@@ -14,6 +14,10 @@ public static class ProcessRuntimeLaunchVariables
     public const string ProductCompletionRequiredFileContentChecksByStep = "ProductCompletionRequiredFileContentChecksByStep";
     public const string ProductCompletionRequiredToolReceipts = "ProductCompletionRequiredToolReceipts";
     public const string ProductCompletionRequiredToolReceiptsByStep = "ProductCompletionRequiredToolReceiptsByStep";
+    public const string CompletionIssueRoutes = "CompletionIssueRoutes";
+    public const string CompletionIssueRoutesByStep = "CompletionIssueRoutesByStep";
+    public const string AcceptanceCriteriaMatrix = "AcceptanceCriteriaMatrix";
+    public const string AcceptanceCriteriaAcceptedBranchOutcomeKeys = "AcceptanceCriteriaAcceptedBranchOutcomeKeys";
     public const string ProcessStepScopedLaunchVariablePrefixesByStep = "ProcessStepScopedLaunchVariablePrefixesByStep";
     public const string ProcessDefinitionKey = "ProcessDefinitionKey";
     public const string ProcessDefinitionName = "ProcessDefinitionName";

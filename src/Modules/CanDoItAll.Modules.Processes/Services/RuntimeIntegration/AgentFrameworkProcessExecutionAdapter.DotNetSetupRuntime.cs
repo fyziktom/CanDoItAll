@@ -81,11 +81,11 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter
                 ungroundedArtifactReferenceIssue);
         }
 
-        var completionGateEvaluation = EvaluateCompletionGates(
+        var completionGateEvaluation = CompletionGateEvaluator.Evaluate(new ProcessCompletionGateContext(
             assignment,
             materialization.Output,
             materialization.ToolReceipts,
-            runtimeResult.ExecutionRunId);
+            runtimeResult.ExecutionRunId));
         if (!completionGateEvaluation.IsSatisfied)
         {
             return NeedsManagerForCompletionIssues(

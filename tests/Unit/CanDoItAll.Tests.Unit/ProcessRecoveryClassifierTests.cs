@@ -28,6 +28,37 @@ public sealed class ProcessRecoveryClassifierTests
     }
 
     [Fact]
+    public void RecoveryClassifier_routes_branch_defect_evidence_gap_to_current_step_retry()
+    {
+        var classifier = new ProcessRecoveryClassifier(new ProcessRecoveryClassifierOptions(3, 1));
+        var result = classifier.ClassifyBlocked(CreateInput(
+            Diagnostic(
+                "process.adapter.branch_outcome_defect_evidence_missing",
+                "sha256:missing-defect-evidence"),
+            failureCategory: ProcessFailureCategory.Unknown));
+
+        Assert.Equal(ProcessFailureCategory.Unknown, result.FailureCategory);
+        Assert.Equal(ProcessRecoveryDecisionKind.SafeRetry, result.DecisionKind);
+        Assert.Equal(ProcessRecoveryRouteKind.CurrentStepRetry, result.RouteKind);
+        Assert.Equal("process.current-step-safe-retry", result.Policy);
+    }
+
+    [Fact]
+    public void RecoveryClassifier_routes_runtime_lifecycle_gap_to_current_step_retry()
+    {
+        var classifier = new ProcessRecoveryClassifier(new ProcessRecoveryClassifierOptions(3, 1));
+        var result = classifier.ClassifyBlocked(CreateInput(
+            Diagnostic(
+                "process.adapter.runtime_lifecycle_correlation_missing",
+                "sha256:runtime-lifecycle"),
+            failureCategory: ProcessFailureCategory.Unknown));
+
+        Assert.Equal(ProcessRecoveryDecisionKind.SafeRetry, result.DecisionKind);
+        Assert.Equal(ProcessRecoveryRouteKind.CurrentStepRetry, result.RouteKind);
+        Assert.Equal("process.current-step-safe-retry", result.Policy);
+    }
+
+    [Fact]
     public void RecoveryClassifier_escalates_after_same_fingerprint_budget_exhausted()
     {
         var classifier = new ProcessRecoveryClassifier(new ProcessRecoveryClassifierOptions(3, 1));
@@ -87,11 +118,12 @@ public sealed class ProcessRecoveryClassifierTests
 
     private static ProcessRecoveryClassificationInput CreateInput(
         StrategyResultDiagnosticReceipt diagnostic,
-        IReadOnlyList<StrategyResultReceipt>? priorReceipts = null)
+        IReadOnlyList<StrategyResultReceipt>? priorReceipts = null,
+        ProcessFailureCategory failureCategory = ProcessFailureCategory.ProductCompletionGate)
     {
         return new ProcessRecoveryClassificationInput(
             StepId,
-            ProcessFailureCategory.ProductCompletionGate,
+            failureCategory,
             diagnostic.Code,
             ProcessRecoveryRouteKind.ManagerAction,
             StepId,

@@ -2,6 +2,7 @@ using System.Text.Json;
 using CanDoItAll.Modules.Workbench;
 using CanDoItAll.Processes.Abstractions;
 using CanDoItAll.Processes.Application;
+using CanDoItAll.Processes.Contracts;
 using CanDoItAll.Processes.Runtime;
 using CanDoItAll.SharedKernel;
 
@@ -139,7 +140,7 @@ public sealed class DotNetProcessLaunchVariableContributorTests
                 IsSubprocess: false),
             variables);
 
-        var receiptMap = JsonSerializer.Deserialize<Dictionary<string, string[]>>(
+        var receiptMap = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(
             variables[ProcessRuntimeLaunchVariables.ProductCompletionRequiredToolReceiptsByStep]);
 
         Assert.NotNull(receiptMap);
@@ -148,6 +149,17 @@ public sealed class DotNetProcessLaunchVariableContributorTests
         AssertValidationReceipts(receiptMap, "qa-recheck");
         AssertBrowserRuntimeProofReceipts(receiptMap, "qa-validation", expectsVisualComparison: false);
         AssertBrowserRuntimeProofReceipts(receiptMap, "qa-recheck", expectsVisualComparison: false);
+        AssertAcceptanceBranchReceiptRules(receiptMap, "qa-validation");
+        AssertAcceptanceBranchReceiptRules(receiptMap, "qa-recheck");
+
+        var routeMap = JsonSerializer.Deserialize<Dictionary<string, JsonElement[]>>(
+            variables[ProcessRuntimeLaunchVariables.CompletionIssueRoutesByStep]);
+
+        Assert.NotNull(routeMap);
+        AssertBranchRoute(routeMap, "qa-validation", "repair-required");
+        AssertBranchRoute(routeMap, "qa-recheck", "repair-escalation");
+        Assert.False(variables.ContainsKey(ProcessRuntimeLaunchVariables.AcceptanceCriteriaMatrix));
+        Assert.False(variables.ContainsKey(ProcessRuntimeLaunchVariables.AcceptanceCriteriaAcceptedBranchOutcomeKeys));
 
         var fileContentMap = JsonSerializer.Deserialize<Dictionary<string, JsonElement[]>>(
             variables[ProcessRuntimeLaunchVariables.ProductCompletionRequiredFileContentChecksByStep]);
@@ -193,6 +205,152 @@ public sealed class DotNetProcessLaunchVariableContributorTests
             => check.GetProperty("mustExist").GetBoolean() == false &&
                check.GetProperty("forbiddenTextAny").EnumerateArray().Any(value =>
                    string.Equals(value.GetString(), "@page \"/counter\"", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Enrich_adds_acceptance_criteria_matrix_for_complex_software_delivery_project()
+    {
+        var contributor = new DotNetProcessLaunchVariableContributor();
+        var projectId = Guid.NewGuid();
+        var node = CreateComplexNode(projectId);
+        var surface = new ProjectStructureSurface(projectId, "Tetris", [node], [], null);
+        var variables = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["ProductRoot"] = @"C:\temp\CanDoItAll\Tetris",
+            ["ProjectStructureContextSummary"] = "Blazor WebAssembly game with explicit acceptance criteria."
+        };
+
+        contributor.Enrich(
+            new ProjectStructureProcessLaunchVariableContext(
+                projectId,
+                surface,
+                node,
+                "software-delivery",
+                ProcessDefinitionId: null,
+                ParentRunId: null,
+                ParentStepId: null,
+                ParentAssignment: null,
+                IsSubprocess: false),
+            variables);
+
+        Assert.True(variables.TryGetValue(ProcessRuntimeLaunchVariables.AcceptanceCriteriaMatrix, out var rawMatrix));
+        Assert.Equal("quality-accepted", variables[ProcessRuntimeLaunchVariables.AcceptanceCriteriaAcceptedBranchOutcomeKeys]);
+        Assert.True(ProcessAcceptanceCriteriaMatrixJson.TryDeserialize(rawMatrix, out var matrix));
+        Assert.Collection(
+            matrix.RequiredCriteria,
+            criterion =>
+            {
+                Assert.Equal("AC-001", criterion.Id);
+                Assert.Equal(node.Id, criterion.SourceNodeId);
+                Assert.Contains("falling tetromino", criterion.Summary, StringComparison.OrdinalIgnoreCase);
+                Assert.Contains("browser-proof", criterion.VerificationMethods);
+            },
+            criterion =>
+            {
+                Assert.Equal("AC-002", criterion.Id);
+                Assert.Contains("completed lines", criterion.Summary, StringComparison.OrdinalIgnoreCase);
+                Assert.Contains("unit-test", criterion.VerificationMethods);
+            },
+            criterion =>
+            {
+                Assert.Equal("AC-003", criterion.Id);
+                Assert.Contains("pause and resume", criterion.Summary, StringComparison.OrdinalIgnoreCase);
+            });
+        Assert.Contains("AC-001", variables["ProductAcceptanceCriteriaContract"], StringComparison.Ordinal);
+        Assert.Contains("criterion id", variables["ProductAcceptanceCriteriaContract"], StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Theory]
+    [InlineData("blazor-app-delivery")]
+    [InlineData("blazor-app-repair-fix")]
+    [InlineData("blazor-backend-feature")]
+    [InlineData("blazor-frontend-feature")]
+    [InlineData("blazor-fullstack-feature")]
+    public void Enrich_adds_root_blazor_delivery_branch_aware_validation_metadata(string definitionKey)
+    {
+        var contributor = new DotNetProcessLaunchVariableContributor();
+        var projectId = Guid.NewGuid();
+        var node = CreateNode(projectId);
+        var surface = new ProjectStructureSurface(projectId, "Calculator", [node], [], null);
+        var variables = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["ProductRoot"] = @"C:\temp\CanDoItAll\Calculator",
+            ["ProjectStructureContextSummary"] = "Blazor WebAssembly calculator app with xUnit tests."
+        };
+
+        contributor.Enrich(
+            new ProjectStructureProcessLaunchVariableContext(
+                projectId,
+                surface,
+                node,
+                definitionKey,
+                ProcessDefinitionId: null,
+                ParentRunId: null,
+                ParentStepId: null,
+                ParentAssignment: null,
+                IsSubprocess: false),
+            variables);
+
+        var receiptMap = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(
+            variables[ProcessRuntimeLaunchVariables.ProductCompletionRequiredToolReceiptsByStep]);
+
+        Assert.NotNull(receiptMap);
+        AssertValidationReceipts(receiptMap, "validate-blazor-runtime");
+        AssertValidationReceipts(receiptMap, "repair-blazor-findings");
+        AssertValidationReceipts(receiptMap, "revalidate-blazor-repair");
+        AssertBrowserRuntimeProofReceipts(receiptMap, "validate-blazor-runtime", expectsVisualComparison: false);
+        AssertBrowserRuntimeProofReceipts(receiptMap, "revalidate-blazor-repair", expectsVisualComparison: false);
+        AssertAcceptanceBranchReceiptRules(receiptMap, "validate-blazor-runtime");
+        AssertAcceptanceBranchReceiptRules(receiptMap, "revalidate-blazor-repair");
+
+        var routeMap = JsonSerializer.Deserialize<Dictionary<string, JsonElement[]>>(
+            variables[ProcessRuntimeLaunchVariables.CompletionIssueRoutesByStep]);
+
+        Assert.NotNull(routeMap);
+        AssertBranchRoute(routeMap, "validate-blazor-runtime", "repair-required");
+        AssertBranchRoute(routeMap, "revalidate-blazor-repair", "repair-escalation");
+
+        var fileContentMap = JsonSerializer.Deserialize<Dictionary<string, JsonElement[]>>(
+            variables[ProcessRuntimeLaunchVariables.ProductCompletionRequiredFileContentChecksByStep]);
+
+        Assert.NotNull(fileContentMap);
+        Assert.Contains("validate-blazor-runtime", fileContentMap);
+        Assert.Contains("repair-blazor-findings", fileContentMap);
+        Assert.Contains("revalidate-blazor-repair", fileContentMap);
+        Assert.False(variables.ContainsKey(ProcessRuntimeLaunchVariables.AcceptanceCriteriaMatrix));
+    }
+
+    [Fact]
+    public void Enrich_adds_acceptance_criteria_matrix_for_complex_blazor_delivery_project()
+    {
+        var contributor = new DotNetProcessLaunchVariableContributor();
+        var projectId = Guid.NewGuid();
+        var node = CreateComplexNode(projectId);
+        var surface = new ProjectStructureSurface(projectId, "Tetris", [node], [], null);
+        var variables = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["ProductRoot"] = @"C:\temp\CanDoItAll\Tetris",
+            ["ProjectStructureContextSummary"] = "Blazor WebAssembly game with explicit acceptance criteria."
+        };
+
+        contributor.Enrich(
+            new ProjectStructureProcessLaunchVariableContext(
+                projectId,
+                surface,
+                node,
+                "blazor-app-delivery",
+                ProcessDefinitionId: null,
+                ParentRunId: null,
+                ParentStepId: null,
+                ParentAssignment: null,
+                IsSubprocess: false),
+            variables);
+
+        Assert.True(variables.TryGetValue(ProcessRuntimeLaunchVariables.AcceptanceCriteriaMatrix, out var rawMatrix));
+        Assert.Equal("quality-accepted", variables[ProcessRuntimeLaunchVariables.AcceptanceCriteriaAcceptedBranchOutcomeKeys]);
+        Assert.True(ProcessAcceptanceCriteriaMatrixJson.TryDeserialize(rawMatrix, out var matrix));
+        Assert.Equal(["AC-001", "AC-002", "AC-003"], matrix.RequiredCriteria.Select(criterion => criterion.Id));
+        Assert.Contains("AC-001", variables["ProductAcceptanceCriteriaContract"], StringComparison.Ordinal);
     }
 
     [Fact]
@@ -318,7 +476,7 @@ public sealed class DotNetProcessLaunchVariableContributorTests
                 IsSubprocess: false),
             variables);
 
-        var receiptMap = JsonSerializer.Deserialize<Dictionary<string, string[]>>(
+        var receiptMap = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(
             variables[ProcessRuntimeLaunchVariables.ProductCompletionRequiredToolReceiptsByStep]);
 
         Assert.NotNull(receiptMap);
@@ -410,6 +568,14 @@ public sealed class DotNetProcessLaunchVariableContributorTests
         Assert.Contains("workspace_dotnet_test", receipts);
     }
 
+    private static void AssertValidationReceipts(IReadOnlyDictionary<string, JsonElement> receiptMap, string stepKey)
+    {
+        var receipts = ReadReceiptToolNames(Assert.Contains(stepKey, receiptMap));
+        Assert.Contains("workspace_dotnet_restore", receipts);
+        Assert.Contains("workspace_dotnet_build", receipts);
+        Assert.Contains("workspace_dotnet_test", receipts);
+    }
+
     private static void AssertBrowserRuntimeProofReceipts(
         IReadOnlyDictionary<string, string[]> receiptMap,
         string stepKey,
@@ -434,6 +600,82 @@ public sealed class DotNetProcessLaunchVariableContributorTests
         }
     }
 
+    private static void AssertBrowserRuntimeProofReceipts(
+        IReadOnlyDictionary<string, JsonElement> receiptMap,
+        string stepKey,
+        bool expectsVisualComparison)
+    {
+        var receipts = ReadReceiptToolNames(Assert.Contains(stepKey, receiptMap));
+        Assert.Contains("workspace_dotnet_run", receipts);
+        Assert.Contains("browser_navigate", receipts);
+        Assert.Contains("browser_snapshot", receipts);
+        Assert.Contains("browser_take_screenshot", receipts);
+        Assert.Contains("browser_console_messages", receipts);
+        Assert.Contains("workspace_dotnet_stop", receipts);
+        if (expectsVisualComparison)
+        {
+            Assert.Contains("workspace_inspect_image", receipts);
+            Assert.Contains("workspace_analyze_image", receipts);
+            Assert.Contains("workspace_analyze_images", receipts);
+        }
+        else
+        {
+            Assert.DoesNotContain("workspace_analyze_images", receipts);
+        }
+    }
+
+    private static void AssertAcceptanceBranchReceiptRules(
+        IReadOnlyDictionary<string, JsonElement> receiptMap,
+        string stepKey)
+    {
+        var element = Assert.Contains(stepKey, receiptMap);
+        Assert.Equal(JsonValueKind.Array, element.ValueKind);
+        Assert.All(element.EnumerateArray(), rule =>
+        {
+            Assert.Equal(JsonValueKind.Object, rule.ValueKind);
+            Assert.True(rule.TryGetProperty("toolName", out _));
+            var branchKeys = rule.GetProperty("enforceBranchOutcomeKeys")
+                .EnumerateArray()
+                .Select(value => value.GetString())
+                .ToArray();
+            Assert.Contains("quality-accepted", branchKeys);
+        });
+
+        Assert.Contains(
+            "workspace_dotnet_run",
+            ProcessRequiredRuntimeToolNames.FromProductCompletionRequiredToolReceipts(element));
+    }
+
+    private static void AssertBranchRoute(
+        IReadOnlyDictionary<string, JsonElement[]> routeMap,
+        string stepKey,
+        string targetBranchOutcomeKey)
+    {
+        var routes = Assert.Contains(stepKey, routeMap);
+        var route = Assert.Single(routes);
+        Assert.Equal("process.adapter.product_required_file_content_missing", route.GetProperty("issueCode").GetString());
+        Assert.Equal(targetBranchOutcomeKey, route.GetProperty("targetBranchOutcomeKey").GetString());
+        Assert.True(route.GetProperty("requiresDefectEvidence").GetBoolean());
+    }
+
+    private static IReadOnlyList<string> ReadReceiptToolNames(JsonElement element)
+    {
+        if (element.ValueKind != JsonValueKind.Array)
+        {
+            return [];
+        }
+
+        return element
+            .EnumerateArray()
+            .Select(item => item.ValueKind == JsonValueKind.String
+                ? item.GetString() ?? string.Empty
+                : item.ValueKind == JsonValueKind.Object && item.TryGetProperty("toolName", out var toolName)
+                    ? toolName.GetString() ?? string.Empty
+                    : string.Empty)
+            .Where(value => !string.IsNullOrWhiteSpace(value))
+            .ToArray();
+    }
+
     private static ProjectStructureNode CreateNode(Guid projectId)
         => new(
             "custom:calculator",
@@ -453,6 +695,41 @@ public sealed class DotNetProcessLaunchVariableContributorTests
             0,
             0,
             new ProjectObjectVisualProfile("rect", "accent", "calculator", string.Empty),
+            [],
+            string.Empty,
+            0,
+            string.Empty,
+            string.Empty,
+            string.Empty,
+            [],
+            0);
+
+    private static ProjectStructureNode CreateComplexNode(Guid projectId)
+        => new(
+            "custom:tetris",
+            $"project:{projectId:D}",
+            ProjectObjectType.ProjectBlock,
+            "delivery",
+            "Main Game",
+            "Tetris",
+            "Planned",
+            """
+            Build a Blazor WebAssembly Tetris game.
+
+            Acceptance criteria:
+            - support falling tetromino gameplay with keyboard movement and rotation.
+            - clear completed lines and update the score.
+            - allow pause and resume without losing board state.
+            """,
+            string.Empty,
+            string.Empty,
+            null,
+            string.Empty,
+            string.Empty,
+            string.Empty,
+            0,
+            0,
+            new ProjectObjectVisualProfile("rect", "accent", "gamepad-2", string.Empty),
             [],
             string.Empty,
             0,

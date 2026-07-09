@@ -79,6 +79,8 @@ public sealed class ProcessCapabilityScope
             RequireSuccessfulExit = receipt.RequireSuccessfulExit,
             RequireCurrentRun = receipt.RequireCurrentRun,
             Activation = receipt.Activation,
+            Purpose = receipt.Purpose,
+            ApplicableBranchOutcomeKeys = NormalizeStringList(receipt.ApplicableBranchOutcomeKeys).ToList(),
             Reason = receipt.Reason.Trim()
         };
         normalized.Key = string.IsNullOrWhiteSpace(receipt.Key)
@@ -102,7 +104,7 @@ public sealed class ProcessCapabilityScope
 
     private static string CreateRequiredReceiptKey(ProcessRequiredToolReceipt receipt)
     {
-        return receipt.Kind switch
+        var selector = receipt.Kind switch
         {
             ProcessRequiredToolReceiptKind.RuntimeToolName => $"runtime-tool:{receipt.ToolName}",
             ProcessRequiredToolReceiptKind.RuntimeToolProviderKey => $"runtime-provider:{receipt.RuntimeToolProviderKey}",
@@ -112,6 +114,28 @@ public sealed class ProcessCapabilityScope
                 : $"mcp-tool:{receipt.McpServerKey}:{receipt.ToolName}",
             _ => "runtime-tool:unknown"
         };
+        var purpose = receipt.Purpose == ProcessRequiredToolReceiptPurpose.Unspecified
+            ? string.Empty
+            : $":purpose:{receipt.Purpose}";
+        var branches = receipt.ApplicableBranchOutcomeKeys.Count == 0
+            ? string.Empty
+            : $":branches:{string.Join(",", NormalizeStringList(receipt.ApplicableBranchOutcomeKeys))}";
+        return $"{selector}{purpose}{branches}";
+    }
+
+    private static IReadOnlyList<string> NormalizeStringList(IEnumerable<string>? values)
+    {
+        if (values is null)
+        {
+            return [];
+        }
+
+        return values
+            .Select(value => value.Trim())
+            .Where(value => !string.IsNullOrWhiteSpace(value))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(value => value, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
     }
 }
 
@@ -163,6 +187,10 @@ public sealed class ProcessRequiredToolReceipt
     public bool RequireCurrentRun { get; set; } = true;
 
     public ProcessRequiredToolReceiptActivation Activation { get; set; } = ProcessRequiredToolReceiptActivation.Always;
+
+    public ProcessRequiredToolReceiptPurpose Purpose { get; set; } = ProcessRequiredToolReceiptPurpose.Unspecified;
+
+    public List<string> ApplicableBranchOutcomeKeys { get; set; } = [];
 
     public string Reason { get; set; } = string.Empty;
 }
@@ -218,8 +246,7 @@ public static class ProcessRequiredRuntimeToolNames
         }
 
         return NormalizeRuntimeToolNameCandidates(element.EnumerateArray()
-            .Where(item => item.ValueKind == JsonValueKind.String)
-            .Select(item => item.GetString() ?? string.Empty));
+            .Select(ReadProductCompletionRequiredToolReceiptCandidate));
     }
 
     public static IReadOnlyList<string> FromProductCompletionRequiredToolReceipts(IEnumerable<string>? requiredToolReceipts)
@@ -328,6 +355,61 @@ public static class ProcessRequiredRuntimeToolNames
         return !string.IsNullOrWhiteSpace(toolName) &&
                activeLaunchContextToolNames.Contains(toolName);
     }
+
+    public static bool IsApplicableToBranchOutcome(
+        ProcessRequiredToolReceipt receipt,
+        string? branchOutcomeKey)
+    {
+        if (receipt.ApplicableBranchOutcomeKeys.Count == 0)
+        {
+            return true;
+        }
+
+        return !string.IsNullOrWhiteSpace(branchOutcomeKey) &&
+               receipt.ApplicableBranchOutcomeKeys.Contains(branchOutcomeKey.Trim(), StringComparer.OrdinalIgnoreCase);
+    }
+
+    private static string ReadProductCompletionRequiredToolReceiptCandidate(JsonElement element)
+    {
+        if (element.ValueKind == JsonValueKind.String)
+        {
+            return element.GetString() ?? string.Empty;
+        }
+
+        if (element.ValueKind != JsonValueKind.Object)
+        {
+            return string.Empty;
+        }
+
+        foreach (var propertyName in new[] { "toolName", "tool", "receipt", "requiredToolReceipt", "name", "selector" })
+        {
+            if (TryGetPropertyCaseInsensitive(element, propertyName, out var property) &&
+                property.ValueKind == JsonValueKind.String)
+            {
+                return property.GetString() ?? string.Empty;
+            }
+        }
+
+        return string.Empty;
+    }
+
+    private static bool TryGetPropertyCaseInsensitive(
+        JsonElement element,
+        string propertyName,
+        out JsonElement property)
+    {
+        foreach (var candidate in element.EnumerateObject())
+        {
+            if (string.Equals(candidate.Name, propertyName, StringComparison.OrdinalIgnoreCase))
+            {
+                property = candidate.Value;
+                return true;
+            }
+        }
+
+        property = default;
+        return false;
+    }
 }
 
 [JsonConverter(typeof(JsonStringEnumConverter<ProcessCapabilityScopeDirectiveKind>))]
@@ -370,6 +452,16 @@ public enum ProcessRequiredToolReceiptActivation
 {
     Always,
     WhenLaunchContextDeclaresTool
+}
+
+[JsonConverter(typeof(JsonStringEnumConverter<ProcessRequiredToolReceiptPurpose>))]
+public enum ProcessRequiredToolReceiptPurpose
+{
+    Unspecified,
+    CompletionEvidence,
+    AcceptanceProof,
+    DefectEvidence,
+    LifecycleProof
 }
 
 [JsonConverter(typeof(JsonStringEnumConverter<ProcessScopedInstructionPlacement>))]

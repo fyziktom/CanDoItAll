@@ -133,11 +133,11 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter
                 ungroundedArtifactReferenceIssue);
         }
 
-        var completionGateEvaluation = EvaluateCompletionGates(
+        var completionGateEvaluation = CompletionGateEvaluator.Evaluate(new ProcessCompletionGateContext(
             assignment,
             materialization.Output,
             materialization.ToolReceipts,
-            subprocessLaunchReceipt.ExecutionRunId);
+            subprocessLaunchReceipt.ExecutionRunId));
         if (!completionGateEvaluation.IsSatisfied)
         {
             return NeedsManagerForCompletionIssues(
@@ -269,11 +269,11 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter
                 ungroundedArtifactReferenceIssue);
         }
 
-        var completionGateEvaluation = EvaluateCompletionGates(
+        var completionGateEvaluation = CompletionGateEvaluator.Evaluate(new ProcessCompletionGateContext(
             assignment,
             materialization.Output,
             materialization.ToolReceipts,
-            completedChildOutcome.SyntheticExecutionRunId);
+            completedChildOutcome.SyntheticExecutionRunId));
         if (!completionGateEvaluation.IsSatisfied)
         {
             return NeedsManagerForCompletionIssues(

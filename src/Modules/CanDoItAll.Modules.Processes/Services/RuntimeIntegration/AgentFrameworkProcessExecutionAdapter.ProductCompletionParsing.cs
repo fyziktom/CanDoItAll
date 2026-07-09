@@ -60,11 +60,54 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter
     private static IReadOnlyList<string> ResolveProductCompletionRequiredToolReceipts(
         IReadOnlyDictionary<string, string> launchVariables,
         string stepKey)
-        => ResolveProductCompletionRequiredStringList(
-            launchVariables,
-            ProcessRuntimeLaunchVariables.ProductCompletionRequiredToolReceipts,
-            ProcessRuntimeLaunchVariables.ProductCompletionRequiredToolReceiptsByStep,
-            stepKey);
+        => ResolveProductCompletionRequiredToolReceiptRules(launchVariables, stepKey)
+            .Select(rule => rule.ToolReceipt)
+            .Where(receipt => !string.IsNullOrWhiteSpace(receipt))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
+    private static IReadOnlyList<ProductCompletionRequiredToolReceiptRule> ResolveProductCompletionRequiredToolReceiptRules(
+        IReadOnlyDictionary<string, string> launchVariables,
+        string stepKey)
+    {
+        var direct = ResolveLaunchVariable(launchVariables, ProcessRuntimeLaunchVariables.ProductCompletionRequiredToolReceipts);
+        if (!string.IsNullOrWhiteSpace(direct))
+        {
+            return ParseProductCompletionRequiredToolReceiptRules(direct);
+        }
+
+        var byStep = ResolveLaunchVariable(launchVariables, ProcessRuntimeLaunchVariables.ProductCompletionRequiredToolReceiptsByStep);
+        if (string.IsNullOrWhiteSpace(byStep) ||
+            string.IsNullOrWhiteSpace(stepKey))
+        {
+            return [];
+        }
+
+        try
+        {
+            using var document = JsonDocument.Parse(byStep);
+            if (document.RootElement.ValueKind != JsonValueKind.Object)
+            {
+                return [];
+            }
+
+            foreach (var property in document.RootElement.EnumerateObject())
+            {
+                if (!string.Equals(property.Name, stepKey, StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                return ParseProductCompletionRequiredToolReceiptRuleElement(property.Value);
+            }
+        }
+        catch (JsonException)
+        {
+            return [];
+        }
+
+        return [];
+    }
 
     private static IReadOnlyList<string> ResolveProductCompletionRequiredStringList(
         IReadOnlyDictionary<string, string> launchVariables,
@@ -131,6 +174,84 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter
             .ToArray();
     }
 
+    private static IReadOnlyList<ProductCompletionRequiredToolReceiptRule> ParseProductCompletionRequiredToolReceiptRules(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return [];
+        }
+
+        try
+        {
+            using var document = JsonDocument.Parse(value);
+            return ParseProductCompletionRequiredToolReceiptRuleElement(document.RootElement);
+        }
+        catch (JsonException)
+        {
+            return value
+                .Split(['\r', '\n', ';'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .Where(item => !string.IsNullOrWhiteSpace(item))
+                .Select(item => new ProductCompletionRequiredToolReceiptRule(
+                    item,
+                    [],
+                    [],
+                    string.Empty,
+                    string.Empty,
+                    string.Empty))
+                .DistinctBy(rule => rule.ToolReceipt, StringComparer.OrdinalIgnoreCase)
+                .ToArray();
+        }
+    }
+
+    private static IReadOnlyList<ProductCompletionRequiredToolReceiptRule> ParseProductCompletionRequiredToolReceiptRuleElement(JsonElement element)
+    {
+        if (element.ValueKind == JsonValueKind.String)
+        {
+            return ParseProductCompletionRequiredToolReceiptRules(element.GetString() ?? string.Empty);
+        }
+
+        if (element.ValueKind == JsonValueKind.Object)
+        {
+            return TryReadProductCompletionRequiredToolReceiptRule(element, out var rule)
+                ? [rule]
+                : [];
+        }
+
+        if (element.ValueKind != JsonValueKind.Array)
+        {
+            return [];
+        }
+
+        return element
+            .EnumerateArray()
+            .SelectMany(ParseProductCompletionRequiredToolReceiptRuleElement)
+            .Where(rule => !string.IsNullOrWhiteSpace(rule.ToolReceipt))
+            .GroupBy(rule => string.IsNullOrWhiteSpace(rule.Key) ? rule.ToolReceipt : rule.Key, StringComparer.OrdinalIgnoreCase)
+            .Select(group => group.First())
+            .ToArray();
+    }
+
+    private static bool TryReadProductCompletionRequiredToolReceiptRule(
+        JsonElement element,
+        out ProductCompletionRequiredToolReceiptRule rule)
+    {
+        var toolReceipt = ReadFirstStringProperty(element, "toolName", "tool", "receipt", "requiredToolReceipt", "name", "selector");
+        if (string.IsNullOrWhiteSpace(toolReceipt))
+        {
+            rule = new ProductCompletionRequiredToolReceiptRule(string.Empty, [], [], string.Empty, string.Empty, string.Empty);
+            return false;
+        }
+
+        rule = new ProductCompletionRequiredToolReceiptRule(
+            toolReceipt,
+            ReadStringPropertyValues(element, "applicableBranchOutcomeKeys", "appliesToBranchOutcomeKeys", "branchOutcomeKeys", "whenBranchOutcomeKeys", "requiredForBranchOutcomeKeys", "enforceBranchOutcomeKeys"),
+            ReadStringPropertyValues(element, "skipBranchOutcomeKeys", "skippedBranchOutcomeKeys", "excludedBranchOutcomeKeys"),
+            ReadFirstStringProperty(element, "purpose", "receiptPurpose"),
+            ReadFirstStringProperty(element, "key", "id"),
+            ReadFirstStringProperty(element, "reason", "description"));
+        return true;
+    }
+
     private static IReadOnlyList<string> ParseProductCompletionRequiredStringList(string value)
     {
         if (string.IsNullOrWhiteSpace(value))
@@ -192,6 +313,102 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter
         }
 
         return ProductCompletionRequiredFileContentCheckResolution.Empty;
+    }
+
+    private static IReadOnlyList<ProcessCompletionIssueRoute> ResolveCompletionIssueRoutes(
+        IReadOnlyDictionary<string, string> launchVariables,
+        string stepKey)
+    {
+        var direct = ResolveLaunchVariable(launchVariables, ProcessRuntimeLaunchVariables.CompletionIssueRoutes);
+        if (!string.IsNullOrWhiteSpace(direct))
+        {
+            return ParseCompletionIssueRoutes(direct);
+        }
+
+        var byStep = ResolveLaunchVariable(launchVariables, ProcessRuntimeLaunchVariables.CompletionIssueRoutesByStep);
+        if (string.IsNullOrWhiteSpace(byStep) ||
+            string.IsNullOrWhiteSpace(stepKey))
+        {
+            return [];
+        }
+
+        try
+        {
+            using var document = JsonDocument.Parse(byStep);
+            if (document.RootElement.ValueKind != JsonValueKind.Object)
+            {
+                return [];
+            }
+
+            foreach (var property in document.RootElement.EnumerateObject())
+            {
+                if (string.Equals(property.Name, stepKey, StringComparison.OrdinalIgnoreCase))
+                {
+                    return ParseCompletionIssueRouteElement(property.Value);
+                }
+            }
+        }
+        catch (JsonException)
+        {
+            return [];
+        }
+
+        return [];
+    }
+
+    private static IReadOnlyList<ProcessCompletionIssueRoute> ParseCompletionIssueRoutes(string value)
+    {
+        try
+        {
+            using var document = JsonDocument.Parse(value);
+            return ParseCompletionIssueRouteElement(document.RootElement);
+        }
+        catch (JsonException)
+        {
+            return [];
+        }
+    }
+
+    private static IReadOnlyList<ProcessCompletionIssueRoute> ParseCompletionIssueRouteElement(JsonElement element)
+    {
+        if (element.ValueKind == JsonValueKind.Object)
+        {
+            return TryReadCompletionIssueRoute(element, out var route)
+                ? [route]
+                : [];
+        }
+
+        if (element.ValueKind != JsonValueKind.Array)
+        {
+            return [];
+        }
+
+        return element
+            .EnumerateArray()
+            .SelectMany(ParseCompletionIssueRouteElement)
+            .Where(route => !string.IsNullOrWhiteSpace(route.IssueCode) &&
+                            !string.IsNullOrWhiteSpace(route.TargetBranchOutcomeKey))
+            .ToArray();
+    }
+
+    private static bool TryReadCompletionIssueRoute(JsonElement element, out ProcessCompletionIssueRoute route)
+    {
+        var issueCode = ReadFirstStringProperty(element, "issueCode", "code", "completionIssueCode");
+        var targetBranchOutcomeKey = ReadFirstStringProperty(element, "targetBranchOutcomeKey", "routeBranchOutcomeKey", "branchOutcomeKey");
+        if (string.IsNullOrWhiteSpace(issueCode) ||
+            string.IsNullOrWhiteSpace(targetBranchOutcomeKey))
+        {
+            route = new ProcessCompletionIssueRoute(string.Empty, [], string.Empty, string.Empty, false);
+            return false;
+        }
+
+        route = new ProcessCompletionIssueRoute(
+            issueCode,
+            ReadStringPropertyValues(element, "sourceBranchOutcomeKeys", "fromBranchOutcomeKeys", "whenBranchOutcomeKeys"),
+            targetBranchOutcomeKey,
+            ReadFirstStringProperty(element, "targetBranchOutcomeTitle", "branchOutcomeTitle", "title"),
+            ReadBooleanProperty(element, defaultValue: false, "requiresDefectEvidence", "requireDefectEvidence"));
+        return true;
     }
 
     private static ProductCompletionRequiredFileContentCheckResolution ParseProductCompletionRequiredFileContentChecks(string value)
@@ -268,7 +485,8 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter
             requiredTextAnyGroups,
             forbiddenTextAnyGroups,
             ReadBooleanProperty(element, defaultValue: true, "mustExist", "requiresPath"),
-            ReadStringPropertyValues(element, "enforceBranchOutcomeKeys", "branchOutcomeKeys", "whenBranchOutcomeKey")));
+            ReadStringPropertyValues(element, "enforceBranchOutcomeKeys", "branchOutcomeKeys", "whenBranchOutcomeKey"),
+            ReadStringPropertyValues(element, "evidenceBranchOutcomeKeys", "defectEvidenceBranchOutcomeKeys", "satisfiesBranchOutcomeKeys")));
     }
 
     private static IReadOnlyList<IReadOnlyList<string>> ReadRequiredTextAnyGroups(JsonElement element)
@@ -364,6 +582,20 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter
         }
 
         return [];
+    }
+
+    private static string ReadFirstStringProperty(JsonElement element, params string[] propertyNames)
+    {
+        foreach (var propertyName in propertyNames)
+        {
+            if (TryGetPropertyCaseInsensitive(element, propertyName, out var property) &&
+                property.ValueKind == JsonValueKind.String)
+            {
+                return property.GetString()?.Trim() ?? string.Empty;
+            }
+        }
+
+        return string.Empty;
     }
 
     private static bool ReadBooleanProperty(JsonElement element, bool defaultValue, params string[] propertyNames)

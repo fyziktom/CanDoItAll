@@ -1,4 +1,5 @@
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.Modules.Workbench;
 using CanDoItAll.Processes.Abstractions;
 using CanDoItAll.Processes.Application;
 using CanDoItAll.Processes.Core;
@@ -84,7 +85,8 @@ public sealed class ProcessRuntimeOperatorApplicationServiceTests
                 projectionStore,
                 new ProcessRuntimeProjectionProjector(projectionStore, ProcessProjectionJsonCodec.Default, clock),
                 clock),
-            []);
+            [],
+            recoveryInstructionBuilder: CreateDotNetRecoveryInstructionBuilder());
 
         var result = await service.ExecuteAsync(new ProcessRuntimeOperatorActionCommand(
             runId,
@@ -595,6 +597,9 @@ public sealed class ProcessRuntimeOperatorApplicationServiceTests
             ["WorkspaceAlias"] = "external-target/C/repositories/calculator"
         };
     }
+
+    private static ProcessStepRecoveryInstructionBuilder CreateDotNetRecoveryInstructionBuilder()
+        => new([new DotNetSoftwareDeliveryRecoveryAdviceProvider()]);
 
     private static ProcessPersistenceDbContext CreateDbContext()
     {

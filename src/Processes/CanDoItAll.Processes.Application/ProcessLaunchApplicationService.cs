@@ -1538,6 +1538,11 @@ public sealed class ProcessLaunchApplicationService(
             return string.Empty;
         }
 
+        if (element.EnumerateArray().Any(item => item.ValueKind == JsonValueKind.Object))
+        {
+            return element.GetRawText();
+        }
+
         return string.Join(
             Environment.NewLine,
             element.EnumerateArray()

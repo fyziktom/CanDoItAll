@@ -103,6 +103,13 @@ internal sealed class WorkspaceCommandReceiptWriter
                 ? processResult.ExitCode == 0 ? "Succeeded" : "Failed"
                 : "Failed";
 
+        var auditedRequestSummary = BuildAuditedProcessRequestSummary(
+            toolName,
+            arguments,
+            targetPaths,
+            processResult.Stdout,
+            processResult.Stderr);
+
         return CreateAuditedReceipt(
             operation: toolName,
             mutatesWorkspace: mutatesWorkspace,
@@ -118,7 +125,7 @@ internal sealed class WorkspaceCommandReceiptWriter
             riskClass: decision.RiskClass,
             approvalMode: decision.ApprovalRequired ? "Required" : "NotRequired",
             isolationGuarantee: BuildBoundarySummary(processResult.Boundary),
-            requestSummary: BuildArgumentsSummary(arguments),
+            requestSummary: auditedRequestSummary,
             workingDirectory: workingDirectory,
             exitSummary: processResult.Started
                 ? $"{outcome} (exit {processResult.ExitCode})"
@@ -249,6 +256,65 @@ internal sealed class WorkspaceCommandReceiptWriter
 
     public static string BuildArgumentsSummary(IReadOnlyList<string> arguments)
         => string.Join(" ", arguments.Select(QuoteArgumentIfNeeded));
+
+    private static string BuildAuditedProcessRequestSummary(
+        string toolName,
+        IReadOnlyList<string> arguments,
+        IReadOnlyList<string> targetPaths,
+        string? stdout,
+        string? stderr)
+    {
+        var summary = BuildArgumentsSummary(arguments);
+        if (!IsDotNetRuntimeLifecycleTool(toolName))
+        {
+            return summary;
+        }
+
+        var lifecycleFacts = new List<string>();
+        foreach (var startupPath in targetPaths
+                     .Where(path => path.EndsWith("startup.json", StringComparison.OrdinalIgnoreCase))
+                     .Distinct(StringComparer.OrdinalIgnoreCase)
+                     .Take(3))
+        {
+            lifecycleFacts.Add($"startupReceipt={startupPath}");
+        }
+
+        foreach (var url in ExtractLoopbackUrls(string.Join(' ', stdout, stderr))
+                     .Distinct(StringComparer.OrdinalIgnoreCase)
+                     .Take(3))
+        {
+            lifecycleFacts.Add($"hostUrl={url}");
+        }
+
+        if (lifecycleFacts.Count == 0)
+        {
+            return summary;
+        }
+
+        return string.IsNullOrWhiteSpace(summary)
+            ? string.Join("; ", lifecycleFacts)
+            : $"{summary}; {string.Join("; ", lifecycleFacts)}";
+    }
+
+    private static bool IsDotNetRuntimeLifecycleTool(string toolName)
+        => string.Equals(toolName, "workspace_dotnet_run", StringComparison.OrdinalIgnoreCase) ||
+           string.Equals(toolName, "workspace_dotnet_stop", StringComparison.OrdinalIgnoreCase);
+
+    private static IReadOnlyList<string> ExtractLoopbackUrls(string text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return [];
+        }
+
+        return System.Text.RegularExpressions.Regex
+            .Matches(
+                text,
+                @"https?://(?:localhost|127\.0\.0\.1|\[::1\]):\d+(?:/[^\s""'<>)]*)?",
+                System.Text.RegularExpressions.RegexOptions.IgnoreCase | System.Text.RegularExpressions.RegexOptions.CultureInvariant)
+            .Select(match => match.Value.TrimEnd('.', ',', ';'))
+            .ToArray();
+    }
 
     private ArtifactDirectory ResolveArtifactDirectory(string recipeId, DateTimeOffset startedAtUtc)
     {

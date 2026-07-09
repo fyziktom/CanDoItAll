@@ -282,13 +282,36 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter : IProcessEx
                     ungroundedArtifactReferenceIssue);
             }
 
-            var completionGateEvaluation = EvaluateCompletionGates(
+            var completionGateEvaluation = CompletionGateEvaluator.Evaluate(new ProcessCompletionGateContext(
                 assignment,
                 materialization.Output,
                 completionToolReceipts,
-                result.ExecutionRunId);
+                result.ExecutionRunId));
             if (!completionGateEvaluation.IsSatisfied)
             {
+                if (AppendRuntimeGateFindingsForRoutedCompletionIssue(
+                        assignment,
+                        materialization.Output,
+                        result.ExecutionRunId,
+                        completionGateEvaluation) is { } runtimeGateFindingsIssue)
+                {
+                    return NeedsManagerForCompletionIssue(
+                        assignment,
+                        validation.RawOutputHash,
+                        runtimeGateFindingsIssue);
+                }
+
+                if (TryCreateRoutedCompletionIssueResult(
+                        assignment,
+                        materialization.Output,
+                        validation.RawOutputHash,
+                        completionGateEvaluation,
+                        producedArtifactContentHashes: null,
+                        out var routedCompletionIssueResult))
+                {
+                    return routedCompletionIssueResult;
+                }
+
                 return NeedsManagerForCompletionIssues(
                     assignment,
                     validation.RawOutputHash,

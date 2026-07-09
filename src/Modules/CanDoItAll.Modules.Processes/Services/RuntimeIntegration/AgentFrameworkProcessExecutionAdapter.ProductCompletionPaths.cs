@@ -157,23 +157,75 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter
             return null;
         }
 
-        var failures = new List<string>();
-        foreach (var check in resolution.Checks)
-        {
-            if (check.EnforceBranchOutcomeKeys.Count > 0 &&
-                !check.EnforceBranchOutcomeKeys.Contains(output.BranchOutcomeKey, StringComparer.OrdinalIgnoreCase))
-            {
-                continue;
-            }
+        var failures = EvaluateProductFileContentCheckFailures(
+            productRoot,
+            resolution.Checks,
+            check => check.EnforceBranchOutcomeKeys.Count == 0 ||
+                     check.EnforceBranchOutcomeKeys.Contains(output.BranchOutcomeKey, StringComparer.OrdinalIgnoreCase));
 
+        if (failures.Count == 0)
+        {
+            return null;
+        }
+
+        var failureSummary = string.Join("; ", failures.Distinct(StringComparer.OrdinalIgnoreCase));
+        return new ProcessCompletionIssue(
+            "process.adapter.product_required_file_content_missing",
+            $"Step '{assignment.StepKey}' claimed completion but required product file content/readback check(s) failed: {failureSummary}.",
+            $"{assignment.RunId}:{assignment.StepInstanceId}:product-required-file-content-missing:{failureSummary}",
+            assignment.ProducedArtifactSlotIds,
+            ProcessDiagnosticRetrySafety.SafeToRetry,
+            ProcessDiagnosticIdempotencyClassification.Idempotent);
+    }
+
+    private static bool HasProductFileContentDefectEvidence(
+        ProcessRuntimeStepAssignment assignment,
+        ProcessStepOutcomeResult output,
+        out string defectSummary)
+    {
+        defectSummary = string.Empty;
+        if (output.Status != ProcessStepOutcomeStatus.Completed ||
+            !TryResolveInspectableProductRoot(assignment.LaunchVariables, out var productRoot))
+        {
+            return false;
+        }
+
+        var resolution = ResolveProductCompletionRequiredFileContentChecks(assignment.LaunchVariables, assignment.StepKey);
+        if (!string.IsNullOrWhiteSpace(resolution.InvalidReason) ||
+            resolution.Checks.Count == 0)
+        {
+            return false;
+        }
+
+        var failures = EvaluateProductFileContentCheckFailures(
+            productRoot,
+            resolution.Checks,
+            check => check.EvidenceBranchOutcomeKeys.Count > 0 &&
+                     check.EvidenceBranchOutcomeKeys.Contains(output.BranchOutcomeKey, StringComparer.OrdinalIgnoreCase));
+        if (failures.Count == 0)
+        {
+            return false;
+        }
+
+        defectSummary = string.Join("; ", failures.Distinct(StringComparer.OrdinalIgnoreCase));
+        return true;
+    }
+
+    private static IReadOnlyList<string> EvaluateProductFileContentCheckFailures(
+        string productRoot,
+        IReadOnlyList<ProductCompletionRequiredFileContentCheck> checks,
+        Func<ProductCompletionRequiredFileContentCheck, bool> shouldEvaluate)
+    {
+        var failures = new List<string>();
+        foreach (var check in checks.Where(shouldEvaluate))
+        {
             if (!TryResolveRequiredProductFileContentCheckPath(productRoot, check, out var resolvedPath, out var pathFailure, out var skippedMissingOptionalPath))
             {
-                if (skippedMissingOptionalPath)
+                if (!skippedMissingOptionalPath)
                 {
-                    continue;
+                    failures.Add(pathFailure);
                 }
 
-                failures.Add(pathFailure);
                 continue;
             }
 
@@ -220,19 +272,7 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter
             }
         }
 
-        if (failures.Count == 0)
-        {
-            return null;
-        }
-
-        var failureSummary = string.Join("; ", failures.Distinct(StringComparer.OrdinalIgnoreCase));
-        return new ProcessCompletionIssue(
-            "process.adapter.product_required_file_content_missing",
-            $"Step '{assignment.StepKey}' claimed completion but required product file content/readback check(s) failed: {failureSummary}.",
-            $"{assignment.RunId}:{assignment.StepInstanceId}:product-required-file-content-missing:{failureSummary}",
-            assignment.ProducedArtifactSlotIds,
-            ProcessDiagnosticRetrySafety.SafeToRetry,
-            ProcessDiagnosticIdempotencyClassification.Idempotent);
+        return failures;
     }
 
     private static bool TryResolveRequiredProductFileContentCheckPath(

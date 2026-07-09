@@ -2360,6 +2360,322 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
     }
 
     [Fact]
+    public void QualityAccepted_with_full_browser_receipts_and_scaffold_content_routes_repair_branch()
+    {
+        var outputRoot = CreateTempProductRoot();
+        try
+        {
+            var scaffoldPage = Path.Combine(outputRoot, "src", "App", "Pages", "Counter.razor");
+            Directory.CreateDirectory(Path.GetDirectoryName(scaffoldPage)!);
+            File.WriteAllText(scaffoldPage, "@page \"/counter\"");
+            var assignment = CreateQaValidationAssignmentWithBranchAwareCompletionRules(
+                outputRoot,
+                scaffoldPage);
+            var primaryRef = BuildStepArtifactRef(assignment);
+            var executionRunId = Guid.NewGuid();
+
+            var result = ToAdapterResult(
+                assignment,
+                new ProcessStepOutcomeResult
+                {
+                    Status = ProcessStepOutcomeStatus.Completed,
+                    Reason = "QA accepted after full runtime and browser proof, but scaffold content remains.",
+                    BranchOutcomeKey = "quality-accepted",
+                    BranchOutcomeTitle = "Quality accepted",
+                    EvidenceRefs = [primaryRef],
+                    NextActions = [],
+                    HumanReadableSummaryMarkdown = """
+                    Incident root run c4888f4f-eabd-469f-80a6-3fccf6018a12.
+                    Step instance 1ebeadbe-98c9-4e9d-af3b-1e9f69a75c62.
+                    Browser proof ran, but Counter.razor scaffold content remains.
+                    """
+                },
+                CreateFullQaValidationReceipts(primaryRef, executionRunId),
+                executionRunId);
+
+            Assert.Equal(StrategyOutcome.Succeeded, result.Outcome);
+            Assert.Contains(result.ManagerSignals, signal => signal.Code.Value == ProcessBranchSignalCodes.Outcome("repair-required").Value);
+            Assert.Contains(result.Diagnostics, diagnostic => diagnostic.Code.Value == "process.adapter.completion_issue_routed");
+            Assert.DoesNotContain(result.Diagnostics, diagnostic => diagnostic.Code.Value == "process.adapter.product_required_file_content_missing");
+        }
+        finally
+        {
+            DeleteDirectory(outputRoot);
+        }
+    }
+
+    [Fact]
+    public void QualityAccepted_with_full_browser_receipts_requires_acceptance_criteria_ids()
+    {
+        var outputRoot = CreateTempProductRoot();
+        try
+        {
+            var scaffoldPage = Path.Combine(outputRoot, "src", "App", "Pages", "Counter.razor");
+            var assignment = CreateQaValidationAssignmentWithAcceptanceMatrix(outputRoot, scaffoldPage);
+            var primaryRef = BuildStepArtifactRef(assignment);
+            var executionRunId = Guid.NewGuid();
+
+            var result = ToAdapterResult(
+                assignment,
+                new ProcessStepOutcomeResult
+                {
+                    Status = ProcessStepOutcomeStatus.Completed,
+                    Reason = "QA accepted after runtime and browser proof.",
+                    BranchOutcomeKey = "quality-accepted",
+                    BranchOutcomeTitle = "Quality accepted",
+                    EvidenceRefs = [primaryRef],
+                    NextActions = [],
+                    HumanReadableSummaryMarkdown = "Browser proof and build/test proof completed, but no criterion ids were cited."
+                },
+                CreateFullQaValidationReceipts(primaryRef, executionRunId),
+                executionRunId);
+
+            Assert.Equal(StrategyOutcome.NeedsManager, result.Outcome);
+            Assert.Contains(result.Diagnostics, diagnostic =>
+                diagnostic.Code.Value == "process.adapter.acceptance_criteria_missing");
+            Assert.DoesNotContain(result.ManagerSignals, signal =>
+                signal.Code.Value == ProcessBranchSignalCodes.Outcome("quality-accepted").Value);
+        }
+        finally
+        {
+            DeleteDirectory(outputRoot);
+        }
+    }
+
+    [Fact]
+    public void QualityAccepted_with_full_browser_receipts_accepts_criterion_by_criterion_proof()
+    {
+        var outputRoot = CreateTempProductRoot();
+        try
+        {
+            var scaffoldPage = Path.Combine(outputRoot, "src", "App", "Pages", "Counter.razor");
+            var assignment = CreateQaValidationAssignmentWithAcceptanceMatrix(outputRoot, scaffoldPage);
+            var primaryRef = BuildStepArtifactRef(assignment);
+            var executionRunId = Guid.NewGuid();
+
+            var result = ToAdapterResult(
+                assignment,
+                new ProcessStepOutcomeResult
+                {
+                    Status = ProcessStepOutcomeStatus.Completed,
+                    Reason = "QA accepted after proving AC-001 and AC-002.",
+                    BranchOutcomeKey = "quality-accepted",
+                    BranchOutcomeTitle = "Quality accepted",
+                    EvidenceRefs = [primaryRef],
+                    NextActions = [],
+                    HumanReadableSummaryMarkdown = """
+                    AC-001: Browser proof shows falling blocks can move and rotate.
+                    AC-002: Test proof shows completed lines update score.
+                    """
+                },
+                CreateFullQaValidationReceipts(primaryRef, executionRunId),
+                executionRunId);
+
+            Assert.Equal(StrategyOutcome.Succeeded, result.Outcome);
+            Assert.Empty(result.Diagnostics);
+            Assert.Contains(result.ManagerSignals, signal =>
+                signal.Code.Value == ProcessBranchSignalCodes.Outcome("quality-accepted").Value);
+        }
+        finally
+        {
+            DeleteDirectory(outputRoot);
+        }
+    }
+
+    [Fact]
+    public void QualityAccepted_rejects_stale_runtime_host_receipt()
+    {
+        var outputRoot = CreateTempProductRoot();
+        try
+        {
+            var scaffoldPage = Path.Combine(outputRoot, "src", "App", "Pages", "Counter.razor");
+            var assignment = CreateQaValidationAssignmentWithAcceptanceMatrix(outputRoot, scaffoldPage);
+            var primaryRef = BuildStepArtifactRef(assignment);
+            var currentExecutionRunId = Guid.NewGuid();
+            var previousExecutionRunId = Guid.NewGuid();
+
+            var result = ToAdapterResult(
+                assignment,
+                new ProcessStepOutcomeResult
+                {
+                    Status = ProcessStepOutcomeStatus.Completed,
+                    Reason = "QA accepted after proving AC-001 and AC-002.",
+                    BranchOutcomeKey = "quality-accepted",
+                    BranchOutcomeTitle = "Quality accepted",
+                    EvidenceRefs = [primaryRef],
+                    NextActions = [],
+                    HumanReadableSummaryMarkdown = "AC-001 proved. AC-002 proved."
+                },
+                CreateFullQaValidationReceipts(primaryRef, currentExecutionRunId, runtimeExecutionRunId: previousExecutionRunId),
+                currentExecutionRunId);
+
+            Assert.Equal(StrategyOutcome.NeedsManager, result.Outcome);
+            Assert.Contains(result.Diagnostics, diagnostic =>
+                diagnostic.Code.Value == "process.adapter.runtime_lifecycle_correlation_missing");
+            Assert.DoesNotContain(result.ManagerSignals, signal =>
+                signal.Code.Value == ProcessBranchSignalCodes.Outcome("quality-accepted").Value);
+        }
+        finally
+        {
+            DeleteDirectory(outputRoot);
+        }
+    }
+
+    [Fact]
+    public void QualityAccepted_rejects_browser_proof_from_different_runtime_host()
+    {
+        var outputRoot = CreateTempProductRoot();
+        try
+        {
+            var scaffoldPage = Path.Combine(outputRoot, "src", "App", "Pages", "Counter.razor");
+            var assignment = CreateQaValidationAssignmentWithAcceptanceMatrix(outputRoot, scaffoldPage);
+            var primaryRef = BuildStepArtifactRef(assignment);
+            var executionRunId = Guid.NewGuid();
+
+            var result = ToAdapterResult(
+                assignment,
+                new ProcessStepOutcomeResult
+                {
+                    Status = ProcessStepOutcomeStatus.Completed,
+                    Reason = "QA accepted after proving AC-001 and AC-002.",
+                    BranchOutcomeKey = "quality-accepted",
+                    BranchOutcomeTitle = "Quality accepted",
+                    EvidenceRefs = [primaryRef],
+                    NextActions = [],
+                    HumanReadableSummaryMarkdown = "AC-001 proved. AC-002 proved."
+                },
+                CreateFullQaValidationReceipts(
+                    primaryRef,
+                    executionRunId,
+                    hostUrl: "http://127.0.0.1:5173",
+                    browserHostUrl: "http://127.0.0.1:5174"),
+                executionRunId);
+
+            Assert.Equal(StrategyOutcome.NeedsManager, result.Outcome);
+            Assert.Contains(result.Diagnostics, diagnostic =>
+                diagnostic.Code.Value == "process.adapter.runtime_lifecycle_correlation_missing");
+        }
+        finally
+        {
+            DeleteDirectory(outputRoot);
+        }
+    }
+
+    [Fact]
+    public void QualityAccepted_rejects_failed_runtime_stop_receipt()
+    {
+        var outputRoot = CreateTempProductRoot();
+        try
+        {
+            var scaffoldPage = Path.Combine(outputRoot, "src", "App", "Pages", "Counter.razor");
+            var assignment = CreateQaValidationAssignmentWithAcceptanceMatrix(outputRoot, scaffoldPage);
+            var primaryRef = BuildStepArtifactRef(assignment);
+            var executionRunId = Guid.NewGuid();
+
+            var result = ToAdapterResult(
+                assignment,
+                new ProcessStepOutcomeResult
+                {
+                    Status = ProcessStepOutcomeStatus.Completed,
+                    Reason = "QA accepted after proving AC-001 and AC-002.",
+                    BranchOutcomeKey = "quality-accepted",
+                    BranchOutcomeTitle = "Quality accepted",
+                    EvidenceRefs = [primaryRef],
+                    NextActions = [],
+                    HumanReadableSummaryMarkdown = "AC-001 proved. AC-002 proved."
+                },
+                CreateFullQaValidationReceipts(
+                    primaryRef,
+                    executionRunId,
+                    stopExitSummary: "Failed (exit 1): still running process ids: 12345"),
+                executionRunId);
+
+            Assert.Equal(StrategyOutcome.NeedsManager, result.Outcome);
+            Assert.Contains(result.Diagnostics, diagnostic =>
+                diagnostic.Code.Value == "process.adapter.runtime_lifecycle_correlation_missing");
+        }
+        finally
+        {
+            DeleteDirectory(outputRoot);
+        }
+    }
+
+    [Fact]
+    public void RepairRequired_with_deterministic_content_defect_does_not_require_acceptance_browser_receipts()
+    {
+        var outputRoot = CreateTempProductRoot();
+        try
+        {
+            var scaffoldPage = Path.Combine(outputRoot, "src", "App", "Pages", "Counter.razor");
+            Directory.CreateDirectory(Path.GetDirectoryName(scaffoldPage)!);
+            File.WriteAllText(scaffoldPage, "@page \"/counter\"");
+            var assignment = CreateQaValidationAssignmentWithBranchAwareCompletionRules(
+                outputRoot,
+                scaffoldPage);
+            var primaryRef = BuildStepArtifactRef(assignment);
+
+            var result = ToAdapterResult(
+                assignment,
+                new ProcessStepOutcomeResult
+                {
+                    Status = ProcessStepOutcomeStatus.Completed,
+                    Reason = "QA found deterministic scaffold defect evidence and routed repair.",
+                    BranchOutcomeKey = "repair-required",
+                    BranchOutcomeTitle = "Repair required",
+                    EvidenceRefs = [primaryRef],
+                    NextActions = ["Remove scaffold content and rerun validation."]
+                },
+                [CreateToolReceipt("workspace_write_file", primaryRef, "Succeeded: Wrote repair evidence.")]);
+
+            Assert.Equal(StrategyOutcome.Succeeded, result.Outcome);
+            Assert.Contains(result.ManagerSignals, signal => signal.Code.Value == ProcessBranchSignalCodes.Outcome("repair-required").Value);
+            Assert.DoesNotContain(result.Diagnostics, diagnostic => diagnostic.Code.Value == "process.adapter.product_required_tool_receipt_missing");
+            Assert.DoesNotContain(result.Diagnostics, diagnostic => diagnostic.Code.Value == "process.adapter.required_tool_receipt_missing");
+        }
+        finally
+        {
+            DeleteDirectory(outputRoot);
+        }
+    }
+
+    [Fact]
+    public void RepairRequired_without_defect_evidence_and_without_browser_proof_is_not_accepted_as_repair_branch()
+    {
+        var outputRoot = CreateTempProductRoot();
+        try
+        {
+            var page = Path.Combine(outputRoot, "src", "App", "Pages", "Home.razor");
+            Directory.CreateDirectory(Path.GetDirectoryName(page)!);
+            File.WriteAllText(page, "<h1>Implemented app</h1>");
+            var assignment = CreateQaValidationAssignmentWithBranchAwareCompletionRules(
+                outputRoot,
+                page);
+            var primaryRef = BuildStepArtifactRef(assignment);
+
+            var result = ToAdapterResult(
+                assignment,
+                new ProcessStepOutcomeResult
+                {
+                    Status = ProcessStepOutcomeStatus.Completed,
+                    Reason = "QA did not run browser proof and selected repair without concrete defect evidence.",
+                    BranchOutcomeKey = "repair-required",
+                    BranchOutcomeTitle = "Repair required",
+                    EvidenceRefs = [primaryRef],
+                    NextActions = ["Run missing browser proof."]
+                },
+                [CreateToolReceipt("workspace_write_file", primaryRef, "Succeeded: Wrote incomplete QA evidence.")]);
+
+            Assert.Equal(StrategyOutcome.NeedsManager, result.Outcome);
+            Assert.Contains(result.Diagnostics, diagnostic => diagnostic.Code.Value == "process.adapter.branch_outcome_defect_evidence_missing");
+            Assert.DoesNotContain(result.ManagerSignals, signal => signal.Code.Value == ProcessBranchSignalCodes.Outcome("repair-required").Value);
+        }
+        finally
+        {
+            DeleteDirectory(outputRoot);
+        }
+    }
+
+    [Fact]
     public void Quality_repair_completion_enforces_ungated_product_file_content_checks()
     {
         var outputRoot = CreateTempProductRoot();
@@ -5513,6 +5829,177 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
             },
             BranchGate: null,
             DateTimeOffset.UtcNow);
+    }
+
+    private static ProcessRuntimeStepAssignment CreateQaValidationAssignmentWithBranchAwareCompletionRules(
+        string outputRoot,
+        string scaffoldPath)
+    {
+        var baseAssignment = CreateManagedArtifactAssignment(
+            "qa-validation",
+            allowedOperations:
+            [
+                ProcessOperationContractNames.ReadProcessContext,
+                ProcessOperationContractNames.ReadUpstreamArtifacts,
+                ProcessOperationContractNames.RunValidation,
+                ProcessOperationContractNames.LaunchRuntime,
+                ProcessOperationContractNames.CaptureRuntimeProof,
+                ProcessOperationContractNames.WriteManagedProcessArtifacts
+            ]);
+        var receiptRules = JsonSerializer.Serialize(new Dictionary<string, object[]>(StringComparer.Ordinal)
+        {
+            ["qa-validation"] =
+            [
+                BranchAwareReceipt("workspace_dotnet_restore", "quality-accepted"),
+                BranchAwareReceipt("workspace_dotnet_build", "quality-accepted"),
+                BranchAwareReceipt("workspace_dotnet_test", "quality-accepted"),
+                BranchAwareReceipt("workspace_dotnet_run", "quality-accepted"),
+                BranchAwareReceipt("browser_navigate", "quality-accepted"),
+                BranchAwareReceipt("browser_snapshot", "quality-accepted"),
+                BranchAwareReceipt("browser_take_screenshot", "quality-accepted"),
+                BranchAwareReceipt("browser_console_messages", "quality-accepted"),
+                BranchAwareReceipt("workspace_dotnet_stop", "quality-accepted")
+            ]
+        });
+        var contentChecks = JsonSerializer.Serialize(new Dictionary<string, object[]>(StringComparer.Ordinal)
+        {
+            ["qa-validation"] =
+            [
+                new Dictionary<string, object>(StringComparer.Ordinal)
+                {
+                    ["pathCandidates"] = new[] { scaffoldPath },
+                    ["mustExist"] = false,
+                    ["enforceBranchOutcomeKeys"] = new[] { "quality-accepted" },
+                    ["evidenceBranchOutcomeKeys"] = new[] { "repair-required" },
+                    ["forbiddenTextAny"] = new[] { "@page \"/counter\"" }
+                }
+            ]
+        });
+        var routes = JsonSerializer.Serialize(new Dictionary<string, object[]>(StringComparer.Ordinal)
+        {
+            ["qa-validation"] =
+            [
+                new Dictionary<string, object>(StringComparer.Ordinal)
+                {
+                    ["issueCode"] = "process.adapter.product_required_file_content_missing",
+                    ["sourceBranchOutcomeKeys"] = new[] { "quality-accepted" },
+                    ["targetBranchOutcomeKey"] = "repair-required",
+                    ["targetBranchOutcomeTitle"] = "Repair required",
+                    ["requiresDefectEvidence"] = true
+                }
+            ]
+        });
+
+        return baseAssignment with
+        {
+            Prompt = """
+            Branch outcomes:
+            - quality-accepted: Quality accepted - validation and product acceptance proof passed.
+            - repair-required: Repair required - deterministic product defect evidence requires repair.
+            """,
+            LaunchVariables = WithLaunchVariables(
+                baseAssignment,
+                ("ProductRoot", outputRoot),
+                (ProcessRuntimeLaunchVariables.ProductCompletionRequiredToolReceiptsByStep, receiptRules),
+                (ProcessRuntimeLaunchVariables.ProductCompletionRequiredFileContentChecksByStep, contentChecks),
+                (ProcessRuntimeLaunchVariables.CompletionIssueRoutesByStep, routes)),
+            CapabilityScope = new ProcessCapabilityScope
+            {
+                RequiredReceipts =
+                [
+                    CapabilityReceipt("workspace_dotnet_run", "quality-accepted"),
+                    CapabilityReceipt("browser_take_screenshot", "quality-accepted"),
+                    CapabilityReceipt("workspace_dotnet_stop", "quality-accepted")
+                ]
+            }
+        };
+    }
+
+    private static ProcessRuntimeStepAssignment CreateQaValidationAssignmentWithAcceptanceMatrix(
+        string outputRoot,
+        string scaffoldPath)
+    {
+        var assignment = CreateQaValidationAssignmentWithBranchAwareCompletionRules(outputRoot, scaffoldPath);
+        var matrix = new ProcessAcceptanceCriteriaMatrix
+        {
+            Criteria =
+            [
+                new ProcessAcceptanceCriterion
+                {
+                    Id = "AC-001",
+                    SourceNodeId = "custom:tetris",
+                    Summary = "support falling blocks with movement and rotation",
+                    VerificationMethods = ["browser-proof"],
+                    RequiredForAcceptance = true
+                },
+                new ProcessAcceptanceCriterion
+                {
+                    Id = "AC-002",
+                    SourceNodeId = "custom:tetris",
+                    Summary = "clear completed lines and update score",
+                    VerificationMethods = ["unit-test"],
+                    RequiredForAcceptance = true
+                }
+            ]
+        };
+
+        return assignment with
+        {
+            LaunchVariables = WithLaunchVariables(
+                assignment,
+                (ProcessRuntimeLaunchVariables.AcceptanceCriteriaMatrix, ProcessAcceptanceCriteriaMatrixJson.Serialize(matrix)),
+                (ProcessRuntimeLaunchVariables.AcceptanceCriteriaAcceptedBranchOutcomeKeys, "quality-accepted"))
+        };
+    }
+
+    private static Dictionary<string, object> BranchAwareReceipt(
+        string toolName,
+        string branchOutcomeKey)
+        => new(StringComparer.Ordinal)
+        {
+            ["toolName"] = toolName,
+            ["purpose"] = "AcceptanceProof",
+            ["applicableBranchOutcomeKeys"] = new[] { branchOutcomeKey }
+        };
+
+    private static ProcessRequiredToolReceipt CapabilityReceipt(
+        string toolName,
+        string branchOutcomeKey)
+        => new()
+        {
+            Key = $"qa:{branchOutcomeKey}:{toolName}",
+            Kind = ProcessRequiredToolReceiptKind.RuntimeToolName,
+            ToolName = toolName,
+            Purpose = ProcessRequiredToolReceiptPurpose.AcceptanceProof,
+            ApplicableBranchOutcomeKeys = [branchOutcomeKey],
+            Reason = $"Required for branch '{branchOutcomeKey}'."
+        };
+
+    private static IReadOnlyList<ToolExecutionReceiptRecord> CreateFullQaValidationReceipts(
+        string primaryRef,
+        Guid executionRunId,
+        string hostUrl = "http://127.0.0.1:5173",
+        string? startupReceipt = null,
+        string? browserHostUrl = null,
+        Guid? runtimeExecutionRunId = null,
+        string stopExitSummary = "Succeeded (exit 0)")
+    {
+        startupReceipt ??= $"artifacts/process-runs/{Guid.NewGuid():D}/tool-runs/dotnet-run/startup.json";
+        var runtimeRunId = runtimeExecutionRunId ?? executionRunId;
+        browserHostUrl ??= hostUrl;
+        return
+        [
+            CreateToolReceipt("workspace_dotnet_restore", "restore app", "Succeeded (exit 0)", executionRunId: executionRunId),
+            CreateToolReceipt("workspace_dotnet_build", "build app", "Succeeded (exit 0)", executionRunId: executionRunId),
+            CreateToolReceipt("workspace_dotnet_test", "test app", "Succeeded (exit 0)", executionRunId: executionRunId),
+            CreateToolReceipt("workspace_dotnet_run", $"run app; startupReceipt={startupReceipt}; hostUrl={hostUrl}", "Succeeded (exit 0)", executionRunId: runtimeRunId),
+            CreateToolReceipt("browser_navigate", $"open app {browserHostUrl}", "Succeeded (exit 0)", executionRunId: executionRunId),
+            CreateToolReceipt("browser_snapshot", $"snapshot app {browserHostUrl}", "Succeeded (exit 0)", executionRunId: executionRunId),
+            CreateToolReceipt("browser_take_screenshot", $"screenshot app {browserHostUrl}", "Succeeded (exit 0)", executionRunId: executionRunId),
+            CreateToolReceipt("browser_console_messages", $"read console {browserHostUrl}", "Succeeded (exit 0)", executionRunId: executionRunId),
+            CreateToolReceipt("workspace_dotnet_stop", $"stop app; startupReceipt={startupReceipt}; hostUrl={hostUrl}", stopExitSummary, executionRunId: executionRunId),
+            CreateToolReceipt("workspace_write_file", primaryRef, "Succeeded: Wrote QA evidence.", executionRunId: executionRunId)
+        ];
     }
 
     private static IReadOnlyDictionary<string, string> WithLaunchVariables(

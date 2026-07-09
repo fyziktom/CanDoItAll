@@ -595,6 +595,102 @@ public sealed class ProcessRuntimeEngineTests
     }
 
     [Fact]
+    public async Task Branch_defect_evidence_gap_routes_to_current_step_retry()
+    {
+        var unitOfWork = new RecordingUnitOfWork();
+        var engine = new ProcessRuntimeEngine(unitOfWork);
+        var token = DispatchClaimToken.New();
+        var state = NewState(
+            ProcessRuntimeStatus.Active,
+            NewStartStep(ProcessRuntimeStepStatus.Completed),
+            NewActivityStep(ProcessRuntimeStepStatus.Running, activeClaimToken: token),
+            claims:
+            [
+                new DispatchClaimState(
+                    token,
+                    ActivityStepId,
+                    OwnerId,
+                    DispatchClaimStatus.Claimed,
+                    1,
+                    Now,
+                    Now.AddMinutes(5),
+                    null,
+                    null)
+            ]);
+
+        var result = await engine.SubmitStrategyResultAsync(
+            state,
+            Context(Now.AddMinutes(1)),
+            new SubmitStrategyResultCommand(
+                ActivityStepId,
+                OwnerId,
+                token,
+                StrategyResultIdempotencyKey.New(),
+                BranchDefectEvidenceGapNeedsManagerResult()));
+
+        var receipt = Assert.Single(result.State.AppliedResults);
+        var step = result.State.Steps.Single(item => item.StepInstanceId == ActivityStepId);
+        Assert.Equal(ProcessRuntimeStatus.Active, result.State.Status);
+        Assert.Equal(ProcessRuntimeStepStatus.Ready, step.Status);
+        Assert.Equal(ProcessRuntimeStepStatus.Ready, receipt.AppliedStepStatus);
+        Assert.NotNull(receipt.RecoveryDecision);
+        Assert.Equal(ProcessFailureCategory.ProductCompletionGate, receipt.RecoveryDecision.FailureCategory);
+        Assert.Equal(ProcessRecoveryDecisionKind.SafeRetry, receipt.RecoveryDecision.DecisionKind);
+        Assert.Equal(ProcessRecoveryRouteKind.CurrentStepRetry, receipt.RecoveryDecision.RouteKind);
+        Assert.Equal("process.current-step-safe-retry", receipt.RecoveryDecision.Policy);
+        Assert.Contains(result.Events, runtimeEvent => runtimeEvent.EventType == ProcessRuntimeEventTypes.StepReady);
+        Assert.DoesNotContain(result.Events, runtimeEvent => runtimeEvent.EventType == ProcessRuntimeEventTypes.StepBlocked);
+    }
+
+    [Fact]
+    public async Task Runtime_lifecycle_correlation_gap_routes_to_current_step_retry()
+    {
+        var unitOfWork = new RecordingUnitOfWork();
+        var engine = new ProcessRuntimeEngine(unitOfWork);
+        var token = DispatchClaimToken.New();
+        var state = NewState(
+            ProcessRuntimeStatus.Active,
+            NewStartStep(ProcessRuntimeStepStatus.Completed),
+            NewActivityStep(ProcessRuntimeStepStatus.Running, activeClaimToken: token),
+            claims:
+            [
+                new DispatchClaimState(
+                    token,
+                    ActivityStepId,
+                    OwnerId,
+                    DispatchClaimStatus.Claimed,
+                    1,
+                    Now,
+                    Now.AddMinutes(5),
+                    null,
+                    null)
+            ]);
+
+        var result = await engine.SubmitStrategyResultAsync(
+            state,
+            Context(Now.AddMinutes(1)),
+            new SubmitStrategyResultCommand(
+                ActivityStepId,
+                OwnerId,
+                token,
+                StrategyResultIdempotencyKey.New(),
+                RuntimeLifecycleCorrelationGapNeedsManagerResult()));
+
+        var receipt = Assert.Single(result.State.AppliedResults);
+        var step = result.State.Steps.Single(item => item.StepInstanceId == ActivityStepId);
+        Assert.Equal(ProcessRuntimeStatus.Active, result.State.Status);
+        Assert.Equal(ProcessRuntimeStepStatus.Ready, step.Status);
+        Assert.Equal(ProcessRuntimeStepStatus.Ready, receipt.AppliedStepStatus);
+        Assert.NotNull(receipt.RecoveryDecision);
+        Assert.Equal(ProcessRecoveryDecisionKind.SafeRetry, receipt.RecoveryDecision.DecisionKind);
+        Assert.Equal(ProcessRecoveryRouteKind.CurrentStepRetry, receipt.RecoveryDecision.RouteKind);
+        Assert.Equal("process.current-step-safe-retry", receipt.RecoveryDecision.Policy);
+        Assert.Contains(result.Events, runtimeEvent => runtimeEvent.EventType == ProcessRuntimeEventTypes.StepReady);
+        Assert.DoesNotContain(result.Events, runtimeEvent => runtimeEvent.EventType == ProcessRuntimeEventTypes.StepBlocked);
+    }
+
+
+    [Fact]
     public async Task Safe_idempotent_completion_gate_result_escalates_after_same_fingerprint_budget()
     {
         var unitOfWork = new RecordingUnitOfWork();
@@ -1110,6 +1206,52 @@ public sealed class ProcessRuntimeEngineTests
             ],
             [],
             "sha256:completion-gate-safe-retry");
+    }
+
+    private static StrategyResultEnvelope BranchDefectEvidenceGapNeedsManagerResult()
+    {
+        return new StrategyResultEnvelope(
+            StrategyId,
+            "1.0.0",
+            Guid.NewGuid(),
+            StrategyOutcome.NeedsManager,
+            [],
+            [],
+            [
+                new StrategyDiagnosticRef(
+                    new StrategyDiagnosticCode("process.adapter.branch_outcome_defect_evidence_missing"),
+                    StrategyDiagnosticSensitivity.Normal,
+                    "sha256:missing-defect-evidence",
+                    "Selected repair branch lacks deterministic defect evidence.",
+                    RestrictedEvidenceReference: null,
+                    ProcessDiagnosticRetrySafety.SafeToRetry,
+                    ProcessDiagnosticIdempotencyClassification.Idempotent)
+            ],
+            [],
+            "sha256:branch-defect-evidence-gap");
+    }
+
+    private static StrategyResultEnvelope RuntimeLifecycleCorrelationGapNeedsManagerResult()
+    {
+        return new StrategyResultEnvelope(
+            StrategyId,
+            "1.0.0",
+            Guid.NewGuid(),
+            StrategyOutcome.NeedsManager,
+            [],
+            [],
+            [
+                new StrategyDiagnosticRef(
+                    new StrategyDiagnosticCode("process.adapter.runtime_lifecycle_correlation_missing"),
+                    StrategyDiagnosticSensitivity.Normal,
+                    "sha256:runtime-lifecycle-correlation",
+                    "Runtime lifecycle proof is incomplete or stale.",
+                    RestrictedEvidenceReference: null,
+                    ProcessDiagnosticRetrySafety.SafeToRetry,
+                    ProcessDiagnosticIdempotencyClassification.Idempotent)
+            ],
+            [],
+            "sha256:runtime-lifecycle-correlation-gap");
     }
 
     private static StrategyResultEnvelope NeedsManagerResultWithoutDiagnostics()

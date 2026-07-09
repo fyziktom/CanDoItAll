@@ -239,24 +239,20 @@ public sealed class ProcessRuntimeProjectionQueryService(
         CancellationToken cancellationToken)
     {
         var enrichmentCache = new RuntimeRunEnrichmentCache(runtimeStateStore, assignmentStore);
-        var lineage = await BuildResultLineageAsync(
+        var enrichment = await BuildRunDiagnosticEnrichmentAsync(
             detail.RunId,
             enrichmentCache,
             cancellationToken).ConfigureAwait(false);
-        if (lineage.Count == 0)
+        if (enrichment.Lineage.Count == 0)
         {
             return detail;
         }
 
-        var diagnostics = lineage
-            .SelectMany(item => item.Diagnostics)
-            .ToArray();
-
         return detail with
         {
-            Diagnostics = diagnostics,
-            ResultLineage = lineage,
-            RecentEvents = EnrichLiveEvents(detail.RecentEvents, diagnostics)
+            Diagnostics = enrichment.CurrentDiagnostics,
+            ResultLineage = enrichment.Lineage,
+            RecentEvents = EnrichLiveEvents(detail.RecentEvents, enrichment.CurrentDiagnostics)
         };
     }
 
@@ -373,10 +369,8 @@ public sealed class ProcessRuntimeProjectionQueryService(
         RuntimeRunEnrichmentCache enrichmentCache,
         CancellationToken cancellationToken)
     {
-        var lineage = await BuildResultLineageAsync(runId, enrichmentCache, cancellationToken).ConfigureAwait(false);
-        return lineage
-            .SelectMany(item => item.Diagnostics)
-            .ToArray();
+        var enrichment = await BuildRunDiagnosticEnrichmentAsync(runId, enrichmentCache, cancellationToken).ConfigureAwait(false);
+        return enrichment.CurrentDiagnostics;
     }
 
     private async Task<IReadOnlyList<ProcessRuntimeResultLineageProjection>> BuildResultLineageAsync(
@@ -400,6 +394,31 @@ public sealed class ProcessRuntimeProjectionQueryService(
             .ConfigureAwait(false);
 
         return BuildResultLineage(state, assignmentsByStep);
+    }
+
+    private async Task<ProcessRunDiagnosticEnrichment> BuildRunDiagnosticEnrichmentAsync(
+        ProcessRunId runId,
+        RuntimeRunEnrichmentCache enrichmentCache,
+        CancellationToken cancellationToken)
+    {
+        if (!enrichmentCache.CanLoadStates)
+        {
+            return new ProcessRunDiagnosticEnrichment([], []);
+        }
+
+        var state = await enrichmentCache.LoadStateAsync(runId, cancellationToken).ConfigureAwait(false);
+        if (state is null)
+        {
+            return new ProcessRunDiagnosticEnrichment([], []);
+        }
+
+        var assignmentsByStep = await enrichmentCache
+            .LoadAssignmentsByStepAsync(runId, cancellationToken)
+            .ConfigureAwait(false);
+        var lineage = BuildResultLineage(state, assignmentsByStep);
+        return new ProcessRunDiagnosticEnrichment(
+            lineage,
+            BuildCurrentDiagnostics(state, lineage));
     }
 
     private static IReadOnlyList<ProcessRuntimeResultLineageProjection> BuildResultLineage(
@@ -445,6 +464,65 @@ public sealed class ProcessRuntimeProjectionQueryService(
         return lineage;
     }
 
+    private static IReadOnlyList<ProcessRuntimeDiagnosticProjection> BuildCurrentDiagnostics(
+        ProcessRuntimeStateSnapshot state,
+        IReadOnlyList<ProcessRuntimeResultLineageProjection> lineage)
+    {
+        if (lineage.Count == 0)
+        {
+            return [];
+        }
+
+        var currentProblemSteps = state.Steps
+            .Where(step => step.IsExecutable &&
+                           step.Status is ProcessRuntimeStepStatus.Blocked or ProcessRuntimeStepStatus.Failed)
+            .ToDictionary(step => step.StepInstanceId.Value, step => step.Status.ToString());
+        if (currentProblemSteps.Count == 0)
+        {
+            return [];
+        }
+
+        return lineage
+            .Where(item =>
+                currentProblemSteps.TryGetValue(item.StepInstanceId, out var stepStatus) &&
+                string.Equals(item.AppliedStepStatus, stepStatus, StringComparison.Ordinal))
+            .GroupBy(item => item.StepInstanceId)
+            .Select(group => group.Last())
+            .SelectMany(item => item.Diagnostics)
+            .ToArray();
+    }
+
+    private static IReadOnlyList<ProcessRuntimeDiagnosticProjection> BuildCurrentStepDiagnostics(
+        ProcessRuntimeStepState currentStep,
+        IReadOnlyList<ProcessRuntimeResultLineageProjection> stepLineage)
+    {
+        if (stepLineage.Count == 0)
+        {
+            return [];
+        }
+
+        var currentStatus = currentStep.Status.ToString();
+        var currentStatusReceipt = stepLineage
+            .LastOrDefault(item => string.Equals(item.AppliedStepStatus, currentStatus, StringComparison.Ordinal));
+        if (currentStatusReceipt is not null)
+        {
+            return currentStatusReceipt.Diagnostics;
+        }
+
+        if (currentStep.Status == ProcessRuntimeStepStatus.Ready)
+        {
+            var safeRetryReceipt = stepLineage.LastOrDefault(item =>
+                item.RecoveryDecision is
+                {
+                    DecisionKind: nameof(ProcessRecoveryDecisionKind.SafeRetry),
+                    Policy: "process.current-step-safe-retry"
+                });
+            return safeRetryReceipt?.Diagnostics ?? [];
+        }
+
+        return [];
+    }
+
     private static IReadOnlyList<ProcessRuntimeDiagnosticProjection> BuildDiagnostics(
         ProcessRunId runId,
         StrategyResultReceipt receipt,
@@ -473,18 +551,23 @@ public sealed class ProcessRuntimeProjectionQueryService(
 
         return receipt.Diagnostics
             .Select(diagnostic => new ProcessRuntimeDiagnosticProjection(
-                runId.Value,
-                receipt.StepInstanceId.Value,
-                stepKey,
-                receipt.StrategyId.Value,
-                receipt.ResultHash,
-                diagnostic.Code,
-                ClassifyDiagnosticCode(diagnostic.Code),
-                diagnostic.SafeSummary,
-                diagnostic.Sensitivity.ToString(),
-                diagnostic.RetrySafety.ToString(),
-                diagnostic.Idempotency.ToString(),
-                diagnostic.RestrictedEvidenceReference))
+                    runId.Value,
+                    receipt.StepInstanceId.Value,
+                    stepKey,
+                    receipt.StrategyId.Value,
+                    receipt.ResultHash,
+                    diagnostic.Code,
+                    ClassifyDiagnosticCode(diagnostic.Code),
+                    diagnostic.SafeSummary,
+                    diagnostic.Sensitivity.ToString(),
+                    diagnostic.RetrySafety.ToString(),
+                    diagnostic.Idempotency.ToString(),
+                    diagnostic.RestrictedEvidenceReference)
+                {
+                    OperatorDetails = ProcessRuntimeOperatorDiagnosticDetailsBuilder.Create(
+                        diagnostic.Code,
+                        diagnostic.SafeSummary)
+                })
             .ToArray();
     }
 
@@ -611,6 +694,10 @@ public sealed class ProcessRuntimeProjectionQueryService(
         public const string Strategy = "Strategy";
         public const string Unknown = "Unknown";
     }
+
+    private sealed record ProcessRunDiagnosticEnrichment(
+        IReadOnlyList<ProcessRuntimeResultLineageProjection> Lineage,
+        IReadOnlyList<ProcessRuntimeDiagnosticProjection> CurrentDiagnostics);
 
     private sealed class RuntimeRunEnrichmentCache(
         IProcessRuntimeStateStore? runtimeStateStore,
@@ -1039,6 +1126,7 @@ public sealed class ProcessRuntimeProjectionQueryService(
             var stepLineage = BuildResultLineage(state, assignmentsByStep)
                 .Where(item => item.StepInstanceId == currentStep.StepInstanceId.Value)
                 .ToArray();
+            var currentStepDiagnostics = BuildCurrentStepDiagnostics(currentStep, stepLineage);
             enriched.Add(runWithProgress with
             {
                 CurrentStep = CreateCurrentStepProjection(
@@ -1047,7 +1135,7 @@ public sealed class ProcessRuntimeProjectionQueryService(
                     currentStep,
                     assignment,
                     nowUtc,
-                    stepLineage.SelectMany(item => item.Diagnostics).ToArray(),
+                    currentStepDiagnostics,
                     stepLineage.SelectMany(item => item.ProducedArtifacts).ToArray())
             });
         }

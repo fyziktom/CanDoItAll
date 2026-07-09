@@ -148,13 +148,24 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter
 
         if (outcome == StrategyOutcome.Succeeded)
         {
-            var completionGateEvaluation = EvaluateCompletionGates(
+            var completionGateEvaluation = CompletionGateEvaluator.Evaluate(new ProcessCompletionGateContext(
                 assignment,
                 output,
                 toolReceipts,
-                currentExecutionRunId);
+                currentExecutionRunId));
             if (!completionGateEvaluation.IsSatisfied)
             {
+                if (TryCreateRoutedCompletionIssueResult(
+                    assignment,
+                    output,
+                    rawOutputHash,
+                    completionGateEvaluation,
+                    producedArtifactContentHashes,
+                    out var routedResult))
+                {
+                    return routedResult;
+                }
+
                 return NeedsManagerForCompletionIssues(assignment, rawOutputHash, completionGateEvaluation);
             }
         }

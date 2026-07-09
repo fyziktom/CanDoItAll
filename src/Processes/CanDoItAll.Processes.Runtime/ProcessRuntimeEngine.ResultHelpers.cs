@@ -338,7 +338,7 @@ public sealed partial class ProcessRuntimeEngine
             return ProcessFailureCategory.AdapterRetryable;
         }
 
-        if (IsProductCompletionGateDiagnosticCode(code))
+        if (ProcessCompletionGateDiagnosticCatalog.IsCompletionGateDiagnosticCode(code))
         {
             return ProcessFailureCategory.ProductCompletionGate;
         }
@@ -390,15 +390,6 @@ public sealed partial class ProcessRuntimeEngine
         }
 
         return ProcessFailureCategory.Unknown;
-    }
-
-    private static bool IsProductCompletionGateDiagnosticCode(string code)
-    {
-        return code.StartsWith("process.adapter.product_", StringComparison.OrdinalIgnoreCase) ||
-               code.StartsWith("process.adapter.produced_artifact_", StringComparison.OrdinalIgnoreCase) ||
-               code.StartsWith("process.adapter.ungrounded_", StringComparison.OrdinalIgnoreCase) ||
-               string.Equals(code, "process.adapter.required_tool_receipt_missing", StringComparison.OrdinalIgnoreCase) ||
-               string.Equals(code, "process.adapter.completed_outcome_declares_unresolved_blocker", StringComparison.OrdinalIgnoreCase);
     }
 
     private static IReadOnlyList<ProcessRuntimeEventEnvelope> BuildResultEvents(

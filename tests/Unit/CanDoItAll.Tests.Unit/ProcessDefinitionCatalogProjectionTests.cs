@@ -628,6 +628,11 @@ public sealed class ProcessDefinitionCatalogProjectionTests
         Assert.Contains("Capture current-run managed artifacts", qualityRepairDoc, StringComparison.Ordinal);
         Assert.Contains("stock .NET or Blazor starter scaffold", qualityRepairDoc, StringComparison.Ordinal);
         Assert.Contains("default counter/weather routes", qualityRepairDoc, StringComparison.Ordinal);
+        Assert.Contains("process.adapter.product_required_file_content_missing", qualityRepair.Notes, StringComparison.Ordinal);
+        Assert.Contains("mutate and read back affected product files", qualityRepair.Notes, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Runtime gate findings", qualityRepairDoc, StringComparison.Ordinal);
+        Assert.Contains("Do not complete by only describing the issue", qualityRepairDoc, StringComparison.Ordinal);
+        Assert.Contains("placeholder pages that keep `@page \"/counter\"` or `@page \"/weather\"`", qualityRepairDoc, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -838,6 +843,8 @@ public sealed class ProcessDefinitionCatalogProjectionTests
         Assert.Contains("stock scaffold UI", stepDocs, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("missing interaction proof", stepDocs, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("exact current-run receipt refs", stepDocs, StringComparison.Ordinal);
+        Assert.Contains("same `workspace_dotnet_run` startup receipt", stepDocs, StringComparison.Ordinal);
+        Assert.Contains("current-run lifecycle gate", stepDocs, StringComparison.Ordinal);
         Assert.Contains("do not write native absolute product paths", stepDocs, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("tetris", stepDocs, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("tetromino", stepDocs, StringComparison.OrdinalIgnoreCase);

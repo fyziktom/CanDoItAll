@@ -69,6 +69,7 @@ public static class ProcessesModuleServiceCollectionExtensions
         services.TryAddScoped<IProcessLaunchDriverCatalogProvider, StandardProcessLaunchDriverCatalogProvider>();
         services.TryAddScoped<IProcessLaunchExecutorResolver, AgentFrameworkProcessLaunchExecutorResolver>();
         services.TryAddSingleton<ILaunchVariableTemplateResolver, LaunchVariableTemplateResolver>();
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IProcessRecoveryAdviceProvider, GenericProcessRecoveryAdviceProvider>());
         services.TryAddSingleton<IProcessStepRecoveryInstructionBuilder, ProcessStepRecoveryInstructionBuilder>();
         services.TryAddScoped<IProcessRuntimeStepAssignmentRepairService, AgentFrameworkProcessRuntimeStepAssignmentRepairService>();
         services.TryAddScoped<IProcessLaunchArtifactInitializer, WorkspaceProcessLaunchArtifactInitializer>();

@@ -659,6 +659,10 @@
             "Kind": "RuntimeToolName",
             "ToolName": "workspace_dotnet_run",
             "Activation": "WhenLaunchContextDeclaresTool",
+            "Purpose": "AcceptanceProof",
+            "ApplicableBranchOutcomeKeys": [
+              "quality-accepted"
+            ],
             "Reason": "QA must start the app before collecting current-run UI proof when the launch context requires browser validation."
           },
           {
@@ -666,6 +670,10 @@
             "Kind": "RuntimeToolName",
             "ToolName": "browser_navigate",
             "Activation": "WhenLaunchContextDeclaresTool",
+            "Purpose": "AcceptanceProof",
+            "ApplicableBranchOutcomeKeys": [
+              "quality-accepted"
+            ],
             "Reason": "QA browser proof must navigate to a concrete route before accepting UI evidence."
           },
           {
@@ -673,6 +681,10 @@
             "Kind": "RuntimeToolName",
             "ToolName": "browser_snapshot",
             "Activation": "WhenLaunchContextDeclaresTool",
+            "Purpose": "AcceptanceProof",
+            "ApplicableBranchOutcomeKeys": [
+              "quality-accepted"
+            ],
             "Reason": "QA browser proof must include durable browser state for the validated route."
           },
           {
@@ -680,6 +692,10 @@
             "Kind": "RuntimeToolName",
             "ToolName": "browser_take_screenshot",
             "Activation": "WhenLaunchContextDeclaresTool",
+            "Purpose": "AcceptanceProof",
+            "ApplicableBranchOutcomeKeys": [
+              "quality-accepted"
+            ],
             "Reason": "QA browser proof must include a current-run screenshot when UI evidence is required."
           },
           {
@@ -687,6 +703,10 @@
             "Kind": "RuntimeToolName",
             "ToolName": "browser_console_messages",
             "Activation": "WhenLaunchContextDeclaresTool",
+            "Purpose": "AcceptanceProof",
+            "ApplicableBranchOutcomeKeys": [
+              "quality-accepted"
+            ],
             "Reason": "QA browser proof must include console diagnostics for the validated route."
           },
           {
@@ -694,6 +714,10 @@
             "Kind": "RuntimeToolName",
             "ToolName": "workspace_dotnet_stop",
             "Activation": "WhenLaunchContextDeclaresTool",
+            "Purpose": "AcceptanceProof",
+            "ApplicableBranchOutcomeKeys": [
+              "quality-accepted"
+            ],
             "Reason": "QA must clean up any app process started for browser validation."
           },
           {
@@ -701,6 +725,10 @@
             "Kind": "RuntimeToolName",
             "ToolName": "workspace_inspect_image",
             "Activation": "WhenLaunchContextDeclaresTool",
+            "Purpose": "AcceptanceProof",
+            "ApplicableBranchOutcomeKeys": [
+              "quality-accepted"
+            ],
             "Reason": "QA visual comparison must inspect screenshot images before accepting visual evidence."
           },
           {
@@ -708,6 +736,10 @@
             "Kind": "RuntimeToolName",
             "ToolName": "workspace_analyze_image",
             "Activation": "WhenLaunchContextDeclaresTool",
+            "Purpose": "AcceptanceProof",
+            "ApplicableBranchOutcomeKeys": [
+              "quality-accepted"
+            ],
             "Reason": "QA visual claims must be grounded in provider-backed image analysis."
           },
           {
@@ -715,6 +747,10 @@
             "Kind": "RuntimeToolName",
             "ToolName": "workspace_analyze_images",
             "Activation": "WhenLaunchContextDeclaresTool",
+            "Purpose": "AcceptanceProof",
+            "ApplicableBranchOutcomeKeys": [
+              "quality-accepted"
+            ],
             "Reason": "QA must compare delivered screenshots with source visual targets when target images exist."
           }
         ]
@@ -834,7 +870,7 @@
       "Key": "quality-repair",
       "Title": "Repair validation findings",
       "Subtitle": "Focused rework from QA evidence",
-      "Notes": "Repair concrete defects, missing workflows, failed validation, or proof gaps identified by QA without expanding beyond the approved delivery scope.",
+      "Notes": "Repair concrete defects, missing workflows, failed validation, or proof gaps identified by QA without expanding beyond the approved delivery scope. Treat runtime completion-gate findings, including process.adapter.product_required_file_content_missing, as authoritative repair targets. Do not mark repair complete by only rewriting managed artifacts or summaries; mutate and read back affected product files, then verify configured content checks pass before returning.",
       "StepKind": "Work",
       "AllowsManualSkip": false,
       "AllowsSafeRefusal": false,
@@ -949,6 +985,10 @@
             "Kind": "RuntimeToolName",
             "ToolName": "workspace_dotnet_run",
             "Activation": "WhenLaunchContextDeclaresTool",
+            "Purpose": "AcceptanceProof",
+            "ApplicableBranchOutcomeKeys": [
+              "quality-accepted"
+            ],
             "Reason": "QA recheck must start the repaired app before collecting current-run UI proof when the launch context requires browser validation."
           },
           {
@@ -956,6 +996,10 @@
             "Kind": "RuntimeToolName",
             "ToolName": "browser_navigate",
             "Activation": "WhenLaunchContextDeclaresTool",
+            "Purpose": "AcceptanceProof",
+            "ApplicableBranchOutcomeKeys": [
+              "quality-accepted"
+            ],
             "Reason": "QA recheck browser proof must navigate to a concrete route before accepting UI evidence."
           },
           {
@@ -963,6 +1007,10 @@
             "Kind": "RuntimeToolName",
             "ToolName": "browser_snapshot",
             "Activation": "WhenLaunchContextDeclaresTool",
+            "Purpose": "AcceptanceProof",
+            "ApplicableBranchOutcomeKeys": [
+              "quality-accepted"
+            ],
             "Reason": "QA recheck browser proof must include durable browser state for the validated route."
           },
           {
@@ -970,6 +1018,10 @@
             "Kind": "RuntimeToolName",
             "ToolName": "browser_take_screenshot",
             "Activation": "WhenLaunchContextDeclaresTool",
+            "Purpose": "AcceptanceProof",
+            "ApplicableBranchOutcomeKeys": [
+              "quality-accepted"
+            ],
             "Reason": "QA recheck browser proof must include a current-run screenshot when UI evidence is required."
           },
           {
@@ -977,6 +1029,10 @@
             "Kind": "RuntimeToolName",
             "ToolName": "browser_console_messages",
             "Activation": "WhenLaunchContextDeclaresTool",
+            "Purpose": "AcceptanceProof",
+            "ApplicableBranchOutcomeKeys": [
+              "quality-accepted"
+            ],
             "Reason": "QA recheck browser proof must include console diagnostics for the validated route."
           },
           {
@@ -984,6 +1040,10 @@
             "Kind": "RuntimeToolName",
             "ToolName": "workspace_dotnet_stop",
             "Activation": "WhenLaunchContextDeclaresTool",
+            "Purpose": "AcceptanceProof",
+            "ApplicableBranchOutcomeKeys": [
+              "quality-accepted"
+            ],
             "Reason": "QA recheck must clean up any app process started for browser validation."
           },
           {
@@ -991,6 +1051,10 @@
             "Kind": "RuntimeToolName",
             "ToolName": "workspace_inspect_image",
             "Activation": "WhenLaunchContextDeclaresTool",
+            "Purpose": "AcceptanceProof",
+            "ApplicableBranchOutcomeKeys": [
+              "quality-accepted"
+            ],
             "Reason": "QA recheck visual comparison must inspect screenshot images before accepting visual evidence."
           },
           {
@@ -998,6 +1062,10 @@
             "Kind": "RuntimeToolName",
             "ToolName": "workspace_analyze_image",
             "Activation": "WhenLaunchContextDeclaresTool",
+            "Purpose": "AcceptanceProof",
+            "ApplicableBranchOutcomeKeys": [
+              "quality-accepted"
+            ],
             "Reason": "QA recheck visual claims must be grounded in provider-backed image analysis."
           },
           {
@@ -1005,6 +1073,10 @@
             "Kind": "RuntimeToolName",
             "ToolName": "workspace_analyze_images",
             "Activation": "WhenLaunchContextDeclaresTool",
+            "Purpose": "AcceptanceProof",
+            "ApplicableBranchOutcomeKeys": [
+              "quality-accepted"
+            ],
             "Reason": "QA recheck must compare repaired screenshots with source visual targets when target images exist."
           }
         ]

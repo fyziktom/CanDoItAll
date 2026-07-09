@@ -1,5 +1,6 @@
 using System.Text.Json;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.Modules.Workbench;
 using CanDoItAll.Processes.Abstractions;
 using CanDoItAll.Processes.Application;
 using CanDoItAll.Processes.Drivers.Abstractions;
@@ -20,7 +21,7 @@ public sealed class ProcessStepRecoveryInstructionBuilderTests
         var result = CreateIncidentResult();
         var receipt = CreateReceipt(result, CreateSafeRetryDecision());
 
-        var instruction = ProcessStepRecoveryInstructionBuilder.Instance.Build(new ProcessStepRecoveryInstructionBuildRequest(
+        var instruction = CreateBuilder().Build(new ProcessStepRecoveryInstructionBuildRequest(
             RunId,
             StepId,
             assignment.StepKey,
@@ -50,7 +51,7 @@ public sealed class ProcessStepRecoveryInstructionBuilderTests
         };
         var result = CreateIncidentResult();
 
-        var instruction = ProcessStepRecoveryInstructionBuilder.Instance.Build(new ProcessStepRecoveryInstructionBuildRequest(
+        var instruction = CreateBuilder().Build(new ProcessStepRecoveryInstructionBuildRequest(
             RunId,
             StepId,
             assignment.StepKey,
@@ -70,7 +71,7 @@ public sealed class ProcessStepRecoveryInstructionBuilderTests
         var assignment = CreateDotNetAssignment();
         var result = CreateIncidentResult();
 
-        var instruction = ProcessStepRecoveryInstructionBuilder.Instance.Build(new ProcessStepRecoveryInstructionBuildRequest(
+        var instruction = CreateBuilder().Build(new ProcessStepRecoveryInstructionBuildRequest(
             RunId,
             StepId,
             assignment.StepKey,
@@ -87,6 +88,43 @@ public sealed class ProcessStepRecoveryInstructionBuilderTests
     }
 
     [Fact]
+    public void RecoveryInstructionBuilder_project_structure_read_receipt_requires_actual_readback_tool()
+    {
+        var launchVariables = new Dictionary<string, string>(
+            CreateDotNetLaunchVariables($"artifacts/process-runs/{RunId.Value:D}/scripts/create-dotnet-project.ps1"),
+            StringComparer.Ordinal)
+        {
+            [ProcessRuntimeLaunchVariables.ProductCompletionRequiredToolReceipts] = "project_structure_node_create;project_structure_read"
+        };
+        var assignment = CreateDotNetAssignment() with
+        {
+            StepKey = "write-run-command-nodes",
+            LaunchVariables = launchVariables
+        };
+        var result = CreateProjectStructureReadMissingReceiptResult();
+
+        var instruction = CreateBuilder().Build(new ProcessStepRecoveryInstructionBuildRequest(
+            RunId,
+            StepId,
+            assignment.StepKey,
+            assignment,
+            result,
+            CreateReceipt(result, CreateBudgetExhaustedDecision("process.adapter.product_required_tool_receipt_missing")),
+            OperatorReason: string.Empty));
+
+        Assert.True(instruction.HasInstruction);
+        Assert.Contains("project_structure_read", instruction.Text, StringComparison.Ordinal);
+        Assert.Contains("project_structure_node_create", instruction.Text, StringComparison.Ordinal);
+        Assert.Contains("metadataJson", instruction.Text, StringComparison.Ordinal);
+        Assert.Contains("metadata.environment.projectPath", instruction.Text, StringComparison.Ordinal);
+        Assert.Contains("metadata.script.command", instruction.Text, StringComparison.Ordinal);
+        Assert.Contains("Invoke each listed tool in this retry before finalizing", instruction.Text, StringComparison.Ordinal);
+        Assert.Contains("Project-structure readback receipt repair", instruction.Text, StringComparison.Ordinal);
+        Assert.Contains("project_structure_node_create result", instruction.Text, StringComparison.Ordinal);
+        Assert.Contains("not a project_structure_read receipt", instruction.Text, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void RecoveryInstructionBuilder_ungrounded_reference_packet_does_not_use_dotnet_setup_guidance()
     {
         var assignment = CreatePeerReviewAssignment();
@@ -95,7 +133,7 @@ public sealed class ProcessStepRecoveryInstructionBuilderTests
             result,
             CreateSafeRetryDecision("process.adapter.ungrounded_outcome_reference"));
 
-        var instruction = ProcessStepRecoveryInstructionBuilder.Instance.Build(new ProcessStepRecoveryInstructionBuildRequest(
+        var instruction = CreateBuilder().Build(new ProcessStepRecoveryInstructionBuildRequest(
             RunId,
             StepId,
             assignment.StepKey,
@@ -124,7 +162,7 @@ public sealed class ProcessStepRecoveryInstructionBuilderTests
             result,
             CreateSafeRetryDecision("process.adapter.product_required_file_content_missing"));
 
-        var instruction = ProcessStepRecoveryInstructionBuilder.Instance.Build(new ProcessStepRecoveryInstructionBuildRequest(
+        var instruction = CreateBuilder().Build(new ProcessStepRecoveryInstructionBuildRequest(
             RunId,
             StepId,
             assignment.StepKey,
@@ -147,6 +185,40 @@ public sealed class ProcessStepRecoveryInstructionBuilderTests
     }
 
     [Fact]
+    public void RecoveryInstructionBuilder_quality_repair_product_readback_failure_requires_product_mutation_before_completion()
+    {
+        var assignment = CreateQualityRepairAssignment();
+        var result = CreateQualityRepairProductReadbackResult();
+        var receipt = CreateReceipt(
+            result,
+            CreateBudgetExhaustedDecision("process.adapter.product_required_file_content_missing"));
+
+        var instruction = CreateBuilder().Build(new ProcessStepRecoveryInstructionBuildRequest(
+            RunId,
+            StepId,
+            assignment.StepKey,
+            assignment,
+            result,
+            receipt,
+            OperatorReason: string.Empty));
+
+        Assert.True(instruction.HasInstruction);
+        Assert.Contains("must mutate the product files", instruction.Text, StringComparison.Ordinal);
+        Assert.Contains("rewriting artifacts or summaries alone is not a repair", instruction.Text, StringComparison.Ordinal);
+        Assert.Contains("stock .NET or Blazor scaffold", instruction.Text, StringComparison.Ordinal);
+        Assert.Contains("placeholder pages that keep @page \"/counter\" or @page \"/weather\"", instruction.Text, StringComparison.Ordinal);
+        Assert.Contains("read back the affected files", instruction.Text, StringComparison.Ordinal);
+        Assert.Contains("verify every configured required/forbidden text check passes", instruction.Text, StringComparison.Ordinal);
+        Assert.Contains("Read back the affected product files after mutation", instruction.Text, StringComparison.Ordinal);
+        Assert.Contains("external-target/C/programovani/dotnet/output/src/TetrisGame/Layout/NavMenu.razor", instruction.Text, StringComparison.Ordinal);
+        Assert.Contains($"artifacts/process-runs/{RunId.Value:D}/steps/quality-repair.md", instruction.Text, StringComparison.Ordinal);
+        Assert.Contains("and submit Completed", instruction.Text, StringComparison.Ordinal);
+        Assert.DoesNotContain(@"C:\programovani", instruction.Text, StringComparison.Ordinal);
+        Assert.DoesNotContain("branchOutcomeKey", instruction.Text, StringComparison.Ordinal);
+        Assert.DoesNotContain("Read back the solution or product output after the helper runs", instruction.Text, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void RecoveryInstructionBuilder_qa_recheck_missing_receipts_preserves_branch_contract()
     {
         var assignment = CreateQaValidationAssignment("qa-recheck");
@@ -155,7 +227,7 @@ public sealed class ProcessStepRecoveryInstructionBuilderTests
             result,
             CreateBudgetExhaustedDecision("process.adapter.product_required_tool_receipt_missing"));
 
-        var instruction = ProcessStepRecoveryInstructionBuilder.Instance.Build(new ProcessStepRecoveryInstructionBuildRequest(
+        var instruction = CreateBuilder().Build(new ProcessStepRecoveryInstructionBuildRequest(
             RunId,
             StepId,
             assignment.StepKey,
@@ -166,16 +238,98 @@ public sealed class ProcessStepRecoveryInstructionBuilderTests
 
         Assert.True(instruction.HasInstruction);
         Assert.Contains("QA current-run validation receipt repair", instruction.Text, StringComparison.Ordinal);
+        Assert.Contains("Current-run means this exact retry", instruction.Text, StringComparison.Ordinal);
+        Assert.Contains("Do not write the QA artifact or submit a branch outcome until the listed tool receipts exist", instruction.Text, StringComparison.Ordinal);
         Assert.Contains("workspace_dotnet_restore with restore target external-target/C/programovani/dotnet/output/TetrisGame.slnx", instruction.Text, StringComparison.Ordinal);
         Assert.Contains("workspace_dotnet_build with build target external-target/C/programovani/dotnet/output/TetrisGame.slnx", instruction.Text, StringComparison.Ordinal);
         Assert.Contains("workspace_dotnet_test with test target external-target/C/programovani/dotnet/output/tests/TetrisGame.Tests/TetrisGame.Tests.csproj", instruction.Text, StringComparison.Ordinal);
         Assert.Contains("workspace_dotnet_run with run target external-target/C/programovani/dotnet/output/src/TetrisGame/TetrisGame.csproj", instruction.Text, StringComparison.Ordinal);
         Assert.Contains("browser_snapshot", instruction.Text, StringComparison.Ordinal);
         Assert.Contains("workspace_dotnet_stop", instruction.Text, StringComparison.Ordinal);
+        Assert.Contains("same host lifecycle", instruction.Text, StringComparison.Ordinal);
         Assert.Contains("branchOutcomeKey 'quality-accepted' or 'repair-escalation'", instruction.Text, StringComparison.Ordinal);
         Assert.Contains($"artifacts/process-runs/{RunId.Value:D}/steps/qa-recheck.md", instruction.Text, StringComparison.Ordinal);
         Assert.DoesNotContain("Only then rewrite", instruction.Text, StringComparison.Ordinal);
         Assert.DoesNotContain("and submit Completed", instruction.Text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void RecoveryInstructionBuilder_runtime_lifecycle_only_requires_same_retry_proof()
+    {
+        var assignment = CreateQaValidationAssignment("qa-recheck");
+        var result = CreateRuntimeLifecycleCorrelationResult();
+        var receipt = CreateReceipt(
+            result,
+            CreateSafeRetryDecision("process.adapter.runtime_lifecycle_correlation_missing"));
+
+        var instruction = CreateBuilder().Build(new ProcessStepRecoveryInstructionBuildRequest(
+            RunId,
+            StepId,
+            assignment.StepKey,
+            assignment,
+            result,
+            receipt,
+            OperatorReason: string.Empty));
+
+        Assert.True(instruction.HasInstruction);
+        Assert.Contains("Runtime lifecycle proof repair", instruction.Text, StringComparison.Ordinal);
+        Assert.Contains("Current-run runtime/browser proof must be produced in this same retry", instruction.Text, StringComparison.Ordinal);
+        Assert.Contains("Do not reuse prior runtime, browser, screenshot, or stop receipts", instruction.Text, StringComparison.Ordinal);
+        Assert.Contains($"artifacts/process-runs/{RunId.Value:D}/steps/qa-recheck.md", instruction.Text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Generic_recovery_builder_has_no_dotnet_software_delivery_domain_tokens()
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        var source = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "src",
+            "Processes",
+            "CanDoItAll.Processes.Application",
+            "ProcessStepRecoveryInstructionBuilder.cs"));
+
+        var forbiddenTokens = new[]
+        {
+            "workspace_dotnet_",
+            "workspace_pwsh_run_script",
+            "workspace_dotnet_new",
+            "qa-validation",
+            "qa-recheck",
+            "quality-accepted",
+            "repair-required",
+            "repair-escalation",
+            "Blazor",
+            "Tetris"
+        };
+
+        foreach (var forbiddenToken in forbiddenTokens)
+        {
+            Assert.DoesNotContain(forbiddenToken, source, StringComparison.OrdinalIgnoreCase);
+        }
+    }
+
+    private static ProcessStepRecoveryInstructionBuilder CreateBuilder()
+        => new(
+            [
+                new GenericProcessRecoveryAdviceProvider(),
+                new DotNetSoftwareDeliveryRecoveryAdviceProvider()
+            ]);
+
+    private static string FindRepositoryRoot()
+    {
+        var directory = new DirectoryInfo(AppContext.BaseDirectory);
+        while (directory is not null)
+        {
+            if (File.Exists(Path.Combine(directory.FullName, "CanDoItAll.slnx")))
+            {
+                return directory.FullName;
+            }
+
+            directory = directory.Parent;
+        }
+
+        throw new DirectoryNotFoundException("Could not locate repository root.");
     }
 
     private static ProcessRuntimeStepAssignment CreateDotNetAssignment()
@@ -257,6 +411,35 @@ public sealed class ProcessStepRecoveryInstructionBuilderTests
                 ProcessOperationContractNames.WriteManagedProcessArtifacts
             ],
             ProcessOperationContractNames.ExternalProductTargetReadOnly,
+            CreateQaLaunchVariables(),
+            BranchGate: null,
+            DateTimeOffset.UtcNow);
+
+    private static ProcessRuntimeStepAssignment CreateQualityRepairAssignment()
+        => new(
+            RunId,
+            PlanId,
+            StepId,
+            "quality-repair",
+            "lead-engineer",
+            "lead-engineer",
+            "Lead engineer",
+            ProcessLaunchExecutorKinds.Agent,
+            "agent",
+            "Agent",
+            "Repair QA validation findings.",
+            "sha256:readiness",
+            "test",
+            [],
+            [],
+            [
+                ProcessOperationContractNames.ReadProcessContext,
+                ProcessOperationContractNames.ReadUpstreamArtifacts,
+                ProcessOperationContractNames.MutateProductTarget,
+                ProcessOperationContractNames.RunValidation,
+                ProcessOperationContractNames.WriteManagedProcessArtifacts
+            ],
+            ProcessOperationContractNames.ExternalProductTargetMutable,
             CreateQaLaunchVariables(),
             BranchGate: null,
             DateTimeOffset.UtcNow);
@@ -387,6 +570,34 @@ public sealed class ProcessStepRecoveryInstructionBuilderTests
             "sha256:ungrounded");
     }
 
+    private static StrategyResultEnvelope CreateProjectStructureReadMissingReceiptResult()
+    {
+        return new StrategyResultEnvelope(
+            new StrategyId("strategy.execute"),
+            "1.0.0",
+            Guid.NewGuid(),
+            StrategyOutcome.NeedsManager,
+            [],
+            [],
+            [
+                new StrategyDiagnosticRef(
+                    new StrategyDiagnosticCode("process.adapter.product_required_tool_receipt_missing"),
+                    StrategyDiagnosticSensitivity.Normal,
+                    "sha256:project-structure-read",
+                    "Step 'write-run-command-nodes' claimed completion but required current-run product tool receipt(s) are missing: project_structure_read.",
+                    RestrictedEvidenceReference: null,
+                    ProcessDiagnosticRetrySafety.SafeToRetry,
+                    ProcessDiagnosticIdempotencyClassification.Idempotent)
+            ],
+            [
+                new ManagerSignal(
+                    new ManagerSignalCode("process.adapter.product_required_tool_receipt_missing"),
+                    "sha256:project-structure-read",
+                    "Project structure readback receipt is missing.")
+            ],
+            "sha256:project-structure-read");
+    }
+
     private static StrategyResultEnvelope CreateQaProductReadbackResult()
     {
         return new StrategyResultEnvelope(
@@ -413,6 +624,34 @@ public sealed class ProcessStepRecoveryInstructionBuilderTests
                     "Product content readback failed.")
             ],
             "sha256:qa-readback");
+    }
+
+    private static StrategyResultEnvelope CreateQualityRepairProductReadbackResult()
+    {
+        return new StrategyResultEnvelope(
+            new StrategyId("strategy.execute"),
+            "1.0.0",
+            Guid.NewGuid(),
+            StrategyOutcome.NeedsManager,
+            [],
+            [],
+            [
+                new StrategyDiagnosticRef(
+                    new StrategyDiagnosticCode("process.adapter.product_required_file_content_missing"),
+                    StrategyDiagnosticSensitivity.Normal,
+                    "sha256:repair-readback",
+                    @"Step 'quality-repair' claimed completion but required product file content/readback check(s) failed: C:\programovani\dotnet\output\src\TetrisGame\Layout\NavMenu.razor contains forbidden text [href=""counter""].",
+                    RestrictedEvidenceReference: null,
+                    ProcessDiagnosticRetrySafety.SafeToRetry,
+                    ProcessDiagnosticIdempotencyClassification.Idempotent)
+            ],
+            [
+                new ManagerSignal(
+                    new ManagerSignalCode("process.adapter.product_required_file_content_missing"),
+                    "sha256:repair-readback",
+                    "Product content readback failed.")
+            ],
+            "sha256:repair-readback");
     }
 
     private static StrategyResultEnvelope CreateQaRecheckMissingReceiptResult()
@@ -449,6 +688,34 @@ public sealed class ProcessStepRecoveryInstructionBuilderTests
                     "Missing QA recheck receipts.")
             ],
             "sha256:qa-receipts");
+    }
+
+    private static StrategyResultEnvelope CreateRuntimeLifecycleCorrelationResult()
+    {
+        return new StrategyResultEnvelope(
+            new StrategyId("strategy.execute"),
+            "1.0.0",
+            Guid.NewGuid(),
+            StrategyOutcome.NeedsManager,
+            [],
+            [],
+            [
+                new StrategyDiagnosticRef(
+                    new StrategyDiagnosticCode("process.adapter.runtime_lifecycle_correlation_missing"),
+                    StrategyDiagnosticSensitivity.Normal,
+                    "sha256:runtime-lifecycle",
+                    "Runtime/browser proof was not produced by the current execution-run host lifecycle.",
+                    RestrictedEvidenceReference: null,
+                    ProcessDiagnosticRetrySafety.SafeToRetry,
+                    ProcessDiagnosticIdempotencyClassification.Idempotent)
+            ],
+            [
+                new ManagerSignal(
+                    new ManagerSignalCode("process.adapter.runtime_lifecycle_correlation_missing"),
+                    "sha256:runtime-lifecycle",
+                    "Runtime lifecycle proof was stale.")
+            ],
+            "sha256:runtime-lifecycle");
     }
 
     private static StrategyResultReceipt CreateReceipt(

@@ -1,7 +1,7 @@
-using System.Text;
-using System.Text.Json;
 using System.Text.RegularExpressions;
+using System.Text.Json;
 using CanDoItAll.Processes.Abstractions;
+using CanDoItAll.Processes.Contracts;
 using CanDoItAll.Processes.Drivers.Abstractions;
 using CanDoItAll.Processes.Runtime;
 
@@ -35,6 +35,62 @@ public interface IProcessStepRecoveryInstructionBuilder
     ProcessStepRecoveryInstruction Build(ProcessStepRecoveryInstructionBuildRequest request);
 }
 
+public sealed record ProcessRecoveryDiagnosticFact(
+    string Code,
+    string EvidenceHash,
+    string Summary,
+    ProcessDiagnosticRetrySafety RetrySafety,
+    ProcessDiagnosticIdempotencyClassification Idempotency);
+
+public sealed record ProcessStepRecoveryAdviceContext(
+    ProcessStepRecoveryInstructionBuildRequest Request,
+    IReadOnlyList<ProcessRecoveryDiagnosticFact> Diagnostics);
+
+public interface IProcessRecoveryAdviceProvider
+{
+    bool CanHandle(ProcessStepRecoveryAdviceContext context);
+
+    IReadOnlyList<string> BuildAdvice(ProcessStepRecoveryAdviceContext context);
+}
+
+public sealed class GenericProcessRecoveryAdviceProvider : IProcessRecoveryAdviceProvider
+{
+    private const string ProductRequiredFileContentMissingCode = "process.adapter.product_required_file_content_missing";
+
+    public bool CanHandle(ProcessStepRecoveryAdviceContext context)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+
+        return context.Diagnostics.Any(diagnostic =>
+            IsRequiredToolReceiptDiagnostic(diagnostic.Code) ||
+            string.Equals(diagnostic.Code, ProductRequiredFileContentMissingCode, StringComparison.Ordinal));
+    }
+
+    public IReadOnlyList<string> BuildAdvice(ProcessStepRecoveryAdviceContext context)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+
+        var lines = new List<string>();
+        if (context.Diagnostics.Any(diagnostic => IsRequiredToolReceiptDiagnostic(diagnostic.Code)))
+        {
+            lines.Add("Generic receipt recovery: satisfy the missing current-run receipt contract before rewriting the managed artifact or returning a final outcome.");
+        }
+
+        if (context.Diagnostics.Any(diagnostic => string.Equals(diagnostic.Code, ProductRequiredFileContentMissingCode, StringComparison.Ordinal)))
+        {
+            lines.Add("Generic product readback recovery: inspect the configured product checks and use process route metadata to decide whether the evidence is a product defect, same-step omission, or blocker.");
+        }
+
+        return lines;
+    }
+
+    private static bool IsRequiredToolReceiptDiagnostic(string code)
+        => string.Equals(code, "process.adapter.product_required_tool_receipt_missing", StringComparison.Ordinal) ||
+           string.Equals(code, "process.adapter.product_required_tool_receipt_blocked_retry", StringComparison.Ordinal) ||
+           string.Equals(code, "process.adapter.required_tool_receipt_missing", StringComparison.Ordinal) ||
+           string.Equals(code, "process.adapter.required_tool_receipt_blocked_retry", StringComparison.Ordinal);
+}
+
 public sealed class ProcessStepRecoveryInstructionBuilder : IProcessStepRecoveryInstructionBuilder
 {
     private const string ProductRequiredToolReceiptMissingCode = "process.adapter.product_required_tool_receipt_missing";
@@ -42,23 +98,24 @@ public sealed class ProcessStepRecoveryInstructionBuilder : IProcessStepRecovery
     private const string RequiredToolReceiptMissingCode = "process.adapter.required_tool_receipt_missing";
     private const string RequiredToolReceiptBlockedRetryCode = "process.adapter.required_tool_receipt_blocked_retry";
     private const string ProductRequiredFileContentMissingCode = "process.adapter.product_required_file_content_missing";
+    private const string RuntimeLifecycleCorrelationMissingCode = "process.adapter.runtime_lifecycle_correlation_missing";
     private const string UngroundedOutcomeReferenceCode = "process.adapter.ungrounded_outcome_reference";
     private const string UngroundedManagedArtifactReferenceCode = "process.adapter.ungrounded_managed_artifact_reference";
-    private const string WorkspacePwshRunScriptToolName = "workspace_pwsh_run_script";
-    private const string WorkspaceDotNetNewToolName = "workspace_dotnet_new";
-    private const string WorkspaceAliasVariableName = "WorkspaceAlias";
-    private const string ProductRootVariableName = "ProductRoot";
-    private const string OutputRootVariableName = "OutputRoot";
-    private const string ProductRootAliasVariableName = "ProductRootAlias";
-    private const string OutputRootAliasVariableName = "OutputRootAlias";
-    private const string ExternalTargetRootVariableName = "ExternalTargetRoot";
-    private const string QaValidationStepKey = "qa-validation";
-    private const string QaRecheckStepKey = "qa-recheck";
-    private const string QualityAcceptedBranchOutcomeKey = "quality-accepted";
-    private const string RepairRequiredBranchOutcomeKey = "repair-required";
-    private const string RepairEscalationBranchOutcomeKey = "repair-escalation";
-    private const string DotNetCreateProjectPrefix = "DotNetCreateProject";
     private static readonly Regex UnresolvedPlaceholderRegex = new(@"\{[A-Za-z][A-Za-z0-9_.:-]*\}", RegexOptions.CultureInvariant);
+
+    private readonly IReadOnlyList<IProcessRecoveryAdviceProvider> adviceProviders;
+
+    public ProcessStepRecoveryInstructionBuilder()
+        : this([new GenericProcessRecoveryAdviceProvider()])
+    {
+    }
+
+    public ProcessStepRecoveryInstructionBuilder(IEnumerable<IProcessRecoveryAdviceProvider> adviceProviders)
+    {
+        ArgumentNullException.ThrowIfNull(adviceProviders);
+
+        this.adviceProviders = adviceProviders.ToArray();
+    }
 
     public static ProcessStepRecoveryInstructionBuilder Instance { get; } = new();
 
@@ -81,10 +138,11 @@ public sealed class ProcessStepRecoveryInstructionBuilder : IProcessStepRecovery
         AddRecoveryDecision(lines, request.Receipt?.RecoveryDecision);
         AddDiagnosticCodes(lines, diagnostics);
         AddRequiredReceiptGuidance(lines, request.Assignment, diagnostics);
-        AddProductReadbackGuidance(lines, request.Assignment, diagnostics);
+        AddProductReadbackGuidance(lines, diagnostics);
         AddUngroundedReferenceGuidance(lines, request, diagnostics);
-        var addedDotNetGuidance = AddDotNetCreateProjectGuidance(lines, request.Assignment, diagnostics);
-        AddPrimaryArtifactGuidance(lines, request, diagnostics, addedDotNetGuidance);
+        AddRuntimeLifecycleGuidance(lines, diagnostics);
+        var providerAddedAdvice = AddProviderAdvice(lines, new ProcessStepRecoveryAdviceContext(request, diagnostics));
+        AddPrimaryArtifactGuidance(lines, request, diagnostics, providerAddedAdvice);
 
         var text = string.Join(
             Environment.NewLine,
@@ -96,13 +154,13 @@ public sealed class ProcessStepRecoveryInstructionBuilder : IProcessStepRecovery
             : new ProcessStepRecoveryInstruction(text);
     }
 
-    private static IEnumerable<RecoveryDiagnosticFact> CollectDiagnostics(ProcessStepRecoveryInstructionBuildRequest request)
+    private static IEnumerable<ProcessRecoveryDiagnosticFact> CollectDiagnostics(ProcessStepRecoveryInstructionBuildRequest request)
     {
         if (request.StrategyResult is not null)
         {
             foreach (var diagnostic in request.StrategyResult.Diagnostics)
             {
-                yield return new RecoveryDiagnosticFact(
+                yield return new ProcessRecoveryDiagnosticFact(
                     diagnostic.Code.Value,
                     diagnostic.EvidenceHash,
                     diagnostic.SafeSummary,
@@ -118,7 +176,7 @@ public sealed class ProcessStepRecoveryInstructionBuilder : IProcessStepRecovery
 
         foreach (var diagnostic in request.Receipt.Diagnostics)
         {
-            yield return new RecoveryDiagnosticFact(
+            yield return new ProcessRecoveryDiagnosticFact(
                 diagnostic.Code,
                 diagnostic.EvidenceHash,
                 diagnostic.SafeSummary,
@@ -127,9 +185,10 @@ public sealed class ProcessStepRecoveryInstructionBuilder : IProcessStepRecovery
         }
     }
 
-    private static bool IsDiagnosticRecoveryCandidate(RecoveryDiagnosticFact diagnostic)
+    private static bool IsDiagnosticRecoveryCandidate(ProcessRecoveryDiagnosticFact diagnostic)
         => IsRequiredToolReceiptDiagnostic(diagnostic.Code) ||
            string.Equals(diagnostic.Code, ProductRequiredFileContentMissingCode, StringComparison.Ordinal) ||
+           string.Equals(diagnostic.Code, RuntimeLifecycleCorrelationMissingCode, StringComparison.Ordinal) ||
            diagnostic.Code.StartsWith("process.adapter.product_", StringComparison.Ordinal) ||
            diagnostic.Code.StartsWith("process.adapter.produced_artifact_", StringComparison.Ordinal) ||
            diagnostic.Code.StartsWith("process.adapter.ungrounded_", StringComparison.Ordinal);
@@ -164,7 +223,7 @@ public sealed class ProcessStepRecoveryInstructionBuilder : IProcessStepRecovery
         }
     }
 
-    private static void AddDiagnosticCodes(List<string> lines, IReadOnlyList<RecoveryDiagnosticFact> diagnostics)
+    private static void AddDiagnosticCodes(List<string> lines, IReadOnlyList<ProcessRecoveryDiagnosticFact> diagnostics)
     {
         lines.Add("Diagnostic codes:");
         foreach (var diagnostic in diagnostics.DistinctBy(diagnostic => diagnostic.Code))
@@ -179,7 +238,7 @@ public sealed class ProcessStepRecoveryInstructionBuilder : IProcessStepRecovery
     private static void AddRequiredReceiptGuidance(
         List<string> lines,
         ProcessRuntimeStepAssignment assignment,
-        IReadOnlyList<RecoveryDiagnosticFact> diagnostics)
+        IReadOnlyList<ProcessRecoveryDiagnosticFact> diagnostics)
     {
         if (!diagnostics.Any(diagnostic => IsRequiredToolReceiptDiagnostic(diagnostic.Code)))
         {
@@ -204,18 +263,12 @@ public sealed class ProcessStepRecoveryInstructionBuilder : IProcessStepRecovery
             lines.Add($"- {receipt}");
         }
 
-        AddQaValidationReceiptGuidance(lines, assignment, requiredReceipts);
-
-        if (requiredReceipts.Any(receipt => string.Equals(receipt, WorkspacePwshRunScriptToolName, StringComparison.OrdinalIgnoreCase)))
-        {
-            lines.Add($"Observed scaffold receipts such as {WorkspaceDotNetNewToolName} are not proof of solution membership; the retry must produce the missing {WorkspacePwshRunScriptToolName} receipt in the current run.");
-        }
+        lines.Add("Invoke each listed tool in this retry before finalizing; prior artifacts, summaries, planned actions, or text claiming verification are not current-run tool receipts.");
     }
 
     private static void AddProductReadbackGuidance(
         List<string> lines,
-        ProcessRuntimeStepAssignment assignment,
-        IReadOnlyList<RecoveryDiagnosticFact> diagnostics)
+        IReadOnlyList<ProcessRecoveryDiagnosticFact> diagnostics)
     {
         var readbackDiagnostics = diagnostics
             .Where(diagnostic => string.Equals(diagnostic.Code, ProductRequiredFileContentMissingCode, StringComparison.Ordinal))
@@ -226,58 +279,16 @@ public sealed class ProcessStepRecoveryInstructionBuilder : IProcessStepRecovery
         }
 
         lines.Add("Product readback failure(s):");
-        var shouldSelectRepairBranch = ShouldSelectQaDefectBranch(assignment, diagnostics);
         foreach (var diagnostic in readbackDiagnostics)
         {
-            lines.Add(shouldSelectRepairBranch
-                ? $"- {diagnostic.Code}: product content/readback check failed; use the configured checks below and do not copy native diagnostic paths into evidence."
-                : $"- {diagnostic.Summary}");
-        }
-
-        if (shouldSelectRepairBranch)
-        {
-            var productAlias = ResolveProductRootAlias(assignment.LaunchVariables);
-            var aliasGuidance = string.IsNullOrWhiteSpace(productAlias)
-                ? "grounded external-target aliases or product-root-relative file names"
-                : $"grounded product alias {productAlias} or product-root-relative file names";
-            lines.Add($"Use {aliasGuidance} in the QA artifact and final outcome. Do not copy native absolute product paths from diagnostics or launch variables.");
-            var defectBranchOutcomeKey = ResolveQaDefectBranchOutcomeKey(assignment.StepKey);
-            lines.Add($"QA repair branch decision: a product content/readback failure is a concrete implementation defect for this step. Do not return Blocked and do not submit quality-accepted. Submit a completed process-step outcome with branchOutcomeKey '{defectBranchOutcomeKey}'.");
-        }
-
-        var checks = ResolveFileContentChecks(assignment.LaunchVariables, assignment.StepKey);
-        foreach (var check in checks)
-        {
-            if (!string.IsNullOrWhiteSpace(check.Description))
-            {
-                lines.Add($"Configured content check: {check.Description}.");
-            }
-
-            var groundedPathCandidates = ResolveGroundedPathCandidates(check.PathCandidates, assignment.LaunchVariables);
-            var pathText = groundedPathCandidates.Count == 0
-                ? "configured product file"
-                : string.Join(" | ", groundedPathCandidates);
-            foreach (var requiredGroup in check.RequiredTextAnyGroups)
-            {
-                if (requiredGroup.Count == 0)
-                {
-                    continue;
-                }
-
-                lines.Add($"Verify readback for {pathText} contains one of: {string.Join(" | ", requiredGroup)}.");
-            }
-
-            if (check.ForbiddenTextAny.Count > 0)
-            {
-                lines.Add($"Failed content must be treated as repair-required when {pathText} contains any forbidden text: {string.Join(" | ", check.ForbiddenTextAny)}.");
-            }
+            lines.Add($"- {diagnostic.Code}: product content/readback check failed; use configured product checks and cite grounded evidence.");
         }
     }
 
     private static void AddUngroundedReferenceGuidance(
         List<string> lines,
         ProcessStepRecoveryInstructionBuildRequest request,
-        IReadOnlyList<RecoveryDiagnosticFact> diagnostics)
+        IReadOnlyList<ProcessRecoveryDiagnosticFact> diagnostics)
     {
         if (!diagnostics.Any(diagnostic => IsUngroundedReferenceDiagnostic(diagnostic.Code)))
         {
@@ -293,225 +304,61 @@ public sealed class ProcessStepRecoveryInstructionBuilder : IProcessStepRecovery
         lines.Add("Overwrite the managed artifact too if it repeats the rejected path-like strings.");
     }
 
-    private static bool AddDotNetCreateProjectGuidance(
+    private static void AddRuntimeLifecycleGuidance(
         List<string> lines,
-        ProcessRuntimeStepAssignment assignment,
-        IReadOnlyList<RecoveryDiagnosticFact> diagnostics)
+        IReadOnlyList<ProcessRecoveryDiagnosticFact> diagnostics)
     {
-        if (!ShouldAddDotNetCreateProjectGuidance(assignment, diagnostics))
+        if (!diagnostics.Any(diagnostic => string.Equals(diagnostic.Code, RuntimeLifecycleCorrelationMissingCode, StringComparison.Ordinal)))
         {
-            return false;
+            return;
         }
 
-        if (!TryResolveScriptVariables(
-                assignment,
-                out var scriptVariableName,
-                out var scriptRefVariableName,
-                out var manifestVariableName))
-        {
-            return false;
-        }
-
-        var scriptRef = TryGetResolvedVariable(assignment.LaunchVariables, scriptRefVariableName);
-        if (string.IsNullOrWhiteSpace(scriptRef))
-        {
-            lines.Add($"Resolved {scriptRefVariableName} is unavailable; fix launch variable resolution before retrying this diagnostic.");
-            return false;
-        }
-
-        lines.Add($"Write {scriptVariableName} verbatim to {scriptRef}.");
-        lines.Add("Verify that script ref with workspace_stat_path or workspace_read_file before invoking it.");
-
-        var workspaceAlias = TryGetResolvedVariable(assignment.LaunchVariables, WorkspaceAliasVariableName) ?? WorkspaceAliasVariableName;
-        var manifestGuidance = !string.IsNullOrWhiteSpace(manifestVariableName) &&
-                               TryGetResolvedVariable(assignment.LaunchVariables, manifestVariableName) is not null
-            ? $" and sideEffectManifest from {manifestVariableName}"
-            : string.Empty;
-        lines.Add($"Invoke {WorkspacePwshRunScriptToolName} with script path {scriptRef}, workingDirectory {workspaceAlias}{manifestGuidance}.");
-        lines.Add($"Do not rerun {WorkspaceDotNetNewToolName} with force=true unless contracted files are missing.");
-        return true;
+        lines.Add("Runtime lifecycle proof repair:");
+        lines.Add("Current-run runtime/browser proof must be produced in this same retry: start the product, navigate the browser to the host URL returned by that start receipt, capture browser state/screenshot/console proof, and stop the same runtime startup receipt.");
+        lines.Add("Do not reuse prior runtime, browser, screenshot, or stop receipts, and do not submit an accepted branch until those current-run receipts exist.");
     }
 
-    private static bool ShouldAddDotNetCreateProjectGuidance(
-        ProcessRuntimeStepAssignment assignment,
-        IReadOnlyList<RecoveryDiagnosticFact> diagnostics)
-        => diagnostics.Any(diagnostic =>
-            IsRequiredToolReceiptDiagnostic(diagnostic.Code) ||
-            string.Equals(diagnostic.Code, ProductRequiredFileContentMissingCode, StringComparison.Ordinal)) &&
-           !ShouldSelectQaDefectBranch(assignment, diagnostics);
+    private bool AddProviderAdvice(List<string> lines, ProcessStepRecoveryAdviceContext context)
+    {
+        var added = false;
+        foreach (var provider in adviceProviders.Where(provider => provider.CanHandle(context)))
+        {
+            foreach (var line in provider.BuildAdvice(context))
+            {
+                if (string.IsNullOrWhiteSpace(line))
+                {
+                    continue;
+                }
+
+                lines.Add(line);
+                added = true;
+            }
+        }
+
+        return added;
+    }
 
     private static void AddPrimaryArtifactGuidance(
         List<string> lines,
         ProcessStepRecoveryInstructionBuildRequest request,
-        IReadOnlyList<RecoveryDiagnosticFact> diagnostics,
-        bool addedDotNetGuidance)
+        IReadOnlyList<ProcessRecoveryDiagnosticFact> diagnostics,
+        bool providerAddedAdvice)
     {
-        var primaryArtifactRef = BuildPrimaryArtifactRef(request);
-        if (ShouldSelectQaDefectBranch(request.Assignment, diagnostics))
+        if (providerAddedAdvice)
         {
-            var defectBranchOutcomeKey = ResolveQaDefectBranchOutcomeKey(request.Assignment.StepKey);
-            lines.Add($"Rewrite {primaryArtifactRef} with the QA defect disposition and submit a completed process-step outcome with branchOutcomeKey '{defectBranchOutcomeKey}'.");
             return;
         }
 
-        if (ShouldPreserveQaBranchOutcomeAfterReceiptRepair(request.Assignment, diagnostics))
+        if (diagnostics.Any(diagnostic => string.Equals(diagnostic.Code, ProductRequiredFileContentMissingCode, StringComparison.Ordinal)))
         {
-            var defectBranchOutcomeKey = ResolveQaDefectBranchOutcomeKey(request.Assignment.StepKey);
-            lines.Add($"Only after the current-run receipt contract is satisfied, rewrite {primaryArtifactRef} and submit a completed process-step outcome with branchOutcomeKey '{QualityAcceptedBranchOutcomeKey}' or '{defectBranchOutcomeKey}' based on the validation evidence.");
-            return;
+            lines.Add("Read back the affected product output and verify the configured completion gate passes.");
         }
 
-        if (addedDotNetGuidance ||
-            diagnostics.Any(diagnostic => string.Equals(diagnostic.Code, ProductRequiredFileContentMissingCode, StringComparison.Ordinal)))
-        {
-            lines.Add("Read back the solution or product output after the helper runs and verify the required membership/content check passes.");
-        }
-
-        lines.Add($"Only then rewrite {primaryArtifactRef} and submit Completed.");
+        lines.Add($"Only then rewrite {BuildPrimaryArtifactRef(request)} and submit Completed.");
     }
 
     private static string BuildPrimaryArtifactRef(ProcessStepRecoveryInstructionBuildRequest request)
         => $"artifacts/process-runs/{request.RunId.Value:D}/steps/{request.StepKey}.md";
-
-    private static bool ShouldSelectQaDefectBranch(
-        ProcessRuntimeStepAssignment assignment,
-        IReadOnlyList<RecoveryDiagnosticFact> diagnostics)
-        => IsQaBranchDecisionStep(assignment.StepKey) &&
-           diagnostics.Any(diagnostic => string.Equals(diagnostic.Code, ProductRequiredFileContentMissingCode, StringComparison.Ordinal));
-
-    private static bool IsQaBranchDecisionStep(string stepKey)
-        => string.Equals(stepKey, QaValidationStepKey, StringComparison.Ordinal) ||
-           string.Equals(stepKey, QaRecheckStepKey, StringComparison.Ordinal);
-
-    private static bool ShouldPreserveQaBranchOutcomeAfterReceiptRepair(
-        ProcessRuntimeStepAssignment assignment,
-        IReadOnlyList<RecoveryDiagnosticFact> diagnostics)
-        => IsQaBranchDecisionStep(assignment.StepKey) &&
-           diagnostics.Any(diagnostic => IsRequiredToolReceiptDiagnostic(diagnostic.Code));
-
-    private static string ResolveQaDefectBranchOutcomeKey(string stepKey)
-        => string.Equals(stepKey, QaRecheckStepKey, StringComparison.Ordinal)
-            ? RepairEscalationBranchOutcomeKey
-            : RepairRequiredBranchOutcomeKey;
-
-    private static void AddQaValidationReceiptGuidance(
-        List<string> lines,
-        ProcessRuntimeStepAssignment assignment,
-        IReadOnlyList<string> requiredReceipts)
-    {
-        if (!IsQaBranchDecisionStep(assignment.StepKey))
-        {
-            return;
-        }
-
-        lines.Add("QA current-run validation receipt repair:");
-        lines.Add("Invoke the missing validation and browser tools in this retry before finalizing; do not satisfy this diagnostic by rewriting only the managed artifact or summary.");
-        AddReceiptToolTargetGuidance(
-            lines,
-            requiredReceipts,
-            "workspace_dotnet_restore",
-            ResolveFirstLaunchVariable(assignment.LaunchVariables, "DotNetSolutionFileAlias", "DotNetSolutionFile"),
-            "restore target");
-        AddReceiptToolTargetGuidance(
-            lines,
-            requiredReceipts,
-            "workspace_dotnet_build",
-            ResolveFirstLaunchVariable(assignment.LaunchVariables, "DotNetSolutionFileAlias", "DotNetSolutionFile"),
-            "build target");
-        AddReceiptToolTargetGuidance(
-            lines,
-            requiredReceipts,
-            "workspace_dotnet_test",
-            ResolveFirstLaunchVariable(assignment.LaunchVariables, "DotNetTestProjectFileAlias", "DotNetTestProjectFile"),
-            "test target");
-        AddReceiptToolTargetGuidance(
-            lines,
-            requiredReceipts,
-            "workspace_dotnet_run",
-            ResolveFirstLaunchVariable(assignment.LaunchVariables, "DotNetAppProjectFileAlias", "DotNetAppProjectFile"),
-            "run target");
-
-        if (requiredReceipts.Any(IsBrowserValidationReceipt))
-        {
-            lines.Add("After workspace_dotnet_run starts the repaired app, navigate the browser to the concrete product route, then call browser_snapshot, browser_take_screenshot, and browser_console_messages in the same retry.");
-        }
-
-        if (requiredReceipts.Any(receipt => string.Equals(receipt, "workspace_dotnet_stop", StringComparison.OrdinalIgnoreCase)))
-        {
-            lines.Add("Call workspace_dotnet_stop for the app process started in this retry before finalizing, even when validation finds a repair/escalation defect.");
-        }
-
-        var defectBranchOutcomeKey = ResolveQaDefectBranchOutcomeKey(assignment.StepKey);
-        lines.Add($"If a required tool is unavailable or denied, return Blocked with that exact tool/capability diagnostic. Otherwise select branchOutcomeKey '{QualityAcceptedBranchOutcomeKey}' or '{defectBranchOutcomeKey}' from the evidence; missing receipts alone are not a branch disposition.");
-    }
-
-    private static bool IsBrowserValidationReceipt(string receipt)
-        => string.Equals(receipt, "browser_navigate", StringComparison.OrdinalIgnoreCase) ||
-           string.Equals(receipt, "browser_snapshot", StringComparison.OrdinalIgnoreCase) ||
-           string.Equals(receipt, "browser_take_screenshot", StringComparison.OrdinalIgnoreCase) ||
-           string.Equals(receipt, "browser_console_messages", StringComparison.OrdinalIgnoreCase);
-
-    private static void AddReceiptToolTargetGuidance(
-        List<string> lines,
-        IReadOnlyList<string> requiredReceipts,
-        string toolName,
-        string? target,
-        string targetLabel)
-    {
-        if (!requiredReceipts.Any(receipt => string.Equals(receipt, toolName, StringComparison.OrdinalIgnoreCase)))
-        {
-            return;
-        }
-
-        var targetText = string.IsNullOrWhiteSpace(target)
-            ? $"the launch-variable {targetLabel}"
-            : target;
-        lines.Add($"- Invoke {toolName} with {targetLabel} {targetText}.");
-    }
-
-    private static string? ResolveFirstLaunchVariable(
-        IReadOnlyDictionary<string, string> launchVariables,
-        params string[] keys)
-    {
-        foreach (var key in keys)
-        {
-            if (TryGetResolvedVariable(launchVariables, key) is { } value)
-            {
-                return value;
-            }
-        }
-
-        return null;
-    }
-
-    private static bool TryResolveScriptVariables(
-        ProcessRuntimeStepAssignment assignment,
-        out string scriptVariableName,
-        out string scriptRefVariableName,
-        out string manifestVariableName)
-    {
-        var prefix = assignment.StepKey switch
-        {
-            "create-dotnet-project" => DotNetCreateProjectPrefix,
-            "repair-solution-setup" when assignment.LaunchVariables.ContainsKey("DotNetAddTestProjectScriptRef") => "DotNetAddTestProject",
-            "repair-solution-setup" => DotNetCreateProjectPrefix,
-            "add-test-project" => "DotNetAddTestProject",
-            _ => string.Empty
-        };
-        if (string.IsNullOrWhiteSpace(prefix))
-        {
-            scriptVariableName = string.Empty;
-            scriptRefVariableName = string.Empty;
-            manifestVariableName = string.Empty;
-            return false;
-        }
-
-        scriptVariableName = $"{prefix}Script";
-        scriptRefVariableName = $"{prefix}ScriptRef";
-        manifestVariableName = $"{prefix}SideEffectManifest";
-        return assignment.LaunchVariables.ContainsKey(scriptVariableName) ||
-               assignment.LaunchVariables.ContainsKey(scriptRefVariableName);
-    }
 
     private static IReadOnlyList<string> ResolveStepStringList(
         IReadOnlyDictionary<string, string> launchVariables,
@@ -521,7 +368,7 @@ public sealed class ProcessStepRecoveryInstructionBuilder : IProcessStepRecovery
     {
         if (TryGetResolvedVariable(launchVariables, directKey) is { } direct)
         {
-            return ParseStringList(direct);
+            return ProcessRequiredRuntimeToolNames.FromProductCompletionRequiredToolReceipts(direct);
         }
 
         if (TryGetResolvedVariable(launchVariables, byStepKey) is not { } byStep)
@@ -541,7 +388,7 @@ public sealed class ProcessStepRecoveryInstructionBuilder : IProcessStepRecovery
             {
                 if (string.Equals(property.Name, stepKey, StringComparison.OrdinalIgnoreCase))
                 {
-                    return ParseStringList(property.Value);
+                    return ProcessRequiredRuntimeToolNames.FromProductCompletionRequiredToolReceipts(property.Value);
                 }
             }
         }
@@ -551,244 +398,6 @@ public sealed class ProcessStepRecoveryInstructionBuilder : IProcessStepRecovery
         }
 
         return [];
-    }
-
-    private static IReadOnlyList<string> ParseStringList(string value)
-    {
-        if (string.IsNullOrWhiteSpace(value))
-        {
-            return [];
-        }
-
-        try
-        {
-            using var document = JsonDocument.Parse(value);
-            return ParseStringList(document.RootElement);
-        }
-        catch (JsonException)
-        {
-            return SplitStringList(value);
-        }
-    }
-
-    private static IReadOnlyList<string> ParseStringList(JsonElement element)
-    {
-        return element.ValueKind switch
-        {
-            JsonValueKind.String => SplitStringList(element.GetString() ?? string.Empty),
-            JsonValueKind.Array => element
-                .EnumerateArray()
-                .SelectMany(ParseStringList)
-                .Distinct(StringComparer.OrdinalIgnoreCase)
-                .ToArray(),
-            _ => []
-        };
-    }
-
-    private static IReadOnlyList<string> SplitStringList(string value)
-        => value
-            .Split([';', ',', '\n', '\r'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-            .Where(item => !ContainsUnresolvedPlaceholder(item))
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .ToArray();
-
-    private static IReadOnlyList<ProductReadbackCheck> ResolveFileContentChecks(
-        IReadOnlyDictionary<string, string> launchVariables,
-        string stepKey)
-    {
-        var raw = TryGetResolvedVariable(launchVariables, ProcessRuntimeLaunchVariables.ProductCompletionRequiredFileContentChecks);
-        if (string.IsNullOrWhiteSpace(raw))
-        {
-            raw = TryGetStepScopedJson(
-                launchVariables,
-                ProcessRuntimeLaunchVariables.ProductCompletionRequiredFileContentChecksByStep,
-                stepKey);
-        }
-
-        if (string.IsNullOrWhiteSpace(raw))
-        {
-            return [];
-        }
-
-        try
-        {
-            using var document = JsonDocument.Parse(raw);
-            return ParseProductReadbackChecks(document.RootElement);
-        }
-        catch (JsonException)
-        {
-            return [];
-        }
-    }
-
-    private static string? TryGetStepScopedJson(
-        IReadOnlyDictionary<string, string> launchVariables,
-        string byStepKey,
-        string stepKey)
-    {
-        var byStep = TryGetResolvedVariable(launchVariables, byStepKey);
-        if (string.IsNullOrWhiteSpace(byStep))
-        {
-            return null;
-        }
-
-        try
-        {
-            using var document = JsonDocument.Parse(byStep);
-            if (document.RootElement.ValueKind != JsonValueKind.Object)
-            {
-                return null;
-            }
-
-            foreach (var property in document.RootElement.EnumerateObject())
-            {
-                if (string.Equals(property.Name, stepKey, StringComparison.OrdinalIgnoreCase))
-                {
-                    return property.Value.GetRawText();
-                }
-            }
-        }
-        catch (JsonException)
-        {
-            return null;
-        }
-
-        return null;
-    }
-
-    private static IReadOnlyList<ProductReadbackCheck> ParseProductReadbackChecks(JsonElement element)
-    {
-        return element.ValueKind switch
-        {
-            JsonValueKind.Array => element
-                .EnumerateArray()
-                .Select(ParseProductReadbackCheck)
-                .Where(check => check is not null)
-                .Cast<ProductReadbackCheck>()
-                .ToArray(),
-            JsonValueKind.Object => ParseProductReadbackCheck(element) is { } check ? [check] : [],
-            _ => []
-        };
-    }
-
-    private static ProductReadbackCheck? ParseProductReadbackCheck(JsonElement element)
-    {
-        if (element.ValueKind != JsonValueKind.Object)
-        {
-            return null;
-        }
-
-        var pathCandidates = element.TryGetProperty("pathCandidates", out var paths)
-            ? ParseStringList(paths)
-            : [];
-        var description = element.TryGetProperty("description", out var descriptionElement) &&
-                          descriptionElement.ValueKind == JsonValueKind.String
-            ? descriptionElement.GetString() ?? string.Empty
-            : string.Empty;
-        var requiredTextAnyGroups = new List<IReadOnlyList<string>>();
-        if (element.TryGetProperty("requiredTextAnyGroups", out var groups))
-        {
-            if (groups.ValueKind == JsonValueKind.Array)
-            {
-                foreach (var group in groups.EnumerateArray())
-                {
-                    requiredTextAnyGroups.Add(ParseStringList(group));
-                }
-            }
-            else
-            {
-                requiredTextAnyGroups.Add(ParseStringList(groups));
-            }
-        }
-
-        var forbiddenTextAny = element.TryGetProperty("forbiddenTextAny", out var forbiddenText)
-            ? ParseStringList(forbiddenText)
-            : [];
-
-        return new ProductReadbackCheck(pathCandidates, description, requiredTextAnyGroups, forbiddenTextAny);
-    }
-
-    private static IReadOnlyList<string> ResolveGroundedPathCandidates(
-        IReadOnlyList<string> pathCandidates,
-        IReadOnlyDictionary<string, string> launchVariables)
-    {
-        if (pathCandidates.Count == 0)
-        {
-            return [];
-        }
-
-        var nativeRoot = ResolveProductRoot(launchVariables);
-        var productAlias = ResolveProductRootAlias(launchVariables);
-        return pathCandidates
-            .Select(candidate => ToGroundedPathCandidate(candidate, nativeRoot, productAlias))
-            .Where(candidate => !string.IsNullOrWhiteSpace(candidate))
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .ToArray();
-    }
-
-    private static string? ResolveProductRoot(IReadOnlyDictionary<string, string> launchVariables)
-        => TryGetResolvedVariable(launchVariables, ProductRootVariableName) ??
-           TryGetResolvedVariable(launchVariables, OutputRootVariableName);
-
-    private static string? ResolveProductRootAlias(IReadOnlyDictionary<string, string> launchVariables)
-        => TryGetResolvedVariable(launchVariables, ProductRootAliasVariableName) ??
-           TryGetResolvedVariable(launchVariables, OutputRootAliasVariableName) ??
-           TryGetResolvedVariable(launchVariables, WorkspaceAliasVariableName) ??
-           TryGetResolvedVariable(launchVariables, ExternalTargetRootVariableName);
-
-    private static string ToGroundedPathCandidate(
-        string candidate,
-        string? nativeRoot,
-        string? productAlias)
-    {
-        if (string.IsNullOrWhiteSpace(candidate))
-        {
-            return string.Empty;
-        }
-
-        var normalizedCandidate = NormalizePathForInstruction(candidate);
-        if (!string.IsNullOrWhiteSpace(productAlias))
-        {
-            var normalizedAlias = NormalizePathForInstruction(productAlias).TrimEnd('/');
-            if (normalizedCandidate.StartsWith(normalizedAlias, StringComparison.OrdinalIgnoreCase))
-            {
-                return normalizedCandidate;
-            }
-
-            if (!string.IsNullOrWhiteSpace(nativeRoot))
-            {
-                var normalizedRoot = NormalizePathForInstruction(nativeRoot).TrimEnd('/');
-                if (normalizedCandidate.StartsWith(normalizedRoot + "/", StringComparison.OrdinalIgnoreCase))
-                {
-                    return $"{normalizedAlias}/{normalizedCandidate[(normalizedRoot.Length + 1)..]}";
-                }
-            }
-        }
-
-        return IsNativeAbsolutePath(normalizedCandidate)
-            ? LastPathSegments(normalizedCandidate, 3)
-            : normalizedCandidate;
-    }
-
-    private static string NormalizePathForInstruction(string value)
-        => value.Trim().Replace('\\', '/');
-
-    private static bool IsNativeAbsolutePath(string normalizedPath)
-        => normalizedPath.StartsWith("/", StringComparison.Ordinal) ||
-           normalizedPath.Length >= 3 &&
-           char.IsLetter(normalizedPath[0]) &&
-           normalizedPath[1] == ':' &&
-           normalizedPath[2] == '/';
-
-    private static string LastPathSegments(string normalizedPath, int segmentCount)
-    {
-        var segments = normalizedPath
-            .Split('/', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-            .TakeLast(segmentCount)
-            .ToArray();
-        return segments.Length == 0
-            ? normalizedPath
-            : string.Join("/", segments);
     }
 
     private static string? TryGetResolvedVariable(
@@ -823,17 +432,4 @@ public sealed class ProcessStepRecoveryInstructionBuilder : IProcessStepRecovery
 
         return UnresolvedPlaceholderRegex.Replace(normalized, "[unresolved-placeholder omitted]");
     }
-
-    private sealed record RecoveryDiagnosticFact(
-        string Code,
-        string EvidenceHash,
-        string Summary,
-        ProcessDiagnosticRetrySafety RetrySafety,
-        ProcessDiagnosticIdempotencyClassification Idempotency);
-
-    private sealed record ProductReadbackCheck(
-        IReadOnlyList<string> PathCandidates,
-        string Description,
-        IReadOnlyList<IReadOnlyList<string>> RequiredTextAnyGroups,
-        IReadOnlyList<string> ForbiddenTextAny);
 }

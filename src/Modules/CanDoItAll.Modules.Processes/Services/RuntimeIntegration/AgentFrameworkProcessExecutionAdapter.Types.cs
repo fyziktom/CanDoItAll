@@ -68,22 +68,23 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter
         IReadOnlyList<IReadOnlyList<string>> RequiredTextAnyGroups,
         IReadOnlyList<IReadOnlyList<string>> ForbiddenTextAnyGroups,
         bool MustExist,
-        IReadOnlyList<string> EnforceBranchOutcomeKeys);
+        IReadOnlyList<string> EnforceBranchOutcomeKeys,
+        IReadOnlyList<string> EvidenceBranchOutcomeKeys);
 
-    private sealed record ProcessCompletionIssue(
-        string Code,
-        string Summary,
-        string Evidence,
-        IReadOnlyList<ArtifactSlotId> RequestedArtifactSlotIds,
-        ProcessDiagnosticRetrySafety RetrySafety,
-        ProcessDiagnosticIdempotencyClassification Idempotency);
+    private sealed record ProductCompletionRequiredToolReceiptRule(
+        string ToolReceipt,
+        IReadOnlyList<string> ApplicableBranchOutcomeKeys,
+        IReadOnlyList<string> SkippedBranchOutcomeKeys,
+        string Purpose,
+        string Key,
+        string Reason);
 
-    private sealed record ProcessCompletionGateEvaluation(IReadOnlyList<ProcessCompletionIssue> Issues)
-    {
-        public bool IsSatisfied => Issues.Count == 0;
-
-        public IReadOnlyList<ProcessCompletionIssue> OrderedIssues { get; } = OrderCompletionGateIssues(Issues);
-    }
+    private sealed record ProcessCompletionIssueRoute(
+        string IssueCode,
+        IReadOnlyList<string> SourceBranchOutcomeKeys,
+        string TargetBranchOutcomeKey,
+        string TargetBranchOutcomeTitle,
+        bool RequiresDefectEvidence);
 
     private sealed record ProductRootInspection(
         bool HasProductFiles,

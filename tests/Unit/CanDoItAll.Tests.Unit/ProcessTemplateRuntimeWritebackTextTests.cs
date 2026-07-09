@@ -16,16 +16,26 @@ public sealed class ProcessTemplateRuntimeWritebackTextTests
         Assert.Contains("project_structure_node_create", write, StringComparison.Ordinal);
         Assert.Contains("project_structure_read", write, StringComparison.Ordinal);
         Assert.Contains("do not return `Completed` with only intended node payloads", write, StringComparison.Ordinal);
+        Assert.Contains("created node ids", write, StringComparison.Ordinal);
+        Assert.Contains("verified with project_structure_read", write, StringComparison.Ordinal);
         Assert.Contains("return `Blocked` with the missing field", write, StringComparison.Ordinal);
+        Assert.Contains("metadataJson", write, StringComparison.Ordinal);
+        Assert.Contains("\"environment\":{\"projectPath\"", write, StringComparison.Ordinal);
+        Assert.Contains("\"script\":{\"command\":\"dotnet\"", write, StringComparison.Ordinal);
         Assert.Contains("steps/run-command-node-receipts.md", write, StringComparison.Ordinal);
         Assert.Contains("do not use `runtime-command-handoff.md` for this step", write, StringComparison.Ordinal);
         Assert.Contains("launcher-compatibility receipts", handoff, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("metadata.environment.projectPath", definitionJson, StringComparison.Ordinal);
         Assert.Contains("metadata.environment.workingDirectory", definitionJson, StringComparison.Ordinal);
+        Assert.Contains("metadataJson", definitionJson, StringComparison.Ordinal);
+        Assert.Contains("\\\"environment\\\":{\\\"projectPath\\\"", definitionJson, StringComparison.Ordinal);
+        Assert.Contains("\\\"script\\\":{\\\"command\\\":\\\"dotnet\\\"", definitionJson, StringComparison.Ordinal);
         Assert.Contains("ProjectStructureRuntimeLauncher.Resolve", definitionJson, StringComparison.Ordinal);
         Assert.Contains("project_structure_node_create", definitionJson, StringComparison.Ordinal);
         Assert.Contains("project_structure_read", definitionJson, StringComparison.Ordinal);
         Assert.Contains("do not return Completed with only intended node payloads", definitionJson, StringComparison.Ordinal);
+        Assert.Contains("created node ids", definitionJson, StringComparison.Ordinal);
+        Assert.Contains("verified-with-project_structure_read text", definitionJson, StringComparison.Ordinal);
         Assert.Contains("steps/run-command-node-receipts.md", definitionJson, StringComparison.Ordinal);
     }
 

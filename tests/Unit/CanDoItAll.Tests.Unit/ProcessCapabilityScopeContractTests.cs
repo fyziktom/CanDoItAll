@@ -160,7 +160,11 @@ public sealed class ProcessCapabilityScopeContractTests
         Assert.Contains("workspace_analyze_image", receiptTools);
         Assert.Contains("workspace_analyze_images", receiptTools);
         Assert.All(receipts, receipt =>
-            Assert.Equal(ProcessRequiredToolReceiptActivation.WhenLaunchContextDeclaresTool, receipt.Activation));
+        {
+            Assert.Equal(ProcessRequiredToolReceiptActivation.WhenLaunchContextDeclaresTool, receipt.Activation);
+            Assert.Equal(ProcessRequiredToolReceiptPurpose.AcceptanceProof, receipt.Purpose);
+            Assert.Equal(["quality-accepted"], receipt.ApplicableBranchOutcomeKeys);
+        });
     }
 
     private static void AssertDotNetValidationReceiptTools(IReadOnlyList<ProcessRequiredToolReceipt> receipts)

@@ -61,7 +61,9 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
             return false;
         }
 
-        return trace.Classification is ToolInvocationClassification.Mutation or ToolInvocationClassification.Validation;
+        return trace.Classification is ToolInvocationClassification.Mutation
+            or ToolInvocationClassification.Validation
+            or ToolInvocationClassification.Read;
     }
 
     private static string ResolveRuntimeProviderReceiptRiskClass(ToolInvocationClassification classification)

@@ -1,3 +1,4 @@
+using CanDoItAll.Modules.Workbench;
 using CanDoItAll.Processes.Abstractions;
 using CanDoItAll.Processes.Application;
 using CanDoItAll.Processes.Builder;
@@ -862,7 +863,8 @@ public sealed class ProcessRuntimeDispatchApplicationServiceTests
             new InMemoryPlanStore(plan),
             assignmentStore,
             strategyResolver,
-            NewNoOpCatchupService());
+            NewNoOpCatchupService(),
+            recoveryInstructionBuilder: CreateDotNetRecoveryInstructionBuilder());
 
         var result = await service.ExecuteReadyAsync(RunId, "unit-test");
 
@@ -1525,6 +1527,9 @@ public sealed class ProcessRuntimeDispatchApplicationServiceTests
             ["WorkspaceAlias"] = "external-target/C/repositories/calculator"
         };
     }
+
+    private static ProcessStepRecoveryInstructionBuilder CreateDotNetRecoveryInstructionBuilder()
+        => new([new DotNetSoftwareDeliveryRecoveryAdviceProvider()]);
 
     private static ProcessRuntimeProjectionCatchupService NewNoOpCatchupService()
         => new(

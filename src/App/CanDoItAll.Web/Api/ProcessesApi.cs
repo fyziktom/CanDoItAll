@@ -467,7 +467,16 @@ internal static class ProcessesApi
             diagnostic.Sensitivity,
             diagnostic.RetrySafety,
             diagnostic.Idempotency,
-            diagnostic.RestrictedDiagnosticReference);
+            diagnostic.RestrictedDiagnosticReference,
+            diagnostic.OperatorDetails is null
+                ? null
+                : new ProcessRuntimeOperatorDiagnosticDetailsApiView(
+                    diagnostic.OperatorDetails.GateId,
+                    diagnostic.OperatorDetails.BranchOutcomeKey,
+                    diagnostic.OperatorDetails.RouteTargetBranchOutcomeKey,
+                    diagnostic.OperatorDetails.FailedCriteriaIds,
+                    diagnostic.OperatorDetails.ReceiptRuleIds,
+                    diagnostic.OperatorDetails.NextAction));
     }
 
     private static ProcessRuntimeArtifactLineageApiView MapArtifactLineage(ProcessRuntimeArtifactLineageProjection artifact)
@@ -707,7 +716,16 @@ internal sealed record ProcessRuntimeDiagnosticApiView(
     string Sensitivity,
     string RetrySafety,
     string Idempotency,
-    string? RestrictedDiagnosticReference);
+    string? RestrictedDiagnosticReference,
+    ProcessRuntimeOperatorDiagnosticDetailsApiView? OperatorDetails);
+
+internal sealed record ProcessRuntimeOperatorDiagnosticDetailsApiView(
+    string GateId,
+    string BranchOutcomeKey,
+    string RouteTargetBranchOutcomeKey,
+    IReadOnlyList<string> FailedCriteriaIds,
+    IReadOnlyList<string> ReceiptRuleIds,
+    string NextAction);
 
 internal sealed record ProcessRuntimeArtifactLineageApiView(
     Guid SlotId,

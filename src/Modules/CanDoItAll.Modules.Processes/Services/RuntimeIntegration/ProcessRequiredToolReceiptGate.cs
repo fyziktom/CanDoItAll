@@ -10,13 +10,17 @@ internal static class ProcessRequiredToolReceiptGate
         ProcessRuntimeStepAssignment assignment,
         IReadOnlyList<ToolExecutionReceiptRecord>? toolReceipts,
         IReadOnlySet<string>? activeLaunchContextToolNames = null,
-        Guid? currentExecutionRunId = null)
+        Guid? currentExecutionRunId = null,
+        string? branchOutcomeKey = null,
+        IReadOnlySet<string>? productCoveredToolNames = null)
     {
         ArgumentNullException.ThrowIfNull(assignment);
 
         var requiredReceipts = ProcessCapabilityScope.Normalize(assignment.CapabilityScope)
             .RequiredReceipts
             .Where(receipt => ProcessRequiredRuntimeToolNames.IsActive(receipt, activeLaunchContextToolNames))
+            .Where(receipt => ProcessRequiredRuntimeToolNames.IsApplicableToBranchOutcome(receipt, branchOutcomeKey))
+            .Where(receipt => !IsCoveredByProductReceiptRule(receipt, productCoveredToolNames))
             .ToArray();
         if (requiredReceipts.Length == 0)
         {
@@ -47,6 +51,26 @@ internal static class ProcessRequiredToolReceiptGate
         return observedReceipts.Count(receipt =>
             MatchesSelector(receipt, requiredReceipt) &&
             IsUsableReceipt(receipt, requiredReceipt, currentExecutionRunId));
+    }
+
+    private static bool IsCoveredByProductReceiptRule(
+        ProcessRequiredToolReceipt requiredReceipt,
+        IReadOnlySet<string>? productCoveredToolNames)
+    {
+        if (productCoveredToolNames is null || productCoveredToolNames.Count == 0)
+        {
+            return false;
+        }
+
+        var toolName = requiredReceipt.Kind switch
+        {
+            ProcessRequiredToolReceiptKind.RuntimeToolName => requiredReceipt.ToolName,
+            ProcessRequiredToolReceiptKind.RuntimeToolNameWithProvider => requiredReceipt.ToolName,
+            ProcessRequiredToolReceiptKind.McpToolName => requiredReceipt.ToolName,
+            _ => string.Empty
+        };
+        return !string.IsNullOrWhiteSpace(toolName) &&
+               productCoveredToolNames.Contains(toolName.Trim());
     }
 
     private static bool MatchesSelector(

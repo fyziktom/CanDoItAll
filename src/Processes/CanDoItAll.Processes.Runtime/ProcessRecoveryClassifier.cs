@@ -91,7 +91,7 @@ public sealed class ProcessRecoveryClassifier(ProcessRecoveryClassifierOptions? 
     {
         return input.FailureCategory == ProcessFailureCategory.ProductCompletionGate ||
                diagnostics.Count > 0 &&
-               diagnostics.All(diagnostic => IsCompletionGateDiagnosticCode(diagnostic.Code));
+               diagnostics.All(diagnostic => ProcessCompletionGateDiagnosticCatalog.IsCompletionGateDiagnosticCode(diagnostic.Code));
     }
 
     private static bool AreAllDiagnosticsSafeAndIdempotent(
@@ -110,15 +110,6 @@ public sealed class ProcessRecoveryClassifier(ProcessRecoveryClassifierOptions? 
                code.Contains("policy", StringComparison.OrdinalIgnoreCase) ||
                code.Contains("rights", StringComparison.OrdinalIgnoreCase) ||
                code.Contains("agent_rights", StringComparison.OrdinalIgnoreCase);
-    }
-
-    private static bool IsCompletionGateDiagnosticCode(string code)
-    {
-        return code.StartsWith("process.adapter.product_", StringComparison.OrdinalIgnoreCase) ||
-               code.StartsWith("process.adapter.produced_artifact_", StringComparison.OrdinalIgnoreCase) ||
-               code.StartsWith("process.adapter.ungrounded_", StringComparison.OrdinalIgnoreCase) ||
-               string.Equals(code, "process.adapter.required_tool_receipt_missing", StringComparison.OrdinalIgnoreCase) ||
-               string.Equals(code, "process.adapter.completed_outcome_declares_unresolved_blocker", StringComparison.OrdinalIgnoreCase);
     }
 
     private static int CountAutomaticSafeRetryReceipts(ProcessRecoveryClassificationInput input)

@@ -118,7 +118,18 @@ public sealed record ProcessRuntimeDiagnosticProjection(
     string Sensitivity,
     string RetrySafety,
     string Idempotency,
-    string? RestrictedDiagnosticReference);
+    string? RestrictedDiagnosticReference)
+{
+    public ProcessRuntimeOperatorDiagnosticDetailsProjection? OperatorDetails { get; init; }
+}
+
+public sealed record ProcessRuntimeOperatorDiagnosticDetailsProjection(
+    string GateId,
+    string BranchOutcomeKey,
+    string RouteTargetBranchOutcomeKey,
+    IReadOnlyList<string> FailedCriteriaIds,
+    IReadOnlyList<string> ReceiptRuleIds,
+    string NextAction);
 
 public sealed record ProcessRuntimeArtifactLineageProjection(
     Guid SlotId,

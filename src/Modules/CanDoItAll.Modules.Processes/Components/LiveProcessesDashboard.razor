@@ -1667,6 +1667,44 @@
             </Cluster>
         </Split>
         <p class="mt-3 text-sm leading-6 text-slate-700">@step.Summary</p>
+        @if (step.Diagnostics.Count > 0)
+        {
+            <Stack GapScale="LayoutGap.XSmall" Class="mt-4">
+                @foreach (var diagnostic in step.Diagnostics)
+                {
+                    <div class="live-processes-event-row">
+                        <Cluster Gap="LayoutGap.XSmall" Class="flex-wrap">
+                            <StatusBadge Tone="warning" Text="@diagnostic.Code" />
+                            <StatusBadge Tone="neutral" Text="@diagnostic.Category" />
+                        </Cluster>
+                        <p class="mt-2 text-sm leading-6 text-slate-700">@diagnostic.SafeSummary</p>
+                        @if (diagnostic.OperatorDetails is { } details)
+                        {
+                            <Cluster Gap="LayoutGap.XSmall" Class="mt-2 flex-wrap">
+                                <StatusBadge Tone="info" Text="@details.GateId" />
+                                @if (!string.IsNullOrWhiteSpace(details.BranchOutcomeKey))
+                                {
+                                    <StatusBadge Tone="neutral" Text="@details.BranchOutcomeKey" />
+                                }
+                                @if (!string.IsNullOrWhiteSpace(details.RouteTargetBranchOutcomeKey))
+                                {
+                                    <StatusBadge Tone="warning" Text="@details.RouteTargetBranchOutcomeKey" />
+                                }
+                                @if (details.FailedCriteriaIds.Count > 0)
+                                {
+                                    <StatusBadge Tone="warning" Text="@string.Join(", ", details.FailedCriteriaIds)" />
+                                }
+                                @if (details.ReceiptRuleIds.Count > 0)
+                                {
+                                    <StatusBadge Tone="neutral" Text="@string.Join(", ", details.ReceiptRuleIds)" />
+                                }
+                            </Cluster>
+                            <p class="mt-2 text-sm leading-6 text-slate-700">@details.NextAction</p>
+                        }
+                    </div>
+                }
+            </Stack>
+        }
     </SurfaceCard>;
 
     private RenderFragment RenderChildRunWaits(ProcessLiveProcessSnapshot run) => @<SurfaceCard Soft="true"

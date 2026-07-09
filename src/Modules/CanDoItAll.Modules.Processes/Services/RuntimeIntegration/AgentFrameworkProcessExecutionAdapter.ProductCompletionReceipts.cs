@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Diagnostics.CodeAnalysis;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -60,9 +61,15 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter
 
     private static ProcessCompletionIssue? ValidateRequiredProductToolReceipts(
         ProcessRuntimeStepAssignment assignment,
-        IReadOnlyList<ToolExecutionReceiptRecord>? toolReceipts)
+        ProcessStepOutcomeResult output,
+        IReadOnlyList<ToolExecutionReceiptRecord>? toolReceipts,
+        IReadOnlyList<ProductCompletionRequiredToolReceiptRule> requiredToolReceiptRules)
     {
-        var requiredToolReceipts = ResolveProductCompletionRequiredToolReceipts(assignment.LaunchVariables, assignment.StepKey);
+        var requiredToolReceipts = requiredToolReceiptRules
+            .Select(rule => rule.ToolReceipt)
+            .Where(receipt => !string.IsNullOrWhiteSpace(receipt))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
         if (!ShouldEnforceRequiredProductToolReceipts(assignment, requiredToolReceipts))
         {
             return null;
@@ -87,7 +94,7 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter
         var missingReceiptGuidance = BuildMissingRequiredToolReceiptGuidance(assignment, missingToolReceipts);
         return new ProcessCompletionIssue(
             "process.adapter.product_required_tool_receipt_missing",
-            $"Step '{assignment.StepKey}' claimed completion but required current-run product tool receipt(s) are missing: {missingSummary}.{failedReceiptGuidance}{missingReceiptGuidance}",
+            $"Step '{assignment.StepKey}' claimed completion for branch '{output.BranchOutcomeKey}' but required current-run product tool receipt(s) are missing: {missingSummary}.{failedReceiptGuidance}{missingReceiptGuidance}",
             $"{assignment.RunId}:{assignment.StepInstanceId}:product-required-tool-receipt-missing:{missingSummary}:{string.Join("|", observedToolReceipts.Select(receipt => $"{receipt.ToolName}:{receipt.RequestSummary}:{receipt.ExitSummary}"))}",
             assignment.ProducedArtifactSlotIds,
             ProcessDiagnosticRetrySafety.SafeToRetry,
@@ -96,15 +103,19 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter
 
     private static ProcessCompletionIssue? ValidateRequiredProcessToolReceipts(
         ProcessRuntimeStepAssignment assignment,
+        ProcessStepOutcomeResult output,
         IReadOnlyList<ToolExecutionReceiptRecord>? toolReceipts,
-        Guid? currentExecutionRunId)
+        Guid? currentExecutionRunId,
+        IReadOnlySet<string> productCoveredToolNames)
     {
         var activeLaunchContextToolNames = ResolveActiveLaunchContextToolNameSet(assignment);
         var gate = ProcessRequiredToolReceiptGate.Evaluate(
             assignment,
             toolReceipts,
             activeLaunchContextToolNames,
-            currentExecutionRunId);
+            currentExecutionRunId,
+            output.BranchOutcomeKey,
+            productCoveredToolNames);
         if (gate.IsSatisfied)
         {
             return null;
@@ -114,11 +125,218 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter
         var missingSummary = ProcessRequiredToolReceiptGate.FormatMissingSummary(gate.MissingReceipts);
         return new ProcessCompletionIssue(
             "process.adapter.required_tool_receipt_missing",
-            $"Step '{assignment.StepKey}' claimed completion but required current-run process tool receipt(s) are missing: {missingSummary}. Retry the same step, invoke the missing required tool(s), cite the receipt refs in the managed artifact, and complete only after the typed process capability scope receipt contract is satisfied.",
+            $"Step '{assignment.StepKey}' claimed completion for branch '{output.BranchOutcomeKey}' but required current-run process tool receipt(s) are missing: {missingSummary}. Retry the same step, invoke the missing required tool(s), cite the receipt refs in the managed artifact, and complete only after the typed process capability scope receipt contract is satisfied.",
             $"{assignment.RunId}:{assignment.StepInstanceId}:required-tool-receipt-missing:{missingSummary}:{string.Join("|", observedToolReceipts.Select(receipt => $"{receipt.ToolName}:{receipt.RuntimeToolProviderKey}:{receipt.RequestSummary}:{receipt.ExitSummary}"))}",
             assignment.ProducedArtifactSlotIds,
             ProcessDiagnosticRetrySafety.SafeToRetry,
             ProcessDiagnosticIdempotencyClassification.Idempotent);
+    }
+
+    private static ProcessCompletionIssue? ValidateRuntimeLifecycleReceipts(
+        ProcessRuntimeStepAssignment assignment,
+        ProcessStepOutcomeResult output,
+        IReadOnlyList<ToolExecutionReceiptRecord>? toolReceipts,
+        Guid? currentExecutionRunId,
+        IReadOnlyList<ProductCompletionRequiredToolReceiptRule> requiredToolReceiptRules)
+    {
+        if (output.Status != ProcessStepOutcomeStatus.Completed)
+        {
+            return null;
+        }
+
+        var requiredToolNames = ResolveProductCoveredRuntimeToolNames(requiredToolReceiptRules);
+        if (!TryResolveRuntimeLifecycleToolNames(requiredToolNames, out var lifecycleToolNames))
+        {
+            return null;
+        }
+
+        var observedToolReceipts = toolReceipts ?? [];
+        var currentReceipts = currentExecutionRunId is null
+            ? observedToolReceipts
+            : observedToolReceipts
+                .Where(receipt => receipt.ExecutionRunId == currentExecutionRunId.Value)
+                .ToArray();
+        var runReceipt = FindSuccessfulReceipt(currentReceipts, lifecycleToolNames.RunToolName);
+        var stopReceipt = FindSuccessfulReceipt(currentReceipts, lifecycleToolNames.StopToolName);
+        var browserReceipts = currentReceipts
+            .Where(receipt => receipt.ToolName.StartsWith("browser_", StringComparison.OrdinalIgnoreCase) &&
+                              IsSuccessfulReceipt(receipt.ExitSummary))
+            .ToArray();
+
+        if (runReceipt is null ||
+            stopReceipt is null ||
+            browserReceipts.Length == 0)
+        {
+            return CreateRuntimeLifecycleIssue(
+                assignment,
+                output,
+                $"Runtime/browser proof was not produced by the current execution-run host lifecycle. Retry QA by starting the product with {lifecycleToolNames.RunToolName}, collecting browser proof against that host, and stopping it with {lifecycleToolNames.StopToolName} in the same execution.",
+                observedToolReceipts);
+        }
+
+        var runFacts = RuntimeLifecycleReceiptFacts.From(runReceipt);
+        var stopFacts = RuntimeLifecycleReceiptFacts.From(stopReceipt);
+        var browserFacts = browserReceipts
+            .Select(RuntimeLifecycleReceiptFacts.From)
+            .ToArray();
+        if (runFacts.StartupReceiptPaths.Count == 0 ||
+            stopFacts.StartupReceiptPaths.Count == 0 ||
+            !runFacts.StartupReceiptPaths.Intersect(stopFacts.StartupReceiptPaths, StringComparer.OrdinalIgnoreCase).Any())
+        {
+            return CreateRuntimeLifecycleIssue(
+                assignment,
+                output,
+                $"{lifecycleToolNames.RunToolName} and {lifecycleToolNames.StopToolName} receipts are not correlated by the same startup.json receipt. Retry QA using the startup.json path returned by the current {lifecycleToolNames.RunToolName} call when invoking {lifecycleToolNames.StopToolName}.",
+                observedToolReceipts);
+        }
+
+        var runAuthorities = runFacts.LoopbackAuthorities;
+        var browserAuthorities = browserFacts
+            .SelectMany(facts => facts.LoopbackAuthorities)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        if (runAuthorities.Count == 0 ||
+            browserAuthorities.Length == 0 ||
+            !runAuthorities.Intersect(browserAuthorities, StringComparer.OrdinalIgnoreCase).Any())
+        {
+            return CreateRuntimeLifecycleIssue(
+                assignment,
+                output,
+                $"Browser proof is not correlated to the host URL reported by {lifecycleToolNames.RunToolName}. Retry QA by navigating the browser to the current run's loopback host URL before collecting screenshots, snapshots, and console proof.",
+                observedToolReceipts);
+        }
+
+        return null;
+    }
+
+    private static bool TryResolveRuntimeLifecycleToolNames(
+        IReadOnlySet<string> requiredToolNames,
+        [NotNullWhen(true)] out RuntimeLifecycleToolNames? lifecycleToolNames)
+    {
+        var runToolName = requiredToolNames
+            .Where(IsWorkspaceRunToolName)
+            .OrderBy(toolName => toolName, StringComparer.OrdinalIgnoreCase)
+            .FirstOrDefault();
+        var stopToolName = requiredToolNames
+            .Where(IsWorkspaceStopToolName)
+            .OrderBy(toolName => toolName, StringComparer.OrdinalIgnoreCase)
+            .FirstOrDefault();
+        if (string.IsNullOrWhiteSpace(runToolName) ||
+            string.IsNullOrWhiteSpace(stopToolName) ||
+            !requiredToolNames.Any(IsBrowserToolName))
+        {
+            lifecycleToolNames = null;
+            return false;
+        }
+
+        lifecycleToolNames = new RuntimeLifecycleToolNames(runToolName, stopToolName);
+        return true;
+    }
+
+    private static bool IsWorkspaceRunToolName(string toolName)
+        => toolName.StartsWith("workspace_", StringComparison.OrdinalIgnoreCase) &&
+           toolName.EndsWith("_run", StringComparison.OrdinalIgnoreCase);
+
+    private static bool IsWorkspaceStopToolName(string toolName)
+        => toolName.StartsWith("workspace_", StringComparison.OrdinalIgnoreCase) &&
+           toolName.EndsWith("_stop", StringComparison.OrdinalIgnoreCase);
+
+    private static bool IsBrowserToolName(string toolName)
+        => toolName.StartsWith("browser_", StringComparison.OrdinalIgnoreCase);
+
+    private static ToolExecutionReceiptRecord? FindSuccessfulReceipt(
+        IReadOnlyList<ToolExecutionReceiptRecord> receipts,
+        string toolName)
+        => receipts
+            .Where(receipt => string.Equals(receipt.ToolName, toolName, StringComparison.OrdinalIgnoreCase) &&
+                              IsSuccessfulReceipt(receipt.ExitSummary))
+            .OrderByDescending(receipt => receipt.CompletedAtUtc)
+            .FirstOrDefault();
+
+    private static ProcessCompletionIssue CreateRuntimeLifecycleIssue(
+        ProcessRuntimeStepAssignment assignment,
+        ProcessStepOutcomeResult output,
+        string summary,
+        IReadOnlyList<ToolExecutionReceiptRecord> observedToolReceipts)
+        => new(
+            "process.adapter.runtime_lifecycle_correlation_missing",
+            $"Step '{assignment.StepKey}' claimed completion for branch '{output.BranchOutcomeKey}', but runtime lifecycle proof is incomplete or stale. {summary}",
+            $"{assignment.RunId}:{assignment.StepInstanceId}:runtime-lifecycle-correlation-missing:{output.BranchOutcomeKey}:{string.Join("|", observedToolReceipts.Select(SummarizeRuntimeLifecycleReceipt))}",
+            assignment.ProducedArtifactSlotIds,
+            ProcessDiagnosticRetrySafety.SafeToRetry,
+            ProcessDiagnosticIdempotencyClassification.Idempotent);
+
+    private static string SummarizeRuntimeLifecycleReceipt(ToolExecutionReceiptRecord receipt)
+        => $"{receipt.ToolName}:{receipt.ExecutionRunId:N}:{MaskNativePaths(receipt.RequestSummary)}:{SummarizeReceiptExit(receipt.ExitSummary)}";
+
+    private static string MaskNativePaths(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return string.Empty;
+        }
+
+        return Regex.Replace(
+            value,
+            @"[A-Za-z]:\\[^\s;|]+",
+            "[native-path]",
+            RegexOptions.CultureInvariant);
+    }
+
+    private static IReadOnlyList<ProductCompletionRequiredToolReceiptRule> ResolveApplicableProductCompletionRequiredToolReceiptRules(
+        ProcessRuntimeStepAssignment assignment,
+        string branchOutcomeKey)
+        => ResolveProductCompletionRequiredToolReceiptRules(assignment.LaunchVariables, assignment.StepKey)
+            .Where(rule => IsApplicableToBranchOutcome(
+                rule.ApplicableBranchOutcomeKeys,
+                rule.SkippedBranchOutcomeKeys,
+                branchOutcomeKey))
+            .ToArray();
+
+    private static IReadOnlySet<string> ResolveProductCoveredRuntimeToolNames(
+        IReadOnlyList<ProductCompletionRequiredToolReceiptRule> rules)
+        => ProcessRequiredRuntimeToolNames
+            .FromProductCompletionRequiredToolReceipts(rules.Select(rule => rule.ToolReceipt))
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+    private static IReadOnlySet<string> ResolveEnforcedProductCoveredRuntimeToolNames(
+        ProcessRuntimeStepAssignment assignment,
+        IReadOnlyList<ProductCompletionRequiredToolReceiptRule> rules)
+    {
+        var requiredToolReceipts = rules
+            .Select(rule => rule.ToolReceipt)
+            .Where(receipt => !string.IsNullOrWhiteSpace(receipt))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
+        return ShouldEnforceRequiredProductToolReceipts(assignment, requiredToolReceipts)
+            ? ResolveProductCoveredRuntimeToolNames(rules)
+            : new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+    }
+
+    private static bool IsApplicableToBranchOutcome(
+        IReadOnlyList<string> applicableBranchOutcomeKeys,
+        string branchOutcomeKey)
+        => IsApplicableToBranchOutcome(applicableBranchOutcomeKeys, [], branchOutcomeKey);
+
+    private static bool IsApplicableToBranchOutcome(
+        IReadOnlyList<string> applicableBranchOutcomeKeys,
+        IReadOnlyList<string> skippedBranchOutcomeKeys,
+        string branchOutcomeKey)
+    {
+        if (string.IsNullOrWhiteSpace(branchOutcomeKey))
+        {
+            return applicableBranchOutcomeKeys.Count == 0 && skippedBranchOutcomeKeys.Count == 0;
+        }
+
+        var normalizedBranch = branchOutcomeKey.Trim();
+        if (skippedBranchOutcomeKeys.Contains(normalizedBranch, StringComparer.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        return applicableBranchOutcomeKeys.Count == 0 ||
+               applicableBranchOutcomeKeys.Contains(normalizedBranch, StringComparer.OrdinalIgnoreCase);
     }
 
     private static bool ShouldEnforceRequiredProductToolReceipts(
@@ -369,6 +587,73 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter
     private static string ReceiptText(ToolExecutionReceiptRecord receipt)
         => $"{receipt.ToolName} {receipt.RequestSummary} {receipt.WorkingDirectory} {receipt.ExitSummary}";
 
+    private sealed record RuntimeLifecycleToolNames(string RunToolName, string StopToolName);
+
+    private sealed record RuntimeLifecycleReceiptFacts(
+        IReadOnlyList<string> StartupReceiptPaths,
+        IReadOnlyList<string> LoopbackAuthorities)
+    {
+        public static RuntimeLifecycleReceiptFacts From(ToolExecutionReceiptRecord receipt)
+        {
+            var text = ReceiptText(receipt);
+            return new RuntimeLifecycleReceiptFacts(
+                ExtractStartupReceiptPaths(text),
+                ExtractLoopbackAuthorities(text));
+        }
+    }
+
+    private static IReadOnlyList<string> ExtractStartupReceiptPaths(string text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return [];
+        }
+
+        return Regex.Matches(
+                text,
+                @"(?:startupReceipt=)?(?<path>[A-Za-z]:\\[^\s;|""'<>]*startup\.json|(?:\.?/)?(?:artifacts|outputs|data|tool-runs|process-runs)/[^\s;|""'<>]*startup\.json)",
+                RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)
+            .Select(match => NormalizeLifecyclePath(match.Groups["path"].Value))
+            .Where(value => !string.IsNullOrWhiteSpace(value))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+    }
+
+    private static IReadOnlyList<string> ExtractLoopbackAuthorities(string text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return [];
+        }
+
+        return Regex.Matches(
+                text,
+                @"https?://(?:localhost|127\.0\.0\.1|\[::1\]):\d+(?:/[^\s""'<>)]*)?",
+                RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)
+            .Select(match => NormalizeLoopbackAuthority(match.Value))
+            .Where(value => !string.IsNullOrWhiteSpace(value))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+    }
+
+    private static string NormalizeLifecyclePath(string value)
+        => string.IsNullOrWhiteSpace(value)
+            ? string.Empty
+            : value.Trim().TrimEnd('.', ',', ';').Replace('\\', '/');
+
+    private static string NormalizeLoopbackAuthority(string value)
+    {
+        if (!Uri.TryCreate(value.Trim().TrimEnd('.', ',', ';'), UriKind.Absolute, out var uri))
+        {
+            return string.Empty;
+        }
+
+        var host = string.Equals(uri.Host, "localhost", StringComparison.OrdinalIgnoreCase)
+            ? "127.0.0.1"
+            : uri.Host.Trim('[', ']');
+        return $"{uri.Scheme.ToLowerInvariant()}://{host.ToLowerInvariant()}:{uri.Port}";
+    }
+
     private static bool TryCreateProductRequiredToolReceiptBlockedRetryIssue(
         ProcessRuntimeStepAssignment assignment,
         ProcessStepOutcomeResult output,
@@ -381,7 +666,11 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter
             return false;
         }
 
-        var requiredToolReceipts = ResolveProductCompletionRequiredToolReceipts(assignment.LaunchVariables, assignment.StepKey);
+        var requiredToolReceipts = ResolveApplicableProductCompletionRequiredToolReceiptRules(assignment, output.BranchOutcomeKey)
+            .Select(rule => rule.ToolReceipt)
+            .Where(receipt => !string.IsNullOrWhiteSpace(receipt))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
         if (!ShouldEnforceRequiredProductToolReceipts(assignment, requiredToolReceipts))
         {
             return false;
@@ -460,7 +749,13 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter
             assignment,
             toolReceipts,
             activeLaunchContextToolNames,
-            currentExecutionRunId);
+            currentExecutionRunId,
+            output.BranchOutcomeKey,
+            ResolveEnforcedProductCoveredRuntimeToolNames(
+                assignment,
+                ResolveApplicableProductCompletionRequiredToolReceiptRules(
+                    assignment,
+                    output.BranchOutcomeKey)));
         if (gate.RequiredReceipts.Count == 0)
         {
             return false;
