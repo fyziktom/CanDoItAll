@@ -12,11 +12,15 @@ public sealed class WorkspaceCommandExecutionService : IWorkspaceCommandExecutio
     public WorkspaceCommandExecutionService(
         string workspaceRoot,
         IWorkspaceProcessHost processHost,
-        WorkspaceScopeDescriptor? workspaceScope = null)
+        WorkspaceScopeDescriptor? workspaceScope = null,
+        IEnumerable<IWorkspaceCommandReceiptLifecycleFactExtractor>? lifecycleFactExtractors = null)
     {
         var pathPolicy = new WorkspacePathPolicy(workspaceRoot, workspaceScope);
         environmentPolicy = new WorkspaceCommandEnvironmentPolicy();
-        receiptWriter = new WorkspaceCommandReceiptWriter(pathPolicy.WorkspaceRoot, pathPolicy.WorkspaceScope);
+        receiptWriter = new WorkspaceCommandReceiptWriter(
+            pathPolicy.WorkspaceRoot,
+            pathPolicy.WorkspaceScope,
+            lifecycleFactExtractors);
         planBuilder = new WorkspaceCommandPlanBuilder(pathPolicy);
         processRunner = new WorkspaceCommandProcessRunner(
             processHost,

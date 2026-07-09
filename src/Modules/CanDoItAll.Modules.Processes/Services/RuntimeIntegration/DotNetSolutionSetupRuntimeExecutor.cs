@@ -6,29 +6,14 @@ using CanDoItAll.Processes.Runtime;
 
 namespace CanDoItAll.Modules.Processes;
 
-internal interface IDotNetSolutionSetupRuntimeExecutor
-{
-    ValueTask<DotNetSolutionSetupRuntimeExecutionResult?> TryExecuteAsync(
-        ProcessRuntimeStepAssignment assignment,
-        CancellationToken cancellationToken = default);
-}
-
-internal sealed record DotNetSolutionSetupRuntimeExecutionResult(
-    bool Succeeded,
-    ProcessStepOutcomeResult? Output,
-    IReadOnlyList<ToolExecutionReceiptRecord> ToolReceipts,
-    Guid ExecutionRunId,
-    string Summary,
-    string Evidence);
-
 internal sealed class DotNetSolutionSetupRuntimeExecutor(
     IWorkspaceFileService workspaceFiles,
-    IWorkspaceCommandExecutionService workspaceCommands) : IDotNetSolutionSetupRuntimeExecutor
+    IWorkspaceCommandExecutionService workspaceCommands) : IProcessRuntimeOwnedStepExecutor
 {
     private const string WorkspaceDotnetNew = "workspace_dotnet_new";
     private const string WorkspacePowerShellRunScript = "workspace_pwsh_run_script";
 
-    public async ValueTask<DotNetSolutionSetupRuntimeExecutionResult?> TryExecuteAsync(
+    public async ValueTask<ProcessRuntimeOwnedStepExecutionResult?> TryExecuteAsync(
         ProcessRuntimeStepAssignment assignment,
         CancellationToken cancellationToken = default)
     {
@@ -43,7 +28,7 @@ internal sealed class DotNetSolutionSetupRuntimeExecutor(
         var executionRunId = Guid.NewGuid();
         if (!guard.IsSatisfied)
         {
-            return DotNetSolutionSetupRuntimeExecutionResultFailure(
+            return RuntimeOwnedStepExecutionResultFailure(
                 executionRunId,
                 [],
                 $"Runtime-owned .NET setup cannot execute because the deterministic tool plan is invalid: {string.Join("; ", guard.Issues.Select(issue => issue.Code))}.",
@@ -54,7 +39,7 @@ internal sealed class DotNetSolutionSetupRuntimeExecutor(
         var receipts = new List<ToolExecutionReceiptRecord>();
         if (!TryResolveExecutionInputs(assignment, plan, out var inputs, out var inputIssue))
         {
-            return DotNetSolutionSetupRuntimeExecutionResultFailure(
+            return RuntimeOwnedStepExecutionResultFailure(
                 executionRunId,
                 receipts,
                 inputIssue,
@@ -74,7 +59,7 @@ internal sealed class DotNetSolutionSetupRuntimeExecutor(
                 .ConfigureAwait(false);
             if (!solutionScaffold.Succeeded)
             {
-                return DotNetSolutionSetupRuntimeExecutionResultFailure(
+                return RuntimeOwnedStepExecutionResultFailure(
                     executionRunId,
                     receipts,
                     solutionScaffold.Summary,
@@ -84,7 +69,7 @@ internal sealed class DotNetSolutionSetupRuntimeExecutor(
             var appProject = inputs.AppProjectFile;
             if (string.IsNullOrWhiteSpace(appProject))
             {
-                return DotNetSolutionSetupRuntimeExecutionResultFailure(
+                return RuntimeOwnedStepExecutionResultFailure(
                     executionRunId,
                     receipts,
                     "Runtime-owned .NET setup cannot create the app project because DotNetAppProjectFile was not resolved.",
@@ -102,7 +87,7 @@ internal sealed class DotNetSolutionSetupRuntimeExecutor(
                 .ConfigureAwait(false);
             if (!appScaffold.Succeeded)
             {
-                return DotNetSolutionSetupRuntimeExecutionResultFailure(
+                return RuntimeOwnedStepExecutionResultFailure(
                     executionRunId,
                     receipts,
                     appScaffold.Summary,
@@ -114,7 +99,7 @@ internal sealed class DotNetSolutionSetupRuntimeExecutor(
         receipts.Add(ToToolReceipt(executionRunId, writeScript));
         if (!writeScript.Succeeded)
         {
-            return DotNetSolutionSetupRuntimeExecutionResultFailure(
+            return RuntimeOwnedStepExecutionResultFailure(
                 executionRunId,
                 receipts,
                 $"Runtime-owned .NET setup could not write helper script '{plan.ScriptRef}': {writeScript.Message}",
@@ -125,7 +110,7 @@ internal sealed class DotNetSolutionSetupRuntimeExecutor(
         receipts.Add(ToToolReceipt(executionRunId, scriptStat));
         if (!scriptStat.Succeeded || !scriptStat.Exists || !string.Equals(scriptStat.PathKind, "file", StringComparison.OrdinalIgnoreCase))
         {
-            return DotNetSolutionSetupRuntimeExecutionResultFailure(
+            return RuntimeOwnedStepExecutionResultFailure(
                 executionRunId,
                 receipts,
                 $"Runtime-owned .NET setup could not verify helper script '{plan.ScriptRef}': {scriptStat.Message}",
@@ -143,7 +128,7 @@ internal sealed class DotNetSolutionSetupRuntimeExecutor(
         receipts.Add(ToToolReceipt(executionRunId, scriptRun));
         if (!scriptRun.Succeeded)
         {
-            return DotNetSolutionSetupRuntimeExecutionResultFailure(
+            return RuntimeOwnedStepExecutionResultFailure(
                 executionRunId,
                 receipts,
                 $"Runtime-owned .NET setup helper failed for step '{assignment.StepKey}': {scriptRun.Message}",
@@ -152,7 +137,7 @@ internal sealed class DotNetSolutionSetupRuntimeExecutor(
 
         if (!ValidateRequiredReadback(assignment, inputs.ProductRoot, out var readbackIssue))
         {
-            return DotNetSolutionSetupRuntimeExecutionResultFailure(
+            return RuntimeOwnedStepExecutionResultFailure(
                 executionRunId,
                 receipts,
                 readbackIssue,
@@ -174,7 +159,7 @@ internal sealed class DotNetSolutionSetupRuntimeExecutor(
             HumanReadableSummaryMarkdown = $"Runtime-owned .NET solution setup wrote and verified the helper script, ran {WorkspacePowerShellRunScript}, and read back required solution membership."
         };
 
-        return new DotNetSolutionSetupRuntimeExecutionResult(
+        return new ProcessRuntimeOwnedStepExecutionResult(
             true,
             outcome,
             receipts,
@@ -222,7 +207,7 @@ internal sealed class DotNetSolutionSetupRuntimeExecutor(
                 $"dotnet-new:{template}:{name}:{dotnetNew.ExitCode}:{dotnetNew.Message}:{dotnetNew.StderrPreview}");
     }
 
-    private static DotNetSolutionSetupRuntimeExecutionResult DotNetSolutionSetupRuntimeExecutionResultFailure(
+    private static ProcessRuntimeOwnedStepExecutionResult RuntimeOwnedStepExecutionResultFailure(
         Guid executionRunId,
         IReadOnlyList<ToolExecutionReceiptRecord> receipts,
         string summary,

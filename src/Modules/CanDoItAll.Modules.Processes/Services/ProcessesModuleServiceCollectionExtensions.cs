@@ -55,7 +55,8 @@ public static class ProcessesModuleServiceCollectionExtensions
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IProcessPromptCompositionDriver, AgentFrameworkProcessStepBriefBuilder>());
         services.TryAddScoped<IProcessStepBriefBuilder, DriverProcessStepBriefBuilder>();
         services.TryAddScoped<IProcessRuntimeToolPreflightService, ProcessRuntimeToolPreflightService>();
-        services.TryAddScoped<IDotNetSolutionSetupRuntimeExecutor, DotNetSolutionSetupRuntimeExecutor>();
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IWorkspaceCommandReceiptLifecycleFactExtractor, DotNetWorkspaceCommandReceiptLifecycleFactExtractor>());
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IProcessRuntimeOwnedStepExecutor, DotNetSolutionSetupRuntimeExecutor>());
         services.TryAddScoped<IParentSubprocessArtifactBridge, ParentSubprocessArtifactBridge>();
         services.TryAddScoped<AgentFrameworkProcessExecutionAdapter>();
         services.TryAddScoped<IProcessExecutionAdapter>(serviceProvider => serviceProvider.GetRequiredService<AgentFrameworkProcessExecutionAdapter>());

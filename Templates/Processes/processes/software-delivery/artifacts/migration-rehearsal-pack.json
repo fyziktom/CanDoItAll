@@ -1,0 +1,27 @@
+{
+  "Kind": "artifact-resource",
+  "Key": "migration-rehearsal-pack",
+  "DisplayName": "Migration rehearsal pack",
+  "Scope": "local",
+  "ProcessKey": "software-delivery",
+  "ArtifactKind": "Evidence",
+  "DefaultTrustRequirement": "ReviewRequired",
+  "DefaultSensitivityLevel": "Restricted",
+  "DefaultRetentionDays": 730,
+  "Summary": "Evidence pack from rehearsal or dry-run execution of a risky schema or data migration.",
+  "AllowedFutureUsageSummary": "Reusable for release approval, rollback review, and post-release forensic analysis only for the covered migration path.",
+  "ValidationRequirementSummary": "Must show rehearsal scope, dataset assumptions, timing, and rollback observations.",
+  "OwnerRoleKey": "data-migration-owner",
+  "DocPath": "processes/software-delivery/artifacts/migration-rehearsal-pack.md",
+  "SemanticAcceptanceContract": {
+    "AcceptanceMode": "SemanticReview",
+    "FileExistenceIsSufficient": false,
+    "RequiredArtifactSlotKey": "migration-rehearsal-pack",
+    "RequiredEvidenceKinds": [
+      "structured-finalizer-output",
+      "reviewed-managed-artifact",
+      "semantic-validation-summary"
+    ],
+    "RequiredReviewSummary": "Must show rehearsal scope, dataset assumptions, timing, and rollback observations."
+  }
+}

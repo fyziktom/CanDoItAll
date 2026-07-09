@@ -20,9 +20,12 @@ public sealed record ProcessTemplateCompatibilityReport(
         MigrationDryRun.Items.Any(item => item.Status is ProcessTemplateMigrationDryRunStatus.ManualReviewRequired or ProcessTemplateMigrationDryRunStatus.MigrationPlanFailed) ||
         SidecarDrift.Sidecars.Any(sidecar => sidecar.Status != ProcessTemplateSidecarDriftStatus.Aligned) ||
         BranchDiagnostics.Diagnostics.Count > 0 ||
-        TemplateContractDiagnostics.Diagnostics.Count > 0;
+        TemplateContractDiagnostics.Diagnostics.Count > 0 ||
+        ArtifactContractDiagnostics.Diagnostics.Count > 0;
 
     public ProcessTemplateContractDiagnosticReport TemplateContractDiagnostics { get; init; } = ProcessTemplateContractDiagnosticReport.Empty;
+
+    public ProcessArtifactContractDiagnosticReport ArtifactContractDiagnostics { get; init; } = ProcessArtifactContractDiagnosticReport.Empty;
 }
 
 public sealed record ProcessTemplateMigrationDryRunReport(
@@ -116,4 +119,26 @@ public enum ProcessTemplateContractDiagnosticKind
     UnknownSubprocessChildArtifactExpectation,
     InvalidBranchOutcomeKey,
     MissingProducedArtifactSlot
+}
+
+public sealed record ProcessArtifactContractDiagnosticReport(
+    int DiagnosticCount,
+    IReadOnlyList<ProcessArtifactContractDiagnostic> Diagnostics)
+{
+    public static ProcessArtifactContractDiagnosticReport Empty { get; } = new(0, []);
+}
+
+public sealed record ProcessArtifactContractDiagnostic(
+    string ProcessKey,
+    string ArtifactKey,
+    ProcessArtifactContractDiagnosticKind Kind,
+    string Message);
+
+public enum ProcessArtifactContractDiagnosticKind
+{
+    MissingSemanticAcceptanceContract,
+    FileOnlyAcceptanceAllowed,
+    MissingArtifactSlot,
+    MissingEvidenceKinds,
+    InvalidSemanticAcceptanceContract
 }

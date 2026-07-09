@@ -44,6 +44,7 @@ public static partial class ProcessTemplateCompatibilityScanner
         var sidecars = new List<ProcessTemplateSidecarDrift>();
         var branchDiagnostics = new List<ProcessBranchMigrationDiagnostic>();
         var contractDiagnostics = new List<ProcessTemplateContractDiagnostic>();
+        var artifactContractDiagnostics = new List<ProcessArtifactContractDiagnostic>();
         var outcomeCount = 0;
 
         try
@@ -100,6 +101,11 @@ public static partial class ProcessTemplateCompatibilityScanner
                         entry.Key,
                         definition.RootElement,
                         definitionElements));
+                    artifactContractDiagnostics.AddRange(await AnalyzeArtifactContractsAsync(
+                            root,
+                            entry,
+                            cancellationToken)
+                        .ConfigureAwait(false));
                 }
             }
         }
@@ -126,7 +132,10 @@ public static partial class ProcessTemplateCompatibilityScanner
         {
             TemplateContractDiagnostics = request.StrictExecutionContractValidation
                 ? new ProcessTemplateContractDiagnosticReport(contractDiagnostics.Count, contractDiagnostics)
-                : ProcessTemplateContractDiagnosticReport.Empty
+                : ProcessTemplateContractDiagnosticReport.Empty,
+            ArtifactContractDiagnostics = request.StrictExecutionContractValidation
+                ? new ProcessArtifactContractDiagnosticReport(artifactContractDiagnostics.Count, artifactContractDiagnostics)
+                : ProcessArtifactContractDiagnosticReport.Empty
         };
     }
 

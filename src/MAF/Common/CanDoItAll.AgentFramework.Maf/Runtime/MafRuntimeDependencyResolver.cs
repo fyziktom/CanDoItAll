@@ -57,7 +57,11 @@ internal sealed class MafRuntimeDependencyResolver : IMafRuntimeDependencyResolv
         var workspaceFileService = services.GetService(typeof(IWorkspaceFileService)) as IWorkspaceFileService
             ?? new WorkspaceFileService(workspaceRoot, workspaceScope);
         var workspaceCommandExecutionService = services.GetService(typeof(IWorkspaceCommandExecutionService)) as IWorkspaceCommandExecutionService
-            ?? new WorkspaceCommandExecutionService(workspaceRoot, new LocalWorkspaceProcessHost(), workspaceScope);
+            ?? new WorkspaceCommandExecutionService(
+                workspaceRoot,
+                new LocalWorkspaceProcessHost(),
+                workspaceScope,
+                ResolveLifecycleFactExtractors(services));
         var documentMarkdownConverter = services.GetService(typeof(IWorkspaceDocumentMarkdownConverter)) as IWorkspaceDocumentMarkdownConverter
             ?? new ManagedCodeMarkItDownDocumentMarkdownConverter();
         var workspaceArtifactToolService = services.GetService(typeof(IWorkspaceArtifactToolService)) as IWorkspaceArtifactToolService
@@ -72,6 +76,12 @@ internal sealed class MafRuntimeDependencyResolver : IMafRuntimeDependencyResolv
             workspaceCommandExecutionService,
             workspaceArtifactToolService);
     }
+
+    private static IEnumerable<IWorkspaceCommandReceiptLifecycleFactExtractor> ResolveLifecycleFactExtractors(
+        IServiceProvider services)
+        => services.GetService(typeof(IEnumerable<IWorkspaceCommandReceiptLifecycleFactExtractor>)) is IEnumerable<IWorkspaceCommandReceiptLifecycleFactExtractor> extractors
+            ? extractors
+            : [];
 
     private static IMafProviderStreamingDispatchGate CreateFallbackProviderStreamingDispatchGate(IServiceProvider services)
     {

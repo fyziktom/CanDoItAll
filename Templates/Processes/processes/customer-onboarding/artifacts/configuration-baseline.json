@@ -1,0 +1,27 @@
+{
+  "Kind": "artifact-resource",
+  "Key": "configuration-baseline",
+  "DisplayName": "Configuration baseline",
+  "Scope": "local",
+  "ProcessKey": "customer-onboarding",
+  "ArtifactKind": "Deliverable",
+  "DefaultTrustRequirement": "ReviewRequired",
+  "DefaultSensitivityLevel": "Internal",
+  "DefaultRetentionDays": 1095,
+  "Summary": "Named configuration baseline for the onboarding scope, including approved options and declared exclusions.",
+  "AllowedFutureUsageSummary": "Reusable for customer handoff, support, and future fit-gap review for the same customer context.",
+  "ValidationRequirementSummary": "Must reflect the actual approved configuration, not workshop speculation.",
+  "OwnerRoleKey": "solution-consultant",
+  "DocPath": "processes/customer-onboarding/artifacts/configuration-baseline.md",
+  "SemanticAcceptanceContract": {
+    "AcceptanceMode": "SemanticReview",
+    "FileExistenceIsSufficient": false,
+    "RequiredArtifactSlotKey": "configuration-baseline",
+    "RequiredEvidenceKinds": [
+      "structured-finalizer-output",
+      "reviewed-managed-artifact",
+      "semantic-validation-summary"
+    ],
+    "RequiredReviewSummary": "Must reflect the actual approved configuration, not workshop speculation."
+  }
+}

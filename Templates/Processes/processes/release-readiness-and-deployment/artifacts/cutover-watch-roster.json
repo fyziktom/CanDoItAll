@@ -1,0 +1,27 @@
+{
+  "Kind": "artifact-resource",
+  "Key": "cutover-watch-roster",
+  "DisplayName": "Cutover watch roster",
+  "Scope": "local",
+  "ProcessKey": "release-readiness-and-deployment",
+  "ArtifactKind": "Brief",
+  "DefaultTrustRequirement": "ReviewRequired",
+  "DefaultSensitivityLevel": "Internal",
+  "DefaultRetentionDays": 365,
+  "Summary": "Named on-watch roster for the first live risk window during deployment or cutover.",
+  "AllowedFutureUsageSummary": "Reusable for the specific deployment event and later incident or retrospective review.",
+  "ValidationRequirementSummary": "Must include actual names, contact paths, and timing, not placeholder roles only.",
+  "OwnerRoleKey": "change-manager",
+  "DocPath": "processes/release-readiness-and-deployment/artifacts/cutover-watch-roster.md",
+  "SemanticAcceptanceContract": {
+    "AcceptanceMode": "SemanticReview",
+    "FileExistenceIsSufficient": false,
+    "RequiredArtifactSlotKey": "cutover-watch-roster",
+    "RequiredEvidenceKinds": [
+      "structured-finalizer-output",
+      "reviewed-managed-artifact",
+      "semantic-validation-summary"
+    ],
+    "RequiredReviewSummary": "Must include actual names, contact paths, and timing, not placeholder roles only."
+  }
+}

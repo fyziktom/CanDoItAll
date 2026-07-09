@@ -73,7 +73,8 @@ public static class AgentFrameworkModuleServiceCollectionExtensions
             return new WorkspaceCommandExecutionService(
                 workspaceRoot,
                 serviceProvider.GetRequiredService<IWorkspaceProcessHost>(),
-                scope);
+                scope,
+                serviceProvider.GetServices<IWorkspaceCommandReceiptLifecycleFactExtractor>());
         });
         services.TryAddScoped<IWorkspaceDocumentMarkdownConverter, ManagedCodeMarkItDownDocumentMarkdownConverter>();
         services.TryAddScoped<IWorkspaceArtifactToolService>(serviceProvider =>

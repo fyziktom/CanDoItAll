@@ -28,30 +28,37 @@ namespace CanDoItAll.Modules.Processes;
 
 internal sealed partial class AgentFrameworkProcessExecutionAdapter
 {
-    private async ValueTask<ProcessExecutionAdapterResult?> TryExecuteRuntimeOwnedDotNetSetupAsync(
+    private async ValueTask<ProcessExecutionAdapterResult?> TryExecuteRuntimeOwnedStepAsync(
         ProcessRuntimeStepAssignment assignment,
         CancellationToken cancellationToken)
     {
-        if (dotNetSolutionSetupRuntimeExecutor is null)
+        foreach (var executor in runtimeOwnedStepExecutors)
         {
-            return null;
+            var runtimeResult = await executor
+                .TryExecuteAsync(assignment, cancellationToken)
+                .ConfigureAwait(false);
+            if (runtimeResult is null)
+            {
+                continue;
+            }
+
+            return ResolveRuntimeOwnedStepResult(assignment, runtimeResult);
         }
 
-        var runtimeResult = await dotNetSolutionSetupRuntimeExecutor
-            .TryExecuteAsync(assignment, cancellationToken)
-            .ConfigureAwait(false);
-        if (runtimeResult is null)
-        {
-            return null;
-        }
+        return null;
+    }
 
+    private ProcessExecutionAdapterResult ResolveRuntimeOwnedStepResult(
+        ProcessRuntimeStepAssignment assignment,
+        ProcessRuntimeOwnedStepExecutionResult runtimeResult)
+    {
         if (!runtimeResult.Succeeded || runtimeResult.Output is null)
         {
             return NeedsManagerForCompletionIssue(
                 assignment,
                 ComputeHash(runtimeResult.Evidence),
                 new ProcessCompletionIssue(
-                    "process.adapter.runtime_owned_dotnet_setup_failed",
+                    "process.adapter.runtime_owned_step_failed",
                     runtimeResult.Summary,
                     runtimeResult.Evidence,
                     assignment.ProducedArtifactSlotIds,

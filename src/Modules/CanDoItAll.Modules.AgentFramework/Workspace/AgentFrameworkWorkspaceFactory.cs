@@ -52,7 +52,11 @@ internal sealed class CanDoItAllAgentWorkspaceFactory(
         var store = new FileSandboxWorkspaceStore(workspaceRoot, scope);
         var processHost = new LocalWorkspaceProcessHost();
         var fileService = new WorkspaceFileService(workspaceRoot, scope);
-        var commandExecutionService = new WorkspaceCommandExecutionService(workspaceRoot, processHost, scope);
+        var commandExecutionService = new WorkspaceCommandExecutionService(
+            workspaceRoot,
+            processHost,
+            scope,
+            serviceProvider.GetServices<IWorkspaceCommandReceiptLifecycleFactExtractor>());
         var mafRuntime = new MafAgentRuntime(workspaceRoot, serviceProvider, scope);
         var scenarioRuntime = new ScenarioHarnessAgentRuntime(
             mafRuntime,

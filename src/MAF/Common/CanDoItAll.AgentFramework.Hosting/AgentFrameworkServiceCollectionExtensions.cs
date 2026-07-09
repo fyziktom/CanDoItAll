@@ -31,7 +31,8 @@ public static class AgentFrameworkServiceCollectionExtensions
         services.TryAddSingleton<IWorkspaceCommandExecutionService>(serviceProvider => new WorkspaceCommandExecutionService(
             normalizedWorkspaceRoot,
             serviceProvider.GetRequiredService<IWorkspaceProcessHost>(),
-            resolvedScope));
+            resolvedScope,
+            serviceProvider.GetServices<IWorkspaceCommandReceiptLifecycleFactExtractor>()));
         services.TryAddSingleton<IWorkspaceDocumentMarkdownConverter, ManagedCodeMarkItDownDocumentMarkdownConverter>();
         services.TryAddSingleton<IWorkspaceArtifactToolService>(serviceProvider => new WorkspaceArtifactToolService(
             normalizedWorkspaceRoot,

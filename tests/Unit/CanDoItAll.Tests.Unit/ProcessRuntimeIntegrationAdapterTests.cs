@@ -4675,7 +4675,7 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
             ExecutorDisplayName = agent.Name
         };
         var executionRunId = Guid.NewGuid();
-        var runtimeExecutor = new FakeDotNetSolutionSetupRuntimeExecutor(new DotNetSolutionSetupRuntimeExecutionResult(
+        var runtimeExecutor = new FakeRuntimeOwnedStepExecutor(new ProcessRuntimeOwnedStepExecutionResult(
             true,
             new ProcessStepOutcomeResult
             {
@@ -4709,7 +4709,7 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
                 new InMemoryAssignmentStore(assignment),
                 new InMemoryRuntimeStateStore(NewRuntimeState(assignment.RunId, assignment.RunId, ProcessRuntimeStatus.Active)),
                 workspaceFiles,
-                dotNetSolutionSetupRuntimeExecutor: runtimeExecutor);
+                runtimeOwnedStepExecutors: [runtimeExecutor]);
 
             var result = await adapter.ExecuteAsync(
                 new ProcessExecutionAdapterRequest(
@@ -6475,11 +6475,11 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
         }
     }
 
-    private sealed class FakeDotNetSolutionSetupRuntimeExecutor(DotNetSolutionSetupRuntimeExecutionResult? result) : IDotNetSolutionSetupRuntimeExecutor
+    private sealed class FakeRuntimeOwnedStepExecutor(ProcessRuntimeOwnedStepExecutionResult? result) : IProcessRuntimeOwnedStepExecutor
     {
         public int CallCount { get; private set; }
 
-        public ValueTask<DotNetSolutionSetupRuntimeExecutionResult?> TryExecuteAsync(
+        public ValueTask<ProcessRuntimeOwnedStepExecutionResult?> TryExecuteAsync(
             ProcessRuntimeStepAssignment assignment,
             CancellationToken cancellationToken = default)
         {

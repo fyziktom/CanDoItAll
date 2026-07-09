@@ -1,0 +1,27 @@
+{
+  "Kind": "process-artifact-template",
+  "Key": "architecture-escalation-brief",
+  "DisplayName": "Architecture escalation brief",
+  "Scope": "local",
+  "ProcessKey": "branching-code-review",
+  "ArtifactKind": "Decision",
+  "DefaultTrustRequirement": "ReviewRequired",
+  "DefaultSensitivityLevel": "Internal",
+  "DefaultRetentionDays": 365,
+  "Summary": "Escalation brief that frames architecture concerns discovered during review and the evidence needed for resolution.",
+  "AllowedFutureUsageSummary": "Reusable for ADR follow-up, review replay, and change-scope renegotiation.",
+  "ValidationRequirementSummary": "Must capture the architectural concern, impacted boundary, and decision needed.",
+  "OwnerRoleKey": "review-lead",
+  "DocPath": "processes/branching-code-review/artifacts/architecture-escalation-brief.md",
+  "SemanticAcceptanceContract": {
+    "AcceptanceMode": "SemanticReview",
+    "FileExistenceIsSufficient": false,
+    "RequiredArtifactSlotKey": "architecture-escalation-brief",
+    "RequiredEvidenceKinds": [
+      "structured-finalizer-output",
+      "reviewed-managed-artifact",
+      "semantic-validation-summary"
+    ],
+    "RequiredReviewSummary": "Must capture the architectural concern, impacted boundary, and decision needed."
+  }
+}

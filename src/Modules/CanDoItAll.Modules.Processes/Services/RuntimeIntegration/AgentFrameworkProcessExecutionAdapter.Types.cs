@@ -27,11 +27,6 @@ namespace CanDoItAll.Modules.Processes;
 
 internal sealed partial class AgentFrameworkProcessExecutionAdapter
 {
-    [GeneratedRegex(
-        @"(?<![0-9a-fA-F])[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}(?![0-9a-fA-F])",
-        RegexOptions.CultureInvariant)]
-    private static partial Regex ProcessRunIdRegex();
-
     [GeneratedRegex("[^A-Za-z0-9._-]+", RegexOptions.CultureInvariant)]
     private static partial Regex ManagedArtifactPathSegmentInvalidCharactersRegex();
 
@@ -89,4 +84,22 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter
     private sealed record ProductRootInspection(
         bool HasProductFiles,
         string Summary);
+
+    private static IEnumerable<string?> EnumerateOutcomeText(ProcessStepOutcomeResult output)
+    {
+        yield return output.Reason;
+        yield return output.BranchOutcomeKey;
+        yield return output.BranchOutcomeTitle;
+        yield return output.HumanReadableSummaryMarkdown;
+
+        foreach (var evidenceRef in output.EvidenceRefs)
+        {
+            yield return evidenceRef;
+        }
+
+        foreach (var nextAction in output.NextActions)
+        {
+            yield return nextAction;
+        }
+    }
 }

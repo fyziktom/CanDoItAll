@@ -1,0 +1,27 @@
+{
+  "Kind": "artifact-resource",
+  "Key": "rollback-trigger-sheet",
+  "DisplayName": "Rollback trigger sheet",
+  "Scope": "local",
+  "ProcessKey": "hotfix-rollout",
+  "ArtifactKind": "Decision",
+  "DefaultTrustRequirement": "ReviewRequired",
+  "DefaultSensitivityLevel": "Restricted",
+  "DefaultRetentionDays": 730,
+  "Summary": "Explicit rollback trigger sheet for emergency rollout that defines telemetry thresholds, shard-risk triggers, and stop conditions.",
+  "AllowedFutureUsageSummary": "Reusable only during the hotfix window, post-incident review, and authorized audit of the event.",
+  "ValidationRequirementSummary": "Must define concrete telemetry or operational signals, not vague discomfort language.",
+  "OwnerRoleKey": "database-engineer",
+  "DocPath": "processes/hotfix-rollout/artifacts/rollback-trigger-sheet.md",
+  "SemanticAcceptanceContract": {
+    "AcceptanceMode": "SemanticReview",
+    "FileExistenceIsSufficient": false,
+    "RequiredArtifactSlotKey": "rollback-trigger-sheet",
+    "RequiredEvidenceKinds": [
+      "structured-finalizer-output",
+      "reviewed-managed-artifact",
+      "semantic-validation-summary"
+    ],
+    "RequiredReviewSummary": "Must define concrete telemetry or operational signals, not vague discomfort language."
+  }
+}

@@ -37,7 +37,7 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter : IProcessEx
     private readonly IReadOnlyList<IProcessSubprocessLaunchCoordinator> subprocessLaunchCoordinators;
     private readonly IProcessRuntimeToolPreflightService? runtimeToolPreflightService;
     private readonly IParentSubprocessArtifactBridge parentSubprocessArtifactBridge;
-    private readonly IDotNetSolutionSetupRuntimeExecutor? dotNetSolutionSetupRuntimeExecutor;
+    private readonly IReadOnlyList<IProcessRuntimeOwnedStepExecutor> runtimeOwnedStepExecutors;
 
     public AgentFrameworkProcessExecutionAdapter(
         ICanDoItAllAgentWorkspaceFactory workspaceFactory,
@@ -48,7 +48,7 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter : IProcessEx
         IEnumerable<IProcessSubprocessLaunchCoordinator>? subprocessLaunchCoordinators = null,
         IProcessRuntimeToolPreflightService? runtimeToolPreflightService = null,
         IParentSubprocessArtifactBridge? parentSubprocessArtifactBridge = null,
-        IDotNetSolutionSetupRuntimeExecutor? dotNetSolutionSetupRuntimeExecutor = null)
+        IEnumerable<IProcessRuntimeOwnedStepExecutor>? runtimeOwnedStepExecutors = null)
     {
         this.workspaceFactory = workspaceFactory;
         this.agentReferenceDataProvider = agentReferenceDataProvider;
@@ -59,7 +59,7 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter : IProcessEx
         this.runtimeToolPreflightService = runtimeToolPreflightService;
         this.parentSubprocessArtifactBridge = parentSubprocessArtifactBridge ??
             new ParentSubprocessArtifactBridge(assignmentStore, stateStore, workspaceFiles);
-        this.dotNetSolutionSetupRuntimeExecutor = dotNetSolutionSetupRuntimeExecutor;
+        this.runtimeOwnedStepExecutors = runtimeOwnedStepExecutors?.ToArray() ?? [];
     }
 
     public ProcessExecutionAdapterDescriptor Descriptor => StandardProcessAdapterDescriptors.WorkflowAdapter;
@@ -157,11 +157,11 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter : IProcessEx
             }
         }
 
-        if (await TryExecuteRuntimeOwnedDotNetSetupAsync(
+        if (await TryExecuteRuntimeOwnedStepAsync(
                 assignment,
-                cancellationToken).ConfigureAwait(false) is { } runtimeOwnedDotNetSetupResult)
+                cancellationToken).ConfigureAwait(false) is { } runtimeOwnedStepResult)
         {
-            return runtimeOwnedDotNetSetupResult;
+            return runtimeOwnedStepResult;
         }
 
         try

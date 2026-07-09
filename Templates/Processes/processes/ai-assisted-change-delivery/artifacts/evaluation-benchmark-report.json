@@ -1,0 +1,27 @@
+{
+  "Kind": "artifact-resource",
+  "Key": "evaluation-benchmark-report",
+  "DisplayName": "Evaluation benchmark report",
+  "Scope": "local",
+  "ProcessKey": "ai-assisted-change-delivery",
+  "ArtifactKind": "Evidence",
+  "DefaultTrustRequirement": "ReviewRequired",
+  "DefaultSensitivityLevel": "Internal",
+  "DefaultRetentionDays": 1095,
+  "Summary": "Detailed AI evaluation report covering task set, scoring method, blind spots, and observed failures.",
+  "AllowedFutureUsageSummary": "Reusable for AI approval, later re-validation, and incident/quality review while the evaluated model or prompt context remains materially similar.",
+  "ValidationRequirementSummary": "Must explain dataset shape, threshold logic, and known blind spots.",
+  "OwnerRoleKey": "ai-evaluation-lead",
+  "DocPath": "processes/ai-assisted-change-delivery/artifacts/evaluation-benchmark-report.md",
+  "SemanticAcceptanceContract": {
+    "AcceptanceMode": "SemanticReview",
+    "FileExistenceIsSufficient": false,
+    "RequiredArtifactSlotKey": "evaluation-benchmark-report",
+    "RequiredEvidenceKinds": [
+      "structured-finalizer-output",
+      "reviewed-managed-artifact",
+      "semantic-validation-summary"
+    ],
+    "RequiredReviewSummary": "Must explain dataset shape, threshold logic, and known blind spots."
+  }
+}

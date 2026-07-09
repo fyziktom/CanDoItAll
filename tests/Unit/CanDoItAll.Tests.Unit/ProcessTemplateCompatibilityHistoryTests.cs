@@ -362,6 +362,56 @@ public sealed class ProcessTemplateCompatibilityHistoryTests
     }
 
     [Fact]
+    public async Task Template_compatibility_strict_scan_rejects_file_only_artifact_acceptance_contract()
+    {
+        var root = CreateTemplatePackRoot();
+        await WriteManifestAsync(root, "artifact-flow");
+        await WriteDefinitionAsync(
+            root,
+            "artifact-flow",
+            """
+            {
+              "key": "artifact-flow",
+              "steps": [
+                {
+                  "key": "write-artifact"
+                }
+              ]
+            }
+            """);
+
+        var artifactRoot = Path.Combine(root, "processes", "artifact-flow", "artifacts");
+        Directory.CreateDirectory(artifactRoot);
+        await File.WriteAllTextAsync(
+            Path.Combine(artifactRoot, "artifact.json"),
+            """
+            {
+              "key": "artifact",
+              "semanticAcceptanceContract": {
+                "acceptanceMode": "SemanticReview",
+                "fileExistenceIsSufficient": true,
+                "requiredArtifactSlotKey": "artifact",
+                "requiredEvidenceKinds": [
+                  "structured-finalizer-output",
+                  "reviewed-managed-artifact",
+                  "semantic-validation-summary"
+                ],
+                "requiredReviewSummary": "Must be semantically reviewed."
+              }
+            }
+            """);
+
+        var report = await ProcessTemplateCompatibilityScanner.AnalyzeAsync(CreateStrictScanRequest(root));
+
+        var diagnostic = Assert.Single(
+            report.ArtifactContractDiagnostics.Diagnostics,
+            item => item.Kind == ProcessArtifactContractDiagnosticKind.FileOnlyAcceptanceAllowed);
+        Assert.Equal("artifact-flow", diagnostic.ProcessKey);
+        Assert.Equal("artifact", diagnostic.ArtifactKey);
+        Assert.True(report.RequiresManualReview);
+    }
+
+    [Fact]
     public async Task Template_loader_materializes_typed_execution_contract()
     {
         var root = CreateTemplatePackRoot();
@@ -454,6 +504,7 @@ public sealed class ProcessTemplateCompatibilityHistoryTests
         var report = await ProcessTemplateCompatibilityScanner.AnalyzeAsync(CreateStrictScanRequest(root));
 
         Assert.Empty(report.TemplateContractDiagnostics.Diagnostics);
+        Assert.Empty(report.ArtifactContractDiagnostics.Diagnostics);
     }
 
     [Fact]
@@ -491,13 +542,14 @@ public sealed class ProcessTemplateCompatibilityHistoryTests
     }
 
     [Fact]
-    public void Business_artifact_templates_declare_semantic_acceptance_contract()
+    public void Shipped_artifact_templates_declare_semantic_acceptance_contract()
     {
         var root = ProcessTemplatePackLoader.FindPackRoot();
-        var artifactDirectory = Path.Combine(root, "processes", "business-plan-development", "artifacts");
-        var files = Directory.GetFiles(artifactDirectory, "*.json");
+        var files = Directory.GetFiles(Path.Combine(root, "processes"), "*.json", SearchOption.AllDirectories)
+            .Where(file => file.Contains($"{Path.DirectorySeparatorChar}artifacts{Path.DirectorySeparatorChar}", StringComparison.Ordinal))
+            .ToArray();
 
-        Assert.Equal(6, files.Length);
+        Assert.Equal(20, files.Length);
         foreach (var file in files)
         {
             using var document = JsonDocument.Parse(File.ReadAllText(file));
