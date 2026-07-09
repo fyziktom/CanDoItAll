@@ -634,22 +634,34 @@ internal sealed partial class DotNetProcessLaunchVariableContributor : IProjectS
             return string.Empty;
         }
 
-        var checks = BuildVisibleUiScaffoldRemovalChecks(appProjectName, appProjectDirectory);
-        if (checks.Length == 0)
+        var acceptanceChecks = BuildVisibleUiScaffoldRemovalChecks(
+            appProjectName,
+            appProjectDirectory,
+            enforceBranchOutcomeKeys: ["quality-accepted"]);
+        var repairCompletionChecks = BuildVisibleUiScaffoldRemovalChecks(
+            appProjectName,
+            appProjectDirectory,
+            enforceBranchOutcomeKeys: []);
+        if (acceptanceChecks.Length == 0 ||
+            repairCompletionChecks.Length == 0)
         {
             return string.Empty;
         }
 
         var map = new Dictionary<string, object[]>(StringComparer.Ordinal)
         {
-            ["qa-validation"] = checks,
-            ["qa-recheck"] = checks
+            ["qa-validation"] = acceptanceChecks,
+            ["quality-repair"] = repairCompletionChecks,
+            ["qa-recheck"] = acceptanceChecks
         };
 
         return JsonSerializer.Serialize(map);
     }
 
-    private static object[] BuildVisibleUiScaffoldRemovalChecks(string appProjectName, string appProjectDirectory)
+    private static object[] BuildVisibleUiScaffoldRemovalChecks(
+        string appProjectName,
+        string appProjectDirectory,
+        IReadOnlyCollection<string> enforceBranchOutcomeKeys)
     {
         var paths = new[]
         {
@@ -683,9 +695,17 @@ internal sealed partial class DotNetProcessLaunchVariableContributor : IProjectS
             {
                 ["pathCandidates"] = new[] { path },
                 ["mustExist"] = false,
-                ["enforceBranchOutcomeKeys"] = new[] { "quality-accepted" },
                 ["forbiddenTextAny"] = forbiddenText,
                 ["description"] = $"{appProjectName} visible UI must not ship default template scaffold content."
+            })
+            .Select(check =>
+            {
+                if (enforceBranchOutcomeKeys.Count > 0)
+                {
+                    check["enforceBranchOutcomeKeys"] = enforceBranchOutcomeKeys;
+                }
+
+                return check;
             })
             .Cast<object>()
             .ToArray();

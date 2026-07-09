@@ -154,12 +154,11 @@ public sealed class DotNetProcessLaunchVariableContributorTests
 
         Assert.NotNull(fileContentMap);
         var qaChecks = Assert.Contains("qa-validation", fileContentMap);
-        Assert.Contains(qaChecks, check =>
-            check.GetProperty("mustExist").GetBoolean() == false &&
-            check.GetProperty("enforceBranchOutcomeKeys").EnumerateArray().Any(value =>
-                string.Equals(value.GetString(), "quality-accepted", StringComparison.Ordinal)) &&
-            check.GetProperty("forbiddenTextAny").EnumerateArray().Any(value =>
-                string.Equals(value.GetString(), "@page \"/counter\"", StringComparison.Ordinal)));
+        Assert.Contains(qaChecks, IsQualityAcceptedScaffoldRemovalCheck);
+        var repairChecks = Assert.Contains("quality-repair", fileContentMap);
+        Assert.Contains(repairChecks, IsUngatedScaffoldRemovalCheck);
+        var recheckChecks = Assert.Contains("qa-recheck", fileContentMap);
+        Assert.Contains(recheckChecks, IsQualityAcceptedScaffoldRemovalCheck);
 
         Assert.Equal(@"C:\temp\CanDoItAll\Calculator", variables["ProductRoot"]);
         Assert.Equal(@"C:\temp\CanDoItAll\Calculator\Calculator.slnx", variables["DotNetSolutionFile"]);
@@ -179,6 +178,21 @@ public sealed class DotNetProcessLaunchVariableContributorTests
         Assert.Contains("workspace_dotnet_run targetPath must be DotNetAppProjectFileAlias", variables["DotNetScaffoldContract"]);
         Assert.Contains("Never call workspace_dotnet_run with DotNetSolutionFile", variables["DotNetScaffoldContract"]);
         Assert.Contains("Do not infer <SolutionName>.sln", variables["DotNetScaffoldContract"]);
+
+        static bool IsQualityAcceptedScaffoldRemovalCheck(JsonElement check)
+            => IsScaffoldRemovalCheck(check) &&
+               check.TryGetProperty("enforceBranchOutcomeKeys", out var branchOutcomeKeys) &&
+               branchOutcomeKeys.EnumerateArray().Any(value =>
+                   string.Equals(value.GetString(), "quality-accepted", StringComparison.Ordinal));
+
+        static bool IsUngatedScaffoldRemovalCheck(JsonElement check)
+            => IsScaffoldRemovalCheck(check) &&
+               !check.TryGetProperty("enforceBranchOutcomeKeys", out _);
+
+        static bool IsScaffoldRemovalCheck(JsonElement check)
+            => check.GetProperty("mustExist").GetBoolean() == false &&
+               check.GetProperty("forbiddenTextAny").EnumerateArray().Any(value =>
+                   string.Equals(value.GetString(), "@page \"/counter\"", StringComparison.Ordinal));
     }
 
     [Fact]

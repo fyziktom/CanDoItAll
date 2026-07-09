@@ -2360,6 +2360,57 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
     }
 
     [Fact]
+    public void Quality_repair_completion_enforces_ungated_product_file_content_checks()
+    {
+        var outputRoot = CreateTempProductRoot();
+        try
+        {
+            var scaffoldPage = Path.Combine(outputRoot, "src", "App", "Pages", "Counter.razor");
+            Directory.CreateDirectory(Path.GetDirectoryName(scaffoldPage)!);
+            File.WriteAllText(scaffoldPage, "@page \"/counter\"");
+            var baseAssignment = CreateManagedArtifactAssignment("quality-repair");
+            var checks = JsonSerializer.Serialize(new Dictionary<string, object[]>
+            {
+                ["quality-repair"] =
+                [
+                    new Dictionary<string, object>
+                    {
+                        ["pathCandidates"] = new[] { scaffoldPage },
+                        ["mustExist"] = false,
+                        ["forbiddenTextAny"] = new[] { "@page \"/counter\"" }
+                    }
+                ]
+            });
+            var assignment = baseAssignment with
+            {
+                LaunchVariables = WithLaunchVariables(
+                    baseAssignment,
+                    ("ProductRoot", outputRoot),
+                    (ProcessRuntimeLaunchVariables.ProductCompletionRequiredFileContentChecksByStep, checks))
+            };
+            var primaryRef = BuildStepArtifactRef(assignment);
+            var result = ToAdapterResult(
+                assignment,
+                new ProcessStepOutcomeResult
+                {
+                    Status = ProcessStepOutcomeStatus.Completed,
+                    Reason = "Repair completed.",
+                    EvidenceRefs = [primaryRef],
+                    NextActions = []
+                },
+                [CreateToolReceipt("workspace_write_file", primaryRef, "Succeeded: Wrote file.")]);
+
+            Assert.Equal(StrategyOutcome.NeedsManager, result.Outcome);
+            Assert.Contains(result.Diagnostics, diagnostic =>
+                diagnostic.Code.Value == "process.adapter.product_required_file_content_missing");
+        }
+        finally
+        {
+            DeleteDirectory(outputRoot);
+        }
+    }
+
+    [Fact]
     public void Managed_artifact_completion_accepts_scoped_workspace_write_receipt()
     {
         var assignment = CreateManagedArtifactAssignment("feature-intake");

@@ -626,6 +626,8 @@ public sealed class ProcessDefinitionCatalogProjectionTests
         Assert.Contains(ProcessOperationContractNames.CaptureRuntimeProof, qualityRepair.AllowedOperations);
         Assert.Contains("runtime or browser proof", qualityRepairDoc, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("Capture current-run managed artifacts", qualityRepairDoc, StringComparison.Ordinal);
+        Assert.Contains("stock .NET or Blazor starter scaffold", qualityRepairDoc, StringComparison.Ordinal);
+        Assert.Contains("default counter/weather routes", qualityRepairDoc, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -844,14 +846,31 @@ public sealed class ProcessDefinitionCatalogProjectionTests
     [Fact]
     public void Software_delivery_peer_review_can_run_read_only_validation()
     {
-        var loader = new ProcessTemplatePackLoader(Path.Combine(FindRepositoryRoot(), "Templates", "Processes"));
+        var repositoryRoot = FindRepositoryRoot();
+        var loader = new ProcessTemplatePackLoader(Path.Combine(repositoryRoot, "Templates", "Processes"));
         var definition = loader.LoadDefinition("software-delivery");
 
         var peerReview = Assert.Single(definition.Steps, step => string.Equals(step.Key, "peer-review", StringComparison.Ordinal));
+        var peerReviewDoc = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Templates",
+            "Processes",
+            "processes",
+            "software-delivery",
+            "steps",
+            "peer-review.md"));
 
         Assert.Equal(ProcessOperationContractNames.ExternalProductTargetReadOnly, peerReview.OperationTargetScope);
         Assert.Contains(ProcessOperationContractNames.RunValidation, peerReview.AllowedOperations);
         Assert.DoesNotContain(ProcessOperationContractNames.MutateProductTarget, peerReview.AllowedOperations);
+        Assert.Contains("current-run tool receipt refs", peerReview.Notes, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("final evidenceRefs", peerReview.Notes, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Do not put native absolute product paths", peerReview.Notes, StringComparison.Ordinal);
+        Assert.Contains("ungrounded external-target child paths", peerReview.Notes, StringComparison.Ordinal);
+        Assert.Contains("peer-review managed artifact ref", peerReview.EvidenceContractSummary, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("exact current-run receipt refs", peerReview.ArtifactExpectations[0].ValidationRequirementSummary, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("current-run tool receipt refs", peerReviewDoc, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Do not put native absolute product paths", peerReviewDoc, StringComparison.Ordinal);
     }
 
     [Fact]
