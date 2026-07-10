@@ -152,6 +152,8 @@ internal sealed class ToolInvocationTraceRecorder
     }
 }
 
+internal sealed record FinalizerSubmissionResult(bool Succeeded, string Message);
+
 internal sealed class FinalizerCapture(AgentFinalizerPolicy policy)
 {
     private readonly object gate = new();
@@ -162,28 +164,28 @@ internal sealed class FinalizerCapture(AgentFinalizerPolicy policy)
 
     public List<AITool> Tools { get; } = [];
 
-    public string SubmitProcessStepOutcome(JsonElement result)
+    public FinalizerSubmissionResult SubmitProcessStepOutcome(JsonElement result)
         => CaptureJsonElement<ProcessStepOutcomeResult>(result, "Process step outcome finalizer captured.");
 
-    public string SubmitCodeReviewResult(CodeReviewResult result)
+    public FinalizerSubmissionResult SubmitCodeReviewResult(CodeReviewResult result)
         => Capture(result, "Code review result finalizer captured.");
 
-    public string SubmitArchitectureReviewResult(ArchitectureReviewResult result)
+    public FinalizerSubmissionResult SubmitArchitectureReviewResult(ArchitectureReviewResult result)
         => Capture(result, "Architecture review result finalizer captured.");
 
-    public string SubmitImplementationPlan(ImplementationPlanResult result)
+    public FinalizerSubmissionResult SubmitImplementationPlan(ImplementationPlanResult result)
         => Capture(result, "Implementation plan finalizer captured.");
 
-    public string SubmitTestPlan(TestPlanResult result)
+    public FinalizerSubmissionResult SubmitTestPlan(TestPlanResult result)
         => Capture(result, "Test plan finalizer captured.");
 
-    public string SubmitToolExecutionDecision(ToolExecutionDecisionResult result)
+    public FinalizerSubmissionResult SubmitToolExecutionDecision(ToolExecutionDecisionResult result)
         => Capture(result, "Tool execution decision finalizer captured.");
 
-    public string SubmitProcessStatePatch(ProcessStatePatch result)
+    public FinalizerSubmissionResult SubmitProcessStatePatch(ProcessStatePatch result)
         => Capture(result, "Process state patch finalizer captured.");
 
-    public string SubmitHumanEscalationRequest(HumanEscalationRequest result)
+    public FinalizerSubmissionResult SubmitHumanEscalationRequest(HumanEscalationRequest result)
         => Capture(result, "Human escalation request finalizer captured.");
 
     public IReadOnlyList<AgentFinalizerInvocation> Snapshot()
@@ -194,7 +196,7 @@ internal sealed class FinalizerCapture(AgentFinalizerPolicy policy)
         }
     }
 
-    private string Capture<TOutput>(TOutput result, string message)
+    private FinalizerSubmissionResult Capture<TOutput>(TOutput result, string message)
     {
         ArgumentNullException.ThrowIfNull(result);
 
@@ -202,20 +204,22 @@ internal sealed class FinalizerCapture(AgentFinalizerPolicy policy)
         return CaptureArgumentsJson(argumentsJson, message);
     }
 
-    private string CaptureJsonElement<TOutput>(JsonElement result, string message)
+    private FinalizerSubmissionResult CaptureJsonElement<TOutput>(JsonElement result, string message)
     {
         var rawJson = result.ValueKind == JsonValueKind.String
             ? result.GetString()
             : result.GetRawText();
         if (!MafFinalizerDriver.TryNormalizeFinalizerJsonRepairText(Policy, rawJson, out var argumentsJson, out var failureMessage))
         {
-            throw new InvalidOperationException($"Finalizer payload for '{Policy.ToolName}' is invalid: {failureMessage}");
+            return new FinalizerSubmissionResult(
+                false,
+                $"Finalizer payload for '{Policy.ToolName}' was rejected: {failureMessage} Correct the payload and call '{Policy.ToolName}' again.");
         }
 
         return CaptureArgumentsJson(argumentsJson, message);
     }
 
-    private string CaptureArgumentsJson(string argumentsJson, string message)
+    private FinalizerSubmissionResult CaptureArgumentsJson(string argumentsJson, string message)
     {
         var candidate = new AgentFinalizerInvocation(
             Policy.ToolName,
@@ -227,15 +231,18 @@ internal sealed class FinalizerCapture(AgentFinalizerPolicy policy)
             var errorSummary = string.Join(
                 "; ",
                 validation.Errors.Select(error => $"{error.Code}: {error.Message}"));
-            throw new InvalidOperationException(
-                $"Finalizer payload for '{Policy.ToolName}' failed validation: {errorSummary}");
+            return new FinalizerSubmissionResult(
+                false,
+                $"Finalizer payload for '{Policy.ToolName}' was rejected: {errorSummary} Correct the payload and call '{Policy.ToolName}' again.");
         }
 
         lock (gate)
         {
             if (invocations.Count > 0)
             {
-                return $"Finalizer '{Policy.ToolName}' already captured; duplicate submission ignored.";
+                return new FinalizerSubmissionResult(
+                    true,
+                    $"Finalizer '{Policy.ToolName}' already captured; duplicate submission ignored.");
             }
 
             nextSequence++;
@@ -245,6 +252,6 @@ internal sealed class FinalizerCapture(AgentFinalizerPolicy policy)
                 nextSequence));
         }
 
-        return message;
+        return new FinalizerSubmissionResult(true, message);
     }
 }

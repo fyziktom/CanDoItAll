@@ -1,3 +1,4 @@
+using System.Text.Json;
 using CanDoItAll.AgentFramework.Maf;
 using CanDoItAll.AgentFramework.Models;
 
@@ -39,6 +40,19 @@ public sealed class MafAgentRuntimeToolInvocationResultTests
         var message = MafRuntimeToolInvocationResultClassifier.ResolveFailureMessage(result);
 
         Assert.Equal("Template 'webapp' is not approved.", message);
+    }
+
+    [Fact]
+    public void ResolveToolInvocationFailureMessage_reads_marshaled_json_result()
+    {
+        using var document = JsonDocument.Parse(
+            """{"succeeded":false,"message":"process.step_outcome.branch_key_required"}""");
+
+        var succeeded = MafRuntimeToolInvocationResultClassifier.IsSuccessful(document.RootElement);
+        var message = MafRuntimeToolInvocationResultClassifier.ResolveFailureMessage(document.RootElement);
+
+        Assert.False(succeeded);
+        Assert.Equal("process.step_outcome.branch_key_required", message);
     }
 
     private static WorkspaceCommandExecutionResult CreateWorkspaceCommandResult(bool succeeded, string message)

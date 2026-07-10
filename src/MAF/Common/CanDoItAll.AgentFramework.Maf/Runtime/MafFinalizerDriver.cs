@@ -313,6 +313,7 @@ internal static class MafFinalizerDriver
 
         return "- Pass exactly one `result` object argument to `submit_process_step_outcome`; do not pass scalar `result`, `status`, `reason`, or `evidenceRefs` as sibling arguments." + Environment.NewLine +
                "- The `result` object must include `status`, `reason`, `branchOutcomeKey`, `branchOutcomeTitle`, `evidenceRefs`, `nextActions`, and `humanReadableSummaryMarkdown`. Use `Completed`, `Blocked`, `Failed`, `WaitingApproval`, or `Refused` for `status`." + Environment.NewLine +
+               "- `branchOutcomeTitle` requires a non-empty stable `branchOutcomeKey`, and the key must be an exact branch declared by the current process brief. If this step does not select a branch, both `branchOutcomeKey` and `branchOutcomeTitle` must be empty strings; do not use placeholders such as `none`, `n/a`, or `completed`." + Environment.NewLine +
                "- Do not copy placeholder evidence values. Evidence refs must be exact current-run refs already created or observed during this turn." + Environment.NewLine +
                "- If `status` is `Completed`, `evidenceRefs` must contain at least one concrete current-run evidence reference. If no such evidence exists, return `Blocked` or `Failed` with a concrete `nextActions` entry instead of claiming completion." + Environment.NewLine;
     }

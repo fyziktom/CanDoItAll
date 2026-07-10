@@ -119,7 +119,9 @@ internal sealed class MafRuntimeAgentFactory
         }
 
         MafRuntimeExecutionOptionsResolver.EnsureStructuredOutputCapability(effectiveProvider, runtimeOptions);
-        var finalizerCapture = CreateFinalizerCapture(runtimeOptions.StructuredOutput, runtimeOptions.FinalizerMode);
+        var finalizerCapture = MafFinalizerToolFactory.CreateCapture(
+            runtimeOptions.StructuredOutput,
+            runtimeOptions.FinalizerMode);
         var capabilityState = await runtimeCapabilityComposer.CreateCapabilityStateCoreAsync(
             agent,
             effectiveProvider,
@@ -566,66 +568,6 @@ internal sealed class MafRuntimeAgentFactory
             ExecutionState.Preparing,
             "Approval policy",
             $"Omitted mutation tool(s) that require MAF approval because provider '{provider.Name}' using transport '{provider.Transport}' has no effective approval path: {toolList}.");
-    }
-
-    private static FinalizerCapture? CreateFinalizerCapture(
-        AgentStructuredOutputContract? structuredOutput,
-        AgentFinalizerMode finalizerMode)
-    {
-        if (finalizerMode == AgentFinalizerMode.Disabled)
-        {
-            return null;
-        }
-
-        if (!AgentFinalizerPolicies.TryResolveForStructuredOutput(structuredOutput, out var policy))
-        {
-            return null;
-        }
-
-        var capture = new FinalizerCapture(policy);
-        var tool = policy.OutputType switch
-        {
-            Type type when type == typeof(ProcessStepOutcomeResult) => AIFunctionFactory.Create(
-                capture.SubmitProcessStepOutcome,
-                policy.ToolName,
-                "Submits the final process-step outcome exactly once as typed machine-readable arguments."),
-            Type type when type == typeof(CodeReviewResult) => AIFunctionFactory.Create(
-                capture.SubmitCodeReviewResult,
-                policy.ToolName,
-                "Submits the final code-review result exactly once as typed machine-readable arguments."),
-            Type type when type == typeof(ArchitectureReviewResult) => AIFunctionFactory.Create(
-                capture.SubmitArchitectureReviewResult,
-                policy.ToolName,
-                "Submits the final architecture-review result exactly once as typed machine-readable arguments."),
-            Type type when type == typeof(ImplementationPlanResult) => AIFunctionFactory.Create(
-                capture.SubmitImplementationPlan,
-                policy.ToolName,
-                "Submits the final implementation plan exactly once as typed machine-readable arguments."),
-            Type type when type == typeof(TestPlanResult) => AIFunctionFactory.Create(
-                capture.SubmitTestPlan,
-                policy.ToolName,
-                "Submits the final test plan exactly once as typed machine-readable arguments."),
-            Type type when type == typeof(ToolExecutionDecisionResult) => AIFunctionFactory.Create(
-                capture.SubmitToolExecutionDecision,
-                policy.ToolName,
-                "Submits the final tool-execution decision exactly once as typed machine-readable arguments."),
-            Type type when type == typeof(ProcessStatePatch) => AIFunctionFactory.Create(
-                capture.SubmitProcessStatePatch,
-                policy.ToolName,
-                "Submits the final process-state patch exactly once as typed machine-readable arguments."),
-            Type type when type == typeof(HumanEscalationRequest) => AIFunctionFactory.Create(
-                capture.SubmitHumanEscalationRequest,
-                policy.ToolName,
-                "Submits the final human-escalation request exactly once as typed machine-readable arguments."),
-            _ => null
-        };
-        if (tool is null)
-        {
-            return null;
-        }
-
-        capture.Tools.Add(tool);
-        return capture;
     }
 
     private static string AppendFinalizerInstructions(

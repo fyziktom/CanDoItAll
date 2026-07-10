@@ -1,3 +1,5 @@
+using System.Text.Json;
+
 namespace CanDoItAll.AgentFramework.Maf;
 
 internal static class MafRuntimeToolInvocationResultClassifier
@@ -45,6 +47,12 @@ internal static class MafRuntimeToolInvocationResultClassifier
             }
 
             return false;
+        }
+
+        if (result is JsonElement jsonElement &&
+            TryResolveJsonSuccess(jsonElement, out succeeded))
+        {
+            return true;
         }
 
         var type = result.GetType();
@@ -126,6 +134,12 @@ internal static class MafRuntimeToolInvocationResultClassifier
             return !string.IsNullOrWhiteSpace(message);
         }
 
+        if (result is JsonElement jsonElement &&
+            TryResolveJsonFailureMessage(jsonElement, out message))
+        {
+            return true;
+        }
+
         var type = result.GetType();
         if (!type.IsValueType && !visited.Add(result))
         {
@@ -179,6 +193,119 @@ internal static class MafRuntimeToolInvocationResultClassifier
             return true;
         }
 
+        return false;
+    }
+
+    private static bool TryResolveJsonSuccess(JsonElement element, out bool succeeded)
+    {
+        succeeded = true;
+        if (element.ValueKind == JsonValueKind.String)
+        {
+            return TryResolveSuccess(element.GetString(), [], out succeeded);
+        }
+
+        if (element.ValueKind == JsonValueKind.Array)
+        {
+            foreach (var item in element.EnumerateArray())
+            {
+                if (TryResolveJsonSuccess(item, out succeeded) && !succeeded)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        if (element.ValueKind != JsonValueKind.Object)
+        {
+            return false;
+        }
+
+        foreach (var propertyName in new[] { "succeeded", "success", "isSuccess" })
+        {
+            if (TryGetJsonProperty(element, propertyName, out var property) &&
+                property.ValueKind is JsonValueKind.True or JsonValueKind.False)
+            {
+                succeeded = property.GetBoolean();
+                return true;
+            }
+        }
+
+        foreach (var propertyName in ResultEnvelopePropertyNames)
+        {
+            if (TryGetJsonProperty(element, propertyName, out var property) &&
+                TryResolveJsonSuccess(property, out succeeded))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static bool TryResolveJsonFailureMessage(JsonElement element, out string message)
+    {
+        message = string.Empty;
+        if (element.ValueKind == JsonValueKind.String)
+        {
+            message = element.GetString() ?? string.Empty;
+            return !string.IsNullOrWhiteSpace(message);
+        }
+
+        if (element.ValueKind == JsonValueKind.Array)
+        {
+            foreach (var item in element.EnumerateArray())
+            {
+                if (TryResolveJsonFailureMessage(item, out message))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        if (element.ValueKind != JsonValueKind.Object)
+        {
+            return false;
+        }
+
+        foreach (var propertyName in new[] { "message", "errorMessage", "failureMessage", "stderrPreview" })
+        {
+            if (TryGetJsonProperty(element, propertyName, out var property) &&
+                property.ValueKind == JsonValueKind.String &&
+                !string.IsNullOrWhiteSpace(property.GetString()))
+            {
+                message = property.GetString()!;
+                return true;
+            }
+        }
+
+        foreach (var propertyName in ResultEnvelopePropertyNames)
+        {
+            if (TryGetJsonProperty(element, propertyName, out var property) &&
+                TryResolveJsonFailureMessage(property, out message))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static bool TryGetJsonProperty(JsonElement element, string propertyName, out JsonElement value)
+    {
+        foreach (var property in element.EnumerateObject())
+        {
+            if (string.Equals(property.Name, propertyName, StringComparison.OrdinalIgnoreCase))
+            {
+                value = property.Value;
+                return true;
+            }
+        }
+
+        value = default;
         return false;
     }
 

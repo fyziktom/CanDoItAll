@@ -125,6 +125,7 @@ public sealed class MafRuntimeArchitectureServicesTests
         {
             typeof(RuntimeCapabilityComposer),
             typeof(MafRuntimeAgentFactory),
+            typeof(MafFinalizerToolFactory),
             typeof(MafRuntimeExecutionOptionsResolver),
             typeof(MafRuntimeToolInvocationResultClassifier),
             typeof(ContextCapabilityBuilder),

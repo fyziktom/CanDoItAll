@@ -788,7 +788,8 @@ public sealed class AgentFinalizerPolicyTests
         var response = capture.SubmitProcessStepOutcome(document.RootElement);
         var snapshot = capture.Snapshot();
 
-        Assert.Equal("Process step outcome finalizer captured.", response);
+        Assert.True(response.Succeeded);
+        Assert.Equal("Process step outcome finalizer captured.", response.Message);
         var invocation = Assert.Single(snapshot);
         Assert.Equal(policy.ToolName, invocation.ToolName);
         var validation = new DefaultAgentFinalizerValidator().Validate(policy, snapshot);
@@ -843,8 +844,10 @@ public sealed class AgentFinalizerPolicyTests
         var invocation = Assert.Single(capture.Snapshot());
         var validation = new DefaultAgentFinalizerValidator().Validate(policy, [invocation]);
 
-        Assert.Equal("Process step outcome finalizer captured.", firstResponse);
-        Assert.Equal("Finalizer 'submit_process_step_outcome' already captured; duplicate submission ignored.", secondResponse);
+        Assert.True(firstResponse.Succeeded);
+        Assert.Equal("Process step outcome finalizer captured.", firstResponse.Message);
+        Assert.True(secondResponse.Succeeded);
+        Assert.Equal("Finalizer 'submit_process_step_outcome' already captured; duplicate submission ignored.", secondResponse.Message);
         Assert.True(validation.Succeeded);
         var output = Assert.IsType<ProcessStepOutcomeResult>(validation.Output);
         Assert.Equal("First valid governed outcome.", output.Reason);
@@ -869,10 +872,10 @@ public sealed class AgentFinalizerPolicyTests
             ProcessStepOutcomeStatus.Completed,
             "Corrected completion with evidence."));
 
-        var exception = Assert.Throws<InvalidOperationException>(() =>
-            capture.SubmitProcessStepOutcome(invalidDocument.RootElement));
+        var rejection = capture.SubmitProcessStepOutcome(invalidDocument.RootElement);
 
-        Assert.Contains("process.step_outcome.completed_evidence_ref_required", exception.Message, StringComparison.Ordinal);
+        Assert.False(rejection.Succeeded);
+        Assert.Contains("process.step_outcome.completed_evidence_ref_required", rejection.Message, StringComparison.Ordinal);
         Assert.Empty(capture.Snapshot());
 
         capture.SubmitProcessStepOutcome(validDocument.RootElement);
@@ -882,6 +885,75 @@ public sealed class AgentFinalizerPolicyTests
         Assert.True(validation.Succeeded);
         var output = Assert.IsType<ProcessStepOutcomeResult>(validation.Output);
         Assert.Equal("Corrected completion with evidence.", output.Reason);
+    }
+
+    [Fact]
+    public void Finalizer_capture_returns_recoverable_feedback_for_branch_title_without_key()
+    {
+        var policy = CreatePolicy();
+        var capture = CreateFinalizerCapture(policy);
+        var invalidOutcome = new ProcessStepOutcomeResult
+        {
+            Status = ProcessStepOutcomeStatus.Completed,
+            Reason = "Peer review completed.",
+            BranchOutcomeKey = string.Empty,
+            BranchOutcomeTitle = "Peer review approved",
+            EvidenceRefs = ["artifacts/process-runs/run-1/steps/peer-review.md"],
+            NextActions = []
+        };
+        using var invalidDocument = JsonDocument.Parse(JsonSerializer.Serialize(
+            invalidOutcome,
+            AgentOutputJson.SerializerOptions));
+        using var correctedDocument = JsonDocument.Parse(SerializeOutcome(
+            ProcessStepOutcomeStatus.Completed,
+            "Peer review completed with no branch selection."));
+
+        var rejection = capture.SubmitProcessStepOutcome(invalidDocument.RootElement);
+
+        Assert.Contains(
+            "process.step_outcome.branch_key_required",
+            rejection.Message,
+            StringComparison.Ordinal);
+        Assert.False(rejection.Succeeded);
+        Assert.Empty(capture.Snapshot());
+
+        capture.SubmitProcessStepOutcome(correctedDocument.RootElement);
+
+        Assert.Single(capture.Snapshot());
+    }
+
+    [Fact]
+    public void Required_finalizer_instructions_explain_branch_field_invariant()
+    {
+        var instructions = MafFinalizerDriver.BuildRequiredFinalizerArgumentInstructions(CreatePolicy());
+
+        Assert.Contains(
+            "`branchOutcomeTitle` requires a non-empty stable `branchOutcomeKey`",
+            instructions,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "both `branchOutcomeKey` and `branchOutcomeTitle` must be empty strings",
+            instructions,
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Process_step_finalizer_tool_schema_exposes_branch_field_invariant()
+    {
+        var capture = Assert.IsType<FinalizerCapture>(MafFinalizerToolFactory.CreateCapture(
+            AgentStructuredOutputContracts.ProcessStepOutcomeResult,
+            AgentFinalizerMode.Required));
+        var function = Assert.IsAssignableFrom<AIFunction>(Assert.Single(capture.Tools));
+        var schema = function.JsonSchema.GetRawText();
+
+        Assert.Contains(
+            "branchOutcomeTitle requires a non-empty stable branchOutcomeKey",
+            schema,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "When no branch is selected, both branch fields must be empty strings",
+            schema,
+            StringComparison.Ordinal);
     }
 
     [Theory]
