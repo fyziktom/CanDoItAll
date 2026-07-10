@@ -217,8 +217,27 @@ internal sealed class FinalizerCapture(AgentFinalizerPolicy policy)
 
     private string CaptureArgumentsJson(string argumentsJson, string message)
     {
+        var candidate = new AgentFinalizerInvocation(
+            Policy.ToolName,
+            argumentsJson,
+            Sequence: 0);
+        var validation = new DefaultAgentFinalizerValidator().Validate(Policy, [candidate]);
+        if (!validation.Succeeded || validation.Output is null)
+        {
+            var errorSummary = string.Join(
+                "; ",
+                validation.Errors.Select(error => $"{error.Code}: {error.Message}"));
+            throw new InvalidOperationException(
+                $"Finalizer payload for '{Policy.ToolName}' failed validation: {errorSummary}");
+        }
+
         lock (gate)
         {
+            if (invocations.Count > 0)
+            {
+                return $"Finalizer '{Policy.ToolName}' already captured; duplicate submission ignored.";
+            }
+
             nextSequence++;
             invocations.Add(new AgentFinalizerInvocation(
                 Policy.ToolName,

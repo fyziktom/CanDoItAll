@@ -12,6 +12,11 @@ internal static class MafFinalizerDriver
 {
     private const int MaxFinalizerRepairPreviousAssistantTextCharacters = 12_000;
 
+    public static bool ShouldAllowMultipleToolCalls(
+        AgentFinalizerMode finalizerMode,
+        bool hasApprovalTools)
+        => finalizerMode != AgentFinalizerMode.Required && !hasApprovalTools;
+
     public static bool ShouldRequestMissingRequiredFinalizerRepair(
         AgentStructuredOutputContract? structuredOutput,
         AgentFinalizerMode finalizerMode,

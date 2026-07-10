@@ -827,6 +827,80 @@ public sealed class AgentFinalizerPolicyTests
     }
 
     [Fact]
+    public void Finalizer_capture_commits_first_valid_process_step_outcome_exactly_once()
+    {
+        var policy = CreatePolicy();
+        var capture = CreateFinalizerCapture(policy);
+        using var firstDocument = JsonDocument.Parse(SerializeOutcome(
+            ProcessStepOutcomeStatus.Completed,
+            "First valid governed outcome."));
+        using var secondDocument = JsonDocument.Parse(SerializeOutcome(
+            ProcessStepOutcomeStatus.Completed,
+            "Duplicate governed outcome."));
+
+        var firstResponse = capture.SubmitProcessStepOutcome(firstDocument.RootElement);
+        var secondResponse = capture.SubmitProcessStepOutcome(secondDocument.RootElement);
+        var invocation = Assert.Single(capture.Snapshot());
+        var validation = new DefaultAgentFinalizerValidator().Validate(policy, [invocation]);
+
+        Assert.Equal("Process step outcome finalizer captured.", firstResponse);
+        Assert.Equal("Finalizer 'submit_process_step_outcome' already captured; duplicate submission ignored.", secondResponse);
+        Assert.True(validation.Succeeded);
+        var output = Assert.IsType<ProcessStepOutcomeResult>(validation.Output);
+        Assert.Equal("First valid governed outcome.", output.Reason);
+    }
+
+    [Fact]
+    public void Finalizer_capture_rejects_invalid_outcome_without_poisoning_valid_correction()
+    {
+        var policy = CreatePolicy();
+        var capture = CreateFinalizerCapture(policy);
+        var invalidOutcome = new ProcessStepOutcomeResult
+        {
+            Status = ProcessStepOutcomeStatus.Completed,
+            Reason = "Invalid completion without evidence.",
+            EvidenceRefs = [],
+            NextActions = []
+        };
+        using var invalidDocument = JsonDocument.Parse(JsonSerializer.Serialize(
+            invalidOutcome,
+            AgentOutputJson.SerializerOptions));
+        using var validDocument = JsonDocument.Parse(SerializeOutcome(
+            ProcessStepOutcomeStatus.Completed,
+            "Corrected completion with evidence."));
+
+        var exception = Assert.Throws<InvalidOperationException>(() =>
+            capture.SubmitProcessStepOutcome(invalidDocument.RootElement));
+
+        Assert.Contains("process.step_outcome.completed_evidence_ref_required", exception.Message, StringComparison.Ordinal);
+        Assert.Empty(capture.Snapshot());
+
+        capture.SubmitProcessStepOutcome(validDocument.RootElement);
+        var invocation = Assert.Single(capture.Snapshot());
+        var validation = new DefaultAgentFinalizerValidator().Validate(policy, [invocation]);
+
+        Assert.True(validation.Succeeded);
+        var output = Assert.IsType<ProcessStepOutcomeResult>(validation.Output);
+        Assert.Equal("Corrected completion with evidence.", output.Reason);
+    }
+
+    [Theory]
+    [InlineData(AgentFinalizerMode.Required, false, false)]
+    [InlineData(AgentFinalizerMode.Required, true, false)]
+    [InlineData(AgentFinalizerMode.Shadow, false, true)]
+    [InlineData(AgentFinalizerMode.Disabled, false, true)]
+    [InlineData(AgentFinalizerMode.Disabled, true, false)]
+    public void Runtime_tool_call_policy_prevents_parallel_required_finalizers(
+        AgentFinalizerMode finalizerMode,
+        bool hasApprovalTools,
+        bool expected)
+    {
+        Assert.Equal(
+            expected,
+            MafFinalizerDriver.ShouldAllowMultipleToolCalls(finalizerMode, hasApprovalTools));
+    }
+
+    [Fact]
     public void Effective_finalizer_invocations_prefer_valid_json_repair_over_invalid_captured_attempt()
     {
         var policy = CreatePolicy();
