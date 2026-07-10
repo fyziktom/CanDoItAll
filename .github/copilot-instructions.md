@@ -35,6 +35,15 @@ Act like a pragmatic architecture-minded engineer: direct, critical, and precise
 - Use Tailwind because the project already uses Tailwind CSS for styling.
 - Follow UX best practices: information architecture, progressive disclosure, scannable forms, clear primary actions, consistent terminology.
 
+## CanDoItAll Components MCP (MANDATORY FOR ALL NON-WEBGL COMPONENT WORK)
+
+- Whenever this repository or any sibling repository uses `CanDoItAll.Components.BaseLib`, `CanvasLib`, `Charts`, `Common`, `Mermaid`, `OverlayLib`, or `QRCode`, query the `candoitall_components` MCP before choosing components, adding package setup/assets, or writing custom UI structure. WebGL libraries are explicitly outside this MCP workflow.
+- Call `components_libraries_list` before adding a Components package, service registration, stylesheet, generated asset component, or direct JavaScript import.
+- Call `components_recommend` with the concrete use case before selecting components. Then call `component_get`, `component_usage_examples`, and `component_examples` for shortlisted components before implementation.
+- For a new or refactored app shell, layout, or primary menu, call `app_shell_guide_get` first. Follow its `ThemeHost` -> `Layout` -> `SideMenu` -> `Body` composition, one-scroll-owner rule, `PageScaffold` page boundary, overlay-host setup, route synchronization, measured overflow, and responsive proof guidance.
+- `SideMenu` is the primary-navigation component: give it a stable `MenuId`, handle `ItemSelected` or `SideMenuService` selections through typed IDs/payloads, do not wrap it in `Sidebar`, and do not build a duplicate mobile menu or custom More-capacity logic.
+- Prefer component parameters, shared assets, services, and semantic tokens before page-local structural CSS. If shared components cannot express the required UI, improve the relevant shared library and sandbox coverage rather than introducing a one-off structural wrapper.
+
 ## CanDoItAll MCP DotNetWatch Server (MANDATORY WORKFLOW)
 
 This workspace includes custom CanDoItAll MCP servers. MCP source lives in the sibling `CanDoItAll.Mcp` repo; this repo owns the settings, install artifacts, skill sync, and MCP config. The primary server is `candoitall_dotnetwatch`, which manages the `dotnet watch` lifecycle for the Blazor app. It also serves as the shared machine-level backend for sibling repos that should be started through an explicit `projectPath` instead of getting their own dotnetwatch MCP entry. Local MCP wiring lives in `.vscode/mcp.json`, and server settings live in `CanDoItAll.Mcp.DotNetWatch.settings.json` and `CanDoItAll.Mcp.SshOps.settings.json`.

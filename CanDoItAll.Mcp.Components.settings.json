@@ -9,10 +9,13 @@
     }
   },
   "Catalog": {
+    "CommonRoot": "..\\CanDoItAll.Components\\src\\CanDoItAll.Components.Common",
     "BaseLibRoot": "..\\CanDoItAll.Components\\src\\CanDoItAll.Components.BaseLib",
     "CanvasLibRoot": "..\\CanDoItAll.Components\\src\\CanDoItAll.Components.CanvasLib",
     "ChartsRoot": "..\\CanDoItAll.Components\\src\\CanDoItAll.Components.Charts",
     "MermaidRoot": "..\\CanDoItAll.Components\\src\\CanDoItAll.Components.Mermaid",
+    "OverlayLibRoot": "..\\CanDoItAll.Components\\src\\CanDoItAll.Components.OverlayLib",
+    "QrCodeRoot": "..\\CanDoItAll.Components\\src\\CanDoItAll.Components.QRCode",
     "SandboxRoot": "..\\CanDoItAll.Components\\src\\CanDoItAll.Components.Sandbox"
   }
 }
