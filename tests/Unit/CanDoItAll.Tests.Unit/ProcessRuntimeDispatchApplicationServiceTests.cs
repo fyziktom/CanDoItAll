@@ -1017,7 +1017,7 @@ public sealed class ProcessRuntimeDispatchApplicationServiceTests
     }
 
     [Fact]
-    public async Task ExecuteReady_auto_reworks_adapter_manager_result_once_before_same_fingerprint_block()
+    public async Task ExecuteReady_auto_reworks_adapter_manager_result_through_same_fingerprint_budget_before_block()
     {
         var observedAtUtc = DateTimeOffset.UtcNow;
         var stepId = ProcessStepInstanceId.New();
@@ -1051,7 +1051,9 @@ public sealed class ProcessRuntimeDispatchApplicationServiceTests
         Assert.Equal(ProcessLaunchStage.Blocked, result.Stage);
         Assert.Equal(ProcessRuntimeStatus.Blocked, result.Status);
         Assert.Equal(ProcessRuntimeStepStatus.Blocked, FindStep(stateStore.State, stepId).Status);
-        Assert.Equal(2, strategyResolver.ExecutionContexts.Count);
+        Assert.Equal(
+            ProcessRecoveryClassifierOptions.Default.MaxSameDiagnosticFingerprintAutomaticReworks + 1,
+            strategyResolver.ExecutionContexts.Count);
         Assert.Contains(
             stateStore.State.AppliedResults,
             receipt => receipt.Outcome == StrategyOutcome.NeedsManager &&
@@ -1120,7 +1122,9 @@ public sealed class ProcessRuntimeDispatchApplicationServiceTests
         Assert.Equal(ProcessLaunchStage.Blocked, result.Stage);
         Assert.Equal(ProcessRuntimeStatus.Blocked, result.Status);
         Assert.Equal(ProcessRuntimeStepStatus.Blocked, FindStep(stateStore.State, stepId).Status);
-        Assert.Equal(2, strategyResolver.ExecutionContexts.Count);
+        Assert.Equal(
+            ProcessRecoveryClassifierOptions.Default.MaxSameDiagnosticFingerprintAutomaticReworks + 1,
+            strategyResolver.ExecutionContexts.Count);
         Assert.Contains(
             stateStore.State.AppliedResults,
             receipt => receipt.Outcome == StrategyOutcome.NeedsManager &&

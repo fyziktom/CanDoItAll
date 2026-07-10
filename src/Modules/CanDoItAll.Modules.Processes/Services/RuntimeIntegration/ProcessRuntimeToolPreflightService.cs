@@ -29,8 +29,21 @@ internal sealed record ProcessRuntimeToolPreflightResult(
     public IReadOnlyList<AgentCapabilityDiagnostic> CapabilityDiagnostics { get; init; } = [];
 }
 
+internal sealed record ProcessRuntimeToolPlanGuardEvaluation(
+    string PolicyName,
+    IReadOnlyList<ProcessRuntimeToolPlanGuardIssue> Issues)
+{
+    public bool IsSatisfied => Issues.Count == 0;
+}
+
+internal interface IProcessRuntimeToolPlanGuard
+{
+    ProcessRuntimeToolPlanGuardEvaluation Evaluate(ProcessRuntimeStepAssignment assignment);
+}
+
 internal sealed class ProcessRuntimeToolPreflightService(
-    IEnumerable<IAgentRuntimeToolProvider> runtimeToolProviders) : IProcessRuntimeToolPreflightService
+    IEnumerable<IAgentRuntimeToolProvider> runtimeToolProviders,
+    IEnumerable<IProcessRuntimeToolPlanGuard>? toolPlanGuards = null) : IProcessRuntimeToolPreflightService
 {
     private static readonly ProviderProfile PreflightProvider = new(
         Guid.Empty,
@@ -54,6 +67,7 @@ internal sealed class ProcessRuntimeToolPreflightService(
     private readonly IReadOnlyList<IAgentRuntimeToolProvider> runtimeToolProviders = runtimeToolProviders
         .OrderBy(provider => provider.Order)
         .ToArray();
+    private readonly IReadOnlyList<IProcessRuntimeToolPlanGuard> toolPlanGuards = (toolPlanGuards ?? []).ToArray();
 
     public async ValueTask<ProcessRuntimeToolPreflightResult> EvaluateAsync(
         ProcessRuntimeToolPreflightRequest request,
@@ -66,18 +80,15 @@ internal sealed class ProcessRuntimeToolPreflightService(
             .Select(toolName => toolName.Trim())
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToArray();
-        if (requiredToolNames.Length == 0)
+        var toolPlanGuardEvaluation = EvaluateToolPlanGuards(request.Assignment);
+        if (!toolPlanGuardEvaluation.IsSatisfied)
         {
-            var emptyToolPlanGuard = DotNetSolutionSetupToolPlanGuard.Evaluate(request.Assignment);
-            return emptyToolPlanGuard.IsSatisfied
-                ? ProcessRuntimeToolPreflightResult.Satisfied
-                : CreateToolPlanFailure(emptyToolPlanGuard);
+            return CreateToolPlanFailure(toolPlanGuardEvaluation);
         }
 
-        var toolPlanGuard = DotNetSolutionSetupToolPlanGuard.Evaluate(request.Assignment);
-        if (!toolPlanGuard.IsSatisfied)
+        if (requiredToolNames.Length == 0)
         {
-            return CreateToolPlanFailure(toolPlanGuard);
+            return ProcessRuntimeToolPreflightResult.Satisfied;
         }
 
         var capabilityDiagnostics = EvaluateRequiredRuntimeToolCapabilities(request, requiredToolNames);
@@ -131,14 +142,28 @@ internal sealed class ProcessRuntimeToolPreflightService(
             $"Required runtime tool(s) are not composed for this process step: {string.Join(", ", missingToolNames)}.{providerErrorSummary}");
     }
 
+    private ProcessRuntimeToolPlanGuardEvaluation EvaluateToolPlanGuards(
+        ProcessRuntimeStepAssignment assignment)
+    {
+        var evaluations = toolPlanGuards
+            .Select(guard => guard.Evaluate(assignment))
+            .Where(evaluation => !evaluation.IsSatisfied)
+            .ToArray();
+        return evaluations.Length == 0
+            ? new ProcessRuntimeToolPlanGuardEvaluation(string.Empty, [])
+            : new ProcessRuntimeToolPlanGuardEvaluation(
+                string.Join(", ", evaluations.Select(evaluation => evaluation.PolicyName)),
+                evaluations.SelectMany(evaluation => evaluation.Issues).ToArray());
+    }
+
     private static ProcessRuntimeToolPreflightResult CreateToolPlanFailure(
-        DotNetSolutionSetupToolPlanGuardResult guardResult)
+        ProcessRuntimeToolPlanGuardEvaluation guardResult)
     {
         var summary = string.Join(" ", guardResult.Issues.Select(issue => issue.SafeSummary));
         return new ProcessRuntimeToolPreflightResult(
             false,
             [],
-            $"Deterministic .NET setup tool-plan guard failed. {summary}")
+            $"Deterministic tool-plan guard '{guardResult.PolicyName}' failed. {summary}")
         {
             PlanIssues = guardResult.Issues
         };

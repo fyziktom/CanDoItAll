@@ -148,6 +148,7 @@ public sealed class DotNetProcessLaunchVariableContributorTests
         AssertValidationReceipts(receiptMap, "quality-repair");
         AssertValidationReceipts(receiptMap, "qa-recheck");
         AssertBrowserRuntimeProofReceipts(receiptMap, "qa-validation", expectsVisualComparison: false);
+        AssertBrowserRuntimeProofReceipts(receiptMap, "quality-repair", expectsVisualComparison: false);
         AssertBrowserRuntimeProofReceipts(receiptMap, "qa-recheck", expectsVisualComparison: false);
         AssertAcceptanceBranchReceiptRules(receiptMap, "qa-validation");
         AssertAcceptanceBranchReceiptRules(receiptMap, "qa-recheck");
@@ -167,10 +168,12 @@ public sealed class DotNetProcessLaunchVariableContributorTests
         Assert.NotNull(fileContentMap);
         var qaChecks = Assert.Contains("qa-validation", fileContentMap);
         Assert.Contains(qaChecks, IsQualityAcceptedScaffoldRemovalCheck);
+        AssertFileContentEvidenceBranch(fileContentMap, "qa-validation", "repair-required");
         var repairChecks = Assert.Contains("quality-repair", fileContentMap);
         Assert.Contains(repairChecks, IsUngatedScaffoldRemovalCheck);
         var recheckChecks = Assert.Contains("qa-recheck", fileContentMap);
         Assert.Contains(recheckChecks, IsQualityAcceptedScaffoldRemovalCheck);
+        AssertFileContentEvidenceBranch(fileContentMap, "qa-recheck", "repair-escalation");
 
         Assert.Equal(@"C:\temp\CanDoItAll\Calculator", variables["ProductRoot"]);
         Assert.Equal(@"C:\temp\CanDoItAll\Calculator\Calculator.slnx", variables["DotNetSolutionFile"]);
@@ -299,6 +302,7 @@ public sealed class DotNetProcessLaunchVariableContributorTests
         AssertValidationReceipts(receiptMap, "repair-blazor-findings");
         AssertValidationReceipts(receiptMap, "revalidate-blazor-repair");
         AssertBrowserRuntimeProofReceipts(receiptMap, "validate-blazor-runtime", expectsVisualComparison: false);
+        AssertBrowserRuntimeProofReceipts(receiptMap, "repair-blazor-findings", expectsVisualComparison: false);
         AssertBrowserRuntimeProofReceipts(receiptMap, "revalidate-blazor-repair", expectsVisualComparison: false);
         AssertAcceptanceBranchReceiptRules(receiptMap, "validate-blazor-runtime");
         AssertAcceptanceBranchReceiptRules(receiptMap, "revalidate-blazor-repair");
@@ -317,6 +321,8 @@ public sealed class DotNetProcessLaunchVariableContributorTests
         Assert.Contains("validate-blazor-runtime", fileContentMap);
         Assert.Contains("repair-blazor-findings", fileContentMap);
         Assert.Contains("revalidate-blazor-repair", fileContentMap);
+        AssertFileContentEvidenceBranch(fileContentMap, "validate-blazor-runtime", "repair-required");
+        AssertFileContentEvidenceBranch(fileContentMap, "revalidate-blazor-repair", "repair-escalation");
         Assert.False(variables.ContainsKey(ProcessRuntimeLaunchVariables.AcceptanceCriteriaMatrix));
     }
 
@@ -652,10 +658,39 @@ public sealed class DotNetProcessLaunchVariableContributorTests
         string targetBranchOutcomeKey)
     {
         var routes = Assert.Contains(stepKey, routeMap);
-        var route = Assert.Single(routes);
-        Assert.Equal("process.adapter.product_required_file_content_missing", route.GetProperty("issueCode").GetString());
-        Assert.Equal(targetBranchOutcomeKey, route.GetProperty("targetBranchOutcomeKey").GetString());
-        Assert.True(route.GetProperty("requiresDefectEvidence").GetBoolean());
+        Assert.Equal(2, routes.Length);
+        Assert.Contains(routes, route =>
+            string.Equals(
+                route.GetProperty("issueCode").GetString(),
+                "process.adapter.product_required_file_content_missing",
+                StringComparison.Ordinal));
+        Assert.Contains(routes, route =>
+            string.Equals(
+                route.GetProperty("issueCode").GetString(),
+                ProcessCompletionDiagnosticCodes.ToolReceiptEvidenceContentRejected,
+                StringComparison.Ordinal));
+        Assert.All(routes, route =>
+        {
+            Assert.Equal(targetBranchOutcomeKey, route.GetProperty("targetBranchOutcomeKey").GetString());
+            Assert.True(route.GetProperty("requiresDefectEvidence").GetBoolean());
+        });
+    }
+
+    private static void AssertFileContentEvidenceBranch(
+        IReadOnlyDictionary<string, JsonElement[]> checkMap,
+        string stepKey,
+        string expectedBranchOutcomeKey)
+    {
+        var checks = Assert.Contains(stepKey, checkMap);
+        Assert.NotEmpty(checks);
+        Assert.All(checks, check =>
+        {
+            var branchOutcomeKeys = check.GetProperty("evidenceBranchOutcomeKeys")
+                .EnumerateArray()
+                .Select(value => value.GetString())
+                .ToArray();
+            Assert.Contains(expectedBranchOutcomeKey, branchOutcomeKeys);
+        });
     }
 
     private static IReadOnlyList<string> ReadReceiptToolNames(JsonElement element)

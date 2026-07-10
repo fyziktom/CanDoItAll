@@ -167,7 +167,8 @@ public sealed class ProcessMafHardeningRegressionTests
                     childAssignment,
                     ProcessRuntimeStepStatus.Completed,
                     [CreateProducedArtifactReceipt(childAssignment, ChildArtifactSlotId)])),
-            new FakeWorkspaceFileService([acceptedRef]));
+            new FakeWorkspaceFileService([acceptedRef]),
+            CreateSubprocessContractResolver());
 
         var result = await bridge.ResolveExistingAsync(assignment);
 
@@ -194,7 +195,8 @@ public sealed class ProcessMafHardeningRegressionTests
             new InMemoryStateStore(
                 NewRuntimeState(parentRunId, parentRunId, ProcessRuntimeStatus.Active),
                 NewRuntimeState(parentRunId, childRunId, ProcessRuntimeStatus.Completed, childAssignment)),
-            new FakeWorkspaceFileService([acceptedRef]));
+            new FakeWorkspaceFileService([acceptedRef]),
+            CreateSubprocessContractResolver());
 
         var result = await bridge.ResolveExistingAsync(assignment);
 
@@ -230,11 +232,12 @@ public sealed class ProcessMafHardeningRegressionTests
                 [stagedRef] = $"""
                 # setup-handoff Process Step Outcome
 
-                {AgentFrameworkProcessExecutionAdapter.ManagedOutcomeArtifactCapturedHeading}
+                {ProcessManagedArtifactService.ManagedOutcomeArtifactCapturedHeading}
 
                 Completion gates have not accepted this output yet.
                 """
-            }));
+            }),
+            CreateSubprocessContractResolver());
 
         var result = await bridge.ResolveExistingAsync(assignment);
 
@@ -266,7 +269,8 @@ public sealed class ProcessMafHardeningRegressionTests
                     childAssignment,
                     ProcessRuntimeStepStatus.Completed,
                     [CreateProducedArtifactReceipt(childAssignment, ChildArtifactSlotId)])),
-            new FakeWorkspaceFileService([noGoRef]));
+            new FakeWorkspaceFileService([noGoRef]),
+            CreateSubprocessContractResolver());
 
         var result = await bridge.ResolveExistingAsync(assignment);
 
@@ -294,7 +298,8 @@ public sealed class ProcessMafHardeningRegressionTests
                     childAssignment,
                     ProcessRuntimeStepStatus.Blocked,
                     [CreateBlockedDiagnosticReceipt(childAssignment)])),
-            new FakeWorkspaceFileService([]));
+            new FakeWorkspaceFileService([]),
+            CreateSubprocessContractResolver());
 
         var result = await bridge.ResolveExistingAsync(assignment);
 
@@ -309,6 +314,9 @@ public sealed class ProcessMafHardeningRegressionTests
         Assert.Contains("workspace_pwsh_run_script", diagnostic.SafeSummary, StringComparison.OrdinalIgnoreCase);
         Assert.NotNull(stoppedChild.RecoveryDecision);
     }
+
+    private static ProcessSubprocessContractResolver CreateSubprocessContractResolver()
+        => new([new DotNetSoftwareDeliverySubprocessContractProvider()]);
 
     private static ProcessRuntimeStepAssignment CreateParentAssignment(ProcessRunId runId)
     {

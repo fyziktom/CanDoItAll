@@ -57,7 +57,28 @@ public static class ProcessesModuleServiceCollectionExtensions
         services.TryAddScoped<IProcessRuntimeToolPreflightService, ProcessRuntimeToolPreflightService>();
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IWorkspaceCommandReceiptLifecycleFactExtractor, DotNetWorkspaceCommandReceiptLifecycleFactExtractor>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IProcessRuntimeOwnedStepExecutor, DotNetSolutionSetupRuntimeExecutor>());
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IProcessToolReceiptPolicyContribution, GenericWorkspaceToolReceiptPolicyContribution>());
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IProcessToolReceiptPolicyContribution, DotNetToolReceiptPolicyContribution>());
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IProcessToolReceiptEvidencePolicyContribution, DotNetBrowserSnapshotEvidencePolicyContribution>());
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IProcessSubprocessContractProvider, DotNetSoftwareDeliverySubprocessContractProvider>());
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IProcessRuntimeToolPlanGuard, DotNetSolutionSetupRuntimeToolPlanGuard>());
+        services.TryAddSingleton<ProcessToolReceiptPolicyCatalog>();
+        services.TryAddSingleton<ProcessSubprocessContractResolver>();
+        services.TryAddScoped<ProcessToolReceiptEvidenceGate>();
+        services.TryAddScoped<ProcessCompletionGateFactory>();
+        services.TryAddScoped(serviceProvider => serviceProvider
+            .GetRequiredService<ProcessCompletionGateFactory>()
+            .CreateCompletionGateEvaluator());
+        services.TryAddScoped<ProcessExecutionResultConverter>();
         services.TryAddScoped<IParentSubprocessArtifactBridge, ParentSubprocessArtifactBridge>();
+        services.TryAddScoped<ProcessCompletionIssueResultFactory>();
+        services.TryAddScoped<ProcessManagedArtifactService>();
+        services.TryAddScoped<ProcessOutcomeGroundingValidator>();
+        services.TryAddScoped<ProcessStepCompletionCoordinator>();
+        services.TryAddScoped<ProcessRuntimeOwnedStepCoordinator>();
+        services.TryAddScoped<ProcessSubprocessCoordinator>();
+        services.TryAddScoped<AgentFrameworkProcessStepExecutor>();
+        services.TryAddScoped<IAgentFrameworkProcessStepExecutor>(serviceProvider => serviceProvider.GetRequiredService<AgentFrameworkProcessStepExecutor>());
         services.TryAddScoped<AgentFrameworkProcessExecutionAdapter>();
         services.TryAddScoped<IProcessExecutionAdapter>(serviceProvider => serviceProvider.GetRequiredService<AgentFrameworkProcessExecutionAdapter>());
         services.TryAddScoped<IProcessStepExecutionDriver>(serviceProvider => serviceProvider.GetRequiredService<AgentFrameworkProcessExecutionAdapter>());

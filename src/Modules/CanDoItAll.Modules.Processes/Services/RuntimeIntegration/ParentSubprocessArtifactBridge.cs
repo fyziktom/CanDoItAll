@@ -79,7 +79,8 @@ internal sealed record ParentSubprocessChildDiagnostic(
 internal sealed class ParentSubprocessArtifactBridge(
     IProcessRuntimeStepAssignmentStore assignmentStore,
     IProcessRuntimeStateStore stateStore,
-    IWorkspaceFileService workspaceFiles) : IParentSubprocessArtifactBridge
+    IWorkspaceFileService workspaceFiles,
+    ProcessSubprocessContractResolver subprocessContractResolver) : IParentSubprocessArtifactBridge
 {
     public async ValueTask<ParentSubprocessArtifactBridgeResult> ResolveExistingAsync(
         ProcessRuntimeStepAssignment assignment,
@@ -92,7 +93,7 @@ internal sealed class ParentSubprocessArtifactBridge(
             return ParentSubprocessArtifactBridgeResult.NotSubprocess;
         }
 
-        if (!ProcessSubprocessContractResolver.TryResolve(assignment, out var contract))
+        if (!subprocessContractResolver.TryResolve(assignment, out var contract))
         {
             return new ParentSubprocessArtifactBridgeResult(
                 ParentSubprocessArtifactBridgeResultKind.ContractMissing);
@@ -446,10 +447,10 @@ internal sealed class ParentSubprocessArtifactBridge(
         }
 
         return !readResult.Content.Contains(
-                   AgentFrameworkProcessExecutionAdapter.ManagedOutcomeArtifactCapturedHeading,
+                   ProcessManagedArtifactService.ManagedOutcomeArtifactCapturedHeading,
                    StringComparison.Ordinal) ||
                readResult.Content.Contains(
-                   AgentFrameworkProcessExecutionAdapter.ManagedOutcomeArtifactAcceptedHeading,
+                   ProcessManagedArtifactService.ManagedOutcomeArtifactAcceptedHeading,
                    StringComparison.Ordinal);
     }
 
@@ -499,7 +500,7 @@ internal sealed class ParentSubprocessArtifactBridge(
             Guid.NewGuid(),
             syntheticExecutionRunId,
             "process-runtime",
-            AgentFrameworkProcessExecutionAdapter.SubprocessLaunchToolName,
+            ProcessSubprocessState.SubprocessLaunchToolName,
             "ProcessRuntime",
             "NotRequired",
             "Process runtime resolved a previously completed matching child subprocess.",

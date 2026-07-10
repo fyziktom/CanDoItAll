@@ -3,6 +3,12 @@ using CanDoItAll.AgentFramework.Models;
 
 namespace CanDoItAll.AgentFramework.Maf;
 
+internal enum ProcessArtifactRecoveryCause
+{
+    ProviderStreamingTimeout,
+    MissingRequiredFinalizer
+}
+
 internal static class ProcessArtifactRecoveryService
 {
     private const int MaxRecoveredProcessArtifactSummaryCharacters = 1_200;
@@ -12,6 +18,7 @@ internal static class ProcessArtifactRecoveryService
         AgentRuntimeContextIntent contextIntent,
         string primaryArtifactRef,
         string artifactMarkdown,
+        ProcessArtifactRecoveryCause recoveryCause,
         out ProcessStepOutcomeResult outcome,
         out string failureMessage)
     {
@@ -65,10 +72,11 @@ internal static class ProcessArtifactRecoveryService
             return false;
         }
 
+        var recoveryClause = ResolveRecoveryClause(recoveryCause);
         var reason =
             statusWasDeclared
-                ? $"Recovered governed process step outcome from primary managed artifact '{primaryArtifactRef}' after provider timeout. The artifact declares status '{status}'."
-                : $"Recovered governed process step outcome from primary managed artifact '{primaryArtifactRef}' after provider timeout. The artifact did not declare a Status line, so the runtime inferred status '{status}' from the artifact text.";
+                ? $"Recovered governed process step outcome from primary managed artifact '{primaryArtifactRef}' {recoveryClause}. The artifact declares status '{status}'."
+                : $"Recovered governed process step outcome from primary managed artifact '{primaryArtifactRef}' {recoveryClause}. The artifact did not declare a Status line, so the runtime inferred status '{status}' from the artifact text.";
         outcome = new ProcessStepOutcomeResult
         {
             Status = status,
@@ -76,10 +84,23 @@ internal static class ProcessArtifactRecoveryService
             BranchOutcomeKey = branchOutcomeKey,
             EvidenceRefs = [primaryArtifactRef],
             NextActions = CreateRecoveredProcessArtifactNextActions(status, primaryArtifactRef),
-            HumanReadableSummaryMarkdown = BuildRecoveredProcessArtifactSummary(primaryArtifactRef, artifactMarkdown)
+            HumanReadableSummaryMarkdown = BuildRecoveredProcessArtifactSummary(
+                primaryArtifactRef,
+                artifactMarkdown,
+                recoveryCause)
         };
         return true;
     }
+
+    internal static string DescribeRecoveryCause(ProcessArtifactRecoveryCause recoveryCause)
+        => recoveryCause switch
+        {
+            ProcessArtifactRecoveryCause.ProviderStreamingTimeout =>
+                "Provider streaming timed out after the current process step primary artifact was written.",
+            ProcessArtifactRecoveryCause.MissingRequiredFinalizer =>
+                "The provider completed without the required finalizer after the current process step primary artifact was written.",
+            _ => throw new ArgumentOutOfRangeException(nameof(recoveryCause), recoveryCause, "Unsupported process artifact recovery cause.")
+        };
 
     internal static bool TryBuildCurrentStepPrimaryManagedArtifactPath(
         AgentRuntimeContextIntent contextIntent,
@@ -376,18 +397,37 @@ internal static class ProcessArtifactRecoveryService
 
     private static string BuildRecoveredProcessArtifactSummary(
         string primaryArtifactRef,
-        string artifactMarkdown)
+        string artifactMarkdown,
+        ProcessArtifactRecoveryCause recoveryCause)
     {
+        var recoveryClause = ResolveRecoveryClause(recoveryCause);
+        var recoveryLabel = ResolveRecoveryLabel(recoveryCause);
         var trimmed = string.IsNullOrWhiteSpace(artifactMarkdown)
             ? string.Empty
             : artifactMarkdown.Trim();
         if (trimmed.Length > MaxRecoveredProcessArtifactSummaryCharacters)
         {
-            trimmed = trimmed[..MaxRecoveredProcessArtifactSummaryCharacters] + Environment.NewLine + "[... artifact summary truncated during provider-timeout recovery ...]";
+            trimmed = trimmed[..MaxRecoveredProcessArtifactSummaryCharacters] + Environment.NewLine + $"[... artifact summary truncated during {recoveryLabel} ...]";
         }
 
         return string.IsNullOrWhiteSpace(trimmed)
-            ? $"Recovered outcome from primary process artifact `{primaryArtifactRef}` after provider timeout."
-            : $"Recovered outcome from primary process artifact `{primaryArtifactRef}` after provider timeout.{Environment.NewLine}{Environment.NewLine}{trimmed}";
+            ? $"Recovered outcome from primary process artifact `{primaryArtifactRef}` {recoveryClause}."
+            : $"Recovered outcome from primary process artifact `{primaryArtifactRef}` {recoveryClause}.{Environment.NewLine}{Environment.NewLine}{trimmed}";
     }
+
+    private static string ResolveRecoveryClause(ProcessArtifactRecoveryCause recoveryCause)
+        => recoveryCause switch
+        {
+            ProcessArtifactRecoveryCause.ProviderStreamingTimeout => "after provider streaming timed out",
+            ProcessArtifactRecoveryCause.MissingRequiredFinalizer => "after provider completion omitted the required finalizer",
+            _ => throw new ArgumentOutOfRangeException(nameof(recoveryCause), recoveryCause, "Unsupported process artifact recovery cause.")
+        };
+
+    private static string ResolveRecoveryLabel(ProcessArtifactRecoveryCause recoveryCause)
+        => recoveryCause switch
+        {
+            ProcessArtifactRecoveryCause.ProviderStreamingTimeout => "provider-streaming-timeout recovery",
+            ProcessArtifactRecoveryCause.MissingRequiredFinalizer => "missing-required-finalizer recovery",
+            _ => throw new ArgumentOutOfRangeException(nameof(recoveryCause), recoveryCause, "Unsupported process artifact recovery cause.")
+        };
 }

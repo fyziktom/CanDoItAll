@@ -35,7 +35,11 @@ internal sealed class DotNetSoftwareDeliveryRecoveryAdviceProvider : IProcessRec
 
         return context.Diagnostics.Any(diagnostic =>
                    IsRequiredToolReceiptDiagnostic(diagnostic.Code) ||
-                   string.Equals(diagnostic.Code, ProductRequiredFileContentMissingCode, StringComparison.Ordinal)) &&
+                   string.Equals(diagnostic.Code, ProductRequiredFileContentMissingCode, StringComparison.Ordinal) ||
+                   string.Equals(
+                       diagnostic.Code,
+                       ProcessCompletionDiagnosticCodes.ToolReceiptEvidenceContentRejected,
+                       StringComparison.Ordinal)) &&
                (IsQaBranchDecisionStep(context.Request.Assignment.StepKey) ||
                 HasDotNetLaunchMetadata(context.Request.Assignment.LaunchVariables) ||
                 HasDotNetSetupStepKey(context.Request.Assignment.StepKey));
@@ -48,9 +52,33 @@ internal sealed class DotNetSoftwareDeliveryRecoveryAdviceProvider : IProcessRec
         var lines = new List<string>();
         AddRequiredReceiptGuidance(lines, context.Request.Assignment, context.Diagnostics);
         AddProductReadbackGuidance(lines, context.Request.Assignment, context.Diagnostics);
+        AddBrowserSnapshotEvidenceGuidance(lines, context.Request.Assignment, context.Diagnostics);
         var addedDotNetGuidance = AddDotNetCreateProjectGuidance(lines, context.Request.Assignment, context.Diagnostics);
         AddPrimaryArtifactGuidance(lines, context.Request, context.Diagnostics, addedDotNetGuidance);
         return lines;
+    }
+
+    private static void AddBrowserSnapshotEvidenceGuidance(
+        List<string> lines,
+        ProcessRuntimeStepAssignment assignment,
+        IReadOnlyList<ProcessRecoveryDiagnosticFact> diagnostics)
+    {
+        if (!diagnostics.Any(diagnostic => string.Equals(
+                diagnostic.Code,
+                ProcessCompletionDiagnosticCodes.ToolReceiptEvidenceContentRejected,
+                StringComparison.Ordinal)))
+        {
+            return;
+        }
+
+        lines.Add("Current-run browser DOM evidence contains a fatal UI state. A successful browser_console_messages receipt or zero console-error count does not override the visible browser snapshot.");
+        if (IsQaBranchDecisionStep(assignment.StepKey))
+        {
+            lines.Add($"Submit the deterministic defect branch '{ResolveQaDefectBranchOutcomeKey(assignment.StepKey)}'; do not submit '{QualityAcceptedBranchOutcomeKey}' while the fatal browser marker remains visible.");
+            return;
+        }
+
+        lines.Add("Repair the product runtime failure, launch the repaired app, and capture a new current-run browser snapshot that no longer contains the rejected marker before completing.");
     }
 
     private static bool HasDotNetLaunchMetadata(IReadOnlyDictionary<string, string> launchVariables)

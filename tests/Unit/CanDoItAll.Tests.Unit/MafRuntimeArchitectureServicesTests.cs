@@ -63,6 +63,62 @@ public sealed class MafRuntimeArchitectureServicesTests
     }
 
     [Fact]
+    public async Task MafProviderStreamingRunner_times_out_an_idle_stream_and_cancels_the_underlying_enumerator()
+    {
+        var runner = new MafProviderStreamingRunner(
+            new TestMafProviderStreamingDispatchGate(),
+            _ => TimeSpan.FromMilliseconds(50));
+        var runtimeAgent = new DelayedStreamingAgent(TimeSpan.FromMinutes(1));
+        var runtimeSession = await runtimeAgent.CreateSessionAsync();
+        var provider = CreateProviderProfile();
+
+        var exception = await Assert.ThrowsAsync<TimeoutException>(async () =>
+        {
+            await foreach (var _ in runner.RunStreamingAsync(
+                               provider,
+                               "unit-model",
+                               runtimeAgent,
+                               runtimeSession,
+                               [new ChatMessage(ChatRole.User, "run")],
+                               new ChatClientAgentRunOptions(new ChatOptions()),
+                               CancellationToken.None))
+            {
+            }
+        });
+
+        Assert.Contains("produced no update", exception.Message, StringComparison.Ordinal);
+        Assert.True(runtimeAgent.DelayTokenWasCanceled);
+    }
+
+    [Fact]
+    public async Task MafProviderStreamingRunner_resets_the_idle_deadline_after_each_update()
+    {
+        var runner = new MafProviderStreamingRunner(
+            new TestMafProviderStreamingDispatchGate(),
+            _ => TimeSpan.FromSeconds(1));
+        var runtimeAgent = new DelayedStreamingAgent(TimeSpan.FromMilliseconds(400), updateCount: 3);
+        var runtimeSession = await runtimeAgent.CreateSessionAsync();
+        var provider = CreateProviderProfile();
+        var updates = new List<AgentResponseUpdate>();
+
+        await foreach (var update in runner.RunStreamingAsync(
+                           provider,
+                           "unit-model",
+                           runtimeAgent,
+                           runtimeSession,
+                           [new ChatMessage(ChatRole.User, "run")],
+                           new ChatClientAgentRunOptions(new ChatOptions()),
+                           CancellationToken.None))
+        {
+            updates.Add(update);
+        }
+
+        Assert.True(runtimeAgent.DelayCompleted);
+        Assert.False(runtimeAgent.DelayTokenWasCanceled);
+        Assert.Equal(3, updates.Count);
+    }
+
+    [Fact]
     public void Maf_runtime_collaborators_are_top_level_types()
     {
         var collaboratorTypes = new[]
@@ -776,7 +832,7 @@ public sealed class MafRuntimeArchitectureServicesTests
             => ValueTask.FromResult<IAsyncDisposable>(new NoOpAsyncDisposable());
     }
 
-    private sealed class DelayedStreamingAgent(TimeSpan delay) : AIAgent
+    private sealed class DelayedStreamingAgent(TimeSpan delay, int updateCount = 1) : AIAgent
     {
         public bool DelayCompleted { get; private set; }
 
@@ -811,13 +867,24 @@ public sealed class MafRuntimeArchitectureServicesTests
             AgentRunOptions? options = null,
             [EnumeratorCancellation] CancellationToken cancellationToken = default)
         {
-            await Task.Delay(delay, cancellationToken);
-            DelayCompleted = true;
-            DelayTokenWasCanceled = cancellationToken.IsCancellationRequested;
+            for (var updateIndex = 0; updateIndex < updateCount; updateIndex++)
+            {
+                try
+                {
+                    await Task.Delay(delay, cancellationToken);
+                }
+                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+                {
+                    DelayTokenWasCanceled = true;
+                    throw;
+                }
 
-            yield return new AgentResponseUpdate(
-                ChatRole.Assistant,
-                [new TextContent("completed")]);
+                yield return new AgentResponseUpdate(
+                    ChatRole.Assistant,
+                    [new TextContent($"completed {updateIndex + 1}")]);
+            }
+
+            DelayCompleted = true;
         }
     }
 

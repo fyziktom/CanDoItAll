@@ -138,7 +138,7 @@ public sealed class ProcessStepRecoveryInstructionBuilder : IProcessStepRecovery
         AddRecoveryDecision(lines, request.Receipt?.RecoveryDecision);
         AddDiagnosticCodes(lines, diagnostics);
         AddRequiredReceiptGuidance(lines, request.Assignment, diagnostics);
-        AddProductReadbackGuidance(lines, diagnostics);
+        AddProductReadbackGuidance(lines, request.Assignment, diagnostics);
         AddUngroundedReferenceGuidance(lines, request, diagnostics);
         AddRuntimeLifecycleGuidance(lines, diagnostics);
         var providerAddedAdvice = AddProviderAdvice(lines, new ProcessStepRecoveryAdviceContext(request, diagnostics));
@@ -268,6 +268,7 @@ public sealed class ProcessStepRecoveryInstructionBuilder : IProcessStepRecovery
 
     private static void AddProductReadbackGuidance(
         List<string> lines,
+        ProcessRuntimeStepAssignment assignment,
         IReadOnlyList<ProcessRecoveryDiagnosticFact> diagnostics)
     {
         var readbackDiagnostics = diagnostics
@@ -279,10 +280,29 @@ public sealed class ProcessStepRecoveryInstructionBuilder : IProcessStepRecovery
         }
 
         lines.Add("Product readback failure(s):");
-        foreach (var diagnostic in readbackDiagnostics)
+        lines.Add("Every listed product readback failure is authoritative for this retry because the product content/readback check failed:");
+        var failures = readbackDiagnostics
+            .SelectMany(diagnostic => ProcessProductReadbackFailureParser.Parse(
+                diagnostic.Summary,
+                assignment.LaunchVariables))
+            .DistinctBy(failure => failure.Description, StringComparer.Ordinal)
+            .ToArray();
+        foreach (var failure in failures)
         {
-            lines.Add($"- {diagnostic.Code}: product content/readback check failed; use configured product checks and cite grounded evidence.");
+            lines.Add($"- {failure.Description}");
         }
+
+        if (failures.Any(failure => failure.Kind == ProcessProductReadbackFailureKind.ForbiddenTextPresent))
+        {
+            lines.Add("Forbidden-text repair obligation: remove every listed forbidden alternative from its file, or delete the file when the product contract allows it. Do not preserve or rewrite the same forbidden text. Re-read each listed path and search for every listed alternative; if any listed alternative remains, do not submit Completed.");
+        }
+
+        if (failures.Any(failure => failure.Kind == ProcessProductReadbackFailureKind.RequiredTextMissing))
+        {
+            lines.Add("Required-text repair obligation: add at least one listed required alternative to its file. Re-read each listed path and verify the required text is present before submitting Completed.");
+        }
+
+        lines.Add("Mutate or remove every failing product file/content marker, read each affected file back, and rerun required validation. Do not complete after changing only visible or linked files while dormant product files still fail configured checks.");
     }
 
     private static void AddUngroundedReferenceGuidance(

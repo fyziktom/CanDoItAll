@@ -1,5 +1,6 @@
 using System.Text.RegularExpressions;
 using CanDoItAll.Processes.Projections;
+using CanDoItAll.Processes.Runtime;
 
 namespace CanDoItAll.Processes.Application;
 
@@ -35,6 +36,7 @@ internal static partial class ProcessRuntimeOperatorDiagnosticDetailsBuilder
             "process.adapter.product_required_tool_receipt_missing" => "product-tool-receipt-gate",
             "process.adapter.required_tool_receipt_missing" => "process-tool-receipt-gate",
             "process.adapter.product_required_file_content_missing" => "product-content-readback-gate",
+            ProcessCompletionDiagnosticCodes.ToolReceiptEvidenceContentRejected => "tool-receipt-evidence-content-gate",
             "process.adapter.branch_outcome_defect_evidence_missing" => "branch-defect-evidence-gate",
             "process.adapter.acceptance_criteria_missing" => "acceptance-criteria-gate",
             "process.adapter.runtime_lifecycle_correlation_missing" => "runtime-lifecycle-gate",
@@ -99,6 +101,7 @@ internal static partial class ProcessRuntimeOperatorDiagnosticDetailsBuilder
             "process.adapter.product_required_tool_receipt_missing" => "Invoke the missing current-run product proof tools before completing this branch.",
             "process.adapter.required_tool_receipt_missing" => "Invoke the missing current-run process capability tools before completing this branch.",
             "process.adapter.product_required_file_content_missing" => "Repair the deterministic product content defect or route to the configured repair branch.",
+            ProcessCompletionDiagnosticCodes.ToolReceiptEvidenceContentRejected => "Repair the rejected current-run tool evidence or route to the configured repair branch.",
             "process.adapter.branch_outcome_defect_evidence_missing" => "Provide deterministic defect evidence before using the configured repair route.",
             _ => "Inspect the diagnostic and retry only after the stated gate is satisfied."
         };

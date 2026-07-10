@@ -211,7 +211,7 @@ internal sealed class AgentFrameworkProcessStepBriefBuilder : IProcessStepBriefB
         return $"""
         This step is product-mutating. Before writing the final managed artifact or submitting Completed, produce a current-run successful product-target mutation receipt unless an earlier attempt for this same step already produced one and the product readback verifies the requested state.
         {aliasSummary}
-        Product mutation receipts come from product-target tools such as workspace_write_file, workspace_append_file, workspace_copy_path, workspace_move_path, workspace_delete_path, workspace_dotnet_new, or workspace_pwsh_run_script when the request path or workingDirectory targets the grounded product alias. Writing only artifacts/process-runs/... is managed evidence, not product mutation.
+        Product mutation receipts come from registered product-target tools when the request path or workingDirectory targets the grounded product alias. Writing only artifacts/process-runs/... is managed evidence, not product mutation.
         After mutating, read or stat the changed product files and cite the concrete product refs and mutation/validation receipt refs in the primary managed artifact. Do not claim changed product files until those files exist under the grounded product target.
         If a product-mutation tool is denied, missing, or cannot target the grounded product alias, return Blocked with that exact current-run tool receipt and manager action request instead of writing a status-only or false completion artifact.
         """;

@@ -18,9 +18,29 @@ internal interface IMafProviderStreamingRunner
         CancellationToken cancellationToken);
 }
 
-internal sealed class MafProviderStreamingRunner(
-    IMafProviderStreamingDispatchGate providerStreamingDispatchGate) : IMafProviderStreamingRunner
+internal sealed class MafProviderStreamingRunner : IMafProviderStreamingRunner
 {
+    private readonly IMafProviderStreamingDispatchGate providerStreamingDispatchGate;
+    private readonly Func<ProviderProfile, TimeSpan> resolveStreamingIdleTimeout;
+
+    public MafProviderStreamingRunner(
+        IMafProviderStreamingDispatchGate providerStreamingDispatchGate)
+        : this(
+            providerStreamingDispatchGate,
+            MafProviderRuntimeSettings.ResolveStreamingIdleTimeout)
+    {
+    }
+
+    internal MafProviderStreamingRunner(
+        IMafProviderStreamingDispatchGate providerStreamingDispatchGate,
+        Func<ProviderProfile, TimeSpan> resolveStreamingIdleTimeout)
+    {
+        this.providerStreamingDispatchGate = providerStreamingDispatchGate
+            ?? throw new ArgumentNullException(nameof(providerStreamingDispatchGate));
+        this.resolveStreamingIdleTimeout = resolveStreamingIdleTimeout
+            ?? throw new ArgumentNullException(nameof(resolveStreamingIdleTimeout));
+    }
+
     public async IAsyncEnumerable<AgentResponseUpdate> RunStreamingAsync(
         ProviderProfile provider,
         string model,
@@ -35,16 +55,102 @@ internal sealed class MafProviderStreamingRunner(
             model,
             cancellationToken).ConfigureAwait(false);
 
+        var idleTimeout = resolveStreamingIdleTimeout(provider);
+        if (idleTimeout <= TimeSpan.Zero)
+        {
+            throw new InvalidOperationException("The provider streaming idle timeout must be positive.");
+        }
+
+        using var streamCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         var updates = RunStreamingCoreAsync(
             runtimeAgent,
             runtimeSession,
             inputMessages,
             runOptions,
-            cancellationToken);
-        await using var enumerator = updates.GetAsyncEnumerator(cancellationToken);
-        while (await enumerator.MoveNextAsync().ConfigureAwait(false))
+            streamCancellation.Token);
+        var enumerator = updates.GetAsyncEnumerator(streamCancellation.Token);
+        TimeoutException? idleTimeoutException = null;
+        try
         {
-            yield return enumerator.Current;
+            while (true)
+            {
+                var moveNext = await MoveNextWithIdleTimeoutAsync(
+                    enumerator,
+                    streamCancellation,
+                    provider.Name,
+                    model,
+                    idleTimeout,
+                    cancellationToken).ConfigureAwait(false);
+                if (moveNext.TimeoutException is not null)
+                {
+                    idleTimeoutException = moveNext.TimeoutException;
+                    break;
+                }
+
+                if (!moveNext.HasNext)
+                {
+                    break;
+                }
+
+                yield return enumerator.Current;
+            }
+        }
+        finally
+        {
+            try
+            {
+                await enumerator.DisposeAsync().ConfigureAwait(false);
+            }
+            catch (Exception disposalException) when (idleTimeoutException is not null)
+            {
+                idleTimeoutException = new TimeoutException(
+                    idleTimeoutException.Message,
+                    new AggregateException(idleTimeoutException, disposalException));
+            }
+        }
+
+        if (idleTimeoutException is not null)
+        {
+            throw idleTimeoutException;
+        }
+    }
+
+    private static async Task<(bool HasNext, TimeoutException? TimeoutException)> MoveNextWithIdleTimeoutAsync(
+        IAsyncEnumerator<AgentResponseUpdate> enumerator,
+        CancellationTokenSource streamCancellation,
+        string providerName,
+        string model,
+        TimeSpan idleTimeout,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var hasNext = await enumerator
+                .MoveNextAsync()
+                .AsTask()
+                .WaitAsync(idleTimeout, cancellationToken)
+                .ConfigureAwait(false);
+            return (hasNext, null);
+        }
+        catch (TimeoutException exception)
+        {
+            Exception? cancellationException = null;
+            try
+            {
+                await streamCancellation.CancelAsync().ConfigureAwait(false);
+            }
+            catch (Exception failure)
+            {
+                cancellationException = failure;
+            }
+
+            var diagnostic = new TimeoutException(
+                $"Provider stream '{providerName}' using model '{model}' produced no update for {idleTimeout}. " +
+                "The idle stream was canceled so runtime recovery can proceed.",
+                cancellationException is null
+                    ? exception
+                    : new AggregateException(exception, cancellationException));
+            return (false, diagnostic);
         }
     }
 

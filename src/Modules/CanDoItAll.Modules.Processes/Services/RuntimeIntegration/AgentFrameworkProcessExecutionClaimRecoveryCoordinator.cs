@@ -36,6 +36,7 @@ internal sealed class AgentFrameworkProcessExecutionClaimRecoveryCoordinator(
     IProcessRuntimeDispatchQueue dispatchQueue,
     ProcessRuntimeBranchSignalApplicationService branchSignalRouter,
     ProcessRuntimeProjectionCatchupService projectionCatchupService,
+    ProcessExecutionResultConverter resultConverter,
     ILogger<AgentFrameworkProcessExecutionClaimRecoveryCoordinator> logger)
 {
     private const int MaximumConcurrencyRetries = 3;
@@ -268,7 +269,7 @@ internal sealed class AgentFrameworkProcessExecutionClaimRecoveryCoordinator(
                 executionRun,
                 cancellationToken)
             .ConfigureAwait(false);
-        var adapterResult = AgentFrameworkProcessExecutionAdapter.ToAdapterResult(
+        var adapterResult = resultConverter.ToAdapterResult(
             assignment,
             validation.Output,
             validation.RawOutputHash,

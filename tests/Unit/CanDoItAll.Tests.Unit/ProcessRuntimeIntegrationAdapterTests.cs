@@ -1321,7 +1321,7 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
                     - Scaffolded app project with `workspace_dotnet_new` template `blazorwasm`
                     """);
 
-                var adapter = new AgentFrameworkProcessExecutionAdapter(
+                var adapter = CreateAdapter(
                     new FakeWorkspaceFactory(workspace),
                     CreateReferenceDataProvider(workspace),
                     new InMemoryAssignmentStore(assignment),
@@ -2638,6 +2638,100 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
         }
     }
 
+    [Theory]
+    [InlineData("Current-run browser navigation reported 1 console error on the primary route.")]
+    [InlineData("Current-run browser proof exposed Blazor error UI with console errors.")]
+    public void RepairRequired_with_current_run_browser_console_error_is_accepted_as_defect_evidence(string reason)
+    {
+        var outputRoot = CreateTempProductRoot();
+        try
+        {
+            var page = Path.Combine(outputRoot, "src", "App", "Pages", "Home.razor");
+            Directory.CreateDirectory(Path.GetDirectoryName(page)!);
+            File.WriteAllText(page, "<h1>Implemented app</h1>");
+            var assignment = CreateQaValidationAssignmentWithBranchAwareCompletionRules(
+                outputRoot,
+                page);
+            var primaryRef = BuildStepArtifactRef(assignment);
+            var consoleRef = $"artifacts/process-runs/{assignment.RunId.Value:D}/browser-console.log";
+
+            var result = ToAdapterResult(
+                assignment,
+                new ProcessStepOutcomeResult
+                {
+                    Status = ProcessStepOutcomeStatus.Completed,
+                    Reason = reason,
+                    BranchOutcomeKey = "repair-required",
+                    BranchOutcomeTitle = "Repair required",
+                    EvidenceRefs = [primaryRef, consoleRef],
+                    NextActions = ["Repair the browser runtime error and rerun QA."]
+                },
+                [
+                    CreateToolReceipt("workspace_write_file", primaryRef, "Succeeded: Wrote QA evidence."),
+                    CreateToolReceipt(
+                        "browser_console_messages",
+                        $"level=\"error\", filename=\"{consoleRef}\"",
+                        "Succeeded")
+                ]);
+
+            Assert.Equal(StrategyOutcome.Succeeded, result.Outcome);
+            Assert.Contains(result.ManagerSignals, signal =>
+                signal.Code.Value == ProcessBranchSignalCodes.Outcome("repair-required").Value);
+            Assert.DoesNotContain(result.Diagnostics, diagnostic =>
+                diagnostic.Code.Value == "process.adapter.branch_outcome_defect_evidence_missing");
+        }
+        finally
+        {
+            DeleteDirectory(outputRoot);
+        }
+    }
+
+    [Fact]
+    public void RepairRequired_with_clean_browser_console_receipt_is_not_accepted_as_defect_evidence()
+    {
+        var outputRoot = CreateTempProductRoot();
+        try
+        {
+            var page = Path.Combine(outputRoot, "src", "App", "Pages", "Home.razor");
+            Directory.CreateDirectory(Path.GetDirectoryName(page)!);
+            File.WriteAllText(page, "<h1>Implemented app</h1>");
+            var assignment = CreateQaValidationAssignmentWithBranchAwareCompletionRules(
+                outputRoot,
+                page);
+            var primaryRef = BuildStepArtifactRef(assignment);
+            var consoleRef = $"artifacts/process-runs/{assignment.RunId.Value:D}/browser-console.log";
+
+            var result = ToAdapterResult(
+                assignment,
+                new ProcessStepOutcomeResult
+                {
+                    Status = ProcessStepOutcomeStatus.Completed,
+                    Reason = "Current-run browser navigation reported no console errors.",
+                    BranchOutcomeKey = "repair-required",
+                    BranchOutcomeTitle = "Repair required",
+                    EvidenceRefs = [primaryRef, consoleRef],
+                    NextActions = ["Run missing deterministic defect validation."]
+                },
+                [
+                    CreateToolReceipt("workspace_write_file", primaryRef, "Succeeded: Wrote QA evidence."),
+                    CreateToolReceipt(
+                        "browser_console_messages",
+                        $"level=\"error\", filename=\"{consoleRef}\"",
+                        "Succeeded")
+                ]);
+
+            Assert.Equal(StrategyOutcome.NeedsManager, result.Outcome);
+            Assert.Contains(result.Diagnostics, diagnostic =>
+                diagnostic.Code.Value == "process.adapter.branch_outcome_defect_evidence_missing");
+            Assert.DoesNotContain(result.ManagerSignals, signal =>
+                signal.Code.Value == ProcessBranchSignalCodes.Outcome("repair-required").Value);
+        }
+        finally
+        {
+            DeleteDirectory(outputRoot);
+        }
+    }
+
     [Fact]
     public void RepairRequired_without_defect_evidence_and_without_browser_proof_is_not_accepted_as_repair_branch()
     {
@@ -3765,7 +3859,7 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
             NextActions = []
         };
 
-        var pendingRunId = await AgentFrameworkProcessExecutionAdapter.TryResolvePendingChildRunAsync(
+        var pendingRunId = await ProcessSubprocessState.TryResolvePendingChildRunAsync(
             assignment,
             output,
             stateStore);
@@ -3790,7 +3884,7 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
             NextActions = []
         };
 
-        var pendingRunId = await AgentFrameworkProcessExecutionAdapter.TryResolvePendingChildRunAsync(
+        var pendingRunId = await ProcessSubprocessState.TryResolvePendingChildRunAsync(
             assignment,
             output,
             stateStore);
@@ -3831,7 +3925,7 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
             ]
         };
 
-        var pendingRunId = await AgentFrameworkProcessExecutionAdapter.TryResolvePendingChildRunAsync(
+        var pendingRunId = await ProcessSubprocessState.TryResolvePendingChildRunAsync(
             assignment,
             output,
             stateStore);
@@ -3858,7 +3952,7 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
             NewRuntimeState(parentRunId, parentRunId, ProcessRuntimeStatus.Active),
             NewRuntimeState(parentRunId, childRunId, ProcessRuntimeStatus.Active));
 
-        var pendingRunId = await AgentFrameworkProcessExecutionAdapter.TryResolveExistingPendingChildRunAsync(
+        var pendingRunId = await ProcessSubprocessState.TryResolveExistingPendingChildRunAsync(
             assignment,
             assignmentStore,
             stateStore);
@@ -3916,7 +4010,7 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
 
         try
         {
-            var adapter = new AgentFrameworkProcessExecutionAdapter(
+            var adapter = CreateAdapter(
                 new FakeWorkspaceFactory(workspace),
                 CreateReferenceDataProvider(workspace),
                 new InMemoryAssignmentStore(assignment),
@@ -3998,7 +4092,7 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
 
         try
         {
-            var adapter = new AgentFrameworkProcessExecutionAdapter(
+            var adapter = CreateAdapter(
                 new FakeWorkspaceFactory(workspace),
                 CreateReferenceDataProvider(workspace),
                 new InMemoryAssignmentStore(assignment),
@@ -4051,7 +4145,7 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
         var workspaceFiles = CreateWorkspaceFileService(out var workspaceRoot);
         try
         {
-            var adapter = new AgentFrameworkProcessExecutionAdapter(
+            var adapter = CreateAdapter(
                 new FakeWorkspaceFactory(workspace),
                 CreateReferenceDataProvider(workspace),
                 new InMemoryAssignmentStore(assignment),
@@ -4119,7 +4213,7 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
         var workspace = new ThrowingWorkspaceService(
             agent,
             new InvalidOperationException("The parent agent should not be reinvoked for a completed child run."));
-        var adapter = new AgentFrameworkProcessExecutionAdapter(
+        var adapter = CreateAdapter(
             new FakeWorkspaceFactory(workspace),
             CreateReferenceDataProvider(workspace),
             new InMemoryAssignmentStore(assignment, childAssignment),
@@ -4191,7 +4285,7 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
         var workspace = new ThrowingWorkspaceService(
             agent,
             new InvalidOperationException("The parent agent should not be reinvoked for a blocked child run."));
-        var adapter = new AgentFrameworkProcessExecutionAdapter(
+        var adapter = CreateAdapter(
             new FakeWorkspaceFactory(workspace),
             CreateReferenceDataProvider(workspace),
             new InMemoryAssignmentStore(assignment, childAssignment),
@@ -4261,7 +4355,7 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
             agent,
             new InvalidOperationException("Provider runtime failed after provider activity."),
             () => assignmentStore.Add(childAssignment));
-        var adapter = new AgentFrameworkProcessExecutionAdapter(
+        var adapter = CreateAdapter(
             new FakeWorkspaceFactory(workspace),
             CreateReferenceDataProvider(workspace),
             assignmentStore,
@@ -4302,7 +4396,7 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
         var workspace = new ThrowingWorkspaceService(
             agent,
             new InvalidOperationException("Finalizer tool 'submit_process_step_outcome' in Required mode failed validation. Errors: agent.finalizer.missing."));
-        var adapter = new AgentFrameworkProcessExecutionAdapter(
+        var adapter = CreateAdapter(
             new FakeWorkspaceFactory(workspace),
             CreateReferenceDataProvider(workspace),
             new InMemoryAssignmentStore(assignment),
@@ -4352,7 +4446,7 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
         var workspaceFiles = CreateWorkspaceFileService(out var workspaceRoot);
         try
         {
-            var adapter = new AgentFrameworkProcessExecutionAdapter(
+            var adapter = CreateAdapter(
                 new FakeWorkspaceFactory(workspace),
                 CreateReferenceDataProvider(workspace),
                 new InMemoryAssignmentStore(assignment),
@@ -4412,7 +4506,7 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
         var workspaceFiles = CreateWorkspaceFileService(out var workspaceRoot);
         try
         {
-            var adapter = new AgentFrameworkProcessExecutionAdapter(
+            var adapter = CreateAdapter(
                 new FakeWorkspaceFactory(workspace),
                 CreateReferenceDataProvider(workspace),
                 new InMemoryAssignmentStore(assignment),
@@ -4469,7 +4563,7 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
         var workspaceFiles = CreateWorkspaceFileService(out var workspaceRoot);
         try
         {
-            var adapter = new AgentFrameworkProcessExecutionAdapter(
+            var adapter = CreateAdapter(
                 new FakeWorkspaceFactory(workspace),
                 CreateReferenceDataProvider(workspace),
                 new InMemoryAssignmentStore(assignment),
@@ -4543,7 +4637,7 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
         var workspaceFiles = CreateWorkspaceFileService(out var workspaceRoot);
         try
         {
-            var adapter = new AgentFrameworkProcessExecutionAdapter(
+            var adapter = CreateAdapter(
                 new FakeWorkspaceFactory(workspace),
                 CreateReferenceDataProvider(workspace),
                 new InMemoryAssignmentStore(assignment),
@@ -4619,13 +4713,15 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
         var workspaceFiles = CreateWorkspaceFileService(out var workspaceRoot);
         try
         {
-            var adapter = new AgentFrameworkProcessExecutionAdapter(
+            var adapter = CreateAdapter(
                 new FakeWorkspaceFactory(workspace),
                 CreateReferenceDataProvider(workspace),
                 new InMemoryAssignmentStore(assignment),
                 new InMemoryRuntimeStateStore(NewRuntimeState(assignment.RunId, assignment.RunId, ProcessRuntimeStatus.Active)),
                 workspaceFiles,
-                runtimeToolPreflightService: new ProcessRuntimeToolPreflightService([]));
+                runtimeToolPreflightService: new ProcessRuntimeToolPreflightService(
+                    [],
+                    [new DotNetSolutionSetupRuntimeToolPlanGuard()]));
 
             var result = await adapter.ExecuteAsync(
                 new ProcessExecutionAdapterRequest(
@@ -4703,7 +4799,7 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
         var workspaceFiles = CreateWorkspaceFileService(out var workspaceRoot);
         try
         {
-            var adapter = new AgentFrameworkProcessExecutionAdapter(
+            var adapter = CreateAdapter(
                 new FakeWorkspaceFactory(workspace),
                 CreateReferenceDataProvider(workspace),
                 new InMemoryAssignmentStore(assignment),
@@ -4863,7 +4959,7 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
         var workspaceFiles = CreateWorkspaceFileService(out var workspaceRoot);
         try
         {
-            var adapter = new AgentFrameworkProcessExecutionAdapter(
+            var adapter = CreateAdapter(
                 new FakeWorkspaceFactory(workspace),
                 CreateReferenceDataProvider(workspace),
                 new InMemoryAssignmentStore(assignment),
@@ -4964,7 +5060,7 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
         var workspaceFiles = CreateWorkspaceFileService(out var workspaceRoot);
         try
         {
-            var adapter = new AgentFrameworkProcessExecutionAdapter(
+            var adapter = CreateAdapter(
                 new FakeWorkspaceFactory(workspace),
                 CreateReferenceDataProvider(workspace),
                 new InMemoryAssignmentStore(assignment),
@@ -5063,7 +5159,7 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
 
                 """);
 
-            var adapter = new AgentFrameworkProcessExecutionAdapter(
+            var adapter = CreateAdapter(
                 new FakeWorkspaceFactory(workspace),
                 CreateReferenceDataProvider(workspace),
                 new InMemoryAssignmentStore(assignment),
@@ -5159,7 +5255,7 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
                 The current scope packet cites unrelated source material at `{{staleRef}}`.
                 """);
 
-            var adapter = new AgentFrameworkProcessExecutionAdapter(
+            var adapter = CreateAdapter(
                 new FakeWorkspaceFactory(workspace),
                 CreateReferenceDataProvider(workspace),
                 new InMemoryAssignmentStore(assignment),
@@ -5183,6 +5279,82 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
             Assert.Contains(primaryRef, result.UserSafeSummary, StringComparison.Ordinal);
             Assert.DoesNotContain(staleRef, result.UserSafeSummary, StringComparison.OrdinalIgnoreCase);
             Assert.Empty(result.ProducedArtifacts);
+        }
+        finally
+        {
+            DeleteDirectory(workspaceRoot);
+        }
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_removes_non_citable_source_paths_from_structured_outcome_before_grounding()
+    {
+        var agent = NewAgent(
+            ".NET Solution Architect",
+            "Solution architect",
+            AgentWorkloadKind.Programming,
+            [
+                "solution-architect",
+                "dotnet",
+                "architecture"
+            ],
+            AgentWorkspaceToolProfileKind.ArchitectureReview);
+        var assignment = CreateManagedArtifactAssignment("quality-repair", agent.Id);
+        var executionRunId = Guid.NewGuid();
+        var primaryRef = BuildStepArtifactRef(assignment);
+        var sourceDocumentRef = @"managed-files\project-media\files\3324868f66e2478abb8f14f32a5db1e9\office365-category-email-summary.md";
+        var escapedSourceDocumentRef = sourceDocumentRef.Replace(@"\", @"\\", StringComparison.Ordinal);
+        var responseText = $$"""
+            {
+              "status": "Completed",
+              "reason": "Repaired the reported product defect. Source context: {{escapedSourceDocumentRef}}",
+              "branchOutcomeKey": "",
+              "branchOutcomeTitle": "",
+              "evidenceRefs": [
+                "{{primaryRef}}"
+              ],
+              "nextActions": [
+                "QA can recheck the repaired product."
+              ],
+              "humanReadableSummaryMarkdown": "Status: Completed\n\nThe product defect is repaired.\n\nSource citation: {{escapedSourceDocumentRef}}"
+            }
+            """;
+        var workspace = new ThrowingWorkspaceService(
+            agent,
+            executeException: null,
+            executeResult: CreateExecutionRunResult(agent.Id, executionRunId, responseText),
+            executionDetail: CreateExecutionRunDetail(
+                agent.Id,
+                executionRunId,
+                responseText,
+                [CreateToolReceipt("workspace_write_file", primaryRef, "Succeeded: Created file.")]));
+        var workspaceFiles = CreateWorkspaceFileService(out var workspaceRoot);
+        try
+        {
+            var adapter = CreateAdapter(
+                new FakeWorkspaceFactory(workspace),
+                CreateReferenceDataProvider(workspace),
+                new InMemoryAssignmentStore(assignment),
+                new InMemoryRuntimeStateStore(NewRuntimeState(assignment.RunId, assignment.RunId, ProcessRuntimeStatus.Active)),
+                workspaceFiles);
+
+            var result = await adapter.ExecuteAsync(
+                new ProcessExecutionAdapterRequest(
+                    assignment.RunId,
+                    assignment.StepInstanceId,
+                    ProcessExecutionAdapterKind.Workflow,
+                    new ProcessExecutionAdapterOperationKey("execute"),
+                    Binding,
+                    [],
+                    []));
+
+            Assert.True(
+                result.Outcome == StrategyOutcome.Succeeded,
+                result.UserSafeSummary);
+            Assert.DoesNotContain(result.Diagnostics, diagnostic =>
+                diagnostic.Code.Value == "process.adapter.ungrounded_outcome_reference");
+            Assert.DoesNotContain("managed-files", result.UserSafeSummary, StringComparison.OrdinalIgnoreCase);
+            Assert.Contains(result.ProducedArtifacts, artifact => artifact.SlotId == assignment.ProducedArtifactSlotIds[0]);
         }
         finally
         {
@@ -5255,7 +5427,7 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
                 - ProjectStructureContextSummary facts for current node.
                 """);
 
-            var adapter = new AgentFrameworkProcessExecutionAdapter(
+            var adapter = CreateAdapter(
                 new FakeWorkspaceFactory(workspace),
                 CreateReferenceDataProvider(workspace),
                 new InMemoryAssignmentStore(assignment),
@@ -5357,7 +5529,7 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
                 The current scope packet is grounded by the project visual target at `{{groundedRef}}`.
                 """);
 
-            var adapter = new AgentFrameworkProcessExecutionAdapter(
+            var adapter = CreateAdapter(
                 new FakeWorkspaceFactory(workspace),
                 CreateReferenceDataProvider(workspace),
                 new InMemoryAssignmentStore(assignment),
@@ -5456,7 +5628,7 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
                 The current validation covered the grounded product file `{{productFile}}`.
                 """);
 
-            var adapter = new AgentFrameworkProcessExecutionAdapter(
+            var adapter = CreateAdapter(
                 new FakeWorkspaceFactory(workspace),
                 CreateReferenceDataProvider(workspace),
                 new InMemoryAssignmentStore(assignment),
@@ -5570,7 +5742,7 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
                 The handoff preserves bridged child process evidence at `{{childEvidenceRef}}`.
                 """);
 
-            var adapter = new AgentFrameworkProcessExecutionAdapter(
+            var adapter = CreateAdapter(
                 new FakeWorkspaceFactory(workspace),
                 CreateReferenceDataProvider(workspace),
                 new InMemoryAssignmentStore(assignment),
@@ -5636,7 +5808,7 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
         var workspaceFiles = CreateWorkspaceFileService(out var workspaceRoot);
         try
         {
-            var adapter = new AgentFrameworkProcessExecutionAdapter(
+            var adapter = CreateAdapter(
                 new FakeWorkspaceFactory(workspace),
                 CreateReferenceDataProvider(workspace),
                 new InMemoryAssignmentStore(assignment),
@@ -5711,7 +5883,7 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
         var workspaceFiles = CreateWorkspaceFileService(out var workspaceRoot);
         try
         {
-            var adapter = new AgentFrameworkProcessExecutionAdapter(
+            var adapter = CreateAdapter(
                 new FakeWorkspaceFactory(workspace),
                 CreateReferenceDataProvider(workspace),
                 new InMemoryAssignmentStore(assignment),
@@ -5756,30 +5928,32 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
         IReadOnlyList<ToolExecutionReceiptRecord>? toolReceipts = null,
         Guid? currentExecutionRunId = null)
     {
-        var adapterType = typeof(ProcessesModuleServiceCollectionExtensions)
-            .Assembly
-            .GetType("CanDoItAll.Modules.Processes.AgentFrameworkProcessExecutionAdapter")
-            ?? throw new InvalidOperationException("Process execution adapter type was not found.");
-        var method = adapterType.GetMethod(
-            "ToAdapterResult",
-            BindingFlags.NonPublic | BindingFlags.Static)
-            ?? throw new InvalidOperationException("Process execution result mapper was not found.");
-
+        var toolReceiptPolicies = CreateToolReceiptPolicyCatalog();
+        var completionGateEvaluator = new ProcessCompletionGateFactory(
+                toolReceiptPolicies,
+                new ProcessToolReceiptEvidenceGate(new WorkspaceFileService(Path.GetTempPath()), []))
+            .CreateCompletionGateEvaluator();
+        var resultConverter = new ProcessExecutionResultConverter(
+            completionGateEvaluator,
+            toolReceiptPolicies);
         var effectiveExecutionRunId = currentExecutionRunId ?? toolReceipts?.FirstOrDefault()?.ExecutionRunId;
-        return Assert.IsType<ProcessExecutionAdapterResult>(method.Invoke(
-            null,
-            [assignment, output, "sha256:raw", toolReceipts, effectiveExecutionRunId, null]));
+        return resultConverter.ToAdapterResult(
+            assignment,
+            output,
+            "sha256:raw",
+            toolReceipts,
+            effectiveExecutionRunId);
     }
 
     private static ProcessStepExecutionContract ResolvePromptStepContract(
         ProcessRuntimeStepAssignment assignment,
         ProcessStepExecutionContract stepContract)
     {
-        var adapterType = typeof(ProcessesModuleServiceCollectionExtensions)
+        var executorType = typeof(ProcessesModuleServiceCollectionExtensions)
             .Assembly
-            .GetType("CanDoItAll.Modules.Processes.AgentFrameworkProcessExecutionAdapter")
-            ?? throw new InvalidOperationException("Process execution adapter type was not found.");
-        var method = adapterType.GetMethod(
+            .GetType("CanDoItAll.Modules.Processes.AgentFrameworkProcessStepExecutor")
+            ?? throw new InvalidOperationException("Process step executor type was not found.");
+        var method = executorType.GetMethod(
             "ResolvePromptStepContract",
             BindingFlags.NonPublic | BindingFlags.Static)
             ?? throw new InvalidOperationException("Process execution prompt contract resolver was not found.");
@@ -5788,18 +5962,7 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
     }
 
     private static AgentProcessRoleReadinessRequest CreateRuntimeReadinessRequest(ProcessRuntimeStepAssignment assignment)
-    {
-        var adapterType = typeof(ProcessesModuleServiceCollectionExtensions)
-            .Assembly
-            .GetType("CanDoItAll.Modules.Processes.AgentFrameworkProcessExecutionAdapter")
-            ?? throw new InvalidOperationException("Process execution adapter type was not found.");
-        var method = adapterType.GetMethod(
-            "CreateRuntimeReadinessRequest",
-            BindingFlags.NonPublic | BindingFlags.Static)
-            ?? throw new InvalidOperationException("Process runtime readiness request builder was not found.");
-
-        return Assert.IsType<AgentProcessRoleReadinessRequest>(method.Invoke(null, [assignment]));
-    }
+        => ProcessExecutionResultFactory.CreateRuntimeReadinessRequest(assignment);
 
     private static ProcessRuntimeStepAssignment CreateProductMutationAssignment(string outputRoot)
     {
@@ -6169,6 +6332,70 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
         Directory.CreateDirectory(workspaceRoot);
         return new WorkspaceFileService(workspaceRoot);
     }
+
+    private static AgentFrameworkProcessExecutionAdapter CreateAdapter(
+        ICanDoItAllAgentWorkspaceFactory workspaceFactory,
+        IAgentReferenceDataProvider agentReferenceDataProvider,
+        IProcessRuntimeStepAssignmentStore assignmentStore,
+        IProcessRuntimeStateStore stateStore,
+        IWorkspaceFileService workspaceFiles,
+        IEnumerable<IProcessSubprocessLaunchCoordinator>? subprocessLaunchCoordinators = null,
+        IProcessRuntimeToolPreflightService? runtimeToolPreflightService = null,
+        IParentSubprocessArtifactBridge? parentSubprocessArtifactBridge = null,
+        IEnumerable<IProcessRuntimeOwnedStepExecutor>? runtimeOwnedStepExecutors = null)
+    {
+        var toolReceiptPolicies = CreateToolReceiptPolicyCatalog();
+        var completionGateEvaluator = new ProcessCompletionGateFactory(
+                toolReceiptPolicies,
+                new ProcessToolReceiptEvidenceGate(
+                    workspaceFiles,
+                    [new DotNetBrowserSnapshotEvidencePolicyContribution()]))
+            .CreateCompletionGateEvaluator();
+        var resultConverter = new ProcessExecutionResultConverter(
+            completionGateEvaluator,
+            toolReceiptPolicies);
+        var subprocessContractResolver = new ProcessSubprocessContractResolver(
+            [new DotNetSoftwareDeliverySubprocessContractProvider()]);
+        var managedArtifactService = new ProcessManagedArtifactService(workspaceFiles);
+        var groundingValidator = new ProcessOutcomeGroundingValidator(workspaceFiles);
+        var completionCoordinator = new ProcessStepCompletionCoordinator(
+            new ProcessCompletionIssueResultFactory(workspaceFiles),
+            managedArtifactService,
+            groundingValidator,
+            completionGateEvaluator,
+            resultConverter);
+        var subprocessArtifactBridge = parentSubprocessArtifactBridge ??
+            new ParentSubprocessArtifactBridge(
+                assignmentStore,
+                stateStore,
+                workspaceFiles,
+                subprocessContractResolver);
+        var subprocessCoordinator = new ProcessSubprocessCoordinator(
+            subprocessLaunchCoordinators ?? [],
+            subprocessArtifactBridge,
+            completionCoordinator);
+        var runtimeOwnedStepCoordinator = new ProcessRuntimeOwnedStepCoordinator(
+            runtimeOwnedStepExecutors ?? [],
+            completionCoordinator);
+        var executor = new AgentFrameworkProcessStepExecutor(
+            workspaceFactory,
+            agentReferenceDataProvider,
+            assignmentStore,
+            stateStore,
+            runtimeToolPreflightService!,
+            runtimeOwnedStepCoordinator,
+            subprocessCoordinator,
+            completionCoordinator,
+            subprocessContractResolver);
+        return new AgentFrameworkProcessExecutionAdapter(executor);
+    }
+
+    private static ProcessToolReceiptPolicyCatalog CreateToolReceiptPolicyCatalog()
+        => new(
+        [
+            new GenericWorkspaceToolReceiptPolicyContribution(),
+            new DotNetToolReceiptPolicyContribution()
+        ]);
 
     private static ExecutionRunResult CreateExecutionRunResult(
         Guid agentId,

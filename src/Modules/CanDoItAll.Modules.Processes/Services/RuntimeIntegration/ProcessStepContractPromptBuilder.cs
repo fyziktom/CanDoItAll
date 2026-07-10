@@ -12,13 +12,14 @@ internal static class ProcessStepContractPromptBuilder
         string prompt,
         ProcessStepExecutionContract stepContract,
         IReadOnlyDictionary<string, string>? launchVariables = null,
-        string stepKey = "")
+        string stepKey = "",
+        ProcessSubprocessContract? resolvedSubprocessContract = null)
     {
-        ProcessSubprocessContract? subprocessContract = null;
-        var hasSubprocessContract = launchVariables is not null &&
-            ProcessSubprocessContractResolver.TryResolve(
+        var subprocessContract = resolvedSubprocessContract;
+        var hasSubprocessContract = subprocessContract is not null ||
+            launchVariables is not null &&
+            ProcessRuntimeLaunchVariables.TryReadProcessStepSubprocessContract(
                 launchVariables,
-                stepKey,
                 out subprocessContract);
         if (stepContract.RequiredArtifacts.Count == 0 &&
             stepContract.ExpectedProducedArtifacts.Count == 0 &&
@@ -100,7 +101,7 @@ internal static class ProcessStepContractPromptBuilder
             builder.AppendLine(
                 "Required runtime tool receipt rule: each listed tool must produce a current execution-run tool receipt before this step may submit Completed. A managed artifact, markdown statement, upstream artifact, launch variable, or prior run log that names the tool is not a receipt. If a listed tool is unavailable, denied, or fails before a branch decision can be made, submit Blocked or the applicable repair branch with the concrete current-run tool failure evidence instead of claiming Completed.");
             builder.AppendLine(
-                "For validation tools, invoke the concrete workspace validation tools such as workspace_dotnet_restore, workspace_dotnet_build, and workspace_dotnet_test in this step before writing final success evidence. Do not replace those invocations with manual shell commands, prose summaries, or upstream artifact readbacks when the tools are listed above.");
+                "For validation tools, invoke the concrete runtime tools listed above in this step before writing final success evidence. Do not replace those invocations with manual shell commands, prose summaries, or upstream artifact readbacks.");
         }
 
         if (subprocessContract is not null)

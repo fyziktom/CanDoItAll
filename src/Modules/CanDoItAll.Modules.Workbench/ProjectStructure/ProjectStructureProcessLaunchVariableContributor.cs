@@ -611,7 +611,7 @@ internal sealed partial class DotNetProcessLaunchVariableContributor : IProjectS
                 qaReceipts,
                 ["quality-accepted"],
                 "AcceptanceProof"),
-            ["quality-repair"] = validationReceipts,
+            ["quality-repair"] = qaReceipts,
             ["qa-recheck"] = BuildBranchAwareReceiptRules(
                 qaReceipts,
                 ["quality-accepted"],
@@ -632,12 +632,24 @@ internal sealed partial class DotNetProcessLaunchVariableContributor : IProjectS
                     ["quality-accepted"],
                     "repair-required",
                     "Repair required",
+                    requiresDefectEvidence: true),
+                BuildBranchRoute(
+                    ProcessCompletionDiagnosticCodes.ToolReceiptEvidenceContentRejected,
+                    ["quality-accepted"],
+                    "repair-required",
+                    "Repair required",
                     requiresDefectEvidence: true)
             ],
             ["qa-recheck"] =
             [
                 BuildBranchRoute(
                     "process.adapter.product_required_file_content_missing",
+                    ["quality-accepted"],
+                    "repair-escalation",
+                    "Repair escalation",
+                    requiresDefectEvidence: true),
+                BuildBranchRoute(
+                    ProcessCompletionDiagnosticCodes.ToolReceiptEvidenceContentRejected,
                     ["quality-accepted"],
                     "repair-escalation",
                     "Repair escalation",
@@ -662,7 +674,7 @@ internal sealed partial class DotNetProcessLaunchVariableContributor : IProjectS
                 qaReceipts,
                 ["quality-accepted"],
                 "AcceptanceProof"),
-            ["repair-blazor-findings"] = validationReceipts,
+            ["repair-blazor-findings"] = qaReceipts,
             ["revalidate-blazor-repair"] = BuildBranchAwareReceiptRules(
                 qaReceipts,
                 ["quality-accepted"],
@@ -683,12 +695,24 @@ internal sealed partial class DotNetProcessLaunchVariableContributor : IProjectS
                     ["quality-accepted"],
                     "repair-required",
                     "Repair required",
+                    requiresDefectEvidence: true),
+                BuildBranchRoute(
+                    ProcessCompletionDiagnosticCodes.ToolReceiptEvidenceContentRejected,
+                    ["quality-accepted"],
+                    "repair-required",
+                    "Repair required",
                     requiresDefectEvidence: true)
             ],
             ["revalidate-blazor-repair"] =
             [
                 BuildBranchRoute(
                     "process.adapter.product_required_file_content_missing",
+                    ["quality-accepted"],
+                    "repair-escalation",
+                    "Repair escalation",
+                    requiresDefectEvidence: true),
+                BuildBranchRoute(
+                    ProcessCompletionDiagnosticCodes.ToolReceiptEvidenceContentRejected,
                     ["quality-accepted"],
                     "repair-escalation",
                     "Repair escalation",
@@ -1086,12 +1110,20 @@ internal sealed partial class DotNetProcessLaunchVariableContributor : IProjectS
         var acceptanceChecks = BuildVisibleUiScaffoldRemovalChecks(
             appProjectName,
             appProjectDirectory,
-            enforceBranchOutcomeKeys: ["quality-accepted"]);
+            enforceBranchOutcomeKeys: ["quality-accepted"],
+            evidenceBranchOutcomeKeys: ["repair-required"]);
+        var recheckAcceptanceChecks = BuildVisibleUiScaffoldRemovalChecks(
+            appProjectName,
+            appProjectDirectory,
+            enforceBranchOutcomeKeys: ["quality-accepted"],
+            evidenceBranchOutcomeKeys: ["repair-escalation"]);
         var repairCompletionChecks = BuildVisibleUiScaffoldRemovalChecks(
             appProjectName,
             appProjectDirectory,
-            enforceBranchOutcomeKeys: []);
+            enforceBranchOutcomeKeys: [],
+            evidenceBranchOutcomeKeys: []);
         if (acceptanceChecks.Length == 0 ||
+            recheckAcceptanceChecks.Length == 0 ||
             repairCompletionChecks.Length == 0)
         {
             return string.Empty;
@@ -1101,7 +1133,7 @@ internal sealed partial class DotNetProcessLaunchVariableContributor : IProjectS
         {
             ["qa-validation"] = acceptanceChecks,
             ["quality-repair"] = repairCompletionChecks,
-            ["qa-recheck"] = acceptanceChecks
+            ["qa-recheck"] = recheckAcceptanceChecks
         };
 
         return JsonSerializer.Serialize(map);
@@ -1120,12 +1152,20 @@ internal sealed partial class DotNetProcessLaunchVariableContributor : IProjectS
         var acceptanceChecks = BuildVisibleUiScaffoldRemovalChecks(
             appProjectName,
             appProjectDirectory,
-            enforceBranchOutcomeKeys: ["quality-accepted"]);
+            enforceBranchOutcomeKeys: ["quality-accepted"],
+            evidenceBranchOutcomeKeys: ["repair-required"]);
+        var recheckAcceptanceChecks = BuildVisibleUiScaffoldRemovalChecks(
+            appProjectName,
+            appProjectDirectory,
+            enforceBranchOutcomeKeys: ["quality-accepted"],
+            evidenceBranchOutcomeKeys: ["repair-escalation"]);
         var repairCompletionChecks = BuildVisibleUiScaffoldRemovalChecks(
             appProjectName,
             appProjectDirectory,
-            enforceBranchOutcomeKeys: []);
+            enforceBranchOutcomeKeys: [],
+            evidenceBranchOutcomeKeys: []);
         if (acceptanceChecks.Length == 0 ||
+            recheckAcceptanceChecks.Length == 0 ||
             repairCompletionChecks.Length == 0)
         {
             return string.Empty;
@@ -1135,7 +1175,7 @@ internal sealed partial class DotNetProcessLaunchVariableContributor : IProjectS
         {
             ["validate-blazor-runtime"] = acceptanceChecks,
             ["repair-blazor-findings"] = repairCompletionChecks,
-            ["revalidate-blazor-repair"] = acceptanceChecks
+            ["revalidate-blazor-repair"] = recheckAcceptanceChecks
         };
 
         return JsonSerializer.Serialize(map);
@@ -1144,7 +1184,8 @@ internal sealed partial class DotNetProcessLaunchVariableContributor : IProjectS
     private static object[] BuildVisibleUiScaffoldRemovalChecks(
         string appProjectName,
         string appProjectDirectory,
-        IReadOnlyCollection<string> enforceBranchOutcomeKeys)
+        IReadOnlyCollection<string> enforceBranchOutcomeKeys,
+        IReadOnlyCollection<string> evidenceBranchOutcomeKeys)
     {
         var paths = new[]
         {
@@ -1186,6 +1227,11 @@ internal sealed partial class DotNetProcessLaunchVariableContributor : IProjectS
                 if (enforceBranchOutcomeKeys.Count > 0)
                 {
                     check["enforceBranchOutcomeKeys"] = enforceBranchOutcomeKeys;
+                }
+
+                if (evidenceBranchOutcomeKeys.Count > 0)
+                {
+                    check["evidenceBranchOutcomeKeys"] = evidenceBranchOutcomeKeys;
                 }
 
                 return check;

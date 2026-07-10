@@ -174,7 +174,7 @@ public sealed record ProcessRecoveryClassifierOptions(
     int MaxAutomaticSafeReworksPerStep,
     int MaxSameDiagnosticFingerprintAutomaticReworks)
 {
-    public static ProcessRecoveryClassifierOptions Default { get; } = new(3, 1);
+    public static ProcessRecoveryClassifierOptions Default { get; } = new(4, 3);
 }
 
 public sealed record ProcessRecoveryClassificationInput(

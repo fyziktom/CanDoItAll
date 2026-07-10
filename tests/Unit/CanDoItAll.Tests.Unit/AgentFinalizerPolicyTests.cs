@@ -31,6 +31,7 @@ public sealed class AgentFinalizerPolicyTests
             ## Changed files
             - external-target/C/programovani/dotnet/output/src/App/App.csproj
             """,
+            ProcessArtifactRecoveryCause.MissingRequiredFinalizer,
             out var outcome,
             out var recoveryFailure);
 
@@ -39,7 +40,8 @@ public sealed class AgentFinalizerPolicyTests
         Assert.Equal(ProcessStepOutcomeStatus.Completed, outcome.Status);
         Assert.Equal([primaryArtifactRef], outcome.EvidenceRefs);
         Assert.Empty(outcome.NextActions);
-        Assert.Contains("provider timeout", outcome.Reason, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("provider timeout", outcome.Reason, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("required finalizer", outcome.Reason, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("Status: completed", outcome.HumanReadableSummaryMarkdown, StringComparison.OrdinalIgnoreCase);
     }
 
@@ -64,6 +66,7 @@ public sealed class AgentFinalizerPolicyTests
             - workspace_dotnet_build exit code 0
             - workspace_dotnet_test exit code 0
             """,
+            ProcessArtifactRecoveryCause.ProviderStreamingTimeout,
             out var outcome,
             out var recoveryFailure);
 
@@ -71,6 +74,7 @@ public sealed class AgentFinalizerPolicyTests
         Assert.Equal(ProcessStepOutcomeStatus.Completed, outcome.Status);
         Assert.Equal("feature-accepted", outcome.BranchOutcomeKey);
         Assert.Equal([primaryArtifactRef], outcome.EvidenceRefs);
+        Assert.Contains("provider streaming timed out", outcome.Reason, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -96,6 +100,7 @@ public sealed class AgentFinalizerPolicyTests
             - workspace_dotnet_build exit code 0
             - workspace_dotnet_test exit code 0
             """,
+            ProcessArtifactRecoveryCause.ProviderStreamingTimeout,
             out var outcome,
             out var recoveryFailure);
 
@@ -124,6 +129,7 @@ public sealed class AgentFinalizerPolicyTests
             ## Invalid duplicate
             Branch outcome key: feature-repair-required
             """,
+            ProcessArtifactRecoveryCause.ProviderStreamingTimeout,
             out var outcome,
             out var recoveryFailure);
 
@@ -152,6 +158,7 @@ public sealed class AgentFinalizerPolicyTests
             ## Branch outcome key
             feature-repair-required
             """,
+            ProcessArtifactRecoveryCause.ProviderStreamingTimeout,
             out var outcome,
             out var recoveryFailure);
 
@@ -174,6 +181,7 @@ public sealed class AgentFinalizerPolicyTests
 
             Status: InProgress  # Feature implementation change set
             """,
+            ProcessArtifactRecoveryCause.ProviderStreamingTimeout,
             out var outcome,
             out var failure);
 
@@ -196,6 +204,7 @@ public sealed class AgentFinalizerPolicyTests
 
             Status: Blocked
             """,
+            ProcessArtifactRecoveryCause.ProviderStreamingTimeout,
             out var outcome,
             out var failure);
 
@@ -221,6 +230,7 @@ public sealed class AgentFinalizerPolicyTests
             Cannot proceed because workspace_dotnet_test failed with exit code 1.
             Evidence: artifacts/process-runs/11111111-1111-1111-1111-111111111111/steps/qa-validation.md
             """,
+            ProcessArtifactRecoveryCause.ProviderStreamingTimeout,
             out var outcome,
             out var failure);
 
@@ -250,6 +260,7 @@ public sealed class AgentFinalizerPolicyTests
             ## Notes
             This step records the intended scaffold contract only.
             """,
+            ProcessArtifactRecoveryCause.ProviderStreamingTimeout,
             out var outcome,
             out var failure);
 
@@ -276,6 +287,7 @@ public sealed class AgentFinalizerPolicyTests
             Cannot proceed because required input is missing from the governed process context.
             Manager action required before retry.
             """,
+            ProcessArtifactRecoveryCause.ProviderStreamingTimeout,
             out var outcome,
             out var failure);
 

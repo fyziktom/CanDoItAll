@@ -219,6 +219,44 @@ public sealed class ProcessStepRecoveryInstructionBuilderTests
     }
 
     [Fact]
+    public void RecoveryInstructionBuilder_product_readback_failure_enumerates_every_actionable_failure()
+    {
+        var assignment = CreateQualityRepairAssignment() with
+        {
+            LaunchVariables = new Dictionary<string, string>(StringComparer.Ordinal)
+            {
+                ["ProductRoot"] = @"C:\work\output",
+                ["ProductRootAlias"] = "external-target/C/work/output"
+            }
+        };
+        var result = CreateMultipleProductReadbackFailureResult();
+
+        var instruction = new ProcessStepRecoveryInstructionBuilder([new GenericProcessRecoveryAdviceProvider()])
+            .Build(new ProcessStepRecoveryInstructionBuildRequest(
+                RunId,
+                StepId,
+                assignment.StepKey,
+                assignment,
+                result,
+                CreateReceipt(
+                    result,
+                    CreateSafeRetryDecision("process.adapter.product_required_file_content_missing")),
+                OperatorReason: string.Empty));
+
+        Assert.True(instruction.HasInstruction);
+        Assert.Contains("Every listed product readback failure is authoritative", instruction.Text, StringComparison.Ordinal);
+        Assert.Contains("external-target/C/work/output/ui/Menu.view contains forbidden text [sample-link]", instruction.Text, StringComparison.Ordinal);
+        Assert.Contains("external-target/C/work/output/ui/Shell.view contains forbidden text [starter-copy]", instruction.Text, StringComparison.Ordinal);
+        Assert.Contains("external-target/C/work/output/samples/First.view contains forbidden text [sample-one]", instruction.Text, StringComparison.Ordinal);
+        Assert.Contains("external-target/C/work/output/samples/Second.view contains forbidden text [sample-two]", instruction.Text, StringComparison.Ordinal);
+        Assert.Contains("Mutate or remove every failing product file/content marker", instruction.Text, StringComparison.Ordinal);
+        Assert.Contains("dormant product files", instruction.Text, StringComparison.Ordinal);
+        Assert.Contains("Do not preserve or rewrite the same forbidden text", instruction.Text, StringComparison.Ordinal);
+        Assert.Contains("if any listed alternative remains, do not submit Completed", instruction.Text, StringComparison.Ordinal);
+        Assert.DoesNotContain(@"C:\work\output", instruction.Text, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void RecoveryInstructionBuilder_qa_recheck_missing_receipts_preserves_branch_contract()
     {
         var assignment = CreateQaValidationAssignment("qa-recheck");
@@ -652,6 +690,34 @@ public sealed class ProcessStepRecoveryInstructionBuilderTests
                     "Product content readback failed.")
             ],
             "sha256:repair-readback");
+    }
+
+    private static StrategyResultEnvelope CreateMultipleProductReadbackFailureResult()
+    {
+        return new StrategyResultEnvelope(
+            new StrategyId("strategy.execute"),
+            "1.0.0",
+            Guid.NewGuid(),
+            StrategyOutcome.NeedsManager,
+            [],
+            [],
+            [
+                new StrategyDiagnosticRef(
+                    new StrategyDiagnosticCode("process.adapter.product_required_file_content_missing"),
+                    StrategyDiagnosticSensitivity.Normal,
+                    "sha256:multiple-readback-failures",
+                    @"Step 'product-repair' claimed completion but required product file content/readback check(s) failed: C:\work\output\ui\Menu.view contains forbidden text [sample-link]; C:\work\output\ui\Shell.view contains forbidden text [starter-copy]; C:\work\output\samples\First.view contains forbidden text [sample-one]; C:\work\output\samples\Second.view contains forbidden text [sample-two].",
+                    RestrictedEvidenceReference: null,
+                    ProcessDiagnosticRetrySafety.SafeToRetry,
+                    ProcessDiagnosticIdempotencyClassification.Idempotent)
+            ],
+            [
+                new ManagerSignal(
+                    new ManagerSignalCode("process.adapter.product_required_file_content_missing"),
+                    "sha256:multiple-readback-failures",
+                    "Product content readback failed.")
+            ],
+            "sha256:multiple-readback-failures");
     }
 
     private static StrategyResultEnvelope CreateQaRecheckMissingReceiptResult()

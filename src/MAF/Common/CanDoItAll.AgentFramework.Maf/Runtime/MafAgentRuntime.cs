@@ -591,7 +591,7 @@ public sealed class MafAgentRuntime : IAgentRuntime
                 finalizerPolicy,
                 updates,
                 ProviderUsageSourcePhases.FinalizerRecovery,
-                "The provider completed without the required finalizer after the current process step primary artifact was written.",
+                ProcessArtifactRecoveryCause.MissingRequiredFinalizer,
                 progressCallback,
                 cancellationToken,
                 snapshotEffectiveToolInvocationTraces).ConfigureAwait(false);
@@ -1232,7 +1232,7 @@ public sealed class MafAgentRuntime : IAgentRuntime
                     policy,
                     updates,
                     ProviderUsageSourcePhases.FinalizerRecovery,
-                    "Provider streaming timed out after the current process step primary artifact was written.",
+                    ProcessArtifactRecoveryCause.ProviderStreamingTimeout,
                     progressCallback,
                     cancellationToken,
                     snapshotToolInvocationTraces).ConfigureAwait(false);
@@ -1301,7 +1301,7 @@ public sealed class MafAgentRuntime : IAgentRuntime
         AgentFinalizerPolicy policy,
         IReadOnlyList<AgentResponseUpdate> updates,
         string usageSourcePhase,
-        string recoveryReason,
+        ProcessArtifactRecoveryCause recoveryCause,
         Func<ExecutionState, string, string, Task> progressCallback,
         CancellationToken cancellationToken,
         Func<IReadOnlyList<AgentToolInvocationTrace>> snapshotToolInvocationTraces)
@@ -1333,6 +1333,7 @@ public sealed class MafAgentRuntime : IAgentRuntime
                 contextIntent,
                 primaryArtifactRef,
                 artifactMarkdown,
+                recoveryCause,
                 out var outcome,
                 out _))
         {
@@ -1340,6 +1341,7 @@ public sealed class MafAgentRuntime : IAgentRuntime
         }
 
         var argumentsJson = JsonSerializer.Serialize(outcome, AgentOutputJson.SerializerOptions);
+        var recoveryReason = ProcessArtifactRecoveryService.DescribeRecoveryCause(recoveryCause);
         var existingToolTraces = snapshotToolInvocationTraces();
         var finalizerSequence = existingToolTraces.Count == 0
             ? 1

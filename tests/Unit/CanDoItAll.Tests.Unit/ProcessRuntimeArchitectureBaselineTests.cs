@@ -2,35 +2,13 @@ using System.Text.Json;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Modules.Processes;
+using CanDoItAll.Processes.Abstractions;
+using CanDoItAll.Processes.Drivers.Abstractions;
 
 namespace CanDoItAll.Tests.Unit;
 
 public sealed class ProcessRuntimeArchitectureBaselineTests
 {
-    private static readonly string[] KnownAdapterPartialFiles =
-    [
-        "AgentFrameworkProcessExecutionAdapter.AcceptanceCriteria.cs",
-        "AgentFrameworkProcessExecutionAdapter.CompletionGates.cs",
-        "AgentFrameworkProcessExecutionAdapter.CompletionIssueResults.cs",
-        "AgentFrameworkProcessExecutionAdapter.cs",
-        "AgentFrameworkProcessExecutionAdapter.DotNetSetupRuntime.cs",
-        "AgentFrameworkProcessExecutionAdapter.Grounding.cs",
-        "AgentFrameworkProcessExecutionAdapter.ManagedArtifactEvidence.cs",
-        "AgentFrameworkProcessExecutionAdapter.ManagedArtifacts.cs",
-        "AgentFrameworkProcessExecutionAdapter.Metadata.cs",
-        "AgentFrameworkProcessExecutionAdapter.ProductCompletionParsing.cs",
-        "AgentFrameworkProcessExecutionAdapter.ProductCompletionPaths.cs",
-        "AgentFrameworkProcessExecutionAdapter.ProductCompletionReceipts.cs",
-        "AgentFrameworkProcessExecutionAdapter.ProductCompletionRetryPolicy.cs",
-        "AgentFrameworkProcessExecutionAdapter.ProductCompletionState.cs",
-        "AgentFrameworkProcessExecutionAdapter.RecoveryPolicy.cs",
-        "AgentFrameworkProcessExecutionAdapter.ResultConversion.cs",
-        "AgentFrameworkProcessExecutionAdapter.Results.cs",
-        "AgentFrameworkProcessExecutionAdapter.Subprocess.cs",
-        "AgentFrameworkProcessExecutionAdapter.SubprocessState.cs",
-        "AgentFrameworkProcessExecutionAdapter.Types.cs"
-    ];
-
     private static readonly string[] GenericDomainLeakTerms =
     [
         "IDotNetSolutionSetupRuntimeExecutor",
@@ -43,11 +21,16 @@ public sealed class ProcessRuntimeArchitectureBaselineTests
         "repair-escalation",
         "create-dotnet-project",
         "add-test-project",
-        "repair-solution-setup"
+        "repair-solution-setup",
+        "workspace_dotnet_",
+        "An unhandled error has occurred.",
+        "DotNetSolutionSetup",
+        "dotnet-development-slice",
+        "software-delivery"
     ];
 
     [Fact]
-    public void AgentFrameworkProcessExecutionAdapter_partial_cluster_has_no_unplanned_growth()
+    public void AgentFrameworkProcessExecutionAdapter_is_one_non_partial_boundary_file()
     {
         var root = FindRepositoryRoot();
         var adapterDirectory = Path.Combine(
@@ -57,8 +40,6 @@ public sealed class ProcessRuntimeArchitectureBaselineTests
             "CanDoItAll.Modules.Processes",
             "Services",
             "RuntimeIntegration");
-        var knownFiles = KnownAdapterPartialFiles.ToHashSet(StringComparer.OrdinalIgnoreCase);
-
         var adapterFiles = Directory
             .EnumerateFiles(adapterDirectory, "AgentFrameworkProcessExecutionAdapter*.cs")
             .Select(Path.GetFileName)
@@ -66,14 +47,104 @@ public sealed class ProcessRuntimeArchitectureBaselineTests
             .Select(name => name!)
             .Order(StringComparer.OrdinalIgnoreCase)
             .ToArray();
-        var unexpectedFiles = adapterFiles
-            .Where(file => !knownFiles.Contains(file))
+        Assert.Equal(["AgentFrameworkProcessExecutionAdapter.cs"], adapterFiles);
+
+        var adapterSource = File.ReadAllText(Path.Combine(adapterDirectory, adapterFiles[0]));
+        Assert.DoesNotContain("partial class AgentFrameworkProcessExecutionAdapter", adapterSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("ExecuteRunAsync", adapterSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("IWorkspaceFileService", adapterSource, StringComparison.Ordinal);
+        Assert.Contains("IAgentFrameworkProcessStepExecutor", adapterSource, StringComparison.Ordinal);
+        Assert.True(adapterSource.Count(character => character == '\n') < 90, "The adapter boundary must remain small.");
+    }
+
+    [Fact]
+    public async Task AgentFrameworkProcessExecutionAdapter_delegates_without_runtime_construction()
+    {
+        var expectedResult = ProcessExecutionAdapterResult.Succeeded("delegated", "sha256:delegated");
+        var executor = new RecordingProcessStepExecutor(expectedResult);
+        var adapter = new AgentFrameworkProcessExecutionAdapter(executor);
+        var request = new ProcessExecutionAdapterRequest(
+            ProcessRunId.New(),
+            ProcessStepInstanceId.New(),
+            ProcessExecutionAdapterKind.Workflow,
+            new ProcessExecutionAdapterOperationKey("adapter.workflow.execute"),
+            new ProcessStrategyBindingSnapshot(
+                new DriverId("test.workflow"),
+                new StrategyId("test.execute"),
+                "1.0.0",
+                "1.0.0",
+                "1",
+                "1",
+                "sha256:binding",
+                []),
+            [],
+            []);
+        using var cancellation = new CancellationTokenSource();
+
+        var result = await adapter.ExecuteAsync(request, cancellation.Token);
+
+        Assert.Same(expectedResult, result);
+        Assert.Same(request, executor.Request);
+        Assert.Equal(cancellation.Token, executor.CancellationToken);
+    }
+
+    [Fact]
+    public void Extracted_process_runtime_integration_has_no_partial_types_or_global_static_imports()
+    {
+        var root = FindRepositoryRoot();
+        var adapterDirectory = Path.Combine(
+            root,
+            "src",
+            "Modules",
+            "CanDoItAll.Modules.Processes",
+            "Services",
+            "RuntimeIntegration");
+        var findings = Directory
+            .EnumerateFiles(adapterDirectory, "*.cs", SearchOption.AllDirectories)
+            .Select(path => (Path: path, Source: File.ReadAllText(path)))
+            .Where(file =>
+                file.Source.Contains("partial class", StringComparison.Ordinal) ||
+                file.Source.Contains("partial record", StringComparison.Ordinal) ||
+                file.Source.Contains("partial struct", StringComparison.Ordinal) ||
+                file.Source.Contains("global using static", StringComparison.Ordinal))
+            .Select(file => Path.GetRelativePath(root, file.Path))
             .ToArray();
 
-        Assert.Empty(unexpectedFiles);
-        Assert.True(
-            adapterFiles.Length <= KnownAdapterPartialFiles.Length,
-            $"Adapter partial cluster grew from {KnownAdapterPartialFiles.Length} to {adapterFiles.Length}: {string.Join(", ", adapterFiles)}");
+        Assert.Empty(findings);
+    }
+
+    [Fact]
+    public void Extracted_adapter_responsibilities_do_not_form_a_replacement_monolith()
+    {
+        var root = FindRepositoryRoot();
+        var adapterDirectory = Path.Combine(
+            root,
+            "src",
+            "Modules",
+            "CanDoItAll.Modules.Processes",
+            "Services",
+            "RuntimeIntegration");
+        var extractedFiles = new[]
+        {
+            "AgentFrameworkProcessStepExecutor.cs",
+            "ProcessBranchOutcomeResolver.cs",
+            "ProcessCompletionIssueResultFactory.cs",
+            "ProcessCompletionRuleParser.cs",
+            "ProcessExecutionResultConverter.cs",
+            "ProcessManagedArtifactService.cs",
+            "ProcessOutcomeGroundingValidator.cs",
+            "ProcessRequiredReceiptMatcher.cs",
+            "ProcessRequiredReceiptRetryPolicy.cs",
+            "ProcessSubprocessCompletionPolicy.cs",
+            "ProcessSubprocessCoordinator.cs"
+        };
+        var oversizedFiles = extractedFiles
+            .Select(fileName => Path.Combine(adapterDirectory, fileName))
+            .Where(path => File.ReadLines(path).Count() >= 500)
+            .Select(path => $"{Path.GetFileName(path)}: {File.ReadLines(path).Count()} lines")
+            .ToArray();
+
+        Assert.Empty(oversizedFiles);
     }
 
     [Fact]
@@ -293,17 +364,14 @@ public sealed class ProcessRuntimeArchitectureBaselineTests
             return true;
         }
 
+        if (normalized.StartsWith(
+                "src/Modules/CanDoItAll.Modules.Processes/Services/RuntimeIntegration/Drivers/DotNet/",
+                StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
         return normalized is
-            "src/MAF/Common/CanDoItAll.AgentFramework.Core/Workspace/Commands/WorkspaceCommandReceiptWriter.cs" or
-            "src/Modules/CanDoItAll.Modules.Processes/Services/RuntimeIntegration/AgentFrameworkProcessExecutionAdapter.cs" or
-            "src/Modules/CanDoItAll.Modules.Processes/Services/RuntimeIntegration/AgentFrameworkProcessExecutionAdapter.DotNetSetupRuntime.cs" or
-            "src/Modules/CanDoItAll.Modules.Processes/Services/RuntimeIntegration/DotNetSolutionSetupRuntimeExecutor.cs" or
-            "src/Modules/CanDoItAll.Modules.Processes/Services/RuntimeIntegration/DotNetSolutionSetupToolPlanGuard.cs" or
-            "src/Modules/CanDoItAll.Modules.Processes/Services/RuntimeIntegration/AgentFrameworkProcessExecutionAdapter.ProductCompletionReceipts.cs" or
-            "src/Modules/CanDoItAll.Modules.Processes/Services/RuntimeIntegration/AgentFrameworkProcessExecutionAdapter.ManagedArtifactEvidence.cs" or
-            "src/Modules/CanDoItAll.Modules.Processes/Services/RuntimeIntegration/AgentFrameworkProcessExecutionAdapter.ResultConversion.cs" or
-            "src/Modules/CanDoItAll.Modules.Processes/Services/RuntimeIntegration/AgentFrameworkProcessExecutionAdapter.ProductCompletionState.cs" or
-            "src/Modules/CanDoItAll.Modules.Processes/Services/RuntimeIntegration/ProcessSubprocessContractResolver.cs" or
             "src/Processes/CanDoItAll.Processes.Runtime/ProcessRecoveryClassifier.cs" or
             "src/Processes/CanDoItAll.Processes.Runtime/ProcessRuntimeEngine.ResultHelpers.cs";
     }
@@ -402,6 +470,22 @@ public sealed class ProcessRuntimeArchitectureBaselineTests
     }
 
     private sealed record TermMatch(string RelativePath, string Term);
+
+    private sealed class RecordingProcessStepExecutor(ProcessExecutionAdapterResult result) : IAgentFrameworkProcessStepExecutor
+    {
+        public ProcessExecutionAdapterRequest? Request { get; private set; }
+
+        public CancellationToken CancellationToken { get; private set; }
+
+        public ValueTask<ProcessExecutionAdapterResult> ExecuteAsync(
+            ProcessExecutionAdapterRequest request,
+            CancellationToken cancellationToken = default)
+        {
+            Request = request;
+            CancellationToken = cancellationToken;
+            return ValueTask.FromResult(result);
+        }
+    }
 
     private sealed class FixedLifecycleFactExtractor(string name, string value) : IWorkspaceCommandReceiptLifecycleFactExtractor
     {

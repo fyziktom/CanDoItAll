@@ -417,6 +417,7 @@ internal static class MafProviderRuntimeSettings
     public const string OpenAiApiKeyEnvironmentVariable = "OPENAI_API_KEY";
 
     private static readonly TimeSpan ModelNetworkTimeout = TimeSpan.FromMinutes(10);
+    private static readonly TimeSpan StreamingIdleTimeoutGrace = TimeSpan.FromSeconds(30);
 
     public static TimeSpan ResolveNetworkTimeout(ProviderProfile provider)
     {
@@ -443,6 +444,9 @@ internal static class MafProviderRuntimeSettings
             return ModelNetworkTimeout;
         }
     }
+
+    public static TimeSpan ResolveStreamingIdleTimeout(ProviderProfile provider)
+        => ResolveNetworkTimeout(provider) + StreamingIdleTimeoutGrace;
 
     public static bool ShouldUseDefaultOpenAiEndpoint(string? baseUrl)
     {

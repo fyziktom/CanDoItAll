@@ -26,6 +26,12 @@ public static class ProcessRuntimeLaunchVariables
     public const string ProcessStepSubprocessDefinitionKey = "ProcessStepSubprocessDefinitionKey";
     public const string ProjectId = "ProjectId";
     public const string ProjectName = "ProjectName";
+    public const string ProductRoot = "ProductRoot";
+    public const string OutputRoot = "OutputRoot";
+    public const string ExternalTargetRoot = "ExternalTargetRoot";
+    public const string ProductRootAlias = "ProductRootAlias";
+    public const string OutputRootAlias = "OutputRootAlias";
+    public const string WorkspaceAlias = "WorkspaceAlias";
 
     public static IReadOnlyDictionary<string, string> CreateParentRunLookup(ProcessRunId parentRunId)
     {

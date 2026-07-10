@@ -763,17 +763,115 @@ public sealed class ProcessRuntimeEngineTests
                 StrategyResultIdempotencyKey.New(),
                 SafeCompletionGateNeedsManagerResult()));
 
-        var receipt = second.State.AppliedResults.Last();
-        var step = second.State.Steps.Single(item => item.StepInstanceId == ActivityStepId);
+        var secondReceipt = second.State.AppliedResults.Last();
+        var secondStep = second.State.Steps.Single(item => item.StepInstanceId == ActivityStepId);
+        Assert.Equal(ProcessRuntimeStepStatus.Ready, secondStep.Status);
+        Assert.Equal(ProcessRuntimeStepStatus.Ready, secondReceipt.AppliedStepStatus);
+        Assert.NotNull(secondReceipt.RecoveryDecision);
+        Assert.Equal(ProcessRecoveryDecisionKind.SafeRetry, secondReceipt.RecoveryDecision.DecisionKind);
+        Assert.Equal(ProcessRecoveryRouteKind.CurrentStepRetry, secondReceipt.RecoveryDecision.RouteKind);
+        Assert.Equal(2, secondReceipt.RecoveryDecision.SameDiagnosticFingerprintAttempt);
+        Assert.Equal(3, secondReceipt.RecoveryDecision.MaximumSameDiagnosticFingerprintAttempts);
+
+        var thirdToken = DispatchClaimToken.New();
+        var thirdState = second.State with
+        {
+            Steps = second.State.Steps
+                .Select(step => step.StepInstanceId == ActivityStepId
+                    ? step with
+                    {
+                        Status = ProcessRuntimeStepStatus.Running,
+                        AttemptNumber = 3,
+                        ActiveClaimToken = thirdToken
+                    }
+                    : step)
+                .ToArray(),
+            Claims =
+            [
+                .. second.State.Claims,
+                new DispatchClaimState(
+                    thirdToken,
+                    ActivityStepId,
+                    OwnerId,
+                    DispatchClaimStatus.Claimed,
+                    3,
+                    Now.AddMinutes(4),
+                    Now.AddMinutes(9),
+                    null,
+                    null)
+            ]
+        };
+
+        var third = await engine.SubmitStrategyResultAsync(
+            thirdState,
+            Context(Now.AddMinutes(5)),
+            new SubmitStrategyResultCommand(
+                ActivityStepId,
+                OwnerId,
+                thirdToken,
+                StrategyResultIdempotencyKey.New(),
+                SafeCompletionGateNeedsManagerResult()));
+
+        var thirdReceipt = third.State.AppliedResults.Last();
+        var thirdStep = third.State.Steps.Single(item => item.StepInstanceId == ActivityStepId);
+        Assert.Equal(ProcessRuntimeStepStatus.Ready, thirdStep.Status);
+        Assert.Equal(ProcessRuntimeStepStatus.Ready, thirdReceipt.AppliedStepStatus);
+        Assert.NotNull(thirdReceipt.RecoveryDecision);
+        Assert.Equal(ProcessRecoveryDecisionKind.SafeRetry, thirdReceipt.RecoveryDecision.DecisionKind);
+        Assert.Equal(ProcessRecoveryRouteKind.CurrentStepRetry, thirdReceipt.RecoveryDecision.RouteKind);
+        Assert.Equal(3, thirdReceipt.RecoveryDecision.SameDiagnosticFingerprintAttempt);
+        Assert.Equal(3, thirdReceipt.RecoveryDecision.MaximumSameDiagnosticFingerprintAttempts);
+
+        var fourthToken = DispatchClaimToken.New();
+        var fourthState = third.State with
+        {
+            Steps = third.State.Steps
+                .Select(step => step.StepInstanceId == ActivityStepId
+                    ? step with
+                    {
+                        Status = ProcessRuntimeStepStatus.Running,
+                        AttemptNumber = 4,
+                        ActiveClaimToken = fourthToken
+                    }
+                    : step)
+                .ToArray(),
+            Claims =
+            [
+                .. third.State.Claims,
+                new DispatchClaimState(
+                    fourthToken,
+                    ActivityStepId,
+                    OwnerId,
+                    DispatchClaimStatus.Claimed,
+                    4,
+                    Now.AddMinutes(6),
+                    Now.AddMinutes(11),
+                    null,
+                    null)
+            ]
+        };
+
+        var fourth = await engine.SubmitStrategyResultAsync(
+            fourthState,
+            Context(Now.AddMinutes(7)),
+            new SubmitStrategyResultCommand(
+                ActivityStepId,
+                OwnerId,
+                fourthToken,
+                StrategyResultIdempotencyKey.New(),
+                SafeCompletionGateNeedsManagerResult()));
+
+        var receipt = fourth.State.AppliedResults.Last();
+        var step = fourth.State.Steps.Single(item => item.StepInstanceId == ActivityStepId);
         Assert.Equal(ProcessRuntimeStepStatus.Blocked, step.Status);
         Assert.Equal(ProcessRuntimeStepStatus.Blocked, receipt.AppliedStepStatus);
         Assert.NotNull(receipt.RecoveryDecision);
         Assert.Equal(ProcessRecoveryDecisionKind.ManagerRequired, receipt.RecoveryDecision.DecisionKind);
         Assert.Equal(ProcessRecoveryRouteKind.ManagerAction, receipt.RecoveryDecision.RouteKind);
         Assert.Equal("process.current-step-safe-retry-budget-exhausted", receipt.RecoveryDecision.Policy);
-        Assert.Equal(2, receipt.RecoveryDecision.SameDiagnosticFingerprintAttempt);
+        Assert.Equal(4, receipt.RecoveryDecision.SameDiagnosticFingerprintAttempt);
         Assert.Contains("exhausted automatic current-step retry budget", receipt.RecoveryDecision.SafeReason, StringComparison.Ordinal);
-        Assert.Contains(second.Events, runtimeEvent => runtimeEvent.EventType == ProcessRuntimeEventTypes.StepBlocked);
+        Assert.Contains(fourth.Events, runtimeEvent => runtimeEvent.EventType == ProcessRuntimeEventTypes.StepBlocked);
     }
 
     [Fact]

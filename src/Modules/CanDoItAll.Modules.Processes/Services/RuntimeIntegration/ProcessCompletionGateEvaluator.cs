@@ -88,6 +88,7 @@ internal sealed class ProcessCompletionGateEvaluator
             "process.adapter.required_tool_receipt_missing" => 11,
             "process.adapter.product_mutation_receipt_missing" => 12,
             "process.adapter.runtime_lifecycle_correlation_missing" => 13,
+            ProcessCompletionDiagnosticCodes.ToolReceiptEvidenceContentRejected => 19,
             "process.adapter.product_required_file_content_missing" => 20,
             "process.adapter.product_required_file_content_check_invalid" => 21,
             "process.adapter.acceptance_criteria_missing" => 22,

@@ -616,18 +616,7 @@ public sealed class ProcessRuntimeIntegrationMetadataTests
     }
 
     private static string BuildProcessExecutionMetadata(ProcessRuntimeStepAssignment assignment)
-    {
-        var adapterType = typeof(ProcessesModuleServiceCollectionExtensions)
-            .Assembly
-            .GetType("CanDoItAll.Modules.Processes.AgentFrameworkProcessExecutionAdapter")
-            ?? throw new InvalidOperationException("Process execution adapter type was not found.");
-        var method = adapterType.GetMethod(
-            "BuildProcessExecutionMetadata",
-            BindingFlags.NonPublic | BindingFlags.Static)
-            ?? throw new InvalidOperationException("Process execution metadata builder was not found.");
-
-        return Assert.IsType<string>(method.Invoke(null, [assignment]));
-    }
+        => ProcessExecutionMetadataBuilder.BuildProcessExecutionMetadata(assignment);
 
     private static ExecutionRunRecord CreateTrustedProcessRun(string metadataJson)
     {
