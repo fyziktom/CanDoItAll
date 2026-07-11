@@ -44,6 +44,88 @@ public sealed class DotNetProcessLaunchVariableContributorTests
         AssertValidationReceipts(receiptMap, "feature-repair");
         AssertValidationReceipts(receiptMap, "targeted-recheck");
 
+        var routeMap = JsonSerializer.Deserialize<Dictionary<string, JsonElement[]>>(
+            variables[ProcessRuntimeLaunchVariables.CompletionIssueRoutesByStep]);
+
+        Assert.NotNull(routeMap);
+        var incompleteImplementationRoute = Assert.Single(Assert.Contains("code-change", routeMap));
+        Assert.Equal(
+            ProcessCompletionDiagnosticCodes.ProductMutationReceiptMissing,
+            incompleteImplementationRoute.GetProperty("issueCode").GetString());
+        Assert.Empty(incompleteImplementationRoute.GetProperty("sourceBranchOutcomeKeys").EnumerateArray());
+        Assert.Equal(
+            "implementation-attempt-incomplete",
+            incompleteImplementationRoute.GetProperty("targetBranchOutcomeKey").GetString());
+        Assert.False(incompleteImplementationRoute.GetProperty("requiresDefectEvidence").GetBoolean());
+        var incompleteRepairRoutes = Assert.Contains("feature-repair", routeMap);
+        Assert.Equal(4, incompleteRepairRoutes.Length);
+        Assert.Equal(
+            [
+                ProcessCompletionDiagnosticCodes.ProductMutationReceiptMissing,
+                ProcessCompletionDiagnosticCodes.ManagedArtifactWriteReceiptMissing,
+                ProcessCompletionDiagnosticCodes.ProductRequiredToolReceiptMissing,
+                ProcessCompletionDiagnosticCodes.ProductSourceInspectionEvidenceMissing
+            ],
+            incompleteRepairRoutes.Select(route => route.GetProperty("issueCode").GetString()));
+        Assert.All(incompleteRepairRoutes, incompleteRepairRoute =>
+        {
+            Assert.Equal(
+                "repair-attempt-incomplete",
+                incompleteRepairRoute.GetProperty("targetBranchOutcomeKey").GetString());
+            Assert.False(incompleteRepairRoute.GetProperty("requiresDefectEvidence").GetBoolean());
+            Assert.Equal(
+                string.Equals(
+                    incompleteRepairRoute.GetProperty("issueCode").GetString(),
+                    ProcessCompletionDiagnosticCodes.ManagedArtifactWriteReceiptMissing,
+                    StringComparison.Ordinal),
+                incompleteRepairRoute.GetProperty("onlyAfterAutomaticRetry").GetBoolean());
+        });
+
+        var sourceInspectionSteps = JsonSerializer.Deserialize<string[]>(
+            variables[ProcessRuntimeLaunchVariables.ProductSourceInspectionRequiredStepKeys]);
+
+        Assert.NotNull(sourceInspectionSteps);
+        Assert.Equal(
+            ["code-change", "targeted-validation", "feature-repair", "targeted-recheck"],
+            sourceInspectionSteps);
+
+        var excludedSourceFragments = JsonSerializer.Deserialize<Dictionary<string, string[]>>(
+            variables[ProcessRuntimeLaunchVariables.ProductSourceInspectionExcludedPathFragmentsByStep]);
+        Assert.NotNull(excludedSourceFragments);
+        Assert.Contains("/Program.cs", excludedSourceFragments["code-change"]);
+        Assert.Contains("/Program.cs", excludedSourceFragments["targeted-validation"]);
+        Assert.Contains(".csproj", excludedSourceFragments["targeted-validation"]);
+        Assert.Contains("/Program.cs", excludedSourceFragments["feature-repair"]);
+        Assert.Contains("/Layout/", excludedSourceFragments["targeted-recheck"]);
+
+        var sourceInspectionBranchMap = JsonSerializer.Deserialize<Dictionary<string, string[]>>(
+            variables[ProcessRuntimeLaunchVariables.ProductSourceInspectionRequiredBranchOutcomeKeysByStep]);
+        Assert.NotNull(sourceInspectionBranchMap);
+        Assert.Equal(["feature-accepted"], sourceInspectionBranchMap["targeted-validation"]);
+        Assert.Equal(["feature-repair-applied"], sourceInspectionBranchMap["feature-repair"]);
+        Assert.Equal(["feature-accepted"], sourceInspectionBranchMap["targeted-recheck"]);
+
+        var mutationBranchMap = JsonSerializer.Deserialize<Dictionary<string, string[]>>(
+            variables[ProcessRuntimeLaunchVariables.ProductMutationRequiredBranchOutcomeKeysByStep]);
+
+        Assert.NotNull(mutationBranchMap);
+        Assert.Equal(["feature-repair-applied"], mutationBranchMap["feature-repair"]);
+
+        var mutationBeforeHandoffSteps = JsonSerializer.Deserialize<string[]>(
+            variables[ProcessRuntimeLaunchVariables.ProductMutationBeforeManagedOutputRequiredStepKeys]);
+        Assert.NotNull(mutationBeforeHandoffSteps);
+        Assert.Equal(["code-change", "feature-repair"], mutationBeforeHandoffSteps);
+
+        var runtimeRoutedBranchMap = JsonSerializer.Deserialize<Dictionary<string, string[]>>(
+            variables[ProcessRuntimeLaunchVariables.RuntimeRoutedBranchOutcomeKeysByStep]);
+        Assert.NotNull(runtimeRoutedBranchMap);
+        Assert.Equal(["implementation-attempt-incomplete"], runtimeRoutedBranchMap["code-change"]);
+        Assert.Equal(["repair-attempt-incomplete"], runtimeRoutedBranchMap["feature-repair"]);
+        var specializationTags = JsonSerializer.Deserialize<string[]>(
+            variables[ProcessRuntimeLaunchVariables.ExecutorPreferredSpecializationTags]);
+        Assert.NotNull(specializationTags);
+        Assert.Equal(["blazor", "wasm", "frontend"], specializationTags);
+
         var scaffoldContract = variables["DotNetScaffoldContract"];
         Assert.Contains("BlazorWasmNamespaceRule", scaffoldContract);
         Assert.Contains("using Calculator;", scaffoldContract);
@@ -145,11 +227,10 @@ public sealed class DotNetProcessLaunchVariableContributorTests
 
         Assert.NotNull(receiptMap);
         AssertValidationReceipts(receiptMap, "qa-validation");
-        AssertValidationReceipts(receiptMap, "quality-repair");
         AssertValidationReceipts(receiptMap, "qa-recheck");
         AssertBrowserRuntimeProofReceipts(receiptMap, "qa-validation", expectsVisualComparison: false);
-        AssertBrowserRuntimeProofReceipts(receiptMap, "quality-repair", expectsVisualComparison: false);
         AssertBrowserRuntimeProofReceipts(receiptMap, "qa-recheck", expectsVisualComparison: false);
+        Assert.DoesNotContain("quality-repair", receiptMap);
         AssertAcceptanceBranchReceiptRules(receiptMap, "qa-validation");
         AssertAcceptanceBranchReceiptRules(receiptMap, "qa-recheck");
 
@@ -162,6 +243,16 @@ public sealed class DotNetProcessLaunchVariableContributorTests
         Assert.False(variables.ContainsKey(ProcessRuntimeLaunchVariables.AcceptanceCriteriaMatrix));
         Assert.False(variables.ContainsKey(ProcessRuntimeLaunchVariables.AcceptanceCriteriaAcceptedBranchOutcomeKeys));
 
+        var sourceInspectionSteps = JsonSerializer.Deserialize<string[]>(
+            variables[ProcessRuntimeLaunchVariables.ProductSourceInspectionRequiredStepKeys]);
+        Assert.NotNull(sourceInspectionSteps);
+        Assert.Equal(["peer-review", "qa-validation", "qa-recheck"], sourceInspectionSteps);
+        var excludedSourceFragments = JsonSerializer.Deserialize<Dictionary<string, string[]>>(
+            variables[ProcessRuntimeLaunchVariables.ProductSourceInspectionExcludedPathFragmentsByStep]);
+        Assert.NotNull(excludedSourceFragments);
+        Assert.Contains("/Program.cs", excludedSourceFragments["peer-review"]);
+        Assert.Contains(".csproj", excludedSourceFragments["qa-validation"]);
+
         var fileContentMap = JsonSerializer.Deserialize<Dictionary<string, JsonElement[]>>(
             variables[ProcessRuntimeLaunchVariables.ProductCompletionRequiredFileContentChecksByStep]);
 
@@ -169,8 +260,7 @@ public sealed class DotNetProcessLaunchVariableContributorTests
         var qaChecks = Assert.Contains("qa-validation", fileContentMap);
         Assert.Contains(qaChecks, IsQualityAcceptedScaffoldRemovalCheck);
         AssertFileContentEvidenceBranch(fileContentMap, "qa-validation", "repair-required");
-        var repairChecks = Assert.Contains("quality-repair", fileContentMap);
-        Assert.Contains(repairChecks, IsUngatedScaffoldRemovalCheck);
+        Assert.DoesNotContain("quality-repair", fileContentMap);
         var recheckChecks = Assert.Contains("qa-recheck", fileContentMap);
         Assert.Contains(recheckChecks, IsQualityAcceptedScaffoldRemovalCheck);
         AssertFileContentEvidenceBranch(fileContentMap, "qa-recheck", "repair-escalation");
@@ -200,14 +290,154 @@ public sealed class DotNetProcessLaunchVariableContributorTests
                branchOutcomeKeys.EnumerateArray().Any(value =>
                    string.Equals(value.GetString(), "quality-accepted", StringComparison.Ordinal));
 
-        static bool IsUngatedScaffoldRemovalCheck(JsonElement check)
-            => IsScaffoldRemovalCheck(check) &&
-               !check.TryGetProperty("enforceBranchOutcomeKeys", out _);
-
         static bool IsScaffoldRemovalCheck(JsonElement check)
             => check.GetProperty("mustExist").GetBoolean() == false &&
                check.GetProperty("forbiddenTextAny").EnumerateArray().Any(value =>
                    string.Equals(value.GetString(), "@page \"/counter\"", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Enrich_adds_quality_repair_receipts_routes_and_content_gates_for_child_steps()
+    {
+        var contributor = new DotNetProcessLaunchVariableContributor();
+        var projectId = Guid.NewGuid();
+        var node = CreateNode(projectId);
+        var surface = new ProjectStructureSurface(projectId, "BusinessApp", [node], [], null);
+        var variables = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["ProductRoot"] = @"C:\temp\CanDoItAll\BusinessApp",
+            ["ProjectStructureContextSummary"] = "Blazor WebAssembly business app with xUnit tests."
+        };
+
+        contributor.Enrich(
+            new ProjectStructureProcessLaunchVariableContext(
+                projectId,
+                surface,
+                node,
+                "dotnet-quality-repair",
+                ProcessDefinitionId: null,
+                ParentRunId: null,
+                ParentStepId: null,
+                ParentAssignment: null,
+                IsSubprocess: true),
+            variables);
+
+        var receiptMap = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(
+            variables[ProcessRuntimeLaunchVariables.ProductCompletionRequiredToolReceiptsByStep]);
+        Assert.NotNull(receiptMap);
+        AssertValidationReceipts(receiptMap, "implement-quality-repair");
+        AssertValidationReceipts(receiptMap, "validate-quality-repair");
+        AssertValidationReceipts(receiptMap, "implement-bughunt-repair");
+        AssertValidationReceipts(receiptMap, "revalidate-bughunt-repair");
+        AssertBrowserRuntimeProofReceipts(receiptMap, "validate-quality-repair", expectsVisualComparison: false);
+        AssertBrowserRuntimeProofReceipts(receiptMap, "revalidate-bughunt-repair", expectsVisualComparison: false);
+        AssertAcceptanceBranchReceiptRules(receiptMap, "validate-quality-repair", "quality-repair-accepted");
+        AssertAcceptanceBranchReceiptRules(receiptMap, "revalidate-bughunt-repair", "quality-repair-accepted");
+
+        var mutationBranchMap = JsonSerializer.Deserialize<Dictionary<string, string[]>>(
+            variables[ProcessRuntimeLaunchVariables.ProductMutationRequiredBranchOutcomeKeysByStep]);
+        Assert.NotNull(mutationBranchMap);
+        Assert.Equal(["product-repair-applied"], mutationBranchMap["implement-quality-repair"]);
+        Assert.Equal(["product-repair-applied"], mutationBranchMap["implement-bughunt-repair"]);
+
+        var runtimeRoutedBranchMap = JsonSerializer.Deserialize<Dictionary<string, string[]>>(
+            variables[ProcessRuntimeLaunchVariables.RuntimeRoutedBranchOutcomeKeysByStep]);
+        Assert.NotNull(runtimeRoutedBranchMap);
+        Assert.Equal(["repair-attempt-incomplete"], runtimeRoutedBranchMap["implement-quality-repair"]);
+        Assert.Equal(["repair-attempt-incomplete"], runtimeRoutedBranchMap["implement-bughunt-repair"]);
+
+        var sourceInspectionSteps = JsonSerializer.Deserialize<string[]>(
+            variables[ProcessRuntimeLaunchVariables.ProductSourceInspectionRequiredStepKeys]);
+        Assert.NotNull(sourceInspectionSteps);
+        Assert.Contains("diagnose-quality-failure", sourceInspectionSteps);
+        Assert.Contains("implement-quality-repair", sourceInspectionSteps);
+        Assert.Contains("diagnose-persistent-failure", sourceInspectionSteps);
+        Assert.Contains("implement-bughunt-repair", sourceInspectionSteps);
+
+        var excludedSourceFragments = JsonSerializer.Deserialize<Dictionary<string, string[]>>(
+            variables[ProcessRuntimeLaunchVariables.ProductSourceInspectionExcludedPathFragmentsByStep]);
+        Assert.NotNull(excludedSourceFragments);
+        Assert.Contains("/Program.cs", excludedSourceFragments["diagnose-quality-failure"]);
+        Assert.Contains("/App.razor", excludedSourceFragments["diagnose-quality-failure"]);
+        Assert.Contains(".csproj", excludedSourceFragments["diagnose-quality-failure"]);
+        Assert.Contains("/Pages/Counter.razor", excludedSourceFragments["diagnose-persistent-failure"]);
+
+        Assert.Equal(
+            "artifacts/process-runs/{CurrentProcessRunId}/scripts/remove-default-blazor-scaffold.ps1",
+            variables["DotNetScaffoldRepairScriptRef"]);
+        Assert.Contains("$appDirectory = 'C:/temp/CanDoItAll/BusinessApp/src/BusinessApp'", variables["DotNetScaffoldRepairScript"], StringComparison.Ordinal);
+        Assert.Contains("currentCount", variables["DotNetScaffoldRepairScript"], StringComparison.Ordinal);
+        Assert.Contains("WeatherForecast", variables["DotNetScaffoldRepairScript"], StringComparison.Ordinal);
+        Assert.Contains("#blazor-error-ui", variables["DotNetScaffoldRepairScript"], StringComparison.Ordinal);
+        Assert.Contains("workspace_pwsh_run_script", variables["DotNetScaffoldRepairExecutionPlan"], StringComparison.Ordinal);
+        Assert.Contains("fingerprint", variables["DotNetScaffoldRepairExecutionPlan"], StringComparison.OrdinalIgnoreCase);
+        using (var manifest = JsonDocument.Parse(variables["DotNetScaffoldRepairSideEffectManifest"]))
+        {
+            Assert.Equal("ProductMutation", manifest.RootElement.GetProperty("mode").GetString());
+            Assert.Contains(
+                manifest.RootElement.GetProperty("declaredWritePaths").EnumerateArray(),
+                path => path.GetString()!.EndsWith("Pages\\Counter.razor", StringComparison.Ordinal));
+        }
+
+        var routeMap = JsonSerializer.Deserialize<Dictionary<string, JsonElement[]>>(
+            variables[ProcessRuntimeLaunchVariables.CompletionIssueRoutesByStep]);
+        Assert.NotNull(routeMap);
+        AssertIncompleteRepairRoute(routeMap, "implement-quality-repair");
+        AssertBranchRoute(routeMap, "validate-quality-repair", "bughunt-required");
+        AssertIncompleteRepairRoute(routeMap, "implement-bughunt-repair");
+        AssertBranchRoute(routeMap, "revalidate-bughunt-repair", "quality-repair-no-go");
+
+        var fileContentMap = JsonSerializer.Deserialize<Dictionary<string, JsonElement[]>>(
+            variables[ProcessRuntimeLaunchVariables.ProductCompletionRequiredFileContentChecksByStep]);
+        Assert.NotNull(fileContentMap);
+        Assert.DoesNotContain("implement-quality-repair", fileContentMap);
+        Assert.DoesNotContain("implement-bughunt-repair", fileContentMap);
+        AssertFileContentEvidenceBranch(fileContentMap, "validate-quality-repair", "bughunt-required");
+        AssertFileContentEvidenceBranch(fileContentMap, "revalidate-bughunt-repair", "quality-repair-no-go");
+    }
+
+    [Fact]
+    public void Enrich_routes_development_slice_no_go_evidence_to_repair_branch()
+    {
+        var contributor = new DotNetProcessLaunchVariableContributor();
+        var projectId = Guid.NewGuid();
+        var node = CreateNode(projectId);
+        var variables = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["ProductRoot"] = @"C:\temp\CanDoItAll\BusinessApp",
+            ["ProjectStructureContextSummary"] = "Blazor WebAssembly business app with xUnit tests."
+        };
+
+        contributor.Enrich(
+            new ProjectStructureProcessLaunchVariableContext(
+                projectId,
+                new ProjectStructureSurface(projectId, "BusinessApp", [node], [], null),
+                node,
+                "dotnet-development-slice",
+                ProcessDefinitionId: null,
+                ParentRunId: null,
+                ParentStepId: null,
+                ParentAssignment: null,
+                IsSubprocess: true),
+            variables);
+
+        var routeMap = JsonSerializer.Deserialize<Dictionary<string, JsonElement[]>>(
+            variables[ProcessRuntimeLaunchVariables.CompletionIssueRoutesByStep]);
+
+        Assert.NotNull(routeMap);
+        var route = Assert.Single(routeMap["add-tests-and-proof"]);
+        Assert.Equal(
+            ProcessCompletionDiagnosticCodes.ToolReceiptEvidenceContentRejected,
+            route.GetProperty("issueCode").GetString());
+        Assert.Equal("slice-repair-required", route.GetProperty("targetBranchOutcomeKey").GetString());
+        Assert.False(route.GetProperty("requiresDefectEvidence").GetBoolean());
+
+        var recheckRoute = Assert.Single(routeMap["add-tests-recheck"]);
+        Assert.Equal(
+            ProcessCompletionDiagnosticCodes.ToolReceiptEvidenceContentRejected,
+            recheckRoute.GetProperty("issueCode").GetString());
+        Assert.Equal("slice-repair-escalation", recheckRoute.GetProperty("targetBranchOutcomeKey").GetString());
+        Assert.False(recheckRoute.GetProperty("requiresDefectEvidence").GetBoolean());
     }
 
     [Fact]
@@ -259,8 +489,53 @@ public sealed class DotNetProcessLaunchVariableContributorTests
                 Assert.Equal("AC-003", criterion.Id);
                 Assert.Contains("pause and resume", criterion.Summary, StringComparison.OrdinalIgnoreCase);
             });
-        Assert.Contains("AC-001", variables["ProductAcceptanceCriteriaContract"], StringComparison.Ordinal);
-        Assert.Contains("criterion id", variables["ProductAcceptanceCriteriaContract"], StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("AC-001", variables[ProcessRuntimeLaunchVariables.ProductAcceptanceCriteriaContract], StringComparison.Ordinal);
+        Assert.Contains("criterion id", variables[ProcessRuntimeLaunchVariables.ProductAcceptanceCriteriaContract], StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void Enrich_preserves_normative_project_requirements_without_acceptance_heading_in_feature_subprocess()
+    {
+        var contributor = new DotNetProcessLaunchVariableContributor();
+        var projectId = Guid.NewGuid();
+        var selectedNode = CreateNode(projectId);
+        var requirementsNode = CreateRequirementNode(
+            projectId,
+            "custom:requirements",
+            "Application requirements",
+            "Use browser database storage as the only persistence mechanism. The UI must allow keyboard input. The dashboard must fit within the viewport without scrolling.");
+        var surface = new ProjectStructureSurface(projectId, "WorkLogger", [selectedNode, requirementsNode], [], null);
+        var variables = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["ProductRoot"] = @"C:\temp\CanDoItAll\WorkLogger",
+            ["ProjectStructureContextSummary"] = "Blazor WebAssembly work logger with local persistence.",
+            [ProcessRuntimeLaunchVariables.AcceptanceCriteriaAcceptedBranchOutcomeKeys] = "quality-accepted"
+        };
+
+        contributor.Enrich(
+            new ProjectStructureProcessLaunchVariableContext(
+                projectId,
+                surface,
+                selectedNode,
+                "dotnet-feature-function-implementation",
+                ProcessDefinitionId: null,
+                ParentRunId: ProcessRunId.New(),
+                ParentStepId: ProcessStepInstanceId.New(),
+                ParentAssignment: null,
+                IsSubprocess: true),
+            variables);
+
+        Assert.True(variables.TryGetValue(ProcessRuntimeLaunchVariables.AcceptanceCriteriaMatrix, out var rawMatrix));
+        Assert.Equal("feature-accepted", variables[ProcessRuntimeLaunchVariables.AcceptanceCriteriaAcceptedBranchOutcomeKeys]);
+        Assert.True(ProcessAcceptanceCriteriaMatrixJson.TryDeserialize(rawMatrix, out var matrix));
+        Assert.Equal(3, matrix.RequiredCriteria.Count);
+        Assert.Contains(matrix.RequiredCriteria, criterion =>
+            criterion.Summary.Contains("only persistence mechanism", StringComparison.OrdinalIgnoreCase) &&
+            criterion.VerificationMethods.Contains("browser-proof"));
+        Assert.Contains(matrix.RequiredCriteria, criterion =>
+            criterion.Summary.Contains("keyboard input", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(matrix.RequiredCriteria, criterion =>
+            criterion.Summary.Contains("without scrolling", StringComparison.OrdinalIgnoreCase));
     }
 
     [Theory]
@@ -314,12 +589,21 @@ public sealed class DotNetProcessLaunchVariableContributorTests
         AssertBranchRoute(routeMap, "validate-blazor-runtime", "repair-required");
         AssertBranchRoute(routeMap, "revalidate-blazor-repair", "repair-escalation");
 
+        var sourceInspectionSteps = JsonSerializer.Deserialize<string[]>(
+            variables[ProcessRuntimeLaunchVariables.ProductSourceInspectionRequiredStepKeys]);
+        Assert.NotNull(sourceInspectionSteps);
+        Assert.Equal(["validate-blazor-runtime", "revalidate-blazor-repair"], sourceInspectionSteps);
+        var excludedSourceFragments = JsonSerializer.Deserialize<Dictionary<string, string[]>>(
+            variables[ProcessRuntimeLaunchVariables.ProductSourceInspectionExcludedPathFragmentsByStep]);
+        Assert.NotNull(excludedSourceFragments);
+        Assert.Contains("/Program.cs", excludedSourceFragments["validate-blazor-runtime"]);
+
         var fileContentMap = JsonSerializer.Deserialize<Dictionary<string, JsonElement[]>>(
             variables[ProcessRuntimeLaunchVariables.ProductCompletionRequiredFileContentChecksByStep]);
 
         Assert.NotNull(fileContentMap);
         Assert.Contains("validate-blazor-runtime", fileContentMap);
-        Assert.Contains("repair-blazor-findings", fileContentMap);
+        Assert.DoesNotContain("repair-blazor-findings", fileContentMap);
         Assert.Contains("revalidate-blazor-repair", fileContentMap);
         AssertFileContentEvidenceBranch(fileContentMap, "validate-blazor-runtime", "repair-required");
         AssertFileContentEvidenceBranch(fileContentMap, "revalidate-blazor-repair", "repair-escalation");
@@ -356,7 +640,7 @@ public sealed class DotNetProcessLaunchVariableContributorTests
         Assert.Equal("quality-accepted", variables[ProcessRuntimeLaunchVariables.AcceptanceCriteriaAcceptedBranchOutcomeKeys]);
         Assert.True(ProcessAcceptanceCriteriaMatrixJson.TryDeserialize(rawMatrix, out var matrix));
         Assert.Equal(["AC-001", "AC-002", "AC-003"], matrix.RequiredCriteria.Select(criterion => criterion.Id));
-        Assert.Contains("AC-001", variables["ProductAcceptanceCriteriaContract"], StringComparison.Ordinal);
+        Assert.Contains("AC-001", variables[ProcessRuntimeLaunchVariables.ProductAcceptanceCriteriaContract], StringComparison.Ordinal);
     }
 
     [Fact]
@@ -590,6 +874,8 @@ public sealed class DotNetProcessLaunchVariableContributorTests
         var receipts = Assert.Contains(stepKey, receiptMap);
         Assert.Contains("workspace_dotnet_run", receipts);
         Assert.Contains("browser_navigate", receipts);
+        Assert.Contains("browser interaction proof", receipts);
+        Assert.Contains("browser_evaluate", receipts);
         Assert.Contains("browser_snapshot", receipts);
         Assert.Contains("browser_take_screenshot", receipts);
         Assert.Contains("browser_console_messages", receipts);
@@ -614,6 +900,8 @@ public sealed class DotNetProcessLaunchVariableContributorTests
         var receipts = ReadReceiptToolNames(Assert.Contains(stepKey, receiptMap));
         Assert.Contains("workspace_dotnet_run", receipts);
         Assert.Contains("browser_navigate", receipts);
+        Assert.Contains("browser interaction proof", receipts);
+        Assert.Contains("browser_evaluate", receipts);
         Assert.Contains("browser_snapshot", receipts);
         Assert.Contains("browser_take_screenshot", receipts);
         Assert.Contains("browser_console_messages", receipts);
@@ -633,6 +921,12 @@ public sealed class DotNetProcessLaunchVariableContributorTests
     private static void AssertAcceptanceBranchReceiptRules(
         IReadOnlyDictionary<string, JsonElement> receiptMap,
         string stepKey)
+        => AssertAcceptanceBranchReceiptRules(receiptMap, stepKey, "quality-accepted");
+
+    private static void AssertAcceptanceBranchReceiptRules(
+        IReadOnlyDictionary<string, JsonElement> receiptMap,
+        string stepKey,
+        string acceptedBranchOutcomeKey)
     {
         var element = Assert.Contains(stepKey, receiptMap);
         Assert.Equal(JsonValueKind.Array, element.ValueKind);
@@ -644,7 +938,7 @@ public sealed class DotNetProcessLaunchVariableContributorTests
                 .EnumerateArray()
                 .Select(value => value.GetString())
                 .ToArray();
-            Assert.Contains("quality-accepted", branchKeys);
+            Assert.Contains(acceptedBranchOutcomeKey, branchKeys);
         });
 
         Assert.Contains(
@@ -658,21 +952,51 @@ public sealed class DotNetProcessLaunchVariableContributorTests
         string targetBranchOutcomeKey)
     {
         var routes = Assert.Contains(stepKey, routeMap);
-        Assert.Equal(2, routes.Length);
-        Assert.Contains(routes, route =>
-            string.Equals(
-                route.GetProperty("issueCode").GetString(),
-                "process.adapter.product_required_file_content_missing",
-                StringComparison.Ordinal));
-        Assert.Contains(routes, route =>
-            string.Equals(
-                route.GetProperty("issueCode").GetString(),
-                ProcessCompletionDiagnosticCodes.ToolReceiptEvidenceContentRejected,
-                StringComparison.Ordinal));
+        var expectedIssueCodes = new[]
+        {
+            ProcessCompletionDiagnosticCodes.ProductRequiredToolReceiptMissing,
+            "process.adapter.product_required_file_content_missing",
+            ProcessCompletionDiagnosticCodes.ToolReceiptEvidenceContentRejected,
+            ProcessCompletionDiagnosticCodes.ProductSourceInspectionEvidenceMissing,
+            ProcessCompletionDiagnosticCodes.UiInteractionEvidenceMissing,
+            ProcessCompletionDiagnosticCodes.UiPostInteractionStateEvidenceMissing
+        };
+        Assert.Equal(expectedIssueCodes.Length, routes.Length);
+        Assert.All(expectedIssueCodes, expectedIssueCode =>
+            Assert.Contains(routes, route =>
+                string.Equals(
+                    route.GetProperty("issueCode").GetString(),
+                    expectedIssueCode,
+                    StringComparison.Ordinal)));
         Assert.All(routes, route =>
         {
             Assert.Equal(targetBranchOutcomeKey, route.GetProperty("targetBranchOutcomeKey").GetString());
-            Assert.True(route.GetProperty("requiresDefectEvidence").GetBoolean());
+            var isPersistentMissingReceiptRoute = string.Equals(
+                route.GetProperty("issueCode").GetString(),
+                ProcessCompletionDiagnosticCodes.ProductRequiredToolReceiptMissing,
+                StringComparison.Ordinal);
+            Assert.Equal(!isPersistentMissingReceiptRoute, route.GetProperty("requiresDefectEvidence").GetBoolean());
+            Assert.Equal(isPersistentMissingReceiptRoute, route.GetProperty("onlyAfterAutomaticRetry").GetBoolean());
+        });
+    }
+
+    private static void AssertIncompleteRepairRoute(
+        IReadOnlyDictionary<string, JsonElement[]> routeMap,
+        string stepKey)
+    {
+        var routes = Assert.Contains(stepKey, routeMap);
+        Assert.Equal(3, routes.Length);
+        Assert.Equal(
+            [
+                ProcessCompletionDiagnosticCodes.ProductRequiredToolReceiptMissing,
+                ProcessCompletionDiagnosticCodes.ProductMutationReceiptMissing,
+                ProcessCompletionDiagnosticCodes.ProductSourceInspectionEvidenceMissing
+            ],
+            routes.Select(route => route.GetProperty("issueCode").GetString()));
+        Assert.All(routes, route =>
+        {
+            Assert.Equal("repair-attempt-incomplete", route.GetProperty("targetBranchOutcomeKey").GetString());
+            Assert.False(route.GetProperty("requiresDefectEvidence").GetBoolean());
         });
     }
 
@@ -765,6 +1089,38 @@ public sealed class DotNetProcessLaunchVariableContributorTests
             0,
             0,
             new ProjectObjectVisualProfile("rect", "accent", "gamepad-2", string.Empty),
+            [],
+            string.Empty,
+            0,
+            string.Empty,
+            string.Empty,
+            string.Empty,
+            [],
+            0);
+
+    private static ProjectStructureNode CreateRequirementNode(
+        Guid projectId,
+        string id,
+        string title,
+        string notes)
+        => new(
+            id,
+            $"project:{projectId:D}",
+            ProjectObjectType.ProjectBlock,
+            "architecture",
+            title,
+            "Required behavior",
+            "Planned",
+            notes,
+            string.Empty,
+            string.Empty,
+            null,
+            string.Empty,
+            string.Empty,
+            string.Empty,
+            0,
+            0,
+            new ProjectObjectVisualProfile("rect", "accent", "clipboard-check", string.Empty),
             [],
             string.Empty,
             0,

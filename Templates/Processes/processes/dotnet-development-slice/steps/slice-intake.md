@@ -4,7 +4,9 @@ Restate the parent scope as one bounded implementation slice with assumptions, e
 
 This is a scope/intake step, not implementation or validation. Do not run restore, build, test, app startup, browser proof, or screenshot capture here. Do not treat a planned greenfield product root as failed runtime proof just because it does not exist yet.
 
-When the parent scope is a full app or broad deliverable, choose the first reviewable MVP behavior that can be implemented by one feature/function subprocess and validated by one focused proof loop. Use the upstream project-structure and architecture facts to pick that behavior; do not block just to ask for manual splitting when the product root, app archetype, setup needs, and validation hooks are already present.
+When the parent scope is a simple full app or one-shot broad deliverable, retain every explicitly named core MVP behavior that must work for the product to be recognizable and useful. Use the upstream project-structure and architecture facts to keep that complete core path bounded; do not silently invent a later slice that the parent process did not schedule.
+
+Exclude only optional polish or a capability assigned to an explicit remaining-slice schedule. Without such a schedule, interaction, typed state transitions, persistence, calculation, search, dashboard, reload restoration, and graceful recovery requirements named by the parent remain mandatory in this slice.
 
 The chosen MVP behavior must not be scaffold-only, setup-only, naming-only, or readiness-only. Scaffolding may be a prerequisite handled by the setup subprocess, but it is not the feature behavior. For a requested app, game, tool, or workflow, the MVP behavior must include the smallest observable product-specific path a user can exercise. For a game, that means a playable primary loop with real input/state transitions; for a persistence requirement such as a local best score, do not defer persistence if it is part of the named core loop.
 

@@ -219,6 +219,8 @@ internal sealed class ProcessCompletionIssueResultFactory(IWorkspaceFileService 
         route = ResolveCompletionIssueRoutes(assignment.LaunchVariables, assignment.StepKey)
             .FirstOrDefault(candidate =>
                 string.Equals(candidate.IssueCode, issue.Code, StringComparison.OrdinalIgnoreCase) &&
+                (!candidate.OnlyAfterAutomaticRetry ||
+                 ProcessExecutionMetadataBuilder.IsAutomaticRuntimeDiagnosticRecovery(assignment.Prompt)) &&
                 IsApplicableToBranchOutcome(candidate.SourceBranchOutcomeKeys, output.BranchOutcomeKey))!;
         return route is not null;
     }
@@ -298,6 +300,18 @@ internal sealed class ProcessCompletionIssueResultFactory(IWorkspaceFileService 
              string.Equals(
                  issue.Code,
                  ProcessCompletionDiagnosticCodes.ToolReceiptEvidenceContentRejected,
+                 StringComparison.OrdinalIgnoreCase) ||
+             string.Equals(
+                 issue.Code,
+                 ProcessCompletionDiagnosticCodes.ProductSourceInspectionEvidenceMissing,
+                 StringComparison.OrdinalIgnoreCase) ||
+             string.Equals(
+                 issue.Code,
+                 ProcessCompletionDiagnosticCodes.UiInteractionEvidenceMissing,
+                 StringComparison.OrdinalIgnoreCase) ||
+             string.Equals(
+                 issue.Code,
+                 ProcessCompletionDiagnosticCodes.UiPostInteractionStateEvidenceMissing,
                  StringComparison.OrdinalIgnoreCase)))
         {
             defectSummary = issue.Summary;

@@ -55,6 +55,27 @@ public sealed class MafAgentRuntimeToolInvocationResultTests
         Assert.Equal("process.step_outcome.branch_key_required", message);
     }
 
+    [Fact]
+    public void IsSuccessfulToolInvocationResult_rejects_mcp_is_error_result()
+    {
+        using var document = JsonDocument.Parse(
+            """{"isError":true,"content":[{"type":"text","text":"browserBackend.callTool failed"}]}""");
+
+        var succeeded = MafRuntimeToolInvocationResultClassifier.IsSuccessful(document.RootElement);
+
+        Assert.False(succeeded);
+    }
+
+    [Fact]
+    public void IsSuccessfulToolInvocationResult_rejects_compacted_mcp_is_error_text()
+    {
+        const string result = "Browser MCP tool browser_snapshot completed. isError=true";
+
+        var succeeded = MafRuntimeToolInvocationResultClassifier.IsSuccessful(result);
+
+        Assert.False(succeeded);
+    }
+
     private static WorkspaceCommandExecutionResult CreateWorkspaceCommandResult(bool succeeded, string message)
     {
         var now = DateTimeOffset.UtcNow;

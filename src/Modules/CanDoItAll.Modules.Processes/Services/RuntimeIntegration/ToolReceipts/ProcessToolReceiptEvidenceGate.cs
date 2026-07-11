@@ -34,6 +34,7 @@ internal sealed class ProcessToolReceiptEvidenceGate(
                 .OrderBy(receipt => receipt.CompletedAtUtc)
                 .ThenBy(receipt => receipt.Id)
                 .ToArray();
+            var matchedArtifactReceipt = false;
             foreach (var receipt in receipts)
             {
                 if (!TryReadArgument(receipt.RequestSummary, rule.ArtifactPathArgumentName, out var artifactPath))
@@ -45,6 +46,15 @@ internal sealed class ProcessToolReceiptEvidenceGate(
                         $"missing-path:{receipt.Id:D}");
                 }
 
+                if (!string.IsNullOrWhiteSpace(rule.RequiredArtifactPathFragment) &&
+                    !artifactPath.Replace('\\', '/').Contains(
+                        rule.RequiredArtifactPathFragment.Replace('\\', '/'),
+                        StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                matchedArtifactReceipt = true;
                 if (!IsCurrentRunArtifactPath(context.Assignment, artifactPath))
                 {
                     return CreateIssue(
@@ -79,6 +89,15 @@ internal sealed class ProcessToolReceiptEvidenceGate(
                         $"forbidden-content:{artifactPath}:{rejectedMarker}");
                 }
             }
+
+            if (!string.IsNullOrWhiteSpace(rule.RequiredArtifactPathFragment) && !matchedArtifactReceipt)
+            {
+                return CreateIssue(
+                    context.Assignment,
+                    rule,
+                    $"No current-run '{rule.ToolName}' receipt inspected the required managed artifact matching '{rule.RequiredArtifactPathFragment}'.",
+                    $"missing-required-artifact-read:{rule.RequiredArtifactPathFragment}");
+            }
         }
 
         return null;
@@ -101,9 +120,9 @@ internal sealed class ProcessToolReceiptEvidenceGate(
         ProcessRuntimeStepAssignment assignment,
         string artifactPath)
     {
-        var normalizedPath = artifactPath.Trim().Replace('\\', '/').TrimStart('/');
-        var expectedRoot = $"artifacts/process-runs/{assignment.RunId.Value:D}/";
-        return normalizedPath.StartsWith(expectedRoot, StringComparison.OrdinalIgnoreCase);
+        var normalizedPath = $"/{artifactPath.Trim().Replace('\\', '/').Trim('/')}";
+        var expectedRunSegment = $"/process-runs/{assignment.RunId.Value:D}/";
+        return normalizedPath.Contains(expectedRunSegment, StringComparison.OrdinalIgnoreCase);
     }
 
     private static bool TryReadArgument(
@@ -121,7 +140,8 @@ internal sealed class ProcessToolReceiptEvidenceGate(
         var markerIndex = requestSummary.IndexOf(marker, StringComparison.OrdinalIgnoreCase);
         if (markerIndex < 0)
         {
-            return false;
+            value = requestSummary.Trim().Trim('"', '\'');
+            return value.Length > 0;
         }
 
         var valueStart = markerIndex + marker.Length;

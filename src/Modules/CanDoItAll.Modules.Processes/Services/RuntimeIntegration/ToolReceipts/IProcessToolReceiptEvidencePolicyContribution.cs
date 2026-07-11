@@ -8,7 +8,8 @@ internal sealed record ProcessToolReceiptTextEvidenceRule(
     string ToolName,
     string ArtifactPathArgumentName,
     IReadOnlyList<string> ForbiddenContentMarkers,
-    string RejectionSummary);
+    string RejectionSummary,
+    string? RequiredArtifactPathFragment = null);
 
 internal interface IProcessToolReceiptEvidencePolicyContribution
 {

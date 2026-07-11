@@ -94,9 +94,19 @@ internal sealed class DotNetToolReceiptPolicyContribution : IProcessToolReceiptP
                assignment.LaunchVariables.ContainsKey(descriptor.ScriptRefVariableName);
     }
 
-    public bool AllowsCompletedOutcomeWithDeclaredBlockers(ProcessRuntimeStepAssignment assignment)
+    public bool AllowsCompletedOutcomeWithDeclaredBlockers(
+        ProcessRuntimeStepAssignment assignment,
+        ProcessStepOutcomeResult output)
         => IsNoGoEscalationKey(assignment.StepKey) ||
-           IsNoGoEscalationKey(assignment.BranchGate?.RequiredOutcomeKey);
+           IsDiagnosticStep(assignment.StepKey) ||
+           IsNoGoEscalationKey(assignment.BranchGate?.RequiredOutcomeKey) ||
+           IsNoGoEscalationKey(output.BranchOutcomeKey) ||
+           IsRepairRoutingOutcomeKey(output.BranchOutcomeKey) ||
+           IsProofOnlyRepairPreparation(assignment.StepKey, output.BranchOutcomeKey);
+
+    internal static bool IsDiagnosticStep(string stepKey)
+        => string.Equals(stepKey, "diagnose-quality-failure", StringComparison.OrdinalIgnoreCase) ||
+           string.Equals(stepKey, "diagnose-persistent-failure", StringComparison.OrdinalIgnoreCase);
 
     private static bool TryResolveRequiredTemplate(string requirement, out string requiredTemplate)
     {
@@ -116,6 +126,19 @@ internal sealed class DotNetToolReceiptPolicyContribution : IProcessToolReceiptP
            (value.Contains("repair-escalation", StringComparison.OrdinalIgnoreCase) ||
             value.Contains("unresolved-repair", StringComparison.OrdinalIgnoreCase) ||
             value.Contains("no-go", StringComparison.OrdinalIgnoreCase));
+
+    private static bool IsRepairRoutingOutcomeKey(string? value)
+        => !string.IsNullOrWhiteSpace(value) &&
+           (string.Equals(value, "repair-required", StringComparison.OrdinalIgnoreCase) ||
+            value.EndsWith("-repair-required", StringComparison.OrdinalIgnoreCase));
+
+    private static bool IsProofOnlyRepairPreparation(string stepKey, string? branchOutcomeKey)
+        => (string.Equals(stepKey, "implement-quality-repair", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(stepKey, "implement-bughunt-repair", StringComparison.OrdinalIgnoreCase)) &&
+           string.Equals(
+               branchOutcomeKey,
+               "proof-only-revalidation-prepared",
+               StringComparison.OrdinalIgnoreCase);
 
     private static string NormalizeCommandText(string value)
     {

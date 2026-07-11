@@ -126,7 +126,8 @@ internal static class ProcessExecutionResultFactory
             assignment.RoleDisplayName,
             NormalizeOperations(assignment.AllowedOperations),
             assignment.OperationTargetScope,
-            ResolveRuntimeReadinessRequiredToolNames(assignment));
+            ResolveRuntimeReadinessRequiredToolNames(assignment),
+            PreferredSpecializationTags: ProcessExecutorSpecializationPolicy.Resolve(assignment.LaunchVariables));
     }
 
     internal static IReadOnlyList<string> ResolveRuntimeReadinessRequiredToolNames(ProcessRuntimeStepAssignment assignment)

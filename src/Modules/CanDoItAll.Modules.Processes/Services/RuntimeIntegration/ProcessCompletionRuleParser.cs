@@ -156,7 +156,7 @@ internal static class ProcessCompletionRuleParser
         if (string.IsNullOrWhiteSpace(issueCode) ||
             string.IsNullOrWhiteSpace(targetBranchOutcomeKey))
         {
-            route = new ProcessCompletionIssueRoute(string.Empty, [], string.Empty, string.Empty, false);
+            route = new ProcessCompletionIssueRoute(string.Empty, [], string.Empty, string.Empty, false, false);
             return false;
         }
 
@@ -165,7 +165,8 @@ internal static class ProcessCompletionRuleParser
             ReadStringPropertyValues(element, "sourceBranchOutcomeKeys", "fromBranchOutcomeKeys", "whenBranchOutcomeKeys"),
             targetBranchOutcomeKey,
             ReadFirstStringProperty(element, "targetBranchOutcomeTitle", "branchOutcomeTitle", "title"),
-            ReadBooleanProperty(element, defaultValue: false, "requiresDefectEvidence", "requireDefectEvidence"));
+            ReadBooleanProperty(element, defaultValue: false, "requiresDefectEvidence", "requireDefectEvidence"),
+            ReadBooleanProperty(element, defaultValue: false, "onlyAfterAutomaticRetry", "afterAutomaticRetry"));
         return true;
     }
 

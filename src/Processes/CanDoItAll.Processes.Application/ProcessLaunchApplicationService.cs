@@ -46,6 +46,7 @@ public sealed class ProcessLaunchApplicationService(
     private const string LegacyProcessRunIdVariableName = "processRunId";
     private const string LegacyManagedArtifactRootVariableName = "managedArtifactRoot";
     private const string ParentManagedArtifactRootVariableName = "ParentManagedArtifactRoot";
+    private const string MultipleBranchGatesUnsupportedCode = "process.launch.multiple_branch_gates_unsupported";
     private const int MaximumLaunchLifecycleConcurrencyRetries = 3;
     private static readonly TimeSpan LaunchLifecycleConcurrencyRetryDelay = TimeSpan.FromMilliseconds(100);
 
@@ -529,6 +530,17 @@ public sealed class ProcessLaunchApplicationService(
             var resolution = launchVariableTemplateResolver.Resolve(stepLaunchVariables);
             stepLaunchVariables = resolution.Variables;
             findings.AddRange(CreateLaunchVariableReadinessFindings(planStep.StepKey, roleKey, resolution.Diagnostics));
+            var branchGateResolution = ProcessRuntimeBranchGateResolver.Resolve(templateStep);
+            if (!branchGateResolution.IsSupported)
+            {
+                findings.Add(new ProcessLaunchReadinessFinding(
+                    ProcessLaunchReadinessSeverity.Error,
+                    MultipleBranchGatesUnsupportedCode,
+                    branchGateResolution.Error!,
+                    planStep.StepKey,
+                    roleKey));
+            }
+
             assignments.Add(new ProcessRuntimeStepAssignment(
                 runId,
                 plan.Header.PlanId,
@@ -558,7 +570,7 @@ public sealed class ProcessLaunchApplicationService(
                 NormalizeAllowedOperations(templateStep.AllowedOperations),
                 NormalizeOperationTargetScope(templateStep.OperationTargetScope),
                 stepLaunchVariables,
-                ResolveBranchGate(templateStep),
+                branchGateResolution.BranchGate,
                 nowUtc)
             {
                 CapabilityScope = ProcessCapabilityScope.Normalize(templateStep.CapabilityScope)
@@ -802,15 +814,6 @@ public sealed class ProcessLaunchApplicationService(
         }
 
         return dependencies;
-    }
-
-    private static ProcessRuntimeBranchGate? ResolveBranchGate(ProcessTemplateDefinitionStepDocument step)
-    {
-        var branchDependency = ProcessTemplateKernelBuilder.EnumerateDependencies(step)
-            .FirstOrDefault(dependency => !string.IsNullOrWhiteSpace(dependency.BranchOutcomeKey));
-        return string.IsNullOrWhiteSpace(branchDependency?.StepKey)
-            ? null
-            : new ProcessRuntimeBranchGate(branchDependency.StepKey, branchDependency.BranchOutcomeKey);
     }
 
     private static IReadOnlyList<ProcessArtifactSlotDescriptor> BuildRuntimeArtifactDescriptors(

@@ -25,14 +25,21 @@ public sealed record ProjectStructureProcessLaunchVariableContext(
     ProcessRuntimeStepAssignment? ParentAssignment,
     bool IsSubprocess);
 
-internal sealed partial class DotNetProcessLaunchVariableContributor : IProjectStructureProcessLaunchVariableContributor
+internal sealed class DotNetProcessLaunchVariableContributor : IProjectStructureProcessLaunchVariableContributor
 {
     private const string DefaultTargetFramework = "net10.0";
     private const string DefaultTestTemplate = "xunit";
     private const string DefaultTestFramework = "xUnit";
     private const string SoftwareDeliveryDefinitionKey = "software-delivery";
+    private const string DotNetQualityRepairDefinitionKey = "dotnet-quality-repair";
     private const string RuntimeCommandWritebackDefinitionKey = "dotnet-runtime-command-writeback";
     private const string UiScreenshotWritebackDefinitionKey = "dotnet-ui-screenshot-writeback";
+    private static readonly Regex TargetFrameworkPattern = new(
+        @"\bnet\d+(?:\.\d+)?\b",
+        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
+    private static readonly Regex IdentifierPartPattern = new(
+        @"[A-Za-z0-9]+",
+        RegexOptions.CultureInvariant | RegexOptions.Compiled);
     private static readonly HashSet<string> SupportedRootDefinitionKeys = new(StringComparer.OrdinalIgnoreCase)
     {
         SoftwareDeliveryDefinitionKey,
@@ -47,6 +54,7 @@ internal sealed partial class DotNetProcessLaunchVariableContributor : IProjectS
         "dotnet-architecture-design-review",
         "dotnet-development-slice",
         "dotnet-feature-function-implementation",
+        DotNetQualityRepairDefinitionKey,
         RuntimeCommandWritebackDefinitionKey,
         "dotnet-solution-setup",
         UiScreenshotWritebackDefinitionKey
@@ -138,6 +146,10 @@ internal sealed partial class DotNetProcessLaunchVariableContributor : IProjectS
         AddIfMissing(variables, "DotNetAppTemplate", appArchetype.Template);
         AddIfMissing(variables, "DotNetAppTemplateOptions", appArchetype.TemplateOptions);
         AddIfMissing(variables, "DotNetAllowedTemplateSwitches", appArchetype.AllowedTemplateSwitches);
+        AddIfMissing(
+            variables,
+            ProcessRuntimeLaunchVariables.ExecutorPreferredSpecializationTags,
+            BuildExecutorPreferredSpecializationTags(appArchetype));
         AddIfMissing(variables, "DotNetTestProjectName", testProjectName);
         AddIfMissing(variables, "DotNetTestProjectDirectory", testProjectDirectory);
         AddIfMissing(variables, "DotNetTestProjectFile", testProjectFile);
@@ -232,64 +244,97 @@ internal sealed partial class DotNetProcessLaunchVariableContributor : IProjectS
                     DefaultTestTemplate,
                     addTestScriptRef));
         }
+        else if (string.Equals(context.DefinitionKey, "dotnet-development-slice", StringComparison.OrdinalIgnoreCase))
+        {
+            SetIfNotEmpty(
+                variables,
+                ProcessRuntimeLaunchVariables.CompletionIssueRoutesByStep,
+                DotNetDevelopmentSliceLaunchPolicyBuilder.BuildCompletionIssueRouteMap());
+        }
         else if (string.Equals(context.DefinitionKey, "dotnet-feature-function-implementation", StringComparison.OrdinalIgnoreCase))
         {
+            var featurePolicy = DotNetFeatureImplementationLaunchPolicyBuilder.Build();
             SetIfNotEmpty(
                 variables,
                 ProcessRuntimeLaunchVariables.ProductCompletionRequiredToolReceiptsByStep,
-                BuildFeatureImplementationCompletionRequiredToolReceiptMap());
-        }
-        else if (string.Equals(context.DefinitionKey, SoftwareDeliveryDefinitionKey, StringComparison.OrdinalIgnoreCase))
-        {
-            SetIfNotEmpty(
-                variables,
-                ProcessRuntimeLaunchVariables.ProductCompletionRequiredToolReceiptsByStep,
-                BuildSoftwareDeliveryCompletionRequiredToolReceiptMap(appArchetype, hasVisualTargetAssets));
-            SetIfNotEmpty(
-                variables,
-                ProcessRuntimeLaunchVariables.ProductCompletionRequiredFileContentChecksByStep,
-                BuildSoftwareDeliveryCompletionRequiredFileContentCheckMap(
-                    appArchetype,
-                    appProjectName,
-                    appProjectDirectory));
+                featurePolicy.RequiredToolReceiptMap);
             SetIfNotEmpty(
                 variables,
                 ProcessRuntimeLaunchVariables.CompletionIssueRoutesByStep,
-                BuildSoftwareDeliveryCompletionIssueRouteMap());
-            if (TryBuildAcceptanceCriteriaMatrix(context, out var acceptanceCriteriaMatrix, out var acceptanceCriteriaContract))
-            {
-                AddAcceptanceCriteriaLaunchVariables(
-                    variables,
-                    acceptanceCriteriaMatrix,
-                    acceptanceCriteriaContract,
-                    acceptedBranchOutcomeKey: "quality-accepted");
-            }
+                featurePolicy.CompletionIssueRouteMap);
+            SetIfNotEmpty(
+                variables,
+                ProcessRuntimeLaunchVariables.ProductSourceInspectionRequiredStepKeys,
+                featurePolicy.ProductSourceInspectionRequiredStepKeys);
+            SetIfNotEmpty(
+                variables,
+                ProcessRuntimeLaunchVariables.ProductSourceInspectionRequiredBranchOutcomeKeysByStep,
+                featurePolicy.ProductSourceInspectionRequiredBranchOutcomeKeyMap);
+            SetIfNotEmpty(
+                variables,
+                ProcessRuntimeLaunchVariables.ProductSourceInspectionExcludedPathFragmentsByStep,
+                featurePolicy.ProductSourceInspectionExcludedPathFragmentsByStep);
+            SetIfNotEmpty(
+                variables,
+                ProcessRuntimeLaunchVariables.ProductMutationRequiredBranchOutcomeKeysByStep,
+                featurePolicy.ProductMutationRequiredBranchOutcomeKeyMap);
+            SetIfNotEmpty(
+                variables,
+                ProcessRuntimeLaunchVariables.ProductMutationBeforeManagedOutputRequiredStepKeys,
+                featurePolicy.ProductMutationBeforeManagedOutputRequiredStepKeys);
+            SetIfNotEmpty(
+                variables,
+                ProcessRuntimeLaunchVariables.ProductMutationToolNames,
+                featurePolicy.ProductMutationToolNames);
+            SetIfNotEmpty(
+                variables,
+                ProcessRuntimeLaunchVariables.RuntimeRoutedBranchOutcomeKeysByStep,
+                featurePolicy.RuntimeRoutedBranchOutcomeKeyMap);
         }
-        else if (IsBlazorDeliveryDefinitionKey(context.DefinitionKey))
+        else if (TryResolveDeliveryQualityWorkflow(context.DefinitionKey, out var qualityWorkflow))
         {
+            var qualityPolicy = DotNetDeliveryQualityLaunchPolicyBuilder.Build(
+                qualityWorkflow,
+                appArchetype.Template,
+                hasVisualTargetAssets,
+                appProjectName,
+                appProjectDirectory);
             SetIfNotEmpty(
                 variables,
                 ProcessRuntimeLaunchVariables.ProductCompletionRequiredToolReceiptsByStep,
-                BuildBlazorDeliveryCompletionRequiredToolReceiptMap(appArchetype, hasVisualTargetAssets));
+                qualityPolicy.RequiredToolReceiptMap);
             SetIfNotEmpty(
                 variables,
                 ProcessRuntimeLaunchVariables.ProductCompletionRequiredFileContentChecksByStep,
-                BuildBlazorDeliveryCompletionRequiredFileContentCheckMap(
-                    appArchetype,
-                    appProjectName,
-                    appProjectDirectory));
+                qualityPolicy.RequiredFileContentCheckMap);
             SetIfNotEmpty(
                 variables,
                 ProcessRuntimeLaunchVariables.CompletionIssueRoutesByStep,
-                BuildBlazorDeliveryCompletionIssueRouteMap());
-            if (TryBuildAcceptanceCriteriaMatrix(context, out var acceptanceCriteriaMatrix, out var acceptanceCriteriaContract))
-            {
-                AddAcceptanceCriteriaLaunchVariables(
-                    variables,
-                    acceptanceCriteriaMatrix,
-                    acceptanceCriteriaContract,
-                    acceptedBranchOutcomeKey: "quality-accepted");
-            }
+                qualityPolicy.CompletionIssueRouteMap);
+            SetIfNotEmpty(
+                variables,
+                ProcessRuntimeLaunchVariables.ProductMutationRequiredBranchOutcomeKeysByStep,
+                qualityPolicy.ProductMutationRequiredBranchOutcomeKeyMap);
+            SetIfNotEmpty(
+                variables,
+                ProcessRuntimeLaunchVariables.RuntimeRoutedBranchOutcomeKeysByStep,
+                qualityPolicy.RuntimeRoutedBranchOutcomeKeyMap);
+            SetIfNotEmpty(
+                variables,
+                ProcessRuntimeLaunchVariables.ProductSourceInspectionRequiredStepKeys,
+                qualityPolicy.ProductSourceInspectionRequiredStepKeys);
+            SetIfNotEmpty(
+                variables,
+                ProcessRuntimeLaunchVariables.ProductSourceInspectionRequiredBranchOutcomeKeysByStep,
+                qualityPolicy.ProductSourceInspectionRequiredBranchOutcomeKeyMap);
+            SetIfNotEmpty(
+                variables,
+                ProcessRuntimeLaunchVariables.ProductSourceInspectionExcludedPathFragmentsByStep,
+                qualityPolicy.ProductSourceInspectionExcludedPathFragmentsByStep);
+            AddIfMissing(variables, "DotNetScaffoldRepairScriptRef", qualityPolicy.ScaffoldRepairScriptRef);
+            AddIfMissing(variables, "DotNetScaffoldRepairScript", qualityPolicy.ScaffoldRepairScript);
+            AddIfMissing(variables, "DotNetScaffoldRepairSideEffectManifest", qualityPolicy.ScaffoldRepairSideEffectManifest);
+            AddIfMissing(variables, "DotNetScaffoldRepairExecutionPlan", qualityPolicy.ScaffoldRepairExecutionPlan);
         }
         else if (string.Equals(context.DefinitionKey, RuntimeCommandWritebackDefinitionKey, StringComparison.OrdinalIgnoreCase))
         {
@@ -305,6 +350,16 @@ internal sealed partial class DotNetProcessLaunchVariableContributor : IProjectS
                 variables,
                 ProcessRuntimeLaunchVariables.ProductCompletionRequiredToolReceiptsByStep,
                 BuildUiScreenshotWritebackCompletionRequiredToolReceiptMap(hasVisualTargetAssets));
+        }
+
+        if (TryResolveAcceptanceBranchOutcomeKey(context.DefinitionKey, out var acceptedBranchOutcomeKey) &&
+            TryBuildAcceptanceCriteriaMatrix(context, out var acceptanceCriteriaMatrix, out var acceptanceCriteriaContract))
+        {
+            AddAcceptanceCriteriaLaunchVariables(
+                variables,
+                acceptanceCriteriaMatrix,
+                acceptanceCriteriaContract,
+                acceptedBranchOutcomeKey);
         }
 
         AddIfMissing(variables, "DotNetWorkspaceAlias", workspaceAlias);
@@ -339,6 +394,59 @@ internal sealed partial class DotNetProcessLaunchVariableContributor : IProjectS
         => !string.IsNullOrWhiteSpace(definitionKey) &&
            !string.Equals(definitionKey, SoftwareDeliveryDefinitionKey, StringComparison.OrdinalIgnoreCase) &&
            SupportedRootDefinitionKeys.Contains(definitionKey);
+
+    private static bool TryResolveDeliveryQualityWorkflow(
+        string? definitionKey,
+        out DotNetDeliveryQualityWorkflow workflow)
+    {
+        if (string.Equals(definitionKey, DotNetQualityRepairDefinitionKey, StringComparison.OrdinalIgnoreCase))
+        {
+            workflow = DotNetDeliveryQualityWorkflow.QualityRepair;
+            return true;
+        }
+
+        if (string.Equals(definitionKey, SoftwareDeliveryDefinitionKey, StringComparison.OrdinalIgnoreCase))
+        {
+            workflow = DotNetDeliveryQualityWorkflow.SoftwareDelivery;
+            return true;
+        }
+
+        workflow = DotNetDeliveryQualityWorkflow.BlazorDelivery;
+        return IsBlazorDeliveryDefinitionKey(definitionKey);
+    }
+
+    private static bool TryResolveAcceptanceBranchOutcomeKey(
+        string? definitionKey,
+        out string branchOutcomeKey)
+    {
+        if (string.Equals(definitionKey, "dotnet-feature-function-implementation", StringComparison.OrdinalIgnoreCase))
+        {
+            branchOutcomeKey = "feature-accepted";
+            return true;
+        }
+
+        if (string.Equals(definitionKey, "dotnet-development-slice", StringComparison.OrdinalIgnoreCase))
+        {
+            branchOutcomeKey = "slice-accepted";
+            return true;
+        }
+
+        if (string.Equals(definitionKey, DotNetQualityRepairDefinitionKey, StringComparison.OrdinalIgnoreCase))
+        {
+            branchOutcomeKey = "quality-repair-accepted";
+            return true;
+        }
+
+        if (string.Equals(definitionKey, SoftwareDeliveryDefinitionKey, StringComparison.OrdinalIgnoreCase) ||
+            IsBlazorDeliveryDefinitionKey(definitionKey))
+        {
+            branchOutcomeKey = "quality-accepted";
+            return true;
+        }
+
+        branchOutcomeKey = string.Empty;
+        return false;
+    }
 
     private static bool TryResolveProductRoot(IDictionary<string, string> variables, out string productRoot)
     {
@@ -417,7 +525,7 @@ internal sealed partial class DotNetProcessLaunchVariableContributor : IProjectS
 
     private static string ResolveTargetFramework(string contextText)
     {
-        var match = TargetFrameworkRegex().Match(contextText);
+        var match = TargetFrameworkPattern.Match(contextText);
         return match.Success
             ? match.Value.ToLowerInvariant()
             : DefaultTargetFramework;
@@ -584,174 +692,6 @@ internal sealed partial class DotNetProcessLaunchVariableContributor : IProjectS
         return JsonSerializer.Serialize(map);
     }
 
-    private static string BuildFeatureImplementationCompletionRequiredToolReceiptMap()
-    {
-        var validationReceipts = BuildDotNetValidationReceiptNames();
-        var map = new Dictionary<string, string[]>(StringComparer.Ordinal)
-        {
-            ["targeted-validation"] = validationReceipts,
-            ["feature-repair"] = validationReceipts,
-            ["targeted-recheck"] = validationReceipts
-        };
-
-        return JsonSerializer.Serialize(map);
-    }
-
-    private static string BuildSoftwareDeliveryCompletionRequiredToolReceiptMap(
-        DotNetScaffoldArchetype appArchetype,
-        bool requiresVisualTargetComparison)
-    {
-        var validationReceipts = BuildDotNetValidationReceiptNames();
-        var qaReceipts = IsBrowserVisibleAppArchetype(appArchetype)
-            ? validationReceipts.Concat(BuildBrowserRuntimeProofReceiptNames(requiresVisualTargetComparison)).ToArray()
-            : validationReceipts;
-        var map = new Dictionary<string, object>(StringComparer.Ordinal)
-        {
-            ["qa-validation"] = BuildBranchAwareReceiptRules(
-                qaReceipts,
-                ["quality-accepted"],
-                "AcceptanceProof"),
-            ["quality-repair"] = qaReceipts,
-            ["qa-recheck"] = BuildBranchAwareReceiptRules(
-                qaReceipts,
-                ["quality-accepted"],
-                "AcceptanceProof")
-        };
-
-        return JsonSerializer.Serialize(map);
-    }
-
-    private static string BuildSoftwareDeliveryCompletionIssueRouteMap()
-    {
-        var map = new Dictionary<string, object[]>(StringComparer.Ordinal)
-        {
-            ["qa-validation"] =
-            [
-                BuildBranchRoute(
-                    "process.adapter.product_required_file_content_missing",
-                    ["quality-accepted"],
-                    "repair-required",
-                    "Repair required",
-                    requiresDefectEvidence: true),
-                BuildBranchRoute(
-                    ProcessCompletionDiagnosticCodes.ToolReceiptEvidenceContentRejected,
-                    ["quality-accepted"],
-                    "repair-required",
-                    "Repair required",
-                    requiresDefectEvidence: true)
-            ],
-            ["qa-recheck"] =
-            [
-                BuildBranchRoute(
-                    "process.adapter.product_required_file_content_missing",
-                    ["quality-accepted"],
-                    "repair-escalation",
-                    "Repair escalation",
-                    requiresDefectEvidence: true),
-                BuildBranchRoute(
-                    ProcessCompletionDiagnosticCodes.ToolReceiptEvidenceContentRejected,
-                    ["quality-accepted"],
-                    "repair-escalation",
-                    "Repair escalation",
-                    requiresDefectEvidence: true)
-            ]
-        };
-
-        return JsonSerializer.Serialize(map);
-    }
-
-    private static string BuildBlazorDeliveryCompletionRequiredToolReceiptMap(
-        DotNetScaffoldArchetype appArchetype,
-        bool requiresVisualTargetComparison)
-    {
-        var validationReceipts = BuildDotNetValidationReceiptNames();
-        var qaReceipts = IsBrowserVisibleAppArchetype(appArchetype)
-            ? validationReceipts.Concat(BuildBrowserRuntimeProofReceiptNames(requiresVisualTargetComparison)).ToArray()
-            : validationReceipts;
-        var map = new Dictionary<string, object>(StringComparer.Ordinal)
-        {
-            ["validate-blazor-runtime"] = BuildBranchAwareReceiptRules(
-                qaReceipts,
-                ["quality-accepted"],
-                "AcceptanceProof"),
-            ["repair-blazor-findings"] = qaReceipts,
-            ["revalidate-blazor-repair"] = BuildBranchAwareReceiptRules(
-                qaReceipts,
-                ["quality-accepted"],
-                "AcceptanceProof")
-        };
-
-        return JsonSerializer.Serialize(map);
-    }
-
-    private static string BuildBlazorDeliveryCompletionIssueRouteMap()
-    {
-        var map = new Dictionary<string, object[]>(StringComparer.Ordinal)
-        {
-            ["validate-blazor-runtime"] =
-            [
-                BuildBranchRoute(
-                    "process.adapter.product_required_file_content_missing",
-                    ["quality-accepted"],
-                    "repair-required",
-                    "Repair required",
-                    requiresDefectEvidence: true),
-                BuildBranchRoute(
-                    ProcessCompletionDiagnosticCodes.ToolReceiptEvidenceContentRejected,
-                    ["quality-accepted"],
-                    "repair-required",
-                    "Repair required",
-                    requiresDefectEvidence: true)
-            ],
-            ["revalidate-blazor-repair"] =
-            [
-                BuildBranchRoute(
-                    "process.adapter.product_required_file_content_missing",
-                    ["quality-accepted"],
-                    "repair-escalation",
-                    "Repair escalation",
-                    requiresDefectEvidence: true),
-                BuildBranchRoute(
-                    ProcessCompletionDiagnosticCodes.ToolReceiptEvidenceContentRejected,
-                    ["quality-accepted"],
-                    "repair-escalation",
-                    "Repair escalation",
-                    requiresDefectEvidence: true)
-            ]
-        };
-
-        return JsonSerializer.Serialize(map);
-    }
-
-    private static object[] BuildBranchAwareReceiptRules(
-        IReadOnlyList<string> receipts,
-        IReadOnlyList<string> enforceBranchOutcomeKeys,
-        string purpose)
-        => receipts
-            .Select(receipt => new Dictionary<string, object>(StringComparer.Ordinal)
-            {
-                ["toolName"] = receipt,
-                ["purpose"] = purpose,
-                ["enforceBranchOutcomeKeys"] = enforceBranchOutcomeKeys,
-                ["reason"] = "Current-run proof required for the selected branch outcome."
-            })
-            .ToArray();
-
-    private static object BuildBranchRoute(
-        string issueCode,
-        IReadOnlyList<string> sourceBranchOutcomeKeys,
-        string targetBranchOutcomeKey,
-        string targetBranchOutcomeTitle,
-        bool requiresDefectEvidence)
-        => new Dictionary<string, object>(StringComparer.Ordinal)
-        {
-            ["issueCode"] = issueCode,
-            ["sourceBranchOutcomeKeys"] = sourceBranchOutcomeKeys,
-            ["targetBranchOutcomeKey"] = targetBranchOutcomeKey,
-            ["targetBranchOutcomeTitle"] = targetBranchOutcomeTitle,
-            ["requiresDefectEvidence"] = requiresDefectEvidence
-        };
-
     private static bool TryBuildAcceptanceCriteriaMatrix(
         ProjectStructureProcessLaunchVariableContext context,
         out ProcessAcceptanceCriteriaMatrix matrix,
@@ -790,13 +730,13 @@ internal sealed partial class DotNetProcessLaunchVariableContributor : IProjectS
             variables,
             ProcessRuntimeLaunchVariables.AcceptanceCriteriaMatrix,
             ProcessAcceptanceCriteriaMatrixJson.Serialize(acceptanceCriteriaMatrix));
-        AddIfMissing(
+        SetIfNotEmpty(
             variables,
             ProcessRuntimeLaunchVariables.AcceptanceCriteriaAcceptedBranchOutcomeKeys,
             acceptedBranchOutcomeKey);
         AddIfMissing(
             variables,
-            "ProductAcceptanceCriteriaContract",
+            ProcessRuntimeLaunchVariables.ProductAcceptanceCriteriaContract,
             acceptanceCriteriaContract);
     }
 
@@ -825,7 +765,7 @@ internal sealed partial class DotNetProcessLaunchVariableContributor : IProjectS
         ProjectStructureNode node,
         List<AcceptanceCriteriaCandidate> candidates)
     {
-        if (!HasExplicitAcceptanceCriteriaSignal(node))
+        if (!HasAcceptanceCriteriaSignal(node))
         {
             return;
         }
@@ -836,23 +776,19 @@ internal sealed partial class DotNetProcessLaunchVariableContributor : IProjectS
         }
     }
 
-    private static bool HasExplicitAcceptanceCriteriaSignal(ProjectStructureNode node)
+    private static bool HasAcceptanceCriteriaSignal(ProjectStructureNode node)
     {
         var text = string.Join(" ", node.Title, node.Subtitle, node.Notes, node.ObjectSubtype, node.Badges);
-        return ContainsAny(
-            text,
-            "acceptance criteria",
-            "acceptance requirement",
-            "acceptance requirements",
-            "must support",
-            "must include",
-            "must provide",
-            "must allow",
-            "must reject",
-            "negative case",
-            "quality gate",
-            "proof required",
-            "definition of done");
+        return HasNormativeCriteriaSignal(text) ||
+               ContainsAny(
+                   text,
+                   "acceptance criteria",
+                   "acceptance requirement",
+                   "acceptance requirements",
+                   "negative case",
+                   "quality gate",
+                   "proof required",
+                   "definition of done");
     }
 
     private static IReadOnlyList<string> ExtractAcceptanceCriteriaSummaries(ProjectStructureNode node)
@@ -867,11 +803,29 @@ internal sealed partial class DotNetProcessLaunchVariableContributor : IProjectS
             ? explicitSectionLines
             : SplitCriteriaText(sourceText);
 
+        var hasExplicitSection = explicitSectionLines.Count > 0;
         return segments
             .Select(CleanAcceptanceCriterion)
-            .Where(IsSubstantiveAcceptanceCriterion)
+            .Where(value => IsSubstantiveAcceptanceCriterion(value, hasExplicitSection))
             .Take(12)
             .ToArray();
+    }
+
+    private static bool HasNormativeCriteriaSignal(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return false;
+        }
+
+        return Regex.IsMatch(
+                   value,
+                   @"\b(?:must|shall|required|requires|only|do\s+not|does\s+not|cannot|can't|without|belongs?|remains?)\b",
+                   RegexOptions.IgnoreCase | RegexOptions.CultureInvariant) ||
+               Regex.IsMatch(
+                   value.TrimStart(),
+                   @"^(?:use|include|keep|show|display|allow|support|validate|reject|persist|store|save|fit|wrap|fail|route|expose|render|provide|prevent|retain|avoid)\b",
+                   RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
     }
 
     private static IReadOnlyList<string> ExtractExplicitAcceptanceCriteriaSection(string text)
@@ -949,7 +903,7 @@ internal sealed partial class DotNetProcessLaunchVariableContributor : IProjectS
         return cleaned.Trim();
     }
 
-    private static bool IsSubstantiveAcceptanceCriterion(string value)
+    private static bool IsSubstantiveAcceptanceCriterion(string value, bool hasExplicitSection)
     {
         if (string.IsNullOrWhiteSpace(value) ||
             value.Length < 18 ||
@@ -958,29 +912,7 @@ internal sealed partial class DotNetProcessLaunchVariableContributor : IProjectS
             return false;
         }
 
-        if (!ContainsAny(
-                value,
-                "must",
-                "support",
-                "allow",
-                "provide",
-                "render",
-                "show",
-                "display",
-                "validate",
-                "reject",
-                "persist",
-                "score",
-                "clear",
-                "pause",
-                "resume",
-                "keyboard",
-                "mouse",
-                "touch",
-                "gameplay",
-                "negative",
-                "error",
-                "proof"))
+        if (!hasExplicitSection && !HasNormativeCriteriaSignal(value))
         {
             return false;
         }
@@ -1002,12 +934,44 @@ internal sealed partial class DotNetProcessLaunchVariableContributor : IProjectS
     private static IReadOnlyList<string> BuildAcceptanceVerificationMethods(string summary)
     {
         var methods = new List<string>();
-        if (ContainsAny(summary, "click", "keyboard", "mouse", "touch", "screen", "render", "display", "show", "ui", "gameplay"))
+        if (ContainsAny(
+                summary,
+                "browser",
+                "click",
+                "input",
+                "interaction",
+                "keyboard",
+                "mouse",
+                "offline",
+                "persist",
+                "refresh",
+                "reload",
+                "render",
+                "screen",
+                "scroll",
+                "show",
+                "storage",
+                "touch",
+                "ui",
+                "viewport",
+                "visual",
+                "workflow"))
         {
             methods.Add("browser-proof");
         }
 
-        if (ContainsAny(summary, "test", "validate", "score", "clear", "reject", "negative", "error"))
+        if (ContainsAny(
+                summary,
+                "calculate",
+                "clear",
+                "error",
+                "negative",
+                "reject",
+                "rule",
+                "state",
+                "test",
+                "transition",
+                "validate"))
         {
             methods.Add("unit-test");
         }
@@ -1076,170 +1040,6 @@ internal sealed partial class DotNetProcessLaunchVariableContributor : IProjectS
         return JsonSerializer.Serialize(map);
     }
 
-    private static string[] BuildBrowserRuntimeProofReceiptNames(bool requiresVisualTargetComparison)
-    {
-        var receipts = new List<string>
-        {
-            "workspace_dotnet_run",
-            "browser_navigate",
-            "browser_snapshot",
-            "browser_take_screenshot",
-            "browser_console_messages",
-            "workspace_dotnet_stop"
-        };
-        if (requiresVisualTargetComparison)
-        {
-            receipts.Add("workspace_inspect_image");
-            receipts.Add("workspace_analyze_image");
-            receipts.Add("workspace_analyze_images");
-        }
-
-        return receipts.ToArray();
-    }
-
-    private static string BuildSoftwareDeliveryCompletionRequiredFileContentCheckMap(
-        DotNetScaffoldArchetype appArchetype,
-        string appProjectName,
-        string appProjectDirectory)
-    {
-        if (!IsBrowserVisibleAppArchetype(appArchetype))
-        {
-            return string.Empty;
-        }
-
-        var acceptanceChecks = BuildVisibleUiScaffoldRemovalChecks(
-            appProjectName,
-            appProjectDirectory,
-            enforceBranchOutcomeKeys: ["quality-accepted"],
-            evidenceBranchOutcomeKeys: ["repair-required"]);
-        var recheckAcceptanceChecks = BuildVisibleUiScaffoldRemovalChecks(
-            appProjectName,
-            appProjectDirectory,
-            enforceBranchOutcomeKeys: ["quality-accepted"],
-            evidenceBranchOutcomeKeys: ["repair-escalation"]);
-        var repairCompletionChecks = BuildVisibleUiScaffoldRemovalChecks(
-            appProjectName,
-            appProjectDirectory,
-            enforceBranchOutcomeKeys: [],
-            evidenceBranchOutcomeKeys: []);
-        if (acceptanceChecks.Length == 0 ||
-            recheckAcceptanceChecks.Length == 0 ||
-            repairCompletionChecks.Length == 0)
-        {
-            return string.Empty;
-        }
-
-        var map = new Dictionary<string, object[]>(StringComparer.Ordinal)
-        {
-            ["qa-validation"] = acceptanceChecks,
-            ["quality-repair"] = repairCompletionChecks,
-            ["qa-recheck"] = recheckAcceptanceChecks
-        };
-
-        return JsonSerializer.Serialize(map);
-    }
-
-    private static string BuildBlazorDeliveryCompletionRequiredFileContentCheckMap(
-        DotNetScaffoldArchetype appArchetype,
-        string appProjectName,
-        string appProjectDirectory)
-    {
-        if (!IsBrowserVisibleAppArchetype(appArchetype))
-        {
-            return string.Empty;
-        }
-
-        var acceptanceChecks = BuildVisibleUiScaffoldRemovalChecks(
-            appProjectName,
-            appProjectDirectory,
-            enforceBranchOutcomeKeys: ["quality-accepted"],
-            evidenceBranchOutcomeKeys: ["repair-required"]);
-        var recheckAcceptanceChecks = BuildVisibleUiScaffoldRemovalChecks(
-            appProjectName,
-            appProjectDirectory,
-            enforceBranchOutcomeKeys: ["quality-accepted"],
-            evidenceBranchOutcomeKeys: ["repair-escalation"]);
-        var repairCompletionChecks = BuildVisibleUiScaffoldRemovalChecks(
-            appProjectName,
-            appProjectDirectory,
-            enforceBranchOutcomeKeys: [],
-            evidenceBranchOutcomeKeys: []);
-        if (acceptanceChecks.Length == 0 ||
-            recheckAcceptanceChecks.Length == 0 ||
-            repairCompletionChecks.Length == 0)
-        {
-            return string.Empty;
-        }
-
-        var map = new Dictionary<string, object[]>(StringComparer.Ordinal)
-        {
-            ["validate-blazor-runtime"] = acceptanceChecks,
-            ["repair-blazor-findings"] = repairCompletionChecks,
-            ["revalidate-blazor-repair"] = recheckAcceptanceChecks
-        };
-
-        return JsonSerializer.Serialize(map);
-    }
-
-    private static object[] BuildVisibleUiScaffoldRemovalChecks(
-        string appProjectName,
-        string appProjectDirectory,
-        IReadOnlyCollection<string> enforceBranchOutcomeKeys,
-        IReadOnlyCollection<string> evidenceBranchOutcomeKeys)
-    {
-        var paths = new[]
-        {
-            CombinePath(appProjectDirectory, "Layout", "NavMenu.razor"),
-            CombinePath(appProjectDirectory, "Layout", "MainLayout.razor"),
-            CombinePath(appProjectDirectory, "Pages", "Home.razor"),
-            CombinePath(appProjectDirectory, "Pages", "Counter.razor"),
-            CombinePath(appProjectDirectory, "Pages", "Weather.razor"),
-            CombinePath(appProjectDirectory, "wwwroot", "sample-data", "weather.json"),
-            CombinePath(appProjectDirectory, "Components", "Layout", "NavMenu.razor"),
-            CombinePath(appProjectDirectory, "Components", "Layout", "MainLayout.razor"),
-            CombinePath(appProjectDirectory, "Components", "Pages", "Home.razor"),
-            CombinePath(appProjectDirectory, "Components", "Pages", "Counter.razor"),
-            CombinePath(appProjectDirectory, "Components", "Pages", "Weather.razor")
-        };
-        var forbiddenText = new[]
-        {
-            "href=\"counter\"",
-            "href=\"weather\"",
-            "@page \"/counter\"",
-            "@page \"/weather\"",
-            "currentCount",
-            "WeatherForecast",
-            "sample-data/weather.json",
-            "Welcome to your new app.",
-            "Hello, world!",
-            "learn.microsoft.com/aspnet/core/"
-        };
-
-        return paths.Select(path => new Dictionary<string, object>(StringComparer.Ordinal)
-            {
-                ["pathCandidates"] = new[] { path },
-                ["mustExist"] = false,
-                ["forbiddenTextAny"] = forbiddenText,
-                ["description"] = $"{appProjectName} visible UI must not ship default template scaffold content."
-            })
-            .Select(check =>
-            {
-                if (enforceBranchOutcomeKeys.Count > 0)
-                {
-                    check["enforceBranchOutcomeKeys"] = enforceBranchOutcomeKeys;
-                }
-
-                if (evidenceBranchOutcomeKeys.Count > 0)
-                {
-                    check["evidenceBranchOutcomeKeys"] = evidenceBranchOutcomeKeys;
-                }
-
-                return check;
-            })
-            .Cast<object>()
-            .ToArray();
-    }
-
     private static bool HasVisualTargetAssets(ProjectStructureProcessLaunchVariableContext context, string contextText)
         => ContainsVisualTargetAssetSummary(contextText) ||
            context.Surface.Nodes.Any(IsVisualTargetAsset);
@@ -1272,19 +1072,32 @@ internal sealed partial class DotNetProcessLaunchVariableContributor : IProjectS
         return ContainsAny(searchableText, "visual", "target", "proposal", "mockup", "wireframe", "layout", "design", "look", "ui");
     }
 
-    private static string[] BuildDotNetValidationReceiptNames()
-        =>
-        [
-            "workspace_dotnet_restore",
-            "workspace_dotnet_build",
-            "workspace_dotnet_test"
-        ];
-
     private static bool IsBrowserVisibleAppArchetype(DotNetScaffoldArchetype appArchetype)
         => string.Equals(appArchetype.Template, "blazor", StringComparison.OrdinalIgnoreCase) ||
            string.Equals(appArchetype.Template, "blazorwasm", StringComparison.OrdinalIgnoreCase) ||
            string.Equals(appArchetype.Template, "mvc", StringComparison.OrdinalIgnoreCase) ||
            string.Equals(appArchetype.Template, "razor", StringComparison.OrdinalIgnoreCase);
+
+    private static string BuildExecutorPreferredSpecializationTags(
+        DotNetScaffoldArchetype appArchetype)
+    {
+        var tags = appArchetype.Template.ToLowerInvariant() switch
+        {
+            "blazorwasm" => new List<string> { "blazor", "wasm", "frontend" },
+            "blazor" => new List<string> { "blazor", "aspnet", "frontend" },
+            "webapi" => new List<string> { "aspnet", "api", "backend" },
+            "worker" => new List<string> { "dotnet", "worker", "backend" },
+            "console" => new List<string> { "dotnet", "console" },
+            "classlib" => new List<string> { "dotnet", "library" },
+            _ => new List<string> { "dotnet" }
+        };
+        if (appArchetype.TemplateOptions.Contains("--pwa", StringComparison.OrdinalIgnoreCase))
+        {
+            tags.Add("pwa");
+        }
+
+        return JsonSerializer.Serialize(tags.Distinct(StringComparer.OrdinalIgnoreCase));
+    }
 
     private static string BuildSolutionSetupCompletionRequiredFileContentCheckMap(
         string solutionName,
@@ -1695,7 +1508,7 @@ internal sealed partial class DotNetProcessLaunchVariableContributor : IProjectS
             return string.Empty;
         }
 
-        var parts = IdentifierPartRegex()
+        var parts = IdentifierPartPattern
             .Matches(value)
             .Select(match => match.Value)
             .Where(part => !string.IsNullOrWhiteSpace(part))
@@ -1766,9 +1579,4 @@ internal sealed partial class DotNetProcessLaunchVariableContributor : IProjectS
             => $"AC-{index + 1:000}";
     }
 
-    [GeneratedRegex(@"\bnet\d+(?:\.\d+)?\b", RegexOptions.IgnoreCase)]
-    private static partial Regex TargetFrameworkRegex();
-
-    [GeneratedRegex(@"[A-Za-z0-9]+")]
-    private static partial Regex IdentifierPartRegex();
 }

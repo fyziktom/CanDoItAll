@@ -51,8 +51,12 @@
     }
   },
   "tags": [
+    "blazor",
     "dotnet",
     "qa",
-    "browser"
+    "browser",
+    "frontend",
+    "wasm",
+    "pwa"
   ]
 }

@@ -7,7 +7,7 @@ using CanDoItAll.Processes.Runtime;
 
 namespace CanDoItAll.Processes.Application;
 
-internal static class ProcessRuntimeRecoveryInstructionHeadings
+public static class ProcessRuntimeRecoveryInstructionHeadings
 {
     public const string OperatorRework = "Operator rework instruction";
     public const string ManagerRecovery = "Runtime manager recovery instruction";
@@ -98,7 +98,6 @@ public sealed class ProcessStepRecoveryInstructionBuilder : IProcessStepRecovery
     private const string RequiredToolReceiptMissingCode = "process.adapter.required_tool_receipt_missing";
     private const string RequiredToolReceiptBlockedRetryCode = "process.adapter.required_tool_receipt_blocked_retry";
     private const string ProductRequiredFileContentMissingCode = "process.adapter.product_required_file_content_missing";
-    private const string RuntimeLifecycleCorrelationMissingCode = "process.adapter.runtime_lifecycle_correlation_missing";
     private const string UngroundedOutcomeReferenceCode = "process.adapter.ungrounded_outcome_reference";
     private const string UngroundedManagedArtifactReferenceCode = "process.adapter.ungrounded_managed_artifact_reference";
     private static readonly Regex UnresolvedPlaceholderRegex = new(@"\{[A-Za-z][A-Za-z0-9_.:-]*\}", RegexOptions.CultureInvariant);
@@ -125,8 +124,10 @@ public sealed class ProcessStepRecoveryInstructionBuilder : IProcessStepRecovery
         ArgumentNullException.ThrowIfNull(request.Assignment);
 
         var diagnostics = CollectDiagnostics(request).ToArray();
+        var adviceContext = new ProcessStepRecoveryAdviceContext(request, diagnostics);
         if (diagnostics.Length == 0 ||
-            !diagnostics.Any(IsDiagnosticRecoveryCandidate))
+            !diagnostics.Any(IsDiagnosticRecoveryCandidate) &&
+            !adviceProviders.Any(provider => provider.CanHandle(adviceContext)))
         {
             return ProcessStepRecoveryInstruction.Empty;
         }
@@ -140,8 +141,7 @@ public sealed class ProcessStepRecoveryInstructionBuilder : IProcessStepRecovery
         AddRequiredReceiptGuidance(lines, request.Assignment, diagnostics);
         AddProductReadbackGuidance(lines, request.Assignment, diagnostics);
         AddUngroundedReferenceGuidance(lines, request, diagnostics);
-        AddRuntimeLifecycleGuidance(lines, diagnostics);
-        var providerAddedAdvice = AddProviderAdvice(lines, new ProcessStepRecoveryAdviceContext(request, diagnostics));
+        var providerAddedAdvice = AddProviderAdvice(lines, adviceContext);
         AddPrimaryArtifactGuidance(lines, request, diagnostics, providerAddedAdvice);
 
         var text = string.Join(
@@ -188,7 +188,6 @@ public sealed class ProcessStepRecoveryInstructionBuilder : IProcessStepRecovery
     private static bool IsDiagnosticRecoveryCandidate(ProcessRecoveryDiagnosticFact diagnostic)
         => IsRequiredToolReceiptDiagnostic(diagnostic.Code) ||
            string.Equals(diagnostic.Code, ProductRequiredFileContentMissingCode, StringComparison.Ordinal) ||
-           string.Equals(diagnostic.Code, RuntimeLifecycleCorrelationMissingCode, StringComparison.Ordinal) ||
            diagnostic.Code.StartsWith("process.adapter.product_", StringComparison.Ordinal) ||
            diagnostic.Code.StartsWith("process.adapter.produced_artifact_", StringComparison.Ordinal) ||
            diagnostic.Code.StartsWith("process.adapter.ungrounded_", StringComparison.Ordinal);
@@ -213,7 +212,7 @@ public sealed class ProcessStepRecoveryInstructionBuilder : IProcessStepRecovery
         lines.Add($"Recovery route: {decision.DecisionKind}/{decision.RouteKind}; policy: {decision.Policy}; source diagnostic: {decision.SourceDiagnosticCode}.");
         if (!string.IsNullOrWhiteSpace(decision.DiagnosticFingerprint))
         {
-            lines.Add($"Retry budget: automatic {decision.AutomaticRetryAttempt}/{decision.MaximumAutomaticRetryAttempts}; same diagnostic fingerprint {decision.SameDiagnosticFingerprintAttempt}/{decision.MaximumSameDiagnosticFingerprintAttempts}; fingerprint {decision.DiagnosticFingerprint}.");
+            lines.Add($"Retry budget: automatic {decision.AutomaticRetryAttempt}/{decision.MaximumAutomaticRetryAttempts}; persistent diagnostic identity {decision.SameDiagnosticFingerprintAttempt}/{decision.MaximumSameDiagnosticFingerprintAttempts}; identity {decision.DiagnosticFingerprint}.");
         }
 
         if (decision.DecisionKind == ProcessRecoveryDecisionKind.ManagerRequired &&
@@ -263,7 +262,7 @@ public sealed class ProcessStepRecoveryInstructionBuilder : IProcessStepRecovery
             lines.Add($"- {receipt}");
         }
 
-        lines.Add("Invoke each listed tool in this retry before finalizing; prior artifacts, summaries, planned actions, or text claiming verification are not current-run tool receipts.");
+        lines.Add("Invoke each listed tool now in this exact execution attempt before finalizing. The gate accepts only receipts whose execution id belongs to this attempt; upstream receipts and receipts from prior attempts of this step do not count. Artifacts, summaries, planned actions, or text claiming verification are not current-execution tool receipts.");
     }
 
     private static void AddProductReadbackGuidance(
@@ -322,20 +321,6 @@ public sealed class ProcessStepRecoveryInstructionBuilder : IProcessStepRecovery
         lines.Add("If the review needs to discuss a product file, describe the component or behavior without a path-like string, or first create a current-run tool receipt that grounds the exact ref and cite that receipt.");
         lines.Add("Do not include native absolute paths, scoped storage paths, managed-files paths, project-media paths, tool-runs paths, SourceDocLink values, or unverified external-target child paths in final outcome fields.");
         lines.Add("Overwrite the managed artifact too if it repeats the rejected path-like strings.");
-    }
-
-    private static void AddRuntimeLifecycleGuidance(
-        List<string> lines,
-        IReadOnlyList<ProcessRecoveryDiagnosticFact> diagnostics)
-    {
-        if (!diagnostics.Any(diagnostic => string.Equals(diagnostic.Code, RuntimeLifecycleCorrelationMissingCode, StringComparison.Ordinal)))
-        {
-            return;
-        }
-
-        lines.Add("Runtime lifecycle proof repair:");
-        lines.Add("Current-run runtime/browser proof must be produced in this same retry: start the product, navigate the browser to the host URL returned by that start receipt, capture browser state/screenshot/console proof, and stop the same runtime startup receipt.");
-        lines.Add("Do not reuse prior runtime, browser, screenshot, or stop receipts, and do not submit an accepted branch until those current-run receipts exist.");
     }
 
     private bool AddProviderAdvice(List<string> lines, ProcessStepRecoveryAdviceContext context)

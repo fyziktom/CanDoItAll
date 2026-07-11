@@ -408,7 +408,7 @@ internal sealed class ProcessOutcomeGroundingValidator(IWorkspaceFileService wor
     }
 
     internal static string TrimOutcomeReference(string value)
-        => value.Trim().Trim('`', '"', '\'', '.', ',', ';', ':', ')', ']', '}');
+        => value.Trim().Trim('`', '"', '\'', '*', '.', ',', ';', ':', ')', ']', '}');
 
     internal static string NormalizeOutcomeReferenceText(string value)
         => TrimOutcomeReference(value)

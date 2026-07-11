@@ -73,7 +73,7 @@ internal sealed class ProcessExecutionResultConverter(
         }
 
         if (outcome == StrategyOutcome.NeedsManager &&
-            IsRetryableManagedArtifactSelfEvidenceBlocker(assignment, output))
+            IsRetryableManagedArtifactSelfEvidenceBlocker(assignment, output, toolReceipts))
         {
             return NeedsManagerForCompletionIssue(
                 assignment,

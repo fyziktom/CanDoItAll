@@ -23,9 +23,10 @@ public sealed class ProcessRecoveryClassifier(ProcessRecoveryClassifierOptions? 
         var diagnostics = input.Diagnostics
             .Where(diagnostic => !string.IsNullOrWhiteSpace(diagnostic.Code))
             .ToArray();
-        var fingerprint = CreateDiagnosticFingerprint(input.SourceDiagnosticCode, diagnostics);
         var safeRetryAttempt = CountAutomaticSafeRetryReceipts(input) + 1;
-        var sameFingerprintAttempt = CountSameFingerprintSafeRetryReceipts(input, fingerprint) + 1;
+        var diagnosticIdentity = SelectMostPersistentDiagnosticIdentity(input, diagnostics);
+        var fingerprint = diagnosticIdentity.Fingerprint;
+        var sameFingerprintAttempt = diagnosticIdentity.PriorRetryOccurrences + 1;
         if (CanUseCurrentStepSafeRetry(input, diagnostics) &&
             safeRetryAttempt <= options.MaxAutomaticSafeReworksPerStep &&
             sameFingerprintAttempt <= options.MaxSameDiagnosticFingerprintAutomaticReworks)
@@ -35,7 +36,7 @@ public sealed class ProcessRecoveryClassifier(ProcessRecoveryClassifierOptions? 
                 ProcessRecoveryDecisionKind.SafeRetry,
                 input.SourceDiagnosticCode,
                 "process.current-step-safe-retry",
-                $"Safe/idempotent completion-gate diagnostics qualify for bounded current-step retry. Diagnostic fingerprint '{fingerprint}', automatic retry {safeRetryAttempt}/{options.MaxAutomaticSafeReworksPerStep}, same-fingerprint retry {sameFingerprintAttempt}/{options.MaxSameDiagnosticFingerprintAutomaticReworks}.")
+                $"Safe/idempotent completion-gate diagnostics qualify for bounded current-step retry. Persistent diagnostic identity '{fingerprint}', automatic retry {safeRetryAttempt}/{options.MaxAutomaticSafeReworksPerStep}, identity occurrence {sameFingerprintAttempt}/{options.MaxSameDiagnosticFingerprintAutomaticReworks}.")
             {
                 RouteKind = ProcessRecoveryRouteKind.CurrentStepRetry,
                 ResponsibleStepInstanceId = input.StepInstanceId,
@@ -55,7 +56,7 @@ public sealed class ProcessRecoveryClassifier(ProcessRecoveryClassifierOptions? 
             ? "process.current-step-safe-retry-budget-exhausted"
             : ResolveRecoveryPolicy(input.DefaultRouteKind);
         var reason = budgetExhausted
-            ? $"Safe/idempotent completion-gate diagnostics exhausted automatic current-step retry budget. Diagnostic fingerprint '{fingerprint}', automatic retry {safeRetryAttempt}/{options.MaxAutomaticSafeReworksPerStep}, same-fingerprint retry {sameFingerprintAttempt}/{options.MaxSameDiagnosticFingerprintAutomaticReworks}. Manager review is required before another rework."
+            ? $"Safe/idempotent completion-gate diagnostics exhausted automatic current-step retry budget. Persistent diagnostic identity '{fingerprint}', automatic retry {safeRetryAttempt}/{options.MaxAutomaticSafeReworksPerStep}, identity occurrence {sameFingerprintAttempt}/{options.MaxSameDiagnosticFingerprintAutomaticReworks}. Manager review is required before another rework."
             : ResolveRecoveryReason(input.DefaultRouteKind);
 
         return new ProcessRecoveryDecisionReceipt(
@@ -120,28 +121,59 @@ public sealed class ProcessRecoveryClassifier(ProcessRecoveryClassifierOptions? 
             receipt.RecoveryDecision.RouteKind == ProcessRecoveryRouteKind.CurrentStepRetry);
     }
 
-    private static int CountSameFingerprintSafeRetryReceipts(
+    private static DiagnosticIdentityRecurrence SelectMostPersistentDiagnosticIdentity(
         ProcessRecoveryClassificationInput input,
-        string fingerprint)
-    {
-        return input.PriorStepReceipts.Count(receipt =>
-            receipt.StepInstanceId == input.StepInstanceId &&
-            receipt.RecoveryDecision?.DecisionKind == ProcessRecoveryDecisionKind.SafeRetry &&
-            receipt.RecoveryDecision.RouteKind == ProcessRecoveryRouteKind.CurrentStepRetry &&
-            string.Equals(receipt.RecoveryDecision.DiagnosticFingerprint, fingerprint, StringComparison.Ordinal));
-    }
-
-    private static string CreateDiagnosticFingerprint(
-        string sourceDiagnosticCode,
         IReadOnlyList<StrategyResultDiagnosticReceipt> diagnostics)
     {
-        var parts = diagnostics.Count == 0
-            ? [sourceDiagnosticCode]
-            : diagnostics
-                .Select(diagnostic => $"{diagnostic.Code}:{diagnostic.EvidenceHash}")
-                .OrderBy(value => value, StringComparer.Ordinal)
-                .ToArray();
-        var bytes = SHA256.HashData(Encoding.UTF8.GetBytes(string.Join("|", parts)));
+        if (diagnostics.Count == 0)
+        {
+            return new DiagnosticIdentityRecurrence(
+                CreateDiagnosticIdentityFingerprint(input.SourceDiagnosticCode, string.Empty),
+                0);
+        }
+
+        var retryReceipts = input.PriorStepReceipts
+            .Where(receipt =>
+            receipt.StepInstanceId == input.StepInstanceId &&
+            receipt.RecoveryDecision?.DecisionKind == ProcessRecoveryDecisionKind.SafeRetry &&
+            receipt.RecoveryDecision.RouteKind == ProcessRecoveryRouteKind.CurrentStepRetry)
+            .ToArray();
+
+        return diagnostics
+            .Select(CreateDiagnosticIdentityFingerprint)
+            .Distinct(StringComparer.Ordinal)
+            .Select(fingerprint => new DiagnosticIdentityRecurrence(
+                fingerprint,
+                retryReceipts.Count(receipt => ReceiptContainsDiagnosticIdentity(receipt, fingerprint))))
+            .OrderByDescending(recurrence => recurrence.PriorRetryOccurrences)
+            .ThenBy(recurrence => recurrence.Fingerprint, StringComparer.Ordinal)
+            .First();
+    }
+
+    private static bool ReceiptContainsDiagnosticIdentity(
+        StrategyResultReceipt receipt,
+        string fingerprint)
+    {
+        return receipt.Diagnostics.Any(diagnostic => string.Equals(
+            CreateDiagnosticIdentityFingerprint(diagnostic),
+            fingerprint,
+            StringComparison.Ordinal));
+    }
+
+    private static string CreateDiagnosticIdentityFingerprint(StrategyResultDiagnosticReceipt diagnostic)
+    {
+        var stableEvidenceHash = string.Equals(
+            diagnostic.Code,
+            "process.adapter.completed_outcome_declares_unresolved_blocker",
+            StringComparison.OrdinalIgnoreCase)
+            ? string.Empty
+            : diagnostic.EvidenceHash;
+        return CreateDiagnosticIdentityFingerprint(diagnostic.Code, stableEvidenceHash);
+    }
+
+    private static string CreateDiagnosticIdentityFingerprint(string code, string evidenceHash)
+    {
+        var bytes = SHA256.HashData(Encoding.UTF8.GetBytes($"{code.Trim()}:{evidenceHash.Trim()}"));
         return "sha256:" + Convert.ToHexString(bytes).ToLowerInvariant();
     }
 
@@ -170,11 +202,15 @@ public sealed class ProcessRecoveryClassifier(ProcessRecoveryClassifierOptions? 
     }
 }
 
+internal readonly record struct DiagnosticIdentityRecurrence(
+    string Fingerprint,
+    int PriorRetryOccurrences);
+
 public sealed record ProcessRecoveryClassifierOptions(
     int MaxAutomaticSafeReworksPerStep,
     int MaxSameDiagnosticFingerprintAutomaticReworks)
 {
-    public static ProcessRecoveryClassifierOptions Default { get; } = new(4, 3);
+    public static ProcessRecoveryClassifierOptions Default { get; } = new(4, 1);
 }
 
 public sealed record ProcessRecoveryClassificationInput(

@@ -14,7 +14,8 @@ public sealed record AgentProcessRoleReadinessRequest(
     IReadOnlyList<string> AllowedOperations,
     string OperationTargetScope,
     IReadOnlyList<string>? RequiredRuntimeToolNames = null,
-    IReadOnlyList<AccessCapabilityIdentity>? RequiredCapabilities = null);
+    IReadOnlyList<AccessCapabilityIdentity>? RequiredCapabilities = null,
+    IReadOnlyList<string>? PreferredSpecializationTags = null);
 
 public sealed record AgentProcessRoleReadinessResult(
     bool HasRoleFit,
@@ -61,6 +62,10 @@ public static class AgentProcessReadinessEvaluator
         var roleFit = (exactMatch.Score > 0 || roleFamilyFit) && roleFamilyFit;
         var score = exactMatch.Score > 0 ? 1_000 + exactMatch.Score : 0;
         var matchedTokens = new List<string>();
+        var specializationTerms = CollectAgentSpecializationTerms(agent);
+        var matchedSpecializationTags = ResolvePreferredSpecializationTags(request)
+            .Where(tag => TokenMatches(specializationTerms, tag))
+            .ToArray();
 
         if (!roleFit)
         {
@@ -99,13 +104,17 @@ public static class AgentProcessReadinessEvaluator
 
         AddToolReadinessFindings(agent, request, roleTokens, findings);
         AddRequiredCapabilityReadinessFindings(agent, request, findings);
+        score += matchedSpecializationTags.Length * 50;
 
         var hasErrors = findings.Any(finding => finding.Severity == AgentProcessReadinessFindingSeverity.Error);
-        var matchSummary = exactMatch.Score > 0
+        var roleMatchSummary = exactMatch.Score > 0
             ? $"exact role metadata for '{exactMatch.MatchKey}'"
             : matchedTokens.Count == 0
                 ? "no role metadata match"
                 : $"semantic role match on {string.Join(", ", matchedTokens)}";
+        var matchSummary = matchedSpecializationTags.Length == 0
+            ? roleMatchSummary
+            : $"{roleMatchSummary} plus preferred specialization {string.Join(", ", matchedSpecializationTags)}";
         var readinessSummary = hasErrors
             ? string.Join(" ", findings
                 .Where(finding => finding.Severity == AgentProcessReadinessFindingSeverity.Error)
@@ -121,6 +130,7 @@ public static class AgentProcessReadinessEvaluator
             string.Join(",", request.AllowedOperations.OrderBy(item => item, StringComparer.Ordinal)),
             string.Join(",", NormalizeRequiredRuntimeToolNames(request.RequiredRuntimeToolNames)),
             string.Join(",", NormalizeRequiredCapabilities(request.RequiredCapabilities).Select(FormatCapabilityIdentity)),
+            string.Join(",", ResolvePreferredSpecializationTags(request)),
             readinessSummary));
 
         return new AgentProcessRoleReadinessResult(
@@ -572,6 +582,16 @@ public static class AgentProcessReadinessEvaluator
             .ToArray();
     }
 
+    private static IReadOnlyList<string> ResolvePreferredSpecializationTags(
+        AgentProcessRoleReadinessRequest request)
+        => (request.PreferredSpecializationTags ?? [])
+            .Where(tag => !string.IsNullOrWhiteSpace(tag))
+            .SelectMany(ExtractTokens)
+            .Where(tag => !IgnoredRoleTokens.Contains(tag))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(tag => tag, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
     private static IReadOnlyList<string> ResolveRoleIdentityTokens(AgentProcessRoleReadinessRequest request)
     {
         return ResolveRoleIdentityKeys(request)
@@ -694,6 +714,24 @@ public static class AgentProcessReadinessEvaluator
         AddTerms(terms, agent.RoleTitle);
         AddTerms(terms, agent.Workload.ToString());
 
+        foreach (var tag in agent.Tags)
+        {
+            AddTerms(terms, tag);
+            var normalizedTag = Normalize(tag);
+            if (!string.IsNullOrWhiteSpace(normalizedTag))
+            {
+                terms.Add(normalizedTag);
+            }
+        }
+
+        return terms;
+    }
+
+    private static HashSet<string> CollectAgentSpecializationTerms(AgentDefinition agent)
+    {
+        var terms = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        AddTerms(terms, agent.Name);
+        AddTerms(terms, agent.RoleTitle);
         foreach (var tag in agent.Tags)
         {
             AddTerms(terms, tag);

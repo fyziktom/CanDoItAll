@@ -50,6 +50,7 @@ internal sealed class AgentFrameworkProcessStepExecutor : IAgentFrameworkProcess
     private readonly ProcessSubprocessCoordinator subprocessCoordinator;
     private readonly ProcessStepCompletionCoordinator completionCoordinator;
     private readonly ProcessSubprocessContractResolver subprocessContractResolver;
+    private readonly ProcessParentSubprocessArtifactContextHydrator parentArtifactContextHydrator;
 
     public AgentFrameworkProcessStepExecutor(
         ICanDoItAllAgentWorkspaceFactory workspaceFactory,
@@ -60,7 +61,8 @@ internal sealed class AgentFrameworkProcessStepExecutor : IAgentFrameworkProcess
         ProcessRuntimeOwnedStepCoordinator runtimeOwnedStepCoordinator,
         ProcessSubprocessCoordinator subprocessCoordinator,
         ProcessStepCompletionCoordinator completionCoordinator,
-        ProcessSubprocessContractResolver subprocessContractResolver)
+        ProcessSubprocessContractResolver subprocessContractResolver,
+        ProcessParentSubprocessArtifactContextHydrator parentArtifactContextHydrator)
     {
         this.workspaceFactory = workspaceFactory;
         this.agentReferenceDataProvider = agentReferenceDataProvider;
@@ -71,6 +73,7 @@ internal sealed class AgentFrameworkProcessStepExecutor : IAgentFrameworkProcess
         this.subprocessCoordinator = subprocessCoordinator;
         this.completionCoordinator = completionCoordinator;
         this.subprocessContractResolver = subprocessContractResolver;
+        this.parentArtifactContextHydrator = parentArtifactContextHydrator;
     }
 
     public async ValueTask<ProcessExecutionAdapterResult> ExecuteAsync(
@@ -167,6 +170,18 @@ internal sealed class AgentFrameworkProcessStepExecutor : IAgentFrameworkProcess
         {
             var workspaceService = workspaceFactory.GetOrganizationWorkspaceService();
             var metadataJson = BuildProcessExecutionMetadata(assignment);
+            var parentArtifactContext = parentArtifactContextHydrator.Hydrate(assignment);
+            if (parentArtifactContext.Issue is { } parentArtifactContextIssue)
+            {
+                return NeedsManagerForCompletionIssue(
+                    assignment,
+                    ComputeHash(parentArtifactContextIssue.Evidence),
+                    parentArtifactContextIssue);
+            }
+
+            var executionPrompt = string.IsNullOrWhiteSpace(parentArtifactContext.PromptContribution)
+                ? assignment.Prompt
+                : $"{assignment.Prompt}{Environment.NewLine}{Environment.NewLine}{parentArtifactContext.PromptContribution}";
             var promptStepContract = ResolvePromptStepContract(assignment, request.StepContract);
             var subprocessContract = subprocessContractResolver.TryResolve(assignment, out var resolvedSubprocessContract)
                 ? resolvedSubprocessContract
@@ -176,7 +191,7 @@ internal sealed class AgentFrameworkProcessStepExecutor : IAgentFrameworkProcess
                     new ExecutionRunRequest(
                         agentId,
                         ProcessStepContractPromptBuilder.Build(
-                            assignment.Prompt,
+                            executionPrompt,
                             promptStepContract,
                             assignment.LaunchVariables,
                             assignment.StepKey,

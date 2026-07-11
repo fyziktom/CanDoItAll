@@ -35,6 +35,64 @@ namespace CanDoItAll.Modules.Processes;
 
 internal static class ProcessProductCompletionStateGate
 {
+    internal static ProcessCompletionIssue? ValidateRequiredBranchOutcomeSelection(
+        ProcessRuntimeStepAssignment assignment,
+        ProcessStepOutcomeResult output)
+    {
+        if (output.Status != ProcessStepOutcomeStatus.Completed ||
+            !string.IsNullOrWhiteSpace(output.BranchOutcomeKey))
+        {
+            return null;
+        }
+
+        var availableBranchOutcomeKeys = ProcessBranchOutcomeResolver
+            .EnumerateAgentSelectableBranchOutcomes(assignment.Prompt)
+            .Select(outcome => outcome.Key)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        if (availableBranchOutcomeKeys.Length == 0)
+        {
+            return null;
+        }
+
+        return new ProcessCompletionIssue(
+            ProcessCompletionDiagnosticCodes.RequiredBranchOutcomeMissing,
+            $"Step '{assignment.StepKey}' returned Completed without selecting a required branch outcome. Select exactly one agent-visible branch key and preserve it when rewriting recovery evidence. Available keys: {string.Join(", ", availableBranchOutcomeKeys)}.",
+            $"{assignment.RunId}:{assignment.StepInstanceId}:required-branch-outcome-missing",
+            assignment.ProducedArtifactSlotIds,
+            ProcessDiagnosticRetrySafety.SafeToRetry,
+            ProcessDiagnosticIdempotencyClassification.Idempotent);
+    }
+
+    internal static ProcessCompletionIssue? ValidateRuntimeRoutedBranchWasNotSelectedDirectly(
+        ProcessRuntimeStepAssignment assignment,
+        ProcessStepOutcomeResult output)
+    {
+        if (output.Status != ProcessStepOutcomeStatus.Completed ||
+            string.IsNullOrWhiteSpace(output.BranchOutcomeKey))
+        {
+            return null;
+        }
+
+        var runtimeRoutedBranchOutcomeKeys = ResolveRuntimeRoutedBranchOutcomeKeys(
+            assignment.LaunchVariables,
+            assignment.StepKey);
+        if (!runtimeRoutedBranchOutcomeKeys.Contains(
+                output.BranchOutcomeKey,
+                StringComparer.OrdinalIgnoreCase))
+        {
+            return null;
+        }
+
+        return new ProcessCompletionIssue(
+            ProcessCompletionDiagnosticCodes.RuntimeRoutedBranchSelectedDirectly,
+            $"Step '{assignment.StepKey}' directly selected runtime-routed branch '{output.BranchOutcomeKey}'. That branch is reserved for deterministic completion-evidence routing and is not an executable agent decision. Retry the same step and select only an agent-visible branch after performing its required work; the runtime will route missing mutation, validation, or readback evidence when applicable.",
+            $"{assignment.RunId}:{assignment.StepInstanceId}:runtime-routed-branch-selected-directly:{output.BranchOutcomeKey}",
+            assignment.ProducedArtifactSlotIds,
+            ProcessDiagnosticRetrySafety.SafeToRetry,
+            ProcessDiagnosticIdempotencyClassification.Idempotent);
+    }
+
     internal static ProcessCompletionIssue? ValidateRequiredProductStateCompletion(
         ProcessRuntimeStepAssignment assignment,
         ProcessStepOutcomeResult output)
@@ -63,7 +121,8 @@ internal static class ProcessProductCompletionStateGate
             return null;
         }
 
-        if (toolReceiptPolicies.AllowsCompletedOutcomeWithDeclaredBlockers(assignment))
+        if (IsConfiguredCompletionIssueRouteTarget(assignment, output) ||
+            toolReceiptPolicies.AllowsCompletedOutcomeWithDeclaredBlockers(assignment, output))
         {
             return null;
         }
@@ -84,11 +143,21 @@ internal static class ProcessProductCompletionStateGate
         return new ProcessCompletionIssue(
             "process.adapter.completed_outcome_declares_unresolved_blocker",
             $"Step '{assignment.StepKey}' returned Completed while its outcome text still declares unresolved blocker or missing-acceptance state: {blockerSummary}. Return Blocked or repair the missing state before claiming completion.",
-            $"{assignment.RunId}:{assignment.StepInstanceId}:completed-outcome-declares-blocker:{ComputeHash(blockerSummary)}",
+            $"{assignment.RunId}:{assignment.StepInstanceId}:completed-outcome-declares-blocker",
             assignment.ProducedArtifactSlotIds,
             ProcessDiagnosticRetrySafety.SafeToRetry,
             ProcessDiagnosticIdempotencyClassification.Idempotent);
     }
+
+    private static bool IsConfiguredCompletionIssueRouteTarget(
+        ProcessRuntimeStepAssignment assignment,
+        ProcessStepOutcomeResult output)
+        => !string.IsNullOrWhiteSpace(output.BranchOutcomeKey) &&
+           ResolveCompletionIssueRoutes(assignment.LaunchVariables, assignment.StepKey)
+               .Any(route => string.Equals(
+                   route.TargetBranchOutcomeKey,
+                   output.BranchOutcomeKey,
+                   StringComparison.OrdinalIgnoreCase));
 
     internal static IEnumerable<string> SplitOutcomeLines(string value)
         => value.Split(

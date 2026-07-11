@@ -1,0 +1,934 @@
+{
+  "Kind": "process-template-definition",
+  "Key": "dotnet-quality-repair",
+  "DisplayName": ".NET quality repair with diagnosis and bounded bughunt",
+  "Summary": "Reusable .NET repair subprocess that separates evidence diagnosis, typed product or proof correction, independent validation, specialist bughunt, bounded re-repair, and accepted or no-go handoff.",
+  "ValueStatement": "Repairs concrete .NET product or proof-contract defects without blind retries, manufactured source edits, or implementer self-acceptance.",
+  "CustomerName": "Software delivery process",
+  "OwnerName": "Repair manager",
+  "InterfaceContractSummary": "The parent supplies QA findings, implementation evidence, product context, and failed proof; the child returns independently accepted repair evidence or an explicit no-go packet.",
+  "GovernanceNotes": "Diagnosis, mutation, and acceptance remain separate responsibilities. A known failed validation result is an unresolved defect, not residual risk.",
+  "ChangeSummary": "Adds progress-sensitive manager and specialist assistance to .NET quality repair.",
+  "GovernancePolicySummary": "One diagnosis-guided repair and one specialist-guided re-repair are allowed before no-go handoff.",
+  "ConstitutionRuleSummary": "Product-repair branches require mutation evidence, proof-only branches require corrected current-execution proof, and neither action may accept itself.",
+  "OperatingModeSummary": "Guarded autonomous execution with manager diagnosis and independent QA branch decisions.",
+  "SimulationReadinessSummary": "Exercises deterministic repair, browser-capable validation, specialist handoff, and bounded no-go behavior.",
+  "Criticality": "High",
+  "AutonomyLevel": "Guarded",
+  "OperatingMode": "GovernedLive",
+  "ContractMode": "Strict",
+  "SourceFrameworkKeys": [
+    "nist-ssdf",
+    "owasp-samm"
+  ],
+  "SharedRoleRefs": [
+    "delivery-manager",
+    "software-engineer",
+    "qa-lead",
+    "solution-architect"
+  ],
+  "SharedArtifactRefs": [
+    "regression-evidence-pack",
+    "implementation-change-set",
+    "test-evidence-pack",
+    "scope-boundary-packet"
+  ],
+  "SharedChecklistRefs": [],
+  "SharedValidationRefs": [],
+  "SharedPromptRefs": [],
+  "LocalRoleRefs": [],
+  "LocalArtifactRefs": [],
+  "LocalChecklistRefs": [],
+  "LocalValidationRefs": [],
+  "LocalPromptRefs": [],
+  "Metrics": [
+    "Repair acceptance rate after manager diagnosis.",
+    "Share of persistent defects resolved by specialist bughunt.",
+    "Number of no-go outcomes with exact current-execution failure evidence."
+  ],
+  "Risks": [
+    "Diagnosis targets symptoms instead of the concrete failed invariant.",
+    "Implementation changes unrelated product surfaces.",
+    "QA accepts known failed proof as residual risk."
+  ],
+  "TailoringRules": [
+    "Use build and test proof for every .NET target and runtime/browser proof only when the failed behavior or product contract is UI-visible.",
+    "Keep the repair inside the approved product boundary and preserve accepted upstream behavior.",
+    "Use the no-go path after the specialist-guided second repair still fails; do not loop back again inside this subprocess."
+  ],
+  "RoleUsages": [
+    {
+      "Key": "repair-manager",
+      "RoleResourceKey": "delivery-manager",
+      "DisplayName": "Repair manager",
+      "Purpose": "Translate concrete failed evidence into a bounded diagnosis and repair target.",
+      "StaffingIntent": "A manager-capable agent that can inspect cross-role evidence and sequence the repair without editing product code.",
+      "PreferredExecutorKind": "agent",
+      "PreferredProjectAssignmentRole": "Manager",
+      "IsRequired": true,
+      "AllowsFallback": true,
+      "RequiresExplicitApproval": false,
+      "DefaultAllocationPercent": 100,
+      "CanvasX": 40,
+      "CanvasY": 40
+    },
+    {
+      "Key": "dotnet-repair-engineer",
+      "RoleResourceKey": "software-engineer",
+      "DisplayName": ".NET repair engineer",
+      "Purpose": "Implement the smallest source change that resolves the diagnosed defect.",
+      "StaffingIntent": "A .NET-capable agent with product mutation and validation tools.",
+      "PreferredExecutorKind": "agent",
+      "PreferredProjectAssignmentRole": "Developer",
+      "IsRequired": true,
+      "AllowsFallback": true,
+      "RequiresExplicitApproval": false,
+      "DefaultAllocationPercent": 100,
+      "CanvasX": 1100,
+      "CanvasY": 40
+    },
+    {
+      "Key": "quality-reviewer",
+      "RoleResourceKey": "qa-lead",
+      "DisplayName": "Independent quality reviewer",
+      "Purpose": "Reproduce the original proof and accept or reject the repaired product independently.",
+      "StaffingIntent": "A QA-capable agent with build, test, runtime, and browser evidence tools when applicable.",
+      "PreferredExecutorKind": "agent",
+      "PreferredProjectAssignmentRole": "Reviewer",
+      "IsRequired": true,
+      "AllowsFallback": true,
+      "RequiresExplicitApproval": false,
+      "DefaultAllocationPercent": 100,
+      "CanvasX": 2200,
+      "CanvasY": 40
+    },
+    {
+      "Key": "bughunt-specialist",
+      "RoleResourceKey": "solution-architect",
+      "DisplayName": "Bughunt specialist",
+      "Purpose": "Compare before and after evidence, identify the persistent root cause, and propose a precise second repair.",
+      "StaffingIntent": "A senior diagnostic agent that does not mutate or accept product code.",
+      "PreferredExecutorKind": "agent",
+      "PreferredProjectAssignmentRole": "Architect",
+      "IsRequired": true,
+      "AllowsFallback": true,
+      "RequiresExplicitApproval": false,
+      "DefaultAllocationPercent": 80,
+      "CanvasX": 3300,
+      "CanvasY": 800
+    }
+  ],
+  "Steps": [
+    {
+      "Order": 0,
+      "Key": "diagnose-quality-failure",
+      "Title": "Diagnose the exact quality failure",
+      "Subtitle": "Manager evidence triage before mutation",
+      "Notes": "Begin with every exact ref listed under AgentFramework inherited parent-step artifact refs and read the relevant parent artifacts before diagnosis. Runtime-appended gate findings in those artifacts are authoritative even when the original agent summary claimed acceptance. A missing accepted implementation handoff is a symptom, not a standalone proof-only diagnosis: trace why the child withheld acceptance back to the authoritative criteria and actual product. Then inspect the referenced command receipts, browser snapshot, console log, screenshots, and implementation evidence that actually exist. Before completing, read representative current product source under the grounded product root at the most likely owning boundary; project files, bootstrap, router/app shell, imports, navigation, stylesheets, and upstream prose alone are not behavior-owning inspection unless the failed criterion is specifically owned there. For a visible Blazor unhandled-error banner without a matching console exception, inspect the loaded stylesheet and #blazor-error-ui visibility rule before assuming an application exception. Name the exact failed invariant, correlate it to concrete source when evidence permits, identify the owning source/composition boundary, and define the smallest proof that must turn green. When and only when the diagnosed target is fingerprint-matched stock Blazor template residue, include the exact line Repair driver: dotnet-blazor-scaffold-residue; do not include it for unrelated defects merely because stock scaffold files exist. Do not edit product files. A visible error, failed command, broken formula, invalid output, or absent core workflow after repair is an unresolved product defect, not residual risk or an evidence-only handoff gap.",
+      "StepKind": "Start",
+      "AllowsManualSkip": false,
+      "AllowsSafeRefusal": false,
+      "RequiresApproval": false,
+      "RequiresDecisionRecord": true,
+      "InputContractSummary": "Parent QA disposition, exact failed proof, reviewed implementation evidence, product root, and inherited authoritative scope; diagnosis must not reduce the full core workflow to the latest proof gap.",
+      "OutputContractSummary": "Grounded defect diagnosis with owning boundary, repair target, exclusions, and proof plan.",
+      "EvidenceContractSummary": "Exact failing receipt or artifact refs, observed error, reproduction state, source hypothesis, and targeted validation plan.",
+      "DecisionRightsSummary": "Repair manager owns the repair target but cannot mutate product code or waive failed proof.",
+      "ExceptionPolicySummary": "Block only when the parent supplied no actionable failure evidence, product context is unavailable, or required evidence access is denied.",
+      "TargetLeadHours": 2,
+      "DependsOnStepKey": "",
+      "DependsOnBranchOutcomeKey": "",
+      "DecisionRoleKey": "repair-manager",
+      "CanvasX": 260,
+      "CanvasY": 0,
+      "BranchCanvasX": 0,
+      "BranchCanvasY": 0,
+      "Dependencies": [],
+      "RoleAssignments": [
+        {
+          "RoleKey": "repair-manager",
+          "ResponsibilityKind": "Responsible",
+          "IsRequired": true,
+          "FallbackOrder": 0,
+          "RebindPolicySummary": "Rebind only to a manager-capable diagnostic agent."
+        },
+        {
+          "RoleKey": "quality-reviewer",
+          "ResponsibilityKind": "Reviewer",
+          "IsRequired": true,
+          "FallbackOrder": 1,
+          "RebindPolicySummary": "QA clarifies proof without taking repair ownership."
+        }
+      ],
+      "ArtifactExpectations": [
+        {
+          "Key": "quality-failure-diagnosis",
+          "TemplateKey": "regression-evidence-pack",
+          "Title": "Quality failure diagnosis",
+          "ArtifactKind": "Evidence",
+          "IsRequired": true,
+          "TrustRequirement": "ReviewRequired",
+          "SensitivityLevel": "Internal",
+          "RetentionDays": 365,
+          "AllowedFutureUsageSummary": "Reusable by implementation, QA, bughunt, and incident analysis.",
+          "ValidationRequirementSummary": "Must cite exact failed evidence, distinguish product defect from environment/process blocker, identify owning boundary and repair target, and define the smallest proof that must pass."
+        }
+      ],
+      "ArtifactInputs": [],
+      "BranchOutcomes": [],
+      "ChecklistRefs": [],
+      "ValidationRefs": [],
+      "PromptRefs": [],
+      "DocRefs": [
+        "processes/dotnet-quality-repair/steps/diagnose-quality-failure.md"
+      ],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure",
+        "ReadUpstreamArtifacts",
+        "WriteManagedProcessArtifacts"
+      ],
+      "OperationTargetScope": "ExternalProductTargetReadOnly"
+    },
+    {
+      "Order": 1,
+      "Key": "implement-quality-repair",
+      "Title": "Apply the diagnosis-guided repair or proof correction",
+      "Subtitle": "Typed product-mutation or proof-only action",
+      "Notes": "Use the manager diagnosis as the repair contract and read the diagnosed current product source before choosing an action. If an expected control, state transition, interaction, visible surface, or browser-console behavior is missing or broken, implement the smallest owning source change, read changed files back, run focused proof, and select product-repair-applied even when build/tests pass. For a visible Blazor unhandled-error banner without a matching console exception, inspect the loaded stylesheet and #blazor-error-ui visibility rule before assuming an application exception. Select proof-only-revalidation-prepared only when the expected behavior already exists and works and the prior route, selector, or proof recipe was wrong. Independent QA still owns acceptance.",
+      "StepKind": "Work",
+      "AllowsManualSkip": false,
+      "AllowsSafeRefusal": false,
+      "RequiresApproval": false,
+      "RequiresDecisionRecord": true,
+      "InputContractSummary": "Grounded quality-failure diagnosis, parent implementation evidence, and approved product boundary.",
+      "OutputContractSummary": "Diagnosis-linked product repair or corrected proof plan with a typed action branch.",
+      "EvidenceContractSummary": "Selected action branch; changed files, readback, and mutation receipts for product repair, or current validation/runtime/browser evidence for proof-only correction.",
+      "DecisionRightsSummary": "Repair engineer selects and executes the diagnosis-supported action but cannot accept the final repair.",
+      "ExceptionPolicySummary": "Return Blocked only for unavailable product root, denied mutation/validation tools, contradictory diagnosis, or required scope outside the approved boundary.",
+      "TargetLeadHours": 6,
+      "DependsOnStepKey": "diagnose-quality-failure",
+      "DependsOnBranchOutcomeKey": "",
+      "DecisionRoleKey": "",
+      "CanvasX": 1340,
+      "CanvasY": 0,
+      "BranchCanvasX": 0,
+      "BranchCanvasY": 0,
+      "Dependencies": [
+        {
+          "DependsOnStepKey": "diagnose-quality-failure",
+          "DependsOnBranchOutcomeKey": ""
+        }
+      ],
+      "RoleAssignments": [
+        {
+          "RoleKey": "dotnet-repair-engineer",
+          "ResponsibilityKind": "Responsible",
+          "IsRequired": true,
+          "FallbackOrder": 0,
+          "RebindPolicySummary": "Rebind only to a .NET-capable product repair agent."
+        },
+        {
+          "RoleKey": "repair-manager",
+          "ResponsibilityKind": "Reviewer",
+          "IsRequired": true,
+          "FallbackOrder": 1,
+          "RebindPolicySummary": "Manager verifies the repair remains diagnosis-aligned."
+        }
+      ],
+      "ArtifactExpectations": [
+        {
+          "Key": "quality-repair-change-set",
+          "TemplateKey": "implementation-change-set",
+          "Title": "Diagnosis-guided quality repair change set",
+          "ArtifactKind": "Deliverable",
+          "IsRequired": true,
+          "TrustRequirement": "ReviewRequired",
+          "SensitivityLevel": "Internal",
+          "RetentionDays": 365,
+          "AllowedFutureUsageSummary": "Reusable by independent validation, bughunt, and parent QA recheck.",
+          "ValidationRequirementSummary": "Must map the diagnosed failure to concrete source changes, file readback, current build/test receipts, and focused proof without claiming final acceptance."
+        }
+      ],
+      "ArtifactInputs": [
+        {
+          "ArtifactExpectationKey": "quality-failure-diagnosis",
+          "SourceStepKey": "diagnose-quality-failure"
+        }
+      ],
+      "BranchOutcomes": [
+        {
+          "Key": "product-repair-applied",
+          "Title": "Product repair applied",
+          "Description": "The diagnosis required a product mutation and current-run mutation, readback, and focused validation evidence were produced."
+        },
+        {
+          "Key": "proof-only-revalidation-prepared",
+          "Title": "Proof-only revalidation prepared",
+          "Description": "The product was already clean; the incorrect proof target or recipe was corrected and exercised with current-run evidence without manufacturing a source change."
+        },
+        {
+          "Key": "repair-attempt-incomplete",
+          "Title": "Repair attempt incomplete",
+          "Description": "The implementer did not produce the claimed required product mutation; independent validation must reproduce the defect and hand exact evidence to bughunt."
+        }
+      ],
+      "ChecklistRefs": [],
+      "ValidationRefs": [],
+      "PromptRefs": [],
+      "DocRefs": [
+        "processes/dotnet-quality-repair/steps/implement-quality-repair.md"
+      ],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure",
+        "ReadUpstreamArtifacts",
+        "MutateProductTarget",
+        "RunValidation",
+        "LaunchRuntime",
+        "CaptureRuntimeProof",
+        "WriteManagedProcessArtifacts"
+      ],
+      "OperationTargetScope": "ExternalProductTargetMutable",
+      "ExecutionClass": "BranchDecision"
+    },
+    {
+      "Order": 2,
+      "Key": "validate-quality-repair",
+      "Title": "Independently validate the repaired product",
+      "Subtitle": "Accept or hand exact evidence to bughunt",
+      "Notes": "Reproduce the original failed proof from the diagnosis and run the current .NET restore/build/test chain. For a UI-visible failure or UI product contract, launch the app, exercise the affected workflow, capture current-run snapshot/screenshot/console evidence, and stop the same runtime. Capture all proof before writing the primary artifact, then write it once with the final disposition; never create a provisional or placeholder Status: Blocked artifact. Known failed proof is not residual risk: if the original error persists, a new release-blocking error appears, an interaction produces no meaningful state change, or expected behavior is still broken, complete the step with bughunt-required and attach exact evidence. Select quality-repair-accepted only when current-execution proof is clean. Return Blocked only when required product access or validation capability was unavailable and no proof decision could be executed.",
+      "StepKind": "Review",
+      "AllowsManualSkip": false,
+      "AllowsSafeRefusal": false,
+      "RequiresApproval": false,
+      "RequiresDecisionRecord": true,
+      "InputContractSummary": "Inherited authoritative scope, original diagnosis, typed repair action, implementer receipts, and product validation contract with a literal current-execution receipt checklist.",
+      "OutputContractSummary": "Independent current-execution validation with accepted or bughunt-required disposition.",
+      "EvidenceContractSummary": "Restore/build/test receipts, exact original-proof reproduction, runtime/browser lifecycle proof when applicable, changed behavior, and clean or failing evidence.",
+      "DecisionRightsSummary": "Quality reviewer owns acceptance and cannot mutate product code or waive a known failure.",
+      "ExceptionPolicySummary": "Return Blocked only when a required validation tool, product root, permission, or process contract is unavailable; use bughunt-required for an executed proof that still fails.",
+      "TargetLeadHours": 4,
+      "DependsOnStepKey": "implement-quality-repair",
+      "DependsOnBranchOutcomeKey": "",
+      "DecisionRoleKey": "quality-reviewer",
+      "CanvasX": 2420,
+      "CanvasY": 0,
+      "BranchCanvasX": 3000,
+      "BranchCanvasY": 700,
+      "Dependencies": [
+        {
+          "DependsOnStepKey": "implement-quality-repair",
+          "DependsOnBranchOutcomeKey": ""
+        }
+      ],
+      "RoleAssignments": [
+        {
+          "RoleKey": "quality-reviewer",
+          "ResponsibilityKind": "Responsible",
+          "IsRequired": true,
+          "FallbackOrder": 0,
+          "RebindPolicySummary": "Rebind only to an independent validation-capable agent."
+        },
+        {
+          "RoleKey": "repair-manager",
+          "ResponsibilityKind": "Reviewer",
+          "IsRequired": true,
+          "FallbackOrder": 1,
+          "RebindPolicySummary": "Manager observes disposition without overriding evidence."
+        }
+      ],
+      "ArtifactExpectations": [
+        {
+          "Key": "quality-repair-validation",
+          "TemplateKey": "regression-evidence-pack",
+          "Title": "Independent quality repair validation",
+          "ArtifactKind": "Evidence",
+          "IsRequired": true,
+          "TrustRequirement": "ReviewRequired",
+          "SensitivityLevel": "Internal",
+          "RetentionDays": 365,
+          "AllowedFutureUsageSummary": "Reusable by accepted handoff, bughunt, parent QA recheck, and incident analysis.",
+          "ValidationRequirementSummary": "Must reproduce the diagnosed proof, include current restore/build/test and conditional runtime/browser evidence, and select quality-repair-accepted or bughunt-required from observed results."
+        }
+      ],
+      "ArtifactInputs": [
+        {
+          "ArtifactExpectationKey": "quality-failure-diagnosis",
+          "SourceStepKey": "diagnose-quality-failure"
+        },
+        {
+          "ArtifactExpectationKey": "quality-repair-change-set",
+          "SourceStepKey": "implement-quality-repair"
+        }
+      ],
+      "BranchOutcomes": [
+        {
+          "Key": "quality-repair-accepted",
+          "Title": "Quality repair accepted",
+          "Description": "Current-execution proof shows the diagnosed defect is repaired without a new release blocker."
+        },
+        {
+          "Key": "bughunt-required",
+          "Title": "Bughunt required",
+          "Description": "Exact current-execution evidence shows the original or a new release-blocking defect remains."
+        }
+      ],
+      "ChecklistRefs": [],
+      "ValidationRefs": [],
+      "PromptRefs": [],
+      "DocRefs": [
+        "processes/dotnet-quality-repair/steps/validate-quality-repair.md"
+      ],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure",
+        "ReadUpstreamArtifacts",
+        "RunValidation",
+        "LaunchRuntime",
+        "CaptureRuntimeProof",
+        "WriteManagedProcessArtifacts"
+      ],
+      "OperationTargetScope": "ExternalProductTargetReadOnly",
+      "ExecutionClass": "BranchDecision"
+    },
+    {
+      "Order": 3,
+      "Key": "quality-repair-handoff",
+      "Title": "Hand accepted repair to the parent",
+      "Subtitle": "Accepted without specialist re-repair",
+      "Notes": "Summarize the diagnosis, changed product surfaces, independent current-execution proof, and parent QA recheck guidance. Do not run new tools or add unproved claims.",
+      "StepKind": "End",
+      "AllowsManualSkip": false,
+      "AllowsSafeRefusal": false,
+      "RequiresApproval": false,
+      "RequiresDecisionRecord": false,
+      "InputContractSummary": "Accepted independent repair validation, diagnosis, and change set.",
+      "OutputContractSummary": "Parent-ready accepted repair handoff.",
+      "EvidenceContractSummary": "Diagnosis, changed surfaces, current-execution validation refs, and recheck guidance.",
+      "DecisionRightsSummary": "Repair manager packages accepted evidence without changing the QA disposition.",
+      "ExceptionPolicySummary": "This step remains skipped unless validation selected quality-repair-accepted.",
+      "TargetLeadHours": 1,
+      "DependsOnStepKey": "validate-quality-repair",
+      "DependsOnBranchOutcomeKey": "quality-repair-accepted",
+      "DecisionRoleKey": "",
+      "CanvasX": 3500,
+      "CanvasY": -520,
+      "BranchCanvasX": 0,
+      "BranchCanvasY": 0,
+      "Dependencies": [
+        {
+          "DependsOnStepKey": "validate-quality-repair",
+          "DependsOnBranchOutcomeKey": "quality-repair-accepted"
+        }
+      ],
+      "RoleAssignments": [
+        {
+          "RoleKey": "repair-manager",
+          "ResponsibilityKind": "Responsible",
+          "IsRequired": true,
+          "FallbackOrder": 0,
+          "RebindPolicySummary": "Rebind only to a manager-capable handoff owner."
+        }
+      ],
+      "ArtifactExpectations": [
+        {
+          "Key": "quality-repair-handoff-packet",
+          "TemplateKey": "implementation-change-set",
+          "Title": ".NET quality repair handoff",
+          "ArtifactKind": "Deliverable",
+          "IsRequired": true,
+          "TrustRequirement": "ReviewRequired",
+          "SensitivityLevel": "Internal",
+          "RetentionDays": 365,
+          "AllowedFutureUsageSummary": "Reusable by parent QA recheck, security review, and release governance.",
+          "ValidationRequirementSummary": "Must identify diagnosis, repaired behavior, changed surfaces, and independent accepted validation evidence."
+        }
+      ],
+      "ArtifactInputs": [
+        {
+          "ArtifactExpectationKey": "quality-repair-validation",
+          "SourceStepKey": "validate-quality-repair"
+        },
+        {
+          "ArtifactExpectationKey": "quality-repair-change-set",
+          "SourceStepKey": "implement-quality-repair"
+        }
+      ],
+      "BranchOutcomes": [],
+      "ChecklistRefs": [],
+      "ValidationRefs": [],
+      "PromptRefs": [],
+      "DocRefs": [
+        "processes/dotnet-quality-repair/steps/quality-repair-handoff.md"
+      ],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadUpstreamArtifacts",
+        "WriteManagedProcessArtifacts"
+      ],
+      "OperationTargetScope": "ExternalProductTargetReadOnly"
+    },
+    {
+      "Order": 4,
+      "Key": "diagnose-persistent-failure",
+      "Title": "Bughunt the persistent failure",
+      "Subtitle": "Specialist comparison before second mutation",
+      "Notes": "Compare the original diagnosis, first change set, and exact failed revalidation evidence. Before completing, read representative current product source under the grounded product root at the likely owning boundary; upstream prose is not product inspection. Inspect the concrete error and owning source/composition boundary, explain why the first repair did not resolve it or what it broke, and propose one precise second repair plus proof. For a visible Blazor unhandled-error banner without a matching console exception, inspect the loaded stylesheet and #blazor-error-ui visibility rule before assuming an application exception. When and only when the second repair targets fingerprint-matched stock Blazor template residue, include the exact line Repair driver: dotnet-blazor-scaffold-residue; do not include it for unrelated defects merely because stock scaffold files exist. Do not edit product files and do not repeat the first plan unchanged.",
+      "StepKind": "Review",
+      "AllowsManualSkip": false,
+      "AllowsSafeRefusal": false,
+      "RequiresApproval": false,
+      "RequiresDecisionRecord": true,
+      "InputContractSummary": "Inherited authoritative scope, original diagnosis, first repair change set, and exact bughunt-required validation evidence.",
+      "OutputContractSummary": "Specialist root-cause delta and bounded second-repair plan.",
+      "EvidenceContractSummary": "Before/after failure comparison, overlooked cause or regression, owning source boundary, and targeted proof.",
+      "DecisionRightsSummary": "Bughunt specialist owns diagnosis but cannot mutate or accept the product.",
+      "ExceptionPolicySummary": "Block only when exact failed evidence or product source access is unavailable; do not issue the same plan without explaining the missed cause.",
+      "TargetLeadHours": 3,
+      "DependsOnStepKey": "validate-quality-repair",
+      "DependsOnBranchOutcomeKey": "bughunt-required",
+      "DecisionRoleKey": "bughunt-specialist",
+      "CanvasX": 3500,
+      "CanvasY": 1040,
+      "BranchCanvasX": 0,
+      "BranchCanvasY": 0,
+      "Dependencies": [
+        {
+          "DependsOnStepKey": "validate-quality-repair",
+          "DependsOnBranchOutcomeKey": "bughunt-required"
+        }
+      ],
+      "RoleAssignments": [
+        {
+          "RoleKey": "bughunt-specialist",
+          "ResponsibilityKind": "Responsible",
+          "IsRequired": true,
+          "FallbackOrder": 0,
+          "RebindPolicySummary": "Rebind only to a senior diagnosis-capable specialist."
+        },
+        {
+          "RoleKey": "repair-manager",
+          "ResponsibilityKind": "Reviewer",
+          "IsRequired": true,
+          "FallbackOrder": 1,
+          "RebindPolicySummary": "Manager enforces bounded scope and evidence continuity."
+        }
+      ],
+      "ArtifactExpectations": [
+        {
+          "Key": "persistent-failure-diagnosis",
+          "TemplateKey": "regression-evidence-pack",
+          "Title": "Persistent failure bughunt diagnosis",
+          "ArtifactKind": "Evidence",
+          "IsRequired": true,
+          "TrustRequirement": "ReviewRequired",
+          "SensitivityLevel": "Internal",
+          "RetentionDays": 365,
+          "AllowedFutureUsageSummary": "Reusable by second repair, no-go analysis, and incident learning.",
+          "ValidationRequirementSummary": "Must compare before/after evidence, identify why the first repair failed, and define a different precise repair and proof plan."
+        }
+      ],
+      "ArtifactInputs": [
+        {
+          "ArtifactExpectationKey": "quality-failure-diagnosis",
+          "SourceStepKey": "diagnose-quality-failure"
+        },
+        {
+          "ArtifactExpectationKey": "quality-repair-change-set",
+          "SourceStepKey": "implement-quality-repair"
+        },
+        {
+          "ArtifactExpectationKey": "quality-repair-validation",
+          "SourceStepKey": "validate-quality-repair"
+        }
+      ],
+      "BranchOutcomes": [],
+      "ChecklistRefs": [],
+      "ValidationRefs": [],
+      "PromptRefs": [],
+      "DocRefs": [
+        "processes/dotnet-quality-repair/steps/diagnose-persistent-failure.md"
+      ],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure",
+        "ReadUpstreamArtifacts",
+        "WriteManagedProcessArtifacts"
+      ],
+      "OperationTargetScope": "ExternalProductTargetReadOnly"
+    },
+    {
+      "Order": 5,
+      "Key": "implement-bughunt-repair",
+      "Title": "Apply the specialist-guided repair or proof correction",
+      "Subtitle": "One bounded typed second action",
+      "Notes": "Apply the bughunt diagnosis to the exact owning boundary and read the diagnosed current product source before choosing an action. A missing expected control, state transition, interaction, visible surface, or real browser-console error is a product defect even when build/tests pass: mutate the smallest owning source or configuration surface, read it back, run focused proof, state the delta from the first repair, and select product-repair-applied. For a visible Blazor unhandled-error banner without a matching console exception, inspect the loaded stylesheet and #blazor-error-ui visibility rule before assuming an application exception. Select proof-only-revalidation-prepared only when the expected behavior already exists and works and the prior target, selector, or proof recipe was wrong. This is the final bounded repair action inside the subprocess.",
+      "StepKind": "Work",
+      "AllowsManualSkip": false,
+      "AllowsSafeRefusal": false,
+      "RequiresApproval": false,
+      "RequiresDecisionRecord": true,
+      "InputContractSummary": "Specialist persistent-failure diagnosis and first repair evidence.",
+      "OutputContractSummary": "Specialist-guided product repair or corrected proof plan with a typed action branch.",
+      "EvidenceContractSummary": "Selected action branch and difference from the first action; mutation/readback evidence for product repair or current validation/runtime/browser evidence for proof-only correction.",
+      "DecisionRightsSummary": "Repair engineer owns the bounded second action but cannot accept it.",
+      "ExceptionPolicySummary": "Return Blocked only for unavailable product root, denied tools, contradictory specialist plan, or required scope outside the approved boundary.",
+      "TargetLeadHours": 5,
+      "DependsOnStepKey": "diagnose-persistent-failure",
+      "DependsOnBranchOutcomeKey": "",
+      "DecisionRoleKey": "",
+      "CanvasX": 4580,
+      "CanvasY": 1040,
+      "BranchCanvasX": 0,
+      "BranchCanvasY": 0,
+      "Dependencies": [
+        {
+          "DependsOnStepKey": "diagnose-persistent-failure",
+          "DependsOnBranchOutcomeKey": ""
+        }
+      ],
+      "RoleAssignments": [
+        {
+          "RoleKey": "dotnet-repair-engineer",
+          "ResponsibilityKind": "Responsible",
+          "IsRequired": true,
+          "FallbackOrder": 0,
+          "RebindPolicySummary": "Rebind only to a .NET-capable repair agent."
+        },
+        {
+          "RoleKey": "bughunt-specialist",
+          "ResponsibilityKind": "Reviewer",
+          "IsRequired": true,
+          "FallbackOrder": 1,
+          "RebindPolicySummary": "Specialist verifies the implementation follows the new diagnosis."
+        }
+      ],
+      "ArtifactExpectations": [
+        {
+          "Key": "bughunt-repair-change-set",
+          "TemplateKey": "implementation-change-set",
+          "Title": "Specialist-guided quality repair change set",
+          "ArtifactKind": "Deliverable",
+          "IsRequired": true,
+          "TrustRequirement": "ReviewRequired",
+          "SensitivityLevel": "Internal",
+          "RetentionDays": 365,
+          "AllowedFutureUsageSummary": "Reusable by final revalidation, parent QA recheck, and incident analysis.",
+          "ValidationRequirementSummary": "Must map specialist diagnosis to concrete changes, distinguish the second plan from the first, include readback and current validation receipts, and avoid claiming final acceptance."
+        }
+      ],
+      "ArtifactInputs": [
+        {
+          "ArtifactExpectationKey": "persistent-failure-diagnosis",
+          "SourceStepKey": "diagnose-persistent-failure"
+        }
+      ],
+      "BranchOutcomes": [
+        {
+          "Key": "product-repair-applied",
+          "Title": "Product repair applied",
+          "Description": "The specialist diagnosis required a product mutation and current-run mutation, readback, and focused validation evidence were produced."
+        },
+        {
+          "Key": "proof-only-revalidation-prepared",
+          "Title": "Proof-only revalidation prepared",
+          "Description": "The specialist proved no product mutation was justified; the proof target or recipe was corrected and exercised with current-run evidence."
+        },
+        {
+          "Key": "repair-attempt-incomplete",
+          "Title": "Repair attempt incomplete",
+          "Description": "The final bounded implementer did not produce the claimed required mutation; independent revalidation must produce accepted proof or a no-go packet."
+        }
+      ],
+      "ChecklistRefs": [],
+      "ValidationRefs": [],
+      "PromptRefs": [],
+      "DocRefs": [
+        "processes/dotnet-quality-repair/steps/implement-bughunt-repair.md"
+      ],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure",
+        "ReadUpstreamArtifacts",
+        "MutateProductTarget",
+        "RunValidation",
+        "LaunchRuntime",
+        "CaptureRuntimeProof",
+        "WriteManagedProcessArtifacts"
+      ],
+      "OperationTargetScope": "ExternalProductTargetMutable",
+      "ExecutionClass": "BranchDecision"
+    },
+    {
+      "Order": 6,
+      "Key": "revalidate-bughunt-repair",
+      "Title": "Independently revalidate after bughunt",
+      "Subtitle": "Final accepted or no-go decision",
+      "Notes": "Reproduce the original and persistent failed proof, then run current restore/build/test and conditional runtime/browser validation. Capture all proof before writing the primary artifact and write it once with the final branch; never create a provisional Status: Blocked artifact. Select quality-repair-accepted only when both failure sets are resolved and no new release blocker exists. Known failed proof is not residual risk. Complete with quality-repair-no-go and exact failing evidence when the defect persists, an interaction remains unchanged, or the second repair introduces another release blocker; negative proof is not a Blocked outcome.",
+      "StepKind": "Review",
+      "AllowsManualSkip": false,
+      "AllowsSafeRefusal": false,
+      "RequiresApproval": false,
+      "RequiresDecisionRecord": true,
+      "InputContractSummary": "Inherited authoritative scope, original diagnosis, first failed validation, specialist diagnosis, second repair change set, and literal current-execution receipt checklist.",
+      "OutputContractSummary": "Independent final validation with accepted or no-go disposition.",
+      "EvidenceContractSummary": "Current restore/build/test, original and persistent proof reproduction, conditional runtime/browser lifecycle, and exact clean or failing evidence.",
+      "DecisionRightsSummary": "Quality reviewer owns the final child disposition and cannot mutate product code.",
+      "ExceptionPolicySummary": "Return Blocked only for unavailable validation capability or product context; use quality-repair-no-go for executed proof that remains failed.",
+      "TargetLeadHours": 4,
+      "DependsOnStepKey": "implement-bughunt-repair",
+      "DependsOnBranchOutcomeKey": "",
+      "DecisionRoleKey": "quality-reviewer",
+      "CanvasX": 5660,
+      "CanvasY": 1040,
+      "BranchCanvasX": 6500,
+      "BranchCanvasY": 900,
+      "Dependencies": [
+        {
+          "DependsOnStepKey": "implement-bughunt-repair",
+          "DependsOnBranchOutcomeKey": ""
+        }
+      ],
+      "RoleAssignments": [
+        {
+          "RoleKey": "quality-reviewer",
+          "ResponsibilityKind": "Responsible",
+          "IsRequired": true,
+          "FallbackOrder": 0,
+          "RebindPolicySummary": "Rebind only to an independent validation-capable agent."
+        },
+        {
+          "RoleKey": "repair-manager",
+          "ResponsibilityKind": "Reviewer",
+          "IsRequired": true,
+          "FallbackOrder": 1,
+          "RebindPolicySummary": "Manager observes the finite repair budget and evidence continuity."
+        }
+      ],
+      "ArtifactExpectations": [
+        {
+          "Key": "bughunt-repair-validation",
+          "TemplateKey": "regression-evidence-pack",
+          "Title": "Independent bughunt repair validation",
+          "ArtifactKind": "Evidence",
+          "IsRequired": true,
+          "TrustRequirement": "ReviewRequired",
+          "SensitivityLevel": "Internal",
+          "RetentionDays": 365,
+          "AllowedFutureUsageSummary": "Reusable by accepted handoff, no-go handoff, parent QA recheck, and incident analysis.",
+          "ValidationRequirementSummary": "Must reproduce original and persistent proof, include current validation evidence, and select quality-repair-accepted or quality-repair-no-go from observed results."
+        }
+      ],
+      "ArtifactInputs": [
+        {
+          "ArtifactExpectationKey": "quality-repair-validation",
+          "SourceStepKey": "validate-quality-repair"
+        },
+        {
+          "ArtifactExpectationKey": "persistent-failure-diagnosis",
+          "SourceStepKey": "diagnose-persistent-failure"
+        },
+        {
+          "ArtifactExpectationKey": "bughunt-repair-change-set",
+          "SourceStepKey": "implement-bughunt-repair"
+        }
+      ],
+      "BranchOutcomes": [
+        {
+          "Key": "quality-repair-accepted",
+          "Title": "Quality repair accepted after bughunt",
+          "Description": "Current-execution proof shows the original and persistent defects are repaired."
+        },
+        {
+          "Key": "quality-repair-no-go",
+          "Title": "Quality repair no-go",
+          "Description": "Exact current-execution proof still contains a release-blocking defect after bounded re-repair."
+        }
+      ],
+      "ChecklistRefs": [],
+      "ValidationRefs": [],
+      "PromptRefs": [],
+      "DocRefs": [
+        "processes/dotnet-quality-repair/steps/revalidate-bughunt-repair.md"
+      ],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure",
+        "ReadUpstreamArtifacts",
+        "RunValidation",
+        "LaunchRuntime",
+        "CaptureRuntimeProof",
+        "WriteManagedProcessArtifacts"
+      ],
+      "OperationTargetScope": "ExternalProductTargetReadOnly",
+      "ExecutionClass": "BranchDecision"
+    },
+    {
+      "Order": 7,
+      "Key": "quality-repair-handoff-after-bughunt",
+      "Title": "Hand accepted bughunt repair to the parent",
+      "Subtitle": "Accepted after specialist-guided re-repair",
+      "Notes": "Summarize both diagnoses, both change sets, why the second repair resolved the persistent failure, and the independent current-execution proof. Do not add unproved claims.",
+      "StepKind": "End",
+      "AllowsManualSkip": false,
+      "AllowsSafeRefusal": false,
+      "RequiresApproval": false,
+      "RequiresDecisionRecord": false,
+      "InputContractSummary": "Accepted final revalidation, specialist diagnosis, and second repair evidence.",
+      "OutputContractSummary": "Parent-ready accepted repair handoff after bughunt.",
+      "EvidenceContractSummary": "Diagnosis chain, changed surfaces, current-execution validation refs, and parent recheck guidance.",
+      "DecisionRightsSummary": "Repair manager packages accepted evidence without changing the final QA disposition.",
+      "ExceptionPolicySummary": "This step remains skipped unless revalidation selected quality-repair-accepted.",
+      "TargetLeadHours": 1,
+      "DependsOnStepKey": "revalidate-bughunt-repair",
+      "DependsOnBranchOutcomeKey": "quality-repair-accepted",
+      "DecisionRoleKey": "",
+      "CanvasX": 6740,
+      "CanvasY": 520,
+      "BranchCanvasX": 0,
+      "BranchCanvasY": 0,
+      "Dependencies": [
+        {
+          "DependsOnStepKey": "revalidate-bughunt-repair",
+          "DependsOnBranchOutcomeKey": "quality-repair-accepted"
+        }
+      ],
+      "RoleAssignments": [
+        {
+          "RoleKey": "repair-manager",
+          "ResponsibilityKind": "Responsible",
+          "IsRequired": true,
+          "FallbackOrder": 0,
+          "RebindPolicySummary": "Rebind only to a manager-capable handoff owner."
+        }
+      ],
+      "ArtifactExpectations": [
+        {
+          "Key": "quality-repair-handoff-after-bughunt-packet",
+          "TemplateKey": "implementation-change-set",
+          "Title": ".NET quality repair handoff after bughunt",
+          "ArtifactKind": "Deliverable",
+          "IsRequired": true,
+          "TrustRequirement": "ReviewRequired",
+          "SensitivityLevel": "Internal",
+          "RetentionDays": 365,
+          "AllowedFutureUsageSummary": "Reusable by parent QA recheck, security review, release governance, and incident learning.",
+          "ValidationRequirementSummary": "Must identify both diagnoses, second repair delta, changed surfaces, and independent accepted final evidence."
+        }
+      ],
+      "ArtifactInputs": [
+        {
+          "ArtifactExpectationKey": "bughunt-repair-validation",
+          "SourceStepKey": "revalidate-bughunt-repair"
+        },
+        {
+          "ArtifactExpectationKey": "bughunt-repair-change-set",
+          "SourceStepKey": "implement-bughunt-repair"
+        }
+      ],
+      "BranchOutcomes": [],
+      "ChecklistRefs": [],
+      "ValidationRefs": [],
+      "PromptRefs": [],
+      "DocRefs": [
+        "processes/dotnet-quality-repair/steps/quality-repair-handoff-after-bughunt.md"
+      ],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadUpstreamArtifacts",
+        "WriteManagedProcessArtifacts"
+      ],
+      "OperationTargetScope": "ExternalProductTargetReadOnly"
+    },
+    {
+      "Order": 8,
+      "Key": "quality-repair-no-go",
+      "Title": "Return bounded quality repair no-go",
+      "Subtitle": "Manager escalation packet after specialist re-repair",
+      "Notes": "Package the exact remaining failure, both diagnoses and repair attempts, current-execution no-go proof, affected behavior, and recommended next specialist or scope. Do not claim successful repair and do not start a third mutation attempt.",
+      "StepKind": "End",
+      "AllowsManualSkip": false,
+      "AllowsSafeRefusal": false,
+      "RequiresApproval": false,
+      "RequiresDecisionRecord": true,
+      "InputContractSummary": "Final no-go validation, original diagnosis, first repair, specialist diagnosis, and second repair.",
+      "OutputContractSummary": "Explicit child no-go packet for parent manager escalation.",
+      "EvidenceContractSummary": "Exact remaining defect, failed proof refs, attempt comparison, risk, and recommended next scope.",
+      "DecisionRightsSummary": "Repair manager reports no-go and cannot silently widen the child repair budget.",
+      "ExceptionPolicySummary": "Do not complete this step without exact current-execution failing evidence and a bounded next recommendation.",
+      "TargetLeadHours": 1,
+      "DependsOnStepKey": "revalidate-bughunt-repair",
+      "DependsOnBranchOutcomeKey": "quality-repair-no-go",
+      "DecisionRoleKey": "repair-manager",
+      "CanvasX": 6740,
+      "CanvasY": 1560,
+      "BranchCanvasX": 0,
+      "BranchCanvasY": 0,
+      "Dependencies": [
+        {
+          "DependsOnStepKey": "revalidate-bughunt-repair",
+          "DependsOnBranchOutcomeKey": "quality-repair-no-go"
+        }
+      ],
+      "RoleAssignments": [
+        {
+          "RoleKey": "repair-manager",
+          "ResponsibilityKind": "Responsible",
+          "IsRequired": true,
+          "FallbackOrder": 0,
+          "RebindPolicySummary": "Rebind only to a manager-capable no-go owner."
+        },
+        {
+          "RoleKey": "bughunt-specialist",
+          "ResponsibilityKind": "Reviewer",
+          "IsRequired": true,
+          "FallbackOrder": 1,
+          "RebindPolicySummary": "Specialist confirms the remaining defect and recommended next scope."
+        }
+      ],
+      "ArtifactExpectations": [
+        {
+          "Key": "quality-repair-no-go-packet",
+          "TemplateKey": "regression-evidence-pack",
+          "Title": ".NET quality repair no-go packet",
+          "ArtifactKind": "Evidence",
+          "IsRequired": true,
+          "TrustRequirement": "ReviewRequired",
+          "SensitivityLevel": "Internal",
+          "RetentionDays": 365,
+          "AllowedFutureUsageSummary": "Reusable by parent manager escalation, new specialist scope, and incident analysis.",
+          "ValidationRequirementSummary": "Must include exact current-execution failure, both attempted repairs, why another child retry is unsafe, and recommended next scope."
+        }
+      ],
+      "ArtifactInputs": [
+        {
+          "ArtifactExpectationKey": "bughunt-repair-validation",
+          "SourceStepKey": "revalidate-bughunt-repair"
+        },
+        {
+          "ArtifactExpectationKey": "persistent-failure-diagnosis",
+          "SourceStepKey": "diagnose-persistent-failure"
+        },
+        {
+          "ArtifactExpectationKey": "bughunt-repair-change-set",
+          "SourceStepKey": "implement-bughunt-repair"
+        }
+      ],
+      "BranchOutcomes": [],
+      "ChecklistRefs": [],
+      "ValidationRefs": [],
+      "PromptRefs": [],
+      "DocRefs": [
+        "processes/dotnet-quality-repair/steps/quality-repair-no-go.md"
+      ],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure",
+        "ReadUpstreamArtifacts",
+        "WriteManagedProcessArtifacts"
+      ],
+      "OperationTargetScope": "ExternalProductTargetReadOnly"
+    }
+  ]
+}

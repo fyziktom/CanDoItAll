@@ -1,7 +1,7 @@
 {
   "PackKey": "candoitall-process-template-pack",
   "Name": "CanDoItAll process template pack (current architecture aligned)",
-  "Version": "2.1.1-live-run-visual-qa",
+  "Version": "2.1.32-independent-specialist-review",
   "GeneratedAtUtc": "2026-05-28T00:00:00Z",
   "SourceFrameworkKeys": [
     "nist-ssdf",
@@ -33,6 +33,10 @@
     {
       "Key": "dotnet-development-slice",
       "RelativePath": "processes/dotnet-development-slice"
+    },
+    {
+      "Key": "dotnet-quality-repair",
+      "RelativePath": "processes/dotnet-quality-repair"
     },
     {
       "Key": "dotnet-architecture-design-review",

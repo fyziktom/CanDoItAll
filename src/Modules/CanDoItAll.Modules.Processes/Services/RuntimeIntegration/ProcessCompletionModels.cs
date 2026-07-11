@@ -39,7 +39,7 @@ internal static class ProcessCompletionText
         @"^\s*(?:\*\*)?Branch\s+outcome\s+key(?:\*\*)?\s*:\s*`?(?<key>[A-Za-z0-9][A-Za-z0-9._-]*)`?\s*\.?\s*$",
         RegexOptions.Compiled | RegexOptions.Multiline | RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
     private static readonly Regex MissingRequiredReceipt = new(
-        @"\b(?:missing|required)\b[^\r\n]{0,80}\breceipt\b|\breceipt\b[^\r\n]{0,80}\bmissing\b",
+        @"\bmissing\b[^\r\n]{0,80}\breceipts?\b|\breceipts?\b[^\r\n]{0,80}\b(?:missing|absent|unavailable)\b|\brequired\b[^\r\n]{0,80}\breceipts?\b[^\r\n]{0,80}\b(?:missing|absent|unavailable|not\s+(?:yet\s+)?(?:captured|recorded|produced|present))\b",
         RegexOptions.Compiled | RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
     private static readonly Regex OutcomePathReference = new(
         @"(?ix)
@@ -114,7 +114,8 @@ internal sealed record ProcessCompletionIssueRoute(
     IReadOnlyList<string> SourceBranchOutcomeKeys,
     string TargetBranchOutcomeKey,
     string TargetBranchOutcomeTitle,
-    bool RequiresDefectEvidence);
+    bool RequiresDefectEvidence,
+    bool OnlyAfterAutomaticRetry);
 
 internal sealed record ProductRootInspection(
     bool HasProductFiles,

@@ -87,6 +87,8 @@ public sealed record ToolInvocationPolicyContext(
     bool ApplicationApprovalAvailable = false,
     bool ProcessScaffoldToolOnly = false,
     bool ProcessAllowsProductMutation = true,
+    bool ProcessRequiresProductMutationBeforeManagedOutput = false,
+    IReadOnlyList<string>? ProcessProductMutationToolNames = null,
     IReadOnlyList<string>? ProcessStepAllowedOperations = null,
     string ProcessStepTargetScope = "",
     string ContextWorkspaceScopeKind = "",
@@ -98,7 +100,11 @@ public sealed record ToolInvocationPolicyContext(
 {
     public string SourceId { get; init; } = string.Empty;
 
+    public IReadOnlyList<string> AllowedManagedArtifactReadRefs { get; init; } = [];
+
     public IReadOnlyList<AgentToolInvocationTrace> RecentToolInvocationTraces { get; } = ToolInvocationTraces ?? [];
+
+    public IReadOnlyList<string> ProductMutationToolNames { get; } = ProcessProductMutationToolNames ?? [];
 
     public bool HasEffectiveApprovalPath =>
         (ApprovalWrapperAvailable && ApprovalWrapperEffectiveForProvider) ||
@@ -362,7 +368,7 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
         "^[A-Za-z]:[\\\\/]",
         RegexOptions.CultureInvariant);
     private static readonly Regex ManagedArtifactStatusLineRegex = new(
-        @"^\s{0,3}#*\s*Status\s*:\s*(?<status>[A-Za-z]+(?:[\s_-]+[A-Za-z]+)?)\b",
+        @"^\s{0,3}#*\s*Status\s*:\s*(?<status>Waiting[\s_-]*Approval|In[\s_-]*Progress|Completed|Blocked|Failed|Refused)\b",
         RegexOptions.CultureInvariant | RegexOptions.IgnoreCase | RegexOptions.Multiline);
     private static readonly HashSet<string> ExternalTargetManagedWorkspaceIsolationTools = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -405,6 +411,17 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
         ToolContractCatalog.WorkspaceWriteFile,
         ToolContractCatalog.WorkspaceAppendFile
     };
+    private static readonly string[] ProductTargetPathArgumentNames =
+    [
+        "path",
+        "relativePath",
+        "targetPath",
+        "sourcePath",
+        "destinationPath",
+        "workingDirectory",
+        "projectPath",
+        "filePath"
+    ];
     private static readonly HashSet<string> ProductFileMutationTools = new(StringComparer.OrdinalIgnoreCase)
     {
         ToolContractCatalog.WorkspaceCreateDirectory,
@@ -554,6 +571,12 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
             return ValueTask.FromResult(currentStepOwnOutputPlaceholderWriteDecision);
         }
 
+        var productMutationBeforeManagedOutputDecision = EvaluateRequiredProductMutationBeforeManagedOutput(context, signature);
+        if (productMutationBeforeManagedOutputDecision is not null)
+        {
+            return ValueTask.FromResult(productMutationBeforeManagedOutputDecision);
+        }
+
         var governedBrowserDecision = browserProofPolicy.EvaluateGovernedToolBounds(context, signature);
         if (governedBrowserDecision is not null)
         {
@@ -683,7 +706,12 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
         }
 
         var primaryRef = BuildCurrentStepPrimaryManagedArtifactPath(context);
-        if (HasSuccessfulCurrentStepPrimaryManagedArtifactWrite(context, primaryRef))
+        if (HasSuccessfulCurrentStepPrimaryManagedArtifactWrite(context, primaryRef) ||
+            context.AllowedManagedArtifactReadRefs.Any(allowedRef =>
+                string.Equals(
+                    NormalizeManagedWorkspacePath(allowedRef),
+                    NormalizeManagedWorkspacePath(primaryRef),
+                    StringComparison.OrdinalIgnoreCase)))
         {
             return null;
         }
@@ -733,6 +761,74 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
         }
 
         return null;
+    }
+
+    private static ToolInvocationPolicyDecision? EvaluateRequiredProductMutationBeforeManagedOutput(
+        ToolInvocationPolicyContext context,
+        string signature)
+    {
+        if (!context.ProcessRequiresProductMutationBeforeManagedOutput ||
+            !string.Equals(context.SourceKind, "process-step", StringComparison.OrdinalIgnoreCase) ||
+            context.Classification != ToolInvocationClassification.Mutation ||
+            !CurrentStepOwnManagedOutputWriteTools.Contains(context.ToolName) ||
+            string.IsNullOrWhiteSpace(context.ProcessRunId) ||
+            string.IsNullOrWhiteSpace(context.SourceId))
+        {
+            return null;
+        }
+
+        var writesPrimaryManagedOutput = ResolveManagedWorkspacePathArguments(context.RedactedArguments)
+            .Select(argument => NormalizeManagedWorkspacePath(argument.Value))
+            .Any(path => IsCurrentStepPrimaryManagedArtifactPath(context, path));
+        if (!writesPrimaryManagedOutput ||
+            !TryResolveManagedArtifactWriteContent(context.RedactedArguments, out var content) ||
+            !TryResolveManagedArtifactStatus(content, out var status) ||
+            !string.Equals(status, "Completed", StringComparison.OrdinalIgnoreCase) ||
+            HasSuccessfulProductTargetMutation(context))
+        {
+            return null;
+        }
+
+        var primaryRef = BuildCurrentStepPrimaryManagedArtifactPath(context);
+        return ToolInvocationPolicyDecision.Deny(
+            signature,
+            $"Governed process step '{context.SourceId}' cannot write primary managed output '{primaryRef}' with status Completed before a successful current-execution product-target mutation. Perform the required product mutation under a grounded external-target alias first, verify the changed product file, then write the final managed artifact. A planned changed-file list or an unchanged successful build is not product mutation evidence.");
+    }
+
+    private static bool HasSuccessfulProductTargetMutation(ToolInvocationPolicyContext context)
+    {
+        if (context.RecentToolInvocationTraces.Count == 0 ||
+            context.AllowedExternalTargetAliases is null ||
+            context.AllowedExternalTargetAliases.Count == 0)
+        {
+            return false;
+        }
+
+        var normalizedAliases = context.AllowedExternalTargetAliases
+            .Where(alias => !string.IsNullOrWhiteSpace(alias))
+            .Select(NormalizeManagedWorkspacePath)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        return context.RecentToolInvocationTraces.Any(trace =>
+            trace.Succeeded &&
+            trace.CompletedAtUtc is not null &&
+            context.ProductMutationToolNames.Contains(trace.ToolName, StringComparer.OrdinalIgnoreCase) &&
+            normalizedAliases.Any(alias => ToolSignatureTargetsExternalAlias(trace.Signature, alias)));
+    }
+
+    private static bool ToolSignatureTargetsExternalAlias(string signature, string normalizedAlias)
+    {
+        if (string.IsNullOrWhiteSpace(signature) || string.IsNullOrWhiteSpace(normalizedAlias))
+        {
+            return false;
+        }
+
+        var normalizedSignature = NormalizeManagedWorkspacePath(signature);
+        return ProductTargetPathArgumentNames.Any(argumentName =>
+            normalizedSignature.Contains($"|{argumentName}={normalizedAlias}/", StringComparison.OrdinalIgnoreCase) ||
+            normalizedSignature.Contains($",{argumentName}={normalizedAlias}/", StringComparison.OrdinalIgnoreCase) ||
+            normalizedSignature.EndsWith($"|{argumentName}={normalizedAlias}", StringComparison.OrdinalIgnoreCase) ||
+            normalizedSignature.EndsWith($",{argumentName}={normalizedAlias}", StringComparison.OrdinalIgnoreCase));
     }
 
     private static bool TryResolveManagedArtifactWriteContent(
@@ -2074,9 +2170,19 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
             return null;
         }
 
+        if (context.Classification == ToolInvocationClassification.Read &&
+            context.AllowedManagedArtifactReadRefs.Any(allowedRef =>
+                string.Equals(
+                    NormalizeManagedWorkspacePath(allowedRef),
+                    normalizedPath,
+                    StringComparison.OrdinalIgnoreCase)))
+        {
+            return null;
+        }
+
         return ToolInvocationPolicyDecision.Deny(
             signature,
-            $"This governed step cannot read managed artifacts for process run '{referencedRunId}' from '{normalizedPath}'. Use the current-run artifact root '{BuildCurrentRunManagedArtifactRoot(context)}' or a required upstream artifact ref listed in the step brief. Child-run artifacts require an external-action subprocess coordinator step.");
+            $"This governed step cannot read managed artifacts for process run '{referencedRunId}' from '{normalizedPath}'. Use the current-run artifact root '{BuildCurrentRunManagedArtifactRoot(context)}' or an exact runtime-authorized upstream artifact ref listed in the step brief. Other cross-run artifacts require an external-action subprocess coordinator step.");
     }
 
     private static ToolInvocationPolicyDecision? EvaluateNativeAbsoluteWorkspaceToolPath(

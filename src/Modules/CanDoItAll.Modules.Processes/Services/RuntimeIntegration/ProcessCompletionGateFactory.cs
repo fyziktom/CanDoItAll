@@ -37,12 +37,16 @@ namespace CanDoItAll.Modules.Processes;
 
 internal sealed class ProcessCompletionGateFactory(
     ProcessToolReceiptPolicyCatalog toolReceiptPolicies,
-    ProcessToolReceiptEvidenceGate toolReceiptEvidenceGate)
+    ProcessToolReceiptEvidenceGate toolReceiptEvidenceGate,
+    ProcessRequiredProductSourceInspectionGate requiredProductSourceInspectionGate,
+    ProcessInteractiveUiAcceptanceGate interactiveUiAcceptanceGate)
 {
     internal ProcessCompletionGateEvaluator CreateCompletionGateEvaluator()
         => new(
         [
             context => ValidateGroundedOutcomeReferences(context.Assignment, context.Output, context.ToolReceipts),
+            context => ValidateRequiredBranchOutcomeSelection(context.Assignment, context.Output),
+            context => ValidateRuntimeRoutedBranchWasNotSelectedDirectly(context.Assignment, context.Output),
             context => ValidateProductMutationCompletion(context.Assignment, context.Output),
             context => ValidateProductMutationWriteReceipt(
                 context.Assignment,
@@ -88,6 +92,8 @@ internal sealed class ProcessCompletionGateFactory(
                     applicableProductToolReceiptRules);
             },
             toolReceiptEvidenceGate.Validate,
+            requiredProductSourceInspectionGate.Validate,
+            interactiveUiAcceptanceGate.Validate,
             context => ValidateBranchOutcomeDefectEvidence(context.Assignment, context.Output, context.ToolReceipts),
             context => ValidateAcceptanceCriteriaCompletion(context.Assignment, context.Output),
             context => ValidateRequiredProductStateCompletion(context.Assignment, context.Output),

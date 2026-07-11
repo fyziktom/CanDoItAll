@@ -82,6 +82,8 @@ internal sealed class ParentSubprocessArtifactBridge(
     IWorkspaceFileService workspaceFiles,
     ProcessSubprocessContractResolver subprocessContractResolver) : IParentSubprocessArtifactBridge
 {
+    private readonly ProcessSubprocessChildArtifactVerifier childArtifactVerifier = new(workspaceFiles);
+
     public async ValueTask<ParentSubprocessArtifactBridgeResult> ResolveExistingAsync(
         ProcessRuntimeStepAssignment assignment,
         CancellationToken cancellationToken = default)
@@ -403,7 +405,7 @@ internal sealed class ParentSubprocessArtifactBridge(
             }
 
             var candidateRef = $"{childManagedArtifactRoot}/steps/{SanitizeManagedArtifactPathSegment(childOutput.StepKey)}.md";
-            if (CanBridgeChildOutputArtifact(candidateRef))
+            if (childArtifactVerifier.CanBridge(candidateRef, childOutput.BranchOutcomeKey))
             {
                 refs.Add(candidateRef);
             }
@@ -430,28 +432,6 @@ internal sealed class ParentSubprocessArtifactBridge(
             receipt.ProducedArtifacts.Count > 0 &&
             (producedSlotIds.Length == 0 ||
              receipt.ProducedArtifacts.Any(artifact => producedSlotIds.Contains(artifact.SlotId))));
-    }
-
-    private bool CanBridgeChildOutputArtifact(string candidateRef)
-    {
-        var stat = workspaceFiles.StatPath(candidateRef);
-        if (!stat.Exists)
-        {
-            return true;
-        }
-
-        var readResult = workspaceFiles.ReadTextFile(candidateRef, maxCharacters: 200000);
-        if (!readResult.Succeeded)
-        {
-            return false;
-        }
-
-        return !readResult.Content.Contains(
-                   ProcessManagedArtifactService.ManagedOutcomeArtifactCapturedHeading,
-                   StringComparison.Ordinal) ||
-               readResult.Content.Contains(
-                   ProcessManagedArtifactService.ManagedOutcomeArtifactAcceptedHeading,
-                   StringComparison.Ordinal);
     }
 
     private static ProcessStepOutcomeResult BuildCompletedSubprocessProcessStepOutcome(

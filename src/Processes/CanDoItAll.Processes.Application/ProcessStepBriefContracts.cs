@@ -1,5 +1,6 @@
 using System.Text;
 using CanDoItAll.Processes.Abstractions;
+using CanDoItAll.Processes.Runtime;
 using CanDoItAll.Processes.Templates;
 
 namespace CanDoItAll.Processes.Application;
@@ -19,11 +20,15 @@ public sealed record ProcessStepBriefBuildRequest(
     IReadOnlyDictionary<(string StepKey, string ExpectationKey), ArtifactSlotId> ArtifactSlotByStepExpectation,
     ProcessRunId RunId,
     string ManagedArtifactRoot,
-    IReadOnlyDictionary<string, string> LaunchVariables);
+    IReadOnlyDictionary<string, string> LaunchVariables)
+{
+    public IReadOnlySet<string>? AgentSelectableBranchOutcomeKeys { get; init; }
+}
 
 public sealed class GenericProcessStepBriefBuilder : IProcessStepBriefBuilder
 {
     private const int MaxLaunchVariableValueCharacters = 2400;
+    private const int MaxAcceptanceCriteriaContractCharacters = 12000;
     private const int LaunchVariableHeadCharacters = 1600;
     private const int LaunchVariableTailCharacters = 500;
 
@@ -33,7 +38,7 @@ public sealed class GenericProcessStepBriefBuilder : IProcessStepBriefBuilder
 
         var step = request.Step;
         var variables = FormatLaunchVariables(request.LaunchVariables);
-        var branchOutcomes = FormatBranchOutcomes(step);
+        var branchOutcomes = FormatBranchOutcomes(step, request.AgentSelectableBranchOutcomeKeys);
         var requiredArtifacts = BuildRequiredArtifactContext(request);
         var producedArtifacts = BuildProducedArtifactContext(request);
         var stepKind = string.IsNullOrWhiteSpace(step.StepKind)
@@ -88,18 +93,22 @@ public sealed class GenericProcessStepBriefBuilder : IProcessStepBriefBuilder
         {branchOutcomes}
 
         Return the executor-specific structured step result configured by the selected process driver.
-        If branch outcomes are listed, select exactly one listed outcome key when the step result determines a branch.
+        If branch outcomes are listed, every Completed result must select exactly one listed outcome key. Preserve that key when rewriting an artifact or result during recovery.
         """;
     }
 
     private static string FormatLaunchVariables(IReadOnlyDictionary<string, string> variables)
     {
-        return variables.Count == 0
+        var visibleVariables = variables
+            .Where(pair => ProcessAgentVisibleLaunchVariablePolicy.IsVisible(pair.Key))
+            .OrderBy(pair => pair.Key)
+            .ToArray();
+        return visibleVariables.Length == 0
             ? "No launch variables were supplied."
-            : string.Join(Environment.NewLine, variables.OrderBy(item => item.Key).Select(item => $"- {item.Key}: {FormatLaunchVariableValue(item.Value)}"));
+            : string.Join(Environment.NewLine, visibleVariables.Select(item => $"- {item.Key}: {FormatLaunchVariableValue(item.Key, item.Value)}"));
     }
 
-    private static string FormatLaunchVariableValue(string value)
+    private static string FormatLaunchVariableValue(string key, string value)
     {
         if (string.IsNullOrWhiteSpace(value))
         {
@@ -107,7 +116,10 @@ public sealed class GenericProcessStepBriefBuilder : IProcessStepBriefBuilder
         }
 
         var normalized = value.Trim();
-        if (normalized.Length <= MaxLaunchVariableValueCharacters)
+        var maxCharacters = string.Equals(key, ProcessRuntimeLaunchVariables.ProductAcceptanceCriteriaContract, StringComparison.OrdinalIgnoreCase)
+            ? MaxAcceptanceCriteriaContractCharacters
+            : MaxLaunchVariableValueCharacters;
+        if (normalized.Length <= maxCharacters)
         {
             return normalized;
         }
@@ -121,13 +133,20 @@ public sealed class GenericProcessStepBriefBuilder : IProcessStepBriefBuilder
             normalized[^LaunchVariableTailCharacters..]);
     }
 
-    private static string FormatBranchOutcomes(ProcessTemplateDefinitionStepDocument step)
+    private static string FormatBranchOutcomes(
+        ProcessTemplateDefinitionStepDocument step,
+        IReadOnlySet<string>? agentSelectableBranchOutcomeKeys)
     {
-        return step.BranchOutcomes.Count == 0
+        var outcomes = agentSelectableBranchOutcomeKeys is null
+            ? step.BranchOutcomes
+            : step.BranchOutcomes
+                .Where(outcome => agentSelectableBranchOutcomeKeys.Contains(outcome.Key))
+                .ToList();
+        return outcomes.Count == 0
             ? "No branch outcomes."
             : string.Join(
                 Environment.NewLine,
-                step.BranchOutcomes.Select(outcome => $"- {outcome.Key}: {outcome.Title} - {outcome.Description}"));
+                outcomes.Select(outcome => $"- {outcome.Key}: {outcome.Title} - {outcome.Description}"));
     }
 
     private static string BuildRequiredArtifactContext(ProcessStepBriefBuildRequest request)

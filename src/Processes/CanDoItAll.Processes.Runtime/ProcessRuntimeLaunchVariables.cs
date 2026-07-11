@@ -8,16 +8,27 @@ public static class ProcessRuntimeLaunchVariables
 {
     public const string ParentProcessRunId = "ParentProcessRunId";
     public const string ParentProcessStepId = "ParentProcessStepId";
+    public const string ParentRequiredArtifactRefs = "ParentRequiredArtifactRefs";
     public const string ProductCompletionRequiredPaths = "ProductCompletionRequiredPaths";
     public const string ProductCompletionRequiredPathsByStep = "ProductCompletionRequiredPathsByStep";
     public const string ProductCompletionRequiredFileContentChecks = "ProductCompletionRequiredFileContentChecks";
     public const string ProductCompletionRequiredFileContentChecksByStep = "ProductCompletionRequiredFileContentChecksByStep";
     public const string ProductCompletionRequiredToolReceipts = "ProductCompletionRequiredToolReceipts";
     public const string ProductCompletionRequiredToolReceiptsByStep = "ProductCompletionRequiredToolReceiptsByStep";
+    public const string ProductMutationRequiredBranchOutcomeKeys = "ProductMutationRequiredBranchOutcomeKeys";
+    public const string ProductMutationRequiredBranchOutcomeKeysByStep = "ProductMutationRequiredBranchOutcomeKeysByStep";
+    public const string ProductMutationBeforeManagedOutputRequiredStepKeys = "ProductMutationBeforeManagedOutputRequiredStepKeys";
+    public const string ProductMutationToolNames = "ProductMutationToolNames";
+    public const string RuntimeRoutedBranchOutcomeKeysByStep = "RuntimeRoutedBranchOutcomeKeysByStep";
+    public const string ExecutorPreferredSpecializationTags = "ExecutorPreferredSpecializationTags";
+    public const string ProductSourceInspectionRequiredStepKeys = "ProductSourceInspectionRequiredStepKeys";
+    public const string ProductSourceInspectionRequiredBranchOutcomeKeysByStep = "ProductSourceInspectionRequiredBranchOutcomeKeysByStep";
+    public const string ProductSourceInspectionExcludedPathFragmentsByStep = "ProductSourceInspectionExcludedPathFragmentsByStep";
     public const string CompletionIssueRoutes = "CompletionIssueRoutes";
     public const string CompletionIssueRoutesByStep = "CompletionIssueRoutesByStep";
     public const string AcceptanceCriteriaMatrix = "AcceptanceCriteriaMatrix";
     public const string AcceptanceCriteriaAcceptedBranchOutcomeKeys = "AcceptanceCriteriaAcceptedBranchOutcomeKeys";
+    public const string ProductAcceptanceCriteriaContract = "ProductAcceptanceCriteriaContract";
     public const string ProcessStepScopedLaunchVariablePrefixesByStep = "ProcessStepScopedLaunchVariablePrefixesByStep";
     public const string ProcessDefinitionKey = "ProcessDefinitionKey";
     public const string ProcessDefinitionName = "ProcessDefinitionName";
@@ -121,6 +132,51 @@ public static class ProcessRuntimeLaunchVariables
 
         definitionKey = value;
         return true;
+    }
+
+    public static string SerializeParentRequiredArtifactRefs(IEnumerable<string> artifactRefs)
+    {
+        ArgumentNullException.ThrowIfNull(artifactRefs);
+
+        var normalized = artifactRefs
+            .Where(artifactRef => !string.IsNullOrWhiteSpace(artifactRef))
+            .Select(artifactRef => artifactRef.Trim())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        return JsonSerializer.Serialize(normalized, ProcessRuntimeLaunchVariableJson.Options);
+    }
+
+    public static bool TryReadParentRequiredArtifactRefs(
+        IReadOnlyDictionary<string, string> launchVariables,
+        out IReadOnlyList<string> artifactRefs)
+    {
+        artifactRefs = [];
+        if (!TryReadNonEmptyString(launchVariables, ParentRequiredArtifactRefs, out var value))
+        {
+            return false;
+        }
+
+        try
+        {
+            var deserialized = JsonSerializer.Deserialize<string[]>(
+                value,
+                ProcessRuntimeLaunchVariableJson.Options);
+            if (deserialized is null)
+            {
+                return false;
+            }
+
+            artifactRefs = deserialized
+                .Where(artifactRef => !string.IsNullOrWhiteSpace(artifactRef))
+                .Select(artifactRef => artifactRef.Trim())
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToArray();
+            return artifactRefs.Count > 0;
+        }
+        catch (JsonException)
+        {
+            return false;
+        }
     }
 
     public static string SerializeProcessStepSubprocessContract(ProcessSubprocessContract contract)

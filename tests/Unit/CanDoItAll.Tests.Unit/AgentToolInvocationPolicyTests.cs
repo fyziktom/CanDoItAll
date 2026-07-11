@@ -541,6 +541,76 @@ public sealed class AgentToolInvocationPolicyTests
     }
 
     [Fact]
+    public async Task EvaluateAsync_allows_exact_runtime_authorized_parent_artifact_read()
+    {
+        var policy = new DefaultAgentToolInvocationPolicy();
+        var currentRunId = Guid.Parse("2a4b7a65-93fe-42b9-b613-14b87b669f76");
+        var parentRunId = Guid.Parse("6480215a-afe9-4251-be05-d3525208b17c");
+        var parentRef = $"artifacts/process-runs/{parentRunId:D}/steps/feature-intake.md";
+        var context = CreateContext(
+            "workspace_read_file",
+            ToolInvocationClassification.Read,
+            isKnownTool: true,
+            autoApprovalAllowed: true,
+            approvalWrapperAvailable: false,
+            arguments: new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["path"] = parentRef
+            },
+            allowedExternalTargetAliases: ["external-target/C/programovani/dotnet/output"],
+            allowedManagedArtifactReadRefs: [parentRef],
+            processStepAllowedOperations:
+            [
+                "ReadProcessContext",
+                "ReadUpstreamArtifacts",
+                "WriteManagedProcessArtifacts"
+            ],
+            processRunId: currentRunId.ToString("D"));
+
+        var decision = await policy.EvaluateAsync(context, CancellationToken.None);
+
+        Assert.Equal(ToolInvocationDecisionKind.Allow, decision.Kind);
+    }
+
+    [Theory]
+    [InlineData("workspace_read_file", ToolInvocationClassification.Read, "peer-review.md")]
+    [InlineData("workspace_write_file", ToolInvocationClassification.Mutation, "feature-intake.md")]
+    public async Task EvaluateAsync_does_not_expand_parent_artifact_authorization(
+        string toolName,
+        ToolInvocationClassification classification,
+        string requestedFile)
+    {
+        var policy = new DefaultAgentToolInvocationPolicy();
+        var currentRunId = Guid.Parse("2a4b7a65-93fe-42b9-b613-14b87b669f76");
+        var parentRunId = Guid.Parse("6480215a-afe9-4251-be05-d3525208b17c");
+        var parentRef = $"artifacts/process-runs/{parentRunId:D}/steps/feature-intake.md";
+        var context = CreateContext(
+            toolName,
+            classification,
+            isKnownTool: true,
+            autoApprovalAllowed: true,
+            approvalWrapperAvailable: false,
+            arguments: new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["path"] = $"artifacts/process-runs/{parentRunId:D}/steps/{requestedFile}",
+                ["content"] = "content"
+            },
+            allowedExternalTargetAliases: ["external-target/C/programovani/dotnet/output"],
+            allowedManagedArtifactReadRefs: [parentRef],
+            processStepAllowedOperations:
+            [
+                "ReadProcessContext",
+                "ReadUpstreamArtifacts",
+                "WriteManagedProcessArtifacts"
+            ],
+            processRunId: currentRunId.ToString("D"));
+
+        var decision = await policy.EvaluateAsync(context, CancellationToken.None);
+
+        Assert.Equal(ToolInvocationDecisionKind.Deny, decision.Kind);
+    }
+
+    [Fact]
     public async Task EvaluateAsync_allows_child_process_run_artifact_ref_for_external_action_coordinator()
     {
         var policy = new DefaultAgentToolInvocationPolicy();
@@ -1916,6 +1986,30 @@ public sealed class AgentToolInvocationPolicyTests
     }
 
     [Fact]
+    public async Task EvaluateAsync_allows_current_step_primary_output_read_when_runtime_explicitly_authorizes_recovery_read()
+    {
+        var policy = new DefaultAgentToolInvocationPolicy();
+        const string primaryRef = "artifacts/process-runs/process-run-001/steps/architecture-review.md";
+        var context = CreateContext(
+            "workspace_read_file",
+            ToolInvocationClassification.Read,
+            isKnownTool: true,
+            autoApprovalAllowed: false,
+            approvalWrapperAvailable: false,
+            arguments: new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["path"] = primaryRef
+            },
+            allowedManagedArtifactReadRefs: [primaryRef],
+            processRunId: "process-run-001",
+            sourceId: "architecture-review");
+
+        var decision = await policy.EvaluateAsync(context, CancellationToken.None);
+
+        Assert.Equal(ToolInvocationDecisionKind.Allow, decision.Kind);
+    }
+
+    [Fact]
     public async Task EvaluateAsync_allows_current_step_primary_output_read_after_successful_write_trace()
     {
         var policy = new DefaultAgentToolInvocationPolicy();
@@ -2479,6 +2573,170 @@ public sealed class AgentToolInvocationPolicyTests
         var decision = await policy.EvaluateAsync(context, CancellationToken.None);
 
         Assert.Equal(ToolInvocationDecisionKind.Allow, decision.Kind);
+    }
+
+    [Fact]
+    public async Task Policy_denies_mutation_required_completed_handoff_before_product_mutation()
+    {
+        var policy = new DefaultAgentToolInvocationPolicy();
+        const string runId = "11111111-2222-3333-4444-555555555555";
+        const string primaryRef = $"artifacts/process-runs/{runId}/steps/code-change.md";
+        var context = CreateContext(
+            ToolContractCatalog.WorkspaceWriteFile,
+            ToolInvocationClassification.Mutation,
+            isKnownTool: true,
+            autoApprovalAllowed: true,
+            approvalWrapperAvailable: false,
+            arguments: new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["path"] = primaryRef,
+                ["content"] = "Status: Completed\n\n# Change set\n\nChanged files are planned."
+            },
+            allowedExternalTargetAliases: ["external-target/C/work/product"],
+            processRequiresProductMutationBeforeManagedOutput: true,
+            processProductMutationToolNames: [ToolContractCatalog.WorkspaceWriteFile],
+            processRunId: runId,
+            sourceId: "code-change");
+
+        var decision = await policy.EvaluateAsync(context, CancellationToken.None);
+        var recoverable = AgentToolPolicyBlockGuard.TryCreateRecoverableDeniedResult(
+            ToolContractCatalog.WorkspaceWriteFile,
+            decision,
+            context,
+            out var result);
+
+        Assert.Equal(ToolInvocationDecisionKind.Deny, decision.Kind);
+        Assert.Contains("before a successful current-execution product-target mutation", decision.Reason, StringComparison.Ordinal);
+        Assert.True(recoverable);
+        Assert.Contains("Continue the step's required product", result, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Policy_allows_mutation_required_completed_handoff_after_product_mutation()
+    {
+        var policy = new DefaultAgentToolInvocationPolicy();
+        const string runId = "11111111-2222-3333-4444-555555555555";
+        const string primaryRef = $"artifacts/process-runs/{runId}/steps/code-change.md";
+        var now = DateTimeOffset.UtcNow;
+        var context = CreateContext(
+            ToolContractCatalog.WorkspaceWriteFile,
+            ToolInvocationClassification.Mutation,
+            isKnownTool: true,
+            autoApprovalAllowed: true,
+            approvalWrapperAvailable: false,
+            arguments: new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["path"] = primaryRef,
+                ["content"] = "Status: Completed\n\n# Change set\n\nProduct mutation is complete."
+            },
+            allowedExternalTargetAliases: ["external-target/C/work/product"],
+            processRequiresProductMutationBeforeManagedOutput: true,
+            processProductMutationToolNames: [ToolContractCatalog.WorkspaceWriteFile],
+            processRunId: runId,
+            sourceId: "code-change",
+            toolInvocationTraces:
+            [
+                new AgentToolInvocationTrace(
+                    ToolContractCatalog.WorkspaceWriteFile,
+                    ToolInvocationClassification.Mutation,
+                    1,
+                    now,
+                    now,
+                    true,
+                    string.Empty)
+                {
+                    Signature = "workspace_write_file|path=external-target/C/work/product/src/App/Home.razor"
+                }
+            ]);
+
+        var decision = await policy.EvaluateAsync(context, CancellationToken.None);
+
+        Assert.Equal(ToolInvocationDecisionKind.Allow, decision.Kind);
+    }
+
+    [Fact]
+    public async Task Policy_does_not_treat_validation_tool_as_product_mutation()
+    {
+        var policy = new DefaultAgentToolInvocationPolicy();
+        const string runId = "11111111-2222-3333-4444-555555555555";
+        var now = DateTimeOffset.UtcNow;
+        var context = CreateContext(
+            ToolContractCatalog.WorkspaceWriteFile,
+            ToolInvocationClassification.Mutation,
+            isKnownTool: true,
+            autoApprovalAllowed: true,
+            approvalWrapperAvailable: false,
+            arguments: new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["path"] = $"artifacts/process-runs/{runId}/steps/feature-repair.md",
+                ["content"] = "Status: Completed\n\n# Repair\n\nValidation passed without source changes."
+            },
+            allowedExternalTargetAliases: ["external-target/C/work/product"],
+            processRequiresProductMutationBeforeManagedOutput: true,
+            processProductMutationToolNames: [ToolContractCatalog.WorkspaceWriteFile],
+            processRunId: runId,
+            sourceId: "feature-repair",
+            toolInvocationTraces:
+            [
+                new AgentToolInvocationTrace(
+                    "workspace_dotnet_build",
+                    ToolInvocationClassification.Mutation,
+                    1,
+                    now,
+                    now,
+                    true,
+                    string.Empty)
+                {
+                    Signature = "workspace_dotnet_build|targetPath=external-target/C/work/product/App.slnx"
+                }
+            ]);
+
+        var decision = await policy.EvaluateAsync(context, CancellationToken.None);
+
+        Assert.Equal(ToolInvocationDecisionKind.Deny, decision.Kind);
+    }
+
+    [Fact]
+    public async Task Policy_does_not_treat_product_alias_quoted_in_managed_artifact_as_mutation_target()
+    {
+        var policy = new DefaultAgentToolInvocationPolicy();
+        const string runId = "11111111-2222-3333-4444-555555555555";
+        const string primaryRef = $"artifacts/process-runs/{runId}/steps/feature-repair.md";
+        var now = DateTimeOffset.UtcNow;
+        var context = CreateContext(
+            ToolContractCatalog.WorkspaceWriteFile,
+            ToolInvocationClassification.Mutation,
+            isKnownTool: true,
+            autoApprovalAllowed: true,
+            approvalWrapperAvailable: false,
+            arguments: new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["path"] = primaryRef,
+                ["content"] = "Status: Completed\n\nProduct root: external-target/C/work/product"
+            },
+            allowedExternalTargetAliases: ["external-target/C/work/product"],
+            processRequiresProductMutationBeforeManagedOutput: true,
+            processProductMutationToolNames: [ToolContractCatalog.WorkspaceWriteFile],
+            processRunId: runId,
+            sourceId: "feature-repair",
+            toolInvocationTraces:
+            [
+                new AgentToolInvocationTrace(
+                    ToolContractCatalog.WorkspaceWriteFile,
+                    ToolInvocationClassification.Mutation,
+                    1,
+                    now,
+                    now,
+                    true,
+                    string.Empty)
+                {
+                    Signature = $"workspace_write_file|content=Status: Completed Product root: external-target/C/work/product,path={primaryRef}"
+                }
+            ]);
+
+        var decision = await policy.EvaluateAsync(context, CancellationToken.None);
+
+        Assert.Equal(ToolInvocationDecisionKind.Deny, decision.Kind);
     }
 
     [Fact]
@@ -3769,8 +4027,11 @@ public sealed class AgentToolInvocationPolicyTests
         IReadOnlyDictionary<string, string>? arguments = null,
         IReadOnlyList<string>? allowedExternalTargetAliases = null,
         IReadOnlyList<string>? readOnlyExternalTargetAliases = null,
+        IReadOnlyList<string>? allowedManagedArtifactReadRefs = null,
         bool processScaffoldToolOnly = false,
         bool processAllowsProductMutation = true,
+        bool processRequiresProductMutationBeforeManagedOutput = false,
+        IReadOnlyList<string>? processProductMutationToolNames = null,
         IReadOnlyList<string>? processStepAllowedOperations = null,
         string processStepTargetScope = "",
         string inspectedScriptContent = "",
@@ -3801,6 +4062,8 @@ public sealed class AgentToolInvocationPolicyTests
             ApplicationApprovalAvailable: applicationApprovalAvailable,
             ProcessScaffoldToolOnly: processScaffoldToolOnly,
             ProcessAllowsProductMutation: processAllowsProductMutation,
+            ProcessRequiresProductMutationBeforeManagedOutput: processRequiresProductMutationBeforeManagedOutput,
+            ProcessProductMutationToolNames: processProductMutationToolNames,
             ProcessStepAllowedOperations: processStepAllowedOperations ?? ProcessOperationContractNames.AllOperations,
             ProcessStepTargetScope: processStepTargetScope,
             ContextWorkspaceScopeKind: contextWorkspaceScopeKind,
@@ -3810,7 +4073,8 @@ public sealed class AgentToolInvocationPolicyTests
             ScriptSideEffectManifestJson: scriptSideEffectManifestJson,
             ToolInvocationTraces: toolInvocationTraces)
         {
-            SourceId = sourceId
+            SourceId = sourceId,
+            AllowedManagedArtifactReadRefs = allowedManagedArtifactReadRefs ?? []
         };
     }
 

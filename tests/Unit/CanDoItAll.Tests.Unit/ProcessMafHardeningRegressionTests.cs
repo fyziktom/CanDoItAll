@@ -1,3 +1,4 @@
+using System.Text.Json;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Modules.Processes;
@@ -41,7 +42,7 @@ public sealed class ProcessMafHardeningRegressionTests
                            !string.IsNullOrWhiteSpace(step.SubprocessProcessKey))
             .ToArray();
 
-        Assert.Equal(9, subprocessParents.Length);
+        Assert.Equal(11, subprocessParents.Length);
         foreach (var step in subprocessParents)
         {
             Assert.NotNull(step.SubprocessContract);
@@ -139,10 +140,36 @@ public sealed class ProcessMafHardeningRegressionTests
         var prompt = ProcessStepContractPromptBuilder.Build("Validate the scaffold.", stepContract);
 
         Assert.Contains("workspace_dotnet_restore", prompt, StringComparison.Ordinal);
-        Assert.Contains("each listed tool must produce a current execution-run tool receipt", prompt, StringComparison.Ordinal);
+        Assert.Contains("each listed tool must produce a receipt whose execution id is this exact execution attempt", prompt, StringComparison.Ordinal);
         Assert.Contains("markdown statement", prompt, StringComparison.Ordinal);
         Assert.Contains("Do not replace those invocations with manual shell commands", prompt, StringComparison.Ordinal);
         Assert.Contains("current execution-run receipt from invoking that exact tool", prompt, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Step_contract_prompt_surfaces_configured_product_source_inspection_gate()
+    {
+        var stepContract = new ProcessStepExecutionContract(
+            RequiredArtifacts: [],
+            ExpectedProducedArtifacts: [],
+            RequiredRuntimeToolNames: [],
+            ContractHash: "sha256:source-inspection");
+        var launchVariables = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            [ProcessRuntimeLaunchVariables.ProductSourceInspectionRequiredStepKeys] =
+                JsonSerializer.Serialize(new[] { "targeted-recheck" })
+        };
+
+        var prompt = ProcessStepContractPromptBuilder.Build(
+            "Recheck the repair.",
+            stepContract,
+            launchVariables,
+            "targeted-recheck");
+
+        Assert.Contains("Required current-run product-source inspection", prompt, StringComparison.Ordinal);
+        Assert.Contains("call workspace_read_file in this exact execution attempt", prompt, StringComparison.Ordinal);
+        Assert.Contains("Reading only managed process artifacts", prompt, StringComparison.Ordinal);
+        Assert.Contains("grounded external product-root alias", prompt, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -280,6 +307,75 @@ public sealed class ProcessMafHardeningRegressionTests
         Assert.Null(result.AcceptedOutcome);
     }
 
+    [Theory]
+    [InlineData("implementation-attempt-incomplete", "NoGoChildOutputFound")]
+    [InlineData("feature-accepted", "AcceptedChildOutputBridged")]
+    public async Task Parent_subprocess_bridge_honors_typed_child_output_branch(
+        string artifactBranchOutcomeKey,
+        string expectedKind)
+    {
+        var parentRunId = ProcessRunId.New();
+        var childRunId = ProcessRunId.New();
+        var assignment = WithSubprocessContract(
+            CreateParentAssignment(parentRunId),
+            new ProcessSubprocessContract
+            {
+                DefinitionKey = "dotnet-solution-setup",
+                ParentProducedArtifactExpectationKey = "solution-skeleton-evidence",
+                AcceptedChildOutputs =
+                [
+                    new ProcessSubprocessChildOutputContract
+                    {
+                        StepKey = "setup-handoff",
+                        ArtifactExpectationKey = "setup-handoff-packet",
+                        ArtifactTitle = "Setup handoff packet"
+                    }
+                ],
+                NoGoChildOutputs =
+                [
+                    new ProcessSubprocessChildOutputContract
+                    {
+                        StepKey = "setup-handoff",
+                        ArtifactExpectationKey = "setup-handoff-packet",
+                        ArtifactTitle = "Incomplete implementation attempt",
+                        BranchOutcomeKey = "implementation-attempt-incomplete"
+                    }
+                ]
+            });
+        var childAssignment = CreateChildAssignment(childRunId, assignment) with
+        {
+            ProducedArtifactSlotIds = [ChildArtifactSlotId]
+        };
+        var artifactRef = $"artifacts/process-runs/{childRunId.Value:D}/steps/setup-handoff.md";
+        var bridge = new ParentSubprocessArtifactBridge(
+            new InMemoryAssignmentStore(childAssignment),
+            new InMemoryStateStore(
+                NewRuntimeState(parentRunId, parentRunId, ProcessRuntimeStatus.Active),
+                NewRuntimeState(
+                    parentRunId,
+                    childRunId,
+                    ProcessRuntimeStatus.Completed,
+                    childAssignment,
+                    ProcessRuntimeStepStatus.Completed,
+                    [CreateProducedArtifactReceipt(childAssignment, ChildArtifactSlotId)])),
+            new FakeWorkspaceFileService(new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                [artifactRef] = $"""
+                Status: Completed
+                Branch outcome key: {artifactBranchOutcomeKey}
+
+                {ProcessManagedArtifactService.ManagedOutcomeArtifactCapturedHeading}
+
+                {ProcessManagedArtifactService.ManagedOutcomeArtifactAcceptedHeading}
+                """
+            }),
+            CreateSubprocessContractResolver());
+
+        var result = await bridge.ResolveExistingAsync(assignment);
+
+        Assert.Equal(expectedKind, result.Kind.ToString());
+    }
+
     [Fact]
     public async Task Parent_subprocess_bridge_returns_child_stopped_blocked_with_latest_child_diagnostics()
     {
@@ -393,6 +489,18 @@ public sealed class ProcessMafHardeningRegressionTests
             LaunchVariables = launchVariables,
             CreatedAtUtc = DateTimeOffset.UtcNow.AddMinutes(1)
         };
+    }
+
+    private static ProcessRuntimeStepAssignment WithSubprocessContract(
+        ProcessRuntimeStepAssignment assignment,
+        ProcessSubprocessContract contract)
+    {
+        var launchVariables = new Dictionary<string, string>(assignment.LaunchVariables, StringComparer.Ordinal)
+        {
+            [ProcessRuntimeLaunchVariables.ProcessStepSubprocessContractJson] =
+                ProcessRuntimeLaunchVariables.SerializeProcessStepSubprocessContract(contract)
+        };
+        return assignment with { LaunchVariables = launchVariables };
     }
 
     private static ProcessRuntimeStateSnapshot NewRuntimeState(

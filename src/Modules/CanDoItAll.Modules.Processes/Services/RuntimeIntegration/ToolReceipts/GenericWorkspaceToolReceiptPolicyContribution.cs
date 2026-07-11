@@ -38,6 +38,8 @@ internal sealed class GenericWorkspaceToolReceiptPolicyContribution : IProcessTo
         return false;
     }
 
-    public bool AllowsCompletedOutcomeWithDeclaredBlockers(ProcessRuntimeStepAssignment assignment)
+    public bool AllowsCompletedOutcomeWithDeclaredBlockers(
+        ProcessRuntimeStepAssignment assignment,
+        ProcessStepOutcomeResult output)
         => false;
 }

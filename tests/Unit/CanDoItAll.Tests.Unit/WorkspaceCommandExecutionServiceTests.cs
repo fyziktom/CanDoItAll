@@ -275,6 +275,49 @@ public sealed class WorkspaceCommandExecutionServiceTests
     }
 
     [Fact]
+    public async Task PowerShellRunScript_preserves_external_working_directory_when_script_path_is_shortened()
+    {
+        if (!OperatingSystem.IsWindows())
+        {
+            return;
+        }
+
+        var workspaceRoot = CreateDeepWorkspaceRoot();
+        var productRoot = Path.Combine(
+            Path.GetTempPath(),
+            $"CanDoItAll.ProductTarget.{Guid.NewGuid():N}",
+            "product");
+        var scriptDirectory = Path.Combine(workspaceRoot, "scripts");
+        Directory.CreateDirectory(scriptDirectory);
+        Directory.CreateDirectory(productRoot);
+        await File.WriteAllTextAsync(
+            Path.Combine(scriptDirectory, "Report-Location.ps1"),
+            "Write-Output (Get-Location).Path");
+        var service = new WorkspaceCommandExecutionService(
+            workspaceRoot,
+            new LocalWorkspaceProcessHost());
+        var productAlias = ToExternalTargetAlias(productRoot);
+
+        try
+        {
+            var result = await service.PowerShellRunScript(
+                "scripts/Report-Location.ps1",
+                workingDirectory: productAlias);
+
+            Assert.True(result.Succeeded, result.Message);
+            Assert.Equal(
+                productRoot.TrimEnd(Path.DirectorySeparatorChar),
+                result.StdoutPreview.Trim().TrimEnd(Path.DirectorySeparatorChar),
+                ignoreCase: true);
+        }
+        finally
+        {
+            TryDeleteDirectory(workspaceRoot);
+            TryDeleteDirectory(Path.GetDirectoryName(productRoot) ?? productRoot);
+        }
+    }
+
+    [Fact]
     public async Task PowerShellRunScript_denies_foreground_static_server_script()
     {
         var workspaceRoot = Path.Combine(Path.GetTempPath(), $"CanDoItAll.WorkspaceCommandExecutionServiceTests.{Guid.NewGuid():N}");

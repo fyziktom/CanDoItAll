@@ -96,7 +96,10 @@ internal static class ProcessRequiredReceiptRetryPolicy
             return false;
         }
 
-        var missingSummary = string.Join("; ", retryToolReceipts);
+        var stableRetryToolReceipts = retryToolReceipts
+            .OrderBy(value => value, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        var missingSummary = string.Join("; ", stableRetryToolReceipts);
         var primaryRef = BuildManagedStepArtifactPath(assignment);
         var originalReason = string.IsNullOrWhiteSpace(output.Reason)
             ? "The step returned Blocked before all required product tool receipts were present."
@@ -113,11 +116,10 @@ internal static class ProcessRequiredReceiptRetryPolicy
         var scriptHelperOrderingGuidance = hasRecoverableScriptHelperOrdering
             ? " A required script execution was denied before a current-run helper script was available, but the same run now has a successful helper script write receipt. Retry by verifying that helper path and invoking the missing script execution tool before returning a final status. This is not a manager grant or reassignment case unless the verified retry is denied for a concrete policy, permission, or environment boundary."
             : string.Empty;
-        var receiptSummary = string.Join("|", observedToolReceipts.Select(receipt => $"{receipt.ToolName}:{receipt.RequestSummary}:{receipt.ExitSummary}"));
         issue = new ProcessCompletionIssue(
             "process.adapter.product_required_tool_receipt_blocked_retry",
             $"{receiptGateGuidance}{failedReceiptGuidance}{scriptHelperOrderingGuidance} Original reason: {originalReason}",
-            $"{assignment.RunId}:{assignment.StepInstanceId}:product-required-tool-receipt-blocked-retry:{missingSummary}:{ComputeHash(receiptSummary)}:{ComputeHash(originalReason)}",
+            $"{assignment.RunId}:{assignment.StepInstanceId}:product-required-tool-receipt-blocked-retry:{output.BranchOutcomeKey}:{string.Join("|", stableRetryToolReceipts)}",
             assignment.ProducedArtifactSlotIds,
             ProcessDiagnosticRetrySafety.SafeToRetry,
             ProcessDiagnosticIdempotencyClassification.Idempotent);
@@ -175,9 +177,11 @@ internal static class ProcessRequiredReceiptRetryPolicy
             return false;
         }
 
-        var retryReceipts = gate.MissingReceipts.Count == 0
+        var retryReceipts = (gate.MissingReceipts.Count == 0
             ? gate.RequiredReceipts
-            : gate.MissingReceipts;
+            : gate.MissingReceipts)
+            .OrderBy(receipt => receipt.Key, StringComparer.Ordinal)
+            .ToArray();
         var missingSummary = ProcessRequiredToolReceiptGate.FormatMissingSummary(retryReceipts);
         var primaryRef = BuildManagedStepArtifactPath(assignment);
         var originalReason = string.IsNullOrWhiteSpace(output.Reason)
@@ -186,12 +190,10 @@ internal static class ProcessRequiredReceiptRetryPolicy
         var receiptGateGuidance = gate.MissingReceipts.Count == 0
             ? "The step output itself reported missing required process receipt evidence even though matching receipt records are present in the current run. Retry the same step and reconcile the primary managed artifact, branch outcome, and evidence refs with those receipts before routing to a branch or manager."
             : $"Step '{assignment.StepKey}' returned Blocked while required current-run process tool receipt(s) are still missing: {missingSummary}. Retry the same step, invoke the missing required tool receipt(s), update primary managed artifact '{primaryRef}', and return Blocked only for a concrete tool, permission, policy, environment, provider, or process-contract blocker.";
-        var receiptSummary = string.Join("|", observedToolReceipts.Select(receipt =>
-            $"{receipt.ToolName}:{receipt.RuntimeToolProviderKey}:{receipt.RequestSummary}:{receipt.ExitSummary}"));
         issue = new ProcessCompletionIssue(
             "process.adapter.required_tool_receipt_blocked_retry",
             $"{receiptGateGuidance} Original reason: {originalReason}",
-            $"{assignment.RunId}:{assignment.StepInstanceId}:required-tool-receipt-blocked-retry:{missingSummary}:{ComputeHash(receiptSummary)}:{ComputeHash(originalReason)}",
+            $"{assignment.RunId}:{assignment.StepInstanceId}:required-tool-receipt-blocked-retry:{output.BranchOutcomeKey}:{string.Join("|", retryReceipts.Select(receipt => receipt.Key))}",
             assignment.ProducedArtifactSlotIds,
             ProcessDiagnosticRetrySafety.SafeToRetry,
             ProcessDiagnosticIdempotencyClassification.Idempotent);

@@ -21,9 +21,12 @@ internal static class ProcessStepContractPromptBuilder
             ProcessRuntimeLaunchVariables.TryReadProcessStepSubprocessContract(
                 launchVariables,
                 out subprocessContract);
+        var requiresProductSourceInspection = launchVariables is not null &&
+            ProcessProductSourceInspectionPolicy.IsConfiguredForStep(launchVariables, stepKey);
         if (stepContract.RequiredArtifacts.Count == 0 &&
             stepContract.ExpectedProducedArtifacts.Count == 0 &&
             stepContract.RequiredRuntimeToolNames.Count == 0 &&
+            !requiresProductSourceInspection &&
             !hasSubprocessContract)
         {
             return prompt;
@@ -99,9 +102,24 @@ internal static class ProcessStepContractPromptBuilder
             }
 
             builder.AppendLine(
-                "Required runtime tool receipt rule: each listed tool must produce a current execution-run tool receipt before this step may submit Completed. A managed artifact, markdown statement, upstream artifact, launch variable, or prior run log that names the tool is not a receipt. If a listed tool is unavailable, denied, or fails before a branch decision can be made, submit Blocked or the applicable repair branch with the concrete current-run tool failure evidence instead of claiming Completed.");
+                "Required runtime tool receipt rule: each listed tool must produce a receipt whose execution id is this exact execution attempt before this step may submit Completed. Upstream receipts and receipts from earlier attempts of this step do not count. A managed artifact, markdown statement, upstream artifact, launch variable, or prior run log that names the tool is not a receipt. Invoke every missing tool now in this execution attempt. If a listed tool is unavailable, denied, or fails before a branch decision can be made, submit Blocked or the applicable repair branch with the concrete current-execution tool failure evidence instead of claiming Completed.");
             builder.AppendLine(
                 "For validation tools, invoke the concrete runtime tools listed above in this step before writing final success evidence. Do not replace those invocations with manual shell commands, prose summaries, or upstream artifact readbacks.");
+        }
+
+        if (requiresProductSourceInspection)
+        {
+            var excludedPathFragments = ProcessProductSourceInspectionPolicy.ResolveExcludedPathFragments(
+                launchVariables!,
+                stepKey);
+            builder.AppendLine("Required current-run product-source inspection:");
+            builder.AppendLine(
+                "- Before submitting Completed, call workspace_read_file in this exact execution attempt for at least one representative owning product source, configuration, style, or mapped test file under the grounded external product-root alias. Reading only managed process artifacts, upstream summaries, launch variables, or files from an earlier attempt does not satisfy this gate. Use the current product readback to justify the selected acceptance, repair, rejection, or escalation branch and cite the grounded product alias in the managed evidence artifact.");
+            if (excludedPathFragments.Count > 0)
+            {
+                builder.Append("- For this step, reads matching these non-owning shell fragments do not satisfy the inspection gate by themselves: ")
+                    .AppendLine(string.Join("; ", excludedPathFragments));
+            }
         }
 
         if (subprocessContract is not null)

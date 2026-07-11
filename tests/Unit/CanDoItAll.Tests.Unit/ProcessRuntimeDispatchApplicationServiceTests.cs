@@ -871,7 +871,9 @@ public sealed class ProcessRuntimeDispatchApplicationServiceTests
         Assert.Equal(ProcessLaunchStage.Completed, result.Stage);
         Assert.Equal(2, strategyResolver.ExecutionCount);
         var prompt = assignmentStore.Assignments.Single().Prompt;
+        Assert.StartsWith("Runtime diagnostic rework instruction:", prompt, StringComparison.Ordinal);
         Assert.Contains("Runtime diagnostic rework instruction:", prompt, StringComparison.Ordinal);
+        Assert.Contains(ProcessAutomaticRecoveryPromptBuilder.ExecutionFocusHeading, prompt, StringComparison.Ordinal);
         Assert.Contains("workspace_pwsh_run_script", prompt, StringComparison.Ordinal);
         Assert.Contains("scripts/create-dotnet-project.ps1", prompt, StringComparison.Ordinal);
         Assert.Contains("workspace_dotnet_new", prompt, StringComparison.Ordinal);

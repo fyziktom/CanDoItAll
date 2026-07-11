@@ -1,0 +1,86 @@
+info: CanDoItAll.Infrastructure.ControlPlane.DatabaseProfileControlPlaneService[0]
+      Resolved database profile Configured PostgreSQL override (e5df9ad6-33db-c697-4a06-78a74976013c) via ExplicitOverride. Provider=PostgreSql. Fingerprint=postgres:127.0.0.1:5432:candoitall_development:candoitall. RuntimeLocked=True.
+info: CanDoItAll.Infrastructure.ControlPlane.CanonicalRuntimeDatabase[0]
+      Initialized canonical runtime database profile e5df9ad6-33db-c697-4a06-78a74976013c (Configured PostgreSQL override). Provider=PostgreSql. Fingerprint=postgres:127.0.0.1:5432:candoitall_development:candoitall. Generation=0.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring runtime database profile e5df9ad6-33db-c697-4a06-78a74976013c (Configured PostgreSQL override) is ready. Provider=PostgreSql, Source=PostgresConnection.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Applying EF migrations for profile e5df9ad6-33db-c697-4a06-78a74976013c.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring CRM/HR schema for profile e5df9ad6-33db-c697-4a06-78a74976013c.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring plugin runtime schema for profile e5df9ad6-33db-c697-4a06-78a74976013c.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring scheduler planner schema for profile e5df9ad6-33db-c697-4a06-78a74976013c.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring agent provider bootstrap for profile e5df9ad6-33db-c697-4a06-78a74976013c.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Runtime database profile e5df9ad6-33db-c697-4a06-78a74976013c is ready.
+info: Quartz.Core.SchedulerSignalerImpl[0]
+      Initialized Scheduler Signaller of type: Quartz.Core.SchedulerSignalerImpl
+info: Quartz.Core.QuartzScheduler[0]
+      Quartz Scheduler created
+info: Quartz.Core.QuartzScheduler[0]
+      JobFactory set to: Quartz.Simpl.MicrosoftDependencyInjectionJobFactory
+info: Quartz.Simpl.RAMJobStore[0]
+      RAMJobStore initialized.
+info: Quartz.Impl.StdSchedulerFactory[0]
+      Quartz Scheduler 3.13.1.0 - 'CanDoItAll SchedulerPlanner' with instanceId 'CanDoItAll.SchedulerPlanner' initialized
+info: Quartz.Impl.StdSchedulerFactory[0]
+      Using thread pool 'Quartz.Simpl.DefaultThreadPool', size: 10
+info: Quartz.Impl.StdSchedulerFactory[0]
+      Using job store 'Quartz.Simpl.RAMJobStore', supports persistence: False, clustered: False
+info: CanDoItAll.Modules.SchedulerPlanner.SchedulerPlannerTriggerScheduler[0]
+      Projected scheduler plan aa141648-524a-4b15-8992-ee6a8b024d5f into local Quartz runtime. Enabled=True, NextFireAtUtc=07/13/2026 13:00:00 +00:00.
+info: CanDoItAll.Modules.SchedulerPlanner.SchedulerPlannerProjectionHostedService[0]
+      SchedulerPlanner projected saved plans into the local Quartz runtime.
+info: Microsoft.Hosting.Lifetime[14]
+      Now listening on: http://localhost:5032
+info: Microsoft.Hosting.Lifetime[0]
+      Application started. Press Ctrl+C to shut down.
+info: Microsoft.Hosting.Lifetime[0]
+      Hosting environment: Development
+info: Microsoft.Hosting.Lifetime[0]
+      Content root path: C:\repositories\CanDoItAll\src\App\CanDoItAll.Web\bin\Debug\net10.0
+info: Quartz.Core.QuartzScheduler[0]
+      Scheduler CanDoItAll SchedulerPlanner_$_CanDoItAll.SchedulerPlanner started.
+warn: CanDoItAll.Modules.AgentFramework.WorkflowExampleCatalogSeedService[0]
+      Skipping workflow example seed 'Example: Gmail Label Email Summary To Project' because one or more optional workflow executors are unavailable in this host: Workflow executor 'gmail.messages-by-label' is not runnable: Plugin 'gmail.mail' is not installed. Workflow executor 'gmail.mark-message-processed' is not runnable: Plugin 'gmail.mail' is not installed.
+warn: CanDoItAll.Modules.AgentFramework.WorkflowExampleCatalogSeedService[0]
+      Skipping workflow example seed 'Example: Gmail Label Email Tasks To Project' because one or more optional workflow executors are unavailable in this host: Workflow executor 'gmail.messages-by-label' is not runnable: Plugin 'gmail.mail' is not installed. Workflow executor 'gmail.mark-message-processed' is not runnable: Plugin 'gmail.mail' is not installed.
+info: CanDoItAll.Modules.AgentFramework.AgentFrameworkCatalogWarmupService[0]
+      Completed AgentFramework catalog repair and projection warmup in 9660 ms.
+warn: Microsoft.AspNetCore.HttpsPolicy.HttpsRedirectionMiddleware[3]
+      Failed to determine the https port for redirect.
+info: CanDoItAll.AgentFramework.Maf.MafAgentRuntime[0]
+      Agent tool policy decision Allow for tool load_skill on agent 9fc87ec2-e918-d756-b6c9-b42b8eecbe6e. ExecutionRunId=fa2fe44d-1b90-4880-ae6e-21a01b7d9260 SourceKind=process-step ProcessRunId=a11b7d62-8e78-4833-b82e-69d96b251975 ProcessStepId=956d6c2a-fa35-41bb-bd97-e90a8669b30f RuntimeToolProviderKey= Signature=load_skill|skillName=concrete-deliverable-delivery
+info: CanDoItAll.AgentFramework.Maf.MafAgentRuntime[0]
+      Agent tool policy decision Allow for tool workspace_write_file on agent 9fc87ec2-e918-d756-b6c9-b42b8eecbe6e. ExecutionRunId=fa2fe44d-1b90-4880-ae6e-21a01b7d9260 SourceKind=process-step ProcessRunId=a11b7d62-8e78-4833-b82e-69d96b251975 ProcessStepId=956d6c2a-fa35-41bb-bd97-e90a8669b30f RuntimeToolProviderKey= Signature=workspace_write_file|content=Status: Completed  # Feature Intake: Clarify .NET scope and app type boundary  ## Step summary This intake packet captures the decision-ready scope boundary for...#ece6a0917190,path=artifacts/process-runs/a11b7d62-8e78-4833-b82e-69d96b251975/steps/feature-intake.md
+info: CanDoItAll.AgentFramework.Maf.MafAgentRuntime[0]
+      Agent tool policy decision Allow for tool load_skill on agent 9fc87ec2-e918-d756-b6c9-b42b8eecbe6e. ExecutionRunId=f9ddaf92-a579-4785-bc74-0344b1ff1926 SourceKind=process-step ProcessRunId=a11b7d62-8e78-4833-b82e-69d96b251975 ProcessStepId=956d6c2a-fa35-41bb-bd97-e90a8669b30f RuntimeToolProviderKey= Signature=load_skill|skillName=concrete-deliverable-delivery
+info: CanDoItAll.AgentFramework.Maf.MafAgentRuntime[0]
+      Agent tool policy decision Deny for tool workspace_stat_path on agent 9fc87ec2-e918-d756-b6c9-b42b8eecbe6e. ExecutionRunId=f9ddaf92-a579-4785-bc74-0344b1ff1926 SourceKind=process-step ProcessRunId=a11b7d62-8e78-4833-b82e-69d96b251975 ProcessStepId=956d6c2a-fa35-41bb-bd97-e90a8669b30f RuntimeToolProviderKey= Signature=workspace_stat_path|path=artifacts/process-runs/a11b7d62-8e78-4833-b82e-69d96b251975/steps/feature-intake.md
+info: CanDoItAll.AgentFramework.Maf.MafAgentRuntime[0]
+      Returning recoverable policy denial for tool workspace_stat_path on governed run a11b7d62-8e78-4833-b82e-69d96b251975, step 956d6c2a-fa35-41bb-bd97-e90a8669b30f. Reason=Governed process step 'feature-intake' cannot read, stat, list, or search its own primary managed output 'artifacts/process-runs/a11b7d62-8e78-4833-b82e-69d96b251975/steps/feature-intake.md' before creating it. Do not retry that read. Continue from launch variables, upstream artifacts, project-structure context, or product readback. When the step has evidence for its outcome, create or overwrite that managed artifact with workspace_write_file or workspace_append_file, then return submit_process_step_outcome with evidenceRefs containing the same managed ref.
+info: CanDoItAll.AgentFramework.Maf.MafAgentRuntime[0]
+      Agent tool policy decision Deny for tool workspace_read_file on agent 9fc87ec2-e918-d756-b6c9-b42b8eecbe6e. ExecutionRunId=f9ddaf92-a579-4785-bc74-0344b1ff1926 SourceKind=process-step ProcessRunId=a11b7d62-8e78-4833-b82e-69d96b251975 ProcessStepId=956d6c2a-fa35-41bb-bd97-e90a8669b30f RuntimeToolProviderKey= Signature=workspace_read_file|maxCharacters=12000,path=artifacts/process-runs/a11b7d62-8e78-4833-b82e-69d96b251975/steps/feature-intake.md
+info: CanDoItAll.AgentFramework.Maf.MafAgentRuntime[0]
+      Returning recoverable policy denial for tool workspace_read_file on governed run a11b7d62-8e78-4833-b82e-69d96b251975, step 956d6c2a-fa35-41bb-bd97-e90a8669b30f. Reason=Governed process step 'feature-intake' cannot read, stat, list, or search its own primary managed output 'artifacts/process-runs/a11b7d62-8e78-4833-b82e-69d96b251975/steps/feature-intake.md' before creating it. Do not retry that read. Continue from launch variables, upstream artifacts, project-structure context, or product readback. When the step has evidence for its outcome, create or overwrite that managed artifact with workspace_write_file or workspace_append_file, then return submit_process_step_outcome with evidenceRefs containing the same managed ref.
+info: CanDoItAll.AgentFramework.Maf.MafAgentRuntime[0]
+      Agent tool policy decision Allow for tool workspace_read_file on agent 9fc87ec2-e918-d756-b6c9-b42b8eecbe6e. ExecutionRunId=f9ddaf92-a579-4785-bc74-0344b1ff1926 SourceKind=process-step ProcessRunId=a11b7d62-8e78-4833-b82e-69d96b251975 ProcessStepId=956d6c2a-fa35-41bb-bd97-e90a8669b30f RuntimeToolProviderKey= Signature=workspace_read_file|maxCharacters=12000,path=project-structure-context-brief.md
+info: CanDoItAll.AgentFramework.Maf.MafAgentRuntime[0]
+      Agent tool policy decision Allow for tool workspace_write_file on agent 9fc87ec2-e918-d756-b6c9-b42b8eecbe6e. ExecutionRunId=f9ddaf92-a579-4785-bc74-0344b1ff1926 SourceKind=process-step ProcessRunId=a11b7d62-8e78-4833-b82e-69d96b251975 ProcessStepId=956d6c2a-fa35-41bb-bd97-e90a8669b30f RuntimeToolProviderKey= Signature=workspace_write_file|content=# Feature intake scope packet  ## Authoritative request - Product: TetrisGame - Selected node: Office365 category email summary - Parent architecture node: Main...#688a1c261cbe,path=artifacts/process-runs/a11b7d62-8e78-4833-b82e-69d96b251975/steps/feature-intake.md
+info: CanDoItAll.AgentFramework.Maf.MafAgentRuntime[0]
+      Agent tool policy decision Allow for tool load_skill on agent 9fc87ec2-e918-d756-b6c9-b42b8eecbe6e. ExecutionRunId=21c26d3e-b085-4b13-8ec1-14a9026fa2ef SourceKind=process-step ProcessRunId=a11b7d62-8e78-4833-b82e-69d96b251975 ProcessStepId=956d6c2a-fa35-41bb-bd97-e90a8669b30f RuntimeToolProviderKey= Signature=load_skill|skillName=concrete-deliverable-delivery
+info: CanDoItAll.AgentFramework.Maf.MafAgentRuntime[0]
+      Agent tool policy decision Deny for tool workspace_read_file on agent 9fc87ec2-e918-d756-b6c9-b42b8eecbe6e. ExecutionRunId=21c26d3e-b085-4b13-8ec1-14a9026fa2ef SourceKind=process-step ProcessRunId=a11b7d62-8e78-4833-b82e-69d96b251975 ProcessStepId=956d6c2a-fa35-41bb-bd97-e90a8669b30f RuntimeToolProviderKey= Signature=workspace_read_file|maxCharacters=12000,path=artifacts/process-runs/a11b7d62-8e78-4833-b82e-69d96b251975/steps/feature-intake.md
+info: CanDoItAll.AgentFramework.Maf.MafAgentRuntime[0]
+      Returning recoverable policy denial for tool workspace_read_file on governed run a11b7d62-8e78-4833-b82e-69d96b251975, step 956d6c2a-fa35-41bb-bd97-e90a8669b30f. Reason=Governed process step 'feature-intake' cannot read, stat, list, or search its own primary managed output 'artifacts/process-runs/a11b7d62-8e78-4833-b82e-69d96b251975/steps/feature-intake.md' before creating it. Do not retry that read. Continue from launch variables, upstream artifacts, project-structure context, or product readback. When the step has evidence for its outcome, create or overwrite that managed artifact with workspace_write_file or workspace_append_file, then return submit_process_step_outcome with evidenceRefs containing the same managed ref.
+info: CanDoItAll.AgentFramework.Maf.MafAgentRuntime[0]
+      Agent tool policy decision Allow for tool workspace_read_file on agent 9fc87ec2-e918-d756-b6c9-b42b8eecbe6e. ExecutionRunId=21c26d3e-b085-4b13-8ec1-14a9026fa2ef SourceKind=process-step ProcessRunId=a11b7d62-8e78-4833-b82e-69d96b251975 ProcessStepId=956d6c2a-fa35-41bb-bd97-e90a8669b30f RuntimeToolProviderKey= Signature=workspace_read_file|maxCharacters=12000,path=artifacts/process-runs/a11b7d62-8e78-4833-b82e-69d96b251975/project-structure.json
+info: CanDoItAll.AgentFramework.Maf.MafAgentRuntime[0]
+      Agent tool policy decision Allow for tool workspace_read_file on agent 9fc87ec2-e918-d756-b6c9-b42b8eecbe6e. ExecutionRunId=21c26d3e-b085-4b13-8ec1-14a9026fa2ef SourceKind=process-step ProcessRunId=a11b7d62-8e78-4833-b82e-69d96b251975 ProcessStepId=956d6c2a-fa35-41bb-bd97-e90a8669b30f RuntimeToolProviderKey= Signature=workspace_read_file|maxCharacters=12000,path=project-structure-context-brief.md
+info: CanDoItAll.AgentFramework.Maf.MafAgentRuntime[0]
+      Agent tool policy decision Allow for tool workspace_write_file on agent 9fc87ec2-e918-d756-b6c9-b42b8eecbe6e. ExecutionRunId=21c26d3e-b085-4b13-8ec1-14a9026fa2ef SourceKind=process-step ProcessRunId=a11b7d62-8e78-4833-b82e-69d96b251975 ProcessStepId=956d6c2a-fa35-41bb-bd97-e90a8669b30f RuntimeToolProviderKey= Signature=workspace_write_file|content=# Feature Intake Scope Boundary Packet  ## Source-of-truth inputs - Project: TetrisGame - Project id: 4abb647b-cd9a-4fb1-ba6e-2e64115660fa - Selected node title...#04f90bfdf530,overwrite=True,path=artifacts/process-runs/a11b7d62-8e78-4833-b82e-69d96b251975/steps/feature-intake.md
+warn: CanDoItAll.Modules.Processes.ProcessRuntimeDispatchQueueWorker[0]
+      Process background dispatch completed for run a11b7d62-8e78-4833-b82e-69d96b251975. Stage=Blocked Status=Blocked Diagnostics=Step 'feature-intake' returned Completed while its outcome text still declares unresolved blocker or missing-acceptance state: Recovered the feature-intake step by overwriting the primary managed artifact with a grounded scope boundary packet derived from the current process context and project-structure brief. The rewritten artifact removes ungrounded path-like references from the outcome content and preserves the explicit .NET scope constraints, app-type hypothesis, exclusions, dependencies, a

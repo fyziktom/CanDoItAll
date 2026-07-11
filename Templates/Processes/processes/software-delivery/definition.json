@@ -28,6 +28,7 @@
     "product-owner",
     "delivery-manager",
     "solution-architect",
+    "review-lead",
     "qa-lead",
     "security-reviewer",
     "release-manager"
@@ -147,6 +148,22 @@
       "CanvasX": 930,
       "CanvasY": 40,
       "Notes": "Implementation owner for code, tests, migration notes, and executable delivery proof."
+    },
+    {
+      "Key": "review-lead",
+      "RoleResourceKey": "review-lead",
+      "DisplayName": "Independent code review lead",
+      "Purpose": "Review the implemented change independently from the implementation owner and protect behavior, architecture, and evidence quality.",
+      "StaffingIntent": "A qualified code reviewer with .NET specialization when the delivered application is .NET-based.",
+      "PreferredExecutorKind": "person-or-agent",
+      "PreferredProjectAssignmentRole": "Reviewer",
+      "IsRequired": true,
+      "AllowsFallback": true,
+      "RequiresExplicitApproval": false,
+      "DefaultAllocationPercent": 35,
+      "CanvasX": 1065,
+      "CanvasY": 40,
+      "Notes": "Independent source-backed review owner; must not be represented by the implementation role contract."
     },
     {
       "Key": "qa-lead",
@@ -406,7 +423,7 @@
       "Key": "implementation",
       "Title": "Run .NET implementation slice subprocess",
       "Subtitle": "Observed implementation and validation slice",
-      "Notes": "Launch and observe the .NET implementation slice subprocess for the approved scope and architecture. When the approved scope is a full app or broad deliverable, launch the child with a first reviewable MVP implementation slice derived from feature-intake and architecture artifacts. The MVP slice must not be scaffold-only, app-shell-only, setup-only, naming-only, or build-only proof; it must include the smallest observable product-specific path a user can exercise. When project structure lists visual target assets, carry their ImageAsset node ids and media paths into the child implementation request as source design inputs. The child implementation must use those assets to shape the visible UI, not only the text summary. The child implementation slice owns solution setup, feature/function implementation, repair subprocesses, tests, targeted proof, and accepted handoff evidence. This parent step records child-run evidence and does not mutate product files directly. This parent step must not launch the app, navigate a browser, wait on browser state, capture screenshots, or perform viewport/runtime proof directly; those actions belong to later root runtime-command and screenshot writeback steps that include LaunchRuntime and CaptureRuntimeProof.",
+      "Notes": "Launch and observe the .NET implementation slice subprocess for the approved scope and architecture. When the approved scope is a full app or broad deliverable, launch the child with a first reviewable MVP implementation slice derived from feature-intake and architecture artifacts. The MVP slice must not be scaffold-only, app-shell-only, setup-only, naming-only, or build-only proof; it must include the smallest observable product-specific path a user can exercise. When project structure lists visual target assets, carry their ImageAsset node ids and media paths into the child implementation request as source design inputs. The child implementation must use those assets to shape the visible UI, not only the text summary. The child implementation slice owns solution setup, feature/function implementation, tests, targeted proof, one bounded repair, and—when that strategy repeats or remains incomplete—a manager-assisted quality-repair subprocess with separate diagnosis, implementation, validation, and bughunt roles. This parent step records child-run evidence and does not mutate product files directly. This parent step must not launch the app, navigate a browser, wait on browser state, capture screenshots, or perform viewport/runtime proof directly; those actions belong to later root runtime-command and screenshot writeback steps that include LaunchRuntime and CaptureRuntimeProof.",
       "StepKind": "Subprocess",
       "AllowsManualSkip": false,
       "AllowsSafeRefusal": false,
@@ -416,7 +433,7 @@
       "OutputContractSummary": "Observed child implementation slice with reviewable change set, test evidence, blockers, rollout inputs, accepted parent-ready handoff, or explicit repair escalation evidence.",
       "EvidenceContractSummary": "Child run status, change-set projection, validation outputs, accepted handoff evidence, repair escalation evidence, output-placement notes, migration steps when applicable, touched-surface inventory, and blockers.",
       "DecisionRightsSummary": "Lead engineer owns the visible implementation subprocess assignment and accepted handoff; delivery manager remains an explicit coordination reviewer.",
-      "ExceptionPolicySummary": "Block when the child implementation slice blocks, fails, omits required project-structure requirements, lacks accepted handoff evidence, or returns slice-repair-escalation. Do not treat a completed child run with an escalation/no-go packet as accepted implementation proof. If accepted child evidence is missing, record a blocker or repair escalation instead of attempting browser proof from this parent step.",
+      "ExceptionPolicySummary": "Block when the child implementation slice blocks, fails, omits required project-structure requirements, or lacks accepted handoff evidence after its manager-assisted repair lane. Do not treat an intermediate escalation/diagnosis packet as accepted implementation proof. If accepted child evidence is missing, record the concrete child blocker instead of attempting browser proof from this parent step.",
       "TargetLeadHours": 36,
       "DependsOnStepKey": "architecture-review",
       "DependsOnBranchOutcomeKey": "",
@@ -462,7 +479,7 @@
           "SensitivityLevel": "Internal",
           "RetentionDays": 365,
           "AllowedFutureUsageSummary": "Reusable for peer review, QA, runtime command writeback, screenshot writeback, release approval, and later defect forensics.",
-          "ValidationRequirementSummary": "Must point to the observed .NET implementation slice child run and include changed files, behavioral intent, validation proof tied to acceptance criteria, accepted handoff evidence from slice-handoff or slice-handoff-after-repair, and confirmation that explicit project-structure requirements were not dropped or deferred. A slice-repair-escalation packet is blocker evidence, not accepted implementation proof.",
+          "ValidationRequirementSummary": "Must point to the observed .NET implementation slice child run and include changed files, behavioral intent, validation proof tied to acceptance criteria, accepted handoff evidence from slice-handoff, slice-handoff-after-repair, or slice-handoff-after-manager-repair, and confirmation that explicit project-structure requirements were not dropped or deferred. An intermediate slice-repair-escalation packet is diagnosis input, not accepted implementation proof.",
           "SubprocessChildStepKey": "implement-code-change",
           "SubprocessChildArtifactTitle": "Slice implementation change set"
         },
@@ -476,7 +493,7 @@
           "SensitivityLevel": "Internal",
           "RetentionDays": 365,
           "AllowedFutureUsageSummary": "Reusable for release rehearsal and rollback planning.",
-          "ValidationRequirementSummary": "Must name data changes or none, operational preconditions, publish/output-placement steps, rollback/removal steps, and accepted child-run handoff evidence used to derive them. Accept either slice-handoff or slice-handoff-after-repair as the source; do not use slice-repair-escalation as rollout-ready evidence.",
+          "ValidationRequirementSummary": "Must name data changes or none, operational preconditions, publish/output-placement steps, rollback/removal steps, and accepted child-run handoff evidence used to derive them. Accept slice-handoff, slice-handoff-after-repair, or slice-handoff-after-manager-repair as the source; do not use the intermediate slice-repair-escalation diagnosis as rollout-ready evidence.",
           "SubprocessChildStepKey": "slice-handoff",
           "SubprocessChildArtifactTitle": "Implementation slice handoff packet"
         }
@@ -533,15 +550,14 @@
             "StepKey": "slice-handoff-after-repair",
             "ArtifactExpectationKey": "slice-handoff-packet-after-repair",
             "ArtifactTitle": "Implementation slice handoff packet after repair"
-          }
-        ],
-        "NoGoChildOutputs": [
+          },
           {
-            "StepKey": "slice-repair-escalation",
-            "ArtifactExpectationKey": "slice-repair-escalation-packet",
-            "ArtifactTitle": "Implementation slice repair escalation packet"
+            "StepKey": "slice-handoff-after-manager-repair",
+            "ArtifactExpectationKey": "slice-handoff-packet-after-manager-repair",
+            "ArtifactTitle": "Implementation slice handoff packet after manager-assisted repair"
           }
         ],
+        "NoGoChildOutputs": [],
         "RequiredChildReceipts": [],
         "AlreadySatisfiedOutput": null,
         "MaterializationMode": "RuntimeSynthesizedParentHandoff"
@@ -584,11 +600,11 @@
       ],
       "RoleAssignments": [
         {
-          "RoleKey": "lead-engineer",
+          "RoleKey": "review-lead",
           "ResponsibilityKind": "Responsible",
           "IsRequired": true,
           "FallbackOrder": 0,
-          "RebindPolicySummary": "Implementation owner remains attached until review comments are addressed."
+          "RebindPolicySummary": "Peer review stays assigned to an independent qualified reviewer; implementation remains a separate lane."
         },
         {
           "RoleKey": "solution-architect",
@@ -620,6 +636,10 @@
         }
       ],
       "ArtifactInputs": [
+        {
+          "ArtifactExpectationKey": "scope-boundary-packet",
+          "SourceStepKey": "feature-intake"
+        },
         {
           "ArtifactExpectationKey": "implementation-change-set",
           "SourceStepKey": "implementation"
@@ -686,6 +706,17 @@
               "quality-accepted"
             ],
             "Reason": "QA browser proof must include durable browser state for the validated route."
+          },
+          {
+            "Key": "qa-browser-evaluate",
+            "Kind": "RuntimeToolName",
+            "ToolName": "browser_evaluate",
+            "Activation": "WhenLaunchContextDeclaresTool",
+            "Purpose": "AcceptanceProof",
+            "ApplicableBranchOutcomeKeys": [
+              "quality-accepted"
+            ],
+            "Reason": "QA browser proof must evaluate current visible or application state after a representative interaction before accepting UI behavior."
           },
           {
             "Key": "qa-browser-screenshot",
@@ -760,11 +791,11 @@
       "AllowsSafeRefusal": false,
       "RequiresApproval": false,
       "RequiresDecisionRecord": false,
-      "InputContractSummary": "Peer-reviewed change set, changed-surface inventory, and release-scope assumptions.",
+      "InputContractSummary": "Authoritative scope boundary packet, peer-reviewed change set, changed-surface inventory, and release assumptions; QA must close every named core criterion with current product/test/browser evidence.",
       "OutputContractSummary": "Targeted QA result with restore/build/test evidence, regressions, warning and executed-test counts, shipped entrypoint/runtime consistency, current-run UI/browser/image proof when applicable, downstream runtime or screenshot proof requirements, residual quality risk, and an explicit accepted or repair-required branch.",
       "EvidenceContractSummary": "Current-run restore logs, warning-free build output unless explicitly accepted, nonzero executed-test proof when tests are expected, exact restore/build/test receipt refs in final evidenceRefs when those commands run, grounded external-target aliases instead of native absolute product paths, shipped entrypoint plus referenced-runtime inspection, stale or unreferenced artifact assessment, source ImageAsset node id/media path evidence when visual targets exist, workspace_dotnet_run and cleanup receipts when UI proof runs, screenshot/browser state/console refs, workspace_inspect_image, workspace_analyze_image, and workspace_analyze_images receipt refs when visual comparison is required, runtime command hints, screenshot/browser proof handoff requirements, and defect notes.",
       "DecisionRightsSummary": "QA lead selects an explicit quality disposition: accepted evidence may continue, while reproducible defects or proof gaps route to repair.",
-      "ExceptionPolicySummary": "Do not let schedule pressure replace proof with verbal confidence. Missing restore/build/test receipts must trigger validation execution first. Route failed restored validation, missing expected tests, stale output, or concrete product defects to repair-required when the implementation role can repair it. Block only when a confirmed tool, policy, environment, access, product-root, or process-contract failure prevents QA validation execution or branch routing.",
+      "ExceptionPolicySummary": "Do not let schedule pressure replace proof with verbal confidence. Missing restore/build/test receipts must trigger validation execution first. Use the exact DotNetSolutionFileAlias, DotNetAppProjectFileAlias, and DotNetTestProjectFileAlias when supplied; do not probe a guessed product-root <App>.csproj or ask a manager to assign another agent merely because this QA execution has not produced its own receipts. Route failed restored validation, missing expected tests, stale output, or concrete product defects to repair-required when the implementation role can repair it. Block only when a confirmed tool, policy, environment, access, product-root, or process-contract failure prevents QA validation execution or branch routing.",
       "TargetLeadHours": 10,
       "DependsOnStepKey": "peer-review",
       "DependsOnBranchOutcomeKey": "",
@@ -819,6 +850,10 @@
       ],
       "ArtifactInputs": [
         {
+          "ArtifactExpectationKey": "scope-boundary-packet",
+          "SourceStepKey": "feature-intake"
+        },
+        {
           "ArtifactExpectationKey": "implementation-change-set",
           "SourceStepKey": "implementation"
         },
@@ -868,19 +903,19 @@
     {
       "Order": 5,
       "Key": "quality-repair",
-      "Title": "Repair validation findings",
-      "Subtitle": "Focused rework from QA evidence",
-      "Notes": "Repair concrete defects, missing workflows, failed validation, or proof gaps identified by QA without expanding beyond the approved delivery scope. Treat runtime completion-gate findings, including process.adapter.product_required_file_content_missing, as authoritative repair targets. Do not mark repair complete by only rewriting managed artifacts or summaries; mutate and read back affected product files, then verify configured content checks pass before returning.",
-      "StepKind": "Work",
+      "Title": "Run .NET quality repair subprocess",
+      "Subtitle": "Manager diagnosis, repair, independent QA, and bounded bughunt",
+      "Notes": "Launch and observe the dotnet-quality-repair subprocess for the concrete QA findings. The child owns evidence diagnosis, product mutation, independent validation, one bughunt handoff, bounded re-repair, and accepted or no-go handoff. This parent step records child evidence and does not mutate product files, launch the app, or capture browser proof directly. Use project_structure_process_subprocess_launch, persist ParentDeferredOutcomeJson while the child is active, and do not wait silently or create duplicate child runs.",
+      "StepKind": "Subprocess",
       "AllowsManualSkip": false,
       "AllowsSafeRefusal": false,
       "RequiresApproval": false,
       "RequiresDecisionRecord": true,
-      "InputContractSummary": "QA repair-required disposition, reviewed implementation package, and failing proof details.",
-      "OutputContractSummary": "Repaired change set and validation notes ready for QA recheck.",
-      "EvidenceContractSummary": "Changed files or deliverables, repair rationale, rerun validation, and remaining risks.",
-      "DecisionRightsSummary": "Lead engineer owns repair execution inside the approved scope and must escalate scope expansion instead of hiding it.",
-      "ExceptionPolicySummary": "Do not mark repair complete until the defect cause is addressed and required validation has been rerun.",
+      "InputContractSummary": "Authoritative scope boundary packet, QA repair-required disposition, reviewed implementation package, and failing proof details; the child may narrow the repair action but not the acceptance scope.",
+      "OutputContractSummary": "Observed child repair with accepted diagnosis-guided change set and independent validation, or explicit no-go evidence.",
+      "EvidenceContractSummary": "Child run status, diagnosis, change set, current-execution validation, bughunt evidence when used, and accepted or no-go handoff.",
+      "DecisionRightsSummary": "The child repair manager owns diagnosis and sequencing; implementation and QA remain separate roles.",
+      "ExceptionPolicySummary": "Block when the child stops without accepted handoff evidence or returns quality-repair-no-go. Do not reinterpret a no-go packet as repaired proof.",
       "TargetLeadHours": 12,
       "DependsOnStepKey": "qa-validation",
       "DependsOnBranchOutcomeKey": "repair-required",
@@ -909,18 +944,18 @@
       ],
       "RoleAssignments": [
         {
-          "RoleKey": "lead-engineer",
+          "RoleKey": "delivery-manager",
           "ResponsibilityKind": "Responsible",
           "IsRequired": true,
           "FallbackOrder": 0,
-          "RebindPolicySummary": "Repair ownership remains with the implementation role so QA findings result in concrete fixes."
+          "RebindPolicySummary": "Repair subprocess observation remains with a manager-capable role."
         },
         {
-          "RoleKey": "qa-lead",
+          "RoleKey": "lead-engineer",
           "ResponsibilityKind": "Reviewer",
           "IsRequired": true,
           "FallbackOrder": 0,
-          "RebindPolicySummary": "QA remains available to clarify failing evidence without taking ownership of implementation."
+          "RebindPolicySummary": "Engineering reviews child scope without taking over manager diagnosis or independent QA."
         }
       ],
       "ArtifactExpectations": [
@@ -934,10 +969,16 @@
           "SensitivityLevel": "Internal",
           "RetentionDays": 365,
           "AllowedFutureUsageSummary": "Reusable for QA recheck, security review, release approval, and later defect analysis.",
-          "ValidationRequirementSummary": "Must name repaired defects, changed files or deliverables, rerun validation, and unresolved risk."
+          "ValidationRequirementSummary": "Must point to an accepted dotnet-quality-repair child handoff with exact diagnosis, changed files or deliverables, current-execution validation, and confirmation that known failed proof was not accepted as residual risk.",
+          "SubprocessChildStepKey": "quality-repair-handoff",
+          "SubprocessChildArtifactTitle": ".NET quality repair handoff"
         }
       ],
       "ArtifactInputs": [
+        {
+          "ArtifactExpectationKey": "scope-boundary-packet",
+          "SourceStepKey": "feature-intake"
+        },
         {
           "ArtifactExpectationKey": "implementation-change-set",
           "SourceStepKey": "implementation"
@@ -964,13 +1005,40 @@
         "ReadProcessContext",
         "ReadProjectStructure",
         "ReadUpstreamArtifacts",
-        "MutateProductTarget",
-        "RunValidation",
-        "LaunchRuntime",
-        "CaptureRuntimeProof",
-        "WriteManagedProcessArtifacts"
+        "WriteManagedProcessArtifacts",
+        "ExecuteExternalAction"
       ],
-      "OperationTargetScope": "ExternalProductTargetMutable"
+      "OperationTargetScope": "ExternalActionControlled",
+      "SubprocessProcessKey": "dotnet-quality-repair",
+      "SubprocessDefinitionSnapshotName": ".NET quality repair with diagnosis and bounded bughunt",
+      "SubprocessContract": {
+        "DefinitionKey": "dotnet-quality-repair",
+        "LaunchMode": "RuntimeOwned",
+        "ParentProducedArtifactExpectationKey": "quality-repair-change-set",
+        "AcceptedChildOutputs": [
+          {
+            "StepKey": "quality-repair-handoff",
+            "ArtifactExpectationKey": "quality-repair-handoff-packet",
+            "ArtifactTitle": ".NET quality repair handoff"
+          },
+          {
+            "StepKey": "quality-repair-handoff-after-bughunt",
+            "ArtifactExpectationKey": "quality-repair-handoff-after-bughunt-packet",
+            "ArtifactTitle": ".NET quality repair handoff after bughunt"
+          }
+        ],
+        "NoGoChildOutputs": [
+          {
+            "StepKey": "quality-repair-no-go",
+            "ArtifactExpectationKey": "quality-repair-no-go-packet",
+            "ArtifactTitle": ".NET quality repair no-go packet"
+          }
+        ],
+        "RequiredChildReceipts": [],
+        "AlreadySatisfiedOutput": null,
+        "MaterializationMode": "RuntimeSynthesizedParentHandoff"
+      },
+      "ExecutionClass": "RuntimeOwnedSubprocess"
     },
     {
       "Order": 6,
@@ -1012,6 +1080,17 @@
               "quality-accepted"
             ],
             "Reason": "QA recheck browser proof must include durable browser state for the validated route."
+          },
+          {
+            "Key": "qa-recheck-browser-evaluate",
+            "Kind": "RuntimeToolName",
+            "ToolName": "browser_evaluate",
+            "Activation": "WhenLaunchContextDeclaresTool",
+            "Purpose": "AcceptanceProof",
+            "ApplicableBranchOutcomeKeys": [
+              "quality-accepted"
+            ],
+            "Reason": "QA recheck must evaluate repaired visible or application state after a representative interaction before accepting UI behavior."
           },
           {
             "Key": "qa-recheck-browser-screenshot",
@@ -1086,11 +1165,11 @@
       "AllowsSafeRefusal": false,
       "RequiresApproval": false,
       "RequiresDecisionRecord": false,
-      "InputContractSummary": "Repair change set, original QA findings, and reviewed implementation package.",
+      "InputContractSummary": "Authoritative scope boundary packet, repair change set, original QA findings, and reviewed implementation package with complete core-criterion coverage.",
       "OutputContractSummary": "Recheck result with restore/build/test evidence, warning-free validation, nonzero executed-test proof when tests are expected, shipped entrypoint/runtime consistency, current-run UI/browser/image proof when applicable, downstream runtime or screenshot proof requirements, regression evidence, and explicit quality disposition.",
       "EvidenceContractSummary": "Current-run restore logs, warning-free build output unless explicitly accepted, nonzero executed-test proof when tests are expected, exact restore/build/test receipt refs in final evidenceRefs when those commands run, grounded external-target aliases instead of native absolute product paths, shipped entrypoint plus referenced-runtime inspection, stale or unreferenced artifact assessment, source ImageAsset node id/media path evidence when visual targets exist, workspace_dotnet_run and cleanup receipts when UI proof runs, screenshot/browser state/console refs, workspace_inspect_image, workspace_analyze_image, and workspace_analyze_images receipt refs when visual comparison is required, runtime command hints, screenshot/browser proof handoff requirements, repair verification, and unresolved defects if any.",
       "DecisionRightsSummary": "QA lead may accept the repaired evidence or escalate when repair remains insufficient.",
-      "ExceptionPolicySummary": "Missing restore/build/test receipts must trigger validation execution first. Select repair-escalation only when required current-run repaired validation was attempted and remains failing, detached, or unmapped. Block only when a confirmed tool, policy, environment, access, product-root, or process-contract failure prevents repaired QA validation execution or branch routing.",
+      "ExceptionPolicySummary": "Missing restore/build/test receipts must trigger validation execution first. Use the exact DotNetSolutionFileAlias, DotNetAppProjectFileAlias, and DotNetTestProjectFileAlias when supplied; do not probe a guessed product-root <App>.csproj or ask a manager to assign another agent merely because this QA execution has not produced its own receipts. Select repair-escalation only when required current-run repaired validation was attempted and remains failing, detached, or unmapped. Block only when a confirmed tool, policy, environment, access, product-root, or process-contract failure prevents repaired QA validation execution or branch routing.",
       "TargetLeadHours": 8,
       "DependsOnStepKey": "quality-repair",
       "DependsOnBranchOutcomeKey": "",
@@ -1144,6 +1223,10 @@
         }
       ],
       "ArtifactInputs": [
+        {
+          "ArtifactExpectationKey": "scope-boundary-packet",
+          "SourceStepKey": "feature-intake"
+        },
         {
           "ArtifactExpectationKey": "regression-evidence-pack",
           "SourceStepKey": "qa-validation"

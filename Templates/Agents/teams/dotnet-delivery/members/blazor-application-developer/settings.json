@@ -55,6 +55,8 @@
     "blazor",
     "dotnet",
     "frontend",
-    "programming"
+    "programming",
+    "wasm",
+    "pwa"
   ]
 }

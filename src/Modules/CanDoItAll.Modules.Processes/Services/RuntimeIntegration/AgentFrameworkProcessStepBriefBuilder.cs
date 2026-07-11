@@ -47,9 +47,20 @@ internal sealed class AgentFrameworkProcessStepBriefBuilder : IProcessStepBriefB
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        var genericBrief = genericBuilder.Build(request);
+        var runtimeRoutedBranchOutcomeKeys = ProcessProductCompletionRuleParser.ResolveRuntimeRoutedBranchOutcomeKeys(
+            request.LaunchVariables,
+            request.Step.Key);
+        var agentSelectableBranchOutcomeKeys = request.Step.BranchOutcomes
+            .Select(outcome => outcome.Key)
+            .Where(key => !runtimeRoutedBranchOutcomeKeys.Contains(key, StringComparer.OrdinalIgnoreCase))
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var genericBrief = genericBuilder.Build(request with
+        {
+            AgentSelectableBranchOutcomeKeys = agentSelectableBranchOutcomeKeys
+        });
         var subprocessGuidance = BuildSubprocessGuidance(request.Step);
         var dependencyArtifactGuidance = BuildDependencyArtifactGuidance(request);
+        var parentSubprocessArtifactGuidance = ParentSubprocessArtifactBriefContribution.Build(request.LaunchVariables);
         var ownOutputBootstrapGuidance = BuildOwnOutputBootstrapGuidance(request);
         var projectStructureContextGuidance = BuildProjectStructureContextGuidance(request);
         var productMutationGuidance = BuildProductMutationGuidance(request);
@@ -95,8 +106,12 @@ internal sealed class AgentFrameworkProcessStepBriefBuilder : IProcessStepBriefB
         AgentFramework dependency artifact refs:
         {dependencyArtifactGuidance}
 
+        AgentFramework inherited parent-step artifact refs:
+        {parentSubprocessArtifactGuidance}
+
         AgentFramework upstream artifact read rule:
-        When Required upstream artifact slots or AgentFramework dependency artifact refs list managed refs, call workspace_stat_path or workspace_read_file on those exact refs before using project-structure hierarchy as fallback context. Project-structure nodes may summarize a run, but upstream process artifacts are read through workspace file tools. Do not abbreviate, ellipsize, shorten, or guess managed refs; copy the full ref from this brief into the workspace tool call. Do not return Blocked for missing intake, design, implementation, QA, screenshot, runtime, or release evidence until every listed managed ref for the needed slot has a current failed workspace file-tool receipt.
+        When Required upstream artifact slots, AgentFramework dependency artifact refs, or inherited parent-step artifact refs list managed refs, call workspace_stat_path or workspace_read_file on those exact refs before using project-structure hierarchy as fallback context. Project-structure nodes may summarize a run, but upstream process artifacts are read through workspace file tools. Do not abbreviate, ellipsize, shorten, or guess managed refs; copy the full ref from this brief into the workspace tool call. Do not return Blocked for missing intake, design, implementation, QA, screenshot, runtime, or release evidence until every listed managed ref for the needed slot has a current failed workspace file-tool receipt.
+        Inherited parent-step artifact content is loaded into the brief by the process adapter before agent invocation. That runtime-hydrated section satisfies the initial context read; call workspace_read_file on an exact inherited ref only when the hydrated section says it was truncated and more detail is required.
         Artifact expectation keys are contract labels, not managed filenames. Do not invent files named after expectation keys, such as feature-acceptance-criteria.md, when the brief lists a producer step artifact like feature-slice-intake.md. If launch variables contain acceptance criteria or the producer step artifact is readable, use that evidence and write this step's own managed artifact instead of blocking on an invented sibling file.
 
         Project-structure evidence hygiene:
@@ -208,6 +223,32 @@ internal sealed class AgentFrameworkProcessStepBriefBuilder : IProcessStepBriefB
         var aliasSummary = aliases.Count == 0
             ? "No grounded external-target alias was resolved; use a tool-provided grounded product alias or return Blocked with the concrete missing target evidence."
             : $"Use one of these grounded external-target aliases for structured product path arguments: {string.Join("; ", aliases)}.";
+        var requiredMutationBranchOutcomeKeys = ProcessProductCompletionRuleParser.ResolveProductMutationRequiredBranchOutcomeKeys(
+            request.LaunchVariables,
+            request.Step.Key);
+        var runtimeRoutedBranchOutcomeKeys = ProcessProductCompletionRuleParser.ResolveRuntimeRoutedBranchOutcomeKeys(
+            request.LaunchVariables,
+            request.Step.Key);
+        if (requiredMutationBranchOutcomeKeys.Count > 0)
+        {
+            var nonMutationBranchOutcomeKeys = request.Step.BranchOutcomes
+                .Select(outcome => outcome.Key)
+                .Where(key => !requiredMutationBranchOutcomeKeys.Contains(key, StringComparer.OrdinalIgnoreCase))
+                .Where(key => !runtimeRoutedBranchOutcomeKeys.Contains(key, StringComparer.OrdinalIgnoreCase))
+                .ToArray();
+            var nonMutationGuidance = nonMutationBranchOutcomeKeys.Length == 0
+                ? "No validation-only completion branch is declared."
+                : $"When the diagnosis proves no product mutation is justified, run the required current-execution validation/proof and select one of the declared validation-only branches: {string.Join(", ", nonMutationBranchOutcomeKeys)}. Do not mutate unrelated product files merely to satisfy a receipt gate.";
+            return $"""
+            This step has branch-specific mutation semantics. A successful current-run product-target mutation receipt is mandatory only for these completion branches: {string.Join(", ", requiredMutationBranchOutcomeKeys)}.
+            Some incomplete-evidence routes are owned by the runtime and are intentionally omitted from Available branch outcomes. Never select, infer, copy, or write a branch key that is not listed in Available branch outcomes; the runtime applies its internal routes after evaluating current-run receipts.
+            {nonMutationGuidance}
+            {aliasSummary}
+            Writing only artifacts/process-runs/... is managed evidence, not product mutation. For a mutation branch, read or stat every changed product file and cite product mutation plus validation receipts. For a validation-only branch, cite the concrete current-run validation/runtime/browser receipts that prove the corrected evidence plan.
+            If the selected branch's required tool is denied, missing, or cannot target the grounded product alias, return Blocked with that exact current-run tool receipt and manager action request.
+            """;
+        }
+
         return $"""
         This step is product-mutating. Before writing the final managed artifact or submitting Completed, produce a current-run successful product-target mutation receipt unless an earlier attempt for this same step already produced one and the product readback verifies the requested state.
         {aliasSummary}

@@ -118,7 +118,8 @@ public sealed class ProcessStepRecoveryInstructionBuilderTests
         Assert.Contains("metadataJson", instruction.Text, StringComparison.Ordinal);
         Assert.Contains("metadata.environment.projectPath", instruction.Text, StringComparison.Ordinal);
         Assert.Contains("metadata.script.command", instruction.Text, StringComparison.Ordinal);
-        Assert.Contains("Invoke each listed tool in this retry before finalizing", instruction.Text, StringComparison.Ordinal);
+        Assert.Contains("Invoke each listed tool now in this exact execution attempt before finalizing", instruction.Text, StringComparison.Ordinal);
+        Assert.Contains("upstream receipts and receipts from prior attempts of this step do not count", instruction.Text, StringComparison.Ordinal);
         Assert.Contains("Project-structure readback receipt repair", instruction.Text, StringComparison.Ordinal);
         Assert.Contains("project_structure_node_create result", instruction.Text, StringComparison.Ordinal);
         Assert.Contains("not a project_structure_read receipt", instruction.Text, StringComparison.Ordinal);
@@ -216,6 +217,111 @@ public sealed class ProcessStepRecoveryInstructionBuilderTests
         Assert.DoesNotContain(@"C:\programovani", instruction.Text, StringComparison.Ordinal);
         Assert.DoesNotContain("branchOutcomeKey", instruction.Text, StringComparison.Ordinal);
         Assert.DoesNotContain("Read back the solution or product output after the helper runs", instruction.Text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void RecoveryInstructionBuilder_dotnet_missing_mutation_uses_bounded_helper_before_more_inventory()
+    {
+        var assignment = CreateQualityRepairAssignment() with
+        {
+            StepKey = "code-change",
+            LaunchVariables = new Dictionary<string, string>(StringComparer.Ordinal)
+            {
+                ["DotNetSolutionFileAlias"] = "external-target/C/work/product/Product.slnx",
+                ["ProductRootAlias"] = "external-target/C/work/product",
+                ["WorkspaceAlias"] = "external-target/C/work/product"
+            }
+        };
+        var result = new StrategyResultEnvelope(
+            new StrategyId("strategy.execute"),
+            "1.0.0",
+            Guid.NewGuid(),
+            StrategyOutcome.NeedsManager,
+            [],
+            [],
+            [
+                new StrategyDiagnosticRef(
+                    new StrategyDiagnosticCode("process.adapter.product_mutation_receipt_missing"),
+                    StrategyDiagnosticSensitivity.Normal,
+                    "sha256:mutation",
+                    "The step completed without a product mutation receipt.",
+                    RestrictedEvidenceReference: null,
+                    ProcessDiagnosticRetrySafety.SafeToRetry,
+                    ProcessDiagnosticIdempotencyClassification.Idempotent)
+            ],
+            [],
+            "sha256:incident");
+
+        var instruction = CreateBuilder().Build(new ProcessStepRecoveryInstructionBuildRequest(
+            RunId,
+            StepId,
+            assignment.StepKey,
+            assignment,
+            result,
+            CreateReceipt(result, CreateSafeRetryDecision("process.adapter.product_mutation_receipt_missing")),
+            OperatorReason: string.Empty));
+
+        Assert.True(instruction.HasInstruction);
+        Assert.Contains(".NET product-mutation retry contract", instruction.Text, StringComparison.Ordinal);
+        Assert.Contains("Do not repeat a broad scaffold inventory", instruction.Text, StringComparison.Ordinal);
+        Assert.Contains($"artifacts/process-runs/{RunId.Value:D}/scripts/apply-product-change.ps1", instruction.Text, StringComparison.Ordinal);
+        Assert.Contains("workspace_pwsh_run_script", instruction.Text, StringComparison.Ordinal);
+        Assert.Contains("\"mode\":\"ProductMutation\"", instruction.Text, StringComparison.Ordinal);
+        Assert.Contains("external-target/C/work/product", instruction.Text, StringComparison.Ordinal);
+        Assert.Contains("treat (Get-Location).Path as the product root", instruction.Text, StringComparison.Ordinal);
+        Assert.Contains("verify the corrected helper and invoke it again in this same execution attempt", instruction.Text, StringComparison.Ordinal);
+        Assert.Contains("A failed helper invocation is not product mutation", instruction.Text, StringComparison.Ordinal);
+        Assert.Contains("do not fall back to another read-only completion", instruction.Text, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void RecoveryInstructionBuilder_mutation_required_missing_artifact_receipt_orders_product_write_before_validation()
+    {
+        var assignment = CreateQualityRepairAssignment() with
+        {
+            StepKey = "feature-repair",
+            LaunchVariables = new Dictionary<string, string>(StringComparer.Ordinal)
+            {
+                ["DotNetSolutionFileAlias"] = "external-target/C/work/product/Product.slnx",
+                ["ProductRootAlias"] = "external-target/C/work/product",
+                [ProcessRuntimeLaunchVariables.ProductMutationBeforeManagedOutputRequiredStepKeys] =
+                    JsonSerializer.Serialize(new[] { "code-change", "feature-repair" })
+            }
+        };
+        var diagnosticCode = ProcessCompletionDiagnosticCodes.ManagedArtifactWriteReceiptMissing;
+        var result = new StrategyResultEnvelope(
+            new StrategyId("strategy.execute"),
+            "1.0.0",
+            Guid.NewGuid(),
+            StrategyOutcome.NeedsManager,
+            [],
+            [],
+            [
+                new StrategyDiagnosticRef(
+                    new StrategyDiagnosticCode(diagnosticCode),
+                    StrategyDiagnosticSensitivity.Normal,
+                    "sha256:managed-receipt",
+                    "The guarded completion write was denied before product mutation.",
+                    RestrictedEvidenceReference: null,
+                    ProcessDiagnosticRetrySafety.SafeToRetry,
+                    ProcessDiagnosticIdempotencyClassification.Idempotent)
+            ],
+            [],
+            "sha256:incident");
+
+        var instruction = CreateBuilder().Build(new ProcessStepRecoveryInstructionBuildRequest(
+            RunId,
+            StepId,
+            assignment.StepKey,
+            assignment,
+            result,
+            CreateReceipt(result, CreateSafeRetryDecision(diagnosticCode)),
+            OperatorReason: string.Empty));
+
+        Assert.True(instruction.HasInstruction);
+        Assert.Contains(".NET product-mutation retry contract", instruction.Text, StringComparison.Ordinal);
+        Assert.Contains("Mutation rights are already granted", instruction.Text, StringComparison.Ordinal);
+        Assert.Contains("Before any restore, build, or test rerun", instruction.Text, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -337,6 +443,7 @@ public sealed class ProcessStepRecoveryInstructionBuilderTests
             "quality-accepted",
             "repair-required",
             "repair-escalation",
+            "browser",
             "Blazor",
             "Tetris"
         };

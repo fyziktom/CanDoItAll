@@ -85,7 +85,7 @@ internal static class ProcessManagedArtifactEvidence
         }
 
         return new ProcessCompletionIssue(
-            "process.adapter.produced_artifact_write_receipt_missing",
+            ProcessCompletionDiagnosticCodes.ManagedArtifactWriteReceiptMissing,
             $"Step '{assignment.StepKey}' claimed completion but did not produce a successful workspace_write_file or workspace_append_file receipt for primary managed artifact '{BuildManagedStepArtifactPath(assignment)}'.",
             $"{assignment.RunId}:{assignment.StepInstanceId}:produced-artifact-write-receipt-missing:{string.Join("|", toolReceipts.Select(receipt => $"{receipt.ToolName}:{receipt.RequestSummary}:{receipt.ExitSummary}"))}",
             assignment.ProducedArtifactSlotIds,
@@ -121,19 +121,6 @@ internal static class ProcessManagedArtifactEvidence
             IsSuccessfulReceipt(receipt.ExitSummary) &&
             (ReceiptTargetsAnyProductRef(receipt.RequestSummary, productTargetRefs) ||
              ReceiptTargetsAnyProductRef(receipt.WorkingDirectory, productTargetRefs)));
-
-    internal static bool CanAcceptBranchGatedValidationOnlyCompletion(
-        ProcessRuntimeStepAssignment assignment,
-        IReadOnlyList<ToolExecutionReceiptRecord> toolReceipts,
-        IReadOnlyList<string> productTargetRefs,
-        ProcessToolReceiptPolicyCatalog toolReceiptPolicies)
-    {
-        var operations = NormalizeOperations(assignment.AllowedOperations);
-        return assignment.BranchGate is not null &&
-               operations.Contains(ProcessOperationContractNames.RunValidation, StringComparer.OrdinalIgnoreCase) &&
-               HasManagedArtifactWriteReceipt(assignment, toolReceipts) &&
-               HasProductValidationReceipt(toolReceipts, productTargetRefs, toolReceiptPolicies);
-    }
 
     internal static bool HasProductValidationReceipt(
         IReadOnlyList<ToolExecutionReceiptRecord> toolReceipts,

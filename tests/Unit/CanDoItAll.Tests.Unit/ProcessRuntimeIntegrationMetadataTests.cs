@@ -1,4 +1,5 @@
 using System.Reflection;
+using System.Text.Json;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Modules.Processes;
@@ -182,6 +183,39 @@ public sealed class ProcessRuntimeIntegrationMetadataTests
     }
 
     [Fact]
+    public void Process_execution_metadata_marks_configured_mutation_before_handoff_step()
+    {
+        var assignment = CreateAssignment(
+            Guid.NewGuid(),
+            [
+                ProcessOperationContractNames.ReadProcessContext,
+                ProcessOperationContractNames.MutateProductTarget,
+                ProcessOperationContractNames.WriteManagedProcessArtifacts
+            ],
+            ProcessOperationContractNames.ExternalProductTargetMutable,
+            stepKey: "code-change");
+        assignment = assignment with
+        {
+            LaunchVariables = new Dictionary<string, string>(assignment.LaunchVariables, StringComparer.Ordinal)
+            {
+                [ProcessRuntimeLaunchVariables.ProductMutationBeforeManagedOutputRequiredStepKeys] =
+                    JsonSerializer.Serialize(new[] { "code-change", "feature-repair" }),
+                [ProcessRuntimeLaunchVariables.ProductMutationToolNames] =
+                    JsonSerializer.Serialize(new[] { "workspace_write_file", "workspace_dotnet_new" })
+            }
+        };
+
+        var metadataJson = BuildProcessExecutionMetadata(assignment);
+        var run = CreateTrustedProcessRun(metadataJson);
+
+        Assert.True(ExecutionInvocationMetadata.ResolveProcessAllowsProductMutation(run));
+        Assert.True(ExecutionInvocationMetadata.ResolveProcessRequiresProductMutationBeforeManagedOutput(run));
+        Assert.Equal(
+            ["workspace_dotnet_new", "workspace_write_file"],
+            ExecutionInvocationMetadata.ResolveProcessProductMutationToolNames(run));
+    }
+
+    [Fact]
     public void Agent_runtime_options_include_process_context_intent_from_trusted_step_metadata()
     {
         var assignment = CreateAssignment(
@@ -237,6 +271,58 @@ public sealed class ProcessRuntimeIntegrationMetadataTests
         Assert.NotNull(options.ContextIntent);
         Assert.False(options.ContextIntent!.RuntimeToolProvidersEnabled);
         Assert.False(options.ContextIntent.WorkspaceToolsEnabled);
+    }
+
+    [Fact]
+    public void Process_execution_metadata_authorizes_only_exact_inherited_parent_artifact_reads()
+    {
+        var projectId = Guid.NewGuid();
+        var parentRunId = Guid.NewGuid();
+        var parentRefs = new[]
+        {
+            $"artifacts/process-runs/{parentRunId:D}/steps/implementation.md",
+            $"artifacts/process-runs/{parentRunId:D}/steps/qa-validation.md"
+        };
+        var assignment = CreateAssignment(
+            projectId,
+            launchVariables: new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["ProjectId"] = projectId.ToString("D"),
+                [ProcessRuntimeLaunchVariables.ParentRequiredArtifactRefs] =
+                    ProcessRuntimeLaunchVariables.SerializeParentRequiredArtifactRefs(parentRefs)
+            });
+
+        var metadataJson = BuildProcessExecutionMetadata(assignment);
+        var run = CreateTrustedProcessRun(metadataJson);
+
+        Assert.Equal(parentRefs, ExecutionInvocationMetadata.ResolveAllowedManagedArtifactReadRefs(run));
+
+        using (WorkspaceExecutionAuditContext.BeginScope(run))
+        {
+            var auditScope = Assert.IsType<WorkspaceExecutionAuditContext.WorkspaceExecutionAuditScopeState>(
+                WorkspaceExecutionAuditContext.Current);
+            Assert.Equal(parentRefs, auditScope.AllowedManagedArtifactReadRefs);
+        }
+    }
+
+    [Fact]
+    public void Process_execution_metadata_authorizes_primary_artifact_read_for_automatic_diagnostic_recovery()
+    {
+        var assignment = CreateAssignment(Guid.NewGuid()) with
+        {
+            Prompt = $"""
+                {ProcessRuntimeRecoveryInstructionHeadings.RuntimeDiagnosticRecovery}:
+                Repair the rejected managed-artifact completion gate.
+                """
+        };
+        var primaryRef = $"artifacts/process-runs/{assignment.RunId.Value:D}/steps/{assignment.StepKey}.md";
+
+        var metadataJson = BuildProcessExecutionMetadata(assignment);
+        var run = CreateTrustedProcessRun(metadataJson);
+
+        Assert.Equal(
+            [primaryRef],
+            ExecutionInvocationMetadata.ResolveAllowedManagedArtifactReadRefs(run));
     }
 
     [Fact]

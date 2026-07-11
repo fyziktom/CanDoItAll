@@ -591,7 +591,8 @@ internal sealed class AgentFrameworkProcessLaunchExecutorResolver(
                 stepKey,
                 templateStep.CapabilityScope,
                 templateStep.ExecutionContract?.RequiredRuntimeToolNames),
-            AgentFrameworkProcessCapabilityScopeTranslator.Translate(templateStep.CapabilityScope).RequiredCapabilities);
+            AgentFrameworkProcessCapabilityScopeTranslator.Translate(templateStep.CapabilityScope).RequiredCapabilities,
+            ProcessExecutorSpecializationPolicy.Resolve(variables));
     }
 
     private static IReadOnlyList<string> ResolveLaunchReadinessRequiredRuntimeToolNames(

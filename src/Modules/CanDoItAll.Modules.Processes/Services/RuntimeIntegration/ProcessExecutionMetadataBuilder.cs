@@ -24,6 +24,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 using static CanDoItAll.Modules.Processes.ProcessCompletionText;
+using static CanDoItAll.Modules.Processes.ProcessManagedArtifactEvidence;
 using static CanDoItAll.Modules.Processes.ProcessSubprocessState;
 
 namespace CanDoItAll.Modules.Processes;
@@ -43,8 +44,39 @@ internal static class ProcessExecutionMetadataBuilder
             [ExecutionInvocationMetadata.ProcessBrowserToolsAllowedMetadataKey] = allowsBrowserProof,
             [ExecutionInvocationMetadata.ProcessStepAllowedOperationsMetadataKey] = allowedOperations,
             [ExecutionInvocationMetadata.ProcessStepTargetScopeMetadataKey] = targetScope,
-            [ExecutionInvocationMetadata.ProcessStepAllowsProductMutationMetadataKey] = allowsProductMutation
+            [ExecutionInvocationMetadata.ProcessStepAllowsProductMutationMetadataKey] = allowsProductMutation,
+            [ExecutionInvocationMetadata.ProcessStepRequiresProductMutationBeforeManagedOutputMetadataKey] =
+                allowsProductMutation && RequiresProductMutationBeforeManagedOutput(assignment)
         };
+        var productMutationToolNames = ResolveConfiguredStringArray(
+            assignment.LaunchVariables,
+            ProcessRuntimeLaunchVariables.ProductMutationToolNames);
+        if (productMutationToolNames.Count > 0)
+        {
+            metadata[ExecutionInvocationMetadata.ProcessProductMutationToolNamesMetadataKey] = productMutationToolNames;
+        }
+        var allowedManagedArtifactReadRefs = new List<string>();
+        if (ProcessRuntimeLaunchVariables.TryReadParentRequiredArtifactRefs(
+                assignment.LaunchVariables,
+                out var parentRequiredArtifactRefs))
+        {
+            allowedManagedArtifactReadRefs.AddRange(parentRequiredArtifactRefs);
+        }
+
+        if (IsAutomaticRuntimeDiagnosticRecovery(assignment.Prompt))
+        {
+            allowedManagedArtifactReadRefs.Add(BuildManagedStepArtifactPath(assignment));
+        }
+
+        if (allowedManagedArtifactReadRefs.Count > 0)
+        {
+            metadata[ExecutionInvocationMetadata.AllowedManagedArtifactReadRefsMetadataKey] =
+                allowedManagedArtifactReadRefs
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .OrderBy(artifactRef => artifactRef, StringComparer.OrdinalIgnoreCase)
+                    .ToArray();
+        }
+
         var trustedAliases = ResolveTrustedExternalTargetAliases(assignment.LaunchVariables);
         if (trustedAliases.Count > 0 && ShouldGroundExternalTargetAliases(allowedOperations, targetScope))
         {
@@ -155,6 +187,59 @@ internal static class ProcessExecutionMetadataBuilder
     internal static bool AllowsBrowserRuntimeProof(IReadOnlyList<string> allowedOperations)
     {
         return allowedOperations.Contains(ProcessOperationContractNames.CaptureRuntimeProof, StringComparer.OrdinalIgnoreCase);
+    }
+
+    internal static bool RequiresProductMutationBeforeManagedOutput(ProcessRuntimeStepAssignment assignment)
+    {
+        if (!assignment.LaunchVariables.TryGetValue(
+                ProcessRuntimeLaunchVariables.ProductMutationBeforeManagedOutputRequiredStepKeys,
+                out var configuredStepKeys) ||
+            string.IsNullOrWhiteSpace(configuredStepKeys))
+        {
+            return false;
+        }
+
+        try
+        {
+            var stepKeys = JsonSerializer.Deserialize<string[]>(configuredStepKeys);
+            return stepKeys?.Contains(assignment.StepKey, StringComparer.OrdinalIgnoreCase) == true;
+        }
+        catch (JsonException)
+        {
+            return false;
+        }
+    }
+
+    private static IReadOnlyList<string> ResolveConfiguredStringArray(
+        IReadOnlyDictionary<string, string> launchVariables,
+        string key)
+    {
+        if (!launchVariables.TryGetValue(key, out var configuredValues) ||
+            string.IsNullOrWhiteSpace(configuredValues))
+        {
+            return [];
+        }
+
+        try
+        {
+            return JsonSerializer.Deserialize<string[]>(configuredValues)?
+                .Where(value => !string.IsNullOrWhiteSpace(value))
+                .Select(value => value.Trim())
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .OrderBy(value => value, StringComparer.OrdinalIgnoreCase)
+                .ToArray() ?? [];
+        }
+        catch (JsonException)
+        {
+            return [];
+        }
+    }
+
+    internal static bool IsAutomaticRuntimeDiagnosticRecovery(string prompt)
+    {
+        return prompt.Contains(
+            $"{ProcessRuntimeRecoveryInstructionHeadings.RuntimeDiagnosticRecovery}:",
+            StringComparison.Ordinal);
     }
 
     internal static bool UsesExternalProductTarget(string targetScope)

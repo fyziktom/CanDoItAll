@@ -34,5 +34,7 @@ internal interface IProcessToolReceiptPolicyContribution
         ProcessRuntimeStepAssignment assignment,
         out ProcessScriptHelperDescriptor descriptor);
 
-    bool AllowsCompletedOutcomeWithDeclaredBlockers(ProcessRuntimeStepAssignment assignment);
+    bool AllowsCompletedOutcomeWithDeclaredBlockers(
+        ProcessRuntimeStepAssignment assignment,
+        ProcessStepOutcomeResult output);
 }

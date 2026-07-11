@@ -6,19 +6,24 @@ namespace CanDoItAll.Modules.Processes;
 internal sealed class DotNetBrowserSnapshotEvidencePolicyContribution : IProcessToolReceiptEvidencePolicyContribution
 {
     internal const string BlazorUnhandledErrorBanner = "An unhandled error has occurred.";
-    private const string QualityAcceptedBranchOutcomeKey = "quality-accepted";
     private const string ScreenshotDefinitionKey = "dotnet-ui-screenshot-writeback";
     private const string BrowserSnapshotToolName = "browser_snapshot";
     private const string BrowserSnapshotFileNameArgument = "filename";
     private static readonly HashSet<string> BrowserValidationDefinitionKeys = new(StringComparer.OrdinalIgnoreCase)
     {
         "software-delivery",
+        "dotnet-quality-repair",
         ScreenshotDefinitionKey,
         "blazor-app-delivery",
         "blazor-app-repair-fix",
         "blazor-backend-feature",
         "blazor-frontend-feature",
         "blazor-fullstack-feature"
+    };
+    private static readonly HashSet<string> AcceptedBranchOutcomeKeys = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "quality-accepted",
+        "quality-repair-accepted"
     };
     private static readonly HashSet<string> BrowserRepairStepKeys = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -55,10 +60,7 @@ internal sealed class DotNetBrowserSnapshotEvidencePolicyContribution : IProcess
     private static bool RequiresCleanBrowserEvidence(
         ProcessRuntimeStepAssignment assignment,
         ProcessStepOutcomeResult output)
-        => string.Equals(
-               output.BranchOutcomeKey,
-               QualityAcceptedBranchOutcomeKey,
-               StringComparison.OrdinalIgnoreCase) ||
+        => AcceptedBranchOutcomeKeys.Contains(output.BranchOutcomeKey) ||
            BrowserRepairStepKeys.Contains(assignment.StepKey) ||
            string.Equals(
                assignment.LaunchVariables.GetValueOrDefault(ProcessRuntimeLaunchVariables.ProcessDefinitionKey),

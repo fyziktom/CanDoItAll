@@ -407,7 +407,7 @@ internal static class ProcessSubprocessCompletionPolicy
                 stoppedChild.Diagnostics.Select(diagnostic => $"{diagnostic.Code}: {diagnostic.SafeSummary}"));
         var recoverySummary = stoppedChild.RecoveryDecision is null
             ? "no child recovery decision was recorded"
-            : $"child recovery decision {stoppedChild.RecoveryDecision.DecisionKind}/{stoppedChild.RecoveryDecision.RouteKind}; policy {stoppedChild.RecoveryDecision.Policy}; retry {stoppedChild.RecoveryDecision.AutomaticRetryAttempt}/{stoppedChild.RecoveryDecision.MaximumAutomaticRetryAttempts}; same fingerprint {stoppedChild.RecoveryDecision.SameDiagnosticFingerprintAttempt}/{stoppedChild.RecoveryDecision.MaximumSameDiagnosticFingerprintAttempts}; reason {stoppedChild.RecoveryDecision.SafeReason}";
+            : $"child recovery decision {stoppedChild.RecoveryDecision.DecisionKind}/{stoppedChild.RecoveryDecision.RouteKind}; policy {stoppedChild.RecoveryDecision.Policy}; retry {stoppedChild.RecoveryDecision.AutomaticRetryAttempt}/{stoppedChild.RecoveryDecision.MaximumAutomaticRetryAttempts}; persistent diagnostic identity {stoppedChild.RecoveryDecision.SameDiagnosticFingerprintAttempt}/{stoppedChild.RecoveryDecision.MaximumSameDiagnosticFingerprintAttempts}; reason {stoppedChild.RecoveryDecision.SafeReason}";
         var childStepId = stoppedChild.ChildStepInstanceId?.Value.ToString("D") ?? "unknown";
         var code = failed
             ? "process.adapter.subprocess_child_failed"

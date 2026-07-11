@@ -28,6 +28,7 @@ using Microsoft.Extensions.Options;
 using static CanDoItAll.Modules.Processes.ProcessCompletionText;
 using static CanDoItAll.Modules.Processes.ProcessExecutionMetadataBuilder;
 using static CanDoItAll.Modules.Processes.ProcessManagedArtifactEvidence;
+using static CanDoItAll.Modules.Processes.ProcessProductCompletionRuleParser;
 using static CanDoItAll.Modules.Processes.ProcessRequiredReceiptMatcher;
 using static CanDoItAll.Modules.Processes.ProcessRequiredReceiptRetryPolicy;
 
@@ -48,19 +49,27 @@ internal static class ProcessCompletionReceiptGate
             return null;
         }
 
+        var requiredMutationBranchOutcomeKeys = ResolveProductMutationRequiredBranchOutcomeKeys(
+            assignment.LaunchVariables,
+            assignment.StepKey);
+        if (requiredMutationBranchOutcomeKeys.Count > 0 &&
+            !requiredMutationBranchOutcomeKeys.Contains(output.BranchOutcomeKey, StringComparer.OrdinalIgnoreCase))
+        {
+            return null;
+        }
+
         var productTargetRefs = ResolveProductTargetReceiptRefs(assignment.LaunchVariables);
         if (productTargetRefs.Count == 0 ||
-            HasProductMutationReceipt(toolReceipts, productTargetRefs, toolReceiptPolicies) ||
-            CanAcceptBranchGatedValidationOnlyCompletion(assignment, toolReceipts, productTargetRefs, toolReceiptPolicies))
+            HasProductMutationReceipt(toolReceipts, productTargetRefs, toolReceiptPolicies))
         {
             return null;
         }
 
         var targetSummary = string.Join("; ", productTargetRefs);
         return new ProcessCompletionIssue(
-            "process.adapter.product_mutation_receipt_missing",
+            ProcessCompletionDiagnosticCodes.ProductMutationReceiptMissing,
             $"Step '{assignment.StepKey}' claimed completion for a product-mutating scope but did not produce a successful product-target mutation receipt for {targetSummary}. Retry the same step by mutating the required product source or test files under the grounded product target with a product mutation tool before writing the final managed artifact; writing only artifacts/process-runs/... is not product mutation.",
-            $"{assignment.RunId}:{assignment.StepInstanceId}:product-mutation-receipt-missing:{string.Join("|", toolReceipts.Select(receipt => $"{receipt.ToolName}:{receipt.RequestSummary}:{receipt.ExitSummary}"))}",
+            $"{assignment.RunId}:{assignment.StepInstanceId}:product-mutation-receipt-missing:{string.Join("|", productTargetRefs.OrderBy(value => value, StringComparer.OrdinalIgnoreCase))}",
             [],
             ProcessDiagnosticRetrySafety.SafeToRetry,
             ProcessDiagnosticIdempotencyClassification.Idempotent);
@@ -97,7 +106,10 @@ internal static class ProcessCompletionReceiptGate
             return null;
         }
 
-        var missingSummary = string.Join("; ", missingToolReceipts);
+        var stableMissingToolReceipts = missingToolReceipts
+            .OrderBy(value => value, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        var missingSummary = string.Join("; ", stableMissingToolReceipts);
         var failedReceiptGuidance = BuildFailedRequiredToolReceiptGuidance(
             assignment,
             observedToolReceipts,
@@ -111,7 +123,7 @@ internal static class ProcessCompletionReceiptGate
         return new ProcessCompletionIssue(
             "process.adapter.product_required_tool_receipt_missing",
             $"Step '{assignment.StepKey}' claimed completion for branch '{output.BranchOutcomeKey}' but required current-run product tool receipt(s) are missing: {missingSummary}.{failedReceiptGuidance}{missingReceiptGuidance}",
-            $"{assignment.RunId}:{assignment.StepInstanceId}:product-required-tool-receipt-missing:{missingSummary}:{string.Join("|", observedToolReceipts.Select(receipt => $"{receipt.ToolName}:{receipt.RequestSummary}:{receipt.ExitSummary}"))}",
+            $"{assignment.RunId}:{assignment.StepInstanceId}:product-required-tool-receipt-missing:{output.BranchOutcomeKey}:{string.Join("|", stableMissingToolReceipts)}",
             assignment.ProducedArtifactSlotIds,
             ProcessDiagnosticRetrySafety.SafeToRetry,
             ProcessDiagnosticIdempotencyClassification.Idempotent);
@@ -137,12 +149,14 @@ internal static class ProcessCompletionReceiptGate
             return null;
         }
 
-        var observedToolReceipts = toolReceipts ?? [];
-        var missingSummary = ProcessRequiredToolReceiptGate.FormatMissingSummary(gate.MissingReceipts);
+        var stableMissingReceipts = gate.MissingReceipts
+            .OrderBy(receipt => receipt.Key, StringComparer.Ordinal)
+            .ToArray();
+        var missingSummary = ProcessRequiredToolReceiptGate.FormatMissingSummary(stableMissingReceipts);
         return new ProcessCompletionIssue(
             "process.adapter.required_tool_receipt_missing",
             $"Step '{assignment.StepKey}' claimed completion for branch '{output.BranchOutcomeKey}' but required current-run process tool receipt(s) are missing: {missingSummary}. Retry the same step, invoke the missing required tool(s), cite the receipt refs in the managed artifact, and complete only after the typed process capability scope receipt contract is satisfied.",
-            $"{assignment.RunId}:{assignment.StepInstanceId}:required-tool-receipt-missing:{missingSummary}:{string.Join("|", observedToolReceipts.Select(receipt => $"{receipt.ToolName}:{receipt.RuntimeToolProviderKey}:{receipt.RequestSummary}:{receipt.ExitSummary}"))}",
+            $"{assignment.RunId}:{assignment.StepInstanceId}:required-tool-receipt-missing:{output.BranchOutcomeKey}:{string.Join("|", stableMissingReceipts.Select(receipt => receipt.Key))}",
             assignment.ProducedArtifactSlotIds,
             ProcessDiagnosticRetrySafety.SafeToRetry,
             ProcessDiagnosticIdempotencyClassification.Idempotent);

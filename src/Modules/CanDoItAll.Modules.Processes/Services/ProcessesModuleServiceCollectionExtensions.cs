@@ -57,13 +57,19 @@ public static class ProcessesModuleServiceCollectionExtensions
         services.TryAddScoped<IProcessRuntimeToolPreflightService, ProcessRuntimeToolPreflightService>();
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IWorkspaceCommandReceiptLifecycleFactExtractor, DotNetWorkspaceCommandReceiptLifecycleFactExtractor>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IProcessRuntimeOwnedStepExecutor, DotNetSolutionSetupRuntimeExecutor>());
+        services.TryAddScoped<DotNetScaffoldResidueInspector>();
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IProcessRuntimeOwnedStepExecutor, DotNetQualityRepairScaffoldRuntimeExecutor>());
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IProcessToolReceiptPolicyContribution, GenericWorkspaceToolReceiptPolicyContribution>());
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IProcessToolReceiptPolicyContribution, BrowserInteractionToolReceiptPolicyContribution>());
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IProcessToolReceiptPolicyContribution, DotNetToolReceiptPolicyContribution>());
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IProcessToolReceiptEvidencePolicyContribution, DotNetBrowserSnapshotEvidencePolicyContribution>());
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IProcessToolReceiptEvidencePolicyContribution, DotNetSubprocessNoGoEvidencePolicyContribution>());
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IProcessSubprocessContractProvider, DotNetSoftwareDeliverySubprocessContractProvider>());
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IProcessRuntimeToolPlanGuard, DotNetSolutionSetupRuntimeToolPlanGuard>());
         services.TryAddSingleton<ProcessToolReceiptPolicyCatalog>();
         services.TryAddSingleton<ProcessSubprocessContractResolver>();
+        services.TryAddSingleton<ProcessInteractiveUiAcceptanceGate>();
+        services.TryAddSingleton<ProcessRequiredProductSourceInspectionGate>();
         services.TryAddScoped<ProcessToolReceiptEvidenceGate>();
         services.TryAddScoped<ProcessCompletionGateFactory>();
         services.TryAddScoped(serviceProvider => serviceProvider
@@ -77,6 +83,7 @@ public static class ProcessesModuleServiceCollectionExtensions
         services.TryAddScoped<ProcessStepCompletionCoordinator>();
         services.TryAddScoped<ProcessRuntimeOwnedStepCoordinator>();
         services.TryAddScoped<ProcessSubprocessCoordinator>();
+        services.TryAddScoped<ProcessParentSubprocessArtifactContextHydrator>();
         services.TryAddScoped<AgentFrameworkProcessStepExecutor>();
         services.TryAddScoped<IAgentFrameworkProcessStepExecutor>(serviceProvider => serviceProvider.GetRequiredService<AgentFrameworkProcessStepExecutor>());
         services.TryAddScoped<AgentFrameworkProcessExecutionAdapter>();

@@ -6,6 +6,8 @@ When `DotNetSolutionFileAlias` or `DotNetSolutionFile` is present, use it for re
 
 This step must emit its own `workspace_dotnet_restore`, `workspace_dotnet_build`, and `workspace_dotnet_test` receipts when those commands are required by the validation contract. Upstream repair receipts are useful inputs, but they do not satisfy this step's current-execution proof contract by themselves. Do not select `feature-accepted` from upstream receipt text alone.
 
+Before deciding the branch, call `workspace_read_file` in this recheck execution on representative owning production source and the mapped test under the grounded product alias. Managed repair/validation artifacts explain the target but do not prove the current product state. If the repair attempt produced no product mutation, use the source readback plus current build/test receipts to select `feature-repair-escalation`; do not accept merely because the unchanged scaffold still builds.
+
 When selecting a recheck branch, put the exact selected key on one line near the top of the artifact as `Branch outcome key: feature-accepted` or `Branch outcome key: feature-repair-escalation`. Do not write only a heading such as `## Branch outcome key` with the key on the next line.
 
 This step owns the repaired feature branch decision:
@@ -19,3 +21,5 @@ This step owns the repaired feature branch decision:
 - Return `Blocked` only when an environment, permission, unavailable tool, or process-contract issue prevents recheck execution.
 
 Do not launch the app or open a browser in this atomic recheck step. Parent runtime-command and screenshot writeback subprocesses own runtime launch, browser interaction, screenshot capture, and visual comparison. Do not choose `feature-repair-escalation` only because runtime/browser proof or visual comparison is absent; if focused build/test proof passes, record live proof as a parent follow-up requirement and select `feature-accepted`.
+
+This step is reachable only from `feature-repair-applied`. A `repair-attempt-incomplete` outcome bypasses recheck and routes directly to the parent no-go packet, so green validation of unchanged product state cannot be converted into acceptance here.

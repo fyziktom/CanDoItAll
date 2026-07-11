@@ -144,7 +144,8 @@ internal sealed class AgentFrameworkProcessRuntimeStepAssignmentRepairService(
             string.IsNullOrWhiteSpace(assignment.OperationTargetScope)
                 ? string.Empty
                 : assignment.OperationTargetScope.Trim(),
-            ResolveRepairReadinessRequiredRuntimeToolNames(assignment));
+            ResolveRepairReadinessRequiredRuntimeToolNames(assignment),
+            PreferredSpecializationTags: ProcessExecutorSpecializationPolicy.Resolve(assignment.LaunchVariables));
     }
 
     private static IReadOnlyList<string> ResolveRepairReadinessRequiredRuntimeToolNames(ProcessRuntimeStepAssignment assignment)

@@ -20,10 +20,12 @@ internal sealed class DotNetSoftwareDeliverySubprocessContractProvider : IProces
         => (NormalizeKey(request.ParentProcessKey), NormalizeKey(request.ParentStepKey)) switch
         {
             ("dotnet-development-slice", "prepare-solution-skeleton") => BuildSolutionSetupContract(),
-            ("dotnet-development-slice", "implement-code-change") => BuildFeatureImplementationContract("slice-change-set"),
-            ("dotnet-development-slice", "slice-repair-code-change") => BuildFeatureImplementationContract("slice-repair-change-set"),
+            ("dotnet-development-slice", "implement-code-change") => BuildFeatureImplementationContract("slice-change-set", routeRepairEscalationToParentReview: true),
+            ("dotnet-development-slice", "slice-repair-code-change") => BuildFeatureImplementationContract("slice-repair-change-set", routeRepairEscalationToParentReview: true),
+            ("dotnet-development-slice", "slice-manager-assisted-repair") => BuildQualityRepairContract("slice-manager-repair-change-set"),
             ("software-delivery", "architecture-review") => BuildArchitectureReviewContract(),
             ("software-delivery", "implementation") => BuildDevelopmentSliceContract("implementation-change-set"),
+            ("software-delivery", "quality-repair") => BuildQualityRepairContract(),
             ("software-delivery", "record-runtime-commands") => BuildRuntimeCommandWritebackContract("runtime-command-writeback"),
             ("software-delivery", "capture-ui-screenshots") => BuildScreenshotWritebackContract("ui-screenshot-writeback"),
             ("software-delivery", "record-runtime-commands-after-repair") => BuildRuntimeCommandWritebackContract("runtime-command-writeback-after-repair"),
@@ -35,10 +37,12 @@ internal sealed class DotNetSoftwareDeliverySubprocessContractProvider : IProces
         => (NormalizeKey(request.ParentStepKey), NormalizeKey(request.ChildProcessKey)) switch
         {
             ("prepare-solution-skeleton", "dotnet-solution-setup") => BuildSolutionSetupContract(),
-            ("implement-code-change", "dotnet-feature-function-implementation") => BuildFeatureImplementationContract("slice-change-set"),
-            ("slice-repair-code-change", "dotnet-feature-function-implementation") => BuildFeatureImplementationContract("slice-repair-change-set"),
+            ("implement-code-change", "dotnet-feature-function-implementation") => BuildFeatureImplementationContract("slice-change-set", routeRepairEscalationToParentReview: true),
+            ("slice-repair-code-change", "dotnet-feature-function-implementation") => BuildFeatureImplementationContract("slice-repair-change-set", routeRepairEscalationToParentReview: true),
+            ("slice-manager-assisted-repair", "dotnet-quality-repair") => BuildQualityRepairContract("slice-manager-repair-change-set"),
             ("architecture-review", "dotnet-architecture-design-review") => BuildArchitectureReviewContract(),
             ("implementation", "dotnet-development-slice") => BuildDevelopmentSliceContract("implementation-change-set"),
+            ("quality-repair", "dotnet-quality-repair") => BuildQualityRepairContract(),
             ("record-runtime-commands", "dotnet-runtime-command-writeback") => BuildRuntimeCommandWritebackContract("runtime-command-writeback"),
             ("capture-ui-screenshots", "dotnet-ui-screenshot-writeback") => BuildScreenshotWritebackContract("ui-screenshot-writeback"),
             ("record-runtime-commands-after-repair", "dotnet-runtime-command-writeback") => BuildRuntimeCommandWritebackContract("runtime-command-writeback-after-repair"),
@@ -58,17 +62,48 @@ internal sealed class DotNetSoftwareDeliverySubprocessContractProvider : IProces
                 Child("setup-repair-escalation", "setup-repair-escalation-packet", "Setup repair escalation packet")
             ]);
 
-    private static ProcessSubprocessContract BuildFeatureImplementationContract(string parentExpectationKey)
-        => Create(
+    private static ProcessSubprocessContract BuildFeatureImplementationContract(
+        string parentExpectationKey,
+        bool routeRepairEscalationToParentReview)
+    {
+        var escalation = Child(
+            "feature-repair-escalation",
+            "feature-repair-escalation-packet",
+            "Feature repair escalation packet");
+        var recheckEscalation = Child(
+            "targeted-recheck",
+            "feature-recheck-evidence",
+            "Feature repair recheck escalation evidence",
+            "feature-repair-escalation");
+        var acceptedOutputs = new List<ProcessSubprocessChildOutputContract>
+        {
+            Child("feature-handoff", "feature-handoff-packet", "Feature implementation handoff packet"),
+            Child("feature-handoff-after-repair", "feature-handoff-packet-after-repair", "Feature implementation handoff packet after repair")
+        };
+        if (routeRepairEscalationToParentReview)
+        {
+            acceptedOutputs.Add(escalation);
+            acceptedOutputs.Add(recheckEscalation);
+        }
+
+        IReadOnlyList<ProcessSubprocessChildOutputContract> noGoOutputs = routeRepairEscalationToParentReview
+            ? []
+            :
+            [
+                Child(
+                    "code-change",
+                    "feature-change-set",
+                    "Incomplete feature implementation attempt",
+                    "implementation-attempt-incomplete"),
+                escalation,
+                recheckEscalation
+            ];
+        return Create(
             "dotnet-feature-function-implementation",
             parentExpectationKey,
-            [
-                Child("feature-handoff", "feature-handoff-packet", "Feature implementation handoff packet"),
-                Child("feature-handoff-after-repair", "feature-handoff-packet-after-repair", "Feature implementation handoff packet after repair")
-            ],
-            [
-                Child("feature-repair-escalation", "feature-repair-escalation-packet", "Feature repair escalation packet")
-            ]);
+            acceptedOutputs,
+            noGoOutputs);
+    }
 
     private static ProcessSubprocessContract BuildArchitectureReviewContract()
         => Create(
@@ -86,10 +121,22 @@ internal sealed class DotNetSoftwareDeliverySubprocessContractProvider : IProces
             parentExpectationKey,
             [
                 Child("slice-handoff", "slice-handoff-packet", "Implementation slice handoff packet"),
-                Child("slice-handoff-after-repair", "slice-handoff-packet-after-repair", "Implementation slice handoff packet after repair")
+                Child("slice-handoff-after-repair", "slice-handoff-packet-after-repair", "Implementation slice handoff packet after repair"),
+                Child("slice-handoff-after-manager-repair", "slice-handoff-packet-after-manager-repair", "Implementation slice handoff packet after manager-assisted repair")
+            ],
+            []);
+
+    private static ProcessSubprocessContract BuildQualityRepairContract(
+        string parentExpectationKey = "quality-repair-change-set")
+        => Create(
+            "dotnet-quality-repair",
+            parentExpectationKey,
+            [
+                Child("quality-repair-handoff", "quality-repair-handoff-packet", ".NET quality repair handoff"),
+                Child("quality-repair-handoff-after-bughunt", "quality-repair-handoff-after-bughunt-packet", ".NET quality repair handoff after bughunt")
             ],
             [
-                Child("slice-repair-escalation", "slice-repair-escalation-packet", "Implementation slice repair escalation packet")
+                Child("quality-repair-no-go", "quality-repair-no-go-packet", ".NET quality repair no-go packet")
             ]);
 
     private static ProcessSubprocessContract BuildRuntimeCommandWritebackContract(string parentExpectationKey)
@@ -130,12 +177,14 @@ internal sealed class DotNetSoftwareDeliverySubprocessContractProvider : IProces
     private static ProcessSubprocessChildOutputContract Child(
         string stepKey,
         string artifactExpectationKey,
-        string artifactTitle)
+        string artifactTitle,
+        string branchOutcomeKey = "")
         => new()
         {
             StepKey = stepKey,
             ArtifactExpectationKey = artifactExpectationKey,
-            ArtifactTitle = artifactTitle
+            ArtifactTitle = artifactTitle,
+            BranchOutcomeKey = branchOutcomeKey
         };
 
     private static string NormalizeKey(string value)

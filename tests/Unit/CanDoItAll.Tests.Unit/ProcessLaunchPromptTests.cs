@@ -1,8 +1,10 @@
+using System.Text.Json;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Modules.Processes;
 using CanDoItAll.Processes.Abstractions;
 using CanDoItAll.Processes.Application;
 using CanDoItAll.Processes.Contracts;
+using CanDoItAll.Processes.Runtime;
 using CanDoItAll.Processes.Templates;
 
 namespace CanDoItAll.Tests.Unit;
@@ -109,6 +111,52 @@ public sealed class ProcessLaunchPromptTests
         Assert.Contains("important-suffix", prompt, StringComparison.Ordinal);
         Assert.Contains("launch variable truncated", prompt, StringComparison.Ordinal);
         Assert.DoesNotContain(new string('x', 3000), prompt, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Generic_step_brief_preserves_full_acceptance_contract_and_hides_runtime_matrix()
+    {
+        var acceptanceContract = string.Join(
+            Environment.NewLine,
+            Enumerable.Range(1, 20).Select(index =>
+                $"AC-{index:000}: Required observable behavior {index} {new string((char)('a' + index % 20), 120)} [proof=browser-proof]"));
+        var prompt = BuildStepPrompt(
+            new GenericProcessStepBriefBuilder(),
+            ProcessRunId.New(),
+            variables: new Dictionary<string, string>
+            {
+                [ProcessRuntimeLaunchVariables.ProductAcceptanceCriteriaContract] = acceptanceContract,
+                [ProcessRuntimeLaunchVariables.AcceptanceCriteriaMatrix] = "internal-matrix-payload",
+                [ProcessRuntimeLaunchVariables.AcceptanceCriteriaAcceptedBranchOutcomeKeys] = "quality-accepted"
+            });
+
+        Assert.Contains("AC-001", prompt, StringComparison.Ordinal);
+        Assert.Contains("AC-020", prompt, StringComparison.Ordinal);
+        Assert.DoesNotContain("launch variable truncated", prompt, StringComparison.Ordinal);
+        Assert.DoesNotContain("internal-matrix-payload", prompt, StringComparison.Ordinal);
+        Assert.DoesNotContain("AcceptanceCriteriaAcceptedBranchOutcomeKeys", prompt, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Generic_step_brief_hides_orchestration_provenance_from_agent_task_context()
+    {
+        var prompt = BuildStepPrompt(
+            new GenericProcessStepBriefBuilder(),
+            ProcessRunId.New(),
+            variables: new Dictionary<string, string>
+            {
+                ["BranchName"] = "memory-providers",
+                ["RepositoryRoot"] = @"C:\repositories\CanDoItAll",
+                ["AgentId"] = "codex-observer-manager",
+                ["SessionId"] = "observer-session",
+                ["ProductRootAlias"] = "external-target/C/programovani/dotnet/output"
+            });
+
+        Assert.Contains("ProductRootAlias: external-target/C/programovani/dotnet/output", prompt, StringComparison.Ordinal);
+        Assert.DoesNotContain("memory-providers", prompt, StringComparison.Ordinal);
+        Assert.DoesNotContain(@"C:\repositories\CanDoItAll", prompt, StringComparison.Ordinal);
+        Assert.DoesNotContain("codex-observer-manager", prompt, StringComparison.Ordinal);
+        Assert.DoesNotContain("observer-session", prompt, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -364,6 +412,40 @@ public sealed class ProcessLaunchPromptTests
     }
 
     [Fact]
+    public void AgentFramework_step_brief_exposes_exact_inherited_parent_artifact_refs()
+    {
+        var parentArtifactRefs = new[]
+        {
+            "artifacts/process-runs/parent/steps/review.md",
+            "artifacts/process-runs/parent/steps/implementation.md"
+        };
+        var prompt = BuildStepPrompt(
+            new AgentFrameworkProcessStepBriefBuilder(),
+            ProcessRunId.New(),
+            CreatePromptStep("Diagnose the inherited evidence before continuing."),
+            CreateDefinition(
+                "generic-repair-review",
+                "Generic repair review",
+                "Review failed output evidence."),
+            variables: new Dictionary<string, string>
+            {
+                [ProcessRuntimeLaunchVariables.ParentProcessRunId] = Guid.NewGuid().ToString("D"),
+                [ProcessRuntimeLaunchVariables.ParentRequiredArtifactRefs] =
+                    ProcessRuntimeLaunchVariables.SerializeParentRequiredArtifactRefs(parentArtifactRefs)
+            });
+
+        Assert.Contains("AgentFramework inherited parent-step artifact refs:", prompt, StringComparison.Ordinal);
+        Assert.Contains(parentArtifactRefs[0], prompt, StringComparison.Ordinal);
+        Assert.Contains(parentArtifactRefs[1], prompt, StringComparison.Ordinal);
+        Assert.Contains("runtime-appended gate findings", prompt, StringComparison.Ordinal);
+        Assert.Contains("process adapter loads every ref", prompt, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("runtime-hydrated inherited artifact section", prompt, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("marked truncated", prompt, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("Tetris", prompt, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("Calculator", prompt, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public void AgentFramework_step_brief_adds_product_mutation_gate_for_mutable_steps()
     {
         var runId = new ProcessRunId(Guid.Parse("d9450dd1-4920-457c-92a4-48d1ec648181"));
@@ -394,6 +476,61 @@ public sealed class ProcessLaunchPromptTests
         Assert.Contains("external-target/C/programovani/dotnet/calculator-output", prompt, StringComparison.Ordinal);
         Assert.Contains("Writing only artifacts/process-runs/... is managed evidence, not product mutation.", prompt, StringComparison.Ordinal);
         Assert.Contains("Do not claim changed product files until those files exist under the grounded product target.", prompt, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void AgentFramework_step_brief_explains_typed_proof_only_repair_branch()
+    {
+        var step = CreatePromptStep("Apply the diagnosis-guided quality action.");
+        step.Key = "implement-quality-repair";
+        step.Title = "Apply repair action";
+        step.AllowedOperations =
+        [
+            ProcessOperationContractNames.ReadUpstreamArtifacts,
+            ProcessOperationContractNames.MutateProductTarget,
+            ProcessOperationContractNames.RunValidation,
+            ProcessOperationContractNames.CaptureRuntimeProof,
+            ProcessOperationContractNames.WriteManagedProcessArtifacts
+        ];
+        step.OperationTargetScope = ProcessOperationContractNames.ExternalProductTargetMutable;
+        step.BranchOutcomes =
+        [
+            new ProcessTemplateDefinitionStepBranchOutcomeDocument { Key = "product-repair-applied" },
+            new ProcessTemplateDefinitionStepBranchOutcomeDocument { Key = "proof-only-revalidation-prepared" },
+            new ProcessTemplateDefinitionStepBranchOutcomeDocument { Key = "repair-attempt-incomplete" }
+        ];
+        var mutationBranchMap = JsonSerializer.Serialize(new Dictionary<string, string[]>(StringComparer.Ordinal)
+        {
+            [step.Key] = ["product-repair-applied"]
+        });
+        var runtimeRoutedBranchMap = JsonSerializer.Serialize(new Dictionary<string, string[]>(StringComparer.Ordinal)
+        {
+            [step.Key] = ["repair-attempt-incomplete"]
+        });
+
+        var prompt = BuildStepPrompt(
+            new AgentFrameworkProcessStepBriefBuilder(),
+            ProcessRunId.New(),
+            step,
+            variables: new Dictionary<string, string>
+            {
+                ["OutputRoot"] = @"C:\programovani\dotnet\business-output",
+                [ProcessRuntimeLaunchVariables.ProductMutationRequiredBranchOutcomeKeysByStep] = mutationBranchMap,
+                [ProcessRuntimeLaunchVariables.RuntimeRoutedBranchOutcomeKeysByStep] = runtimeRoutedBranchMap
+            });
+
+        Assert.Contains("branch-specific mutation semantics", prompt, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("product-repair-applied", prompt, StringComparison.Ordinal);
+        Assert.Contains("proof-only-revalidation-prepared", prompt, StringComparison.Ordinal);
+        Assert.Contains("Do not mutate unrelated product files merely to satisfy a receipt gate.", prompt, StringComparison.Ordinal);
+        Assert.Contains("current-run validation/runtime/browser receipts", prompt, StringComparison.Ordinal);
+        Assert.Contains("intentionally omitted from Available branch outcomes", prompt, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Never select, infer, copy, or write a branch key that is not listed", prompt, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("repair-attempt-incomplete", prompt, StringComparison.Ordinal);
+        var availableBranchSection = prompt[
+            prompt.IndexOf("Available branch outcomes:", StringComparison.Ordinal)..
+            prompt.IndexOf("Return the executor-specific", StringComparison.Ordinal)];
+        Assert.DoesNotContain("repair-attempt-incomplete", availableBranchSection, StringComparison.Ordinal);
     }
 
     [Fact]

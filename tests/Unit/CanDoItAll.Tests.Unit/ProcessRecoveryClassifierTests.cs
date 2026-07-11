@@ -59,6 +59,32 @@ public sealed class ProcessRecoveryClassifierTests
     }
 
     [Fact]
+    public void RecoveryClassifier_routes_direct_runtime_branch_selection_to_one_current_step_retry()
+    {
+        var classifier = new ProcessRecoveryClassifier();
+        var diagnostic = Diagnostic(
+            ProcessCompletionDiagnosticCodes.RuntimeRoutedBranchSelectedDirectly,
+            "sha256:runtime-owned-branch");
+
+        var first = classifier.ClassifyBlocked(CreateInput(
+            diagnostic,
+            failureCategory: ProcessFailureCategory.Unknown));
+
+        Assert.Equal(ProcessRecoveryDecisionKind.SafeRetry, first.DecisionKind);
+        Assert.Equal(ProcessRecoveryRouteKind.CurrentStepRetry, first.RouteKind);
+        Assert.Equal("process.current-step-safe-retry", first.Policy);
+
+        var priorReceipt = CreateReceipt(diagnostic, first, "sha256:first-runtime-owned-branch-retry");
+        var repeated = classifier.ClassifyBlocked(CreateInput(
+            diagnostic,
+            [priorReceipt],
+            ProcessFailureCategory.Unknown));
+
+        Assert.Equal(ProcessRecoveryDecisionKind.ManagerRequired, repeated.DecisionKind);
+        Assert.Equal("process.current-step-safe-retry-budget-exhausted", repeated.Policy);
+    }
+
+    [Fact]
     public void RecoveryClassifier_routes_managed_artifact_completion_retry_to_current_step_retry()
     {
         var classifier = new ProcessRecoveryClassifier();
@@ -74,7 +100,7 @@ public sealed class ProcessRecoveryClassifierTests
     }
 
     [Fact]
-    public void RecoveryClassifier_default_allows_three_same_fingerprint_safe_reworks()
+    public void RecoveryClassifier_default_requires_manager_when_same_diagnostic_survives_one_retry()
     {
         var classifier = new ProcessRecoveryClassifier();
         var diagnostic = Diagnostic(
@@ -92,57 +118,78 @@ public sealed class ProcessRecoveryClassifierTests
             recoveryDecision: first);
 
         var second = classifier.ClassifyBlocked(CreateInput(diagnostic, [priorReceipt]));
-        var secondReceipt = new StrategyResultReceipt(
-            StepId,
-            StrategyId,
-            StrategyResultIdempotencyKey.New(),
-            StrategyOutcome.NeedsManager,
-            ProcessRuntimeStepStatus.Ready,
-            "sha256:second-retry",
-            diagnostics: [diagnostic],
-            recoveryDecision: second);
-
-        var third = classifier.ClassifyBlocked(CreateInput(diagnostic, [priorReceipt, secondReceipt]));
-
-        Assert.Equal(ProcessRecoveryDecisionKind.SafeRetry, second.DecisionKind);
-        Assert.Equal(ProcessRecoveryRouteKind.CurrentStepRetry, second.RouteKind);
+        Assert.Equal(ProcessRecoveryDecisionKind.ManagerRequired, second.DecisionKind);
+        Assert.Equal(ProcessRecoveryRouteKind.ManagerAction, second.RouteKind);
         Assert.Equal(2, second.SameDiagnosticFingerprintAttempt);
-        Assert.Equal(3, second.MaximumSameDiagnosticFingerprintAttempts);
-        Assert.Equal(ProcessRecoveryDecisionKind.SafeRetry, third.DecisionKind);
-        Assert.Equal(ProcessRecoveryRouteKind.CurrentStepRetry, third.RouteKind);
-        Assert.Equal(3, third.SameDiagnosticFingerprintAttempt);
-        Assert.Equal(3, third.MaximumSameDiagnosticFingerprintAttempts);
+        Assert.Equal(1, second.MaximumSameDiagnosticFingerprintAttempts);
+        Assert.Equal(first.DiagnosticFingerprint, second.DiagnosticFingerprint);
     }
 
     [Fact]
-    public void RecoveryClassifier_default_allows_one_bounded_follow_up_after_diagnostic_progress()
+    public void RecoveryClassifier_treats_changed_blocker_prose_as_same_diagnostic_identity()
+    {
+        const string diagnosticCode = "process.adapter.completed_outcome_declares_unresolved_blocker";
+        var classifier = new ProcessRecoveryClassifier();
+        var firstDiagnostic = Diagnostic(diagnosticCode, "sha256:first-blocker-prose");
+        var first = classifier.ClassifyBlocked(CreateInput(firstDiagnostic));
+        var priorReceipt = CreateReceipt(firstDiagnostic, first, "sha256:first-blocker-result");
+        var secondDiagnostic = Diagnostic(diagnosticCode, "sha256:rewritten-blocker-prose");
+
+        var second = classifier.ClassifyBlocked(CreateInput(secondDiagnostic, [priorReceipt]));
+
+        Assert.Equal(ProcessRecoveryDecisionKind.ManagerRequired, second.DecisionKind);
+        Assert.Equal("process.current-step-safe-retry-budget-exhausted", second.Policy);
+        Assert.Equal(2, second.SameDiagnosticFingerprintAttempt);
+        Assert.Equal(first.DiagnosticFingerprint, second.DiagnosticFingerprint);
+    }
+
+    [Fact]
+    public void RecoveryClassifier_escalates_when_one_diagnostic_persists_while_incidental_diagnostics_change()
     {
         var classifier = new ProcessRecoveryClassifier();
-        var originalDiagnostic = Diagnostic(
+        var persistent = Diagnostic(
+            "process.adapter.tool_receipt_evidence_content_rejected",
+            "sha256:persistent-fatal-state");
+        var removed = Diagnostic(
             "process.adapter.product_required_file_content_missing",
-            "sha256:three-files-remain");
+            "sha256:starter-content");
+        var first = classifier.ClassifyBlocked(CreateInput([persistent, removed]));
+        var firstReceipt = CreateReceipt([persistent, removed], first, "sha256:first-retry");
+        var added = Diagnostic(
+            "process.adapter.runtime_lifecycle_correlation_missing",
+            "sha256:new-lifecycle-gap");
+
+        var second = classifier.ClassifyBlocked(CreateInput([persistent, added], [firstReceipt]));
+
+        Assert.Equal(ProcessRecoveryDecisionKind.ManagerRequired, second.DecisionKind);
+        Assert.Equal(ProcessRecoveryRouteKind.ManagerAction, second.RouteKind);
+        Assert.Equal("process.current-step-safe-retry-budget-exhausted", second.Policy);
+        Assert.Equal(2, second.SameDiagnosticFingerprintAttempt);
+        Assert.Equal(1, second.MaximumSameDiagnosticFingerprintAttempts);
+        Assert.StartsWith("sha256:", second.DiagnosticFingerprint, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void RecoveryClassifier_default_allows_bounded_follow_ups_when_diagnostics_are_replaced()
+    {
+        var classifier = new ProcessRecoveryClassifier();
         var priorReceipts = new List<StrategyResultReceipt>();
-        for (var attempt = 1; attempt <= 3; attempt++)
+        for (var attempt = 1; attempt <= 4; attempt++)
         {
-            var decision = classifier.ClassifyBlocked(CreateInput(originalDiagnostic, priorReceipts));
+            var diagnostic = Diagnostic(
+                "process.adapter.product_required_file_content_missing",
+                $"sha256:progress-state-{attempt}");
+            var decision = classifier.ClassifyBlocked(CreateInput(diagnostic, priorReceipts));
             Assert.Equal(ProcessRecoveryDecisionKind.SafeRetry, decision.DecisionKind);
-            priorReceipts.Add(CreateReceipt(originalDiagnostic, decision, $"sha256:retry-{attempt}"));
+            Assert.Equal(attempt, decision.AutomaticRetryAttempt);
+            Assert.Equal(1, decision.SameDiagnosticFingerprintAttempt);
+            priorReceipts.Add(CreateReceipt(diagnostic, decision, $"sha256:retry-{attempt}"));
         }
 
-        var progressedDiagnostic = Diagnostic(
+        var exhaustedDiagnostic = Diagnostic(
             "process.adapter.product_required_file_content_missing",
-            "sha256:two-files-remain");
-        var progressFollowUp = classifier.ClassifyBlocked(CreateInput(progressedDiagnostic, priorReceipts));
-
-        Assert.Equal(ProcessRecoveryDecisionKind.SafeRetry, progressFollowUp.DecisionKind);
-        Assert.Equal(ProcessRecoveryRouteKind.CurrentStepRetry, progressFollowUp.RouteKind);
-        Assert.Equal(4, progressFollowUp.AutomaticRetryAttempt);
-        Assert.Equal(4, progressFollowUp.MaximumAutomaticRetryAttempts);
-        Assert.Equal(1, progressFollowUp.SameDiagnosticFingerprintAttempt);
-        Assert.Equal(3, progressFollowUp.MaximumSameDiagnosticFingerprintAttempts);
-
-        priorReceipts.Add(CreateReceipt(progressedDiagnostic, progressFollowUp, "sha256:progress-follow-up"));
-        var exhausted = classifier.ClassifyBlocked(CreateInput(progressedDiagnostic, priorReceipts));
+            "sha256:progress-state-5");
+        var exhausted = classifier.ClassifyBlocked(CreateInput(exhaustedDiagnostic, priorReceipts));
 
         Assert.Equal(ProcessRecoveryDecisionKind.ManagerRequired, exhausted.DecisionKind);
         Assert.Equal("process.current-step-safe-retry-budget-exhausted", exhausted.Policy);
@@ -222,6 +269,20 @@ public sealed class ProcessRecoveryClassifierTests
             priorReceipts ?? []);
     }
 
+    private static ProcessRecoveryClassificationInput CreateInput(
+        IReadOnlyList<StrategyResultDiagnosticReceipt> diagnostics,
+        IReadOnlyList<StrategyResultReceipt>? priorReceipts = null)
+    {
+        return new ProcessRecoveryClassificationInput(
+            StepId,
+            ProcessFailureCategory.ProductCompletionGate,
+            diagnostics[0].Code,
+            ProcessRecoveryRouteKind.ManagerAction,
+            StepId,
+            diagnostics,
+            priorReceipts ?? []);
+    }
+
     private static StrategyResultDiagnosticReceipt Diagnostic(
         string code,
         string evidenceHash)
@@ -249,6 +310,22 @@ public sealed class ProcessRecoveryClassifierTests
             ProcessRuntimeStepStatus.Ready,
             resultHash,
             diagnostics: [diagnostic],
+            recoveryDecision: decision);
+    }
+
+    private static StrategyResultReceipt CreateReceipt(
+        IReadOnlyList<StrategyResultDiagnosticReceipt> diagnostics,
+        ProcessRecoveryDecisionReceipt decision,
+        string resultHash)
+    {
+        return new StrategyResultReceipt(
+            StepId,
+            StrategyId,
+            StrategyResultIdempotencyKey.New(),
+            StrategyOutcome.NeedsManager,
+            ProcessRuntimeStepStatus.Ready,
+            resultHash,
+            diagnostics: diagnostics,
             recoveryDecision: decision);
     }
 }

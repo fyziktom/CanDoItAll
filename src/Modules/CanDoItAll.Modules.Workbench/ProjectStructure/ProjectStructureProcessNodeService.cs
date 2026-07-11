@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Text.Json;
 using System.Text;
 using System.Text.RegularExpressions;
+using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Processes.Abstractions;
 using CanDoItAll.Processes.Application;
@@ -94,6 +95,10 @@ public sealed class ProjectStructureProcessNodeService(
         ProcessRuntimeLaunchVariables.ProductCompletionRequiredPathsByStep,
         ProcessRuntimeLaunchVariables.ProductCompletionRequiredToolReceipts,
         ProcessRuntimeLaunchVariables.ProductCompletionRequiredToolReceiptsByStep,
+        ProcessRuntimeLaunchVariables.ProductMutationRequiredBranchOutcomeKeys,
+        ProcessRuntimeLaunchVariables.ProductMutationRequiredBranchOutcomeKeysByStep,
+        ProcessRuntimeLaunchVariables.RuntimeRoutedBranchOutcomeKeysByStep,
+        ProcessRuntimeLaunchVariables.ExecutorPreferredSpecializationTags,
         ProcessRuntimeLaunchVariables.ProductCompletionRequiredFileContentChecks,
         ProcessRuntimeLaunchVariables.ProductCompletionRequiredFileContentChecksByStep
     ];
@@ -118,6 +123,10 @@ public sealed class ProjectStructureProcessNodeService(
         ProcessRuntimeLaunchVariables.ProductCompletionRequiredPathsByStep,
         ProcessRuntimeLaunchVariables.ProductCompletionRequiredToolReceipts,
         ProcessRuntimeLaunchVariables.ProductCompletionRequiredToolReceiptsByStep,
+        ProcessRuntimeLaunchVariables.ProductMutationRequiredBranchOutcomeKeys,
+        ProcessRuntimeLaunchVariables.ProductMutationRequiredBranchOutcomeKeysByStep,
+        ProcessRuntimeLaunchVariables.RuntimeRoutedBranchOutcomeKeysByStep,
+        ProcessRuntimeLaunchVariables.ExecutorPreferredSpecializationTags,
         ProcessRuntimeLaunchVariables.ProductCompletionRequiredFileContentChecks,
         ProcessRuntimeLaunchVariables.ProductCompletionRequiredFileContentChecksByStep
     ];
@@ -448,9 +457,11 @@ public sealed class ProjectStructureProcessNodeService(
             parentRunId,
             parentStepId,
             parentAssignment,
+            parentState,
             definitionKey,
             request,
             agent,
+            dependencies.WorkspaceFiles,
             dependencies.LaunchVariableContributors);
         var subprocessIdentityVariables = CreateSubprocessIdentityVariables(
             projectId,
@@ -466,6 +477,7 @@ public sealed class ProjectStructureProcessNodeService(
                 parentRunId,
                 parentStepId,
                 parentAssignment,
+                parentState,
                 definitionKey,
                 subprocessIdentityVariables,
                 request.IncludeLaunchPlan,
@@ -592,6 +604,7 @@ public sealed class ProjectStructureProcessNodeService(
         ProcessRunId parentRunId,
         ProcessStepInstanceId parentStepId,
         ProcessRuntimeStepAssignment parentAssignment,
+        ProcessRuntimeStateSnapshot parentState,
         string definitionKey,
         IReadOnlyDictionary<string, string> subprocessIdentityVariables,
         bool includeLaunchPlan,
@@ -1103,6 +1116,7 @@ public sealed class ProjectStructureProcessNodeService(
             serviceProvider.GetRequiredService<IProcessInstancePlanStore>(),
             serviceProvider.GetRequiredService<IProcessRuntimeStepAssignmentStore>(),
             serviceProvider.GetRequiredService<IProcessRuntimeStateStore>(),
+            serviceProvider.GetRequiredService<IWorkspaceFileService>(),
             serviceProvider.GetServices<IProjectStructureProcessLaunchVariableContributor>().ToArray());
     }
 
@@ -1183,9 +1197,11 @@ public sealed class ProjectStructureProcessNodeService(
         ProcessRunId parentRunId,
         ProcessStepInstanceId parentStepId,
         ProcessRuntimeStepAssignment parentAssignment,
+        ProcessRuntimeStateSnapshot parentState,
         string definitionKey,
         ProjectStructureProcessSubprocessLaunchInput request,
         ProjectStructureAgentContext agent,
+        IWorkspaceFileService workspaceFiles,
         IEnumerable<IProjectStructureProcessLaunchVariableContributor> contributors)
     {
         var variables = CopyInheritableSubprocessLaunchVariables(parentAssignment.LaunchVariables);
@@ -1262,6 +1278,7 @@ public sealed class ProjectStructureProcessNodeService(
                 parentAssignment,
                 IsSubprocess: true),
             variables);
+        ProcessSubprocessParentArtifactContextBuilder.Apply(variables, parentState, parentStepId, workspaceFiles);
         RemoveSubprocessReservedLaunchVariables(variables);
 
         return variables;
@@ -1920,6 +1937,7 @@ public sealed class ProjectStructureProcessNodeService(
         IProcessInstancePlanStore PlanStore,
         IProcessRuntimeStepAssignmentStore AssignmentStore,
         IProcessRuntimeStateStore StateStore,
+        IWorkspaceFileService WorkspaceFiles,
         IReadOnlyList<IProjectStructureProcessLaunchVariableContributor> LaunchVariableContributors);
 }
 

@@ -13,6 +13,8 @@ internal sealed class DotNetSoftwareDeliveryRecoveryAdviceProvider : IProcessRec
     private const string RequiredToolReceiptMissingCode = "process.adapter.required_tool_receipt_missing";
     private const string RequiredToolReceiptBlockedRetryCode = "process.adapter.required_tool_receipt_blocked_retry";
     private const string ProductRequiredFileContentMissingCode = "process.adapter.product_required_file_content_missing";
+    private const string ProductMutationReceiptMissingCode = "process.adapter.product_mutation_receipt_missing";
+    private const string RuntimeLifecycleCorrelationMissingCode = "process.adapter.runtime_lifecycle_correlation_missing";
     private const string WorkspacePwshRunScriptToolName = "workspace_pwsh_run_script";
     private const string WorkspaceDotNetNewToolName = "workspace_dotnet_new";
     private const string WorkspaceAliasVariableName = "WorkspaceAlias";
@@ -33,16 +35,25 @@ internal sealed class DotNetSoftwareDeliveryRecoveryAdviceProvider : IProcessRec
     {
         ArgumentNullException.ThrowIfNull(context);
 
-        return context.Diagnostics.Any(diagnostic =>
+        var assignment = context.Request.Assignment;
+        var hasManagedArtifactReceiptFailureForMutationStep =
+            RequiresProductMutationBeforeManagedOutput(assignment) &&
+            context.Diagnostics.Any(diagnostic => string.Equals(
+                diagnostic.Code,
+                ProcessCompletionDiagnosticCodes.ManagedArtifactWriteReceiptMissing,
+                StringComparison.Ordinal));
+        return (hasManagedArtifactReceiptFailureForMutationStep || context.Diagnostics.Any(diagnostic =>
                    IsRequiredToolReceiptDiagnostic(diagnostic.Code) ||
                    string.Equals(diagnostic.Code, ProductRequiredFileContentMissingCode, StringComparison.Ordinal) ||
+                   string.Equals(diagnostic.Code, ProductMutationReceiptMissingCode, StringComparison.Ordinal) ||
+                   string.Equals(diagnostic.Code, RuntimeLifecycleCorrelationMissingCode, StringComparison.Ordinal) ||
                    string.Equals(
                        diagnostic.Code,
                        ProcessCompletionDiagnosticCodes.ToolReceiptEvidenceContentRejected,
-                       StringComparison.Ordinal)) &&
-               (IsQaBranchDecisionStep(context.Request.Assignment.StepKey) ||
-                HasDotNetLaunchMetadata(context.Request.Assignment.LaunchVariables) ||
-                HasDotNetSetupStepKey(context.Request.Assignment.StepKey));
+                       StringComparison.Ordinal))) &&
+               (IsQaBranchDecisionStep(assignment.StepKey) ||
+                HasDotNetLaunchMetadata(assignment.LaunchVariables) ||
+                HasDotNetSetupStepKey(assignment.StepKey));
     }
 
     public IReadOnlyList<string> BuildAdvice(ProcessStepRecoveryAdviceContext context)
@@ -52,10 +63,81 @@ internal sealed class DotNetSoftwareDeliveryRecoveryAdviceProvider : IProcessRec
         var lines = new List<string>();
         AddRequiredReceiptGuidance(lines, context.Request.Assignment, context.Diagnostics);
         AddProductReadbackGuidance(lines, context.Request.Assignment, context.Diagnostics);
+        AddProductMutationGuidance(lines, context.Request.Assignment, context.Diagnostics);
         AddBrowserSnapshotEvidenceGuidance(lines, context.Request.Assignment, context.Diagnostics);
+        AddRuntimeLifecycleGuidance(lines, context.Diagnostics);
         var addedDotNetGuidance = AddDotNetCreateProjectGuidance(lines, context.Request.Assignment, context.Diagnostics);
         AddPrimaryArtifactGuidance(lines, context.Request, context.Diagnostics, addedDotNetGuidance);
         return lines;
+    }
+
+    private static void AddProductMutationGuidance(
+        List<string> lines,
+        ProcessRuntimeStepAssignment assignment,
+        IReadOnlyList<ProcessRecoveryDiagnosticFact> diagnostics)
+    {
+        var requiresMutationBeforeManagedOutput = RequiresProductMutationBeforeManagedOutput(assignment);
+        if (!diagnostics.Any(diagnostic =>
+                string.Equals(diagnostic.Code, ProductMutationReceiptMissingCode, StringComparison.Ordinal) ||
+                (requiresMutationBeforeManagedOutput && string.Equals(
+                    diagnostic.Code,
+                    ProcessCompletionDiagnosticCodes.ManagedArtifactWriteReceiptMissing,
+                    StringComparison.Ordinal))))
+        {
+            return;
+        }
+
+        var productRootAlias = ResolveProductRootAlias(assignment.LaunchVariables);
+        var target = string.IsNullOrWhiteSpace(productRootAlias)
+            ? "the grounded product-root alias"
+            : productRootAlias;
+        var helperRef = $"artifacts/process-runs/{assignment.RunId.Value:D}/scripts/apply-product-change.ps1";
+
+        lines.Add(".NET product-mutation retry contract: the previous execution already inspected the scaffold but exhausted its turn without changing the product. Do not repeat a broad scaffold inventory and do not write the final managed artifact before a successful product-target mutation.");
+        lines.Add("Mutation rights are already granted for this step. Do not ask for authorization and do not interpret the denied managed-artifact write as a missing permission. Before any restore, build, or test rerun, call a product mutation tool against an actual production or test file under the grounded product root.");
+        lines.Add("Use at most one bounded product file listing, then read only the project/import/entry files and direct mutation targets that are necessary for the accepted slice. Reuse the paths and gaps already identified by the previous attempt.");
+        lines.Add($"When the change spans several files, prefer one bounded helper: write it to {helperRef}, verify that ref, then invoke {WorkspacePwshRunScriptToolName} with workingDirectory {target} and sideEffectManifest {{\"version\":1,\"mode\":\"ProductMutation\",\"declaredWritePaths\":[\"{target}\"]}}.");
+        lines.Add($"The helper starts with {target} as its current directory. Inside the helper, treat (Get-Location).Path as the product root and join only product-root-relative child paths. Do not append {target} or another external-target alias to the current directory.");
+        lines.Add("A failed helper invocation is not product mutation. If you correct the helper after a failure, verify the corrected helper and invoke it again in this same execution attempt. Do not write the final artifact or claim the helper was re-run until the corrected invocation has a successful product-mutation receipt.");
+        lines.Add("After the helper or direct writes succeed, read back representative changed production and test files, then overwrite the managed artifact with the actual changed-file inventory. If the helper is denied, use direct workspace product writes or return the exact denial; do not fall back to another read-only completion.");
+    }
+
+    private static bool RequiresProductMutationBeforeManagedOutput(ProcessRuntimeStepAssignment assignment)
+    {
+        if (!assignment.LaunchVariables.TryGetValue(
+                ProcessRuntimeLaunchVariables.ProductMutationBeforeManagedOutputRequiredStepKeys,
+                out var configuredStepKeys) ||
+            string.IsNullOrWhiteSpace(configuredStepKeys))
+        {
+            return false;
+        }
+
+        try
+        {
+            return JsonSerializer.Deserialize<string[]>(configuredStepKeys)?
+                .Contains(assignment.StepKey, StringComparer.OrdinalIgnoreCase) == true;
+        }
+        catch (JsonException)
+        {
+            return false;
+        }
+    }
+
+    private static void AddRuntimeLifecycleGuidance(
+        List<string> lines,
+        IReadOnlyList<ProcessRecoveryDiagnosticFact> diagnostics)
+    {
+        if (!diagnostics.Any(diagnostic => string.Equals(
+                diagnostic.Code,
+                RuntimeLifecycleCorrelationMissingCode,
+                StringComparison.Ordinal)))
+        {
+            return;
+        }
+
+        lines.Add("Runtime lifecycle proof repair:");
+        lines.Add("Current-run runtime/browser proof must be produced in this same retry: start the product, navigate the browser to the host URL returned by that start receipt, capture browser state/screenshot/console proof, and stop the same runtime startup receipt.");
+        lines.Add("Do not reuse prior runtime, browser, screenshot, or stop receipts, and do not submit an accepted branch until those current-run receipts exist.");
     }
 
     private static void AddBrowserSnapshotEvidenceGuidance(

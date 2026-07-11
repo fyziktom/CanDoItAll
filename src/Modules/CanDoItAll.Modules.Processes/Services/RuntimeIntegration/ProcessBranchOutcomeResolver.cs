@@ -35,9 +35,28 @@ internal static class ProcessBranchOutcomeResolver
     internal static bool ShouldRouteBlockedBranchOutcome(
         ProcessRuntimeStepAssignment assignment,
         ProcessStepOutcomeResult output)
-        => output.Status == ProcessStepOutcomeStatus.Blocked &&
-           !string.IsNullOrWhiteSpace(output.BranchOutcomeKey) &&
-           (assignment.ProducedArtifactSlotIds.Count == 0 || output.EvidenceRefs.Count > 0);
+    {
+        if (output.Status != ProcessStepOutcomeStatus.Blocked ||
+            string.IsNullOrWhiteSpace(output.BranchOutcomeKey) ||
+            assignment.ProducedArtifactSlotIds.Count > 0 && output.EvidenceRefs.Count == 0)
+        {
+            return false;
+        }
+
+        var declaredBranchOutcomeKeys = EnumerateDeclaredBranchOutcomeKeys(assignment.Prompt)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        if (declaredBranchOutcomeKeys.Length > 0 &&
+            !declaredBranchOutcomeKeys.Contains(output.BranchOutcomeKey, StringComparer.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        var outputText = string.Join(
+            " ",
+            EnumerateOutcomeText(output).Where(value => !string.IsNullOrWhiteSpace(value)));
+        return !LooksLikeRightsOrToolBoundary(outputText);
+    }
 
     internal static bool TryInferEvidenceBackedBranchOutcome(
         ProcessRuntimeStepAssignment assignment,
@@ -304,6 +323,46 @@ internal static class ProcessBranchOutcomeResolver
 
     internal static IEnumerable<string> EnumerateDeclaredBranchOutcomeKeys(string prompt)
         => EnumerateDeclaredBranchOutcomes(prompt).Select(outcome => outcome.Key);
+
+    internal static IEnumerable<BranchOutcomePromptDescriptor> EnumerateAgentSelectableBranchOutcomes(string prompt)
+    {
+        if (string.IsNullOrWhiteSpace(prompt))
+        {
+            yield break;
+        }
+
+        var lines = prompt.Split(['\r', '\n']);
+        var inBranchSection = false;
+        var foundOutcome = false;
+        foreach (var line in lines)
+        {
+            if (!inBranchSection)
+            {
+                var heading = NormalizeOutcomeMarkdownMetadataLine(line);
+                inBranchSection = string.Equals(heading, "Available branch outcomes", StringComparison.OrdinalIgnoreCase) ||
+                                  string.Equals(heading, "Branch outcomes", StringComparison.OrdinalIgnoreCase);
+                continue;
+            }
+
+            if (string.IsNullOrWhiteSpace(line))
+            {
+                if (foundOutcome)
+                {
+                    yield break;
+                }
+
+                continue;
+            }
+
+            if (!TryReadDeclaredBranchOutcomeLine(line, out var key, out var rest))
+            {
+                yield break;
+            }
+
+            foundOutcome = true;
+            yield return new BranchOutcomePromptDescriptor(key, ExtractBranchOutcomeTitle(rest));
+        }
+    }
 
     internal static IEnumerable<BranchOutcomePromptDescriptor> EnumerateDeclaredBranchOutcomes(string prompt)
     {

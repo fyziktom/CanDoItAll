@@ -52,7 +52,13 @@
   },
   "tags": [
     "review",
+    "review-lead",
     "code",
-    "quality"
+    "quality",
+    "dotnet",
+    "blazor",
+    "frontend",
+    "wasm",
+    "pwa"
   ]
 }

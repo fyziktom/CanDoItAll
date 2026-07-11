@@ -20,6 +20,8 @@ internal static class ProcessCompletionGateDiagnosticCatalog
                string.Equals(code, "process.adapter.completed_outcome_declares_unresolved_blocker", StringComparison.OrdinalIgnoreCase) ||
                string.Equals(code, "process.adapter.branch_outcome_defect_evidence_missing", StringComparison.OrdinalIgnoreCase) ||
                string.Equals(code, "process.adapter.branch_route_defect_evidence_missing", StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(code, ProcessCompletionDiagnosticCodes.RequiredBranchOutcomeMissing, StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(code, ProcessCompletionDiagnosticCodes.RuntimeRoutedBranchSelectedDirectly, StringComparison.OrdinalIgnoreCase) ||
                string.Equals(code, "process.adapter.runtime_lifecycle_correlation_missing", StringComparison.OrdinalIgnoreCase) ||
                string.Equals(code, "process.adapter.runtime_gate_findings_append_failed", StringComparison.OrdinalIgnoreCase) ||
                string.Equals(code, ProcessCompletionDiagnosticCodes.ToolReceiptEvidenceContentRejected, StringComparison.OrdinalIgnoreCase) ||

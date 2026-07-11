@@ -10,6 +10,7 @@ public static class ExecutionInvocationMetadata
     public const string RequireStructuredOutputValidationMetadataKey = "agentRequireStructuredOutputValidation";
     public const string AllowedExternalTargetAliasesMetadataKey = "agentAllowedExternalTargetAliases";
     public const string ReadOnlyExternalTargetAliasesMetadataKey = "agentReadOnlyExternalTargetAliases";
+    public const string AllowedManagedArtifactReadRefsMetadataKey = "agentAllowedManagedArtifactReadRefs";
     public const string ProcessCooperationModeMetadataKey = "agentProcessCooperationMode";
     public const string ProcessWorkspaceToolProfileMetadataKey = "agentProcessWorkspaceToolProfile";
     public const string ProcessCooperationSummaryMetadataKey = "agentProcessCooperationSummary";
@@ -19,6 +20,8 @@ public static class ExecutionInvocationMetadata
     public const string ProcessStepAllowedOperationsMetadataKey = "agentProcessStepAllowedOperations";
     public const string ProcessStepTargetScopeMetadataKey = "agentProcessStepTargetScope";
     public const string ProcessStepAllowsProductMutationMetadataKey = "agentProcessStepAllowsProductMutation";
+    public const string ProcessStepRequiresProductMutationBeforeManagedOutputMetadataKey = "agentProcessStepRequiresProductMutationBeforeManagedOutput";
+    public const string ProcessProductMutationToolNamesMetadataKey = "agentProcessProductMutationToolNames";
     public const string ProcessGroundedTargetAliasLedgerMetadataKey = "agentProcessGroundedTargetAliasLedger";
     public const string ContextWorkspaceScopeMetadataKey = "agentContextWorkspaceScope";
     public const string ProjectStructureLaunchAgentMetadataKey = "agentProjectStructureLaunchAgent";
@@ -276,6 +279,27 @@ public static class ExecutionInvocationMetadata
         return ResolveExternalTargetAliases(run, ReadOnlyExternalTargetAliasesMetadataKey);
     }
 
+    public static IReadOnlyList<string> ResolveAllowedManagedArtifactReadRefs(ExecutionRunRecord run)
+    {
+        ArgumentNullException.ThrowIfNull(run);
+
+        if (!IsTrustedGovernedProcessRun(run))
+        {
+            return [];
+        }
+
+        return ResolveStringArray(run.MetadataJson, AllowedManagedArtifactReadRefsMetadataKey)
+            .Select(WorkspaceScopeDescriptor.NormalizeRelativePath)
+            .Where(path =>
+                WorkspaceProcessRunArtifactPath.TryResolveRunId(path, out var runId, out var artifactSuffix) &&
+                Guid.TryParse(runId, out _) &&
+                !string.IsNullOrWhiteSpace(artifactSuffix))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(path => path, StringComparer.OrdinalIgnoreCase)
+            .Take(256)
+            .ToArray();
+    }
+
     public static AgentProcessCooperationMode? ResolveProcessCooperationMode(ExecutionRunRecord run)
     {
         ArgumentNullException.ThrowIfNull(run);
@@ -355,6 +379,33 @@ public static class ExecutionInvocationMetadata
         }
 
         return ResolveProcessAllowsProductMutation(ParseObject(run.MetadataJson));
+    }
+
+    public static bool ResolveProcessRequiresProductMutationBeforeManagedOutput(ExecutionRunRecord run)
+    {
+        ArgumentNullException.ThrowIfNull(run);
+
+        return IsTrustedGovernedProcessRun(run) &&
+               TryReadBoolean(
+                   run.MetadataJson,
+                   ProcessStepRequiresProductMutationBeforeManagedOutputMetadataKey) == true;
+    }
+
+    public static IReadOnlyList<string> ResolveProcessProductMutationToolNames(ExecutionRunRecord run)
+    {
+        ArgumentNullException.ThrowIfNull(run);
+
+        if (!IsTrustedGovernedProcessRun(run))
+        {
+            return [];
+        }
+
+        return ResolveStringArray(run.MetadataJson, ProcessProductMutationToolNamesMetadataKey)
+            .Where(item => !string.IsNullOrWhiteSpace(item))
+            .Select(item => item.Trim())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(item => item, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
     }
 
     public static IReadOnlyList<string> ResolveProcessStepAllowedOperations(ExecutionRunRecord run)
@@ -594,6 +645,7 @@ public static class ExecutionInvocationMetadata
     private static bool HasProcessBoundaryMetadata(JsonObject metadata)
     {
         return metadata.ContainsKey(ProcessStepAllowsProductMutationMetadataKey) ||
+               metadata.ContainsKey(ProcessStepRequiresProductMutationBeforeManagedOutputMetadataKey) ||
                metadata.ContainsKey(ProcessStepAllowedOperationsMetadataKey) ||
                metadata.ContainsKey(ProcessStepTargetScopeMetadataKey) ||
                metadata.ContainsKey(ProcessStepExecutionBoundaryMetadataKey);

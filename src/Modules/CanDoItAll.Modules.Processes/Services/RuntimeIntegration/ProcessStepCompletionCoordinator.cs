@@ -6,6 +6,8 @@ using CanDoItAll.Processes.Drivers.Abstractions;
 using CanDoItAll.Processes.Runtime;
 
 using static CanDoItAll.Modules.Processes.ProcessCompletionIssueResultFactory;
+using static CanDoItAll.Modules.Processes.ProcessBranchOutcomeResolver;
+using static CanDoItAll.Modules.Processes.ProcessCompletionRetryPolicy;
 
 namespace CanDoItAll.Modules.Processes;
 
@@ -23,6 +25,11 @@ internal sealed class ProcessStepCompletionCoordinator(
         IReadOnlyList<ToolExecutionReceiptRecord> toolReceipts)
     {
         var normalizedOutput = ProcessOutcomeGroundingValidator.RemoveNonCitableSourceMetadataFromOutcome(output);
+        if (ShouldRouteBlockedBranchOutcome(assignment, normalizedOutput))
+        {
+            normalizedOutput = CopyAsCompletedBranchOutcome(normalizedOutput);
+        }
+
         return managedArtifactService.MaterializeManagedOutcomeArtifactIfNeeded(
             assignment,
             normalizedOutput,

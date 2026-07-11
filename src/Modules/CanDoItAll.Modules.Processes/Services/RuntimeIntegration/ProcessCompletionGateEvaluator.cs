@@ -97,7 +97,7 @@ internal sealed class ProcessCompletionGateEvaluator
             "process.adapter.product_output_missing" => 32,
             "process.adapter.product_output_evidence_missing" => 33,
             "process.adapter.produced_artifact_evidence_missing" => 40,
-            "process.adapter.produced_artifact_write_receipt_missing" => 41,
+            ProcessCompletionDiagnosticCodes.ManagedArtifactWriteReceiptMissing => 41,
             "process.adapter.managed_artifact_materialization_failed" => 42,
             "process.adapter.managed_artifact_outcome_append_failed" => 43,
             "process.adapter.managed_artifact_acceptance_append_failed" => 44,

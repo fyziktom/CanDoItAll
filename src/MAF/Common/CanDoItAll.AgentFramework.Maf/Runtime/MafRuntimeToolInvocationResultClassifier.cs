@@ -68,6 +68,12 @@ internal static class MafRuntimeToolInvocationResultClassifier
             return true;
         }
 
+        if (TryReadBooleanProperty(result, "IsError", out var isError))
+        {
+            succeeded = !isError;
+            return true;
+        }
+
         if (TryReadFailureExitSummary(result, out succeeded))
         {
             return true;
@@ -232,6 +238,13 @@ internal static class MafRuntimeToolInvocationResultClassifier
             }
         }
 
+        if (TryGetJsonProperty(element, "isError", out var isErrorProperty) &&
+            isErrorProperty.ValueKind is JsonValueKind.True or JsonValueKind.False)
+        {
+            succeeded = !isErrorProperty.GetBoolean();
+            return true;
+        }
+
         foreach (var propertyName in ResultEnvelopePropertyNames)
         {
             if (TryGetJsonProperty(element, propertyName, out var property) &&
@@ -368,6 +381,9 @@ internal static class MafRuntimeToolInvocationResultClassifier
                text.Contains("Succeeded=False", StringComparison.OrdinalIgnoreCase) ||
                text.Contains("\"succeeded\":false", StringComparison.OrdinalIgnoreCase) ||
                text.Contains("succeeded: false", StringComparison.OrdinalIgnoreCase) ||
+               text.Contains("isError=true", StringComparison.OrdinalIgnoreCase) ||
+               text.Contains("\"isError\":true", StringComparison.OrdinalIgnoreCase) ||
+               text.Contains("isError: true", StringComparison.OrdinalIgnoreCase) ||
                text.Contains("ExitSummary = Denied", StringComparison.OrdinalIgnoreCase) ||
                text.Contains("ExitSummary: Denied", StringComparison.OrdinalIgnoreCase) ||
                text.Contains("ExitSummary = Failed", StringComparison.OrdinalIgnoreCase) ||

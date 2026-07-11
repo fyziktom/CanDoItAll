@@ -372,6 +372,9 @@ internal sealed class MafRuntimeAgentFactory
                 ApplicationApprovalAvailable: false,
                 ProcessScaffoldToolOnly: auditScope?.ProcessScaffoldToolOnly == true,
                 ProcessAllowsProductMutation: auditScope?.ProcessAllowsProductMutation != false,
+                ProcessRequiresProductMutationBeforeManagedOutput:
+                    auditScope?.ProcessRequiresProductMutationBeforeManagedOutput == true,
+                ProcessProductMutationToolNames: auditScope?.ProcessProductMutationToolNames ?? [],
                 ProcessStepAllowedOperations: auditScope?.ProcessStepAllowedOperations ?? [],
                 ProcessStepTargetScope: auditScope?.ProcessStepTargetScope ?? string.Empty,
                 ContextWorkspaceScopeKind: auditScope?.ContextWorkspaceScope?.Kind.ToString() ?? string.Empty,
@@ -381,7 +384,8 @@ internal sealed class MafRuntimeAgentFactory
                 ScriptSideEffectManifestJson: scriptSideEffectManifestJson,
                 ToolInvocationTraces: toolInvocationTraceRecorder.Snapshot())
             {
-                SourceId = auditScope?.SourceId ?? string.Empty
+                SourceId = auditScope?.SourceId ?? string.Empty,
+                AllowedManagedArtifactReadRefs = auditScope?.AllowedManagedArtifactReadRefs ?? []
             };
             var policyDecision = await toolPolicy.EvaluateAsync(policyContext, cancellationToken);
             using var activity = AgentFrameworkTelemetry.ActivitySource.StartActivity("maf.function.invoke", ActivityKind.Internal);

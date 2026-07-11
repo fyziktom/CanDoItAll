@@ -47,7 +47,7 @@ public sealed class ProcessRuntimeDispatchApplicationService(
     private const string ManagerRecoveryInstructionHeading = ProcessRuntimeRecoveryInstructionHeadings.ManagerRecovery;
     private const string RuntimeDiagnosticRecoveryInstructionHeading = ProcessRuntimeRecoveryInstructionHeadings.RuntimeDiagnosticRecovery;
     private static readonly Regex PriorRuntimeRecoveryInstructionBlockRegex = new(
-        $@"(?ms)^\s*(?:{Regex.Escape(ManagerRecoveryInstructionHeading)}|{Regex.Escape(RuntimeDiagnosticRecoveryInstructionHeading)}):\s*.*?(?=^\s*(?:{Regex.Escape(ManagerRecoveryInstructionHeading)}|{Regex.Escape(RuntimeDiagnosticRecoveryInstructionHeading)}):\s*|\z)",
+        $@"(?ms)^\s*(?:{Regex.Escape(ManagerRecoveryInstructionHeading)}|{Regex.Escape(RuntimeDiagnosticRecoveryInstructionHeading)}):\s*.*?(?=^\s*(?:{Regex.Escape(ManagerRecoveryInstructionHeading)}|{Regex.Escape(RuntimeDiagnosticRecoveryInstructionHeading)}):\s*|^\s*{Regex.Escape(ProcessAutomaticRecoveryPromptBuilder.ExecutionFocusHeading)}\s*|\z)",
         RegexOptions.CultureInvariant);
     private static readonly TimeSpan ClaimCleanupConcurrencyRetryDelay = TimeSpan.FromMilliseconds(100);
     private readonly ProcessRuntimeDispatchOptions dispatchOptions = NormalizeOptions(options);
@@ -1009,16 +1009,20 @@ public sealed class ProcessRuntimeDispatchApplicationService(
             ? BuildManagerRecoveryInstruction(result, recoveryInstruction)
             : BuildRuntimeDiagnosticRecoveryInstruction(result, recoveryInstruction);
         var normalizedPrompt = RemovePriorRuntimeRecoveryInstructionBlocks(assignment.Prompt).TrimEnd();
-        if (normalizedPrompt.Contains(instruction, StringComparison.Ordinal))
+        var prompt = stepStatus == ProcessRuntimeStepStatus.Ready && recoveryInstruction.HasInstruction
+            ? ProcessAutomaticRecoveryPromptBuilder.Build(
+                assignment with { Prompt = normalizedPrompt },
+                instruction)
+            : $"""
+              {normalizedPrompt}
+
+              {instruction}
+              """;
+        if (string.Equals(prompt, assignment.Prompt, StringComparison.Ordinal))
         {
             return;
         }
 
-        var prompt = $"""
-        {normalizedPrompt}
-
-        {instruction}
-        """;
         await assignmentStore.SaveAsync([assignment with { Prompt = prompt }], cancellationToken).ConfigureAwait(false);
     }
 

@@ -51,6 +51,24 @@ internal static class ProcessProductCompletionRuleParser
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToArray();
 
+    internal static IReadOnlyList<string> ResolveProductMutationRequiredBranchOutcomeKeys(
+        IReadOnlyDictionary<string, string> launchVariables,
+        string stepKey)
+        => ResolveProductCompletionRequiredStringList(
+            launchVariables,
+            ProcessRuntimeLaunchVariables.ProductMutationRequiredBranchOutcomeKeys,
+            ProcessRuntimeLaunchVariables.ProductMutationRequiredBranchOutcomeKeysByStep,
+            stepKey);
+
+    internal static IReadOnlyList<string> ResolveRuntimeRoutedBranchOutcomeKeys(
+        IReadOnlyDictionary<string, string> launchVariables,
+        string stepKey)
+        => ResolveProductCompletionRequiredStringList(
+            launchVariables,
+            "RuntimeRoutedBranchOutcomeKeys",
+            ProcessRuntimeLaunchVariables.RuntimeRoutedBranchOutcomeKeysByStep,
+            stepKey);
+
     internal static IReadOnlyList<ProductCompletionRequiredToolReceiptRule> ResolveProductCompletionRequiredToolReceiptRules(
         IReadOnlyDictionary<string, string> launchVariables,
         string stepKey)

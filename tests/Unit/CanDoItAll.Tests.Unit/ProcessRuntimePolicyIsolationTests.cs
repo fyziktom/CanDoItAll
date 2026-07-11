@@ -2,6 +2,7 @@ using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Modules.Processes;
 using CanDoItAll.Processes.Abstractions;
+using CanDoItAll.Processes.Contracts;
 using CanDoItAll.Processes.Drivers.Abstractions;
 using CanDoItAll.Processes.Runtime;
 using Microsoft.Extensions.Configuration;
@@ -21,6 +22,12 @@ public sealed class ProcessRuntimePolicyIsolationTests
 
         Assert.True(match.IsHandled);
         Assert.True(match.IsMatch);
+        Assert.True(catalog.MatchRequirement(
+            CreateToolReceipt(ToolContractCatalog.BrowserPressKey, "key=Enter"),
+            BrowserInteractionToolReceiptPolicyContribution.InteractionProofRequirement).IsMatch);
+        Assert.False(catalog.MatchRequirement(
+            CreateToolReceipt(ToolContractCatalog.BrowserSnapshot, "filename=state.yml"),
+            BrowserInteractionToolReceiptPolicyContribution.InteractionProofRequirement).IsMatch);
         Assert.True(catalog.IsProductMutationTool("workspace_write_file"));
         Assert.True(catalog.IsProductMutationTool("workspace_dotnet_new"));
         Assert.True(catalog.IsProductValidationTool("workspace_dotnet_build"));
@@ -77,6 +84,93 @@ public sealed class ProcessRuntimePolicyIsolationTests
     }
 
     [Fact]
+    public void Runtime_routed_branch_cannot_be_selected_directly_by_agent()
+    {
+        var runId = ProcessRunId.New();
+        var assignment = new ProcessRuntimeStepAssignment(
+            runId,
+            ProcessInstancePlanId.New(),
+            ProcessStepInstanceId.New(),
+            "implement-quality-repair",
+            "repair",
+            "repair",
+            "Repair",
+            "Agent",
+            Guid.NewGuid().ToString("D"),
+            "Repair",
+            "Apply repair.",
+            "sha256:readiness",
+            "Test assignment.",
+            [ArtifactSlotId.New()],
+            [],
+            [],
+            ProcessOperationContractNames.ExternalProductTargetMutable,
+            new Dictionary<string, string>(StringComparer.Ordinal)
+            {
+                [ProcessRuntimeLaunchVariables.RuntimeRoutedBranchOutcomeKeysByStep] =
+                    "{\"implement-quality-repair\":[\"repair-attempt-incomplete\"]}"
+            },
+            BranchGate: null,
+            DateTimeOffset.UtcNow);
+        var output = new ProcessStepOutcomeResult
+        {
+            Status = ProcessStepOutcomeStatus.Completed,
+            BranchOutcomeKey = "repair-attempt-incomplete",
+            Reason = "No product mutation was attempted."
+        };
+
+        var issue = ProcessProductCompletionStateGate.ValidateRuntimeRoutedBranchWasNotSelectedDirectly(
+            assignment,
+            output);
+
+        Assert.NotNull(issue);
+        Assert.Equal(ProcessCompletionDiagnosticCodes.RuntimeRoutedBranchSelectedDirectly, issue.Code);
+        Assert.Contains("not an executable agent decision", issue.Summary, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Agent_selectable_repair_branch_is_not_rejected_as_runtime_routed()
+    {
+        var assignment = new ProcessRuntimeStepAssignment(
+            ProcessRunId.New(),
+            ProcessInstancePlanId.New(),
+            ProcessStepInstanceId.New(),
+            "implement-quality-repair",
+            "repair",
+            "repair",
+            "Repair",
+            "Agent",
+            Guid.NewGuid().ToString("D"),
+            "Repair",
+            "Apply repair.",
+            "sha256:readiness",
+            "Test assignment.",
+            [ArtifactSlotId.New()],
+            [],
+            [],
+            ProcessOperationContractNames.ExternalProductTargetMutable,
+            new Dictionary<string, string>(StringComparer.Ordinal)
+            {
+                [ProcessRuntimeLaunchVariables.RuntimeRoutedBranchOutcomeKeysByStep] =
+                    "{\"implement-quality-repair\":[\"repair-attempt-incomplete\"]}"
+            },
+            BranchGate: null,
+            DateTimeOffset.UtcNow);
+        var output = new ProcessStepOutcomeResult
+        {
+            Status = ProcessStepOutcomeStatus.Completed,
+            BranchOutcomeKey = "product-repair-applied",
+            Reason = "Repair applied."
+        };
+
+        var issue = ProcessProductCompletionStateGate.ValidateRuntimeRoutedBranchWasNotSelectedDirectly(
+            assignment,
+            output);
+
+        Assert.Null(issue);
+    }
+
+    [Fact]
     public void Dotnet_browser_evidence_gate_rejects_current_run_blazor_error_banner()
     {
         var issue = EvaluateBrowserSnapshotEvidence(
@@ -115,6 +209,20 @@ public sealed class ProcessRuntimePolicyIsolationTests
     }
 
     [Fact]
+    public void Dotnet_browser_evidence_gate_rejects_fatal_banner_on_quality_repair_accepted_branch()
+    {
+        var issue = EvaluateBrowserSnapshotEvidence(
+            $"- generic: {DotNetBrowserSnapshotEvidencePolicyContribution.BlazorUnhandledErrorBanner}",
+            receiptBelongsToCurrentExecution: true,
+            processDefinitionKey: "dotnet-quality-repair",
+            stepKey: "validate-quality-repair",
+            branchOutcomeKey: "quality-repair-accepted");
+
+        Assert.NotNull(issue);
+        Assert.Equal(ProcessCompletionDiagnosticCodes.ToolReceiptEvidenceContentRejected, issue.Code);
+    }
+
+    [Fact]
     public void Dotnet_browser_evidence_gate_ignores_previous_execution_snapshot()
     {
         var issue = EvaluateBrowserSnapshotEvidence(
@@ -136,10 +244,72 @@ public sealed class ProcessRuntimePolicyIsolationTests
         Assert.Null(issue);
     }
 
+    [Fact]
+    public void Dotnet_development_slice_evidence_gate_rejects_typed_child_no_go_on_accepted_branch()
+    {
+        var issue = EvaluateDevelopmentSliceCoordinatorEvidence(
+            "Child evidence: artifacts/process-runs/child/steps/feature-repair-escalation.md",
+            "slice-accepted");
+
+        Assert.NotNull(issue);
+        Assert.Equal(ProcessCompletionDiagnosticCodes.ToolReceiptEvidenceContentRejected, issue.Code);
+        Assert.Contains("typed child repair-escalation no-go", issue.Summary, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void Dotnet_development_slice_evidence_gate_accepts_child_handoff_on_accepted_branch()
+    {
+        var issue = EvaluateDevelopmentSliceCoordinatorEvidence(
+            "Child evidence: artifacts/process-runs/child/steps/feature-handoff-after-repair.md",
+            "slice-accepted");
+
+        Assert.Null(issue);
+    }
+
+    [Fact]
+    public void Dotnet_development_slice_recheck_rejects_typed_child_no_go_on_accepted_branch()
+    {
+        var issue = EvaluateDevelopmentSliceCoordinatorEvidence(
+            "Child evidence: artifacts/process-runs/child/steps/feature-repair-escalation.md",
+            "slice-accepted",
+            stepKey: "add-tests-recheck",
+            coordinatorArtifactName: "slice-repair-code-change.md");
+
+        Assert.NotNull(issue);
+        Assert.Equal(ProcessCompletionDiagnosticCodes.ToolReceiptEvidenceContentRejected, issue.Code);
+        Assert.Contains("typed child repair-escalation no-go", issue.Summary, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void Dotnet_development_slice_recheck_accepts_repaired_child_handoff_on_accepted_branch()
+    {
+        var issue = EvaluateDevelopmentSliceCoordinatorEvidence(
+            "Child evidence: artifacts/process-runs/child/steps/feature-handoff-after-repair.md",
+            "slice-accepted",
+            stepKey: "add-tests-recheck",
+            coordinatorArtifactName: "slice-repair-code-change.md");
+
+        Assert.Null(issue);
+    }
+
+    [Fact]
+    public void Dotnet_development_slice_evidence_gate_reads_persisted_scoped_workspace_receipt()
+    {
+        var issue = EvaluateDevelopmentSliceCoordinatorEvidence(
+            "Child evidence: artifacts/process-runs/child/steps/feature-repair-escalation.md",
+            "slice-accepted",
+            usePersistedScopedReceipt: true);
+
+        Assert.NotNull(issue);
+        Assert.Equal(ProcessCompletionDiagnosticCodes.ToolReceiptEvidenceContentRejected, issue.Code);
+        Assert.Contains("typed child repair-escalation no-go", issue.Summary, StringComparison.OrdinalIgnoreCase);
+    }
+
     private static ProcessToolReceiptPolicyCatalog CreateToolReceiptPolicyCatalog()
         => new(
         [
             new GenericWorkspaceToolReceiptPolicyContribution(),
+            new BrowserInteractionToolReceiptPolicyContribution(),
             new DotNetToolReceiptPolicyContribution()
         ]);
 
@@ -233,6 +403,86 @@ public sealed class ProcessRuntimePolicyIsolationTests
         }
     }
 
+    private static ProcessCompletionIssue? EvaluateDevelopmentSliceCoordinatorEvidence(
+        string coordinatorContent,
+        string branchOutcomeKey,
+        bool usePersistedScopedReceipt = false,
+        string stepKey = "add-tests-and-proof",
+        string coordinatorArtifactName = "implement-code-change.md")
+    {
+        var workspaceRoot = Path.Combine(Path.GetTempPath(), $"CanDoItAll.ProcessNoGoEvidenceGate.{Guid.NewGuid():N}");
+        Directory.CreateDirectory(workspaceRoot);
+        try
+        {
+            var workspaceFiles = new WorkspaceFileService(workspaceRoot);
+            var runId = new ProcessRunId(Guid.NewGuid());
+            var executionRunId = Guid.NewGuid();
+            var artifactPath = usePersistedScopedReceipt
+                ? $"artifacts/scopes/organization/test/process-runs/{runId.Value:D}/steps/{coordinatorArtifactName}"
+                : $"artifacts/process-runs/{runId.Value:D}/steps/{coordinatorArtifactName}";
+            Assert.True(workspaceFiles.WriteTextFile(artifactPath, coordinatorContent).Succeeded);
+            var assignment = new ProcessRuntimeStepAssignment(
+                runId,
+                ProcessInstancePlanId.New(),
+                ProcessStepInstanceId.New(),
+                stepKey,
+                "qa",
+                "qa",
+                "QA",
+                "Agent",
+                Guid.NewGuid().ToString("D"),
+                "QA",
+                "Validate implementation evidence.",
+                "sha256:readiness",
+                "Test assignment.",
+                [ArtifactSlotId.New()],
+                [],
+                [],
+                "ExternalProductTargetReadOnly",
+                new Dictionary<string, string>(StringComparer.Ordinal)
+                {
+                    [ProcessRuntimeLaunchVariables.ProcessDefinitionKey] = "dotnet-development-slice"
+                },
+                BranchGate: null,
+                DateTimeOffset.UtcNow);
+            var output = new ProcessStepOutcomeResult
+            {
+                Status = ProcessStepOutcomeStatus.Completed,
+                Reason = "Validation completed.",
+                BranchOutcomeKey = branchOutcomeKey,
+                EvidenceRefs = [artifactPath],
+                NextActions = [],
+                HumanReadableSummaryMarkdown = "Status: Completed"
+            };
+            var requestSummary = usePersistedScopedReceipt
+                ? artifactPath
+                : $"maxCharacters=12000,path={artifactPath}";
+            var receipt = CreateToolReceipt("workspace_read_file", requestSummary) with
+            {
+                ExecutionRunId = executionRunId
+            };
+            var unrelatedReceipt = CreateToolReceipt(
+                "workspace_read_file",
+                $"maxCharacters=12000,path=artifacts/process-runs/{runId.Value:D}/steps/slice-intake.md") with
+            {
+                ExecutionRunId = executionRunId
+            };
+            var gate = new ProcessToolReceiptEvidenceGate(
+                workspaceFiles,
+                [new DotNetSubprocessNoGoEvidencePolicyContribution()]);
+
+            return gate.Validate(new ProcessCompletionGateContext(
+                assignment,
+                output,
+                [unrelatedReceipt, receipt],
+                executionRunId));
+        }
+        finally
+        {
+            Directory.Delete(workspaceRoot, recursive: true);
+        }
+    }
+
     private sealed class AlwaysMatchingToolReceiptPolicyContribution : IProcessToolReceiptPolicyContribution
     {
         public bool IsProductMutationTool(string toolName)
@@ -257,7 +507,9 @@ public sealed class ProcessRuntimePolicyIsolationTests
             return false;
         }
 
-        public bool AllowsCompletedOutcomeWithDeclaredBlockers(ProcessRuntimeStepAssignment assignment)
+        public bool AllowsCompletedOutcomeWithDeclaredBlockers(
+            ProcessRuntimeStepAssignment assignment,
+            ProcessStepOutcomeResult output)
             => false;
     }
 }

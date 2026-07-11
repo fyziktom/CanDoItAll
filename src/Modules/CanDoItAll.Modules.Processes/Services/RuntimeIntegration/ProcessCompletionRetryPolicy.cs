@@ -173,7 +173,8 @@ internal static class ProcessCompletionRetryPolicy
 
     internal static bool IsRetryableManagedArtifactSelfEvidenceBlocker(
         ProcessRuntimeStepAssignment assignment,
-        ProcessStepOutcomeResult output)
+        ProcessStepOutcomeResult output,
+        IReadOnlyList<ToolExecutionReceiptRecord>? toolReceipts)
     {
         if (output.Status != ProcessStepOutcomeStatus.Blocked ||
             assignment.ProducedArtifactSlotIds.Count == 0)
@@ -195,7 +196,9 @@ internal static class ProcessCompletionRetryPolicy
         var text = string.Join(
             " ",
             EnumerateOutcomeText(output).Where(value => !string.IsNullOrWhiteSpace(value)));
-        if (LooksLikeRightsOrToolBoundary(text))
+        if (LooksLikeRightsOrToolBoundary(text) &&
+            toolReceipts is not null &&
+            HasConcreteToolBoundaryReceipt(toolReceipts))
         {
             return false;
         }
@@ -209,7 +212,9 @@ internal static class ProcessCompletionRetryPolicy
             "current-run evidence",
             "concrete current-run evidence",
             "managed artifact evidence",
-            "evidence reference");
+            "evidence reference",
+            "did not inspect",
+            "did not read");
     }
 
     internal static bool IsRetryableManagedArtifactMissingPrimaryOutputBlocker(
@@ -236,15 +241,15 @@ internal static class ProcessCompletionRetryPolicy
             return false;
         }
 
-        return ContainsAny(
-                   text,
-                   "missing-primary-output",
-                   "primary managed output not written",
-                   "primary output ref was not created",
-                   "primary managed artifact",
-                   "required primary managed output",
-                   "create the required primary managed")
-               && ContainsAny(
+        var explicitlyReportsMissingPrimaryOutput = ContainsAny(
+            text,
+            "missing-primary-output",
+            "primary managed output not written",
+            "primary output ref was not created",
+            "required primary managed output was not written",
+            "create the required primary managed");
+        return explicitlyReportsMissingPrimaryOutput &&
+               ContainsAny(
                    text,
                    "workspace_write_file",
                    "workspace_append_file",

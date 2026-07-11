@@ -4,6 +4,8 @@ using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Processes.Application;
 using CanDoItAll.Processes.Runtime;
 
+using static CanDoItAll.Modules.Processes.ProcessRuntimeOwnedToolReceiptFactory;
+
 namespace CanDoItAll.Modules.Processes;
 
 internal sealed class DotNetSolutionSetupRuntimeExecutor(
@@ -96,7 +98,7 @@ internal sealed class DotNetSolutionSetupRuntimeExecutor(
         }
 
         var writeScript = workspaceFiles.WriteTextFile(plan.ScriptRef, plan.Script, overwrite: true);
-        receipts.Add(ToToolReceipt(executionRunId, writeScript));
+        receipts.Add(From(executionRunId, writeScript));
         if (!writeScript.Succeeded)
         {
             return RuntimeOwnedStepExecutionResultFailure(
@@ -107,7 +109,7 @@ internal sealed class DotNetSolutionSetupRuntimeExecutor(
         }
 
         var scriptStat = workspaceFiles.StatPath(plan.ScriptRef);
-        receipts.Add(ToToolReceipt(executionRunId, scriptStat));
+        receipts.Add(From(executionRunId, scriptStat));
         if (!scriptStat.Succeeded || !scriptStat.Exists || !string.Equals(scriptStat.PathKind, "file", StringComparison.OrdinalIgnoreCase))
         {
             return RuntimeOwnedStepExecutionResultFailure(
@@ -125,7 +127,7 @@ internal sealed class DotNetSolutionSetupRuntimeExecutor(
                 timeoutSeconds: 300,
                 sideEffectManifest: plan.SideEffectManifest)
             .ConfigureAwait(false);
-        receipts.Add(ToToolReceipt(executionRunId, scriptRun));
+        receipts.Add(From(executionRunId, scriptRun));
         if (!scriptRun.Succeeded)
         {
             return RuntimeOwnedStepExecutionResultFailure(
@@ -198,7 +200,7 @@ internal sealed class DotNetSolutionSetupRuntimeExecutor(
                 force: false,
                 timeoutSeconds: 300)
             .ConfigureAwait(false);
-        receipts.Add(ToToolReceipt(executionRunId, dotnetNew));
+        receipts.Add(From(executionRunId, dotnetNew));
         return dotnetNew.Succeeded
             ? DotNetSolutionSetupOperationResult.Ok
             : new DotNetSolutionSetupOperationResult(
@@ -457,59 +459,6 @@ internal sealed class DotNetSolutionSetupRuntimeExecutor(
         DotNetSolutionSetupToolPlan plan)
         => $"artifacts/process-runs/{assignment.RunId.Value:D}/tool-runs/{assignment.StepKey}.{plan.Kind}.runtime-owned-dotnet-setup.json";
 
-    private static ToolExecutionReceiptRecord ToToolReceipt(
-        Guid executionRunId,
-        WorkspaceFileMutationResult result)
-        => new(
-            Guid.NewGuid(),
-            executionRunId,
-            "workspace-file",
-            result.Receipt.Operation,
-            result.Receipt.MutatesWorkspace ? "WorkspaceMutation" : "ReadOnlyWorkspace",
-            "NotRequired",
-            result.Receipt.Boundary,
-            result.Path,
-            ".",
-            BuildExitSummary(result.Succeeded, result.Message),
-            result.Receipt.StartedAtUtc,
-            result.Receipt.CompletedAtUtc);
-
-    private static ToolExecutionReceiptRecord ToToolReceipt(
-        Guid executionRunId,
-        WorkspacePathStatResult result)
-        => new(
-            Guid.NewGuid(),
-            executionRunId,
-            "workspace-file",
-            result.Receipt.Operation,
-            "ReadOnlyWorkspace",
-            "NotRequired",
-            result.Receipt.Boundary,
-            result.Path,
-            ".",
-            BuildExitSummary(result.Succeeded, result.Message),
-            result.Receipt.StartedAtUtc,
-            result.Receipt.CompletedAtUtc);
-
-    private static ToolExecutionReceiptRecord ToToolReceipt(
-        Guid executionRunId,
-        WorkspaceCommandExecutionResult result)
-        => new(
-            Guid.NewGuid(),
-            executionRunId,
-            "workspace-process",
-            result.ToolName,
-            result.RiskClass,
-            result.ApprovalRequired ? "Required" : "NotRequired",
-            result.Boundary.Notes,
-            result.ArgumentsSummary,
-            result.WorkingDirectory,
-            result.Succeeded
-                ? $"Succeeded (exit {result.ExitCode}): {result.Message}"
-                : $"Failed (exit {result.ExitCode}): {result.Message}",
-            result.Receipt.StartedAtUtc,
-            result.Receipt.CompletedAtUtc);
-
     private static ToolExecutionReceiptRecord CreateIdempotentSkipReceipt(
         Guid executionRunId,
         string toolName,
@@ -529,9 +478,6 @@ internal sealed class DotNetSolutionSetupRuntimeExecutor(
             exitSummary,
             DateTimeOffset.UtcNow,
             DateTimeOffset.UtcNow);
-
-    private static string BuildExitSummary(bool succeeded, string message)
-        => succeeded ? $"Succeeded: {message}" : $"Failed: {message}";
 
     private static string ToExternalTargetAliasOrNative(string path)
     {
@@ -585,4 +531,3 @@ internal sealed class DotNetSolutionSetupRuntimeExecutor(
         public static DotNetSolutionSetupOperationResult Ok { get; } = new(true, string.Empty, string.Empty);
     }
 }
-

@@ -69,7 +69,9 @@ internal sealed class ProcessToolReceiptPolicyCatalog
         }
     }
 
-    public bool AllowsCompletedOutcomeWithDeclaredBlockers(ProcessRuntimeStepAssignment assignment)
+    public bool AllowsCompletedOutcomeWithDeclaredBlockers(
+        ProcessRuntimeStepAssignment assignment,
+        ProcessStepOutcomeResult output)
         => contributions.Any(contribution =>
-            contribution.AllowsCompletedOutcomeWithDeclaredBlockers(assignment));
+            contribution.AllowsCompletedOutcomeWithDeclaredBlockers(assignment, output));
 }
