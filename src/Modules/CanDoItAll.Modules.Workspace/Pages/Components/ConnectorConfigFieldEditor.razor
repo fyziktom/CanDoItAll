@@ -7,7 +7,7 @@
 @switch (Field.FieldType)
     {
         case ConnectorConfigFieldType.Number:
-            <InputNumber TValue="int?"
+            <InputNumber TValue="decimal?"
                          Value="NumberValue"
                          ValueChanged="HandleNumberChanged"
                          ValueExpression="() => NumberValue"
@@ -99,10 +99,10 @@
         set => State.SetText(Field.Key, value);
     }
 
-    private int? NumberValue
+    private decimal? NumberValue
     {
-        get => State.GetNumber(Field.Key);
-        set => State.SetNumber(Field.Key, value);
+        get => State.GetDecimalNumber(Field.Key);
+        set => State.SetDecimalNumber(Field.Key, value);
     }
 
     private bool BooleanValue
@@ -117,7 +117,7 @@
         await StateChanged.InvokeAsync(State);
     }
 
-    private async Task HandleNumberChanged(int? value)
+    private async Task HandleNumberChanged(decimal? value)
     {
         NumberValue = value;
         await StateChanged.InvokeAsync(State);

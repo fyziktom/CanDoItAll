@@ -30,38 +30,30 @@ public sealed class PluginWorkflowExecutorBoundaryTests
     }
 
     [Fact]
-    public void PluginDescriptorSourceProjectsGrantAvailabilityAndSourceMetadata()
+    public void PluginManifestProjectionPreservesStableContributionMetadata()
     {
-        var plugin = new TestPlugin(CreatePluginDescriptor(
-            sourceKind: PluginSourceKind.Bundled,
-            trustLevel: PluginTrustLevel.Bundled,
-            capabilities: PluginCapabilityKind.WorkflowExecutor | PluginCapabilityKind.OAuth2,
-            oauth2: new PluginOAuth2Descriptor(
-                new PluginConnectionKey("oauth"),
-                new Uri("https://example.test/authorize"),
-                new Uri("https://example.test/token"),
-                ["mail.read"])));
-        var grantEvaluator = new StaticGrantEvaluator(
-            PluginGrantDecision.Allow(plugin.Descriptor.Id, PluginCapabilityKind.WorkflowExecutor),
-            PluginGrantDecision.Deny(
-                plugin.Descriptor.Id,
-                PluginCapabilityKind.OAuth2,
-                PluginGrantDecisionKind.GrantMissing,
-                "OAuth grant is missing."));
-        var source = new PluginWorkflowExecutorDescriptorSource([plugin], grantEvaluator);
+        var descriptor = new RuntimeFixtureWorkflowExecutor().Descriptor with
+        {
+            SettingsPresentationMode = WorkflowExecutorSettingsPresentationMode.CustomRenderer
+        };
 
-        var descriptor = Assert.Single(source.ListExecutorDescriptors());
+        var projected = PluginWorkflowExecutorDescriptor.FromWorkflowExecutorDescriptor(descriptor);
 
-        Assert.Equal(plugin.Descriptor.WorkflowExecutors[0].ExecutorId, descriptor.Id);
-        Assert.Equal(WorkflowExecutorSourceKind.BundledPlugin, descriptor.Source.Kind);
-        Assert.Equal(plugin.Descriptor.Id.Value, descriptor.Source.PluginId);
-        Assert.Equal(WorkflowExecutorTrustLevel.BundledPlugin, descriptor.Source.TrustLevel);
-        Assert.Equal(WorkflowExecutorAvailabilityKind.Unavailable, descriptor.Availability.Kind);
-        Assert.Equal(nameof(PluginGrantDecisionKind.GrantMissing), descriptor.Availability.ReasonCode);
-        Assert.False(descriptor.CanExecute);
-        Assert.Equal(plugin.Descriptor.WorkflowExecutors[0].SideEffects, descriptor.SideEffects);
-        Assert.Equal(plugin.Descriptor.WorkflowExecutors[0].PermissionPolicy, descriptor.PermissionPolicy);
-        Assert.True(descriptor.DeterministicTestMode.IsSupported);
+        Assert.Equal(descriptor.Id, projected.ExecutorId);
+        Assert.Equal(descriptor.Name, projected.Name);
+        Assert.Equal(descriptor.Description, projected.Description);
+        Assert.Equal(descriptor.Category, projected.Category);
+        Assert.Equal(descriptor.SetupRendererKey, projected.SettingsRendererKey.Value);
+        Assert.Equal(descriptor.ConfigurationSchema, projected.SettingsSchema);
+        Assert.Equal(descriptor.InputShape, projected.InputShape);
+        Assert.Equal(descriptor.ResultShape, projected.ResultShape);
+        Assert.Equal(descriptor.DefaultPolicy, projected.DefaultPolicy);
+        Assert.Equal(descriptor.DefaultSettingsJson, projected.DefaultSettingsJson);
+        Assert.Equal(descriptor.SettingsPresentationMode, projected.SettingsPresentationMode);
+        Assert.Equal(descriptor.Simulation, projected.Simulation);
+        Assert.Equal(descriptor.SideEffects, projected.SideEffects);
+        Assert.Equal(descriptor.PermissionPolicy, projected.PermissionPolicy);
+        Assert.Equal(descriptor.DeterministicTestMode, projected.DeterministicTestMode);
     }
 
     [Fact]
@@ -79,16 +71,29 @@ public sealed class PluginWorkflowExecutorBoundaryTests
             plugin);
 
         using var provider = services.BuildServiceProvider();
-        var executor = Assert.Single(provider.GetRequiredService<IEnumerable<IWorkflowExecutor>>());
-        var descriptorSource = Assert.Single(provider.GetRequiredService<IEnumerable<IWorkflowExecutorDescriptorSource>>());
-        var descriptor = Assert.Single(descriptorSource.ListExecutorDescriptors());
+        using var scope = provider.CreateScope();
+        var contribution = Assert.Single(
+            scope.ServiceProvider.GetRequiredService<IEnumerable<IWorkflowExecutorContribution>>());
+        var executor = Assert.IsType<RuntimePackageWorkflowExecutor>(Assert.Single(
+            scope.ServiceProvider.GetRequiredService<IEnumerable<IWorkflowExecutor>>()));
+        var descriptor = contribution.Descriptor;
+        var implementationDescriptor = new RuntimeFixtureWorkflowExecutor().Descriptor;
 
-        Assert.IsType<RuntimePackageWorkflowExecutor>(executor);
         Assert.Equal(RuntimeFixtureWorkflowExecutor.ExecutorId, descriptor.Id);
         Assert.Equal(WorkflowExecutorSourceKind.LocalPackage, descriptor.Source.Kind);
         Assert.Equal(plugin.Id.Value, descriptor.Source.PluginId);
         Assert.Equal(plugin.Package!.PackageId.Value, descriptor.Source.PackageId);
         Assert.Equal(WorkflowExecutorTrustLevel.LocalPackage, descriptor.Source.TrustLevel);
+        Assert.Equal(implementationDescriptor.DefaultSettingsJson, descriptor.DefaultSettingsJson);
+        Assert.Equal(implementationDescriptor.ConfigurationSchema.Version, descriptor.ConfigurationSchema.Version);
+        Assert.Equal(
+            implementationDescriptor.ConfigurationSchema.Fields.Select(field => (field.Key, field.FieldType, field.IsRequired)),
+            descriptor.ConfigurationSchema.Fields.Select(field => (field.Key, field.FieldType, field.IsRequired)));
+        Assert.Equal(implementationDescriptor.Simulation, descriptor.Simulation);
+        Assert.Equal(implementationDescriptor.PermissionPolicy, descriptor.PermissionPolicy);
+        Assert.Equal(implementationDescriptor.SideEffects, descriptor.SideEffects);
+        Assert.Equal(implementationDescriptor.DeterministicTestMode, descriptor.DeterministicTestMode);
+        Assert.Equal(descriptor, executor.Descriptor);
     }
 
     [Fact]
@@ -106,8 +111,9 @@ public sealed class PluginWorkflowExecutorBoundaryTests
             plugin);
 
         using var provider = services.BuildServiceProvider();
+        using var scope = provider.CreateScope();
         var exception = Assert.Throws<PluginWorkflowExecutorActivationException>(() =>
-            provider.GetRequiredService<IEnumerable<IWorkflowExecutor>>().ToArray());
+            scope.ServiceProvider.GetRequiredService<IEnumerable<IWorkflowExecutor>>().ToArray());
 
         Assert.Equal(plugin.Id, exception.PluginId);
         Assert.Equal(plugin.Package!.PackageId, exception.PackageId);
@@ -117,7 +123,115 @@ public sealed class PluginWorkflowExecutorBoundaryTests
     }
 
     [Fact]
-    public void PluginModuleComposesPluginExecutorBoundaryInsteadOfOwningDescriptorSource()
+    public void RuntimePackageRegistrationRejectsManifestImplementationCountMismatch()
+    {
+        var plugin = CreatePluginDescriptor(
+            sourceKind: PluginSourceKind.LocalPackage,
+            trustLevel: PluginTrustLevel.LocalPackage,
+            packageId: "runtime.count-mismatch.package");
+        var services = new ServiceCollection();
+
+        var exception = Assert.Throws<PluginWorkflowExecutorActivationException>(() =>
+            PluginWorkflowExecutorRuntimeRegistration.RegisterWorkflowExecutors(
+                services,
+                [],
+                plugin));
+
+        Assert.Equal(PluginWorkflowExecutorActivationFailureKind.ManifestRuntimeMismatch, exception.FailureKind);
+        Assert.Equal("runtime-package-manifest-validation", exception.Operation);
+        Assert.Contains(RuntimeFixtureWorkflowExecutor.ExecutorId.Value, exception.Message, StringComparison.Ordinal);
+        Assert.Contains("none", exception.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void RuntimePackageContributionRejectsManifestRuntimeIdMismatch()
+    {
+        var plugin = CreatePluginDescriptor(
+            sourceKind: PluginSourceKind.LocalPackage,
+            trustLevel: PluginTrustLevel.LocalPackage,
+            packageId: "runtime.id-mismatch.package");
+        var services = new ServiceCollection();
+        PluginWorkflowExecutorRuntimeRegistration.RegisterWorkflowExecutors(
+            services,
+            [typeof(MismatchedRuntimeExecutor)],
+            plugin);
+
+        using var provider = services.BuildServiceProvider();
+        using var scope = provider.CreateScope();
+        var exception = Assert.Throws<PluginWorkflowExecutorActivationException>(() =>
+            scope.ServiceProvider.GetRequiredService<IEnumerable<IWorkflowExecutor>>().ToArray());
+
+        Assert.Equal(PluginWorkflowExecutorActivationFailureKind.ManifestRuntimeMismatch, exception.FailureKind);
+        Assert.Contains(RuntimeFixtureWorkflowExecutor.ExecutorId.Value, exception.Message, StringComparison.Ordinal);
+        Assert.Contains(MismatchedRuntimeExecutor.ExecutorId.Value, exception.Message, StringComparison.Ordinal);
+        Assert.Contains(typeof(MismatchedRuntimeExecutor).FullName!, exception.ExecutorTypeName, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void RuntimePackageContributionRejectsManifestRuntimeMetadataDrift()
+    {
+        var plugin = CreatePluginDescriptor(
+            sourceKind: PluginSourceKind.LocalPackage,
+            trustLevel: PluginTrustLevel.LocalPackage,
+            packageId: "runtime.metadata-mismatch.package") with
+        {
+            WorkflowExecutors =
+            [
+                CreatePluginExecutor() with
+                {
+                    DefaultSettingsJson = "{\"enabled\":false}"
+                }
+            ]
+        };
+        var services = new ServiceCollection();
+        PluginWorkflowExecutorRuntimeRegistration.RegisterWorkflowExecutors(
+            services,
+            [typeof(RuntimeFixtureWorkflowExecutor)],
+            plugin);
+
+        using var provider = services.BuildServiceProvider();
+        using var scope = provider.CreateScope();
+        var exception = Assert.Throws<PluginWorkflowExecutorActivationException>(() =>
+            scope.ServiceProvider.GetRequiredService<IEnumerable<IWorkflowExecutor>>().ToArray());
+
+        Assert.Equal(PluginWorkflowExecutorActivationFailureKind.ManifestRuntimeMismatch, exception.FailureKind);
+        Assert.Contains("defaultSettingsJson", exception.Message, StringComparison.Ordinal);
+        Assert.Contains(RuntimeFixtureWorkflowExecutor.ExecutorId.Value, exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void RuntimePackageContributionRejectsSettingsPresentationModeDrift()
+    {
+        var plugin = CreatePluginDescriptor(
+            sourceKind: PluginSourceKind.LocalPackage,
+            trustLevel: PluginTrustLevel.LocalPackage,
+            packageId: "runtime.renderer-mode-mismatch.package") with
+        {
+            WorkflowExecutors =
+            [
+                CreatePluginExecutor() with
+                {
+                    SettingsPresentationMode = WorkflowExecutorSettingsPresentationMode.CustomRenderer
+                }
+            ]
+        };
+        var services = new ServiceCollection();
+        PluginWorkflowExecutorRuntimeRegistration.RegisterWorkflowExecutors(
+            services,
+            [typeof(RuntimeFixtureWorkflowExecutor)],
+            plugin);
+
+        using var provider = services.BuildServiceProvider();
+        using var scope = provider.CreateScope();
+        var exception = Assert.Throws<PluginWorkflowExecutorActivationException>(() =>
+            scope.ServiceProvider.GetRequiredService<IEnumerable<IWorkflowExecutor>>().ToArray());
+
+        Assert.Equal(PluginWorkflowExecutorActivationFailureKind.ManifestRuntimeMismatch, exception.FailureKind);
+        Assert.Contains("settingsPresentationMode", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void PluginModuleDoesNotRegisterLegacyWorkflowExecutorDescriptorSource()
     {
         var moduleSource = File.ReadAllText(Path.Combine(
             FindRepositoryRoot(),
@@ -126,17 +240,16 @@ public sealed class PluginWorkflowExecutorBoundaryTests
             "CanDoItAll.Modules.Plugins",
             "Services",
             "PluginsModuleServiceCollectionExtensions.cs"));
-        var oldDescriptorSourcePath = Path.Combine(
+        var pluginBoundaryRoot = Path.Combine(
             FindRepositoryRoot(),
             "src",
-            "Modules",
-            "CanDoItAll.Modules.Plugins",
-            "Catalog",
-            "PluginWorkflowExecutorDescriptorSource.cs");
+            "MAF",
+            "WorkflowExecutors",
+            "CanDoItAll.AgentFramework.WorkflowExecutors.Plugins");
 
-        Assert.Contains("AddPluginWorkflowExecutorBoundary()", moduleSource, StringComparison.Ordinal);
-        Assert.Contains("IPluginWorkflowExecutorGrantEvaluator", moduleSource, StringComparison.Ordinal);
-        Assert.False(File.Exists(oldDescriptorSourcePath));
+        Assert.DoesNotContain("AddPluginWorkflowExecutorBoundary()", moduleSource, StringComparison.Ordinal);
+        Assert.False(File.Exists(Path.Combine(pluginBoundaryRoot, "PluginWorkflowExecutorDescriptorSource.cs")));
+        Assert.False(File.Exists(Path.Combine(pluginBoundaryRoot, "RuntimePackageWorkflowExecutorDescriptorSource.cs")));
     }
 
     private static PluginDescriptor CreatePluginDescriptor(
@@ -172,20 +285,26 @@ public sealed class PluginWorkflowExecutorBoundaryTests
         => new(
             RuntimeFixtureWorkflowExecutor.ExecutorId,
             "Runtime fixture executor",
-            "Executor used by plugin executor boundary tests.",
+            "Runtime package executor used by tests.",
             WorkflowExecutorCategoryKind.Utility,
             new PluginRendererKey("runtime.fixture"),
-            ConfigurationSchema.Empty(),
+            new ConfigurationSchema(
+                "1.0",
+                [new ConfigurationFieldDescriptor("enabled", "Enabled", ConfigurationFieldType.Boolean, IsRequired: false, "Enable fixture execution.")]),
             WorkflowValueShape.Text,
             new WorkflowValueShape(WorkflowValueShapeKind.Json, "{}", "JSON"),
             WorkflowExecutorExecutionPolicy.Default)
         {
+            DefaultSettingsJson = "{\"enabled\":true}",
+            Simulation = WorkflowExecutorSimulationDescriptor.JsonTemplate(
+                "{\"simulated\":true}",
+                "Simulate runtime package execution."),
             PermissionPolicy = new WorkflowExecutorPermissionPolicy(
                 WorkflowExecutorCapabilityFlags.UsesNetwork |
                 WorkflowExecutorCapabilityFlags.SupportsDeterministicTestMode,
                 WorkflowExecutorApprovalRequirement.NotRequired),
-            SideEffects = WorkflowExecutorSideEffectDescriptor.None,
-            DeterministicTestMode = WorkflowExecutorDeterministicTestModeDescriptor.Supported("Boundary test preview.")
+            SideEffects = WorkflowExecutorSideEffectDescriptor.ExternalRead("runtime-fixture-read/v1"),
+            DeterministicTestMode = WorkflowExecutorDeterministicTestModeDescriptor.Supported("Runtime fixture preview.")
         };
 
     private static ProjectReferenceSnapshot ReadProjectReferences(string relativeProjectPath)
@@ -218,24 +337,6 @@ public sealed class PluginWorkflowExecutorBoundaryTests
         return directory?.FullName ?? throw new InvalidOperationException("Repository root could not be found.");
     }
 
-    private sealed class TestPlugin(PluginDescriptor descriptor) : ICanDoItAllPlugin
-    {
-        public PluginDescriptor Descriptor { get; } = descriptor;
-    }
-
-    private sealed class StaticGrantEvaluator(params PluginGrantDecision[] decisions) : IPluginWorkflowExecutorGrantEvaluator
-    {
-        public PluginGrantDecision Evaluate(
-            PluginId pluginId,
-            PluginCapabilityKind capability,
-            PluginHostToolRecipeId? recipeId = null)
-            => decisions.FirstOrDefault(decision =>
-                   decision.PluginId == pluginId &&
-                   decision.Capability == capability &&
-                   decision.RecipeId == recipeId)
-               ?? PluginGrantDecision.Allow(pluginId, capability, recipeId);
-    }
-
     private sealed class RuntimeFixtureWorkflowExecutor : IWorkflowExecutor
     {
         public static WorkflowExecutorId ExecutorId { get; } = new("runtime.fixture.executor");
@@ -249,10 +350,24 @@ public sealed class PluginWorkflowExecutorBoundaryTests
             "runtime.fixture",
             WorkflowValueShape.Text,
             new WorkflowValueShape(WorkflowValueShapeKind.Json, "{}", "JSON"),
-            "{}",
-            "{}",
+            "{\"type\":\"object\"}",
+            "{\"enabled\":true}",
             WorkflowExecutorExecutionPolicy.Default,
-            IsImplemented: true);
+            IsImplemented: true)
+        {
+            ConfigurationSchema = new ConfigurationSchema(
+                "1.0",
+                [new ConfigurationFieldDescriptor("enabled", "Enabled", ConfigurationFieldType.Boolean, IsRequired: false, "Enable fixture execution.")]),
+            Simulation = WorkflowExecutorSimulationDescriptor.JsonTemplate(
+                "{\"simulated\":true}",
+                "Simulate runtime package execution."),
+            PermissionPolicy = new WorkflowExecutorPermissionPolicy(
+                WorkflowExecutorCapabilityFlags.UsesNetwork |
+                WorkflowExecutorCapabilityFlags.SupportsDeterministicTestMode,
+                WorkflowExecutorApprovalRequirement.NotRequired),
+            SideEffects = WorkflowExecutorSideEffectDescriptor.ExternalRead("runtime-fixture-read/v1"),
+            DeterministicTestMode = WorkflowExecutorDeterministicTestModeDescriptor.Supported("Runtime fixture preview.")
+        };
 
         public ValueTask<WorkflowNodeExecutionResult> ExecuteAsync(
             WorkflowExecutorExecutionContext context,
@@ -288,6 +403,31 @@ public sealed class PluginWorkflowExecutorBoundaryTests
                 context.Node.Id,
                 "{}",
                 context.Descriptor.ResultShape));
+    }
+
+    private sealed class MismatchedRuntimeExecutor : IWorkflowExecutor
+    {
+        public static WorkflowExecutorId ExecutorId { get; } = new("runtime.fixture.mismatched");
+
+        public WorkflowExecutorDescriptor Descriptor => new(
+            ExecutorId,
+            "Mismatched runtime executor",
+            "Runtime executor whose id is not declared in the manifest.",
+            WorkflowExecutorCategoryKind.Utility,
+            "extension",
+            "runtime.fixture",
+            WorkflowValueShape.Text,
+            WorkflowValueShape.Text,
+            "{\"type\":\"object\"}",
+            "{}",
+            WorkflowExecutorExecutionPolicy.Default,
+            IsImplemented: true);
+
+        public ValueTask<WorkflowNodeExecutionResult> ExecuteAsync(
+            WorkflowExecutorExecutionContext context,
+            WorkflowNodeInput input,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
     }
 
     private sealed class MissingDependency

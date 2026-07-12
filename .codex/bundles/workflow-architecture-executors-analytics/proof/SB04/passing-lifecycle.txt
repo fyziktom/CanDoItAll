@@ -1,0 +1,11 @@
+Commands:
+
+dotnet test tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj --no-restore -m:1 --filter FullyQualifiedName~WorkflowRuntimeLifecycleRedGateTests
+
+Result: 13 passed, 0 failed, 0 skipped, duration 241 ms.
+
+dotnet test tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj --no-restore -m:1 --filter "FullyQualifiedName~WorkflowRuntime|FullyQualifiedName~WorkflowFoundationTests"
+
+Result: 46 passed, 0 failed, 0 skipped, duration 378 ms.
+
+The wider filter proves existing runtime/foundation behavior was migrated honestly: safe lifecycle metadata is retained, payload artifacts remain available, and unsupported resume no longer fabricates approval or completion outcomes.

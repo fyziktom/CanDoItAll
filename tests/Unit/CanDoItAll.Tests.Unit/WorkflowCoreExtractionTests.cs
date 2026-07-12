@@ -4,8 +4,10 @@ using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Workflows.Abstractions;
 using CanDoItAll.AgentFramework.Workflows.Builder;
 using Microsoft.Extensions.DependencyInjection;
-using CoreRuntimeBackendCatalog = CanDoItAll.AgentFramework.Core.IWorkflowRuntimeBackendCatalog;
-using CoreWorkflowDefinitionValidator = CanDoItAll.AgentFramework.Core.IWorkflowDefinitionValidator;
+using WorkflowCatalogContract = CanDoItAll.AgentFramework.Workflows.Abstractions.IWorkflowCatalogService;
+using WorkflowDefinitionValidatorContract = CanDoItAll.AgentFramework.Workflows.Abstractions.IWorkflowDefinitionValidator;
+using WorkflowRuntimeBackendCatalogContract = CanDoItAll.AgentFramework.Workflows.Abstractions.IWorkflowRuntimeBackendCatalog;
+using WorkflowRuntimeManagerContract = CanDoItAll.AgentFramework.Workflows.Abstractions.IWorkflowRuntimeManager;
 
 namespace CanDoItAll.Tests.Unit;
 
@@ -29,6 +31,7 @@ public sealed class WorkflowCoreExtractionTests
             "CanDoItAll.Modules.Plugins",
             "CanDoItAll.Plugins.Abstractions",
             "CanDoItAll.AgentFramework.Persistence",
+            "CanDoItAll.AgentFramework.Workflows.Runtime",
             "CanDoItAll.Web"
         };
 
@@ -50,6 +53,53 @@ public sealed class WorkflowCoreExtractionTests
     }
 
     [Fact]
+    public void WorkflowContractsAreOwnedOnlyByWorkflowAbstractions()
+    {
+        var root = FindRepositoryRoot();
+        var legacyContractFiles = new[]
+        {
+            Path.Combine(
+                root,
+                "src",
+                "MAF",
+                "Common",
+                "CanDoItAll.AgentFramework.Core",
+                "Workflows",
+                "WorkflowCatalogContracts.cs"),
+            Path.Combine(
+                root,
+                "src",
+                "MAF",
+                "Workflows",
+                "CanDoItAll.AgentFramework.Workflows.Runtime",
+                "WorkflowContracts.cs")
+        };
+
+        Assert.All(legacyContractFiles, contractFile => Assert.False(File.Exists(contractFile), contractFile));
+        var contractAssembly = typeof(WorkflowCatalogContract).Assembly;
+        var contractTypes = new[]
+        {
+            typeof(IWorkflowSettingsService),
+            typeof(IWorkflowComponentLibraryService),
+            typeof(IWorkflowTestRunner),
+            typeof(WorkflowDefinitionValidatorContract),
+            typeof(WorkflowRuntimeBackendCatalogContract),
+            typeof(WorkflowRuntimeManagerContract),
+            typeof(IWorkflowExecutionBackend),
+            typeof(IWorkflowRunStore),
+            typeof(IWorkflowArtifactContentStore),
+            typeof(WorkflowRunPageRequest),
+            typeof(WorkflowBackendStartResult)
+        };
+
+        Assert.Equal("CanDoItAll.AgentFramework.Workflows.Abstractions", typeof(WorkflowCatalogContract).Namespace);
+        Assert.All(contractTypes, contractType => Assert.Equal(contractAssembly, contractType.Assembly));
+        Assert.All(
+            contractTypes,
+            contractType => Assert.Equal("CanDoItAll.AgentFramework.Workflows.Abstractions", contractType.Namespace));
+    }
+
+    [Fact]
     public void WorkflowCoreImplementationFilesMovedOutOfAgentFrameworkCoreProject()
     {
         var root = FindRepositoryRoot();
@@ -60,8 +110,7 @@ public sealed class WorkflowCoreExtractionTests
             "WorkflowRoutingCompiler.cs",
             "WorkflowPreviewSimulationRenderer.cs",
             "WorkflowPayloadPolicyService.cs",
-            "WorkflowFailureDisplayFormatter.cs",
-            "WorkflowProcessExecutorBridge.cs"
+            "WorkflowFailureDisplayFormatter.cs"
         };
 
         foreach (var movedFile in movedFiles)
@@ -82,16 +131,46 @@ public sealed class WorkflowCoreExtractionTests
         services.AddSingleton<IWorkflowExecutorCatalog>(WorkflowExecutorCatalog.FromDescriptors([]));
         services.AddWorkflowCoreServices();
 
-        Assert.Contains(services, descriptor => descriptor.ServiceType == typeof(CoreWorkflowDefinitionValidator));
-        Assert.Contains(services, descriptor => descriptor.ServiceType == typeof(CoreRuntimeBackendCatalog));
+        Assert.Contains(services, descriptor => descriptor.ServiceType == typeof(WorkflowDefinitionValidatorContract));
+        Assert.Contains(services, descriptor => descriptor.ServiceType == typeof(WorkflowRuntimeBackendCatalogContract));
         Assert.Contains(services, descriptor => descriptor.ServiceType == typeof(IWorkflowPayloadPolicyService));
-        Assert.Contains(services, descriptor => descriptor.ServiceType == typeof(IWorkflowProcessExecutorBridge));
         Assert.Contains(services, descriptor => descriptor.ServiceType == typeof(IWorkflowTestRunner));
 
         using var provider = services.BuildServiceProvider();
-        Assert.IsType<WorkflowDefinitionValidator>(provider.GetRequiredService<CoreWorkflowDefinitionValidator>());
-        Assert.IsType<WorkflowRuntimeBackendCatalog>(provider.GetRequiredService<CoreRuntimeBackendCatalog>());
+        Assert.IsType<WorkflowDefinitionValidator>(provider.GetRequiredService<WorkflowDefinitionValidatorContract>());
+        Assert.IsType<WorkflowRuntimeBackendCatalog>(provider.GetRequiredService<WorkflowRuntimeBackendCatalogContract>());
         Assert.IsType<WorkflowPayloadPolicyService>(provider.GetRequiredService<IWorkflowPayloadPolicyService>());
+    }
+
+    [Fact]
+    public void DirectRuntimeProcessBridgeWasRemovedInFavorOfGovernedModuleDriver()
+    {
+        var root = FindRepositoryRoot();
+        var bridgePath = Path.Combine(
+            root,
+            "src",
+            "MAF",
+            "Workflows",
+            "CanDoItAll.AgentFramework.Workflows.Core",
+            "WorkflowProcessExecutorBridge.cs");
+        var contractSource = File.ReadAllText(Path.Combine(
+            root,
+            "src",
+            "MAF",
+            "Workflows",
+            "CanDoItAll.AgentFramework.Workflows.Abstractions",
+            "WorkflowRuntimeContracts.cs"));
+        var registrationSource = File.ReadAllText(Path.Combine(
+            root,
+            "src",
+            "MAF",
+            "Workflows",
+            "CanDoItAll.AgentFramework.Workflows.Core",
+            "WorkflowCoreServiceCollectionExtensions.cs"));
+
+        Assert.False(File.Exists(bridgePath));
+        Assert.DoesNotContain("IWorkflowProcessExecutorBridge", contractSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("WorkflowProcessExecutorBridge", registrationSource, StringComparison.Ordinal);
     }
 
     [Fact]

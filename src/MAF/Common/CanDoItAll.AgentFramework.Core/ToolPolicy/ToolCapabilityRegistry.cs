@@ -278,6 +278,20 @@ public static class ToolCapabilityRegistry
             Mutation(AgentToolInvocationPolicyMetadata.ProcessesTemplateImport, ToolCapabilitySideEffectKind.ProcessMutation, StaticRequirement(ProcessOperationContractNames.ExecuteExternalAction)),
             Read(AgentToolInvocationPolicyMetadata.ProcessesTemplateBaselineScenariosList, ToolCapabilitySideEffectKind.WorkspaceRead),
             Read(AgentToolInvocationPolicyMetadata.ProcessesTemplateLiveRunProfilesList, ToolCapabilitySideEffectKind.WorkspaceRead),
+            Read(AgentToolInvocationPolicyMetadata.WorkflowsDefinitionsList, ToolCapabilitySideEffectKind.None),
+            Mutation(
+                AgentToolInvocationPolicyMetadata.WorkflowsRunStart,
+                ToolCapabilitySideEffectKind.RuntimeLaunch,
+                StaticRequirement(ProcessOperationContractNames.LaunchRuntime)),
+            Read(AgentToolInvocationPolicyMetadata.WorkflowsRunStatusGet, ToolCapabilitySideEffectKind.None),
+            Mutation(
+                AgentToolInvocationPolicyMetadata.WorkflowsRunCancel,
+                ToolCapabilitySideEffectKind.RuntimeLaunch,
+                StaticRequirement(ProcessOperationContractNames.ExecuteExternalAction)),
+            Mutation(
+                AgentToolInvocationPolicyMetadata.WorkflowsExternalResponseSubmit,
+                ToolCapabilitySideEffectKind.RuntimeLaunch,
+                StaticRequirement(ProcessOperationContractNames.ExecuteExternalAction)),
             Mutation(AgentToolInvocationPolicyMetadata.ImageGenerationCreate, ToolCapabilitySideEffectKind.MediaGeneration, StaticRequirement(ProcessOperationContractNames.ExecuteExternalAction))
         };
 

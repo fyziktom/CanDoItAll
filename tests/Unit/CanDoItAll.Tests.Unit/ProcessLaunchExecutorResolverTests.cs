@@ -1,5 +1,6 @@
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.AgentFramework.Workflows.Abstractions;
 using CanDoItAll.Modules.AgentFramework;
 using CanDoItAll.Modules.AgentFramework.Hosting;
 using CanDoItAll.Modules.CrmHr;
@@ -46,7 +47,8 @@ public sealed class ProcessLaunchExecutorResolverTests
                 workspaceFactory,
                 new NoOpAiTechnicalAgentBridge(),
                 Options.Create(new ProcessMockAgentOptions { Enabled = false })),
-            new ProviderProfileService());
+            new ProviderProfileService(),
+            new ResolverWorkflowCatalog());
 
         var result = await resolver.ResolveAsync(new ProcessLaunchExecutorResolutionRequest(
             CreateDefinition(),
@@ -61,6 +63,96 @@ public sealed class ProcessLaunchExecutorResolverTests
         Assert.Equal(ProcessLaunchExecutorKinds.Agent, binding.ExecutorKind);
         Assert.Equal(agent.Id.ToString("D"), binding.ExecutorId);
         Assert.Contains("delivery-manager", binding.AssignmentReason, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task ResolveAsync_binds_only_the_explicit_workflow_and_latest_active_version()
+    {
+        var workflowId = WorkflowId.New();
+        var active = CreateWorkflowDefinition(workflowId, WorkflowVersionId.New(), WorkflowLifecycleStatus.Active);
+        var catalog = new ResolverWorkflowCatalog
+        {
+            LatestActive = new WorkflowDefinitionDetail(active, WorkflowValidationResult.Success)
+        };
+        var workspace = new ResolverWorkspaceService([], []);
+        var resolver = CreateResolver(new ResolverWorkspaceFactory(workspace), catalog);
+        var definition = CreateDefinition();
+        definition.RoleUsages[0].PreferredExecutorKind = ProcessLaunchExecutorKinds.Workflow;
+        definition.RoleUsages[0].WorkflowBinding = new ProcessWorkflowExecutorBinding(
+            new ProcessWorkflowId(workflowId.Value));
+
+        var result = await resolver.ResolveAsync(new ProcessLaunchExecutorResolutionRequest(
+            definition,
+            CreatePlan(),
+            LiveRunProfile: null,
+            Variables: new Dictionary<string, string>()));
+
+        Assert.DoesNotContain(result.Findings, finding => finding.Severity == ProcessLaunchReadinessSeverity.Error);
+        var binding = Assert.Single(result.Bindings);
+        Assert.Equal(ProcessLaunchExecutorKinds.Workflow, binding.ExecutorKind);
+        Assert.Equal(workflowId.Value, binding.WorkflowBinding?.WorkflowId.Value);
+        Assert.Null(binding.WorkflowBinding?.WorkflowVersionId);
+        Assert.Equal(workflowId, catalog.LatestActiveWorkflowId);
+        Assert.False(catalog.ListDefinitionsCalled);
+    }
+
+    [Fact]
+    public async Task ResolveAsync_rejects_exact_workflow_version_that_is_not_active_and_runnable()
+    {
+        var workflowId = WorkflowId.New();
+        var versionId = WorkflowVersionId.New();
+        var draft = CreateWorkflowDefinition(workflowId, versionId, WorkflowLifecycleStatus.Draft);
+        var catalog = new ResolverWorkflowCatalog
+        {
+            Exact = new WorkflowDefinitionDetail(draft, WorkflowValidationResult.Success)
+        };
+        var workspace = new ResolverWorkspaceService([], []);
+        var resolver = CreateResolver(new ResolverWorkspaceFactory(workspace), catalog);
+        var definition = CreateDefinition();
+        definition.RoleUsages[0].PreferredExecutorKind = ProcessLaunchExecutorKinds.Workflow;
+        definition.RoleUsages[0].WorkflowBinding = new ProcessWorkflowExecutorBinding(
+            new ProcessWorkflowId(workflowId.Value),
+            new ProcessWorkflowVersionId(versionId.Value));
+
+        var result = await resolver.ResolveAsync(new ProcessLaunchExecutorResolutionRequest(
+            definition,
+            CreatePlan(),
+            LiveRunProfile: null,
+            Variables: new Dictionary<string, string>()));
+
+        Assert.Empty(result.Bindings);
+        Assert.Contains(result.Findings, finding =>
+            finding.Code == "process.launch.workflow_not_runnable" &&
+            finding.Severity == ProcessLaunchReadinessSeverity.Error);
+        Assert.Equal((workflowId, versionId), catalog.ExactSelection);
+    }
+
+    [Fact]
+    public async Task ResolveAsync_rejects_workflow_kind_without_explicit_workflow_instead_of_selecting_any_active()
+    {
+        var catalog = new ResolverWorkflowCatalog
+        {
+            LatestActive = new WorkflowDefinitionDetail(
+                CreateWorkflowDefinition(WorkflowId.New(), WorkflowVersionId.New(), WorkflowLifecycleStatus.Active),
+                WorkflowValidationResult.Success)
+        };
+        var workspace = new ResolverWorkspaceService([], []);
+        var resolver = CreateResolver(new ResolverWorkspaceFactory(workspace), catalog);
+        var definition = CreateDefinition();
+        definition.RoleUsages[0].PreferredExecutorKind = ProcessLaunchExecutorKinds.Workflow;
+
+        var result = await resolver.ResolveAsync(new ProcessLaunchExecutorResolutionRequest(
+            definition,
+            CreatePlan(),
+            LiveRunProfile: null,
+            Variables: new Dictionary<string, string>()));
+
+        Assert.Empty(result.Bindings);
+        Assert.Contains(result.Findings, finding =>
+            finding.Code == "process.launch.workflow_selection_required" &&
+            finding.Severity == ProcessLaunchReadinessSeverity.Error);
+        Assert.Null(catalog.LatestActiveWorkflowId);
+        Assert.False(catalog.ListDefinitionsCalled);
     }
 
     [Fact]
@@ -996,7 +1088,9 @@ public sealed class ProcessLaunchExecutorResolverTests
             finding.Code == "agent.readiness.workspace-scaffold-missing");
     }
 
-    private static AgentFrameworkProcessLaunchExecutorResolver CreateResolver(ResolverWorkspaceFactory workspaceFactory)
+    private static AgentFrameworkProcessLaunchExecutorResolver CreateResolver(
+        ResolverWorkspaceFactory workspaceFactory,
+        IWorkflowCatalogService? workflowCatalog = null)
     {
         return new AgentFrameworkProcessLaunchExecutorResolver(
             CreateReferenceDataProvider(workspaceFactory.WorkspaceService),
@@ -1004,7 +1098,8 @@ public sealed class ProcessLaunchExecutorResolverTests
                 workspaceFactory,
                 new NoOpAiTechnicalAgentBridge(),
                 Options.Create(new ProcessMockAgentOptions { Enabled = false })),
-            new ProviderProfileService());
+            new ProviderProfileService(),
+            workflowCatalog ?? new ResolverWorkflowCatalog());
     }
 
     private static IAgentReferenceDataProvider CreateReferenceDataProvider(IAgentFrameworkWorkspaceService workspaceService)
@@ -1093,6 +1188,41 @@ public sealed class ProcessLaunchExecutorResolverTests
                 }
             ]
         };
+    }
+
+    private static WorkflowDefinition CreateWorkflowDefinition(
+        WorkflowId workflowId,
+        WorkflowVersionId versionId,
+        WorkflowLifecycleStatus status)
+    {
+        var start = new WorkflowNode(
+            new WorkflowNodeId("start"),
+            WorkflowNodeKind.Start,
+            "Start",
+            [],
+            new WorkflowNodeSettings(
+                ComponentId: null,
+                AgentId: null,
+                SubworkflowId: null,
+                ExternalRequestKind: null,
+                Instructions: string.Empty,
+                    InputShape: new WorkflowValueShape(WorkflowValueShapeKind.Json, "{}", "JSON input"),
+                    ResultShape: new WorkflowValueShape(WorkflowValueShapeKind.Json, "{}", "JSON result")));
+        return new WorkflowDefinition(
+            workflowId,
+            versionId,
+            "Process workflow",
+            "Workflow selected explicitly by a process assignment.",
+            status,
+            new WorkflowGraph(start.Id, [start], []),
+            new WorkflowRuntimePolicy(
+                WorkflowRuntimeBackendKind.InProcess,
+                AllowInProcessPreviewRuns: true,
+                RequireDurableProductionRuns: false,
+                ExposeAzureFunctionsStatusEndpoint: false,
+                ExposeAzureFunctionsMcpTool: false),
+            Now,
+            Now);
     }
 
     private static ProcessTemplateDefinitionDocument CreateTechnicalSubprocessDefinition()
@@ -1740,6 +1870,81 @@ public sealed class ProcessLaunchExecutorResolverTests
         public WorkspaceScopeDescriptor GetOrganizationScope() => WorkspaceScopeDescriptor.Organization("unit-test");
 
         public string GetWorkspaceRoot() => Path.GetTempPath();
+    }
+
+    private sealed class ResolverWorkflowCatalog : IWorkflowCatalogService
+    {
+        public WorkflowDefinitionDetail? Exact { get; init; }
+
+        public WorkflowDefinitionDetail? LatestActive { get; init; }
+
+        public (WorkflowId WorkflowId, WorkflowVersionId VersionId)? ExactSelection { get; private set; }
+
+        public WorkflowId? LatestActiveWorkflowId { get; private set; }
+
+        public bool ListDefinitionsCalled { get; private set; }
+
+        public Task<IReadOnlyList<WorkflowCatalogItem>> ListDefinitionsAsync(
+            CancellationToken cancellationToken = default)
+        {
+            ListDefinitionsCalled = true;
+            return Task.FromResult<IReadOnlyList<WorkflowCatalogItem>>([]);
+        }
+
+        public Task<WorkflowDefinitionDetail?> GetDefinitionAsync(
+            WorkflowId workflowId,
+            WorkflowVersionId? versionId = null,
+            CancellationToken cancellationToken = default)
+        {
+            if (versionId is not { } exactVersionId)
+            {
+                throw new InvalidOperationException("Resolver workflow tests require an exact version for GetDefinitionAsync.");
+            }
+
+            ExactSelection = (workflowId, exactVersionId);
+            return Task.FromResult(Exact);
+        }
+
+        public Task<WorkflowDefinitionDetail?> GetLatestDefinitionByStatusAsync(
+            WorkflowId workflowId,
+            WorkflowLifecycleStatus status,
+            CancellationToken cancellationToken = default)
+        {
+            Assert.Equal(WorkflowLifecycleStatus.Active, status);
+            LatestActiveWorkflowId = workflowId;
+            return Task.FromResult(LatestActive);
+        }
+
+        public Task<WorkflowDefinition> SaveDefinitionAsync(
+            WorkflowDefinitionSaveRequest request,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
+        public Task<WorkflowDefinition> ChangeDefinitionStatusAsync(
+            WorkflowDefinitionStatusChangeRequest request,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
+        public Task<WorkflowDefinitionExportEnvelope?> ExportDefinitionAsync(
+            WorkflowId workflowId,
+            WorkflowVersionId? versionId = null,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
+        public Task<WorkflowDefinition> ImportDefinitionAsync(
+            WorkflowDefinitionImportRequest request,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
+        public Task DeleteDefinitionAsync(
+            WorkflowId workflowId,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
+        public Task<WorkflowValidationResult> ValidateDefinitionAsync(
+            WorkflowDefinition definition,
+            CancellationToken cancellationToken = default)
+            => Task.FromResult(WorkflowValidationResult.Success);
     }
 
     private sealed class ResolverWorkspaceService(

@@ -1,5 +1,8 @@
+using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Modules.AgentFramework.Pages.Components;
+using CanDoItAll.Modules.Workspace.Pages.Components;
+using CanDoItAll.SharedKernel.Configuration;
 
 namespace CanDoItAll.Tests.Components;
 
@@ -71,6 +74,254 @@ public sealed class WorkflowExecutorCanvasCatalogTests
         Assert.Contains("Available", action.Description, StringComparison.Ordinal);
         Assert.Contains("External write", action.Description, StringComparison.Ordinal);
         Assert.Contains("Unsafe retries", action.Description, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void BuildCreateAction_projects_any_executor_configuration_schema()
+    {
+        var schema = new ConfigurationSchema(
+            "2.0",
+            [
+                new ConfigurationFieldDescriptor(
+                    "sourcePath",
+                    "Source path",
+                    ConfigurationFieldType.Text,
+                    IsRequired: true,
+                    "Workspace source path."),
+                new ConfigurationFieldDescriptor(
+                    "maxBytes",
+                    "Max bytes",
+                    ConfigurationFieldType.Number,
+                    IsRequired: false,
+                    "Maximum source bytes."),
+                new ConfigurationFieldDescriptor(
+                    "options",
+                    "Options",
+                    ConfigurationFieldType.Json,
+                    IsRequired: false,
+                    "Executor-specific JSON options.")
+            ]);
+        var executor = CreateExecutor(
+            "plugin.document.convert",
+            "Plugin document converter",
+            WorkflowExecutorSourceDescriptor.BundledPlugin(
+                "document.plugin",
+                "2.0.0",
+                "Document plugin")) with
+        {
+            ConfigurationSchema = schema,
+            DefaultSettingsJson = """{"sourcePath":"in/report.docx","maxBytes":10485760,"options":{"format":"markdown"}}"""
+        };
+
+        var action = WorkflowExecutorCanvasCatalog.BuildCreateAction(executor);
+
+        Assert.Equal("test-renderer", action.SetupRendererKey);
+        Assert.Contains(action.InputFields, field =>
+            field.Key == WorkflowExecutorConfigurationMapper.BuildInputKey("sourcePath") &&
+            field.IsRequired);
+        Assert.Contains(action.InputFields, field =>
+            field.Key == WorkflowExecutorConfigurationMapper.BuildInputKey("maxBytes") &&
+            field.InputMode == "number");
+        Assert.Contains(action.InputFields, field =>
+            field.Key == WorkflowExecutorConfigurationMapper.BuildInputKey("options") &&
+            field.InputMode == "textarea");
+        Assert.Contains(action.DefaultInputValues, value =>
+            value.Key == WorkflowExecutorConfigurationMapper.BuildInputKey("sourcePath") &&
+            value.Value == "in/report.docx");
+        Assert.Contains(action.DefaultInputValues, value =>
+            value.Key == WorkflowExecutorConfigurationMapper.BuildInputKey("maxBytes") &&
+            value.Value == "10485760");
+    }
+
+    [Fact]
+    public void BuildCreateAction_projects_every_field_for_new_document_and_image_executors()
+    {
+        var descriptors = new[]
+        {
+            BuiltInWorkflowExecutorDescriptors.DocumentToMarkdown,
+            BuiltInWorkflowExecutorDescriptors.ImageInspect,
+            BuiltInWorkflowExecutorDescriptors.ImageAnalyze,
+            BuiltInWorkflowExecutorDescriptors.StorageFile,
+            BuiltInWorkflowExecutorDescriptors.Spreadsheet
+        };
+
+        foreach (var descriptor in descriptors)
+        {
+            var action = WorkflowExecutorCanvasCatalog.BuildCreateAction(descriptor);
+            var actionFieldKeys = action.InputFields
+                .Select(field => field.Key)
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+            Assert.All(
+                descriptor.ConfigurationSchema.Fields,
+                field => Assert.Contains(
+                    WorkflowExecutorConfigurationMapper.BuildInputKey(field.Key),
+                    actionFieldKeys));
+        }
+
+        var imageAnalyzeFields = BuiltInWorkflowExecutorDescriptors.ImageAnalyze.ConfigurationSchema.Fields
+            .ToDictionary(field => field.Key, StringComparer.OrdinalIgnoreCase);
+        Assert.Equal(ConfigurationNumberKind.Int64, imageAnalyzeFields["maxBytes"].NumberKind);
+        Assert.Equal(ConfigurationFieldType.Guid, imageAnalyzeFields["providerProfileId"].FieldType);
+    }
+
+    [Fact]
+    public void BuildCreateAction_routes_custom_settings_to_the_trusted_renderer_instead_of_the_generic_dialog()
+    {
+        var customAction = WorkflowExecutorCanvasCatalog.BuildCreateAction(
+            BuiltInWorkflowExecutorDescriptors.ImageGeneration);
+        var schemaAction = WorkflowExecutorCanvasCatalog.BuildCreateAction(
+            BuiltInWorkflowExecutorDescriptors.ImageInspect);
+
+        Assert.False(customAction.RequiresInput);
+        Assert.True(schemaAction.RequiresInput);
+        Assert.Equal(
+            BuiltInWorkflowExecutorDescriptors.ImageGeneration.SetupRendererKey,
+            customAction.SetupRendererKey);
+    }
+
+    [Fact]
+    public void ConfigurationMapper_round_trips_typed_values_without_int_truncation()
+    {
+        var schema = new ConfigurationSchema(
+            "1.0",
+            [
+                new ConfigurationFieldDescriptor("maxBytes", "Max bytes", ConfigurationFieldType.Number, false, string.Empty)
+                {
+                    NumberKind = ConfigurationNumberKind.Int64
+                },
+                new ConfigurationFieldDescriptor("enabled", "Enabled", ConfigurationFieldType.Boolean, false, string.Empty),
+                new ConfigurationFieldDescriptor("options", "Options", ConfigurationFieldType.Json, false, string.Empty)
+            ]);
+        var state = WorkflowExecutorConfigurationMapper.ReadState(
+            """{"maxBytes":1099511627776,"enabled":true,"options":{"mode":"strict"}}""",
+            schema);
+
+        var json = WorkflowExecutorConfigurationMapper.SerializeState(schema, state);
+        using var document = System.Text.Json.JsonDocument.Parse(json);
+
+        Assert.Equal(1099511627776L, document.RootElement.GetProperty("maxBytes").GetInt64());
+        Assert.True(document.RootElement.GetProperty("enabled").GetBoolean());
+        Assert.Equal("strict", document.RootElement.GetProperty("options").GetProperty("mode").GetString());
+    }
+
+    [Fact]
+    public void ConfigurationMapper_rejects_fractional_integer_and_invalid_guid_settings()
+    {
+        var schema = new ConfigurationSchema(
+            "1.0",
+            [
+                new ConfigurationFieldDescriptor("maxRows", "Max rows", ConfigurationFieldType.Number, false, string.Empty),
+                new ConfigurationFieldDescriptor("providerId", "Provider id", ConfigurationFieldType.Guid, false, string.Empty)
+            ]);
+        var state = new ConfigurationState(new Dictionary<string, string>
+        {
+            ["maxRows"] = "1.5",
+            ["providerId"] = "not-a-guid"
+        });
+
+        var exception = Assert.Throws<InvalidOperationException>(() =>
+            WorkflowExecutorConfigurationMapper.SerializeState(schema, state));
+
+        Assert.Contains("Int32", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("GUID", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void ConfigurationMapper_rejects_invalid_settings_instead_of_hiding_them()
+    {
+        var schema = ConfigurationSchema.Empty();
+
+        var exception = Assert.Throws<InvalidOperationException>(() =>
+            WorkflowExecutorConfigurationMapper.ReadState("{", schema));
+
+        Assert.Contains("invalid JSON", exception.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void ConfigurationMapper_allows_partial_editor_state_but_rejects_incomplete_create_state()
+    {
+        var schema = new ConfigurationSchema(
+            "1.0",
+            [
+                new ConfigurationFieldDescriptor(
+                    "requiredName",
+                    "Required name",
+                    ConfigurationFieldType.Text,
+                    IsRequired: true,
+                    string.Empty)
+            ]);
+        var state = new ConfigurationState();
+
+        var partialJson = WorkflowExecutorConfigurationMapper.SerializeState(schema, state);
+        var exception = Assert.Throws<InvalidOperationException>(() =>
+            WorkflowExecutorConfigurationMapper.SerializeCompleteState(schema, state));
+
+        Assert.Equal("{}", partialJson);
+        Assert.Contains("requiredName", exception.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void Workflow_canvas_editor_has_no_executor_id_specific_settings_branches()
+    {
+        var root = FindRepositoryRoot();
+        var razorSource = File.ReadAllText(Path.Combine(
+            root,
+            "src",
+            "Modules",
+            "CanDoItAll.Modules.AgentFramework",
+            "Pages",
+            "Components",
+            "WorkflowCanvasEditor.razor"));
+        var codeBehindSource = File.ReadAllText(Path.Combine(
+            root,
+            "src",
+            "Modules",
+            "CanDoItAll.Modules.AgentFramework",
+            "Pages",
+            "Components",
+            "WorkflowCanvasEditor.razor.cs"));
+        var forbiddenExecutorIds = new[]
+        {
+            nameof(WorkflowExecutorIds.StorageFile),
+            nameof(WorkflowExecutorIds.HttpFetch),
+            nameof(WorkflowExecutorIds.Spreadsheet),
+            nameof(WorkflowExecutorIds.ProjectStructure),
+            nameof(WorkflowExecutorIds.ImageGeneration)
+        };
+
+        Assert.Contains(nameof(SettingsRendererHost), razorSource, StringComparison.Ordinal);
+        Assert.Contains("ShouldRenderSettingsRenderer(descriptor)", razorSource, StringComparison.Ordinal);
+        Assert.Contains(nameof(WorkflowExecutorSettingsPresentationMode.CustomRenderer), codeBehindSource, StringComparison.Ordinal);
+        foreach (var executorId in forbiddenExecutorIds)
+        {
+            Assert.DoesNotContain(
+                $"WorkflowExecutorIds.{executorId}",
+                razorSource,
+                StringComparison.Ordinal);
+        }
+
+        Assert.DoesNotContain("ReadExecutorSettings<", codeBehindSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("UpdateExecutorSettings<", codeBehindSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("UpdateEnumExecutorSettings<", codeBehindSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("UpdateHttp", codeBehindSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("UpdateSpreadsheet", codeBehindSource, StringComparison.Ordinal);
+    }
+
+    private static string FindRepositoryRoot()
+    {
+        var directory = new DirectoryInfo(AppContext.BaseDirectory);
+        while (directory is not null)
+        {
+            if (File.Exists(Path.Combine(directory.FullName, "CanDoItAll.slnx")))
+            {
+                return directory.FullName;
+            }
+
+            directory = directory.Parent;
+        }
+
+        throw new InvalidOperationException("Could not locate the repository root.");
     }
 
     private static WorkflowExecutorDescriptor CreateExecutor(

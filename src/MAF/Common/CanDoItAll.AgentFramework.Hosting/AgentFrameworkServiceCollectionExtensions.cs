@@ -34,11 +34,15 @@ public static class AgentFrameworkServiceCollectionExtensions
             resolvedScope,
             serviceProvider.GetServices<IWorkspaceCommandReceiptLifecycleFactExtractor>()));
         services.TryAddSingleton<IWorkspaceDocumentMarkdownConverter, ManagedCodeMarkItDownDocumentMarkdownConverter>();
+        services.TryAddSingleton<IWorkspaceImageOperationService>(_ => new WorkspaceImageOperationService(
+            normalizedWorkspaceRoot,
+            resolvedScope));
         services.TryAddSingleton<IWorkspaceArtifactToolService>(serviceProvider => new WorkspaceArtifactToolService(
             normalizedWorkspaceRoot,
             serviceProvider.GetRequiredService<IWorkspaceCommandExecutionService>(),
             serviceProvider.GetRequiredService<IWorkspaceDocumentMarkdownConverter>(),
-            resolvedScope));
+            resolvedScope,
+            serviceProvider.GetRequiredService<IWorkspaceImageOperationService>()));
         services.TryAddSingleton<IAgentProviderCredentialResolver, EnvironmentVariableAgentProviderCredentialResolver>();
         services.AddMafProviderRuntimeServices();
         services.TryAddSingleton<IProviderProfileService, ProviderProfileService>();

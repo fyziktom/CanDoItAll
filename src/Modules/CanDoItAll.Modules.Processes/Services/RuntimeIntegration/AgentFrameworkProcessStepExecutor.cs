@@ -45,6 +45,7 @@ internal sealed class AgentFrameworkProcessStepExecutor : IAgentFrameworkProcess
     private readonly IAgentReferenceDataProvider agentReferenceDataProvider;
     private readonly IProcessRuntimeStepAssignmentStore assignmentStore;
     private readonly IProcessRuntimeStateStore stateStore;
+    private readonly IProcessWorkflowStepExecutor workflowStepExecutor;
     private readonly IProcessRuntimeToolPreflightService runtimeToolPreflightService;
     private readonly ProcessRuntimeOwnedStepCoordinator runtimeOwnedStepCoordinator;
     private readonly ProcessSubprocessCoordinator subprocessCoordinator;
@@ -58,6 +59,7 @@ internal sealed class AgentFrameworkProcessStepExecutor : IAgentFrameworkProcess
         IAgentReferenceDataProvider agentReferenceDataProvider,
         IProcessRuntimeStepAssignmentStore assignmentStore,
         IProcessRuntimeStateStore stateStore,
+        IProcessWorkflowStepExecutor workflowStepExecutor,
         IProcessRuntimeToolPreflightService runtimeToolPreflightService,
         ProcessRuntimeOwnedStepCoordinator runtimeOwnedStepCoordinator,
         ProcessSubprocessCoordinator subprocessCoordinator,
@@ -70,6 +72,8 @@ internal sealed class AgentFrameworkProcessStepExecutor : IAgentFrameworkProcess
         this.agentReferenceDataProvider = agentReferenceDataProvider;
         this.assignmentStore = assignmentStore;
         this.stateStore = stateStore;
+        this.workflowStepExecutor = workflowStepExecutor ??
+            throw new ArgumentNullException(nameof(workflowStepExecutor));
         this.runtimeToolPreflightService = runtimeToolPreflightService ??
             throw new ArgumentNullException(nameof(runtimeToolPreflightService));
         this.runtimeOwnedStepCoordinator = runtimeOwnedStepCoordinator;
@@ -96,6 +100,13 @@ internal sealed class AgentFrameworkProcessStepExecutor : IAgentFrameworkProcess
         if (assignment is null)
         {
             return Failed("process.adapter.assignment_missing", $"No runtime assignment exists for step '{stepId}'.", stepId.ToString());
+        }
+
+        if (ProcessLaunchExecutorKinds.IsWorkflow(assignment.ExecutorKind))
+        {
+            return await workflowStepExecutor
+                .ExecuteAsync(assignment, request.StepContract, cancellationToken)
+                .ConfigureAwait(false);
         }
 
         if (await subprocessCoordinator.TryResolveExistingSubprocessBridgeAsync(

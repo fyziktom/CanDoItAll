@@ -3,48 +3,21 @@ using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.AgentFramework.WorkflowExecutors.Plugins;
 using CanDoItAll.Plugins.Abstractions;
 
 namespace CanDoItAll.Modules.Plugins;
 
 public sealed class Office365DownloadByCategoryWorkflowExecutor(
-    PluginGrantEvaluator grantEvaluator,
-    PluginOAuthService oauthService,
-    Office365GraphClient graphClient) : IWorkflowExecutor
+    IPluginWorkflowExecutorGrantEvaluator grantEvaluator,
+    IPluginWorkflowOAuthService oauthService,
+    IOffice365WorkflowClient graphClient) : IWorkflowExecutor
 {
     private static readonly JsonSerializerOptions JsonOptions = Office365WorkflowJson.Options;
-    private static readonly WorkflowValueShape ResultShape = new(WorkflowValueShapeKind.Json, "{}", "Office365 email message batch JSON.");
-    private static readonly WorkflowExecutorSourceDescriptor PluginSource = WorkflowExecutorSourceDescriptor.BundledPlugin(
-        Office365PluginConstants.PluginId.Value,
-        "1.0.0",
-        "Office365 Mail",
-        Office365PluginConstants.Icon);
 
-    public WorkflowExecutorDescriptor Descriptor => new(
-        Office365PluginConstants.DownloadByCategoryExecutorId,
-        "Office365 messages by category",
-        "Downloads a bounded batch of Microsoft Graph mail messages that have the configured Outlook category.",
-        WorkflowExecutorCategoryKind.Data,
-        "mail",
-        Office365PluginConstants.SettingsRendererKey.Value,
-        WorkflowValueShape.Text,
-        ResultShape,
-        "{\"type\":\"object\"}",
-        JsonSerializer.Serialize(new Office365WorkflowExecutorSettings(), JsonOptions),
-        WorkflowExecutorExecutionPolicy.Default with { TimeoutSeconds = 60 },
-        IsImplemented: true)
+    public WorkflowExecutorDescriptor Descriptor => Office365WorkflowExecutorDescriptors.DownloadByCategory with
     {
-        Source = PluginSource,
-        Availability = ResolveAvailability(),
-        Simulation = Office365WorkflowSimulationTemplates.DownloadByCategory,
-        PermissionPolicy = new WorkflowExecutorPermissionPolicy(
-            WorkflowExecutorCapabilityFlags.ReadsExternalData |
-            WorkflowExecutorCapabilityFlags.UsesNetwork |
-            WorkflowExecutorCapabilityFlags.UsesSecrets |
-            WorkflowExecutorCapabilityFlags.SupportsDeterministicTestMode,
-            WorkflowExecutorApprovalRequirement.NotRequired),
-        SideEffects = WorkflowExecutorSideEffectDescriptor.ExternalRead(EmailWorkflowSideEffectConstants.ExternalReadReceiptSchema),
-        DeterministicTestMode = WorkflowExecutorDeterministicTestModeDescriptor.Supported("Run Preview uses simulated Microsoft Graph messages without calling Office365.")
+        Availability = ResolveAvailability()
     };
 
     public async ValueTask<WorkflowNodeExecutionResult> ExecuteAsync(
@@ -55,7 +28,7 @@ public sealed class Office365DownloadByCategoryWorkflowExecutor(
         var settings = JsonSerializer.Deserialize<Office365WorkflowExecutorSettings>(context.SettingsJson, JsonOptions)
                        ?? throw new InvalidOperationException("Office365 executor settings are invalid.");
 
-        var connectionId = await oauthService.ResolveWorkflowConnectionIdAsync(
+        var connectionId = await oauthService.ResolveConnectionIdAsync(
             Office365PluginConstants.PluginId,
             Office365PluginConstants.ConnectionKey,
             settings.ConnectionId,
@@ -79,7 +52,7 @@ public sealed class Office365DownloadByCategoryWorkflowExecutor(
         return new WorkflowNodeExecutionResult(
             context.Node.Id,
             CreatePayload(input, settings, connectionId, batch),
-            ResultShape);
+            Office365WorkflowExecutorDescriptors.DownloadByCategory.ResultShape);
     }
 
     private static string CreatePayload(
@@ -194,43 +167,15 @@ public sealed class Office365DownloadByCategoryWorkflowExecutor(
 }
 
 public sealed class Office365DownloadByAddressWorkflowExecutor(
-    PluginGrantEvaluator grantEvaluator,
-    PluginOAuthService oauthService,
-    Office365GraphClient graphClient) : IWorkflowExecutor
+    IPluginWorkflowExecutorGrantEvaluator grantEvaluator,
+    IPluginWorkflowOAuthService oauthService,
+    IOffice365WorkflowClient graphClient) : IWorkflowExecutor
 {
     private static readonly JsonSerializerOptions JsonOptions = Office365WorkflowJson.Options;
-    private static readonly WorkflowValueShape ResultShape = new(WorkflowValueShapeKind.Json, "{}", "Office365 address-matched email message JSON.");
-    private static readonly WorkflowExecutorSourceDescriptor PluginSource = WorkflowExecutorSourceDescriptor.BundledPlugin(
-        Office365PluginConstants.PluginId.Value,
-        "1.0.0",
-        "Office365 Mail",
-        Office365PluginConstants.Icon);
 
-    public WorkflowExecutorDescriptor Descriptor => new(
-        Office365PluginConstants.DownloadByAddressExecutorId,
-        "Office365 unprocessed message by address",
-        "Downloads at most one newest Microsoft 365 message from or sent by a configured email address, excluding messages already carrying the processed category.",
-        WorkflowExecutorCategoryKind.Data,
-        "mail",
-        Office365PluginConstants.SettingsRendererKey.Value,
-        WorkflowValueShape.Text,
-        ResultShape,
-        "{\"type\":\"object\"}",
-        JsonSerializer.Serialize(new Office365MessageAddressWorkflowExecutorSettings(), JsonOptions),
-        WorkflowExecutorExecutionPolicy.Default with { TimeoutSeconds = 60 },
-        IsImplemented: true)
+    public WorkflowExecutorDescriptor Descriptor => Office365WorkflowExecutorDescriptors.DownloadByAddress with
     {
-        Source = PluginSource,
-        Availability = ResolveAvailability(),
-        Simulation = Office365WorkflowSimulationTemplates.DownloadByAddress,
-        PermissionPolicy = new WorkflowExecutorPermissionPolicy(
-            WorkflowExecutorCapabilityFlags.ReadsExternalData |
-            WorkflowExecutorCapabilityFlags.UsesNetwork |
-            WorkflowExecutorCapabilityFlags.UsesSecrets |
-            WorkflowExecutorCapabilityFlags.SupportsDeterministicTestMode,
-            WorkflowExecutorApprovalRequirement.NotRequired),
-        SideEffects = WorkflowExecutorSideEffectDescriptor.ExternalRead(EmailWorkflowSideEffectConstants.ExternalReadReceiptSchema),
-        DeterministicTestMode = WorkflowExecutorDeterministicTestModeDescriptor.Supported("Run Preview uses simulated Microsoft Graph messages without calling Office365.")
+        Availability = ResolveAvailability()
     };
 
     public async ValueTask<WorkflowNodeExecutionResult> ExecuteAsync(
@@ -247,7 +192,7 @@ public sealed class Office365DownloadByAddressWorkflowExecutor(
             settings.ConnectionIdJsonPath,
             nameof(settings.ConnectionIdJsonPath),
             "Office365 address executor");
-        var connectionId = await oauthService.ResolveWorkflowConnectionIdAsync(
+        var connectionId = await oauthService.ResolveConnectionIdAsync(
             Office365PluginConstants.PluginId,
             Office365PluginConstants.ConnectionKey,
             configuredConnectionId,
@@ -274,7 +219,7 @@ public sealed class Office365DownloadByAddressWorkflowExecutor(
         return new WorkflowNodeExecutionResult(
             context.Node.Id,
             CreatePayload(input, resolvedPayloadSettings, connectionId, batch),
-            ResultShape);
+            Office365WorkflowExecutorDescriptors.DownloadByAddress.ResultShape);
     }
 
     private static Office365MessageAddressFilterSettings CreateFilterSettings(
@@ -435,46 +380,15 @@ public sealed class Office365DownloadByAddressWorkflowExecutor(
 }
 
 public sealed class Office365MarkProcessedWorkflowExecutor(
-    PluginGrantEvaluator grantEvaluator,
-    PluginOAuthService oauthService,
-    Office365GraphClient graphClient) : IWorkflowExecutor
+    IPluginWorkflowExecutorGrantEvaluator grantEvaluator,
+    IPluginWorkflowOAuthService oauthService,
+    IOffice365WorkflowClient graphClient) : IWorkflowExecutor
 {
     private static readonly JsonSerializerOptions JsonOptions = Office365WorkflowJson.Options;
-    private static readonly WorkflowValueShape ResultShape = new(WorkflowValueShapeKind.Json, "{}", "Office365 category mutation JSON.");
-    private static readonly WorkflowExecutorSourceDescriptor PluginSource = WorkflowExecutorSourceDescriptor.BundledPlugin(
-        Office365PluginConstants.PluginId.Value,
-        "1.0.0",
-        "Office365 Mail",
-        Office365PluginConstants.Icon);
 
-    public WorkflowExecutorDescriptor Descriptor => new(
-        Office365PluginConstants.MarkProcessedExecutorId,
-        "Office365 mark processed",
-        "Adds the processed Outlook category to a Microsoft 365 message and optionally removes the source category.",
-        WorkflowExecutorCategoryKind.Data,
-        "mail",
-        Office365PluginConstants.SettingsRendererKey.Value,
-        WorkflowValueShape.Text,
-        ResultShape,
-        "{\"type\":\"object\"}",
-        JsonSerializer.Serialize(new Office365MarkProcessedWorkflowExecutorSettings(), JsonOptions),
-        WorkflowExecutorExecutionPolicy.Default with { TimeoutSeconds = 60 },
-        IsImplemented: true)
+    public WorkflowExecutorDescriptor Descriptor => Office365WorkflowExecutorDescriptors.MarkProcessed with
     {
-        Source = PluginSource,
-        Availability = ResolveAvailability(),
-        Simulation = Office365WorkflowSimulationTemplates.MarkProcessed,
-        PermissionPolicy = new WorkflowExecutorPermissionPolicy(
-            WorkflowExecutorCapabilityFlags.WritesExternalData |
-            WorkflowExecutorCapabilityFlags.UsesNetwork |
-            WorkflowExecutorCapabilityFlags.UsesSecrets |
-            WorkflowExecutorCapabilityFlags.IdempotentExternalMarker |
-            WorkflowExecutorCapabilityFlags.SupportsDeterministicTestMode,
-            WorkflowExecutorApprovalRequirement.NotRequired),
-        SideEffects = WorkflowExecutorSideEffectDescriptor.IdempotentProcessedMarker(
-            "$.externalSideEffectReceipt.idempotencyKey",
-            EmailWorkflowSideEffectConstants.ProcessedMarkerReceiptSchema),
-        DeterministicTestMode = WorkflowExecutorDeterministicTestModeDescriptor.Supported("Run Preview simulates the Office365 category mutation without changing Microsoft Graph.")
+        Availability = ResolveAvailability()
     };
 
     public async ValueTask<WorkflowNodeExecutionResult> ExecuteAsync(
@@ -507,7 +421,7 @@ public sealed class Office365MarkProcessedWorkflowExecutor(
             throw new InvalidOperationException("Office365 mark-processed executor resolved an empty message id.");
         }
 
-        var connectionId = await oauthService.ResolveWorkflowConnectionIdAsync(
+        var connectionId = await oauthService.ResolveConnectionIdAsync(
             Office365PluginConstants.PluginId,
             Office365PluginConstants.ConnectionKey,
             configuredConnectionId,
@@ -528,7 +442,7 @@ public sealed class Office365MarkProcessedWorkflowExecutor(
         return new WorkflowNodeExecutionResult(
             context.Node.Id,
             CreatePayload(input, result),
-            ResultShape);
+            Office365WorkflowExecutorDescriptors.MarkProcessed.ResultShape);
     }
 
     private static string CreatePayload(

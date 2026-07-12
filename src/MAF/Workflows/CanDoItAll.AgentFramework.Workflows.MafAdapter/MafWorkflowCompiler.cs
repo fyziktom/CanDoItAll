@@ -1,5 +1,6 @@
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.AgentFramework.Workflows.Abstractions;
 using Microsoft.Agents.AI.Workflows;
 
 namespace CanDoItAll.AgentFramework.Maf;
@@ -24,7 +25,8 @@ public sealed class MafWorkflowCompiler(
     IWorkflowDefinitionValidator validator,
     IWorkflowExecutorInvoker? executorInvoker = null,
     IWorkflowLlmComponentInvoker? llmComponentInvoker = null,
-    IWorkflowRoutingCompiler? routingCompiler = null) : IWorkflowMafCompiler
+    IWorkflowRoutingCompiler? routingCompiler = null,
+    TimeProvider? timeProvider = null) : IWorkflowMafCompiler
 {
     public MafWorkflowBuildResult Compile(
         WorkflowDefinition definition,
@@ -215,13 +217,18 @@ public sealed class MafWorkflowCompiler(
             CancellationToken cancellationToken)
         {
             var progressObserver = WorkflowNodeExecutionProgressScope.Current;
+            var clock = timeProvider ?? TimeProvider.System;
+            var startedAtUtc = clock.GetUtcNow();
+            var invocationId = Guid.NewGuid();
             WorkflowUsageMetrics? usage = null;
+            IReadOnlyList<WorkflowUsageObservation> usageObservations = [];
             await RecordProgressAsync(
                 progressObserver,
                 definition,
                 node,
                 WorkflowNodeExecutionProgressState.Started,
-                cancellationToken);
+                cancellationToken,
+                occurredAtUtc: startedAtUtc);
 
             try
             {
@@ -233,7 +240,9 @@ public sealed class MafWorkflowCompiler(
                     WorkflowNodeExecutionProgressState.Completed,
                     cancellationToken,
                     payloadJson: output.PayloadJson,
-                    usage: usage);
+                    usage: usage,
+                    usageObservations: usageObservations,
+                    occurredAtUtc: clock.GetUtcNow());
                 return output;
             }
             catch (WorkflowExternalRequestPendingException)
@@ -242,13 +251,25 @@ public sealed class MafWorkflowCompiler(
             }
             catch (Exception exception)
             {
+                if (exception is WorkflowUsageObservationException usageException)
+                {
+                    usageObservations = usageException.Observations;
+                    usage = WorkflowUsageCompatibilityProjection.Project(
+                        usageObservations,
+                        fallbackProviderName: "workflow-provider",
+                        fallbackModel: "workflow-model");
+                }
+
                 await RecordProgressAsync(
                     progressObserver,
                     definition,
                     node,
                     WorkflowNodeExecutionProgressState.Failed,
                     CancellationToken.None,
-                    errorMessage: exception.Message);
+                    errorMessage: exception.Message,
+                    usage: usage,
+                    usageObservations: usageObservations,
+                    occurredAtUtc: clock.GetUtcNow());
                 throw;
             }
 
@@ -293,6 +314,30 @@ public sealed class MafWorkflowCompiler(
                     }
 
                     usage = result.Usage;
+                    usageObservations = result.UsageObservations;
+                    if (usageObservations.Count == 0 && usage is not null)
+                    {
+                        usageObservations = WorkflowUsageObservationFactory.FromLegacyMetrics(
+                            new WorkflowUsageObservationContext(
+                                WorkflowExecutorExecutionAuditScope.CurrentRunId,
+                                definition.Id,
+                                definition.VersionId,
+                                node.Id,
+                                ExecutorId: null,
+                                component.Id,
+                                WorkflowUsageProducerKind.LlmComponent,
+                                invocationId,
+                                Attempt: 1,
+                                startedAtUtc,
+                                clock.GetUtcNow()),
+                            usage,
+                            clock.GetUtcNow());
+                    }
+
+                    usage ??= WorkflowUsageCompatibilityProjection.Project(
+                        usageObservations,
+                        fallbackProviderName: "workflow-provider",
+                        fallbackModel: component.Model);
                     return new WorkflowNodeInput(result.PayloadJson);
                 }
 
@@ -304,6 +349,32 @@ public sealed class MafWorkflowCompiler(
                     }
 
                     var result = await executorInvoker.ExecuteAsync(definition, node, nodeInput, nodeCancellationToken);
+                    usage = result.Usage;
+                    usageObservations = result.UsageObservations;
+                    if (usageObservations.Count == 0 && usage is not null)
+                    {
+                        var recordedAtUtc = clock.GetUtcNow();
+                        usageObservations = WorkflowUsageObservationFactory.FromLegacyMetrics(
+                            new WorkflowUsageObservationContext(
+                                WorkflowExecutorExecutionAuditScope.CurrentRunId,
+                                definition.Id,
+                                definition.VersionId,
+                                node.Id,
+                                node.Settings.ExecutorId,
+                                ComponentId: null,
+                                WorkflowUsageProducerKind.Executor,
+                                invocationId,
+                                Attempt: 1,
+                                startedAtUtc,
+                                recordedAtUtc),
+                            usage,
+                            recordedAtUtc);
+                    }
+
+                    usage ??= WorkflowUsageCompatibilityProjection.Project(
+                        usageObservations,
+                        fallbackProviderName: "workflow-provider",
+                        fallbackModel: "workflow-executor");
                     return new WorkflowNodeInput(result.PayloadJson);
                 }
 
@@ -345,7 +416,9 @@ public sealed class MafWorkflowCompiler(
         CancellationToken cancellationToken,
         string payloadJson = "",
         string errorMessage = "",
-        WorkflowUsageMetrics? usage = null)
+        WorkflowUsageMetrics? usage = null,
+        IReadOnlyList<WorkflowUsageObservation>? usageObservations = null,
+        DateTimeOffset? occurredAtUtc = null)
     {
         return observer is null
             ? ValueTask.CompletedTask
@@ -356,12 +429,13 @@ public sealed class MafWorkflowCompiler(
                     WorkflowExecutorExecutionAuditScope.CurrentRunId,
                     node.Id,
                     state,
-                    DateTimeOffset.UtcNow)
+                    occurredAtUtc ?? DateTimeOffset.UtcNow)
                 {
                     ExecutorId = node.Settings.ExecutorId,
                     PayloadJson = payloadJson,
                     ErrorMessage = errorMessage,
-                    Usage = usage
+                    Usage = usage,
+                    UsageObservations = usageObservations ?? []
                 },
                 cancellationToken);
     }

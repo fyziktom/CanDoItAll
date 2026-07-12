@@ -636,7 +636,10 @@ public sealed class ProcessTemplatePackLoader
                 ? "Local role without template source."
                 : $"Resolved from {roleTemplateSourceKey}.",
             usage.CanvasX,
-            usage.CanvasY);
+            usage.CanvasY)
+        {
+            WorkflowBinding = usage.WorkflowBinding
+        };
     }
 
     private static ProcessTemplateRoleResourceDocument? TryLoadRoleResource(
@@ -833,7 +836,10 @@ public sealed record ProcessTemplateDefinitionRoleSummary(
     string SnapshotSummary,
     string OverrideSummary,
     double CanvasX,
-    double CanvasY);
+    double CanvasY)
+{
+    public ProcessWorkflowExecutorBinding? WorkflowBinding { get; init; }
+}
 
 public sealed record ProcessTemplateRoleTemplateActionSummary(
     string ActionId,
@@ -977,6 +983,8 @@ public sealed class ProcessTemplateLiveRunAssignmentDocument
     public string ExecutorKind { get; set; } = string.Empty;
 
     public string BindingReason { get; set; } = string.Empty;
+
+    public ProcessWorkflowExecutorBinding? WorkflowBinding { get; set; }
 }
 
 public sealed class ProcessTemplateLiveRunAcceptanceCriterionDocument
@@ -1044,6 +1052,8 @@ public sealed class ProcessTemplateDefinitionRoleUsageDocument
     public string StaffingIntent { get; set; } = string.Empty;
 
     public string PreferredExecutorKind { get; set; } = string.Empty;
+
+    public ProcessWorkflowExecutorBinding? WorkflowBinding { get; set; }
 
     public string PreferredProjectAssignmentRole { get; set; } = string.Empty;
 

@@ -1,27 +1,38 @@
-using System.Text;
 using System.Text.Json;
-using System.Text.RegularExpressions;
-using System.IO.Compression;
-using System.Xml.Linq;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
-using ExcelDataReader;
-using UglyToad.PdfPig;
 
 namespace CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Workspace;
 
-public sealed partial class SourceIngestionWorkflowExecutor(IWorkspacePathResolutionService paths) : IWorkflowExecutor
+public sealed class SourceIngestionWorkflowExecutor : IWorkflowExecutor
 {
-    private static readonly char[] PathTrimCharacters = [' ', '\t', '\r', '\n', '`', '\'', '"'];
+    private readonly WorkflowSourceCandidateCollector candidateCollector;
+    private readonly WorkflowSourceFileResolver fileResolver;
+    private readonly WorkflowSourceDocumentReader documentReader;
 
-    static SourceIngestionWorkflowExecutor()
+    public SourceIngestionWorkflowExecutor(
+        IWorkspacePathResolutionService paths,
+        IWorkspaceDocumentMarkdownConverter documentMarkdownConverter)
+        : this(
+            new WorkflowSourceCandidateCollector(),
+            new WorkflowSourceFileResolver(paths),
+            new WorkflowSourceDocumentReader(documentMarkdownConverter))
     {
-        Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
+    }
+
+    internal SourceIngestionWorkflowExecutor(
+        WorkflowSourceCandidateCollector candidateCollector,
+        WorkflowSourceFileResolver fileResolver,
+        WorkflowSourceDocumentReader documentReader)
+    {
+        this.candidateCollector = candidateCollector ?? throw new ArgumentNullException(nameof(candidateCollector));
+        this.fileResolver = fileResolver ?? throw new ArgumentNullException(nameof(fileResolver));
+        this.documentReader = documentReader ?? throw new ArgumentNullException(nameof(documentReader));
     }
 
     public WorkflowExecutorDescriptor Descriptor => BuiltInWorkflowExecutorDescriptors.SourceIngestion;
 
-    public ValueTask<WorkflowNodeExecutionResult> ExecuteAsync(
+    public async ValueTask<WorkflowNodeExecutionResult> ExecuteAsync(
         WorkflowExecutorExecutionContext context,
         WorkflowNodeInput input,
         CancellationToken cancellationToken = default)
@@ -35,10 +46,10 @@ public sealed partial class SourceIngestionWorkflowExecutor(IWorkspacePathResolu
         var maxFiles = Math.Clamp(settings.MaxFiles, 1, 40);
         var maxCharactersPerFile = Math.Clamp(settings.MaxCharactersPerFile, 1000, 80000);
         var remainingCharacters = Math.Clamp(settings.MaxTotalCharacters, 1000, 240000);
-        var candidates = CollectCandidates(root, settings, sourceKeys)
+        var candidates = candidateCollector.Collect(root, settings, sourceKeys)
             .GroupBy(candidate => $"{candidate.Kind}:{candidate.Value}", StringComparer.OrdinalIgnoreCase)
             .Select(group => group.First())
-            .ToList();
+            .ToArray();
         var loaded = new List<WorkflowSourceIngestionDocument>();
         var errors = new List<WorkflowSourceIngestionError>();
         var visitedFiles = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -55,7 +66,11 @@ public sealed partial class SourceIngestionWorkflowExecutor(IWorkspacePathResolu
 
             try
             {
-                foreach (var file in ResolveCandidateFiles(candidate, settings, allowedExtensions, maxFiles - loaded.Count))
+                foreach (var file in fileResolver.ResolveCandidateFiles(
+                             candidate,
+                             settings,
+                             allowedExtensions,
+                             maxFiles - loaded.Count))
                 {
                     cancellationToken.ThrowIfCancellationRequested();
                     if (!visitedFiles.Add(file.FullPath))
@@ -63,7 +78,11 @@ public sealed partial class SourceIngestionWorkflowExecutor(IWorkspacePathResolu
                         continue;
                     }
 
-                    var loadedDocument = ReadSourceDocument(candidate, file, maxCharactersPerFile, remainingCharacters);
+                    var effectiveCharacterBudget = Math.Min(maxCharactersPerFile, remainingCharacters);
+                    var readResult = await documentReader
+                        .ReadAsync(file, effectiveCharacterBudget, cancellationToken)
+                        .ConfigureAwait(false);
+                    var loadedDocument = CreateDocument(candidate, file, readResult);
                     loaded.Add(loadedDocument);
                     remainingCharacters -= loadedDocument.Text.Length;
                     truncated = truncated || loadedDocument.IsTruncated;
@@ -103,7 +122,62 @@ public sealed partial class SourceIngestionWorkflowExecutor(IWorkspacePathResolu
             isTruncated = truncated
         };
 
-        return ValueTask.FromResult(WorkflowExecutorJson.Result(context, result));
+        return WorkflowExecutorJson.Result(context, result);
     }
 
+    private static WorkflowSourceIngestionDocument CreateDocument(
+        WorkflowSourceCandidate candidate,
+        WorkflowSourceIngestionFile file,
+        WorkflowSourceReadResult result)
+        => new(
+            candidate.Key,
+            candidate.Label,
+            candidate.Kind,
+            candidate.Origin,
+            file.DisplayPath,
+            file.FileName,
+            Path.GetExtension(file.FullPath).ToLowerInvariant(),
+            result.Text,
+            result.TotalCharacters,
+            result.IsTruncated,
+            result.ExtractionStatus);
+
+    private static JsonElement? TryClone(JsonElement root, string propertyName)
+        => root.TryGetProperty(propertyName, out var value)
+            ? value.Clone()
+            : null;
+
+    private static string BuildSourceSummary(
+        IReadOnlyList<WorkflowSourceIngestionDocument> loaded,
+        IReadOnlyList<WorkflowSourceIngestionError> errors,
+        bool truncated)
+    {
+        var sourceText = loaded.Count == 1 ? "source" : "sources";
+        var summary = $"Loaded {loaded.Count} {sourceText}";
+        if (errors.Count > 0)
+        {
+            summary += $" with {errors.Count} error(s)";
+        }
+
+        if (truncated)
+        {
+            summary += "; content was truncated to workflow limits";
+        }
+
+        return summary + ".";
+    }
+
+    private static IReadOnlySet<string> NormalizeKeys(IReadOnlyList<string> sourceKeys)
+        => sourceKeys
+            .Where(key => !string.IsNullOrWhiteSpace(key))
+            .Select(key => key.Trim())
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+    private static IReadOnlySet<string> NormalizeExtensions(IReadOnlyList<string> extensions)
+        => extensions
+            .Where(extension => !string.IsNullOrWhiteSpace(extension))
+            .Select(extension => extension.Trim().StartsWith(".", StringComparison.Ordinal)
+                ? extension.Trim().ToLowerInvariant()
+                : "." + extension.Trim().ToLowerInvariant())
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
 }

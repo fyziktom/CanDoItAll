@@ -841,6 +841,80 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                     b.ToTable("AgentFramework_WorkflowExternalRequests", (string)null);
                 });
 
+            modelBuilder.Entity("CanDoItAll.Modules.AgentFramework.WorkflowLaunchIdempotencyRecordEntity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("CallerKey")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<Guid>("ClaimToken")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("ClaimedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("CompletedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CompletionJson")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Fingerprint")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<DateTimeOffset>("LeaseExpiresAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("Mode")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("OriginKind")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("OriginScopeKey")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<Guid>("RequestedVersionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ReservedRunId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("SelectionKind")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("State")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("WorkflowId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ReservedRunId")
+                        .IsUnique()
+                        .HasDatabaseName("UX_AF_WorkflowLaunchIdempotency_Run");
+
+                    b.HasIndex("State", "LeaseExpiresAtUtc")
+                        .HasDatabaseName("IX_AF_WorkflowLaunchIdempotency_Lease");
+
+                    b.HasIndex("CallerKey", "WorkflowId", "SelectionKind", "RequestedVersionId", "Mode", "OriginKind", "OriginScopeKey")
+                        .IsUnique()
+                        .HasDatabaseName("UX_AF_WorkflowLaunchIdempotency_Scope");
+
+                    b.ToTable("AgentFramework_WorkflowLaunchIdempotency", (string)null);
+                });
+
             modelBuilder.Entity("CanDoItAll.Modules.AgentFramework.WorkflowRunRecordEntity", b =>
                 {
                     b.Property<Guid>("RunId")
@@ -858,12 +932,19 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                     b.Property<DateTimeOffset>("CreatedAtUtc")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<string>("OriginJson")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
                     b.Property<int>("State")
                         .HasColumnType("integer");
 
                     b.Property<string>("Summary")
                         .IsRequired()
                         .HasColumnType("TEXT");
+
+                    b.Property<DateTimeOffset?>("TerminalAtUtc")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<DateTimeOffset>("UpdatedAtUtc")
                         .HasColumnType("timestamp with time zone");
@@ -899,6 +980,164 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("AgentFramework_WorkflowSettings", (string)null);
+                });
+
+            modelBuilder.Entity("CanDoItAll.Modules.AgentFramework.WorkflowUsageObservationRecordEntity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Attempt")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("CachedInputTokens")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset?>("CompletedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("ComponentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal?>("CostUsd")
+                        .HasPrecision(28, 12)
+                        .HasColumnType("numeric(28,12)");
+
+                    b.Property<string>("ExecutorId")
+                        .HasMaxLength(240)
+                        .HasColumnType("character varying(240)");
+
+                    b.Property<int>("InputTokens")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("InvocationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Model")
+                        .IsRequired()
+                        .HasMaxLength(240)
+                        .HasColumnType("character varying(240)");
+
+                    b.Property<string>("ModelKey")
+                        .IsRequired()
+                        .HasMaxLength(240)
+                        .HasColumnType("character varying(240)");
+
+                    b.Property<string>("NodeId")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("OriginJson")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("OriginKind")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid?>("OriginProcessAssignmentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("OriginProcessRunId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("OutputTokens")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("PricingProfileHash")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<int>("PricingProvenance")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("PricingStatus")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("PricingVersion")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)");
+
+                    b.Property<int>("ProducerKind")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("ProviderKind")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("ProviderName")
+                        .IsRequired()
+                        .HasMaxLength(240)
+                        .HasColumnType("character varying(240)");
+
+                    b.Property<string>("ProviderNameKey")
+                        .IsRequired()
+                        .HasMaxLength(240)
+                        .HasColumnType("character varying(240)");
+
+                    b.Property<Guid?>("ProviderProfileId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ProviderRequestId")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("ProviderResponseId")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<int>("ReasoningTokens")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset>("RecordedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("RunId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("SourcePhase")
+                        .IsRequired()
+                        .HasMaxLength(240)
+                        .HasColumnType("character varying(240)");
+
+                    b.Property<DateTimeOffset?>("StartedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("ToolCallCount")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("TotalTokens")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("TransportKind")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("UsageStatus")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("VersionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("WorkflowId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("NodeId", "ExecutorId");
+
+                    b.HasIndex("OriginProcessRunId", "RecordedAtUtc");
+
+                    b.HasIndex("ProviderNameKey", "ModelKey");
+
+                    b.HasIndex("RunId", "RecordedAtUtc");
+
+                    b.HasIndex("WorkflowId", "RecordedAtUtc");
+
+                    b.ToTable("AgentFramework_WorkflowUsageObservations", (string)null);
                 });
 
             modelBuilder.Entity("CanDoItAll.Modules.Collaboration.CollaborationInboxItemRecord", b =>
@@ -5360,6 +5599,15 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                         .HasMaxLength(256)
                         .HasColumnType("character varying(256)");
 
+                    b.Property<Guid?>("WorkflowId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int?>("WorkflowOutputMapping")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid?>("WorkflowVersionId")
+                        .HasColumnType("uuid");
+
                     b.HasKey("RunId", "StepInstanceId");
 
                     b.HasIndex("PlanId");
@@ -5368,6 +5616,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
 
                     b.HasIndex("RunId", "StepKey")
                         .IsUnique();
+
+                    b.HasIndex("WorkflowId", "WorkflowVersionId");
 
                     b.ToTable("process_runtime_step_assignments", (string)null);
                 });

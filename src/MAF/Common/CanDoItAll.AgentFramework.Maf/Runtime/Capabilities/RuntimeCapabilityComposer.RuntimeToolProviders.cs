@@ -16,7 +16,8 @@ internal sealed class RuntimeRegisteredToolProviderAttacher(IRuntimeToolProvider
         bool suppressApprovalRequirements,
         AgentRuntimeContextPolicyKind policyKind,
         WorkspaceScopeDescriptor contextWorkspaceScope,
-        AgentRuntimeContextIntent contextIntent)
+        AgentRuntimeContextIntent contextIntent,
+        string runtimeSessionKey)
     {
         if (!contextIntent.RuntimeToolProvidersEnabled)
         {
@@ -42,7 +43,7 @@ internal sealed class RuntimeRegisteredToolProviderAttacher(IRuntimeToolProvider
             capabilities,
             suppressApprovalRequirements,
             MapRuntimeToolProviderPurpose(policyKind),
-            RuntimeSessionKey: string.Empty,
+            RuntimeSessionKey: runtimeSessionKey,
             effectiveContextIntent,
             ResolveRuntimeToolProviderTags(contextWorkspaceScope));
         var result = await runtimeToolProviderComposer.AttachAsync(

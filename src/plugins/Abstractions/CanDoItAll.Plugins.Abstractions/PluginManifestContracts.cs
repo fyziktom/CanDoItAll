@@ -76,11 +76,43 @@ public sealed record PluginWorkflowExecutorDescriptor(
     WorkflowValueShape ResultShape,
     WorkflowExecutorExecutionPolicy DefaultPolicy)
 {
+    public string DefaultSettingsJson { get; init; } = "{}";
+
+    public WorkflowExecutorSettingsPresentationMode SettingsPresentationMode { get; init; } =
+        WorkflowExecutorSettingsPresentationMode.Schema;
+
+    public WorkflowExecutorSimulationDescriptor Simulation { get; init; } = WorkflowExecutorSimulationDescriptor.None;
+
     public WorkflowExecutorPermissionPolicy PermissionPolicy { get; init; } = WorkflowExecutorPermissionPolicy.None;
 
     public WorkflowExecutorSideEffectDescriptor SideEffects { get; init; } = WorkflowExecutorSideEffectDescriptor.None;
 
     public WorkflowExecutorDeterministicTestModeDescriptor DeterministicTestMode { get; init; } = WorkflowExecutorDeterministicTestModeDescriptor.None;
+
+    public static PluginWorkflowExecutorDescriptor FromWorkflowExecutorDescriptor(
+        WorkflowExecutorDescriptor descriptor)
+    {
+        ArgumentNullException.ThrowIfNull(descriptor);
+
+        return new PluginWorkflowExecutorDescriptor(
+            descriptor.Id,
+            descriptor.Name,
+            descriptor.Description,
+            descriptor.Category,
+            new PluginRendererKey(descriptor.SetupRendererKey),
+            descriptor.ConfigurationSchema,
+            descriptor.InputShape,
+            descriptor.ResultShape,
+            descriptor.DefaultPolicy)
+        {
+            DefaultSettingsJson = descriptor.DefaultSettingsJson,
+            SettingsPresentationMode = descriptor.SettingsPresentationMode,
+            Simulation = descriptor.Simulation,
+            PermissionPolicy = descriptor.PermissionPolicy,
+            SideEffects = descriptor.SideEffects,
+            DeterministicTestMode = descriptor.DeterministicTestMode
+        };
+    }
 }
 
 public sealed record PluginPackageDescriptor(

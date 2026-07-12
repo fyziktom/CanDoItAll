@@ -21,10 +21,10 @@ public static class DockerPluginServiceCollectionExtensions
         services.AddScoped<IPluginHostToolService, DockerHostToolService>();
         if (registerWorkflowExecutors)
         {
-            services.TryAddEnumerable(ServiceDescriptor.Scoped<IWorkflowExecutor, DockerListContainersWorkflowExecutor>());
-            services.TryAddEnumerable(ServiceDescriptor.Scoped<IWorkflowExecutor, DockerPullImageWorkflowExecutor>());
-            services.TryAddEnumerable(ServiceDescriptor.Scoped<IWorkflowExecutor, DockerStartContainerWorkflowExecutor>());
-            services.TryAddEnumerable(ServiceDescriptor.Scoped<IWorkflowExecutor, DockerReadLogsWorkflowExecutor>());
+            services.AddWorkflowExecutorContribution<DockerListContainersWorkflowExecutor>(DockerWorkflowExecutorDescriptors.ListContainers, ServiceLifetime.Scoped);
+            services.AddWorkflowExecutorContribution<DockerPullImageWorkflowExecutor>(DockerWorkflowExecutorDescriptors.PullImage, ServiceLifetime.Scoped);
+            services.AddWorkflowExecutorContribution<DockerStartContainerWorkflowExecutor>(DockerWorkflowExecutorDescriptors.StartContainer, ServiceLifetime.Scoped);
+            services.AddWorkflowExecutorContribution<DockerReadLogsWorkflowExecutor>(DockerWorkflowExecutorDescriptors.ReadLogs, ServiceLifetime.Scoped);
         }
 
         return services;

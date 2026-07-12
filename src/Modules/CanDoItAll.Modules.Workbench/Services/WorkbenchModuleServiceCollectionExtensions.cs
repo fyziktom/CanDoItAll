@@ -50,6 +50,7 @@ public static class WorkbenchModuleServiceCollectionExtensions
         services.TryAddScoped<ProcessLaunchVariablePreparationService>();
         services.AddScoped<ProjectStructureProcessNodeService>();
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IProcessSubprocessLaunchCoordinator, ProjectStructureProcessSubprocessLaunchCoordinator>());
+        services.TryAddSingleton<ProjectStructureWorkflowLaunchIntentFactory>();
         services.AddScoped<ProjectStructureWorkflowNodeService>();
         services.TryAddScoped<IWorkspacePathResolutionService>(serviceProvider =>
         {

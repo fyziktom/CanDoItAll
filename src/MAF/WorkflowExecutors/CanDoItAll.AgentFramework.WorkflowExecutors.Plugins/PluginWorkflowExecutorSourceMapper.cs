@@ -5,6 +5,8 @@ namespace CanDoItAll.AgentFramework.WorkflowExecutors.Plugins;
 
 public static class PluginWorkflowExecutorSourceMapper
 {
+    private const string ObjectSettingsSchemaJson = "{\"type\":\"object\"}";
+
     public static WorkflowExecutorSourceDescriptor CreateSource(PluginDescriptor plugin)
     {
         var icon = plugin.Icon ?? UiIconDescriptor.Default;
@@ -41,6 +43,41 @@ public static class PluginWorkflowExecutorSourceMapper
         => plugin.Icon is { Kind: UiIconKind.MaterialIcon, Value: { Length: > 0 } value }
             ? value
             : "extension";
+
+    public static WorkflowExecutorDescriptor CreateDescriptor(
+        PluginDescriptor plugin,
+        PluginWorkflowExecutorDescriptor executor)
+    {
+        ArgumentNullException.ThrowIfNull(plugin);
+        ArgumentNullException.ThrowIfNull(executor);
+
+        return new WorkflowExecutorDescriptor(
+            executor.ExecutorId,
+            executor.Name,
+            executor.Description,
+            executor.Category,
+            ResolveIconName(plugin),
+            executor.SettingsRendererKey.Value,
+            executor.InputShape,
+            executor.ResultShape,
+            ObjectSettingsSchemaJson,
+            executor.DefaultSettingsJson,
+            executor.DefaultPolicy,
+            IsImplemented: true)
+        {
+            Source = CreateSource(plugin),
+            Availability = WorkflowExecutorAvailabilityDescriptor.Available(),
+            SettingsSchema = WorkflowExecutorSettingsSchemaDescriptor.JsonSchema(
+                executor.SettingsSchema.Version,
+                ObjectSettingsSchemaJson),
+            ConfigurationSchema = executor.SettingsSchema,
+            SettingsPresentationMode = executor.SettingsPresentationMode,
+            Simulation = executor.Simulation,
+            PermissionPolicy = executor.PermissionPolicy,
+            SideEffects = executor.SideEffects,
+            DeterministicTestMode = executor.DeterministicTestMode
+        };
+    }
 
     public static WorkflowExecutorSourceKind MapSourceKind(PluginSourceKind sourceKind)
         => sourceKind switch

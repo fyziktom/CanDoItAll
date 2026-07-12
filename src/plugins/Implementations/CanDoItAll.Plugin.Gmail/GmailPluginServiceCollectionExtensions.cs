@@ -18,10 +18,12 @@ public static class GmailPluginServiceCollectionExtensions
         }
 
         services.AddScoped<GmailApiClient>();
+        services.TryAddScoped<IGmailWorkflowClient>(serviceProvider =>
+            serviceProvider.GetRequiredService<GmailApiClient>());
         if (registerWorkflowExecutors)
         {
-            services.TryAddEnumerable(ServiceDescriptor.Scoped<IWorkflowExecutor, GmailDownloadByLabelWorkflowExecutor>());
-            services.TryAddEnumerable(ServiceDescriptor.Scoped<IWorkflowExecutor, GmailMarkProcessedWorkflowExecutor>());
+            services.AddWorkflowExecutorContribution<GmailDownloadByLabelWorkflowExecutor>(GmailWorkflowExecutorDescriptors.DownloadByLabel, ServiceLifetime.Scoped);
+            services.AddWorkflowExecutorContribution<GmailMarkProcessedWorkflowExecutor>(GmailWorkflowExecutorDescriptors.MarkProcessed, ServiceLifetime.Scoped);
         }
 
         return services;

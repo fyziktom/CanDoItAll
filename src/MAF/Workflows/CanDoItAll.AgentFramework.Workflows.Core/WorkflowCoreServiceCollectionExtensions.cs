@@ -1,3 +1,4 @@
+using CanDoItAll.AgentFramework.Workflows.Abstractions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
@@ -12,8 +13,13 @@ public static class WorkflowCoreServiceCollectionExtensions
         services.TryAddScoped<IWorkflowDefinitionValidator>(serviceProvider => new WorkflowDefinitionValidator(
             serviceProvider.GetRequiredService<IWorkflowExecutorCatalog>()));
         services.TryAddSingleton<IWorkflowRuntimeBackendCatalog>(_ => new WorkflowRuntimeBackendCatalog());
+        services.TryAddSingleton(TimeProvider.System);
+        services.TryAddSingleton<IWorkflowLaunchIdempotencyStore, InMemoryWorkflowLaunchIdempotencyStore>();
+        services.TryAddScoped<IWorkflowRunLauncher, WorkflowRuntimeManagerRunLauncher>();
+        services.TryAddScoped<IWorkflowLaunchService, WorkflowLaunchService>();
+        services.TryAddScoped<IWorkflowUsageAnalyticsStore, WorkflowUsageAnalyticsStore>();
+        services.TryAddScoped<IWorkflowAnalyticsQueryService, WorkflowAnalyticsQueryService>();
         services.TryAddScoped<IWorkflowPayloadPolicyService, WorkflowPayloadPolicyService>();
-        services.TryAddScoped<IWorkflowProcessExecutorBridge, WorkflowProcessExecutorBridge>();
         services.TryAddScoped<IWorkflowTestRunner, WorkflowTestRunner>();
 
         return services;

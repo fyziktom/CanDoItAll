@@ -573,6 +573,7 @@ public sealed class ProcessLaunchApplicationService(
                 branchGateResolution.BranchGate,
                 nowUtc)
             {
+                WorkflowBinding = binding?.WorkflowBinding,
                 CapabilityScope = ProcessCapabilityScope.Normalize(templateStep.CapabilityScope)
             });
         }
@@ -712,6 +713,7 @@ public sealed class ProcessLaunchApplicationService(
                     blockingFinding?.Message,
                     assignment?.BranchGate)
                 {
+                    WorkflowBinding = assignment?.WorkflowBinding,
                     AllowedOperations = templateStep is null ? [] : NormalizeAllowedOperations(templateStep.AllowedOperations),
                     OperationTargetScope = templateStep is null ? string.Empty : NormalizeOperationTargetScope(templateStep.OperationTargetScope),
                     RoleResourceKey = FirstNonEmpty(assignment?.RoleResourceKey, role?.RoleResourceKey),

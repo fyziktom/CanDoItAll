@@ -1,0 +1,33 @@
+SB02 validator transcript index
+WorkingDirectory: repo://
+
+Command: dotnet test tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj --no-restore --filter "FullyQualifiedName~CanDoItAll.Tests.Unit.WorkflowSourceIngestionArchitectureTests"
+ExitCode: 1
+Evidence: bundle://proof/SB02/failing-first.txt
+
+Command: dotnet test tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj -nologo --no-build --filter "FullyQualifiedName~ManagedCodeMarkItDownDocumentMarkdownConverterTests|FullyQualifiedName~WorkspaceArtifactToolServiceTests|FullyQualifiedName~WorkflowSourceIngestion|FullyQualifiedName~WorkspaceFileWorkflowExecutorTypedResultTests|FullyQualifiedName~WorkspaceImageOperationServiceTests|FullyQualifiedName~ProviderRuntimeImageAnalysisServiceTests|FullyQualifiedName~WorkspaceRuntimePluginImageAnalysisTests|FullyQualifiedName~WorkflowExecutorCategoryIsolationTests|FullyQualifiedName~HttpFetchDownloadsToWorkspaceAndSourceIngestionReadsOutputPath"
+ExitCode: 0
+Evidence: bundle://proof/SB02/passing-shared-operations.txt and bundle://proof/SB02/passing-image-analysis.txt
+
+Command: rg -n "partial class SourceIngestionWorkflowExecutor|PdfPig|ProviderChatAttachment|GetRequiredService" src/MAF/WorkflowExecutors/Standard/CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Workspace src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/Workspace
+ExitCode: 1
+Evidence: disallowed parser, partial, provider, and service-location markers absent; bundle://proof/SB02/anti-stub.txt
+
+Invariant ID: SB02-CONVERSION-BOUNDARY
+Invariant ID: SB02-SOURCE-INGESTION-DELEGATION
+Invariant ID: SB02-TYPED-SHARED-OPERATIONS
+Invariant ID: SB02-IMAGE-ANALYSIS-SEAM
+
+Test name: ConvertToMarkdownAsync_extracts_recognizable_pdf_content
+Test name: ConvertToMarkdownAsync_extracts_recognizable_docx_content
+Test name: ConvertToMarkdownAsync_extracts_recognizable_xlsx_content
+Test name: ConvertDocumentToMarkdown_overwrites_existing_output_with_full_markdown
+Test name: DocumentExtensionsDelegateToSharedConverter
+Test name: DocumentReaderRejectsConverterContractViolations
+Test name: ConversionFailureBecomesSourceErrorWithoutRawFallback
+Test name: WorkspaceFileExecutor_DoesNotInspectResultsWithReflection
+Test name: ArtifactService_ImageMethodsDelegateToInjectedOperationService
+Test name: AnalyzeAsync_maps_gateway_request_and_preserves_token_usage
+Test name: AnalyzeAsync_rejects_provider_model_without_vision_without_calling_gateway
+Test name: AnalyzeImageFile_delegates_to_analysis_service_and_preserves_result_shape
+Test name: Workspace_plugin_and_composer_do_not_locate_or_fallback_image_analysis_services

@@ -1,6 +1,5 @@
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
-using CanDoItAll.AgentFramework.Providers;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -14,10 +13,8 @@ internal sealed class WorkspaceRuntimePlugin(
     AgentWorkspaceToolAccessSettings accessSettings,
     ProviderProfile provider,
     string runtimeModel,
-    IMafProviderRuntimeGateway providerRuntimeGateway)
+    IAgentImageAnalysisService imageAnalysisService)
 {
-    private static readonly ProviderProfileService ProviderFeatureService = new();
-
         private readonly IWorkspaceCommandExecutionService commandExecutionService = commandExecutionService;
         private readonly IWorkspaceArtifactToolService artifactToolService = artifactToolService;
         private readonly string workspaceRoot = Path.GetFullPath(workspaceRoot);
@@ -26,7 +23,7 @@ internal sealed class WorkspaceRuntimePlugin(
         private readonly AgentWorkspaceToolAccessSettings accessSettings = AgentWorkspaceToolAccessMetadata.Normalize(accessSettings);
         private readonly ProviderProfile provider = provider;
         private readonly string runtimeModel = runtimeModel;
-        private readonly IMafProviderRuntimeGateway providerRuntimeGateway = providerRuntimeGateway;
+        private readonly IAgentImageAnalysisService imageAnalysisService = imageAnalysisService;
         private const string ImageAnalysisModelParameterConfigurationJson = """{"modelParameters":{"numPredict":512,"think":false}}""";
         private static readonly JsonSerializerOptions ScriptManifestJsonOptions = CreateScriptManifestJsonOptions();
 
@@ -196,42 +193,26 @@ internal sealed class WorkspaceRuntimePlugin(
             }
 
             var selectedModel = ResolveImageAnalysisModel();
-            var featureMatrix = ProviderFeatureService.ResolveFeatureMatrixForModel(provider, selectedModel);
-            if (!featureMatrix.SupportsVision)
-            {
-                return CreateImageAnalysisResult(
-                    succeeded: false,
-                    image,
-                    NormalizeImageAnalysisPrompt(prompt),
-                    analysis: string.Empty,
-                    inputTokens: 0,
-                    outputTokens: 0,
-                    diagnostics: $"Provider '{provider.Name}' model '{selectedModel}' does not support vision/image input.");
-            }
-
             var analysisPrompt = NormalizeImageAnalysisPrompt(prompt);
             try
             {
-                var result = await providerRuntimeGateway.RunProviderImageChatAsync(
-                        provider,
-                        new ProviderTestChatRequest(
+                var result = await imageAnalysisService.AnalyzeAsync(
+                        new AgentImageAnalysisRequest(
+                            provider,
                             selectedModel,
-                            string.Empty,
-                            [],
-                            analysisPrompt),
-                        selectedModel,
-                        [new ProviderChatAttachment(
-                            ResolveImageAttachmentName(image.Path),
-                            image.ContentType,
-                            image.Bytes)],
-                        ImageAnalysisModelParameterConfigurationJson)
+                            analysisPrompt,
+                            [new AgentImageAnalysisSource(
+                                ResolveImageAttachmentName(image.Path),
+                                image.ContentType,
+                                image.Bytes)],
+                            ImageAnalysisModelParameterConfigurationJson))
                     .ConfigureAwait(false);
 
                 return CreateImageAnalysisResult(
                     succeeded: true,
                     image,
                     analysisPrompt,
-                    result.ResponseText,
+                    result.Analysis,
                     result.InputTokens,
                     result.OutputTokens,
                     diagnostics: string.Empty);
@@ -302,46 +283,30 @@ internal sealed class WorkspaceRuntimePlugin(
             }
 
             var selectedModel = ResolveImageAnalysisModel();
-            var featureMatrix = ProviderFeatureService.ResolveFeatureMatrixForModel(provider, selectedModel);
-            if (!featureMatrix.SupportsVision)
-            {
-                return CreateImagesAnalysisResult(
-                    succeeded: false,
-                    images,
-                    NormalizeImageSetAnalysisPrompt(prompt, normalizedPaths.Length, string.Empty),
-                    analysis: string.Empty,
-                    inputTokens: 0,
-                    outputTokens: 0,
-                    diagnostics: $"Provider '{provider.Name}' model '{selectedModel}' does not support vision/image input.");
-            }
-
             var deterministicEvidence = WorkspaceImageSetEvidenceBuilder.Build(images);
             var analysisPrompt = NormalizeImageSetAnalysisPrompt(prompt, images.Count, deterministicEvidence);
             try
             {
-                var attachments = images
-                    .Select((image, index) => new ProviderChatAttachment(
+                var sources = images
+                    .Select((image, index) => new AgentImageAnalysisSource(
                         $"{index + 1:D2}-{ResolveImageAttachmentName(image.Path)}",
                         image.ContentType,
                         image.Bytes))
                     .ToList();
-                var result = await providerRuntimeGateway.RunProviderImageChatAsync(
-                        provider,
-                        new ProviderTestChatRequest(
+                var result = await imageAnalysisService.AnalyzeAsync(
+                        new AgentImageAnalysisRequest(
+                            provider,
                             selectedModel,
-                            string.Empty,
-                            [],
-                            analysisPrompt),
-                        selectedModel,
-                        attachments,
-                        ImageAnalysisModelParameterConfigurationJson)
+                            analysisPrompt,
+                            sources,
+                            ImageAnalysisModelParameterConfigurationJson))
                     .ConfigureAwait(false);
 
                 return CreateImagesAnalysisResult(
                     succeeded: true,
                     images,
                     analysisPrompt,
-                    result.ResponseText,
+                    result.Analysis,
                     result.InputTokens,
                     result.OutputTokens,
                     diagnostics: string.Empty);

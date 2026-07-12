@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.AgentFramework.Workflows.Abstractions;
 
 namespace CanDoItAll.AgentFramework.Core;
 
@@ -8,6 +9,7 @@ public sealed class InMemoryWorkflowRunStore :
     IWorkflowArtifactStore,
     IWorkflowExternalRequestStore
 {
+    private readonly object mutationSync = new();
     private readonly ConcurrentDictionary<WorkflowRunId, WorkflowRunSnapshot> runs = new();
     private readonly ConcurrentDictionary<WorkflowRunId, ConcurrentQueue<WorkflowEventRecord>> events = new();
     private readonly ConcurrentDictionary<WorkflowExternalRequestId, WorkflowExternalRequestRecord> requests = new();
@@ -18,8 +20,115 @@ public sealed class InMemoryWorkflowRunStore :
 
     public Task SaveRunAsync(WorkflowRunSnapshot run, CancellationToken cancellationToken = default)
     {
-        runs[run.RunId] = run;
+        cancellationToken.ThrowIfCancellationRequested();
+        lock (mutationSync)
+        {
+            runs[run.RunId] = run;
+        }
+
         return Task.CompletedTask;
+    }
+
+    public Task CreateRunWithStartedEventAsync(
+        WorkflowRunSnapshot run,
+        WorkflowEventRecord startedEvent,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(run);
+        ArgumentNullException.ThrowIfNull(startedEvent);
+        cancellationToken.ThrowIfCancellationRequested();
+        if (run.RunId != startedEvent.RunId)
+        {
+            throw new InvalidOperationException("Workflow run and started event must use the same run id.");
+        }
+
+        if (startedEvent.Kind != WorkflowEventKind.Started)
+        {
+            throw new InvalidOperationException("Initial workflow persistence requires a Started event.");
+        }
+
+        lock (mutationSync)
+        {
+            if (runs.ContainsKey(run.RunId))
+            {
+                throw new WorkflowRunAlreadyExistsException(run.RunId);
+            }
+
+            runs[run.RunId] = run;
+            events.GetOrAdd(run.RunId, _ => new ConcurrentQueue<WorkflowEventRecord>())
+                .Enqueue(startedEvent);
+        }
+
+        return Task.CompletedTask;
+    }
+
+    public Task<WorkflowRunTransitionResult> TryTransitionRunAsync(
+        WorkflowRunId runId,
+        IReadOnlyCollection<WorkflowRunState> expectedStates,
+        WorkflowRunSnapshot updatedRun,
+        WorkflowEventRecord? transitionEvent = null,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(expectedStates);
+        ArgumentNullException.ThrowIfNull(updatedRun);
+        cancellationToken.ThrowIfCancellationRequested();
+        if (updatedRun.RunId != runId || transitionEvent is not null && transitionEvent.RunId != runId)
+        {
+            throw new InvalidOperationException("Workflow transition records must use the requested run id.");
+        }
+
+        lock (mutationSync)
+        {
+            if (!runs.TryGetValue(runId, out var current) || !expectedStates.Contains(current.State))
+            {
+                return Task.FromResult(new WorkflowRunTransitionResult(false, current));
+            }
+
+            runs[runId] = updatedRun;
+            if (transitionEvent is not null)
+            {
+                events.GetOrAdd(runId, _ => new ConcurrentQueue<WorkflowEventRecord>())
+                    .Enqueue(transitionEvent);
+            }
+
+            return Task.FromResult(new WorkflowRunTransitionResult(true, updatedRun));
+        }
+    }
+
+    public Task<WorkflowExternalResponseAcceptanceResult> TryAcceptExternalResponseAsync(
+        WorkflowExternalRequestId requestId,
+        string responseJson,
+        DateTimeOffset respondedAtUtc,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(responseJson);
+        cancellationToken.ThrowIfCancellationRequested();
+        lock (mutationSync)
+        {
+            if (!requests.TryGetValue(requestId, out var request))
+            {
+                return Task.FromResult(new WorkflowExternalResponseAcceptanceResult(
+                    WorkflowExternalResponseAcceptanceOutcome.NotFound,
+                    Request: null));
+            }
+
+            if (request.RespondedAtUtc.HasValue)
+            {
+                return Task.FromResult(new WorkflowExternalResponseAcceptanceResult(
+                    WorkflowExternalResponseAcceptanceOutcome.AlreadyResponded,
+                    request));
+            }
+
+            var accepted = request with
+            {
+                ResponseJson = responseJson,
+                RespondedAtUtc = respondedAtUtc
+            };
+            requests[requestId] = accepted;
+            return Task.FromResult(new WorkflowExternalResponseAcceptanceResult(
+                WorkflowExternalResponseAcceptanceOutcome.Accepted,
+                accepted));
+        }
     }
 
     public Task<WorkflowRunSnapshot?> GetRunAsync(WorkflowRunId runId, CancellationToken cancellationToken = default)
@@ -91,8 +200,13 @@ public sealed class InMemoryWorkflowRunStore :
 
     public Task SaveEventAsync(WorkflowEventRecord workflowEvent, CancellationToken cancellationToken = default)
     {
-        events.GetOrAdd(workflowEvent.RunId, _ => new ConcurrentQueue<WorkflowEventRecord>())
-            .Enqueue(workflowEvent);
+        cancellationToken.ThrowIfCancellationRequested();
+        lock (mutationSync)
+        {
+            events.GetOrAdd(workflowEvent.RunId, _ => new ConcurrentQueue<WorkflowEventRecord>())
+                .Enqueue(workflowEvent);
+        }
+
         return Task.CompletedTask;
     }
 
@@ -206,9 +320,18 @@ public sealed class InMemoryWorkflowRunStore :
         WorkflowExternalRequestRecord request,
         CancellationToken cancellationToken = default)
     {
-        requests[request.Id] = request;
-        requestsByRun.GetOrAdd(request.RunId, _ => new ConcurrentQueue<WorkflowExternalRequestId>())
-            .Enqueue(request.Id);
+        cancellationToken.ThrowIfCancellationRequested();
+        lock (mutationSync)
+        {
+            var isNew = !requests.ContainsKey(request.Id);
+            requests[request.Id] = request;
+            if (isNew)
+            {
+                requestsByRun.GetOrAdd(request.RunId, _ => new ConcurrentQueue<WorkflowExternalRequestId>())
+                    .Enqueue(request.Id);
+            }
+        }
+
         return Task.CompletedTask;
     }
 
@@ -261,18 +384,22 @@ public sealed class InMemoryWorkflowRunStore :
         DateTimeOffset respondedAtUtc,
         CancellationToken cancellationToken = default)
     {
-        if (!requests.TryGetValue(requestId, out var request))
+        cancellationToken.ThrowIfCancellationRequested();
+        lock (mutationSync)
         {
-            throw new KeyNotFoundException($"Workflow external request '{requestId}' was not found.");
-        }
+            if (!requests.TryGetValue(requestId, out var request))
+            {
+                throw new KeyNotFoundException($"Workflow external request '{requestId}' was not found.");
+            }
 
-        var answered = request with
-        {
-            ResponseJson = responseJson,
-            RespondedAtUtc = respondedAtUtc
-        };
-        requests[requestId] = answered;
-        return Task.FromResult(answered);
+            var answered = request with
+            {
+                ResponseJson = responseJson,
+                RespondedAtUtc = respondedAtUtc
+            };
+            requests[requestId] = answered;
+            return Task.FromResult(answered);
+        }
     }
 
     public Task SaveArtifactAsync(WorkflowArtifactRecord artifact, CancellationToken cancellationToken = default)
@@ -303,9 +430,17 @@ public sealed class InMemoryWorkflowRunStore :
 
     private Task<WorkflowExternalRequestRecord> SaveExternalRequestCoreAsync(WorkflowExternalRequestRecord request)
     {
-        requests[request.Id] = request;
-        requestsByRun.GetOrAdd(request.RunId, _ => new ConcurrentQueue<WorkflowExternalRequestId>())
-            .Enqueue(request.Id);
+        lock (mutationSync)
+        {
+            var isNew = !requests.ContainsKey(request.Id);
+            requests[request.Id] = request;
+            if (isNew)
+            {
+                requestsByRun.GetOrAdd(request.RunId, _ => new ConcurrentQueue<WorkflowExternalRequestId>())
+                    .Enqueue(request.Id);
+            }
+        }
+
         return Task.FromResult(request);
     }
 

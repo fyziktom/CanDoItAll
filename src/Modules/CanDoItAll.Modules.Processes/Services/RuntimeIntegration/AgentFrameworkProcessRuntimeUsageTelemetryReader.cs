@@ -156,6 +156,7 @@ internal sealed class AgentFrameworkProcessRuntimeUsageTelemetryReader(
             decimal.Round(estimatedCostUsd, 6, MidpointRounding.AwayFromZero),
             decimal.Round(actualCostUsd, 6, MidpointRounding.AwayFromZero))
         {
+            ToolCallCount = usageObservation.ToolCallCount,
             ContextEstimatedInputTokens = contextSummary.EstimatedInputTokens,
             ContextInputMessageCount = contextSummary.InputMessageCount,
             ContextToolCount = contextSummary.ToolCount,

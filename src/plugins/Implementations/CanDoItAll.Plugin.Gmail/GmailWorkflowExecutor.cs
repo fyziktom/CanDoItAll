@@ -3,49 +3,22 @@ using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.AgentFramework.WorkflowExecutors.Plugins;
 using CanDoItAll.Plugins.Abstractions;
 
 namespace CanDoItAll.Modules.Plugins;
 
 public sealed class GmailDownloadByLabelWorkflowExecutor(
-    PluginGrantEvaluator grantEvaluator,
-    PluginOAuthService oauthService,
-    GmailApiClient gmailApiClient) : IWorkflowExecutor
+    IPluginWorkflowExecutorGrantEvaluator grantEvaluator,
+    IPluginWorkflowOAuthService oauthService,
+    IGmailWorkflowClient gmailApiClient) : IWorkflowExecutor
 {
     private const int MaxWorkflowMessages = 1;
     private static readonly JsonSerializerOptions JsonOptions = GmailWorkflowJson.Options;
-    private static readonly WorkflowValueShape ResultShape = new(WorkflowValueShapeKind.Json, "{}", "Gmail email message batch JSON.");
-    private static readonly WorkflowExecutorSourceDescriptor PluginSource = WorkflowExecutorSourceDescriptor.BundledPlugin(
-        GmailPluginConstants.PluginId.Value,
-        "1.0.0",
-        "Gmail",
-        GmailPluginConstants.Icon);
 
-    public WorkflowExecutorDescriptor Descriptor => new(
-        GmailPluginConstants.DownloadByLabelExecutorId,
-        "Gmail messages by label",
-        "Downloads the first unprocessed Gmail messages that have the configured label.",
-        WorkflowExecutorCategoryKind.Data,
-        "mail",
-        GmailPluginConstants.SettingsRendererKey.Value,
-        WorkflowValueShape.Text,
-        ResultShape,
-        "{\"type\":\"object\"}",
-        JsonSerializer.Serialize(new GmailWorkflowExecutorSettings(), JsonOptions),
-        WorkflowExecutorExecutionPolicy.Default with { TimeoutSeconds = 60 },
-        IsImplemented: true)
+    public WorkflowExecutorDescriptor Descriptor => GmailWorkflowExecutorDescriptors.DownloadByLabel with
     {
-        Source = PluginSource,
-        Availability = ResolveAvailability(),
-        Simulation = GmailWorkflowSimulationTemplates.DownloadByLabel,
-        PermissionPolicy = new WorkflowExecutorPermissionPolicy(
-            WorkflowExecutorCapabilityFlags.ReadsExternalData |
-            WorkflowExecutorCapabilityFlags.UsesNetwork |
-            WorkflowExecutorCapabilityFlags.UsesSecrets |
-            WorkflowExecutorCapabilityFlags.SupportsDeterministicTestMode,
-            WorkflowExecutorApprovalRequirement.NotRequired),
-        SideEffects = WorkflowExecutorSideEffectDescriptor.ExternalRead(EmailWorkflowSideEffectConstants.ExternalReadReceiptSchema),
-        DeterministicTestMode = WorkflowExecutorDeterministicTestModeDescriptor.Supported("Run Preview uses simulated Gmail messages without calling Gmail.")
+        Availability = ResolveAvailability()
     };
 
     public async ValueTask<WorkflowNodeExecutionResult> ExecuteAsync(
@@ -56,7 +29,7 @@ public sealed class GmailDownloadByLabelWorkflowExecutor(
         var settings = JsonSerializer.Deserialize<GmailWorkflowExecutorSettings>(context.SettingsJson, JsonOptions)
                        ?? throw new InvalidOperationException("Gmail executor settings are invalid.");
 
-        var connectionId = await oauthService.ResolveWorkflowConnectionIdAsync(
+        var connectionId = await oauthService.ResolveConnectionIdAsync(
             GmailPluginConstants.PluginId,
             GmailPluginConstants.ConnectionKey,
             settings.ConnectionId,
@@ -80,7 +53,7 @@ public sealed class GmailDownloadByLabelWorkflowExecutor(
         return new WorkflowNodeExecutionResult(
             context.Node.Id,
             CreatePayload(input, settings, connectionId, batch),
-            ResultShape);
+            GmailWorkflowExecutorDescriptors.DownloadByLabel.ResultShape);
     }
 
     private static string CreatePayload(
@@ -200,46 +173,15 @@ public sealed class GmailDownloadByLabelWorkflowExecutor(
 }
 
 public sealed class GmailMarkProcessedWorkflowExecutor(
-    PluginGrantEvaluator grantEvaluator,
-    PluginOAuthService oauthService,
-    GmailApiClient gmailApiClient) : IWorkflowExecutor
+    IPluginWorkflowExecutorGrantEvaluator grantEvaluator,
+    IPluginWorkflowOAuthService oauthService,
+    IGmailWorkflowClient gmailApiClient) : IWorkflowExecutor
 {
     private static readonly JsonSerializerOptions JsonOptions = GmailWorkflowJson.Options;
-    private static readonly WorkflowValueShape ResultShape = new(WorkflowValueShapeKind.Json, "{}", "Gmail processed label mutation JSON.");
-    private static readonly WorkflowExecutorSourceDescriptor PluginSource = WorkflowExecutorSourceDescriptor.BundledPlugin(
-        GmailPluginConstants.PluginId.Value,
-        "1.0.0",
-        "Gmail",
-        GmailPluginConstants.Icon);
 
-    public WorkflowExecutorDescriptor Descriptor => new(
-        GmailPluginConstants.MarkProcessedExecutorId,
-        "Gmail mark processed",
-        "Adds the processed label to a Gmail message and removes the source label.",
-        WorkflowExecutorCategoryKind.Data,
-        "mail",
-        GmailPluginConstants.SettingsRendererKey.Value,
-        WorkflowValueShape.Text,
-        ResultShape,
-        "{\"type\":\"object\"}",
-        JsonSerializer.Serialize(new GmailMarkProcessedWorkflowExecutorSettings(), JsonOptions),
-        WorkflowExecutorExecutionPolicy.Default with { TimeoutSeconds = 60 },
-        IsImplemented: true)
+    public WorkflowExecutorDescriptor Descriptor => GmailWorkflowExecutorDescriptors.MarkProcessed with
     {
-        Source = PluginSource,
-        Availability = ResolveAvailability(),
-        Simulation = GmailWorkflowSimulationTemplates.MarkProcessed,
-        PermissionPolicy = new WorkflowExecutorPermissionPolicy(
-            WorkflowExecutorCapabilityFlags.WritesExternalData |
-            WorkflowExecutorCapabilityFlags.UsesNetwork |
-            WorkflowExecutorCapabilityFlags.UsesSecrets |
-            WorkflowExecutorCapabilityFlags.IdempotentExternalMarker |
-            WorkflowExecutorCapabilityFlags.SupportsDeterministicTestMode,
-            WorkflowExecutorApprovalRequirement.NotRequired),
-        SideEffects = WorkflowExecutorSideEffectDescriptor.IdempotentProcessedMarker(
-            "$.externalSideEffectReceipt.idempotencyKey",
-            EmailWorkflowSideEffectConstants.ProcessedMarkerReceiptSchema),
-        DeterministicTestMode = WorkflowExecutorDeterministicTestModeDescriptor.Supported("Run Preview simulates the Gmail label mutation without changing Gmail.")
+        Availability = ResolveAvailability()
     };
 
     public async ValueTask<WorkflowNodeExecutionResult> ExecuteAsync(
@@ -260,7 +202,7 @@ public sealed class GmailMarkProcessedWorkflowExecutor(
             throw new InvalidOperationException("Gmail mark-processed executor resolved an empty message id.");
         }
 
-        var connectionId = await oauthService.ResolveWorkflowConnectionIdAsync(
+        var connectionId = await oauthService.ResolveConnectionIdAsync(
             GmailPluginConstants.PluginId,
             GmailPluginConstants.ConnectionKey,
             settings.ConnectionId,
@@ -281,7 +223,7 @@ public sealed class GmailMarkProcessedWorkflowExecutor(
         return new WorkflowNodeExecutionResult(
             context.Node.Id,
             CreatePayload(input, result),
-            ResultShape);
+            GmailWorkflowExecutorDescriptors.MarkProcessed.ResultShape);
     }
 
     private static string CreatePayload(

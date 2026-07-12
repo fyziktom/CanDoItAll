@@ -9,13 +9,13 @@ public interface IWorkspaceDocumentMarkdownConverter
 
 public sealed record WorkspaceDocumentMarkdownConversionRequest(
     string SourcePath,
-    string OutputPath);
+    int? MaxCharacters = null);
 
 public sealed record WorkspaceDocumentMarkdownConversionResult(
     bool Succeeded,
     string Message,
     string SourcePath,
-    string OutputPath,
-    int MarkdownCharacterCount,
+    string Markdown,
+    int TotalMarkdownCharacters,
+    bool IsTruncated,
     string Diagnostics);
-

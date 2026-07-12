@@ -1,0 +1,33 @@
+SB04 explicit process-to-workflow execution proof
+Date: 2026-07-12
+
+Production behavior proved:
+- Process roles and launch overrides carry a typed workflow id, optional exact version id, and typed output mapping; no composite executor id or arbitrary-active selection is used.
+- The resolver validates exact active/runnable versions or the latest active version within the explicitly selected workflow.
+- The dedicated workflow driver launches through IWorkflowLaunchService with Production, WaitForStopped, a typed ProcessAssignment origin/input envelope, and a stable assignment idempotency key.
+- Retry recovery accepts only persisted child runs whose workflow/version and typed process run/assignment origin match. Active children defer, terminal states map explicitly, and duplicate or spoofed children are rejected.
+- A launcher-returned run is revalidated before use. Missing/mismatched workflow, version, or origin fails explicitly.
+- Process artifact/tool-receipt contracts and externalized/truncated workflow output fail explicitly; no result or resume is fabricated.
+- Runtime assignment persistence stores workflow id, version id, and typed output mapping. Migration 20260712210953_AddProcessWorkflowExecutorBinding is model-converged.
+- The large-screen process role editor preserves workflow bindings across later edits, supports latest-active or exact-version selection, and blocks invalid GUID input using BaseLib form wrappers.
+
+Commands and results:
+- dotnet build src/Modules/CanDoItAll.Modules.Processes/CanDoItAll.Modules.Processes.csproj --no-restore -m:1
+  Result: passed, 0 warnings, 0 errors.
+- dotnet test tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj --no-build --no-restore --filter "FullyQualifiedName~WorkflowProcessStepExecutorTests|FullyQualifiedName~ProcessLaunchExecutorResolverTests|FullyQualifiedName~ProcessPersistenceStoreTests|FullyQualifiedName~WorkflowCoreExtractionTests"
+  Result: 63 passed, 0 failed.
+- dotnet test tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj --no-build --no-restore --filter "FullyQualifiedName~ProcessRuntimeIntegrationAdapterTests|FullyQualifiedName~WorkflowAgentRuntimeToolProviderTests"
+  Result: 161 passed, 0 failed.
+- dotnet test tests/Components/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj --no-build --no-restore --filter "FullyQualifiedName~Workflow_role_binding"
+  Result: 2 passed, 0 failed.
+- dotnet test tests/Components/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj --no-build --no-restore --filter "FullyQualifiedName~ProcessWorkspaceShellTests.Role_"
+  Result: 3 passed, 0 failed.
+- dotnet build src/Foundation/CanDoItAll.Migrations.PostgreSql/CanDoItAll.Migrations.PostgreSql.csproj --no-restore -m:1
+  Result: passed, 0 warnings, 0 errors.
+- dotnet ef migrations has-pending-model-changes --project src/Foundation/CanDoItAll.Migrations.PostgreSql/CanDoItAll.Migrations.PostgreSql.csproj --context AppDbContext --no-build
+  Result: no changes have been made to the model since the last migration.
+
+Architecture evidence:
+- Scoped CodeAnalytics snapshot: snap-20260712202635-d4d98642.
+- The process-owned contract remains SDK-free. Modules.Processes is the adapter boundary over workflow launch/runtime abstractions.
+- The unused trivial IWorkflowProcessExecutorBridge was removed instead of expanded into a second launch policy.

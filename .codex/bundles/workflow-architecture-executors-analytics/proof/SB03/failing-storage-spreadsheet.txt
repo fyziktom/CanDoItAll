@@ -1,0 +1,11 @@
+Command:
+dotnet test tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj --no-restore -p:BuildProjectReferences=false --filter "FullyQualifiedName~WorkflowStorageSpreadsheetAdapterTests" --logger "console;verbosity=minimal"
+
+Result: exit code 1.
+
+Intended failing-first diagnostics:
+- CS0117: WorkflowStorageFileOperation had no ListDirectory value.
+- CS0117: WorkflowSpreadsheetOperation had no Preview value.
+- CS1061: WorkflowSpreadsheetExecutorSettings had no MaxWorksheets property.
+
+The same concurrent build also saw transient compilation from another in-progress plugin slice; the three diagnostics above are the capability-specific red gate addressed by this slice.

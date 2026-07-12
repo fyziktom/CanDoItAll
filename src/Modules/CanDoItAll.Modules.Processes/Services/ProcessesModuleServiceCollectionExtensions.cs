@@ -96,13 +96,15 @@ public static class ProcessesModuleServiceCollectionExtensions
         services.TryAddScoped<ProcessRuntimeOwnedStepCoordinator>();
         services.TryAddScoped<ProcessSubprocessCoordinator>();
         services.TryAddScoped<ProcessParentSubprocessArtifactContextHydrator>();
+        services.TryAddScoped<IProcessWorkflowStepExecutor, WorkflowProcessStepExecutor>();
         services.TryAddScoped<AgentFrameworkProcessStepExecutor>();
         services.TryAddScoped<IAgentFrameworkProcessStepExecutor>(serviceProvider => serviceProvider.GetRequiredService<AgentFrameworkProcessStepExecutor>());
         services.TryAddScoped<AgentFrameworkProcessExecutionAdapter>();
         services.TryAddScoped<IProcessExecutionAdapter>(serviceProvider => serviceProvider.GetRequiredService<AgentFrameworkProcessExecutionAdapter>());
         services.TryAddScoped<IProcessStepExecutionDriver>(serviceProvider => serviceProvider.GetRequiredService<AgentFrameworkProcessExecutionAdapter>());
         services.TryAddScoped<IProcessExecutionObservationReader, AgentFrameworkProcessExecutionObservationReader>();
-        services.TryAddScoped<IProcessRuntimeUsageTelemetryReader, AgentFrameworkProcessRuntimeUsageTelemetryReader>();
+        services.TryAddScoped<AgentFrameworkProcessRuntimeUsageTelemetryReader>();
+        services.TryAddScoped<IProcessRuntimeUsageTelemetryReader, WorkflowAwareProcessRuntimeUsageTelemetryReader>();
         services.TryAddScoped<AgentFrameworkProcessExecutionClaimRecoveryCoordinator>();
         services.TryAddScoped<AgentFrameworkProcessExecutionClaimRecoveryReconciler>();
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IAgentExecutionRecoveryObserver, AgentFrameworkProcessExecutionRecoveryObserver>());

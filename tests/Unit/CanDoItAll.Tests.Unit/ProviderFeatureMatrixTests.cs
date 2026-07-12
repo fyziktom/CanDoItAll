@@ -344,20 +344,13 @@ public sealed class ProviderFeatureMatrixTests
             "CanDoItAll.Modules.AgentFramework",
             "Providers",
             "AgentFrameworkProviderMetadata.cs");
-        var workflowSource = ReadRepositoryFile(
+        var workflowRendererSource = ReadRepositoryFile(
             "src",
             "Modules",
             "CanDoItAll.Modules.AgentFramework",
             "Pages",
             "Components",
-            "WorkflowCanvasEditor.razor.cs");
-        var workflowMarkup = ReadRepositoryFile(
-            "src",
-            "Modules",
-            "CanDoItAll.Modules.AgentFramework",
-            "Pages",
-            "Components",
-            "WorkflowCanvasEditor.razor");
+            "WorkflowImageGenerationSettingsRenderer.razor");
         var treeNodeBuilderSource = ReadRepositoryFile(
             "src",
             "Modules",
@@ -373,12 +366,10 @@ public sealed class ProviderFeatureMatrixTests
         Assert.Contains("AgentFrameworkProviderKind.ComfyUi => ComfyUiProviderAdapter.PluginKey", metadataSource, StringComparison.Ordinal);
         Assert.Contains("No workspace connector plugin mapping exists for provider kind", metadataSource, StringComparison.Ordinal);
 
-        Assert.Contains("ImageProviderOptions", workflowSource, StringComparison.Ordinal);
-        Assert.Contains("option.Purpose == ProviderProfilePurpose.ImageGeneration", workflowSource, StringComparison.Ordinal);
-        Assert.Contains("workflow-image-provider-select", workflowMarkup, StringComparison.Ordinal);
-        Assert.Contains("selected.ExecutorId != WorkflowExecutorIds.ImageGeneration", workflowMarkup, StringComparison.Ordinal);
-        Assert.Contains("Selected provider is not an image-generation provider", workflowMarkup, StringComparison.Ordinal);
-        Assert.DoesNotContain("Provider profile id", workflowMarkup, StringComparison.Ordinal);
+        Assert.Contains("option.Purpose == ProviderProfilePurpose.ImageGeneration", workflowRendererSource, StringComparison.Ordinal);
+        Assert.Contains("disabled=\"@(!provider.IsEnabled)\"", workflowRendererSource, StringComparison.Ordinal);
+        Assert.Contains("not an available image-generation provider", workflowRendererSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("ProviderProfilePurpose.Chat", workflowRendererSource, StringComparison.Ordinal);
         Assert.Contains("ProviderKind.ComfyUi => \"image\"", treeNodeBuilderSource, StringComparison.Ordinal);
     }
 

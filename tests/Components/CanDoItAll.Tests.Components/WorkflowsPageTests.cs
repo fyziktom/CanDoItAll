@@ -2,6 +2,7 @@ using Bunit;
 using AngleSharp.Dom;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.AgentFramework.Workflows.Abstractions;
 using CanDoItAll.AgentFramework.Workflows.Templates;
 using CanDoItAll.Components.BaseLib;
 using CanDoItAll.Components.CanvasLib;
@@ -459,6 +460,32 @@ public sealed class WorkflowsPageTests
     }
 
     [Fact]
+    public async Task Workflow_canvas_toolbox_opens_custom_executor_settings_in_the_node_inspector()
+    {
+        await using var environment = CanDoItAllTestEnvironment.Create("workflow-canvas-custom-settings-tests");
+        await using var harness = await CreateInMemoryWorkflowHarnessAsync(environment);
+        var navigation = harness.Context.Services.GetRequiredService<NavigationManager>();
+
+        navigation.NavigateTo("/agents/workflows");
+        var cut = harness.Context.RenderComponent<WorkflowsPage>();
+
+        cut.WaitForElement("[data-testid='workflows-tab-editor']");
+        ClickTabButton(cut, "Editor");
+        cut.WaitForElement("[data-testid='workflow-canvas-editor']");
+        var toolboxSearch = EnsureWorkflowToolboxVisible(cut);
+
+        toolboxSearch.Input("image generation");
+        cut.WaitForElement("[data-testid='workflow-toolbox-executor-image-generate']").Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            var providerSelector = cut.Find("[data-testid='workflow-canvas-executor-settings-providerProfileId']");
+            Assert.Equal("select", providerSelector.TagName, StringComparer.OrdinalIgnoreCase);
+            Assert.DoesNotContain("Create Image generation", cut.Markup, StringComparison.Ordinal);
+        });
+    }
+
+    [Fact]
     public async Task Workflow_canvas_places_llm_component_validates_runs_and_saves_definition()
     {
         await using var harness = await ComponentTestHarness.CreateAsync(RegisterDeterministicWorkflowLlmInvoker);
@@ -769,7 +796,8 @@ public sealed class WorkflowsPageTests
     [Fact]
     public async Task Workflow_canvas_authors_typed_predicate_route_metadata()
     {
-        await using var harness = await ComponentTestHarness.CreateAsync(RegisterDeterministicWorkflowLlmInvoker);
+        await using var environment = CanDoItAllTestEnvironment.Create("workflow-canvas-predicate-route-tests");
+        await using var harness = await CreateInMemoryWorkflowHarnessAsync(environment);
         var navigation = harness.Context.Services.GetRequiredService<NavigationManager>();
         var notificationService = harness.Context.Services.GetRequiredService<NotificationService>();
 
@@ -1368,7 +1396,7 @@ public sealed class WorkflowsPageTests
         var inputs = cut.FindAll(searchSelector);
         if (inputs.Count > 0)
         {
-            return inputs[0];
+            return inputs.First();
         }
 
         cut.Find("[data-testid='workflow-canvas-toggle-toolbox']").Click();
@@ -1941,6 +1969,36 @@ public sealed class WorkflowsPageTests
         IWorkflowExternalRequestStore
     {
         private readonly InMemoryWorkflowRunStore inner = new();
+
+        public Task CreateRunWithStartedEventAsync(
+            WorkflowRunSnapshot run,
+            WorkflowEventRecord startedEvent,
+            CancellationToken cancellationToken = default)
+            => inner.CreateRunWithStartedEventAsync(run, startedEvent, cancellationToken);
+
+        public Task<WorkflowRunTransitionResult> TryTransitionRunAsync(
+            WorkflowRunId runId,
+            IReadOnlyCollection<WorkflowRunState> expectedStates,
+            WorkflowRunSnapshot updatedRun,
+            WorkflowEventRecord? transitionEvent = null,
+            CancellationToken cancellationToken = default)
+            => inner.TryTransitionRunAsync(
+                runId,
+                expectedStates,
+                updatedRun,
+                transitionEvent,
+                cancellationToken);
+
+        public Task<WorkflowExternalResponseAcceptanceResult> TryAcceptExternalResponseAsync(
+            WorkflowExternalRequestId requestId,
+            string responseJson,
+            DateTimeOffset respondedAtUtc,
+            CancellationToken cancellationToken = default)
+            => inner.TryAcceptExternalResponseAsync(
+                requestId,
+                responseJson,
+                respondedAtUtc,
+                cancellationToken);
 
         public Task SaveRunAsync(
             WorkflowRunSnapshot run,

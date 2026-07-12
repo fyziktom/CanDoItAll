@@ -5252,6 +5252,61 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
     }
 
     [Fact]
+    public async Task ExecuteAsync_delegates_typed_workflow_assignment_before_agent_and_subprocess_paths()
+    {
+        var agent = NewAgent(
+            "Workflow process sentinel",
+            "Must not execute for a workflow-bound assignment.",
+            AgentWorkloadKind.Management,
+            ["workflow-sentinel"],
+            AgentWorkspaceToolProfileKind.ReadOnly);
+        var assignment = CreateSubprocessAssignment() with
+        {
+            ExecutorKind = ProcessLaunchExecutorKinds.Workflow,
+            ExecutorId = "workflow-display-only",
+            WorkflowBinding = new ProcessWorkflowExecutorBinding(new ProcessWorkflowId(Guid.NewGuid()))
+        };
+        var expected = ProcessExecutionResultFactory.Failed(
+            "process.adapter.workflow_delegation_test",
+            "Workflow assignment reached the dedicated workflow driver.",
+            assignment.StepInstanceId.ToString());
+        var workflowExecutor = new RecordingProcessWorkflowStepExecutor(expected);
+        var workspace = new ThrowingWorkspaceService(
+            agent,
+            new InvalidOperationException("The agent path must not execute for a workflow assignment."));
+        var workspaceFiles = CreateWorkspaceFileService(out var workspaceRoot);
+
+        try
+        {
+            var adapter = CreateAdapter(
+                new FakeWorkspaceFactory(workspace),
+                CreateReferenceDataProvider(workspace),
+                new InMemoryAssignmentStore(assignment),
+                new InMemoryRuntimeStateStore(),
+                workspaceFiles,
+                workflowStepExecutor: workflowExecutor);
+
+            var result = await adapter.ExecuteAsync(new ProcessExecutionAdapterRequest(
+                assignment.RunId,
+                assignment.StepInstanceId,
+                ProcessExecutionAdapterKind.Workflow,
+                new ProcessExecutionAdapterOperationKey("execute"),
+                Binding,
+                [],
+                []));
+
+            Assert.Equal(expected, result);
+            Assert.Equal(assignment, workflowExecutor.Assignment);
+            Assert.NotNull(workflowExecutor.StepContract);
+            Assert.False(workspace.ExecuteRunCalled);
+        }
+        finally
+        {
+            DeleteDirectory(workspaceRoot);
+        }
+    }
+
+    [Fact]
     public async Task ExecuteAsync_defers_mapped_subprocess_when_running_child_is_not_yet_state_visible()
     {
         var parentRunId = ProcessRunId.New();
@@ -8178,7 +8233,8 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
         IEnumerable<IProcessSubprocessLaunchCoordinator>? subprocessLaunchCoordinators = null,
         IProcessRuntimeToolPreflightService? runtimeToolPreflightService = null,
         IParentSubprocessArtifactBridge? parentSubprocessArtifactBridge = null,
-        IEnumerable<IProcessRuntimeOwnedStepExecutor>? runtimeOwnedStepExecutors = null)
+        IEnumerable<IProcessRuntimeOwnedStepExecutor>? runtimeOwnedStepExecutors = null,
+        IProcessWorkflowStepExecutor? workflowStepExecutor = null)
     {
         var toolReceiptPolicies = CreateToolReceiptPolicyCatalog();
         var completionIssueResultFactory = new ProcessCompletionIssueResultFactory(
@@ -8237,6 +8293,7 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
             agentReferenceDataProvider,
             assignmentStore,
             stateStore,
+            workflowStepExecutor ?? new UnexpectedProcessWorkflowStepExecutor(),
             effectiveRuntimeToolPreflightService,
             runtimeOwnedStepCoordinator,
             subprocessCoordinator,
@@ -8248,6 +8305,34 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
                 new BrowserExecutionMetadataContribution()
             ]));
         return new AgentFrameworkProcessExecutionAdapter(executor);
+    }
+
+    private sealed class UnexpectedProcessWorkflowStepExecutor : IProcessWorkflowStepExecutor
+    {
+        public ValueTask<ProcessExecutionAdapterResult> ExecuteAsync(
+            ProcessRuntimeStepAssignment assignment,
+            ProcessStepExecutionContract stepContract,
+            CancellationToken cancellationToken = default)
+            => throw new InvalidOperationException(
+                $"Agent integration test unexpectedly dispatched workflow assignment '{assignment.StepKey}'.");
+    }
+
+    private sealed class RecordingProcessWorkflowStepExecutor(ProcessExecutionAdapterResult result) :
+        IProcessWorkflowStepExecutor
+    {
+        public ProcessRuntimeStepAssignment? Assignment { get; private set; }
+
+        public ProcessStepExecutionContract? StepContract { get; private set; }
+
+        public ValueTask<ProcessExecutionAdapterResult> ExecuteAsync(
+            ProcessRuntimeStepAssignment assignment,
+            ProcessStepExecutionContract stepContract,
+            CancellationToken cancellationToken = default)
+        {
+            Assignment = assignment;
+            StepContract = stepContract;
+            return ValueTask.FromResult(result);
+        }
     }
 
     private static ProcessToolReceiptPolicyCatalog CreateToolReceiptPolicyCatalog()

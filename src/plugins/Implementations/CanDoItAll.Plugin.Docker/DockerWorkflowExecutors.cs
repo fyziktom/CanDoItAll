@@ -1,63 +1,26 @@
 using System.Text.Json;
-using System.Text.Json.Serialization;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.AgentFramework.WorkflowExecutors.Plugins;
 using CanDoItAll.Plugins.Abstractions;
-using CanDoItAll.SharedKernel.Configuration;
 
 namespace CanDoItAll.Modules.Plugins;
 
 public abstract class DockerWorkflowExecutorBase(
-    PluginGrantEvaluator grantEvaluator,
+    IPluginWorkflowExecutorGrantEvaluator grantEvaluator,
     IPluginHostToolService hostToolService) : IWorkflowExecutor
 {
-    private const string SettingsSchemaJson = "{\"type\":\"object\"}";
-    private static readonly JsonSerializerOptions SerializerOptions = CreateSerializerOptions();
-    private static readonly WorkflowValueShape JsonShape = new(
-        WorkflowValueShapeKind.Json,
-        "{}",
-        "Docker command JSON result");
-    private static readonly WorkflowExecutorSourceDescriptor PluginSource = WorkflowExecutorSourceDescriptor.BundledPlugin(
-        DockerPluginConstants.PluginId.Value,
-        "1.0.0",
-        "Docker",
-        DockerPluginConstants.Icon);
+    private static readonly JsonSerializerOptions SerializerOptions = DockerWorkflowJson.Options;
 
-    protected abstract WorkflowExecutorId ExecutorId { get; }
+    protected abstract WorkflowExecutorDescriptor DescriptorDefinition { get; }
+
+    protected WorkflowExecutorId ExecutorId => DescriptorDefinition.Id;
 
     protected abstract PluginHostToolRecipeId RecipeId { get; }
 
-    protected abstract string Name { get; }
-
-    protected abstract string Description { get; }
-
-    protected virtual WorkflowExecutorExecutionPolicy DefaultPolicy => WorkflowExecutorExecutionPolicy.Default;
-
-    public WorkflowExecutorDescriptor Descriptor => new(
-        ExecutorId,
-        Name,
-        Description,
-        WorkflowExecutorCategoryKind.Command,
-        "terminal",
-        DockerPluginConstants.SettingsRendererKey.Value,
-        WorkflowValueShape.Text,
-        JsonShape,
-        SettingsSchemaJson,
-        Serialize(new DockerWorkflowExecutorSettings()),
-        DefaultPolicy,
-        IsImplemented: true)
+    public WorkflowExecutorDescriptor Descriptor => DescriptorDefinition with
     {
-        Source = PluginSource,
-        Availability = ResolveAvailability(),
-        SettingsSchema = WorkflowExecutorSettingsSchemaDescriptor.JsonSchema("1.0", SettingsSchemaJson),
-        ConfigurationSchema = CreateConfigurationSchema(),
-        Simulation = DockerWorkflowSimulationTemplates.CommandResult,
-        PermissionPolicy = new WorkflowExecutorPermissionPolicy(
-            WorkflowExecutorCapabilityFlags.RunsHostCommand |
-            WorkflowExecutorCapabilityFlags.EmitsArtifacts |
-            WorkflowExecutorCapabilityFlags.SupportsDeterministicTestMode,
-            WorkflowExecutorApprovalRequirement.AlwaysRequired),
-        DeterministicTestMode = WorkflowExecutorDeterministicTestModeDescriptor.Supported("Run Preview simulates Docker host-tool output without invoking Docker.")
+        Availability = ResolveAvailability()
     };
 
     public async ValueTask<WorkflowNodeExecutionResult> ExecuteAsync(
@@ -172,36 +135,17 @@ public abstract class DockerWorkflowExecutorBase(
         PluginHostToolRecipeId? recipeId,
         CancellationToken cancellationToken)
     {
-        var decision = await grantEvaluator.EvaluateAsync(
+        cancellationToken.ThrowIfCancellationRequested();
+        var decision = grantEvaluator.Evaluate(
             DockerPluginConstants.PluginId,
             capability,
-            recipeId,
-            cancellationToken);
+            recipeId);
         if (!decision.Allowed)
         {
             throw new InvalidOperationException(decision.Message);
         }
     }
 
-    private static ConfigurationSchema CreateConfigurationSchema()
-        => new(
-            "1.0",
-            [
-                new ConfigurationFieldDescriptor("image", "Image", ConfigurationFieldType.Text, IsRequired: false, "Docker image reference."),
-                new ConfigurationFieldDescriptor("containerName", "Container name", ConfigurationFieldType.Text, IsRequired: false, "Docker container name."),
-                new ConfigurationFieldDescriptor("pullIfMissing", "Pull if missing", ConfigurationFieldType.Boolean, IsRequired: false, "Pull the image before creating the container when it is not available locally."),
-                new ConfigurationFieldDescriptor("portMappings", "Port mappings", ConfigurationFieldType.Json, IsRequired: false, "JSON array of host:container port mappings."),
-                new ConfigurationFieldDescriptor("tail", "Log tail", ConfigurationFieldType.Number, IsRequired: false, "Maximum number of log lines to read."),
-                new ConfigurationFieldDescriptor("since", "Logs since", ConfigurationFieldType.Text, IsRequired: false, "Optional docker logs --since value."),
-                new ConfigurationFieldDescriptor("maxOutputCharacters", "Output cap", ConfigurationFieldType.Number, IsRequired: false, "Maximum stdout/stderr characters captured.")
-            ]);
-
-    private static JsonSerializerOptions CreateSerializerOptions()
-    {
-        var options = new JsonSerializerOptions(JsonSerializerDefaults.Web);
-        options.Converters.Add(new JsonStringEnumConverter());
-        return options;
-    }
 }
 
 internal static class DockerWorkflowSimulationTemplates
@@ -237,18 +181,12 @@ internal static class DockerWorkflowSimulationTemplates
 }
 
 public sealed class DockerListContainersWorkflowExecutor(
-    PluginGrantEvaluator grantEvaluator,
+    IPluginWorkflowExecutorGrantEvaluator grantEvaluator,
     IPluginHostToolService hostToolService) : DockerWorkflowExecutorBase(grantEvaluator, hostToolService)
 {
-    protected override WorkflowExecutorId ExecutorId => DockerPluginConstants.ListContainersExecutorId;
+    protected override WorkflowExecutorDescriptor DescriptorDefinition => DockerWorkflowExecutorDescriptors.ListContainers;
 
     protected override PluginHostToolRecipeId RecipeId => PluginHostToolRecipeIds.DockerListContainers;
-
-    protected override string Name => "Docker containers";
-
-    protected override string Description => "Lists running Docker containers through the guarded Docker plugin.";
-
-    protected override WorkflowExecutorExecutionPolicy DefaultPolicy => WorkflowExecutorExecutionPolicy.Default with { TimeoutSeconds = 20 };
 
     protected override IReadOnlyDictionary<string, string> CreateArguments(
         DockerWorkflowExecutorSettings settings,
@@ -257,18 +195,12 @@ public sealed class DockerListContainersWorkflowExecutor(
 }
 
 public sealed class DockerPullImageWorkflowExecutor(
-    PluginGrantEvaluator grantEvaluator,
+    IPluginWorkflowExecutorGrantEvaluator grantEvaluator,
     IPluginHostToolService hostToolService) : DockerWorkflowExecutorBase(grantEvaluator, hostToolService)
 {
-    protected override WorkflowExecutorId ExecutorId => DockerPluginConstants.PullImageExecutorId;
+    protected override WorkflowExecutorDescriptor DescriptorDefinition => DockerWorkflowExecutorDescriptors.PullImage;
 
     protected override PluginHostToolRecipeId RecipeId => PluginHostToolRecipeIds.DockerPullImage;
-
-    protected override string Name => "Docker pull image";
-
-    protected override string Description => "Pulls a validated Docker image through the guarded Docker plugin.";
-
-    protected override WorkflowExecutorExecutionPolicy DefaultPolicy => WorkflowExecutorExecutionPolicy.Default with { TimeoutSeconds = 900, CaptureOutputArtifact = true };
 
     protected override IReadOnlyDictionary<string, string> CreateArguments(
         DockerWorkflowExecutorSettings settings,
@@ -300,18 +232,12 @@ public sealed class DockerPullImageWorkflowExecutor(
 }
 
 public sealed class DockerStartContainerWorkflowExecutor(
-    PluginGrantEvaluator grantEvaluator,
+    IPluginWorkflowExecutorGrantEvaluator grantEvaluator,
     IPluginHostToolService hostToolService) : DockerWorkflowExecutorBase(grantEvaluator, hostToolService)
 {
-    protected override WorkflowExecutorId ExecutorId => DockerPluginConstants.StartContainerExecutorId;
+    protected override WorkflowExecutorDescriptor DescriptorDefinition => DockerWorkflowExecutorDescriptors.StartContainer;
 
     protected override PluginHostToolRecipeId RecipeId => PluginHostToolRecipeIds.DockerStartContainer;
-
-    protected override string Name => "Docker start container";
-
-    protected override string Description => "Starts an existing container or creates one from a validated image through the guarded Docker plugin.";
-
-    protected override WorkflowExecutorExecutionPolicy DefaultPolicy => WorkflowExecutorExecutionPolicy.Default with { TimeoutSeconds = 120, CaptureOutputArtifact = true };
 
     protected override IReadOnlyDictionary<string, string> CreateArguments(
         DockerWorkflowExecutorSettings settings,
@@ -347,18 +273,12 @@ public sealed class DockerStartContainerWorkflowExecutor(
 }
 
 public sealed class DockerReadLogsWorkflowExecutor(
-    PluginGrantEvaluator grantEvaluator,
+    IPluginWorkflowExecutorGrantEvaluator grantEvaluator,
     IPluginHostToolService hostToolService) : DockerWorkflowExecutorBase(grantEvaluator, hostToolService)
 {
-    protected override WorkflowExecutorId ExecutorId => DockerPluginConstants.ReadLogsExecutorId;
+    protected override WorkflowExecutorDescriptor DescriptorDefinition => DockerWorkflowExecutorDescriptors.ReadLogs;
 
     protected override PluginHostToolRecipeId RecipeId => PluginHostToolRecipeIds.DockerReadLogs;
-
-    protected override string Name => "Docker logs";
-
-    protected override string Description => "Reads bounded logs from a Docker container through the guarded Docker plugin.";
-
-    protected override WorkflowExecutorExecutionPolicy DefaultPolicy => WorkflowExecutorExecutionPolicy.Default with { TimeoutSeconds = 30, CaptureOutputArtifact = true };
 
     protected override IReadOnlyDictionary<string, string> CreateArguments(
         DockerWorkflowExecutorSettings settings,

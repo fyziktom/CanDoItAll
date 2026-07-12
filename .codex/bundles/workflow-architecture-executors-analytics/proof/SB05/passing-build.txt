@@ -1,0 +1,28 @@
+SB05 scoped production build proof
+
+Recorded UTC: 2026-07-12T21:16:35Z
+Working directory: C:\repositories\CanDoItAll
+
+Command:
+dotnet build src/Modules/CanDoItAll.Modules.Processes/CanDoItAll.Modules.Processes.csproj --no-restore
+Result: exit code 0; 0 warnings, 0 errors; elapsed 29.05 seconds.
+
+This dependency build compiled the workflow Models, Abstractions, Core, Runtime, MAF adapter, AgentFramework module, process contracts/projections/application/persistence, and final workflow-aware process telemetry reader.
+
+Command:
+dotnet build src/Modules/CanDoItAll.Modules.AgentFramework/CanDoItAll.Modules.AgentFramework.csproj --no-restore --no-dependencies
+Result: exit code 0; 0 warnings, 0 errors; elapsed 5.18 seconds.
+
+Command:
+dotnet build src/App/CanDoItAll.Web/CanDoItAll.Web.csproj --no-restore --no-dependencies
+Result: exit code 0; 0 warnings, 0 errors; elapsed 8.56 seconds.
+
+Command:
+dotnet build src/Foundation/CanDoItAll.Migrations.PostgreSql/CanDoItAll.Migrations.PostgreSql.csproj --no-restore --no-dependencies
+Result: exit code 0; 0 warnings, 0 errors; elapsed 16.00 seconds.
+
+Command:
+dotnet ef migrations has-pending-model-changes --project src/Foundation/CanDoItAll.Migrations.PostgreSql/CanDoItAll.Migrations.PostgreSql.csproj --no-build
+Result: exit code 0; "No changes have been made to the model since the last migration."
+
+The EF CLI also emitted its non-blocking local tool advisory: tools 10.0.3, runtime 10.0.4.

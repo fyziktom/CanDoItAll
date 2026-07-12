@@ -1,0 +1,27 @@
+Shared spreadsheet preview operation
+------------------------------------
+Tools.Documents build: succeeded, 0 warnings, 0 errors.
+AgentFramework.Maf build: succeeded, 0 warnings, 0 errors.
+
+Focused test result: 16 passed, 0 failed.
+Coverage: bounded worksheets/rows/columns; formulas; empty, missing, and malformed workbooks; independent truncation; runtime delegation; audit receipt; denied read; path traversal.
+
+Workflow storage/spreadsheet adapters
+-------------------------------------
+Commands:
+dotnet build src/MAF/Common/CanDoItAll.AgentFramework.Models/CanDoItAll.AgentFramework.Models.csproj --no-restore --verbosity:minimal
+dotnet build src/MAF/WorkflowExecutors/CanDoItAll.AgentFramework.WorkflowExecutors.Core/CanDoItAll.AgentFramework.WorkflowExecutors.Core.csproj --no-restore -p:BuildProjectReferences=false --verbosity:minimal
+dotnet build src/MAF/WorkflowExecutors/Standard/CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Workspace/CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Workspace.csproj --no-restore -p:BuildProjectReferences=false --verbosity:minimal
+dotnet build src/MAF/WorkflowExecutors/Standard/CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Documents/CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Documents.csproj --no-restore -p:BuildProjectReferences=false --verbosity:minimal
+
+Result: all four builds succeeded with 0 warnings and 0 errors.
+
+Command:
+dotnet test tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj --no-restore --no-build --filter "FullyQualifiedName~WorkflowStorageSpreadsheetAdapterTests|FullyQualifiedName~SpreadsheetPreviewTests|FullyQualifiedName~WorkspaceFileWorkflowExecutorTypedResultTests" --logger "console;verbosity=minimal"
+
+Result: 25 passed, 0 failed, 0 skipped.
+
+Semantic assertions:
+- Existing persisted enum numeric values remain unchanged; ListDirectory=16 and Preview=7 are appended.
+- ListDirectory calls the exact non-recursive shared operation, never the recursive ListFiles operation.
+- Spreadsheet preview resolves the workspace path once and delegates once to ISpreadsheetDocumentService.PreviewWorkbook.

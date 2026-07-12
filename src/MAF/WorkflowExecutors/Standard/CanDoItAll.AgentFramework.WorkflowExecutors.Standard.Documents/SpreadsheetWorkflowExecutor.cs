@@ -23,6 +23,7 @@ public sealed class SpreadsheetWorkflowExecutor(
         object result = settings.Operation switch
         {
             WorkflowSpreadsheetOperation.WorkbookSummary => Inspect(settings),
+            WorkflowSpreadsheetOperation.Preview => Preview(settings),
             WorkflowSpreadsheetOperation.ReadCell => ReadCell(settings),
             WorkflowSpreadsheetOperation.ReadRange => ReadRange(settings),
             WorkflowSpreadsheetOperation.RangeToMarkdown => ReadRange(settings),
@@ -39,6 +40,16 @@ public sealed class SpreadsheetWorkflowExecutor(
     {
         var workbook = paths.ResolveFilePath(Require(settings.WorkbookPath, nameof(settings.WorkbookPath)), allowMissing: false);
         return documents.InspectWorkbook(workbook.FullPath);
+    }
+
+    private object Preview(WorkflowSpreadsheetExecutorSettings settings)
+    {
+        var workbook = paths.ResolveFilePath(Require(settings.WorkbookPath, nameof(settings.WorkbookPath)), allowMissing: false);
+        return documents.PreviewWorkbook(new SpreadsheetWorkbookPreviewRequest(
+            workbook.FullPath,
+            settings.MaxWorksheets,
+            settings.MaxRows,
+            settings.MaxColumns));
     }
 
     private object ReadCell(WorkflowSpreadsheetExecutorSettings settings)

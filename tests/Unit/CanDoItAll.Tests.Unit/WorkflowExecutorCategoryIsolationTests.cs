@@ -19,8 +19,11 @@ public sealed class WorkflowExecutorCategoryIsolationTests
     private static readonly string[] ConcreteExecutorFileNames =
     [
         "ControlWorkflowExecutors.cs",
+        "DocumentToMarkdownWorkflowExecutor.cs",
         "HttpFetchWorkflowExecutor.cs",
+        "ImageAnalyzeWorkflowExecutor.cs",
         "ImageGenerationWorkflowExecutor.cs",
+        "ImageInspectWorkflowExecutor.cs",
         "JsonTransformWorkflowExecutor.cs",
         "MarkdownRenderWorkflowExecutor.cs",
         "PlannedWorkflowExecutor.cs",
@@ -52,32 +55,53 @@ public sealed class WorkflowExecutorCategoryIsolationTests
     }
 
     [Fact]
-    public void CategoryDescriptorSourcesPartitionBuiltInDescriptors()
+    public void CategoryRegistrationsPartitionBuiltInContributions()
     {
-        IWorkflowExecutorDescriptorSource[] sources =
+        var services = new ServiceCollection();
+        services.AddStandardControlWorkflowExecutors(ServiceLifetime.Singleton);
+        services.AddStandardTransformWorkflowExecutors(ServiceLifetime.Singleton);
+        services.AddStandardWorkspaceWorkflowExecutors(ServiceLifetime.Singleton);
+        services.AddStandardNetworkWorkflowExecutors(ServiceLifetime.Singleton);
+        services.AddStandardDocumentWorkflowExecutors(ServiceLifetime.Singleton);
+        services.AddStandardMediaWorkflowExecutors(ServiceLifetime.Singleton);
+        services.AddStandardProjectStructureWorkflowExecutors(ServiceLifetime.Singleton);
+
+        Type[] expectedImplementationTypes =
         [
-            new StandardControlWorkflowExecutorDescriptorSource(),
-            new StandardTransformWorkflowExecutorDescriptorSource(),
-            new StandardWorkspaceWorkflowExecutorDescriptorSource(),
-            new StandardNetworkWorkflowExecutorDescriptorSource(),
-            new StandardDocumentWorkflowExecutorDescriptorSource(),
-            new StandardMediaWorkflowExecutorDescriptorSource(),
-            new StandardProjectStructureWorkflowExecutorDescriptorSource()
+            typeof(DelayWorkflowExecutor),
+            typeof(HumanApprovalWorkflowExecutor),
+            typeof(JsonTransformWorkflowExecutor),
+            typeof(MarkdownRenderWorkflowExecutor),
+            typeof(WorkspaceFileWorkflowExecutor),
+            typeof(SourceIngestionWorkflowExecutor),
+            typeof(HttpFetchWorkflowExecutor),
+            typeof(DocumentToMarkdownWorkflowExecutor),
+            typeof(SpreadsheetWorkflowExecutor),
+            typeof(ImageAnalyzeWorkflowExecutor),
+            typeof(ImageGenerationWorkflowExecutor),
+            typeof(ImageInspectWorkflowExecutor),
+            typeof(ProjectStructureWorkflowExecutor)
         ];
-
-        var sourceDescriptors = sources
-            .SelectMany(source => source.ListExecutorDescriptors())
+        var contributionDescriptors = services
+            .Where(descriptor => descriptor.ServiceType == typeof(IWorkflowExecutorContribution))
             .ToArray();
-        var duplicateIds = sourceDescriptors
-            .GroupBy(descriptor => descriptor.Id)
-            .Where(group => group.Count() > 1)
-            .Select(group => group.Key.Value)
+        var implementationTypes = services
+            .Where(descriptor => descriptor.ServiceType == typeof(IWorkflowExecutor))
+            .Select(descriptor => descriptor.ImplementationType)
+            .OfType<Type>()
+            .Select(type => type.GetGenericArguments().Single())
+            .ToArray();
+        var plannedDescriptors = contributionDescriptors
+            .Select(descriptor => descriptor.ImplementationInstance)
+            .OfType<IWorkflowExecutorContribution>()
+            .Select(contribution => contribution.Descriptor)
+            .Where(descriptor => !descriptor.CanExecute)
             .ToArray();
 
-        Assert.Empty(duplicateIds);
-        Assert.Equal(
-            BuiltInWorkflowExecutorDescriptors.All.Select(descriptor => descriptor.Id.Value).Order(StringComparer.Ordinal),
-            sourceDescriptors.Select(descriptor => descriptor.Id.Value).Order(StringComparer.Ordinal));
+        Assert.Equal(expectedImplementationTypes.OrderBy(type => type.FullName), implementationTypes.OrderBy(type => type.FullName));
+        Assert.Equal(BuiltInWorkflowExecutorDescriptors.Planned, plannedDescriptors);
+        Assert.Equal(expectedImplementationTypes.Length + plannedDescriptors.Length, contributionDescriptors.Length);
+        Assert.DoesNotContain(services, descriptor => descriptor.ServiceType == typeof(IWorkflowExecutorDescriptorSource));
     }
 
     [Fact]
@@ -99,17 +123,11 @@ public sealed class WorkflowExecutorCategoryIsolationTests
         services.AddStandardWorkflowExecutors();
 
         var executorDescriptors = services.Where(descriptor => descriptor.ServiceType == typeof(IWorkflowExecutor)).ToArray();
-        var descriptorSources = services.Where(descriptor => descriptor.ServiceType == typeof(IWorkflowExecutorDescriptorSource)).ToArray();
+        var contributionDescriptors = services.Where(descriptor => descriptor.ServiceType == typeof(IWorkflowExecutorContribution)).ToArray();
 
-        Assert.Equal(10 + BuiltInWorkflowExecutorDescriptors.Planned.Count, executorDescriptors.Length);
-        Assert.Equal(7, descriptorSources.Length);
-        Assert.Contains(descriptorSources, descriptor => descriptor.ImplementationType == typeof(StandardControlWorkflowExecutorDescriptorSource));
-        Assert.Contains(descriptorSources, descriptor => descriptor.ImplementationType == typeof(StandardTransformWorkflowExecutorDescriptorSource));
-        Assert.Contains(descriptorSources, descriptor => descriptor.ImplementationType == typeof(StandardWorkspaceWorkflowExecutorDescriptorSource));
-        Assert.Contains(descriptorSources, descriptor => descriptor.ImplementationType == typeof(StandardNetworkWorkflowExecutorDescriptorSource));
-        Assert.Contains(descriptorSources, descriptor => descriptor.ImplementationType == typeof(StandardDocumentWorkflowExecutorDescriptorSource));
-        Assert.Contains(descriptorSources, descriptor => descriptor.ImplementationType == typeof(StandardMediaWorkflowExecutorDescriptorSource));
-        Assert.Contains(descriptorSources, descriptor => descriptor.ImplementationType == typeof(StandardProjectStructureWorkflowExecutorDescriptorSource));
+        Assert.Equal(BuiltInWorkflowExecutorDescriptors.Implemented.Count, executorDescriptors.Length);
+        Assert.Equal(BuiltInWorkflowExecutorDescriptors.All.Count, contributionDescriptors.Length);
+        Assert.DoesNotContain(services, descriptor => descriptor.ServiceType == typeof(IWorkflowExecutorDescriptorSource));
     }
 
     [Fact]
@@ -126,7 +144,7 @@ public sealed class WorkflowExecutorCategoryIsolationTests
         AssertProjectReferences(
             "src/MAF/WorkflowExecutors/Standard/CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Workspace/CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Workspace.csproj",
             ["CanDoItAll.AgentFramework.Core", "CanDoItAll.AgentFramework.Models", "CanDoItAll.AgentFramework.WorkflowExecutors.Core"],
-            ["ExcelDataReader", "Microsoft.Extensions.DependencyInjection.Abstractions", "PdfPig"]);
+            ["ExcelDataReader", "Microsoft.Extensions.DependencyInjection.Abstractions"]);
         AssertProjectReferences(
             "src/MAF/WorkflowExecutors/Standard/CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Network/CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Network.csproj",
             ["CanDoItAll.AgentFramework.Core", "CanDoItAll.AgentFramework.Models", "CanDoItAll.AgentFramework.WorkflowExecutors.Core", "CanDoItAll.AgentFramework.Workflows.Core", "CanDoItAll.Modules.Security"],
@@ -149,15 +167,18 @@ public sealed class WorkflowExecutorCategoryIsolationTests
     public void LargeExecutorCategoriesAreSplitByResponsibility()
     {
         var root = FindRepositoryRoot();
-        AssertSplit(
-            Path.Combine(root, "src", "MAF", "WorkflowExecutors", "Standard", "CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Workspace"),
+        var workspaceDirectory = Path.Combine(root, "src", "MAF", "WorkflowExecutors", "Standard", "CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Workspace");
+        AssertComposedExecutor(
+            workspaceDirectory,
             "SourceIngestionWorkflowExecutor.cs",
             [
-                "SourceIngestionWorkflowReader.cs",
-                "SourceIngestionWorkflowPaths.cs",
-                "SourceIngestionWorkflowCandidates.cs",
-                "SourceIngestionWorkflowModels.cs"
+                ("WorkflowSourceCandidateCollector.cs", "WorkflowSourceCandidateCollector"),
+                ("WorkflowSourceFileResolver.cs", "WorkflowSourceFileResolver"),
+                ("WorkflowSourceDocumentReader.cs", "WorkflowSourceDocumentReader")
             ]);
+        Assert.False(File.Exists(Path.Combine(workspaceDirectory, "SourceIngestionWorkflowReader.cs")));
+        Assert.False(File.Exists(Path.Combine(workspaceDirectory, "SourceIngestionWorkflowPaths.cs")));
+        Assert.False(File.Exists(Path.Combine(workspaceDirectory, "SourceIngestionWorkflowCandidates.cs")));
         AssertSplit(
             Path.Combine(root, "src", "MAF", "WorkflowExecutors", "Standard", "CanDoItAll.AgentFramework.WorkflowExecutors.Standard.ProjectStructure"),
             "ProjectStructureWorkflowExecutor.cs",
@@ -166,6 +187,27 @@ public sealed class WorkflowExecutorCategoryIsolationTests
                 "ProjectStructureWorkflowInputResolution.cs",
                 "ProjectStructureWorkflowSupport.cs"
             ]);
+    }
+
+    private static void AssertComposedExecutor(
+        string categoryDirectory,
+        string mainFileName,
+        IReadOnlyList<(string FileName, string TypeName)> collaborators)
+    {
+        var mainFile = Path.Combine(categoryDirectory, mainFileName);
+        Assert.True(File.Exists(mainFile), $"{mainFileName} is missing.");
+        Assert.DoesNotContain("partial class", File.ReadAllText(mainFile), StringComparison.Ordinal);
+        Assert.InRange(File.ReadAllLines(mainFile).Length, 1, 240);
+
+        foreach (var (fileName, typeName) in collaborators)
+        {
+            var collaboratorFile = Path.Combine(categoryDirectory, fileName);
+            Assert.True(File.Exists(collaboratorFile), $"{fileName} is missing.");
+            var source = File.ReadAllText(collaboratorFile);
+            Assert.Contains($"sealed class {typeName}", source, StringComparison.Ordinal);
+            Assert.DoesNotContain($"partial class {typeName}", source, StringComparison.Ordinal);
+            Assert.InRange(File.ReadAllLines(collaboratorFile).Length, 1, 340);
+        }
     }
 
     private static void AssertProjectReferences(

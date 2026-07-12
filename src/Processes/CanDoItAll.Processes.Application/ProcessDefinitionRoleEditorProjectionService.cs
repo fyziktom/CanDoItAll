@@ -1,4 +1,5 @@
 using System.Globalization;
+using CanDoItAll.Processes.Contracts;
 using CanDoItAll.Processes.Projections;
 using CanDoItAll.Processes.Templates;
 
@@ -14,6 +15,9 @@ public sealed class ProcessDefinitionRoleEditorProjectionService
     private const string VersionConflictCode = "processes.definition.role.version-conflict";
     private const string MissingRoleCode = "processes.definition.role.missing";
     private const string MissingTemplateActionCode = "processes.definition.role.template.action-missing";
+    private const string WorkflowSelectionRequiredCode = "process.role.workflow_selection_required";
+    private const string WorkflowVersionInvalidCode = "process.role.workflow_version_invalid";
+    private const string WorkflowBindingExecutorMismatchCode = "process.role.workflow_binding_executor_mismatch";
 
     private readonly ProcessTemplatePackLoader templatePackLoader;
     private readonly IProcessProjectionClock clock;
@@ -399,10 +403,10 @@ public sealed class ProcessDefinitionRoleEditorProjectionService
             role.StaffingIntent,
             ParseExecutorKind(role.PreferredExecutorKind),
             new ProcessDefinitionWorkflowPreferenceProjection(
-                ProcessDefinitionRoleWorkflowPreferenceKind.AnyActiveWorkflow,
-                WorkflowDefinitionId: null,
-                WorkflowVersionId: null,
-                "Any active workflow"),
+                ProcessDefinitionRoleWorkflowPreferenceKind.SpecificWorkflow,
+                role.WorkflowBinding?.WorkflowId.Value,
+                role.WorkflowBinding?.WorkflowVersionId?.Value,
+                FormatWorkflowPreference(role.WorkflowBinding)),
             ParseProjectAssignmentKind(role.PreferredProjectAssignmentRole),
             role.IsRequired,
             role.AllowsFallback,
@@ -473,10 +477,10 @@ public sealed class ProcessDefinitionRoleEditorProjectionService
             "Select project staffing that satisfies this role before launch planning.",
             templateAction.PreferredExecutorKind,
             new ProcessDefinitionWorkflowPreferenceProjection(
-                ProcessDefinitionRoleWorkflowPreferenceKind.AnyActiveWorkflow,
+                ProcessDefinitionRoleWorkflowPreferenceKind.SpecificWorkflow,
                 WorkflowDefinitionId: null,
                 WorkflowVersionId: null,
-                "Any active workflow"),
+                "Select a workflow"),
             ProcessDefinitionRoleProjectAssignmentKind.Unspecified,
             IsRequired: true,
             AllowsFallback: true,
@@ -548,6 +552,40 @@ public sealed class ProcessDefinitionRoleEditorProjectionService
                 ProcessDefinitionRoleLintSection.Execution,
                 "Preferred executor kind is required.",
                 "Choose a typed executor kind instead of leaving the role executor ambiguous."));
+        }
+
+        if (draft.PreferredExecutorKind == ProcessDefinitionRoleExecutorKind.Workflow &&
+            (!draft.WorkflowPreference.WorkflowDefinitionId.HasValue ||
+             draft.WorkflowPreference.WorkflowDefinitionId.Value == Guid.Empty))
+        {
+            issues.Add(new ProcessDefinitionRoleLintIssueProjection(
+                WorkflowSelectionRequiredCode,
+                ProcessDefinitionRoleLintSeverity.Error,
+                ProcessDefinitionRoleLintSection.Execution,
+                "Workflow executor roles require one explicitly selected workflow.",
+                "Select a workflow definition; an arbitrary active workflow is not a valid process binding."));
+        }
+
+        if (draft.WorkflowPreference.WorkflowVersionId == Guid.Empty)
+        {
+            issues.Add(new ProcessDefinitionRoleLintIssueProjection(
+                WorkflowVersionInvalidCode,
+                ProcessDefinitionRoleLintSeverity.Error,
+                ProcessDefinitionRoleLintSection.Execution,
+                "An exact workflow version must be a non-empty identifier.",
+                "Choose an exact saved workflow version or leave the version empty to use the selected workflow's latest active version."));
+        }
+
+        if (draft.PreferredExecutorKind != ProcessDefinitionRoleExecutorKind.Workflow &&
+            (draft.WorkflowPreference.WorkflowDefinitionId.HasValue ||
+             draft.WorkflowPreference.WorkflowVersionId.HasValue))
+        {
+            issues.Add(new ProcessDefinitionRoleLintIssueProjection(
+                WorkflowBindingExecutorMismatchCode,
+                ProcessDefinitionRoleLintSeverity.Error,
+                ProcessDefinitionRoleLintSection.Execution,
+                "Only workflow executor roles can retain a workflow binding.",
+                "Change the executor kind to Workflow or clear the workflow definition and version identifiers."));
         }
 
         if (draft.DefaultAllocationPercent is < 0 or > 100)
@@ -695,6 +733,18 @@ public sealed class ProcessDefinitionRoleEditorProjectionService
             "workflow" => ProcessDefinitionRoleExecutorKind.Workflow,
             _ => ProcessDefinitionRoleExecutorKind.Unspecified
         };
+
+    private static string FormatWorkflowPreference(ProcessWorkflowExecutorBinding? binding)
+    {
+        if (binding is null)
+        {
+            return "Select a workflow";
+        }
+
+        return binding.WorkflowVersionId is { } versionId
+            ? $"Workflow {binding.WorkflowId.Value:D}, version {versionId.Value:D}"
+            : $"Workflow {binding.WorkflowId.Value:D}, latest active version";
+    }
 
     private static ProcessDefinitionRoleProjectAssignmentKind ParseProjectAssignmentKind(string value)
         => Enum.TryParse<ProcessDefinitionRoleProjectAssignmentKind>(NormalizeText(value), ignoreCase: true, out var parsed)

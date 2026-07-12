@@ -28,6 +28,12 @@ public sealed class MigrationBootstrapIntegrationTests
     private const string ProcessRuntimeAssignmentCapabilityScopeMigrationId = "20260707134848_ProcessRuntimeAssignmentCapabilityScope";
     private const string ProcessStrategyResultReceiptLineageMigrationId = "20260707195705_ProcessStrategyResultReceiptLineage";
     private const string ProcessRuntimeInputArtifactContractsMigrationId = "20260707222506_ProcessRuntimeInputArtifactContracts";
+    private const string ProcessRuntimeStepArtifactDescriptorsMigrationId = "20260708120721_ProcessRuntimeStepArtifactDescriptors";
+    private const string DistributedMemoryWorkerPhaseLeasesMigrationId = "20260712133000_DistributedMemoryWorkerPhaseLeases";
+    private const string RetireNativeCognitiveMemoryModelMetadataMigrationId = "20260712133717_RetireNativeCognitiveMemoryModelMetadata";
+    private const string WorkflowUsageAnalyticsMigrationId = "20260712204230_AddWorkflowUsageAnalytics";
+    private const string ProcessWorkflowExecutorBindingMigrationId = "20260712210953_AddProcessWorkflowExecutorBinding";
+    private const string WorkflowLaunchIdempotencyMigrationId = "20260712215655_AddWorkflowLaunchIdempotency";
     private static readonly string[] ExpectedPostgreSqlMigrations =
     [
         InitialPostgreSqlBaselineMigrationId,
@@ -49,7 +55,13 @@ public sealed class MigrationBootstrapIntegrationTests
         IncludeCognitiveMemoryModuleModelMigrationId,
         ProcessRuntimeAssignmentCapabilityScopeMigrationId,
         ProcessStrategyResultReceiptLineageMigrationId,
-        ProcessRuntimeInputArtifactContractsMigrationId
+        ProcessRuntimeInputArtifactContractsMigrationId,
+        ProcessRuntimeStepArtifactDescriptorsMigrationId,
+        DistributedMemoryWorkerPhaseLeasesMigrationId,
+        RetireNativeCognitiveMemoryModelMetadataMigrationId,
+        WorkflowUsageAnalyticsMigrationId,
+        ProcessWorkflowExecutorBindingMigrationId,
+        WorkflowLaunchIdempotencyMigrationId
     ];
 
     [Fact]

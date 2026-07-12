@@ -68,11 +68,13 @@ public static class WorkflowExecutorDescriptorFactory
         string iconName,
         string setupRendererKey,
         WorkflowExecutorSourceDescriptor source,
+        string availabilityMessage = "Executor is listed for roadmap visibility but is not implemented in this host.",
         WorkflowValueShape? inputShape = null,
         WorkflowValueShape? resultShape = null,
         string schemaJson = DefaultObjectJsonSchema)
     {
         ArgumentNullException.ThrowIfNull(source);
+        ArgumentException.ThrowIfNullOrWhiteSpace(availabilityMessage);
         ArgumentException.ThrowIfNullOrWhiteSpace(schemaJson);
 
         return new WorkflowExecutorDescriptor(
@@ -90,7 +92,7 @@ public static class WorkflowExecutorDescriptorFactory
             IsImplemented: false)
         {
             Source = source,
-            Availability = WorkflowExecutorAvailabilityDescriptor.Planned("Executor is listed for roadmap visibility but is not implemented in this host."),
+            Availability = WorkflowExecutorAvailabilityDescriptor.Planned(availabilityMessage),
             SettingsSchema = WorkflowExecutorSettingsSchemaDescriptor.JsonSchema(SettingsSchemaVersion, schemaJson),
             ConfigurationSchema = ConfigurationSchema.Empty(SettingsSchemaVersion)
         };
@@ -108,7 +110,8 @@ public static class WorkflowExecutorDescriptorFactory
                 IsRequired: false,
                 HelpText: string.Empty)
             {
-                Options = ResolveOptions(property.PropertyType)
+                Options = ResolveOptions(property.PropertyType),
+                NumberKind = ResolveNumberKind(property.PropertyType)
             })
             .ToArray();
 
@@ -144,12 +147,38 @@ public static class WorkflowExecutorDescriptorFactory
             return ConfigurationFieldType.Select;
         }
 
-        if (type == typeof(string) || type == typeof(Guid))
+        if (type == typeof(Guid))
+        {
+            return ConfigurationFieldType.Guid;
+        }
+
+        if (type == typeof(string))
         {
             return ConfigurationFieldType.Text;
         }
 
         return ConfigurationFieldType.Json;
+    }
+
+    private static ConfigurationNumberKind ResolveNumberKind(Type propertyType)
+    {
+        var type = Nullable.GetUnderlyingType(propertyType) ?? propertyType;
+        if (type == typeof(long))
+        {
+            return ConfigurationNumberKind.Int64;
+        }
+
+        if (type == typeof(decimal))
+        {
+            return ConfigurationNumberKind.Decimal;
+        }
+
+        if (type == typeof(double) || type == typeof(float))
+        {
+            return ConfigurationNumberKind.Double;
+        }
+
+        return ConfigurationNumberKind.Int32;
     }
 
     private static IReadOnlyList<ConfigurationFieldOption> ResolveOptions(Type propertyType)

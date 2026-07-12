@@ -73,6 +73,26 @@ public sealed class MafAgentRuntimeToolProviderCompositionTests
     }
 
     [Fact]
+    public async Task MafAgentRuntimeToolProviderComposition_propagates_authoritative_runtime_session_key()
+    {
+        var provider = new TestRuntimeToolProvider(10, "runtime_session_probe");
+        var services = new ServiceCollection();
+        services.AddSingleton<IAgentRuntimeToolProvider>(provider);
+        var runtime = RuntimeCapabilityComposer.CreateDefault(Path.GetTempPath(), services.BuildServiceProvider());
+
+        _ = await InvokeCreateCapabilityStateCoreAsync(
+            runtime,
+            CreateToolEnabledAgent(),
+            CreateProviderProfile(),
+            [],
+            AgentRuntimeContextIntent.Empty,
+            runtimeSessionKey: "maf-runtime-session-17");
+
+        var context = Assert.Single(provider.Contexts);
+        Assert.Equal("maf-runtime-session-17", context.RuntimeSessionKey);
+    }
+
+    [Fact]
     public async Task MafAgentRuntimeToolProviderComposition_skips_registered_providers_when_context_disables_them()
     {
         var provider = new TestRuntimeToolProvider(10, "runtime_tool_should_not_attach");
@@ -1143,7 +1163,8 @@ public sealed class MafAgentRuntimeToolProviderCompositionTests
         IReadOnlyList<CapabilityCatalogItem> capabilities,
         AgentRuntimeContextIntent contextIntent,
         List<string>? progressMessages = null,
-        bool suppressApprovalRequirements = true)
+        bool suppressApprovalRequirements = true,
+        string runtimeSessionKey = "")
     {
         return await composer.CreateCapabilityStateCoreAsync(
             agent,
@@ -1159,7 +1180,8 @@ public sealed class MafAgentRuntimeToolProviderCompositionTests
             CancellationToken.None,
             suppressApprovalRequirements,
             WorkspaceScopeDescriptor.Sandbox,
-            contextIntent);
+            contextIntent,
+            runtimeSessionKey);
     }
 
     private static object InvokeCreateRuntimeCapabilityAccessPlan(

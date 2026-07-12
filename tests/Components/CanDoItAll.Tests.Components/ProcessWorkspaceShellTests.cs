@@ -376,6 +376,62 @@ public sealed class ProcessWorkspaceShellTests
     }
 
     [Fact]
+    public void Workflow_role_binding_round_trips_and_is_not_erased_by_later_role_edits()
+    {
+        var workflowId = Guid.Parse("62000000-0000-0000-0000-000000000001");
+        var workflowVersionId = Guid.Parse("62000000-0000-0000-0000-000000000002");
+        using var context = CreateContext(out var client);
+        var cut = context.RenderComponent<ProcessWorkspaceShell>();
+        ActivateProcessDetailTab(cut, "processes-detail-tab-roles", "processes-detail-panel-roles");
+
+        cut.Find("[data-testid='processes-role-solution-architect']").Click();
+        cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-testid='processes-role-details-dialog']")));
+        cut.Find("[data-testid='processes-role-executor-kind']")
+            .Change(ProcessDefinitionRoleExecutorKind.Workflow.ToString());
+        cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-testid='processes-role-workflow-binding']")));
+        cut.Find("[data-testid='processes-role-workflow-id']").Change(workflowId.ToString("D"));
+        cut.Find("[data-testid='processes-role-workflow-version-id']").Change(workflowVersionId.ToString("D"));
+        cut.WaitForAssertion(() => Assert.False(cut.Find("[data-testid='processes-role-save']").HasAttribute("disabled")));
+        cut.Find("[data-testid='processes-role-save']").Click();
+
+        cut.WaitForAssertion(() => Assert.Equal(workflowId, client.LastRoleCommand?.Draft.WorkflowPreference.WorkflowDefinitionId));
+        Assert.Equal(workflowVersionId, client.LastRoleCommand?.Draft.WorkflowPreference.WorkflowVersionId);
+        cut.WaitForAssertion(() => Assert.Equal(
+            workflowId.ToString("D"),
+            cut.Find("[data-testid='processes-role-workflow-id']").GetAttribute("value")));
+        Assert.Equal(
+            workflowVersionId.ToString("D"),
+            cut.Find("[data-testid='processes-role-workflow-version-id']").GetAttribute("value"));
+
+        cut.Find("[data-testid='processes-role-display-name']").Input("Workflow architecture steward");
+        cut.Find("[data-testid='processes-role-save']").Click();
+
+        cut.WaitForAssertion(() => Assert.Equal("Workflow architecture steward", client.LastRoleCommand?.Draft.DisplayName));
+        Assert.Equal(workflowId, client.LastRoleCommand?.Draft.WorkflowPreference.WorkflowDefinitionId);
+        Assert.Equal(workflowVersionId, client.LastRoleCommand?.Draft.WorkflowPreference.WorkflowVersionId);
+    }
+
+    [Fact]
+    public void Workflow_role_binding_rejects_invalid_guid_before_save()
+    {
+        using var context = CreateContext(out var client);
+        var cut = context.RenderComponent<ProcessWorkspaceShell>();
+        ActivateProcessDetailTab(cut, "processes-detail-tab-roles", "processes-detail-panel-roles");
+
+        cut.Find("[data-testid='processes-role-solution-architect']").Click();
+        cut.Find("[data-testid='processes-role-executor-kind']")
+            .Change(ProcessDefinitionRoleExecutorKind.Workflow.ToString());
+        cut.Find("[data-testid='processes-role-workflow-id']").Change("not-a-guid");
+
+        cut.WaitForAssertion(() => Assert.Contains(
+            "must be a non-empty GUID",
+            cut.Find("[data-testid='processes-role-workflow-id-error']").TextContent,
+            StringComparison.Ordinal));
+        Assert.True(cut.Find("[data-testid='processes-role-save']").HasAttribute("disabled"));
+        Assert.Null(client.LastRoleCommand);
+    }
+
+    [Fact]
     public void Role_apply_template_uses_selected_template_action()
     {
         using var context = CreateContext(out var client);
@@ -2199,10 +2255,10 @@ public sealed class ProcessWorkspaceShellTests
                 "Assign a senior architecture owner before launch planning.",
                 ProcessDefinitionRoleExecutorKind.PersonOrAgent,
                 new ProcessDefinitionWorkflowPreferenceProjection(
-                    ProcessDefinitionRoleWorkflowPreferenceKind.AnyActiveWorkflow,
+                    ProcessDefinitionRoleWorkflowPreferenceKind.SpecificWorkflow,
                     WorkflowDefinitionId: null,
                     WorkflowVersionId: null,
-                    "Any active workflow"),
+                    "No workflow selected"),
                 ProcessDefinitionRoleProjectAssignmentKind.Architect,
                 IsRequired: true,
                 AllowsFallback: true,

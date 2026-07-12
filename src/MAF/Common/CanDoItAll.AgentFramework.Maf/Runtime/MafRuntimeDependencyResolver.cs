@@ -38,8 +38,11 @@ internal sealed class MafRuntimeDependencyResolver : IMafRuntimeDependencyResolv
         var streamingDispatchGate = services.GetService(typeof(IMafProviderStreamingDispatchGate)) is IMafProviderStreamingDispatchGate resolvedGate
             ? resolvedGate
             : CreateFallbackProviderStreamingDispatchGate(services);
+        var imageAnalysisService = services.GetService(typeof(IAgentImageAnalysisService)) is IAgentImageAnalysisService resolvedImageAnalysisService
+            ? resolvedImageAnalysisService
+            : new ProviderRuntimeImageAnalysisService(gateway);
 
-        return new MafRuntimeProviderDependencies(gateway, streamingDispatchGate);
+        return new MafRuntimeProviderDependencies(gateway, streamingDispatchGate, imageAnalysisService);
     }
 
     public MafWorkspaceRuntimeServices ResolveWorkspaceServices(
@@ -64,12 +67,15 @@ internal sealed class MafRuntimeDependencyResolver : IMafRuntimeDependencyResolv
                 ResolveLifecycleFactExtractors(services));
         var documentMarkdownConverter = services.GetService(typeof(IWorkspaceDocumentMarkdownConverter)) as IWorkspaceDocumentMarkdownConverter
             ?? new ManagedCodeMarkItDownDocumentMarkdownConverter();
+        var imageOperationService = services.GetService(typeof(IWorkspaceImageOperationService)) as IWorkspaceImageOperationService
+            ?? new WorkspaceImageOperationService(workspaceRoot, workspaceScope);
         var workspaceArtifactToolService = services.GetService(typeof(IWorkspaceArtifactToolService)) as IWorkspaceArtifactToolService
             ?? new WorkspaceArtifactToolService(
                 workspaceRoot,
                 workspaceCommandExecutionService,
                 documentMarkdownConverter,
-                workspaceScope);
+                workspaceScope,
+                imageOperationService);
 
         return new MafWorkspaceRuntimeServices(
             workspaceFileService,

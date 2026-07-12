@@ -5,6 +5,7 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.AgentFramework.Workflows.Abstractions;
 using CanDoItAll.Modules.AgentFramework;
 using CanDoItAll.Modules.AgentFramework.Hosting;
 using CanDoItAll.Processes.Application;
@@ -33,7 +34,8 @@ namespace CanDoItAll.Modules.Processes;
 internal sealed class AgentFrameworkProcessLaunchExecutorResolver(
     IAgentReferenceDataProvider agentReferenceDataProvider,
     ProcessMockAgentCatalogService processMockAgentCatalogService,
-    IProviderProfileService providerProfileService) : IProcessLaunchExecutorResolver
+    IProviderProfileService providerProfileService,
+    IWorkflowCatalogService workflowCatalog) : IProcessLaunchExecutorResolver
 {
     public async ValueTask<ProcessLaunchExecutorResolution> ResolveAsync(
         ProcessLaunchExecutorResolutionRequest request,
@@ -81,6 +83,31 @@ internal sealed class AgentFrameworkProcessLaunchExecutorResolver(
             var role = roleByKey.GetValueOrDefault(roleKey);
             var roleQuery = ResolveRoleQuery(roleKey, role);
             var requestedExecutorKind = ResolveExecutorKind(profileAssignment, role, executorOverride);
+            if (ProcessLaunchExecutorKinds.IsWorkflow(requestedExecutorKind))
+            {
+                await ResolveWorkflowBindingAsync(
+                    planStep.StepKey,
+                    roleKey,
+                    role,
+                    profileAssignment,
+                    executorOverride,
+                    bindings,
+                    findings,
+                    cancellationToken).ConfigureAwait(false);
+                continue;
+            }
+
+            if (ResolveWorkflowBinding(role, profileAssignment, executorOverride) is not null)
+            {
+                findings.Add(new ProcessLaunchReadinessFinding(
+                    ProcessLaunchReadinessSeverity.Error,
+                    "process.launch.workflow_binding_executor_mismatch",
+                    $"Step '{planStep.StepKey}' role '{roleKey}' declares a workflow binding but executor kind '{requestedExecutorKind}' is not Workflow.",
+                    planStep.StepKey,
+                    roleKey));
+                continue;
+            }
+
             if (!ProcessLaunchExecutorKinds.CanResolveAsAgent(requestedExecutorKind))
             {
                 findings.Add(new ProcessLaunchReadinessFinding(
@@ -156,10 +183,132 @@ internal sealed class AgentFrameworkProcessLaunchExecutorResolver(
             findings.Add(new ProcessLaunchReadinessFinding(
                 ProcessLaunchReadinessSeverity.Info,
                 "process.launch.readiness_ok",
-                "All executable steps have active agent bindings with enabled governed-output-capable providers."));
+                "All executable steps have explicit runnable executor bindings."));
         }
 
         return new ProcessLaunchExecutorResolution(bindings, findings);
+    }
+
+    private async ValueTask ResolveWorkflowBindingAsync(
+        string stepKey,
+        string roleKey,
+        ProcessTemplateDefinitionRoleUsageDocument? role,
+        ProcessTemplateLiveRunAssignmentDocument? profileAssignment,
+        ProcessLaunchExecutorOverride? executorOverride,
+        ICollection<ProcessLaunchExecutorBinding> bindings,
+        ICollection<ProcessLaunchReadinessFinding> findings,
+        CancellationToken cancellationToken)
+    {
+        var workflowBinding = ResolveWorkflowBinding(role, profileAssignment, executorOverride);
+        if (workflowBinding is null)
+        {
+            findings.Add(new ProcessLaunchReadinessFinding(
+                ProcessLaunchReadinessSeverity.Error,
+                "process.launch.workflow_selection_required",
+                $"Step '{stepKey}' role '{roleKey}' requires one explicitly selected workflow id.",
+                stepKey,
+                roleKey));
+            return;
+        }
+
+        var workflowId = new WorkflowId(workflowBinding.WorkflowId.Value);
+        WorkflowDefinitionDetail? detail;
+        if (workflowBinding.WorkflowVersionId is { } workflowVersionId)
+        {
+            detail = await workflowCatalog.GetDefinitionAsync(
+                workflowId,
+                new WorkflowVersionId(workflowVersionId.Value),
+                cancellationToken).ConfigureAwait(false);
+        }
+        else
+        {
+            detail = await workflowCatalog.GetLatestDefinitionByStatusAsync(
+                workflowId,
+                WorkflowLifecycleStatus.Active,
+                cancellationToken).ConfigureAwait(false);
+        }
+
+        if (detail is null)
+        {
+            findings.Add(new ProcessLaunchReadinessFinding(
+                ProcessLaunchReadinessSeverity.Error,
+                "process.launch.workflow_not_found",
+                workflowBinding.WorkflowVersionId is { } versionId
+                    ? $"Workflow '{workflowBinding.WorkflowId.Value:D}' version '{versionId.Value:D}' was not found."
+                    : $"Workflow '{workflowBinding.WorkflowId.Value:D}' does not have an Active version.",
+                stepKey,
+                roleKey));
+            return;
+        }
+
+        var definition = detail.Definition;
+        var exactVersionMatches = workflowBinding.WorkflowVersionId is not { } selectedVersionId ||
+            definition.VersionId.Value == selectedVersionId.Value;
+        if (definition.Id != workflowId ||
+            !exactVersionMatches ||
+            definition.Status != WorkflowLifecycleStatus.Active ||
+            !detail.Validation.Succeeded)
+        {
+            findings.Add(new ProcessLaunchReadinessFinding(
+                ProcessLaunchReadinessSeverity.Error,
+                "process.launch.workflow_not_runnable",
+                $"Workflow '{workflowBinding.WorkflowId.Value:D}' resolved to version '{definition.VersionId.Value:D}', but the selected definition is not an Active validated production workflow.",
+                stepKey,
+                roleKey));
+            return;
+        }
+
+        bindings.Add(new ProcessLaunchExecutorBinding(
+            stepKey,
+            roleKey,
+            ProcessLaunchExecutorKinds.Workflow,
+            workflowBinding.WorkflowId.Value.ToString("D"),
+            definition.Name,
+            ComputeWorkflowReadinessHash(definition, detail.Validation),
+            ResolveWorkflowAssignmentReason(profileAssignment, executorOverride, definition))
+        {
+            WorkflowBinding = workflowBinding
+        });
+    }
+
+    private static ProcessWorkflowExecutorBinding? ResolveWorkflowBinding(
+        ProcessTemplateDefinitionRoleUsageDocument? role,
+        ProcessTemplateLiveRunAssignmentDocument? profileAssignment,
+        ProcessLaunchExecutorOverride? executorOverride)
+        => executorOverride?.WorkflowBinding ??
+           profileAssignment?.WorkflowBinding ??
+           role?.WorkflowBinding;
+
+    private static string ResolveWorkflowAssignmentReason(
+        ProcessTemplateLiveRunAssignmentDocument? profileAssignment,
+        ProcessLaunchExecutorOverride? executorOverride,
+        WorkflowDefinition definition)
+    {
+        if (!string.IsNullOrWhiteSpace(executorOverride?.AssignmentReason))
+        {
+            return executorOverride.AssignmentReason.Trim();
+        }
+
+        if (!string.IsNullOrWhiteSpace(profileAssignment?.BindingReason))
+        {
+            return profileAssignment.BindingReason.Trim();
+        }
+
+        return $"Resolved explicit Active workflow '{definition.Name}' version '{definition.VersionId.Value:D}'.";
+    }
+
+    private static string ComputeWorkflowReadinessHash(
+        WorkflowDefinition definition,
+        WorkflowValidationResult validation)
+    {
+        var source = string.Join(
+            ':',
+            definition.Id.Value.ToString("N"),
+            definition.VersionId.Value.ToString("N"),
+            definition.Status,
+            validation.Succeeded,
+            string.Join(',', validation.Issues.Select(issue => issue.Code).OrderBy(code => code)));
+        return "sha256:" + Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(source))).ToLowerInvariant();
     }
 
     private static bool AddCapabilityScopeReadinessFindings(

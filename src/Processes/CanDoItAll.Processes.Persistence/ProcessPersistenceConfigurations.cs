@@ -71,6 +71,7 @@ internal sealed class ProcessRuntimeStepAssignmentEntityConfiguration : IEntityT
         builder.Property(assignment => assignment.ExecutorKind).HasMaxLength(128).IsRequired();
         builder.Property(assignment => assignment.ExecutorId).HasMaxLength(256).IsRequired();
         builder.Property(assignment => assignment.ExecutorDisplayName).HasMaxLength(512).IsRequired();
+        builder.Property(assignment => assignment.WorkflowOutputMapping);
         builder.Property(assignment => assignment.Prompt).IsRequired();
         builder.Property(assignment => assignment.ReadinessHash).HasMaxLength(128).IsRequired();
         builder.Property(assignment => assignment.AssignmentReason).HasMaxLength(2048).IsRequired();
@@ -85,6 +86,7 @@ internal sealed class ProcessRuntimeStepAssignmentEntityConfiguration : IEntityT
         builder.HasIndex(assignment => assignment.PlanId);
         builder.HasIndex(assignment => new { assignment.RunId, assignment.StepKey }).IsUnique();
         builder.HasIndex(assignment => new { assignment.ExecutorKind, assignment.ExecutorId });
+        builder.HasIndex(assignment => new { assignment.WorkflowId, assignment.WorkflowVersionId });
     }
 }
 

@@ -3,6 +3,7 @@ using CanDoItAll.AgentFramework.Capabilities.Abstractions;
 using CanDoItAll.AgentFramework.Capabilities.Access;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Maf;
+using CanDoItAll.AgentFramework.Workflows.Abstractions;
 using CanDoItAll.AgentFramework.Memory.DependencyInjection;
 using CanDoItAll.AgentFramework.Mcp;
 using CanDoItAll.AgentFramework.Mcp.Abstractions;
@@ -15,6 +16,7 @@ using CanDoItAll.AgentFramework.Voice;
 using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Modules.AgentFramework.Hosting;
+using CanDoItAll.Modules.AgentFramework.Pages.Components;
 using CanDoItAll.Modules.CrmHr;
 using CanDoItAll.Modules.Workspace;
 using CanDoItAll.SharedKernel;
@@ -80,6 +82,11 @@ public static class AgentFrameworkModuleServiceCollectionExtensions
                 serviceProvider.GetServices<IWorkspaceCommandReceiptLifecycleFactExtractor>());
         });
         services.TryAddScoped<IWorkspaceDocumentMarkdownConverter, ManagedCodeMarkItDownDocumentMarkdownConverter>();
+        services.TryAddScoped<IWorkspaceImageOperationService>(serviceProvider =>
+        {
+            var (workspaceRoot, scope) = ResolveCurrentWorkspaceScope(serviceProvider);
+            return new WorkspaceImageOperationService(workspaceRoot, scope);
+        });
         services.TryAddScoped<IWorkspaceArtifactToolService>(serviceProvider =>
         {
             var (workspaceRoot, scope) = ResolveCurrentWorkspaceScope(serviceProvider);
@@ -87,7 +94,8 @@ public static class AgentFrameworkModuleServiceCollectionExtensions
                 workspaceRoot,
                 serviceProvider.GetRequiredService<IWorkspaceCommandExecutionService>(),
                 serviceProvider.GetRequiredService<IWorkspaceDocumentMarkdownConverter>(),
-                scope);
+                scope,
+                serviceProvider.GetRequiredService<IWorkspaceImageOperationService>());
         });
         services.TryAddScoped<MafAgentRuntime>(serviceProvider =>
         {
@@ -112,6 +120,8 @@ public static class AgentFrameworkModuleServiceCollectionExtensions
         services.AddScoped<IAgentFrameworkOrganizationCatalogRepairService, AgentFrameworkOrganizationCatalogRepairService>();
         services.AddScoped<AgentFrameworkCatalogWarmupService>();
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IAgentRuntimeToolProvider, ImageGenerationAgentRuntimeToolProvider>());
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IAgentRuntimeToolProvider, WorkflowAgentRuntimeToolProvider>());
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<ISettingsRendererSource, WorkflowSettingsRendererSource>());
         services.AddWorkflowTemplateServices();
         services.AddScoped<WorkflowExampleCatalogSeedService>();
         services.AddScoped<ProcessMockAgentCatalogService>();
@@ -134,6 +144,14 @@ public static class AgentFrameworkModuleServiceCollectionExtensions
         services.TryAddScoped<IWorkflowArtifactStore>(serviceProvider => serviceProvider.GetRequiredService<PersistentWorkflowRunStore>());
         services.TryAddScoped<IWorkflowExternalRequestStore>(serviceProvider => serviceProvider.GetRequiredService<PersistentWorkflowRunStore>());
         services.TryAddScoped<IWorkflowCheckpointStore>(serviceProvider => serviceProvider.GetRequiredService<PersistentWorkflowRunStore>());
+        services.TryAddScoped<PersistentWorkflowLaunchIdempotencyStore>();
+        services.Replace(ServiceDescriptor.Scoped<IWorkflowLaunchIdempotencyStore>(serviceProvider =>
+            serviceProvider.GetRequiredService<PersistentWorkflowLaunchIdempotencyStore>()));
+        services.TryAddScoped<PersistentWorkflowUsageObservationStore>();
+        services.Replace(ServiceDescriptor.Scoped<IWorkflowUsageObservationStore>(serviceProvider =>
+            serviceProvider.GetRequiredService<PersistentWorkflowUsageObservationStore>()));
+        services.Replace(ServiceDescriptor.Scoped<IWorkflowUsageAnalyticsStore>(serviceProvider =>
+            serviceProvider.GetRequiredService<PersistentWorkflowUsageObservationStore>()));
         services.AddFileWorkflowArtifactContentStore(ResolveCurrentWorkspaceScope);
         services.TryAddScoped<IWorkflowRuntimeEvidenceSourceProvider, WorkflowRuntimeEvidenceSourceProvider>();
         services.TryAddScoped<IProcessRuntimeEvidenceSourceProvider, UnavailableProcessRuntimeEvidenceSourceProvider>();

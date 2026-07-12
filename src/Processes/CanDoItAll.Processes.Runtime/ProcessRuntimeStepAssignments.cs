@@ -25,6 +25,8 @@ public sealed record ProcessRuntimeStepAssignment(
     ProcessRuntimeBranchGate? BranchGate,
     DateTimeOffset CreatedAtUtc)
 {
+    public ProcessWorkflowExecutorBinding? WorkflowBinding { get; init; }
+
     public ProcessCapabilityScope CapabilityScope { get; init; } = ProcessCapabilityScope.Empty;
 }
 

@@ -38,7 +38,8 @@ internal interface IRuntimeCapabilityComposer
         CancellationToken cancellationToken,
         bool suppressApprovalRequirements,
         WorkspaceScopeDescriptor contextWorkspaceScope,
-        AgentRuntimeContextIntent contextIntent);
+        AgentRuntimeContextIntent contextIntent,
+        string runtimeSessionKey = "");
 }
 
 internal sealed class RuntimeCapabilityComposer : IRuntimeCapabilityComposer
@@ -55,7 +56,7 @@ internal sealed class RuntimeCapabilityComposer : IRuntimeCapabilityComposer
     private readonly WorkspaceScopeDescriptor workspaceScope;
     private readonly IMafRuntimeDependencyResolver dependencyResolver;
     private readonly IMafProviderCredentialService providerCredentialService;
-    private readonly IMafProviderRuntimeGateway providerRuntimeGateway;
+    private readonly IAgentImageAnalysisService imageAnalysisService;
     private readonly IRuntimeToolProviderComposer runtimeToolProviderComposer;
     private readonly IMafRuntimeCompositionMetrics compositionMetrics;
     private readonly RuntimeCapabilityDescriptorCatalog descriptorCatalog;
@@ -68,7 +69,7 @@ internal sealed class RuntimeCapabilityComposer : IRuntimeCapabilityComposer
         WorkspaceScopeDescriptor workspaceScope,
         IMafRuntimeDependencyResolver dependencyResolver,
         IMafProviderCredentialService providerCredentialService,
-        IMafProviderRuntimeGateway providerRuntimeGateway,
+        IAgentImageAnalysisService imageAnalysisService,
         IRuntimeToolProviderComposer runtimeToolProviderComposer,
         IMafRuntimeCompositionMetrics compositionMetrics)
     {
@@ -82,7 +83,7 @@ internal sealed class RuntimeCapabilityComposer : IRuntimeCapabilityComposer
         this.workspaceScope = workspaceScope;
         this.dependencyResolver = dependencyResolver ?? throw new ArgumentNullException(nameof(dependencyResolver));
         this.providerCredentialService = providerCredentialService ?? throw new ArgumentNullException(nameof(providerCredentialService));
-        this.providerRuntimeGateway = providerRuntimeGateway ?? throw new ArgumentNullException(nameof(providerRuntimeGateway));
+        this.imageAnalysisService = imageAnalysisService ?? throw new ArgumentNullException(nameof(imageAnalysisService));
         this.runtimeToolProviderComposer = runtimeToolProviderComposer ?? throw new ArgumentNullException(nameof(runtimeToolProviderComposer));
         this.compositionMetrics = compositionMetrics ?? throw new ArgumentNullException(nameof(compositionMetrics));
         var capabilityAccessPolicyEvaluator = services.GetService(typeof(CapabilityAccessPolicyEvaluatorContract)) as CapabilityAccessPolicyEvaluatorContract
@@ -120,7 +121,7 @@ internal sealed class RuntimeCapabilityComposer : IRuntimeCapabilityComposer
             effectiveWorkspaceScope,
             dependencyResolver,
             providerCredentialService,
-            providerDependencies.ProviderRuntimeGateway,
+            providerDependencies.ImageAnalysisService,
             runtimeToolProviderComposer,
             compositionMetrics);
     }
@@ -145,7 +146,8 @@ internal sealed class RuntimeCapabilityComposer : IRuntimeCapabilityComposer
             cancellationToken,
             suppressApprovalRequirements,
             workspaceScope,
-            AgentRuntimeContextIntent.Empty);
+            AgentRuntimeContextIntent.Empty,
+            runtimeSessionKey: string.Empty);
     }
 
     internal RuntimeCapabilityAccessPlan CreateRuntimeCapabilityAccessPlan(
@@ -171,7 +173,8 @@ internal sealed class RuntimeCapabilityComposer : IRuntimeCapabilityComposer
         CancellationToken cancellationToken,
         bool suppressApprovalRequirements,
         WorkspaceScopeDescriptor contextWorkspaceScope,
-        AgentRuntimeContextIntent contextIntent)
+        AgentRuntimeContextIntent contextIntent,
+        string runtimeSessionKey = "")
     {
         var totalStopwatch = Stopwatch.StartNew();
         try
@@ -235,7 +238,8 @@ internal sealed class RuntimeCapabilityComposer : IRuntimeCapabilityComposer
                     suppressApprovalRequirements,
                     ResolveContextPolicyKind(agent, suppressApprovalRequirements),
                     contextWorkspaceScope,
-                    contextIntent));
+                    contextIntent,
+                    runtimeSessionKey));
             await TrackAsync(
                 "capability.a2a-tools",
                 () => AttachA2ARemoteAgentToolsAsync(composition, agent, progressCallback, cancellationToken, suppressApprovalRequirements));
@@ -318,7 +322,15 @@ internal sealed class RuntimeCapabilityComposer : IRuntimeCapabilityComposer
             workspaceRoot,
             effectiveWorkspaceScope,
             workspaceToolAccess);
-        var workspacePlugin = new WorkspaceRuntimePlugin(workspaceServices.CommandExecutionService, workspaceServices.ArtifactToolService, workspaceRoot, effectiveWorkspaceScope, workspaceToolAccess, provider, model, providerRuntimeGateway);
+        var workspacePlugin = new WorkspaceRuntimePlugin(
+            workspaceServices.CommandExecutionService,
+            workspaceServices.ArtifactToolService,
+            workspaceRoot,
+            effectiveWorkspaceScope,
+            workspaceToolAccess,
+            provider,
+            model,
+            imageAnalysisService);
         var spreadsheetPlugin = new WorkspaceSpreadsheetRuntimePlugin(
             ResolveSpreadsheetDocumentService(),
             workspaceRoot,

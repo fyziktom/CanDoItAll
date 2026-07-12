@@ -79,7 +79,8 @@ internal sealed class MafRuntimeAgentFactory
         CancellationToken cancellationToken,
         bool suppressApprovalRequirements = false,
         bool forceOmitTemperature = false,
-        AgentRuntimeExecutionOptions? executionOptions = null)
+        AgentRuntimeExecutionOptions? executionOptions = null,
+        string runtimeSessionKey = "")
     {
         var runtimeOptions = executionOptions ?? MafRuntimeExecutionOptionsResolver.CreateDisabled(null);
         if (runtimeOptions.Handoff is not null)
@@ -91,7 +92,8 @@ internal sealed class MafRuntimeAgentFactory
                 cancellationToken,
                 suppressApprovalRequirements,
                 forceOmitTemperature,
-                runtimeOptions);
+                runtimeOptions,
+                runtimeSessionKey);
         }
 
         var toolInvocationTraceRecorder = new ToolInvocationTraceRecorder();
@@ -132,7 +134,8 @@ internal sealed class MafRuntimeAgentFactory
             cancellationToken,
             suppressApprovalRequirements,
             runtimeOptions.ContextWorkspaceScope ?? workspaceScope,
-            runtimeOptions.ContextIntent ?? AgentRuntimeContextIntent.Empty);
+            runtimeOptions.ContextIntent ?? AgentRuntimeContextIntent.Empty,
+            runtimeSessionKey);
         await FilterUnusableApprovalToolsAsync(
             capabilityState,
             effectiveProvider,
@@ -209,7 +212,8 @@ internal sealed class MafRuntimeAgentFactory
         CancellationToken cancellationToken,
         bool suppressApprovalRequirements,
         bool forceOmitTemperature,
-        AgentRuntimeExecutionOptions runtimeOptions)
+        AgentRuntimeExecutionOptions runtimeOptions,
+        string runtimeSessionKey)
     {
         var handoffOptions = runtimeOptions.Handoff
             ?? throw new InvalidOperationException("Handoff runtime build requires handoff execution options.");
@@ -254,7 +258,8 @@ internal sealed class MafRuntimeAgentFactory
                     cancellationToken,
                     suppressApprovalRequirements,
                     forceOmitTemperature,
-                    participantExecutionOptions);
+                    participantExecutionOptions,
+                    runtimeSessionKey);
                 participantBuilds.Add(participantBuild);
                 participantAgents[participant.Agent.Id] = participantBuild.Agent;
             }

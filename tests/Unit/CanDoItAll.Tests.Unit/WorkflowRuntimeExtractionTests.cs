@@ -1,17 +1,14 @@
-using System.Text.Json;
-using System.Text.Json.Serialization;
 using System.Xml.Linq;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Workflows.Abstractions;
 using Microsoft.Extensions.DependencyInjection;
+using WorkflowRuntimeManagerContract = CanDoItAll.AgentFramework.Workflows.Abstractions.IWorkflowRuntimeManager;
 
 namespace CanDoItAll.Tests.Unit;
 
 public sealed class WorkflowRuntimeExtractionTests
 {
-    private static readonly JsonSerializerOptions JsonOptions = CreateJsonOptions();
-
     [Fact]
     public void WorkflowRuntimeProjectDoesNotReferenceForbiddenImplementationProjects()
     {
@@ -56,7 +53,7 @@ public sealed class WorkflowRuntimeExtractionTests
         var root = FindRepositoryRoot();
         var movedFiles = new[]
         {
-            "WorkflowContracts.cs",
+            "WorkflowCheckpointFactory.cs",
             "WorkflowRuntimeManager.cs",
             "WorkflowExternalRequestRuntime.cs",
             "WorkflowArtifactContentStores.cs",
@@ -73,6 +70,14 @@ public sealed class WorkflowRuntimeExtractionTests
                 File.Exists(Path.Combine(root, "src", "MAF", "Workflows", "CanDoItAll.AgentFramework.Workflows.Runtime", movedFile)),
                 $"{movedFile} must exist in Workflows.Runtime.");
         }
+
+        Assert.False(File.Exists(Path.Combine(
+            root,
+            "src",
+            "MAF",
+            "Workflows",
+            "CanDoItAll.AgentFramework.Workflows.Runtime",
+            "WorkflowContracts.cs")));
     }
 
     [Fact]
@@ -95,14 +100,19 @@ public sealed class WorkflowRuntimeExtractionTests
                 ValidateScopes = true
             });
             using var scope = provider.CreateScope();
+            using var secondScope = provider.CreateScope();
 
             Assert.IsType<WorkflowRuntimeManager>(
-                scope.ServiceProvider.GetRequiredService<CanDoItAll.AgentFramework.Core.IWorkflowRuntimeManager>());
+                scope.ServiceProvider.GetRequiredService<WorkflowRuntimeManagerContract>());
             Assert.IsType<InMemoryWorkflowRunStore>(scope.ServiceProvider.GetRequiredService<IWorkflowRunStore>());
             Assert.IsType<FileWorkflowArtifactContentStore>(scope.ServiceProvider.GetRequiredService<IWorkflowArtifactContentStore>());
             Assert.IsType<WorkflowCheckpointFactory>(scope.ServiceProvider.GetRequiredService<IWorkflowCheckpointFactory>());
             Assert.IsType<NullWorkflowEventSink>(scope.ServiceProvider.GetRequiredService<IWorkflowEventSink>());
             Assert.IsType<WorkflowExternalRequestApprovalGate>(scope.ServiceProvider.GetRequiredService<IWorkflowExecutorApprovalGate>());
+            Assert.Same(
+                scope.ServiceProvider.GetRequiredService<IWorkflowActiveRunRegistry>(),
+                secondScope.ServiceProvider.GetRequiredService<IWorkflowActiveRunRegistry>());
+            Assert.Same(TimeProvider.System, scope.ServiceProvider.GetRequiredService<TimeProvider>());
         }
         finally
         {
@@ -111,6 +121,18 @@ public sealed class WorkflowRuntimeExtractionTests
                 Directory.Delete(workspaceRoot, recursive: true);
             }
         }
+    }
+
+    [Fact]
+    public void ActiveRunRegistryContractDoesNotExposeConcreteLease()
+    {
+        var tryRegister = typeof(IWorkflowActiveRunRegistry).GetMethod(nameof(IWorkflowActiveRunRegistry.TryRegister));
+
+        Assert.NotNull(tryRegister);
+        var leaseParameter = Assert.Single(
+            tryRegister!.GetParameters(),
+            parameter => parameter.IsOut);
+        Assert.Equal(typeof(IWorkflowActiveRunLease).MakeByRefType(), leaseParameter.ParameterType);
     }
 
     [Fact]
@@ -176,7 +198,7 @@ public sealed class WorkflowRuntimeExtractionTests
     }
 
     [Fact]
-    public async Task RuntimeManagerCancellationEventCarriesTypedDiagnosticPayload()
+    public async Task RuntimeManagerDoesNotFabricateCancellationForInactiveRun()
     {
         var store = new InMemoryWorkflowRunStore();
         var manager = new WorkflowRuntimeManager([], store);
@@ -193,20 +215,14 @@ public sealed class WorkflowRuntimeExtractionTests
             UpdatedAtUtc: now);
         await store.SaveRunAsync(run);
 
-        var cancelled = await manager.CancelAsync(run.RunId);
-        var cancellationEvent = Assert.Single(await store.ListEventsAsync(run.RunId));
-        var payload = JsonSerializer.Deserialize<WorkflowEventPayloadEnvelope>(
-            cancellationEvent.PayloadJson,
-            JsonOptions)!;
-        var diagnostic = JsonSerializer.Deserialize<WorkflowFailureDiagnosticEnvelope>(
-            payload.InlineJson,
-            JsonOptions)!;
+        var result = await manager.RequestCancellationAsync(run.RunId);
+        var persisted = await manager.GetRunAsync(run.RunId);
+        var events = await store.ListEventsAsync(run.RunId);
 
-        Assert.Equal(WorkflowRunState.Cancelled, cancelled.State);
-        Assert.Equal(WorkflowEventKind.Cancelled, cancellationEvent.Kind);
-        Assert.Equal(WorkflowFailureKind.Cancellation, diagnostic.Kind);
-        Assert.Equal(run.RunId, diagnostic.RunId);
-        Assert.Equal(WorkflowFailureRetryability.NotRetryable, diagnostic.Retryability);
+        Assert.Equal(WorkflowRunCancellationOutcome.NotActive, result.Outcome);
+        Assert.NotNull(persisted);
+        Assert.Equal(WorkflowRunState.Running, persisted.State);
+        Assert.Empty(events);
     }
 
     [Fact]
@@ -302,13 +318,6 @@ public sealed class WorkflowRuntimeExtractionTests
         throw new InvalidOperationException("Could not locate the repository root.");
     }
 
-    private static JsonSerializerOptions CreateJsonOptions()
-    {
-        var options = new JsonSerializerOptions(JsonSerializerDefaults.Web);
-        options.Converters.Add(new JsonStringEnumConverter());
-        return options;
-    }
-
     private sealed class CompletedBackend : IWorkflowExecutionBackend
     {
         public WorkflowRuntimeBackendDescriptor Descriptor { get; } = new(
@@ -345,6 +354,29 @@ public sealed class WorkflowRuntimeExtractionTests
 
     private sealed class ThrowingSaveRunStore(Exception saveRunException) : IWorkflowRunStore
     {
+        public Task CreateRunWithStartedEventAsync(
+            WorkflowRunSnapshot run,
+            WorkflowEventRecord startedEvent,
+            CancellationToken cancellationToken = default)
+            => Task.FromException(saveRunException);
+
+        public Task<WorkflowRunTransitionResult> TryTransitionRunAsync(
+            WorkflowRunId runId,
+            IReadOnlyCollection<WorkflowRunState> expectedStates,
+            WorkflowRunSnapshot updatedRun,
+            WorkflowEventRecord? transitionEvent = null,
+            CancellationToken cancellationToken = default)
+            => Task.FromResult(new WorkflowRunTransitionResult(false, Run: null));
+
+        public Task<WorkflowExternalResponseAcceptanceResult> TryAcceptExternalResponseAsync(
+            WorkflowExternalRequestId requestId,
+            string responseJson,
+            DateTimeOffset respondedAtUtc,
+            CancellationToken cancellationToken = default)
+            => Task.FromResult(new WorkflowExternalResponseAcceptanceResult(
+                WorkflowExternalResponseAcceptanceOutcome.NotFound,
+                Request: null));
+
         public Task SaveRunAsync(
             WorkflowRunSnapshot run,
             CancellationToken cancellationToken = default)

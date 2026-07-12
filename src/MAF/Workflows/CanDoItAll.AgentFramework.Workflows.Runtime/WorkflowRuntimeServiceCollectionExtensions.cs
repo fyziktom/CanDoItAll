@@ -1,4 +1,5 @@
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.AgentFramework.Workflows.Abstractions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
@@ -13,6 +14,8 @@ public static class WorkflowRuntimeServiceCollectionExtensions
         services.TryAddScoped<IWorkflowExecutorApprovalGate, WorkflowExternalRequestApprovalGate>();
         services.TryAddSingleton<IWorkflowCheckpointFactory, WorkflowCheckpointFactory>();
         services.TryAddSingleton<IWorkflowEventSink, NullWorkflowEventSink>();
+        services.TryAddSingleton(TimeProvider.System);
+        services.TryAddSingleton<IWorkflowActiveRunRegistry, WorkflowActiveRunRegistry>();
         services.TryAddScoped<IWorkflowRuntimeManager, WorkflowRuntimeManager>();
 
         return services;
@@ -30,7 +33,9 @@ public static class WorkflowRuntimeServiceCollectionExtensions
         var resolvedScope = workspaceScope ?? WorkspaceScopeDescriptor.Sandbox;
 
         services.TryAddSingleton<InMemoryWorkflowRunStore>();
+        services.TryAddSingleton<InMemoryWorkflowUsageObservationStore>();
         services.TryAddSingleton<IWorkflowRunStore>(serviceProvider => serviceProvider.GetRequiredService<InMemoryWorkflowRunStore>());
+        services.TryAddSingleton<IWorkflowUsageObservationStore>(serviceProvider => serviceProvider.GetRequiredService<InMemoryWorkflowUsageObservationStore>());
         services.TryAddSingleton<IWorkflowArtifactStore>(serviceProvider => serviceProvider.GetRequiredService<InMemoryWorkflowRunStore>());
         services.TryAddSingleton<IWorkflowExternalRequestStore>(serviceProvider => serviceProvider.GetRequiredService<InMemoryWorkflowRunStore>());
         services.TryAddSingleton<IWorkflowCheckpointStore>(serviceProvider => serviceProvider.GetRequiredService<InMemoryWorkflowRunStore>());

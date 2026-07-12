@@ -1,0 +1,24 @@
+SB05 real PostgreSQL persistence proof
+
+Recorded UTC: 2026-07-12T21:16:35Z
+Working directory: C:\repositories\CanDoItAll
+Command:
+dotnet test tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj --no-build --no-restore --filter "FullyQualifiedName~WorkflowUsagePersistenceIntegrationTests"
+
+Exit code: 0
+Result: 1 passed, 0 failed, 0 skipped; duration 12 seconds.
+
+Named test:
+- PostgreSqlPersistsImmutableUsageFactsAndExecutesDatabaseAggregates
+
+Production behavior proven against PostgreSQL:
+- Exact TerminalAtUtc and typed launch origin round-trip through PersistentWorkflowRunStore.
+- Known-free and unknown-price observations coexist without treating unknown as zero.
+- Canonical RunId is mandatory; a null-run observation is rejected before persistence and the table column is NOT NULL.
+- Raw filtering uses typed/indexed OriginProcessRunId rather than OriginJson parsing.
+- Database-side aggregate totals preserve all observations and group provider/model rows.
+- Same immutable ID is idempotent; same ID with different immutable content throws WorkflowUsageObservationConflictException.
+
+Build prerequisite:
+dotnet build tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj --no-restore --no-dependencies
+Result: exit code 0; 0 warnings, 0 errors.

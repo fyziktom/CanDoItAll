@@ -7,7 +7,8 @@ namespace CanDoItAll.AgentFramework.Maf;
 public sealed class MafWorkflowLlmComponentInvoker(
     IAgentRuntime agentRuntime,
     IProviderProfileRegistry providerRegistry,
-    IProviderProfileService providerProfileService) : IWorkflowLlmComponentInvoker
+    IProviderProfileService providerProfileService,
+    TimeProvider? timeProvider = null) : IWorkflowLlmComponentInvoker
 {
     public async ValueTask<WorkflowNodeExecutionResult> ExecuteAsync(
         WorkflowDefinition definition,
@@ -24,7 +25,9 @@ public sealed class MafWorkflowLlmComponentInvoker(
         var provider = await ResolveProviderAsync(component, cancellationToken);
         var model = ResolveEffectiveModel(component, provider);
         var agent = CreateAgent(component, provider, model);
-        var now = DateTimeOffset.UtcNow;
+        var clock = timeProvider ?? TimeProvider.System;
+        var now = clock.GetUtcNow();
+        var invocationId = Guid.NewGuid();
         var session = new ChatSessionRecord(
             Id: Guid.NewGuid(),
             AgentId: agent.Id,
@@ -35,85 +38,119 @@ public sealed class MafWorkflowLlmComponentInvoker(
             SerializedSessionStateJson: null,
             Messages: [],
             PendingApprovals: []);
-        var response = await agentRuntime.RunAsync(
-            agent,
-            provider,
-            session,
-            capabilities: [],
-            memory: [],
-            BuildPrompt(definition, node, component, input),
-            runtimeSessionKey: null,
-            static (_, _, _) => Task.CompletedTask,
-            cancellationToken,
-            suppressApprovalRequirements: true,
-            executionOptions: CreateExecutionOptions(component, input));
-
-        var payload = response.ResponseText.Trim();
-        if (RequiresJsonOutput(component))
+        AgentRuntimeResponse response;
+        try
         {
-            ValidateJsonPayload(payload, node, component);
+            response = await agentRuntime.RunAsync(
+                agent,
+                provider,
+                session,
+                capabilities: [],
+                memory: [],
+                BuildPrompt(definition, node, component, input),
+                runtimeSessionKey: null,
+                static (_, _, _) => Task.CompletedTask,
+                cancellationToken,
+                suppressApprovalRequirements: true,
+                executionOptions: CreateExecutionOptions(component, input));
+        }
+        catch (AgentRuntimeUsageException exception)
+        {
+            var failureObservations = WorkflowUsageObservationFactory.FromProviderObservations(
+                CreateUsageContext(definition, node, component, invocationId, now, clock.GetUtcNow()),
+                provider,
+                model,
+                exception.UsageObservations);
+            throw new WorkflowUsageObservationException(exception.Message, exception, failureObservations);
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            var failureCompletedAtUtc = clock.GetUtcNow();
+            var unavailable = WorkflowUsageObservationFactory.FromProviderResponseMetrics(
+                CreateUsageContext(definition, node, component, invocationId, now, failureCompletedAtUtc),
+                provider,
+                model,
+                inputTokens: 0,
+                cachedInputTokens: 0,
+                outputTokens: 0,
+                reasoningTokens: 0,
+                totalTokens: 0,
+                toolCallCount: 0,
+                failureCompletedAtUtc);
+            throw new WorkflowUsageObservationException(exception.Message, exception, [unavailable]);
         }
 
-        var usage = CreateWorkflowUsageMetrics(provider, model, response);
+        var completedAtUtc = clock.GetUtcNow();
+        var usageContext = CreateUsageContext(
+            definition,
+            node,
+            component,
+            invocationId,
+            now,
+            completedAtUtc);
+        var usageObservations = response.UsageObservations.Count > 0
+            ? WorkflowUsageObservationFactory.FromProviderObservations(
+                usageContext,
+                provider,
+                model,
+                response.UsageObservations)
+            :
+            [
+                WorkflowUsageObservationFactory.FromProviderResponseMetrics(
+                    usageContext,
+                    provider,
+                    model,
+                    response.InputTokens,
+                    response.CachedInputTokens,
+                    response.OutputTokens,
+                    reasoningTokens: 0,
+                    totalTokens: response.InputTokens + response.OutputTokens,
+                    response.ToolCalls,
+                    completedAtUtc)
+            ];
+
+        var payload = response.ResponseText.Trim();
+        try
+        {
+            if (RequiresJsonOutput(component))
+            {
+                ValidateJsonPayload(payload, node, component);
+            }
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            throw new WorkflowUsageObservationException(exception.Message, exception, usageObservations);
+        }
 
         return new WorkflowNodeExecutionResult(
             node.Id,
             payload,
             component.ResultShape)
         {
-            Usage = usage
+            Usage = WorkflowUsageCompatibilityProjection.Project(usageObservations, provider.Name, model),
+            UsageObservations = usageObservations
         };
     }
 
-    private static WorkflowUsageMetrics? CreateWorkflowUsageMetrics(
-        ProviderProfile provider,
-        string model,
-        AgentRuntimeResponse response)
-    {
-        if (response.UsageObservations.Count > 0)
-        {
-            var observations = response.UsageObservations
-                .Select(observation => observation with
-                {
-                    ProviderName = string.IsNullOrWhiteSpace(observation.ProviderName)
-                        ? provider.Name
-                        : observation.ProviderName,
-                    Model = string.IsNullOrWhiteSpace(observation.Model)
-                        ? model
-                        : observation.Model
-                })
-                .ToList();
-            var summary = ProviderPricingCalculator.SummarizeUsage(observations, [provider]);
-            return new WorkflowUsageMetrics(
-                provider.Name,
-                model,
-                summary.InputTokens,
-                summary.CachedInputTokens,
-                summary.OutputTokens,
-                summary.KnownCostUsd)
-            {
-                KnownObservationCount = summary.KnownObservationCount,
-                UnknownObservationCount = summary.UnknownObservationCount
-            };
-        }
-
-        return ProviderPricingCalculator.TryCalculate(
-            provider.Name,
-            model,
-            response.InputTokens,
-            0,
-            response.OutputTokens,
-            provider.ModelPrices,
-            out var cost)
-                ? new WorkflowUsageMetrics(
-                    provider.Name,
-                    model,
-                    response.InputTokens,
-                    0,
-                    response.OutputTokens,
-                    cost.TotalUsd)
-                : null;
-    }
+    private static WorkflowUsageObservationContext CreateUsageContext(
+        WorkflowDefinition definition,
+        WorkflowNode node,
+        LlmCallComponent component,
+        Guid invocationId,
+        DateTimeOffset startedAtUtc,
+        DateTimeOffset completedAtUtc)
+        => new(
+            WorkflowExecutorExecutionAuditScope.CurrentRunId,
+            definition.Id,
+            definition.VersionId,
+            node.Id,
+            ExecutorId: null,
+            component.Id,
+            WorkflowUsageProducerKind.LlmComponent,
+            invocationId,
+            Attempt: 1,
+            startedAtUtc,
+            completedAtUtc);
 
     private async Task<ProviderProfile> ResolveProviderAsync(
         LlmCallComponent component,

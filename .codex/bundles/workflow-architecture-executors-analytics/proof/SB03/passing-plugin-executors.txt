@@ -1,0 +1,11 @@
+Command:
+dotnet test tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj --no-build --no-restore --filter "FullyQualifiedName~BundledPluginWorkflowExecutorTests|FullyQualifiedName~PluginWorkflowExecutorBoundaryTests|FullyQualifiedName~PluginManifestTests" --logger "console;verbosity=minimal"
+
+Result: 27 passed, 0 failed, 0 skipped in 675 ms.
+
+Covered semantics:
+- Bundled Gmail, Office365, and Docker manifest descriptors match concrete contribution defaults, schema, simulation, policy, side effects, and deterministic metadata.
+- Concrete Gmail/Office365/Docker executors execute directly through narrow fake OAuth/API/grant/host ports without live external effects.
+- Permission, malformed-input, unsafe Docker argument, operation-failure, and cancellation paths do not perform unintended calls.
+- Plugin manifests round-trip default settings and simulation JSON; malformed JSON is rejected and legacy omitted fields deserialize to explicit safe defaults.
+- Runtime package activation rejects ID or descriptor metadata drift rather than exposing a misleading editor contract.

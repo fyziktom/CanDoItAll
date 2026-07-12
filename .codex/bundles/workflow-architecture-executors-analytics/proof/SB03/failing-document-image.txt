@@ -1,0 +1,20 @@
+SB03 failing-first document/image executor architecture proof
+
+RunLabel: SB03-DOCUMENT-IMAGE-NODES
+Command: dotnet test tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj --no-build --filter "FullyQualifiedName~WorkflowDocumentImageExecutorArchitectureTests"
+WorkingDirectory: repo://
+ExitCode: 1
+
+Result before implementation:
+- Failed: 13
+- Passed: 0
+- Skipped: 0
+- Total: 13
+- Duration: 200 milliseconds
+
+Expected failures:
+- document.to-markdown, image.inspect, and image.analyze typed ID properties were absent.
+- The three typed settings contracts were absent.
+- The three implemented descriptor properties were absent.
+- The three standard executor contribution types were absent.
+- The built-in catalog did not contain any of the three IDs.

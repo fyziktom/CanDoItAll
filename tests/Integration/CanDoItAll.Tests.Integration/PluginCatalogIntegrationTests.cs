@@ -129,6 +129,32 @@ public sealed class PluginCatalogIntegrationTests
     }
 
     [Fact]
+    public async Task BundledEmailContributionsPreserveDefaultsSchemasSimulationsAndPolicies()
+    {
+        await using var host = await ApiTestHost.CreateAsync(jwtEnabled: false);
+        await using var scope = host.App.Services.CreateAsyncScope();
+        var catalog = scope.ServiceProvider.GetRequiredService<IWorkflowExecutorCatalog>();
+
+        var gmailDownload = catalog.GetRequiredExecutor(GmailPluginConstants.DownloadByLabelExecutorId);
+        var gmailMark = catalog.GetRequiredExecutor(GmailPluginConstants.MarkProcessedExecutorId);
+        var officeCategory = catalog.GetRequiredExecutor(Office365PluginConstants.DownloadByCategoryExecutorId);
+        var officeAddress = catalog.GetRequiredExecutor(Office365PluginConstants.DownloadByAddressExecutorId);
+        var officeMark = catalog.GetRequiredExecutor(Office365PluginConstants.MarkProcessedExecutorId);
+
+        AssertExecutorMetadata(gmailDownload, GmailPluginConstants.SettingsRendererKey.Value, 4, 60, "simulated-gmail-message-1");
+        AssertExecutorMetadata(gmailMark, GmailPluginConstants.SettingsRendererKey.Value, 4, 60, "sourceLabelRemoved");
+        AssertExecutorMetadata(officeCategory, Office365PluginConstants.SettingsRendererKey.Value, 4, 60, "simulated-office365-message-1");
+        AssertExecutorMetadata(officeAddress, Office365PluginConstants.SettingsRendererKey.Value, 14, 60, "idempotencyKey");
+        AssertExecutorMetadata(officeMark, Office365PluginConstants.SettingsRendererKey.Value, 6, 60, "processedCategoryCreated");
+
+        Assert.Equal(GmailPluginConstants.DefaultSourceLabel, JsonSerializer.Deserialize<GmailWorkflowExecutorSettings>(gmailDownload.DefaultSettingsJson, JsonOptions)!.Label);
+        Assert.Equal(GmailPluginConstants.DefaultProcessedLabel, JsonSerializer.Deserialize<GmailMarkProcessedWorkflowExecutorSettings>(gmailMark.DefaultSettingsJson, JsonOptions)!.ProcessedLabel);
+        Assert.Equal(Office365PluginConstants.DefaultSourceCategory, JsonSerializer.Deserialize<Office365WorkflowExecutorSettings>(officeCategory.DefaultSettingsJson, JsonOptions)!.Category);
+        Assert.Equal(336, JsonSerializer.Deserialize<Office365MessageAddressWorkflowExecutorSettings>(officeAddress.DefaultSettingsJson, JsonOptions)!.LookbackHours);
+        Assert.Equal(Office365PluginConstants.DefaultProcessedCategory, JsonSerializer.Deserialize<Office365MarkProcessedWorkflowExecutorSettings>(officeMark.DefaultSettingsJson, JsonOptions)!.ProcessedCategory);
+    }
+
+    [Fact]
     public async Task Plugin_grants_refresh_office365_workflow_templates_for_project_structure_add_options()
     {
         await using var host = await ApiTestHost.CreateAsync(
@@ -350,16 +376,8 @@ public sealed class PluginCatalogIntegrationTests
                 "1.0.0",
                 PluginCapabilityKind.WorkflowExecutor,
                 [
-                    new PluginWorkflowExecutorDescriptor(
-                        RuntimePackageFixtureWorkflowExecutor.ExecutorId,
-                        "Runtime fixture executor",
-                        "Executor contributed by a runtime package assembly.",
-                        WorkflowExecutorCategoryKind.Utility,
-                        new PluginRendererKey("runtime.fixture"),
-                        ConfigurationSchema.Empty(),
-                        WorkflowValueShape.Text,
-                        WorkflowValueShape.Text,
-                        WorkflowExecutorExecutionPolicy.Default)
+                    PluginWorkflowExecutorDescriptor.FromWorkflowExecutorDescriptor(
+                        new RuntimePackageFixtureWorkflowExecutor().Descriptor)
                 ],
                 PluginSettingsDescriptor.Empty,
                 [],
@@ -963,6 +981,14 @@ public sealed class PluginCatalogIntegrationTests
             Assert.Equal(WorkflowExecutorSourceKind.LocalPackage, initialDockerStart.Source.Kind);
             Assert.Equal(DockerPluginConstants.PluginId.Value, initialDockerStart.Source.PluginId);
             Assert.Equal(DockerPluginConstants.PackageId.Value, initialDockerStart.Source.PackageId);
+            Assert.Equal(DockerPluginConstants.SettingsRendererKey.Value, initialDockerStart.SetupRendererKey);
+            Assert.Equal(7, initialDockerStart.ConfigurationSchema.Fields.Count);
+            Assert.Equal(120, initialDockerStart.DefaultPolicy.TimeoutSeconds);
+            Assert.True(initialDockerStart.DefaultPolicy.CaptureOutputArtifact);
+            Assert.True(initialDockerStart.Simulation.SupportsPreviewSimulation);
+            Assert.Contains("simulated docker output", initialDockerStart.Simulation.OutputTemplateJson, StringComparison.Ordinal);
+            Assert.Equal(WorkflowExecutorApprovalRequirement.AlwaysRequired, initialDockerStart.PermissionPolicy.ApprovalRequirement);
+            Assert.Equal("qdrant/qdrant:v1.15.3", JsonSerializer.Deserialize<DockerWorkflowExecutorSettings>(initialDockerStart.DefaultSettingsJson, JsonOptions)!.Image);
             Assert.True(workflowGrant.IsSuccess, FormatErrors(workflowGrant.Errors));
             Assert.True(hostCommandGrant.IsSuccess, FormatErrors(hostCommandGrant.Errors));
             Assert.True(recipeGrant.IsSuccess, FormatErrors(recipeGrant.Errors));
@@ -1331,71 +1357,31 @@ public sealed class PluginCatalogIntegrationTests
     private static PluginPackageManifest CreateDockerPackageManifest()
     {
         var assemblyName = Path.GetFileName(typeof(DockerPluginAssemblyMarker).Assembly.Location);
+        var services = new ServiceCollection();
+        services.AddCanDoItAllDockerPlugin(registerWorkflowExecutors: false);
+        using var provider = services.BuildServiceProvider();
+        var bundledDescriptor = Assert.Single(
+            provider.GetRequiredService<IEnumerable<ICanDoItAllPlugin>>(),
+            plugin => plugin.Descriptor.Id == DockerPluginConstants.PluginId).Descriptor;
         return new PluginPackageManifest
         {
-            Plugin = new PluginDescriptor(
-                DockerPluginConstants.PluginId,
-                "Docker",
-                "Provides guarded workflow executors for listing containers, pulling images, starting containers, and reading bounded logs.",
-                "1.0.0",
-                "CanDoItAll",
-                PluginSourceKind.LocalPackage,
-                PluginTrustLevel.LocalPackage,
-                "1.0.0",
-                PluginCapabilityKind.WorkflowExecutor | PluginCapabilityKind.HostCommand,
-                [
-                    CreateDockerExecutor(
-                        DockerPluginConstants.ListContainersExecutorId,
-                        "Docker containers",
-                        "Lists running Docker containers through a constrained docker ps host-tool recipe.",
-                        WorkflowExecutorExecutionPolicy.Default with { TimeoutSeconds = 20 }),
-                    CreateDockerExecutor(
-                        DockerPluginConstants.PullImageExecutorId,
-                        "Docker pull image",
-                        "Pulls a validated Docker image reference through a constrained docker pull host-tool recipe.",
-                        WorkflowExecutorExecutionPolicy.Default with { TimeoutSeconds = 900, CaptureOutputArtifact = true }),
-                    CreateDockerExecutor(
-                        DockerPluginConstants.StartContainerExecutorId,
-                        "Docker start container",
-                        "Starts an existing container or creates a container from a validated image through constrained Docker recipes.",
-                        WorkflowExecutorExecutionPolicy.Default with { TimeoutSeconds = 120, CaptureOutputArtifact = true }),
-                    CreateDockerExecutor(
-                        DockerPluginConstants.ReadLogsExecutorId,
-                        "Docker logs",
-                        "Reads bounded logs from a validated running Docker container.",
-                        WorkflowExecutorExecutionPolicy.Default with { TimeoutSeconds = 30, CaptureOutputArtifact = true })
-                ],
-                PluginSettingsDescriptor.Empty,
-                [],
-                new PluginPackageDescriptor(
+            Plugin = bundledDescriptor with
+            {
+                SourceKind = PluginSourceKind.LocalPackage,
+                TrustLevel = PluginTrustLevel.LocalPackage,
+                Package = new PluginPackageDescriptor(
                     DockerPluginConstants.PackageId,
                     "1.0.0",
                     "1.0.0",
                     "sha256-test",
-                    "signature-test"),
-                Icon: DockerPluginConstants.Icon),
+                    "signature-test")
+            },
             EntryAssembly = assemblyName,
             Assemblies = [assemblyName],
             IconPath = "icon.svg",
             RequiresRestart = true
         };
     }
-
-    private static PluginWorkflowExecutorDescriptor CreateDockerExecutor(
-        WorkflowExecutorId executorId,
-        string name,
-        string description,
-        WorkflowExecutorExecutionPolicy defaultPolicy)
-        => new(
-            executorId,
-            name,
-            description,
-            WorkflowExecutorCategoryKind.Command,
-            DockerPluginConstants.SettingsRendererKey,
-            ConfigurationSchema.Empty(),
-            WorkflowValueShape.Text,
-            new WorkflowValueShape(WorkflowValueShapeKind.Json, "{}", "Docker command JSON result"),
-            defaultPolicy);
 
     private static async Task<byte[]> CreateDockerPackageArchiveAsync(PluginPackageManifest manifest)
     {
@@ -1463,6 +1449,26 @@ public sealed class PluginCatalogIntegrationTests
                 "1.0.0",
                 "sha256",
                 "signature"));
+
+    private static void AssertExecutorMetadata(
+        WorkflowExecutorDescriptor descriptor,
+        string rendererKey,
+        int fieldCount,
+        int timeoutSeconds,
+        string simulationFragment)
+    {
+        Assert.Equal(rendererKey, descriptor.SetupRendererKey);
+        Assert.Equal(fieldCount, descriptor.ConfigurationSchema.Fields.Count);
+        Assert.Equal(timeoutSeconds, descriptor.DefaultPolicy.TimeoutSeconds);
+        Assert.False(string.IsNullOrWhiteSpace(descriptor.DefaultSettingsJson));
+        Assert.True(descriptor.SettingsSchema.HasSchema);
+        Assert.True(descriptor.Simulation.SupportsPreviewSimulation);
+        Assert.Contains(simulationFragment, descriptor.Simulation.OutputTemplateJson, StringComparison.Ordinal);
+        Assert.True(descriptor.DeterministicTestMode.IsSupported);
+        Assert.True(descriptor.PermissionPolicy.RequiredCapabilities.HasFlag(
+            WorkflowExecutorCapabilityFlags.SupportsDeterministicTestMode));
+        Assert.Equal(WorkflowExecutorSourceKind.BundledPlugin, descriptor.Source.Kind);
+    }
 
     private static string FormatErrors(IReadOnlyList<CanDoItAll.SharedKernel.Error> errors)
         => string.Join(" | ", errors.Select(error => error.Message));

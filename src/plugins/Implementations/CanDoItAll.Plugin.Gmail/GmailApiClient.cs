@@ -7,7 +7,23 @@ using System.Text.Json.Serialization;
 
 namespace CanDoItAll.Modules.Plugins;
 
-public sealed class GmailApiClient(IHttpClientFactory httpClientFactory)
+public interface IGmailWorkflowClient
+{
+    Task<PluginEmailMessageBatch> DownloadMessagesByLabelAsync(
+        string accessToken,
+        string label,
+        int maxMessages,
+        CancellationToken cancellationToken = default);
+
+    Task<GmailMessageLabelMutationResult> MarkMessageProcessedAsync(
+        string accessToken,
+        string messageId,
+        string sourceLabel,
+        string processedLabel,
+        CancellationToken cancellationToken = default);
+}
+
+public sealed class GmailApiClient(IHttpClientFactory httpClientFactory) : IGmailWorkflowClient
 {
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
     private const string GmailBaseUrl = "https://gmail.googleapis.com/gmail/v1/users/me";

@@ -165,11 +165,98 @@ public static class BuiltInWorkflowExecutorDescriptors
             WorkflowExecutorCapabilityFlags.ReadsExternalData |
             WorkflowExecutorCapabilityFlags.UsesNetwork |
             WorkflowExecutorCapabilityFlags.EmitsArtifacts,
+            WorkflowExecutorApprovalRequirement.RequiredForExternalEffect)) with
+    {
+        SettingsPresentationMode = WorkflowExecutorSettingsPresentationMode.CustomRenderer
+    };
+
+    public static WorkflowExecutorDescriptor DocumentToMarkdown { get; } = Create(
+        WorkflowExecutorIds.DocumentToMarkdown,
+        "Document to Markdown",
+        "Converts a workspace document to Markdown through the shared artifact operation and writes the managed output artifact.",
+        WorkflowExecutorCategoryKind.Markdown,
+        "text_snippet",
+        "builtin.document-to-markdown",
+        new WorkflowDocumentToMarkdownExecutorSettings(),
+        defaultPolicy: WorkflowExecutorExecutionPolicy.Default with { TimeoutSeconds = 90, CaptureOutputArtifact = true },
+        permissionPolicy: new WorkflowExecutorPermissionPolicy(
+            WorkflowExecutorCapabilityFlags.ReadsWorkspace |
+            WorkflowExecutorCapabilityFlags.WritesWorkspace |
+            WorkflowExecutorCapabilityFlags.EmitsArtifacts |
+            WorkflowExecutorCapabilityFlags.SupportsDeterministicTestMode,
+            WorkflowExecutorApprovalRequirement.NotRequired),
+        deterministicTestMode: WorkflowExecutorDeterministicTestModeDescriptor.Supported(
+            "Delegates to the deterministic workspace document conversion operation and supports fixture documents."),
+        simulation: WorkflowExecutorSimulationDescriptor.JsonTemplate(
+            """
+            {
+              "succeeded": true,
+              "message": "Simulated document conversion.",
+              "sourcePath": "{{settingsPath:$.sourcePath}}",
+              "outputPath": "{{settingsPath:$.outputPath}}",
+              "markdownPreview": "",
+              "previewTruncated": false,
+              "diagnostics": ""
+            }
+            """,
+            "Simulates the document conversion result without reading or writing workspace files."));
+
+    public static WorkflowExecutorDescriptor ImageInspect { get; } = Create(
+        WorkflowExecutorIds.ImageInspect,
+        "Image inspection",
+        "Reads deterministic metadata for a workspace image through the shared image operation.",
+        WorkflowExecutorCategoryKind.Image,
+        "image_search",
+        "builtin.image-inspect",
+        new WorkflowImageInspectExecutorSettings(),
+        permissionPolicy: new WorkflowExecutorPermissionPolicy(
+            WorkflowExecutorCapabilityFlags.ReadsWorkspace |
+            WorkflowExecutorCapabilityFlags.SupportsDeterministicTestMode,
+            WorkflowExecutorApprovalRequirement.NotRequired),
+        deterministicTestMode: WorkflowExecutorDeterministicTestModeDescriptor.Supported(
+            "Reads deterministic image headers and metadata from local fixture files."),
+        simulation: WorkflowExecutorSimulationDescriptor.JsonTemplate(
+            """
+            {
+              "succeeded": true,
+              "message": "Simulated image inspection.",
+              "path": "{{settingsPath:$.path}}",
+              "format": "",
+              "contentType": "",
+              "sizeBytes": 0,
+              "width": null,
+              "height": null,
+              "diagnostics": ""
+            }
+            """,
+            "Simulates image metadata without reading workspace files."));
+
+    public static WorkflowExecutorDescriptor ImageAnalyze { get; } = Create(
+        WorkflowExecutorIds.ImageAnalyze,
+        "Image analysis",
+        "Loads a bounded workspace image and analyzes visible evidence through an enabled vision-capable Chat provider.",
+        WorkflowExecutorCategoryKind.Image,
+        "visibility",
+        "builtin.image-analyze",
+        new WorkflowImageAnalyzeExecutorSettings(),
+        defaultPolicy: WorkflowExecutorExecutionPolicy.Default with { TimeoutSeconds = 120 },
+        permissionPolicy: new WorkflowExecutorPermissionPolicy(
+            WorkflowExecutorCapabilityFlags.ReadsWorkspace |
+            WorkflowExecutorCapabilityFlags.ReadsExternalData |
+            WorkflowExecutorCapabilityFlags.UsesNetwork |
+            WorkflowExecutorCapabilityFlags.UsesSecrets,
             WorkflowExecutorApprovalRequirement.RequiredForExternalEffect));
 
     public static IReadOnlyList<WorkflowExecutorDescriptor> Planned { get; } =
     [
-        CreatePlanned(WorkflowExecutorIds.CommandProcess, "Command process", "Runs a bounded local process through the existing workspace command service.", WorkflowExecutorCategoryKind.Command, "terminal", "planned.command-process")
+        CreatePlanned(
+            WorkflowExecutorIds.CommandProcess,
+            "Command process",
+            "Runs a bounded local process through the existing workspace command service.",
+            WorkflowExecutorCategoryKind.Command,
+            "terminal",
+            "planned.command-process",
+            "Command execution remains planned until typed allow-listed recipes propagate cancellation, require approval, remove credentials from child environments, and return masked output and failures.")
     ];
 
     public static IReadOnlyList<WorkflowExecutorDescriptor> Implemented { get; } =
@@ -183,7 +270,10 @@ public static class BuiltInWorkflowExecutorDescriptors
         ApprovalRequest,
         Spreadsheet,
         ProjectStructure,
-        ImageGeneration
+        ImageGeneration,
+        DocumentToMarkdown,
+        ImageInspect,
+        ImageAnalyze
     ];
 
     public static IReadOnlyList<WorkflowExecutorDescriptor> All { get; } =
@@ -202,8 +292,10 @@ public static class BuiltInWorkflowExecutorDescriptors
         TSettings defaultSettings,
         WorkflowExecutorExecutionPolicy? defaultPolicy = null,
         WorkflowExecutorPermissionPolicy? permissionPolicy = null,
-        WorkflowExecutorDeterministicTestModeDescriptor? deterministicTestMode = null)
-        => WorkflowExecutorDescriptorFactory.CreateImplemented(
+        WorkflowExecutorDeterministicTestModeDescriptor? deterministicTestMode = null,
+        WorkflowExecutorSimulationDescriptor? simulation = null)
+    {
+        var descriptor = WorkflowExecutorDescriptorFactory.CreateImplemented(
             id,
             name,
             description,
@@ -215,6 +307,11 @@ public static class BuiltInWorkflowExecutorDescriptors
             defaultPolicy: defaultPolicy,
             permissionPolicy: permissionPolicy,
             deterministicTestMode: deterministicTestMode);
+        return descriptor with
+        {
+            Simulation = simulation ?? WorkflowExecutorSimulationDescriptor.None
+        };
+    }
 
     private static WorkflowExecutorDescriptor CreatePlanned(
         WorkflowExecutorId id,
@@ -222,7 +319,8 @@ public static class BuiltInWorkflowExecutorDescriptors
         string description,
         WorkflowExecutorCategoryKind category,
         string iconName,
-        string setupRendererKey)
+        string setupRendererKey,
+        string availabilityMessage)
         => WorkflowExecutorDescriptorFactory.CreatePlanned(
             id,
             name,
@@ -230,6 +328,7 @@ public static class BuiltInWorkflowExecutorDescriptors
             category,
             iconName,
             setupRendererKey,
-            BuiltInSource);
+            BuiltInSource,
+            availabilityMessage);
 }
 

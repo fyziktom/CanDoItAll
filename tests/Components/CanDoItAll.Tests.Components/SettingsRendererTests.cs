@@ -59,19 +59,101 @@ public sealed class SettingsRendererTests
         [
             new StaticSettingsRendererSource([descriptor])
         ]));
-        var schema = new ConfigurationSchema("1.0",
-        [
-            new ConfigurationFieldDescriptor("name", "Name", ConfigurationFieldType.Text, IsRequired: true, "Name")
-        ]);
+        var schema = ConfigurationSchema.Empty("1.0");
 
         var cut = context.RenderComponent<SettingsRendererHost>(parameters => parameters
             .Add(component => component.RendererKey, "trusted.test")
+            .Add(component => component.RendererOwnerId, "test")
+            .Add(component => component.RendererTrustLevel, SettingsRendererTrustLevel.Application)
             .Add(component => component.Schema, schema)
             .Add(component => component.State, new ConfigurationState())
             .Add(component => component.TestIdPrefix, "settings-renderer"));
 
         Assert.Contains("trusted-renderer", cut.Markup, StringComparison.Ordinal);
         Assert.Contains("1.0", cut.Markup, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void SettingsRendererHost_shows_failure_when_plugin_requests_an_application_renderer()
+    {
+        using var context = new TestContext();
+        var descriptor = new SettingsRendererDescriptor(
+            "trusted.test",
+            typeof(TrustedSettingsRenderer),
+            SettingsRendererTrustLevel.Application,
+            "application",
+            "1.0");
+        context.Services.AddSingleton<ISettingsRendererRegistry>(new SettingsRendererRegistry(
+        [
+            new StaticSettingsRendererSource([descriptor])
+        ]));
+        var schema = new ConfigurationSchema(
+            "1.0",
+            [
+                new ConfigurationFieldDescriptor(
+                    "name",
+                    "Name",
+                    ConfigurationFieldType.Text,
+                    IsRequired: true,
+                    "Name")
+            ]);
+
+        var cut = context.RenderComponent<SettingsRendererHost>(parameters => parameters
+            .Add(component => component.RendererKey, "trusted.test")
+            .Add(component => component.RendererOwnerId, "external.plugin")
+            .Add(component => component.RendererTrustLevel, SettingsRendererTrustLevel.BundledPlugin)
+            .Add(component => component.Schema, schema)
+            .Add(component => component.State, new ConfigurationState())
+            .Add(component => component.TestIdPrefix, "settings-renderer"));
+
+        Assert.DoesNotContain("trusted-renderer", cut.Markup, StringComparison.Ordinal);
+        Assert.DoesNotContain("settings-renderer-name", cut.Markup, StringComparison.Ordinal);
+        Assert.Contains("data-settings-renderer-resolution=\"TrustMismatch\"", cut.Markup, StringComparison.Ordinal);
+        Assert.Contains("does not match the executor trust level", cut.Markup, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void SettingsRendererHost_shows_failure_for_unregistered_claimed_renderer()
+    {
+        using var context = new TestContext();
+        context.Services.AddSingleton<ISettingsRendererRegistry>(new SettingsRendererRegistry(Array.Empty<ISettingsRendererSource>()));
+        var schema = new ConfigurationSchema(
+            "1.0",
+            [
+                new ConfigurationFieldDescriptor(
+                    "name",
+                    "Name",
+                    ConfigurationFieldType.Text,
+                    IsRequired: true,
+                    "Name")
+            ]);
+
+        var cut = context.RenderComponent<SettingsRendererHost>(parameters => parameters
+            .Add(component => component.RendererKey, "plugin.missing")
+            .Add(component => component.RendererOwnerId, "external.plugin")
+            .Add(component => component.RendererTrustLevel, SettingsRendererTrustLevel.BundledPlugin)
+            .Add(component => component.Schema, schema)
+            .Add(component => component.State, new ConfigurationState())
+            .Add(component => component.TestIdPrefix, "settings-renderer"));
+
+        Assert.DoesNotContain("settings-renderer-name", cut.Markup, StringComparison.Ordinal);
+        Assert.Contains("data-settings-renderer-resolution=\"NotRegistered\"", cut.Markup, StringComparison.Ordinal);
+        Assert.Contains("not registered", cut.Markup, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void SettingsRendererHost_shows_failure_for_incomplete_renderer_claim()
+    {
+        using var context = new TestContext();
+        context.Services.AddSingleton<ISettingsRendererRegistry>(new SettingsRendererRegistry(Array.Empty<ISettingsRendererSource>()));
+
+        var cut = context.RenderComponent<SettingsRendererHost>(parameters => parameters
+            .Add(component => component.RendererKey, "plugin.incomplete")
+            .Add(component => component.Schema, ConfigurationSchema.Empty("1.0"))
+            .Add(component => component.State, new ConfigurationState()));
+
+        Assert.Contains("data-settings-renderer-resolution=\"IncompleteRequest\"", cut.Markup, StringComparison.Ordinal);
+        Assert.Contains("missing its key, owner, or trust metadata", cut.Markup, StringComparison.Ordinal);
     }
 
     public sealed class TrustedSettingsRenderer : ComponentBase

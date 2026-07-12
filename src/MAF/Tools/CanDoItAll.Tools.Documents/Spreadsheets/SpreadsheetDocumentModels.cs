@@ -11,6 +11,40 @@ public sealed record SpreadsheetWorkbookSummary(
     string WorkbookPath,
     IReadOnlyList<SpreadsheetWorksheetSummary> Worksheets);
 
+public sealed record SpreadsheetWorkbookPreviewRequest(
+    string WorkbookPath,
+    int MaxWorksheets = 2,
+    int MaxRows = 8,
+    int MaxColumns = 8)
+{
+    public const int MaximumWorksheets = 100;
+    public const int MaximumRows = 1000;
+    public const int MaximumColumns = 100;
+}
+
+public sealed record SpreadsheetWorksheetPreview(
+    string Name,
+    int Position,
+    string UsedRangeAddress,
+    int UsedRowCount,
+    int UsedColumnCount,
+    IReadOnlyList<IReadOnlyList<string>> Values,
+    string MarkdownTable,
+    bool RowsTruncated,
+    bool ColumnsTruncated)
+{
+    public bool IsTruncated => RowsTruncated || ColumnsTruncated;
+}
+
+public sealed record SpreadsheetWorkbookPreviewResult(
+    string WorkbookPath,
+    int TotalWorksheetCount,
+    IReadOnlyList<SpreadsheetWorksheetPreview> Worksheets,
+    bool WorksheetsTruncated)
+{
+    public bool IsTruncated => WorksheetsTruncated || Worksheets.Any(worksheet => worksheet.IsTruncated);
+}
+
 public sealed record SpreadsheetCellValue(
     string Address,
     string Value);
@@ -56,6 +90,8 @@ public sealed record SpreadsheetWriteResult(
 public interface ISpreadsheetDocumentService
 {
     SpreadsheetWorkbookSummary InspectWorkbook(string workbookPath);
+
+    SpreadsheetWorkbookPreviewResult PreviewWorkbook(SpreadsheetWorkbookPreviewRequest request);
 
     SpreadsheetCellValue ReadCell(string workbookPath, string worksheetName, string cellAddress);
 

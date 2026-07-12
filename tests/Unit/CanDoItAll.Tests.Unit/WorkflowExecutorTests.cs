@@ -48,29 +48,44 @@ public sealed class WorkflowExecutorTests
     }
 
     [Fact]
-    public void BuiltInRegistrationAddsImplementedAndPlannedExecutors()
+    public void BuiltInRegistrationAddsImplementedAndPlannedContributions()
     {
         var services = new ServiceCollection();
 
         services.AddStandardWorkflowExecutors();
 
-        var executorDescriptors = services
-            .Where(descriptor => descriptor.ServiceType == typeof(IWorkflowExecutor))
+        var contributionDescriptors = services
+            .Where(descriptor => descriptor.ServiceType == typeof(IWorkflowExecutorContribution))
             .ToArray();
-        Assert.Equal(10 + BuiltInWorkflowExecutorDescriptors.Planned.Count, executorDescriptors.Length);
-        Assert.Contains(executorDescriptors, descriptor => descriptor.ImplementationType == typeof(WorkspaceFileWorkflowExecutor));
-        Assert.Contains(executorDescriptors, descriptor => descriptor.ImplementationType == typeof(JsonTransformWorkflowExecutor));
-        Assert.Contains(executorDescriptors, descriptor => descriptor.ImplementationType == typeof(MarkdownRenderWorkflowExecutor));
-        Assert.Contains(executorDescriptors, descriptor => descriptor.ImplementationType == typeof(SourceIngestionWorkflowExecutor));
-        Assert.Contains(executorDescriptors, descriptor => descriptor.ImplementationType == typeof(HttpFetchWorkflowExecutor));
-        Assert.Contains(executorDescriptors, descriptor => descriptor.ImplementationType == typeof(DelayWorkflowExecutor));
-        Assert.Contains(executorDescriptors, descriptor => descriptor.ImplementationType == typeof(HumanApprovalWorkflowExecutor));
-        Assert.Contains(executorDescriptors, descriptor => descriptor.ImplementationType == typeof(SpreadsheetWorkflowExecutor));
-        Assert.Contains(executorDescriptors, descriptor => descriptor.ImplementationType == typeof(ProjectStructureWorkflowExecutor));
-        Assert.Contains(executorDescriptors, descriptor => descriptor.ImplementationType == typeof(ImageGenerationWorkflowExecutor));
-        Assert.Equal(
-            BuiltInWorkflowExecutorDescriptors.Planned.Count,
-            executorDescriptors.Count(descriptor => descriptor.ImplementationFactory is not null));
+        var implementationTypes = services
+            .Where(descriptor => descriptor.ServiceType == typeof(IWorkflowExecutor))
+            .Select(descriptor => descriptor.ImplementationType)
+            .OfType<Type>()
+            .Select(type => type.GetGenericArguments().Single())
+            .ToArray();
+        var plannedDescriptors = contributionDescriptors
+            .Select(descriptor => descriptor.ImplementationInstance)
+            .OfType<IWorkflowExecutorContribution>()
+            .Where(contribution => !contribution.Descriptor.CanExecute)
+            .Select(contribution => contribution.Descriptor)
+            .ToArray();
+
+        Assert.Equal(13 + BuiltInWorkflowExecutorDescriptors.Planned.Count, contributionDescriptors.Length);
+        Assert.Contains(typeof(WorkspaceFileWorkflowExecutor), implementationTypes);
+        Assert.Contains(typeof(JsonTransformWorkflowExecutor), implementationTypes);
+        Assert.Contains(typeof(MarkdownRenderWorkflowExecutor), implementationTypes);
+        Assert.Contains(typeof(SourceIngestionWorkflowExecutor), implementationTypes);
+        Assert.Contains(typeof(HttpFetchWorkflowExecutor), implementationTypes);
+        Assert.Contains(typeof(DelayWorkflowExecutor), implementationTypes);
+        Assert.Contains(typeof(HumanApprovalWorkflowExecutor), implementationTypes);
+        Assert.Contains(typeof(SpreadsheetWorkflowExecutor), implementationTypes);
+        Assert.Contains(typeof(ProjectStructureWorkflowExecutor), implementationTypes);
+        Assert.Contains(typeof(ImageGenerationWorkflowExecutor), implementationTypes);
+        Assert.Contains(typeof(DocumentToMarkdownWorkflowExecutor), implementationTypes);
+        Assert.Contains(typeof(ImageInspectWorkflowExecutor), implementationTypes);
+        Assert.Contains(typeof(ImageAnalyzeWorkflowExecutor), implementationTypes);
+        Assert.Equal(BuiltInWorkflowExecutorDescriptors.Planned, plannedDescriptors);
+        Assert.Equal(13, services.Count(descriptor => descriptor.ServiceType == typeof(IWorkflowExecutor)));
     }
 
     [Fact]
@@ -1004,7 +1019,7 @@ public sealed class WorkflowExecutorTests
         var node = CreateLlmNode("summarize-office365", component.Id);
         var definition = CreateDefinition([node], [], node.Id.Value);
 
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => invoker.ExecuteAsync(
+        var exception = await Assert.ThrowsAsync<WorkflowUsageObservationException>(() => invoker.ExecuteAsync(
             definition,
             node,
             component,
@@ -1012,6 +1027,7 @@ public sealed class WorkflowExecutorTests
 
         Assert.Contains("summarize-office365", exception.Message, StringComparison.Ordinal);
         Assert.Contains("invalid JSON", exception.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.IsType<InvalidOperationException>(exception.InnerException);
         var executionOptions = runtime.LastExecutionOptions;
         Assert.NotNull(executionOptions);
         Assert.True(executionOptions!.RequireJsonResponseFormat);
@@ -1255,7 +1271,9 @@ public sealed class WorkflowExecutorTests
         Assert.Contains("\"outputPath\":\"downloads/source.html\"", httpResult.PayloadJson, StringComparison.Ordinal);
 
         var ingestion = await ExecuteDirectAsync(
-            new SourceIngestionWorkflowExecutor(new WorkspacePathResolutionService(temp.Path)),
+            new SourceIngestionWorkflowExecutor(
+                new WorkspacePathResolutionService(temp.Path),
+                new ManagedCodeMarkItDownDocumentMarkdownConverter()),
             new WorkflowSourceIngestionExecutorSettings
             {
                 IncludeAdditionalSources = true,
@@ -1268,7 +1286,7 @@ public sealed class WorkflowExecutorTests
             httpResult.PayloadJson);
 
         Assert.Contains("Download evidence", ingestion.PayloadJson, StringComparison.Ordinal);
-        Assert.Contains("html-text", ingestion.PayloadJson, StringComparison.Ordinal);
+        Assert.Contains("markitdown-html", ingestion.PayloadJson, StringComparison.Ordinal);
     }
 
     [Fact]

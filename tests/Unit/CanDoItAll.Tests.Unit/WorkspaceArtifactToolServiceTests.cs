@@ -98,7 +98,12 @@ public sealed class WorkspaceArtifactToolServiceTests
             Assert.Equal("workspace_convert_document", result.Receipt.Operation);
             Assert.Contains(result.Receipt.ArtifactReferences, item => item.RelativePath == result.OutputPath);
             Assert.Equal(Path.GetFullPath(documentPath), converter.ObservedSourcePath);
-            Assert.Equal(Path.Combine(root, "artifacts", "converted-documents", "quote.md"), converter.ObservedOutputPath);
+            Assert.Null(converter.ObservedMaxCharacters);
+            Assert.Equal(1, converter.CallCount);
+            Assert.Equal(
+                converter.Markdown,
+                await File.ReadAllTextAsync(Path.Combine(root, "artifacts", "converted-documents", "quote.md")));
+            Assert.NotEmpty(result.Receipt.ReceiptRelativePath);
         }
         finally
         {
@@ -174,6 +179,133 @@ public sealed class WorkspaceArtifactToolServiceTests
             Assert.False(result.Receipt.MutatesWorkspace);
             Assert.Equal("Failed", result.Receipt.Outcome);
             Assert.False(File.Exists(Path.Combine(root, "artifacts", "converted-documents", "quote.md")));
+            Assert.Equal(1, converter.CallCount);
+        }
+        finally
+        {
+            DeleteDirectory(root);
+        }
+    }
+
+    [Fact]
+    public async Task ConvertDocumentToMarkdown_overwrites_existing_output_with_full_markdown()
+    {
+        var root = CreateWorkspaceRoot();
+        try
+        {
+            var documentPath = Path.Combine(root, "source", "quote.html");
+            var outputPath = Path.Combine(root, "artifacts", "converted-documents", "quote.md");
+            Directory.CreateDirectory(Path.GetDirectoryName(documentPath)!);
+            Directory.CreateDirectory(Path.GetDirectoryName(outputPath)!);
+            await File.WriteAllTextAsync(documentPath, "<h1>Quote</h1>");
+            await File.WriteAllTextAsync(outputPath, "old markdown");
+            var converter = new FakeDocumentMarkdownConverter
+            {
+                Markdown = "# Complete replacement\n\nAll converted content."
+            };
+            var service = new WorkspaceArtifactToolService(
+                root,
+                new WorkspaceCommandExecutionService(root, new LocalWorkspaceProcessHost()),
+                converter);
+
+            var result = await service.ConvertDocumentToMarkdown(
+                "source/quote.html",
+                "artifacts/converted-documents/quote.md",
+                previewCharacters: 10);
+
+            Assert.True(result.Succeeded, result.Diagnostics);
+            Assert.Equal(converter.Markdown, await File.ReadAllTextAsync(outputPath));
+            Assert.Equal(converter.Markdown[..10], result.MarkdownPreview);
+            Assert.True(result.PreviewTruncated);
+            Assert.True(result.Receipt.MutatesWorkspace);
+            Assert.DoesNotContain(
+                Directory.EnumerateFiles(Path.GetDirectoryName(outputPath)!),
+                path => path.EndsWith(".tmp", StringComparison.OrdinalIgnoreCase));
+        }
+        finally
+        {
+            DeleteDirectory(root);
+        }
+    }
+
+    [Fact]
+    public async Task ConvertDocumentToMarkdown_output_write_failure_preserves_existing_path_and_has_no_mutation_receipt()
+    {
+        var root = CreateWorkspaceRoot();
+        try
+        {
+            var documentPath = Path.Combine(root, "source", "quote.html");
+            var blockingPath = Path.Combine(root, "artifacts", "converted-documents");
+            Directory.CreateDirectory(Path.GetDirectoryName(documentPath)!);
+            Directory.CreateDirectory(Path.GetDirectoryName(blockingPath)!);
+            await File.WriteAllTextAsync(documentPath, "<h1>Quote</h1>");
+            await File.WriteAllTextAsync(blockingPath, "existing workspace content");
+            var converter = new FakeDocumentMarkdownConverter
+            {
+                Markdown = "# Converted markdown"
+            };
+            var service = new WorkspaceArtifactToolService(
+                root,
+                new WorkspaceCommandExecutionService(root, new LocalWorkspaceProcessHost()),
+                converter);
+
+            var result = await service.ConvertDocumentToMarkdown(
+                "source/quote.html",
+                "artifacts/converted-documents/quote.md");
+
+            Assert.False(result.Succeeded);
+            Assert.Contains("could not be written", result.Message, StringComparison.OrdinalIgnoreCase);
+            Assert.Equal("existing workspace content", await File.ReadAllTextAsync(blockingPath));
+            Assert.False(result.Receipt.MutatesWorkspace);
+            Assert.Equal("Failed", result.Receipt.Outcome);
+            Assert.Empty(result.Receipt.ReceiptRelativePath);
+            Assert.Empty(result.Receipt.ArtifactReferences);
+            Assert.Empty(result.MarkdownPreview);
+            Assert.False(result.PreviewTruncated);
+            Assert.Equal(1, converter.CallCount);
+        }
+        finally
+        {
+            DeleteDirectory(root);
+        }
+    }
+
+    [Fact]
+    public async Task ConvertDocumentToMarkdown_propagates_cancellation_to_converter_and_does_not_write_output()
+    {
+        var root = CreateWorkspaceRoot();
+        try
+        {
+            var documentPath = Path.Combine(root, "source", "quote.html");
+            var outputPath = Path.Combine(root, "artifacts", "converted-documents", "quote.md");
+            Directory.CreateDirectory(Path.GetDirectoryName(documentPath)!);
+            await File.WriteAllTextAsync(documentPath, "<h1>Quote</h1>");
+            var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            var converter = new FakeDocumentMarkdownConverter
+            {
+                Handler = async (_, cancellationToken) =>
+                {
+                    entered.SetResult();
+                    await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken);
+                    throw new InvalidOperationException("Unreachable after cancellation.");
+                }
+            };
+            var service = new WorkspaceArtifactToolService(
+                root,
+                new WorkspaceCommandExecutionService(root, new LocalWorkspaceProcessHost()),
+                converter);
+            using var cancellationSource = new CancellationTokenSource();
+
+            var conversion = service.ConvertDocumentToMarkdown(
+                "source/quote.html",
+                "artifacts/converted-documents/quote.md",
+                cancellationToken: cancellationSource.Token);
+            await entered.Task.WaitAsync(TimeSpan.FromSeconds(5));
+            cancellationSource.Cancel();
+
+            await Assert.ThrowsAnyAsync<OperationCanceledException>(() => conversion);
+            Assert.Equal(cancellationSource.Token, converter.ObservedCancellationToken);
+            Assert.False(File.Exists(outputPath));
         }
         finally
         {
@@ -230,27 +362,37 @@ public sealed class WorkspaceArtifactToolServiceTests
 
         public string? ObservedSourcePath { get; private set; }
 
-        public string? ObservedOutputPath { get; private set; }
+        public int? ObservedMaxCharacters { get; private set; }
 
-        public async Task<WorkspaceDocumentMarkdownConversionResult> ConvertToMarkdownAsync(
+        public int CallCount { get; private set; }
+
+        public CancellationToken ObservedCancellationToken { get; private set; }
+
+        public Func<WorkspaceDocumentMarkdownConversionRequest, CancellationToken, Task<WorkspaceDocumentMarkdownConversionResult>>? Handler { get; init; }
+
+        public Task<WorkspaceDocumentMarkdownConversionResult> ConvertToMarkdownAsync(
             WorkspaceDocumentMarkdownConversionRequest request,
             CancellationToken cancellationToken = default)
         {
+            cancellationToken.ThrowIfCancellationRequested();
+            CallCount++;
             ObservedSourcePath = request.SourcePath;
-            ObservedOutputPath = request.OutputPath;
-            if (Succeeded)
+            ObservedMaxCharacters = request.MaxCharacters;
+            ObservedCancellationToken = cancellationToken;
+
+            if (Handler is not null)
             {
-                Directory.CreateDirectory(Path.GetDirectoryName(request.OutputPath)!);
-                await File.WriteAllTextAsync(request.OutputPath, Markdown, cancellationToken);
+                return Handler(request, cancellationToken);
             }
 
-            return new WorkspaceDocumentMarkdownConversionResult(
+            return Task.FromResult(new WorkspaceDocumentMarkdownConversionResult(
                 Succeeded,
                 Message,
                 request.SourcePath,
-                request.OutputPath,
+                Succeeded ? Markdown : string.Empty,
                 Succeeded ? Markdown.Length : 0,
-                Diagnostics);
+                IsTruncated: false,
+                Diagnostics));
         }
     }
 }

@@ -1,5 +1,6 @@
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.AgentFramework.Workflows.Abstractions;
 using Microsoft.Agents.AI.Workflows;
 
 namespace CanDoItAll.AgentFramework.Maf;
@@ -10,6 +11,7 @@ public sealed class MafInProcessWorkflowExecutionBackend : IWorkflowExecutionBac
     private readonly IMafWorkflowEventNormalizer eventNormalizer;
     private readonly IWorkflowCheckpointFactory checkpointFactory;
     private readonly IWorkflowPayloadPolicyService payloadPolicyService;
+    private readonly TimeProvider timeProvider;
     private readonly IReadOnlyList<LlmCallComponent>? components;
     private readonly IWorkflowComponentLibraryService? componentLibrary;
 
@@ -18,7 +20,8 @@ public sealed class MafInProcessWorkflowExecutionBackend : IWorkflowExecutionBac
         IReadOnlyList<LlmCallComponent> components,
         IMafWorkflowEventNormalizer? eventNormalizer = null,
         IWorkflowCheckpointFactory? checkpointFactory = null,
-        IWorkflowPayloadPolicyService? payloadPolicyService = null)
+        IWorkflowPayloadPolicyService? payloadPolicyService = null,
+        TimeProvider? timeProvider = null)
     {
         ArgumentNullException.ThrowIfNull(compiler);
         ArgumentNullException.ThrowIfNull(components);
@@ -28,6 +31,7 @@ public sealed class MafInProcessWorkflowExecutionBackend : IWorkflowExecutionBac
         this.eventNormalizer = eventNormalizer ?? new MafWorkflowEventNormalizer();
         this.checkpointFactory = checkpointFactory ?? new WorkflowCheckpointFactory();
         this.payloadPolicyService = payloadPolicyService ?? new WorkflowPayloadPolicyService();
+        this.timeProvider = timeProvider ?? TimeProvider.System;
     }
 
     public MafInProcessWorkflowExecutionBackend(
@@ -35,7 +39,8 @@ public sealed class MafInProcessWorkflowExecutionBackend : IWorkflowExecutionBac
         IWorkflowComponentLibraryService componentLibrary,
         IMafWorkflowEventNormalizer? eventNormalizer = null,
         IWorkflowCheckpointFactory? checkpointFactory = null,
-        IWorkflowPayloadPolicyService? payloadPolicyService = null)
+        IWorkflowPayloadPolicyService? payloadPolicyService = null,
+        TimeProvider? timeProvider = null)
     {
         ArgumentNullException.ThrowIfNull(compiler);
         ArgumentNullException.ThrowIfNull(componentLibrary);
@@ -45,6 +50,7 @@ public sealed class MafInProcessWorkflowExecutionBackend : IWorkflowExecutionBac
         this.eventNormalizer = eventNormalizer ?? new MafWorkflowEventNormalizer();
         this.checkpointFactory = checkpointFactory ?? new WorkflowCheckpointFactory();
         this.payloadPolicyService = payloadPolicyService ?? new WorkflowPayloadPolicyService();
+        this.timeProvider = timeProvider ?? TimeProvider.System;
     }
 
     public WorkflowRuntimeBackendDescriptor Descriptor { get; } = new(
@@ -54,7 +60,11 @@ public sealed class MafInProcessWorkflowExecutionBackend : IWorkflowExecutionBac
         SupportsStreaming: true,
         SupportsExternalRequests: true,
         SupportsDashboardObservability: false,
-        OperationalNotes: "Use for local development, tests, previews, and approved short non-durable runs only.");
+        OperationalNotes: "Use for local development, tests, previews, and approved short non-durable runs only.")
+    {
+        SupportsExternalResponseResume = false,
+        SupportsActiveCancellation = true
+    };
 
     public async Task<WorkflowBackendStartResult> StartAsync(
         WorkflowDefinition definition,
@@ -65,7 +75,7 @@ public sealed class MafInProcessWorkflowExecutionBackend : IWorkflowExecutionBac
         ArgumentNullException.ThrowIfNull(definition);
         ArgumentNullException.ThrowIfNull(request);
 
-        var now = DateTimeOffset.UtcNow;
+        var now = timeProvider.GetUtcNow();
         var resolvedComponents = componentLibrary is null
             ? components ?? []
             : await componentLibrary.ListComponentsAsync(cancellationToken);
@@ -102,7 +112,11 @@ public sealed class MafInProcessWorkflowExecutionBackend : IWorkflowExecutionBac
                 BackendRunId: runId.ToString(),
                 Summary: diagnostic.Message,
                 CreatedAtUtc: now,
-                UpdatedAtUtc: now);
+                UpdatedAtUtc: now)
+            {
+                TerminalAtUtc = now,
+                Origin = request.Origin
+            };
             var failedEvent = new WorkflowEventRecord(
                 Guid.NewGuid(),
                 runId,
@@ -147,6 +161,7 @@ public sealed class MafInProcessWorkflowExecutionBackend : IWorkflowExecutionBac
             definition,
             request.PreviewSimulationPlan,
             payloadPolicyService,
+            request.Origin,
             WorkflowNodeExecutionProgressScope.Current);
         Run run;
         try
@@ -172,6 +187,7 @@ public sealed class MafInProcessWorkflowExecutionBackend : IWorkflowExecutionBac
                 Descriptor.Kind,
                 pendingException.Request,
                 progressObserver,
+                request.Origin,
                 now,
                 cancellationToken);
         }
@@ -184,6 +200,7 @@ public sealed class MafInProcessWorkflowExecutionBackend : IWorkflowExecutionBac
                 Descriptor.Kind,
                 capturedRequest,
                 progressObserver,
+                request.Origin,
                 now,
                 cancellationToken);
         }
@@ -201,7 +218,7 @@ public sealed class MafInProcessWorkflowExecutionBackend : IWorkflowExecutionBac
                         runId,
                         workflowEvent,
                         eventBindings,
-                        DateTimeOffset.UtcNow))
+                        timeProvider.GetUtcNow()))
                     .Where(workflowEvent => !IsDuplicateProgressEvent(progressObserver.Events, workflowEvent))
                     .ToList())
                 .OrderBy(workflowEvent => workflowEvent.CreatedAtUtc)
@@ -262,9 +279,10 @@ public sealed class MafInProcessWorkflowExecutionBackend : IWorkflowExecutionBac
                     WorkflowEventPayloads.Serialize(
                         WorkflowEventPayloadSource.Runtime,
                         "WorkflowCompleted"),
-                    DateTimeOffset.UtcNow));
+                    timeProvider.GetUtcNow()));
             }
 
+            var snapshotUpdatedAtUtc = timeProvider.GetUtcNow();
             var snapshot = new WorkflowRunSnapshot(
                 runId,
                 definition.Id,
@@ -278,11 +296,15 @@ public sealed class MafInProcessWorkflowExecutionBackend : IWorkflowExecutionBac
                         ? $"Workflow '{definition.Name}' completed."
                         : $"Workflow '{definition.Name}' is {finalState}.",
                 CreatedAtUtc: now,
-                UpdatedAtUtc: DateTimeOffset.UtcNow);
+                UpdatedAtUtc: snapshotUpdatedAtUtc)
+            {
+                TerminalAtUtc = IsTerminal(finalState) ? snapshotUpdatedAtUtc : null,
+                Origin = request.Origin
+            };
             var artifacts = MergeArtifacts(
                 progressObserver.Artifacts,
                 finalState == WorkflowRunState.Completed
-                    ? MafConfiguredFileArtifactResolver.BuildConfiguredFileArtifacts(definition, runId, DateTimeOffset.UtcNow)
+                    ? MafConfiguredFileArtifactResolver.BuildConfiguredFileArtifacts(definition, runId, timeProvider.GetUtcNow())
                     : []);
             var checkpoint = checkpointFactory.CreateMetadataCheckpoint(
                 new WorkflowCheckpointCreateRequest(
@@ -297,7 +319,8 @@ public sealed class MafInProcessWorkflowExecutionBackend : IWorkflowExecutionBac
 
             return new WorkflowBackendStartResult(snapshot, events, [], artifacts)
             {
-                Checkpoints = [checkpoint]
+                Checkpoints = [checkpoint],
+                UsageObservations = progressObserver.UsageObservations
             };
         }
     }
@@ -308,10 +331,11 @@ public sealed class MafInProcessWorkflowExecutionBackend : IWorkflowExecutionBac
         WorkflowRuntimeBackendKind backend,
         WorkflowExternalRequestRecord request,
         WorkflowBackendProgressEventObserver progressObserver,
+        WorkflowLaunchOrigin? origin,
         DateTimeOffset createdAtUtc,
         CancellationToken cancellationToken)
     {
-        var now = DateTimeOffset.UtcNow;
+        var now = timeProvider.GetUtcNow();
         var summary = request.Kind == WorkflowExternalRequestKind.Approval
             ? $"Workflow is waiting for approval at node '{request.NodeId}'."
             : $"Workflow is waiting for input at node '{request.NodeId}'.";
@@ -336,7 +360,10 @@ public sealed class MafInProcessWorkflowExecutionBackend : IWorkflowExecutionBac
             BackendRunId: runId.ToString(),
             Summary: summary,
             CreatedAtUtc: createdAtUtc,
-            UpdatedAtUtc: now);
+            UpdatedAtUtc: now)
+        {
+            Origin = origin
+        };
         var waitingEvent = new WorkflowEventRecord(
             Guid.NewGuid(),
             runId,
@@ -375,7 +402,8 @@ public sealed class MafInProcessWorkflowExecutionBackend : IWorkflowExecutionBac
 
         return new WorkflowBackendStartResult(waitingRun, events, [request], progressObserver.Artifacts)
         {
-            Checkpoints = [checkpoint]
+            Checkpoints = [checkpoint],
+            UsageObservations = progressObserver.UsageObservations
         };
     }
 
@@ -387,6 +415,9 @@ public sealed class MafInProcessWorkflowExecutionBackend : IWorkflowExecutionBac
             WorkflowRunState.Cancelled => WorkflowCheckpointKind.Cancelled,
             _ => WorkflowCheckpointKind.RuntimeBoundary
         };
+
+    private static bool IsTerminal(WorkflowRunState state)
+        => state is WorkflowRunState.Completed or WorkflowRunState.Failed or WorkflowRunState.Cancelled;
 
     private static IReadOnlyList<WorkflowArtifactRecord> MergeArtifacts(
         params IEnumerable<WorkflowArtifactRecord>[] artifactGroups)

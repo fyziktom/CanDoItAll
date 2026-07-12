@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Text.Json;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.AgentFramework.Workflows.Abstractions;
 using CanDoItAll.Components.CanvasLib;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.SharedKernel;
@@ -46,7 +47,7 @@ public interface ISchedulerTargetLauncher
 {
     Task<SchedulerTargetLaunchResult> LaunchAsync(
         SchedulerPlan plan,
-        DateTimeOffset firedAtUtc,
+        SchedulerTargetLaunchContext context,
         CancellationToken cancellationToken = default);
 }
 
@@ -845,7 +846,7 @@ public sealed class QuartzCronDescriptionService : ICronDescriptionService
 }
 
 public sealed class SchedulerTargetLauncher(
-    IWorkflowCatalogService workflowCatalogService,
+    IWorkflowLaunchService workflowLaunchService,
     IWorkflowRuntimeManager workflowRuntimeManager) : ISchedulerTargetLauncher
 {
     private const string WorkflowEventInlineJsonPropertyName = "inlineJson";
@@ -855,10 +856,17 @@ public sealed class SchedulerTargetLauncher(
 
     public async Task<SchedulerTargetLaunchResult> LaunchAsync(
         SchedulerPlan plan,
-        DateTimeOffset firedAtUtc,
+        SchedulerTargetLaunchContext context,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(plan);
+        ArgumentNullException.ThrowIfNull(context);
+        if (plan.Id != context.PlanId)
+        {
+            throw new ArgumentException(
+                $"Scheduler launch context plan id '{context.PlanId:D}' does not match plan '{plan.Id:D}'.",
+                nameof(context));
+        }
 
         return plan.TargetKind switch
         {
@@ -867,38 +875,37 @@ public sealed class SchedulerTargetLauncher(
                 SchedulerPlanRunRetryCategory.SchedulerFailure,
                 SchedulerPlanRunRoutes.Failed,
                 targetKind: SchedulerPlanTargetKind.Process),
-            SchedulerPlanTargetKind.Workflow => await LaunchWorkflowAsync(plan, cancellationToken),
+            SchedulerPlanTargetKind.Workflow => await LaunchWorkflowAsync(plan, context, cancellationToken),
             _ => throw new InvalidOperationException($"Scheduler target kind '{plan.TargetKind}' is not supported.")
         };
     }
 
     private async Task<SchedulerTargetLaunchResult> LaunchWorkflowAsync(
         SchedulerPlan plan,
+        SchedulerTargetLaunchContext context,
         CancellationToken cancellationToken)
     {
-        var detail = await workflowCatalogService.GetDefinitionAsync(
-            new WorkflowId(plan.TargetId),
-            plan.TargetVersionId.HasValue ? new WorkflowVersionId(plan.TargetVersionId.Value) : null,
-            cancellationToken)
-            ?? throw new KeyNotFoundException($"Workflow definition '{plan.TargetId:D}' was not found.");
-
-        var validation = await workflowCatalogService.ValidateDefinitionAsync(detail.Definition, cancellationToken);
-        if (!validation.Succeeded)
-        {
-            var issues = string.Join(" | ", validation.Issues.Take(5).Select(item => $"{item.Code}: {item.Message}"));
-            throw new InvalidOperationException($"Workflow definition '{detail.Definition.Name}' is not valid for scheduled execution. {issues}");
-        }
-
-        var run = await workflowRuntimeManager.StartAsync(
-            detail.Definition,
-            new WorkflowRunStartRequest(
-                detail.Definition.Id,
-                detail.Definition.VersionId,
-                string.IsNullOrWhiteSpace(plan.InputJson) ? "{}" : plan.InputJson,
-                RequestedBackend: null,
-                SourceProcessRunId: null,
-                SourceProcessAssignmentId: null),
+        var workflowId = new WorkflowId(plan.TargetId);
+        WorkflowDefinitionSelection selection = plan.TargetVersionId.HasValue
+            ? new WorkflowDefinitionSelection.ExactSavedVersion(
+                workflowId,
+                new WorkflowVersionId(plan.TargetVersionId.Value))
+            : new WorkflowDefinitionSelection.LatestActive(workflowId);
+        var launchResult = await workflowLaunchService.LaunchAsync(
+            new WorkflowLaunchIntent(
+                selection,
+                WorkflowLaunchMode.Production,
+                new WorkflowLaunchOrigin.SchedulerPlanRun(
+                    context.PlanId,
+                    context.PlanRunId,
+                    context.SchedulerFireId,
+                    context.FiredAtUtc,
+                    context.CorrelationId),
+                plan.InputJson,
+                WorkflowLaunchCompletionPolicy.WaitForStopped,
+                new WorkflowLaunchIdempotency.CallerSupplied(context.IdempotencyKey)),
             cancellationToken);
+        var run = launchResult.Run;
         var events = await workflowRuntimeManager.ListEventsAsync(run.RunId, cancellationToken);
         var routeResult = ResolveWorkflowRouteResult(events);
 
@@ -1120,6 +1127,16 @@ public sealed class SchedulerPlannerRunDispatcher(
             throw new ArgumentException("Scheduler plan id is required.", nameof(request));
         }
 
+        if (request.SchedulerFireId == Guid.Empty)
+        {
+            throw new ArgumentException("Scheduler fire id is required.", nameof(request));
+        }
+
+        if (request.FiredAtUtc == default)
+        {
+            throw new ArgumentException("Scheduler fired-at timestamp is required.", nameof(request));
+        }
+
         var now = clock.GetUtcNow();
         var dedupeKey = BuildFireDedupeKey(request.PlanId, request.FiredAtUtc);
 
@@ -1144,17 +1161,23 @@ public sealed class SchedulerPlannerRunDispatcher(
 
         if (run is null)
         {
+            var correlationId = request.CorrelationId ?? request.SchedulerFireId;
             run = new SchedulerPlanRun
             {
                 Id = Guid.NewGuid(),
                 PlanId = plan.Id,
                 DedupeKey = dedupeKey,
                 SchedulerFireId = request.SchedulerFireId,
-                CorrelationId = request.CorrelationId,
+                CorrelationId = correlationId,
                 FiredAtUtc = request.FiredAtUtc,
                 CreatedAtUtc = now
             };
             await dbContext.Set<SchedulerPlanRun>().AddAsync(run, cancellationToken);
+        }
+
+        else if (!run.CorrelationId.HasValue)
+        {
+            run.CorrelationId = request.CorrelationId ?? request.SchedulerFireId;
         }
 
         run.Status = SchedulerPlanRunDispatchStatus.Dispatching;
@@ -1171,7 +1194,15 @@ public sealed class SchedulerPlannerRunDispatcher(
 
         try
         {
-            var launchResult = await targetLauncher.LaunchAsync(plan, request.FiredAtUtc, cancellationToken);
+            var launchResult = await targetLauncher.LaunchAsync(
+                plan,
+                new SchedulerTargetLaunchContext(
+                    plan.Id,
+                    run.Id,
+                    new WorkflowSchedulerFireId(run.SchedulerFireId),
+                    run.FiredAtUtc,
+                    new WorkflowLaunchCorrelationId(run.CorrelationId!.Value)),
+                cancellationToken);
             var completedAt = clock.GetUtcNow();
             run.Status = launchResult.DispatchStatus;
             run.TargetRunId = launchResult.TargetRunId;

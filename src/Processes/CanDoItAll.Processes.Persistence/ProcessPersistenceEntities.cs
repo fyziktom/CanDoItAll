@@ -77,6 +77,12 @@ public sealed class ProcessRuntimeStepAssignmentEntity
 
     public string ExecutorDisplayName { get; set; } = string.Empty;
 
+    public Guid? WorkflowId { get; set; }
+
+    public Guid? WorkflowVersionId { get; set; }
+
+    public int? WorkflowOutputMapping { get; set; }
+
     public string Prompt { get; set; } = string.Empty;
 
     public string ReadinessHash { get; set; } = string.Empty;

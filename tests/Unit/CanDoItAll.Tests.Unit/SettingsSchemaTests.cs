@@ -82,6 +82,99 @@ public sealed class SettingsSchemaTests
     }
 
     [Fact]
+    public void SettingsSchemaValidator_rejects_explicit_empty_guid_for_optional_and_required_fields()
+    {
+        var validator = new ConfigurationSchemaValidator();
+        var optionalSchema = new ConfigurationSchema("1.0",
+        [
+            new ConfigurationFieldDescriptor("projectId", "Project", ConfigurationFieldType.Guid, IsRequired: false, "Optional project id.")
+        ]);
+        var requiredSchema = new ConfigurationSchema("1.0",
+        [
+            new ConfigurationFieldDescriptor("projectId", "Project", ConfigurationFieldType.Guid, IsRequired: true, "Required project id.")
+        ]);
+        var state = new ConfigurationState(new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["projectId"] = Guid.Empty.ToString()
+        });
+
+        var optionalResult = validator.Validate(optionalSchema, state);
+        var requiredResult = validator.Validate(requiredSchema, state);
+
+        Assert.Contains(optionalResult.Issues, issue =>
+            issue.FieldKey == "projectId" &&
+            issue.Message.Contains("non-empty GUID", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(requiredResult.Issues, issue =>
+            issue.FieldKey == "projectId" &&
+            issue.Message.Contains("non-empty GUID", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public void WorkflowDefinitionValidator_treats_json_null_as_unset_for_optional_fields()
+    {
+        var executor = new OptionalGuidExecutor();
+        var validator = new WorkflowDefinitionValidator(new WorkflowExecutorCatalog([executor]));
+        var definition = CreateDefinition(
+        [
+            CreateNode("start", WorkflowNodeKind.Start),
+            CreateExecutorNode("tool", executor.Descriptor.Id) with
+            {
+                Settings = CreateSettings(executor.Descriptor.Id) with
+                {
+                    ExecutorSettingsJson = """
+                        {
+                          "projectId": null,
+                          "projectIdJsonPath": "$.projectId"
+                        }
+                        """
+                }
+            },
+            CreateNode("end", WorkflowNodeKind.End)
+        ], [
+            CreateEdge("start-tool", "start", "tool"),
+            CreateEdge("tool-end", "tool", "end")
+        ]);
+
+        var result = validator.Validate(definition, []);
+
+        Assert.DoesNotContain(result.Issues, issue => issue.Code == WorkflowValidationIssueCode.InvalidExecutorSettings);
+    }
+
+    [Fact]
+    public void SettingsSchemaValidator_rejects_undefined_field_and_number_metadata()
+    {
+        var validator = new ConfigurationSchemaValidator();
+        var schema = new ConfigurationSchema("1.0",
+        [
+            new ConfigurationFieldDescriptor(
+                "unknownType",
+                "Unknown type",
+                (ConfigurationFieldType)999,
+                IsRequired: false,
+                "Invalid field metadata."),
+            new ConfigurationFieldDescriptor(
+                "unknownNumber",
+                "Unknown number",
+                ConfigurationFieldType.Number,
+                IsRequired: false,
+                "Invalid number metadata.")
+            {
+                NumberKind = (ConfigurationNumberKind)999
+            }
+        ]);
+
+        var result = validator.Validate(schema, new ConfigurationState());
+
+        Assert.False(result.Succeeded);
+        Assert.Contains(result.Issues, issue =>
+            issue.FieldKey == "unknownType" &&
+            issue.Message.Contains("undefined field type", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(result.Issues, issue =>
+            issue.FieldKey == "unknownNumber" &&
+            issue.Message.Contains("undefined number kind", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
     public void WorkflowDefinitionValidator_applies_executor_configuration_schema()
     {
         var executor = new SchemaBackedExecutor();
@@ -211,6 +304,39 @@ public sealed class SettingsSchemaTests
             [
                 new ConfigurationFieldDescriptor("endpointUrl", "Endpoint", ConfigurationFieldType.Url, IsRequired: true, "Endpoint URL"),
                 new ConfigurationFieldDescriptor("maxResults", "Max results", ConfigurationFieldType.Number, IsRequired: false, "Limit")
+            ])
+        };
+
+        public ValueTask<WorkflowNodeExecutionResult> ExecuteAsync(
+            WorkflowExecutorExecutionContext context,
+            WorkflowNodeInput input,
+            CancellationToken cancellationToken = default)
+            => ValueTask.FromResult(new WorkflowNodeExecutionResult(
+                context.Node.Id,
+                "{}",
+                context.Descriptor.ResultShape));
+    }
+
+    private sealed class OptionalGuidExecutor : IWorkflowExecutor
+    {
+        public WorkflowExecutorDescriptor Descriptor { get; } = new(
+            new WorkflowExecutorId("test.optional-guid"),
+            "Optional GUID test",
+            "Optional GUID schema test executor.",
+            WorkflowExecutorCategoryKind.Data,
+            "data_object",
+            "test.optional-guid",
+            WorkflowValueShape.Text,
+            new WorkflowValueShape(WorkflowValueShapeKind.Json, "{}", "JSON"),
+            "{\"type\":\"object\"}",
+            "{}",
+            WorkflowExecutorExecutionPolicy.Default,
+            IsImplemented: true)
+        {
+            ConfigurationSchema = new ConfigurationSchema("1.0",
+            [
+                new ConfigurationFieldDescriptor("projectId", "Project", ConfigurationFieldType.Guid, IsRequired: false, "Optional project id."),
+                new ConfigurationFieldDescriptor("projectIdJsonPath", "Project JSON path", ConfigurationFieldType.Text, IsRequired: false, "Project id input path.")
             ])
         };
 

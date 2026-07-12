@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text.Json;
 
 namespace CanDoItAll.SharedKernel.Configuration;
@@ -11,7 +12,16 @@ public enum ConfigurationFieldType
     Json,
     SecretReference,
     Select,
-    MultilineText
+    MultilineText,
+    Guid
+}
+
+public enum ConfigurationNumberKind
+{
+    Int32,
+    Int64,
+    Decimal,
+    Double
 }
 
 public sealed record ConfigurationFieldOption(string Value, string Label)
@@ -27,6 +37,8 @@ public record ConfigurationFieldDescriptor(
     string HelpText)
 {
     public IReadOnlyList<ConfigurationFieldOption> Options { get; init; } = [];
+
+    public ConfigurationNumberKind NumberKind { get; init; } = ConfigurationNumberKind.Int32;
 }
 
 public record ConfigurationSchema(
@@ -96,7 +108,24 @@ public class ConfigurationState
 
     public void SetNumber(string key, int? value)
     {
-        SetText(key, value?.ToString());
+        SetText(key, value?.ToString(CultureInfo.InvariantCulture));
+    }
+
+    public decimal? GetDecimalNumber(string key)
+    {
+        var rawValue = GetText(key);
+        return decimal.TryParse(
+            rawValue,
+            NumberStyles.Number | NumberStyles.AllowExponent,
+            CultureInfo.InvariantCulture,
+            out var parsed)
+                ? parsed
+                : null;
+    }
+
+    public void SetDecimalNumber(string key, decimal? value)
+    {
+        SetText(key, value?.ToString(CultureInfo.InvariantCulture));
     }
 
     public bool GetBoolean(string key)
@@ -220,6 +249,23 @@ public sealed class ConfigurationSchemaValidator : IConfigurationSchemaValidator
                 continue;
             }
 
+            if (!Enum.IsDefined(field.FieldType))
+            {
+                issues.Add(new ConfigurationValidationIssue(
+                    key,
+                    $"Configuration field '{key}' has an undefined field type."));
+                continue;
+            }
+
+            if (field.FieldType == ConfigurationFieldType.Number &&
+                !Enum.IsDefined(field.NumberKind))
+            {
+                issues.Add(new ConfigurationValidationIssue(
+                    key,
+                    $"Configuration field '{key}' has an undefined number kind."));
+                continue;
+            }
+
             var value = state.GetText(key);
             if (field.IsRequired && string.IsNullOrWhiteSpace(value))
             {
@@ -257,9 +303,18 @@ public sealed class ConfigurationSchemaValidator : IConfigurationSchemaValidator
 
                 return;
             case ConfigurationFieldType.Number:
-                if (!int.TryParse(value, out _))
+                if (!IsValidNumber(field.NumberKind, value))
                 {
-                    issues.Add(new ConfigurationValidationIssue(key, $"Configuration field '{key}' must be a number."));
+                    issues.Add(new ConfigurationValidationIssue(
+                        key,
+                        $"Configuration field '{key}' must be a valid {field.NumberKind} number."));
+                }
+
+                return;
+            case ConfigurationFieldType.Guid:
+                if (!Guid.TryParse(value, out var guid) || guid == Guid.Empty)
+                {
+                    issues.Add(new ConfigurationValidationIssue(key, $"Configuration field '{key}' must be a non-empty GUID."));
                 }
 
                 return;
@@ -310,4 +365,32 @@ public sealed class ConfigurationSchemaValidator : IConfigurationSchemaValidator
         return string.Equals(option.Value, value, StringComparison.OrdinalIgnoreCase) ||
                option.AcceptedValues.Any(acceptedValue => string.Equals(acceptedValue, value, StringComparison.OrdinalIgnoreCase));
     }
+
+    private static bool IsValidNumber(
+        ConfigurationNumberKind numberKind,
+        string value)
+        => numberKind switch
+        {
+            ConfigurationNumberKind.Int32 => int.TryParse(
+                value,
+                NumberStyles.Integer,
+                CultureInfo.InvariantCulture,
+                out _),
+            ConfigurationNumberKind.Int64 => long.TryParse(
+                value,
+                NumberStyles.Integer,
+                CultureInfo.InvariantCulture,
+                out _),
+            ConfigurationNumberKind.Decimal => decimal.TryParse(
+                value,
+                NumberStyles.Number | NumberStyles.AllowExponent,
+                CultureInfo.InvariantCulture,
+                out _),
+            ConfigurationNumberKind.Double => double.TryParse(
+                value,
+                NumberStyles.Float,
+                CultureInfo.InvariantCulture,
+                out var number) && double.IsFinite(number),
+            _ => false
+        };
 }

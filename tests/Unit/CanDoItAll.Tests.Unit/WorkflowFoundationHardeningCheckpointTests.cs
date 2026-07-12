@@ -11,6 +11,7 @@ public sealed class WorkflowFoundationHardeningCheckpointTests
         "CanDoItAll.Modules.Plugins",
         "CanDoItAll.Plugins.Abstractions",
         "CanDoItAll.AgentFramework.Persistence",
+        "CanDoItAll.AgentFramework.Workflows.Runtime",
         "CanDoItAll.Web"
     ];
 
@@ -39,7 +40,6 @@ public sealed class WorkflowFoundationHardeningCheckpointTests
                     "CanDoItAll.AgentFramework.Models",
                     "CanDoItAll.AgentFramework.WorkflowExecutors.Core",
                     "CanDoItAll.AgentFramework.Workflows.Abstractions",
-                    "CanDoItAll.AgentFramework.Workflows.Runtime",
                     "CanDoItAll.SharedKernel"
                 ],
                 ["Microsoft.Extensions.DependencyInjection.Abstractions"]),
@@ -125,13 +125,8 @@ public sealed class WorkflowFoundationHardeningCheckpointTests
             Path.Combine(FindRepositoryRoot(), "src", "MAF", "Workflows", "CanDoItAll.AgentFramework.Workflows.Core"),
             Path.Combine(FindRepositoryRoot(), "src", "MAF", "Workflows", "CanDoItAll.AgentFramework.Workflows.Runtime")
         };
-        var excludedContractFiles = new HashSet<string>(StringComparer.Ordinal)
-        {
-            "WorkflowContracts.cs"
-        };
         var oversizedFiles = implementationDirectories
             .SelectMany(directory => Directory.EnumerateFiles(directory, "*.cs"))
-            .Where(path => !excludedContractFiles.Contains(Path.GetFileName(path)))
             .Select(path => new
             {
                 Path = Path.GetRelativePath(FindRepositoryRoot(), path),

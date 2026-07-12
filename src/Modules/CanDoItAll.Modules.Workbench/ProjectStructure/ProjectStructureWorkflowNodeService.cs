@@ -2,6 +2,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.AgentFramework.Workflows.Abstractions;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.SharedKernel;
 using Microsoft.Extensions.Logging;
@@ -12,6 +13,8 @@ public sealed class ProjectStructureWorkflowNodeService(
     ProjectWorkbenchService projectWorkbenchService,
     ProjectsService projectsService,
     IWorkflowCatalogService workflowCatalogService,
+    IWorkflowLaunchService workflowLaunchService,
+    ProjectStructureWorkflowLaunchIntentFactory launchIntentFactory,
     IWorkflowRuntimeManager workflowRuntimeManager,
     IWorkflowRunStore workflowRunStore,
     IEnumerable<IWorkflowExecutionBackend> workflowExecutionBackends,
@@ -288,43 +291,34 @@ public sealed class ProjectStructureWorkflowNodeService(
             agent,
             request.RequestedBy);
         var backendSelection = ResolveStartBackendSelection(detail.Definition, request.RequestedBackend);
-        var startingStatus = BuildStatus(
-            detail.Definition,
-            workflowMetadata,
-            null,
-            WorkflowRunState.Running,
-            [],
-            [],
-            $"Workflow run is starting on {backendSelection.Backend}.");
-        await ApplyStatusAsync(projectId, nodeId, workflowMetadata, detail.Definition, startingStatus, null, cancellationToken);
 
         try
         {
-            var run = await workflowRuntimeManager.StartAsync(
-                detail.Definition,
-                new WorkflowRunStartRequest(
-                    detail.Definition.Id,
-                    detail.Definition.VersionId,
+            var launchResult = await workflowLaunchService.LaunchAsync(
+                launchIntentFactory.Create(
+                    detail.Definition,
+                    projectId,
+                    nodeId,
+                    agent,
                     preview.InputJson,
-                    backendSelection.Backend,
-                    SourceProcessRunId: null,
-                    SourceProcessAssignmentId: null)
-                {
-                    PreviewSimulationPlan = simulationPlan
-                },
+                    request.RequestedBackend,
+                    simulationPlan,
+                    workflowMetadata.LastRunId),
                 cancellationToken);
-            var status = await BuildStatusAsync(detail.Definition, workflowMetadata, run, cancellationToken);
+            var run = launchResult.Run;
+            var resolvedDefinition = launchResult.ResolvedRequest.Definition;
+            var status = await BuildStatusAsync(resolvedDefinition, workflowMetadata, run, cancellationToken);
             var projection = await BuildResultProjectionAsync(projectId, existingNodeIds, cancellationToken);
             status = MergeResultProjection(status, projection);
-            await ApplyStatusAsync(projectId, nodeId, workflowMetadata, detail.Definition, status, run, cancellationToken);
+            await ApplyStatusAsync(projectId, nodeId, workflowMetadata, resolvedDefinition, status, run, cancellationToken);
 
             return new ProjectStructureWorkflowNodeStartResult(
                 projectId,
                 nodeId,
-                detail.Definition.Id,
-                detail.Definition.VersionId,
+                resolvedDefinition.Id,
+                resolvedDefinition.VersionId,
                 run.RunId,
-                BuildWorkflowRunRoute(projectId, detail.Definition.Id, run.RunId),
+                BuildWorkflowRunRoute(projectId, resolvedDefinition.Id, run.RunId),
                 status,
                 string.IsNullOrWhiteSpace(backendSelection.Warning) ? [] : [backendSelection.Warning]);
         }
@@ -337,7 +331,7 @@ public sealed class ProjectStructureWorkflowNodeService(
                 nodeId,
                 detail.Definition.Id,
                 detail.Definition.VersionId,
-                backendSelection.Backend);
+                request.RequestedBackend ?? detail.Definition.RuntimePolicy.PreferredBackend);
             var failedStatus = BuildStatus(
                 detail.Definition,
                 workflowMetadata,
@@ -474,28 +468,16 @@ public sealed class ProjectStructureWorkflowNodeService(
         WorkflowDefinition definition,
         WorkflowRuntimeBackendKind? requestedBackend)
     {
-        if (requestedBackend.HasValue)
-        {
-            return new ProjectStructureWorkflowStartBackendSelection(requestedBackend.Value, string.Empty);
-        }
-
+        var backend = requestedBackend ?? definition.RuntimePolicy.PreferredBackend;
         var registeredBackends = ListRegisteredBackendKinds();
-        if (registeredBackends.Contains(definition.RuntimePolicy.PreferredBackend))
+        if (registeredBackends.Contains(backend))
         {
-            return new ProjectStructureWorkflowStartBackendSelection(definition.RuntimePolicy.PreferredBackend, string.Empty);
-        }
-
-        if (definition.RuntimePolicy.AllowInProcessPreviewRuns &&
-            registeredBackends.Contains(WorkflowRuntimeBackendKind.InProcess))
-        {
-            return new ProjectStructureWorkflowStartBackendSelection(
-                WorkflowRuntimeBackendKind.InProcess,
-                $"Workflow definition prefers {definition.RuntimePolicy.PreferredBackend}, but this host has not registered that runtime. Project Structure explicitly requested InProcess for this local start.");
+            return new ProjectStructureWorkflowStartBackendSelection(backend, string.Empty);
         }
 
         return new ProjectStructureWorkflowStartBackendSelection(
-            definition.RuntimePolicy.PreferredBackend,
-            $"Workflow definition prefers {definition.RuntimePolicy.PreferredBackend}, but this host has not registered that runtime.");
+            backend,
+            $"Workflow runtime backend {backend} is not registered in this host.");
     }
 
     private IReadOnlyList<ProjectStructureWorkflowStartBackendOption> BuildStartBackendOptions(

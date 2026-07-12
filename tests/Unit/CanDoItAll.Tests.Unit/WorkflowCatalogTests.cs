@@ -399,7 +399,14 @@ public sealed class WorkflowCatalogTests
             ],
             runStore);
 
-        return new WorkflowTestRunner(catalog, runtimeManager, runStore);
+        var launchService = new WorkflowLaunchService(
+            catalog,
+            new WorkflowRuntimeBackendCatalog([WorkflowRuntimeBackendKind.InProcess]),
+            new WorkflowRuntimeManagerRunLauncher(runtimeManager),
+            new InMemoryWorkflowLaunchIdempotencyStore(),
+            runStore,
+            TimeProvider.System);
+        return new WorkflowTestRunner(catalog, launchService, runtimeManager, runStore);
     }
 
     private static WorkflowDefinitionSaveRequest CreateSaveRequest(

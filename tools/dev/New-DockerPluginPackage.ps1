@@ -71,83 +71,155 @@ foreach ($fileName in $requiredFiles + $optionalFiles) {
     }
 }
 
-@'
-{
-  "plugin": {
-    "id": "candoitall.docker",
-    "displayName": "Docker",
-    "description": "Provides guarded workflow executors for listing containers, pulling images, starting containers, and reading bounded logs.",
-    "version": "1.0.0",
-    "vendor": "CanDoItAll",
-    "sourceKind": 1,
-    "trustLevel": 2,
-    "minAppVersion": "1.0.0",
-    "capabilities": 513,
-    "workflowExecutors": [
-      {
-        "executorId": "docker.list-containers",
-        "name": "Docker containers",
-        "description": "Lists running Docker containers through a constrained docker ps host-tool recipe.",
-        "category": 9,
-        "settingsRendererKey": "docker.workflow-settings",
-        "settingsSchema": { "version": "1.0", "fields": [] },
-        "inputShape": { "kind": 0, "schemaJson": "", "description": "Plain text" },
-        "resultShape": { "kind": 1, "schemaJson": "{}", "description": "Docker command JSON result" },
-        "defaultPolicy": { "timeoutSeconds": 20, "maxRetryAttempts": 0, "retryDelayMilliseconds": 250, "captureOutputArtifact": false }
-      },
-      {
-        "executorId": "docker.pull-image",
-        "name": "Docker pull image",
-        "description": "Pulls a validated Docker image reference through a constrained docker pull host-tool recipe.",
-        "category": 9,
-        "settingsRendererKey": "docker.workflow-settings",
-        "settingsSchema": { "version": "1.0", "fields": [] },
-        "inputShape": { "kind": 0, "schemaJson": "", "description": "Plain text" },
-        "resultShape": { "kind": 1, "schemaJson": "{}", "description": "Docker command JSON result" },
-        "defaultPolicy": { "timeoutSeconds": 900, "maxRetryAttempts": 0, "retryDelayMilliseconds": 250, "captureOutputArtifact": true }
-      },
-      {
-        "executorId": "docker.start-container",
-        "name": "Docker start container",
-        "description": "Starts an existing container or creates a container from a validated image through constrained Docker recipes.",
-        "category": 9,
-        "settingsRendererKey": "docker.workflow-settings",
-        "settingsSchema": { "version": "1.0", "fields": [] },
-        "inputShape": { "kind": 0, "schemaJson": "", "description": "Plain text" },
-        "resultShape": { "kind": 1, "schemaJson": "{}", "description": "Docker command JSON result" },
-        "defaultPolicy": { "timeoutSeconds": 120, "maxRetryAttempts": 0, "retryDelayMilliseconds": 250, "captureOutputArtifact": true }
-      },
-      {
-        "executorId": "docker.read-logs",
-        "name": "Docker logs",
-        "description": "Reads bounded logs from a validated running Docker container.",
-        "category": 9,
-        "settingsRendererKey": "docker.workflow-settings",
-        "settingsSchema": { "version": "1.0", "fields": [] },
-        "inputShape": { "kind": 0, "schemaJson": "", "description": "Plain text" },
-        "resultShape": { "kind": 1, "schemaJson": "{}", "description": "Docker command JSON result" },
-        "defaultPolicy": { "timeoutSeconds": 30, "maxRetryAttempts": 0, "retryDelayMilliseconds": 250, "captureOutputArtifact": true }
-      }
-    ],
-    "settings": { "schema": { "version": "1.0", "fields": [] }, "renderers": [] },
-    "connections": [],
-    "package": {
-      "packageId": "candoitall.docker.package",
-      "version": "1.0.0",
-      "minAppVersion": "1.0.0",
-      "sha256": "",
-      "signature": "",
-      "catalogUri": null
+$dockerSettingsFields = @(
+    [ordered]@{
+        key = "image"
+        label = "Image"
+        fieldType = 0
+        isRequired = $false
+        helpText = "Docker image reference."
     },
-    "oauth2": null,
-    "icon": { "kind": 0, "value": "deployed_code", "packageId": "", "label": "Docker" }
-  },
-  "entryAssembly": "CanDoItAll.Plugin.Docker.dll",
-  "assemblies": [ "CanDoItAll.Plugin.Docker.dll" ],
-  "iconPath": "icon.svg",
-  "requiresRestart": true
+    [ordered]@{
+        key = "containerName"
+        label = "Container name"
+        fieldType = 0
+        isRequired = $false
+        helpText = "Docker container name."
+    },
+    [ordered]@{
+        key = "pullIfMissing"
+        label = "Pull if missing"
+        fieldType = 3
+        isRequired = $false
+        helpText = "Pull the image before creating the container when it is not available locally."
+    },
+    [ordered]@{
+        key = "portMappings"
+        label = "Port mappings"
+        fieldType = 4
+        isRequired = $false
+        helpText = "JSON array of host:container port mappings."
+    },
+    [ordered]@{
+        key = "tail"
+        label = "Log tail"
+        fieldType = 2
+        isRequired = $false
+        helpText = "Maximum number of log lines to read."
+    },
+    [ordered]@{
+        key = "since"
+        label = "Logs since"
+        fieldType = 0
+        isRequired = $false
+        helpText = "Optional docker logs --since value."
+    },
+    [ordered]@{
+        key = "maxOutputCharacters"
+        label = "Output cap"
+        fieldType = 2
+        isRequired = $false
+        helpText = "Maximum stdout/stderr characters captured."
+    }
+)
+$dockerPermissionPolicy = [ordered]@{
+    requiredCapabilities = 448
+    approvalRequirement = 2
 }
-'@ | Set-Content -LiteralPath $manifestPath -Encoding UTF8
+$dockerDeterministicTestMode = [ordered]@{
+    isSupported = $true
+    description = "Run Preview simulates Docker host-tool output without invoking Docker."
+}
+
+function New-DockerWorkflowExecutorManifest {
+    param(
+        [string] $ExecutorId,
+        [string] $Name,
+        [string] $Description,
+        [int] $TimeoutSeconds,
+        [bool] $CaptureOutputArtifact
+    )
+
+    return [ordered]@{
+        executorId = $ExecutorId
+        name = $Name
+        description = $Description
+        category = 9
+        settingsRendererKey = "docker.workflow-settings"
+        settingsSchema = [ordered]@{
+            version = "1.0"
+            fields = $dockerSettingsFields
+        }
+        inputShape = [ordered]@{
+            kind = 0
+            schemaJson = ""
+            description = "Plain text"
+        }
+        resultShape = [ordered]@{
+            kind = 1
+            schemaJson = "{}"
+            description = "Docker command JSON result"
+        }
+        defaultPolicy = [ordered]@{
+            timeoutSeconds = $TimeoutSeconds
+            maxRetryAttempts = 0
+            retryDelayMilliseconds = 250
+            captureOutputArtifact = $CaptureOutputArtifact
+        }
+        permissionPolicy = $dockerPermissionPolicy
+        deterministicTestMode = $dockerDeterministicTestMode
+    }
+}
+
+$manifest = [ordered]@{
+    plugin = [ordered]@{
+        id = "candoitall.docker"
+        displayName = "Docker"
+        description = "Provides guarded workflow executors for listing containers, pulling images, starting containers, and reading bounded logs."
+        version = "1.0.0"
+        vendor = "CanDoItAll"
+        sourceKind = 1
+        trustLevel = 2
+        minAppVersion = "1.0.0"
+        capabilities = 513
+        workflowExecutors = @(
+            New-DockerWorkflowExecutorManifest "docker.list-containers" "Docker containers" "Lists running Docker containers through the guarded Docker plugin." 20 $false
+            New-DockerWorkflowExecutorManifest "docker.pull-image" "Docker pull image" "Pulls a validated Docker image through the guarded Docker plugin." 900 $true
+            New-DockerWorkflowExecutorManifest "docker.start-container" "Docker start container" "Starts an existing container or creates one from a validated image through the guarded Docker plugin." 120 $true
+            New-DockerWorkflowExecutorManifest "docker.read-logs" "Docker logs" "Reads bounded logs from a Docker container through the guarded Docker plugin." 30 $true
+        )
+        settings = [ordered]@{
+            schema = [ordered]@{
+                version = "1.0"
+                fields = @()
+            }
+            renderers = @()
+        }
+        connections = @()
+        package = [ordered]@{
+            packageId = "candoitall.docker.package"
+            version = "1.0.0"
+            minAppVersion = "1.0.0"
+            sha256 = ""
+            signature = ""
+            catalogUri = $null
+        }
+        oauth2 = $null
+        icon = [ordered]@{
+            kind = 0
+            value = "deployed_code"
+            packageId = ""
+            label = "Docker"
+        }
+        tags = @("docker", "host-command", "workflow")
+    }
+    entryAssembly = "CanDoItAll.Plugin.Docker.dll"
+    assemblies = @("CanDoItAll.Plugin.Docker.dll")
+    iconPath = "icon.svg"
+    requiresRestart = $true
+}
+
+$manifest | ConvertTo-Json -Depth 20 | Set-Content -LiteralPath $manifestPath -Encoding UTF8
 
 @'
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Docker">

@@ -18,11 +18,13 @@ public static class Office365PluginServiceCollectionExtensions
         }
 
         services.AddScoped<Office365GraphClient>();
+        services.TryAddScoped<IOffice365WorkflowClient>(serviceProvider =>
+            serviceProvider.GetRequiredService<Office365GraphClient>());
         if (registerWorkflowExecutors)
         {
-            services.TryAddEnumerable(ServiceDescriptor.Scoped<IWorkflowExecutor, Office365DownloadByCategoryWorkflowExecutor>());
-            services.TryAddEnumerable(ServiceDescriptor.Scoped<IWorkflowExecutor, Office365DownloadByAddressWorkflowExecutor>());
-            services.TryAddEnumerable(ServiceDescriptor.Scoped<IWorkflowExecutor, Office365MarkProcessedWorkflowExecutor>());
+            services.AddWorkflowExecutorContribution<Office365DownloadByCategoryWorkflowExecutor>(Office365WorkflowExecutorDescriptors.DownloadByCategory, ServiceLifetime.Scoped);
+            services.AddWorkflowExecutorContribution<Office365DownloadByAddressWorkflowExecutor>(Office365WorkflowExecutorDescriptors.DownloadByAddress, ServiceLifetime.Scoped);
+            services.AddWorkflowExecutorContribution<Office365MarkProcessedWorkflowExecutor>(Office365WorkflowExecutorDescriptors.MarkProcessed, ServiceLifetime.Scoped);
         }
 
         return services;

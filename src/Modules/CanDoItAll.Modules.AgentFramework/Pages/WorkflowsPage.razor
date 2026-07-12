@@ -555,59 +555,10 @@
                 <TabsItem Text="Analytics"
                           Icon="query_stats"
                           data-testid="workflows-tab-analytics">
-                    <Grid Gap="LayoutGap.Large"
-                          Class="workflows-layout"
-                          ColumnTemplateLg="minmax(0,1fr) minmax(0,1fr)">
-                        <SurfaceCard data-testid="workflows-analytics-status">
-                            <TextBlock TextStyle="TextStyle.Eyebrow" Value="Analytics" />
-                            <h2 class="workflows-card-title">Current history page</h2>
-                            <Grid Gap="LayoutGap.Small" ColumnsLg="2" Class="mt-4">
-                                <div class="workflows-fact">
-                                    <span>Shown done</span>
-                                    <strong>@runs.Count(run => run.State == WorkflowRunState.Completed)</strong>
-                                </div>
-                                <div class="workflows-fact">
-                                    <span>Shown running</span>
-                                    <strong>@runs.Count(run => run.State == WorkflowRunState.Running)</strong>
-                                </div>
-                                <div class="workflows-fact">
-                                    <span>Shown waiting</span>
-                                    <strong>@runs.Count(run => run.State == WorkflowRunState.WaitingForInput)</strong>
-                                </div>
-                                <div class="workflows-fact">
-                                    <span>Shown failed</span>
-                                    <strong>@runs.Count(run => run.State == WorkflowRunState.Failed)</strong>
-                                </div>
-                            </Grid>
-                        </SurfaceCard>
-
-                        <SurfaceCard data-testid="workflows-analytics-catalog">
-                            <TextBlock TextStyle="TextStyle.Eyebrow" Value="Catalog health" />
-                            <h2 class="workflows-card-title">Workflow inventory</h2>
-                            <Grid Gap="LayoutGap.Small" ColumnsLg="2" Class="mt-4">
-                                <div class="workflows-fact">
-                                    <span>Drafts</span>
-                                    <strong>@definitions.Count(definition => definition.Status == WorkflowLifecycleStatus.Draft)</strong>
-                                </div>
-                                <div class="workflows-fact">
-                                    <span>Published</span>
-                                    <strong>@definitions.Count(definition => definition.Status == WorkflowLifecycleStatus.Active)</strong>
-                                </div>
-                                <div class="workflows-fact">
-                                    <span>Components</span>
-                                    <strong>@ComponentCountText</strong>
-                                </div>
-                                <div class="workflows-fact">
-                                    <span>Validation issues</span>
-                                    <strong>@validationIssues.Count</strong>
-                                </div>
-                            </Grid>
-                            <div class="workflows-section">
-                                <TextBlock TextStyle="TextStyle.Eyebrow" Value="Runtime policy" />
-                                <p class="workflows-muted">@BuildSettingsSummary()</p>
-                            </div>
-                        </SurfaceCard>
-                    </Grid>
+                    <WorkflowAnalyticsPanel QueryService="AnalyticsQueryService"
+                                            Workflows="definitions"
+                                            IsActive="@(activeWorkflowTabIndex == AnalyticsTabIndex)"
+                                            RefreshVersion="analyticsRefreshVersion" />
                 </TabsItem>
             </Tabs>
 

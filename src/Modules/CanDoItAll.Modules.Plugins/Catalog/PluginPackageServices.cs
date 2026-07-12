@@ -957,18 +957,28 @@ internal static class RuntimePluginAssemblyRegistrar
         foreach (var packageRoot in PluginPackageManifestStore.ListInstalledPackageRoots(options.InstalledRootPath))
         {
             var manifest = ReadManifestForStartup(packageRoot.ManifestPath, packageRoot.PackageRootPath);
-            foreach (var assemblyPath in PluginPackageManifestStore.ResolveAssemblyPaths(manifest, packageRoot.PackageRootPath))
-            {
-                if (!File.Exists(assemblyPath))
+            var assemblies = PluginPackageManifestStore
+                .ResolveAssemblyPaths(manifest, packageRoot.PackageRootPath)
+                .Select(assemblyPath =>
                 {
-                    throw new InvalidOperationException($"Installed plugin package assembly '{assemblyPath}' was not found.");
-                }
+                    if (!File.Exists(assemblyPath))
+                    {
+                        throw new InvalidOperationException($"Installed plugin package assembly '{assemblyPath}' was not found.");
+                    }
 
-                var assembly = LoadPluginAssembly(assemblyPath);
+                    return LoadPluginAssembly(assemblyPath);
+                })
+                .ToArray();
+            foreach (var assembly in assemblies)
+            {
                 InvokeRegistrars(services, assembly);
-                PluginWorkflowExecutorRuntimeRegistration.RegisterWorkflowExecutors(services, assembly, manifest.Plugin);
                 RegisterAssignableTypes<IPluginHostToolRecipeCatalogSource>(services, assembly, ServiceLifetime.Singleton);
             }
+
+            PluginWorkflowExecutorRuntimeRegistration.RegisterWorkflowExecutors(
+                services,
+                assemblies.SelectMany(PluginWorkflowExecutorRuntimeRegistration.DiscoverWorkflowExecutorTypes),
+                manifest.Plugin);
         }
     }
 

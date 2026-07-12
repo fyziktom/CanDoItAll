@@ -529,13 +529,13 @@ public static class ProviderPricingCalculator
             return false;
         }
 
-        if (observation.ProviderCostUsd is > 0m)
+        if (observation.ProviderCostUsd is >= 0m)
         {
             costUsd = observation.ProviderCostUsd.Value;
             return true;
         }
 
-        if (observation.CalculatedCostUsd is > 0m)
+        if (observation.CalculatedCostUsd is >= 0m)
         {
             costUsd = observation.CalculatedCostUsd.Value;
             return true;

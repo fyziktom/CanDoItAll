@@ -108,6 +108,11 @@ public sealed class EfProcessRuntimeStepAssignmentStore(ProcessPersistenceDbCont
             ExecutorKind = assignment.ExecutorKind,
             ExecutorId = assignment.ExecutorId,
             ExecutorDisplayName = assignment.ExecutorDisplayName,
+            WorkflowId = assignment.WorkflowBinding?.WorkflowId.Value,
+            WorkflowVersionId = assignment.WorkflowBinding?.WorkflowVersionId?.Value,
+            WorkflowOutputMapping = assignment.WorkflowBinding is { } workflowBinding
+                ? (int)workflowBinding.OutputMapping
+                : null,
             Prompt = assignment.Prompt,
             ReadinessHash = assignment.ReadinessHash,
             AssignmentReason = assignment.AssignmentReason,
@@ -135,6 +140,11 @@ public sealed class EfProcessRuntimeStepAssignmentStore(ProcessPersistenceDbCont
         entity.ExecutorKind = assignment.ExecutorKind;
         entity.ExecutorId = assignment.ExecutorId;
         entity.ExecutorDisplayName = assignment.ExecutorDisplayName;
+        entity.WorkflowId = assignment.WorkflowBinding?.WorkflowId.Value;
+        entity.WorkflowVersionId = assignment.WorkflowBinding?.WorkflowVersionId?.Value;
+        entity.WorkflowOutputMapping = assignment.WorkflowBinding is { } workflowBinding
+            ? (int)workflowBinding.OutputMapping
+            : null;
         entity.Prompt = assignment.Prompt;
         entity.ReadinessHash = assignment.ReadinessHash;
         entity.AssignmentReason = assignment.AssignmentReason;
@@ -178,8 +188,38 @@ public sealed class EfProcessRuntimeStepAssignmentStore(ProcessPersistenceDbCont
             branchGate,
             entity.CreatedAtUtc)
         {
+            WorkflowBinding = ToWorkflowBinding(entity),
             CapabilityScope = DeserializeCapabilityScope(entity.CapabilityScopeJson)
         };
+    }
+
+    private static ProcessWorkflowExecutorBinding? ToWorkflowBinding(
+        ProcessRuntimeStepAssignmentEntity entity)
+    {
+        if (!entity.WorkflowId.HasValue)
+        {
+            if (entity.WorkflowVersionId.HasValue || entity.WorkflowOutputMapping.HasValue)
+            {
+                throw new InvalidOperationException(
+                    $"Process assignment '{entity.RunId:D}/{entity.StepInstanceId:D}' persisted workflow binding fields without a workflow id.");
+            }
+
+            return null;
+        }
+
+        if (entity.WorkflowOutputMapping is not { } outputMappingValue ||
+            !Enum.IsDefined(typeof(ProcessWorkflowOutputMappingKind), outputMappingValue))
+        {
+            throw new InvalidOperationException(
+                $"Process assignment '{entity.RunId:D}/{entity.StepInstanceId:D}' persisted an invalid workflow output mapping '{entity.WorkflowOutputMapping?.ToString() ?? "missing"}'.");
+        }
+
+        return new ProcessWorkflowExecutorBinding(
+            new ProcessWorkflowId(entity.WorkflowId.Value),
+            entity.WorkflowVersionId is { } versionId
+                ? new ProcessWorkflowVersionId(versionId)
+                : null,
+            (ProcessWorkflowOutputMappingKind)outputMappingValue);
     }
 
     private static string JoinGuids(IReadOnlyList<ArtifactSlotId> slotIds)

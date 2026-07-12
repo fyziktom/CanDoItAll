@@ -24,6 +24,8 @@ public sealed record WorkflowNodeExecutionProgress(
     public string ErrorMessage { get; init; } = string.Empty;
 
     public WorkflowUsageMetrics? Usage { get; init; }
+
+    public IReadOnlyList<WorkflowUsageObservation> UsageObservations { get; init; } = [];
 }
 
 public interface IWorkflowNodeExecutionProgressObserver

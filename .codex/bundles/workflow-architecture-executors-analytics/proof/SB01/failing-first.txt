@@ -1,0 +1,18 @@
+SB01 failing-first dependency-boundary proof
+
+RunLabel: SB01-CONTRACT-OWNERSHIP
+Command: dotnet test tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj --filter "FullyQualifiedName~WorkflowCoreExtractionTests|FullyQualifiedName~WorkflowRuntimeExtractionTests" --no-restore --verbosity minimal
+WorkingDirectory: repo://
+ExitCode: 1
+
+Result before implementation:
+- Failed: 5
+- Passed: 10
+- Total: 15
+
+Expected failures:
+- WorkflowRuntimeExtractionTests.WorkflowRuntimeRegistrationExtensionOwnsRuntimeServiceRegistrations: no Workflows.Abstractions.IWorkflowRuntimeManager registration existed.
+- WorkflowCoreExtractionTests.WorkflowCoreRegistrationExtensionOwnsCoreServiceRegistrations: DI still registered duplicate Core validator/backend interfaces.
+- WorkflowCoreExtractionTests.WorkflowContractsAreOwnedOnlyByWorkflowAbstractions: legacy Common/Core WorkflowCatalogContracts.cs and Workflows.Runtime WorkflowContracts.cs both existed.
+- WorkflowRuntimeExtractionTests.WorkflowRuntimeImplementationFilesMovedOutOfAgentFrameworkCoreProject: WorkflowCheckpointFactory.cs was not owned by Workflows.Runtime.
+- WorkflowCoreExtractionTests.WorkflowCoreProjectDoesNotReferenceForbiddenImplementationProjects: Workflows.Core still referenced Workflows.Runtime.

@@ -8,10 +8,12 @@ internal sealed class WorkflowBackendProgressEventObserver(
     WorkflowDefinition definition,
     WorkflowPreviewSimulationPlan previewSimulationPlan,
     IWorkflowPayloadPolicyService payloadPolicyService,
+    WorkflowLaunchOrigin? origin,
     IWorkflowNodeExecutionProgressObserver? next) : IWorkflowNodeExecutionProgressObserver
 {
     private readonly List<WorkflowEventRecord> events = [];
     private readonly List<WorkflowArtifactRecord> artifacts = [];
+    private readonly Dictionary<WorkflowUsageObservationId, WorkflowUsageObservation> usageObservations = [];
     private readonly IReadOnlyDictionary<WorkflowNodeId, WorkflowNode> nodesById = definition.Graph.Nodes.ToDictionary(node => node.Id);
     private readonly HashSet<WorkflowNodeId> previewSimulationNodeIds = previewSimulationPlan.Steps
         .Select(step => step.NodeId)
@@ -20,6 +22,8 @@ internal sealed class WorkflowBackendProgressEventObserver(
     public IReadOnlyList<WorkflowEventRecord> Events => events;
 
     public IReadOnlyList<WorkflowArtifactRecord> Artifacts => artifacts;
+
+    public IReadOnlyList<WorkflowUsageObservation> UsageObservations => usageObservations.Values.ToArray();
 
     public void AddArtifact(WorkflowArtifactRecord? artifact)
     {
@@ -35,6 +39,7 @@ internal sealed class WorkflowBackendProgressEventObserver(
         WorkflowNodeExecutionProgress progress,
         CancellationToken cancellationToken = default)
     {
+        CaptureUsageObservations(progress);
         var message = string.IsNullOrWhiteSpace(progress.ExecutorId?.Value)
             ? $"Workflow node '{progress.NodeId}' {progress.State.ToString().ToLowerInvariant()}."
             : $"Workflow node '{progress.NodeId}' {progress.State.ToString().ToLowerInvariant()} for executor '{progress.ExecutorId}'.";
@@ -61,7 +66,44 @@ internal sealed class WorkflowBackendProgressEventObserver(
 
         if (next is not null)
         {
-            await next.RecordAsync(progress, cancellationToken);
+            var safeProgress = progress.State switch
+            {
+                WorkflowNodeExecutionProgressState.Completed => progress with
+                {
+                    PayloadJson = payloadResult.InlinePayload
+                },
+                WorkflowNodeExecutionProgressState.Failed => progress with
+                {
+                    ErrorMessage = payloadResult.InlinePayload
+                },
+                _ => progress
+            };
+            await next.RecordAsync(safeProgress, cancellationToken);
+        }
+    }
+
+    private void CaptureUsageObservations(WorkflowNodeExecutionProgress progress)
+    {
+        foreach (var observation in progress.UsageObservations)
+        {
+            var correlated = WorkflowUsageObservationCorrelator.Correlate(
+                observation,
+                runId,
+                definition.Id,
+                definition.VersionId,
+                origin,
+                progress.NodeId);
+            if (usageObservations.TryGetValue(correlated.Id, out var stored))
+            {
+                if (stored != correlated)
+                {
+                    throw new WorkflowUsageObservationConflictException(correlated.Id);
+                }
+
+                continue;
+            }
+
+            usageObservations.Add(correlated.Id, correlated);
         }
     }
 

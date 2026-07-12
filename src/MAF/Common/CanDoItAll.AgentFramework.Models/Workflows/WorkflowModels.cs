@@ -631,6 +631,10 @@ public sealed record WorkflowRuntimeBackendDescriptor(
     bool SupportsDashboardObservability,
     string OperationalNotes)
 {
+    public bool SupportsExternalResponseResume { get; init; }
+
+    public bool SupportsActiveCancellation { get; init; }
+
     public WorkflowRuntimeBackendAvailabilityKind Availability { get; init; } = WorkflowRuntimeBackendAvailabilityKind.Registered;
 
     public bool IsRegistered { get; init; } = true;
@@ -649,6 +653,12 @@ public sealed record WorkflowRunStartRequest(
     Guid? SourceProcessAssignmentId)
 {
     public WorkflowPreviewSimulationPlan PreviewSimulationPlan { get; init; } = WorkflowPreviewSimulationPlan.Empty;
+
+    public WorkflowLaunchOrigin? Origin { get; init; }
+
+    public WorkflowLaunchIdempotency Idempotency { get; init; } = new WorkflowLaunchIdempotency.NotRequested();
+
+    public WorkflowRunId? RequestedRunId { get; init; }
 }
 
 public sealed record WorkflowRunSnapshot(
@@ -660,7 +670,12 @@ public sealed record WorkflowRunSnapshot(
     string BackendRunId,
     string Summary,
     DateTimeOffset CreatedAtUtc,
-    DateTimeOffset UpdatedAtUtc);
+    DateTimeOffset UpdatedAtUtc)
+{
+    public DateTimeOffset? TerminalAtUtc { get; init; }
+
+    public WorkflowLaunchOrigin? Origin { get; init; }
+}
 
 public sealed record WorkflowEventRecord(
     Guid Id,
@@ -745,4 +760,6 @@ public sealed record WorkflowNodeExecutionResult(
 {
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public WorkflowUsageMetrics? Usage { get; init; }
+
+    public IReadOnlyList<WorkflowUsageObservation> UsageObservations { get; init; } = [];
 }

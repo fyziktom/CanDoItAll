@@ -798,6 +798,11 @@ public sealed class ProcessRuntimeProjectionQueryService(
                     continue;
                 }
 
+                if (!ProcessLaunchExecutorKinds.CanResolveAsAgent(assignment.ExecutorKind))
+                {
+                    continue;
+                }
+
                 observedCandidateRunIds.Add(run.RunId);
                 var claim = step.ActiveClaimToken is { } activeClaimToken
                     ? state.Claims.FirstOrDefault(item => item.ClaimToken == activeClaimToken)

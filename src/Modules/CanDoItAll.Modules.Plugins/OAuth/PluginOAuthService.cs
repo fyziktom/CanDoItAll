@@ -6,6 +6,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using CanDoItAll.Infrastructure.Persistence;
+using CanDoItAll.AgentFramework.WorkflowExecutors.Plugins;
 using CanDoItAll.Modules.Security;
 using CanDoItAll.Plugins.Abstractions;
 using CanDoItAll.SharedKernel;
@@ -23,7 +24,7 @@ public sealed class PluginOAuthService(
     ISecretVault secretVault,
     IHttpClientFactory httpClientFactory,
     IClock clock,
-    ILogger<PluginOAuthService> logger)
+    ILogger<PluginOAuthService> logger) : IPluginWorkflowOAuthService
 {
     private const int StateBytes = 32;
     private const int PkceVerifierBytes = 64;
@@ -394,6 +395,19 @@ public sealed class PluginOAuthService(
         throw new InvalidOperationException(
             $"No connected OAuth connection is available for plugin '{pluginId}' connection '{connectionKey}'. LatestStatus={latest.Status}.{scopeMessage}{accountMessage}");
     }
+
+    ValueTask<PluginConnectionId> IPluginWorkflowOAuthService.ResolveConnectionIdAsync(
+        PluginId pluginId,
+        PluginConnectionKey connectionKey,
+        string configuredConnectionId,
+        IReadOnlyList<string> scopes,
+        CancellationToken cancellationToken)
+        => ResolveWorkflowConnectionIdAsync(
+            pluginId,
+            connectionKey,
+            configuredConnectionId,
+            scopes,
+            cancellationToken);
 
     private async ValueTask<PluginOAuth2TokenSnapshot> GetAccessTokenCoreAsync(
         PluginId pluginId,

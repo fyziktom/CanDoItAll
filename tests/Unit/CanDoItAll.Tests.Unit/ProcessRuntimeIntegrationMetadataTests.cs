@@ -2,6 +2,7 @@ using System.Reflection;
 using System.Text.Json;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.AgentFramework.Workflows.Abstractions;
 using CanDoItAll.Modules.Processes;
 using CanDoItAll.Processes.Abstractions;
 using CanDoItAll.Processes.Application;
@@ -618,6 +619,95 @@ public sealed class ProcessRuntimeIntegrationMetadataTests
     }
 
     [Fact]
+    public async Task Runtime_usage_reader_counts_typed_process_workflow_fact_once_when_agent_telemetry_has_same_id()
+    {
+        var fixture = CreateWorkflowUsageTelemetryFixture();
+        var workflowStore = new InMemoryWorkflowUsageObservationStore();
+        await workflowStore.AppendAsync(fixture.WorkflowObservation);
+        var reader = new WorkflowAwareProcessRuntimeUsageTelemetryReader(fixture.AgentReader, workflowStore);
+
+        var observations = await reader.ListAsync(new ProcessRuntimeUsageTelemetryQuery(
+            [fixture.ProcessRunId],
+            fixture.Now.AddHours(-1),
+            fixture.Now.AddHours(1),
+            TakePerRun: 25));
+
+        var observation = Assert.Single(observations);
+        Assert.Equal(fixture.WorkflowObservation.Id.Value, observation.UsageObservationId);
+        Assert.Equal(fixture.ProcessRunId, observation.RunId);
+        Assert.Equal(fixture.WorkflowObservation.RunId!.Value.Value, observation.ExecutionRunId);
+        Assert.Equal(1, observation.ToolCallCount);
+        Assert.Equal(0.42m, observation.ActualCostUsd);
+    }
+
+    [Fact]
+    public async Task Runtime_usage_reader_rejects_invalid_query_boundaries()
+    {
+        var fixture = CreateWorkflowUsageTelemetryFixture();
+        var reader = new WorkflowAwareProcessRuntimeUsageTelemetryReader(
+            fixture.AgentReader,
+            new InMemoryWorkflowUsageObservationStore());
+
+        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => reader.ListAsync(
+            new ProcessRuntimeUsageTelemetryQuery(
+                [fixture.ProcessRunId],
+                fixture.Now.AddHours(-1),
+                fixture.Now.AddHours(1),
+                TakePerRun: 0)).AsTask());
+        await Assert.ThrowsAsync<ArgumentException>(() => reader.ListAsync(
+            new ProcessRuntimeUsageTelemetryQuery(
+                [fixture.ProcessRunId],
+                fixture.Now.AddHours(1),
+                fixture.Now.AddHours(-1),
+                TakePerRun: 25)).AsTask());
+    }
+
+    [Fact]
+    public async Task Runtime_usage_reader_rejects_same_id_immutable_dimension_drift()
+    {
+        var fixture = CreateWorkflowUsageTelemetryFixture();
+        var workflowStore = new InMemoryWorkflowUsageObservationStore();
+        await workflowStore.AppendAsync(fixture.WorkflowObservation with
+        {
+            InputTokens = 101,
+            TotalTokens = 151
+        });
+        var reader = new WorkflowAwareProcessRuntimeUsageTelemetryReader(fixture.AgentReader, workflowStore);
+
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => reader.ListAsync(
+            new ProcessRuntimeUsageTelemetryQuery(
+                [fixture.ProcessRunId],
+                fixture.Now.AddHours(-1),
+                fixture.Now.AddHours(1),
+                TakePerRun: 25)).AsTask());
+
+        Assert.Contains("conflicting immutable dimensions", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Runtime_usage_reader_rejects_uncorrelated_workflow_fact()
+    {
+        var fixture = CreateWorkflowUsageTelemetryFixture();
+        var uncorrelated = fixture.WorkflowObservation with
+        {
+            Id = WorkflowUsageObservationId.New(),
+            RunId = null
+        };
+        var reader = new WorkflowAwareProcessRuntimeUsageTelemetryReader(
+            fixture.AgentReader,
+            new FixedWorkflowUsageObservationStore([uncorrelated]));
+
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => reader.ListAsync(
+            new ProcessRuntimeUsageTelemetryQuery(
+                [fixture.ProcessRunId],
+                fixture.Now.AddHours(-1),
+                fixture.Now.AddHours(1),
+                TakePerRun: 25)).AsTask());
+
+        Assert.Contains("not correlated to a workflow run", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Process_execution_metadata_does_not_trust_repository_root_as_product_target_alias()
     {
         var assignment = CreateAssignment(
@@ -671,6 +761,88 @@ public sealed class ProcessRuntimeIntegrationMetadataTests
         var writableAliases = ExecutionInvocationMetadata.ResolveAllowedExternalTargetAliases(run);
 
         Assert.Contains("external-target/C/programovani/dotnet/output", writableAliases);
+    }
+
+    private static WorkflowUsageTelemetryFixture CreateWorkflowUsageTelemetryFixture()
+    {
+        var now = new DateTimeOffset(2026, 7, 12, 20, 0, 0, TimeSpan.Zero);
+        var processRunId = ProcessRunId.New();
+        var workflowRunId = WorkflowRunId.New();
+        var executionRun = CreateUsageExecutionRun(processRunId, now);
+        var usageId = Guid.NewGuid();
+        var providerObservation = new ProviderUsageObservation(
+            usageId,
+            now,
+            "OpenAI default",
+            ProviderKind.OpenAi,
+            "gpt-test",
+            ProviderTransportKind.Responses,
+            ProviderUsageSourcePhases.AgentRuntime,
+            ProviderUsageObservationStatus.Observed,
+            InputTokens: 100,
+            CachedInputTokens: 10,
+            OutputTokens: 50,
+            ReasoningTokens: 0,
+            TotalTokens: 150,
+            ToolCallCount: 1)
+        {
+            ExecutionRunId = workflowRunId.Value,
+            ProcessRunId = processRunId.ToString(),
+            CalculatedCostUsd = 0.42m
+        };
+        var workspace = new UsageTelemetryWorkspaceService(
+            [executionRun],
+            new Dictionary<Guid, ExecutionRunDetail>
+            {
+                [executionRun.Id] = CreateExecutionRunDetail(executionRun, [providerObservation])
+            });
+        var agentReader = new AgentFrameworkProcessRuntimeUsageTelemetryReader(
+            new WorkspaceBackedAgentReferenceDataProvider(workspace, new AgentReferenceDataCache()),
+            workspace);
+        var assignmentId = new WorkflowProcessAssignmentId(Guid.Parse(executionRun.ProcessStepId));
+        var workflowObservation = new WorkflowUsageObservation(
+            new WorkflowUsageObservationId(usageId),
+            workflowRunId,
+            WorkflowId.New(),
+            WorkflowVersionId.New(),
+            new WorkflowNodeId("process-workflow-node"),
+            ExecutorId: null,
+            ComponentId: null,
+            WorkflowUsageProducerKind.LlmComponent,
+            Guid.NewGuid(),
+            Attempt: 1,
+            ProviderProfileId: null,
+            "OpenAI default",
+            ProviderKind.OpenAi,
+            ProviderTransportKind.Responses,
+            "gpt-test",
+            ProviderUsageSourcePhases.AgentRuntime,
+            WorkflowUsageStatus.Observed,
+            WorkflowPricingStatus.Known,
+            WorkflowUsagePricingProvenance.PricingProfileSnapshot,
+            InputTokens: 100,
+            CachedInputTokens: 10,
+            OutputTokens: 50,
+            ReasoningTokens: 0,
+            TotalTokens: 150,
+            ToolCallCount: 1,
+            CostUsd: 0.42m,
+            PricingProfileHash: "process-workflow-profile",
+            PricingVersion: "v1",
+            ProviderRequestId: string.Empty,
+            ProviderResponseId: string.Empty,
+            now.AddSeconds(-1),
+            now,
+            now,
+            new WorkflowLaunchOrigin.ProcessAssignment(
+                new WorkflowProcessRunId(processRunId.Value),
+                assignmentId,
+                new WorkflowLaunchCorrelationId("process-workflow-usage")));
+        return new WorkflowUsageTelemetryFixture(
+            now,
+            processRunId,
+            agentReader,
+            workflowObservation);
     }
 
     private static ExecutionRunRecord CreateUsageExecutionRun(
@@ -797,6 +969,36 @@ public sealed class ProcessRuntimeIntegrationMetadataTests
             PendingApprovals: [],
             ProcessRunId: "run-001",
             ProcessStepId: "step-001");
+    }
+
+    private sealed record WorkflowUsageTelemetryFixture(
+        DateTimeOffset Now,
+        ProcessRunId ProcessRunId,
+        AgentFrameworkProcessRuntimeUsageTelemetryReader AgentReader,
+        WorkflowUsageObservation WorkflowObservation);
+
+    private sealed class FixedWorkflowUsageObservationStore(
+        IReadOnlyList<WorkflowUsageObservation> observations) : IWorkflowUsageObservationStore
+    {
+        public Task AppendAsync(
+            WorkflowUsageObservation observation,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
+        public Task AppendRangeAsync(
+            IReadOnlyList<WorkflowUsageObservation> observationsToAppend,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
+        public Task<IReadOnlyList<WorkflowUsageObservation>> ListAsync(
+            WorkflowUsageObservationQuery query,
+            CancellationToken cancellationToken = default)
+            => Task.FromResult(observations);
+
+        public Task<WorkflowListPage<WorkflowUsageObservation>> ListPageAsync(
+            WorkflowUsageObservationPageRequest request,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
     }
 
     private sealed class FixedMetadataContribution(

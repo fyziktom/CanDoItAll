@@ -55,6 +55,7 @@ public static class MafProviderRuntimeServiceCollectionExtensions
         services.TryAddSingleton<IProviderRuntimeHandleFactory, ProviderRuntimeHandleFactory>();
         services.TryAddSingleton<IProviderRuntimePool, ProviderRuntimePool>();
         services.TryAddSingleton<IProviderBatchJobBalancer, ProviderBatchJobBalancer>();
+        services.TryAddSingleton<IAgentImageAnalysisService, ProviderRuntimeImageAnalysisService>();
         services.TryAddSingleton<IAgentImageGenerationService, ProviderRuntimeImageGenerationService>();
         services.TryAddSingleton<IMafProviderRuntimeGateway, MafProviderRuntimeGateway>();
 

@@ -414,6 +414,8 @@ public sealed class ProcessPersistenceStoreTests
         var stepId = ProcessStepInstanceId.New();
         var producedSlotId = ArtifactSlotId.New();
         var requiredSlotId = ArtifactSlotId.New();
+        var workflowId = Guid.NewGuid();
+        var workflowVersionId = Guid.NewGuid();
         var assignment = new ProcessRuntimeStepAssignment(
             runId,
             ProcessInstancePlanId.New(),
@@ -422,7 +424,7 @@ public sealed class ProcessPersistenceStoreTests
             "blazor-engineer",
             "lead-engineer",
             "Blazor engineer",
-            ProcessLaunchExecutorKinds.Agent,
+            ProcessLaunchExecutorKinds.Workflow,
             Guid.NewGuid().ToString("D"),
             "Blazor engineer",
             "Execute the step.",
@@ -440,6 +442,10 @@ public sealed class ProcessPersistenceStoreTests
             new ProcessRuntimeBranchGate("validate-blazor-runtime", "repair-required"),
             Now)
         {
+            WorkflowBinding = new ProcessWorkflowExecutorBinding(
+                new ProcessWorkflowId(workflowId),
+                new ProcessWorkflowVersionId(workflowVersionId),
+                ProcessWorkflowOutputMappingKind.ProcessStepOutcome),
             CapabilityScope = new ProcessCapabilityScope
             {
                 Directives =
@@ -468,6 +474,9 @@ public sealed class ProcessPersistenceStoreTests
         };
 
         await store.SaveAsync([assignment]);
+        var persisted = await dbContext.RuntimeStepAssignments.SingleAsync(entity =>
+            entity.RunId == runId.Value && entity.StepInstanceId == stepId.Value);
+        Assert.Equal((int)ProcessWorkflowOutputMappingKind.ProcessStepOutcome, persisted.WorkflowOutputMapping);
         var loaded = await store.LoadAsync(runId, stepId);
 
         Assert.NotNull(loaded);
@@ -479,6 +488,9 @@ public sealed class ProcessPersistenceStoreTests
         Assert.True(loaded.LaunchVariables.TryGetValue("RepositoryRoot", out var repositoryRoot));
         Assert.Equal(@"C:\programovani\dotnet\output", repositoryRoot);
         Assert.Equal("repair-required", loaded.BranchGate?.RequiredOutcomeKey);
+        Assert.Equal(workflowId, loaded.WorkflowBinding?.WorkflowId.Value);
+        Assert.Equal(workflowVersionId, loaded.WorkflowBinding?.WorkflowVersionId?.Value);
+        Assert.Equal(ProcessWorkflowOutputMappingKind.ProcessStepOutcome, loaded.WorkflowBinding?.OutputMapping);
         var directive = Assert.Single(loaded.CapabilityScope.Directives);
         Assert.Equal(ProcessCapabilityScopeDirectiveKind.AllowOnly, directive.Kind);
         Assert.Equal(ProcessCapabilityScopeTargetKind.RuntimeToolProviderKey, directive.Target.Kind);

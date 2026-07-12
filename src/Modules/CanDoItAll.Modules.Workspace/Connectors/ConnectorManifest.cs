@@ -23,6 +23,7 @@ public static class ConnectorConfigFieldType
     public const ConfigurationFieldType SecretReference = ConfigurationFieldType.SecretReference;
     public const ConfigurationFieldType Select = ConfigurationFieldType.Select;
     public const ConfigurationFieldType MultilineText = ConfigurationFieldType.MultilineText;
+    public const ConfigurationFieldType Guid = ConfigurationFieldType.Guid;
 }
 
 public sealed record ConnectorConfigFieldDescriptor(

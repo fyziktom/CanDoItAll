@@ -1,16 +1,18 @@
-using System.Globalization;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.AgentFramework.Workflows.Abstractions;
 using CanDoItAll.Components.BaseLib;
 using CanDoItAll.Components.CanvasLib;
 using CanDoItAll.Components.OverlayLib;
 using CanDoItAll.SharedKernel.Configuration;
 using CanDoItAll.Modules.Security;
 using CanDoItAll.Modules.AgentFramework.Pages;
+using CanDoItAll.Modules.Workspace;
 using Microsoft.AspNetCore.Components;
+using Microsoft.Extensions.Logging;
 
 namespace CanDoItAll.Modules.AgentFramework.Pages.Components;
 
@@ -51,6 +53,9 @@ public partial class WorkflowCanvasEditor
     [Inject]
     public NotificationService NotificationService { get; set; } = default!;
 
+    [Inject]
+    public ILogger<WorkflowCanvasEditor> Logger { get; set; } = default!;
+
     [Parameter]
     public WorkflowDefinition? Definition { get; set; }
 
@@ -59,12 +64,6 @@ public partial class WorkflowCanvasEditor
 
     [Parameter]
     public IReadOnlyList<WorkflowProviderOption> ProviderOptions { get; set; } = [];
-
-    private IReadOnlyList<WorkflowProviderOption> ImageProviderOptions => ProviderOptions
-        .Where(option => option.Purpose == ProviderProfilePurpose.ImageGeneration)
-        .OrderByDescending(option => option.IsEnabled)
-        .ThenBy(option => option.Name, StringComparer.OrdinalIgnoreCase)
-        .ToList();
 
     [Parameter]
     public EventCallback<WorkflowDefinition> DefinitionSaved { get; set; }
@@ -128,7 +127,6 @@ public partial class WorkflowCanvasEditor
     private bool isPreviewInputDialogOpen;
     private bool isBusy;
     private bool isTesting;
-    private bool isLoadingSecrets;
     private int workflowInspectorTabIndex;
 
     private WorkflowCanvasNodeDraft? SelectedNode
@@ -360,7 +358,7 @@ public partial class WorkflowCanvasEditor
         }
 
         ApplyCreateRequest(node, request);
-        ApplyExecutorCreateRequest(node, request);
+        ApplyExecutorCreateRequest(node, descriptor, request);
         document.Nodes.Add(node);
         InsertNodeBeforeEnd(node);
         SelectNode(node.Id.Value);
@@ -874,17 +872,13 @@ public partial class WorkflowCanvasEditor
         return definition;
     }
 
-    private async Task HandleCanvasSelectionChangedAsync(CanvasWorkbenchSelectionChangedEventArgs args)
+    private Task HandleCanvasSelectionChangedAsync(CanvasWorkbenchSelectionChangedEventArgs args)
     {
         selectedNodeId = args.PrimaryNodeId ?? args.SelectedNodeIds.FirstOrDefault();
         canvasUiState.SelectedNodeIds = string.IsNullOrWhiteSpace(selectedNodeId)
             ? []
             : [selectedNodeId];
-
-        if (IsHttpExecutorNode(SelectedNode))
-        {
-            await LoadSecretPickerItemsAsync();
-        }
+        return Task.CompletedTask;
     }
 
     private Task HandleCanvasStateChangedAsync(string stateJson)
@@ -932,6 +926,10 @@ public partial class WorkflowCanvasEditor
                 TryResolveExecutorDescriptor(executorId, out var descriptor))
             {
                 await AddExecutorNodeAsync(descriptor, request);
+                if (descriptor.SettingsPresentationMode == WorkflowExecutorSettingsPresentationMode.CustomRenderer)
+                {
+                    workflowInspectorTabIndex = 1;
+                }
             }
         }
         catch (Exception exception) when (exception is ArgumentException or InvalidOperationException or JsonException)
@@ -1250,25 +1248,17 @@ public partial class WorkflowCanvasEditor
         canvasUiState.SelectedNodeIds = [nodeId];
     }
 
-    private async Task HandleCanvasNodeOpenedAsync(string nodeId)
+    private Task HandleCanvasNodeOpenedAsync(string nodeId)
     {
         SelectNode(nodeId);
-        if (IsHttpExecutorNode(SelectedNode))
-        {
-            await LoadSecretPickerItemsAsync();
-        }
-
         isNodeDetailsDialogOpen = SelectedNode is not null;
+        return Task.CompletedTask;
     }
 
-    private async Task OpenSelectedNodeDetailsAsync()
+    private Task OpenSelectedNodeDetailsAsync()
     {
-        if (IsHttpExecutorNode(SelectedNode))
-        {
-            await LoadSecretPickerItemsAsync();
-        }
-
         isNodeDetailsDialogOpen = SelectedNode is not null;
+        return Task.CompletedTask;
     }
 
     private Task CloseNodeDetailsDialogAsync()
@@ -1309,6 +1299,14 @@ public partial class WorkflowCanvasEditor
         }
 
         var request = BuildCreateActionRequest(action, title, notes, objectSubtype);
+        if (WorkflowExecutorCanvasCatalog.TryParseCreateActionId(actionId, out var executorId) &&
+            TryResolveExecutorDescriptor(executorId, out var descriptor) &&
+            descriptor.SettingsPresentationMode == WorkflowExecutorSettingsPresentationMode.CustomRenderer)
+        {
+            await HandleCanvasCreateActionAsync(request);
+            return;
+        }
+
         await workbenchRef.OpenCreateDialogAsync(action, request);
     }
 
@@ -1632,6 +1630,40 @@ public partial class WorkflowCanvasEditor
         => node.ExecutorId.HasValue && TryResolveExecutorDescriptor(node.ExecutorId.Value, out var descriptor)
             ? descriptor
             : null;
+
+    private static string? ResolveSettingsRendererKey(WorkflowExecutorDescriptor descriptor)
+        => descriptor.SettingsPresentationMode == WorkflowExecutorSettingsPresentationMode.CustomRenderer
+            ? descriptor.SetupRendererKey
+            : null;
+
+    private static bool ShouldRenderSettingsRenderer(WorkflowExecutorDescriptor descriptor)
+        => descriptor.ConfigurationSchema.Fields.Count > 0 ||
+           descriptor.SettingsPresentationMode == WorkflowExecutorSettingsPresentationMode.CustomRenderer;
+
+    private static string ResolveSettingsRendererOwnerId(WorkflowExecutorDescriptor descriptor)
+        => descriptor.SettingsPresentationMode != WorkflowExecutorSettingsPresentationMode.CustomRenderer
+            ? string.Empty
+            : descriptor.Source.TrustLevel switch
+        {
+            WorkflowExecutorTrustLevel.Application => descriptor.Source.SourceId,
+            WorkflowExecutorTrustLevel.BundledPlugin => descriptor.Source.PluginId,
+            _ => string.Empty
+        };
+
+    private static SettingsRendererTrustLevel? ResolveSettingsRendererTrustLevel(
+        WorkflowExecutorDescriptor descriptor)
+        => descriptor.SettingsPresentationMode != WorkflowExecutorSettingsPresentationMode.CustomRenderer
+            ? null
+            : descriptor.Source.TrustLevel switch
+        {
+            WorkflowExecutorTrustLevel.Application => SettingsRendererTrustLevel.Application,
+            WorkflowExecutorTrustLevel.BundledPlugin => SettingsRendererTrustLevel.BundledPlugin,
+            _ => null
+        };
+
+    private static bool HasSecretReferenceSettings(WorkflowExecutorDescriptor descriptor)
+        => descriptor.ConfigurationSchema.Fields.Any(field =>
+            field.FieldType == ConfigurationFieldType.SecretReference);
 
     private void HandleSelectedExecutorChanged(WorkflowCanvasNodeDraft node, ChangeEventArgs args)
     {
@@ -1963,37 +1995,6 @@ public partial class WorkflowCanvasEditor
         node.ExecutionPolicy = update(ResolveSelectedExecutionPolicy(node));
     }
 
-    private TSettings ReadExecutorSettings<TSettings>(WorkflowCanvasNodeDraft node)
-        where TSettings : new()
-    {
-        var settingsJson = string.IsNullOrWhiteSpace(node.ExecutorSettingsJson)
-            ? ResolveSelectedExecutorDescriptor(node)?.DefaultSettingsJson
-            : node.ExecutorSettingsJson;
-        if (string.IsNullOrWhiteSpace(settingsJson))
-        {
-            return new TSettings();
-        }
-
-        try
-        {
-            return JsonSerializer.Deserialize<TSettings>(settingsJson, ExecutorJsonOptions) ?? new TSettings();
-        }
-        catch (JsonException)
-        {
-            return new TSettings();
-        }
-    }
-
-    private void UpdateExecutorSettings<TSettings>(
-        WorkflowCanvasNodeDraft node,
-        Func<TSettings, TSettings> update)
-        where TSettings : new()
-    {
-        var updated = update(ReadExecutorSettings<TSettings>(node));
-        node.ExecutorSettingsJson = JsonSerializer.Serialize(updated, ExecutorJsonOptions);
-        errorMessage = string.Empty;
-    }
-
     private ConfigurationState CreateExecutorConfigurationState(
         WorkflowCanvasNodeDraft node,
         WorkflowExecutorDescriptor descriptor)
@@ -2002,7 +2003,9 @@ public partial class WorkflowCanvasEditor
             ? descriptor.DefaultSettingsJson
             : node.ExecutorSettingsJson;
 
-        return ReadConfigurationState(settingsJson, descriptor.ConfigurationSchema);
+        return WorkflowExecutorConfigurationMapper.ReadState(
+            settingsJson,
+            descriptor.ConfigurationSchema);
     }
 
     private void HandleSelectedExecutorConfigurationStateChanged(
@@ -2010,244 +2013,12 @@ public partial class WorkflowCanvasEditor
         ConfigurationSchema schema,
         ConfigurationState state)
     {
-        node.ExecutorSettingsJson = SerializeConfigurationState(schema, state);
+        node.ExecutorSettingsJson = WorkflowExecutorConfigurationMapper.SerializeState(schema, state);
         errorMessage = string.Empty;
-    }
-
-    private static ConfigurationState ReadConfigurationState(
-        string? settingsJson,
-        ConfigurationSchema schema)
-    {
-        if (string.IsNullOrWhiteSpace(settingsJson))
-        {
-            return new ConfigurationState();
-        }
-
-        try
-        {
-            using var document = JsonDocument.Parse(settingsJson);
-            if (document.RootElement.ValueKind != JsonValueKind.Object)
-            {
-                return new ConfigurationState();
-            }
-
-            var values = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-            foreach (var property in document.RootElement.EnumerateObject())
-            {
-                values[property.Name] = NormalizeConfigurationValue(
-                    property.Name,
-                    property.Value.ValueKind == JsonValueKind.String
-                        ? property.Value.GetString() ?? string.Empty
-                        : property.Value.GetRawText(),
-                    schema);
-            }
-
-            return new ConfigurationState(values);
-        }
-        catch (JsonException)
-        {
-            return new ConfigurationState();
-        }
-    }
-
-    private static string NormalizeConfigurationValue(
-        string key,
-        string value,
-        ConfigurationSchema schema)
-    {
-        var field = schema.Fields.FirstOrDefault(candidate => string.Equals(candidate.Key, key, StringComparison.OrdinalIgnoreCase));
-        if (field?.FieldType != ConfigurationFieldType.Select)
-        {
-            return value;
-        }
-
-        var option = field.Options.FirstOrDefault(candidate =>
-            string.Equals(candidate.Value, value, StringComparison.OrdinalIgnoreCase) ||
-            candidate.AcceptedValues.Any(acceptedValue => string.Equals(acceptedValue, value, StringComparison.OrdinalIgnoreCase)));
-        return option?.Value ?? value;
-    }
-
-    private static string SerializeConfigurationState(
-        ConfigurationSchema schema,
-        ConfigurationState state)
-    {
-        using var stream = new MemoryStream();
-        using (var writer = new Utf8JsonWriter(stream))
-        {
-            writer.WriteStartObject();
-            var writtenKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            foreach (var field in schema.Fields)
-            {
-                if (!state.Values.TryGetValue(field.Key, out var value) ||
-                    string.IsNullOrWhiteSpace(value))
-                {
-                    continue;
-                }
-
-                WriteConfigurationValue(writer, field.Key, value, field);
-                writtenKeys.Add(field.Key);
-            }
-
-            foreach (var item in state.Values)
-            {
-                if (writtenKeys.Contains(item.Key) ||
-                    string.IsNullOrWhiteSpace(item.Value))
-                {
-                    continue;
-                }
-
-                writer.WriteString(item.Key, item.Value);
-            }
-
-            writer.WriteEndObject();
-        }
-
-        return Encoding.UTF8.GetString(stream.ToArray());
-    }
-
-    private static void WriteConfigurationValue(
-        Utf8JsonWriter writer,
-        string key,
-        string value,
-        ConfigurationFieldDescriptor field)
-    {
-        switch (field.FieldType)
-        {
-            case ConfigurationFieldType.Number:
-                if (int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var number))
-                {
-                    writer.WriteNumber(key, number);
-                    return;
-                }
-
-                break;
-            case ConfigurationFieldType.Boolean:
-                if (bool.TryParse(value, out var boolean))
-                {
-                    writer.WriteBoolean(key, boolean);
-                    return;
-                }
-
-                break;
-            case ConfigurationFieldType.Json:
-                if (TryWriteRawJsonValue(writer, key, value))
-                {
-                    return;
-                }
-
-                break;
-            default:
-                break;
-        }
-
-        writer.WriteString(key, value);
-    }
-
-    private static bool TryWriteRawJsonValue(
-        Utf8JsonWriter writer,
-        string key,
-        string value)
-    {
-        try
-        {
-            using var document = JsonDocument.Parse(value);
-            writer.WritePropertyName(key);
-            document.RootElement.WriteTo(writer);
-            return true;
-        }
-        catch (JsonException)
-        {
-            return false;
-        }
-    }
-
-    private void UpdateEnumExecutorSettings<TSettings, TEnum>(
-        WorkflowCanvasNodeDraft node,
-        ChangeEventArgs args,
-        Func<TSettings, TEnum, TSettings> update)
-        where TSettings : new()
-        where TEnum : struct, Enum
-    {
-        if (Enum.TryParse<TEnum>(ReadString(args), out var parsed))
-        {
-            UpdateExecutorSettings<TSettings>(node, settings => update(settings, parsed));
-        }
-    }
-
-    private string BuildHeadersJson(WorkflowCanvasNodeDraft node)
-        => JsonSerializer.Serialize(ReadExecutorSettings<WorkflowHttpExecutorSettings>(node).Headers, IndentedExecutorJsonOptions);
-
-    private void UpdateHttpHeadersJson(WorkflowCanvasNodeDraft node, ChangeEventArgs args)
-    {
-        if (!TryDeserializeJson<IReadOnlyDictionary<string, string>>(args.Value?.ToString(), out var headers))
-        {
-            return;
-        }
-
-        UpdateExecutorSettings<WorkflowHttpExecutorSettings>(node, settings => settings with
-        {
-            Headers = headers ?? new Dictionary<string, string>()
-        });
-    }
-
-    private void UpdateHttpSecretId(WorkflowCanvasNodeDraft node, ChangeEventArgs args)
-    {
-        var selected = Guid.TryParse(args.Value?.ToString(), out var secretId) && secretId != Guid.Empty
-            ? secretPickerItems.FirstOrDefault(item => item.Id == secretId)
-            : null;
-
-        UpdateExecutorSettings<WorkflowHttpExecutorSettings>(node, settings => settings with
-        {
-            SecretHeader = settings.SecretHeader with
-            {
-                SecretId = selected?.Id,
-                SecretNameSnapshot = selected?.Name ?? string.Empty,
-                Purpose = WorkflowSecretPurposes.HttpHeader
-            }
-        });
-    }
-
-    private void UpdateHttpSecretHeaderName(WorkflowCanvasNodeDraft node, ChangeEventArgs args)
-    {
-        UpdateExecutorSettings<WorkflowHttpExecutorSettings>(node, settings => settings with
-        {
-            SecretHeader = settings.SecretHeader with
-            {
-                HeaderName = ReadString(args)
-            }
-        });
-    }
-
-    private void UpdateHttpSecretValueFormat(WorkflowCanvasNodeDraft node, ChangeEventArgs args)
-    {
-        if (!Enum.TryParse<WorkflowHttpSecretValueFormat>(ReadString(args), out var valueFormat))
-        {
-            return;
-        }
-
-        UpdateExecutorSettings<WorkflowHttpExecutorSettings>(node, settings => settings with
-        {
-            SecretHeader = settings.SecretHeader with
-            {
-                ValueFormat = valueFormat
-            }
-        });
-    }
-
-    private void UpdateHttpSecretCustomPrefix(WorkflowCanvasNodeDraft node, ChangeEventArgs args)
-    {
-        UpdateExecutorSettings<WorkflowHttpExecutorSettings>(node, settings => settings with
-        {
-            SecretHeader = settings.SecretHeader with
-            {
-                CustomPrefix = ReadString(args)
-            }
-        });
     }
 
     private async Task LoadSecretPickerItemsAsync()
     {
-        isLoadingSecrets = true;
         secretPickerErrorMessage = string.Empty;
         try
         {
@@ -2256,68 +2027,10 @@ public partial class WorkflowCanvasEditor
         catch (Exception exception)
         {
             secretPickerItems = [];
-            secretPickerErrorMessage = $"Secret list failed to load. {exception.Message}";
-        }
-        finally
-        {
-            isLoadingSecrets = false;
-        }
-    }
-
-    private static bool IsHttpExecutorNode(WorkflowCanvasNodeDraft? node)
-        => node is
-        {
-            Kind: WorkflowNodeKind.Executor,
-            ExecutorId: { } executorId
-        } && executorId == WorkflowExecutorIds.HttpFetch;
-
-    private string BuildCellWritesJson(WorkflowCanvasNodeDraft node)
-        => JsonSerializer.Serialize(ReadExecutorSettings<WorkflowSpreadsheetExecutorSettings>(node).CellWrites, IndentedExecutorJsonOptions);
-
-    private string BuildRangeWritesJson(WorkflowCanvasNodeDraft node)
-        => JsonSerializer.Serialize(ReadExecutorSettings<WorkflowSpreadsheetExecutorSettings>(node).RangeWrites, IndentedExecutorJsonOptions);
-
-    private void UpdateSpreadsheetCellWritesJson(WorkflowCanvasNodeDraft node, ChangeEventArgs args)
-    {
-        if (!TryDeserializeJson<IReadOnlyList<WorkflowSpreadsheetCellWrite>>(args.Value?.ToString(), out var writes))
-        {
-            return;
-        }
-
-        UpdateExecutorSettings<WorkflowSpreadsheetExecutorSettings>(node, settings => settings with
-        {
-            CellWrites = writes ?? []
-        });
-    }
-
-    private void UpdateSpreadsheetRangeWritesJson(WorkflowCanvasNodeDraft node, ChangeEventArgs args)
-    {
-        if (!TryDeserializeJson<IReadOnlyList<WorkflowSpreadsheetRangeWrite>>(args.Value?.ToString(), out var writes))
-        {
-            return;
-        }
-
-        UpdateExecutorSettings<WorkflowSpreadsheetExecutorSettings>(node, settings => settings with
-        {
-            RangeWrites = writes ?? []
-        });
-    }
-
-    private bool TryDeserializeJson<T>(string? json, out T? value)
-    {
-        try
-        {
-            value = string.IsNullOrWhiteSpace(json)
-                ? default
-                : JsonSerializer.Deserialize<T>(json, ExecutorJsonOptions);
-            errorMessage = string.Empty;
-            return true;
-        }
-        catch (JsonException exception)
-        {
-            value = default;
-            errorMessage = exception.Message;
-            return false;
+            secretPickerErrorMessage = "Secrets could not be loaded for executor settings.";
+            Logger.LogError(
+                "Failed to load secret picker items for workflow executor settings. FailureType: {FailureType}",
+                exception.GetType().Name);
         }
     }
 
@@ -2417,6 +2130,7 @@ public partial class WorkflowCanvasEditor
 
     private static void ApplyExecutorCreateRequest(
         WorkflowCanvasNodeDraft node,
+        WorkflowExecutorDescriptor? descriptor,
         CanvasWorkbenchCreateActionRequest? request)
     {
         if (request is null || node.Kind != WorkflowNodeKind.Executor)
@@ -2457,205 +2171,29 @@ public partial class WorkflowCanvasEditor
         }
 
         node.ExecutionPolicy = policy;
-        if (node.ExecutorId == WorkflowExecutorIds.StorageFile)
+        if (descriptor?.ConfigurationSchema.Fields.Count > 0)
         {
-            var settings = ReadExecutorCreateSettings<WorkflowStorageFileExecutorSettings>(node);
-            if (Enum.TryParse<WorkflowStorageFileOperation>(GetInputValue(request, "storageOperation", settings.Operation.ToString()), out var operation))
+            var state = WorkflowExecutorConfigurationMapper.ReadState(
+                node.ExecutorSettingsJson,
+                descriptor.ConfigurationSchema);
+            foreach (var field in descriptor.ConfigurationSchema.Fields)
             {
-                settings = settings with { Operation = operation };
-            }
-
-            settings = settings with
-            {
-                Path = GetInputValue(request, "storagePath", settings.Path),
-                DestinationPath = GetInputValue(request, "storageDestinationPath", settings.DestinationPath),
-                Content = GetInputValue(request, "storageContent", settings.Content),
-                ContentFromInput = ReadCreateBool(request, "storageContentFromInput", settings.ContentFromInput),
-                Query = GetInputValue(request, "storageQuery", settings.Query),
-                SearchPattern = GetInputValue(request, "storageSearchPattern", settings.SearchPattern),
-                MaxResults = ReadCreateInt(request, "storageMaxResults", settings.MaxResults),
-                MaxCharacters = ReadCreateInt(request, "storageMaxCharacters", settings.MaxCharacters),
-                Overwrite = ReadCreateBool(request, "storageOverwrite", settings.Overwrite)
-            };
-            node.ExecutorSettingsJson = JsonSerializer.Serialize(settings, ExecutorJsonOptions);
-            return;
-        }
-
-        if (node.ExecutorId == WorkflowExecutorIds.HttpFetch)
-        {
-            var settings = ReadExecutorCreateSettings<WorkflowHttpExecutorSettings>(node);
-            if (Enum.TryParse<WorkflowHttpMethodKind>(GetInputValue(request, "httpMethod", settings.Method.ToString()), out var method))
-            {
-                settings = settings with { Method = method };
-            }
-
-            var headers = settings.Headers;
-            var headersJson = GetInputValue(request, "httpHeadersJson", string.Empty);
-            if (!string.IsNullOrWhiteSpace(headersJson))
-            {
-                headers = JsonSerializer.Deserialize<IReadOnlyDictionary<string, string>>(headersJson, ExecutorJsonOptions)
-                          ?? new Dictionary<string, string>();
-            }
-
-            var secretHeader = settings.SecretHeader;
-            var httpSecretId = GetInputValue(request, "httpSecretId", secretHeader.SecretId?.ToString("D") ?? string.Empty);
-            if (Guid.TryParse(httpSecretId, out var parsedSecretId) && parsedSecretId != Guid.Empty)
-            {
-                secretHeader = secretHeader with
+                var inputKey = WorkflowExecutorConfigurationMapper.BuildInputKey(field.Key);
+                var input = request.InputValues?.FirstOrDefault(candidate =>
+                    string.Equals(candidate.Key, inputKey, StringComparison.OrdinalIgnoreCase));
+                if (input is not null)
                 {
-                    SecretId = parsedSecretId,
-                    SecretNameSnapshot = ResolveSecretNameSnapshot(parsedSecretId),
-                    Purpose = WorkflowSecretPurposes.HttpHeader
-                };
-            }
-            else
-            {
-                secretHeader = secretHeader with
-                {
-                    SecretId = null,
-                    SecretNameSnapshot = string.Empty
-                };
+                    state.SetText(field.Key, input.Value);
+                }
             }
 
-            if (Enum.TryParse<WorkflowHttpSecretValueFormat>(GetInputValue(request, "httpSecretValueFormat", secretHeader.ValueFormat.ToString()), out var secretValueFormat))
-            {
-                secretHeader = secretHeader with
-                {
-                    ValueFormat = secretValueFormat
-                };
-            }
-
-            secretHeader = secretHeader with
-            {
-                HeaderName = GetInputValue(request, "httpSecretHeaderName", secretHeader.HeaderName),
-                CustomPrefix = GetInputValue(request, "httpSecretCustomPrefix", secretHeader.CustomPrefix)
-            };
-
-            settings = settings with
-            {
-                Url = GetInputValue(request, "httpUrl", settings.Url),
-                UrlJsonPath = GetInputValue(request, "httpUrlJsonPath", settings.UrlJsonPath),
-                Headers = headers,
-                SecretHeader = secretHeader,
-                Body = GetInputValue(request, "httpBody", settings.Body),
-                MaxResponseBytes = ReadCreateInt(request, "httpMaxResponseBytes", settings.MaxResponseBytes),
-                IncludeInputPayload = ReadCreateBool(request, "httpIncludeInputPayload", settings.IncludeInputPayload)
-            };
-            node.ExecutorSettingsJson = JsonSerializer.Serialize(settings, ExecutorJsonOptions);
+            node.ExecutorSettingsJson = WorkflowExecutorConfigurationMapper.SerializeCompleteState(
+                descriptor.ConfigurationSchema,
+                state);
             return;
         }
 
-        if (node.ExecutorId == WorkflowExecutorIds.Spreadsheet)
-        {
-            var settings = ReadExecutorCreateSettings<WorkflowSpreadsheetExecutorSettings>(node);
-            if (Enum.TryParse<WorkflowSpreadsheetOperation>(GetInputValue(request, "spreadsheetOperation", settings.Operation.ToString()), out var operation))
-            {
-                settings = settings with { Operation = operation };
-            }
-
-            settings = settings with
-            {
-                WorkbookPath = GetInputValue(request, "spreadsheetWorkbookPath", settings.WorkbookPath),
-                OutputWorkbookPath = GetInputValue(request, "spreadsheetOutputWorkbookPath", settings.OutputWorkbookPath),
-                WorksheetName = GetInputValue(request, "spreadsheetWorksheetName", settings.WorksheetName),
-                CellAddress = GetInputValue(request, "spreadsheetCellAddress", settings.CellAddress),
-                RangeAddress = GetInputValue(request, "spreadsheetRangeAddress", settings.RangeAddress),
-                Value = GetInputValue(request, "spreadsheetValue", settings.Value),
-                CreateWorkbookIfMissing = ReadCreateBool(request, "spreadsheetCreateWorkbookIfMissing", settings.CreateWorkbookIfMissing),
-                Overwrite = ReadCreateBool(request, "spreadsheetOverwrite", settings.Overwrite),
-                MaxRows = ReadCreateInt(request, "spreadsheetMaxRows", settings.MaxRows),
-                MaxColumns = ReadCreateInt(request, "spreadsheetMaxColumns", settings.MaxColumns)
-            };
-            node.ExecutorSettingsJson = JsonSerializer.Serialize(settings, ExecutorJsonOptions);
-            return;
-        }
-
-        if (node.ExecutorId == WorkflowExecutorIds.ProjectStructure)
-        {
-            var settings = ReadExecutorCreateSettings<WorkflowProjectStructureExecutorSettings>(node);
-            if (Enum.TryParse<WorkflowProjectStructureOperation>(GetInputValue(request, "projectStructureOperation", settings.Operation.ToString()), out var operation))
-            {
-                settings = settings with { Operation = operation };
-            }
-
-            var projectId = settings.ProjectId;
-            var projectIdValue = GetInputValue(request, "projectStructureProjectId", projectId?.ToString("D") ?? string.Empty);
-            if (Guid.TryParse(projectIdValue, out var parsedProjectId) && parsedProjectId != Guid.Empty)
-            {
-                projectId = parsedProjectId;
-            }
-
-            settings = settings with
-            {
-                ProjectId = projectId,
-                ProjectIdJsonPath = GetInputValue(request, "projectStructureProjectIdJsonPath", settings.ProjectIdJsonPath),
-                NodeId = GetInputValue(request, "projectStructureNodeId", settings.NodeId),
-                NodeIdJsonPath = GetInputValue(request, "projectStructureNodeIdJsonPath", settings.NodeIdJsonPath),
-                AssetKind = GetInputValue(request, "projectStructureAssetKind", settings.AssetKind),
-                Title = GetInputValue(request, "projectStructureTitle", settings.Title),
-                Content = GetInputValue(request, "projectStructureContent", settings.Content),
-                ContentFromInput = ReadCreateBool(request, "projectStructureContentFromInput", settings.ContentFromInput),
-                SourceWorkspacePath = GetInputValue(request, "projectStructureSourceWorkspacePath", settings.SourceWorkspacePath),
-                ContentType = GetInputValue(request, "projectStructureContentType", settings.ContentType)
-            };
-            node.ExecutorSettingsJson = JsonSerializer.Serialize(settings, ExecutorJsonOptions);
-            return;
-        }
-
-        if (node.ExecutorId == WorkflowExecutorIds.ImageGeneration)
-        {
-            var settings = ReadExecutorCreateSettings<WorkflowImageGenerationExecutorSettings>(node);
-            if (Enum.TryParse<WorkflowImageGenerationOperation>(GetInputValue(request, "imageOperation", settings.Operation.ToString()), out var operation))
-            {
-                settings = settings with { Operation = operation };
-            }
-
-            var providerProfileId = settings.ProviderProfileId;
-            var providerIdValue = GetInputValue(request, "imageProviderProfileId", providerProfileId?.ToString("D") ?? string.Empty);
-            if (Guid.TryParse(providerIdValue, out var parsedProviderId) && parsedProviderId != Guid.Empty)
-            {
-                providerProfileId = parsedProviderId;
-            }
-
-            settings = settings with
-            {
-                Prompt = GetInputValue(request, "imagePrompt", settings.Prompt),
-                ProviderProfileId = providerProfileId,
-                Model = GetInputValue(request, "imageModel", settings.Model),
-                Size = GetInputValue(request, "imageSize", settings.Size),
-                Quality = GetInputValue(request, "imageQuality", settings.Quality),
-                OutputFormat = GetInputValue(request, "imageOutputFormat", settings.OutputFormat),
-                OutputWorkspacePath = GetInputValue(request, "imageOutputWorkspacePath", settings.OutputWorkspacePath)
-            };
-            node.ExecutorSettingsJson = JsonSerializer.Serialize(settings, ExecutorJsonOptions);
-        }
     }
-
-    private static TSettings ReadExecutorCreateSettings<TSettings>(WorkflowCanvasNodeDraft node)
-        where TSettings : new()
-    {
-        if (string.IsNullOrWhiteSpace(node.ExecutorSettingsJson))
-        {
-            return new TSettings();
-        }
-
-        return JsonSerializer.Deserialize<TSettings>(node.ExecutorSettingsJson, ExecutorJsonOptions) ?? new TSettings();
-    }
-
-    private static string ResolveSecretNameSnapshot(Guid secretId)
-        => secretId == Guid.Empty ? string.Empty : secretId.ToString("D");
-
-    private static int ReadCreateInt(
-        CanvasWorkbenchCreateActionRequest request,
-        string key,
-        int fallback)
-        => int.TryParse(GetInputValue(request, key, string.Empty), out var value) ? value : fallback;
-
-    private static bool ReadCreateBool(
-        CanvasWorkbenchCreateActionRequest request,
-        string key,
-        bool fallback)
-        => bool.TryParse(GetInputValue(request, key, string.Empty), out var value) ? value : fallback;
 
     private LlmCallComponent? ResolveRequestedComponent(CanvasWorkbenchCreateActionRequest request)
     {
@@ -2870,24 +2408,6 @@ public partial class WorkflowCanvasEditor
     {
         var label = $"{option.Name} - {option.Kind} - {option.Transport}";
         return option.IsEnabled ? label : $"{label} (disabled)";
-    }
-
-    private WorkflowProviderOption? ResolveImageProviderOption(Guid? providerProfileId)
-    {
-        return providerProfileId.HasValue
-            ? ImageProviderOptions.FirstOrDefault(option => option.ProviderProfileId == providerProfileId.Value)
-            : null;
-    }
-
-    private string BuildImageProviderOptionsSummary()
-    {
-        if (ImageProviderOptions.Count == 0)
-        {
-            return "No image-generation providers are available.";
-        }
-
-        var enabledCount = ImageProviderOptions.Count(option => option.IsEnabled);
-        return $"{enabledCount} enabled image provider(s) available.";
     }
 
     private void SyncNewComponentDefaults()

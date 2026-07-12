@@ -26,6 +26,41 @@ public sealed class ClosedXmlSpreadsheetDocumentService : ISpreadsheetDocumentSe
         return new SpreadsheetWorkbookSummary(workbookPath, worksheets);
     }
 
+    public SpreadsheetWorkbookPreviewResult PreviewWorkbook(SpreadsheetWorkbookPreviewRequest request)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        ArgumentException.ThrowIfNullOrWhiteSpace(request.WorkbookPath);
+        ValidatePreviewLimit(
+            request.MaxWorksheets,
+            SpreadsheetWorkbookPreviewRequest.MaximumWorksheets,
+            nameof(request.MaxWorksheets));
+        ValidatePreviewLimit(
+            request.MaxRows,
+            SpreadsheetWorkbookPreviewRequest.MaximumRows,
+            nameof(request.MaxRows));
+        ValidatePreviewLimit(
+            request.MaxColumns,
+            SpreadsheetWorkbookPreviewRequest.MaximumColumns,
+            nameof(request.MaxColumns));
+
+        using var workbook = OpenPreviewWorkbook(request.WorkbookPath);
+        var totalWorksheetCount = workbook.Worksheets.Count;
+        var worksheets = workbook.Worksheets
+            .Take(request.MaxWorksheets)
+            .Select((worksheet, index) => CreateWorksheetPreview(
+                worksheet,
+                index + 1,
+                request.MaxRows,
+                request.MaxColumns))
+            .ToArray();
+
+        return new SpreadsheetWorkbookPreviewResult(
+            request.WorkbookPath,
+            totalWorksheetCount,
+            worksheets,
+            WorksheetsTruncated: totalWorksheetCount > worksheets.Length);
+    }
+
     public SpreadsheetCellValue ReadCell(string workbookPath, string worksheetName, string cellAddress)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(workbookPath);
@@ -137,6 +172,89 @@ public sealed class ClosedXmlSpreadsheetDocumentService : ISpreadsheetDocumentSe
     {
         return workbook.Worksheets.FirstOrDefault(item => string.Equals(item.Name, worksheetName, StringComparison.OrdinalIgnoreCase))
             ?? throw new InvalidOperationException($"Spreadsheet worksheet '{worksheetName}' was not found.");
+    }
+
+    private static XLWorkbook OpenPreviewWorkbook(string workbookPath)
+    {
+        var fullPath = Path.GetFullPath(workbookPath);
+        if (!File.Exists(fullPath))
+        {
+            throw new FileNotFoundException($"Spreadsheet workbook '{fullPath}' was not found.", fullPath);
+        }
+
+        try
+        {
+            return new XLWorkbook(fullPath);
+        }
+        catch (UnauthorizedAccessException)
+        {
+            throw;
+        }
+        catch (Exception exception) when (exception is not OutOfMemoryException)
+        {
+            throw new InvalidDataException($"Spreadsheet workbook '{fullPath}' could not be opened as an XLSX workbook.", exception);
+        }
+    }
+
+    private static SpreadsheetWorksheetPreview CreateWorksheetPreview(
+        IXLWorksheet worksheet,
+        int position,
+        int maxRows,
+        int maxColumns)
+    {
+        var usedRange = worksheet.RangeUsed();
+        if (usedRange is null)
+        {
+            return new SpreadsheetWorksheetPreview(
+                worksheet.Name,
+                position,
+                UsedRangeAddress: string.Empty,
+                UsedRowCount: 0,
+                UsedColumnCount: 0,
+                Values: [],
+                MarkdownTable: string.Empty,
+                RowsTruncated: false,
+                ColumnsTruncated: false);
+        }
+
+        var usedRowCount = usedRange.RowCount();
+        var usedColumnCount = usedRange.ColumnCount();
+        var previewRowCount = Math.Min(usedRowCount, maxRows);
+        var previewColumnCount = Math.Min(usedColumnCount, maxColumns);
+        var values = new List<IReadOnlyList<string>>(previewRowCount);
+
+        for (var rowIndex = 1; rowIndex <= previewRowCount; rowIndex++)
+        {
+            var row = new List<string>(previewColumnCount);
+            for (var columnIndex = 1; columnIndex <= previewColumnCount; columnIndex++)
+            {
+                row.Add(CellToString(usedRange.Cell(rowIndex, columnIndex)));
+            }
+
+            values.Add(row);
+        }
+
+        return new SpreadsheetWorksheetPreview(
+            worksheet.Name,
+            position,
+            usedRange.RangeAddress.ToStringRelative(),
+            usedRowCount,
+            usedColumnCount,
+            values,
+            BuildMarkdownTable(values),
+            RowsTruncated: usedRowCount > previewRowCount,
+            ColumnsTruncated: usedColumnCount > previewColumnCount);
+    }
+
+    private static void ValidatePreviewLimit(int value, int maximum, string parameterName)
+    {
+        if (value < 1 || value > maximum)
+        {
+            throw new ArgumentOutOfRangeException(
+                parameterName,
+                value,
+                $"Spreadsheet preview limit '{parameterName}' must be between 1 and {maximum}.");
+        }
     }
 
     private static void WriteRange(IXLRange range, IReadOnlyList<IReadOnlyList<string>> values)

@@ -10,6 +10,8 @@ internal sealed class WorkspaceSpreadsheetRuntimePlugin(
     WorkspaceScopeDescriptor workspaceScope,
     AgentWorkspaceToolAccessSettings accessSettings)
 {
+    private const string SpreadsheetPreviewOperation = "workspace_spreadsheet_preview";
+
     private readonly ISpreadsheetDocumentService spreadsheets = spreadsheets ?? throw new ArgumentNullException(nameof(spreadsheets));
     private readonly WorkspacePathResolutionService paths = new(workspaceRoot, workspaceScope);
     private readonly WorkspaceSpreadsheetRuntimePathAccess pathAccess = new(workspaceRoot, workspaceScope, accessSettings);
@@ -30,6 +32,34 @@ internal sealed class WorkspaceSpreadsheetRuntimePlugin(
             startedAtUtc);
 
         return summary with
+        {
+            WorkbookPath = workbook.RelativePath
+        };
+    }
+
+    public SpreadsheetWorkbookPreviewResult PreviewWorkbook(
+        string workbookPath,
+        int maxWorksheets = 2,
+        int maxRows = 8,
+        int maxColumns = 8)
+    {
+        var startedAtUtc = DateTimeOffset.UtcNow;
+        var workbook = ResolveReadableWorkbook(workbookPath);
+        var result = spreadsheets.PreviewWorkbook(new SpreadsheetWorkbookPreviewRequest(
+            workbook.FullPath,
+            maxWorksheets,
+            maxRows,
+            maxColumns));
+        receiptWriter.Persist(
+            SpreadsheetPreviewOperation,
+            mutatesWorkspace: false,
+            message: $"Previewed {result.Worksheets.Count} of {result.TotalWorksheetCount} worksheet(s) from workbook '{workbook.RelativePath}'.",
+            requestSummary: $"{workbook.RelativePath}, maxWorksheets={maxWorksheets}, maxRows={maxRows}, maxColumns={maxColumns}",
+            targetPaths: [workbook.RelativePath],
+            artifactReferences: [],
+            startedAtUtc);
+
+        return result with
         {
             WorkbookPath = workbook.RelativePath
         };

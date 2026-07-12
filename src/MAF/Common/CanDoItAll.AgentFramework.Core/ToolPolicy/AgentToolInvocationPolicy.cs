@@ -2707,6 +2707,11 @@ public static class AgentToolInvocationPolicyMetadata
     public const string ProcessesTemplateImport = "processes_template_import";
     public const string ProcessesTemplateBaselineScenariosList = "processes_template_baseline_scenarios_list";
     public const string ProcessesTemplateLiveRunProfilesList = "processes_template_live_run_profiles_list";
+    public const string WorkflowsDefinitionsList = "workflows_definitions_list";
+    public const string WorkflowsRunStart = "workflows_run_start";
+    public const string WorkflowsRunStatusGet = "workflows_run_status_get";
+    public const string WorkflowsRunCancel = "workflows_run_cancel";
+    public const string WorkflowsExternalResponseSubmit = "workflows_external_response_submit";
     public const string ImageGenerationCreate = "image_generation_create";
     public const string WorkspaceInspectImage = "workspace_inspect_image";
     public const string WorkspaceAnalyzeImage = "workspace_analyze_image";

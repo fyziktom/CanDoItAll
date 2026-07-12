@@ -139,7 +139,8 @@ public sealed class WorkflowExecutorFoundationExtractionTests
         var fields = descriptor.ConfigurationSchema.Fields.ToDictionary(field => field.Key);
         Assert.Equal(ConfigurationFieldType.Boolean, fields["enabled"].FieldType);
         Assert.Equal(ConfigurationFieldType.Number, fields["limit"].FieldType);
-        Assert.Equal(ConfigurationFieldType.Text, fields["projectId"].FieldType);
+        Assert.Equal(ConfigurationNumberKind.Int32, fields["limit"].NumberKind);
+        Assert.Equal(ConfigurationFieldType.Guid, fields["projectId"].FieldType);
         Assert.Equal(ConfigurationFieldType.Select, fields["mode"].FieldType);
         Assert.Equal(ConfigurationFieldType.Json, fields["filter"].FieldType);
         Assert.Contains(fields["mode"].Options, option => option.Value == nameof(FactoryMode.Strict));
@@ -160,7 +161,7 @@ public sealed class WorkflowExecutorFoundationExtractionTests
         var cognitiveRecall = CanDoItAll.Modules.CognitiveMemory.CognitiveMemoryWorkflowExecutorDescriptors.Recall;
         Assert.Equal(WorkflowExecutorSourceKind.BuiltIn, cognitiveRecall.Source.Kind);
         Assert.Equal(WorkflowExecutorDescriptorFactory.SettingsSchemaVersion, cognitiveRecall.ConfigurationSchema.Version);
-        Assert.Contains(cognitiveRecall.ConfigurationSchema.Fields, field => field.Key == "projectId" && field.FieldType == ConfigurationFieldType.Text);
+        Assert.Contains(cognitiveRecall.ConfigurationSchema.Fields, field => field.Key == "projectId" && field.FieldType == ConfigurationFieldType.Guid);
         Assert.Contains("\"contextCharacterBudget\"", cognitiveRecall.DefaultSettingsJson, StringComparison.Ordinal);
     }
 
@@ -248,11 +249,20 @@ public sealed class WorkflowExecutorFoundationExtractionTests
             "src/plugins/Implementations/CanDoItAll.Plugin.Gmail/CanDoItAll.Plugin.Gmail.csproj",
             "CanDoItAll.AgentFramework.WorkflowExecutors.Abstractions");
         AssertProjectReferences(
+            "src/plugins/Implementations/CanDoItAll.Plugin.Gmail/CanDoItAll.Plugin.Gmail.csproj",
+            "CanDoItAll.AgentFramework.WorkflowExecutors.Core");
+        AssertProjectReferences(
             "src/plugins/Implementations/CanDoItAll.Plugin.Office365/CanDoItAll.Plugin.Office365.csproj",
             "CanDoItAll.AgentFramework.WorkflowExecutors.Abstractions");
         AssertProjectReferences(
+            "src/plugins/Implementations/CanDoItAll.Plugin.Office365/CanDoItAll.Plugin.Office365.csproj",
+            "CanDoItAll.AgentFramework.WorkflowExecutors.Core");
+        AssertProjectReferences(
             "src/plugins/Implementations/CanDoItAll.Plugin.Docker/CanDoItAll.Plugin.Docker.csproj",
             "CanDoItAll.AgentFramework.WorkflowExecutors.Abstractions");
+        AssertProjectReferences(
+            "src/plugins/Implementations/CanDoItAll.Plugin.Docker/CanDoItAll.Plugin.Docker.csproj",
+            "CanDoItAll.AgentFramework.WorkflowExecutors.Core");
     }
 
     private static WorkflowExecutorDescriptor CreateDescriptor(string id)

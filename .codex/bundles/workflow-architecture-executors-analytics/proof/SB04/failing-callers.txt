@@ -1,0 +1,12 @@
+Caller migration failing-first evidence
+
+Command:
+dotnet test tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj --no-restore -p:BuildProjectReferences=false --filter "FullyQualifiedName~WorkflowCallerLaunchMigrationTests" --logger "console;verbosity=minimal"
+
+Initial result:
+- Failed to compile because WorkflowTestRunner did not accept IWorkflowLaunchService.
+
+Intermediate result:
+- One test passed and the production-source boundary test failed because WorkflowsApi did not use IWorkflowLaunchService.
+
+The red assertions were retained and now pass.

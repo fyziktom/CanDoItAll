@@ -23,6 +23,7 @@ public sealed class MafAgentRuntime : IAgentRuntime
     private readonly IMafProviderCredentialService providerCredentialService;
     private readonly IMafProviderAgentFactory providerAgentFactory;
     private readonly IMafProviderRuntimeGateway providerRuntimeGateway;
+    private readonly IAgentImageAnalysisService imageAnalysisService;
     private readonly IMafProviderStreamingDispatchGate providerStreamingDispatchGate;
     private readonly IMafProviderStreamingRunner providerStreamingRunner;
     private readonly IRuntimeToolProviderComposer runtimeToolProviderComposer;
@@ -57,6 +58,7 @@ public sealed class MafAgentRuntime : IAgentRuntime
             : new MafProviderAgentFactory(providerCredentialService);
         var providerDependencies = dependencyResolver.ResolveProviderDependencies(services);
         providerRuntimeGateway = providerDependencies.ProviderRuntimeGateway;
+        imageAnalysisService = providerDependencies.ImageAnalysisService;
         inputAttachmentPreparer = new InputAttachmentPreparer(providerCredentialService, providerRuntimeGateway);
         providerStreamingDispatchGate = providerDependencies.ProviderStreamingDispatchGate;
         providerStreamingRunner = services.GetService(typeof(IMafProviderStreamingRunner)) is IMafProviderStreamingRunner resolvedStreamingRunner
@@ -74,7 +76,7 @@ public sealed class MafAgentRuntime : IAgentRuntime
             this.workspaceScope,
             dependencyResolver,
             providerCredentialService,
-            providerRuntimeGateway,
+            imageAnalysisService,
             runtimeToolProviderComposer,
             compositionMetrics);
         runtimeAgentFactory = new MafRuntimeAgentFactory(
@@ -163,6 +165,27 @@ public sealed class MafAgentRuntime : IAgentRuntime
         IReadOnlyList<ProviderUsageObservation>? usageObservations)
     {
         return InputAttachmentPreparer.AttachUsageObservations(response, usageObservations);
+    }
+
+    private static string ResolveRuntimeToolProviderSessionKey(
+        ChatSessionRecord session,
+        string? runtimeSessionKey)
+    {
+        ArgumentNullException.ThrowIfNull(session);
+
+        if (!string.IsNullOrWhiteSpace(runtimeSessionKey))
+        {
+            return runtimeSessionKey.Trim();
+        }
+
+        if (!string.IsNullOrWhiteSpace(session.Compatibility?.RuntimeSessionKey))
+        {
+            return session.Compatibility.RuntimeSessionKey.Trim();
+        }
+
+        return session.Id == Guid.Empty
+            ? string.Empty
+            : session.Id.ToString("D");
     }
 
     public async Task<AgentRuntimeResponse> RunAsync(
@@ -257,7 +280,8 @@ public sealed class MafAgentRuntime : IAgentRuntime
             cancellationToken,
             suppressApprovalRequirements,
             forceOmitTemperature,
-            runtimeOptions);
+            runtimeOptions,
+            ResolveRuntimeToolProviderSessionKey(session, runtimeSessionKey));
         InputAttachmentSupport.EnsureSupported(runtimeBuild.Provider, runtimeBuild.Model, runtimeOptions);
 
         if (runtimeBuild.IsTemperatureOmitted)
@@ -405,7 +429,8 @@ public sealed class MafAgentRuntime : IAgentRuntime
             cancellationToken,
             suppressApprovalRequirements,
             forceOmitTemperature,
-            runtimeOptions);
+            runtimeOptions,
+            ResolveRuntimeToolProviderSessionKey(session, runtimeSessionKey));
 
         if (runtimeBuild.IsTemperatureOmitted)
         {

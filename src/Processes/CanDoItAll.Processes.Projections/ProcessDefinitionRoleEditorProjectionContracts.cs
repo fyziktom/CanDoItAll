@@ -12,7 +12,6 @@ public enum ProcessDefinitionRoleExecutorKind
 
 public enum ProcessDefinitionRoleWorkflowPreferenceKind
 {
-    AnyActiveWorkflow,
     SpecificWorkflow
 }
 

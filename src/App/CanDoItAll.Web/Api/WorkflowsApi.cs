@@ -1,7 +1,10 @@
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.AgentFramework.Workflows.Abstractions;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace CanDoItAll.Web.Api;
 
@@ -12,6 +15,8 @@ internal static class WorkflowsApi
         var workflows = group.MapGroup("/workflows")
             .WithTags("Workflows")
             .DisableAntiforgery();
+
+        workflows.MapWorkflowRunControlApi();
 
         workflows.MapGet("/contract", () => Results.Ok(new WorkflowApiContractResponse(
             [
@@ -192,22 +197,6 @@ internal static class WorkflowsApi
         })
         .WithName("ValidateSavedWorkflowDefinition");
 
-        workflows.MapPost("/definitions/{workflowId:guid}/runs/start", async (
-                Guid workflowId,
-                WorkflowRunStartApiRequest request,
-                IWorkflowCatalogService catalogService,
-                IWorkflowRuntimeManager runtimeManager,
-                IWorkflowRunStore runStore,
-                CancellationToken cancellationToken) =>
-            await StartWorkflowRunAsync(
-                workflowId,
-                request,
-                catalogService,
-                runtimeManager,
-                runStore,
-                cancellationToken))
-            .WithName("StartWorkflowDefinitionRun");
-
         workflows.MapPost("/validate", async (
                 WorkflowDefinition request,
                 IWorkflowCatalogService catalogService,
@@ -268,21 +257,6 @@ internal static class WorkflowsApi
         })
         .WithName("RunWorkflowTest");
 
-        workflows.MapPost("/runs/start", async (
-                WorkflowRunStartApiRequest request,
-                IWorkflowCatalogService catalogService,
-                IWorkflowRuntimeManager runtimeManager,
-                IWorkflowRunStore runStore,
-                CancellationToken cancellationToken) =>
-            await StartWorkflowRunAsync(
-                routeWorkflowId: null,
-                request,
-                catalogService,
-                runtimeManager,
-                runStore,
-                cancellationToken))
-            .WithName("StartWorkflowRun");
-
         workflows.MapGet("/runs", async (
                 [AsParameters] WorkflowRunListApiQuery query,
                 IWorkflowRunStore runStore,
@@ -332,13 +306,6 @@ internal static class WorkflowsApi
                 runStore,
                 cancellationToken))
             .WithName("GetWorkflowRunDetail");
-
-        workflows.MapPost("/runs/{runId:guid}/cancel", async (
-                Guid runId,
-                IWorkflowRuntimeManager runtimeManager,
-                CancellationToken cancellationToken) =>
-            await ToApiResultAsync(() => runtimeManager.CancelAsync(new WorkflowRunId(runId), cancellationToken)))
-            .WithName("CancelWorkflowRun");
 
         workflows.MapGet("/runs/{runId:guid}/events", async (
                 Guid runId,
@@ -395,26 +362,74 @@ internal static class WorkflowsApi
             Results.Ok(await runStore.ListPendingExternalRequestsAsync(new WorkflowRunId(runId), cancellationToken)))
             .WithName("ListWorkflowRunPendingRequests");
 
+        workflows.MapGet("/analytics", async (
+                [AsParameters] WorkflowAnalyticsApiQuery query,
+                IWorkflowAnalyticsQueryService analyticsQueryService,
+                CancellationToken cancellationToken) =>
+            await GetWorkflowAnalyticsResultAsync(query, analyticsQueryService, cancellationToken))
+            .WithName("GetWorkflowAnalytics");
+
+        return group;
+    }
+
+    internal static RouteGroupBuilder MapWorkflowRunControlApi(this RouteGroupBuilder workflows)
+    {
+        workflows.MapPost("/definitions/{workflowId:guid}/runs/start", async (
+                Guid workflowId,
+                WorkflowRunStartApiRequest request,
+                HttpContext httpContext,
+                IWorkflowLaunchService launchService,
+                IWorkflowRuntimeManager runtimeManager,
+                IWorkflowRunStore runStore,
+                CancellationToken cancellationToken) =>
+            await StartWorkflowRunAsync(
+                workflowId,
+                request,
+                httpContext,
+                launchService,
+                runtimeManager,
+                runStore,
+                cancellationToken))
+            .WithName("StartWorkflowDefinitionRun");
+
+        workflows.MapPost("/runs/start", async (
+                WorkflowRunStartApiRequest request,
+                HttpContext httpContext,
+                IWorkflowLaunchService launchService,
+                IWorkflowRuntimeManager runtimeManager,
+                IWorkflowRunStore runStore,
+                CancellationToken cancellationToken) =>
+            await StartWorkflowRunAsync(
+                routeWorkflowId: null,
+                request,
+                httpContext,
+                launchService,
+                runtimeManager,
+                runStore,
+                cancellationToken))
+            .WithName("StartWorkflowRun");
+
+        workflows.MapPost("/runs/{runId:guid}/cancel", async (
+                Guid runId,
+                IWorkflowRuntimeManager runtimeManager,
+                CancellationToken cancellationToken) =>
+            MapCancellationResult(await runtimeManager.RequestCancellationAsync(
+                new WorkflowRunId(runId),
+                cancellationToken)))
+            .WithName("CancelWorkflowRun");
+
         workflows.MapPost("/external-requests/{requestId:guid}/response", async (
                 Guid requestId,
                 WorkflowExternalRequestResponseApiRequest request,
                 IWorkflowRuntimeManager runtimeManager,
                 CancellationToken cancellationToken) =>
-            await ToApiResultAsync(() => runtimeManager.RespondToExternalRequestAsync(
+            MapExternalResponseResult(await runtimeManager.SubmitExternalResponseAsync(
                 new WorkflowExternalRequestId(requestId),
                 request.ResponseJson,
                 cancellationToken)))
             .WithName("RespondToWorkflowExternalRequest");
 
-        workflows.MapGet("/analytics", async (
-                [AsParameters] WorkflowAnalyticsApiQuery query,
-                IWorkflowCatalogService catalogService,
-                IWorkflowRunStore runStore,
-                CancellationToken cancellationToken) =>
-            Results.Ok(await BuildAnalyticsAsync(query, catalogService, runStore, cancellationToken)))
-            .WithName("GetWorkflowAnalytics");
-
-        return group;
+        return workflows;
     }
 
     private static async Task<IResult> ChangeDefinitionStatusAsync(
@@ -435,7 +450,8 @@ internal static class WorkflowsApi
     private static async Task<IResult> StartWorkflowRunAsync(
         Guid? routeWorkflowId,
         WorkflowRunStartApiRequest request,
-        IWorkflowCatalogService catalogService,
+        HttpContext httpContext,
+        IWorkflowLaunchService launchService,
         IWorkflowRuntimeManager runtimeManager,
         IWorkflowRunStore runStore,
         CancellationToken cancellationToken)
@@ -459,50 +475,39 @@ internal static class WorkflowsApi
                 "workflows.workflow-id-required");
         }
 
-        var detail = await catalogService.GetDefinitionAsync(
-            new WorkflowId(requestedWorkflowId.Value),
-            request.VersionId.HasValue ? new WorkflowVersionId(request.VersionId.Value) : null,
-            cancellationToken);
-        if (detail is null)
+        try
         {
-            return ApiEndpointResults.NotFound(
-                "Workflow definition was not found.",
-                "workflows.definition-not-found");
+            var workflowId = new WorkflowId(requestedWorkflowId.Value);
+            WorkflowDefinitionSelection selection = request.VersionId.HasValue
+                ? new WorkflowDefinitionSelection.ExactSavedVersion(
+                    workflowId,
+                    new WorkflowVersionId(request.VersionId.Value))
+                : new WorkflowDefinitionSelection.LatestActive(workflowId);
+            var launchResult = await launchService.LaunchAsync(
+                new WorkflowLaunchIntent(
+                    selection,
+                    WorkflowLaunchMode.Production,
+                    new WorkflowLaunchOrigin.Api(
+                        ResolveApiActor(httpContext.User),
+                        new WorkflowLaunchCorrelationId(httpContext.TraceIdentifier)),
+                    request.InputJson ?? "{}",
+                    WorkflowLaunchCompletionPolicy.WaitForStopped,
+                    new WorkflowLaunchIdempotency.NotRequested())
+                {
+                    RequestedBackend = request.RequestedBackend
+                },
+                cancellationToken);
+            return Results.Ok(await BuildRunDetailAsync(
+                launchResult.Run,
+                runtimeManager,
+                runStore,
+                cancellationToken));
         }
-
-        var validation = await catalogService.ValidateDefinitionAsync(detail.Definition, cancellationToken);
-        if (!validation.Succeeded)
+        catch (WorkflowLaunchValidationException exception)
         {
             return Results.BadRequest(new WorkflowRunStartRejectedApiResponse(
-                validation,
-                "Workflow definition failed validation."));
-        }
-
-        string inputJson;
-        try
-        {
-            inputJson = NormalizeInputJson(request.InputJson);
-        }
-        catch (JsonException exception)
-        {
-            return ApiEndpointResults.BadRequest(
-                $"Workflow input JSON is invalid: {exception.Message}",
-                "workflows.input-json-invalid");
-        }
-
-        try
-        {
-            var run = await runtimeManager.StartAsync(
-                detail.Definition,
-                new WorkflowRunStartRequest(
-                    detail.Definition.Id,
-                    detail.Definition.VersionId,
-                    inputJson,
-                    request.RequestedBackend,
-                    request.SourceProcessRunId,
-                    request.SourceProcessAssignmentId),
-                cancellationToken);
-            return Results.Ok(await BuildRunDetailAsync(run, runtimeManager, runStore, cancellationToken));
+                exception.Validation,
+                exception.Message));
         }
         catch (ArgumentException exception)
         {
@@ -517,6 +522,53 @@ internal static class WorkflowsApi
             return ApiEndpointResults.NotFound(exception.Message, "workflows.resource-not-found");
         }
     }
+
+    private static WorkflowLaunchActor ResolveApiActor(ClaimsPrincipal principal)
+    {
+        var subjectId = principal.FindFirst("sub")?.Value ??
+                        principal.FindFirst(ClaimTypes.NameIdentifier)?.Value ??
+                        principal.Identity?.Name;
+        return string.IsNullOrWhiteSpace(subjectId)
+            ? new WorkflowLaunchActor(WorkflowLaunchActorKind.Service, "candoitall-api")
+            : new WorkflowLaunchActor(WorkflowLaunchActorKind.User, subjectId);
+    }
+
+    private static IResult MapCancellationResult(WorkflowRunCancellationResult result)
+        => result.Outcome switch
+        {
+            WorkflowRunCancellationOutcome.CancellationRequested => Results.Ok(result),
+            WorkflowRunCancellationOutcome.NotFound => Results.Json(result, statusCode: StatusCodes.Status404NotFound),
+            WorkflowRunCancellationOutcome.AlreadyTerminal or
+                WorkflowRunCancellationOutcome.NotActive or
+                WorkflowRunCancellationOutcome.TransitionRejected =>
+                Results.Json(result, statusCode: StatusCodes.Status409Conflict),
+            WorkflowRunCancellationOutcome.BackendNotCancellable =>
+                Results.Json(result, statusCode: StatusCodes.Status422UnprocessableEntity),
+            _ => Results.Problem(
+                statusCode: StatusCodes.Status500InternalServerError,
+                title: "Unknown workflow cancellation outcome.")
+        };
+
+    private static IResult MapExternalResponseResult(WorkflowExternalResponseResult result)
+        => result.Outcome switch
+        {
+            WorkflowExternalResponseOutcome.Accepted => Results.Ok(result),
+            WorkflowExternalResponseOutcome.RequestNotFound or WorkflowExternalResponseOutcome.RunNotFound =>
+                Results.Json(result, statusCode: StatusCodes.Status404NotFound),
+            WorkflowExternalResponseOutcome.AlreadyResponded or
+                WorkflowExternalResponseOutcome.RunNotWaiting or
+                WorkflowExternalResponseOutcome.TransitionRejected =>
+                Results.Json(result, statusCode: StatusCodes.Status409Conflict),
+            WorkflowExternalResponseOutcome.UnsupportedResume =>
+                Results.Json(result, statusCode: StatusCodes.Status422UnprocessableEntity),
+            WorkflowExternalResponseOutcome.BackendUnavailable =>
+                Results.Json(result, statusCode: StatusCodes.Status503ServiceUnavailable),
+            WorkflowExternalResponseOutcome.ResumeFailed =>
+                Results.Json(result, statusCode: StatusCodes.Status502BadGateway),
+            _ => Results.Problem(
+                statusCode: StatusCodes.Status500InternalServerError,
+                title: "Unknown workflow external-response outcome.")
+        };
 
     private static async Task<IResult> GetDefinitionResultAsync(
         Guid workflowId,
@@ -582,46 +634,6 @@ internal static class WorkflowsApi
             await runStore.ListCheckpointsAsync(run.RunId, cancellationToken));
     }
 
-    private static async Task<WorkflowAnalyticsApiResponse> BuildAnalyticsAsync(
-        WorkflowAnalyticsApiQuery query,
-        IWorkflowCatalogService catalogService,
-        IWorkflowRunStore runStore,
-        CancellationToken cancellationToken)
-    {
-        var definitions = await catalogService.ListDefinitionsAsync(cancellationToken);
-        var filteredDefinitions = query.WorkflowId.HasValue
-            ? definitions.Where(item => item.Id == new WorkflowId(query.WorkflowId.Value)).ToArray()
-            : definitions;
-        var runs = await runStore.ListRunsAsync(
-            query.WorkflowId.HasValue ? new WorkflowId(query.WorkflowId.Value) : null,
-            cancellationToken);
-        var filteredRuns = FilterRuns(
-            runs,
-            new WorkflowRunListApiQuery
-            {
-                WorkflowId = query.WorkflowId,
-                State = query.State,
-                Backend = query.Backend,
-                Search = query.Search,
-                Take = query.Take
-            });
-
-        return new WorkflowAnalyticsApiResponse(
-            filteredDefinitions.Count,
-            filteredDefinitions.Count(item => item.Status == WorkflowLifecycleStatus.Active),
-            CountBy(filteredDefinitions, item => item.Status.ToString()),
-            filteredRuns.Count,
-            filteredRuns.Count(item => item.State == WorkflowRunState.Running),
-            filteredRuns.Count(item => item.State == WorkflowRunState.WaitingForInput),
-            filteredRuns.Count(item => item.State == WorkflowRunState.Failed),
-            CountBy(filteredRuns, item => item.State.ToString()),
-            CountBy(filteredRuns, item => item.Backend.ToString()),
-            filteredRuns
-                .OrderByDescending(item => item.UpdatedAtUtc)
-                .Take(NormalizeTake(query.Take))
-                .ToArray());
-    }
-
     private static IReadOnlyList<WorkflowRunSnapshot> FilterRuns(
         IReadOnlyList<WorkflowRunSnapshot> runs,
         WorkflowRunListApiQuery query)
@@ -660,13 +672,6 @@ internal static class WorkflowsApi
             .ToDictionary(group => group.Key, group => group.Count(), StringComparer.OrdinalIgnoreCase);
     }
 
-    private static string NormalizeInputJson(string? inputJson)
-    {
-        var normalized = string.IsNullOrWhiteSpace(inputJson) ? "{}" : inputJson.Trim();
-        using var _ = JsonDocument.Parse(normalized);
-        return normalized;
-    }
-
     private static bool Contains(string value, string? search)
     {
         return !string.IsNullOrWhiteSpace(search) &&
@@ -676,6 +681,41 @@ internal static class WorkflowsApi
     private static int NormalizeTake(int? take)
     {
         return Math.Clamp(take.GetValueOrDefault(50), 1, 500);
+    }
+
+    private static int NormalizeAnalyticsRecentTake(int? take)
+    {
+        if (take is null)
+        {
+            return 8;
+        }
+
+        if (take is < 1 or > 500)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(take),
+                take,
+                "Workflow analytics recent take must be between 1 and 500.");
+        }
+
+        return take.Value;
+    }
+
+    internal static Task<IResult> GetWorkflowAnalyticsResultAsync(
+        WorkflowAnalyticsApiQuery query,
+        IWorkflowAnalyticsQueryService analyticsQueryService,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(query);
+        ArgumentNullException.ThrowIfNull(analyticsQueryService);
+        return ToApiResultAsync(() => analyticsQueryService.QueryAsync(
+            new WorkflowAnalyticsQuery(
+                query.WorkflowId.HasValue ? new WorkflowId(query.WorkflowId.Value) : null,
+                query.State,
+                query.Backend,
+                query.Search ?? string.Empty,
+                NormalizeAnalyticsRecentTake(query.Take)),
+            cancellationToken));
     }
 
     private static async Task<IResult> ToApiResultAsync<T>(Func<Task<T>> action)
@@ -742,6 +782,7 @@ internal sealed class WorkflowAnalyticsApiQuery
     public int? Take { get; set; }
 }
 
+[JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
 internal sealed class WorkflowRunStartApiRequest
 {
     public Guid? WorkflowId { get; set; }
@@ -751,10 +792,6 @@ internal sealed class WorkflowRunStartApiRequest
     public string? InputJson { get; set; }
 
     public WorkflowRuntimeBackendKind? RequestedBackend { get; set; }
-
-    public Guid? SourceProcessRunId { get; set; }
-
-    public Guid? SourceProcessAssignmentId { get; set; }
 }
 
 internal sealed record WorkflowRunDetailApiResponse(
@@ -767,15 +804,3 @@ internal sealed record WorkflowRunDetailApiResponse(
 internal sealed record WorkflowRunStartRejectedApiResponse(
     WorkflowValidationResult Validation,
     string ErrorMessage);
-
-internal sealed record WorkflowAnalyticsApiResponse(
-    int DefinitionCount,
-    int ActiveDefinitionCount,
-    IReadOnlyDictionary<string, int> DefinitionsByStatus,
-    int RunCount,
-    int RunningRunCount,
-    int WaitingForInputRunCount,
-    int FailedRunCount,
-    IReadOnlyDictionary<string, int> RunsByState,
-    IReadOnlyDictionary<string, int> RunsByBackend,
-    IReadOnlyList<WorkflowRunSnapshot> RecentRuns);

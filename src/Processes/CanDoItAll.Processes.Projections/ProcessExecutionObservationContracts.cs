@@ -50,6 +50,8 @@ public sealed record ProcessRuntimeUsageObservation(
     decimal EstimatedCostUsd,
     decimal ActualCostUsd)
 {
+    public int ToolCallCount { get; init; }
+
     public int ContextEstimatedInputTokens { get; init; }
 
     public int ContextInputMessageCount { get; init; }

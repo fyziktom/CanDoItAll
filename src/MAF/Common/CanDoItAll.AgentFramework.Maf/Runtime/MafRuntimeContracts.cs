@@ -55,7 +55,8 @@ internal sealed record RuntimeToolProviderRegistration(
 
 internal sealed record MafRuntimeProviderDependencies(
     IMafProviderRuntimeGateway ProviderRuntimeGateway,
-    IMafProviderStreamingDispatchGate ProviderStreamingDispatchGate);
+    IMafProviderStreamingDispatchGate ProviderStreamingDispatchGate,
+    IAgentImageAnalysisService ImageAnalysisService);
 
 internal sealed record MafWorkspaceRuntimeServices(
     IWorkspaceFileService FileService,

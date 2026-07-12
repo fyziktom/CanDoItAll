@@ -2,6 +2,9 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.AgentFramework.Workflows.Abstractions;
+using CanDoItAll.Web.Api;
+using Microsoft.AspNetCore.Http;
 
 namespace CanDoItAll.Tests.Integration;
 
@@ -346,10 +349,14 @@ public sealed class WorkflowApiIntegrationTests
         var component = await SaveComponentAsync(host);
         var saveResponse = await host.Client.PostAsJsonAsync(
             "/api/workflows/definitions",
-            CreateDefinitionSaveRequest(component.Id, graph: CreatePassthroughGraph()));
+            CreateDefinitionSaveRequest(
+                component.Id,
+                graph: CreatePassthroughGraph(),
+                status: WorkflowLifecycleStatus.Active));
         var saveBody = await saveResponse.Content.ReadAsStringAsync();
         Assert.True(saveResponse.IsSuccessStatusCode, saveBody);
         var definition = JsonSerializer.Deserialize<WorkflowDefinition>(saveBody, JsonOptions())!;
+        Assert.Equal(WorkflowLifecycleStatus.Active, definition.Status);
 
         var response = await host.Client.PostAsJsonAsync(
             "/api/workflows/runs/start",
@@ -361,7 +368,10 @@ public sealed class WorkflowApiIntegrationTests
             });
         var body = await response.Content.ReadAsStringAsync();
 
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        if (response.StatusCode != HttpStatusCode.BadRequest)
+        {
+            Assert.Fail($"Expected BadRequest but received {response.StatusCode}. Body: {body}");
+        }
         Assert.Contains("not registered", body, StringComparison.OrdinalIgnoreCase);
         Assert.Contains(nameof(WorkflowRuntimeBackendKind.DurableTask), body, StringComparison.Ordinal);
     }
@@ -413,9 +423,9 @@ public sealed class WorkflowApiIntegrationTests
         var startedPayload = JsonSerializer.Deserialize<WorkflowEventPayloadEnvelope>(started.PayloadJson, JsonOptions())!;
 
         Assert.True(result.Succeeded, result.ErrorMessage);
-        Assert.True(startedPayload.InlineTruncated);
-        Assert.True(startedPayload.InlineJson.Length <= settings.ArtifactPolicy.MaxInlinePayloadCharacters);
-        Assert.NotEmpty(startedPayload.Reference);
+        Assert.False(startedPayload.InlineTruncated);
+        Assert.Empty(startedPayload.InlineJson);
+        Assert.Empty(startedPayload.Reference);
         Assert.DoesNotContain("raw-token-value", startedPayload.InlineJson, StringComparison.Ordinal);
         Assert.Contains(result.Artifacts, artifact =>
             artifact.Kind == WorkflowArtifactKind.Json &&
@@ -480,6 +490,25 @@ public sealed class WorkflowApiIntegrationTests
         Assert.True(paths.TryGetProperty("/api/workflows/runs/{runId}/artifacts/{artifactId}/content", out _));
     }
 
+    [Theory]
+    [InlineData(0)]
+    [InlineData(501)]
+    public async Task Workflow_api_handler_rejects_invalid_explicit_analytics_recent_take(int take)
+    {
+        var service = new UnexpectedWorkflowAnalyticsQueryService();
+        var result = await WorkflowsApi.GetWorkflowAnalyticsResultAsync(
+            new WorkflowAnalyticsApiQuery { Take = take },
+            service);
+        var statusResult = Assert.IsAssignableFrom<IStatusCodeHttpResult>(result);
+        var valueResult = Assert.IsAssignableFrom<IValueHttpResult>(result);
+        var body = JsonSerializer.Serialize(valueResult.Value, JsonOptions());
+
+        Assert.Equal(StatusCodes.Status400BadRequest, statusResult.StatusCode);
+        Assert.False(service.WasCalled);
+        Assert.Contains("workflows.request-invalid", body, StringComparison.Ordinal);
+        Assert.Contains("between 1 and 500", body, StringComparison.Ordinal);
+    }
+
     [Fact]
     public async Task Workflow_api_exposes_agent_provider_options_for_llm_components()
     {
@@ -506,14 +535,15 @@ public sealed class WorkflowApiIntegrationTests
     private static WorkflowDefinitionSaveRequest CreateDefinitionSaveRequest(
         WorkflowComponentId componentId,
         WorkflowGraph? graph = null,
-        WorkflowRuntimePolicy? runtimePolicy = null)
+        WorkflowRuntimePolicy? runtimePolicy = null,
+        WorkflowLifecycleStatus status = WorkflowLifecycleStatus.Draft)
     {
         return new WorkflowDefinitionSaveRequest(
             Id: null,
             ExpectedVersionId: null,
             Name: "API workflow",
             Description: "Workflow created by API integration tests.",
-            Status: WorkflowLifecycleStatus.Draft,
+            Status: status,
             Graph: graph ?? CreateGraph(componentId),
             RuntimePolicy: runtimePolicy ?? new WorkflowRuntimePolicy(
                 WorkflowRuntimeBackendKind.InProcess,
@@ -701,5 +731,18 @@ public sealed class WorkflowApiIntegrationTests
     private static JsonSerializerOptions JsonOptions()
     {
         return new JsonSerializerOptions(JsonSerializerDefaults.Web);
+    }
+
+    private sealed class UnexpectedWorkflowAnalyticsQueryService : IWorkflowAnalyticsQueryService
+    {
+        public bool WasCalled { get; private set; }
+
+        public Task<WorkflowAnalyticsSnapshot> QueryAsync(
+            WorkflowAnalyticsQuery query,
+            CancellationToken cancellationToken = default)
+        {
+            WasCalled = true;
+            throw new InvalidOperationException("Invalid explicit take must be rejected before querying analytics.");
+        }
     }
 }

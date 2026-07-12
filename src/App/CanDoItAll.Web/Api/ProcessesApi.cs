@@ -340,7 +340,13 @@ internal static class ProcessesApi
             step.BlockedReason,
             step.BranchGate is null
                 ? null
-                : new ProcessRuntimeBranchGateApiView(step.BranchGate.SourceStepKey, step.BranchGate.RequiredOutcomeKey));
+                : new ProcessRuntimeBranchGateApiView(step.BranchGate.SourceStepKey, step.BranchGate.RequiredOutcomeKey),
+            step.WorkflowBinding is null
+                ? null
+                : new ProcessWorkflowBindingApiView(
+                    step.WorkflowBinding.WorkflowId.Value,
+                    step.WorkflowBinding.WorkflowVersionId?.Value,
+                    step.WorkflowBinding.OutputMapping.ToString()));
     }
 
     private static ProcessLaunchReadinessFindingApiView MapReadinessFinding(ProcessLaunchReadinessFinding finding)
@@ -585,7 +591,13 @@ internal sealed record ProcessLaunchStepApiView(
     string ExecutorDisplayName,
     bool IsBlocked,
     string? BlockedReason,
-    ProcessRuntimeBranchGateApiView? BranchGate);
+    ProcessRuntimeBranchGateApiView? BranchGate,
+    ProcessWorkflowBindingApiView? WorkflowBinding);
+
+internal sealed record ProcessWorkflowBindingApiView(
+    Guid WorkflowId,
+    Guid? WorkflowVersionId,
+    string OutputMapping);
 
 internal sealed record ProcessRuntimeBranchGateApiView(
     string SourceStepKey,
