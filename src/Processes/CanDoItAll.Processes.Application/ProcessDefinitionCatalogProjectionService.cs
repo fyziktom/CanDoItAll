@@ -34,6 +34,13 @@ public sealed class ProcessDefinitionCatalogProjectionService
     public static ProcessDefinitionId CreateDefinitionId(ProcessDefinitionCatalogItemKey key)
         => ProcessTemplateKernelBuilder.CreateDefinitionId(key.Value);
 
+    public string ResolveDefinitionKey(ProcessDefinitionId definitionId)
+    {
+        return catalogItems.Value
+            .FirstOrDefault(item => CreateDefinitionId(item.Key) == definitionId)
+            ?.Key.Value ?? string.Empty;
+    }
+
     public Task<ProcessDefinitionCatalogProjection> GetCatalogAsync(
         ProcessWorkspaceShellScope scope,
         ProcessDefinitionCatalogQueryProjection query,

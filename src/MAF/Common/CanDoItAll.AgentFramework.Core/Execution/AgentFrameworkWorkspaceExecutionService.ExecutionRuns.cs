@@ -281,6 +281,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                     runtimeResponse.PendingApprovals.Count > 0 ? ExecutionState.WaitingOnTool : ExecutionState.Completed,
                     runtimeResponse.PendingApprovals.Count > 0 ? null : RunOutcome.Succeeded,
                     DateTimeOffset.UtcNow);
+                var runtimeToolReceipts = CreateRuntimeProviderToolReceipts(run, runtimeResponse);
 
                 var approvalUpdate = ExecutionRunStateTransitions.SynchronizePendingApprovals(
                     prepared.RunApprovals,
@@ -306,7 +307,8 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                             Session: updatedSession,
                             RunApprovals: approvalUpdate.RunApprovals,
                             Metric: metric,
-                            UsageObservations: usageObservations),
+                            UsageObservations: usageObservations,
+                            ToolReceipts: runtimeToolReceipts),
                         cancellationToken);
                 }
                 else
@@ -316,7 +318,8 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                             Run: updatedRun,
                             RunApprovals: approvalUpdate.RunApprovals,
                             Metric: metric,
-                            UsageObservations: usageObservations),
+                            UsageObservations: usageObservations,
+                            ToolReceipts: runtimeToolReceipts),
                         cancellationToken);
                 }
 
@@ -805,6 +808,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                     runtimeResponse.PendingApprovals.Count > 0 ? ExecutionState.WaitingOnTool : ExecutionState.Completed,
                     runtimeResponse.PendingApprovals.Count > 0 ? null : RunOutcome.Succeeded,
                     DateTimeOffset.UtcNow);
+                var runtimeToolReceipts = CreateRuntimeProviderToolReceipts(run, runtimeResponse);
 
                 var approvalUpdate = ExecutionRunStateTransitions.SynchronizePendingApprovals(
                     [],
@@ -830,7 +834,8 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                             Session: updatedSession,
                             RunApprovals: approvalUpdate.RunApprovals,
                             Metric: metric,
-                            UsageObservations: usageObservations),
+                            UsageObservations: usageObservations,
+                            ToolReceipts: runtimeToolReceipts),
                         cancellationToken);
                 }
                 else
@@ -840,7 +845,8 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                             Run: updatedRun,
                             RunApprovals: approvalUpdate.RunApprovals,
                             Metric: metric,
-                            UsageObservations: usageObservations),
+                            UsageObservations: usageObservations,
+                            ToolReceipts: runtimeToolReceipts),
                         cancellationToken);
                 }
 
@@ -1315,7 +1321,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
             return configuredProvider;
         }
 
-        var candidates = await ResolveGovernedProcessProviderOverrideCandidatesAsync(catalog, cancellationToken).ConfigureAwait(false);
+        var candidates = await ResolveGovernedProcessProviderOverrideCandidatesAsync(configuredProvider, catalog, cancellationToken).ConfigureAwait(false);
         var selected = candidates.FirstOrDefault();
         return selected is null ? configuredProvider : selected;
     }
@@ -1331,14 +1337,29 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         }
 
         var featureMatrix = ProviderFeatureService.ResolveFeatureMatrix(configuredProvider);
-        return !featureMatrix.SupportsStructuredOutput;
+        return !featureMatrix.SupportsStructuredOutput ||
+               ShouldPreferFrameworkManagedProcessProvider(configuredProvider);
     }
 
     private async Task<IReadOnlyList<ProviderProfile>> ResolveGovernedProcessProviderOverrideCandidatesAsync(
+        ProviderProfile configuredProvider,
         SandboxWorkspaceCatalog? catalog,
         CancellationToken cancellationToken)
     {
         var providers = catalog?.Providers ?? await providerRegistry.ListProvidersAsync(cancellationToken).ConfigureAwait(false);
+        return OrderGovernedProcessProviderOverrideCandidates(providers, configuredProvider, ProviderFeatureService)
+            .ToArray();
+    }
+
+    internal static IReadOnlyList<ProviderProfile> OrderGovernedProcessProviderOverrideCandidates(
+        IEnumerable<ProviderProfile> providers,
+        ProviderProfile configuredProvider,
+        IProviderProfileService providerProfileService)
+    {
+        ArgumentNullException.ThrowIfNull(providers);
+        ArgumentNullException.ThrowIfNull(configuredProvider);
+        ArgumentNullException.ThrowIfNull(providerProfileService);
+
         return providers
             .Where(provider => provider.IsEnabled)
             .Where(provider => provider.Purpose == ProviderProfilePurpose.Chat)
@@ -1346,15 +1367,41 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
             .Select(provider => new
             {
                 Provider = provider,
-                FeatureMatrix = ProviderFeatureService.ResolveFeatureMatrix(provider)
+                FeatureMatrix = providerProfileService.ResolveFeatureMatrix(provider)
             })
             .Where(item => item.FeatureMatrix.SupportsStructuredOutput)
-            .OrderByDescending(item => string.Equals(item.Provider.Name, ManagedSeedProviderFallbacks.OpenAiDefaultProviderName, StringComparison.OrdinalIgnoreCase))
-            .ThenByDescending(item => item.Provider.Transport == ProviderTransportKind.Responses)
+            .OrderByDescending(item => IsPreferredFrameworkManagedProcessProvider(item.Provider))
+            .ThenByDescending(item => SameProviderFamily(item.Provider, configuredProvider))
             .ThenByDescending(item => item.Provider.Kind is ProviderKind.OpenAi or ProviderKind.AzureOpenAi)
+            .ThenByDescending(item => string.Equals(item.Provider.Name, ManagedSeedProviderFallbacks.OpenAiChatCompletionsProviderName, StringComparison.OrdinalIgnoreCase))
+            .ThenByDescending(item => string.Equals(item.Provider.Name, configuredProvider.Name, StringComparison.OrdinalIgnoreCase))
             .ThenBy(item => item.Provider.Name, StringComparer.OrdinalIgnoreCase)
             .Select(item => item.Provider)
             .ToArray();
+    }
+
+    private static bool ShouldPreferFrameworkManagedProcessProvider(ProviderProfile provider)
+        => provider.Kind is ProviderKind.OpenAi or ProviderKind.AzureOpenAi &&
+           provider.Transport == ProviderTransportKind.Responses;
+
+    private static bool IsPreferredFrameworkManagedProcessProvider(ProviderProfile provider)
+        => provider.Kind is ProviderKind.OpenAi or ProviderKind.AzureOpenAi &&
+           provider.Transport == ProviderTransportKind.ChatCompletions;
+
+    private static bool SameProviderFamily(ProviderProfile candidate, ProviderProfile configuredProvider)
+    {
+        return candidate.Kind == configuredProvider.Kind &&
+               string.Equals(
+                   NormalizeProviderBaseUrl(candidate.BaseUrl),
+                   NormalizeProviderBaseUrl(configuredProvider.BaseUrl),
+                   StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string NormalizeProviderBaseUrl(string value)
+    {
+        return string.IsNullOrWhiteSpace(value)
+            ? string.Empty
+            : value.Trim().TrimEnd('/');
     }
 
     private static bool IsScenarioHarnessProvider(ProviderProfile provider)

@@ -18,6 +18,7 @@
     <ProjectReference Include="..\..\Tools\CanDoItAll.Tools.Documents\CanDoItAll.Tools.Documents.csproj" />
     <ProjectReference Include="..\..\..\Modules\CanDoItAll.Modules.Security\CanDoItAll.Modules.Security.csproj" />
     <ProjectReference Include="..\..\..\Modules\CanDoItAll.Modules.Workspace\CanDoItAll.Modules.Workspace.csproj" />
+    <ProjectReference Include="..\..\..\Foundation\CanDoItAll.SharedKernel\CanDoItAll.SharedKernel.csproj" />
   </ItemGroup>
 
   <ItemGroup>

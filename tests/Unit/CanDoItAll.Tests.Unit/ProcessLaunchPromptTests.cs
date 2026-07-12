@@ -67,6 +67,50 @@ public sealed class ProcessLaunchPromptTests
     }
 
     [Fact]
+    public void Driver_step_brief_builder_uses_replaceable_prompt_composition_driver()
+    {
+        var builder = new DriverProcessStepBriefBuilder(
+        [
+            new FakePromptCompositionDriver("business-analysis-driver")
+        ]);
+
+        var prompt = BuildStepPrompt(
+            builder,
+            ProcessRunId.New(),
+            CreatePromptStep("Prepare supplier risk analysis."),
+            CreateDefinition("supplier-risk-review", "Supplier risk review", "Review supplier risk."),
+            variables: new Dictionary<string, string>
+            {
+                ["SupplierPortfolio"] = "critical-vendors"
+            });
+
+        Assert.Equal("fake prompt from business-analysis-driver for supplier-risk-review/resolve-contract", prompt);
+    }
+
+    [Fact]
+    public void Generic_step_brief_bounds_large_launch_variable_values()
+    {
+        var runId = new ProcessRunId(Guid.Parse("d9450dd1-4920-457c-92a4-48d1ec648181"));
+        var largeValue = string.Concat(
+            "important-prefix",
+            new string('x', 5000),
+            "important-suffix");
+        var prompt = BuildStepPrompt(
+            new GenericProcessStepBriefBuilder(),
+            runId,
+            variables: new Dictionary<string, string>
+            {
+                ["LargeContext"] = largeValue
+            });
+
+        Assert.Contains("LargeContext", prompt, StringComparison.Ordinal);
+        Assert.Contains("important-prefix", prompt, StringComparison.Ordinal);
+        Assert.Contains("important-suffix", prompt, StringComparison.Ordinal);
+        Assert.Contains("launch variable truncated", prompt, StringComparison.Ordinal);
+        Assert.DoesNotContain(new string('x', 3000), prompt, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void AgentFramework_step_brief_keeps_project_structure_guidance_outside_generic_application_layer()
     {
         var runId = new ProcessRunId(Guid.Parse("d9450dd1-4920-457c-92a4-48d1ec648181"));
@@ -90,8 +134,15 @@ public sealed class ProcessLaunchPromptTests
         Assert.Contains("AgentFramework execution contract:", prompt, StringComparison.Ordinal);
         Assert.Contains("This is a tool-backed process step, not a chat-only response", prompt, StringComparison.Ordinal);
         Assert.Contains("Only after the required evidence exists", prompt, StringComparison.Ordinal);
+        Assert.Contains("Do not put native absolute filesystem paths", prompt, StringComparison.Ordinal);
+        Assert.Contains("scoped storage paths under artifacts/scopes", prompt, StringComparison.Ordinal);
+        Assert.Contains("ignore that scoped echo in artifact prose and evidenceRefs", prompt, StringComparison.Ordinal);
         Assert.Contains("Governed launch tool: project_structure_process_subprocess_launch", prompt, StringComparison.Ordinal);
         Assert.Contains("Do not mark Completed until the child run receipt", prompt, StringComparison.Ordinal);
+        Assert.Contains("Mandatory-launch rule:", prompt, StringComparison.Ordinal);
+        Assert.Contains("your first non-read external action for this step must be project_structure_process_subprocess_launch", prompt, StringComparison.Ordinal);
+        Assert.Contains("Parent-tool boundary rule:", prompt, StringComparison.Ordinal);
+        Assert.Contains("direct child-work tools are not required in the parent subprocess step", prompt, StringComparison.Ordinal);
         Assert.Contains("Stopped-child rule:", prompt, StringComparison.Ordinal);
         Assert.Contains("Do not return Blocked only because a stopped child run exists", prompt, StringComparison.Ordinal);
         Assert.Contains("Do not relaunch a Blocked child or a child with escalation/no-go evidence", prompt, StringComparison.Ordinal);
@@ -99,12 +150,14 @@ public sealed class ProcessLaunchPromptTests
         Assert.Contains("BranchName, RepositoryRoot, SessionId", prompt, StringComparison.Ordinal);
         Assert.Contains("ChildManagedArtifactRoot", prompt, StringComparison.Ordinal);
         Assert.Contains("ParentDeferredOutcomeJson", prompt, StringComparison.Ordinal);
-        Assert.Contains("when the launch tool result has RunId and Stage Running, call submit_process_step_outcome with ParentDeferredOutcomeJson exactly", prompt, StringComparison.Ordinal);
-        Assert.Contains("the process runtime will defer the parent step until the child run stops", prompt, StringComparison.Ordinal);
+        Assert.Contains("when the launch tool result has RunId and ParentDeferredOutcomeJson, call submit_process_step_outcome with that JSON exactly", prompt, StringComparison.Ordinal);
+        Assert.Contains("for Stage Completed it completes the parent from child evidence", prompt, StringComparison.Ordinal);
         Assert.Contains("Treat artifacts under ChildManagedArtifactRoot as the child evidence bundle", prompt, StringComparison.Ordinal);
         Assert.Contains("ExpectedChildEvidenceRefs are preferred lookup candidates after the child run is stopped", prompt, StringComparison.Ordinal);
         Assert.Contains("Managed artifact refs are workspace-managed relative paths", prompt, StringComparison.Ordinal);
-        Assert.Contains("keep the managed relative ref in evidenceRefs", prompt, StringComparison.Ordinal);
+        Assert.Contains("Include the written managed artifact paths from this brief in evidenceRefs", prompt, StringComparison.Ordinal);
+        Assert.Contains("Do not put native absolute filesystem paths", prompt, StringComparison.Ordinal);
+        Assert.Contains("scoped storage paths under artifacts/scopes", prompt, StringComparison.Ordinal);
         Assert.Contains("never convert them to external-target paths", prompt, StringComparison.Ordinal);
         Assert.Contains("Project-structure evidence hygiene:", prompt, StringComparison.Ordinal);
         Assert.Contains("Do not create project-structure nodes for every subprocess, intermediate screenshot, log, or step detail", prompt, StringComparison.Ordinal);
@@ -282,8 +335,14 @@ public sealed class ProcessLaunchPromptTests
             });
 
         Assert.Contains("AgentFramework project-structure context source:", prompt, StringComparison.Ordinal);
+        Assert.Contains("A native or storage path-like value remains non-citable final evidence", prompt, StringComparison.Ordinal);
+        Assert.Contains("retry diagnostics, or previous failed attempts", prompt, StringComparison.Ordinal);
         Assert.Contains("ProjectStructureContextSummary in Launch variables is the current project-structure context for this run", prompt, StringComparison.Ordinal);
-        Assert.Contains("DotNetScaffoldContract and DotNet* launch variables are typed project-structure facts", prompt, StringComparison.Ordinal);
+        Assert.Contains("Ignore generated process evidence from prior runs", prompt, StringComparison.Ordinal);
+        Assert.Contains("Path-like storage details in ProjectStructureContextSummary are lookup context only", prompt, StringComparison.Ordinal);
+        Assert.Contains("Do not copy native absolute paths", prompt, StringComparison.Ordinal);
+        Assert.Contains("Launch variables whose names end with Contract are typed project-structure facts", prompt, StringComparison.Ordinal);
+        Assert.DoesNotContain("DotNetScaffoldContract and DotNet* launch variables are typed project-structure facts", prompt, StringComparison.Ordinal);
         Assert.Contains("ProductRoot, OutputRoot, and ExternalTargetRoot launch variables identify the product target", prompt, StringComparison.Ordinal);
         Assert.Contains("Grounded external-target aliases for structured workspace tool path arguments: external-target/C/programovani/dotnet/output", prompt, StringComparison.Ordinal);
         Assert.Contains("The project-structure context lists visual target assets", prompt, StringComparison.Ordinal);
@@ -297,6 +356,39 @@ public sealed class ProcessLaunchPromptTests
         Assert.Contains("Project-structure context is not materialized as a managed JSON file by default", prompt, StringComparison.Ordinal);
         Assert.Contains("write the relevant facts into the step's primary managed artifact", prompt, StringComparison.Ordinal);
         Assert.DoesNotContain("Tetris app", prompt, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void AgentFramework_step_brief_adds_product_mutation_gate_for_mutable_steps()
+    {
+        var runId = new ProcessRunId(Guid.Parse("d9450dd1-4920-457c-92a4-48d1ec648181"));
+        var step = CreatePromptStep("Implement the focused product behavior.");
+        step.Key = "code-change";
+        step.Title = "Implement code change";
+        step.AllowedOperations =
+        [
+            ProcessOperationContractNames.ReadUpstreamArtifacts,
+            ProcessOperationContractNames.MutateProductTarget,
+            ProcessOperationContractNames.RunValidation,
+            ProcessOperationContractNames.WriteManagedProcessArtifacts
+        ];
+        step.OperationTargetScope = ProcessOperationContractNames.ExternalProductTargetMutable;
+
+        var prompt = BuildStepPrompt(
+            new AgentFrameworkProcessStepBriefBuilder(),
+            runId,
+            step,
+            variables: new Dictionary<string, string>
+            {
+                ["OutputRoot"] = @"C:\programovani\dotnet\calculator-output"
+            });
+
+        Assert.Contains("AgentFramework product mutation gate:", prompt, StringComparison.Ordinal);
+        Assert.Contains("This step is product-mutating.", prompt, StringComparison.Ordinal);
+        Assert.Contains("produce a current-run successful product-target mutation receipt", prompt, StringComparison.Ordinal);
+        Assert.Contains("external-target/C/programovani/dotnet/calculator-output", prompt, StringComparison.Ordinal);
+        Assert.Contains("Writing only artifacts/process-runs/... is managed evidence, not product mutation.", prompt, StringComparison.Ordinal);
+        Assert.Contains("Do not claim changed product files until those files exist under the grounded product target.", prompt, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -460,6 +552,8 @@ public sealed class ProcessLaunchPromptTests
         Assert.Contains("This is a tool-backed process step, not a chat-only response", prompt, StringComparison.Ordinal);
         Assert.Contains("Only after the required evidence exists", prompt, StringComparison.Ordinal);
         Assert.Contains("Primary write ref: artifacts/process-runs/d9450dd1-4920-457c-92a4-48d1ec648181/steps/feature-intake.md", prompt, StringComparison.Ordinal);
+        Assert.Contains("Current-run helper script ordering rule", prompt, StringComparison.Ordinal);
+        Assert.Contains("verify the exact helper path with workspace_stat_path or workspace_read_file", prompt, StringComparison.Ordinal);
         Assert.Contains("first workspace mutation for this slot must create the primary write ref with workspace_write_file or workspace_append_file", prompt, StringComparison.Ordinal);
         Assert.Contains("the first workspace mutation for that produced output must be workspace_write_file or workspace_append_file to the listed Primary write ref", prompt, StringComparison.Ordinal);
         Assert.Contains("AgentFramework own-output bootstrap:", prompt, StringComparison.Ordinal);
@@ -541,5 +635,16 @@ public sealed class ProcessLaunchPromptTests
             DisplayName = displayName,
             Summary = summary
         };
+    }
+
+    private sealed class FakePromptCompositionDriver(string name) : IProcessPromptCompositionDriver
+    {
+        public DriverId DriverId { get; } = new(name);
+
+        public bool CanCompose(ProcessStepBriefBuildRequest request)
+            => string.Equals(request.Definition.Key, "supplier-risk-review", StringComparison.Ordinal);
+
+        public string Compose(ProcessStepBriefBuildRequest request)
+            => $"fake prompt from {DriverId.Value} for {request.Definition.Key}/{request.Step.Key}";
     }
 }

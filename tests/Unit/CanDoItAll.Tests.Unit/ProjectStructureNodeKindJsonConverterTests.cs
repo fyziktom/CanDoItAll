@@ -111,4 +111,65 @@ public sealed class ProjectStructureNodeKindJsonConverterTests
         Assert.NotNull(input);
         Assert.Equal(expectedSubtype, input.ObjectSubtype);
     }
+
+    [Fact]
+    public void CreateInput_accepts_structured_metadata_object()
+    {
+        const string json = """
+            {
+              "objectType": "Environment",
+              "objectSubtype": "dotnet-runtime",
+              "title": "Run app",
+              "metadata": {
+                "environment": {
+                  "environmentKind": "dotNetRuntime",
+                  "projectPath": "src/Calculator/Calculator.csproj",
+                  "workingDirectory": "."
+                }
+              }
+            }
+            """;
+
+        var input = JsonSerializer.Deserialize<ProjectStructureNodeCreateInput>(json, SerializerOptions);
+
+        Assert.NotNull(input);
+        Assert.Equal(ProjectObjectType.Environment, input.ObjectType);
+        Assert.Equal("dotnet-runtime", input.ObjectSubtype);
+        Assert.NotNull(input.MetadataJson);
+        using var document = JsonDocument.Parse(input.MetadataJson!);
+        Assert.Equal(
+            "src/Calculator/Calculator.csproj",
+            document.RootElement.GetProperty("environment").GetProperty("projectPath").GetString());
+    }
+
+    [Fact]
+    public void EditInput_accepts_structured_metadata_object()
+    {
+        const string json = """
+            {
+              "objectType": "Script",
+              "objectSubtype": "console",
+              "title": "Run tests",
+              "metadata": {
+                "script": {
+                  "scriptKind": "console",
+                  "command": "dotnet",
+                  "arguments": "test Calculator.slnx",
+                  "workingDirectory": "."
+                }
+              }
+            }
+            """;
+
+        var input = JsonSerializer.Deserialize<ProjectStructureNodeEditInput>(json, SerializerOptions);
+
+        Assert.NotNull(input);
+        Assert.Equal(ProjectObjectType.Script, input.ObjectType);
+        Assert.Equal("console", input.ObjectSubtype);
+        Assert.NotNull(input.MetadataJson);
+        using var document = JsonDocument.Parse(input.MetadataJson!);
+        Assert.Equal(
+            "dotnet",
+            document.RootElement.GetProperty("script").GetProperty("command").GetString());
+    }
 }

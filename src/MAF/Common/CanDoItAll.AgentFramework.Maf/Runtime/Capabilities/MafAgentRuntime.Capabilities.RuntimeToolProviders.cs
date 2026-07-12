@@ -106,7 +106,7 @@ public sealed partial class MafAgentRuntime
                 registration.Descriptor.ProviderKey,
                 "registered runtime tool provider selected for this run",
                 tools.Count,
-                EstimateToolSchemaChars(tools)));
+                MafContextManifestBuilder.EstimateToolSchemaChars(tools)));
             attachedToolCount += tools.Count;
             attachmentSummaries.Add(new RuntimeToolProviderAttachmentSummary(
                 registration.Descriptor.ProviderKey,

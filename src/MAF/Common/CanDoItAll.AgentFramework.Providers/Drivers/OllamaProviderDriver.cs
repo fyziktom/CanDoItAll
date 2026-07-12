@@ -96,13 +96,10 @@ public sealed class OllamaProviderDriver(HttpClient httpClient) :
             payload["options"] = options;
         }
 
-        var think = AgentProviderModelParameterPolicy.ResolveOllamaThink(
+        var think = AgentProviderModelParameterPolicy.ResolveOllamaThinkOrDefault(
             request.Provider.ConfigurationJson,
             request.ModelParameterConfigurationJson);
-        if (think is not null)
-        {
-            payload["think"] = think.Value;
-        }
+        payload["think"] = think;
 
         using var response = await httpClient.PostAsJsonAsync(
             BuildEndpoint(request.Provider, "api/chat"),
@@ -202,14 +199,10 @@ public sealed class OllamaProviderDriver(HttpClient httpClient) :
         string requestModelParameterConfigurationJson)
     {
         var options = new Dictionary<string, object>(StringComparer.Ordinal);
-        var numPredict = AgentProviderModelParameterPolicy.ResolveMaxOutputTokens(
-            provider.Kind,
+        var numPredict = AgentProviderModelParameterPolicy.ResolveOllamaMaxOutputTokensOrDefault(
             provider.ConfigurationJson,
             requestModelParameterConfigurationJson);
-        if (numPredict is not null)
-        {
-            options[NumPredictSnakePropertyName] = numPredict.Value;
-        }
+        options[NumPredictSnakePropertyName] = numPredict;
 
         return options;
     }

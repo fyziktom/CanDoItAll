@@ -645,7 +645,12 @@ public sealed record ProjectStructureAssetDescriptor(
 public sealed record ProjectStructureAssetContentDescriptor(
     ProjectStructureAssetDescriptor Asset,
     long ContentLength,
-    string Base64Data);
+    string Base64Data)
+{
+    public bool Base64DataOmitted { get; init; }
+
+    public string ContentSummary { get; init; } = string.Empty;
+}
 
 public sealed record ProjectStructureAssetRevisionRequest(
     string Title,

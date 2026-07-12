@@ -1,5 +1,4 @@
 using System.Globalization;
-using System.Text.Json;
 using CanDoItAll.Processes.Abstractions;
 using CanDoItAll.Processes.Projections;
 using CanDoItAll.Processes.Runtime;
@@ -17,8 +16,6 @@ public sealed class ProcessRuntimeProjectionQueryService(
     private const int LiveSnapshotReadLimit = 500;
     private const int RuntimeMetricEventReadLimit = 10_000;
     private const int OperatorActionObservationTakePerRun = 100;
-    private const int MaxOperatorDiagnosticTextLength = 900;
-    private const int MaxOperatorDiagnosticItemLength = 240;
     private static readonly TimeSpan ActiveExecutionStaleAfter = TimeSpan.FromMinutes(30);
 
     public async Task<ProcessLiveProcessesResult> GetLiveProcessesAsync(
@@ -999,8 +996,8 @@ public sealed class ProcessRuntimeProjectionQueryService(
         var receipt = state.AppliedResults
             .Where(item => item.StepInstanceId == step.StepInstanceId)
             .LastOrDefault();
-        var diagnostic = CreateStepExecutionDiagnostic(executionObservation);
-        var capabilityHint = BuildOperatorCapabilityHint(assignment);
+        var diagnostic = ProcessRuntimeOperatorActionDiagnostics.Create(executionObservation);
+        var capabilityHint = BuildOperatorCapabilityHint(assignment, diagnostic);
         var problemSummary = $"{BuildOperatorProblemSummary(stepKey, step, roleDisplayName, executorDisplayName, receipt, expiredClaim, diagnostic)} {capabilityHint}".Trim();
         var requiredDecision = $"{BuildOperatorDecision(stepKey, step.Status, roleDisplayName, executorDisplayName, expiredClaim, diagnostic)} {capabilityHint}".Trim();
         var recommendedInstruction = $"{BuildRecommendedOperatorInstruction(stepKey, step, roleDisplayName, executorDisplayName, receipt, expiredClaim, diagnostic)} {capabilityHint}".Trim();
@@ -1044,7 +1041,7 @@ public sealed class ProcessRuntimeProjectionQueryService(
         StepExecutionDiagnostic? diagnostic)
     {
         var outcomeText = receipt is null ? string.Empty : $" Last strategy outcome: {receipt.Outcome}.";
-        var diagnosticText = BuildOperatorExecutionSummary(diagnostic);
+        var diagnosticText = ProcessRuntimeOperatorActionDiagnostics.BuildExecutionSummary(diagnostic);
         return $"Root action: approve manager-guided rework for {stepKey} after {status}.{outcomeText} {diagnosticText} Assigned role: {roleDisplayName}. Executor: {executorDisplayName}.".Trim();
     }
 
@@ -1069,7 +1066,7 @@ public sealed class ProcessRuntimeProjectionQueryService(
         var attemptText = step.AttemptNumber <= 0
             ? "before a dispatch attempt was recorded"
             : $"on attempt {step.AttemptNumber.ToString(CultureInfo.InvariantCulture)}";
-        var diagnosticText = BuildOperatorExecutionSummary(diagnostic);
+        var diagnosticText = ProcessRuntimeOperatorActionDiagnostics.BuildExecutionSummary(diagnostic);
         var missingDiagnosticText = receipt is null || diagnostic is not null
             ? string.Empty
             : " No AgentFramework result summary was found for this blocker; inspect execution runs by process run and step id before approving a blind retry.";
@@ -1120,177 +1117,24 @@ public sealed class ProcessRuntimeProjectionQueryService(
         var branchInstruction = diagnostic is not null && IsRepairBranch(diagnostic.BranchOutcomeKey)
             ? $" If the previous finding is repairable, return status Completed with branchOutcomeKey '{diagnostic.BranchOutcomeKey}' instead of Blocked."
             : string.Empty;
-        var priorActions = BuildPriorNextActions(diagnostic);
+        var priorActions = ProcessRuntimeOperatorActionDiagnostics.BuildPriorNextActions(diagnostic);
+        var failedToolInstruction = ProcessRuntimeOperatorActionDiagnostics.BuildFailedToolInstruction(diagnostic);
 
-        return $"Manager-approved rework for step '{stepKey}'. Resolve {outcomeText}, preserve accepted upstream artifacts, produce the required evidence for role '{roleDisplayName}', and continue the process. Previous executor: {executorDisplayName}. Step status before rework: {step.Status}.{branchInstruction}{priorActions}";
-    }
-
-    private static StepExecutionDiagnostic? CreateStepExecutionDiagnostic(ProcessExecutionObservation? observation)
-    {
-        if (observation is null || string.IsNullOrWhiteSpace(observation.ResultSummary))
-        {
-            return null;
-        }
-
-        var rawSummary = observation.ResultSummary.Trim();
-        if (rawSummary.StartsWith("{", StringComparison.Ordinal))
-        {
-            try
-            {
-                using var document = JsonDocument.Parse(rawSummary);
-                if (document.RootElement.ValueKind == JsonValueKind.Object)
-                {
-                    var root = document.RootElement;
-                    return new StepExecutionDiagnostic(
-                        observation.ExecutionRunId,
-                        observation.ProviderName,
-                        observation.Model,
-                        observation.State,
-                        observation.Outcome,
-                        ReadJsonString(root, "status"),
-                        ReadJsonString(root, "branchOutcomeKey"),
-                        ReadJsonString(root, "branchOutcomeTitle"),
-                        TruncateDiagnosticText(FirstNonEmpty(
-                            ReadJsonString(root, "reason"),
-                            ReadJsonString(root, "humanReadableSummaryMarkdown"))),
-                        ReadJsonStringArray(root, "nextActions", take: 3),
-                        ReadJsonStringArray(root, "evidenceRefs", take: 5));
-                }
-            }
-            catch (JsonException)
-            {
-            }
-        }
-
-        return new StepExecutionDiagnostic(
-            observation.ExecutionRunId,
-            observation.ProviderName,
-            observation.Model,
-            observation.State,
-            observation.Outcome,
-            string.Empty,
-            string.Empty,
-            string.Empty,
-            TruncateDiagnosticText(rawSummary),
-            [],
-            []);
-    }
-
-    private static string BuildOperatorExecutionSummary(StepExecutionDiagnostic? diagnostic)
-    {
-        if (diagnostic is null)
-        {
-            return string.Empty;
-        }
-
-        var details = new List<string>();
-        var status = FirstNonEmpty(diagnostic.Status, diagnostic.ExecutionOutcome, diagnostic.ExecutionState);
-        if (!string.IsNullOrWhiteSpace(status))
-        {
-            details.Add($"status {status}");
-        }
-
-        var branch = FormatBranchOutcome(diagnostic);
-        if (!string.IsNullOrWhiteSpace(branch))
-        {
-            details.Add($"branch {branch}");
-        }
-
-        if (!string.IsNullOrWhiteSpace(diagnostic.Reason))
-        {
-            details.Add($"reason: {diagnostic.Reason}");
-        }
-
-        if (details.Count == 0)
-        {
-            return $"AgentFramework execution run {diagnostic.ExecutionRunId:D} has no persisted result reason.";
-        }
-
-        return $"AgentFramework result {diagnostic.ExecutionRunId:D}: {string.Join("; ", details)}.";
-    }
-
-    private static string BuildPriorNextActions(StepExecutionDiagnostic? diagnostic)
-    {
-        if (diagnostic is null || diagnostic.NextActions.Count == 0)
-        {
-            return string.Empty;
-        }
-
-        var actions = diagnostic.NextActions
-            .Take(2)
-            .Select(action => TruncateDiagnosticText(action, MaxOperatorDiagnosticItemLength))
-            .Where(action => !string.IsNullOrWhiteSpace(action))
-            .ToArray();
-        return actions.Length == 0
-            ? string.Empty
-            : $" Prior agent next action(s): {string.Join(" ", actions)}";
-    }
-
-    private static string FormatBranchOutcome(StepExecutionDiagnostic diagnostic)
-    {
-        if (string.IsNullOrWhiteSpace(diagnostic.BranchOutcomeKey))
-        {
-            return diagnostic.BranchOutcomeTitle;
-        }
-
-        if (string.IsNullOrWhiteSpace(diagnostic.BranchOutcomeTitle) ||
-            string.Equals(diagnostic.BranchOutcomeKey, diagnostic.BranchOutcomeTitle, StringComparison.OrdinalIgnoreCase))
-        {
-            return diagnostic.BranchOutcomeKey;
-        }
-
-        return $"{diagnostic.BranchOutcomeKey} ({diagnostic.BranchOutcomeTitle})";
+        return $"Manager-approved rework for step '{stepKey}'. Resolve {outcomeText}, preserve accepted upstream artifacts, produce the required evidence for role '{roleDisplayName}', and continue the process. Previous executor: {executorDisplayName}. Step status before rework: {step.Status}.{branchInstruction}{priorActions}{failedToolInstruction}";
     }
 
     private static bool IsRepairBranch(string branchOutcomeKey)
         => branchOutcomeKey.Contains("repair", StringComparison.OrdinalIgnoreCase);
 
-    private static string ReadJsonString(JsonElement root, string propertyName)
-        => root.TryGetProperty(propertyName, out var property) && property.ValueKind == JsonValueKind.String
-            ? property.GetString()?.Trim() ?? string.Empty
-            : string.Empty;
-
-    private static IReadOnlyList<string> ReadJsonStringArray(JsonElement root, string propertyName, int take)
+    private static string BuildOperatorCapabilityHint(
+        ProcessRuntimeStepAssignment? assignment,
+        StepExecutionDiagnostic? diagnostic)
     {
-        if (!root.TryGetProperty(propertyName, out var property) || property.ValueKind != JsonValueKind.Array)
+        if (diagnostic is not null && diagnostic.HasConcreteFailure)
         {
-            return [];
+            return "Why this may repeat: a blind retry will repeat the same failure unless the next attempt reads the listed diagnostic artifacts, fixes the concrete command target, environment, or product issue, and records fresh successful receipts.";
         }
 
-        var values = new List<string>();
-        foreach (var item in property.EnumerateArray())
-        {
-            if (item.ValueKind != JsonValueKind.String || string.IsNullOrWhiteSpace(item.GetString()))
-            {
-                continue;
-            }
-
-            values.Add(TruncateDiagnosticText(item.GetString()!, MaxOperatorDiagnosticItemLength));
-            if (values.Count == take)
-            {
-                break;
-            }
-        }
-
-        return values;
-    }
-
-    private static string TruncateDiagnosticText(
-        string value,
-        int maxLength = MaxOperatorDiagnosticTextLength)
-    {
-        var normalized = string.Join(
-            " ",
-            value
-                .ReplaceLineEndings(" ")
-                .Split(' ', StringSplitOptions.RemoveEmptyEntries));
-        return normalized.Length <= maxLength
-            ? normalized
-            : normalized[..maxLength].TrimEnd() + "...";
-    }
-
-    private static string BuildOperatorCapabilityHint(ProcessRuntimeStepAssignment? assignment)
-    {
         if (assignment is null)
         {
             return "Why this may repeat: runtime assignment metadata is missing, so verify the step still has a valid agent binding before approving another attempt.";
@@ -1594,16 +1438,4 @@ public sealed class ProcessRuntimeProjectionQueryService(
     private static string FirstNonEmpty(params string?[] values)
         => values.FirstOrDefault(value => !string.IsNullOrWhiteSpace(value))?.Trim() ?? string.Empty;
 
-    private sealed record StepExecutionDiagnostic(
-        Guid ExecutionRunId,
-        string ProviderName,
-        string Model,
-        string ExecutionState,
-        string ExecutionOutcome,
-        string Status,
-        string BranchOutcomeKey,
-        string BranchOutcomeTitle,
-        string Reason,
-        IReadOnlyList<string> NextActions,
-        IReadOnlyList<string> EvidenceRefs);
 }

@@ -138,6 +138,11 @@ internal sealed class WorkspacePathPolicy
             return resolution;
         }
 
+        if (TryCreateManagedPathAliasCorrectionMessage(displayPath, out var aliasCorrectionMessage))
+        {
+            throw new InvalidOperationException(aliasCorrectionMessage);
+        }
+
         throw new InvalidOperationException($"Path '{displayPath}' does not exist.");
     }
 
@@ -210,6 +215,40 @@ internal sealed class WorkspacePathPolicy
 
     public static string NormalizeRelativePath(string path)
         => path.Replace('\\', '/').Trim();
+
+    public static bool TryCreateManagedPathAliasCorrectionMessage(string? path, out string message)
+    {
+        message = string.Empty;
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            return false;
+        }
+
+        var normalized = NormalizeRelativePath(path);
+        var segments = normalized.Split('/', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        var correctedSegments = segments.Select(NormalizeManagedPathAliasSegment).ToArray();
+        var hasManagedAliasCorrection = segments
+            .Zip(correctedSegments)
+            .Any(pair => !string.Equals(pair.First, pair.Second, StringComparison.Ordinal));
+        if (!hasManagedAliasCorrection)
+        {
+            return false;
+        }
+
+        var corrected = string.Join('/', correctedSegments);
+        message = $"Path '{normalized}' uses underscore managed-file segment(s). Use exact workspace path '{corrected}'. Managed project-media paths use hyphenated segments.";
+        return true;
+    }
+
+    private static string NormalizeManagedPathAliasSegment(string segment)
+    {
+        return segment switch
+        {
+            _ when string.Equals(segment, "managed_files", StringComparison.OrdinalIgnoreCase) => "managed-files",
+            _ when string.Equals(segment, "project_media", StringComparison.OrdinalIgnoreCase) => "project-media",
+            _ => segment
+        };
+    }
 
     public static string NormalizeAbsolutePath(string path)
         => Path.GetFullPath(path).Replace('\\', '/');

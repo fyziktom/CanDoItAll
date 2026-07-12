@@ -1,16 +1,19 @@
 @namespace CanDoItAll.Modules.Processes
 @using System.Globalization
+@using System.Text.Json
 @using CanDoItAll.Infrastructure.Configuration
 @using CanDoItAll.Processes.Abstractions
 @using CanDoItAll.Processes.Application
 @using CanDoItAll.Processes.Projections
 @using CanDoItAll.Processes.Runtime
+@using Microsoft.JSInterop
 @inject IProcessWorkspaceProjectionClient ProjectionClient
 @inject ProcessWorkspaceMockProjectionFactory MockProjectionFactory
 @inject ICurrencyFormatter CurrencyFormatter
 @inject NavigationManager Navigation
 @inject NotificationService Notifications
 @inject TooltipService TooltipService
+@inject IJSRuntime JsRuntime
 
 <PageTitle>@PageTitleText</PageTitle>
 
@@ -40,6 +43,15 @@
                 </CompactStatStrip>
 
                 <ToolbarActions Class="live-processes-command-strip__actions">
+                    @if (HiddenRelatedRunCount > 0)
+                    {
+                        <PageHeaderActionButton Icon="visibility"
+                                                Label="@($"Show {HiddenRelatedRunCount}")"
+                                                TooltipText="Show hidden process cards in this dashboard."
+                                                Disabled="@isLoading"
+                                                Click="ShowHiddenRunGroupsAsync"
+                                                data-testid="live-processes-show-hidden-runs" />
+                    }
                     <PageHeaderActionButton Icon="refresh"
                                             Label="Refresh"
                                             TooltipText="Refresh the live process projection."
@@ -271,6 +283,8 @@
     private const int ProcessNameDisplayLength = 34;
     private const string ProcessManagerDisplayName = "Process manager";
     private const string UnassignedAgentDisplayName = "Unassigned";
+    private const string HiddenRunGroupsStorageKeyPrefix = "candoitall.live-processes.hidden-run-groups";
+    private static readonly JsonSerializerOptions HiddenRunGroupsJsonOptions = new(JsonSerializerDefaults.Web);
 
     private sealed record RunDisplayModel(
         string ProcessName,
@@ -373,6 +387,8 @@
     private string? operatorActionError;
     private readonly Dictionary<Guid, string> operatorActionNotes = new();
     private readonly HashSet<Guid> mockResolvedOperatorActionStepIds = [];
+    private readonly HashSet<Guid> hiddenRunGroupIds = [];
+    private string? hiddenRunGroupsLoadedStorageKey;
 
     private string PageTitleText => ProjectId.HasValue ? "Project live processes" : "Live processes";
 
@@ -388,6 +404,14 @@
         => shell?.Runtime.Runs.Count > 0
             ? shell.Runtime.Runs.Max(run => run.LastEventAtUtc).LocalDateTime.ToString("g", CultureInfo.CurrentCulture)
             : "No events";
+
+    private int HiddenRelatedRunCount
+        => shell?.Runtime.Runs.Count(run => hiddenRunGroupIds.Contains(ResolveRunGroupId(run))) ?? 0;
+
+    private string HiddenRunGroupsStorageKey
+        => ProjectId.HasValue
+            ? $"{HiddenRunGroupsStorageKeyPrefix}:project:{ProjectId.Value:D}"
+            : $"{HiddenRunGroupsStorageKeyPrefix}:global";
 
     private string ProjectionStatusText
         => shell?.Refresh.Status switch
@@ -415,6 +439,19 @@
         await LoadAsync(forceRefresh: false);
     }
 
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        var storageKey = HiddenRunGroupsStorageKey;
+        if (string.Equals(hiddenRunGroupsLoadedStorageKey, storageKey, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        hiddenRunGroupsLoadedStorageKey = storageKey;
+        await LoadHiddenRunGroupsAsync(storageKey);
+        StateHasChanged();
+    }
+
     private Task ForceRefreshAsync()
         => LoadAsync(forceRefresh: true);
 
@@ -433,7 +470,7 @@
         {
             shell = await LoadShellProjectionAsync(forceRefresh, selectedRuntimeRunId ?? RunIdQuery);
             var requestedRunId = shell.Runtime.SelectedRunId ?? selectedRuntimeRunId ?? RunIdQuery;
-            var resolvedRunId = ResolveRunIdForCurrentStatusFilter(shell.Runtime.Runs, requestedRunId);
+            var resolvedRunId = ResolveRunIdForCurrentStatusFilter(VisibleRuntimeRuns(shell.Runtime.Runs), requestedRunId);
 
             if (resolvedRunId != requestedRunId)
             {
@@ -554,7 +591,10 @@
 
     private IReadOnlyList<ProcessLiveProcessSnapshot> SelectableRuns
         => shell?.Runtime.Runs
+            .Where(IsRunGroupVisible)
             .Where(run => statusFilter is null || run.Status == statusFilter)
+            .OrderByDescending(run => run.LastEventAtUtc)
+            .ThenBy(run => run.RunId.Value)
             .ToArray() ?? [];
 
     private IReadOnlyList<ProcessLiveProcessSnapshot> VisibleRuns
@@ -576,21 +616,23 @@
                 run.IsActive ||
                 run.Status is ProcessProjectedRunStatus.NeedsAttention or ProcessProjectedRunStatus.Failed ||
                 run.Incidents.Count > 0)
-            .OrderByDescending(run => run.Status == ProcessProjectedRunStatus.NeedsAttention)
+            .OrderByDescending(run => run.LastEventAtUtc)
+            .ThenByDescending(run => run.Status == ProcessProjectedRunStatus.NeedsAttention)
             .ThenByDescending(run => run.Status == ProcessProjectedRunStatus.Failed)
             .ThenByDescending(run => run.IsActive)
-            .ThenByDescending(run => run.LastEventAtUtc)
+            .ThenBy(run => run.RunId.Value)
             .Take(12)
             .ToArray();
 
     private IReadOnlyList<ProcessLiveProcessSnapshot> AttentionRuns
         => VisibleRuns
             .Where(RequiresOperatorAttention)
-            .OrderByDescending(run => run.Status == ProcessProjectedRunStatus.NeedsAttention)
+            .OrderByDescending(run => run.LastEventAtUtc)
+            .ThenByDescending(run => run.Status == ProcessProjectedRunStatus.NeedsAttention)
             .ThenByDescending(run => run.Status == ProcessProjectedRunStatus.Failed)
             .ThenByDescending(run => run.Incidents.Count)
             .ThenByDescending(run => ResolveManagerMessages(run.RunId).Count)
-            .ThenByDescending(run => run.LastEventAtUtc)
+            .ThenBy(run => run.RunId.Value)
             .Take(6)
             .ToArray();
 
@@ -862,10 +904,23 @@
                 @foreach (var run in AttentionRuns)
                 {
                     var action = ResolvePrimaryOperatorAction(run);
+                    var projectDisplayText = ResolveProjectDisplayText(run);
                     <article class="live-processes-attention-card" data-testid="live-processes-attention-card">
                         <div class="live-processes-attention-card__body">
                             <Cluster Gap="LayoutGap.XSmall" Class="flex-wrap">
                                 <StatusBadge Tone="@ResolveRunStatusTone(run.Status)" Text="@run.Status.ToString()" />
+                                @if (run.IsSubprocess)
+                                {
+                                    <StatusBadge Tone="accent"
+                                                 Text="Subprocess escalation"
+                                                 data-testid="live-processes-attention-subprocess-escalation-badge" />
+                                }
+                                @if (!string.IsNullOrWhiteSpace(projectDisplayText))
+                                {
+                                    <StatusBadge Tone="info"
+                                                 Text="@projectDisplayText"
+                                                 data-testid="live-processes-attention-project-badge" />
+                                }
                                 @if (run.Incidents.Count > 0)
                                 {
                                     <StatusBadge Tone="warning" Text="@FormatCount(run.Incidents.Count, "incident", "incidents")" />
@@ -874,6 +929,9 @@
                                 {
                                     <StatusBadge Tone="info" Text="@FormatCount(ResolveManagerMessages(run.RunId).Count, "manager message", "manager messages")" />
                                 }
+                                <StatusBadge Tone="neutral"
+                                             Text="@run.LastEventAtUtc.LocalDateTime.ToString("g", CultureInfo.CurrentCulture)"
+                                             data-testid="live-processes-attention-run-date" />
                             </Cluster>
                             <h3 class="live-processes-attention-card__title">@RenderRunTitleContent(run)</h3>
                             <p class="live-processes-attention-card__summary">@BuildAttentionSummary(run)</p>
@@ -910,6 +968,14 @@
                                     title="Open process control"
                                     aria-label="Open process control"
                                     Click="@(() => OpenProcessControlAsync(run.RunId.Value))" />
+                            <Button Icon="visibility_off"
+                                    Text="Hide run"
+                                    ButtonStyle="ButtonStyle.Light"
+                                    Size="ButtonSize.Small"
+                                    title="Hide this run group"
+                                    aria-label="Hide this run group"
+                                    Click="@(() => HideRunGroupAsync(run))"
+                                    data-testid="live-processes-hide-run-group" />
                         </Cluster>
                     </article>
                 }
@@ -1070,6 +1136,14 @@
                     title="Open process control"
                     aria-label="Open process control"
                     Click="@(() => OpenProcessControlAsync(run.RunId.Value))" />
+            <Button Icon="visibility_off"
+                    Text="Hide run"
+                    ButtonStyle="ButtonStyle.Light"
+                    Size="ButtonSize.Small"
+                    title="Hide this run group"
+                    aria-label="Hide this run group"
+                    Click="@(() => HideRunGroupAsync(run))"
+                    data-testid="live-processes-hide-run-group" />
         </Cluster>
     </article>;
 
@@ -1115,14 +1189,25 @@
                             <StatusBadge Tone="info" Text="@run.LastEventAtUtc.LocalDateTime.ToString("g", CultureInfo.CurrentCulture)" />
                         </span>
                     </button>
-                    <Button Icon="open_in_new"
-                            ButtonStyle="ButtonStyle.Light"
-                            Size="ButtonSize.Small"
-                            Class="cda-button--quick live-processes-run-card__open"
-                            title="Open run details"
-                            aria-label="Open run details"
-                            Click="@(() => OpenRunDetailDialogAsync(run))"
-                            data-testid="live-processes-run-open-details" />
+                    <Stack GapScale="LayoutGap.XSmall"
+                           Class="live-processes-run-card__actions">
+                        <Button Icon="open_in_new"
+                                ButtonStyle="ButtonStyle.Light"
+                                Size="ButtonSize.Small"
+                                Class="cda-button--quick live-processes-run-card__open"
+                                title="Open run details"
+                                aria-label="Open run details"
+                                Click="@(() => OpenRunDetailDialogAsync(run))"
+                                data-testid="live-processes-run-open-details" />
+                        <Button Icon="visibility_off"
+                                ButtonStyle="ButtonStyle.Light"
+                                Size="ButtonSize.Small"
+                                Class="cda-button--quick live-processes-run-card__open"
+                                title="Hide this run group"
+                                aria-label="Hide this run group"
+                                Click="@(() => HideRunGroupAsync(run))"
+                                data-testid="live-processes-hide-run-group" />
+                    </Stack>
                 </article>
             }
         }
@@ -1751,7 +1836,7 @@
             ? parsed
             : null;
         runtimeEventPage = 0;
-        selectedRuntimeRunId = ResolveRunIdForCurrentStatusFilter(shell?.Runtime.Runs ?? [], selectedRuntimeRunId);
+        selectedRuntimeRunId = ResolveRunIdForCurrentStatusFilter(VisibleRuntimeRuns(shell?.Runtime.Runs ?? []), selectedRuntimeRunId);
         await LoadAsync(forceRefresh: false);
     }
 
@@ -1770,6 +1855,94 @@
         runtimeEventPage = 0;
         await LoadAsync(forceRefresh: false);
     }
+
+    private async Task HideRunGroupAsync(ProcessLiveProcessSnapshot run)
+    {
+        var groupId = ResolveRunGroupId(run);
+        hiddenRunGroupIds.Add(groupId);
+        await SaveHiddenRunGroupsAsync();
+
+        if (selectedRuntimeRunId.HasValue &&
+            shell?.Runtime.Runs.Any(candidate =>
+                candidate.RunId.Value == selectedRuntimeRunId.Value &&
+                ResolveRunGroupId(candidate) == groupId) == true)
+        {
+            selectedRuntimeRunId = null;
+            runtimeEventPage = 0;
+            await LoadAsync(forceRefresh: false);
+        }
+    }
+
+    private async Task ShowHiddenRunGroupsAsync()
+    {
+        hiddenRunGroupIds.Clear();
+        await SaveHiddenRunGroupsAsync();
+    }
+
+    private async Task LoadHiddenRunGroupsAsync(string storageKey)
+    {
+        try
+        {
+            var json = await JsRuntime.InvokeAsync<string?>("localStorage.getItem", storageKey);
+            hiddenRunGroupIds.Clear();
+            if (string.IsNullOrWhiteSpace(json))
+            {
+                return;
+            }
+
+            var values = JsonSerializer.Deserialize<string[]>(json, HiddenRunGroupsJsonOptions) ?? [];
+            foreach (var value in values)
+            {
+                if (Guid.TryParse(value, out var runGroupId) && runGroupId != Guid.Empty)
+                {
+                    hiddenRunGroupIds.Add(runGroupId);
+                }
+            }
+        }
+        catch (JsonException exception)
+        {
+            hiddenRunGroupIds.Clear();
+            operatorActionError = $"Stored hidden process card preferences were invalid and were cleared: {exception.Message}";
+            await JsRuntime.InvokeVoidAsync("localStorage.removeItem", storageKey);
+        }
+        catch (Exception exception) when (exception is JSException or InvalidOperationException)
+        {
+            operatorActionError = $"Could not load hidden process card preferences: {exception.Message}";
+        }
+    }
+
+    private async Task SaveHiddenRunGroupsAsync()
+    {
+        operatorActionError = null;
+        try
+        {
+            if (hiddenRunGroupIds.Count == 0)
+            {
+                await JsRuntime.InvokeVoidAsync("localStorage.removeItem", HiddenRunGroupsStorageKey);
+                return;
+            }
+
+            var values = hiddenRunGroupIds
+                .OrderBy(id => id)
+                .Select(id => id.ToString("D"))
+                .ToArray();
+            var json = JsonSerializer.Serialize(values, HiddenRunGroupsJsonOptions);
+            await JsRuntime.InvokeVoidAsync("localStorage.setItem", HiddenRunGroupsStorageKey, json);
+        }
+        catch (Exception exception) when (exception is JSException or InvalidOperationException)
+        {
+            operatorActionError = $"Could not save hidden process card preferences: {exception.Message}";
+        }
+    }
+
+    private IReadOnlyList<ProcessLiveProcessSnapshot> VisibleRuntimeRuns(IReadOnlyList<ProcessLiveProcessSnapshot> runs)
+        => runs.Where(IsRunGroupVisible).ToArray();
+
+    private bool IsRunGroupVisible(ProcessLiveProcessSnapshot run)
+        => !hiddenRunGroupIds.Contains(ResolveRunGroupId(run));
+
+    private static Guid ResolveRunGroupId(ProcessLiveProcessSnapshot run)
+        => run.RootRunId.Value == Guid.Empty ? run.RunId.Value : run.RootRunId.Value;
 
     private Guid? ResolveRunIdForCurrentStatusFilter(IReadOnlyList<ProcessLiveProcessSnapshot> runs, Guid? requestedRunId)
     {

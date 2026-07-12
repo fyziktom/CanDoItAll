@@ -44,23 +44,246 @@ public sealed class AgentFinalizerPolicyTests
     }
 
     [Fact]
-    public void Process_step_artifact_recovery_rejects_in_progress_artifact()
+    public void Process_step_artifact_recovery_preserves_branch_outcome_key_from_primary_artifact()
     {
-        var context = CreateGovernedProcessContext(Guid.NewGuid(), "code-change");
+        var runId = Guid.NewGuid();
+        var context = CreateGovernedProcessContext(runId, "targeted-validation");
+        var primaryArtifactRef = $"artifacts/process-runs/{runId:D}/steps/targeted-validation.md";
 
         var recovered = MafAgentRuntime.TryCreateProcessStepOutcomeFromPrimaryArtifact(
             context,
-            "artifacts/process-runs/11111111-1111-1111-1111-111111111111/steps/code-change.md",
+            primaryArtifactRef,
+            """
+            # Targeted validation
+
+            Status: Completed
+            Branch outcome key: feature-accepted
+
+            ## Evidence
+            - workspace_dotnet_restore exit code 0
+            - workspace_dotnet_build exit code 0
+            - workspace_dotnet_test exit code 0
+            """,
+            out var outcome,
+            out var recoveryFailure);
+
+        Assert.True(recovered, recoveryFailure);
+        Assert.Equal(ProcessStepOutcomeStatus.Completed, outcome.Status);
+        Assert.Equal("feature-accepted", outcome.BranchOutcomeKey);
+        Assert.Equal([primaryArtifactRef], outcome.EvidenceRefs);
+    }
+
+    [Fact]
+    public void Process_step_artifact_recovery_preserves_branch_outcome_key_from_markdown_section()
+    {
+        var runId = Guid.NewGuid();
+        var context = CreateGovernedProcessContext(runId, "targeted-validation");
+        var primaryArtifactRef = $"artifacts/process-runs/{runId:D}/steps/targeted-validation.md";
+
+        var recovered = MafAgentRuntime.TryCreateProcessStepOutcomeFromPrimaryArtifact(
+            context,
+            primaryArtifactRef,
+            """
+            # Targeted validation
+
+            Status: Completed
+
+            ## Branch outcome key
+            feature-accepted
+
+            ## Evidence
+            - workspace_dotnet_restore exit code 0
+            - workspace_dotnet_build exit code 0
+            - workspace_dotnet_test exit code 0
+            """,
+            out var outcome,
+            out var recoveryFailure);
+
+        Assert.True(recovered, recoveryFailure);
+        Assert.Equal(ProcessStepOutcomeStatus.Completed, outcome.Status);
+        Assert.Equal("feature-accepted", outcome.BranchOutcomeKey);
+        Assert.Equal([primaryArtifactRef], outcome.EvidenceRefs);
+    }
+
+    [Fact]
+    public void Process_step_artifact_recovery_rejects_conflicting_branch_outcome_keys()
+    {
+        var runId = Guid.NewGuid();
+        var context = CreateGovernedProcessContext(runId, "targeted-validation");
+        var primaryArtifactRef = $"artifacts/process-runs/{runId:D}/steps/targeted-validation.md";
+
+        var recovered = MafAgentRuntime.TryCreateProcessStepOutcomeFromPrimaryArtifact(
+            context,
+            primaryArtifactRef,
+            """
+            # Targeted validation
+
+            Status: Completed
+            Branch outcome key: feature-accepted
+
+            ## Invalid duplicate
+            Branch outcome key: feature-repair-required
+            """,
+            out var outcome,
+            out var recoveryFailure);
+
+        Assert.False(recovered);
+        Assert.Null(outcome);
+        Assert.Contains("multiple different Branch outcome key lines", recoveryFailure, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void Process_step_artifact_recovery_rejects_conflicting_branch_outcome_key_sections()
+    {
+        var runId = Guid.NewGuid();
+        var context = CreateGovernedProcessContext(runId, "targeted-validation");
+        var primaryArtifactRef = $"artifacts/process-runs/{runId:D}/steps/targeted-validation.md";
+
+        var recovered = MafAgentRuntime.TryCreateProcessStepOutcomeFromPrimaryArtifact(
+            context,
+            primaryArtifactRef,
+            """
+            # Targeted validation
+
+            Status: Completed
+            Branch outcome key: feature-accepted
+
+            ## Invalid duplicate
+            ## Branch outcome key
+            feature-repair-required
+            """,
+            out var outcome,
+            out var recoveryFailure);
+
+        Assert.False(recovered);
+        Assert.Null(outcome);
+        Assert.Contains("multiple different Branch outcome key lines", recoveryFailure, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void Process_step_artifact_recovery_rejects_in_progress_artifact()
+    {
+        var context = CreateGovernedProcessContext(Guid.NewGuid(), "code-change");
+        var primaryArtifactRef = "artifacts/process-runs/11111111-1111-1111-1111-111111111111/steps/code-change.md";
+
+        var recovered = MafAgentRuntime.TryCreateProcessStepOutcomeFromPrimaryArtifact(
+            context,
+            primaryArtifactRef,
             """
             # Feature implementation change set
 
-            Status: in progress
+            Status: InProgress  # Feature implementation change set
             """,
-            out _,
+            out var outcome,
             out var failure);
 
         Assert.False(recovered);
-        Assert.Contains("Status line", failure, StringComparison.OrdinalIgnoreCase);
+        Assert.Null(outcome);
+        Assert.Contains("recoverable Status line", failure, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void Process_step_artifact_recovery_rejects_status_only_blocked_artifact()
+    {
+        var context = CreateGovernedProcessContext(Guid.NewGuid(), "qa-validation");
+        var primaryArtifactRef = "artifacts/process-runs/11111111-1111-1111-1111-111111111111/steps/qa-validation.md";
+
+        var recovered = MafAgentRuntime.TryCreateProcessStepOutcomeFromPrimaryArtifact(
+            context,
+            primaryArtifactRef,
+            """
+            # QA validation
+
+            Status: Blocked
+            """,
+            out var outcome,
+            out var failure);
+
+        Assert.False(recovered);
+        Assert.Null(outcome);
+        Assert.Contains("without concrete blocker evidence", failure, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void Process_step_artifact_recovery_recovers_blocked_artifact_with_concrete_evidence()
+    {
+        var context = CreateGovernedProcessContext(Guid.NewGuid(), "qa-validation");
+        var primaryArtifactRef = "artifacts/process-runs/11111111-1111-1111-1111-111111111111/steps/qa-validation.md";
+
+        var recovered = MafAgentRuntime.TryCreateProcessStepOutcomeFromPrimaryArtifact(
+            context,
+            primaryArtifactRef,
+            """
+            # QA validation
+
+            Status: Blocked
+
+            Cannot proceed because workspace_dotnet_test failed with exit code 1.
+            Evidence: artifacts/process-runs/11111111-1111-1111-1111-111111111111/steps/qa-validation.md
+            """,
+            out var outcome,
+            out var failure);
+
+        Assert.True(recovered, failure);
+        Assert.Equal(ProcessStepOutcomeStatus.Blocked, outcome.Status);
+        Assert.Equal([primaryArtifactRef], outcome.EvidenceRefs);
+        Assert.NotEmpty(outcome.NextActions);
+    }
+
+    [Fact]
+    public void Process_step_artifact_recovery_infers_completed_from_nonempty_artifact_without_status()
+    {
+        var runId = Guid.NewGuid();
+        var context = CreateGovernedProcessContext(runId, "scaffold-contract");
+        var primaryArtifactRef = $"artifacts/process-runs/{runId:D}/steps/scaffold-contract.md";
+
+        var recovered = MafAgentRuntime.TryCreateProcessStepOutcomeFromPrimaryArtifact(
+            context,
+            primaryArtifactRef,
+            """
+            # Scaffold contract
+
+            ## Contract facts
+            - Product root: `external-target/C/output`
+            - App project: `src/App`
+
+            ## Notes
+            This step records the intended scaffold contract only.
+            """,
+            out var outcome,
+            out var failure);
+
+        Assert.True(recovered, failure);
+        Assert.Equal(ProcessStepOutcomeStatus.Completed, outcome.Status);
+        Assert.Equal([primaryArtifactRef], outcome.EvidenceRefs);
+        Assert.Empty(outcome.NextActions);
+        Assert.Contains("inferred status 'Completed'", outcome.Reason, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void Process_step_artifact_recovery_infers_blocked_from_artifact_without_status()
+    {
+        var runId = Guid.NewGuid();
+        var context = CreateGovernedProcessContext(runId, "external-check");
+        var primaryArtifactRef = $"artifacts/process-runs/{runId:D}/steps/external-check.md";
+
+        var recovered = MafAgentRuntime.TryCreateProcessStepOutcomeFromPrimaryArtifact(
+            context,
+            primaryArtifactRef,
+            """
+            # External check
+
+            Cannot proceed because required input is missing from the governed process context.
+            Manager action required before retry.
+            """,
+            out var outcome,
+            out var failure);
+
+        Assert.True(recovered, failure);
+        Assert.Equal(ProcessStepOutcomeStatus.Blocked, outcome.Status);
+        Assert.Equal([primaryArtifactRef], outcome.EvidenceRefs);
+        Assert.NotEmpty(outcome.NextActions);
+        Assert.Contains("inferred status 'Blocked'", outcome.Reason, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -351,14 +574,14 @@ public sealed class AgentFinalizerPolicyTests
             Tools = [unrelatedTool, finalizerTool]
         };
 
-        var resolvedTool = MafAgentRuntime.ResolveRequiredFinalizerTool(
+        var resolvedTool = MafFinalizerDriver.ResolveRequiredFinalizerTool(
             policy,
             [finalizerTool]);
-        MafAgentRuntime.ConfigureRequiredFinalizerRepairChatOptions(
+        MafFinalizerDriver.ConfigureRequiredFinalizerRepairChatOptions(
             chatOptions,
             policy,
             resolvedTool);
-        var repairOptions = MafAgentRuntime.CreateRequiredFinalizerRepairRunOptions(policy, resolvedTool);
+        var repairOptions = MafFinalizerDriver.CreateRequiredFinalizerRepairRunOptions(policy, resolvedTool);
 
         Assert.Same(finalizerTool, resolvedTool);
         Assert.False(chatOptions.AllowMultipleToolCalls);
@@ -403,12 +626,12 @@ public sealed class AgentFinalizerPolicyTests
         }
         """;
 
-        var directResult = MafAgentRuntime.TryNormalizeFinalizerJsonRepairText(
+        var directResult = MafFinalizerDriver.TryNormalizeFinalizerJsonRepairText(
             policy,
             directPayload,
             out var directJson,
             out var directFailure);
-        var wrappedResult = MafAgentRuntime.TryNormalizeFinalizerJsonRepairText(
+        var wrappedResult = MafFinalizerDriver.TryNormalizeFinalizerJsonRepairText(
             policy,
             wrappedPayload,
             out var wrappedJson,
@@ -451,7 +674,7 @@ public sealed class AgentFinalizerPolicyTests
         }
         """;
 
-        var result = MafAgentRuntime.TryNormalizeFinalizerJsonRepairText(
+        var result = MafFinalizerDriver.TryNormalizeFinalizerJsonRepairText(
             policy,
             payload,
             out var argumentsJson,
@@ -485,7 +708,7 @@ public sealed class AgentFinalizerPolicyTests
         }
         """;
 
-        var result = MafAgentRuntime.TryNormalizeFinalizerJsonRepairText(
+        var result = MafFinalizerDriver.TryNormalizeFinalizerJsonRepairText(
             policy,
             payload,
             out var argumentsJson,
@@ -504,7 +727,7 @@ public sealed class AgentFinalizerPolicyTests
     public void Streamed_finalizer_recorder_captures_complete_later_chunk_for_same_call()
     {
         var policy = CreatePolicy();
-        var recorder = new MafAgentRuntime.StreamedFinalizerInvocationRecorder(
+        var recorder = new MafFinalizerDriver.StreamedFinalizerInvocationRecorder(
             AgentStructuredOutputContracts.ProcessStepOutcomeResult,
             AgentFinalizerMode.Required);
         const string outcomeJson = """
@@ -614,7 +837,7 @@ public sealed class AgentFinalizerPolicyTests
             SerializeOutcome(ProcessStepOutcomeStatus.Completed, "Repair produced a valid outcome."),
             Sequence: 2);
 
-        var effective = MafAgentRuntime.CreateEffectiveFinalizerInvocations(
+        var effective = MafFinalizerDriver.CreateEffectiveFinalizerInvocations(
             AgentStructuredOutputContracts.ProcessStepOutcomeResult,
             AgentFinalizerMode.Required,
             [invalidCaptured],
@@ -649,7 +872,7 @@ public sealed class AgentFinalizerPolicyTests
             SerializeOutcome(ProcessStepOutcomeStatus.Completed, "Third valid outcome."),
             Sequence: 3);
 
-        var effective = MafAgentRuntime.CreateEffectiveFinalizerInvocations(
+        var effective = MafFinalizerDriver.CreateEffectiveFinalizerInvocations(
             AgentStructuredOutputContracts.ProcessStepOutcomeResult,
             AgentFinalizerMode.Required,
             [first, second, third],
@@ -673,8 +896,8 @@ public sealed class AgentFinalizerPolicyTests
         var policy = CreatePolicy();
         var previousText = "START-" + new string('x', 30_000) + "-TAIL";
 
-        var toolRepairPrompt = MafAgentRuntime.BuildRequiredFinalizerRepairPrompt(policy, previousText);
-        var jsonRepairPrompt = MafAgentRuntime.BuildRequiredFinalizerJsonRepairPrompt(policy, previousText);
+        var toolRepairPrompt = MafFinalizerDriver.BuildRequiredFinalizerRepairPrompt(policy, previousText);
+        var jsonRepairPrompt = MafFinalizerDriver.BuildRequiredFinalizerJsonRepairPrompt(policy, previousText);
 
         AssertBoundedRepairPrompt(toolRepairPrompt);
         AssertBoundedRepairPrompt(jsonRepairPrompt);
@@ -692,8 +915,8 @@ public sealed class AgentFinalizerPolicyTests
             "Primary write ref: artifacts/process-runs/run-001/steps/implementation-approach.md",
             "Completion rule: consolidate this slot into the primary managed ref first and include that exact primary ref in evidenceRefs before returning Completed.");
 
-        var toolRepairPrompt = MafAgentRuntime.BuildRequiredFinalizerRepairPrompt(policy, null, repairContext);
-        var jsonRepairPrompt = MafAgentRuntime.BuildRequiredFinalizerJsonRepairPrompt(policy, null, repairContext);
+        var toolRepairPrompt = MafFinalizerDriver.BuildRequiredFinalizerRepairPrompt(policy, null, repairContext);
+        var jsonRepairPrompt = MafFinalizerDriver.BuildRequiredFinalizerJsonRepairPrompt(policy, null, repairContext);
 
         Assert.Contains("Do not submit a generic no-prior-evidence blocker", toolRepairPrompt, StringComparison.Ordinal);
         Assert.Contains("workspace_read_file", toolRepairPrompt, StringComparison.Ordinal);
@@ -720,12 +943,58 @@ public sealed class AgentFinalizerPolicyTests
                 IsGovernedProcessStep = true
             });
 
-        var useFrameworkHistory = MafAgentRuntime.ShouldUseFrameworkManagedHistory(
+        var useFrameworkHistory = MafRuntimeSessionBuilder.ShouldUseFrameworkManagedHistory(
             agent,
             provider,
             options);
 
         Assert.True(useFrameworkHistory);
+    }
+
+    [Fact]
+    public void Governed_process_provider_order_prefers_chat_completions_for_framework_managed_steps()
+    {
+        var responsesProvider = CreateProvider(
+            ProviderTransportKind.Responses,
+            preferFrameworkManagedHistory: false) with
+        {
+            Id = Guid.Parse("c1c103db-707e-3f52-8809-8d804fc171d1"),
+            Name = ManagedSeedProviderFallbacks.OpenAiDefaultProviderName,
+            ConfigurationJson = "{\"history\":\"service-managed\"}"
+        };
+        var chatCompletionsProvider = CreateProvider(
+            ProviderTransportKind.ChatCompletions,
+            preferFrameworkManagedHistory: true) with
+        {
+            Id = Guid.Parse("036b360a-e3f4-8350-97ca-f88de60ba2bb"),
+            Name = ManagedSeedProviderFallbacks.OpenAiChatCompletionsProviderName,
+            ConfigurationJson = "{\"history\":\"framework-managed\",\"timeoutSeconds\":600}"
+        };
+
+        var orderedProviders = AgentFrameworkWorkspaceExecutionService.OrderGovernedProcessProviderOverrideCandidates(
+            [responsesProvider, chatCompletionsProvider],
+            responsesProvider,
+            new ProviderProfileService());
+
+        Assert.Equal(chatCompletionsProvider.Id, orderedProviders[0].Id);
+    }
+
+    [Fact]
+    public void Chat_completions_provider_ignores_reasoning_effort_configuration()
+    {
+        var provider = CreateProvider(
+            ProviderTransportKind.ChatCompletions,
+            preferFrameworkManagedHistory: true) with
+        {
+            ConfigurationJson = "{\"reasoningEffort\":\"medium\"}"
+        };
+
+        var isUnsupported = MafModelParametersBuilder.IsReasoningEffortConfiguredButTransportUnsupported(
+            provider,
+            "gpt-5.4-mini",
+            "{\"reasoningEffort\":\"high\"}");
+
+        Assert.False(isUnsupported);
     }
 
     [Fact]

@@ -2,9 +2,9 @@ using CanDoItAll.Processes.Drivers.Abstractions;
 
 namespace CanDoItAll.Processes.Drivers.Standard;
 
-public sealed class StandardProcessAdapterStrategyFactory(IProcessExecutionAdapter adapter) : IProcessStrategyFactory
+public sealed class StandardProcessAdapterStrategyFactory(IProcessStepExecutionDriver driver) : IProcessStrategyFactory
 {
-    public ProcessStrategyDescriptor Descriptor => adapter.Descriptor.Strategy;
+    public ProcessStrategyDescriptor Descriptor => driver.Descriptor.Strategy;
 
     public ValueTask<IProcessStrategy> CreateAsync(
         ProcessStrategyBindingSnapshot binding,
@@ -15,14 +15,14 @@ public sealed class StandardProcessAdapterStrategyFactory(IProcessExecutionAdapt
         if (binding.StrategyId != Descriptor.StrategyId)
         {
             throw new InvalidOperationException(
-                $"Strategy binding '{binding.StrategyId}' does not match adapter strategy '{Descriptor.StrategyId}'.");
+                $"Strategy binding '{binding.StrategyId}' does not match adapter driver strategy '{Descriptor.StrategyId}'.");
         }
 
-        return ValueTask.FromResult<IProcessStrategy>(new StandardProcessAdapterStrategy(adapter));
+        return ValueTask.FromResult<IProcessStrategy>(new StandardProcessAdapterStrategy(driver));
     }
 }
 
-internal sealed class StandardProcessAdapterStrategy(IProcessExecutionAdapter adapter) : IProcessStrategy
+internal sealed class StandardProcessAdapterStrategy(IProcessStepExecutionDriver driver) : IProcessStrategy
 {
     public async ValueTask<StrategyResultEnvelope> ExecuteAsync(
         ProcessStrategyExecutionContext context,
@@ -30,12 +30,13 @@ internal sealed class StandardProcessAdapterStrategy(IProcessExecutionAdapter ad
     {
         ArgumentNullException.ThrowIfNull(context);
 
-        var result = await adapter.ExecuteAsync(
+        var adapter = driver.Descriptor.Adapter;
+        var result = await driver.ExecuteStepAsync(
             new ProcessExecutionAdapterRequest(
                 context.RunId,
                 context.StepId,
-                adapter.Descriptor.Kind,
-                new ProcessExecutionAdapterOperationKey($"{adapter.Descriptor.AdapterId}.execute"),
+                adapter.Kind,
+                new ProcessExecutionAdapterOperationKey($"{adapter.AdapterId}.execute"),
                 context.Binding,
                 context.Inputs,
                 CreateContextFacets(context.Inputs)),
@@ -55,8 +56,8 @@ internal sealed class StandardProcessAdapterStrategy(IProcessExecutionAdapter ad
         }
 
         return new StrategyResultEnvelope(
-            adapter.Descriptor.Strategy.StrategyId,
-            adapter.Descriptor.Strategy.StrategyVersion,
+            adapter.Strategy.StrategyId,
+            adapter.Strategy.StrategyVersion,
             Guid.NewGuid(),
             result.Outcome,
             result.ProducedArtifacts,

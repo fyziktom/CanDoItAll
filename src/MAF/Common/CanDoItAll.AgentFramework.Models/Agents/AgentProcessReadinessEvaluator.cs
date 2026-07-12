@@ -10,7 +10,8 @@ public sealed record AgentProcessRoleReadinessRequest(
     string RoleResourceKey,
     string RoleDisplayName,
     IReadOnlyList<string> AllowedOperations,
-    string OperationTargetScope);
+    string OperationTargetScope,
+    IReadOnlyList<string>? RequiredRuntimeToolNames = null);
 
 public sealed record AgentProcessRoleReadinessResult(
     bool HasRoleFit,
@@ -105,7 +106,7 @@ public static class AgentProcessReadinessEvaluator
             ? string.Join(" ", findings
                 .Where(finding => finding.Severity == AgentProcessReadinessFindingSeverity.Error)
                 .Select(finding => finding.Message))
-            : "Agent role family and workspace tool readiness satisfy the step operation contract.";
+            : "Agent role family, workspace tool readiness, and project-structure tool readiness satisfy the step operation contract.";
         var readinessHash = ComputeHash(string.Join(
             "|",
             agent.Id.ToString("D"),
@@ -114,6 +115,7 @@ public static class AgentProcessReadinessEvaluator
             request.RoleResourceKey,
             request.OperationTargetScope,
             string.Join(",", request.AllowedOperations.OrderBy(item => item, StringComparer.Ordinal)),
+            string.Join(",", NormalizeRequiredRuntimeToolNames(request.RequiredRuntimeToolNames)),
             readinessSummary));
 
         return new AgentProcessRoleReadinessResult(
@@ -178,6 +180,114 @@ public static class AgentProcessReadinessEvaluator
         {
             findings.Add(MissingTool(agent, request, "agent.readiness.workspace-scaffold-missing", "scaffold .NET projects"));
         }
+
+        AddRequiredRuntimeToolReadinessFindings(agent, request, normalized, findings);
+    }
+
+    private static void AddRequiredRuntimeToolReadinessFindings(
+        AgentDefinition agent,
+        AgentProcessRoleReadinessRequest request,
+        AgentWorkspaceToolAccessSettings normalized,
+        List<AgentProcessReadinessFinding> findings)
+    {
+        foreach (var requiredToolName in NormalizeRequiredRuntimeToolNames(request.RequiredRuntimeToolNames))
+        {
+            if (requiredToolName.StartsWith("project_structure_", StringComparison.OrdinalIgnoreCase))
+            {
+                AddRequiredProjectStructureToolReadinessFindings(agent, request, requiredToolName, findings);
+                continue;
+            }
+
+            if (!AgentWorkspaceToolAccessMetadata.TryResolveWorkspaceToolPermission(requiredToolName, out var permission))
+            {
+                if (requiredToolName.StartsWith("workspace_", StringComparison.OrdinalIgnoreCase))
+                {
+                    findings.Add(new AgentProcessReadinessFinding(
+                        AgentProcessReadinessFindingSeverity.Error,
+                        "agent.readiness.required-workspace-tool-unknown",
+                        $"Step '{request.StepKey}' requires workspace tool '{requiredToolName}', but readiness cannot map that tool to a workspace permission."));
+                }
+
+                continue;
+            }
+
+            if (HasWorkspacePermission(normalized, permission))
+            {
+                if (HasRequiredWorkspaceRuntimeToolCapability(agent, requiredToolName))
+                {
+                    continue;
+                }
+
+                findings.Add(new AgentProcessReadinessFinding(
+                    AgentProcessReadinessFindingSeverity.Error,
+                    "agent.readiness.required-tool-capability-missing",
+                    $"Step '{request.StepKey}' requires workspace tool '{requiredToolName}', but agent '{agent.Name}' does not have the matching capability assignment."));
+                continue;
+            }
+
+            var summary = FormatWorkspaceToolPermission(permission);
+            findings.Add(MissingTool(
+                agent,
+                request,
+                $"agent.readiness.required-tool-{summary.Code}-missing",
+                $"{summary.Description} for required runtime tool '{requiredToolName}'"));
+        }
+    }
+
+    private static void AddRequiredProjectStructureToolReadinessFindings(
+        AgentDefinition agent,
+        AgentProcessRoleReadinessRequest request,
+        string requiredToolName,
+        List<AgentProcessReadinessFinding> findings)
+    {
+        var access = AgentProjectStructureAccessMetadata.Normalize(
+            AgentProjectStructureAccessMetadata.Read(agent.ConfigurationJson));
+
+        if (ProjectStructureMutationRuntimeToolNames.Contains(requiredToolName))
+        {
+            if (!access.CanWrite)
+            {
+                findings.Add(new AgentProcessReadinessFinding(
+                    AgentProcessReadinessFindingSeverity.Error,
+                    "agent.readiness.required-project-structure-write-missing",
+                    $"Step '{request.StepKey}' requires project-structure mutation tool '{requiredToolName}', but agent '{agent.Name}' does not have project-structure write access."));
+            }
+
+            return;
+        }
+
+        if (ProjectStructureReadRuntimeToolNames.Contains(requiredToolName))
+        {
+            if (!access.CanRead)
+            {
+                findings.Add(new AgentProcessReadinessFinding(
+                    AgentProcessReadinessFindingSeverity.Error,
+                    "agent.readiness.required-project-structure-read-missing",
+                    $"Step '{request.StepKey}' requires project-structure read tool '{requiredToolName}', but agent '{agent.Name}' does not have project-structure read access."));
+            }
+
+            return;
+        }
+
+        findings.Add(new AgentProcessReadinessFinding(
+            AgentProcessReadinessFindingSeverity.Error,
+            "agent.readiness.required-project-structure-tool-unknown",
+            $"Step '{request.StepKey}' requires project-structure tool '{requiredToolName}', but readiness cannot classify the tool as read-only or mutating."));
+    }
+
+    private static bool HasRequiredWorkspaceRuntimeToolCapability(AgentDefinition agent, string requiredToolName)
+    {
+        if (string.IsNullOrWhiteSpace(requiredToolName) ||
+            !requiredToolName.StartsWith("workspace_", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        var normalizedToolName = requiredToolName.Trim().Replace('-', '_');
+        var normalizedCapabilityKey = normalizedToolName.Replace('_', '-');
+        return agent.Capabilities.Any(capability =>
+            string.Equals(capability.CapabilityKey, normalizedCapabilityKey, StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(capability.CapabilityKey.Replace('-', '_'), normalizedToolName, StringComparison.OrdinalIgnoreCase));
     }
 
     private static AgentProcessReadinessFinding MissingTool(
@@ -235,6 +345,49 @@ public static class AgentProcessReadinessEvaluator
     private static bool HasOperation(AgentProcessRoleReadinessRequest request, string operation)
     {
         return request.AllowedOperations.Contains(operation, StringComparer.Ordinal);
+    }
+
+    private static bool HasWorkspacePermission(
+        AgentWorkspaceToolAccessSettings normalized,
+        AgentWorkspaceToolPermissionKind permission)
+    {
+        return permission switch
+        {
+            AgentWorkspaceToolPermissionKind.ReadFiles => normalized.CanReadFiles,
+            AgentWorkspaceToolPermissionKind.WriteFiles => normalized.CanWriteFiles,
+            AgentWorkspaceToolPermissionKind.ManagePaths => normalized.CanManageWorkspacePaths,
+            AgentWorkspaceToolPermissionKind.RunValidationCommands => normalized.CanRunValidationCommands,
+            AgentWorkspaceToolPermissionKind.ScaffoldProjects => normalized.CanScaffoldProjects,
+            AgentWorkspaceToolPermissionKind.RunLocalScripts => normalized.CanRunLocalScripts,
+            AgentWorkspaceToolPermissionKind.TransformArtifacts => normalized.CanTransformArtifacts,
+            _ => false
+        };
+    }
+
+    private static (string Code, string Description) FormatWorkspaceToolPermission(AgentWorkspaceToolPermissionKind permission)
+    {
+        return permission switch
+        {
+            AgentWorkspaceToolPermissionKind.ReadFiles => ("read-files", "read workspace files"),
+            AgentWorkspaceToolPermissionKind.WriteFiles => ("write-files", "write workspace files"),
+            AgentWorkspaceToolPermissionKind.ManagePaths => ("manage-paths", "manage workspace paths"),
+            AgentWorkspaceToolPermissionKind.RunValidationCommands => ("validation", "run workspace validation commands"),
+            AgentWorkspaceToolPermissionKind.ScaffoldProjects => ("scaffold", "scaffold workspace projects"),
+            AgentWorkspaceToolPermissionKind.RunLocalScripts => ("local-scripts", "run workspace local scripts"),
+            AgentWorkspaceToolPermissionKind.TransformArtifacts => ("artifact-transform", "transform or analyze workspace artifacts"),
+            _ => ("workspace-permission", "use workspace tools")
+        };
+    }
+
+    private static IReadOnlyList<string> NormalizeRequiredRuntimeToolNames(IReadOnlyList<string>? requiredRuntimeToolNames)
+    {
+        return requiredRuntimeToolNames?
+            .Where(toolName => !string.IsNullOrWhiteSpace(toolName))
+            .Select(toolName => toolName.Trim().Replace('-', '_'))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(toolName => toolName, StringComparer.OrdinalIgnoreCase)
+            .ToArray()
+            ?? [];
     }
 
     private static bool IsTargetScope(AgentProcessRoleReadinessRequest request, string targetScope)
@@ -896,6 +1049,67 @@ public static class AgentProcessReadinessEvaluator
         "wasm",
         "webassembly"
     ];
+
+    private static readonly HashSet<string> ProjectStructureReadRuntimeToolNames = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "project_structure_projects_list",
+        "project_structure_hierarchy_get",
+        "project_structure_read",
+        "project_structure_node_catalog",
+        "project_structure_checklist",
+        "project_structure_dependencies_query",
+        "project_structure_asset_get",
+        "project_structure_asset_content_get",
+        "project_structure_node_workflow_add_options",
+        "project_structure_node_workflow_status_get",
+        "project_structure_knowledge_query",
+        "project_structure_analytics_query",
+        "project_structure_lease_get"
+    };
+
+    private static readonly HashSet<string> ProjectStructureMutationRuntimeToolNames = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "project_structure_project_create",
+        "project_structure_project_update",
+        "project_structure_subproject_link",
+        "project_structure_nodes_to_new_subproject",
+        "project_structure_dependency_link",
+        "project_structure_dependency_unlink",
+        "project_structure_node_create",
+        "project_structure_node_update",
+        "project_structure_node_type_update",
+        "project_structure_node_metadata_update",
+        "project_structure_nodes_status_update",
+        "project_structure_node_status_update",
+        "project_structure_nodes_progress_update",
+        "project_structure_node_progress_update",
+        "project_structure_nodes_marker_update",
+        "project_structure_node_marker_update",
+        "project_structure_nodes_priority_update",
+        "project_structure_node_priority_update",
+        "project_structure_node_move",
+        "project_structure_node_recompose",
+        "project_structure_node_reparent",
+        "project_structure_node_descendants_to_project_move",
+        "project_structure_node_command_execute",
+        "project_structure_node_process_definition_link",
+        "project_structure_node_process_start",
+        "project_structure_process_subprocess_launch",
+        "project_structure_node_workflow_definition_create",
+        "project_structure_node_workflow_start",
+        "project_structure_node_delete",
+        "project_structure_nodes_delete",
+        "project_structure_approval_request",
+        "project_structure_asset_create",
+        "project_structure_asset_create_revision",
+        "project_structure_link_create",
+        "project_structure_link_unlink",
+        "project_structure_import",
+        "project_structure_project_lease_acquire",
+        "project_structure_repo_branch_lease_acquire",
+        "project_structure_lease_renew",
+        "project_structure_lease_release"
+    };
 
     private sealed record ExactRoleMatch(
         string MatchKey,

@@ -64,7 +64,9 @@ public sealed partial class ProcessRuntimeEngine
             {
                 Status = nextStepStatus,
                 ActiveClaimToken = null,
-                CompletedResultKey = command.IdempotencyKey
+                CompletedResultKey = nextStepStatus == ProcessRuntimeStepStatus.Completed
+                    ? command.IdempotencyKey
+                    : null
             });
         var next = state with
         {

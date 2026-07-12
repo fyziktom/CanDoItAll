@@ -737,6 +737,79 @@ public sealed class ProcessRuntimeDispatchQueueTests
     }
 
     [Fact]
+    public async Task Child_parent_query_skips_parent_steps_waiting_on_newer_active_child()
+    {
+        await using var dbContext = CreateDbContext();
+        var now = new DateTimeOffset(2026, 6, 17, 18, 0, 0, TimeSpan.Zero);
+        var parentRunId = Guid.NewGuid();
+        var readyParentRunId = Guid.NewGuid();
+        var stoppedChildRunId = Guid.NewGuid();
+        var activeChildRunId = Guid.NewGuid();
+
+        var parentStepId = AddRuntimeState(
+            dbContext,
+            parentRunId,
+            ProcessRuntimeStatus.Active,
+            now,
+            ProcessRuntimeStepStatus.Waiting,
+            activeClaimToken: null);
+        var readyParentStepId = AddRuntimeState(
+            dbContext,
+            readyParentRunId,
+            ProcessRuntimeStatus.Active,
+            now,
+            ProcessRuntimeStepStatus.Ready,
+            activeClaimToken: null);
+        AddRuntimeState(
+            dbContext,
+            stoppedChildRunId,
+            ProcessRuntimeStatus.Completed,
+            now.AddMinutes(1),
+            ProcessRuntimeStepStatus.Completed,
+            activeClaimToken: null);
+        AddRuntimeState(
+            dbContext,
+            activeChildRunId,
+            ProcessRuntimeStatus.Active,
+            now.AddMinutes(2),
+            ProcessRuntimeStepStatus.Running,
+            activeClaimToken: Guid.NewGuid());
+        AddAssignment(
+            dbContext,
+            stoppedChildRunId,
+            Guid.NewGuid(),
+            new Dictionary<string, string>
+            {
+                [ProcessRuntimeLaunchVariables.ParentProcessRunId] = parentRunId.ToString("D"),
+                [ProcessRuntimeLaunchVariables.ParentProcessStepId] = parentStepId.ToString("D")
+            });
+        AddAssignment(
+            dbContext,
+            stoppedChildRunId,
+            Guid.NewGuid(),
+            new Dictionary<string, string>
+            {
+                [ProcessRuntimeLaunchVariables.ParentProcessRunId] = readyParentRunId.ToString("D"),
+                [ProcessRuntimeLaunchVariables.ParentProcessStepId] = readyParentStepId.ToString("D")
+            });
+        AddAssignment(
+            dbContext,
+            activeChildRunId,
+            Guid.NewGuid(),
+            new Dictionary<string, string>
+            {
+                [ProcessRuntimeLaunchVariables.ParentProcessRunId] = parentRunId.ToString("D"),
+                [ProcessRuntimeLaunchVariables.ParentProcessStepId] = parentStepId.ToString("D")
+            });
+
+        await dbContext.SaveChangesAsync();
+
+        var parentSteps = await ProcessRuntimeChildRunParentQuery.LoadActiveParentStepsAsync(dbContext, stoppedChildRunId);
+
+        Assert.Empty(parentSteps);
+    }
+
+    [Fact]
     public async Task Child_parent_query_returns_active_parent_claims_for_completed_child_claim_release()
     {
         await using var dbContext = CreateDbContext();
@@ -1092,6 +1165,12 @@ public sealed class ProcessRuntimeDispatchQueueTests
             "dispatcher",
             now,
             now.AddMinutes(25));
+        var previousClaimCompletedExecution = CreateExecutionRun(
+            runId,
+            stepId,
+            now.AddSeconds(-10),
+            ExecutionState.Completed,
+            RunOutcome.Succeeded);
         var oldCompletedExecution = CreateExecutionRun(
             runId,
             stepId,
@@ -1106,7 +1185,7 @@ public sealed class ProcessRuntimeDispatchQueueTests
             RunOutcome.Succeeded);
 
         var selected = AgentFrameworkProcessExecutionClaimRecoveryReconciler.SelectRecoverableExecution(
-            [oldCompletedExecution, completedExecution],
+            [oldCompletedExecution, previousClaimCompletedExecution, completedExecution],
             candidate);
 
         Assert.Equal(completedExecution.Id, selected?.Id);
@@ -1120,6 +1199,33 @@ public sealed class ProcessRuntimeDispatchQueueTests
 
         selected = AgentFrameworkProcessExecutionClaimRecoveryReconciler.SelectRecoverableExecution(
             [oldCompletedExecution, completedExecution, newerRunningExecution],
+            candidate);
+
+        Assert.Null(selected);
+    }
+
+    [Fact]
+    public void Claim_recovery_does_not_select_completed_execution_from_previous_claim()
+    {
+        var now = new DateTimeOffset(2026, 6, 17, 18, 0, 0, TimeSpan.Zero);
+        var runId = Guid.NewGuid();
+        var stepId = Guid.NewGuid();
+        var candidate = new AgentFrameworkProcessExecutionClaimRecoveryReconciler.ActiveProcessClaimCandidate(
+            runId,
+            stepId,
+            Guid.NewGuid(),
+            "dispatcher",
+            now,
+            now.AddMinutes(25));
+        var previousClaimCompletedExecution = CreateExecutionRun(
+            runId,
+            stepId,
+            now.AddSeconds(-10),
+            ExecutionState.Completed,
+            RunOutcome.Succeeded);
+
+        var selected = AgentFrameworkProcessExecutionClaimRecoveryReconciler.SelectRecoverableExecution(
+            [previousClaimCompletedExecution],
             candidate);
 
         Assert.Null(selected);
@@ -1231,7 +1337,13 @@ public sealed class ProcessRuntimeDispatchQueueTests
             executionCreatedAtUtc.AddSeconds(-45),
             executionCreatedAtUtc));
         Assert.True(AgentFrameworkProcessExecutionClaimRecoveryCoordinator.CanAssociateClaimWithRecoveredExecution(
-            executionCreatedAtUtc.AddMinutes(2),
+            executionCreatedAtUtc,
+            executionCreatedAtUtc));
+        Assert.False(AgentFrameworkProcessExecutionClaimRecoveryCoordinator.CanAssociateClaimWithRecoveredExecution(
+            executionCreatedAtUtc.AddTicks(1),
+            executionCreatedAtUtc));
+        Assert.False(AgentFrameworkProcessExecutionClaimRecoveryCoordinator.CanAssociateClaimWithRecoveredExecution(
+            executionCreatedAtUtc.AddMinutes(-3),
             executionCreatedAtUtc));
         Assert.False(AgentFrameworkProcessExecutionClaimRecoveryCoordinator.CanAssociateClaimWithRecoveredExecution(
             executionCreatedAtUtc.AddMinutes(3),

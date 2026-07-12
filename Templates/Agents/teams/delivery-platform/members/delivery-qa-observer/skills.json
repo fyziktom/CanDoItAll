@@ -18,6 +18,7 @@
     "workspace-write-file",
     "workspace-append-file",
     "workspace-dotnet-build",
+    "workspace-dotnet-restore",
     "workspace-dotnet-test",
     "workspace-dotnet-run",
     "workspace-dotnet-stop",

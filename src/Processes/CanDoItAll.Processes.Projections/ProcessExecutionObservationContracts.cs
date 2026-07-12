@@ -107,4 +107,7 @@ public sealed record ProcessExecutionArtifactObservation(
     string DisplayName,
     string RelativePath,
     string Summary,
-    DateTimeOffset CreatedAtUtc);
+    DateTimeOffset CreatedAtUtc)
+{
+    public string ProducedBy { get; init; } = string.Empty;
+}

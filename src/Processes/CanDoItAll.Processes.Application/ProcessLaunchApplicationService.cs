@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json;
 using CanDoItAll.Processes.Abstractions;
 using CanDoItAll.Processes.Builder;
 using CanDoItAll.Processes.Contracts;
@@ -514,6 +515,7 @@ public sealed class ProcessLaunchApplicationService(
             var producedSlots = ResolveProducedSlots(templateStep, kernelBuild);
             var roleKey = binding?.RoleKey ?? ResolvePrimaryRoleKey(templateStep);
             roleByKey.TryGetValue(roleKey, out var role);
+            var stepLaunchVariables = EnrichStepLaunchVariables(effectiveLaunchVariables, templateStep);
             assignments.Add(new ProcessRuntimeStepAssignment(
                 runId,
                 plan.Header.PlanId,
@@ -535,14 +537,14 @@ public sealed class ProcessLaunchApplicationService(
                     kernelBuild.ArtifactSlotByStepExpectation,
                     runId,
                     managedArtifactRoot,
-                    effectiveLaunchVariables)),
+                    stepLaunchVariables)),
                 binding?.ReadinessHash ?? ComputeHash($"missing:{planStep.StepKey}"),
                 binding?.AssignmentReason ?? "No executor binding was resolved.",
                 producedSlots,
                 requiredSlots,
                 NormalizeAllowedOperations(templateStep.AllowedOperations),
                 NormalizeOperationTargetScope(templateStep.OperationTargetScope),
-                effectiveLaunchVariables,
+                stepLaunchVariables,
                 ResolveBranchGate(templateStep),
                 nowUtc));
         }
@@ -944,6 +946,364 @@ public sealed class ProcessLaunchApplicationService(
         }
 
         return enriched;
+    }
+
+    private static IReadOnlyDictionary<string, string> EnrichStepLaunchVariables(
+        IReadOnlyDictionary<string, string> variables,
+        ProcessTemplateDefinitionStepDocument step)
+    {
+        var enriched = new Dictionary<string, string>(variables, StringComparer.Ordinal);
+        ApplyStepScopedLaunchVariablePrefixFilter(enriched, step.Key);
+        var inheritedProductCompletionPaths = TryGetNonEmptyLaunchVariable(
+            enriched,
+            ProcessRuntimeLaunchVariables.ProductCompletionRequiredPaths);
+        var inheritedProductCompletionFileContentChecks = TryGetNonEmptyLaunchVariable(
+            enriched,
+            ProcessRuntimeLaunchVariables.ProductCompletionRequiredFileContentChecks);
+        var inheritedProductCompletionToolReceipts = TryGetNonEmptyLaunchVariable(
+            enriched,
+            ProcessRuntimeLaunchVariables.ProductCompletionRequiredToolReceipts);
+        RemoveCanonicalLaunchVariable(enriched, ProcessRuntimeLaunchVariables.ProcessStepKind);
+        RemoveCanonicalLaunchVariable(enriched, ProcessRuntimeLaunchVariables.ProcessStepSubprocessDefinitionKey);
+        RemoveCanonicalLaunchVariable(enriched, ProcessRuntimeLaunchVariables.ProductCompletionRequiredPaths);
+        RemoveCanonicalLaunchVariable(enriched, ProcessRuntimeLaunchVariables.ProductCompletionRequiredFileContentChecks);
+        RemoveCanonicalLaunchVariable(enriched, ProcessRuntimeLaunchVariables.ProductCompletionRequiredToolReceipts);
+
+        if (!string.IsNullOrWhiteSpace(step.StepKind))
+        {
+            SetCanonicalLaunchVariable(enriched, ProcessRuntimeLaunchVariables.ProcessStepKind, step.StepKind.Trim());
+        }
+
+        if (!string.IsNullOrWhiteSpace(step.SubprocessProcessKey))
+        {
+            SetCanonicalLaunchVariable(
+                enriched,
+                ProcessRuntimeLaunchVariables.ProcessStepSubprocessDefinitionKey,
+                step.SubprocessProcessKey.Trim());
+        }
+
+        if (TryResolveStepProductCompletionRequiredPaths(enriched, step.Key, out var stepProductCompletionPaths))
+        {
+            SetCanonicalLaunchVariable(
+                enriched,
+                ProcessRuntimeLaunchVariables.ProductCompletionRequiredPaths,
+                stepProductCompletionPaths);
+        }
+        else if (!string.IsNullOrWhiteSpace(inheritedProductCompletionPaths))
+        {
+            SetCanonicalLaunchVariable(
+                enriched,
+                ProcessRuntimeLaunchVariables.ProductCompletionRequiredPaths,
+                inheritedProductCompletionPaths);
+        }
+
+        if (TryResolveStepProductCompletionRequiredToolReceipts(enriched, step.Key, out var stepProductCompletionToolReceipts))
+        {
+            SetCanonicalLaunchVariable(
+                enriched,
+                ProcessRuntimeLaunchVariables.ProductCompletionRequiredToolReceipts,
+                stepProductCompletionToolReceipts);
+        }
+        else if (!string.IsNullOrWhiteSpace(inheritedProductCompletionToolReceipts))
+        {
+            SetCanonicalLaunchVariable(
+                enriched,
+                ProcessRuntimeLaunchVariables.ProductCompletionRequiredToolReceipts,
+                inheritedProductCompletionToolReceipts);
+        }
+
+        if (TryResolveStepProductCompletionRequiredFileContentChecks(enriched, step.Key, out var stepProductCompletionFileContentChecks))
+        {
+            SetCanonicalLaunchVariable(
+                enriched,
+                ProcessRuntimeLaunchVariables.ProductCompletionRequiredFileContentChecks,
+                stepProductCompletionFileContentChecks);
+        }
+        else if (!string.IsNullOrWhiteSpace(inheritedProductCompletionFileContentChecks))
+        {
+            SetCanonicalLaunchVariable(
+                enriched,
+                ProcessRuntimeLaunchVariables.ProductCompletionRequiredFileContentChecks,
+                inheritedProductCompletionFileContentChecks);
+        }
+
+        return enriched;
+    }
+
+    private static void ApplyStepScopedLaunchVariablePrefixFilter(
+        IDictionary<string, string> variables,
+        string stepKey)
+    {
+        var mapJson = TryGetNonEmptyLaunchVariable(
+            variables,
+            ProcessRuntimeLaunchVariables.ProcessStepScopedLaunchVariablePrefixesByStep);
+        RemoveCanonicalLaunchVariable(
+            variables,
+            ProcessRuntimeLaunchVariables.ProcessStepScopedLaunchVariablePrefixesByStep);
+        if (string.IsNullOrWhiteSpace(mapJson) ||
+            string.IsNullOrWhiteSpace(stepKey) ||
+            !TryResolveStepScopedLaunchVariablePrefixes(
+                mapJson,
+                stepKey,
+                out var scopedPrefixes,
+                out var currentStepPrefixes))
+        {
+            return;
+        }
+
+        foreach (var key in variables.Keys.ToArray())
+        {
+            if (StartsWithAnyPrefix(key, scopedPrefixes) &&
+                !StartsWithAnyPrefix(key, currentStepPrefixes))
+            {
+                variables.Remove(key);
+            }
+        }
+    }
+
+    private static bool TryResolveStepScopedLaunchVariablePrefixes(
+        string mapJson,
+        string stepKey,
+        out IReadOnlyList<string> scopedPrefixes,
+        out IReadOnlyList<string> currentStepPrefixes)
+    {
+        scopedPrefixes = [];
+        currentStepPrefixes = [];
+
+        try
+        {
+            using var document = JsonDocument.Parse(mapJson);
+            if (document.RootElement.ValueKind != JsonValueKind.Object)
+            {
+                return false;
+            }
+
+            var allPrefixes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var stepPrefixes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var property in document.RootElement.EnumerateObject())
+            {
+                var propertyPrefixes = ReadStringArray(property.Value);
+                foreach (var prefix in propertyPrefixes)
+                {
+                    allPrefixes.Add(prefix);
+                }
+
+                if (!string.Equals(property.Name, stepKey, StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                foreach (var prefix in propertyPrefixes)
+                {
+                    stepPrefixes.Add(prefix);
+                }
+            }
+
+            if (allPrefixes.Count == 0)
+            {
+                return false;
+            }
+
+            scopedPrefixes = allPrefixes
+                .OrderByDescending(prefix => prefix.Length)
+                .ThenBy(prefix => prefix, StringComparer.OrdinalIgnoreCase)
+                .ToArray();
+            currentStepPrefixes = stepPrefixes
+                .OrderByDescending(prefix => prefix.Length)
+                .ThenBy(prefix => prefix, StringComparer.OrdinalIgnoreCase)
+                .ToArray();
+            return true;
+        }
+        catch (JsonException)
+        {
+            return false;
+        }
+    }
+
+    private static IReadOnlyList<string> ReadStringArray(JsonElement element)
+    {
+        if (element.ValueKind == JsonValueKind.String)
+        {
+            var value = element.GetString()?.Trim() ?? string.Empty;
+            return string.IsNullOrWhiteSpace(value) ? [] : [value];
+        }
+
+        if (element.ValueKind != JsonValueKind.Array)
+        {
+            return [];
+        }
+
+        return element
+            .EnumerateArray()
+            .Where(item => item.ValueKind == JsonValueKind.String)
+            .Select(item => item.GetString()?.Trim() ?? string.Empty)
+            .Where(item => !string.IsNullOrWhiteSpace(item))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+    }
+
+    private static bool StartsWithAnyPrefix(string value, IReadOnlyList<string> prefixes)
+    {
+        return prefixes.Any(prefix => value.StartsWith(prefix, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static bool TryResolveStepProductCompletionRequiredPaths(
+        IReadOnlyDictionary<string, string> variables,
+        string stepKey,
+        out string paths)
+    {
+        paths = string.Empty;
+        var mapJson = TryGetNonEmptyLaunchVariable(
+            variables,
+            ProcessRuntimeLaunchVariables.ProductCompletionRequiredPathsByStep);
+        if (string.IsNullOrWhiteSpace(mapJson) ||
+            string.IsNullOrWhiteSpace(stepKey))
+        {
+            return false;
+        }
+
+        try
+        {
+            using var document = JsonDocument.Parse(mapJson);
+            if (document.RootElement.ValueKind != JsonValueKind.Object)
+            {
+                return false;
+            }
+
+            foreach (var property in document.RootElement.EnumerateObject())
+            {
+                if (!string.Equals(property.Name, stepKey, StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                paths = FormatProductCompletionRequiredStringList(property.Value);
+                return !string.IsNullOrWhiteSpace(paths);
+            }
+        }
+        catch (JsonException)
+        {
+            return false;
+        }
+
+        return false;
+    }
+
+    private static bool TryResolveStepProductCompletionRequiredToolReceipts(
+        IReadOnlyDictionary<string, string> variables,
+        string stepKey,
+        out string toolReceipts)
+    {
+        toolReceipts = string.Empty;
+        var mapJson = TryGetNonEmptyLaunchVariable(
+            variables,
+            ProcessRuntimeLaunchVariables.ProductCompletionRequiredToolReceiptsByStep);
+        if (string.IsNullOrWhiteSpace(mapJson) ||
+            string.IsNullOrWhiteSpace(stepKey))
+        {
+            return false;
+        }
+
+        try
+        {
+            using var document = JsonDocument.Parse(mapJson);
+            if (document.RootElement.ValueKind != JsonValueKind.Object)
+            {
+                return false;
+            }
+
+            foreach (var property in document.RootElement.EnumerateObject())
+            {
+                if (!string.Equals(property.Name, stepKey, StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                toolReceipts = FormatProductCompletionRequiredStringList(property.Value);
+                return !string.IsNullOrWhiteSpace(toolReceipts);
+            }
+        }
+        catch (JsonException)
+        {
+            return false;
+        }
+
+        return false;
+    }
+
+    private static bool TryResolveStepProductCompletionRequiredFileContentChecks(
+        IReadOnlyDictionary<string, string> variables,
+        string stepKey,
+        out string checks)
+    {
+        checks = string.Empty;
+        var mapJson = TryGetNonEmptyLaunchVariable(
+            variables,
+            ProcessRuntimeLaunchVariables.ProductCompletionRequiredFileContentChecksByStep);
+        if (string.IsNullOrWhiteSpace(mapJson) ||
+            string.IsNullOrWhiteSpace(stepKey))
+        {
+            return false;
+        }
+
+        try
+        {
+            using var document = JsonDocument.Parse(mapJson);
+            if (document.RootElement.ValueKind != JsonValueKind.Object)
+            {
+                return false;
+            }
+
+            foreach (var property in document.RootElement.EnumerateObject())
+            {
+                if (!string.Equals(property.Name, stepKey, StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                checks = property.Value.GetRawText();
+                return !string.IsNullOrWhiteSpace(checks);
+            }
+        }
+        catch (JsonException)
+        {
+            return false;
+        }
+
+        return false;
+    }
+
+    private static string FormatProductCompletionRequiredStringList(JsonElement element)
+    {
+        if (element.ValueKind == JsonValueKind.String)
+        {
+            return element.GetString()?.Trim() ?? string.Empty;
+        }
+
+        if (element.ValueKind != JsonValueKind.Array)
+        {
+            return string.Empty;
+        }
+
+        return string.Join(
+            Environment.NewLine,
+            element.EnumerateArray()
+                .Where(item => item.ValueKind == JsonValueKind.String)
+                .Select(item => item.GetString()?.Trim() ?? string.Empty)
+                .Where(item => !string.IsNullOrWhiteSpace(item))
+                .Distinct(StringComparer.OrdinalIgnoreCase));
+    }
+
+    private static void RemoveCanonicalLaunchVariable(
+        IDictionary<string, string> variables,
+        string key)
+    {
+        foreach (var existingKey in variables.Keys
+            .Where(candidate => string.Equals(candidate, key, StringComparison.OrdinalIgnoreCase))
+            .ToArray())
+        {
+            variables.Remove(existingKey);
+        }
     }
 
     private static void PreservePreviousValue(

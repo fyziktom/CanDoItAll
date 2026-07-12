@@ -7,8 +7,17 @@ public static class ProcessRuntimeLaunchVariables
 {
     public const string ParentProcessRunId = "ParentProcessRunId";
     public const string ParentProcessStepId = "ParentProcessStepId";
+    public const string ProductCompletionRequiredPaths = "ProductCompletionRequiredPaths";
+    public const string ProductCompletionRequiredPathsByStep = "ProductCompletionRequiredPathsByStep";
+    public const string ProductCompletionRequiredFileContentChecks = "ProductCompletionRequiredFileContentChecks";
+    public const string ProductCompletionRequiredFileContentChecksByStep = "ProductCompletionRequiredFileContentChecksByStep";
+    public const string ProductCompletionRequiredToolReceipts = "ProductCompletionRequiredToolReceipts";
+    public const string ProductCompletionRequiredToolReceiptsByStep = "ProductCompletionRequiredToolReceiptsByStep";
+    public const string ProcessStepScopedLaunchVariablePrefixesByStep = "ProcessStepScopedLaunchVariablePrefixesByStep";
     public const string ProcessDefinitionKey = "ProcessDefinitionKey";
     public const string ProcessDefinitionName = "ProcessDefinitionName";
+    public const string ProcessStepKind = "ProcessStepKind";
+    public const string ProcessStepSubprocessDefinitionKey = "ProcessStepSubprocessDefinitionKey";
     public const string ProjectId = "ProjectId";
     public const string ProjectName = "ProjectName";
 
@@ -85,6 +94,20 @@ public static class ProcessRuntimeLaunchVariables
         }
 
         definitionName = value;
+        return true;
+    }
+
+    public static bool TryReadProcessStepSubprocessDefinitionKey(
+        IReadOnlyDictionary<string, string> launchVariables,
+        out string definitionKey)
+    {
+        definitionKey = string.Empty;
+        if (!TryReadNonEmptyString(launchVariables, ProcessStepSubprocessDefinitionKey, out var value))
+        {
+            return false;
+        }
+
+        definitionKey = value;
         return true;
     }
 

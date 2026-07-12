@@ -171,7 +171,7 @@ public sealed class WorkspaceCommandExecutionService : IWorkspaceCommandExecutio
             "workspace_convert_document",
             "convert_document",
             "LocalExecution:DocumentConversion",
-            approvalRequired: true);
+            approvalRequired: false);
 
     public Task<WorkspaceCommandExecutionResult> InspectSpreadsheetPreview(string path, int maxRows = 8, int maxColumns = 8, int timeoutSeconds = 300)
         => ExecutePlanAsync(

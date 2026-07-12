@@ -386,7 +386,7 @@ internal sealed class ProjectStructureNodeCreateInputJsonConverter : JsonConvert
             model.EndUtc,
             resolved.ObjectSubtype,
             model.Media,
-            model.MetadataJson,
+            ProjectStructureNodeRequestMetadata.ResolveMetadataJson(model.MetadataJson, model.Metadata),
             model.LeaseToken,
             model.DurationSeconds);
     }
@@ -441,6 +441,8 @@ internal sealed class ProjectStructureNodeCreateInputJsonConverter : JsonConvert
 
         public string? MetadataJson { get; set; }
 
+        public JsonElement? Metadata { get; set; }
+
         public string? LeaseToken { get; set; }
 
         public int? DurationSeconds { get; set; }
@@ -463,7 +465,7 @@ internal sealed class ProjectStructureNodeEditInputJsonConverter : JsonConverter
             resolved.ObjectSubtype,
             model.StartUtc,
             model.EndUtc,
-            model.MetadataJson,
+            ProjectStructureNodeRequestMetadata.ResolveMetadataJson(model.MetadataJson, model.Metadata),
             model.LeaseToken,
             model.DurationSeconds);
     }
@@ -508,8 +510,29 @@ internal sealed class ProjectStructureNodeEditInputJsonConverter : JsonConverter
 
         public string? MetadataJson { get; set; }
 
+        public JsonElement? Metadata { get; set; }
+
         public string? LeaseToken { get; set; }
 
         public int? DurationSeconds { get; set; }
+    }
+}
+
+internal static class ProjectStructureNodeRequestMetadata
+{
+    public static string? ResolveMetadataJson(string? metadataJson, JsonElement? metadata)
+    {
+        if (!string.IsNullOrWhiteSpace(metadataJson))
+        {
+            return metadataJson;
+        }
+
+        if (!metadata.HasValue ||
+            metadata.Value.ValueKind is JsonValueKind.Undefined or JsonValueKind.Null)
+        {
+            return null;
+        }
+
+        return metadata.Value.GetRawText();
     }
 }

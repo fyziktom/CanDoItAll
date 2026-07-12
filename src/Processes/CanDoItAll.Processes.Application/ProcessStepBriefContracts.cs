@@ -23,6 +23,10 @@ public sealed record ProcessStepBriefBuildRequest(
 
 public sealed class GenericProcessStepBriefBuilder : IProcessStepBriefBuilder
 {
+    private const int MaxLaunchVariableValueCharacters = 2400;
+    private const int LaunchVariableHeadCharacters = 1600;
+    private const int LaunchVariableTailCharacters = 500;
+
     public string Build(ProcessStepBriefBuildRequest request)
     {
         ArgumentNullException.ThrowIfNull(request);
@@ -92,7 +96,29 @@ public sealed class GenericProcessStepBriefBuilder : IProcessStepBriefBuilder
     {
         return variables.Count == 0
             ? "No launch variables were supplied."
-            : string.Join(Environment.NewLine, variables.OrderBy(item => item.Key).Select(item => $"- {item.Key}: {item.Value}"));
+            : string.Join(Environment.NewLine, variables.OrderBy(item => item.Key).Select(item => $"- {item.Key}: {FormatLaunchVariableValue(item.Value)}"));
+    }
+
+    private static string FormatLaunchVariableValue(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return string.Empty;
+        }
+
+        var normalized = value.Trim();
+        if (normalized.Length <= MaxLaunchVariableValueCharacters)
+        {
+            return normalized;
+        }
+
+        var omittedCharacters = normalized.Length - LaunchVariableHeadCharacters - LaunchVariableTailCharacters;
+        return string.Concat(
+            normalized[..LaunchVariableHeadCharacters],
+            Environment.NewLine,
+            $"[... launch variable truncated; {omittedCharacters} character(s) omitted ...]",
+            Environment.NewLine,
+            normalized[^LaunchVariableTailCharacters..]);
     }
 
     private static string FormatBranchOutcomes(ProcessTemplateDefinitionStepDocument step)
@@ -262,7 +288,7 @@ public sealed class GenericProcessStepBriefBuilder : IProcessStepBriefBuilder
         - Child definition snapshot name: {snapshotName}
         - Scope rule: use the parent step's assigned project node. Leave ParentProjectNodeId empty unless the parent launch context has no project node. Do not pass ProcessRunNodeId as ParentProjectNodeId.
         - Completion rule: {completionRule}
-        - Stopped-child rule: do not return blocked only because a previous child run is Completed, Failed, Cancelled, or Blocked. Do not relaunch a Blocked child or a child with escalation/no-go evidence; propagate that blocker with child run and artifact refs.
+        - Child-outcome rule: when the subprocess launch tool returns ParentDeferredOutcomeJson, submit that JSON exactly. Running children defer the parent; Completed children complete the parent from child evidence; stopped children propagate their concrete blocker. Do not relaunch a Blocked child or a child with escalation/no-go evidence.
         """;
     }
 

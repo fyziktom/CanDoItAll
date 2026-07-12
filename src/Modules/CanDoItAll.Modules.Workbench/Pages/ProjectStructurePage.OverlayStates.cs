@@ -216,6 +216,7 @@ public sealed record ProjectStructureProcessStartRoleState(
 public sealed record ProjectStructureProcessStartDialogState(
     Guid ProjectId,
     Guid ProcessDefinitionId,
+    string DefinitionKey,
     string NodeId,
     string NodeTitle,
     string? ParentNodeId,

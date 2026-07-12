@@ -13,6 +13,10 @@ internal sealed class WorkspaceFileQueryService
     private readonly WorkspaceFileReceiptWriter receiptWriter;
     private readonly WorkspaceTextContentGuard textContentGuard;
 
+    private readonly record struct WorkspaceFileListRequest(
+        string? RelativePath,
+        string SearchPattern);
+
     public WorkspaceFileQueryService(
         WorkspacePathPolicy pathPolicy,
         WorkspaceFileReceiptWriter receiptWriter,
@@ -26,14 +30,28 @@ internal sealed class WorkspaceFileQueryService
     public WorkspaceFileListResult ListFiles(string? relativePath = null, string searchPattern = "*", int maxResults = 100)
     {
         var startedAtUtc = DateTimeOffset.UtcNow;
-        if (!pathPolicy.TryResolveWorkspacePath(relativePath, allowWorkspaceRoot: true, out var resolution, out var validationMessage))
+        var request = NormalizeListRequest(relativePath, searchPattern);
+        var normalizedSearchPattern = NormalizeSearchPattern(request.SearchPattern);
+        if (TryCreateSearchPatternValidationFailure(normalizedSearchPattern, out var patternValidationMessage))
+        {
+            return new WorkspaceFileListResult(
+                Succeeded: false,
+                Message: patternValidationMessage,
+                Receipt: receiptWriter.CreateReceipt("workspace_list_files", false, "Denied", patternValidationMessage, string.Empty, [], [], startedAtUtc),
+                RootPath: request.RelativePath ?? ".",
+                SearchPattern: normalizedSearchPattern,
+                Entries: [],
+                IsTruncated: false);
+        }
+
+        if (!pathPolicy.TryResolveWorkspacePath(request.RelativePath, allowWorkspaceRoot: true, out var resolution, out var validationMessage))
         {
             return new WorkspaceFileListResult(
                 Succeeded: false,
                 Message: validationMessage,
                 Receipt: receiptWriter.CreateReceipt("workspace_list_files", false, "Denied", validationMessage, string.Empty, [], [], startedAtUtc),
                 RootPath: ".",
-                SearchPattern: NormalizeSearchPattern(searchPattern),
+                SearchPattern: normalizedSearchPattern,
                 Entries: [],
                 IsTruncated: false);
         }
@@ -47,20 +65,22 @@ internal sealed class WorkspaceFileQueryService
                 Message: resolvedFileMessage,
                 Receipt: receiptWriter.CreateReceipt("workspace_list_files", false, "Succeeded", resolvedFileMessage, string.Empty, [entry.RelativePath], [], startedAtUtc),
                 RootPath: resolution.RelativePath,
-                SearchPattern: NormalizeSearchPattern(searchPattern),
+                SearchPattern: normalizedSearchPattern,
                 Entries: [entry],
                 IsTruncated: false);
         }
 
         if (!Directory.Exists(resolution.FullPath))
         {
-            var missingPathMessage = $"Workspace path '{relativePath ?? "."}' does not exist.";
+            var missingPathMessage = WorkspacePathPolicy.TryCreateManagedPathAliasCorrectionMessage(request.RelativePath ?? resolution.RelativePath, out var aliasCorrectionMessage)
+                ? aliasCorrectionMessage
+                : $"Workspace path '{request.RelativePath ?? "."}' does not exist.";
             return new WorkspaceFileListResult(
                 Succeeded: false,
                 Message: missingPathMessage,
                 Receipt: receiptWriter.CreateReceipt("workspace_list_files", false, "Failed", missingPathMessage, string.Empty, [resolution.RelativePath], [], startedAtUtc),
                 RootPath: resolution.RelativePath,
-                SearchPattern: NormalizeSearchPattern(searchPattern),
+                SearchPattern: normalizedSearchPattern,
                 Entries: [],
                 IsTruncated: false);
         }
@@ -69,7 +89,6 @@ internal sealed class WorkspaceFileQueryService
         var entries = new List<WorkspaceFileListEntry>();
         var truncated = false;
 
-        var normalizedSearchPattern = NormalizeSearchPattern(searchPattern);
         var enumerationSearchPattern = GetEnumerationSearchPattern(normalizedSearchPattern);
         foreach (var path in Directory.EnumerateFileSystemEntries(
                      resolution.FullPath,
@@ -105,7 +124,7 @@ internal sealed class WorkspaceFileQueryService
             .ToList();
 
         var listMessage = entries.Count == 0
-            ? $"No workspace paths matched '{NormalizeSearchPattern(searchPattern)}' under '{resolution.RelativePath}'."
+            ? $"No workspace paths matched '{normalizedSearchPattern}' under '{resolution.RelativePath}'."
             : $"Listed {entries.Count} workspace path(s) under '{resolution.RelativePath}'.";
 
         return new WorkspaceFileListResult(
@@ -113,7 +132,7 @@ internal sealed class WorkspaceFileQueryService
             Message: listMessage,
             Receipt: receiptWriter.CreateReceipt("workspace_list_files", false, "Succeeded", listMessage, string.Empty, [resolution.RelativePath], [], startedAtUtc),
             RootPath: resolution.RelativePath,
-            SearchPattern: NormalizeSearchPattern(searchPattern),
+            SearchPattern: normalizedSearchPattern,
             Entries: entries,
             IsTruncated: truncated);
     }
@@ -148,7 +167,9 @@ internal sealed class WorkspaceFileQueryService
 
         if (!File.Exists(resolution.FullPath) && !Directory.Exists(resolution.FullPath))
         {
-            var missingPathMessage = $"Workspace path '{relativePath ?? "."}' does not exist.";
+            var missingPathMessage = WorkspacePathPolicy.TryCreateManagedPathAliasCorrectionMessage(relativePath ?? resolution.RelativePath, out var aliasCorrectionMessage)
+                ? aliasCorrectionMessage
+                : $"Workspace path '{relativePath ?? "."}' does not exist.";
             return new WorkspaceTextSearchResult(
                 Succeeded: false,
                 Message: missingPathMessage,
@@ -265,7 +286,9 @@ internal sealed class WorkspaceFileQueryService
 
         if (!File.Exists(resolution.FullPath))
         {
-            var missingFileMessage = $"File '{path}' does not exist in the workspace.";
+            var missingFileMessage = WorkspacePathPolicy.TryCreateManagedPathAliasCorrectionMessage(path, out var aliasCorrectionMessage)
+                ? aliasCorrectionMessage
+                : $"File '{path}' does not exist in the workspace.";
             return new WorkspaceTextFileReadResult(
                 Succeeded: false,
                 Message: missingFileMessage,
@@ -360,7 +383,9 @@ internal sealed class WorkspaceFileQueryService
                 ChildCount: childCount);
         }
 
-        var missingMessage = $"Workspace path '{resolution.RelativePath}' does not exist.";
+        var missingMessage = WorkspacePathPolicy.TryCreateManagedPathAliasCorrectionMessage(resolution.RelativePath, out var aliasCorrectionMessage)
+            ? aliasCorrectionMessage
+            : $"Workspace path '{resolution.RelativePath}' does not exist.";
         return new WorkspacePathStatResult(
             Succeeded: true,
             Message: missingMessage,
@@ -717,6 +742,60 @@ internal sealed class WorkspaceFileQueryService
 
     private static string NormalizeSearchPattern(string searchPattern)
         => string.IsNullOrWhiteSpace(searchPattern) ? "*" : searchPattern.Trim();
+
+    private static bool TryCreateSearchPatternValidationFailure(string searchPattern, out string message)
+    {
+        message = string.Empty;
+        var normalizedPattern = searchPattern.Replace('\\', '/');
+        if (!IsRegexLikeSearchPattern(searchPattern, normalizedPattern))
+        {
+            return false;
+        }
+
+        message = $"workspace_list_files searchPattern uses glob syntax, not regex. Received '{searchPattern}'. Use patterns like '*xray*.pdf' or '**/*.pdf', and narrow relativePath.";
+        return true;
+    }
+
+    private static bool IsRegexLikeSearchPattern(string searchPattern, string normalizedPattern)
+    {
+        return searchPattern.Contains(@"\.", StringComparison.Ordinal) ||
+               normalizedPattern.StartsWith(".*", StringComparison.Ordinal) ||
+               normalizedPattern.Contains("|.*", StringComparison.Ordinal) ||
+               normalizedPattern.Contains("(.*", StringComparison.Ordinal) ||
+               searchPattern.Contains('|', StringComparison.Ordinal) ||
+               normalizedPattern.StartsWith('^') ||
+               normalizedPattern.EndsWith('$');
+    }
+
+    private static WorkspaceFileListRequest NormalizeListRequest(
+        string? relativePath,
+        string searchPattern)
+    {
+        var normalizedSearchPattern = NormalizeSearchPattern(searchPattern);
+        if (!string.Equals(normalizedSearchPattern, "*", StringComparison.Ordinal) ||
+            string.IsNullOrWhiteSpace(relativePath))
+        {
+            return new WorkspaceFileListRequest(relativePath, normalizedSearchPattern);
+        }
+
+        var normalizedPath = relativePath.Replace('\\', '/').Trim();
+        var globstarIndex = normalizedPath.IndexOf("**", StringComparison.Ordinal);
+        if (globstarIndex < 0)
+        {
+            return new WorkspaceFileListRequest(relativePath, normalizedSearchPattern);
+        }
+
+        var normalizedRelativePath = normalizedPath[..globstarIndex].TrimEnd('/');
+        var embeddedSearchPattern = normalizedPath[globstarIndex..].TrimStart('/');
+        if (embeddedSearchPattern is "" or "**")
+        {
+            embeddedSearchPattern = "**/*";
+        }
+
+        return new WorkspaceFileListRequest(
+            string.IsNullOrWhiteSpace(normalizedRelativePath) ? null : normalizedRelativePath,
+            embeddedSearchPattern);
+    }
 
     private static string GetEnumerationSearchPattern(string normalizedSearchPattern)
     {

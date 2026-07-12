@@ -27,7 +27,7 @@ public sealed partial class MafAgentRuntime
         CancellationToken cancellationToken,
         bool suppressApprovalRequirements = false)
     {
-        var model = ResolveRuntimeModel(agent, provider);
+        var model = MafModelParametersBuilder.ResolveRuntimeModel(agent, provider);
         return await CreateCapabilityStateCoreAsync(
             agent,
             provider,
@@ -407,7 +407,7 @@ public sealed partial class MafAgentRuntime
             "configured-workspace-tools",
             "workspace tools allowed by agent settings and context profile",
             tools.Count,
-            EstimateToolSchemaChars(tools)));
+            MafContextManifestBuilder.EstimateToolSchemaChars(tools)));
         composition.State.HasApprovalTools |= tools.Any(tool => tool is ApprovalRequiredAIFunction);
         var overrideProfile = WorkspaceExecutionAuditContext.Current?.WorkspaceToolProfileOverride;
         var profileSuffix = overrideProfile.HasValue
@@ -464,7 +464,7 @@ public sealed partial class MafAgentRuntime
             "a2a-remote-agent-tools",
             "enabled A2A remote endpoints exposed skills as tools",
             tools.Count,
-            EstimateToolSchemaChars(tools)));
+            MafContextManifestBuilder.EstimateToolSchemaChars(tools)));
         composition.State.Disposables.AddRange(result.Disposables);
         composition.State.HasApprovalTools |= !suppressApprovalRequirements && approvalRequired;
         await progressCallback(
@@ -496,7 +496,7 @@ public sealed partial class MafAgentRuntime
                     composition.State.Tools.Add(tool);
                 }
 
-                RecordCatalogCapabilitySource(composition.State, capability, tools.Count, EstimateToolSchemaChars(tools));
+                RecordCatalogCapabilitySource(composition.State, capability, tools.Count, MafContextManifestBuilder.EstimateToolSchemaChars(tools));
                 composition.State.HasApprovalTools |= composition.ToolBuilder.CapabilityHasApprovalTools(capability, suppressApprovalRequirements);
                 break;
             case CapabilityKind.Plugin:
@@ -506,7 +506,7 @@ public sealed partial class MafAgentRuntime
                     composition.State.Tools.Add(tool);
                 }
 
-                RecordCatalogCapabilitySource(composition.State, capability, pluginTools.Count, EstimateToolSchemaChars(pluginTools));
+                RecordCatalogCapabilitySource(composition.State, capability, pluginTools.Count, MafContextManifestBuilder.EstimateToolSchemaChars(pluginTools));
                 composition.State.HasApprovalTools |= !suppressApprovalRequirements
                     && DeserializeConfiguration<PluginCapabilityConfiguration>(capability.ConfigurationJson)?.ApprovalRequired == true;
                 break;
@@ -1052,6 +1052,8 @@ public sealed partial class MafAgentRuntime
         public List<string>? AllowedTools { get; set; }
 
         public string? ApprovalMode { get; set; }
+
+        public int? TimeoutSeconds { get; set; }
     }
 
     private sealed class RagCapabilityConfiguration
@@ -1067,6 +1069,14 @@ public sealed partial class MafAgentRuntime
         public int? RecentMessageMemoryLimit { get; set; }
 
         public int? MaxResults { get; set; }
+
+        public int? MaxFilesToScan { get; set; }
+
+        public int? MinQueryTerms { get; set; }
+
+        public int? MinMatchedTerms { get; set; }
+
+        public int? MinScore { get; set; }
     }
 
     private sealed class AiContextCapabilityConfiguration

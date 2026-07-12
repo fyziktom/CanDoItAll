@@ -1,6 +1,7 @@
 using CanDoItAll.Processes.Abstractions;
 using CanDoItAll.Processes.Application;
 using CanDoItAll.Processes.Projections;
+using CanDoItAll.Modules.Workbench;
 
 namespace CanDoItAll.Web.Api;
 
@@ -30,11 +31,13 @@ internal static class ProcessesApi
         processes.MapPost("/launch/check", async (
                 ProcessLaunchApiRequest request,
                 ProcessLaunchApplicationService launchService,
+                ProjectStructureProcessNodeService projectStructureProcessNodeService,
                 ILoggerFactory loggerFactory,
                 CancellationToken cancellationToken) =>
             await ExecuteLaunchOperationAsync(
                 request,
                 launchService,
+                projectStructureProcessNodeService,
                 loggerFactory,
                 previewOnly: true,
                 cancellationToken))
@@ -43,11 +46,13 @@ internal static class ProcessesApi
         processes.MapPost("/launch", async (
                 ProcessLaunchApiRequest request,
                 ProcessLaunchApplicationService launchService,
+                ProjectStructureProcessNodeService projectStructureProcessNodeService,
                 ILoggerFactory loggerFactory,
                 CancellationToken cancellationToken) =>
             await ExecuteLaunchOperationAsync(
                 request,
                 launchService,
+                projectStructureProcessNodeService,
                 loggerFactory,
                 previewOnly: false,
                 cancellationToken))
@@ -227,13 +232,17 @@ internal static class ProcessesApi
     private static async Task<IResult> ExecuteLaunchOperationAsync(
         ProcessLaunchApiRequest request,
         ProcessLaunchApplicationService launchService,
+        ProjectStructureProcessNodeService projectStructureProcessNodeService,
         ILoggerFactory loggerFactory,
         bool previewOnly,
         CancellationToken cancellationToken)
     {
         try
         {
-            var launchRequest = MapLaunchRequest(request);
+            var launchRequest = await MapLaunchRequestAsync(
+                request,
+                projectStructureProcessNodeService,
+                cancellationToken).ConfigureAwait(false);
             var result = previewOnly
                 ? await launchService.PreviewAsync(launchRequest with { Execute = false }, cancellationToken).ConfigureAwait(false)
                 : await launchService.LaunchAsync(launchRequest, cancellationToken).ConfigureAwait(false);
@@ -258,9 +267,30 @@ internal static class ProcessesApi
         }
     }
 
-    private static ProcessLaunchRequest MapLaunchRequest(ProcessLaunchApiRequest request)
+    private static async Task<ProcessLaunchRequest> MapLaunchRequestAsync(
+        ProcessLaunchApiRequest request,
+        ProjectStructureProcessNodeService projectStructureProcessNodeService,
+        CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request);
+
+        var variables = request.Variables ?? new Dictionary<string, string>(StringComparer.Ordinal);
+        if (request.ProjectId is { } projectId &&
+            projectId != Guid.Empty &&
+            !string.IsNullOrWhiteSpace(request.ProjectNodeId))
+        {
+            variables = new Dictionary<string, string>(
+                await projectStructureProcessNodeService.BuildProjectScopedLaunchVariablesAsync(
+                    new ProjectStructureProcessLaunchVariableBuildRequest(
+                        projectId,
+                        request.ProjectNodeId,
+                        request.DefinitionKey,
+                        request.ProcessDefinitionId is { } scopedDefinitionId ? new ProcessDefinitionId(scopedDefinitionId) : null,
+                        string.IsNullOrWhiteSpace(request.RequestedBy) ? "process-api" : request.RequestedBy,
+                        variables),
+                    cancellationToken).ConfigureAwait(false),
+                StringComparer.Ordinal);
+        }
 
         return new ProcessLaunchRequest(
             request.DefinitionKey,
@@ -269,7 +299,7 @@ internal static class ProcessesApi
             request.ProjectId,
             request.ProjectNodeId,
             string.IsNullOrWhiteSpace(request.RequestedBy) ? "process-api" : request.RequestedBy,
-            request.Variables ?? new Dictionary<string, string>(StringComparer.Ordinal),
+            variables,
             request.RunReadiness,
             request.Execute);
     }

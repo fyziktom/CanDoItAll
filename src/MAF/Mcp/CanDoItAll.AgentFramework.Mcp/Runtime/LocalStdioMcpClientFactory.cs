@@ -3,6 +3,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using CanDoItAll.AgentFramework.Capabilities.Abstractions;
+using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Mcp.Abstractions;
 
 namespace CanDoItAll.AgentFramework.Mcp;
@@ -58,7 +59,7 @@ internal sealed class LocalStdioMcpRuntimeClient(
         return RunWithTimeoutAsync(
             async operationToken =>
             {
-                StartProcess(operationToken);
+                await StartProcessAsync(operationToken);
                 await SendRequestAsync(
                     "initialize",
                     new
@@ -168,7 +169,7 @@ internal sealed class LocalStdioMcpRuntimeClient(
         }
     }
 
-    private void StartProcess(CancellationToken cancellationToken)
+    private async Task StartProcessAsync(CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
         if (process is not null)
@@ -177,9 +178,10 @@ internal sealed class LocalStdioMcpRuntimeClient(
         }
 
         var workingDirectory = ResolveWorkingDirectory(descriptor.WorkingDirectory);
+        var launch = await ResolveLaunchAsync(workingDirectory, cancellationToken).ConfigureAwait(false);
         var startInfo = new ProcessStartInfo
         {
-            FileName = ResolveExecutablePath(descriptor.Command),
+            FileName = ResolveExecutablePath(launch.Command),
             WorkingDirectory = workingDirectory,
             UseShellExecute = false,
             RedirectStandardInput = true,
@@ -188,7 +190,7 @@ internal sealed class LocalStdioMcpRuntimeClient(
             CreateNoWindow = true
         };
 
-        foreach (var argument in descriptor.Arguments)
+        foreach (var argument in launch.Arguments)
         {
             startInfo.ArgumentList.Add(argument);
         }
@@ -229,6 +231,22 @@ internal sealed class LocalStdioMcpRuntimeClient(
 
         process = startedProcess;
         standardErrorPump = PumpStandardErrorAsync(startedProcess.StandardError);
+    }
+
+    private async Task<PlaywrightMcpLaunchResolution> ResolveLaunchAsync(
+        string workingDirectory,
+        CancellationToken cancellationToken)
+    {
+        var playwrightResolution = await PlaywrightMcpLaunchResolver.TryResolveAsync(
+                workingDirectory,
+                descriptor.Command,
+                descriptor.Arguments,
+                cancellationToken)
+            .ConfigureAwait(false);
+
+        return playwrightResolution ?? new PlaywrightMcpLaunchResolution(
+            descriptor.Command,
+            descriptor.Arguments);
     }
 
     private static string ResolveWorkingDirectory(string workingDirectory)
@@ -301,6 +319,17 @@ internal sealed class LocalStdioMcpRuntimeClient(
 
     private void AddEnvironmentVariableBindings(ProcessStartInfo startInfo)
     {
+        foreach (var (targetName, value) in descriptor.RawEnvironmentVariables)
+        {
+            if (string.IsNullOrWhiteSpace(targetName) ||
+                string.IsNullOrWhiteSpace(value))
+            {
+                continue;
+            }
+
+            startInfo.Environment[targetName.Trim()] = value;
+        }
+
         foreach (var (targetName, sourceName) in descriptor.EnvironmentVariableBindings)
         {
             if (string.IsNullOrWhiteSpace(targetName) ||
@@ -554,7 +583,10 @@ internal sealed class LocalStdioMcpRuntimeClient(
             var description = tool.TryGetProperty("description", out var descriptionElement)
                 ? descriptionElement.GetString() ?? string.Empty
                 : string.Empty;
-            discovered.Add(new DiscoveredMcpTool(name, description));
+            var inputSchema = tool.TryGetProperty("inputSchema", out var inputSchemaElement)
+                ? inputSchemaElement.Clone()
+                : (JsonElement?)null;
+            discovered.Add(new DiscoveredMcpTool(name, description, inputSchema));
         }
 
         return discovered;

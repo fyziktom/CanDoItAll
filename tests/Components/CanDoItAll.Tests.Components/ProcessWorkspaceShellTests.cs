@@ -949,6 +949,57 @@ public sealed class ProcessWorkspaceShellTests
         Assert.DoesNotContain("Unassigned", subprocessCard.TextContent, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void Live_processes_attention_card_shows_event_date_and_hide_action()
+    {
+        using var context = CreateContext(out _);
+
+        var cut = context.RenderComponent<LiveProcessesDashboard>();
+
+        cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-testid='live-processes-attention-card']")));
+        var attentionCard = cut.Find("[data-testid='live-processes-attention-card']");
+
+        Assert.NotNull(attentionCard.QuerySelector("[data-testid='live-processes-attention-run-date']"));
+        Assert.NotNull(attentionCard.QuerySelector("[data-testid='live-processes-hide-run-group']"));
+    }
+
+    [Fact]
+    public void Live_processes_dashboard_hides_and_restores_related_run_cards()
+    {
+        using var context = CreateContext(out _);
+
+        var cut = context.RenderComponent<LiveProcessesDashboard>();
+
+        cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-testid='live-processes-activity-cards']")));
+        var subprocessCard = cut
+            .FindAll("[data-testid='live-processes-activity-card']")
+            .Single(card => card.TextContent.Contains("Run 88888888", StringComparison.Ordinal));
+
+        subprocessCard.QuerySelector("[data-testid='live-processes-hide-run-group']")!.Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.DoesNotContain(
+                cut.FindAll("[data-testid='live-processes-activity-card']"),
+                card => card.TextContent.Contains("Run 88888888", StringComparison.Ordinal));
+            Assert.DoesNotContain(
+                cut.FindAll("[data-testid='live-processes-run-card']"),
+                card => card.TextContent.Contains("Run 88888888", StringComparison.Ordinal));
+        });
+
+        cut.Find("[data-testid='live-processes-show-hidden-runs']").Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains(
+                cut.FindAll("[data-testid='live-processes-activity-card']"),
+                card => card.TextContent.Contains("Run 88888888", StringComparison.Ordinal));
+            Assert.Contains(
+                cut.FindAll("[data-testid='live-processes-run-card']"),
+                card => card.TextContent.Contains("Run 88888888", StringComparison.Ordinal));
+        });
+    }
+
     private static TestContext CreateContext(
         out RecordingProcessWorkspaceProjectionClient client,
         IAgentFrameworkWorkspaceService? agentWorkspaceService = null,

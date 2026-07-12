@@ -755,6 +755,116 @@ public sealed class ProcessProjectionPipelineTests
     }
 
     [Fact]
+    public async Task Runtime_workspace_operator_actions_include_failed_tool_receipts_for_blocked_step()
+    {
+        await using var dbContext = CreateDbContext();
+        var store = new EfProcessProjectionStore(dbContext);
+        var runId = ProcessRunId.New();
+        var planId = ProcessInstancePlanId.New();
+        var blockedStepId = ProcessStepInstanceId.New();
+        await ProjectAsync(
+            store,
+            StoredEvent(1, runId, ProcessRuntimeEventTypes.StepBlocked, Now.AddMinutes(-5)),
+            latestKnownGlobalSequence: 1);
+        var state = new ProcessRuntimeStateSnapshot(
+            runId,
+            runId,
+            planId,
+            "sha256:plan",
+            ProcessRuntimeStatus.Active,
+            [
+                new ProcessRuntimeStepState(
+                    blockedStepId,
+                    ProcessStepDefinitionId.New(),
+                    ProcessRuntimeStepStatus.Blocked,
+                    IsExecutable: true,
+                    AttemptNumber: 1,
+                    DependencyStepIds: new HashSet<ProcessStepInstanceId>(),
+                    RequiredArtifactSlots: new HashSet<ArtifactSlotId>(),
+                    ActiveClaimToken: null,
+                    CompletedResultKey: StrategyResultIdempotencyKey.New())
+            ],
+            [],
+            [
+                new StrategyResultReceipt(
+                    blockedStepId,
+                    new StrategyId("strategy.adapter.workflow.execute"),
+                    StrategyResultIdempotencyKey.New(),
+                    StrategyOutcome.NeedsManager,
+                    ProcessRuntimeStepStatus.Blocked,
+                    "sha256:result")
+            ],
+            new HashSet<ArtifactSlotId>(),
+            Now.AddMinutes(-1));
+        var query = new ProcessRuntimeProjectionQueryService(
+            store,
+            ProcessProjectionJsonCodec.Default,
+            new FixedProcessProjectionClock(Now),
+            new InMemoryRuntimeStateStore(state),
+            new InMemoryAssignmentStore(
+            [
+                CreateAssignment(runId, planId, blockedStepId, "targeted-validation", ".NET QA Review Lead")
+            ]),
+            new InMemoryObservationReader(
+                CreateObservation(
+                    runId,
+                    blockedStepId,
+                    ".NET QA Review Lead",
+                    "Failed",
+                    Now.AddMinutes(-1),
+                    recentTools:
+                    [
+                        new ProcessExecutionToolObservation(
+                            "workspace_dotnet_test",
+                            "workspace",
+                            @"targetPath=external-target/C/programovani/dotnet/calculator-output/Calculator.slnx arguments=-c Debug",
+                            "Failed (exit 1)",
+                            Now.AddMinutes(-3),
+                            Now.AddMinutes(-2))
+                    ],
+                    artifacts:
+                    [
+                        new ProcessExecutionArtifactObservation(
+                            "workspace-tool-output",
+                            "dotnet_test stderr",
+                            "managed-files/process-runs/run/steps/targeted-validation/dotnet-test-stderr.log",
+                            "Captured stderr.",
+                            Now.AddMinutes(-2))
+                        {
+                            ProducedBy = "workspace_dotnet_test"
+                        },
+                        new ProcessExecutionArtifactObservation(
+                            "workspace-tool-output",
+                            "dotnet_test stdout",
+                            "managed-files/process-runs/run/steps/targeted-validation/dotnet-test-stdout.log",
+                            "Captured stdout.",
+                            Now.AddMinutes(-2))
+                        {
+                            ProducedBy = "workspace_dotnet_test"
+                        }
+                    ],
+                    lastError: "Failed to convert System.Reflection.TypeExtensions.dll to webcil: Access to the path is denied.")));
+
+        var workspace = await query.GetRuntimeWorkspaceAsync(new ProcessRuntimeWorkspaceQuery(
+            Now,
+            TimeSpan.FromHours(1),
+            EventPage: 0,
+            EventPageSize: 10,
+            TakeRuns: 10,
+            SelectedRunId: null));
+
+        var run = Assert.Single(workspace.Runs);
+        var action = Assert.Single(run.OperatorActions);
+        Assert.Contains("workspace_dotnet_test", action.ProblemSummary, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Calculator.slnx", action.ProblemSummary, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Access to the path is denied", action.ProblemSummary, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("dotnet_test stderr", action.ProblemSummary, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("blind retry", action.ProblemSummary, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Previous failed tool receipt", action.RecommendedInstruction, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Inspect the listed stdout/stderr", action.RecommendedInstruction, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public async Task Runtime_workspace_operator_actions_are_suppressed_while_claim_is_open()
     {
         await using var dbContext = CreateDbContext();
@@ -1749,7 +1859,10 @@ public sealed class ProcessProjectionPipelineTests
         string state,
         DateTimeOffset updatedAtUtc,
         string avatarImageUrl = "",
-        string resultSummary = "")
+        string resultSummary = "",
+        IReadOnlyList<ProcessExecutionToolObservation>? recentTools = null,
+        IReadOnlyList<ProcessExecutionArtifactObservation>? artifacts = null,
+        string lastError = "")
     {
         var isTerminal = string.Equals(state, "Completed", StringComparison.OrdinalIgnoreCase) ||
             string.Equals(state, "Failed", StringComparison.OrdinalIgnoreCase);
@@ -1779,9 +1892,9 @@ public sealed class ProcessProjectionPipelineTests
                     "Execution",
                     $"{agentName} is {state}.")
             ],
-            [],
-            [],
-            LastError: string.Empty)
+            recentTools ?? [],
+            artifacts ?? [],
+            LastError: lastError)
         {
             AgentAvatarImageUrl = avatarImageUrl
         };

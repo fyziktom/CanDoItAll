@@ -13,6 +13,7 @@ using CanDoItAll.Processes.Templates;
 using CanDoItAll.Processes.Runtime;
 using CanDoItAll.SharedKernel;
 using Microsoft.Extensions.Options;
+using System.Text.Json;
 
 namespace CanDoItAll.Tests.Unit;
 
@@ -514,7 +515,7 @@ public sealed class ProcessLaunchExecutorResolverTests
             AgentWorkloadKind.Qa,
             AgentWorkspaceToolProfileKind.SoftwareDevelopment,
             ["qa-lead", "dotnet", "screenshots", "validation"]);
-        var workspace = new ResolverWorkspaceService([qaAgent], [CreateProvider(providerId)]);
+        var workspace = new ResolverWorkspaceService([qaAgent], [CreateProvider(providerId, ProviderKind.Ollama)]);
         var workspaceFactory = new ResolverWorkspaceFactory(workspace);
         var resolver = CreateResolver(workspaceFactory);
 
@@ -526,6 +527,101 @@ public sealed class ProcessLaunchExecutorResolverTests
 
         Assert.DoesNotContain(result.Findings, finding =>
             finding.Code == "process.launch.step_operation_contract_invalid");
+    }
+
+    [Fact]
+    public async Task ResolveAsync_rejects_required_workspace_tool_when_agent_lacks_capability_assignment()
+    {
+        var providerId = Guid.Parse("a7e02a87-0f51-49e4-a38a-4253eac29c18");
+        var qaAgent = CreateAgent(
+            providerId,
+            Guid.Parse("b98eb57d-d908-45c3-8f0b-a162fa2f98f4"),
+            ".NET QA Review Lead",
+            ".NET QA Review Lead",
+            "Captures UI screenshot proof and records validation evidence.",
+            AgentWorkloadKind.Qa,
+            AgentWorkspaceToolProfileKind.QualityValidation,
+            ["qa-lead", "dotnet", "screenshots", "validation"],
+            [
+                new AgentCapabilityAssignment(
+                    Guid.Parse("5ec990bf-7f6b-489e-98b2-fb224da5b730"),
+                    "workspace-dotnet-build",
+                    CapabilityKind.Tool,
+                    CapabilityProofStatus.Verified,
+                    Now,
+                    "Build tool is available.")
+            ]);
+        var workspace = new ResolverWorkspaceService([qaAgent], [CreateProvider(providerId)]);
+        var workspaceFactory = new ResolverWorkspaceFactory(workspace);
+        var resolver = CreateResolver(workspaceFactory);
+        var requiredToolReceiptMap = JsonSerializer.Serialize(new Dictionary<string, string[]>(StringComparer.Ordinal)
+        {
+            ["capture-ui-screenshots"] = ["workspace_dotnet_run"]
+        });
+
+        var result = await resolver.ResolveAsync(new ProcessLaunchExecutorResolutionRequest(
+            CreateScreenshotSubprocessDefinition(),
+            CreatePlan("capture-ui-screenshots"),
+            LiveRunProfile: null,
+            Variables: new Dictionary<string, string>
+            {
+                [ProcessRuntimeLaunchVariables.ProductCompletionRequiredToolReceiptsByStep] = requiredToolReceiptMap
+            }));
+
+        Assert.Empty(result.Bindings);
+        Assert.Contains(result.Findings, finding =>
+            finding.Severity == ProcessLaunchReadinessSeverity.Error &&
+            finding.Code == "agent.readiness.required-tool-capability-missing" &&
+            finding.Message.Contains("workspace_dotnet_run", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public async Task ResolveAsync_rejects_required_project_structure_write_tool_when_agent_lacks_write_access()
+    {
+        var providerId = Guid.Parse("791c85f9-88ab-41d0-a093-a14bfd8ac1b6");
+        var qaAgent = CreateAgent(
+            providerId,
+            Guid.Parse("b1e1e6f1-1bd6-4c29-ae41-0dfebbc64c85"),
+            "Delivery QA Observer",
+            "QA lead and browser-proof reviewer",
+            "Captures UI screenshot proof and records validation evidence.",
+            AgentWorkloadKind.Qa,
+            AgentWorkspaceToolProfileKind.QualityValidation,
+            ["qa-lead", "browser", "screenshots", "validation"]) with
+        {
+            ConfigurationJson = AgentProjectStructureAccessMetadata.Write(
+                AgentWorkspaceToolAccessMetadata.Write(
+                    "{}",
+                    AgentWorkspaceToolAccessProfiles.CreateSettings(AgentWorkspaceToolProfileKind.QualityValidation)),
+                new AgentProjectStructureAccessSettings
+                {
+                    CanRead = true,
+                    CanWrite = false,
+                    AllowAllProjects = true
+                })
+        };
+        var workspace = new ResolverWorkspaceService([qaAgent], [CreateProvider(providerId)]);
+        var workspaceFactory = new ResolverWorkspaceFactory(workspace);
+        var resolver = CreateResolver(workspaceFactory);
+        var requiredToolReceiptMap = JsonSerializer.Serialize(new Dictionary<string, string[]>(StringComparer.Ordinal)
+        {
+            ["store-ui-screenshots"] = ["project_structure_node_create", "project_structure_asset_create"]
+        });
+
+        var result = await resolver.ResolveAsync(new ProcessLaunchExecutorResolutionRequest(
+            CreateScreenshotStorageDefinition(),
+            CreatePlan("store-ui-screenshots"),
+            LiveRunProfile: null,
+            Variables: new Dictionary<string, string>
+            {
+                [ProcessRuntimeLaunchVariables.ProductCompletionRequiredToolReceiptsByStep] = requiredToolReceiptMap
+            }));
+
+        Assert.Empty(result.Bindings);
+        Assert.Contains(result.Findings, finding =>
+            finding.Severity == ProcessLaunchReadinessSeverity.Error &&
+            finding.Code == "agent.readiness.required-project-structure-write-missing" &&
+            finding.Message.Contains("project_structure_asset_create", StringComparison.OrdinalIgnoreCase));
     }
 
     [Fact]
@@ -1046,6 +1142,54 @@ public sealed class ProcessLaunchExecutorResolverTests
                         new ProcessTemplateDefinitionStepRoleAssignmentDocument
                         {
                             RoleKey = "qa-lead",
+                            ResponsibilityKind = "Responsible",
+                            IsRequired = true
+                        }
+                    ]
+                }
+            ]
+        };
+    }
+
+    private static ProcessTemplateDefinitionDocument CreateScreenshotStorageDefinition()
+    {
+        return new ProcessTemplateDefinitionDocument
+        {
+            Key = "dotnet-ui-screenshot-writeback",
+            RoleUsages =
+            [
+                new ProcessTemplateDefinitionRoleUsageDocument
+                {
+                    Key = "screenshot-review-storage-agent",
+                    RoleResourceKey = "qa-lead",
+                    DisplayName = "Screenshot review and storage agent",
+                    PreferredExecutorKind = ProcessLaunchExecutorKinds.Agent,
+                    PreferredProjectAssignmentRole = "AiAgent",
+                    IsRequired = true
+                }
+            ],
+            Steps =
+            [
+                new ProcessTemplateDefinitionStepDocument
+                {
+                    Key = "store-ui-screenshots",
+                    Title = "Store screenshots under process run node",
+                    StepKind = "Review",
+                    AllowedOperations =
+                    [
+                        ProcessOperationContractNames.ReadProcessContext,
+                        ProcessOperationContractNames.ReadProjectStructure,
+                        ProcessOperationContractNames.ReadUpstreamArtifacts,
+                        ProcessOperationContractNames.CaptureRuntimeProof,
+                        ProcessOperationContractNames.WriteManagedProcessArtifacts,
+                        ProcessOperationContractNames.ExecuteExternalAction
+                    ],
+                    OperationTargetScope = ProcessOperationContractNames.ExternalActionControlled,
+                    RoleAssignments =
+                    [
+                        new ProcessTemplateDefinitionStepRoleAssignmentDocument
+                        {
+                            RoleKey = "screenshot-review-storage-agent",
                             ResponsibilityKind = "Responsible",
                             IsRequired = true
                         }

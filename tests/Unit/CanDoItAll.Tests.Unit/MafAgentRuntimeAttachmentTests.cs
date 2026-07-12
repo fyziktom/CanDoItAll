@@ -13,7 +13,7 @@ public sealed class MafAgentRuntimeAttachmentTests
     [Fact]
     public void CreateUserInputMessage_AddsImageAttachmentsAsDataContent()
     {
-        var message = MafAgentRuntime.CreateUserInputMessage(
+        var message = MafRuntimeSessionBuilder.CreateUserInputMessage(
             "Inspect the screenshot.",
             [TestImageAttachment]);
 
@@ -222,15 +222,67 @@ public sealed class MafAgentRuntimeAttachmentTests
         Assert.Equal(preparedPrompt, Assert.Single(message.Contents.OfType<TextContent>()).Text);
     }
 
+    [Fact]
+    public void CreatePromptInputMessages_for_governed_process_step_ignores_prior_chat_transcript()
+    {
+        var agent = CreateAgent();
+        var provider = CreateProvider(ProviderKind.Ollama, "llama3.2:3b");
+        var now = DateTimeOffset.UtcNow;
+        var session = new ChatSessionRecord(
+            Guid.NewGuid(),
+            agent.Id,
+            "Thread",
+            now,
+            now,
+            [
+                new ChatMessageRecord(Guid.NewGuid(), ChatMessageRole.User, "Stale Tetris source context.", now.AddMinutes(-2), 1),
+                new ChatMessageRecord(Guid.NewGuid(), ChatMessageRole.Assistant, "Prior assistant response.", now.AddMinutes(-1), 2),
+                new ChatMessageRecord(Guid.NewGuid(), ChatMessageRole.User, "Original persisted prompt.", now, 3)
+            ]);
+        const string preparedPrompt = "Process step execution brief\n\nProject: Calculator";
+
+        var messages = InvokeCreatePromptInputMessages(
+            agent,
+            provider,
+            session,
+            preparedPrompt,
+            CreateExecutionOptions([], CreateGovernedProcessIntent()));
+
+        var message = Assert.Single(messages);
+        Assert.Equal(ChatRole.User, message.Role);
+        var text = Assert.Single(message.Contents.OfType<TextContent>()).Text;
+        Assert.Equal(preparedPrompt, text);
+        Assert.DoesNotContain("Tetris", text, StringComparison.OrdinalIgnoreCase);
+    }
+
     private static AgentRuntimeExecutionOptions CreateExecutionOptions(
-        IReadOnlyList<AgentRuntimeInputAttachment> attachments)
+        IReadOnlyList<AgentRuntimeInputAttachment> attachments,
+        AgentRuntimeContextIntent? contextIntent = null)
     {
         return new AgentRuntimeExecutionOptions(
             StructuredOutput: null,
             FinalizerMode: AgentFinalizerMode.Disabled,
             RequireStructuredOutputValidation: true,
             MaxStructuredOutputRepairAttempts: 0,
+            ContextIntent: contextIntent,
             InputAttachments: attachments);
+    }
+
+    private static AgentRuntimeContextIntent CreateGovernedProcessIntent()
+    {
+        return new AgentRuntimeContextIntent(
+            SourceKind: "process-step",
+            SourceId: "add-test-project",
+            ProcessRunId: Guid.NewGuid().ToString("D"),
+            ProcessStepId: Guid.NewGuid().ToString("D"),
+            TargetScope: "ExternalProductTargetMutable",
+            IsGovernedProcessStep: true,
+            BrowserToolsAllowed: false,
+            ScaffoldToolOnly: false,
+            AllowsProductMutation: true,
+            WorkspaceToolProfile: null,
+            WorkspaceScope: WorkspaceScopeDescriptor.Project(Guid.NewGuid().ToString("D")),
+            AllowedOperations: ["MutateProductTarget"]);
     }
 
     private static ProviderProfile CreateProvider(
@@ -320,12 +372,6 @@ public sealed class MafAgentRuntimeAttachmentTests
         string prompt,
         AgentRuntimeExecutionOptions runtimeOptions)
     {
-        var method = typeof(MafAgentRuntime).GetMethod("CreatePromptInputMessages", BindingFlags.NonPublic | BindingFlags.Static)
-            ?? throw new InvalidOperationException("CreatePromptInputMessages method was not found.");
-
-        var result = method.Invoke(null, [agent, provider, session, prompt, runtimeOptions])
-            ?? throw new InvalidOperationException("CreatePromptInputMessages did not return messages.");
-
-        return ((IEnumerable<ChatMessage>)result).ToList();
+        return MafRuntimeSessionBuilder.CreatePromptInputMessages(agent, provider, session, prompt, runtimeOptions).ToList();
     }
 }

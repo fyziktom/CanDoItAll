@@ -385,7 +385,7 @@ public sealed partial class MafAgentRuntime
 
             return configuration.AdditionalProperties.ToDictionary(
                 pair => pair.Key,
-                pair => ConvertJsonValue(pair.Value),
+                pair => MafToolInvocationArgumentFormatter.ConvertJsonValue(pair.Value),
                 StringComparer.OrdinalIgnoreCase);
         }
 
