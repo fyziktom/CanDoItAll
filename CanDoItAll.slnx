@@ -13,8 +13,11 @@
     <Project Path="src/Memory/CanDoItAll.Memory.Abstractions/CanDoItAll.Memory.Abstractions.csproj" />
     <Project Path="src/Memory/CanDoItAll.Memory.Application/CanDoItAll.Memory.Application.csproj" />
     <Project Path="src/Memory/CanDoItAll.Memory.Http/CanDoItAll.Memory.Http.csproj" />
+    <Project Path="src/Memory/CanDoItAll.Memory.Http.Contracts/CanDoItAll.Memory.Http.Contracts.csproj" />
     <Project Path="src/Memory/CanDoItAll.Memory.Mcp/CanDoItAll.Memory.Mcp.csproj" />
+    <Project Path="src/Memory/CanDoItAll.Memory.Mock/CanDoItAll.Memory.Mock.csproj" />
     <Project Path="src/Memory/CanDoItAll.Memory.Persistence/CanDoItAll.Memory.Persistence.csproj" />
+    <Project Path="src/Memory/CanDoItAll.Memory.SourceGateway.Abstractions/CanDoItAll.Memory.SourceGateway.Abstractions.csproj" />
   </Folder>
   <Folder Name="/src/UI/">
     <Project Path="src/UI/CanDoItAll.AppComponents/CanDoItAll.AppComponents.csproj" />
@@ -120,8 +123,14 @@
   <Folder Name="/tests/Unit/">
     <Project Path="tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj" />
   </Folder>
+  <Folder Name="/src/MAF/Memory/">
+    <Project Path="src/MAF/Memory/CanDoItAll.AgentFramework.Memory/CanDoItAll.AgentFramework.Memory.csproj" />
+  </Folder>
   <Folder Name="/tests/Memory/">
     <Project Path="tests/Memory/CanDoItAll.Memory.Tests/CanDoItAll.Memory.Tests.csproj" />
+  </Folder>
+  <Folder Name="/tests/MAF/">
+    <Project Path="tests/MAF/CanDoItAll.AgentFramework.Memory.Tests/CanDoItAll.AgentFramework.Memory.Tests.csproj" />
   </Folder>
   <Folder Name="/tests/Integration/">
     <Project Path="tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj" />

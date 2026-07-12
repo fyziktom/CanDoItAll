@@ -9,6 +9,9 @@ public sealed class MemoryFeedbackWorker(
     TimeProvider timeProvider,
     MemoryAsyncWorkerOptions options) : IMemoryFeedbackWorker
 {
+    private readonly MemoryProviderDriverCatalog<IMemoryProviderFeedbackDeliveryDriver> driverCatalog =
+        new(feedbackDrivers, static driver => driver.DriverKind);
+
     public async Task<MemoryAsyncWorkerRunResult> DeliverPendingFeedbackAsync(CancellationToken cancellationToken = default)
     {
         options.Validate();
@@ -28,30 +31,7 @@ public sealed class MemoryFeedbackWorker(
         foreach (var record in feedback)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            if (!profiles.TryGetValue(record.ProviderInstanceId, out var provider))
-            {
-                var retry = await RetryOrFailAsync(record, now, "Memory feedback provider profile is no longer registered.", cancellationToken);
-                retried += retry.Retried;
-                deadLettered += retry.DeadLettered;
-                diagnostics.Add(retry.Diagnostic);
-                continue;
-            }
-
-            var driver = feedbackDrivers.FirstOrDefault(candidate => candidate.DriverKind == provider.DriverKind);
-            if (driver is null)
-            {
-                var retry = await RetryOrFailAsync(record, now, $"No feedback delivery driver registered for '{provider.DriverKind}'.", cancellationToken);
-                retried += retry.Retried;
-                deadLettered += retry.DeadLettered;
-                diagnostics.Add(retry.Diagnostic);
-                continue;
-            }
-
-            var running = record.Status == MemoryLedgerStatus.Running
-                ? record
-                : await feedbackLedgerStore.TransitionAsync(record.FeedbackRecordId, MemoryLedgerStatus.Running, now, "Delivering feedback to memory provider.", cancellationToken);
-            var dispatch = await driver.DeliverFeedbackAsync(provider, running, cancellationToken);
-            var applied = await ApplyDispatchResultAsync(running, dispatch, now, cancellationToken);
+            var applied = await ProcessSafelyAsync(record, profiles, now, cancellationToken);
             completed += applied.Completed;
             retried += applied.Retried;
             deadLettered += applied.DeadLettered;
@@ -70,6 +50,86 @@ public sealed class MemoryFeedbackWorker(
             0,
             0,
             diagnostics);
+    }
+
+    private async Task<FeedbackOutcome> ProcessSafelyAsync(
+        MemoryFeedbackRecord feedback,
+        IReadOnlyDictionary<MemoryProviderInstanceId, MemoryProviderProfile> profiles,
+        DateTimeOffset now,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await ProcessAsync(feedback, profiles, now, cancellationToken);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception exception)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            return FeedbackOutcome.ForRetried(MemoryWorkerExceptionDiagnostic.Create(
+                $"Memory feedback '{feedback.FeedbackRecordId}' processing",
+                exception));
+        }
+    }
+
+    private async Task<FeedbackOutcome> ProcessAsync(
+        MemoryFeedbackRecord feedback,
+        IReadOnlyDictionary<MemoryProviderInstanceId, MemoryProviderProfile> profiles,
+        DateTimeOffset now,
+        CancellationToken cancellationToken)
+    {
+        if (!profiles.TryGetValue(feedback.ProviderInstanceId, out var provider))
+        {
+            return await RetryOrFailAsync(
+                feedback,
+                now,
+                "Memory feedback provider profile is no longer registered.",
+                cancellationToken);
+        }
+
+        var driver = driverCatalog.ResolveUnique(provider.DriverKind, out var driverFailure);
+        if (driver is null)
+        {
+            return await RetryOrFailAsync(
+                feedback,
+                now,
+                driverFailure,
+                cancellationToken);
+        }
+
+        var running = feedback.Status == MemoryLedgerStatus.Running
+            ? feedback
+            : await feedbackLedgerStore.TransitionAsync(
+                feedback.FeedbackRecordId,
+                MemoryLedgerStatus.Running,
+                now,
+                "Delivering feedback to memory provider.",
+                cancellationToken);
+        MemoryProviderQueueDispatchResult dispatch;
+        try
+        {
+            dispatch = await driver.DeliverFeedbackAsync(provider, running, cancellationToken);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception exception)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            return await RetryOrFailAsync(
+                running,
+                now,
+                MemoryWorkerExceptionDiagnostic.Create(
+                    $"Memory feedback '{feedback.FeedbackRecordId}' provider delivery",
+                    exception),
+                cancellationToken);
+        }
+
+        return await ApplyDispatchResultAsync(running, dispatch, now, cancellationToken);
     }
 
     private async Task<FeedbackOutcome> ApplyDispatchResultAsync(

@@ -1,4 +1,5 @@
 using CanDoItAll.Modules.Memory.Components;
+using CanDoItAll.Modules.Memory.Pages;
 using CanDoItAll.Modules.Memory.Services;
 using CanDoItAll.SharedKernel;
 using Microsoft.Extensions.DependencyInjection;
@@ -12,7 +13,17 @@ public static class MemoryModuleServiceCollectionExtensions
     {
         services.TryAddSingleton(TimeProvider.System);
         services.TryAddSingleton<IMemoryProviderUiSurfaceComponentRegistry, MemoryProviderUiSurfaceComponentRegistry>();
+        services.TryAddSingleton<MemoryProviderProfileEditorMapper>();
+        services.TryAddScoped<MemoryProviderUiSurfaceProjector>();
+        services.TryAddScoped<MemoryProviderSnapshotReader>();
+        services.TryAddScoped<MemoryProviderProfileUiService>();
+        services.TryAddScoped<MemoryProviderUiRequestFactory>();
+        services.TryAddScoped<MemoryProviderExecutableActionGuard>();
+        services.TryAddScoped<MemoryProviderQueryUiService>();
+        services.TryAddScoped<MemoryProviderLedgerActionUiService>();
+        services.TryAddScoped<MemoryProviderIngestionUiService>();
         services.TryAddScoped<IMemoryProviderManagementUiService, MemoryProviderManagementUiService>();
+        services.TryAddTransient<MemoryProvidersPageController>();
         services.AddSingleton(
             new MemoryProviderUiSurfaceComponentRegistration(
                 MemoryProviderUiSurfaceKeys.MockProviderPanelComponent,

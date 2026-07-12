@@ -1,0 +1,91 @@
+@namespace CanDoItAll.Modules.Memory.Components
+
+<FormSection Title="Runtime capabilities"
+             Description="Claims must match ports that the selected driver can execute in production.">
+    @if (UnsupportedClaims.Count > 0)
+    {
+        <Alert AlertStyle="AlertStyle.Warning">
+            Clear unsupported claim(s) before saving: @string.Join(", ", UnsupportedClaims.Select(item => item.Value)).
+        </Alert>
+    }
+
+    <Grid Gap="LayoutGap.Medium" ColumnTemplate="repeat(auto-fit,minmax(13rem,1fr))">
+        <MemoryProviderBooleanField Label="Enabled"
+                                    Value="@Editor.IsEnabled"
+                                    ValueChanged="@(value => Editor.IsEnabled = value)"
+                                    TestId="memory-ui-editor-enabled" />
+        <MemoryProviderBooleanField Label="Sync query"
+                                    Value="@Editor.SupportsContextQuerySync"
+                                    ValueChanged="@(value => Editor.SupportsContextQuerySync = value)"
+                                    Disabled="@IsUnavailable(MemoryCapabilityIds.ContextQuerySync, Editor.SupportsContextQuerySync)"
+                                    TestId="memory-ui-editor-sync-query" />
+        <MemoryProviderBooleanField Label="Async query"
+                                    Value="@Editor.SupportsContextQueryAsync"
+                                    ValueChanged="@(value => Editor.SupportsContextQueryAsync = value)"
+                                    Disabled="@IsUnavailable(MemoryCapabilityIds.ContextQueryAsync, Editor.SupportsContextQueryAsync)"
+                                    TestId="memory-ui-editor-async-query" />
+        <MemoryProviderBooleanField Label="Snapshot ingestion"
+                                    Value="@Editor.SupportsSnapshotIngestion"
+                                    ValueChanged="@(value => Editor.SupportsSnapshotIngestion = value)"
+                                    Disabled="@IsUnavailable(MemoryCapabilityIds.IngestionSnapshot, Editor.SupportsSnapshotIngestion)"
+                                    TestId="memory-ui-editor-snapshot-ingestion" />
+        <MemoryProviderBooleanField Label="Provider source requests"
+                                    Value="@Editor.SupportsProviderRequestedSources"
+                                    ValueChanged="@(value => Editor.SupportsProviderRequestedSources = value)"
+                                    Disabled="@IsUnavailable(MemoryCapabilityIds.IngestionProviderRequestedSource, Editor.SupportsProviderRequestedSources)"
+                                    TestId="memory-ui-editor-source-requests" />
+        <MemoryProviderBooleanField Label="Immediate feedback"
+                                    Value="@Editor.SupportsImmediateFeedback"
+                                    ValueChanged="@(value => Editor.SupportsImmediateFeedback = value)"
+                                    Disabled="@IsUnavailable(MemoryCapabilityIds.FeedbackImmediate, Editor.SupportsImmediateFeedback)"
+                                    TestId="memory-ui-editor-immediate-feedback" />
+        <MemoryProviderBooleanField Label="Delayed feedback"
+                                    Value="@Editor.SupportsDelayedFeedback"
+                                    ValueChanged="@(value => Editor.SupportsDelayedFeedback = value)"
+                                    Disabled="@IsUnavailable(MemoryCapabilityIds.FeedbackDelayed, Editor.SupportsDelayedFeedback)"
+                                    TestId="memory-ui-editor-delayed-feedback" />
+        <MemoryProviderBooleanField Label="Provider events"
+                                    Value="@Editor.SupportsProviderEvents"
+                                    ValueChanged="@(value => Editor.SupportsProviderEvents = value)"
+                                    Disabled="@IsUnavailable(MemoryCapabilityIds.EventsProviderPush, Editor.SupportsProviderEvents)"
+                                    TestId="memory-ui-editor-provider-events" />
+        <MemoryProviderBooleanField Label="Host event polling"
+                                    Value="@Editor.SupportsHostEventPolling"
+                                    ValueChanged="@(value => Editor.SupportsHostEventPolling = value)"
+                                    Disabled="@IsUnavailable(MemoryCapabilityIds.EventsHostPoll, Editor.SupportsHostEventPolling)"
+                                    TestId="memory-ui-editor-host-events" />
+        <MemoryProviderBooleanField Label="Operation status"
+                                    Value="@Editor.SupportsOperationStatus"
+                                    ValueChanged="@(value => Editor.SupportsOperationStatus = value)"
+                                    Disabled="@IsUnavailable(MemoryCapabilityIds.OperationStatus, Editor.SupportsOperationStatus)"
+                                    TestId="memory-ui-editor-operation-status" />
+        <MemoryProviderBooleanField Label="RCL surface"
+                                    Value="@Editor.SupportsRclUi"
+                                    ValueChanged="@(value => Editor.SupportsRclUi = value)"
+                                    TestId="memory-ui-editor-rcl" />
+        <MemoryProviderBooleanField Label="Iframe surface"
+                                    Value="@Editor.SupportsIframeUi"
+                                    ValueChanged="UpdateIframeSupportAsync"
+                                    TestId="memory-ui-editor-iframe" />
+    </Grid>
+</FormSection>
+
+@code {
+    [Parameter, EditorRequired]
+    public MemoryProviderProfileEditorModel Editor { get; set; } = new();
+
+    [Parameter]
+    public EventCallback Changed { get; set; }
+
+    private IReadOnlyList<MemoryCapabilityId> UnsupportedClaims =>
+        MemoryProviderCapabilityPolicy.GetUnsupportedEnabledClaims(Editor);
+
+    private bool IsUnavailable(MemoryCapabilityId capability, bool currentValue) =>
+        !currentValue && !MemoryProviderCapabilityPolicy.CanAdvertise(Editor.DriverKind, capability);
+
+    private async Task UpdateIframeSupportAsync(bool value)
+    {
+        Editor.SupportsIframeUi = value;
+        await Changed.InvokeAsync();
+    }
+}

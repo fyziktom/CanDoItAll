@@ -33,6 +33,8 @@ public sealed class CapabilityTemplateSeedMaterializationTests
         Assert.Equal(CanDoItAll.AgentFramework.Models.CapabilityKind.Skill, byKey["aspnet-core-skill"].Kind);
         Assert.Equal(CanDoItAll.AgentFramework.Models.CapabilityKind.Rag, byKey["workspace-source-rag"].Kind);
         Assert.DoesNotContain(byKey.Keys, key => string.Equals(key, "candoitall-bundle-workflow", StringComparison.OrdinalIgnoreCase));
+        Assert.DoesNotContain(capabilities, capability =>
+            capability.Kind == CanDoItAll.AgentFramework.Models.CapabilityKind.Memory);
     }
 
     [Fact]
@@ -346,7 +348,6 @@ public sealed class CapabilityTemplateSeedMaterializationTests
         "mail-summary-inline-skill",
         "mail-triage-context",
         "mail-triage-inline-skill",
-        "mem0-shared-memory",
         "playwright-local-mcp",
         "provider-health",
         "provider-native-code-interpreter",

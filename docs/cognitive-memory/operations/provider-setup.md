@@ -23,6 +23,9 @@ The default base configuration is:
       },
       "NativeRemote": {
         "Enabled": false
+      },
+      "Mcp": {
+        "Enabled": false
       }
     }
   }
@@ -125,38 +128,35 @@ Create an enabled profile with `DriverKind` set to `Http` and include the requir
 | `host.candoitall.memory.http.baseUrl` | Yes | Absolute HTTP(S) base URL. |
 | `host.candoitall.memory.http.queryPath` | No | Defaults to `/memory/query`. |
 | `host.candoitall.memory.http.healthPath` | No | Defaults to `/memory/health`. |
-| `host.candoitall.memory.http.apiKey` | No | Secret value; do not log it. |
+| `host.candoitall.memory.http.apiKeyEnvironmentVariable` | No | Environment-variable name containing the secret; the secret is never stored in the profile. |
 | `host.candoitall.memory.http.authHeaderName` | No | Defaults to `Authorization`. |
 | `host.candoitall.memory.http.authScheme` | No | Defaults to `Bearer`. |
 | `host.candoitall.memory.http.timeoutMilliseconds` | No | Positive integer override. |
 | `host.candoitall.memory.http.maxRetryAttempts` | No | Non-negative integer override. |
 
-The current HTTP driver dispatches context queries and reads provider health. If the profile advertises async operation status, feedback, source ingestion, or event polling without a matching driver implementation, workers will record typed driver-unavailable diagnostics.
+The current HTTP driver dispatches synchronous context queries and reads provider health. It rejects accepted asynchronous responses because HTTP profiles do not have a status-poll driver. Profiles cannot advertise feedback, source ingestion, event polling, or asynchronous query support through this driver.
 
-Expected query response shape is `HttpMemoryProviderResponse`, carrying either a `MemoryContextPack`, a `MemoryOperationAccepted`, a provider error, or an unsupported-capability response.
+Expected query response shape is `HttpMemoryProviderResponse`, carrying a `MemoryContextPack`, provider error, or unsupported-capability response. `MemoryOperationAccepted` remains in the versioned wire contract for transports that implement status polling, but is rejected by this driver.
 
 ## MCP Provider
 
-The MCP driver is available through `AddMcpMemoryProviderDriver`, but the base appsettings file does not enable it by default. Host-specific composition must call the extension before MCP profiles can dispatch.
+The MCP driver is registered by composition only when `Memory:Providers:Mcp:Enabled` is true. It uses the official MCP HTTP client and supports remote HTTP servers only.
 
 Create an enabled profile with `DriverKind` set to `Mcp` and include:
 
 | Extension key | Required | Notes |
 | --- | --- | --- |
 | `host.candoitall.memory.mcp.serverKey` | Yes | Stable MCP server key. |
-| `host.candoitall.memory.mcp.descriptorKind` | No | `remote-http` by default; `internal-hosted` is also supported. |
+| `host.candoitall.memory.mcp.descriptorKind` | No | `remote-http` by default. `internal-hosted` is rejected because it has no executable runtime path. |
 | `host.candoitall.memory.mcp.remoteEndpoint` | Required for `remote-http` | Absolute URI. |
-| `host.candoitall.memory.mcp.implementationKey` | Required for `internal-hosted` | Internal hosted implementation key. |
 | `host.candoitall.memory.mcp.displayName` | No | Defaults to profile display name. |
 | `host.candoitall.memory.mcp.description` | No | Defaults to a generic MCP provider description. |
+| `host.candoitall.memory.mcp.authHeaderName` | No | HTTP header name; defaults to `Authorization` when a binding is present. |
+| `host.candoitall.memory.mcp.authHeaderEnvironmentVariable` | No | Environment-variable name containing the complete header value, such as `Bearer <token>`. |
 | `host.candoitall.memory.mcp.tools.contextQuery` | Capability-driven | Tool used for context query. |
-| `host.candoitall.memory.mcp.tools.ingestion` | Capability-driven | Tool used for snapshot ingestion. |
-| `host.candoitall.memory.mcp.tools.sourceRequest` | Capability-driven | Tool used for provider-requested sources. |
-| `host.candoitall.memory.mcp.tools.feedback` | Capability-driven | Tool used for immediate or delayed feedback. |
-| `host.candoitall.memory.mcp.tools.eventPoll` | Capability-driven | Tool used for host-poll events. |
 | `host.candoitall.memory.mcp.tools.operationStatus` | Capability-driven | Tool used for async operation status. |
 
-Declare only capabilities with a configured tool. Missing tool names are reported as unsupported capability by the MCP driver.
+The shipped MCP adapter supports context query and, when configured, operation-status polling. Ingestion, provider-source requests, feedback, and event-poll tool keys are rejected during profile decoding. Declare only capabilities with an implemented configured tool.
 
 ## Native Remote Provider
 
@@ -190,13 +190,13 @@ Create an enabled profile with `DriverKind` set to `NativeRemote` and include:
 | `native.cognitiveMemory.remote.serviceBaseUrl` | Yes | Absolute HTTP(S) base URL of the native service. |
 | `native.cognitiveMemory.remote.queryPath` | No | Defaults to `/memory/query`. |
 | `native.cognitiveMemory.remote.healthPath` | No | Defaults to `/memory/health`. |
-| `native.cognitiveMemory.remote.apiKey` | No | Secret value; do not log it. |
+| `native.cognitiveMemory.remote.apiKeyEnvironmentVariable` | No | Environment-variable name containing the secret; the secret is never stored in the profile. |
 | `native.cognitiveMemory.remote.authHeaderName` | No | Defaults to `Authorization`. |
 | `native.cognitiveMemory.remote.authScheme` | No | Defaults to `Bearer`. |
 | `native.cognitiveMemory.remote.timeoutMilliseconds` | No | Positive integer override. |
 | `native.cognitiveMemory.remote.maxRetryAttempts` | No | Non-negative integer override. |
 
-The native remote driver adapts these keys into the generic HTTP driver. Native service startup, native DB migrations, Qdrant projection, model execution, and advanced native UI remain owned by the native service repository.
+The native remote driver adapts these keys into the generic synchronous HTTP driver. Native service startup, native DB migrations, projection, model execution, and advanced native UI remain owned by the external repository.
 
 ## UI Surface Setup
 

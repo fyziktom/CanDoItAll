@@ -2,26 +2,15 @@ using CanDoItAll.Memory.Abstractions;
 
 namespace CanDoItAll.Memory.Application;
 
-public interface IMemoryProviderRegistry
-{
-    IReadOnlyList<MemoryProviderProfile> Providers { get; }
-
-    IReadOnlyList<MemoryProviderProfile> GetEnabledProviders();
-
-    IReadOnlyList<MemoryProviderProfile> GetProvidersForCapability(MemoryCapabilityId capability);
-
-    MemoryProviderSelectionResult SelectProvider(
-        MemoryProviderSelectionPolicy policy,
-        MemoryProviderSelectionContext context);
-}
-
 public sealed class InMemoryMemoryProviderRegistry : IMemoryProviderRegistry
 {
     private readonly IReadOnlyList<MemoryProviderProfile> providers;
+    private readonly MemoryProviderSelectionEvaluator evaluator;
 
     public InMemoryMemoryProviderRegistry(IReadOnlyList<MemoryProviderProfile> providers)
     {
         this.providers = providers.ToArray();
+        evaluator = new MemoryProviderSelectionEvaluator(this.providers);
     }
 
     public IReadOnlyList<MemoryProviderProfile> Providers => providers;
@@ -31,7 +20,9 @@ public sealed class InMemoryMemoryProviderRegistry : IMemoryProviderRegistry
 
     public IReadOnlyList<MemoryProviderProfile> GetProvidersForCapability(MemoryCapabilityId capability) =>
         GetEnabledProviders()
-            .Where(provider => SupportsCapability(provider, capability))
+            .Where(provider =>
+                MemoryProviderSelectionRules.SupportsWorkspaceScope(provider) &&
+                MemoryProviderSelectionRules.SupportsCapability(provider, capability))
             .ToArray();
 
     public MemoryProviderSelectionResult SelectProvider(
@@ -40,19 +31,9 @@ public sealed class InMemoryMemoryProviderRegistry : IMemoryProviderRegistry
     {
         ArgumentNullException.ThrowIfNull(policy);
         ArgumentNullException.ThrowIfNull(context);
-
-        if (policy.DeniedCapabilities.Contains(policy.RequiredCapability))
-        {
-            return MemoryProviderSelectionResult.Rejected(
-                MemoryProviderSelectionStatus.CapabilityDenied,
-                MemoryProviderSelectionReason.None,
-                policy.RequiredCapability,
-                $"Capability '{policy.RequiredCapability}' is denied by memory provider selection policy.",
-                []);
-        }
-
-        if (policy.AllowedCapabilities.Count > 0 &&
-            !policy.AllowedCapabilities.Contains(policy.RequiredCapability))
+        if (policy.DeniedCapabilities.Contains(policy.RequiredCapability) ||
+            (policy.AllowedCapabilities.Count > 0 &&
+             !policy.AllowedCapabilities.Contains(policy.RequiredCapability)))
         {
             return MemoryProviderSelectionResult.Rejected(
                 MemoryProviderSelectionStatus.CapabilityDenied,
@@ -74,28 +55,44 @@ public sealed class InMemoryMemoryProviderRegistry : IMemoryProviderRegistry
 
         if (policy.ExplicitProviderId is { } explicitProviderId)
         {
-            return EvaluateSelectedProvider(
+            return evaluator.Evaluate(
                 explicitProviderId,
                 MemoryProviderSelectionReason.ExplicitProvider,
-                policy.RequiredCapability);
+                policy);
         }
 
-        if (TryResolveAssignment(policy, context, out var assignedProviderId))
+        if (MemoryProviderAssignmentResolver.TryResolve(policy, context, out var assignedProviderId))
         {
-            return EvaluateSelectedProvider(
+            return evaluator.Evaluate(
                 assignedProviderId,
                 MemoryProviderSelectionReason.AssignmentOverride,
-                policy.RequiredCapability);
+                policy);
         }
 
         if (policy.DefaultProviderId is { } defaultProviderId)
         {
-            return EvaluateSelectedProvider(
+            if (policy.FallbackBehavior != MemoryProviderFallbackBehavior.AllowDefaultProviderWhenNoAssignment)
+            {
+                return MemoryProviderSelectionResult.Rejected(
+                    MemoryProviderSelectionStatus.ProviderSelectionRequired,
+                    MemoryProviderSelectionReason.DefaultProvider,
+                    policy.RequiredCapability,
+                    "A default memory provider was configured, but implicit default fallback is denied by policy.",
+                    [defaultProviderId]);
+            }
+
+            return evaluator.Evaluate(
                 defaultProviderId,
                 MemoryProviderSelectionReason.DefaultProvider,
-                policy.RequiredCapability);
+                policy);
         }
 
+        return EvaluateUnassignedProvider(policy);
+    }
+
+    private MemoryProviderSelectionResult EvaluateUnassignedProvider(
+        MemoryProviderSelectionPolicy policy)
+    {
         var enabledProviders = GetEnabledProviders();
         if (enabledProviders.Count == 0)
         {
@@ -107,8 +104,10 @@ public sealed class InMemoryMemoryProviderRegistry : IMemoryProviderRegistry
                 providers.Select(provider => provider.InstanceId).ToArray());
         }
 
-        var matchingProvider = enabledProviders.FirstOrDefault(provider => SupportsCapability(provider, policy.RequiredCapability));
-        if (matchingProvider is null)
+        var matchingProviders = enabledProviders
+            .Where(provider => MemoryProviderSelectionRules.SupportsCapability(provider, policy.RequiredCapability))
+            .ToArray();
+        if (matchingProviders.Length == 0)
         {
             return MemoryProviderSelectionResult.Rejected(
                 MemoryProviderSelectionStatus.CapabilityUnavailable,
@@ -118,95 +117,37 @@ public sealed class InMemoryMemoryProviderRegistry : IMemoryProviderRegistry
                 enabledProviders.Select(provider => provider.InstanceId).ToArray());
         }
 
-        return MemoryProviderSelectionResult.Selected(
-            matchingProvider,
-            MemoryProviderSelectionReason.DefaultProvider,
-            policy.RequiredCapability);
-    }
-
-    private MemoryProviderSelectionResult EvaluateSelectedProvider(
-        MemoryProviderInstanceId providerId,
-        MemoryProviderSelectionReason reason,
-        MemoryCapabilityId requiredCapability)
-    {
-        var provider = providers.FirstOrDefault(candidate => candidate.InstanceId == providerId);
-        if (provider is null)
+        var scopedProviders = matchingProviders
+            .Where(MemoryProviderSelectionRules.SupportsWorkspaceScope)
+            .ToArray();
+        if (scopedProviders.Length == 0)
         {
             return MemoryProviderSelectionResult.Rejected(
-                MemoryProviderSelectionStatus.ProviderNotFound,
-                reason,
-                requiredCapability,
-                $"Memory provider '{providerId}' was not found; dispatch is not allowed.",
-                [providerId]);
+                MemoryProviderSelectionStatus.ProviderDenied,
+                MemoryProviderSelectionReason.None,
+                policy.RequiredCapability,
+                "Compatible memory providers use a single-workspace scope that cannot be validated; dispatch is not allowed.",
+                matchingProviders.Select(provider => provider.InstanceId).ToArray());
         }
 
-        if (!provider.IsEnabled)
+        var allowedProviders = scopedProviders
+            .Where(provider => MemoryProviderSelectionRules.IsProviderAllowed(policy, provider.InstanceId))
+            .ToArray();
+        if (allowedProviders.Length == 0)
         {
             return MemoryProviderSelectionResult.Rejected(
-                MemoryProviderSelectionStatus.ProviderDisabled,
-                reason,
-                requiredCapability,
-                $"Memory provider '{providerId}' is disabled; implicit fallback is denied.",
-                [providerId]);
+                MemoryProviderSelectionStatus.ProviderDenied,
+                MemoryProviderSelectionReason.None,
+                policy.RequiredCapability,
+                "Compatible memory providers are excluded by the allowed-provider policy; dispatch is not allowed.",
+                scopedProviders.Select(provider => provider.InstanceId).ToArray());
         }
 
-        if (!SupportsCapability(provider, requiredCapability))
-        {
-            return MemoryProviderSelectionResult.Rejected(
-                MemoryProviderSelectionStatus.CapabilityUnavailable,
-                reason,
-                requiredCapability,
-                $"Memory provider '{providerId}' does not support capability '{requiredCapability}'; dispatch is not allowed.",
-                [providerId]);
-        }
-
-        return MemoryProviderSelectionResult.Selected(provider, reason, requiredCapability);
-    }
-
-    private static bool SupportsCapability(
-        MemoryProviderProfile provider,
-        MemoryCapabilityId capability)
-    {
-        return provider.Manifest.Capabilities.Any(candidate => candidate.Supported && candidate.Id == capability);
-    }
-
-    private static bool TryResolveAssignment(
-        MemoryProviderSelectionPolicy policy,
-        MemoryProviderSelectionContext context,
-        out MemoryProviderInstanceId providerId)
-    {
-        foreach (var assignment in policy.Assignments)
-        {
-            if (AssignmentMatches(assignment, context))
-            {
-                providerId = assignment.ProviderInstanceId;
-                return true;
-            }
-        }
-
-        providerId = default;
-        return false;
-    }
-
-    private static bool AssignmentMatches(
-        MemoryProviderAssignment assignment,
-        MemoryProviderSelectionContext context)
-    {
-        return assignment.Scope switch
-        {
-            MemoryProviderAssignmentScope.Agent => Matches(context.AgentId, assignment.Key),
-            MemoryProviderAssignmentScope.AgentRole => Matches(context.AgentRole, assignment.Key),
-            MemoryProviderAssignmentScope.Workflow => Matches(context.WorkflowId, assignment.Key),
-            MemoryProviderAssignmentScope.WorkflowNode => Matches(context.WorkflowNodeId, assignment.Key),
-            MemoryProviderAssignmentScope.Process => Matches(context.ProcessId, assignment.Key),
-            _ => false
-        };
-    }
-
-    private static bool Matches(
-        string? actual,
-        string expected)
-    {
-        return string.Equals(actual, expected, StringComparison.OrdinalIgnoreCase);
+        return MemoryProviderSelectionResult.Rejected(
+            MemoryProviderSelectionStatus.ProviderSelectionRequired,
+            MemoryProviderSelectionReason.None,
+            policy.RequiredCapability,
+            "A compatible memory provider exists, but no explicit provider, assignment, or default provider was selected; dispatch is not allowed.",
+            allowedProviders.Select(provider => provider.InstanceId).ToArray());
     }
 }

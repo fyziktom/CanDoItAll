@@ -1,3 +1,4 @@
+using CanDoItAll.Memory.SourceGateway;
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
 
@@ -61,16 +62,13 @@ public sealed class MemorySourceGatewayHardeningCheckpointTests
     }
 
     [Fact]
-    public void CP003_Source_snapshot_contract_family_is_not_duplicated_outside_maf_core()
+    public void CP003_Source_snapshot_contract_family_is_not_duplicated_outside_source_gateway_abstractions()
     {
-        var canonicalPath = Path.Combine(
+        var canonicalDirectory = Path.Combine(
             RepoRoot,
             "src",
-            "MAF",
-            "Common",
-            "CanDoItAll.AgentFramework.Core",
-            "Sources",
-            "MemorySourceSnapshotContracts.cs");
+            "Memory",
+            "CanDoItAll.Memory.SourceGateway.Abstractions");
         var genericProtocolPath = Path.Combine(
             RepoRoot,
             "src",
@@ -81,7 +79,9 @@ public sealed class MemorySourceGatewayHardeningCheckpointTests
             @"\b(?:record(?:\s+struct|\s+class)?|class|interface|enum)\s+(?:I)?(?:MemorySourceSnapshot|MemorySourceSnapshotManifest|MemorySourceSnapshotCursor|MemorySourceSnapshotCursorDescriptor|MemorySourceSnapshotPage|MemorySourceItem|MemorySourceItemId|MemorySourceItemKey|MemorySourceProvenance|MemorySourcePermissionContext|MemorySourceLayoutMetadata|MemorySourceLink|MemorySourceReference|MemorySourceStorageReference|CrmHrSourceSnapshotRequest|ResourceSourceSnapshotRequest|ManualSourceSnapshotRequest|I\w+SourceSnapshotProvider)\b",
             RegexOptions.CultureInvariant);
         var violations = EnumerateSourceFiles("src")
-            .Where(path => !Path.GetFullPath(path).Equals(canonicalPath, StringComparison.OrdinalIgnoreCase))
+            .Where(path => !Path.GetFullPath(path).StartsWith(
+                canonicalDirectory + Path.DirectorySeparatorChar,
+                StringComparison.OrdinalIgnoreCase))
             .Where(path => !Path.GetFullPath(path).Equals(genericProtocolPath, StringComparison.OrdinalIgnoreCase))
             .SelectMany(path => File.ReadLines(path)
                 .Select((line, index) => new

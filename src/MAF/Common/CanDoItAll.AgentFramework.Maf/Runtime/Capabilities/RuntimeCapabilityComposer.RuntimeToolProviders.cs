@@ -33,6 +33,9 @@ internal sealed class RuntimeRegisteredToolProviderAttacher(IRuntimeToolProvider
             return;
         }
 
+        var effectiveContextIntent = contextIntent.WorkspaceScope is null
+            ? contextIntent with { WorkspaceScope = contextWorkspaceScope }
+            : contextIntent;
         var context = new AgentRuntimeToolProviderContext(
             agent,
             provider,
@@ -40,7 +43,7 @@ internal sealed class RuntimeRegisteredToolProviderAttacher(IRuntimeToolProvider
             suppressApprovalRequirements,
             MapRuntimeToolProviderPurpose(policyKind),
             RuntimeSessionKey: string.Empty,
-            contextIntent,
+            effectiveContextIntent,
             ResolveRuntimeToolProviderTags(contextWorkspaceScope));
         var result = await runtimeToolProviderComposer.AttachAsync(
             new RuntimeToolProviderAttachmentRequest(

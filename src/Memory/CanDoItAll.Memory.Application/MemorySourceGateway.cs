@@ -1,5 +1,5 @@
-using CanDoItAll.AgentFramework.Core;
-using MafMemorySourceKind = CanDoItAll.AgentFramework.Core.MemorySourceKind;
+using CanDoItAll.Memory.SourceGateway;
+using MafMemorySourceKind = CanDoItAll.Memory.SourceGateway.MemorySourceKind;
 
 namespace CanDoItAll.Memory.Application;
 

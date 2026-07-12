@@ -4,6 +4,7 @@ using CanDoItAll.AgentFramework.Mcp.Abstractions;
 using CanDoItAll.Memory.Abstractions;
 using CanDoItAll.Memory.Application;
 using CanDoItAll.Memory.Mcp;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace CanDoItAll.Memory.Tests;
 
@@ -33,7 +34,23 @@ public sealed class MemoryMcpDriverTests
             new MemoryContextQueryRequest(
                 "What should I remember?",
                 [MemoryCapabilityIds.ContextQuerySync],
-                MemorySourceProvenance.None),
+                MemorySourceProvenance.None)
+            {
+                Context = new MemoryRequestContext(
+                    new MemoryWorkspaceContext("workspace-alpha", "Workspace alpha", CustomerId: null, Domain: null, Tags: []),
+                    new MemoryExecutionContext(
+                        ProjectId: "44444444-4444-4444-4444-444444444444",
+                        ProjectName: "Project alpha",
+                        ProcessId: "process-alpha",
+                        ProcessStepId: "step-alpha",
+                        ProcessStepName: null,
+                        WorkflowId: "workflow-alpha",
+                        WorkflowNodeId: "node-alpha",
+                        ArtifactIds: []),
+                    MemoryPolicyContext.InternalDefault,
+                    MemoryBudget.Default,
+                    MemoryExtensionData.Empty)
+            },
             CancellationToken.None);
 
         Assert.Equal(MemoryProviderDriverResultKind.ContextPack, result.Kind);
@@ -41,6 +58,9 @@ public sealed class MemoryMcpDriverTests
         Assert.Equal(McpServerDescriptorKind.RemoteHttp, factory.LastDescriptor?.DescriptorKind);
         Assert.Equal(McpServerKey.Create("memory-mcp"), factory.LastDescriptor?.ServerKey);
         Assert.Contains(McpToolName.Create("memory_context_query"), factory.LastDescriptor!.AllowedTools);
+        var remoteDescriptor = Assert.IsType<RemoteHttpMcpServerDescriptor>(factory.LastDescriptor);
+        Assert.Equal("CANDOITALL_MEMORY_MCP_TEST_KEY", remoteDescriptor.HeaderBindings["Authorization"]);
+        Assert.False(remoteDescriptor.SideEffectProfile.IsStateChanging);
         Assert.Equal(1, factory.CreateCount);
         Assert.True(factory.LastClient!.Started);
         Assert.True(factory.LastClient.Stopped);
@@ -59,31 +79,22 @@ public sealed class MemoryMcpDriverTests
         Assert.Equal(
             MemoryCapabilityIds.ContextQuerySync.Value,
             envelope.GetProperty("payload").GetProperty("requestedCapabilities")[0].GetProperty("value").GetString());
+        Assert.Equal(
+            "44444444-4444-4444-4444-444444444444",
+            envelope.GetProperty("executionContext").GetProperty("projectId").GetString());
     }
 
     [Fact]
-    public async Task MCP002_Unsupported_ingestion_is_structured_when_tool_not_configured()
+    public void MCP002_Ingestion_tool_mapping_is_rejected_because_no_application_port_consumes_it()
     {
-        var factory = new RecordingMcpClientFactory(new Dictionary<McpToolName, string>());
-        var driver = new McpMemoryProviderDriver(factory, new McpMemoryProviderOptions());
         var provider = CreateProfile(
-            [MemoryCapabilityIds.ContextQuerySync, MemoryCapabilityIds.IngestionSnapshot],
-            (McpMemoryProviderConfigurationKeys.ContextQueryTool, JsonString("memory_context_query")));
+            [MemoryCapabilityIds.IngestionSnapshot],
+            (McpMemoryProviderConfigurationKeys.IngestionTool, JsonString("memory_ingest")));
 
-        var result = await driver.ExecuteIngestionAsync(
-            provider,
-            CreateOperation(MemoryCapabilityIds.IngestionSnapshot, MemoryOperationKind.Ingestion),
-            new MemoryIngestionRequest(
-                MemorySourceSnapshotId.Parse("project:alpha"),
-                MemorySourceKind.Project,
-                MemoryPayload.FromText("source text"),
-                [MemoryCapabilityIds.IngestionSnapshot]),
-            CancellationToken.None);
+        var exception = Assert.Throws<InvalidOperationException>(
+            () => McpMemoryProviderConfiguration.FromProfile(provider, new McpMemoryProviderOptions()));
 
-        Assert.Equal(McpMemoryAdapterResultKind.UnsupportedCapability, result.Kind);
-        Assert.Null(result.AcceptedOperation);
-        Assert.Contains("ingestion.snapshot", result.Diagnostic, StringComparison.Ordinal);
-        Assert.Equal(0, factory.CreateCount);
+        Assert.Contains("not supported by the application runtime", exception.Message, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -108,46 +119,52 @@ public sealed class MemoryMcpDriverTests
             [MemoryCapabilityIds.ContextQueryAsync],
             (McpMemoryProviderConfigurationKeys.OperationStatusTool, JsonString("memory_operation_status")));
 
-        var result = await driver.GetOperationStatusAsync(
+        var result = await ((IMemoryProviderOperationStatusDriver)driver).PollOperationAsync(
             provider,
-            new MemoryOperationStatusRequest(operation.OperationId),
+            operation,
             CancellationToken.None);
 
-        Assert.Equal(McpMemoryAdapterResultKind.OperationResult, result.Kind);
+        Assert.Equal(MemoryProviderOperationPollResultKind.OperationResult, result.Kind);
         Assert.Equal(MemoryOperationStatus.Succeeded, result.OperationResult?.Status);
         var call = Assert.Single(factory.LastClient!.ToolCalls);
         Assert.Equal(McpToolName.Create("memory_operation_status"), call.ToolName);
         using var arguments = JsonDocument.Parse(call.JsonArguments);
-        Assert.Equal(operation.OperationId.Value.ToString("D"), arguments.RootElement.GetProperty("operationId").GetString());
+        var root = arguments.RootElement;
+        Assert.Equal(operation.OperationId.Value.ToString("D"), root.GetProperty("operationId").GetString());
+        Assert.Equal(operation.CorrelationId.Value.ToString("D"), root.GetProperty("correlationId").GetString());
+        Assert.Equal(operation.CausationId.Value.ToString("D"), root.GetProperty("causationId").GetString());
+        Assert.Equal(operation.ProviderInstanceId.Value, root.GetProperty("providerInstanceId").GetString());
+        Assert.Equal(operation.RequestedCapability.Value, root.GetProperty("capabilityId").GetString());
+        Assert.Equal(operation.CorrelationId.Value.ToString("D"), factory.LastCorrelationId);
+        var envelope = root.GetProperty("envelope");
+        Assert.Equal(
+            operation.OperationId.Value.ToString("D"),
+            envelope.GetProperty("operationId").GetProperty("value").GetString());
+        Assert.Equal(
+            "workspace-status",
+            envelope.GetProperty("workspaceContext").GetProperty("workspaceId").GetString());
+        Assert.Equal(
+            "project-status",
+            envelope.GetProperty("executionContext").GetProperty("projectId").GetString());
+        Assert.Equal(
+            (int)MemorySensitivity.Confidential,
+            envelope.GetProperty("policyContext").GetProperty("sensitivity").GetInt32());
+        Assert.Equal(
+            "agent-alpha",
+            envelope.GetProperty("requestedBy").GetProperty("agentId").GetString());
     }
 
     [Fact]
-    public async Task MCP004_Event_polling_returns_provider_events_when_tool_available()
+    public void MCP004_Event_polling_mapping_is_rejected_until_delivery_is_complete()
     {
-        var providerEvent = new MemoryProviderEvent(
-            MemoryProviderEventId.New(),
-            MemoryProviderEventKind.MaintenanceSignal,
-            MemoryCorrelationId.New(),
-            MemoryCausationId.New(),
-            "Rebuild memory index.",
-            MemoryPayload.FromText("maintenance"));
-        var factory = new RecordingMcpClientFactory(
-            new Dictionary<McpToolName, string>
-            {
-                [McpToolName.Create("memory_poll_events")] =
-                    JsonSerializer.Serialize(new McpMemoryProviderEventPollResponse([providerEvent]), JsonOptions)
-            });
-        var driver = new McpMemoryProviderDriver(factory, new McpMemoryProviderOptions());
         var provider = CreateProfile(
             [MemoryCapabilityIds.EventsHostPoll],
             (McpMemoryProviderConfigurationKeys.EventPollTool, JsonString("memory_poll_events")));
 
-        var result = await driver.PollEventsAsync(provider, CancellationToken.None);
+        var exception = Assert.Throws<InvalidOperationException>(
+            () => McpMemoryProviderConfiguration.FromProfile(provider, new McpMemoryProviderOptions()));
 
-        Assert.Equal(McpMemoryAdapterResultKind.ProviderEvents, result.Kind);
-        var returned = Assert.Single(result.Events);
-        Assert.Equal(providerEvent.EventId, returned.EventId);
-        Assert.Equal(McpToolName.Create("memory_poll_events"), Assert.Single(factory.LastClient!.ToolCalls).ToolName);
+        Assert.Contains("not supported by the application runtime", exception.Message, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -176,10 +193,6 @@ public sealed class MemoryMcpDriverTests
     {
         var toolMap = new McpMemoryProviderToolMap(
             ContextQueryTool: McpToolName.Create("memory_context_query"),
-            IngestionTool: null,
-            SourceRequestTool: null,
-            FeedbackTool: null,
-            EventPollTool: McpToolName.Create("memory_poll_events"),
             OperationStatusTool: McpToolName.Create("memory_operation_status"));
 
         var manifest = McpMemoryProviderManifestFactory.CreateManifest(
@@ -192,30 +205,139 @@ public sealed class MemoryMcpDriverTests
             capability => capability.Id == MemoryCapabilityIds.ContextQuerySync &&
                 capability.Version == McpMemoryCapabilityVersions.ToolV1 &&
                 capability.Supported);
-        Assert.Contains(
+        Assert.DoesNotContain(
             manifest.Capabilities,
-            capability => capability.Id == MemoryCapabilityIds.EventsHostPoll &&
-                capability.Version == McpMemoryCapabilityVersions.ToolV1 &&
-                capability.Supported);
+            capability => capability.Id == MemoryCapabilityIds.EventsHostPoll);
         Assert.DoesNotContain(manifest.Capabilities, capability => capability.Id == MemoryCapabilityIds.IngestionSnapshot);
         Assert.True(manifest.InteractionSupport.SupportsSynchronousQueries);
         Assert.True(manifest.InteractionSupport.SupportsAsynchronousOperations);
-        Assert.True(manifest.InteractionSupport.SupportsProviderEvents);
+        Assert.False(manifest.InteractionSupport.SupportsProviderEvents);
+        Assert.False(manifest.InteractionSupport.SupportsSourceRequests);
+        Assert.False(manifest.InteractionSupport.SupportsFeedback);
+        Assert.DoesNotContain(
+            manifest.Capabilities,
+            capability => capability.Id == MemoryCapabilityIds.IngestionProviderRequestedSource ||
+                capability.Id == MemoryCapabilityIds.FeedbackImmediate ||
+                capability.Id == MemoryCapabilityIds.FeedbackDelayed);
+    }
+
+    [Fact]
+    public void MCP007_Internal_hosted_profile_is_rejected_before_execution()
+    {
+        var provider = CreateProfile(
+            [MemoryCapabilityIds.ContextQuerySync],
+            (McpMemoryProviderConfigurationKeys.DescriptorKind, JsonString(McpMemoryProviderDescriptorKinds.InternalHosted)));
+
+        var exception = Assert.Throws<InvalidOperationException>(
+            () => McpMemoryProviderConfiguration.FromProfile(provider, new McpMemoryProviderOptions()));
+
+        Assert.Contains("not executable", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData(McpMemoryProviderConfigurationKeys.SourceRequestTool)]
+    [InlineData(McpMemoryProviderConfigurationKeys.FeedbackTool)]
+    public void MCP008_Unimplemented_tool_mapping_is_rejected(string configurationKey)
+    {
+        var provider = CreateProfile(
+            [MemoryCapabilityIds.ContextQuerySync],
+            (configurationKey, JsonString("memory_unimplemented")));
+
+        var exception = Assert.Throws<InvalidOperationException>(
+            () => McpMemoryProviderConfiguration.FromProfile(provider, new McpMemoryProviderOptions()));
+
+        Assert.Contains("not supported by the application runtime", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData(McpMemoryProviderConfigurationKeys.AuthHeaderName, "Authorization\r\nInjected")]
+    [InlineData(McpMemoryProviderConfigurationKeys.AuthHeaderEnvironmentVariable, "invalid-variable-name")]
+    public void MCP009_Invalid_header_binding_identifier_is_rejected(
+        string configurationKey,
+        string invalidValue)
+    {
+        var provider = CreateProfile(
+            [MemoryCapabilityIds.ContextQuerySync],
+            (configurationKey, JsonString(invalidValue)));
+
+        var exception = Assert.Throws<InvalidOperationException>(
+            () => McpMemoryProviderConfiguration.FromProfile(provider, new McpMemoryProviderOptions()));
+
+        Assert.Contains(configurationKey, exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void MCP010_Driver_registrations_are_scoped_with_the_runtime_client_factory()
+    {
+        var services = new ServiceCollection();
+
+        services.AddMcpMemoryProviderDriver();
+
+        Assert.Equal(
+            ServiceLifetime.Scoped,
+            Assert.Single(services, item => item.ServiceType == typeof(McpMemoryProviderDriver)).Lifetime);
+        Assert.Equal(
+            ServiceLifetime.Scoped,
+            Assert.Single(services, item => item.ServiceType == typeof(IMemoryProviderDriver)).Lifetime);
+        Assert.Equal(
+            ServiceLifetime.Scoped,
+            Assert.Single(services, item => item.ServiceType == typeof(IMemoryProviderOperationStatusDriver)).Lifetime);
+        Assert.DoesNotContain(services, item => item.ServiceType == typeof(IMemoryProviderEventPollDriver));
+    }
+
+    [Fact]
+    public async Task MCP011_Status_without_persisted_request_context_fails_without_provider_call()
+    {
+        var factory = new RecordingMcpClientFactory(new Dictionary<McpToolName, string>());
+        var driver = new McpMemoryProviderDriver(factory, new McpMemoryProviderOptions());
+        var provider = CreateProfile(
+            [MemoryCapabilityIds.ContextQueryAsync],
+            (McpMemoryProviderConfigurationKeys.OperationStatusTool, JsonString("memory_operation_status")));
+
+        var result = await ((IMemoryProviderOperationStatusDriver)driver).PollOperationAsync(
+            provider,
+            CreateOperation(MemoryCapabilityIds.ContextQueryAsync, includeContext: false),
+            CancellationToken.None);
+
+        Assert.Equal(MemoryProviderOperationPollResultKind.TerminalFailure, result.Kind);
+        Assert.Equal(0, factory.CreateCount);
+        Assert.Contains("persisted request context", result.Diagnostic, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void MCP012_Secret_bearing_endpoint_query_is_rejected()
+    {
+        var provider = CreateProfile(
+            [MemoryCapabilityIds.ContextQuerySync],
+            (McpMemoryProviderConfigurationKeys.RemoteEndpoint, JsonString("https://memory-mcp.test/mcp?token=secret")),
+            (McpMemoryProviderConfigurationKeys.ContextQueryTool, JsonString("memory_context_query")));
+
+        var exception = Assert.Throws<InvalidOperationException>(() =>
+            McpMemoryProviderConfiguration.FromProfile(provider, new McpMemoryProviderOptions()));
+
+        Assert.Contains("query strings", exception.Message, StringComparison.Ordinal);
+        Assert.DoesNotContain("secret", exception.Message, StringComparison.Ordinal);
     }
 
     private static MemoryProviderProfile CreateProfile(
         IReadOnlyList<MemoryCapabilityId> capabilities,
         params (string Key, JsonElement Value)[] extensions)
     {
-        var values = new List<(string Key, JsonElement Value)>
+        var values = new Dictionary<string, JsonElement>(StringComparer.Ordinal)
         {
-            (McpMemoryProviderConfigurationKeys.DescriptorKind, JsonString(McpMemoryProviderDescriptorKinds.RemoteHttp)),
-            (McpMemoryProviderConfigurationKeys.ServerKey, JsonString("memory-mcp")),
-            (McpMemoryProviderConfigurationKeys.RemoteEndpoint, JsonString("https://memory-mcp.test/mcp")),
-            (McpMemoryProviderConfigurationKeys.DisplayName, JsonString("Memory MCP")),
-            (McpMemoryProviderConfigurationKeys.Description, JsonString("Test MCP memory provider"))
+            [McpMemoryProviderConfigurationKeys.DescriptorKind] = JsonString(McpMemoryProviderDescriptorKinds.RemoteHttp),
+            [McpMemoryProviderConfigurationKeys.ServerKey] = JsonString("memory-mcp"),
+            [McpMemoryProviderConfigurationKeys.RemoteEndpoint] = JsonString("https://memory-mcp.test/mcp"),
+            [McpMemoryProviderConfigurationKeys.DisplayName] = JsonString("Memory MCP"),
+            [McpMemoryProviderConfigurationKeys.Description] = JsonString("Test MCP memory provider"),
+            [McpMemoryProviderConfigurationKeys.AuthHeaderName] = JsonString("Authorization"),
+            [McpMemoryProviderConfigurationKeys.AuthHeaderEnvironmentVariable] = JsonString("CANDOITALL_MEMORY_MCP_TEST_KEY")
         };
-        values.AddRange(extensions);
+        foreach (var (key, value) in extensions)
+        {
+            values[key] = value;
+        }
+
         return new MemoryProviderProfile(
             MemoryProviderInstanceId.Parse("mcp-provider"),
             "MCP Provider",
@@ -232,20 +354,20 @@ public sealed class MemoryMcpDriverTests
                 MemoryProviderInteractionSupport.SyncQueryOnly,
                 UiSurfaces: [],
                 MemoryProviderLimits.Default,
-                new MemoryExtensionData(values.ToDictionary(item => item.Key, item => item.Value, StringComparer.Ordinal))));
+                new MemoryExtensionData(values)));
     }
 
     private static MemoryOperationRecord CreateOperation(
         MemoryCapabilityId capability,
-        MemoryOperationKind operationKind = MemoryOperationKind.ContextQuery)
+        bool includeContext = true)
     {
         var now = new DateTimeOffset(2026, 7, 5, 12, 0, 0, TimeSpan.Zero);
-        return MemoryOperationRecord.Create(
+        var operation = MemoryOperationRecord.Create(
             MemoryOperationRecordId.New(),
             new MemoryOperationId(Guid.Parse("11111111-1111-1111-1111-111111111111")),
             MemoryProviderInstanceId.Parse("mcp-provider"),
             capability,
-            operationKind,
+            MemoryOperationKind.ContextQuery,
             new MemoryLedgerRequester(
                 "agent-runtime",
                 AgentId: "agent-alpha",
@@ -260,6 +382,37 @@ public sealed class MemoryMcpDriverTests
             [],
             MemoryLedgerRetentionPolicy.Expiring(now.AddHours(1), now.AddHours(2)),
             now);
+        if (!includeContext)
+        {
+            return operation;
+        }
+
+        var context = new MemoryRequestContext(
+            new MemoryWorkspaceContext(
+                "workspace-status",
+                "Status workspace",
+                CustomerId: null,
+                Domain: "engineering",
+                Tags: ["memory"]),
+            new MemoryExecutionContext(
+                "project-status",
+                "Status project",
+                "process-alpha",
+                "step-alpha",
+                "Status step",
+                "workflow-alpha",
+                "node-alpha",
+                ["artifact-alpha"]),
+            MemoryPolicyContext.InternalDefault with
+            {
+                Sensitivity = MemorySensitivity.Confidential
+            },
+            new MemoryBudget(5, 4_096, 1_024, TimeSpan.FromSeconds(5)),
+            MemoryExtensionData.Empty);
+        return operation with
+        {
+            Extensions = operation.Extensions.WithMemoryRequestContext(operation, context)
+        };
     }
 
     private static MemoryContextPack CreateContextPack() =>
@@ -281,12 +434,15 @@ public sealed class MemoryMcpDriverTests
 
         public RecordingMcpRuntimeClient? LastClient { get; private set; }
 
+        public string? LastCorrelationId { get; private set; }
+
         public Task<IMcpRuntimeClient> CreateAsync(
             McpServerDescriptor descriptor,
             string correlationId,
             CancellationToken cancellationToken)
         {
             CreateCount++;
+            LastCorrelationId = correlationId;
             LastDescriptor = descriptor;
             LastClient = new RecordingMcpRuntimeClient(toolResults);
             return Task.FromResult<IMcpRuntimeClient>(LastClient);

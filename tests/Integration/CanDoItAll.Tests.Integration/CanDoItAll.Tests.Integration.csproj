@@ -32,6 +32,7 @@
     <ProjectReference Include="..\..\..\src\Foundation\CanDoItAll.Infrastructure\CanDoItAll.Infrastructure.csproj" />
     <ProjectReference Include="..\..\..\src\Memory\CanDoItAll.Memory.Abstractions\CanDoItAll.Memory.Abstractions.csproj" />
     <ProjectReference Include="..\..\..\src\Memory\CanDoItAll.Memory.Application\CanDoItAll.Memory.Application.csproj" />
+    <ProjectReference Include="..\..\..\src\Memory\CanDoItAll.Memory.SourceGateway.Abstractions\CanDoItAll.Memory.SourceGateway.Abstractions.csproj" />
     <ProjectReference Include="..\..\..\src\Modules\CanDoItAll.Modules.Projects\CanDoItAll.Modules.Projects.csproj" />
     <ProjectReference Include="..\..\..\src\Modules\CanDoItAll.Modules.Processes\CanDoItAll.Modules.Processes.csproj" />
     <ProjectReference Include="..\..\..\src\Modules\CanDoItAll.Modules.Resources\CanDoItAll.Modules.Resources.csproj" />

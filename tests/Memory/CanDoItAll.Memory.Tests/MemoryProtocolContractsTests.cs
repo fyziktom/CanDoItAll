@@ -211,6 +211,14 @@ public sealed class MemoryProtocolContractsTests
 
         var invalidCapability = Assert.Throws<ArgumentException>(() => MemoryCapabilityId.Parse("native Cognitive Memory"));
         Assert.Contains("Capability ids must use dotted lowercase tokens", invalidCapability.Message);
+
+        var controlCharacterProvider = Assert.Throws<ArgumentException>(() =>
+            MemoryProviderInstanceId.Parse("provider.safe\r\nprovider.injected"));
+        Assert.Contains("control characters", controlCharacterProvider.Message, StringComparison.Ordinal);
+
+        var oversizedProvider = Assert.Throws<ArgumentException>(() =>
+            MemoryProviderInstanceId.Parse(new string('p', 257)));
+        Assert.Contains("at most 256", oversizedProvider.Message, StringComparison.Ordinal);
     }
 
     [Fact]

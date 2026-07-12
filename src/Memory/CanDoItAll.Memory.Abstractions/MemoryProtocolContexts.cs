@@ -130,3 +130,18 @@ public sealed record MemorySourceProvenance(
 {
     public static readonly MemorySourceProvenance None = new(null, null, [], []);
 }
+
+public sealed record MemoryRequestContext(
+    MemoryWorkspaceContext Workspace,
+    MemoryExecutionContext Execution,
+    MemoryPolicyContext Policy,
+    MemoryBudget Budget,
+    MemoryExtensionData Extensions)
+{
+    public static readonly MemoryRequestContext Default = new(
+        MemoryWorkspaceContext.None,
+        MemoryExecutionContext.None,
+        MemoryPolicyContext.InternalDefault,
+        MemoryBudget.Default,
+        MemoryExtensionData.Empty);
+}

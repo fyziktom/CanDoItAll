@@ -1,0 +1,12 @@
+@namespace CanDoItAll.Modules.Memory.Components
+
+<div class="memory-ui-facts">
+    <MemoryProviderFact Label="Operation" Value="@Operation.OperationId.Value.ToString("D")" />
+    <MemoryProviderFact Label="Status" Value="@Operation.Status.ToString()" />
+    <MemoryProviderFact Label="Capability" Value="@Operation.RequestedCapability.Value" />
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public MemoryProviderOperationUiRecord Operation { get; set; } = default!;
+}

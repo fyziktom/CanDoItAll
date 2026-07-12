@@ -176,29 +176,6 @@ internal sealed class AiContextCapabilityConfiguration
     public string? Role { get; set; }
 }
 
-internal sealed class MemoryCapabilityConfiguration
-{
-    public string? Provider { get; set; }
-
-    public string? Endpoint { get; set; }
-
-    public string? ApiKeyEnvironmentVariable { get; set; }
-
-    public string? ApplicationId { get; set; }
-
-    public string? AgentId { get; set; }
-
-    public string? ThreadId { get; set; }
-
-    public string? UserId { get; set; }
-
-    public string? ContextPrompt { get; set; }
-
-    public string? StateKey { get; set; }
-
-    public bool? EnableSensitiveTelemetryData { get; set; }
-}
-
 internal sealed class PluginCapabilityConfiguration
 {
     public string? RegisteredPluginServiceType { get; set; }

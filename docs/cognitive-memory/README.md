@@ -4,11 +4,12 @@ This section documents the current post-extraction memory architecture. The base
 
 ## Current Stage
 
-The memory provider extraction is at release-candidate closure as of 2026-07-06:
+The memory provider extraction is in its final SB40 architecture and validation gate as of 2026-07-12:
 
 - Base startup supports zero configured memory providers.
-- Generic memory contracts, provider registry, ledgers, workers, Source Gateway, MAF tool/workflow/context integration, and `/memory` UI are implemented in the main repo.
-- HTTP and native-remote provider drivers are opt-in through configuration.
+- Generic memory contracts, provider registry, ledgers, workers, Source Gateway, Agent Framework integration, and `/memory` UI are implemented in the main repo.
+- HTTP, native-remote, and MCP provider drivers are opt-in through configuration.
+- Agents own ordered provider bindings and choose `Disabled`, `Automatic`, or explicit `/mem:<alias>` invocation.
 - The deterministic mock driver is explicit test/development configuration only.
 - The native `CanDoItAll.CognitiveMemory` service lives in `C:\repositories\CanDoItAll.CognitiveMemory` and is validated separately.
 - Legacy main database `CognitiveMemory_*` tables are retained read-only with an export path.
@@ -19,6 +20,7 @@ The memory provider extraction is at release-candidate closure as of 2026-07-06:
 - [Stage assessment](current-state/stage-assessment.md): release status, boundaries, residual risks, and validation evidence.
 - [Implementation map](current-state/implementation-map.md): source folders, registration, services, UI, native service, and legacy-retained areas.
 - [Provider setup](operations/provider-setup.md): zero-provider, mock, HTTP, MCP, and native-remote setup.
+- [Agent memory configuration](operations/agent-memory.md): ordered provider bindings, automatic mode, explicit `/mem:<alias>` routing, and failure behavior.
 - [Provider authoring](operations/provider-authoring.md): contracts and rules for adding a memory provider.
 - [Release notes](operations/release-notes-memory-provider-extraction.md): operator-visible behavior changes, migration, rollback, and readiness decision.
 - [Legacy main DB retirement](operations/legacy-main-db-retirement.md): read-only export and retirement path for historical main database `CognitiveMemory_*` tables.
@@ -35,10 +37,8 @@ Historical P0/P1 native Cognitive Memory documents remain in this folder for con
 - `src/Memory/CanDoItAll.Memory.Http`
 - `src/Memory/CanDoItAll.Memory.Mcp`
 - `src/Modules/CanDoItAll.Modules.Memory`
-- `src/Modules/CanDoItAll.Modules.AgentFramework/AgentTools/MemoryAgentRuntimeToolProvider.cs`
-- `src/Modules/CanDoItAll.Modules.AgentFramework/WorkflowExecutors/MemoryWorkflowExecutor.cs`
-- `src/Modules/CanDoItAll.Modules.AgentFramework/Context/MemoryAgentContextContributor.cs`
-- `src/MAF/Common/CanDoItAll.AgentFramework.Core/Sources/MemorySourceSnapshotContracts.cs`
+- `src/MAF/Memory/CanDoItAll.AgentFramework.Memory`
+- `src/Memory/CanDoItAll.Memory.SourceGateway.Abstractions`
 - `C:\repositories\CanDoItAll.CognitiveMemory`
 
 Retained legacy-native references:
@@ -54,10 +54,10 @@ These retained references must not be used as proof that the base host still dep
 1. The base app registers generic memory persistence, runtime services, `/memory` UI, Source Gateway adapters, and MAF memory integration.
 2. With no provider configured, runtime calls return typed no-provider diagnostics and do not dispatch to native, Qdrant, OpenAI, or mock providers.
 3. Provider profiles select driver kinds such as HTTP, MCP, native remote, or explicit mock. Profile extensions carry transport-specific settings.
-4. All tool, workflow, context, UI, and source-ingestion calls route through the shared memory operation handler and generic ledgers.
+4. Agent context calls route through the dedicated Agent Framework Memory adapter, then the shared generic operation handler and ledgers. Only complete operations are exposed to agents.
 5. Source data reaches providers through Source Gateway snapshots, not host EF entities.
-6. Operation, feedback, provider event, event outbox, source request, retention, and health state are observable through generic ledgers and workers.
-7. Native Cognitive Memory is exposed as an optional remote provider through the generic protocol. Its DB, engine, workers, and MAF-native behavior are service-owned in the native repo.
+6. Operation, feedback, provider event, event outbox, source request, retention, and health state have generic ledger contracts. Shipping drivers advertise only the subset they implement end to end.
+7. Native Cognitive Memory is exposed as an optional remote provider through the generic protocol. Its DB, engine, workers, and access policy are owned by its external repository; generic agent behavior remains in the main app.
 8. Historical main database native memory tables are not dropped by the main app. Operators can export them and retain them read-only.
 
 ## Release Boundary

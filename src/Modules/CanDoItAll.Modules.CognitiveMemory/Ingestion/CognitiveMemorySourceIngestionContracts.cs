@@ -1,4 +1,5 @@
 using CanDoItAll.AgentFramework.Core;
+using CanDoItAll.Memory.SourceGateway;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 

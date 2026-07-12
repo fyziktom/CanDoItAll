@@ -116,6 +116,7 @@ internal sealed partial class AgentFrameworkWorkspaceCatalogService
         CapabilityEditorModel model,
         CancellationToken cancellationToken = default)
     {
+        LegacyMemoryCapabilityPolicy.EnsureNotRetired(model.Kind, model.Name);
         Guid capabilityId = Guid.Empty;
         await UpdateCatalogAsync(catalog =>
         {

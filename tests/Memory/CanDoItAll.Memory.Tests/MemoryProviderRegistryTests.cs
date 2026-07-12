@@ -23,17 +23,22 @@ public sealed class MemoryProviderRegistryTests
     }
 
     [Fact]
-    public void PR002_One_enabled_provider_is_selected_when_capability_matches()
+    public void PR002_One_enabled_provider_is_selected_only_when_explicitly_requested()
     {
         var provider = CreateProfile("programming-memory", [SyncQuery]);
         var registry = new InMemoryMemoryProviderRegistry([provider]);
 
-        var result = registry.SelectProvider(MemoryProviderSelectionPolicy.RequireCapability(SyncQuery), MemoryProviderSelectionContext.None);
+        var policy = MemoryProviderSelectionPolicy.RequireCapability(SyncQuery) with
+        {
+            ExplicitProviderId = provider.InstanceId
+        };
+
+        var result = registry.SelectProvider(policy, MemoryProviderSelectionContext.None);
 
         Assert.Equal(MemoryProviderSelectionStatus.Selected, result.Status);
         Assert.True(result.DispatchAllowed);
         Assert.Equal(provider.InstanceId, result.SelectedProvider?.InstanceId);
-        Assert.Equal(MemoryProviderSelectionReason.DefaultProvider, result.Reason);
+        Assert.Equal(MemoryProviderSelectionReason.ExplicitProvider, result.Reason);
     }
 
     [Fact]
@@ -85,7 +90,12 @@ public sealed class MemoryProviderRegistryTests
         var provider = CreateProfile("programming-memory", [SyncQuery]);
         var registry = new InMemoryMemoryProviderRegistry([provider]);
 
-        var result = registry.SelectProvider(MemoryProviderSelectionPolicy.RequireCapability(SnapshotIngestion), MemoryProviderSelectionContext.None);
+        var policy = MemoryProviderSelectionPolicy.RequireCapability(SnapshotIngestion) with
+        {
+            ExplicitProviderId = provider.InstanceId
+        };
+
+        var result = registry.SelectProvider(policy, MemoryProviderSelectionContext.None);
 
         Assert.Equal(MemoryProviderSelectionStatus.CapabilityUnavailable, result.Status);
         Assert.False(result.DispatchAllowed);
@@ -125,6 +135,178 @@ public sealed class MemoryProviderRegistryTests
         Assert.False(result.DispatchAllowed);
         Assert.Null(result.SelectedProvider);
         Assert.Contains("No enabled memory provider", result.Diagnostic);
+    }
+
+    [Fact]
+    public void PR008_Deny_implicit_fallback_never_selects_an_unassigned_compatible_provider()
+    {
+        var first = CreateProfile("first-memory", [SyncQuery]);
+        var second = CreateProfile("second-memory", [SyncQuery]);
+        var registry = new InMemoryMemoryProviderRegistry([first, second]);
+        var policy = MemoryProviderSelectionPolicy.RequireCapability(SyncQuery) with
+        {
+            FallbackBehavior = MemoryProviderFallbackBehavior.DenyImplicitFallback
+        };
+
+        var result = registry.SelectProvider(policy, MemoryProviderSelectionContext.None);
+
+        Assert.False(result.DispatchAllowed);
+        Assert.Null(result.SelectedProvider);
+        Assert.Equal(MemoryProviderSelectionStatus.ProviderSelectionRequired, result.Status);
+        Assert.Equal([first.InstanceId, second.InstanceId], result.CandidateProviderIds);
+    }
+
+    [Fact]
+    public void PR009_Explicit_provider_outside_allowed_provider_ids_is_denied()
+    {
+        var allowed = CreateProfile("allowed-memory", [SyncQuery]);
+        var denied = CreateProfile("denied-memory", [SyncQuery]);
+        var registry = new InMemoryMemoryProviderRegistry([allowed, denied]);
+        var policy = MemoryProviderSelectionPolicy.RequireCapability(SyncQuery) with
+        {
+            ExplicitProviderId = denied.InstanceId,
+            AllowedProviderIds = [allowed.InstanceId]
+        };
+
+        var result = registry.SelectProvider(policy, MemoryProviderSelectionContext.None);
+
+        Assert.Equal(MemoryProviderSelectionStatus.ProviderDenied, result.Status);
+        Assert.False(result.DispatchAllowed);
+        Assert.Null(result.SelectedProvider);
+        Assert.Equal([denied.InstanceId], result.CandidateProviderIds);
+    }
+
+    [Fact]
+    public void PR010_Assignment_outside_allowed_provider_ids_is_denied()
+    {
+        var allowed = CreateProfile("allowed-memory", [SyncQuery]);
+        var denied = CreateProfile("denied-memory", [SyncQuery]);
+        var registry = new InMemoryMemoryProviderRegistry([allowed, denied]);
+        var policy = MemoryProviderSelectionPolicy.RequireCapability(SyncQuery) with
+        {
+            AllowedProviderIds = [allowed.InstanceId],
+            Assignments =
+            [
+                new MemoryProviderAssignment(
+                    MemoryProviderAssignmentScope.Agent,
+                    "agent-dev",
+                    denied.InstanceId)
+            ]
+        };
+
+        var result = registry.SelectProvider(
+            policy,
+            new MemoryProviderSelectionContext(
+                AgentId: "agent-dev",
+                AgentRole: null,
+                WorkflowId: null,
+                WorkflowNodeId: null,
+                ProcessId: null));
+
+        Assert.Equal(MemoryProviderSelectionStatus.ProviderDenied, result.Status);
+        Assert.False(result.DispatchAllowed);
+        Assert.Null(result.SelectedProvider);
+    }
+
+    [Fact]
+    public void PR011_Allowed_provider_ids_do_not_create_an_implicit_selection()
+    {
+        var allowed = CreateProfile("allowed-memory", [SyncQuery]);
+        var excluded = CreateProfile("excluded-memory", [SyncQuery]);
+        var registry = new InMemoryMemoryProviderRegistry([excluded, allowed]);
+        var policy = MemoryProviderSelectionPolicy.RequireCapability(SyncQuery) with
+        {
+            AllowedProviderIds = [allowed.InstanceId]
+        };
+
+        var result = registry.SelectProvider(policy, MemoryProviderSelectionContext.None);
+
+        Assert.Equal(MemoryProviderSelectionStatus.ProviderSelectionRequired, result.Status);
+        Assert.False(result.DispatchAllowed);
+        Assert.Null(result.SelectedProvider);
+        Assert.Equal([allowed.InstanceId], result.CandidateProviderIds);
+    }
+
+    [Fact]
+    public void PR012_Default_provider_is_selected_only_when_named_by_policy()
+    {
+        var first = CreateProfile("first-memory", [SyncQuery]);
+        var second = CreateProfile("second-memory", [SyncQuery]) with
+        {
+            DefaultPolicy = new MemoryProviderProfilePolicy(
+                MemoryProviderFallbackBehavior.AllowDefaultProviderWhenNoAssignment)
+        };
+        var registry = new InMemoryMemoryProviderRegistry([first, second]);
+        var policy = MemoryProviderSelectionPolicy.RequireCapability(SyncQuery) with
+        {
+            DefaultProviderId = second.InstanceId,
+            FallbackBehavior = MemoryProviderFallbackBehavior.AllowDefaultProviderWhenNoAssignment
+        };
+
+        var result = registry.SelectProvider(policy, MemoryProviderSelectionContext.None);
+
+        Assert.Equal(MemoryProviderSelectionStatus.Selected, result.Status);
+        Assert.Equal(second.InstanceId, result.SelectedProvider?.InstanceId);
+        Assert.Equal(MemoryProviderSelectionReason.DefaultProvider, result.Reason);
+    }
+
+    [Fact]
+    public void PR013_Default_provider_is_rejected_when_implicit_fallback_is_denied()
+    {
+        var provider = CreateProfile("default-memory", [SyncQuery]);
+        var registry = new InMemoryMemoryProviderRegistry([provider]);
+        var policy = MemoryProviderSelectionPolicy.RequireCapability(SyncQuery) with
+        {
+            DefaultProviderId = provider.InstanceId,
+            FallbackBehavior = MemoryProviderFallbackBehavior.DenyImplicitFallback
+        };
+
+        var result = registry.SelectProvider(policy, MemoryProviderSelectionContext.None);
+
+        Assert.Equal(MemoryProviderSelectionStatus.ProviderSelectionRequired, result.Status);
+        Assert.False(result.DispatchAllowed);
+        Assert.Null(result.SelectedProvider);
+        Assert.Contains("fallback is denied", result.Diagnostic, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void PR014_Single_workspace_provider_is_rejected_without_a_scope_key()
+    {
+        var provider = CreateProfile("scoped-memory", [SyncQuery]) with
+        {
+            WorkspaceScope = MemoryProviderWorkspaceScope.SingleWorkspace
+        };
+        var registry = new InMemoryMemoryProviderRegistry([provider]);
+        var policy = MemoryProviderSelectionPolicy.RequireCapability(SyncQuery) with
+        {
+            ExplicitProviderId = provider.InstanceId
+        };
+
+        var result = registry.SelectProvider(policy, MemoryProviderSelectionContext.None);
+
+        Assert.Equal(MemoryProviderSelectionStatus.ProviderDenied, result.Status);
+        Assert.False(result.DispatchAllowed);
+        Assert.Null(result.SelectedProvider);
+        Assert.Empty(registry.GetProvidersForCapability(SyncQuery));
+        Assert.Contains("cannot be validated", result.Diagnostic, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void PR015_Default_provider_requires_provider_profile_opt_in()
+    {
+        var provider = CreateProfile("default-memory", [SyncQuery]);
+        var registry = new InMemoryMemoryProviderRegistry([provider]);
+        var policy = MemoryProviderSelectionPolicy.RequireCapability(SyncQuery) with
+        {
+            DefaultProviderId = provider.InstanceId,
+            FallbackBehavior = MemoryProviderFallbackBehavior.AllowDefaultProviderWhenNoAssignment
+        };
+
+        var result = registry.SelectProvider(policy, MemoryProviderSelectionContext.None);
+
+        Assert.Equal(MemoryProviderSelectionStatus.ProviderDenied, result.Status);
+        Assert.False(result.DispatchAllowed);
+        Assert.Contains("does not allow", result.Diagnostic, StringComparison.Ordinal);
     }
 
     private static MemoryProviderProfile CreateProfile(

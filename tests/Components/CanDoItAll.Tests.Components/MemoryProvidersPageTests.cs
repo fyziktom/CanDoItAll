@@ -7,6 +7,7 @@ using CanDoItAll.Memory.Persistence;
 using CanDoItAll.Modules.AgentFramework;
 using CanDoItAll.Modules.Memory;
 using CanDoItAll.Modules.Memory.Pages;
+using CanDoItAll.Modules.Memory.Services;
 using CanDoItAll.Modules.Processes;
 using CanDoItAll.Web.Composition;
 using Microsoft.EntityFrameworkCore;
@@ -87,9 +88,49 @@ public sealed class MemoryProvidersPageTests
             Assert.Equal(2, setup.Store.Profiles.Count);
             Assert.Contains("provider.business-demo", setup.Store.Profiles.Select(profile => profile.InstanceId.Value));
             Assert.Contains("provider.programming-demo", setup.Store.Profiles.Select(profile => profile.InstanceId.Value));
+            Assert.All(setup.Store.Profiles, profile =>
+                Assert.Equal(
+                    [MemoryCapabilityIds.ContextQuerySync],
+                    profile.Manifest.Capabilities
+                        .Where(capability => capability.Supported)
+                        .Select(capability => capability.Id)));
             Assert.Contains("Business demo memory", cut.Markup);
             Assert.Contains("Programming demo memory", cut.Markup);
         });
+    }
+
+    [Fact]
+    public async Task Imported_stale_manifest_cannot_enable_unimplemented_mutation_actions()
+    {
+        var setup = CreateContext(CreateMockProvider(
+            "provider.stale",
+            "Stale imported memory",
+            MemoryProviderHealthState.Healthy,
+            MemoryCapabilityIds.ContextQuerySync,
+            MemoryCapabilityIds.IngestionSnapshot,
+            MemoryCapabilityIds.FeedbackImmediate,
+            MemoryCapabilityIds.EventsProviderPush,
+            MemoryCapabilityIds.OperationStatus));
+        using var context = setup.Context;
+        var cut = context.RenderComponent<MemoryProvidersPage>();
+
+        cut.WaitForElement("[data-testid='memory-ui-tab-ingestion']").Click();
+        cut.WaitForAssertion(() =>
+            Assert.Empty(cut.FindAll("[data-testid='memory-ui-ingestion-submit']")));
+
+        var guard = context.Services.GetRequiredService<MemoryProviderExecutableActionGuard>();
+        foreach (var capability in new[]
+                 {
+                     MemoryCapabilityIds.IngestionSnapshot,
+                     MemoryCapabilityIds.FeedbackImmediate,
+                     MemoryCapabilityIds.EventsProviderPush
+                 })
+        {
+            await Assert.ThrowsAsync<InvalidOperationException>(() =>
+                guard.EnsureProviderCanExecuteAsync("provider.stale", capability, CancellationToken.None));
+        }
+
+        Assert.False(MemoryProviderCapabilityPolicy.CanCancelOperation(MemoryProviderDriverKind.Mock));
     }
 
     [Fact]
@@ -134,6 +175,31 @@ public sealed class MemoryProvidersPageTests
         Assert.DoesNotContain("CognitiveMemory", sourceText);
         Assert.DoesNotContain("Qdrant", sourceText);
         Assert.DoesNotContain("CanDoItAll.AgentFramework.Rag", sourceText);
+    }
+
+    [Fact]
+    public void MemoryUiModule_ProviderManagementRemainsResponsibilityBased()
+    {
+        var root = FindRepositoryRoot();
+        var moduleRoot = Path.Combine(root, "src", "Modules", "CanDoItAll.Modules.Memory");
+        var sourceFiles = Directory.GetFiles(moduleRoot, "*.*", SearchOption.AllDirectories)
+            .Where(path => !path.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase) &&
+                           !path.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase))
+            .Where(path => path.EndsWith(".cs", StringComparison.OrdinalIgnoreCase) ||
+                           path.EndsWith(".razor", StringComparison.OrdinalIgnoreCase))
+            .ToArray();
+        var oversizedFiles = sourceFiles
+            .Select(path => new { Path = path, Lines = File.ReadLines(path).Count() })
+            .Where(file => file.Lines > 220)
+            .ToArray();
+        var sourceText = string.Join(Environment.NewLine, sourceFiles.Select(File.ReadAllText));
+        var facade = File.ReadAllText(Path.Combine(moduleRoot, "Services", "MemoryProviderManagementUiService.cs"));
+
+        Assert.Empty(oversizedFiles);
+        Assert.DoesNotContain("partial class", sourceText, StringComparison.Ordinal);
+        Assert.DoesNotContain("BuildCapabilities", facade, StringComparison.Ordinal);
+        Assert.DoesNotContain("ProjectRclSurface", facade, StringComparison.Ordinal);
+        Assert.DoesNotContain("JsonSerializer", facade, StringComparison.Ordinal);
     }
 
     private static (TestContext Context, InMemoryMemoryProviderProfileStore Store) CreateContext(

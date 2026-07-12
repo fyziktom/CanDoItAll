@@ -1,0 +1,36 @@
+@namespace CanDoItAll.Modules.Memory.Components
+
+<section class="memory-ui-context-pack" data-testid="memory-ui-context-pack">
+    <TextBlock TextStyle="TextStyle.Subtitle1" Value="@ContextPack.Summary" />
+    <div class="memory-ui-facts">
+        <MemoryProviderFact Label="Context pack" Value="@ContextPack.ContextPackId.Value.ToString("D")" />
+        <MemoryProviderFact Label="Confidence" Value="@ContextPack.ProviderConfidence.ToString("P0")" />
+        @if (ContextPack.FeedbackHandle is not null)
+        {
+            <MemoryProviderFact Label="Feedback handle" Value="@ContextPack.FeedbackHandle.Value.ToString()" />
+        }
+    </div>
+
+    <Stack Orientation="Orientation.Vertical" Gap="LayoutGap.Medium" Class="memory-ui-ledger-list">
+        @foreach (var contextSection in ContextPack.Sections)
+        {
+            <SectionCard Title="@contextSection.Title">
+                <TextBlock TextStyle="TextStyle.Body2" Value="@contextSection.Text" />
+                @if (contextSection.Citations.Count > 0)
+                {
+                    <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
+                        @foreach (var citation in contextSection.Citations)
+                        {
+                            <StatusBadge Text="@($"{citation.Label} / {citation.SourceRef}")" Tone="neutral" />
+                        }
+                    </Cluster>
+                }
+            </SectionCard>
+        }
+    </Stack>
+</section>
+
+@code {
+    [Parameter, EditorRequired]
+    public MemoryContextPack ContextPack { get; set; } = default!;
+}

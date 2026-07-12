@@ -3,6 +3,7 @@ using CanDoItAll.Components.BaseLib;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Memory.Abstractions;
 using CanDoItAll.Memory.Application;
+using CanDoItAll.Memory.Mock;
 using CanDoItAll.Memory.Persistence;
 using CanDoItAll.Modules.Memory;
 using CanDoItAll.Modules.Memory.Pages;
@@ -16,7 +17,7 @@ public sealed class MemoryProviderOperationsPageTests
     private static readonly DateTimeOffset Now = DateTimeOffset.Parse("2026-07-05T20:30:00Z");
 
     [Fact]
-    public async Task MemoryProvidersPage_RunsSyncQueryDisplaysContextPackAndSubmitsFeedback()
+    public async Task MemoryProvidersPage_RunsSyncQueryWithoutAdvertisingUnsupportedFeedback()
     {
         var setup = await CreateRuntimeContextAsync(
             enableDeterministicMockDriver: true,
@@ -39,23 +40,13 @@ public sealed class MemoryProviderOperationsPageTests
             Assert.Contains("Mock memory context for payment integration", cut.Markup);
             Assert.Contains("Deterministic mock memory", cut.Markup);
             Assert.Contains("Project 1", cut.Markup);
-            Assert.Contains("memory-feedback:", cut.Markup);
-        });
-
-        cut.Find("[data-testid='memory-ui-feedback-comment']").Change("helpful context");
-        cut.Find("[data-testid='memory-ui-feedback-submit']").Click();
-        cut.Find("[data-testid='memory-ui-tab-feedback']").Click();
-
-        cut.WaitForAssertion(() =>
-        {
-            Assert.Contains("Useful", cut.Markup);
-            Assert.Contains("Unmatched", cut.Markup);
-            Assert.Contains("Memory feedback accepted for delivery.", cut.Markup);
+            Assert.DoesNotContain("memory-feedback:", cut.Markup);
+            Assert.Empty(cut.FindAll("[data-testid='memory-ui-feedback-submit']"));
         });
     }
 
     [Fact]
-    public async Task MemoryProvidersPage_RendersAsyncAcceptedStatusAndCancellation()
+    public async Task MemoryProvidersPage_RejectsStaleMockAsyncAndCancellationClaims()
     {
         var setup = await CreateRuntimeContextAsync(
             enableDeterministicMockDriver: false,
@@ -73,22 +64,18 @@ public sealed class MemoryProviderOperationsPageTests
         cut.Find("[data-testid='memory-ui-tab-query']").Click();
         cut.WaitForElement("[data-testid='memory-ui-query-text']").Change("long recall");
         cut.Find("[data-testid='memory-ui-query-async']").Change(true);
-        cut.Find("[data-testid='memory-ui-query-submit']").Click();
 
         cut.WaitForAssertion(() =>
         {
-            Assert.Contains("Accepted", cut.Markup);
-            Assert.Contains("/memory/operations/", cut.Markup);
+            Assert.True(cut.Find("[data-testid='memory-ui-query-submit']").HasAttribute("disabled"));
+            Assert.Contains("cannot execute asynchronous context queries", cut.Markup);
         });
 
         cut.Find("[data-testid='memory-ui-tab-operations']").Click();
-        cut.WaitForAssertion(() => Assert.Contains("Running", cut.Markup));
-        cut.Find("[data-testid='memory-ui-cancel-operation']").Click();
-
         cut.WaitForAssertion(() =>
         {
-            Assert.Contains("Cancelled", cut.Markup);
-            Assert.Contains("Memory operation cancelled.", cut.Markup);
+            Assert.Contains("No operation rows", cut.Markup);
+            Assert.Empty(cut.FindAll("[data-testid='memory-ui-cancel-operation']"));
         });
     }
 
@@ -121,7 +108,7 @@ public sealed class MemoryProviderOperationsPageTests
     }
 
     [Fact]
-    public async Task MemoryProvidersPage_RendersEventInboxAndExpiredFeedbackState()
+    public async Task MemoryProvidersPage_RendersEventAndFeedbackLedgersWithoutUnsupportedActions()
     {
         var setup = await CreateRuntimeContextAsync(
             enableDeterministicMockDriver: false,
@@ -147,9 +134,8 @@ public sealed class MemoryProviderOperationsPageTests
         {
             Assert.Contains("Provider event", cut.Markup);
             Assert.Contains("Pending", cut.Markup);
+            Assert.Empty(cut.FindAll("[data-testid='memory-ui-event-acknowledge']"));
         });
-        cut.Find("[data-testid='memory-ui-event-acknowledge']").Click();
-        cut.WaitForAssertion(() => Assert.Contains("Memory provider event acknowledgement queued.", cut.Markup));
 
         cut.Find("[data-testid='memory-ui-tab-feedback']").Click();
         cut.WaitForAssertion(() =>
@@ -160,7 +146,7 @@ public sealed class MemoryProviderOperationsPageTests
     }
 
     [Fact]
-    public async Task MemoryProvidersPage_EnqueuesManualIngestionAndShowsOperationLedger()
+    public async Task MemoryProvidersPage_RejectsStaleManualIngestionClaim()
     {
         var setup = await CreateRuntimeContextAsync(
             enableDeterministicMockDriver: false,
@@ -174,23 +160,18 @@ public sealed class MemoryProviderOperationsPageTests
 
         cut.WaitForElement("[data-testid='memory-ui-provider-list']");
         cut.Find("[data-testid='memory-ui-tab-ingestion']").Click();
-        cut.WaitForElement("[data-testid='memory-ui-ingestion-title']").Change("Release note");
-        cut.Find("[data-testid='memory-ui-ingestion-content']").Change("Payment integration release note for memory ingestion.");
-        cut.Find("[data-testid='memory-ui-ingestion-submit']").Click();
 
         cut.WaitForAssertion(() =>
         {
-            Assert.Contains("Source snapshot captured and queued for provider ingestion.", cut.Markup);
-            Assert.Contains("Snapshot", cut.Markup);
-            Assert.Contains("Ingestion", cut.Markup);
+            Assert.Contains("Ingestion unavailable", cut.Markup);
+            Assert.Contains("cannot execute snapshot ingestion", cut.Markup);
+            Assert.Empty(cut.FindAll("[data-testid='memory-ui-ingestion-submit']"));
         });
 
         cut.Find("[data-testid='memory-ui-tab-operations']").Click();
         cut.WaitForAssertion(() =>
         {
-            Assert.Contains("Ingestion", cut.Markup);
-            Assert.Contains("Accepted", cut.Markup);
-            Assert.Contains("ingestion.snapshot", cut.Markup);
+            Assert.Contains("No operation rows", cut.Markup);
         });
     }
 
@@ -205,10 +186,11 @@ public sealed class MemoryProviderOperationsPageTests
         context.Services.AddDbContextFactory<AppDbContext>(options =>
             options.UseInMemoryDatabase($"memory-ui-ops-{Guid.NewGuid():N}"));
         context.Services.AddSingleton<TimeProvider>(new FixedTimeProvider(Now));
-        context.Services.AddGenericMemoryModule(options =>
+        context.Services.AddGenericMemoryModule();
+        if (enableDeterministicMockDriver)
         {
-            options.EnableDeterministicMockProvider = enableDeterministicMockDriver;
-        });
+            context.Services.AddDeterministicMockMemoryProviderDriver();
+        }
         configureServices?.Invoke(context.Services);
         context.Services.AddMemoryUiModule();
 

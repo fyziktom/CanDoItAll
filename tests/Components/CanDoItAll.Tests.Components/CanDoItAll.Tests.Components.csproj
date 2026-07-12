@@ -40,6 +40,9 @@
     <ProjectReference Include="..\..\..\src\Modules\CanDoItAll.Modules.Workbench\CanDoItAll.Modules.Workbench.csproj" />
     <ProjectReference Include="..\..\..\src\Modules\CanDoItAll.Modules.Factory\CanDoItAll.Modules.Factory.csproj" />
     <ProjectReference Include="..\..\..\src\Modules\CanDoItAll.Modules.Memory\CanDoItAll.Modules.Memory.csproj" />
+    <ProjectReference Include="..\..\..\src\Memory\CanDoItAll.Memory.Http\CanDoItAll.Memory.Http.csproj" />
+    <ProjectReference Include="..\..\..\src\Memory\CanDoItAll.Memory.Mcp\CanDoItAll.Memory.Mcp.csproj" />
+    <ProjectReference Include="..\..\..\src\Memory\CanDoItAll.Memory.Mock\CanDoItAll.Memory.Mock.csproj" />
     <ProjectReference Include="..\..\..\src\Modules\CanDoItAll.Modules.Projects\CanDoItAll.Modules.Projects.csproj" />
     <ProjectReference Include="..\..\..\src\plugins\Implementations\CanDoItAll.Plugin.Office365\CanDoItAll.Plugin.Office365.csproj" />
     <ProjectReference Include="..\..\..\tools\App\CanDoItAll.Manager\CanDoItAll.Manager.csproj" />

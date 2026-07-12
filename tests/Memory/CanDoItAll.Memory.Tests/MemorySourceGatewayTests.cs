@@ -1,4 +1,5 @@
-using AgentCore = CanDoItAll.AgentFramework.Core;
+using CanDoItAll.Memory.SourceGateway;
+using AgentCore = CanDoItAll.Memory.SourceGateway;
 using CanDoItAll.Memory.Abstractions;
 using CanDoItAll.Memory.Application;
 

@@ -1,4 +1,4 @@
-using CanDoItAll.AgentFramework.Core;
+using CanDoItAll.Memory.SourceGateway;
 
 namespace CanDoItAll.Memory.Application;
 

@@ -3,7 +3,9 @@ using CanDoItAll.AgentFramework.Capabilities.Access;
 using CanDoItAll.AgentFramework.Mcp;
 using CanDoItAll.AgentFramework.Mcp.Abstractions;
 using System.Text;
+using System.Text.Json;
 using System.Text.Json.Nodes;
+using ModelContextProtocol.Protocol;
 
 namespace CanDoItAll.Tests.Unit;
 
@@ -331,7 +333,7 @@ public sealed class McpRuntimeContractsTests
     }
 
     [Fact]
-    public async Task Local_stdio_factory_creates_local_clients_and_rejects_unsupported_transports()
+    public async Task Mcp_factory_creates_local_and_remote_http_clients()
     {
         var factory = new LocalStdioMcpClientFactory();
         var local = BrowserDescriptor([McpToolName.Create("browser_snapshot")]);
@@ -348,12 +350,235 @@ public sealed class McpRuntimeContractsTests
             timeout: TimeSpan.FromSeconds(3));
 
         var client = await factory.CreateAsync(local, "LOCAL_STDIO_FACTORY_LOCAL", CancellationToken.None);
-        var exception = await Assert.ThrowsAsync<McpSetupException>(
-            () => factory.CreateAsync(remote, "LOCAL_STDIO_FACTORY_REMOTE", CancellationToken.None));
+        var remoteClient = await factory.CreateAsync(
+            remote,
+            "MCP_FACTORY_REMOTE",
+            CancellationToken.None);
 
         Assert.IsType<LocalStdioMcpRuntimeClient>(client);
-        Assert.Equal(CapabilityDiagnosticCategory.ImplementationMissing, exception.Category);
+        Assert.IsType<RemoteHttpMcpRuntimeClient>(remoteClient);
         await client.StopAsync(CancellationToken.None);
+        await remoteClient.StopAsync(CancellationToken.None);
+    }
+
+    [Fact]
+    public async Task Remote_http_client_rejects_missing_environment_backed_header_before_connecting()
+    {
+        const string environmentVariable = "CANDOITALL_TEST_MISSING_MCP_CREDENTIAL";
+        Environment.SetEnvironmentVariable(environmentVariable, null);
+        var descriptor = McpDescriptorFactory.RemoteHttp(
+            CapabilityKey.Create("secured-memory-mcp"),
+            McpServerKey.Create("secured-memory-mcp"),
+            "Secured Memory MCP",
+            "Remote MCP memory service.",
+            new Uri("https://example.test/mcp"),
+            allowedTools: [McpToolName.Create("memory_query")],
+            headerBindings: new Dictionary<string, string>
+            {
+                ["Authorization"] = environmentVariable
+            },
+            rawHeaders: new Dictionary<string, string>(),
+            approvalMode: McpApprovalMode.NeverRequire,
+            timeout: TimeSpan.FromSeconds(3));
+        var client = await new LocalStdioMcpClientFactory().CreateAsync(
+            descriptor,
+            "REMOTE_HTTP_MISSING_SECRET",
+            CancellationToken.None);
+
+        var exception = await Assert.ThrowsAsync<McpSetupException>(
+            () => client.StartAsync(CancellationToken.None));
+
+        Assert.Equal(CapabilityDiagnosticCategory.SecretBinding, exception.Category);
+        await client.StopAsync(CancellationToken.None);
+    }
+
+    [Fact]
+    public void Remote_http_transport_resolves_header_value_from_environment_without_mutating_it()
+    {
+        const string environmentVariable = "CANDOITALL_TEST_MCP_CREDENTIAL";
+        const string expectedValue = "Bearer credential-with-significant-trailing-space ";
+        Environment.SetEnvironmentVariable(environmentVariable, expectedValue);
+        try
+        {
+            var descriptor = McpDescriptorFactory.RemoteHttp(
+                CapabilityKey.Create("secured-memory-mcp"),
+                McpServerKey.Create("secured-memory-mcp"),
+                "Secured Memory MCP",
+                "Remote MCP memory service.",
+                new Uri("https://example.test/mcp"),
+                allowedTools: [McpToolName.Create("memory_query")],
+                headerBindings: new Dictionary<string, string>
+                {
+                    ["Authorization"] = environmentVariable
+                },
+                rawHeaders: new Dictionary<string, string>(),
+                approvalMode: McpApprovalMode.NeverRequire,
+                timeout: TimeSpan.FromSeconds(3));
+
+            var options = RemoteHttpMcpTransportOptionsFactory.Create(descriptor);
+
+            Assert.Equal(expectedValue, options.AdditionalHeaders!["Authorization"]);
+            Assert.Equal(descriptor.Timeout, options.ConnectionTimeout);
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable(environmentVariable, null);
+        }
+    }
+
+    [Fact]
+    public void Remote_http_transport_rejects_persisted_raw_headers()
+    {
+        var descriptor = McpDescriptorFactory.RemoteHttp(
+            CapabilityKey.Create("unsafe-memory-mcp"),
+            McpServerKey.Create("unsafe-memory-mcp"),
+            "Unsafe Memory MCP",
+            "Remote MCP memory service.",
+            new Uri("https://example.test/mcp"),
+            allowedTools: [McpToolName.Create("memory_query")],
+            headerBindings: new Dictionary<string, string>(),
+            rawHeaders: new Dictionary<string, string>
+            {
+                ["Authorization"] = "Bearer persisted-secret"
+            },
+            approvalMode: McpApprovalMode.NeverRequire,
+            timeout: TimeSpan.FromSeconds(3));
+
+        var exception = Assert.Throws<McpSetupException>(
+            () => RemoteHttpMcpTransportOptionsFactory.Create(descriptor));
+
+        Assert.Equal(CapabilityDiagnosticCategory.SecretBinding, exception.Category);
+        Assert.DoesNotContain("persisted-secret", exception.Detail, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData("Authorization\r\nInjected", "VALID_MCP_SECRET")]
+    [InlineData("Authorization", "invalid-environment-name")]
+    public void Remote_http_transport_rejects_invalid_header_binding_identifiers(
+        string headerName,
+        string environmentVariable)
+    {
+        var descriptor = McpDescriptorFactory.RemoteHttp(
+            CapabilityKey.Create("invalid-binding-mcp"),
+            McpServerKey.Create("invalid-binding-mcp"),
+            "Invalid Binding MCP",
+            "Remote MCP with an invalid binding.",
+            new Uri("https://example.test/mcp"),
+            allowedTools: [McpToolName.Create("memory_query")],
+            headerBindings: new Dictionary<string, string>
+            {
+                [headerName] = environmentVariable
+            },
+            rawHeaders: new Dictionary<string, string>(),
+            approvalMode: McpApprovalMode.NeverRequire,
+            timeout: TimeSpan.FromSeconds(3));
+
+        var exception = Assert.Throws<McpSetupException>(
+            () => RemoteHttpMcpTransportOptionsFactory.Create(descriptor));
+
+        Assert.Equal(CapabilityDiagnosticCategory.SecretBinding, exception.Category);
+    }
+
+    [Fact]
+    public async Task Remote_http_client_rejects_tool_outside_allowlist_before_runtime_access()
+    {
+        var descriptor = McpDescriptorFactory.RemoteHttp(
+            CapabilityKey.Create("restricted-memory-mcp"),
+            McpServerKey.Create("restricted-memory-mcp"),
+            "Restricted Memory MCP",
+            "Remote MCP memory service.",
+            new Uri("https://example.test/mcp"),
+            allowedTools: [McpToolName.Create("memory_query")],
+            headerBindings: new Dictionary<string, string>(),
+            rawHeaders: new Dictionary<string, string>(),
+            approvalMode: McpApprovalMode.NeverRequire,
+            timeout: TimeSpan.FromSeconds(3));
+        var client = new RemoteHttpMcpRuntimeClient(descriptor);
+
+        var exception = await Assert.ThrowsAsync<McpSetupException>(
+            () => client.CallToolAsync(
+                McpToolName.Create("memory_delete"),
+                "{}",
+                CancellationToken.None));
+
+        Assert.Equal(CapabilityDiagnosticCategory.AccessPolicy, exception.Category);
+    }
+
+    [Fact]
+    public void Remote_http_tool_result_reader_unwraps_structured_or_single_json_text()
+    {
+        var serverKey = McpServerKey.Create("memory-mcp");
+        var toolName = McpToolName.Create("memory_query");
+        var structured = new CallToolResult
+        {
+            Content = [],
+            StructuredContent = JsonSerializer.SerializeToElement(new { ok = true })
+        };
+        var text = new CallToolResult
+        {
+            Content =
+            [
+                new TextContentBlock
+                {
+                    Text = """{"ok":true}"""
+                }
+            ]
+        };
+
+        var structuredJson = McpToolResultReader.Read(structured, serverKey, toolName);
+        var textJson = McpToolResultReader.Read(text, serverKey, toolName);
+
+        Assert.Equal("""{"ok":true}""", structuredJson);
+        Assert.Equal("""{"ok":true}""", textJson);
+    }
+
+    [Fact]
+    public void Remote_http_tool_result_reader_rejects_multiple_text_blocks()
+    {
+        var result = new CallToolResult
+        {
+            Content =
+            [
+                new TextContentBlock { Text = "{}" },
+                new TextContentBlock { Text = "{}" }
+            ]
+        };
+
+        var exception = Assert.Throws<McpSetupException>(() => McpToolResultReader.Read(
+            result,
+            McpServerKey.Create("memory-mcp"),
+            McpToolName.Create("memory_query")));
+
+        Assert.Equal(CapabilityDiagnosticCategory.SchemaValidation, exception.Category);
+    }
+
+    [Fact]
+    public void Remote_http_tool_result_reader_rejects_non_json_text()
+    {
+        var result = new CallToolResult
+        {
+            Content = [new TextContentBlock { Text = "not-json" }]
+        };
+
+        var exception = Assert.Throws<McpSetupException>(() => McpToolResultReader.Read(
+            result,
+            McpServerKey.Create("memory-mcp"),
+            McpToolName.Create("memory_query")));
+
+        Assert.Equal(CapabilityDiagnosticCategory.JsonParse, exception.Category);
+    }
+
+    [Fact]
+    public async Task Mcp_operation_timeout_maps_internal_deadline_cancellation_to_timeout()
+    {
+        var timeout = new McpOperationTimeout(TimeSpan.FromMilliseconds(25));
+
+        var exception = await Assert.ThrowsAsync<TimeoutException>(() => timeout.RunAsync(
+            operationToken => Task.Delay(Timeout.InfiniteTimeSpan, operationToken),
+            "remote MCP test operation",
+            CancellationToken.None));
+
+        Assert.Contains("remote MCP test operation", exception.Message, StringComparison.Ordinal);
     }
 
     [Fact]

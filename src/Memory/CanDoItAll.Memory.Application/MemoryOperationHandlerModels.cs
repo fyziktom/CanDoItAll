@@ -6,7 +6,7 @@ public sealed record MemoryOperationHandlerRequest<TPayload>(
     MemoryOperationCaller Caller,
     MemoryProviderSelectionPolicy SelectionPolicy,
     MemoryOperationKind OperationKind,
-    IReadOnlyList<MemorySourceSnapshotId> SourceSnapshotIds,
+    IReadOnlyList<CanDoItAll.Memory.Abstractions.MemorySourceSnapshotId> SourceSnapshotIds,
     MemoryLedgerRetentionPolicy Retention,
     TPayload Payload)
 {
@@ -34,7 +34,12 @@ public enum MemoryOperationHandlerStatus
     Cancelled = 12,
     Failed = 13,
     TimedOut = 14,
-    UnsupportedOperation = 15
+    UnsupportedOperation = 15,
+    ProviderDenied = 16,
+    ProviderSelectionRequired = 17,
+    AccessDenied = 18,
+    ProviderConfigurationFailed = 19,
+    DriverFailed = 20
 }
 
 public sealed record MemoryOperationHandlerResult<TOutput>(

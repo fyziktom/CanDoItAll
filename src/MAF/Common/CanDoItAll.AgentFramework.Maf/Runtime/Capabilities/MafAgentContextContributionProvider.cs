@@ -11,19 +11,68 @@ internal sealed class MafAgentContextContributionProvider(
     AgentDefinition agent,
     ProviderProfile provider,
     AgentContextContributionPolicy policy,
+    AgentRuntimeContextIntent contextIntent,
     IAgentContextContributionTraceSink? traceSink = null) : MessageAIContextProvider
 {
+    public MafAgentContextContributionProvider(
+        IAgentContextContributor contributor,
+        AgentDefinition agent,
+        ProviderProfile provider,
+        AgentContextContributionPolicy policy,
+        IAgentContextContributionTraceSink? traceSink)
+        : this(
+            contributor,
+            agent,
+            provider,
+            policy,
+            AgentRuntimeContextIntent.Empty,
+            traceSink)
+    {
+    }
+
     public AgentContextContributorId ContributorId => contributor.Descriptor.Id;
 
     internal async ValueTask<IReadOnlyList<ChatMessage>> ContributeAsync(
         IReadOnlyList<ChatMessage> requestMessages,
         CancellationToken cancellationToken = default)
     {
+        var result = await ContributeCoreAsync(requestMessages, cancellationToken);
+        return ResolveContributionMessages(result);
+    }
+
+    protected override async ValueTask<IEnumerable<ChatMessage>> InvokingCoreAsync(
+        InvokingContext context,
+        CancellationToken cancellationToken = default)
+    {
+        var requestMessages = context.RequestMessages.ToList();
+        var result = await ContributeCoreAsync(requestMessages, cancellationToken);
+        var transformedRequestMessages = MafChatMessageTextTransformer.Apply(
+            result.RequestMessageTransformation,
+            requestMessages,
+            ContributorId);
+        var contributionProvider = new PreparedContributionProvider(ResolveContributionMessages(result));
+        return await contributionProvider.InvokingAsync(
+            new InvokingContext(context.Agent, context.Session, transformedRequestMessages),
+            cancellationToken);
+    }
+
+    protected override async ValueTask<IEnumerable<ChatMessage>> ProvideMessagesAsync(
+        InvokingContext context,
+        CancellationToken cancellationToken = default)
+        => await ContributeAsync(context.RequestMessages.ToList(), cancellationToken);
+
+    private async ValueTask<AgentContextContributionResult> ContributeCoreAsync(
+        IReadOnlyList<ChatMessage> requestMessages,
+        CancellationToken cancellationToken)
+    {
         var request = new AgentContextContributionRequest(
             agent,
             provider,
             requestMessages.Select(MapRequestMessage).ToList(),
-            policy);
+            policy)
+        {
+            ContextIntent = contextIntent
+        };
 
         AgentContextContributionResult result;
         var stopwatch = Stopwatch.StartNew();
@@ -59,6 +108,11 @@ internal sealed class MafAgentContextContributionProvider(
             result.FailureMessage,
             stopwatch.Elapsed));
 
+        return result;
+    }
+
+    private IReadOnlyList<ChatMessage> ResolveContributionMessages(AgentContextContributionResult result)
+    {
         return result.Status switch
         {
             AgentContextContributionStatus.Provided => result.Messages.Select(MapChatMessage).ToList(),
@@ -71,11 +125,6 @@ internal sealed class MafAgentContextContributionProvider(
                 $"Agent context contributor '{ContributorId}' returned unsupported status '{result.Status}'.")
         };
     }
-
-    protected override async ValueTask<IEnumerable<ChatMessage>> ProvideMessagesAsync(
-        InvokingContext context,
-        CancellationToken cancellationToken = default)
-        => await ContributeAsync(context.RequestMessages.ToList(), cancellationToken);
 
     private static AgentContextRequestMessage MapRequestMessage(ChatMessage message)
         => new(MapRole(message.Role), message.Text ?? string.Empty);
@@ -106,4 +155,15 @@ internal sealed class MafAgentContextContributionProvider(
             AgentContextMessageRole.System => ChatRole.System,
             _ => ChatRole.System
         };
+
+    private sealed class PreparedContributionProvider(IReadOnlyList<ChatMessage> messages) : MessageAIContextProvider
+    {
+        protected override ValueTask<IEnumerable<ChatMessage>> ProvideMessagesAsync(
+            InvokingContext context,
+            CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            return ValueTask.FromResult<IEnumerable<ChatMessage>>(messages);
+        }
+    }
 }

@@ -34,7 +34,7 @@ Use an existing driver when possible:
 | Need | Driver |
 | --- | --- |
 | Plain HTTP context query and health | `Http` |
-| MCP tool-backed query, ingestion, feedback, events, or status | `Mcp` |
+| MCP remote-HTTP context query and optional operation status | `Mcp` |
 | Native Cognitive Memory remote service | `NativeRemote` |
 | Deterministic tests and demos | `Mock` |
 
@@ -58,7 +58,7 @@ Keep `MemoryProviderFallbackBehavior.DenyImplicitFallback` unless a reviewed pro
 
 ## Source Gateway
 
-Source data must move through `MemorySourceSnapshot` contracts from `src/MAF/Common/CanDoItAll.AgentFramework.Core/Sources/MemorySourceSnapshotContracts.cs`.
+Source data must move through provider-neutral snapshot contracts from `src/Memory/CanDoItAll.Memory.SourceGateway.Abstractions`.
 
 When adding a new source adapter:
 
@@ -77,10 +77,10 @@ All memory work must go through the shared handler:
 - context queries: `IMemoryRuntimeService` or `IMemoryOperationHandler.ExecuteContextQueryAsync`;
 - manual/source ingestion: `ManualMemorySourceIngestionService` or the source-capture path on `IMemoryOperationHandler`;
 - feedback: `IMemoryOperationHandler.SubmitFeedbackAsync`;
-- status/cancel: `IMemoryOperationHandler.GetOperationStatusAsync` and `CancelOperationAsync`;
+- status/cancel: `IMemoryOperationHandler.GetStatusAsync` and `CancelAsync`;
 - events: `IMemoryProviderEventWorker` plus event acknowledge paths.
 
-Do not duplicate dispatch code in UI, MAF tools, workflows, or providers. The operation, feedback, source request, event inbox/outbox, retention, and health records are the production observability surface.
+Do not duplicate dispatch code in UI, Agent Framework adapters, workflows, or providers. A capability may be exposed only when its transport and background processing path are complete. The current agent-facing surface deliberately exposes query and operation status only.
 
 ## Provider UI
 

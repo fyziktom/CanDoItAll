@@ -1,3 +1,4 @@
+using CanDoItAll.Memory.SourceGateway;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.Modules.Workspace;
 using CanDoItAll.Memory.Application;

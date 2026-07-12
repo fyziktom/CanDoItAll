@@ -123,8 +123,12 @@ public sealed class MemoryTestSuiteRebalanceCheckpointTests
 
         var runtimeResult = await provider.GetRequiredService<IMemoryRuntimeService>()
             .ExecuteContextQueryAsync(
-                CreateRuntimeRequest(MemoryCapabilityIds.ContextQueryAsync),
+                CreateRuntimeRequest(
+                    MemoryCapabilityIds.ContextQueryAsync,
+                    MemoryProviderInstanceId.Parse("provider.mock.delayed")),
                 CreateQueryRequest(MemoryCapabilityIds.ContextQueryAsync));
+        Assert.IsType<FixedTimeProvider>(provider.GetRequiredService<TimeProvider>())
+            .Advance(runtimeResult.AcceptedOperation!.PollAfter);
         var workerResult = await provider.GetRequiredService<IMemoryAsyncOperationWorker>()
             .PollOperationsAsync();
         var persisted = await provider.GetRequiredService<IMemoryOperationLedgerStore>()
@@ -132,7 +136,10 @@ public sealed class MemoryTestSuiteRebalanceCheckpointTests
         var feedbackResult = await provider.GetRequiredService<IMemoryOperationHandler>()
             .SubmitFeedbackAsync(MemoryOperationRequestBuilder.Feedback(
                 CreateCaller(),
-                MemoryProviderSelectionPolicy.RequireCapability(MemoryCapabilityIds.FeedbackDelayed),
+                MemoryProviderSelectionPolicy.RequireCapability(MemoryCapabilityIds.FeedbackDelayed) with
+                {
+                    ExplicitProviderId = MemoryProviderInstanceId.Parse("provider.mock.delayed")
+                },
                 new MemoryFeedbackRequest(
                     MemoryContextPackId.New(),
                     MemoryFeedbackOutcome.Useful,
@@ -269,10 +276,14 @@ public sealed class MemoryTestSuiteRebalanceCheckpointTests
     }
 
     private static MemoryRuntimeOperationRequest CreateRuntimeRequest(
-        MemoryCapabilityId capability)
+        MemoryCapabilityId capability,
+        MemoryProviderInstanceId? providerInstanceId = null)
     {
         return new MemoryRuntimeOperationRequest(
-            MemoryProviderSelectionPolicy.RequireCapability(capability),
+            MemoryProviderSelectionPolicy.RequireCapability(capability) with
+            {
+                ExplicitProviderId = providerInstanceId ?? MemoryProviderInstanceId.Parse("provider.mock.immediate")
+            },
             MemoryProviderSelectionContext.None,
             MemoryOperationKind.ContextQuery,
             CreateRequester(),
@@ -343,8 +354,15 @@ public sealed class MemoryTestSuiteRebalanceCheckpointTests
         throw new DirectoryNotFoundException("Could not locate repository root containing CanDoItAll.slnx.");
     }
 
-    private sealed class FixedTimeProvider(DateTimeOffset now) : TimeProvider
+    private sealed class FixedTimeProvider(DateTimeOffset initialNow) : TimeProvider
     {
+        private DateTimeOffset now = initialNow;
+
         public override DateTimeOffset GetUtcNow() => now;
+
+        public void Advance(TimeSpan elapsed)
+        {
+            now += elapsed;
+        }
     }
 }

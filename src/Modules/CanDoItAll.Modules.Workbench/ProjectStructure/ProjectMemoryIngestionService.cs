@@ -1,7 +1,7 @@
 using CanDoItAll.Memory.Abstractions;
 using CanDoItAll.Memory.Application;
 using CanDoItAll.SharedKernel;
-using MafMemorySourceKind = CanDoItAll.AgentFramework.Core.MemorySourceKind;
+using MafMemorySourceKind = CanDoItAll.Memory.SourceGateway.MemorySourceKind;
 
 namespace CanDoItAll.Modules.Workbench;
 

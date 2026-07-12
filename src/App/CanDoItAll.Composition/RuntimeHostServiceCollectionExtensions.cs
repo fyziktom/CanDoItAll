@@ -4,13 +4,11 @@ using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Persistence;
-using CanDoItAll.Memory.Http;
-using CanDoItAll.Memory.Persistence;
+using CanDoItAll.Composition.Memory;
 using CanDoItAll.Modules.AgentFramework;
 using CanDoItAll.Modules.Collaboration;
 using CanDoItAll.Modules.CrmHr;
 using CanDoItAll.Modules.Factory;
-using CanDoItAll.Modules.Memory;
 using CanDoItAll.Modules.Plugins;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Processes;
@@ -38,13 +36,6 @@ namespace CanDoItAll.Composition;
 public static class RuntimeHostServiceCollectionExtensions
 {
     private const string OpenAiApiKeyConfigurationKey = "OPENAI_API_KEY";
-    private const string DeterministicMockMemoryProviderConfigurationSection = "Memory:Providers:DeterministicMock";
-    private const string HttpMemoryProviderConfigurationSection = "Memory:Providers:Http";
-    private const string NativeRemoteMemoryProviderConfigurationSection = "Memory:Providers:NativeRemote";
-    private const string ProviderDriverEnabledConfigurationKey = "Enabled";
-    private const string ProviderDriverClientNameConfigurationKey = "ClientName";
-    private const string ProviderDriverDefaultTimeoutConfigurationKey = "DefaultTimeout";
-    private const string ProviderDriverMaxRetryAttemptsConfigurationKey = "MaxRetryAttempts";
 
     public static IServiceCollection AddCanDoItAllRuntimeModules(
         this IServiceCollection services,
@@ -58,14 +49,7 @@ public static class RuntimeHostServiceCollectionExtensions
         services.AddSecurityModule(configuration);
         services.AddWorkspaceModule();
         services.AddProjectsModule();
-        services.AddGenericMemoryModule(options =>
-        {
-            options.EnableDeterministicMockProvider = IsProviderDriverEnabled(
-                configuration,
-                DeterministicMockMemoryProviderConfigurationSection);
-        });
-        services.AddConfiguredMemoryProviderDrivers(configuration);
-        services.AddMemoryUiModule();
+        services.AddCanDoItAllMemory(configuration);
         services.AddWorkbenchModule();
         services.AddResourcesModule();
         services.AddPromptsModule();
@@ -81,86 +65,6 @@ public static class RuntimeHostServiceCollectionExtensions
         services.AddCrmHrModule();
         services.AddSchedulerPlannerWorkflowInputOptionProviders();
         return services;
-    }
-
-    private static IServiceCollection AddConfiguredMemoryProviderDrivers(
-        this IServiceCollection services,
-        IConfiguration configuration)
-    {
-        var httpSection = configuration.GetSection(HttpMemoryProviderConfigurationSection);
-        if (IsProviderDriverEnabled(configuration, HttpMemoryProviderConfigurationSection))
-        {
-            services.AddHttpMemoryProviderDriver(options =>
-            {
-                ConfigureHttpMemoryProviderOptions(options, httpSection);
-            });
-        }
-
-        var nativeSection = configuration.GetSection(NativeRemoteMemoryProviderConfigurationSection);
-        if (IsProviderDriverEnabled(configuration, NativeRemoteMemoryProviderConfigurationSection))
-        {
-            services.AddNativeRemoteMemoryProviderDriver(options =>
-            {
-                ConfigureNativeRemoteMemoryProviderOptions(options, nativeSection);
-            });
-        }
-
-        return services;
-    }
-
-    private static bool IsProviderDriverEnabled(
-        IConfiguration configuration,
-        string sectionName)
-    {
-        var section = configuration.GetSection(sectionName);
-        return section.Exists() &&
-               (section.GetValue<bool?>(ProviderDriverEnabledConfigurationKey) ?? false);
-    }
-
-    private static void ConfigureHttpMemoryProviderOptions(
-        HttpMemoryProviderOptions options,
-        IConfigurationSection section)
-    {
-        var clientName = section[ProviderDriverClientNameConfigurationKey];
-        if (!string.IsNullOrWhiteSpace(clientName))
-        {
-            options.ClientName = clientName.Trim();
-        }
-
-        var defaultTimeout = section.GetValue<TimeSpan?>(ProviderDriverDefaultTimeoutConfigurationKey);
-        if (defaultTimeout.HasValue)
-        {
-            options.DefaultTimeout = defaultTimeout.Value;
-        }
-
-        var maxRetryAttempts = section.GetValue<int?>(ProviderDriverMaxRetryAttemptsConfigurationKey);
-        if (maxRetryAttempts.HasValue)
-        {
-            options.MaxRetryAttempts = maxRetryAttempts.Value;
-        }
-    }
-
-    private static void ConfigureNativeRemoteMemoryProviderOptions(
-        NativeRemoteMemoryProviderOptions options,
-        IConfigurationSection section)
-    {
-        var clientName = section[ProviderDriverClientNameConfigurationKey];
-        if (!string.IsNullOrWhiteSpace(clientName))
-        {
-            options.ClientName = clientName.Trim();
-        }
-
-        var defaultTimeout = section.GetValue<TimeSpan?>(ProviderDriverDefaultTimeoutConfigurationKey);
-        if (defaultTimeout.HasValue)
-        {
-            options.DefaultTimeout = defaultTimeout.Value;
-        }
-
-        var maxRetryAttempts = section.GetValue<int?>(ProviderDriverMaxRetryAttemptsConfigurationKey);
-        if (maxRetryAttempts.HasValue)
-        {
-            options.MaxRetryAttempts = maxRetryAttempts.Value;
-        }
     }
 
     private static void PromoteConfiguredOpenAiCredential(

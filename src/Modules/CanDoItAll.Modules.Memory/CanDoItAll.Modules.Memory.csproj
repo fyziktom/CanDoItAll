@@ -20,6 +20,8 @@
     <ProjectReference Include="..\..\Foundation\CanDoItAll.SharedKernel\CanDoItAll.SharedKernel.csproj" />
     <ProjectReference Include="..\..\Memory\CanDoItAll.Memory.Abstractions\CanDoItAll.Memory.Abstractions.csproj" />
     <ProjectReference Include="..\..\Memory\CanDoItAll.Memory.Application\CanDoItAll.Memory.Application.csproj" />
+    <ProjectReference Include="..\..\Memory\CanDoItAll.Memory.Http\CanDoItAll.Memory.Http.csproj" />
+    <ProjectReference Include="..\..\Memory\CanDoItAll.Memory.Mcp\CanDoItAll.Memory.Mcp.csproj" />
   </ItemGroup>
 
 </Project>

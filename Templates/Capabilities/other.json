@@ -98,27 +98,6 @@
       "operationClassifications": [
         "read"
       ]
-    },
-    {
-      "kind": "memory",
-      "key": "mem0-shared-memory",
-      "displayName": "Mem0 Shared Memory",
-      "description": "Optional Mem0Provider integration for external memory once credentials are available.",
-      "stableId": "memory:mem0-shared:v1",
-      "stableGuidKey": "capabilities/mem0-shared-memory",
-      "endpointOrPath": "https://api.mem0.ai",
-      "operationClassifications": [
-        "read",
-        "external-action"
-      ],
-      "configuration": {
-        "provider": "mem0",
-        "endpoint": "https://api.mem0.ai",
-        "apiKeyEnvironmentVariable": "MEM0_API_KEY",
-        "applicationId": "CanDoItAll.AgentFramework",
-        "agentId": "{agentId}"
-      },
-      "proofNotes": "Configured as an optional external memory provider. Live proof requires MEM0_API_KEY."
     }
   ]
 }

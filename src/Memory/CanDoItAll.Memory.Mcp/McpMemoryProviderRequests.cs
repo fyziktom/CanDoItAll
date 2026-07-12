@@ -13,20 +13,12 @@ public sealed record McpMemoryContextQueryToolRequest(
     IReadOnlyList<string> RequestedCapabilities,
     MemoryOperationEnvelope<MemoryContextQueryRequest> Envelope);
 
-public sealed record McpMemoryIngestionToolRequest(
+public sealed record McpMemoryOperationStatusToolRequest(
     string OperationId,
     string CorrelationId,
+    string CausationId,
     string ProviderInstanceId,
     string CapabilityId,
     string MemoryProtocolVersion,
-    string SourceSnapshotId,
-    MemoryOperationEnvelope<MemoryIngestionRequest> Envelope);
-
-public sealed record McpMemoryOperationStatusToolRequest(
-    string OperationId,
-    string MemoryProtocolVersion,
-    MemoryOperationStatusRequest Request);
-
-public sealed record McpMemoryProviderEventPollRequest(
-    string ProviderInstanceId,
-    string MemoryProtocolVersion);
+    MemoryOperationStatusRequest Request,
+    MemoryOperationEnvelope<MemoryOperationStatusRequest> Envelope);

@@ -84,8 +84,9 @@ public sealed class MemoryProviderManagementPlaywrightTests
             await page.GetByTestId("memory-ui-provider-detail").WaitForAsync();
             await ExpectTextAsync(page, "Programming demo memory");
             await ExpectTextAsync(page, "Degraded");
-            await ExpectTextAsync(page, "context.query.async");
-            await ExpectTextAsync(page, "operations.status");
+            await ExpectTextAsync(page, "context.query.sync");
+            await Assertions.Expect(page.GetByText("context.query.async", new PageGetByTextOptions { Exact = true })).Not.ToBeVisibleAsync();
+            await Assertions.Expect(page.GetByText("operations.status", new PageGetByTextOptions { Exact = true })).Not.ToBeVisibleAsync();
             await page.ScreenshotAsync(new PageScreenshotOptions
             {
                 Path = Path.Combine(screenshotRoot, "memory-ui-provider-detail-desktop.png"),
@@ -117,7 +118,7 @@ public sealed class MemoryProviderManagementPlaywrightTests
     }
 
     [Fact]
-    public async Task MemoryProviderOperations_RunsQueryFeedbackAndManualIngestion()
+    public async Task MemoryProviderOperations_RunsQueryAndBlocksUnsupportedMutations()
     {
         await using var host = await MemoryProviderManagementPlaywrightHost.CreateAsync();
         await using var browser = await host.Playwright.Chromium.LaunchAsync(new BrowserTypeLaunchOptions
@@ -153,8 +154,8 @@ public sealed class MemoryProviderManagementPlaywrightTests
             await page.GetByTestId("memory-ui-editor-instance-id").FillAsync("provider.regression-browser");
             await page.GetByTestId("memory-ui-editor-display-name").FillAsync("regression browser memory");
             await page.GetByTestId("memory-ui-editor-health").SelectOptionAsync("Healthy");
-            await page.GetByTestId("memory-ui-editor-immediate-feedback").SetCheckedAsync(true);
-            await page.GetByTestId("memory-ui-editor-snapshot-ingestion").SetCheckedAsync(true);
+            await Assertions.Expect(page.GetByTestId("memory-ui-editor-immediate-feedback")).ToBeDisabledAsync();
+            await Assertions.Expect(page.GetByTestId("memory-ui-editor-snapshot-ingestion")).ToBeDisabledAsync();
             await page.GetByTestId("memory-ui-save-provider").ClickAsync();
 
             await WaitForVisibleWithDialogDismissalAsync(page, "memory-ui-provider-list");
@@ -166,39 +167,27 @@ public sealed class MemoryProviderManagementPlaywrightTests
             await ExpectTextAsync(page, "Mock memory context for contract source references");
             await ExpectTextAsync(page, "Deterministic mock memory");
             await ExpectTextAsync(page, "Project 1");
-            await ExpectTextAsync(page, "memory-feedback:");
+            await Assertions.Expect(page.GetByTestId("memory-ui-feedback-submit")).Not.ToBeVisibleAsync();
             await page.ScreenshotAsync(new PageScreenshotOptions
             {
                 Path = Path.Combine(screenshotRoot, "memory-ui-query-context-pack-desktop.png"),
                 FullPage = true
             });
 
-            await page.GetByTestId("memory-ui-feedback-comment").FillAsync("browser proof accepted this context");
-            await page.GetByTestId("memory-ui-feedback-submit").ClickAsync();
-            await ExpectTextAsync(page, "Memory feedback accepted for delivery.");
-            await ExpectTextAsync(page, "ContextUsed");
-            await page.ScreenshotAsync(new PageScreenshotOptions
-            {
-                Path = Path.Combine(screenshotRoot, "memory-ui-feedback-ledger-desktop.png"),
-                FullPage = true
-            });
-
             await SelectTabAsync(page, "memory-ui-tab-ingestion", "memory-ui-ingestion");
-            await page.GetByTestId("memory-ui-ingestion-title").FillAsync("Browser manual note");
-            await page.GetByTestId("memory-ui-ingestion-content").FillAsync("Browser proof manual source snapshot.");
-            await page.GetByTestId("memory-ui-ingestion-submit").ClickAsync();
-            await ExpectTextAsync(page, "Source snapshot captured and queued for provider ingestion.");
-            await ExpectTextAsync(page, "Snapshot");
+            await ExpectTextAsync(page, "Ingestion unavailable");
+            await Assertions.Expect(page.GetByTestId("memory-ui-ingestion-submit")).Not.ToBeVisibleAsync();
             await page.ScreenshotAsync(new PageScreenshotOptions
             {
-                Path = Path.Combine(screenshotRoot, "memory-ui-manual-ingestion-desktop.png"),
+                Path = Path.Combine(screenshotRoot, "memory-ui-unsupported-mutations-desktop.png"),
                 FullPage = true
             });
 
             await SelectTabAsync(page, "memory-ui-tab-operations", "memory-ui-operations");
-            await ExpectTextAsync(page, "Ingestion");
-            await ExpectTextAsync(page, "Accepted");
-            await ExpectTextAsync(page, "ingestion.snapshot");
+            await ExpectTextAsync(page, "ContextQuery");
+            await ExpectTextAsync(page, "Completed");
+            await ExpectTextAsync(page, "context.query.sync");
+            await Assertions.Expect(page.GetByTestId("memory-ui-cancel-operation")).Not.ToBeVisibleAsync();
             await page.ScreenshotAsync(new PageScreenshotOptions
             {
                 Path = Path.Combine(screenshotRoot, "memory-ui-operations-ledger-desktop.png"),
@@ -229,7 +218,7 @@ public sealed class MemoryProviderManagementPlaywrightTests
     }
 
     [Fact]
-    public async Task MemoryProviderSurfaces_RendersRclIframeAndPolicyFallbacks()
+    public async Task MemoryProviderSurfaces_RendersRclIframeAndRejectsUnsafeUrl()
     {
         await using var host = await MemoryProviderManagementPlaywrightHost.CreateAsync();
         await using var browser = await host.Playwright.Chromium.LaunchAsync(new BrowserTypeLaunchOptions
@@ -296,14 +285,14 @@ public sealed class MemoryProviderManagementPlaywrightTests
 
             await page.SetViewportSizeAsync(1440, 1000);
             await SelectTabAsync(page, "memory-ui-tab-providers", "memory-ui-provider-detail");
-            await page.GetByTestId("memory-ui-editor-provider-kind").FillAsync("memory.unknown");
             await page.GetByTestId("memory-ui-editor-provider-ui-url").FillAsync("javascript:alert(1)");
             await page.GetByTestId("memory-ui-save-provider").ClickAsync();
-
-            await SelectTabAsync(page, "memory-ui-tab-provider-ui", "memory-ui-provider-ui");
-            await ExpectTextAsync(page, "No RCL component is registered for 'memory.unknown.panel'.");
             await ExpectTextAsync(page, "Provider UI URL must use HTTPS or loopback HTTP.");
             await Assertions.Expect(page.GetByText("javascript:alert", new PageGetByTextOptions { Exact = false })).Not.ToBeVisibleAsync();
+            await SelectTabAsync(page, "memory-ui-tab-provider-ui", "memory-ui-provider-ui");
+            await ExpectTextAsync(page, "Mock provider panel");
+            await Assertions.Expect(page.GetByTestId("memory-ui-provider-iframe"))
+                .ToHaveAttributeAsync("src", "https://memory.example.test/console");
             await page.ScreenshotAsync(new PageScreenshotOptions
             {
                 Path = Path.Combine(screenshotRoot, "memory-ui-provider-ui-fallback-desktop.png"),
@@ -379,10 +368,10 @@ public sealed class MemoryProviderManagementPlaywrightTests
             await page.GetByTestId("memory-ui-editor-instance-id").FillAsync("provider.regression-browser");
             await page.GetByTestId("memory-ui-editor-display-name").FillAsync("regression checkpoint memory");
             await page.GetByTestId("memory-ui-editor-health").SelectOptionAsync("Healthy");
-            await page.GetByTestId("memory-ui-editor-async-query").SetCheckedAsync(true);
-            await page.GetByTestId("memory-ui-editor-immediate-feedback").SetCheckedAsync(true);
-            await page.GetByTestId("memory-ui-editor-snapshot-ingestion").SetCheckedAsync(true);
-            await page.GetByTestId("memory-ui-editor-operation-status").SetCheckedAsync(true);
+            await Assertions.Expect(page.GetByTestId("memory-ui-editor-async-query")).ToBeDisabledAsync();
+            await Assertions.Expect(page.GetByTestId("memory-ui-editor-immediate-feedback")).ToBeDisabledAsync();
+            await Assertions.Expect(page.GetByTestId("memory-ui-editor-snapshot-ingestion")).ToBeDisabledAsync();
+            await Assertions.Expect(page.GetByTestId("memory-ui-editor-operation-status")).ToBeDisabledAsync();
             await page.GetByTestId("memory-ui-editor-rcl").SetCheckedAsync(true);
             await page.GetByTestId("memory-ui-editor-iframe").SetCheckedAsync(true);
             await page.GetByTestId("memory-ui-editor-provider-ui-url").FillAsync("https://memory.example.test/console");
@@ -398,44 +387,29 @@ public sealed class MemoryProviderManagementPlaywrightTests
 
             await SelectTabAsync(page, "memory-ui-tab-query", "memory-ui-query");
             await page.GetByTestId("memory-ui-query-text").FillAsync("checkpoint source references");
-            await page.GetByTestId("memory-ui-query-async").SetCheckedAsync(true);
             await page.GetByTestId("memory-ui-query-submit").ClickAsync();
             await ExpectTextAsync(page, "Mock memory context for checkpoint source references");
             await ExpectTextAsync(page, "Deterministic mock memory");
-            await ExpectTextAsync(page, "memory-feedback:");
+            await Assertions.Expect(page.GetByTestId("memory-ui-feedback-submit")).Not.ToBeVisibleAsync();
             await page.ScreenshotAsync(new PageScreenshotOptions
             {
                 Path = Path.Combine(screenshotRoot, "memory-ui-checkpoint-query-desktop.png"),
                 FullPage = true
             });
 
-            await page.GetByTestId("memory-ui-feedback-comment").FillAsync("regression browser checkpoint feedback");
-            await page.GetByTestId("memory-ui-feedback-submit").ClickAsync();
-            await ExpectTextAsync(page, "Memory feedback accepted for delivery.");
-            await ExpectTextAsync(page, "ContextUsed");
-            await page.ScreenshotAsync(new PageScreenshotOptions
-            {
-                Path = Path.Combine(screenshotRoot, "memory-ui-checkpoint-feedback-desktop.png"),
-                FullPage = true
-            });
-
             await SelectTabAsync(page, "memory-ui-tab-ingestion", "memory-ui-ingestion");
-            await page.GetByTestId("memory-ui-ingestion-title").FillAsync("regression browser manual note");
-            await page.GetByTestId("memory-ui-ingestion-content").FillAsync("Manual source snapshot captured by the regression browser checkpoint.");
-            await page.GetByTestId("memory-ui-ingestion-submit").ClickAsync();
-            await ExpectTextAsync(page, "Source snapshot captured and queued for provider ingestion.");
-            await ExpectTextAsync(page, "Snapshot");
+            await ExpectTextAsync(page, "Ingestion unavailable");
+            await Assertions.Expect(page.GetByTestId("memory-ui-ingestion-submit")).Not.ToBeVisibleAsync();
             await page.ScreenshotAsync(new PageScreenshotOptions
             {
-                Path = Path.Combine(screenshotRoot, "memory-ui-checkpoint-ingestion-desktop.png"),
+                Path = Path.Combine(screenshotRoot, "memory-ui-checkpoint-mutations-disabled-desktop.png"),
                 FullPage = true
             });
 
             await SelectTabAsync(page, "memory-ui-tab-operations", "memory-ui-operations");
             await ExpectTextAsync(page, "ContextQuery");
-            await ExpectTextAsync(page, "Ingestion");
-            await ExpectTextAsync(page, "context.query.async");
-            await ExpectTextAsync(page, "ingestion.snapshot");
+            await ExpectTextAsync(page, "context.query.sync");
+            await Assertions.Expect(page.GetByTestId("memory-ui-cancel-operation")).Not.ToBeVisibleAsync();
             await page.ScreenshotAsync(new PageScreenshotOptions
             {
                 Path = Path.Combine(screenshotRoot, "memory-ui-checkpoint-operations-desktop.png"),
@@ -465,15 +439,17 @@ public sealed class MemoryProviderManagementPlaywrightTests
             await SelectTabAsync(page, "memory-ui-tab-providers", "memory-ui-provider-detail");
             await page.GetByTestId("memory-ui-editor-instance-id").FillAsync("provider.regression-fallback");
             await page.GetByTestId("memory-ui-editor-display-name").FillAsync("regression fallback provider");
-            await page.GetByTestId("memory-ui-editor-provider-kind").FillAsync("memory.unknown");
-            await page.GetByTestId("memory-ui-editor-provider-ui-url").FillAsync("javascript:alert(1)");
             await page.GetByTestId("memory-ui-save-provider").ClickAsync();
             await WaitForVisibleWithDialogDismissalAsync(page, "memory-ui-provider-list");
             await ExpectTextAsync(page, "regression fallback provider");
 
-            await SelectTabAsync(page, "memory-ui-tab-provider-ui", "memory-ui-provider-ui");
-            await ExpectTextAsync(page, "No RCL component is registered for 'memory.unknown.panel'.");
+            await page.GetByTestId("memory-ui-editor-provider-ui-url").FillAsync("javascript:alert(1)");
+            await page.GetByTestId("memory-ui-save-provider").ClickAsync();
             await ExpectTextAsync(page, "Provider UI URL must use HTTPS or loopback HTTP.");
+            await SelectTabAsync(page, "memory-ui-tab-provider-ui", "memory-ui-provider-ui");
+            await ExpectTextAsync(page, "Mock provider panel");
+            await Assertions.Expect(page.GetByTestId("memory-ui-provider-iframe"))
+                .ToHaveAttributeAsync("src", "https://memory.example.test/console");
             await Assertions.Expect(page.GetByText("javascript:alert", new PageGetByTextOptions { Exact = false })).Not.ToBeVisibleAsync();
             await page.ScreenshotAsync(new PageScreenshotOptions
             {

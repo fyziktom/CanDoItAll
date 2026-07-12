@@ -852,7 +852,8 @@ internal static class SandboxWorkspaceSeedNormalizer
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
         return capabilities
-            .Where(capability => !IsRetiredSandboxRegisteredSkillCapability(capability) &&
+            .Where(capability => !LegacyMemoryCapabilityPolicy.IsRetired(capability.Kind) &&
+                                 !IsRetiredSandboxRegisteredSkillCapability(capability) &&
                                  !IsRetiredBuiltInInlineSkillCapability(capability, seededCapabilityKeys))
             .OrderBy(item => item.Kind)
             .ThenBy(item => item.Name, StringComparer.OrdinalIgnoreCase)

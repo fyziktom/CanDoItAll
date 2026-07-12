@@ -1,0 +1,153 @@
+@using CanDoItAll.Memory.Abstractions
+@using CanDoItAll.Memory.Application
+@using Microsoft.Extensions.Logging
+@inject IMemoryProviderProfileStore ProviderProfileStore
+@inject IEnumerable<IMemoryProviderDriver> ProviderDrivers
+@inject ILogger<AgentMemorySettingsPanel> Logger
+
+<section data-testid="agents-catalog-memory-access">
+<FormSection Title="Memory providers"
+             Description="Bind stable aliases to external memory providers and choose when the agent may query them.">
+    <Grid Gap="LayoutGap.Large" ColumnsMd="3">
+        <div>
+            <label class="cda-field-label">Invocation mode</label>
+            <InputSelect TValue="AgentMemoryInvocationMode"
+                         Value="@Value.InvocationMode"
+                         ValueChanged="state.HandleInvocationModeChanged"
+                         ValueExpression="@(() => Value.InvocationMode)"
+                         class="cda-input"
+                         data-testid="agents-catalog-memory-mode">
+                @foreach (var mode in Enum.GetValues<AgentMemoryInvocationMode>())
+                {
+                    <option value="@mode">@AgentMemorySettingsPanelState.DescribeMode(mode)</option>
+                }
+            </InputSelect>
+        </div>
+
+        <SurfaceCard Soft="true" Class="md:col-span-2">
+            <Stack GapScale="LayoutGap.Small">
+                <label class="cda-inline-option">
+                    <input type="checkbox"
+                           checked="@Value.RequireContextContributions"
+                           disabled="@(Value.InvocationMode == AgentMemoryInvocationMode.Disabled)"
+                           @onchange="eventArgs => Value.RequireContextContributions = AgentMemorySettingsPanelState.ReadCheckbox(eventArgs.Value)"
+                           data-testid="agents-catalog-memory-required" />
+                    Fail the request when no configured memory provider returns context
+                </label>
+                <label class="cda-inline-option">
+                    <input type="checkbox"
+                           checked="@(Value.InvocationMode == AgentMemoryInvocationMode.Automatic && Value.CanUseMemoryTools)"
+                           disabled="@(Value.InvocationMode != AgentMemoryInvocationMode.Automatic)"
+                           @onchange="state.HandleMemoryToolsChanged"
+                           data-testid="agents-catalog-memory-tools" />
+                    Expose memory tools to this agent
+                </label>
+            </Stack>
+        </SurfaceCard>
+    </Grid>
+
+    <Alert AlertStyle="AlertStyle.Info">
+        <p class="font-semibold">Prompt-forced memory</p>
+        <p class="mt-1">
+            Explicit directive mode does not query memory unless the current user prompt starts with
+            <code>/mem:&lt;alias&gt;</code>. Multiple leading directives select multiple providers.
+        </p>
+    </Alert>
+
+    <Grid Gap="LayoutGap.Medium" ColumnsMd="4">
+        <div>
+            <label class="cda-field-label">Alias</label>
+            <InputText @bind-Value="state.NewAlias"
+                       class="cda-input"
+                       placeholder="team-memory"
+                       data-testid="agents-catalog-memory-new-alias" />
+        </div>
+        <div>
+            <label class="cda-field-label">Configured provider</label>
+            <InputSelect @bind-Value="state.NewProviderInstanceId"
+                         class="cda-input"
+                         disabled="@(!state.AvailableProviders.Any())"
+                         data-testid="agents-catalog-memory-new-provider">
+                <option value="">Select an enabled provider</option>
+                @foreach (var provider in state.AvailableProviders)
+                {
+                    <option value="@provider.InstanceId.Value">@provider.DisplayName (@provider.InstanceId.Value)</option>
+                }
+            </InputSelect>
+        </div>
+        <div>
+            <label class="cda-field-label">Failure behavior</label>
+            <InputSelect @bind-Value="state.NewRequirement"
+                         class="cda-input"
+                         data-testid="agents-catalog-memory-new-requirement">
+                @foreach (var requirement in Enum.GetValues<AgentMemoryProviderRequirement>())
+                {
+                    <option value="@requirement">@requirement</option>
+                }
+            </InputSelect>
+        </div>
+        <Stack GapScale="LayoutGap.Small" JustifyContent="JustifyContent.End">
+            <label class="cda-inline-option">
+                <input type="checkbox" @bind="state.IncludeInAutomaticContext" />
+                Include in automatic fan-out
+            </label>
+            <Button Text="Add provider binding"
+                    Icon="add"
+                    ButtonStyle="ButtonStyle.Light"
+                    Click="state.AddBindingAsync"
+                    Disabled="@(!state.CanAddBindings)"
+                    data-testid="agents-catalog-memory-add-binding" />
+        </Stack>
+    </Grid>
+
+    @if (!string.IsNullOrWhiteSpace(state.ValidationMessage))
+    {
+        <Alert AlertStyle="AlertStyle.Warning" data-testid="agents-catalog-memory-validation">
+            @state.ValidationMessage
+        </Alert>
+    }
+
+    @if (!string.IsNullOrWhiteSpace(state.ProviderLoadError))
+    {
+        <Alert AlertStyle="AlertStyle.Danger" data-testid="agents-catalog-memory-provider-load-error">
+            @state.ProviderLoadError
+        </Alert>
+    }
+    else if (state.AvailableProviders.Count == 0)
+    {
+        <Alert AlertStyle="AlertStyle.Info" data-testid="agents-catalog-memory-no-providers">
+            Configure and enable a memory provider with synchronous context-query capability before binding one to this agent.
+        </Alert>
+    }
+
+    <AgentMemoryBindingList Bindings="Value.ProviderBindings"
+                            Remove="state.RemoveBindingAsync"
+                            Move="HandleMoveBindingAsync"
+                            UpdateRequirement="HandleRequirementChangeAsync" />
+</FormSection>
+</section>
+
+@code {
+    private AgentMemorySettingsPanelState state = null!;
+
+    [Parameter, EditorRequired]
+    public AgentMemoryAccessSettings Value { get; set; } = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        state = new AgentMemorySettingsPanelState(ProviderProfileStore, ProviderDrivers, Logger, Value);
+        state.UpdateValue(Value);
+        await state.LoadProvidersAsync();
+    }
+
+    protected override void OnParametersSet()
+    {
+        state?.UpdateValue(Value);
+    }
+
+    private Task HandleMoveBindingAsync(AgentMemoryBindingMove command) =>
+        state.MoveBindingAsync(command.Alias, command.Offset);
+
+    private Task HandleRequirementChangeAsync(AgentMemoryBindingRequirementChange command) =>
+        state.UpdateRequirementAsync(command.Alias, command.Requirement);
+}

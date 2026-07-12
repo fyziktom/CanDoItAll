@@ -4,11 +4,13 @@ using System.Text.Json;
 using CanDoItAll.Memory.Abstractions;
 using CanDoItAll.Memory.Application;
 using CanDoItAll.Memory.Http;
+using CanDoItAll.Memory.Protocol.Http;
 
 namespace CanDoItAll.Memory.Tests;
 
 public sealed class NativeRemoteMemoryProviderDriverTests
 {
+    private const string ApiKeyEnvironmentVariable = "CANDOITALL_TEST_NATIVE_MEMORY_API_KEY";
     private static readonly DateTimeOffset Now = DateTimeOffset.Parse("2026-07-06T01:00:00Z");
 
     [Fact]
@@ -99,6 +101,23 @@ public sealed class NativeRemoteMemoryProviderDriverTests
         Assert.Contains("Malformed", result.Diagnostic, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public async Task NativeRemoteDriver_MaliciousQueryPathCannotRedirectAuthenticatedRequest()
+    {
+        using var handler = new CapturingHandler((_, _) =>
+            JsonResponse(HttpMemoryProviderResponse.FromContextPack(CreateContextPack())));
+        var driver = CreateDriver(handler);
+        var profile = CreateNativeProfile(
+            queryPath: "//user:password@attacker.example.test/collect");
+
+        await Assert.ThrowsAsync<ArgumentException>(() =>
+            driver.ExecuteContextQueryAsync(profile, CreateOperation(), CreateQuery()));
+
+        Assert.Equal(0, handler.RequestCount);
+        Assert.Null(handler.RequestUri);
+        Assert.Null(handler.Authorization);
+    }
+
     private static NativeRemoteMemoryProviderDriver CreateDriver(CapturingHandler handler)
     {
         return new NativeRemoteMemoryProviderDriver(
@@ -106,18 +125,29 @@ public sealed class NativeRemoteMemoryProviderDriverTests
             new NativeRemoteMemoryProviderOptions());
     }
 
-    private static MemoryProviderProfile CreateNativeProfile(bool withBaseUrl = true, int? timeoutMilliseconds = null)
+    private static MemoryProviderProfile CreateNativeProfile(
+        bool withBaseUrl = true,
+        int? timeoutMilliseconds = null,
+        string? queryPath = null)
     {
+        Environment.SetEnvironmentVariable(ApiKeyEnvironmentVariable, "native-secret");
         var extensions = new List<(string Key, JsonElement Value)>();
         if (withBaseUrl)
         {
             extensions.Add((NativeRemoteMemoryProviderConfigurationKeys.ServiceBaseUrl, JsonSerializer.SerializeToElement("https://native-memory.example.test")));
         }
 
-        extensions.Add((NativeRemoteMemoryProviderConfigurationKeys.ApiKey, JsonSerializer.SerializeToElement("native-secret")));
+        extensions.Add((
+            NativeRemoteMemoryProviderConfigurationKeys.ApiKeyEnvironmentVariable,
+            JsonSerializer.SerializeToElement(ApiKeyEnvironmentVariable)));
         if (timeoutMilliseconds.HasValue)
         {
             extensions.Add((NativeRemoteMemoryProviderConfigurationKeys.TimeoutMilliseconds, JsonSerializer.SerializeToElement(timeoutMilliseconds.Value)));
+        }
+
+        if (queryPath is not null)
+        {
+            extensions.Add((NativeRemoteMemoryProviderConfigurationKeys.QueryPath, JsonSerializer.SerializeToElement(queryPath)));
         }
 
         return new MemoryProviderProfile(
@@ -220,10 +250,13 @@ public sealed class NativeRemoteMemoryProviderDriverTests
 
         public string RequestBody { get; private set; } = string.Empty;
 
+        public int RequestCount { get; private set; }
+
         protected override async Task<HttpResponseMessage> SendAsync(
             HttpRequestMessage request,
             CancellationToken cancellationToken)
         {
+            RequestCount++;
             RequestUri = request.RequestUri;
             Authorization = request.Headers.Authorization?.ToString();
             RequestBody = request.Content is null

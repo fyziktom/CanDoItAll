@@ -382,6 +382,11 @@ internal sealed class AgentFrameworkOrganizationCatalogRepairService(
                 continue;
             }
 
+            if (LegacyMemoryCapabilityPolicy.IsRetired(legacyCapability.Kind))
+            {
+                continue;
+            }
+
             var currentCapability = currentCapabilities.FirstOrDefault(item => item.Id == legacyCapability.Id)
                 ?? currentCapabilities.FirstOrDefault(item =>
                     string.Equals(

@@ -23,8 +23,9 @@ public sealed class MemoryAgentContextContributorTests
         var contributor = new MemoryAgentContextContributor(handler, TimeProvider.System);
         var agent = CreateAgent(new AgentMemoryAccessSettings
         {
-            CanUseContextContributions = true,
-            PreferredProviderInstanceId = "memory.context",
+            InvocationMode = AgentMemoryInvocationMode.Automatic,
+            PreferredProviderInstanceId = MemoryProviderInstanceId.Parse("memory.context"),
+            ProviderBindings = [Binding("memory.context")],
             AllowedCapabilityIds = [MemoryCapabilityIds.ContextQuerySync]
         });
 
@@ -35,7 +36,7 @@ public sealed class MemoryAgentContextContributorTests
         Assert.Equal(AgentContextContributionStatus.Provided, result.Status);
         var message = Assert.Single(result.Messages);
         Assert.Equal(AgentContextMessageRole.System, message.Role);
-        Assert.Contains("Memory context pack", message.Text, StringComparison.Ordinal);
+        Assert.Contains("Memory reference data", message.Text, StringComparison.Ordinal);
         Assert.Contains("Use the generic memory provider boundary.", message.Text, StringComparison.Ordinal);
         Assert.Equal("memory.context", result.TraceMetadata[MemoryAgentContextContributionTraceKeys.ProviderInstanceId]);
         Assert.NotNull(handler.LastQuery);
@@ -72,11 +73,11 @@ public sealed class MemoryAgentContextContributorTests
         var contributor = new MemoryAgentContextContributor(handler, TimeProvider.System);
         var optionalAgent = CreateAgent(new AgentMemoryAccessSettings
         {
-            CanUseContextContributions = true
+            InvocationMode = AgentMemoryInvocationMode.Automatic
         });
         var requiredAgent = CreateAgent(new AgentMemoryAccessSettings
         {
-            CanUseContextContributions = true,
+            InvocationMode = AgentMemoryInvocationMode.Automatic,
             RequireContextContributions = true
         });
 
@@ -104,8 +105,9 @@ public sealed class MemoryAgentContextContributorTests
         var contributor = new MemoryAgentContextContributor(handler, TimeProvider.System);
         var agent = CreateAgent(new AgentMemoryAccessSettings
         {
-            CanUseContextContributions = true,
-            PreferredProviderInstanceId = "memory.context",
+            InvocationMode = AgentMemoryInvocationMode.Automatic,
+            PreferredProviderInstanceId = MemoryProviderInstanceId.Parse("memory.context"),
+            ProviderBindings = [Binding("memory.context")],
             AllowedCapabilityIds = [MemoryCapabilityIds.FeedbackImmediate]
         });
 
@@ -121,33 +123,79 @@ public sealed class MemoryAgentContextContributorTests
     }
 
     [Fact]
-    public async Task Async_accepted_context_contribution_returns_status_metadata_without_blocking()
+    public void Imported_configuration_rejects_undefined_assignment_scope()
     {
-        var operationId = MemoryOperationId.New();
+        const string configuration = """
+            {
+              "memory": {
+                "invocationMode": "Automatic",
+                "providerAssignments": [
+                  { "scope": "999", "key": "workflow-1", "providerInstanceId": "memory.context" }
+                ]
+              }
+            }
+            """;
+
+        var exception = Assert.Throws<AgentMemoryConfigurationException>(
+            () => AgentMemoryAccessMetadata.Read(configuration));
+
+        Assert.Contains("valid scope", exception.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Theory]
+    [InlineData("memory.context", "memory.context")]
+    [InlineData("memory.context", "memory.other")]
+    public async Task Imported_duplicate_assignment_is_rejected_before_dispatch(
+        string firstProvider,
+        string secondProvider)
+    {
+        var configuration = $$"""
+            {
+              "memory": {
+                "invocationMode": "Automatic",
+                "providerAssignments": [
+                  { "scope": "Workflow", "key": "FLOW-1", "providerInstanceId": "{{firstProvider}}" },
+                  { "scope": "Workflow", "key": "flow-1", "providerInstanceId": "{{secondProvider}}" }
+                ]
+              }
+            }
+            """;
+        var handler = new RecordingMemoryOperationHandler();
+        var contributor = new MemoryAgentContextContributor(handler, TimeProvider.System);
+
+        await Assert.ThrowsAsync<AgentMemoryConfigurationException>(async () =>
+            await contributor.ContributeAsync(CreateRequest(
+                CreateAgent(configuration),
+                [new AgentContextRequestMessage(AgentContextMessageRole.User, "query")])));
+
+        Assert.Empty(handler.QueryRequests);
+    }
+
+    [Fact]
+    public async Task Legacy_async_context_flag_is_ignored_and_current_call_uses_sync_query()
+    {
         var handler = new RecordingMemoryOperationHandler
         {
-            QueryResult = RecordingMemoryOperationHandler.AcceptedQuery(operationId)
+            QueryResult = RecordingMemoryOperationHandler.CompletedQuery("Context", "Sync result")
         };
         var contributor = new MemoryAgentContextContributor(handler, TimeProvider.System);
         var agent = CreateAgent(new AgentMemoryAccessSettings
         {
-            CanUseContextContributions = true,
-            PreferredProviderInstanceId = "memory.async",
+            InvocationMode = AgentMemoryInvocationMode.Automatic,
+            PreferredProviderInstanceId = MemoryProviderInstanceId.Parse("memory.async"),
+            ProviderBindings = [Binding("memory.async")],
             AllowAsyncContextContributions = true,
-            AllowedCapabilityIds = [MemoryCapabilityIds.ContextQueryAsync]
+            AllowedCapabilityIds = [MemoryCapabilityIds.ContextQuerySync]
         });
 
         var result = await contributor.ContributeAsync(CreateRequest(
             agent,
             [new AgentContextRequestMessage(AgentContextMessageRole.User, "query")]));
 
-        Assert.Equal(AgentContextContributionStatus.Skipped, result.Status);
+        Assert.Equal(AgentContextContributionStatus.Provided, result.Status);
         Assert.Equal(
-            MemoryAgentContextContributionTraceReasons.AsyncAccepted,
-            result.TraceMetadata[MemoryAgentContextContributionTraceKeys.Reason]);
-        Assert.Equal(operationId.Value.ToString("D"), result.TraceMetadata[MemoryAgentContextContributionTraceKeys.OperationId]);
-        Assert.Equal("/memory/operations/" + operationId, result.TraceMetadata[MemoryAgentContextContributionTraceKeys.StatusPath]);
-        Assert.Equal(MemoryCapabilityIds.ContextQueryAsync.Value, handler.LastQuery?.SelectionPolicy.RequiredCapability.Value);
+            MemoryCapabilityIds.ContextQuerySync.Value,
+            handler.LastQuery?.SelectionPolicy.RequiredCapability.Value);
     }
 
     [Fact]
@@ -228,10 +276,11 @@ public sealed class MemoryAgentContextContributorTests
             "{}",
             new AgentMemoryAccessSettings
             {
-                CanUseContextContributions = true,
+                InvocationMode = AgentMemoryInvocationMode.Automatic,
                 RequireContextContributions = true,
                 AllowAsyncContextContributions = true,
-                DefaultProviderInstanceId = "memory.context",
+                DefaultProviderInstanceId = MemoryProviderInstanceId.Parse("memory.context"),
+                ProviderBindings = [Binding("memory.context")],
                 AllowedCapabilityIds = [MemoryCapabilityIds.ContextQueryAsync]
             });
 
@@ -239,9 +288,9 @@ public sealed class MemoryAgentContextContributorTests
 
         Assert.True(settings.CanUseContextContributions);
         Assert.True(settings.RequireContextContributions);
-        Assert.True(settings.AllowAsyncContextContributions);
+        Assert.False(settings.AllowAsyncContextContributions);
         Assert.False(settings.CanUseMemoryTools);
-        Assert.Equal("memory.context", settings.DefaultProviderInstanceId);
+        Assert.Equal("memory.context", settings.DefaultProviderInstanceId?.Value);
         Assert.Equal([MemoryCapabilityIds.ContextQueryAsync], settings.AllowedCapabilityIds);
     }
 
@@ -259,7 +308,15 @@ public sealed class MemoryAgentContextContributorTests
                 WorkspaceScopeDescriptor.Organization("unit")));
     }
 
+    private static AgentMemoryProviderBindingSetting Binding(string providerId) =>
+        new(
+            AgentMemoryProviderAlias.Parse(providerId),
+            MemoryProviderInstanceId.Parse(providerId));
+
     private static AgentDefinition CreateAgent(AgentMemoryAccessSettings memoryAccess)
+        => CreateAgent(AgentMemoryAccessMetadata.Write("{}", memoryAccess));
+
+    private static AgentDefinition CreateAgent(string configurationJson)
     {
         var now = DateTimeOffset.UtcNow;
         return new AgentDefinition(
@@ -276,7 +333,7 @@ public sealed class MemoryAgentContextContributorTests
             0.2,
             RequirePerServiceCallChatHistoryPersistence: false,
             EnableBackgroundResponses: false,
-            AgentMemoryAccessMetadata.Write("{}", memoryAccess),
+            configurationJson,
             IsTemplate: false,
             TemplateKey: string.Empty,
             AgentPermissionsPolicy.Default,

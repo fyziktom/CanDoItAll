@@ -2,6 +2,8 @@ using CanDoItAll.Composition;
 using CanDoItAll.Memory.Abstractions;
 using CanDoItAll.Memory.Application;
 using CanDoItAll.Memory.Http;
+using CanDoItAll.Memory.Mcp;
+using CanDoItAll.Memory.Mock;
 using CanDoItAll.Memory.Persistence;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -61,6 +63,7 @@ public sealed class HostCompositionDependencyRemovalTests
         Assert.DoesNotContain(services, descriptor => descriptor.ServiceType == typeof(IMemoryProviderDriver));
         Assert.DoesNotContain(services, descriptor => DescriptorContainsType(descriptor, typeof(DeterministicMockMemoryProviderDriver)));
         Assert.DoesNotContain(services, descriptor => DescriptorContainsType(descriptor, typeof(HttpMemoryProviderDriver)));
+        Assert.DoesNotContain(services, descriptor => DescriptorContainsType(descriptor, typeof(McpMemoryProviderDriver)));
         Assert.DoesNotContain(services, descriptor => DescriptorContainsType(descriptor, typeof(NativeRemoteMemoryProviderDriver)));
         Assert.DoesNotContain(services, descriptor => DescriptorMentions(descriptor, "Qdrant"));
         Assert.DoesNotContain(services, descriptor => DescriptorMentions(descriptor, "CanDoItAll.Modules.CognitiveMemory"));
@@ -74,6 +77,7 @@ public sealed class HostCompositionDependencyRemovalTests
         {
             ["Memory:Providers:DeterministicMock:Enabled"] = "true",
             ["Memory:Providers:Http:Enabled"] = "true",
+            ["Memory:Providers:Mcp:Enabled"] = "true",
             ["Memory:Providers:NativeRemote:Enabled"] = "true",
             ["Memory:Providers:Http:ClientName"] = "test-memory-http",
             ["Memory:Providers:NativeRemote:ClientName"] = "test-memory-native-remote"
@@ -86,8 +90,41 @@ public sealed class HostCompositionDependencyRemovalTests
             .ToArray();
 
         Assert.Equal(
-            [MemoryProviderDriverKind.Http, MemoryProviderDriverKind.NativeRemote, MemoryProviderDriverKind.Mock],
+            [MemoryProviderDriverKind.Http, MemoryProviderDriverKind.Mcp, MemoryProviderDriverKind.NativeRemote, MemoryProviderDriverKind.Mock],
             driverKinds);
+    }
+
+    [Fact]
+    public void CP005_Mock_driver_and_memory_composition_have_explicit_owners()
+    {
+        Assert.Equal(
+            "CanDoItAll.Memory.Mock",
+            typeof(DeterministicMockMemoryProviderDriver).Assembly.GetName().Name);
+
+        var persistenceProject = File.ReadAllText(Path.Combine(
+            RepoRoot,
+            "src",
+            "Memory",
+            "CanDoItAll.Memory.Persistence",
+            "CanDoItAll.Memory.Persistence.csproj"));
+        Assert.DoesNotContain("CanDoItAll.Memory.Mock", persistenceProject, StringComparison.Ordinal);
+
+        var runtimeHost = File.ReadAllText(Path.Combine(
+            RepoRoot,
+            "src",
+            "App",
+            "CanDoItAll.Composition",
+            "RuntimeHostServiceCollectionExtensions.cs"));
+        Assert.Contains("AddCanDoItAllMemory(configuration)", runtimeHost, StringComparison.Ordinal);
+        Assert.DoesNotContain("Memory:Providers:", runtimeHost, StringComparison.Ordinal);
+
+        Assert.True(File.Exists(Path.Combine(
+            RepoRoot,
+            "src",
+            "App",
+            "CanDoItAll.Composition",
+            "Memory",
+            "MemoryRuntimeServiceCollectionExtensions.cs")));
     }
 
     private static IConfiguration CreateConfiguration(IReadOnlyDictionary<string, string?> values)

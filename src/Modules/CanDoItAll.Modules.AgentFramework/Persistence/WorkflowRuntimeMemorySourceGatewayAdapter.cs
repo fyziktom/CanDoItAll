@@ -1,9 +1,10 @@
+using CanDoItAll.Memory.SourceGateway;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Memory.Abstractions;
 using CanDoItAll.Memory.Application;
-using MafMemorySourceKind = CanDoItAll.AgentFramework.Core.MemorySourceKind;
-using MafMemorySourceSnapshot = CanDoItAll.AgentFramework.Core.MemorySourceSnapshot;
+using MafMemorySourceKind = CanDoItAll.Memory.SourceGateway.MemorySourceKind;
+using MafMemorySourceSnapshot = CanDoItAll.Memory.SourceGateway.MemorySourceSnapshot;
 
 namespace CanDoItAll.Modules.AgentFramework;
 
@@ -37,7 +38,7 @@ public sealed class WorkflowRuntimeMemorySourceGatewayAdapter(
 
         return await sourceSnapshotProvider.ReadSnapshotAsync(
             new WorkflowRuntimeEvidenceSourceRequest(
-                request.ScopeId == Guid.Empty ? null : new WorkflowRunId(request.ScopeId),
+                request.ScopeId == Guid.Empty ? null : request.ScopeId,
                 request.Cursor,
                 request.Take),
             cancellationToken);

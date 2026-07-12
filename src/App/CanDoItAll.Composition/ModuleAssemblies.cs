@@ -3,7 +3,6 @@ using CanDoItAll.Memory.Persistence;
 using CanDoItAll.Modules.AgentFramework;
 using CanDoItAll.Modules.Collaboration;
 using CanDoItAll.Modules.CrmHr;
-using CanDoItAll.Modules.CognitiveMemory;
 using CanDoItAll.Modules.Factory;
 using CanDoItAll.Modules.Memory;
 using CanDoItAll.Modules.Plugins;
@@ -27,7 +26,6 @@ public static class ModuleAssemblies
         typeof(AgentFrameworkModuleAssemblyMarker).Assembly,
         typeof(CollaborationModuleAssemblyMarker).Assembly,
         typeof(CrmHrModuleAssemblyMarker).Assembly,
-        typeof(CognitiveMemoryModuleAssemblyMarker).Assembly,
         typeof(FactoryModuleAssemblyMarker).Assembly,
         typeof(MemoryModuleAssemblyMarker).Assembly,
         typeof(PluginsModuleAssemblyMarker).Assembly,

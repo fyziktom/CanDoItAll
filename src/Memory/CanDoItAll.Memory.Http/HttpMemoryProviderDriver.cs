@@ -1,17 +1,14 @@
 using System.Net;
-using System.Net.Http.Json;
 using System.Text.Json;
 using CanDoItAll.Memory.Abstractions;
 using CanDoItAll.Memory.Application;
 
 namespace CanDoItAll.Memory.Http;
 
-public sealed partial class HttpMemoryProviderDriver(
+public sealed class HttpMemoryProviderDriver(
     IHttpClientFactory httpClientFactory,
     HttpMemoryProviderOptions options) : IMemoryProviderDriver, IMemoryProviderHealthDriver
 {
-    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
-
     public MemoryProviderDriverKind DriverKind => MemoryProviderDriverKind.Http;
 
     public async Task<MemoryProviderDriverResult> ExecuteContextQueryAsync(
@@ -24,7 +21,7 @@ public sealed partial class HttpMemoryProviderDriver(
         ArgumentNullException.ThrowIfNull(operation);
         ArgumentNullException.ThrowIfNull(request);
 
-        if (!SupportsAnyRequestedCapability(provider, request))
+        if (!HttpMemoryProviderRequestFactory.SupportsAnyRequestedCapability(provider, request))
         {
             return MemoryProviderDriverResult.Failed(
                 MemoryProviderDriverResultKind.UnsupportedCapability,
@@ -35,23 +32,31 @@ public sealed partial class HttpMemoryProviderDriver(
         var client = httpClientFactory.CreateClient(options.ClientName);
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         timeout.CancelAfter(configuration.Timeout);
-        var requestBody = CreateQueryRequest(provider, operation, request);
+        var requestBody = HttpMemoryProviderRequestFactory.CreateQueryRequest(provider, operation, request);
+        var responseSizeLimit = options.ResponseSizeLimit.ConstrainToJsonEnvelope(request.Context.Budget);
 
         for (var attempt = 0; attempt <= configuration.MaxRetryAttempts; attempt++)
         {
-            using var httpRequest = CreatePostRequest(
+            using var httpRequest = HttpMemoryProviderRequestFactory.CreatePostRequest(
                 configuration.BuildUri(configuration.QueryPath),
                 requestBody,
                 configuration);
             try
             {
-                using var response = await client.SendAsync(httpRequest, timeout.Token);
-                if (ShouldRetry(response.StatusCode, attempt, configuration.MaxRetryAttempts))
+                using var response = await client.SendAsync(
+                    httpRequest,
+                    HttpCompletionOption.ResponseHeadersRead,
+                    timeout.Token);
+                if (HttpMemoryProviderRequestFactory.ShouldRetry(response.StatusCode, attempt, configuration.MaxRetryAttempts))
                 {
                     continue;
                 }
 
-                return await MapContextQueryResponseAsync(provider, response, timeout.Token);
+                return await HttpMemoryProviderResponseMapper.MapContextQueryResponseAsync(
+                    provider,
+                    response,
+                    responseSizeLimit,
+                    timeout.Token);
             }
             catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
             {
@@ -83,11 +88,14 @@ public sealed partial class HttpMemoryProviderDriver(
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         timeout.CancelAfter(configuration.Timeout);
         using var request = new HttpRequestMessage(HttpMethod.Get, configuration.BuildUri(configuration.HealthPath));
-        ApplyAuthentication(request, configuration);
+        HttpMemoryProviderRequestFactory.ApplyAuthentication(request, configuration);
 
         try
         {
-            using var response = await client.SendAsync(request, timeout.Token);
+            using var response = await client.SendAsync(
+                request,
+                HttpCompletionOption.ResponseHeadersRead,
+                timeout.Token);
             if (!response.IsSuccessStatusCode)
             {
                 return new MemoryProviderHealth(
@@ -98,7 +106,11 @@ public sealed partial class HttpMemoryProviderDriver(
                     provider.Manifest);
             }
 
-            return await response.Content.ReadFromJsonAsync<MemoryProviderHealth>(JsonOptions, timeout.Token)
+            return await HttpMemoryProviderResponseReader.ReadJsonAsync<MemoryProviderHealth>(
+                    response.Content,
+                    options.ResponseSizeLimit,
+                    HttpMemoryProviderJson.Options,
+                    timeout.Token)
                 ?? new MemoryProviderHealth(
                     MemoryProviderHealthStatus.Degraded,
                     "empty-health-response",
@@ -123,6 +135,13 @@ public sealed partial class HttpMemoryProviderDriver(
             return new MemoryProviderHealth(
                 MemoryProviderHealthStatus.Degraded,
                 "malformed-health-response",
+                provider.Manifest);
+        }
+        catch (HttpMemoryProviderResponseTooLargeException)
+        {
+            return new MemoryProviderHealth(
+                MemoryProviderHealthStatus.Degraded,
+                "oversized-health-response",
                 provider.Manifest);
         }
     }

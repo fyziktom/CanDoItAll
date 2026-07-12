@@ -3,13 +3,19 @@ namespace CanDoItAll.Memory.Abstractions;
 public sealed record MemoryContextQueryRequest(
     string Query,
     IReadOnlyList<MemoryCapabilityId> RequestedCapabilities,
-    MemorySourceProvenance SourceProvenance);
+    MemorySourceProvenance SourceProvenance)
+{
+    public MemoryRequestContext Context { get; init; } = MemoryRequestContext.Default;
+}
 
 public sealed record MemoryIngestionRequest(
     MemorySourceSnapshotId SourceSnapshotId,
     MemorySourceKind SourceKind,
     MemoryPayload Payload,
-    IReadOnlyList<MemoryCapabilityId> RequestedCapabilities);
+    IReadOnlyList<MemoryCapabilityId> RequestedCapabilities)
+{
+    public MemoryRequestContext Context { get; init; } = MemoryRequestContext.Default;
+}
 
 public sealed record MemoryFeedbackRequest(
     MemoryContextPackId ContextPackId,

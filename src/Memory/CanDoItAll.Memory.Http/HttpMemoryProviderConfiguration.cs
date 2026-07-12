@@ -5,10 +5,11 @@ namespace CanDoItAll.Memory.Http;
 
 public static class HttpMemoryProviderConfigurationKeys
 {
+    public const string LegacyRawApiKey = "host.candoitall.memory.http.apiKey";
     public const string BaseUrl = "host.candoitall.memory.http.baseUrl";
     public const string QueryPath = "host.candoitall.memory.http.queryPath";
     public const string HealthPath = "host.candoitall.memory.http.healthPath";
-    public const string ApiKey = "host.candoitall.memory.http.apiKey";
+    public const string ApiKeyEnvironmentVariable = "host.candoitall.memory.http.apiKeyEnvironmentVariable";
     public const string AuthHeaderName = "host.candoitall.memory.http.authHeaderName";
     public const string AuthScheme = "host.candoitall.memory.http.authScheme";
     public const string TimeoutMilliseconds = "host.candoitall.memory.http.timeoutMilliseconds";
@@ -29,7 +30,7 @@ public sealed record HttpMemoryProviderConfiguration(
     Uri BaseUrl,
     string QueryPath,
     string HealthPath,
-    string? ApiKey,
+    string? ApiKeyEnvironmentVariable,
     string AuthHeaderName,
     string AuthScheme,
     TimeSpan Timeout,
@@ -44,29 +45,47 @@ public sealed record HttpMemoryProviderConfiguration(
         options.Validate();
 
         var values = profile.Manifest.Extensions.Values;
+        RejectPersistedRawCredential(values, HttpMemoryProviderConfigurationKeys.LegacyRawApiKey);
         var baseUrl = ReadRequiredUri(values, HttpMemoryProviderConfigurationKeys.BaseUrl);
+        var authHeaderName = ReadString(values, HttpMemoryProviderConfigurationKeys.AuthHeaderName) ?? "Authorization";
+        var authScheme = ReadString(values, HttpMemoryProviderConfigurationKeys.AuthScheme) ?? "Bearer";
+        ValidateAuthentication(authHeaderName, authScheme);
+        var apiKeyEnvironmentVariable = ReadString(
+            values,
+            HttpMemoryProviderConfigurationKeys.ApiKeyEnvironmentVariable);
+        ValidateCredentialReference(apiKeyEnvironmentVariable);
         return new HttpMemoryProviderConfiguration(
             baseUrl,
             ReadString(values, HttpMemoryProviderConfigurationKeys.QueryPath) ?? HttpMemoryProviderEndpoints.Query,
             ReadString(values, HttpMemoryProviderConfigurationKeys.HealthPath) ?? HttpMemoryProviderEndpoints.Health,
-            ReadString(values, HttpMemoryProviderConfigurationKeys.ApiKey),
-            ReadString(values, HttpMemoryProviderConfigurationKeys.AuthHeaderName) ?? "Authorization",
-            ReadString(values, HttpMemoryProviderConfigurationKeys.AuthScheme) ?? "Bearer",
+            apiKeyEnvironmentVariable,
+            authHeaderName,
+            authScheme,
             ReadTimeout(values, options.DefaultTimeout),
             ReadRetryCount(values, options.MaxRetryAttempts));
     }
 
-    public Uri BuildUri(string relativePath)
+    public string? ResolveApiKey()
     {
-        if (string.IsNullOrWhiteSpace(relativePath))
+        if (string.IsNullOrWhiteSpace(ApiKeyEnvironmentVariable))
         {
-            throw new ArgumentException("HTTP memory provider path must not be empty.", nameof(relativePath));
+            return null;
         }
 
-        return new Uri(BaseUrl, relativePath.StartsWith("/", StringComparison.Ordinal)
-            ? relativePath
-            : $"/{relativePath}");
+        var value = Environment.GetEnvironmentVariable(ApiKeyEnvironmentVariable);
+        if (string.IsNullOrWhiteSpace(value) ||
+            value.Contains('\r') ||
+            value.Contains('\n'))
+        {
+            throw new InvalidOperationException(
+                $"HTTP memory provider credential environment variable '{ApiKeyEnvironmentVariable}' is missing or contains an invalid header value.");
+        }
+
+        return value.Trim();
     }
+
+    public Uri BuildUri(string relativePath) =>
+        HttpMemoryProviderUriBuilder.Build(BaseUrl, relativePath);
 
     private static Uri ReadRequiredUri(
         IReadOnlyDictionary<string, JsonElement> values,
@@ -75,12 +94,22 @@ public sealed record HttpMemoryProviderConfiguration(
         var value = ReadString(values, key)
             ?? throw new InvalidOperationException($"HTTP memory provider profile is missing required extension '{key}'.");
         if (!Uri.TryCreate(value, UriKind.Absolute, out var uri) ||
-            (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
+            !string.IsNullOrEmpty(uri.UserInfo) ||
+            !string.IsNullOrEmpty(uri.Query) ||
+            !string.IsNullOrEmpty(uri.Fragment) ||
+            !IsSecureRemoteEndpoint(uri))
         {
-            throw new InvalidOperationException($"HTTP memory provider extension '{key}' must be an absolute HTTP(S) URI.");
+            throw new InvalidOperationException(
+                $"HTTP memory provider extension '{key}' must be an absolute HTTPS URI without embedded credentials, query strings, or fragments; loopback HTTP is allowed for local development.");
         }
 
         return uri;
+    }
+
+    private static bool IsSecureRemoteEndpoint(Uri uri)
+    {
+        return uri.Scheme == Uri.UriSchemeHttps ||
+            (uri.Scheme == Uri.UriSchemeHttp && uri.IsLoopback);
     }
 
     private static string? ReadString(
@@ -138,5 +167,42 @@ public sealed record HttpMemoryProviderConfiguration(
         }
 
         return retryCount;
+    }
+
+    private static void RejectPersistedRawCredential(
+        IReadOnlyDictionary<string, JsonElement> values,
+        string key)
+    {
+        if (values.ContainsKey(key))
+        {
+            throw new InvalidOperationException(
+                $"HTTP memory provider extension '{key}' stores a raw credential. Replace it with '{HttpMemoryProviderConfigurationKeys.ApiKeyEnvironmentVariable}'.");
+        }
+    }
+
+    private static void ValidateAuthentication(
+        string headerName,
+        string authScheme)
+    {
+        if (!HttpMemoryProviderHeaderBindingValidator.IsHttpToken(headerName))
+        {
+            throw new InvalidOperationException("HTTP memory provider authentication header name is invalid.");
+        }
+
+        if (string.Equals(headerName, "Authorization", StringComparison.OrdinalIgnoreCase) &&
+            !HttpMemoryProviderHeaderBindingValidator.IsHttpToken(authScheme))
+        {
+            throw new InvalidOperationException("HTTP memory provider authorization scheme is invalid.");
+        }
+    }
+
+    private static void ValidateCredentialReference(string? environmentVariable)
+    {
+        if (environmentVariable is not null &&
+            !HttpMemoryProviderHeaderBindingValidator.IsEnvironmentVariableName(environmentVariable))
+        {
+            throw new InvalidOperationException(
+                $"HTTP memory provider extension '{HttpMemoryProviderConfigurationKeys.ApiKeyEnvironmentVariable}' must be an environment-variable identifier using ASCII letters, digits, or underscores.");
+        }
     }
 }

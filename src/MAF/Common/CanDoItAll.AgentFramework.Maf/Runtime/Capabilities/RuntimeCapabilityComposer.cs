@@ -206,7 +206,7 @@ internal sealed class RuntimeCapabilityComposer : IRuntimeCapabilityComposer
 
             await TrackAsync(
                 "capability.workspace-memory",
-                () => AttachWorkspaceMemoryAsync(composition, memory, progressCallback));
+                () => AttachWorkspaceMemoryAsync(composition, agent, memory, progressCallback));
             await TrackAsync(
                 "capability.context-contributors",
                 () => AttachContextContributorsAsync(
@@ -215,7 +215,8 @@ internal sealed class RuntimeCapabilityComposer : IRuntimeCapabilityComposer
                     provider,
                     progressCallback,
                     suppressApprovalRequirements,
-                    contextWorkspaceScope));
+                    contextWorkspaceScope,
+                    contextIntent));
             await TrackAsync(
                 "capability.skills",
                 () => AttachSkillsAsync(composition, effectiveCapabilities, progressCallback, suppressApprovalRequirements));
@@ -418,28 +419,25 @@ internal sealed class RuntimeCapabilityComposer : IRuntimeCapabilityComposer
             : new StorageRuntimePlugin(catalogService, driverRegistry, accessSettings);
     }
 
-    private async Task AttachWorkspaceMemoryAsync(
+    private Task AttachWorkspaceMemoryAsync(
         RuntimeCapabilityComposition composition,
+        AgentDefinition agent,
         IReadOnlyList<AgentMemoryRecord> memory,
         Func<ExecutionState, string, string, Task> progressCallback)
     {
         if (memory.Count == 0)
         {
-            return;
+            return Task.CompletedTask;
         }
 
-        var maxInjectedMemoryItems = composition.AgentConfiguration.MaxInjectedMemoryItems ?? 6;
-        composition.State.ContextProviders.Add(new WorkspaceMemoryContextProvider(memory, maxInjectedMemoryItems));
-        composition.State.ContextSources.Add(AgentRuntimeContextManifestSource.Included(
+        var memoryAccess = AgentMemoryAccessMetadata.Read(agent.ConfigurationJson);
+        composition.State.ContextSources.Add(AgentRuntimeContextManifestSource.Excluded(
             AgentRuntimeContextSourceCategories.Memory,
             "workspace-memory",
-            "agent memory selected for this run",
-            Math.Min(memory.Count, maxInjectedMemoryItems),
-            memory.Take(maxInjectedMemoryItems).Sum(item => item.Content.Length)));
-        await progressCallback(
-            ExecutionState.Preparing,
-            "Memory",
-            $"Attached {Math.Min(memory.Count, maxInjectedMemoryItems)} workspace memory item(s) as AI context.");
+            memoryAccess.InvocationMode == AgentMemoryInvocationMode.Disabled
+                ? "agent memory invocation is disabled; legacy workspace memory injection is not permitted"
+                : "generic agent memory provider invocation owns memory context for this run"));
+        return Task.CompletedTask;
     }
 
     private async Task AttachContextContributorsAsync(
@@ -448,7 +446,8 @@ internal sealed class RuntimeCapabilityComposer : IRuntimeCapabilityComposer
         ProviderProfile provider,
         Func<ExecutionState, string, string, Task> progressCallback,
         bool suppressApprovalRequirements,
-        WorkspaceScopeDescriptor contextWorkspaceScope)
+        WorkspaceScopeDescriptor contextWorkspaceScope,
+        AgentRuntimeContextIntent contextIntent)
     {
         if (composition.ContextContributors.Count == 0)
         {
@@ -493,6 +492,7 @@ internal sealed class RuntimeCapabilityComposer : IRuntimeCapabilityComposer
                 agent,
                 provider,
                 policy,
+                contextIntent,
                 composition.State.ContextContributionTraceCollector));
         }
 
@@ -761,9 +761,7 @@ internal sealed class RuntimeCapabilityComposer : IRuntimeCapabilityComposer
                 RecordCatalogCapabilitySource(composition.State, capability, 1, capability.Description.Length);
                 break;
             case CapabilityKind.Memory:
-                await composition.ContextBuilder.AddMemoryProviderAsync(composition.State, capability, agent, progressCallback, cancellationToken);
-                RecordCatalogCapabilitySource(composition.State, capability, 1, capability.Description.Length);
-                break;
+                throw LegacyMemoryCapabilityPolicy.CreateException(capability.Name);
         }
     }
 

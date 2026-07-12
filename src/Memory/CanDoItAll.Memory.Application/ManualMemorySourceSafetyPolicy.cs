@@ -1,14 +1,18 @@
+using CanDoItAll.Memory.SourceGateway;
 using System.Text.RegularExpressions;
-using CanDoItAll.AgentFramework.Core;
 
 namespace CanDoItAll.Memory.Application;
 
-internal static partial class ManualMemorySourceSafetyPolicy
+internal static class ManualMemorySourceSafetyPolicy
 {
+    private static readonly Regex PrivateKeyMarkerPattern = new(
+        @"-----BEGIN\s+(?:RSA\s+|EC\s+|OPENSSH\s+)?PRIVATE\s+KEY-----",
+        RegexOptions.CultureInvariant | RegexOptions.Compiled);
+
     public static void EnsureContentAllowed(string contentText)
     {
         if (MemorySourceSnapshotSecurity.ContainsSensitiveInlineValue(contentText) ||
-            PrivateKeyMarkerRegex().IsMatch(contentText))
+            PrivateKeyMarkerPattern.IsMatch(contentText))
         {
             throw new InvalidOperationException(
                 "Manual source content appears to contain sensitive credentials. Remove secrets or provide a redacted source before ingestion.");
@@ -53,7 +57,4 @@ internal static partial class ManualMemorySourceSafetyPolicy
 
         return Path.GetFileName(locator);
     }
-
-    [GeneratedRegex(@"-----BEGIN\s+(?:RSA\s+|EC\s+|OPENSSH\s+)?PRIVATE\s+KEY-----", RegexOptions.CultureInvariant)]
-    private static partial Regex PrivateKeyMarkerRegex();
 }

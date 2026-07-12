@@ -1,0 +1,21 @@
+@namespace CanDoItAll.Modules.Memory.Components
+
+@if (Capabilities.Count == 0)
+{
+    <TextBlock TextStyle="TextStyle.Body2" Value="No capabilities declared." />
+}
+else
+{
+    <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap" Class="memory-ui-capabilities">
+        @foreach (var capability in Capabilities.OrderBy(item => item.Id.Value, StringComparer.Ordinal))
+        {
+            <StatusBadge Text="@capability.Id.Value"
+                         Tone="@(capability.Supported ? "info" : "neutral")" />
+        }
+    </Cluster>
+}
+
+@code {
+    [Parameter]
+    public IReadOnlyList<MemoryCapabilityDescriptor> Capabilities { get; set; } = [];
+}

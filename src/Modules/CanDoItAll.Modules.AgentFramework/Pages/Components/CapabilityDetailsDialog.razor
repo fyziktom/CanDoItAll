@@ -38,7 +38,8 @@ else
                                                  class="cda-input"
                                                  disabled="@IsKindLocked"
                                                  data-testid="agents-capability-details-kind">
-                                        @foreach (var kind in Enum.GetValues<CapabilityKind>())
+                                        @foreach (var kind in Enum.GetValues<CapabilityKind>()
+                                            .Where(kind => !LegacyMemoryCapabilityPolicy.IsRetired(kind) || kind == editorModel.Kind))
                                         {
                                             <option value="@kind">@ResolveCapabilityKindLabel(kind)</option>
                                         }

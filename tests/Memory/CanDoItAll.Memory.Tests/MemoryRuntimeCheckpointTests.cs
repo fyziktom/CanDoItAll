@@ -109,8 +109,105 @@ public sealed class MemoryRuntimeCheckpointTests
         Assert.Equal(MemoryLedgerStatus.Running, persisted?.Status);
         Assert.NotNull(accepted);
         Assert.Equal(operationId, accepted.OperationId);
-        Assert.Equal($"/memory/operations/{operationId}", accepted.StatusPath);
+        Assert.Equal(operationId.Value.ToString("D"), accepted.StatusPath);
         Assert.Equal(TimeSpan.FromSeconds(5), accepted.PollAfter);
+    }
+
+    [Fact]
+    public async Task CP005_Mismatched_accepted_operation_id_fails_the_host_operation()
+    {
+        using var rootProvider = CreateServiceProvider(services =>
+            services.AddSingleton<IMemoryProviderDriver>(
+                new AcceptingMemoryProviderDriver(AcceptanceMode.MismatchedOperation)));
+        using var scope = rootProvider.CreateScope();
+        var provider = scope.ServiceProvider;
+        await provider.GetRequiredService<IMemoryProviderProfileStore>()
+            .UpsertAsync(CreateProviderProfile(), DateTimeOffset.UtcNow);
+
+        var result = await provider.GetRequiredService<IMemoryRuntimeService>()
+            .ExecuteContextQueryAsync(CreateRuntimeRequest(), CreateQueryRequest());
+
+        Assert.Equal(MemoryLedgerStatus.Failed, result.OperationRecord?.Status);
+        Assert.Null(result.AcceptedOperation);
+        Assert.Contains("different operation id", result.Diagnostic, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData(AcceptanceMode.NonPositivePoll)]
+    [InlineData(AcceptanceMode.Expired)]
+    [InlineData(AcceptanceMode.StatusPathWithUserInfo)]
+    public async Task CP006_Invalid_accepted_operation_schedule_fails_closed(AcceptanceMode mode)
+    {
+        using var rootProvider = CreateServiceProvider(services =>
+            services.AddSingleton<IMemoryProviderDriver>(new AcceptingMemoryProviderDriver(mode)));
+        using var scope = rootProvider.CreateScope();
+        var provider = scope.ServiceProvider;
+        await provider.GetRequiredService<IMemoryProviderProfileStore>()
+            .UpsertAsync(CreateProviderProfile(), DateTimeOffset.UtcNow);
+
+        var result = await provider.GetRequiredService<IMemoryRuntimeService>()
+            .ExecuteContextQueryAsync(CreateRuntimeRequest(), CreateQueryRequest());
+
+        Assert.Equal(MemoryLedgerStatus.Failed, result.OperationRecord?.Status);
+        Assert.Null(result.AcceptedOperation);
+        Assert.True(result.DriverDispatchAttempted);
+    }
+
+    [Fact]
+    public async Task CP007_Cancellation_reports_local_tracking_semantics()
+    {
+        using var rootProvider = CreateServiceProvider(services =>
+            services.AddSingleton<IMemoryProviderDriver>(new AcceptingMemoryProviderDriver()));
+        using var scope = rootProvider.CreateScope();
+        var provider = scope.ServiceProvider;
+        var profile = CreateProviderProfile();
+        await provider.GetRequiredService<IMemoryProviderProfileStore>()
+            .UpsertAsync(profile, DateTimeOffset.UtcNow);
+        var runtimeResult = await provider.GetRequiredService<IMemoryRuntimeService>()
+            .ExecuteContextQueryAsync(CreateRuntimeRequest(), CreateQueryRequest());
+        var operationId = Assert.IsType<MemoryOperationRecord>(runtimeResult.OperationRecord).OperationId;
+
+        var result = await provider.GetRequiredService<IMemoryOperationHandler>()
+            .CancelAsync(MemoryOperationRequestBuilder.Cancellation(
+                MemoryOperationCaller.Tool("memory.cancel", CreateRequester()),
+                MemoryProviderSelectionPolicy.RequireCapability(MemoryCapabilityIds.OperationStatus) with
+                {
+                    ExplicitProviderId = profile.InstanceId
+                },
+                new MemoryOperationCancellationRequest(operationId, "stop tracking"),
+                MemoryLedgerRetentionPolicy.Expiring(
+                    DateTimeOffset.UtcNow.AddDays(1),
+                    DateTimeOffset.UtcNow.AddDays(2))));
+
+        Assert.Equal(MemoryOperationHandlerStatus.Cancelled, result.Status);
+        Assert.False(result.DriverDispatchAttempted);
+        Assert.Contains("locally", result.Diagnostic, StringComparison.Ordinal);
+        Assert.Contains("was not dispatched", result.Diagnostic, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task CP008_Duplicate_query_drivers_fail_closed_without_dispatch()
+    {
+        var first = new AcceptingMemoryProviderDriver();
+        var second = new AcceptingMemoryProviderDriver();
+        using var rootProvider = CreateServiceProvider(services =>
+        {
+            services.AddSingleton<IMemoryProviderDriver>(first);
+            services.AddSingleton<IMemoryProviderDriver>(second);
+        });
+        using var scope = rootProvider.CreateScope();
+        var provider = scope.ServiceProvider;
+        await provider.GetRequiredService<IMemoryProviderProfileStore>()
+            .UpsertAsync(CreateProviderProfile(), DateTimeOffset.UtcNow);
+
+        var result = await provider.GetRequiredService<IMemoryRuntimeService>()
+            .ExecuteContextQueryAsync(CreateRuntimeRequest(), CreateQueryRequest());
+
+        Assert.False(result.DriverDispatchAttempted);
+        Assert.Equal(MemoryLedgerStatus.Failed, result.OperationRecord?.Status);
+        Assert.Equal(0, first.DispatchCount);
+        Assert.Equal(0, second.DispatchCount);
+        Assert.Contains("Multiple", result.Diagnostic, StringComparison.Ordinal);
     }
 
     private static ServiceProvider CreateServiceProvider(Action<IServiceCollection>? configure = null)
@@ -126,7 +223,10 @@ public sealed class MemoryRuntimeCheckpointTests
     private static MemoryRuntimeOperationRequest CreateRuntimeRequest()
     {
         return new MemoryRuntimeOperationRequest(
-            MemoryProviderSelectionPolicy.RequireCapability(MemoryCapabilityIds.ContextQueryAsync),
+            MemoryProviderSelectionPolicy.RequireCapability(MemoryCapabilityIds.ContextQueryAsync) with
+            {
+                ExplicitProviderId = MemoryProviderInstanceId.Parse("provider.accepting")
+            },
             MemoryProviderSelectionContext.None,
             MemoryOperationKind.ContextQuery,
             CreateRequester(),
@@ -164,7 +264,10 @@ public sealed class MemoryRuntimeCheckpointTests
             new MemoryProviderManifest(
                 MemoryProviderKind.Parse("memory.mock"),
                 MemoryProtocolVersion.Current,
-                [new MemoryCapabilityDescriptor(MemoryCapabilityIds.ContextQueryAsync, "1", Supported: true)],
+                [
+                    new MemoryCapabilityDescriptor(MemoryCapabilityIds.ContextQueryAsync, "1", Supported: true),
+                    new MemoryCapabilityDescriptor(MemoryCapabilityIds.OperationStatus, "1", Supported: true)
+                ],
                 new MemoryProviderInteractionSupport(
                     SupportsSynchronousQueries: false,
                     SupportsAsynchronousOperations: true,
@@ -215,9 +318,21 @@ public sealed class MemoryRuntimeCheckpointTests
         throw new DirectoryNotFoundException("Could not locate repository root containing CanDoItAll.slnx.");
     }
 
-    private sealed class AcceptingMemoryProviderDriver : IMemoryProviderDriver
+    public enum AcceptanceMode
+    {
+        Valid = 0,
+        MismatchedOperation = 1,
+        NonPositivePoll = 2,
+        Expired = 3,
+        StatusPathWithUserInfo = 4
+    }
+
+    private sealed class AcceptingMemoryProviderDriver(
+        AcceptanceMode mode = AcceptanceMode.Valid) : IMemoryProviderDriver
     {
         public MemoryProviderDriverKind DriverKind => MemoryProviderDriverKind.Mock;
+
+        public int DispatchCount { get; private set; }
 
         public Task<MemoryProviderDriverResult> ExecuteContextQueryAsync(
             MemoryProviderProfile provider,
@@ -225,11 +340,16 @@ public sealed class MemoryRuntimeCheckpointTests
             MemoryContextQueryRequest request,
             CancellationToken cancellationToken = default)
         {
+            DispatchCount++;
             var accepted = new MemoryOperationAccepted(
-                operation.OperationId,
-                $"/memory/operations/{operation.OperationId}",
-                DateTimeOffset.UtcNow.AddMinutes(2),
-                TimeSpan.FromSeconds(5),
+                mode == AcceptanceMode.MismatchedOperation ? MemoryOperationId.New() : operation.OperationId,
+                mode == AcceptanceMode.StatusPathWithUserInfo
+                    ? "https://agent:secret@memory.example/operations/status"
+                    : $"/memory/operations/{operation.OperationId}",
+                mode == AcceptanceMode.Expired
+                    ? DateTimeOffset.UtcNow.AddMinutes(-1)
+                    : DateTimeOffset.UtcNow.AddMinutes(2),
+                mode == AcceptanceMode.NonPositivePoll ? TimeSpan.Zero : TimeSpan.FromSeconds(5),
                 CallbackAvailable: false);
             return Task.FromResult(MemoryProviderDriverResult.Accepted(accepted, "provider accepted"));
         }

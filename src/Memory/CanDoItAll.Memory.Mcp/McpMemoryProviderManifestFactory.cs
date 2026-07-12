@@ -19,11 +19,6 @@ public static class McpMemoryProviderManifestFactory
             capabilities.Add(CreateCapability(MemoryCapabilityIds.ContextQueryAsync));
         }
 
-        AddIfTool(capabilities, toolMap.IngestionTool, MemoryCapabilityIds.IngestionSnapshot);
-        AddIfTool(capabilities, toolMap.SourceRequestTool, MemoryCapabilityIds.IngestionProviderRequestedSource);
-        AddIfTool(capabilities, toolMap.FeedbackTool, MemoryCapabilityIds.FeedbackImmediate);
-        AddIfTool(capabilities, toolMap.FeedbackTool, MemoryCapabilityIds.FeedbackDelayed);
-        AddIfTool(capabilities, toolMap.EventPollTool, MemoryCapabilityIds.EventsHostPoll);
         AddIfTool(capabilities, toolMap.OperationStatusTool, MemoryCapabilityIds.OperationStatus);
 
         return new MemoryProviderManifest(
@@ -33,9 +28,9 @@ public static class McpMemoryProviderManifestFactory
             new MemoryProviderInteractionSupport(
                 SupportsSynchronousQueries: toolMap.ContextQueryTool is not null,
                 SupportsAsynchronousOperations: toolMap.OperationStatusTool is not null,
-                SupportsSourceRequests: toolMap.SourceRequestTool is not null,
-                SupportsFeedback: toolMap.FeedbackTool is not null,
-                SupportsProviderEvents: toolMap.EventPollTool is not null),
+                SupportsSourceRequests: false,
+                SupportsFeedback: false,
+                SupportsProviderEvents: false),
             UiSurfaces: [],
             limits,
             MemoryExtensionData.Empty);

@@ -6,10 +6,11 @@ namespace CanDoItAll.Memory.Http;
 
 public static class NativeRemoteMemoryProviderConfigurationKeys
 {
+    public const string LegacyRawApiKey = "native.cognitiveMemory.remote.apiKey";
     public const string ServiceBaseUrl = "native.cognitiveMemory.remote.serviceBaseUrl";
     public const string QueryPath = "native.cognitiveMemory.remote.queryPath";
     public const string HealthPath = "native.cognitiveMemory.remote.healthPath";
-    public const string ApiKey = "native.cognitiveMemory.remote.apiKey";
+    public const string ApiKeyEnvironmentVariable = "native.cognitiveMemory.remote.apiKeyEnvironmentVariable";
     public const string AuthHeaderName = "native.cognitiveMemory.remote.authHeaderName";
     public const string AuthScheme = "native.cognitiveMemory.remote.authScheme";
     public const string TimeoutMilliseconds = "native.cognitiveMemory.remote.timeoutMilliseconds";
@@ -25,6 +26,9 @@ public sealed class NativeRemoteMemoryProviderOptions
     public TimeSpan DefaultTimeout { get; set; } = TimeSpan.FromSeconds(30);
 
     public int MaxRetryAttempts { get; set; }
+
+    public MemoryProviderResponseSizeLimit ResponseSizeLimit { get; set; } =
+        MemoryProviderResponseSizeLimit.Default;
 
     public void Validate()
     {
@@ -42,6 +46,8 @@ public sealed class NativeRemoteMemoryProviderOptions
         {
             throw new InvalidOperationException("Native remote memory provider retry count cannot be negative.");
         }
+
+        ResponseSizeLimit.EnsureValid();
     }
 
     internal HttpMemoryProviderOptions ToHttpOptions() =>
@@ -49,7 +55,8 @@ public sealed class NativeRemoteMemoryProviderOptions
         {
             ClientName = ClientName,
             DefaultTimeout = DefaultTimeout,
-            MaxRetryAttempts = MaxRetryAttempts
+            MaxRetryAttempts = MaxRetryAttempts,
+            ResponseSizeLimit = ResponseSizeLimit
         };
 }
 
@@ -91,6 +98,12 @@ public sealed class NativeRemoteMemoryProviderDriver(
         }
 
         var nativeValues = provider.Manifest.Extensions.Values;
+        if (nativeValues.ContainsKey(NativeRemoteMemoryProviderConfigurationKeys.LegacyRawApiKey))
+        {
+            throw new InvalidOperationException(
+                $"Native remote memory provider extension '{NativeRemoteMemoryProviderConfigurationKeys.LegacyRawApiKey}' stores a raw credential. Replace it with '{NativeRemoteMemoryProviderConfigurationKeys.ApiKeyEnvironmentVariable}'.");
+        }
+
         var extensions = new List<(string Key, JsonElement Value)>
         {
             (HttpMemoryProviderConfigurationKeys.BaseUrl, JsonSerializer.SerializeToElement(ReadRequiredString(
@@ -103,7 +116,11 @@ public sealed class NativeRemoteMemoryProviderDriver(
                 nativeValues,
                 NativeRemoteMemoryProviderConfigurationKeys.HealthPath) ?? HttpMemoryProviderEndpoints.Health))
         };
-        CopyOptionalString(nativeValues, extensions, NativeRemoteMemoryProviderConfigurationKeys.ApiKey, HttpMemoryProviderConfigurationKeys.ApiKey);
+        CopyOptionalString(
+            nativeValues,
+            extensions,
+            NativeRemoteMemoryProviderConfigurationKeys.ApiKeyEnvironmentVariable,
+            HttpMemoryProviderConfigurationKeys.ApiKeyEnvironmentVariable);
         CopyOptionalString(nativeValues, extensions, NativeRemoteMemoryProviderConfigurationKeys.AuthHeaderName, HttpMemoryProviderConfigurationKeys.AuthHeaderName);
         CopyOptionalString(nativeValues, extensions, NativeRemoteMemoryProviderConfigurationKeys.AuthScheme, HttpMemoryProviderConfigurationKeys.AuthScheme);
         CopyOptionalValue(nativeValues, extensions, NativeRemoteMemoryProviderConfigurationKeys.TimeoutMilliseconds, HttpMemoryProviderConfigurationKeys.TimeoutMilliseconds);

@@ -2,6 +2,7 @@ using System.Text.Json;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Memory.Abstractions;
 using CanDoItAll.Memory.Application;
+using CanDoItAll.Memory.Mock;
 using CanDoItAll.Memory.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -104,6 +105,14 @@ public sealed class MemoryRuntimePersistenceTests
         Assert.True(result.DriverDispatchAttempted);
         Assert.Equal(1, driver.DispatchCount);
         Assert.Equal("Mock memory context for payment integration", result.ContextPack?.Summary);
+        var persisted = await provider.GetRequiredService<IMemoryOperationLedgerStore>()
+            .GetAsync(result.OperationRecord!.OperationId);
+        var context = Assert.IsType<MemoryRequestContext>(
+            persisted!.GetRequiredMemoryRequestContext());
+        Assert.Equal("workspace-persisted", context.Workspace.WorkspaceId);
+        Assert.Equal("project-persisted", context.Execution.ProjectId);
+        Assert.Equal(MemorySensitivity.Confidential, context.Policy.Sensitivity);
+        Assert.Equal(12_345, context.Budget.MaxSourceBytes);
     }
 
     [Fact]
@@ -141,10 +150,11 @@ public sealed class MemoryRuntimePersistenceTests
         var services = new ServiceCollection();
         services.AddDbContextFactory<AppDbContext>(options =>
             options.UseInMemoryDatabase($"memory-runtime-{Guid.NewGuid():N}"));
-        services.AddGenericMemoryModule(options =>
+        services.AddGenericMemoryModule();
+        if (enableMockDriver)
         {
-            options.EnableDeterministicMockProvider = enableMockDriver;
-        });
+            services.AddDeterministicMockMemoryProviderDriver();
+        }
 
         return services.BuildServiceProvider(validateScopes: true);
     }
@@ -152,7 +162,10 @@ public sealed class MemoryRuntimePersistenceTests
     private static MemoryRuntimeOperationRequest CreateRuntimeRequest()
     {
         return new MemoryRuntimeOperationRequest(
-            MemoryProviderSelectionPolicy.RequireCapability(MemoryCapabilityId.Parse("context.query.sync")),
+            MemoryProviderSelectionPolicy.RequireCapability(MemoryCapabilityId.Parse("context.query.sync")) with
+            {
+                ExplicitProviderId = MemoryProviderInstanceId.Parse("provider.mock")
+            },
             MemoryProviderSelectionContext.None,
             MemoryOperationKind.ContextQuery,
             CreateRequester(),
@@ -171,7 +184,31 @@ public sealed class MemoryRuntimePersistenceTests
                 MemorySourceSnapshotId.Parse("snapshot.project.1"),
                 SourceModule: nameof(MemorySourceKind.Project),
                 SourceRecordIds: ["project-1"],
-                Citations: ["Project 1"]));
+                Citations: ["Project 1"]))
+        {
+            Context = new MemoryRequestContext(
+                new MemoryWorkspaceContext(
+                    "workspace-persisted",
+                    "Persisted workspace",
+                    CustomerId: null,
+                    Domain: "engineering",
+                    Tags: ["test"]),
+                new MemoryExecutionContext(
+                    "project-persisted",
+                    "Persisted project",
+                    ProcessId: null,
+                    ProcessStepId: null,
+                    ProcessStepName: null,
+                    WorkflowId: null,
+                    WorkflowNodeId: null,
+                    ArtifactIds: []),
+                MemoryPolicyContext.InternalDefault with
+                {
+                    Sensitivity = MemorySensitivity.Confidential
+                },
+                new MemoryBudget(10, 12_345, 2_000, TimeSpan.FromSeconds(10)),
+                MemoryExtensionData.Empty)
+        };
     }
 
     private static MemoryProviderProfile CreateMockProviderProfile()
@@ -257,12 +294,12 @@ public sealed class MemoryRuntimePersistenceTests
             Guid.NewGuid(),
             MemoryProviderInstanceId.Parse("provider.mock"),
             new MemorySourceGatewayRequest(
-                CanDoItAll.AgentFramework.Core.MemorySourceKind.WorkbenchProjectStructure,
+                CanDoItAll.Memory.SourceGateway.MemorySourceKind.WorkbenchProjectStructure,
                 Guid.Parse("4a7f8bf0-b2a5-4cc7-8229-322729fb9168"),
                 MemorySourceScope.Project,
                 Cursor: null,
                 Take: null,
-                MemorySourceGatewayPolicy.Allow([CanDoItAll.AgentFramework.Core.MemorySourceKind.WorkbenchProjectStructure]),
+                MemorySourceGatewayPolicy.Allow([CanDoItAll.Memory.SourceGateway.MemorySourceKind.WorkbenchProjectStructure]),
                 RequesterId: "user-42"),
             MemorySourceIngestionJobStatus.Queued,
             CreatedAtUtc: Now,

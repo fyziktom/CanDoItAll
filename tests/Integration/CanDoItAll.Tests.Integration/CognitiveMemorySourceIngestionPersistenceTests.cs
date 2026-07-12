@@ -1,3 +1,4 @@
+using CanDoItAll.Memory.SourceGateway;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.Composition;
 using CanDoItAll.Infrastructure.Persistence;
@@ -211,26 +212,41 @@ public sealed class CognitiveMemorySourceIngestionPersistenceTests
 
     private static async Task<SourceIngestionFixture> CreateFixtureAsync()
     {
-        AppDbContextModelRegistry.ConfigureAssemblies(ModuleAssemblies.All);
-        var database = PostgresTestDatabaseLease.Create("cognitivememorysourceingestionpersistencetests");
+        var modelRegistryScope = AppDbContextModelRegistry.UseIsolatedAssembliesForTesting();
+        try
+        {
+            AppDbContextModelRegistry.ConfigureAssemblies(
+                ModuleAssemblies.All.Append(typeof(CognitiveMemoryModuleAssemblyMarker).Assembly));
+            var database = PostgresTestDatabaseLease.Create("cognitivememorysourceingestionpersistencetests");
 
-        var options = database.CreateAppDbContextOptions();
-        var factory = new TestDbContextFactory(options);
-        var dbContext = await factory.CreateDbContextAsync();
-        await dbContext.Database.EnsureCreatedAsync();
+            var options = database.CreateAppDbContextOptions();
+            var factory = new TestDbContextFactory(options);
+            var dbContext = await factory.CreateDbContextAsync();
+            await dbContext.Database.EnsureCreatedAsync();
 
-        var projectProvider = new FakeProjectStructureSourceSnapshotProvider();
-        var processProvider = new FakeProcessRuntimeEvidenceSourceProvider();
-        var workflowProvider = new FakeWorkflowRuntimeEvidenceSourceProvider();
-        var service = new CognitiveMemorySourceIngestionService(
-            factory,
-            projectProvider,
-            processProvider,
-            workflowProvider,
-            new FixedClock(),
-            NullLogger<CognitiveMemorySourceIngestionService>.Instance);
+            var projectProvider = new FakeProjectStructureSourceSnapshotProvider();
+            var processProvider = new FakeProcessRuntimeEvidenceSourceProvider();
+            var workflowProvider = new FakeWorkflowRuntimeEvidenceSourceProvider();
+            var service = new CognitiveMemorySourceIngestionService(
+                factory,
+                projectProvider,
+                processProvider,
+                workflowProvider,
+                new FixedClock(),
+                NullLogger<CognitiveMemorySourceIngestionService>.Instance);
 
-        return new SourceIngestionFixture(database, dbContext, projectProvider, service);
+            return new SourceIngestionFixture(
+                database,
+                dbContext,
+                projectProvider,
+                service,
+                modelRegistryScope);
+        }
+        catch
+        {
+            modelRegistryScope.Dispose();
+            throw;
+        }
     }
 
     private static void AssertEntityTable<TEntity>(IReadOnlyList<IEntityType> entityTypes, string tableName)
@@ -256,7 +272,8 @@ public sealed class CognitiveMemorySourceIngestionPersistenceTests
         PostgresTestDatabaseLease database,
         AppDbContext dbContext,
         FakeProjectStructureSourceSnapshotProvider projectProvider,
-        CognitiveMemorySourceIngestionService service) : IAsyncDisposable
+        CognitiveMemorySourceIngestionService service,
+        IDisposable modelRegistryScope) : IAsyncDisposable
     {
         public AppDbContext DbContext { get; } = dbContext;
 
@@ -268,6 +285,7 @@ public sealed class CognitiveMemorySourceIngestionPersistenceTests
         {
             await DbContext.DisposeAsync();
             await database.DisposeAsync();
+            modelRegistryScope.Dispose();
         }
     }
 }

@@ -20,7 +20,6 @@ Conservative Microsoft Agent Framework package update from the existing 1.8-era 
 | `CanDoItAll.AgentFramework.Maf` | `Microsoft.Agents.AI.OpenAI` | `1.8.0` | `1.13.0` | Stable MAF target. |
 | `CanDoItAll.AgentFramework.Maf` | `Microsoft.Agents.AI.Workflows` | `1.8.0` | `1.13.0` | Stable MAF target. |
 | `CanDoItAll.AgentFramework.Maf` | `Microsoft.Agents.AI.A2A` | `1.8.0-preview.260528.1` | `1.13.0-preview.260703.1` | Current NuGet CLI preview. |
-| `CanDoItAll.AgentFramework.Maf` | `Microsoft.Agents.AI.Mem0` | `1.0.0-preview.251028.1` | `1.0.0-preview.251028.1` | Current NuGet CLI still reports latest as not found. |
 | `CanDoItAll.AgentFramework.Workflows.MafAdapter` | `Microsoft.Agents.AI` | `1.8.0` | `1.13.0` | Stable MAF target. |
 | `CanDoItAll.AgentFramework.Workflows.MafAdapter` | `Microsoft.Agents.AI.Workflows` | `1.8.0` | `1.13.0` | Stable MAF target. |
 | `CanDoItAll.AgentFramework.Workflows.MafAdapter` | `Microsoft.Extensions.AI.Abstractions` | `10.5.1` | `10.6.0` | Restore-proven MAF floor. |

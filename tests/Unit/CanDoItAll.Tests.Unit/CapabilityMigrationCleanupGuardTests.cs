@@ -70,7 +70,7 @@ public sealed class CapabilityMigrationCleanupGuardTests
             ReadRepositoryFile("src/MAF/Tools/CanDoItAll.AgentFramework.Tools/External/ExternalProcessToolInvoker.cs"),
             ReadRepositoryFile("src/MAF/Tools/CanDoItAll.AgentFramework.Tools/External/ExternalHttpToolInvoker.cs"),
             ReadRepositoryFile("src/MAF/Tools/CanDoItAll.AgentFramework.Tools/External/ToolDiagnostics.cs"),
-            ReadRepositoryFile("src/MAF/Mcp/CanDoItAll.AgentFramework.Mcp/Runtime/McpSetupTestService.cs"),
+            ReadRepositoryFiles("src/MAF/Mcp/CanDoItAll.AgentFramework.Mcp/Runtime"),
             ReadRepositoryFile("src/MAF/Mcp/CanDoItAll.AgentFramework.Mcp/Diagnostics/McpDiagnostics.cs"));
 
         Assert.Contains("CapabilityDiagnosticCategory.ProcessStart", source, StringComparison.Ordinal);
@@ -83,6 +83,30 @@ public sealed class CapabilityMigrationCleanupGuardTests
         Assert.DoesNotContain("MCP unavailable", source, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("Tool setup failed", source, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("Generic setup error", source, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void INV_CLEANUP_006_legacy_mem0_catalog_runtime_is_retired()
+    {
+        var mafProject = ReadRepositoryFile(
+            "src/MAF/Common/CanDoItAll.AgentFramework.Maf/CanDoItAll.AgentFramework.Maf.csproj");
+        var contextBuilder = ReadRepositoryFile(
+            "src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/Capabilities/ContextCapabilityBuilder.cs");
+        var runtimeComposer = ReadRepositoryFile(
+            "src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/Capabilities/RuntimeCapabilityComposer.cs");
+        var catalogService = ReadRepositoryFile(
+            "src/MAF/Common/CanDoItAll.AgentFramework.Core/Catalog/AgentFrameworkWorkspaceCatalogService.ProvidersAndCapabilities.cs");
+        var seedNormalizer = ReadRepositoryFile(
+            "src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Seeds/SandboxWorkspaceSeedNormalizer.cs");
+        var capabilityTemplates = ReadRepositoryFile("Templates/Capabilities/other.json");
+
+        Assert.DoesNotContain("Microsoft.Agents.AI.Mem0", mafProject, StringComparison.Ordinal);
+        Assert.DoesNotContain("Mem0Provider", contextBuilder, StringComparison.Ordinal);
+        Assert.DoesNotContain("AddMemoryProviderAsync", contextBuilder, StringComparison.Ordinal);
+        Assert.DoesNotContain("mem0-shared-memory", capabilityTemplates, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("LegacyMemoryCapabilityPolicy.CreateException", runtimeComposer, StringComparison.Ordinal);
+        Assert.Contains("LegacyMemoryCapabilityPolicy.EnsureNotRetired", catalogService, StringComparison.Ordinal);
+        Assert.Contains("LegacyMemoryCapabilityPolicy.IsRetired", seedNormalizer, StringComparison.Ordinal);
     }
 
     private static string ReadRepositoryFiles(string relativeDirectory)

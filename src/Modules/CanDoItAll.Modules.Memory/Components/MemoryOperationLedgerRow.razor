@@ -19,9 +19,9 @@
                 ButtonStyle="ButtonStyle.Light"
                 Size="ButtonSize.Small"
                 Click="RefreshStatusAsync"
-                Disabled="@(IsBusy || !CanManageStatus)"
+                Disabled="@(IsBusy || !CanRefreshStatus)"
                 data-testid="memory-ui-refresh-operation" />
-        @if (CanManageStatus && Operation.Status is MemoryLedgerStatus.Accepted or MemoryLedgerStatus.Running)
+        @if (CanCancel && Operation.Status is MemoryLedgerStatus.Accepted or MemoryLedgerStatus.Running)
         {
             <Button Text="Cancel operation"
                     Icon="cancel"
@@ -39,7 +39,10 @@
     public MemoryProviderOperationUiRecord Operation { get; set; } = default!;
 
     [Parameter]
-    public bool CanManageStatus { get; set; }
+    public bool CanRefreshStatus { get; set; }
+
+    [Parameter]
+    public bool CanCancel { get; set; }
 
     [Parameter]
     public bool IsBusy { get; set; }

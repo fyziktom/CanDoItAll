@@ -7,6 +7,7 @@
   <ItemGroup>
     <ProjectReference Include="..\CanDoItAll.Memory.Application\CanDoItAll.Memory.Application.csproj" />
     <ProjectReference Include="..\CanDoItAll.Memory.Abstractions\CanDoItAll.Memory.Abstractions.csproj" />
+    <ProjectReference Include="..\CanDoItAll.Memory.Http.Contracts\CanDoItAll.Memory.Http.Contracts.csproj" />
   </ItemGroup>
 
   <ItemGroup>

@@ -2,6 +2,7 @@ using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Rag.Driver.Abstractions;
 using CanDoItAll.AgentFramework.Rag.Driver.Models;
 using CanDoItAll.Infrastructure.Persistence;
+using CanDoItAll.Memory.SourceGateway;
 using CanDoItAll.Modules.CognitiveMemory;
 using CanDoItAll.SharedKernel;
 using Microsoft.EntityFrameworkCore;

@@ -2,7 +2,7 @@
 
 ## Release Decision
 
-The memory provider extraction is ready for merge after SB34 closure when the final build, tests, dependency audits, native repo build/tests, and bundle completed-stage validation pass.
+The memory provider extraction was reopened for architecture repair on 2026-07-12. SB35-SB39 repair provider selection, agent modes, transport truthfulness, and external-repository isolation. SB40 remains the release gate until final builds, live-process/browser proof, architecture review, and completed-stage bundle validation pass.
 
 This release changes Cognitive Memory from a base-host native module assumption into an optional provider behind the generic Memory Provider runtime.
 
@@ -12,10 +12,13 @@ This release changes Cognitive Memory from a base-host native module assumption 
 - `/memory` is the generic provider management and operations surface.
 - Memory calls from UI, MAF tools, workflows, context contribution, and Source Gateway ingestion use shared generic runtime paths.
 - Missing provider, disabled provider, capability mismatch, missing driver, timeout, and provider errors are observable as typed diagnostics and ledger records.
+- Each agent can bind ordered zero/many provider aliases and choose automatic context or explicit leading `/mem:<alias>` directives.
+- Automatic context is synchronous and deterministic; explicit tool queries may be asynchronous only when operation status is implemented.
 - HTTP and native-remote provider drivers are opt-in.
 - The deterministic mock provider is explicit test/development configuration only.
-- MCP memory provider support is package-level and requires host composition to register the driver before MCP profiles can dispatch.
+- MCP remote-HTTP provider support is configuration-gated and supports context query plus optional operation status. Unsupported ingestion, feedback, and event tool mappings are rejected.
 - Native Cognitive Memory now belongs to `C:\repositories\CanDoItAll.CognitiveMemory` as an optional service/provider path.
+- The external solution owns its Protocol v1 wire DTOs and builds/tests without the main checkout; compatibility is verified through JSON fixtures and live consumer conformance.
 - Historical main database `CognitiveMemory_*` tables are retained read-only with an export service and no destructive drop migration.
 
 ## Default Startup
@@ -33,6 +36,9 @@ No provider is enabled by default:
         "Enabled": false
       },
       "NativeRemote": {
+        "Enabled": false
+      },
+      "Mcp": {
         "Enabled": false
       }
     }
@@ -52,7 +58,8 @@ The short version:
 2. Create or import an enabled `MemoryProviderProfile`.
 3. Declare only capabilities supported by that driver/provider.
 4. Verify provider health and run a context query from `/memory`.
-5. Inspect operation and feedback ledgers for typed status and diagnostics.
+5. Bind the profile to an agent with a stable alias and choose `Automatic` or `ExplicitDirective` mode.
+6. Inspect operation ledgers for typed status and diagnostics.
 
 ## Native Service Setup
 
@@ -64,7 +71,7 @@ dotnet build .\CanDoItAll.CognitiveMemory.slnx --no-restore --verbosity:minimal
 dotnet test .\tests\CanDoItAll.CognitiveMemory.Tests\CanDoItAll.CognitiveMemory.Tests.csproj --logger "console;verbosity=minimal"
 ```
 
-After the native service is running, enable `Memory:Providers:NativeRemote:Enabled`, import a `NativeRemote` profile with `native.cognitiveMemory.remote.serviceBaseUrl`, and verify health through the generic profile UI.
+After the native service is running, enable `Memory:Providers:NativeRemote:Enabled`, configure a `NativeRemote` profile with `native.cognitiveMemory.remote.serviceBaseUrl` plus an environment-variable credential reference, and verify a project-scoped query through the generic profile UI.
 
 Native service DB migrations, Qdrant projection configuration, advanced native memory features, native workers, and native UI packaging are service-owned concerns.
 
@@ -112,8 +119,8 @@ Run the commands in [validation and testing](validation-and-testing.md). The fin
 | --- | --- | --- | --- |
 | Move/delete retained legacy main-repo native module and native regression tests. | Memory/native maintainers | Audits can be misread if retained legacy tests are treated as base-host dependencies. | Native-suite migration bundle. |
 | Native import from legacy main DB export. | Native service maintainers | Historical data can be exported but not imported into native service by this release. | Native import contract bundle. |
-| Dedicated profile import/editor fields for HTTP, MCP, and native-remote transport extensions. | Generic memory UI maintainers | Operators may need seeded/imported profiles for transport-specific extension keys. | Provider profile UX hardening bundle. |
 | Production hosting runbook for native service. | Platform/operator owners | Native provider rollout needs environment-specific secrets, DB, service health, and deployment policy. | Native service operations bundle. |
+| Distributed claim/lease for generic memory background workers. | Generic memory persistence maintainers | Multiple active worker replicas can process the same due row. | Run one active memory-worker host until an atomic lease/claim contract is implemented. |
 
 ## Compatibility
 

@@ -3,8 +3,14 @@ using System.Text.RegularExpressions;
 
 namespace CanDoItAll.Memory.Abstractions;
 
-internal static partial class MemoryProtocolGuard
+internal static class MemoryProtocolGuard
 {
+    private const int MaximumIdentifierLength = 256;
+
+    private static readonly Regex CapabilityIdPattern = new(
+        "^[a-z][a-z0-9]*(?:[.-][a-z0-9]+)*$",
+        RegexOptions.CultureInvariant | RegexOptions.Compiled);
+
     public static string EnsureText(string value, string parameterName)
     {
         if (string.IsNullOrWhiteSpace(value))
@@ -25,10 +31,24 @@ internal static partial class MemoryProtocolGuard
         return value;
     }
 
+    public static string EnsureIdentifier(string value, string parameterName)
+    {
+        var normalized = EnsureText(value, parameterName);
+        if (normalized.Length > MaximumIdentifierLength ||
+            normalized.Any(char.IsControl))
+        {
+            throw new ArgumentException(
+                $"Identifiers must be at most {MaximumIdentifierLength} characters and cannot contain control characters.",
+                parameterName);
+        }
+
+        return normalized;
+    }
+
     public static string EnsureCapabilityId(string value, string parameterName)
     {
         var normalized = EnsureText(value, parameterName);
-        if (!CapabilityIdPattern().IsMatch(normalized))
+        if (!CapabilityIdPattern.IsMatch(normalized))
         {
             throw new ArgumentException(
                 "Capability ids must use dotted lowercase tokens such as 'context.query.sync'.",
@@ -50,9 +70,6 @@ internal static partial class MemoryProtocolGuard
             "Extension keys must start with one of the reserved namespaces: host.candoitall.*, native.cognitiveMemory.*, or provider.vendor.*.",
             parameterName);
     }
-
-    [GeneratedRegex("^[a-z][a-z0-9]*(?:[.-][a-z0-9]+)*$", RegexOptions.CultureInvariant)]
-    private static partial Regex CapabilityIdPattern();
 }
 
 public readonly record struct MemoryProtocolVersion
@@ -81,7 +98,7 @@ public readonly record struct MemoryProviderInstanceId
     [JsonConstructor]
     public MemoryProviderInstanceId(string value)
     {
-        Value = MemoryProtocolGuard.EnsureText(value, nameof(value));
+        Value = MemoryProtocolGuard.EnsureIdentifier(value, nameof(value));
     }
 
     public string Value { get; }

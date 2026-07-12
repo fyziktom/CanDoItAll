@@ -1,8 +1,13 @@
+using CanDoItAll.Memory.Abstractions;
+
 namespace CanDoItAll.Memory.Mcp;
 
 public sealed class McpMemoryProviderOptions
 {
     public TimeSpan DefaultTimeout { get; set; } = TimeSpan.FromSeconds(30);
+
+    public MemoryProviderResponseSizeLimit ResponseSizeLimit { get; set; } =
+        MemoryProviderResponseSizeLimit.Default;
 
     public void Validate()
     {
@@ -10,5 +15,7 @@ public sealed class McpMemoryProviderOptions
         {
             throw new InvalidOperationException("MCP memory provider default timeout must be positive.");
         }
+
+        ResponseSizeLimit.EnsureValid();
     }
 }

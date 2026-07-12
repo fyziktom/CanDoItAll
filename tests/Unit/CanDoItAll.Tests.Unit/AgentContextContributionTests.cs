@@ -159,6 +159,41 @@ public sealed class AgentContextContributionTests
     }
 
     [Fact]
+    public async Task Disabled_memory_invocation_excludes_legacy_workspace_memory_without_hidden_attachment()
+    {
+        var runtime = RuntimeCapabilityComposer.CreateDefault(
+            Path.GetTempPath(),
+            new ServiceCollection().BuildServiceProvider());
+        var agent = CreateAgent();
+        var legacyMemory = new AgentMemoryRecord(
+            Guid.NewGuid(),
+            agent.Id,
+            MemoryKind.Fact,
+            "Legacy note",
+            "Hidden legacy memory must not reach the model.",
+            "unit",
+            5,
+            "{}",
+            DateTimeOffset.UtcNow);
+
+        var state = await InvokeCreateCapabilityStateAsync(
+            runtime,
+            agent,
+            CreateProviderProfile(),
+            [],
+            [legacyMemory]);
+        var contextProviders = Assert.IsAssignableFrom<IEnumerable<AIContextProvider>>(
+            state.GetType().GetProperty("ContextProviders", BindingFlags.Public | BindingFlags.Instance)?.GetValue(state));
+        var contextSources = Assert.IsAssignableFrom<IEnumerable<AgentRuntimeContextManifestSource>>(
+            state.GetType().GetProperty("ContextSources", BindingFlags.Public | BindingFlags.Instance)?.GetValue(state));
+
+        Assert.DoesNotContain(contextProviders, provider => provider.GetType().Name == "WorkspaceMemoryContextProvider");
+        var trace = Assert.Single(contextSources, source => source.SourceId == "workspace-memory");
+        Assert.Equal(AgentRuntimeContextSourceDecision.Excluded, trace.Decision);
+        Assert.Contains("disabled", trace.Reason, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public async Task Maf_runtime_uses_context_workspace_scope_override_for_contributors()
     {
         var projectId = Guid.Parse("29fbb9a8-8422-4b8b-89ed-9d515103b801");
@@ -535,13 +570,14 @@ public sealed class AgentContextContributionTests
         RuntimeCapabilityComposer composer,
         AgentDefinition agent,
         ProviderProfile provider,
-        List<string> progressMessages)
+        List<string> progressMessages,
+        IReadOnlyList<AgentMemoryRecord>? memory = null)
     {
         return await composer.CreateCapabilityStateAsync(
             agent,
             provider,
             Array.Empty<CapabilityCatalogItem>(),
-            Array.Empty<AgentMemoryRecord>(),
+            memory ?? Array.Empty<AgentMemoryRecord>(),
             (_, _, message) =>
             {
                 progressMessages.Add(message);

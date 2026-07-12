@@ -52,7 +52,7 @@ public readonly record struct MemoryFeedbackHandle
     [JsonConstructor]
     public MemoryFeedbackHandle(string value)
     {
-        Value = MemoryProtocolGuard.EnsureText(value, nameof(value));
+        Value = MemoryProtocolGuard.EnsureIdentifier(value, nameof(value));
     }
 
     public string Value { get; }

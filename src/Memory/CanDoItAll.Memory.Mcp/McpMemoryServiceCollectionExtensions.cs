@@ -15,14 +15,10 @@ public static class McpMemoryServiceCollectionExtensions
         options.Validate();
 
         services.AddSingleton(options);
-        services.TryAddSingleton<McpMemoryProviderDriver>();
-        services.AddSingleton<IMemoryProviderDriver>(provider =>
+        services.TryAddScoped<McpMemoryProviderDriver>();
+        services.AddScoped<IMemoryProviderDriver>(provider =>
             provider.GetRequiredService<McpMemoryProviderDriver>());
-        services.AddSingleton<IMcpMemoryProviderAdapter>(provider =>
-            provider.GetRequiredService<McpMemoryProviderDriver>());
-        services.AddSingleton<IMemoryProviderOperationStatusDriver>(provider =>
-            provider.GetRequiredService<McpMemoryProviderDriver>());
-        services.AddSingleton<IMemoryProviderEventPollDriver>(provider =>
+        services.AddScoped<IMemoryProviderOperationStatusDriver>(provider =>
             provider.GetRequiredService<McpMemoryProviderDriver>());
 
         return services;

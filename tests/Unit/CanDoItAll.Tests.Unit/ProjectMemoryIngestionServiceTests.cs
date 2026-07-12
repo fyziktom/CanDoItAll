@@ -4,7 +4,7 @@ using CanDoItAll.Modules.Workbench;
 using CanDoItAll.SharedKernel;
 using GenericMemorySourceScope = CanDoItAll.Memory.Abstractions.MemorySourceScope;
 using MemoryProviderInstanceId = CanDoItAll.Memory.Abstractions.MemoryProviderInstanceId;
-using MafMemorySourceKind = CanDoItAll.AgentFramework.Core.MemorySourceKind;
+using MafMemorySourceKind = CanDoItAll.Memory.SourceGateway.MemorySourceKind;
 
 namespace CanDoItAll.Tests.Unit;
 
@@ -103,7 +103,7 @@ public sealed class ProjectMemoryIngestionServiceTests
                 NowUtc,
                 NowUtc,
                 request.Payload.StatusReason,
-                CapturedSnapshotId: new CanDoItAll.AgentFramework.Core.MemorySourceSnapshotId("maf.snapshot.project.1"),
+                CapturedSnapshotId: new CanDoItAll.Memory.SourceGateway.MemorySourceSnapshotId("maf.snapshot.project.1"),
                 operation.OperationId);
             return Task.FromResult(new MemoryOperationHandlerResult<MemorySourceCaptureOperationResult>(
                 MemoryOperationHandlerStatus.Accepted,

@@ -1006,6 +1006,39 @@ public sealed class MafAgentRuntimeToolProviderCompositionTests
         Assert.Contains("provider failed intentionally", exception.Message, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public async Task MafAgentRuntimeComposition_rejects_retired_catalog_memory_capability()
+    {
+        var capability = CreateLegacyMemoryCapability();
+        var agent = CreateToolEnabledAgent() with
+        {
+            Capabilities =
+            [
+                new AgentCapabilityAssignment(
+                    capability.Id,
+                    capability.Key,
+                    capability.Kind,
+                    CapabilityProofStatus.Verified,
+                    DateTimeOffset.UtcNow,
+                    string.Empty)
+            ]
+        };
+        var runtime = RuntimeCapabilityComposer.CreateDefault(
+            Path.GetTempPath(),
+            new ServiceCollection().BuildServiceProvider());
+
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(async () =>
+            await InvokeCreateCapabilityStateCoreAsync(
+                runtime,
+                agent,
+                CreateProviderProfile(),
+                [capability],
+                AgentRuntimeContextIntent.Empty));
+
+        Assert.Contains("retired", exception.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("agent Memory settings", exception.Message, StringComparison.Ordinal);
+    }
+
     private static IReadOnlyList<AITool> ReadTools(object state)
         => Assert.IsAssignableFrom<IEnumerable<AITool>>(
                 state.GetType().GetProperty("Tools", BindingFlags.Public | BindingFlags.Instance)?.GetValue(state))
@@ -1228,6 +1261,20 @@ public sealed class MafAgentRuntimeToolProviderCompositionTests
             Description: key + " test capability.",
             EndpointOrPath: string.Empty,
             ConfigurationJson: "{\"tool\":\"" + toolName + "\"}",
+            ProofStatus: CapabilityProofStatus.Verified,
+            ProofNotes: string.Empty,
+            LastVerifiedAtUtc: DateTimeOffset.UtcNow,
+            IsBuiltIn: false);
+
+    private static CapabilityCatalogItem CreateLegacyMemoryCapability()
+        => new(
+            Id: Guid.NewGuid(),
+            Kind: CapabilityKind.Memory,
+            Key: "legacy-mem0-memory",
+            Name: "Legacy Mem0 memory",
+            Description: "Legacy catalog memory capability.",
+            EndpointOrPath: "https://api.mem0.ai",
+            ConfigurationJson: "{\"provider\":\"mem0\",\"endpoint\":\"https://api.mem0.ai\",\"apiKeyEnvironmentVariable\":\"CANDOITALL_TEST_RETIRED_MEM0_KEY\"}",
             ProofStatus: CapabilityProofStatus.Verified,
             ProofNotes: string.Empty,
             LastVerifiedAtUtc: DateTimeOffset.UtcNow,

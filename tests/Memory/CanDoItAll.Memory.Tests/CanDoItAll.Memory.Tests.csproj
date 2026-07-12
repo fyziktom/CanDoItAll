@@ -27,8 +27,10 @@
     <ProjectReference Include="..\..\..\src\Memory\CanDoItAll.Memory.Abstractions\CanDoItAll.Memory.Abstractions.csproj" />
     <ProjectReference Include="..\..\..\src\Memory\CanDoItAll.Memory.Http\CanDoItAll.Memory.Http.csproj" />
     <ProjectReference Include="..\..\..\src\Memory\CanDoItAll.Memory.Mcp\CanDoItAll.Memory.Mcp.csproj" />
+    <ProjectReference Include="..\..\..\src\Memory\CanDoItAll.Memory.Mock\CanDoItAll.Memory.Mock.csproj" />
     <ProjectReference Include="..\..\..\src\Memory\CanDoItAll.Memory.Persistence\CanDoItAll.Memory.Persistence.csproj" />
     <ProjectReference Include="..\..\..\src\MAF\Common\CanDoItAll.AgentFramework.Core\CanDoItAll.AgentFramework.Core.csproj" />
+    <ProjectReference Include="..\..\..\src\MAF\Memory\CanDoItAll.AgentFramework.Memory\CanDoItAll.AgentFramework.Memory.csproj" />
   </ItemGroup>
 
 </Project>

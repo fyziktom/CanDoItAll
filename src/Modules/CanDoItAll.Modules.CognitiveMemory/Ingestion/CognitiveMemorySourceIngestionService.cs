@@ -1,3 +1,4 @@
+using CanDoItAll.Memory.SourceGateway;
 using System.Text.Json;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
@@ -275,7 +276,7 @@ public sealed class CognitiveMemorySourceIngestionService(
                 new ProcessRuntimeEvidenceSourceRequest(NormalizeOptionalScope(request.ScopeId), request.Cursor, request.Take),
                 cancellationToken),
             MemorySourceKind.WorkflowRuntime => await workflowRuntimeEvidenceSourceProvider.ReadSnapshotAsync(
-                new WorkflowRuntimeEvidenceSourceRequest(NormalizeOptionalScope(request.ScopeId) is Guid runId ? new WorkflowRunId(runId) : null, request.Cursor, request.Take),
+                new WorkflowRuntimeEvidenceSourceRequest(NormalizeOptionalScope(request.ScopeId), request.Cursor, request.Take),
                 cancellationToken),
             _ => throw new NotSupportedException($"Source kind '{request.SourceKind}' is not supported by cognitive memory source ingestion.")
         };

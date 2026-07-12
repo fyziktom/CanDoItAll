@@ -1,8 +1,9 @@
+using CanDoItAll.Memory.SourceGateway;
 using System.Globalization;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
-using MafMemorySourceKind = CanDoItAll.AgentFramework.Core.MemorySourceKind;
+using MafMemorySourceKind = CanDoItAll.Memory.SourceGateway.MemorySourceKind;
 
 namespace CanDoItAll.Modules.CrmHr;
 

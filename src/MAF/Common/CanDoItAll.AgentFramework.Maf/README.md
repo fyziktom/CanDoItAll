@@ -36,7 +36,6 @@ Direct package references:
 - `ExcelDataReader (3.8.0)`
 - `Microsoft.Agents.AI (1.8.0)`
 - `Microsoft.Agents.AI.A2A (1.8.0-preview.260528.1)`
-- `Microsoft.Agents.AI.Mem0 (1.0.0-preview.251028.1)`
 - `Microsoft.Agents.AI.OpenAI (1.8.0)`
 - `Microsoft.Agents.AI.Workflows (1.8.0)`
 - `ModelContextProtocol (1.1.0)`

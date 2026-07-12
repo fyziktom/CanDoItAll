@@ -1,0 +1,48 @@
+@namespace CanDoItAll.Modules.Memory.Components
+
+<FormSection Title="Submit feedback" Description="Correlate an outcome with the delivered context pack.">
+    <Grid Gap="LayoutGap.Large" ColumnTemplate="repeat(auto-fit,minmax(14rem,1fr))">
+        <FormField Text="Outcome">
+            <DropDown TValue="MemoryFeedbackOutcome"
+                      Data="@Outcomes"
+                      Value="@Editor.Outcome"
+                      ValueChanged="@(value => Editor.Outcome = value)"
+                      data-testid="memory-ui-feedback-outcome" />
+        </FormField>
+        <FormField Text="Stage">
+            <DropDown TValue="MemoryFeedbackStage"
+                      Data="@Stages"
+                      Value="@Editor.Stage"
+                      ValueChanged="@(value => Editor.Stage = value)"
+                      data-testid="memory-ui-feedback-stage" />
+        </FormField>
+    </Grid>
+    <FormField Text="Comment">
+        <TextArea Value="@Editor.Comment"
+                  ValueChanged="@(value => Editor.Comment = value)"
+                  Rows="4"
+                  data-testid="memory-ui-feedback-comment" />
+    </FormField>
+    <Button Text="Submit feedback"
+            Icon="rate_review"
+            ButtonStyle="ButtonStyle.Primary"
+            Size="ButtonSize.Small"
+            Click="OnSubmit"
+            Disabled="@(IsBusy || string.IsNullOrWhiteSpace(Editor.ContextPackId))"
+            IsBusy="@IsBusy"
+            data-testid="memory-ui-feedback-submit" />
+</FormSection>
+
+@code {
+    private static readonly MemoryFeedbackOutcome[] Outcomes = Enum.GetValues<MemoryFeedbackOutcome>();
+    private static readonly MemoryFeedbackStage[] Stages = Enum.GetValues<MemoryFeedbackStage>();
+
+    [Parameter, EditorRequired]
+    public MemoryFeedbackEditorModel Editor { get; set; } = new();
+
+    [Parameter]
+    public bool IsBusy { get; set; }
+
+    [Parameter]
+    public EventCallback OnSubmit { get; set; }
+}

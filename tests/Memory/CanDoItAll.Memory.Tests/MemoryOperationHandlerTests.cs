@@ -1,6 +1,7 @@
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Memory.Abstractions;
 using CanDoItAll.Memory.Application;
+using CanDoItAll.Memory.Mock;
 using CanDoItAll.Memory.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -37,8 +38,10 @@ public sealed class MemoryOperationHandlerTests
         Assert.NotEqual(toolResult.OperationRecord.OperationId, executorResult.OperationRecord.OperationId);
         Assert.Equal(MemoryOperationCallerKind.Tool, toolResult.OperationRecord.Extensions.GetMemoryOperationCaller()?.Kind);
         Assert.Equal(MemoryOperationCallerKind.WorkflowExecutor, executorResult.OperationRecord.Extensions.GetMemoryOperationCaller()?.Kind);
-        Assert.NotNull(toolResult.Output?.FeedbackHandle);
-        Assert.NotNull(executorResult.Output?.FeedbackHandle);
+        Assert.Null(toolResult.Output?.FeedbackHandle);
+        Assert.Null(executorResult.Output?.FeedbackHandle);
+        Assert.Null(toolResult.FeedbackHandle);
+        Assert.Null(executorResult.FeedbackHandle);
     }
 
     [Theory]
@@ -89,6 +92,56 @@ public sealed class MemoryOperationHandlerTests
     }
 
     [Fact]
+    public async Task Feedback_claim_without_delivery_driver_is_rejected_before_enqueue()
+    {
+        using var rootProvider = CreateServiceProvider(enableMockDriver: false);
+        using var scope = rootProvider.CreateScope();
+        var provider = scope.ServiceProvider;
+        var profile = CreateProviderProfile(MemoryCapabilityIds.FeedbackImmediate);
+        await provider.GetRequiredService<IMemoryProviderProfileStore>().UpsertAsync(profile, Now);
+
+        var result = await provider.GetRequiredService<IMemoryOperationHandler>()
+            .SubmitFeedbackAsync(MemoryOperationRequestBuilder.Feedback(
+                MemoryOperationCaller.UiAction("memory.feedback.test", CreateRequester()),
+                MemoryProviderSelectionPolicy.RequireCapability(MemoryCapabilityIds.FeedbackImmediate) with
+                {
+                    ExplicitProviderId = profile.InstanceId
+                },
+                CreateFeedbackRequest(),
+                CreateRetentionPolicy()));
+
+        Assert.Equal(MemoryOperationHandlerStatus.DriverUnavailable, result.Status);
+        Assert.False(result.DriverDispatchAttempted);
+        Assert.Empty(await provider.GetRequiredService<IMemoryFeedbackLedgerStore>()
+            .ListByProviderAsync(profile.InstanceId));
+    }
+
+    [Fact]
+    public async Task Event_acknowledgement_claim_without_outbox_driver_is_rejected_before_enqueue()
+    {
+        using var rootProvider = CreateServiceProvider(enableMockDriver: false);
+        using var scope = rootProvider.CreateScope();
+        var provider = scope.ServiceProvider;
+        var profile = CreateProviderProfile(MemoryCapabilityIds.EventsProviderPush);
+        await provider.GetRequiredService<IMemoryProviderProfileStore>().UpsertAsync(profile, Now);
+
+        var result = await provider.GetRequiredService<IMemoryOperationHandler>()
+            .AcknowledgeEventAsync(MemoryOperationRequestBuilder.EventAcknowledge(
+                MemoryOperationCaller.UiAction("memory.event.test", CreateRequester()),
+                MemoryProviderSelectionPolicy.RequireCapability(MemoryCapabilityIds.EventsProviderPush) with
+                {
+                    ExplicitProviderId = profile.InstanceId
+                },
+                new MemoryEventAcknowledgeRequest(MemoryProviderEventId.New(), Accepted: true, "accepted"),
+                CreateRetentionPolicy()));
+
+        Assert.Equal(MemoryOperationHandlerStatus.DriverUnavailable, result.Status);
+        Assert.False(result.DriverDispatchAttempted);
+        Assert.Empty(await provider.GetRequiredService<IMemoryEventLedgerStore>()
+            .ListPendingOutboxAsync(profile.InstanceId));
+    }
+
+    [Fact]
     public void Request_builders_cover_shared_operation_kinds()
     {
         var caller = MemoryOperationCaller.UiAction("memory.admin.query", CreateRequester());
@@ -134,6 +187,141 @@ public sealed class MemoryOperationHandlerTests
             CreateRetentionPolicy()).OperationKind);
     }
 
+    [Fact]
+    public async Task Operation_status_and_cancellation_reject_a_different_requester()
+    {
+        using var rootProvider = CreateServiceProvider(enableMockDriver: true);
+        using var scope = rootProvider.CreateScope();
+        var provider = scope.ServiceProvider;
+        var profile = CreateProviderProfile(MemoryCapabilityIds.ContextQuerySync);
+        await provider.GetRequiredService<IMemoryProviderProfileStore>()
+            .UpsertAsync(profile, Now);
+        var handler = provider.GetRequiredService<IMemoryOperationHandler>();
+        var queryPolicy = MemoryProviderSelectionPolicy.RequireCapability(MemoryCapabilityIds.ContextQuerySync) with
+        {
+            ExplicitProviderId = profile.InstanceId
+        };
+        var queryResult = await handler.ExecuteQueryAsync(MemoryOperationRequestBuilder.Query(
+            MemoryOperationCaller.Tool("agent.tool.memory-query", CreateRequester()),
+            queryPolicy,
+            CreateQueryRequest(),
+            CreateRetentionPolicy()));
+        var operationId = Assert.IsType<MemoryOperationRecord>(queryResult.OperationRecord).OperationId;
+        var foreignCaller = MemoryOperationCaller.Tool(
+            "agent.tool.memory-status",
+            CreateRequester() with
+            {
+                RequesterId = "user-foreign",
+                AgentId = "agent-foreign",
+                SessionId = "session-foreign"
+            });
+        var statusResult = await handler.GetStatusAsync(MemoryOperationRequestBuilder.Status(
+            foreignCaller,
+            MemoryProviderSelectionPolicy.RequireCapability(MemoryCapabilityIds.OperationStatus),
+            new MemoryOperationStatusRequest(operationId),
+            CreateRetentionPolicy()));
+        var cancellationResult = await handler.CancelAsync(MemoryOperationRequestBuilder.Cancellation(
+            foreignCaller,
+            MemoryProviderSelectionPolicy.RequireCapability(MemoryCapabilityIds.OperationStatus),
+            new MemoryOperationCancellationRequest(operationId, "foreign cancellation"),
+            CreateRetentionPolicy()));
+
+        Assert.NotEqual(MemoryOperationHandlerStatus.Completed, statusResult.Status);
+        Assert.NotEqual(MemoryOperationHandlerStatus.Cancelled, cancellationResult.Status);
+        Assert.False(statusResult.DriverDispatchAttempted);
+        Assert.False(cancellationResult.DriverDispatchAttempted);
+    }
+
+    [Fact]
+    public async Task Status_and_cancellation_do_not_succeed_when_provider_selection_is_rejected()
+    {
+        using var rootProvider = CreateServiceProvider(enableMockDriver: true);
+        using var scope = rootProvider.CreateScope();
+        var provider = scope.ServiceProvider;
+        var profile = CreateProviderProfile(MemoryCapabilityIds.ContextQuerySync);
+        await provider.GetRequiredService<IMemoryProviderProfileStore>()
+            .UpsertAsync(profile, Now);
+        var handler = provider.GetRequiredService<IMemoryOperationHandler>();
+        var requester = CreateRequester();
+        var queryResult = await handler.ExecuteQueryAsync(MemoryOperationRequestBuilder.Query(
+            MemoryOperationCaller.Tool("agent.tool.memory-query", requester),
+            MemoryProviderSelectionPolicy.RequireCapability(MemoryCapabilityIds.ContextQuerySync) with
+            {
+                ExplicitProviderId = profile.InstanceId
+            },
+            CreateQueryRequest(),
+            CreateRetentionPolicy()));
+        var operationId = Assert.IsType<MemoryOperationRecord>(queryResult.OperationRecord).OperationId;
+
+        var statusResult = await handler.GetStatusAsync(MemoryOperationRequestBuilder.Status(
+            MemoryOperationCaller.Tool("agent.tool.memory-status", requester),
+            MemoryProviderSelectionPolicy.RequireCapability(MemoryCapabilityIds.OperationStatus),
+            new MemoryOperationStatusRequest(operationId),
+            CreateRetentionPolicy()));
+        var cancellationResult = await handler.CancelAsync(MemoryOperationRequestBuilder.Cancellation(
+            MemoryOperationCaller.Tool("agent.tool.memory-cancel", requester),
+            MemoryProviderSelectionPolicy.RequireCapability(MemoryCapabilityIds.OperationStatus),
+            new MemoryOperationCancellationRequest(operationId, "user cancelled"),
+            CreateRetentionPolicy()));
+
+        Assert.Equal(MemoryOperationHandlerStatus.CapabilityUnavailable, statusResult.Status);
+        Assert.Equal(MemoryOperationHandlerStatus.CapabilityUnavailable, cancellationResult.Status);
+        Assert.Null(statusResult.OperationRecord);
+        Assert.Null(cancellationResult.OperationRecord);
+        Assert.False(statusResult.DriverDispatchAttempted);
+        Assert.False(cancellationResult.DriverDispatchAttempted);
+    }
+
+    [Fact]
+    public async Task Driver_exception_becomes_a_typed_failure_without_exposing_exception_details()
+    {
+        var driver = new ThrowingMemoryProviderDriver();
+        using var rootProvider = CreateServiceProvider(enableMockDriver: false, driver);
+        using var scope = rootProvider.CreateScope();
+        var provider = scope.ServiceProvider;
+        var profile = CreateProviderProfile(
+            MemoryCapabilityIds.ContextQuerySync,
+            MemoryProviderDriverKind.Mock);
+        await provider.GetRequiredService<IMemoryProviderProfileStore>()
+            .UpsertAsync(profile, Now);
+        var handler = provider.GetRequiredService<IMemoryOperationHandler>();
+
+        var result = await handler.ExecuteQueryAsync(MemoryOperationRequestBuilder.Query(
+            MemoryOperationCaller.Tool("agent.tool.memory-query", CreateRequester()),
+            MemoryProviderSelectionPolicy.RequireCapability(MemoryCapabilityIds.ContextQuerySync) with
+            {
+                ExplicitProviderId = profile.InstanceId
+            },
+            CreateQueryRequest(),
+            CreateRetentionPolicy()));
+
+        Assert.Equal(MemoryOperationHandlerStatus.DriverFailed, result.Status);
+        Assert.Equal(MemoryLedgerStatus.Failed, result.OperationRecord?.Status);
+        Assert.True(result.DriverDispatchAttempted);
+        Assert.DoesNotContain("secret-provider-token", result.Diagnostic, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Provider_configuration_exception_becomes_a_typed_failure_before_dispatch()
+    {
+        using var rootProvider = CreateServiceProvider(
+            enableMockDriver: false,
+            useThrowingProfileStore: true);
+        using var scope = rootProvider.CreateScope();
+        var handler = scope.ServiceProvider.GetRequiredService<IMemoryOperationHandler>();
+
+        var result = await handler.ExecuteQueryAsync(MemoryOperationRequestBuilder.Query(
+            MemoryOperationCaller.Tool("agent.tool.memory-query", CreateRequester()),
+            MemoryProviderSelectionPolicy.RequireCapability(MemoryCapabilityIds.ContextQuerySync),
+            CreateQueryRequest(),
+            CreateRetentionPolicy()));
+
+        Assert.Equal(MemoryOperationHandlerStatus.ProviderConfigurationFailed, result.Status);
+        Assert.Equal(MemoryProviderSelectionStatus.ProviderConfigurationFailed, result.Selection.Status);
+        Assert.False(result.DriverDispatchAttempted);
+        Assert.DoesNotContain("secret-connection-string", result.Diagnostic, StringComparison.Ordinal);
+    }
+
     public static IEnumerable<object[]> CrossCallerRoutes()
     {
         yield return [MemoryOperationCaller.Tool("agent.tool.memory-query", CreateRequester())];
@@ -143,16 +331,30 @@ public sealed class MemoryOperationHandlerTests
         yield return [MemoryOperationCaller.ApiEndpoint("api.memory.query", CreateRequester())];
     }
 
-    private static ServiceProvider CreateServiceProvider(bool enableMockDriver)
+    private static ServiceProvider CreateServiceProvider(
+        bool enableMockDriver,
+        IMemoryProviderDriver? driver = null,
+        bool useThrowingProfileStore = false)
     {
         var services = new ServiceCollection();
         services.AddDbContextFactory<AppDbContext>(options =>
             options.UseInMemoryDatabase($"memory-operation-handler-{Guid.NewGuid():N}"));
         services.AddSingleton<TimeProvider>(new FixedTimeProvider(Now));
-        services.AddGenericMemoryModule(options =>
+        services.AddGenericMemoryModule();
+        if (enableMockDriver)
         {
-            options.EnableDeterministicMockProvider = enableMockDriver;
-        });
+            services.AddDeterministicMockMemoryProviderDriver();
+        }
+        if (driver is not null)
+        {
+            services.AddSingleton<IMemoryProviderDriver>(driver);
+        }
+
+        if (useThrowingProfileStore)
+        {
+            services.AddScoped<IMemoryProviderProfileStore, ThrowingMemoryProviderProfileStore>();
+        }
+
         return services.BuildServiceProvider(validateScopes: true);
     }
 
@@ -186,12 +388,14 @@ public sealed class MemoryOperationHandlerTests
             EconomicImpact: null);
     }
 
-    private static MemoryProviderProfile CreateProviderProfile(MemoryCapabilityId capability)
+    private static MemoryProviderProfile CreateProviderProfile(
+        MemoryCapabilityId capability,
+        MemoryProviderDriverKind driverKind = MemoryProviderDriverKind.Mock)
     {
         return new MemoryProviderProfile(
             MemoryProviderInstanceId.Parse("provider.mock"),
             DisplayName: "Deterministic mock memory",
-            MemoryProviderDriverKind.Mock,
+            driverKind,
             IsEnabled: true,
             MemoryProviderHealthState.Healthy,
             MemoryProviderWorkspaceScope.AllWorkspaces,
@@ -233,7 +437,10 @@ public sealed class MemoryOperationHandlerTests
             handler.ExecuteQueryAsync(
                 MemoryOperationRequestBuilder.Query(
                     MemoryOperationCaller.Tool("agent.tool.memory-query", CreateRequester()),
-                    MemoryProviderSelectionPolicy.RequireCapability(MemoryCapabilityIds.ContextQuerySync),
+                    MemoryProviderSelectionPolicy.RequireCapability(MemoryCapabilityIds.ContextQuerySync) with
+                    {
+                        ExplicitProviderId = MemoryProviderInstanceId.Parse("provider.mock")
+                    },
                     query,
                     CreateRetentionPolicy()),
                 cancellationToken);
@@ -247,7 +454,10 @@ public sealed class MemoryOperationHandlerTests
             handler.ExecuteQueryAsync(
                 MemoryOperationRequestBuilder.Query(
                     MemoryOperationCaller.WorkflowExecutor("workflow.executor.memory-query", CreateRequester()),
-                    MemoryProviderSelectionPolicy.RequireCapability(MemoryCapabilityIds.ContextQuerySync),
+                    MemoryProviderSelectionPolicy.RequireCapability(MemoryCapabilityIds.ContextQuerySync) with
+                    {
+                        ExplicitProviderId = MemoryProviderInstanceId.Parse("provider.mock")
+                    },
                     query,
                     CreateRetentionPolicy()),
                 cancellationToken);
@@ -256,5 +466,36 @@ public sealed class MemoryOperationHandlerTests
     private sealed class FixedTimeProvider(DateTimeOffset now) : TimeProvider
     {
         public override DateTimeOffset GetUtcNow() => now;
+    }
+
+    private sealed class ThrowingMemoryProviderDriver : IMemoryProviderDriver
+    {
+        public MemoryProviderDriverKind DriverKind => MemoryProviderDriverKind.Mock;
+
+        public Task<MemoryProviderDriverResult> ExecuteContextQueryAsync(
+            MemoryProviderProfile provider,
+            MemoryOperationRecord operation,
+            MemoryContextQueryRequest request,
+            CancellationToken cancellationToken = default)
+        {
+            throw new InvalidOperationException("secret-provider-token");
+        }
+    }
+
+    private sealed class ThrowingMemoryProviderProfileStore : IMemoryProviderProfileStore
+    {
+        public Task UpsertAsync(
+            MemoryProviderProfile profile,
+            DateTimeOffset updatedAtUtc,
+            CancellationToken cancellationToken = default)
+        {
+            throw new InvalidOperationException("secret-connection-string");
+        }
+
+        public Task<IReadOnlyList<MemoryProviderProfile>> ListAsync(
+            CancellationToken cancellationToken = default)
+        {
+            throw new InvalidOperationException("secret-connection-string");
+        }
     }
 }

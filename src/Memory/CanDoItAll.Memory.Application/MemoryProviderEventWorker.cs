@@ -2,14 +2,18 @@ using CanDoItAll.Memory.Abstractions;
 
 namespace CanDoItAll.Memory.Application;
 
-public sealed partial class MemoryProviderEventWorker(
+internal sealed class MemoryProviderEventWorker(
     IMemoryProviderProfileStore providerProfileStore,
     IMemoryEventLedgerStore eventLedgerStore,
     IEnumerable<IMemoryProviderEventPollDriver> pollDrivers,
-    IEnumerable<IMemoryProviderEventOutboxDriver> outboxDrivers,
+    MemoryProviderEventInboxProcessor inboxProcessor,
+    MemoryProviderEventOutboxProcessor outboxProcessor,
     TimeProvider timeProvider,
     MemoryAsyncWorkerOptions options) : IMemoryProviderEventWorker
 {
+    private readonly MemoryProviderDriverCatalog<IMemoryProviderEventPollDriver> pollDriverCatalog =
+        new(pollDrivers, static driver => driver.DriverKind);
+
     public async Task<MemoryAsyncWorkerRunResult> PollProviderEventsAsync(CancellationToken cancellationToken = default)
     {
         options.Validate();
@@ -21,19 +25,37 @@ public sealed partial class MemoryProviderEventWorker(
         var retried = 0;
         var scanned = 0;
 
-        foreach (var provider in profiles.Where(profile => profile.IsEnabled && profile.Manifest.InteractionSupport.SupportsProviderEvents))
+        foreach (var provider in profiles.Where(SupportsHostEventPolling))
         {
             cancellationToken.ThrowIfCancellationRequested();
             scanned++;
-            var driver = pollDrivers.FirstOrDefault(candidate => candidate.DriverKind == provider.DriverKind);
+            var driver = pollDriverCatalog.ResolveUnique(provider.DriverKind, out var driverFailure);
             if (driver is null)
             {
                 retried++;
-                diagnostics.Add($"No provider event poll driver registered for '{provider.DriverKind}'.");
+                diagnostics.Add(driverFailure);
                 continue;
             }
 
-            var poll = await driver.PollEventsAsync(provider, cancellationToken);
+            MemoryProviderEventPollResult poll;
+            try
+            {
+                poll = await driver.PollEventsAsync(provider, cancellationToken);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception exception)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                retried++;
+                diagnostics.Add(MemoryWorkerExceptionDiagnostic.Create(
+                    $"Memory provider '{provider.InstanceId}' event poll",
+                    exception));
+                continue;
+            }
+
             if (poll.Kind != MemoryProviderEventPollResultKind.Events)
             {
                 retried++;
@@ -43,11 +65,29 @@ public sealed partial class MemoryProviderEventWorker(
 
             foreach (var providerEvent in poll.Events.Take(options.MaxBatchSize))
             {
-                var admission = await AdmitProviderEventAsync(
-                    provider,
-                    providerEvent,
-                    MemoryEventLoopContext.ProviderOrigin(provider.InstanceId),
-                    cancellationToken);
+                MemoryEventAdmissionResult admission;
+                try
+                {
+                    admission = await AdmitProviderEventAsync(
+                        provider,
+                        providerEvent,
+                        MemoryEventLoopContext.ProviderOrigin(provider.InstanceId),
+                        cancellationToken);
+                }
+                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+                {
+                    throw;
+                }
+                catch (Exception exception)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    retried++;
+                    diagnostics.Add(MemoryWorkerExceptionDiagnostic.Create(
+                        $"Memory provider '{provider.InstanceId}' event admission",
+                        exception));
+                    continue;
+                }
+
                 enqueued += admission.Status == MemoryEventAdmissionStatus.Accepted ? 1 : 0;
                 duplicates += admission.Status == MemoryEventAdmissionStatus.Duplicate ? 1 : 0;
                 loopRejected += admission.Status == MemoryEventAdmissionStatus.LoopRejected ? 1 : 0;
@@ -106,6 +146,8 @@ public sealed partial class MemoryProviderEventWorker(
     {
         var profiles = await providerProfileStore.ListAsync(cancellationToken);
         var completed = 0;
+        var retried = 0;
+        var deadLettered = 0;
         var enqueued = 0;
         var diagnostics = new List<string>();
         foreach (var provider in profiles)
@@ -114,32 +156,49 @@ public sealed partial class MemoryProviderEventWorker(
             foreach (var record in records)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                await eventLedgerStore.TransitionInboxAsync(
-                    record.InboxRecordId,
-                    MemoryLedgerStatus.Completed,
-                    timeProvider.GetUtcNow(),
-                    "Provider event admitted to host inbox.",
-                    cancellationToken);
-                await eventLedgerStore.EnqueueOutboxAsync(CreateAcknowledgement(record), cancellationToken);
-                completed++;
-                enqueued++;
-                diagnostics.Add($"Completed memory provider event inbox '{record.InboxRecordId}'.");
+                MemoryEventInboxOutcome outcome;
+                try
+                {
+                    outcome = await inboxProcessor.ProcessAsync(record, cancellationToken);
+                }
+                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+                {
+                    throw;
+                }
+                catch (Exception exception)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    outcome = MemoryEventInboxOutcome.ForRetried(
+                        MemoryWorkerExceptionDiagnostic.Create(
+                            $"Memory provider event inbox '{record.InboxRecordId}' recovery",
+                            exception));
+                }
+
+                completed += outcome.Completed;
+                retried += outcome.Retried;
+                deadLettered += outcome.DeadLettered;
+                enqueued += outcome.Enqueued;
+                diagnostics.Add(outcome.Diagnostic);
             }
         }
 
-        return CreateResult(completed, completed, 0, 0, enqueued, 0, 0, diagnostics);
+        return CreateResult(
+            completed + retried + deadLettered,
+            completed,
+            retried,
+            deadLettered,
+            enqueued,
+            0,
+            0,
+            diagnostics);
     }
 
-    private MemoryEventOutboxRecord CreateAcknowledgement(MemoryEventInboxRecord inbox)
-    {
-        return MemoryEventOutboxRecord.CreateAcknowledgement(
-            MemoryEventOutboxRecordId.New(),
-            inbox.ProviderInstanceId,
-            inbox.ProviderEventId,
-            inbox.InboxRecordId,
-            timeProvider.GetUtcNow(),
-            MemoryPayload.FromText("accepted"));
-    }
+    public Task<MemoryAsyncWorkerRunResult> DrainOutboxAsync(CancellationToken cancellationToken = default) =>
+        outboxProcessor.DrainAsync(cancellationToken);
+
+    private static bool SupportsHostEventPolling(MemoryProviderProfile profile) =>
+        profile.IsEnabled && profile.Manifest.Capabilities.Any(capability =>
+            capability.Supported && capability.Id == MemoryCapabilityIds.EventsHostPoll);
 
     private static MemoryAsyncWorkerRunResult CreateResult(
         int scanned,

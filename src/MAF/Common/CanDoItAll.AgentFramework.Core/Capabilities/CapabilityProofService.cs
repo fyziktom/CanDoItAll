@@ -77,7 +77,7 @@ public sealed partial class CapabilityProofService : ICapabilityProofService
             CapabilityKind.McpServer => await VerifyMcpCapabilityAsync(agent, provider, capability, notes, checkedAt, cancellationToken),
             CapabilityKind.Rag => VerifyRagCapability(capability, notes, checkedAt),
             CapabilityKind.AiContext => VerifyAiContextCapability(capability, notes, checkedAt),
-            CapabilityKind.Memory => VerifyMemoryCapability(capability, notes, checkedAt),
+            CapabilityKind.Memory => Failed(LegacyMemoryCapabilityPolicy.BuildDiagnostic(capability.Name), checkedAt),
             _ => PendingReview("Capability kind is recorded, but this sandbox does not have a verification rule for it yet.", checkedAt)
         };
     }

@@ -31,6 +31,7 @@ public sealed class MemoryAsyncWorkerTests
         Assert.Equal(1, result.Scanned);
         Assert.Equal(1, result.Completed);
         Assert.Equal(MemoryLedgerStatus.Completed, persisted?.Status);
+        Assert.Equal("done", persisted?.GetFinalOperationResult()?.Output?.Text);
         Assert.Equal(1, statusDriver.Calls);
         Assert.All(statusDriver.ObservedTokens, token => Assert.True(token.CanBeCanceled));
     }
@@ -162,6 +163,168 @@ public sealed class MemoryAsyncWorkerTests
         Assert.Equal(2, statusDriver.Calls);
     }
 
+    [Fact]
+    public async Task OP006_Operation_worker_rejects_a_mismatched_final_result()
+    {
+        var time = new ManualMemoryTimeProvider(Now);
+        var statusDriver = new ScriptedOperationStatusDriver(_ =>
+            MemoryProviderOperationPollResult.FromResult(
+                new MemoryOperationResult(
+                    MemoryOperationId.New(),
+                    MemoryOperationStatus.Succeeded,
+                    MemoryPayload.FromText("wrong operation"),
+                    [],
+                    [],
+                    []),
+                "mismatched result"));
+        using var rootProvider = CreateServiceProvider(time, statusDriver: statusDriver);
+        using var scope = rootProvider.CreateScope();
+        var provider = scope.ServiceProvider;
+        var operation = await SeedAcceptedOperationAsync(provider, Now.AddSeconds(-10));
+
+        var result = await provider.GetRequiredService<IMemoryAsyncOperationWorker>().PollOperationsAsync();
+        var persisted = await provider.GetRequiredService<IMemoryOperationLedgerStore>()
+            .GetAsync(operation.OperationId);
+
+        Assert.Equal(1, result.DeadLettered);
+        Assert.Equal(MemoryLedgerStatus.Failed, persisted?.Status);
+        Assert.Null(persisted?.GetFinalOperationResult());
+        Assert.Contains("different operation id", persisted?.StatusReason, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task OP007_Operation_worker_exception_does_not_starve_later_records()
+    {
+        var time = new ManualMemoryTimeProvider(Now);
+        var failingOperationId = default(MemoryOperationId);
+        var statusDriver = new ScriptedOperationStatusDriver(operation =>
+            operation.OperationId == failingOperationId
+                ? throw new InvalidOperationException("provider-secret-detail")
+                : MemoryProviderOperationPollResult.FromResult(
+                    new MemoryOperationResult(
+                        operation.OperationId,
+                        MemoryOperationStatus.Succeeded,
+                        MemoryPayload.FromText("done"),
+                        [],
+                        [],
+                        []),
+                    "completed"));
+        using var rootProvider = CreateServiceProvider(time, statusDriver: statusDriver);
+        using var scope = rootProvider.CreateScope();
+        var provider = scope.ServiceProvider;
+        var failing = await SeedAcceptedOperationAsync(provider, Now.AddSeconds(-10));
+        var succeeding = await SeedAcceptedOperationAsync(provider, Now.AddSeconds(-9));
+        failingOperationId = failing.OperationId;
+
+        var result = await provider.GetRequiredService<IMemoryAsyncOperationWorker>().PollOperationsAsync();
+        var completed = await provider.GetRequiredService<IMemoryOperationLedgerStore>()
+            .GetAsync(succeeding.OperationId);
+
+        Assert.Equal(2, result.Scanned);
+        Assert.Equal(1, result.Retried);
+        Assert.Equal(1, result.Completed);
+        Assert.Equal(MemoryLedgerStatus.Completed, completed?.Status);
+        Assert.Contains(result.Diagnostics, diagnostic => diagnostic.Contains(nameof(InvalidOperationException), StringComparison.Ordinal));
+        Assert.DoesNotContain(result.Diagnostics, diagnostic => diagnostic.Contains("provider-secret-detail", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task OP008_Accepted_operation_is_not_polled_before_provider_interval()
+    {
+        var time = new ManualMemoryTimeProvider(Now);
+        var statusDriver = ScriptedOperationStatusDriver.FromResult(MemoryOperationStatus.Succeeded);
+        using var rootProvider = CreateServiceProvider(time, statusDriver: statusDriver);
+        using var scope = rootProvider.CreateScope();
+        var provider = scope.ServiceProvider;
+        var operation = await SeedRunningOperationWithAcceptanceAsync(
+            provider,
+            updatedAtUtc: Now.AddSeconds(-1),
+            expiresAtUtc: Now.AddMinutes(1),
+            pollAfter: TimeSpan.FromSeconds(5));
+
+        var result = await provider.GetRequiredService<IMemoryAsyncOperationWorker>().PollOperationsAsync();
+        var persisted = await provider.GetRequiredService<IMemoryOperationLedgerStore>()
+            .GetAsync(operation.OperationId);
+
+        Assert.Equal(1, result.Retried);
+        Assert.Equal(0, statusDriver.Calls);
+        Assert.Equal(operation.UpdatedAtUtc, persisted?.UpdatedAtUtc);
+    }
+
+    [Fact]
+    public async Task OP009_Accepted_operation_times_out_at_provider_expiry()
+    {
+        var time = new ManualMemoryTimeProvider(Now);
+        var statusDriver = ScriptedOperationStatusDriver.FromResult(MemoryOperationStatus.Succeeded);
+        using var rootProvider = CreateServiceProvider(time, statusDriver: statusDriver);
+        using var scope = rootProvider.CreateScope();
+        var provider = scope.ServiceProvider;
+        var operation = await SeedRunningOperationWithAcceptanceAsync(
+            provider,
+            updatedAtUtc: Now.AddSeconds(-10),
+            expiresAtUtc: Now,
+            pollAfter: TimeSpan.FromSeconds(1));
+
+        var result = await provider.GetRequiredService<IMemoryAsyncOperationWorker>().PollOperationsAsync();
+        var persisted = await provider.GetRequiredService<IMemoryOperationLedgerStore>()
+            .GetAsync(operation.OperationId);
+
+        Assert.Equal(1, result.TimedOut);
+        Assert.Equal(0, statusDriver.Calls);
+        Assert.Equal(MemoryLedgerStatus.TimedOut, persisted?.Status);
+        Assert.Contains("acceptance expired", persisted?.StatusReason, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task OP010_Still_running_result_resets_provider_poll_interval()
+    {
+        var time = new ManualMemoryTimeProvider(Now);
+        var statusDriver = new ScriptedOperationStatusDriver(_ =>
+            MemoryProviderOperationPollResult.StillRunning("provider still running"));
+        using var rootProvider = CreateServiceProvider(time, statusDriver: statusDriver);
+        using var scope = rootProvider.CreateScope();
+        var provider = scope.ServiceProvider;
+        var operation = await SeedRunningOperationWithAcceptanceAsync(
+            provider,
+            updatedAtUtc: Now.AddSeconds(-10),
+            expiresAtUtc: Now.AddMinutes(1),
+            pollAfter: TimeSpan.FromSeconds(5));
+        var worker = provider.GetRequiredService<IMemoryAsyncOperationWorker>();
+
+        await worker.PollOperationsAsync();
+        var second = await worker.PollOperationsAsync();
+        var persisted = await provider.GetRequiredService<IMemoryOperationLedgerStore>()
+            .GetAsync(operation.OperationId);
+
+        Assert.Equal(1, statusDriver.Calls);
+        Assert.Equal(1, second.Retried);
+        Assert.Equal(Now, persisted?.UpdatedAtUtc);
+    }
+
+    [Fact]
+    public async Task OP011_Final_result_exceeding_original_budget_fails_closed()
+    {
+        var time = new ManualMemoryTimeProvider(Now);
+        var statusDriver = ScriptedOperationStatusDriver.FromResult(MemoryOperationStatus.Succeeded);
+        using var rootProvider = CreateServiceProvider(time, statusDriver: statusDriver);
+        using var scope = rootProvider.CreateScope();
+        var provider = scope.ServiceProvider;
+        var operation = await SeedAcceptedOperationAsync(
+            provider,
+            Now.AddSeconds(-10),
+            new MemoryBudget(2, 3, 100, TimeSpan.FromSeconds(2)));
+
+        var result = await provider.GetRequiredService<IMemoryAsyncOperationWorker>()
+            .PollOperationsAsync();
+        var persisted = await provider.GetRequiredService<IMemoryOperationLedgerStore>()
+            .GetAsync(operation.OperationId);
+
+        Assert.Equal(1, result.DeadLettered);
+        Assert.Equal(MemoryLedgerStatus.Failed, persisted?.Status);
+        Assert.Null(persisted?.GetFinalOperationResult());
+        Assert.Contains("UTF-8 byte budget", persisted?.StatusReason, StringComparison.Ordinal);
+    }
+
     private static ServiceProvider CreateServiceProvider(
         TimeProvider timeProvider,
         IMemoryProviderOperationStatusDriver? statusDriver = null,
@@ -203,13 +366,39 @@ public sealed class MemoryAsyncWorkerTests
 
     private static async Task<MemoryOperationRecord> SeedAcceptedOperationAsync(
         IServiceProvider provider,
-        DateTimeOffset createdAtUtc)
+        DateTimeOffset createdAtUtc,
+        MemoryBudget? budget = null)
     {
         await SeedProviderProfileAsync(provider);
-        var operation = CreateOperationRecord(createdAtUtc);
+        var operation = CreateOperationRecord(createdAtUtc, budget);
         var store = provider.GetRequiredService<IMemoryOperationLedgerStore>();
         await store.CreateAsync(operation);
         return await store.TransitionAsync(operation.OperationId, MemoryLedgerStatus.Accepted, createdAtUtc, "provider accepted");
+    }
+
+    private static async Task<MemoryOperationRecord> SeedRunningOperationWithAcceptanceAsync(
+        IServiceProvider provider,
+        DateTimeOffset updatedAtUtc,
+        DateTimeOffset expiresAtUtc,
+        TimeSpan pollAfter)
+    {
+        await SeedProviderProfileAsync(provider);
+        var operation = CreateOperationRecord(updatedAtUtc.AddSeconds(-1));
+        var accepted = new MemoryOperationAccepted(
+            operation.OperationId,
+            $"/memory/operations/{operation.OperationId.Value:D}",
+            expiresAtUtc,
+            pollAfter,
+            CallbackAvailable: false);
+        var extensions = operation.Extensions.WithAcceptedOperation(accepted);
+        var store = provider.GetRequiredService<IMemoryOperationLedgerStore>();
+        await store.CreateAsync(operation);
+        return await store.TransitionAsync(
+            operation.OperationId,
+            MemoryLedgerStatus.Running,
+            updatedAtUtc,
+            "provider accepted",
+            extensions);
     }
 
     private static async Task SeedProviderProfileAsync(IServiceProvider provider)
@@ -248,9 +437,11 @@ public sealed class MemoryAsyncWorkerTests
                 MemoryExtensionData.Empty));
     }
 
-    private static MemoryOperationRecord CreateOperationRecord(DateTimeOffset createdAtUtc)
+    private static MemoryOperationRecord CreateOperationRecord(
+        DateTimeOffset createdAtUtc,
+        MemoryBudget? budget = null)
     {
-        return MemoryOperationRecord.Create(
+        var operation = MemoryOperationRecord.Create(
             MemoryOperationRecordId.New(),
             MemoryOperationId.New(),
             ProviderId,
@@ -262,6 +453,14 @@ public sealed class MemoryAsyncWorkerTests
             [MemorySourceSnapshotId.Parse("snapshot.project.1")],
             MemoryLedgerRetentionPolicy.Expiring(Now.AddDays(7), Now.AddDays(30)),
             createdAtUtc);
+        var context = MemoryRequestContext.Default with
+        {
+            Budget = budget ?? MemoryBudget.Default
+        };
+        return operation with
+        {
+            Extensions = operation.Extensions.WithMemoryRequestContext(operation, context)
+        };
     }
 
     private static MemoryFeedbackRecord CreateFeedbackRecord(

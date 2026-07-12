@@ -1,3 +1,5 @@
+using CanDoItAll.Memory.Abstractions;
+
 namespace CanDoItAll.Memory.Http;
 
 public sealed class HttpMemoryProviderOptions
@@ -9,6 +11,9 @@ public sealed class HttpMemoryProviderOptions
     public TimeSpan DefaultTimeout { get; set; } = TimeSpan.FromSeconds(30);
 
     public int MaxRetryAttempts { get; set; }
+
+    public MemoryProviderResponseSizeLimit ResponseSizeLimit { get; set; } =
+        MemoryProviderResponseSizeLimit.Default;
 
     public void Validate()
     {
@@ -26,5 +31,7 @@ public sealed class HttpMemoryProviderOptions
         {
             throw new InvalidOperationException("HTTP memory provider retry count cannot be negative.");
         }
+
+        ResponseSizeLimit.EnsureValid();
     }
 }

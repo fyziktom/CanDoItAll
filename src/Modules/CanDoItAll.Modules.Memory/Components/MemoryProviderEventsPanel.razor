@@ -1,0 +1,46 @@
+@namespace CanDoItAll.Modules.Memory.Components
+
+<SurfaceCard data-testid="memory-ui-events">
+    <TextBlock TextStyle="TextStyle.Eyebrow" Value="Events" />
+    <TextBlock TextStyle="TextStyle.Subtitle1" Value="Event inbox" />
+    @if (ActionResult is not null)
+    {
+        <MemoryActionResult Status="@ActionResult.Status.ToString()" Diagnostic="@ActionResult.Diagnostic" />
+    }
+
+    @if (Events.Count > 0)
+    {
+        <Stack Orientation="Orientation.Vertical" Gap="LayoutGap.Medium" Class="memory-ui-ledger-list">
+            @foreach (var item in Events)
+            {
+                <MemoryEventInboxRow Event="@item"
+                                     CanAcknowledge="@MemoryProviderUiAvailability.CanAcknowledgeEvents(Provider)"
+                                     IsBusy="@IsBusy"
+                                     OnAcknowledge="OnAcknowledge" />
+            }
+        </Stack>
+    }
+    else
+    {
+        <EmptyState Eyebrow="No events"
+                    Title="No pending provider events"
+                    Description="Provider event inbox rows appear here when adapters enqueue them." />
+    }
+</SurfaceCard>
+
+@code {
+    [Parameter]
+    public MemoryProviderManagementProfile? Provider { get; set; }
+
+    [Parameter]
+    public IReadOnlyList<MemoryProviderEventUiRecord> Events { get; set; } = [];
+
+    [Parameter]
+    public MemoryProviderEventAcknowledgeUiResult? ActionResult { get; set; }
+
+    [Parameter]
+    public bool IsBusy { get; set; }
+
+    [Parameter]
+    public EventCallback<MemoryProviderEventId> OnAcknowledge { get; set; }
+}

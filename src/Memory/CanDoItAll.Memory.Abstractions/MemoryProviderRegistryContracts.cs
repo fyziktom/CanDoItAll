@@ -46,7 +46,10 @@ public enum MemoryProviderSelectionStatus
     ProviderNotFound = 3,
     ProviderDisabled = 4,
     CapabilityUnavailable = 5,
-    CapabilityDenied = 6
+    CapabilityDenied = 6,
+    ProviderDenied = 7,
+    ProviderSelectionRequired = 8,
+    ProviderConfigurationFailed = 9
 }
 
 public enum MemoryProviderSelectionReason
@@ -98,6 +101,8 @@ public sealed record MemoryProviderSelectionPolicy(
     IReadOnlyList<MemoryCapabilityId> DeniedCapabilities,
     MemoryProviderFallbackBehavior FallbackBehavior)
 {
+    public IReadOnlyList<MemoryProviderInstanceId> AllowedProviderIds { get; init; } = [];
+
     public static MemoryProviderSelectionPolicy RequireCapability(MemoryCapabilityId capability) =>
         new(
             capability,

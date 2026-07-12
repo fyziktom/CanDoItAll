@@ -61,6 +61,13 @@ public sealed record AgentContextRequestMessage(
     AgentContextMessageRole Role,
     string Text);
 
+public sealed record AgentContextRequestMessageTextReplacement(
+    int MessageIndex,
+    string Text);
+
+public sealed record AgentContextRequestMessageTransformation(
+    IReadOnlyList<AgentContextRequestMessageTextReplacement> TextReplacements);
+
 public sealed record AgentContextMessage(
     AgentContextMessageRole Role,
     string Text);
@@ -69,7 +76,10 @@ public sealed record AgentContextContributionRequest(
     AgentDefinition Agent,
     ProviderProfile Provider,
     IReadOnlyList<AgentContextRequestMessage> RequestMessages,
-    AgentContextContributionPolicy Policy);
+    AgentContextContributionPolicy Policy)
+{
+    public AgentRuntimeContextIntent ContextIntent { get; init; } = AgentRuntimeContextIntent.Empty;
+}
 
 public sealed record AgentContextContributionResult(
     AgentContextContributionStatus Status,
@@ -77,6 +87,8 @@ public sealed record AgentContextContributionResult(
     IReadOnlyDictionary<string, string> TraceMetadata,
     string FailureMessage)
 {
+    public AgentContextRequestMessageTransformation? RequestMessageTransformation { get; init; }
+
     public static AgentContextContributionResult Provided(
         IReadOnlyList<AgentContextMessage> messages,
         IReadOnlyDictionary<string, string>? traceMetadata = null)
@@ -104,6 +116,19 @@ public sealed record AgentContextContributionResult(
             [],
             NormalizeTraceMetadata(traceMetadata),
             failureMessage.Trim());
+    }
+
+    public AgentContextContributionResult WithRequestMessageTextReplacement(
+        int messageIndex,
+        string text)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegative(messageIndex);
+        ArgumentNullException.ThrowIfNull(text);
+        return this with
+        {
+            RequestMessageTransformation = new AgentContextRequestMessageTransformation(
+                [new AgentContextRequestMessageTextReplacement(messageIndex, text)])
+        };
     }
 
     private static IReadOnlyDictionary<string, string> NormalizeTraceMetadata(

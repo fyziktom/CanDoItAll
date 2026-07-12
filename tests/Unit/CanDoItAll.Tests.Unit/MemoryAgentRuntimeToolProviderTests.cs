@@ -21,9 +21,11 @@ public sealed class MemoryAgentRuntimeToolProviderTests
         var toolProvider = new MemoryAgentRuntimeToolProvider(handler, TimeProvider.System);
         var agent = CreateAgent(new AgentMemoryAccessSettings
         {
+            InvocationMode = AgentMemoryInvocationMode.Automatic,
             CanUseMemoryTools = true,
             CanIngestSources = true,
-            PreferredProviderInstanceId = "memory.programming",
+            PreferredProviderInstanceId = MemoryProviderInstanceId.Parse("memory.programming"),
+            ProviderBindings = [Binding("memory.programming")],
             AllowedSourceScopes = [MemorySourceScope.Manual]
         });
 
@@ -31,17 +33,13 @@ public sealed class MemoryAgentRuntimeToolProviderTests
         var tools = await toolProvider.CreateToolsAsync(context, CancellationToken.None);
         var metadata = toolProvider.GetToolMetadata(context);
 
-        Assert.Equal(6, tools.Count);
+        Assert.Equal(2, tools.Count);
         Assert.Equal(925, toolProvider.Order);
         Assert.Equal(MemoryAgentRuntimeToolProvider.ProviderKey, toolProvider.Descriptor?.ProviderKey);
         Assert.Contains(tools, tool => tool.Name == MemoryAgentRuntimeToolNames.ContextQuery);
-        Assert.Contains(tools, tool => tool.Name == MemoryAgentRuntimeToolNames.IngestText);
-        Assert.Contains(tools, tool => tool.Name == MemoryAgentRuntimeToolNames.FeedbackSubmit);
         Assert.Contains(tools, tool => tool.Name == MemoryAgentRuntimeToolNames.OperationStatus);
-        Assert.Contains(tools, tool => tool.Name == MemoryAgentRuntimeToolNames.OperationCancel);
-        Assert.Contains(tools, tool => tool.Name == MemoryAgentRuntimeToolNames.EventAcknowledge);
         Assert.Contains(metadata, item => item.ToolName == MemoryAgentRuntimeToolNames.ContextQuery && item.OperationKind == AgentRuntimeToolOperationKind.Read);
-        Assert.Contains(metadata, item => item.ToolName == MemoryAgentRuntimeToolNames.OperationCancel && item.OperationKind == AgentRuntimeToolOperationKind.Mutation);
+        Assert.All(metadata, item => Assert.Equal(AgentRuntimeToolOperationKind.Read, item.OperationKind));
     }
 
     [Fact]
@@ -54,8 +52,10 @@ public sealed class MemoryAgentRuntimeToolProviderTests
         var toolProvider = new MemoryAgentRuntimeToolProvider(handler, TimeProvider.System);
         var agent = CreateAgent(new AgentMemoryAccessSettings
         {
+            InvocationMode = AgentMemoryInvocationMode.Automatic,
             CanUseMemoryTools = true,
-            PreferredProviderInstanceId = "memory.programming",
+            PreferredProviderInstanceId = MemoryProviderInstanceId.Parse("memory.programming"),
+            ProviderBindings = [Binding("memory.programming")],
             AllowedCapabilityIds = [MemoryCapabilityIds.ContextQuerySync]
         });
 
@@ -66,8 +66,8 @@ public sealed class MemoryAgentRuntimeToolProviderTests
 
         Assert.Equal(MemoryToolResultStatus.Completed, result.Status);
         Assert.Equal("memory.programming", result.ProviderInstanceId);
-        Assert.Equal("Architecture notes", result.Summary);
-        Assert.Equal("Use generic memory provider boundaries.", Assert.Single(result.Sections).Text);
+        Assert.Equal("MEMORY-DATA | Architecture notes", result.Summary);
+        Assert.Equal("MEMORY-DATA | Use generic memory provider boundaries.", Assert.Single(result.Sections).Text);
         Assert.NotNull(result.FeedbackHandle);
         Assert.NotNull(handler.LastQuery);
         Assert.Equal("memory.programming", handler.LastQuery.SelectionPolicy.ExplicitProviderId?.Value);
@@ -85,13 +85,17 @@ public sealed class MemoryAgentRuntimeToolProviderTests
         var toolProvider = new MemoryAgentRuntimeToolProvider(handler, TimeProvider.System);
         var programmingAgent = CreateAgent(new AgentMemoryAccessSettings
         {
+            InvocationMode = AgentMemoryInvocationMode.Automatic,
             CanUseMemoryTools = true,
-            PreferredProviderInstanceId = "memory.programming"
+            PreferredProviderInstanceId = MemoryProviderInstanceId.Parse("memory.programming"),
+            ProviderBindings = [Binding("memory.programming")]
         });
         var businessAgent = CreateAgent(new AgentMemoryAccessSettings
         {
+            InvocationMode = AgentMemoryInvocationMode.Automatic,
             CanUseMemoryTools = true,
-            PreferredProviderInstanceId = "memory.business"
+            PreferredProviderInstanceId = MemoryProviderInstanceId.Parse("memory.business"),
+            ProviderBindings = [Binding("memory.business")]
         });
 
         var programmingTool = await CreateToolAsync(toolProvider, programmingAgent, MemoryAgentRuntimeToolNames.ContextQuery);
@@ -119,8 +123,10 @@ public sealed class MemoryAgentRuntimeToolProviderTests
         var toolProvider = new MemoryAgentRuntimeToolProvider(handler, TimeProvider.System);
         var agent = CreateAgent(new AgentMemoryAccessSettings
         {
+            InvocationMode = AgentMemoryInvocationMode.Automatic,
             CanUseMemoryTools = true,
-            PreferredProviderInstanceId = "memory.missing"
+            PreferredProviderInstanceId = MemoryProviderInstanceId.Parse("memory.missing"),
+            ProviderBindings = [Binding("memory.missing")]
         });
 
         var tool = await CreateToolAsync(toolProvider, agent, MemoryAgentRuntimeToolNames.ContextQuery);
@@ -149,8 +155,10 @@ public sealed class MemoryAgentRuntimeToolProviderTests
         var toolProvider = new MemoryAgentRuntimeToolProvider(handler, TimeProvider.System);
         var agent = CreateAgent(new AgentMemoryAccessSettings
         {
+            InvocationMode = AgentMemoryInvocationMode.Automatic,
             CanUseMemoryTools = true,
-            PreferredProviderInstanceId = "memory.async",
+            PreferredProviderInstanceId = MemoryProviderInstanceId.Parse("memory.async"),
+            ProviderBindings = [Binding("memory.async")],
             AllowedCapabilityIds = [MemoryCapabilityIds.ContextQueryAsync]
         });
 
@@ -167,29 +175,94 @@ public sealed class MemoryAgentRuntimeToolProviderTests
     }
 
     [Fact]
-    public async Task Ingest_text_tool_denies_manual_source_scope_before_dispatch()
+    public async Task Unsupported_mutation_tools_are_not_exposed_even_for_legacy_ingestion_settings()
     {
         var handler = new RecordingMemoryOperationHandler();
         var toolProvider = new MemoryAgentRuntimeToolProvider(handler, TimeProvider.System);
         var agent = CreateAgent(new AgentMemoryAccessSettings
         {
+            InvocationMode = AgentMemoryInvocationMode.Automatic,
             CanUseMemoryTools = true,
             CanIngestSources = true,
-            PreferredProviderInstanceId = "memory.programming",
+            PreferredProviderInstanceId = MemoryProviderInstanceId.Parse("memory.programming"),
+            ProviderBindings = [Binding("memory.programming")],
             AllowedSourceScopes = [MemorySourceScope.Project]
         });
 
-        var tool = await CreateToolAsync(toolProvider, agent, MemoryAgentRuntimeToolNames.IngestText);
-        var result = await InvokeToolAsync<MemoryIngestTextToolResult>(
-            tool,
-            new MemoryIngestTextToolInput(
-                "Manual note",
-                "Provider extraction notes.",
-                SourceCategory: "architecture"));
+        var tools = await toolProvider.CreateToolsAsync(CreateContext(agent), CancellationToken.None);
 
-        Assert.Equal(MemoryToolResultStatus.SourceScopeDenied, result.Status);
-        Assert.False(result.DispatchAttempted);
+        Assert.Equal(
+            [MemoryAgentRuntimeToolNames.ContextQuery, MemoryAgentRuntimeToolNames.OperationStatus],
+            tools.Select(tool => tool.Name));
         Assert.Empty(handler.SourceCaptureRequests);
+    }
+
+    [Theory]
+    [InlineData("preferred")]
+    [InlineData("default")]
+    [InlineData("assignment")]
+    public async Task Legacy_unbound_provider_selector_is_rejected_before_tool_dispatch(string selector)
+    {
+        var selectorJson = selector switch
+        {
+            "preferred" => "\"preferredProviderInstanceId\":\"memory.hidden\"",
+            "default" => "\"defaultProviderInstanceId\":\"memory.hidden\"",
+            _ => "\"providerAssignments\":[{\"scope\":\"Workflow\",\"key\":\"workflow-a\",\"providerInstanceId\":\"memory.hidden\"}]"
+        };
+        var configurationJson = "{\"memory\":{\"canUseMemoryTools\":true," + selectorJson + "}}";
+        var handler = new RecordingMemoryOperationHandler();
+        var toolProvider = new MemoryAgentRuntimeToolProvider(handler, TimeProvider.System);
+
+        await Assert.ThrowsAsync<AgentMemoryConfigurationException>(async () =>
+            await toolProvider.CreateToolsAsync(
+                CreateContext(CreateAgent(configurationJson)),
+                CancellationToken.None));
+
+        Assert.Empty(handler.QueryRequests);
+    }
+
+    [Fact]
+    public async Task Configuration_with_no_remaining_binding_rejects_query_without_dispatch()
+    {
+        var handler = new RecordingMemoryOperationHandler();
+        var toolProvider = new MemoryAgentRuntimeToolProvider(handler, TimeProvider.System);
+        var agent = CreateAgent(new AgentMemoryAccessSettings
+        {
+            InvocationMode = AgentMemoryInvocationMode.Automatic,
+            CanUseMemoryTools = true
+        });
+        var tool = await CreateToolAsync(toolProvider, agent, MemoryAgentRuntimeToolNames.ContextQuery);
+
+        var result = await InvokeToolAsync<MemoryContextQueryToolResult>(
+            tool,
+            new MemoryContextQueryToolInput("must not dispatch"));
+
+        Assert.Equal(MemoryToolResultStatus.NoProviderConfigured, result.Status);
+        Assert.False(result.DispatchAttempted);
+        Assert.Empty(handler.QueryRequests);
+    }
+
+    [Theory]
+    [InlineData(AgentMemoryInvocationMode.Disabled)]
+    [InlineData(AgentMemoryInvocationMode.ExplicitDirective)]
+    public async Task Non_automatic_invocation_mode_exposes_no_tools_and_never_dispatches(
+        AgentMemoryInvocationMode mode)
+    {
+        var handler = new RecordingMemoryOperationHandler();
+        var toolProvider = new MemoryAgentRuntimeToolProvider(handler, TimeProvider.System);
+        var agent = CreateAgent(new AgentMemoryAccessSettings
+        {
+            InvocationMode = mode,
+            CanUseMemoryTools = true,
+            ProviderBindings = [Binding("memory.programming")]
+        });
+
+        var tools = await toolProvider.CreateToolsAsync(CreateContext(agent), CancellationToken.None);
+        var metadata = toolProvider.GetToolMetadata(CreateContext(agent));
+
+        Assert.Empty(tools);
+        Assert.Empty(metadata);
+        Assert.Empty(handler.QueryRequests);
     }
 
     [Fact]
@@ -212,11 +285,23 @@ public sealed class MemoryAgentRuntimeToolProviderTests
             """{"existing":true}""",
             new AgentMemoryAccessSettings
             {
+                InvocationMode = AgentMemoryInvocationMode.Automatic,
                 CanUseMemoryTools = true,
                 CanIngestSources = true,
-                PreferredProviderInstanceId = " memory.programming ",
-                DefaultProviderInstanceId = "memory.default",
-                AllowedProviderInstanceIds = ["memory.programming", " memory.business "],
+                PreferredProviderInstanceId = MemoryProviderInstanceId.Parse(" memory.programming "),
+                DefaultProviderInstanceId = MemoryProviderInstanceId.Parse("memory.default"),
+                ProviderBindings =
+                [
+                    Binding("memory.programming"),
+                    Binding("memory.business"),
+                    Binding("memory.default")
+                ],
+                AllowedProviderInstanceIds =
+                [
+                    MemoryProviderInstanceId.Parse("memory.programming"),
+                    MemoryProviderInstanceId.Parse(" memory.business "),
+                    MemoryProviderInstanceId.Parse("memory.default")
+                ],
                 AllowedCapabilityIds = [MemoryCapabilityIds.ContextQuerySync, MemoryCapabilityIds.FeedbackImmediate],
                 DeniedCapabilityIds = [MemoryCapabilityIds.ContextQueryAsync],
                 AllowedSourceScopes = [MemorySourceScope.Manual, MemorySourceScope.Project],
@@ -225,17 +310,19 @@ public sealed class MemoryAgentRuntimeToolProviderTests
                     new AgentMemoryProviderAssignmentSetting(
                         MemoryProviderAssignmentScope.Workflow,
                         " workflow-a ",
-                        " memory.business ")
+                        MemoryProviderInstanceId.Parse(" memory.business "))
                 ]
             });
 
         var settings = AgentMemoryAccessMetadata.Read(configurationJson);
 
         Assert.True(settings.CanUseMemoryTools);
-        Assert.True(settings.CanIngestSources);
-        Assert.Equal("memory.programming", settings.PreferredProviderInstanceId);
-        Assert.Equal("memory.default", settings.DefaultProviderInstanceId);
-        Assert.Equal(["memory.programming", "memory.business"], settings.AllowedProviderInstanceIds);
+        Assert.False(settings.CanIngestSources);
+        Assert.Equal("memory.programming", settings.PreferredProviderInstanceId?.Value);
+        Assert.Equal("memory.default", settings.DefaultProviderInstanceId?.Value);
+        Assert.Equal(
+            ["memory.business", "memory.default", "memory.programming"],
+            settings.AllowedProviderInstanceIds.Select(provider => provider.Value));
         Assert.Equal(
             [MemoryCapabilityIds.ContextQuerySync, MemoryCapabilityIds.FeedbackImmediate],
             settings.AllowedCapabilityIds);
@@ -254,6 +341,11 @@ public sealed class MemoryAgentRuntimeToolProviderTests
         return tools.Single(tool => tool.Name == toolName);
     }
 
+    private static AgentMemoryProviderBindingSetting Binding(string providerId) =>
+        new(
+            AgentMemoryProviderAlias.Parse(providerId),
+            MemoryProviderInstanceId.Parse(providerId));
+
     private static async Task<TResult> InvokeToolAsync<TResult>(
         AITool tool,
         object input)
@@ -262,7 +354,7 @@ public sealed class MemoryAgentRuntimeToolProviderTests
         var rawResult = await function.InvokeAsync(
             new AIFunctionArguments
             {
-                ["request"] = input
+                ["input"] = input
             });
 
         return rawResult switch
@@ -303,15 +395,25 @@ public sealed class MemoryAgentRuntimeToolProviderTests
             SuppressApprovalRequirements: false,
             AgentRuntimeToolProviderPurpose.InteractiveChat,
             RuntimeSessionKey: "unit-memory-tools",
-            AgentRuntimeContextIntent.Empty,
-            Tags: new Dictionary<string, string>
-            {
-                [MemoryAgentRuntimeToolTags.WorkflowId] = "workflow-a",
-                [MemoryAgentRuntimeToolTags.ProcessId] = "process-a"
-            });
+            new AgentRuntimeContextIntent(
+                SourceKind: "workflow",
+                SourceId: "workflow-a",
+                ProcessRunId: "process-a",
+                ProcessStepId: string.Empty,
+                TargetScope: string.Empty,
+                IsGovernedProcessStep: false,
+                BrowserToolsAllowed: true,
+                AllowsProductMutation: true,
+                WorkspaceToolProfile: null,
+                WorkspaceScope: WorkspaceScopeDescriptor.Project("project-a"),
+                AllowedOperations: []),
+            Tags: new Dictionary<string, string>());
     }
 
     private static AgentDefinition CreateAgent(AgentMemoryAccessSettings memoryAccess)
+        => CreateAgent(AgentMemoryAccessMetadata.Write("{}", memoryAccess));
+
+    private static AgentDefinition CreateAgent(string configurationJson)
     {
         var now = DateTimeOffset.UtcNow;
         return new AgentDefinition(
@@ -328,7 +430,7 @@ public sealed class MemoryAgentRuntimeToolProviderTests
             0.2,
             RequirePerServiceCallChatHistoryPersistence: false,
             EnableBackgroundResponses: false,
-            AgentMemoryAccessMetadata.Write("{}", memoryAccess),
+            configurationJson,
             IsTemplate: false,
             TemplateKey: string.Empty,
             AgentPermissionsPolicy.Default,

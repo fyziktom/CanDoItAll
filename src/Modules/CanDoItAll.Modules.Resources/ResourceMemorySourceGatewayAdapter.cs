@@ -1,8 +1,9 @@
+using CanDoItAll.Memory.SourceGateway;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.Memory.Abstractions;
 using CanDoItAll.Memory.Application;
-using MafMemorySourceKind = CanDoItAll.AgentFramework.Core.MemorySourceKind;
-using MafMemorySourceSnapshot = CanDoItAll.AgentFramework.Core.MemorySourceSnapshot;
+using MafMemorySourceKind = CanDoItAll.Memory.SourceGateway.MemorySourceKind;
+using MafMemorySourceSnapshot = CanDoItAll.Memory.SourceGateway.MemorySourceSnapshot;
 
 namespace CanDoItAll.Modules.Resources;
 

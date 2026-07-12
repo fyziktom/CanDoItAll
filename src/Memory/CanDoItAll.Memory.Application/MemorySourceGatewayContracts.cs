@@ -1,7 +1,7 @@
+using CanDoItAll.Memory.SourceGateway;
 using System.Text.RegularExpressions;
-using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.Memory.Abstractions;
-using MafMemorySourceKind = CanDoItAll.AgentFramework.Core.MemorySourceKind;
+using MafMemorySourceKind = CanDoItAll.Memory.SourceGateway.MemorySourceKind;
 
 namespace CanDoItAll.Memory.Application;
 
@@ -25,14 +25,18 @@ public enum MemorySourcePayloadForm
     BinaryOrExternalReference = 5
 }
 
-public readonly partial record struct MemorySourceModuleId
+public readonly record struct MemorySourceModuleId
 {
+    private static readonly Regex ModuleIdPattern = new(
+        "^[a-z][a-z0-9]*(?:[.-][a-z0-9]+)*$",
+        RegexOptions.CultureInvariant | RegexOptions.Compiled);
+
     public MemorySourceModuleId(string value)
     {
         var normalized = string.IsNullOrWhiteSpace(value)
             ? throw new ArgumentException("Memory source module id must not be empty.", nameof(value))
             : value.Trim();
-        if (!ModuleIdPattern().IsMatch(normalized))
+        if (!ModuleIdPattern.IsMatch(normalized))
         {
             throw new ArgumentException(
                 "Memory source module ids must use dotted lowercase tokens such as 'workbench.project-structure'.",
@@ -47,9 +51,6 @@ public readonly partial record struct MemorySourceModuleId
     public static MemorySourceModuleId Parse(string value) => new(value);
 
     public override string ToString() => Value;
-
-    [GeneratedRegex("^[a-z][a-z0-9]*(?:[.-][a-z0-9]+)*$", RegexOptions.CultureInvariant)]
-    private static partial Regex ModuleIdPattern();
 }
 
 public sealed record MemorySourceGatewayPolicy(

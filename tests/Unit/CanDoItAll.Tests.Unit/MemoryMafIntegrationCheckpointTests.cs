@@ -10,9 +10,19 @@ public sealed class MemoryMafIntegrationCheckpointTests
     public void Maf_memory_entry_points_use_shared_policy_resolver_and_result_shaper()
     {
         var root = FindRepositoryRoot();
-        var toolSource = ReadSource(root, "src/Modules/CanDoItAll.Modules.AgentFramework/AgentTools/MemoryAgentRuntimeToolProvider.cs");
-        var workflowSource = ReadSource(root, "src/Modules/CanDoItAll.Modules.AgentFramework/WorkflowExecutors/MemoryWorkflowExecutor.cs");
-        var contextSource = ReadSource(root, "src/Modules/CanDoItAll.Modules.AgentFramework/Context/MemoryAgentContextContributor.cs");
+        var toolSource = string.Join(
+            Environment.NewLine,
+            ReadSource(root, "src/MAF/Memory/CanDoItAll.AgentFramework.Memory/Tools/MemoryAgentRuntimeToolProvider.cs"),
+            ReadSource(root, "src/MAF/Memory/CanDoItAll.AgentFramework.Memory/Tools/MemoryAgentQueryTools.cs"),
+            ReadSource(root, "src/MAF/Memory/CanDoItAll.AgentFramework.Memory/Tools/MemoryAgentToolPolicyFactory.cs"));
+        var workflowSource = string.Join(
+            Environment.NewLine,
+            ReadSource(root, "src/MAF/Memory/CanDoItAll.AgentFramework.Memory/WorkflowExecutors/MemoryWorkflowRequestFactory.cs"),
+            ReadSource(root, "src/MAF/Memory/CanDoItAll.AgentFramework.Memory/WorkflowExecutors/MemoryWorkflowQueryOperation.cs"));
+        var contextSource = string.Join(
+            Environment.NewLine,
+            ReadSource(root, "src/MAF/Memory/CanDoItAll.AgentFramework.Memory/Context/MemoryAgentContextContributor.cs"),
+            ReadSource(root, "src/MAF/Memory/CanDoItAll.AgentFramework.Memory/Context/MemoryAgentContextQueryDispatcher.cs"));
 
         Assert.Contains("MemoryMafProviderPolicyResolver.Resolve", toolSource, StringComparison.Ordinal);
         Assert.Contains("MemoryMafProviderPolicyResolver.Resolve", workflowSource, StringComparison.Ordinal);
@@ -24,6 +34,11 @@ public sealed class MemoryMafIntegrationCheckpointTests
         Assert.DoesNotContain("private MemoryProviderPolicyResolution ResolvePolicy", contextSource, StringComparison.Ordinal);
         Assert.DoesNotContain("private static MemoryContextQueryToolResult MapQueryResult", toolSource, StringComparison.Ordinal);
         Assert.DoesNotContain("private static MemoryContextQueryToolResult MapQueryResult", workflowSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("partial class", toolSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("partial class", contextSource, StringComparison.Ordinal);
+        Assert.False(File.Exists(Path.Combine(
+            root,
+            "src/Modules/CanDoItAll.Modules.AgentFramework/WorkflowExecutors/MemoryWorkflowExecutor.cs")));
     }
 
     [Fact]

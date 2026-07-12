@@ -4,11 +4,13 @@ using System.Text.Json;
 using CanDoItAll.Memory.Abstractions;
 using CanDoItAll.Memory.Application;
 using CanDoItAll.Memory.Http;
+using CanDoItAll.Memory.Protocol.Http;
 
 namespace CanDoItAll.Memory.Tests;
 
 public sealed class MemoryHttpDriverTests
 {
+    private const string ApiKeyEnvironmentVariable = "CANDOITALL_MEMORY_HTTP_TEST_KEY";
     private static readonly DateTimeOffset Now = DateTimeOffset.Parse("2026-07-05T12:00:00Z");
 
     [Fact]
@@ -34,10 +36,12 @@ public sealed class MemoryHttpDriverTests
         Assert.Equal(operation.RequestedCapability.Value, body.RootElement.GetProperty("capabilityId").GetString());
         Assert.True(body.RootElement.TryGetProperty("envelope", out var envelope));
         Assert.Equal(MemoryProtocolVersion.Current.Value, envelope.GetProperty("memoryProtocolVersion").GetProperty("value").GetString());
+        Assert.Equal("workspace-1", envelope.GetProperty("workspaceContext").GetProperty("workspaceId").GetString());
+        Assert.Equal("11111111-1111-1111-1111-111111111111", envelope.GetProperty("executionContext").GetProperty("projectId").GetString());
     }
 
     [Fact]
-    public async Task HTTP002_Async_accepted_response_maps_to_running_operation()
+    public async Task HTTP002_Async_accepted_response_is_rejected_without_status_driver()
     {
         using var handler = new CapturingHandler((_, _) =>
             JsonResponse(HttpMemoryProviderResponse.FromAccepted(new MemoryOperationAccepted(
@@ -50,10 +54,11 @@ public sealed class MemoryHttpDriverTests
 
         var result = await driver.ExecuteContextQueryAsync(CreateHttpProfile(), CreateOperation(), CreateQuery());
 
-        Assert.Equal(MemoryProviderDriverResultKind.OperationAccepted, result.Kind);
-        Assert.Equal(MemoryLedgerStatus.Running, result.LedgerStatus);
-        Assert.Equal("/memory/operations/11111111-1111-1111-1111-111111111111", result.AcceptedOperation?.StatusPath);
+        Assert.Equal(MemoryProviderDriverResultKind.UnsupportedCapability, result.Kind);
+        Assert.Equal(MemoryLedgerStatus.Failed, result.LedgerStatus);
+        Assert.Null(result.AcceptedOperation);
         Assert.Null(result.ContextPack);
+        Assert.Contains("operation-status polling is not implemented", result.Diagnostic, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -157,6 +162,217 @@ public sealed class MemoryHttpDriverTests
         Assert.Equal(1, handler.RequestCount);
     }
 
+    [Fact]
+    public async Task HTTP009_Missing_credential_environment_variable_fails_before_dispatch()
+    {
+        using var handler = new CapturingHandler((_, _) =>
+            JsonResponse(HttpMemoryProviderResponse.FromContextPack(CreateContextPack())));
+        var driver = CreateDriver(handler);
+        var profile = CreateHttpProfile();
+        Environment.SetEnvironmentVariable(ApiKeyEnvironmentVariable, null);
+
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            driver.ExecuteContextQueryAsync(profile, CreateOperation(), CreateQuery()));
+
+        Assert.Contains(ApiKeyEnvironmentVariable, exception.Message, StringComparison.Ordinal);
+        Assert.Equal(0, handler.RequestCount);
+    }
+
+    [Fact]
+    public async Task HTTP010_Persisted_raw_credential_is_rejected()
+    {
+        using var handler = new CapturingHandler((_, _) =>
+            JsonResponse(HttpMemoryProviderResponse.FromContextPack(CreateContextPack())));
+        var driver = CreateDriver(handler);
+        var profile = CreateHttpProfile();
+        var values = profile.Manifest.Extensions.Values.ToDictionary();
+        values[HttpMemoryProviderConfigurationKeys.LegacyRawApiKey] =
+            JsonSerializer.SerializeToElement("must-not-be-stored");
+        profile = profile with
+        {
+            Manifest = profile.Manifest with
+            {
+                Extensions = new MemoryExtensionData(values)
+            }
+        };
+
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            driver.ExecuteContextQueryAsync(profile, CreateOperation(), CreateQuery()));
+
+        Assert.Contains("raw credential", exception.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("must-not-be-stored", exception.Message, StringComparison.Ordinal);
+        Assert.Equal(0, handler.RequestCount);
+    }
+
+    [Fact]
+    public async Task HTTP011_Cleartext_non_loopback_endpoint_is_rejected()
+    {
+        using var handler = new CapturingHandler((_, _) =>
+            JsonResponse(HttpMemoryProviderResponse.FromContextPack(CreateContextPack())));
+        var driver = CreateDriver(handler);
+        var profile = CreateHttpProfile();
+        var values = profile.Manifest.Extensions.Values.ToDictionary();
+        values[HttpMemoryProviderConfigurationKeys.BaseUrl] =
+            JsonSerializer.SerializeToElement("http://memory.example.test");
+        profile = profile with
+        {
+            Manifest = profile.Manifest with
+            {
+                Extensions = new MemoryExtensionData(values)
+            }
+        };
+
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            driver.ExecuteContextQueryAsync(profile, CreateOperation(), CreateQuery()));
+
+        Assert.Contains("HTTPS", exception.Message, StringComparison.Ordinal);
+        Assert.Equal(0, handler.RequestCount);
+    }
+
+    [Theory]
+    [InlineData(HttpMemoryProviderConfigurationKeys.BaseUrl, "https://memory.example.test?token=secret")]
+    [InlineData(HttpMemoryProviderConfigurationKeys.QueryPath, "/v1/context/query?token=secret")]
+    public async Task HTTP011A_Secret_bearing_url_locations_are_rejected(
+        string extensionKey,
+        string extensionValue)
+    {
+        using var handler = new CapturingHandler((_, _) =>
+            JsonResponse(HttpMemoryProviderResponse.FromContextPack(CreateContextPack())));
+        var driver = CreateDriver(handler);
+        var profile = WithExtension(CreateHttpProfile(), extensionKey, extensionValue);
+
+        var exception = await Record.ExceptionAsync(() =>
+            driver.ExecuteContextQueryAsync(profile, CreateOperation(), CreateQuery()));
+
+        var rejection = Assert.IsAssignableFrom<Exception>(exception);
+        Assert.True(rejection is ArgumentException or InvalidOperationException);
+        Assert.DoesNotContain("secret", rejection.Message, StringComparison.Ordinal);
+        Assert.Equal(0, handler.RequestCount);
+    }
+
+    [Fact]
+    public async Task HTTP012_Invalid_credential_environment_variable_reference_is_rejected()
+    {
+        using var handler = new CapturingHandler((_, _) =>
+            JsonResponse(HttpMemoryProviderResponse.FromContextPack(CreateContextPack())));
+        var driver = CreateDriver(handler);
+        var profile = WithExtension(
+            CreateHttpProfile(),
+            HttpMemoryProviderConfigurationKeys.ApiKeyEnvironmentVariable,
+            "INVALID-VARIABLE-NAME");
+
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            driver.ExecuteContextQueryAsync(profile, CreateOperation(), CreateQuery()));
+
+        Assert.Contains("environment-variable identifier", exception.Message, StringComparison.Ordinal);
+        Assert.Equal(0, handler.RequestCount);
+    }
+
+    [Fact]
+    public async Task HTTP013_Invalid_authentication_header_name_is_rejected()
+    {
+        using var handler = new CapturingHandler((_, _) =>
+            JsonResponse(HttpMemoryProviderResponse.FromContextPack(CreateContextPack())));
+        var driver = CreateDriver(handler);
+        var profile = WithExtension(
+            CreateHttpProfile(),
+            HttpMemoryProviderConfigurationKeys.AuthHeaderName,
+            "X-Memory:Injected");
+
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            driver.ExecuteContextQueryAsync(profile, CreateOperation(), CreateQuery()));
+
+        Assert.Contains("header name", exception.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(0, handler.RequestCount);
+    }
+
+    [Fact]
+    public async Task HTTP014_Credential_header_injection_is_rejected_before_dispatch()
+    {
+        using var handler = new CapturingHandler((_, _) =>
+            JsonResponse(HttpMemoryProviderResponse.FromContextPack(CreateContextPack())));
+        var driver = CreateDriver(handler);
+        var profile = CreateHttpProfile();
+        Environment.SetEnvironmentVariable(ApiKeyEnvironmentVariable, "provider-secret\r\nX-Injected: true");
+
+        try
+        {
+            var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+                driver.ExecuteContextQueryAsync(profile, CreateOperation(), CreateQuery()));
+
+            Assert.Contains("invalid header value", exception.Message, StringComparison.OrdinalIgnoreCase);
+            Assert.DoesNotContain("provider-secret", exception.Message, StringComparison.Ordinal);
+            Assert.Equal(0, handler.RequestCount);
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable(ApiKeyEnvironmentVariable, "provider-secret");
+        }
+    }
+
+    [Theory]
+    [InlineData("memory/query")]
+    [InlineData("//attacker.example.test/collect")]
+    [InlineData("https://attacker.example.test/collect")]
+    [InlineData("/memory\\query")]
+    [InlineData("/memory//query")]
+    [InlineData("/memory/query\r\nX-Injected:true")]
+    [InlineData("//user:password@attacker.example.test/collect")]
+    public async Task HTTP015_Invalid_query_path_is_rejected_before_authenticated_dispatch(string queryPath)
+    {
+        using var handler = new CapturingHandler((_, _) =>
+            JsonResponse(HttpMemoryProviderResponse.FromContextPack(CreateContextPack())));
+        var driver = CreateDriver(handler);
+        var profile = WithExtension(
+            CreateHttpProfile(),
+            HttpMemoryProviderConfigurationKeys.QueryPath,
+            queryPath);
+
+        await Assert.ThrowsAsync<ArgumentException>(() =>
+            driver.ExecuteContextQueryAsync(profile, CreateOperation(), CreateQuery()));
+
+        Assert.Equal(0, handler.RequestCount);
+        Assert.Null(handler.RequestUri);
+        Assert.Null(handler.Authorization);
+    }
+
+    [Fact]
+    public async Task HTTP016_Network_health_path_is_rejected_before_authenticated_dispatch()
+    {
+        using var handler = new CapturingHandler((_, _) =>
+            JsonResponse(new MemoryProviderHealth(
+                MemoryProviderHealthStatus.Reachable,
+                LastErrorCategory: null,
+                CreateHttpProfile().Manifest)));
+        var driver = CreateDriver(handler);
+        var profile = WithExtension(
+            CreateHttpProfile(),
+            HttpMemoryProviderConfigurationKeys.HealthPath,
+            "//user:password@attacker.example.test/collect");
+
+        await Assert.ThrowsAsync<ArgumentException>(() => driver.GetHealthAsync(profile));
+
+        Assert.Equal(0, handler.RequestCount);
+        Assert.Null(handler.RequestUri);
+        Assert.Null(handler.Authorization);
+    }
+
+    private static MemoryProviderProfile WithExtension(
+        MemoryProviderProfile profile,
+        string key,
+        string value)
+    {
+        var values = profile.Manifest.Extensions.Values.ToDictionary();
+        values[key] = JsonSerializer.SerializeToElement(value);
+        return profile with
+        {
+            Manifest = profile.Manifest with
+            {
+                Extensions = new MemoryExtensionData(values)
+            }
+        };
+    }
+
     private static HttpMemoryProviderDriver CreateDriver(CapturingHandler handler)
     {
         return new HttpMemoryProviderDriver(
@@ -166,10 +382,11 @@ public sealed class MemoryHttpDriverTests
 
     private static MemoryProviderProfile CreateHttpProfile(int? timeoutMilliseconds = null)
     {
+        Environment.SetEnvironmentVariable(ApiKeyEnvironmentVariable, "provider-secret");
         var extensions = new List<(string Key, JsonElement Value)>
         {
             (HttpMemoryProviderConfigurationKeys.BaseUrl, JsonSerializer.SerializeToElement("https://memory.example.test")),
-            (HttpMemoryProviderConfigurationKeys.ApiKey, JsonSerializer.SerializeToElement("provider-secret"))
+            (HttpMemoryProviderConfigurationKeys.ApiKeyEnvironmentVariable, JsonSerializer.SerializeToElement(ApiKeyEnvironmentVariable))
         };
         if (timeoutMilliseconds.HasValue)
         {
@@ -228,7 +445,23 @@ public sealed class MemoryHttpDriverTests
                 MemorySourceSnapshotId.Parse("snapshot.project.1"),
                 SourceModule: nameof(MemorySourceKind.Project),
                 SourceRecordIds: ["project-1"],
-                Citations: ["Project 1"]));
+                Citations: ["Project 1"]))
+        {
+            Context = new MemoryRequestContext(
+                new MemoryWorkspaceContext("workspace-1", "Workspace 1", CustomerId: null, Domain: null, Tags: []),
+                new MemoryExecutionContext(
+                    ProjectId: "11111111-1111-1111-1111-111111111111",
+                    ProjectName: "Project 1",
+                    ProcessId: "process-1",
+                    ProcessStepId: "step-1",
+                    ProcessStepName: null,
+                    WorkflowId: "workflow-1",
+                    WorkflowNodeId: "node-1",
+                    ArtifactIds: []),
+                MemoryPolicyContext.InternalDefault,
+                MemoryBudget.Default,
+                MemoryExtensionData.Empty)
+        };
     }
 
     private static MemoryContextPack CreateContextPack()

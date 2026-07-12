@@ -1,3 +1,4 @@
+using CanDoItAll.Memory.SourceGateway;
 using System.Text.RegularExpressions;
 using CanDoItAll.Memory.Abstractions;
 using CanDoItAll.Memory.Application;
@@ -93,6 +94,9 @@ public sealed class MemoryFoundationCheckpointTests
             @"\b(?:record|record\s+class|class|interface)\s+(?:I)?MemorySourceSnapshot(?:Provider)?\b",
             RegexOptions.CultureInvariant);
         var matches = EnumerateSourceFiles("src", "Memory")
+            .Where(path => !path.Contains(
+                $"{Path.DirectorySeparatorChar}CanDoItAll.Memory.SourceGateway.Abstractions{Path.DirectorySeparatorChar}",
+                StringComparison.OrdinalIgnoreCase))
             .SelectMany(path => File.ReadLines(path)
                 .Select((line, index) => new
                 {

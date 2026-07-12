@@ -1,0 +1,123 @@
+@namespace CanDoItAll.Modules.Memory.Components
+
+<section data-testid="memory-ui-provider-editor">
+<FormSection Title="Provider profile"
+             Description="Edit generic selection, transport, and capability metadata.">
+    @if (Editor.LegacyRawCredentialKeys.Count > 0)
+    {
+        <Alert AlertStyle="AlertStyle.Warning">
+            This profile contains a legacy raw credential. Configure an environment-variable reference before saving;
+            the raw value will not be persisted.
+        </Alert>
+    }
+
+    <Grid Gap="LayoutGap.Large" ColumnTemplate="repeat(auto-fit,minmax(16rem,1fr))">
+        <FormField Text="Instance id">
+            <TextBox Value="@Editor.InstanceId"
+                     ValueChanged="@(value => Editor.InstanceId = value)"
+                     data-testid="memory-ui-editor-instance-id" />
+        </FormField>
+        <FormField Text="Display name">
+            <TextBox Value="@Editor.DisplayName"
+                     ValueChanged="@(value => Editor.DisplayName = value)"
+                     data-testid="memory-ui-editor-display-name" />
+        </FormField>
+        <FormField Text="Driver">
+            <DropDown TValue="MemoryProviderDriverKind"
+                      Data="@DriverKinds"
+                      Value="@Editor.DriverKind"
+                      ValueChanged="@(value => Editor.DriverKind = value)"
+                      data-testid="memory-ui-editor-driver" />
+        </FormField>
+        <FormField Text="Health">
+            <DropDown TValue="MemoryProviderHealthState"
+                      Data="@HealthStates"
+                      Value="@Editor.HealthState"
+                      ValueChanged="@(value => Editor.HealthState = value)"
+                      data-testid="memory-ui-editor-health" />
+        </FormField>
+        <FormField Text="Workspace">
+            <DropDown TValue="MemoryProviderWorkspaceScope"
+                      Data="@WorkspaceScopes"
+                      Value="@Editor.WorkspaceScope"
+                      ValueChanged="@(value => Editor.WorkspaceScope = value)"
+                      data-testid="memory-ui-editor-workspace" />
+        </FormField>
+        <FormField Text="Fallback">
+            <DropDown TValue="MemoryProviderFallbackBehavior"
+                      Data="@FallbackBehaviors"
+                      Value="@Editor.FallbackBehavior"
+                      ValueChanged="@(value => Editor.FallbackBehavior = value)"
+                      data-testid="memory-ui-editor-fallback" />
+        </FormField>
+        <FormField Text="Provider kind">
+            <TextBox Value="@Editor.ProviderKind"
+                     ValueChanged="@(value => Editor.ProviderKind = value)"
+                     data-testid="memory-ui-editor-provider-kind" />
+        </FormField>
+        <FormField Text="Provider UI URL">
+            <TextBox Value="@Editor.ProviderUiUrl"
+                     ValueChanged="@(value => Editor.ProviderUiUrl = value)"
+                     Disabled="@(!Editor.SupportsIframeUi)"
+                     data-testid="memory-ui-editor-provider-ui-url" />
+        </FormField>
+        <FormField Text="Selection tags">
+            <TagEditor Value="@Editor.SelectionTags"
+                       ValueChanged="UpdateSelectionTags"
+                       InputTestId="memory-ui-editor-selection-tags"
+                       TestId="memory-ui-editor-selection-tags-editor"
+                       Placeholder="Add provider selection tag" />
+        </FormField>
+    </Grid>
+
+    @if (Editor.DriverKind is MemoryProviderDriverKind.Http or MemoryProviderDriverKind.NativeRemote)
+    {
+        <MemoryProviderHttpTransportEditor Transport="@Editor.Http"
+                                           DriverKind="@Editor.DriverKind" />
+    }
+    else if (Editor.DriverKind == MemoryProviderDriverKind.Mcp)
+    {
+        <MemoryProviderMcpTransportEditor Transport="@Editor.Mcp" />
+    }
+
+    <MemoryProviderCapabilityEditor Editor="@Editor"
+                                    Changed="RefreshCapabilityDependencies" />
+
+    <Button Text="Save provider"
+            Icon="save"
+            ButtonStyle="ButtonStyle.Primary"
+            Size="ButtonSize.Small"
+            Click="OnSave"
+            Disabled="@IsBusy"
+            IsBusy="@IsBusy"
+            data-testid="memory-ui-save-provider" />
+</FormSection>
+</section>
+
+@code {
+    private static readonly IReadOnlyList<MemoryProviderDriverKind> DriverKinds =
+        MemoryProviderCapabilityPolicy.ExecutableDriverKinds;
+    private static readonly MemoryProviderHealthState[] HealthStates = Enum.GetValues<MemoryProviderHealthState>();
+    private static readonly MemoryProviderWorkspaceScope[] WorkspaceScopes =
+        [MemoryProviderWorkspaceScope.AllWorkspaces];
+    private static readonly MemoryProviderFallbackBehavior[] FallbackBehaviors = Enum.GetValues<MemoryProviderFallbackBehavior>();
+
+    [Parameter, EditorRequired]
+    public MemoryProviderProfileEditorModel Editor { get; set; } = new();
+
+    [Parameter]
+    public bool IsBusy { get; set; }
+
+    [Parameter]
+    public EventCallback OnSave { get; set; }
+
+    private void UpdateSelectionTags(IReadOnlyList<string> tags)
+    {
+        Editor.SelectionTags = tags.ToList();
+    }
+
+    private void RefreshCapabilityDependencies()
+    {
+        StateHasChanged();
+    }
+}

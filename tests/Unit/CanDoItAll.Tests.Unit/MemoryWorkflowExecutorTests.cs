@@ -21,6 +21,8 @@ public sealed class MemoryWorkflowExecutorTests
         var descriptor = Assert.Single(descriptors);
         Assert.Equal(WorkflowExecutorIds.Memory, descriptor.Id);
         Assert.True(descriptor.CanExecute);
+        Assert.False(descriptor.PermissionPolicy.RequiredCapabilities.HasFlag(
+            WorkflowExecutorCapabilityFlags.WritesExternalData));
         Assert.True(MemoryWorkflowExecutorCompatibility.TryMapLegacyExecutorId(new WorkflowExecutorId("cognitive-memory.recall"), out var mappedId));
         Assert.Equal(WorkflowExecutorIds.Memory, mappedId);
     }
@@ -45,8 +47,8 @@ public sealed class MemoryWorkflowExecutorTests
             });
 
         Assert.Equal(MemoryToolResultStatus.Completed, result.Status);
-        Assert.Equal("Workflow context", result.Summary);
-        Assert.Equal("Use the generic handler.", Assert.Single(result.Sections).Text);
+        Assert.Equal("MEMORY-DATA | Workflow context", result.Summary);
+        Assert.Equal("MEMORY-DATA | Use the generic handler.", Assert.Single(result.Sections).Text);
         Assert.NotNull(handler.LastQuery);
         Assert.Equal("memory.workflow", handler.LastQuery.SelectionPolicy.ExplicitProviderId?.Value);
         Assert.Equal(MemoryOperationCallerKind.WorkflowExecutor, handler.LastQuery.Caller.Kind);
@@ -92,7 +94,6 @@ public sealed class MemoryWorkflowExecutorTests
                 Query = "async workflow query",
                 ProviderInstanceId = "memory.async",
                 AllowAsync = true,
-                WaitForAsyncCompletion = false,
                 AllowedCapabilityIds = [MemoryCapabilityIds.ContextQueryAsync.Value]
             });
 
@@ -100,6 +101,40 @@ public sealed class MemoryWorkflowExecutorTests
         Assert.NotNull(result.AsyncOperation);
         Assert.Equal(operationId.Value, result.AsyncOperation.OperationId);
         Assert.Equal(MemoryCapabilityIds.ContextQueryAsync.Value, handler.LastQuery?.SelectionPolicy.RequiredCapability.Value);
+    }
+
+    [Fact]
+    public async Task Accepted_async_query_is_read_through_a_later_operation_status_node()
+    {
+        var operationId = MemoryOperationId.New();
+        var handler = new RecordingMemoryOperationHandler
+        {
+            QueryResult = RecordingMemoryOperationHandler.AcceptedQuery(operationId),
+            StatusResult = RecordingMemoryOperationHandler.CompletedStatus(operationId, "persisted async context")
+        };
+        var executor = new MemoryWorkflowExecutor(handler, TimeProvider.System);
+
+        var accepted = await ExecuteAsync<MemoryContextQueryToolResult>(
+            executor,
+            new MemoryWorkflowExecutorSettings
+            {
+                Operation = MemoryWorkflowOperation.ContextQuery,
+                Query = "async query",
+                ProviderInstanceId = "memory.workflow",
+                AllowAsync = true,
+                AllowedCapabilityIds = [MemoryCapabilityIds.ContextQueryAsync.Value]
+            });
+        var completed = await ExecuteAsync<MemoryOperationStatusToolResult>(
+            executor,
+            new MemoryWorkflowExecutorSettings
+            {
+                Operation = MemoryWorkflowOperation.OperationStatus,
+                OperationId = operationId.Value,
+                AllowedCapabilityIds = [MemoryCapabilityIds.OperationStatus.Value]
+            });
+
+        Assert.Equal(MemoryToolResultStatus.Accepted, accepted.Status);
+        Assert.Equal("MEMORY-DATA | persisted async context", completed.FinalResult?.OutputText);
     }
 
     [Fact]
@@ -122,6 +157,7 @@ public sealed class MemoryWorkflowExecutorTests
 
         Assert.Equal(MemoryToolResultStatus.NoProviderConfigured, result.Status);
         Assert.False(result.DispatchAttempted);
+        Assert.False(result.Diagnostic.StartsWith("MEMORY-DATA", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -144,27 +180,66 @@ public sealed class MemoryWorkflowExecutorTests
         Assert.Empty(handler.QueryRequests);
     }
 
-    [Fact]
-    public async Task Manual_ingestion_denies_source_scope_before_handler_dispatch()
+    [Theory]
+    [InlineData("IngestText")]
+    [InlineData("FeedbackSubmit")]
+    [InlineData("OperationCancel")]
+    [InlineData("EventAcknowledge")]
+    public async Task Unsupported_legacy_mutation_string_is_typed_and_never_dispatched(string operation)
     {
         var handler = new RecordingMemoryOperationHandler();
         var executor = new MemoryWorkflowExecutor(handler, TimeProvider.System);
 
-        var result = await ExecuteAsync<MemoryIngestTextToolResult>(
+        var result = await ExecuteRawAsync<MemoryContextQueryToolResult>(
             executor,
-            new MemoryWorkflowExecutorSettings
-            {
-                Operation = MemoryWorkflowOperation.IngestText,
-                ProviderInstanceId = "memory.workflow",
-                Title = "Workflow note",
-                ContentText = "Memory source content.",
-                SourceCategory = "workflow",
-                AllowedSourceScopes = [MemorySourceScope.Project.ToString()]
-            });
+            $$"""{"operation":"{{operation}}","contentText":"malicious legacy write"}""");
 
-        Assert.Equal(MemoryToolResultStatus.SourceScopeDenied, result.Status);
+        Assert.Equal(MemoryToolResultStatus.UnsupportedOperation, result.Status);
         Assert.False(result.DispatchAttempted);
         Assert.Empty(handler.SourceCaptureRequests);
+    }
+
+    [Theory]
+    [InlineData(1)]
+    [InlineData(2)]
+    [InlineData(4)]
+    [InlineData(5)]
+    public async Task Unsupported_legacy_mutation_number_is_typed_and_never_dispatched(int operation)
+    {
+        var handler = new RecordingMemoryOperationHandler();
+        var executor = new MemoryWorkflowExecutor(handler, TimeProvider.System);
+
+        var result = await ExecuteRawAsync<MemoryContextQueryToolResult>(
+            executor,
+            $$"""{"operation":{{operation}},"contentText":"malicious legacy write"}""");
+
+        Assert.Equal(MemoryToolResultStatus.UnsupportedOperation, result.Status);
+        Assert.False(result.DispatchAttempted);
+        Assert.Empty(handler.SourceCaptureRequests);
+    }
+
+    [Theory]
+    [InlineData("""
+        {"operation":"ContextQuery","query":"query","providerAssignments":[
+          {"scope":"Workflow","key":"FLOW-A","providerInstanceId":"memory.workflow"},
+          {"scope":"Workflow","key":"flow-a","providerInstanceId":"memory.other"}
+        ]}
+        """)]
+    [InlineData("""
+        {"operation":"ContextQuery","query":"query","providerAssignments":[
+          {"scope":999,"key":"flow-a","providerInstanceId":"memory.workflow"}
+        ]}
+        """)]
+    public async Task Invalid_workflow_assignment_is_typed_and_never_dispatched(string settingsJson)
+    {
+        var handler = new RecordingMemoryOperationHandler();
+        var executor = new MemoryWorkflowExecutor(handler, TimeProvider.System);
+
+        var result = await ExecuteRawAsync<MemoryContextQueryToolResult>(executor, settingsJson);
+
+        Assert.Equal(MemoryToolResultStatus.InvalidRequest, result.Status);
+        Assert.False(result.DispatchAttempted);
+        Assert.Empty(handler.QueryRequests);
     }
 
     [Fact]
@@ -189,9 +264,18 @@ public sealed class MemoryWorkflowExecutorTests
         MemoryWorkflowExecutor executor,
         MemoryWorkflowExecutorSettings settings,
         string inputJson = "{}")
+        => await ExecuteRawAsync<TResult>(
+            executor,
+            JsonSerializer.Serialize(settings, JsonOptions),
+            inputJson);
+
+    private static async Task<TResult> ExecuteRawAsync<TResult>(
+        MemoryWorkflowExecutor executor,
+        string settingsJson,
+        string inputJson = "{}")
     {
         var result = await executor.ExecuteAsync(
-            CreateContext(executor.Descriptor, settings),
+            CreateContext(executor.Descriptor, settingsJson),
             new WorkflowNodeInput(inputJson));
         return JsonSerializer.Deserialize<TResult>(result.PayloadJson, JsonOptions)
             ?? throw new InvalidOperationException("Memory workflow executor returned null JSON.");
@@ -199,7 +283,7 @@ public sealed class MemoryWorkflowExecutorTests
 
     private static WorkflowExecutorExecutionContext CreateContext(
         WorkflowExecutorDescriptor descriptor,
-        MemoryWorkflowExecutorSettings settings)
+        string settingsJson)
     {
         var node = new WorkflowNode(
             new WorkflowNodeId("workflow-memory"),
@@ -216,7 +300,7 @@ public sealed class MemoryWorkflowExecutorTests
                 ResultShape: WorkflowExecutorDescriptorFactory.JsonShape)
             {
                 ExecutorId = descriptor.Id,
-                ExecutorSettingsJson = JsonSerializer.Serialize(settings, JsonOptions),
+                ExecutorSettingsJson = settingsJson,
                 ExecutionPolicy = WorkflowExecutorExecutionPolicy.Default
             });
         var definition = new WorkflowDefinition(
@@ -252,6 +336,8 @@ public sealed class MemoryWorkflowExecutorTests
 
         public MemoryOperationHandlerResult<MemoryContextPack> QueryResult { get; set; } =
             CompletedQuery("Context", "Result");
+
+        public MemoryOperationHandlerResult<MemoryOperationRecord>? StatusResult { get; set; }
 
         public List<MemoryOperationHandlerRequest<MemoryContextQueryRequest>> QueryRequests { get; } = [];
 
@@ -327,6 +413,61 @@ public sealed class MemoryWorkflowExecutorTests
                 Diagnostic: "No memory provider configured.");
         }
 
+        public static MemoryOperationHandlerResult<MemoryOperationRecord> CompletedStatus(
+            MemoryOperationId operationId,
+            string outputText)
+        {
+            var provider = CreateProvider("memory.async");
+            var now = DateTimeOffset.UtcNow;
+            var operation = MemoryOperationRecord.Create(
+                MemoryOperationRecordId.New(),
+                operationId,
+                provider.InstanceId,
+                MemoryCapabilityIds.ContextQueryAsync,
+                MemoryOperationKind.ContextQuery,
+                new MemoryLedgerRequester(
+                    "workflow-test",
+                    AgentId: null,
+                    AgentRole: "WorkflowExecutor",
+                    SessionId: "session-test",
+                    WorkflowId: "workflow-test",
+                    WorkflowNodeId: "node-test",
+                    ProcessId: null,
+                    ProcessStepId: null),
+                MemoryCorrelationId.New(),
+                MemoryCausationId.New(),
+                [],
+                MemoryLedgerRetentionPolicy.Expiring(now.AddDays(1), now.AddDays(7)),
+                now);
+            var finalResult = new MemoryOperationResult(
+                operationId,
+                MemoryOperationStatus.Succeeded,
+                MemoryPayload.FromText(outputText),
+                [],
+                [],
+                []);
+            operation = operation with
+            {
+                Status = MemoryLedgerStatus.Completed,
+                Extensions = operation.Extensions.WithFinalOperationResult(
+                    operationId,
+                    provider.InstanceId,
+                    finalResult)
+            };
+            return new MemoryOperationHandlerResult<MemoryOperationRecord>(
+                MemoryOperationHandlerStatus.Completed,
+                MemoryProviderSelectionResult.Selected(
+                    provider,
+                    MemoryProviderSelectionReason.ExplicitProvider,
+                    MemoryCapabilityIds.OperationStatus),
+                operation,
+                operation,
+                AcceptedOperation: null,
+                FeedbackHandle: null,
+                DriverDispatchAttempted: false,
+                Diagnostic: "Completed.");
+        }
+
         public Task<MemoryOperationHandlerResult<MemoryContextPack>> ExecuteQueryAsync(
             MemoryOperationHandlerRequest<MemoryContextQueryRequest> request,
             CancellationToken cancellationToken = default)
@@ -353,7 +494,7 @@ public sealed class MemoryWorkflowExecutorTests
         public Task<MemoryOperationHandlerResult<MemoryOperationRecord>> GetStatusAsync(
             MemoryOperationHandlerRequest<MemoryOperationStatusRequest> request,
             CancellationToken cancellationToken = default)
-            => throw new NotSupportedException();
+            => Task.FromResult(StatusResult ?? throw new NotSupportedException());
 
         public Task<MemoryOperationHandlerResult<MemoryOperationRecord>> CancelAsync(
             MemoryOperationHandlerRequest<MemoryOperationCancellationRequest> request,

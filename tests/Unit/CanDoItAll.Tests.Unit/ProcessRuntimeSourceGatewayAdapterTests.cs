@@ -1,3 +1,4 @@
+using CanDoItAll.Memory.SourceGateway;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Memory.Application;
@@ -151,7 +152,7 @@ public sealed class ProcessRuntimeSourceGatewayAdapterTests
         var snapshot = await adapter.ReadSnapshotAsync(request);
 
         Assert.Same(provider.Snapshot, snapshot);
-        Assert.Equal(RunId, provider.LastRequest?.RunId?.Value);
+        Assert.Equal(RunId, provider.LastRequest?.RunId);
         Assert.Equal(25, provider.LastRequest?.Take);
     }
 

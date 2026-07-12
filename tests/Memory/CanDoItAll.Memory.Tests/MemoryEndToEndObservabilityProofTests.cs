@@ -62,6 +62,8 @@ public sealed class MemoryEndToEndObservabilityProofTests
         Assert.NotNull(programmingResult.ContextPack?.FeedbackHandle);
         Assert.NotNull(businessAccepted.AcceptedOperation);
 
+        Assert.IsType<FixedTimeProvider>(serviceProvider.GetRequiredService<TimeProvider>())
+            .Advance(businessAccepted.AcceptedOperation.PollAfter);
         var operationWorkerResult = await serviceProvider.GetRequiredService<IMemoryAsyncOperationWorker>()
             .PollOperationsAsync();
         var completedBusinessOperation = await serviceProvider.GetRequiredService<IMemoryOperationLedgerStore>()
@@ -562,11 +564,18 @@ public sealed class MemoryEndToEndObservabilityProofTests
         throw new DirectoryNotFoundException("Could not locate repository root containing CanDoItAll.slnx.");
     }
 
-    private sealed class FixedTimeProvider(DateTimeOffset now) : TimeProvider
+    private sealed class FixedTimeProvider(DateTimeOffset initialNow) : TimeProvider
     {
+        private DateTimeOffset now = initialNow;
+
         public override DateTimeOffset GetUtcNow()
         {
             return now;
+        }
+
+        public void Advance(TimeSpan elapsed)
+        {
+            now += elapsed;
         }
     }
 

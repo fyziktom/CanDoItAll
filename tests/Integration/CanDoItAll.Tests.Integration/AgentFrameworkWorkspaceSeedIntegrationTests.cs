@@ -19,6 +19,7 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
             item => string.Equals(item.Key, "document-spreadsheet-reconciliation-inline-skill", StringComparison.OrdinalIgnoreCase));
         var retiredCapabilityId = Guid.NewGuid();
         var retiredBundleWorkflowCapabilityId = Guid.NewGuid();
+        var retiredMemoryCapabilityId = Guid.NewGuid();
         var retiredCapability = new CapabilityCatalogItem(
             retiredCapabilityId,
             CapabilityKind.Skill,
@@ -47,6 +48,18 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
             string.Empty,
             null,
             true);
+        var retiredMemoryCapability = new CapabilityCatalogItem(
+            retiredMemoryCapabilityId,
+            CapabilityKind.Memory,
+            "legacy-mem0-memory",
+            "Legacy Mem0 Memory",
+            "Retired catalog memory capability.",
+            "https://api.mem0.ai",
+            "{}",
+            CapabilityProofStatus.NotRun,
+            string.Empty,
+            null,
+            true);
         var financialStrategist = Assert.Single(
             seed.Agents,
             item => string.Equals(item.Name, "Financial Strategist", StringComparison.Ordinal));
@@ -55,7 +68,9 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
             item => string.Equals(item.Name, "Spreadsheet Analyst", StringComparison.Ordinal));
         var catalog = seed.ToCatalog() with
         {
-            Capabilities = seed.Capabilities.Concat([retiredCapability, retiredBundleWorkflowCapability]).ToList(),
+            Capabilities = seed.Capabilities
+                .Concat([retiredCapability, retiredBundleWorkflowCapability, retiredMemoryCapability])
+                .ToList(),
             Agents = seed.Agents.Select(agent => agent.Id == financialStrategist.Id
                 ? agent with
                 {
@@ -73,6 +88,13 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
                             retiredBundleWorkflowCapability.Kind,
                             CapabilityProofStatus.NotRun,
                             null,
+                            string.Empty),
+                        new AgentCapabilityAssignment(
+                            retiredMemoryCapabilityId,
+                            retiredMemoryCapability.Key,
+                            retiredMemoryCapability.Kind,
+                            CapabilityProofStatus.NotRun,
+                            null,
                             string.Empty)
                     ]).ToList()
                 }
@@ -86,9 +108,11 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
 
         Assert.DoesNotContain(normalized.Capabilities, item => item.Id == retiredCapabilityId);
         Assert.DoesNotContain(normalized.Capabilities, item => item.Id == retiredBundleWorkflowCapabilityId);
+        Assert.DoesNotContain(normalized.Capabilities, item => item.Id == retiredMemoryCapabilityId);
         Assert.DoesNotContain(normalized.Capabilities, item => string.Equals(item.Key, "candoitall-bundle-workflow", StringComparison.OrdinalIgnoreCase));
         Assert.DoesNotContain(normalizedFinancialStrategist.Capabilities, item => item.CapabilityId == retiredCapabilityId);
         Assert.DoesNotContain(normalizedFinancialStrategist.Capabilities, item => item.CapabilityId == retiredBundleWorkflowCapabilityId);
+        Assert.DoesNotContain(normalizedFinancialStrategist.Capabilities, item => item.CapabilityId == retiredMemoryCapabilityId);
         Assert.Contains(spreadsheetAnalyst.Capabilities, item => item.CapabilityId == reconciliationCapability.Id);
         Assert.Contains(normalizedFinancialStrategist.Capabilities, item => item.CapabilityId == reconciliationCapability.Id);
     }
