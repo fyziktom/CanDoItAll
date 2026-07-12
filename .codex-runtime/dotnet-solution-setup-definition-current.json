@@ -1,0 +1,1365 @@
+{
+  "Kind": "process-template-definition",
+  "Key": "dotnet-solution-setup",
+  "DisplayName": ".NET solution baseline subprocess",
+  "Summary": "Atomic subprocess that either initializes an explicitly planned .NET baseline or verifies an explicitly declared existing solution context before feature work.",
+  "ValueStatement": "Turns the fragile first implementation step into a small observable child process with explicit context, initialization, verification, and build-validation checkpoints without hardcoding a specific app archetype.",
+  "CustomerName": "Software delivery process",
+  "OwnerName": "Engineering manager",
+  "InterfaceContractSummary": "The parent supplies a typed solution context. Only an initialize context supplies creation details; verify-existing supplies only declared paths and returns read-only verification evidence.",
+  "GovernanceNotes": "Do not hide initialization or existing-context failures behind later implementation steps. The selected provisioning mode, declared paths, and build output must be observable before feature work starts.",
+  "ChangeSummary": "Introduces a reusable child process for explicit .NET baseline initialization or verification lanes required by larger software-development processes.",
+  "GovernancePolicySummary": "A development slice may proceed only after its declared baseline is initialized or its declared existing context is verified.",
+  "ConstitutionRuleSummary": "The typed solution context and baseline evidence are durable process artifacts, not transient agent chat decisions.",
+  "OperatingModeSummary": "Assisted execution with explicit manager observation is sufficient because each step has a narrow, verifiable output.",
+  "SimulationReadinessSummary": "Small enough for local validation and nested subprocess tests while still representing a real .NET project bootstrap.",
+  "Criticality": "Standard",
+  "AutonomyLevel": "Assisted",
+  "OperatingMode": "AssistedExecution",
+  "LaunchDriverActivations": [
+    {
+      "DriverKey": "dotnet.launch-contract",
+      "Settings": {
+        "Mode": "solution-setup",
+        "ProductCompletionRequiredPathsByStep": "{\"create-dotnet-project\":[\"${DotNetSolutionFileForwardSlash}\",\"${DotNetAppProjectFileForwardSlash}\"],\"add-test-project\":[\"${DotNetSolutionFileForwardSlash}\",\"${DotNetAppProjectFileForwardSlash}\",\"${DotNetTestProjectFileForwardSlash}\"],\"repair-solution-setup\":[\"${DotNetSolutionFileForwardSlash}\",\"${DotNetAppProjectFileForwardSlash}\",\"${DotNetTestProjectFileForwardSlash}\"]}",
+        "ProductCompletionRequiredToolReceiptsByStep": "{\"create-dotnet-project\":[\"template=sln\",\"template=${DotNetAppTemplate}\",\"workspace_pwsh_run_script\"],\"add-test-project\":[\"workspace_pwsh_run_script\"],\"repair-solution-setup\":[\"workspace_pwsh_run_script\"],\"validate-first-build\":[\"workspace_dotnet_restore\",\"workspace_dotnet_build\",\"workspace_dotnet_test\"],\"validate-first-build-after-repair\":[\"workspace_dotnet_restore\",\"workspace_dotnet_build\",\"workspace_dotnet_test\"]}",
+        "ProductCompletionRequiredFileContentChecksByStep": "{\"create-dotnet-project\":[{\"pathCandidates\":[\"${DotNetSolutionFileForwardSlash}\"],\"requiredTextAnyGroups\":[[\"${DotNetAppProjectSolutionRelativePath}\"]]}],\"add-test-project\":[{\"pathCandidates\":[\"${DotNetSolutionFileForwardSlash}\"],\"requiredTextAnyGroups\":[[\"${DotNetAppProjectSolutionRelativePath}\"],[\"${DotNetTestProjectSolutionRelativePath}\"]]},{\"pathCandidates\":[\"${DotNetTestProjectFileForwardSlash}\"],\"requiredTextAnyGroups\":[[\"${DotNetAppProjectReferenceRelativePath}\"]]}],\"repair-solution-setup\":[{\"pathCandidates\":[\"${DotNetSolutionFileForwardSlash}\"],\"requiredTextAnyGroups\":[[\"${DotNetAppProjectSolutionRelativePath}\"],[\"${DotNetTestProjectSolutionRelativePath}\"]]},{\"pathCandidates\":[\"${DotNetTestProjectFileForwardSlash}\"],\"requiredTextAnyGroups\":[[\"${DotNetAppProjectReferenceRelativePath}\"]]}]}",
+        "ProcessStepScopedLaunchVariablePrefixesByStep": "{\"scaffold-contract\":[\"DotNetCreateProject\",\"DotNetAddTestProject\"],\"create-dotnet-project\":[\"DotNetCreateProject\"],\"add-test-project\":[\"DotNetAddTestProject\"],\"repair-solution-setup\":[\"DotNetCreateProject\",\"DotNetAddTestProject\"]}"
+      },
+      "InputArtifactBindings": [
+        {
+          "BindingKey": "solution-context",
+          "SourceStepKey": "slice-architecture-check",
+          "ArtifactExpectationKey": "dotnet-solution-context",
+          "PayloadSchema": "dotnet.solution-context/v1"
+        }
+      ]
+    }
+  ],
+  "SourceFrameworkKeys": [
+    "nist-ssdf",
+    "owasp-samm"
+  ],
+  "SharedRoleRefs": [
+    "delivery-manager",
+    "software-engineer",
+    "qa-lead"
+  ],
+  "SharedArtifactRefs": [
+    "implementation-plan",
+    "implementation-change-set",
+    "test-evidence-pack"
+  ],
+  "SharedChecklistRefs": [],
+  "SharedValidationRefs": [],
+  "SharedPromptRefs": [],
+  "LocalRoleRefs": [],
+  "LocalArtifactRefs": [],
+  "LocalChecklistRefs": [],
+  "LocalValidationRefs": [],
+  "LocalPromptRefs": [],
+  "Metrics": [
+    "Time from declared solution context to first successful solution build.",
+    "Percentage of initialization runs with an included planned test project and reference.",
+    "Number of baseline defects discovered after implementation work begins."
+  ],
+  "Risks": [
+    "Wrong solution or project names leak into generated namespaces and test references.",
+    "Test project omitted or disconnected from the application project.",
+    "Template command succeeds but first build fails because dependencies or target frameworks are wrong."
+  ],
+  "TailoringRules": [
+    "For an existing repository, use provisioningMode verify-existing; it validates only explicitly declared paths and must not create or repair product files.",
+    "Select the project template from current-run project structure or upstream architecture notes. Do not let generic examples or remembered prior runs provide the stack. Escalate when the stack or archetype is missing or conflicts with requested validation.",
+    "Select the test project template from the parent contract or existing repository convention. Do not hardcode xUnit, MSTest, or NUnit in the process."
+  ],
+  "RoleUsages": [
+    {
+      "Key": "delivery-manager",
+      "RoleResourceKey": "delivery-manager",
+      "DisplayName": "Setup manager",
+      "Purpose": "Track scaffold readiness, blockers, and handoff evidence for the parent process.",
+      "StaffingIntent": "A manager-capable human or AI agent that can summarize progress and escalate missing inputs.",
+      "PreferredExecutorKind": "agent",
+      "PreferredProjectAssignmentRole": "Manager",
+      "IsRequired": true,
+      "AllowsFallback": true,
+      "RequiresExplicitApproval": false,
+      "DefaultAllocationPercent": 100,
+      "CanvasX": 40,
+      "CanvasY": 40
+    },
+    {
+      "Key": "software-engineer",
+      "RoleResourceKey": "software-engineer",
+      "DisplayName": ".NET scaffold engineer",
+      "Purpose": "Create the requested .NET solution, app project, test project, and references from the scaffold contract without assuming a UI stack, service shape, or default test framework.",
+      "StaffingIntent": "A general .NET-capable implementer with access to repository files and build tools; must choose app and test templates only from current-run project structure or upstream artifacts.",
+      "PreferredExecutorKind": "agent",
+      "PreferredProjectAssignmentRole": "Developer",
+      "IsRequired": true,
+      "AllowsFallback": true,
+      "RequiresExplicitApproval": false,
+      "DefaultAllocationPercent": 100,
+      "CanvasX": 280,
+      "CanvasY": 40
+    },
+    {
+      "Key": "qa-lead",
+      "RoleResourceKey": "qa-lead",
+      "DisplayName": "Validation reviewer",
+      "Purpose": "Confirm the solution builds and the test project is usable before handoff.",
+      "StaffingIntent": "A reviewer that can evaluate build and test evidence.",
+      "PreferredExecutorKind": "agent",
+      "PreferredProjectAssignmentRole": "Reviewer",
+      "IsRequired": true,
+      "AllowsFallback": true,
+      "RequiresExplicitApproval": false,
+      "DefaultAllocationPercent": 50,
+      "CanvasX": 3059,
+      "CanvasY": 370
+    }
+  ],
+  "Steps": [
+    {
+      "Order": 0,
+      "Key": "scaffold-contract",
+      "Title": "Capture solution scaffold contract",
+      "Subtitle": "Names before files",
+      "Notes": "Record solution name, app project name, app project directory, test project name, test project directory, target framework, product root, requested .NET archetype, test framework preference, allowed template switches, and the explicit project topology. Use the grounded product root from project structure or parent artifacts. If no product root is grounded, block unless the parent explicitly defines a managed output root as the product. Copy explicit project-structure directories exactly; do not impose a src/tests layout, infer a UI stack, or add unrequested framework or test-framework defaults. When a required project directory is not supplied, derive it only from current launch variables or an authoritative upstream setup contract and record the assumption.",
+      "StepKind": "Start",
+      "AllowsManualSkip": false,
+      "AllowsSafeRefusal": false,
+      "RequiresApproval": false,
+      "RequiresDecisionRecord": false,
+      "InputContractSummary": "Parent process request with target product root, solution name, project names, app archetype, test framework preference, and framework constraints.",
+      "OutputContractSummary": "Unambiguous scaffold contract ready for execution, including solution file candidates and app/test project directories.",
+      "EvidenceContractSummary": "Recorded names, product root, solution file candidates, project paths, target framework, app archetype, test framework preference, and assumptions.",
+      "DecisionRightsSummary": "Setup manager can clarify names but cannot invent externally visible project identity when the parent contract is explicit.",
+      "ExceptionPolicySummary": "Block when naming, product root, app archetype, test framework, or repository target is ambiguous enough to create the wrong files.",
+      "TargetLeadHours": 1,
+      "DependsOnStepKey": "",
+      "DependsOnBranchOutcomeKey": "",
+      "DecisionRoleKey": "",
+      "CanvasX": 260,
+      "CanvasY": 0,
+      "BranchCanvasX": 0,
+      "BranchCanvasY": 0,
+      "Dependencies": [],
+      "RoleAssignments": [
+        {
+          "RoleKey": "delivery-manager",
+          "ResponsibilityKind": "Responsible",
+          "IsRequired": true,
+          "FallbackOrder": 0,
+          "RebindPolicySummary": "Rebind only to a manager-capable operator that can report blockers to the parent run."
+        }
+      ],
+      "ArtifactExpectations": [
+        {
+          "Key": "scaffold-plan",
+          "TemplateKey": "implementation-plan",
+          "Title": "Scaffold contract",
+          "ArtifactKind": "Brief",
+          "IsRequired": true,
+          "TrustRequirement": "ReviewRequired",
+          "SensitivityLevel": "Internal",
+          "RetentionDays": 180,
+          "AllowedFutureUsageSummary": "Used by child and parent managers to verify generated names and paths.",
+          "ValidationRequirementSummary": "Must name the solution, solution file candidates, app project and directory, test project and directory, target framework, product root, app archetype/template, test framework/template, and whether the product root already exists or must be created."
+        }
+      ],
+      "ArtifactInputs": [],
+      "BranchOutcomes": [],
+      "ChecklistRefs": [],
+      "ValidationRefs": [],
+      "PromptRefs": [],
+      "DocRefs": [
+        "processes/dotnet-solution-setup/steps/scaffold-contract.md"
+      ],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure",
+        "ReadUpstreamArtifacts",
+        "WriteManagedProcessArtifacts"
+      ],
+      "OperationTargetScope": "ExternalProductTargetReadOnly"
+    },
+    {
+      "Order": 1,
+      "Key": "create-dotnet-project",
+      "Title": "Create .NET solution and app project",
+      "Subtitle": "Solution skeleton",
+      "Notes": "Create the solution file and requested .NET app project with the agreed names, topology, archetype, and template, then ensure the solution contains the app project before this step completes. Do not cite project-media file paths as source document context unless they are present in current launch variables, current prompt context, inherited upstream artifacts, or current-run tool receipts. Write the primary scaffold artifact using only grounded external-target aliases, managed process refs, project-structure node ids, and current-run tool receipt refs; do not write native absolute paths, scoped storage paths under artifacts/scopes/..., tool-run stdout/stderr paths, managed-files paths, project-media paths, or SourceDocLink values in the artifact body, reason, summary, next actions, or evidenceRefs. Create the grounded product root and contracted app parent directory when they do not exist, then use workspace_dotnet_new with template sln for the solution and the contracted app template at the contracted app directory. A solution-only workspace_dotnet_new receipt does not satisfy the app scaffold requirement. When DotNetCreateProjectExecutionPlan is present, execute it in order: scaffold or verify solution/app files, write DotNetCreateProjectScript to DotNetCreateProjectScriptRef, verify that .ps1 ref, run it with workspace_pwsh_run_script and DotNetCreateProjectSideEffectManifest, then read back the solution and app project file. Do not write the primary steps/create-dotnet-project.md artifact or Completed outcome before the workspace_pwsh_run_script receipt exists; if a retry diagnostic says that receipt is missing, write or verify the helper and run it instead of rerunning workspace_dotnet_new or using force=true. The ProductCompletionRequiredPaths, ProductCompletionRequiredToolReceipts, and ProductCompletionRequiredFileContentChecks launch variables are hard completion gates; do not report Completed until required paths, template receipts, the helper receipt, and the solution app-membership file-content check pass. Existing files are not enough proof: inspect only the files and generated outputs named by the selected template contract or current diagnostic, and repair setup-only drift without changing requested product behavior. Do not create the test project, add feature code, run dotnet build/test/run, start a browser, or default to guessed external-target paths in this step.",
+      "StepKind": "Work",
+      "AllowsManualSkip": false,
+      "AllowsSafeRefusal": false,
+      "RequiresApproval": false,
+      "RequiresDecisionRecord": false,
+      "InputContractSummary": "Scaffold contract with names, paths, and template constraints.",
+      "OutputContractSummary": "Solution file and requested .NET application project are present, and the solution contains the app project.",
+      "EvidenceContractSummary": "Command output, created file list, solution file path, app project path, app solution-membership readback, and explicit note that test-project creation and validation are deferred to later setup steps.",
+      "DecisionRightsSummary": "Scaffold engineer may adjust command syntax but not the agreed project identity.",
+      "ExceptionPolicySummary": "Block on template failure, unexpected project layout, generated names that do not match the contract, missing solution/app project files, or unavailable mutation capability required to scaffold the solution and app project.",
+      "TargetLeadHours": 2,
+      "DependsOnStepKey": "scaffold-contract",
+      "DependsOnBranchOutcomeKey": "",
+      "DecisionRoleKey": "",
+      "CanvasX": 1340,
+      "CanvasY": 0,
+      "BranchCanvasX": 0,
+      "BranchCanvasY": 0,
+      "Dependencies": [
+        {
+          "DependsOnStepKey": "scaffold-contract",
+          "DependsOnBranchOutcomeKey": ""
+        }
+      ],
+      "RoleAssignments": [
+        {
+          "RoleKey": "software-engineer",
+          "ResponsibilityKind": "Responsible",
+          "IsRequired": true,
+          "FallbackOrder": 0,
+          "RebindPolicySummary": "Rebind only to a .NET-capable implementer with repository write access."
+        }
+      ],
+      "ArtifactExpectations": [
+        {
+          "Key": "solution-skeleton-change-set",
+          "TemplateKey": "implementation-change-set",
+          "Title": "Solution skeleton change set",
+          "ArtifactKind": "Deliverable",
+          "IsRequired": true,
+          "TrustRequirement": "ReviewRequired",
+          "SensitivityLevel": "Internal",
+          "RetentionDays": 180,
+          "AllowedFutureUsageSummary": "Used by the implementation slice as the baseline solution structure.",
+          "ValidationRequirementSummary": "Must include the .slnx or .sln solution file, requested .NET app project under the agreed app directory, selected template/archetype proof, app solution-membership evidence, and confirmation that no test project, feature implementation, dotnet run, browser proof, or app startup was performed in this step."
+        }
+      ],
+      "ArtifactInputs": [
+        {
+          "ArtifactExpectationKey": "scaffold-plan",
+          "SourceStepKey": "scaffold-contract"
+        }
+      ],
+      "BranchOutcomes": [],
+      "ChecklistRefs": [],
+      "ValidationRefs": [],
+      "PromptRefs": [],
+      "DocRefs": [
+        "processes/dotnet-solution-setup/steps/create-dotnet-project.md"
+      ],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure",
+        "ReadUpstreamArtifacts",
+        "MutateProductTarget",
+        "WriteManagedProcessArtifacts"
+      ],
+      "OperationTargetScope": "ExternalProductTargetMutable",
+      "ExecutionClass": "RuntimeOwnedToolPlan",
+      "ExecutionContract": {
+        "ExecutionClass": "RuntimeOwnedToolPlan",
+        "RuntimeOwnedExecutorKey": "dotnet.solution-setup",
+        "RequiredRuntimeToolNames": [
+          "workspace_create_directory",
+          "workspace_dotnet_new",
+          "workspace_write_file",
+          "workspace_stat_path",
+          "workspace_pwsh_run_script",
+          "workspace_read_file"
+        ],
+        "RequiredReceipts": [
+          {
+            "Key": "create-solution",
+            "ToolName": "workspace_dotnet_new",
+            "Predicate": "template=sln at ProductRoot using contracted solution name",
+            "RequireSuccessfulExit": true,
+            "RequireCurrentRun": true
+          },
+          {
+            "Key": "create-app-project",
+            "ToolName": "workspace_dotnet_new",
+            "Predicate": "contracted app template at the contracted app directory",
+            "RequireSuccessfulExit": true,
+            "RequireCurrentRun": true
+          },
+          {
+            "Key": "write-helper-script",
+            "ToolName": "workspace_write_file",
+            "Predicate": "DotNetCreateProjectScript written to DotNetCreateProjectScriptRef",
+            "RequireSuccessfulExit": true,
+            "RequireCurrentRun": true
+          },
+          {
+            "Key": "run-helper-script",
+            "ToolName": "workspace_pwsh_run_script",
+            "Predicate": "DotNetCreateProjectScriptRef with DotNetCreateProjectSideEffectManifest in ProductMutation mode",
+            "RequireSuccessfulExit": true,
+            "RequireCurrentRun": true
+          },
+          {
+            "Key": "solution-membership-readback",
+            "ToolName": "workspace_read_file",
+            "Predicate": "solution file readback contains the contracted app project",
+            "RequireSuccessfulExit": true,
+            "RequireCurrentRun": true
+          }
+        ],
+        "ProducedArtifactSlots": [
+          {
+            "ArtifactExpectationKey": "solution-skeleton-change-set",
+            "MaterializationMode": "RuntimeManaged"
+          }
+        ],
+        "DeterministicToolPlan": {
+          "PlanKey": "dotnet.create-project",
+          "PlanKind": "DotNetSolutionCreate",
+          "ScriptRefLaunchVariable": "DotNetCreateProjectScriptRef",
+          "ScriptLaunchVariable": "DotNetCreateProjectScript",
+          "SideEffectManifestLaunchVariable": "DotNetCreateProjectSideEffectManifest",
+          "ExecutionPlanLaunchVariable": "DotNetCreateProjectExecutionPlan",
+          "RequiresReadbackChecks": true,
+          "Operations": [
+            {
+              "Key": "create-solution",
+              "ToolName": "workspace_dotnet_new",
+              "RequiredReceiptKey": "create-solution",
+              "ArgumentsSummary": "Create or verify the solution file at the grounded product root.",
+              "IdempotencyPolicyKey": "current-run-repeatable"
+            },
+            {
+              "Key": "create-app-project",
+              "ToolName": "workspace_dotnet_new",
+              "RequiredReceiptKey": "create-app-project",
+              "ArgumentsSummary": "Create or verify the contracted app project from the selected template.",
+              "IdempotencyPolicyKey": "current-run-repeatable"
+            },
+            {
+              "Key": "write-helper-script",
+              "ToolName": "workspace_write_file",
+              "RequiredReceiptKey": "write-helper-script",
+              "ArgumentsSummary": "Write the reviewed solution-membership helper script.",
+              "IdempotencyPolicyKey": "current-run-repeatable"
+            },
+            {
+              "Key": "run-helper-script",
+              "ToolName": "workspace_pwsh_run_script",
+              "RequiredReceiptKey": "run-helper-script",
+              "ArgumentsSummary": "Run the helper script with the product side-effect manifest.",
+              "IdempotencyPolicyKey": "current-run-repeatable"
+            },
+            {
+              "Key": "solution-membership-readback",
+              "ToolName": "workspace_read_file",
+              "RequiredReceiptKey": "solution-membership-readback",
+              "ArgumentsSummary": "Read back solution membership after helper execution.",
+              "IdempotencyPolicyKey": "current-run-repeatable"
+            }
+          ],
+          "RequiredReceipts": [
+            {
+              "Key": "create-solution",
+              "ToolName": "workspace_dotnet_new",
+              "Predicate": "template=sln at ProductRoot using contracted solution name",
+              "RequireSuccessfulExit": true,
+              "RequireCurrentRun": true
+            },
+            {
+              "Key": "create-app-project",
+              "ToolName": "workspace_dotnet_new",
+              "Predicate": "contracted app template at the contracted app directory",
+              "RequireSuccessfulExit": true,
+              "RequireCurrentRun": true
+            },
+            {
+              "Key": "write-helper-script",
+              "ToolName": "workspace_write_file",
+              "Predicate": "DotNetCreateProjectScript written to DotNetCreateProjectScriptRef",
+              "RequireSuccessfulExit": true,
+              "RequireCurrentRun": true
+            },
+            {
+              "Key": "run-helper-script",
+              "ToolName": "workspace_pwsh_run_script",
+              "Predicate": "DotNetCreateProjectScriptRef with DotNetCreateProjectSideEffectManifest in ProductMutation mode",
+              "RequireSuccessfulExit": true,
+              "RequireCurrentRun": true
+            },
+            {
+              "Key": "solution-membership-readback",
+              "ToolName": "workspace_read_file",
+              "Predicate": "solution file readback contains the contracted app project",
+              "RequireSuccessfulExit": true,
+              "RequireCurrentRun": true
+            }
+          ],
+          "ReadbackChecks": [
+            {
+              "PathCandidates": [
+                "DotNetSolutionFile",
+                "DotNetSolutionFileAlias",
+                "DotNetSolutionFileCandidates"
+              ],
+              "RequiredTextAnyGroups": [
+                [
+                  "DotNetAppProjectFile",
+                  "DotNetAppProjectRelativePath"
+                ]
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "Order": 2,
+      "Key": "add-test-project",
+      "Title": "Add .NET test project and reference",
+      "Subtitle": "Test lane from the start",
+      "Notes": "When DotNetAddTestProjectExecutionPlan is present, execute it in order before any primary artifact write: write DotNetAddTestProjectScript verbatim to DotNetAddTestProjectScriptRef, verify that .ps1 ref, invoke workspace_pwsh_run_script with DotNetAddTestProjectSideEffectManifest, then read back the solution and test project files. The generated helper creates the missing test project with the typed test template before it wires solution membership and the project reference. Do not write Status: InProgress, progress notes, placeholders, or a Completed artifact before the script receipt exists. Create the test project using the test framework grounded by the parent contract or existing repository convention, add it to the solution, and reference the application project where appropriate. The ProductCompletionRequiredPaths, ProductCompletionRequiredToolReceipts, and ProductCompletionRequiredFileContentChecks launch variables are hard completion gates; every listed path must exist, every listed tool receipt must be present, and every listed file content/readback check must pass before Completed, which normally means the solution file, app project file, and test project file are present plus a successful workspace_pwsh_run_script receipt, solution membership records, and a project reference record. If the app project path is missing and this step has MutateProductTarget, recover the missing app scaffold in place before creating and connecting the test project; block only for a concrete tool, permission, policy, or environment boundary. Add the test project to the solution and add the project reference by writing a reviewed current-run PowerShell helper, verifying that helper .ps1 path with workspace_stat_path or workspace_read_file, then invoking the same helper .ps1 path with workspace_pwsh_run_script using sideEffectManifest mode ProductMutation. The helper must use native ProductRoot/DotNet* paths, choose the existing contracted .slnx or .sln, create the missing test project with the typed test template before wiring, add the app project to the solution first when membership is missing, run dotnet sln <solution-file> add <test-project-file>, run dotnet add <test-project-file> reference <app-project-file>, then run dotnet sln <solution-file> list, convert command output to scalar strings before membership or ProjectReference regex checks, compute product-root-relative app/test project paths and the test-project-relative ProjectReference path, normalize both slash directions in expected paths and readback text, and fail only after those create/repair commands have run and either project or the ProjectReference is still missing. Do not preflight-fail only because the app project is absent from the solution when the app project file exists; repair that solution membership in this step. Do not compare only native absolute project paths because dotnet sln list and SDK ProjectReference values normally emit relative paths. If workspace_pwsh_run_script uses arguments for product paths, those argument values are consumed by PowerShell and must be native absolute ProductRoot/DotNet* paths, not external-target aliases. In PowerShell, do not test output-line arrays with -notmatch directly; join them before matching. If workspace_pwsh_run_script is denied because the helper path did not exist or could not be inspected, write or verify the helper .ps1 path and retry workspace_pwsh_run_script before returning Blocked. For the workspace_pwsh_run_script tool call itself, use a reviewed current-run .ps1 helper ref for path, never the primary steps/*.md artifact, use current-run artifact refs for outputPaths, and use the grounded external-target alias for workingDirectory; do not pass native absolute paths as structured workspace tool path or workingDirectory arguments. Do not report Completed until the solution readback contains both app and test project entries and the test project readback contains the required ProjectReference when an app reference is appropriate. Do not default to a specific test framework when the current run names another one. Do not implement feature tests, run dotnet build/test/run, start a browser, or perform runtime proof in this step; those belong to validation or feature implementation steps.",
+      "StepKind": "Work",
+      "AllowsManualSkip": false,
+      "AllowsSafeRefusal": false,
+      "RequiresApproval": false,
+      "RequiresDecisionRecord": false,
+      "InputContractSummary": "Solution skeleton and scaffold contract.",
+      "OutputContractSummary": "Test project is present, added to the solution, and connected to the application project where appropriate.",
+      "EvidenceContractSummary": "Project file, solution membership, project reference, package restore or template receipt evidence, and explicit note that runtime/build validation is deferred.",
+      "DecisionRightsSummary": "Scaffold engineer can choose command syntax and package defaults for the selected framework but must keep the test project in the same solution.",
+      "ExceptionPolicySummary": "Block if the test project cannot be created, cannot be added to the solution, cannot reference the application project when a reference is required, or the needed mutation tool/capability is unavailable.",
+      "TargetLeadHours": 2,
+      "DependsOnStepKey": "create-dotnet-project",
+      "DependsOnBranchOutcomeKey": "",
+      "DecisionRoleKey": "",
+      "CanvasX": 2420,
+      "CanvasY": 0,
+      "BranchCanvasX": 0,
+      "BranchCanvasY": 0,
+      "Dependencies": [
+        {
+          "DependsOnStepKey": "create-dotnet-project",
+          "DependsOnBranchOutcomeKey": ""
+        }
+      ],
+      "RoleAssignments": [
+        {
+          "RoleKey": "software-engineer",
+          "ResponsibilityKind": "Responsible",
+          "IsRequired": true,
+          "FallbackOrder": 0,
+          "RebindPolicySummary": "Rebind only to a .NET-capable implementer with repository write access."
+        }
+      ],
+      "ArtifactExpectations": [
+        {
+          "Key": "test-project-change-set",
+          "TemplateKey": "implementation-change-set",
+          "Title": "Test project change set",
+          "ArtifactKind": "Deliverable",
+          "IsRequired": true,
+          "TrustRequirement": "ReviewRequired",
+          "SensitivityLevel": "Internal",
+          "RetentionDays": 180,
+          "AllowedFutureUsageSummary": "Used by later implementation slices to add unit tests without reworking structure.",
+          "ValidationRequirementSummary": "Must include test project file, solution membership, project reference evidence, and confirmation that no feature tests, dotnet run, browser proof, or app startup was performed in this step."
+        }
+      ],
+      "ArtifactInputs": [
+        {
+          "ArtifactExpectationKey": "solution-skeleton-change-set",
+          "SourceStepKey": "create-dotnet-project"
+        }
+      ],
+      "BranchOutcomes": [],
+      "ChecklistRefs": [],
+      "ValidationRefs": [],
+      "PromptRefs": [],
+      "DocRefs": [
+        "processes/dotnet-solution-setup/steps/add-test-project.md"
+      ],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure",
+        "ReadUpstreamArtifacts",
+        "MutateProductTarget",
+        "WriteManagedProcessArtifacts"
+      ],
+      "OperationTargetScope": "ExternalProductTargetMutable",
+      "ExecutionClass": "RuntimeOwnedToolPlan",
+      "ExecutionContract": {
+        "ExecutionClass": "RuntimeOwnedToolPlan",
+        "RuntimeOwnedExecutorKey": "dotnet.solution-setup",
+        "RequiredRuntimeToolNames": [
+          "workspace_write_file",
+          "workspace_stat_path",
+          "workspace_pwsh_run_script",
+          "workspace_read_file"
+        ],
+        "RequiredReceipts": [
+          {
+            "Key": "write-helper-script",
+            "ToolName": "workspace_write_file",
+            "Predicate": "DotNetAddTestProjectScript written to DotNetAddTestProjectScriptRef",
+            "RequireSuccessfulExit": true,
+            "RequireCurrentRun": true
+          },
+          {
+            "Key": "run-helper-script",
+            "ToolName": "workspace_pwsh_run_script",
+            "Predicate": "DotNetAddTestProjectScriptRef with DotNetAddTestProjectSideEffectManifest in ProductMutation mode",
+            "RequireSuccessfulExit": true,
+            "RequireCurrentRun": true
+          },
+          {
+            "Key": "solution-membership-readback",
+            "ToolName": "workspace_read_file",
+            "Predicate": "solution file contains app and test project entries",
+            "RequireSuccessfulExit": true,
+            "RequireCurrentRun": true
+          },
+          {
+            "Key": "project-reference-readback",
+            "ToolName": "workspace_read_file",
+            "Predicate": "test project contains the contracted ProjectReference",
+            "RequireSuccessfulExit": true,
+            "RequireCurrentRun": true
+          }
+        ],
+        "ProducedArtifactSlots": [
+          {
+            "ArtifactExpectationKey": "test-project-change-set",
+            "MaterializationMode": "RuntimeManaged"
+          }
+        ],
+        "DeterministicToolPlan": {
+          "PlanKey": "dotnet.add-test-project",
+          "PlanKind": "DotNetSolutionAddTestProject",
+          "ScriptRefLaunchVariable": "DotNetAddTestProjectScriptRef",
+          "ScriptLaunchVariable": "DotNetAddTestProjectScript",
+          "SideEffectManifestLaunchVariable": "DotNetAddTestProjectSideEffectManifest",
+          "ExecutionPlanLaunchVariable": "DotNetAddTestProjectExecutionPlan",
+          "RequiresReadbackChecks": true,
+          "Operations": [
+            {
+              "Key": "write-helper-script",
+              "ToolName": "workspace_write_file",
+              "RequiredReceiptKey": "write-helper-script",
+              "ArgumentsSummary": "Write the reviewed test-project wiring helper script.",
+              "IdempotencyPolicyKey": "current-run-repeatable"
+            },
+            {
+              "Key": "run-helper-script",
+              "ToolName": "workspace_pwsh_run_script",
+              "RequiredReceiptKey": "run-helper-script",
+              "ArgumentsSummary": "Run the helper script with the product side-effect manifest.",
+              "IdempotencyPolicyKey": "current-run-repeatable"
+            },
+            {
+              "Key": "solution-membership-readback",
+              "ToolName": "workspace_read_file",
+              "RequiredReceiptKey": "solution-membership-readback",
+              "ArgumentsSummary": "Read back solution membership after helper execution.",
+              "IdempotencyPolicyKey": "current-run-repeatable"
+            },
+            {
+              "Key": "project-reference-readback",
+              "ToolName": "workspace_read_file",
+              "RequiredReceiptKey": "project-reference-readback",
+              "ArgumentsSummary": "Read back the test project reference after helper execution.",
+              "IdempotencyPolicyKey": "current-run-repeatable"
+            }
+          ],
+          "RequiredReceipts": [
+            {
+              "Key": "write-helper-script",
+              "ToolName": "workspace_write_file",
+              "Predicate": "DotNetAddTestProjectScript written to DotNetAddTestProjectScriptRef",
+              "RequireSuccessfulExit": true,
+              "RequireCurrentRun": true
+            },
+            {
+              "Key": "run-helper-script",
+              "ToolName": "workspace_pwsh_run_script",
+              "Predicate": "DotNetAddTestProjectScriptRef with DotNetAddTestProjectSideEffectManifest in ProductMutation mode",
+              "RequireSuccessfulExit": true,
+              "RequireCurrentRun": true
+            },
+            {
+              "Key": "solution-membership-readback",
+              "ToolName": "workspace_read_file",
+              "Predicate": "solution file contains app and test project entries",
+              "RequireSuccessfulExit": true,
+              "RequireCurrentRun": true
+            },
+            {
+              "Key": "project-reference-readback",
+              "ToolName": "workspace_read_file",
+              "Predicate": "test project contains the contracted ProjectReference",
+              "RequireSuccessfulExit": true,
+              "RequireCurrentRun": true
+            }
+          ],
+          "ReadbackChecks": [
+            {
+              "PathCandidates": [
+                "DotNetSolutionFile",
+                "DotNetSolutionFileAlias",
+                "DotNetSolutionFileCandidates"
+              ],
+              "RequiredTextAnyGroups": [
+                [
+                  "DotNetAppProjectFile",
+                  "DotNetTestProjectFile"
+                ]
+              ]
+            },
+            {
+              "PathCandidates": [
+                "DotNetTestProjectFile",
+                "DotNetTestProjectFileAlias"
+              ],
+              "RequiredTextAnyGroups": [
+                [
+                  "ProjectReference",
+                  "DotNetAppProjectFile",
+                  "DotNetAppProjectRelativePath"
+                ]
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "Order": 3,
+      "Key": "validate-first-build",
+      "Title": "Validate first build and test discovery",
+      "Subtitle": "Build proof",
+      "Notes": "Run restore/build and a targeted test discovery or initial test command so the scaffold is known good before handoff. Before command execution, inspect the contracted solution and project files; a solution with no app/test project entries is incomplete even when dotnet build exits successfully as a no-op. Use workspace_dotnet_restore and workspace_dotnet_build against the contracted solution or product root before finalizing. Use workspace_dotnet_test against DotNetTestProjectFileAlias or DotNetTestProjectFile when present, preferably with noBuild=true after a successful solution build; use the contracted solution or product root for tests only when no test project target exists. The ProductCompletionRequiredToolReceipts launch variable is a hard validation gate for this step; successful current-run receipts for restore, build, and test are required before Completed. Select setup-validated only when proof is green and solution membership/project-reference readbacks are present. Select setup-repair-required for repairable empty-solution, disconnected test project, restore, build, package, project-reference, template-integrity, or test-discovery failures and include a concrete repair packet. Return Blocked for missing execution capability only after a current tool boundary or denied tool receipt proves the required validation tool is unavailable. In the managed artifact, include the exact selected branch key on its own line as Branch outcome key: setup-validated or Branch outcome key: setup-repair-required before finalizing. Do not launch runtime, start a web app, run browser proof, or implement feature behavior in this setup validation step; runtime and browser proof belong to downstream validation steps unless the parent process defines a separate runtime-proof setup step.",
+      "StepKind": "Review",
+      "AllowsManualSkip": false,
+      "AllowsSafeRefusal": false,
+      "RequiresApproval": false,
+      "RequiresDecisionRecord": true,
+      "InputContractSummary": "Solution skeleton and test project change sets.",
+      "OutputContractSummary": "Build and test command output that proves the new solution can be iterated safely.",
+      "EvidenceContractSummary": "Command, exit code, warnings, and any accepted follow-up risks.",
+      "DecisionRightsSummary": "Validation reviewer can reject the scaffold when build proof is missing or non-deterministic.",
+      "ExceptionPolicySummary": "Select setup-repair-required for repairable scaffold, restore, build, package, reference, template-integrity, or test-discovery failures. Block only when an environment, permission, missing tool, or process-contract issue prevents evidence collection or branch routing.",
+      "TargetLeadHours": 2,
+      "DependsOnStepKey": "add-test-project",
+      "DependsOnBranchOutcomeKey": "",
+      "DecisionRoleKey": "qa-lead",
+      "CanvasX": 3500,
+      "CanvasY": 0,
+      "BranchCanvasX": 3760,
+      "BranchCanvasY": 357,
+      "Dependencies": [
+        {
+          "DependsOnStepKey": "create-dotnet-project",
+          "DependsOnBranchOutcomeKey": ""
+        },
+        {
+          "DependsOnStepKey": "add-test-project",
+          "DependsOnBranchOutcomeKey": ""
+        }
+      ],
+      "RoleAssignments": [
+        {
+          "RoleKey": "qa-lead",
+          "ResponsibilityKind": "Responsible",
+          "IsRequired": true,
+          "FallbackOrder": 0,
+          "RebindPolicySummary": "Rebind only to a reviewer capable of interpreting .NET build and test output."
+        }
+      ],
+      "ArtifactExpectations": [
+        {
+          "Key": "first-build-evidence",
+          "TemplateKey": "test-evidence-pack",
+          "Title": "First build and test discovery evidence",
+          "ArtifactKind": "Evidence",
+          "IsRequired": true,
+          "TrustRequirement": "ReviewRequired",
+          "SensitivityLevel": "Internal",
+          "RetentionDays": 180,
+          "AllowedFutureUsageSummary": "Used by parent implementation slices to prove the bootstrap baseline is usable.",
+          "ValidationRequirementSummary": "Must include command, exit code, relevant output, and unresolved warnings."
+        }
+      ],
+      "ArtifactInputs": [
+        {
+          "ArtifactExpectationKey": "solution-skeleton-change-set",
+          "SourceStepKey": "create-dotnet-project"
+        },
+        {
+          "ArtifactExpectationKey": "test-project-change-set",
+          "SourceStepKey": "add-test-project"
+        }
+      ],
+      "BranchOutcomes": [
+        {
+          "Key": "setup-validated",
+          "Title": "Setup validated",
+          "Description": "Restore, build, and targeted test discovery or initial test command are green enough for parent implementation handoff."
+        },
+        {
+          "Key": "setup-repair-required",
+          "Title": "Setup repair required",
+          "Description": "The scaffold has repairable restore, build, package, project-reference, template-integrity, or test-discovery failures that should be fixed inside this setup subprocess."
+        }
+      ],
+      "ChecklistRefs": [],
+      "ValidationRefs": [],
+      "PromptRefs": [],
+      "DocRefs": [
+        "processes/dotnet-solution-setup/steps/validate-first-build.md"
+      ],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure",
+        "ReadUpstreamArtifacts",
+        "RunValidation",
+        "WriteManagedProcessArtifacts"
+      ],
+      "OperationTargetScope": "ExternalProductTargetReadOnly",
+      "ExecutionClass": "BranchDecision",
+      "ExecutionContract": {
+        "ExecutionClass": "BranchDecision",
+        "RequiredRuntimeToolNames": [
+          "workspace_dotnet_restore",
+          "workspace_dotnet_build",
+          "workspace_dotnet_test",
+          "workspace_read_file"
+        ],
+        "RequiredReceipts": [
+          {
+            "Key": "restore",
+            "ToolName": "workspace_dotnet_restore",
+            "Predicate": "current-run restore against the contracted solution or product root",
+            "RequireSuccessfulExit": true,
+            "RequireCurrentRun": true
+          },
+          {
+            "Key": "build",
+            "ToolName": "workspace_dotnet_build",
+            "Predicate": "current-run build against the contracted solution or product root",
+            "RequireSuccessfulExit": true,
+            "RequireCurrentRun": true
+          },
+          {
+            "Key": "test",
+            "ToolName": "workspace_dotnet_test",
+            "Predicate": "current-run targeted test or test discovery receipt when a test target exists",
+            "RequireSuccessfulExit": true,
+            "RequireCurrentRun": true
+          },
+          {
+            "Key": "solution-readback",
+            "ToolName": "workspace_read_file",
+            "Predicate": "solution membership readback confirms app and test entries",
+            "RequireSuccessfulExit": true,
+            "RequireCurrentRun": true
+          }
+        ],
+        "ProducedArtifactSlots": [
+          {
+            "ArtifactExpectationKey": "first-build-evidence",
+            "MaterializationMode": "RuntimeManaged"
+          }
+        ]
+      }
+    },
+    {
+      "Order": 4,
+      "Key": "repair-solution-setup",
+      "Title": "Repair solution setup findings",
+      "Subtitle": "Bounded scaffold repair",
+      "Notes": "Repair only the setup findings recorded by validate-first-build. Keep this scoped to scaffold, project files, package/reference wiring, template-integrity, and test-discovery fixes. If validation reported an empty solution, missing solution membership, or a disconnected test project, mutate the product target to add the missing solution entries and project references; existing project files alone are not a repair. If DotNetAddTestProjectExecutionPlan is present, prefer that deterministic helper plan for solution membership and project-reference repair instead of inventing a new helper: write DotNetAddTestProjectScript verbatim to DotNetAddTestProjectScriptRef, verify that .ps1 ref, invoke it with workspace_pwsh_run_script and DotNetAddTestProjectSideEffectManifest, then read back the solution and test project files. For solution membership or project-reference repair, write a reviewed current-run PowerShell helper with workspace_write_file, verify that helper .ps1 path with workspace_stat_path or workspace_read_file, then invoke the same helper .ps1 path with workspace_pwsh_run_script using sideEffectManifest mode ProductMutation; the helper must use native ProductRoot/DotNet* paths, choose the existing contracted .slnx or .sln, run the missing dotnet sln add and dotnet add reference commands, run dotnet sln list, convert command output to scalar strings before regex checks, compute product-root-relative solution membership paths and compute test-project-relative ProjectReference paths with System.IO.Path.GetRelativePath from the test project directory to the app project file, normalize both slash directions in expected paths and readback text, and fail if the targeted membership/reference is still absent. Do not hardcode escaped relative ProjectReference strings in the check. Do not compare only native absolute project paths because dotnet sln list and SDK ProjectReference values normally emit relative paths. In PowerShell, do not test output-line arrays with -notmatch directly; join them before matching. If workspace_pwsh_run_script is denied because the helper path did not exist or could not be inspected, write or verify the helper .ps1 path and retry workspace_pwsh_run_script before returning Blocked. For the workspace_pwsh_run_script tool call itself, use a reviewed current-run .ps1 helper ref for path, never the primary steps/*.md artifact, use current-run artifact refs for outputPaths, and use the grounded external-target alias for workingDirectory; do not pass native absolute paths as structured workspace tool path or workingDirectory arguments. Do not report Completed until the repaired solution/project readbacks show the targeted fix and the current step has the required workspace_pwsh_run_script receipt when product wiring was repaired. Do not implement feature behavior, replace starter UI beyond template repair, launch runtime, or capture browser proof.",
+      "StepKind": "Work",
+      "AllowsManualSkip": false,
+      "AllowsSafeRefusal": false,
+      "RequiresApproval": false,
+      "RequiresDecisionRecord": false,
+      "InputContractSummary": "Initial first-build evidence and concrete repair packet from setup validation.",
+      "OutputContractSummary": "Minimal setup repair change set ready for repaired first-build validation.",
+      "EvidenceContractSummary": "Changed files, root cause, exact repair actions, solution/project readback evidence, and commands to rerun.",
+      "DecisionRightsSummary": "Implementation engineer may mutate only setup scaffolding and test project wiring required to make first build proof possible.",
+      "ExceptionPolicySummary": "Block only when the repair target is contradictory, a required tool or permission is unavailable, or the product target cannot be accessed. Do not block just because the initial validation proof failed; that is the input to this repair step.",
+      "TargetLeadHours": 4,
+      "DependsOnStepKey": "validate-first-build",
+      "DependsOnBranchOutcomeKey": "setup-repair-required",
+      "DecisionRoleKey": "",
+      "CanvasX": 4580,
+      "CanvasY": 820,
+      "BranchCanvasX": 0,
+      "BranchCanvasY": 0,
+      "Dependencies": [
+        {
+          "DependsOnStepKey": "validate-first-build",
+          "DependsOnBranchOutcomeKey": "setup-repair-required"
+        }
+      ],
+      "RoleAssignments": [
+        {
+          "RoleKey": "software-engineer",
+          "ResponsibilityKind": "Responsible",
+          "IsRequired": true,
+          "FallbackOrder": 0,
+          "RebindPolicySummary": "Rebind only to a .NET-capable implementer allowed to mutate the external product target."
+        }
+      ],
+      "ArtifactExpectations": [
+        {
+          "Key": "setup-repair-change-set",
+          "TemplateKey": "implementation-change-set",
+          "Title": "Setup repair change set",
+          "ArtifactKind": "Deliverable",
+          "IsRequired": true,
+          "TrustRequirement": "ReviewRequired",
+          "SensitivityLevel": "Internal",
+          "RetentionDays": 180,
+          "AllowedFutureUsageSummary": "Used by repaired setup validation and parent implementation slices to understand scaffold repair.",
+          "ValidationRequirementSummary": "Must summarize initial validation failure, root cause, changed files, exact setup-only repair actions, and commands to rerun."
+        }
+      ],
+      "ArtifactInputs": [
+        {
+          "ArtifactExpectationKey": "first-build-evidence",
+          "SourceStepKey": "validate-first-build"
+        }
+      ],
+      "BranchOutcomes": [],
+      "ChecklistRefs": [],
+      "ValidationRefs": [],
+      "PromptRefs": [],
+      "DocRefs": [
+        "processes/dotnet-solution-setup/steps/repair-solution-setup.md"
+      ],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure",
+        "ReadUpstreamArtifacts",
+        "MutateProductTarget",
+        "WriteManagedProcessArtifacts"
+      ],
+      "OperationTargetScope": "ExternalProductTargetMutable",
+      "ExecutionClass": "RuntimeOwnedToolPlan",
+      "ExecutionContract": {
+        "ExecutionClass": "RuntimeOwnedToolPlan",
+        "RuntimeOwnedExecutorKey": "dotnet.solution-setup",
+        "RequiredRuntimeToolNames": [
+          "workspace_write_file",
+          "workspace_stat_path",
+          "workspace_pwsh_run_script",
+          "workspace_read_file"
+        ],
+        "RequiredReceipts": [
+          {
+            "Key": "write-helper-script",
+            "ToolName": "workspace_write_file",
+            "Predicate": "solution repair helper script written to DotNetAddTestProjectScriptRef or current-run managed script ref",
+            "RequireSuccessfulExit": true,
+            "RequireCurrentRun": true
+          },
+          {
+            "Key": "run-helper-script",
+            "ToolName": "workspace_pwsh_run_script",
+            "Predicate": "repair helper script executed with ProductMutation side-effect manifest",
+            "RequireSuccessfulExit": true,
+            "RequireCurrentRun": true
+          },
+          {
+            "Key": "solution-membership-readback",
+            "ToolName": "workspace_read_file",
+            "Predicate": "repaired solution membership readback confirms targeted fix",
+            "RequireSuccessfulExit": true,
+            "RequireCurrentRun": true
+          },
+          {
+            "Key": "project-reference-readback",
+            "ToolName": "workspace_read_file",
+            "Predicate": "repaired project reference readback confirms targeted fix when applicable",
+            "RequireSuccessfulExit": true,
+            "RequireCurrentRun": true
+          }
+        ],
+        "ProducedArtifactSlots": [
+          {
+            "ArtifactExpectationKey": "setup-repair-change-set",
+            "MaterializationMode": "RuntimeManaged"
+          }
+        ],
+        "DeterministicToolPlan": {
+          "PlanKey": "dotnet.repair-solution-setup",
+          "PlanKind": "DotNetSolutionRepair",
+          "ScriptRefLaunchVariable": "DotNetAddTestProjectScriptRef",
+          "ScriptLaunchVariable": "DotNetAddTestProjectScript",
+          "SideEffectManifestLaunchVariable": "DotNetAddTestProjectSideEffectManifest",
+          "ExecutionPlanLaunchVariable": "DotNetRepairSolutionSetupExecutionPlan",
+          "RequiresReadbackChecks": true,
+          "Operations": [
+            {
+              "Key": "write-helper-script",
+              "ToolName": "workspace_write_file",
+              "RequiredReceiptKey": "write-helper-script",
+              "ArgumentsSummary": "Write the reviewed repair helper script.",
+              "IdempotencyPolicyKey": "current-run-repeatable"
+            },
+            {
+              "Key": "run-helper-script",
+              "ToolName": "workspace_pwsh_run_script",
+              "RequiredReceiptKey": "run-helper-script",
+              "ArgumentsSummary": "Run the repair helper script with the product side-effect manifest.",
+              "IdempotencyPolicyKey": "current-run-repeatable"
+            },
+            {
+              "Key": "solution-membership-readback",
+              "ToolName": "workspace_read_file",
+              "RequiredReceiptKey": "solution-membership-readback",
+              "ArgumentsSummary": "Read back repaired solution membership.",
+              "IdempotencyPolicyKey": "current-run-repeatable"
+            },
+            {
+              "Key": "project-reference-readback",
+              "ToolName": "workspace_read_file",
+              "RequiredReceiptKey": "project-reference-readback",
+              "ArgumentsSummary": "Read back repaired project references when applicable.",
+              "IdempotencyPolicyKey": "current-run-repeatable"
+            }
+          ],
+          "RequiredReceipts": [
+            {
+              "Key": "write-helper-script",
+              "ToolName": "workspace_write_file",
+              "Predicate": "solution repair helper script written to DotNetAddTestProjectScriptRef or current-run managed script ref",
+              "RequireSuccessfulExit": true,
+              "RequireCurrentRun": true
+            },
+            {
+              "Key": "run-helper-script",
+              "ToolName": "workspace_pwsh_run_script",
+              "Predicate": "repair helper script executed with ProductMutation side-effect manifest",
+              "RequireSuccessfulExit": true,
+              "RequireCurrentRun": true
+            },
+            {
+              "Key": "solution-membership-readback",
+              "ToolName": "workspace_read_file",
+              "Predicate": "repaired solution membership readback confirms targeted fix",
+              "RequireSuccessfulExit": true,
+              "RequireCurrentRun": true
+            },
+            {
+              "Key": "project-reference-readback",
+              "ToolName": "workspace_read_file",
+              "Predicate": "repaired project reference readback confirms targeted fix when applicable",
+              "RequireSuccessfulExit": true,
+              "RequireCurrentRun": true
+            }
+          ],
+          "ReadbackChecks": [
+            {
+              "PathCandidates": [
+                "DotNetSolutionFile",
+                "DotNetSolutionFileAlias",
+                "DotNetSolutionFileCandidates"
+              ],
+              "RequiredTextAnyGroups": [
+                [
+                  "DotNetAppProjectFile",
+                  "DotNetTestProjectFile"
+                ]
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "Order": 5,
+      "Key": "validate-first-build-after-repair",
+      "Title": "Revalidate first build after setup repair",
+      "Subtitle": "Repaired build proof",
+      "Notes": "Rerun restore/build and the smallest targeted test discovery or initial test command after setup repair. Before command execution, inspect the repaired solution and project files; a solution with no app/test project entries remains failed repair evidence even when dotnet build exits successfully as a no-op. Use workspace_dotnet_restore and workspace_dotnet_build against the contracted solution or product root before finalizing. Use workspace_dotnet_test against DotNetTestProjectFileAlias or DotNetTestProjectFile when present, preferably with noBuild=true after a successful solution build; use the contracted solution or product root for tests only when no test project target exists. The ProductCompletionRequiredToolReceipts launch variable is a hard validation gate for this step; successful current-run receipts for restore, build, and test are required before Completed. Select setup-validated only when the repaired scaffold is green and solution membership/project-reference readbacks are present. Select setup-repair-escalation when proof still fails, repair evidence is detached from the original failure, solution membership/project-reference readback is still missing, or another repair would exceed setup scope. Return Blocked for missing execution capability only after a current tool boundary or denied tool receipt proves the required validation tool is unavailable. In the managed artifact, include the exact selected branch key on its own line as Branch outcome key: setup-validated or Branch outcome key: setup-repair-escalation before finalizing.",
+      "StepKind": "Review",
+      "AllowsManualSkip": false,
+      "AllowsSafeRefusal": false,
+      "RequiresApproval": false,
+      "RequiresDecisionRecord": true,
+      "InputContractSummary": "Initial validation failure and setup repair change set.",
+      "OutputContractSummary": "Repaired first-build evidence with explicit setup-validated or setup-repair-escalation branch.",
+      "EvidenceContractSummary": "Rerun commands, exit codes, relevant output, original failure before/after assessment, and unresolved gaps after repair.",
+      "DecisionRightsSummary": "Validation reviewer can accept repaired setup evidence or escalate unresolved setup repair findings.",
+      "ExceptionPolicySummary": "Select setup-repair-escalation when repaired restore/build/test proof remains failing or detached from the original repair target. Block only when an environment, permission, missing tool, or process-contract issue prevents recheck execution.",
+      "TargetLeadHours": 2,
+      "DependsOnStepKey": "repair-solution-setup",
+      "DependsOnBranchOutcomeKey": "",
+      "DecisionRoleKey": "qa-lead",
+      "CanvasX": 5660,
+      "CanvasY": 820,
+      "BranchCanvasX": 5920,
+      "BranchCanvasY": 1177,
+      "Dependencies": [
+        {
+          "DependsOnStepKey": "repair-solution-setup",
+          "DependsOnBranchOutcomeKey": ""
+        }
+      ],
+      "RoleAssignments": [
+        {
+          "RoleKey": "qa-lead",
+          "ResponsibilityKind": "Responsible",
+          "IsRequired": true,
+          "FallbackOrder": 0,
+          "RebindPolicySummary": "Rebind only to a reviewer capable of interpreting repaired .NET build and test output."
+        }
+      ],
+      "ArtifactExpectations": [
+        {
+          "Key": "repaired-first-build-evidence",
+          "TemplateKey": "test-evidence-pack",
+          "Title": "Repaired first build and test discovery evidence",
+          "ArtifactKind": "Evidence",
+          "IsRequired": true,
+          "TrustRequirement": "ReviewRequired",
+          "SensitivityLevel": "Internal",
+          "RetentionDays": 180,
+          "AllowedFutureUsageSummary": "Used by parent implementation slices to prove the repaired bootstrap baseline is usable.",
+          "ValidationRequirementSummary": "Must include command, exit code, relevant output, original failure before/after assessment, and unresolved warnings."
+        }
+      ],
+      "ArtifactInputs": [
+        {
+          "ArtifactExpectationKey": "first-build-evidence",
+          "SourceStepKey": "validate-first-build"
+        },
+        {
+          "ArtifactExpectationKey": "setup-repair-change-set",
+          "SourceStepKey": "repair-solution-setup"
+        }
+      ],
+      "BranchOutcomes": [
+        {
+          "Key": "setup-validated",
+          "Title": "Setup validated after repair",
+          "Description": "Repaired restore, build, and targeted test discovery or initial test command are green enough for parent implementation handoff."
+        },
+        {
+          "Key": "setup-repair-escalation",
+          "Title": "Setup repair escalation",
+          "Description": "Repaired setup proof still has blocking failures or gaps that require parent escalation or a new setup scope."
+        }
+      ],
+      "ChecklistRefs": [],
+      "ValidationRefs": [],
+      "PromptRefs": [],
+      "DocRefs": [
+        "processes/dotnet-solution-setup/steps/validate-first-build-after-repair.md"
+      ],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure",
+        "ReadUpstreamArtifacts",
+        "RunValidation",
+        "WriteManagedProcessArtifacts"
+      ],
+      "OperationTargetScope": "ExternalProductTargetReadOnly",
+      "ExecutionClass": "BranchDecision",
+      "ExecutionContract": {
+        "ExecutionClass": "BranchDecision",
+        "RequiredRuntimeToolNames": [
+          "workspace_dotnet_restore",
+          "workspace_dotnet_build",
+          "workspace_dotnet_test",
+          "workspace_read_file"
+        ],
+        "RequiredReceipts": [
+          {
+            "Key": "restore",
+            "ToolName": "workspace_dotnet_restore",
+            "Predicate": "current-run restore against the contracted solution or product root",
+            "RequireSuccessfulExit": true,
+            "RequireCurrentRun": true
+          },
+          {
+            "Key": "build",
+            "ToolName": "workspace_dotnet_build",
+            "Predicate": "current-run build against the contracted solution or product root",
+            "RequireSuccessfulExit": true,
+            "RequireCurrentRun": true
+          },
+          {
+            "Key": "test",
+            "ToolName": "workspace_dotnet_test",
+            "Predicate": "current-run targeted test or test discovery receipt when a test target exists",
+            "RequireSuccessfulExit": true,
+            "RequireCurrentRun": true
+          },
+          {
+            "Key": "solution-readback",
+            "ToolName": "workspace_read_file",
+            "Predicate": "solution membership readback confirms app and test entries",
+            "RequireSuccessfulExit": true,
+            "RequireCurrentRun": true
+          }
+        ],
+        "ProducedArtifactSlots": [
+          {
+            "ArtifactExpectationKey": "repaired-first-build-evidence",
+            "MaterializationMode": "RuntimeManaged"
+          }
+        ]
+      }
+    },
+    {
+      "Order": 6,
+      "Key": "setup-handoff",
+      "Title": "Hand off setup evidence",
+      "Subtitle": "Ready for implementation",
+      "Notes": "Summarize the initially validated setup path, what was created, what validated, and any residual setup notes the parent process needs. Treat a successful workspace_stat_path or workspace_read_file receipt for the exact required canonical ref artifacts/process-runs/<setup-run-id>/steps/validate-first-build.md as durable first-build evidence. Do not require or probe sibling refs such as artifacts/process-runs/<setup-run-id>/validate-first-build.",
+      "StepKind": "End",
+      "AllowsManualSkip": false,
+      "AllowsSafeRefusal": false,
+      "RequiresApproval": false,
+      "RequiresDecisionRecord": false,
+      "InputContractSummary": "Validated scaffold outputs and first build evidence.",
+      "OutputContractSummary": "Handoff packet for the parent development slice.",
+      "EvidenceContractSummary": "Created paths, commands run, validation status from the canonical steps/validate-first-build.md managed artifact, and remaining risks.",
+      "DecisionRightsSummary": "Setup manager closes only when the validation reviewer evidence is present.",
+      "ExceptionPolicySummary": "Do not close with missing build evidence, a non-selected setup-validated branch, or unresolved scaffold blockers. Do not block solely because a non-canonical sibling evidence path is absent when the required steps/validate-first-build.md ref is readable and reports successful validation.",
+      "TargetLeadHours": 1,
+      "DependsOnStepKey": "validate-first-build",
+      "DependsOnBranchOutcomeKey": "setup-validated",
+      "DecisionRoleKey": "",
+      "CanvasX": 4580,
+      "CanvasY": 0,
+      "BranchCanvasX": 0,
+      "BranchCanvasY": 0,
+      "Dependencies": [
+        {
+          "DependsOnStepKey": "validate-first-build",
+          "DependsOnBranchOutcomeKey": "setup-validated"
+        }
+      ],
+      "RoleAssignments": [
+        {
+          "RoleKey": "delivery-manager",
+          "ResponsibilityKind": "Responsible",
+          "IsRequired": true,
+          "FallbackOrder": 0,
+          "RebindPolicySummary": "Rebind only to a manager-capable operator that can report blockers to the parent run."
+        }
+      ],
+      "ArtifactExpectations": [
+        {
+          "Key": "setup-handoff-packet",
+          "TemplateKey": "implementation-plan",
+          "Title": "Setup handoff packet",
+          "ArtifactKind": "Evidence",
+          "IsRequired": true,
+          "TrustRequirement": "ReviewRequired",
+          "SensitivityLevel": "Internal",
+          "RetentionDays": 180,
+          "AllowedFutureUsageSummary": "Used by parent runs and future slices to understand the generated solution baseline.",
+          "ValidationRequirementSummary": "Must summarize created paths, commands, validation result, blockers, the exact setup-handoff artifact path, and the exact canonical upstream first-build artifact path. Must not require a sibling non-steps first-build path."
+        }
+      ],
+      "ArtifactInputs": [
+        {
+          "ArtifactExpectationKey": "first-build-evidence",
+          "SourceStepKey": "validate-first-build"
+        }
+      ],
+      "BranchOutcomes": [],
+      "ChecklistRefs": [],
+      "ValidationRefs": [],
+      "PromptRefs": [],
+      "DocRefs": [
+        "processes/dotnet-solution-setup/steps/setup-handoff.md"
+      ],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure",
+        "ReadUpstreamArtifacts",
+        "WriteManagedProcessArtifacts"
+      ],
+      "OperationTargetScope": "ExternalProductTargetReadOnly"
+    },
+    {
+      "Order": 7,
+      "Key": "setup-handoff-after-repair",
+      "Title": "Hand off repaired setup evidence",
+      "Subtitle": "Ready for implementation after repair",
+      "Notes": "Summarize the repaired setup path, initial failure, repair actions, repaired validation proof, and any residual setup notes the parent process needs. Treat successful workspace_stat_path or workspace_read_file receipts for artifacts/process-runs/<setup-run-id>/steps/repair-solution-setup.md and artifacts/process-runs/<setup-run-id>/steps/validate-first-build-after-repair.md as durable repaired setup evidence.",
+      "StepKind": "End",
+      "AllowsManualSkip": false,
+      "AllowsSafeRefusal": false,
+      "RequiresApproval": false,
+      "RequiresDecisionRecord": false,
+      "InputContractSummary": "Initial validation failure, setup repair change set, and repaired first-build evidence.",
+      "OutputContractSummary": "Repaired setup handoff packet for the parent development slice.",
+      "EvidenceContractSummary": "Created paths, repair actions, commands run, repaired validation status, and remaining risks.",
+      "DecisionRightsSummary": "Setup manager closes only when repaired validation selected setup-validated and evidence is present.",
+      "ExceptionPolicySummary": "Do not close when repaired validation selected setup-repair-escalation, repaired proof is missing, or scaffold blockers remain untriaged.",
+      "TargetLeadHours": 1,
+      "DependsOnStepKey": "validate-first-build-after-repair",
+      "DependsOnBranchOutcomeKey": "setup-validated",
+      "DecisionRoleKey": "",
+      "CanvasX": 6740,
+      "CanvasY": 820,
+      "BranchCanvasX": 0,
+      "BranchCanvasY": 0,
+      "Dependencies": [
+        {
+          "DependsOnStepKey": "repair-solution-setup",
+          "DependsOnBranchOutcomeKey": ""
+        },
+        {
+          "DependsOnStepKey": "validate-first-build-after-repair",
+          "DependsOnBranchOutcomeKey": "setup-validated"
+        }
+      ],
+      "RoleAssignments": [
+        {
+          "RoleKey": "delivery-manager",
+          "ResponsibilityKind": "Responsible",
+          "IsRequired": true,
+          "FallbackOrder": 0,
+          "RebindPolicySummary": "Rebind only to a manager-capable operator that can report repaired setup evidence to the parent run."
+        }
+      ],
+      "ArtifactExpectations": [
+        {
+          "Key": "setup-handoff-packet-after-repair",
+          "TemplateKey": "implementation-plan",
+          "Title": "Repaired setup handoff packet",
+          "ArtifactKind": "Evidence",
+          "IsRequired": true,
+          "TrustRequirement": "ReviewRequired",
+          "SensitivityLevel": "Internal",
+          "RetentionDays": 180,
+          "AllowedFutureUsageSummary": "Used by parent runs and future slices to understand the repaired generated solution baseline.",
+          "ValidationRequirementSummary": "Must summarize created paths, initial validation failure, repair actions, repaired validation result, blockers, the exact setup-handoff-after-repair artifact path, and the exact canonical upstream repaired first-build artifact path."
+        }
+      ],
+      "ArtifactInputs": [
+        {
+          "ArtifactExpectationKey": "first-build-evidence",
+          "SourceStepKey": "validate-first-build"
+        },
+        {
+          "ArtifactExpectationKey": "setup-repair-change-set",
+          "SourceStepKey": "repair-solution-setup"
+        },
+        {
+          "ArtifactExpectationKey": "repaired-first-build-evidence",
+          "SourceStepKey": "validate-first-build-after-repair"
+        }
+      ],
+      "BranchOutcomes": [],
+      "ChecklistRefs": [],
+      "ValidationRefs": [],
+      "PromptRefs": [],
+      "DocRefs": [
+        "processes/dotnet-solution-setup/steps/setup-handoff-after-repair.md"
+      ],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure",
+        "ReadUpstreamArtifacts",
+        "WriteManagedProcessArtifacts"
+      ],
+      "OperationTargetScope": "ExternalProductTargetReadOnly"
+    },
+    {
+      "Order": 8,
+      "Key": "setup-repair-escalation",
+      "Title": "Escalate unresolved setup repair",
+      "Subtitle": "Parent no-go packet",
+      "Notes": "Record unresolved repaired setup validation findings and make the parent no-go recommendation explicit instead of presenting the setup as accepted.",
+      "StepKind": "End",
+      "AllowsManualSkip": false,
+      "AllowsSafeRefusal": false,
+      "RequiresApproval": false,
+      "RequiresDecisionRecord": false,
+      "InputContractSummary": "Initial validation failure, setup repair change set, and failed repaired recheck evidence.",
+      "OutputContractSummary": "Parent setup escalation packet with unresolved scaffold defects, proof gaps, risks, and recommended next action.",
+      "EvidenceContractSummary": "Unresolved blocker list, failing proof references, attempted repair, and parent escalation recommendation.",
+      "DecisionRightsSummary": "Setup manager can escalate unresolved repair findings but cannot present the setup as accepted.",
+      "ExceptionPolicySummary": "Do not continue to accepted setup handoff while repaired validation remains unresolved.",
+      "TargetLeadHours": 1,
+      "DependsOnStepKey": "validate-first-build-after-repair",
+      "DependsOnBranchOutcomeKey": "setup-repair-escalation",
+      "DecisionRoleKey": "",
+      "CanvasX": 6740,
+      "CanvasY": 1220,
+      "BranchCanvasX": 0,
+      "BranchCanvasY": 0,
+      "Dependencies": [
+        {
+          "DependsOnStepKey": "repair-solution-setup",
+          "DependsOnBranchOutcomeKey": ""
+        },
+        {
+          "DependsOnStepKey": "validate-first-build-after-repair",
+          "DependsOnBranchOutcomeKey": "setup-repair-escalation"
+        }
+      ],
+      "RoleAssignments": [
+        {
+          "RoleKey": "delivery-manager",
+          "ResponsibilityKind": "Responsible",
+          "IsRequired": true,
+          "FallbackOrder": 0,
+          "RebindPolicySummary": "Rebind only to a manager-capable operator that can report no-go setup evidence to the parent run."
+        }
+      ],
+      "ArtifactExpectations": [
+        {
+          "Key": "setup-repair-escalation-packet",
+          "TemplateKey": "regression-evidence-pack",
+          "Title": "Setup repair escalation packet",
+          "ArtifactKind": "Evidence",
+          "IsRequired": true,
+          "TrustRequirement": "ReviewRequired",
+          "SensitivityLevel": "Internal",
+          "RetentionDays": 180,
+          "AllowedFutureUsageSummary": "Reusable by parent implementation planning and future setup repair.",
+          "ValidationRequirementSummary": "Must summarize unresolved setup findings, attempted repair, failing proof, no-go rationale, and required next scope."
+        }
+      ],
+      "ArtifactInputs": [
+        {
+          "ArtifactExpectationKey": "first-build-evidence",
+          "SourceStepKey": "validate-first-build"
+        },
+        {
+          "ArtifactExpectationKey": "setup-repair-change-set",
+          "SourceStepKey": "repair-solution-setup"
+        },
+        {
+          "ArtifactExpectationKey": "repaired-first-build-evidence",
+          "SourceStepKey": "validate-first-build-after-repair"
+        }
+      ],
+      "BranchOutcomes": [],
+      "ChecklistRefs": [],
+      "ValidationRefs": [],
+      "PromptRefs": [],
+      "DocRefs": [
+        "processes/dotnet-solution-setup/steps/setup-repair-escalation.md"
+      ],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure",
+        "ReadUpstreamArtifacts",
+        "WriteManagedProcessArtifacts"
+      ],
+      "OperationTargetScope": "ExternalProductTargetReadOnly"
+    }
+  ]
+}

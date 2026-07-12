@@ -465,7 +465,8 @@
         "WriteManagedProcessArtifacts",
         "EscalateOrDecide"
       ],
-      "OperationTargetScope": "ExternalProductTargetReadOnly"
+      "OperationTargetScope": "ExternalProductTargetReadOnly",
+      "ExecutionClass": "BranchDecision"
     },
     {
       "Order": 4,
@@ -658,7 +659,7 @@
         "architecture-governance"
       ],
       "KnowledgeRequirements": [
-        "Deep knowledge of the owned domain\u2019s rules, invariants, operational pain points, and integration surface.",
+        "Deep knowledge of the owned domain’s rules, invariants, operational pain points, and integration surface.",
         "Ability to evaluate whether an architectural proposal preserves domain boundaries and team ownership clarity.",
         "Understanding of business impact if domain semantics are oversimplified or coupled incorrectly.",
         "Knowledge of historical debt or prior incidents tied to domain boundary mistakes.",
@@ -981,3 +982,4 @@
   ],
   "SharedArtifactRefs": []
 }
+

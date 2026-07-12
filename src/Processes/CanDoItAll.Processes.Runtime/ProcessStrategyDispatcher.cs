@@ -33,7 +33,8 @@ public sealed class ProcessStrategyDispatcher
             workItem.RunId,
             workItem.StepInstanceId,
             workItem.StrategyBinding,
-            workItem.StrategyBinding.Inputs);
+            workItem.StrategyBinding.Inputs,
+            workItem.StepContract);
 
         return await strategy.ExecuteAsync(context, cancellationToken).ConfigureAwait(false);
     }

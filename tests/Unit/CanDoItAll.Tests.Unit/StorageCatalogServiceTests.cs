@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace CanDoItAll.Tests.Unit;
 
+[Collection(AppDbContextModelRegistryTestCollectionNames.Name)]
 public sealed class StorageCatalogServiceTests
 {
     [Fact]
@@ -99,7 +100,7 @@ public sealed class StorageCatalogServiceTests
 
     private static StorageCatalogService CreateSut(string databaseName, string workspaceRoot)
     {
-        var options = new DbContextOptionsBuilder<AppDbContext>()
+        var options = AppDbContextTestOptionsBuilder.Create()
             .UseInMemoryDatabase(databaseName)
             .Options;
 

@@ -62,7 +62,10 @@ public sealed record ProcessRuntimeStateSnapshot(
     IReadOnlyList<DispatchClaimState> Claims,
     IReadOnlyList<StrategyResultReceipt> AppliedResults,
     IReadOnlySet<ArtifactSlotId> AvailableArtifactSlots,
-    DateTimeOffset UpdatedAtUtc);
+    DateTimeOffset UpdatedAtUtc)
+{
+    public IReadOnlyList<ProcessRuntimeInputArtifactReceipt> ConnectedInputArtifacts { get; init; } = [];
+}
 
 public sealed record ProcessRuntimeStepState(
     ProcessStepInstanceId StepInstanceId,
@@ -73,7 +76,25 @@ public sealed record ProcessRuntimeStepState(
     IReadOnlySet<ProcessStepInstanceId> DependencyStepIds,
     IReadOnlySet<ArtifactSlotId> RequiredArtifactSlots,
     DispatchClaimToken? ActiveClaimToken,
-    StrategyResultIdempotencyKey? CompletedResultKey);
+    StrategyResultIdempotencyKey? CompletedResultKey)
+{
+    public IReadOnlySet<ArtifactSlotId> ProducedArtifactSlots { get; init; } = new HashSet<ArtifactSlotId>();
+
+    public IReadOnlyList<string> RequiredRuntimeToolNames { get; init; } = [];
+
+    public IReadOnlyList<ProcessArtifactSlotDescriptor> ArtifactDescriptors { get; init; } = [];
+
+    public IReadOnlyList<SubprocessArtifactMappingDescriptor> SubprocessArtifactMappings { get; init; } = [];
+}
+
+public sealed record ProcessRuntimeInputArtifactReceipt(
+    ProcessStepInstanceId ConsumerStepInstanceId,
+    ArtifactSlotId RequiredSlotId,
+    ProcessArtifactInputAvailability Availability,
+    ProcessStepInstanceId? ProducerStepInstanceId,
+    ArtifactInstanceId? ArtifactId,
+    string ContentHash,
+    string ConnectionHash);
 
 public sealed record DispatchClaimState(
     DispatchClaimToken ClaimToken,
@@ -86,20 +107,150 @@ public sealed record DispatchClaimState(
     DateTimeOffset? RenewedAtUtc,
     StrategyResultIdempotencyKey? ResultIdempotencyKey);
 
-public sealed record StrategyResultReceipt(
-    ProcessStepInstanceId StepInstanceId,
-    StrategyId StrategyId,
-    StrategyResultIdempotencyKey IdempotencyKey,
-    StrategyOutcome Outcome,
-    ProcessRuntimeStepStatus AppliedStepStatus,
-    string ResultHash);
+public sealed record StrategyResultReceipt
+{
+    public StrategyResultReceipt(
+        ProcessStepInstanceId stepInstanceId,
+        StrategyId strategyId,
+        StrategyResultIdempotencyKey idempotencyKey,
+        StrategyOutcome outcome,
+        ProcessRuntimeStepStatus appliedStepStatus,
+        string resultHash,
+        IReadOnlyList<StrategyResultDiagnosticReceipt>? diagnostics = null,
+        IReadOnlyList<StrategyResultArtifactReceipt>? producedArtifacts = null,
+        ProcessRecoveryDecisionReceipt? recoveryDecision = null)
+    {
+        StepInstanceId = stepInstanceId;
+        StrategyId = strategyId;
+        IdempotencyKey = idempotencyKey;
+        Outcome = outcome;
+        AppliedStepStatus = appliedStepStatus;
+        ResultHash = resultHash;
+        Diagnostics = diagnostics ?? [];
+        ProducedArtifacts = producedArtifacts ?? [];
+        RecoveryDecision = recoveryDecision;
+    }
 
-public sealed record DispatchWorkItem(
-    ProcessRunId RunId,
-    ProcessStepInstanceId StepInstanceId,
-    ProcessStepDefinitionId StepDefinitionId,
-    ProcessStrategyBindingSnapshot StrategyBinding,
-    int AttemptNumber);
+    public ProcessStepInstanceId StepInstanceId { get; init; }
+
+    public StrategyId StrategyId { get; init; }
+
+    public StrategyResultIdempotencyKey IdempotencyKey { get; init; }
+
+    public StrategyOutcome Outcome { get; init; }
+
+    public ProcessRuntimeStepStatus AppliedStepStatus { get; init; }
+
+    public string ResultHash { get; init; }
+
+    public IReadOnlyList<StrategyResultDiagnosticReceipt> Diagnostics { get; init; }
+
+    public IReadOnlyList<StrategyResultArtifactReceipt> ProducedArtifacts { get; init; }
+
+    public ProcessRecoveryDecisionReceipt? RecoveryDecision { get; init; }
+}
+
+public sealed record StrategyResultDiagnosticReceipt(
+    string Code,
+    StrategyDiagnosticSensitivity Sensitivity,
+    string EvidenceHash,
+    string SafeSummary,
+    string? RestrictedEvidenceReference,
+    ProcessDiagnosticRetrySafety RetrySafety,
+    ProcessDiagnosticIdempotencyClassification Idempotency);
+
+public sealed record StrategyResultArtifactReceipt(
+    ArtifactSlotId SlotId,
+    ArtifactInstanceId ArtifactId,
+    string ContentHash);
+
+public sealed record ProcessRecoveryDecisionReceipt(
+    ProcessFailureCategory FailureCategory,
+    ProcessRecoveryDecisionKind DecisionKind,
+    string SourceDiagnosticCode,
+    string Policy,
+    string SafeReason)
+{
+    public ProcessRecoveryRouteKind RouteKind { get; init; } = ProcessRecoveryRouteKind.ManagerAction;
+
+    public ProcessStepInstanceId? ResponsibleStepInstanceId { get; init; }
+
+    public string DiagnosticFingerprint { get; init; } = string.Empty;
+
+    public int AutomaticRetryAttempt { get; init; }
+
+    public int MaximumAutomaticRetryAttempts { get; init; }
+
+    public int SameDiagnosticFingerprintAttempt { get; init; }
+
+    public int MaximumSameDiagnosticFingerprintAttempts { get; init; }
+}
+
+public enum ProcessFailureCategory
+{
+    Unknown,
+    MissingDiagnostics,
+    MissingArtifact,
+    MissingCapability,
+    DeniedCapability,
+    PolicyViolation,
+    Timeout,
+    ProviderFailure,
+    ChildRunBlocked,
+    InstructionNonCompliance,
+    ProductCompletionGate,
+    AdapterRetryable
+}
+
+public enum ProcessRecoveryDecisionKind
+{
+    None,
+    SafeRetry,
+    ManagerRequired,
+    TerminalBlocked
+}
+
+public enum ProcessRecoveryRouteKind
+{
+    None,
+    CurrentStepRetry,
+    UpstreamStepRework,
+    ManagerAction,
+    TerminalBlock,
+    ChildRunPropagation,
+    TemplateRepair
+}
+
+public sealed record DispatchWorkItem
+{
+    public DispatchWorkItem(
+        ProcessRunId runId,
+        ProcessStepInstanceId stepInstanceId,
+        ProcessStepDefinitionId stepDefinitionId,
+        ProcessStrategyBindingSnapshot strategyBinding,
+        int attemptNumber,
+        ProcessStepExecutionContract? stepContract = null)
+    {
+        RunId = runId;
+        StepInstanceId = stepInstanceId;
+        StepDefinitionId = stepDefinitionId;
+        StrategyBinding = strategyBinding;
+        AttemptNumber = attemptNumber;
+        StepContract = stepContract ?? ProcessStepExecutionContract.Empty;
+    }
+
+    public ProcessRunId RunId { get; init; }
+
+    public ProcessStepInstanceId StepInstanceId { get; init; }
+
+    public ProcessStepDefinitionId StepDefinitionId { get; init; }
+
+    public ProcessStrategyBindingSnapshot StrategyBinding { get; init; }
+
+    public int AttemptNumber { get; init; }
+
+    public ProcessStepExecutionContract StepContract { get; init; }
+}
 
 public sealed record ProcessRuntimeMutation(
     ProcessRuntimeTransitionOutcome Outcome,

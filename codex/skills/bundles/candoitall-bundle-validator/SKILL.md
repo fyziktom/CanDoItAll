@@ -83,11 +83,41 @@ For critical work, the gate fails when any of these are true:
 
 Use `../candoitall-bundle-execution/references/semantic-adequacy-proof.md` and `../candoitall-bundle-execution/references/artifact-backed-proof-manifest.md` as the audit rubric when evaluating these claims.
 
+## C# Architecture Gate Checks
+
+For C# architecture-heavy bundles, the readiness gate fails unless:
+
+- `architecture/00-csharp-current-state-inventory.md` exists.
+- `architecture/01-csharp-boundary-map.md` exists.
+- `architecture/02-csharp-dependency-direction.md` exists.
+- `architecture/03-csharp-pattern-selection-records.md` exists.
+- `architecture/04-csharp-testability-plan.md` exists.
+- `plan/architecture-checkpoints.md` exists.
+- `reviews/csharp-architecture-gate.md` exists.
+- every architecture-relevant subbundle has C# architecture sections
+- critical foundation subbundles exist before dependent feature subbundles
+- partial-class policy is explicitly stated
+- testability proof is planned
+- CodeAnalytics MCP evidence is recorded by snapshot id, or the bundle records an explicit MCP-unavailable validation gap
+
+For completed C# architecture-heavy bundles, the final closure gate fails unless:
+
+- architecture gate result is recorded
+- changed project references have before/after proof
+- old large class shrink or thin-facade proof is recorded
+- no new partial class was added without policy justification
+- extracted behavior has isolated unit tests
+- composition smoke exists when registration changed
+- pattern selection records match implementation
+- unresolved bridges have follow-up subbundles
+- CodeAnalytics dependency or findings proof was refreshed when project references, large classes, providers, tools, drivers, memory protocols, or runtime composition changed
+
 ## References
 
 - Read [references/readiness-and-closure-checks.md](references/readiness-and-closure-checks.md) for the audit checklist.
 - Read [../candoitall-bundle-execution/references/semantic-adequacy-proof.md](../candoitall-bundle-execution/references/semantic-adequacy-proof.md) before passing final closure for critical work.
 - Read [../candoitall-bundle-execution/references/artifact-backed-proof-manifest.md](../candoitall-bundle-execution/references/artifact-backed-proof-manifest.md) before accepting critical proof manifests or red-team closure artifacts.
+- Use `candoitall-csharp-architecture-bundle-guard`, `csharp-architecture-review-gate`, and `candoitall-codeanalytics-mcp` when validating C# architecture-heavy bundles.
 - Use `candoitall-subbundle-validator` for per-subbundle entry and closure gates.
 - Use `scripts/validate_bundle.py` as the automation-backed baseline for structural and proof-depth checks, then finish the manual audit before passing the gate.
 

@@ -1,5 +1,4 @@
 using CanDoItAll.AgentFramework.Core;
-using CanDoItAll.AgentFramework.Models;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
@@ -14,15 +13,8 @@ public static class StandardProjectStructureWorkflowExecutorServiceCollectionExt
         ArgumentNullException.ThrowIfNull(services);
 
         services.TryAdd(ServiceDescriptor.Describe(typeof(IProjectStructureRuntimeGateway), typeof(UnavailableProjectStructureRuntimeGateway), executorLifetime));
-        services.TryAddEnumerable(ServiceDescriptor.Singleton<IWorkflowExecutorDescriptorSource, StandardProjectStructureWorkflowExecutorDescriptorSource>());
-        services.TryAddEnumerable(ServiceDescriptor.Describe(typeof(IWorkflowExecutor), typeof(ProjectStructureWorkflowExecutor), executorLifetime));
+        services.AddWorkflowExecutorContribution<ProjectStructureWorkflowExecutor>(BuiltInWorkflowExecutorDescriptors.ProjectStructure, executorLifetime);
 
         return services;
     }
-}
-
-public sealed class StandardProjectStructureWorkflowExecutorDescriptorSource : IWorkflowExecutorDescriptorSource
-{
-    public IEnumerable<WorkflowExecutorDescriptor> ListExecutorDescriptors()
-        => [BuiltInWorkflowExecutorDescriptors.ProjectStructure];
 }

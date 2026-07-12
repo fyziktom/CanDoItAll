@@ -76,7 +76,20 @@ public sealed class ProcessRuntimeEngineTests
                 ProcessRuntimeStepStatus.Pending,
                 dependencies: new HashSet<ProcessStepInstanceId> { StartStepId },
                 requiredArtifacts: new HashSet<ArtifactSlotId> { ArtifactSlotId }),
-            availableArtifacts: new HashSet<ArtifactSlotId> { ArtifactSlotId });
+            availableArtifacts: new HashSet<ArtifactSlotId> { ArtifactSlotId }) with
+        {
+            ConnectedInputArtifacts =
+            [
+                new ProcessRuntimeInputArtifactReceipt(
+                    ActivityStepId,
+                    ArtifactSlotId,
+                    ProcessArtifactInputAvailability.Available,
+                    StartStepId,
+                    ArtifactInstanceId,
+                    "sha256:artifact",
+                    "sha256:start-to-activity-artifact")
+            ]
+        };
 
         var result = await engine.ScheduleReadyAsync(state, Context());
         var readyStep = result.State.Steps.Single(step => step.StepInstanceId == ActivityStepId);
@@ -88,6 +101,31 @@ public sealed class ProcessRuntimeEngineTests
         var workItem = Assert.Single(readyWork);
         Assert.Equal(ActivityStepId, workItem.StepInstanceId);
         Assert.Equal(Binding.StrategyId, workItem.StrategyBinding.StrategyId);
+    }
+
+    [Fact]
+    public async Task Scheduler_keeps_pending_step_waiting_when_slot_exists_without_connected_input_receipt()
+    {
+        var unitOfWork = new RecordingUnitOfWork();
+        var engine = new ProcessRuntimeEngine(unitOfWork);
+        var state = NewState(
+            ProcessRuntimeStatus.Active,
+            NewStartStep(ProcessRuntimeStepStatus.Completed),
+            NewActivityStep(
+                ProcessRuntimeStepStatus.Pending,
+                dependencies: new HashSet<ProcessStepInstanceId> { StartStepId },
+                requiredArtifacts: new HashSet<ArtifactSlotId> { ArtifactSlotId }),
+            availableArtifacts: new HashSet<ArtifactSlotId> { ArtifactSlotId });
+
+        var result = await engine.ScheduleReadyAsync(state, Context());
+
+        Assert.True(result.Succeeded);
+        Assert.Equal(
+            ProcessRuntimeStepStatus.Pending,
+            result.State.Steps.Single(step => step.StepInstanceId == ActivityStepId).Status);
+        Assert.DoesNotContain(
+            result.Events,
+            runtimeEvent => runtimeEvent.EventType == ProcessRuntimeEventTypes.StepReady);
     }
 
     [Fact]
@@ -461,6 +499,436 @@ public sealed class ProcessRuntimeEngineTests
     }
 
     [Fact]
+    public async Task Blocked_strategy_result_preserves_safe_diagnostics_on_receipt()
+    {
+        var unitOfWork = new RecordingUnitOfWork();
+        var engine = new ProcessRuntimeEngine(unitOfWork);
+        var token = DispatchClaimToken.New();
+        var state = NewState(
+            ProcessRuntimeStatus.Active,
+            NewStartStep(ProcessRuntimeStepStatus.Completed),
+            NewActivityStep(ProcessRuntimeStepStatus.Running, activeClaimToken: token),
+            claims:
+            [
+                new DispatchClaimState(
+                    token,
+                    ActivityStepId,
+                    OwnerId,
+                    DispatchClaimStatus.Claimed,
+                    1,
+                    Now,
+                    Now.AddMinutes(5),
+                    null,
+                    null)
+            ]);
+
+        var result = await engine.SubmitStrategyResultAsync(
+            state,
+            Context(Now.AddMinutes(1)),
+            new SubmitStrategyResultCommand(
+                ActivityStepId,
+                OwnerId,
+                token,
+                StrategyResultIdempotencyKey.New(),
+                NeedsManagerResult()));
+
+        var receipt = Assert.Single(result.State.AppliedResults);
+        var diagnostic = Assert.Single(receipt.Diagnostics);
+        Assert.Equal("process.runtime.test_needs_manager", diagnostic.Code);
+        Assert.Equal("sha256:needs-manager-diagnostic", diagnostic.EvidenceHash);
+        Assert.Equal("Unit test needs manager.", diagnostic.SafeSummary);
+        Assert.Equal(ProcessDiagnosticRetrySafety.UnsafeToRetry, diagnostic.RetrySafety);
+        Assert.Equal(ProcessDiagnosticIdempotencyClassification.Idempotent, diagnostic.Idempotency);
+        Assert.NotNull(receipt.RecoveryDecision);
+        Assert.Equal(ProcessRecoveryDecisionKind.ManagerRequired, receipt.RecoveryDecision.DecisionKind);
+        Assert.Equal(ProcessFailureCategory.Unknown, receipt.RecoveryDecision.FailureCategory);
+    }
+
+    [Fact]
+    public async Task Safe_idempotent_completion_gate_result_routes_to_current_step_retry()
+    {
+        var unitOfWork = new RecordingUnitOfWork();
+        var engine = new ProcessRuntimeEngine(unitOfWork);
+        var token = DispatchClaimToken.New();
+        var state = NewState(
+            ProcessRuntimeStatus.Active,
+            NewStartStep(ProcessRuntimeStepStatus.Completed),
+            NewActivityStep(ProcessRuntimeStepStatus.Running, activeClaimToken: token),
+            claims:
+            [
+                new DispatchClaimState(
+                    token,
+                    ActivityStepId,
+                    OwnerId,
+                    DispatchClaimStatus.Claimed,
+                    1,
+                    Now,
+                    Now.AddMinutes(5),
+                    null,
+                    null)
+            ]);
+
+        var result = await engine.SubmitStrategyResultAsync(
+            state,
+            Context(Now.AddMinutes(1)),
+            new SubmitStrategyResultCommand(
+                ActivityStepId,
+                OwnerId,
+                token,
+                StrategyResultIdempotencyKey.New(),
+                SafeCompletionGateNeedsManagerResult()));
+
+        var receipt = Assert.Single(result.State.AppliedResults);
+        var step = result.State.Steps.Single(item => item.StepInstanceId == ActivityStepId);
+        Assert.Equal(ProcessRuntimeStatus.Active, result.State.Status);
+        Assert.Equal(ProcessRuntimeStepStatus.Ready, step.Status);
+        Assert.Equal(ProcessRuntimeStepStatus.Ready, receipt.AppliedStepStatus);
+        Assert.NotNull(receipt.RecoveryDecision);
+        Assert.Equal(ProcessFailureCategory.ProductCompletionGate, receipt.RecoveryDecision.FailureCategory);
+        Assert.Equal(ProcessRecoveryDecisionKind.SafeRetry, receipt.RecoveryDecision.DecisionKind);
+        Assert.Equal(ProcessRecoveryRouteKind.CurrentStepRetry, receipt.RecoveryDecision.RouteKind);
+        Assert.Equal("process.current-step-safe-retry", receipt.RecoveryDecision.Policy);
+        Assert.Equal(1, receipt.RecoveryDecision.AutomaticRetryAttempt);
+        Assert.Equal(1, receipt.RecoveryDecision.SameDiagnosticFingerprintAttempt);
+        Assert.Contains(result.Events, runtimeEvent => runtimeEvent.EventType == ProcessRuntimeEventTypes.StepReady);
+        Assert.DoesNotContain(result.Events, runtimeEvent => runtimeEvent.EventType == ProcessRuntimeEventTypes.StepBlocked);
+    }
+
+    [Fact]
+    public async Task Branch_defect_evidence_gap_routes_to_current_step_retry()
+    {
+        var unitOfWork = new RecordingUnitOfWork();
+        var engine = new ProcessRuntimeEngine(unitOfWork);
+        var token = DispatchClaimToken.New();
+        var state = NewState(
+            ProcessRuntimeStatus.Active,
+            NewStartStep(ProcessRuntimeStepStatus.Completed),
+            NewActivityStep(ProcessRuntimeStepStatus.Running, activeClaimToken: token),
+            claims:
+            [
+                new DispatchClaimState(
+                    token,
+                    ActivityStepId,
+                    OwnerId,
+                    DispatchClaimStatus.Claimed,
+                    1,
+                    Now,
+                    Now.AddMinutes(5),
+                    null,
+                    null)
+            ]);
+
+        var result = await engine.SubmitStrategyResultAsync(
+            state,
+            Context(Now.AddMinutes(1)),
+            new SubmitStrategyResultCommand(
+                ActivityStepId,
+                OwnerId,
+                token,
+                StrategyResultIdempotencyKey.New(),
+                BranchDefectEvidenceGapNeedsManagerResult()));
+
+        var receipt = Assert.Single(result.State.AppliedResults);
+        var step = result.State.Steps.Single(item => item.StepInstanceId == ActivityStepId);
+        Assert.Equal(ProcessRuntimeStatus.Active, result.State.Status);
+        Assert.Equal(ProcessRuntimeStepStatus.Ready, step.Status);
+        Assert.Equal(ProcessRuntimeStepStatus.Ready, receipt.AppliedStepStatus);
+        Assert.NotNull(receipt.RecoveryDecision);
+        Assert.Equal(ProcessFailureCategory.ProductCompletionGate, receipt.RecoveryDecision.FailureCategory);
+        Assert.Equal(ProcessRecoveryDecisionKind.SafeRetry, receipt.RecoveryDecision.DecisionKind);
+        Assert.Equal(ProcessRecoveryRouteKind.CurrentStepRetry, receipt.RecoveryDecision.RouteKind);
+        Assert.Equal("process.current-step-safe-retry", receipt.RecoveryDecision.Policy);
+        Assert.Contains(result.Events, runtimeEvent => runtimeEvent.EventType == ProcessRuntimeEventTypes.StepReady);
+        Assert.DoesNotContain(result.Events, runtimeEvent => runtimeEvent.EventType == ProcessRuntimeEventTypes.StepBlocked);
+    }
+
+    [Fact]
+    public async Task Runtime_lifecycle_correlation_gap_routes_to_current_step_retry()
+    {
+        var unitOfWork = new RecordingUnitOfWork();
+        var engine = new ProcessRuntimeEngine(unitOfWork);
+        var token = DispatchClaimToken.New();
+        var state = NewState(
+            ProcessRuntimeStatus.Active,
+            NewStartStep(ProcessRuntimeStepStatus.Completed),
+            NewActivityStep(ProcessRuntimeStepStatus.Running, activeClaimToken: token),
+            claims:
+            [
+                new DispatchClaimState(
+                    token,
+                    ActivityStepId,
+                    OwnerId,
+                    DispatchClaimStatus.Claimed,
+                    1,
+                    Now,
+                    Now.AddMinutes(5),
+                    null,
+                    null)
+            ]);
+
+        var result = await engine.SubmitStrategyResultAsync(
+            state,
+            Context(Now.AddMinutes(1)),
+            new SubmitStrategyResultCommand(
+                ActivityStepId,
+                OwnerId,
+                token,
+                StrategyResultIdempotencyKey.New(),
+                RuntimeLifecycleCorrelationGapNeedsManagerResult()));
+
+        var receipt = Assert.Single(result.State.AppliedResults);
+        var step = result.State.Steps.Single(item => item.StepInstanceId == ActivityStepId);
+        Assert.Equal(ProcessRuntimeStatus.Active, result.State.Status);
+        Assert.Equal(ProcessRuntimeStepStatus.Ready, step.Status);
+        Assert.Equal(ProcessRuntimeStepStatus.Ready, receipt.AppliedStepStatus);
+        Assert.NotNull(receipt.RecoveryDecision);
+        Assert.Equal(ProcessRecoveryDecisionKind.SafeRetry, receipt.RecoveryDecision.DecisionKind);
+        Assert.Equal(ProcessRecoveryRouteKind.CurrentStepRetry, receipt.RecoveryDecision.RouteKind);
+        Assert.Equal("process.current-step-safe-retry", receipt.RecoveryDecision.Policy);
+        Assert.Contains(result.Events, runtimeEvent => runtimeEvent.EventType == ProcessRuntimeEventTypes.StepReady);
+        Assert.DoesNotContain(result.Events, runtimeEvent => runtimeEvent.EventType == ProcessRuntimeEventTypes.StepBlocked);
+    }
+
+
+    [Fact]
+    public async Task Safe_idempotent_completion_gate_result_escalates_when_diagnostic_survives_one_retry()
+    {
+        var unitOfWork = new RecordingUnitOfWork();
+        var engine = new ProcessRuntimeEngine(unitOfWork);
+        var firstToken = DispatchClaimToken.New();
+        var state = NewState(
+            ProcessRuntimeStatus.Active,
+            NewStartStep(ProcessRuntimeStepStatus.Completed),
+            NewActivityStep(ProcessRuntimeStepStatus.Running, activeClaimToken: firstToken),
+            claims:
+            [
+                new DispatchClaimState(
+                    firstToken,
+                    ActivityStepId,
+                    OwnerId,
+                    DispatchClaimStatus.Claimed,
+                    1,
+                    Now,
+                    Now.AddMinutes(5),
+                    null,
+                    null)
+            ]);
+
+        var first = await engine.SubmitStrategyResultAsync(
+            state,
+            Context(Now.AddMinutes(1)),
+            new SubmitStrategyResultCommand(
+                ActivityStepId,
+                OwnerId,
+                firstToken,
+                StrategyResultIdempotencyKey.New(),
+                SafeCompletionGateNeedsManagerResult()));
+
+        var secondToken = DispatchClaimToken.New();
+        var retryState = first.State with
+        {
+            Steps = first.State.Steps
+                .Select(step => step.StepInstanceId == ActivityStepId
+                    ? step with
+                    {
+                        Status = ProcessRuntimeStepStatus.Running,
+                        AttemptNumber = 2,
+                        ActiveClaimToken = secondToken
+                    }
+                    : step)
+                .ToArray(),
+            Claims =
+            [
+                .. first.State.Claims,
+                new DispatchClaimState(
+                    secondToken,
+                    ActivityStepId,
+                    OwnerId,
+                    DispatchClaimStatus.Claimed,
+                    2,
+                    Now.AddMinutes(2),
+                    Now.AddMinutes(7),
+                    null,
+                    null)
+            ]
+        };
+
+        var second = await engine.SubmitStrategyResultAsync(
+            retryState,
+            Context(Now.AddMinutes(3)),
+            new SubmitStrategyResultCommand(
+                ActivityStepId,
+                OwnerId,
+                secondToken,
+                StrategyResultIdempotencyKey.New(),
+                SafeCompletionGateNeedsManagerResult()));
+
+        var secondReceipt = second.State.AppliedResults.Last();
+        var secondStep = second.State.Steps.Single(item => item.StepInstanceId == ActivityStepId);
+        Assert.Equal(ProcessRuntimeStepStatus.Blocked, secondStep.Status);
+        Assert.Equal(ProcessRuntimeStepStatus.Blocked, secondReceipt.AppliedStepStatus);
+        Assert.NotNull(secondReceipt.RecoveryDecision);
+        Assert.Equal(ProcessRecoveryDecisionKind.ManagerRequired, secondReceipt.RecoveryDecision.DecisionKind);
+        Assert.Equal(ProcessRecoveryRouteKind.ManagerAction, secondReceipt.RecoveryDecision.RouteKind);
+        Assert.Equal("process.current-step-safe-retry-budget-exhausted", secondReceipt.RecoveryDecision.Policy);
+        Assert.Equal(2, secondReceipt.RecoveryDecision.SameDiagnosticFingerprintAttempt);
+        Assert.Equal(1, secondReceipt.RecoveryDecision.MaximumSameDiagnosticFingerprintAttempts);
+        Assert.Contains("exhausted automatic current-step retry budget", secondReceipt.RecoveryDecision.SafeReason, StringComparison.Ordinal);
+        Assert.Contains(second.Events, runtimeEvent => runtimeEvent.EventType == ProcessRuntimeEventTypes.StepBlocked);
+    }
+
+    [Fact]
+    public async Task Blocked_strategy_result_without_diagnostics_records_missing_diagnostic()
+    {
+        var unitOfWork = new RecordingUnitOfWork();
+        var engine = new ProcessRuntimeEngine(unitOfWork);
+        var token = DispatchClaimToken.New();
+        var state = NewState(
+            ProcessRuntimeStatus.Active,
+            NewStartStep(ProcessRuntimeStepStatus.Completed),
+            NewActivityStep(ProcessRuntimeStepStatus.Running, activeClaimToken: token),
+            claims:
+            [
+                new DispatchClaimState(
+                    token,
+                    ActivityStepId,
+                    OwnerId,
+                    DispatchClaimStatus.Claimed,
+                    1,
+                    Now,
+                    Now.AddMinutes(5),
+                    null,
+                    null)
+            ]);
+
+        var result = await engine.SubmitStrategyResultAsync(
+            state,
+            Context(Now.AddMinutes(1)),
+            new SubmitStrategyResultCommand(
+                ActivityStepId,
+                OwnerId,
+                token,
+                StrategyResultIdempotencyKey.New(),
+                NeedsManagerResultWithoutDiagnostics()));
+
+        var receipt = Assert.Single(result.State.AppliedResults);
+        var diagnostic = Assert.Single(receipt.Diagnostics);
+        Assert.Equal("process.runtime.blocked_without_diagnostics", diagnostic.Code);
+        Assert.Equal(ProcessDiagnosticRetrySafety.Unknown, diagnostic.RetrySafety);
+        Assert.Contains("Step blocked without strategy diagnostics", diagnostic.SafeSummary, StringComparison.Ordinal);
+        Assert.NotNull(receipt.RecoveryDecision);
+        Assert.Equal(ProcessFailureCategory.MissingDiagnostics, receipt.RecoveryDecision.FailureCategory);
+        Assert.Equal(ProcessRecoveryDecisionKind.ManagerRequired, receipt.RecoveryDecision.DecisionKind);
+    }
+
+    [Fact]
+    public async Task Successful_result_missing_expected_output_blocks_with_finalization_diagnostic()
+    {
+        var unitOfWork = new RecordingUnitOfWork();
+        var engine = new ProcessRuntimeEngine(unitOfWork);
+        var token = DispatchClaimToken.New();
+        var state = NewState(
+            ProcessRuntimeStatus.Active,
+            NewStartStep(ProcessRuntimeStepStatus.Completed),
+            NewActivityStep(ProcessRuntimeStepStatus.Running, activeClaimToken: token) with
+            {
+                ProducedArtifactSlots = new HashSet<ArtifactSlotId> { ArtifactSlotId }
+            },
+            claims:
+            [
+                new DispatchClaimState(
+                    token,
+                    ActivityStepId,
+                    OwnerId,
+                    DispatchClaimStatus.Claimed,
+                    1,
+                    Now,
+                    Now.AddMinutes(5),
+                    null,
+                    null)
+            ]);
+
+        var result = await engine.SubmitStrategyResultAsync(
+            state,
+            Context(Now.AddMinutes(1)),
+            new SubmitStrategyResultCommand(
+                ActivityStepId,
+                OwnerId,
+                token,
+                StrategyResultIdempotencyKey.New(),
+                SucceededResult()));
+
+        var receipt = Assert.Single(result.State.AppliedResults);
+        Assert.True(result.Succeeded);
+        Assert.Equal(ProcessRuntimeStepStatus.Blocked, result.State.Steps.Single(step => step.StepInstanceId == ActivityStepId).Status);
+        Assert.Equal(StrategyOutcome.NeedsManager, receipt.Outcome);
+        Assert.Equal(ProcessRuntimeStepStatus.Blocked, receipt.AppliedStepStatus);
+        Assert.Contains(receipt.Diagnostics, diagnostic => diagnostic.Code == "process.runtime.missing_expected_output_artifact");
+        Assert.NotNull(receipt.RecoveryDecision);
+        Assert.Equal(ProcessFailureCategory.MissingArtifact, receipt.RecoveryDecision.FailureCategory);
+        Assert.Equal(ProcessRecoveryRouteKind.ManagerAction, receipt.RecoveryDecision.RouteKind);
+        Assert.Equal(ActivityStepId, receipt.RecoveryDecision.ResponsibleStepInstanceId);
+    }
+
+    [Fact]
+    public async Task Missing_required_input_routes_recovery_to_upstream_producer()
+    {
+        var unitOfWork = new RecordingUnitOfWork();
+        var engine = new ProcessRuntimeEngine(unitOfWork);
+        var token = DispatchClaimToken.New();
+        var state = NewState(
+            ProcessRuntimeStatus.Active,
+            NewStartStep(ProcessRuntimeStepStatus.Completed),
+            NewActivityStep(
+                ProcessRuntimeStepStatus.Running,
+                requiredArtifacts: new HashSet<ArtifactSlotId> { ArtifactSlotId },
+                activeClaimToken: token),
+            claims:
+            [
+                new DispatchClaimState(
+                    token,
+                    ActivityStepId,
+                    OwnerId,
+                    DispatchClaimStatus.Claimed,
+                    1,
+                    Now,
+                    Now.AddMinutes(5),
+                    null,
+                    null)
+            ]) with
+        {
+            ConnectedInputArtifacts =
+            [
+                new ProcessRuntimeInputArtifactReceipt(
+                    ActivityStepId,
+                    ArtifactSlotId,
+                    ProcessArtifactInputAvailability.Expected,
+                    StartStepId,
+                    ArtifactId: null,
+                    ContentHash: string.Empty,
+                    ConnectionHash: "sha256:start-to-activity-expected")
+            ]
+        };
+
+        var result = await engine.SubmitStrategyResultAsync(
+            state,
+            Context(Now.AddMinutes(1)),
+            new SubmitStrategyResultCommand(
+                ActivityStepId,
+                OwnerId,
+                token,
+                StrategyResultIdempotencyKey.New(),
+                MissingInputNeedsManagerResult()));
+
+        var receipt = Assert.Single(result.State.AppliedResults);
+        Assert.True(result.Succeeded);
+        Assert.NotNull(receipt.RecoveryDecision);
+        Assert.Equal(ProcessFailureCategory.MissingArtifact, receipt.RecoveryDecision.FailureCategory);
+        Assert.Equal(ProcessRecoveryRouteKind.UpstreamStepRework, receipt.RecoveryDecision.RouteKind);
+        Assert.Equal(StartStepId, receipt.RecoveryDecision.ResponsibleStepInstanceId);
+    }
+
+    [Fact]
     public async Task Rework_request_reactivates_failed_run_and_requeues_failed_step()
     {
         var unitOfWork = new RecordingUnitOfWork();
@@ -716,6 +1184,117 @@ public sealed class ProcessRuntimeEngineTests
             ],
             [],
             "sha256:needs-manager-result");
+    }
+
+    private static StrategyResultEnvelope SafeCompletionGateNeedsManagerResult()
+    {
+        return new StrategyResultEnvelope(
+            StrategyId,
+            "1.0.0",
+            Guid.NewGuid(),
+            StrategyOutcome.NeedsManager,
+            [],
+            [],
+            [
+                new StrategyDiagnosticRef(
+                    new StrategyDiagnosticCode("process.adapter.product_required_tool_receipt_missing"),
+                    StrategyDiagnosticSensitivity.Normal,
+                    "sha256:missing-workspace-pwsh-run-script",
+                    "Required current-run product tool receipt is missing: workspace_pwsh_run_script.",
+                    RestrictedEvidenceReference: null,
+                    ProcessDiagnosticRetrySafety.SafeToRetry,
+                    ProcessDiagnosticIdempotencyClassification.Idempotent)
+            ],
+            [],
+            "sha256:completion-gate-safe-retry");
+    }
+
+    private static StrategyResultEnvelope BranchDefectEvidenceGapNeedsManagerResult()
+    {
+        return new StrategyResultEnvelope(
+            StrategyId,
+            "1.0.0",
+            Guid.NewGuid(),
+            StrategyOutcome.NeedsManager,
+            [],
+            [],
+            [
+                new StrategyDiagnosticRef(
+                    new StrategyDiagnosticCode("process.adapter.branch_outcome_defect_evidence_missing"),
+                    StrategyDiagnosticSensitivity.Normal,
+                    "sha256:missing-defect-evidence",
+                    "Selected repair branch lacks deterministic defect evidence.",
+                    RestrictedEvidenceReference: null,
+                    ProcessDiagnosticRetrySafety.SafeToRetry,
+                    ProcessDiagnosticIdempotencyClassification.Idempotent)
+            ],
+            [],
+            "sha256:branch-defect-evidence-gap");
+    }
+
+    private static StrategyResultEnvelope RuntimeLifecycleCorrelationGapNeedsManagerResult()
+    {
+        return new StrategyResultEnvelope(
+            StrategyId,
+            "1.0.0",
+            Guid.NewGuid(),
+            StrategyOutcome.NeedsManager,
+            [],
+            [],
+            [
+                new StrategyDiagnosticRef(
+                    new StrategyDiagnosticCode("process.adapter.runtime_lifecycle_correlation_missing"),
+                    StrategyDiagnosticSensitivity.Normal,
+                    "sha256:runtime-lifecycle-correlation",
+                    "Runtime lifecycle proof is incomplete or stale.",
+                    RestrictedEvidenceReference: null,
+                    ProcessDiagnosticRetrySafety.SafeToRetry,
+                    ProcessDiagnosticIdempotencyClassification.Idempotent)
+            ],
+            [],
+            "sha256:runtime-lifecycle-correlation-gap");
+    }
+
+    private static StrategyResultEnvelope NeedsManagerResultWithoutDiagnostics()
+    {
+        return new StrategyResultEnvelope(
+            StrategyId,
+            "1.0.0",
+            Guid.NewGuid(),
+            StrategyOutcome.NeedsManager,
+            [],
+            [],
+            [],
+            [],
+            "sha256:needs-manager-result");
+    }
+
+    private static StrategyResultEnvelope MissingInputNeedsManagerResult()
+    {
+        return new StrategyResultEnvelope(
+            StrategyId,
+            "1.0.0",
+            Guid.NewGuid(),
+            StrategyOutcome.NeedsManager,
+            [],
+            [new RequestedArtifactRef(ArtifactSlotId, "sha256:requested-input")],
+            [
+                new StrategyDiagnosticRef(
+                    new StrategyDiagnosticCode("process.runtime.required_artifact_missing"),
+                    StrategyDiagnosticSensitivity.Normal,
+                    "sha256:missing-input",
+                    "Required input artifact is missing.",
+                    RestrictedEvidenceReference: null,
+                    ProcessDiagnosticRetrySafety.UnsafeToRetry,
+                    ProcessDiagnosticIdempotencyClassification.Idempotent)
+            ],
+            [
+                new ManagerSignal(
+                    new ManagerSignalCode("process.runtime.required_artifact_missing"),
+                    "sha256:missing-input",
+                    "Required input artifact is missing.")
+            ],
+            "sha256:missing-input-result");
     }
 
     private sealed class RecordingUnitOfWork : IProcessRuntimeUnitOfWork

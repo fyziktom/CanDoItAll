@@ -5,7 +5,7 @@ namespace CanDoItAll.Tests.Unit;
 public sealed class CapabilityMigrationCleanupGuardTests
 {
     [Fact]
-    public void SB12_INV_CLEANUP_001_seed_builder_uses_template_materializer_only_for_default_capabilities()
+    public void INV_CLEANUP_001_seed_builder_uses_template_materializer_only_for_default_capabilities()
     {
         var source = ReadRepositoryFile("src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Seeds/SandboxWorkspaceSeedBuilder.cs");
 
@@ -19,7 +19,7 @@ public sealed class CapabilityMigrationCleanupGuardTests
     }
 
     [Fact]
-    public void SB12_INV_CLEANUP_002_maf_runtime_does_not_define_private_capability_descriptor_dtos()
+    public void INV_CLEANUP_002_maf_runtime_does_not_define_private_capability_descriptor_dtos()
     {
         var source = ReadRepositoryFiles("src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/Capabilities");
 
@@ -30,23 +30,26 @@ public sealed class CapabilityMigrationCleanupGuardTests
     }
 
     [Fact]
-    public void SB12_INV_CLEANUP_003_runtime_suppression_uses_shared_evaluator()
+    public void INV_CLEANUP_003_runtime_suppression_uses_shared_evaluator()
     {
         var accessSource = ReadRepositoryFiles("src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/Capabilities");
-        var policySource = ReadRepositoryFile("src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/Capabilities/MafAgentRuntime.Capabilities.Access.Policies.cs");
+        var runtimeProviderComposerSource = ReadRepositoryFile("src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/Capabilities/RuntimeToolProviderComposer.cs");
+        var policySource = ReadRepositoryFile("src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/Capabilities/RuntimeCapabilityComposer.Access.Policies.cs");
 
         Assert.Contains("ICapabilityAccessPolicyEvaluator", accessSource, StringComparison.Ordinal);
-        Assert.Contains("EvaluateRuntimeToolAccess", accessSource, StringComparison.Ordinal);
-        Assert.Contains("AppendRuntimeToolAccessResult", accessSource, StringComparison.Ordinal);
+        Assert.Contains("RuntimeToolProviderAccessFilter", runtimeProviderComposerSource, StringComparison.Ordinal);
+        Assert.Contains("request.AccessPlan.Evaluator.Evaluate", runtimeProviderComposerSource, StringComparison.Ordinal);
         Assert.Contains("result.ToEffectiveSet()", accessSource, StringComparison.Ordinal);
         Assert.Contains("CapabilitySelector.ByTag(CapabilityTag.Create(\"configured\"))", policySource, StringComparison.Ordinal);
+        Assert.DoesNotContain("EvaluateRuntimeToolAccess", accessSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("AppendRuntimeToolAccessResult", accessSource, StringComparison.Ordinal);
         Assert.DoesNotContain("ShouldExcludeSkillsForProcessStep", accessSource, StringComparison.Ordinal);
         Assert.DoesNotContain("ResolveProcessScopedWorkspaceToolAccess", accessSource, StringComparison.Ordinal);
         Assert.DoesNotContain("FilterCapabilitiesForProcess", accessSource, StringComparison.Ordinal);
     }
 
     [Fact]
-    public void SB12_INV_CLEANUP_004_runtime_access_logic_does_not_compare_raw_selector_values()
+    public void INV_CLEANUP_004_runtime_access_logic_does_not_compare_raw_selector_values()
     {
         var mafSource = ReadRepositoryFiles("src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/Capabilities");
         var evaluatorSource = ReadRepositoryFile("src/MAF/Capabilities/CanDoItAll.AgentFramework.Capabilities.Access/CapabilityAccessPolicyEvaluator.cs");
@@ -60,14 +63,14 @@ public sealed class CapabilityMigrationCleanupGuardTests
     }
 
     [Fact]
-    public void SB12_INV_CLEANUP_005_external_tool_and_mcp_setup_failures_remain_structured()
+    public void INV_CLEANUP_005_external_tool_and_mcp_setup_failures_remain_structured()
     {
         var source = string.Join(
             Environment.NewLine,
             ReadRepositoryFile("src/MAF/Tools/CanDoItAll.AgentFramework.Tools/External/ExternalProcessToolInvoker.cs"),
             ReadRepositoryFile("src/MAF/Tools/CanDoItAll.AgentFramework.Tools/External/ExternalHttpToolInvoker.cs"),
             ReadRepositoryFile("src/MAF/Tools/CanDoItAll.AgentFramework.Tools/External/ToolDiagnostics.cs"),
-            ReadRepositoryFile("src/MAF/Mcp/CanDoItAll.AgentFramework.Mcp/Runtime/McpSetupTestService.cs"),
+            ReadRepositoryFiles("src/MAF/Mcp/CanDoItAll.AgentFramework.Mcp/Runtime"),
             ReadRepositoryFile("src/MAF/Mcp/CanDoItAll.AgentFramework.Mcp/Diagnostics/McpDiagnostics.cs"));
 
         Assert.Contains("CapabilityDiagnosticCategory.ProcessStart", source, StringComparison.Ordinal);
@@ -80,6 +83,30 @@ public sealed class CapabilityMigrationCleanupGuardTests
         Assert.DoesNotContain("MCP unavailable", source, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("Tool setup failed", source, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("Generic setup error", source, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void INV_CLEANUP_006_legacy_mem0_catalog_runtime_is_retired()
+    {
+        var mafProject = ReadRepositoryFile(
+            "src/MAF/Common/CanDoItAll.AgentFramework.Maf/CanDoItAll.AgentFramework.Maf.csproj");
+        var contextBuilder = ReadRepositoryFile(
+            "src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/Capabilities/ContextCapabilityBuilder.cs");
+        var runtimeComposer = ReadRepositoryFile(
+            "src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/Capabilities/RuntimeCapabilityComposer.cs");
+        var catalogService = ReadRepositoryFile(
+            "src/MAF/Common/CanDoItAll.AgentFramework.Core/Catalog/AgentFrameworkWorkspaceCatalogService.ProvidersAndCapabilities.cs");
+        var seedNormalizer = ReadRepositoryFile(
+            "src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Seeds/SandboxWorkspaceSeedNormalizer.cs");
+        var capabilityTemplates = ReadRepositoryFile("Templates/Capabilities/other.json");
+
+        Assert.DoesNotContain("Microsoft.Agents.AI.Mem0", mafProject, StringComparison.Ordinal);
+        Assert.DoesNotContain("Mem0Provider", contextBuilder, StringComparison.Ordinal);
+        Assert.DoesNotContain("AddMemoryProviderAsync", contextBuilder, StringComparison.Ordinal);
+        Assert.DoesNotContain("mem0-shared-memory", capabilityTemplates, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("LegacyMemoryCapabilityPolicy.CreateException", runtimeComposer, StringComparison.Ordinal);
+        Assert.Contains("LegacyMemoryCapabilityPolicy.EnsureNotRetired", catalogService, StringComparison.Ordinal);
+        Assert.Contains("LegacyMemoryCapabilityPolicy.IsRetired", seedNormalizer, StringComparison.Ordinal);
     }
 
     private static string ReadRepositoryFiles(string relativeDirectory)

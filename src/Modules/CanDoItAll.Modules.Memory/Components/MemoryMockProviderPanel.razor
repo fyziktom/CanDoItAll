@@ -1,0 +1,15 @@
+@namespace CanDoItAll.Modules.Memory.Components
+
+<section class="memory-ui-built-in-rcl-surface" data-testid="memory-ui-mock-rcl-surface">
+    <strong>Mock provider panel</strong>
+    <span>@(Provider?.DisplayName ?? "No provider")</span>
+    <span>@(Surface?.ComponentKey ?? "No component key")</span>
+</section>
+
+@code {
+    [Parameter]
+    public MemoryProviderManagementProfile? Provider { get; set; }
+
+    [Parameter]
+    public MemoryProviderUiSurfaceProjection? Surface { get; set; }
+}

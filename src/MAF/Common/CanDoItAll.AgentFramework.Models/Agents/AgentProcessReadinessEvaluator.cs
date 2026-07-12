@@ -1,5 +1,7 @@
 using System.Security.Cryptography;
 using System.Text;
+using AccessCapabilityIdentity = CanDoItAll.AgentFramework.Capabilities.Abstractions.CapabilityIdentity;
+using AccessCapabilityKind = CanDoItAll.AgentFramework.Capabilities.Abstractions.CapabilityKind;
 
 namespace CanDoItAll.AgentFramework.Models;
 
@@ -11,7 +13,9 @@ public sealed record AgentProcessRoleReadinessRequest(
     string RoleDisplayName,
     IReadOnlyList<string> AllowedOperations,
     string OperationTargetScope,
-    IReadOnlyList<string>? RequiredRuntimeToolNames = null);
+    IReadOnlyList<string>? RequiredRuntimeToolNames = null,
+    IReadOnlyList<AccessCapabilityIdentity>? RequiredCapabilities = null,
+    IReadOnlyList<string>? PreferredSpecializationTags = null);
 
 public sealed record AgentProcessRoleReadinessResult(
     bool HasRoleFit,
@@ -58,6 +62,10 @@ public static class AgentProcessReadinessEvaluator
         var roleFit = (exactMatch.Score > 0 || roleFamilyFit) && roleFamilyFit;
         var score = exactMatch.Score > 0 ? 1_000 + exactMatch.Score : 0;
         var matchedTokens = new List<string>();
+        var specializationTerms = CollectAgentSpecializationTerms(agent);
+        var matchedSpecializationTags = ResolvePreferredSpecializationTags(request)
+            .Where(tag => TokenMatches(specializationTerms, tag))
+            .ToArray();
 
         if (!roleFit)
         {
@@ -95,13 +103,18 @@ public static class AgentProcessReadinessEvaluator
         }
 
         AddToolReadinessFindings(agent, request, roleTokens, findings);
+        AddRequiredCapabilityReadinessFindings(agent, request, findings);
+        score += matchedSpecializationTags.Length * 50;
 
         var hasErrors = findings.Any(finding => finding.Severity == AgentProcessReadinessFindingSeverity.Error);
-        var matchSummary = exactMatch.Score > 0
+        var roleMatchSummary = exactMatch.Score > 0
             ? $"exact role metadata for '{exactMatch.MatchKey}'"
             : matchedTokens.Count == 0
                 ? "no role metadata match"
                 : $"semantic role match on {string.Join(", ", matchedTokens)}";
+        var matchSummary = matchedSpecializationTags.Length == 0
+            ? roleMatchSummary
+            : $"{roleMatchSummary} plus preferred specialization {string.Join(", ", matchedSpecializationTags)}";
         var readinessSummary = hasErrors
             ? string.Join(" ", findings
                 .Where(finding => finding.Severity == AgentProcessReadinessFindingSeverity.Error)
@@ -116,6 +129,8 @@ public static class AgentProcessReadinessEvaluator
             request.OperationTargetScope,
             string.Join(",", request.AllowedOperations.OrderBy(item => item, StringComparer.Ordinal)),
             string.Join(",", NormalizeRequiredRuntimeToolNames(request.RequiredRuntimeToolNames)),
+            string.Join(",", NormalizeRequiredCapabilities(request.RequiredCapabilities).Select(FormatCapabilityIdentity)),
+            string.Join(",", ResolvePreferredSpecializationTags(request)),
             readinessSummary));
 
         return new AgentProcessRoleReadinessResult(
@@ -198,6 +213,12 @@ public static class AgentProcessReadinessEvaluator
                 continue;
             }
 
+            if (IsBrowserRuntimeToolName(requiredToolName))
+            {
+                AddRequiredBrowserToolReadinessFindings(agent, request, requiredToolName, findings);
+                continue;
+            }
+
             if (!AgentWorkspaceToolAccessMetadata.TryResolveWorkspaceToolPermission(requiredToolName, out var permission))
             {
                 if (requiredToolName.StartsWith("workspace_", StringComparison.OrdinalIgnoreCase))
@@ -232,6 +253,112 @@ public static class AgentProcessReadinessEvaluator
                 $"agent.readiness.required-tool-{summary.Code}-missing",
                 $"{summary.Description} for required runtime tool '{requiredToolName}'"));
         }
+    }
+
+    private static void AddRequiredCapabilityReadinessFindings(
+        AgentDefinition agent,
+        AgentProcessRoleReadinessRequest request,
+        List<AgentProcessReadinessFinding> findings)
+    {
+        var workspaceToolAccess = AgentWorkspaceToolAccessMetadata.Normalize(
+            AgentWorkspaceToolAccessMetadata.Read(agent.ConfigurationJson));
+        foreach (var requiredCapability in NormalizeRequiredCapabilities(request.RequiredCapabilities))
+        {
+            if (HasRequiredCapability(agent, workspaceToolAccess, requiredCapability))
+            {
+                continue;
+            }
+
+            findings.Add(new AgentProcessReadinessFinding(
+                AgentProcessReadinessFindingSeverity.Error,
+                "agent.readiness.required-capability-missing",
+                $"Step '{request.StepKey}' requires {FormatCapabilityKind(requiredCapability.Kind)} capability '{requiredCapability.Key.Value}', but agent '{agent.Name}' does not expose it in the process step capability scope."));
+        }
+    }
+
+    private static bool HasRequiredCapability(
+        AgentDefinition agent,
+        AgentWorkspaceToolAccessSettings workspaceToolAccess,
+        AccessCapabilityIdentity requiredCapability)
+    {
+        if (requiredCapability.Kind == AccessCapabilityKind.Tool &&
+            TryResolveRuntimeToolNameFromCapabilityKey(requiredCapability.Key.Value, out var runtimeToolName) &&
+            AgentWorkspaceToolAccessMetadata.TryResolveWorkspaceToolPermission(runtimeToolName, out var permission))
+        {
+            return HasWorkspacePermission(workspaceToolAccess, permission);
+        }
+
+        return TryMapCapabilityKind(requiredCapability.Kind, out var modelKind) &&
+               agent.Capabilities.Any(capability =>
+                   capability.Kind == modelKind &&
+                   CapabilityKeyMatches(capability.CapabilityKey, requiredCapability.Key.Value));
+    }
+
+    private static bool TryResolveRuntimeToolNameFromCapabilityKey(
+        string capabilityKey,
+        out string runtimeToolName)
+    {
+        runtimeToolName = string.IsNullOrWhiteSpace(capabilityKey)
+            ? string.Empty
+            : capabilityKey.Trim().Replace('-', '_');
+        return !string.IsNullOrWhiteSpace(runtimeToolName);
+    }
+
+    private static bool TryMapCapabilityKind(
+        AccessCapabilityKind accessKind,
+        out CapabilityKind modelKind)
+    {
+        modelKind = default;
+        return accessKind switch
+        {
+            AccessCapabilityKind.Skill => SetMappedKind(CapabilityKind.Skill, out modelKind),
+            AccessCapabilityKind.Tool => SetMappedKind(CapabilityKind.Tool, out modelKind),
+            AccessCapabilityKind.McpServer => SetMappedKind(CapabilityKind.McpServer, out modelKind),
+            AccessCapabilityKind.Plugin => SetMappedKind(CapabilityKind.Plugin, out modelKind),
+            AccessCapabilityKind.Rag => SetMappedKind(CapabilityKind.Rag, out modelKind),
+            AccessCapabilityKind.AiContext => SetMappedKind(CapabilityKind.AiContext, out modelKind),
+            AccessCapabilityKind.Memory => SetMappedKind(CapabilityKind.Memory, out modelKind),
+            _ => false
+        };
+    }
+
+    private static bool SetMappedKind(
+        CapabilityKind value,
+        out CapabilityKind mapped)
+    {
+        mapped = value;
+        return true;
+    }
+
+    private static bool CapabilityKeyMatches(
+        string assignedKey,
+        string requiredKey)
+    {
+        if (string.IsNullOrWhiteSpace(assignedKey) ||
+            string.IsNullOrWhiteSpace(requiredKey))
+        {
+            return false;
+        }
+
+        return string.Equals(assignedKey.Trim(), requiredKey.Trim(), StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(assignedKey.Trim().Replace('_', '-'), requiredKey.Trim().Replace('_', '-'), StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static void AddRequiredBrowserToolReadinessFindings(
+        AgentDefinition agent,
+        AgentProcessRoleReadinessRequest request,
+        string requiredToolName,
+        List<AgentProcessReadinessFinding> findings)
+    {
+        if (HasRequiredBrowserRuntimeToolCapability(agent, requiredToolName))
+        {
+            return;
+        }
+
+        findings.Add(new AgentProcessReadinessFinding(
+            AgentProcessReadinessFindingSeverity.Error,
+            "agent.readiness.required-browser-tool-missing",
+            $"Step '{request.StepKey}' requires browser runtime tool '{requiredToolName}', but agent '{agent.Name}' does not have a Playwright/browser MCP capability assignment that can expose it."));
     }
 
     private static void AddRequiredProjectStructureToolReadinessFindings(
@@ -289,6 +416,40 @@ public static class AgentProcessReadinessEvaluator
             string.Equals(capability.CapabilityKey, normalizedCapabilityKey, StringComparison.OrdinalIgnoreCase) ||
             string.Equals(capability.CapabilityKey.Replace('-', '_'), normalizedToolName, StringComparison.OrdinalIgnoreCase));
     }
+
+    private static bool HasRequiredBrowserRuntimeToolCapability(AgentDefinition agent, string requiredToolName)
+    {
+        var normalizedToolName = requiredToolName.Trim().Replace('-', '_');
+        var normalizedToolKey = normalizedToolName.Replace('_', '-');
+        return agent.Capabilities.Any(capability =>
+            capability.Kind switch
+            {
+                CapabilityKind.McpServer => IsBrowserMcpServerCapability(capability.CapabilityKey),
+                CapabilityKind.Tool => CapabilityKeyMatchesTool(capability.CapabilityKey, normalizedToolName, normalizedToolKey),
+                _ => false
+            });
+    }
+
+    private static bool IsBrowserMcpServerCapability(string capabilityKey)
+    {
+        return capabilityKey.Contains("playwright", StringComparison.OrdinalIgnoreCase) ||
+               capabilityKey.Contains("browser-mcp", StringComparison.OrdinalIgnoreCase) ||
+               capabilityKey.Contains("browser_mcp", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool CapabilityKeyMatchesTool(
+        string capabilityKey,
+        string normalizedToolName,
+        string normalizedToolKey)
+    {
+        var keyWithUnderscores = capabilityKey.Replace('-', '_');
+        return string.Equals(capabilityKey, normalizedToolKey, StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(keyWithUnderscores, normalizedToolName, StringComparison.OrdinalIgnoreCase) ||
+               keyWithUnderscores.EndsWith($"_{normalizedToolName}", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsBrowserRuntimeToolName(string toolName)
+        => toolName.StartsWith("browser_", StringComparison.OrdinalIgnoreCase);
 
     private static AgentProcessReadinessFinding MissingTool(
         AgentDefinition agent,
@@ -390,6 +551,23 @@ public static class AgentProcessReadinessEvaluator
             ?? [];
     }
 
+    private static IReadOnlyList<AccessCapabilityIdentity> NormalizeRequiredCapabilities(
+        IReadOnlyList<AccessCapabilityIdentity>? requiredCapabilities)
+    {
+        return requiredCapabilities?
+            .Where(item => !string.IsNullOrWhiteSpace(item.Key.Value))
+            .Distinct()
+            .OrderBy(FormatCapabilityIdentity, StringComparer.OrdinalIgnoreCase)
+            .ToArray()
+            ?? [];
+    }
+
+    private static string FormatCapabilityIdentity(AccessCapabilityIdentity identity)
+        => $"{FormatCapabilityKind(identity.Kind)}:{identity.Key.Value}";
+
+    private static string FormatCapabilityKind(AccessCapabilityKind kind)
+        => kind.ToString();
+
     private static bool IsTargetScope(AgentProcessRoleReadinessRequest request, string targetScope)
     {
         return string.Equals(request.OperationTargetScope, targetScope, StringComparison.Ordinal);
@@ -403,6 +581,16 @@ public static class AgentProcessReadinessEvaluator
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToArray();
     }
+
+    private static IReadOnlyList<string> ResolvePreferredSpecializationTags(
+        AgentProcessRoleReadinessRequest request)
+        => (request.PreferredSpecializationTags ?? [])
+            .Where(tag => !string.IsNullOrWhiteSpace(tag))
+            .SelectMany(ExtractTokens)
+            .Where(tag => !IgnoredRoleTokens.Contains(tag))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(tag => tag, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
 
     private static IReadOnlyList<string> ResolveRoleIdentityTokens(AgentProcessRoleReadinessRequest request)
     {
@@ -526,6 +714,24 @@ public static class AgentProcessReadinessEvaluator
         AddTerms(terms, agent.RoleTitle);
         AddTerms(terms, agent.Workload.ToString());
 
+        foreach (var tag in agent.Tags)
+        {
+            AddTerms(terms, tag);
+            var normalizedTag = Normalize(tag);
+            if (!string.IsNullOrWhiteSpace(normalizedTag))
+            {
+                terms.Add(normalizedTag);
+            }
+        }
+
+        return terms;
+    }
+
+    private static HashSet<string> CollectAgentSpecializationTerms(AgentDefinition agent)
+    {
+        var terms = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        AddTerms(terms, agent.Name);
+        AddTerms(terms, agent.RoleTitle);
         foreach (var tag in agent.Tags)
         {
             AddTerms(terms, tag);

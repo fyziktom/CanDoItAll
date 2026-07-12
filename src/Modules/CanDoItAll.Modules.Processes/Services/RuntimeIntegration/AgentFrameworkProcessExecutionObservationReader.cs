@@ -47,18 +47,15 @@ internal sealed class AgentFrameworkProcessExecutionObservationReader(
         var agentNameById = referenceData.Agents.ToDictionary(agent => agent.Id, agent => agent.Name);
         var agentAvatarById = referenceData.Agents.ToDictionary(agent => agent.Id, agent => agent.AvatarImageUrl ?? string.Empty);
         var requestedRunIds = query.RunIds.ToHashSet();
+        var requestedStepIds = query.StepInstanceIds.ToHashSet();
         var executionRuns = await ListExecutionRunsAsync(query, cancellationToken).ConfigureAwait(false);
         var observations = new List<ProcessExecutionObservation>();
 
-        foreach (var executionRun in executionRuns
-                     .OrderByDescending(run => run.UpdatedAtUtc)
-                     .GroupBy(
-                         run => run.ProcessRunId,
-                         StringComparer.OrdinalIgnoreCase)
-                     .SelectMany(group => group.Take(Math.Max(1, query.TakePerRun))))
+        foreach (var executionRun in SliceExecutionRuns(executionRuns, query))
         {
             if (!TryParseProcessIdentity(executionRun, out var processRunId, out var stepInstanceId) ||
-                !requestedRunIds.Contains(processRunId))
+                !requestedRunIds.Contains(processRunId) ||
+                requestedStepIds.Count > 0 && !requestedStepIds.Contains(stepInstanceId))
             {
                 continue;
             }
@@ -110,21 +107,63 @@ internal sealed class AgentFrameworkProcessExecutionObservationReader(
         CancellationToken cancellationToken)
     {
         var executionRuns = new List<ExecutionRunRecord>();
+        var stepIds = query.StepInstanceIds
+            .Distinct()
+            .ToArray();
         foreach (var runId in query.RunIds.Distinct())
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            var runRecords = await workspaceService.ListExecutionRunsAsync(
-                new ExecutionRunQuery(
-                    Take: Math.Max(1, query.TakePerRun),
-                    ProcessRunId: runId.ToString(),
-                    UpdatedFromUtc: query.FromUtc,
-                    UpdatedToUtc: query.ToUtc),
-                cancellationToken).ConfigureAwait(false);
-            executionRuns.AddRange(runRecords);
+            if (stepIds.Length == 0)
+            {
+                var runRecords = await workspaceService.ListExecutionRunsAsync(
+                    new ExecutionRunQuery(
+                        Take: Math.Max(1, query.TakePerRun),
+                        ProcessRunId: runId.ToString(),
+                        UpdatedFromUtc: query.FromUtc,
+                        UpdatedToUtc: query.ToUtc),
+                    cancellationToken).ConfigureAwait(false);
+                executionRuns.AddRange(runRecords);
+                continue;
+            }
+
+            foreach (var stepId in stepIds)
+            {
+                var runRecords = await workspaceService.ListExecutionRunsAsync(
+                    new ExecutionRunQuery(
+                        Take: Math.Max(1, query.TakePerRun),
+                        ProcessRunId: runId.ToString(),
+                        ProcessStepId: stepId.ToString(),
+                        UpdatedFromUtc: query.FromUtc,
+                        UpdatedToUtc: query.ToUtc),
+                    cancellationToken).ConfigureAwait(false);
+                executionRuns.AddRange(runRecords);
+            }
         }
 
         return executionRuns;
+    }
+
+    private static IEnumerable<ExecutionRunRecord> SliceExecutionRuns(
+        IReadOnlyList<ExecutionRunRecord> executionRuns,
+        ProcessExecutionObservationQuery query)
+    {
+        var take = Math.Max(1, query.TakePerRun);
+        var orderedRuns = executionRuns.OrderByDescending(run => run.UpdatedAtUtc);
+        if (query.StepInstanceIds.Count == 0)
+        {
+            return orderedRuns
+                .GroupBy(
+                    run => run.ProcessRunId,
+                    StringComparer.OrdinalIgnoreCase)
+                .SelectMany(group => group.Take(take));
+        }
+
+        return orderedRuns
+            .GroupBy(
+                run => $"{run.ProcessRunId}\u001f{run.ProcessStepId}",
+                StringComparer.OrdinalIgnoreCase)
+            .SelectMany(group => group.Take(take));
     }
 
     private static IReadOnlyList<ProcessExecutionActivityObservation> MapActivities(ExecutionRunDetail? detail)

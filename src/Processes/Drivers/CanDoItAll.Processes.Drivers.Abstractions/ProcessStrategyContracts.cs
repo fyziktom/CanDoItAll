@@ -32,11 +32,97 @@ public sealed record StrategyBindingInput(
     StrategyBindingInputKey Key,
     string ValueHash);
 
-public sealed record ProcessStrategyExecutionContext(
-    ProcessRunId RunId,
-    ProcessStepInstanceId? StepId,
-    ProcessStrategyBindingSnapshot Binding,
-    IReadOnlyList<StrategyBindingInput> Inputs);
+public sealed record ProcessStrategyExecutionContext
+{
+    public ProcessStrategyExecutionContext(
+        ProcessRunId runId,
+        ProcessStepInstanceId? stepId,
+        ProcessStrategyBindingSnapshot binding,
+        IReadOnlyList<StrategyBindingInput> inputs,
+        ProcessStepExecutionContract? stepContract = null)
+    {
+        RunId = runId;
+        StepId = stepId;
+        Binding = binding;
+        Inputs = inputs;
+        StepContract = stepContract ?? ProcessStepExecutionContract.Empty;
+    }
+
+    public ProcessRunId RunId { get; init; }
+
+    public ProcessStepInstanceId? StepId { get; init; }
+
+    public ProcessStrategyBindingSnapshot Binding { get; init; }
+
+    public IReadOnlyList<StrategyBindingInput> Inputs { get; init; }
+
+    public ProcessStepExecutionContract StepContract { get; init; }
+}
+
+public sealed record ProcessStepExecutionContract(
+    IReadOnlyList<RequiredArtifactInputRef> RequiredArtifacts,
+    IReadOnlyList<ExpectedProducedArtifactRef> ExpectedProducedArtifacts,
+    IReadOnlyList<string> RequiredRuntimeToolNames,
+    string ContractHash)
+{
+    public static ProcessStepExecutionContract Empty { get; } = new([], [], [], "sha256:empty-step-contract");
+
+    public IReadOnlyList<ProcessArtifactSlotDescriptor> ArtifactDescriptors { get; init; } = [];
+
+    public IReadOnlyList<SubprocessArtifactMappingDescriptor> SubprocessArtifactMappings { get; init; } = [];
+}
+
+public sealed record RequiredArtifactInputRef(
+    ArtifactSlotId SlotId,
+    ProcessArtifactInputAvailability Availability,
+    ProcessStepInstanceId? ProducerStepId,
+    ArtifactInstanceId? ArtifactId,
+    string ContentHash,
+    string ConnectionHash);
+
+public sealed record ExpectedProducedArtifactRef(
+    ArtifactSlotId SlotId);
+
+public sealed record ProcessArtifactSlotDescriptor(
+    ArtifactSlotId SlotId,
+    string SlotKey,
+    string StepKey,
+    string ArtifactExpectationKey,
+    string ArtifactTitle,
+    string ArtifactKind,
+    string PrimaryManagedRef,
+    ProcessArtifactMaterializationMode MaterializationMode)
+{
+    public string PayloadSchema { get; init; } = string.Empty;
+}
+
+public sealed record SubprocessArtifactMappingDescriptor(
+    ArtifactSlotId ParentSlotId,
+    string ParentArtifactExpectationKey,
+    string ChildProcessDefinitionKey,
+    IReadOnlyList<SubprocessChildArtifactMappingDescriptor> AcceptedChildOutputs,
+    IReadOnlyList<SubprocessChildArtifactMappingDescriptor> NoGoChildOutputs);
+
+public sealed record SubprocessChildArtifactMappingDescriptor(
+    string StepKey,
+    string ArtifactExpectationKey,
+    string ArtifactTitle,
+    string BranchOutcomeKey);
+
+public enum ProcessArtifactMaterializationMode
+{
+    AgentWritten,
+    RuntimeSynthesizedParentHandoff,
+    RecoveredExistingProof,
+    RuntimeDiagnosticOnly
+}
+
+public enum ProcessArtifactInputAvailability
+{
+    Expected,
+    Available,
+    Missing
+}
 
 public sealed record StrategyResultEnvelope(
     StrategyId StrategyId,

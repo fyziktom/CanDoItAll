@@ -3,6 +3,7 @@ using System.Text.Json.Serialization;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Maf;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.AgentFramework.Workflows.Abstractions;
 using Microsoft.Agents.AI.Workflows;
 
 namespace CanDoItAll.Tests.Unit;
@@ -392,7 +393,7 @@ public sealed class WorkflowFoundationTests
     }
 
     [Fact]
-    public async Task RuntimeManager_applies_payload_policy_to_started_input_and_node_output_artifacts()
+    public async Task RuntimeManager_keeps_lifecycle_events_safe_and_persists_payload_artifacts()
     {
         var component = CreateComponent();
         var definition = CreateDefinition([
@@ -451,12 +452,11 @@ public sealed class WorkflowFoundationTests
         var completedPayload = JsonSerializer.Deserialize<WorkflowEventPayloadEnvelope>(completed.PayloadJson, SerializerOptions)!;
 
         Assert.Equal(WorkflowRunState.Completed, run.State);
-        Assert.True(startedPayload.InlineTruncated);
-        Assert.True(startedPayload.InlineJson.Length <= settings.ArtifactPolicy.MaxInlinePayloadCharacters);
-        Assert.NotEmpty(startedPayload.Reference);
+        Assert.False(startedPayload.InlineTruncated);
+        Assert.Empty(startedPayload.Reference);
         Assert.DoesNotContain("raw-token-value", startedPayload.InlineJson, StringComparison.Ordinal);
-        Assert.True(completedPayload.InlineTruncated);
-        Assert.NotEmpty(completedPayload.Reference);
+        Assert.False(completedPayload.InlineTruncated);
+        Assert.Empty(completedPayload.Reference);
         Assert.DoesNotContain("raw-token-value", completedPayload.InlineJson, StringComparison.Ordinal);
         Assert.Contains(artifacts, artifact =>
             artifact.Kind == WorkflowArtifactKind.Json &&
@@ -683,51 +683,53 @@ public sealed class WorkflowFoundationTests
                 SourceProcessRunId: null,
                 SourceProcessAssignmentId: null));
         var pending = await store.ListPendingExternalRequestsAsync(run.RunId);
-        var completed = await manager.RespondToExternalRequestAsync(pending[0].Id, "{\"approved\":true}");
+        var response = await manager.SubmitExternalResponseAsync(
+            pending[0].Id,
+            "{\"approved\":true}");
+        var persistedRequest = await store.GetExternalRequestAsync(pending[0].Id);
 
         Assert.Equal(WorkflowRunState.WaitingForInput, run.State);
         Assert.Single(pending);
-        Assert.Equal(WorkflowRunState.Completed, completed.State);
+        Assert.Equal(WorkflowExternalResponseOutcome.UnsupportedResume, response.Outcome);
+        Assert.Equal(WorkflowRunState.WaitingForInput, response.Run?.State);
+        Assert.Null(persistedRequest?.RespondedAtUtc);
     }
 
     [Fact]
-    public async Task RuntimeManagerCompletesApprovalRequestWhenApproved()
+    public async Task RuntimeManagerLeavesApprovalWaitingWhenResumeBackendIsUnavailable()
     {
         var store = new InMemoryWorkflowRunStore();
         var manager = new WorkflowRuntimeManager([], store);
         var request = await SaveWaitingApprovalRequestAsync(store);
 
-        var completed = await manager.RespondToExternalRequestAsync(
+        var response = await manager.SubmitExternalResponseAsync(
             request.Id,
             "{\"approved\":true,\"message\":\"Operator approved.\"}");
         var pending = await store.ListPendingExternalRequestsAsync(request.RunId);
         var events = await manager.ListEventsAsync(request.RunId);
 
-        Assert.Equal(WorkflowRunState.Completed, completed.State);
-        Assert.Empty(pending);
-        Assert.Contains(events, workflowEvent =>
-            workflowEvent.Kind == WorkflowEventKind.Completed &&
-            workflowEvent.NodeId == request.NodeId);
+        Assert.Equal(WorkflowExternalResponseOutcome.BackendUnavailable, response.Outcome);
+        Assert.Single(pending);
+        Assert.DoesNotContain(events, workflowEvent => workflowEvent.Kind == WorkflowEventKind.Completed);
     }
 
     [Fact]
-    public async Task RuntimeManagerFailsApprovalRequestWhenDenied()
+    public async Task RuntimeManagerDoesNotFabricateApprovalDenialWithoutResumeBackend()
     {
         var store = new InMemoryWorkflowRunStore();
         var manager = new WorkflowRuntimeManager([], store);
         var request = await SaveWaitingApprovalRequestAsync(store);
 
-        var failed = await manager.RespondToExternalRequestAsync(
+        var response = await manager.SubmitExternalResponseAsync(
             request.Id,
             "{\"approved\":false,\"message\":\"Denied token=raw-token-value.\"}");
+        var persisted = await manager.GetRunAsync(request.RunId);
         var events = await manager.ListEventsAsync(request.RunId);
 
-        Assert.Equal(WorkflowRunState.Failed, failed.State);
-        Assert.Contains("denied", failed.Summary, StringComparison.OrdinalIgnoreCase);
-        Assert.DoesNotContain("raw-token-value", failed.Summary, StringComparison.Ordinal);
-        Assert.Contains(events, workflowEvent =>
-            workflowEvent.Kind == WorkflowEventKind.Error &&
-            workflowEvent.NodeId == request.NodeId);
+        Assert.Equal(WorkflowExternalResponseOutcome.BackendUnavailable, response.Outcome);
+        Assert.NotNull(persisted);
+        Assert.Equal(WorkflowRunState.WaitingForInput, persisted.State);
+        Assert.DoesNotContain(events, workflowEvent => workflowEvent.Kind == WorkflowEventKind.Error);
     }
 
     [Fact]

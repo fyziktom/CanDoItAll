@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Text.Json;
 using System.Text;
 using System.Text.RegularExpressions;
+using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Processes.Abstractions;
 using CanDoItAll.Processes.Application;
@@ -67,6 +68,7 @@ public sealed class ProjectStructureProcessNodeService(
         ProcessStepTargetScopeVariableName,
         ProcessStepAllowsProductMutationVariableName,
         ProcessStepKindVariableName,
+        ProcessRuntimeLaunchVariables.ProcessStepSubprocessContractJson,
         ProcessStepSubprocessDefinitionKeyVariableName,
         AgentProcessStepAllowedOperationsVariableName,
         AgentProcessStepTargetScopeVariableName,
@@ -82,17 +84,20 @@ public sealed class ProjectStructureProcessNodeService(
         "OutputRootAlias",
         "ProductRootAlias",
         "WorkspaceAlias",
+        "ProductTargetFilesystemState",
         "ScopeSummary",
         "ScopeBoundarySummary",
         "ChildScopeMvp",
         "SourceCitations",
         "SourceOfTruth",
-        "DotNetSolutionFile",
-        "DotNetSolutionFileAlias",
         ProcessRuntimeLaunchVariables.ProductCompletionRequiredPaths,
         ProcessRuntimeLaunchVariables.ProductCompletionRequiredPathsByStep,
         ProcessRuntimeLaunchVariables.ProductCompletionRequiredToolReceipts,
         ProcessRuntimeLaunchVariables.ProductCompletionRequiredToolReceiptsByStep,
+        ProcessRuntimeLaunchVariables.ProductMutationRequiredBranchOutcomeKeys,
+        ProcessRuntimeLaunchVariables.ProductMutationRequiredBranchOutcomeKeysByStep,
+        ProcessRuntimeLaunchVariables.RuntimeRoutedBranchOutcomeKeysByStep,
+        ProcessRuntimeLaunchVariables.ExecutorPreferredSpecializationTags,
         ProcessRuntimeLaunchVariables.ProductCompletionRequiredFileContentChecks,
         ProcessRuntimeLaunchVariables.ProductCompletionRequiredFileContentChecksByStep
     ];
@@ -105,18 +110,14 @@ public sealed class ProjectStructureProcessNodeService(
         "OutputRootAlias",
         "ProductRootAlias",
         "WorkspaceAlias",
-        "DotNetSolutionName",
-        "DotNetSolutionFile",
-        "DotNetSolutionFileAlias",
-        "DotNetSolutionFileCandidates",
-        "DotNetAppProjectName",
-        "DotNetAppProjectDirectory",
-        "DotNetTestProjectName",
-        "DotNetTestProjectDirectory",
         ProcessRuntimeLaunchVariables.ProductCompletionRequiredPaths,
         ProcessRuntimeLaunchVariables.ProductCompletionRequiredPathsByStep,
         ProcessRuntimeLaunchVariables.ProductCompletionRequiredToolReceipts,
         ProcessRuntimeLaunchVariables.ProductCompletionRequiredToolReceiptsByStep,
+        ProcessRuntimeLaunchVariables.ProductMutationRequiredBranchOutcomeKeys,
+        ProcessRuntimeLaunchVariables.ProductMutationRequiredBranchOutcomeKeysByStep,
+        ProcessRuntimeLaunchVariables.RuntimeRoutedBranchOutcomeKeysByStep,
+        ProcessRuntimeLaunchVariables.ExecutorPreferredSpecializationTags,
         ProcessRuntimeLaunchVariables.ProductCompletionRequiredFileContentChecks,
         ProcessRuntimeLaunchVariables.ProductCompletionRequiredFileContentChecksByStep
     ];
@@ -195,7 +196,7 @@ public sealed class ProjectStructureProcessNodeService(
             processDefinitionId,
             targetNode,
             agent,
-            dependencies.LaunchVariableContributors,
+            dependencies.LaunchVariablePreparationService,
             definitionKey);
         var variables = CopyLaunchVariables(request.Variables);
 
@@ -306,7 +307,7 @@ public sealed class ProjectStructureProcessNodeService(
                         processDefinitionId.Value,
                         targetNode,
                         agent,
-                        dependencies.LaunchVariableContributors,
+                        dependencies.LaunchVariablePreparationService,
                         definitionKey),
                     RunReadiness: request.RunHrMatch,
                     Execute: request.Execute),
@@ -447,10 +448,12 @@ public sealed class ProjectStructureProcessNodeService(
             parentRunId,
             parentStepId,
             parentAssignment,
+            parentState,
             definitionKey,
             request,
             agent,
-            dependencies.LaunchVariableContributors);
+            dependencies.WorkspaceFiles,
+            dependencies.LaunchVariablePreparationService);
         var subprocessIdentityVariables = CreateSubprocessIdentityVariables(
             projectId,
             projectNode.Id,
@@ -465,6 +468,7 @@ public sealed class ProjectStructureProcessNodeService(
                 parentRunId,
                 parentStepId,
                 parentAssignment,
+                parentState,
                 definitionKey,
                 subprocessIdentityVariables,
                 request.IncludeLaunchPlan,
@@ -591,6 +595,7 @@ public sealed class ProjectStructureProcessNodeService(
         ProcessRunId parentRunId,
         ProcessStepInstanceId parentStepId,
         ProcessRuntimeStepAssignment parentAssignment,
+        ProcessRuntimeStateSnapshot parentState,
         string definitionKey,
         IReadOnlyDictionary<string, string> subprocessIdentityVariables,
         bool includeLaunchPlan,
@@ -955,89 +960,13 @@ public sealed class ProjectStructureProcessNodeService(
         AddExternalTargetRef(refs, ResolveLaunchVariable(launchVariables, "ExternalTargetRoot"));
         AddExternalTargetRef(refs, ResolveLaunchVariable(launchVariables, "WorkspaceAlias"));
 
-        var productRootAlias = ResolveLaunchVariable(launchVariables, "ProductRootAlias");
-        if (string.IsNullOrWhiteSpace(productRootAlias))
-        {
-            productRootAlias = ResolveLaunchVariable(launchVariables, "OutputRootAlias");
-        }
-
-        if (string.IsNullOrWhiteSpace(productRootAlias))
-        {
-            return refs;
-        }
-
-        AddExternalTargetRef(refs, ResolveLaunchVariable(launchVariables, "DotNetSolutionFileAlias"));
-        AddExternalTargetRef(refs, ResolveLaunchVariable(launchVariables, "DotNetAppProjectFileAlias"));
-        AddExternalTargetRef(refs, ResolveLaunchVariable(launchVariables, "DotNetTestProjectFileAlias"));
-
-        var solutionName = ResolveLaunchVariable(launchVariables, "DotNetSolutionName");
-        if (!string.IsNullOrWhiteSpace(solutionName))
-        {
-            refs.Add($"{productRootAlias}/{solutionName}.slnx");
-            refs.Add($"{productRootAlias}/{solutionName}.sln");
-        }
-
-        AddProjectFileRef(refs, productRootAlias, ResolveLaunchVariable(launchVariables, "DotNetAppProjectDirectory"), ResolveLaunchVariable(launchVariables, "DotNetAppProjectName"));
-        AddProjectFileRef(refs, productRootAlias, ResolveLaunchVariable(launchVariables, "DotNetTestProjectDirectory"), ResolveLaunchVariable(launchVariables, "DotNetTestProjectName"));
-
         return refs;
     }
 
-    private static void AddProjectFileRef(
-        ICollection<string> refs,
-        string productRootAlias,
-        string projectDirectory,
-        string projectName)
-    {
-        if (string.IsNullOrWhiteSpace(productRootAlias) ||
-            string.IsNullOrWhiteSpace(projectDirectory) ||
-            string.IsNullOrWhiteSpace(projectName))
-        {
-            return;
-        }
-
-        var relativeDirectory = TryCreateRelativePath(ResolveLaunchVariablePath(productRootAlias), projectDirectory);
-        var projectPath = string.IsNullOrWhiteSpace(relativeDirectory)
-            ? $"{productRootAlias}/{projectName}.csproj"
-            : $"{productRootAlias}/{NormalizePathSeparators(relativeDirectory)}/{projectName}.csproj";
-        refs.Add(projectPath);
-    }
-
-    private static string ResolveLaunchVariablePath(string value)
-    {
-        return string.IsNullOrWhiteSpace(value)
-            ? string.Empty
-            : value.Trim().Replace("external-target/C/", "C:/", StringComparison.OrdinalIgnoreCase).Replace('/', Path.DirectorySeparatorChar);
-    }
-
-    private static string TryCreateRelativePath(string root, string path)
-    {
-        try
-        {
-            if (string.IsNullOrWhiteSpace(root) || string.IsNullOrWhiteSpace(path))
-            {
-                return string.Empty;
-            }
-
-            var relative = Path.GetRelativePath(root, path);
-            return relative.StartsWith("..", StringComparison.Ordinal) || Path.IsPathRooted(relative)
-                ? string.Empty
-                : relative;
-        }
-        catch (ArgumentException)
-        {
-            return string.Empty;
-        }
-    }
-
-    private static string NormalizePathSeparators(string value)
-        => value.Replace('\\', '/').Trim('/');
-
     private static void AddExternalTargetRef(ICollection<string> refs, string value)
     {
-        var alias = AgentWorkspaceToolAccessMetadata.NormalizeExternalTargetAlias(value);
-        if (!string.IsNullOrWhiteSpace(alias) &&
-            alias.StartsWith("external-target/", StringComparison.OrdinalIgnoreCase))
+        var alias = value.Trim().Replace('\\', '/');
+        if (alias.StartsWith("external-target/", StringComparison.OrdinalIgnoreCase))
         {
             refs.Add(alias);
         }
@@ -1102,7 +1031,8 @@ public sealed class ProjectStructureProcessNodeService(
             serviceProvider.GetRequiredService<IProcessInstancePlanStore>(),
             serviceProvider.GetRequiredService<IProcessRuntimeStepAssignmentStore>(),
             serviceProvider.GetRequiredService<IProcessRuntimeStateStore>(),
-            serviceProvider.GetServices<IProjectStructureProcessLaunchVariableContributor>().ToArray());
+            serviceProvider.GetRequiredService<IWorkspaceFileService>(),
+            serviceProvider.GetRequiredService<ProcessLaunchVariablePreparationService>());
     }
 
     private static IReadOnlyDictionary<string, string> CreateVariables(
@@ -1112,7 +1042,7 @@ public sealed class ProjectStructureProcessNodeService(
         Guid processDefinitionId,
         ProjectStructureNode targetNode,
         ProjectStructureAgentContext agent,
-        IEnumerable<IProjectStructureProcessLaunchVariableContributor> contributors,
+        ProcessLaunchVariablePreparationService launchVariablePreparationService,
         string? definitionKey)
     {
         var variables = new Dictionary<string, string>(StringComparer.Ordinal)
@@ -1158,19 +1088,13 @@ public sealed class ProjectStructureProcessNodeService(
             ApplyProductRootLaunchVariables(variables, outputRoot);
         }
 
-        ApplyLaunchVariableContributors(
-            contributors,
-            new ProjectStructureProcessLaunchVariableContext(
-                surface.ProjectId,
-                surface,
-                targetNode,
-                definitionKey,
-                ProcessDefinitionId: processDefinitionId,
-                ParentRunId: null,
-                ParentStepId: null,
-                ParentAssignment: null,
-                IsSubprocess: false),
-            variables);
+        ApplyLaunchVariablePreparation(
+            launchVariablePreparationService,
+            surface,
+            targetNode,
+            definitionKey,
+            isSubprocess: false,
+            variables: variables);
 
         return variables;
     }
@@ -1182,10 +1106,12 @@ public sealed class ProjectStructureProcessNodeService(
         ProcessRunId parentRunId,
         ProcessStepInstanceId parentStepId,
         ProcessRuntimeStepAssignment parentAssignment,
+        ProcessRuntimeStateSnapshot parentState,
         string definitionKey,
         ProjectStructureProcessSubprocessLaunchInput request,
         ProjectStructureAgentContext agent,
-        IEnumerable<IProjectStructureProcessLaunchVariableContributor> contributors)
+        IWorkspaceFileService workspaceFiles,
+        ProcessLaunchVariablePreparationService launchVariablePreparationService)
     {
         var variables = CopyInheritableSubprocessLaunchVariables(parentAssignment.LaunchVariables);
         if (request.Variables is not null)
@@ -1248,19 +1174,14 @@ public sealed class ProjectStructureProcessNodeService(
             variables.Remove(ProjectStructureContextSummaryVariableName);
         }
 
-        ApplyLaunchVariableContributors(
-            contributors,
-            new ProjectStructureProcessLaunchVariableContext(
-                projectId,
-                surface,
-                projectNode,
-                definitionKey,
-                ProcessDefinitionId: null,
-                parentRunId,
-                parentStepId,
-                parentAssignment,
-                IsSubprocess: true),
-            variables);
+        ProcessSubprocessParentArtifactContextBuilder.Apply(variables, parentState, parentStepId, workspaceFiles);
+        ApplyLaunchVariablePreparation(
+            launchVariablePreparationService,
+            surface,
+            projectNode,
+            definitionKey,
+            isSubprocess: true,
+            variables: variables);
         RemoveSubprocessReservedLaunchVariables(variables);
 
         return variables;
@@ -1347,15 +1268,26 @@ public sealed class ProjectStructureProcessNodeService(
         };
     }
 
-    private static void ApplyLaunchVariableContributors(
-        IEnumerable<IProjectStructureProcessLaunchVariableContributor> contributors,
-        ProjectStructureProcessLaunchVariableContext context,
+    private static void ApplyLaunchVariablePreparation(
+        ProcessLaunchVariablePreparationService launchVariablePreparationService,
+        ProjectStructureSurface surface,
+        ProjectStructureNode targetNode,
+        string? definitionKey,
+        bool isSubprocess,
         IDictionary<string, string> variables)
     {
-        foreach (var contributor in contributors)
-        {
-            contributor.Enrich(context, variables);
-        }
+        ArgumentNullException.ThrowIfNull(launchVariablePreparationService);
+
+        var contextSummary = variables.TryGetValue(ProjectStructureContextSummaryVariableName, out var value)
+            ? value
+            : string.Empty;
+        var context = ProjectStructureProcessLaunchSourceSnapshotMapper.Create(
+            surface,
+            targetNode,
+            definitionKey,
+            isSubprocess,
+            contextSummary);
+        launchVariablePreparationService.Enrich(context, variables);
     }
 
     private static string BuildProjectStructureContextSummary(ProjectStructureSurface surface, ProjectStructureNode focusNode)
@@ -1674,17 +1606,6 @@ public sealed class ProjectStructureProcessNodeService(
         var normalizedOutputRoot = outputRoot.Trim();
         variables["OutputRoot"] = normalizedOutputRoot;
         variables["ProductRoot"] = normalizedOutputRoot;
-
-        var externalTargetAlias = AgentWorkspaceToolAccessMetadata.NormalizeExternalTargetAlias(normalizedOutputRoot);
-        if (string.IsNullOrWhiteSpace(externalTargetAlias))
-        {
-            return;
-        }
-
-        variables["ExternalTargetRoot"] = externalTargetAlias;
-        variables["OutputRootAlias"] = externalTargetAlias;
-        variables["ProductRootAlias"] = externalTargetAlias;
-        variables["WorkspaceAlias"] = externalTargetAlias;
     }
 
     private static string ResolveOutputRoot(ProjectStructureNode? node)
@@ -1919,7 +1840,8 @@ public sealed class ProjectStructureProcessNodeService(
         IProcessInstancePlanStore PlanStore,
         IProcessRuntimeStepAssignmentStore AssignmentStore,
         IProcessRuntimeStateStore StateStore,
-        IReadOnlyList<IProjectStructureProcessLaunchVariableContributor> LaunchVariableContributors);
+        IWorkspaceFileService WorkspaceFiles,
+        ProcessLaunchVariablePreparationService LaunchVariablePreparationService);
 }
 
 public sealed record ProjectStructureProcessLaunchVariableBuildRequest(

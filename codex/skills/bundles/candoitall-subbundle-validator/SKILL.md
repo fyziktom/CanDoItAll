@@ -54,11 +54,37 @@ The closure gate also fails when the anti-stub audit is missing or when raw-note
 
 Artifact-backed proof is part of the closure gate. A critical subbundle with only execution-report prose, table rows, or uncited command names is `Fail`; repair the proof manifest before downstream work starts.
 
+## C# Architecture Subbundle Checks
+
+For architecture-relevant C# subbundles, the entry gate passes only when:
+
+- prerequisite architecture checkpoints passed
+- current source references are still valid
+- dependency direction plan is present
+- partial-class policy is present
+- testability contract is present
+- pattern decision is present or explicitly not needed
+- target owner type or project is named
+- CodeAnalytics snapshot scope and health are recorded, or the subbundle records an explicit MCP-unavailable validation gap
+
+The closure gate passes only when:
+
+- build and targeted tests passed or a blocker is honestly recorded
+- extracted behavior has direct unit tests
+- source assertion proves behavior moved or new behavior lives in the new owner
+- no new partial class was added without policy-compliant justification
+- project reference changes match the target dependency direction
+- old class did not gain a new unrelated responsibility
+- `csharp-architecture-review-gate` result is `Pass` or `Pass with follow-up`
+- follow-up subbundles exist for temporary bridges
+- CodeAnalytics dependency or findings proof was refreshed when the subbundle changed project references, large classes, providers, tools, drivers, memory protocols, or runtime composition
+
 ## References
 
 - Read [references/prerequisite-and-closure-gates.md](references/prerequisite-and-closure-gates.md) for the phase checklist.
 - Read [../candoitall-bundle-execution/references/semantic-adequacy-proof.md](../candoitall-bundle-execution/references/semantic-adequacy-proof.md) when validating a critical subbundle.
 - Read [../candoitall-bundle-execution/references/artifact-backed-proof-manifest.md](../candoitall-bundle-execution/references/artifact-backed-proof-manifest.md) when validating critical proof manifests.
+- Use `candoitall-csharp-architecture-bundle-guard`, `csharp-architecture-review-gate`, and `candoitall-codeanalytics-mcp` when validating architecture-relevant C# subbundles.
 - Use `candoitall-watch-playwright-loop` when the proof depends on fast nearby browser validation.
 - Use `candoitall-bundle-validator` for bundle-level readiness and final closure.
 

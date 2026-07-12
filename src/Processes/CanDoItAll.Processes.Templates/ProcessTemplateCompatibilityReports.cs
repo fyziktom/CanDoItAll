@@ -4,7 +4,10 @@ public sealed record ProcessTemplateCompatibilityScanRequest(
     string TemplatePackRoot,
     string TargetSchemaVersion,
     ProcessTemplateMigrationRegistry MigrationRegistry,
-    DateTimeOffset ObservedAtUtc);
+    DateTimeOffset ObservedAtUtc)
+{
+    public bool StrictExecutionContractValidation { get; init; }
+}
 
 public sealed record ProcessTemplateCompatibilityReport(
     string TemplatePackRoot,
@@ -16,7 +19,13 @@ public sealed record ProcessTemplateCompatibilityReport(
     public bool RequiresManualReview =>
         MigrationDryRun.Items.Any(item => item.Status is ProcessTemplateMigrationDryRunStatus.ManualReviewRequired or ProcessTemplateMigrationDryRunStatus.MigrationPlanFailed) ||
         SidecarDrift.Sidecars.Any(sidecar => sidecar.Status != ProcessTemplateSidecarDriftStatus.Aligned) ||
-        BranchDiagnostics.Diagnostics.Count > 0;
+        BranchDiagnostics.Diagnostics.Count > 0 ||
+        TemplateContractDiagnostics.Diagnostics.Count > 0 ||
+        ArtifactContractDiagnostics.Diagnostics.Count > 0;
+
+    public ProcessTemplateContractDiagnosticReport TemplateContractDiagnostics { get; init; } = ProcessTemplateContractDiagnosticReport.Empty;
+
+    public ProcessArtifactContractDiagnosticReport ArtifactContractDiagnostics { get; init; } = ProcessArtifactContractDiagnosticReport.Empty;
 }
 
 public sealed record ProcessTemplateMigrationDryRunReport(
@@ -81,4 +90,56 @@ public enum ProcessBranchMigrationDiagnosticKind
 {
     MissingStableOutcomeKey,
     AmbiguousRouteTarget
+}
+
+public sealed record ProcessTemplateContractDiagnosticReport(
+    int DiagnosticCount,
+    IReadOnlyList<ProcessTemplateContractDiagnostic> Diagnostics)
+{
+    public static ProcessTemplateContractDiagnosticReport Empty { get; } = new(0, []);
+}
+
+public sealed record ProcessTemplateContractDiagnostic(
+    string ProcessKey,
+    string StepKey,
+    ProcessTemplateContractDiagnosticKind Kind,
+    string Message);
+
+public enum ProcessTemplateContractDiagnosticKind
+{
+    ProseOnlyHardGate,
+    MissingExecutionContract,
+    InvalidExecutionClass,
+    MissingRuntimeOwnedExecutorKey,
+    MissingDeterministicToolPlan,
+    InvalidDeterministicToolPlan,
+    MissingRequiredReceiptMetadata,
+    MissingReadbackChecks,
+    UnknownSubprocessDefinition,
+    UnknownSubprocessChildOutputStep,
+    UnknownSubprocessChildArtifactExpectation,
+    InvalidBranchOutcomeKey,
+    MissingProducedArtifactSlot
+}
+
+public sealed record ProcessArtifactContractDiagnosticReport(
+    int DiagnosticCount,
+    IReadOnlyList<ProcessArtifactContractDiagnostic> Diagnostics)
+{
+    public static ProcessArtifactContractDiagnosticReport Empty { get; } = new(0, []);
+}
+
+public sealed record ProcessArtifactContractDiagnostic(
+    string ProcessKey,
+    string ArtifactKey,
+    ProcessArtifactContractDiagnosticKind Kind,
+    string Message);
+
+public enum ProcessArtifactContractDiagnosticKind
+{
+    MissingSemanticAcceptanceContract,
+    FileOnlyAcceptanceAllowed,
+    MissingArtifactSlot,
+    MissingEvidenceKinds,
+    InvalidSemanticAcceptanceContract
 }

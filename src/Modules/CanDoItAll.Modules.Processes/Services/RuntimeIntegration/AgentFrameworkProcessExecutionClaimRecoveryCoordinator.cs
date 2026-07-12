@@ -36,6 +36,8 @@ internal sealed class AgentFrameworkProcessExecutionClaimRecoveryCoordinator(
     IProcessRuntimeDispatchQueue dispatchQueue,
     ProcessRuntimeBranchSignalApplicationService branchSignalRouter,
     ProcessRuntimeProjectionCatchupService projectionCatchupService,
+    ProcessManagedArtifactService managedArtifactService,
+    ProcessExecutionResultConverter resultConverter,
     ILogger<AgentFrameworkProcessExecutionClaimRecoveryCoordinator> logger)
 {
     private const int MaximumConcurrencyRetries = 3;
@@ -268,11 +270,18 @@ internal sealed class AgentFrameworkProcessExecutionClaimRecoveryCoordinator(
                 executionRun,
                 cancellationToken)
             .ConfigureAwait(false);
-        var adapterResult = AgentFrameworkProcessExecutionAdapter.ToAdapterResult(
+        var normalizedOutput = managedArtifactService.RecoverUnambiguousBranchOutcomeFromCurrentPrimaryArtifact(
             assignment,
             validation.Output,
-            validation.RawOutputHash,
+            executionRun.Id,
             toolReceipts);
+        var adapterResult = resultConverter.ToAdapterResult(
+            assignment,
+            normalizedOutput,
+            validation.RawOutputHash,
+            toolReceipts,
+            executionRun.Id,
+            stepContract: ProcessRuntimeArtifactContracts.BuildStepContract(state, step));
         var result = CreateRecoveredStrategyResult(executionRun, adapterResult);
         var engine = new ProcessRuntimeEngine(unitOfWork);
         var commit = await engine.SubmitStrategyResultAsync(

@@ -1,3 +1,4 @@
+using CanDoItAll.Memory.SourceGateway;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using CanDoItAll.AgentFramework.Core;
@@ -5,6 +6,7 @@ using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Tooling;
 using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Infrastructure.Storage;
+using CanDoItAll.Memory.Application;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Workspace;
 using CanDoItAll.Processes.Application;
@@ -45,9 +47,10 @@ public static class WorkbenchModuleServiceCollectionExtensions
         services.AddSingleton<ProjectStructureDeferredNodeCompletionWorker>();
         services.AddHostedService(serviceProvider =>
             serviceProvider.GetRequiredService<ProjectStructureDeferredNodeCompletionWorker>());
-        services.TryAddEnumerable(ServiceDescriptor.Scoped<IProjectStructureProcessLaunchVariableContributor, DotNetProcessLaunchVariableContributor>());
+        services.TryAddScoped<ProcessLaunchVariablePreparationService>();
         services.AddScoped<ProjectStructureProcessNodeService>();
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IProcessSubprocessLaunchCoordinator, ProjectStructureProcessSubprocessLaunchCoordinator>());
+        services.TryAddSingleton<ProjectStructureWorkflowLaunchIntentFactory>();
         services.AddScoped<ProjectStructureWorkflowNodeService>();
         services.TryAddScoped<IWorkspacePathResolutionService>(serviceProvider =>
         {
@@ -61,6 +64,8 @@ public static class WorkbenchModuleServiceCollectionExtensions
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IAgentRuntimeToolProvider, ProjectStructureAgentRuntimeToolProvider>());
         services.AddScoped<IProjectStructureRuntimeGateway, WorkbenchProjectStructureRuntimeGateway>();
         services.AddScoped<IProjectStructureSourceSnapshotProvider, WorkbenchProjectStructureSourceSnapshotProvider>();
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IMemorySourceGatewayAdapter, WorkbenchProjectStructureMemorySourceGatewayAdapter>());
+        services.AddScoped<ProjectMemoryIngestionService>();
         services.AddScoped<IProjectGanttPreviewService, ProjectGanttPreviewService>();
         services.AddScoped<IProjectStructureLocalFileOpener, ProjectStructureLocalFileOpener>();
         services.AddScoped<IProjectStructureRuntimeLauncher, ProjectStructureRuntimeLauncher>();

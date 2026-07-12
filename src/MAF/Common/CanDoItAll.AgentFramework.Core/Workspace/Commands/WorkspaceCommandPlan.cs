@@ -14,4 +14,5 @@ internal sealed record WorkspaceCommandPlan(
     int TimeoutSeconds,
     int StdoutLimitCharacters,
     int StderrLimitCharacters,
-    IReadOnlyDictionary<string, string?>? EnvironmentVariables = null);
+    IReadOnlyDictionary<string, string?>? EnvironmentVariables = null,
+    ToolExecutionSideEffectMode DeclaredSideEffectMode = ToolExecutionSideEffectMode.Unspecified);

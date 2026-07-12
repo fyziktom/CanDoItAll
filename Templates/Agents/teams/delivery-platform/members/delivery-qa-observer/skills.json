@@ -2,6 +2,7 @@
   "capabilityKeys": [
     "playwright-local-mcp",
     "concrete-deliverable-delivery-inline-skill",
+    "development-image-analysis-guidance-inline-skill",
     "candoitall-frontend-theme",
     "frontend-skill",
     "candoitall-watch-playwright-loop",

@@ -1,135 +1,103 @@
 # Validation And Testing
 
-## Targeted Commands
+Run these commands from `C:\repositories\CanDoItAll` unless the command explicitly changes repository.
 
-Run from the repository root.
+## Release Gate
 
-```powershell
-dotnet test tests\Unit\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj --filter "FullyQualifiedName~CognitiveMemory" --logger "console;verbosity=minimal" -m:1
-dotnet test tests\Integration\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --filter "FullyQualifiedName~CognitiveMemory" --logger "console;verbosity=minimal" -m:1
-dotnet test tests\Components\CanDoItAll.Tests.Components\CanDoItAll.Tests.Components.csproj --filter "FullyQualifiedName~CognitiveMemory" --logger "console;verbosity=minimal" -m:1
-```
-
-Use the Playwright project when UI behavior changes:
+Generic memory runtime:
 
 ```powershell
-dotnet test tests\Playwright\CanDoItAll.Tests.Playwright\CanDoItAll.Tests.Playwright.csproj --filter "FullyQualifiedName~CognitiveMemory" --logger "console;verbosity=minimal" -m:1
+dotnet test .\tests\Memory\CanDoItAll.Memory.Tests\CanDoItAll.Memory.Tests.csproj --no-restore --logger "console;verbosity=normal"
 ```
 
-Run the solution build when persistence, API, or shared contracts change:
+MAF memory integration:
 
 ```powershell
-dotnet build CanDoItAll.slnx --no-restore -m:1 --verbosity:minimal
+dotnet test .\tests\Unit\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj --no-restore --filter "FullyQualifiedName~MemoryAgentRuntimeToolProviderTests|FullyQualifiedName~MemoryWorkflowExecutorTests|FullyQualifiedName~MemoryAgentContextContributorTests|FullyQualifiedName~MemoryMafIntegrationCheckpointTests" --logger "console;verbosity=normal"
 ```
+
+Generic memory component UI:
+
+```powershell
+dotnet test .\tests\Components\CanDoItAll.Tests.Components\CanDoItAll.Tests.Components.csproj --no-restore --filter "FullyQualifiedName~MemoryProvider|FullyQualifiedName~MemoryUiRefactoringCheckpoint" --logger "console;verbosity=normal"
+```
+
+Generic memory browser UI:
+
+```powershell
+dotnet test .\tests\Playwright\CanDoItAll.Tests.Playwright\CanDoItAll.Tests.Playwright.csproj --no-restore --filter "FullyQualifiedName~MemoryProviderManagementPlaywrightTests" --logger "console;verbosity=normal"
+```
+
+Database runtime switching:
+
+```powershell
+dotnet test .\tests\Integration\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --no-restore --filter "FullyQualifiedName~DatabaseSwitchIntegrationTests" --logger "console;verbosity=normal"
+```
+
+Native Cognitive Memory service:
+
+```powershell
+dotnet build C:\repositories\CanDoItAll.CognitiveMemory\CanDoItAll.CognitiveMemory.slnx --no-restore --verbosity:minimal
+dotnet test C:\repositories\CanDoItAll.CognitiveMemory\tests\CanDoItAll.CognitiveMemory.Tests\CanDoItAll.CognitiveMemory.Tests.csproj --no-restore --logger "console;verbosity=normal"
+```
+
+Main solution:
+
+```powershell
+dotnet build .\CanDoItAll.slnx --no-restore --verbosity:minimal
+```
+
+Bundle validation:
+
+```powershell
+python .\codex\skills\bundles\candoitall-bundle-preparation\scripts\validate_bundle.py --profile initiative --stage completed --repo-root . .\codex\bundles\candoitall-memory-provider-extraction-bundle
+```
+
+## Source Audits
+
+Base host and generic memory paths must not depend on the retained native module, Qdrant RAG driver, or SemanticCompletion driver:
+
+```powershell
+rg -n "CanDoItAll.Modules.CognitiveMemory|AddCognitiveMemoryModule|CognitiveMemoryModuleAssemblyMarker|CanDoItAll.AgentFramework.Rag.Qdrant|CanDoItAll.AgentFramework.SemanticCompletion.Driver" .\src\App\CanDoItAll.Composition .\src\Memory .\src\Modules\CanDoItAll.Modules.Memory .\src\Modules\CanDoItAll.Modules.AgentFramework -g "*.cs" -g "*.csproj" -g "*.razor"
+```
+
+Retained native references must be classified as one of:
+
+- native service repository code;
+- retained legacy main-repo native module code;
+- retained legacy/native regression tests;
+- legacy main DB export/retirement artifacts;
+- historical documentation.
+
+Any direct reference from base composition, generic memory runtime, generic memory UI, or MAF memory integration to native Cognitive Memory implementation types is a release blocker.
 
 ## Current Coverage Shape
 
-| Layer | Coverage today |
+| Layer | Coverage |
 | --- | --- |
-| Unit | Foundation guards, source ingestion, score geometry, signal ledger, taxonomy, recall, consolidation, review UI service, operator audit including retention cleanup run audit, operational settings, retention cleanup, procedure memory, temporal replay, workspace attention, advanced services, module registration, projection adapters, provider failure paths. |
-| Integration | PostgreSQL persistence model coverage for foundation, source ingestion, score geometry, signals, taxonomy, recall, consolidation, temporal replay, workspace, procedural, neuro foundation, advanced records. |
-| Component | Cognitive Memory page coverage. |
-| Playwright | Review UI browser proof. |
+| Generic memory | Provider profiles, registry selection, operation handler, runtime service, ledgers, workers, feedback, provider events, Source Gateway, manual ingestion, HTTP driver, MCP driver, native remote adapter, deterministic mock driver, retention, host-composition guards, end-to-end observability proof. |
+| MAF | Runtime tool provider, workflow executor, context contributor, source snapshot contracts, and process/workflow/source adapter paths. |
+| UI components | `/memory` provider list, profile editor, zero-provider state, query/feedback/ingestion/operations/event surfaces, provider UI surface projection. |
+| Playwright | Browser-visible `/memory` provider management, zero-provider state, query/context pack, feedback, manual ingestion, operations ledger, RCL/iframe fallback, and mobile checkpoints. |
+| Integration | Database runtime switching with generic memory persistence registered. |
+| Native service | Native repo solution build and native service tests. |
+| Legacy main DB | Export service and no-op retirement migration coverage. |
 
-## P1 Beta Qdrant Validation Evidence
+## Browser Validation Policy
 
-The P1 beta closure pass was validated with Docker PostgreSQL/Qdrant and the public API path:
+Run Playwright when a change touches:
 
-```powershell
-dotnet test tests\Unit\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj --no-restore --filter "FullyQualifiedName~CognitiveMemoryOperationalServicesTests|FullyQualifiedName~CognitiveMemoryConsolidationEngineTests|FullyQualifiedName~CognitiveMemoryTaxonomyTests" --logger "console;verbosity=minimal" -m:1
-dotnet build src\App\CanDoItAll.Web\CanDoItAll.Web.csproj --no-restore -m:1 --verbosity:minimal
-```
+- `/memory` UI or CSS;
+- provider profile rendering or selection UX;
+- provider UI surface projection;
+- browser-visible zero-provider, feedback, ingestion, operations, or event behavior.
 
-Results:
+SB34 is documentation and release-gate work, so it does not require new screenshots unless a browser-visible source file changes. The final proof can reference the SB33 browser screenshots for full `/memory` behavior.
 
-- Focused unit tests: 26/26 passed.
-- Web project build: passed with 0 warnings and 0 errors.
-- Docker status: `candoitall-qdrant` healthy on `6333/6334`, `candoitall-postgres` healthy on `5432`.
-- Public API proof: uploaded an external Markdown source, consolidated 2 source items into 2 memory records, projected 2/2 missing durable records through `/api/cognitive-memory/v1/projections/rebuild`.
-- Qdrant proof: collection `candoitall-knowledge` green, 384-dimensional cosine vectors, filtered points contain durable projection row ids and embedding profile `local-hashing-v1:dimension=384`.
-- Recall proof: `/api/cognitive-memory/v1/recall` returned 2 selected candidates and vector stage `providerTrace = rag:qdrant:search:2`.
-- Evidence file: `codex/bundles/cognitive-memory-beta-qdrant-validation/reviews/runtime-proof/qdrant-beta-live-proof.json`.
+## Historical Native Validation
 
-Browser proof:
+Older documents in this folder describe P0/P1 native Cognitive Memory validation, including Qdrant-backed recall and the legacy `/api/cognitive-memory` route family. Treat those as native-provider history. Current base-host release proof is the generic Memory Provider release gate above.
 
-- Route: `http://127.0.0.1:5289/cognitive-memory`.
-- Startup profile dialog: explicit PostgreSQL startup override was shown and continued.
-- Dashboard and health tab loaded at 1440x1000 and 390x900.
-- Console: only normal Blazor startup/WebSocket info entries.
-- Screenshots: `codex/bundles/cognitive-memory-beta-qdrant-validation/reviews/browser-proof/cognitive-memory-beta-desktop-loaded.png`, `cognitive-memory-beta-mobile-loaded.png`, `cognitive-memory-beta-health-desktop.png`, and `cognitive-memory-beta-health-mobile.png`.
+## Failure Handling
 
-## P1 Hardening Validation Evidence
-
-The P1 beta-hardening pass was validated with:
-
-```powershell
-dotnet test tests\Unit\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj --no-restore --filter "FullyQualifiedName~CognitiveMemoryOperationalSettingsTests" --logger "console;verbosity=minimal" -m:1
-dotnet test tests\Unit\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj --no-restore --filter "FullyQualifiedName~CognitiveMemory|FullyQualifiedName~AgentContextContributionTests" --logger "console;verbosity=minimal" -m:1
-dotnet test tests\Integration\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --no-restore --filter "FullyQualifiedName~CognitiveMemory" --logger "console;verbosity=minimal" -m:1
-dotnet test tests\Components\CanDoItAll.Tests.Components\CanDoItAll.Tests.Components.csproj --no-restore --filter "FullyQualifiedName~CognitiveMemory" --logger "console;verbosity=minimal" -m:1
-dotnet build src\App\CanDoItAll.Web\CanDoItAll.Web.csproj --no-restore -m:1 --verbosity:minimal
-```
-
-Results:
-
-- External-source/settings unit focus: 10/10 passed.
-- Unit Cognitive Memory and agent-context tests: 142/142 passed.
-- Integration Cognitive Memory tests: 25/25 passed.
-- Component Cognitive Memory tests: 1/1 passed.
-- Web project build: passed with 0 warnings and 0 errors.
-- V1 API contract smoke: `GET /api/cognitive-memory/v1/contract` returned version `v1`, base path `/api/cognitive-memory/v1`, 35 routes, 7 examples, and the retention cleanup route.
-
-Browser proof was run because this pass changed the health tab:
-
-- Route: `http://127.0.0.1:5289/cognitive-memory`.
-- Desktop viewport: 1440x1000, health tab rendered `Operator audit` and `Mutation, evidence, and projection signals`.
-- Narrow viewport: 390x900, health tab rendered the operator audit section without horizontal overflow in the captured snapshot.
-- Console: only normal Blazor startup/WebSocket info entries in the fresh proof log.
-- Screenshots: `codex/bundles/cognitive-memory-p1-beta-hardening/reviews/browser-proof/cognitive-memory-health-desktop-p1.png` and `codex/bundles/cognitive-memory-p1-beta-hardening/reviews/browser-proof/cognitive-memory-health-mobile-p1.png`.
-
-## P0 Validation Evidence
-
-The P0 maintainability and operations pass was validated with:
-
-```powershell
-dotnet test tests\Unit\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj --no-restore --filter "FullyQualifiedName~CognitiveMemory|FullyQualifiedName~AgentContextContributionTests" --logger "console;verbosity=minimal" -m:1
-dotnet test tests\Integration\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --no-restore --filter "FullyQualifiedName~CognitiveMemory" --logger "console;verbosity=minimal" -m:1
-dotnet test tests\Components\CanDoItAll.Tests.Components\CanDoItAll.Tests.Components.csproj --no-restore --filter "FullyQualifiedName~CognitiveMemory" --logger "console;verbosity=minimal" -m:1
-dotnet build src\App\CanDoItAll.Web\CanDoItAll.Web.csproj --no-restore -m:1 --verbosity:minimal
-```
-
-Results:
-
-- Unit Cognitive Memory and agent-context tests: 136/136 passed.
-- Integration Cognitive Memory tests: 25/25 passed.
-- Component Cognitive Memory tests: 1/1 passed.
-- Web project build: passed with 0 warnings and 0 errors.
-
-Browser proof was run because this pass changed rendered Blazor structure:
-
-- Route: `http://127.0.0.1:5289/cognitive-memory`.
-- Startup action: accepted the active database profile dialog.
-- Desktop viewport: 1440x1000, settings tab rendered operational controls.
-- Narrow viewport: 390x900, settings tab rendered operational controls with no horizontal overflow.
-- Assertions: `cognitive-memory-settings`, `cognitive-memory-operational-actions`, `cognitive-memory-run-automation`, `cognitive-memory-rebuild-projections`, `cognitive-memory-automation-run-progress`, and `cognitive-memory-projection-rebuild-progress` were present.
-- Console: only normal Blazor connection messages.
-- Screenshots: `codex/bundles/cognitive-memory-p0-maintainability/reviews/browser-proof/cognitive-memory-settings-desktop-p0.png` and `codex/bundles/cognitive-memory-p0-maintainability/reviews/browser-proof/cognitive-memory-settings-mobile-p0.png`.
-
-## Evidence From Previous Closure
-
-The latest completed Cognitive Memory repair bundles record:
-
-- Unit Cognitive Memory tests: 117/117 passed.
-- Integration Cognitive Memory tests: 25/25 passed.
-- Component Cognitive Memory tests: 1/1 passed.
-- Serial solution build passed with existing unrelated `Google.Protobuf` warnings.
-- Live PostgreSQL validation exercised settings, staged source ingestion, consolidation, review approval/rejection, recall, probe sessions, Epistemic Drive scans, and local Ollama validation.
-
-## Gaps To Add After P1 Beta
-
-- Containerized CI or operator-owned scripted repeatability for the live Docker Qdrant proof.
-- Hosted scheduler tests only if an autonomous scoped worker is introduced.
-- External-client API contract compatibility tests for the v1 route surface.
-- Broader browser coverage for review, probe, ingestion, and projection operation flows.
-- Load/performance tests for large source manifests, recall trace retention, and review queues.
-
+Do not continue the release gate after a failed command unless the failure is classified and fixed or explicitly deferred in the execution report with owner, risk, and follow-up bundle. Existing NuGet vulnerability/source warnings may be recorded as non-blocking only when the command exits successfully.

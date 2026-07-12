@@ -4,6 +4,8 @@ namespace CanDoItAll.AgentFramework.Core;
 
 public interface IWorkspaceFileService
 {
+    WorkspaceFileListResult ListDirectory(string? relativePath = null, int maxResults = 100);
+
     WorkspaceFileListResult ListFiles(string? relativePath = null, string searchPattern = "*", int maxResults = 100);
 
     WorkspaceTextSearchResult SearchText(string query, string? relativePath = null, int maxResults = 20);

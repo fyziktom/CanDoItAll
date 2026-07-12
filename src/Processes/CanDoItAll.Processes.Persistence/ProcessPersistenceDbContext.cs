@@ -18,6 +18,8 @@ public sealed class ProcessPersistenceDbContext(DbContextOptions<ProcessPersiste
 
     public DbSet<ProcessRuntimeAvailableArtifactSlotEntity> AvailableArtifactSlots => Set<ProcessRuntimeAvailableArtifactSlotEntity>();
 
+    public DbSet<ProcessRuntimeInputArtifactEntity> RuntimeInputArtifacts => Set<ProcessRuntimeInputArtifactEntity>();
+
     public DbSet<ProcessRuntimeEventEntity> RuntimeEvents => Set<ProcessRuntimeEventEntity>();
 
     public DbSet<ProcessOutboxMessageEntity> OutboxMessages => Set<ProcessOutboxMessageEntity>();

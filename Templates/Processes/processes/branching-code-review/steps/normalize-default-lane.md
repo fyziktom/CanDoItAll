@@ -23,7 +23,7 @@ Create an explicit normalization note when no named review outcome was selected 
 - Requires decision record: False
 
 ## Dependencies
-- route-review-disposition / __default__
+- route-review-disposition / default
 
 ## Role assignments
 - `review-lead` / Review lead => Responsible; required=True; fallback-order=0; rebind=Default normalization remains an explicit review-lead responsibility.
@@ -36,3 +36,4 @@ Create an explicit normalization note when no named review outcome was selected 
 
 ## Branch outcomes
 - No explicit branch outcomes.
+

@@ -23,6 +23,8 @@ public readonly record struct WorkflowExecutorId
 
 public static class WorkflowExecutorIds
 {
+    public static WorkflowExecutorId Memory { get; } = new("memory.operation");
+
     public static WorkflowExecutorId StorageFile { get; } = new("storage.file");
 
     public static WorkflowExecutorId SourceIngestion { get; } = new("source.ingest");
@@ -32,6 +34,12 @@ public static class WorkflowExecutorIds
     public static WorkflowExecutorId HttpFetch { get; } = new("http.fetch");
 
     public static WorkflowExecutorId ImageGeneration { get; } = new("image.generate");
+
+    public static WorkflowExecutorId DocumentToMarkdown { get; } = new("document.to-markdown");
+
+    public static WorkflowExecutorId ImageInspect { get; } = new("image.inspect");
+
+    public static WorkflowExecutorId ImageAnalyze { get; } = new("image.analyze");
 
     public static WorkflowExecutorId Spreadsheet { get; } = new("spreadsheet");
 
@@ -138,6 +146,12 @@ public enum WorkflowExecutorSettingsSchemaKind
 {
     None,
     JsonSchema
+}
+
+public enum WorkflowExecutorSettingsPresentationMode
+{
+    Schema,
+    CustomRenderer
 }
 
 public static class WorkflowExecutorSourceIds
@@ -337,7 +351,8 @@ public enum WorkflowStorageFileOperation
     Zip,
     Unzip,
     SearchText,
-    DiffText
+    DiffText,
+    ListDirectory
 }
 
 public enum WorkflowJsonTransformOperation
@@ -407,7 +422,8 @@ public enum WorkflowSpreadsheetOperation
     WriteCell,
     WriteRange,
     ApplyBatch,
-    RangeToMarkdown
+    RangeToMarkdown,
+    Preview
 }
 
 public enum WorkflowProjectStructureOperation
@@ -615,6 +631,9 @@ public sealed record WorkflowExecutorDescriptor(
         WorkflowExecutorSettingsSchemaDescriptor.JsonSchema("1.0", SettingsSchemaJson);
 
     public ConfigurationSchema ConfigurationSchema { get; init; } = ConfigurationSchema.Empty();
+
+    public WorkflowExecutorSettingsPresentationMode SettingsPresentationMode { get; init; } =
+        WorkflowExecutorSettingsPresentationMode.Schema;
 
     public WorkflowExecutorSimulationDescriptor Simulation { get; init; } = WorkflowExecutorSimulationDescriptor.None;
 
@@ -835,6 +854,8 @@ public sealed record WorkflowSpreadsheetExecutorSettings
     public int MaxRows { get; init; } = 100;
 
     public int MaxColumns { get; init; } = 40;
+
+    public int MaxWorksheets { get; init; } = 2;
 }
 
 public sealed record WorkflowProjectStructureExecutorSettings
@@ -894,3 +915,56 @@ public sealed record WorkflowImageGenerationExecutorSettings
 
     public string OutputWorkspacePath { get; init; } = string.Empty;
 }
+
+public sealed record WorkflowDocumentToMarkdownExecutorSettings
+{
+    public string SourcePath { get; init; } = string.Empty;
+
+    public string SourcePathJsonPath { get; init; } = string.Empty;
+
+    public string OutputPath { get; init; } = string.Empty;
+
+    public int PreviewCharacters { get; init; } = 4000;
+}
+
+public sealed record WorkflowImageInspectExecutorSettings
+{
+    public string Path { get; init; } = string.Empty;
+
+    public string PathJsonPath { get; init; } = string.Empty;
+}
+
+public sealed record WorkflowImageAnalyzeExecutorSettings
+{
+    public string Path { get; init; } = string.Empty;
+
+    public string PathJsonPath { get; init; } = string.Empty;
+
+    public string Prompt { get; init; } = "Analyze the image using only directly visible evidence.";
+
+    public Guid? ProviderProfileId { get; init; }
+
+    public string Model { get; init; } = string.Empty;
+
+    public long MaxBytes { get; init; } = 10 * 1024 * 1024;
+
+    public string ModelParameterConfigurationJson { get; init; } =
+        """{"modelParameters":{"numPredict":512,"think":false}}""";
+}
+
+public sealed record WorkflowImageAnalyzeExecutorResult(
+    bool Succeeded,
+    Guid ProviderProfileId,
+    string ProviderName,
+    string Model,
+    string Path,
+    string Prompt,
+    string Analysis,
+    int InputTokens,
+    int OutputTokens,
+    string Format,
+    string ContentType,
+    long SizeBytes,
+    int? Width,
+    int? Height,
+    WorkspaceToolReceipt Receipt);

@@ -21,7 +21,7 @@ public sealed class WorkflowShellSmokeTests
             "bundles",
             "skill-tool-mcp-isolation-template-migration",
             "proof",
-            "SB11",
+            "regression",
             "screenshots");
         Directory.CreateDirectory(artifactDirectory);
 

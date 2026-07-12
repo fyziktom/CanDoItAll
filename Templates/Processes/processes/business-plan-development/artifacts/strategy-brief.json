@@ -12,5 +12,17 @@
   "AllowedFutureUsageSummary": "Reusable by finance, marketing, and final review.",
   "ValidationRequirementSummary": "Must separate facts from assumptions and identify open questions.",
   "OwnerRoleKey": "business-strategist",
-  "DocPath": "processes/business-plan-development/artifacts/strategy-brief.md"
+  "DocPath": "processes/business-plan-development/artifacts/strategy-brief.md",
+  "SemanticAcceptanceContract": {
+    "AcceptanceMode": "SemanticReview",
+    "FileExistenceIsSufficient": false,
+    "RequiredArtifactSlotKey": "strategy-brief",
+    "RequiredEvidenceKinds": [
+      "structured-finalizer-output",
+      "reviewed-managed-artifact",
+      "semantic-validation-summary"
+    ],
+    "RequiredReviewSummary": "Must separate facts from assumptions and identify open questions."
+  }
 }
+

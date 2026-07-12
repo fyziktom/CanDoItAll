@@ -12,9 +12,16 @@
     "workspace-append-file",
     "workspace-convert-document",
     "workspace-inspect-spreadsheet",
+    "workspace-spreadsheet-summary",
+    "workspace-read-spreadsheet-cell",
+    "workspace-read-spreadsheet-range",
+    "workspace-write-spreadsheet",
+    "workspace-spreadsheet-function-catalog",
+    "workspace-inspect-image",
+    "workspace-analyze-image",
+    "workspace-analyze-images",
     "workspace-source-rag",
-    "research-briefing-context",
-    "provider-native-code-interpreter"
+    "research-briefing-context"
   ],
   "notes": "Resolved against the built-in capability catalog during seed materialization. Keep this list role-specific."
 }

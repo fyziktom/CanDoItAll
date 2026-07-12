@@ -1,0 +1,79 @@
+@using CanDoItAll.AgentFramework.Models
+
+@if (Bindings.Count == 0)
+{
+    <SurfaceCard Soft="true">
+        <p class="text-sm text-slate-600">No external memory providers are bound to this agent.</p>
+    </SurfaceCard>
+}
+else
+{
+    <Stack GapScale="LayoutGap.Small" data-testid="agents-catalog-memory-bindings">
+        @for (var index = 0; index < Bindings.Count; index++)
+        {
+            var binding = Bindings[index];
+            var bindingIndex = index;
+            <SurfaceCard Soft="true">
+                <Grid Gap="LayoutGap.Medium" ColumnsMd="2">
+                    <Stack GapScale="LayoutGap.XSmall">
+                        <strong>/mem:@binding.Alias.Value</strong>
+                        <span class="text-sm text-slate-600">@binding.ProviderInstanceId.Value</span>
+                        <small class="text-slate-500">
+                            @(binding.IncludeInAutomaticContext ? "Included in automatic context" : "Explicit directive only")
+                        </small>
+                        <InputSelect TValue="AgentMemoryProviderRequirement"
+                                     Value="binding.Requirement"
+                                     ValueChanged="requirement => UpdateRequirement.InvokeAsync(new(binding.Alias, requirement))"
+                                     ValueExpression="@(() => binding.Requirement)"
+                                     class="cda-input"
+                                     data-testid="@($"agents-catalog-memory-requirement-{binding.Alias.Value}")">
+                            @foreach (var requirement in Enum.GetValues<AgentMemoryProviderRequirement>())
+                            {
+                                <option value="@requirement">@requirement</option>
+                            }
+                        </InputSelect>
+                    </Stack>
+                    <Cluster Gap="LayoutGap.XSmall"
+                             Wrap="FlexWrap.Wrap"
+                             AlignItems="AlignItems.Center"
+                             JustifyContent="JustifyContent.End">
+                        <Button Text="Up"
+                                Icon="arrow_upward"
+                                ButtonStyle="ButtonStyle.Light"
+                                Size="ButtonSize.Small"
+                                Disabled="@(bindingIndex == 0)"
+                                Click="() => Move.InvokeAsync(new(binding.Alias, -1))"
+                                data-testid="@($"agents-catalog-memory-up-{binding.Alias.Value}")" />
+                        <Button Text="Down"
+                                Icon="arrow_downward"
+                                ButtonStyle="ButtonStyle.Light"
+                                Size="ButtonSize.Small"
+                                Disabled="@(bindingIndex == Bindings.Count - 1)"
+                                Click="() => Move.InvokeAsync(new(binding.Alias, 1))"
+                                data-testid="@($"agents-catalog-memory-down-{binding.Alias.Value}")" />
+                        <Button Text="Remove"
+                                Icon="delete"
+                                ButtonStyle="ButtonStyle.Light"
+                                Size="ButtonSize.Small"
+                                Click="() => Remove.InvokeAsync(binding.Alias)"
+                                data-testid="@($"agents-catalog-memory-remove-{binding.Alias.Value}")" />
+                    </Cluster>
+                </Grid>
+            </SurfaceCard>
+        }
+    </Stack>
+}
+
+@code {
+    [Parameter, EditorRequired]
+    public IReadOnlyList<AgentMemoryProviderBindingSetting> Bindings { get; set; } = [];
+
+    [Parameter, EditorRequired]
+    public EventCallback<AgentMemoryProviderAlias> Remove { get; set; }
+
+    [Parameter, EditorRequired]
+    public EventCallback<AgentMemoryBindingMove> Move { get; set; }
+
+    [Parameter, EditorRequired]
+    public EventCallback<AgentMemoryBindingRequirementChange> UpdateRequirement { get; set; }
+}

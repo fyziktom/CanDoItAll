@@ -1,5 +1,6 @@
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.AgentFramework.Workflows.Abstractions;
 using CanDoItAll.Modules.AgentFramework;
 using CanDoItAll.Modules.AgentFramework.Hosting;
 using CanDoItAll.Modules.CrmHr;
@@ -7,6 +8,7 @@ using CanDoItAll.Modules.Processes;
 using CanDoItAll.Processes.Abstractions;
 using CanDoItAll.Processes.Application;
 using CanDoItAll.Processes.Builder;
+using CanDoItAll.Processes.Contracts;
 using CanDoItAll.Processes.Core;
 using CanDoItAll.Processes.Drivers.Abstractions;
 using CanDoItAll.Processes.Templates;
@@ -45,7 +47,8 @@ public sealed class ProcessLaunchExecutorResolverTests
                 workspaceFactory,
                 new NoOpAiTechnicalAgentBridge(),
                 Options.Create(new ProcessMockAgentOptions { Enabled = false })),
-            new ProviderProfileService());
+            new ProviderProfileService(),
+            new ResolverWorkflowCatalog());
 
         var result = await resolver.ResolveAsync(new ProcessLaunchExecutorResolutionRequest(
             CreateDefinition(),
@@ -60,6 +63,208 @@ public sealed class ProcessLaunchExecutorResolverTests
         Assert.Equal(ProcessLaunchExecutorKinds.Agent, binding.ExecutorKind);
         Assert.Equal(agent.Id.ToString("D"), binding.ExecutorId);
         Assert.Contains("delivery-manager", binding.AssignmentReason, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task ResolveAsync_binds_only_the_explicit_workflow_and_latest_active_version()
+    {
+        var workflowId = WorkflowId.New();
+        var active = CreateWorkflowDefinition(workflowId, WorkflowVersionId.New(), WorkflowLifecycleStatus.Active);
+        var catalog = new ResolverWorkflowCatalog
+        {
+            LatestActive = new WorkflowDefinitionDetail(active, WorkflowValidationResult.Success)
+        };
+        var workspace = new ResolverWorkspaceService([], []);
+        var resolver = CreateResolver(new ResolverWorkspaceFactory(workspace), catalog);
+        var definition = CreateDefinition();
+        definition.RoleUsages[0].PreferredExecutorKind = ProcessLaunchExecutorKinds.Workflow;
+        definition.RoleUsages[0].WorkflowBinding = new ProcessWorkflowExecutorBinding(
+            new ProcessWorkflowId(workflowId.Value));
+
+        var result = await resolver.ResolveAsync(new ProcessLaunchExecutorResolutionRequest(
+            definition,
+            CreatePlan(),
+            LiveRunProfile: null,
+            Variables: new Dictionary<string, string>()));
+
+        Assert.DoesNotContain(result.Findings, finding => finding.Severity == ProcessLaunchReadinessSeverity.Error);
+        var binding = Assert.Single(result.Bindings);
+        Assert.Equal(ProcessLaunchExecutorKinds.Workflow, binding.ExecutorKind);
+        Assert.Equal(workflowId.Value, binding.WorkflowBinding?.WorkflowId.Value);
+        Assert.Null(binding.WorkflowBinding?.WorkflowVersionId);
+        Assert.Equal(workflowId, catalog.LatestActiveWorkflowId);
+        Assert.False(catalog.ListDefinitionsCalled);
+    }
+
+    [Fact]
+    public async Task ResolveAsync_rejects_exact_workflow_version_that_is_not_active_and_runnable()
+    {
+        var workflowId = WorkflowId.New();
+        var versionId = WorkflowVersionId.New();
+        var draft = CreateWorkflowDefinition(workflowId, versionId, WorkflowLifecycleStatus.Draft);
+        var catalog = new ResolverWorkflowCatalog
+        {
+            Exact = new WorkflowDefinitionDetail(draft, WorkflowValidationResult.Success)
+        };
+        var workspace = new ResolverWorkspaceService([], []);
+        var resolver = CreateResolver(new ResolverWorkspaceFactory(workspace), catalog);
+        var definition = CreateDefinition();
+        definition.RoleUsages[0].PreferredExecutorKind = ProcessLaunchExecutorKinds.Workflow;
+        definition.RoleUsages[0].WorkflowBinding = new ProcessWorkflowExecutorBinding(
+            new ProcessWorkflowId(workflowId.Value),
+            new ProcessWorkflowVersionId(versionId.Value));
+
+        var result = await resolver.ResolveAsync(new ProcessLaunchExecutorResolutionRequest(
+            definition,
+            CreatePlan(),
+            LiveRunProfile: null,
+            Variables: new Dictionary<string, string>()));
+
+        Assert.Empty(result.Bindings);
+        Assert.Contains(result.Findings, finding =>
+            finding.Code == "process.launch.workflow_not_runnable" &&
+            finding.Severity == ProcessLaunchReadinessSeverity.Error);
+        Assert.Equal((workflowId, versionId), catalog.ExactSelection);
+    }
+
+    [Fact]
+    public async Task ResolveAsync_rejects_workflow_kind_without_explicit_workflow_instead_of_selecting_any_active()
+    {
+        var catalog = new ResolverWorkflowCatalog
+        {
+            LatestActive = new WorkflowDefinitionDetail(
+                CreateWorkflowDefinition(WorkflowId.New(), WorkflowVersionId.New(), WorkflowLifecycleStatus.Active),
+                WorkflowValidationResult.Success)
+        };
+        var workspace = new ResolverWorkspaceService([], []);
+        var resolver = CreateResolver(new ResolverWorkspaceFactory(workspace), catalog);
+        var definition = CreateDefinition();
+        definition.RoleUsages[0].PreferredExecutorKind = ProcessLaunchExecutorKinds.Workflow;
+
+        var result = await resolver.ResolveAsync(new ProcessLaunchExecutorResolutionRequest(
+            definition,
+            CreatePlan(),
+            LiveRunProfile: null,
+            Variables: new Dictionary<string, string>()));
+
+        Assert.Empty(result.Bindings);
+        Assert.Contains(result.Findings, finding =>
+            finding.Code == "process.launch.workflow_selection_required" &&
+            finding.Severity == ProcessLaunchReadinessSeverity.Error);
+        Assert.Null(catalog.LatestActiveWorkflowId);
+        Assert.False(catalog.ListDefinitionsCalled);
+    }
+
+    [Fact]
+    public async Task ResolveAsync_surfaces_management_only_skill_suppression_without_changing_agent_settings()
+    {
+        var providerId = Guid.Parse("632a32cd-bcc7-4467-96c3-4f5292f5db42");
+        var agent = CreateAgent(
+            providerId,
+            Guid.Parse("a70383fc-68d7-4032-b052-c63ed53b6d36"),
+            "Technical Delivery Manager",
+            "Delivery manager with engineering background",
+            "Coordinates delivery governance and can also support engineering work when a process step allows it.",
+            AgentWorkloadKind.Management,
+            AgentWorkspaceToolProfileKind.SoftwareDevelopment,
+            ["delivery-manager", "dotnet", "programming"]);
+        var workspace = new ResolverWorkspaceService([agent], [CreateProvider(providerId)]);
+        var workspaceFactory = new ResolverWorkspaceFactory(workspace);
+        var resolver = CreateResolver(workspaceFactory);
+        var definition = CreateDefinition();
+        definition.Steps[0].CapabilityScope = new ProcessCapabilityScope
+        {
+            Directives =
+            [
+                new ProcessCapabilityScopeDirective
+                {
+                    Kind = ProcessCapabilityScopeDirectiveKind.Deny,
+                    Target = new ProcessCapabilityScopeTarget
+                    {
+                        Kind = ProcessCapabilityScopeTargetKind.CapabilityKind,
+                        Value = CapabilityKind.Skill.ToString()
+                    },
+                    Reason = "Management-only step."
+                }
+            ]
+        };
+
+        var result = await resolver.ResolveAsync(new ProcessLaunchExecutorResolutionRequest(
+            definition,
+            CreatePlan(),
+            LiveRunProfile: null,
+            Variables: new Dictionary<string, string>()));
+
+        Assert.DoesNotContain(result.Findings, finding => finding.Severity == ProcessLaunchReadinessSeverity.Error);
+        var binding = Assert.Single(result.Bindings);
+        Assert.Equal(agent.Id.ToString("D"), binding.ExecutorId);
+        Assert.Contains(result.Findings, finding =>
+            finding.Severity == ProcessLaunchReadinessSeverity.Info &&
+            finding.Code == "process.launch.capability_suppressed" &&
+            finding.Message.Contains("CapabilityKind:Skill", StringComparison.Ordinal) &&
+            finding.Message.Contains("Management-only", StringComparison.Ordinal));
+        Assert.Contains(result.Findings, finding =>
+            finding.Severity == ProcessLaunchReadinessSeverity.Info &&
+            finding.Code == "process.launch.readiness_ok");
+    }
+
+    [Fact]
+    public async Task ResolveAsync_binds_required_scoped_workspace_tool_when_profile_exposes_it()
+    {
+        var providerId = Guid.Parse("91caa057-c4e7-44d6-9796-100adcf2dd93");
+        var agent = CreateAgent(providerId);
+        var workspace = new ResolverWorkspaceService([agent], [CreateProvider(providerId)]);
+        var workspaceFactory = new ResolverWorkspaceFactory(workspace);
+        var resolver = CreateResolver(workspaceFactory);
+        var definition = CreateDefinition();
+        definition.Steps[0].CapabilityScope = CreateRequiredWorkspaceToolScope("workspace-analyze-image");
+
+        var result = await resolver.ResolveAsync(new ProcessLaunchExecutorResolutionRequest(
+            definition,
+            CreatePlan(),
+            LiveRunProfile: null,
+            Variables: new Dictionary<string, string>()));
+
+        Assert.DoesNotContain(result.Findings, finding => finding.Severity == ProcessLaunchReadinessSeverity.Error);
+        var binding = Assert.Single(result.Bindings);
+        Assert.Equal(agent.Id.ToString("D"), binding.ExecutorId);
+        Assert.Contains(result.Findings, finding =>
+            finding.Severity == ProcessLaunchReadinessSeverity.Info &&
+            finding.Code == "process.launch.capability_required" &&
+            finding.Message.Contains("CapabilityIdentity:Tool/workspace-analyze-image", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task ResolveAsync_rejects_required_scoped_workspace_tool_when_profile_cannot_expose_it()
+    {
+        var providerId = Guid.Parse("ba3bc84f-7e95-4e5a-a93d-af2fe164ebf1");
+        var agent = CreateAgent(
+            providerId,
+            Guid.Parse("5de5fb45-aa57-4ea0-ae9f-472a963f1cd8"),
+            "Read-only Delivery Manager",
+            "Delivery Manager",
+            "Coordinates delivery governance with read-only workspace access.",
+            AgentWorkloadKind.Management,
+            AgentWorkspaceToolProfileKind.ReadOnly,
+            ["delivery-manager"]);
+        var workspace = new ResolverWorkspaceService([agent], [CreateProvider(providerId)]);
+        var workspaceFactory = new ResolverWorkspaceFactory(workspace);
+        var resolver = CreateResolver(workspaceFactory);
+        var definition = CreateDefinition();
+        definition.Steps[0].CapabilityScope = CreateRequiredWorkspaceToolScope("workspace-analyze-image");
+
+        var result = await resolver.ResolveAsync(new ProcessLaunchExecutorResolutionRequest(
+            definition,
+            CreatePlan(),
+            LiveRunProfile: null,
+            Variables: new Dictionary<string, string>()));
+
+        Assert.Empty(result.Bindings);
+        Assert.Contains(result.Findings, finding =>
+            finding.Severity == ProcessLaunchReadinessSeverity.Error &&
+            finding.Code == "agent.readiness.required-capability-missing" &&
+            finding.Message.Contains("workspace-analyze-image", StringComparison.Ordinal) &&
+            finding.Message.Contains(agent.Name, StringComparison.Ordinal));
     }
 
     [Fact]
@@ -213,7 +418,8 @@ public sealed class ProcessLaunchExecutorResolverTests
             "Implements C#, ASP.NET Core, and Blazor deliverables with real source changes, focused tests, and runnable proof.",
             AgentWorkloadKind.Programming,
             AgentWorkspaceToolProfileKind.SoftwareDevelopment,
-            ["dotnet", "programming", "blazor"]);
+            ["dotnet", "programming", "blazor"],
+            CreateDotNetSetupToolCapabilities());
         var workspace = new ResolverWorkspaceService([programmingAgent, dotnetDeveloperAgent], [CreateProvider(providerId)]);
         var workspaceFactory = new ResolverWorkspaceFactory(workspace);
         var resolver = CreateResolver(workspaceFactory);
@@ -231,6 +437,113 @@ public sealed class ProcessLaunchExecutorResolverTests
         Assert.Equal("software-engineer", binding.RoleKey);
         Assert.Equal(dotnetDeveloperAgent.Id.ToString("D"), binding.ExecutorId);
         Assert.NotEqual(programmingAgent.Id.ToString("D"), binding.ExecutorId);
+    }
+
+    [Fact]
+    public async Task ResolveAsync_uses_template_specialization_tags_to_select_dotnet_qa_over_generic_qa()
+    {
+        var providerId = Guid.Parse("b7cc83e6-2d22-43a8-8b71-5c4320231ff8");
+        var genericQaAgent = CreateAgent(
+            providerId,
+            Guid.Parse("f653b0a9-c090-4be8-898d-2b82bc581963"),
+            "Delivery QA Observer",
+            "QA lead",
+            "Reviews generic delivery evidence.",
+            AgentWorkloadKind.Qa,
+            AgentWorkspaceToolProfileKind.QualityValidation,
+            ["qa"]);
+        var dotnetQaAgent = CreateAgent(
+            providerId,
+            Guid.Parse("280d3904-33e5-4207-9524-c4b50cd6dff6"),
+            ".NET QA Review Lead",
+            ".NET QA specialist",
+            "Reviews .NET product evidence.",
+            AgentWorkloadKind.Qa,
+            AgentWorkspaceToolProfileKind.QualityValidation,
+            ["dotnet", "qa"]);
+        var workspace = new ResolverWorkspaceService([genericQaAgent, dotnetQaAgent], [CreateProvider(providerId)]);
+        var workspaceFactory = new ResolverWorkspaceFactory(workspace);
+        var resolver = CreateResolver(workspaceFactory);
+        var definition = new ProcessTemplateDefinitionDocument
+        {
+            Key = "specialized-qa-test",
+            RoleUsages =
+            [
+                new ProcessTemplateDefinitionRoleUsageDocument
+                {
+                    Key = "qa-lead",
+                    RoleResourceKey = "qa-lead",
+                    DisplayName = "QA lead",
+                    PreferredExecutorKind = ProcessLaunchExecutorKinds.Agent,
+                    PreferredProjectAssignmentRole = "QA",
+                    IsRequired = true
+                }
+            ],
+            Steps =
+            [
+                new ProcessTemplateDefinitionStepDocument
+                {
+                    Key = "validate",
+                    Title = "Validate product",
+                    StepKind = "Review",
+                    ExecutorPreferredSpecializationTags = ["dotnet", "qa"],
+                    AllowedOperations = [ProcessOperationContractNames.ReadProcessContext],
+                    OperationTargetScope = ProcessOperationContractNames.ExternalProductTargetReadOnly,
+                    RoleAssignments =
+                    [
+                        new ProcessTemplateDefinitionStepRoleAssignmentDocument
+                        {
+                            RoleKey = "qa-lead",
+                            ResponsibilityKind = "Responsible",
+                            IsRequired = true
+                        }
+                    ]
+                }
+            ]
+        };
+
+        var result = await resolver.ResolveAsync(new ProcessLaunchExecutorResolutionRequest(
+            definition,
+            CreatePlan("validate"),
+            LiveRunProfile: null,
+            Variables: new Dictionary<string, string>()));
+
+        Assert.DoesNotContain(result.Findings, finding => finding.Severity == ProcessLaunchReadinessSeverity.Error);
+        var binding = Assert.Single(result.Bindings);
+        Assert.Equal(dotnetQaAgent.Id.ToString("D"), binding.ExecutorId);
+        Assert.NotEqual(genericQaAgent.Id.ToString("D"), binding.ExecutorId);
+        Assert.Contains("preferred specialization", binding.AssignmentReason, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task ResolveAsync_rejects_dotnet_setup_template_when_agent_lacks_required_tool_capability()
+    {
+        var providerId = Guid.Parse("52ee790f-23d9-432c-8e8e-c15ca95115fb");
+        var dotnetDeveloperAgent = CreateAgent(
+            providerId,
+            Guid.Parse("95e9dcc1-577c-42b5-82e4-1d46414872a0"),
+            ".NET Application Developer",
+            ".NET implementation specialist",
+            "Implements C#, ASP.NET Core, and Blazor deliverables with real source changes, focused tests, and runnable proof.",
+            AgentWorkloadKind.Programming,
+            AgentWorkspaceToolProfileKind.SoftwareDevelopment,
+            ["dotnet", "programming", "blazor"]);
+        var workspace = new ResolverWorkspaceService([dotnetDeveloperAgent], [CreateProvider(providerId)]);
+        var workspaceFactory = new ResolverWorkspaceFactory(workspace);
+        var resolver = CreateResolver(workspaceFactory);
+        var definition = LoadTemplateDefinition("dotnet-solution-setup");
+
+        var result = await resolver.ResolveAsync(new ProcessLaunchExecutorResolutionRequest(
+            definition,
+            CreatePlan("create-dotnet-project"),
+            LiveRunProfile: null,
+            Variables: new Dictionary<string, string>()));
+
+        Assert.Empty(result.Bindings);
+        Assert.Contains(result.Findings, finding =>
+            finding.Severity == ProcessLaunchReadinessSeverity.Error &&
+            finding.Code == "agent.readiness.required-tool-capability-missing" &&
+            finding.Message.Contains("workspace_pwsh_run_script", StringComparison.OrdinalIgnoreCase));
     }
 
     [Fact]
@@ -465,7 +778,7 @@ public sealed class ProcessLaunchExecutorResolverTests
     }
 
     [Fact]
-    public async Task ResolveAsync_rejects_architecture_subprocess_contract_with_runtime_proof_tools()
+    public async Task ResolveAsync_allows_structurally_valid_subprocess_contract_regardless_of_role_or_title_text()
     {
         var providerId = Guid.Parse("e785895d-a164-4175-a28f-9cc12fdf7fa5");
         var architectAgent = CreateAgent(
@@ -482,6 +795,9 @@ public sealed class ProcessLaunchExecutorResolverTests
         var resolver = CreateResolver(workspaceFactory);
         var definition = CreateTechnicalSubprocessDefinition();
         var architectureStep = Assert.Single(definition.Steps, step => string.Equals(step.Key, "architecture-review", StringComparison.Ordinal));
+        var architectureRole = Assert.Single(definition.RoleUsages, role => string.Equals(role.Key, "solution-architect", StringComparison.Ordinal));
+        architectureRole.DisplayName = "Řídící koordinátor 合意";
+        architectureStep.Title = "Příprava provozního návrhu";
         architectureStep.AllowedOperations =
         [
             .. architectureStep.AllowedOperations,
@@ -495,11 +811,42 @@ public sealed class ProcessLaunchExecutorResolverTests
             LiveRunProfile: null,
             Variables: new Dictionary<string, string>()));
 
+        Assert.DoesNotContain(result.Findings, finding =>
+            finding.Code == "process.launch.step_operation_contract_invalid");
+    }
+
+    [Fact]
+    public async Task ResolveAsync_rejects_subprocess_contract_without_child_execution_operation_or_controlled_scope()
+    {
+        var providerId = Guid.Parse("e8bca6d2-5ef8-41a7-a9a1-ec856eb7e1f4");
+        var workspace = new ResolverWorkspaceService([CreateAgent(providerId)], [CreateProvider(providerId)]);
+        var workspaceFactory = new ResolverWorkspaceFactory(workspace);
+        var resolver = CreateResolver(workspaceFactory);
+        var definition = CreateTechnicalSubprocessDefinition();
+        var architectureStep = Assert.Single(definition.Steps, step => string.Equals(step.Key, "architecture-review", StringComparison.Ordinal));
+        architectureStep.Title = "Spuštění 子流程";
+        architectureStep.AllowedOperations =
+        [
+            ProcessOperationContractNames.ReadProcessContext,
+            ProcessOperationContractNames.WriteManagedProcessArtifacts
+        ];
+        architectureStep.OperationTargetScope = ProcessOperationContractNames.ExternalProductTargetReadOnly;
+
+        var result = await resolver.ResolveAsync(new ProcessLaunchExecutorResolutionRequest(
+            definition,
+            CreatePlan("architecture-review"),
+            LiveRunProfile: null,
+            Variables: new Dictionary<string, string>()));
+
         Assert.Empty(result.Bindings);
         Assert.Contains(result.Findings, finding =>
             finding.Severity == ProcessLaunchReadinessSeverity.Error &&
             finding.Code == "process.launch.step_operation_contract_invalid" &&
-            finding.Message.Contains("runtime/browser proof", StringComparison.OrdinalIgnoreCase));
+            finding.Message.Contains(ProcessOperationContractNames.ExecuteExternalAction, StringComparison.Ordinal));
+        Assert.Contains(result.Findings, finding =>
+            finding.Severity == ProcessLaunchReadinessSeverity.Error &&
+            finding.Code == "process.launch.step_operation_contract_invalid" &&
+            finding.Message.Contains(ProcessOperationContractNames.ExternalActionControlled, StringComparison.Ordinal));
     }
 
     [Fact]
@@ -625,7 +972,7 @@ public sealed class ProcessLaunchExecutorResolverTests
     }
 
     [Fact]
-    public async Task ResolveAsync_rejects_mutable_implementation_work_step_without_mutation_contract()
+    public async Task ResolveAsync_allows_activity_contract_regardless_of_localized_role_or_title_text()
     {
         var providerId = Guid.Parse("b4309322-2334-4b52-805b-5fa16e290043");
         var developerAgent = CreateAgent(
@@ -640,19 +987,20 @@ public sealed class ProcessLaunchExecutorResolverTests
         var workspace = new ResolverWorkspaceService([developerAgent], [CreateProvider(providerId)]);
         var workspaceFactory = new ResolverWorkspaceFactory(workspace);
         var resolver = CreateResolver(workspaceFactory);
-        var definition = CreateBrokenImplementationWorkDefinition();
+        var definition = CreateLocalizedActivityDefinition();
 
         var result = await resolver.ResolveAsync(new ProcessLaunchExecutorResolutionRequest(
             definition,
-            CreatePlan("code-change"),
+            CreatePlan("doplnit-実装"),
             LiveRunProfile: null,
             Variables: new Dictionary<string, string>()));
 
-        Assert.Empty(result.Bindings);
-        Assert.Contains(result.Findings, finding =>
-            finding.Severity == ProcessLaunchReadinessSeverity.Error &&
-            finding.Code == "process.launch.step_operation_contract_invalid" &&
-            finding.Message.Contains(ProcessOperationContractNames.MutateProductTarget, StringComparison.Ordinal));
+        Assert.DoesNotContain(result.Findings, finding =>
+            finding.Code == "process.launch.step_operation_contract_invalid");
+        var binding = Assert.Single(result.Bindings);
+        Assert.Equal("doplnit-実装", binding.StepKey);
+        Assert.Equal("vývojář-検証", binding.RoleKey);
+        Assert.Equal(developerAgent.Id.ToString("D"), binding.ExecutorId);
     }
 
     [Fact]
@@ -740,7 +1088,9 @@ public sealed class ProcessLaunchExecutorResolverTests
             finding.Code == "agent.readiness.workspace-scaffold-missing");
     }
 
-    private static AgentFrameworkProcessLaunchExecutorResolver CreateResolver(ResolverWorkspaceFactory workspaceFactory)
+    private static AgentFrameworkProcessLaunchExecutorResolver CreateResolver(
+        ResolverWorkspaceFactory workspaceFactory,
+        IWorkflowCatalogService? workflowCatalog = null)
     {
         return new AgentFrameworkProcessLaunchExecutorResolver(
             CreateReferenceDataProvider(workspaceFactory.WorkspaceService),
@@ -748,7 +1098,8 @@ public sealed class ProcessLaunchExecutorResolverTests
                 workspaceFactory,
                 new NoOpAiTechnicalAgentBridge(),
                 Options.Create(new ProcessMockAgentOptions { Enabled = false })),
-            new ProviderProfileService());
+            new ProviderProfileService(),
+            workflowCatalog ?? new ResolverWorkflowCatalog());
     }
 
     private static IAgentReferenceDataProvider CreateReferenceDataProvider(IAgentFrameworkWorkspaceService workspaceService)
@@ -779,6 +1130,27 @@ public sealed class ProcessLaunchExecutorResolverTests
         Assert.Contains(step.RoleAssignments, assignment =>
             string.Equals(assignment.RoleKey, expectedRoleKey, StringComparison.OrdinalIgnoreCase) &&
             string.Equals(assignment.ResponsibilityKind, "Reviewer", StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static ProcessCapabilityScope CreateRequiredWorkspaceToolScope(string capabilityKey)
+    {
+        return new ProcessCapabilityScope
+        {
+            Directives =
+            [
+                new ProcessCapabilityScopeDirective
+                {
+                    Kind = ProcessCapabilityScopeDirectiveKind.Require,
+                    Target = new ProcessCapabilityScopeTarget
+                    {
+                        Kind = ProcessCapabilityScopeTargetKind.CapabilityIdentity,
+                        Value = CapabilityKind.Tool.ToString(),
+                        SecondaryValue = capabilityKey
+                    },
+                    Reason = "Scoped process step requires this workspace tool."
+                }
+            ]
+        };
     }
 
     private static ProcessTemplateDefinitionDocument CreateDefinition()
@@ -816,6 +1188,41 @@ public sealed class ProcessLaunchExecutorResolverTests
                 }
             ]
         };
+    }
+
+    private static WorkflowDefinition CreateWorkflowDefinition(
+        WorkflowId workflowId,
+        WorkflowVersionId versionId,
+        WorkflowLifecycleStatus status)
+    {
+        var start = new WorkflowNode(
+            new WorkflowNodeId("start"),
+            WorkflowNodeKind.Start,
+            "Start",
+            [],
+            new WorkflowNodeSettings(
+                ComponentId: null,
+                AgentId: null,
+                SubworkflowId: null,
+                ExternalRequestKind: null,
+                Instructions: string.Empty,
+                    InputShape: new WorkflowValueShape(WorkflowValueShapeKind.Json, "{}", "JSON input"),
+                    ResultShape: new WorkflowValueShape(WorkflowValueShapeKind.Json, "{}", "JSON result")));
+        return new WorkflowDefinition(
+            workflowId,
+            versionId,
+            "Process workflow",
+            "Workflow selected explicitly by a process assignment.",
+            status,
+            new WorkflowGraph(start.Id, [start], []),
+            new WorkflowRuntimePolicy(
+                WorkflowRuntimeBackendKind.InProcess,
+                AllowInProcessPreviewRuns: true,
+                RequireDurableProductionRuns: false,
+                ExposeAzureFunctionsStatusEndpoint: false,
+                ExposeAzureFunctionsMcpTool: false),
+            Now,
+            Now);
     }
 
     private static ProcessTemplateDefinitionDocument CreateTechnicalSubprocessDefinition()
@@ -1056,18 +1463,18 @@ public sealed class ProcessLaunchExecutorResolverTests
         };
     }
 
-    private static ProcessTemplateDefinitionDocument CreateBrokenImplementationWorkDefinition()
+    private static ProcessTemplateDefinitionDocument CreateLocalizedActivityDefinition()
     {
         return new ProcessTemplateDefinitionDocument
         {
-            Key = "dotnet-feature-function-implementation",
+            Key = "obecny-activity-contract",
             RoleUsages =
             [
                 new ProcessTemplateDefinitionRoleUsageDocument
                 {
-                    Key = "software-engineer",
-                    RoleResourceKey = "software-engineer",
-                    DisplayName = ".NET feature implementer",
+                    Key = "vývojář-検証",
+                    RoleResourceKey = "lead-engineer",
+                    DisplayName = "Разработчик browser implementation",
                     PreferredExecutorKind = ProcessLaunchExecutorKinds.Agent,
                     PreferredProjectAssignmentRole = "Developer",
                     IsRequired = true
@@ -1077,9 +1484,9 @@ public sealed class ProcessLaunchExecutorResolverTests
             [
                 new ProcessTemplateDefinitionStepDocument
                 {
-                    Key = "code-change",
-                    Title = "Implement code change",
-                    StepKind = "Work",
+                    Key = "doplnit-実装",
+                    Title = "Browser implementation repair",
+                    StepKind = "Activity",
                     AllowedOperations =
                     [
                         ProcessOperationContractNames.ReadProcessContext,
@@ -1092,7 +1499,7 @@ public sealed class ProcessLaunchExecutorResolverTests
                     [
                         new ProcessTemplateDefinitionStepRoleAssignmentDocument
                         {
-                            RoleKey = "software-engineer",
+                            RoleKey = "vývojář-検証",
                             ResponsibilityKind = "Responsible",
                             IsRequired = true
                         }
@@ -1370,6 +1777,30 @@ public sealed class ProcessLaunchExecutorResolverTests
             UpdatedAtUtc: Now);
     }
 
+    private static IReadOnlyList<AgentCapabilityAssignment> CreateDotNetSetupToolCapabilities()
+    {
+        return
+        [
+            CreateToolCapability("workspace-create-directory"),
+            CreateToolCapability("workspace-dotnet-new"),
+            CreateToolCapability("workspace-write-file"),
+            CreateToolCapability("workspace-stat-path"),
+            CreateToolCapability("workspace-pwsh-run-script"),
+            CreateToolCapability("workspace-read-file")
+        ];
+    }
+
+    private static AgentCapabilityAssignment CreateToolCapability(string capabilityKey)
+    {
+        return new AgentCapabilityAssignment(
+            Guid.NewGuid(),
+            capabilityKey,
+            CapabilityKind.Tool,
+            CapabilityProofStatus.Verified,
+            Now,
+            "Capability is available in this unit-test fixture.");
+    }
+
     private static ProviderProfile CreateProvider(
         Guid providerId,
         ProviderKind kind = ProviderKind.OpenAi,
@@ -1439,6 +1870,81 @@ public sealed class ProcessLaunchExecutorResolverTests
         public WorkspaceScopeDescriptor GetOrganizationScope() => WorkspaceScopeDescriptor.Organization("unit-test");
 
         public string GetWorkspaceRoot() => Path.GetTempPath();
+    }
+
+    private sealed class ResolverWorkflowCatalog : IWorkflowCatalogService
+    {
+        public WorkflowDefinitionDetail? Exact { get; init; }
+
+        public WorkflowDefinitionDetail? LatestActive { get; init; }
+
+        public (WorkflowId WorkflowId, WorkflowVersionId VersionId)? ExactSelection { get; private set; }
+
+        public WorkflowId? LatestActiveWorkflowId { get; private set; }
+
+        public bool ListDefinitionsCalled { get; private set; }
+
+        public Task<IReadOnlyList<WorkflowCatalogItem>> ListDefinitionsAsync(
+            CancellationToken cancellationToken = default)
+        {
+            ListDefinitionsCalled = true;
+            return Task.FromResult<IReadOnlyList<WorkflowCatalogItem>>([]);
+        }
+
+        public Task<WorkflowDefinitionDetail?> GetDefinitionAsync(
+            WorkflowId workflowId,
+            WorkflowVersionId? versionId = null,
+            CancellationToken cancellationToken = default)
+        {
+            if (versionId is not { } exactVersionId)
+            {
+                throw new InvalidOperationException("Resolver workflow tests require an exact version for GetDefinitionAsync.");
+            }
+
+            ExactSelection = (workflowId, exactVersionId);
+            return Task.FromResult(Exact);
+        }
+
+        public Task<WorkflowDefinitionDetail?> GetLatestDefinitionByStatusAsync(
+            WorkflowId workflowId,
+            WorkflowLifecycleStatus status,
+            CancellationToken cancellationToken = default)
+        {
+            Assert.Equal(WorkflowLifecycleStatus.Active, status);
+            LatestActiveWorkflowId = workflowId;
+            return Task.FromResult(LatestActive);
+        }
+
+        public Task<WorkflowDefinition> SaveDefinitionAsync(
+            WorkflowDefinitionSaveRequest request,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
+        public Task<WorkflowDefinition> ChangeDefinitionStatusAsync(
+            WorkflowDefinitionStatusChangeRequest request,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
+        public Task<WorkflowDefinitionExportEnvelope?> ExportDefinitionAsync(
+            WorkflowId workflowId,
+            WorkflowVersionId? versionId = null,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
+        public Task<WorkflowDefinition> ImportDefinitionAsync(
+            WorkflowDefinitionImportRequest request,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
+        public Task DeleteDefinitionAsync(
+            WorkflowId workflowId,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
+        public Task<WorkflowValidationResult> ValidateDefinitionAsync(
+            WorkflowDefinition definition,
+            CancellationToken cancellationToken = default)
+            => Task.FromResult(WorkflowValidationResult.Success);
     }
 
     private sealed class ResolverWorkspaceService(

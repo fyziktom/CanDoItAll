@@ -24,6 +24,10 @@
     {
       "key": "dotnet-qa-review-lead",
       "relativePath": "members/dotnet-qa-review-lead"
+    },
+    {
+      "key": "runtime-failure-analyst",
+      "relativePath": "members/runtime-failure-analyst"
     }
   ]
 }

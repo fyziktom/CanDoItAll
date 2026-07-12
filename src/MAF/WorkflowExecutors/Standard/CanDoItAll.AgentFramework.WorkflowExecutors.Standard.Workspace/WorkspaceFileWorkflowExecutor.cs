@@ -18,6 +18,7 @@ public sealed class WorkspaceFileWorkflowExecutor(IWorkspaceFileService files) :
         object result = settings.Operation switch
         {
             WorkflowStorageFileOperation.List => EnsureSucceeded(FilterList(files.ListFiles(EmptyToNull(settings.Path), settings.SearchPattern, settings.MaxResults), settings)),
+            WorkflowStorageFileOperation.ListDirectory => EnsureSucceeded(FilterList(files.ListDirectory(EmptyToNull(settings.Path), settings.MaxResults), settings)),
             WorkflowStorageFileOperation.Tree => EnsureSucceeded(FilterList(files.ListFiles(EmptyToNull(settings.Path), settings.SearchPattern, settings.MaxFiles), settings)),
             WorkflowStorageFileOperation.Exists => EnsureSucceeded(files.StatPath(Require(settings.Path, nameof(settings.Path)))),
             WorkflowStorageFileOperation.Stat => EnsureSucceeded(files.StatPath(Require(settings.Path, nameof(settings.Path)))),
@@ -83,13 +84,11 @@ public sealed class WorkspaceFileWorkflowExecutor(IWorkspaceFileService files) :
     }
 
     private static T EnsureSucceeded<T>(T result)
+        where T : IWorkspaceToolOperationResult
     {
-        var succeededProperty = typeof(T).GetProperty("Succeeded");
-        var messageProperty = typeof(T).GetProperty("Message");
-        if (succeededProperty?.GetValue(result) is false)
+        if (!result.Succeeded)
         {
-            var message = messageProperty?.GetValue(result)?.ToString() ?? "Workspace operation failed.";
-            throw new InvalidOperationException(message);
+            throw new InvalidOperationException(result.Message);
         }
 
         return result;

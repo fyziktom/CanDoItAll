@@ -1,0 +1,14 @@
+SB01 full solution build proof
+
+RunLabel: SB01-CONTRACT-OWNERSHIP
+RunLabel: SB01-CONTRIBUTION-IDENTITY
+RunLabel: SB01-PLUGIN-DESCRIPTOR-PARITY
+Command: dotnet build CanDoItAll.slnx -nologo --no-restore
+WorkingDirectory: repo://
+ExitCode: 0
+
+Result:
+- Projects built successfully, including Workflows.Abstractions, Workflows.Core, Workflows.Runtime, WorkflowExecutors.Core, WorkflowExecutors.Plugins, all standard executor categories, Gmail, Office365, Docker, Web, and all test projects.
+- Warnings: 0
+- Errors: 0
+- Elapsed: 00:00:21.13

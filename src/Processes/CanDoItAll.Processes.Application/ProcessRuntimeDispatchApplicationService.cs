@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.RegularExpressions;
 using CanDoItAll.Processes.Abstractions;
 using CanDoItAll.Processes.Builder;
 using CanDoItAll.Processes.Contracts;
@@ -35,19 +36,23 @@ public sealed class ProcessRuntimeDispatchApplicationService(
     ProcessRuntimeProjectionCatchupService projectionCatchupService,
     ProcessRuntimeDispatchOptions? options = null,
     IProcessRuntimeDispatchQueue? dispatchQueue = null,
-    IProcessRuntimeBranchSignalRouter? branchSignalRouterOverride = null)
+    IProcessRuntimeBranchSignalRouter? branchSignalRouterOverride = null,
+    IProcessStepRecoveryInstructionBuilder? recoveryInstructionBuilder = null)
 {
     private const int MaximumDispatchIterations = 200;
     private const int MaximumStepDispatchAttempts = 20;
-    private const int MaximumRepeatedAutomaticRetryResults = 3;
-    private const int MaximumRepeatedTransientExecutionRetryResults = 5;
     private const int MaximumClaimCleanupConcurrencyRetries = 3;
-    private const string AgentTransientExecutionRetryDiagnosticCode = "process.adapter.agent_transient_execution_retry";
     private const string DispatcherActorId = "process-runtime-dispatcher";
     private const string ClaimReleaseFailureExceptionDataKey = "ProcessDispatchClaimReleaseFailure";
-    private const string AutomaticReworkInstructionHeading = "Runtime automatic rework instruction";
+    private const string ManagerRecoveryInstructionHeading = ProcessRuntimeRecoveryInstructionHeadings.ManagerRecovery;
+    private const string RuntimeDiagnosticRecoveryInstructionHeading = ProcessRuntimeRecoveryInstructionHeadings.RuntimeDiagnosticRecovery;
+    private static readonly Regex PriorRuntimeRecoveryInstructionBlockRegex = new(
+        $@"(?ms)^\s*(?:{Regex.Escape(ManagerRecoveryInstructionHeading)}|{Regex.Escape(RuntimeDiagnosticRecoveryInstructionHeading)}):\s*.*?(?=^\s*(?:{Regex.Escape(ManagerRecoveryInstructionHeading)}|{Regex.Escape(RuntimeDiagnosticRecoveryInstructionHeading)}):\s*|^\s*{Regex.Escape(ProcessAutomaticRecoveryPromptBuilder.ExecutionFocusHeading)}\s*|\z)",
+        RegexOptions.CultureInvariant);
     private static readonly TimeSpan ClaimCleanupConcurrencyRetryDelay = TimeSpan.FromMilliseconds(100);
     private readonly ProcessRuntimeDispatchOptions dispatchOptions = NormalizeOptions(options);
+    private readonly IProcessStepRecoveryInstructionBuilder recoveryInstructionBuilder =
+        recoveryInstructionBuilder ?? ProcessStepRecoveryInstructionBuilder.Instance;
     private readonly IProcessRuntimeBranchSignalRouter branchSignalRouter =
         branchSignalRouterOverride ?? new ProcessRuntimeBranchSignalApplicationService(
             clock,
@@ -305,7 +310,6 @@ public sealed class ProcessRuntimeDispatchApplicationService(
                         strategyFactory,
                         dispatchOptions.StepExecutionTimeout,
                         cancellationToken).ConfigureAwait(false);
-                    result = SuppressRepeatedAutomaticRetryResultIfNeeded(state, workItem, result);
                     var resultCommand = new SubmitStrategyResultCommand(
                         workItem.StepInstanceId,
                         ownerId,
@@ -342,9 +346,10 @@ public sealed class ProcessRuntimeDispatchApplicationService(
                     resultSubmitted = true;
                     AddBlockedManagerResultDiagnostics(diagnostics, resultCommit.State, workItem.StepInstanceId, result);
 
-                    await ApplyAutomaticRetryInstructionAsync(
+                    await ApplyStrategyRecoveryInstructionAsync(
                         workItem.RunId,
                         workItem.StepInstanceId,
+                        resultCommit.State,
                         result,
                         cancellationToken).ConfigureAwait(false);
 
@@ -961,13 +966,20 @@ public sealed class ProcessRuntimeDispatchApplicationService(
         return $"Dispatch claim release failed for run '{runId}', step '{stepInstanceId}', token '{claimToken}': state changed after {MaximumClaimCleanupConcurrencyRetries} retries.";
     }
 
-    private async Task ApplyAutomaticRetryInstructionAsync(
+    private async Task ApplyStrategyRecoveryInstructionAsync(
         ProcessRunId runId,
         ProcessStepInstanceId stepInstanceId,
+        ProcessRuntimeStateSnapshot state,
         StrategyResultEnvelope result,
         CancellationToken cancellationToken)
     {
-        if (!IsAutomaticallyRetryableManagerResult(result))
+        if (result.Outcome != StrategyOutcome.NeedsManager)
+        {
+            return;
+        }
+
+        var stepStatus = state.Steps.FirstOrDefault(step => step.StepInstanceId == stepInstanceId)?.Status;
+        if (stepStatus is not (ProcessRuntimeStepStatus.Ready or ProcessRuntimeStepStatus.Blocked))
         {
             return;
         }
@@ -978,62 +990,101 @@ public sealed class ProcessRuntimeDispatchApplicationService(
             return;
         }
 
-        var instruction = BuildAutomaticRetryInstruction(result);
-        if (assignment.Prompt.Contains(instruction, StringComparison.Ordinal))
+        var receipt = FindLatestReceipt(state, stepInstanceId, result.ResultHash);
+        var recoveryInstruction = recoveryInstructionBuilder.Build(new ProcessStepRecoveryInstructionBuildRequest(
+            runId,
+            stepInstanceId,
+            assignment.StepKey,
+            assignment,
+            result,
+            receipt,
+            OperatorReason: string.Empty));
+        if (stepStatus == ProcessRuntimeStepStatus.Ready &&
+            !recoveryInstruction.HasInstruction)
         {
             return;
         }
 
-        var prompt = $"""
-        {assignment.Prompt.TrimEnd()}
+        var instruction = stepStatus == ProcessRuntimeStepStatus.Blocked
+            ? BuildManagerRecoveryInstruction(result, recoveryInstruction)
+            : BuildRuntimeDiagnosticRecoveryInstruction(result, recoveryInstruction);
+        var normalizedPrompt = RemovePriorRuntimeRecoveryInstructionBlocks(assignment.Prompt).TrimEnd();
+        var prompt = stepStatus == ProcessRuntimeStepStatus.Ready && recoveryInstruction.HasInstruction
+            ? ProcessAutomaticRecoveryPromptBuilder.Build(
+                assignment with { Prompt = normalizedPrompt },
+                instruction)
+            : $"""
+              {normalizedPrompt}
 
-        {instruction}
-        """;
+              {instruction}
+              """;
+        if (string.Equals(prompt, assignment.Prompt, StringComparison.Ordinal))
+        {
+            return;
+        }
+
         await assignmentStore.SaveAsync([assignment with { Prompt = prompt }], cancellationToken).ConfigureAwait(false);
     }
 
-    private static string BuildAutomaticRetryInstruction(StrategyResultEnvelope result)
+    private static StrategyResultReceipt? FindLatestReceipt(
+        ProcessRuntimeStateSnapshot state,
+        ProcessStepInstanceId stepInstanceId,
+        string resultHash)
+        => state.AppliedResults
+            .LastOrDefault(receipt =>
+                receipt.StepInstanceId == stepInstanceId &&
+                string.Equals(receipt.ResultHash, resultHash, StringComparison.Ordinal));
+
+    private static string BuildRuntimeDiagnosticRecoveryInstruction(
+        StrategyResultEnvelope result,
+        ProcessStepRecoveryInstruction recoveryInstruction)
+    {
+        var packetText = recoveryInstruction.HasInstruction
+            ? recoveryInstruction.Text.Trim()
+            : "Retry the current step only after resolving the runtime diagnostic that rejected the previous result.";
+        return $"""
+        {RuntimeDiagnosticRecoveryInstructionHeading}:
+        The previous result was safe and idempotent to rework, so the runtime reopened this same step instead of escalating to the process manager. Result hash: {result.ResultHash}
+        {packetText}
+        """;
+    }
+
+    private static string BuildManagerRecoveryInstruction(
+        StrategyResultEnvelope result,
+        ProcessStepRecoveryInstruction recoveryInstruction)
     {
         var diagnostics = result.Diagnostics
             .Select(diagnostic => $"- {diagnostic.Code.Value}: {diagnostic.SafeSummary}")
             .ToArray();
         var diagnosticText = diagnostics.Length == 0
-            ? "- The previous completion result violated a runtime adapter contract."
+            ? "- The previous completion result requires manager review."
             : string.Join(Environment.NewLine, diagnostics);
+        var requestedArtifactText = result.RequestedArtifacts.Count == 0
+            ? "- No artifact slots were explicitly requested by the strategy result."
+            : string.Join(
+                Environment.NewLine,
+                result.RequestedArtifacts.Select(artifact => $"- {artifact.SlotId}: {artifact.RequestHash}"));
 
         return $"""
-        {AutomaticReworkInstructionHeading}:
-        The previous completion result was rejected by the runtime and will be retried automatically. Result hash: {result.ResultHash}
-        Fix the next attempt by following every listed runtime diagnostic exactly. If a diagnostic names an ungrounded path-like ref, overwrite the managed artifact and remove every named ungrounded ref from the artifact body, reason, summary, next actions, and evidence refs unless this same retry first creates a successful current-run tool receipt that grounds the exact ref. If a diagnostic names a missing required tool receipt and no successful prior receipt for this same process step exists, invoke that named tool and confirm the successful receipt before returning Completed. If a diagnostic names a missing product-target mutation receipt, mutate the required product source or test files with a product mutation tool that targets the grounded product alias before writing the final managed artifact; do not satisfy it by only rewriting artifacts/process-runs/... evidence. If a prior attempt already produced the required product mutation and the product state now verifies, do not repeat an idempotent mutation only to create another receipt; verify the concrete refs and finalize the managed artifact. For structured workspace tool arguments such as path, workingDirectory, and outputPaths, use grounded workspace refs or external-target aliases, not native absolute paths. Native absolute ProductRoot paths are only for script content, command arguments inside an approved ProductMutation script, and sideEffectManifest read/write declarations. If a diagnostic names missing managed artifacts, product paths, or evidence refs, create or update those concrete refs before returning Completed. Do not satisfy a diagnostic by only rewriting the managed summary or by deferring required product work to a later step.
+        {ManagerRecoveryInstructionHeading}:
+        The previous result blocked the step and must be reviewed by the process manager before any rework is dispatched. Result hash: {result.ResultHash}
+        Confirm every required input artifact, requested artifact slot, tool receipt, and expected output artifact before requesting rework. If a diagnostic points to a missing upstream artifact, rework the responsible producer step first; do not retry this step until the connected input receipt is available. Do not satisfy missing evidence by only rewriting summaries or deferring required work to a later step.
         Diagnostics:
         {diagnosticText}
+        Diagnostic repair packet:
+        {ResolveDiagnosticRepairPacketText(recoveryInstruction)}
+        Requested artifacts:
+        {requestedArtifactText}
         """;
     }
 
-    private static bool IsAutomaticallyRetryableManagerResult(StrategyResultEnvelope result)
-    {
-        return result.Outcome == StrategyOutcome.NeedsManager &&
-               result.Diagnostics.Count > 0 &&
-               result.Diagnostics.All(IsAutomaticallyRetryableDiagnostic) &&
-               result.ManagerSignals.Any(signal => signal.Code.Value.StartsWith("process.adapter.", StringComparison.Ordinal));
-    }
+    private static string ResolveDiagnosticRepairPacketText(ProcessStepRecoveryInstruction recoveryInstruction)
+        => recoveryInstruction.HasInstruction
+            ? recoveryInstruction.Text.Trim()
+            : "- No diagnostic-specific repair packet was available for this result; manager review must name the concrete evidence or contract change before redispatch.";
 
-    private static bool IsAutomaticallyRetryableDiagnostic(StrategyDiagnosticRef diagnostic)
-    {
-        return diagnostic.RetrySafety == ProcessDiagnosticRetrySafety.SafeToRetry &&
-               diagnostic.Idempotency == ProcessDiagnosticIdempotencyClassification.Idempotent &&
-               diagnostic.Code.Value.StartsWith("process.adapter.", StringComparison.Ordinal);
-    }
-
-    private static bool IsTransientExecutionRetryResult(StrategyResultEnvelope result)
-    {
-        return result.Diagnostics.Count > 0 &&
-               result.Diagnostics.All(diagnostic =>
-                   string.Equals(
-                       diagnostic.Code.Value,
-                       AgentTransientExecutionRetryDiagnosticCode,
-                       StringComparison.Ordinal));
-    }
+    private static string RemovePriorRuntimeRecoveryInstructionBlocks(string prompt)
+        => PriorRuntimeRecoveryInstructionBlockRegex.Replace(prompt, string.Empty).TrimEnd();
 
     private static void AddBlockedManagerResultDiagnostics(
         List<string> diagnostics,
@@ -1050,23 +1101,6 @@ public sealed class ProcessRuntimeDispatchApplicationService(
         diagnostics.AddRange(result.Diagnostics
             .Select(diagnostic => diagnostic.SafeSummary)
             .Where(summary => !string.IsNullOrWhiteSpace(summary)));
-    }
-
-    private static StrategyResultEnvelope SuppressRepeatedAutomaticRetryResultIfNeeded(
-        ProcessRuntimeStateSnapshot state,
-        DispatchWorkItem workItem,
-        StrategyResultEnvelope result)
-    {
-        if (!IsAutomaticallyRetryableManagerResult(result) ||
-            (IsTransientExecutionRetryResult(result) &&
-             CountSubmittedResults(state, workItem.StepInstanceId, result.ResultHash) < MaximumRepeatedTransientExecutionRetryResults) ||
-            (CountSubmittedResults(state, workItem.StepInstanceId, result.ResultHash) < MaximumRepeatedAutomaticRetryResults &&
-             CountSubmittedAutomaticAdapterRetryResults(state, workItem.StepInstanceId) < MaximumRepeatedAutomaticRetryResults))
-        {
-            return result;
-        }
-
-        return CreateRepeatedAutomaticRetrySuppressedResult(workItem, result);
     }
 
     private async Task<ProcessRuntimeCommitResult> SubmitStrategyResultWithConcurrencyRetryAsync(
@@ -1232,8 +1266,8 @@ public sealed class ProcessRuntimeDispatchApplicationService(
 
             hasUnresolvedExecutableStep = true;
             if (step.Status == ProcessRuntimeStepStatus.Pending &&
-                DependenciesSatisfied(state, step) &&
-                RequiredArtifactsAvailable(state, step))
+                ProcessRuntimeArtifactContracts.DependenciesSatisfied(state, step) &&
+                ProcessRuntimeArtifactContracts.RequiredArtifactsAvailable(state, step))
             {
                 return false;
             }
@@ -1255,39 +1289,6 @@ public sealed class ProcessRuntimeDispatchApplicationService(
         }
 
         return false;
-    }
-
-    private static bool DependenciesSatisfied(
-        ProcessRuntimeStateSnapshot state,
-        ProcessRuntimeStepState step)
-    {
-        foreach (var dependencyId in step.DependencyStepIds)
-        {
-            var dependency = state.Steps.FirstOrDefault(candidate => candidate.StepInstanceId == dependencyId);
-            if (dependency is null ||
-                !ProcessRuntimeTerminalStates.IsStepTerminal(dependency.Status) ||
-                dependency.Status is ProcessRuntimeStepStatus.Failed or ProcessRuntimeStepStatus.Cancelled)
-            {
-                return false;
-            }
-        }
-
-        return true;
-    }
-
-    private static bool RequiredArtifactsAvailable(
-        ProcessRuntimeStateSnapshot state,
-        ProcessRuntimeStepState step)
-    {
-        foreach (var slotId in step.RequiredArtifactSlots)
-        {
-            if (!state.AvailableArtifactSlots.Contains(slotId))
-            {
-                return false;
-            }
-        }
-
-        return true;
     }
 
     private static StrategyResultEnvelope CreateOverBudgetResult(DispatchWorkItem workItem)
@@ -1321,56 +1322,6 @@ public sealed class ProcessRuntimeDispatchApplicationService(
             resultHash);
     }
 
-    private static StrategyResultEnvelope CreateRepeatedAutomaticRetrySuppressedResult(
-        DispatchWorkItem workItem,
-        StrategyResultEnvelope repeatedResult)
-    {
-        var repeatedReason = BuildRepeatedAutomaticRetrySuppressionReason(repeatedResult);
-        var summary = string.IsNullOrWhiteSpace(repeatedReason)
-            ? $"Step '{workItem.StepInstanceId}' produced the same automatic adapter retry result {MaximumRepeatedAutomaticRetryResults} time(s). Runtime stopped automatic retry so a manager can inspect the provider/runtime blocker before another retry."
-            : $"Step '{workItem.StepInstanceId}' produced the same automatic adapter retry result {MaximumRepeatedAutomaticRetryResults} time(s). Runtime stopped automatic retry so a manager can inspect the provider/runtime blocker before another retry. Last automatic retry reason: {repeatedReason}";
-        var stableKey = $"process-runtime:repeated-automatic-retry-suppressed:{workItem.RunId}:{workItem.StepInstanceId}:{repeatedResult.ResultHash}:{MaximumRepeatedAutomaticRetryResults}";
-        var resultHash = ComputeHash($"{stableKey}:{workItem.AttemptNumber}");
-        return new StrategyResultEnvelope(
-            workItem.StrategyBinding.StrategyId,
-            workItem.StrategyBinding.StrategyVersion,
-            CreateDeterministicGuid(stableKey),
-            StrategyOutcome.NeedsManager,
-            repeatedResult.ProducedArtifacts,
-            repeatedResult.RequestedArtifacts,
-            [
-                new StrategyDiagnosticRef(
-                    new StrategyDiagnosticCode("process.runtime.repeated_automatic_retry_suppressed"),
-                    StrategyDiagnosticSensitivity.Normal,
-                    resultHash,
-                    summary,
-                    RestrictedEvidenceReference: null,
-                    ProcessDiagnosticRetrySafety.UnsafeToRetry,
-                    ProcessDiagnosticIdempotencyClassification.Idempotent)
-            ],
-            [
-                new ManagerSignal(
-                    new ManagerSignalCode("process.runtime.repeated_automatic_retry_suppressed"),
-                    resultHash,
-                    summary)
-            ],
-            resultHash);
-    }
-
-    private static string BuildRepeatedAutomaticRetrySuppressionReason(StrategyResultEnvelope repeatedResult)
-    {
-        var diagnostics = repeatedResult.Diagnostics
-            .Select(diagnostic => diagnostic.SafeSummary)
-            .Where(summary => !string.IsNullOrWhiteSpace(summary))
-            .Distinct(StringComparer.Ordinal)
-            .Take(3)
-            .ToArray();
-
-        return diagnostics.Length == 0
-            ? string.Empty
-            : string.Join(" ", diagnostics);
-    }
-
     private static int CountSubmittedResults(
         ProcessRuntimeStateSnapshot state,
         ProcessStepInstanceId stepInstanceId)
@@ -1379,42 +1330,6 @@ public sealed class ProcessRuntimeDispatchApplicationService(
         foreach (var receipt in state.AppliedResults)
         {
             if (receipt.StepInstanceId == stepInstanceId)
-            {
-                count++;
-            }
-        }
-
-        return count;
-    }
-
-    private static int CountSubmittedResults(
-        ProcessRuntimeStateSnapshot state,
-        ProcessStepInstanceId stepInstanceId,
-        string resultHash)
-    {
-        var count = 0;
-        foreach (var receipt in state.AppliedResults)
-        {
-            if (receipt.StepInstanceId == stepInstanceId &&
-                string.Equals(receipt.ResultHash, resultHash, StringComparison.Ordinal))
-            {
-                count++;
-            }
-        }
-
-        return count;
-    }
-
-    private static int CountSubmittedAutomaticAdapterRetryResults(
-        ProcessRuntimeStateSnapshot state,
-        ProcessStepInstanceId stepInstanceId)
-    {
-        var count = 0;
-        foreach (var receipt in state.AppliedResults)
-        {
-            if (receipt.StepInstanceId == stepInstanceId &&
-                receipt.Outcome == StrategyOutcome.NeedsManager &&
-                receipt.AppliedStepStatus == ProcessRuntimeStepStatus.Ready)
             {
                 count++;
             }

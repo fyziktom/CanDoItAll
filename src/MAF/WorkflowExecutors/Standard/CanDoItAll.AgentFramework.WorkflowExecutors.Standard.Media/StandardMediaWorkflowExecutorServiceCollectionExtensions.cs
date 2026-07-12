@@ -1,5 +1,4 @@
 using CanDoItAll.AgentFramework.Core;
-using CanDoItAll.AgentFramework.Models;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
@@ -14,15 +13,11 @@ public static class StandardMediaWorkflowExecutorServiceCollectionExtensions
         ArgumentNullException.ThrowIfNull(services);
 
         services.TryAdd(ServiceDescriptor.Describe(typeof(IAgentImageGenerationService), typeof(UnavailableAgentImageGenerationService), executorLifetime));
-        services.TryAddEnumerable(ServiceDescriptor.Singleton<IWorkflowExecutorDescriptorSource, StandardMediaWorkflowExecutorDescriptorSource>());
-        services.TryAddEnumerable(ServiceDescriptor.Describe(typeof(IWorkflowExecutor), typeof(ImageGenerationWorkflowExecutor), executorLifetime));
+        services.TryAdd(ServiceDescriptor.Describe(typeof(IAgentImageAnalysisService), typeof(UnavailableAgentImageAnalysisService), executorLifetime));
+        services.AddWorkflowExecutorContribution<ImageGenerationWorkflowExecutor>(BuiltInWorkflowExecutorDescriptors.ImageGeneration, executorLifetime);
+        services.AddWorkflowExecutorContribution<ImageInspectWorkflowExecutor>(BuiltInWorkflowExecutorDescriptors.ImageInspect, executorLifetime);
+        services.AddWorkflowExecutorContribution<ImageAnalyzeWorkflowExecutor>(BuiltInWorkflowExecutorDescriptors.ImageAnalyze, executorLifetime);
 
         return services;
     }
-}
-
-public sealed class StandardMediaWorkflowExecutorDescriptorSource : IWorkflowExecutorDescriptorSource
-{
-    public IEnumerable<WorkflowExecutorDescriptor> ListExecutorDescriptors()
-        => [BuiltInWorkflowExecutorDescriptors.ImageGeneration];
 }

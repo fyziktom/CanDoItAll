@@ -20,6 +20,7 @@
     "workspace-create-directory",
     "workspace-write-file",
     "workspace-append-file",
+    "workspace-dotnet-restore",
     "workspace-dotnet-build",
     "workspace-dotnet-test",
     "workspace-dotnet-run",

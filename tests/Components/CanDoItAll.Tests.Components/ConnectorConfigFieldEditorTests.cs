@@ -50,4 +50,50 @@ public sealed class ConnectorConfigFieldEditorTests
 
         Assert.True(state.GetBoolean("enabled"));
     }
+
+    [Fact]
+    public void ConnectorConfigFieldEditor_preserves_int64_numeric_state()
+    {
+        using var context = new TestContext();
+        var state = new ConnectorConfigState();
+        var field = new ConfigurationFieldDescriptor(
+            "maxBytes",
+            "Max bytes",
+            ConfigurationFieldType.Number,
+            IsRequired: false,
+            "Maximum bytes")
+        {
+            NumberKind = ConfigurationNumberKind.Int64
+        };
+
+        var cut = context.RenderComponent<ConnectorConfigFieldEditor>(parameters => parameters
+            .Add(component => component.Field, field)
+            .Add(component => component.State, state)
+            .Add(component => component.TestId, "connector-config-max-bytes"));
+
+        cut.Find("[data-testid='connector-config-max-bytes']").Change("1099511627776");
+
+        Assert.Equal("1099511627776", state.GetText("maxBytes"));
+    }
+
+    [Fact]
+    public void ConfigurationSchemaValidator_rejects_fractional_integer_and_empty_guid()
+    {
+        var schema = new ConfigurationSchema(
+            "1.0",
+            [
+                new ConfigurationFieldDescriptor("count", "Count", ConfigurationFieldType.Number, false, string.Empty),
+                new ConfigurationFieldDescriptor("providerId", "Provider", ConfigurationFieldType.Guid, true, string.Empty)
+            ]);
+        var state = new ConfigurationState(new Dictionary<string, string>
+        {
+            ["count"] = "2.5",
+            ["providerId"] = Guid.Empty.ToString("D")
+        });
+
+        var result = new ConfigurationSchemaValidator().Validate(schema, state);
+
+        Assert.Contains(result.Issues, issue => issue.FieldKey == "count" && issue.Message.Contains("Int32", StringComparison.Ordinal));
+        Assert.Contains(result.Issues, issue => issue.FieldKey == "providerId" && issue.Message.Contains("GUID", StringComparison.Ordinal));
+    }
 }

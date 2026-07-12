@@ -14,7 +14,7 @@ public sealed class MafAgentRuntimeImageAnalysisModelTests
             SuggestedModels = ["qwen3.5:9b", "llama3.2:3b"]
         };
 
-        var model = MafAgentRuntime.ResolveProviderImageAnalysisModel(provider, "qwen3.5:2b");
+        var model = WorkspaceImageAnalysisModelResolver.ResolveProviderImageAnalysisModel(provider, "qwen3.5:2b");
 
         Assert.Equal("qwen3.5:2b", model);
     }
@@ -30,7 +30,7 @@ public sealed class MafAgentRuntimeImageAnalysisModelTests
             ConfigurationJson = """{"supportsVision":true}"""
         };
 
-        var model = MafAgentRuntime.ResolveProviderImageAnalysisModel(provider, "llama3.2:3b");
+        var model = WorkspaceImageAnalysisModelResolver.ResolveProviderImageAnalysisModel(provider, "llama3.2:3b");
 
         Assert.Equal("qwen3.5:9b", model);
     }
@@ -45,7 +45,7 @@ public sealed class MafAgentRuntimeImageAnalysisModelTests
             ConfigurationJson = """{"visionModel":"gemma4:12b"}"""
         };
 
-        var model = MafAgentRuntime.ResolveProviderImageAnalysisModel(provider, "llama3.2:3b");
+        var model = WorkspaceImageAnalysisModelResolver.ResolveProviderImageAnalysisModel(provider, "llama3.2:3b");
 
         Assert.Equal("gemma4:12b", model);
     }

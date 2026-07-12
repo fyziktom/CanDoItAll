@@ -6,7 +6,7 @@ using System.Diagnostics;
 
 namespace CanDoItAll.AgentFramework.Core;
 
-internal static class WorkspaceExecutionAuditTrailWriter
+public static class WorkspaceExecutionAuditTrailWriter
 {
     private static readonly JsonSerializerOptions SerializerOptions = new(JsonSerializerDefaults.Web)
     {
@@ -49,7 +49,8 @@ internal static class WorkspaceExecutionAuditTrailWriter
             CompletedAtUtc: receipt.CompletedAtUtc)
         {
             RuntimeToolProviderKey = runtimeToolOwnership?.ProviderKey ?? string.Empty,
-            RuntimeToolProviderName = runtimeToolOwnership?.ProviderName ?? string.Empty
+            RuntimeToolProviderName = runtimeToolOwnership?.ProviderName ?? string.Empty,
+            DeclaredSideEffectMode = receipt.DeclaredSideEffectMode
         };
 
         using (var receiptActivity = AgentFrameworkTelemetry.ActivitySource.StartActivity("tool.receipt", ActivityKind.Internal))

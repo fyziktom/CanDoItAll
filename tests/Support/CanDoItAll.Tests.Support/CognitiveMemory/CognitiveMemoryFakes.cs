@@ -1,3 +1,4 @@
+using CanDoItAll.Memory.SourceGateway;
 using System.Text;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
@@ -291,7 +292,7 @@ public sealed class FakeWorkflowRuntimeEvidenceSourceProvider : IWorkflowRuntime
         CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        var runId = request.RunId?.Value ?? Guid.Empty;
+        var runId = request.RunId ?? Guid.Empty;
         if (!itemsByRun.TryGetValue(runId, out var items))
         {
             throw new InvalidOperationException($"No fake workflow-runtime source items were registered for run '{runId:D}'.");

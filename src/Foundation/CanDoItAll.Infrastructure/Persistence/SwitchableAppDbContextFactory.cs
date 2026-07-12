@@ -7,7 +7,7 @@ using System.Reflection;
 
 namespace CanDoItAll.Infrastructure.Persistence;
 
-internal static class AppDbContextMigrationsAssemblyNames
+public static class AppDbContextMigrationsAssemblyNames
 {
     public const string PostgreSql = "CanDoItAll.Migrations.PostgreSql";
 }

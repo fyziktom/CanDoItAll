@@ -1,7 +1,6 @@
 using CanDoItAll.AgentFramework.Maf;
 using CanDoItAll.AgentFramework.Models;
 using Microsoft.Extensions.AI;
-using System.Reflection;
 
 namespace CanDoItAll.Tests.Unit;
 
@@ -9,6 +8,23 @@ public sealed class MafAgentRuntimeAttachmentTests
 {
     private static readonly AgentRuntimeInputAttachment TestImageAttachment =
         new("screen.png", "image/png", [1, 2, 3], "artifacts/screen.png");
+
+    [Fact]
+    public void Input_attachment_analysis_prompt_is_domain_neutral_by_default()
+    {
+        var prompt = InputAttachmentPreparer.BuildInputAttachmentAnalysisPrompt(
+            "Describe the attached image.",
+            new AgentRuntimeInputAttachment(
+                "sample.png",
+                "image/png",
+                [],
+                "uploads/sample.png"));
+
+        Assert.Contains("Analyze one image attachment for the current agent request", prompt, StringComparison.Ordinal);
+        Assert.DoesNotContain("software delivery", prompt, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("UI state", prompt, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("software behavior", prompt, StringComparison.OrdinalIgnoreCase);
+    }
 
     [Fact]
     public void CreateUserInputMessage_AddsImageAttachmentsAsDataContent()
@@ -53,7 +69,7 @@ public sealed class MafAgentRuntimeAttachmentTests
             }
             """;
 
-        var scrubbed = MafAgentRuntime.RemoveRequestScopedDataContentFromSerializedSession(serializedSession);
+        var scrubbed = RequestScopedSessionContentScrubber.RemoveRequestScopedDataContent(serializedSession);
 
         Assert.NotNull(scrubbed);
         Assert.Contains("Inspect the screenshot.", scrubbed);
@@ -69,7 +85,7 @@ public sealed class MafAgentRuntimeAttachmentTests
         var options = CreateExecutionOptions([TestImageAttachment]);
 
         var exception = Assert.Throws<InvalidOperationException>(() =>
-            MafAgentRuntime.EnsureInputAttachmentsSupported(provider, provider.DefaultModel, options));
+            InputAttachmentSupport.EnsureSupported(provider, provider.DefaultModel, options));
 
         Assert.Contains("does not support vision/image input", exception.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("gptoss32k:latest", exception.Message, StringComparison.OrdinalIgnoreCase);
@@ -85,7 +101,7 @@ public sealed class MafAgentRuntimeAttachmentTests
         var options = CreateExecutionOptions([TestImageAttachment]);
 
         var exception = Assert.Throws<InvalidOperationException>(() =>
-            MafAgentRuntime.EnsureInputAttachmentsSupported(provider, provider.DefaultModel, options));
+            InputAttachmentSupport.EnsureSupported(provider, provider.DefaultModel, options));
 
         Assert.Contains("does not support vision/image input", exception.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("gptoss32k:latest", exception.Message, StringComparison.OrdinalIgnoreCase);
@@ -103,7 +119,7 @@ public sealed class MafAgentRuntimeAttachmentTests
         var options = CreateExecutionOptions([TestImageAttachment]);
 
         var exception = Assert.Throws<InvalidOperationException>(() =>
-            MafAgentRuntime.EnsureInputAttachmentsSupported(provider, provider.DefaultModel, options));
+            InputAttachmentSupport.EnsureSupported(provider, provider.DefaultModel, options));
 
         Assert.Contains("does not support vision/image input", exception.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("gptoss32k:latest", exception.Message, StringComparison.OrdinalIgnoreCase);
@@ -115,7 +131,7 @@ public sealed class MafAgentRuntimeAttachmentTests
         var provider = CreateProvider(ProviderKind.Ollama, "gptoss32k:latest");
         var options = CreateExecutionOptions([TestImageAttachment]);
 
-        MafAgentRuntime.EnsureInputAttachmentsSupported(provider, "gemma4:12b", options);
+        InputAttachmentSupport.EnsureSupported(provider, "gemma4:12b", options);
     }
 
     [Fact]
@@ -124,7 +140,7 @@ public sealed class MafAgentRuntimeAttachmentTests
         var provider = CreateProvider(ProviderKind.Ollama, "qwen3.5:9b");
         var options = CreateExecutionOptions([]);
 
-        var model = MafAgentRuntime.ResolveRuntimeModelForInputAttachments(provider, "llama3.2:3b", options);
+        var model = InputAttachmentSupport.ResolveRuntimeModel(provider, "llama3.2:3b", options);
 
         Assert.Equal("llama3.2:3b", model);
     }
@@ -135,7 +151,7 @@ public sealed class MafAgentRuntimeAttachmentTests
         var provider = CreateProvider(ProviderKind.Ollama, "qwen3.5:9b");
         var options = CreateExecutionOptions([TestImageAttachment]);
 
-        var model = MafAgentRuntime.ResolveRuntimeModelForInputAttachments(provider, "qwen3.5:9b", options);
+        var model = InputAttachmentSupport.ResolveRuntimeModel(provider, "qwen3.5:9b", options);
 
         Assert.Equal("qwen3.5:9b", model);
     }
@@ -151,7 +167,7 @@ public sealed class MafAgentRuntimeAttachmentTests
         };
         var options = CreateExecutionOptions([TestImageAttachment]);
 
-        var model = MafAgentRuntime.ResolveRuntimeModelForInputAttachments(provider, "llama3.2:3b", options);
+        var model = InputAttachmentSupport.ResolveRuntimeModel(provider, "llama3.2:3b", options);
 
         Assert.Equal("qwen3.5:9b", model);
     }
@@ -162,7 +178,7 @@ public sealed class MafAgentRuntimeAttachmentTests
         var provider = CreateProvider(ProviderKind.Ollama, "gptoss32k:latest");
         var options = CreateExecutionOptions([TestImageAttachment]);
 
-        var model = MafAgentRuntime.ResolveRuntimeModelForInputAttachments(provider, provider.DefaultModel, options);
+        var model = InputAttachmentSupport.ResolveRuntimeModel(provider, provider.DefaultModel, options);
 
         Assert.Equal("gptoss32k:latest", model);
     }
@@ -278,7 +294,6 @@ public sealed class MafAgentRuntimeAttachmentTests
             TargetScope: "ExternalProductTargetMutable",
             IsGovernedProcessStep: true,
             BrowserToolsAllowed: false,
-            ScaffoldToolOnly: false,
             AllowsProductMutation: true,
             WorkspaceToolProfile: null,
             WorkspaceScope: WorkspaceScopeDescriptor.Project(Guid.NewGuid().ToString("D")),
@@ -336,7 +351,7 @@ public sealed class MafAgentRuntimeAttachmentTests
             UpdatedAtUtc: now);
     }
 
-    private static object CreateInputAttachmentAnalysis(
+    private static InputAttachmentAnalysis CreateInputAttachmentAnalysis(
         string name,
         string sourcePath,
         string model,
@@ -344,25 +359,14 @@ public sealed class MafAgentRuntimeAttachmentTests
         int inputTokens,
         int outputTokens)
     {
-        var analysisType = typeof(MafAgentRuntime).GetNestedType("InputAttachmentAnalysis", BindingFlags.NonPublic)
-            ?? throw new InvalidOperationException("InputAttachmentAnalysis nested type was not found.");
-
-        return Activator.CreateInstance(analysisType, name, sourcePath, model, analysis, inputTokens, outputTokens)
-            ?? throw new InvalidOperationException("InputAttachmentAnalysis could not be created.");
+        return new InputAttachmentAnalysis(name, sourcePath, model, analysis, inputTokens, outputTokens);
     }
 
     private static string InvokeAppendInputAttachmentAnalysis(
         string prompt,
-        object analysis)
+        InputAttachmentAnalysis analysis)
     {
-        var analysisType = analysis.GetType();
-        var analyses = Array.CreateInstance(analysisType, 1);
-        analyses.SetValue(analysis, 0);
-        var method = typeof(MafAgentRuntime).GetMethod("AppendInputAttachmentAnalysis", BindingFlags.NonPublic | BindingFlags.Static)
-            ?? throw new InvalidOperationException("AppendInputAttachmentAnalysis method was not found.");
-
-        return (string)(method.Invoke(null, [prompt, analyses])
-            ?? throw new InvalidOperationException("AppendInputAttachmentAnalysis did not return a prompt."));
+        return InputAttachmentPreparer.AppendInputAttachmentAnalysis(prompt, [analysis]);
     }
 
     private static IReadOnlyList<ChatMessage> InvokeCreatePromptInputMessages(

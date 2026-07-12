@@ -16,11 +16,11 @@ public sealed class AgentFinalizerPolicyTests
         var runId = Guid.NewGuid();
         var context = CreateGovernedProcessContext(runId, "code-change");
 
-        var pathResolved = MafAgentRuntime.TryBuildCurrentStepPrimaryManagedArtifactPath(
+        var pathResolved = ProcessArtifactRecoveryService.TryBuildCurrentStepPrimaryManagedArtifactPath(
             context,
             out var primaryArtifactRef,
             out var pathFailure);
-        var recovered = MafAgentRuntime.TryCreateProcessStepOutcomeFromPrimaryArtifact(
+        var recovered = ProcessArtifactRecoveryService.TryCreateProcessStepOutcomeFromPrimaryArtifact(
             context,
             primaryArtifactRef,
             """
@@ -31,6 +31,7 @@ public sealed class AgentFinalizerPolicyTests
             ## Changed files
             - external-target/C/programovani/dotnet/output/src/App/App.csproj
             """,
+            ProcessArtifactRecoveryCause.MissingRequiredFinalizer,
             out var outcome,
             out var recoveryFailure);
 
@@ -39,7 +40,8 @@ public sealed class AgentFinalizerPolicyTests
         Assert.Equal(ProcessStepOutcomeStatus.Completed, outcome.Status);
         Assert.Equal([primaryArtifactRef], outcome.EvidenceRefs);
         Assert.Empty(outcome.NextActions);
-        Assert.Contains("provider timeout", outcome.Reason, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("provider timeout", outcome.Reason, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("required finalizer", outcome.Reason, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("Status: completed", outcome.HumanReadableSummaryMarkdown, StringComparison.OrdinalIgnoreCase);
     }
 
@@ -50,7 +52,7 @@ public sealed class AgentFinalizerPolicyTests
         var context = CreateGovernedProcessContext(runId, "targeted-validation");
         var primaryArtifactRef = $"artifacts/process-runs/{runId:D}/steps/targeted-validation.md";
 
-        var recovered = MafAgentRuntime.TryCreateProcessStepOutcomeFromPrimaryArtifact(
+        var recovered = ProcessArtifactRecoveryService.TryCreateProcessStepOutcomeFromPrimaryArtifact(
             context,
             primaryArtifactRef,
             """
@@ -64,6 +66,7 @@ public sealed class AgentFinalizerPolicyTests
             - workspace_dotnet_build exit code 0
             - workspace_dotnet_test exit code 0
             """,
+            ProcessArtifactRecoveryCause.ProviderStreamingTimeout,
             out var outcome,
             out var recoveryFailure);
 
@@ -71,6 +74,7 @@ public sealed class AgentFinalizerPolicyTests
         Assert.Equal(ProcessStepOutcomeStatus.Completed, outcome.Status);
         Assert.Equal("feature-accepted", outcome.BranchOutcomeKey);
         Assert.Equal([primaryArtifactRef], outcome.EvidenceRefs);
+        Assert.Contains("provider streaming timed out", outcome.Reason, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -80,7 +84,7 @@ public sealed class AgentFinalizerPolicyTests
         var context = CreateGovernedProcessContext(runId, "targeted-validation");
         var primaryArtifactRef = $"artifacts/process-runs/{runId:D}/steps/targeted-validation.md";
 
-        var recovered = MafAgentRuntime.TryCreateProcessStepOutcomeFromPrimaryArtifact(
+        var recovered = ProcessArtifactRecoveryService.TryCreateProcessStepOutcomeFromPrimaryArtifact(
             context,
             primaryArtifactRef,
             """
@@ -96,6 +100,7 @@ public sealed class AgentFinalizerPolicyTests
             - workspace_dotnet_build exit code 0
             - workspace_dotnet_test exit code 0
             """,
+            ProcessArtifactRecoveryCause.ProviderStreamingTimeout,
             out var outcome,
             out var recoveryFailure);
 
@@ -112,7 +117,7 @@ public sealed class AgentFinalizerPolicyTests
         var context = CreateGovernedProcessContext(runId, "targeted-validation");
         var primaryArtifactRef = $"artifacts/process-runs/{runId:D}/steps/targeted-validation.md";
 
-        var recovered = MafAgentRuntime.TryCreateProcessStepOutcomeFromPrimaryArtifact(
+        var recovered = ProcessArtifactRecoveryService.TryCreateProcessStepOutcomeFromPrimaryArtifact(
             context,
             primaryArtifactRef,
             """
@@ -124,12 +129,13 @@ public sealed class AgentFinalizerPolicyTests
             ## Invalid duplicate
             Branch outcome key: feature-repair-required
             """,
+            ProcessArtifactRecoveryCause.ProviderStreamingTimeout,
             out var outcome,
             out var recoveryFailure);
 
         Assert.False(recovered);
         Assert.Null(outcome);
-        Assert.Contains("multiple different Branch outcome key lines", recoveryFailure, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("multiple different Branch outcome key values", recoveryFailure, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -139,7 +145,7 @@ public sealed class AgentFinalizerPolicyTests
         var context = CreateGovernedProcessContext(runId, "targeted-validation");
         var primaryArtifactRef = $"artifacts/process-runs/{runId:D}/steps/targeted-validation.md";
 
-        var recovered = MafAgentRuntime.TryCreateProcessStepOutcomeFromPrimaryArtifact(
+        var recovered = ProcessArtifactRecoveryService.TryCreateProcessStepOutcomeFromPrimaryArtifact(
             context,
             primaryArtifactRef,
             """
@@ -152,12 +158,13 @@ public sealed class AgentFinalizerPolicyTests
             ## Branch outcome key
             feature-repair-required
             """,
+            ProcessArtifactRecoveryCause.ProviderStreamingTimeout,
             out var outcome,
             out var recoveryFailure);
 
         Assert.False(recovered);
         Assert.Null(outcome);
-        Assert.Contains("multiple different Branch outcome key lines", recoveryFailure, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("multiple different Branch outcome key values", recoveryFailure, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -166,7 +173,7 @@ public sealed class AgentFinalizerPolicyTests
         var context = CreateGovernedProcessContext(Guid.NewGuid(), "code-change");
         var primaryArtifactRef = "artifacts/process-runs/11111111-1111-1111-1111-111111111111/steps/code-change.md";
 
-        var recovered = MafAgentRuntime.TryCreateProcessStepOutcomeFromPrimaryArtifact(
+        var recovered = ProcessArtifactRecoveryService.TryCreateProcessStepOutcomeFromPrimaryArtifact(
             context,
             primaryArtifactRef,
             """
@@ -174,12 +181,13 @@ public sealed class AgentFinalizerPolicyTests
 
             Status: InProgress  # Feature implementation change set
             """,
+            ProcessArtifactRecoveryCause.ProviderStreamingTimeout,
             out var outcome,
             out var failure);
 
         Assert.False(recovered);
         Assert.Null(outcome);
-        Assert.Contains("recoverable Status line", failure, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("invalid Status field", failure, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -188,7 +196,7 @@ public sealed class AgentFinalizerPolicyTests
         var context = CreateGovernedProcessContext(Guid.NewGuid(), "qa-validation");
         var primaryArtifactRef = "artifacts/process-runs/11111111-1111-1111-1111-111111111111/steps/qa-validation.md";
 
-        var recovered = MafAgentRuntime.TryCreateProcessStepOutcomeFromPrimaryArtifact(
+        var recovered = ProcessArtifactRecoveryService.TryCreateProcessStepOutcomeFromPrimaryArtifact(
             context,
             primaryArtifactRef,
             """
@@ -196,6 +204,7 @@ public sealed class AgentFinalizerPolicyTests
 
             Status: Blocked
             """,
+            ProcessArtifactRecoveryCause.ProviderStreamingTimeout,
             out var outcome,
             out var failure);
 
@@ -210,7 +219,7 @@ public sealed class AgentFinalizerPolicyTests
         var context = CreateGovernedProcessContext(Guid.NewGuid(), "qa-validation");
         var primaryArtifactRef = "artifacts/process-runs/11111111-1111-1111-1111-111111111111/steps/qa-validation.md";
 
-        var recovered = MafAgentRuntime.TryCreateProcessStepOutcomeFromPrimaryArtifact(
+        var recovered = ProcessArtifactRecoveryService.TryCreateProcessStepOutcomeFromPrimaryArtifact(
             context,
             primaryArtifactRef,
             """
@@ -221,6 +230,7 @@ public sealed class AgentFinalizerPolicyTests
             Cannot proceed because workspace_dotnet_test failed with exit code 1.
             Evidence: artifacts/process-runs/11111111-1111-1111-1111-111111111111/steps/qa-validation.md
             """,
+            ProcessArtifactRecoveryCause.ProviderStreamingTimeout,
             out var outcome,
             out var failure);
 
@@ -237,7 +247,7 @@ public sealed class AgentFinalizerPolicyTests
         var context = CreateGovernedProcessContext(runId, "scaffold-contract");
         var primaryArtifactRef = $"artifacts/process-runs/{runId:D}/steps/scaffold-contract.md";
 
-        var recovered = MafAgentRuntime.TryCreateProcessStepOutcomeFromPrimaryArtifact(
+        var recovered = ProcessArtifactRecoveryService.TryCreateProcessStepOutcomeFromPrimaryArtifact(
             context,
             primaryArtifactRef,
             """
@@ -250,6 +260,7 @@ public sealed class AgentFinalizerPolicyTests
             ## Notes
             This step records the intended scaffold contract only.
             """,
+            ProcessArtifactRecoveryCause.ProviderStreamingTimeout,
             out var outcome,
             out var failure);
 
@@ -267,7 +278,7 @@ public sealed class AgentFinalizerPolicyTests
         var context = CreateGovernedProcessContext(runId, "external-check");
         var primaryArtifactRef = $"artifacts/process-runs/{runId:D}/steps/external-check.md";
 
-        var recovered = MafAgentRuntime.TryCreateProcessStepOutcomeFromPrimaryArtifact(
+        var recovered = ProcessArtifactRecoveryService.TryCreateProcessStepOutcomeFromPrimaryArtifact(
             context,
             primaryArtifactRef,
             """
@@ -276,6 +287,7 @@ public sealed class AgentFinalizerPolicyTests
             Cannot proceed because required input is missing from the governed process context.
             Manager action required before retry.
             """,
+            ProcessArtifactRecoveryCause.ProviderStreamingTimeout,
             out var outcome,
             out var failure);
 
@@ -291,7 +303,7 @@ public sealed class AgentFinalizerPolicyTests
     {
         var context = CreateGovernedProcessContext(Guid.NewGuid(), "../code-change");
 
-        var resolved = MafAgentRuntime.TryBuildCurrentStepPrimaryManagedArtifactPath(
+        var resolved = ProcessArtifactRecoveryService.TryBuildCurrentStepPrimaryManagedArtifactPath(
             context,
             out _,
             out var failure);
@@ -770,21 +782,17 @@ public sealed class AgentFinalizerPolicyTests
     {
         var policy = CreatePolicy();
         var capture = CreateFinalizerCapture(policy);
-        var submitMethod = capture.GetType().GetMethod("SubmitProcessStepOutcome")
-            ?? throw new InvalidOperationException("SubmitProcessStepOutcome method was not found.");
-        var snapshotMethod = capture.GetType().GetMethod("Snapshot")
-            ?? throw new InvalidOperationException("Snapshot method was not found.");
         var outcomeJson = SerializeOutcome(ProcessStepOutcomeStatus.Completed, "Provider sent result as a JSON string.");
         using var document = JsonDocument.Parse(JsonSerializer.Serialize(outcomeJson));
 
-        var response = submitMethod.Invoke(capture, [document.RootElement]);
-        var snapshot = snapshotMethod.Invoke(capture, []);
+        var response = capture.SubmitProcessStepOutcome(document.RootElement);
+        var snapshot = capture.Snapshot();
 
-        Assert.Equal("Process step outcome finalizer captured.", response);
-        var invocations = Assert.IsAssignableFrom<IReadOnlyList<AgentFinalizerInvocation>>(snapshot);
-        var invocation = Assert.Single(invocations);
+        Assert.True(response.Succeeded);
+        Assert.Equal("Process step outcome finalizer captured.", response.Message);
+        var invocation = Assert.Single(snapshot);
         Assert.Equal(policy.ToolName, invocation.ToolName);
-        var validation = new DefaultAgentFinalizerValidator().Validate(policy, invocations);
+        var validation = new DefaultAgentFinalizerValidator().Validate(policy, snapshot);
         Assert.True(validation.Succeeded);
         var output = Assert.IsType<ProcessStepOutcomeResult>(validation.Output);
         Assert.Equal(ProcessStepOutcomeStatus.Completed, output.Status);
@@ -796,10 +804,6 @@ public sealed class AgentFinalizerPolicyTests
     {
         var policy = CreatePolicy();
         var capture = CreateFinalizerCapture(policy);
-        var submitMethod = capture.GetType().GetMethod("SubmitProcessStepOutcome")
-            ?? throw new InvalidOperationException("SubmitProcessStepOutcome method was not found.");
-        var snapshotMethod = capture.GetType().GetMethod("Snapshot")
-            ?? throw new InvalidOperationException("Snapshot method was not found.");
         const string outcomeJson = """
         {
           "status": "Completed",
@@ -814,14 +818,158 @@ public sealed class AgentFinalizerPolicyTests
         """;
         using var document = JsonDocument.Parse(JsonSerializer.Serialize(outcomeJson));
 
-        submitMethod.Invoke(capture, [document.RootElement]);
-        var snapshot = snapshotMethod.Invoke(capture, []);
+        capture.SubmitProcessStepOutcome(document.RootElement);
+        var snapshot = capture.Snapshot();
 
-        var invocations = Assert.IsAssignableFrom<IReadOnlyList<AgentFinalizerInvocation>>(snapshot);
-        var validation = new DefaultAgentFinalizerValidator().Validate(policy, invocations);
+        var validation = new DefaultAgentFinalizerValidator().Validate(policy, snapshot);
         Assert.True(validation.Succeeded);
         var output = Assert.IsType<ProcessStepOutcomeResult>(validation.Output);
         Assert.Equal("Feature intake completed with current-run evidence.", output.Reason);
+    }
+
+    [Fact]
+    public void Finalizer_capture_commits_first_valid_process_step_outcome_exactly_once()
+    {
+        var policy = CreatePolicy();
+        var capture = CreateFinalizerCapture(policy);
+        using var firstDocument = JsonDocument.Parse(SerializeOutcome(
+            ProcessStepOutcomeStatus.Completed,
+            "First valid governed outcome."));
+        using var secondDocument = JsonDocument.Parse(SerializeOutcome(
+            ProcessStepOutcomeStatus.Completed,
+            "Duplicate governed outcome."));
+
+        var firstResponse = capture.SubmitProcessStepOutcome(firstDocument.RootElement);
+        var secondResponse = capture.SubmitProcessStepOutcome(secondDocument.RootElement);
+        var invocation = Assert.Single(capture.Snapshot());
+        var validation = new DefaultAgentFinalizerValidator().Validate(policy, [invocation]);
+
+        Assert.True(firstResponse.Succeeded);
+        Assert.Equal("Process step outcome finalizer captured.", firstResponse.Message);
+        Assert.True(secondResponse.Succeeded);
+        Assert.Equal("Finalizer 'submit_process_step_outcome' already captured; duplicate submission ignored.", secondResponse.Message);
+        Assert.True(validation.Succeeded);
+        var output = Assert.IsType<ProcessStepOutcomeResult>(validation.Output);
+        Assert.Equal("First valid governed outcome.", output.Reason);
+    }
+
+    [Fact]
+    public void Finalizer_capture_rejects_invalid_outcome_without_poisoning_valid_correction()
+    {
+        var policy = CreatePolicy();
+        var capture = CreateFinalizerCapture(policy);
+        var invalidOutcome = new ProcessStepOutcomeResult
+        {
+            Status = ProcessStepOutcomeStatus.Completed,
+            Reason = "Invalid completion without evidence.",
+            EvidenceRefs = [],
+            NextActions = []
+        };
+        using var invalidDocument = JsonDocument.Parse(JsonSerializer.Serialize(
+            invalidOutcome,
+            AgentOutputJson.SerializerOptions));
+        using var validDocument = JsonDocument.Parse(SerializeOutcome(
+            ProcessStepOutcomeStatus.Completed,
+            "Corrected completion with evidence."));
+
+        var rejection = capture.SubmitProcessStepOutcome(invalidDocument.RootElement);
+
+        Assert.False(rejection.Succeeded);
+        Assert.Contains("process.step_outcome.completed_evidence_ref_required", rejection.Message, StringComparison.Ordinal);
+        Assert.Empty(capture.Snapshot());
+
+        capture.SubmitProcessStepOutcome(validDocument.RootElement);
+        var invocation = Assert.Single(capture.Snapshot());
+        var validation = new DefaultAgentFinalizerValidator().Validate(policy, [invocation]);
+
+        Assert.True(validation.Succeeded);
+        var output = Assert.IsType<ProcessStepOutcomeResult>(validation.Output);
+        Assert.Equal("Corrected completion with evidence.", output.Reason);
+    }
+
+    [Fact]
+    public void Finalizer_capture_returns_recoverable_feedback_for_branch_title_without_key()
+    {
+        var policy = CreatePolicy();
+        var capture = CreateFinalizerCapture(policy);
+        var invalidOutcome = new ProcessStepOutcomeResult
+        {
+            Status = ProcessStepOutcomeStatus.Completed,
+            Reason = "Peer review completed.",
+            BranchOutcomeKey = string.Empty,
+            BranchOutcomeTitle = "Peer review approved",
+            EvidenceRefs = ["artifacts/process-runs/run-1/steps/peer-review.md"],
+            NextActions = []
+        };
+        using var invalidDocument = JsonDocument.Parse(JsonSerializer.Serialize(
+            invalidOutcome,
+            AgentOutputJson.SerializerOptions));
+        using var correctedDocument = JsonDocument.Parse(SerializeOutcome(
+            ProcessStepOutcomeStatus.Completed,
+            "Peer review completed with no branch selection."));
+
+        var rejection = capture.SubmitProcessStepOutcome(invalidDocument.RootElement);
+
+        Assert.Contains(
+            "process.step_outcome.branch_key_required",
+            rejection.Message,
+            StringComparison.Ordinal);
+        Assert.False(rejection.Succeeded);
+        Assert.Empty(capture.Snapshot());
+
+        capture.SubmitProcessStepOutcome(correctedDocument.RootElement);
+
+        Assert.Single(capture.Snapshot());
+    }
+
+    [Fact]
+    public void Required_finalizer_instructions_explain_branch_field_invariant()
+    {
+        var instructions = MafFinalizerDriver.BuildRequiredFinalizerArgumentInstructions(CreatePolicy());
+
+        Assert.Contains(
+            "`branchOutcomeTitle` requires a non-empty stable `branchOutcomeKey`",
+            instructions,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "both `branchOutcomeKey` and `branchOutcomeTitle` must be empty strings",
+            instructions,
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Process_step_finalizer_tool_schema_exposes_branch_field_invariant()
+    {
+        var capture = Assert.IsType<FinalizerCapture>(MafFinalizerToolFactory.CreateCapture(
+            AgentStructuredOutputContracts.ProcessStepOutcomeResult,
+            AgentFinalizerMode.Required));
+        var function = Assert.IsAssignableFrom<AIFunction>(Assert.Single(capture.Tools));
+        var schema = function.JsonSchema.GetRawText();
+
+        Assert.Contains(
+            "branchOutcomeTitle requires a non-empty stable branchOutcomeKey",
+            schema,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "When no branch is selected, both branch fields must be empty strings",
+            schema,
+            StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData(AgentFinalizerMode.Required, false, false)]
+    [InlineData(AgentFinalizerMode.Required, true, false)]
+    [InlineData(AgentFinalizerMode.Shadow, false, true)]
+    [InlineData(AgentFinalizerMode.Disabled, false, true)]
+    [InlineData(AgentFinalizerMode.Disabled, true, false)]
+    public void Runtime_tool_call_policy_prevents_parallel_required_finalizers(
+        AgentFinalizerMode finalizerMode,
+        bool hasApprovalTools,
+        bool expected)
+    {
+        Assert.Equal(
+            expected,
+            MafFinalizerDriver.ShouldAllowMultipleToolCalls(finalizerMode, hasApprovalTools));
     }
 
     [Fact]
@@ -1005,7 +1153,8 @@ public sealed class AgentFinalizerPolicyTests
             new ExecutionInvocationPolicy(
                 FinalizerMode: AgentFinalizerMode.Required,
                 MaxStructuredOutputRepairAttempts: 9,
-                RequireStructuredOutputValidation: true));
+                RequireStructuredOutputValidation: true,
+                AllowRequiredFinalizerStructuredOutputRecovery: true));
 
         using var document = JsonDocument.Parse(metadataJson);
         var root = document.RootElement;
@@ -1017,6 +1166,52 @@ public sealed class AgentFinalizerPolicyTests
             ExecutionInvocationMetadata.MaxRepairAttempts,
             root.GetProperty(ExecutionInvocationMetadata.MaxStructuredOutputRepairAttemptsMetadataKey).GetInt32());
         Assert.True(root.GetProperty(ExecutionInvocationMetadata.RequireStructuredOutputValidationMetadataKey).GetBoolean());
+        Assert.True(root.GetProperty(
+            ExecutionInvocationMetadata.AllowRequiredFinalizerStructuredOutputRecoveryMetadataKey).GetBoolean());
+    }
+
+    [Fact]
+    public void Required_finalizer_structured_output_recovery_allows_only_missing_finalizer_when_explicitly_enabled()
+    {
+        var policy = AgentFinalizerPolicy.Required<ProcessStepOutcomeResult>(
+            AgentFinalizerPolicies.SubmitProcessStepOutcomeToolName);
+        var missing = AgentFinalizerValidationResult.Failure(
+            policy,
+            matchingInvocationCount: 0,
+            rawOutputHash: "sha256:missing",
+            new AgentOutputValidationError
+            {
+                Code = "agent.finalizer.missing",
+                Message = "Required finalizer was not called.",
+                Path = "$.finalizer"
+            });
+        var malformed = AgentFinalizerValidationResult.Failure(
+            policy,
+            matchingInvocationCount: 1,
+            rawOutputHash: "sha256:malformed",
+            new AgentOutputValidationError
+            {
+                Code = "agent.output.invalid",
+                Message = "Finalizer arguments are malformed.",
+                Path = "$.finalizer"
+            });
+
+        Assert.True(RequiredFinalizerStructuredOutputRecoveryPolicy.CanRecover(
+            recoveryEnabled: true,
+            finalizerMode: AgentFinalizerMode.Required,
+            validation: missing));
+        Assert.False(RequiredFinalizerStructuredOutputRecoveryPolicy.CanRecover(
+            recoveryEnabled: false,
+            finalizerMode: AgentFinalizerMode.Required,
+            validation: missing));
+        Assert.False(RequiredFinalizerStructuredOutputRecoveryPolicy.CanRecover(
+            recoveryEnabled: true,
+            finalizerMode: AgentFinalizerMode.Required,
+            validation: malformed));
+        Assert.False(RequiredFinalizerStructuredOutputRecoveryPolicy.CanRecover(
+            recoveryEnabled: true,
+            finalizerMode: AgentFinalizerMode.Shadow,
+            validation: missing));
     }
 
     [Fact]
@@ -1131,18 +1326,8 @@ public sealed class AgentFinalizerPolicyTests
             "Final process-step outcome.");
     }
 
-    private static object CreateFinalizerCapture(AgentFinalizerPolicy policy)
-    {
-        var captureType = typeof(MafAgentRuntime).GetNestedType("FinalizerCapture", BindingFlags.NonPublic)
-            ?? throw new InvalidOperationException("FinalizerCapture nested type was not found.");
-        return Activator.CreateInstance(
-                captureType,
-                BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic,
-                binder: null,
-                args: [policy],
-                culture: null)
-            ?? throw new InvalidOperationException("FinalizerCapture instance was not created.");
-    }
+    private static FinalizerCapture CreateFinalizerCapture(AgentFinalizerPolicy policy)
+        => new(policy);
 
     private static string SerializeOutcome(
         ProcessStepOutcomeStatus status,
@@ -1280,7 +1465,6 @@ public sealed class AgentFinalizerPolicyTests
             TargetScope: "ExternalProductTargetMutable",
             IsGovernedProcessStep: true,
             BrowserToolsAllowed: false,
-            ScaffoldToolOnly: false,
             AllowsProductMutation: true,
             WorkspaceToolProfile: null,
             WorkspaceScope: WorkspaceScopeDescriptor.Project(Guid.NewGuid().ToString("D")),

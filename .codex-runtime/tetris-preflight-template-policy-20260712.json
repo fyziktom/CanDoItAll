@@ -1,0 +1,453 @@
+{
+  "definitionId": "3458e5d8-36b4-1861-83b1-522604c8e302",
+  "launchPlanId": "f6c37f73-afdb-451b-b7d8-61b14a3d205c",
+  "runId": null,
+  "stage": "Planned",
+  "route": "",
+  "launchPlan": {
+    "planId": "f6c37f73-afdb-451b-b7d8-61b14a3d205c",
+    "definitionId": "3458e5d8-36b4-1861-83b1-522604c8e302",
+    "definitionVersionId": "e3e29cfc-38fd-6ad6-f276-49a7793fb4a1",
+    "definitionKey": "software-delivery",
+    "definitionName": "Multi-team software delivery and release governance",
+    "definitionSummary": ".NET-focused multi-team delivery template for planned software change with explicit app-type classification, architecture design and review, subprocess-backed implementation, QA, runtime command writeback, UI screenshot writeback, security, release, deployment, and retrospective governance.",
+    "liveRunProfileKey": null,
+    "planHash": "sha256:4ac739c304a43d4a973183ceb797cf9d24548a21490a724ab6719dc66c71b9c5",
+    "steps": [
+      {
+        "stepInstanceId": "de9c6c87-26cd-47e5-805c-0e618420bc5a",
+        "stepKey": "feature-intake",
+        "title": "Clarify .NET scope and app type boundary",
+        "roleKey": "product-owner",
+        "executorKind": "agent",
+        "executorId": "9fc87ec2-e918-d756-b6c9-b42b8eecbe6e",
+        "executorDisplayName": "Business Strategist",
+        "isBlocked": false,
+        "blockedReason": null,
+        "branchGate": null
+      },
+      {
+        "stepInstanceId": "211d0bf3-f44c-4fab-afd2-559651fdf512",
+        "stepKey": "architecture-review",
+        "title": "Run .NET architecture design and review subprocess",
+        "roleKey": "solution-architect",
+        "executorKind": "agent",
+        "executorId": "38d4deb5-74ce-8e55-bf1a-17e88b437472",
+        "executorDisplayName": ".NET Solution Architect",
+        "isBlocked": false,
+        "blockedReason": null,
+        "branchGate": null
+      },
+      {
+        "stepInstanceId": "b3685f5c-4dc0-482d-b9cb-49f3a6d1e310",
+        "stepKey": "implementation",
+        "title": "Run .NET implementation slice subprocess",
+        "roleKey": "lead-engineer",
+        "executorKind": "agent",
+        "executorId": "1e267ce2-bf18-ce52-9743-9b36b9314994",
+        "executorDisplayName": ".NET Application Developer",
+        "isBlocked": false,
+        "blockedReason": null,
+        "branchGate": null
+      },
+      {
+        "stepInstanceId": "77c67ebd-93c6-4b35-bc4e-b508cfa76783",
+        "stepKey": "peer-review",
+        "title": "Complete peer review and integration readiness",
+        "roleKey": "review-lead",
+        "executorKind": "agent",
+        "executorId": "33183e52-4c54-b852-8c24-bd1d13cf1f23",
+        "executorDisplayName": "Code Review Lead",
+        "isBlocked": false,
+        "blockedReason": null,
+        "branchGate": null
+      },
+      {
+        "stepInstanceId": "b73ae809-3295-4a75-b334-12cf5eb12e74",
+        "stepKey": "qa-validation",
+        "title": "Run QA validation",
+        "roleKey": "qa-lead",
+        "executorKind": "agent",
+        "executorId": "752665f3-bf7d-0b54-9208-7809282cd415",
+        "executorDisplayName": ".NET QA Review Lead",
+        "isBlocked": false,
+        "blockedReason": null,
+        "branchGate": null
+      },
+      {
+        "stepInstanceId": "62fa0427-b4b7-4d06-b8a3-155e2051a2fa",
+        "stepKey": "quality-repair",
+        "title": "Run .NET quality repair subprocess",
+        "roleKey": "delivery-manager",
+        "executorKind": "agent",
+        "executorId": "b0c2a317-a417-385f-9f59-0f4a2c5b7ff2",
+        "executorDisplayName": "Delivery Manager",
+        "isBlocked": false,
+        "blockedReason": null,
+        "branchGate": {
+          "sourceStepKey": "qa-validation",
+          "requiredOutcomeKey": "repair-required"
+        }
+      },
+      {
+        "stepInstanceId": "79ea2b0e-476f-4dda-af90-934c3a2a1703",
+        "stepKey": "qa-recheck",
+        "title": "Re-run QA validation after repair",
+        "roleKey": "qa-lead",
+        "executorKind": "agent",
+        "executorId": "752665f3-bf7d-0b54-9208-7809282cd415",
+        "executorDisplayName": ".NET QA Review Lead",
+        "isBlocked": false,
+        "blockedReason": null,
+        "branchGate": {
+          "sourceStepKey": "qa-validation",
+          "requiredOutcomeKey": "repair-required"
+        }
+      },
+      {
+        "stepInstanceId": "37dd8405-d7d0-4721-b467-588c1527953d",
+        "stepKey": "security-review",
+        "title": "Perform security and data-handling review",
+        "roleKey": "security-reviewer",
+        "executorKind": "agent",
+        "executorId": "5ab2958c-08de-b251-8ead-caa321248b91",
+        "executorDisplayName": "Security Reviewer",
+        "isBlocked": false,
+        "blockedReason": null,
+        "branchGate": {
+          "sourceStepKey": "qa-validation",
+          "requiredOutcomeKey": "quality-accepted"
+        }
+      },
+      {
+        "stepInstanceId": "2790f7e6-f2dd-4b50-85b1-8132ca376785",
+        "stepKey": "record-runtime-commands",
+        "title": "Record .NET run commands under process run node",
+        "roleKey": "delivery-manager",
+        "executorKind": "agent",
+        "executorId": "b0c2a317-a417-385f-9f59-0f4a2c5b7ff2",
+        "executorDisplayName": "Delivery Manager",
+        "isBlocked": false,
+        "blockedReason": null,
+        "branchGate": {
+          "sourceStepKey": "qa-validation",
+          "requiredOutcomeKey": "quality-accepted"
+        }
+      },
+      {
+        "stepInstanceId": "3b2b4474-b62b-4bf0-86ae-913bbed3128e",
+        "stepKey": "capture-ui-screenshots",
+        "title": "Capture and store .NET UI screenshots",
+        "roleKey": "qa-lead",
+        "executorKind": "agent",
+        "executorId": "549a3e86-5ffc-0d58-bf8c-10952fcdaac4",
+        "executorDisplayName": "Delivery QA Observer",
+        "isBlocked": false,
+        "blockedReason": null,
+        "branchGate": null
+      },
+      {
+        "stepInstanceId": "12f435b6-bc8d-4122-be76-9ca58f30aefb",
+        "stepKey": "release-approval",
+        "title": "Approve first-pass release readiness",
+        "roleKey": "delivery-manager",
+        "executorKind": "agent",
+        "executorId": "b0c2a317-a417-385f-9f59-0f4a2c5b7ff2",
+        "executorDisplayName": "Delivery Manager",
+        "isBlocked": false,
+        "blockedReason": null,
+        "branchGate": {
+          "sourceStepKey": "qa-validation",
+          "requiredOutcomeKey": "quality-accepted"
+        }
+      },
+      {
+        "stepInstanceId": "e5e2602f-d788-4b1c-bd5d-6e3eab3beee6",
+        "stepKey": "execute-release-rollout",
+        "title": "Execute first-pass controlled release rollout",
+        "roleKey": "release-manager",
+        "executorKind": "agent",
+        "executorId": "6f674c92-3347-dd55-96d3-851db9739b35",
+        "executorDisplayName": "Release Readiness Manager",
+        "isBlocked": false,
+        "blockedReason": null,
+        "branchGate": null
+      },
+      {
+        "stepInstanceId": "61e4477b-5690-4ae4-986a-e8d06356db4f",
+        "stepKey": "post-release-learning",
+        "title": "Capture first-pass post-release learning",
+        "roleKey": "delivery-manager",
+        "executorKind": "agent",
+        "executorId": "b0c2a317-a417-385f-9f59-0f4a2c5b7ff2",
+        "executorDisplayName": "Delivery Manager",
+        "isBlocked": false,
+        "blockedReason": null,
+        "branchGate": null
+      },
+      {
+        "stepInstanceId": "820ac4a6-7075-48c1-96c0-180e1ede121c",
+        "stepKey": "security-review-after-repair",
+        "title": "Perform security review after repair",
+        "roleKey": "security-reviewer",
+        "executorKind": "agent",
+        "executorId": "5ab2958c-08de-b251-8ead-caa321248b91",
+        "executorDisplayName": "Security Reviewer",
+        "isBlocked": false,
+        "blockedReason": null,
+        "branchGate": {
+          "sourceStepKey": "qa-recheck",
+          "requiredOutcomeKey": "quality-accepted"
+        }
+      },
+      {
+        "stepInstanceId": "676d8808-f061-4719-94e6-e5df40ba1c21",
+        "stepKey": "record-runtime-commands-after-repair",
+        "title": "Record repaired .NET run commands under process run node",
+        "roleKey": "delivery-manager",
+        "executorKind": "agent",
+        "executorId": "b0c2a317-a417-385f-9f59-0f4a2c5b7ff2",
+        "executorDisplayName": "Delivery Manager",
+        "isBlocked": false,
+        "blockedReason": null,
+        "branchGate": {
+          "sourceStepKey": "qa-recheck",
+          "requiredOutcomeKey": "quality-accepted"
+        }
+      },
+      {
+        "stepInstanceId": "b991fcbd-a7f7-492d-837e-eb9585a530f4",
+        "stepKey": "capture-ui-screenshots-after-repair",
+        "title": "Capture and store repaired .NET UI screenshots",
+        "roleKey": "qa-lead",
+        "executorKind": "agent",
+        "executorId": "549a3e86-5ffc-0d58-bf8c-10952fcdaac4",
+        "executorDisplayName": "Delivery QA Observer",
+        "isBlocked": false,
+        "blockedReason": null,
+        "branchGate": {
+          "sourceStepKey": "qa-validation",
+          "requiredOutcomeKey": "repair-required"
+        }
+      },
+      {
+        "stepInstanceId": "987e248d-8cdd-44fc-adb7-bdb03d045793",
+        "stepKey": "repair-escalation",
+        "title": "Escalate unresolved repair findings",
+        "roleKey": "delivery-manager",
+        "executorKind": "agent",
+        "executorId": "b0c2a317-a417-385f-9f59-0f4a2c5b7ff2",
+        "executorDisplayName": "Delivery Manager",
+        "isBlocked": false,
+        "blockedReason": null,
+        "branchGate": {
+          "sourceStepKey": "qa-recheck",
+          "requiredOutcomeKey": "repair-escalation"
+        }
+      },
+      {
+        "stepInstanceId": "d1d25a0a-9974-4748-ba36-a6541ffc57b8",
+        "stepKey": "release-approval-after-repair",
+        "title": "Approve repaired release readiness",
+        "roleKey": "delivery-manager",
+        "executorKind": "agent",
+        "executorId": "b0c2a317-a417-385f-9f59-0f4a2c5b7ff2",
+        "executorDisplayName": "Delivery Manager",
+        "isBlocked": false,
+        "blockedReason": null,
+        "branchGate": {
+          "sourceStepKey": "qa-recheck",
+          "requiredOutcomeKey": "quality-accepted"
+        }
+      },
+      {
+        "stepInstanceId": "c3d1f6ab-38cb-4483-8f9b-4a6224c63ea6",
+        "stepKey": "execute-release-rollout-after-repair",
+        "title": "Execute repaired controlled release rollout",
+        "roleKey": "release-manager",
+        "executorKind": "agent",
+        "executorId": "6f674c92-3347-dd55-96d3-851db9739b35",
+        "executorDisplayName": "Release Readiness Manager",
+        "isBlocked": false,
+        "blockedReason": null,
+        "branchGate": null
+      },
+      {
+        "stepInstanceId": "69d2a045-15bd-4f2c-8e62-6249c6ff2691",
+        "stepKey": "post-release-learning-after-repair",
+        "title": "Capture repaired-release learning",
+        "roleKey": "delivery-manager",
+        "executorKind": "agent",
+        "executorId": "b0c2a317-a417-385f-9f59-0f4a2c5b7ff2",
+        "executorDisplayName": "Delivery Manager",
+        "isBlocked": false,
+        "blockedReason": null,
+        "branchGate": null
+      }
+    ],
+    "readinessFindings": [
+      {
+        "severity": "Info",
+        "code": "process.launch.required_tool_receipt",
+        "message": "Step 'qa-validation' requires tool receipt 'qa-ui-runtime-start' for runtime tool 'workspace_dotnet_run'. Reason: QA must start the app before collecting current-run UI proof when the launch context requires browser validation.",
+        "stepKey": "qa-validation",
+        "roleKey": "qa-lead"
+      },
+      {
+        "severity": "Info",
+        "code": "process.launch.required_tool_receipt",
+        "message": "Step 'qa-validation' requires tool receipt 'qa-browser-navigate' for runtime tool 'browser_navigate'. Reason: QA browser proof must navigate to a concrete route before accepting UI evidence.",
+        "stepKey": "qa-validation",
+        "roleKey": "qa-lead"
+      },
+      {
+        "severity": "Info",
+        "code": "process.launch.required_tool_receipt",
+        "message": "Step 'qa-validation' requires tool receipt 'qa-browser-state' for runtime tool 'browser_snapshot'. Reason: QA browser proof must include durable browser state for the validated route.",
+        "stepKey": "qa-validation",
+        "roleKey": "qa-lead"
+      },
+      {
+        "severity": "Info",
+        "code": "process.launch.required_tool_receipt",
+        "message": "Step 'qa-validation' requires tool receipt 'qa-browser-evaluate' for runtime tool 'browser_evaluate'. Reason: QA browser proof must evaluate current visible or application state after a representative interaction before accepting UI behavior.",
+        "stepKey": "qa-validation",
+        "roleKey": "qa-lead"
+      },
+      {
+        "severity": "Info",
+        "code": "process.launch.required_tool_receipt",
+        "message": "Step 'qa-validation' requires tool receipt 'qa-browser-screenshot' for runtime tool 'browser_take_screenshot'. Reason: QA browser proof must include a current-run screenshot when UI evidence is required.",
+        "stepKey": "qa-validation",
+        "roleKey": "qa-lead"
+      },
+      {
+        "severity": "Info",
+        "code": "process.launch.required_tool_receipt",
+        "message": "Step 'qa-validation' requires tool receipt 'qa-browser-console' for runtime tool 'browser_console_messages'. Reason: QA browser proof must include console diagnostics for the validated route.",
+        "stepKey": "qa-validation",
+        "roleKey": "qa-lead"
+      },
+      {
+        "severity": "Info",
+        "code": "process.launch.required_tool_receipt",
+        "message": "Step 'qa-validation' requires tool receipt 'qa-ui-runtime-stop' for runtime tool 'workspace_dotnet_stop'. Reason: QA must clean up any app process started for browser validation.",
+        "stepKey": "qa-validation",
+        "roleKey": "qa-lead"
+      },
+      {
+        "severity": "Info",
+        "code": "process.launch.required_tool_receipt",
+        "message": "Step 'qa-validation' requires tool receipt 'qa-inspect-image' for runtime tool 'workspace_inspect_image'. Reason: QA visual comparison must inspect screenshot images before accepting visual evidence.",
+        "stepKey": "qa-validation",
+        "roleKey": "qa-lead"
+      },
+      {
+        "severity": "Info",
+        "code": "process.launch.required_tool_receipt",
+        "message": "Step 'qa-validation' requires tool receipt 'qa-analyze-image' for runtime tool 'workspace_analyze_image'. Reason: QA visual claims must be grounded in provider-backed image analysis.",
+        "stepKey": "qa-validation",
+        "roleKey": "qa-lead"
+      },
+      {
+        "severity": "Info",
+        "code": "process.launch.required_tool_receipt",
+        "message": "Step 'qa-validation' requires tool receipt 'qa-compare-images' for runtime tool 'workspace_analyze_images'. Reason: QA must compare delivered screenshots with source visual targets when target images exist.",
+        "stepKey": "qa-validation",
+        "roleKey": "qa-lead"
+      },
+      {
+        "severity": "Info",
+        "code": "process.launch.scoped_instruction_fragment",
+        "message": "Step 'qa-validation' adds scoped instruction fragment 'qa-prevalidation-screenshot-disposition'.",
+        "stepKey": "qa-validation",
+        "roleKey": "qa-lead"
+      },
+      {
+        "severity": "Info",
+        "code": "process.launch.required_tool_receipt",
+        "message": "Step 'qa-recheck' requires tool receipt 'qa-recheck-ui-runtime-start' for runtime tool 'workspace_dotnet_run'. Reason: QA recheck must start the repaired app before collecting current-run UI proof when the launch context requires browser validation.",
+        "stepKey": "qa-recheck",
+        "roleKey": "qa-lead"
+      },
+      {
+        "severity": "Info",
+        "code": "process.launch.required_tool_receipt",
+        "message": "Step 'qa-recheck' requires tool receipt 'qa-recheck-browser-navigate' for runtime tool 'browser_navigate'. Reason: QA recheck browser proof must navigate to a concrete route before accepting UI evidence.",
+        "stepKey": "qa-recheck",
+        "roleKey": "qa-lead"
+      },
+      {
+        "severity": "Info",
+        "code": "process.launch.required_tool_receipt",
+        "message": "Step 'qa-recheck' requires tool receipt 'qa-recheck-browser-state' for runtime tool 'browser_snapshot'. Reason: QA recheck browser proof must include durable browser state for the validated route.",
+        "stepKey": "qa-recheck",
+        "roleKey": "qa-lead"
+      },
+      {
+        "severity": "Info",
+        "code": "process.launch.required_tool_receipt",
+        "message": "Step 'qa-recheck' requires tool receipt 'qa-recheck-browser-evaluate' for runtime tool 'browser_evaluate'. Reason: QA recheck must evaluate repaired visible or application state after a representative interaction before accepting UI behavior.",
+        "stepKey": "qa-recheck",
+        "roleKey": "qa-lead"
+      },
+      {
+        "severity": "Info",
+        "code": "process.launch.required_tool_receipt",
+        "message": "Step 'qa-recheck' requires tool receipt 'qa-recheck-browser-screenshot' for runtime tool 'browser_take_screenshot'. Reason: QA recheck browser proof must include a current-run screenshot when UI evidence is required.",
+        "stepKey": "qa-recheck",
+        "roleKey": "qa-lead"
+      },
+      {
+        "severity": "Info",
+        "code": "process.launch.required_tool_receipt",
+        "message": "Step 'qa-recheck' requires tool receipt 'qa-recheck-browser-console' for runtime tool 'browser_console_messages'. Reason: QA recheck browser proof must include console diagnostics for the validated route.",
+        "stepKey": "qa-recheck",
+        "roleKey": "qa-lead"
+      },
+      {
+        "severity": "Info",
+        "code": "process.launch.required_tool_receipt",
+        "message": "Step 'qa-recheck' requires tool receipt 'qa-recheck-ui-runtime-stop' for runtime tool 'workspace_dotnet_stop'. Reason: QA recheck must clean up any app process started for browser validation.",
+        "stepKey": "qa-recheck",
+        "roleKey": "qa-lead"
+      },
+      {
+        "severity": "Info",
+        "code": "process.launch.required_tool_receipt",
+        "message": "Step 'qa-recheck' requires tool receipt 'qa-recheck-inspect-image' for runtime tool 'workspace_inspect_image'. Reason: QA recheck visual comparison must inspect screenshot images before accepting visual evidence.",
+        "stepKey": "qa-recheck",
+        "roleKey": "qa-lead"
+      },
+      {
+        "severity": "Info",
+        "code": "process.launch.required_tool_receipt",
+        "message": "Step 'qa-recheck' requires tool receipt 'qa-recheck-analyze-image' for runtime tool 'workspace_analyze_image'. Reason: QA recheck visual claims must be grounded in provider-backed image analysis.",
+        "stepKey": "qa-recheck",
+        "roleKey": "qa-lead"
+      },
+      {
+        "severity": "Info",
+        "code": "process.launch.required_tool_receipt",
+        "message": "Step 'qa-recheck' requires tool receipt 'qa-recheck-compare-images' for runtime tool 'workspace_analyze_images'. Reason: QA recheck must compare repaired screenshots with source visual targets when target images exist.",
+        "stepKey": "qa-recheck",
+        "roleKey": "qa-lead"
+      },
+      {
+        "severity": "Info",
+        "code": "process.launch.scoped_instruction_fragment",
+        "message": "Step 'qa-recheck' adds scoped instruction fragment 'qa-recheck-prevalidation-screenshot-disposition'.",
+        "stepKey": "qa-recheck",
+        "roleKey": "qa-lead"
+      },
+      {
+        "severity": "Info",
+        "code": "process.launch.readiness_ok",
+        "message": "All executable steps have active agent bindings with enabled governed-output-capable providers.",
+        "stepKey": null,
+        "roleKey": null
+      }
+    ]
+  },
+  "warnings": []
+}

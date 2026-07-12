@@ -12,11 +12,16 @@ internal sealed class WorkspaceCommandReceiptWriter
 
     private readonly string workspaceRoot;
     private readonly WorkspaceScopeDescriptor workspaceScope;
+    private readonly IReadOnlyList<IWorkspaceCommandReceiptLifecycleFactExtractor> lifecycleFactExtractors;
 
-    public WorkspaceCommandReceiptWriter(string workspaceRoot, WorkspaceScopeDescriptor? workspaceScope = null)
+    public WorkspaceCommandReceiptWriter(
+        string workspaceRoot,
+        WorkspaceScopeDescriptor? workspaceScope = null,
+        IEnumerable<IWorkspaceCommandReceiptLifecycleFactExtractor>? lifecycleFactExtractors = null)
     {
         this.workspaceRoot = Path.GetFullPath(workspaceRoot);
         this.workspaceScope = workspaceScope ?? WorkspaceScopeDescriptor.Sandbox;
+        this.lifecycleFactExtractors = lifecycleFactExtractors?.ToArray() ?? [];
     }
 
     public WorkspaceToolReceipt PersistProcessReceipt(
@@ -28,7 +33,8 @@ internal sealed class WorkspaceCommandReceiptWriter
         IReadOnlyList<string> targetPaths,
         bool mutatesWorkspace,
         string message,
-        WorkspaceProcessExecutionResult processResult)
+        WorkspaceProcessExecutionResult processResult,
+        ToolExecutionSideEffectMode declaredSideEffectMode = ToolExecutionSideEffectMode.Unspecified)
     {
         var artifactDirectory = ResolveArtifactDirectory(recipeId, processResult.StartedAtUtc);
         Directory.CreateDirectory(artifactDirectory.FullPath);
@@ -103,6 +109,13 @@ internal sealed class WorkspaceCommandReceiptWriter
                 ? processResult.ExitCode == 0 ? "Succeeded" : "Failed"
                 : "Failed";
 
+        var auditedRequestSummary = BuildAuditedProcessRequestSummary(
+            toolName,
+            arguments,
+            targetPaths,
+            processResult.Stdout,
+            processResult.Stderr);
+
         return CreateAuditedReceipt(
             operation: toolName,
             mutatesWorkspace: mutatesWorkspace,
@@ -118,11 +131,12 @@ internal sealed class WorkspaceCommandReceiptWriter
             riskClass: decision.RiskClass,
             approvalMode: decision.ApprovalRequired ? "Required" : "NotRequired",
             isolationGuarantee: BuildBoundarySummary(processResult.Boundary),
-            requestSummary: BuildArgumentsSummary(arguments),
+            requestSummary: auditedRequestSummary,
             workingDirectory: workingDirectory,
             exitSummary: processResult.Started
                 ? $"{outcome} (exit {processResult.ExitCode})"
-                : $"Failed ({processResult.FailureMessage})");
+                : $"Failed ({processResult.FailureMessage})",
+            declaredSideEffectMode: declaredSideEffectMode);
     }
 
     public WorkspaceToolReceipt PersistDescriptorReceipt(
@@ -211,7 +225,8 @@ internal sealed class WorkspaceCommandReceiptWriter
         string isolationGuarantee,
         string requestSummary,
         string workingDirectory,
-        string exitSummary)
+        string exitSummary,
+        ToolExecutionSideEffectMode declaredSideEffectMode = ToolExecutionSideEffectMode.Unspecified)
     {
         var receipt = new WorkspaceToolReceipt(
             Operation: operation,
@@ -225,7 +240,8 @@ internal sealed class WorkspaceCommandReceiptWriter
             StartedAtUtc: startedAtUtc,
             CompletedAtUtc: completedAtUtc)
         {
-            ExecutionRunId = WorkspaceExecutionAuditContext.Current?.ExecutionRunId
+            ExecutionRunId = WorkspaceExecutionAuditContext.Current?.ExecutionRunId,
+            DeclaredSideEffectMode = declaredSideEffectMode
         };
 
         WorkspaceExecutionAuditTrailWriter.PersistReceipt(
@@ -249,6 +265,38 @@ internal sealed class WorkspaceCommandReceiptWriter
 
     public static string BuildArgumentsSummary(IReadOnlyList<string> arguments)
         => string.Join(" ", arguments.Select(QuoteArgumentIfNeeded));
+
+    private string BuildAuditedProcessRequestSummary(
+        string toolName,
+        IReadOnlyList<string> arguments,
+        IReadOnlyList<string> targetPaths,
+        string? stdout,
+        string? stderr)
+    {
+        var summary = BuildArgumentsSummary(arguments);
+        var context = new WorkspaceCommandReceiptLifecycleFactContext(
+            toolName,
+            arguments,
+            targetPaths,
+            stdout,
+            stderr);
+        var lifecycleFacts = lifecycleFactExtractors
+            .SelectMany(extractor => extractor.Extract(context))
+            .Select(fact => fact.Format())
+            .Where(fact => !string.IsNullOrWhiteSpace(fact))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Take(6)
+            .ToArray();
+
+        if (lifecycleFacts.Length == 0)
+        {
+            return summary;
+        }
+
+        return string.IsNullOrWhiteSpace(summary)
+            ? string.Join("; ", lifecycleFacts)
+            : $"{summary}; {string.Join("; ", lifecycleFacts)}";
+    }
 
     private ArtifactDirectory ResolveArtifactDirectory(string recipeId, DateTimeOffset startedAtUtc)
     {

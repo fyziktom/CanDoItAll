@@ -1,5 +1,6 @@
 using CanDoItAll.Processes.Abstractions;
 using CanDoItAll.Processes.Builder;
+using CanDoItAll.Processes.Contracts;
 using CanDoItAll.Processes.Drivers.Abstractions;
 using CanDoItAll.Processes.Runtime;
 using CanDoItAll.Processes.Templates;
@@ -33,7 +34,10 @@ public sealed record ProcessLaunchExecutorOverride(
     string ExecutorKind,
     string ExecutorId,
     string ExecutorDisplayName,
-    string AssignmentReason);
+    string AssignmentReason)
+{
+    public ProcessWorkflowExecutorBinding? WorkflowBinding { get; init; }
+}
 
 public sealed record ProcessLaunchResult(
     ProcessDefinitionId DefinitionId,
@@ -77,6 +81,8 @@ public sealed record ProcessLaunchStepView(
     string? BlockedReason,
     ProcessRuntimeBranchGate? BranchGate)
 {
+    public ProcessWorkflowExecutorBinding? WorkflowBinding { get; init; }
+
     public IReadOnlyList<string> AllowedOperations { get; init; } = [];
 
     public string OperationTargetScope { get; init; } = string.Empty;
@@ -84,6 +90,10 @@ public sealed record ProcessLaunchStepView(
     public string RoleResourceKey { get; init; } = string.Empty;
 
     public string RoleDisplayName { get; init; } = string.Empty;
+
+    public ProcessCapabilityScope CapabilityScope { get; init; } = ProcessCapabilityScope.Empty;
+
+    public IReadOnlyList<string> RequiredRuntimeToolNames { get; init; } = [];
 }
 
 public sealed record ProcessLaunchReadinessFinding(
@@ -120,7 +130,10 @@ public sealed record ProcessLaunchExecutorBinding(
     string ExecutorId,
     string ExecutorDisplayName,
     string ReadinessHash,
-    string AssignmentReason);
+    string AssignmentReason)
+{
+    public ProcessWorkflowExecutorBinding? WorkflowBinding { get; init; }
+}
 
 public interface IProcessLaunchExecutorResolver
 {
@@ -160,6 +173,12 @@ public static class ProcessLaunchExecutorKinds
         var normalized = NormalizeExecutorKind(executorKind);
         return normalized is "agent" or "aiagent" or "personoragent";
     }
+
+    public static bool IsWorkflow(string executorKind)
+        => string.Equals(
+            NormalizeExecutorKind(executorKind),
+            Workflow,
+            StringComparison.Ordinal);
 
     private static string NormalizeExecutorKind(string executorKind)
         => string.IsNullOrWhiteSpace(executorKind)

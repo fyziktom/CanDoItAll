@@ -177,6 +177,10 @@ else
                         </FormSection>
                     </TabsItem>
 
+                    <TabsItem Text="Memory">
+                        <AgentMemorySettingsPanel Value="@editorModel.MemoryAccess" />
+                    </TabsItem>
+
                     <TabsItem Text="Images">
                         <FormSection Title="Image Generation" Description="Control whether this agent may generate image deliverables and which image provider it should use.">
                             <Grid Gap="LayoutGap.Large" ColumnsMd="3" data-testid="agents-catalog-image-generation-access">

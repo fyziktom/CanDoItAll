@@ -1,0 +1,28 @@
+SB01 focused semantic unit proof
+
+RunLabel: SB01-CONTRACT-OWNERSHIP
+RunLabel: SB01-CONTRIBUTION-IDENTITY
+RunLabel: SB01-PLUGIN-DESCRIPTOR-PARITY
+Command: dotnet test tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj -nologo --no-build --filter "FullyQualifiedName~WorkflowCoreExtractionTests|FullyQualifiedName~WorkflowRuntimeExtractionTests|FullyQualifiedName~WorkflowFoundationHardeningCheckpointTests|FullyQualifiedName~WorkflowExecutorContributionTests|FullyQualifiedName~WorkflowExecutorCategoryIsolationTests|FullyQualifiedName~WorkflowExecutorFoundationExtractionTests|FullyQualifiedName~PluginWorkflowExecutorBoundaryTests|FullyQualifiedName~WorkflowExecutorHardeningCheckpointTests|FullyQualifiedName~WorkflowExecutorTests|FullyQualifiedName~WorkflowExecutorPolicyObservabilityTests|FullyQualifiedName~PluginManifestTests"
+WorkingDirectory: repo://
+ExitCode: 0
+
+Result:
+- Failed: 0
+- Passed: 129
+- Skipped: 0
+- Total: 129
+- Duration: 4 seconds
+
+Test name: WorkflowContractsAreOwnedOnlyByWorkflowAbstractions
+Test name: WorkflowCoreProjectDoesNotReferenceForbiddenImplementationProjects
+Test name: WorkflowRuntimeRegistrationExtensionOwnsRuntimeServiceRegistrations
+Test name: CoreServicesResolveStandardContributionAndCompatibilityAliasWithoutDuplicates
+Test name: CoreServicesRejectDuplicateContributionIds
+Test name: CoreServicesRejectRunnableLegacyDescriptorWithoutImplementation
+Test name: CoreServicesRejectMismatchedLegacyDescriptorAndImplementation
+Test name: DescriptorOnlyContributionPreservesPlannedExecutorWithoutImplementation
+Test name: PluginManifestProjectionPreservesStableContributionMetadata
+Test name: RuntimePackageRegistrationRejectsManifestImplementationCountMismatch
+Test name: RuntimePackageContributionRejectsManifestRuntimeIdMismatch
+Test name: PluginModuleDoesNotRegisterLegacyWorkflowExecutorDescriptorSource

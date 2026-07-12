@@ -41,8 +41,8 @@ Use an explicit branch router node to decide whether the authored change goes to
 - `security-review` / Security review — Route the change into security and data-handling review.
 - `architecture-review` / Architecture review — Escalate architectural consequences that exceed local code review authority.
 - `ready-for-merge` / Ready for merge — Send the change directly to the merge approval lane.
-- `__default__` / Default — Continue when no explicit branch outcome is selected.
-- `__error__` / Error — Escalate canvas or runtime authoring failures that prevent a safe routing decision.
+- `default` / Default — Continue when no explicit branch outcome is selected.
+- `error` / Error — Escalate canvas or runtime authoring failures that prevent a safe routing decision.
 
 ## Checklists
 - `review-router-safety-checklist`
@@ -53,3 +53,4 @@ Use an explicit branch router node to decide whether the authored change goes to
 
 ## Prompts
 - `prompt-review-normalization`
+

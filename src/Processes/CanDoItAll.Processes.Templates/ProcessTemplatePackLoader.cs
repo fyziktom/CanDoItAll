@@ -1,6 +1,10 @@
 using System.Reflection;
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Text.Json.Serialization.Metadata;
+using CanDoItAll.Processes.Contracts;
 
 namespace CanDoItAll.Processes.Templates;
 
@@ -36,7 +40,14 @@ public sealed class ProcessTemplatePackLoader
             Require(entry.RelativePath, "process relative path", loadedPack.RootPath),
             DefinitionFileName));
 
-        return ReadJson(definitionPath, ProcessTemplateJsonContext.Default.ProcessTemplateDefinitionDocument);
+        var definition = ReadJson(definitionPath, ProcessTemplateJsonContext.Default.ProcessTemplateDefinitionDocument);
+        ValidateDefinition(definition, definitionPath);
+        ResolveExecutionGuidance(
+            definition,
+            loadedPack.RootPath,
+            Require(entry.RelativePath, "process relative path", loadedPack.RootPath),
+            definitionPath);
+        return definition;
     }
 
     public IReadOnlyList<ProcessTemplateLiveRunProfileDocument> LoadLiveRunProfiles()
@@ -65,6 +76,7 @@ public sealed class ProcessTemplatePackLoader
         var manifestPath = Path.Combine(root, ManifestFileName);
         var manifest = ReadJson(manifestPath, ProcessTemplateJsonContext.Default.ProcessTemplatePackManifest);
         var definitions = new List<ProcessTemplateDefinitionSummary>(manifest.Processes.Count);
+        var loadedDefinitions = new List<(ProcessTemplateDefinitionDocument Definition, string DefinitionPath)>();
         var roleTemplateActions = LoadRoleTemplateActions(root);
 
         foreach (var entry in manifest.Processes.OrderBy(item => item.Key, StringComparer.OrdinalIgnoreCase))
@@ -72,12 +84,16 @@ public sealed class ProcessTemplatePackLoader
             var relativePath = Require(entry.RelativePath, "process relative path", manifestPath);
             var definitionPath = Path.GetFullPath(Path.Combine(root, relativePath, DefinitionFileName));
             var definition = ReadJson(definitionPath, ProcessTemplateJsonContext.Default.ProcessTemplateDefinitionDocument);
+            ValidateDefinition(definition, definitionPath);
+            ValidateExecutionGuidanceReferences(definition, root, relativePath, definitionPath);
             var key = Require(definition.Key, "definition key", definitionPath);
             if (!string.Equals(key, Require(entry.Key, "process key", manifestPath), StringComparison.OrdinalIgnoreCase))
             {
                 throw new InvalidOperationException(
                     $"Process template '{definitionPath}' key '{key}' does not match manifest key '{entry.Key}'.");
             }
+
+            loadedDefinitions.Add((definition, definitionPath));
 
             definitions.Add(new ProcessTemplateDefinitionSummary(
                 key,
@@ -108,6 +124,8 @@ public sealed class ProcessTemplatePackLoader
                 ProcessTemplateCanvasSummaryBuilder.Build(root, definition),
                 ProcessTemplateLibrarySummaryBuilder.Build(relativePath, definition)));
         }
+
+        ValidateForwardedChildContextArtifacts(loadedDefinitions);
 
         return new ProcessTemplatePack(root, manifest, definitions);
     }
@@ -154,6 +172,432 @@ public sealed class ProcessTemplatePackLoader
             stepRoleBindings);
     }
 
+    private static void ValidateDefinition(
+        ProcessTemplateDefinitionDocument definition,
+        string definitionPath)
+    {
+        ValidateLaunchDriverActivations(definition, definitionPath);
+
+        foreach (var step in definition.Steps)
+        {
+            ValidateExecutorPreferredSpecializationTags(step, definitionPath, definition.Key);
+            if (!string.Equals(step.StepKind, "Subprocess", StringComparison.OrdinalIgnoreCase) &&
+                string.IsNullOrWhiteSpace(step.SubprocessProcessKey))
+            {
+                ValidateStepExecutionContract(definition, step, definitionPath);
+                continue;
+            }
+
+            ValidateStepExecutionContract(definition, step, definitionPath);
+            ValidateSubprocessContract(definition, step, definitionPath);
+        }
+    }
+
+    private static void ValidateExecutionGuidanceReferences(
+        ProcessTemplateDefinitionDocument definition,
+        string packRoot,
+        string definitionRelativePath,
+        string definitionPath)
+    {
+        foreach (var step in definition.Steps)
+        {
+            var references = step.ExecutionGuidanceRefs
+                .Select(reference => Require(reference, "execution guidance reference", definitionPath))
+                .ToArray();
+            var duplicate = references
+                .GroupBy(reference => reference, StringComparer.OrdinalIgnoreCase)
+                .FirstOrDefault(group => group.Count() > 1);
+            if (duplicate is not null)
+            {
+                throw new InvalidOperationException(
+                    $"Process template step '{step.Key}' declares execution guidance reference '{duplicate.Key}' more than once in '{definitionPath}'.");
+            }
+
+            foreach (var reference in references)
+            {
+                var path = ResolveExecutionGuidancePath(packRoot, reference, definitionPath);
+                if (!File.Exists(path))
+                {
+                    throw new InvalidOperationException(
+                        $"Process template step '{step.Key}' references missing execution guidance '{reference}' in '{definitionPath}'.");
+                }
+
+                if (string.IsNullOrWhiteSpace(File.ReadAllText(path)))
+                {
+                    throw new InvalidOperationException(
+                        $"Process template step '{step.Key}' references empty execution guidance '{reference}' in '{definitionPath}'.");
+                }
+            }
+        }
+    }
+
+    private static void ResolveExecutionGuidance(
+        ProcessTemplateDefinitionDocument definition,
+        string packRoot,
+        string definitionRelativePath,
+        string definitionPath)
+    {
+        ValidateExecutionGuidanceReferences(definition, packRoot, definitionRelativePath, definitionPath);
+        foreach (var step in definition.Steps)
+        {
+            step.ResolvedExecutionGuidance = step.ExecutionGuidanceRefs
+                .Select(reference =>
+                {
+                    var path = ResolveExecutionGuidancePath(packRoot, reference, definitionPath);
+                    var content = File.ReadAllText(path).Trim();
+                    var contentHash = "sha256:" + Convert.ToHexString(
+                        SHA256.HashData(Encoding.UTF8.GetBytes(content))).ToLowerInvariant();
+                    return new ProcessTemplateExecutionGuidanceDocument(
+                        reference.Replace('\\', '/'),
+                        content,
+                        contentHash);
+                })
+                .ToArray();
+        }
+    }
+
+    private static string ResolveExecutionGuidancePath(
+        string packRoot,
+        string reference,
+        string definitionPath)
+    {
+        if (Path.IsPathRooted(reference))
+        {
+            throw new InvalidOperationException(
+                $"Execution guidance reference '{reference}' in '{definitionPath}' must be pack-relative.");
+        }
+
+        var normalizedPackRoot = Path.GetFullPath(packRoot);
+        var path = Path.GetFullPath(Path.Combine(
+            normalizedPackRoot,
+            reference.Replace('/', Path.DirectorySeparatorChar)));
+        var rootPrefix = normalizedPackRoot.EndsWith(Path.DirectorySeparatorChar)
+            ? normalizedPackRoot
+            : normalizedPackRoot + Path.DirectorySeparatorChar;
+        if (!path.StartsWith(rootPrefix, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException(
+                $"Execution guidance reference '{reference}' in '{definitionPath}' must remain inside the process template pack.");
+        }
+
+        if (!string.Equals(Path.GetExtension(path), ".md", StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException(
+                $"Execution guidance reference '{reference}' in '{definitionPath}' must reference a Markdown file.");
+        }
+
+        return path;
+    }
+
+    private static void ValidateExecutorPreferredSpecializationTags(
+        ProcessTemplateDefinitionStepDocument step,
+        string definitionPath,
+        string definitionKey)
+    {
+        if (step.ExecutorPreferredSpecializationTags.Any(string.IsNullOrWhiteSpace))
+        {
+            throw new InvalidOperationException(
+                $"Process template step '{definitionPath}:{definitionKey}.{step.Key}' has an empty executor specialization tag.");
+        }
+
+        var duplicateTag = step.ExecutorPreferredSpecializationTags
+            .GroupBy(tag => tag.Trim(), StringComparer.OrdinalIgnoreCase)
+            .FirstOrDefault(group => group.Count() > 1);
+        if (duplicateTag is not null)
+        {
+            throw new InvalidOperationException(
+                $"Process template step '{definitionPath}:{definitionKey}.{step.Key}' declares executor specialization tag '{duplicateTag.Key}' more than once.");
+        }
+    }
+
+    private static void ValidateLaunchDriverActivations(
+        ProcessTemplateDefinitionDocument definition,
+        string definitionPath)
+    {
+        var driverKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var activation in definition.LaunchDriverActivations)
+        {
+            var driverKey = Require(activation.DriverKey, "launch driver activation key", definitionPath);
+            if (!driverKeys.Add(driverKey))
+            {
+                throw new InvalidOperationException(
+                    $"Process template '{definitionPath}:{definition.Key}' declares launch driver '{driverKey}' more than once.");
+            }
+
+            foreach (var (settingKey, settingValue) in activation.Settings)
+            {
+                if (string.IsNullOrWhiteSpace(settingKey) || string.IsNullOrWhiteSpace(settingValue))
+                {
+                    throw new InvalidOperationException(
+                        $"Process template '{definitionPath}:{definition.Key}' launch driver '{driverKey}' has an empty setting key or value.");
+                }
+            }
+
+            var bindingKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var binding in activation.InputArtifactBindings)
+            {
+                var bindingKey = Require(binding.BindingKey, "launch driver artifact binding key", definitionPath);
+                Require(binding.SourceStepKey, "launch driver artifact binding source step key", definitionPath);
+                Require(binding.ArtifactExpectationKey, "launch driver artifact binding artifact expectation key", definitionPath);
+                Require(binding.PayloadSchema, "launch driver artifact binding payload schema", definitionPath);
+                if (!bindingKeys.Add(bindingKey))
+                {
+                    throw new InvalidOperationException(
+                        $"Process template '{definitionPath}:{definition.Key}' launch driver '{driverKey}' declares artifact binding '{bindingKey}' more than once.");
+                }
+            }
+        }
+    }
+
+    private static void ValidateStepExecutionContract(
+        ProcessTemplateDefinitionDocument definition,
+        ProcessTemplateDefinitionStepDocument step,
+        string definitionPath)
+    {
+        var stepPath = $"{definitionPath}:{definition.Key}.{step.Key}";
+        var executionClass = ResolveExecutionClass(step);
+        if (string.IsNullOrWhiteSpace(executionClass))
+        {
+            return;
+        }
+
+        if (!ProcessTemplateStepExecutionClasses.IsKnown(executionClass))
+        {
+            throw new InvalidOperationException(
+                $"Process template step '{stepPath}' has unknown executionClass '{executionClass}'.");
+        }
+
+        if (ProcessTemplateStepExecutionClasses.RequiresDeterministicToolPlan(executionClass) &&
+            step.ExecutionContract?.DeterministicToolPlan is null)
+        {
+            throw new InvalidOperationException(
+                $"Process template step '{stepPath}' executionClass '{executionClass}' requires ExecutionContract.DeterministicToolPlan.");
+        }
+
+        if (ProcessTemplateStepExecutionClasses.IsRuntimeOwnedToolPlan(executionClass) &&
+            string.IsNullOrWhiteSpace(step.ExecutionContract?.RuntimeOwnedExecutorKey))
+        {
+            throw new InvalidOperationException(
+                $"Process template step '{stepPath}' executionClass '{executionClass}' requires ExecutionContract.RuntimeOwnedExecutorKey.");
+        }
+
+        if (ProcessTemplateStepExecutionClasses.IsRuntimeOwnedToolPlan(executionClass) &&
+            step.ExecutionContract?.DeterministicToolPlan is { } runtimeOwnedPlan &&
+            (string.IsNullOrWhiteSpace(runtimeOwnedPlan.PlanKey) ||
+             string.IsNullOrWhiteSpace(runtimeOwnedPlan.PlanKind) ||
+             string.IsNullOrWhiteSpace(runtimeOwnedPlan.ExecutionPlanLaunchVariable)))
+        {
+            throw new InvalidOperationException(
+                $"Process template step '{stepPath}' runtime-owned deterministic tool plan requires PlanKey, PlanKind, and ExecutionPlanLaunchVariable.");
+        }
+    }
+
+    private static string ResolveExecutionClass(ProcessTemplateDefinitionStepDocument step)
+        => !string.IsNullOrWhiteSpace(step.ExecutionClass)
+            ? step.ExecutionClass.Trim()
+            : step.ExecutionContract?.ExecutionClass.Trim() ?? string.Empty;
+
+    private static void ValidateSubprocessContract(
+        ProcessTemplateDefinitionDocument definition,
+        ProcessTemplateDefinitionStepDocument step,
+        string definitionPath)
+    {
+        var stepPath = $"{definitionPath}:{definition.Key}.{step.Key}";
+        var contract = step.SubprocessContract
+            ?? throw new InvalidOperationException($"Process template subprocess step '{stepPath}' must define SubprocessContract.");
+        var childDefinitionKey = Require(contract.DefinitionKey, "subprocess contract definition key", stepPath);
+        var stepChildDefinitionKey = Require(step.SubprocessProcessKey, "subprocess step child process key", stepPath);
+        if (!string.Equals(childDefinitionKey, stepChildDefinitionKey, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException(
+                $"Process template subprocess step '{stepPath}' contract DefinitionKey '{childDefinitionKey}' does not match SubprocessProcessKey '{stepChildDefinitionKey}'.");
+        }
+
+        if (contract.LaunchMode != ProcessSubprocessLaunchMode.RuntimeOwned)
+        {
+            throw new InvalidOperationException($"Process template subprocess step '{stepPath}' must use RuntimeOwned subprocess launch mode.");
+        }
+
+        if (contract.MaterializationMode != ProcessSubprocessMaterializationMode.RuntimeSynthesizedParentHandoff)
+        {
+            throw new InvalidOperationException($"Process template subprocess step '{stepPath}' must use RuntimeSynthesizedParentHandoff materialization mode.");
+        }
+
+        var parentExpectationKey = Require(
+            contract.ParentProducedArtifactExpectationKey,
+            "subprocess parent produced artifact expectation key",
+            stepPath);
+        if (step.ArtifactExpectations.All(artifact =>
+                !string.Equals(artifact.Key, parentExpectationKey, StringComparison.OrdinalIgnoreCase)))
+        {
+            throw new InvalidOperationException(
+                $"Process template subprocess step '{stepPath}' contract parent expectation '{parentExpectationKey}' does not match any artifact expectation on the step.");
+        }
+
+        if (contract.AcceptedChildOutputs.Count == 0 && contract.AlreadySatisfiedOutput is null)
+        {
+            throw new InvalidOperationException(
+                $"Process template subprocess step '{stepPath}' must define at least one accepted child output or an AlreadySatisfiedOutput.");
+        }
+
+        ValidateChildOutputs(contract.AcceptedChildOutputs, step, stepPath, "accepted child output");
+        ValidateChildOutputs(contract.NoGoChildOutputs, step, stepPath, "no-go child output");
+        if (contract.AlreadySatisfiedOutput is not null)
+        {
+            ValidateChildOutput(contract.AlreadySatisfiedOutput, step, stepPath, "already-satisfied output");
+        }
+
+        if (step.AllowsManualSkip && contract.AlreadySatisfiedOutput is null)
+        {
+            throw new InvalidOperationException(
+                $"Process template subprocess step '{stepPath}' allows manual skip but does not define a typed AlreadySatisfiedOutput.");
+        }
+
+        ValidateForwardedChildContextArtifactShape(contract, stepPath);
+    }
+
+    private static void ValidateForwardedChildContextArtifactShape(
+        ProcessSubprocessContract contract,
+        string stepPath)
+    {
+        var bindingKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var forwardedArtifact in contract.ForwardedChildContextArtifacts)
+        {
+            var bindingKey = Require(
+                forwardedArtifact.BindingKey,
+                "forwarded child context artifact binding key",
+                stepPath);
+            Require(
+                forwardedArtifact.SourceStepKey,
+                "forwarded child context artifact source step key",
+                stepPath);
+            Require(
+                forwardedArtifact.ArtifactExpectationKey,
+                "forwarded child context artifact expectation key",
+                stepPath);
+            Require(
+                forwardedArtifact.PayloadSchema,
+                "forwarded child context artifact payload schema",
+                stepPath);
+            if (!bindingKeys.Add(bindingKey))
+            {
+                throw new InvalidOperationException(
+                    $"Process template subprocess step '{stepPath}' declares forwarded child context binding '{bindingKey}' more than once.");
+            }
+        }
+    }
+
+    private static void ValidateForwardedChildContextArtifacts(
+        IReadOnlyList<(ProcessTemplateDefinitionDocument Definition, string DefinitionPath)> definitions)
+    {
+        var definitionsByKey = definitions.ToDictionary(
+            item => item.Definition.Key,
+            StringComparer.OrdinalIgnoreCase);
+        foreach (var (parentDefinition, parentDefinitionPath) in definitions)
+        {
+            foreach (var parentStep in parentDefinition.Steps.Where(step => step.SubprocessContract is not null))
+            {
+                var contract = parentStep.SubprocessContract!;
+                if (contract.ForwardedChildContextArtifacts.Count == 0)
+                {
+                    continue;
+                }
+
+                var parentStepPath = $"{parentDefinitionPath}:{parentDefinition.Key}.{parentStep.Key}";
+                var childDefinitionKey = Require(
+                    contract.DefinitionKey,
+                    "subprocess contract definition key",
+                    parentStepPath);
+                if (!definitionsByKey.TryGetValue(childDefinitionKey, out var childDefinition))
+                {
+                    throw new InvalidOperationException(
+                        $"Process template subprocess step '{parentStepPath}' declares forwarded child context, but child definition '{childDefinitionKey}' is not present in the template pack.");
+                }
+
+                var outputStepKeys = contract.AcceptedChildOutputs
+                    .Concat(contract.NoGoChildOutputs)
+                    .Append(contract.AlreadySatisfiedOutput)
+                    .Where(output => output is not null && !string.IsNullOrWhiteSpace(output.StepKey))
+                    .Select(output => output!.StepKey.Trim())
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .ToArray();
+
+                foreach (var forwardedArtifact in contract.ForwardedChildContextArtifacts)
+                {
+                    var sourceStepKey = forwardedArtifact.SourceStepKey.Trim();
+                    var expectationKey = forwardedArtifact.ArtifactExpectationKey.Trim();
+                    var payloadSchema = forwardedArtifact.PayloadSchema.Trim();
+                    var producerStep = childDefinition.Definition.Steps.FirstOrDefault(step =>
+                        string.Equals(step.Key, sourceStepKey, StringComparison.OrdinalIgnoreCase));
+                    var expectation = producerStep?.ArtifactExpectations.FirstOrDefault(candidate =>
+                        string.Equals(candidate.Key, expectationKey, StringComparison.OrdinalIgnoreCase));
+                    if (producerStep is null || expectation is null)
+                    {
+                        throw new InvalidOperationException(
+                            $"Process template subprocess step '{parentStepPath}' forwarded child context binding '{forwardedArtifact.BindingKey}' does not resolve child artifact '{sourceStepKey}/{expectationKey}' in '{childDefinitionKey}'.");
+                    }
+
+                    if (!string.Equals(expectation.PayloadSchema?.Trim(), payloadSchema, StringComparison.Ordinal))
+                    {
+                        throw new InvalidOperationException(
+                            $"Process template subprocess step '{parentStepPath}' forwarded child context binding '{forwardedArtifact.BindingKey}' schema '{payloadSchema}' does not match child artifact '{sourceStepKey}/{expectationKey}' schema '{expectation.PayloadSchema}'.");
+                    }
+
+                    foreach (var outputStepKey in outputStepKeys)
+                    {
+                        var outputStep = childDefinition.Definition.Steps.FirstOrDefault(step =>
+                            string.Equals(step.Key, outputStepKey, StringComparison.OrdinalIgnoreCase));
+                        if (outputStep is null || !outputStep.ArtifactInputs.Any(input =>
+                                string.Equals(input.SourceStepKey, sourceStepKey, StringComparison.OrdinalIgnoreCase) &&
+                                string.Equals(input.ArtifactExpectationKey, expectationKey, StringComparison.OrdinalIgnoreCase)))
+                        {
+                            throw new InvalidOperationException(
+                                $"Process template subprocess step '{parentStepPath}' forwarded child context binding '{forwardedArtifact.BindingKey}' is not a typed input of child output step '{outputStepKey}' in '{childDefinitionKey}'.");
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private static void ValidateChildOutputs(
+        IReadOnlyList<ProcessSubprocessChildOutputContract> outputs,
+        ProcessTemplateDefinitionStepDocument parentStep,
+        string stepPath,
+        string outputKind)
+    {
+        foreach (var output in outputs)
+        {
+            ValidateChildOutput(output, parentStep, stepPath, outputKind);
+        }
+    }
+
+    private static void ValidateChildOutput(
+        ProcessSubprocessChildOutputContract output,
+        ProcessTemplateDefinitionStepDocument parentStep,
+        string stepPath,
+        string outputKind)
+    {
+        Require(output.StepKey, $"{outputKind} step key", stepPath);
+        if (string.IsNullOrWhiteSpace(output.ArtifactExpectationKey) &&
+            string.IsNullOrWhiteSpace(output.ArtifactTitle))
+        {
+            throw new InvalidOperationException(
+                $"Process template subprocess step '{stepPath}' {outputKind} must define ArtifactExpectationKey or ArtifactTitle.");
+        }
+
+        if (!string.IsNullOrWhiteSpace(output.ParentBranchOutcomeKey) &&
+            parentStep.BranchOutcomes.All(parentOutcome =>
+                !string.Equals(
+                    parentOutcome.Key,
+                    output.ParentBranchOutcomeKey,
+                    StringComparison.OrdinalIgnoreCase)))
+        {
+            throw new InvalidOperationException(
+                $"Process template subprocess step '{stepPath}' {outputKind} routes to unknown parent branch '{output.ParentBranchOutcomeKey}'.");
+        }
+    }
+
     private static ProcessTemplateDefinitionRoleSummary CreateRoleSummary(
         string root,
         string definitionRelativePath,
@@ -192,7 +636,10 @@ public sealed class ProcessTemplatePackLoader
                 ? "Local role without template source."
                 : $"Resolved from {roleTemplateSourceKey}.",
             usage.CanvasX,
-            usage.CanvasY);
+            usage.CanvasY)
+        {
+            WorkflowBinding = usage.WorkflowBinding
+        };
     }
 
     private static ProcessTemplateRoleResourceDocument? TryLoadRoleResource(
@@ -389,7 +836,10 @@ public sealed record ProcessTemplateDefinitionRoleSummary(
     string SnapshotSummary,
     string OverrideSummary,
     double CanvasX,
-    double CanvasY);
+    double CanvasY)
+{
+    public ProcessWorkflowExecutorBinding? WorkflowBinding { get; init; }
+}
 
 public sealed record ProcessTemplateRoleTemplateActionSummary(
     string ActionId,
@@ -434,8 +884,10 @@ public sealed record ProcessTemplateDefinitionStepAuthoringSummary(
     string ExceptionPolicySummary,
     IReadOnlyList<string> AllowedOperations,
     string OperationTargetScope,
+    ProcessCapabilityScope CapabilityScope,
     string SubprocessProcessKey,
     string SubprocessDefinitionSnapshotName,
+    ProcessSubprocessContract? SubprocessContract,
     IReadOnlyList<ProcessTemplateDefinitionStepBranchOutcomeSummary> BranchOutcomes,
     IReadOnlyList<ProcessTemplateDefinitionStepRoleBindingSummary> RoleBindings,
     IReadOnlyList<ProcessTemplateDefinitionStepArtifactExpectationSummary> ArtifactExpectations);
@@ -531,6 +983,8 @@ public sealed class ProcessTemplateLiveRunAssignmentDocument
     public string ExecutorKind { get; set; } = string.Empty;
 
     public string BindingReason { get; set; } = string.Empty;
+
+    public ProcessWorkflowExecutorBinding? WorkflowBinding { get; set; }
 }
 
 public sealed class ProcessTemplateLiveRunAcceptanceCriterionDocument
@@ -578,6 +1032,8 @@ public sealed class ProcessTemplateDefinitionDocument
 
     public string SimulationReadinessSummary { get; set; } = string.Empty;
 
+    public List<ProcessTemplateDriverActivationDocument> LaunchDriverActivations { get; set; } = [];
+
     public List<ProcessTemplateDefinitionRoleUsageDocument> RoleUsages { get; set; } = [];
 
     public List<ProcessTemplateDefinitionStepDocument> Steps { get; set; } = [];
@@ -596,6 +1052,8 @@ public sealed class ProcessTemplateDefinitionRoleUsageDocument
     public string StaffingIntent { get; set; } = string.Empty;
 
     public string PreferredExecutorKind { get; set; } = string.Empty;
+
+    public ProcessWorkflowExecutorBinding? WorkflowBinding { get; set; }
 
     public string PreferredProjectAssignmentRole { get; set; } = string.Empty;
 
@@ -644,6 +1102,8 @@ public sealed class ProcessTemplateDefinitionStepDocument
 
     public bool RequiresDecisionRecord { get; set; }
 
+    public bool AllowsCompletedOutcomeWithOpenIssues { get; set; }
+
     public string InputContractSummary { get; set; } = string.Empty;
 
     public string OutputContractSummary { get; set; } = string.Empty;
@@ -654,9 +1114,16 @@ public sealed class ProcessTemplateDefinitionStepDocument
 
     public string ExceptionPolicySummary { get; set; } = string.Empty;
 
+    public List<string> ExecutionGuidanceRefs { get; set; } = [];
+
+    [JsonIgnore]
+    public IReadOnlyList<ProcessTemplateExecutionGuidanceDocument> ResolvedExecutionGuidance { get; set; } = [];
+
     public List<string> AllowedOperations { get; set; } = [];
 
     public string OperationTargetScope { get; set; } = string.Empty;
+
+    public ProcessCapabilityScope CapabilityScope { get; set; } = ProcessCapabilityScope.Empty;
 
     public string DependsOnStepKey { get; set; } = string.Empty;
 
@@ -664,9 +1131,19 @@ public sealed class ProcessTemplateDefinitionStepDocument
 
     public string DecisionRoleKey { get; set; } = string.Empty;
 
+    public List<string> ExecutorPreferredSpecializationTags { get; set; } = [];
+
     public string SubprocessProcessKey { get; set; } = string.Empty;
 
     public string SubprocessDefinitionSnapshotName { get; set; } = string.Empty;
+
+    public ProcessSubprocessContract? SubprocessContract { get; set; }
+
+    public string ExecutionClass { get; set; } = string.Empty;
+
+    public ProcessTemplateStepExecutionContractDocument? ExecutionContract { get; set; }
+
+    public ProcessTemplateStepCompletionPolicyDocument? CompletionPolicy { get; set; }
 
     public double CanvasX { get; set; }
 
@@ -686,6 +1163,11 @@ public sealed class ProcessTemplateDefinitionStepDocument
 
     public List<ProcessTemplateDefinitionStepBranchOutcomeDocument> BranchOutcomes { get; set; } = [];
 }
+
+public sealed record ProcessTemplateExecutionGuidanceDocument(
+    string Reference,
+    string Content,
+    string ContentHash);
 
 public sealed class ProcessTemplateDefinitionArtifactInputDocument
 {
@@ -708,6 +1190,8 @@ public sealed class ProcessTemplateDefinitionStepBranchOutcomeDocument
     public string Title { get; set; } = string.Empty;
 
     public string Description { get; set; } = string.Empty;
+
+    public bool AllowsCompletedOutcomeWithOpenIssues { get; set; }
 
     public string RouteTargetKind { get; set; } = string.Empty;
 
@@ -746,6 +1230,8 @@ public sealed class ProcessTemplateDefinitionArtifactExpectationDocument
     public string Title { get; set; } = string.Empty;
 
     public string ArtifactKind { get; set; } = string.Empty;
+
+    public string PayloadSchema { get; set; } = string.Empty;
 
     public bool IsRequired { get; set; }
 

@@ -44,7 +44,10 @@ public sealed record ProcessLiveRunEventProjection(
     DateTimeOffset OccurredAtUtc,
     ProcessProjectedSensitivity Sensitivity,
     string Summary,
-    string? RestrictedDiagnosticReference);
+    string? RestrictedDiagnosticReference)
+{
+    public IReadOnlyList<ProcessRuntimeDiagnosticProjection> Diagnostics { get; init; } = [];
+}
 
 public sealed record ProcessLiveProcessSnapshot(
     ProcessRunId RootRunId,
@@ -71,6 +74,8 @@ public sealed record ProcessLiveProcessSnapshot(
 
     public ProcessRuntimeCurrentStepProjection? CurrentStep { get; init; }
 
+    public IReadOnlyList<ProcessRuntimeDiagnosticProjection> Diagnostics { get; init; } = [];
+
     public int ExecutableStepCount { get; init; }
 
     public int CompletedStepCount { get; init; }
@@ -94,7 +99,62 @@ public sealed record ProcessRuntimeCurrentStepProjection(
     DateTimeOffset UpdatedAtUtc,
     DateTimeOffset? ClaimedAtUtc,
     DateTimeOffset? LeaseExpiresAtUtc,
-    string Summary);
+    string Summary)
+{
+    public IReadOnlyList<ProcessRuntimeDiagnosticProjection> Diagnostics { get; init; } = [];
+
+    public IReadOnlyList<ProcessRuntimeArtifactLineageProjection> ProducedArtifacts { get; init; } = [];
+}
+
+public sealed record ProcessRuntimeDiagnosticProjection(
+    Guid RunId,
+    Guid StepInstanceId,
+    string StepKey,
+    string StrategyId,
+    string ResultHash,
+    string Code,
+    string Category,
+    string SafeSummary,
+    string Sensitivity,
+    string RetrySafety,
+    string Idempotency,
+    string? RestrictedDiagnosticReference)
+{
+    public ProcessRuntimeOperatorDiagnosticDetailsProjection? OperatorDetails { get; init; }
+}
+
+public sealed record ProcessRuntimeOperatorDiagnosticDetailsProjection(
+    string GateId,
+    string BranchOutcomeKey,
+    string RouteTargetBranchOutcomeKey,
+    IReadOnlyList<string> FailedCriteriaIds,
+    IReadOnlyList<string> ReceiptRuleIds,
+    string NextAction);
+
+public sealed record ProcessRuntimeArtifactLineageProjection(
+    Guid SlotId,
+    Guid ArtifactId,
+    string ContentHash);
+
+public sealed record ProcessRuntimeRecoveryDecisionProjection(
+    string FailureCategory,
+    string DecisionKind,
+    string SourceDiagnosticCode,
+    string Policy,
+    string SafeReason);
+
+public sealed record ProcessRuntimeResultLineageProjection(
+    Guid RunId,
+    Guid StepInstanceId,
+    string StepKey,
+    string StrategyId,
+    Guid IdempotencyKey,
+    string Outcome,
+    string AppliedStepStatus,
+    string ResultHash,
+    IReadOnlyList<ProcessRuntimeDiagnosticProjection> Diagnostics,
+    IReadOnlyList<ProcessRuntimeArtifactLineageProjection> ProducedArtifacts,
+    ProcessRuntimeRecoveryDecisionProjection? RecoveryDecision);
 
 public sealed record ProcessRuntimeChildRunWaitProjection(
     Guid ParentRunId,
@@ -137,7 +197,12 @@ public sealed record ProcessRunDetailProjection(
     DateTimeOffset FirstEventAtUtc,
     DateTimeOffset LastEventAtUtc,
     ProcessProjectionFreshness Freshness,
-    IReadOnlyList<ProcessLiveRunEventProjection> RecentEvents);
+    IReadOnlyList<ProcessLiveRunEventProjection> RecentEvents)
+{
+    public IReadOnlyList<ProcessRuntimeDiagnosticProjection> Diagnostics { get; init; } = [];
+
+    public IReadOnlyList<ProcessRuntimeResultLineageProjection> ResultLineage { get; init; } = [];
+}
 
 public sealed record ProcessTimelineEventProjection(
     RuntimeEventId EventId,
@@ -148,7 +213,10 @@ public sealed record ProcessTimelineEventProjection(
     DateTimeOffset OccurredAtUtc,
     ProcessProjectedSensitivity Sensitivity,
     string Summary,
-    string? RestrictedDiagnosticReference);
+    string? RestrictedDiagnosticReference)
+{
+    public IReadOnlyList<ProcessRuntimeDiagnosticProjection> Diagnostics { get; init; } = [];
+}
 
 public sealed record ProcessIncidentProjection(
     string IncidentId,

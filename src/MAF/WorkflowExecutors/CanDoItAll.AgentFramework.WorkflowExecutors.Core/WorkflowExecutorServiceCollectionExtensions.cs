@@ -9,10 +9,18 @@ public static class WorkflowExecutorServiceCollectionExtensions
     {
         ArgumentNullException.ThrowIfNull(services);
 
+        services.TryAddScoped<WorkflowExecutorContributionSet>();
         services.TryAddScoped<IWorkflowExecutorCatalog>(serviceProvider =>
-            WorkflowExecutorCatalog.FromDescriptorSources(serviceProvider.GetServices<IWorkflowExecutorDescriptorSource>()));
+            WorkflowExecutorCatalog.FromDescriptors(
+                serviceProvider.GetRequiredService<WorkflowExecutorContributionSet>().Descriptors));
         services.TryAddScoped<IWorkflowExecutorExecutionObserver, CompositeWorkflowExecutorExecutionObserver>();
-        services.TryAddScoped<IWorkflowExecutorInvoker, WorkflowExecutorInvoker>();
+        services.TryAddScoped<IWorkflowExecutorInvoker>(serviceProvider =>
+            new WorkflowExecutorInvoker(
+                serviceProvider.GetRequiredService<IWorkflowExecutorCatalog>(),
+                serviceProvider.GetRequiredService<WorkflowExecutorContributionSet>().ValidateImplementations(
+                    serviceProvider.GetServices<IWorkflowExecutor>()),
+                serviceProvider.GetService<IWorkflowExecutorExecutionObserver>(),
+                serviceProvider.GetService<IWorkflowExecutorApprovalGate>()));
 
         return services;
     }

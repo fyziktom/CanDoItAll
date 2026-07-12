@@ -21,15 +21,19 @@ public sealed partial class CapabilityProofService : ICapabilityProofService
         "provider-native-web-search",
         "workspace-search",
         "workspace-read-file",
+        "workspace-list-directory",
         "workspace-list-files",
         "workspace-execution-boundary",
         "workspace-stat-path",
+        "workspace-hash-path",
         "workspace-create-directory",
         "workspace-write-file",
         "workspace-append-file",
         "workspace-copy-path",
         "workspace-move-path",
         "workspace-delete-path",
+        "workspace-zip-path",
+        "workspace-unzip-archive",
         "workspace-diff-text",
         "workspace-git-status",
         "workspace-git-diff",
@@ -41,6 +45,11 @@ public sealed partial class CapabilityProofService : ICapabilityProofService
         "workspace-pwsh-run-script",
         "workspace-convert-document",
         "workspace-inspect-spreadsheet",
+        "workspace-spreadsheet-summary",
+        "workspace-read-spreadsheet-cell",
+        "workspace-read-spreadsheet-range",
+        "workspace-write-spreadsheet",
+        "workspace-spreadsheet-function-catalog",
         "workspace-plugin"
     };
 
@@ -68,7 +77,7 @@ public sealed partial class CapabilityProofService : ICapabilityProofService
             CapabilityKind.McpServer => await VerifyMcpCapabilityAsync(agent, provider, capability, notes, checkedAt, cancellationToken),
             CapabilityKind.Rag => VerifyRagCapability(capability, notes, checkedAt),
             CapabilityKind.AiContext => VerifyAiContextCapability(capability, notes, checkedAt),
-            CapabilityKind.Memory => VerifyMemoryCapability(capability, notes, checkedAt),
+            CapabilityKind.Memory => Failed(LegacyMemoryCapabilityPolicy.BuildDiagnostic(capability.Name), checkedAt),
             _ => PendingReview("Capability kind is recorded, but this sandbox does not have a verification rule for it yet.", checkedAt)
         };
     }

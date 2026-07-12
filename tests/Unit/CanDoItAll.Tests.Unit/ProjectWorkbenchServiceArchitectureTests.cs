@@ -1,6 +1,7 @@
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.AgentFramework.Tooling;
+using CanDoItAll.Memory.Application;
 using CanDoItAll.Modules.Factory;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Workbench;
@@ -63,6 +64,12 @@ public sealed class ProjectWorkbenchServiceArchitectureTests
             services,
             descriptor => descriptor.ServiceType == typeof(IProjectWorkbenchSeedService) &&
                 descriptor.Lifetime == ServiceLifetime.Scoped);
+        Assert.Contains(
+            services,
+            descriptor => descriptor.ServiceType == typeof(IMemorySourceGatewayAdapter) &&
+                descriptor.ImplementationType == typeof(WorkbenchProjectStructureMemorySourceGatewayAdapter) &&
+                descriptor.Lifetime == ServiceLifetime.Scoped);
+        AssertScoped<ProjectMemoryIngestionService>(services);
     }
 
     private static void AssertScoped<TService>(IServiceCollection services)

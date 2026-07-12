@@ -843,7 +843,7 @@ public sealed class ProjectStructureAgentIntegrationTests
         Assert.Equal(outputRoot, assignment.LaunchVariables["OutputRoot"]);
         var contextSummary = assignment.LaunchVariables["ProjectStructureContextSummary"];
         Assert.Contains("Blazor WASM PWA app shape", contextSummary, StringComparison.Ordinal);
-        Assert.Contains(outputRoot, contextSummary, StringComparison.Ordinal);
+        Assert.DoesNotContain(outputRoot, contextSummary, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("Visual target assets:", contextSummary, StringComparison.Ordinal);
         Assert.Contains(visualTargetAsset.Id, contextSummary, StringComparison.Ordinal);
         Assert.Contains("calculator-target.png", contextSummary, StringComparison.Ordinal);
@@ -930,6 +930,7 @@ public sealed class ProjectStructureAgentIntegrationTests
         var parentAssignment = Assert.Single(parentAssignments, item => item.StepKey == "architecture-review");
         var parentLaunchVariables = new Dictionary<string, string>(parentAssignment.LaunchVariables, StringComparer.Ordinal)
         {
+            ["ProductTargetFilesystemState"] = "forged-parent-state",
             ["OperationTargetScope"] = ProcessOperationContractNames.ExternalActionControlled,
             ["AllowedOperations"] = ProcessOperationContractNames.ExecuteExternalAction,
             ["ProcessStepAllowedOperations"] = ProcessOperationContractNames.ExecuteExternalAction,
@@ -955,6 +956,7 @@ public sealed class ProjectStructureAgentIntegrationTests
                 DefinitionKey: "dotnet-architecture-design-review",
                 Variables: new Dictionary<string, object?>(StringComparer.Ordinal)
                 {
+                    ["ProductTargetFilesystemState"] = "forged-request-state",
                     ["ProjectNodeId"] = "attempted-scope-escape",
                     ["OperationTargetScope"] = ProcessOperationContractNames.ExternalActionControlled,
                     ["AllowedOperations"] = ProcessOperationContractNames.ExecuteExternalAction,
@@ -1004,6 +1006,13 @@ public sealed class ProjectStructureAgentIntegrationTests
         Assert.NotEmpty(childAssignments);
         Assert.All(childAssignments, assignment =>
         {
+            Assert.True(assignment.LaunchVariables.TryGetValue("ProductTargetFilesystemState", out var targetFilesystemState));
+            Assert.NotEqual("forged-parent-state", targetFilesystemState);
+            Assert.NotEqual("forged-request-state", targetFilesystemState);
+            Assert.Contains(
+                targetFilesystemState,
+                ["missing", "empty", "populated", "not-directory", "unavailable"],
+                StringComparer.OrdinalIgnoreCase);
             Assert.Equal("True", assignment.LaunchVariables["includeLaunchPlan"]);
             Assert.Equal("3", assignment.LaunchVariables["subprocessPriority"]);
             Assert.DoesNotContain("OperationTargetScope", assignment.LaunchVariables.Keys);
@@ -1034,15 +1043,8 @@ public sealed class ProjectStructureAgentIntegrationTests
         Assert.Contains("Producer step: draft-architecture-design - Draft .NET architecture design", reviewAssignment.Prompt, StringComparison.Ordinal);
         Assert.Contains($"artifacts/process-runs/{subprocess.RunId.Value:D}/steps/draft-architecture-design.md", reviewAssignment.Prompt, StringComparison.Ordinal);
         var classifyAssignment = Assert.Single(childAssignments, assignment => assignment.StepKey == "classify-dotnet-application");
-        Assert.Equal("Blazor WebAssembly PWA", classifyAssignment.LaunchVariables["DotNetAppArchetype"]);
-        Assert.Contains("AppTemplate: blazorwasm", classifyAssignment.LaunchVariables["DotNetScaffoldContract"], StringComparison.Ordinal);
-        Assert.Contains("AllowedTemplateSwitches: --pwa", classifyAssignment.LaunchVariables["DotNetScaffoldContract"], StringComparison.Ordinal);
-        Assert.Contains("ScaffoldToolContract: use workspace_dotnet_new with template 'blazorwasm --pwa'", classifyAssignment.LaunchVariables["DotNetScaffoldContract"], StringComparison.Ordinal);
-        Assert.Contains("WorkspaceAlias: external-target/C/temp/CanDoItAll/TetrisGame", classifyAssignment.LaunchVariables["DotNetScaffoldContract"], StringComparison.Ordinal);
-        Assert.Contains("StructuredWorkspacePathRule: use WorkspaceAlias or external-target/... aliases in workspace_* tool path arguments", classifyAssignment.LaunchVariables["DotNetScaffoldContract"], StringComparison.Ordinal);
-        Assert.Contains("ExistingScaffoldRule: existing files are not enough", classifyAssignment.LaunchVariables["DotNetScaffoldContract"], StringComparison.Ordinal);
-        Assert.Contains("PackageRule: do not add PackageReference Include=\"Microsoft.AspNetCore.Components.WebAssembly.PWA\"", classifyAssignment.LaunchVariables["DotNetScaffoldContract"], StringComparison.Ordinal);
-        Assert.Contains("BlazorWasmTemplateIntegrityRule: Program.cs, App.razor, and _Imports.razor", classifyAssignment.LaunchVariables["DotNetScaffoldContract"], StringComparison.Ordinal);
+        Assert.DoesNotContain("DotNetAppArchetype", classifyAssignment.LaunchVariables.Keys, StringComparer.OrdinalIgnoreCase);
+        Assert.False(classifyAssignment.LaunchVariables.ContainsKey("DotNetScaffoldContract"));
         Assert.Contains("project-structure-grounded greenfield target", classifyAssignment.Prompt, StringComparison.Ordinal);
         Assert.Contains("absence of .sln, .slnx, or .csproj files", classifyAssignment.Prompt, StringComparison.Ordinal);
         var parentProcessRunNodeId = ProjectStructureProcessNodeKeys.BuildProcessRunNodeKey(parent.RunId.Value);
@@ -1675,6 +1677,9 @@ public sealed class ProjectStructureAgentIntegrationTests
         var addTestProjectAssignment = Assert.Single(childAssignments, assignment => assignment.StepKey == "add-test-project");
         var validateFirstBuildAssignment = Assert.Single(childAssignments, assignment => assignment.StepKey == "validate-first-build");
         var revalidateFirstBuildAssignment = Assert.Single(childAssignments, assignment => assignment.StepKey == "validate-first-build-after-repair");
+        var expectedManagedArtifactRoot = ProcessLaunchApplicationService.BuildManagedProcessArtifactRoot(new ProcessRunId(subprocess.RunId!.Value));
+        var expectedCreateProjectScriptRef = $"{expectedManagedArtifactRoot}/scripts/create-dotnet-project.wire-solution.ps1";
+        var expectedAddTestProjectScriptRef = $"{expectedManagedArtifactRoot}/scripts/add-test-project.wire-solution.ps1";
         Assert.DoesNotContain(ProcessOperationContractNames.RunValidation, createProjectAssignment.AllowedOperations);
         Assert.DoesNotContain(ProcessOperationContractNames.RunValidation, addTestProjectAssignment.AllowedOperations);
         Assert.Contains(ProcessOperationContractNames.RunValidation, validateFirstBuildAssignment.AllowedOperations);
@@ -1698,40 +1703,23 @@ public sealed class ProjectStructureAgentIntegrationTests
         Assert.Contains("TetrisGame", scaffoldAssignment.LaunchVariables["ProjectStructureContextSummary"], StringComparison.Ordinal);
         Assert.Contains("Blazor WASM PWA app shape", scaffoldAssignment.LaunchVariables["ProjectStructureContextSummary"], StringComparison.Ordinal);
         Assert.DoesNotContain("unrelated payroll", scaffoldAssignment.LaunchVariables["ProjectStructureContextSummary"], StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("SolutionName: TetrisGame", scaffoldAssignment.LaunchVariables["DotNetScaffoldContract"], StringComparison.Ordinal);
-        Assert.Contains("WorkspaceAlias: external-target/C/temp/CanDoItAll/TetrisGame", scaffoldAssignment.LaunchVariables["DotNetScaffoldContract"], StringComparison.Ordinal);
-        Assert.DoesNotContain(@"C:\stale\wrong", scaffoldAssignment.LaunchVariables["DotNetScaffoldContract"], StringComparison.OrdinalIgnoreCase);
-        Assert.DoesNotContain("external-target/C/stale/wrong", scaffoldAssignment.LaunchVariables["DotNetScaffoldContract"], StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("SolutionScaffoldToolContract: use workspace_dotnet_new with template 'sln', parentDirectory set to WorkspaceAlias", scaffoldAssignment.LaunchVariables["DotNetScaffoldContract"], StringComparison.Ordinal);
-        Assert.Contains("StructuredWorkspacePathRule: use WorkspaceAlias or external-target/... aliases in workspace_* tool path arguments", scaffoldAssignment.LaunchVariables["DotNetScaffoldContract"], StringComparison.Ordinal);
-        Assert.Contains("EvidenceSourceRule: cite project-media file paths only when they are present in current launch variables", scaffoldAssignment.LaunchVariables["DotNetScaffoldContract"], StringComparison.Ordinal);
-        Assert.Contains("ExistingScaffoldRule: existing files are not enough", scaffoldAssignment.LaunchVariables["DotNetScaffoldContract"], StringComparison.Ordinal);
-        Assert.Contains("WorkspaceScriptPathRule: when invoking workspace_pwsh_run_script, path must be the reviewed current-run .ps1 helper path", scaffoldAssignment.LaunchVariables["DotNetScaffoldContract"], StringComparison.Ordinal);
-        Assert.Contains("SolutionMembershipScript: create-dotnet-project must leave the solution containing the app project", scaffoldAssignment.LaunchVariables["DotNetScaffoldContract"], StringComparison.Ordinal);
-        Assert.Contains("compute the product-root-relative app project path", scaffoldAssignment.LaunchVariables["DotNetScaffoldContract"], StringComparison.Ordinal);
-        Assert.Contains("dotnet sln list normally emits solution-relative paths", scaffoldAssignment.LaunchVariables["DotNetScaffoldContract"], StringComparison.Ordinal);
-        Assert.Contains("convert the list output to one scalar string before regex checks", scaffoldAssignment.LaunchVariables["DotNetScaffoldContract"], StringComparison.Ordinal);
-        Assert.Contains("do not test an output-line array with -notmatch directly", scaffoldAssignment.LaunchVariables["DotNetScaffoldContract"], StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("MandatoryTestWiringScript: create a reviewed current-run artifact PowerShell helper", scaffoldAssignment.LaunchVariables["DotNetScaffoldContract"], StringComparison.Ordinal);
-        Assert.Contains("The helper must create the missing test project with dotnet new xunit before wiring", scaffoldAssignment.LaunchVariables["DotNetScaffoldContract"], StringComparison.Ordinal);
-        Assert.Contains("compute product-root-relative app/test project paths", scaffoldAssignment.LaunchVariables["DotNetScaffoldContract"], StringComparison.Ordinal);
-        Assert.Contains("test-project-relative ProjectReference path", scaffoldAssignment.LaunchVariables["DotNetScaffoldContract"], StringComparison.Ordinal);
-        Assert.Contains("convert command output to scalar strings before membership or ProjectReference regex checks", scaffoldAssignment.LaunchVariables["DotNetScaffoldContract"], StringComparison.Ordinal);
-        Assert.Contains("ProductMutationScriptManifest: pass sideEffectManifest", scaffoldAssignment.LaunchVariables["DotNetScaffoldContract"], StringComparison.Ordinal);
-        Assert.Contains("Create-dotnet-project deterministic execution plan", scaffoldAssignment.LaunchVariables["DotNetCreateProjectExecutionPlan"], StringComparison.Ordinal);
-        Assert.Contains("workspace_dotnet_new", scaffoldAssignment.LaunchVariables["DotNetCreateProjectExecutionPlan"], StringComparison.Ordinal);
-        Assert.Contains("DotNetCreateProjectScript", scaffoldAssignment.LaunchVariables["DotNetCreateProjectExecutionPlan"], StringComparison.Ordinal);
-        Assert.Contains("workspace_pwsh_run_script", scaffoldAssignment.LaunchVariables["DotNetCreateProjectExecutionPlan"], StringComparison.Ordinal);
+        Assert.False(scaffoldAssignment.LaunchVariables.ContainsKey("DotNetScaffoldContract"));
+        using var createPlanDocument = JsonDocument.Parse(scaffoldAssignment.LaunchVariables["DotNetCreateProjectExecutionPlan"]);
+        Assert.Equal("dotnet.create-project", createPlanDocument.RootElement.GetProperty("PlanKey").GetString());
+        Assert.True(createPlanDocument.RootElement.GetProperty("RequiresScaffold").GetBoolean());
         Assert.Equal(
-            "artifacts/process-runs/{CurrentProcessRunId}/scripts/create-dotnet-project.wire-solution.ps1",
+            expectedCreateProjectScriptRef,
             scaffoldAssignment.LaunchVariables["DotNetCreateProjectScriptRef"]);
+        Assert.DoesNotContain("{CurrentProcessRunId}", scaffoldAssignment.LaunchVariables["DotNetCreateProjectExecutionPlan"], StringComparison.Ordinal);
         Assert.Contains("DotNetCreateProjectScript", scaffoldAssignment.LaunchVariables.Keys, StringComparer.Ordinal);
         Assert.Contains("DotNetCreateProjectSideEffectManifest", scaffoldAssignment.LaunchVariables.Keys, StringComparer.Ordinal);
         Assert.Equal(
-            "artifacts/process-runs/{CurrentProcessRunId}/scripts/add-test-project.wire-solution.ps1",
+            expectedAddTestProjectScriptRef,
             scaffoldAssignment.LaunchVariables["DotNetAddTestProjectScriptRef"]);
-        Assert.Contains("Add-test-project deterministic execution plan", scaffoldAssignment.LaunchVariables["DotNetAddTestProjectExecutionPlan"], StringComparison.Ordinal);
-        Assert.Contains("workspace_pwsh_run_script", scaffoldAssignment.LaunchVariables["DotNetAddTestProjectExecutionPlan"], StringComparison.Ordinal);
+        using var addTestPlanDocument = JsonDocument.Parse(scaffoldAssignment.LaunchVariables["DotNetAddTestProjectExecutionPlan"]);
+        Assert.Equal("dotnet.add-test-project", addTestPlanDocument.RootElement.GetProperty("PlanKey").GetString());
+        Assert.False(addTestPlanDocument.RootElement.GetProperty("RequiresScaffold").GetBoolean());
+        Assert.DoesNotContain("{CurrentProcessRunId}", scaffoldAssignment.LaunchVariables["DotNetAddTestProjectExecutionPlan"], StringComparison.Ordinal);
         Assert.Contains("$SolutionCandidates", scaffoldAssignment.LaunchVariables["DotNetAddTestProjectScript"], StringComparison.Ordinal);
         Assert.Contains("$newTestProjectArguments = @('new', $TestTemplate", scaffoldAssignment.LaunchVariables["DotNetAddTestProjectScript"], StringComparison.Ordinal);
         Assert.Contains("$newTestProjectArguments += @('--framework', $TargetFramework)", scaffoldAssignment.LaunchVariables["DotNetAddTestProjectScript"], StringComparison.Ordinal);
@@ -1742,6 +1730,7 @@ public sealed class ProjectStructureAgentIntegrationTests
         Assert.Contains(@"C:\\temp\\CanDoItAll\\TetrisGame\\tests\\TetrisGame.Tests", scaffoldAssignment.LaunchVariables["DotNetAddTestProjectSideEffectManifest"], StringComparison.Ordinal);
         Assert.Contains("DotNetCreateProjectExecutionPlan", createProjectAssignment.LaunchVariables.Keys, StringComparer.Ordinal);
         Assert.Contains("DotNetCreateProjectScriptRef", createProjectAssignment.LaunchVariables.Keys, StringComparer.Ordinal);
+        Assert.Equal(expectedCreateProjectScriptRef, createProjectAssignment.LaunchVariables["DotNetCreateProjectScriptRef"]);
         Assert.Contains("DotNetCreateProjectScript", createProjectAssignment.LaunchVariables.Keys, StringComparer.Ordinal);
         Assert.Contains("DotNetCreateProjectSideEffectManifest", createProjectAssignment.LaunchVariables.Keys, StringComparer.Ordinal);
         Assert.DoesNotContain("DotNetAddTestProjectScriptRef", createProjectAssignment.LaunchVariables.Keys, StringComparer.Ordinal);
@@ -1749,6 +1738,7 @@ public sealed class ProjectStructureAgentIntegrationTests
         Assert.DoesNotContain("DotNetAddTestProjectExecutionPlan", createProjectAssignment.LaunchVariables.Keys, StringComparer.Ordinal);
         Assert.DoesNotContain("DotNetAddTestProjectSideEffectManifest", createProjectAssignment.LaunchVariables.Keys, StringComparer.Ordinal);
         Assert.Contains("DotNetAddTestProjectScriptRef", addTestProjectAssignment.LaunchVariables.Keys, StringComparer.Ordinal);
+        Assert.Equal(expectedAddTestProjectScriptRef, addTestProjectAssignment.LaunchVariables["DotNetAddTestProjectScriptRef"]);
         Assert.Contains("DotNetAddTestProjectScript", addTestProjectAssignment.LaunchVariables.Keys, StringComparer.Ordinal);
         Assert.Contains("DotNetAddTestProjectExecutionPlan", addTestProjectAssignment.LaunchVariables.Keys, StringComparer.Ordinal);
         Assert.Contains("DotNetAddTestProjectSideEffectManifest", addTestProjectAssignment.LaunchVariables.Keys, StringComparer.Ordinal);
@@ -1757,18 +1747,11 @@ public sealed class ProjectStructureAgentIntegrationTests
         Assert.DoesNotContain("DotNetCreateProjectExecutionPlan", addTestProjectAssignment.LaunchVariables.Keys, StringComparer.Ordinal);
         Assert.DoesNotContain("DotNetCreateProjectSideEffectManifest", addTestProjectAssignment.LaunchVariables.Keys, StringComparer.Ordinal);
         Assert.DoesNotContain(ProcessRuntimeLaunchVariables.ProcessStepScopedLaunchVariablePrefixesByStep, createProjectAssignment.LaunchVariables.Keys, StringComparer.Ordinal);
-        Assert.Contains("Create-dotnet-project deterministic execution plan", createProjectAssignment.Prompt, StringComparison.Ordinal);
-        Assert.DoesNotContain("Add-test-project deterministic execution plan", createProjectAssignment.Prompt, StringComparison.Ordinal);
-        Assert.Contains("Add-test-project deterministic execution plan", addTestProjectAssignment.Prompt, StringComparison.Ordinal);
-        Assert.DoesNotContain("Create-dotnet-project deterministic execution plan", addTestProjectAssignment.Prompt, StringComparison.Ordinal);
-        Assert.Contains("AppTemplate: blazorwasm", scaffoldAssignment.Prompt, StringComparison.Ordinal);
-        Assert.Contains("AllowedTemplateSwitches: --pwa", scaffoldAssignment.Prompt, StringComparison.Ordinal);
-        Assert.Contains("SolutionScaffoldToolContract: use workspace_dotnet_new with template 'sln', parentDirectory set to WorkspaceAlias", scaffoldAssignment.Prompt, StringComparison.Ordinal);
-        Assert.Contains("ScaffoldToolContract: use workspace_dotnet_new with template 'blazorwasm --pwa'", scaffoldAssignment.Prompt, StringComparison.Ordinal);
-        Assert.Contains("EvidenceSourceRule: cite project-media file paths only when they are present in current launch variables", scaffoldAssignment.Prompt, StringComparison.Ordinal);
-        Assert.Contains("PackageRule: do not add PackageReference Include=\"Microsoft.AspNetCore.Components.WebAssembly.PWA\"", scaffoldAssignment.Prompt, StringComparison.Ordinal);
-        Assert.Contains("BlazorWasmTemplateIntegrityRule: Program.cs, App.razor, and _Imports.razor", scaffoldAssignment.Prompt, StringComparison.Ordinal);
-        Assert.Contains("TestTemplate: xunit", scaffoldAssignment.Prompt, StringComparison.Ordinal);
+        Assert.Contains("dotnet.create-project", createProjectAssignment.Prompt, StringComparison.Ordinal);
+        Assert.DoesNotContain("dotnet.add-test-project", createProjectAssignment.Prompt, StringComparison.Ordinal);
+        Assert.Contains("dotnet.add-test-project", addTestProjectAssignment.Prompt, StringComparison.Ordinal);
+        Assert.DoesNotContain("dotnet.create-project", addTestProjectAssignment.Prompt, StringComparison.Ordinal);
+        Assert.False(scaffoldAssignment.LaunchVariables.ContainsKey("DotNetScaffoldContract"));
         Assert.Contains(
             @"C:\temp\CanDoItAll\TetrisGame\TetrisGame.slnx",
             createProjectAssignment.LaunchVariables[ProcessRuntimeLaunchVariables.ProductCompletionRequiredPaths],

@@ -8,6 +8,62 @@ public enum SettingsRendererTrustLevel
     BundledPlugin
 }
 
+public enum SettingsRendererResolutionStatus
+{
+    NotRequested,
+    IncompleteRequest,
+    Resolved,
+    NotRegistered,
+    TrustMismatch,
+    OwnerMismatch,
+    SchemaVersionMismatch
+}
+
+public sealed record SettingsRendererResolutionRequest
+{
+    public SettingsRendererResolutionRequest(
+        string rendererKey,
+        SettingsRendererTrustLevel trustLevel,
+        string ownerId,
+        string schemaVersion)
+    {
+        if (!Enum.IsDefined(trustLevel))
+        {
+            throw new ArgumentOutOfRangeException(nameof(trustLevel), trustLevel, "Settings renderer trust level is not defined.");
+        }
+
+        RendererKey = NormalizeRequired(rendererKey, nameof(rendererKey));
+        TrustLevel = trustLevel;
+        OwnerId = NormalizeRequired(ownerId, nameof(ownerId));
+        SchemaVersion = NormalizeRequired(schemaVersion, nameof(schemaVersion));
+    }
+
+    public string RendererKey { get; }
+
+    public SettingsRendererTrustLevel TrustLevel { get; }
+
+    public string OwnerId { get; }
+
+    public string SchemaVersion { get; }
+
+    private static string NormalizeRequired(string value, string parameterName)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            throw new ArgumentException($"{parameterName} is required.", parameterName);
+        }
+
+        return value.Trim();
+    }
+}
+
+public sealed record SettingsRendererResolution(
+    SettingsRendererResolutionStatus Status,
+    SettingsRendererDescriptor? Descriptor)
+{
+    public bool IsResolved => Status == SettingsRendererResolutionStatus.Resolved && Descriptor is not null;
+}
+
 public sealed record SettingsRendererDescriptor
 {
     public SettingsRendererDescriptor(
@@ -17,6 +73,11 @@ public sealed record SettingsRendererDescriptor
         string OwnerId,
         string SupportedSchemaVersion)
     {
+        if (!Enum.IsDefined(TrustLevel))
+        {
+            throw new ArgumentOutOfRangeException(nameof(TrustLevel), TrustLevel, "Settings renderer trust level is not defined.");
+        }
+
         this.RendererKey = NormalizeRendererKey(RendererKey);
         this.ComponentType = ValidateComponentType(ComponentType);
         this.TrustLevel = TrustLevel;
@@ -85,7 +146,7 @@ public interface ISettingsRendererRegistry
 {
     IReadOnlyList<SettingsRendererDescriptor> ListRenderers();
 
-    SettingsRendererDescriptor? FindRenderer(string? rendererKey);
+    SettingsRendererResolution ResolveRenderer(SettingsRendererResolutionRequest request);
 }
 
 public sealed class SettingsRendererRegistry : ISettingsRendererRegistry
@@ -110,11 +171,33 @@ public sealed class SettingsRendererRegistry : ISettingsRendererRegistry
             .ToArray();
     }
 
-    public SettingsRendererDescriptor? FindRenderer(string? rendererKey)
+    public SettingsRendererResolution ResolveRenderer(SettingsRendererResolutionRequest request)
     {
-        return string.IsNullOrWhiteSpace(rendererKey)
-            ? null
-            : descriptorsByKey.GetValueOrDefault(rendererKey.Trim());
+        ArgumentNullException.ThrowIfNull(request);
+        if (!descriptorsByKey.TryGetValue(request.RendererKey, out var descriptor))
+        {
+            return new(SettingsRendererResolutionStatus.NotRegistered, Descriptor: null);
+        }
+
+        if (descriptor.TrustLevel != request.TrustLevel)
+        {
+            return new(SettingsRendererResolutionStatus.TrustMismatch, Descriptor: null);
+        }
+
+        if (!string.Equals(descriptor.OwnerId, request.OwnerId, StringComparison.OrdinalIgnoreCase))
+        {
+            return new(SettingsRendererResolutionStatus.OwnerMismatch, Descriptor: null);
+        }
+
+        if (!string.Equals(
+                descriptor.SupportedSchemaVersion,
+                request.SchemaVersion,
+                StringComparison.OrdinalIgnoreCase))
+        {
+            return new(SettingsRendererResolutionStatus.SchemaVersionMismatch, Descriptor: null);
+        }
+
+        return new(SettingsRendererResolutionStatus.Resolved, descriptor);
     }
 
     private static IReadOnlyDictionary<string, SettingsRendererDescriptor> BuildRegistry(

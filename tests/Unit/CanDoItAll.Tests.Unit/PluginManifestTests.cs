@@ -95,6 +95,73 @@ public sealed class PluginManifestTests
     }
 
     [Fact]
+    public void PluginManifest_validator_requires_declared_bundled_renderer_for_custom_executor_settings()
+    {
+        var customExecutor = CreateExecutor("sample.exec", "settings.renderer") with
+        {
+            SettingsPresentationMode = WorkflowExecutorSettingsPresentationMode.CustomRenderer
+        };
+        var missingRenderer = CreateDescriptor(
+            workflowExecutors: [customExecutor],
+            capabilities: PluginCapabilityKind.WorkflowExecutor);
+        var untrustedRenderer = CreateDescriptor(
+            workflowExecutors: [customExecutor],
+            settings: new PluginSettingsDescriptor(
+                ConfigurationSchema.Empty(),
+                [
+                    new PluginSettingsRendererDescriptor(
+                        new PluginRendererKey("settings.renderer"),
+                        "Settings",
+                        "SampleSettingsRenderer",
+                        PluginRendererTrustLevel.RemotePackage)
+                ]),
+            capabilities: PluginCapabilityKind.WorkflowExecutor | PluginCapabilityKind.SettingsRenderer);
+
+        var missingResult = PluginManifestValidator.Validate(missingRenderer);
+        var untrustedResult = PluginManifestValidator.Validate(untrustedRenderer);
+
+        Assert.Contains(
+            missingResult.Issues,
+            issue => issue.Code == PluginManifestValidationIssueCode.InvalidSettingsRendererContract &&
+                     issue.Message.Contains("not declared", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(
+            missingResult.Issues,
+            issue => issue.Code == PluginManifestValidationIssueCode.MissingCapability &&
+                     issue.Message.Contains("custom workflow executor settings renderers", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(
+            untrustedResult.Issues,
+            issue => issue.Code == PluginManifestValidationIssueCode.InvalidSettingsRendererContract &&
+                     issue.Message.Contains("bundled", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public void PluginManifest_validator_accepts_bundled_renderer_for_custom_executor_settings()
+    {
+        var descriptor = CreateDescriptor(
+            workflowExecutors:
+            [
+                CreateExecutor("sample.exec", "settings.renderer") with
+                {
+                    SettingsPresentationMode = WorkflowExecutorSettingsPresentationMode.CustomRenderer
+                }
+            ],
+            settings: new PluginSettingsDescriptor(
+                ConfigurationSchema.Empty(),
+                [
+                    new PluginSettingsRendererDescriptor(
+                        new PluginRendererKey("settings.renderer"),
+                        "Settings",
+                        "SampleSettingsRenderer",
+                        PluginRendererTrustLevel.Bundled)
+                ]),
+            capabilities: PluginCapabilityKind.WorkflowExecutor | PluginCapabilityKind.SettingsRenderer);
+
+        var result = PluginManifestValidator.Validate(descriptor);
+
+        Assert.True(result.Succeeded, string.Join(Environment.NewLine, result.Issues.Select(issue => issue.Message)));
+    }
+
+    [Fact]
     public void PluginManifest_validator_rejects_executor_permission_policy_without_manifest_capabilities()
     {
         var descriptor = CreateDescriptor(
@@ -240,6 +307,72 @@ public sealed class PluginManifestTests
         Assert.Equal(descriptor.WorkflowExecutors[0].ExecutorId, roundTrip.WorkflowExecutors[0].ExecutorId);
         Assert.Equal(descriptor.Settings.Renderers[0].RendererKey, roundTrip.Settings.Renderers[0].RendererKey);
         Assert.Equal(descriptor.Connections[0].Key, roundTrip.Connections[0].Key);
+    }
+
+    [Fact]
+    public void PluginManifest_executor_metadata_round_trips_defaults_and_simulation()
+    {
+        var executor = CreateExecutor("sample.exec", "settings.renderer") with
+        {
+            DefaultSettingsJson = "{\"enabled\":true}",
+            Simulation = WorkflowExecutorSimulationDescriptor.JsonTemplate(
+                "{\"simulated\":true}",
+                "Test simulation.")
+        };
+        var descriptor = CreateDescriptor(
+            workflowExecutors: [executor],
+            capabilities: PluginCapabilityKind.WorkflowExecutor);
+
+        var json = JsonSerializer.Serialize(descriptor, JsonOptions);
+        var roundTrip = JsonSerializer.Deserialize<PluginDescriptor>(json, JsonOptions)!;
+
+        Assert.Equal(executor.DefaultSettingsJson, roundTrip.WorkflowExecutors[0].DefaultSettingsJson);
+        Assert.Equal(executor.Simulation, roundTrip.WorkflowExecutors[0].Simulation);
+    }
+
+    [Fact]
+    public void PluginManifest_old_executor_json_uses_compatible_metadata_defaults()
+    {
+        const string json = """
+            {
+              "executorId": "legacy.exec",
+              "name": "Legacy",
+              "description": "Legacy manifest executor.",
+              "category": 9,
+              "settingsRendererKey": "legacy.settings",
+              "settingsSchema": { "version": "1.0", "fields": [] },
+              "inputShape": { "kind": 0, "schemaJson": "", "description": "" },
+              "resultShape": { "kind": 0, "schemaJson": "", "description": "" },
+              "defaultPolicy": { "timeoutSeconds": 60, "maxRetryAttempts": 0, "retryDelayMilliseconds": 0, "requiresApproval": false }
+            }
+            """;
+
+        var executor = JsonSerializer.Deserialize<PluginWorkflowExecutorDescriptor>(json, JsonOptions)!;
+
+        Assert.Equal("{}", executor.DefaultSettingsJson);
+        Assert.Equal(WorkflowExecutorSettingsPresentationMode.Schema, executor.SettingsPresentationMode);
+        Assert.Equal(WorkflowExecutorSimulationDescriptor.None, executor.Simulation);
+    }
+
+    [Fact]
+    public void PluginManifest_validator_rejects_malformed_executor_defaults_and_simulation()
+    {
+        var executor = CreateExecutor("sample.exec", "settings.renderer") with
+        {
+            DefaultSettingsJson = "{invalid",
+            Simulation = WorkflowExecutorSimulationDescriptor.JsonTemplate(
+                "{also-invalid",
+                "Invalid test simulation.")
+        };
+        var descriptor = CreateDescriptor(
+            workflowExecutors: [executor],
+            capabilities: PluginCapabilityKind.WorkflowExecutor);
+
+        var result = PluginManifestValidator.Validate(descriptor);
+
+        Assert.Equal(
+            2,
+            result.Issues.Count(issue => issue.Code == PluginManifestValidationIssueCode.InvalidWorkflowExecutorJson));
     }
 
     [Fact]

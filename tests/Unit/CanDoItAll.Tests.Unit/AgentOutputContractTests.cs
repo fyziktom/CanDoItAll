@@ -14,6 +14,16 @@ public sealed class AgentOutputContractTests
             Status = ProcessStepOutcomeStatus.Completed,
             Reason = "Implementation and validation completed.",
             EvidenceRefs = ["artifact://implementation-plan"],
+            AcceptanceCriteriaEvidence =
+            [
+                new ProcessAcceptanceCriterionEvidence
+                {
+                    CriterionId = "REQ-001",
+                    Status = ProcessAcceptanceCriterionEvidenceStatus.Passed,
+                    Summary = "The current validation run proved the requested behavior.",
+                    EvidenceRefs = ["artifact://implementation-plan"]
+                }
+            ],
             NextActions = [],
             HumanReadableSummaryMarkdown = "Completed."
         };
@@ -25,6 +35,9 @@ public sealed class AgentOutputContractTests
         Assert.NotNull(roundTripped);
         Assert.Equal(ProcessStepOutcomeStatus.Completed, roundTripped.Status);
         Assert.Equal("Implementation and validation completed.", roundTripped.Reason);
+        var criterionEvidence = Assert.Single(roundTripped.AcceptanceCriteriaEvidence);
+        Assert.Equal("REQ-001", criterionEvidence.CriterionId);
+        Assert.Equal(ProcessAcceptanceCriterionEvidenceStatus.Passed, criterionEvidence.Status);
     }
 
     [Fact]
@@ -135,6 +148,34 @@ public sealed class AgentOutputContractTests
 
         Assert.False(result.IsValid);
         Assert.Contains(result.Errors, error => error.Code == "process.step_outcome.completed_evidence_ref_required");
+    }
+
+    [Fact]
+    public void ProcessStepOutcomeValidator_rejects_acceptance_criterion_evidence_without_proof()
+    {
+        var validator = new ProcessStepOutcomeValidator();
+        var output = new ProcessStepOutcomeResult
+        {
+            Status = ProcessStepOutcomeStatus.Completed,
+            Reason = "The implementation was completed.",
+            EvidenceRefs = ["execution://run-001"],
+            AcceptanceCriteriaEvidence =
+            [
+                new ProcessAcceptanceCriterionEvidence
+                {
+                    CriterionId = "REQ-001",
+                    Status = ProcessAcceptanceCriterionEvidenceStatus.Passed,
+                    Summary = "The criterion was supposedly proved.",
+                    EvidenceRefs = []
+                }
+            ],
+            NextActions = []
+        };
+
+        var result = validator.Validate(output);
+
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, error => error.Code == "process.step_outcome.acceptance_criterion_proof_required");
     }
 
     [Fact]

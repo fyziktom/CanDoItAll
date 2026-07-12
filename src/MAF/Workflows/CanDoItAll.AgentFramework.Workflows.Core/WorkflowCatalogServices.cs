@@ -1,4 +1,5 @@
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.AgentFramework.Workflows.Abstractions;
 
 namespace CanDoItAll.AgentFramework.Core;
 
@@ -77,6 +78,36 @@ public sealed class InMemoryWorkflowCatalogService :
             definition = versionId is null
                 ? versions[^1]
                 : versions.SingleOrDefault(item => item.VersionId == versionId.Value);
+        }
+        finally
+        {
+            store.Gate.Release();
+        }
+
+        return definition is null
+            ? null
+            : new WorkflowDefinitionDetail(
+                definition,
+                await ValidateDefinitionAsync(definition, cancellationToken));
+    }
+
+    public async Task<WorkflowDefinitionDetail?> GetLatestDefinitionByStatusAsync(
+        WorkflowId workflowId,
+        WorkflowLifecycleStatus status,
+        CancellationToken cancellationToken = default)
+    {
+        WorkflowDefinition? definition;
+        await store.Gate.WaitAsync(cancellationToken);
+        try
+        {
+            definition = store.Definitions.TryGetValue(workflowId, out var versions)
+                ? versions
+                    .Where(item => item.Status == status)
+                    .OrderByDescending(item => item.UpdatedAtUtc)
+                    .ThenByDescending(item => item.CreatedAtUtc)
+                    .ThenByDescending(item => item.VersionId.Value)
+                    .FirstOrDefault()
+                : null;
         }
         finally
         {

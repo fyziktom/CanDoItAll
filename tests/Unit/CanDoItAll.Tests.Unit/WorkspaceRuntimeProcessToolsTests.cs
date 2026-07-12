@@ -13,7 +13,7 @@ public sealed class WorkspaceRuntimeProcessToolsTests
             """
             <Project Sdk="Microsoft.NET.Sdk.Web">
               <ItemGroup>
-                <ProjectReference Include="..\CanDoItAll.Infrastructure\CanDoItAll.Infrastructure.csproj" />
+                <ProjectReference Include="..\..\Foundation\CanDoItAll.Infrastructure\CanDoItAll.Infrastructure.csproj" />
               </ItemGroup>
             </Project>
             """,
@@ -114,7 +114,7 @@ public sealed class WorkspaceRuntimeProcessToolsTests
             """
             <Project Sdk="Microsoft.NET.Sdk.Web">
               <ItemGroup>
-                <ProjectReference Include="..\CanDoItAll.Infrastructure\CanDoItAll.Infrastructure.csproj" />
+                <ProjectReference Include="..\..\Foundation\CanDoItAll.Infrastructure\CanDoItAll.Infrastructure.csproj" />
               </ItemGroup>
             </Project>
             """,

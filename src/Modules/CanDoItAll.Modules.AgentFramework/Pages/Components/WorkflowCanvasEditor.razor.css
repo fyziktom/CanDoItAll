@@ -301,6 +301,10 @@
 }
 
 @media (min-width: 1361px) {
+    .workflow-canvas-editor-shell ::deep .cw-canvas-host.cw-workbench:has(> .cw-canvas-composer.is-dialog) {
+        z-index: 660 !important;
+    }
+
     .workflow-canvas-editor-shell ::deep .cw-main-grid {
         grid-template-columns: minmax(0, 1fr) minmax(20rem, 26rem);
         gap: 1rem;

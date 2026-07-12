@@ -6,6 +6,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace CanDoItAll.Tests.Unit;
 
+[Collection(AppDbContextModelRegistryTestCollectionNames.Name)]
 public sealed class SecretVaultTests
 {
     [Fact]
@@ -241,12 +242,8 @@ public sealed class SecretVaultTests
     private static TestDbContextFactory CreateDbContextFactory()
     {
         AppDbContextModelRegistry.ConfigureAssemblies([typeof(SecretRecord).Assembly]);
-        var internalServiceProvider = new ServiceCollection()
-            .AddEntityFrameworkInMemoryDatabase()
-            .BuildServiceProvider();
-        var options = new DbContextOptionsBuilder<AppDbContext>()
+        var options = AppDbContextTestOptionsBuilder.Create()
             .UseInMemoryDatabase($"secret-vault-{Guid.NewGuid():N}")
-            .UseInternalServiceProvider(internalServiceProvider)
             .Options;
 
         return new TestDbContextFactory(options);

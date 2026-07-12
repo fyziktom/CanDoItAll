@@ -7,6 +7,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace CanDoItAll.Tests.Unit;
 
+[Collection(AppDbContextModelRegistryTestCollectionNames.Name)]
 public sealed class SecretRuntimeAuthorizationTests
 {
     private const string PluginId = "plugin.external-webhook";
@@ -124,12 +125,8 @@ public sealed class SecretRuntimeAuthorizationTests
     private static TestDbContextFactory CreateDbContextFactory()
     {
         AppDbContextModelRegistry.ConfigureAssemblies([typeof(SecretRecord).Assembly]);
-        var internalServiceProvider = new ServiceCollection()
-            .AddEntityFrameworkInMemoryDatabase()
-            .BuildServiceProvider();
-        var options = new DbContextOptionsBuilder<AppDbContext>()
+        var options = AppDbContextTestOptionsBuilder.Create()
             .UseInMemoryDatabase($"secret-runtime-authorization-{Guid.NewGuid():N}")
-            .UseInternalServiceProvider(internalServiceProvider)
             .Options;
 
         return new TestDbContextFactory(options);

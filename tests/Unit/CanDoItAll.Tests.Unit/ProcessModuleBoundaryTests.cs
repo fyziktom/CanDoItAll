@@ -155,6 +155,74 @@ public sealed class ProcessModuleBoundaryTests
     }
 
     [Fact]
+    public void Workbench_launch_preparation_uses_only_the_application_facing_contract()
+    {
+        var root = FindRepositoryRoot();
+        var removedContributorPath = Path.Combine(
+            root,
+            "src",
+            "Modules",
+            "CanDoItAll.Modules.Workbench",
+            "ProjectStructure",
+            "ProjectStructureProcessLaunchVariableContributor.cs");
+        Assert.False(
+            File.Exists(removedContributorPath),
+            "Workbench must not retain a concrete .NET launch-variable contributor.");
+
+        var launchPreparationPaths = new[]
+        {
+            Path.Combine(root, "src", "Modules", "CanDoItAll.Modules.Workbench", "ProjectStructure", "ProjectStructureProcessLaunchSourceSnapshotMapper.cs"),
+            Path.Combine(root, "src", "Modules", "CanDoItAll.Modules.Workbench", "Pages", "ProjectStructurePage.Processes.cs"),
+            Path.Combine(root, "src", "Modules", "CanDoItAll.Modules.Workbench", "Services", "WorkbenchModuleServiceCollectionExtensions.cs")
+        };
+        var blockedTerms = new[]
+        {
+            "DotNet",
+            "Blazor",
+            "workspace_dotnet",
+            "AgentWorkspaceToolAccessMetadata",
+            "IProjectStructureProcessLaunchVariableContributor",
+            "ProjectStructureProcessLaunchVariableContext",
+            "dotnet-solution-setup",
+            "software-delivery",
+            "CanDoItAll.Processes.Runtime"
+        };
+
+        var findings = launchPreparationPaths
+            .SelectMany(path => FindTermMatches(root, path, blockedTerms))
+            .ToArray();
+
+        Assert.True(
+            findings.Length == 0,
+            "Workbench launch preparation must map neutral source facts and delegate domain contribution: " + string.Join(", ", findings));
+    }
+
+    [Fact]
+    public void Workbench_process_node_service_does_not_synthesize_dotnet_launch_context()
+    {
+        var root = FindRepositoryRoot();
+        var path = Path.Combine(
+            root,
+            "src",
+            "Modules",
+            "CanDoItAll.Modules.Workbench",
+            "ProjectStructure",
+            "ProjectStructureProcessNodeService.cs");
+        var blockedTerms = new[]
+        {
+            "DotNet",
+            ".sln",
+            ".csproj"
+        };
+
+        var findings = FindTermMatches(root, path, blockedTerms).ToArray();
+
+        Assert.True(
+            findings.Length == 0,
+            "Workbench process orchestration must retain only generic external-target context and delegate technology-specific paths to drivers: " + string.Join(", ", findings));
+    }
+
+    [Fact]
     public void Deprecated_process_runtime_symbols_are_absent_from_active_sources()
     {
         var root = FindRepositoryRoot();
@@ -221,7 +289,10 @@ public sealed class ProcessModuleBoundaryTests
         var text = File.ReadAllText(path);
         foreach (var term in terms)
         {
-            if (text.Contains(term, StringComparison.Ordinal))
+            if (System.Text.RegularExpressions.Regex.IsMatch(
+                    text,
+                    $"(?<![A-Za-z0-9_]){System.Text.RegularExpressions.Regex.Escape(term)}(?![A-Za-z0-9_])",
+                    System.Text.RegularExpressions.RegexOptions.CultureInvariant))
             {
                 yield return $"{Path.GetRelativePath(root, path)} contains {term}";
             }

@@ -410,22 +410,31 @@ public static class AgentWorkspaceToolAccessMetadata
         switch (normalizedToolName)
         {
             case "workspace_execution_boundary":
+            case "workspace_list_directory":
             case "workspace_list_files":
             case "workspace_search":
             case "workspace_read_file":
             case "workspace_stat_path":
+            case "workspace_hash_path":
             case "workspace_diff_text":
             case "workspace_git_status":
             case "workspace_git_diff":
             case "workspace_git_log":
             case "workspace_git_show":
             case "workspace_inspect_spreadsheet":
+            case "workspace_spreadsheet_summary":
+            case "workspace_read_spreadsheet_cell":
+            case "workspace_read_spreadsheet_range":
+            case "workspace_spreadsheet_function_catalog":
             case "workspace_inspect_image":
                 permission = AgentWorkspaceToolPermissionKind.ReadFiles;
                 return true;
             case "workspace_create_directory":
             case "workspace_write_file":
             case "workspace_append_file":
+            case "workspace_zip_path":
+            case "workspace_unzip_archive":
+            case "workspace_write_spreadsheet":
                 permission = AgentWorkspaceToolPermissionKind.WriteFiles;
                 return true;
             case "workspace_copy_path":

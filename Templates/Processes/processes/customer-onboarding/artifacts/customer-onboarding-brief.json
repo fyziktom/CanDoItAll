@@ -1,0 +1,27 @@
+{
+  "Kind": "process-artifact-template",
+  "Key": "customer-onboarding-brief",
+  "DisplayName": "Customer onboarding brief",
+  "Scope": "local",
+  "ProcessKey": "customer-onboarding",
+  "ArtifactKind": "Brief",
+  "DefaultTrustRequirement": "ReviewRequired",
+  "DefaultSensitivityLevel": "Internal",
+  "DefaultRetentionDays": 365,
+  "Summary": "Structured onboarding brief that captures customer goals, environment constraints, milestone targets, and named stakeholders.",
+  "AllowedFutureUsageSummary": "Reusable for staffing review, kickoff, customer communication, and later retrospective analysis.",
+  "ValidationRequirementSummary": "Must identify success criteria, stakeholders, target dates, constraints, and unresolved dependencies.",
+  "OwnerRoleKey": "account-owner",
+  "DocPath": "processes/customer-onboarding/artifacts/customer-onboarding-brief.md",
+  "SemanticAcceptanceContract": {
+    "AcceptanceMode": "SemanticReview",
+    "FileExistenceIsSufficient": false,
+    "RequiredArtifactSlotKey": "customer-onboarding-brief",
+    "RequiredEvidenceKinds": [
+      "structured-finalizer-output",
+      "reviewed-managed-artifact",
+      "semantic-validation-summary"
+    ],
+    "RequiredReviewSummary": "Must identify success criteria, stakeholders, target dates, constraints, and unresolved dependencies."
+  }
+}

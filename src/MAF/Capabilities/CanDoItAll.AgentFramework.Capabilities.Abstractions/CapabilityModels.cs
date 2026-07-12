@@ -108,7 +108,10 @@ public sealed record CapabilityAccessRule(
     string Reason);
 
 public sealed record CapabilityAccessPolicy(
-    IReadOnlyList<CapabilityAccessRule> Rules);
+    IReadOnlyList<CapabilityAccessRule> Rules,
+    CapabilityAccessDefaultEffect DefaultEffect = CapabilityAccessDefaultEffect.Inherit,
+    CapabilityAccessScope? DefaultScope = null,
+    string DefaultReason = "");
 
 public sealed record CapabilityAccessEvaluationContext(
     IReadOnlyList<CapabilityExposureDescriptor> CandidateCapabilities,

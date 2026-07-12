@@ -1,0 +1,23 @@
+SB02 failing-first shared-conversion/source-ingestion architecture proof
+
+RunLabel: SB02-CONVERSION-BOUNDARY
+RunLabel: SB02-SOURCE-INGESTION-DELEGATION
+Command: dotnet test tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj --no-restore --filter "FullyQualifiedName~CanDoItAll.Tests.Unit.WorkflowSourceIngestionArchitectureTests"
+WorkingDirectory: repo://
+ExitCode: 1
+
+Result before implementation:
+- Failed: 17
+- Passed: 1
+- Total: 18
+
+Expected failures:
+- WorkspaceDocumentMarkdownConversionRequest lacked MaxCharacters and still owned OutputPath.
+- WorkspaceDocumentMarkdownConversionResult lacked Markdown, TotalMarkdownCharacters, and IsTruncated and still owned OutputPath.
+- SourceIngestionWorkflowExecutor was partial and lacked an IWorkspaceDocumentMarkdownConverter constructor dependency.
+- Source ingestion still contained direct PDF, DOCX, HTML, and combined XLS/XLSX parser markers.
+- The standard Workspace executor project still referenced PdfPig.
+- WorkflowSourceCandidateCollector, WorkflowSourceFileResolver, and WorkflowSourceDocumentReader did not exist.
+
+Passing baseline invariant:
+- ConversionRequestKeepsSourcePath

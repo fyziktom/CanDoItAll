@@ -127,26 +127,8 @@ public sealed partial class ProcessRuntimeEngine
         ProcessRuntimeStateSnapshot state,
         ProcessRuntimeStepState step)
     {
-        foreach (var dependencyId in step.DependencyStepIds)
-        {
-            var dependency = FindStep(state, dependencyId);
-            if (dependency is null ||
-                !ProcessRuntimeTerminalStates.IsStepTerminal(dependency.Status) ||
-                dependency.Status is ProcessRuntimeStepStatus.Failed or ProcessRuntimeStepStatus.Cancelled)
-            {
-                return false;
-            }
-        }
-
-        foreach (var slotId in step.RequiredArtifactSlots)
-        {
-            if (!state.AvailableArtifactSlots.Contains(slotId))
-            {
-                return false;
-            }
-        }
-
-        return true;
+        return ProcessRuntimeArtifactContracts.DependenciesSatisfied(state, step) &&
+               ProcessRuntimeArtifactContracts.RequiredArtifactsAvailable(state, step);
     }
 
     private static IReadOnlyList<StrategyResultReceipt> RemoveStepReceipts(

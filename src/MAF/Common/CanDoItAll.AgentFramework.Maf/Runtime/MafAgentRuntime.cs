@@ -1,8 +1,5 @@
-using System.Collections.Concurrent;
 using System.Diagnostics;
-using System.Text;
 using System.Text.Json;
-using System.Text.Json.Nodes;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Providers;
@@ -11,47 +8,184 @@ using Microsoft.Extensions.AI;
 
 namespace CanDoItAll.AgentFramework.Maf;
 
-public sealed partial class MafAgentRuntime(
-    string workspaceRoot,
-    IServiceProvider services,
-    WorkspaceScopeDescriptor? workspaceScope = null) : IAgentRuntime
+public sealed class MafAgentRuntime : IAgentRuntime
 {
-    private const int MaxRepeatedToolInvocationCount = 3;
-    private const int MaxRecoveredProcessArtifactSummaryCharacters = 1_200;
-    private const string ProcessArtifactBranchOutcomeKeyLineKey = "Branch outcome key";
-
-    private static readonly JsonSerializerOptions SerializerOptions = new(JsonSerializerDefaults.Web);
-    private static readonly TimeSpan FinalizerSessionSerializationTimeout = TimeSpan.FromSeconds(5);
     private static readonly HttpClient HttpClient = new()
     {
         Timeout = TimeSpan.FromSeconds(20)
     };
     private static readonly ProviderProfileService ProviderFeatureService = new();
 
-    private readonly string workspaceRoot = Path.GetFullPath(workspaceRoot);
-    private readonly IServiceProvider services = services;
-    private readonly WorkspaceScopeDescriptor workspaceScope = workspaceScope ?? WorkspaceScopeDescriptor.Sandbox;
-    private readonly IMafProviderRuntimeGateway providerRuntimeGateway =
-        services.GetService(typeof(IMafProviderRuntimeGateway)) is IMafProviderRuntimeGateway gateway
-            ? gateway
-            : MafProviderRuntimeGateway.CreateFallback(services);
-    private readonly IMafProviderStreamingDispatchGate providerStreamingDispatchGate =
-        services.GetService(typeof(IMafProviderStreamingDispatchGate)) is IMafProviderStreamingDispatchGate streamingDispatchGate
-            ? streamingDispatchGate
-            : CreateFallbackProviderStreamingDispatchGate(services);
-    private readonly ConcurrentDictionary<Guid, IReadOnlyList<ToolApprovalRequestContent>> pendingApprovalCache = new();
+    private readonly string workspaceRoot;
+    private readonly IServiceProvider services;
+    private readonly WorkspaceScopeDescriptor workspaceScope;
+    private readonly IMafRuntimeDependencyResolver dependencyResolver;
+    private readonly IMafProviderCredentialService providerCredentialService;
+    private readonly IMafProviderAgentFactory providerAgentFactory;
+    private readonly IMafProviderRuntimeGateway providerRuntimeGateway;
+    private readonly IAgentImageAnalysisService imageAnalysisService;
+    private readonly IMafProviderStreamingDispatchGate providerStreamingDispatchGate;
+    private readonly IMafProviderStreamingRunner providerStreamingRunner;
+    private readonly IRuntimeToolProviderComposer runtimeToolProviderComposer;
+    private readonly IMafRuntimeCompositionMetrics compositionMetrics;
+    private readonly IRuntimeCapabilityComposer runtimeCapabilityComposer;
+    private readonly MafRuntimeAgentFactory runtimeAgentFactory;
+    private readonly InputAttachmentPreparer inputAttachmentPreparer;
+    private readonly IMafApprovalContinuationDriver approvalContinuationDriver;
+    private readonly IMafRuntimeSessionPersistenceDriver sessionPersistenceDriver;
 
-    private static IMafProviderStreamingDispatchGate CreateFallbackProviderStreamingDispatchGate(IServiceProvider services)
+    public MafAgentRuntime(
+        string workspaceRoot,
+        IServiceProvider services,
+        WorkspaceScopeDescriptor? workspaceScope = null)
     {
+        if (string.IsNullOrWhiteSpace(workspaceRoot))
+        {
+            throw new ArgumentException("Workspace root must be provided.", nameof(workspaceRoot));
+        }
+
         ArgumentNullException.ThrowIfNull(services);
 
-        var providerFactory = services.GetService(typeof(IAgentProviderFactory)) is IAgentProviderFactory resolvedFactory
-            ? resolvedFactory
-            : MafProviderRuntimeServiceCollectionExtensions.CreateDefaultProviderFactory(services);
-        var dispatchLaneGate = services.GetService(typeof(IProviderDispatchLaneGate)) is IProviderDispatchLaneGate resolvedGate
-            ? resolvedGate
-            : new ProviderDispatchLaneGate(providerFactory);
-        return new MafProviderStreamingDispatchGate(dispatchLaneGate);
+        this.workspaceRoot = Path.GetFullPath(workspaceRoot);
+        this.services = services;
+        this.workspaceScope = workspaceScope ?? WorkspaceScopeDescriptor.Sandbox;
+        dependencyResolver = MafRuntimeDependencyResolver.Resolve(services);
+        providerCredentialService = services.GetService(typeof(IMafProviderCredentialService)) is IMafProviderCredentialService resolvedCredentialService
+            ? resolvedCredentialService
+            : new MafProviderCredentialService(services);
+        providerAgentFactory = services.GetService(typeof(IMafProviderAgentFactory)) is IMafProviderAgentFactory resolvedAgentFactory
+            ? resolvedAgentFactory
+            : new MafProviderAgentFactory(providerCredentialService);
+        var providerDependencies = dependencyResolver.ResolveProviderDependencies(services);
+        providerRuntimeGateway = providerDependencies.ProviderRuntimeGateway;
+        imageAnalysisService = providerDependencies.ImageAnalysisService;
+        inputAttachmentPreparer = new InputAttachmentPreparer(providerCredentialService, providerRuntimeGateway);
+        providerStreamingDispatchGate = providerDependencies.ProviderStreamingDispatchGate;
+        providerStreamingRunner = services.GetService(typeof(IMafProviderStreamingRunner)) is IMafProviderStreamingRunner resolvedStreamingRunner
+            ? resolvedStreamingRunner
+            : new MafProviderStreamingRunner(providerStreamingDispatchGate);
+        runtimeToolProviderComposer = services.GetService(typeof(IRuntimeToolProviderComposer)) is IRuntimeToolProviderComposer resolvedComposer
+            ? resolvedComposer
+            : RuntimeToolProviderComposer.Default;
+        compositionMetrics = services.GetService(typeof(IMafRuntimeCompositionMetrics)) is IMafRuntimeCompositionMetrics resolvedMetrics
+            ? resolvedMetrics
+            : NoOpMafRuntimeCompositionMetrics.Instance;
+        runtimeCapabilityComposer = new RuntimeCapabilityComposer(
+            this.workspaceRoot,
+            services,
+            this.workspaceScope,
+            dependencyResolver,
+            providerCredentialService,
+            imageAnalysisService,
+            runtimeToolProviderComposer,
+            compositionMetrics);
+        runtimeAgentFactory = new MafRuntimeAgentFactory(
+            this.workspaceRoot,
+            services,
+            this.workspaceScope,
+            providerCredentialService,
+            providerAgentFactory,
+            runtimeCapabilityComposer);
+        approvalContinuationDriver = services.GetService(typeof(IMafApprovalContinuationDriver)) is IMafApprovalContinuationDriver resolvedApprovalContinuationDriver
+            ? resolvedApprovalContinuationDriver
+            : new MafApprovalContinuationDriver();
+        sessionPersistenceDriver = services.GetService(typeof(IMafRuntimeSessionPersistenceDriver)) is IMafRuntimeSessionPersistenceDriver resolvedSessionPersistenceDriver
+            ? resolvedSessionPersistenceDriver
+            : new MafRuntimeSessionPersistenceDriver();
+    }
+
+    public Task<AIAgent> CreateHostedAgentAsync(
+        AgentDefinition agent,
+        ProviderProfile provider,
+        IReadOnlyList<CapabilityCatalogItem> capabilities,
+        IReadOnlyList<AgentMemoryRecord> memory,
+        CancellationToken cancellationToken = default,
+        bool suppressApprovalRequirements = false,
+        bool forceOmitTemperature = false,
+        AgentRuntimeExecutionOptions? executionOptions = null)
+    {
+        return runtimeAgentFactory.CreateHostedAgentAsync(
+            agent,
+            provider,
+            capabilities,
+            memory,
+            cancellationToken,
+            suppressApprovalRequirements,
+            forceOmitTemperature,
+            executionOptions);
+    }
+
+    public Task<ProviderHealthResult> TestProviderAsync(
+        ProviderProfile provider,
+        CancellationToken cancellationToken = default)
+        => ProviderRuntimeDiagnostics.TestProviderAsync(
+            providerRuntimeGateway,
+            provider,
+            cancellationToken);
+
+    public Task<ProviderTestChatResult> RunProviderTestChatAsync(
+        ProviderProfile provider,
+        ProviderTestChatRequest request,
+        CancellationToken cancellationToken = default)
+        => ProviderRuntimeDiagnostics.RunProviderTestChatAsync(
+            providerRuntimeGateway,
+            provider,
+            request,
+            cancellationToken);
+
+    public Task<ProviderModelMaintenanceEditorResult> CreateOrUpdateProviderModelAsync(
+        ProviderProfile provider,
+        ProviderModelMaintenanceEditorRequest request,
+        CancellationToken cancellationToken = default)
+        => ProviderRuntimeDiagnostics.CreateOrUpdateProviderModelAsync(
+            providerRuntimeGateway,
+            provider,
+            request,
+            cancellationToken);
+
+    private Task<PreparedInputAttachments> PrepareInputAttachmentsAsync(
+        AgentDefinition agent,
+        ProviderProfile provider,
+        string prompt,
+        AgentRuntimeExecutionOptions runtimeOptions,
+        Func<ExecutionState, string, string, Task> progressCallback,
+        CancellationToken cancellationToken)
+    {
+        return inputAttachmentPreparer.PrepareAsync(
+            agent,
+            provider,
+            prompt,
+            runtimeOptions,
+            progressCallback,
+            cancellationToken);
+    }
+
+    private static AgentRuntimeResponse AttachPreparedInputUsageObservations(
+        AgentRuntimeResponse response,
+        IReadOnlyList<ProviderUsageObservation>? usageObservations)
+    {
+        return InputAttachmentPreparer.AttachUsageObservations(response, usageObservations);
+    }
+
+    private static string ResolveRuntimeToolProviderSessionKey(
+        ChatSessionRecord session,
+        string? runtimeSessionKey)
+    {
+        ArgumentNullException.ThrowIfNull(session);
+
+        if (!string.IsNullOrWhiteSpace(runtimeSessionKey))
+        {
+            return runtimeSessionKey.Trim();
+        }
+
+        if (!string.IsNullOrWhiteSpace(session.Compatibility?.RuntimeSessionKey))
+        {
+            return session.Compatibility.RuntimeSessionKey.Trim();
+        }
+
+        return session.Id == Guid.Empty
+            ? string.Empty
+            : session.Id.ToString("D");
     }
 
     public async Task<AgentRuntimeResponse> RunAsync(
@@ -121,7 +255,7 @@ public sealed partial class MafAgentRuntime(
         AgentRuntimeExecutionOptions? executionOptions,
         bool forceOmitTemperature)
     {
-        var runtimeOptions = NormalizeRuntimeExecutionOptions(structuredOutput, executionOptions);
+        var runtimeOptions = MafRuntimeExecutionOptionsResolver.Normalize(structuredOutput, executionOptions);
         var preparedInput = await PrepareInputAttachmentsAsync(
             agent,
             provider,
@@ -137,7 +271,7 @@ public sealed partial class MafAgentRuntime(
             await progressCallback(ExecutionState.Preparing, "Approval policy", "Auto-approve is active for this run, so future tool approval gates will be suppressed.");
         }
 
-        await using var runtimeBuild = await CreateRuntimeBuildAsync(
+        await using var runtimeBuild = await runtimeAgentFactory.CreateRuntimeBuildAsync(
             agent,
             provider,
             capabilities,
@@ -146,8 +280,9 @@ public sealed partial class MafAgentRuntime(
             cancellationToken,
             suppressApprovalRequirements,
             forceOmitTemperature,
-            runtimeOptions);
-        EnsureInputAttachmentsSupported(runtimeBuild.Provider, runtimeBuild.Model, runtimeOptions);
+            runtimeOptions,
+            ResolveRuntimeToolProviderSessionKey(session, runtimeSessionKey));
+        InputAttachmentSupport.EnsureSupported(runtimeBuild.Provider, runtimeBuild.Model, runtimeOptions);
 
         if (runtimeBuild.IsTemperatureOmitted)
         {
@@ -278,14 +413,14 @@ public sealed partial class MafAgentRuntime(
         AgentRuntimeExecutionOptions? executionOptions,
         bool forceOmitTemperature)
     {
-        var runtimeOptions = NormalizeRuntimeExecutionOptions(structuredOutput, executionOptions);
+        var runtimeOptions = MafRuntimeExecutionOptionsResolver.Normalize(structuredOutput, executionOptions);
         await progressCallback(ExecutionState.Preparing, "Framework", "Rehydrating the Microsoft Agent Framework runtime to continue from a pending approval.");
         if (suppressApprovalRequirements)
         {
             await progressCallback(ExecutionState.Preparing, "Approval policy", "Auto-approve remains active, so future tool approval gates will be suppressed after this decision is replayed.");
         }
 
-        await using var runtimeBuild = await CreateRuntimeBuildAsync(
+        await using var runtimeBuild = await runtimeAgentFactory.CreateRuntimeBuildAsync(
             agent,
             provider,
             capabilities,
@@ -294,7 +429,8 @@ public sealed partial class MafAgentRuntime(
             cancellationToken,
             suppressApprovalRequirements,
             forceOmitTemperature,
-            runtimeOptions);
+            runtimeOptions,
+            ResolveRuntimeToolProviderSessionKey(session, runtimeSessionKey));
 
         if (runtimeBuild.IsTemperatureOmitted)
         {
@@ -318,7 +454,7 @@ public sealed partial class MafAgentRuntime(
             continuationToken: null,
             forceOmitTemperature: forceOmitTemperature,
             runtimeOptions);
-        var inputMessages = CreateApprovalInputMessages(session, approved).ToList();
+        var inputMessages = approvalContinuationDriver.CreateApprovalInputMessages(session, approved).ToList();
         var capabilityState = runtimeBuild.CapabilityState;
         var contextManifest = MafContextManifestBuilder.Create(
             agent,
@@ -412,7 +548,7 @@ public sealed partial class MafAgentRuntime(
             AgentResponseUpdate update,
             string usageSourcePhase)
         {
-            var snapshot = SnapshotUpdate(update);
+            var snapshot = MafAgentResponseSnapshotter.SnapshotUpdate(update);
             updates.Add(snapshot);
 
             if (!announcedStreaming && !string.IsNullOrWhiteSpace(snapshot.Text))
@@ -480,7 +616,7 @@ public sealed partial class MafAgentRuntime(
                 finalizerPolicy,
                 updates,
                 ProviderUsageSourcePhases.FinalizerRecovery,
-                "The provider completed without the required finalizer after the current process step primary artifact was written.",
+                ProcessArtifactRecoveryCause.MissingRequiredFinalizer,
                 progressCallback,
                 cancellationToken,
                 snapshotEffectiveToolInvocationTraces).ConfigureAwait(false);
@@ -513,7 +649,7 @@ public sealed partial class MafAgentRuntime(
 
             try
             {
-                await foreach (var repairUpdate in RunProviderStreamingAsync(provider, resolvedModel, runtimeAgent, runtimeSession, repairMessages, repairRunOptions, cancellationToken))
+                await foreach (var repairUpdate in providerStreamingRunner.RunStreamingAsync(provider, resolvedModel, runtimeAgent, runtimeSession, repairMessages, repairRunOptions, cancellationToken))
                 {
                     var finalizerResponse = await RecordStreamingUpdateAsync(
                         repairUpdate,
@@ -578,7 +714,7 @@ public sealed partial class MafAgentRuntime(
                 throw new AgentRuntimeUsageException(
                     $"Required finalizer repair captured '{exception.ToolName}' but the governed result could not be validated.",
                     exception,
-                    CreateProviderUsageObservations(
+                    MafRuntimeResponseAssembler.CreateProviderUsageObservations(
                         provider,
                         resolvedModel,
                         runtimeSession,
@@ -612,14 +748,14 @@ public sealed partial class MafAgentRuntime(
                 throw new AgentRuntimeUsageException(
                     "Provider runtime failed during the bounded required-finalizer repair turn. Usage was captured when available.",
                     exception,
-                    CreateProviderUsageObservations(
+                    MafRuntimeResponseAssembler.CreateProviderUsageObservations(
                         provider,
                         resolvedModel,
                         runtimeSession,
                         runtimeSessionKey,
                         updates,
                     ProviderUsageSourcePhases.FinalizerRecovery,
-                    BuildProviderFailureDiagnostic(exception)));
+                    MafRuntimeResponseAssembler.BuildProviderFailureDiagnostic(exception)));
             }
         }
 
@@ -650,9 +786,9 @@ public sealed partial class MafAgentRuntime(
 
             try
             {
-                await foreach (var jsonRepairUpdate in RunProviderStreamingAsync(provider, resolvedModel, jsonRepairAgent, jsonRepairSession, jsonRepairMessages, jsonRepairRunOptions, cancellationToken))
+                await foreach (var jsonRepairUpdate in providerStreamingRunner.RunStreamingAsync(provider, resolvedModel, jsonRepairAgent, jsonRepairSession, jsonRepairMessages, jsonRepairRunOptions, cancellationToken))
                 {
-                    jsonRepairUpdates.Add(SnapshotUpdate(jsonRepairUpdate));
+                    jsonRepairUpdates.Add(MafAgentResponseSnapshotter.SnapshotUpdate(jsonRepairUpdate));
                     var streamedFinalizerResponse = await RecordStreamingUpdateAsync(
                         jsonRepairUpdate,
                         ProviderUsageSourcePhases.FinalizerRecovery);
@@ -727,7 +863,7 @@ public sealed partial class MafAgentRuntime(
 
                 try
                 {
-                    await foreach (var update in RunProviderStreamingAsync(provider, resolvedModel, runtimeAgent, runtimeSession, inputMessages, runOptions, cancellationToken))
+                    await foreach (var update in providerStreamingRunner.RunStreamingAsync(provider, resolvedModel, runtimeAgent, runtimeSession, inputMessages, runOptions, cancellationToken))
                     {
                         var finalizerResponse = await RecordStreamingUpdateAsync(
                             update,
@@ -810,14 +946,14 @@ public sealed partial class MafAgentRuntime(
                     throw new AgentRuntimeUsageException(
                         "Provider runtime failed after provider activity. Usage was captured when available.",
                         exception,
-                        CreateProviderUsageObservations(
+                        MafRuntimeResponseAssembler.CreateProviderUsageObservations(
                             provider,
                             resolvedModel,
                             runtimeSession,
                             runtimeSessionKey,
                             updates,
                             ProviderUsageSourcePhases.AgentRuntime,
-                            BuildProviderFailureDiagnostic(exception)));
+                            MafRuntimeResponseAssembler.BuildProviderFailureDiagnostic(exception)));
                 }
             }
 
@@ -829,14 +965,14 @@ public sealed partial class MafAgentRuntime(
 
             if (approvalRequests.Count > 0)
             {
-                pendingApprovalCache[session.Id] = approvalRequests;
+                approvalContinuationDriver.StorePendingApprovals(session.Id, approvalRequests);
             }
             else
             {
-                pendingApprovalCache.TryRemove(session.Id, out _);
+                approvalContinuationDriver.ClearPendingApprovals(session.Id);
             }
 
-            if (!ShouldContinueBackgroundRun(agent, provider, response, approvalRequests))
+            if (!MafRuntimeResponseAssembler.ShouldContinueBackgroundRun(agent, provider, response, approvalRequests))
             {
                 var repairedFinalizerResponse = await TryRunMissingRequiredFinalizerRepairAsync(response, approvalRequests);
                 if (repairedFinalizerResponse is not null)
@@ -844,8 +980,8 @@ public sealed partial class MafAgentRuntime(
                     return AttachContextDiagnostics(repairedFinalizerResponse);
                 }
 
-                var pendingApprovals = approvalRequests.Select(MapPendingApproval).ToList();
-                var serializedSessionJson = await TrySerializePersistableRuntimeSessionAsync(
+                var pendingApprovals = approvalRequests.Select(approvalContinuationDriver.MapPendingApproval).ToList();
+                var serializedSessionJson = await sessionPersistenceDriver.TrySerializePersistableRuntimeSessionAsync(
                     runtimeAgent,
                     runtimeSession,
                     runtimeOptions,
@@ -858,21 +994,21 @@ public sealed partial class MafAgentRuntime(
                     await progressCallback(ExecutionState.WaitingOnTool, "Approval", "The run is waiting for a tool approval response before it can continue.");
                 }
 
-                ThrowIfEmptyProviderCompletion(provider, resolvedModel, response, pendingApprovals);
+                MafRuntimeResponseAssembler.ThrowIfEmptyProviderCompletion(provider, resolvedModel, response, pendingApprovals);
 
                 return AttachContextDiagnostics(new AgentRuntimeResponse(
-                    ResponseText: ResolveResponseText(response, pendingApprovals),
-                    InputTokens: ClampTokenCount(response.Usage?.InputTokenCount),
-                    OutputTokens: ClampTokenCount(response.Usage?.OutputTokenCount),
-                    ToolCalls: CountToolCalls(response),
-                    RuntimeSessionKey: ResolveRuntimeSessionKey(runtimeSession, response, runtimeSessionKey),
+                    ResponseText: approvalContinuationDriver.ResolveResponseText(response, pendingApprovals),
+                    InputTokens: MafRuntimeResponseAssembler.ClampTokenCount(response.Usage?.InputTokenCount),
+                    OutputTokens: MafRuntimeResponseAssembler.ClampTokenCount(response.Usage?.OutputTokenCount),
+                    ToolCalls: MafRuntimeResponseAssembler.CountToolCalls(response),
+                    RuntimeSessionKey: MafRuntimeResponseAssembler.ResolveRuntimeSessionKey(runtimeSession, response, runtimeSessionKey),
                     SerializedSessionStateJson: serializedSessionJson,
                     PendingApprovals: pendingApprovals)
                 {
-                    CachedInputTokens = ClampTokenCount(response.Usage?.CachedInputTokenCount),
+                    CachedInputTokens = MafRuntimeResponseAssembler.ClampTokenCount(response.Usage?.CachedInputTokenCount),
                     FinalizerInvocations = snapshotEffectiveFinalizerInvocations(),
                     ToolInvocationTraces = snapshotEffectiveToolInvocationTraces(),
-                    UsageObservations = CreateProviderUsageObservations(
+                    UsageObservations = MafRuntimeResponseAssembler.CreateProviderUsageObservations(
                         provider,
                         resolvedModel,
                         runtimeSession,
@@ -926,8 +1062,8 @@ public sealed partial class MafAgentRuntime(
         };
         var repairCapabilityState = new RuntimeCapabilityState();
         repairCapabilityState.Tools.Add(finalizerTool);
-        return CreateInstrumentedAgent(
-            CreateFrameworkAgent(provider, model, repairOptions, frameworkManagedHistory: false),
+        return runtimeAgentFactory.CreateInstrumentedAgent(
+            providerAgentFactory.CreateFrameworkAgent(provider, model, repairOptions, frameworkManagedHistory: false, services),
             provider,
             agent,
             repairCapabilityState,
@@ -975,7 +1111,7 @@ public sealed partial class MafAgentRuntime(
             ChatHistoryProvider = null,
             RequirePerServiceCallChatHistoryPersistence = false
         };
-        return CreateFrameworkAgent(provider, model, repairOptions, frameworkManagedHistory: false);
+        return providerAgentFactory.CreateFrameworkAgent(provider, model, repairOptions, frameworkManagedHistory: false, services);
     }
 
     private static async ValueTask DisposeAgentAsync(AIAgent agent)
@@ -1026,7 +1162,7 @@ public sealed partial class MafAgentRuntime(
         return true;
     }
 
-    private static async Task<AgentRuntimeResponse?> TryCreateFinalizerResponseAfterEarlyFinalizerAsync(
+    private async Task<AgentRuntimeResponse?> TryCreateFinalizerResponseAfterEarlyFinalizerAsync(
         ProviderProfile provider,
         string model,
         AgentStructuredOutputContract? structuredOutput,
@@ -1044,14 +1180,14 @@ public sealed partial class MafAgentRuntime(
     {
         var finalizerInvocations = snapshotFinalizerInvocations();
         var toolInvocationTraces = snapshotToolInvocationTraces();
-        var serializedResponse = TryBuildRequiredFinalizerRuntimeResponse(
+        var serializedResponse = MafRuntimeResponseAssembler.TryBuildRequiredFinalizerRuntimeResponse(
             structuredOutput,
             finalizerMode,
-            ResolveRuntimeSessionKey(runtimeSession, runtimeSessionKey),
+            MafRuntimeResponseAssembler.ResolveRuntimeSessionKey(runtimeSession, runtimeSessionKey),
             serializedSessionStateJson: null,
             finalizerInvocations,
             toolInvocationTraces,
-            CreateProviderUsageObservations(
+            MafRuntimeResponseAssembler.CreateProviderUsageObservations(
                 provider,
                 model,
                 runtimeSession,
@@ -1069,7 +1205,7 @@ public sealed partial class MafAgentRuntime(
             "Finalizer short-circuit",
             "Required finalizer tool produced a valid governed result. Persisting the typed result immediately without waiting for redundant post-finalizer assistant prose.");
 
-        var serializedSessionStateJson = await TrySerializePersistableRuntimeSessionAsync(
+        var serializedSessionStateJson = await sessionPersistenceDriver.TrySerializePersistableRuntimeSessionAsync(
             runtimeAgent,
             runtimeSession,
             runtimeOptions,
@@ -1121,7 +1257,7 @@ public sealed partial class MafAgentRuntime(
                     policy,
                     updates,
                     ProviderUsageSourcePhases.FinalizerRecovery,
-                    "Provider streaming timed out after the current process step primary artifact was written.",
+                    ProcessArtifactRecoveryCause.ProviderStreamingTimeout,
                     progressCallback,
                     cancellationToken,
                     snapshotToolInvocationTraces).ConfigureAwait(false);
@@ -1147,7 +1283,7 @@ public sealed partial class MafAgentRuntime(
             "Finalizer recovery",
             $"Provider streaming failed after required finalizer '{policy.ToolName}' was captured. Persisting the governed finalizer outcome and preserving the provider error for diagnostics: {exception.Message}");
 
-        var serializedSessionStateJson = await TrySerializePersistableRuntimeSessionAsync(
+        var serializedSessionStateJson = await sessionPersistenceDriver.TrySerializePersistableRuntimeSessionAsync(
             runtimeAgent,
             runtimeSession,
             runtimeOptions,
@@ -1163,13 +1299,13 @@ public sealed partial class MafAgentRuntime(
                 .Select(trace => $"{trace.ToolName}|{trace.Sequence}")
                 .Distinct(StringComparer.Ordinal)
                 .Count(),
-            RuntimeSessionKey: ResolveRuntimeSessionKey(runtimeSession, runtimeSessionKey),
+            RuntimeSessionKey: MafRuntimeResponseAssembler.ResolveRuntimeSessionKey(runtimeSession, runtimeSessionKey),
             SerializedSessionStateJson: serializedSessionStateJson,
             PendingApprovals: [])
         {
             FinalizerInvocations = finalizerInvocations,
             ToolInvocationTraces = toolInvocationTraces,
-            UsageObservations = CreateProviderUsageObservations(
+            UsageObservations = MafRuntimeResponseAssembler.CreateProviderUsageObservations(
                 provider,
                 model,
                 runtimeSession,
@@ -1190,7 +1326,7 @@ public sealed partial class MafAgentRuntime(
         AgentFinalizerPolicy policy,
         IReadOnlyList<AgentResponseUpdate> updates,
         string usageSourcePhase,
-        string recoveryReason,
+        ProcessArtifactRecoveryCause recoveryCause,
         Func<ExecutionState, string, string, Task> progressCallback,
         CancellationToken cancellationToken,
         Func<IReadOnlyList<AgentToolInvocationTrace>> snapshotToolInvocationTraces)
@@ -1201,7 +1337,7 @@ public sealed partial class MafAgentRuntime(
         }
 
         var contextIntent = runtimeOptions.ContextIntent ?? AgentRuntimeContextIntent.Empty;
-        if (!TryBuildCurrentStepPrimaryManagedArtifactPath(contextIntent, out var primaryArtifactRef, out _))
+        if (!ProcessArtifactRecoveryService.TryBuildCurrentStepPrimaryManagedArtifactPath(contextIntent, out var primaryArtifactRef, out _))
         {
             return null;
         }
@@ -1218,10 +1354,11 @@ public sealed partial class MafAgentRuntime(
             return null;
         }
 
-        if (!TryCreateProcessStepOutcomeFromPrimaryArtifact(
+        if (!ProcessArtifactRecoveryService.TryCreateProcessStepOutcomeFromPrimaryArtifact(
                 contextIntent,
                 primaryArtifactRef,
                 artifactMarkdown,
+                recoveryCause,
                 out var outcome,
                 out _))
         {
@@ -1229,6 +1366,7 @@ public sealed partial class MafAgentRuntime(
         }
 
         var argumentsJson = JsonSerializer.Serialize(outcome, AgentOutputJson.SerializerOptions);
+        var recoveryReason = ProcessArtifactRecoveryService.DescribeRecoveryCause(recoveryCause);
         var existingToolTraces = snapshotToolInvocationTraces();
         var finalizerSequence = existingToolTraces.Count == 0
             ? 1
@@ -1249,14 +1387,14 @@ public sealed partial class MafAgentRuntime(
                 FailureMessage: string.Empty))
             .ToArray();
 
-        var recoveredResponse = TryBuildRequiredFinalizerRuntimeResponse(
+        var recoveredResponse = MafRuntimeResponseAssembler.TryBuildRequiredFinalizerRuntimeResponse(
             policy.OutputContract,
             AgentFinalizerMode.Required,
-            ResolveRuntimeSessionKey(runtimeSession, runtimeSessionKey),
+            MafRuntimeResponseAssembler.ResolveRuntimeSessionKey(runtimeSession, runtimeSessionKey),
             serializedSessionStateJson: null,
             [finalizerInvocation],
             toolInvocationTraces,
-            CreateProviderUsageObservations(
+            MafRuntimeResponseAssembler.CreateProviderUsageObservations(
                 provider,
                 model,
                 runtimeSession,
@@ -1274,7 +1412,7 @@ public sealed partial class MafAgentRuntime(
             "Finalizer recovery",
             $"{recoveryReason} Persisting a validated required-finalizer result synthesized from current process step artifact '{primaryArtifactRef}' with status '{outcome.Status}'.").ConfigureAwait(false);
 
-        var serializedSessionStateJson = await TrySerializePersistableRuntimeSessionAsync(
+        var serializedSessionStateJson = await sessionPersistenceDriver.TrySerializePersistableRuntimeSessionAsync(
             runtimeAgent,
             runtimeSession,
             runtimeOptions,
@@ -1285,389 +1423,6 @@ public sealed partial class MafAgentRuntime(
         {
             SerializedSessionStateJson = serializedSessionStateJson
         };
-    }
-
-    internal static bool TryCreateProcessStepOutcomeFromPrimaryArtifact(
-        AgentRuntimeContextIntent contextIntent,
-        string primaryArtifactRef,
-        string artifactMarkdown,
-        out ProcessStepOutcomeResult outcome,
-        out string failureMessage)
-    {
-        outcome = default!;
-        failureMessage = string.Empty;
-
-        if (!contextIntent.IsGovernedProcessStep ||
-            !string.Equals(contextIntent.SourceKind, "process-step", StringComparison.OrdinalIgnoreCase) ||
-            string.IsNullOrWhiteSpace(contextIntent.ProcessRunId) ||
-            string.IsNullOrWhiteSpace(contextIntent.SourceId))
-        {
-            failureMessage = "The runtime context is not a governed process step.";
-            return false;
-        }
-
-        if (string.IsNullOrWhiteSpace(primaryArtifactRef))
-        {
-            failureMessage = "The primary artifact reference is required.";
-            return false;
-        }
-
-        var statusWasDeclared = TryReadProcessArtifactStatus(artifactMarkdown, out var status, out var hasStatusLine);
-        if (!statusWasDeclared &&
-            hasStatusLine)
-        {
-            failureMessage = "The primary process artifact does not contain a recoverable Status line.";
-            return false;
-        }
-
-        if (!statusWasDeclared &&
-            !TryInferProcessArtifactStatus(artifactMarkdown, out status))
-        {
-            failureMessage = "The primary process artifact is empty or does not contain recoverable process outcome evidence.";
-            return false;
-        }
-
-        if (statusWasDeclared &&
-            status == ProcessStepOutcomeStatus.Blocked &&
-            IsStatusOnlyRecoveredBlockedArtifact(artifactMarkdown))
-        {
-            failureMessage = "The primary process artifact declares Blocked without concrete blocker evidence.";
-            return false;
-        }
-
-        if (!TryReadProcessArtifactBranchOutcomeKey(
-            artifactMarkdown,
-            out var branchOutcomeKey,
-            out var branchOutcomeFailure))
-        {
-            failureMessage = branchOutcomeFailure;
-            return false;
-        }
-
-        var reason =
-            statusWasDeclared
-                ? $"Recovered governed process step outcome from primary managed artifact '{primaryArtifactRef}' after provider timeout. The artifact declares status '{status}'."
-                : $"Recovered governed process step outcome from primary managed artifact '{primaryArtifactRef}' after provider timeout. The artifact did not declare a Status line, so the runtime inferred status '{status}' from the artifact text.";
-        outcome = new ProcessStepOutcomeResult
-        {
-            Status = status,
-            Reason = reason,
-            BranchOutcomeKey = branchOutcomeKey,
-            EvidenceRefs = [primaryArtifactRef],
-            NextActions = CreateRecoveredProcessArtifactNextActions(status, primaryArtifactRef),
-            HumanReadableSummaryMarkdown = BuildRecoveredProcessArtifactSummary(primaryArtifactRef, artifactMarkdown)
-        };
-        return true;
-    }
-
-    internal static bool TryBuildCurrentStepPrimaryManagedArtifactPath(
-        AgentRuntimeContextIntent contextIntent,
-        out string primaryArtifactRef,
-        out string failureMessage)
-    {
-        primaryArtifactRef = string.Empty;
-        failureMessage = string.Empty;
-
-        if (!Guid.TryParse(contextIntent.ProcessRunId, out var processRunId))
-        {
-            failureMessage = "The process run id is not a GUID.";
-            return false;
-        }
-
-        var sourceId = contextIntent.SourceId?.Trim() ?? string.Empty;
-        if (string.IsNullOrWhiteSpace(sourceId) ||
-            sourceId.Contains('/') ||
-            sourceId.Contains('\\') ||
-            sourceId.Contains("..", StringComparison.Ordinal))
-        {
-            failureMessage = "The process step source id is not a safe artifact file name.";
-            return false;
-        }
-
-        primaryArtifactRef = WorkspaceScopeDescriptor.NormalizeRelativePath(
-            $"artifacts/process-runs/{processRunId:D}/steps/{sourceId}.md");
-        return true;
-    }
-
-    private static bool TryReadProcessArtifactStatus(
-        string artifactMarkdown,
-        out ProcessStepOutcomeStatus status,
-        out bool hasStatusLine)
-    {
-        status = default;
-        hasStatusLine = false;
-        foreach (var rawLine in artifactMarkdown.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries))
-        {
-            var line = rawLine.Trim().TrimStart('#', '-', '*', ' ');
-            var separatorIndex = line.IndexOf(':', StringComparison.Ordinal);
-            if (separatorIndex <= 0)
-            {
-                continue;
-            }
-
-            var key = line[..separatorIndex].Trim(' ', '*', '`');
-            if (!string.Equals(key, "Status", StringComparison.OrdinalIgnoreCase))
-            {
-                continue;
-            }
-
-            hasStatusLine = true;
-            return TryMapProcessArtifactStatus(line[(separatorIndex + 1)..], out status);
-        }
-
-        return false;
-    }
-
-    private static bool TryReadProcessArtifactBranchOutcomeKey(
-        string artifactMarkdown,
-        out string branchOutcomeKey,
-        out string failureMessage)
-    {
-        branchOutcomeKey = string.Empty;
-        failureMessage = string.Empty;
-        var declaredKeys = new HashSet<string>(StringComparer.Ordinal);
-        var lines = artifactMarkdown.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries);
-
-        for (var index = 0; index < lines.Length; index++)
-        {
-            var line = NormalizeProcessArtifactMetadataLine(lines[index]);
-            var separatorIndex = line.IndexOf(':', StringComparison.Ordinal);
-            if (separatorIndex <= 0)
-            {
-                if (!string.Equals(line, ProcessArtifactBranchOutcomeKeyLineKey, StringComparison.OrdinalIgnoreCase))
-                {
-                    continue;
-                }
-
-                if (index + 1 >= lines.Length ||
-                    !TryAddProcessArtifactBranchOutcomeKey(
-                        NormalizeProcessArtifactBranchOutcomeKeyValue(NormalizeProcessArtifactMetadataLine(lines[index + 1])),
-                        declaredKeys,
-                        out failureMessage))
-                {
-                    failureMessage = string.IsNullOrWhiteSpace(failureMessage)
-                        ? "The primary process artifact contains an invalid Branch outcome key section."
-                        : failureMessage;
-                    return false;
-                }
-
-                continue;
-            }
-
-            var key = line[..separatorIndex].Trim(' ', '*', '`');
-            if (!string.Equals(key, ProcessArtifactBranchOutcomeKeyLineKey, StringComparison.OrdinalIgnoreCase))
-            {
-                continue;
-            }
-
-            var value = NormalizeProcessArtifactBranchOutcomeKeyValue(line[(separatorIndex + 1)..]);
-            if (!TryAddProcessArtifactBranchOutcomeKey(value, declaredKeys, out failureMessage))
-            {
-                return false;
-            }
-        }
-
-        branchOutcomeKey = declaredKeys.SingleOrDefault() ?? string.Empty;
-        return true;
-    }
-
-    private static string NormalizeProcessArtifactMetadataLine(string value)
-        => value.Trim().TrimStart('#', '-', '*', ' ');
-
-    private static bool TryAddProcessArtifactBranchOutcomeKey(
-        string value,
-        ISet<string> declaredKeys,
-        out string failureMessage)
-    {
-        failureMessage = string.Empty;
-        if (!IsSafeProcessArtifactBranchOutcomeKey(value))
-        {
-            failureMessage = "The primary process artifact contains an invalid Branch outcome key line.";
-            return false;
-        }
-
-        declaredKeys.Add(value);
-        if (declaredKeys.Count <= 1)
-        {
-            return true;
-        }
-
-        failureMessage = "The primary process artifact contains multiple different Branch outcome key lines.";
-        return false;
-    }
-
-    private static string NormalizeProcessArtifactBranchOutcomeKeyValue(string value)
-    {
-        var trimmed = value.Trim().Trim('*', '`', '.', ';');
-        var commentIndex = trimmed.IndexOf('#', StringComparison.Ordinal);
-        if (commentIndex >= 0)
-        {
-            trimmed = trimmed[..commentIndex].Trim();
-        }
-
-        return trimmed.Trim('*', '`', '.', ';');
-    }
-
-    private static bool IsSafeProcessArtifactBranchOutcomeKey(string value)
-        => !string.IsNullOrWhiteSpace(value) &&
-           char.IsLetterOrDigit(value[0]) &&
-           value.All(character => char.IsLetterOrDigit(character) || character is '-' or '_' or '.');
-
-    private static bool TryInferProcessArtifactStatus(
-        string artifactMarkdown,
-        out ProcessStepOutcomeStatus status)
-    {
-        status = default;
-        var text = artifactMarkdown.ReplaceLineEndings(" ").Trim();
-        if (string.IsNullOrWhiteSpace(text))
-        {
-            return false;
-        }
-
-        if (ContainsAny(
-            text,
-            "waiting approval",
-            "approval required",
-            "pending approval",
-            "human approval"))
-        {
-            status = ProcessStepOutcomeStatus.WaitingApproval;
-            return true;
-        }
-
-        if (ContainsAny(
-            text,
-            "blocked",
-            "cannot proceed",
-            "unable to proceed",
-            "missing required",
-            "requires manager",
-            "manager action required",
-            "policydenied",
-            "permission denied",
-            "access denied",
-            "not authorized"))
-        {
-            status = ProcessStepOutcomeStatus.Blocked;
-            return true;
-        }
-
-        if (ContainsAny(
-            text,
-            "unrecoverable failure",
-            "unrecoverable error",
-            "execution failed",
-            "validation failed",
-            "failed to complete"))
-        {
-            status = ProcessStepOutcomeStatus.Failed;
-            return true;
-        }
-
-        status = ProcessStepOutcomeStatus.Completed;
-        return true;
-    }
-
-    private static bool ContainsAny(string text, params string[] values)
-        => values.Any(value => text.Contains(value, StringComparison.OrdinalIgnoreCase));
-
-    private static bool IsStatusOnlyRecoveredBlockedArtifact(string artifactMarkdown)
-    {
-        var normalized = artifactMarkdown.Trim();
-        if (normalized.Length > 700)
-        {
-            return false;
-        }
-
-        return !ContainsAny(
-            normalized,
-            "PolicyDenied",
-            "denied",
-            "failed",
-            "failure",
-            "exception",
-            "error",
-            "cannot proceed",
-            "unable to proceed",
-            "missing",
-            "required tool",
-            "unavailable",
-            "approval",
-            "dependency",
-            "environment",
-            "boundary",
-            "evidence",
-            "receipt");
-    }
-
-    private static bool TryMapProcessArtifactStatus(
-        string value,
-        out ProcessStepOutcomeStatus status)
-    {
-        status = default;
-        var normalized = NormalizeProcessArtifactStatusValue(value);
-        status = normalized switch
-        {
-            "completed" or "complete" or "succeeded" or "success" => ProcessStepOutcomeStatus.Completed,
-            "blocked" or "waiting" or "waitingonchild" or "waitingforchild" => ProcessStepOutcomeStatus.Blocked,
-            "failed" or "failure" => ProcessStepOutcomeStatus.Failed,
-            "waitingapproval" or "pendingapproval" => ProcessStepOutcomeStatus.WaitingApproval,
-            "refused" or "rejected" => ProcessStepOutcomeStatus.Refused,
-            _ => default
-        };
-        return normalized is "completed" or "complete" or "succeeded" or "success" or
-            "blocked" or "waiting" or "waitingonchild" or "waitingforchild" or
-            "failed" or "failure" or
-            "waitingapproval" or "pendingapproval" or
-            "refused" or "rejected";
-    }
-
-    private static string NormalizeProcessArtifactStatusValue(string value)
-    {
-        var trimmed = value.Trim().Trim('*', '`', '.', ';');
-        var commentIndex = trimmed.IndexOf('#', StringComparison.Ordinal);
-        if (commentIndex >= 0)
-        {
-            trimmed = trimmed[..commentIndex].Trim();
-        }
-
-        return new string(
-            trimmed
-                .Where(character => char.IsLetterOrDigit(character))
-                .Select(char.ToLowerInvariant)
-                .ToArray());
-    }
-
-    private static IReadOnlyList<string> CreateRecoveredProcessArtifactNextActions(
-        ProcessStepOutcomeStatus status,
-        string primaryArtifactRef)
-    {
-        if (status == ProcessStepOutcomeStatus.Completed)
-        {
-            return [];
-        }
-
-        return
-        [
-            $"Review '{primaryArtifactRef}' and re-dispatch or rework the governed process step with the recorded evidence."
-        ];
-    }
-
-    private static string BuildRecoveredProcessArtifactSummary(
-        string primaryArtifactRef,
-        string artifactMarkdown)
-    {
-        var trimmed = string.IsNullOrWhiteSpace(artifactMarkdown)
-            ? string.Empty
-            : artifactMarkdown.Trim();
-        if (trimmed.Length > MaxRecoveredProcessArtifactSummaryCharacters)
-        {
-            trimmed = trimmed[..MaxRecoveredProcessArtifactSummaryCharacters] + Environment.NewLine + "[... artifact summary truncated during provider-timeout recovery ...]";
-        }
-
-        return string.IsNullOrWhiteSpace(trimmed)
-            ? $"Recovered outcome from primary process artifact `{primaryArtifactRef}` after provider timeout."
-            : $"Recovered outcome from primary process artifact `{primaryArtifactRef}` after provider timeout.{Environment.NewLine}{Environment.NewLine}{trimmed}";
     }
 
     private static bool IsProviderStreamingTimeout(Exception exception)
@@ -1683,7 +1438,7 @@ public sealed partial class MafAgentRuntime(
         return false;
     }
 
-    private static async Task<AgentRuntimeResponse?> TryCreateFinalizerResponseAfterRequiredFinalizerAsync(
+    private async Task<AgentRuntimeResponse?> TryCreateFinalizerResponseAfterRequiredFinalizerAsync(
         ProviderProfile provider,
         string model,
         AgentStructuredOutputContract? structuredOutput,
@@ -1701,14 +1456,14 @@ public sealed partial class MafAgentRuntime(
     {
         var finalizerInvocations = snapshotFinalizerInvocations();
         var toolInvocationTraces = snapshotToolInvocationTraces();
-        var serializedResponse = TryBuildRequiredFinalizerRuntimeResponse(
+        var serializedResponse = MafRuntimeResponseAssembler.TryBuildRequiredFinalizerRuntimeResponse(
             structuredOutput,
             finalizerMode,
-            ResolveRuntimeSessionKey(runtimeSession, runtimeSessionKey),
+            MafRuntimeResponseAssembler.ResolveRuntimeSessionKey(runtimeSession, runtimeSessionKey),
             serializedSessionStateJson: null,
             finalizerInvocations,
             toolInvocationTraces,
-            CreateProviderUsageObservations(
+            MafRuntimeResponseAssembler.CreateProviderUsageObservations(
                 provider,
                 model,
                 runtimeSession,
@@ -1726,7 +1481,7 @@ public sealed partial class MafAgentRuntime(
             "Finalizer short-circuit",
             "Required finalizer tool produced a valid governed result. Persisting the typed result without waiting for redundant post-finalizer assistant prose.");
 
-        var serializedSessionStateJson = await TrySerializePersistableRuntimeSessionAsync(
+        var serializedSessionStateJson = await sessionPersistenceDriver.TrySerializePersistableRuntimeSessionAsync(
             runtimeAgent,
             runtimeSession,
             runtimeOptions,
@@ -1738,660 +1493,5 @@ public sealed partial class MafAgentRuntime(
             SerializedSessionStateJson = serializedSessionStateJson
         };
     }
-
-    private static AgentRuntimeResponse? TryBuildRequiredFinalizerRuntimeResponse(
-        AgentStructuredOutputContract? structuredOutput,
-        AgentFinalizerMode finalizerMode,
-        string runtimeSessionKey,
-        string? serializedSessionStateJson,
-        IReadOnlyList<AgentFinalizerInvocation> finalizerInvocations,
-        IReadOnlyList<AgentToolInvocationTrace> toolInvocationTraces,
-        IReadOnlyList<ProviderUsageObservation> usageObservations)
-    {
-        if (finalizerMode != AgentFinalizerMode.Required ||
-            !AgentFinalizerPolicies.TryResolveForStructuredOutput(structuredOutput, out var policy))
-        {
-            return null;
-        }
-
-        var finalizerValidation = new DefaultAgentFinalizerValidator().Validate(policy, finalizerInvocations);
-        if (!finalizerValidation.Succeeded || finalizerValidation.Output is null)
-        {
-            return null;
-        }
-
-        var sequenceValidation = AgentFinalizerSequenceValidator.Validate(policy, toolInvocationTraces);
-        if (!sequenceValidation.Succeeded)
-        {
-            return null;
-        }
-
-        return new AgentRuntimeResponse(
-            JsonSerializer.Serialize(finalizerValidation.Output, policy.OutputType, AgentOutputJson.SerializerOptions),
-            InputTokens: 0,
-            OutputTokens: 0,
-            ToolCalls: toolInvocationTraces
-                .Where(trace => !string.IsNullOrWhiteSpace(trace.ToolName))
-                .Select(trace => $"{trace.ToolName}|{trace.Sequence}")
-                .Distinct(StringComparer.Ordinal)
-                .Count(),
-            RuntimeSessionKey: runtimeSessionKey,
-            SerializedSessionStateJson: serializedSessionStateJson,
-            PendingApprovals: [])
-        {
-            FinalizerInvocations = finalizerInvocations,
-            ToolInvocationTraces = toolInvocationTraces,
-            UsageObservations = usageObservations
-        };
-    }
-
-    private static IReadOnlyList<ProviderUsageObservation> CreateProviderUsageObservations(
-        ProviderProfile provider,
-        string model,
-        AgentSession runtimeSession,
-        string? runtimeSessionKey,
-        IReadOnlyList<AgentResponseUpdate> updates,
-        string sourcePhase,
-        string diagnostic)
-    {
-        if (updates.Count == 0)
-        {
-            return
-            [
-                CreateMissingProviderUsageObservation(
-                    provider,
-                    model,
-                    ResolveRuntimeSessionKey(runtimeSession, runtimeSessionKey),
-                    sourcePhase,
-                    diagnostic)
-            ];
-        }
-
-        var response = updates.ToAgentResponse();
-        var runtimeKey = ResolveRuntimeSessionKey(runtimeSession, response, runtimeSessionKey);
-        var rawUsageJson = response.Usage is null
-            ? string.Empty
-            : JsonSerializer.Serialize(response.Usage, SerializerOptions);
-
-        return
-        [
-            DefaultProviderUsageNormalizer.Instance.Normalize(new ProviderUsageNormalizationRequest(
-                Provider: provider,
-                Model: model,
-                SourcePhase: sourcePhase,
-                UsageStatus: response.Usage is null
-                    ? ProviderUsageObservationStatus.UsageUnavailable
-                    : ProviderUsageObservationStatus.Observed,
-                InputTokens: ClampTokenCount(response.Usage?.InputTokenCount),
-                CachedInputTokens: ClampTokenCount(response.Usage?.CachedInputTokenCount),
-                OutputTokens: ClampTokenCount(response.Usage?.OutputTokenCount),
-                ReasoningTokens: 0,
-                TotalTokens: ClampTokenCount(response.Usage?.TotalTokenCount),
-                ToolCallCount: CountToolCalls(response),
-                ProviderResponseId: response.ResponseId ?? response.ContinuationToken?.ToString() ?? string.Empty,
-                ProviderRequestId: string.Empty,
-                RuntimeSessionKey: runtimeKey,
-                RawUsageJson: rawUsageJson,
-                DiagnosticsJson: JsonSerializer.Serialize(
-                    new Dictionary<string, string>
-                    {
-                        ["diagnostic"] = diagnostic
-                    },
-                    SerializerOptions)))
-        ];
-    }
-
-    private static string BuildProviderFailureDiagnostic(Exception exception)
-    {
-        ArgumentNullException.ThrowIfNull(exception);
-
-        var builder = new StringBuilder("Provider streaming failed before a successful runtime response.");
-        var current = exception;
-        var depth = 0;
-        while (current is not null && depth < 4)
-        {
-            builder
-                .Append(" Exception")
-                .Append(depth)
-                .Append('=')
-                .Append(current.GetType().FullName ?? current.GetType().Name)
-                .Append(": ")
-                .Append(WorkflowExecutorRedaction.RedactText(current.Message))
-                .Append('.');
-
-            current = current.InnerException;
-            depth++;
-        }
-
-        return builder.ToString();
-    }
-
-    private static ProviderUsageObservation CreateMissingProviderUsageObservation(
-        ProviderProfile provider,
-        string model,
-        string runtimeSessionKey,
-        string sourcePhase,
-        string diagnostic)
-    {
-        return new ProviderUsageObservation(
-            Id: Guid.NewGuid(),
-            CreatedAtUtc: DateTimeOffset.UtcNow,
-            ProviderName: provider.Name,
-            ProviderKind: provider.Kind,
-            Model: model,
-            TransportKind: provider.Transport,
-            SourcePhase: sourcePhase,
-            UsageStatus: ProviderUsageObservationStatus.MissingAfterProviderActivity,
-            InputTokens: 0,
-            CachedInputTokens: 0,
-            OutputTokens: 0,
-            ReasoningTokens: 0,
-            TotalTokens: 0,
-            ToolCallCount: 0)
-        {
-            RuntimeSessionKey = runtimeSessionKey,
-            DiagnosticsJson = JsonSerializer.Serialize(
-                new Dictionary<string, string>
-                {
-                    ["diagnostic"] = diagnostic
-                },
-                SerializerOptions)
-        };
-    }
-
-    private static int ClampTokenCount(long? tokenCount)
-    {
-        if (!tokenCount.HasValue || tokenCount.Value <= 0)
-        {
-            return 0;
-        }
-
-        return tokenCount.Value > int.MaxValue
-            ? int.MaxValue
-            : (int)tokenCount.Value;
-    }
-
-    private static bool ShouldSkipRuntimeSessionSerialization(
-        AgentRuntimeExecutionOptions runtimeOptions,
-        IReadOnlyCollection<PendingToolApprovalRecord> pendingApprovals)
-    {
-        return pendingApprovals.Count == 0 &&
-               (runtimeOptions.ContextIntent?.IsGovernedProcessStep == true ||
-                HasRequestScopedInputAttachments(runtimeOptions));
-    }
-
-    private static bool HasRequestScopedInputAttachments(AgentRuntimeExecutionOptions runtimeOptions)
-        => runtimeOptions.InputAttachments?.Count > 0;
-
-    internal static void EnsureInputAttachmentsSupported(
-        ProviderProfile provider,
-        string model,
-        AgentRuntimeExecutionOptions runtimeOptions)
-    {
-        ArgumentNullException.ThrowIfNull(provider);
-        ArgumentNullException.ThrowIfNull(runtimeOptions);
-
-        var attachments = runtimeOptions.InputAttachments ?? [];
-        if (attachments.Count == 0)
-        {
-            return;
-        }
-
-        var selectedModel = string.IsNullOrWhiteSpace(model) ? provider.DefaultModel : model.Trim();
-        var featureMatrix = ProviderFeatureService.ResolveFeatureMatrixForModel(provider, selectedModel);
-        if (featureMatrix.SupportsVision)
-        {
-            return;
-        }
-
-        throw new InvalidOperationException(
-            $"Provider '{provider.Name}' model '{selectedModel}' does not support vision/image input, but the request includes {attachments.Count:N0} image attachment(s). Choose a vision-capable provider/model or remove the attachment(s).");
-    }
-
-    internal static string ResolveRuntimeModelForInputAttachments(
-        ProviderProfile provider,
-        string model,
-        AgentRuntimeExecutionOptions runtimeOptions)
-    {
-        ArgumentNullException.ThrowIfNull(provider);
-        ArgumentNullException.ThrowIfNull(runtimeOptions);
-
-        var selectedModel = string.IsNullOrWhiteSpace(model) ? provider.DefaultModel : model.Trim();
-        var attachments = runtimeOptions.InputAttachments ?? [];
-        if (attachments.Count == 0)
-        {
-            return selectedModel;
-        }
-
-        if (ProviderFeatureService.ResolveFeatureMatrixForModel(provider, selectedModel).SupportsVision)
-        {
-            return selectedModel;
-        }
-
-        var imageAnalysisModel = ResolveProviderImageAnalysisModel(provider, selectedModel);
-        return ProviderFeatureService.ResolveFeatureMatrixForModel(provider, imageAnalysisModel).SupportsVision
-            ? imageAnalysisModel
-            : selectedModel;
-    }
-
-    private static string ResolveRuntimeSessionSerializationSkipMessage(AgentRuntimeExecutionOptions runtimeOptions)
-    {
-        return HasRequestScopedInputAttachments(runtimeOptions)
-            ? "Skipped Microsoft Agent Framework session serialization because request-scoped input attachments are not persisted into session state. The sandbox transcript keeps the text turn for future replay."
-            : "Skipped Microsoft Agent Framework session serialization for a governed process step with no pending approvals. Process state is persisted through the typed outcome and artifacts.";
-    }
-
-    private static async Task<string?> TrySerializePersistableRuntimeSessionAsync(
-        AIAgent runtimeAgent,
-        AgentSession runtimeSession,
-        AgentRuntimeExecutionOptions runtimeOptions,
-        IReadOnlyCollection<PendingToolApprovalRecord> pendingApprovals,
-        Func<ExecutionState, string, string, Task> progressCallback,
-        CancellationToken cancellationToken)
-    {
-        if (ShouldSkipRuntimeSessionSerialization(runtimeOptions, pendingApprovals))
-        {
-            await progressCallback(
-                ExecutionState.Persisting,
-                "Session",
-                ResolveRuntimeSessionSerializationSkipMessage(runtimeOptions));
-            return null;
-        }
-
-        await progressCallback(ExecutionState.Persisting, "Session", "Serializing the Microsoft Agent Framework session.");
-        var serializedSessionJson = await TrySerializeRuntimeSessionAsync(
-            runtimeAgent,
-            runtimeSession,
-            cancellationToken);
-        if (serializedSessionJson is null)
-        {
-            await progressCallback(
-                ExecutionState.Persisting,
-                "Session",
-                "Microsoft Agent Framework session serialization did not complete within the bounded timeout. Continuing without serialized session state.");
-            return null;
-        }
-
-        if (!HasRequestScopedInputAttachments(runtimeOptions))
-        {
-            return serializedSessionJson;
-        }
-
-        var scrubbedSessionJson = RemoveRequestScopedDataContentFromSerializedSession(serializedSessionJson);
-        if (scrubbedSessionJson is null)
-        {
-            await progressCallback(
-                ExecutionState.Persisting,
-                "Session",
-                "Dropped serialized Microsoft Agent Framework session state because request-scoped attachment payload scrubbing failed.");
-            return null;
-        }
-
-        if (!string.Equals(serializedSessionJson, scrubbedSessionJson, StringComparison.Ordinal))
-        {
-            await progressCallback(
-                ExecutionState.Persisting,
-                "Session",
-                "Removed request-scoped attachment payloads from serialized Microsoft Agent Framework session state.");
-        }
-
-        return scrubbedSessionJson;
-    }
-
-    internal static string? RemoveRequestScopedDataContentFromSerializedSession(string? serializedSessionJson)
-    {
-        if (string.IsNullOrWhiteSpace(serializedSessionJson))
-        {
-            return serializedSessionJson;
-        }
-
-        try
-        {
-            var root = JsonNode.Parse(serializedSessionJson);
-            if (root is null)
-            {
-                return serializedSessionJson;
-            }
-
-            return RemoveRequestScopedDataContentNodes(root)
-                ? root.ToJsonString(SerializerOptions)
-                : serializedSessionJson;
-        }
-        catch (JsonException)
-        {
-            return null;
-        }
-    }
-
-    private static bool RemoveRequestScopedDataContentNodes(JsonNode node)
-    {
-        return node switch
-        {
-            JsonObject jsonObject => RemoveRequestScopedDataContentNodes(jsonObject),
-            JsonArray jsonArray => RemoveRequestScopedDataContentNodes(jsonArray),
-            _ => false
-        };
-    }
-
-    private static bool RemoveRequestScopedDataContentNodes(JsonObject jsonObject)
-    {
-        var removedAny = false;
-        foreach (var property in jsonObject.ToList())
-        {
-            if (property.Value is not null)
-            {
-                removedAny |= RemoveRequestScopedDataContentNodes(property.Value);
-            }
-        }
-
-        return removedAny;
-    }
-
-    private static bool RemoveRequestScopedDataContentNodes(JsonArray jsonArray)
-    {
-        var removedAny = false;
-        var dataContentIndexes = new List<int>();
-        for (var index = 0; index < jsonArray.Count; index++)
-        {
-            var item = jsonArray[index];
-            if (IsRequestScopedDataContentNode(item))
-            {
-                dataContentIndexes.Add(index);
-                continue;
-            }
-
-            if (item is not null)
-            {
-                removedAny |= RemoveRequestScopedDataContentNodes(item);
-            }
-        }
-
-        for (var index = dataContentIndexes.Count - 1; index >= 0; index--)
-        {
-            jsonArray.RemoveAt(dataContentIndexes[index]);
-            removedAny = true;
-        }
-
-        if (dataContentIndexes.Count > 0 && jsonArray.Count == 0)
-        {
-            jsonArray.Add(new JsonObject
-            {
-                ["$type"] = "text",
-                ["text"] = "[Request-scoped attachment omitted from persisted session state.]"
-            });
-        }
-
-        return removedAny;
-    }
-
-    private static bool IsRequestScopedDataContentNode(JsonNode? node)
-    {
-        return node is JsonObject jsonObject &&
-               jsonObject.TryGetPropertyValue("$type", out var typeNode) &&
-               string.Equals(typeNode?.GetValue<string>(), "data", StringComparison.OrdinalIgnoreCase);
-    }
-
-    private static async Task<string?> TrySerializeRuntimeSessionAsync(
-        AIAgent runtimeAgent,
-        AgentSession runtimeSession,
-        CancellationToken cancellationToken)
-    {
-        try
-        {
-            var serializedSession = await Task.Run(
-                async () => await runtimeAgent.SerializeSessionAsync(
-                    runtimeSession,
-                    cancellationToken: cancellationToken),
-                cancellationToken).WaitAsync(
-                FinalizerSessionSerializationTimeout,
-                cancellationToken);
-            return JsonSerializer.Serialize(serializedSession, SerializerOptions);
-        }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-        {
-            throw;
-        }
-        catch (TimeoutException)
-        {
-            return null;
-        }
-        catch
-        {
-            return null;
-        }
-    }
-
-    private IEnumerable<ChatMessage> CreateApprovalInputMessages(ChatSessionRecord session, bool approved)
-    {
-        var approvals = GetCachedOrRehydratedApprovals(session);
-        return approvals
-            .Select(item => new ChatMessage(ChatRole.User, [item.CreateResponse(approved)]))
-            .ToList();
-    }
-
-    private IReadOnlyList<ToolApprovalRequestContent> GetCachedOrRehydratedApprovals(ChatSessionRecord session)
-    {
-        if (pendingApprovalCache.TryGetValue(session.Id, out var cached))
-        {
-            return cached;
-        }
-
-        var compatibility = session.Compatibility;
-        if (compatibility is null || compatibility.PendingApprovals.Count == 0)
-        {
-            throw new InvalidOperationException("This session does not have any cached approval requests to continue.");
-        }
-
-        var rehydrated = compatibility.PendingApprovals
-            .Select(RehydratePendingApproval)
-            .ToList();
-
-        pendingApprovalCache[session.Id] = rehydrated;
-        return rehydrated;
-    }
-
-    private static ToolApprovalRequestContent RehydratePendingApproval(PendingToolApprovalRecord record)
-    {
-        var arguments = MafToolInvocationArgumentFormatter.DeserializeArguments(record.ArgumentsJson);
-        ToolCallContent toolCall = record.ToolKind switch
-        {
-            "mcp" or "hosted-mcp" => new McpServerToolCallContent(record.CallId, record.ToolName, record.Details)
-            {
-                Arguments = arguments
-            },
-            _ => new FunctionCallContent(record.CallId, record.ToolName, arguments)
-        };
-
-        return new ToolApprovalRequestContent(record.ApprovalId, toolCall);
-    }
-
-    private static PendingToolApprovalRecord MapPendingApproval(ToolApprovalRequestContent request)
-    {
-        var toolCall = request.ToolCall;
-        var toolKind = toolCall switch
-        {
-            McpServerToolCallContent => "mcp",
-            FunctionCallContent => "function",
-            _ => "tool"
-        };
-
-        var details = toolCall switch
-        {
-            McpServerToolCallContent mcp => mcp.ServerName,
-            _ => string.Empty
-        };
-
-        var argumentsJson = toolCall switch
-        {
-            McpServerToolCallContent mcp when mcp.Arguments is not null => JsonSerializer.Serialize(mcp.Arguments, SerializerOptions),
-            FunctionCallContent function when function.Arguments is not null => JsonSerializer.Serialize(function.Arguments, SerializerOptions),
-            _ => "{}"
-        };
-
-        return new PendingToolApprovalRecord(
-            ApprovalId: request.RequestId ?? toolCall.CallId ?? Guid.NewGuid().ToString("N"),
-            CallId: toolCall.CallId ?? string.Empty,
-            ToolName: MafToolInvocationArgumentFormatter.ResolveToolName(toolCall),
-            ToolKind: toolKind,
-            Details: details ?? string.Empty,
-            ArgumentsJson: argumentsJson);
-    }
-
-    private static string ResolveResponseText(
-        AgentResponse response,
-        IReadOnlyList<PendingToolApprovalRecord> pendingApprovals)
-    {
-        if (!string.IsNullOrWhiteSpace(response.Text))
-        {
-            return response.Text.Trim();
-        }
-
-        if (pendingApprovals.Count == 0)
-        {
-            return "The provider completed without returning text.";
-        }
-
-        var summary = string.Join(
-            Environment.NewLine,
-            pendingApprovals.Select(item =>
-            {
-                var argumentSummary = MafToolInvocationArgumentFormatter.DescribeArguments(item.ArgumentsJson);
-                return item.ToolKind == "mcp"
-                    ? $"- Approval required for MCP tool '{item.ToolName}' on server '{item.Details}'{MafToolInvocationArgumentFormatter.FormatInlineArgumentSummary(argumentSummary)}."
-                    : $"- Approval required for tool '{item.ToolName}'{MafToolInvocationArgumentFormatter.FormatInlineArgumentSummary(argumentSummary)}.";
-            }));
-
-        return $"Approval is required before the run can continue.{Environment.NewLine}{summary}";
-    }
-
-    private static void ThrowIfEmptyProviderCompletion(
-        ProviderProfile provider,
-        string model,
-        AgentResponse response,
-        IReadOnlyList<PendingToolApprovalRecord> pendingApprovals)
-    {
-        if (!string.IsNullOrWhiteSpace(response.Text) ||
-            pendingApprovals.Count > 0 ||
-            CountToolCalls(response) > 0 ||
-            ClampTokenCount(response.Usage?.OutputTokenCount) > 0)
-        {
-            return;
-        }
-
-        throw new InvalidOperationException(
-            $"Provider '{provider.Name}' model '{model}' completed without returning text, tool calls, approvals, or output tokens.");
-    }
-
-    private static bool ShouldContinueBackgroundRun(
-        AgentDefinition agent,
-        ProviderProfile provider,
-        AgentResponse response,
-        IReadOnlyCollection<ToolApprovalRequestContent> approvalRequests)
-    {
-        if (approvalRequests.Count > 0)
-        {
-            return false;
-        }
-
-        return agent.EnableBackgroundResponses
-            && MafRuntimeSessionBuilder.SupportsBackgroundResponses(provider)
-            && response.ContinuationToken is not null;
-    }
-
-    private static int CountToolCalls(AgentResponse response)
-    {
-        return response.Messages
-            .SelectMany(message => message.Contents)
-            .Select(content => content switch
-            {
-                ToolApprovalRequestContent approval => approval.ToolCall?.CallId ?? approval.ToolCall?.ToString(),
-                ToolCallContent toolCall => toolCall.CallId ?? MafToolInvocationArgumentFormatter.ResolveToolName(toolCall),
-                _ => null
-            })
-            .Where(item => !string.IsNullOrWhiteSpace(item))
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .Count();
-    }
-
-    private static string ResolveRuntimeSessionKey(
-        AgentSession runtimeSession,
-        AgentResponse response,
-        string? fallbackValue)
-    {
-        if (runtimeSession is ChatClientAgentSession chatSession && !string.IsNullOrWhiteSpace(chatSession.ConversationId))
-        {
-            return chatSession.ConversationId;
-        }
-
-        return response.ResponseId
-            ?? response.ContinuationToken?.ToString()
-            ?? fallbackValue
-            ?? string.Empty;
-    }
-
-    private static string ResolveRuntimeSessionKey(
-        AgentSession runtimeSession,
-        string? fallbackValue)
-    {
-        if (runtimeSession is ChatClientAgentSession chatSession && !string.IsNullOrWhiteSpace(chatSession.ConversationId))
-        {
-            return chatSession.ConversationId;
-        }
-
-        return fallbackValue ?? string.Empty;
-    }
-
-    private sealed class RequiredFinalizerCapturedException(string toolName) : Exception(
-        $"Required finalizer tool '{toolName}' was captured.")
-    {
-        public string ToolName { get; } = toolName;
-    }
-
-    private sealed class RepeatedToolInvocationGuard
-    {
-        private readonly Dictionary<string, int> repeatedToolInvocationCounts = new(StringComparer.OrdinalIgnoreCase);
-        private int mutationGeneration;
-
-        public void Guard(ToolCallContent toolCall)
-        {
-            var toolName = MafToolInvocationArgumentFormatter.ResolveToolName(toolCall);
-            if (!ShouldGuardRepeatedToolInvocation(toolName))
-            {
-                return;
-            }
-
-            var signature = MafToolInvocationArgumentFormatter.ResolveToolInvocationSignature(toolCall);
-            if (IsValidationToolInvocation(toolName))
-            {
-                signature = $"{signature}|mutationGeneration={mutationGeneration}";
-            }
-
-            var repeatedToolInvocationCount = repeatedToolInvocationCounts.TryGetValue(signature, out var currentCount)
-                ? currentCount + 1
-                : 1;
-            repeatedToolInvocationCounts[signature] = repeatedToolInvocationCount;
-            if (repeatedToolInvocationCount > MaxRepeatedToolInvocationCount)
-            {
-                throw new InvalidOperationException(
-                    $"Agent repeated identical tool invocation '{signature}' {repeatedToolInvocationCount} times in one run. Stop repeating the same tool call and either call the required next validation tool, inspect and change the underlying cause, or return a governed blocked/failed outcome.");
-            }
-
-            if (IsMutationToolInvocation(toolName))
-            {
-                mutationGeneration++;
-            }
-        }
-    }
-
-    private static bool ShouldGuardRepeatedToolInvocation(string toolName)
-    {
-        return IsValidationToolInvocation(toolName) || IsMutationToolInvocation(toolName);
-    }
-
-    private static bool IsValidationToolInvocation(string toolName)
-        => AgentToolInvocationPolicyMetadata.IsValidationTool(toolName);
-
-    private static bool IsMutationToolInvocation(string toolName)
-        => AgentToolInvocationPolicyMetadata.IsMutationTool(toolName);
 
 }

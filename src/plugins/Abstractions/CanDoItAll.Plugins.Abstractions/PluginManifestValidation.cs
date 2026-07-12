@@ -1,3 +1,4 @@
+using System.Text.Json;
 using CanDoItAll.AgentFramework.Models;
 
 namespace CanDoItAll.Plugins.Abstractions;
@@ -12,7 +13,9 @@ public enum PluginManifestValidationIssueCode
     MissingCapability,
     UnsupportedCapability,
     MissingConnectionMetadata,
-    InconsistentPermissionPolicy
+    InconsistentPermissionPolicy,
+    InvalidSettingsRendererContract,
+    InvalidWorkflowExecutorJson
 }
 
 public sealed record PluginManifestValidationIssue(
@@ -92,6 +95,13 @@ public static class PluginManifestValidator
             issues);
         RequireCapability(
             descriptor,
+            descriptor.WorkflowExecutors.Any(executor =>
+                executor.SettingsPresentationMode == WorkflowExecutorSettingsPresentationMode.CustomRenderer),
+            PluginCapabilityKind.SettingsRenderer,
+            "custom workflow executor settings renderers",
+            issues);
+        RequireCapability(
+            descriptor,
             descriptor.OAuth2 is not null,
             PluginCapabilityKind.OAuth2,
             "OAuth2 metadata",
@@ -109,6 +119,8 @@ public static class PluginManifestValidator
             "secret-backed connections",
             issues);
         ValidateOAuthConnectionMetadata(descriptor, issues);
+        ValidateWorkflowExecutorSettingsPresentation(descriptor, issues);
+        ValidateWorkflowExecutorJson(descriptor, issues);
         ValidateWorkflowExecutorPermissionPolicies(descriptor, issues);
 
         return new PluginManifestValidationResult(issues);
@@ -266,6 +278,98 @@ public static class PluginManifestValidator
             }
 
             ValidateDeterministicTestMode(descriptor, executor, requiredCapabilities, issues);
+        }
+    }
+
+    private static void ValidateWorkflowExecutorSettingsPresentation(
+        PluginDescriptor descriptor,
+        List<PluginManifestValidationIssue> issues)
+    {
+        foreach (var executor in descriptor.WorkflowExecutors)
+        {
+            if (!Enum.IsDefined(executor.SettingsPresentationMode))
+            {
+                issues.Add(new PluginManifestValidationIssue(
+                    PluginManifestValidationIssueCode.InvalidSettingsRendererContract,
+                    $"Plugin '{descriptor.Id}' workflow executor '{executor.ExecutorId}' declares an unsupported settings presentation mode '{executor.SettingsPresentationMode}'.",
+                    descriptor.Id));
+                continue;
+            }
+
+            if (executor.SettingsPresentationMode != WorkflowExecutorSettingsPresentationMode.CustomRenderer)
+            {
+                continue;
+            }
+
+            var renderer = descriptor.Settings.Renderers.FirstOrDefault(candidate =>
+                candidate.RendererKey == executor.SettingsRendererKey);
+            if (renderer is null)
+            {
+                issues.Add(new PluginManifestValidationIssue(
+                    PluginManifestValidationIssueCode.InvalidSettingsRendererContract,
+                    $"Plugin '{descriptor.Id}' workflow executor '{executor.ExecutorId}' claims custom settings renderer '{executor.SettingsRendererKey}' but the renderer is not declared.",
+                    descriptor.Id));
+                continue;
+            }
+
+            if (descriptor.SourceKind != PluginSourceKind.Bundled ||
+                descriptor.TrustLevel != PluginTrustLevel.Bundled ||
+                renderer.TrustLevel != PluginRendererTrustLevel.Bundled)
+            {
+                issues.Add(new PluginManifestValidationIssue(
+                    PluginManifestValidationIssueCode.InvalidSettingsRendererContract,
+                    $"Plugin '{descriptor.Id}' workflow executor '{executor.ExecutorId}' can use a custom settings renderer only from a bundled, trusted renderer contribution.",
+                    descriptor.Id));
+            }
+        }
+    }
+
+    private static void ValidateWorkflowExecutorJson(
+        PluginDescriptor descriptor,
+        List<PluginManifestValidationIssue> issues)
+    {
+        foreach (var executor in descriptor.WorkflowExecutors)
+        {
+            AddInvalidJsonIssue(
+                descriptor,
+                executor,
+                executor.DefaultSettingsJson,
+                "default settings",
+                allowEmpty: false,
+                issues);
+            AddInvalidJsonIssue(
+                descriptor,
+                executor,
+                executor.Simulation.OutputTemplateJson,
+                "simulation output template",
+                allowEmpty: !executor.Simulation.SupportsPreviewSimulation,
+                issues);
+        }
+    }
+
+    private static void AddInvalidJsonIssue(
+        PluginDescriptor descriptor,
+        PluginWorkflowExecutorDescriptor executor,
+        string? json,
+        string fieldName,
+        bool allowEmpty,
+        List<PluginManifestValidationIssue> issues)
+    {
+        if (allowEmpty && string.IsNullOrWhiteSpace(json))
+        {
+            return;
+        }
+
+        try
+        {
+            using var document = JsonDocument.Parse(json ?? string.Empty);
+        }
+        catch (JsonException)
+        {
+            issues.Add(new PluginManifestValidationIssue(
+                PluginManifestValidationIssueCode.InvalidWorkflowExecutorJson,
+                $"Plugin '{descriptor.Id}' workflow executor '{executor.ExecutorId}' has invalid {fieldName} JSON.",
+                descriptor.Id));
         }
     }
 

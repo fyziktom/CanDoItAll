@@ -1,6 +1,6 @@
 # Add test project and reference
 
-If `DotNetAddTestProjectExecutionPlan` is present, execute that plan in order before writing the primary step artifact: write `DotNetAddTestProjectScript` verbatim to `DotNetAddTestProjectScriptRef`, verify that `.ps1` ref, run `workspace_pwsh_run_script` with `DotNetAddTestProjectSideEffectManifest`, then read back the solution file and test project file. The generated helper creates the missing test project with the typed test template before it wires solution membership and the project reference. Do not write `Status: InProgress`, progress notes, placeholders, or a `Completed` artifact before the script receipt exists.
+Before writing the primary step artifact, write `DotNetAddTestProjectScript` verbatim to `DotNetAddTestProjectScriptRef`, verify that `.ps1` ref, run `workspace_pwsh_run_script` with `DotNetAddTestProjectSideEffectManifest`, then read back the solution file and test project file. The generated helper creates the missing test project with the explicit test template before it wires solution membership and the project reference. Do not write `Status: InProgress`, progress notes, placeholders, or a `Completed` artifact before the script receipt exists.
 
 Create the test project using the test framework grounded by the parent contract or existing repository convention, add it to the solution, and add the required project reference to keep test work available from the first slice.
 

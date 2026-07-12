@@ -1,0 +1,9 @@
+No runnable failing-first transcript was captured for the plugin slice.
+
+Structural red gate before the change:
+- Gmail and Office365 executors required sealed concrete OAuth and HTTP client implementations.
+- Docker executors required a concrete grant evaluator despite an existing grant port.
+- PluginWorkflowExecutorDescriptor did not carry DefaultSettingsJson or Simulation.
+- Runtime package validation compared executor IDs only.
+
+Consequently direct positive ExecuteAsync tests with deterministic fakes and full manifest/runtime editor parity assertions could not be written without first adding narrow ports and extending the contribution contract. The passing plugin proof demonstrates the resulting behavior rather than treating source inspection as closure evidence.

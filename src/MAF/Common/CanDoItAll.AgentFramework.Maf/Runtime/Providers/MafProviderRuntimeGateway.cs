@@ -38,6 +38,7 @@ public static class MafProviderRuntimeServiceCollectionExtensions
     {
         ArgumentNullException.ThrowIfNull(services);
 
+        services.AddMafRuntimeArchitectureServices();
         services.TryAddSingleton<IProviderRuntimeDescriptorStore, ProviderProfileRuntimeDescriptorStore>();
         services.TryAddSingleton<IProviderRuntimeDescriptorSource>(
             serviceProvider => serviceProvider.GetRequiredService<IProviderRuntimeDescriptorStore>());
@@ -54,6 +55,7 @@ public static class MafProviderRuntimeServiceCollectionExtensions
         services.TryAddSingleton<IProviderRuntimeHandleFactory, ProviderRuntimeHandleFactory>();
         services.TryAddSingleton<IProviderRuntimePool, ProviderRuntimePool>();
         services.TryAddSingleton<IProviderBatchJobBalancer, ProviderBatchJobBalancer>();
+        services.TryAddSingleton<IAgentImageAnalysisService, ProviderRuntimeImageAnalysisService>();
         services.TryAddSingleton<IAgentImageGenerationService, ProviderRuntimeImageGenerationService>();
         services.TryAddSingleton<IMafProviderRuntimeGateway, MafProviderRuntimeGateway>();
 

@@ -12,5 +12,17 @@
   "AllowedFutureUsageSummary": "Reusable for execution planning, budget review, and portfolio decisions.",
   "ValidationRequirementSummary": "Must identify approved path, blockers, risks, assumptions, and next actions.",
   "OwnerRoleKey": "business-strategist",
-  "DocPath": "processes/business-plan-development/artifacts/integrated-business-plan.md"
+  "DocPath": "processes/business-plan-development/artifacts/integrated-business-plan.md",
+  "SemanticAcceptanceContract": {
+    "AcceptanceMode": "SemanticReview",
+    "FileExistenceIsSufficient": false,
+    "RequiredArtifactSlotKey": "integrated-business-plan",
+    "RequiredEvidenceKinds": [
+      "structured-finalizer-output",
+      "reviewed-managed-artifact",
+      "semantic-validation-summary"
+    ],
+    "RequiredReviewSummary": "Must identify approved path, blockers, risks, assumptions, and next actions."
+  }
 }
+

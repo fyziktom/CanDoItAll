@@ -1,0 +1,16 @@
+{
+  "name": "candoitall-csharp-architecture-skills",
+  "version": "1.0.0",
+  "language": "en",
+  "created_for": "CanDoItAll Codex skills",
+  "contains": {
+    "skills": 10,
+    "shared_references": true,
+    "bundle_integration": true,
+    "examples": true,
+    "templates": true,
+    "optional_install_script": true
+  },
+  "primary_skill": "csharp-architecture-governor",
+  "bundle_guard_skill": "candoitall-csharp-architecture-bundle-guard"
+}

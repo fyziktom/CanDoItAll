@@ -1,4 +1,5 @@
 using CanDoItAll.AgentFramework.Core;
+using CanDoItAll.Memory.SourceGateway;
 using CanDoItAll.Tests.Support.CognitiveMemory;
 
 namespace CanDoItAll.Tests.Unit;

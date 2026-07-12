@@ -1,5 +1,12 @@
 namespace CanDoItAll.AgentFramework.Models;
 
+public interface IWorkspaceToolOperationResult
+{
+    bool Succeeded { get; }
+
+    string Message { get; }
+}
+
 public sealed record WorkspaceArtifactReference(
     string Zone,
     string RelativePath,
@@ -20,6 +27,8 @@ public sealed record WorkspaceToolReceipt(
     DateTimeOffset CompletedAtUtc)
 {
     public Guid? ExecutionRunId { get; init; }
+
+    public ToolExecutionSideEffectMode DeclaredSideEffectMode { get; init; }
 }
 
 public sealed record WorkspaceFileListEntry(
@@ -35,7 +44,7 @@ public sealed record WorkspaceFileListResult(
     string RootPath,
     string SearchPattern,
     IReadOnlyList<WorkspaceFileListEntry> Entries,
-    bool IsTruncated);
+    bool IsTruncated) : IWorkspaceToolOperationResult;
 
 public sealed record WorkspaceTextSearchMatch(
     string RelativePath,
@@ -49,7 +58,7 @@ public sealed record WorkspaceTextSearchResult(
     string Query,
     string RootPath,
     IReadOnlyList<WorkspaceTextSearchMatch> Matches,
-    bool IsTruncated);
+    bool IsTruncated) : IWorkspaceToolOperationResult;
 
 public sealed record WorkspaceTextFileReadResult(
     bool Succeeded,
@@ -58,7 +67,7 @@ public sealed record WorkspaceTextFileReadResult(
     string Path,
     string Content,
     int TotalCharacters,
-    bool IsTruncated);
+    bool IsTruncated) : IWorkspaceToolOperationResult;
 
 public sealed record WorkspacePathStatResult(
     bool Succeeded,
@@ -69,18 +78,19 @@ public sealed record WorkspacePathStatResult(
     string PathKind,
     long? SizeBytes,
     DateTimeOffset? LastWriteTimeUtc,
-    int? ChildCount);
+    int? ChildCount) : IWorkspaceToolOperationResult;
 
 public sealed record WorkspacePathHashResult(
     bool Succeeded,
     string Message,
+    WorkspaceToolReceipt Receipt,
     string Path,
     string PathKind,
     string Algorithm,
     string Hash,
     long SizeBytes,
     int FileCount,
-    bool IsTruncated);
+    bool IsTruncated) : IWorkspaceToolOperationResult;
 
 public sealed record WorkspaceFileMutationResult(
     bool Succeeded,
@@ -92,16 +102,17 @@ public sealed record WorkspaceFileMutationResult(
     bool PathExistedBefore,
     bool CreatedNewPath,
     bool OverwroteExistingPath,
-    int CharacterCount);
+    int CharacterCount) : IWorkspaceToolOperationResult;
 
 public sealed record WorkspaceArchiveMutationResult(
     bool Succeeded,
     string Message,
+    WorkspaceToolReceipt Receipt,
     string SourcePath,
     string DestinationPath,
     int FileCount,
     long TotalBytes,
-    bool IsTruncated);
+    bool IsTruncated) : IWorkspaceToolOperationResult;
 
 public sealed record WorkspaceTextDiffResult(
     bool Succeeded,
@@ -112,4 +123,4 @@ public sealed record WorkspaceTextDiffResult(
     string DiffPreview,
     int AddedLineCount,
     int RemovedLineCount,
-    bool IsTruncated);
+    bool IsTruncated) : IWorkspaceToolOperationResult;

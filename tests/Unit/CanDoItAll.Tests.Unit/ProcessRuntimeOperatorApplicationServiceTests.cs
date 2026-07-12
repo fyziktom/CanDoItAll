@@ -1,4 +1,5 @@
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.Modules.Workbench;
 using CanDoItAll.Processes.Abstractions;
 using CanDoItAll.Processes.Application;
 using CanDoItAll.Processes.Core;
@@ -53,6 +54,121 @@ public sealed class ProcessRuntimeOperatorApplicationServiceTests
         Assert.Contains("hides #blazor-error-ui", saved.Prompt, StringComparison.Ordinal);
         var queued = Assert.Single(dispatchQueue.Requests);
         Assert.Equal(runId, queued.RunId);
+    }
+
+    [Fact]
+    public async Task Request_rework_appends_diagnostic_specific_packet_from_runtime_receipt()
+    {
+        var runId = ProcessRunId.New();
+        var stepId = ProcessStepInstanceId.New();
+        var planId = ProcessInstancePlanId.New();
+        var assignmentStore = new RecordingAssignmentStore(CreateAssignment(
+            runId,
+            planId,
+            stepId,
+            "create-dotnet-project",
+            CreateDotNetCreateProjectLaunchVariables(runId)));
+        var dispatchQueue = new RecordingDispatchQueue();
+        await using var dbContext = CreateDbContext();
+        var projectionStore = new EfProcessProjectionStore(dbContext);
+        var clock = new FixedProcessProjectionClock(Now);
+        var stateStore = new InMemoryRuntimeStateStore(CreateFailedStateWithIncidentReceipt(runId, planId, stepId));
+        var service = new ProcessRuntimeOperatorApplicationService(
+            clock,
+            stateStore,
+            stateStore,
+            assignmentStore,
+            new RecordingUnitOfWork(stateStore),
+            dispatchQueue,
+            new ProcessRuntimeProjectionCatchupService(
+                new EmptyRuntimeEventReplayStore(),
+                projectionStore,
+                new ProcessRuntimeProjectionProjector(projectionStore, ProcessProjectionJsonCodec.Default, clock),
+                clock),
+            [],
+            recoveryInstructionBuilder: CreateRecoveryInstructionBuilder());
+
+        var result = await service.ExecuteAsync(new ProcessRuntimeOperatorActionCommand(
+            runId,
+            stepId,
+            ProcessRuntimeOperatorActionKind.RequestRework,
+            "unit-test",
+            "Retry after fixing the missing solution wiring receipt."));
+
+        Assert.True(result.Succeeded);
+        var prompt = Assert.Single(assignmentStore.SavedAssignments).Prompt;
+        Assert.Contains("Operator rework instruction:", prompt, StringComparison.Ordinal);
+        Assert.Contains("Diagnostic recovery packet:", prompt, StringComparison.Ordinal);
+        Assert.Contains("workspace_pwsh_run_script", prompt, StringComparison.Ordinal);
+        Assert.Contains("Generic receipt recovery", prompt, StringComparison.Ordinal);
+        Assert.Contains("missing current-run receipt contract", prompt, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("{CurrentProcessRunId}", prompt, StringComparison.Ordinal);
+        Assert.Single(dispatchQueue.Requests);
+    }
+
+    [Fact]
+    public async Task Request_rework_removes_prior_recovery_prompt_blocks_before_appending_fresh_instruction()
+    {
+        var runId = ProcessRunId.New();
+        var stepId = ProcessStepInstanceId.New();
+        var planId = ProcessInstancePlanId.New();
+        var stalePrompt = """
+            Repair the generated app and return structured process output.
+
+            Runtime manager recovery instruction:
+            The previous result blocked the step and must be reviewed by the process manager before any rework is dispatched.
+            Diagnostics:
+            - process.adapter.runtime_tool_preflight_failed: browser tools were unavailable in an old attempt.
+
+            Operator rework instruction:
+            Old operator note that is no longer the current repair instruction.
+
+            Runtime manager recovery instruction:
+            Diagnostics:
+            - process.adapter.product_required_tool_receipt_blocked_retry: Original reason: The runtime preflight explicitly reported browser tools unavailable.
+            Requested artifacts:
+            - old-slot: sha256:old
+            """;
+        var assignmentStore = new RecordingAssignmentStore(CreateAssignment(runId, planId, stepId) with
+        {
+            Prompt = stalePrompt
+        });
+        var dispatchQueue = new RecordingDispatchQueue();
+        await using var dbContext = CreateDbContext();
+        var projectionStore = new EfProcessProjectionStore(dbContext);
+        var clock = new FixedProcessProjectionClock(Now);
+        var stateStore = new InMemoryRuntimeStateStore(CreateFailedState(runId, planId, stepId));
+        var service = new ProcessRuntimeOperatorApplicationService(
+            clock,
+            stateStore,
+            stateStore,
+            assignmentStore,
+            new RecordingUnitOfWork(stateStore),
+            dispatchQueue,
+            new ProcessRuntimeProjectionCatchupService(
+                new EmptyRuntimeEventReplayStore(),
+                projectionStore,
+                new ProcessRuntimeProjectionProjector(projectionStore, ProcessProjectionJsonCodec.Default, clock),
+                clock),
+            []);
+
+        var result = await service.ExecuteAsync(new ProcessRuntimeOperatorActionCommand(
+            runId,
+            stepId,
+            ProcessRuntimeOperatorActionKind.RequestRework,
+            "unit-test",
+            "Runtime preflight is now satisfied; invoke the current browser and validation tools."));
+
+        Assert.True(result.Succeeded);
+        var saved = Assert.Single(assignmentStore.SavedAssignments);
+        Assert.StartsWith("Repair the generated app", saved.Prompt, StringComparison.Ordinal);
+        Assert.Contains("Operator rework instruction:", saved.Prompt, StringComparison.Ordinal);
+        Assert.Contains("Runtime preflight is now satisfied", saved.Prompt, StringComparison.Ordinal);
+        Assert.DoesNotContain("Runtime manager recovery instruction:", saved.Prompt, StringComparison.Ordinal);
+        Assert.DoesNotContain("Old operator note", saved.Prompt, StringComparison.Ordinal);
+        Assert.DoesNotContain("browser tools were unavailable in an old attempt", saved.Prompt, StringComparison.Ordinal);
+        Assert.DoesNotContain("old-slot", saved.Prompt, StringComparison.Ordinal);
+        Assert.Single(dispatchQueue.Requests);
     }
 
     [Fact]
@@ -310,6 +426,62 @@ public sealed class ProcessRuntimeOperatorApplicationServiceTests
             Now.AddMinutes(-5));
     }
 
+    private static ProcessRuntimeStateSnapshot CreateFailedStateWithIncidentReceipt(
+        ProcessRunId runId,
+        ProcessInstancePlanId planId,
+        ProcessStepInstanceId stepId)
+    {
+        var resultKey = StrategyResultIdempotencyKey.New();
+        return new ProcessRuntimeStateSnapshot(
+            runId,
+            runId,
+            planId,
+            "sha256:plan",
+            ProcessRuntimeStatus.Failed,
+            [
+                new ProcessRuntimeStepState(
+                    stepId,
+                    ProcessStepDefinitionId.New(),
+                    ProcessRuntimeStepStatus.Failed,
+                    IsExecutable: true,
+                    AttemptNumber: 2,
+                    DependencyStepIds: new HashSet<ProcessStepInstanceId>(),
+                    RequiredArtifactSlots: new HashSet<ArtifactSlotId>(),
+                    ActiveClaimToken: null,
+                    resultKey)
+            ],
+            [],
+            [
+                new StrategyResultReceipt(
+                    stepId,
+                    new StrategyId("strategy.adapter.workflow.execute"),
+                    resultKey,
+                    StrategyOutcome.NeedsManager,
+                    ProcessRuntimeStepStatus.Blocked,
+                    "sha256:incident",
+                    [
+                        new StrategyResultDiagnosticReceipt(
+                            "process.adapter.product_required_tool_receipt_missing",
+                            StrategyDiagnosticSensitivity.Normal,
+                            "sha256:receipt",
+                            "Step 'create-dotnet-project' claimed completion but required current-run product tool receipt(s) are missing: workspace_pwsh_run_script.",
+                            RestrictedEvidenceReference: null,
+                            ProcessDiagnosticRetrySafety.SafeToRetry,
+                            ProcessDiagnosticIdempotencyClassification.Idempotent),
+                        new StrategyResultDiagnosticReceipt(
+                            "process.adapter.product_required_file_content_missing",
+                            StrategyDiagnosticSensitivity.Normal,
+                            "sha256:readback",
+                            "Step 'create-dotnet-project' claimed completion but required product file content/readback check(s) failed: Calculator.slnx does not contain src/Calculator/Calculator.csproj.",
+                            RestrictedEvidenceReference: null,
+                            ProcessDiagnosticRetrySafety.SafeToRetry,
+                            ProcessDiagnosticIdempotencyClassification.Idempotent)
+                    ])
+            ],
+            new HashSet<ArtifactSlotId>(),
+            Now.AddMinutes(-5));
+    }
+
     private static ProcessRuntimeStateSnapshot CreateExpiredRunningState(
         ProcessRunId runId,
         ProcessInstancePlanId planId,
@@ -384,13 +556,15 @@ public sealed class ProcessRuntimeOperatorApplicationServiceTests
     private static ProcessRuntimeStepAssignment CreateAssignment(
         ProcessRunId runId,
         ProcessInstancePlanId planId,
-        ProcessStepInstanceId stepId)
+        ProcessStepInstanceId stepId,
+        string stepKey = "feature-repair",
+        IReadOnlyDictionary<string, string>? launchVariables = null)
     {
         return new ProcessRuntimeStepAssignment(
             runId,
             planId,
             stepId,
-            "feature-repair",
+            stepKey,
             "software-engineer",
             "software-engineer",
             ".NET feature implementer",
@@ -404,10 +578,27 @@ public sealed class ProcessRuntimeOperatorApplicationServiceTests
             [],
             [ProcessOperationContractNames.MutateProductTarget, ProcessOperationContractNames.CaptureRuntimeProof],
             ProcessOperationContractNames.ExternalProductTargetMutable,
-            new Dictionary<string, string>(),
+            launchVariables ?? new Dictionary<string, string>(),
             BranchGate: null,
             Now.AddMinutes(-10));
     }
+
+    private static IReadOnlyDictionary<string, string> CreateDotNetCreateProjectLaunchVariables(ProcessRunId runId)
+    {
+        return new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            [ProcessRuntimeLaunchVariables.ProductCompletionRequiredToolReceipts] = "workspace_pwsh_run_script",
+            [ProcessRuntimeLaunchVariables.ProductCompletionRequiredFileContentChecks] =
+                """[{"pathCandidates":["Calculator.slnx"],"requiredTextAnyGroups":[["src/Calculator/Calculator.csproj"]]}]""",
+            ["DotNetCreateProjectScript"] = "$ErrorActionPreference = 'Stop'",
+            ["DotNetCreateProjectScriptRef"] = $"artifacts/process-runs/{runId.Value:D}/scripts/create-dotnet-project.ps1",
+            ["DotNetCreateProjectSideEffectManifest"] = """{"version":1,"mode":"ProductMutation"}""",
+            ["WorkspaceAlias"] = "external-target/C/repositories/calculator"
+        };
+    }
+
+    private static ProcessStepRecoveryInstructionBuilder CreateRecoveryInstructionBuilder()
+        => new([new GenericProcessRecoveryAdviceProvider()]);
 
     private static ProcessPersistenceDbContext CreateDbContext()
     {

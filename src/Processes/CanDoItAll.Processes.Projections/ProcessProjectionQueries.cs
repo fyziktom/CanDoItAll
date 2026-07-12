@@ -17,7 +17,8 @@ public sealed record ProcessLiveProcessesLoadOptions
         IncludeAttentionReconciliation = false,
         IncludeOperatorActions = false,
         IncludeCurrentSteps = false,
-        IncludeChildRunWaits = false
+        IncludeChildRunWaits = false,
+        IncludeDiagnostics = false
     };
 
     public bool IncludeAttentionReconciliation { get; init; } = true;
@@ -27,6 +28,8 @@ public sealed record ProcessLiveProcessesLoadOptions
     public bool IncludeCurrentSteps { get; init; } = true;
 
     public bool IncludeChildRunWaits { get; init; } = true;
+
+    public bool IncludeDiagnostics { get; init; } = true;
 }
 
 public sealed record ProcessLiveProcessesResult(

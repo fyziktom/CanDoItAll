@@ -1,4 +1,3 @@
-using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Plugins.Abstractions;
 using CanDoItAll.SharedKernel.Configuration;
 
@@ -6,15 +5,6 @@ namespace CanDoItAll.Modules.Plugins;
 
 internal sealed class GmailBundledPlugin : IBundledPlugin
 {
-    private static readonly WorkflowValueShape EmailBatchShape = new(
-        WorkflowValueShapeKind.Json,
-        "{}",
-        "Gmail email message batch JSON.");
-    private static readonly WorkflowValueShape LabelMutationShape = new(
-        WorkflowValueShapeKind.Json,
-        "{}",
-        "Gmail label mutation result JSON.");
-
     public PluginDescriptor Descriptor { get; } = new(
         GmailPluginConstants.PluginId,
         "Gmail",
@@ -25,51 +15,9 @@ internal sealed class GmailBundledPlugin : IBundledPlugin
         PluginTrustLevel.Bundled,
         "1.0.0",
         PluginCapabilityKind.WorkflowExecutor | PluginCapabilityKind.OAuth2 | PluginCapabilityKind.HttpClient,
-        [
-            new PluginWorkflowExecutorDescriptor(
-                GmailPluginConstants.DownloadByLabelExecutorId,
-                "Gmail messages by label",
-                "Downloads the first unprocessed Gmail messages that have the selected label.",
-                WorkflowExecutorCategoryKind.Data,
-                GmailPluginConstants.SettingsRendererKey,
-                CreateExecutorSettingsSchema(),
-                WorkflowValueShape.Text,
-                EmailBatchShape,
-                WorkflowExecutorExecutionPolicy.Default with { TimeoutSeconds = 60 })
-            {
-                PermissionPolicy = new WorkflowExecutorPermissionPolicy(
-                    WorkflowExecutorCapabilityFlags.ReadsExternalData |
-                    WorkflowExecutorCapabilityFlags.UsesNetwork |
-                    WorkflowExecutorCapabilityFlags.UsesSecrets |
-                    WorkflowExecutorCapabilityFlags.SupportsDeterministicTestMode,
-                    WorkflowExecutorApprovalRequirement.NotRequired),
-                SideEffects = WorkflowExecutorSideEffectDescriptor.ExternalRead(EmailWorkflowSideEffectConstants.ExternalReadReceiptSchema),
-                DeterministicTestMode = WorkflowExecutorDeterministicTestModeDescriptor.Supported("Run Preview uses simulated Gmail messages without calling Gmail.")
-            },
-            new PluginWorkflowExecutorDescriptor(
-                GmailPluginConstants.MarkProcessedExecutorId,
-                "Gmail mark processed",
-                "Adds the processed label to a Gmail message and removes the source label.",
-                WorkflowExecutorCategoryKind.Data,
-                GmailPluginConstants.SettingsRendererKey,
-                CreateMarkProcessedSettingsSchema(),
-                WorkflowValueShape.Text,
-                LabelMutationShape,
-                WorkflowExecutorExecutionPolicy.Default with { TimeoutSeconds = 60 })
-            {
-                PermissionPolicy = new WorkflowExecutorPermissionPolicy(
-                    WorkflowExecutorCapabilityFlags.WritesExternalData |
-                    WorkflowExecutorCapabilityFlags.UsesNetwork |
-                    WorkflowExecutorCapabilityFlags.UsesSecrets |
-                    WorkflowExecutorCapabilityFlags.IdempotentExternalMarker |
-                    WorkflowExecutorCapabilityFlags.SupportsDeterministicTestMode,
-                    WorkflowExecutorApprovalRequirement.NotRequired),
-                SideEffects = WorkflowExecutorSideEffectDescriptor.IdempotentProcessedMarker(
-                    "$.externalSideEffectReceipt.idempotencyKey",
-                    EmailWorkflowSideEffectConstants.ProcessedMarkerReceiptSchema),
-                DeterministicTestMode = WorkflowExecutorDeterministicTestModeDescriptor.Supported("Run Preview simulates the Gmail label mutation without changing Gmail.")
-            }
-        ],
+        GmailWorkflowExecutorDescriptors.All
+            .Select(PluginWorkflowExecutorDescriptor.FromWorkflowExecutorDescriptor)
+            .ToArray(),
         PluginSettingsDescriptor.Empty,
         [
             new PluginConnectionDescriptor(
@@ -118,23 +66,4 @@ internal sealed class GmailBundledPlugin : IBundledPlugin
                 new ConfigurationFieldDescriptor(PluginOAuthConnectionSettingKeys.RedirectUri, "Redirect URI", ConfigurationFieldType.Url, IsRequired: false, "Optional exact redirect URI registered in Google Cloud.")
             ]);
 
-    private static ConfigurationSchema CreateExecutorSettingsSchema()
-        => new(
-            "1.0",
-            [
-                new ConfigurationFieldDescriptor("connectionId", "Connection", ConfigurationFieldType.Text, IsRequired: false, "Optional plugin connection id. Leave empty to use the latest connected Gmail OAuth connection."),
-                new ConfigurationFieldDescriptor("label", "Label", ConfigurationFieldType.Text, IsRequired: true, "Gmail label name or id."),
-                new ConfigurationFieldDescriptor("processedLabel", "Processed label", ConfigurationFieldType.Text, IsRequired: true, "Label applied after the workflow stores the summary."),
-                new ConfigurationFieldDescriptor("maxMessages", "Max messages", ConfigurationFieldType.Number, IsRequired: false, "Maximum messages to download. Use 1 for one-message processing.")
-            ]);
-
-    private static ConfigurationSchema CreateMarkProcessedSettingsSchema()
-        => new(
-            "1.0",
-            [
-                new ConfigurationFieldDescriptor("connectionId", "Connection", ConfigurationFieldType.Text, IsRequired: false, "Optional plugin connection id. Leave empty to use the latest connected Gmail OAuth connection."),
-                new ConfigurationFieldDescriptor("sourceLabel", "Source label", ConfigurationFieldType.Text, IsRequired: true, "Gmail label removed after successful processing."),
-                new ConfigurationFieldDescriptor("processedLabel", "Processed label", ConfigurationFieldType.Text, IsRequired: true, "Gmail label added after successful processing."),
-                new ConfigurationFieldDescriptor("messageIdJsonPath", "Message id JSON path", ConfigurationFieldType.Text, IsRequired: true, "Workflow JSON path resolving to the Gmail message id.")
-            ]);
 }

@@ -1069,7 +1069,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
             Outcome = outcome,
             ResultSummary = response.PendingApprovals.Count > 0
                 ? $"Awaiting approval for {response.PendingApprovals.Count} tool request(s)."
-                : CreateExecutionSummary(response.ResponseText)
+                : CreateExecutionSummary(run, response)
         };
     }
 
@@ -1512,13 +1512,13 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
             TargetScope: ExecutionInvocationMetadata.ResolveProcessStepTargetScope(run),
             IsGovernedProcessStep: isGovernedProcessStep,
             BrowserToolsAllowed: ExecutionInvocationMetadata.ResolveProcessBrowserToolsAllowed(run),
-            ScaffoldToolOnly: ExecutionInvocationMetadata.ResolveProcessScaffoldToolOnly(run),
             AllowsProductMutation: ExecutionInvocationMetadata.ResolveProcessAllowsProductMutation(run),
             WorkspaceToolProfile: ExecutionInvocationMetadata.ResolveProcessWorkspaceToolProfile(run),
             WorkspaceScope: workspaceScope,
             AllowedOperations: ExecutionInvocationMetadata.ResolveProcessStepAllowedOperations(run),
             RuntimeToolProvidersEnabled: ExecutionInvocationMetadata.ResolveRuntimeToolProvidersEnabled(run),
-            WorkspaceToolsEnabled: ExecutionInvocationMetadata.ResolveWorkspaceToolsEnabled(run));
+            WorkspaceToolsEnabled: ExecutionInvocationMetadata.ResolveWorkspaceToolsEnabled(run),
+            CapabilityScopeOverride: ExecutionInvocationMetadata.ResolveRuntimeCapabilityScopeOverride(run));
     }
 
     private async Task AppendProcessCooperationLogAsync(
@@ -1623,6 +1623,22 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
             var errorSummary = FormatValidationErrors(result.Errors);
             var message =
                 $"Finalizer tool '{policy.ToolName}' in {finalizerMode} mode failed validation. Raw output hash: {result.RawOutputHash}. Errors: {errorSummary}";
+            if (RequiredFinalizerStructuredOutputRecoveryPolicy.CanRecover(
+                    ExecutionInvocationMetadata.ResolveAllowRequiredFinalizerStructuredOutputRecovery(run),
+                    finalizerMode,
+                    result))
+            {
+                await AppendExecutionLogAsync(
+                    run.Id,
+                    run.AgentId,
+                    run.ChatSessionId,
+                    ExecutionState.Persisting,
+                    "Finalizer recovery",
+                    $"Required finalizer tool '{policy.ToolName}' was not called. Explicit structured-output recovery is enabled; the raw response will be validated and, when needed, repaired against '{structuredOutput.ContractKey}'. Completion evidence gates remain authoritative.",
+                    cancellationToken);
+                return response;
+            }
+
             await AppendExecutionLogAsync(
                 run.Id,
                 run.AgentId,
@@ -1860,6 +1876,48 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         {
             return false;
         }
+    }
+
+    private static string CreateExecutionSummary(
+        ExecutionRunRecord run,
+        AgentRuntimeResponse response)
+    {
+        if (IsProcessStepOutcomeContract(run) &&
+            TryCreateProcessStepOutcomeExecutionSummary(response.ResponseText, out var summary))
+        {
+            return summary;
+        }
+
+        return CreateExecutionSummary(response.ResponseText);
+    }
+
+    private static bool IsProcessStepOutcomeContract(ExecutionRunRecord run)
+    {
+        return string.Equals(
+                   run.StructuredOutputContractKey,
+                   AgentStructuredOutputContracts.ProcessStepOutcomeResultKey,
+                   StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(
+                   run.StructuredOutputTypeName,
+                   nameof(ProcessStepOutcomeResult),
+                   StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool TryCreateProcessStepOutcomeExecutionSummary(
+        string responseText,
+        out string summary)
+    {
+        summary = string.Empty;
+        var validation = AgentOutputJson.DeserializeAndValidate(
+            responseText,
+            new ProcessStepOutcomeValidator());
+        if (!validation.Succeeded || validation.Output is not ProcessStepOutcomeResult output)
+        {
+            return false;
+        }
+
+        summary = JsonSerializer.Serialize(output, AgentOutputJson.SerializerOptions);
+        return true;
     }
 
     private static void EnsureExecutionRunExists(

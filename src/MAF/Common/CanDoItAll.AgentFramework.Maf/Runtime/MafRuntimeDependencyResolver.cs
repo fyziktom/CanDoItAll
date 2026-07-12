@@ -1,0 +1,103 @@
+using CanDoItAll.AgentFramework.Core;
+using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.AgentFramework.Providers;
+using CanDoItAll.Tools.Documents;
+
+namespace CanDoItAll.AgentFramework.Maf;
+
+internal interface IMafRuntimeDependencyResolver
+{
+    MafRuntimeProviderDependencies ResolveProviderDependencies(IServiceProvider services);
+
+    MafWorkspaceRuntimeServices ResolveWorkspaceServices(
+        IServiceProvider services,
+        string workspaceRoot,
+        WorkspaceScopeDescriptor workspaceScope);
+}
+
+internal sealed class MafRuntimeDependencyResolver : IMafRuntimeDependencyResolver
+{
+    public static IMafRuntimeDependencyResolver Default { get; } = new MafRuntimeDependencyResolver();
+
+    public static IMafRuntimeDependencyResolver Resolve(IServiceProvider services)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+
+        return services.GetService(typeof(IMafRuntimeDependencyResolver)) is IMafRuntimeDependencyResolver resolver
+            ? resolver
+            : Default;
+    }
+
+    public MafRuntimeProviderDependencies ResolveProviderDependencies(IServiceProvider services)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+
+        var gateway = services.GetService(typeof(IMafProviderRuntimeGateway)) is IMafProviderRuntimeGateway resolvedGateway
+            ? resolvedGateway
+            : MafProviderRuntimeGateway.CreateFallback(services);
+        var streamingDispatchGate = services.GetService(typeof(IMafProviderStreamingDispatchGate)) is IMafProviderStreamingDispatchGate resolvedGate
+            ? resolvedGate
+            : CreateFallbackProviderStreamingDispatchGate(services);
+        var imageAnalysisService = services.GetService(typeof(IAgentImageAnalysisService)) is IAgentImageAnalysisService resolvedImageAnalysisService
+            ? resolvedImageAnalysisService
+            : new ProviderRuntimeImageAnalysisService(gateway);
+
+        return new MafRuntimeProviderDependencies(gateway, streamingDispatchGate, imageAnalysisService);
+    }
+
+    public MafWorkspaceRuntimeServices ResolveWorkspaceServices(
+        IServiceProvider services,
+        string workspaceRoot,
+        WorkspaceScopeDescriptor workspaceScope)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+
+        if (string.IsNullOrWhiteSpace(workspaceRoot))
+        {
+            throw new ArgumentException("Workspace root must be provided.", nameof(workspaceRoot));
+        }
+
+        var workspaceFileService = services.GetService(typeof(IWorkspaceFileService)) as IWorkspaceFileService
+            ?? new WorkspaceFileService(workspaceRoot, workspaceScope);
+        var workspaceCommandExecutionService = services.GetService(typeof(IWorkspaceCommandExecutionService)) as IWorkspaceCommandExecutionService
+            ?? new WorkspaceCommandExecutionService(
+                workspaceRoot,
+                new LocalWorkspaceProcessHost(),
+                workspaceScope,
+                ResolveLifecycleFactExtractors(services));
+        var documentMarkdownConverter = services.GetService(typeof(IWorkspaceDocumentMarkdownConverter)) as IWorkspaceDocumentMarkdownConverter
+            ?? new ManagedCodeMarkItDownDocumentMarkdownConverter();
+        var imageOperationService = services.GetService(typeof(IWorkspaceImageOperationService)) as IWorkspaceImageOperationService
+            ?? new WorkspaceImageOperationService(workspaceRoot, workspaceScope);
+        var workspaceArtifactToolService = services.GetService(typeof(IWorkspaceArtifactToolService)) as IWorkspaceArtifactToolService
+            ?? new WorkspaceArtifactToolService(
+                workspaceRoot,
+                workspaceCommandExecutionService,
+                documentMarkdownConverter,
+                workspaceScope,
+                imageOperationService);
+
+        return new MafWorkspaceRuntimeServices(
+            workspaceFileService,
+            workspaceCommandExecutionService,
+            workspaceArtifactToolService);
+    }
+
+    private static IEnumerable<IWorkspaceCommandReceiptLifecycleFactExtractor> ResolveLifecycleFactExtractors(
+        IServiceProvider services)
+        => services.GetService(typeof(IEnumerable<IWorkspaceCommandReceiptLifecycleFactExtractor>)) is IEnumerable<IWorkspaceCommandReceiptLifecycleFactExtractor> extractors
+            ? extractors
+            : [];
+
+    private static IMafProviderStreamingDispatchGate CreateFallbackProviderStreamingDispatchGate(IServiceProvider services)
+    {
+        var providerFactory = services.GetService(typeof(IAgentProviderFactory)) is IAgentProviderFactory resolvedFactory
+            ? resolvedFactory
+            : MafProviderRuntimeServiceCollectionExtensions.CreateDefaultProviderFactory(services);
+        var dispatchLaneGate = services.GetService(typeof(IProviderDispatchLaneGate)) is IProviderDispatchLaneGate resolvedGate
+            ? resolvedGate
+            : new ProviderDispatchLaneGate(providerFactory);
+
+        return new MafProviderStreamingDispatchGate(dispatchLaneGate);
+    }
+}

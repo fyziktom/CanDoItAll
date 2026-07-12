@@ -48,29 +48,44 @@ public sealed class WorkflowExecutorTests
     }
 
     [Fact]
-    public void BuiltInRegistrationAddsImplementedAndPlannedExecutors()
+    public void BuiltInRegistrationAddsImplementedAndPlannedContributions()
     {
         var services = new ServiceCollection();
 
         services.AddStandardWorkflowExecutors();
 
-        var executorDescriptors = services
-            .Where(descriptor => descriptor.ServiceType == typeof(IWorkflowExecutor))
+        var contributionDescriptors = services
+            .Where(descriptor => descriptor.ServiceType == typeof(IWorkflowExecutorContribution))
             .ToArray();
-        Assert.Equal(10 + BuiltInWorkflowExecutorDescriptors.Planned.Count, executorDescriptors.Length);
-        Assert.Contains(executorDescriptors, descriptor => descriptor.ImplementationType == typeof(WorkspaceFileWorkflowExecutor));
-        Assert.Contains(executorDescriptors, descriptor => descriptor.ImplementationType == typeof(JsonTransformWorkflowExecutor));
-        Assert.Contains(executorDescriptors, descriptor => descriptor.ImplementationType == typeof(MarkdownRenderWorkflowExecutor));
-        Assert.Contains(executorDescriptors, descriptor => descriptor.ImplementationType == typeof(SourceIngestionWorkflowExecutor));
-        Assert.Contains(executorDescriptors, descriptor => descriptor.ImplementationType == typeof(HttpFetchWorkflowExecutor));
-        Assert.Contains(executorDescriptors, descriptor => descriptor.ImplementationType == typeof(DelayWorkflowExecutor));
-        Assert.Contains(executorDescriptors, descriptor => descriptor.ImplementationType == typeof(HumanApprovalWorkflowExecutor));
-        Assert.Contains(executorDescriptors, descriptor => descriptor.ImplementationType == typeof(SpreadsheetWorkflowExecutor));
-        Assert.Contains(executorDescriptors, descriptor => descriptor.ImplementationType == typeof(ProjectStructureWorkflowExecutor));
-        Assert.Contains(executorDescriptors, descriptor => descriptor.ImplementationType == typeof(ImageGenerationWorkflowExecutor));
-        Assert.Equal(
-            BuiltInWorkflowExecutorDescriptors.Planned.Count,
-            executorDescriptors.Count(descriptor => descriptor.ImplementationFactory is not null));
+        var implementationTypes = services
+            .Where(descriptor => descriptor.ServiceType == typeof(IWorkflowExecutor))
+            .Select(descriptor => descriptor.ImplementationType)
+            .OfType<Type>()
+            .Select(type => type.GetGenericArguments().Single())
+            .ToArray();
+        var plannedDescriptors = contributionDescriptors
+            .Select(descriptor => descriptor.ImplementationInstance)
+            .OfType<IWorkflowExecutorContribution>()
+            .Where(contribution => !contribution.Descriptor.CanExecute)
+            .Select(contribution => contribution.Descriptor)
+            .ToArray();
+
+        Assert.Equal(13 + BuiltInWorkflowExecutorDescriptors.Planned.Count, contributionDescriptors.Length);
+        Assert.Contains(typeof(WorkspaceFileWorkflowExecutor), implementationTypes);
+        Assert.Contains(typeof(JsonTransformWorkflowExecutor), implementationTypes);
+        Assert.Contains(typeof(MarkdownRenderWorkflowExecutor), implementationTypes);
+        Assert.Contains(typeof(SourceIngestionWorkflowExecutor), implementationTypes);
+        Assert.Contains(typeof(HttpFetchWorkflowExecutor), implementationTypes);
+        Assert.Contains(typeof(DelayWorkflowExecutor), implementationTypes);
+        Assert.Contains(typeof(HumanApprovalWorkflowExecutor), implementationTypes);
+        Assert.Contains(typeof(SpreadsheetWorkflowExecutor), implementationTypes);
+        Assert.Contains(typeof(ProjectStructureWorkflowExecutor), implementationTypes);
+        Assert.Contains(typeof(ImageGenerationWorkflowExecutor), implementationTypes);
+        Assert.Contains(typeof(DocumentToMarkdownWorkflowExecutor), implementationTypes);
+        Assert.Contains(typeof(ImageInspectWorkflowExecutor), implementationTypes);
+        Assert.Contains(typeof(ImageAnalyzeWorkflowExecutor), implementationTypes);
+        Assert.Equal(BuiltInWorkflowExecutorDescriptors.Planned, plannedDescriptors);
+        Assert.Equal(13, services.Count(descriptor => descriptor.ServiceType == typeof(IWorkflowExecutor)));
     }
 
     [Fact]
@@ -1004,7 +1019,7 @@ public sealed class WorkflowExecutorTests
         var node = CreateLlmNode("summarize-office365", component.Id);
         var definition = CreateDefinition([node], [], node.Id.Value);
 
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => invoker.ExecuteAsync(
+        var exception = await Assert.ThrowsAsync<WorkflowUsageObservationException>(() => invoker.ExecuteAsync(
             definition,
             node,
             component,
@@ -1012,6 +1027,7 @@ public sealed class WorkflowExecutorTests
 
         Assert.Contains("summarize-office365", exception.Message, StringComparison.Ordinal);
         Assert.Contains("invalid JSON", exception.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.IsType<InvalidOperationException>(exception.InnerException);
         var executionOptions = runtime.LastExecutionOptions;
         Assert.NotNull(executionOptions);
         Assert.True(executionOptions!.RequireJsonResponseFormat);
@@ -1255,7 +1271,9 @@ public sealed class WorkflowExecutorTests
         Assert.Contains("\"outputPath\":\"downloads/source.html\"", httpResult.PayloadJson, StringComparison.Ordinal);
 
         var ingestion = await ExecuteDirectAsync(
-            new SourceIngestionWorkflowExecutor(new WorkspacePathResolutionService(temp.Path)),
+            new SourceIngestionWorkflowExecutor(
+                new WorkspacePathResolutionService(temp.Path),
+                new ManagedCodeMarkItDownDocumentMarkdownConverter()),
             new WorkflowSourceIngestionExecutorSettings
             {
                 IncludeAdditionalSources = true,
@@ -1268,7 +1286,7 @@ public sealed class WorkflowExecutorTests
             httpResult.PayloadJson);
 
         Assert.Contains("Download evidence", ingestion.PayloadJson, StringComparison.Ordinal);
-        Assert.Contains("html-text", ingestion.PayloadJson, StringComparison.Ordinal);
+        Assert.Contains("markitdown-html", ingestion.PayloadJson, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -1282,16 +1300,88 @@ public sealed class WorkflowExecutorTests
             workbookPath,
             workbookPath,
             "Data",
-            [new SpreadsheetCellWrite("A1", "Name"), new SpreadsheetCellWrite("B1", "Value")],
+            [new SpreadsheetCellWrite("A1", "Name"), new SpreadsheetCellWrite("B1", "Value"), new SpreadsheetCellWrite("C1", "Formula")],
             [new SpreadsheetRangeWrite("A2:B3", [["Alpha", "10"], ["Beta", "20"]])],
             CreateWorkbookIfMissing: true,
             Overwrite: true));
+        service.Write(new SpreadsheetWriteRequest(
+            workbookPath,
+            workbookPath,
+            "Data",
+            [new SpreadsheetCellWrite("C2", "=SUM(B2:B3)")],
+            [],
+            CreateWorkbookIfMissing: false,
+            Overwrite: true));
 
         var cell = service.ReadCell(workbookPath, "Data", "A2");
-        var range = service.ReadRange(workbookPath, "Data", "A1:B3", maxRows: 10, maxColumns: 10);
+        var formula = service.ReadCell(workbookPath, "Data", "C2");
+        var range = service.ReadRange(workbookPath, "Data", "A1:C3", maxRows: 10, maxColumns: 10);
+        var functions = SpreadsheetFunctionCatalog.List(query: "sum", category: null, maxResults: 10);
 
         Assert.Equal("Alpha", cell.Value);
-        Assert.Contains("| Name | Value |", range.MarkdownTable, StringComparison.Ordinal);
+        Assert.Equal("=SUM(B2:B3)", formula.Value);
+        Assert.Contains("| Name | Value | Formula |", range.MarkdownTable, StringComparison.Ordinal);
+        Assert.Contains(functions, function => string.Equals(function.Name, "SUMIFS", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void WorkspaceSpreadsheetRuntimePluginPersistsToolReceipts()
+    {
+        using var temp = new TempDirectory();
+        var run = CreateExecutionRunRecord();
+        var plugin = new WorkspaceSpreadsheetRuntimePlugin(
+            new ClosedXmlSpreadsheetDocumentService(),
+            temp.Path,
+            WorkspaceScopeDescriptor.Sandbox,
+            new AgentWorkspaceToolAccessSettings
+            {
+                CanReadFiles = true,
+                CanWriteFiles = true,
+                CanTransformArtifacts = true
+            });
+
+        using (WorkspaceExecutionAuditContext.BeginScope(run))
+        {
+            plugin.WriteSpreadsheetWorkbook(
+                "margin.xlsx",
+                "Summary",
+                cellWrites:
+                [
+                    new SpreadsheetCellWrite("A1", "Metric"),
+                    new SpreadsheetCellWrite("B1", "Value"),
+                    new SpreadsheetCellWrite("A2", "Total"),
+                    new SpreadsheetCellWrite("B2", "=SUM(1,2)")
+                ],
+                createWorkbookIfMissing: true,
+                overwrite: true);
+            plugin.InspectWorkbook("margin.xlsx");
+            plugin.ReadSpreadsheetCell("margin.xlsx", "Summary", "B2");
+            plugin.ReadSpreadsheetRange("margin.xlsx", "Summary", "A1:B2");
+            plugin.ListSpreadsheetFunctions("sum", maxResults: 5);
+        }
+
+        var receiptRoot = Path.Combine(
+            temp.Path,
+            "data",
+            "execution",
+            "runs",
+            run.Id.ToString("N"),
+            "audit",
+            "receipts");
+        var receipts = Directory.EnumerateFiles(receiptRoot, "*.json")
+            .Select(path => System.Text.Json.JsonSerializer.Deserialize<ToolExecutionReceiptRecord>(
+                File.ReadAllText(path),
+                new System.Text.Json.JsonSerializerOptions(System.Text.Json.JsonSerializerDefaults.Web)))
+            .OfType<ToolExecutionReceiptRecord>()
+            .ToArray();
+
+        Assert.Contains(receipts, receipt => receipt.ToolName == "workspace_write_spreadsheet" &&
+                                             receipt.RiskClass == "MutatingWorkspace");
+        Assert.Contains(receipts, receipt => receipt.ToolName == "workspace_spreadsheet_summary" &&
+                                             receipt.RiskClass == "ReadOnlyWorkspace");
+        Assert.Contains(receipts, receipt => receipt.ToolName == "workspace_read_spreadsheet_cell");
+        Assert.Contains(receipts, receipt => receipt.ToolName == "workspace_read_spreadsheet_range");
+        Assert.Contains(receipts, receipt => receipt.ToolName == "workspace_spreadsheet_function_catalog");
     }
 
     [Fact]
@@ -2161,6 +2251,36 @@ public sealed class WorkflowExecutorTests
                 request.Format,
                 [new AgentGeneratedImage("image/png", imageBytes, revisedPrompt)]));
         }
+    }
+
+    private static ExecutionRunRecord CreateExecutionRunRecord()
+    {
+        var now = DateTimeOffset.UtcNow;
+        return new ExecutionRunRecord(
+            Id: Guid.NewGuid(),
+            AgentId: Guid.NewGuid(),
+            ChatSessionId: null,
+            Title: "Spreadsheet receipt test",
+            SourceKind: "unit-test",
+            SourceId: "spreadsheet-receipt",
+            CorrelationId: "spreadsheet-receipt",
+            CausationId: string.Empty,
+            RequestedBy: "unit-test",
+            RequestedByKind: "system",
+            MetadataJson: "{}",
+            InputSummary: "Input",
+            ResultSummary: string.Empty,
+            ProviderName: "Provider",
+            Model: "model",
+            State: ExecutionState.Running,
+            Outcome: null,
+            CreatedAtUtc: now,
+            UpdatedAtUtc: now,
+            StartedAtUtc: now,
+            CompletedAtUtc: null,
+            RuntimeSessionKey: string.Empty,
+            SerializedSessionStateJson: null,
+            PendingApprovals: []);
     }
 
     private sealed class TempDirectory : IDisposable

@@ -1,0 +1,3 @@
+Command: python C:/Users/lucys/.codex/skills/candoitall-bundle-preparation/scripts/validate_bundle.py .codex/bundles/workflow-architecture-executors-analytics --profile initiative --stage prepared --repo-root C:/repositories/CanDoItAll
+ExitCode: 0
+Output: Bundle is valid for stage 'prepared': C:\repositories\CanDoItAll\.codex\bundles\workflow-architecture-executors-analytics

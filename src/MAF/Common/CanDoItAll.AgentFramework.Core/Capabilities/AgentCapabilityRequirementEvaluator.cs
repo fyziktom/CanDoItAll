@@ -74,6 +74,11 @@ public static class AgentCapabilityRequirementEvaluator
     {
         ArgumentNullException.ThrowIfNull(capability);
 
+        if (LegacyMemoryCapabilityPolicy.IsRetired(capability.Kind))
+        {
+            return true;
+        }
+
         if (capability.Kind != CapabilityKind.Skill)
         {
             return false;

@@ -12,11 +12,15 @@ public sealed class WorkspaceCommandExecutionService : IWorkspaceCommandExecutio
     public WorkspaceCommandExecutionService(
         string workspaceRoot,
         IWorkspaceProcessHost processHost,
-        WorkspaceScopeDescriptor? workspaceScope = null)
+        WorkspaceScopeDescriptor? workspaceScope = null,
+        IEnumerable<IWorkspaceCommandReceiptLifecycleFactExtractor>? lifecycleFactExtractors = null)
     {
         var pathPolicy = new WorkspacePathPolicy(workspaceRoot, workspaceScope);
         environmentPolicy = new WorkspaceCommandEnvironmentPolicy();
-        receiptWriter = new WorkspaceCommandReceiptWriter(pathPolicy.WorkspaceRoot, pathPolicy.WorkspaceScope);
+        receiptWriter = new WorkspaceCommandReceiptWriter(
+            pathPolicy.WorkspaceRoot,
+            pathPolicy.WorkspaceScope,
+            lifecycleFactExtractors);
         planBuilder = new WorkspaceCommandPlanBuilder(pathPolicy);
         processRunner = new WorkspaceCommandProcessRunner(
             processHost,
@@ -141,9 +145,15 @@ public sealed class WorkspaceCommandExecutionService : IWorkspaceCommandExecutio
             "LocalExecution",
             approvalRequired: false);
 
-    public Task<WorkspaceCommandExecutionResult> DotnetNew(string template, string name, string? parentDirectory = null, bool force = false, int timeoutSeconds = 300)
+    public Task<WorkspaceCommandExecutionResult> DotnetNew(
+        string template,
+        string name,
+        string? parentDirectory = null,
+        bool force = false,
+        int timeoutSeconds = 300,
+        string? targetFramework = null)
         => ExecutePlanAsync(
-            () => planBuilder.BuildDotnetNew(template, name, parentDirectory, force, timeoutSeconds),
+            () => planBuilder.BuildDotnetNew(template, name, parentDirectory, force, timeoutSeconds, targetFramework),
             "workspace_dotnet_new",
             "dotnet_new",
             "WorkspaceMutation",
@@ -164,14 +174,6 @@ public sealed class WorkspaceCommandExecutionService : IWorkspaceCommandExecutio
             "pwsh_run_script",
             "LocalExecution",
             approvalRequired: true);
-
-    public Task<WorkspaceCommandExecutionResult> ConvertDocumentWithMarkItDown(string sourcePath, string outputPath, int timeoutSeconds = 300)
-        => ExecutePlanAsync(
-            () => planBuilder.BuildConvertDocumentWithMarkItDown(sourcePath, outputPath, timeoutSeconds),
-            "workspace_convert_document",
-            "convert_document",
-            "LocalExecution:DocumentConversion",
-            approvalRequired: false);
 
     public Task<WorkspaceCommandExecutionResult> InspectSpreadsheetPreview(string path, int maxRows = 8, int maxColumns = 8, int timeoutSeconds = 300)
         => ExecutePlanAsync(

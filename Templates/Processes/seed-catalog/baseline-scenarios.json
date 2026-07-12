@@ -1712,14 +1712,14 @@
       {
         "StepKey": "resolve-blazor-contract",
         "TargetStatus": "Completed",
-        "SelectedBranchOutcomeKey": "__default__",
+        "SelectedBranchOutcomeKey": "default",
         "Reason": "Architecture and acceptance contract resolved without implementation.",
         "DecidedBy": "Blazor PWA solution architect"
       },
       {
         "StepKey": "implement-blazor-change",
         "TargetStatus": "Completed",
-        "SelectedBranchOutcomeKey": "__default__",
+        "SelectedBranchOutcomeKey": "default",
         "Reason": "Requested WASM PWA implementation completed with build/test proof.",
         "DecidedBy": "Blazor PWA engineer"
       },
@@ -1893,3 +1893,4 @@
     ]
   }
 ]
+

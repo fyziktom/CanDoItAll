@@ -28,6 +28,7 @@
     "product-owner",
     "delivery-manager",
     "solution-architect",
+    "review-lead",
     "qa-lead",
     "security-reviewer",
     "release-manager"
@@ -149,6 +150,22 @@
       "Notes": "Implementation owner for code, tests, migration notes, and executable delivery proof."
     },
     {
+      "Key": "review-lead",
+      "RoleResourceKey": "review-lead",
+      "DisplayName": "Independent code review lead",
+      "Purpose": "Review the implemented change independently from the implementation owner and protect behavior, architecture, and evidence quality.",
+      "StaffingIntent": "A qualified code reviewer with .NET specialization when the delivered application is .NET-based.",
+      "PreferredExecutorKind": "person-or-agent",
+      "PreferredProjectAssignmentRole": "Reviewer",
+      "IsRequired": true,
+      "AllowsFallback": true,
+      "RequiresExplicitApproval": false,
+      "DefaultAllocationPercent": 35,
+      "CanvasX": 1065,
+      "CanvasY": 40,
+      "Notes": "Independent source-backed review owner; must not be represented by the implementation role contract."
+    },
+    {
       "Key": "qa-lead",
       "RoleResourceKey": "qa-lead",
       "DisplayName": "QA lead",
@@ -265,6 +282,9 @@
       "DocRefs": [
         "processes/software-delivery/steps/feature-intake.md"
       ],
+      "ExecutionGuidanceRefs": [
+        "processes/software-delivery/steps/feature-intake.md"
+      ],
       "AllowedOperations": [
         "ReadProcessContext",
         "ReadProjectStructure",
@@ -347,6 +367,20 @@
           "ValidationRequirementSummary": "Must map to the reviewed child architecture handoff and include selected option, rejected options, source-of-truth choice, service/model/component boundaries, testability notes, and migration ownership.",
           "SubprocessChildStepKey": "architecture-handoff",
           "SubprocessChildArtifactTitle": ".NET architecture design and review handoff"
+        },
+        {
+          "Key": "acceptance-validation-plan",
+          "TemplateKey": "implementation-plan",
+          "Title": "Acceptance-driven validation plan",
+          "ArtifactKind": "Brief",
+          "IsRequired": true,
+          "TrustRequirement": "ReviewRequired",
+          "SensitivityLevel": "Internal",
+          "RetentionDays": 365,
+          "AllowedFutureUsageSummary": "Reusable by implementation, QA, repair, and release governance as the durable criterion-to-proof contract.",
+          "ValidationRequirementSummary": "Must map every available authoritative acceptance criterion or explicit invariant, preserving literal criterion ids when supplied, to an owning production boundary, planned proof, failure signal, and responsible role. Planned proof is not executed acceptance evidence.",
+          "SubprocessChildStepKey": "design-validation-plan",
+          "SubprocessChildArtifactTitle": ".NET acceptance-driven validation plan"
         }
       ],
       "ArtifactInputs": [
@@ -377,24 +411,51 @@
       ],
       "OperationTargetScope": "ExternalActionControlled",
       "SubprocessProcessKey": "dotnet-architecture-design-review",
-      "SubprocessDefinitionSnapshotName": ".NET architecture design and review subprocess"
+      "SubprocessDefinitionSnapshotName": ".NET architecture design and review subprocess",
+      "SubprocessContract": {
+        "DefinitionKey": "dotnet-architecture-design-review",
+        "LaunchMode": "RuntimeOwned",
+        "ParentProducedArtifactExpectationKey": "architecture-decision-record",
+        "AcceptedChildOutputs": [
+          {
+            "StepKey": "classify-dotnet-application",
+            "ArtifactExpectationKey": "dotnet-application-classification",
+            "ArtifactTitle": ".NET application classification and project context"
+          },
+          {
+            "StepKey": "design-validation-plan",
+            "ArtifactExpectationKey": "acceptance-validation-plan",
+            "ArtifactTitle": ".NET acceptance-driven validation plan"
+          },
+          {
+            "StepKey": "architecture-handoff",
+            "ArtifactExpectationKey": "architecture-design-review-handoff",
+            "ArtifactTitle": ".NET architecture design and review handoff"
+          }
+        ],
+        "NoGoChildOutputs": [],
+        "RequiredChildReceipts": [],
+        "AlreadySatisfiedOutput": null,
+        "MaterializationMode": "RuntimeSynthesizedParentHandoff"
+      },
+      "ExecutionClass": "RuntimeOwnedSubprocess"
     },
     {
       "Order": 2,
       "Key": "implementation",
       "Title": "Run .NET implementation slice subprocess",
       "Subtitle": "Observed implementation and validation slice",
-      "Notes": "Launch and observe the .NET implementation slice subprocess for the approved scope and architecture. When the approved scope is a full app or broad deliverable, launch the child with a first reviewable MVP implementation slice derived from feature-intake and architecture artifacts. The MVP slice must not be scaffold-only, app-shell-only, setup-only, naming-only, or build-only proof; it must include the smallest observable product-specific path a user can exercise. When project structure lists visual target assets, carry their ImageAsset node ids and media paths into the child implementation request as source design inputs. The child implementation must use those assets to shape the visible UI, not only the text summary. The child implementation slice owns solution setup, feature/function implementation, repair subprocesses, tests, targeted proof, and accepted handoff evidence. This parent step records child-run evidence and does not mutate product files directly. This parent step must not launch the app, navigate a browser, wait on browser state, capture screenshots, or perform viewport/runtime proof directly; those actions belong to later root runtime-command and screenshot writeback steps that include LaunchRuntime and CaptureRuntimeProof.",
+      "Notes": "Launch and observe the .NET implementation slice subprocess for the approved scope and architecture. Pass the architecture decision record and acceptance-driven validation plan as durable child inputs; preserve literal ProductAcceptanceCriteriaContract ids when present so the child cannot silently narrow required behavior or replace planned proof with acceptance evidence. When the approved scope is a full app or broad deliverable, launch the child with a first reviewable MVP implementation slice derived from feature-intake and architecture artifacts. The MVP slice must not be scaffold-only, app-shell-only, setup-only, naming-only, or build-only proof; it must include the smallest observable product-specific path a user can exercise. When project structure lists visual target assets, carry their ImageAsset node ids and media paths into the child implementation request as source design inputs. The child implementation must use those assets to shape the visible UI, not only the text summary. The child implementation slice owns solution setup, feature/function implementation, tests, targeted proof, one bounded repair, and—when that strategy repeats or remains incomplete—a manager-assisted quality-repair subprocess with separate diagnosis, implementation, validation, and bughunt roles. This parent step records child-run evidence and does not mutate product files directly. This parent step must not launch the app, navigate a browser, wait on browser state, capture screenshots, or perform viewport/runtime proof directly; those actions belong to later root runtime-command and screenshot writeback steps that include LaunchRuntime and CaptureRuntimeProof.",
       "StepKind": "Subprocess",
       "AllowsManualSkip": false,
       "AllowsSafeRefusal": false,
       "RequiresApproval": false,
       "RequiresDecisionRecord": true,
-      "InputContractSummary": "Approved .NET architecture path, app classification, scope packet, unresolved technical questions, and implementation-slice start criteria.",
+      "InputContractSummary": "Approved .NET architecture path, acceptance-driven validation plan, app classification, scope packet, unresolved technical questions, and implementation-slice start criteria.",
       "OutputContractSummary": "Observed child implementation slice with reviewable change set, test evidence, blockers, rollout inputs, accepted parent-ready handoff, or explicit repair escalation evidence.",
       "EvidenceContractSummary": "Child run status, change-set projection, validation outputs, accepted handoff evidence, repair escalation evidence, output-placement notes, migration steps when applicable, touched-surface inventory, and blockers.",
       "DecisionRightsSummary": "Lead engineer owns the visible implementation subprocess assignment and accepted handoff; delivery manager remains an explicit coordination reviewer.",
-      "ExceptionPolicySummary": "Block when the child implementation slice blocks, fails, omits required project-structure requirements, lacks accepted handoff evidence, or returns slice-repair-escalation. Do not treat a completed child run with an escalation/no-go packet as accepted implementation proof. If accepted child evidence is missing, record a blocker or repair escalation instead of attempting browser proof from this parent step.",
+      "ExceptionPolicySummary": "Block when the child implementation slice blocks, fails, omits required project-structure requirements, or lacks accepted handoff evidence after its manager-assisted repair lane. Do not treat an intermediate escalation/diagnosis packet as accepted implementation proof. If accepted child evidence is missing, record the concrete child blocker instead of attempting browser proof from this parent step.",
       "TargetLeadHours": 36,
       "DependsOnStepKey": "architecture-review",
       "DependsOnBranchOutcomeKey": "",
@@ -440,7 +501,7 @@
           "SensitivityLevel": "Internal",
           "RetentionDays": 365,
           "AllowedFutureUsageSummary": "Reusable for peer review, QA, runtime command writeback, screenshot writeback, release approval, and later defect forensics.",
-          "ValidationRequirementSummary": "Must point to the observed .NET implementation slice child run and include changed files, behavioral intent, validation proof tied to acceptance criteria, accepted handoff evidence from slice-handoff or slice-handoff-after-repair, and confirmation that explicit project-structure requirements were not dropped or deferred. A slice-repair-escalation packet is blocker evidence, not accepted implementation proof.",
+          "ValidationRequirementSummary": "Must point to the observed .NET implementation slice child run and include changed files, behavioral intent, validation proof tied to acceptance criteria, accepted handoff evidence from slice-handoff, slice-handoff-after-repair, slice-handoff-after-initial-manager-repair, or slice-handoff-after-manager-repair, and confirmation that explicit project-structure requirements were not dropped or deferred. An intermediate slice-repair-escalation packet is diagnosis input, not accepted implementation proof.",
           "SubprocessChildStepKey": "implement-code-change",
           "SubprocessChildArtifactTitle": "Slice implementation change set"
         },
@@ -454,7 +515,7 @@
           "SensitivityLevel": "Internal",
           "RetentionDays": 365,
           "AllowedFutureUsageSummary": "Reusable for release rehearsal and rollback planning.",
-          "ValidationRequirementSummary": "Must name data changes or none, operational preconditions, publish/output-placement steps, rollback/removal steps, and accepted child-run handoff evidence used to derive them. Accept either slice-handoff or slice-handoff-after-repair as the source; do not use slice-repair-escalation as rollout-ready evidence.",
+          "ValidationRequirementSummary": "Must name data changes or none, operational preconditions, publish/output-placement steps, rollback/removal steps, and accepted child-run handoff evidence used to derive them. Accept slice-handoff, slice-handoff-after-repair, slice-handoff-after-initial-manager-repair, or slice-handoff-after-manager-repair as the source; do not use the intermediate slice-repair-escalation diagnosis as rollout-ready evidence.",
           "SubprocessChildStepKey": "slice-handoff",
           "SubprocessChildArtifactTitle": "Implementation slice handoff packet"
         }
@@ -466,6 +527,10 @@
         },
         {
           "ArtifactExpectationKey": "architecture-decision-record",
+          "SourceStepKey": "architecture-review"
+        },
+        {
+          "ArtifactExpectationKey": "acceptance-validation-plan",
           "SourceStepKey": "architecture-review"
         },
         {
@@ -496,14 +561,54 @@
       ],
       "OperationTargetScope": "ExternalActionControlled",
       "SubprocessProcessKey": "dotnet-development-slice",
-      "SubprocessDefinitionSnapshotName": ".NET implementation slice with atomic validation"
+      "SubprocessDefinitionSnapshotName": ".NET implementation slice with atomic validation",
+      "SubprocessContract": {
+        "DefinitionKey": "dotnet-development-slice",
+        "LaunchMode": "RuntimeOwned",
+        "ParentProducedArtifactExpectationKey": "implementation-change-set",
+        "AcceptedChildOutputs": [
+          {
+            "StepKey": "slice-handoff",
+            "ArtifactExpectationKey": "slice-handoff-packet",
+            "ArtifactTitle": "Implementation slice handoff packet"
+          },
+          {
+            "StepKey": "slice-handoff-after-repair",
+            "ArtifactExpectationKey": "slice-handoff-packet-after-repair",
+            "ArtifactTitle": "Implementation slice handoff packet after repair"
+          },
+          {
+            "StepKey": "slice-handoff-after-initial-manager-repair",
+            "ArtifactExpectationKey": "slice-handoff-packet-after-initial-manager-repair",
+            "ArtifactTitle": "Implementation slice handoff packet after initial manager-assisted repair"
+          },
+          {
+            "StepKey": "slice-handoff-after-manager-repair",
+            "ArtifactExpectationKey": "slice-handoff-packet-after-manager-repair",
+            "ArtifactTitle": "Implementation slice handoff packet after manager-assisted repair"
+          }
+        ],
+        "NoGoChildOutputs": [],
+        "RequiredChildReceipts": [],
+        "ForwardedChildContextArtifacts": [
+          {
+            "BindingKey": "solution-context",
+            "SourceStepKey": "slice-architecture-check",
+            "ArtifactExpectationKey": "dotnet-solution-context",
+            "PayloadSchema": "dotnet.solution-context/v1"
+          }
+        ],
+        "AlreadySatisfiedOutput": null,
+        "MaterializationMode": "RuntimeSynthesizedParentHandoff"
+      },
+      "ExecutionClass": "RuntimeOwnedSubprocess"
     },
     {
       "Order": 3,
       "Key": "peer-review",
       "Title": "Complete peer review and integration readiness",
       "Subtitle": "Design and implementation challenge",
-      "Notes": "Review the change set against the approved design, integration consequences, and release assumptions.",
+      "Notes": "Review the change set against the approved design, integration consequences, and release assumptions. Read the required upstream managed artifact refs before judging the implementation. Write or update artifacts/process-runs/<current-process-run-id>/steps/peer-review.md before returning. Use managed process refs, project-structure node ids, and current-run tool receipt refs as evidence. Do not put native absolute product paths, scoped storage paths, managed-files paths, project-media paths, tool-runs paths, SourceDocLink values, or ungrounded external-target child paths in the artifact body, reason, summary, next actions, or final evidenceRefs. If a review finding needs to discuss a product file, describe the component or behavior without a path-like string, or first create a current-run read/validation receipt that grounds the exact ref and cite that receipt. Final submit_process_step_outcome evidenceRefs must include the peer-review artifact ref plus exact current-run receipt refs for any validation tools run.",
       "StepKind": "Review",
       "AllowsManualSkip": false,
       "AllowsSafeRefusal": false,
@@ -511,7 +616,7 @@
       "RequiresDecisionRecord": false,
       "InputContractSummary": "Implementation package, architecture decision record, and changed-surface inventory.",
       "OutputContractSummary": "Peer-reviewed change set with explicit residual risk and follow-up items.",
-      "EvidenceContractSummary": "Review notes, unresolved issues list, and approved follow-up actions.",
+      "EvidenceContractSummary": "Review notes, unresolved issues list, approved follow-up actions, the current-run peer-review managed artifact ref, and exact current-run validation/read receipt refs when tools run; final evidence must avoid native absolute product paths and ungrounded path-like refs.",
       "DecisionRightsSummary": "Reviewers may block unsafe merge or release progression until the change set satisfies design and evidence expectations.",
       "ExceptionPolicySummary": "Do not downgrade architecture, data, or migration concerns to cosmetic comments.",
       "TargetLeadHours": 8,
@@ -534,11 +639,11 @@
       ],
       "RoleAssignments": [
         {
-          "RoleKey": "lead-engineer",
+          "RoleKey": "review-lead",
           "ResponsibilityKind": "Responsible",
           "IsRequired": true,
           "FallbackOrder": 0,
-          "RebindPolicySummary": "Implementation owner remains attached until review comments are addressed."
+          "RebindPolicySummary": "Peer review stays assigned to an independent qualified reviewer; implementation remains a separate lane."
         },
         {
           "RoleKey": "solution-architect",
@@ -566,16 +671,28 @@
           "SensitivityLevel": "Internal",
           "RetentionDays": 365,
           "AllowedFutureUsageSummary": "Reusable for QA, security, and release governance.",
-          "ValidationRequirementSummary": "Must capture accepted issues, rejected concerns, and explicit residual risk."
+          "ValidationRequirementSummary": "Must capture accepted issues, rejected concerns, explicit residual risk, current-run upstream artifact refs reviewed, the peer-review primary managed artifact ref, and exact current-run receipt refs for any validation tools run. Must not use native absolute product paths, scoped storage paths, managed-files paths, project-media paths, tool-runs paths, SourceDocLink values, or ungrounded external-target child paths as final evidence."
         }
       ],
       "ArtifactInputs": [
+        {
+          "ArtifactExpectationKey": "scope-boundary-packet",
+          "SourceStepKey": "feature-intake"
+        },
         {
           "ArtifactExpectationKey": "implementation-change-set",
           "SourceStepKey": "implementation"
         },
         {
           "ArtifactExpectationKey": "architecture-decision-record",
+          "SourceStepKey": "architecture-review"
+        },
+        {
+          "ArtifactExpectationKey": "acceptance-validation-plan",
+          "SourceStepKey": "architecture-review"
+        },
+        {
+          "ArtifactExpectationKey": "project-structure-context-brief",
           "SourceStepKey": "architecture-review"
         }
       ],
@@ -586,6 +703,9 @@
       "DocRefs": [
         "processes/software-delivery/steps/peer-review.md"
       ],
+      "ExecutionGuidanceRefs": [
+        "processes/software-delivery/steps/peer-review.md"
+      ],
       "AllowedOperations": [
         "ReadProcessContext",
         "ReadProjectStructure",
@@ -594,28 +714,164 @@
         "WriteManagedProcessArtifacts",
         "EscalateOrDecide"
       ],
-      "OperationTargetScope": "ExternalProductTargetReadOnly"
+      "OperationTargetScope": "ExternalProductTargetReadOnly",
+      "CompletionPolicy": {
+        "RequiredProductToolReceipts": [],
+        "CompletionIssueRoutes": [],
+        "RequiresProductSourceInspection": true,
+        "ProductSourceInspectionRequiredBranchOutcomeKeys": [],
+        "ProductMutationRequiredBranchOutcomeKeys": [],
+        "RequiresProductMutationBeforeManagedOutput": false,
+        "ProductMutationToolNames": [],
+        "RuntimeRoutedBranchOutcomeKeys": []
+      }
     },
     {
       "Order": 4,
       "Key": "qa-validation",
       "Title": "Run QA validation",
       "Subtitle": "Regression, build, test, and handoff evidence",
-        "Notes": "Execute targeted regression validation and defect triage against the reviewed implementation package. This step has RunValidation; missing restore/build/test receipts are not a reason to route repair until this step has attempted the commands itself. For .NET targets, record a current-run validation chain from the product root: dotnet restore, dotnet build --no-restore, and dotnet test --no-restore when a test project exists or tests are expected. When DotNetSolutionFile or DotNetSolutionFileAlias is present, target that solution file for restore and build. When DotNetTestProjectFileAlias or DotNetTestProjectFile is present, target that test project for workspace_dotnet_test, preferably with noBuild=true after a successful solution build; use the solution target for tests only when no test project target exists. Do not infer <SolutionName>.sln from DotNetSolutionName, and do not report a missing .sln as a defect when the canonical .slnx target exists or already has successful current-run restore/build receipts. If the canonical target is absent, inspect DotNetSolutionFileCandidates and the product-root file listing, then use the existing candidate, preferring .slnx when both exist. Do not accept upstream build or test claims alone as QA proof. If validation tools, product-root alias, or permissions are unavailable, return Blocked with the concrete missing tool or capability; do not select repair-required for missing validation access. External generated product roots may not be Git repositories. Do not call workspace_git_status as a validation precondition for a grounded product root, and do not treat a not a git repository result as a product-root, validation-tool, or repair blocker. If Git status was already attempted and failed only because the product root is not a Git repository, record Git status as not applicable and continue immediately with product-root file listing plus the restore/build/test validation chain. If --no-restore fails because restore assets are stale or missing, run restore and then rerun build/test; select repair-required only when the restored validation chain still fails or product evidence does not satisfy the accepted scope. Write the QA managed artifact with grounded external-target aliases, managed refs, project-structure node ids, and tool receipt refs instead of native absolute product paths. Final submit_process_step_outcome evidenceRefs must include the QA artifact ref plus exact current-run restore/build/test receipt refs when those tools ran. Inspect the shipped entrypoint, referenced runtime commands, project files, and stale or unreferenced artifacts. When a visible UI workflow or source ImageAsset target exists and this step has LaunchRuntime plus CaptureRuntimeProof, start the app with workspace_dotnet_run against DotNetAppProjectFileAlias when present, otherwise DotNetAppProjectFile, interact with the primary workflow, capture current-run screenshot, browser state, and console evidence, compare source visual targets with workspace_inspect_image, workspace_analyze_image, and workspace_analyze_images when available, stop the app with workspace_dotnet_stop, and use those results for the QA branch decision. Record the ImageAsset node ids, media paths, comparison method, screenshot refs, runtime command hints, and screenshot/browser proof requirements for the downstream runtime-command and screenshot writeback subprocesses. Select repair-required for unresolved visual-target mismatch, stock scaffold UI on a product route, missing interaction proof, unstyled custom UI, or any concrete product defect implementation can repair. Return Blocked only for a confirmed tool, policy, environment, access, product-root, provider-capability, or process-contract failure that prevents QA from executing validation or collecting enough evidence to choose quality-accepted or repair-required; cite the failed tool or missing capability.",
+      "Notes": "Execute targeted current-run validation against the reviewed implementation. First read the implementation handoff and its runtime-forwarded typed child context when present; it supplies declared targets without authorizing cross-run artifact reads. Use agreeing launch aliases when available, then grounded product inspection without constructing conventional names or layouts. Run restore before build or test when assets are stale. A visible defect is a repair finding, not a capture retry. Use the screenshot subprocess evidence for UI assessment and return Blocked only for a concrete tool, policy, environment, access, provider, or process-contract boundary.",
+      "CapabilityScope": {
+        "RequiredReceipts": [
+          {
+            "Key": "qa-ui-runtime-start",
+            "Kind": "RuntimeToolName",
+            "ToolName": "workspace_dotnet_run",
+            "Activation": "WhenLaunchContextDeclaresTool",
+            "Purpose": "AcceptanceProof",
+            "ApplicableBranchOutcomeKeys": [
+              "quality-accepted"
+            ],
+            "Reason": "QA must start the app before collecting current-run UI proof when the launch context requires browser validation."
+          },
+          {
+            "Key": "qa-browser-navigate",
+            "Kind": "RuntimeToolName",
+            "ToolName": "browser_navigate",
+            "Activation": "WhenLaunchContextDeclaresTool",
+            "Purpose": "AcceptanceProof",
+            "ApplicableBranchOutcomeKeys": [
+              "quality-accepted"
+            ],
+            "Reason": "QA browser proof must navigate to a concrete route before accepting UI evidence."
+          },
+          {
+            "Key": "qa-browser-state",
+            "Kind": "RuntimeToolName",
+            "ToolName": "browser_snapshot",
+            "Activation": "WhenLaunchContextDeclaresTool",
+            "Purpose": "AcceptanceProof",
+            "ApplicableBranchOutcomeKeys": [
+              "quality-accepted"
+            ],
+            "Reason": "QA browser proof must include durable browser state for the validated route."
+          },
+          {
+            "Key": "qa-browser-evaluate",
+            "Kind": "RuntimeToolName",
+            "ToolName": "browser_evaluate",
+            "Activation": "WhenLaunchContextDeclaresTool",
+            "Purpose": "AcceptanceProof",
+            "ApplicableBranchOutcomeKeys": [
+              "quality-accepted"
+            ],
+            "Reason": "QA browser proof must evaluate current visible or application state after a representative interaction before accepting UI behavior."
+          },
+          {
+            "Key": "qa-browser-screenshot",
+            "Kind": "RuntimeToolName",
+            "ToolName": "browser_take_screenshot",
+            "Activation": "WhenLaunchContextDeclaresTool",
+            "Purpose": "AcceptanceProof",
+            "ApplicableBranchOutcomeKeys": [
+              "quality-accepted"
+            ],
+            "Reason": "QA browser proof must include a current-run screenshot when UI evidence is required."
+          },
+          {
+            "Key": "qa-browser-console",
+            "Kind": "RuntimeToolName",
+            "ToolName": "browser_console_messages",
+            "Activation": "WhenLaunchContextDeclaresTool",
+            "Purpose": "AcceptanceProof",
+            "ApplicableBranchOutcomeKeys": [
+              "quality-accepted"
+            ],
+            "Reason": "QA browser proof must include console diagnostics for the validated route."
+          },
+          {
+            "Key": "qa-ui-runtime-stop",
+            "Kind": "RuntimeToolName",
+            "ToolName": "workspace_dotnet_stop",
+            "Activation": "WhenLaunchContextDeclaresTool",
+            "Purpose": "AcceptanceProof",
+            "ApplicableBranchOutcomeKeys": [
+              "quality-accepted"
+            ],
+            "Reason": "QA must clean up any app process started for browser validation."
+          },
+          {
+            "Key": "qa-inspect-image",
+            "Kind": "RuntimeToolName",
+            "ToolName": "workspace_inspect_image",
+            "Activation": "WhenLaunchContextDeclaresTool",
+            "Purpose": "AcceptanceProof",
+            "ApplicableBranchOutcomeKeys": [
+              "quality-accepted"
+            ],
+            "Reason": "QA visual comparison must inspect screenshot images before accepting visual evidence."
+          },
+          {
+            "Key": "qa-analyze-image",
+            "Kind": "RuntimeToolName",
+            "ToolName": "workspace_analyze_image",
+            "Activation": "WhenLaunchContextDeclaresTool",
+            "Purpose": "AcceptanceProof",
+            "ApplicableBranchOutcomeKeys": [
+              "quality-accepted"
+            ],
+            "Reason": "QA visual claims must be grounded in provider-backed image analysis."
+          },
+          {
+            "Key": "qa-compare-images",
+            "Kind": "RuntimeToolName",
+            "ToolName": "workspace_analyze_images",
+            "Activation": "WhenLaunchContextDeclaresTool",
+            "Purpose": "AcceptanceProof",
+            "ApplicableBranchOutcomeKeys": [
+              "quality-accepted"
+            ],
+            "Reason": "QA must compare delivered screenshots with source visual targets when target images exist."
+          }
+        ],
+        "InstructionFragments": [
+          {
+            "Key": "qa-prevalidation-screenshot-disposition",
+            "Title": "Pre-QA screenshot evidence disposition",
+            "Content": "Read the pre-QA screenshot handoff. visual-defect-observed is concrete product evidence, not an infrastructure blocker: independently validate the route and select the existing repair-required branch when the defect is corroborated. no-ui-evidence-recorded means browser validation is inapplicable for the declared target: preserve its explicit classification evidence, continue non-browser QA, and do not treat absent browser proof as blocked or accepted. Return Blocked only if a concrete tool, access, policy, environment, or provider failure prevents QA from choosing quality-accepted or repair-required.",
+            "Placement": "AppendToStepBrief"
+          }
+        ]
+      },
       "StepKind": "Review",
       "AllowsManualSkip": false,
       "AllowsSafeRefusal": false,
       "RequiresApproval": false,
       "RequiresDecisionRecord": false,
-      "InputContractSummary": "Peer-reviewed change set, changed-surface inventory, and release-scope assumptions.",
-        "OutputContractSummary": "Targeted QA result with restore/build/test evidence, regressions, warning and executed-test counts, shipped entrypoint/runtime consistency, current-run UI/browser/image proof when applicable, downstream runtime or screenshot proof requirements, residual quality risk, and an explicit accepted or repair-required branch.",
-        "EvidenceContractSummary": "Current-run restore logs, warning-free build output unless explicitly accepted, nonzero executed-test proof when tests are expected, exact restore/build/test receipt refs in final evidenceRefs when those commands run, grounded external-target aliases instead of native absolute product paths, shipped entrypoint plus referenced-runtime inspection, stale or unreferenced artifact assessment, source ImageAsset node id/media path evidence when visual targets exist, workspace_dotnet_run and cleanup receipts when UI proof runs, screenshot/browser state/console refs, workspace_inspect_image, workspace_analyze_image, and workspace_analyze_images receipt refs when visual comparison is required, runtime command hints, screenshot/browser proof handoff requirements, and defect notes.",
+      "InputContractSummary": "Authoritative scope boundary packet, architecture decision record, acceptance-driven validation plan, peer-reviewed change set, changed-surface inventory, and release assumptions. The generic ProductAcceptanceCriteriaContract is the literal current-run criterion-to-proof source; QA must close every named core criterion with current product/test/browser evidence.",
+      "OutputContractSummary": "Targeted QA result with restore/build/test evidence, regressions, warning and executed-test counts, shipped entrypoint/runtime consistency, current-run UI/browser/image proof when applicable, downstream runtime or screenshot proof requirements, residual quality risk, and an explicit accepted or repair-required branch.",
+      "EvidenceContractSummary": "Literal acceptance-criteria coverage with current-run proof or failure for every criterion, current-run restore logs, warning-free build output unless explicitly accepted, nonzero executed-test proof when tests are expected, exact restore/build/test receipt refs in final evidenceRefs when those commands run, grounded external-target aliases instead of native absolute product paths, shipped entrypoint plus referenced-runtime inspection, stale or unreferenced artifact assessment, source ImageAsset node id/media path evidence when visual targets exist, workspace_dotnet_run and cleanup receipts when UI proof runs, screenshot/browser state/console refs, workspace_inspect_image, workspace_analyze_image, and workspace_analyze_images receipt refs when visual comparison is required, runtime command hints, screenshot/browser proof handoff requirements, and defect notes.",
       "DecisionRightsSummary": "QA lead selects an explicit quality disposition: accepted evidence may continue, while reproducible defects or proof gaps route to repair.",
-      "ExceptionPolicySummary": "Do not let schedule pressure replace proof with verbal confidence. Missing restore/build/test receipts must trigger validation execution first. Route failed restored validation, missing expected tests, stale output, or concrete product defects to repair-required when the implementation role can repair it. Block only when a confirmed tool, policy, environment, access, product-root, or process-contract failure prevents QA validation execution or branch routing.",
+      "ExceptionPolicySummary": "Do not let schedule pressure replace proof with verbal confidence. Missing restore/build/test receipts must trigger validation execution first. Use the exact DotNetSolutionFileAlias, DotNetAppProjectFileAlias, and DotNetTestProjectFileAlias when supplied; do not probe a guessed product-root <App>.csproj or ask a manager to assign another agent merely because this QA execution has not produced its own receipts. When those variables are absent, use runtime-forwarded typed bootstrap context or inspect the grounded product root; never infer a conventional layout. Route failed restored validation, missing expected tests, stale output, or concrete product defects to repair-required when the implementation role can repair it. Block only when a confirmed tool, policy, environment, access, product-root, or process-contract failure prevents QA validation execution or branch routing.",
       "TargetLeadHours": 10,
       "DependsOnStepKey": "peer-review",
       "DependsOnBranchOutcomeKey": "",
       "DecisionRoleKey": "qa-lead",
+      "ExecutorPreferredSpecializationTags": [
+        "dotnet",
+        "qa"
+      ],
       "CanvasX": 4580,
       "CanvasY": 0,
       "BranchCanvasX": 4789,
@@ -631,6 +887,10 @@
         },
         {
           "DependsOnStepKey": "peer-review",
+          "DependsOnBranchOutcomeKey": ""
+        },
+        {
+          "DependsOnStepKey": "capture-ui-screenshots",
           "DependsOnBranchOutcomeKey": ""
         }
       ],
@@ -661,10 +921,14 @@
           "SensitivityLevel": "Internal",
           "RetentionDays": 365,
           "AllowedFutureUsageSummary": "Reusable for release approval, incident review, and later regression comparison.",
-            "ValidationRequirementSummary": "Must name changed flows, assertion depth, warning counts, current-run restore/build/test commands and exit codes, exact restore/build/test receipt refs in final evidenceRefs when those commands run, executed-test counts when tests are expected, shipped entrypoint and referenced runtime files or commands using grounded external-target aliases instead of native absolute product paths, stale/unreferenced artifact findings, current-run UI/browser/image proof when applicable, downstream runtime or screenshot proof handoff requirements, and unresolved risks. If a visible browser workflow or source ImageAsset target exists, the pack must include ImageAsset node id, media path or file name, comparison method, screenshot refs, runtime command hints, and screenshot/browser proof requirements for downstream runtime-command and screenshot writeback subprocesses. Missing tests, failed restored validation, stale output, unreferenced shipped entrypoint, unresolved visual-target mismatch, stock scaffold UI on a product route, missing interaction proof, or missing downstream proof handoff requirements must route to repair-required. Absent future runtime/browser proof artifacts are not a repair condition when required current-run UI proof has passed and downstream proof requirements are mapped."
+          "ValidationRequirementSummary": "Must name changed flows, assertion depth, warning counts, current-run restore/build/test commands and exit codes, exact restore/build/test receipt refs in final evidenceRefs when those commands run, executed-test counts when tests are expected, shipped entrypoint and referenced runtime files or commands using grounded external-target aliases instead of native absolute product paths, stale/unreferenced artifact findings, current-run UI/browser/image proof when applicable, downstream runtime or screenshot proof handoff requirements, and unresolved risks. If a visible browser workflow or source ImageAsset target exists, the pack must include ImageAsset node id, media path or file name, comparison method, screenshot refs, runtime command hints, and screenshot/browser proof requirements for downstream runtime-command and screenshot writeback subprocesses. Missing tests, failed restored validation, stale output, unreferenced shipped entrypoint, unresolved visual-target mismatch, stock scaffold UI on a product route, missing interaction proof, or missing downstream proof handoff requirements must route to repair-required. Absent future runtime/browser proof artifacts are not a repair condition when required current-run UI proof has passed and downstream proof requirements are mapped."
         }
       ],
       "ArtifactInputs": [
+        {
+          "ArtifactExpectationKey": "scope-boundary-packet",
+          "SourceStepKey": "feature-intake"
+        },
         {
           "ArtifactExpectationKey": "implementation-change-set",
           "SourceStepKey": "implementation"
@@ -674,8 +938,20 @@
           "SourceStepKey": "peer-review"
         },
         {
+          "ArtifactExpectationKey": "architecture-decision-record",
+          "SourceStepKey": "architecture-review"
+        },
+        {
+          "ArtifactExpectationKey": "acceptance-validation-plan",
+          "SourceStepKey": "architecture-review"
+        },
+        {
           "ArtifactExpectationKey": "project-structure-context-brief",
           "SourceStepKey": "architecture-review"
+        },
+        {
+          "ArtifactExpectationKey": "ui-screenshot-writeback",
+          "SourceStepKey": "capture-ui-screenshots"
         }
       ],
       "BranchOutcomes": [
@@ -700,6 +976,9 @@
       "DocRefs": [
         "processes/software-delivery/steps/qa-validation.md"
       ],
+      "ExecutionGuidanceRefs": [
+        "processes/software-delivery/steps/qa-validation.md"
+      ],
       "AllowedOperations": [
         "ReadProcessContext",
         "ReadProjectStructure",
@@ -709,24 +988,126 @@
         "CaptureRuntimeProof",
         "WriteManagedProcessArtifacts"
       ],
-      "OperationTargetScope": "ExternalProductTargetReadOnly"
+      "OperationTargetScope": "ExternalProductTargetReadOnly",
+      "ExecutionClass": "BranchDecision",
+      "CompletionPolicy": {
+        "AcceptanceCriteriaRequiredBranchOutcomeKeys": [
+          "quality-accepted"
+        ],
+        "RequiredProductToolReceipts": [
+          {
+            "ToolName": "workspace_dotnet_restore",
+            "Purpose": "AcceptanceProof",
+            "EnforceBranchOutcomeKeys": [
+              "quality-accepted"
+            ],
+            "Reason": "Current-run proof is required for the selected branch outcome."
+          },
+          {
+            "ToolName": "workspace_dotnet_build",
+            "Purpose": "AcceptanceProof",
+            "EnforceBranchOutcomeKeys": [
+              "quality-accepted"
+            ],
+            "Reason": "Current-run proof is required for the selected branch outcome."
+          },
+          {
+            "ToolName": "workspace_dotnet_test",
+            "Purpose": "AcceptanceProof",
+            "EnforceBranchOutcomeKeys": [
+              "quality-accepted"
+            ],
+            "Reason": "Current-run proof is required for the selected branch outcome."
+          }
+        ],
+        "CompletionIssueRoutes": [
+          {
+            "IssueCode": "process.adapter.product_required_tool_receipt_missing",
+            "SourceBranchOutcomeKeys": [
+              "quality-accepted"
+            ],
+            "TargetBranchOutcomeKey": "repair-required",
+            "TargetBranchOutcomeTitle": "Repair required",
+            "RequiresDefectEvidence": false,
+            "OnlyAfterAutomaticRetry": true
+          },
+          {
+            "IssueCode": "process.adapter.product_required_file_content_missing",
+            "SourceBranchOutcomeKeys": [
+              "quality-accepted"
+            ],
+            "TargetBranchOutcomeKey": "repair-required",
+            "TargetBranchOutcomeTitle": "Repair required",
+            "RequiresDefectEvidence": true,
+            "OnlyAfterAutomaticRetry": false
+          },
+          {
+            "IssueCode": "process.adapter.tool_receipt_evidence_content_rejected",
+            "SourceBranchOutcomeKeys": [
+              "quality-accepted"
+            ],
+            "TargetBranchOutcomeKey": "repair-required",
+            "TargetBranchOutcomeTitle": "Repair required",
+            "RequiresDefectEvidence": true,
+            "OnlyAfterAutomaticRetry": false
+          },
+          {
+            "IssueCode": "process.adapter.product_source_inspection_evidence_missing",
+            "SourceBranchOutcomeKeys": [
+              "quality-accepted"
+            ],
+            "TargetBranchOutcomeKey": "repair-required",
+            "TargetBranchOutcomeTitle": "Repair required",
+            "RequiresDefectEvidence": true,
+            "OnlyAfterAutomaticRetry": false
+          },
+          {
+            "IssueCode": "process.adapter.ui_interaction_evidence_missing",
+            "SourceBranchOutcomeKeys": [
+              "quality-accepted"
+            ],
+            "TargetBranchOutcomeKey": "repair-required",
+            "TargetBranchOutcomeTitle": "Repair required",
+            "RequiresDefectEvidence": true,
+            "OnlyAfterAutomaticRetry": false
+          },
+          {
+            "IssueCode": "process.adapter.ui_post_interaction_state_evidence_missing",
+            "SourceBranchOutcomeKeys": [
+              "quality-accepted"
+            ],
+            "TargetBranchOutcomeKey": "repair-required",
+            "TargetBranchOutcomeTitle": "Repair required",
+            "RequiresDefectEvidence": true,
+            "OnlyAfterAutomaticRetry": false
+          }
+        ],
+        "RequiresProductSourceInspection": true,
+        "ProductSourceInspectionRequiredBranchOutcomeKeys": [
+          "quality-accepted"
+        ],
+        "ProductMutationRequiredBranchOutcomeKeys": [],
+        "RequiresProductMutationBeforeManagedOutput": false,
+        "ProductMutationToolNames": [],
+        "RuntimeRoutedBranchOutcomeKeys": []
+      }
     },
     {
       "Order": 5,
       "Key": "quality-repair",
-      "Title": "Repair validation findings",
-      "Subtitle": "Focused rework from QA evidence",
-      "Notes": "Repair concrete defects, missing workflows, failed validation, or proof gaps identified by QA without expanding beyond the approved delivery scope.",
-      "StepKind": "Work",
+      "Title": "Run .NET quality repair subprocess",
+      "Subtitle": "Manager diagnosis, repair, independent QA, and bounded bughunt",
+      "Notes": "Launch and observe the dotnet-quality-repair subprocess for the concrete QA findings. The child owns evidence diagnosis, product mutation, independent validation, one bughunt handoff, bounded re-repair, and accepted or no-go handoff. This parent step records child evidence and does not mutate product files, launch the app, or capture browser proof directly. Use project_structure_process_subprocess_launch, persist ParentDeferredOutcomeJson while the child is active, and do not wait silently or create duplicate child runs.",
+      "StepKind": "Subprocess",
       "AllowsManualSkip": false,
       "AllowsSafeRefusal": false,
       "RequiresApproval": false,
       "RequiresDecisionRecord": true,
-      "InputContractSummary": "QA repair-required disposition, reviewed implementation package, and failing proof details.",
-      "OutputContractSummary": "Repaired change set and validation notes ready for QA recheck.",
-      "EvidenceContractSummary": "Changed files or deliverables, repair rationale, rerun validation, and remaining risks.",
-      "DecisionRightsSummary": "Lead engineer owns repair execution inside the approved scope and must escalate scope expansion instead of hiding it.",
-      "ExceptionPolicySummary": "Do not mark repair complete until the defect cause is addressed and required validation has been rerun.",
+      "InputContractSummary": "Authoritative scope boundary packet, architecture decision record, acceptance-driven validation plan, QA repair-required disposition, reviewed implementation package, and failing proof details. The generic ProductAcceptanceCriteriaContract remains authoritative for repair scope; the child may narrow the repair action but not the acceptance scope.",
+      "OutputContractSummary": "Observed child repair with accepted diagnosis-guided change set and independent validation, or explicit no-go evidence.",
+      "EvidenceContractSummary": "Child run status, diagnosis mapped to the authoritative criterion-to-proof contract, change set, current-execution validation, bughunt evidence when used, and accepted or no-go handoff.",
+      "DecisionRightsSummary": "The child repair manager owns diagnosis and sequencing; implementation and QA remain separate roles.",
+      "ExceptionPolicySummary": "Block when the child stops without accepted handoff evidence or returns quality-repair-no-go. Do not reinterpret a no-go packet as repaired proof.",
       "TargetLeadHours": 12,
       "DependsOnStepKey": "qa-validation",
       "DependsOnBranchOutcomeKey": "repair-required",
@@ -755,18 +1136,18 @@
       ],
       "RoleAssignments": [
         {
-          "RoleKey": "lead-engineer",
+          "RoleKey": "delivery-manager",
           "ResponsibilityKind": "Responsible",
           "IsRequired": true,
           "FallbackOrder": 0,
-          "RebindPolicySummary": "Repair ownership remains with the implementation role so QA findings result in concrete fixes."
+          "RebindPolicySummary": "Repair subprocess observation remains with a manager-capable role."
         },
         {
-          "RoleKey": "qa-lead",
+          "RoleKey": "lead-engineer",
           "ResponsibilityKind": "Reviewer",
           "IsRequired": true,
           "FallbackOrder": 0,
-          "RebindPolicySummary": "QA remains available to clarify failing evidence without taking ownership of implementation."
+          "RebindPolicySummary": "Engineering reviews child scope without taking over manager diagnosis or independent QA."
         }
       ],
       "ArtifactExpectations": [
@@ -780,10 +1161,28 @@
           "SensitivityLevel": "Internal",
           "RetentionDays": 365,
           "AllowedFutureUsageSummary": "Reusable for QA recheck, security review, release approval, and later defect analysis.",
-          "ValidationRequirementSummary": "Must name repaired defects, changed files or deliverables, rerun validation, and unresolved risk."
+          "ValidationRequirementSummary": "Must point to an accepted dotnet-quality-repair child handoff with exact diagnosis, changed files or deliverables, current-execution validation, and confirmation that known failed proof was not accepted as residual risk.",
+          "SubprocessChildStepKey": "quality-repair-handoff",
+          "SubprocessChildArtifactTitle": ".NET quality repair handoff"
         }
       ],
       "ArtifactInputs": [
+        {
+          "ArtifactExpectationKey": "scope-boundary-packet",
+          "SourceStepKey": "feature-intake"
+        },
+        {
+          "ArtifactExpectationKey": "architecture-decision-record",
+          "SourceStepKey": "architecture-review"
+        },
+        {
+          "ArtifactExpectationKey": "acceptance-validation-plan",
+          "SourceStepKey": "architecture-review"
+        },
+        {
+          "ArtifactExpectationKey": "project-structure-context-brief",
+          "SourceStepKey": "architecture-review"
+        },
         {
           "ArtifactExpectationKey": "implementation-change-set",
           "SourceStepKey": "implementation"
@@ -810,34 +1209,187 @@
         "ReadProcessContext",
         "ReadProjectStructure",
         "ReadUpstreamArtifacts",
-        "MutateProductTarget",
-        "RunValidation",
-        "LaunchRuntime",
-        "CaptureRuntimeProof",
-        "WriteManagedProcessArtifacts"
+        "WriteManagedProcessArtifacts",
+        "ExecuteExternalAction"
       ],
-      "OperationTargetScope": "ExternalProductTargetMutable"
+      "OperationTargetScope": "ExternalActionControlled",
+      "SubprocessProcessKey": "dotnet-quality-repair",
+      "SubprocessDefinitionSnapshotName": ".NET quality repair with diagnosis and bounded bughunt",
+      "SubprocessContract": {
+        "DefinitionKey": "dotnet-quality-repair",
+        "LaunchMode": "RuntimeOwned",
+        "ParentProducedArtifactExpectationKey": "quality-repair-change-set",
+        "AcceptedChildOutputs": [
+          {
+            "StepKey": "quality-repair-handoff",
+            "ArtifactExpectationKey": "quality-repair-handoff-packet",
+            "ArtifactTitle": ".NET quality repair handoff"
+          },
+          {
+            "StepKey": "quality-repair-handoff-after-bughunt",
+            "ArtifactExpectationKey": "quality-repair-handoff-after-bughunt-packet",
+            "ArtifactTitle": ".NET quality repair handoff after bughunt"
+          }
+        ],
+        "NoGoChildOutputs": [
+          {
+            "StepKey": "quality-repair-no-go",
+            "ArtifactExpectationKey": "quality-repair-no-go-packet",
+            "ArtifactTitle": ".NET quality repair no-go packet"
+          }
+        ],
+        "RequiredChildReceipts": [],
+        "AlreadySatisfiedOutput": null,
+        "MaterializationMode": "RuntimeSynthesizedParentHandoff"
+      },
+      "ExecutionClass": "RuntimeOwnedSubprocess"
     },
     {
       "Order": 6,
       "Key": "qa-recheck",
       "Title": "Re-run QA validation after repair",
       "Subtitle": "Repair verification",
-        "Notes": "Re-run targeted regression validation against the repaired package and select an explicit accepted or unresolved-repair branch. This step has RunValidation; missing restore/build/test receipts are not a reason to escalate until this step has attempted the commands itself. For .NET targets, record a current-run validation chain from the product root: dotnet restore, dotnet build --no-restore, and dotnet test --no-restore when a test project exists or tests are expected. When DotNetSolutionFile or DotNetSolutionFileAlias is present, target that solution file for restore and build. When DotNetTestProjectFileAlias or DotNetTestProjectFile is present, target that test project for workspace_dotnet_test, preferably with noBuild=true after a successful solution build; use the solution target for tests only when no test project target exists. Do not infer <SolutionName>.sln from DotNetSolutionName, and do not report a missing .sln as a defect when the canonical .slnx target exists or already has successful current-run restore/build receipts. If the canonical target is absent, inspect DotNetSolutionFileCandidates and the product-root file listing, then use the existing candidate, preferring .slnx when both exist. Do not accept repair notes or upstream build claims alone as recheck proof. If validation tools, product-root alias, or permissions are unavailable, return Blocked with the concrete missing tool or capability; do not select repair-escalation for missing validation access. External generated product roots may not be Git repositories. Do not call workspace_git_status as a validation precondition for a grounded product root, and do not treat a not a git repository result as a product-root, validation-tool, or repair blocker. If Git status was already attempted and failed only because the product root is not a Git repository, record Git status as not applicable and continue immediately with product-root file listing plus the restore/build/test validation chain. If --no-restore fails because restore assets are stale or missing, run restore and then rerun build/test; select repair-escalation only when the restored validation chain still fails or product evidence does not satisfy the repair target. Write the QA recheck managed artifact with grounded external-target aliases, managed refs, project-structure node ids, and tool receipt refs instead of native absolute product paths. Final submit_process_step_outcome evidenceRefs must include the QA recheck artifact ref plus exact current-run restore/build/test receipt refs when those tools ran. Inspect the repaired shipped entrypoint, referenced runtime commands, project files, and stale or unreferenced artifacts. When a visible UI workflow or source ImageAsset target exists and this step has LaunchRuntime plus CaptureRuntimeProof, start the app with workspace_dotnet_run against DotNetAppProjectFileAlias when present, otherwise DotNetAppProjectFile, interact with the primary workflow, capture current-run screenshot, browser state, and console evidence, compare source visual targets with workspace_inspect_image, workspace_analyze_image, and workspace_analyze_images when available, stop the app with workspace_dotnet_stop, and use those results for the QA branch decision. Record the ImageAsset node ids, media paths, comparison method, screenshot refs, runtime command hints, and screenshot/browser proof requirements for downstream repaired runtime-command and screenshot writeback subprocesses. Select repair-escalation for unresolved visual-target mismatch, stock scaffold UI on a product route, missing interaction proof, unstyled custom UI, or another release-blocking defect that remains after repair. Return Blocked only for a confirmed tool, policy, environment, access, product-root, provider-capability, or process-contract failure that prevents QA from executing validation or collecting enough evidence to choose quality-accepted or repair-escalation; cite the failed tool or missing capability.",
+      "Notes": "Revalidate the repaired package with current-run evidence. First read the implementation and repair handoffs and their runtime-forwarded typed child context when present; use agreeing aliases only when they match that context, then grounded inspection without constructing conventional names or layouts. Run restore before build or test when assets are stale. A visible defect remains a repair escalation finding, not a capture retry. Use the repaired screenshot subprocess evidence for UI assessment and return Blocked only for a concrete execution boundary.",
+      "CapabilityScope": {
+        "RequiredReceipts": [
+          {
+            "Key": "qa-recheck-ui-runtime-start",
+            "Kind": "RuntimeToolName",
+            "ToolName": "workspace_dotnet_run",
+            "Activation": "WhenLaunchContextDeclaresTool",
+            "Purpose": "AcceptanceProof",
+            "ApplicableBranchOutcomeKeys": [
+              "quality-accepted"
+            ],
+            "Reason": "QA recheck must start the repaired app before collecting current-run UI proof when the launch context requires browser validation."
+          },
+          {
+            "Key": "qa-recheck-browser-navigate",
+            "Kind": "RuntimeToolName",
+            "ToolName": "browser_navigate",
+            "Activation": "WhenLaunchContextDeclaresTool",
+            "Purpose": "AcceptanceProof",
+            "ApplicableBranchOutcomeKeys": [
+              "quality-accepted"
+            ],
+            "Reason": "QA recheck browser proof must navigate to a concrete route before accepting UI evidence."
+          },
+          {
+            "Key": "qa-recheck-browser-state",
+            "Kind": "RuntimeToolName",
+            "ToolName": "browser_snapshot",
+            "Activation": "WhenLaunchContextDeclaresTool",
+            "Purpose": "AcceptanceProof",
+            "ApplicableBranchOutcomeKeys": [
+              "quality-accepted"
+            ],
+            "Reason": "QA recheck browser proof must include durable browser state for the validated route."
+          },
+          {
+            "Key": "qa-recheck-browser-evaluate",
+            "Kind": "RuntimeToolName",
+            "ToolName": "browser_evaluate",
+            "Activation": "WhenLaunchContextDeclaresTool",
+            "Purpose": "AcceptanceProof",
+            "ApplicableBranchOutcomeKeys": [
+              "quality-accepted"
+            ],
+            "Reason": "QA recheck must evaluate repaired visible or application state after a representative interaction before accepting UI behavior."
+          },
+          {
+            "Key": "qa-recheck-browser-screenshot",
+            "Kind": "RuntimeToolName",
+            "ToolName": "browser_take_screenshot",
+            "Activation": "WhenLaunchContextDeclaresTool",
+            "Purpose": "AcceptanceProof",
+            "ApplicableBranchOutcomeKeys": [
+              "quality-accepted"
+            ],
+            "Reason": "QA recheck browser proof must include a current-run screenshot when UI evidence is required."
+          },
+          {
+            "Key": "qa-recheck-browser-console",
+            "Kind": "RuntimeToolName",
+            "ToolName": "browser_console_messages",
+            "Activation": "WhenLaunchContextDeclaresTool",
+            "Purpose": "AcceptanceProof",
+            "ApplicableBranchOutcomeKeys": [
+              "quality-accepted"
+            ],
+            "Reason": "QA recheck browser proof must include console diagnostics for the validated route."
+          },
+          {
+            "Key": "qa-recheck-ui-runtime-stop",
+            "Kind": "RuntimeToolName",
+            "ToolName": "workspace_dotnet_stop",
+            "Activation": "WhenLaunchContextDeclaresTool",
+            "Purpose": "AcceptanceProof",
+            "ApplicableBranchOutcomeKeys": [
+              "quality-accepted"
+            ],
+            "Reason": "QA recheck must clean up any app process started for browser validation."
+          },
+          {
+            "Key": "qa-recheck-inspect-image",
+            "Kind": "RuntimeToolName",
+            "ToolName": "workspace_inspect_image",
+            "Activation": "WhenLaunchContextDeclaresTool",
+            "Purpose": "AcceptanceProof",
+            "ApplicableBranchOutcomeKeys": [
+              "quality-accepted"
+            ],
+            "Reason": "QA recheck visual comparison must inspect screenshot images before accepting visual evidence."
+          },
+          {
+            "Key": "qa-recheck-analyze-image",
+            "Kind": "RuntimeToolName",
+            "ToolName": "workspace_analyze_image",
+            "Activation": "WhenLaunchContextDeclaresTool",
+            "Purpose": "AcceptanceProof",
+            "ApplicableBranchOutcomeKeys": [
+              "quality-accepted"
+            ],
+            "Reason": "QA recheck visual claims must be grounded in provider-backed image analysis."
+          },
+          {
+            "Key": "qa-recheck-compare-images",
+            "Kind": "RuntimeToolName",
+            "ToolName": "workspace_analyze_images",
+            "Activation": "WhenLaunchContextDeclaresTool",
+            "Purpose": "AcceptanceProof",
+            "ApplicableBranchOutcomeKeys": [
+              "quality-accepted"
+            ],
+            "Reason": "QA recheck must compare repaired screenshots with source visual targets when target images exist."
+          }
+        ],
+        "InstructionFragments": [
+          {
+            "Key": "qa-recheck-prevalidation-screenshot-disposition",
+            "Title": "Pre-recheck screenshot evidence disposition",
+            "Content": "Read the post-repair screenshot handoff. visual-defect-observed is concrete product evidence, not an infrastructure blocker: independently validate the route and select the existing repair-escalation branch when the defect remains. no-ui-evidence-recorded means browser validation is inapplicable for the declared target: preserve its explicit classification evidence, continue non-browser QA, and do not treat absent browser proof as blocked or accepted. Return Blocked only if a concrete tool, access, policy, environment, or provider failure prevents QA from choosing quality-accepted or repair-escalation.",
+            "Placement": "AppendToStepBrief"
+          }
+        ]
+      },
       "StepKind": "Review",
       "AllowsManualSkip": false,
       "AllowsSafeRefusal": false,
       "RequiresApproval": false,
       "RequiresDecisionRecord": false,
-      "InputContractSummary": "Repair change set, original QA findings, and reviewed implementation package.",
+      "InputContractSummary": "Authoritative scope boundary packet, architecture decision record, acceptance-driven validation plan, repair change set, original QA findings, and reviewed implementation package with complete core-criterion coverage. Use the generic ProductAcceptanceCriteriaContract to retain every literal criterion through recheck.",
       "OutputContractSummary": "Recheck result with restore/build/test evidence, warning-free validation, nonzero executed-test proof when tests are expected, shipped entrypoint/runtime consistency, current-run UI/browser/image proof when applicable, downstream runtime or screenshot proof requirements, regression evidence, and explicit quality disposition.",
-      "EvidenceContractSummary": "Current-run restore logs, warning-free build output unless explicitly accepted, nonzero executed-test proof when tests are expected, exact restore/build/test receipt refs in final evidenceRefs when those commands run, grounded external-target aliases instead of native absolute product paths, shipped entrypoint plus referenced-runtime inspection, stale or unreferenced artifact assessment, source ImageAsset node id/media path evidence when visual targets exist, workspace_dotnet_run and cleanup receipts when UI proof runs, screenshot/browser state/console refs, workspace_inspect_image, workspace_analyze_image, and workspace_analyze_images receipt refs when visual comparison is required, runtime command hints, screenshot/browser proof handoff requirements, repair verification, and unresolved defects if any.",
+      "EvidenceContractSummary": "Literal acceptance-criteria coverage with current-run proof or failure for every criterion, current-run restore logs, warning-free build output unless explicitly accepted, nonzero executed-test proof when tests are expected, exact restore/build/test receipt refs in final evidenceRefs when those commands run, grounded external-target aliases instead of native absolute product paths, shipped entrypoint plus referenced-runtime inspection, stale or unreferenced artifact assessment, source ImageAsset node id/media path evidence when visual targets exist, workspace_dotnet_run and cleanup receipts when UI proof runs, screenshot/browser state/console refs, workspace_inspect_image, workspace_analyze_image, and workspace_analyze_images receipt refs when visual comparison is required, runtime command hints, screenshot/browser proof handoff requirements, repair verification, and unresolved defects if any.",
       "DecisionRightsSummary": "QA lead may accept the repaired evidence or escalate when repair remains insufficient.",
-        "ExceptionPolicySummary": "Missing restore/build/test receipts must trigger validation execution first. Select repair-escalation only when required current-run repaired validation was attempted and remains failing, detached, or unmapped. Block only when a confirmed tool, policy, environment, access, product-root, or process-contract failure prevents repaired QA validation execution or branch routing.",
+      "ExceptionPolicySummary": "Missing restore/build/test receipts must trigger validation execution first. Use the exact DotNetSolutionFileAlias, DotNetAppProjectFileAlias, and DotNetTestProjectFileAlias when supplied; do not probe a guessed product-root <App>.csproj or ask a manager to assign another agent merely because this QA execution has not produced its own receipts. When those variables are absent, use runtime-forwarded typed bootstrap context or inspect the grounded product root; never infer a conventional layout. Select repair-escalation only when required current-run repaired validation was attempted and remains failing, detached, or unmapped. Block only when a confirmed tool, policy, environment, access, product-root, provider-capability, or process-contract failure prevents repaired QA validation execution or branch routing.",
       "TargetLeadHours": 8,
       "DependsOnStepKey": "quality-repair",
       "DependsOnBranchOutcomeKey": "",
       "DecisionRoleKey": "qa-lead",
+      "ExecutorPreferredSpecializationTags": [
+        "dotnet",
+        "qa"
+      ],
       "CanvasX": 6740,
       "CanvasY": 1040,
       "BranchCanvasX": 6949,
@@ -853,6 +1405,10 @@
         },
         {
           "DependsOnStepKey": "implementation",
+          "DependsOnBranchOutcomeKey": ""
+        },
+        {
+          "DependsOnStepKey": "capture-ui-screenshots-after-repair",
           "DependsOnBranchOutcomeKey": ""
         }
       ],
@@ -888,6 +1444,22 @@
       ],
       "ArtifactInputs": [
         {
+          "ArtifactExpectationKey": "scope-boundary-packet",
+          "SourceStepKey": "feature-intake"
+        },
+        {
+          "ArtifactExpectationKey": "architecture-decision-record",
+          "SourceStepKey": "architecture-review"
+        },
+        {
+          "ArtifactExpectationKey": "acceptance-validation-plan",
+          "SourceStepKey": "architecture-review"
+        },
+        {
+          "ArtifactExpectationKey": "project-structure-context-brief",
+          "SourceStepKey": "architecture-review"
+        },
+        {
           "ArtifactExpectationKey": "regression-evidence-pack",
           "SourceStepKey": "qa-validation"
         },
@@ -898,6 +1470,10 @@
         {
           "ArtifactExpectationKey": "implementation-change-set",
           "SourceStepKey": "implementation"
+        },
+        {
+          "ArtifactExpectationKey": "ui-screenshot-writeback-after-repair",
+          "SourceStepKey": "capture-ui-screenshots-after-repair"
         }
       ],
       "BranchOutcomes": [
@@ -931,7 +1507,112 @@
       "OperationTargetScope": "ExternalProductTargetReadOnly",
       "DocRefs": [
         "processes/software-delivery/steps/qa-recheck.md"
-      ]
+      ],
+      "ExecutionGuidanceRefs": [
+        "processes/software-delivery/steps/qa-recheck.md"
+      ],
+      "ExecutionClass": "BranchDecision",
+      "CompletionPolicy": {
+        "AcceptanceCriteriaRequiredBranchOutcomeKeys": [
+          "quality-accepted"
+        ],
+        "RequiredProductToolReceipts": [
+          {
+            "ToolName": "workspace_dotnet_restore",
+            "Purpose": "AcceptanceProof",
+            "EnforceBranchOutcomeKeys": [
+              "quality-accepted"
+            ],
+            "Reason": "Current-run proof is required for the selected branch outcome."
+          },
+          {
+            "ToolName": "workspace_dotnet_build",
+            "Purpose": "AcceptanceProof",
+            "EnforceBranchOutcomeKeys": [
+              "quality-accepted"
+            ],
+            "Reason": "Current-run proof is required for the selected branch outcome."
+          },
+          {
+            "ToolName": "workspace_dotnet_test",
+            "Purpose": "AcceptanceProof",
+            "EnforceBranchOutcomeKeys": [
+              "quality-accepted"
+            ],
+            "Reason": "Current-run proof is required for the selected branch outcome."
+          }
+        ],
+        "CompletionIssueRoutes": [
+          {
+            "IssueCode": "process.adapter.product_required_tool_receipt_missing",
+            "SourceBranchOutcomeKeys": [
+              "quality-accepted"
+            ],
+            "TargetBranchOutcomeKey": "repair-escalation",
+            "TargetBranchOutcomeTitle": "Repair escalation",
+            "RequiresDefectEvidence": false,
+            "OnlyAfterAutomaticRetry": true
+          },
+          {
+            "IssueCode": "process.adapter.product_required_file_content_missing",
+            "SourceBranchOutcomeKeys": [
+              "quality-accepted"
+            ],
+            "TargetBranchOutcomeKey": "repair-escalation",
+            "TargetBranchOutcomeTitle": "Repair escalation",
+            "RequiresDefectEvidence": true,
+            "OnlyAfterAutomaticRetry": false
+          },
+          {
+            "IssueCode": "process.adapter.tool_receipt_evidence_content_rejected",
+            "SourceBranchOutcomeKeys": [
+              "quality-accepted"
+            ],
+            "TargetBranchOutcomeKey": "repair-escalation",
+            "TargetBranchOutcomeTitle": "Repair escalation",
+            "RequiresDefectEvidence": true,
+            "OnlyAfterAutomaticRetry": false
+          },
+          {
+            "IssueCode": "process.adapter.product_source_inspection_evidence_missing",
+            "SourceBranchOutcomeKeys": [
+              "quality-accepted"
+            ],
+            "TargetBranchOutcomeKey": "repair-escalation",
+            "TargetBranchOutcomeTitle": "Repair escalation",
+            "RequiresDefectEvidence": true,
+            "OnlyAfterAutomaticRetry": false
+          },
+          {
+            "IssueCode": "process.adapter.ui_interaction_evidence_missing",
+            "SourceBranchOutcomeKeys": [
+              "quality-accepted"
+            ],
+            "TargetBranchOutcomeKey": "repair-escalation",
+            "TargetBranchOutcomeTitle": "Repair escalation",
+            "RequiresDefectEvidence": true,
+            "OnlyAfterAutomaticRetry": false
+          },
+          {
+            "IssueCode": "process.adapter.ui_post_interaction_state_evidence_missing",
+            "SourceBranchOutcomeKeys": [
+              "quality-accepted"
+            ],
+            "TargetBranchOutcomeKey": "repair-escalation",
+            "TargetBranchOutcomeTitle": "Repair escalation",
+            "RequiresDefectEvidence": true,
+            "OnlyAfterAutomaticRetry": false
+          }
+        ],
+        "RequiresProductSourceInspection": true,
+        "ProductSourceInspectionRequiredBranchOutcomeKeys": [
+          "quality-accepted"
+        ],
+        "ProductMutationRequiredBranchOutcomeKeys": [],
+        "RequiresProductMutationBeforeManagedOutput": false,
+        "ProductMutationToolNames": [],
+        "RuntimeRoutedBranchOutcomeKeys": []
+      }
     },
     {
       "Order": 7,
@@ -1027,6 +1708,9 @@
       "DocRefs": [
         "processes/software-delivery/steps/security-review.md"
       ],
+      "ExecutionGuidanceRefs": [
+        "processes/software-delivery/steps/security-review.md"
+      ],
       "AllowedOperations": [
         "ReadProcessContext",
         "ReadProjectStructure",
@@ -1045,6 +1729,28 @@
       "StepKind": "Subprocess",
       "SubprocessProcessKey": "dotnet-runtime-command-writeback",
       "SubprocessDefinitionSnapshotName": ".NET runtime command project-structure writeback",
+      "SubprocessContract": {
+        "DefinitionKey": "dotnet-runtime-command-writeback",
+        "LaunchMode": "RuntimeOwned",
+        "ParentProducedArtifactExpectationKey": "runtime-command-writeback",
+        "AcceptedChildOutputs": [
+          {
+            "StepKey": "runtime-command-handoff",
+            "ArtifactExpectationKey": "runtime-command-handoff",
+            "ArtifactTitle": ".NET runtime command handoff"
+          }
+        ],
+        "NoGoChildOutputs": [],
+        "RequiredChildReceipts": [
+          {
+            "ToolName": "project_structure_node_create",
+            "RuntimeToolProviderKey": "project-structure.runtime-tools",
+            "Description": "Runtime command writeback must create or update launcher-compatible project-structure command nodes."
+          }
+        ],
+        "AlreadySatisfiedOutput": null,
+        "MaterializationMode": "RuntimeSynthesizedParentHandoff"
+      },
       "AllowsManualSkip": false,
       "AllowsSafeRefusal": false,
       "RequiresApproval": false,
@@ -1105,6 +1811,14 @@
         {
           "ArtifactExpectationKey": "regression-evidence-pack",
           "SourceStepKey": "qa-validation"
+        },
+        {
+          "ArtifactExpectationKey": "architecture-decision-record",
+          "SourceStepKey": "architecture-review"
+        },
+        {
+          "ArtifactExpectationKey": "implementation-change-set",
+          "SourceStepKey": "implementation"
         }
       ],
       "BranchOutcomes": [],
@@ -1121,24 +1835,54 @@
         "WriteManagedProcessArtifacts",
         "ExecuteExternalAction"
       ],
-      "OperationTargetScope": "ExternalActionControlled"
+      "OperationTargetScope": "ExternalActionControlled",
+      "ExecutionClass": "RuntimeOwnedSubprocess"
     },
     {
       "Order": 9,
       "Key": "capture-ui-screenshots",
       "Title": "Capture and store .NET UI screenshots",
       "Subtitle": "Screenshots under process run node",
-      "Notes": "Launch and observe the .NET UI screenshot writeback subprocess after runtime command nodes exist by calling `project_structure_process_subprocess_launch` for `dotnet-ui-screenshot-writeback`. This parent step does not own browser navigation, app startup, screenshot capture, or image storage; those actions belong to the child subprocess. UI targets must capture screenshots and store accepted image assets under a Screenshots parent node below the current process run node. Backend-only or no-UI targets must produce explicit no-UI evidence. When a child screenshot handoff accepts or rejects screenshots for visual reasons, verify that the child evidence includes current-run `workspace_analyze_image` receipts for individual screenshots and `workspace_analyze_images` receipts for ordered comparisons or time-dependent behavior. When source ImageAsset targets exist, verify that the child screenshot handoff includes a Visual target comparison section naming the source ImageAsset node id, media path or file name, screenshot ref, comparison method, and accepted or blocked disposition. Do not complete from screenshot paths, dimensions, or project-structure image asset ids alone when the downstream decision depends on visual content. Write the parent step record to artifacts/process-runs/<current-process-run-id>/steps/capture-ui-screenshots.md and include that exact path in final evidenceRefs together with child screenshot handoff evidence.",
+      "Notes": "Launch and observe the .NET UI screenshot writeback subprocess before first-pass QA validation by calling `project_structure_process_subprocess_launch` for `dotnet-ui-screenshot-writeback`. This parent step does not own browser navigation, app startup, screenshot capture, image storage, or a product decision; those actions belong to the child subprocess and then QA. Use architecture, acceptance-plan, implementation, peer-review, and process-run context as input. Runtime command nodes may not yet exist: the child must use the grounded app project and direct launch fallback instead of treating their absence as a blocker. UI targets must capture durable screenshots and write accepted or diagnostic image evidence under a Screenshots parent node below the current process run node; backend-only or no-UI targets must produce explicit no-UI evidence. visual-defect-observed is a completed child evidence outcome for QA, not a child no-go. The child evidence must contain current-run image analysis and source-target comparison when applicable; do not complete from paths, dimensions, asset ids, or chat summaries alone. Write the parent step record to artifacts/process-runs/<current-process-run-id>/steps/capture-ui-screenshots.md and include that exact path in final evidenceRefs together with child screenshot handoff evidence.",
       "StepKind": "Subprocess",
       "SubprocessProcessKey": "dotnet-ui-screenshot-writeback",
       "SubprocessDefinitionSnapshotName": ".NET UI screenshot project-structure writeback",
+      "SubprocessContract": {
+        "DefinitionKey": "dotnet-ui-screenshot-writeback",
+        "LaunchMode": "RuntimeOwned",
+        "ParentProducedArtifactExpectationKey": "ui-screenshot-writeback",
+        "AcceptedChildOutputs": [
+          {
+            "StepKey": "screenshot-handoff",
+            "ArtifactExpectationKey": "ui-screenshot-writeback-handoff",
+            "ArtifactTitle": ".NET UI screenshot writeback handoff",
+            "BranchOutcomeKey": "visual-accepted"
+          },
+          {
+            "StepKey": "screenshot-handoff",
+            "ArtifactExpectationKey": "ui-screenshot-writeback-handoff",
+            "ArtifactTitle": ".NET UI screenshot writeback handoff",
+            "BranchOutcomeKey": "visual-defect-observed"
+          },
+          {
+            "StepKey": "screenshot-handoff",
+            "ArtifactExpectationKey": "ui-screenshot-writeback-handoff",
+            "ArtifactTitle": ".NET UI screenshot writeback handoff",
+            "BranchOutcomeKey": "no-ui-evidence-recorded"
+          }
+        ],
+        "NoGoChildOutputs": [],
+        "RequiredChildReceipts": [],
+        "AlreadySatisfiedOutput": null,
+        "MaterializationMode": "RuntimeSynthesizedParentHandoff"
+      },
       "AllowsManualSkip": false,
       "AllowsSafeRefusal": false,
       "RequiresApproval": false,
       "RequiresDecisionRecord": false,
-      "InputContractSummary": "Accepted QA evidence, architecture handoff, implementation evidence, and process run node context.",
+      "InputContractSummary": "Architecture handoff, acceptance-driven validation plan, implementation and peer-review evidence, scope boundary packet, and process run node context before first-pass QA.",
       "OutputContractSummary": "Observed .NET UI screenshot project-structure writeback child run with parent-ready writeback evidence.",
-      "EvidenceContractSummary": "Child run status, managed artifacts, provider-backed image-analysis receipts for visual screenshot decisions, Visual target comparison details when source ImageAsset targets exist, project-structure receipts, node ids, screenshot or no-UI receipts, runtime command compatibility evidence, and blockers.",
+      "EvidenceContractSummary": "Child run status, managed artifacts, exactly visual-accepted, visual-defect-observed, or no-ui-evidence-recorded. UI dispositions require provider-backed current-run workspace_inspect_image, workspace_analyze_image, and workspace_analyze_images receipts and Visual target comparison details when source ImageAsset targets exist. no-ui-evidence-recorded requires explicit no-UI classification evidence instead of browser, image-analysis, or image-asset claims. Include project-structure receipts, node ids, accepted or diagnostic screenshot assets or no-UI receipts, direct-launch fallback evidence when runtime command nodes do not exist, and concrete execution blockers.",
       "DecisionRightsSummary": "Parent role coordinates subprocess completion and cannot mutate product files.",
       "ExceptionPolicySummary": "Inspect stopped child subprocess evidence before blocking. If required child evidence is missing and relaunch is allowed, relaunch through the subprocess driver; block only for concrete missing tools, inputs, policy/environment failures, or irrecoverable evidence after a fresh child result.",
       "TargetLeadHours": 2,
@@ -1151,11 +1895,15 @@
       "BranchCanvasY": 0,
       "Dependencies": [
         {
-          "DependsOnStepKey": "qa-validation",
-          "DependsOnBranchOutcomeKey": "quality-accepted"
+          "DependsOnStepKey": "implementation",
+          "DependsOnBranchOutcomeKey": ""
         },
         {
-          "DependsOnStepKey": "record-runtime-commands",
+          "DependsOnStepKey": "architecture-review",
+          "DependsOnBranchOutcomeKey": ""
+        },
+        {
+          "DependsOnStepKey": "peer-review",
           "DependsOnBranchOutcomeKey": ""
         }
       ],
@@ -1179,12 +1927,37 @@
           "SensitivityLevel": "Internal",
           "RetentionDays": 365,
           "AllowedFutureUsageSummary": "Reusable by release approval and process-run replay.",
-          "ValidationRequirementSummary": "Must include the current-run parent step artifact path artifacts/process-runs/<current-process-run-id>/steps/capture-ui-screenshots.md in final evidenceRefs, point to child step screenshot-handoff, include child artifact .NET UI screenshot writeback handoff, current process run node context, Screenshots parent node, accepted image asset or no-UI receipts, Visual target comparison details when source ImageAsset targets exist, provider-backed image-analysis receipts for visual screenshot decisions, write receipts, and unresolved blockers.",
+          "ValidationRequirementSummary": "Must include the current-run parent step artifact path artifacts/process-runs/<current-process-run-id>/steps/capture-ui-screenshots.md in final evidenceRefs, point to child step screenshot-handoff, and include child artifact .NET UI screenshot writeback handoff with exactly visual-accepted, visual-defect-observed, or no-ui-evidence-recorded. UI dispositions require current process run node context, Screenshots parent node, accepted or diagnostic image assets, Visual target comparison details when source ImageAsset targets exist, and provider-backed image-analysis receipts. no-ui-evidence-recorded requires its explicit classification evidence without browser or image-asset claims. Include direct-launch fallback evidence when needed, write receipts, and concrete execution blockers.",
           "SubprocessChildStepKey": "screenshot-handoff",
           "SubprocessChildArtifactTitle": ".NET UI screenshot writeback handoff"
         }
       ],
-      "ArtifactInputs": [],
+      "ArtifactInputs": [
+        {
+          "ArtifactExpectationKey": "scope-boundary-packet",
+          "SourceStepKey": "feature-intake"
+        },
+        {
+          "ArtifactExpectationKey": "architecture-decision-record",
+          "SourceStepKey": "architecture-review"
+        },
+        {
+          "ArtifactExpectationKey": "acceptance-validation-plan",
+          "SourceStepKey": "architecture-review"
+        },
+        {
+          "ArtifactExpectationKey": "project-structure-context-brief",
+          "SourceStepKey": "architecture-review"
+        },
+        {
+          "ArtifactExpectationKey": "implementation-change-set",
+          "SourceStepKey": "implementation"
+        },
+        {
+          "ArtifactExpectationKey": "peer-review-note",
+          "SourceStepKey": "peer-review"
+        }
+      ],
       "BranchOutcomes": [],
       "ChecklistRefs": [],
       "ValidationRefs": [],
@@ -1199,7 +1972,8 @@
         "WriteManagedProcessArtifacts",
         "ExecuteExternalAction"
       ],
-      "OperationTargetScope": "ExternalActionControlled"
+      "OperationTargetScope": "ExternalActionControlled",
+      "ExecutionClass": "RuntimeOwnedSubprocess"
     },
     {
       "Order": 10,
@@ -1316,6 +2090,9 @@
       "DocRefs": [
         "processes/software-delivery/steps/release-approval.md"
       ],
+      "ExecutionGuidanceRefs": [
+        "processes/software-delivery/steps/release-approval.md"
+      ],
       "AllowedOperations": [
         "ReadProcessContext",
         "ReadProjectStructure",
@@ -1405,6 +2182,9 @@
       "DocRefs": [
         "processes/software-delivery/steps/execute-release-rollout.md"
       ],
+      "ExecutionGuidanceRefs": [
+        "processes/software-delivery/steps/execute-release-rollout.md"
+      ],
       "AllowedOperations": [
         "ReadProcessContext",
         "ReadProjectStructure",
@@ -1487,6 +2267,9 @@
       "ValidationRefs": [],
       "PromptRefs": [],
       "DocRefs": [
+        "processes/software-delivery/steps/post-release-learning.md"
+      ],
+      "ExecutionGuidanceRefs": [
         "processes/software-delivery/steps/post-release-learning.md"
       ],
       "AllowedOperations": [
@@ -1588,6 +2371,9 @@
       "DocRefs": [
         "processes/software-delivery/steps/security-review.md"
       ],
+      "ExecutionGuidanceRefs": [
+        "processes/software-delivery/steps/security-review.md"
+      ],
       "AllowedOperations": [
         "ReadProcessContext",
         "ReadProjectStructure",
@@ -1606,6 +2392,28 @@
       "StepKind": "Subprocess",
       "SubprocessProcessKey": "dotnet-runtime-command-writeback",
       "SubprocessDefinitionSnapshotName": ".NET runtime command project-structure writeback",
+      "SubprocessContract": {
+        "DefinitionKey": "dotnet-runtime-command-writeback",
+        "LaunchMode": "RuntimeOwned",
+        "ParentProducedArtifactExpectationKey": "runtime-command-writeback-after-repair",
+        "AcceptedChildOutputs": [
+          {
+            "StepKey": "runtime-command-handoff",
+            "ArtifactExpectationKey": "runtime-command-handoff",
+            "ArtifactTitle": ".NET runtime command handoff"
+          }
+        ],
+        "NoGoChildOutputs": [],
+        "RequiredChildReceipts": [
+          {
+            "ToolName": "project_structure_node_create",
+            "RuntimeToolProviderKey": "project-structure.runtime-tools",
+            "Description": "Repaired runtime command writeback must create or update launcher-compatible project-structure command nodes."
+          }
+        ],
+        "AlreadySatisfiedOutput": null,
+        "MaterializationMode": "RuntimeSynthesizedParentHandoff"
+      },
       "AllowsManualSkip": false,
       "AllowsSafeRefusal": false,
       "RequiresApproval": false,
@@ -1670,6 +2478,18 @@
         {
           "ArtifactExpectationKey": "repaired-regression-evidence-pack",
           "SourceStepKey": "qa-recheck"
+        },
+        {
+          "ArtifactExpectationKey": "architecture-decision-record",
+          "SourceStepKey": "architecture-review"
+        },
+        {
+          "ArtifactExpectationKey": "implementation-change-set",
+          "SourceStepKey": "implementation"
+        },
+        {
+          "ArtifactExpectationKey": "quality-repair-change-set",
+          "SourceStepKey": "quality-repair"
         }
       ],
       "BranchOutcomes": [],
@@ -1686,24 +2506,54 @@
         "WriteManagedProcessArtifacts",
         "ExecuteExternalAction"
       ],
-      "OperationTargetScope": "ExternalActionControlled"
+      "OperationTargetScope": "ExternalActionControlled",
+      "ExecutionClass": "RuntimeOwnedSubprocess"
     },
     {
       "Order": 15,
       "Key": "capture-ui-screenshots-after-repair",
       "Title": "Capture and store repaired .NET UI screenshots",
       "Subtitle": "Screenshots under process run node",
-      "Notes": "Launch and observe UI screenshot writeback after repaired runtime command nodes exist by calling `project_structure_process_subprocess_launch` for `dotnet-ui-screenshot-writeback`. This parent step does not own browser navigation, app startup, screenshot capture, or image storage; those actions belong to the child subprocess. UI targets must store repaired screenshots under Screenshots below the process run node; no-UI targets must carry explicit no-UI evidence. When a child screenshot handoff accepts or rejects repaired screenshots for visual reasons, verify that the child evidence includes current-run `workspace_analyze_image` receipts for individual screenshots and `workspace_analyze_images` receipts for ordered comparisons or time-dependent behavior. When source ImageAsset targets exist, verify that the child screenshot handoff includes a Visual target comparison section naming the source ImageAsset node id, media path or file name, screenshot ref, comparison method, and accepted or blocked disposition. Do not complete from screenshot paths, dimensions, or project-structure image asset ids alone when the downstream decision depends on visual content. Write the parent step record to artifacts/process-runs/<current-process-run-id>/steps/capture-ui-screenshots-after-repair.md and include that exact path in final evidenceRefs together with child screenshot handoff evidence.",
+      "Notes": "Launch and observe UI screenshot writeback after the quality-repair child completes but before QA recheck by calling `project_structure_process_subprocess_launch` for `dotnet-ui-screenshot-writeback`. This parent step does not own browser navigation, app startup, screenshot capture, image storage, or a product decision; those actions belong to the child subprocess and then QA recheck. Use the original QA repair-required evidence, repair change set, architecture and acceptance plan, implementation evidence, peer-review evidence, and process-run context as input. Repaired runtime command nodes may not yet exist: the child must use the grounded app project and direct launch fallback instead of treating their absence as a blocker. UI targets must store accepted or diagnostic repaired screenshot evidence under Screenshots; no-UI targets must carry explicit no-UI evidence. visual-defect-observed is a completed child evidence outcome for QA recheck, not a child no-go. The child evidence must contain current-run image analysis and source-target comparison when applicable; do not complete from paths, dimensions, asset ids, or chat summaries alone. Write the parent step record to artifacts/process-runs/<current-process-run-id>/steps/capture-ui-screenshots-after-repair.md and include that exact path in final evidenceRefs together with child screenshot handoff evidence.",
       "StepKind": "Subprocess",
       "SubprocessProcessKey": "dotnet-ui-screenshot-writeback",
       "SubprocessDefinitionSnapshotName": ".NET UI screenshot project-structure writeback",
+      "SubprocessContract": {
+        "DefinitionKey": "dotnet-ui-screenshot-writeback",
+        "LaunchMode": "RuntimeOwned",
+        "ParentProducedArtifactExpectationKey": "ui-screenshot-writeback-after-repair",
+        "AcceptedChildOutputs": [
+          {
+            "StepKey": "screenshot-handoff",
+            "ArtifactExpectationKey": "ui-screenshot-writeback-handoff",
+            "ArtifactTitle": ".NET UI screenshot writeback handoff",
+            "BranchOutcomeKey": "visual-accepted"
+          },
+          {
+            "StepKey": "screenshot-handoff",
+            "ArtifactExpectationKey": "ui-screenshot-writeback-handoff",
+            "ArtifactTitle": ".NET UI screenshot writeback handoff",
+            "BranchOutcomeKey": "visual-defect-observed"
+          },
+          {
+            "StepKey": "screenshot-handoff",
+            "ArtifactExpectationKey": "ui-screenshot-writeback-handoff",
+            "ArtifactTitle": ".NET UI screenshot writeback handoff",
+            "BranchOutcomeKey": "no-ui-evidence-recorded"
+          }
+        ],
+        "NoGoChildOutputs": [],
+        "RequiredChildReceipts": [],
+        "AlreadySatisfiedOutput": null,
+        "MaterializationMode": "RuntimeSynthesizedParentHandoff"
+      },
       "AllowsManualSkip": false,
       "AllowsSafeRefusal": false,
       "RequiresApproval": false,
       "RequiresDecisionRecord": false,
-      "InputContractSummary": "Accepted QA evidence, architecture handoff, implementation evidence, and process run node context.",
+      "InputContractSummary": "Original QA repair-required evidence, quality-repair change set, architecture handoff, acceptance-driven validation plan, implementation and peer-review evidence, and process run node context before QA recheck.",
       "OutputContractSummary": "Observed .NET UI screenshot project-structure writeback child run with parent-ready writeback evidence.",
-      "EvidenceContractSummary": "Child run status, managed artifacts, provider-backed image-analysis receipts for repaired visual screenshot decisions, Visual target comparison details when source ImageAsset targets exist, project-structure receipts, node ids, screenshot or no-UI receipts, runtime command compatibility evidence, and blockers.",
+      "EvidenceContractSummary": "Child run status, managed artifacts, exactly visual-accepted, visual-defect-observed, or no-ui-evidence-recorded. UI dispositions require provider-backed current-run workspace_inspect_image, workspace_analyze_image, and workspace_analyze_images receipts and Visual target comparison details when source ImageAsset targets exist. no-ui-evidence-recorded requires explicit no-UI classification evidence instead of browser, image-analysis, or image-asset claims. Include project-structure receipts, node ids, accepted or diagnostic screenshot assets or no-UI receipts, direct-launch fallback evidence when runtime command nodes do not exist, and concrete execution blockers.",
       "DecisionRightsSummary": "Parent role coordinates subprocess completion and cannot mutate product files.",
       "ExceptionPolicySummary": "Inspect stopped child subprocess evidence before blocking. If required child evidence is missing and relaunch is allowed, relaunch through the subprocess driver; block only for concrete missing tools, inputs, policy/environment failures, or irrecoverable evidence after a fresh child result.",
       "TargetLeadHours": 2,
@@ -1716,11 +2566,23 @@
       "BranchCanvasY": 0,
       "Dependencies": [
         {
-          "DependsOnStepKey": "qa-recheck",
-          "DependsOnBranchOutcomeKey": "quality-accepted"
+          "DependsOnStepKey": "quality-repair",
+          "DependsOnBranchOutcomeKey": ""
         },
         {
-          "DependsOnStepKey": "record-runtime-commands-after-repair",
+          "DependsOnStepKey": "qa-validation",
+          "DependsOnBranchOutcomeKey": "repair-required"
+        },
+        {
+          "DependsOnStepKey": "implementation",
+          "DependsOnBranchOutcomeKey": ""
+        },
+        {
+          "DependsOnStepKey": "architecture-review",
+          "DependsOnBranchOutcomeKey": ""
+        },
+        {
+          "DependsOnStepKey": "peer-review",
           "DependsOnBranchOutcomeKey": ""
         }
       ],
@@ -1744,12 +2606,45 @@
           "SensitivityLevel": "Internal",
           "RetentionDays": 365,
           "AllowedFutureUsageSummary": "Reusable by release approval and process-run replay.",
-          "ValidationRequirementSummary": "Must include the current-run parent step artifact path artifacts/process-runs/<current-process-run-id>/steps/capture-ui-screenshots-after-repair.md in final evidenceRefs, point to child step screenshot-handoff, include child artifact .NET UI screenshot writeback handoff, current process run node context, Screenshots parent node, accepted image asset or no-UI receipts, Visual target comparison details when source ImageAsset targets exist, provider-backed image-analysis receipts for repaired visual screenshot decisions, write receipts, and unresolved blockers.",
+          "ValidationRequirementSummary": "Must include the current-run parent step artifact path artifacts/process-runs/<current-process-run-id>/steps/capture-ui-screenshots-after-repair.md in final evidenceRefs, point to child step screenshot-handoff, and include child artifact .NET UI screenshot writeback handoff with exactly visual-accepted, visual-defect-observed, or no-ui-evidence-recorded. UI dispositions require current process run node context, Screenshots parent node, accepted or diagnostic image assets, Visual target comparison details when source ImageAsset targets exist, and provider-backed image-analysis receipts. no-ui-evidence-recorded requires its explicit classification evidence without browser or image-asset claims. Include direct-launch fallback evidence when needed, write receipts, and concrete execution blockers.",
           "SubprocessChildStepKey": "screenshot-handoff",
           "SubprocessChildArtifactTitle": ".NET UI screenshot writeback handoff"
         }
       ],
-      "ArtifactInputs": [],
+      "ArtifactInputs": [
+        {
+          "ArtifactExpectationKey": "scope-boundary-packet",
+          "SourceStepKey": "feature-intake"
+        },
+        {
+          "ArtifactExpectationKey": "architecture-decision-record",
+          "SourceStepKey": "architecture-review"
+        },
+        {
+          "ArtifactExpectationKey": "acceptance-validation-plan",
+          "SourceStepKey": "architecture-review"
+        },
+        {
+          "ArtifactExpectationKey": "project-structure-context-brief",
+          "SourceStepKey": "architecture-review"
+        },
+        {
+          "ArtifactExpectationKey": "peer-review-note",
+          "SourceStepKey": "peer-review"
+        },
+        {
+          "ArtifactExpectationKey": "implementation-change-set",
+          "SourceStepKey": "implementation"
+        },
+        {
+          "ArtifactExpectationKey": "regression-evidence-pack",
+          "SourceStepKey": "qa-validation"
+        },
+        {
+          "ArtifactExpectationKey": "quality-repair-change-set",
+          "SourceStepKey": "quality-repair"
+        }
+      ],
       "BranchOutcomes": [],
       "ChecklistRefs": [],
       "ValidationRefs": [],
@@ -1764,7 +2659,8 @@
         "WriteManagedProcessArtifacts",
         "ExecuteExternalAction"
       ],
-      "OperationTargetScope": "ExternalActionControlled"
+      "OperationTargetScope": "ExternalActionControlled",
+      "ExecutionClass": "RuntimeOwnedSubprocess"
     },
     {
       "Order": 16,
@@ -1852,6 +2748,9 @@
       "ValidationRefs": [],
       "PromptRefs": [],
       "DocRefs": [
+        "processes/software-delivery/steps/repair-escalation.md"
+      ],
+      "ExecutionGuidanceRefs": [
         "processes/software-delivery/steps/repair-escalation.md"
       ],
       "AllowedOperations": [
@@ -1978,6 +2877,9 @@
       "DocRefs": [
         "processes/software-delivery/steps/release-approval-after-repair.md"
       ],
+      "ExecutionGuidanceRefs": [
+        "processes/software-delivery/steps/release-approval-after-repair.md"
+      ],
       "AllowedOperations": [
         "ReadProcessContext",
         "ReadProjectStructure",
@@ -2067,6 +2969,9 @@
       "DocRefs": [
         "processes/software-delivery/steps/execute-release-rollout.md"
       ],
+      "ExecutionGuidanceRefs": [
+        "processes/software-delivery/steps/execute-release-rollout.md"
+      ],
       "AllowedOperations": [
         "ReadProcessContext",
         "ReadProjectStructure",
@@ -2149,6 +3054,9 @@
       "ValidationRefs": [],
       "PromptRefs": [],
       "DocRefs": [
+        "processes/software-delivery/steps/post-release-learning.md"
+      ],
+      "ExecutionGuidanceRefs": [
         "processes/software-delivery/steps/post-release-learning.md"
       ],
       "AllowedOperations": [
@@ -2491,3 +3399,4 @@
     "prompt-release-scope-recap"
   ]
 }
+

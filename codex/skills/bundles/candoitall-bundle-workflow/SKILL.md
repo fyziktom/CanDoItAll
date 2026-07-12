@@ -26,6 +26,7 @@ The workflow is complete only when all of these are true:
 - every executed subbundle has passed its entry and closure gates or is honestly blocked
 - every completed critical subbundle has an artifact-backed `proof/SBxx/manifest.md` and `proof/SBxx/semantic-invariants.md` or `.json` with changed-file hashes, command transcripts, failing-first and passing proof where behavior changed, source assertions, invariant IDs, and anti-stub audit results
 - any subbundle that changes bundle skills, validators, or proof rules has synchronized the repo skill copy into the active Codex skill root and recorded portable hash proof before dependent feature subbundles start
+- C# architecture-heavy bundles have activated `candoitall-csharp-architecture-bundle-guard`, recorded CodeAnalytics MCP evidence, and included current-state inventory, boundary map, dependency-direction map, pattern selection records, testability plan, partial-class policy, and architecture checkpoints before implementation starts
 - every new production signal, state, record, or event named by critical proof has a `## Production Behavior Artifact Matrix` in both the manifest and semantic invariant contract, with producer, consumer, lifecycle, and negative-test citations
 - critical proof uses portable `repo://` and `bundle://` references so moved bundles, WSL, Linux, CI, and Windows checks can resolve the same evidence
 - code changes, tests, browser or host proof, screenshots, and execution report rows support the same conclusion
@@ -37,23 +38,25 @@ The workflow is complete only when all of these are true:
 1. Decide whether a usable bundle already exists.
 2. If no bundle exists, use `candoitall-bundle-preparation`.
 3. If the bundle exists but is stale, incomplete, or inconsistent with the repo, repair it before implementation.
-4. Run the readiness gate with `candoitall-bundle-validator` and `scripts/validate_bundle.py --stage prepared`.
-5. Review the subbundle dependency map, critical foundations, and phase gates before touching implementation code.
-6. Execute one subbundle at a time with `candoitall-bundle-execution`.
-7. Before each subbundle, run the entry gate with `candoitall-subbundle-validator`.
-8. After each subbundle, record proof and run the closure gate with `candoitall-subbundle-validator`.
-9. Reopen earlier work when later observations weaken a prerequisite or critical foundation.
-10. If the subbundle changed bundle skills, validators, or proof rules, install the updated repo skill into the active Codex skill root, reopen the skill instructions, and record repo/active hashes before continuing.
-11. Before a critical subbundle is marked complete, verify that every path referenced by its proof manifest exists, that the semantic invariant contract exists, and that required failing-first, passing, source-assertion, and anti-stub transcripts are present.
-12. After implementation, audit the original raw notes and source artifacts one by one.
-13. Run the final closure gate with `candoitall-bundle-validator` and `scripts/validate_bundle.py --stage completed`.
-14. Synchronize root status, subbundle status, execution report, analytics rows, proof paths, residual risks, and follow-up items.
+4. If the bundle touches C# architecture, refactoring, partial classes, tools, providers, memory protocols, process drivers, runtime composition, factories, builders, catalogs, or project references, activate `candoitall-csharp-architecture-bundle-guard`, `csharp-architecture-governor`, and `candoitall-codeanalytics-mcp` before readiness validation.
+5. Run the readiness gate with `candoitall-bundle-validator` and `scripts/validate_bundle.py --stage prepared`.
+6. Review the subbundle dependency map, critical foundations, architecture checkpoints, and phase gates before touching implementation code.
+7. Execute one subbundle at a time with `candoitall-bundle-execution`.
+8. Before each subbundle, run the entry gate with `candoitall-subbundle-validator`.
+9. After each subbundle, record proof and run the closure gate with `candoitall-subbundle-validator`.
+10. Reopen earlier work when later observations weaken a prerequisite or critical foundation.
+11. If the subbundle changed bundle skills, validators, or proof rules, install the updated repo skill into the active Codex skill root, reopen the skill instructions, and record repo/active hashes before continuing.
+12. Before a critical subbundle is marked complete, verify that every path referenced by its proof manifest exists, that the semantic invariant contract exists, and that required failing-first, passing, source-assertion, and anti-stub transcripts are present.
+13. After implementation, audit the original raw notes and source artifacts one by one.
+14. Run the final closure gate with `candoitall-bundle-validator` and `scripts/validate_bundle.py --stage completed`.
+15. Synchronize root status, subbundle status, execution report, analytics rows, proof paths, residual risks, and follow-up items.
 
 ## Decision Rule
 
 - Raw notes, docx feedback, screenshots, mixed artifacts, broad initiatives, and architecture-heavy requests start in preparation.
 - Existing validated bundles start in execution.
 - Existing weak bundles start in repair, then readiness validation, then execution.
+- C# architecture-heavy work starts in preparation or repair unless the existing bundle already has the C# architecture gate artifacts and passing checkpoints.
 - If implementation reality forces a scope reduction, repair the bundle and rerun the prepared-stage validator before continuing.
 
 ## Gate Discipline
@@ -74,6 +77,7 @@ The workflow is complete only when all of these are true:
 - Overlays, contextual help, dropdowns, menus, dialogs, and floating windows require open-state proof for readability, clipping, lateral overflow, and layering.
 - Host-visible behavior such as PowerShell launch, UAC, file opening, or desktop integration requires host-level proof or an explicit validation gap.
 - Critical proof must be artifact-backed: command transcripts, changed-file hashes, source assertions, anti-stub audit output, and failing-first or red-team artifacts must live under `proof/SBxx/`.
+- C# architecture proof must include CodeAnalytics MCP evidence for dependency direction, findings or hotspots, and relevant exact symbols when the MCP is available; if unavailable, the bundle must record that as a validation gap instead of silently falling back to broad text search.
 - Production-only signals must not be manually seeded by positive tests unless the test is explicitly a migration, backfill, or validator fixture. Normal feature proof must show the production emitter and the lifecycle path that consumes it.
 - Dream synthesis proof must reject diagnostic templates such as `Conclusion: ... supported by N source-backed observation(s)` as shipped memory text; those strings belong in diagnostics, not in positive synthesis proof.
 - Use `screenshot` when browser capture cannot prove the desktop or window context.
@@ -116,6 +120,7 @@ Before the workflow exits:
 - Use `candoitall-bundle-execution` for implementation and proof updates.
 - Use `candoitall-bundle-validator` for readiness and final closure gates.
 - Use `candoitall-subbundle-validator` for per-phase entry and closure gates.
+- Use `candoitall-csharp-architecture-bundle-guard`, `csharp-architecture-governor`, `csharp-architecture-review-gate`, and `candoitall-codeanalytics-mcp` for C# architecture-heavy bundles.
 - Use `mtp-hot-reload` only as an iteration accelerator when the targeted test project already uses Microsoft Testing Platform.
 - Use `playwright`, `screenshot`, `imagegen`, and `frontend-skill` as part of the UI validation loop when the bundle scope justifies them.
 

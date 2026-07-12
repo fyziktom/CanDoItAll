@@ -1,3 +1,4 @@
+using CanDoItAll.Processes.Drivers.Abstractions;
 using CanDoItAll.Processes.Runtime;
 
 namespace CanDoItAll.Processes.Persistence;
@@ -50,6 +51,8 @@ public sealed class ProcessRuntimeStateEntity
     public List<ProcessStrategyResultReceiptEntity> ResultReceipts { get; } = [];
 
     public List<ProcessRuntimeAvailableArtifactSlotEntity> AvailableArtifactSlots { get; } = [];
+
+    public List<ProcessRuntimeInputArtifactEntity> ConnectedInputArtifacts { get; } = [];
 }
 
 public sealed class ProcessRuntimeStepAssignmentEntity
@@ -74,6 +77,12 @@ public sealed class ProcessRuntimeStepAssignmentEntity
 
     public string ExecutorDisplayName { get; set; } = string.Empty;
 
+    public Guid? WorkflowId { get; set; }
+
+    public Guid? WorkflowVersionId { get; set; }
+
+    public int? WorkflowOutputMapping { get; set; }
+
     public string Prompt { get; set; } = string.Empty;
 
     public string ReadinessHash { get; set; } = string.Empty;
@@ -89,6 +98,8 @@ public sealed class ProcessRuntimeStepAssignmentEntity
     public string OperationTargetScope { get; set; } = string.Empty;
 
     public string LaunchVariablesJson { get; set; } = string.Empty;
+
+    public string CapabilityScopeJson { get; set; } = string.Empty;
 
     public string? BranchGateSourceStepKey { get; set; }
 
@@ -114,6 +125,14 @@ public sealed class ProcessRuntimeStepEntity
     public string DependencyStepIds { get; set; } = string.Empty;
 
     public string RequiredArtifactSlotIds { get; set; } = string.Empty;
+
+    public string ProducedArtifactSlotIds { get; set; } = string.Empty;
+
+    public string RequiredRuntimeToolNamesJson { get; set; } = "[]";
+
+    public string ArtifactDescriptorsJson { get; set; } = "[]";
+
+    public string SubprocessArtifactMappingsJson { get; set; } = "[]";
 
     public Guid? ActiveClaimToken { get; set; }
 
@@ -163,6 +182,12 @@ public sealed class ProcessStrategyResultReceiptEntity
 
     public string ResultHash { get; set; } = string.Empty;
 
+    public string DiagnosticsJson { get; set; } = "[]";
+
+    public string ProducedArtifactsJson { get; set; } = "[]";
+
+    public string? RecoveryDecisionJson { get; set; }
+
     public ProcessRuntimeStateEntity? RuntimeState { get; set; }
 }
 
@@ -171,6 +196,27 @@ public sealed class ProcessRuntimeAvailableArtifactSlotEntity
     public Guid RunId { get; set; }
 
     public Guid SlotId { get; set; }
+
+    public ProcessRuntimeStateEntity? RuntimeState { get; set; }
+}
+
+public sealed class ProcessRuntimeInputArtifactEntity
+{
+    public Guid RunId { get; set; }
+
+    public Guid ConsumerStepInstanceId { get; set; }
+
+    public Guid RequiredSlotId { get; set; }
+
+    public ProcessArtifactInputAvailability Availability { get; set; }
+
+    public Guid? ProducerStepInstanceId { get; set; }
+
+    public Guid? ArtifactId { get; set; }
+
+    public string ContentHash { get; set; } = string.Empty;
+
+    public string ConnectionHash { get; set; } = string.Empty;
 
     public ProcessRuntimeStateEntity? RuntimeState { get; set; }
 }

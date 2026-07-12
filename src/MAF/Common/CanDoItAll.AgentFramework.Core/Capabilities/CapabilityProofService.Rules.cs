@@ -387,42 +387,6 @@ public sealed partial class CapabilityProofService
         return Verified(notes, checkedAt);
     }
 
-    private static CapabilityVerificationResult VerifyMemoryCapability(
-        CapabilityCatalogItem capability,
-        List<string> notes,
-        DateTimeOffset checkedAt)
-    {
-        var provider = TryReadConfigurationString(capability.ConfigurationJson, "provider");
-        if (!string.Equals(provider, "mem0", StringComparison.OrdinalIgnoreCase))
-        {
-            return PendingReview(
-                $"{string.Join(" ", notes)} Memory capability is configured, but only Mem0 structural checks are implemented in this sandbox.",
-                checkedAt);
-        }
-
-        var endpoint = TryReadConfigurationString(capability.ConfigurationJson, "endpoint") ?? capability.EndpointOrPath;
-        if (!TryCreateUri(endpoint, out var uri) || (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
-        {
-            return Failed($"Memory capability '{capability.Name}' does not contain a valid Mem0 endpoint.", checkedAt);
-        }
-
-        var apiKeyEnvironmentVariable = TryReadConfigurationString(capability.ConfigurationJson, "apiKeyEnvironmentVariable");
-        if (string.IsNullOrWhiteSpace(apiKeyEnvironmentVariable))
-        {
-            return Failed($"Memory capability '{capability.Name}' is missing apiKeyEnvironmentVariable.", checkedAt);
-        }
-
-        if (string.IsNullOrWhiteSpace(AgentProviderEnvironmentCredential.ResolveAndPromote(apiKeyEnvironmentVariable)))
-        {
-            return Failed($"Environment variable '{apiKeyEnvironmentVariable}' is not set for memory capability '{capability.Name}'.", checkedAt);
-        }
-
-        notes.Add($"Mem0 endpoint '{uri}' is configured and API key environment variable '{apiKeyEnvironmentVariable}' is present.");
-        return PendingReview(
-            $"{string.Join(" ", notes)} Live provider execution still needs a runtime proof path.",
-            checkedAt);
-    }
-
     private static async Task<CapabilityVerificationResult> VerifyEndpointProofAsync(
         CapabilityCatalogItem capability,
         List<string> notes,

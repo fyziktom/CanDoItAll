@@ -1,0 +1,32 @@
+SB05 production source assertions
+
+Recorded UTC: 2026-07-12T21:16:35Z
+Working directory: C:\repositories\CanDoItAll
+
+Command:
+rg -n "ThrowIfNotPersistable|AggregateAsync|OriginProcessRunIds|GetWorkflowAnalyticsResultAsync|UsageObservations|TerminalAtUtc|WorkflowUsageObservationCorrelator" src/MAF src/Modules/CanDoItAll.Modules.AgentFramework src/Modules/CanDoItAll.Modules.Processes src/App/CanDoItAll.Web/Api/WorkflowsApi.cs -g "*.cs"
+Exit code: 0
+
+Representative assertions found:
+- WorkflowUsageObservationValidator.ThrowIfNotPersistable is called by both in-memory and persistent stores.
+- WorkflowRuntimeManager and StoreBackedWorkflowNodeExecutionProgressObserver correlate observations before append.
+- Compiler, progress, backend result, and failure exception boundaries all carry IReadOnlyList<WorkflowUsageObservation>.
+- PersistentWorkflowUsageObservationStore.AggregateAsync performs database-side aggregate queries.
+- In-memory and persistent queries accept typed WorkflowProcessRunId filters.
+- Workflow run persistence stores exact TerminalAtUtc and OriginJson.
+- WorkflowAwareProcessRuntimeUsageTelemetryReader queries typed process-origin fields.
+- GET /analytics delegates to GetWorkflowAnalyticsResultAsync/IWorkflowAnalyticsQueryService.
+
+Endpoint isolation command result:
+PASS: analytics endpoint delegates only to IWorkflowAnalyticsQueryService/GetWorkflowAnalyticsResultAsync; no event JSON, run store, catalog store, or clamp projection.
+
+Production behavior artifact matrix:
+
+| Producer/boundary | Canonical output | Persistence/projection consumer | Negative proof |
+|---|---|---|---|
+| MafWorkflowLlmComponentInvoker | One immutable fact per provider observation, plus explicit unavailable/failure facts | Compiler -> progress/backend -> store | Corrupt dimensions and failure facts |
+| Usage-aware executor/plugin result | UsageObservations on WorkflowNodeExecutionResult | Compiler -> backend result -> store | Same fact from progress/result remains one row |
+| WorkflowRuntimeManager / store-backed progress | Correlated RunId/workflow/version/node/origin facts | IWorkflowUsageObservationStore | Null-run fact rejected before persistence |
+| PersistentWorkflowUsageObservationStore | Immutable raw rows + DB aggregates | WorkflowAnalyticsQueryService | Same ID/different fact conflicts atomically |
+| WorkflowAnalyticsQueryService | Typed unpaged totals, bounded recent rows, duration availability | API and SB06 UI | Historical terminal without TerminalAtUtc is unavailable, not inferred |
+| WorkflowAwareProcessRuntimeUsageTelemetryReader | ProcessRuntimeUsageObservation rollup | Existing process analytics | Full immutable drift, invalid query, and missing correlation throw |

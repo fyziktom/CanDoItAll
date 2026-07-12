@@ -34,7 +34,7 @@ public sealed class PluginsPageTests
         Assert.Contains(Office365PluginConstants.DownloadByCategoryExecutorId.Value, cut.Markup, StringComparison.Ordinal);
         Assert.Contains(Office365PluginConstants.DownloadByAddressExecutorId.Value, cut.Markup, StringComparison.Ordinal);
         Assert.Contains(Office365PluginConstants.MarkProcessedExecutorId.Value, cut.Markup, StringComparison.Ordinal);
-        Assert.Contains("Downloads a bounded batch of Microsoft Graph mail messages that have the selected Outlook category.", cut.Markup, StringComparison.Ordinal);
+        Assert.Contains("Downloads a bounded batch of Microsoft Graph mail messages that have the configured Outlook category.", cut.Markup, StringComparison.Ordinal);
         Assert.Contains("Adds the processed Outlook category to a Microsoft 365 message and optionally removes the source category.", cut.Markup, StringComparison.Ordinal);
     }
 

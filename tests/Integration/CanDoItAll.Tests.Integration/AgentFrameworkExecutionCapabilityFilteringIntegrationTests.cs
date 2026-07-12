@@ -7,6 +7,42 @@ namespace CanDoItAll.Tests.Integration;
 public sealed class AgentFrameworkExecutionCapabilityFilteringIntegrationTests
 {
     [Fact]
+    public void ResolveAttachedCapabilities_filters_retired_catalog_memory_kind()
+    {
+        var retiredMemory = new CapabilityCatalogItem(
+            Guid.NewGuid(),
+            CapabilityKind.Memory,
+            "legacy-mem0-memory",
+            "Legacy Mem0 Memory",
+            "Retired catalog memory capability.",
+            "https://api.mem0.ai",
+            "{}",
+            CapabilityProofStatus.NotRun,
+            string.Empty,
+            null,
+            true);
+        var assignment = new AgentCapabilityAssignment(
+            retiredMemory.Id,
+            retiredMemory.Key,
+            retiredMemory.Kind,
+            retiredMemory.ProofStatus,
+            retiredMemory.LastVerifiedAtUtc,
+            retiredMemory.ProofNotes);
+        var agent = CreateAgent([assignment]);
+        var catalog = new SandboxWorkspaceCatalog(
+            Version: "1.0",
+            Agents: [agent],
+            Providers: [],
+            Capabilities: [retiredMemory],
+            Memory: []);
+
+        var resolved = InvokeResolveAttachedCapabilities(catalog, agent);
+
+        Assert.Empty(resolved);
+        Assert.True(AgentCapabilityRequirementEvaluator.IsRetiredCapability(retiredMemory));
+    }
+
+    [Fact]
     public void ResolveAttachedCapabilities_filters_retired_workspace_delivery_skill_from_execution_input()
     {
         var retainedCapability = new CapabilityCatalogItem(

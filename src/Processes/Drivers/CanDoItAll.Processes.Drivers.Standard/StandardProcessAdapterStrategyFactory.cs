@@ -1,3 +1,5 @@
+using System.Security.Cryptography;
+using System.Text;
 using CanDoItAll.Processes.Drivers.Abstractions;
 
 namespace CanDoItAll.Processes.Drivers.Standard;
@@ -39,7 +41,10 @@ internal sealed class StandardProcessAdapterStrategy(IProcessStepExecutionDriver
                 new ProcessExecutionAdapterOperationKey($"{adapter.AdapterId}.execute"),
                 context.Binding,
                 context.Inputs,
-                CreateContextFacets(context.Inputs)),
+                CreateContextFacets(context))
+            {
+                StepContract = context.StepContract
+            },
             cancellationToken);
 
         var diagnostics = new List<StrategyDiagnosticRef>(result.Diagnostics.Count);
@@ -68,10 +73,10 @@ internal sealed class StandardProcessAdapterStrategy(IProcessStepExecutionDriver
     }
 
     private static IReadOnlyList<ProcessExecutionContextFacet> CreateContextFacets(
-        IReadOnlyList<StrategyBindingInput> inputs)
+        ProcessStrategyExecutionContext context)
     {
-        var facets = new List<ProcessExecutionContextFacet>(inputs.Count);
-        foreach (var input in inputs)
+        var facets = new List<ProcessExecutionContextFacet>(context.Inputs.Count + 4);
+        foreach (var input in context.Inputs)
         {
             facets.Add(new ProcessExecutionContextFacet(
                 new ProcessExecutionContextFacetKey(input.Key.Value),
@@ -79,6 +84,39 @@ internal sealed class StandardProcessAdapterStrategy(IProcessStepExecutionDriver
                 StrategyDiagnosticSensitivity.Normal));
         }
 
+        facets.Add(new ProcessExecutionContextFacet(
+            new ProcessExecutionContextFacetKey("process.step.contract"),
+            context.StepContract.ContractHash,
+            StrategyDiagnosticSensitivity.Normal));
+        facets.Add(new ProcessExecutionContextFacet(
+            new ProcessExecutionContextFacetKey("process.step.required-artifacts"),
+            HashFacetValues(context.StepContract.RequiredArtifacts.Select(artifact => artifact.ConnectionHash)),
+            StrategyDiagnosticSensitivity.Normal));
+        facets.Add(new ProcessExecutionContextFacet(
+            new ProcessExecutionContextFacetKey("process.step.expected-outputs"),
+            HashFacetValues(context.StepContract.ExpectedProducedArtifacts.Select(artifact => artifact.SlotId.Value.ToString("N"))),
+            StrategyDiagnosticSensitivity.Normal));
+        facets.Add(new ProcessExecutionContextFacet(
+            new ProcessExecutionContextFacetKey("process.step.required-runtime-tools"),
+            HashFacetValues(context.StepContract.RequiredRuntimeToolNames),
+            StrategyDiagnosticSensitivity.Normal));
+
         return facets;
+    }
+
+    private static string HashFacetValues(IEnumerable<string> values)
+    {
+        var normalized = values
+            .Where(value => !string.IsNullOrWhiteSpace(value))
+            .Select(value => value.Trim())
+            .OrderBy(value => value, StringComparer.Ordinal)
+            .ToArray();
+        if (normalized.Length == 0)
+        {
+            return "sha256:empty";
+        }
+
+        var bytes = SHA256.HashData(Encoding.UTF8.GetBytes(string.Join(';', normalized)));
+        return $"sha256:{Convert.ToHexString(bytes).ToLowerInvariant()}";
     }
 }

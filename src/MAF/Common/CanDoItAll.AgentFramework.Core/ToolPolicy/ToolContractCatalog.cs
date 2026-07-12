@@ -2,16 +2,20 @@ namespace CanDoItAll.AgentFramework.Core;
 
 public static class ToolContractCatalog
 {
+    public const string WorkspaceListDirectory = "workspace_list_directory";
     public const string WorkspaceListFiles = "workspace_list_files";
     public const string WorkspaceSearch = "workspace_search";
     public const string WorkspaceReadFile = "workspace_read_file";
     public const string WorkspaceStatPath = "workspace_stat_path";
+    public const string WorkspaceHashPath = "workspace_hash_path";
     public const string WorkspaceCreateDirectory = "workspace_create_directory";
     public const string WorkspaceWriteFile = "workspace_write_file";
     public const string WorkspaceAppendFile = "workspace_append_file";
     public const string WorkspaceCopyPath = "workspace_copy_path";
     public const string WorkspaceMovePath = "workspace_move_path";
     public const string WorkspaceDeletePath = "workspace_delete_path";
+    public const string WorkspaceZipPath = "workspace_zip_path";
+    public const string WorkspaceUnzipArchive = "workspace_unzip_archive";
     public const string WorkspaceDiffText = "workspace_diff_text";
     public const string WorkspaceDotNetNew = "workspace_dotnet_new";
     public const string WorkspaceDotNetRestore = "workspace_dotnet_restore";
@@ -25,6 +29,11 @@ public static class ToolContractCatalog
     public const string WorkspaceAnalyzeImage = "workspace_analyze_image";
     public const string WorkspaceAnalyzeImages = "workspace_analyze_images";
     public const string WorkspaceInspectSpreadsheet = "workspace_inspect_spreadsheet";
+    public const string WorkspaceSpreadsheetSummary = "workspace_spreadsheet_summary";
+    public const string WorkspaceReadSpreadsheetCell = "workspace_read_spreadsheet_cell";
+    public const string WorkspaceReadSpreadsheetRange = "workspace_read_spreadsheet_range";
+    public const string WorkspaceWriteSpreadsheet = "workspace_write_spreadsheet";
+    public const string WorkspaceSpreadsheetFunctionCatalog = "workspace_spreadsheet_function_catalog";
     public const string WorkspaceConvertDocument = "workspace_convert_document";
     public const string WorkspaceCommandRun = "workspace_command_run";
     public const string WorkspaceExecutionBoundary = "workspace_execution_boundary";
@@ -56,16 +65,20 @@ public static class ToolContractCatalog
 
     public static IReadOnlyList<string> WorkspaceToolNames { get; } =
     [
+        WorkspaceListDirectory,
         WorkspaceListFiles,
         WorkspaceSearch,
         WorkspaceReadFile,
         WorkspaceStatPath,
+        WorkspaceHashPath,
         WorkspaceCreateDirectory,
         WorkspaceWriteFile,
         WorkspaceAppendFile,
         WorkspaceCopyPath,
         WorkspaceMovePath,
         WorkspaceDeletePath,
+        WorkspaceZipPath,
+        WorkspaceUnzipArchive,
         WorkspaceDiffText,
         WorkspaceDotNetNew,
         WorkspaceDotNetRestore,
@@ -79,6 +92,11 @@ public static class ToolContractCatalog
         WorkspaceAnalyzeImage,
         WorkspaceAnalyzeImages,
         WorkspaceInspectSpreadsheet,
+        WorkspaceSpreadsheetSummary,
+        WorkspaceReadSpreadsheetCell,
+        WorkspaceReadSpreadsheetRange,
+        WorkspaceWriteSpreadsheet,
+        WorkspaceSpreadsheetFunctionCatalog,
         WorkspaceConvertDocument,
         WorkspaceCommandRun,
         WorkspaceExecutionBoundary,
@@ -183,6 +201,11 @@ public static class ToolContractCatalog
         AgentToolInvocationPolicyMetadata.ProcessesTemplateImport,
         AgentToolInvocationPolicyMetadata.ProcessesTemplateBaselineScenariosList,
         AgentToolInvocationPolicyMetadata.ProcessesTemplateLiveRunProfilesList,
+        AgentToolInvocationPolicyMetadata.WorkflowsDefinitionsList,
+        AgentToolInvocationPolicyMetadata.WorkflowsRunStart,
+        AgentToolInvocationPolicyMetadata.WorkflowsRunStatusGet,
+        AgentToolInvocationPolicyMetadata.WorkflowsRunCancel,
+        AgentToolInvocationPolicyMetadata.WorkflowsExternalResponseSubmit,
         AgentToolInvocationPolicyMetadata.ImageGenerationCreate,
         AgentToolInvocationPolicyMetadata.ProjectStructureProjectsList,
         AgentToolInvocationPolicyMetadata.ProjectStructureProjectCreate,

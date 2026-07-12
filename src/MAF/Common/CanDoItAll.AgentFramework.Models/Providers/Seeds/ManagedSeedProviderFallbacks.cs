@@ -66,6 +66,7 @@ public static class ManagedSeedProviderFallbacks
     public const string OpenAiChatCompletionsProviderName = "OpenAI chat completions";
     public const string OpenAiBaseUrl = "https://api.openai.com/v1";
     public const string OpenAiDefaultModel = "gpt-5.4-mini";
+    public const int OpenAiDefaultTimeoutSeconds = 120;
     public const string DefaultReasoningEffort = "medium";
     public const string FallbackProviderName = "Remote Ollama";
     public const string FallbackBaseUrl = "http://192.168.10.132:11434";

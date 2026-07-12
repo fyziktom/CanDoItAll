@@ -19,7 +19,7 @@ public sealed class AgentCapabilitySetupFlowPlaywrightTests
     [Fact]
     public async Task Capabilities_tab_supports_tool_setup_test_and_access_preview_on_large_screen()
     {
-        var evidenceDirectory = @"C:\repositories\CanDoItAll\codex\bundles\skill-tool-mcp-isolation-template-migration\proof\SB10";
+        var evidenceDirectory = @"C:\repositories\CanDoItAll\codex\bundles\skill-tool-mcp-isolation-template-migration\proof\regression";
         Directory.CreateDirectory(evidenceDirectory);
 
         var suffix = DateTimeOffset.UtcNow.ToString("yyyyMMddHHmmss", System.Globalization.CultureInfo.InvariantCulture);

@@ -108,6 +108,37 @@ function Get-RepoManagedSkillDirectories {
     return $directories
 }
 
+function Get-RepoManagedSupportDirectories {
+    param(
+        [string]$Root
+    )
+
+    return @(Get-ChildItem -Path $Root -Directory |
+        Where-Object {
+            $_.Name.StartsWith("_", [System.StringComparison]::Ordinal) -and
+            -not (Test-Path (Join-Path $_.FullName "SKILL.md"))
+        } |
+        Sort-Object FullName)
+}
+
+function Remove-TargetDirectoryIfPresent {
+    param(
+        [string]$TargetDirectory
+    )
+
+    $resolvedTargetRoot = [System.IO.Path]::GetFullPath($targetSkillRoot)
+    $resolvedTargetDirectory = [System.IO.Path]::GetFullPath($TargetDirectory)
+    $expectedPrefix = $resolvedTargetRoot.TrimEnd([System.IO.Path]::DirectorySeparatorChar) + [System.IO.Path]::DirectorySeparatorChar
+
+    if (-not $resolvedTargetDirectory.StartsWith($expectedPrefix, [System.StringComparison]::OrdinalIgnoreCase)) {
+        throw "Refusing to remove directory outside target skill root: $resolvedTargetDirectory"
+    }
+
+    if (Test-Path $resolvedTargetDirectory) {
+        Remove-Item -LiteralPath $resolvedTargetDirectory -Recurse -Force
+    }
+}
+
 function Install-SkillDirectory {
     param(
         [string]$SourceDirectory,
@@ -116,13 +147,29 @@ function Install-SkillDirectory {
     )
 
     $targetDirectory = Join-Path $targetSkillRoot $SkillName
-    if (Test-Path $targetDirectory) {
-        Remove-Item -Path $targetDirectory -Recurse -Force
-    }
+    Remove-TargetDirectoryIfPresent -TargetDirectory $targetDirectory
 
-    Copy-Item -Path $SourceDirectory -Destination $targetSkillRoot -Recurse -Force
+    Copy-Item -LiteralPath $SourceDirectory -Destination $targetSkillRoot -Recurse -Force
     $installedSkills.Add([pscustomobject]@{
         Skill  = $SkillName
+        Origin = $Origin
+        Target = $targetDirectory
+    }) | Out-Null
+}
+
+function Install-SupportDirectory {
+    param(
+        [string]$SourceDirectory,
+        [string]$ResourceName,
+        [string]$Origin
+    )
+
+    $targetDirectory = Join-Path $targetSkillRoot $ResourceName
+    Remove-TargetDirectoryIfPresent -TargetDirectory $targetDirectory
+
+    Copy-Item -LiteralPath $SourceDirectory -Destination $targetSkillRoot -Recurse -Force
+    $installedSkills.Add([pscustomobject]@{
+        Skill  = $ResourceName
         Origin = $Origin
         Target = $targetDirectory
     }) | Out-Null
@@ -165,6 +212,11 @@ function Sync-GitRepository {
 Ensure-Directory -Path $targetSkillRoot
 
 if (-not $SkipCustomSkills) {
+    Write-Step "Installing custom CanDoItAll skill support resources from repo"
+    foreach ($directory in Get-RepoManagedSupportDirectories -Root $repoSkillRoot) {
+        Install-SupportDirectory -SourceDirectory $directory.FullName -ResourceName $directory.Name -Origin "repo-support"
+    }
+
     Write-Step "Installing custom CanDoItAll skills from repo"
     foreach ($directory in Get-RepoManagedSkillDirectories -Root $repoSkillRoot) {
         Install-SkillDirectory -SourceDirectory $directory.FullName -SkillName $directory.Name -Origin "repo"

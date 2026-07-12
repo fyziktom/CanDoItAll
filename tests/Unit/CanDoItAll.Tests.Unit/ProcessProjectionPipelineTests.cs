@@ -755,6 +755,310 @@ public sealed class ProcessProjectionPipelineTests
     }
 
     [Fact]
+    public async Task Runtime_projection_readback_includes_blocked_result_diagnostics_and_lineage()
+    {
+        await using var dbContext = CreateDbContext();
+        var store = new EfProcessProjectionStore(dbContext);
+        var runId = ProcessRunId.New();
+        var planId = ProcessInstancePlanId.New();
+        var blockedStepId = ProcessStepInstanceId.New();
+        var slotId = ArtifactSlotId.New();
+        var artifactId = ArtifactInstanceId.New();
+        await ProjectAsync(
+            store,
+            StoredEvent(1, runId, ProcessRuntimeEventTypes.StepBlocked, Now.AddMinutes(-5)),
+            latestKnownGlobalSequence: 1);
+        var state = new ProcessRuntimeStateSnapshot(
+            runId,
+            runId,
+            planId,
+            "sha256:plan",
+            ProcessRuntimeStatus.Active,
+            [
+                new ProcessRuntimeStepState(
+                    blockedStepId,
+                    ProcessStepDefinitionId.New(),
+                    ProcessRuntimeStepStatus.Blocked,
+                    IsExecutable: true,
+                    AttemptNumber: 1,
+                    DependencyStepIds: new HashSet<ProcessStepInstanceId>(),
+                    RequiredArtifactSlots: new HashSet<ArtifactSlotId>(),
+                    ActiveClaimToken: null,
+                    CompletedResultKey: StrategyResultIdempotencyKey.New())
+            ],
+            [],
+            [
+                new StrategyResultReceipt(
+                    blockedStepId,
+                    new StrategyId("strategy.adapter.workflow.execute"),
+                    StrategyResultIdempotencyKey.New(),
+                    StrategyOutcome.NeedsManager,
+                    ProcessRuntimeStepStatus.Blocked,
+                    "sha256:blocked-result",
+                    [
+                        new StrategyResultDiagnosticReceipt(
+                            "process.runtime.missing_artifact",
+                            StrategyDiagnosticSensitivity.Normal,
+                            "sha256:diagnostic",
+                            "Required artifact was not produced.",
+                            RestrictedEvidenceReference: null,
+                            ProcessDiagnosticRetrySafety.UnsafeToRetry,
+                            ProcessDiagnosticIdempotencyClassification.Idempotent)
+                    ],
+                    [
+                        new StrategyResultArtifactReceipt(
+                            slotId,
+                            artifactId,
+                            "sha256:artifact")
+                    ],
+                    new ProcessRecoveryDecisionReceipt(
+                        ProcessFailureCategory.MissingArtifact,
+                        ProcessRecoveryDecisionKind.ManagerRequired,
+                        "process.runtime.missing_artifact",
+                        "process.manager-review-required",
+                        "Manager review is required."))
+            ],
+            new HashSet<ArtifactSlotId>(),
+            Now.AddMinutes(-1));
+        var query = new ProcessRuntimeProjectionQueryService(
+            store,
+            ProcessProjectionJsonCodec.Default,
+            new FixedProcessProjectionClock(Now),
+            new InMemoryRuntimeStateStore(state),
+            new InMemoryAssignmentStore(
+            [
+                CreateAssignment(runId, planId, blockedStepId, "produce-evidence", "Process Worker")
+            ]));
+
+        var detail = await query.GetRunDetailAsync(new ProcessRunDetailQuery(runId));
+        var history = await query.GetRunHistoryAsync(new ProcessRunHistoryQuery(runId, Now.AddHours(-1), Now, Take: 10));
+        var live = await query.GetLiveProcessesAsync(new ProcessLiveProcessesQuery(Now, TimeSpan.FromHours(1), Take: 10));
+
+        Assert.NotNull(detail);
+        var detailDiagnostic = Assert.Single(detail.Diagnostics);
+        Assert.Equal("process.runtime.missing_artifact", detailDiagnostic.Code);
+        Assert.Equal("Runtime", detailDiagnostic.Category);
+        Assert.Equal("produce-evidence", detailDiagnostic.StepKey);
+        var lineage = Assert.Single(detail.ResultLineage);
+        Assert.Equal(blockedStepId.Value, lineage.StepInstanceId);
+        Assert.Equal(artifactId.Value, Assert.Single(lineage.ProducedArtifacts).ArtifactId);
+        Assert.NotNull(lineage.RecoveryDecision);
+        Assert.Equal("MissingArtifact", lineage.RecoveryDecision.FailureCategory);
+        Assert.Equal("ManagerRequired", lineage.RecoveryDecision.DecisionKind);
+        Assert.Contains("Required artifact was not produced", Assert.Single(history.Events).Summary, StringComparison.Ordinal);
+        var liveRun = Assert.Single(live.Runs);
+        Assert.Equal("process.runtime.missing_artifact", Assert.Single(liveRun.Diagnostics).Code);
+        Assert.Equal("process.runtime.missing_artifact", Assert.Single(liveRun.CurrentStep!.Diagnostics).Code);
+        Assert.Equal(slotId.Value, Assert.Single(liveRun.CurrentStep.ProducedArtifacts).SlotId);
+    }
+
+    [Fact]
+    public async Task Runtime_projection_current_diagnostics_exclude_safe_retry_diagnostics_from_completed_steps()
+    {
+        await using var dbContext = CreateDbContext();
+        var store = new EfProcessProjectionStore(dbContext);
+        var runId = ProcessRunId.New();
+        var planId = ProcessInstancePlanId.New();
+        var featureStepId = ProcessStepInstanceId.New();
+        var qaStepId = ProcessStepInstanceId.New();
+        var featureSuccessKey = StrategyResultIdempotencyKey.New();
+        await ProjectAsync(
+            store,
+            StoredEvent(1, runId, ProcessRuntimeEventTypes.ProcessRunBlocked, Now.AddMinutes(-1)),
+            latestKnownGlobalSequence: 1);
+        var staleDiagnostic = new StrategyResultDiagnosticReceipt(
+            "process.adapter.ungrounded_outcome_reference",
+            StrategyDiagnosticSensitivity.Normal,
+            "sha256:stale-feature-diagnostic",
+            "Feature intake cited an ungrounded path-like ref.",
+            RestrictedEvidenceReference: null,
+            ProcessDiagnosticRetrySafety.SafeToRetry,
+            ProcessDiagnosticIdempotencyClassification.Idempotent);
+        var currentDiagnostic = new StrategyResultDiagnosticReceipt(
+            "process.adapter.branch_outcome_defect_evidence_missing",
+            StrategyDiagnosticSensitivity.Normal,
+            "sha256:current-qa-diagnostic",
+            "QA selected repair branch without deterministic defect evidence.",
+            RestrictedEvidenceReference: null,
+            ProcessDiagnosticRetrySafety.SafeToRetry,
+            ProcessDiagnosticIdempotencyClassification.Idempotent);
+        var state = new ProcessRuntimeStateSnapshot(
+            runId,
+            runId,
+            planId,
+            "sha256:plan",
+            ProcessRuntimeStatus.Blocked,
+            [
+                new ProcessRuntimeStepState(
+                    featureStepId,
+                    ProcessStepDefinitionId.New(),
+                    ProcessRuntimeStepStatus.Completed,
+                    IsExecutable: true,
+                    AttemptNumber: 2,
+                    DependencyStepIds: new HashSet<ProcessStepInstanceId>(),
+                    RequiredArtifactSlots: new HashSet<ArtifactSlotId>(),
+                    ActiveClaimToken: null,
+                    CompletedResultKey: featureSuccessKey),
+                new ProcessRuntimeStepState(
+                    qaStepId,
+                    ProcessStepDefinitionId.New(),
+                    ProcessRuntimeStepStatus.Blocked,
+                    IsExecutable: true,
+                    AttemptNumber: 1,
+                    DependencyStepIds: new HashSet<ProcessStepInstanceId> { featureStepId },
+                    RequiredArtifactSlots: new HashSet<ArtifactSlotId>(),
+                    ActiveClaimToken: null,
+                    CompletedResultKey: null)
+            ],
+            [],
+            [
+                new StrategyResultReceipt(
+                    featureStepId,
+                    new StrategyId("strategy.adapter.workflow.execute"),
+                    StrategyResultIdempotencyKey.New(),
+                    StrategyOutcome.NeedsManager,
+                    ProcessRuntimeStepStatus.Ready,
+                    "sha256:feature-safe-retry",
+                    [staleDiagnostic],
+                    [],
+                    new ProcessRecoveryDecisionReceipt(
+                        ProcessFailureCategory.ProductCompletionGate,
+                        ProcessRecoveryDecisionKind.SafeRetry,
+                        staleDiagnostic.Code,
+                        "process.current-step-safe-retry",
+                        "Safe retry.")),
+                new StrategyResultReceipt(
+                    featureStepId,
+                    new StrategyId("strategy.adapter.workflow.execute"),
+                    featureSuccessKey,
+                    StrategyOutcome.Succeeded,
+                    ProcessRuntimeStepStatus.Completed,
+                    "sha256:feature-completed"),
+                new StrategyResultReceipt(
+                    qaStepId,
+                    new StrategyId("strategy.adapter.workflow.execute"),
+                    StrategyResultIdempotencyKey.New(),
+                    StrategyOutcome.NeedsManager,
+                    ProcessRuntimeStepStatus.Blocked,
+                    "sha256:qa-blocked",
+                    [currentDiagnostic])
+            ],
+            new HashSet<ArtifactSlotId>(),
+            Now);
+        var query = new ProcessRuntimeProjectionQueryService(
+            store,
+            ProcessProjectionJsonCodec.Default,
+            new FixedProcessProjectionClock(Now),
+            new InMemoryRuntimeStateStore(state),
+            new InMemoryAssignmentStore(
+            [
+                CreateAssignment(runId, planId, featureStepId, "feature-intake", "Programming Workspace Analyst"),
+                CreateAssignment(runId, planId, qaStepId, "qa-validation", "Delivery QA Observer")
+            ]));
+
+        var detail = await query.GetRunDetailAsync(new ProcessRunDetailQuery(runId));
+        var history = await query.GetRunHistoryAsync(new ProcessRunHistoryQuery(runId, Now.AddHours(-1), Now, Take: 10));
+        var live = await query.GetLiveProcessesAsync(new ProcessLiveProcessesQuery(Now, TimeSpan.FromHours(1), Take: 10));
+
+        Assert.NotNull(detail);
+        Assert.Equal("process.adapter.branch_outcome_defect_evidence_missing", Assert.Single(detail.Diagnostics).Code);
+        Assert.Contains(detail.ResultLineage.SelectMany(item => item.Diagnostics), diagnostic =>
+            diagnostic.Code == "process.adapter.ungrounded_outcome_reference");
+        Assert.DoesNotContain(detail.RecentEvents.SelectMany(item => item.Diagnostics), diagnostic =>
+            diagnostic.Code == "process.adapter.ungrounded_outcome_reference");
+        var eventSummary = Assert.Single(history.Events).Summary;
+        Assert.Contains("QA selected repair branch", eventSummary, StringComparison.Ordinal);
+        Assert.DoesNotContain("Feature intake", eventSummary, StringComparison.Ordinal);
+        var liveRun = Assert.Single(live.Runs);
+        Assert.Equal("process.adapter.branch_outcome_defect_evidence_missing", Assert.Single(liveRun.Diagnostics).Code);
+        Assert.Equal("process.adapter.branch_outcome_defect_evidence_missing", Assert.Single(liveRun.CurrentStep!.Diagnostics).Code);
+    }
+
+    [Fact]
+    public async Task Runtime_projection_readback_includes_operator_diagnostic_details()
+    {
+        await using var dbContext = CreateDbContext();
+        var store = new EfProcessProjectionStore(dbContext);
+        var runId = ProcessRunId.New();
+        var planId = ProcessInstancePlanId.New();
+        var blockedStepId = ProcessStepInstanceId.New();
+        await ProjectAsync(
+            store,
+            StoredEvent(1, runId, ProcessRuntimeEventTypes.StepBlocked, Now.AddMinutes(-5)),
+            latestKnownGlobalSequence: 1);
+        var diagnosticSummary = "Accepted branch 'quality-accepted' is missing acceptance criteria evidence for AC-001 and AC-002.";
+        var state = new ProcessRuntimeStateSnapshot(
+            runId,
+            runId,
+            planId,
+            "sha256:plan",
+            ProcessRuntimeStatus.Active,
+            [
+                new ProcessRuntimeStepState(
+                    blockedStepId,
+                    ProcessStepDefinitionId.New(),
+                    ProcessRuntimeStepStatus.Blocked,
+                    IsExecutable: true,
+                    AttemptNumber: 1,
+                    DependencyStepIds: new HashSet<ProcessStepInstanceId>(),
+                    RequiredArtifactSlots: new HashSet<ArtifactSlotId>(),
+                    ActiveClaimToken: null,
+                    CompletedResultKey: StrategyResultIdempotencyKey.New())
+            ],
+            [],
+            [
+                new StrategyResultReceipt(
+                    blockedStepId,
+                    new StrategyId("strategy.adapter.workflow.execute"),
+                    StrategyResultIdempotencyKey.New(),
+                    StrategyOutcome.NeedsManager,
+                    ProcessRuntimeStepStatus.Blocked,
+                    "sha256:operator-diagnostic",
+                    [
+                        new StrategyResultDiagnosticReceipt(
+                            "process.adapter.acceptance_criteria_missing",
+                            StrategyDiagnosticSensitivity.Normal,
+                            "sha256:operator-diagnostic",
+                            diagnosticSummary,
+                            RestrictedEvidenceReference: null,
+                            ProcessDiagnosticRetrySafety.SafeToRetry,
+                            ProcessDiagnosticIdempotencyClassification.Idempotent)
+                    ],
+                    [],
+                    null)
+            ],
+            new HashSet<ArtifactSlotId>(),
+            Now.AddMinutes(-1));
+        var query = new ProcessRuntimeProjectionQueryService(
+            store,
+            ProcessProjectionJsonCodec.Default,
+            new FixedProcessProjectionClock(Now),
+            new InMemoryRuntimeStateStore(state),
+            new InMemoryAssignmentStore(
+            [
+                CreateAssignment(runId, planId, blockedStepId, "qa-validation", "Delivery QA Observer")
+            ]));
+
+        var detail = await query.GetRunDetailAsync(new ProcessRunDetailQuery(runId));
+        var history = await query.GetRunHistoryAsync(new ProcessRunHistoryQuery(runId, Now.AddHours(-1), Now, Take: 10));
+        var live = await query.GetLiveProcessesAsync(new ProcessLiveProcessesQuery(Now, TimeSpan.FromHours(1), Take: 10));
+
+        Assert.NotNull(detail);
+        var detailDiagnostic = Assert.Single(detail.Diagnostics);
+        Assert.Equal("process.adapter.acceptance_criteria_missing", detailDiagnostic.Code);
+        Assert.NotNull(detailDiagnostic.OperatorDetails);
+        var details = detailDiagnostic.OperatorDetails!;
+        Assert.Equal("acceptance-criteria-gate", details.GateId);
+        Assert.Equal("quality-accepted", details.BranchOutcomeKey);
+        Assert.Equal(["AC-001", "AC-002"], details.FailedCriteriaIds);
+        Assert.Contains("criterion-by-criterion", details.NextAction, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal("process.adapter.acceptance_criteria_missing", Assert.Single(history.Events).Diagnostics.Single().Code);
+        var liveDetails = Assert.Single(Assert.Single(live.Runs).CurrentStep!.Diagnostics).OperatorDetails;
+        Assert.NotNull(liveDetails);
+        Assert.Equal("acceptance-criteria-gate", liveDetails!.GateId);
+    }
+
+    [Fact]
     public async Task Runtime_workspace_operator_actions_include_failed_tool_receipts_for_blocked_step()
     {
         await using var dbContext = CreateDbContext();

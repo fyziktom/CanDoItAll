@@ -37,6 +37,118 @@ public sealed class ProcessPersistenceStoreTests
         Assert.NotNull(loaded);
         Assert.Equal(ProcessRuntimeStatus.Completed, loaded.Status);
         Assert.Contains(loaded.AvailableArtifactSlots, slot => slot == RequiredArtifactSlotId);
+        var loadedStep = Assert.Single(loaded.Steps);
+        Assert.Contains(loadedStep.ProducedArtifactSlots, slot => slot == RequiredArtifactSlotId);
+        Assert.Contains(loadedStep.RequiredRuntimeToolNames, toolName => toolName == "runtime-tool");
+        var loadedInputArtifact = Assert.Single(loaded.ConnectedInputArtifacts);
+        Assert.Equal(ProcessArtifactInputAvailability.Available, loadedInputArtifact.Availability);
+        Assert.Equal(RequiredArtifactSlotId, loadedInputArtifact.RequiredSlotId);
+    }
+
+    [Fact]
+    public async Task Commit_round_trips_strategy_result_diagnostics_and_artifact_lineage()
+    {
+        await using var dbContext = CreateDbContext();
+        var unitOfWork = new EfProcessRuntimeUnitOfWork(dbContext);
+        var request = NewCommitRequest(includeArtifactLedger: true);
+        var stepId = request.Mutation.State.AppliedResults.Single().StepInstanceId;
+        var idempotencyKey = StrategyResultIdempotencyKey.New();
+        var receipt = new StrategyResultReceipt(
+            stepId,
+            new StrategyId("strategy.test"),
+            idempotencyKey,
+            StrategyOutcome.NeedsManager,
+            ProcessRuntimeStepStatus.Blocked,
+            "hash:blocked-result",
+            [
+                new StrategyResultDiagnosticReceipt(
+                    "process.runtime.test_blocked",
+                    StrategyDiagnosticSensitivity.Normal,
+                    "hash:diagnostic",
+                    "Unit test blocked.",
+                    RestrictedEvidenceReference: null,
+                    ProcessDiagnosticRetrySafety.UnsafeToRetry,
+                    ProcessDiagnosticIdempotencyClassification.Idempotent)
+            ],
+            [
+                new StrategyResultArtifactReceipt(
+                    RequiredArtifactSlotId,
+                    new ArtifactInstanceId(new Guid("9facff93-8f8b-4736-921e-916de95df35f")),
+                    "hash:artifact")
+            ],
+            new ProcessRecoveryDecisionReceipt(
+                ProcessFailureCategory.MissingArtifact,
+                ProcessRecoveryDecisionKind.ManagerRequired,
+                "process.runtime.test_blocked",
+                "unit-test-policy",
+                "Unit test recovery decision.")
+            {
+                RouteKind = ProcessRecoveryRouteKind.UpstreamStepRework,
+                ResponsibleStepInstanceId = stepId
+            });
+        var state = request.Mutation.State with
+        {
+            AppliedResults = [receipt]
+        };
+        var mutation = request.Mutation with
+        {
+            State = state
+        };
+
+        await unitOfWork.CommitAsync(request with { Mutation = mutation });
+
+        var loaded = await unitOfWork.LoadAsync(state.RunId);
+        Assert.NotNull(loaded);
+        var loadedReceipt = Assert.Single(loaded.AppliedResults);
+        Assert.Equal("process.runtime.test_blocked", Assert.Single(loadedReceipt.Diagnostics).Code);
+        Assert.Equal(RequiredArtifactSlotId, Assert.Single(loadedReceipt.ProducedArtifacts).SlotId);
+        Assert.NotNull(loadedReceipt.RecoveryDecision);
+        Assert.Equal(ProcessFailureCategory.MissingArtifact, loadedReceipt.RecoveryDecision.FailureCategory);
+        Assert.Equal(ProcessRecoveryRouteKind.UpstreamStepRework, loadedReceipt.RecoveryDecision.RouteKind);
+        Assert.Equal(stepId, loadedReceipt.RecoveryDecision.ResponsibleStepInstanceId);
+    }
+
+    [Fact]
+    public async Task Commit_round_trips_generic_artifact_payload_schema_metadata()
+    {
+        await using var dbContext = CreateDbContext();
+        var unitOfWork = new EfProcessRuntimeUnitOfWork(dbContext);
+        var request = NewCommitRequest(includeArtifactLedger: false);
+        var step = Assert.Single(request.Mutation.State.Steps);
+        var descriptor = new ProcessArtifactSlotDescriptor(
+            RequiredArtifactSlotId,
+            "architecture:solution-context",
+            "architecture",
+            "solution-context",
+            "Solution context",
+            "Decision",
+            "artifacts/process-runs/test/steps/architecture.md",
+            ProcessArtifactMaterializationMode.AgentWritten)
+        {
+            PayloadSchema = "example.solution-context/v1"
+        };
+        var state = request.Mutation.State with
+        {
+            Steps =
+            [
+                step with
+                {
+                    ArtifactDescriptors = [descriptor]
+                }
+            ]
+        };
+        var mutation = request.Mutation with
+        {
+            State = state
+        };
+
+        await unitOfWork.CommitAsync(request with { Mutation = mutation });
+
+        var loaded = await unitOfWork.LoadAsync(state.RunId);
+
+        Assert.NotNull(loaded);
+        var loadedDescriptor = Assert.Single(Assert.Single(loaded.Steps).ArtifactDescriptors);
+        Assert.Equal("example.solution-context/v1", loadedDescriptor.PayloadSchema);
     }
 
     [Fact]
@@ -302,6 +414,8 @@ public sealed class ProcessPersistenceStoreTests
         var stepId = ProcessStepInstanceId.New();
         var producedSlotId = ArtifactSlotId.New();
         var requiredSlotId = ArtifactSlotId.New();
+        var workflowId = Guid.NewGuid();
+        var workflowVersionId = Guid.NewGuid();
         var assignment = new ProcessRuntimeStepAssignment(
             runId,
             ProcessInstancePlanId.New(),
@@ -310,7 +424,7 @@ public sealed class ProcessPersistenceStoreTests
             "blazor-engineer",
             "lead-engineer",
             "Blazor engineer",
-            ProcessLaunchExecutorKinds.Agent,
+            ProcessLaunchExecutorKinds.Workflow,
             Guid.NewGuid().ToString("D"),
             "Blazor engineer",
             "Execute the step.",
@@ -326,9 +440,43 @@ public sealed class ProcessPersistenceStoreTests
                 ["RepositoryRoot"] = @"C:\programovani\dotnet\output"
             },
             new ProcessRuntimeBranchGate("validate-blazor-runtime", "repair-required"),
-            Now);
+            Now)
+        {
+            WorkflowBinding = new ProcessWorkflowExecutorBinding(
+                new ProcessWorkflowId(workflowId),
+                new ProcessWorkflowVersionId(workflowVersionId),
+                ProcessWorkflowOutputMappingKind.ProcessStepOutcome),
+            CapabilityScope = new ProcessCapabilityScope
+            {
+                Directives =
+                [
+                    new ProcessCapabilityScopeDirective
+                    {
+                        Kind = ProcessCapabilityScopeDirectiveKind.AllowOnly,
+                        Target = new ProcessCapabilityScopeTarget
+                        {
+                            Kind = ProcessCapabilityScopeTargetKind.RuntimeToolProviderKey,
+                            Value = "management.provider"
+                        },
+                        Reason = "Management-only step."
+                    }
+                ],
+                InstructionFragments =
+                [
+                    new ProcessScopedInstructionFragment
+                    {
+                        Key = "management-only",
+                        Title = "Management-only scope",
+                        Content = "Do not implement product changes."
+                    }
+                ]
+            }
+        };
 
         await store.SaveAsync([assignment]);
+        var persisted = await dbContext.RuntimeStepAssignments.SingleAsync(entity =>
+            entity.RunId == runId.Value && entity.StepInstanceId == stepId.Value);
+        Assert.Equal((int)ProcessWorkflowOutputMappingKind.ProcessStepOutcome, persisted.WorkflowOutputMapping);
         var loaded = await store.LoadAsync(runId, stepId);
 
         Assert.NotNull(loaded);
@@ -340,6 +488,14 @@ public sealed class ProcessPersistenceStoreTests
         Assert.True(loaded.LaunchVariables.TryGetValue("RepositoryRoot", out var repositoryRoot));
         Assert.Equal(@"C:\programovani\dotnet\output", repositoryRoot);
         Assert.Equal("repair-required", loaded.BranchGate?.RequiredOutcomeKey);
+        Assert.Equal(workflowId, loaded.WorkflowBinding?.WorkflowId.Value);
+        Assert.Equal(workflowVersionId, loaded.WorkflowBinding?.WorkflowVersionId?.Value);
+        Assert.Equal(ProcessWorkflowOutputMappingKind.ProcessStepOutcome, loaded.WorkflowBinding?.OutputMapping);
+        var directive = Assert.Single(loaded.CapabilityScope.Directives);
+        Assert.Equal(ProcessCapabilityScopeDirectiveKind.AllowOnly, directive.Kind);
+        Assert.Equal(ProcessCapabilityScopeTargetKind.RuntimeToolProviderKey, directive.Target.Kind);
+        Assert.Equal("management.provider", directive.Target.Value);
+        Assert.Equal("Do not implement product changes.", Assert.Single(loaded.CapabilityScope.InstructionFragments).Content);
     }
 
     [Fact]
@@ -513,6 +669,10 @@ public sealed class ProcessPersistenceStoreTests
                     new HashSet<ArtifactSlotId> { RequiredArtifactSlotId },
                     null,
                     StrategyResultIdempotencyKey.New())
+                {
+                    ProducedArtifactSlots = new HashSet<ArtifactSlotId> { RequiredArtifactSlotId },
+                    RequiredRuntimeToolNames = ["runtime-tool"]
+                }
             ],
             [],
             [
@@ -525,7 +685,20 @@ public sealed class ProcessPersistenceStoreTests
                     "hash:result")
             ],
             new HashSet<ArtifactSlotId> { RequiredArtifactSlotId },
-            updatedAtUtc);
+            updatedAtUtc)
+        {
+            ConnectedInputArtifacts =
+            [
+                new ProcessRuntimeInputArtifactReceipt(
+                    stepId,
+                    RequiredArtifactSlotId,
+                    ProcessArtifactInputAvailability.Available,
+                    ProducerStepInstanceId: null,
+                    ArtifactId: ArtifactInstanceId.New(),
+                    ContentHash: "hash:artifact",
+                    ConnectionHash: "hash:connected-input")
+            ]
+        };
     }
 
     private static ProcessRuntimeEventEnvelope NewEvent(

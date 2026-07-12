@@ -1,4 +1,5 @@
 using CanDoItAll.AgentFramework.Core;
+using CanDoItAll.Memory.SourceGateway;
 using CanDoItAll.SharedKernel;
 
 namespace CanDoItAll.Modules.CognitiveMemory;

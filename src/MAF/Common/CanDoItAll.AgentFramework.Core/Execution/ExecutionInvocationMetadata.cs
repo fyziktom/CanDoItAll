@@ -8,23 +8,28 @@ public static class ExecutionInvocationMetadata
 {
     public const string MaxStructuredOutputRepairAttemptsMetadataKey = "agentMaxStructuredOutputRepairAttempts";
     public const string RequireStructuredOutputValidationMetadataKey = "agentRequireStructuredOutputValidation";
+    public const string AllowRequiredFinalizerStructuredOutputRecoveryMetadataKey = "agentAllowRequiredFinalizerStructuredOutputRecovery";
     public const string AllowedExternalTargetAliasesMetadataKey = "agentAllowedExternalTargetAliases";
     public const string ReadOnlyExternalTargetAliasesMetadataKey = "agentReadOnlyExternalTargetAliases";
+    public const string AllowedManagedArtifactReadRefsMetadataKey = "agentAllowedManagedArtifactReadRefs";
     public const string ProcessCooperationModeMetadataKey = "agentProcessCooperationMode";
     public const string ProcessWorkspaceToolProfileMetadataKey = "agentProcessWorkspaceToolProfile";
     public const string ProcessCooperationSummaryMetadataKey = "agentProcessCooperationSummary";
     public const string ProcessBrowserToolsAllowedMetadataKey = "agentProcessBrowserToolsAllowed";
-    public const string ProcessScaffoldToolOnlyMetadataKey = "agentProcessScaffoldToolOnly";
     public const string ProcessStepExecutionBoundaryMetadataKey = "agentProcessStepExecutionBoundary";
     public const string ProcessStepAllowedOperationsMetadataKey = "agentProcessStepAllowedOperations";
     public const string ProcessStepTargetScopeMetadataKey = "agentProcessStepTargetScope";
     public const string ProcessStepAllowsProductMutationMetadataKey = "agentProcessStepAllowsProductMutation";
+    public const string ProcessStepRequiresProductMutationBeforeManagedOutputMetadataKey = "agentProcessStepRequiresProductMutationBeforeManagedOutput";
+    public const string ProcessProductMutationToolNamesMetadataKey = "agentProcessProductMutationToolNames";
+    public const string ProcessProductMutationRequiredBranchOutcomeKeysMetadataKey = "agentProcessProductMutationRequiredBranchOutcomeKeys";
     public const string ProcessGroundedTargetAliasLedgerMetadataKey = "agentProcessGroundedTargetAliasLedger";
     public const string ContextWorkspaceScopeMetadataKey = "agentContextWorkspaceScope";
     public const string ProjectStructureLaunchAgentMetadataKey = "agentProjectStructureLaunchAgent";
     public const string ProjectStructureProcessNodeContextMetadataKey = "agentProjectStructureProcessNodeContext";
     public const string RuntimeToolProvidersEnabledMetadataKey = "agentRuntimeToolProvidersEnabled";
     public const string WorkspaceToolsEnabledMetadataKey = "agentWorkspaceToolsEnabled";
+    public const string RuntimeCapabilityScopeOverrideMetadataKey = "agentRuntimeCapabilityScopeOverride";
     public const int DefaultGovernedRepairAttempts = 1;
     public const int MaxRepairAttempts = 2;
     private const string ContextWorkspaceScopeKindPropertyName = "kind";
@@ -61,6 +66,8 @@ public static class ExecutionInvocationMetadata
         }
 
         metadata[RequireStructuredOutputValidationMetadataKey] = policy.RequireStructuredOutputValidation;
+        metadata[AllowRequiredFinalizerStructuredOutputRecoveryMetadataKey] =
+            policy.AllowRequiredFinalizerStructuredOutputRecovery;
         return metadata.ToJsonString(AgentOutputJson.SerializerOptions);
     }
 
@@ -110,6 +117,23 @@ public static class ExecutionInvocationMetadata
     {
         var metadata = ParseObject(metadataJson);
         metadata[WorkspaceToolsEnabledMetadataKey] = enabled;
+        return metadata.ToJsonString(AgentOutputJson.SerializerOptions);
+    }
+
+    public static string ApplyRuntimeCapabilityScopeOverride(
+        string? metadataJson,
+        AgentRuntimeCapabilityScopeOverride? scopeOverride)
+    {
+        var metadata = ParseObject(metadataJson);
+        if (scopeOverride is null || scopeOverride.IsEmpty)
+        {
+            metadata.Remove(RuntimeCapabilityScopeOverrideMetadataKey);
+            return metadata.ToJsonString(AgentOutputJson.SerializerOptions);
+        }
+
+        metadata[RuntimeCapabilityScopeOverrideMetadataKey] = JsonSerializer.SerializeToNode(
+            scopeOverride,
+            AgentOutputJson.SerializerOptions);
         return metadata.ToJsonString(AgentOutputJson.SerializerOptions);
     }
 
@@ -242,6 +266,17 @@ public static class ExecutionInvocationMetadata
         return TryReadBoolean(run.MetadataJson, RequireStructuredOutputValidationMetadataKey) ?? true;
     }
 
+    public static bool ResolveAllowRequiredFinalizerStructuredOutputRecovery(
+        ExecutionRunRecord run)
+    {
+        ArgumentNullException.ThrowIfNull(run);
+
+        return TryReadBoolean(
+                   run.MetadataJson,
+                   AllowRequiredFinalizerStructuredOutputRecoveryMetadataKey) ??
+               false;
+    }
+
     public static IReadOnlyList<string> ResolveAllowedExternalTargetAliases(
         ExecutionRunRecord run)
     {
@@ -256,6 +291,27 @@ public static class ExecutionInvocationMetadata
         ArgumentNullException.ThrowIfNull(run);
 
         return ResolveExternalTargetAliases(run, ReadOnlyExternalTargetAliasesMetadataKey);
+    }
+
+    public static IReadOnlyList<string> ResolveAllowedManagedArtifactReadRefs(ExecutionRunRecord run)
+    {
+        ArgumentNullException.ThrowIfNull(run);
+
+        if (!IsTrustedGovernedProcessRun(run))
+        {
+            return [];
+        }
+
+        return ResolveStringArray(run.MetadataJson, AllowedManagedArtifactReadRefsMetadataKey)
+            .Select(WorkspaceScopeDescriptor.NormalizeRelativePath)
+            .Where(path =>
+                WorkspaceProcessRunArtifactPath.TryResolveRunId(path, out var runId, out var artifactSuffix) &&
+                Guid.TryParse(runId, out _) &&
+                !string.IsNullOrWhiteSpace(artifactSuffix))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(path => path, StringComparer.OrdinalIgnoreCase)
+            .Take(256)
+            .ToArray();
     }
 
     public static AgentProcessCooperationMode? ResolveProcessCooperationMode(ExecutionRunRecord run)
@@ -302,15 +358,7 @@ public static class ExecutionInvocationMetadata
         ArgumentNullException.ThrowIfNull(run);
 
         return !IsTrustedGovernedProcessRun(run) ||
-               TryReadBoolean(run.MetadataJson, ProcessBrowserToolsAllowedMetadataKey) != false;
-    }
-
-    public static bool ResolveProcessScaffoldToolOnly(ExecutionRunRecord run)
-    {
-        ArgumentNullException.ThrowIfNull(run);
-
-        return IsTrustedGovernedProcessRun(run) &&
-               TryReadBoolean(run.MetadataJson, ProcessScaffoldToolOnlyMetadataKey) == true;
+               TryReadBoolean(run.MetadataJson, ProcessBrowserToolsAllowedMetadataKey) == true;
     }
 
     public static bool ResolveRuntimeToolProvidersEnabled(ExecutionRunRecord run)
@@ -337,6 +385,50 @@ public static class ExecutionInvocationMetadata
         }
 
         return ResolveProcessAllowsProductMutation(ParseObject(run.MetadataJson));
+    }
+
+    public static bool ResolveProcessRequiresProductMutationBeforeManagedOutput(ExecutionRunRecord run)
+    {
+        ArgumentNullException.ThrowIfNull(run);
+
+        return IsTrustedGovernedProcessRun(run) &&
+               TryReadBoolean(
+                   run.MetadataJson,
+                   ProcessStepRequiresProductMutationBeforeManagedOutputMetadataKey) == true;
+    }
+
+    public static IReadOnlyList<string> ResolveProcessProductMutationToolNames(ExecutionRunRecord run)
+    {
+        ArgumentNullException.ThrowIfNull(run);
+
+        if (!IsTrustedGovernedProcessRun(run))
+        {
+            return [];
+        }
+
+        return ResolveStringArray(run.MetadataJson, ProcessProductMutationToolNamesMetadataKey)
+            .Where(item => !string.IsNullOrWhiteSpace(item))
+            .Select(item => item.Trim())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(item => item, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+    }
+
+    public static IReadOnlyList<string> ResolveProcessProductMutationRequiredBranchOutcomeKeys(ExecutionRunRecord run)
+    {
+        ArgumentNullException.ThrowIfNull(run);
+
+        if (!IsTrustedGovernedProcessRun(run))
+        {
+            return [];
+        }
+
+        return ResolveStringArray(run.MetadataJson, ProcessProductMutationRequiredBranchOutcomeKeysMetadataKey)
+            .Where(item => !string.IsNullOrWhiteSpace(item))
+            .Select(item => item.Trim())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(item => item, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
     }
 
     public static IReadOnlyList<string> ResolveProcessStepAllowedOperations(ExecutionRunRecord run)
@@ -390,6 +482,21 @@ public static class ExecutionInvocationMetadata
         return IsTrustedGovernedProcessRun(run)
             ? ResolveProjectStructureProcessNodeContext(run.MetadataJson)
             : null;
+    }
+
+    public static AgentRuntimeCapabilityScopeOverride? ResolveRuntimeCapabilityScopeOverride(ExecutionRunRecord run)
+    {
+        ArgumentNullException.ThrowIfNull(run);
+
+        if (!IsTrustedGovernedProcessRun(run))
+        {
+            return null;
+        }
+
+        var scope = ReadTrustedRuntimeCapabilityScopeOverride(
+            run.MetadataJson,
+            RuntimeCapabilityScopeOverrideMetadataKey);
+        return scope is { IsEmpty: false } ? scope : null;
     }
 
     private static JsonObject ParseObject(string? metadataJson)
@@ -493,6 +600,39 @@ public static class ExecutionInvocationMetadata
         }
     }
 
+    private static AgentRuntimeCapabilityScopeOverride? ReadTrustedRuntimeCapabilityScopeOverride(
+        string? metadataJson,
+        string propertyName)
+    {
+        if (string.IsNullOrWhiteSpace(metadataJson))
+        {
+            return null;
+        }
+
+        try
+        {
+            using var document = JsonDocument.Parse(metadataJson);
+            if (document.RootElement.ValueKind != JsonValueKind.Object)
+            {
+                throw new InvalidOperationException("Trusted governed process metadata must be a JSON object.");
+            }
+
+            if (!document.RootElement.TryGetProperty(propertyName, out var value))
+            {
+                return null;
+            }
+
+            return value.Deserialize<AgentRuntimeCapabilityScopeOverride>(AgentOutputJson.SerializerOptions)
+                ?? throw new InvalidOperationException("Trusted governed process capability scope metadata deserialized to null.");
+        }
+        catch (JsonException exception)
+        {
+            throw new InvalidOperationException(
+                "Trusted governed process capability scope metadata is malformed.",
+                exception);
+        }
+    }
+
     private static bool ResolveProcessAllowsProductMutation(JsonObject metadata)
     {
         if (metadata[ProcessStepAllowsProductMutationMetadataKey] is JsonValue value &&
@@ -528,6 +668,8 @@ public static class ExecutionInvocationMetadata
     private static bool HasProcessBoundaryMetadata(JsonObject metadata)
     {
         return metadata.ContainsKey(ProcessStepAllowsProductMutationMetadataKey) ||
+               metadata.ContainsKey(ProcessStepRequiresProductMutationBeforeManagedOutputMetadataKey) ||
+               metadata.ContainsKey(ProcessProductMutationRequiredBranchOutcomeKeysMetadataKey) ||
                metadata.ContainsKey(ProcessStepAllowedOperationsMetadataKey) ||
                metadata.ContainsKey(ProcessStepTargetScopeMetadataKey) ||
                metadata.ContainsKey(ProcessStepExecutionBoundaryMetadataKey);

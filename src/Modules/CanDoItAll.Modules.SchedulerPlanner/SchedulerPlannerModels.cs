@@ -296,6 +296,61 @@ public sealed class SchedulerHistoryQuery
     public int Take { get; set; } = 50;
 }
 
+public sealed record SchedulerTargetLaunchContext
+{
+    public SchedulerTargetLaunchContext(
+        Guid planId,
+        Guid planRunId,
+        WorkflowSchedulerFireId schedulerFireId,
+        DateTimeOffset firedAtUtc,
+        WorkflowLaunchCorrelationId correlationId)
+    {
+        if (planId == Guid.Empty)
+        {
+            throw new ArgumentException("Scheduler plan id cannot be empty.", nameof(planId));
+        }
+
+        if (planRunId == Guid.Empty)
+        {
+            throw new ArgumentException("Scheduler plan run id cannot be empty.", nameof(planRunId));
+        }
+
+        if (schedulerFireId.Value == Guid.Empty)
+        {
+            throw new ArgumentException("Scheduler fire id cannot be empty.", nameof(schedulerFireId));
+        }
+
+        if (firedAtUtc == default)
+        {
+            throw new ArgumentException("Scheduler fired-at timestamp is required.", nameof(firedAtUtc));
+        }
+
+        if (string.IsNullOrWhiteSpace(correlationId.Value))
+        {
+            throw new ArgumentException("Scheduler launch correlation id is required.", nameof(correlationId));
+        }
+
+        PlanId = planId;
+        PlanRunId = planRunId;
+        SchedulerFireId = schedulerFireId;
+        FiredAtUtc = firedAtUtc;
+        CorrelationId = correlationId;
+        IdempotencyKey = new WorkflowLaunchIdempotencyKey($"scheduler-plan-run:{planRunId:N}");
+    }
+
+    public Guid PlanId { get; }
+
+    public Guid PlanRunId { get; }
+
+    public WorkflowSchedulerFireId SchedulerFireId { get; }
+
+    public DateTimeOffset FiredAtUtc { get; }
+
+    public WorkflowLaunchCorrelationId CorrelationId { get; }
+
+    public WorkflowLaunchIdempotencyKey IdempotencyKey { get; }
+}
+
 public sealed record SchedulerTargetLaunchResult(
     SchedulerPlanTargetKind TargetKind,
     Guid TargetRunId,

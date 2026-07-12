@@ -50,6 +50,11 @@ internal sealed class ProcessRuntimeStateEntityConfiguration : IEntityTypeConfig
             .WithOne(slot => slot.RuntimeState)
             .HasForeignKey(slot => slot.RunId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        builder.HasMany(state => state.ConnectedInputArtifacts)
+            .WithOne(artifact => artifact.RuntimeState)
+            .HasForeignKey(artifact => artifact.RunId)
+            .OnDelete(DeleteBehavior.Cascade);
     }
 }
 
@@ -66,6 +71,7 @@ internal sealed class ProcessRuntimeStepAssignmentEntityConfiguration : IEntityT
         builder.Property(assignment => assignment.ExecutorKind).HasMaxLength(128).IsRequired();
         builder.Property(assignment => assignment.ExecutorId).HasMaxLength(256).IsRequired();
         builder.Property(assignment => assignment.ExecutorDisplayName).HasMaxLength(512).IsRequired();
+        builder.Property(assignment => assignment.WorkflowOutputMapping);
         builder.Property(assignment => assignment.Prompt).IsRequired();
         builder.Property(assignment => assignment.ReadinessHash).HasMaxLength(128).IsRequired();
         builder.Property(assignment => assignment.AssignmentReason).HasMaxLength(2048).IsRequired();
@@ -74,11 +80,13 @@ internal sealed class ProcessRuntimeStepAssignmentEntityConfiguration : IEntityT
         builder.Property(assignment => assignment.AllowedOperations).IsRequired();
         builder.Property(assignment => assignment.OperationTargetScope).HasMaxLength(128).IsRequired();
         builder.Property(assignment => assignment.LaunchVariablesJson).IsRequired();
+        builder.Property(assignment => assignment.CapabilityScopeJson).IsRequired();
         builder.Property(assignment => assignment.BranchGateSourceStepKey).HasMaxLength(256);
         builder.Property(assignment => assignment.BranchGateRequiredOutcomeKey).HasMaxLength(256);
         builder.HasIndex(assignment => assignment.PlanId);
         builder.HasIndex(assignment => new { assignment.RunId, assignment.StepKey }).IsUnique();
         builder.HasIndex(assignment => new { assignment.ExecutorKind, assignment.ExecutorId });
+        builder.HasIndex(assignment => new { assignment.WorkflowId, assignment.WorkflowVersionId });
     }
 }
 
@@ -91,6 +99,10 @@ internal sealed class ProcessRuntimeStepEntityConfiguration : IEntityTypeConfigu
         builder.Property(step => step.Status).HasConversion<string>().HasMaxLength(64).IsRequired();
         builder.Property(step => step.DependencyStepIds).IsRequired();
         builder.Property(step => step.RequiredArtifactSlotIds).IsRequired();
+        builder.Property(step => step.ProducedArtifactSlotIds).IsRequired();
+        builder.Property(step => step.RequiredRuntimeToolNamesJson).IsRequired();
+        builder.Property(step => step.ArtifactDescriptorsJson).IsRequired();
+        builder.Property(step => step.SubprocessArtifactMappingsJson).IsRequired();
         builder.HasIndex(step => new { step.RunId, step.Status });
         builder.HasIndex(step => new { step.RunId, step.ActiveClaimToken });
     }
@@ -119,6 +131,9 @@ internal sealed class ProcessStrategyResultReceiptEntityConfiguration : IEntityT
         builder.Property(receipt => receipt.Outcome).HasMaxLength(64).IsRequired();
         builder.Property(receipt => receipt.AppliedStepStatus).HasConversion<string>().HasMaxLength(64).IsRequired();
         builder.Property(receipt => receipt.ResultHash).HasMaxLength(128).IsRequired();
+        builder.Property(receipt => receipt.DiagnosticsJson).IsRequired();
+        builder.Property(receipt => receipt.ProducedArtifactsJson).IsRequired();
+        builder.Property(receipt => receipt.RecoveryDecisionJson);
         builder.HasIndex(receipt => new { receipt.StepInstanceId, receipt.StrategyId, receipt.IdempotencyKey }).IsUnique();
     }
 }
@@ -129,6 +144,27 @@ internal sealed class ProcessRuntimeAvailableArtifactSlotEntityConfiguration : I
     {
         builder.ToTable("process_runtime_available_artifact_slots");
         builder.HasKey(slot => new { slot.RunId, slot.SlotId });
+    }
+}
+
+internal sealed class ProcessRuntimeInputArtifactEntityConfiguration : IEntityTypeConfiguration<ProcessRuntimeInputArtifactEntity>
+{
+    public void Configure(EntityTypeBuilder<ProcessRuntimeInputArtifactEntity> builder)
+    {
+        builder.ToTable("process_runtime_input_artifacts");
+        builder.HasKey(artifact => new
+        {
+            artifact.RunId,
+            artifact.ConsumerStepInstanceId,
+            artifact.RequiredSlotId,
+            artifact.ConnectionHash
+        });
+        builder.Property(artifact => artifact.Availability).HasConversion<string>().HasMaxLength(64).IsRequired();
+        builder.Property(artifact => artifact.ContentHash).HasMaxLength(128).IsRequired();
+        builder.Property(artifact => artifact.ConnectionHash).HasMaxLength(128).IsRequired();
+        builder.HasIndex(artifact => new { artifact.RunId, artifact.ConsumerStepInstanceId, artifact.Availability });
+        builder.HasIndex(artifact => new { artifact.RunId, artifact.RequiredSlotId });
+        builder.HasIndex(artifact => new { artifact.RunId, artifact.ProducerStepInstanceId });
     }
 }
 

@@ -26,12 +26,12 @@
     "canObserveOtherAgents": true,
     "canScheduleWork": false,
     "requiresApprovalForExternalCalls": true,
-    "autoApproveExternalCallsByDefault": false
+    "autoApproveExternalCallsByDefault": true
   },
   "access": {
     "projectStructure": {
       "canRead": true,
-      "canWrite": false,
+      "canWrite": true,
       "allowAllProjects": true,
       "allowedProjectIds": []
     },
@@ -48,6 +48,12 @@
       "allowAllStorageCatalogs": false,
       "allowedStorageCatalogIds": [],
       "allowedExternalTargetAliases": []
+    },
+    "imageGeneration": {
+      "canGenerateImages": true,
+      "preferredProviderProfileKey": "openai-image-generation",
+      "defaultModel": "gpt-image-1-mini",
+      "canStoreImagesAsProjectAssets": true
     }
   },
   "tags": [

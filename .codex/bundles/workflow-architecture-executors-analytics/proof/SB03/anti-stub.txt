@@ -1,0 +1,18 @@
+Source audit commands:
+rg -n "document\.to-markdown|image\.inspect|image\.analyze" src -g '*.cs'
+rg -n "ProcessStartInfo|System\.Diagnostics\.Process|powershell|cmd\.exe|bash" src/MAF/WorkflowExecutors -g '*.cs'
+rg -n "MarkItDown|XLWorkbook|Image\.From|SixLabors" src/MAF/WorkflowExecutors/Standard -g '*.cs'
+
+Results:
+- The three stable executor ID literals occur only in WorkflowExecutorIds; adapters/descriptors reference the typed IDs.
+- No standard workflow executor exposes raw process/shell construction.
+- No standard executor embeds MarkItDown, ClosedXML workbook opening, or a duplicate image parser.
+
+Manual extension-point audit:
+- DocumentToMarkdownWorkflowExecutor maps settings/input/output and delegates IWorkspaceArtifactToolService.
+- ImageInspectWorkflowExecutor maps settings/input/output and delegates IWorkspaceImageOperationService.
+- ImageAnalyzeWorkflowExecutor maps provider/model/input/output and delegates IAgentImageAnalysisService; provider behavior remains in the MAF adapter.
+- SpreadsheetWorkflowExecutor delegates ISpreadsheetDocumentService.PreviewWorkbook.
+- WorkspaceFileWorkflowExecutor delegates IWorkspaceFileService.ListDirectory.
+- Gmail/Office365/Docker executors use narrow OAuth/API/grant/host ports; concrete implementations remain the production behavior owners.
+- command.process remains descriptor-only and non-runnable.

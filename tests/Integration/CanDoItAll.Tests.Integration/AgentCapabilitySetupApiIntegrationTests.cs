@@ -53,7 +53,7 @@ public sealed class AgentCapabilitySetupApiIntegrationTests
             {
                 Capability = CreateExternalToolCapability("api-external-audit"),
                 JsonInput = "{not-json",
-                CorrelationId = "SB11_API_TOOL"
+                CorrelationId = "API_TOOL"
             });
         var toolResult = await ReadJsonAsync<CapabilitySetupTestResult>(toolResponse);
 
@@ -62,7 +62,7 @@ public sealed class AgentCapabilitySetupApiIntegrationTests
             new CapabilityMcpSetupTestRequest
             {
                 Capability = CreateRemoteMcpCapability("api-browser-mcp"),
-                CorrelationId = "SB11_API_MCP"
+                CorrelationId = "API_MCP"
             });
         var mcpResult = await ReadJsonAsync<McpSetupTestResult>(mcpResponse);
 
@@ -89,7 +89,7 @@ public sealed class AgentCapabilitySetupApiIntegrationTests
                         }
                     ]
                 },
-                CorrelationId = "SB11_API_INVALID_POLICY"
+                CorrelationId = "API_INVALID_POLICY"
             });
         using var invalidPolicyJson = await ReadJsonDocumentAsync(invalidPolicyResponse);
 
@@ -124,7 +124,7 @@ public sealed class AgentCapabilitySetupApiIntegrationTests
                         }
                     ]
                 },
-                CorrelationId = "SB11_API_REQUIRED_DENIED"
+                CorrelationId = "API_REQUIRED_DENIED"
             });
         using var deniedRequiredJson = await ReadJsonDocumentAsync(deniedRequiredResponse);
 
@@ -132,7 +132,7 @@ public sealed class AgentCapabilitySetupApiIntegrationTests
         Assert.Contains(toolResult.Diagnostics, diagnostic =>
             diagnostic.Category == CapabilityDiagnosticCategory.JsonParse &&
             diagnostic.FieldPath == "$.jsonInput" &&
-            diagnostic.CorrelationId == "SB11_API_TOOL");
+            diagnostic.CorrelationId == "API_TOOL");
 
         Assert.False(mcpResult.IsSuccess);
         Assert.True(mcpResult.CleanupCompleted);
@@ -172,7 +172,7 @@ public sealed class AgentCapabilitySetupApiIntegrationTests
             diagnostic => IdentityPropertyEquals(diagnostic, AccessCapabilityKind.Tool, "api-required-audit") &&
                           EnumPropertyEquals(diagnostic, "category", CapabilityDiagnosticCategory.RequiredCapabilityDenied) &&
                           ValueObjectPropertyEquals(diagnostic, "ruleId", "deny-required-audit") &&
-                          StringPropertyEquals(diagnostic, "correlationId", "SB11_API_REQUIRED_DENIED"));
+                          StringPropertyEquals(diagnostic, "correlationId", "API_REQUIRED_DENIED"));
     }
 
     private static CapabilityEditorModel CreateExternalToolCapability(string key)

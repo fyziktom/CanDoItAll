@@ -1,64 +1,51 @@
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.AgentFramework.Workflows.Abstractions;
 
 namespace CanDoItAll.AgentFramework.Core;
 
 public sealed class WorkflowTestRunner(
     IWorkflowCatalogService catalog,
+    IWorkflowLaunchService launchService,
     IWorkflowRuntimeManager runtimeManager,
     IWorkflowRunStore runStore) : IWorkflowTestRunner
 {
+    private const string PreviewActorSubjectId = "workflow-test-runner";
+
     public async Task<WorkflowTestRunResult> RunAsync(
         WorkflowTestRunRequest request,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        var definition = await ResolveDefinitionAsync(request, cancellationToken);
-        if (definition is null)
+        if (request.ValidateOnly)
         {
-            return new WorkflowTestRunResult(
-                Succeeded: false,
-                new WorkflowValidationResult(
-                [
-                    new WorkflowValidationIssue(
-                        WorkflowValidationIssueCode.MissingName,
-                        "A saved workflow id or draft workflow definition is required.")
-                ]),
-                Run: null,
-                Events: [],
-                Artifacts: [],
-                PendingExternalRequests: [],
-                ErrorMessage: "Workflow definition was not found.");
+            return await ValidateOnlyAsync(request, cancellationToken);
         }
 
-        var validation = await catalog.ValidateDefinitionAsync(definition, cancellationToken);
-        if (!validation.Succeeded || request.ValidateOnly)
+        var selection = ResolveSelection(request);
+        if (selection is null)
         {
-            return new WorkflowTestRunResult(
-                validation.Succeeded,
-                validation,
-                Run: null,
-                Events: [],
-                Artifacts: [],
-                PendingExternalRequests: [],
-                ErrorMessage: validation.Succeeded ? string.Empty : "Workflow definition failed validation.");
+            return MissingDefinitionResult();
         }
 
         try
         {
-            var run = await runtimeManager.StartAsync(
-                definition,
-                new WorkflowRunStartRequest(
-                    definition.Id,
-                    definition.VersionId,
-                    string.IsNullOrWhiteSpace(request.InputJson) ? "{}" : request.InputJson,
-                    request.RequestedBackend,
-                    SourceProcessRunId: null,
-                    SourceProcessAssignmentId: null)
+            var launchResult = await launchService.LaunchAsync(
+                new WorkflowLaunchIntent(
+                    selection,
+                    WorkflowLaunchMode.Preview,
+                    new WorkflowLaunchOrigin.Preview(
+                        new WorkflowLaunchActor(WorkflowLaunchActorKind.Service, PreviewActorSubjectId),
+                        new WorkflowLaunchCorrelationId(Guid.NewGuid())),
+                    request.InputJson,
+                    WorkflowLaunchCompletionPolicy.WaitForStopped,
+                    new WorkflowLaunchIdempotency.NotRequested())
                 {
+                    RequestedBackend = request.RequestedBackend,
                     PreviewSimulationPlan = request.PreviewSimulationPlan
                 },
                 cancellationToken);
+            var run = launchResult.Run;
             var events = await runtimeManager.ListEventsAsync(run.RunId, cancellationToken);
             var artifacts = await runStore.ListArtifactsAsync(run.RunId, cancellationToken);
             var pendingExternalRequests = await runStore.ListPendingExternalRequestsAsync(run.RunId, cancellationToken);
@@ -66,7 +53,7 @@ public sealed class WorkflowTestRunner(
 
             return new WorkflowTestRunResult(
                 run.State is WorkflowRunState.Completed or WorkflowRunState.WaitingForInput or WorkflowRunState.Idle,
-                validation,
+                WorkflowValidationResult.Success,
                 run,
                 events,
                 artifacts,
@@ -76,33 +63,90 @@ public sealed class WorkflowTestRunner(
                 Checkpoints = checkpoints
             };
         }
-        catch (Exception exception) when (exception is InvalidOperationException or KeyNotFoundException)
+        catch (WorkflowLaunchValidationException exception)
         {
             return new WorkflowTestRunResult(
                 Succeeded: false,
-                validation,
+                exception.Validation,
                 Run: null,
                 Events: [],
                 Artifacts: [],
                 PendingExternalRequests: [],
                 ErrorMessage: exception.Message);
         }
+        catch (Exception exception) when (exception is InvalidOperationException or KeyNotFoundException or ArgumentException)
+        {
+            return FailureResult(exception.Message);
+        }
     }
 
-    private async Task<WorkflowDefinition?> ResolveDefinitionAsync(
+    private async Task<WorkflowTestRunResult> ValidateOnlyAsync(
         WorkflowTestRunRequest request,
         CancellationToken cancellationToken)
     {
         if (request.DraftDefinition is not null)
         {
-            return request.DraftDefinition;
+            var draftValidation = await catalog.ValidateDefinitionAsync(request.DraftDefinition, cancellationToken);
+            return ValidationResult(draftValidation);
         }
 
-        if (request.WorkflowId is not { } workflowId)
+        if (request.WorkflowId is not { } workflowId || request.VersionId is not { } versionId)
         {
-            return null;
+            return MissingDefinitionResult();
         }
 
-        return (await catalog.GetDefinitionAsync(workflowId, request.VersionId, cancellationToken))?.Definition;
+        var detail = await catalog.GetDefinitionAsync(workflowId, versionId, cancellationToken);
+        return detail is null
+            ? MissingDefinitionResult()
+            : ValidationResult(detail.Validation);
     }
+
+    private static WorkflowDefinitionSelection? ResolveSelection(WorkflowTestRunRequest request)
+        => request switch
+        {
+            { DraftDefinition: not null } => new WorkflowDefinitionSelection.DraftPreview(request.DraftDefinition),
+            { WorkflowId: { } workflowId, VersionId: { } versionId } =>
+                new WorkflowDefinitionSelection.ExactSavedVersion(workflowId, versionId),
+            _ => null
+        };
+
+    private static WorkflowTestRunResult ValidationResult(WorkflowValidationResult validation)
+        => new(
+            validation.Succeeded,
+            validation,
+            Run: null,
+            Events: [],
+            Artifacts: [],
+            PendingExternalRequests: [],
+            ErrorMessage: validation.Succeeded ? string.Empty : "Workflow definition failed validation.");
+
+    private static WorkflowTestRunResult MissingDefinitionResult()
+        => new(
+            Succeeded: false,
+            new WorkflowValidationResult(
+            [
+                new WorkflowValidationIssue(
+                    WorkflowValidationIssueCode.MissingName,
+                    "An exact saved workflow id and version or a draft workflow definition is required.")
+            ]),
+            Run: null,
+            Events: [],
+            Artifacts: [],
+            PendingExternalRequests: [],
+            ErrorMessage: "Workflow definition was not found.");
+
+    private static WorkflowTestRunResult FailureResult(string message)
+        => new(
+            Succeeded: false,
+            new WorkflowValidationResult(
+            [
+                new WorkflowValidationIssue(
+                    WorkflowValidationIssueCode.InvalidWorkflowSettings,
+                    message)
+            ]),
+            Run: null,
+            Events: [],
+            Artifacts: [],
+            PendingExternalRequests: [],
+            ErrorMessage: message);
 }

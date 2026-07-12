@@ -6,7 +6,7 @@ namespace CanDoItAll.Tests.Unit;
 public sealed class AgentFrameworkRuntimeToolReceiptTests
 {
     [Fact]
-    public void CreateRuntimeProviderToolReceipts_projects_successful_mutation_traces()
+    public void CreateRuntimeProviderToolReceipts_projects_successful_runtime_provider_traces()
     {
         var runId = Guid.NewGuid();
         var startedAtUtc = DateTimeOffset.UtcNow;
@@ -53,17 +53,29 @@ public sealed class AgentFrameworkRuntimeToolReceiptTests
 
         var receipts = AgentFrameworkWorkspaceExecutionService.CreateRuntimeProviderToolReceipts(run, response);
 
-        var receipt = Assert.Single(receipts);
-        Assert.Equal(runId, receipt.ExecutionRunId);
-        Assert.Equal("runtime-provider", receipt.ToolFamily);
-        Assert.Equal("project_structure_node_create", receipt.ToolName);
-        Assert.Equal("RuntimeProvider:Mutation", receipt.RiskClass);
-        Assert.Equal("PolicyEnforced", receipt.ApprovalMode);
-        Assert.Equal("RuntimeProviderPolicy", receipt.IsolationGuarantee);
-        Assert.Equal("Succeeded", receipt.ExitSummary);
-        Assert.Equal("project-structure.runtime-tools", receipt.RuntimeToolProviderKey);
-        Assert.Equal("Project structure runtime tools", receipt.RuntimeToolProviderName);
-        Assert.Contains("project_structure_node_create", receipt.RequestSummary, StringComparison.Ordinal);
+        Assert.Equal(2, receipts.Count);
+
+        var createReceipt = receipts.Single(receipt => receipt.ToolName == "project_structure_node_create");
+        Assert.Equal(runId, createReceipt.ExecutionRunId);
+        Assert.Equal("runtime-provider", createReceipt.ToolFamily);
+        Assert.Equal("RuntimeProvider:Mutation", createReceipt.RiskClass);
+        Assert.Equal("PolicyEnforced", createReceipt.ApprovalMode);
+        Assert.Equal("RuntimeProviderPolicy", createReceipt.IsolationGuarantee);
+        Assert.Equal("Succeeded", createReceipt.ExitSummary);
+        Assert.Equal("project-structure.runtime-tools", createReceipt.RuntimeToolProviderKey);
+        Assert.Equal("Project structure runtime tools", createReceipt.RuntimeToolProviderName);
+        Assert.Contains("project_structure_node_create", createReceipt.RequestSummary, StringComparison.Ordinal);
+
+        var readReceipt = receipts.Single(receipt => receipt.ToolName == "project_structure_read");
+        Assert.Equal(runId, readReceipt.ExecutionRunId);
+        Assert.Equal("runtime-provider", readReceipt.ToolFamily);
+        Assert.Equal("RuntimeProvider:Read", readReceipt.RiskClass);
+        Assert.Equal("PolicyEnforced", readReceipt.ApprovalMode);
+        Assert.Equal("RuntimeProviderPolicy", readReceipt.IsolationGuarantee);
+        Assert.Equal("Succeeded", readReceipt.ExitSummary);
+        Assert.Equal("project-structure.runtime-tools", readReceipt.RuntimeToolProviderKey);
+        Assert.Equal("Project structure runtime tools", readReceipt.RuntimeToolProviderName);
+        Assert.Contains("project_structure_read", readReceipt.RequestSummary, StringComparison.Ordinal);
     }
 
     private static ExecutionRunRecord CreateRun(Guid runId, DateTimeOffset now)

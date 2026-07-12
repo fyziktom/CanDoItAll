@@ -1,5 +1,6 @@
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.AgentFramework.Workflows.Abstractions;
 using CanDoItAll.AgentFramework.Workflows.Templates;
 using CanDoItAll.Components.BaseLib;
 using CanDoItAll.Components.CanvasLib;
@@ -52,6 +53,9 @@ public partial class WorkflowsPage
 
     [Inject]
     public IWorkflowRunStore RunStore { get; set; } = default!;
+
+    [Inject]
+    public IWorkflowAnalyticsQueryService AnalyticsQueryService { get; set; } = default!;
 
     [Inject]
     public IProjectStructureRuntimeGateway ProjectStructureGateway { get; set; } = default!;
@@ -109,6 +113,7 @@ public partial class WorkflowsPage
     private bool historyLoaded;
     private bool selectedDefinitionDetailLoaded;
     private bool selectedDefinitionDetailUnavailable;
+    private long analyticsRefreshVersion;
     private Task? componentLibraryLoadTask;
     private readonly HashSet<string> expandedWorkflowTreeNodeIds = [];
     private CanvasWorkbenchUiState templatePreviewCanvasUiState = CreateTemplatePreviewCanvasUiState("start");
@@ -291,6 +296,7 @@ public partial class WorkflowsPage
         WorkflowId? preferredDefinitionId = null,
         WorkflowRunId? preferredRunId = null)
     {
+        analyticsRefreshVersion++;
         var settingsTask = SettingsService.GetSettingsAsync();
         var definitionsTask = CatalogService.ListDefinitionsAsync();
         await Task.WhenAll(settingsTask, definitionsTask);
@@ -757,6 +763,11 @@ public partial class WorkflowsPage
                 NotificationService.Success("Workflow test completed", testResult.Run?.Summary ?? "Workflow run completed.");
             }
 
+            if (testResult.Run is not null)
+            {
+                analyticsRefreshVersion++;
+            }
+
             await LoadRunsPageAsync(
                 selectedDefinition.Id,
                 pageIndex: 0,
@@ -932,6 +943,7 @@ public partial class WorkflowsPage
 
     private async Task HandleCanvasPreviewRunCompletedAsync(WorkflowRunSnapshot run)
     {
+        analyticsRefreshVersion++;
         await LoadRunsPageAsync(run.WorkflowId, pageIndex: 0, preferredRunId: run.RunId);
         await OpenRunDetailDialogAsync(selectedRun ?? run);
     }
@@ -1016,13 +1028,13 @@ public partial class WorkflowsPage
     }
 
     private static bool WorkflowTabRequiresComponentLibrary(int index)
-        => index is EditorTabIndex or AnalyticsTabIndex;
+        => index == EditorTabIndex;
 
     private static bool WorkflowTabRequiresHistory(int index)
-        => index is HistoryTabIndex or AnalyticsTabIndex;
+        => index == HistoryTabIndex;
 
     private static bool WorkflowTabRequiresDefinitionDetail(int index)
-        => index is WorkflowsTabIndex or EditorTabIndex or AnalyticsTabIndex;
+        => index is WorkflowsTabIndex or EditorTabIndex;
 
     private bool ShouldLoadHistory(WorkflowRunId? preferredRunId)
         => preferredRunId.HasValue ||

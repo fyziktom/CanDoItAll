@@ -1,0 +1,15 @@
+SB01 host-backed validation limitation
+
+Command: dotnet test tests/Components/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj -nologo --no-build --filter "FullyQualifiedName~Plugins_page_shows_workflow_executors_from_plugin_descriptor" --blame-hang-timeout 30s
+ExitCode: 1
+Result: the component host made no test progress and the blame timeout captured TestResults/cd16094a-*/testhost_*_hangdump.dmp.
+
+Command: dotnet test tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj -nologo --no-build --filter "FullyQualifiedName~PluginCatalogIntegrationTests.PluginCatalog_api_returns_catalog_route" --blame-hang-timeout 60s
+ExitCode: 1
+Result: the pre-existing API test hung at ApiTestHost.CreateAsync and captured TestResults/225ab5b5-*/testhost_*_hangdump.dmp.
+
+Command: dotnet test tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj -nologo --no-build --filter "FullyQualifiedName~PluginCatalogIntegrationTests.BundledEmailContributionsPreserveDefaultsSchemasSimulationsAndPolicies" --blame-hang-timeout 60s
+ExitCode: 1
+Result: the new DB-backed assertion hung at the same ApiTestHost.CreateAsync boundary and captured TestResults/e965d255-*/testhost_*_hangdump.dmp.
+
+Assessment: this is an existing host/test-environment startup failure, not an observed contribution failure. The full solution compiles both suites, the non-hosted 129-test semantic unit gate passes, and the real Gmail/Office365 19-test integration gate passes. Exact hanging process trees were terminated after dump capture; no testhost process remained before the final build.

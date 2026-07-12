@@ -29,13 +29,13 @@ public sealed record AgentRuntimeContextIntent(
     string TargetScope,
     bool IsGovernedProcessStep,
     bool BrowserToolsAllowed,
-    bool ScaffoldToolOnly,
     bool AllowsProductMutation,
     AgentWorkspaceToolProfileKind? WorkspaceToolProfile,
     WorkspaceScopeDescriptor? WorkspaceScope,
     IReadOnlyList<string> AllowedOperations,
     bool RuntimeToolProvidersEnabled = true,
-    bool WorkspaceToolsEnabled = true)
+    bool WorkspaceToolsEnabled = true,
+    AgentRuntimeCapabilityScopeOverride? CapabilityScopeOverride = null)
 {
     public static AgentRuntimeContextIntent Empty { get; } = new(
         SourceKind: string.Empty,
@@ -45,13 +45,13 @@ public sealed record AgentRuntimeContextIntent(
         TargetScope: string.Empty,
         IsGovernedProcessStep: false,
         BrowserToolsAllowed: true,
-        ScaffoldToolOnly: false,
         AllowsProductMutation: true,
         WorkspaceToolProfile: null,
         WorkspaceScope: null,
         AllowedOperations: [],
         RuntimeToolProvidersEnabled: true,
-        WorkspaceToolsEnabled: true);
+        WorkspaceToolsEnabled: true,
+        CapabilityScopeOverride: null);
 }
 
 public sealed record AgentRuntimeContextManifestTotals(

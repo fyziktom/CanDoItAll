@@ -7,7 +7,28 @@ using System.Text.Json.Serialization;
 
 namespace CanDoItAll.Modules.Plugins;
 
-public sealed class Office365GraphClient(IHttpClientFactory httpClientFactory)
+public interface IOffice365WorkflowClient
+{
+    Task<PluginEmailMessageBatch> DownloadMessagesByCategoryAsync(
+        string accessToken,
+        string category,
+        int maxMessages,
+        CancellationToken cancellationToken = default);
+
+    Task<PluginEmailMessageBatch> DownloadOneUnprocessedMessageByAddressAsync(
+        string accessToken,
+        Office365MessageAddressFilterSettings settings,
+        CancellationToken cancellationToken = default);
+
+    Task<Office365MessageCategoryMutationResult> MarkMessageProcessedAsync(
+        string accessToken,
+        string messageId,
+        string? sourceCategory,
+        string processedCategory,
+        CancellationToken cancellationToken = default);
+}
+
+public sealed class Office365GraphClient(IHttpClientFactory httpClientFactory) : IOffice365WorkflowClient
 {
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
     private const string GraphBaseUrl = "https://graph.microsoft.com/v1.0";

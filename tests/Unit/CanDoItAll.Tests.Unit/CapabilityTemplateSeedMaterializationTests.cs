@@ -12,7 +12,7 @@ namespace CanDoItAll.Tests.Unit;
 public sealed class CapabilityTemplateSeedMaterializationTests
 {
     [Fact]
-    public void SB06_INV_TEMPLATE_001_default_pack_materializes_known_catalog_without_duplicate_keys()
+    public void INV_TEMPLATE_001_default_pack_materializes_known_catalog_without_duplicate_keys()
     {
         var pack = new CapabilityTemplatePackLoader().Load();
         var capabilities = CapabilityTemplateSeedMaterializer.MaterializeDefaultCapabilities(pack);
@@ -33,10 +33,12 @@ public sealed class CapabilityTemplateSeedMaterializationTests
         Assert.Equal(CanDoItAll.AgentFramework.Models.CapabilityKind.Skill, byKey["aspnet-core-skill"].Kind);
         Assert.Equal(CanDoItAll.AgentFramework.Models.CapabilityKind.Rag, byKey["workspace-source-rag"].Kind);
         Assert.DoesNotContain(byKey.Keys, key => string.Equals(key, "candoitall-bundle-workflow", StringComparison.OrdinalIgnoreCase));
+        Assert.DoesNotContain(capabilities, capability =>
+            capability.Kind == CanDoItAll.AgentFramework.Models.CapabilityKind.Memory);
     }
 
     [Fact]
-    public void SB06_INV_TEMPLATE_002_materialization_preserves_representative_configuration_json()
+    public void INV_TEMPLATE_002_materialization_preserves_representative_configuration_json()
     {
         var pack = new CapabilityTemplatePackLoader().Load();
         var capabilities = CapabilityTemplateSeedMaterializer.MaterializeDefaultCapabilities(pack)
@@ -76,6 +78,19 @@ public sealed class CapabilityTemplateSeedMaterializationTests
         Assert.Equal("inline", aspNetSkillJson.RootElement.GetProperty("skillSource").GetString());
         Assert.Equal("aspnet-core", aspNetSkillJson.RootElement.GetProperty("inlineSkill").GetProperty("name").GetString());
         Assert.Contains("ASP.NET Core", aspNetSkillJson.RootElement.GetProperty("inlineSkill").GetProperty("instructions").GetString(), StringComparison.Ordinal);
+
+        var developmentImageSkill = capabilities["development-image-analysis-guidance-inline-skill"];
+        Assert.Contains(developmentImageSkill.Tags, tag => string.Equals(tag, "development", StringComparison.Ordinal));
+        Assert.Contains(developmentImageSkill.Tags, tag => string.Equals(tag, "image-analysis", StringComparison.Ordinal));
+        using var developmentImageSkillJson = JsonDocument.Parse(developmentImageSkill.ConfigurationJson);
+        Assert.Equal("inline", developmentImageSkillJson.RootElement.GetProperty("skillSource").GetString());
+        Assert.Equal(
+            "development-image-analysis",
+            developmentImageSkillJson.RootElement.GetProperty("inlineSkill").GetProperty("name").GetString());
+        Assert.Contains(
+            "software-delivery process step asks for UI screenshot review",
+            developmentImageSkillJson.RootElement.GetProperty("inlineSkill").GetProperty("instructions").GetString(),
+            StringComparison.Ordinal);
 
         using var ragJson = JsonDocument.Parse(capabilities["workspace-source-rag"].ConfigurationJson);
         Assert.Equal(".", ragJson.RootElement.GetProperty("ragRoot").GetString());
@@ -157,7 +172,7 @@ public sealed class CapabilityTemplateSeedMaterializationTests
     }
 
     [Fact]
-    public void SB06_INV_TEMPLATE_003_invalid_templates_block_materialization_without_fallback()
+    public void INV_TEMPLATE_003_invalid_templates_block_materialization_without_fallback()
     {
         using var packDirectory = new TemporaryCapabilityTemplatePack(
             "capabilities.json",
@@ -208,7 +223,7 @@ public sealed class CapabilityTemplateSeedMaterializationTests
     }
 
     [Fact]
-    public void SB06_INV_TEMPLATE_004_agent_template_assignments_resolve_against_template_catalog()
+    public void INV_TEMPLATE_004_agent_template_assignments_resolve_against_template_catalog()
     {
         var pack = new CapabilityTemplatePackLoader().Load();
         var capabilities = CapabilityTemplateSeedMaterializer.MaterializeDefaultCapabilities(pack);
@@ -220,7 +235,7 @@ public sealed class CapabilityTemplateSeedMaterializationTests
     }
 
     [Fact]
-    public void SB06_INV_SEED_001_sandbox_seed_document_uses_template_backed_capability_catalog()
+    public void INV_SEED_001_sandbox_seed_document_uses_template_backed_capability_catalog()
     {
         var document = SandboxWorkspaceSeedBuilder.Build();
         var templateCapabilities = CapabilityTemplateSeedMaterializer.MaterializeDefaultCapabilities(new CapabilityTemplatePackLoader().Load());
@@ -242,7 +257,7 @@ public sealed class CapabilityTemplateSeedMaterializationTests
     }
 
     [Fact]
-    public void SB06_INV_POLICY_001_access_policy_loader_compiles_typed_rules_and_rejects_unknown_grants()
+    public void INV_POLICY_001_access_policy_loader_compiles_typed_rules_and_rejects_unknown_grants()
     {
         var pack = new CapabilityTemplatePackLoader().Load();
         var policy = Assert.Single(pack.Policies, item => item.Key == "default-compatibility-policy").Policy;
@@ -284,7 +299,7 @@ public sealed class CapabilityTemplateSeedMaterializationTests
     }
 
     [Fact]
-    public void SB06_INV_POLICY_002_allowed_operations_compile_to_typed_compatibility_rules()
+    public void INV_POLICY_002_allowed_operations_compile_to_typed_compatibility_rules()
     {
         var result = ProcessAllowedOperationsCapabilityPolicyCompiler.Compile(
             [ProcessOperationContractNames.RunValidation, ProcessOperationContractNames.ReadProjectStructure],
@@ -324,6 +339,7 @@ public sealed class CapabilityTemplateSeedMaterializationTests
         "candoitall-frontend-theme",
         "candoitall-watch-playwright-loop",
         "concrete-deliverable-delivery-inline-skill",
+        "development-image-analysis-guidance-inline-skill",
         "document-spreadsheet-reconciliation-inline-skill",
         "dotnet-app-delivery-inline-skill",
         "frontend-skill",
@@ -332,7 +348,6 @@ public sealed class CapabilityTemplateSeedMaterializationTests
         "mail-summary-inline-skill",
         "mail-triage-context",
         "mail-triage-inline-skill",
-        "mem0-shared-memory",
         "playwright-local-mcp",
         "provider-health",
         "provider-native-code-interpreter",
@@ -366,17 +381,26 @@ public sealed class CapabilityTemplateSeedMaterializationTests
         "workspace-git-status",
         "workspace-git-switch",
         "workspace-git-unstage",
+        "workspace-hash-path",
         "workspace-inspect-image",
         "workspace-inspect-spreadsheet",
+        "workspace-list-directory",
         "workspace-list-files",
         "workspace-move-path",
         "workspace-pwsh-run-script",
         "workspace-python-run-file",
         "workspace-read-file",
+        "workspace-read-spreadsheet-cell",
+        "workspace-read-spreadsheet-range",
         "workspace-search",
         "workspace-source-rag",
+        "workspace-spreadsheet-function-catalog",
+        "workspace-spreadsheet-summary",
         "workspace-stat-path",
+        "workspace-unzip-archive",
         "workspace-write-file",
+        "workspace-write-spreadsheet",
+        "workspace-zip-path",
         "writing-mstest-tests"
     ];
 

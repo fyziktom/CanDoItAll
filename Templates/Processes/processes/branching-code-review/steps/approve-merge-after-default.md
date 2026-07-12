@@ -23,7 +23,7 @@ Approve or reject merge after the default normalization lane has made the ambigu
 - Requires decision record: False
 
 ## Dependencies
-- route-review-disposition / __default__
+- route-review-disposition / default
 - normalize-default-lane
 
 ## Role assignments
@@ -39,3 +39,4 @@ Approve or reject merge after the default normalization lane has made the ambigu
 
 ## Branch outcomes
 - No explicit branch outcomes.
+

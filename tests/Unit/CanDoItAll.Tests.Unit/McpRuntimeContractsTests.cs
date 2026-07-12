@@ -3,14 +3,16 @@ using CanDoItAll.AgentFramework.Capabilities.Access;
 using CanDoItAll.AgentFramework.Mcp;
 using CanDoItAll.AgentFramework.Mcp.Abstractions;
 using System.Text;
+using System.Text.Json;
 using System.Text.Json.Nodes;
+using ModelContextProtocol.Protocol;
 
 namespace CanDoItAll.Tests.Unit;
 
 public sealed class McpRuntimeContractsTests
 {
     [Fact]
-    public async Task SB04_INV_INTERNAL_001_internal_hosted_mcp_setup_uses_application_lifecycle_and_implementation_key()
+    public async Task INV_INTERNAL_001_internal_hosted_mcp_setup_uses_application_lifecycle_and_implementation_key()
     {
         var descriptor = McpDescriptorFactory.InternalHosted(
             CapabilityKey.Create("workspace-internal-mcp"),
@@ -28,7 +30,7 @@ public sealed class McpRuntimeContractsTests
                 new DiscoveredMcpTool(McpToolName.Create("workspace_search"), "Search workspace content.")
             ])));
 
-        var result = await setup.TestAsync(descriptor, "SB04_INV_INTERNAL_001", CancellationToken.None);
+        var result = await setup.TestAsync(descriptor, "INV_INTERNAL_001", CancellationToken.None);
 
         Assert.True(result.IsSuccess);
         Assert.True(result.CleanupCompleted);
@@ -39,7 +41,7 @@ public sealed class McpRuntimeContractsTests
     }
 
     [Fact]
-    public async Task SB04_INV_LOCAL_001_fake_local_mcp_setup_lists_allowed_tools_and_cleans_up()
+    public async Task INV_LOCAL_001_fake_local_mcp_setup_lists_allowed_tools_and_cleans_up()
     {
         var descriptor = McpDescriptorFactory.LocalStdio(
             CapabilityKey.Create("playwright-local-mcp"),
@@ -63,7 +65,7 @@ public sealed class McpRuntimeContractsTests
             ]));
         var setup = new McpSetupTestService(fakeFactory);
 
-        var result = await setup.TestAsync(descriptor, "SB04_INV_LOCAL_001", CancellationToken.None);
+        var result = await setup.TestAsync(descriptor, "INV_LOCAL_001", CancellationToken.None);
 
         Assert.True(result.IsSuccess);
         Assert.True(result.CleanupCompleted);
@@ -74,7 +76,7 @@ public sealed class McpRuntimeContractsTests
     }
 
     [Fact]
-    public async Task SB04_INV_LOCAL_002_missing_allowed_tools_fails_before_start()
+    public async Task INV_LOCAL_002_missing_allowed_tools_fails_before_start()
     {
         var descriptor = McpDescriptorFactory.LocalStdio(
             CapabilityKey.Create("playwright-local-mcp"),
@@ -93,7 +95,7 @@ public sealed class McpRuntimeContractsTests
         var fakeFactory = new FakeMcpClientFactory(new FakeMcpServerScript(Tools: []));
         var setup = new McpSetupTestService(fakeFactory);
 
-        var result = await setup.TestAsync(descriptor, "SB04_INV_LOCAL_002", CancellationToken.None);
+        var result = await setup.TestAsync(descriptor, "INV_LOCAL_002", CancellationToken.None);
 
         Assert.False(result.IsSuccess);
         Assert.Equal(0, fakeFactory.CreatedClients);
@@ -103,7 +105,7 @@ public sealed class McpRuntimeContractsTests
     }
 
     [Fact]
-    public async Task SB04_INV_LOCAL_003_disallowed_command_is_rejected_before_start()
+    public async Task INV_LOCAL_003_disallowed_command_is_rejected_before_start()
     {
         var descriptor = McpDescriptorFactory.LocalStdio(
             CapabilityKey.Create("unsafe-local-mcp"),
@@ -122,7 +124,7 @@ public sealed class McpRuntimeContractsTests
         var fakeFactory = new FakeMcpClientFactory(new FakeMcpServerScript(Tools: []));
         var setup = new McpSetupTestService(fakeFactory);
 
-        var result = await setup.TestAsync(descriptor, "SB04_INV_LOCAL_003", CancellationToken.None);
+        var result = await setup.TestAsync(descriptor, "INV_LOCAL_003", CancellationToken.None);
 
         Assert.False(result.IsSuccess);
         Assert.Equal(0, fakeFactory.CreatedClients);
@@ -132,7 +134,7 @@ public sealed class McpRuntimeContractsTests
     }
 
     [Fact]
-    public async Task SB04_INV_SECRET_001_raw_environment_and_headers_are_rejected()
+    public async Task INV_SECRET_001_raw_environment_and_headers_are_rejected()
     {
         var localDescriptor = McpDescriptorFactory.LocalStdio(
             CapabilityKey.Create("raw-env-local-mcp"),
@@ -161,8 +163,8 @@ public sealed class McpRuntimeContractsTests
             timeout: TimeSpan.FromSeconds(5));
         var setup = new McpSetupTestService(new FakeMcpClientFactory(new FakeMcpServerScript(Tools: [])));
 
-        var local = await setup.TestAsync(localDescriptor, "SB04_INV_SECRET_001_LOCAL", CancellationToken.None);
-        var remote = await setup.TestAsync(remoteDescriptor, "SB04_INV_SECRET_001_REMOTE", CancellationToken.None);
+        var local = await setup.TestAsync(localDescriptor, "INV_SECRET_001_LOCAL", CancellationToken.None);
+        var remote = await setup.TestAsync(remoteDescriptor, "INV_SECRET_001_REMOTE", CancellationToken.None);
 
         Assert.False(local.IsSuccess);
         Assert.False(remote.IsSuccess);
@@ -174,7 +176,7 @@ public sealed class McpRuntimeContractsTests
     }
 
     [Fact]
-    public async Task SB04_INV_SETUP_001_list_tools_failure_returns_typed_diagnostic_and_cleanup_proof()
+    public async Task INV_SETUP_001_list_tools_failure_returns_typed_diagnostic_and_cleanup_proof()
     {
         var descriptor = BrowserDescriptor([McpToolName.Create("browser_snapshot")]);
         var fakeFactory = new FakeMcpClientFactory(new FakeMcpServerScript(
@@ -186,7 +188,7 @@ public sealed class McpRuntimeContractsTests
                 "Fix the MCP server list-tools handler.")));
         var setup = new McpSetupTestService(fakeFactory);
 
-        var result = await setup.TestAsync(descriptor, "SB04_INV_SETUP_001", CancellationToken.None);
+        var result = await setup.TestAsync(descriptor, "INV_SETUP_001", CancellationToken.None);
 
         Assert.False(result.IsSuccess);
         Assert.True(result.CleanupCompleted);
@@ -197,7 +199,7 @@ public sealed class McpRuntimeContractsTests
     }
 
     [Fact]
-    public async Task SB04_INV_CLEANUP_001_cleanup_failure_returns_cleanup_diagnostic_without_hiding_original_failure()
+    public async Task INV_CLEANUP_001_cleanup_failure_returns_cleanup_diagnostic_without_hiding_original_failure()
     {
         var descriptor = BrowserDescriptor([McpToolName.Create("browser_snapshot")]);
         var fakeFactory = new FakeMcpClientFactory(new FakeMcpServerScript(
@@ -210,7 +212,7 @@ public sealed class McpRuntimeContractsTests
             StopException: new InvalidOperationException("shutdown failed token=raw-secret-value")));
         var setup = new McpSetupTestService(fakeFactory);
 
-        var result = await setup.TestAsync(descriptor, "SB04_INV_CLEANUP_001", CancellationToken.None);
+        var result = await setup.TestAsync(descriptor, "INV_CLEANUP_001", CancellationToken.None);
 
         Assert.False(result.IsSuccess);
         Assert.False(result.CleanupCompleted);
@@ -221,13 +223,13 @@ public sealed class McpRuntimeContractsTests
     }
 
     [Fact]
-    public async Task SB04_INV_SETUP_002_allowed_tools_mismatch_reports_missing_tool()
+    public async Task INV_SETUP_002_allowed_tools_mismatch_reports_missing_tool()
     {
         var descriptor = BrowserDescriptor([McpToolName.Create("browser_missing")]);
         var setup = new McpSetupTestService(new FakeMcpClientFactory(new FakeMcpServerScript(
             Tools: [new DiscoveredMcpTool(McpToolName.Create("browser_snapshot"), "Snapshot page state.")])));
 
-        var result = await setup.TestAsync(descriptor, "SB04_INV_SETUP_002", CancellationToken.None);
+        var result = await setup.TestAsync(descriptor, "INV_SETUP_002", CancellationToken.None);
 
         Assert.False(result.IsSuccess);
         var diagnostic = Assert.Single(result.Diagnostics);
@@ -237,14 +239,14 @@ public sealed class McpRuntimeContractsTests
     }
 
     [Fact]
-    public async Task SB04_INV_SETUP_003_startup_timeout_returns_timeout_diagnostic()
+    public async Task INV_SETUP_003_startup_timeout_returns_timeout_diagnostic()
     {
         var descriptor = BrowserDescriptor([McpToolName.Create("browser_snapshot")]);
         var setup = new McpSetupTestService(new FakeMcpClientFactory(new FakeMcpServerScript(
             Tools: [],
             StartException: new TimeoutException("startup expired token=raw-secret-value"))));
 
-        var result = await setup.TestAsync(descriptor, "SB04_INV_SETUP_003", CancellationToken.None);
+        var result = await setup.TestAsync(descriptor, "INV_SETUP_003", CancellationToken.None);
 
         Assert.False(result.IsSuccess);
         var diagnostic = Assert.Single(result.Diagnostics);
@@ -254,7 +256,7 @@ public sealed class McpRuntimeContractsTests
     }
 
     [Fact]
-    public async Task SB04_INV_SETUP_004_process_start_and_handshake_failures_return_typed_diagnostics()
+    public async Task INV_SETUP_004_process_start_and_handshake_failures_return_typed_diagnostics()
     {
         var descriptor = BrowserDescriptor([McpToolName.Create("browser_snapshot")]);
         var processStartSetup = new McpSetupTestService(new FakeMcpClientFactory(new FakeMcpServerScript(
@@ -272,8 +274,8 @@ public sealed class McpRuntimeContractsTests
                 "handshake failed token=raw-secret-value",
                 "Fix the MCP initialize handshake."))));
 
-        var processStart = await processStartSetup.TestAsync(descriptor, "SB04_INV_SETUP_004_PROCESS", CancellationToken.None);
-        var handshake = await handshakeSetup.TestAsync(descriptor, "SB04_INV_SETUP_004_HANDSHAKE", CancellationToken.None);
+        var processStart = await processStartSetup.TestAsync(descriptor, "INV_SETUP_004_PROCESS", CancellationToken.None);
+        var handshake = await handshakeSetup.TestAsync(descriptor, "INV_SETUP_004_HANDSHAKE", CancellationToken.None);
 
         var processDiagnostic = Assert.Single(processStart.Diagnostics);
         var handshakeDiagnostic = Assert.Single(handshake.Diagnostics);
@@ -288,7 +290,7 @@ public sealed class McpRuntimeContractsTests
     }
 
     [Fact]
-    public async Task SB04_INV_SETUP_005_cancellation_returns_cancellation_diagnostic_and_cleanup_proof()
+    public async Task INV_SETUP_005_cancellation_returns_cancellation_diagnostic_and_cleanup_proof()
     {
         var descriptor = BrowserDescriptor([McpToolName.Create("browser_snapshot")]);
         var fakeFactory = new FakeMcpClientFactory(new FakeMcpServerScript(
@@ -296,7 +298,7 @@ public sealed class McpRuntimeContractsTests
             StartException: new OperationCanceledException()));
         var setup = new McpSetupTestService(fakeFactory);
 
-        var result = await setup.TestAsync(descriptor, "SB04_INV_SETUP_005", CancellationToken.None);
+        var result = await setup.TestAsync(descriptor, "INV_SETUP_005", CancellationToken.None);
 
         Assert.False(result.IsSuccess);
         Assert.True(result.CleanupCompleted);
@@ -306,7 +308,7 @@ public sealed class McpRuntimeContractsTests
     }
 
     [Fact]
-    public async Task SB04_INV_RUNTIME_001_fake_mcp_client_can_start_list_call_and_stop()
+    public async Task INV_RUNTIME_001_fake_mcp_client_can_start_list_call_and_stop()
     {
         var descriptor = BrowserDescriptor([McpToolName.Create("browser_snapshot")]);
         var factory = new FakeMcpClientFactory(new FakeMcpServerScript(
@@ -315,7 +317,7 @@ public sealed class McpRuntimeContractsTests
             {
                 [McpToolName.Create("browser_snapshot")] = """{"ok":true}"""
             }));
-        var client = await factory.CreateAsync(descriptor, "SB04_INV_RUNTIME_001", CancellationToken.None);
+        var client = await factory.CreateAsync(descriptor, "INV_RUNTIME_001", CancellationToken.None);
 
         await client.StartAsync(CancellationToken.None);
         var tools = await client.ListToolsAsync(CancellationToken.None);
@@ -331,7 +333,7 @@ public sealed class McpRuntimeContractsTests
     }
 
     [Fact]
-    public async Task Local_stdio_factory_creates_local_clients_and_rejects_unsupported_transports()
+    public async Task Mcp_factory_creates_local_and_remote_http_clients()
     {
         var factory = new LocalStdioMcpClientFactory();
         var local = BrowserDescriptor([McpToolName.Create("browser_snapshot")]);
@@ -348,12 +350,235 @@ public sealed class McpRuntimeContractsTests
             timeout: TimeSpan.FromSeconds(3));
 
         var client = await factory.CreateAsync(local, "LOCAL_STDIO_FACTORY_LOCAL", CancellationToken.None);
-        var exception = await Assert.ThrowsAsync<McpSetupException>(
-            () => factory.CreateAsync(remote, "LOCAL_STDIO_FACTORY_REMOTE", CancellationToken.None));
+        var remoteClient = await factory.CreateAsync(
+            remote,
+            "MCP_FACTORY_REMOTE",
+            CancellationToken.None);
 
         Assert.IsType<LocalStdioMcpRuntimeClient>(client);
-        Assert.Equal(CapabilityDiagnosticCategory.ImplementationMissing, exception.Category);
+        Assert.IsType<RemoteHttpMcpRuntimeClient>(remoteClient);
         await client.StopAsync(CancellationToken.None);
+        await remoteClient.StopAsync(CancellationToken.None);
+    }
+
+    [Fact]
+    public async Task Remote_http_client_rejects_missing_environment_backed_header_before_connecting()
+    {
+        const string environmentVariable = "CANDOITALL_TEST_MISSING_MCP_CREDENTIAL";
+        Environment.SetEnvironmentVariable(environmentVariable, null);
+        var descriptor = McpDescriptorFactory.RemoteHttp(
+            CapabilityKey.Create("secured-memory-mcp"),
+            McpServerKey.Create("secured-memory-mcp"),
+            "Secured Memory MCP",
+            "Remote MCP memory service.",
+            new Uri("https://example.test/mcp"),
+            allowedTools: [McpToolName.Create("memory_query")],
+            headerBindings: new Dictionary<string, string>
+            {
+                ["Authorization"] = environmentVariable
+            },
+            rawHeaders: new Dictionary<string, string>(),
+            approvalMode: McpApprovalMode.NeverRequire,
+            timeout: TimeSpan.FromSeconds(3));
+        var client = await new LocalStdioMcpClientFactory().CreateAsync(
+            descriptor,
+            "REMOTE_HTTP_MISSING_SECRET",
+            CancellationToken.None);
+
+        var exception = await Assert.ThrowsAsync<McpSetupException>(
+            () => client.StartAsync(CancellationToken.None));
+
+        Assert.Equal(CapabilityDiagnosticCategory.SecretBinding, exception.Category);
+        await client.StopAsync(CancellationToken.None);
+    }
+
+    [Fact]
+    public void Remote_http_transport_resolves_header_value_from_environment_without_mutating_it()
+    {
+        const string environmentVariable = "CANDOITALL_TEST_MCP_CREDENTIAL";
+        const string expectedValue = "Bearer credential-with-significant-trailing-space ";
+        Environment.SetEnvironmentVariable(environmentVariable, expectedValue);
+        try
+        {
+            var descriptor = McpDescriptorFactory.RemoteHttp(
+                CapabilityKey.Create("secured-memory-mcp"),
+                McpServerKey.Create("secured-memory-mcp"),
+                "Secured Memory MCP",
+                "Remote MCP memory service.",
+                new Uri("https://example.test/mcp"),
+                allowedTools: [McpToolName.Create("memory_query")],
+                headerBindings: new Dictionary<string, string>
+                {
+                    ["Authorization"] = environmentVariable
+                },
+                rawHeaders: new Dictionary<string, string>(),
+                approvalMode: McpApprovalMode.NeverRequire,
+                timeout: TimeSpan.FromSeconds(3));
+
+            var options = RemoteHttpMcpTransportOptionsFactory.Create(descriptor);
+
+            Assert.Equal(expectedValue, options.AdditionalHeaders!["Authorization"]);
+            Assert.Equal(descriptor.Timeout, options.ConnectionTimeout);
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable(environmentVariable, null);
+        }
+    }
+
+    [Fact]
+    public void Remote_http_transport_rejects_persisted_raw_headers()
+    {
+        var descriptor = McpDescriptorFactory.RemoteHttp(
+            CapabilityKey.Create("unsafe-memory-mcp"),
+            McpServerKey.Create("unsafe-memory-mcp"),
+            "Unsafe Memory MCP",
+            "Remote MCP memory service.",
+            new Uri("https://example.test/mcp"),
+            allowedTools: [McpToolName.Create("memory_query")],
+            headerBindings: new Dictionary<string, string>(),
+            rawHeaders: new Dictionary<string, string>
+            {
+                ["Authorization"] = "Bearer persisted-secret"
+            },
+            approvalMode: McpApprovalMode.NeverRequire,
+            timeout: TimeSpan.FromSeconds(3));
+
+        var exception = Assert.Throws<McpSetupException>(
+            () => RemoteHttpMcpTransportOptionsFactory.Create(descriptor));
+
+        Assert.Equal(CapabilityDiagnosticCategory.SecretBinding, exception.Category);
+        Assert.DoesNotContain("persisted-secret", exception.Detail, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData("Authorization\r\nInjected", "VALID_MCP_SECRET")]
+    [InlineData("Authorization", "invalid-environment-name")]
+    public void Remote_http_transport_rejects_invalid_header_binding_identifiers(
+        string headerName,
+        string environmentVariable)
+    {
+        var descriptor = McpDescriptorFactory.RemoteHttp(
+            CapabilityKey.Create("invalid-binding-mcp"),
+            McpServerKey.Create("invalid-binding-mcp"),
+            "Invalid Binding MCP",
+            "Remote MCP with an invalid binding.",
+            new Uri("https://example.test/mcp"),
+            allowedTools: [McpToolName.Create("memory_query")],
+            headerBindings: new Dictionary<string, string>
+            {
+                [headerName] = environmentVariable
+            },
+            rawHeaders: new Dictionary<string, string>(),
+            approvalMode: McpApprovalMode.NeverRequire,
+            timeout: TimeSpan.FromSeconds(3));
+
+        var exception = Assert.Throws<McpSetupException>(
+            () => RemoteHttpMcpTransportOptionsFactory.Create(descriptor));
+
+        Assert.Equal(CapabilityDiagnosticCategory.SecretBinding, exception.Category);
+    }
+
+    [Fact]
+    public async Task Remote_http_client_rejects_tool_outside_allowlist_before_runtime_access()
+    {
+        var descriptor = McpDescriptorFactory.RemoteHttp(
+            CapabilityKey.Create("restricted-memory-mcp"),
+            McpServerKey.Create("restricted-memory-mcp"),
+            "Restricted Memory MCP",
+            "Remote MCP memory service.",
+            new Uri("https://example.test/mcp"),
+            allowedTools: [McpToolName.Create("memory_query")],
+            headerBindings: new Dictionary<string, string>(),
+            rawHeaders: new Dictionary<string, string>(),
+            approvalMode: McpApprovalMode.NeverRequire,
+            timeout: TimeSpan.FromSeconds(3));
+        var client = new RemoteHttpMcpRuntimeClient(descriptor);
+
+        var exception = await Assert.ThrowsAsync<McpSetupException>(
+            () => client.CallToolAsync(
+                McpToolName.Create("memory_delete"),
+                "{}",
+                CancellationToken.None));
+
+        Assert.Equal(CapabilityDiagnosticCategory.AccessPolicy, exception.Category);
+    }
+
+    [Fact]
+    public void Remote_http_tool_result_reader_unwraps_structured_or_single_json_text()
+    {
+        var serverKey = McpServerKey.Create("memory-mcp");
+        var toolName = McpToolName.Create("memory_query");
+        var structured = new CallToolResult
+        {
+            Content = [],
+            StructuredContent = JsonSerializer.SerializeToElement(new { ok = true })
+        };
+        var text = new CallToolResult
+        {
+            Content =
+            [
+                new TextContentBlock
+                {
+                    Text = """{"ok":true}"""
+                }
+            ]
+        };
+
+        var structuredJson = McpToolResultReader.Read(structured, serverKey, toolName);
+        var textJson = McpToolResultReader.Read(text, serverKey, toolName);
+
+        Assert.Equal("""{"ok":true}""", structuredJson);
+        Assert.Equal("""{"ok":true}""", textJson);
+    }
+
+    [Fact]
+    public void Remote_http_tool_result_reader_rejects_multiple_text_blocks()
+    {
+        var result = new CallToolResult
+        {
+            Content =
+            [
+                new TextContentBlock { Text = "{}" },
+                new TextContentBlock { Text = "{}" }
+            ]
+        };
+
+        var exception = Assert.Throws<McpSetupException>(() => McpToolResultReader.Read(
+            result,
+            McpServerKey.Create("memory-mcp"),
+            McpToolName.Create("memory_query")));
+
+        Assert.Equal(CapabilityDiagnosticCategory.SchemaValidation, exception.Category);
+    }
+
+    [Fact]
+    public void Remote_http_tool_result_reader_rejects_non_json_text()
+    {
+        var result = new CallToolResult
+        {
+            Content = [new TextContentBlock { Text = "not-json" }]
+        };
+
+        var exception = Assert.Throws<McpSetupException>(() => McpToolResultReader.Read(
+            result,
+            McpServerKey.Create("memory-mcp"),
+            McpToolName.Create("memory_query")));
+
+        Assert.Equal(CapabilityDiagnosticCategory.JsonParse, exception.Category);
+    }
+
+    [Fact]
+    public async Task Mcp_operation_timeout_maps_internal_deadline_cancellation_to_timeout()
+    {
+        var timeout = new McpOperationTimeout(TimeSpan.FromMilliseconds(25));
+
+        var exception = await Assert.ThrowsAsync<TimeoutException>(() => timeout.RunAsync(
+            operationToken => Task.Delay(Timeout.InfiniteTimeSpan, operationToken),
+            "remote MCP test operation",
+            CancellationToken.None));
+
+        Assert.Contains("remote MCP test operation", exception.Message, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -411,7 +636,7 @@ public sealed class McpRuntimeContractsTests
     }
 
     [Fact]
-    public void SB04_INV_POLICY_001_server_and_child_tool_descriptors_participate_in_access_policy()
+    public void INV_POLICY_001_server_and_child_tool_descriptors_participate_in_access_policy()
     {
         var server = McpExposureDescriptorFactory.CreateServer(BrowserDescriptor([McpToolName.Create("browser_snapshot")]));
         var tool = McpExposureDescriptorFactory.CreateTool(
@@ -438,7 +663,7 @@ public sealed class McpRuntimeContractsTests
             [server, tool],
             [],
             [policy],
-            "SB04_INV_POLICY_001"));
+            "INV_POLICY_001"));
 
         Assert.Empty(result.AllowedCapabilities);
         Assert.Contains(result.Diagnostics, item => item.Identity == server.Identity);
@@ -446,7 +671,7 @@ public sealed class McpRuntimeContractsTests
     }
 
     [Fact]
-    public async Task SB04_INV_REMOTE_001_remote_http_status_failure_maps_typed_diagnostic()
+    public async Task INV_REMOTE_001_remote_http_status_failure_maps_typed_diagnostic()
     {
         var descriptor = McpDescriptorFactory.RemoteHttp(
             CapabilityKey.Create("remote-docs-mcp"),
@@ -468,7 +693,7 @@ public sealed class McpRuntimeContractsTests
                 "Repair the remote endpoint or credentials.",
                 httpStatusCode: 503))));
 
-        var result = await setup.TestAsync(descriptor, "SB04_INV_REMOTE_001", CancellationToken.None);
+        var result = await setup.TestAsync(descriptor, "INV_REMOTE_001", CancellationToken.None);
 
         Assert.False(result.IsSuccess);
         var diagnostic = Assert.Single(result.Diagnostics);

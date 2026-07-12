@@ -4,6 +4,7 @@
     "workspace-search",
     "workspace-read-file",
     "workspace-stat-path",
+    "workspace-convert-document",
     "workspace-create-directory",
     "workspace-write-file",
     "workspace-append-file"

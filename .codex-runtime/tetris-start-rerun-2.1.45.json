@@ -1,0 +1,1189 @@
+{
+  "projectId": "3324868f-66e2-478a-bb8f-14f32a5db1e9",
+  "nodeId": "custom:31c0e9396041430ba1f537b5639ed2cb",
+  "processDefinitionId": "3458e5d8-36b4-1861-83b1-522604c8e302",
+  "launchPlanId": "a4681e86-4af8-4638-b21e-336fe21087d5",
+  "runId": "f91f846a-f4e0-4e88-ba01-7f2c7d99b838",
+  "stage": "Running",
+  "route": "/projects/3324868f-66e2-478a-bb8f-14f32a5db1e9/processes/live?runId=f91f846a-f4e0-4e88-ba01-7f2c7d99b838",
+  "launchPlan": {
+    "planId": {
+      "value": "a4681e86-4af8-4638-b21e-336fe21087d5"
+    },
+    "definitionId": {
+      "value": "3458e5d8-36b4-1861-83b1-522604c8e302"
+    },
+    "definitionVersionId": {
+      "value": "e3b8c7c0-fd90-e337-1aee-0da395e98150"
+    },
+    "definitionKey": "software-delivery",
+    "definitionName": "Multi-team software delivery and release governance",
+    "definitionSummary": ".NET-focused multi-team delivery template for planned software change with explicit app-type classification, architecture design and review, subprocess-backed implementation, QA, runtime command writeback, UI screenshot writeback, security, release, deployment, and retrospective governance.",
+    "liveRunProfileKey": null,
+    "planHash": "sha256:16d6974211fcf8f9642c51db32aa8a04d7497bf47cf61123d4a436954a2254d5",
+    "steps": [
+      {
+        "stepInstanceId": {
+          "value": "354b5215-39b3-4631-82b8-f88f5c6b2bf9"
+        },
+        "stepKey": "feature-intake",
+        "title": "Clarify .NET scope and app type boundary",
+        "roleKey": "product-owner",
+        "executorKind": "agent",
+        "executorId": "9fc87ec2-e918-d756-b6c9-b42b8eecbe6e",
+        "executorDisplayName": "Business Strategist",
+        "isBlocked": false,
+        "blockedReason": null,
+        "branchGate": null,
+        "allowedOperations": [
+          "ReadProcessContext",
+          "ReadProjectStructure",
+          "ReadUpstreamArtifacts",
+          "WriteManagedProcessArtifacts"
+        ],
+        "operationTargetScope": "ExternalProductTargetReadOnly",
+        "roleResourceKey": "product-owner",
+        "roleDisplayName": "Product owner",
+        "capabilityScope": {
+          "directives": [],
+          "instructionFragments": [],
+          "requiredReceipts": [],
+          "isEmpty": true
+        },
+        "requiredRuntimeToolNames": []
+      },
+      {
+        "stepInstanceId": {
+          "value": "053d5360-719b-4f5a-bbe1-7c2f18bf1baf"
+        },
+        "stepKey": "architecture-review",
+        "title": "Run .NET architecture design and review subprocess",
+        "roleKey": "solution-architect",
+        "executorKind": "agent",
+        "executorId": "38d4deb5-74ce-8e55-bf1a-17e88b437472",
+        "executorDisplayName": ".NET Solution Architect",
+        "isBlocked": false,
+        "blockedReason": null,
+        "branchGate": null,
+        "allowedOperations": [
+          "ExecuteExternalAction",
+          "ReadProcessContext",
+          "ReadProjectStructure",
+          "ReadUpstreamArtifacts",
+          "WriteManagedProcessArtifacts"
+        ],
+        "operationTargetScope": "ExternalActionControlled",
+        "roleResourceKey": "solution-architect",
+        "roleDisplayName": "Solution architect",
+        "capabilityScope": {
+          "directives": [],
+          "instructionFragments": [],
+          "requiredReceipts": [],
+          "isEmpty": true
+        },
+        "requiredRuntimeToolNames": []
+      },
+      {
+        "stepInstanceId": {
+          "value": "a0ba294a-f2d8-4b33-b754-a971ccb837cd"
+        },
+        "stepKey": "implementation",
+        "title": "Run .NET implementation slice subprocess",
+        "roleKey": "lead-engineer",
+        "executorKind": "agent",
+        "executorId": "1e267ce2-bf18-ce52-9743-9b36b9314994",
+        "executorDisplayName": ".NET Application Developer",
+        "isBlocked": false,
+        "blockedReason": null,
+        "branchGate": null,
+        "allowedOperations": [
+          "ExecuteExternalAction",
+          "ReadProcessContext",
+          "ReadProjectStructure",
+          "ReadUpstreamArtifacts",
+          "WriteManagedProcessArtifacts"
+        ],
+        "operationTargetScope": "ExternalActionControlled",
+        "roleResourceKey": "lead-engineer",
+        "roleDisplayName": "Lead engineer",
+        "capabilityScope": {
+          "directives": [],
+          "instructionFragments": [],
+          "requiredReceipts": [],
+          "isEmpty": true
+        },
+        "requiredRuntimeToolNames": []
+      },
+      {
+        "stepInstanceId": {
+          "value": "cfbc0940-c7bf-498b-af22-bd877326ec74"
+        },
+        "stepKey": "peer-review",
+        "title": "Complete peer review and integration readiness",
+        "roleKey": "review-lead",
+        "executorKind": "agent",
+        "executorId": "33183e52-4c54-b852-8c24-bd1d13cf1f23",
+        "executorDisplayName": "Code Review Lead",
+        "isBlocked": false,
+        "blockedReason": null,
+        "branchGate": null,
+        "allowedOperations": [
+          "EscalateOrDecide",
+          "ReadProcessContext",
+          "ReadProjectStructure",
+          "ReadUpstreamArtifacts",
+          "RunValidation",
+          "WriteManagedProcessArtifacts"
+        ],
+        "operationTargetScope": "ExternalProductTargetReadOnly",
+        "roleResourceKey": "review-lead",
+        "roleDisplayName": "Independent code review lead",
+        "capabilityScope": {
+          "directives": [],
+          "instructionFragments": [],
+          "requiredReceipts": [],
+          "isEmpty": true
+        },
+        "requiredRuntimeToolNames": []
+      },
+      {
+        "stepInstanceId": {
+          "value": "9091f50c-dbb0-4fc9-ac1d-d418c97dda69"
+        },
+        "stepKey": "qa-validation",
+        "title": "Run QA validation",
+        "roleKey": "qa-lead",
+        "executorKind": "agent",
+        "executorId": "752665f3-bf7d-0b54-9208-7809282cd415",
+        "executorDisplayName": ".NET QA Review Lead",
+        "isBlocked": false,
+        "blockedReason": null,
+        "branchGate": null,
+        "allowedOperations": [
+          "CaptureRuntimeProof",
+          "LaunchRuntime",
+          "ReadProcessContext",
+          "ReadProjectStructure",
+          "ReadUpstreamArtifacts",
+          "RunValidation",
+          "WriteManagedProcessArtifacts"
+        ],
+        "operationTargetScope": "ExternalProductTargetReadOnly",
+        "roleResourceKey": "qa-lead",
+        "roleDisplayName": "QA lead",
+        "capabilityScope": {
+          "directives": [],
+          "instructionFragments": [
+            {
+              "key": "qa-prevalidation-screenshot-disposition",
+              "title": "Pre-QA screenshot evidence disposition",
+              "content": "Read the pre-QA screenshot handoff. visual-defect-observed is concrete product evidence, not an infrastructure blocker: independently validate the route and select the existing repair-required branch when the defect is corroborated. no-ui-evidence-recorded means browser validation is inapplicable for the declared target: preserve its explicit classification evidence, continue non-browser QA, and do not treat absent browser proof as blocked or accepted. Return Blocked only if a concrete tool, access, policy, environment, or provider failure prevents QA from choosing quality-accepted or repair-required.",
+              "placement": "AppendToStepBrief"
+            }
+          ],
+          "requiredReceipts": [
+            {
+              "key": "qa-ui-runtime-start",
+              "kind": "RuntimeToolName",
+              "toolName": "workspace_dotnet_run",
+              "runtimeToolProviderKey": "",
+              "mcpServerKey": "",
+              "minimumCount": 1,
+              "requireSuccessfulExit": true,
+              "requireCurrentRun": true,
+              "activation": "WhenLaunchContextDeclaresTool",
+              "purpose": "AcceptanceProof",
+              "applicableBranchOutcomeKeys": [
+                "quality-accepted"
+              ],
+              "reason": "QA must start the app before collecting current-run UI proof when the launch context requires browser validation."
+            },
+            {
+              "key": "qa-browser-navigate",
+              "kind": "RuntimeToolName",
+              "toolName": "browser_navigate",
+              "runtimeToolProviderKey": "",
+              "mcpServerKey": "",
+              "minimumCount": 1,
+              "requireSuccessfulExit": true,
+              "requireCurrentRun": true,
+              "activation": "WhenLaunchContextDeclaresTool",
+              "purpose": "AcceptanceProof",
+              "applicableBranchOutcomeKeys": [
+                "quality-accepted"
+              ],
+              "reason": "QA browser proof must navigate to a concrete route before accepting UI evidence."
+            },
+            {
+              "key": "qa-browser-state",
+              "kind": "RuntimeToolName",
+              "toolName": "browser_snapshot",
+              "runtimeToolProviderKey": "",
+              "mcpServerKey": "",
+              "minimumCount": 1,
+              "requireSuccessfulExit": true,
+              "requireCurrentRun": true,
+              "activation": "WhenLaunchContextDeclaresTool",
+              "purpose": "AcceptanceProof",
+              "applicableBranchOutcomeKeys": [
+                "quality-accepted"
+              ],
+              "reason": "QA browser proof must include durable browser state for the validated route."
+            },
+            {
+              "key": "qa-browser-evaluate",
+              "kind": "RuntimeToolName",
+              "toolName": "browser_evaluate",
+              "runtimeToolProviderKey": "",
+              "mcpServerKey": "",
+              "minimumCount": 1,
+              "requireSuccessfulExit": true,
+              "requireCurrentRun": true,
+              "activation": "WhenLaunchContextDeclaresTool",
+              "purpose": "AcceptanceProof",
+              "applicableBranchOutcomeKeys": [
+                "quality-accepted"
+              ],
+              "reason": "QA browser proof must evaluate current visible or application state after a representative interaction before accepting UI behavior."
+            },
+            {
+              "key": "qa-browser-screenshot",
+              "kind": "RuntimeToolName",
+              "toolName": "browser_take_screenshot",
+              "runtimeToolProviderKey": "",
+              "mcpServerKey": "",
+              "minimumCount": 1,
+              "requireSuccessfulExit": true,
+              "requireCurrentRun": true,
+              "activation": "WhenLaunchContextDeclaresTool",
+              "purpose": "AcceptanceProof",
+              "applicableBranchOutcomeKeys": [
+                "quality-accepted"
+              ],
+              "reason": "QA browser proof must include a current-run screenshot when UI evidence is required."
+            },
+            {
+              "key": "qa-browser-console",
+              "kind": "RuntimeToolName",
+              "toolName": "browser_console_messages",
+              "runtimeToolProviderKey": "",
+              "mcpServerKey": "",
+              "minimumCount": 1,
+              "requireSuccessfulExit": true,
+              "requireCurrentRun": true,
+              "activation": "WhenLaunchContextDeclaresTool",
+              "purpose": "AcceptanceProof",
+              "applicableBranchOutcomeKeys": [
+                "quality-accepted"
+              ],
+              "reason": "QA browser proof must include console diagnostics for the validated route."
+            },
+            {
+              "key": "qa-ui-runtime-stop",
+              "kind": "RuntimeToolName",
+              "toolName": "workspace_dotnet_stop",
+              "runtimeToolProviderKey": "",
+              "mcpServerKey": "",
+              "minimumCount": 1,
+              "requireSuccessfulExit": true,
+              "requireCurrentRun": true,
+              "activation": "WhenLaunchContextDeclaresTool",
+              "purpose": "AcceptanceProof",
+              "applicableBranchOutcomeKeys": [
+                "quality-accepted"
+              ],
+              "reason": "QA must clean up any app process started for browser validation."
+            },
+            {
+              "key": "qa-inspect-image",
+              "kind": "RuntimeToolName",
+              "toolName": "workspace_inspect_image",
+              "runtimeToolProviderKey": "",
+              "mcpServerKey": "",
+              "minimumCount": 1,
+              "requireSuccessfulExit": true,
+              "requireCurrentRun": true,
+              "activation": "WhenLaunchContextDeclaresTool",
+              "purpose": "AcceptanceProof",
+              "applicableBranchOutcomeKeys": [
+                "quality-accepted"
+              ],
+              "reason": "QA visual comparison must inspect screenshot images before accepting visual evidence."
+            },
+            {
+              "key": "qa-analyze-image",
+              "kind": "RuntimeToolName",
+              "toolName": "workspace_analyze_image",
+              "runtimeToolProviderKey": "",
+              "mcpServerKey": "",
+              "minimumCount": 1,
+              "requireSuccessfulExit": true,
+              "requireCurrentRun": true,
+              "activation": "WhenLaunchContextDeclaresTool",
+              "purpose": "AcceptanceProof",
+              "applicableBranchOutcomeKeys": [
+                "quality-accepted"
+              ],
+              "reason": "QA visual claims must be grounded in provider-backed image analysis."
+            },
+            {
+              "key": "qa-compare-images",
+              "kind": "RuntimeToolName",
+              "toolName": "workspace_analyze_images",
+              "runtimeToolProviderKey": "",
+              "mcpServerKey": "",
+              "minimumCount": 1,
+              "requireSuccessfulExit": true,
+              "requireCurrentRun": true,
+              "activation": "WhenLaunchContextDeclaresTool",
+              "purpose": "AcceptanceProof",
+              "applicableBranchOutcomeKeys": [
+                "quality-accepted"
+              ],
+              "reason": "QA must compare delivered screenshots with source visual targets when target images exist."
+            }
+          ],
+          "isEmpty": false
+        },
+        "requiredRuntimeToolNames": [
+          "workspace_dotnet_build",
+          "workspace_dotnet_restore",
+          "workspace_dotnet_test"
+        ]
+      },
+      {
+        "stepInstanceId": {
+          "value": "397f0022-aaf9-47e7-9290-91f9aacf62f2"
+        },
+        "stepKey": "quality-repair",
+        "title": "Run .NET quality repair subprocess",
+        "roleKey": "delivery-manager",
+        "executorKind": "agent",
+        "executorId": "b0c2a317-a417-385f-9f59-0f4a2c5b7ff2",
+        "executorDisplayName": "Delivery Manager",
+        "isBlocked": false,
+        "blockedReason": null,
+        "branchGate": {
+          "sourceStepKey": "qa-validation",
+          "requiredOutcomeKey": "repair-required"
+        },
+        "allowedOperations": [
+          "ExecuteExternalAction",
+          "ReadProcessContext",
+          "ReadProjectStructure",
+          "ReadUpstreamArtifacts",
+          "WriteManagedProcessArtifacts"
+        ],
+        "operationTargetScope": "ExternalActionControlled",
+        "roleResourceKey": "delivery-manager",
+        "roleDisplayName": "Delivery manager",
+        "capabilityScope": {
+          "directives": [],
+          "instructionFragments": [],
+          "requiredReceipts": [],
+          "isEmpty": true
+        },
+        "requiredRuntimeToolNames": []
+      },
+      {
+        "stepInstanceId": {
+          "value": "b79fe138-5d7d-49b8-b305-5f0a83586cd4"
+        },
+        "stepKey": "qa-recheck",
+        "title": "Re-run QA validation after repair",
+        "roleKey": "qa-lead",
+        "executorKind": "agent",
+        "executorId": "752665f3-bf7d-0b54-9208-7809282cd415",
+        "executorDisplayName": ".NET QA Review Lead",
+        "isBlocked": false,
+        "blockedReason": null,
+        "branchGate": {
+          "sourceStepKey": "qa-validation",
+          "requiredOutcomeKey": "repair-required"
+        },
+        "allowedOperations": [
+          "CaptureRuntimeProof",
+          "LaunchRuntime",
+          "ReadProcessContext",
+          "ReadProjectStructure",
+          "ReadUpstreamArtifacts",
+          "RunValidation",
+          "WriteManagedProcessArtifacts"
+        ],
+        "operationTargetScope": "ExternalProductTargetReadOnly",
+        "roleResourceKey": "qa-lead",
+        "roleDisplayName": "QA lead",
+        "capabilityScope": {
+          "directives": [],
+          "instructionFragments": [
+            {
+              "key": "qa-recheck-prevalidation-screenshot-disposition",
+              "title": "Pre-recheck screenshot evidence disposition",
+              "content": "Read the post-repair screenshot handoff. visual-defect-observed is concrete product evidence, not an infrastructure blocker: independently validate the route and select the existing repair-escalation branch when the defect remains. no-ui-evidence-recorded means browser validation is inapplicable for the declared target: preserve its explicit classification evidence, continue non-browser QA, and do not treat absent browser proof as blocked or accepted. Return Blocked only if a concrete tool, access, policy, environment, or provider failure prevents QA from choosing quality-accepted or repair-escalation.",
+              "placement": "AppendToStepBrief"
+            }
+          ],
+          "requiredReceipts": [
+            {
+              "key": "qa-recheck-ui-runtime-start",
+              "kind": "RuntimeToolName",
+              "toolName": "workspace_dotnet_run",
+              "runtimeToolProviderKey": "",
+              "mcpServerKey": "",
+              "minimumCount": 1,
+              "requireSuccessfulExit": true,
+              "requireCurrentRun": true,
+              "activation": "WhenLaunchContextDeclaresTool",
+              "purpose": "AcceptanceProof",
+              "applicableBranchOutcomeKeys": [
+                "quality-accepted"
+              ],
+              "reason": "QA recheck must start the repaired app before collecting current-run UI proof when the launch context requires browser validation."
+            },
+            {
+              "key": "qa-recheck-browser-navigate",
+              "kind": "RuntimeToolName",
+              "toolName": "browser_navigate",
+              "runtimeToolProviderKey": "",
+              "mcpServerKey": "",
+              "minimumCount": 1,
+              "requireSuccessfulExit": true,
+              "requireCurrentRun": true,
+              "activation": "WhenLaunchContextDeclaresTool",
+              "purpose": "AcceptanceProof",
+              "applicableBranchOutcomeKeys": [
+                "quality-accepted"
+              ],
+              "reason": "QA recheck browser proof must navigate to a concrete route before accepting UI evidence."
+            },
+            {
+              "key": "qa-recheck-browser-state",
+              "kind": "RuntimeToolName",
+              "toolName": "browser_snapshot",
+              "runtimeToolProviderKey": "",
+              "mcpServerKey": "",
+              "minimumCount": 1,
+              "requireSuccessfulExit": true,
+              "requireCurrentRun": true,
+              "activation": "WhenLaunchContextDeclaresTool",
+              "purpose": "AcceptanceProof",
+              "applicableBranchOutcomeKeys": [
+                "quality-accepted"
+              ],
+              "reason": "QA recheck browser proof must include durable browser state for the validated route."
+            },
+            {
+              "key": "qa-recheck-browser-evaluate",
+              "kind": "RuntimeToolName",
+              "toolName": "browser_evaluate",
+              "runtimeToolProviderKey": "",
+              "mcpServerKey": "",
+              "minimumCount": 1,
+              "requireSuccessfulExit": true,
+              "requireCurrentRun": true,
+              "activation": "WhenLaunchContextDeclaresTool",
+              "purpose": "AcceptanceProof",
+              "applicableBranchOutcomeKeys": [
+                "quality-accepted"
+              ],
+              "reason": "QA recheck must evaluate repaired visible or application state after a representative interaction before accepting UI behavior."
+            },
+            {
+              "key": "qa-recheck-browser-screenshot",
+              "kind": "RuntimeToolName",
+              "toolName": "browser_take_screenshot",
+              "runtimeToolProviderKey": "",
+              "mcpServerKey": "",
+              "minimumCount": 1,
+              "requireSuccessfulExit": true,
+              "requireCurrentRun": true,
+              "activation": "WhenLaunchContextDeclaresTool",
+              "purpose": "AcceptanceProof",
+              "applicableBranchOutcomeKeys": [
+                "quality-accepted"
+              ],
+              "reason": "QA recheck browser proof must include a current-run screenshot when UI evidence is required."
+            },
+            {
+              "key": "qa-recheck-browser-console",
+              "kind": "RuntimeToolName",
+              "toolName": "browser_console_messages",
+              "runtimeToolProviderKey": "",
+              "mcpServerKey": "",
+              "minimumCount": 1,
+              "requireSuccessfulExit": true,
+              "requireCurrentRun": true,
+              "activation": "WhenLaunchContextDeclaresTool",
+              "purpose": "AcceptanceProof",
+              "applicableBranchOutcomeKeys": [
+                "quality-accepted"
+              ],
+              "reason": "QA recheck browser proof must include console diagnostics for the validated route."
+            },
+            {
+              "key": "qa-recheck-ui-runtime-stop",
+              "kind": "RuntimeToolName",
+              "toolName": "workspace_dotnet_stop",
+              "runtimeToolProviderKey": "",
+              "mcpServerKey": "",
+              "minimumCount": 1,
+              "requireSuccessfulExit": true,
+              "requireCurrentRun": true,
+              "activation": "WhenLaunchContextDeclaresTool",
+              "purpose": "AcceptanceProof",
+              "applicableBranchOutcomeKeys": [
+                "quality-accepted"
+              ],
+              "reason": "QA recheck must clean up any app process started for browser validation."
+            },
+            {
+              "key": "qa-recheck-inspect-image",
+              "kind": "RuntimeToolName",
+              "toolName": "workspace_inspect_image",
+              "runtimeToolProviderKey": "",
+              "mcpServerKey": "",
+              "minimumCount": 1,
+              "requireSuccessfulExit": true,
+              "requireCurrentRun": true,
+              "activation": "WhenLaunchContextDeclaresTool",
+              "purpose": "AcceptanceProof",
+              "applicableBranchOutcomeKeys": [
+                "quality-accepted"
+              ],
+              "reason": "QA recheck visual comparison must inspect screenshot images before accepting visual evidence."
+            },
+            {
+              "key": "qa-recheck-analyze-image",
+              "kind": "RuntimeToolName",
+              "toolName": "workspace_analyze_image",
+              "runtimeToolProviderKey": "",
+              "mcpServerKey": "",
+              "minimumCount": 1,
+              "requireSuccessfulExit": true,
+              "requireCurrentRun": true,
+              "activation": "WhenLaunchContextDeclaresTool",
+              "purpose": "AcceptanceProof",
+              "applicableBranchOutcomeKeys": [
+                "quality-accepted"
+              ],
+              "reason": "QA recheck visual claims must be grounded in provider-backed image analysis."
+            },
+            {
+              "key": "qa-recheck-compare-images",
+              "kind": "RuntimeToolName",
+              "toolName": "workspace_analyze_images",
+              "runtimeToolProviderKey": "",
+              "mcpServerKey": "",
+              "minimumCount": 1,
+              "requireSuccessfulExit": true,
+              "requireCurrentRun": true,
+              "activation": "WhenLaunchContextDeclaresTool",
+              "purpose": "AcceptanceProof",
+              "applicableBranchOutcomeKeys": [
+                "quality-accepted"
+              ],
+              "reason": "QA recheck must compare repaired screenshots with source visual targets when target images exist."
+            }
+          ],
+          "isEmpty": false
+        },
+        "requiredRuntimeToolNames": [
+          "workspace_dotnet_build",
+          "workspace_dotnet_restore",
+          "workspace_dotnet_test"
+        ]
+      },
+      {
+        "stepInstanceId": {
+          "value": "a323a43e-e998-4425-a718-0dc438b60fac"
+        },
+        "stepKey": "security-review",
+        "title": "Perform security and data-handling review",
+        "roleKey": "security-reviewer",
+        "executorKind": "agent",
+        "executorId": "5ab2958c-08de-b251-8ead-caa321248b91",
+        "executorDisplayName": "Security Reviewer",
+        "isBlocked": false,
+        "blockedReason": null,
+        "branchGate": {
+          "sourceStepKey": "qa-validation",
+          "requiredOutcomeKey": "quality-accepted"
+        },
+        "allowedOperations": [
+          "EscalateOrDecide",
+          "ReadProcessContext",
+          "ReadProjectStructure",
+          "ReadUpstreamArtifacts",
+          "WriteManagedProcessArtifacts"
+        ],
+        "operationTargetScope": "ExternalProductTargetReadOnly",
+        "roleResourceKey": "security-reviewer",
+        "roleDisplayName": "Security reviewer",
+        "capabilityScope": {
+          "directives": [],
+          "instructionFragments": [],
+          "requiredReceipts": [],
+          "isEmpty": true
+        },
+        "requiredRuntimeToolNames": []
+      },
+      {
+        "stepInstanceId": {
+          "value": "426bdac6-bfe7-4f5e-a101-b87954bcceee"
+        },
+        "stepKey": "record-runtime-commands",
+        "title": "Record .NET run commands under process run node",
+        "roleKey": "delivery-manager",
+        "executorKind": "agent",
+        "executorId": "b0c2a317-a417-385f-9f59-0f4a2c5b7ff2",
+        "executorDisplayName": "Delivery Manager",
+        "isBlocked": false,
+        "blockedReason": null,
+        "branchGate": {
+          "sourceStepKey": "qa-validation",
+          "requiredOutcomeKey": "quality-accepted"
+        },
+        "allowedOperations": [
+          "ExecuteExternalAction",
+          "ReadProcessContext",
+          "ReadProjectStructure",
+          "ReadUpstreamArtifacts",
+          "WriteManagedProcessArtifacts"
+        ],
+        "operationTargetScope": "ExternalActionControlled",
+        "roleResourceKey": "delivery-manager",
+        "roleDisplayName": "Delivery manager",
+        "capabilityScope": {
+          "directives": [],
+          "instructionFragments": [],
+          "requiredReceipts": [],
+          "isEmpty": true
+        },
+        "requiredRuntimeToolNames": []
+      },
+      {
+        "stepInstanceId": {
+          "value": "c1c000db-9c77-4688-938b-ac52d88b0d2d"
+        },
+        "stepKey": "capture-ui-screenshots",
+        "title": "Capture and store .NET UI screenshots",
+        "roleKey": "qa-lead",
+        "executorKind": "agent",
+        "executorId": "549a3e86-5ffc-0d58-bf8c-10952fcdaac4",
+        "executorDisplayName": "Delivery QA Observer",
+        "isBlocked": false,
+        "blockedReason": null,
+        "branchGate": null,
+        "allowedOperations": [
+          "ExecuteExternalAction",
+          "ReadProcessContext",
+          "ReadProjectStructure",
+          "ReadUpstreamArtifacts",
+          "WriteManagedProcessArtifacts"
+        ],
+        "operationTargetScope": "ExternalActionControlled",
+        "roleResourceKey": "qa-lead",
+        "roleDisplayName": "QA lead",
+        "capabilityScope": {
+          "directives": [],
+          "instructionFragments": [],
+          "requiredReceipts": [],
+          "isEmpty": true
+        },
+        "requiredRuntimeToolNames": []
+      },
+      {
+        "stepInstanceId": {
+          "value": "5716b699-8901-47bd-aa7c-7d3d8170a66b"
+        },
+        "stepKey": "release-approval",
+        "title": "Approve first-pass release readiness",
+        "roleKey": "delivery-manager",
+        "executorKind": "agent",
+        "executorId": "b0c2a317-a417-385f-9f59-0f4a2c5b7ff2",
+        "executorDisplayName": "Delivery Manager",
+        "isBlocked": false,
+        "blockedReason": null,
+        "branchGate": {
+          "sourceStepKey": "qa-validation",
+          "requiredOutcomeKey": "quality-accepted"
+        },
+        "allowedOperations": [
+          "EscalateOrDecide",
+          "ReadProcessContext",
+          "ReadProjectStructure",
+          "ReadUpstreamArtifacts",
+          "WriteManagedProcessArtifacts"
+        ],
+        "operationTargetScope": "ExternalProductTargetReadOnly",
+        "roleResourceKey": "delivery-manager",
+        "roleDisplayName": "Delivery manager",
+        "capabilityScope": {
+          "directives": [],
+          "instructionFragments": [],
+          "requiredReceipts": [],
+          "isEmpty": true
+        },
+        "requiredRuntimeToolNames": []
+      },
+      {
+        "stepInstanceId": {
+          "value": "b293a866-df20-458b-810d-8b11b85574a3"
+        },
+        "stepKey": "execute-release-rollout",
+        "title": "Execute first-pass controlled release rollout",
+        "roleKey": "release-manager",
+        "executorKind": "agent",
+        "executorId": "6f674c92-3347-dd55-96d3-851db9739b35",
+        "executorDisplayName": "Release Readiness Manager",
+        "isBlocked": false,
+        "blockedReason": null,
+        "branchGate": null,
+        "allowedOperations": [
+          "ExecuteExternalAction",
+          "ReadProcessContext",
+          "ReadProjectStructure",
+          "ReadUpstreamArtifacts",
+          "WriteManagedProcessArtifacts"
+        ],
+        "operationTargetScope": "ExternalActionControlled",
+        "roleResourceKey": "release-manager",
+        "roleDisplayName": "Release manager",
+        "capabilityScope": {
+          "directives": [],
+          "instructionFragments": [],
+          "requiredReceipts": [],
+          "isEmpty": true
+        },
+        "requiredRuntimeToolNames": []
+      },
+      {
+        "stepInstanceId": {
+          "value": "b329c890-2163-419c-b964-35ffe5fe6c11"
+        },
+        "stepKey": "post-release-learning",
+        "title": "Capture first-pass post-release learning",
+        "roleKey": "delivery-manager",
+        "executorKind": "agent",
+        "executorId": "b0c2a317-a417-385f-9f59-0f4a2c5b7ff2",
+        "executorDisplayName": "Delivery Manager",
+        "isBlocked": false,
+        "blockedReason": null,
+        "branchGate": null,
+        "allowedOperations": [
+          "ExecuteExternalAction",
+          "ReadProcessContext",
+          "ReadProjectStructure",
+          "ReadUpstreamArtifacts",
+          "WriteManagedProcessArtifacts"
+        ],
+        "operationTargetScope": "ExternalActionControlled",
+        "roleResourceKey": "delivery-manager",
+        "roleDisplayName": "Delivery manager",
+        "capabilityScope": {
+          "directives": [],
+          "instructionFragments": [],
+          "requiredReceipts": [],
+          "isEmpty": true
+        },
+        "requiredRuntimeToolNames": []
+      },
+      {
+        "stepInstanceId": {
+          "value": "cdce3c61-4076-457b-a96c-a875297d0286"
+        },
+        "stepKey": "security-review-after-repair",
+        "title": "Perform security review after repair",
+        "roleKey": "security-reviewer",
+        "executorKind": "agent",
+        "executorId": "5ab2958c-08de-b251-8ead-caa321248b91",
+        "executorDisplayName": "Security Reviewer",
+        "isBlocked": false,
+        "blockedReason": null,
+        "branchGate": {
+          "sourceStepKey": "qa-recheck",
+          "requiredOutcomeKey": "quality-accepted"
+        },
+        "allowedOperations": [
+          "EscalateOrDecide",
+          "ReadProcessContext",
+          "ReadProjectStructure",
+          "ReadUpstreamArtifacts",
+          "WriteManagedProcessArtifacts"
+        ],
+        "operationTargetScope": "ExternalProductTargetReadOnly",
+        "roleResourceKey": "security-reviewer",
+        "roleDisplayName": "Security reviewer",
+        "capabilityScope": {
+          "directives": [],
+          "instructionFragments": [],
+          "requiredReceipts": [],
+          "isEmpty": true
+        },
+        "requiredRuntimeToolNames": []
+      },
+      {
+        "stepInstanceId": {
+          "value": "6f90b07c-f86f-459f-84a5-85b9129ce360"
+        },
+        "stepKey": "record-runtime-commands-after-repair",
+        "title": "Record repaired .NET run commands under process run node",
+        "roleKey": "delivery-manager",
+        "executorKind": "agent",
+        "executorId": "b0c2a317-a417-385f-9f59-0f4a2c5b7ff2",
+        "executorDisplayName": "Delivery Manager",
+        "isBlocked": false,
+        "blockedReason": null,
+        "branchGate": {
+          "sourceStepKey": "qa-recheck",
+          "requiredOutcomeKey": "quality-accepted"
+        },
+        "allowedOperations": [
+          "ExecuteExternalAction",
+          "ReadProcessContext",
+          "ReadProjectStructure",
+          "ReadUpstreamArtifacts",
+          "WriteManagedProcessArtifacts"
+        ],
+        "operationTargetScope": "ExternalActionControlled",
+        "roleResourceKey": "delivery-manager",
+        "roleDisplayName": "Delivery manager",
+        "capabilityScope": {
+          "directives": [],
+          "instructionFragments": [],
+          "requiredReceipts": [],
+          "isEmpty": true
+        },
+        "requiredRuntimeToolNames": []
+      },
+      {
+        "stepInstanceId": {
+          "value": "f277e997-44ed-4ab0-9e1b-ebf528e3722b"
+        },
+        "stepKey": "capture-ui-screenshots-after-repair",
+        "title": "Capture and store repaired .NET UI screenshots",
+        "roleKey": "qa-lead",
+        "executorKind": "agent",
+        "executorId": "549a3e86-5ffc-0d58-bf8c-10952fcdaac4",
+        "executorDisplayName": "Delivery QA Observer",
+        "isBlocked": false,
+        "blockedReason": null,
+        "branchGate": {
+          "sourceStepKey": "qa-validation",
+          "requiredOutcomeKey": "repair-required"
+        },
+        "allowedOperations": [
+          "ExecuteExternalAction",
+          "ReadProcessContext",
+          "ReadProjectStructure",
+          "ReadUpstreamArtifacts",
+          "WriteManagedProcessArtifacts"
+        ],
+        "operationTargetScope": "ExternalActionControlled",
+        "roleResourceKey": "qa-lead",
+        "roleDisplayName": "QA lead",
+        "capabilityScope": {
+          "directives": [],
+          "instructionFragments": [],
+          "requiredReceipts": [],
+          "isEmpty": true
+        },
+        "requiredRuntimeToolNames": []
+      },
+      {
+        "stepInstanceId": {
+          "value": "e47c4fc8-9233-412d-903b-5ac454c2a8dd"
+        },
+        "stepKey": "repair-escalation",
+        "title": "Escalate unresolved repair findings",
+        "roleKey": "delivery-manager",
+        "executorKind": "agent",
+        "executorId": "b0c2a317-a417-385f-9f59-0f4a2c5b7ff2",
+        "executorDisplayName": "Delivery Manager",
+        "isBlocked": false,
+        "blockedReason": null,
+        "branchGate": {
+          "sourceStepKey": "qa-recheck",
+          "requiredOutcomeKey": "repair-escalation"
+        },
+        "allowedOperations": [
+          "EscalateOrDecide",
+          "ReadProcessContext",
+          "ReadProjectStructure",
+          "ReadUpstreamArtifacts",
+          "WriteManagedProcessArtifacts"
+        ],
+        "operationTargetScope": "ExternalProductTargetReadOnly",
+        "roleResourceKey": "delivery-manager",
+        "roleDisplayName": "Delivery manager",
+        "capabilityScope": {
+          "directives": [],
+          "instructionFragments": [],
+          "requiredReceipts": [],
+          "isEmpty": true
+        },
+        "requiredRuntimeToolNames": []
+      },
+      {
+        "stepInstanceId": {
+          "value": "c37cc338-7ba2-492f-bfe5-24c699c5ae76"
+        },
+        "stepKey": "release-approval-after-repair",
+        "title": "Approve repaired release readiness",
+        "roleKey": "delivery-manager",
+        "executorKind": "agent",
+        "executorId": "b0c2a317-a417-385f-9f59-0f4a2c5b7ff2",
+        "executorDisplayName": "Delivery Manager",
+        "isBlocked": false,
+        "blockedReason": null,
+        "branchGate": {
+          "sourceStepKey": "qa-recheck",
+          "requiredOutcomeKey": "quality-accepted"
+        },
+        "allowedOperations": [
+          "EscalateOrDecide",
+          "ReadProcessContext",
+          "ReadProjectStructure",
+          "ReadUpstreamArtifacts",
+          "WriteManagedProcessArtifacts"
+        ],
+        "operationTargetScope": "ExternalProductTargetReadOnly",
+        "roleResourceKey": "delivery-manager",
+        "roleDisplayName": "Delivery manager",
+        "capabilityScope": {
+          "directives": [],
+          "instructionFragments": [],
+          "requiredReceipts": [],
+          "isEmpty": true
+        },
+        "requiredRuntimeToolNames": []
+      },
+      {
+        "stepInstanceId": {
+          "value": "2566db50-e44b-46e9-893e-a45759bb1d5e"
+        },
+        "stepKey": "execute-release-rollout-after-repair",
+        "title": "Execute repaired controlled release rollout",
+        "roleKey": "release-manager",
+        "executorKind": "agent",
+        "executorId": "6f674c92-3347-dd55-96d3-851db9739b35",
+        "executorDisplayName": "Release Readiness Manager",
+        "isBlocked": false,
+        "blockedReason": null,
+        "branchGate": null,
+        "allowedOperations": [
+          "ExecuteExternalAction",
+          "ReadProcessContext",
+          "ReadProjectStructure",
+          "ReadUpstreamArtifacts",
+          "WriteManagedProcessArtifacts"
+        ],
+        "operationTargetScope": "ExternalActionControlled",
+        "roleResourceKey": "release-manager",
+        "roleDisplayName": "Release manager",
+        "capabilityScope": {
+          "directives": [],
+          "instructionFragments": [],
+          "requiredReceipts": [],
+          "isEmpty": true
+        },
+        "requiredRuntimeToolNames": []
+      },
+      {
+        "stepInstanceId": {
+          "value": "260c4987-4aee-497c-852f-c1fe4bf4c79a"
+        },
+        "stepKey": "post-release-learning-after-repair",
+        "title": "Capture repaired-release learning",
+        "roleKey": "delivery-manager",
+        "executorKind": "agent",
+        "executorId": "b0c2a317-a417-385f-9f59-0f4a2c5b7ff2",
+        "executorDisplayName": "Delivery Manager",
+        "isBlocked": false,
+        "blockedReason": null,
+        "branchGate": null,
+        "allowedOperations": [
+          "ExecuteExternalAction",
+          "ReadProcessContext",
+          "ReadProjectStructure",
+          "ReadUpstreamArtifacts",
+          "WriteManagedProcessArtifacts"
+        ],
+        "operationTargetScope": "ExternalActionControlled",
+        "roleResourceKey": "delivery-manager",
+        "roleDisplayName": "Delivery manager",
+        "capabilityScope": {
+          "directives": [],
+          "instructionFragments": [],
+          "requiredReceipts": [],
+          "isEmpty": true
+        },
+        "requiredRuntimeToolNames": []
+      }
+    ],
+    "readinessFindings": [
+      {
+        "severity": 0,
+        "code": "process.launch.required_tool_receipt",
+        "message": "Step 'qa-validation' requires tool receipt 'qa-ui-runtime-start' for runtime tool 'workspace_dotnet_run'. Reason: QA must start the app before collecting current-run UI proof when the launch context requires browser validation.",
+        "stepKey": "qa-validation",
+        "roleKey": "qa-lead"
+      },
+      {
+        "severity": 0,
+        "code": "process.launch.required_tool_receipt",
+        "message": "Step 'qa-validation' requires tool receipt 'qa-browser-navigate' for runtime tool 'browser_navigate'. Reason: QA browser proof must navigate to a concrete route before accepting UI evidence.",
+        "stepKey": "qa-validation",
+        "roleKey": "qa-lead"
+      },
+      {
+        "severity": 0,
+        "code": "process.launch.required_tool_receipt",
+        "message": "Step 'qa-validation' requires tool receipt 'qa-browser-state' for runtime tool 'browser_snapshot'. Reason: QA browser proof must include durable browser state for the validated route.",
+        "stepKey": "qa-validation",
+        "roleKey": "qa-lead"
+      },
+      {
+        "severity": 0,
+        "code": "process.launch.required_tool_receipt",
+        "message": "Step 'qa-validation' requires tool receipt 'qa-browser-evaluate' for runtime tool 'browser_evaluate'. Reason: QA browser proof must evaluate current visible or application state after a representative interaction before accepting UI behavior.",
+        "stepKey": "qa-validation",
+        "roleKey": "qa-lead"
+      },
+      {
+        "severity": 0,
+        "code": "process.launch.required_tool_receipt",
+        "message": "Step 'qa-validation' requires tool receipt 'qa-browser-screenshot' for runtime tool 'browser_take_screenshot'. Reason: QA browser proof must include a current-run screenshot when UI evidence is required.",
+        "stepKey": "qa-validation",
+        "roleKey": "qa-lead"
+      },
+      {
+        "severity": 0,
+        "code": "process.launch.required_tool_receipt",
+        "message": "Step 'qa-validation' requires tool receipt 'qa-browser-console' for runtime tool 'browser_console_messages'. Reason: QA browser proof must include console diagnostics for the validated route.",
+        "stepKey": "qa-validation",
+        "roleKey": "qa-lead"
+      },
+      {
+        "severity": 0,
+        "code": "process.launch.required_tool_receipt",
+        "message": "Step 'qa-validation' requires tool receipt 'qa-ui-runtime-stop' for runtime tool 'workspace_dotnet_stop'. Reason: QA must clean up any app process started for browser validation.",
+        "stepKey": "qa-validation",
+        "roleKey": "qa-lead"
+      },
+      {
+        "severity": 0,
+        "code": "process.launch.required_tool_receipt",
+        "message": "Step 'qa-validation' requires tool receipt 'qa-inspect-image' for runtime tool 'workspace_inspect_image'. Reason: QA visual comparison must inspect screenshot images before accepting visual evidence.",
+        "stepKey": "qa-validation",
+        "roleKey": "qa-lead"
+      },
+      {
+        "severity": 0,
+        "code": "process.launch.required_tool_receipt",
+        "message": "Step 'qa-validation' requires tool receipt 'qa-analyze-image' for runtime tool 'workspace_analyze_image'. Reason: QA visual claims must be grounded in provider-backed image analysis.",
+        "stepKey": "qa-validation",
+        "roleKey": "qa-lead"
+      },
+      {
+        "severity": 0,
+        "code": "process.launch.required_tool_receipt",
+        "message": "Step 'qa-validation' requires tool receipt 'qa-compare-images' for runtime tool 'workspace_analyze_images'. Reason: QA must compare delivered screenshots with source visual targets when target images exist.",
+        "stepKey": "qa-validation",
+        "roleKey": "qa-lead"
+      },
+      {
+        "severity": 0,
+        "code": "process.launch.scoped_instruction_fragment",
+        "message": "Step 'qa-validation' adds scoped instruction fragment 'qa-prevalidation-screenshot-disposition'.",
+        "stepKey": "qa-validation",
+        "roleKey": "qa-lead"
+      },
+      {
+        "severity": 0,
+        "code": "process.launch.required_tool_receipt",
+        "message": "Step 'qa-recheck' requires tool receipt 'qa-recheck-ui-runtime-start' for runtime tool 'workspace_dotnet_run'. Reason: QA recheck must start the repaired app before collecting current-run UI proof when the launch context requires browser validation.",
+        "stepKey": "qa-recheck",
+        "roleKey": "qa-lead"
+      },
+      {
+        "severity": 0,
+        "code": "process.launch.required_tool_receipt",
+        "message": "Step 'qa-recheck' requires tool receipt 'qa-recheck-browser-navigate' for runtime tool 'browser_navigate'. Reason: QA recheck browser proof must navigate to a concrete route before accepting UI evidence.",
+        "stepKey": "qa-recheck",
+        "roleKey": "qa-lead"
+      },
+      {
+        "severity": 0,
+        "code": "process.launch.required_tool_receipt",
+        "message": "Step 'qa-recheck' requires tool receipt 'qa-recheck-browser-state' for runtime tool 'browser_snapshot'. Reason: QA recheck browser proof must include durable browser state for the validated route.",
+        "stepKey": "qa-recheck",
+        "roleKey": "qa-lead"
+      },
+      {
+        "severity": 0,
+        "code": "process.launch.required_tool_receipt",
+        "message": "Step 'qa-recheck' requires tool receipt 'qa-recheck-browser-evaluate' for runtime tool 'browser_evaluate'. Reason: QA recheck must evaluate repaired visible or application state after a representative interaction before accepting UI behavior.",
+        "stepKey": "qa-recheck",
+        "roleKey": "qa-lead"
+      },
+      {
+        "severity": 0,
+        "code": "process.launch.required_tool_receipt",
+        "message": "Step 'qa-recheck' requires tool receipt 'qa-recheck-browser-screenshot' for runtime tool 'browser_take_screenshot'. Reason: QA recheck browser proof must include a current-run screenshot when UI evidence is required.",
+        "stepKey": "qa-recheck",
+        "roleKey": "qa-lead"
+      },
+      {
+        "severity": 0,
+        "code": "process.launch.required_tool_receipt",
+        "message": "Step 'qa-recheck' requires tool receipt 'qa-recheck-browser-console' for runtime tool 'browser_console_messages'. Reason: QA recheck browser proof must include console diagnostics for the validated route.",
+        "stepKey": "qa-recheck",
+        "roleKey": "qa-lead"
+      },
+      {
+        "severity": 0,
+        "code": "process.launch.required_tool_receipt",
+        "message": "Step 'qa-recheck' requires tool receipt 'qa-recheck-ui-runtime-stop' for runtime tool 'workspace_dotnet_stop'. Reason: QA recheck must clean up any app process started for browser validation.",
+        "stepKey": "qa-recheck",
+        "roleKey": "qa-lead"
+      },
+      {
+        "severity": 0,
+        "code": "process.launch.required_tool_receipt",
+        "message": "Step 'qa-recheck' requires tool receipt 'qa-recheck-inspect-image' for runtime tool 'workspace_inspect_image'. Reason: QA recheck visual comparison must inspect screenshot images before accepting visual evidence.",
+        "stepKey": "qa-recheck",
+        "roleKey": "qa-lead"
+      },
+      {
+        "severity": 0,
+        "code": "process.launch.required_tool_receipt",
+        "message": "Step 'qa-recheck' requires tool receipt 'qa-recheck-analyze-image' for runtime tool 'workspace_analyze_image'. Reason: QA recheck visual claims must be grounded in provider-backed image analysis.",
+        "stepKey": "qa-recheck",
+        "roleKey": "qa-lead"
+      },
+      {
+        "severity": 0,
+        "code": "process.launch.required_tool_receipt",
+        "message": "Step 'qa-recheck' requires tool receipt 'qa-recheck-compare-images' for runtime tool 'workspace_analyze_images'. Reason: QA recheck must compare repaired screenshots with source visual targets when target images exist.",
+        "stepKey": "qa-recheck",
+        "roleKey": "qa-lead"
+      },
+      {
+        "severity": 0,
+        "code": "process.launch.scoped_instruction_fragment",
+        "message": "Step 'qa-recheck' adds scoped instruction fragment 'qa-recheck-prevalidation-screenshot-disposition'.",
+        "stepKey": "qa-recheck",
+        "roleKey": "qa-lead"
+      },
+      {
+        "severity": 0,
+        "code": "process.launch.readiness_ok",
+        "message": "All executable steps have active agent bindings with enabled governed-output-capable providers.",
+        "stepKey": null,
+        "roleKey": null
+      }
+    ]
+  },
+  "warnings": []
+}

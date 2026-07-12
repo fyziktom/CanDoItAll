@@ -1,0 +1,18 @@
+SB06 analytics UI anti-stub audit
+
+Scoped search rejected these panel dependencies/patterns:
+- raw structural div/span/p/h1-h6 markup
+- WorkflowEvent
+- PayloadJson
+- JsonDocument
+- HistoryRunPageSize
+- ColumnsSm or ColumnsMd
+
+Positive source assertions:
+- one IWorkflowAnalyticsQueryService boundary
+- one isolated WorkflowAnalyticsPanel wrapper
+- Analytics-tab IsActive gate
+- refresh-version invalidation
+- BaseLib large-screen layout and DataGrid wrappers
+
+`git diff --check` reported no whitespace errors in the analytics files; only existing line-ending conversion warnings appeared for WorkflowsPage files.

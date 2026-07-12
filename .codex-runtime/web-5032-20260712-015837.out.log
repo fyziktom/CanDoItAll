@@ -1,0 +1,137 @@
+Použití nastavení spuštění z src\App\CanDoItAll.Web\Properties\launchSettings.json...
+info: CanDoItAll.Infrastructure.ControlPlane.DatabaseProfileControlPlaneService[0]
+      Resolved database profile Configured PostgreSQL override (e5df9ad6-33db-c697-4a06-78a74976013c) via ExplicitOverride. Provider=PostgreSql. Fingerprint=postgres:127.0.0.1:5432:candoitall_development:candoitall. RuntimeLocked=True.
+info: CanDoItAll.Infrastructure.ControlPlane.CanonicalRuntimeDatabase[0]
+      Initialized canonical runtime database profile e5df9ad6-33db-c697-4a06-78a74976013c (Configured PostgreSQL override). Provider=PostgreSql. Fingerprint=postgres:127.0.0.1:5432:candoitall_development:candoitall. Generation=0.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring runtime database profile e5df9ad6-33db-c697-4a06-78a74976013c (Configured PostgreSQL override) is ready. Provider=PostgreSql, Source=PostgresConnection.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Applying EF migrations for profile e5df9ad6-33db-c697-4a06-78a74976013c.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring CRM/HR schema for profile e5df9ad6-33db-c697-4a06-78a74976013c.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring plugin runtime schema for profile e5df9ad6-33db-c697-4a06-78a74976013c.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring scheduler planner schema for profile e5df9ad6-33db-c697-4a06-78a74976013c.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring agent provider bootstrap for profile e5df9ad6-33db-c697-4a06-78a74976013c.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Runtime database profile e5df9ad6-33db-c697-4a06-78a74976013c is ready.
+info: Quartz.Core.SchedulerSignalerImpl[0]
+      Initialized Scheduler Signaller of type: Quartz.Core.SchedulerSignalerImpl
+info: Quartz.Core.QuartzScheduler[0]
+      Quartz Scheduler created
+info: Quartz.Core.QuartzScheduler[0]
+      JobFactory set to: Quartz.Simpl.MicrosoftDependencyInjectionJobFactory
+info: Quartz.Simpl.RAMJobStore[0]
+      RAMJobStore initialized.
+info: Quartz.Impl.StdSchedulerFactory[0]
+      Quartz Scheduler 3.13.1.0 - 'CanDoItAll SchedulerPlanner' with instanceId 'CanDoItAll.SchedulerPlanner' initialized
+info: Quartz.Impl.StdSchedulerFactory[0]
+      Using thread pool 'Quartz.Simpl.DefaultThreadPool', size: 10
+info: Quartz.Impl.StdSchedulerFactory[0]
+      Using job store 'Quartz.Simpl.RAMJobStore', supports persistence: False, clustered: False
+info: CanDoItAll.Modules.SchedulerPlanner.SchedulerPlannerTriggerScheduler[0]
+      Projected scheduler plan aa141648-524a-4b15-8992-ee6a8b024d5f into local Quartz runtime. Enabled=True, NextFireAtUtc=07/13/2026 13:00:00 +00:00.
+info: CanDoItAll.Modules.SchedulerPlanner.SchedulerPlannerProjectionHostedService[0]
+      SchedulerPlanner projected saved plans into the local Quartz runtime.
+info: Microsoft.Hosting.Lifetime[14]
+      Now listening on: http://localhost:5032
+info: Microsoft.Hosting.Lifetime[0]
+      Application started. Press Ctrl+C to shut down.
+info: Microsoft.Hosting.Lifetime[0]
+      Hosting environment: Development
+info: Microsoft.Hosting.Lifetime[0]
+      Content root path: C:\repositories\CanDoItAll\src\App\CanDoItAll.Web
+info: Quartz.Core.QuartzScheduler[0]
+      Scheduler CanDoItAll SchedulerPlanner_$_CanDoItAll.SchedulerPlanner started.
+warn: Microsoft.AspNetCore.HttpsPolicy.HttpsRedirectionMiddleware[3]
+      Failed to determine the https port for redirect.
+warn: CanDoItAll.Modules.AgentFramework.WorkflowExampleCatalogSeedService[0]
+      Skipping workflow example seed 'Example: Gmail Label Email Summary To Project' because one or more optional workflow executors are unavailable in this host: Workflow executor 'gmail.messages-by-label' is not runnable: Plugin 'gmail.mail' is not installed. Workflow executor 'gmail.mark-message-processed' is not runnable: Plugin 'gmail.mail' is not installed.
+warn: CanDoItAll.Modules.AgentFramework.WorkflowExampleCatalogSeedService[0]
+      Skipping workflow example seed 'Example: Gmail Label Email Tasks To Project' because one or more optional workflow executors are unavailable in this host: Workflow executor 'gmail.messages-by-label' is not runnable: Plugin 'gmail.mail' is not installed. Workflow executor 'gmail.mark-message-processed' is not runnable: Plugin 'gmail.mail' is not installed.
+info: CanDoItAll.Modules.AgentFramework.AgentFrameworkCatalogWarmupService[0]
+      Completed AgentFramework catalog repair and projection warmup in 11743 ms.
+fail: Microsoft.AspNetCore.Diagnostics.DeveloperExceptionPageMiddleware[1]
+      An unhandled exception has occurred while executing the request.
+      Microsoft.AspNetCore.Http.BadHttpRequestException: Required parameter "bool includeTemplates" was not provided from query string.
+         at lambda_method922(Closure, Object, HttpContext)
+         at Microsoft.AspNetCore.HttpsPolicy.HttpsRedirectionMiddleware.Invoke(HttpContext context)
+         at Microsoft.AspNetCore.Diagnostics.StatusCodePagesMiddleware.Invoke(HttpContext context)
+         at Microsoft.AspNetCore.Authorization.AuthorizationMiddleware.Invoke(HttpContext context)
+         at Microsoft.AspNetCore.Diagnostics.DeveloperExceptionPageMiddlewareImpl.Invoke(HttpContext context)
+fail: Microsoft.AspNetCore.Diagnostics.DeveloperExceptionPageMiddleware[1]
+      An unhandled exception has occurred while executing the request.
+      Microsoft.AspNetCore.Http.BadHttpRequestException: Required parameter "bool includeTemplates" was not provided from query string.
+         at lambda_method921(Closure, Object, HttpContext)
+         at Microsoft.AspNetCore.HttpsPolicy.HttpsRedirectionMiddleware.Invoke(HttpContext context)
+         at Microsoft.AspNetCore.Diagnostics.StatusCodePagesMiddleware.Invoke(HttpContext context)
+         at Microsoft.AspNetCore.Authorization.AuthorizationMiddleware.Invoke(HttpContext context)
+         at Microsoft.AspNetCore.Diagnostics.DeveloperExceptionPageMiddlewareImpl.Invoke(HttpContext context)
+info: CanDoItAll.AgentFramework.Maf.MafAgentRuntime[0]
+      Agent tool policy decision Allow for tool load_skill on agent 9fc87ec2-e918-d756-b6c9-b42b8eecbe6e. ExecutionRunId=5c0fef47-dfa2-4fd5-a64d-85818ee572c3 SourceKind=process-step ProcessRunId=c8ebc2a5-3caa-4eed-b8d0-7c35012cbbc7 ProcessStepId=9594fcfc-bad2-4e48-aa55-a568f57dc25c RuntimeToolProviderKey= Signature=load_skill|skillName=concrete-deliverable-delivery
+info: CanDoItAll.AgentFramework.Maf.MafAgentRuntime[0]
+      Agent tool policy decision Allow for tool workspace_write_file on agent 9fc87ec2-e918-d756-b6c9-b42b8eecbe6e. ExecutionRunId=5c0fef47-dfa2-4fd5-a64d-85818ee572c3 SourceKind=process-step ProcessRunId=c8ebc2a5-3caa-4eed-b8d0-7c35012cbbc7 ProcessStepId=9594fcfc-bad2-4e48-aa55-a568f57dc25c RuntimeToolProviderKey= Signature=workspace_write_file|content=Status: Completed  # Feature Intake: Clarify .NET scope and app type boundary  ## Step context - Process: Multi-team software delivery and release governance - ...#edea687801ed,path=artifacts/process-runs/c8ebc2a5-3caa-4eed-b8d0-7c35012cbbc7/steps/feature-intake.md
+info: CanDoItAll.AgentFramework.Maf.MafAgentRuntime[0]
+      Agent tool policy decision Allow for tool workspace_stat_path on agent 9fc87ec2-e918-d756-b6c9-b42b8eecbe6e. ExecutionRunId=5c0fef47-dfa2-4fd5-a64d-85818ee572c3 SourceKind=process-step ProcessRunId=c8ebc2a5-3caa-4eed-b8d0-7c35012cbbc7 ProcessStepId=9594fcfc-bad2-4e48-aa55-a568f57dc25c RuntimeToolProviderKey= Signature=workspace_stat_path|path=artifacts/process-runs/c8ebc2a5-3caa-4eed-b8d0-7c35012cbbc7/steps/feature-intake.md
+info: CanDoItAll.Modules.Processes.ProcessRuntimeDispatchQueueWorker[0]
+      Process background dispatch completed for run c8ebc2a5-3caa-4eed-b8d0-7c35012cbbc7. Stage=Running Status=Active Diagnostics=Process run 'c8ebc2a5-3caa-4eed-b8d0-7c35012cbbc7' changed concurrently while creating a dispatch claim; retrying with the latest runtime state. | Step 'architecture-review' is waiting for active child process run '4c600418-8b07-4de8-9000-7ace3c588c6c'.
+info: CanDoItAll.AgentFramework.Maf.MafAgentRuntime[0]
+      Agent tool policy decision Allow for tool workspace_write_file on agent 38d4deb5-74ce-8e55-bf1a-17e88b437472. ExecutionRunId=cbbf8695-72bd-4844-8320-cb79eed3630c SourceKind=process-step ProcessRunId=4c600418-8b07-4de8-9000-7ace3c588c6c ProcessStepId=1b2dbd93-9d29-4e57-ad37-7d6e329b780e RuntimeToolProviderKey= Signature=workspace_write_file|content=Status: Completed  # .NET Application Classification and Project Context  ## Step context - Process: .NET architecture design and review subprocess - Step key: ...#63ca81b97c04,overwrite=True,path=artifacts/process-runs/4c600418-8b07-4de8-9000-7ace3c588c6c/steps/classify-dotnet-application.md
+info: CanDoItAll.AgentFramework.Maf.MafAgentRuntime[0]
+      Agent tool policy decision Allow for tool workspace_read_file on agent 38d4deb5-74ce-8e55-bf1a-17e88b437472. ExecutionRunId=f6e21593-8ad5-460d-8e6a-76f1c03f59af SourceKind=process-step ProcessRunId=4c600418-8b07-4de8-9000-7ace3c588c6c ProcessStepId=4ac03ca3-c611-473b-81e2-c8f6f9875a49 RuntimeToolProviderKey= Signature=workspace_read_file|maxCharacters=20000,path=artifacts/process-runs/4c600418-8b07-4de8-9000-7ace3c588c6c/steps/classify-dotnet-application.md
+info: CanDoItAll.AgentFramework.Maf.MafAgentRuntime[0]
+      Agent tool policy decision Allow for tool workspace_write_file on agent 38d4deb5-74ce-8e55-bf1a-17e88b437472. ExecutionRunId=f6e21593-8ad5-460d-8e6a-76f1c03f59af SourceKind=process-step ProcessRunId=4c600418-8b07-4de8-9000-7ace3c588c6c ProcessStepId=4ac03ca3-c611-473b-81e2-c8f6f9875a49 RuntimeToolProviderKey= Signature=workspace_write_file|content=Status: Completed  # .NET Architecture Design Draft  ## Step context - Process: .NET architecture design and review subprocess - Step key: draft-architecture-de...#d50030ea03b0,path=artifacts/process-runs/4c600418-8b07-4de8-9000-7ace3c588c6c/steps/draft-architecture-design.md
+info: CanDoItAll.AgentFramework.Maf.MafAgentRuntime[0]
+      Agent tool policy decision Allow for tool workspace_read_file on agent 549a3e86-5ffc-0d58-bf8c-10952fcdaac4. ExecutionRunId=685e9dc5-0b4a-4074-a740-2fded276a930 SourceKind=process-step ProcessRunId=4c600418-8b07-4de8-9000-7ace3c588c6c ProcessStepId=1013bc2b-6d87-4923-8c80-68c575aef948 RuntimeToolProviderKey= Signature=workspace_read_file|maxCharacters=12000,path=artifacts/process-runs/4c600418-8b07-4de8-9000-7ace3c588c6c/steps/classify-dotnet-application.md
+info: CanDoItAll.AgentFramework.Maf.MafAgentRuntime[0]
+      Agent tool policy decision Allow for tool workspace_read_file on agent 549a3e86-5ffc-0d58-bf8c-10952fcdaac4. ExecutionRunId=685e9dc5-0b4a-4074-a740-2fded276a930 SourceKind=process-step ProcessRunId=4c600418-8b07-4de8-9000-7ace3c588c6c ProcessStepId=1013bc2b-6d87-4923-8c80-68c575aef948 RuntimeToolProviderKey= Signature=workspace_read_file|maxCharacters=12000,path=artifacts/process-runs/4c600418-8b07-4de8-9000-7ace3c588c6c/steps/draft-architecture-design.md
+info: CanDoItAll.AgentFramework.Maf.MafAgentRuntime[0]
+      Agent tool policy decision Allow for tool workspace_write_file on agent 549a3e86-5ffc-0d58-bf8c-10952fcdaac4. ExecutionRunId=685e9dc5-0b4a-4074-a740-2fded276a930 SourceKind=process-step ProcessRunId=4c600418-8b07-4de8-9000-7ace3c588c6c ProcessStepId=1013bc2b-6d87-4923-8c80-68c575aef948 RuntimeToolProviderKey= Signature=workspace_write_file|content=Status: Completed  # Design acceptance-driven validation plan  ## Step context - Process: .NET architecture design and review subprocess - Step key: design-vali...#5c1b4f1e4445,path=artifacts/process-runs/4c600418-8b07-4de8-9000-7ace3c588c6c/steps/design-validation-plan.md
+info: CanDoItAll.AgentFramework.Maf.MafAgentRuntime[0]
+      Agent tool policy decision Allow for tool workspace_read_file on agent 38d4deb5-74ce-8e55-bf1a-17e88b437472. ExecutionRunId=518ae5b1-2894-426b-a1de-99c90fc21b8b SourceKind=process-step ProcessRunId=4c600418-8b07-4de8-9000-7ace3c588c6c ProcessStepId=41ba7fc3-052e-4c0d-9a40-f34c371537f0 RuntimeToolProviderKey= Signature=workspace_read_file|maxCharacters=20000,path=artifacts/process-runs/4c600418-8b07-4de8-9000-7ace3c588c6c/steps/draft-architecture-design.md
+info: CanDoItAll.AgentFramework.Maf.MafAgentRuntime[0]
+      Agent tool policy decision Allow for tool workspace_read_file on agent 38d4deb5-74ce-8e55-bf1a-17e88b437472. ExecutionRunId=518ae5b1-2894-426b-a1de-99c90fc21b8b SourceKind=process-step ProcessRunId=4c600418-8b07-4de8-9000-7ace3c588c6c ProcessStepId=41ba7fc3-052e-4c0d-9a40-f34c371537f0 RuntimeToolProviderKey= Signature=workspace_read_file|maxCharacters=20000,path=artifacts/process-runs/4c600418-8b07-4de8-9000-7ace3c588c6c/steps/design-validation-plan.md
+info: CanDoItAll.AgentFramework.Maf.MafAgentRuntime[0]
+      Agent tool policy decision Allow for tool workspace_read_file on agent 38d4deb5-74ce-8e55-bf1a-17e88b437472. ExecutionRunId=518ae5b1-2894-426b-a1de-99c90fc21b8b SourceKind=process-step ProcessRunId=4c600418-8b07-4de8-9000-7ace3c588c6c ProcessStepId=41ba7fc3-052e-4c0d-9a40-f34c371537f0 RuntimeToolProviderKey= Signature=workspace_read_file|maxCharacters=20000,path=artifacts/process-runs/4c600418-8b07-4de8-9000-7ace3c588c6c/steps/classify-dotnet-application.md
+info: CanDoItAll.AgentFramework.Maf.MafAgentRuntime[0]
+      Agent tool policy decision Allow for tool workspace_write_file on agent 38d4deb5-74ce-8e55-bf1a-17e88b437472. ExecutionRunId=518ae5b1-2894-426b-a1de-99c90fc21b8b SourceKind=process-step ProcessRunId=4c600418-8b07-4de8-9000-7ace3c588c6c ProcessStepId=41ba7fc3-052e-4c0d-9a40-f34c371537f0 RuntimeToolProviderKey= Signature=workspace_write_file|content=Status: Completed  # .NET Architecture Review Findings  ## Step context - Process: .NET architecture design and review subprocess - Step key: review-architectur...#4afe8052b4b0,path=artifacts/process-runs/4c600418-8b07-4de8-9000-7ace3c588c6c/steps/review-architecture-design.md
+info: CanDoItAll.AgentFramework.Maf.MafAgentRuntime[0]
+      Agent tool policy decision Allow for tool workspace_read_file on agent b0c2a317-a417-385f-9f59-0f4a2c5b7ff2. ExecutionRunId=d3a8bfab-4339-4cb0-841b-b6033f4c4417 SourceKind=process-step ProcessRunId=4c600418-8b07-4de8-9000-7ace3c588c6c ProcessStepId=1373a17b-462f-46cb-8c7d-e91eb1662e0a RuntimeToolProviderKey= Signature=workspace_read_file|maxCharacters=12000,path=artifacts/process-runs/4c600418-8b07-4de8-9000-7ace3c588c6c/steps/classify-dotnet-application.md
+info: CanDoItAll.AgentFramework.Maf.MafAgentRuntime[0]
+      Agent tool policy decision Allow for tool workspace_read_file on agent b0c2a317-a417-385f-9f59-0f4a2c5b7ff2. ExecutionRunId=d3a8bfab-4339-4cb0-841b-b6033f4c4417 SourceKind=process-step ProcessRunId=4c600418-8b07-4de8-9000-7ace3c588c6c ProcessStepId=1373a17b-462f-46cb-8c7d-e91eb1662e0a RuntimeToolProviderKey= Signature=workspace_read_file|maxCharacters=12000,path=artifacts/process-runs/4c600418-8b07-4de8-9000-7ace3c588c6c/steps/review-architecture-design.md
+info: CanDoItAll.AgentFramework.Maf.MafAgentRuntime[0]
+      Agent tool policy decision Allow for tool workspace_read_file on agent b0c2a317-a417-385f-9f59-0f4a2c5b7ff2. ExecutionRunId=d3a8bfab-4339-4cb0-841b-b6033f4c4417 SourceKind=process-step ProcessRunId=4c600418-8b07-4de8-9000-7ace3c588c6c ProcessStepId=1373a17b-462f-46cb-8c7d-e91eb1662e0a RuntimeToolProviderKey= Signature=workspace_read_file|maxCharacters=12000,path=artifacts/process-runs/4c600418-8b07-4de8-9000-7ace3c588c6c/steps/design-validation-plan.md
+info: CanDoItAll.AgentFramework.Maf.MafAgentRuntime[0]
+      Agent tool policy decision Allow for tool workspace_write_file on agent b0c2a317-a417-385f-9f59-0f4a2c5b7ff2. ExecutionRunId=d3a8bfab-4339-4cb0-841b-b6033f4c4417 SourceKind=process-step ProcessRunId=4c600418-8b07-4de8-9000-7ace3c588c6c ProcessStepId=1373a17b-462f-46cb-8c7d-e91eb1662e0a RuntimeToolProviderKey= Signature=workspace_write_file|content=Status: Completed  # .NET Architecture Design and Review Handoff  ## Step context - Process: .NET architecture design and review subprocess - Step key: architec...#48d387ff7c5d,path=artifacts/process-runs/4c600418-8b07-4de8-9000-7ace3c588c6c/steps/architecture-handoff.md
+info: CanDoItAll.Modules.Processes.ProcessRuntimeDispatchQueueWorker[0]
+      Process background dispatch completed for run 4c600418-8b07-4de8-9000-7ace3c588c6c. Stage=Completed Status=Completed Diagnostics=Process run '4c600418-8b07-4de8-9000-7ace3c588c6c' changed concurrently while creating a dispatch claim; retrying with the latest runtime state. | Process run '4c600418-8b07-4de8-9000-7ace3c588c6c' changed concurrently while creating a dispatch claim; retrying with the latest runtime state. | Process run '4c600418-8b07-4de8-9000-7ace3c588c6c' changed concurrently while creating a dispatch claim; retrying with the latest runtime state. | Process run '4c600418-8b07-4de8-9000-7ace3c588c6c' changed concurrently while creating a dispatch claim; retrying with the latest runtime state.
+info: CanDoItAll.Modules.Processes.ProcessRuntimeDispatchQueueWorker[0]
+      Process background dispatch queued 1 parent run(s) after terminal child run 4c600418-8b07-4de8-9000-7ace3c588c6c.
+info: CanDoItAll.Modules.Processes.ProcessRuntimeDispatchQueueWorker[0]
+      Process background dispatch completed for run c8ebc2a5-3caa-4eed-b8d0-7c35012cbbc7. Stage=Running Status=Active Diagnostics=Process run 'c8ebc2a5-3caa-4eed-b8d0-7c35012cbbc7' changed concurrently while creating a dispatch claim; retrying with the latest runtime state. | Step 'implementation' is waiting for active child process run 'eb450b76-91f4-4781-a75f-12a865301c78'.
+info: CanDoItAll.AgentFramework.Maf.MafAgentRuntime[0]
+      Agent tool policy decision Allow for tool workspace_write_file on agent b0c2a317-a417-385f-9f59-0f4a2c5b7ff2. ExecutionRunId=a981940f-dfa0-4373-8ca9-3e15ffacc07f SourceKind=process-step ProcessRunId=eb450b76-91f4-4781-a75f-12a865301c78 ProcessStepId=6774eac8-50af-41ec-8ba3-4fd265105168 RuntimeToolProviderKey= Signature=workspace_write_file|content=Status: Completed  # Slice Intake: Capture implementation boundary for the TetrisGame .NET slice  ## Scope summary This implementation slice covers the bounded,...#096f751b2249,path=artifacts/process-runs/eb450b76-91f4-4781-a75f-12a865301c78/steps/slice-intake.md
+info: CanDoItAll.Modules.Processes.AgentFrameworkProcessExecutionClaimRecoveryCoordinator[0]
+      Recovered completed AgentFramework execution run a981940f-dfa0-4373-8ca9-3e15ffacc07f into process run eb450b76-91f4-4781-a75f-12a865301c78, step 6774eac8-50af-41ec-8ba3-4fd265105168. Outcome=Succeeded
+info: CanDoItAll.Modules.Processes.AgentFrameworkProcessExecutionClaimRecoveryWorker[0]
+      Process execution claim recovery reconciled 1 interrupted claim(s).
+info: CanDoItAll.AgentFramework.Maf.MafAgentRuntime[0]
+      Agent tool policy decision Allow for tool workspace_read_file on agent 38d4deb5-74ce-8e55-bf1a-17e88b437472. ExecutionRunId=e2df64ad-3541-4705-8aac-6e6ee47edfab SourceKind=process-step ProcessRunId=eb450b76-91f4-4781-a75f-12a865301c78 ProcessStepId=a57f453d-89cc-4a2e-8065-6f988143b8de RuntimeToolProviderKey= Signature=workspace_read_file|maxCharacters=12000,path=artifacts/process-runs/eb450b76-91f4-4781-a75f-12a865301c78/steps/slice-intake.md
+info: CanDoItAll.AgentFramework.Maf.MafAgentRuntime[0]
+      Agent tool policy decision Allow for tool workspace_write_file on agent 38d4deb5-74ce-8e55-bf1a-17e88b437472. ExecutionRunId=e2df64ad-3541-4705-8aac-6e6ee47edfab SourceKind=process-step ProcessRunId=eb450b76-91f4-4781-a75f-12a865301c78 ProcessStepId=a57f453d-89cc-4a2e-8065-6f988143b8de RuntimeToolProviderKey= Signature=workspace_write_file|content=Status: Completed  # Slice Architecture Decision Record: TetrisGame .NET implementation slice  ## Scope and source-of-truth decision The authoritative delivery ...#6e2ba1f944ed,overwrite=True,path=artifacts/process-runs/eb450b76-91f4-4781-a75f-12a865301c78/steps/slice-architecture-check.md
+warn: CanDoItAll.Modules.Processes.ProcessRuntimeDispatchQueueWorker[0]
+      Process background dispatch completed for run eb450b76-91f4-4781-a75f-12a865301c78. Stage=Running Status=Active Diagnostics=Strategy result was rejected because the active claim token no longer matches. | Dispatch claim release rejected for run 'eb450b76-91f4-4781-a75f-12a865301c78', step '6774eac8-50af-41ec-8ba3-4fd265105168', token '1573e939-487d-4296-8088-baf0d34d9346': Claim release requires the current active claim. | Process run 'eb450b76-91f4-4781-a75f-12a865301c78' changed concurrently while creating a dispatch claim; retrying with the latest runtime state. | Process run 'eb450b76-91f4-4781-a75f-12a865301c78' changed concurrently while creating a dispatch claim; retrying with the latest runtime state. | Step 'prepare-solution-skeleton' is waiting for active child process run '89b841c4-dd7b-4787-8bec-120638fd2fee'.
+info: CanDoItAll.AgentFramework.Maf.MafAgentRuntime[0]
+      Agent tool policy decision Allow for tool workspace_write_file on agent b0c2a317-a417-385f-9f59-0f4a2c5b7ff2. ExecutionRunId=1ad8362f-fc33-4730-9c3a-1c9c4e264610 SourceKind=process-step ProcessRunId=89b841c4-dd7b-4787-8bec-120638fd2fee ProcessStepId=24c03596-669b-47d6-b41a-8c52cf2cb023 RuntimeToolProviderKey= Signature=workspace_write_file|content=Status: Completed  # Scaffold Contract: .NET solution baseline for TetrisGame  ## Process context - Process definition: .NET solution baseline subprocess - Step...#cf818ce31100,path=artifacts/process-runs/89b841c4-dd7b-4787-8bec-120638fd2fee/steps/scaffold-contract.md
+warn: CanDoItAll.Modules.Processes.ProcessRuntimeDispatchQueueWorker[0]
+      Process background dispatch completed for run 89b841c4-dd7b-4787-8bec-120638fd2fee. Stage=Blocked Status=Blocked Diagnostics=Process run '89b841c4-dd7b-4787-8bec-120638fd2fee' changed concurrently while creating a dispatch claim; retrying with the latest runtime state. | The declared existing .NET solution context is missing required file 'TetrisGame.sln'.
+info: CanDoItAll.Modules.Processes.ProcessRuntimeDispatchQueueWorker[0]
+      Process background dispatch queued 1 parent run(s) after terminal child run 89b841c4-dd7b-4787-8bec-120638fd2fee.
+warn: CanDoItAll.Modules.Processes.ProcessRuntimeDispatchQueueWorker[0]
+      Process background dispatch completed for run eb450b76-91f4-4781-a75f-12a865301c78. Stage=Blocked Status=Blocked Diagnostics=Step 'prepare-solution-skeleton' has blocked child process run '89b841c4-dd7b-4787-8bec-120638fd2fee' at child step 'create-dotnet-project' (446b50da-2b07-468d-b996-af87d19a7d87); child runtime status Blocked; child step status Blocked. Child diagnostic(s): process.adapter.runtime_owned_step_failed: The declared existing .NET solution context is missing required file 'TetrisGame.sln'.. child recovery decision ManagerRequired/ManagerAction; policy process.manager-review-required; retry 1/4; persi
+info: CanDoItAll.Modules.Processes.ProcessRuntimeDispatchQueueWorker[0]
+      Process background dispatch queued 1 parent run(s) after terminal child run eb450b76-91f4-4781-a75f-12a865301c78.
+warn: CanDoItAll.Modules.Processes.ProcessRuntimeDispatchQueueWorker[0]
+      Process background dispatch completed for run c8ebc2a5-3caa-4eed-b8d0-7c35012cbbc7. Stage=Blocked Status=Blocked Diagnostics=Step 'implementation' has blocked child process run 'eb450b76-91f4-4781-a75f-12a865301c78' at child step 'prepare-solution-skeleton' (94b42282-5da2-41ae-a7ed-592b087bdd12); child runtime status Blocked; child step status Blocked. Child diagnostic(s): process.adapter.subprocess_child_blocked: Step 'prepare-solution-skeleton' has blocked child process run '89b841c4-dd7b-4787-8bec-120638fd2fee' at child step 'create-dotnet-project' (446b50da-2b07-468d-b996-af87d19a7d87); child runtime status Blocke

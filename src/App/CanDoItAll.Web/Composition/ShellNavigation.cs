@@ -12,7 +12,6 @@ public static class ShellNavigation
         new("Collaboration", "/collaboration", "forum", "Human escalation, inbox, and process-scoped conversations.", PinnedByDefault: false),
         new("CRM / HR", "/crm-hr", "groups", "Unified party directory, CRM, workforce, recruiting, agents, and assignments.", PinnedByDefault: false),
         new("Agents", "/agents", "smart_toy", "Integrated AgentFramework foundation, imported tabs, and runtime governance.", PinnedByDefault: false),
-        new("Cognitive Memory", "/cognitive-memory", "psychology", "Memory review, recall traces, consolidation health, projection health, replay, and procedures.", PinnedByDefault: false),
         new("Resources", "/resources", "inventory_2", "Typed resources, connectors, and validation status.", PinnedByDefault: false),
         new("Plugins", "/plugins", "extension", "Plugin catalog, runtime packages, installation state, and availability.", PinnedByDefault: false),
         new("Prompt Gallery", "/prompt-gallery", "library_books", "Prompt library, collections, versions, and usage.", PinnedByDefault: false),

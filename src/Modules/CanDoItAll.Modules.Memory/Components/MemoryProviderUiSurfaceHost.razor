@@ -1,0 +1,85 @@
+@namespace CanDoItAll.Modules.Memory.Components
+
+<TextBlock TextStyle="TextStyle.Eyebrow" Value="Provider UI" />
+<h2 class="memory-ui-card-title">@(Provider is null ? "No provider selected" : Provider.DisplayName)</h2>
+<p class="memory-ui-muted">
+    Provider-specific surfaces render only when the selected provider declares the required capability and passes host UI policy.
+</p>
+
+@if (Provider is null)
+{
+    <EmptyState Eyebrow="No selection"
+                Title="Select a provider to view provider-specific UI"
+                Description="The host will not render provider UI without an explicit selected profile." />
+}
+else if (Surfaces.Count > 0)
+{
+    <div class="memory-ui-provider-surfaces" data-testid="memory-ui-provider-surfaces">
+        @foreach (var surface in Surfaces)
+        {
+            <article class="memory-ui-provider-surface" data-testid="@($"memory-ui-provider-surface-{surface.SurfaceId}")">
+                <div class="memory-ui-provider-surface-header">
+                    <div>
+                        <strong>@surface.Name</strong>
+                        <small>@(surface.ComponentKey ?? surface.RequiredCapability.Value)</small>
+                    </div>
+                    <StatusBadge Tone="@MemoryUiFormatting.UiSurfaceTone(surface.Availability)"
+                                 Text="@surface.Availability.ToString()" />
+                </div>
+                <p class="memory-ui-muted">@surface.Diagnostic</p>
+
+                @if (surface.CanRender && surface.Kind == MemoryProviderUiSurfaceKind.RazorComponentLibrary && surface.ComponentType is not null)
+                {
+                    <div class="memory-ui-provider-rcl-host" data-testid="memory-ui-provider-rcl-host">
+                        <DynamicComponent Type="surface.ComponentType" Parameters="CreateSurfaceParameters(surface)" />
+                    </div>
+                }
+                else if (surface.CanRender && surface.Kind == MemoryProviderUiSurfaceKind.Iframe && surface.Url is not null)
+                {
+                    <iframe class="memory-ui-provider-frame"
+                            data-testid="memory-ui-provider-iframe"
+                            src="@surface.Url"
+                            title="@surface.Name"
+                            sandbox="allow-scripts allow-forms allow-same-origin"
+                            referrerpolicy="no-referrer"
+                            loading="lazy"></iframe>
+                }
+                else if (surface.CanRender && surface.Kind == MemoryProviderUiSurfaceKind.ExternalUrl && surface.Url is not null)
+                {
+                    <a class="memory-ui-provider-external-link"
+                       data-testid="memory-ui-provider-external-link"
+                       href="@surface.Url"
+                       target="_blank"
+                       rel="noopener noreferrer">Open provider UI</a>
+                }
+                else
+                {
+                    <p class="memory-ui-provider-surface-fallback" data-testid="memory-ui-provider-surface-fallback">
+                        Surface rendering is blocked by host policy.
+                    </p>
+                }
+            </article>
+        }
+    </div>
+}
+else
+{
+    <EmptyState Eyebrow="No provider UI"
+                Title="No provider-specific surfaces are declared"
+                Description="Add RCL, iframe, or external URL surfaces to the selected provider manifest." />
+}
+
+@code {
+    [Parameter]
+    public MemoryProviderManagementProfile? Provider { get; set; }
+
+    [Parameter]
+    public IReadOnlyList<MemoryProviderUiSurfaceProjection> Surfaces { get; set; } = [];
+
+    private Dictionary<string, object?> CreateSurfaceParameters(MemoryProviderUiSurfaceProjection surface) =>
+        new()
+        {
+            [MemoryProviderUiSurfaceParameterNames.Provider] = Provider,
+            [MemoryProviderUiSurfaceParameterNames.Surface] = surface
+        };
+}

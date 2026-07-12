@@ -1,0 +1,10 @@
+{
+  "runId": "c5a1a7ae-707d-4aeb-9fe1-3e744cd25f52",
+  "kind": "CancelRun",
+  "outcome": "Applied",
+  "status": "Cancelled",
+  "diagnostics": [
+    "Cancellation cascaded to 1 descendant process run(s): 5613ecfc-1259-4b4c-a8a9-119cc07b98dc.",
+    "Signaled cancellation to 1 active AgentFramework execution run(s)."
+  ]
+}

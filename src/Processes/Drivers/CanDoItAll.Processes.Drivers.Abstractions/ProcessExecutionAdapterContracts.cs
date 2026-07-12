@@ -25,7 +25,10 @@ public sealed record ProcessExecutionAdapterRequest(
     ProcessExecutionAdapterOperationKey OperationKey,
     ProcessStrategyBindingSnapshot Binding,
     IReadOnlyList<StrategyBindingInput> Inputs,
-    IReadOnlyList<ProcessExecutionContextFacet> ContextFacets);
+    IReadOnlyList<ProcessExecutionContextFacet> ContextFacets)
+{
+    public ProcessStepExecutionContract StepContract { get; init; } = ProcessStepExecutionContract.Empty;
+}
 
 public sealed record ProcessExecutionContextFacet(
     ProcessExecutionContextFacetKey Key,

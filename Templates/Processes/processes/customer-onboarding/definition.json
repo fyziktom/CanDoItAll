@@ -262,7 +262,8 @@
         "WriteManagedProcessArtifacts",
         "EscalateOrDecide"
       ],
-      "OperationTargetScope": "ManagedProcessArtifactsOnly"
+      "OperationTargetScope": "ManagedProcessArtifactsOnly",
+      "ExecutionClass": "BranchDecision"
     },
     {
       "Order": 2,
@@ -428,7 +429,7 @@
       "ProcessKey": "customer-onboarding",
       "Summary": "Configuration and fit-gap specialist for mapping customer needs to the delivered product capability.",
       "Purpose": "Translate customer operating reality into a safe, supportable configuration and adoption path.",
-      "StaffingIntent": "A solution specialist who understands both the product\u2019s capabilities and the customer\u2019s working model.",
+      "StaffingIntent": "A solution specialist who understands both the product’s capabilities and the customer’s working model.",
       "PreferredExecutorKind": "person",
       "PreferredProjectAssignmentRole": "TechnicalContact",
       "IsRequired": true,
@@ -447,7 +448,7 @@
         "customer-solutioning"
       ],
       "KnowledgeRequirements": [
-        "Knowledge of the product\u2019s configuration model, constraints, extension points, and known limits.",
+        "Knowledge of the product’s configuration model, constraints, extension points, and known limits.",
         "Ability to identify fit-gap issues before they become late-stage surprises.",
         "Understanding of customer process variation and what can or cannot be supported without custom delivery.",
         "Ability to explain solution trade-offs in operational rather than purely technical language.",
@@ -760,7 +761,7 @@
       "Phase": "go-live",
       "Summary": "Checks whether the customer-side and internal-side prerequisites for onboarding go-live are truly complete.",
       "EntryCriteria": "Configuration and handoff planning are largely complete and go-live is approaching.",
-      "ExitCriteria": "No go-live-critical task is ownerless or hidden behind vague \u0027customer to confirm\u0027 language.",
+      "ExitCriteria": "No go-live-critical task is ownerless or hidden behind vague 'customer to confirm' language.",
       "Checks": [
         "Customer-side access and ownership are explicit.",
         "Configuration baseline is signed off or acknowledged.",
@@ -907,3 +908,4 @@
     "prompt-staffing-summary"
   ]
 }
+

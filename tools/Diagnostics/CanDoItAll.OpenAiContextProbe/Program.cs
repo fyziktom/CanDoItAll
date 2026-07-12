@@ -257,7 +257,6 @@ internal static partial class Program
             TargetScope: ProcessOperationContractNames.ManagedOutputProduct,
             IsGovernedProcessStep: true,
             BrowserToolsAllowed: false,
-            ScaffoldToolOnly: false,
             AllowsProductMutation: allowedOperations.Contains(
                 ProcessOperationContractNames.MutateProductTarget,
                 StringComparer.OrdinalIgnoreCase),

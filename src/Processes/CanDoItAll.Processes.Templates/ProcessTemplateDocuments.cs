@@ -1,6 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using CanDoItAll.Processes.Abstractions;
+using CanDoItAll.Processes.Contracts;
 
 namespace CanDoItAll.Processes.Templates;
 
@@ -102,6 +103,12 @@ public enum ProcessTemplateProjectionKind
 [JsonSerializable(typeof(ProcessTemplatePackManifest))]
 [JsonSerializable(typeof(ProcessTemplateLiveRunProfileDocument[]))]
 [JsonSerializable(typeof(ProcessTemplateDefinitionDocument))]
+[JsonSerializable(typeof(ProcessTemplateStepExecutionContractDocument))]
+[JsonSerializable(typeof(ProcessTemplateDeterministicToolPlanDocument))]
+[JsonSerializable(typeof(ProcessTemplateRequiredReceiptDocument))]
+[JsonSerializable(typeof(ProcessTemplateProducedArtifactSlotDocument))]
+[JsonSerializable(typeof(ProcessTemplateFileContentCheckDocument))]
+[JsonSerializable(typeof(ProcessSubprocessContract))]
 [JsonSerializable(typeof(ProcessTemplateRoleResourceDocument))]
 [JsonSerializable(typeof(ProcessTemplateRoleTemplateActionDocument[]))]
 [JsonSerializable(typeof(ProcessTemplateStepTemplateActionDocument[]))]

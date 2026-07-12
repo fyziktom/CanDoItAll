@@ -1,0 +1,127 @@
+@page "/memory"
+@namespace CanDoItAll.Modules.Memory.Pages
+@inject MemoryProvidersPageController Controller
+
+<PageTitle>Memory</PageTitle>
+
+<PageScaffold MaxWidthClass="max-w-full" data-testid="memory-ui-page">
+    <Header>
+        <PageHeader Eyebrow="Memory"
+                    Title="Provider management"
+                    Description="Generic provider profiles, capability manifests, health, and safe provider selection.">
+            <Actions>
+                <Button Icon="refresh"
+                        ButtonStyle="ButtonStyle.Light"
+                        Size="ButtonSize.Small"
+                        Class="cda-button--quick"
+                        title="Refresh memory providers"
+                        aria-label="Refresh memory providers"
+                        Click="Controller.RefreshAsync"
+                        Disabled="@Controller.IsBusy"
+                        IsBusy="@Controller.IsBusy"
+                        data-testid="memory-ui-refresh" />
+            </Actions>
+        </PageHeader>
+    </Header>
+
+    <Lead>
+        <MemoryProvidersSummary Snapshot="@Controller.Snapshot" />
+    </Lead>
+
+    <ChildContent>
+        <div class="memory-ui-root">
+            @if (!string.IsNullOrWhiteSpace(Controller.ErrorMessage))
+            {
+                <Alert AlertStyle="AlertStyle.Danger" data-testid="memory-ui-error">
+                    <strong>Memory provider action failed.</strong>
+                    <span>@Controller.ErrorMessage</span>
+                </Alert>
+            }
+
+            @if (Controller.IsLoading)
+            {
+                <LoadingState Eyebrow="Loading"
+                              Title="Loading memory providers"
+                              Description="Reading generic provider profiles and manifest status."
+                              data-testid="memory-ui-loading" />
+            }
+            else if (Controller.Snapshot is null)
+            {
+                <EmptyState Eyebrow="Unavailable"
+                            Title="Memory provider state is unavailable"
+                            Description="Refresh after the runtime database is ready." />
+            }
+            else
+            {
+                <Tabs @key="Controller.TabsRenderKey"
+                      @bind-SelectedIndex="Controller.ActiveTabIndex"
+                      RenderMode="TabRenderMode.Server"
+                      Variant="TabsVariant.WorkspacePrimary"
+                      OverflowMode="TabsOverflowMode.Wrap"
+                      AriaLabel="Memory provider tabs"
+                      data-testid="memory-ui-tabs">
+                    <TabsItem Text="Providers"
+                              Icon="memory"
+                              BadgeText="@Controller.Snapshot.ProviderCount.ToString()"
+                              data-testid="memory-ui-tab-providers">
+                        <MemoryProviderManagementTab Providers="@Controller.Snapshot.Providers"
+                                                     SelectedProvider="@Controller.SelectedProvider"
+                                                     SelectedProviderId="@Controller.SelectedProviderId"
+                                                     Editor="@Controller.Editor"
+                                                     IsBusy="@Controller.IsBusy"
+                                                     OnAddDemoProviders="Controller.AddDemoProvidersAsync"
+                                                     OnSelectProvider="Controller.SelectProviderAsync"
+                                                     OnSave="Controller.SaveProviderAsync" />
+                    </TabsItem>
+                    <TabsItem Text="Operations" Icon="route" data-testid="memory-ui-tab-operations">
+                        <MemoryProviderOperationsPanel Provider="@Controller.SelectedProvider"
+                                                       Operations="@Controller.Snapshot.Operations"
+                                                       ActionResult="@Controller.OperationActionResult"
+                                                       IsBusy="@Controller.IsOperationBusy"
+                                                       OnRefreshStatus="Controller.RefreshOperationAsync"
+                                                       OnCancelOperation="Controller.CancelOperationAsync" />
+                    </TabsItem>
+                    <TabsItem Text="Events" Icon="event" data-testid="memory-ui-tab-events">
+                        <MemoryProviderEventsPanel Provider="@Controller.SelectedProvider"
+                                                   Events="@Controller.Snapshot.Events"
+                                                   ActionResult="@Controller.EventActionResult"
+                                                   IsBusy="@Controller.IsEventBusy"
+                                                   OnAcknowledge="Controller.AcknowledgeEventAsync" />
+                    </TabsItem>
+                    <TabsItem Text="Feedback" Icon="rate_review" data-testid="memory-ui-tab-feedback">
+                        <MemoryProviderFeedbackPanel Feedback="@Controller.Snapshot.Feedback"
+                                                     ActionResult="@Controller.FeedbackActionResult" />
+                    </TabsItem>
+                    <TabsItem Text="Query" Icon="travel_explore" data-testid="memory-ui-tab-query">
+                        <MemoryProviderQueryPanel Provider="@Controller.SelectedProvider"
+                                                  Editor="@Controller.QueryEditor"
+                                                  Result="@Controller.QueryResult"
+                                                  FeedbackEditor="@Controller.FeedbackEditor"
+                                                  IsBusy="@Controller.IsQueryBusy"
+                                                  IsFeedbackBusy="@Controller.IsFeedbackBusy"
+                                                  OnRun="Controller.RunQueryAsync"
+                                                  OnSubmitFeedback="Controller.SubmitFeedbackAsync" />
+                    </TabsItem>
+                    <TabsItem Text="Ingestion" Icon="upload_file" data-testid="memory-ui-tab-ingestion">
+                        <MemoryProviderIngestionPanel Provider="@Controller.SelectedProvider"
+                                                      Editor="@Controller.IngestionEditor"
+                                                      Result="@Controller.IngestionResult"
+                                                      IsBusy="@Controller.IsIngestionBusy"
+                                                      OnEnqueue="Controller.EnqueueManualIngestionAsync" />
+                    </TabsItem>
+                    <TabsItem Text="Provider UI"
+                              Icon="widgets"
+                              BadgeText="@Controller.Snapshot.ProviderUiSurfaces.Count.ToString()"
+                              data-testid="memory-ui-tab-provider-ui">
+                        <MemoryProviderUiPanel Provider="@Controller.SelectedProvider"
+                                               Surfaces="@Controller.Snapshot.ProviderUiSurfaces" />
+                    </TabsItem>
+                </Tabs>
+            }
+        </div>
+    </ChildContent>
+</PageScaffold>
+
+@code {
+    protected override Task OnInitializedAsync() => Controller.RefreshAsync();
+}

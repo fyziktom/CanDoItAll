@@ -1,0 +1,27 @@
+{
+  "Kind": "artifact-resource",
+  "Key": "decision-brief",
+  "DisplayName": "Decision brief",
+  "Scope": "local",
+  "ProcessKey": "architecture-decision-governance",
+  "ArtifactKind": "Brief",
+  "DefaultTrustRequirement": "ReviewRequired",
+  "DefaultSensitivityLevel": "Internal",
+  "DefaultRetentionDays": 1095,
+  "Summary": "Decision-prep brief that frames the architecture question, options, and decision deadline before a formal ADR is finalized.",
+  "AllowedFutureUsageSummary": "Reusable for the current decision cycle and later governance context only.",
+  "ValidationRequirementSummary": "Must make the decision question explicit, not only the desired answer.",
+  "OwnerRoleKey": "governance-facilitator",
+  "DocPath": "processes/architecture-decision-governance/artifacts/decision-brief.md",
+  "SemanticAcceptanceContract": {
+    "AcceptanceMode": "SemanticReview",
+    "FileExistenceIsSufficient": false,
+    "RequiredArtifactSlotKey": "decision-brief",
+    "RequiredEvidenceKinds": [
+      "structured-finalizer-output",
+      "reviewed-managed-artifact",
+      "semantic-validation-summary"
+    ],
+    "RequiredReviewSummary": "Must make the decision question explicit, not only the desired answer."
+  }
+}

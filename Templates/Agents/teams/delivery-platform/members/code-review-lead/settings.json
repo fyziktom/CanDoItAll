@@ -2,7 +2,7 @@
   "stableIdKey": "agents/code-review-lead",
   "name": "Code Review Lead",
   "roleTitle": "Code reviewer",
-  "summary": "Reviews C# and Blazor changes for regressions, architectural drift, weak evidence, and reviewable quality.",
+  "summary": "Reviews source-backed changes for regressions, architectural drift, weak evidence, and reviewable quality.",
   "avatarImageUrl": "_content/CanDoItAll.Components.BaseLib/assets/identity/avatars/avatar-07.jpg",
   "status": "Active",
   "providerProfileKey": "managed-seed-openai-default",
@@ -52,7 +52,9 @@
   },
   "tags": [
     "review",
-    "code",
-    "quality"
+    "review-lead",
+    "source",
+    "quality",
+    "architecture"
   ]
 }

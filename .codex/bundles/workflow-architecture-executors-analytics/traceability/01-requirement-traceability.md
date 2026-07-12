@@ -1,0 +1,21 @@
+# Requirement Traceability
+
+| Input or requirement | Bundle location | Owning subbundle | Closure proof | Result |
+|---|---|---|---|---|
+| WF-ARCH-01 active contracts/dependencies | `architecture/02-csharp-dependency-direction.md` | SB01 | `bundle://proof/SB01/manifest.md`; final snapshot `snap-20260712222011-fb859aa3` | Complete; 0 project cycles in the 88-source-project direct scan. |
+| WF-ARCH-02 executor contribution truth | `architecture/03-csharp-pattern-selection-records.md` | SB01 | `bundle://proof/SB01/manifest.md` | Complete; runnable descriptor/implementation parity is enforced and planned descriptors remain non-runnable. |
+| WF-ARCH-03 modular responsibility | `architecture/00-csharp-current-state-inventory.md` | SB02 | `bundle://proof/SB02/manifest.md`; `bundle://reviews/csharp-architecture-gate.md` | Complete with non-blocking large-owner follow-up. |
+| WF-OPS-01 shared operations | `architecture/01-csharp-boundary-map.md` | SB02 | `bundle://proof/SB02/manifest.md` | Complete; transport adapters delegate to cohesive operations. |
+| WF-EXEC-01 document conversion | `requirements/01-normalized-requirements.md` | SB03 | `bundle://proof/SB03/manifest.md`; `repo://workflow-executors-markdown.png` | Complete; Document to Markdown is runnable and desktop-discoverable. |
+| WF-EXEC-02 file/spreadsheet operations | `requirements/01-normalized-requirements.md` | SB03 | `bundle://proof/SB03/manifest.md`; `repo://workflow-executors-markdown.png` | Complete through typed storage/spreadsheet operations; low-level catalog-only functions were not duplicated as nodes. |
+| WF-EXEC-03 image nodes | `requirements/01-normalized-requirements.md` | SB03/SB05 | `bundle://proof/SB03/manifest.md`; `bundle://proof/SB05/manifest.md` | Complete; image inspection/analysis share operations and propagate usage. |
+| WF-EXEC-04 command process | `analysis/02-assumptions-and-risks.md` | SB03 | `bundle://proof/SB03/passing-command-safety-blocker.txt` | Complete as an explicit safety exception; the unsafe raw-shell node remains planned and non-runnable. |
+| WF-PLUGIN-01 plugin parity/renderers | `analysis/01-current-state.md` | SB01/SB03/SB06 | `bundle://proof/SB03/manifest.md`; `bundle://proof/SB06/browser-validation.md` | Complete; Gmail schema and trusted renderer paths work without arbitrary type activation. |
+| WF-LIFE-01 start-path parity | `architecture/03-csharp-pattern-selection-records.md` | SB04 | `bundle://proof/SB04/manifest.md` | Complete for API, scheduler, project structure, generic agent tools, and processes. |
+| WF-LIFE-02 incremental lifecycle | `architecture/04-csharp-testability-plan.md` | SB04 | `bundle://proof/SB04/semantic-invariants.md`; `bundle://proof/SB04/workflow-launch-idempotency.md` | Complete; InProcess resume capability remains explicitly non-durable. |
+| WF-AN-01 canonical usage | `architecture/01-target-solution.md` | SB05 | `bundle://proof/SB05/manifest.md` | Complete; canonical facts, persistence, database aggregates, and unknown pricing are explicit. |
+| WF-AN-02 analytics API/UI | `requirements/01-normalized-requirements.md` | SB05/SB06 | `bundle://proof/SB05/manifest.md`; `bundle://proof/SB06/browser-validation.md` | Complete; totals are independent of the recent-run window. |
+| WF-UI-01 catalog-driven creation | `analysis/01-current-state.md` | SB06 | `bundle://proof/SB06/manifest.md` | Complete; custom executors bypass generic creation and no executor-ID settings branch remains. |
+| WF-UI-02 trusted settings renderers | `architecture/03-csharp-pattern-selection-records.md` | SB06 | `bundle://proof/SB06/semantic-invariants.md`; `repo://workflow-custom-image-settings.png` | Complete; trust/version/key/owner validation and visible failure behavior are proven. |
+| WF-UI-03 large screen only | `inputs/02-structured-input.md` | SB06/SB07 | `bundle://proof/SB06/browser-validation.md` | Complete at 1600x1000; small/medium work was intentionally excluded. |
+| WF-TEST-01 behavior-focused coverage | `architecture/04-csharp-testability-plan.md` | all/SB07 | subbundle manifests plus `bundle://proof/SB07/manifest.md` | Complete; solution, unit, component, integration, PostgreSQL, EF, architecture, browser, and validator gates passed. |

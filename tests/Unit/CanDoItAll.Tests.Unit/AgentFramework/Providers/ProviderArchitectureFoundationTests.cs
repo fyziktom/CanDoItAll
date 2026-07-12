@@ -167,7 +167,7 @@ public sealed class ProviderArchitectureFoundationTests
             StringComparison.Ordinal);
         Assert.Contains(
             "providerRuntimeGateway",
-            File.ReadAllText(Path.Combine(root, "src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/Providers/MafAgentRuntime.ProviderHealth.cs")),
+            File.ReadAllText(Path.Combine(root, "src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/Providers/ProviderRuntimeDiagnostics.cs")),
             StringComparison.Ordinal);
         Assert.Contains(
             "ProviderRuntimeVoiceDriver",

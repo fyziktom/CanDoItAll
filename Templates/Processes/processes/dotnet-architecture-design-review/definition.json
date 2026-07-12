@@ -143,7 +143,7 @@
       "Key": "classify-dotnet-application",
       "Title": "Classify .NET application type and project boundary",
       "Subtitle": "App archetype and source root",
-      "Notes": "Read the project structure, repository files, requested work, and upstream scope to classify the .NET target as backend-only API/service, Blazor Server/SSR, Blazor WebAssembly, Blazor WASM PWA, worker, console app, class library, or mixed solution. Record product root, test root, runnable projects, UI routes if present, repository state, and any contradictions before design starts. For a project-structure-grounded greenfield target, absence of .sln, .slnx, or .csproj files under ProductRoot, OutputRoot, or ExternalTargetRoot is not by itself a blocker when DotNetScaffoldContract, DotNetAppArchetype, or ProjectStructureContextSummary identifies the intended app type and layout; classify it as greenfield and leave scaffolding to a later product-mutable setup step. When classifying from ProjectStructureContextSummary or DotNet* launch variables, cite those launch variable names as source evidence. Do not cite source document paths, native absolute paths, workspace-relative .slnx, .sln, .csproj, markdown, project-media paths, managed-files paths, scoped storage paths, tool-runs paths, or SourceDocLink values in the artifact body, reason, summary, next actions, or evidenceRefs, even when those path-like values appear in the current step brief, source-document metadata, launch variables, retry diagnostics, or project-structure context. If a source document must be named, cite its stable document id, project-structure node id, title, or current-run workspace tool receipt instead. Do not create, edit, build, test, or run product files in this step.",
+      "Notes": "Read the project structure, repository files, requested work, and upstream scope to classify the .NET target as backend-only API/service, Blazor Server/SSR, Blazor WebAssembly, Blazor WASM PWA, worker, console app, class library, or mixed solution. Record product root, test root, runnable projects, UI routes if present, repository state, and any contradictions before design starts. For a project-structure-grounded greenfield target, absence of .sln, .slnx, or .csproj files under ProductRoot, OutputRoot, or ExternalTargetRoot is not by itself a blocker when the project structure and scope identify the intended app type; classify it as greenfield and leave the explicit bootstrap decision to the later slice architecture step. Cite stable project-structure node ids, artifact refs, titles, or current-run workspace tool receipts rather than source-document or native paths. Do not create, edit, build, test, or run product files in this step.",
       "StepKind": "Start",
       "AllowsManualSkip": false,
       "AllowsSafeRefusal": false,
@@ -201,6 +201,9 @@
       "DocRefs": [
         "processes/dotnet-architecture-design-review/steps/classify-dotnet-application.md"
       ],
+      "ExecutionGuidanceRefs": [
+        "processes/dotnet-architecture-design-review/steps/classify-dotnet-application.md"
+      ],
       "AllowedOperations": [
         "ReadProcessContext",
         "ReadProjectStructure",
@@ -214,7 +217,7 @@
       "Key": "draft-architecture-design",
       "Title": "Draft .NET architecture design",
       "Subtitle": "Boundaries, models, services, and tests",
-      "Notes": "Draft the implementation architecture from the classification and scope. Separate UI component orchestration from application/domain logic, name models and DTOs that cover the user stories, identify services and service functions needed to satisfy acceptance criteria, define persistence/integration boundaries, and outline test seams. Treat project-structure launch context, node title/notes/status, ProjectStructureContextSummary, and classification findings as valid scope evidence when no separate user-story artifact exists; record explicit assumptions instead of blocking. Do not implement code or mutate product files.",
+      "Notes": "Draft the implementation architecture from the classification and scope. Separate UI component orchestration from application/domain logic, name models and DTOs that cover the user stories, identify services and service functions needed to satisfy acceptance criteria, define persistence/integration boundaries, and outline test seams. State the production boundary that each important behavior can be validated through so the following validation-planning step does not have to infer it. Treat project-structure launch context, node title/notes/status, ProjectStructureContextSummary, and classification findings as valid scope evidence when no separate user-story artifact exists; record explicit assumptions instead of blocking. Do not implement code or mutate product files.",
       "StepKind": "Work",
       "AllowsManualSkip": false,
       "AllowsSafeRefusal": false,
@@ -266,7 +269,7 @@
           "SensitivityLevel": "Internal",
           "RetentionDays": 365,
           "AllowedFutureUsageSummary": "Reusable by architecture review and the implementation slice.",
-          "ValidationRequirementSummary": "Must describe UI/application/domain/infrastructure split, models and DTOs, services and functions needed for user stories, testability seams, app-type-specific runtime path, and rejected alternatives."
+          "ValidationRequirementSummary": "Must describe UI/application/domain/infrastructure split, models and DTOs, services and functions needed for user stories, testability seams, app-type-specific runtime path, and rejected alternatives. For each important behavior, identify the intended production boundary that later validation can exercise."
         }
       ],
       "ArtifactInputs": [
@@ -282,6 +285,9 @@
       "DocRefs": [
         "processes/dotnet-architecture-design-review/steps/draft-architecture-design.md"
       ],
+      "ExecutionGuidanceRefs": [
+        "processes/dotnet-architecture-design-review/steps/draft-architecture-design.md"
+      ],
       "AllowedOperations": [
         "ReadProcessContext",
         "ReadProjectStructure",
@@ -292,16 +298,108 @@
     },
     {
       "Order": 2,
+      "Key": "design-validation-plan",
+      "Title": "Design acceptance-driven validation plan",
+      "Subtitle": "Criterion-to-proof mapping before implementation",
+      "Notes": "Translate the reviewed scope and architecture into an implementation-ready validation plan. Map every authoritative acceptance criterion or explicit invariant to the owning production boundary, a focused validation level, required test data or state, expected observable proof, and a concrete failure signal. Use unit, component, integration, runtime, API, document, workbook, browser, or other evidence only where the delivered product actually needs it; do not prescribe browser proof for a non-browser target. Identify which proof is planned before implementation, which must be current-run after implementation, and which role owns each validation activity. In this read-only pre-implementation step, generated product files and later validation receipts may be absent by design: record them as downstream proof prerequisites, not as missing receipts, an unresolved blocker, or a current implementation gate. Record gaps as mandatory implementation constraints rather than hiding them in prose. Do not implement code or mutate product files.",
+      "StepKind": "Work",
+      "AllowsManualSkip": false,
+      "AllowsSafeRefusal": false,
+      "RequiresApproval": false,
+      "RequiresDecisionRecord": false,
+      "InputContractSummary": "Application classification, architecture draft, available acceptance evidence, and project structure context.",
+      "OutputContractSummary": "Acceptance-driven validation plan that implementation and QA can execute without rediscovering the intended proof strategy.",
+      "EvidenceContractSummary": "Criterion-to-proof matrix, owning production boundaries, validation levels, command or tool assumptions, failure signals, and explicit non-applicable evidence classes.",
+      "DecisionRightsSummary": "The QA reviewer owns validation-plan completeness; the architecture designer confirms that the named production boundaries match the design.",
+      "ExceptionPolicySummary": "Block only when authoritative scope is contradictory, unowned, or too incomplete to identify a validation strategy. When details are still implementable, record bounded assumptions and mandatory validation constraints instead of escalating.",
+      "TargetLeadHours": 2,
+      "DependsOnStepKey": "draft-architecture-design",
+      "DependsOnBranchOutcomeKey": "",
+      "DecisionRoleKey": "",
+      "CanvasX": 2200,
+      "CanvasY": 0,
+      "BranchCanvasX": 0,
+      "BranchCanvasY": 0,
+      "Dependencies": [
+        {
+          "DependsOnStepKey": "classify-dotnet-application",
+          "DependsOnBranchOutcomeKey": ""
+        },
+        {
+          "DependsOnStepKey": "draft-architecture-design",
+          "DependsOnBranchOutcomeKey": ""
+        }
+      ],
+      "RoleAssignments": [
+        {
+          "RoleKey": "qa-reviewer",
+          "ResponsibilityKind": "Responsible",
+          "IsRequired": true,
+          "FallbackOrder": 0,
+          "RebindPolicySummary": "Validation planning remains with a QA-capable reviewer who does not implement the product."
+        },
+        {
+          "RoleKey": "architecture-designer",
+          "ResponsibilityKind": "Reviewer",
+          "IsRequired": true,
+          "FallbackOrder": 0,
+          "RebindPolicySummary": "Architecture review confirms that each planned proof targets a real production boundary."
+        }
+      ],
+      "ArtifactExpectations": [
+        {
+          "Key": "acceptance-validation-plan",
+          "TemplateKey": "implementation-plan",
+          "Title": ".NET acceptance-driven validation plan",
+          "ArtifactKind": "Brief",
+          "IsRequired": true,
+          "TrustRequirement": "ReviewRequired",
+          "SensitivityLevel": "Internal",
+          "RetentionDays": 365,
+          "AllowedFutureUsageSummary": "Reusable by implementation, repair, QA, and release governance.",
+          "ValidationRequirementSummary": "Must map every available acceptance criterion or explicit invariant to an owning production boundary, a validation level, required input or state, expected proof, failure signal, and responsible role. It must identify browser or visual proof as non-applicable when the target has no browser-facing behavior."
+        }
+      ],
+      "ArtifactInputs": [
+        {
+          "ArtifactExpectationKey": "dotnet-application-classification",
+          "SourceStepKey": "classify-dotnet-application"
+        },
+        {
+          "ArtifactExpectationKey": "dotnet-architecture-design",
+          "SourceStepKey": "draft-architecture-design"
+        }
+      ],
+      "BranchOutcomes": [],
+      "ChecklistRefs": [],
+      "ValidationRefs": [],
+      "PromptRefs": [],
+      "DocRefs": [
+        "processes/dotnet-architecture-design-review/steps/design-validation-plan.md"
+      ],
+      "ExecutionGuidanceRefs": [
+        "processes/dotnet-architecture-design-review/steps/design-validation-plan.md"
+      ],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure",
+        "ReadUpstreamArtifacts",
+        "WriteManagedProcessArtifacts"
+      ],
+      "OperationTargetScope": "ExternalProductTargetReadOnly"
+    },
+    {
+      "Order": 3,
       "Key": "review-architecture-design",
       "Title": "Review .NET architecture design",
       "Subtitle": "Independent design challenge",
-      "Notes": "Review the design before implementation. Ask explicitly: is logic properly split from Blazor/components/controllers; are models and DTOs well defined and complete for the user stories; do services expose the functions needed for acceptance criteria; are functions testable without full UI/runtime; are persistence, integration, security, and deployment boundaries clear; is runtime command and screenshot applicability known; and are risks or trade-offs recorded. Treat project-structure launch context, node title/notes/status, ProjectStructureContextSummary, classification findings, and draft assumptions as valid scope/acceptance evidence when no separate user-story artifact exists. Do not hard-block solely because a standalone acceptance-criteria or user-story file is absent; complete with explicit assumptions and mandatory implementation constraints when the available scope is implementable. Do not implement code or mutate product files.",
+      "Notes": "Review the design and validation plan before implementation. Ask explicitly: is logic properly split from Blazor/components/controllers; are models and DTOs well defined and complete for the user stories; do services expose the functions needed for acceptance criteria; are functions testable without full UI/runtime; does every available criterion or invariant have an executable proof plan at the correct production boundary; are persistence, integration, security, and deployment boundaries clear; is runtime command and screenshot applicability known; and are risks or trade-offs recorded. Treat project-structure launch context, node title/notes/status, ProjectStructureContextSummary, classification findings, and draft assumptions as valid scope/acceptance evidence when no separate user-story artifact exists. Do not hard-block solely because a standalone acceptance-criteria or user-story file is absent; complete with explicit assumptions and mandatory implementation constraints when the available scope is implementable. Do not implement code or mutate product files.",
       "StepKind": "Review",
       "AllowsManualSkip": false,
       "AllowsSafeRefusal": false,
       "RequiresApproval": false,
       "RequiresDecisionRecord": false,
-      "InputContractSummary": "Architecture draft, application classification, and available scope/acceptance evidence from project-structure context or upstream artifacts.",
+      "InputContractSummary": "Architecture draft, acceptance-driven validation plan, application classification, and available scope/acceptance evidence from project-structure context or upstream artifacts.",
       "OutputContractSummary": "Reviewed architecture decision with required implementation constraints, approval rationale, or hard block reason.",
       "EvidenceContractSummary": "Checklist answers, design risks, testability assessment, implementation constraints, and go/no-go architecture recommendation.",
       "DecisionRightsSummary": "Architecture reviewer can require implementation constraints or approve implementation readiness; they cannot mutate product files. Use hard block only for missing, contradictory, unowned, or non-implementable architecture evidence. Missing standalone acceptance/user-story files are not a hard block when project-structure context and upstream artifacts provide implementable scope.",
@@ -321,6 +419,10 @@
         },
         {
           "DependsOnStepKey": "draft-architecture-design",
+          "DependsOnBranchOutcomeKey": ""
+        },
+        {
+          "DependsOnStepKey": "design-validation-plan",
           "DependsOnBranchOutcomeKey": ""
         }
       ],
@@ -351,7 +453,7 @@
           "SensitivityLevel": "Internal",
           "RetentionDays": 365,
           "AllowedFutureUsageSummary": "Reusable by implementation, QA, and release governance.",
-          "ValidationRequirementSummary": "Must answer whether component/controller logic is split from services/domain logic, models cover the available user-story/scope evidence, service functions cover available acceptance evidence, functions are testable, and boundary risks are explicit. Project-structure context and launch variables count as scope evidence when no standalone acceptance artifact exists. Actionable findings must be expressed as mandatory implementation constraints unless the evidence is missing, contradictory, unowned, or non-implementable."
+          "ValidationRequirementSummary": "Must answer whether component/controller logic is split from services/domain logic, models cover the available user-story/scope evidence, service functions cover available acceptance evidence, functions are testable, every available criterion or explicit invariant has a plausible proof at the correct production boundary, and boundary risks are explicit. Project-structure context and launch variables count as scope evidence when no standalone acceptance artifact exists. Actionable findings must be expressed as mandatory implementation constraints unless the evidence is missing, contradictory, unowned, or non-implementable."
         }
       ],
       "ArtifactInputs": [
@@ -362,6 +464,10 @@
         {
           "ArtifactExpectationKey": "dotnet-architecture-design",
           "SourceStepKey": "draft-architecture-design"
+        },
+        {
+          "ArtifactExpectationKey": "acceptance-validation-plan",
+          "SourceStepKey": "design-validation-plan"
         }
       ],
       "BranchOutcomes": [],
@@ -369,6 +475,9 @@
       "ValidationRefs": [],
       "PromptRefs": [],
       "DocRefs": [
+        "processes/dotnet-architecture-design-review/steps/review-architecture-design.md"
+      ],
+      "ExecutionGuidanceRefs": [
         "processes/dotnet-architecture-design-review/steps/review-architecture-design.md"
       ],
       "AllowedOperations": [
@@ -381,19 +490,19 @@
       "OperationTargetScope": "ExternalProductTargetReadOnly"
     },
     {
-      "Order": 3,
+      "Order": 4,
       "Key": "architecture-handoff",
       "Title": "Hand off reviewed .NET architecture",
       "Subtitle": "Implementation-ready design packet",
-      "Notes": "Summarize the accepted architecture, application type, product root, test root, UI/no-UI applicability, runtime command expectations, review-imposed implementation constraints, and implementation slice start criteria. This step creates managed process artifacts only; no product files are changed.",
+      "Notes": "Summarize the accepted architecture, application type, product root, test root, UI/no-UI applicability, acceptance-driven validation plan, runtime command expectations, review-imposed implementation constraints, and implementation slice start criteria. Preserve the criterion-to-proof mapping so downstream implementation and QA do not silently narrow the scope. This step creates managed process artifacts only; no product files are changed.",
       "StepKind": "End",
       "AllowsManualSkip": false,
       "AllowsSafeRefusal": false,
       "RequiresApproval": false,
       "RequiresDecisionRecord": false,
-      "InputContractSummary": "Classification, design draft, and architecture review findings.",
+      "InputContractSummary": "Classification, design draft, acceptance-driven validation plan, and architecture review findings.",
       "OutputContractSummary": "Parent-ready architecture handoff for .NET implementation slice routing.",
-      "EvidenceContractSummary": "Accepted design, unresolved risks, mandatory implementation constraints, implementation start criteria, runtime command expectations, and UI screenshot applicability.",
+      "EvidenceContractSummary": "Accepted design, criterion-to-proof mapping, unresolved risks, mandatory implementation constraints, implementation start criteria, runtime command expectations, and UI screenshot applicability.",
       "DecisionRightsSummary": "Delivery manager may close only when architecture review has a clear implementation-ready disposition or explicit implementation constraints that downstream implementation can absorb.",
       "ExceptionPolicySummary": "Do not close when design findings remain unresolved, contradictory, unowned, or impossible for the implementation slice to satisfy. Close with constraints when findings are actionable and implementable.",
       "TargetLeadHours": 2,
@@ -441,7 +550,7 @@
           "SensitivityLevel": "Internal",
           "RetentionDays": 365,
           "AllowedFutureUsageSummary": "Reusable by parent implementation, QA, runtime-command, screenshot, and release steps.",
-          "ValidationRequirementSummary": "Must include approved architecture summary, app type, product root, test root, UI/no-UI applicability, service/model boundary, testability notes, mandatory implementation constraints from review, and implementation slice start criteria."
+          "ValidationRequirementSummary": "Must include approved architecture summary, app type, product root, test root, UI/no-UI applicability, service/model boundary, criterion-to-proof mapping, testability notes, mandatory implementation constraints from review, and implementation slice start criteria."
         }
       ],
       "ArtifactInputs": [
@@ -452,6 +561,10 @@
         {
           "ArtifactExpectationKey": "architecture-review-findings",
           "SourceStepKey": "review-architecture-design"
+        },
+        {
+          "ArtifactExpectationKey": "acceptance-validation-plan",
+          "SourceStepKey": "design-validation-plan"
         }
       ],
       "BranchOutcomes": [],
@@ -459,6 +572,9 @@
       "ValidationRefs": [],
       "PromptRefs": [],
       "DocRefs": [
+        "processes/dotnet-architecture-design-review/steps/architecture-handoff.md"
+      ],
+      "ExecutionGuidanceRefs": [
         "processes/dotnet-architecture-design-review/steps/architecture-handoff.md"
       ],
       "AllowedOperations": [

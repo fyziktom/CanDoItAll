@@ -97,6 +97,37 @@ Before starting a subbundle:
 
 Critical foundations need deeper closure proof before downstream work may continue. That usually means more than the immediate local fix: add one dependent-flow smoke, host proof, or higher-surface regression check when the bundle says the current subbundle unlocks later work.
 
+## C# Architecture Execution Addendum
+
+When executing an architecture-relevant C# subbundle:
+
+- Read the C# architecture files before editing code:
+  - `architecture/00-csharp-current-state-inventory.md`
+  - `architecture/01-csharp-boundary-map.md`
+  - `architecture/02-csharp-dependency-direction.md`
+  - `architecture/03-csharp-pattern-selection-records.md`
+  - `architecture/04-csharp-testability-plan.md`
+  - `plan/architecture-checkpoints.md`
+  - `reviews/csharp-architecture-gate.md`
+- Run the subbundle entry gate and confirm architecture checkpoint prerequisites.
+- Use `candoitall-codeanalytics-mcp` before and after dependency-direction or large-class changes: reuse the prepared snapshot when still valid, otherwise rebuild a scoped snapshot; inspect `solution_inventory_get`, `project_inventory_get`, `dependencies_get`, `findings_get`, and exact symbol tools before broad file reads.
+- Do not add a partial class unless the subbundle explicitly allows it under the partial-class policy.
+- If a new project reference is needed but not planned, repair the bundle before adding it.
+- If a cyclic reference appears, stop and extract a smaller contract instead of adding the reference.
+- If tests require constructing the old runtime for extracted behavior, keep the subbundle open and improve the seam.
+- After implementation, update:
+  - `reviews/csharp-architecture-gate.md`
+  - `architecture/02-csharp-dependency-direction.md`
+  - `architecture/03-csharp-pattern-selection-records.md` if pattern choice changed
+  - `architecture/04-csharp-testability-plan.md` with actual tests
+- Run `csharp-architecture-review-gate` before closure.
+- Record source assertions proving:
+  - old class shrank or became a thin facade
+  - moved behavior lives in the new owner
+  - project references point correctly
+  - tests instantiate extracted behavior directly
+- Do not start dependent feature subbundles until the architecture checkpoint passes.
+
 ## UI Work Rule
 
 For Blazor or other UI-heavy subbundles:
@@ -104,6 +135,7 @@ For Blazor or other UI-heavy subbundles:
 - use Playwright MCP and the `playwright` skill for browser truth
 - open a real headed browser session on the target route and keep the proof tied to that route
 - use `candoitall-watch-playwright-loop` when hot-reload and browser proof matter
+- use `candoitall-components-mcp` before adding raw layout markup or page-local structural CSS in CanDoItAll Blazor, BaseLib, or CanvasLib UI work
 - use `frontend-skill` for visual hierarchy, composition, and spacing critique
 - start with a maximized headed browser window or a large-screen desktop viewport that fills the available work area
 - capture a first-pass large-screen screenshot and actually inspect it before moving on
@@ -161,6 +193,8 @@ Before declaring the bundle complete:
 - Read [references/ui-validation-questions.md](references/ui-validation-questions.md) for the UI inspection checklist.
 - Use `candoitall-subbundle-validator` for per-phase entry and closure gates.
 - Use `candoitall-bundle-validator` for final closure.
+- Use `candoitall-csharp-architecture-bundle-guard`, `csharp-architecture-governor`, `csharp-architecture-review-gate`, and `candoitall-codeanalytics-mcp` for architecture-relevant C# subbundles.
+- Use `candoitall-components-mcp` for CanDoItAll Blazor, BaseLib, CanvasLib, or shared component work before inventing one-off page structure.
 - Use `mtp-hot-reload` for repeated local test iteration when the relevant test project already runs on Microsoft Testing Platform.
 - Use `playwright`, `screenshot`, `imagegen`, and `frontend-skill` when the subbundle’s UI proof needs them.
 

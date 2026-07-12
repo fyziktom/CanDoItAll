@@ -12,13 +12,18 @@ public sealed class CapabilityAccessPolicyTemplateCompiler
         var rules = new List<CapabilityAccessRule>();
         var ruleIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
+        var defaultEffect = CapabilityAccessDefaultEffect.Inherit;
         if (!string.IsNullOrWhiteSpace(template.DefaultEffect))
         {
-            _ = ReadEnum<CapabilityAccessDefaultEffect>(
+            var readDefaultEffect = ReadEnum<CapabilityAccessDefaultEffect>(
                 template.DefaultEffect,
                 "$.defaultEffect",
                 templatePath,
                 issues);
+            if (readDefaultEffect is not null)
+            {
+                defaultEffect = readDefaultEffect.Value;
+            }
         }
 
         for (var index = 0; index < template.Rules.Count; index++)
@@ -61,7 +66,7 @@ public sealed class CapabilityAccessPolicyTemplateCompiler
         }
 
         return new CapabilityAccessPolicyCompilationResult(
-            issues.Count == 0 ? new CapabilityAccessPolicy(rules) : null,
+            issues.Count == 0 ? new CapabilityAccessPolicy(rules, defaultEffect) : null,
             new CapabilityValidationResult(issues));
     }
 

@@ -58,8 +58,8 @@
   "TailoringRules": [
     "Skip the generic .NET solution setup subprocess only when the repository already has a correct solution skeleton and the skip records explicit proof.",
     "Use the app archetype, test framework, validation type, and product root from the current project structure or upstream architecture notes; escalate when those inputs conflict or are missing.",
-    "When the parent scope is a full app or full deliverable, narrow this development slice to the first reviewable MVP behavior and pass that concrete behavior into the feature/function child subprocess. The first MVP behavior must not be scaffold-only, setup-only, naming-only, or readiness-only; scaffolding is prerequisite evidence, not the accepted product behavior.",
-    "Split large features into multiple instances of this subprocess instead of widening one child run indefinitely.",
+    "When the parent scope is a simple full app or one-shot full deliverable, keep every explicitly named core MVP behavior in this development slice and pass those criteria into the feature/function child subprocess. The MVP must not be scaffold-only, setup-only, naming-only, readiness-only, static-looking, or build-only proof; scaffolding is prerequisite evidence, not the accepted product behavior.",
+    "Split work into multiple instances only when the parent launch context supplies an explicit remaining-slice schedule. Without that schedule, do not defer a named core interaction, persistence requirement, calculation, search, dashboard, or recovery behavior to an unplanned later slice.",
     "Keep parent approval and release gates in the parent process; this subprocess owns implementation proof only."
   ],
   "RoleUsages": [
@@ -130,17 +130,17 @@
       "Key": "slice-intake",
       "Title": "Capture implementation slice boundary",
       "Subtitle": "Small enough to finish",
-      "Notes": "Restate the parent scope as one bounded implementation slice with assumptions, exclusions, and validation hooks. If the parent asks for a full app or broad deliverable, select the first reviewable MVP behavior from upstream project-structure and architecture facts. That MVP behavior must not be scaffold-only, setup-only, naming-only, or readiness-only; it must include an observable product-specific path a user can exercise. If project structure lists visual target assets, copy their ImageAsset node ids, media paths, and target-look notes into the slice acceptance criteria or validation hooks. This is an intake step: do not run restore, build, test, app startup, or browser validation here.",
+      "Notes": "Restate the parent scope as one bounded implementation slice with assumptions, exclusions, and validation hooks. If the parent asks for a simple full app or one-shot broad deliverable, retain every explicitly named core MVP behavior from upstream project-structure and architecture facts. The MVP must not be scaffold-only, setup-only, naming-only, readiness-only, static-looking, or build-only; it must include the complete recognizable interaction path, typed state transitions, and any named persistence, calculation, search, dashboard, or recovery behavior. Exclude only optional polish or a capability assigned to an explicit later-slice schedule. If project structure lists visual target assets, copy their ImageAsset node ids, media paths, and target-look notes into the slice acceptance criteria or validation hooks. Decide ProductTargetState from authoritative baseline provenance, not from a configured output-root alias or directory existence: select existing only when current-run evidence identifies a baseline that must be retained; select greenfield for a new deliverable with no such baseline. This is an intake step: do not run restore, build, test, app startup, or browser validation here.",
       "StepKind": "Start",
       "AllowsManualSkip": false,
       "AllowsSafeRefusal": false,
       "RequiresApproval": false,
       "RequiresDecisionRecord": false,
       "InputContractSummary": "Parent scope packet, repository context, and requested behavior.",
-      "OutputContractSummary": "Slice boundary with acceptance criteria, product-root intent, setup needs, and excluded follow-up work.",
-      "EvidenceContractSummary": "Scope summary, assumptions, product-root classification, setup/implementation handoff, and validation plan outline.",
+      "OutputContractSummary": "Slice boundary with acceptance criteria, explicit ProductTargetState, setup needs, and excluded follow-up work.",
+      "EvidenceContractSummary": "Scope summary, assumptions, ProductTargetState with grounded evidence, setup/implementation handoff, and validation plan outline.",
       "DecisionRightsSummary": "Slice manager can narrow execution scope but cannot silently discard parent acceptance criteria or downgrade a requested product to scaffold-only readiness.",
-      "ExceptionPolicySummary": "Block when the slice cannot be made small enough for atomic validation, when the selected scope is only scaffold/setup/readiness work, or when the required product root, architecture, app archetype, or validation boundary is contradictory or missing.",
+      "ExceptionPolicySummary": "Block when the slice cannot be made small enough for atomic validation, when the selected scope is only scaffold/setup/readiness work, or when the required product root, architecture, app archetype, validation boundary, or authoritative baseline evidence is contradictory or missing. Do not label a target existing merely because its configured directory or alias exists.",
       "TargetLeadHours": 2,
       "DependsOnStepKey": "",
       "DependsOnBranchOutcomeKey": "",
@@ -170,7 +170,7 @@
           "SensitivityLevel": "Internal",
           "RetentionDays": 365,
           "AllowedFutureUsageSummary": "Reusable by parent peer review and future slices.",
-          "ValidationRequirementSummary": "Must define acceptance criteria, exclusions, intended product root, setup needs, and validation hooks without using build/runtime/browser proof as intake evidence."
+          "ValidationRequirementSummary": "Must define acceptance criteria, exclusions, intended product root, setup needs, validation hooks, and exactly one ProductTargetState: greenfield or existing; grounded target root; and current-run evidence. Greenfield means no authoritative product baseline must be preserved even when a directory or preliminary files exist. Existing means an authoritative baseline must be retained and modified and must cite the authoritative baseline topology or artifact. A target alias, configured output root, or directory existence alone is not existing-baseline evidence. When the request is for a new deliverable and no baseline is identified, record greenfield."
         }
       ],
       "ArtifactInputs": [],
@@ -181,6 +181,18 @@
       "DocRefs": [
         "processes/dotnet-development-slice/steps/slice-intake.md"
       ],
+      "ExecutionGuidanceRefs": [
+        "processes/dotnet-development-slice/steps/slice-intake.md"
+      ],
+      "CapabilityScope": {
+        "InstructionFragments": [
+          {
+            "Key": "product-target-state-decision",
+            "Title": "Product target state decision",
+            "Content": "ProductTargetState is a semantic baseline-provenance decision, not a filesystem classification. Select existing only when current-run project structure or an upstream artifact identifies an authoritative baseline that must be retained, including its concrete topology or source evidence. A configured target alias, output root, or directory existence is not enough. When the requested deliverable is new and no authoritative baseline is identified, select greenfield even if the target directory already exists; cite the new-deliverable input and the absence of baseline evidence. If evidence conflicts, return Blocked with the exact contradiction instead of guessing."
+          }
+        ]
+      },
       "AllowedOperations": [
         "ReadProcessContext",
         "ReadProjectStructure",
@@ -194,14 +206,14 @@
       "Key": "slice-architecture-check",
       "Title": "Check architecture and source-of-truth impact",
       "Subtitle": "No hidden ownership drift",
-      "Notes": "Confirm canonical models, integration boundaries, persistence ownership, and UI/application/domain responsibilities before code starts. This architecture step must not run restore, build, test, app startup, browser proof, or product-root file inspection for a missing greenfield root; record the intended root and setup handoff instead.",
+      "Notes": "Confirm canonical models, integration boundaries, persistence ownership, and UI/application/domain responsibilities before code starts. Read the upstream ProductTargetState before producing a solution context: greenfield requires initialize and an explicit initialization plan; existing requires verify-existing and read-only proof of the exact current topology. ProductTargetFilesystemState is physical observation only and does not override target intent. This architecture step must not run restore, build, test, app startup, or browser proof; block on a concrete target-state contradiction instead of guessing or retrying the same classification.",
       "StepKind": "Review",
       "AllowsManualSkip": false,
       "AllowsSafeRefusal": false,
       "RequiresApproval": false,
       "RequiresDecisionRecord": true,
-      "InputContractSummary": "Slice scope packet and parent architecture notes.",
-      "OutputContractSummary": "Architecture decision record or explicit no-ADR rationale for this slice.",
+      "InputContractSummary": "Slice scope packet including ProductTargetState and parent architecture notes.",
+      "OutputContractSummary": "Architecture decision record or explicit no-ADR rationale plus a solution context whose provisioning mode agrees with ProductTargetState.",
       "EvidenceContractSummary": "Touched boundaries, source-of-truth decision, and risk notes.",
       "DecisionRightsSummary": "Slice architect can require split or escalation when ownership boundaries are unclear.",
       "ExceptionPolicySummary": "Block on canonical model ambiguity, persistence ownership conflict, unsafe cross-layer leakage, contradictory project-structure requirements, or artifact recovery when required architecture evidence is missing or invalid before branch routing. Do not block only because a greenfield product root does not exist yet.",
@@ -209,6 +221,20 @@
       "DependsOnStepKey": "slice-intake",
       "DependsOnBranchOutcomeKey": "",
       "DecisionRoleKey": "solution-architect",
+      "ExecutorPreferredSpecializationTags": [
+        "architecture",
+        "dotnet"
+      ],
+      "CapabilityScope": {
+        "InstructionFragments": [
+          {
+            "Key": "dotnet-solution-context-authoring",
+            "Title": ".NET solution-context authoring contract",
+            "Content": "This step has two required outputs in the same primary managed Markdown artifact: the architecture decision narrative and one machine-readable .NET solution context. Keep the narrative, then include exactly one fenced `json` block in the entire artifact; do not use a second `json` block for examples, notes, or diagnostics. That one JSON object must declare `schema` exactly `dotnet.solution-context/v1`, `provisioningMode`, `solution.file`, non-empty `requiredProjectFiles`, and optional `testProjectFiles`, using only bare ProductRoot-relative paths. For ProductTargetState greenfield, set `provisioningMode` to `initialize` and include an `initialization` object with `solutionName`, `application` (name, directory, file, template, templateOptions, optional archetype), `tests` (name, directory, file, template, frameworkPreference), and `targetFramework`. For existing, set `provisioningMode` to `verify-existing`, include only topology proved by current read-only evidence, and omit `initialization`. application.templateOptions represents optional dotnet new flags only: use [] when none is required, and make every non-empty item one --prefixed option flag rather than a feature label, template name, archetype, or bare value. Before the first write, perform one whole-payload type-and-completeness self-check: the root, `solution`, and `initialization` (when required) are JSON objects; `requiredProjectFiles`, optional `testProjectFiles`, `solution.candidateFiles`, and `application.templateOptions` are JSON arrays; every required nested object and scalar is present for the selected provisioning mode; and the artifact contains exactly one fenced `json` block. Do not write a partial payload and rely on a later retry to discover the next missing field. Narrative alone is not a substitute for this payload, and a schema-looking second artifact or sibling file does not satisfy the declared output.",
+            "Placement": "AppendToStepBrief"
+          }
+        ]
+      },
       "CanvasX": 1340,
       "CanvasY": 0,
       "BranchCanvasX": 1600,
@@ -240,6 +266,19 @@
           "RetentionDays": 365,
           "AllowedFutureUsageSummary": "Reusable by implementation, peer review, and parent release approval.",
           "ValidationRequirementSummary": "Must name source-of-truth ownership and cross-layer impact."
+        },
+        {
+          "Key": "dotnet-solution-context",
+          "TemplateKey": "implementation-plan",
+          "Title": ".NET solution context",
+          "ArtifactKind": "Decision",
+          "PayloadSchema": "dotnet.solution-context/v1",
+          "IsRequired": true,
+          "TrustRequirement": "ReviewRequired",
+          "SensitivityLevel": "Internal",
+          "RetentionDays": 365,
+          "AllowedFutureUsageSummary": "Reusable by the bounded setup subprocess, implementation, repair, and validation without inferring product topology.",
+          "ValidationRequirementSummary": "Must contain exactly one fenced json block with schema dotnet.solution-context/v1, explicit provisioningMode, solution.file, explicit requiredProjectFiles, optional testProjectFiles, and ProductRoot-relative paths. Before writing, self-check the entire payload: root, solution, and required initialization are objects; project/candidate/template-option collections are arrays; every non-empty application.templateOptions item is one --prefixed option flag; and every nested required value for the selected mode is present. Greenfield ProductTargetState requires initialize with a separate complete initialization plan; existing ProductTargetState requires verify-existing with read-only grounded topology. Never use native absolute paths, external-target aliases, ProductRoot prefixes, or managed-artifact paths. Verify-existing must omit initialization and report contradictions rather than inventing topology."
         }
       ],
       "ArtifactInputs": [
@@ -255,6 +294,9 @@
       "DocRefs": [
         "processes/dotnet-development-slice/steps/slice-architecture-check.md"
       ],
+      "ExecutionGuidanceRefs": [
+        "processes/dotnet-development-slice/steps/slice-architecture-check.md"
+      ],
       "AllowedOperations": [
         "ReadProcessContext",
         "ReadProjectStructure",
@@ -267,21 +309,48 @@
     {
       "Order": 2,
       "Key": "prepare-solution-skeleton",
-      "Title": "Prepare solution skeleton subprocess",
-      "Subtitle": "Nested scaffold run",
-      "Notes": "Launch the generic .NET solution setup subprocess when the slice starts from an empty or incomplete .NET solution. The child process must choose the app archetype and test framework from project structure or architecture notes, not from process-specific assumptions. Accept either setup-handoff or setup-handoff-after-repair from the child as valid setup proof; treat setup-repair-escalation as no-go blocker evidence.",
+      "Title": "Establish solution baseline subprocess",
+      "Subtitle": "Initialize or verify declared context",
+      "Notes": "Launch the isolated .NET solution baseline subprocess from the explicit bound solution context. An initialize context may create only its declared baseline; a verify-existing context is read-only and must not infer templates, names, framework, test framework, layout, or project relationships from prose. Accept either setup-handoff or setup-handoff-after-repair as valid baseline proof; treat setup-repair-escalation as no-go blocker evidence.",
       "StepKind": "Subprocess",
       "SubprocessProcessKey": "dotnet-solution-setup",
       "SubprocessDefinitionSnapshotName": ".NET solution setup subprocess",
-      "AllowsManualSkip": true,
+      "SubprocessContract": {
+        "DefinitionKey": "dotnet-solution-setup",
+        "LaunchMode": "RuntimeOwned",
+        "ParentProducedArtifactExpectationKey": "solution-skeleton-evidence",
+        "AcceptedChildOutputs": [
+          {
+            "StepKey": "setup-handoff",
+            "ArtifactExpectationKey": "setup-handoff-packet",
+            "ArtifactTitle": "Setup handoff packet"
+          },
+          {
+            "StepKey": "setup-handoff-after-repair",
+            "ArtifactExpectationKey": "setup-handoff-packet-after-repair",
+            "ArtifactTitle": "Setup handoff packet after repair"
+          }
+        ],
+        "NoGoChildOutputs": [
+          {
+            "StepKey": "setup-repair-escalation",
+            "ArtifactExpectationKey": "setup-repair-escalation-packet",
+            "ArtifactTitle": "Setup repair escalation packet"
+          }
+        ],
+        "RequiredChildReceipts": [],
+        "AlreadySatisfiedOutput": null,
+        "MaterializationMode": "RuntimeSynthesizedParentHandoff"
+      },
+      "AllowsManualSkip": false,
       "AllowsSafeRefusal": false,
       "RequiresApproval": false,
       "RequiresDecisionRecord": false,
-      "InputContractSummary": "Slice scope, architecture decision, and target solution naming contract.",
-      "OutputContractSummary": "Observed child run that creates or validates the solution skeleton and test project.",
-      "EvidenceContractSummary": "Child run status, build proof, setup-handoff or setup-handoff-after-repair packet, and setup-repair-escalation no-go evidence when present.",
-      "DecisionRightsSummary": "Implementation engineer may skip only when an equivalent solution skeleton already exists and evidence is recorded.",
-      "ExceptionPolicySummary": "Block the slice when the child setup run blocks, fails, reports setup-repair-escalation, or lacks setup-handoff/setup-handoff-after-repair scaffold proof.",
+      "InputContractSummary": "Slice scope, architecture decision, and typed solution context.",
+      "OutputContractSummary": "Observed child run that initializes a declared baseline or verifies an explicit existing solution context.",
+      "EvidenceContractSummary": "Child run status, declared-context verification or initialization proof, setup-handoff or setup-handoff-after-repair packet, and setup-repair-escalation no-go evidence when present.",
+      "DecisionRightsSummary": "The child follows the explicit provisioningMode; it does not infer whether to initialize or verify from directory contents or prose.",
+      "ExceptionPolicySummary": "Block the slice when the child baseline run blocks, fails, reports setup-repair-escalation, or lacks setup-handoff/setup-handoff-after-repair evidence.",
       "TargetLeadHours": 8,
       "DependsOnStepKey": "slice-architecture-check",
       "DependsOnBranchOutcomeKey": "",
@@ -309,21 +378,29 @@
         {
           "Key": "solution-skeleton-evidence",
           "TemplateKey": "implementation-plan",
-          "Title": "Solution skeleton evidence",
+          "Title": "Solution baseline evidence",
           "ArtifactKind": "Evidence",
           "IsRequired": true,
           "TrustRequirement": "ReviewRequired",
           "SensitivityLevel": "Internal",
           "RetentionDays": 365,
           "AllowedFutureUsageSummary": "Reusable by implementation and validation steps.",
-          "ValidationRequirementSummary": "Must point to the observed child run, setup-handoff or setup-handoff-after-repair scaffold proof, or an explicit already-existing skeleton proof. setup-repair-escalation is blocker evidence, not accepted setup proof.",
+          "ValidationRequirementSummary": "Must point to the observed child run and its declared-context initialization or read-only verification proof. setup-repair-escalation is blocker evidence, not accepted baseline proof.",
           "SubprocessChildStepKey": "setup-handoff",
           "SubprocessChildArtifactTitle": "Setup handoff packet"
         }
       ],
       "ArtifactInputs": [
         {
+          "ArtifactExpectationKey": "slice-scope-packet",
+          "SourceStepKey": "slice-intake"
+        },
+        {
           "ArtifactExpectationKey": "slice-architecture-decision",
+          "SourceStepKey": "slice-architecture-check"
+        },
+        {
+          "ArtifactExpectationKey": "dotnet-solution-context",
           "SourceStepKey": "slice-architecture-check"
         }
       ],
@@ -341,7 +418,8 @@
         "WriteManagedProcessArtifacts",
         "ExecuteExternalAction"
       ],
-      "OperationTargetScope": "ExternalActionControlled"
+      "OperationTargetScope": "ExternalActionControlled",
+      "ExecutionClass": "RuntimeOwnedSubprocess"
     },
     {
       "Order": 3,
@@ -352,6 +430,43 @@
       "StepKind": "Subprocess",
       "SubprocessProcessKey": "dotnet-feature-function-implementation",
       "SubprocessDefinitionSnapshotName": ".NET feature/function implementation subprocess",
+      "SubprocessContract": {
+        "DefinitionKey": "dotnet-feature-function-implementation",
+        "LaunchMode": "RuntimeOwned",
+        "ParentProducedArtifactExpectationKey": "slice-change-set",
+        "AcceptedChildOutputs": [
+          {
+            "StepKey": "feature-handoff",
+            "ArtifactExpectationKey": "feature-handoff-packet",
+            "ArtifactTitle": "Feature implementation handoff packet",
+            "ParentBranchOutcomeKey": "implementation-ready"
+          },
+          {
+            "StepKey": "feature-handoff-after-repair",
+            "ArtifactExpectationKey": "feature-handoff-packet-after-repair",
+            "ArtifactTitle": "Feature implementation handoff packet after repair",
+            "ParentBranchOutcomeKey": "implementation-ready"
+          }
+        ],
+        "NoGoChildOutputs": [
+          {
+            "StepKey": "feature-repair-escalation",
+            "ArtifactExpectationKey": "feature-repair-escalation-packet",
+            "ArtifactTitle": "Feature repair escalation packet for manager-assisted repair",
+            "ParentBranchOutcomeKey": "implementation-needs-manager-repair"
+          },
+          {
+            "StepKey": "targeted-recheck",
+            "ArtifactExpectationKey": "feature-recheck-evidence",
+            "ArtifactTitle": "Feature repair recheck no-go evidence for manager-assisted repair",
+            "BranchOutcomeKey": "feature-repair-escalation",
+            "ParentBranchOutcomeKey": "implementation-needs-manager-repair"
+          }
+        ],
+        "RequiredChildReceipts": [],
+        "AlreadySatisfiedOutput": null,
+        "MaterializationMode": "RuntimeSynthesizedParentHandoff"
+      },
       "AllowsManualSkip": false,
       "AllowsSafeRefusal": false,
       "RequiresApproval": false,
@@ -360,7 +475,7 @@
       "OutputContractSummary": "Observed child run that returns a reviewable code change, focused validation evidence, blockers, and residual risks.",
       "EvidenceContractSummary": "Child run status, implementation change set, validation evidence, accepted handoff evidence, repair escalation evidence, manager rework directives, and unresolved blockers.",
       "DecisionRightsSummary": "Implementation engineer can request targeted child-run repair but cannot widen behavior beyond the slice boundary.",
-      "ExceptionPolicySummary": "Block the slice when the child implementation run blocks, fails, lacks accepted handoff evidence, or reports feature-repair-escalation. Do not treat a completed child run with a repair escalation packet as accepted implementation proof.",
+      "ExceptionPolicySummary": "Block the slice when the child implementation run blocks or fails without a typed output. A completed feature-repair-escalation packet is an explicit no-go disposition, not accepted implementation proof: route it to the manager-assisted repair branch with its typed evidence.",
       "TargetLeadHours": 12,
       "DependsOnStepKey": "prepare-solution-skeleton",
       "DependsOnBranchOutcomeKey": "",
@@ -406,7 +521,15 @@
       ],
       "ArtifactInputs": [
         {
+          "ArtifactExpectationKey": "slice-scope-packet",
+          "SourceStepKey": "slice-intake"
+        },
+        {
           "ArtifactExpectationKey": "slice-architecture-decision",
+          "SourceStepKey": "slice-architecture-check"
+        },
+        {
+          "ArtifactExpectationKey": "dotnet-solution-context",
           "SourceStepKey": "slice-architecture-check"
         },
         {
@@ -414,7 +537,18 @@
           "SourceStepKey": "prepare-solution-skeleton"
         }
       ],
-      "BranchOutcomes": [],
+      "BranchOutcomes": [
+        {
+          "Key": "implementation-ready",
+          "Title": "Implementation child accepted",
+          "Description": "The child returned an accepted feature handoff that can proceed to slice validation."
+        },
+        {
+          "Key": "implementation-needs-manager-repair",
+          "Title": "Implementation child requires manager-assisted repair",
+          "Description": "The child returned typed no-go evidence; preserve it and start the bounded manager-assisted repair path."
+        }
+      ],
       "ChecklistRefs": [],
       "ValidationRefs": [],
       "PromptRefs": [],
@@ -428,28 +562,33 @@
         "WriteManagedProcessArtifacts",
         "ExecuteExternalAction"
       ],
-      "OperationTargetScope": "ExternalActionControlled"
+      "OperationTargetScope": "ExternalActionControlled",
+      "ExecutionClass": "RuntimeOwnedSubprocess"
     },
     {
       "Order": 4,
       "Key": "add-tests-and-proof",
       "Title": "Validate tests and targeted proof",
       "Subtitle": "Validation commands before handoff",
-      "Notes": "Review the current-run implement-code-change coordinator artifact, test additions, and validation evidence, then run targeted build and test validation needed to prove the slice behavior. This step has validation-command ownership: do not defer restore, build, or test execution to later root proof steps. Use the governed validation tools workspace_dotnet_restore, workspace_dotnet_build, and workspace_dotnet_test for the current run. If current-run restore/build/test receipts are missing and those validation tools plus the grounded product root are available, run the validation chain now; missing receipts are not a repair finding by themselves. Managed artifact evidence rule: cite this step's managed artifact and current-run validation tool receipts as proof. Do not put product source/test file aliases, native product paths, external-target file paths, managed-files paths, or project-media storage paths in evidenceRefs. In the artifact body, prefer product-root-relative file names. If a retry diagnostic names an ungrounded product path but the grounded product root and validation tools are available, rerun the restore/build/test chain or read/list the file with a current-run workspace tool, then overwrite the artifact with grounded receipt-based proof instead of selecting slice-repair-required or returning Blocked. For .NET product roots, run and record a current-run validation chain: dotnet restore, dotnet build --no-restore, and dotnet test --no-restore when a test project exists or tests are expected. Target restore/build at the discovered solution when present; target workspace_dotnet_test at DotNetTestProjectFileAlias or DotNetTestProjectFile when present, preferably with noBuild=true after a successful solution build, and use the solution target for tests only when no test project target exists. Do not mark the slice accepted from implementation handoff evidence alone, and do not select slice-repair-required only because the receipts were absent before this step ran. External generated product roots may not be Git repositories. Do not call workspace_git_status as a validation precondition for a grounded product root, and do not treat a not a git repository result as a product-root, validation-tool, or repair blocker. If Git status was already attempted and failed only because the product root is not a Git repository, record Git status as not applicable and continue immediately with product-root file listing plus the restore/build/test validation chain. Before running validation commands, resolve the actual solution target from setup handoff, product readback, or product-root file listing: inspect <ProductRoot>/<SolutionName>.slnx and <ProductRoot>/<SolutionName>.sln, use the existing file, prefer .slnx when both exist, and never synthesize or require <SolutionName>.sln when only <SolutionName>.slnx exists. If a validation attempt fails only because a guessed solution path is missing, rerun the current-run validation chain against the discovered .slnx or .sln target and do not route repair for the missing guessed path. If --no-restore fails because restore assets are stale or missing, run restore and then rerun build/test; select slice-repair-required only when the restored validation chain still fails or product proof does not satisfy the chosen slice behavior. Child-run refs cited inside the coordinator artifact are trace links, not direct read requirements for this QA validation step; do not read artifacts/process-runs/<child-run-id>/... files directly unless the step brief explicitly lists that exact child artifact as a required upstream ref. If the coordinator artifact says the child completed and lists accepted handoff evidence, independently validate from the product root with build/test/readback proof instead of returning Blocked for the child artifact boundary. Do not launch the app, open a browser, or capture runtime screenshots in this slice proof step; root runtime-command and screenshot writeback steps own live visual proof. Do not add, edit, or repair product tests in this step; missing or inadequate tests must select the slice-repair-required branch and route back to a bounded implementation repair subprocess instead of being silently fixed by QA. When visual target ImageAsset ids or media paths are part of the slice scope, verify that coordinator evidence preserves those acceptance inputs and require root runtime-command and screenshot writeback follow-up for live screenshot comparison before release. When selecting slice-repair-required, write a repair target packet in this step artifact with exact failed acceptance criteria, failing command or evidence metric, child run id when present, child step artifact refs as trace links when present, and the smallest proof that would close the defect. If the current-run coordinator packet cites a child feature-repair-escalation or targeted-recheck artifact but direct child reads are not allowed, restate the missing or failing evidence from the coordinator packet and product proof instead of returning Blocked. Return blocked only for environment, permission, unavailable validation tool, or process-contract failures that prevent validation or repair routing.",
+      "Notes": "Validate the declared product behavior with current-run restore, build, and test evidence. Read the required typed dotnet-solution-context artifact first for the declared solution and test targets; its declared paths are authoritative. If it is unavailable, use grounded product-root discovery without constructing conventional names or layouts. Never treat a missing guessed target as a product defect. Run restore before build or test when assets are stale. Do not mutate code or tests in this QA step; route a concrete failed criterion to the repair branch.",
       "StepKind": "Review",
       "AllowsManualSkip": false,
       "AllowsSafeRefusal": false,
       "RequiresApproval": false,
       "RequiresDecisionRecord": true,
-      "InputContractSummary": "Implementation change set and slice architecture decision.",
+      "InputContractSummary": "Authoritative slice scope packet, implementation change set, and slice architecture decision; every named core criterion remains in scope until directly proved.",
       "OutputContractSummary": "Test and validation evidence review tied to the implemented behavior, with explicit slice-accepted or slice-repair-required branch.",
       "EvidenceContractSummary": "Current-run restore/build/test commands, exit codes, warnings, executed tests, explicit assessment of whether current-run coordinator evidence and product proof satisfy acceptance criteria, and a concrete repair target packet whenever repair is selected. Live runtime screenshots are owned by root runtime-command and screenshot writeback steps.",
       "DecisionRightsSummary": "Validation owner can accept evidence or require focused implementation rework when proof or tests do not match acceptance criteria, but cannot mutate product files.",
       "ExceptionPolicySummary": "Select slice-repair-required on missing tests, failing build, failing focused validation, validation too broad to diagnose failures, missing accepted child proof in the current-run coordinator artifact, or invalid evidence that still has a repair route. Block only when the environment, permissions, validation tooling, or process contract prevents validation or repair routing.",
       "TargetLeadHours": 6,
       "DependsOnStepKey": "implement-code-change",
-      "DependsOnBranchOutcomeKey": "",
+      "DependsOnBranchOutcomeKey": "implementation-ready",
       "DecisionRoleKey": "qa-lead",
+      "ExecutorPreferredSpecializationTags": [
+        "dotnet",
+        "qa"
+      ],
       "CanvasX": 4580,
       "CanvasY": 0,
       "BranchCanvasX": 4840,
@@ -457,7 +596,7 @@
       "Dependencies": [
         {
           "DependsOnStepKey": "implement-code-change",
-          "DependsOnBranchOutcomeKey": ""
+          "DependsOnBranchOutcomeKey": "implementation-ready"
         }
       ],
       "RoleAssignments": [
@@ -485,6 +624,18 @@
       ],
       "ArtifactInputs": [
         {
+          "ArtifactExpectationKey": "slice-scope-packet",
+          "SourceStepKey": "slice-intake"
+        },
+        {
+          "ArtifactExpectationKey": "slice-architecture-decision",
+          "SourceStepKey": "slice-architecture-check"
+        },
+        {
+          "ArtifactExpectationKey": "dotnet-solution-context",
+          "SourceStepKey": "slice-architecture-check"
+        },
+        {
           "ArtifactExpectationKey": "slice-change-set",
           "SourceStepKey": "implement-code-change"
         }
@@ -507,6 +658,9 @@
       "DocRefs": [
         "processes/dotnet-development-slice/steps/add-tests-and-proof.md"
       ],
+      "ExecutionGuidanceRefs": [
+        "processes/dotnet-development-slice/steps/add-tests-and-proof.md"
+      ],
       "AllowedOperations": [
         "ReadProcessContext",
         "ReadProjectStructure",
@@ -514,7 +668,36 @@
         "RunValidation",
         "WriteManagedProcessArtifacts"
       ],
-      "OperationTargetScope": "ExternalProductTargetReadOnly"
+      "OperationTargetScope": "ExternalProductTargetReadOnly",
+      "CapabilityScope": {
+        "RequiredReceipts": [
+          {
+            "Key": "slice-validation-restore",
+            "Kind": "RuntimeToolName",
+            "ToolName": "workspace_dotnet_restore",
+            "Activation": "Always",
+            "RequireSuccessfulExit": false,
+            "Reason": "Slice validation must run restore in the current execution before choosing accepted or repair-required."
+          },
+          {
+            "Key": "slice-validation-build",
+            "Kind": "RuntimeToolName",
+            "ToolName": "workspace_dotnet_build",
+            "Activation": "Always",
+            "RequireSuccessfulExit": false,
+            "Reason": "Slice validation must run build in the current execution before choosing accepted or repair-required."
+          },
+          {
+            "Key": "slice-validation-test",
+            "Kind": "RuntimeToolName",
+            "ToolName": "workspace_dotnet_test",
+            "Activation": "Always",
+            "RequireSuccessfulExit": false,
+            "Reason": "Slice validation must run tests in the current execution when a test project exists or tests are expected."
+          }
+        ]
+      },
+      "ExecutionClass": "BranchDecision"
     },
     {
       "Order": 5,
@@ -540,14 +723,10 @@
       "CanvasY": 0,
       "BranchCanvasX": 0,
       "BranchCanvasY": 0,
-      "Dependencies": [
-        {
-          "DependsOnStepKey": "implement-code-change",
-          "DependsOnBranchOutcomeKey": ""
-        },
-        {
-          "DependsOnStepKey": "add-tests-and-proof",
-          "DependsOnBranchOutcomeKey": "slice-accepted"
+    "Dependencies": [
+      {
+        "DependsOnStepKey": "add-tests-and-proof",
+        "DependsOnBranchOutcomeKey": "slice-accepted"
         }
       ],
       "RoleAssignments": [
@@ -575,6 +754,18 @@
       ],
       "ArtifactInputs": [
         {
+          "ArtifactExpectationKey": "slice-scope-packet",
+          "SourceStepKey": "slice-intake"
+        },
+        {
+          "ArtifactExpectationKey": "slice-architecture-decision",
+          "SourceStepKey": "slice-architecture-check"
+        },
+        {
+          "ArtifactExpectationKey": "dotnet-solution-context",
+          "SourceStepKey": "slice-architecture-check"
+        },
+        {
           "ArtifactExpectationKey": "slice-change-set",
           "SourceStepKey": "implement-code-change"
         },
@@ -589,6 +780,232 @@
       "PromptRefs": [],
       "DocRefs": [
         "processes/dotnet-development-slice/steps/slice-handoff.md"
+      ],
+      "ExecutionGuidanceRefs": [
+        "processes/dotnet-development-slice/steps/slice-handoff.md"
+      ],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure",
+        "ReadUpstreamArtifacts",
+        "WriteManagedProcessArtifacts"
+      ],
+      "OperationTargetScope": "ExternalProductTargetReadOnly"
+    },
+    {
+      "Order": 12,
+      "Key": "initial-manager-assisted-repair",
+      "Title": "Run manager-assisted repair for child no-go",
+      "Subtitle": "Diagnose before repeating implementation",
+      "Notes": "Launch and observe the dotnet-quality-repair subprocess when the initial feature child returned typed no-go evidence. This is not a blind retry: the child no-go packet, scope, architecture decision, and setup evidence define the repair target. First call project_structure_process_subprocess_launch with definitionKey dotnet-quality-repair. If the launch response includes ParentDeferredOutcomeJson, submit that parent outcome exactly so the runtime resumes this coordinator from the child result. The repair child owns diagnosis, targeted mutation, independent validation, and its bounded specialist-guided re-repair. This parent step only preserves the no-go evidence and materializes accepted repair handoff; it must not mutate the product or reinterpret quality-repair-no-go as success.",
+      "StepKind": "Subprocess",
+      "SubprocessProcessKey": "dotnet-quality-repair",
+      "SubprocessDefinitionSnapshotName": ".NET quality repair for initial feature child no-go",
+      "SubprocessContract": {
+        "DefinitionKey": "dotnet-quality-repair",
+        "LaunchMode": "RuntimeOwned",
+        "ParentProducedArtifactExpectationKey": "initial-manager-repair-change-set",
+        "AcceptedChildOutputs": [
+          {
+            "StepKey": "quality-repair-handoff",
+            "ArtifactExpectationKey": "quality-repair-handoff-packet",
+            "ArtifactTitle": ".NET quality repair handoff"
+          },
+          {
+            "StepKey": "quality-repair-handoff-after-bughunt",
+            "ArtifactExpectationKey": "quality-repair-handoff-after-bughunt-packet",
+            "ArtifactTitle": ".NET quality repair handoff after bughunt"
+          }
+        ],
+        "NoGoChildOutputs": [
+          {
+            "StepKey": "quality-repair-no-go",
+            "ArtifactExpectationKey": "quality-repair-no-go-packet",
+            "ArtifactTitle": ".NET quality repair no-go packet"
+          }
+        ],
+        "RequiredChildReceipts": [],
+        "AlreadySatisfiedOutput": null,
+        "MaterializationMode": "RuntimeSynthesizedParentHandoff"
+      },
+      "AllowsManualSkip": false,
+      "AllowsSafeRefusal": false,
+      "RequiresApproval": false,
+      "RequiresDecisionRecord": true,
+      "InputContractSummary": "Authoritative slice scope, architecture decision, setup evidence, and typed initial feature-child no-go evidence.",
+      "OutputContractSummary": "Accepted manager-assisted repair change set with independent validation, or an explicit quality-repair no-go for manager attention.",
+      "EvidenceContractSummary": "Child no-go packet, diagnosis, product mutation, current validation, and accepted or no-go quality-repair handoff.",
+      "DecisionRightsSummary": "The delivery manager sequences a bounded diagnosis-guided repair; the quality-repair child retains mutation and final-validation separation.",
+      "ExceptionPolicySummary": "Block only when the quality-repair child blocks, fails, or returns quality-repair-no-go. Do not restart the same feature strategy without the child diagnosis changing the repair plan.",
+      "TargetLeadHours": 12,
+      "DependsOnStepKey": "implement-code-change",
+      "DependsOnBranchOutcomeKey": "implementation-needs-manager-repair",
+      "DecisionRoleKey": "",
+      "CanvasX": 4580,
+      "CanvasY": -920,
+      "BranchCanvasX": 0,
+      "BranchCanvasY": 0,
+      "Dependencies": [
+        {
+          "DependsOnStepKey": "implement-code-change",
+          "DependsOnBranchOutcomeKey": "implementation-needs-manager-repair"
+        }
+      ],
+      "RoleAssignments": [
+        {
+          "RoleKey": "delivery-manager",
+          "ResponsibilityKind": "Responsible",
+          "IsRequired": true,
+          "FallbackOrder": 0,
+          "RebindPolicySummary": "Rebind only to a manager-capable operator that can preserve no-go evidence and repair scope."
+        },
+        {
+          "RoleKey": "qa-lead",
+          "ResponsibilityKind": "Reviewer",
+          "IsRequired": true,
+          "FallbackOrder": 1,
+          "RebindPolicySummary": "Review whether the repair target follows the failed evidence rather than repeating the prior attempt."
+        }
+      ],
+      "ArtifactExpectations": [
+        {
+          "Key": "initial-manager-repair-change-set",
+          "TemplateKey": "implementation-change-set",
+          "Title": "Initial manager-assisted repair change set",
+          "ArtifactKind": "Deliverable",
+          "IsRequired": true,
+          "TrustRequirement": "ReviewRequired",
+          "SensitivityLevel": "Internal",
+          "RetentionDays": 365,
+          "AllowedFutureUsageSummary": "Reusable by parent QA, release approval, and later defect analysis.",
+          "ValidationRequirementSummary": "Must point to accepted dotnet-quality-repair handoff with diagnosis, changed surfaces, current validation, and coverage of the original slice criteria.",
+          "SubprocessChildStepKey": "quality-repair-handoff",
+          "SubprocessChildArtifactTitle": ".NET quality repair handoff"
+        }
+      ],
+      "ArtifactInputs": [
+        {
+          "ArtifactExpectationKey": "slice-scope-packet",
+          "SourceStepKey": "slice-intake"
+        },
+        {
+          "ArtifactExpectationKey": "slice-architecture-decision",
+          "SourceStepKey": "slice-architecture-check"
+        },
+        {
+          "ArtifactExpectationKey": "dotnet-solution-context",
+          "SourceStepKey": "slice-architecture-check"
+        },
+        {
+          "ArtifactExpectationKey": "solution-skeleton-evidence",
+          "SourceStepKey": "prepare-solution-skeleton"
+        },
+        {
+          "ArtifactExpectationKey": "slice-change-set",
+          "SourceStepKey": "implement-code-change"
+        }
+      ],
+      "BranchOutcomes": [],
+      "ChecklistRefs": [],
+      "ValidationRefs": [],
+      "PromptRefs": [],
+      "DocRefs": [
+        "processes/dotnet-development-slice/steps/initial-manager-assisted-repair.md"
+      ],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure",
+        "ReadUpstreamArtifacts",
+        "WriteManagedProcessArtifacts",
+        "ExecuteExternalAction"
+      ],
+      "OperationTargetScope": "ExternalActionControlled",
+      "ExecutionClass": "RuntimeOwnedSubprocess"
+    },
+    {
+      "Order": 13,
+      "Key": "slice-handoff-after-initial-manager-repair",
+      "Title": "Hand off initial manager-repaired slice",
+      "Subtitle": "Parent-ready repair evidence",
+      "Notes": "Produce this parent-ready handoff only after initial-manager-assisted-repair returned accepted quality-repair evidence. Reconcile that evidence with every criterion in the authoritative slice scope. Do not present a child no-go, unresolved criterion, or an unproved assertion as accepted.",
+      "StepKind": "End",
+      "AllowsManualSkip": false,
+      "AllowsSafeRefusal": false,
+      "RequiresApproval": false,
+      "RequiresDecisionRecord": false,
+      "InputContractSummary": "Authoritative scope, initial child no-go evidence, and accepted manager-assisted repair change set.",
+      "OutputContractSummary": "Parent-ready implementation handoff after manager-assisted recovery of initial child no-go.",
+      "EvidenceContractSummary": "No-go diagnosis, repaired surfaces, independent validation, criterion coverage, residual risks, and parent next action.",
+      "DecisionRightsSummary": "The delivery manager can close only from accepted repair evidence and full criterion coverage.",
+      "ExceptionPolicySummary": "Do not close when accepted quality-repair handoff is missing, a core criterion remains unresolved, or the repair child returned no-go.",
+      "TargetLeadHours": 2,
+      "DependsOnStepKey": "initial-manager-assisted-repair",
+      "DependsOnBranchOutcomeKey": "",
+      "DecisionRoleKey": "",
+      "CanvasX": 5660,
+      "CanvasY": -920,
+      "BranchCanvasX": 0,
+      "BranchCanvasY": 0,
+      "Dependencies": [
+        {
+          "DependsOnStepKey": "initial-manager-assisted-repair",
+          "DependsOnBranchOutcomeKey": ""
+        }
+      ],
+      "RoleAssignments": [
+        {
+          "RoleKey": "delivery-manager",
+          "ResponsibilityKind": "Responsible",
+          "IsRequired": true,
+          "FallbackOrder": 0,
+          "RebindPolicySummary": "Rebind only to a manager-capable operator that can reconcile repair evidence with the parent scope."
+        }
+      ],
+      "ArtifactExpectations": [
+        {
+          "Key": "slice-handoff-packet-after-initial-manager-repair",
+          "TemplateKey": "regression-evidence-pack",
+          "Title": "Implementation slice handoff after initial manager-assisted repair",
+          "ArtifactKind": "Evidence",
+          "IsRequired": true,
+          "TrustRequirement": "ReviewRequired",
+          "SensitivityLevel": "Internal",
+          "RetentionDays": 365,
+          "AllowedFutureUsageSummary": "Reusable by parent peer review, QA, and release approval.",
+          "ValidationRequirementSummary": "Must include accepted manager-assisted repair evidence, independent validation, criterion-by-criterion coverage, unresolved risks, and recommended parent action."
+        }
+      ],
+      "ArtifactInputs": [
+        {
+          "ArtifactExpectationKey": "slice-scope-packet",
+          "SourceStepKey": "slice-intake"
+        },
+        {
+          "ArtifactExpectationKey": "slice-architecture-decision",
+          "SourceStepKey": "slice-architecture-check"
+        },
+        {
+          "ArtifactExpectationKey": "dotnet-solution-context",
+          "SourceStepKey": "slice-architecture-check"
+        },
+        {
+          "ArtifactExpectationKey": "slice-change-set",
+          "SourceStepKey": "implement-code-change"
+        },
+        {
+          "ArtifactExpectationKey": "initial-manager-repair-change-set",
+          "SourceStepKey": "initial-manager-assisted-repair"
+        }
+      ],
+      "BranchOutcomes": [],
+      "ChecklistRefs": [],
+      "ValidationRefs": [],
+      "PromptRefs": [],
+      "DocRefs": [
+        "processes/dotnet-development-slice/steps/slice-handoff-after-initial-manager-repair.md"
+      ],
+      "ExecutionGuidanceRefs": [
+        "processes/dotnet-development-slice/steps/slice-handoff-after-initial-manager-repair.md"
       ],
       "AllowedOperations": [
         "ReadProcessContext",
@@ -607,15 +1024,47 @@
       "StepKind": "Subprocess",
       "SubprocessProcessKey": "dotnet-feature-function-implementation",
       "SubprocessDefinitionSnapshotName": ".NET feature/function implementation subprocess",
+      "SubprocessContract": {
+        "DefinitionKey": "dotnet-feature-function-implementation",
+        "LaunchMode": "RuntimeOwned",
+        "ParentProducedArtifactExpectationKey": "slice-repair-change-set",
+        "AcceptedChildOutputs": [
+          {
+            "StepKey": "feature-handoff",
+            "ArtifactExpectationKey": "feature-handoff-packet",
+            "ArtifactTitle": "Feature implementation handoff packet"
+          },
+          {
+            "StepKey": "feature-handoff-after-repair",
+            "ArtifactExpectationKey": "feature-handoff-packet-after-repair",
+            "ArtifactTitle": "Feature implementation handoff packet after repair"
+          },
+          {
+            "StepKey": "feature-repair-escalation",
+            "ArtifactExpectationKey": "feature-repair-escalation-packet",
+            "ArtifactTitle": "Feature repair escalation packet"
+          },
+          {
+            "StepKey": "targeted-recheck",
+            "ArtifactExpectationKey": "feature-recheck-evidence",
+            "ArtifactTitle": "Feature repair recheck escalation evidence",
+            "BranchOutcomeKey": "feature-repair-escalation"
+          }
+        ],
+        "NoGoChildOutputs": [],
+        "RequiredChildReceipts": [],
+        "AlreadySatisfiedOutput": null,
+        "MaterializationMode": "RuntimeSynthesizedParentHandoff"
+      },
       "AllowsManualSkip": false,
       "AllowsSafeRefusal": false,
       "RequiresApproval": false,
       "RequiresDecisionRecord": false,
-      "InputContractSummary": "Slice validation failure with exact repair target packet, implementation change set, architecture decision, and bounded repair request.",
-      "OutputContractSummary": "Observed child repair run with change set, validation proof, accepted handoff, or repair escalation evidence.",
+      "InputContractSummary": "Authoritative slice scope packet plus the exact validation failure, repair target packet, implementation change set, architecture decision, and bounded repair request; the latest defect must not narrow away other core criteria.",
+      "OutputContractSummary": "Observed child repair run with change set, validation proof, accepted handoff, or reviewable repair escalation evidence for the parent recheck.",
       "EvidenceContractSummary": "Child repair run status, changed files, validation evidence, accepted handoff evidence, repair escalation evidence, and unresolved blockers.",
       "DecisionRightsSummary": "Implementation engineer can request bounded repair but cannot widen the slice beyond the parent-approved boundary.",
-      "ExceptionPolicySummary": "Block when the child repair run blocks, fails, lacks accepted handoff evidence, or reports feature-repair-escalation.",
+      "ExceptionPolicySummary": "Block when the child repair run itself blocks or fails. Materialize a completed child repair-escalation packet for parent recheck and manager-assisted recovery; do not treat that packet as accepted product proof.",
       "TargetLeadHours": 8,
       "DependsOnStepKey": "add-tests-and-proof",
       "DependsOnBranchOutcomeKey": "slice-repair-required",
@@ -661,6 +1110,18 @@
       ],
       "ArtifactInputs": [
         {
+          "ArtifactExpectationKey": "slice-scope-packet",
+          "SourceStepKey": "slice-intake"
+        },
+        {
+          "ArtifactExpectationKey": "slice-architecture-decision",
+          "SourceStepKey": "slice-architecture-check"
+        },
+        {
+          "ArtifactExpectationKey": "dotnet-solution-context",
+          "SourceStepKey": "slice-architecture-check"
+        },
+        {
           "ArtifactExpectationKey": "slice-change-set",
           "SourceStepKey": "implement-code-change"
         },
@@ -683,20 +1144,21 @@
         "WriteManagedProcessArtifacts",
         "ExecuteExternalAction"
       ],
-      "OperationTargetScope": "ExternalActionControlled"
+      "OperationTargetScope": "ExternalActionControlled",
+      "ExecutionClass": "RuntimeOwnedSubprocess"
     },
     {
       "Order": 7,
       "Key": "add-tests-recheck",
       "Title": "Recheck slice proof after repair",
       "Subtitle": "Repaired validation commands",
-      "Notes": "Review the current-run repair coordinator artifacts and rerun the smallest reliable proof needed for the slice. This step has validation-command ownership after repair: do not defer restore, build, or test execution to later root proof steps. Use the governed validation tools workspace_dotnet_restore, workspace_dotnet_build, and workspace_dotnet_test for the current run. If current-run restore/build/test receipts are missing and those validation tools plus the grounded product root are available, run the validation chain now; missing receipts are not an escalation finding by themselves. Managed artifact evidence rule: cite this step's managed artifact and current-run validation tool receipts as proof. Do not put product source/test file aliases, native product paths, external-target file paths, managed-files paths, or project-media storage paths in evidenceRefs. In the artifact body, prefer product-root-relative file names. If a retry diagnostic names an ungrounded product path but the grounded product root and validation tools are available, rerun the restore/build/test chain or read/list the file with a current-run workspace tool, then overwrite the artifact with grounded receipt-based proof instead of selecting slice-repair-escalation or returning Blocked. For .NET product roots, run and record a current-run validation chain: dotnet restore, dotnet build --no-restore, and dotnet test --no-restore when a test project exists or tests are expected. Target restore/build at the discovered solution when present; target workspace_dotnet_test at DotNetTestProjectFileAlias or DotNetTestProjectFile when present, preferably with noBuild=true after a successful solution build, and use the solution target for tests only when no test project target exists. Do not accept the repair from child handoff text alone, and do not select slice-repair-escalation only because the receipts were absent before this step ran. External generated product roots may not be Git repositories. Do not call workspace_git_status as a validation precondition for a grounded product root, and do not treat a not a git repository result as a product-root, validation-tool, or repair blocker. If Git status was already attempted and failed only because the product root is not a Git repository, record Git status as not applicable and continue immediately with product-root file listing plus the restore/build/test validation chain. Before running validation commands, resolve the actual solution target from setup handoff, repaired evidence, product readback, or product-root file listing: inspect <ProductRoot>/<SolutionName>.slnx and <ProductRoot>/<SolutionName>.sln, use the existing file, prefer .slnx when both exist, and never synthesize or require <SolutionName>.sln when only <SolutionName>.slnx exists. If prior validation failed only because a guessed solution path was missing, rerun the current-run validation chain against the discovered .slnx or .sln target before selecting slice-repair-escalation. If --no-restore fails because restore assets are stale or missing, run restore and then rerun build/test; select slice-repair-escalation only when the restored validation chain still fails or product proof does not satisfy the original repair target. Child-run refs cited inside add-tests-and-proof or slice-repair-code-change are trace links, not direct read requirements for this QA validation step; do not read artifacts/process-runs/<child-run-id>/... files directly unless the step brief explicitly lists that exact child artifact as a required upstream ref. Select slice-accepted only when repaired evidence, current-run build proof, current-run executed-test proof when tests exist or are expected, and focused proof satisfy the slice behavior and the original repair target. Select slice-repair-escalation when the original repair target proof still fails, accepted child handoff is missing from the current-run repair coordinator artifact, the child proved a different behavior while leaving the triggering failure unresolved, or another repair would exceed the slice boundary.",
+      "Notes": "Revalidate the original repair target with current-run restore, build, and test evidence. Read the required typed dotnet-solution-context artifact first for the declared solution and test targets; its declared paths are authoritative. If it is unavailable, use grounded product-root discovery without constructing conventional names or layouts. Never treat a missing guessed target as a product defect. Run restore before build or test when assets are stale. Do not mutate code or tests in this QA recheck; escalate only a concrete unresolved criterion or an execution boundary.",
       "StepKind": "Review",
       "AllowsManualSkip": false,
       "AllowsSafeRefusal": false,
       "RequiresApproval": false,
       "RequiresDecisionRecord": true,
-      "InputContractSummary": "Original slice validation failure, repair child run evidence, and architecture decision.",
+      "InputContractSummary": "Authoritative slice scope packet, original validation failure, repair child evidence, and architecture decision; recheck must account for every original core criterion.",
       "OutputContractSummary": "Repaired slice validation evidence with explicit slice-accepted or slice-repair-escalation branch.",
       "EvidenceContractSummary": "Current-run restore/build/test commands, exit codes, warnings, executed tests, current-run repair coordinator evidence, original repair target before/after assessment, and unresolved gaps after repair. Live runtime/browser proof belongs to root runtime-command and screenshot writeback steps.",
       "DecisionRightsSummary": "Validation owner can accept repaired evidence or escalate unresolved repair findings; QA still cannot mutate product files.",
@@ -705,6 +1167,10 @@
       "DependsOnStepKey": "slice-repair-code-change",
       "DependsOnBranchOutcomeKey": "",
       "DecisionRoleKey": "qa-lead",
+      "ExecutorPreferredSpecializationTags": [
+        "dotnet",
+        "qa"
+      ],
       "CanvasX": 6740,
       "CanvasY": 920,
       "BranchCanvasX": 7000,
@@ -751,6 +1217,18 @@
       ],
       "ArtifactInputs": [
         {
+          "ArtifactExpectationKey": "slice-scope-packet",
+          "SourceStepKey": "slice-intake"
+        },
+        {
+          "ArtifactExpectationKey": "slice-architecture-decision",
+          "SourceStepKey": "slice-architecture-check"
+        },
+        {
+          "ArtifactExpectationKey": "dotnet-solution-context",
+          "SourceStepKey": "slice-architecture-check"
+        },
+        {
           "ArtifactExpectationKey": "slice-test-evidence",
           "SourceStepKey": "add-tests-and-proof"
         },
@@ -777,6 +1255,9 @@
       "DocRefs": [
         "processes/dotnet-development-slice/steps/add-tests-recheck.md"
       ],
+      "ExecutionGuidanceRefs": [
+        "processes/dotnet-development-slice/steps/add-tests-recheck.md"
+      ],
       "AllowedOperations": [
         "ReadProcessContext",
         "ReadProjectStructure",
@@ -784,7 +1265,36 @@
         "RunValidation",
         "WriteManagedProcessArtifacts"
       ],
-      "OperationTargetScope": "ExternalProductTargetReadOnly"
+      "OperationTargetScope": "ExternalProductTargetReadOnly",
+      "CapabilityScope": {
+        "RequiredReceipts": [
+          {
+            "Key": "slice-recheck-restore",
+            "Kind": "RuntimeToolName",
+            "ToolName": "workspace_dotnet_restore",
+            "Activation": "Always",
+            "RequireSuccessfulExit": false,
+            "Reason": "Repaired slice validation must run restore in the current execution before choosing accepted or escalation."
+          },
+          {
+            "Key": "slice-recheck-build",
+            "Kind": "RuntimeToolName",
+            "ToolName": "workspace_dotnet_build",
+            "Activation": "Always",
+            "RequireSuccessfulExit": false,
+            "Reason": "Repaired slice validation must run build in the current execution before choosing accepted or escalation."
+          },
+          {
+            "Key": "slice-recheck-test",
+            "Kind": "RuntimeToolName",
+            "ToolName": "workspace_dotnet_test",
+            "Activation": "Always",
+            "RequireSuccessfulExit": false,
+            "Reason": "Repaired slice validation must run tests in the current execution when a test project exists or tests are expected."
+          }
+        ]
+      },
+      "ExecutionClass": "BranchDecision"
     },
     {
       "Order": 8,
@@ -797,7 +1307,7 @@
       "AllowsSafeRefusal": false,
       "RequiresApproval": false,
       "RequiresDecisionRecord": false,
-      "InputContractSummary": "Scope, architecture, original change set, repair change set, and accepted recheck evidence.",
+      "InputContractSummary": "Authoritative slice scope packet, architecture, original and repair change sets, accepted recheck evidence, and criterion-by-criterion coverage.",
       "OutputContractSummary": "Parent-ready repaired implementation handoff with blockers and residual risks.",
       "EvidenceContractSummary": "Implementation summary, repair summary, validation result, open issues, and explicit next action.",
       "DecisionRightsSummary": "Slice manager can close only when repaired slice-accepted was selected and validation evidence is present.",
@@ -845,6 +1355,14 @@
       ],
       "ArtifactInputs": [
         {
+          "ArtifactExpectationKey": "slice-scope-packet",
+          "SourceStepKey": "slice-intake"
+        },
+        {
+          "ArtifactExpectationKey": "dotnet-solution-context",
+          "SourceStepKey": "slice-architecture-check"
+        },
+        {
           "ArtifactExpectationKey": "slice-change-set",
           "SourceStepKey": "implement-code-change"
         },
@@ -864,6 +1382,9 @@
       "DocRefs": [
         "processes/dotnet-development-slice/steps/slice-handoff-after-repair.md"
       ],
+      "ExecutionGuidanceRefs": [
+        "processes/dotnet-development-slice/steps/slice-handoff-after-repair.md"
+      ],
       "AllowedOperations": [
         "ReadProcessContext",
         "ReadProjectStructure",
@@ -875,19 +1396,19 @@
     {
       "Order": 9,
       "Key": "slice-repair-escalation",
-      "Title": "Escalate unresolved slice repair",
-      "Subtitle": "Parent no-go packet",
-      "Notes": "Record unresolved repaired validation findings and make the parent no-go recommendation explicit instead of presenting the slice as accepted.",
-      "StepKind": "End",
+      "Title": "Prepare manager-assisted slice repair",
+      "Subtitle": "Manager diagnosis handoff",
+      "Notes": "Record unresolved repaired validation findings as a manager diagnosis input. The absence of an accepted child handoff is a routing symptom, not itself a repair target, and the downstream quality-repair subprocess cannot manufacture a child handoff. Preserve the authoritative slice scope, trace why the child withheld acceptance back to the unresolved product behavior or executable proof, distinguish repeated implementation strategy from the acceptance contract, and identify the owning source, failed proof, and smallest mutation-plus-validation loop. Green restore/build/test receipts do not make a presentational shell or missing original workflow proof-only. This artifact is reviewable recovery evidence, not a parent no-go or accepted product proof.",
+      "StepKind": "Review",
       "AllowsManualSkip": false,
       "AllowsSafeRefusal": false,
       "RequiresApproval": false,
       "RequiresDecisionRecord": false,
-      "InputContractSummary": "Original validation failure, repair child run evidence, and failed repaired recheck evidence.",
-      "OutputContractSummary": "Parent escalation packet with unresolved defects, proof gaps, risks, and recommended next action.",
-      "EvidenceContractSummary": "Unresolved blocker list, failing proof references, attempted repair, and parent escalation recommendation.",
-      "DecisionRightsSummary": "Slice manager can escalate unresolved repair findings but cannot present the slice as accepted.",
-      "ExceptionPolicySummary": "Do not continue to parent-ready accepted handoff while repaired validation remains unresolved.",
+      "InputContractSummary": "Authoritative slice scope, original validation failure, repair child run evidence, and failed repaired recheck evidence.",
+      "OutputContractSummary": "Manager repair diagnosis packet with unresolved defects, proof gaps, repeated-strategy analysis, and a bounded mutation-plus-validation target.",
+      "EvidenceContractSummary": "Unresolved blocker list, failing proof references, attempted repair, authoritative acceptance criteria, owning source, and recommended manager-assisted repair action.",
+      "DecisionRightsSummary": "Slice manager can sequence one diagnosis-guided quality repair subprocess but cannot present unresolved findings as accepted.",
+      "ExceptionPolicySummary": "Do not continue to parent-ready accepted handoff while repaired validation remains unresolved; prepare the bounded manager-assisted repair unless a genuine permission, environment, or contradictory-requirement blocker prevents it.",
       "TargetLeadHours": 1,
       "DependsOnStepKey": "add-tests-recheck",
       "DependsOnBranchOutcomeKey": "slice-repair-escalation",
@@ -931,6 +1452,18 @@
       ],
       "ArtifactInputs": [
         {
+          "ArtifactExpectationKey": "slice-scope-packet",
+          "SourceStepKey": "slice-intake"
+        },
+        {
+          "ArtifactExpectationKey": "dotnet-solution-context",
+          "SourceStepKey": "slice-architecture-check"
+        },
+        {
+          "ArtifactExpectationKey": "slice-architecture-decision",
+          "SourceStepKey": "slice-architecture-check"
+        },
+        {
           "ArtifactExpectationKey": "slice-test-evidence",
           "SourceStepKey": "add-tests-and-proof"
         },
@@ -950,6 +1483,240 @@
       "DocRefs": [
         "processes/dotnet-development-slice/steps/slice-repair-escalation.md"
       ],
+      "ExecutionGuidanceRefs": [
+        "processes/dotnet-development-slice/steps/slice-repair-escalation.md"
+      ],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure",
+        "ReadUpstreamArtifacts",
+        "WriteManagedProcessArtifacts"
+      ],
+      "OperationTargetScope": "ExternalProductTargetReadOnly"
+    },
+    {
+      "Order": 10,
+      "Key": "slice-manager-assisted-repair",
+      "Title": "Run manager-assisted quality repair",
+      "Subtitle": "Diagnosis, implementation, independent validation, and bounded bughunt",
+      "Notes": "Launch and observe the dotnet-quality-repair subprocess for the unresolved slice findings. First call project_structure_process_subprocess_launch with definitionKey dotnet-quality-repair. Do not wait silently, write a progress artifact, or create another child while one is active. If the launch response includes ParentDeferredOutcomeJson, submit that parent outcome exactly so the runtime resumes this step from the child result. The child receives the authoritative slice scope, both validation packets, the failed repair evidence, and the manager diagnosis. It owns diagnosis, product mutation, independent validation, and one specialist-guided re-repair before an explicit no-go. This parent step only coordinates the child and materializes accepted handoff evidence; it must not mutate the product or reinterpret a quality-repair-no-go packet as success.",
+      "StepKind": "Subprocess",
+      "SubprocessProcessKey": "dotnet-quality-repair",
+      "SubprocessDefinitionSnapshotName": ".NET quality repair with diagnosis and bounded bughunt",
+      "SubprocessContract": {
+        "DefinitionKey": "dotnet-quality-repair",
+        "LaunchMode": "RuntimeOwned",
+        "ParentProducedArtifactExpectationKey": "slice-manager-repair-change-set",
+        "AcceptedChildOutputs": [
+          {
+            "StepKey": "quality-repair-handoff",
+            "ArtifactExpectationKey": "quality-repair-handoff-packet",
+            "ArtifactTitle": ".NET quality repair handoff"
+          },
+          {
+            "StepKey": "quality-repair-handoff-after-bughunt",
+            "ArtifactExpectationKey": "quality-repair-handoff-after-bughunt-packet",
+            "ArtifactTitle": ".NET quality repair handoff after bughunt"
+          }
+        ],
+        "NoGoChildOutputs": [
+          {
+            "StepKey": "quality-repair-no-go",
+            "ArtifactExpectationKey": "quality-repair-no-go-packet",
+            "ArtifactTitle": ".NET quality repair no-go packet"
+          }
+        ],
+        "RequiredChildReceipts": [],
+        "AlreadySatisfiedOutput": null,
+        "MaterializationMode": "RuntimeSynthesizedParentHandoff"
+      },
+      "AllowsManualSkip": false,
+      "AllowsSafeRefusal": false,
+      "RequiresApproval": false,
+      "RequiresDecisionRecord": true,
+      "InputContractSummary": "Authoritative slice scope, original and repaired validation failures, failed child repair evidence, and manager diagnosis; repair action may narrow but acceptance scope may not.",
+      "OutputContractSummary": "Accepted manager-assisted repair change set with independent validation and optional bughunt evidence, or explicit bounded child no-go.",
+      "EvidenceContractSummary": "Child status, diagnosis, product mutation, restore/build/test proof, owning-source readback, optional runtime/browser proof, bughunt evidence when used, and accepted or no-go handoff.",
+      "DecisionRightsSummary": "Delivery manager owns repair sequencing; implementation and independent validation remain separate child roles.",
+      "ExceptionPolicySummary": "Block only when the child blocks, fails, or returns quality-repair-no-go after its bounded diagnosis and bughunt lanes. Do not relaunch the same failed feature-repair strategy.",
+      "TargetLeadHours": 12,
+      "DependsOnStepKey": "slice-repair-escalation",
+      "DependsOnBranchOutcomeKey": "",
+      "DecisionRoleKey": "",
+      "CanvasX": 8900,
+      "CanvasY": 1320,
+      "BranchCanvasX": 0,
+      "BranchCanvasY": 0,
+      "Dependencies": [
+        {
+          "DependsOnStepKey": "slice-repair-escalation",
+          "DependsOnBranchOutcomeKey": ""
+        },
+        {
+          "DependsOnStepKey": "add-tests-recheck",
+          "DependsOnBranchOutcomeKey": "slice-repair-escalation"
+        }
+      ],
+      "RoleAssignments": [
+        {
+          "RoleKey": "delivery-manager",
+          "ResponsibilityKind": "Responsible",
+          "IsRequired": true,
+          "FallbackOrder": 0,
+          "RebindPolicySummary": "Manager-assisted repair observation remains with a manager-capable role."
+        },
+        {
+          "RoleKey": "lead-engineer",
+          "ResponsibilityKind": "Reviewer",
+          "IsRequired": true,
+          "FallbackOrder": 0,
+          "RebindPolicySummary": "Engineering reviews the bounded repair scope without replacing independent child validation."
+        }
+      ],
+      "ArtifactExpectations": [
+        {
+          "Key": "slice-manager-repair-change-set",
+          "TemplateKey": "implementation-change-set",
+          "Title": "Manager-assisted slice repair change set",
+          "ArtifactKind": "Deliverable",
+          "IsRequired": true,
+          "TrustRequirement": "ReviewRequired",
+          "SensitivityLevel": "Internal",
+          "RetentionDays": 365,
+          "AllowedFutureUsageSummary": "Reusable by parent QA, release approval, and later defect analysis.",
+          "ValidationRequirementSummary": "Must point to an accepted dotnet-quality-repair child handoff with diagnosis, changed files, current-execution validation, and confirmation that the original slice criteria remain covered.",
+          "SubprocessChildStepKey": "quality-repair-handoff",
+          "SubprocessChildArtifactTitle": ".NET quality repair handoff"
+        }
+      ],
+      "ArtifactInputs": [
+        {
+          "ArtifactExpectationKey": "slice-scope-packet",
+          "SourceStepKey": "slice-intake"
+        },
+        {
+          "ArtifactExpectationKey": "dotnet-solution-context",
+          "SourceStepKey": "slice-architecture-check"
+        },
+        {
+          "ArtifactExpectationKey": "slice-architecture-decision",
+          "SourceStepKey": "slice-architecture-check"
+        },
+        {
+          "ArtifactExpectationKey": "slice-test-evidence",
+          "SourceStepKey": "add-tests-and-proof"
+        },
+        {
+          "ArtifactExpectationKey": "slice-repair-change-set",
+          "SourceStepKey": "slice-repair-code-change"
+        },
+        {
+          "ArtifactExpectationKey": "slice-recheck-evidence",
+          "SourceStepKey": "add-tests-recheck"
+        },
+        {
+          "ArtifactExpectationKey": "slice-repair-escalation-packet",
+          "SourceStepKey": "slice-repair-escalation"
+        }
+      ],
+      "BranchOutcomes": [],
+      "ChecklistRefs": [],
+      "ValidationRefs": [],
+      "PromptRefs": [],
+      "DocRefs": [
+        "processes/dotnet-development-slice/steps/slice-manager-assisted-repair.md"
+      ],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure",
+        "ReadUpstreamArtifacts",
+        "WriteManagedProcessArtifacts",
+        "ExecuteExternalAction"
+      ],
+      "OperationTargetScope": "ExternalActionControlled",
+      "ExecutionClass": "RuntimeOwnedSubprocess"
+    },
+    {
+      "Order": 11,
+      "Key": "slice-handoff-after-manager-repair",
+      "Title": "Hand off manager-repaired implementation slice",
+      "Subtitle": "Parent-ready manager-assisted evidence",
+      "Notes": "Produce the parent-ready handoff only after the manager-assisted quality repair subprocess returned accepted handoff evidence. Reconcile that evidence with every criterion in the authoritative slice scope and state the owning production surface and proof for each core behavior. Do not present a quality-repair-no-go or unresolved criterion as accepted.",
+      "StepKind": "End",
+      "AllowsManualSkip": false,
+      "AllowsSafeRefusal": false,
+      "RequiresApproval": false,
+      "RequiresDecisionRecord": false,
+      "InputContractSummary": "Authoritative slice scope, manager diagnosis, and accepted manager-assisted repair change set with independent validation.",
+      "OutputContractSummary": "Parent-ready implementation handoff after manager-assisted repair with criterion coverage and residual risks.",
+      "EvidenceContractSummary": "Manager diagnosis, changed product surfaces, independent validation, bughunt evidence when used, criterion coverage, open risks, and explicit parent next action.",
+      "DecisionRightsSummary": "Delivery manager can close only from accepted manager-assisted repair evidence and full criterion coverage.",
+      "ExceptionPolicySummary": "Do not close when accepted child handoff is missing, any authoritative core criterion remains unresolved, or the child returned no-go.",
+      "TargetLeadHours": 2,
+      "DependsOnStepKey": "slice-manager-assisted-repair",
+      "DependsOnBranchOutcomeKey": "",
+      "DecisionRoleKey": "",
+      "CanvasX": 9980,
+      "CanvasY": 1320,
+      "BranchCanvasX": 0,
+      "BranchCanvasY": 0,
+      "Dependencies": [
+        {
+          "DependsOnStepKey": "slice-manager-assisted-repair",
+          "DependsOnBranchOutcomeKey": ""
+        }
+      ],
+      "RoleAssignments": [
+        {
+          "RoleKey": "delivery-manager",
+          "ResponsibilityKind": "Responsible",
+          "IsRequired": true,
+          "FallbackOrder": 0,
+          "RebindPolicySummary": "Rebind only to a manager-capable operator that can reconcile accepted repair evidence with the parent scope."
+        }
+      ],
+      "ArtifactExpectations": [
+        {
+          "Key": "slice-handoff-packet-after-manager-repair",
+          "TemplateKey": "regression-evidence-pack",
+          "Title": "Implementation slice handoff after manager-assisted repair",
+          "ArtifactKind": "Evidence",
+          "IsRequired": true,
+          "TrustRequirement": "ReviewRequired",
+          "SensitivityLevel": "Internal",
+          "RetentionDays": 365,
+          "AllowedFutureUsageSummary": "Reusable by parent peer review, QA, and release approval.",
+          "ValidationRequirementSummary": "Must include accepted manager-assisted repair evidence, independent validation, criterion-by-criterion scope coverage, unresolved risks, and recommended parent action."
+        }
+      ],
+      "ArtifactInputs": [
+        {
+          "ArtifactExpectationKey": "slice-scope-packet",
+          "SourceStepKey": "slice-intake"
+        },
+        {
+          "ArtifactExpectationKey": "dotnet-solution-context",
+          "SourceStepKey": "slice-architecture-check"
+        },
+        {
+          "ArtifactExpectationKey": "slice-repair-escalation-packet",
+          "SourceStepKey": "slice-repair-escalation"
+        },
+        {
+          "ArtifactExpectationKey": "slice-manager-repair-change-set",
+          "SourceStepKey": "slice-manager-assisted-repair"
+        }
+      ],
+      "BranchOutcomes": [],
+      "ChecklistRefs": [],
+      "ValidationRefs": [],
+      "PromptRefs": [],
+      "DocRefs": [
+        "processes/dotnet-development-slice/steps/slice-handoff-after-manager-repair.md"
+      ],
+      "ExecutionGuidanceRefs": [
+        "processes/dotnet-development-slice/steps/slice-handoff-after-manager-repair.md"
+      ],
       "AllowedOperations": [
         "ReadProcessContext",
         "ReadProjectStructure",
@@ -960,3 +1727,4 @@
     }
   ]
 }
+

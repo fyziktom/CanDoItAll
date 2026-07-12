@@ -20,7 +20,10 @@ public sealed record ProcessExecutionObservationQuery(
     IReadOnlyList<ProcessRunId> RunIds,
     DateTimeOffset FromUtc,
     DateTimeOffset ToUtc,
-    int TakePerRun);
+    int TakePerRun)
+{
+    public IReadOnlyList<ProcessStepInstanceId> StepInstanceIds { get; init; } = [];
+}
 
 public sealed record ProcessRuntimeUsageTelemetryQuery(
     IReadOnlyList<ProcessRunId> RunIds,
@@ -47,6 +50,8 @@ public sealed record ProcessRuntimeUsageObservation(
     decimal EstimatedCostUsd,
     decimal ActualCostUsd)
 {
+    public int ToolCallCount { get; init; }
+
     public int ContextEstimatedInputTokens { get; init; }
 
     public int ContextInputMessageCount { get; init; }

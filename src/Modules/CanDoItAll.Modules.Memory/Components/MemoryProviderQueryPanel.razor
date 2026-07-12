@@ -1,0 +1,65 @@
+@namespace CanDoItAll.Modules.Memory.Components
+
+<SurfaceCard data-testid="memory-ui-query">
+    <TextBlock TextStyle="TextStyle.Eyebrow" Value="Query" />
+    <TextBlock TextStyle="TextStyle.Subtitle1"
+               Value="@(CanRun ? "Ready for selected provider" : "Query unavailable")" />
+    <TextBlock TextStyle="TextStyle.Body2"
+               Value="@MemoryProviderUiAvailability.QueryDiagnostic(Provider, Editor.UseAsyncQuery)" />
+
+    <FormField Text="Query">
+        <TextArea Value="@Editor.Query"
+                  ValueChanged="@(value => Editor.Query = value)"
+                  Rows="6"
+                  data-testid="memory-ui-query-text" />
+    </FormField>
+    <MemoryProviderBooleanField Label="Async query"
+                                Value="@Editor.UseAsyncQuery"
+                                ValueChanged="@(value => Editor.UseAsyncQuery = value)"
+                                TestId="memory-ui-query-async" />
+    <Button Text="Run query"
+            Icon="play_arrow"
+            ButtonStyle="ButtonStyle.Primary"
+            Size="ButtonSize.Small"
+            Click="OnRun"
+            Disabled="@(!CanRun || IsBusy)"
+            IsBusy="@IsBusy"
+            data-testid="memory-ui-query-submit" />
+
+    @if (Result is not null)
+    {
+        <MemoryProviderQueryResultPanel Result="@Result"
+                                        Provider="@Provider"
+                                        FeedbackEditor="@FeedbackEditor"
+                                        IsFeedbackBusy="@IsFeedbackBusy"
+                                        OnSubmitFeedback="OnSubmitFeedback" />
+    }
+</SurfaceCard>
+
+@code {
+    [Parameter]
+    public MemoryProviderManagementProfile? Provider { get; set; }
+
+    [Parameter, EditorRequired]
+    public MemoryQueryEditorModel Editor { get; set; } = new();
+
+    [Parameter]
+    public MemoryProviderQueryUiResult? Result { get; set; }
+
+    [Parameter, EditorRequired]
+    public MemoryFeedbackEditorModel FeedbackEditor { get; set; } = new();
+
+    [Parameter]
+    public bool IsBusy { get; set; }
+
+    [Parameter]
+    public bool IsFeedbackBusy { get; set; }
+
+    [Parameter]
+    public EventCallback OnRun { get; set; }
+
+    [Parameter]
+    public EventCallback OnSubmitFeedback { get; set; }
+
+    private bool CanRun => MemoryProviderUiAvailability.CanRunQuery(Provider, Editor.UseAsyncQuery);
+}

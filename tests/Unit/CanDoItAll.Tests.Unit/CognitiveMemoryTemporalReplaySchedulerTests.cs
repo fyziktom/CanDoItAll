@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 
 namespace CanDoItAll.Tests.Unit;
 
+[Collection(AppDbContextModelRegistryTestCollectionNames.Name)]
 public sealed class CognitiveMemoryTemporalReplaySchedulerTests
 {
     [Fact]
@@ -266,7 +267,7 @@ public sealed class CognitiveMemoryTemporalReplaySchedulerTests
     private static TestFixture CreateFixture()
     {
         AppDbContextModelRegistry.ConfigureAssemblies([typeof(CognitiveMemoryModuleAssemblyMarker).Assembly]);
-        var options = new DbContextOptionsBuilder<AppDbContext>()
+        var options = AppDbContextTestOptionsBuilder.Create()
             .UseInMemoryDatabase($"cognitive-memory-temporal-replay-{Guid.NewGuid():N}")
             .Options;
         return new TestFixture(new TestDbContextFactory(options), new FixedClock());

@@ -8,6 +8,7 @@ using static CanDoItAll.Tests.Unit.DatabaseRuntimeSwitchingTestProfiles;
 
 namespace CanDoItAll.Tests.Unit;
 
+[Collection(AppDbContextModelRegistryTestCollectionNames.Name)]
 public sealed class ControlPlaneDatabaseProfileCatalogTests
 {
     [Fact]
@@ -50,6 +51,7 @@ public sealed class ControlPlaneDatabaseProfileCatalogTests
     }
 }
 
+[Collection(AppDbContextModelRegistryTestCollectionNames.Name)]
 public sealed class DataProtectionControlPlaneTests
 {
     [Fact]
@@ -75,6 +77,7 @@ public sealed class DataProtectionControlPlaneTests
     }
 }
 
+[Collection(AppDbContextModelRegistryTestCollectionNames.Name)]
 public sealed class DatabaseProfileOverrideTests
 {
     [Fact]
@@ -270,6 +273,7 @@ public sealed class DatabaseProfileOverrideTests
     }
 }
 
+[Collection(AppDbContextModelRegistryTestCollectionNames.Name)]
 public sealed class LegacyDatabaseProfileCatalogQuarantineTests
 {
     [Fact]

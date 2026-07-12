@@ -1,13 +1,6 @@
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.WorkflowExecutors.Plugins;
-using CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Control;
-using CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Documents;
-using CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Media;
-using CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Network;
-using CanDoItAll.AgentFramework.WorkflowExecutors.Standard.ProjectStructure;
-using CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Transforms;
-using CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Workspace;
 using CanDoItAll.AgentFramework.Workflows.Abstractions;
 using CanDoItAll.Modules.CognitiveMemory;
 using CanDoItAll.Plugins.Abstractions;
@@ -155,28 +148,19 @@ public sealed class WorkflowExecutorHardeningCheckpointTests
     private static IReadOnlyList<WorkflowExecutorDescriptor> CollectCombinedDescriptors()
     {
         List<WorkflowExecutorDescriptor> descriptors = [];
-        IWorkflowExecutorDescriptorSource[] standardSources =
-        [
-            new StandardControlWorkflowExecutorDescriptorSource(),
-            new StandardTransformWorkflowExecutorDescriptorSource(),
-            new StandardWorkspaceWorkflowExecutorDescriptorSource(),
-            new StandardNetworkWorkflowExecutorDescriptorSource(),
-            new StandardDocumentWorkflowExecutorDescriptorSource(),
-            new StandardMediaWorkflowExecutorDescriptorSource(),
-            new StandardProjectStructureWorkflowExecutorDescriptorSource()
-        ];
-        descriptors.AddRange(standardSources.SelectMany(source => source.ListExecutorDescriptors()));
+        descriptors.AddRange(BuiltInWorkflowExecutorDescriptors.All);
         descriptors.Add(CognitiveMemoryWorkflowExecutorDescriptors.Recall);
         descriptors.Add(CognitiveMemoryWorkflowExecutorDescriptors.Probe);
         descriptors.Add(CognitiveMemoryWorkflowExecutorDescriptors.LearningProposal);
 
-        var bundledPlugin = new TestPlugin(CreatePluginDescriptor(
-            PluginSourceKind.Bundled,
-            PluginTrustLevel.Bundled,
-            packageId: null));
-        descriptors.AddRange(new PluginWorkflowExecutorDescriptorSource(
-            [bundledPlugin],
-            new AllowingGrantEvaluator()).ListExecutorDescriptors());
+        descriptors.Add(CreateRuntimePackageDescriptor("plugin.hardening.bundled") with
+        {
+            Source = WorkflowExecutorSourceDescriptor.BundledPlugin(
+                BundledPluginId.Value,
+                "1.0.0",
+                "Hardening plugin",
+                UiIconDescriptor.MaterialIcon("extension", "Hardening plugin"))
+        });
 
         var runtimePackage = CreatePluginDescriptor(
             PluginSourceKind.LocalPackage,
@@ -188,9 +172,10 @@ public sealed class WorkflowExecutorHardeningCheckpointTests
             [typeof(RuntimePackageExecutor)],
             runtimePackage);
         using var provider = services.BuildServiceProvider();
-        descriptors.AddRange(provider
-            .GetRequiredService<IEnumerable<IWorkflowExecutorDescriptorSource>>()
-            .SelectMany(source => source.ListExecutorDescriptors()));
+        using var scope = provider.CreateScope();
+        descriptors.AddRange(scope.ServiceProvider
+            .GetRequiredService<IEnumerable<IWorkflowExecutorContribution>>()
+            .Select(contribution => contribution.Descriptor));
 
         return descriptors;
     }
@@ -209,7 +194,9 @@ public sealed class WorkflowExecutorHardeningCheckpointTests
             trustLevel,
             "1.0.0",
             PluginCapabilityKind.WorkflowExecutor,
-            [CreatePluginExecutor()],
+            [CreatePluginExecutor(sourceKind == PluginSourceKind.Bundled
+                ? new WorkflowExecutorId("plugin.hardening.bundled")
+                : RuntimePackageExecutorId)],
             PluginSettingsDescriptor.Empty,
             [],
             packageId is null
@@ -223,24 +210,9 @@ public sealed class WorkflowExecutorHardeningCheckpointTests
             OAuth2: null,
             UiIconDescriptor.MaterialIcon("extension", "Hardening plugin"));
 
-    private static PluginWorkflowExecutorDescriptor CreatePluginExecutor()
-        => new(
-            new WorkflowExecutorId("plugin.hardening.bundled"),
-            "Bundled hardening executor",
-            "Bundled plugin executor used by hardening checkpoint tests.",
-            WorkflowExecutorCategoryKind.Utility,
-            new PluginRendererKey("plugin.hardening"),
-            ConfigurationSchema.Empty(),
-            WorkflowValueShape.Text,
-            new WorkflowValueShape(WorkflowValueShapeKind.Json, "{}", "JSON"),
-            WorkflowExecutorExecutionPolicy.Default)
-        {
-            PermissionPolicy = new WorkflowExecutorPermissionPolicy(
-                WorkflowExecutorCapabilityFlags.UsesNetwork,
-                WorkflowExecutorApprovalRequirement.NotRequired),
-            SideEffects = WorkflowExecutorSideEffectDescriptor.ExternalRead("hardening-read/v1"),
-            DeterministicTestMode = WorkflowExecutorDeterministicTestModeDescriptor.Supported("Hardening preview.")
-        };
+    private static PluginWorkflowExecutorDescriptor CreatePluginExecutor(WorkflowExecutorId executorId)
+        => PluginWorkflowExecutorDescriptor.FromWorkflowExecutorDescriptor(
+            CreateRuntimePackageDescriptor(executorId.Value));
 
     private static WorkflowExecutorDescriptor CreateRuntimePackageDescriptor(string id)
         => new(
@@ -323,20 +295,6 @@ public sealed class WorkflowExecutorHardeningCheckpointTests
     private static readonly PluginPackageId RuntimePackageId = new("plugin.hardening.runtime");
 
     private static readonly WorkflowExecutorId RuntimePackageExecutorId = new("plugin.hardening.runtime-executor");
-
-    private sealed class TestPlugin(PluginDescriptor descriptor) : ICanDoItAllPlugin
-    {
-        public PluginDescriptor Descriptor { get; } = descriptor;
-    }
-
-    private sealed class AllowingGrantEvaluator : IPluginWorkflowExecutorGrantEvaluator
-    {
-        public PluginGrantDecision Evaluate(
-            PluginId pluginId,
-            PluginCapabilityKind capability,
-            PluginHostToolRecipeId? recipeId = null)
-            => PluginGrantDecision.Allow(pluginId, capability, recipeId);
-    }
 
     private sealed class RuntimePackageExecutor : IWorkflowExecutor
     {

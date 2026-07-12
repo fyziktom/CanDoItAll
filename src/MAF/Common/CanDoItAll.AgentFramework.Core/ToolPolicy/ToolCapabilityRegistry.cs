@@ -154,16 +154,20 @@ public static class ToolCapabilityRegistry
     {
         var capabilities = new List<ToolCapabilityMetadata>
         {
+            Read(ToolContractCatalog.WorkspaceListDirectory, ToolCapabilitySideEffectKind.WorkspaceRead),
             Read(ToolContractCatalog.WorkspaceListFiles, ToolCapabilitySideEffectKind.WorkspaceRead),
             Read(ToolContractCatalog.WorkspaceSearch, ToolCapabilitySideEffectKind.WorkspaceRead),
             Read(ToolContractCatalog.WorkspaceReadFile, ToolCapabilitySideEffectKind.WorkspaceRead),
             Read(ToolContractCatalog.WorkspaceStatPath, ToolCapabilitySideEffectKind.WorkspaceRead),
+            Read(ToolContractCatalog.WorkspaceHashPath, ToolCapabilitySideEffectKind.WorkspaceRead),
             Mutation(ToolContractCatalog.WorkspaceCreateDirectory, ToolCapabilitySideEffectKind.WorkspaceWrite, ToolCapabilityOperationRequirementKind.WorkspaceFileMutation),
             Mutation(ToolContractCatalog.WorkspaceWriteFile, ToolCapabilitySideEffectKind.WorkspaceWrite, ToolCapabilityOperationRequirementKind.WorkspaceFileMutation),
             Mutation(ToolContractCatalog.WorkspaceAppendFile, ToolCapabilitySideEffectKind.WorkspaceWrite, ToolCapabilityOperationRequirementKind.WorkspaceFileMutation),
             Mutation(ToolContractCatalog.WorkspaceCopyPath, ToolCapabilitySideEffectKind.WorkspaceWrite, ToolCapabilityOperationRequirementKind.WorkspaceFileMutation),
             Mutation(ToolContractCatalog.WorkspaceMovePath, ToolCapabilitySideEffectKind.WorkspaceWrite, ToolCapabilityOperationRequirementKind.WorkspaceFileMutation),
             Mutation(ToolContractCatalog.WorkspaceDeletePath, ToolCapabilitySideEffectKind.WorkspaceWrite, ToolCapabilityOperationRequirementKind.WorkspaceFileMutation),
+            Mutation(ToolContractCatalog.WorkspaceZipPath, ToolCapabilitySideEffectKind.WorkspaceWrite, ToolCapabilityOperationRequirementKind.WorkspaceFileMutation),
+            Mutation(ToolContractCatalog.WorkspaceUnzipArchive, ToolCapabilitySideEffectKind.WorkspaceWrite, ToolCapabilityOperationRequirementKind.WorkspaceFileMutation),
             Read(ToolContractCatalog.WorkspaceDiffText, ToolCapabilitySideEffectKind.WorkspaceRead),
             Mutation(ToolContractCatalog.WorkspaceDotNetNew, ToolCapabilitySideEffectKind.WorkspaceWrite, ToolCapabilityOperationRequirementKind.WorkspaceFileMutation),
             Validation(ToolContractCatalog.WorkspaceDotNetRestore, ToolCapabilitySideEffectKind.LocalProcessExecution, StaticRequirement(ProcessOperationContractNames.RunValidation)),
@@ -194,6 +198,11 @@ public static class ToolCapabilityRegistry
                     ProcessOperationContractNames.CaptureRuntimeProof,
                     ProcessOperationContractNames.ReadProjectStructure)),
             Read(ToolContractCatalog.WorkspaceInspectSpreadsheet, ToolCapabilitySideEffectKind.WorkspaceRead),
+            Read(ToolContractCatalog.WorkspaceSpreadsheetSummary, ToolCapabilitySideEffectKind.WorkspaceRead),
+            Read(ToolContractCatalog.WorkspaceReadSpreadsheetCell, ToolCapabilitySideEffectKind.WorkspaceRead),
+            Read(ToolContractCatalog.WorkspaceReadSpreadsheetRange, ToolCapabilitySideEffectKind.WorkspaceRead),
+            Mutation(ToolContractCatalog.WorkspaceWriteSpreadsheet, ToolCapabilitySideEffectKind.WorkspaceWrite, ToolCapabilityOperationRequirementKind.WorkspaceFileMutation),
+            Read(ToolContractCatalog.WorkspaceSpreadsheetFunctionCatalog, ToolCapabilitySideEffectKind.WorkspaceRead),
             Validation(
                 ToolContractCatalog.WorkspaceConvertDocument,
                 ToolCapabilitySideEffectKind.DocumentConversion,
@@ -269,6 +278,20 @@ public static class ToolCapabilityRegistry
             Mutation(AgentToolInvocationPolicyMetadata.ProcessesTemplateImport, ToolCapabilitySideEffectKind.ProcessMutation, StaticRequirement(ProcessOperationContractNames.ExecuteExternalAction)),
             Read(AgentToolInvocationPolicyMetadata.ProcessesTemplateBaselineScenariosList, ToolCapabilitySideEffectKind.WorkspaceRead),
             Read(AgentToolInvocationPolicyMetadata.ProcessesTemplateLiveRunProfilesList, ToolCapabilitySideEffectKind.WorkspaceRead),
+            Read(AgentToolInvocationPolicyMetadata.WorkflowsDefinitionsList, ToolCapabilitySideEffectKind.None),
+            Mutation(
+                AgentToolInvocationPolicyMetadata.WorkflowsRunStart,
+                ToolCapabilitySideEffectKind.RuntimeLaunch,
+                StaticRequirement(ProcessOperationContractNames.LaunchRuntime)),
+            Read(AgentToolInvocationPolicyMetadata.WorkflowsRunStatusGet, ToolCapabilitySideEffectKind.None),
+            Mutation(
+                AgentToolInvocationPolicyMetadata.WorkflowsRunCancel,
+                ToolCapabilitySideEffectKind.RuntimeLaunch,
+                StaticRequirement(ProcessOperationContractNames.ExecuteExternalAction)),
+            Mutation(
+                AgentToolInvocationPolicyMetadata.WorkflowsExternalResponseSubmit,
+                ToolCapabilitySideEffectKind.RuntimeLaunch,
+                StaticRequirement(ProcessOperationContractNames.ExecuteExternalAction)),
             Mutation(AgentToolInvocationPolicyMetadata.ImageGenerationCreate, ToolCapabilitySideEffectKind.MediaGeneration, StaticRequirement(ProcessOperationContractNames.ExecuteExternalAction))
         };
 

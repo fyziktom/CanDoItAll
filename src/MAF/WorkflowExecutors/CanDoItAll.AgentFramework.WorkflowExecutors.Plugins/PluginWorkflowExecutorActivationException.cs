@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Plugins.Abstractions;
 
 namespace CanDoItAll.AgentFramework.WorkflowExecutors.Plugins;
@@ -6,7 +7,8 @@ namespace CanDoItAll.AgentFramework.WorkflowExecutors.Plugins;
 public enum PluginWorkflowExecutorActivationFailureKind
 {
     MissingPackageMetadata,
-    ActivationFailed
+    ActivationFailed,
+    ManifestRuntimeMismatch
 }
 
 public enum PluginWorkflowExecutorActivationRetryability
@@ -105,6 +107,47 @@ public sealed class PluginWorkflowExecutorActivationException : InvalidOperation
             innerException.ToString(),
             innerException);
 
+    public static PluginWorkflowExecutorActivationException ManifestRuntimeMismatch(
+        PluginDescriptor plugin,
+        IReadOnlyCollection<string> declaredExecutorIds,
+        IReadOnlyCollection<string> runtimeExecutorIds,
+        IReadOnlyCollection<Type> implementationTypes)
+    {
+        var declared = FormatValues(declaredExecutorIds);
+        var runtime = FormatValues(runtimeExecutorIds);
+        var types = FormatValues(implementationTypes.Select(type => type.FullName ?? type.Name));
+        return new PluginWorkflowExecutorActivationException(
+            plugin.Id,
+            plugin.Package?.PackageId,
+            types,
+            "runtime-package-manifest-validation",
+            $"Runtime plugin package '{plugin.Package?.PackageId}' for plugin '{plugin.Id}' declares workflow executor ids [{declared}] but contributes [{runtime}].",
+            PluginWorkflowExecutorActivationFailureKind.ManifestRuntimeMismatch,
+            PluginWorkflowExecutorActivationRetryability.RetryableAfterRepair,
+            "Make the package manifest workflow executor ids exactly match the runtime contribution ids before restarting the application.",
+            $"Declared=[{declared}]; Runtime=[{runtime}]; Types=[{types}].");
+    }
+
+    public static PluginWorkflowExecutorActivationException ManifestRuntimeMetadataMismatch(
+        PluginDescriptor plugin,
+        WorkflowExecutorId executorId,
+        Type implementationType,
+        IReadOnlyCollection<string> mismatchedFields)
+    {
+        var fields = FormatValues(mismatchedFields);
+        var typeName = implementationType.FullName ?? implementationType.Name;
+        return new PluginWorkflowExecutorActivationException(
+            plugin.Id,
+            plugin.Package?.PackageId,
+            typeName,
+            "runtime-package-manifest-validation",
+            $"Runtime plugin executor '{executorId}' for package '{plugin.Package?.PackageId}' does not match its manifest metadata. Mismatched fields: [{fields}].",
+            PluginWorkflowExecutorActivationFailureKind.ManifestRuntimeMismatch,
+            PluginWorkflowExecutorActivationRetryability.RetryableAfterRepair,
+            "Regenerate the package manifest from the runtime workflow executor descriptor before restarting the application.",
+            $"ExecutorId={executorId}; Type={typeName}; MismatchedFields=[{fields}].");
+    }
+
     private static string NormalizeRequired(string value, string parameterName)
     {
         if (string.IsNullOrWhiteSpace(value))
@@ -113,6 +156,15 @@ public sealed class PluginWorkflowExecutorActivationException : InvalidOperation
         }
 
         return value.Trim();
+    }
+
+    private static string FormatValues(IEnumerable<string> values)
+    {
+        var formatted = values
+            .Where(value => !string.IsNullOrWhiteSpace(value))
+            .Order(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        return formatted.Length == 0 ? "none" : string.Join(", ", formatted);
     }
 
     private static string RedactTechnicalDetail(string value)

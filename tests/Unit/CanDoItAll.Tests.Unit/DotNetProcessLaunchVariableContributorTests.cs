@@ -1,466 +1,249 @@
 using System.Text.Json;
-using CanDoItAll.Modules.Workbench;
-using CanDoItAll.Processes.Abstractions;
-using CanDoItAll.Processes.Runtime;
-using CanDoItAll.SharedKernel;
+using CanDoItAll.Modules.Processes;
+using CanDoItAll.Processes.Application;
+using CanDoItAll.Processes.Templates;
 
 namespace CanDoItAll.Tests.Unit;
 
 public sealed class DotNetProcessLaunchVariableContributorTests
 {
     [Fact]
-    public void Enrich_adds_feature_validation_required_receipt_map()
+    public void Enrich_does_not_create_dotnet_facts_when_no_driver_is_declared()
     {
         var contributor = new DotNetProcessLaunchVariableContributor();
-        var projectId = Guid.NewGuid();
-        var node = CreateNode(projectId);
-        var surface = new ProjectStructureSurface(projectId, "Calculator", [node], [], null);
+        var context = new ProcessLaunchPreparationContext(
+            "generic-process",
+            IsSubprocess: false,
+            Source("Build a Blazor PWA with xUnit tests in src and tests."));
         var variables = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
         {
-            ["ProductRoot"] = @"C:\temp\CanDoItAll\Calculator",
-            ["ProjectStructureContextSummary"] = "Blazor WebAssembly calculator app with xUnit tests."
+            ["ProductRoot"] = @"C:\output\AnyProduct",
+            ["ProjectStructureContextSummary"] = "Blazor PWA net10 xUnit src tests"
         };
 
-        contributor.Enrich(
-            new ProjectStructureProcessLaunchVariableContext(
-                projectId,
-                surface,
-                node,
-                "dotnet-feature-function-implementation",
-                ProcessDefinitionId: null,
-                ParentRunId: null,
-                ParentStepId: null,
-                ParentAssignment: null,
-                IsSubprocess: true),
-            variables);
+        contributor.Enrich(context, variables);
 
-        var receiptMap = JsonSerializer.Deserialize<Dictionary<string, string[]>>(
-            variables[ProcessRuntimeLaunchVariables.ProductCompletionRequiredToolReceiptsByStep]);
-
-        Assert.NotNull(receiptMap);
-        AssertValidationReceipts(receiptMap, "targeted-validation");
-        AssertValidationReceipts(receiptMap, "feature-repair");
-        AssertValidationReceipts(receiptMap, "targeted-recheck");
-
-        var scaffoldContract = variables["DotNetScaffoldContract"];
-        Assert.Contains("BlazorWasmNamespaceRule", scaffoldContract);
-        Assert.Contains("using Calculator;", scaffoldContract);
-        Assert.Contains("@using Calculator.Layout", scaffoldContract);
-        Assert.Contains("CS0246", scaffoldContract);
+        Assert.DoesNotContain(variables.Keys, key => key.StartsWith("DotNet", StringComparison.Ordinal));
     }
 
     [Fact]
-    public void Enrich_adds_setup_receipt_map_with_create_membership_script_receipt()
+    public void Enrich_rejects_solution_setup_without_the_declared_solution_context_binding()
     {
         var contributor = new DotNetProcessLaunchVariableContributor();
-        var projectId = Guid.NewGuid();
-        var node = CreateNode(projectId);
-        var surface = new ProjectStructureSurface(projectId, "Calculator", [node], [], null);
-        var variables = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        var context = new ProcessLaunchPreparationContext(
+            "dotnet-solution-setup",
+            IsSubprocess: true,
+            Source("Blazor PWA net10 xUnit src tests"))
         {
-            ["ProductRoot"] = @"C:\temp\CanDoItAll\Calculator",
-            ["ProjectStructureContextSummary"] = "Blazor WebAssembly calculator app with xUnit tests."
+            DriverActivations =
+            [
+                new ProcessLaunchDriverActivation(
+                    "dotnet.launch-contract",
+                    new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+                    {
+                        ["Mode"] = "solution-setup"
+                    })
+            ]
         };
 
-        contributor.Enrich(
-            new ProjectStructureProcessLaunchVariableContext(
-                projectId,
-                surface,
-                node,
-                "dotnet-solution-setup",
-                ProcessDefinitionId: null,
-                ParentRunId: null,
-                ParentStepId: null,
-                ParentAssignment: null,
-                IsSubprocess: true),
-            variables);
+        var exception = Assert.Throws<InvalidOperationException>(() => contributor.Enrich(
+            context,
+            new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["ProductRoot"] = @"C:\output\AnyProduct"
+            }));
 
-        var receiptMap = JsonSerializer.Deserialize<Dictionary<string, string[]>>(
-            variables[ProcessRuntimeLaunchVariables.ProductCompletionRequiredToolReceiptsByStep]);
-
-        Assert.NotNull(receiptMap);
-        var createReceipts = Assert.Contains("create-dotnet-project", receiptMap);
-        Assert.Contains("template=sln", createReceipts);
-        Assert.Contains("template=blazorwasm", createReceipts);
-        Assert.Contains("workspace_pwsh_run_script", createReceipts);
-        Assert.Contains("workspace_pwsh_run_script", Assert.Contains("add-test-project", receiptMap));
-        Assert.Contains("workspace_pwsh_run_script", Assert.Contains("repair-solution-setup", receiptMap));
-        AssertValidationReceipts(receiptMap, "validate-first-build");
-        AssertValidationReceipts(receiptMap, "validate-first-build-after-repair");
-
-        var executionPlan = variables["DotNetCreateProjectExecutionPlan"];
-        Assert.Contains("DotNetCreateProjectScript", executionPlan, StringComparison.Ordinal);
-        Assert.Contains("workspace_pwsh_run_script", executionPlan, StringComparison.Ordinal);
-        Assert.Contains("solution app-membership readback", executionPlan, StringComparison.OrdinalIgnoreCase);
-        Assert.DoesNotContain("Do not write Status: InProgress", executionPlan, StringComparison.Ordinal);
-
-        Assert.Equal(
-            "artifacts/process-runs/{CurrentProcessRunId}/scripts/create-dotnet-project.wire-solution.ps1",
-            variables["DotNetCreateProjectScriptRef"]);
-        Assert.Contains("Invoke-Dotnet @('sln', $SolutionFile, 'add', $AppProjectFile)", variables["DotNetCreateProjectScript"], StringComparison.Ordinal);
-        Assert.Contains("\"mode\":\"ProductMutation\"", variables["DotNetCreateProjectSideEffectManifest"], StringComparison.Ordinal);
+        Assert.Contains("input artifact binding", exception.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
-    public void Enrich_adds_root_software_delivery_validation_required_receipt_map()
+    public void Preparation_service_does_not_activate_the_dotnet_driver_for_root_delivery_templates()
     {
-        var contributor = new DotNetProcessLaunchVariableContributor();
-        var projectId = Guid.NewGuid();
-        var node = CreateNode(projectId);
-        var surface = new ProjectStructureSurface(projectId, "Calculator", [node], [], null);
+        var service = new ProcessLaunchVariablePreparationService(
+            [new DotNetProcessLaunchVariableContributor()],
+            new ProcessTemplatePackLoader());
         var variables = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
         {
-            ["ProductRoot"] = @"C:\temp\CanDoItAll\Calculator",
-            ["ProjectStructureContextSummary"] = "Blazor WebAssembly calculator app with xUnit tests."
+            ["ProductRoot"] = @"C:\output\AnyProduct",
+            ["ProjectStructureContextSummary"] = "Blazor PWA net10 xUnit src tests"
         };
 
-        contributor.Enrich(
-            new ProjectStructureProcessLaunchVariableContext(
-                projectId,
-                surface,
-                node,
-                "software-delivery",
-                ProcessDefinitionId: null,
-                ParentRunId: null,
-                ParentStepId: null,
-                ParentAssignment: null,
-                IsSubprocess: false),
+        service.Enrich(
+            new ProcessLaunchPreparationContext("software-delivery", IsSubprocess: false, Source("Blazor PWA net10 xUnit src tests")),
             variables);
 
-        var receiptMap = JsonSerializer.Deserialize<Dictionary<string, string[]>>(
-            variables[ProcessRuntimeLaunchVariables.ProductCompletionRequiredToolReceiptsByStep]);
-
-        Assert.NotNull(receiptMap);
-        AssertValidationReceipts(receiptMap, "qa-validation");
-        AssertValidationReceipts(receiptMap, "quality-repair");
-        AssertValidationReceipts(receiptMap, "qa-recheck");
-        AssertBrowserRuntimeProofReceipts(receiptMap, "qa-validation", expectsVisualComparison: false);
-        AssertBrowserRuntimeProofReceipts(receiptMap, "qa-recheck", expectsVisualComparison: false);
-
-        var fileContentMap = JsonSerializer.Deserialize<Dictionary<string, JsonElement[]>>(
-            variables[ProcessRuntimeLaunchVariables.ProductCompletionRequiredFileContentChecksByStep]);
-
-        Assert.NotNull(fileContentMap);
-        var qaChecks = Assert.Contains("qa-validation", fileContentMap);
-        Assert.Contains(qaChecks, check =>
-            check.GetProperty("mustExist").GetBoolean() == false &&
-            check.GetProperty("enforceBranchOutcomeKeys").EnumerateArray().Any(value =>
-                string.Equals(value.GetString(), "quality-accepted", StringComparison.Ordinal)) &&
-            check.GetProperty("forbiddenTextAny").EnumerateArray().Any(value =>
-                string.Equals(value.GetString(), "@page \"/counter\"", StringComparison.Ordinal)));
-
-        Assert.Equal(@"C:\temp\CanDoItAll\Calculator", variables["ProductRoot"]);
-        Assert.Equal(@"C:\temp\CanDoItAll\Calculator\Calculator.slnx", variables["DotNetSolutionFile"]);
-        Assert.Contains("external-target/", variables["DotNetSolutionFileAlias"], StringComparison.OrdinalIgnoreCase);
-        Assert.Equal(@"C:\temp\CanDoItAll\Calculator\src\Calculator\Calculator.csproj", variables["DotNetAppProjectFile"]);
-        Assert.Contains("external-target/", variables["DotNetAppProjectFileAlias"], StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("/src/Calculator/Calculator.csproj", variables["DotNetAppProjectFileAlias"], StringComparison.OrdinalIgnoreCase);
-        Assert.Equal(@"C:\temp\CanDoItAll\Calculator\tests\Calculator.Tests\Calculator.Tests.csproj", variables["DotNetTestProjectFile"]);
-        Assert.Contains("external-target/", variables["DotNetTestProjectFileAlias"], StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("/tests/Calculator.Tests/Calculator.Tests.csproj", variables["DotNetTestProjectFileAlias"], StringComparison.OrdinalIgnoreCase);
-        Assert.Equal("blazorwasm", variables["DotNetAppTemplate"]);
-        Assert.Contains("BlazorWasmNamespaceRule", variables["DotNetScaffoldContract"]);
-        Assert.Contains("SolutionValidationTargetRule", variables["DotNetScaffoldContract"]);
-        Assert.Contains("Test validation must target DotNetTestProjectFileAlias or DotNetTestProjectFile", variables["DotNetScaffoldContract"]);
-        Assert.Contains("fall back to the solution target only when no test project target exists", variables["DotNetScaffoldContract"]);
-        Assert.Contains("DotNetRunProjectTargetRule", variables["DotNetScaffoldContract"]);
-        Assert.Contains("workspace_dotnet_run targetPath must be DotNetAppProjectFileAlias", variables["DotNetScaffoldContract"]);
-        Assert.Contains("Never call workspace_dotnet_run with DotNetSolutionFile", variables["DotNetScaffoldContract"]);
-        Assert.Contains("Do not infer <SolutionName>.sln", variables["DotNetScaffoldContract"]);
+        Assert.DoesNotContain(variables.Keys, key => key.StartsWith("DotNet", StringComparison.Ordinal));
     }
 
     [Fact]
-    public void Enrich_adds_ui_screenshot_writeback_required_project_structure_receipts_for_browser_app()
+    public void Template_declares_one_explicit_solution_context_binding_for_solution_setup()
     {
-        var contributor = new DotNetProcessLaunchVariableContributor();
-        var projectId = Guid.NewGuid();
-        var node = CreateNode(projectId);
-        var surface = new ProjectStructureSurface(projectId, "Calculator", [node], [], null);
-        var variables = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-        {
-            ["ProductRoot"] = @"C:\temp\CanDoItAll\Calculator",
-            ["ProjectStructureContextSummary"] = "Blazor WebAssembly calculator app with xUnit tests."
-        };
+        var definition = new ProcessTemplatePackLoader().LoadDefinition("dotnet-solution-setup");
+        var activation = Assert.Single(definition.LaunchDriverActivations);
+        var binding = Assert.Single(activation.InputArtifactBindings);
 
-        contributor.Enrich(
-            new ProjectStructureProcessLaunchVariableContext(
-                projectId,
-                surface,
-                node,
-                "dotnet-ui-screenshot-writeback",
-                ProcessDefinitionId: null,
-                ParentRunId: null,
-                ParentStepId: null,
-                ParentAssignment: null,
-                IsSubprocess: true),
-            variables);
+        Assert.Equal("dotnet.launch-contract", activation.DriverKey);
+        Assert.Equal("solution-setup", activation.Settings["Mode"]);
+        Assert.Equal("solution-context", binding.BindingKey);
+        Assert.Equal("slice-architecture-check", binding.SourceStepKey);
+        Assert.Equal("dotnet-solution-context", binding.ArtifactExpectationKey);
+        Assert.Equal(DotNetSolutionContextParser.Schema, binding.PayloadSchema);
 
-        var receiptMap = JsonSerializer.Deserialize<Dictionary<string, string[]>>(
-            variables[ProcessRuntimeLaunchVariables.ProductCompletionRequiredToolReceiptsByStep]);
-
-        Assert.NotNull(receiptMap);
-        var captureReceipts = Assert.Contains("capture-ui-screenshots", receiptMap);
-        Assert.Contains("workspace_dotnet_run", captureReceipts);
-        Assert.Contains("browser_navigate", captureReceipts);
-        Assert.Contains("browser_snapshot", captureReceipts);
-        Assert.Contains("browser_take_screenshot", captureReceipts);
-        Assert.Contains("browser_console_messages", captureReceipts);
-        Assert.Contains("workspace_dotnet_stop", captureReceipts);
-
-        var storeReceipts = Assert.Contains("store-ui-screenshots", receiptMap);
-        Assert.Contains("workspace_inspect_image", storeReceipts);
-        Assert.Contains("workspace_analyze_image", storeReceipts);
-        Assert.DoesNotContain("workspace_analyze_images", storeReceipts);
-        Assert.Contains("project_structure_node_create", storeReceipts);
-        Assert.Contains("project_structure_asset_create", storeReceipts);
-        Assert.Equal("blazorwasm", variables["DotNetAppTemplate"]);
-        Assert.Equal(@"C:\temp\CanDoItAll\Calculator\src\Calculator\Calculator.csproj", variables["DotNetAppProjectFile"]);
-        Assert.Contains("external-target/", variables["DotNetAppProjectFileAlias"], StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("/src/Calculator/Calculator.csproj", variables["DotNetAppProjectFileAlias"], StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("DotNetRunProjectTargetRule", variables["DotNetScaffoldContract"]);
-        Assert.Contains("workspace_dotnet_run targetPath must be DotNetAppProjectFileAlias", variables["DotNetScaffoldContract"]);
+        var configuredActivation = new ProcessLaunchDriverActivation(
+            activation.DriverKey,
+            activation.Settings);
+        Assert.True(
+            DotNetSolutionSetupTemplatePolicyBindings.TryParse(
+                configuredActivation,
+                out _,
+                out var issue),
+            issue);
     }
 
     [Fact]
-    public void Enrich_adds_visual_target_comparison_receipt_for_ui_screenshot_writeback_when_source_image_assets_exist()
+    public void Template_owned_setup_policy_accepts_arbitrary_step_keys_without_driver_choreography()
     {
-        var contributor = new DotNetProcessLaunchVariableContributor();
-        var projectId = Guid.NewGuid();
-        var node = CreateNode(projectId);
-        var visualTarget = CreateVisualTargetNode(projectId, node.Id);
-        var surface = new ProjectStructureSurface(projectId, "Calculator", [node, visualTarget], [], null);
+        var activation = new ProcessLaunchDriverActivation(
+            "dotnet.launch-contract",
+            new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                [DotNetSolutionSetupTemplatePolicyBindings.RequiredPathsSettingKey] =
+                    """{"establish-custom-baseline":["${DotNetSolutionFileForwardSlash}"]}""",
+                [DotNetSolutionSetupTemplatePolicyBindings.RequiredToolReceiptsSettingKey] =
+                    """{"establish-custom-baseline":["workspace_pwsh_run_script"]}""",
+                [DotNetSolutionSetupTemplatePolicyBindings.RequiredFileContentChecksSettingKey] =
+                    """{"establish-custom-baseline":[{"pathCandidates":["${DotNetSolutionFileForwardSlash}"],"requiredTextAnyGroups":[["src/Custom/Custom.csproj"]]}]}""",
+                [DotNetSolutionSetupTemplatePolicyBindings.ScopedLaunchVariablePrefixesSettingKey] =
+                    """{"establish-custom-baseline":["DotNetCustom"]}"""
+            });
+
+        var parsed = DotNetSolutionSetupTemplatePolicyBindings.TryParse(
+            activation,
+            out var bindings,
+            out var issue);
+
+        Assert.True(parsed, issue);
         var variables = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
         {
-            ["ProductRoot"] = @"C:\temp\CanDoItAll\Calculator",
-            ["ProjectStructureContextSummary"] = """
-                Blazor WebAssembly app with xUnit tests.
-                Visual target assets:
-                - Application layout proposal (custom:visual-target) [ImageAsset/generated; image/png; media=managed-files/project-media/images/project/proposal.png; file=proposal.png; parent=custom:calculator]: source visual target.
-                Visual target rule: implementation and QA must fetch or analyze the relevant asset content before accepting visual alignment.
-                """
+            ["DotNetSolutionFileForwardSlash"] = "C:/output/Custom/Custom.slnx"
         };
+        bindings.ApplyTo(variables);
+        var resolved = new LaunchVariableTemplateResolver().Resolve(variables);
 
-        contributor.Enrich(
-            new ProjectStructureProcessLaunchVariableContext(
-                projectId,
-                surface,
-                node,
-                "dotnet-ui-screenshot-writeback",
-                ProcessDefinitionId: null,
-                ParentRunId: null,
-                ParentStepId: null,
-                ParentAssignment: null,
-                IsSubprocess: true),
-            variables);
-
-        var receiptMap = JsonSerializer.Deserialize<Dictionary<string, string[]>>(
-            variables[ProcessRuntimeLaunchVariables.ProductCompletionRequiredToolReceiptsByStep]);
-
-        Assert.NotNull(receiptMap);
-        var storeReceipts = Assert.Contains("store-ui-screenshots", receiptMap);
-        Assert.Contains("workspace_inspect_image", storeReceipts);
-        Assert.Contains("workspace_analyze_image", storeReceipts);
-        Assert.Contains("workspace_analyze_images", storeReceipts);
-        Assert.Contains("project_structure_node_create", storeReceipts);
-        Assert.Contains("project_structure_asset_create", storeReceipts);
+        using var document = JsonDocument.Parse(
+            resolved.Variables["ProductCompletionRequiredPathsByStep"]);
+        var pathMap = document.RootElement;
+        Assert.True(pathMap.TryGetProperty("establish-custom-baseline", out var paths));
+        Assert.Equal(1, paths.GetArrayLength());
+        Assert.Equal("C:/output/Custom/Custom.slnx", paths[0].GetString());
+        Assert.False(pathMap.TryGetProperty("create-dotnet-project", out _));
     }
 
     [Fact]
-    public void Enrich_adds_visual_target_comparison_receipts_for_root_ui_qa_when_source_image_assets_exist()
+    public void Template_owned_setup_policy_rejects_missing_required_map()
     {
-        var contributor = new DotNetProcessLaunchVariableContributor();
-        var projectId = Guid.NewGuid();
-        var node = CreateNode(projectId);
-        var visualTarget = CreateVisualTargetNode(projectId, node.Id);
-        var surface = new ProjectStructureSurface(projectId, "Calculator", [node, visualTarget], [], null);
-        var variables = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-        {
-            ["ProductRoot"] = @"C:\temp\CanDoItAll\Calculator",
-            ["ProjectStructureContextSummary"] = "Blazor WebAssembly app with xUnit tests and a source visual target proposal."
-        };
+        var activation = new ProcessLaunchDriverActivation(
+            "dotnet.launch-contract",
+            new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                [DotNetSolutionSetupTemplatePolicyBindings.RequiredPathsSettingKey] = "{}"
+            });
 
-        contributor.Enrich(
-            new ProjectStructureProcessLaunchVariableContext(
-                projectId,
-                surface,
-                node,
-                "software-delivery",
-                ProcessDefinitionId: null,
-                ParentRunId: null,
-                ParentStepId: null,
-                ParentAssignment: null,
-                IsSubprocess: false),
-            variables);
+        var parsed = DotNetSolutionSetupTemplatePolicyBindings.TryParse(
+            activation,
+            out _,
+            out var issue);
 
-        var receiptMap = JsonSerializer.Deserialize<Dictionary<string, string[]>>(
-            variables[ProcessRuntimeLaunchVariables.ProductCompletionRequiredToolReceiptsByStep]);
-
-        Assert.NotNull(receiptMap);
-        AssertBrowserRuntimeProofReceipts(receiptMap, "qa-validation", expectsVisualComparison: true);
-        AssertBrowserRuntimeProofReceipts(receiptMap, "qa-recheck", expectsVisualComparison: true);
+        Assert.False(parsed);
+        Assert.Contains(
+            DotNetSolutionSetupTemplatePolicyBindings.RequiredPathsSettingKey,
+            issue,
+            StringComparison.Ordinal);
     }
 
     [Fact]
-    public void Enrich_adds_runtime_command_writeback_required_project_structure_receipts()
+    public void Launch_driver_contains_no_prose_inference_or_legacy_contract_builder()
     {
-        var contributor = new DotNetProcessLaunchVariableContributor();
-        var projectId = Guid.NewGuid();
-        var node = CreateNode(projectId);
-        var surface = new ProjectStructureSurface(projectId, "Calculator", [node], [], null);
-        var variables = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-        {
-            ["ProductRoot"] = @"C:\temp\CanDoItAll\Calculator",
-            ["ProjectStructureContextSummary"] = "Blazor WebAssembly calculator app with xUnit tests."
-        };
+        var root = FindRepositoryRoot();
+        var driverDirectory = Path.Combine(
+            root,
+            "src",
+            "Modules",
+            "CanDoItAll.Modules.Processes",
+            "Services",
+            "RuntimeIntegration",
+            "Drivers",
+            "DotNet");
+        var factory = File.ReadAllText(Path.Combine(driverDirectory, "DotNetProcessLaunchContractFactory.cs"));
+        var contributor = File.ReadAllText(Path.Combine(driverDirectory, "DotNetProcessLaunchVariableContributor.cs"));
 
-        contributor.Enrich(
-            new ProjectStructureProcessLaunchVariableContext(
-                projectId,
-                surface,
-                node,
-                "dotnet-runtime-command-writeback",
-                ProcessDefinitionId: null,
-                ParentRunId: ProcessRunId.New(),
-                ParentStepId: ProcessStepInstanceId.New(),
-                ParentAssignment: null,
-                IsSubprocess: true),
-            variables);
-
-        var receiptMap = JsonSerializer.Deserialize<Dictionary<string, string[]>>(
-            variables[ProcessRuntimeLaunchVariables.ProductCompletionRequiredToolReceiptsByStep]);
-
-        Assert.NotNull(receiptMap);
-        var writeReceipts = Assert.Contains("write-run-command-nodes", receiptMap);
-        Assert.Contains("project_structure_node_create", writeReceipts);
-        Assert.Contains("project_structure_read", writeReceipts);
-        Assert.Equal("blazorwasm", variables["DotNetAppTemplate"]);
+        Assert.False(File.Exists(Path.Combine(driverDirectory, "DotNetProcessLaunchContractBuilder.cs")));
+        Assert.False(File.Exists(Path.Combine(driverDirectory, "DotNetSolutionSetupReadbackPolicyFactory.cs")));
+        Assert.DoesNotContain("ProjectStructureContextSummary", factory, StringComparison.Ordinal);
+        Assert.DoesNotContain("context.Source", factory, StringComparison.Ordinal);
+        Assert.DoesNotContain("Regex", factory, StringComparison.Ordinal);
+        Assert.DoesNotContain("Blazor", factory, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("xunit", factory, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("net10", factory, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("WorkspaceDotnetNewTemplateCatalog", factory, StringComparison.Ordinal);
+        Assert.DoesNotContain("software-delivery", contributor, StringComparison.Ordinal);
+        Assert.DoesNotContain("blazor-", contributor, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
-    public void Enrich_replaces_parent_required_receipt_map_for_ui_screenshot_subprocess()
+    public void Template_owned_target_intent_contract_is_explicit_and_product_agnostic()
     {
-        var contributor = new DotNetProcessLaunchVariableContributor();
-        var projectId = Guid.NewGuid();
-        var node = CreateNode(projectId);
-        var surface = new ProjectStructureSurface(projectId, "Calculator", [node], [], null);
-        var variables = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-        {
-            ["ProductRoot"] = @"C:\temp\CanDoItAll\Calculator",
-            ["ProjectStructureContextSummary"] = "Blazor WebAssembly calculator app with xUnit tests.",
-            [ProcessRuntimeLaunchVariables.ProductCompletionRequiredToolReceiptsByStep] = JsonSerializer.Serialize(
-                new Dictionary<string, string[]>
-                {
-                    ["qa-validation"] = ["workspace_dotnet_restore", "workspace_dotnet_build", "workspace_dotnet_test"]
-                })
-        };
+        var root = FindRepositoryRoot();
+        var processDirectory = Path.Combine(
+            root,
+            "Templates",
+            "Processes",
+            "processes",
+            "dotnet-development-slice");
+        var intake = File.ReadAllText(Path.Combine(processDirectory, "steps", "slice-intake.md"));
+        var architecture = File.ReadAllText(Path.Combine(processDirectory, "steps", "slice-architecture-check.md"));
+        var definition = File.ReadAllText(Path.Combine(processDirectory, "definition.json"));
 
-        contributor.Enrich(
-            new ProjectStructureProcessLaunchVariableContext(
-                projectId,
-                surface,
-                node,
-                "dotnet-ui-screenshot-writeback",
-                ProcessDefinitionId: null,
-                ParentRunId: ProcessRunId.New(),
-                ParentStepId: ProcessStepInstanceId.New(),
-                ParentAssignment: null,
-                IsSubprocess: true),
-            variables);
-
-        var receiptMap = JsonSerializer.Deserialize<Dictionary<string, string[]>>(
-            variables[ProcessRuntimeLaunchVariables.ProductCompletionRequiredToolReceiptsByStep]);
-
-        Assert.NotNull(receiptMap);
-        Assert.DoesNotContain("qa-validation", receiptMap.Keys);
-        Assert.Contains("workspace_dotnet_run", Assert.Contains("capture-ui-screenshots", receiptMap));
-        Assert.Contains("project_structure_asset_create", Assert.Contains("store-ui-screenshots", receiptMap));
+        Assert.Contains("ProductTargetState", intake, StringComparison.Ordinal);
+        Assert.Contains("ProductTargetFilesystemState", intake, StringComparison.Ordinal);
+        Assert.Contains("greenfield", architecture, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("verify-existing", architecture, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("initialization", architecture, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("dotnet.solution-context/v1", definition, StringComparison.Ordinal);
+        Assert.Contains("external-target/...", architecture, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("ProductTargetState", definition, StringComparison.Ordinal);
+        Assert.DoesNotContain("Tetris", intake, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("Calculator", architecture, StringComparison.OrdinalIgnoreCase);
     }
 
-    private static void AssertValidationReceipts(IReadOnlyDictionary<string, string[]> receiptMap, string stepKey)
+    private static ProcessLaunchSourceSnapshot Source(string notes)
     {
-        var receipts = Assert.Contains(stepKey, receiptMap);
-        Assert.Contains("workspace_dotnet_restore", receipts);
-        Assert.Contains("workspace_dotnet_build", receipts);
-        Assert.Contains("workspace_dotnet_test", receipts);
+        var item = new ProcessLaunchSourceItem(
+            "source",
+            "Ignored source title",
+            string.Empty,
+            notes,
+            string.Empty,
+            string.Empty,
+            [],
+            ProcessLaunchSourceItemKind.Other,
+            IsIncludedInProcessContext: true);
+        return new ProcessLaunchSourceSnapshot(Guid.NewGuid(), "Ignored project", item, [item], notes);
     }
 
-    private static void AssertBrowserRuntimeProofReceipts(
-        IReadOnlyDictionary<string, string[]> receiptMap,
-        string stepKey,
-        bool expectsVisualComparison)
+    private static string FindRepositoryRoot()
     {
-        var receipts = Assert.Contains(stepKey, receiptMap);
-        Assert.Contains("workspace_dotnet_run", receipts);
-        Assert.Contains("browser_navigate", receipts);
-        Assert.Contains("browser_snapshot", receipts);
-        Assert.Contains("browser_take_screenshot", receipts);
-        Assert.Contains("browser_console_messages", receipts);
-        Assert.Contains("workspace_dotnet_stop", receipts);
-        if (expectsVisualComparison)
+        var directory = new DirectoryInfo(AppContext.BaseDirectory);
+        while (directory is not null)
         {
-            Assert.Contains("workspace_inspect_image", receipts);
-            Assert.Contains("workspace_analyze_image", receipts);
-            Assert.Contains("workspace_analyze_images", receipts);
+            if (File.Exists(Path.Combine(directory.FullName, "CanDoItAll.slnx")))
+            {
+                return directory.FullName;
+            }
+
+            directory = directory.Parent;
         }
-        else
-        {
-            Assert.DoesNotContain("workspace_analyze_images", receipts);
-        }
+
+        throw new InvalidOperationException("Could not locate repository root.");
     }
-
-    private static ProjectStructureNode CreateNode(Guid projectId)
-        => new(
-            "custom:calculator",
-            $"project:{projectId:D}",
-            ProjectObjectType.ProjectBlock,
-            "delivery",
-            "Main App",
-            "Calculator",
-            "Planned",
-            "Build a Blazor WebAssembly calculator.",
-            string.Empty,
-            string.Empty,
-            null,
-            string.Empty,
-            string.Empty,
-            string.Empty,
-            0,
-            0,
-            new ProjectObjectVisualProfile("rect", "accent", "calculator", string.Empty),
-            [],
-            string.Empty,
-            0,
-            string.Empty,
-            string.Empty,
-            string.Empty,
-            [],
-            0);
-
-    private static ProjectStructureNode CreateVisualTargetNode(Guid projectId, string parentId)
-        => new(
-            "custom:visual-target",
-            parentId,
-            ProjectObjectType.ImageAsset,
-            "generated",
-            "Application layout proposal",
-            "Source visual target",
-            "Planned",
-            "Reference visual target for implementation and QA.",
-            string.Empty,
-            string.Empty,
-            null,
-            string.Empty,
-            "project://visual-target",
-            "reference",
-            0,
-            0,
-            new ProjectObjectVisualProfile("rect", "danger", "image", string.Empty),
-            [],
-            "managed-files/project-media/images/project/proposal.png",
-            0,
-            "image/png",
-            "proposal.png",
-            string.Empty,
-            [],
-            0);
 }

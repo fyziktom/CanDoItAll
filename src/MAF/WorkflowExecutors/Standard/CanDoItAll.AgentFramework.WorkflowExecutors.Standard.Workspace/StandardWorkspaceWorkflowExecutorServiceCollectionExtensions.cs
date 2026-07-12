@@ -1,7 +1,5 @@
 using CanDoItAll.AgentFramework.Core;
-using CanDoItAll.AgentFramework.Models;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Workspace;
 
@@ -13,20 +11,9 @@ public static class StandardWorkspaceWorkflowExecutorServiceCollectionExtensions
     {
         ArgumentNullException.ThrowIfNull(services);
 
-        services.TryAddEnumerable(ServiceDescriptor.Singleton<IWorkflowExecutorDescriptorSource, StandardWorkspaceWorkflowExecutorDescriptorSource>());
-        services.TryAddEnumerable(ServiceDescriptor.Describe(typeof(IWorkflowExecutor), typeof(WorkspaceFileWorkflowExecutor), executorLifetime));
-        services.TryAddEnumerable(ServiceDescriptor.Describe(typeof(IWorkflowExecutor), typeof(SourceIngestionWorkflowExecutor), executorLifetime));
+        services.AddWorkflowExecutorContribution<WorkspaceFileWorkflowExecutor>(BuiltInWorkflowExecutorDescriptors.StorageFile, executorLifetime);
+        services.AddWorkflowExecutorContribution<SourceIngestionWorkflowExecutor>(BuiltInWorkflowExecutorDescriptors.SourceIngestion, executorLifetime);
 
         return services;
     }
-}
-
-public sealed class StandardWorkspaceWorkflowExecutorDescriptorSource : IWorkflowExecutorDescriptorSource
-{
-    public IEnumerable<WorkflowExecutorDescriptor> ListExecutorDescriptors()
-        =>
-        [
-            BuiltInWorkflowExecutorDescriptors.StorageFile,
-            BuiltInWorkflowExecutorDescriptors.SourceIngestion
-        ];
 }

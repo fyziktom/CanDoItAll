@@ -8,10 +8,10 @@ namespace CanDoItAll.Tests.Unit;
 
 public sealed class MafPackageBaselineReflectionTests
 {
-    private const string ExpectedMafAssemblyVersionPrefix = "1.8.0.";
+    private const string ExpectedMafAssemblyVersionPrefix = "1.13.0.";
 
     [Fact]
-    public void Maf18_symbols_are_classified_from_loaded_runtime_assemblies()
+    public void Maf_symbols_are_classified_from_loaded_runtime_assemblies()
     {
         var assemblies = new[]
         {

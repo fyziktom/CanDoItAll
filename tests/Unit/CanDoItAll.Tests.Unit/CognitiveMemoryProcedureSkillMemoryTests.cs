@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 
 namespace CanDoItAll.Tests.Unit;
 
+[Collection(AppDbContextModelRegistryTestCollectionNames.Name)]
 public sealed class CognitiveMemoryProcedureSkillMemoryTests
 {
     [Fact]
@@ -286,7 +287,7 @@ public sealed class CognitiveMemoryProcedureSkillMemoryTests
     private static TestFixture CreateFixture()
     {
         AppDbContextModelRegistry.ConfigureAssemblies([typeof(CognitiveMemoryModuleAssemblyMarker).Assembly]);
-        var options = new DbContextOptionsBuilder<AppDbContext>()
+        var options = AppDbContextTestOptionsBuilder.Create()
             .UseInMemoryDatabase($"cognitive-memory-procedure-{Guid.NewGuid():N}")
             .Options;
         return new TestFixture(new TestDbContextFactory(options), new FixedClock());

@@ -12,6 +12,11 @@ public interface IWorkflowCatalogService
         WorkflowVersionId? versionId = null,
         CancellationToken cancellationToken = default);
 
+    Task<WorkflowDefinitionDetail?> GetLatestDefinitionByStatusAsync(
+        WorkflowId workflowId,
+        WorkflowLifecycleStatus status,
+        CancellationToken cancellationToken = default);
+
     Task<WorkflowDefinition> SaveDefinitionAsync(
         WorkflowDefinitionSaveRequest request,
         CancellationToken cancellationToken = default);
@@ -20,8 +25,58 @@ public interface IWorkflowCatalogService
         WorkflowDefinitionStatusChangeRequest request,
         CancellationToken cancellationToken = default);
 
+    Task<WorkflowDefinitionExportEnvelope?> ExportDefinitionAsync(
+        WorkflowId workflowId,
+        WorkflowVersionId? versionId = null,
+        CancellationToken cancellationToken = default);
+
+    Task<WorkflowDefinition> ImportDefinitionAsync(
+        WorkflowDefinitionImportRequest request,
+        CancellationToken cancellationToken = default);
+
+    Task DeleteDefinitionAsync(
+        WorkflowId workflowId,
+        CancellationToken cancellationToken = default);
+
     Task<WorkflowValidationResult> ValidateDefinitionAsync(
         WorkflowDefinition definition,
+        CancellationToken cancellationToken = default);
+}
+
+public interface IWorkflowSettingsService
+{
+    Task<WorkflowSettings> GetSettingsAsync(CancellationToken cancellationToken = default);
+
+    Task<WorkflowSettings> SaveSettingsAsync(
+        WorkflowSettings settings,
+        CancellationToken cancellationToken = default);
+}
+
+public interface IWorkflowComponentLibraryService
+{
+    Task<IReadOnlyList<WorkflowProviderOption>> ListProviderOptionsAsync(
+        CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<LlmCallComponent>> ListComponentsAsync(
+        CancellationToken cancellationToken = default);
+
+    Task<LlmCallComponent?> GetComponentAsync(
+        WorkflowComponentId componentId,
+        CancellationToken cancellationToken = default);
+
+    Task<LlmCallComponent> SaveComponentAsync(
+        LlmCallComponentSaveRequest request,
+        CancellationToken cancellationToken = default);
+
+    Task DeleteComponentAsync(
+        WorkflowComponentId componentId,
+        CancellationToken cancellationToken = default);
+}
+
+public interface IWorkflowTestRunner
+{
+    Task<WorkflowTestRunResult> RunAsync(
+        WorkflowTestRunRequest request,
         CancellationToken cancellationToken = default);
 }
 
@@ -50,12 +105,38 @@ public interface IWorkflowRuntimeManager
         WorkflowRunId runId,
         CancellationToken cancellationToken = default);
 
+    Task<IReadOnlyList<WorkflowRunSnapshot>> ListRunsAsync(
+        WorkflowId? workflowId = null,
+        CancellationToken cancellationToken = default);
+
     Task<IReadOnlyList<WorkflowEventRecord>> ListEventsAsync(
         WorkflowRunId runId,
         CancellationToken cancellationToken = default);
 
+    Task<IReadOnlyList<WorkflowCheckpointRecord>> ListCheckpointsAsync(
+        WorkflowRunId runId,
+        CancellationToken cancellationToken = default);
+
+    Task<WorkflowListPage<WorkflowEventRecord>> ListEventPageAsync(
+        WorkflowEventPageRequest request,
+        CancellationToken cancellationToken = default);
+
     Task<WorkflowRunSnapshot> CancelAsync(
         WorkflowRunId runId,
+        CancellationToken cancellationToken = default);
+
+    Task<WorkflowRunCancellationResult> RequestCancellationAsync(
+        WorkflowRunId runId,
+        CancellationToken cancellationToken = default);
+
+    Task<WorkflowRunSnapshot> RespondToExternalRequestAsync(
+        WorkflowExternalRequestId requestId,
+        string responseJson,
+        CancellationToken cancellationToken = default);
+
+    Task<WorkflowExternalResponseResult> SubmitExternalResponseAsync(
+        WorkflowExternalRequestId requestId,
+        string responseJson,
         CancellationToken cancellationToken = default);
 }
 

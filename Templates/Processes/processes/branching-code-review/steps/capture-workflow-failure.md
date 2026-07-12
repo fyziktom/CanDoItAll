@@ -23,7 +23,7 @@ Escalate malformed or contradictory workflow states into a durable error lane wi
 - Requires decision record: False
 
 ## Dependencies
-- route-review-disposition / __error__
+- route-review-disposition / error
 
 ## Role assignments
 - `review-lead` / Review lead => Responsible; required=True; fallback-order=0; rebind=The review lead remains accountable for the error lane until recovery is assigned.
@@ -36,3 +36,4 @@ Escalate malformed or contradictory workflow states into a durable error lane wi
 
 ## Branch outcomes
 - No explicit branch outcomes.
+

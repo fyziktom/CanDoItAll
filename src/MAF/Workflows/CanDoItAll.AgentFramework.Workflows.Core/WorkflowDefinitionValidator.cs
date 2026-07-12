@@ -1,5 +1,6 @@
 using System.Text.Json;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.AgentFramework.Workflows.Abstractions;
 using CanDoItAll.SharedKernel.Configuration;
 
 namespace CanDoItAll.AgentFramework.Core;
@@ -328,6 +329,11 @@ public sealed class WorkflowDefinitionValidator : IWorkflowDefinitionValidator
         var values = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         foreach (var property in settingsRoot.EnumerateObject())
         {
+            if (property.Value.ValueKind is JsonValueKind.Null or JsonValueKind.Undefined)
+            {
+                continue;
+            }
+
             values[property.Name] = property.Value.ValueKind == JsonValueKind.String
                 ? property.Value.GetString() ?? string.Empty
                 : property.Value.GetRawText();

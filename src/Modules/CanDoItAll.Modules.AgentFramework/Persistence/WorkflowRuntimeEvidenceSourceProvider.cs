@@ -1,3 +1,4 @@
+using CanDoItAll.Memory.SourceGateway;
 using System.Globalization;
 using System.Linq.Expressions;
 using CanDoItAll.AgentFramework.Core;
@@ -17,7 +18,7 @@ public sealed class WorkflowRuntimeEvidenceSourceProvider(
         ArgumentNullException.ThrowIfNull(request);
 
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        var runId = request.RunId?.Value;
+        var runId = request.RunId;
         var scopeId = runId ?? Guid.Empty;
         var sources = new[]
             {

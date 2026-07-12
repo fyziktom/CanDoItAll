@@ -1,11 +1,9 @@
-# Repair validation findings
+# Run the .NET quality repair subprocess
 
-Repair concrete defects, missing workflows, failed validation, or proof gaps identified by QA without expanding beyond the approved delivery scope.
+Launch and observe `dotnet-quality-repair` with `project_structure_process_subprocess_launch`. Pass the concrete QA disposition, reviewed implementation evidence, exact failed command or runtime/browser evidence, architecture decision record, acceptance-driven validation plan, and approved product boundary into the child request.
 
-## Contract
-- Inputs: QA repair-required disposition, reviewed implementation package, and failing proof details.
-- Outputs: Repaired change set and validation notes ready for QA recheck.
-- Evidence: Changed files or deliverables, repair rationale, rerun validation, and remaining risks.
-- Operation target scope: `ExternalProductTargetMutable`
+Pass the required `scope-boundary-packet` as authoritative child context. Preserve literal `ProductAcceptanceCriteriaContract` ids when present and require the child diagnosis and validation to map the repair target back to the criterion-to-proof plan. The QA defect packet may narrow the immediate repair action, but it must not replace or discard original core acceptance obligations. A proof-only correction is valid only when current product-source and behavioral evidence already closes those obligations.
 
-When the QA finding is about runtime behavior, screenshots, browser state, console output, or launch/cleanup evidence, repair the concrete defect and rerun the smallest runtime or browser proof that demonstrates the same failing behavior is fixed. Capture current-run managed artifacts for that proof, including screenshot or browser state evidence and console output when a visible browser workflow is involved. Stop any runtime started only for this repair step before finalizing the artifact.
+This parent step does not diagnose the defect, mutate product files, run validation, launch the product, or capture browser proof. Those responsibilities belong to distinct child roles. Persist `ParentDeferredOutcomeJson` while the child is active, return the deferred outcome, and do not wait silently or create a duplicate child run.
+
+Accept only a child artifact from `quality-repair-handoff` or `quality-repair-handoff-after-bughunt`. Treat `quality-repair-no-go` as blocker evidence for manager escalation, never as a repaired change set. A completed child run without a mapped accepted handoff is not successful repair proof.

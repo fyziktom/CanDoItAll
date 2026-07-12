@@ -141,6 +141,41 @@ public sealed class AgentTeamCatalogIntegrationTests
     }
 
     [Fact]
+    public void Default_agent_template_pack_exposes_financial_writeback_and_document_conversion_access()
+    {
+        var pack = new AgentTemplatePackLoader().Load();
+        var members = pack.Teams
+            .SelectMany(team => team.MemberTemplates)
+            .ToDictionary(member => member.Key, StringComparer.OrdinalIgnoreCase);
+
+        var financial = members["financial-strategist"];
+        Assert.True(financial.Settings.Permissions.AutoApproveExternalCallsByDefault);
+        Assert.True(financial.Settings.Access.ProjectStructure is { CanWrite: true });
+        Assert.True(financial.Settings.Access.ImageGeneration is { CanGenerateImages: true });
+        Assert.True(financial.Settings.Access.ImageGeneration is { CanStoreImagesAsProjectAssets: true });
+        Assert.Contains("workspace-convert-document", financial.Skills.CapabilityKeys);
+        Assert.Contains("workspace-inspect-image", financial.Skills.CapabilityKeys);
+        Assert.Contains("workspace-analyze-image", financial.Skills.CapabilityKeys);
+        Assert.Contains("workspace-analyze-images", financial.Skills.CapabilityKeys);
+        Assert.Contains("workspace-write-spreadsheet", financial.Skills.CapabilityKeys);
+        Assert.Contains("workspace-spreadsheet-function-catalog", financial.Skills.CapabilityKeys);
+        Assert.DoesNotContain("provider-native-code-interpreter", financial.Skills.CapabilityKeys);
+
+        var spreadsheetAnalyst = members["spreadsheet-analyst"];
+        Assert.Contains("workspace-write-spreadsheet", spreadsheetAnalyst.Skills.CapabilityKeys);
+        Assert.Contains("workspace-read-spreadsheet-range", spreadsheetAnalyst.Skills.CapabilityKeys);
+        Assert.Contains("workspace-spreadsheet-function-catalog", spreadsheetAnalyst.Skills.CapabilityKeys);
+
+        var research = members["research-deep-dive-analyst"];
+        Assert.Equal("ReadOnly", research.Settings.Access.WorkspaceTools?.Profile);
+        Assert.True(research.Settings.Access.WorkspaceTools is { CanTransformArtifacts: true });
+        Assert.Contains("workspace-convert-document", research.Skills.CapabilityKeys);
+
+        var deliveryManager = members["delivery-manager"];
+        Assert.Contains("workspace-convert-document", deliveryManager.Skills.CapabilityKeys);
+    }
+
+    [Fact]
     public void Managed_agent_normalization_backfills_missing_seed_avatar_and_preserves_custom_avatar()
     {
         var seed = SandboxWorkspaceSeedFactory.Create();

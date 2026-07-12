@@ -4,11 +4,8 @@ using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Persistence;
-using CanDoItAll.AgentFramework.Rag.Driver.Models;
-using CanDoItAll.AgentFramework.Rag.Qdrant.DependencyInjection;
-using CanDoItAll.AgentFramework.SemanticCompletion.Driver.Embeddings;
+using CanDoItAll.Composition.Memory;
 using CanDoItAll.Modules.AgentFramework;
-using CanDoItAll.Modules.CognitiveMemory;
 using CanDoItAll.Modules.Collaboration;
 using CanDoItAll.Modules.CrmHr;
 using CanDoItAll.Modules.Factory;
@@ -26,7 +23,6 @@ using CanDoItAll.SharedKernel;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System.Data;
@@ -40,7 +36,6 @@ namespace CanDoItAll.Composition;
 public static class RuntimeHostServiceCollectionExtensions
 {
     private const string OpenAiApiKeyConfigurationKey = "OPENAI_API_KEY";
-    private const string QdrantRagConfigurationSection = "Rag:Qdrant";
 
     public static IServiceCollection AddCanDoItAllRuntimeModules(
         this IServiceCollection services,
@@ -54,6 +49,7 @@ public static class RuntimeHostServiceCollectionExtensions
         services.AddSecurityModule(configuration);
         services.AddWorkspaceModule();
         services.AddProjectsModule();
+        services.AddCanDoItAllMemory(configuration);
         services.AddWorkbenchModule();
         services.AddResourcesModule();
         services.AddPromptsModule();
@@ -64,102 +60,11 @@ public static class RuntimeHostServiceCollectionExtensions
         services.AddProcessesModule(configuration);
         services.AddTestLabModule();
         services.AddAgentFrameworkModule(configuration);
-        services.AddConfiguredQdrantRagDriver(configuration);
-        services.AddCognitiveMemoryModule();
         services.AddSchedulerPlannerModule(configuration);
         services.AddCollaborationModule();
         services.AddCrmHrModule();
         services.AddSchedulerPlannerWorkflowInputOptionProviders();
         return services;
-    }
-
-    private static IServiceCollection AddConfiguredQdrantRagDriver(
-        this IServiceCollection services,
-        IConfiguration configuration)
-    {
-        var section = configuration.GetSection(QdrantRagConfigurationSection);
-        if (!section.Exists() || !(section.GetValue<bool?>("Enabled") ?? false))
-        {
-            return services;
-        }
-
-        var collectionName = section["CollectionName"];
-        var vectorSize = section.GetValue<int?>("VectorSize") ?? 384;
-        var effectiveCollectionName = string.IsNullOrWhiteSpace(collectionName)
-            ? "candoitall-knowledge"
-            : collectionName.Trim();
-        var embeddingProfileId = string.IsNullOrWhiteSpace(section["EmbeddingProfileId"])
-            ? $"local-hashing-v1:dimension={vectorSize}"
-            : section["EmbeddingProfileId"]!.Trim();
-        var projectionProfileId = string.IsNullOrWhiteSpace(section["ProjectionProfileId"])
-            ? "qdrant-default-v1"
-            : section["ProjectionProfileId"]!.Trim();
-        var grpcPort = section.GetValue<int?>("GrpcPort") ??
-                       section.GetValue<int?>("Port") ??
-                       6334;
-        var distance = ReadQdrantDistance(section["Distance"]);
-
-        services.TryAddSingleton<IAgentTextEmbeddingGenerator>(_ =>
-            new LocalHashingAgentTextEmbeddingGenerator(new LocalHashingAgentTextEmbeddingOptions
-            {
-                Dimension = vectorSize,
-                ProfileId = embeddingProfileId
-            }));
-        services.Configure<CognitiveMemoryProjectionOptions>(options =>
-        {
-            options.Enabled = true;
-            options.CollectionName = effectiveCollectionName;
-            options.ProjectionProfileId = projectionProfileId;
-            options.EmbeddingProfileId = embeddingProfileId;
-            options.TargetProviderName = RagDriverProviderNames.Qdrant;
-            options.ProjectionStoreKind = CognitiveMemoryProjectionStoreKind.Qdrant;
-            options.VectorDimensions = vectorSize;
-        });
-
-        services.AddQdrantRagDriver(
-            configureQdrant: options =>
-            {
-                options.Host = string.IsNullOrWhiteSpace(section["Host"]) ? "localhost" : section["Host"]!.Trim();
-                options.Port = grpcPort;
-                options.Https = section.GetValue<bool?>("Https") ?? false;
-                options.ApiKey = string.IsNullOrWhiteSpace(section["ApiKey"]) ? null : section["ApiKey"]!.Trim();
-                options.CreateCollectionIfMissing = section.GetValue<bool?>("CreateCollectionIfMissing") ?? true;
-                options.WaitForWrites = section.GetValue<bool?>("WaitForWrites") ?? true;
-
-                var grpcTimeout = section.GetValue<TimeSpan?>("GrpcTimeout");
-                if (grpcTimeout.HasValue)
-                {
-                    options.GrpcTimeout = grpcTimeout.Value;
-                }
-            },
-            configureFactory: options =>
-            {
-                options.DefaultCollection = new RagCollectionOptions
-                {
-                    CollectionName = effectiveCollectionName,
-                    VectorSize = vectorSize,
-                    Distance = distance
-                };
-            },
-            configureEmbedding: options => options.Dimension = vectorSize);
-
-        return services;
-    }
-
-    private static RagDistanceMetric ReadQdrantDistance(string? value)
-    {
-        if (string.IsNullOrWhiteSpace(value))
-        {
-            return RagDistanceMetric.Cosine;
-        }
-
-        if (Enum.TryParse<RagDistanceMetric>(value.Trim(), ignoreCase: true, out var distance))
-        {
-            return distance;
-        }
-
-        throw new InvalidOperationException(
-            $"Unsupported {QdrantRagConfigurationSection}:Distance value '{value}'.");
     }
 
     private static void PromoteConfiguredOpenAiCredential(
@@ -223,6 +128,12 @@ public sealed class AppDatabaseBootstrapper(
     private const string ProcessRuntimeEventGlobalSequenceIdentityRepairMigrationId = "20260617131500_ProcessRuntimeEventGlobalSequenceIdentityRepair";
     private const string ProcessRuntimeAssignmentRoleIdentityMigrationId = "20260618103000_ProcessRuntimeAssignmentRoleIdentity";
     private const string RemoveUnusedValidationActivityAutomationModulesMigrationId = "20260621212712_RemoveUnusedValidationActivityAutomationModules";
+    private const string GenericMemoryProviderRuntimeMigrationId = "20260705163628_GenericMemoryProviderRuntime";
+    private const string RetireLegacyCognitiveMemoryMainDbModelMigrationId = "20260706015654_RetireLegacyCognitiveMemoryMainDbModel";
+    private const string IncludeCognitiveMemoryModuleModelMigrationId = "20260707110549_IncludeCognitiveMemoryModuleModel";
+    private const string ProcessRuntimeAssignmentCapabilityScopeMigrationId = "20260707134848_ProcessRuntimeAssignmentCapabilityScope";
+    private const string ProcessStrategyResultReceiptLineageMigrationId = "20260707195705_ProcessStrategyResultReceiptLineage";
+    private const string ProcessRuntimeInputArtifactContractsMigrationId = "20260707222506_ProcessRuntimeInputArtifactContracts";
     private static readonly string[] CurrentPostgreSqlMigrationIds =
     [
         InitialPostgreSqlBaselineMigrationId,
@@ -238,7 +149,13 @@ public sealed class AppDatabaseBootstrapper(
         ProcessRuntimeAssignmentLaunchVariablesMigrationId,
         ProcessRuntimeEventGlobalSequenceIdentityRepairMigrationId,
         ProcessRuntimeAssignmentRoleIdentityMigrationId,
-        RemoveUnusedValidationActivityAutomationModulesMigrationId
+        RemoveUnusedValidationActivityAutomationModulesMigrationId,
+        GenericMemoryProviderRuntimeMigrationId,
+        RetireLegacyCognitiveMemoryMainDbModelMigrationId,
+        IncludeCognitiveMemoryModuleModelMigrationId,
+        ProcessRuntimeAssignmentCapabilityScopeMigrationId,
+        ProcessStrategyResultReceiptLineageMigrationId,
+        ProcessRuntimeInputArtifactContractsMigrationId
     ];
     private static readonly string[] BaselineSentinelTables =
     [
@@ -247,8 +164,26 @@ public sealed class AppDatabaseBootstrapper(
     ];
     private static readonly PostgreSqlColumnRequirement[] MergedBaselineColumnRequirements =
     [
+        new("process_runtime_step_assignments", ["CapabilityScopeJson"]),
+        new("process_strategy_result_receipts", ["DiagnosticsJson", "ProducedArtifactsJson", "RecoveryDecisionJson"]),
+        new("process_runtime_steps", ["ProducedArtifactSlotIds", "RequiredRuntimeToolNamesJson"]),
+        new("process_runtime_input_artifacts", [
+            "RunId",
+            "ConsumerStepInstanceId",
+            "RequiredSlotId",
+            "ConnectionHash",
+            "Availability",
+            "ProducerStepInstanceId",
+            "ArtifactId",
+            "ContentHash"
+        ])
     ];
-    private static readonly string[] MergedBaselineIndexRequirements = [];
+    private static readonly string[] MergedBaselineIndexRequirements =
+    [
+        "IX_process_runtime_input_artifacts_RunId_ConsumerStepInstanceI~",
+        "IX_process_runtime_input_artifacts_RunId_ProducerStepInstanceId",
+        "IX_process_runtime_input_artifacts_RunId_RequiredSlotId"
+    ];
 
     private readonly record struct PostgreSqlColumnRequirement(string TableName, string[] ColumnNames);
 

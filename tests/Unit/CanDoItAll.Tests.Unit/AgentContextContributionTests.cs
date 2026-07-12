@@ -125,7 +125,7 @@ public sealed class AgentContextContributionTests
         services.AddSingleton<IAgentContextContributor>(new TestContextContributor("late", 20, _ => AgentContextContributionResult.Skipped()));
         services.AddSingleton<IAgentContextContributor>(new TestContextContributor("disabled", 0, _ => AgentContextContributionResult.Skipped(), enabled: false));
         services.AddSingleton<IAgentContextContributor>(new TestContextContributor("early", 10, _ => AgentContextContributionResult.Skipped()));
-        var runtime = new MafAgentRuntime(Path.GetTempPath(), services.BuildServiceProvider());
+        var runtime = RuntimeCapabilityComposer.CreateDefault(Path.GetTempPath(), services.BuildServiceProvider());
         var progressMessages = new List<string>();
 
         var state = await InvokeCreateCapabilityStateAsync(
@@ -159,6 +159,41 @@ public sealed class AgentContextContributionTests
     }
 
     [Fact]
+    public async Task Disabled_memory_invocation_excludes_legacy_workspace_memory_without_hidden_attachment()
+    {
+        var runtime = RuntimeCapabilityComposer.CreateDefault(
+            Path.GetTempPath(),
+            new ServiceCollection().BuildServiceProvider());
+        var agent = CreateAgent();
+        var legacyMemory = new AgentMemoryRecord(
+            Guid.NewGuid(),
+            agent.Id,
+            MemoryKind.Fact,
+            "Legacy note",
+            "Hidden legacy memory must not reach the model.",
+            "unit",
+            5,
+            "{}",
+            DateTimeOffset.UtcNow);
+
+        var state = await InvokeCreateCapabilityStateAsync(
+            runtime,
+            agent,
+            CreateProviderProfile(),
+            [],
+            [legacyMemory]);
+        var contextProviders = Assert.IsAssignableFrom<IEnumerable<AIContextProvider>>(
+            state.GetType().GetProperty("ContextProviders", BindingFlags.Public | BindingFlags.Instance)?.GetValue(state));
+        var contextSources = Assert.IsAssignableFrom<IEnumerable<AgentRuntimeContextManifestSource>>(
+            state.GetType().GetProperty("ContextSources", BindingFlags.Public | BindingFlags.Instance)?.GetValue(state));
+
+        Assert.DoesNotContain(contextProviders, provider => provider.GetType().Name == "WorkspaceMemoryContextProvider");
+        var trace = Assert.Single(contextSources, source => source.SourceId == "workspace-memory");
+        Assert.Equal(AgentRuntimeContextSourceDecision.Excluded, trace.Decision);
+        Assert.Contains("disabled", trace.Reason, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public async Task Maf_runtime_uses_context_workspace_scope_override_for_contributors()
     {
         var projectId = Guid.Parse("29fbb9a8-8422-4b8b-89ed-9d515103b801");
@@ -172,7 +207,7 @@ public sealed class AgentContextContributionTests
                 capturedScope = request.Policy.WorkspaceScope;
                 return AgentContextContributionResult.Skipped();
             }));
-        var runtime = new MafAgentRuntime(
+        var runtime = RuntimeCapabilityComposer.CreateDefault(
             Path.GetTempPath(),
             services.BuildServiceProvider(),
             WorkspaceScopeDescriptor.Organization("unit-org"));
@@ -199,7 +234,7 @@ public sealed class AgentContextContributionTests
         var services = new ServiceCollection();
         services.AddSingleton<IAgentContextContributor>(new TestContextContributor("duplicate", 10, _ => AgentContextContributionResult.Skipped()));
         services.AddSingleton<IAgentContextContributor>(new TestContextContributor("duplicate", 20, _ => AgentContextContributionResult.Skipped()));
-        var runtime = new MafAgentRuntime(Path.GetTempPath(), services.BuildServiceProvider());
+        var runtime = RuntimeCapabilityComposer.CreateDefault(Path.GetTempPath(), services.BuildServiceProvider());
 
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(async () =>
             await InvokeCreateCapabilityStateAsync(
@@ -532,71 +567,48 @@ public sealed class AgentContextContributionTests
             UpdatedAtUtc: DateTimeOffset.UnixEpoch));
 
     private static async Task<object> InvokeCreateCapabilityStateAsync(
-        MafAgentRuntime runtime,
+        RuntimeCapabilityComposer composer,
         AgentDefinition agent,
         ProviderProfile provider,
-        List<string> progressMessages)
+        List<string> progressMessages,
+        IReadOnlyList<AgentMemoryRecord>? memory = null)
     {
-        var method = typeof(MafAgentRuntime).GetMethod(
-                         "CreateCapabilityStateAsync",
-                         BindingFlags.NonPublic | BindingFlags.Instance)
-                     ?? throw new InvalidOperationException("CreateCapabilityStateAsync method was not found.");
-        var invocation = method.Invoke(
-            runtime,
-            [
-                agent,
-                provider,
-                Array.Empty<CapabilityCatalogItem>(),
-                Array.Empty<AgentMemoryRecord>(),
-                (Func<ExecutionState, string, string, Task>)((_, _, message) =>
-                {
-                    progressMessages.Add(message);
-                    return Task.CompletedTask;
-                }),
-                CancellationToken.None,
-                false
-            ]);
-        var task = Assert.IsAssignableFrom<Task>(invocation);
-        await task;
-
-        return task.GetType().GetProperty("Result", BindingFlags.Public | BindingFlags.Instance)?.GetValue(task)
-               ?? throw new InvalidOperationException("CreateCapabilityStateAsync did not produce a result.");
+        return await composer.CreateCapabilityStateAsync(
+            agent,
+            provider,
+            Array.Empty<CapabilityCatalogItem>(),
+            memory ?? Array.Empty<AgentMemoryRecord>(),
+            (_, _, message) =>
+            {
+                progressMessages.Add(message);
+                return Task.CompletedTask;
+            },
+            CancellationToken.None,
+            suppressApprovalRequirements: false);
     }
 
     private static async Task<object> InvokeCreateCapabilityStateCoreAsync(
-        MafAgentRuntime runtime,
+        RuntimeCapabilityComposer composer,
         AgentDefinition agent,
         ProviderProfile provider,
         WorkspaceScopeDescriptor contextWorkspaceScope,
         List<string> progressMessages)
     {
-        var method = typeof(MafAgentRuntime).GetMethod(
-                         "CreateCapabilityStateCoreAsync",
-                         BindingFlags.NonPublic | BindingFlags.Instance)
-                     ?? throw new InvalidOperationException("CreateCapabilityStateCoreAsync method was not found.");
-        var invocation = method.Invoke(
-            runtime,
-            [
-                agent,
-                provider,
-                provider.DefaultModel,
-                Array.Empty<CapabilityCatalogItem>(),
-                Array.Empty<AgentMemoryRecord>(),
-                (Func<ExecutionState, string, string, Task>)((_, _, message) =>
-                {
-                    progressMessages.Add(message);
-                    return Task.CompletedTask;
-                }),
-                CancellationToken.None,
-                false,
-                contextWorkspaceScope,
-                AgentRuntimeContextIntent.Empty
-            ]);
-        var task = Assert.IsAssignableFrom<Task>(invocation);
-        await task;
-
-        return task.GetType().GetProperty("Result", BindingFlags.Public | BindingFlags.Instance)?.GetValue(task)
-               ?? throw new InvalidOperationException("CreateCapabilityStateCoreAsync did not produce a result.");
+        return await composer.CreateCapabilityStateCoreAsync(
+            agent,
+            provider,
+            provider.DefaultModel,
+            Array.Empty<CapabilityCatalogItem>(),
+            Array.Empty<AgentMemoryRecord>(),
+            (_, _, message) =>
+            {
+                progressMessages.Add(message);
+                return Task.CompletedTask;
+            },
+            CancellationToken.None,
+            suppressApprovalRequirements: false,
+            contextWorkspaceScope,
+            AgentRuntimeContextIntent.Empty);
     }
 
     private static AgentContextContributionTraceCollector ReadContextContributionTraceCollector(object state)

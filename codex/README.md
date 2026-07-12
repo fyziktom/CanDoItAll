@@ -14,6 +14,16 @@ It includes these custom skills:
 - `candoitall-components-mcp`
 - `candoitall-codeanalytics-mcp`
 - `candoitall-frontend-theme`
+- `candoitall-csharp-architecture-bundle-guard`
+- `csharp-architecture-governor`
+- `csharp-modular-refactoring`
+- `csharp-project-boundary-extraction`
+- `csharp-factory-builder-composition`
+- `csharp-provider-tool-plugin-isolation`
+- `csharp-testability-contracts`
+- `csharp-dependency-graph-audit`
+- `csharp-design-pattern-selection`
+- `csharp-architecture-review-gate`
 - `canonical-model-review`
 - `feature-block-architecture-review`
 - `architecture-drift-audit`
@@ -36,6 +46,7 @@ powershell -ExecutionPolicy Bypass -File .\codex\scripts\install-candoitall-skil
 That script:
 
 - copies the custom CanDoItAll skills from this repo into `$CODEX_HOME\skills`
+- copies repo-owned skill support folders such as `_csharp-architecture-shared` into `$CODEX_HOME\skills`
 - clones or updates the public `openai/skills` and `dotnet/skills` repos into temp caches
 - finds the required public sibling skills by name in the correct upstream repo
 - installs those sibling skills into the same Codex home
@@ -61,7 +72,9 @@ powershell -ExecutionPolicy Bypass -File .\codex\scripts\install-candoitall-skil
 - The bundle skill pack now includes explicit readiness, subbundle-gate, and final-closure validators.
 - `openai-docs` is installed with the repo skill pack so model and prompt guidance can be refreshed from official OpenAI docs on other machines.
 - `candoitall-components-mcp` is the repo skill to use before inventing page-local structure in BaseLib or CanvasLib consumers. It expects the `candoitall_components` MCP server to be available and points Codex toward shared component parameters, sandbox routes, and real product usages first.
-- `candoitall-codeanalytics-mcp` is the default repo skill for read-only C# investigation. It expects the `candoitall_codeanalytics` MCP server to be available and steers Codex toward solution inventory, document inspection, exact symbol tools, and focused context. SharpTools is backup-only and should stay disabled unless CodeAnalytics has a real unresolved capability gap.
+- `candoitall-codeanalytics-mcp` is the default repo skill for read-only C# investigation. It expects the `candoitall_codeanalytics` MCP server to be available and steers Codex toward scoped snapshots, dashboard health, solution/project inventory, dependency and cycle analysis, findings, DI, persistence, exact symbol tools, references, implementations, file inspection, exports, and focused context. SharpTools is backup-only and should stay disabled unless CodeAnalytics has a real unresolved capability gap.
+- The C# architecture skills add a strict architecture gate for large-class refactoring, partial-class clusters, provider/tool/plugin isolation, memory protocols, process drivers, runtime composition, project references, factories, builders, catalogs, and testability work. Architecture-heavy bundles must include current-state inventory, target boundary map, dependency-direction proof, pattern selection records, testability plan, partial-class policy, and architecture checkpoints before implementation.
+- `codex/csharp-architecture` keeps the package-level examples, checklists, bundle templates, and integration notes outside the discoverable skill folders. Use those artifacts when preparing architecture-heavy bundles or updating the bundle skills.
 - Large-screen validation comes first: maximize the browser window or fill the available desktop work area, capture a screenshot, review it, then continue to narrower widths.
 - `imagegen` is a planning aid only when UI direction is unclear; it does not replace shipped browser proof.
 - The repo also ships architecture review helper docs in `codex/architecture-review` and optional repo-local custom agents in `.codex/agents`.

@@ -1,9 +1,12 @@
+using System.Data;
 using System.Text.Json;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.AgentFramework.Workflows.Abstractions;
 using CanDoItAll.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using Npgsql;
 
 namespace CanDoItAll.Modules.AgentFramework;
 
@@ -73,6 +76,30 @@ public sealed class PersistentWorkflowCatalogService(
             : new WorkflowDefinitionDetail(
                 definition,
                 await ValidateDefinitionAsync(definition, cancellationToken));
+    }
+
+    public async Task<WorkflowDefinitionDetail?> GetLatestDefinitionByStatusAsync(
+        WorkflowId workflowId,
+        WorkflowLifecycleStatus status,
+        CancellationToken cancellationToken = default)
+    {
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        var record = await dbContext.Set<WorkflowDefinitionRecord>()
+            .AsNoTracking()
+            .Where(item => item.WorkflowId == workflowId.Value && item.Status == status)
+            .OrderByDescending(item => item.UpdatedAtUtc)
+            .ThenByDescending(item => item.CreatedAtUtc)
+            .ThenByDescending(item => item.VersionId)
+            .FirstOrDefaultAsync(cancellationToken);
+        if (record is null)
+        {
+            return null;
+        }
+
+        var definition = Deserialize<WorkflowDefinition>(record.DefinitionJson);
+        return new WorkflowDefinitionDetail(
+            definition,
+            await ValidateDefinitionAsync(definition, cancellationToken));
     }
 
     public async Task<WorkflowDefinition> SaveDefinitionAsync(
@@ -741,6 +768,134 @@ public sealed class PersistentWorkflowRunStore(IDbContextFactory<AppDbContext> d
     IWorkflowArtifactStore,
     IWorkflowExternalRequestStore
 {
+    public async Task CreateRunWithStartedEventAsync(
+        WorkflowRunSnapshot run,
+        WorkflowEventRecord startedEvent,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(run);
+        ArgumentNullException.ThrowIfNull(startedEvent);
+        if (run.RunId != startedEvent.RunId)
+        {
+            throw new InvalidOperationException("Workflow run and started event must use the same run id.");
+        }
+
+        if (startedEvent.Kind != WorkflowEventKind.Started)
+        {
+            throw new InvalidOperationException("Initial workflow persistence requires a Started event.");
+        }
+
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        await using var transaction = await dbContext.Database.BeginTransactionAsync(
+            IsolationLevel.Serializable,
+            cancellationToken);
+        dbContext.Set<WorkflowRunRecordEntity>().Add(WorkflowRunRecordEntity.FromSnapshot(run));
+        dbContext.Set<WorkflowEventRecordEntity>().Add(WorkflowEventRecordEntity.FromEvent(startedEvent));
+        try
+        {
+            await dbContext.SaveChangesAsync(cancellationToken);
+            await transaction.CommitAsync(cancellationToken);
+        }
+        catch (DbUpdateException exception) when (IsWorkflowRunPrimaryKeyViolation(exception))
+        {
+            await transaction.RollbackAsync(CancellationToken.None);
+            throw new WorkflowRunAlreadyExistsException(run.RunId);
+        }
+    }
+
+    public async Task<WorkflowRunTransitionResult> TryTransitionRunAsync(
+        WorkflowRunId runId,
+        IReadOnlyCollection<WorkflowRunState> expectedStates,
+        WorkflowRunSnapshot updatedRun,
+        WorkflowEventRecord? transitionEvent = null,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(expectedStates);
+        ArgumentNullException.ThrowIfNull(updatedRun);
+        if (updatedRun.RunId != runId || transitionEvent is not null && transitionEvent.RunId != runId)
+        {
+            throw new InvalidOperationException("Workflow transition records must use the requested run id.");
+        }
+
+        var states = expectedStates.Distinct().ToArray();
+        if (states.Length == 0)
+        {
+            return new WorkflowRunTransitionResult(false, await GetRunAsync(runId, cancellationToken));
+        }
+
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        await using var transaction = await dbContext.Database.BeginTransactionAsync(
+            IsolationLevel.Serializable,
+            cancellationToken);
+        var originJson = WorkflowRunRecordEntity.SerializeOrigin(updatedRun.Origin);
+        var affected = await dbContext.Set<WorkflowRunRecordEntity>()
+            .Where(record => record.RunId == runId.Value && states.Contains(record.State))
+            .ExecuteUpdateAsync(setters => setters
+                .SetProperty(record => record.WorkflowId, updatedRun.WorkflowId.Value)
+                .SetProperty(record => record.VersionId, updatedRun.VersionId.Value)
+                .SetProperty(record => record.State, updatedRun.State)
+                .SetProperty(record => record.Backend, updatedRun.Backend)
+                .SetProperty(record => record.BackendRunId, updatedRun.BackendRunId)
+                .SetProperty(record => record.Summary, updatedRun.Summary)
+                .SetProperty(record => record.CreatedAtUtc, updatedRun.CreatedAtUtc)
+                .SetProperty(record => record.UpdatedAtUtc, updatedRun.UpdatedAtUtc)
+                .SetProperty(record => record.TerminalAtUtc, updatedRun.TerminalAtUtc)
+                .SetProperty(record => record.OriginJson, originJson),
+                cancellationToken);
+        if (affected == 0)
+        {
+            var currentRecord = await dbContext.Set<WorkflowRunRecordEntity>()
+                .AsNoTracking()
+                .SingleOrDefaultAsync(record => record.RunId == runId.Value, cancellationToken);
+            await transaction.RollbackAsync(cancellationToken);
+            return new WorkflowRunTransitionResult(false, currentRecord?.ToSnapshot());
+        }
+
+        if (transitionEvent is not null)
+        {
+            dbContext.Set<WorkflowEventRecordEntity>().Add(WorkflowEventRecordEntity.FromEvent(transitionEvent));
+            await dbContext.SaveChangesAsync(cancellationToken);
+        }
+
+        await transaction.CommitAsync(cancellationToken);
+        return new WorkflowRunTransitionResult(true, updatedRun);
+    }
+
+    public async Task<WorkflowExternalResponseAcceptanceResult> TryAcceptExternalResponseAsync(
+        WorkflowExternalRequestId requestId,
+        string responseJson,
+        DateTimeOffset respondedAtUtc,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(responseJson);
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        await using var transaction = await dbContext.Database.BeginTransactionAsync(
+            IsolationLevel.Serializable,
+            cancellationToken);
+        var affected = await dbContext.Set<WorkflowExternalRequestRecordEntity>()
+            .Where(record => record.Id == requestId.Value && record.RespondedAtUtc == null)
+            .ExecuteUpdateAsync(setters => setters
+                .SetProperty(record => record.ResponseJson, responseJson)
+                .SetProperty(record => record.RespondedAtUtc, respondedAtUtc),
+                cancellationToken);
+        var record = await dbContext.Set<WorkflowExternalRequestRecordEntity>()
+            .AsNoTracking()
+            .SingleOrDefaultAsync(item => item.Id == requestId.Value, cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
+        if (record is null)
+        {
+            return new WorkflowExternalResponseAcceptanceResult(
+                WorkflowExternalResponseAcceptanceOutcome.NotFound,
+                Request: null);
+        }
+
+        return new WorkflowExternalResponseAcceptanceResult(
+            affected == 1
+                ? WorkflowExternalResponseAcceptanceOutcome.Accepted
+                : WorkflowExternalResponseAcceptanceOutcome.AlreadyResponded,
+            record.ToRequest());
+    }
+
     public async Task SaveRunAsync(
         WorkflowRunSnapshot run,
         CancellationToken cancellationToken = default)
@@ -762,6 +917,8 @@ public sealed class PersistentWorkflowRunStore(IDbContextFactory<AppDbContext> d
             record.Summary = run.Summary;
             record.CreatedAtUtc = run.CreatedAtUtc;
             record.UpdatedAtUtc = run.UpdatedAtUtc;
+            record.TerminalAtUtc = run.TerminalAtUtc;
+            record.OriginJson = WorkflowRunRecordEntity.SerializeOrigin(run.Origin);
         }
 
         await dbContext.SaveChangesAsync(cancellationToken);
@@ -1148,6 +1305,23 @@ public sealed class PersistentWorkflowRunStore(IDbContextFactory<AppDbContext> d
     private static int NormalizePageIndex(int pageIndex)
         => Math.Max(0, pageIndex);
 
+    private static bool IsWorkflowRunPrimaryKeyViolation(DbUpdateException exception)
+    {
+        for (Exception? current = exception; current is not null; current = current.InnerException)
+        {
+            if (current is PostgresException
+                {
+                    SqlState: PostgresErrorCodes.UniqueViolation,
+                    ConstraintName: "PK_AgentFramework_WorkflowRuns"
+                })
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     private static int NormalizePageSize(int pageSize)
         => Math.Clamp(pageSize, 1, 100);
 }
@@ -1228,6 +1402,8 @@ public sealed class WorkflowSettingsRecord
 
 public sealed class WorkflowRunRecordEntity
 {
+    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
+
     public Guid RunId { get; set; }
 
     public Guid WorkflowId { get; set; }
@@ -1246,6 +1422,10 @@ public sealed class WorkflowRunRecordEntity
 
     public DateTimeOffset UpdatedAtUtc { get; set; }
 
+    public DateTimeOffset? TerminalAtUtc { get; set; }
+
+    public string OriginJson { get; set; } = string.Empty;
+
     public static WorkflowRunRecordEntity FromSnapshot(WorkflowRunSnapshot run) => new()
     {
         RunId = run.RunId.Value,
@@ -1256,7 +1436,9 @@ public sealed class WorkflowRunRecordEntity
         BackendRunId = run.BackendRunId,
         Summary = run.Summary,
         CreatedAtUtc = run.CreatedAtUtc,
-        UpdatedAtUtc = run.UpdatedAtUtc
+        UpdatedAtUtc = run.UpdatedAtUtc,
+        TerminalAtUtc = run.TerminalAtUtc,
+        OriginJson = SerializeOrigin(run.Origin)
     };
 
     public WorkflowRunSnapshot ToSnapshot() => new(
@@ -1268,7 +1450,16 @@ public sealed class WorkflowRunRecordEntity
         BackendRunId,
         Summary,
         CreatedAtUtc,
-        UpdatedAtUtc);
+        UpdatedAtUtc)
+    {
+        TerminalAtUtc = this.TerminalAtUtc,
+        Origin = string.IsNullOrWhiteSpace(OriginJson)
+            ? null
+            : JsonSerializer.Deserialize<WorkflowLaunchOrigin>(OriginJson, JsonOptions)
+    };
+
+    public static string SerializeOrigin(WorkflowLaunchOrigin? origin)
+        => origin is null ? string.Empty : JsonSerializer.Serialize(origin, JsonOptions);
 }
 
 public sealed class WorkflowEventRecordEntity
@@ -1527,6 +1718,7 @@ internal sealed class WorkflowRunRecordEntityConfiguration : IEntityTypeConfigur
         builder.Property(item => item.Backend).HasConversion<int>();
         builder.Property(item => item.BackendRunId).HasMaxLength(300);
         builder.Property(item => item.Summary).HasColumnType("TEXT");
+        builder.Property(item => item.OriginJson).HasColumnType("TEXT");
         builder.HasIndex(item => item.WorkflowId);
         builder.HasIndex(item => item.UpdatedAtUtc);
     }

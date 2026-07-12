@@ -1,9 +1,9 @@
-# Prepare solution skeleton subprocess
+# Establish solution baseline subprocess
 
-Launch the generic .NET solution setup subprocess when the slice starts from an empty or incomplete .NET solution. If the skeleton already exists, record explicit proof before skipping.
+Launch the generic .NET solution baseline subprocess for either an explicit initialization plan or an explicit existing-solution verification context. The child never chooses between those modes from prose.
 
-When the solution/app/test skeleton is missing or incomplete and this step has the governed subprocess launch tool, launch the setup subprocess before writing the primary parent artifact. Do not write `Status: InProgress`, progress notes, or a partial parent artifact while the child setup run is active. Submit the launch tool's `ParentDeferredOutcomeJson` exactly so the parent waits for the child run and later completes from the child setup handoff.
+When the context says `initialize`, the child may create only the declared solution, application, and test baseline. When it says `verify-existing`, it performs read-only verification of the declared solution and project files; it must not create a helper script, call `dotnet new`, add solution membership, add a project reference, or mutate product files. Do not write `Status: InProgress`, progress notes, or a partial parent artifact while the child run is active. Submit the launch tool's `ParentDeferredOutcomeJson` exactly so the parent waits for the child run and later completes from the child setup handoff.
 
-The child setup process must use the app archetype, target framework, test framework, and product root grounded by project structure or architecture notes. Do not force any UI, API, CLI, worker, library, or test technology choice unless the current run provides that signal. Escalate when the generic setup process cannot select a safe template without inventing requirements.
+The child setup process receives the exact `dotnet-solution-context/v1` artifact from `slice-architecture-check`. It must use that bound decision and must not select an app archetype, framework, test framework, solution name, or layout from prose. Escalate the upstream architecture contradiction when that decision is missing or invalid; do not create a replacement contract in this step.
 
-Accept either `setup-handoff` or `setup-handoff-after-repair` from the child setup run as valid scaffold proof. Treat `setup-repair-escalation` as blocker evidence, not as accepted setup proof.
+Accept either `setup-handoff` or `setup-handoff-after-repair` from the child setup run as valid baseline proof. Treat `setup-repair-escalation` as blocker evidence, not as accepted baseline proof.

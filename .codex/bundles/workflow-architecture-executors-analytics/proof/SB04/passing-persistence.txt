@@ -1,0 +1,13 @@
+Command:
+
+dotnet test tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj --no-restore -m:1 --filter FullyQualifiedName~WorkflowRuntimePersistenceLifecycleTests
+
+Result: 1 passed, 0 failed, 0 skipped, duration 6 s.
+
+Provider: PostgreSQL through PostgresTestDatabaseLease.
+
+Assertions:
+- Running plus Started persists together.
+- a terminal compare-and-set wins and a late transition is rejected without a second terminal event.
+- the first external response is accepted and the second observes AlreadyResponded with the first response preserved.
+- a forced duplicate event key causes the initial transaction to fail, and neither the new run nor its Started event remains.

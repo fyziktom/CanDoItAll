@@ -266,6 +266,15 @@ public sealed record ExecutionArtifactRecord(
     string Summary,
     DateTimeOffset CreatedAtUtc);
 
+public enum ToolExecutionSideEffectMode
+{
+    Unspecified = 0,
+    NoMutation,
+    ManagedProcessArtifacts,
+    ExternalArtifactDestination,
+    ProductMutation
+}
+
 public sealed record ToolExecutionReceiptRecord(
     Guid Id,
     Guid ExecutionRunId,
@@ -283,6 +292,8 @@ public sealed record ToolExecutionReceiptRecord(
     public string RuntimeToolProviderKey { get; init; } = string.Empty;
 
     public string RuntimeToolProviderName { get; init; } = string.Empty;
+
+    public ToolExecutionSideEffectMode DeclaredSideEffectMode { get; init; }
 }
 
 public sealed record ExecutionWorkflowCheckpointRecord(
@@ -337,7 +348,8 @@ public sealed record ExecutionInvocationContext(
 public sealed record ExecutionInvocationPolicy(
     AgentFinalizerMode? FinalizerMode = null,
     int? MaxStructuredOutputRepairAttempts = null,
-    bool RequireStructuredOutputValidation = true);
+    bool RequireStructuredOutputValidation = true,
+    bool AllowRequiredFinalizerStructuredOutputRecovery = false);
 
 public sealed record AgentRuntimeInputAttachment(
     string Name,

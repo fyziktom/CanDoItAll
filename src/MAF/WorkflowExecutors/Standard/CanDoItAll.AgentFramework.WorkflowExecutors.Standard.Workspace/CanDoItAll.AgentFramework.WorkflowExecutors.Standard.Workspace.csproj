@@ -9,7 +9,6 @@
   <ItemGroup>
     <PackageReference Include="ExcelDataReader" Version="3.8.0" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.7" />
-    <PackageReference Include="PdfPig" Version="0.1.14" />
   </ItemGroup>
 
   <PropertyGroup>

@@ -549,7 +549,8 @@
         "WriteManagedProcessArtifacts",
         "ExecuteExternalAction"
       ],
-      "OperationTargetScope": "ExternalActionControlled"
+      "OperationTargetScope": "ExternalActionControlled",
+      "ExecutionClass": "BranchDecision"
     },
     {
       "Order": 5,
@@ -721,7 +722,7 @@
         "Clear licensing decisions consumed by delivery teams.",
         "Reduced late-stage OSS licensing surprises.",
         "Documented obligation patterns reused across component reviews.",
-        "Audit or legal review confidence in the role\u2019s output."
+        "Audit or legal review confidence in the role’s output."
       ],
       "DocPath": "processes/oss-intake-supply-chain-governance/roles/license-counsel.md"
     },
@@ -794,7 +795,7 @@
         "Structured SBOM outputs used in later reviews or incidents.",
         "Traceable reconciliation notes for incomplete metadata.",
         "Reduced dependency-visibility gaps over time.",
-        "Stakeholder trust in the curator\u2019s completeness signals."
+        "Stakeholder trust in the curator’s completeness signals."
       ],
       "DocPath": "processes/oss-intake-supply-chain-governance/roles/sbom-curator.md"
     }
@@ -988,3 +989,4 @@
   ],
   "SharedArtifactRefs": []
 }
+

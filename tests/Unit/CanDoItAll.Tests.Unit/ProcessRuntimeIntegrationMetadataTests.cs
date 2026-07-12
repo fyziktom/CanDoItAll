@@ -1,11 +1,15 @@
 using System.Reflection;
+using System.Text.Json;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.AgentFramework.Workflows.Abstractions;
 using CanDoItAll.Modules.Processes;
 using CanDoItAll.Processes.Abstractions;
 using CanDoItAll.Processes.Application;
+using CanDoItAll.Processes.Contracts;
 using CanDoItAll.Processes.Projections;
 using CanDoItAll.Processes.Runtime;
+using Capabilities = CanDoItAll.AgentFramework.Capabilities.Abstractions;
 
 namespace CanDoItAll.Tests.Unit;
 
@@ -131,6 +135,22 @@ public sealed class ProcessRuntimeIntegrationMetadataTests
     }
 
     [Fact]
+    public void Governed_process_without_browser_metadata_fails_closed()
+    {
+        var run = CreateTrustedProcessRun("{}");
+
+        Assert.False(ExecutionInvocationMetadata.ResolveProcessBrowserToolsAllowed(run));
+    }
+
+    [Fact]
+    public void Governed_process_with_malformed_browser_metadata_fails_closed()
+    {
+        var run = CreateTrustedProcessRun("""{"agentProcessBrowserToolsAllowed":"not-a-boolean"}""");
+
+        Assert.False(ExecutionInvocationMetadata.ResolveProcessBrowserToolsAllowed(run));
+    }
+
+    [Fact]
     public void Process_execution_metadata_does_not_infer_browser_tools_from_screenshot_step_key()
     {
         var assignment = CreateAssignment(
@@ -177,6 +197,84 @@ public sealed class ProcessRuntimeIntegrationMetadataTests
         Assert.Empty(writableAliases);
         Assert.Contains("external-target/C/programovani/dotnet/output", readOnlyAliases);
         Assert.False(ExecutionInvocationMetadata.ResolveProcessAllowsProductMutation(run));
+    }
+
+    [Fact]
+    public void Process_execution_metadata_marks_configured_mutation_before_handoff_step()
+    {
+        var assignment = CreateAssignment(
+            Guid.NewGuid(),
+            [
+                ProcessOperationContractNames.ReadProcessContext,
+                ProcessOperationContractNames.MutateProductTarget,
+                ProcessOperationContractNames.WriteManagedProcessArtifacts
+            ],
+            ProcessOperationContractNames.ExternalProductTargetMutable,
+            stepKey: "code-change");
+        assignment = assignment with
+        {
+            LaunchVariables = new Dictionary<string, string>(assignment.LaunchVariables, StringComparer.Ordinal)
+            {
+                [ProcessRuntimeLaunchVariables.ProductMutationBeforeManagedOutputRequiredStepKeys] =
+                    JsonSerializer.Serialize(new[] { "code-change", "feature-repair" }),
+                [ProcessRuntimeLaunchVariables.ProductMutationToolNames] =
+                    JsonSerializer.Serialize(new[] { "workspace_write_file", "workspace_dotnet_new" }),
+                [ProcessRuntimeLaunchVariables.ProductMutationRequiredBranchOutcomeKeys] =
+                    JsonSerializer.Serialize(new[] { "product-repair-applied" })
+            }
+        };
+
+        var metadataJson = BuildProcessExecutionMetadata(assignment);
+        var run = CreateTrustedProcessRun(metadataJson);
+
+        Assert.True(ExecutionInvocationMetadata.ResolveProcessAllowsProductMutation(run));
+        Assert.True(ExecutionInvocationMetadata.ResolveProcessRequiresProductMutationBeforeManagedOutput(run));
+        Assert.Equal(
+            ["workspace_dotnet_new", "workspace_write_file"],
+            ExecutionInvocationMetadata.ResolveProcessProductMutationToolNames(run));
+        Assert.Equal(
+            ["product-repair-applied"],
+            ExecutionInvocationMetadata.ResolveProcessProductMutationRequiredBranchOutcomeKeys(run));
+
+        using (WorkspaceExecutionAuditContext.BeginScope(run))
+        {
+            var auditScope = Assert.IsType<WorkspaceExecutionAuditContext.WorkspaceExecutionAuditScopeState>(
+                WorkspaceExecutionAuditContext.Current);
+            Assert.Equal(["product-repair-applied"], auditScope.ProcessProductMutationRequiredBranchOutcomeKeys);
+        }
+    }
+
+    [Fact]
+    public void Process_execution_metadata_rejects_contribution_key_owned_by_late_generic_metadata()
+    {
+        var assignment = CreateAssignment(Guid.NewGuid());
+        assignment = assignment with
+        {
+            LaunchVariables = new Dictionary<string, string>(assignment.LaunchVariables, StringComparer.OrdinalIgnoreCase)
+            {
+                [ProcessRuntimeLaunchVariables.ProductMutationToolNames] =
+                    JsonSerializer.Serialize(new[] { "workspace_write_file" })
+            }
+        };
+        var composer = new ProcessExecutionMetadataComposer(
+        [
+            new FixedMetadataContribution(
+                "test.generic-key-collision",
+                100,
+                new Dictionary<string, object>(StringComparer.Ordinal)
+                {
+                    [ExecutionInvocationMetadata.ProcessProductMutationToolNamesMetadataKey] =
+                        new[] { "workspace_read_file" }
+                })
+        ]);
+
+        var exception = Assert.Throws<InvalidOperationException>(() => composer.Compose(assignment));
+
+        Assert.Contains(
+            ExecutionInvocationMetadata.ProcessProductMutationToolNamesMetadataKey,
+            exception.Message,
+            StringComparison.Ordinal);
+        Assert.Contains("conflicts with a generic process metadata key", exception.Message, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -235,6 +333,173 @@ public sealed class ProcessRuntimeIntegrationMetadataTests
         Assert.NotNull(options.ContextIntent);
         Assert.False(options.ContextIntent!.RuntimeToolProvidersEnabled);
         Assert.False(options.ContextIntent.WorkspaceToolsEnabled);
+    }
+
+    [Fact]
+    public void Process_execution_metadata_authorizes_only_exact_inherited_parent_artifact_reads()
+    {
+        var projectId = Guid.NewGuid();
+        var parentRunId = Guid.NewGuid();
+        var parentRefs = new[]
+        {
+            $"artifacts/process-runs/{parentRunId:D}/steps/implementation.md",
+            $"artifacts/process-runs/{parentRunId:D}/steps/qa-validation.md"
+        };
+        var assignment = CreateAssignment(
+            projectId,
+            launchVariables: new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["ProjectId"] = projectId.ToString("D"),
+                [ProcessRuntimeLaunchVariables.ParentRequiredArtifactRefs] =
+                    ProcessRuntimeLaunchVariables.SerializeParentRequiredArtifactRefs(parentRefs)
+            });
+
+        var metadataJson = BuildProcessExecutionMetadata(assignment);
+        var run = CreateTrustedProcessRun(metadataJson);
+
+        Assert.Equal(parentRefs, ExecutionInvocationMetadata.ResolveAllowedManagedArtifactReadRefs(run));
+
+        using (WorkspaceExecutionAuditContext.BeginScope(run))
+        {
+            var auditScope = Assert.IsType<WorkspaceExecutionAuditContext.WorkspaceExecutionAuditScopeState>(
+                WorkspaceExecutionAuditContext.Current);
+            Assert.Equal(parentRefs, auditScope.AllowedManagedArtifactReadRefs);
+        }
+    }
+
+    [Fact]
+    public void Process_execution_metadata_authorizes_primary_artifact_read_for_automatic_diagnostic_recovery()
+    {
+        var assignment = CreateAssignment(Guid.NewGuid()) with
+        {
+            Prompt = $"""
+                {ProcessRuntimeRecoveryInstructionHeadings.RuntimeDiagnosticRecovery}:
+                Repair the rejected managed-artifact completion gate.
+                """
+        };
+        var primaryRef = $"artifacts/process-runs/{assignment.RunId.Value:D}/steps/{assignment.StepKey}.md";
+
+        var metadataJson = BuildProcessExecutionMetadata(assignment);
+        var run = CreateTrustedProcessRun(metadataJson);
+
+        Assert.Equal(
+            [primaryRef],
+            ExecutionInvocationMetadata.ResolveAllowedManagedArtifactReadRefs(run));
+    }
+
+    [Fact]
+    public void Process_execution_metadata_carries_scoped_capability_policy_to_runtime_intent()
+    {
+        var assignment = CreateAssignment(Guid.NewGuid()) with
+        {
+            CapabilityScope = new ProcessCapabilityScope
+            {
+                Directives =
+                [
+                    new ProcessCapabilityScopeDirective
+                    {
+                        Kind = ProcessCapabilityScopeDirectiveKind.AllowOnly,
+                        Target = new ProcessCapabilityScopeTarget
+                        {
+                            Kind = ProcessCapabilityScopeTargetKind.RuntimeToolProviderKey,
+                            Value = "management.provider"
+                        },
+                        Reason = "Management-only step."
+                    },
+                    new ProcessCapabilityScopeDirective
+                    {
+                        Kind = ProcessCapabilityScopeDirectiveKind.Deny,
+                        Target = new ProcessCapabilityScopeTarget
+                        {
+                            Kind = ProcessCapabilityScopeTargetKind.CapabilityTag,
+                            Value = "development"
+                        },
+                        Reason = "Development capabilities are suppressed for this step."
+                    },
+                    new ProcessCapabilityScopeDirective
+                    {
+                        Kind = ProcessCapabilityScopeDirectiveKind.Require,
+                        Target = new ProcessCapabilityScopeTarget
+                        {
+                            Kind = ProcessCapabilityScopeTargetKind.CapabilityIdentity,
+                            Value = nameof(Capabilities.CapabilityKind.Tool),
+                            SecondaryValue = "workspace-read-file"
+                        },
+                        Reason = "The management step still needs read-only workspace evidence."
+                    }
+                ],
+                RequiredReceipts =
+                [
+                    new ProcessRequiredToolReceipt
+                    {
+                        Key = "qa-browser-screenshot",
+                        Kind = ProcessRequiredToolReceiptKind.RuntimeToolName,
+                        ToolName = "browser_take_screenshot",
+                        Activation = ProcessRequiredToolReceiptActivation.WhenLaunchContextDeclaresTool,
+                        Reason = "QA proof requires current-run screenshot evidence when UI proof is active."
+                    }
+                ]
+            }
+        };
+        var metadataJson = BuildProcessExecutionMetadata(assignment);
+        var run = CreateTrustedProcessRun(metadataJson) with
+        {
+            SourceId = assignment.StepKey,
+            ProcessRunId = assignment.RunId.Value.ToString("D"),
+            ProcessStepId = assignment.StepInstanceId.Value.ToString("D")
+        };
+        var method = typeof(AgentFrameworkWorkspaceExecutionService).GetMethod(
+            "CreateRuntimeExecutionOptions",
+            BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("CreateRuntimeExecutionOptions method was not found.");
+
+        var options = Assert.IsType<AgentRuntimeExecutionOptions>(method.Invoke(null, [run, null, null, Array.Empty<AgentRuntimeInputAttachment>()]));
+
+        var resolvedScope = ExecutionInvocationMetadata.ResolveRuntimeCapabilityScopeOverride(run);
+        Assert.NotNull(resolvedScope);
+        Assert.NotNull(options.ContextIntent!.CapabilityScopeOverride);
+        Assert.Equal(resolvedScope!.Policies.Count, options.ContextIntent.CapabilityScopeOverride!.Policies.Count);
+        Assert.Equal(resolvedScope.RequiredCapabilities.Count, options.ContextIntent.CapabilityScopeOverride.RequiredCapabilities.Count);
+        Assert.Equal(resolvedScope.RequiredReceipts.Count, options.ContextIntent.CapabilityScopeOverride.RequiredReceipts.Count);
+        var policy = Assert.Single(resolvedScope.Policies);
+        Assert.Equal(Capabilities.CapabilityAccessDefaultEffect.DenyAll, policy.DefaultEffect);
+        Assert.Contains(policy.Rules, rule =>
+            rule.Effect == Capabilities.CapabilityAccessEffect.Allow &&
+            rule.Selector.Kind == Capabilities.CapabilitySelectorKind.Tag &&
+            rule.Selector.Tag == Capabilities.RuntimeToolProviderCapabilityTags.CreateProviderKeyTag("management.provider"));
+        Assert.Contains(policy.Rules, rule =>
+            rule.Effect == Capabilities.CapabilityAccessEffect.Deny &&
+            rule.Selector.Kind == Capabilities.CapabilitySelectorKind.Tag &&
+            rule.Selector.Tag == Capabilities.CapabilityTag.Create("development"));
+        Assert.Contains(policy.Rules, rule =>
+            rule.Effect == Capabilities.CapabilityAccessEffect.Require &&
+            rule.Selector.Kind == Capabilities.CapabilitySelectorKind.CapabilityKey);
+        var required = Assert.Single(resolvedScope.RequiredCapabilities);
+        Assert.Equal(Capabilities.CapabilityKind.Tool, required.Kind);
+        Assert.Equal(Capabilities.CapabilityKey.Create("workspace-read-file"), required.Key);
+        var requiredReceipt = Assert.Single(resolvedScope.RequiredReceipts);
+        Assert.Equal("qa-browser-screenshot", requiredReceipt.Key);
+        Assert.Equal("browser_take_screenshot", requiredReceipt.ToolName);
+        Assert.Equal(AgentRuntimeRequiredToolReceiptActivation.WhenLaunchContextDeclaresTool, requiredReceipt.Activation);
+    }
+
+    [Fact]
+    public void Process_runtime_capability_scope_metadata_fails_closed_when_malformed()
+    {
+        var metadataJson = $$"""
+            {
+              "{{ExecutionInvocationMetadata.RuntimeCapabilityScopeOverrideMetadataKey}}": {
+                "policies": "invalid-policy-list",
+                "requiredCapabilities": []
+              }
+            }
+            """;
+        var run = CreateTrustedProcessRun(metadataJson);
+
+        var exception = Assert.Throws<InvalidOperationException>(() =>
+            ExecutionInvocationMetadata.ResolveRuntimeCapabilityScopeOverride(run));
+
+        Assert.Contains("capability scope metadata is malformed", exception.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -354,6 +619,95 @@ public sealed class ProcessRuntimeIntegrationMetadataTests
     }
 
     [Fact]
+    public async Task Runtime_usage_reader_counts_typed_process_workflow_fact_once_when_agent_telemetry_has_same_id()
+    {
+        var fixture = CreateWorkflowUsageTelemetryFixture();
+        var workflowStore = new InMemoryWorkflowUsageObservationStore();
+        await workflowStore.AppendAsync(fixture.WorkflowObservation);
+        var reader = new WorkflowAwareProcessRuntimeUsageTelemetryReader(fixture.AgentReader, workflowStore);
+
+        var observations = await reader.ListAsync(new ProcessRuntimeUsageTelemetryQuery(
+            [fixture.ProcessRunId],
+            fixture.Now.AddHours(-1),
+            fixture.Now.AddHours(1),
+            TakePerRun: 25));
+
+        var observation = Assert.Single(observations);
+        Assert.Equal(fixture.WorkflowObservation.Id.Value, observation.UsageObservationId);
+        Assert.Equal(fixture.ProcessRunId, observation.RunId);
+        Assert.Equal(fixture.WorkflowObservation.RunId!.Value.Value, observation.ExecutionRunId);
+        Assert.Equal(1, observation.ToolCallCount);
+        Assert.Equal(0.42m, observation.ActualCostUsd);
+    }
+
+    [Fact]
+    public async Task Runtime_usage_reader_rejects_invalid_query_boundaries()
+    {
+        var fixture = CreateWorkflowUsageTelemetryFixture();
+        var reader = new WorkflowAwareProcessRuntimeUsageTelemetryReader(
+            fixture.AgentReader,
+            new InMemoryWorkflowUsageObservationStore());
+
+        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => reader.ListAsync(
+            new ProcessRuntimeUsageTelemetryQuery(
+                [fixture.ProcessRunId],
+                fixture.Now.AddHours(-1),
+                fixture.Now.AddHours(1),
+                TakePerRun: 0)).AsTask());
+        await Assert.ThrowsAsync<ArgumentException>(() => reader.ListAsync(
+            new ProcessRuntimeUsageTelemetryQuery(
+                [fixture.ProcessRunId],
+                fixture.Now.AddHours(1),
+                fixture.Now.AddHours(-1),
+                TakePerRun: 25)).AsTask());
+    }
+
+    [Fact]
+    public async Task Runtime_usage_reader_rejects_same_id_immutable_dimension_drift()
+    {
+        var fixture = CreateWorkflowUsageTelemetryFixture();
+        var workflowStore = new InMemoryWorkflowUsageObservationStore();
+        await workflowStore.AppendAsync(fixture.WorkflowObservation with
+        {
+            InputTokens = 101,
+            TotalTokens = 151
+        });
+        var reader = new WorkflowAwareProcessRuntimeUsageTelemetryReader(fixture.AgentReader, workflowStore);
+
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => reader.ListAsync(
+            new ProcessRuntimeUsageTelemetryQuery(
+                [fixture.ProcessRunId],
+                fixture.Now.AddHours(-1),
+                fixture.Now.AddHours(1),
+                TakePerRun: 25)).AsTask());
+
+        Assert.Contains("conflicting immutable dimensions", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Runtime_usage_reader_rejects_uncorrelated_workflow_fact()
+    {
+        var fixture = CreateWorkflowUsageTelemetryFixture();
+        var uncorrelated = fixture.WorkflowObservation with
+        {
+            Id = WorkflowUsageObservationId.New(),
+            RunId = null
+        };
+        var reader = new WorkflowAwareProcessRuntimeUsageTelemetryReader(
+            fixture.AgentReader,
+            new FixedWorkflowUsageObservationStore([uncorrelated]));
+
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => reader.ListAsync(
+            new ProcessRuntimeUsageTelemetryQuery(
+                [fixture.ProcessRunId],
+                fixture.Now.AddHours(-1),
+                fixture.Now.AddHours(1),
+                TakePerRun: 25)).AsTask());
+
+        Assert.Contains("not correlated to a workflow run", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Process_execution_metadata_does_not_trust_repository_root_as_product_target_alias()
     {
         var assignment = CreateAssignment(
@@ -407,6 +761,88 @@ public sealed class ProcessRuntimeIntegrationMetadataTests
         var writableAliases = ExecutionInvocationMetadata.ResolveAllowedExternalTargetAliases(run);
 
         Assert.Contains("external-target/C/programovani/dotnet/output", writableAliases);
+    }
+
+    private static WorkflowUsageTelemetryFixture CreateWorkflowUsageTelemetryFixture()
+    {
+        var now = new DateTimeOffset(2026, 7, 12, 20, 0, 0, TimeSpan.Zero);
+        var processRunId = ProcessRunId.New();
+        var workflowRunId = WorkflowRunId.New();
+        var executionRun = CreateUsageExecutionRun(processRunId, now);
+        var usageId = Guid.NewGuid();
+        var providerObservation = new ProviderUsageObservation(
+            usageId,
+            now,
+            "OpenAI default",
+            ProviderKind.OpenAi,
+            "gpt-test",
+            ProviderTransportKind.Responses,
+            ProviderUsageSourcePhases.AgentRuntime,
+            ProviderUsageObservationStatus.Observed,
+            InputTokens: 100,
+            CachedInputTokens: 10,
+            OutputTokens: 50,
+            ReasoningTokens: 0,
+            TotalTokens: 150,
+            ToolCallCount: 1)
+        {
+            ExecutionRunId = workflowRunId.Value,
+            ProcessRunId = processRunId.ToString(),
+            CalculatedCostUsd = 0.42m
+        };
+        var workspace = new UsageTelemetryWorkspaceService(
+            [executionRun],
+            new Dictionary<Guid, ExecutionRunDetail>
+            {
+                [executionRun.Id] = CreateExecutionRunDetail(executionRun, [providerObservation])
+            });
+        var agentReader = new AgentFrameworkProcessRuntimeUsageTelemetryReader(
+            new WorkspaceBackedAgentReferenceDataProvider(workspace, new AgentReferenceDataCache()),
+            workspace);
+        var assignmentId = new WorkflowProcessAssignmentId(Guid.Parse(executionRun.ProcessStepId));
+        var workflowObservation = new WorkflowUsageObservation(
+            new WorkflowUsageObservationId(usageId),
+            workflowRunId,
+            WorkflowId.New(),
+            WorkflowVersionId.New(),
+            new WorkflowNodeId("process-workflow-node"),
+            ExecutorId: null,
+            ComponentId: null,
+            WorkflowUsageProducerKind.LlmComponent,
+            Guid.NewGuid(),
+            Attempt: 1,
+            ProviderProfileId: null,
+            "OpenAI default",
+            ProviderKind.OpenAi,
+            ProviderTransportKind.Responses,
+            "gpt-test",
+            ProviderUsageSourcePhases.AgentRuntime,
+            WorkflowUsageStatus.Observed,
+            WorkflowPricingStatus.Known,
+            WorkflowUsagePricingProvenance.PricingProfileSnapshot,
+            InputTokens: 100,
+            CachedInputTokens: 10,
+            OutputTokens: 50,
+            ReasoningTokens: 0,
+            TotalTokens: 150,
+            ToolCallCount: 1,
+            CostUsd: 0.42m,
+            PricingProfileHash: "process-workflow-profile",
+            PricingVersion: "v1",
+            ProviderRequestId: string.Empty,
+            ProviderResponseId: string.Empty,
+            now.AddSeconds(-1),
+            now,
+            now,
+            new WorkflowLaunchOrigin.ProcessAssignment(
+                new WorkflowProcessRunId(processRunId.Value),
+                assignmentId,
+                new WorkflowLaunchCorrelationId("process-workflow-usage")));
+        return new WorkflowUsageTelemetryFixture(
+            now,
+            processRunId,
+            agentReader,
+            workflowObservation);
     }
 
     private static ExecutionRunRecord CreateUsageExecutionRun(
@@ -499,18 +935,10 @@ public sealed class ProcessRuntimeIntegrationMetadataTests
     }
 
     private static string BuildProcessExecutionMetadata(ProcessRuntimeStepAssignment assignment)
-    {
-        var adapterType = typeof(ProcessesModuleServiceCollectionExtensions)
-            .Assembly
-            .GetType("CanDoItAll.Modules.Processes.AgentFrameworkProcessExecutionAdapter")
-            ?? throw new InvalidOperationException("Process execution adapter type was not found.");
-        var method = adapterType.GetMethod(
-            "BuildProcessExecutionMetadata",
-            BindingFlags.NonPublic | BindingFlags.Static)
-            ?? throw new InvalidOperationException("Process execution metadata builder was not found.");
-
-        return Assert.IsType<string>(method.Invoke(null, [assignment]));
-    }
+        => new ProcessExecutionMetadataComposer(
+        [
+            new BrowserExecutionMetadataContribution()
+        ]).Compose(assignment);
 
     private static ExecutionRunRecord CreateTrustedProcessRun(string metadataJson)
     {
@@ -541,6 +969,54 @@ public sealed class ProcessRuntimeIntegrationMetadataTests
             PendingApprovals: [],
             ProcessRunId: "run-001",
             ProcessStepId: "step-001");
+    }
+
+    private sealed record WorkflowUsageTelemetryFixture(
+        DateTimeOffset Now,
+        ProcessRunId ProcessRunId,
+        AgentFrameworkProcessRuntimeUsageTelemetryReader AgentReader,
+        WorkflowUsageObservation WorkflowObservation);
+
+    private sealed class FixedWorkflowUsageObservationStore(
+        IReadOnlyList<WorkflowUsageObservation> observations) : IWorkflowUsageObservationStore
+    {
+        public Task AppendAsync(
+            WorkflowUsageObservation observation,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
+        public Task AppendRangeAsync(
+            IReadOnlyList<WorkflowUsageObservation> observationsToAppend,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
+        public Task<IReadOnlyList<WorkflowUsageObservation>> ListAsync(
+            WorkflowUsageObservationQuery query,
+            CancellationToken cancellationToken = default)
+            => Task.FromResult(observations);
+
+        public Task<WorkflowListPage<WorkflowUsageObservation>> ListPageAsync(
+            WorkflowUsageObservationPageRequest request,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+    }
+
+    private sealed class FixedMetadataContribution(
+        string contributionKey,
+        int order,
+        IReadOnlyDictionary<string, object> metadata) : IProcessExecutionMetadataContribution
+    {
+        public string ContributionKey => contributionKey;
+
+        public int Order => order;
+
+        public IReadOnlyDictionary<string, object> BuildMetadata(
+            ProcessExecutionMetadataContributionContext context)
+        {
+            ArgumentNullException.ThrowIfNull(context);
+
+            return metadata;
+        }
     }
 
     private sealed class UsageTelemetryWorkspaceService(

@@ -19,9 +19,45 @@ public sealed class SettingsRendererTests
             new StaticSettingsRendererSource([descriptor])
         ]);
 
-        var resolved = registry.FindRenderer("BUILTIN.TEST");
+        var resolved = registry.ResolveRenderer(new SettingsRendererResolutionRequest(
+            "BUILTIN.TEST",
+            SettingsRendererTrustLevel.Application,
+            "test",
+            "1.0"));
 
-        Assert.Same(descriptor, resolved);
+        Assert.Equal(SettingsRendererResolutionStatus.Resolved, resolved.Status);
+        Assert.Same(descriptor, resolved.Descriptor);
+    }
+
+    [Theory]
+    [InlineData(SettingsRendererTrustLevel.BundledPlugin, "test", "1.0", SettingsRendererResolutionStatus.TrustMismatch)]
+    [InlineData(SettingsRendererTrustLevel.Application, "another-owner", "1.0", SettingsRendererResolutionStatus.OwnerMismatch)]
+    [InlineData(SettingsRendererTrustLevel.Application, "test", "2.0", SettingsRendererResolutionStatus.SchemaVersionMismatch)]
+    public void SettingsRendererRegistry_rejects_untrusted_or_incompatible_requests(
+        SettingsRendererTrustLevel trustLevel,
+        string ownerId,
+        string schemaVersion,
+        SettingsRendererResolutionStatus expectedStatus)
+    {
+        var descriptor = new SettingsRendererDescriptor(
+            "builtin.test",
+            typeof(SettingsRendererHost),
+            SettingsRendererTrustLevel.Application,
+            "test",
+            "1.0");
+        var registry = new SettingsRendererRegistry(
+        [
+            new StaticSettingsRendererSource([descriptor])
+        ]);
+
+        var resolution = registry.ResolveRenderer(new SettingsRendererResolutionRequest(
+            descriptor.RendererKey,
+            trustLevel,
+            ownerId,
+            schemaVersion));
+
+        Assert.Equal(expectedStatus, resolution.Status);
+        Assert.Null(resolution.Descriptor);
     }
 
     [Fact]

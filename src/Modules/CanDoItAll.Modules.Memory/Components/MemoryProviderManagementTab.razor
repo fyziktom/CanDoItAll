@@ -1,0 +1,42 @@
+@namespace CanDoItAll.Modules.Memory.Components
+
+<Grid Gap="LayoutGap.Large"
+      Class="memory-ui-layout"
+      ColumnTemplateXl="minmax(21rem,0.75fr) minmax(0,1.25fr)"
+      data-testid="memory-ui-provider-management">
+    <MemoryProviderListPanel Providers="@Providers"
+                             SelectedProviderId="@SelectedProviderId"
+                             IsBusy="@IsBusy"
+                             OnAddDemoProviders="OnAddDemoProviders"
+                             OnSelectProvider="OnSelectProvider" />
+    <MemoryProviderDetailPanel Provider="@SelectedProvider"
+                               Editor="@Editor"
+                               IsBusy="@IsBusy"
+                               OnSave="OnSave" />
+</Grid>
+
+@code {
+    [Parameter]
+    public IReadOnlyList<MemoryProviderManagementProfile> Providers { get; set; } = [];
+
+    [Parameter]
+    public MemoryProviderManagementProfile? SelectedProvider { get; set; }
+
+    [Parameter]
+    public string? SelectedProviderId { get; set; }
+
+    [Parameter, EditorRequired]
+    public MemoryProviderProfileEditorModel Editor { get; set; } = new();
+
+    [Parameter]
+    public bool IsBusy { get; set; }
+
+    [Parameter]
+    public EventCallback OnAddDemoProviders { get; set; }
+
+    [Parameter]
+    public EventCallback<string> OnSelectProvider { get; set; }
+
+    [Parameter]
+    public EventCallback OnSave { get; set; }
+}

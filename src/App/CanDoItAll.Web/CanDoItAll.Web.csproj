@@ -5,6 +5,7 @@
     <ProjectReference Include="..\..\MAF\Capabilities\CanDoItAll.AgentFramework.Capabilities.Abstractions\CanDoItAll.AgentFramework.Capabilities.Abstractions.csproj" />
     <ProjectReference Include="..\..\MAF\Capabilities\CanDoItAll.AgentFramework.Capabilities.Templates\CanDoItAll.AgentFramework.Capabilities.Templates.csproj" />
     <ProjectReference Include="..\..\MAF\Mcp\CanDoItAll.AgentFramework.Mcp.Abstractions\CanDoItAll.AgentFramework.Mcp.Abstractions.csproj" />
+    <ProjectReference Include="..\..\MAF\Workflows\CanDoItAll.AgentFramework.Workflows.Abstractions\CanDoItAll.AgentFramework.Workflows.Abstractions.csproj" />
     <PackageReference Include="CanDoItAll.Components.BaseLib" Version="0.1.0" />
     <PackageReference Include="CanDoItAll.Components.CanvasLib" Version="0.1.1" />
     <PackageReference Include="CanDoItAll.Components.Charts" Version="0.1.0" />
@@ -54,6 +55,7 @@
     <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="10.0.4" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.4" />
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.4" />
+    <PackageReference Include="Microsoft.OpenApi" Version="2.10.0" />
   </ItemGroup>
 
 </Project>
