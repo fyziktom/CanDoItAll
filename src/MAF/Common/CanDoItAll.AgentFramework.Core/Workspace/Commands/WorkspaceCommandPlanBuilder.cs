@@ -1,7 +1,6 @@
 using System.Net;
 using System.Text;
 using System.Text.RegularExpressions;
-using System.Xml.Linq;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Git;
 
@@ -9,35 +8,6 @@ namespace CanDoItAll.AgentFramework.Core;
 
 internal sealed class WorkspaceCommandPlanBuilder
 {
-    private const string WebProjectSdk = "Microsoft.NET.Sdk.Web";
-    private const string BlazorWebAssemblyProjectSdk = "Microsoft.NET.Sdk.BlazorWebAssembly";
-
-    private static readonly HashSet<string> ApprovedDotnetTemplates = new(StringComparer.OrdinalIgnoreCase)
-    {
-        "blazor",
-        "blazorserver",
-        "blazorserver-empty",
-        "blazorwasm",
-        "blazorwasm-empty",
-        "classlib",
-        "console",
-        "mstest",
-        "mvc",
-        "nunit",
-        "razor",
-        "sln",
-        "web",
-        "webapp",
-        "webapi",
-        "worker",
-        "xunit"
-    };
-
-    private static readonly HashSet<string> ApprovedDotnetTemplateOptions = new(StringComparer.OrdinalIgnoreCase)
-    {
-        "--pwa"
-    };
-
     private static readonly HashSet<string> AllowedProjectExtensions = new(StringComparer.OrdinalIgnoreCase)
     {
         ".csproj",
@@ -378,7 +348,7 @@ internal sealed class WorkspaceCommandPlanBuilder
         var target = BuildDotnetRunnableTarget(targetPath, workingDirectory);
         var urls = ResolveDotnetRunUrls(url);
         var normalizedConfiguration = NormalizeConfiguration(configuration);
-        var shouldWaitForHttp = waitForHttp || IsKnownHttpProject(target.ProjectArgument);
+        var shouldWaitForHttp = waitForHttp;
 
         if (!shouldWaitForHttp)
         {
@@ -511,7 +481,13 @@ internal sealed class WorkspaceCommandPlanBuilder
             stderrLimitCharacters: 64 * 1024);
     }
 
-    public WorkspaceCommandPlan BuildDotnetNew(string template, string name, string? parentDirectory = null, bool force = false, int timeoutSeconds = 300)
+    public WorkspaceCommandPlan BuildDotnetNew(
+        string template,
+        string name,
+        string? parentDirectory = null,
+        bool force = false,
+        int timeoutSeconds = 300,
+        string? targetFramework = null)
     {
         if (string.IsNullOrWhiteSpace(template))
         {
@@ -520,16 +496,24 @@ internal sealed class WorkspaceCommandPlanBuilder
 
         var templateSpec = ParseDotnetTemplateSpec(template);
         var normalizedTemplate = templateSpec.Template;
-        if (!ApprovedDotnetTemplates.Contains(normalizedTemplate))
+        if (!WorkspaceDotnetNewTemplateCatalog.IsApprovedTemplate(normalizedTemplate))
         {
-            throw new InvalidOperationException($"Template '{template}' is not approved. Allowed templates: {string.Join(", ", ApprovedDotnetTemplates.OrderBy(item => item, StringComparer.OrdinalIgnoreCase))}.");
+            throw new InvalidOperationException($"Template '{template}' is not approved. Allowed templates: {string.Join(", ", WorkspaceDotnetNewTemplateCatalog.ApprovedTemplates.OrderBy(item => item, StringComparer.OrdinalIgnoreCase))}.");
         }
 
-        var unapprovedTemplateOption = templateSpec.Options.FirstOrDefault(option => !ApprovedDotnetTemplateOptions.Contains(option));
+        var unapprovedTemplateOption = templateSpec.Options.FirstOrDefault(
+            option => !WorkspaceDotnetNewTemplateCatalog.IsApprovedTemplateOption(normalizedTemplate, option));
         if (unapprovedTemplateOption is not null)
         {
+            var supportedOptions = WorkspaceDotnetNewTemplateCatalog.GetApprovedTemplateOptions(normalizedTemplate);
             throw new InvalidOperationException(
-                $"Template option '{unapprovedTemplateOption}' is not approved for workspace_dotnet_new. Allowed template options: {string.Join(", ", ApprovedDotnetTemplateOptions.OrderBy(item => item, StringComparer.OrdinalIgnoreCase))}.");
+                $"Template option '{unapprovedTemplateOption}' is not approved for template '{normalizedTemplate}' in workspace_dotnet_new. Allowed template options: {FormatTemplateOptions(supportedOptions)}.");
+        }
+
+        if (!WorkspaceDotnetNewTemplateCatalog.TryNormalizeTargetFramework(targetFramework, out var normalizedTargetFramework))
+        {
+            throw new InvalidOperationException(
+                "workspace_dotnet_new targetFramework must be a supported target-framework value such as 'net8.0'.");
         }
 
         if (string.IsNullOrWhiteSpace(name)
@@ -548,7 +532,7 @@ internal sealed class WorkspaceCommandPlanBuilder
                 $"workspace_dotnet_new parentDirectory '{workingDirectoryRelative}' ends with a project-file extension. Pass the containing directory as parentDirectory and the project name separately.");
         }
 
-        var isSolutionTemplate = string.Equals(normalizedTemplate, "sln", StringComparison.OrdinalIgnoreCase);
+        var isSolutionTemplate = WorkspaceDotnetNewTemplateCatalog.IsSolutionTemplate(normalizedTemplate);
         if (Directory.Exists(workingDirectoryResolution.FullPath) &&
             ContainsTopLevelProjectFile(
                 workingDirectoryResolution.FullPath,
@@ -581,6 +565,11 @@ internal sealed class WorkspaceCommandPlanBuilder
             normalizedTemplate
         };
         arguments.AddRange(templateSpec.Options);
+        if (!string.IsNullOrWhiteSpace(normalizedTargetFramework))
+        {
+            arguments.Add("--framework");
+            arguments.Add(normalizedTargetFramework);
+        }
         arguments.Add("-n");
         arguments.Add(trimmedName);
         if (force)
@@ -611,7 +600,7 @@ internal sealed class WorkspaceCommandPlanBuilder
         string trimmedName,
         string defaultTargetRelativePath)
     {
-        if (!string.Equals(template, "sln", StringComparison.OrdinalIgnoreCase))
+        if (!WorkspaceDotnetNewTemplateCatalog.IsSolutionTemplate(template))
         {
             return [defaultTargetRelativePath];
         }
@@ -647,6 +636,11 @@ internal sealed class WorkspaceCommandPlanBuilder
 
         return new DotnetNewTemplateSpec(tokens[0], tokens.Skip(1).ToArray());
     }
+
+    private static string FormatTemplateOptions(IReadOnlyList<string> options)
+        => options.Count == 0
+            ? "none"
+            : string.Join(", ", options.OrderBy(item => item, StringComparer.OrdinalIgnoreCase));
 
     private static bool ContainsProjectFile(string directory)
         => Directory.EnumerateFiles(
@@ -707,7 +701,8 @@ internal sealed class WorkspaceCommandPlanBuilder
             arguments: normalizedArguments,
             timeoutSeconds: timeoutSeconds,
             stdoutLimitCharacters: 128 * 1024,
-            stderrLimitCharacters: 64 * 1024);
+            stderrLimitCharacters: 64 * 1024,
+            declaredSideEffectMode: ResolveDeclaredScriptSideEffectMode(sideEffectManifest));
     }
 
     public WorkspaceCommandPlan BuildPowerShellRunScript(string path, string[]? arguments = null, string[]? outputPaths = null, string? workingDirectory = null, int timeoutSeconds = 300, string? sideEffectManifest = null)
@@ -747,7 +742,34 @@ internal sealed class WorkspaceCommandPlanBuilder
             arguments: normalizedArguments,
             timeoutSeconds: timeoutSeconds,
             stdoutLimitCharacters: 128 * 1024,
-            stderrLimitCharacters: 64 * 1024);
+            stderrLimitCharacters: 64 * 1024,
+            declaredSideEffectMode: ResolveDeclaredScriptSideEffectMode(sideEffectManifest));
+    }
+
+    private static ToolExecutionSideEffectMode ResolveDeclaredScriptSideEffectMode(string? sideEffectManifest)
+    {
+        if (string.IsNullOrWhiteSpace(sideEffectManifest))
+        {
+            return ToolExecutionSideEffectMode.Unspecified;
+        }
+
+        if (!GovernedScriptSideEffectManifest.TryParse(
+                sideEffectManifest,
+                out var manifest,
+                out var failureMessage))
+        {
+            throw new InvalidOperationException(failureMessage);
+        }
+
+        return manifest.Mode switch
+        {
+            GovernedScriptSideEffectMode.NoMutation => ToolExecutionSideEffectMode.NoMutation,
+            GovernedScriptSideEffectMode.ManagedProcessArtifacts => ToolExecutionSideEffectMode.ManagedProcessArtifacts,
+            GovernedScriptSideEffectMode.ExternalArtifactDestination => ToolExecutionSideEffectMode.ExternalArtifactDestination,
+            GovernedScriptSideEffectMode.ProductMutation => ToolExecutionSideEffectMode.ProductMutation,
+            _ => throw new InvalidOperationException(
+                $"Unsupported governed script side-effect mode '{manifest.Mode}'.")
+        };
     }
 
     private static void ValidatePowerShellRunScriptIsBounded(WorkspacePathResolution scriptResolution)
@@ -911,7 +933,8 @@ internal sealed class WorkspaceCommandPlanBuilder
         IReadOnlyList<string> arguments,
         int timeoutSeconds,
         int stdoutLimitCharacters,
-        int stderrLimitCharacters)
+        int stderrLimitCharacters,
+        ToolExecutionSideEffectMode declaredSideEffectMode = ToolExecutionSideEffectMode.Unspecified)
     {
         var externalRootsAllowed = WorkspacePathPolicy.IsExternalTargetAliasPath(workingDirectory)
             || targetPaths.Any(WorkspacePathPolicy.IsExternalTargetAliasPath);
@@ -938,7 +961,8 @@ internal sealed class WorkspaceCommandPlanBuilder
             Arguments: arguments,
             TimeoutSeconds: Math.Clamp(timeoutSeconds, 1, 3600),
             StdoutLimitCharacters: stdoutLimitCharacters,
-            StderrLimitCharacters: stderrLimitCharacters);
+            StderrLimitCharacters: stderrLimitCharacters,
+            DeclaredSideEffectMode: declaredSideEffectMode);
     }
 
     private WorkspaceCommandPlan CreateGitPlan(
@@ -1157,39 +1181,6 @@ internal sealed class WorkspaceCommandPlanBuilder
         }
 
         return IPAddress.TryParse(host, out var address) && IPAddress.IsLoopback(address);
-    }
-
-    private static bool IsKnownHttpProject(string projectPath)
-    {
-        if (!File.Exists(projectPath))
-        {
-            return false;
-        }
-
-        try
-        {
-            var document = XDocument.Load(projectPath);
-            var sdk = document.Root?.Attribute("Sdk")?.Value;
-            return IsKnownHttpProjectSdk(sdk);
-        }
-        catch
-        {
-            return false;
-        }
-    }
-
-    private static bool IsKnownHttpProjectSdk(string? sdk)
-    {
-        if (string.IsNullOrWhiteSpace(sdk))
-        {
-            return false;
-        }
-
-        return sdk
-            .Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-            .Any(item =>
-                item.StartsWith(WebProjectSdk, StringComparison.OrdinalIgnoreCase) ||
-                item.StartsWith(BlazorWebAssemblyProjectSdk, StringComparison.OrdinalIgnoreCase));
     }
 
     private static string BuildDotnetHttpRunPowerShellScript(

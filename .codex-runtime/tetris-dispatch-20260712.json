@@ -1,0 +1,9 @@
+{
+  "runId": "1edfc9a1-2022-4673-865a-ce335af19509",
+  "stage": "Running",
+  "status": "Active",
+  "diagnostics": [
+    "Process run '1edfc9a1-2022-4673-865a-ce335af19509' changed concurrently while creating a dispatch claim; retrying with the latest runtime state.",
+    "Step 'architecture-review' is waiting for active child process run '3de7f835-a6f3-4ac0-8fb8-a11ac82d0d62'."
+  ]
+}

@@ -4,6 +4,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using CanDoItAll.AgentFramework.Core;
+using CanDoItAll.AgentFramework.Core.Execution;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Modules.AgentFramework;
 using CanDoItAll.Modules.AgentFramework.Hosting;
@@ -30,7 +31,6 @@ using static CanDoItAll.Modules.Processes.ProcessExecutionResultFactory;
 using static CanDoItAll.Modules.Processes.ProcessManagedArtifactEvidence;
 using static CanDoItAll.Modules.Processes.ProcessManagedArtifactFormatter;
 using static CanDoItAll.Modules.Processes.ProcessManagedArtifactOutcomeParser;
-using static CanDoItAll.Modules.Processes.ProcessRuntimeLifecycleReceiptFacts;
 
 namespace CanDoItAll.Modules.Processes;
 
@@ -253,6 +253,69 @@ internal sealed class ProcessManagedArtifactService(IWorkspaceFileService worksp
                 "Process runtime accepted staged managed artifact after completion gates passed."))
             .ToArray();
         return null;
+    }
+
+    internal ProcessStepOutcomeResult RecoverUnambiguousBranchOutcomeFromCurrentPrimaryArtifact(
+        ProcessRuntimeStepAssignment assignment,
+        ProcessStepOutcomeResult output,
+        Guid executionRunId,
+        IReadOnlyList<ToolExecutionReceiptRecord> currentToolReceipts)
+    {
+        if (output.Status != ProcessStepOutcomeStatus.Completed ||
+            !string.IsNullOrWhiteSpace(output.BranchOutcomeKey) ||
+            !currentToolReceipts.Any(receipt => receipt.ExecutionRunId == executionRunId) ||
+            !HasManagedArtifactWriteReceipt(
+                assignment,
+                currentToolReceipts.Where(receipt => receipt.ExecutionRunId == executionRunId).ToArray()))
+        {
+            return output;
+        }
+
+        var primaryRef = BuildManagedStepArtifactPath(assignment);
+        var readResult = workspaceFiles.ReadTextFile(primaryRef, maxCharacters: 200000);
+        if (!readResult.Succeeded)
+        {
+            return output;
+        }
+
+        var parsedArtifactOutcome = ManagedProcessArtifactOutcomeReader.Read(readResult.Content);
+        if (!parsedArtifactOutcome.IsValid ||
+            parsedArtifactOutcome.Status != ProcessStepOutcomeStatus.Completed ||
+            !parsedArtifactOutcome.HasBranchOutcomeKey)
+        {
+            return output;
+        }
+
+        var matchingDeclaredOutcomes = ProcessBranchOutcomeResolver
+            .EnumerateAgentSelectableBranchOutcomes(assignment.Prompt)
+            .Where(outcome => string.Equals(
+                outcome.Key,
+                parsedArtifactOutcome.BranchOutcomeKey,
+                StringComparison.OrdinalIgnoreCase))
+            .DistinctBy(outcome => outcome.Key, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        if (matchingDeclaredOutcomes.Length != 1)
+        {
+            return output;
+        }
+
+        var declaredOutcome = matchingDeclaredOutcomes[0];
+        var recoveredOutput = new ProcessStepOutcomeResult
+        {
+            Status = output.Status,
+            Reason = output.Reason,
+            BranchOutcomeKey = declaredOutcome.Key,
+            BranchOutcomeTitle = string.IsNullOrWhiteSpace(output.BranchOutcomeTitle)
+                ? declaredOutcome.Title
+                : output.BranchOutcomeTitle,
+            EvidenceRefs = output.EvidenceRefs,
+            AcceptanceCriteriaEvidence = output.AcceptanceCriteriaEvidence,
+            NextActions = output.NextActions,
+            HumanReadableSummaryMarkdown = output.HumanReadableSummaryMarkdown
+        };
+        return ProcessAcceptanceCriteriaGate.ValidateAcceptanceCriteriaCompletion(assignment, recoveredOutput) is null
+            ? recoveredOutput
+            : output;
     }
 
     private bool TryReadCompletedPrimaryManagedArtifactOutcome(

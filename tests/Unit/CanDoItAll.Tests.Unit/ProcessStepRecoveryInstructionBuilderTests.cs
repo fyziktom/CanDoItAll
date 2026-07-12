@@ -15,9 +15,15 @@ public sealed class ProcessStepRecoveryInstructionBuilderTests
     private static readonly ProcessStepInstanceId StepId = ProcessStepInstanceId.New();
 
     [Fact]
-    public void RecoveryInstructionBuilder_dotnet_create_project_mentions_missing_pwsh_receipt_and_resolved_script_ref()
+    public void RecoveryInstructionBuilder_lists_template_declared_current_run_receipts()
     {
-        var assignment = CreateDotNetAssignment();
+        var assignment = CreatePeerReviewAssignment() with
+        {
+            LaunchVariables = new Dictionary<string, string>(StringComparer.Ordinal)
+            {
+                [ProcessRuntimeLaunchVariables.ProductCompletionRequiredToolReceipts] = "workspace_write_file"
+            }
+        };
         var result = CreateIncidentResult();
         var receipt = CreateReceipt(result, CreateSafeRetryDecision());
 
@@ -31,23 +37,22 @@ public sealed class ProcessStepRecoveryInstructionBuilderTests
             OperatorReason: string.Empty));
 
         Assert.True(instruction.HasInstruction);
-        Assert.Contains("workspace_pwsh_run_script", instruction.Text, StringComparison.Ordinal);
-        Assert.Contains("artifacts/process-runs/", instruction.Text, StringComparison.Ordinal);
-        Assert.Contains("scripts/create-dotnet-project.ps1", instruction.Text, StringComparison.Ordinal);
-        Assert.Contains("Calculator.slnx", instruction.Text, StringComparison.Ordinal);
-        Assert.Contains("src/Calculator/Calculator.csproj", instruction.Text, StringComparison.Ordinal);
-        Assert.Contains("workspace_dotnet_new", instruction.Text, StringComparison.Ordinal);
-        Assert.Contains("Do not rerun", instruction.Text, StringComparison.Ordinal);
+        Assert.Contains("workspace_write_file", instruction.Text, StringComparison.Ordinal);
+        Assert.Contains("Missing current-run receipt(s):", instruction.Text, StringComparison.Ordinal);
+        Assert.Contains("this exact execution attempt", instruction.Text, StringComparison.Ordinal);
         Assert.Contains("SafeRetry/CurrentStepRetry", instruction.Text, StringComparison.Ordinal);
     }
 
     [Fact]
-    public void RecoveryInstructionBuilder_does_not_include_unresolved_current_process_run_id_placeholder()
+    public void RecoveryInstructionBuilder_does_not_expose_unresolved_placeholder_values()
     {
         var assignment = CreateDotNetAssignment() with
         {
-            LaunchVariables = CreateDotNetLaunchVariables(
-                "artifacts/process-runs/{CurrentProcessRunId}/scripts/create-dotnet-project.ps1")
+            LaunchVariables = new Dictionary<string, string>(StringComparer.Ordinal)
+            {
+                [ProcessRuntimeLaunchVariables.ProductCompletionRequiredToolReceipts] = "workspace_write_file",
+                ["TemplateValue"] = "{CurrentProcessRunId}"
+            }
         };
         var result = CreateIncidentResult();
 
@@ -62,11 +67,11 @@ public sealed class ProcessStepRecoveryInstructionBuilderTests
 
         Assert.True(instruction.HasInstruction);
         Assert.DoesNotContain("{CurrentProcessRunId}", instruction.Text, StringComparison.Ordinal);
-        Assert.Contains("Resolved DotNetCreateProjectScriptRef is unavailable", instruction.Text, StringComparison.Ordinal);
+        Assert.Contains("workspace_write_file", instruction.Text, StringComparison.Ordinal);
     }
 
     [Fact]
-    public void RecoveryInstructionBuilder_budget_exhausted_packet_includes_attempted_repair_plan()
+    public void RecoveryInstructionBuilder_budget_exhausted_packet_includes_attempted_recovery_context()
     {
         var assignment = CreateDotNetAssignment();
         var result = CreateIncidentResult();
@@ -82,17 +87,14 @@ public sealed class ProcessStepRecoveryInstructionBuilderTests
 
         Assert.True(instruction.HasInstruction);
         Assert.Contains("Safe retry budget is exhausted", instruction.Text, StringComparison.Ordinal);
-        Assert.Contains("workspace_pwsh_run_script", instruction.Text, StringComparison.Ordinal);
-        Assert.Contains("scripts/create-dotnet-project.ps1", instruction.Text, StringComparison.Ordinal);
-        Assert.Contains("Only then rewrite", instruction.Text, StringComparison.Ordinal);
+        Assert.Contains("Diagnostic codes:", instruction.Text, StringComparison.Ordinal);
+        Assert.Contains("Generic receipt recovery", instruction.Text, StringComparison.Ordinal);
     }
 
     [Fact]
-    public void RecoveryInstructionBuilder_project_structure_read_receipt_requires_actual_readback_tool()
+    public void RecoveryInstructionBuilder_requires_current_execution_receipts_without_domain_tool_guidance()
     {
-        var launchVariables = new Dictionary<string, string>(
-            CreateDotNetLaunchVariables($"artifacts/process-runs/{RunId.Value:D}/scripts/create-dotnet-project.ps1"),
-            StringComparer.Ordinal)
+        var launchVariables = new Dictionary<string, string>(StringComparer.Ordinal)
         {
             [ProcessRuntimeLaunchVariables.ProductCompletionRequiredToolReceipts] = "project_structure_node_create;project_structure_read"
         };
@@ -115,14 +117,9 @@ public sealed class ProcessStepRecoveryInstructionBuilderTests
         Assert.True(instruction.HasInstruction);
         Assert.Contains("project_structure_read", instruction.Text, StringComparison.Ordinal);
         Assert.Contains("project_structure_node_create", instruction.Text, StringComparison.Ordinal);
-        Assert.Contains("metadataJson", instruction.Text, StringComparison.Ordinal);
-        Assert.Contains("metadata.environment.projectPath", instruction.Text, StringComparison.Ordinal);
-        Assert.Contains("metadata.script.command", instruction.Text, StringComparison.Ordinal);
         Assert.Contains("Invoke each listed tool now in this exact execution attempt before finalizing", instruction.Text, StringComparison.Ordinal);
         Assert.Contains("upstream receipts and receipts from prior attempts of this step do not count", instruction.Text, StringComparison.Ordinal);
-        Assert.Contains("Project-structure readback receipt repair", instruction.Text, StringComparison.Ordinal);
-        Assert.Contains("project_structure_node_create result", instruction.Text, StringComparison.Ordinal);
-        Assert.Contains("not a project_structure_read receipt", instruction.Text, StringComparison.Ordinal);
+        Assert.DoesNotContain("workspace_dotnet_", instruction.Text, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -155,7 +152,7 @@ public sealed class ProcessStepRecoveryInstructionBuilderTests
     }
 
     [Fact]
-    public void RecoveryInstructionBuilder_qa_product_readback_failure_selects_repair_required_branch()
+    public void RecoveryInstructionBuilder_product_readback_failure_stays_generic()
     {
         var assignment = CreateQaValidationAssignment();
         var result = CreateQaProductReadbackResult();
@@ -174,19 +171,13 @@ public sealed class ProcessStepRecoveryInstructionBuilderTests
 
         Assert.True(instruction.HasInstruction);
         Assert.Contains("product content/readback check failed", instruction.Text, StringComparison.Ordinal);
-        Assert.Contains("Do not return Blocked", instruction.Text, StringComparison.Ordinal);
-        Assert.Contains("branchOutcomeKey 'repair-required'", instruction.Text, StringComparison.Ordinal);
-        Assert.Contains("external-target/C/programovani/dotnet/output/src/TetrisGame/Layout/NavMenu.razor", instruction.Text, StringComparison.Ordinal);
-        Assert.Contains("href=\"counter\"", instruction.Text, StringComparison.Ordinal);
-        Assert.Contains($"artifacts/process-runs/{RunId.Value:D}/steps/qa-validation.md", instruction.Text, StringComparison.Ordinal);
+        Assert.Contains("Product readback failure(s):", instruction.Text, StringComparison.Ordinal);
+        Assert.Contains("Mutate or remove every failing product file/content marker", instruction.Text, StringComparison.Ordinal);
         Assert.DoesNotContain(@"C:\programovani", instruction.Text, StringComparison.Ordinal);
-        Assert.DoesNotContain("Read back the solution or product output after the helper runs", instruction.Text, StringComparison.Ordinal);
-        Assert.DoesNotContain("verify the required membership/content check passes", instruction.Text, StringComparison.OrdinalIgnoreCase);
-        Assert.DoesNotContain("workspace_pwsh_run_script", instruction.Text, StringComparison.Ordinal);
     }
 
     [Fact]
-    public void RecoveryInstructionBuilder_quality_repair_product_readback_failure_requires_product_mutation_before_completion()
+    public void RecoveryInstructionBuilder_product_readback_failure_requires_readback_and_validation()
     {
         var assignment = CreateQualityRepairAssignment();
         var result = CreateQualityRepairProductReadbackResult();
@@ -204,23 +195,14 @@ public sealed class ProcessStepRecoveryInstructionBuilderTests
             OperatorReason: string.Empty));
 
         Assert.True(instruction.HasInstruction);
-        Assert.Contains("must mutate the product files", instruction.Text, StringComparison.Ordinal);
-        Assert.Contains("rewriting artifacts or summaries alone is not a repair", instruction.Text, StringComparison.Ordinal);
-        Assert.Contains("stock .NET or Blazor scaffold", instruction.Text, StringComparison.Ordinal);
-        Assert.Contains("placeholder pages that keep @page \"/counter\" or @page \"/weather\"", instruction.Text, StringComparison.Ordinal);
-        Assert.Contains("read back the affected files", instruction.Text, StringComparison.Ordinal);
-        Assert.Contains("verify every configured required/forbidden text check passes", instruction.Text, StringComparison.Ordinal);
-        Assert.Contains("Read back the affected product files after mutation", instruction.Text, StringComparison.Ordinal);
-        Assert.Contains("external-target/C/programovani/dotnet/output/src/TetrisGame/Layout/NavMenu.razor", instruction.Text, StringComparison.Ordinal);
-        Assert.Contains($"artifacts/process-runs/{RunId.Value:D}/steps/quality-repair.md", instruction.Text, StringComparison.Ordinal);
-        Assert.Contains("and submit Completed", instruction.Text, StringComparison.Ordinal);
+        Assert.Contains("Product readback failure(s):", instruction.Text, StringComparison.Ordinal);
+        Assert.Contains("read each affected file back", instruction.Text, StringComparison.Ordinal);
+        Assert.Contains("rerun required validation", instruction.Text, StringComparison.Ordinal);
         Assert.DoesNotContain(@"C:\programovani", instruction.Text, StringComparison.Ordinal);
-        Assert.DoesNotContain("branchOutcomeKey", instruction.Text, StringComparison.Ordinal);
-        Assert.DoesNotContain("Read back the solution or product output after the helper runs", instruction.Text, StringComparison.Ordinal);
     }
 
     [Fact]
-    public void RecoveryInstructionBuilder_dotnet_missing_mutation_uses_bounded_helper_before_more_inventory()
+    public void RecoveryInstructionBuilder_missing_mutation_requires_real_product_change()
     {
         var assignment = CreateQualityRepairAssignment() with
         {
@@ -229,7 +211,9 @@ public sealed class ProcessStepRecoveryInstructionBuilderTests
             {
                 ["DotNetSolutionFileAlias"] = "external-target/C/work/product/Product.slnx",
                 ["ProductRootAlias"] = "external-target/C/work/product",
-                ["WorkspaceAlias"] = "external-target/C/work/product"
+                ["WorkspaceAlias"] = "external-target/C/work/product",
+                [ProcessRuntimeLaunchVariables.ProductMutationBeforeManagedOutputRequiredStepKeys] =
+                    JsonSerializer.Serialize(new[] { "code-change" })
             }
         };
         var result = new StrategyResultEnvelope(
@@ -262,20 +246,14 @@ public sealed class ProcessStepRecoveryInstructionBuilderTests
             OperatorReason: string.Empty));
 
         Assert.True(instruction.HasInstruction);
-        Assert.Contains(".NET product-mutation retry contract", instruction.Text, StringComparison.Ordinal);
-        Assert.Contains("Do not repeat a broad scaffold inventory", instruction.Text, StringComparison.Ordinal);
-        Assert.Contains($"artifacts/process-runs/{RunId.Value:D}/scripts/apply-product-change.ps1", instruction.Text, StringComparison.Ordinal);
-        Assert.Contains("workspace_pwsh_run_script", instruction.Text, StringComparison.Ordinal);
-        Assert.Contains("\"mode\":\"ProductMutation\"", instruction.Text, StringComparison.Ordinal);
-        Assert.Contains("external-target/C/work/product", instruction.Text, StringComparison.Ordinal);
-        Assert.Contains("treat (Get-Location).Path as the product root", instruction.Text, StringComparison.Ordinal);
-        Assert.Contains("verify the corrected helper and invoke it again in this same execution attempt", instruction.Text, StringComparison.Ordinal);
-        Assert.Contains("A failed helper invocation is not product mutation", instruction.Text, StringComparison.Ordinal);
-        Assert.Contains("do not fall back to another read-only completion", instruction.Text, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Required product-mutation recovery", instruction.Text, StringComparison.Ordinal);
+        Assert.Contains("smallest real product or test change", instruction.Text, StringComparison.Ordinal);
+        Assert.Contains("rewriting only the managed artifact", instruction.Text, StringComparison.Ordinal);
+        Assert.Contains("If no in-scope mutation can be justified", instruction.Text, StringComparison.Ordinal);
     }
 
     [Fact]
-    public void RecoveryInstructionBuilder_mutation_required_missing_artifact_receipt_orders_product_write_before_validation()
+    public void RecoveryInstructionBuilder_mutation_required_missing_artifact_receipt_orders_product_change_before_artifact()
     {
         var assignment = CreateQualityRepairAssignment() with
         {
@@ -319,9 +297,8 @@ public sealed class ProcessStepRecoveryInstructionBuilderTests
             OperatorReason: string.Empty));
 
         Assert.True(instruction.HasInstruction);
-        Assert.Contains(".NET product-mutation retry contract", instruction.Text, StringComparison.Ordinal);
-        Assert.Contains("Mutation rights are already granted", instruction.Text, StringComparison.Ordinal);
-        Assert.Contains("Before any restore, build, or test rerun", instruction.Text, StringComparison.Ordinal);
+        Assert.Contains("Required product-mutation recovery", instruction.Text, StringComparison.Ordinal);
+        Assert.Contains("before it writes the managed outcome, reruns validation, or returns a final branch", instruction.Text, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -363,7 +340,7 @@ public sealed class ProcessStepRecoveryInstructionBuilderTests
     }
 
     [Fact]
-    public void RecoveryInstructionBuilder_qa_recheck_missing_receipts_preserves_branch_contract()
+    public void RecoveryInstructionBuilder_missing_receipts_preserves_current_execution_contract()
     {
         var assignment = CreateQaValidationAssignment("qa-recheck");
         var result = CreateQaRecheckMissingReceiptResult();
@@ -381,24 +358,18 @@ public sealed class ProcessStepRecoveryInstructionBuilderTests
             OperatorReason: string.Empty));
 
         Assert.True(instruction.HasInstruction);
-        Assert.Contains("QA current-run validation receipt repair", instruction.Text, StringComparison.Ordinal);
-        Assert.Contains("Current-run means this exact retry", instruction.Text, StringComparison.Ordinal);
-        Assert.Contains("Do not write the QA artifact or submit a branch outcome until the listed tool receipts exist", instruction.Text, StringComparison.Ordinal);
-        Assert.Contains("workspace_dotnet_restore with restore target external-target/C/programovani/dotnet/output/TetrisGame.slnx", instruction.Text, StringComparison.Ordinal);
-        Assert.Contains("workspace_dotnet_build with build target external-target/C/programovani/dotnet/output/TetrisGame.slnx", instruction.Text, StringComparison.Ordinal);
-        Assert.Contains("workspace_dotnet_test with test target external-target/C/programovani/dotnet/output/tests/TetrisGame.Tests/TetrisGame.Tests.csproj", instruction.Text, StringComparison.Ordinal);
-        Assert.Contains("workspace_dotnet_run with run target external-target/C/programovani/dotnet/output/src/TetrisGame/TetrisGame.csproj", instruction.Text, StringComparison.Ordinal);
+        Assert.Contains("Missing current-run receipt(s):", instruction.Text, StringComparison.Ordinal);
+        Assert.Contains("this exact execution attempt", instruction.Text, StringComparison.Ordinal);
+        Assert.Contains("workspace_dotnet_restore", instruction.Text, StringComparison.Ordinal);
+        Assert.Contains("workspace_dotnet_build", instruction.Text, StringComparison.Ordinal);
+        Assert.Contains("workspace_dotnet_test", instruction.Text, StringComparison.Ordinal);
+        Assert.Contains("workspace_dotnet_run", instruction.Text, StringComparison.Ordinal);
         Assert.Contains("browser_snapshot", instruction.Text, StringComparison.Ordinal);
         Assert.Contains("workspace_dotnet_stop", instruction.Text, StringComparison.Ordinal);
-        Assert.Contains("same host lifecycle", instruction.Text, StringComparison.Ordinal);
-        Assert.Contains("branchOutcomeKey 'quality-accepted' or 'repair-escalation'", instruction.Text, StringComparison.Ordinal);
-        Assert.Contains($"artifacts/process-runs/{RunId.Value:D}/steps/qa-recheck.md", instruction.Text, StringComparison.Ordinal);
-        Assert.DoesNotContain("Only then rewrite", instruction.Text, StringComparison.Ordinal);
-        Assert.DoesNotContain("and submit Completed", instruction.Text, StringComparison.Ordinal);
     }
 
     [Fact]
-    public void RecoveryInstructionBuilder_runtime_lifecycle_only_requires_same_retry_proof()
+    public void RecoveryInstructionBuilder_runtime_lifecycle_only_requires_same_execution_proof()
     {
         var assignment = CreateQaValidationAssignment("qa-recheck");
         var result = CreateRuntimeLifecycleCorrelationResult();
@@ -416,10 +387,51 @@ public sealed class ProcessStepRecoveryInstructionBuilderTests
             OperatorReason: string.Empty));
 
         Assert.True(instruction.HasInstruction);
-        Assert.Contains("Runtime lifecycle proof repair", instruction.Text, StringComparison.Ordinal);
-        Assert.Contains("Current-run runtime/browser proof must be produced in this same retry", instruction.Text, StringComparison.Ordinal);
-        Assert.Contains("Do not reuse prior runtime, browser, screenshot, or stop receipts", instruction.Text, StringComparison.Ordinal);
+        Assert.Contains("Current-execution lifecycle recovery", instruction.Text, StringComparison.Ordinal);
+        Assert.Contains("within this retry", instruction.Text, StringComparison.Ordinal);
+        Assert.Contains("Do not reuse lifecycle, validation, capture, or cleanup evidence", instruction.Text, StringComparison.Ordinal);
         Assert.Contains($"artifacts/process-runs/{RunId.Value:D}/steps/qa-recheck.md", instruction.Text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void RecoveryInstructionBuilder_schema_invalid_payload_requires_declared_output_rewrite()
+    {
+        var assignment = CreatePeerReviewAssignment();
+        var result = new StrategyResultEnvelope(
+            new StrategyId("strategy.execute"),
+            "1.0.0",
+            Guid.NewGuid(),
+            StrategyOutcome.NeedsManager,
+            [],
+            [],
+            [
+                new StrategyDiagnosticRef(
+                    new StrategyDiagnosticCode(ProcessCompletionDiagnosticCodes.ArtifactPayloadSchemaInvalid),
+                    StrategyDiagnosticSensitivity.Normal,
+                    "sha256:schema",
+                    "The declared output payload is invalid.",
+                    RestrictedEvidenceReference: null,
+                    ProcessDiagnosticRetrySafety.SafeToRetry,
+                    ProcessDiagnosticIdempotencyClassification.Idempotent)
+            ],
+            [],
+            "sha256:schema");
+
+        var instruction = CreateBuilder().Build(new ProcessStepRecoveryInstructionBuildRequest(
+            RunId,
+            StepId,
+            assignment.StepKey,
+            assignment,
+            result,
+            CreateReceipt(
+                result,
+                CreateSafeRetryDecision(ProcessCompletionDiagnosticCodes.ArtifactPayloadSchemaInvalid)),
+            OperatorReason: string.Empty));
+
+        Assert.True(instruction.HasInstruction);
+        Assert.Contains("Schema-bound artifact recovery", instruction.Text, StringComparison.Ordinal);
+        Assert.Contains("reread the Produced artifact slots contract", instruction.Text, StringComparison.Ordinal);
+        Assert.Contains("do not substitute narrative for a schema-bound payload", instruction.Text, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -455,11 +467,7 @@ public sealed class ProcessStepRecoveryInstructionBuilderTests
     }
 
     private static ProcessStepRecoveryInstructionBuilder CreateBuilder()
-        => new(
-            [
-                new GenericProcessRecoveryAdviceProvider(),
-                new DotNetSoftwareDeliveryRecoveryAdviceProvider()
-            ]);
+        => new([new GenericProcessRecoveryAdviceProvider()]);
 
     private static string FindRepositoryRoot()
     {

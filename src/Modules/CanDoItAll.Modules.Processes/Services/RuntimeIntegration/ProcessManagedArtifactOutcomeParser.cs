@@ -4,6 +4,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using CanDoItAll.AgentFramework.Core;
+using CanDoItAll.AgentFramework.Core.Execution;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Modules.AgentFramework;
 using CanDoItAll.Modules.AgentFramework.Hosting;
@@ -28,7 +29,6 @@ using static CanDoItAll.Modules.Processes.ProcessCompletionText;
 using static CanDoItAll.Modules.Processes.ProcessExecutionMetadataBuilder;
 using static CanDoItAll.Modules.Processes.ProcessExecutionResultFactory;
 using static CanDoItAll.Modules.Processes.ProcessManagedArtifactEvidence;
-using static CanDoItAll.Modules.Processes.ProcessRuntimeLifecycleReceiptFacts;
 
 namespace CanDoItAll.Modules.Processes;
 
@@ -39,63 +39,14 @@ internal static class ProcessManagedArtifactOutcomeParser
         out ProcessStepOutcomeStatus status)
     {
         status = default;
-        foreach (var rawLine in content.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries))
+        var parsed = ManagedProcessArtifactOutcomeReader.Read(content);
+        if (!parsed.IsValid || !parsed.HasStatus)
         {
-            var line = rawLine.Trim().TrimStart('#', '-', '*', ' ');
-            var separatorIndex = line.IndexOf(':', StringComparison.Ordinal);
-            if (separatorIndex <= 0)
-            {
-                continue;
-            }
-
-            var key = line[..separatorIndex].Trim(' ', '*', '`');
-            if (!string.Equals(key, "Status", StringComparison.OrdinalIgnoreCase))
-            {
-                continue;
-            }
-
-            return TryMapManagedArtifactStatus(line[(separatorIndex + 1)..], out status);
+            return false;
         }
 
-        return false;
-    }
-
-    internal static bool TryMapManagedArtifactStatus(
-        string value,
-        out ProcessStepOutcomeStatus status)
-    {
-        status = default;
-        var normalized = NormalizeManagedArtifactStatusValue(value);
-        status = normalized switch
-        {
-            "completed" or "complete" or "succeeded" or "success" => ProcessStepOutcomeStatus.Completed,
-            "blocked" or "waiting" or "waitingonchild" or "waitingforchild" => ProcessStepOutcomeStatus.Blocked,
-            "failed" or "failure" => ProcessStepOutcomeStatus.Failed,
-            "waitingapproval" or "pendingapproval" => ProcessStepOutcomeStatus.WaitingApproval,
-            "refused" or "rejected" => ProcessStepOutcomeStatus.Refused,
-            _ => default
-        };
-        return normalized is "completed" or "complete" or "succeeded" or "success" or
-            "blocked" or "waiting" or "waitingonchild" or "waitingforchild" or
-            "failed" or "failure" or
-            "waitingapproval" or "pendingapproval" or
-            "refused" or "rejected";
-    }
-
-    internal static string NormalizeManagedArtifactStatusValue(string value)
-    {
-        var trimmed = value.Trim().Trim('*', '`', '.', ';');
-        var commentIndex = trimmed.IndexOf('#', StringComparison.Ordinal);
-        if (commentIndex >= 0)
-        {
-            trimmed = trimmed[..commentIndex].Trim();
-        }
-
-        return new string(
-            trimmed
-                .Where(character => char.IsLetterOrDigit(character))
-                .Select(char.ToLowerInvariant)
-                .ToArray());
+        status = parsed.Status!.Value;
+        return true;
     }
 
     internal static bool ManagedArtifactBelongsToStep(
@@ -152,6 +103,7 @@ internal static class ProcessManagedArtifactOutcomeParser
                 .Append(primaryRef)
                 .Distinct(StringComparer.OrdinalIgnoreCase)
                 .ToArray(),
+            AcceptanceCriteriaEvidence = output.AcceptanceCriteriaEvidence,
             NextActions = [],
             HumanReadableSummaryMarkdown = output.HumanReadableSummaryMarkdown
         };
@@ -259,6 +211,7 @@ internal static class ProcessManagedArtifactOutcomeParser
             BranchOutcomeKey = output.BranchOutcomeKey,
             BranchOutcomeTitle = output.BranchOutcomeTitle,
             EvidenceRefs = evidenceRefs,
+            AcceptanceCriteriaEvidence = output.AcceptanceCriteriaEvidence,
             NextActions = output.NextActions,
             HumanReadableSummaryMarkdown = output.HumanReadableSummaryMarkdown
         };
@@ -278,6 +231,7 @@ internal static class ProcessManagedArtifactOutcomeParser
             BranchOutcomeKey = output.BranchOutcomeKey,
             BranchOutcomeTitle = output.BranchOutcomeTitle,
             EvidenceRefs = [evidenceRef],
+            AcceptanceCriteriaEvidence = output.AcceptanceCriteriaEvidence,
             NextActions = [],
             HumanReadableSummaryMarkdown = output.HumanReadableSummaryMarkdown
         };

@@ -109,6 +109,49 @@ public sealed class ProcessPersistenceStoreTests
     }
 
     [Fact]
+    public async Task Commit_round_trips_generic_artifact_payload_schema_metadata()
+    {
+        await using var dbContext = CreateDbContext();
+        var unitOfWork = new EfProcessRuntimeUnitOfWork(dbContext);
+        var request = NewCommitRequest(includeArtifactLedger: false);
+        var step = Assert.Single(request.Mutation.State.Steps);
+        var descriptor = new ProcessArtifactSlotDescriptor(
+            RequiredArtifactSlotId,
+            "architecture:solution-context",
+            "architecture",
+            "solution-context",
+            "Solution context",
+            "Decision",
+            "artifacts/process-runs/test/steps/architecture.md",
+            ProcessArtifactMaterializationMode.AgentWritten)
+        {
+            PayloadSchema = "example.solution-context/v1"
+        };
+        var state = request.Mutation.State with
+        {
+            Steps =
+            [
+                step with
+                {
+                    ArtifactDescriptors = [descriptor]
+                }
+            ]
+        };
+        var mutation = request.Mutation with
+        {
+            State = state
+        };
+
+        await unitOfWork.CommitAsync(request with { Mutation = mutation });
+
+        var loaded = await unitOfWork.LoadAsync(state.RunId);
+
+        Assert.NotNull(loaded);
+        var loadedDescriptor = Assert.Single(Assert.Single(loaded.Steps).ArtifactDescriptors);
+        Assert.Equal("example.solution-context/v1", loadedDescriptor.PayloadSchema);
+    }
+
+    [Fact]
     public async Task Commit_rejects_broken_event_outbox_atomicity_before_writing_rows()
     {
         await using var dbContext = CreateDbContext();

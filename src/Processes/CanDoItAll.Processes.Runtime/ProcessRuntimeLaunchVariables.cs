@@ -9,6 +9,7 @@ public static class ProcessRuntimeLaunchVariables
     public const string ParentProcessRunId = "ParentProcessRunId";
     public const string ParentProcessStepId = "ParentProcessStepId";
     public const string ParentRequiredArtifactRefs = "ParentRequiredArtifactRefs";
+    public const string ParentRequiredArtifactBindings = "ParentRequiredArtifactBindings";
     public const string ProductCompletionRequiredPaths = "ProductCompletionRequiredPaths";
     public const string ProductCompletionRequiredPathsByStep = "ProductCompletionRequiredPathsByStep";
     public const string ProductCompletionRequiredFileContentChecks = "ProductCompletionRequiredFileContentChecks";
@@ -19,6 +20,7 @@ public static class ProcessRuntimeLaunchVariables
     public const string ProductMutationRequiredBranchOutcomeKeysByStep = "ProductMutationRequiredBranchOutcomeKeysByStep";
     public const string ProductMutationBeforeManagedOutputRequiredStepKeys = "ProductMutationBeforeManagedOutputRequiredStepKeys";
     public const string ProductMutationToolNames = "ProductMutationToolNames";
+    public const string RuntimeRoutedBranchOutcomeKeys = "RuntimeRoutedBranchOutcomeKeys";
     public const string RuntimeRoutedBranchOutcomeKeysByStep = "RuntimeRoutedBranchOutcomeKeysByStep";
     public const string ExecutorPreferredSpecializationTags = "ExecutorPreferredSpecializationTags";
     public const string ProductSourceInspectionRequiredStepKeys = "ProductSourceInspectionRequiredStepKeys";
@@ -34,6 +36,9 @@ public static class ProcessRuntimeLaunchVariables
     public const string ProcessDefinitionName = "ProcessDefinitionName";
     public const string ProcessStepKind = "ProcessStepKind";
     public const string ProcessStepSubprocessContractJson = "ProcessStepSubprocessContractJson";
+    public const string ProcessStepScriptHelperDescriptorJson = "ProcessStepScriptHelperDescriptorJson";
+    public const string ProcessStepRuntimeOwnedExecutorKey = "ProcessStepRuntimeOwnedExecutorKey";
+    public const string ProcessStepCompletionDispositionJson = "ProcessStepCompletionDispositionJson";
     public const string ProcessStepSubprocessDefinitionKey = "ProcessStepSubprocessDefinitionKey";
     public const string ProjectId = "ProjectId";
     public const string ProjectName = "ProjectName";
@@ -134,6 +139,20 @@ public static class ProcessRuntimeLaunchVariables
         return true;
     }
 
+    public static bool TryReadProcessStepRuntimeOwnedExecutorKey(
+        IReadOnlyDictionary<string, string> launchVariables,
+        out string executorKey)
+    {
+        executorKey = string.Empty;
+        if (!TryReadNonEmptyString(launchVariables, ProcessStepRuntimeOwnedExecutorKey, out var value))
+        {
+            return false;
+        }
+
+        executorKey = value;
+        return true;
+    }
+
     public static string SerializeParentRequiredArtifactRefs(IEnumerable<string> artifactRefs)
     {
         ArgumentNullException.ThrowIfNull(artifactRefs);
@@ -179,6 +198,70 @@ public static class ProcessRuntimeLaunchVariables
         }
     }
 
+    public static string SerializeParentRequiredArtifactBindings(
+        IEnumerable<ProcessParentArtifactBindingRef> bindings)
+    {
+        ArgumentNullException.ThrowIfNull(bindings);
+
+        var normalized = bindings
+            .Where(binding =>
+                !string.IsNullOrWhiteSpace(binding.SourceStepKey) &&
+                !string.IsNullOrWhiteSpace(binding.ArtifactExpectationKey) &&
+                !string.IsNullOrWhiteSpace(binding.ArtifactRef))
+            .Select(binding => new ProcessParentArtifactBindingRef(
+                binding.SourceStepKey.Trim(),
+                binding.ArtifactExpectationKey.Trim(),
+                binding.ArtifactRef.Trim()))
+            .Distinct()
+            .OrderBy(binding => binding.SourceStepKey, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(binding => binding.ArtifactExpectationKey, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(binding => binding.ArtifactRef, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        return JsonSerializer.Serialize(normalized, ProcessRuntimeLaunchVariableJson.Options);
+    }
+
+    public static bool TryReadParentRequiredArtifactBindings(
+        IReadOnlyDictionary<string, string> launchVariables,
+        out IReadOnlyList<ProcessParentArtifactBindingRef> bindings)
+    {
+        bindings = [];
+        if (!TryReadNonEmptyString(launchVariables, ParentRequiredArtifactBindings, out var value))
+        {
+            return false;
+        }
+
+        try
+        {
+            var deserialized = JsonSerializer.Deserialize<ProcessParentArtifactBindingRef[]>(
+                value,
+                ProcessRuntimeLaunchVariableJson.Options);
+            if (deserialized is null)
+            {
+                return false;
+            }
+
+            bindings = deserialized
+                .Where(binding =>
+                    !string.IsNullOrWhiteSpace(binding.SourceStepKey) &&
+                    !string.IsNullOrWhiteSpace(binding.ArtifactExpectationKey) &&
+                    !string.IsNullOrWhiteSpace(binding.ArtifactRef))
+                .Select(binding => new ProcessParentArtifactBindingRef(
+                    binding.SourceStepKey.Trim(),
+                    binding.ArtifactExpectationKey.Trim(),
+                    binding.ArtifactRef.Trim()))
+                .Distinct()
+                .OrderBy(binding => binding.SourceStepKey, StringComparer.OrdinalIgnoreCase)
+                .ThenBy(binding => binding.ArtifactExpectationKey, StringComparer.OrdinalIgnoreCase)
+                .ThenBy(binding => binding.ArtifactRef, StringComparer.OrdinalIgnoreCase)
+                .ToArray();
+            return bindings.Count > 0;
+        }
+        catch (JsonException)
+        {
+            return false;
+        }
+    }
+
     public static string SerializeProcessStepSubprocessContract(ProcessSubprocessContract contract)
     {
         ArgumentNullException.ThrowIfNull(contract);
@@ -213,6 +296,93 @@ public static class ProcessRuntimeLaunchVariables
             return false;
         }
     }
+
+    public static string SerializeProcessStepScriptHelperDescriptor(
+        ProcessRuntimeScriptHelperDescriptor descriptor)
+    {
+        ArgumentNullException.ThrowIfNull(descriptor);
+        return JsonSerializer.Serialize(descriptor, ProcessRuntimeLaunchVariableJson.Options);
+    }
+
+    public static bool TryReadProcessStepScriptHelperDescriptor(
+        IReadOnlyDictionary<string, string> launchVariables,
+        out ProcessRuntimeScriptHelperDescriptor descriptor)
+    {
+        descriptor = new ProcessRuntimeScriptHelperDescriptor(string.Empty, string.Empty, string.Empty);
+        if (!TryReadNonEmptyString(launchVariables, ProcessStepScriptHelperDescriptorJson, out var value))
+        {
+            return false;
+        }
+
+        try
+        {
+            var deserialized = JsonSerializer.Deserialize<ProcessRuntimeScriptHelperDescriptor>(
+                value,
+                ProcessRuntimeLaunchVariableJson.Options);
+            if (deserialized is null ||
+                string.IsNullOrWhiteSpace(deserialized.ScriptVariableName) ||
+                string.IsNullOrWhiteSpace(deserialized.ScriptRefVariableName))
+            {
+                return false;
+            }
+
+            descriptor = deserialized;
+            return true;
+        }
+        catch (JsonException)
+        {
+            return false;
+        }
+    }
+
+    public static string SerializeProcessStepCompletionDisposition(
+        ProcessRuntimeCompletionDisposition disposition)
+    {
+        ArgumentNullException.ThrowIfNull(disposition);
+        return JsonSerializer.Serialize(disposition, ProcessRuntimeLaunchVariableJson.Options);
+    }
+
+    public static bool TryReadProcessStepCompletionDisposition(
+        IReadOnlyDictionary<string, string> launchVariables,
+        out ProcessRuntimeCompletionDisposition disposition)
+    {
+        disposition = new ProcessRuntimeCompletionDisposition(false, []);
+        if (!TryReadNonEmptyString(launchVariables, ProcessStepCompletionDispositionJson, out var value))
+        {
+            return false;
+        }
+
+        try
+        {
+            var deserialized = JsonSerializer.Deserialize<ProcessRuntimeCompletionDisposition>(
+                value,
+                ProcessRuntimeLaunchVariableJson.Options);
+            if (deserialized is null)
+            {
+                return false;
+            }
+
+            disposition = deserialized with
+            {
+                OpenIssueBranchOutcomeKeys = (deserialized.OpenIssueBranchOutcomeKeys ?? [])
+                    .Where(key => !string.IsNullOrWhiteSpace(key))
+                    .Select(key => key.Trim())
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .ToArray()
+            };
+            return true;
+        }
+        catch (JsonException)
+        {
+            return false;
+        }
+    }
+
+    public static bool AllowsCompletedOutcomeWithOpenIssues(
+        IReadOnlyDictionary<string, string> launchVariables,
+        string? branchOutcomeKey)
+        => TryReadProcessStepCompletionDisposition(launchVariables, out var disposition) &&
+           disposition.AllowsOpenIssuesFor(branchOutcomeKey);
 
     public static bool TryReadProjectId(
         IReadOnlyDictionary<string, string> launchVariables,
@@ -317,3 +487,16 @@ internal static class ProcessRuntimeLaunchVariableJson
 public readonly record struct ProcessRuntimeParentStepReference(
     ProcessRunId RunId,
     ProcessStepInstanceId StepInstanceId);
+
+public sealed record ProcessParentArtifactBindingRef(
+    string SourceStepKey,
+    string ArtifactExpectationKey,
+    string ArtifactRef);
+
+public sealed record ProcessRuntimeScriptHelperDescriptor(
+    string ScriptVariableName,
+    string ScriptRefVariableName,
+    string ManifestVariableName,
+    string PlanKey = "",
+    string PlanKind = "",
+    string ExecutionPlanVariableName = "");

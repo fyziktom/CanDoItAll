@@ -124,10 +124,22 @@ internal sealed class WorkspaceRuntimePlugin(
             return commandExecutionService.DotnetStop(allowedStartupReceiptPath, timeoutSeconds);
         }
 
-        public Task<WorkspaceCommandExecutionResult> DotnetWorkspaceNew(string template, string name, string? parentDirectory = null, bool force = false, int timeoutSeconds = 300)
+        public Task<WorkspaceCommandExecutionResult> DotnetWorkspaceNew(
+            string template,
+            string name,
+            string? parentDirectory = null,
+            bool force = false,
+            int timeoutSeconds = 300,
+            string? targetFramework = null)
         {
-            var allowedParentDirectory = PrepareScaffoldPath(parentDirectory, name);
-            return commandExecutionService.DotnetNew(template, name, allowedParentDirectory, force, timeoutSeconds);
+            var allowedParentDirectory = PrepareScaffoldPath(parentDirectory);
+            return commandExecutionService.DotnetNew(
+                template,
+                name,
+                allowedParentDirectory,
+                force,
+                timeoutSeconds,
+                targetFramework);
         }
 
         public Task<WorkspaceCommandExecutionResult> RunWorkspacePythonFile(string path, string[]? arguments = null, string? workingDirectory = null, int timeoutSeconds = 300, object? sideEffectManifest = null)
@@ -380,9 +392,9 @@ internal sealed class WorkspaceRuntimePlugin(
             return NormalizeAllowedExternalPathForWorkspaceTools(path);
         }
 
-        private string? PrepareScaffoldPath(string? path, string? scaffoldName)
+        private string? PrepareScaffoldPath(string? path)
         {
-            EnsureScaffoldAllowed(path, scaffoldName);
+            EnsureScaffoldAllowed(path);
             return NormalizeAllowedExternalPathForWorkspaceTools(path);
         }
 
@@ -449,16 +461,11 @@ internal sealed class WorkspaceRuntimePlugin(
             EnsureFileReadAllowed(path);
         }
 
-        private void EnsureScaffoldAllowed(string? path, string? scaffoldName)
+        private void EnsureScaffoldAllowed(string? path)
         {
             if (!accessSettings.CanScaffoldProjects)
             {
                 throw new InvalidOperationException($"This agent is not allowed to scaffold workspace projects. Effective workspace tool profile '{FormatEffectiveWorkspaceProfile()}' does not grant project scaffolding; implementation process steps must use a software-development workspace-tool profile.");
-            }
-
-            if (IsAllowedScaffoldParentAlias(path, scaffoldName))
-            {
-                return;
             }
 
             EnsureFileWriteAllowed(path);
@@ -685,51 +692,6 @@ internal sealed class WorkspaceRuntimePlugin(
             return AgentWorkspaceToolAccessMetadata.IsExternalTargetAliasAllowed(
                 normalizedAlias,
                 allowedAliases);
-        }
-
-        private bool IsAllowedScaffoldParentAlias(string? parentDirectory, string? scaffoldName)
-        {
-            var normalizedParentDirectory = AgentWorkspaceToolAccessMetadata.NormalizeExternalTargetAlias(parentDirectory);
-            if (string.IsNullOrWhiteSpace(normalizedParentDirectory))
-            {
-                return false;
-            }
-
-            var normalizedScaffoldName = NormalizeExternalTargetChildName(scaffoldName);
-            if (string.IsNullOrWhiteSpace(normalizedScaffoldName))
-            {
-                return false;
-            }
-
-            var requestedScaffoldRoot = AgentWorkspaceToolAccessMetadata.NormalizeExternalTargetAlias(
-                $"{normalizedParentDirectory}/{normalizedScaffoldName}");
-            if (string.IsNullOrWhiteSpace(requestedScaffoldRoot))
-            {
-                return false;
-            }
-
-            return ResolveAllowedExternalTargetAliases()
-                .Select(AgentWorkspaceToolAccessMetadata.NormalizeExternalTargetAlias)
-                .Where(alias => !string.IsNullOrWhiteSpace(alias))
-                .Any(alias => string.Equals(requestedScaffoldRoot, alias, StringComparison.OrdinalIgnoreCase));
-        }
-
-        private static string NormalizeExternalTargetChildName(string? name)
-        {
-            if (string.IsNullOrWhiteSpace(name))
-            {
-                return string.Empty;
-            }
-
-            var normalizedName = name
-                .Replace('\\', '/')
-                .Trim()
-                .Trim('`', '"', '\'')
-                .Trim('/');
-            var segments = normalizedName.Split('/', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-            return segments.Any(segment => string.Equals(segment, ".", StringComparison.Ordinal) || string.Equals(segment, "..", StringComparison.Ordinal))
-                ? string.Empty
-                : normalizedName;
         }
 
         private static string? NormalizeScriptSideEffectManifest(object? sideEffectManifest)

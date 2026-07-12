@@ -24,7 +24,12 @@ internal sealed class ProcessStepCompletionCoordinator(
         Guid executionRunId,
         IReadOnlyList<ToolExecutionReceiptRecord> toolReceipts)
     {
-        var normalizedOutput = ProcessOutcomeGroundingValidator.RemoveNonCitableSourceMetadataFromOutcome(output);
+        var normalizedOutput = ProcessOutcomeCitationSanitizer.RemoveNonCitableSourceMetadataFromOutcome(output);
+        normalizedOutput = managedArtifactService.RecoverUnambiguousBranchOutcomeFromCurrentPrimaryArtifact(
+            assignment,
+            normalizedOutput,
+            executionRunId,
+            toolReceipts);
         if (ShouldRouteBlockedBranchOutcome(assignment, normalizedOutput))
         {
             normalizedOutput = CopyAsCompletedBranchOutcome(normalizedOutput);
@@ -56,7 +61,8 @@ internal sealed class ProcessStepCompletionCoordinator(
         string rawOutputHash,
         Guid executionRunId,
         IReadOnlyList<ToolExecutionReceiptRecord> completionToolReceipts,
-        bool appendRuntimeGateFindings = false)
+        bool appendRuntimeGateFindings = false,
+        ProcessStepExecutionContract? stepContract = null)
     {
         if (groundingValidator.ValidateManagedArtifactBodyReferences(
                 assignment,
@@ -73,7 +79,10 @@ internal sealed class ProcessStepCompletionCoordinator(
             assignment,
             materialization.Output,
             completionToolReceipts,
-            executionRunId));
+            executionRunId)
+        {
+            StepContract = stepContract ?? ProcessStepExecutionContract.Empty
+        });
         if (!completionGateEvaluation.IsSatisfied)
         {
             if (appendRuntimeGateFindings &&
@@ -81,7 +90,8 @@ internal sealed class ProcessStepCompletionCoordinator(
                     assignment,
                     materialization.Output,
                     executionRunId,
-                    completionGateEvaluation) is { } runtimeGateFindingsIssue)
+                    completionGateEvaluation,
+                    completionToolReceipts) is { } runtimeGateFindingsIssue)
             {
                 return NeedsManagerForCompletionIssue(
                     assignment,
@@ -89,11 +99,13 @@ internal sealed class ProcessStepCompletionCoordinator(
                     runtimeGateFindingsIssue);
             }
 
-            if (TryCreateRoutedCompletionIssueResult(
+            if (completionIssueResultFactory.TryCreateRoutedCompletionIssueResult(
                     assignment,
                     materialization.Output,
                     rawOutputHash,
                     completionGateEvaluation,
+                    completionToolReceipts,
+                    executionRunId,
                     producedArtifactContentHashes: null,
                     out var routedCompletionIssueResult))
             {
@@ -137,6 +149,7 @@ internal sealed class ProcessStepCompletionCoordinator(
             rawOutputHash,
             acceptedCompletionToolReceipts,
             executionRunId,
-            producedArtifactContentHashes);
+            producedArtifactContentHashes,
+            stepContract);
     }
 }

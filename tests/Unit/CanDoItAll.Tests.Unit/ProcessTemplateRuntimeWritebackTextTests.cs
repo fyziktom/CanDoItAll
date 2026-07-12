@@ -57,7 +57,7 @@ public sealed class ProcessTemplateRuntimeWritebackTextTests
     }
 
     [Fact]
-    public void Software_delivery_parent_steps_require_runtime_and_screenshot_compatibility()
+    public void Software_delivery_parent_steps_allow_pre_qa_screenshot_evidence_with_direct_launch_fallback()
     {
         var root = FindRepositoryRoot();
         var recordRuntimeCommands = File.ReadAllText(Path.Combine(root, "Templates", "Processes", "processes", "software-delivery", "steps", "record-runtime-commands.md"));
@@ -69,9 +69,14 @@ public sealed class ProcessTemplateRuntimeWritebackTextTests
         Assert.Contains("launcher-compatible metadata receipts", recordRuntimeCommands, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("launcher-compatible metadata receipts", recordRuntimeCommandsAfterRepair, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("launcher-compatible metadata receipts", definitionJson, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("verify the runtime command handoff includes a launcher-compatible Run app node", captureScreenshots, StringComparison.Ordinal);
-        Assert.Contains("verify the repaired runtime command handoff includes a launcher-compatible Run app node", captureScreenshotsAfterRepair, StringComparison.Ordinal);
-        Assert.Contains("why screenshots cannot be captured", captureScreenshots, StringComparison.Ordinal);
+        Assert.Contains("before first-pass QA validation", captureScreenshots, StringComparison.Ordinal);
+        Assert.Contains("direct launch fallback", captureScreenshots, StringComparison.Ordinal);
+        Assert.Contains("visual-defect-observed", captureScreenshots, StringComparison.Ordinal);
+        Assert.Contains("no-ui-evidence-recorded", captureScreenshots, StringComparison.Ordinal);
+        Assert.Contains("before QA recheck", captureScreenshotsAfterRepair, StringComparison.Ordinal);
+        Assert.Contains("direct launch fallback", captureScreenshotsAfterRepair, StringComparison.Ordinal);
+        Assert.Contains("visual-defect-observed", captureScreenshotsAfterRepair, StringComparison.Ordinal);
+        Assert.Contains("no-ui-evidence-recorded", captureScreenshotsAfterRepair, StringComparison.Ordinal);
     }
 
     private static string FindRepositoryRoot()

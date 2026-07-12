@@ -35,6 +35,32 @@ public sealed class ProcessCompletionGateEvaluatorTests
             result.OrderedIssues.Select(issue => issue.Code));
     }
 
+    [Fact]
+    public void Evaluate_prioritizes_schema_invalid_payload_before_retryable_receipt_gaps()
+    {
+        var evaluator = new ProcessCompletionGateEvaluator(
+        [
+            _ => CreateIssue(
+                "process.adapter.product_required_tool_receipt_missing",
+                "missing-receipt",
+                ProcessDiagnosticRetrySafety.SafeToRetry),
+            _ => CreateIssue(
+                ProcessCompletionDiagnosticCodes.ArtifactPayloadSchemaInvalid,
+                "invalid-payload",
+                ProcessDiagnosticRetrySafety.SafeToRetry)
+        ]);
+
+        var result = evaluator.Evaluate(new ProcessCompletionGateContext(
+            Assignment: null!,
+            Output: null!,
+            ToolReceipts: null,
+            CurrentExecutionRunId: null));
+
+        Assert.Equal(
+            ProcessCompletionDiagnosticCodes.ArtifactPayloadSchemaInvalid,
+            result.OrderedIssues[0].Code);
+    }
+
     private static ProcessCompletionIssue CreateIssue(
         string code,
         string evidence,

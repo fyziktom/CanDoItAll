@@ -145,9 +145,15 @@ public sealed class WorkspaceCommandExecutionService : IWorkspaceCommandExecutio
             "LocalExecution",
             approvalRequired: false);
 
-    public Task<WorkspaceCommandExecutionResult> DotnetNew(string template, string name, string? parentDirectory = null, bool force = false, int timeoutSeconds = 300)
+    public Task<WorkspaceCommandExecutionResult> DotnetNew(
+        string template,
+        string name,
+        string? parentDirectory = null,
+        bool force = false,
+        int timeoutSeconds = 300,
+        string? targetFramework = null)
         => ExecutePlanAsync(
-            () => planBuilder.BuildDotnetNew(template, name, parentDirectory, force, timeoutSeconds),
+            () => planBuilder.BuildDotnetNew(template, name, parentDirectory, force, timeoutSeconds, targetFramework),
             "workspace_dotnet_new",
             "dotnet_new",
             "WorkspaceMutation",

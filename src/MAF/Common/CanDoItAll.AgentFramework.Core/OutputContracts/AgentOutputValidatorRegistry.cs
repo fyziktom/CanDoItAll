@@ -114,6 +114,58 @@ public sealed class ProcessStepOutcomeValidator : IAgentOutputValidator<ProcessS
                 "$.evidenceRefs"));
         }
 
+        var acceptanceCriteriaEvidence = output.AcceptanceCriteriaEvidence;
+        if (acceptanceCriteriaEvidence is null)
+        {
+            errors.Add(Error(
+                "process.step_outcome.acceptance_criteria_evidence_required",
+                "Acceptance criteria evidence must be an array when supplied.",
+                "$.acceptanceCriteriaEvidence"));
+            acceptanceCriteriaEvidence = [];
+        }
+
+        var seenCriterionIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        for (var index = 0; index < acceptanceCriteriaEvidence.Count; index++)
+        {
+            var criterionEvidence = acceptanceCriteriaEvidence[index];
+            var path = $"$.acceptanceCriteriaEvidence[{index}]";
+            if (criterionEvidence is null)
+            {
+                errors.Add(Error(
+                    "process.step_outcome.acceptance_criterion_evidence_required",
+                    "Acceptance criteria evidence entries must not be null.",
+                    path));
+                continue;
+            }
+
+            if (string.IsNullOrWhiteSpace(criterionEvidence.CriterionId) ||
+                string.IsNullOrWhiteSpace(criterionEvidence.Summary))
+            {
+                errors.Add(Error(
+                    "process.step_outcome.acceptance_criterion_identity_required",
+                    "Acceptance criteria evidence entries must include a criterion id and summary.",
+                    path));
+            }
+
+            if (!string.IsNullOrWhiteSpace(criterionEvidence.CriterionId) &&
+                !seenCriterionIds.Add(criterionEvidence.CriterionId.Trim()))
+            {
+                errors.Add(Error(
+                    "process.step_outcome.acceptance_criterion_duplicate",
+                    $"Acceptance criteria evidence contains duplicate criterion id '{criterionEvidence.CriterionId.Trim()}'.",
+                    $"{path}.criterionId"));
+            }
+
+            if (criterionEvidence.EvidenceRefs is null ||
+                !criterionEvidence.EvidenceRefs.Any(reference => !string.IsNullOrWhiteSpace(reference)))
+            {
+                errors.Add(Error(
+                    "process.step_outcome.acceptance_criterion_proof_required",
+                    "Acceptance criteria evidence entries must include at least one concrete proof reference.",
+                    $"{path}.evidenceRefs"));
+            }
+        }
+
         RequireText(output.Reason, "process.step_outcome.reason_required", "Process step outcome reason is required.", "$.reason", errors);
 
         if (output.Status == ProcessStepOutcomeStatus.Completed &&

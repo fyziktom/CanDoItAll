@@ -8,16 +8,23 @@ internal sealed class GenericWorkspaceToolReceiptPolicyContribution : IProcessTo
 {
     private static readonly HashSet<string> ProductMutationToolNames = new(StringComparer.OrdinalIgnoreCase)
     {
-        "workspace_write_file",
-        "workspace_append_file",
-        "workspace_copy_path",
-        "workspace_move_path",
-        "workspace_delete_path",
-        "workspace_pwsh_run_script"
+        ToolContractCatalog.WorkspaceWriteFile,
+        ToolContractCatalog.WorkspaceAppendFile,
+        ToolContractCatalog.WorkspaceCopyPath,
+        ToolContractCatalog.WorkspaceMovePath,
+        ToolContractCatalog.WorkspaceDeletePath
     };
 
-    public bool IsProductMutationTool(string toolName)
-        => ProductMutationToolNames.Contains(toolName);
+    private static readonly HashSet<string> ScriptExecutionToolNames = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ToolContractCatalog.WorkspacePowerShellRunScript,
+        ToolContractCatalog.WorkspacePythonRunFile
+    };
+
+    public bool IsProductMutationReceipt(ToolExecutionReceiptRecord receipt)
+        => ProductMutationToolNames.Contains(receipt.ToolName) ||
+           (ScriptExecutionToolNames.Contains(receipt.ToolName) &&
+            receipt.DeclaredSideEffectMode == ToolExecutionSideEffectMode.ProductMutation);
 
     public bool IsProductValidationTool(string toolName)
         => false;
@@ -29,17 +36,4 @@ internal sealed class GenericWorkspaceToolReceiptPolicyContribution : IProcessTo
 
     public IEnumerable<string> EnumerateRequirementSearchTerms(string requirement)
         => [];
-
-    public bool TryResolveScriptHelper(
-        ProcessRuntimeStepAssignment assignment,
-        out ProcessScriptHelperDescriptor descriptor)
-    {
-        descriptor = null!;
-        return false;
-    }
-
-    public bool AllowsCompletedOutcomeWithDeclaredBlockers(
-        ProcessRuntimeStepAssignment assignment,
-        ProcessStepOutcomeResult output)
-        => false;
 }

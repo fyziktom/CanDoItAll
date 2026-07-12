@@ -82,10 +82,10 @@ internal static class ProcessCompletionReceiptGate
         IReadOnlyList<ProductCompletionRequiredToolReceiptRule> requiredToolReceiptRules,
         ProcessToolReceiptPolicyCatalog toolReceiptPolicies)
     {
-        var requiredToolReceipts = requiredToolReceiptRules
-            .Select(rule => rule.ToolReceipt)
-            .Where(receipt => !string.IsNullOrWhiteSpace(receipt))
-            .Distinct(StringComparer.OrdinalIgnoreCase)
+        var requiredToolReceiptRequirements =
+            ConsolidateRequiredProductToolReceiptRequirements(requiredToolReceiptRules);
+        var requiredToolReceipts = requiredToolReceiptRequirements
+            .Select(requirement => requirement.ToolReceipt)
             .ToArray();
         if (!ShouldEnforceRequiredProductToolReceipts(assignment, requiredToolReceipts))
         {
@@ -93,13 +93,14 @@ internal static class ProcessCompletionReceiptGate
         }
 
         var observedToolReceipts = toolReceipts ?? [];
-        var allowFailedExecutionReceipt = AllowsFailedRequiredToolReceipt(assignment);
-        var missingToolReceipts = requiredToolReceipts
-            .Where(requiredToolReceipt => !HasRequiredToolReceipt(
+        var canUseFailedExecutionReceipt = AllowsFailedRequiredToolReceipt(assignment);
+        var missingToolReceipts = requiredToolReceiptRequirements
+            .Where(requirement => !HasRequiredToolReceipt(
                 observedToolReceipts,
-                requiredToolReceipt,
-                allowFailedExecutionReceipt,
+                requirement.ToolReceipt,
+                canUseFailedExecutionReceipt && requirement.AllowFailedExecutionReceipt,
                 toolReceiptPolicies))
+            .Select(requirement => requirement.ToolReceipt)
             .ToArray();
         if (missingToolReceipts.Length == 0)
         {
@@ -114,12 +115,11 @@ internal static class ProcessCompletionReceiptGate
             assignment,
             observedToolReceipts,
             missingToolReceipts,
-            allowFailedExecutionReceipt,
+            allowFailedExecutionReceipt: false,
             toolReceiptPolicies);
         var missingReceiptGuidance = BuildMissingRequiredToolReceiptGuidance(
             assignment,
-            missingToolReceipts,
-            toolReceiptPolicies);
+            missingToolReceipts);
         return new ProcessCompletionIssue(
             "process.adapter.product_required_tool_receipt_missing",
             $"Step '{assignment.StepKey}' claimed completion for branch '{output.BranchOutcomeKey}' but required current-run product tool receipt(s) are missing: {missingSummary}.{failedReceiptGuidance}{missingReceiptGuidance}",

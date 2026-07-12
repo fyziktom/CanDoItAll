@@ -26,10 +26,8 @@ using Microsoft.Extensions.Options;
 using static CanDoItAll.Modules.Processes.ProcessAgentRightsDiagnosticPolicy;
 using static CanDoItAll.Modules.Processes.ProcessCompletionRuleParser;
 using static CanDoItAll.Modules.Processes.ProcessProductCompletionRuleParser;
-using static CanDoItAll.Modules.Processes.ProcessProductRootResolver;
 using static CanDoItAll.Modules.Processes.ProcessCompletionText;
 using static CanDoItAll.Modules.Processes.ProcessExecutionResultFactory;
-using static CanDoItAll.Modules.Processes.ProcessProductCompletionPathGate;
 
 namespace CanDoItAll.Modules.Processes;
 
@@ -93,44 +91,28 @@ internal static class ProcessProductCompletionStateGate
             ProcessDiagnosticIdempotencyClassification.Idempotent);
     }
 
-    internal static ProcessCompletionIssue? ValidateRequiredProductStateCompletion(
-        ProcessRuntimeStepAssignment assignment,
-        ProcessStepOutcomeResult output)
-    {
-        if (output.Status != ProcessStepOutcomeStatus.Completed ||
-            !TryResolveInspectableProductRoot(assignment.LaunchVariables, out var productRoot))
-        {
-            return null;
-        }
-
-        if (ValidateRequiredProductPaths(assignment, productRoot) is { } requiredPathIssue)
-        {
-            return requiredPathIssue;
-        }
-
-        return ValidateRequiredProductFileContentChecks(assignment, output, productRoot);
-    }
-
     internal static ProcessCompletionIssue? ValidateCompletedOutcomeDoesNotDeclareBlockers(
         ProcessRuntimeStepAssignment assignment,
-        ProcessStepOutcomeResult output,
-        ProcessToolReceiptPolicyCatalog toolReceiptPolicies)
+        ProcessStepOutcomeResult output)
     {
         if (output.Status != ProcessStepOutcomeStatus.Completed)
         {
             return null;
         }
 
-        if (IsConfiguredCompletionIssueRouteTarget(assignment, output) ||
-            toolReceiptPolicies.AllowsCompletedOutcomeWithDeclaredBlockers(assignment, output))
+        if (ProcessRuntimeLaunchVariables.AllowsCompletedOutcomeWithOpenIssues(
+                assignment.LaunchVariables,
+                output.BranchOutcomeKey) ||
+            IsConfiguredCompletionIssueRouteTarget(assignment, output))
         {
             return null;
         }
 
+        var requiresCurrentRunProof = RequiresCurrentRunProof(assignment);
         var blockerLines = EnumerateOutcomeText(output)
             .Where(value => !string.IsNullOrWhiteSpace(value))
             .SelectMany(value => SplitOutcomeLines(value!))
-            .Where(DeclaresUnresolvedBlocker)
+            .Where(line => DeclaresUnresolvedBlocker(line, requiresCurrentRunProof))
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .Take(5)
             .ToArray();
@@ -166,6 +148,9 @@ internal static class ProcessProductCompletionStateGate
             .Where(line => !string.IsNullOrWhiteSpace(line));
 
     internal static bool DeclaresUnresolvedBlocker(string line)
+        => DeclaresUnresolvedBlocker(line, requiresCurrentRunProof: true);
+
+    internal static bool DeclaresUnresolvedBlocker(string line, bool requiresCurrentRunProof)
     {
         if (ContainsNegatedBlockerPhrase(line))
         {
@@ -182,8 +167,29 @@ internal static class ProcessProductCompletionStateGate
                 "not launcher-compatible",
                 "not launcher compatible",
                 "pending writeback receipt") ||
-            MissingRequiredReceiptRegex().IsMatch(line) ||
-            DeclaresDeferredValidationProof(line);
+            requiresCurrentRunProof &&
+            (MissingRequiredReceiptRegex().IsMatch(line) ||
+             DeclaresDeferredValidationProof(line));
+    }
+
+    private static bool RequiresCurrentRunProof(ProcessRuntimeStepAssignment assignment)
+    {
+        var allowedOperations = assignment.AllowedOperations;
+        return ProcessExecutionMetadataBuilder.AllowsProductMutation(
+                   allowedOperations,
+                   assignment.OperationTargetScope) ||
+               allowedOperations.Contains(
+                   ProcessOperationContractNames.RunValidation,
+                   StringComparer.OrdinalIgnoreCase) ||
+               allowedOperations.Contains(
+                   ProcessOperationContractNames.LaunchRuntime,
+                   StringComparer.OrdinalIgnoreCase) ||
+               allowedOperations.Contains(
+                   ProcessOperationContractNames.CaptureRuntimeProof,
+                   StringComparer.OrdinalIgnoreCase) ||
+               allowedOperations.Contains(
+                   ProcessOperationContractNames.ExecuteExternalAction,
+                   StringComparer.OrdinalIgnoreCase);
     }
 
     internal static bool DeclaresDeferredValidationProof(string line)

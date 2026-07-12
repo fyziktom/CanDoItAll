@@ -1,8 +1,8 @@
 {
   "PackKey": "candoitall-process-template-pack",
   "Name": "CanDoItAll process template pack (current architecture aligned)",
-  "Version": "2.1.32-independent-specialist-review",
-  "GeneratedAtUtc": "2026-05-28T00:00:00Z",
+  "Version": "2.1.51-template-path-variants",
+  "GeneratedAtUtc": "2026-07-12T08:54:00Z",
   "SourceFrameworkKeys": [
     "nist-ssdf",
     "nist-ssdf-ai",

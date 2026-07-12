@@ -34,6 +34,8 @@ public sealed class ProcessSubprocessContract
 
     public List<ProcessSubprocessRequiredReceiptContract> RequiredChildReceipts { get; set; } = [];
 
+    public List<ProcessSubprocessForwardedChildContextArtifactContract> ForwardedChildContextArtifacts { get; set; } = [];
+
     public ProcessSubprocessChildOutputContract? AlreadySatisfiedOutput { get; set; }
 
     public ProcessSubprocessMaterializationMode MaterializationMode { get; set; } =
@@ -50,6 +52,8 @@ public sealed class ProcessSubprocessChildOutputContract
 
     public string BranchOutcomeKey { get; set; } = string.Empty;
 
+    public string ParentBranchOutcomeKey { get; set; } = string.Empty;
+
     public string Description { get; set; } = string.Empty;
 }
 
@@ -60,4 +64,15 @@ public sealed class ProcessSubprocessRequiredReceiptContract
     public string RuntimeToolProviderKey { get; set; } = string.Empty;
 
     public string Description { get; set; } = string.Empty;
+}
+
+public sealed class ProcessSubprocessForwardedChildContextArtifactContract
+{
+    public string BindingKey { get; set; } = string.Empty;
+
+    public string SourceStepKey { get; set; } = string.Empty;
+
+    public string ArtifactExpectationKey { get; set; } = string.Empty;
+
+    public string PayloadSchema { get; set; } = string.Empty;
 }

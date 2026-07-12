@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
 using CanDoItAll.AgentFramework.Models;
@@ -22,23 +23,38 @@ internal sealed class MafProviderStreamingRunner : IMafProviderStreamingRunner
 {
     private readonly IMafProviderStreamingDispatchGate providerStreamingDispatchGate;
     private readonly Func<ProviderProfile, TimeSpan> resolveStreamingIdleTimeout;
+    private readonly Func<ProviderProfile, TimeSpan> resolveStreamingAbsoluteTimeout;
 
     public MafProviderStreamingRunner(
         IMafProviderStreamingDispatchGate providerStreamingDispatchGate)
         : this(
             providerStreamingDispatchGate,
-            MafProviderRuntimeSettings.ResolveStreamingIdleTimeout)
+            MafProviderRuntimeSettings.ResolveStreamingIdleTimeout,
+            MafProviderRuntimeSettings.ResolveStreamingAbsoluteTimeout)
     {
     }
 
     internal MafProviderStreamingRunner(
         IMafProviderStreamingDispatchGate providerStreamingDispatchGate,
         Func<ProviderProfile, TimeSpan> resolveStreamingIdleTimeout)
+        : this(
+            providerStreamingDispatchGate,
+            resolveStreamingIdleTimeout,
+            provider => ResolveDefaultAbsoluteTimeout(resolveStreamingIdleTimeout(provider)))
+    {
+    }
+
+    internal MafProviderStreamingRunner(
+        IMafProviderStreamingDispatchGate providerStreamingDispatchGate,
+        Func<ProviderProfile, TimeSpan> resolveStreamingIdleTimeout,
+        Func<ProviderProfile, TimeSpan> resolveStreamingAbsoluteTimeout)
     {
         this.providerStreamingDispatchGate = providerStreamingDispatchGate
             ?? throw new ArgumentNullException(nameof(providerStreamingDispatchGate));
         this.resolveStreamingIdleTimeout = resolveStreamingIdleTimeout
             ?? throw new ArgumentNullException(nameof(resolveStreamingIdleTimeout));
+        this.resolveStreamingAbsoluteTimeout = resolveStreamingAbsoluteTimeout
+            ?? throw new ArgumentNullException(nameof(resolveStreamingAbsoluteTimeout));
     }
 
     public async IAsyncEnumerable<AgentResponseUpdate> RunStreamingAsync(
@@ -61,6 +77,12 @@ internal sealed class MafProviderStreamingRunner : IMafProviderStreamingRunner
             throw new InvalidOperationException("The provider streaming idle timeout must be positive.");
         }
 
+        var absoluteTimeout = resolveStreamingAbsoluteTimeout(provider);
+        if (absoluteTimeout <= TimeSpan.Zero)
+        {
+            throw new InvalidOperationException("The provider streaming absolute timeout must be positive.");
+        }
+
         using var streamCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         var updates = RunStreamingCoreAsync(
             runtimeAgent,
@@ -70,20 +92,42 @@ internal sealed class MafProviderStreamingRunner : IMafProviderStreamingRunner
             streamCancellation.Token);
         var enumerator = updates.GetAsyncEnumerator(streamCancellation.Token);
         TimeoutException? idleTimeoutException = null;
+        var streamStartedAt = Stopwatch.GetTimestamp();
+        var lastSemanticProgressAt = streamStartedAt;
         try
         {
             while (true)
             {
-                var moveNext = await MoveNextWithIdleTimeoutAsync(
-                    enumerator,
-                    streamCancellation,
-                    provider.Name,
-                    model,
+                var watchdog = ResolveWatchdogDeadline(
+                    streamStartedAt,
+                    lastSemanticProgressAt,
                     idleTimeout,
+                    absoluteTimeout);
+                if (watchdog.Remaining <= TimeSpan.Zero)
+                {
+                    idleTimeoutException = await CreateWatchdogTimeoutAsync(
+                        streamCancellation,
+                        provider.Name,
+                        model,
+                        watchdog.IsAbsoluteDeadline,
+                        watchdog.Timeout,
+                        innerException: null).ConfigureAwait(false);
+                    break;
+                }
+
+                var moveNext = await MoveNextWithWatchdogTimeoutAsync(
+                    enumerator,
+                    watchdog.Remaining,
                     cancellationToken).ConfigureAwait(false);
                 if (moveNext.TimeoutException is not null)
                 {
-                    idleTimeoutException = moveNext.TimeoutException;
+                    idleTimeoutException = await CreateWatchdogTimeoutAsync(
+                        streamCancellation,
+                        provider.Name,
+                        model,
+                        watchdog.IsAbsoluteDeadline,
+                        watchdog.Timeout,
+                        moveNext.TimeoutException).ConfigureAwait(false);
                     break;
                 }
 
@@ -92,7 +136,13 @@ internal sealed class MafProviderStreamingRunner : IMafProviderStreamingRunner
                     break;
                 }
 
-                yield return enumerator.Current;
+                var update = enumerator.Current;
+                if (HasSemanticProgress(update))
+                {
+                    lastSemanticProgressAt = Stopwatch.GetTimestamp();
+                }
+
+                yield return update;
             }
         }
         finally
@@ -115,12 +165,9 @@ internal sealed class MafProviderStreamingRunner : IMafProviderStreamingRunner
         }
     }
 
-    private static async Task<(bool HasNext, TimeoutException? TimeoutException)> MoveNextWithIdleTimeoutAsync(
+    private static async Task<(bool HasNext, TimeoutException? TimeoutException)> MoveNextWithWatchdogTimeoutAsync(
         IAsyncEnumerator<AgentResponseUpdate> enumerator,
-        CancellationTokenSource streamCancellation,
-        string providerName,
-        string model,
-        TimeSpan idleTimeout,
+        TimeSpan timeout,
         CancellationToken cancellationToken)
     {
         try
@@ -128,30 +175,82 @@ internal sealed class MafProviderStreamingRunner : IMafProviderStreamingRunner
             var hasNext = await enumerator
                 .MoveNextAsync()
                 .AsTask()
-                .WaitAsync(idleTimeout, cancellationToken)
+                .WaitAsync(timeout, cancellationToken)
                 .ConfigureAwait(false);
             return (hasNext, null);
         }
         catch (TimeoutException exception)
         {
-            Exception? cancellationException = null;
-            try
-            {
-                await streamCancellation.CancelAsync().ConfigureAwait(false);
-            }
-            catch (Exception failure)
-            {
-                cancellationException = failure;
-            }
-
-            var diagnostic = new TimeoutException(
-                $"Provider stream '{providerName}' using model '{model}' produced no update for {idleTimeout}. " +
-                "The idle stream was canceled so runtime recovery can proceed.",
-                cancellationException is null
-                    ? exception
-                    : new AggregateException(exception, cancellationException));
-            return (false, diagnostic);
+            return (false, exception);
         }
+    }
+
+    private static async Task<TimeoutException> CreateWatchdogTimeoutAsync(
+        CancellationTokenSource streamCancellation,
+        string providerName,
+        string model,
+        bool isAbsoluteDeadline,
+        TimeSpan timeout,
+        Exception? innerException)
+    {
+        Exception? cancellationException = null;
+        try
+        {
+            await streamCancellation.CancelAsync().ConfigureAwait(false);
+        }
+        catch (Exception cancellationFailure)
+        {
+            cancellationException = cancellationFailure;
+        }
+
+        var reason = isAbsoluteDeadline
+            ? $"exceeded the absolute stream deadline of {timeout}"
+            : $"made no semantic progress for {timeout}";
+        var diagnostic = $"Provider stream '{providerName}' using model '{model}' {reason}. " +
+            "The stream was canceled so runtime recovery can proceed.";
+        var combinedFailure = innerException switch
+        {
+            null when cancellationException is null => null,
+            null => cancellationException,
+            _ when cancellationException is null => innerException,
+            _ => new AggregateException(innerException, cancellationException)
+        };
+        return combinedFailure is null
+            ? new TimeoutException(diagnostic)
+            : new TimeoutException(diagnostic, combinedFailure);
+    }
+
+    private static (TimeSpan Remaining, bool IsAbsoluteDeadline, TimeSpan Timeout) ResolveWatchdogDeadline(
+        long streamStartedAt,
+        long lastSemanticProgressAt,
+        TimeSpan semanticIdleTimeout,
+        TimeSpan absoluteTimeout)
+    {
+        var semanticRemaining = semanticIdleTimeout - Stopwatch.GetElapsedTime(lastSemanticProgressAt);
+        var absoluteRemaining = absoluteTimeout - Stopwatch.GetElapsedTime(streamStartedAt);
+        return absoluteRemaining <= semanticRemaining
+            ? (absoluteRemaining, true, absoluteTimeout)
+            : (semanticRemaining, false, semanticIdleTimeout);
+    }
+
+    private static TimeSpan ResolveDefaultAbsoluteTimeout(TimeSpan idleTimeout)
+    {
+        var doubledTicks = checked(idleTimeout.Ticks * 2);
+        return TimeSpan.FromTicks(doubledTicks);
+    }
+
+    private static bool HasSemanticProgress(AgentResponseUpdate update)
+    {
+        if (update.FinishReason is not null)
+        {
+            return true;
+        }
+
+        return update.Contents.Any(content => content switch
+        {
+            TextContent text => !string.IsNullOrWhiteSpace(text.Text),
+            _ => true
+        });
     }
 
     private static IAsyncEnumerable<AgentResponseUpdate> RunStreamingCoreAsync(

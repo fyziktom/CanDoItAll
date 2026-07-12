@@ -161,6 +161,51 @@ public sealed class WorkspaceCommandExecutionServiceTests
     }
 
     [Fact]
+    public async Task PowerShellRunScript_persists_declared_product_mutation_mode_in_audit_receipt()
+    {
+        var workspaceRoot = Path.Combine(Path.GetTempPath(), $"CanDoItAll.WorkspaceCommandExecutionServiceTests.{Guid.NewGuid():N}");
+        var scriptDirectory = Path.Combine(workspaceRoot, "scripts");
+        Directory.CreateDirectory(scriptDirectory);
+        await File.WriteAllTextAsync(Path.Combine(scriptDirectory, "Apply-Update.ps1"), "Write-Output 'ok'");
+        var service = new WorkspaceCommandExecutionService(workspaceRoot, new FakeWorkspaceProcessHost());
+        var run = CreateProcessStepExecutionRun("{}");
+
+        try
+        {
+            using (WorkspaceExecutionAuditContext.BeginScope(run))
+            {
+                var result = await service.PowerShellRunScript(
+                    "scripts/Apply-Update.ps1",
+                    sideEffectManifest: JsonSerializer.Serialize(new GovernedScriptSideEffectManifest
+                    {
+                        Mode = GovernedScriptSideEffectMode.ProductMutation
+                    }));
+
+                Assert.True(result.Succeeded);
+            }
+
+            var auditRoot = WorkspaceExecutionAuditTrailWriter.GetRunAuditRoot(
+                workspaceRoot,
+                WorkspaceScopeDescriptor.Sandbox,
+                run.Id);
+            var receiptPath = Assert.Single(Directory.EnumerateFiles(
+                Path.Combine(auditRoot, "receipts"),
+                "*.json",
+                SearchOption.TopDirectoryOnly));
+            var receipt = JsonSerializer.Deserialize<ToolExecutionReceiptRecord>(
+                await File.ReadAllTextAsync(receiptPath),
+                new JsonSerializerOptions(JsonSerializerDefaults.Web));
+
+            Assert.NotNull(receipt);
+            Assert.Equal(ToolExecutionSideEffectMode.ProductMutation, receipt.DeclaredSideEffectMode);
+        }
+        finally
+        {
+            TryDeleteDirectory(workspaceRoot);
+        }
+    }
+
+    [Fact]
     public async Task DotnetBuild_shortens_windows_workspace_root_when_path_budget_is_unsafe()
     {
         if (!OperatingSystem.IsWindows())
@@ -935,7 +980,7 @@ public sealed class WorkspaceCommandExecutionServiceTests
     }
 
     [Fact]
-    public async Task DotnetRun_foreground_request_uses_http_smoke_for_blazor_webassembly_project()
+    public async Task DotnetRun_foreground_request_honors_explicit_no_http_wait_for_blazor_webassembly_project()
     {
         var workspaceRoot = Path.Combine(Path.GetTempPath(), $"CanDoItAll.WorkspaceCommandExecutionServiceTests.{Guid.NewGuid():N}");
         var projectDirectory = Path.Combine(workspaceRoot, "apps", "TetrisGame");
@@ -957,14 +1002,9 @@ public sealed class WorkspaceCommandExecutionServiceTests
             Assert.NotNull(processHost.LastRequest);
             Assert.Equal("workspace_dotnet_run", processHost.LastRequest!.ToolName);
             Assert.DoesNotContain("-EncodedCommand", processHost.LastRequest.Arguments);
-            Assert.Contains("-File", processHost.LastRequest.Arguments);
-            Assert.Contains(result.Receipt.TargetPaths, item => item.EndsWith("startup.json", StringComparison.OrdinalIgnoreCase));
-            Assert.Contains(result.Receipt.TargetPaths, item => item.EndsWith("run.ps1", StringComparison.OrdinalIgnoreCase));
-
-            var script = await ReadGeneratedDotnetRunScriptAsync(processHost);
-            Assert.Contains("'--urls'", script, StringComparison.Ordinal);
-            Assert.Contains("$noBuild = $false", script, StringComparison.Ordinal);
-            Assert.Contains("Process tree was stopped after smoke validation", script, StringComparison.Ordinal);
+            Assert.DoesNotContain("-File", processHost.LastRequest.Arguments);
+            Assert.DoesNotContain(result.Receipt.TargetPaths, item => item.EndsWith("startup.json", StringComparison.OrdinalIgnoreCase));
+            Assert.DoesNotContain(result.Receipt.TargetPaths, item => item.EndsWith("run.ps1", StringComparison.OrdinalIgnoreCase));
         }
         finally
         {
@@ -1040,6 +1080,104 @@ public sealed class WorkspaceCommandExecutionServiceTests
             Assert.Equal(["new", "blazorwasm", "--pwa", "-n", "TetrisGame"], processHost.LastRequest.Arguments);
             Assert.Equal(Path.Combine(workspaceRoot, "apps"), processHost.LastRequest.WorkingDirectory);
             Assert.Contains("apps/TetrisGame", result.Receipt.TargetPaths, StringComparer.OrdinalIgnoreCase);
+        }
+        finally
+        {
+            TryDeleteDirectory(workspaceRoot);
+        }
+    }
+
+    [Fact]
+    public async Task DotnetNew_rejects_a_template_option_not_supported_by_the_selected_template()
+    {
+        var workspaceRoot = Path.Combine(Path.GetTempPath(), $"CanDoItAll.WorkspaceCommandExecutionServiceTests.{Guid.NewGuid():N}");
+        Directory.CreateDirectory(Path.Combine(workspaceRoot, "apps"));
+        var processHost = new FakeWorkspaceProcessHost();
+        var service = new WorkspaceCommandExecutionService(workspaceRoot, processHost);
+
+        try
+        {
+            var result = await service.DotnetNew("console --pwa", "ConsoleApp", "apps");
+
+            Assert.False(result.Succeeded);
+            Assert.Contains("not approved for template 'console'", result.Message, StringComparison.Ordinal);
+            Assert.Null(processHost.LastRequest);
+        }
+        finally
+        {
+            TryDeleteDirectory(workspaceRoot);
+        }
+    }
+
+    [Fact]
+    public async Task DotnetNew_accepts_target_framework_argument_with_a_valid_value()
+    {
+        var workspaceRoot = Path.Combine(Path.GetTempPath(), $"CanDoItAll.WorkspaceCommandExecutionServiceTests.{Guid.NewGuid():N}");
+        Directory.CreateDirectory(Path.Combine(workspaceRoot, "apps"));
+        var processHost = new FakeWorkspaceProcessHost();
+        var service = new WorkspaceCommandExecutionService(workspaceRoot, processHost);
+
+        try
+        {
+            var result = await service.DotnetNew(
+                "blazorwasm",
+                "FrameworkScopedApp",
+                "apps",
+                targetFramework: "net8.0");
+
+            Assert.True(result.Succeeded);
+            Assert.NotNull(processHost.LastRequest);
+            Assert.Equal(
+                ["new", "blazorwasm", "--framework", "net8.0", "-n", "FrameworkScopedApp"],
+                processHost.LastRequest!.Arguments);
+        }
+        finally
+        {
+            TryDeleteDirectory(workspaceRoot);
+        }
+    }
+
+    [Fact]
+    public async Task DotnetNew_rejects_target_framework_argument_without_a_valid_value()
+    {
+        var workspaceRoot = Path.Combine(Path.GetTempPath(), $"CanDoItAll.WorkspaceCommandExecutionServiceTests.{Guid.NewGuid():N}");
+        Directory.CreateDirectory(Path.Combine(workspaceRoot, "apps"));
+        var processHost = new FakeWorkspaceProcessHost();
+        var service = new WorkspaceCommandExecutionService(workspaceRoot, processHost);
+
+        try
+        {
+            var result = await service.DotnetNew(
+                "blazorwasm",
+                "FrameworkScopedApp",
+                "apps",
+                targetFramework: "invalid");
+
+            Assert.False(result.Succeeded);
+            Assert.Contains("targetFramework must be a supported target-framework value", result.Message, StringComparison.Ordinal);
+            Assert.Null(processHost.LastRequest);
+        }
+        finally
+        {
+            TryDeleteDirectory(workspaceRoot);
+        }
+    }
+
+    [Fact]
+    public async Task DotnetNew_rejects_an_inline_target_framework_value()
+    {
+        var workspaceRoot = Path.Combine(Path.GetTempPath(), $"CanDoItAll.WorkspaceCommandExecutionServiceTests.{Guid.NewGuid():N}");
+        Directory.CreateDirectory(Path.Combine(workspaceRoot, "apps"));
+        var processHost = new FakeWorkspaceProcessHost();
+        var service = new WorkspaceCommandExecutionService(workspaceRoot, processHost);
+
+        try
+        {
+            var result = await service.DotnetNew("blazorwasm --framework net8.0", "FrameworkScopedApp", "apps");
+
+            Assert.False(result.Succeeded);
+            Assert.Contains("Template argument 'net8.0' is not approved", result.Message, StringComparison.Ordinal);
+            Assert.Null(processHost.LastRequest);
         }
         finally
         {

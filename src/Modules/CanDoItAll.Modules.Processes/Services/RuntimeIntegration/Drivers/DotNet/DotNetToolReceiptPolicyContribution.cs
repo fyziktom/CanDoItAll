@@ -10,8 +10,8 @@ internal sealed class DotNetToolReceiptPolicyContribution : IProcessToolReceiptP
     private const string NewToolName = $"{ToolPrefix}new";
     private const string TemplateRequirementPrefix = "template=";
 
-    public bool IsProductMutationTool(string toolName)
-        => string.Equals(toolName, NewToolName, StringComparison.OrdinalIgnoreCase);
+    public bool IsProductMutationReceipt(ToolExecutionReceiptRecord receipt)
+        => string.Equals(receipt.ToolName, NewToolName, StringComparison.OrdinalIgnoreCase);
 
     public bool IsProductValidationTool(string toolName)
         => string.Equals(toolName, $"{ToolPrefix}build", StringComparison.OrdinalIgnoreCase) ||
@@ -68,46 +68,6 @@ internal sealed class DotNetToolReceiptPolicyContribution : IProcessToolReceiptP
         }
     }
 
-    public bool TryResolveScriptHelper(
-        ProcessRuntimeStepAssignment assignment,
-        out ProcessScriptHelperDescriptor descriptor)
-    {
-        var prefix = assignment.StepKey switch
-        {
-            "create-dotnet-project" => "DotNetCreateProject",
-            "add-test-project" => "DotNetAddTestProject",
-            "repair-solution-setup" when assignment.LaunchVariables.ContainsKey("DotNetAddTestProjectScriptRef") => "DotNetAddTestProject",
-            "repair-solution-setup" => "DotNetCreateProject",
-            _ => string.Empty
-        };
-        if (string.IsNullOrWhiteSpace(prefix))
-        {
-            descriptor = null!;
-            return false;
-        }
-
-        descriptor = new ProcessScriptHelperDescriptor(
-            $"{prefix}Script",
-            $"{prefix}ScriptRef",
-            $"{prefix}SideEffectManifest");
-        return assignment.LaunchVariables.ContainsKey(descriptor.ScriptVariableName) ||
-               assignment.LaunchVariables.ContainsKey(descriptor.ScriptRefVariableName);
-    }
-
-    public bool AllowsCompletedOutcomeWithDeclaredBlockers(
-        ProcessRuntimeStepAssignment assignment,
-        ProcessStepOutcomeResult output)
-        => IsNoGoEscalationKey(assignment.StepKey) ||
-           IsDiagnosticStep(assignment.StepKey) ||
-           IsNoGoEscalationKey(assignment.BranchGate?.RequiredOutcomeKey) ||
-           IsNoGoEscalationKey(output.BranchOutcomeKey) ||
-           IsRepairRoutingOutcomeKey(output.BranchOutcomeKey) ||
-           IsProofOnlyRepairPreparation(assignment.StepKey, output.BranchOutcomeKey);
-
-    internal static bool IsDiagnosticStep(string stepKey)
-        => string.Equals(stepKey, "diagnose-quality-failure", StringComparison.OrdinalIgnoreCase) ||
-           string.Equals(stepKey, "diagnose-persistent-failure", StringComparison.OrdinalIgnoreCase);
-
     private static bool TryResolveRequiredTemplate(string requirement, out string requiredTemplate)
     {
         requiredTemplate = string.Empty;
@@ -120,25 +80,6 @@ internal sealed class DotNetToolReceiptPolicyContribution : IProcessToolReceiptP
         requiredTemplate = requirement[TemplateRequirementPrefix.Length..].Trim();
         return requiredTemplate.Length > 0;
     }
-
-    private static bool IsNoGoEscalationKey(string? value)
-        => !string.IsNullOrWhiteSpace(value) &&
-           (value.Contains("repair-escalation", StringComparison.OrdinalIgnoreCase) ||
-            value.Contains("unresolved-repair", StringComparison.OrdinalIgnoreCase) ||
-            value.Contains("no-go", StringComparison.OrdinalIgnoreCase));
-
-    private static bool IsRepairRoutingOutcomeKey(string? value)
-        => !string.IsNullOrWhiteSpace(value) &&
-           (string.Equals(value, "repair-required", StringComparison.OrdinalIgnoreCase) ||
-            value.EndsWith("-repair-required", StringComparison.OrdinalIgnoreCase));
-
-    private static bool IsProofOnlyRepairPreparation(string stepKey, string? branchOutcomeKey)
-        => (string.Equals(stepKey, "implement-quality-repair", StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(stepKey, "implement-bughunt-repair", StringComparison.OrdinalIgnoreCase)) &&
-           string.Equals(
-               branchOutcomeKey,
-               "proof-only-revalidation-prepared",
-               StringComparison.OrdinalIgnoreCase);
 
     private static string NormalizeCommandText(string value)
     {

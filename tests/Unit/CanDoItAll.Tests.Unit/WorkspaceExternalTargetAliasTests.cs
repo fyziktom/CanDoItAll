@@ -44,7 +44,7 @@ public sealed class WorkspaceExternalTargetAliasTests : IDisposable
     }
 
     [Fact]
-    public void WriteTextFile_rejects_razor_char_callbacks_to_string_handlers()
+    public void WriteTextFile_allows_razor_content_without_language_specific_workspace_policy()
     {
         var workspaceRoot = CreateDirectory("workspace");
         var externalFilePath = Path.Combine(CreateDirectory("external-target-root"), "Workflow", "Components", "Pages", "Home.razor");
@@ -68,11 +68,8 @@ public sealed class WorkspaceExternalTargetAliasTests : IDisposable
 
         var result = service.WriteTextFile(aliasPath, content);
 
-        Assert.False(result.Succeeded);
-        Assert.Contains("CS1503", result.Message, StringComparison.Ordinal);
-        Assert.Contains("AppendToResult", result.Message, StringComparison.Ordinal);
-        Assert.Contains("SetOperation", result.Message, StringComparison.Ordinal);
-        Assert.False(File.Exists(externalFilePath));
+        Assert.True(result.Succeeded);
+        Assert.True(File.Exists(externalFilePath));
     }
 
     [Fact]
@@ -124,7 +121,7 @@ public sealed class TestMethodAttribute : Attribute;
     }
 
     [Fact]
-    public void WriteTextFile_rejects_razor_double_quoted_string_callback_inside_double_quoted_attribute()
+    public void WriteTextFile_allows_content_without_framework_specific_workspace_policy()
     {
         var workspaceRoot = CreateDirectory("workspace");
         var externalFilePath = Path.Combine(CreateDirectory("external-target-root"), "Workflow", "Components", "Pages", "Home.razor");
@@ -144,13 +141,12 @@ public sealed class TestMethodAttribute : Attribute;
 
         var result = service.WriteTextFile(aliasPath, content);
 
-        Assert.False(result.Succeeded);
-        Assert.Contains("unescaped double-quoted string literal", result.Message, StringComparison.Ordinal);
-        Assert.False(File.Exists(externalFilePath));
+        Assert.True(result.Succeeded);
+        Assert.True(File.Exists(externalFilePath));
     }
 
     [Fact]
-    public void WriteTextFile_rejects_legacy_blazor_host_file_in_current_blazor_web_app()
+    public void WriteTextFile_allows_host_file_content_without_framework_specific_workspace_policy()
     {
         var workspaceRoot = CreateDirectory("workspace");
         var projectDirectory = CreateCurrentBlazorWebAppProject("FerryKiosk");
@@ -167,14 +163,12 @@ public sealed class TestMethodAttribute : Attribute;
 
         var result = service.WriteTextFile(aliasPath, content);
 
-        Assert.False(result.Succeeded);
-        Assert.Contains("current Blazor Web App surface", result.Message, StringComparison.Ordinal);
-        Assert.Contains("_Host.cshtml", result.Message, StringComparison.Ordinal);
-        Assert.False(File.Exists(hostFilePath));
+        Assert.True(result.Succeeded);
+        Assert.True(File.Exists(hostFilePath));
     }
 
     [Fact]
-    public void WriteTextFile_rejects_legacy_blazor_host_apis_in_current_blazor_web_app()
+    public void WriteTextFile_allows_program_content_without_framework_specific_workspace_policy()
     {
         var workspaceRoot = CreateDirectory("workspace");
         var projectDirectory = CreateCurrentBlazorWebAppProject("FerryKiosk");
@@ -197,10 +191,8 @@ app.Run();
 
         var result = service.WriteTextFile(aliasPath, content);
 
-        Assert.False(result.Succeeded);
-        Assert.Contains("legacy Blazor Server hosting API", result.Message, StringComparison.Ordinal);
-        Assert.Contains("AddServerSideBlazor", result.Message, StringComparison.Ordinal);
-        Assert.False(File.Exists(programFilePath));
+        Assert.True(result.Succeeded);
+        Assert.True(File.Exists(programFilePath));
     }
 
     [Fact]

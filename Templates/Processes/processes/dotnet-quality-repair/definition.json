@@ -104,12 +104,12 @@
     },
     {
       "Key": "bughunt-specialist",
-      "RoleResourceKey": "solution-architect",
-      "DisplayName": "Bughunt specialist",
-      "Purpose": "Compare before and after evidence, identify the persistent root cause, and propose a precise second repair.",
-      "StaffingIntent": "A senior diagnostic agent that does not mutate or accept product code.",
+      "RoleResourceKey": "qa-lead",
+      "DisplayName": "Runtime failure analyst",
+      "Purpose": "Compare before and after evidence, isolate a persistent runtime or behavior failure, and propose a precise second repair.",
+      "StaffingIntent": "A senior QA diagnostic agent that can investigate .NET and Blazor runtime evidence without mutating or accepting product code.",
       "PreferredExecutorKind": "agent",
-      "PreferredProjectAssignmentRole": "Architect",
+      "PreferredProjectAssignmentRole": "Reviewer",
       "IsRequired": true,
       "AllowsFallback": true,
       "RequiresExplicitApproval": false,
@@ -123,8 +123,8 @@
       "Order": 0,
       "Key": "diagnose-quality-failure",
       "Title": "Diagnose the exact quality failure",
-      "Subtitle": "Manager evidence triage before mutation",
-      "Notes": "Begin with every exact ref listed under AgentFramework inherited parent-step artifact refs and read the relevant parent artifacts before diagnosis. Runtime-appended gate findings in those artifacts are authoritative even when the original agent summary claimed acceptance. A missing accepted implementation handoff is a symptom, not a standalone proof-only diagnosis: trace why the child withheld acceptance back to the authoritative criteria and actual product. Then inspect the referenced command receipts, browser snapshot, console log, screenshots, and implementation evidence that actually exist. Before completing, read representative current product source under the grounded product root at the most likely owning boundary; project files, bootstrap, router/app shell, imports, navigation, stylesheets, and upstream prose alone are not behavior-owning inspection unless the failed criterion is specifically owned there. For a visible Blazor unhandled-error banner without a matching console exception, inspect the loaded stylesheet and #blazor-error-ui visibility rule before assuming an application exception. Name the exact failed invariant, correlate it to concrete source when evidence permits, identify the owning source/composition boundary, and define the smallest proof that must turn green. When and only when the diagnosed target is fingerprint-matched stock Blazor template residue, include the exact line Repair driver: dotnet-blazor-scaffold-residue; do not include it for unrelated defects merely because stock scaffold files exist. Do not edit product files. A visible error, failed command, broken formula, invalid output, or absent core workflow after repair is an unresolved product defect, not residual risk or an evidence-only handoff gap.",
+      "Subtitle": "Specialist evidence triage before mutation",
+      "Notes": "Begin with every exact ref listed under AgentFramework inherited parent-step artifact refs and read the relevant parent artifacts before diagnosis. Runtime-appended gate findings in those artifacts are authoritative even when the original agent summary claimed acceptance. A missing accepted implementation handoff is a symptom, not a standalone proof-only diagnosis: trace why the child withheld acceptance back to the authoritative criteria and actual product. Then inspect the referenced command receipts, browser snapshot, console log, screenshots, and implementation evidence that actually exist. Before completing, read representative current product source under the grounded product root at the most likely owning boundary; project files, bootstrap, router/app shell, imports, navigation, stylesheets, and upstream prose alone are not behavior-owning inspection unless the failed criterion is specifically owned there. For a visible UI error, compare rendered state, console diagnostics, styling, and the owning source before assuming which layer caused it. Name the exact failed invariant, correlate it to concrete source when evidence permits, identify the owning source/composition boundary, and define the smallest proof that must turn green. Do not edit product files. A visible error, failed command, broken formula, invalid output, or absent core workflow after repair is an unresolved product defect, not residual risk or an evidence-only handoff gap.",
       "StepKind": "Start",
       "AllowsManualSkip": false,
       "AllowsSafeRefusal": false,
@@ -133,12 +133,15 @@
       "InputContractSummary": "Parent QA disposition, exact failed proof, reviewed implementation evidence, product root, and inherited authoritative scope; diagnosis must not reduce the full core workflow to the latest proof gap.",
       "OutputContractSummary": "Grounded defect diagnosis with owning boundary, repair target, exclusions, and proof plan.",
       "EvidenceContractSummary": "Exact failing receipt or artifact refs, observed error, reproduction state, source hypothesis, and targeted validation plan.",
-      "DecisionRightsSummary": "Repair manager owns the repair target but cannot mutate product code or waive failed proof.",
+      "DecisionRightsSummary": "Bughunt specialist owns the grounded root-cause diagnosis; the repair manager reviews the repair target but neither role can mutate product code or waive failed proof.",
       "ExceptionPolicySummary": "Block only when the parent supplied no actionable failure evidence, product context is unavailable, or required evidence access is denied.",
       "TargetLeadHours": 2,
       "DependsOnStepKey": "",
       "DependsOnBranchOutcomeKey": "",
       "DecisionRoleKey": "repair-manager",
+      "ExecutorPreferredSpecializationTags": [
+        "bughunt-specialist"
+      ],
       "CanvasX": 260,
       "CanvasY": 0,
       "BranchCanvasX": 0,
@@ -146,17 +149,24 @@
       "Dependencies": [],
       "RoleAssignments": [
         {
-          "RoleKey": "repair-manager",
+          "RoleKey": "bughunt-specialist",
           "ResponsibilityKind": "Responsible",
           "IsRequired": true,
           "FallbackOrder": 0,
-          "RebindPolicySummary": "Rebind only to a manager-capable diagnostic agent."
+          "RebindPolicySummary": "Rebind only to a specialist-capable diagnostic agent."
+        },
+        {
+          "RoleKey": "repair-manager",
+          "ResponsibilityKind": "Reviewer",
+          "IsRequired": true,
+          "FallbackOrder": 1,
+          "RebindPolicySummary": "Manager reviews repair scope and escalation without taking specialist diagnosis ownership."
         },
         {
           "RoleKey": "quality-reviewer",
           "ResponsibilityKind": "Reviewer",
           "IsRequired": true,
-          "FallbackOrder": 1,
+          "FallbackOrder": 2,
           "RebindPolicySummary": "QA clarifies proof without taking repair ownership."
         }
       ],
@@ -182,20 +192,56 @@
       "DocRefs": [
         "processes/dotnet-quality-repair/steps/diagnose-quality-failure.md"
       ],
+      "ExecutionGuidanceRefs": [
+        "processes/dotnet-quality-repair/steps/diagnose-quality-failure.md"
+      ],
       "AllowedOperations": [
         "ReadProcessContext",
         "ReadProjectStructure",
         "ReadUpstreamArtifacts",
         "WriteManagedProcessArtifacts"
       ],
-      "OperationTargetScope": "ExternalProductTargetReadOnly"
+      "OperationTargetScope": "ExternalProductTargetReadOnly",
+      "CapabilityScope": {
+        "InstructionFragments": [
+          {
+            "Key": "ground-owning-source-before-diagnosis-output",
+            "Title": "Owning product source proof",
+            "Content": "Before writing the diagnosis artifact or finalizing, inspect the grounded external product target, choose a behavior-owning source file for the observed failure, and call workspace_read_file on that exact external-target path in this execution. A directory listing, project/bootstrap/shell file, managed artifact, or upstream prose does not satisfy this obligation unless it directly owns the failed criterion. If the listed root has only directories, descend into the relevant product directory and read a concrete source file before concluding."
+          }
+        ],
+        "RequiredReceipts": [
+          {
+            "Key": "read-owning-product-source",
+            "Kind": "RuntimeToolName",
+            "ToolName": "workspace_read_file",
+            "MinimumCount": 1,
+            "RequireSuccessfulExit": true,
+            "RequireCurrentRun": true,
+            "Activation": "Always",
+            "Purpose": "DefectEvidence",
+            "ApplicableBranchOutcomeKeys": [],
+            "Reason": "The diagnosis must be grounded in a current-run owning product source read under the declared external product target."
+          }
+        ]
+      },
+      "CompletionPolicy": {
+        "RequiredProductToolReceipts": [],
+        "CompletionIssueRoutes": [],
+        "RequiresProductSourceInspection": true,
+        "ProductSourceInspectionRequiredBranchOutcomeKeys": [],
+        "ProductMutationRequiredBranchOutcomeKeys": [],
+        "RequiresProductMutationBeforeManagedOutput": false,
+        "ProductMutationToolNames": [],
+        "RuntimeRoutedBranchOutcomeKeys": []
+      }
     },
     {
       "Order": 1,
       "Key": "implement-quality-repair",
       "Title": "Apply the diagnosis-guided repair or proof correction",
       "Subtitle": "Typed product-mutation or proof-only action",
-      "Notes": "Use the manager diagnosis as the repair contract and read the diagnosed current product source before choosing an action. If an expected control, state transition, interaction, visible surface, or browser-console behavior is missing or broken, implement the smallest owning source change, read changed files back, run focused proof, and select product-repair-applied even when build/tests pass. For a visible Blazor unhandled-error banner without a matching console exception, inspect the loaded stylesheet and #blazor-error-ui visibility rule before assuming an application exception. Select proof-only-revalidation-prepared only when the expected behavior already exists and works and the prior route, selector, or proof recipe was wrong. Independent QA still owns acceptance.",
+      "Notes": "Use the manager diagnosis as the repair contract and read the diagnosed current product source before choosing an action. If an expected control, state transition, interaction, visible surface, or runtime behavior is missing or broken, implement the smallest owning source change, read changed files back, run focused proof, and select product-repair-applied even when build/tests pass. For a visible UI failure without a matching console exception, inspect the rendered state, loaded styling, and owning source boundary before assuming an application exception. Select proof-only-revalidation-prepared only when the expected behavior already exists and works and the prior route, selector, or proof recipe was wrong. Independent QA still owns acceptance.",
       "StepKind": "Work",
       "AllowsManualSkip": false,
       "AllowsSafeRefusal": false,
@@ -270,13 +316,17 @@
         {
           "Key": "repair-attempt-incomplete",
           "Title": "Repair attempt incomplete",
-          "Description": "The implementer did not produce the claimed required product mutation; independent validation must reproduce the defect and hand exact evidence to bughunt."
+          "Description": "The implementer did not produce the claimed required product mutation; independent validation must reproduce the defect and hand exact evidence to bughunt.",
+          "AllowsCompletedOutcomeWithOpenIssues": true
         }
       ],
       "ChecklistRefs": [],
       "ValidationRefs": [],
       "PromptRefs": [],
       "DocRefs": [
+        "processes/dotnet-quality-repair/steps/implement-quality-repair.md"
+      ],
+      "ExecutionGuidanceRefs": [
         "processes/dotnet-quality-repair/steps/implement-quality-repair.md"
       ],
       "AllowedOperations": [
@@ -290,7 +340,82 @@
         "WriteManagedProcessArtifacts"
       ],
       "OperationTargetScope": "ExternalProductTargetMutable",
-      "ExecutionClass": "BranchDecision"
+      "ExecutionClass": "BranchDecision",
+      "CompletionPolicy": {
+        "RequiredProductToolReceipts": [
+          {
+            "ToolName": "workspace_dotnet_restore",
+            "Purpose": "FocusedValidation",
+            "EnforceBranchOutcomeKeys": [],
+            "Reason": "Current-run validation proof is required for the repair attempt."
+          },
+          {
+            "ToolName": "workspace_dotnet_build",
+            "Purpose": "FocusedValidation",
+            "EnforceBranchOutcomeKeys": [],
+            "Reason": "Current-run validation proof is required for the repair attempt."
+          },
+          {
+            "ToolName": "workspace_dotnet_test",
+            "Purpose": "FocusedValidation",
+            "EnforceBranchOutcomeKeys": [],
+            "Reason": "Current-run validation proof is required for the repair attempt."
+          }
+        ],
+        "CompletionIssueRoutes": [
+          {
+            "IssueCode": "process.adapter.product_required_tool_receipt_missing",
+            "SourceBranchOutcomeKeys": [
+              "product-repair-applied"
+            ],
+            "TargetBranchOutcomeKey": "repair-attempt-incomplete",
+            "TargetBranchOutcomeTitle": "Repair attempt incomplete",
+            "RequiresDefectEvidence": false,
+            "OnlyAfterAutomaticRetry": false
+          },
+          {
+            "IssueCode": "process.adapter.product_mutation_receipt_missing",
+            "SourceBranchOutcomeKeys": [
+              "product-repair-applied"
+            ],
+            "TargetBranchOutcomeKey": "repair-attempt-incomplete",
+            "TargetBranchOutcomeTitle": "Repair attempt incomplete",
+            "RequiresDefectEvidence": false,
+            "OnlyAfterAutomaticRetry": false
+          },
+          {
+            "IssueCode": "process.adapter.product_source_inspection_evidence_missing",
+            "SourceBranchOutcomeKeys": [
+              "product-repair-applied"
+            ],
+            "TargetBranchOutcomeKey": "repair-attempt-incomplete",
+            "TargetBranchOutcomeTitle": "Repair attempt incomplete",
+            "RequiresDefectEvidence": false,
+            "OnlyAfterAutomaticRetry": false
+          }
+        ],
+        "RequiresProductSourceInspection": true,
+        "ProductSourceInspectionRequiredBranchOutcomeKeys": [
+          "product-repair-applied",
+          "proof-only-revalidation-prepared"
+        ],
+        "ProductMutationRequiredBranchOutcomeKeys": [
+          "product-repair-applied"
+        ],
+        "RequiresProductMutationBeforeManagedOutput": true,
+        "ProductMutationToolNames": [
+          "workspace_write_file",
+          "workspace_append_file",
+          "workspace_copy_path",
+          "workspace_move_path",
+          "workspace_delete_path",
+          "workspace_pwsh_run_script",
+          "workspace_dotnet_new"
+        ],
+        "RuntimeRoutedBranchOutcomeKeys": [
+          "repair-attempt-incomplete"
+        ]
+      }
     },
     {
       "Order": 2,
@@ -371,13 +496,17 @@
         {
           "Key": "bughunt-required",
           "Title": "Bughunt required",
-          "Description": "Exact current-execution evidence shows the original or a new release-blocking defect remains."
+          "Description": "Exact current-execution evidence shows the original or a new release-blocking defect remains.",
+          "AllowsCompletedOutcomeWithOpenIssues": true
         }
       ],
       "ChecklistRefs": [],
       "ValidationRefs": [],
       "PromptRefs": [],
       "DocRefs": [
+        "processes/dotnet-quality-repair/steps/validate-quality-repair.md"
+      ],
+      "ExecutionGuidanceRefs": [
         "processes/dotnet-quality-repair/steps/validate-quality-repair.md"
       ],
       "AllowedOperations": [
@@ -390,7 +519,106 @@
         "WriteManagedProcessArtifacts"
       ],
       "OperationTargetScope": "ExternalProductTargetReadOnly",
-      "ExecutionClass": "BranchDecision"
+      "ExecutionClass": "BranchDecision",
+      "CompletionPolicy": {
+        "AcceptanceCriteriaRequiredBranchOutcomeKeys": [
+          "quality-repair-accepted"
+        ],
+        "RequiredProductToolReceipts": [
+          {
+            "ToolName": "workspace_dotnet_restore",
+            "Purpose": "AcceptanceProof",
+            "EnforceBranchOutcomeKeys": [
+              "quality-repair-accepted"
+            ],
+            "Reason": "Current-run proof is required for the selected branch outcome."
+          },
+          {
+            "ToolName": "workspace_dotnet_build",
+            "Purpose": "AcceptanceProof",
+            "EnforceBranchOutcomeKeys": [
+              "quality-repair-accepted"
+            ],
+            "Reason": "Current-run proof is required for the selected branch outcome."
+          },
+          {
+            "ToolName": "workspace_dotnet_test",
+            "Purpose": "AcceptanceProof",
+            "EnforceBranchOutcomeKeys": [
+              "quality-repair-accepted"
+            ],
+            "Reason": "Current-run proof is required for the selected branch outcome."
+          }
+        ],
+        "CompletionIssueRoutes": [
+          {
+            "IssueCode": "process.adapter.product_required_tool_receipt_missing",
+            "SourceBranchOutcomeKeys": [
+              "quality-repair-accepted"
+            ],
+            "TargetBranchOutcomeKey": "bughunt-required",
+            "TargetBranchOutcomeTitle": "Bughunt required",
+            "RequiresDefectEvidence": false,
+            "OnlyAfterAutomaticRetry": true
+          },
+          {
+            "IssueCode": "process.adapter.product_required_file_content_missing",
+            "SourceBranchOutcomeKeys": [
+              "quality-repair-accepted"
+            ],
+            "TargetBranchOutcomeKey": "bughunt-required",
+            "TargetBranchOutcomeTitle": "Bughunt required",
+            "RequiresDefectEvidence": true,
+            "OnlyAfterAutomaticRetry": false
+          },
+          {
+            "IssueCode": "process.adapter.tool_receipt_evidence_content_rejected",
+            "SourceBranchOutcomeKeys": [
+              "quality-repair-accepted"
+            ],
+            "TargetBranchOutcomeKey": "bughunt-required",
+            "TargetBranchOutcomeTitle": "Bughunt required",
+            "RequiresDefectEvidence": true,
+            "OnlyAfterAutomaticRetry": false
+          },
+          {
+            "IssueCode": "process.adapter.product_source_inspection_evidence_missing",
+            "SourceBranchOutcomeKeys": [
+              "quality-repair-accepted"
+            ],
+            "TargetBranchOutcomeKey": "bughunt-required",
+            "TargetBranchOutcomeTitle": "Bughunt required",
+            "RequiresDefectEvidence": true,
+            "OnlyAfterAutomaticRetry": false
+          },
+          {
+            "IssueCode": "process.adapter.ui_interaction_evidence_missing",
+            "SourceBranchOutcomeKeys": [
+              "quality-repair-accepted"
+            ],
+            "TargetBranchOutcomeKey": "bughunt-required",
+            "TargetBranchOutcomeTitle": "Bughunt required",
+            "RequiresDefectEvidence": true,
+            "OnlyAfterAutomaticRetry": false
+          },
+          {
+            "IssueCode": "process.adapter.ui_post_interaction_state_evidence_missing",
+            "SourceBranchOutcomeKeys": [
+              "quality-repair-accepted"
+            ],
+            "TargetBranchOutcomeKey": "bughunt-required",
+            "TargetBranchOutcomeTitle": "Bughunt required",
+            "RequiresDefectEvidence": true,
+            "OnlyAfterAutomaticRetry": false
+          }
+        ],
+        "RequiresProductSourceInspection": false,
+        "ProductSourceInspectionRequiredBranchOutcomeKeys": [],
+        "ProductMutationRequiredBranchOutcomeKeys": [],
+        "RequiresProductMutationBeforeManagedOutput": false,
+        "ProductMutationToolNames": [],
+        "RuntimeRoutedBranchOutcomeKeys": []
+      }
     },
     {
       "Order": 3,
@@ -462,6 +690,9 @@
       "DocRefs": [
         "processes/dotnet-quality-repair/steps/quality-repair-handoff.md"
       ],
+      "ExecutionGuidanceRefs": [
+        "processes/dotnet-quality-repair/steps/quality-repair-handoff.md"
+      ],
       "AllowedOperations": [
         "ReadProcessContext",
         "ReadUpstreamArtifacts",
@@ -474,7 +705,7 @@
       "Key": "diagnose-persistent-failure",
       "Title": "Bughunt the persistent failure",
       "Subtitle": "Specialist comparison before second mutation",
-      "Notes": "Compare the original diagnosis, first change set, and exact failed revalidation evidence. Before completing, read representative current product source under the grounded product root at the likely owning boundary; upstream prose is not product inspection. Inspect the concrete error and owning source/composition boundary, explain why the first repair did not resolve it or what it broke, and propose one precise second repair plus proof. For a visible Blazor unhandled-error banner without a matching console exception, inspect the loaded stylesheet and #blazor-error-ui visibility rule before assuming an application exception. When and only when the second repair targets fingerprint-matched stock Blazor template residue, include the exact line Repair driver: dotnet-blazor-scaffold-residue; do not include it for unrelated defects merely because stock scaffold files exist. Do not edit product files and do not repeat the first plan unchanged.",
+      "Notes": "Compare the original diagnosis, first change set, and exact failed revalidation evidence. Before completing, read representative current product source under the grounded product root at the likely owning boundary; upstream prose is not product inspection. Inspect the concrete error and owning source/composition boundary, explain why the first repair did not resolve it or what it broke, and propose one precise second repair plus proof. For a visible UI error, compare rendered state, console diagnostics, styling, and the owning source before assuming which layer caused it. Do not edit product files and do not repeat the first plan unchanged. State the primary failure signature, owning boundary, rejected competing hypothesis, smallest different repair, and validation recipe that can falsify the second repair.",
       "StepKind": "Review",
       "AllowsManualSkip": false,
       "AllowsSafeRefusal": false,
@@ -489,6 +720,10 @@
       "DependsOnStepKey": "validate-quality-repair",
       "DependsOnBranchOutcomeKey": "bughunt-required",
       "DecisionRoleKey": "bughunt-specialist",
+      "ExecutorPreferredSpecializationTags": [
+        "bughunt-specialist",
+        "dotnet"
+      ],
       "CanvasX": 3500,
       "CanvasY": 1040,
       "BranchCanvasX": 0,
@@ -550,6 +785,9 @@
       "DocRefs": [
         "processes/dotnet-quality-repair/steps/diagnose-persistent-failure.md"
       ],
+      "ExecutionGuidanceRefs": [
+        "processes/dotnet-quality-repair/steps/diagnose-persistent-failure.md"
+      ],
       "AllowedOperations": [
         "ReadProcessContext",
         "ReadProjectStructure",
@@ -563,7 +801,7 @@
       "Key": "implement-bughunt-repair",
       "Title": "Apply the specialist-guided repair or proof correction",
       "Subtitle": "One bounded typed second action",
-      "Notes": "Apply the bughunt diagnosis to the exact owning boundary and read the diagnosed current product source before choosing an action. A missing expected control, state transition, interaction, visible surface, or real browser-console error is a product defect even when build/tests pass: mutate the smallest owning source or configuration surface, read it back, run focused proof, state the delta from the first repair, and select product-repair-applied. For a visible Blazor unhandled-error banner without a matching console exception, inspect the loaded stylesheet and #blazor-error-ui visibility rule before assuming an application exception. Select proof-only-revalidation-prepared only when the expected behavior already exists and works and the prior target, selector, or proof recipe was wrong. This is the final bounded repair action inside the subprocess.",
+      "Notes": "Apply the bughunt diagnosis to the exact owning boundary and read the diagnosed current product source before choosing an action. A missing expected control, state transition, interaction, visible surface, or real runtime error is a product defect even when build/tests pass: mutate the smallest owning source or configuration surface, read it back, run focused proof, state the delta from the first repair, and select product-repair-applied. For a visible UI failure without a matching console exception, inspect rendered state, loaded styling, and the owning source boundary before assuming an application exception. Select proof-only-revalidation-prepared only when the expected behavior already exists and works and the prior target, selector, or proof recipe was wrong. This is the final bounded repair action inside the subprocess.",
       "StepKind": "Work",
       "AllowsManualSkip": false,
       "AllowsSafeRefusal": false,
@@ -638,13 +876,17 @@
         {
           "Key": "repair-attempt-incomplete",
           "Title": "Repair attempt incomplete",
-          "Description": "The final bounded implementer did not produce the claimed required mutation; independent revalidation must produce accepted proof or a no-go packet."
+          "Description": "The final bounded implementer did not produce the claimed required mutation; independent revalidation must produce accepted proof or a no-go packet.",
+          "AllowsCompletedOutcomeWithOpenIssues": true
         }
       ],
       "ChecklistRefs": [],
       "ValidationRefs": [],
       "PromptRefs": [],
       "DocRefs": [
+        "processes/dotnet-quality-repair/steps/implement-bughunt-repair.md"
+      ],
+      "ExecutionGuidanceRefs": [
         "processes/dotnet-quality-repair/steps/implement-bughunt-repair.md"
       ],
       "AllowedOperations": [
@@ -658,7 +900,82 @@
         "WriteManagedProcessArtifacts"
       ],
       "OperationTargetScope": "ExternalProductTargetMutable",
-      "ExecutionClass": "BranchDecision"
+      "ExecutionClass": "BranchDecision",
+      "CompletionPolicy": {
+        "RequiredProductToolReceipts": [
+          {
+            "ToolName": "workspace_dotnet_restore",
+            "Purpose": "FocusedValidation",
+            "EnforceBranchOutcomeKeys": [],
+            "Reason": "Current-run validation proof is required for the repair attempt."
+          },
+          {
+            "ToolName": "workspace_dotnet_build",
+            "Purpose": "FocusedValidation",
+            "EnforceBranchOutcomeKeys": [],
+            "Reason": "Current-run validation proof is required for the repair attempt."
+          },
+          {
+            "ToolName": "workspace_dotnet_test",
+            "Purpose": "FocusedValidation",
+            "EnforceBranchOutcomeKeys": [],
+            "Reason": "Current-run validation proof is required for the repair attempt."
+          }
+        ],
+        "CompletionIssueRoutes": [
+          {
+            "IssueCode": "process.adapter.product_required_tool_receipt_missing",
+            "SourceBranchOutcomeKeys": [
+              "product-repair-applied"
+            ],
+            "TargetBranchOutcomeKey": "repair-attempt-incomplete",
+            "TargetBranchOutcomeTitle": "Repair attempt incomplete",
+            "RequiresDefectEvidence": false,
+            "OnlyAfterAutomaticRetry": false
+          },
+          {
+            "IssueCode": "process.adapter.product_mutation_receipt_missing",
+            "SourceBranchOutcomeKeys": [
+              "product-repair-applied"
+            ],
+            "TargetBranchOutcomeKey": "repair-attempt-incomplete",
+            "TargetBranchOutcomeTitle": "Repair attempt incomplete",
+            "RequiresDefectEvidence": false,
+            "OnlyAfterAutomaticRetry": false
+          },
+          {
+            "IssueCode": "process.adapter.product_source_inspection_evidence_missing",
+            "SourceBranchOutcomeKeys": [
+              "product-repair-applied"
+            ],
+            "TargetBranchOutcomeKey": "repair-attempt-incomplete",
+            "TargetBranchOutcomeTitle": "Repair attempt incomplete",
+            "RequiresDefectEvidence": false,
+            "OnlyAfterAutomaticRetry": false
+          }
+        ],
+        "RequiresProductSourceInspection": true,
+        "ProductSourceInspectionRequiredBranchOutcomeKeys": [
+          "product-repair-applied",
+          "proof-only-revalidation-prepared"
+        ],
+        "ProductMutationRequiredBranchOutcomeKeys": [
+          "product-repair-applied"
+        ],
+        "RequiresProductMutationBeforeManagedOutput": true,
+        "ProductMutationToolNames": [
+          "workspace_write_file",
+          "workspace_append_file",
+          "workspace_copy_path",
+          "workspace_move_path",
+          "workspace_delete_path",
+          "workspace_pwsh_run_script",
+          "workspace_dotnet_new"
+        ],
+        "RuntimeRoutedBranchOutcomeKeys": [
+          "repair-attempt-incomplete"
+        ]
+      }
     },
     {
       "Order": 6,
@@ -743,13 +1060,17 @@
         {
           "Key": "quality-repair-no-go",
           "Title": "Quality repair no-go",
-          "Description": "Exact current-execution proof still contains a release-blocking defect after bounded re-repair."
+          "Description": "Exact current-execution proof still contains a release-blocking defect after bounded re-repair.",
+          "AllowsCompletedOutcomeWithOpenIssues": true
         }
       ],
       "ChecklistRefs": [],
       "ValidationRefs": [],
       "PromptRefs": [],
       "DocRefs": [
+        "processes/dotnet-quality-repair/steps/revalidate-bughunt-repair.md"
+      ],
+      "ExecutionGuidanceRefs": [
         "processes/dotnet-quality-repair/steps/revalidate-bughunt-repair.md"
       ],
       "AllowedOperations": [
@@ -762,7 +1083,106 @@
         "WriteManagedProcessArtifacts"
       ],
       "OperationTargetScope": "ExternalProductTargetReadOnly",
-      "ExecutionClass": "BranchDecision"
+      "ExecutionClass": "BranchDecision",
+      "CompletionPolicy": {
+        "AcceptanceCriteriaRequiredBranchOutcomeKeys": [
+          "quality-repair-accepted"
+        ],
+        "RequiredProductToolReceipts": [
+          {
+            "ToolName": "workspace_dotnet_restore",
+            "Purpose": "AcceptanceProof",
+            "EnforceBranchOutcomeKeys": [
+              "quality-repair-accepted"
+            ],
+            "Reason": "Current-run proof is required for the selected branch outcome."
+          },
+          {
+            "ToolName": "workspace_dotnet_build",
+            "Purpose": "AcceptanceProof",
+            "EnforceBranchOutcomeKeys": [
+              "quality-repair-accepted"
+            ],
+            "Reason": "Current-run proof is required for the selected branch outcome."
+          },
+          {
+            "ToolName": "workspace_dotnet_test",
+            "Purpose": "AcceptanceProof",
+            "EnforceBranchOutcomeKeys": [
+              "quality-repair-accepted"
+            ],
+            "Reason": "Current-run proof is required for the selected branch outcome."
+          }
+        ],
+        "CompletionIssueRoutes": [
+          {
+            "IssueCode": "process.adapter.product_required_tool_receipt_missing",
+            "SourceBranchOutcomeKeys": [
+              "quality-repair-accepted"
+            ],
+            "TargetBranchOutcomeKey": "quality-repair-no-go",
+            "TargetBranchOutcomeTitle": "Quality repair no-go",
+            "RequiresDefectEvidence": false,
+            "OnlyAfterAutomaticRetry": true
+          },
+          {
+            "IssueCode": "process.adapter.product_required_file_content_missing",
+            "SourceBranchOutcomeKeys": [
+              "quality-repair-accepted"
+            ],
+            "TargetBranchOutcomeKey": "quality-repair-no-go",
+            "TargetBranchOutcomeTitle": "Quality repair no-go",
+            "RequiresDefectEvidence": true,
+            "OnlyAfterAutomaticRetry": false
+          },
+          {
+            "IssueCode": "process.adapter.tool_receipt_evidence_content_rejected",
+            "SourceBranchOutcomeKeys": [
+              "quality-repair-accepted"
+            ],
+            "TargetBranchOutcomeKey": "quality-repair-no-go",
+            "TargetBranchOutcomeTitle": "Quality repair no-go",
+            "RequiresDefectEvidence": true,
+            "OnlyAfterAutomaticRetry": false
+          },
+          {
+            "IssueCode": "process.adapter.product_source_inspection_evidence_missing",
+            "SourceBranchOutcomeKeys": [
+              "quality-repair-accepted"
+            ],
+            "TargetBranchOutcomeKey": "quality-repair-no-go",
+            "TargetBranchOutcomeTitle": "Quality repair no-go",
+            "RequiresDefectEvidence": true,
+            "OnlyAfterAutomaticRetry": false
+          },
+          {
+            "IssueCode": "process.adapter.ui_interaction_evidence_missing",
+            "SourceBranchOutcomeKeys": [
+              "quality-repair-accepted"
+            ],
+            "TargetBranchOutcomeKey": "quality-repair-no-go",
+            "TargetBranchOutcomeTitle": "Quality repair no-go",
+            "RequiresDefectEvidence": true,
+            "OnlyAfterAutomaticRetry": false
+          },
+          {
+            "IssueCode": "process.adapter.ui_post_interaction_state_evidence_missing",
+            "SourceBranchOutcomeKeys": [
+              "quality-repair-accepted"
+            ],
+            "TargetBranchOutcomeKey": "quality-repair-no-go",
+            "TargetBranchOutcomeTitle": "Quality repair no-go",
+            "RequiresDefectEvidence": true,
+            "OnlyAfterAutomaticRetry": false
+          }
+        ],
+        "RequiresProductSourceInspection": false,
+        "ProductSourceInspectionRequiredBranchOutcomeKeys": [],
+        "ProductMutationRequiredBranchOutcomeKeys": [],
+        "RequiresProductMutationBeforeManagedOutput": false,
+        "ProductMutationToolNames": [],
+        "RuntimeRoutedBranchOutcomeKeys": []
+      }
     },
     {
       "Order": 7,
@@ -834,6 +1254,9 @@
       "DocRefs": [
         "processes/dotnet-quality-repair/steps/quality-repair-handoff-after-bughunt.md"
       ],
+      "ExecutionGuidanceRefs": [
+        "processes/dotnet-quality-repair/steps/quality-repair-handoff-after-bughunt.md"
+      ],
       "AllowedOperations": [
         "ReadProcessContext",
         "ReadUpstreamArtifacts",
@@ -852,6 +1275,7 @@
       "AllowsSafeRefusal": false,
       "RequiresApproval": false,
       "RequiresDecisionRecord": true,
+      "AllowsCompletedOutcomeWithOpenIssues": true,
       "InputContractSummary": "Final no-go validation, original diagnosis, first repair, specialist diagnosis, and second repair.",
       "OutputContractSummary": "Explicit child no-go packet for parent manager escalation.",
       "EvidenceContractSummary": "Exact remaining defect, failed proof refs, attempt comparison, risk, and recommended next scope.",
@@ -920,6 +1344,9 @@
       "ValidationRefs": [],
       "PromptRefs": [],
       "DocRefs": [
+        "processes/dotnet-quality-repair/steps/quality-repair-no-go.md"
+      ],
+      "ExecutionGuidanceRefs": [
         "processes/dotnet-quality-repair/steps/quality-repair-no-go.md"
       ],
       "AllowedOperations": [

@@ -46,8 +46,7 @@ public static class WorkbenchModuleServiceCollectionExtensions
         services.AddSingleton<ProjectStructureDeferredNodeCompletionWorker>();
         services.AddHostedService(serviceProvider =>
             serviceProvider.GetRequiredService<ProjectStructureDeferredNodeCompletionWorker>());
-        services.TryAddEnumerable(ServiceDescriptor.Scoped<IProjectStructureProcessLaunchVariableContributor, DotNetProcessLaunchVariableContributor>());
-        services.TryAddEnumerable(ServiceDescriptor.Singleton<IProcessRecoveryAdviceProvider, DotNetSoftwareDeliveryRecoveryAdviceProvider>());
+        services.TryAddScoped<ProcessLaunchVariablePreparationService>();
         services.AddScoped<ProjectStructureProcessNodeService>();
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IProcessSubprocessLaunchCoordinator, ProjectStructureProcessSubprocessLaunchCoordinator>());
         services.AddScoped<ProjectStructureWorkflowNodeService>();

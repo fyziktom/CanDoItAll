@@ -89,7 +89,10 @@ public sealed class ProcessCapabilityScopeContractTests
             directive.Kind == ProcessCapabilityScopeDirectiveKind.Deny &&
             directive.Target.Kind == ProcessCapabilityScopeTargetKind.CapabilityTag &&
             string.Equals(directive.Target.Value, "development", StringComparison.Ordinal));
-        Assert.Empty(applicabilityStep.CapabilityScope.InstructionFragments);
+        Assert.DoesNotContain(applicabilityStep.CapabilityScope.InstructionFragments, fragment =>
+            fragment.Content.Contains("development-image-analysis-guidance-inline-skill", StringComparison.Ordinal));
+        Assert.Contains(applicabilityStep.CapabilityScope.InstructionFragments, fragment =>
+            string.Equals(fragment.Key, "pre-qa-screenshot-applicability-context", StringComparison.Ordinal));
 
         var requiredCapabilityKeys = storageStep.CapabilityScope.Directives
             .Where(directive =>
@@ -98,10 +101,7 @@ public sealed class ProcessCapabilityScopeContractTests
             .Select(directive => directive.Target.SecondaryValue)
             .ToHashSet(StringComparer.Ordinal);
 
-        Assert.Contains("development-image-analysis-guidance-inline-skill", requiredCapabilityKeys);
-        Assert.Contains("workspace-inspect-image", requiredCapabilityKeys);
-        Assert.Contains("workspace-analyze-image", requiredCapabilityKeys);
-        Assert.Contains("workspace-analyze-images", requiredCapabilityKeys);
+        Assert.Empty(requiredCapabilityKeys);
         var instruction = Assert.Single(storageStep.CapabilityScope.InstructionFragments);
         Assert.Equal("development-ui-screenshot-image-analysis", instruction.Key);
         Assert.Contains("software-delivery visual evidence", instruction.Content, StringComparison.Ordinal);
@@ -143,6 +143,28 @@ public sealed class ProcessCapabilityScopeContractTests
 
         AssertDotNetValidationReceiptTools(addTestsStep.CapabilityScope.RequiredReceipts);
         AssertDotNetValidationReceiptTools(recheckStep.CapabilityScope.RequiredReceipts);
+    }
+
+    [Fact]
+    public void Dotnet_quality_repair_diagnosis_declares_current_run_owning_source_receipt()
+    {
+        var definition = new ProcessTemplatePackLoader().LoadDefinition("dotnet-quality-repair");
+        var diagnosisStep = definition.Steps.Single(step =>
+            string.Equals(step.Key, "diagnose-quality-failure", StringComparison.Ordinal));
+
+        var receipt = Assert.Single(diagnosisStep.CapabilityScope.RequiredReceipts);
+        Assert.Equal("read-owning-product-source", receipt.Key);
+        Assert.Equal(ProcessRequiredToolReceiptKind.RuntimeToolName, receipt.Kind);
+        Assert.Equal("workspace_read_file", receipt.ToolName);
+        Assert.Equal(ProcessRequiredToolReceiptPurpose.DefectEvidence, receipt.Purpose);
+        Assert.Equal(ProcessRequiredToolReceiptActivation.Always, receipt.Activation);
+        Assert.True(receipt.RequireCurrentRun);
+        Assert.True(receipt.RequireSuccessfulExit);
+
+        var instruction = Assert.Single(diagnosisStep.CapabilityScope.InstructionFragments);
+        Assert.Equal("ground-owning-source-before-diagnosis-output", instruction.Key);
+        Assert.Contains("before writing the diagnosis artifact", instruction.Content, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("workspace_read_file", instruction.Content, StringComparison.Ordinal);
     }
 
     private static void AssertRequiredReceiptTools(IReadOnlyList<ProcessRequiredToolReceipt> receipts)

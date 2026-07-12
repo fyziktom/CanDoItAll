@@ -35,7 +35,8 @@ public sealed class ProcessSubprocessParentArtifactContextBuilderTests
             });
         var variables = new Dictionary<string, string>(StringComparer.Ordinal)
         {
-            [ProcessRuntimeLaunchVariables.ParentRequiredArtifactRefs] = "[\"stale-grandparent-ref\"]"
+            [ProcessRuntimeLaunchVariables.ParentRequiredArtifactRefs] = "[\"stale-grandparent-ref\"]",
+            [ProcessRuntimeLaunchVariables.ParentRequiredArtifactBindings] = "[{}]"
         };
 
         ProcessSubprocessParentArtifactContextBuilder.Apply(variables, parentState, parentStepId);
@@ -43,6 +44,11 @@ public sealed class ProcessSubprocessParentArtifactContextBuilderTests
         Assert.True(ProcessRuntimeLaunchVariables.TryReadParentRequiredArtifactRefs(variables, out var artifactRefs));
         var artifactRef = Assert.Single(artifactRefs);
         Assert.Equal("artifacts/process-runs/parent/steps/qa-validation.md", artifactRef);
+        Assert.True(ProcessRuntimeLaunchVariables.TryReadParentRequiredArtifactBindings(variables, out var bindings));
+        var binding = Assert.Single(bindings);
+        Assert.Equal("qa-validation", binding.SourceStepKey);
+        Assert.Equal("artifact", binding.ArtifactExpectationKey);
+        Assert.Equal(artifactRef, binding.ArtifactRef);
     }
 
     [Fact]
@@ -50,7 +56,8 @@ public sealed class ProcessSubprocessParentArtifactContextBuilderTests
     {
         var variables = new Dictionary<string, string>(StringComparer.Ordinal)
         {
-            [ProcessRuntimeLaunchVariables.ParentRequiredArtifactRefs] = "[\"stale-grandparent-ref\"]"
+            [ProcessRuntimeLaunchVariables.ParentRequiredArtifactRefs] = "[\"stale-grandparent-ref\"]",
+            [ProcessRuntimeLaunchVariables.ParentRequiredArtifactBindings] = "[{}]"
         };
 
         ProcessSubprocessParentArtifactContextBuilder.Apply(
@@ -59,10 +66,11 @@ public sealed class ProcessSubprocessParentArtifactContextBuilderTests
             ProcessStepInstanceId.New());
 
         Assert.DoesNotContain(ProcessRuntimeLaunchVariables.ParentRequiredArtifactRefs, variables);
+        Assert.DoesNotContain(ProcessRuntimeLaunchVariables.ParentRequiredArtifactBindings, variables);
     }
 
     [Fact]
-    public void Apply_exposes_child_evidence_cited_by_runtime_synthesized_parent_handoff()
+    public void Apply_does_not_expand_child_evidence_refs_from_a_runtime_synthesized_parent_handoff()
     {
         var workspaceRoot = Path.Combine(Path.GetTempPath(), $"CanDoItAll.SubprocessContext.{Guid.NewGuid():N}");
         Directory.CreateDirectory(workspaceRoot);
@@ -120,9 +128,76 @@ public sealed class ProcessSubprocessParentArtifactContextBuilderTests
                 workspaceFiles);
 
             Assert.True(ProcessRuntimeLaunchVariables.TryReadParentRequiredArtifactRefs(variables, out var artifactRefs));
-            Assert.Equal(
-                new[] { parentRef, childRef }.Order(StringComparer.OrdinalIgnoreCase).ToArray(),
-                artifactRefs);
+            Assert.Equal([parentRef], artifactRefs);
+        }
+        finally
+        {
+            Directory.Delete(workspaceRoot, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void Apply_does_not_expand_any_child_ref_from_parent_artifact_prose()
+    {
+        var workspaceRoot = Path.Combine(Path.GetTempPath(), $"CanDoItAll.SubprocessContext.{Guid.NewGuid():N}");
+        Directory.CreateDirectory(workspaceRoot);
+        try
+        {
+            var parentStepId = ProcessStepInstanceId.New();
+            var requiredSlotId = ArtifactSlotId.New();
+            var childRunId = Guid.NewGuid();
+            var parentRef = "artifacts/process-runs/parent/steps/implement-code-change.md";
+            var acceptedChildRef = $"artifacts/process-runs/{childRunId:D}/steps/slice-handoff.md";
+            var undeclaredChildRef = $"artifacts/process-runs/{childRunId:D}/steps/private-review.md";
+            var workspaceFiles = new WorkspaceFileService(workspaceRoot);
+            Assert.True(workspaceFiles.WriteTextFile(
+                parentRef,
+                $"""
+                ## Runtime Captured Structured Outcome
+
+                Matching child process run {childRunId:D} completed with typed evidence.
+
+                ## Subprocess handoff completed
+
+                ## Child evidence
+
+                - `{acceptedChildRef}`
+
+                ## Runtime-forwarded child context
+
+                Trace-only text: `{undeclaredChildRef}`
+
+                ## Runtime Accepted Completion Gates
+                """).Succeeded);
+            var parentState = CreateState(
+                new ProcessRuntimeStepState(
+                    parentStepId,
+                    ProcessStepDefinitionId.New(),
+                    ProcessRuntimeStepStatus.Running,
+                    IsExecutable: true,
+                    AttemptNumber: 1,
+                    DependencyStepIds: new HashSet<ProcessStepInstanceId>(),
+                    RequiredArtifactSlots: new HashSet<ArtifactSlotId> { requiredSlotId },
+                    ActiveClaimToken: null,
+                    CompletedResultKey: null)
+                {
+                    ArtifactDescriptors =
+                    [
+                        Descriptor(
+                            requiredSlotId,
+                            "implement-code-change",
+                            parentRef,
+                            ProcessArtifactMaterializationMode.RuntimeSynthesizedParentHandoff)
+                    ]
+                });
+            var variables = new Dictionary<string, string>(StringComparer.Ordinal);
+
+            ProcessSubprocessParentArtifactContextBuilder.Apply(variables, parentState, parentStepId, workspaceFiles);
+
+            Assert.True(ProcessRuntimeLaunchVariables.TryReadParentRequiredArtifactRefs(variables, out var artifactRefs));
+            Assert.Equal([parentRef], artifactRefs);
+            Assert.DoesNotContain(acceptedChildRef, artifactRefs, StringComparer.OrdinalIgnoreCase);
+            Assert.DoesNotContain(undeclaredChildRef, artifactRefs, StringComparer.OrdinalIgnoreCase);
         }
         finally
         {

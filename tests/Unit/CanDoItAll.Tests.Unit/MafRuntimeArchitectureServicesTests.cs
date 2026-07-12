@@ -86,17 +86,18 @@ public sealed class MafRuntimeArchitectureServicesTests
             }
         });
 
-        Assert.Contains("produced no update", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("made no semantic progress", exception.Message, StringComparison.Ordinal);
         Assert.True(runtimeAgent.DelayTokenWasCanceled);
     }
 
     [Fact]
-    public async Task MafProviderStreamingRunner_resets_the_idle_deadline_after_each_update()
+    public async Task MafProviderStreamingRunner_resets_the_semantic_idle_deadline_after_each_update()
     {
         var runner = new MafProviderStreamingRunner(
             new TestMafProviderStreamingDispatchGate(),
-            _ => TimeSpan.FromSeconds(1));
-        var runtimeAgent = new DelayedStreamingAgent(TimeSpan.FromMilliseconds(400), updateCount: 3);
+            _ => TimeSpan.FromSeconds(2),
+            _ => TimeSpan.FromSeconds(15));
+        var runtimeAgent = new DelayedStreamingAgent(TimeSpan.FromMilliseconds(800), updateCount: 3);
         var runtimeSession = await runtimeAgent.CreateSessionAsync();
         var provider = CreateProviderProfile();
         var updates = new List<AgentResponseUpdate>();
@@ -116,6 +117,68 @@ public sealed class MafRuntimeArchitectureServicesTests
         Assert.True(runtimeAgent.DelayCompleted);
         Assert.False(runtimeAgent.DelayTokenWasCanceled);
         Assert.Equal(3, updates.Count);
+    }
+
+    [Fact]
+    public async Task MafProviderStreamingRunner_does_not_treat_empty_heartbeat_updates_as_semantic_progress()
+    {
+        var runner = new MafProviderStreamingRunner(
+            new TestMafProviderStreamingDispatchGate(),
+            _ => TimeSpan.FromMilliseconds(80));
+        var runtimeAgent = new DelayedStreamingAgent(
+            TimeSpan.FromMilliseconds(10),
+            emitSemanticUpdates: false,
+            runUntilCancelled: true);
+        var runtimeSession = await runtimeAgent.CreateSessionAsync();
+        var provider = CreateProviderProfile();
+
+        var exception = await Assert.ThrowsAsync<TimeoutException>(async () =>
+        {
+            await foreach (var _ in runner.RunStreamingAsync(
+                               provider,
+                               "unit-model",
+                               runtimeAgent,
+                               runtimeSession,
+                               [new ChatMessage(ChatRole.User, "run")],
+                               new ChatClientAgentRunOptions(new ChatOptions()),
+                               CancellationToken.None))
+            {
+            }
+        });
+
+        Assert.Contains("made no semantic progress", exception.Message, StringComparison.Ordinal);
+        Assert.True(runtimeAgent.StreamCancellationWasRequested);
+    }
+
+    [Fact]
+    public async Task MafProviderStreamingRunner_enforces_absolute_deadline_when_semantic_updates_continue()
+    {
+        var runner = new MafProviderStreamingRunner(
+            new TestMafProviderStreamingDispatchGate(),
+            _ => TimeSpan.FromSeconds(1),
+            _ => TimeSpan.FromMilliseconds(80));
+        var runtimeAgent = new DelayedStreamingAgent(
+            TimeSpan.FromMilliseconds(10),
+            runUntilCancelled: true);
+        var runtimeSession = await runtimeAgent.CreateSessionAsync();
+        var provider = CreateProviderProfile();
+
+        var exception = await Assert.ThrowsAsync<TimeoutException>(async () =>
+        {
+            await foreach (var _ in runner.RunStreamingAsync(
+                               provider,
+                               "unit-model",
+                               runtimeAgent,
+                               runtimeSession,
+                               [new ChatMessage(ChatRole.User, "run")],
+                               new ChatClientAgentRunOptions(new ChatOptions()),
+                               CancellationToken.None))
+            {
+            }
+        });
+
+        Assert.Contains("absolute stream deadline", exception.Message, StringComparison.Ordinal);
+        Assert.True(runtimeAgent.StreamCancellationWasRequested);
     }
 
     [Fact]
@@ -833,11 +896,17 @@ public sealed class MafRuntimeArchitectureServicesTests
             => ValueTask.FromResult<IAsyncDisposable>(new NoOpAsyncDisposable());
     }
 
-    private sealed class DelayedStreamingAgent(TimeSpan delay, int updateCount = 1) : AIAgent
+    private sealed class DelayedStreamingAgent(
+        TimeSpan delay,
+        int updateCount = 1,
+        bool emitSemanticUpdates = true,
+        bool runUntilCancelled = false) : AIAgent
     {
         public bool DelayCompleted { get; private set; }
 
         public bool DelayTokenWasCanceled { get; private set; }
+
+        public bool StreamCancellationWasRequested { get; private set; }
 
         protected override ValueTask<AgentSession> CreateSessionCoreAsync(CancellationToken cancellationToken = default)
             => ValueTask.FromResult<AgentSession>(new DelayedStreamingAgentSession());
@@ -868,7 +937,10 @@ public sealed class MafRuntimeArchitectureServicesTests
             AgentRunOptions? options = null,
             [EnumeratorCancellation] CancellationToken cancellationToken = default)
         {
-            for (var updateIndex = 0; updateIndex < updateCount; updateIndex++)
+            using var cancellationRegistration = cancellationToken.Register(
+                () => StreamCancellationWasRequested = true);
+
+            for (var updateIndex = 0; runUntilCancelled || updateIndex < updateCount; updateIndex++)
             {
                 try
                 {
@@ -880,12 +952,14 @@ public sealed class MafRuntimeArchitectureServicesTests
                     throw;
                 }
 
-                yield return new AgentResponseUpdate(
-                    ChatRole.Assistant,
-                    [new TextContent($"completed {updateIndex + 1}")]);
+                yield return emitSemanticUpdates
+                    ? new AgentResponseUpdate(
+                        ChatRole.Assistant,
+                        [new TextContent($"completed {updateIndex + 1}")])
+                    : new AgentResponseUpdate(ChatRole.Assistant, []);
             }
 
-            DelayCompleted = true;
+            DelayCompleted = !runUntilCancelled;
         }
     }
 

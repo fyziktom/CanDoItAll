@@ -97,7 +97,7 @@ internal sealed class AgentFrameworkProcessLaunchExecutorResolver(
                 continue;
             }
 
-            if (!ValidateStepOperationContract(templateStep, roleKey, role, findings, planStep.StepKey))
+            if (!ValidateStepOperationContract(templateStep, roleKey, findings, planStep.StepKey))
             {
                 continue;
             }
@@ -592,7 +592,13 @@ internal sealed class AgentFrameworkProcessLaunchExecutorResolver(
                 templateStep.CapabilityScope,
                 templateStep.ExecutionContract?.RequiredRuntimeToolNames),
             AgentFrameworkProcessCapabilityScopeTranslator.Translate(templateStep.CapabilityScope).RequiredCapabilities,
-            ProcessExecutorSpecializationPolicy.Resolve(variables));
+            ProcessExecutorSpecializationPolicy.Resolve(variables)
+                .Concat(templateStep.ExecutorPreferredSpecializationTags)
+                .Where(tag => !string.IsNullOrWhiteSpace(tag))
+                .Select(tag => tag.Trim())
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .OrderBy(tag => tag, StringComparer.OrdinalIgnoreCase)
+                .ToArray());
     }
 
     private static IReadOnlyList<string> ResolveLaunchReadinessRequiredRuntimeToolNames(
@@ -657,7 +663,6 @@ internal sealed class AgentFrameworkProcessLaunchExecutorResolver(
     private static bool ValidateStepOperationContract(
         ProcessTemplateDefinitionStepDocument templateStep,
         string roleKey,
-        ProcessTemplateDefinitionRoleUsageDocument? role,
         List<ProcessLaunchReadinessFinding> findings,
         string stepKey)
     {
@@ -665,33 +670,11 @@ internal sealed class AgentFrameworkProcessLaunchExecutorResolver(
         var targetScope = NormalizeOptional(templateStep.OperationTargetScope);
         var valid = true;
 
-        if (IsArchitectureRole(roleKey, role) && AllowsProductMutation(operations, targetScope))
-        {
-            AddSemanticContractFinding(
-                findings,
-                stepKey,
-                roleKey,
-                $"Step '{stepKey}' assigns architecture role '{roleKey}' but allows product mutation.");
-            valid = false;
-        }
-
-        if (IsArchitectureRole(roleKey, role) &&
-            HasRuntimeProofOperations(operations) &&
-            !IsRuntimeOrBrowserProofStep(templateStep))
-        {
-            AddSemanticContractFinding(
-                findings,
-                stepKey,
-                roleKey,
-                $"Step '{stepKey}' assigns architecture role '{roleKey}' but allows runtime/browser proof operations.");
-            valid = false;
-        }
-
         if (IsSubprocessStep(templateStep))
         {
             if (!operations.Contains(ProcessOperationContractNames.ExecuteExternalAction, StringComparer.OrdinalIgnoreCase))
             {
-                AddSemanticContractFinding(
+                AddStructuralContractFinding(
                     findings,
                     stepKey,
                     roleKey,
@@ -701,45 +684,11 @@ internal sealed class AgentFrameworkProcessLaunchExecutorResolver(
 
             if (!string.Equals(targetScope, ProcessOperationContractNames.ExternalActionControlled, StringComparison.OrdinalIgnoreCase))
             {
-                AddSemanticContractFinding(
+                AddStructuralContractFinding(
                     findings,
                     stepKey,
                     roleKey,
                     $"Subprocess step '{stepKey}' must use {ProcessOperationContractNames.ExternalActionControlled} target scope.");
-                valid = false;
-            }
-
-            if (HasRuntimeProofOperations(operations) && !IsRuntimeOrBrowserProofStep(templateStep))
-            {
-                AddSemanticContractFinding(
-                    findings,
-                    stepKey,
-                    roleKey,
-                    $"Subprocess step '{stepKey}' must not allow runtime/browser proof operations unless the subprocess owns runtime or screenshot proof.");
-                valid = false;
-            }
-        }
-
-        if (IsEngineeringProductWorkStep(templateStep, roleKey, role))
-        {
-            if (!operations.Contains(ProcessOperationContractNames.MutateProductTarget, StringComparer.OrdinalIgnoreCase))
-            {
-                AddSemanticContractFinding(
-                    findings,
-                    stepKey,
-                    roleKey,
-                    $"Implementation step '{stepKey}' must allow {ProcessOperationContractNames.MutateProductTarget}.");
-                valid = false;
-            }
-
-            if (!string.Equals(targetScope, ProcessOperationContractNames.ExternalProductTargetMutable, StringComparison.OrdinalIgnoreCase) &&
-                !string.Equals(targetScope, ProcessOperationContractNames.ManagedOutputProduct, StringComparison.OrdinalIgnoreCase))
-            {
-                AddSemanticContractFinding(
-                    findings,
-                    stepKey,
-                    roleKey,
-                    $"Implementation step '{stepKey}' must use a mutable product target scope.");
                 valid = false;
             }
         }
@@ -747,7 +696,7 @@ internal sealed class AgentFrameworkProcessLaunchExecutorResolver(
         return valid;
     }
 
-    private static void AddSemanticContractFinding(
+    private static void AddStructuralContractFinding(
         List<ProcessLaunchReadinessFinding> findings,
         string stepKey,
         string roleKey,
@@ -792,109 +741,6 @@ internal sealed class AgentFrameworkProcessLaunchExecutorResolver(
     {
         return string.Equals(step.StepKind, ProcessTemplateStepKinds.Subprocess, StringComparison.OrdinalIgnoreCase) ||
                !string.IsNullOrWhiteSpace(step.SubprocessProcessKey);
-    }
-
-    private static bool AllowsProductMutation(
-        IReadOnlyList<string> operations,
-        string targetScope)
-    {
-        return operations.Contains(ProcessOperationContractNames.MutateProductTarget, StringComparer.OrdinalIgnoreCase) ||
-               string.Equals(targetScope, ProcessOperationContractNames.ExternalProductTargetMutable, StringComparison.OrdinalIgnoreCase) ||
-               string.Equals(targetScope, ProcessOperationContractNames.ManagedOutputProduct, StringComparison.OrdinalIgnoreCase);
-    }
-
-    private static bool HasRuntimeProofOperations(IReadOnlyList<string> operations)
-    {
-        return operations.Contains(ProcessOperationContractNames.LaunchRuntime, StringComparer.OrdinalIgnoreCase) ||
-               operations.Contains(ProcessOperationContractNames.CaptureRuntimeProof, StringComparer.OrdinalIgnoreCase);
-    }
-
-    private static bool IsArchitectureRole(
-        string roleKey,
-        ProcessTemplateDefinitionRoleUsageDocument? role)
-    {
-        return ContainsRoleToken(roleKey, "architect") ||
-               ContainsRoleToken(roleKey, "architecture") ||
-               ContainsRoleToken(role?.RoleResourceKey, "architect") ||
-               ContainsRoleToken(role?.RoleResourceKey, "architecture") ||
-               ContainsRoleToken(role?.DisplayName, "architect") ||
-               ContainsRoleToken(role?.DisplayName, "architecture");
-    }
-
-    private static bool IsEngineeringProductWorkStep(
-        ProcessTemplateDefinitionStepDocument step,
-        string roleKey,
-        ProcessTemplateDefinitionRoleUsageDocument? role)
-    {
-        if (IsSubprocessStep(step) ||
-            IsProcessClosureStep(step) ||
-            IsManagementRole(roleKey, role) ||
-            !IsEngineeringRole(roleKey, role))
-        {
-            return false;
-        }
-
-        return ContainsRoleToken(step.Key, "code") ||
-               ContainsRoleToken(step.Key, "implement") ||
-               ContainsRoleToken(step.Key, "implementation") ||
-               ContainsRoleToken(step.Key, "repair") ||
-               ContainsRoleToken(step.Title, "code") ||
-               ContainsRoleToken(step.Title, "implement") ||
-               ContainsRoleToken(step.Title, "implementation") ||
-               ContainsRoleToken(step.Title, "repair");
-    }
-
-    private static bool IsProcessClosureStep(ProcessTemplateDefinitionStepDocument step)
-    {
-        return string.Equals(step.StepKind, ProcessTemplateStepKinds.End, StringComparison.OrdinalIgnoreCase);
-    }
-
-    private static bool IsManagementRole(
-        string roleKey,
-        ProcessTemplateDefinitionRoleUsageDocument? role)
-    {
-        return ContainsRoleToken(roleKey, "manager") ||
-               ContainsRoleToken(role?.RoleResourceKey, "manager") ||
-               ContainsRoleToken(role?.DisplayName, "manager");
-    }
-
-    private static bool IsEngineeringRole(
-        string roleKey,
-        ProcessTemplateDefinitionRoleUsageDocument? role)
-    {
-        return ContainsRoleToken(roleKey, "engineer") ||
-               ContainsRoleToken(roleKey, "developer") ||
-               ContainsRoleToken(roleKey, "implementation") ||
-               ContainsRoleToken(role?.RoleResourceKey, "engineer") ||
-               ContainsRoleToken(role?.RoleResourceKey, "developer") ||
-               ContainsRoleToken(role?.RoleResourceKey, "implementation") ||
-               ContainsRoleToken(role?.DisplayName, "engineer") ||
-               ContainsRoleToken(role?.DisplayName, "developer") ||
-               ContainsRoleToken(role?.DisplayName, "implementation");
-    }
-
-    private static bool IsRuntimeOrBrowserProofStep(ProcessTemplateDefinitionStepDocument step)
-    {
-        return ContainsRoleToken(step.Key, "runtime") ||
-               ContainsRoleToken(step.Key, "browser") ||
-               ContainsRoleToken(step.Key, "screenshot") ||
-               ContainsRoleToken(step.Key, "screenshots") ||
-               ContainsRoleToken(step.Title, "runtime") ||
-               ContainsRoleToken(step.Title, "browser") ||
-               ContainsRoleToken(step.Title, "screenshot") ||
-               ContainsRoleToken(step.Title, "screenshots");
-    }
-
-    private static bool ContainsRoleToken(string? value, string token)
-    {
-        if (string.IsNullOrWhiteSpace(value))
-        {
-            return false;
-        }
-
-        return value
-            .Split(['-', '_', ' ', '.', '/', '\\', ':', ';', ',', '(', ')', '[', ']'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-            .Any(part => string.Equals(part, token, StringComparison.OrdinalIgnoreCase));
     }
 
     private static string NormalizeOptional(string value)

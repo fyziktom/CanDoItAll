@@ -451,7 +451,8 @@ internal static class ProcessPersistenceMappers
                 descriptor.ArtifactTitle,
                 descriptor.ArtifactKind,
                 descriptor.PrimaryManagedRef,
-                descriptor.MaterializationMode)).ToArray(),
+                descriptor.MaterializationMode,
+                descriptor.PayloadSchema)).ToArray(),
             ReceiptJsonOptions);
 
     private static IReadOnlyList<ProcessArtifactSlotDescriptor> DeserializeArtifactDescriptors(string? value)
@@ -472,7 +473,10 @@ internal static class ProcessPersistenceMappers
                 descriptor.ArtifactTitle.Trim(),
                 descriptor.ArtifactKind.Trim(),
                 descriptor.PrimaryManagedRef.Trim(),
-                descriptor.MaterializationMode))
+                descriptor.MaterializationMode)
+            {
+                PayloadSchema = descriptor.PayloadSchema?.Trim() ?? string.Empty
+            })
             .ToArray();
     }
 
@@ -633,7 +637,8 @@ internal static class ProcessPersistenceMappers
         string ArtifactTitle,
         string ArtifactKind,
         string PrimaryManagedRef,
-        ProcessArtifactMaterializationMode MaterializationMode);
+        ProcessArtifactMaterializationMode MaterializationMode,
+        string? PayloadSchema = null);
 
     private sealed record PersistedSubprocessArtifactMappingDescriptor(
         Guid ParentSlotId,

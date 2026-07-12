@@ -5,14 +5,6 @@ namespace CanDoItAll.AgentFramework.Core;
 
 internal sealed class WorkspaceFileMutationService
 {
-    private static readonly Regex MalformedDoubleQuotedRazorStringCallbackRegex = new(
-        @"@on\w+\s*=\s*""[^""\r\n]*=>[^""\r\n]*\(\s*""",
-        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
-
-    private static readonly Regex RazorCharLiteralCallbackRegex = new(
-        @"@on\w+\s*=\s*""[^""\r\n]*=>[^""\r\n]*\b(?<handler>[A-Za-z_][A-Za-z0-9_]*)\s*\(\s*'[^'\r\n]+'",
-        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
-
     private static readonly Regex TestFrameworkShimNamespaceRegex = new(
         @"\bnamespace\s+(Microsoft\.VisualStudio\.TestTools\.UnitTesting|Xunit|NUnit\.Framework)\b",
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
@@ -34,43 +26,6 @@ internal sealed class WorkspaceFileMutationService
         ".razor",
         ".vb"
     };
-
-    private static readonly HashSet<string> ProtectedProjectSurfaceFiles = new(StringComparer.OrdinalIgnoreCase)
-    {
-        "appsettings.Development.json",
-        "appsettings.json",
-        "Components/_Imports.razor",
-        "Components/App.razor",
-        "Components/Layout/MainLayout.razor",
-        "Components/Layout/MainLayout.razor.css",
-        "Components/Layout/NavMenu.razor",
-        "Components/Layout/NavMenu.razor.css",
-        "Components/Pages/Home.razor",
-        "Components/Routes.razor",
-        "Program.cs",
-        "Properties/launchSettings.json",
-        "wwwroot/app.css"
-    };
-
-    private static readonly HashSet<string> CurrentBlazorWebAppSurfaceFiles = new(StringComparer.OrdinalIgnoreCase)
-    {
-        "Components/App.razor",
-        "Components/Routes.razor"
-    };
-
-    private static readonly HashSet<string> LegacyBlazorServerHostFiles = new(StringComparer.OrdinalIgnoreCase)
-    {
-        "Pages/_Host.cshtml",
-        "Startup.cs"
-    };
-
-    private static readonly string[] LegacyBlazorServerApiMarkers =
-    [
-        "AddServerSideBlazor",
-        "MapBlazorHub",
-        "MapFallbackToPage",
-        "UseStartup"
-    ];
 
     private readonly WorkspacePathPolicy pathPolicy;
     private readonly WorkspaceFileReceiptWriter receiptWriter;
@@ -196,28 +151,6 @@ internal sealed class WorkspaceFileMutationService
             return CreateMutationFailure(
                 "workspace_write_file",
                 frameworkShimMessage,
-                resolution.RelativePath,
-                null,
-                "file",
-                startedAtUtc);
-        }
-
-        if (TryGetMixedBlazorHostingWriteMessage(resolution.FullPath, resolution.RelativePath, safeContent, out var mixedBlazorHostingMessage))
-        {
-            return CreateMutationFailure(
-                "workspace_write_file",
-                mixedBlazorHostingMessage,
-                resolution.RelativePath,
-                null,
-                "file",
-                startedAtUtc);
-        }
-
-        if (TryGetInvalidRazorCallbackWriteMessage(resolution.FullPath, resolution.RelativePath, safeContent, out var razorCallbackMessage))
-        {
-            return CreateMutationFailure(
-                "workspace_write_file",
-                razorCallbackMessage,
                 resolution.RelativePath,
                 null,
                 "file",
@@ -608,11 +541,11 @@ internal sealed class WorkspaceFileMutationService
 
         if (File.Exists(resolution.FullPath))
         {
-            if (TryGetProtectedProjectSurfaceDeleteMessage(resolution.FullPath, resolution.RelativePath, out var protectedDeleteMessage))
+            if (ProjectFileExtensions.Contains(Path.GetExtension(resolution.FullPath)))
             {
                 return CreateMutationFailure(
                     "workspace_delete_path",
-                    protectedDeleteMessage,
+                    $"Deleting project or solution file '{resolution.RelativePath}' is not allowed. Edit the project file or repair the existing project in place.",
                     resolution.RelativePath,
                     null,
                     "file",
@@ -637,21 +570,7 @@ internal sealed class WorkspaceFileMutationService
 
         if (Directory.Exists(resolution.FullPath))
         {
-            if (recursive &&
-                ContainsProtectedProjectSurfaceFile(resolution.FullPath, out var protectedRelativePath))
-            {
-                return CreateMutationFailure(
-                    "workspace_delete_path",
-                    $"Recursive delete is not allowed for '{resolution.RelativePath}' because it would remove protected project surface file '{protectedRelativePath}'. Edit or overwrite that file instead of deleting the scaffold surface.",
-                    resolution.RelativePath,
-                    null,
-                    "directory",
-                    startedAtUtc);
-            }
-
-            if (recursive &&
-                ContainsProjectFile(resolution.FullPath) &&
-                !IsMisplacedNestedTestProjectDirectory(resolution.FullPath))
+            if (recursive && ContainsProjectFile(resolution.FullPath))
             {
                 return CreateMutationFailure(
                     "workspace_delete_path",
@@ -828,37 +747,6 @@ internal sealed class WorkspaceFileMutationService
                 })
             .Any(path => ProjectFileExtensions.Contains(Path.GetExtension(path)));
 
-    private static bool TryGetInvalidRazorCallbackWriteMessage(string fullPath, string relativePath, string content, out string message)
-    {
-        message = string.Empty;
-        if (!string.Equals(Path.GetExtension(fullPath), ".razor", StringComparison.OrdinalIgnoreCase) ||
-            string.IsNullOrWhiteSpace(content))
-        {
-            return false;
-        }
-
-        if (MalformedDoubleQuotedRazorStringCallbackRegex.IsMatch(content))
-        {
-            message = $"Cannot write Razor file '{relativePath}' because an event callback contains an unescaped double-quoted string literal inside a double-quoted Razor attribute. Use a type-consistent callback before writing, for example `@onclick='() => AppendDigit(\"1\")'`, or use a char handler such as `AppendDigit(char digit)` with `@onclick=\"() => AppendDigit('1')\"`.";
-            return true;
-        }
-
-        var mismatchedHandlers = RazorCharLiteralCallbackRegex
-            .Matches(content)
-            .Select(match => match.Groups["handler"].Value)
-            .Where(handler => ContainsStringParameterHandler(content, handler))
-            .Distinct(StringComparer.Ordinal)
-            .ToArray();
-
-        if (mismatchedHandlers.Length == 0)
-        {
-            return false;
-        }
-
-        message = $"Cannot write Razor file '{relativePath}' because event callbacks pass char literals to handler(s) declared with `string` parameters: {string.Join(", ", mismatchedHandlers)}. This causes CS1503. Change the handlers to char parameters, or keep string handlers and use single-quoted Razor attributes with string arguments such as `@onclick='() => AppendToResult(\"1\")'`; do not retry the same content.";
-        return true;
-    }
-
     private static bool TryGetForbiddenFrameworkShimWriteMessage(string fullPath, string relativePath, string content, out string message)
     {
         message = string.Empty;
@@ -876,58 +764,6 @@ internal sealed class WorkspaceFileMutationService
 
         message = $"Cannot write C# file '{relativePath}' because it defines local shim types in framework or test-framework namespace '{shimNamespaceMatch.Groups[1].Value}'. Do not fake package, runtime, or test APIs to make validation pass. Fix the real package/project references, repair restore/build diagnostics, or return a concrete blocker.";
         return true;
-    }
-
-    private static bool TryGetMixedBlazorHostingWriteMessage(
-        string fullPath,
-        string relativePath,
-        string content,
-        out string message)
-    {
-        message = string.Empty;
-        if (!TryFindNearestProjectDirectory(fullPath, out var projectDirectory) ||
-            !HasCurrentBlazorWebAppSurface(projectDirectory))
-        {
-            return false;
-        }
-
-        var projectRelativePath = NormalizeProjectRelativePath(projectDirectory, fullPath);
-        if (LegacyBlazorServerHostFiles.Contains(projectRelativePath))
-        {
-            message = $"Cannot write Blazor hosting file '{relativePath}' because project '{projectDirectory}' already has the current Blazor Web App surface (`Components/App.razor` and `Components/Routes.razor`). Do not mix that hosting model with legacy Blazor Server files such as `_Host.cshtml` or `Startup.cs`; repair the project to one hosting model before retrying.";
-            return true;
-        }
-
-        if (!string.Equals(Path.GetFileName(fullPath), "Program.cs", StringComparison.OrdinalIgnoreCase) ||
-            string.IsNullOrWhiteSpace(content))
-        {
-            return false;
-        }
-
-        var legacyMarker = LegacyBlazorServerApiMarkers
-            .FirstOrDefault(marker => content.Contains(marker, StringComparison.Ordinal));
-        if (legacyMarker is null)
-        {
-            return false;
-        }
-
-        message = $"Cannot write Program.cs '{relativePath}' because it uses legacy Blazor Server hosting API `{legacyMarker}` while the project already has the current Blazor Web App surface (`Components/App.razor` and `Components/Routes.razor`). Use `AddRazorComponents().AddInteractiveServerComponents()` with `MapRazorComponents<App>().AddInteractiveServerRenderMode()`, or convert the whole project to one hosting model first.";
-        return true;
-    }
-
-    private static bool HasCurrentBlazorWebAppSurface(string projectDirectory)
-        => CurrentBlazorWebAppSurfaceFiles.All(relativePath =>
-            File.Exists(Path.Combine(projectDirectory, relativePath.Replace('/', Path.DirectorySeparatorChar))));
-
-    private static bool ContainsStringParameterHandler(string content, string handler)
-    {
-        if (string.IsNullOrWhiteSpace(handler))
-        {
-            return false;
-        }
-
-        var pattern = $@"\b{Regex.Escape(handler)}\s*\(\s*string\s+[A-Za-z_][A-Za-z0-9_]*";
-        return Regex.IsMatch(content, pattern, RegexOptions.CultureInvariant);
     }
 
     private static bool TryGetNestedProjectContainerWriteMessage(
@@ -959,17 +795,12 @@ internal sealed class WorkspaceFileMutationService
                 return false;
             }
 
-            if (IsSiblingTestProjectPath(currentDirectory.FullName, targetFullPath))
-            {
-                return false;
-            }
-
             if (TryFindSameNamedNestedProject(currentDirectory.FullName, out var existingProjectFile))
             {
                 var existingProjectPath = Path.GetRelativePath(currentDirectory.FullName, existingProjectFile)
                     .Replace(Path.DirectorySeparatorChar, '/')
                     .Replace(Path.AltDirectorySeparatorChar, '/');
-                message = $"Cannot create project-owned file '{relativePath}' outside the existing nested project '{existingProjectPath}'. Use the nested host project path, or create a sibling `.Tests` project from the container root; do not create a second root project or source tree.";
+                message = $"Cannot create project-owned file '{relativePath}' outside the existing nested project '{existingProjectPath}'. Use the nested host project path, or establish a sibling project through an explicit project-creation operation; do not create a second root project or source tree.";
                 return true;
             }
 
@@ -1082,88 +913,6 @@ internal sealed class WorkspaceFileMutationService
         return false;
     }
 
-    private static bool IsSiblingTestProjectPath(string containerDirectory, string targetFullPath)
-    {
-        var relativePath = Path.GetRelativePath(containerDirectory, targetFullPath);
-        if (relativePath.StartsWith("..", StringComparison.Ordinal) ||
-            Path.IsPathRooted(relativePath))
-        {
-            return false;
-        }
-
-        var firstSegment = relativePath
-            .Split([Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar], StringSplitOptions.RemoveEmptyEntries)
-            .FirstOrDefault();
-
-        return firstSegment?.EndsWith(".Tests", StringComparison.OrdinalIgnoreCase) == true;
-    }
-
-    private static bool TryGetProtectedProjectSurfaceDeleteMessage(
-        string fullPath,
-        string relativePath,
-        out string message)
-    {
-        if (ProjectFileExtensions.Contains(Path.GetExtension(fullPath)))
-        {
-            message = $"Deleting project or solution file '{relativePath}' is not allowed. Edit the project file or repair the existing project in place.";
-            return true;
-        }
-
-        if (!TryFindNearestProjectDirectory(fullPath, out var projectDirectory))
-        {
-            message = string.Empty;
-            return false;
-        }
-
-        var projectRelativePath = NormalizeProjectRelativePath(projectDirectory, fullPath);
-        if (ProtectedProjectSurfaceFiles.Contains(projectRelativePath))
-        {
-            message = $"Deleting protected project surface file '{relativePath}' is not allowed. Edit or overwrite '{projectRelativePath}' instead of tearing down the scaffold.";
-            return true;
-        }
-
-        if (projectRelativePath.StartsWith("wwwroot/lib/", StringComparison.OrdinalIgnoreCase))
-        {
-            message = $"Deleting framework static asset '{relativePath}' is not allowed during project repair. Leave scaffold library assets in place unless a dedicated cleanup tool owns the migration.";
-            return true;
-        }
-
-        message = string.Empty;
-        return false;
-    }
-
-    private static bool ContainsProtectedProjectSurfaceFile(string directory, out string protectedRelativePath)
-    {
-        protectedRelativePath = string.Empty;
-
-        foreach (var file in Directory.EnumerateFiles(
-                     directory,
-                     "*.*",
-                     new EnumerationOptions
-                     {
-                         RecurseSubdirectories = true,
-                         IgnoreInaccessible = true,
-                         AttributesToSkip = 0
-                     }))
-        {
-            if (TryGetProtectedProjectSurfaceDeleteMessage(file, file, out _))
-            {
-                if (TryFindNearestProjectDirectory(file, out var projectDirectory))
-                {
-                    protectedRelativePath = NormalizeProjectRelativePath(projectDirectory, file);
-                }
-                else
-                {
-                    protectedRelativePath = Path.GetFileName(file);
-                }
-
-                return true;
-            }
-        }
-
-        return false;
-    }
-
     private static bool TryFindNearestProjectDirectory(string fullPath, out string projectDirectory)
     {
         var currentDirectory = ResolveProjectDirectorySearchStart(fullPath);
@@ -1205,20 +954,6 @@ internal sealed class WorkspaceFileMutationService
         => Path.GetRelativePath(projectDirectory, fullPath)
             .Replace(Path.DirectorySeparatorChar, '/')
             .Replace(Path.AltDirectorySeparatorChar, '/');
-
-    private static bool IsMisplacedNestedTestProjectDirectory(string directory)
-    {
-        var directoryName = Path.GetFileName(Path.TrimEndingDirectorySeparator(directory));
-        if (!directoryName.EndsWith(".Tests", StringComparison.OrdinalIgnoreCase))
-        {
-            return false;
-        }
-
-        var parentDirectory = Directory.GetParent(directory);
-        return parentDirectory is not null &&
-               Directory.EnumerateFiles(parentDirectory.FullName, "*.*", SearchOption.TopDirectoryOnly)
-                   .Any(path => ProjectFileExtensions.Contains(Path.GetExtension(path)));
-    }
 
     private static string EnsureTrailingSeparator(string path)
     {

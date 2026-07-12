@@ -41,9 +41,7 @@ internal interface IProcessRuntimeToolPlanGuard
     ProcessRuntimeToolPlanGuardEvaluation Evaluate(ProcessRuntimeStepAssignment assignment);
 }
 
-internal sealed class ProcessRuntimeToolPreflightService(
-    IEnumerable<IAgentRuntimeToolProvider> runtimeToolProviders,
-    IEnumerable<IProcessRuntimeToolPlanGuard>? toolPlanGuards = null) : IProcessRuntimeToolPreflightService
+internal sealed class ProcessRuntimeToolPreflightService : IProcessRuntimeToolPreflightService
 {
     private static readonly ProviderProfile PreflightProvider = new(
         Guid.Empty,
@@ -64,10 +62,24 @@ internal sealed class ProcessRuntimeToolPreflightService(
         LastCheckedAtUtc: null,
         SuggestedModels: []);
 
-    private readonly IReadOnlyList<IAgentRuntimeToolProvider> runtimeToolProviders = runtimeToolProviders
-        .OrderBy(provider => provider.Order)
-        .ToArray();
-    private readonly IReadOnlyList<IProcessRuntimeToolPlanGuard> toolPlanGuards = (toolPlanGuards ?? []).ToArray();
+    private readonly IReadOnlyList<IAgentRuntimeToolProvider> runtimeToolProviders;
+    private readonly IReadOnlyList<IProcessRuntimeToolPlanGuard> toolPlanGuards;
+    private readonly ProcessRuntimeToolPreflightContributionCatalog toolPreflightContributions;
+
+    public ProcessRuntimeToolPreflightService(
+        IEnumerable<IAgentRuntimeToolProvider> runtimeToolProviders,
+        IEnumerable<IProcessRuntimeToolPlanGuard>? toolPlanGuards,
+        ProcessRuntimeToolPreflightContributionCatalog toolPreflightContributions)
+    {
+        ArgumentNullException.ThrowIfNull(runtimeToolProviders);
+        ArgumentNullException.ThrowIfNull(toolPreflightContributions);
+
+        this.runtimeToolProviders = runtimeToolProviders
+            .OrderBy(provider => provider.Order)
+            .ToArray();
+        this.toolPlanGuards = (toolPlanGuards ?? []).ToArray();
+        this.toolPreflightContributions = toolPreflightContributions;
+    }
 
     public async ValueTask<ProcessRuntimeToolPreflightResult> EvaluateAsync(
         ProcessRuntimeToolPreflightRequest request,
@@ -91,17 +103,28 @@ internal sealed class ProcessRuntimeToolPreflightService(
             return ProcessRuntimeToolPreflightResult.Satisfied;
         }
 
-        var capabilityDiagnostics = EvaluateRequiredRuntimeToolCapabilities(request, requiredToolNames);
-        if (capabilityDiagnostics.Count > 0)
+        var contributionContext = new ProcessRuntimeToolPreflightContributionContext(
+            request,
+            requiredToolNames,
+            ProcessRuntimeProviderContextFactory.Create(request.Assignment));
+        toolPreflightContributions.Contribute(contributionContext);
+        var capabilityDiagnostics = contributionContext.CapabilityDiagnostics
+            .Concat(EvaluateRequiredRuntimeToolCapabilities(
+                request,
+                requiredToolNames,
+                contributionContext.HandledToolNames))
+            .DistinctBy(diagnostic => (diagnostic.Kind, diagnostic.CapabilityKey))
+            .ToArray();
+        if (capabilityDiagnostics.Length > 0)
         {
             return CreateCapabilityFailure(capabilityDiagnostics);
         }
 
-        var contextIntent = CreateContextIntent(request.Assignment);
+        var contextIntent = contributionContext.ContextIntent;
         var context = CreateProviderContext(request.Agent, contextIntent);
         var composedToolNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         AddConfiguredWorkspaceToolNames(composedToolNames, request.Agent, contextIntent);
-        AddAssignedBrowserToolNames(composedToolNames, request.Agent, contextIntent, requiredToolNames);
+        composedToolNames.UnionWith(contributionContext.ComposedToolNames);
         var providerErrors = new List<string>();
         foreach (var provider in runtimeToolProviders)
         {
@@ -188,7 +211,8 @@ internal sealed class ProcessRuntimeToolPreflightService(
 
     private static IReadOnlyList<AgentCapabilityDiagnostic> EvaluateRequiredRuntimeToolCapabilities(
         ProcessRuntimeToolPreflightRequest request,
-        IReadOnlyList<string> requiredToolNames)
+        IReadOnlyList<string> requiredToolNames,
+        IReadOnlySet<string> contributionHandledToolNames)
     {
         var diagnostics = new List<AgentCapabilityDiagnostic>();
         foreach (var requiredToolName in requiredToolNames)
@@ -199,9 +223,8 @@ internal sealed class ProcessRuntimeToolPreflightService(
                 continue;
             }
 
-            if (normalizedToolName.StartsWith("browser_", StringComparison.OrdinalIgnoreCase))
+            if (contributionHandledToolNames.Contains(normalizedToolName))
             {
-                AddMissingBrowserCapabilityDiagnostic(request, normalizedToolName, diagnostics);
                 continue;
             }
 
@@ -239,23 +262,6 @@ internal sealed class ProcessRuntimeToolPreflightService(
             $"Step '{request.Assignment.StepKey}' requires runtime tool '{normalizedToolName}', but agent '{request.Agent.Name}' does not have matching tool capability '{capabilityKey}'."));
     }
 
-    private static void AddMissingBrowserCapabilityDiagnostic(
-        ProcessRuntimeToolPreflightRequest request,
-        string normalizedToolName,
-        List<AgentCapabilityDiagnostic> diagnostics)
-    {
-        if (HasRequiredBrowserRuntimeToolCapability(request.Agent, normalizedToolName))
-        {
-            return;
-        }
-
-        diagnostics.Add(CreateMissingCapabilityDiagnostic(
-            request,
-            CapabilityKind.McpServer,
-            "playwright-local-mcp",
-            $"Step '{request.Assignment.StepKey}' requires browser runtime tool '{normalizedToolName}', but agent '{request.Agent.Name}' does not have a Playwright/browser MCP capability or matching browser tool capability."));
-    }
-
     private static AgentCapabilityDiagnostic CreateMissingCapabilityDiagnostic(
         ProcessRuntimeToolPreflightRequest request,
         CapabilityKind kind,
@@ -274,29 +280,6 @@ internal sealed class ProcessRuntimeToolPreflightService(
             kind,
             capabilityKey,
             message);
-    }
-
-    private static AgentRuntimeContextIntent CreateContextIntent(
-        ProcessRuntimeStepAssignment assignment)
-    {
-        return new AgentRuntimeContextIntent(
-            SourceKind: "process-step",
-            SourceId: assignment.StepKey,
-            ProcessRunId: assignment.RunId.Value.ToString("D"),
-            ProcessStepId: assignment.StepInstanceId.Value.ToString("D"),
-            TargetScope: assignment.OperationTargetScope,
-            IsGovernedProcessStep: true,
-            BrowserToolsAllowed: assignment.AllowedOperations.Any(operation =>
-                string.Equals(operation, ProcessOperationContractNames.CaptureRuntimeProof, StringComparison.OrdinalIgnoreCase)),
-            ScaffoldToolOnly: false,
-            AllowsProductMutation: assignment.AllowedOperations.Any(operation =>
-                string.Equals(operation, ProcessOperationContractNames.MutateProductTarget, StringComparison.OrdinalIgnoreCase)),
-            WorkspaceToolProfile: null,
-            WorkspaceScope: null,
-            AllowedOperations: assignment.AllowedOperations,
-            RuntimeToolProvidersEnabled: true,
-            WorkspaceToolsEnabled: true,
-            CapabilityScopeOverride: AgentFrameworkProcessCapabilityScopeTranslator.Translate(assignment.CapabilityScope));
     }
 
     private static AgentRuntimeToolProviderContext CreateProviderContext(
@@ -347,52 +330,6 @@ internal sealed class ProcessRuntimeToolPreflightService(
         }
     }
 
-    private static void AddAssignedBrowserToolNames(
-        HashSet<string> composedToolNames,
-        AgentDefinition agent,
-        AgentRuntimeContextIntent contextIntent,
-        IReadOnlyList<string> requiredToolNames)
-    {
-        if (!agent.Permissions.CanUseTools ||
-            !contextIntent.BrowserToolsAllowed)
-        {
-            return;
-        }
-
-        foreach (var requiredToolName in requiredToolNames.Where(IsBrowserRuntimeToolName))
-        {
-            var normalizedToolName = ToolContractCatalog.NormalizeToolName(requiredToolName);
-            if (HasRequiredBrowserRuntimeToolCapability(agent, normalizedToolName) &&
-                ToolCapabilityRegistry.TryResolve(normalizedToolName, out var capability) &&
-                RuntimeToolProcessIntentPolicy.IsToolCapabilityAllowedForProcessIntent(capability, contextIntent))
-            {
-                composedToolNames.Add(normalizedToolName);
-            }
-        }
-    }
-
-    private static bool HasRequiredBrowserRuntimeToolCapability(
-        AgentDefinition agent,
-        string requiredToolName)
-    {
-        var normalizedToolName = requiredToolName.Trim().Replace('-', '_');
-        var normalizedToolKey = normalizedToolName.Replace('_', '-');
-        return agent.Capabilities.Any(capability =>
-            capability.Kind switch
-            {
-                CapabilityKind.McpServer => IsBrowserMcpServerCapability(capability.CapabilityKey),
-                CapabilityKind.Tool => CapabilityKeyMatchesTool(capability.CapabilityKey, normalizedToolName, normalizedToolKey),
-                _ => false
-            });
-    }
-
-    private static bool IsBrowserMcpServerCapability(string capabilityKey)
-    {
-        return capabilityKey.Contains("playwright", StringComparison.OrdinalIgnoreCase) ||
-               capabilityKey.Contains("browser-mcp", StringComparison.OrdinalIgnoreCase) ||
-               capabilityKey.Contains("browser_mcp", StringComparison.OrdinalIgnoreCase);
-    }
-
     private static bool CapabilityKeyMatchesTool(
         string capabilityKey,
         string normalizedToolName,
@@ -403,9 +340,6 @@ internal sealed class ProcessRuntimeToolPreflightService(
                string.Equals(keyWithUnderscores, normalizedToolName, StringComparison.OrdinalIgnoreCase) ||
                keyWithUnderscores.EndsWith($"_{normalizedToolName}", StringComparison.OrdinalIgnoreCase);
     }
-
-    private static bool IsBrowserRuntimeToolName(string toolName)
-        => toolName.StartsWith("browser_", StringComparison.OrdinalIgnoreCase);
 
     private static bool CanAttachConfiguredWorkspaceTools(
         AgentWorkspaceToolAccessSettings workspaceToolAccess)

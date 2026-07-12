@@ -20,4 +20,20 @@ public sealed class ProcessProductCompletionStateGateTests
     {
         Assert.True(ProcessProductCompletionStateGate.DeclaresUnresolvedBlocker(line));
     }
+
+    [Fact]
+    public void Planning_step_does_not_treat_future_receipts_as_a_current_blocker()
+    {
+        Assert.False(ProcessProductCompletionStateGate.DeclaresUnresolvedBlocker(
+            "The generated-product validation receipts are not yet captured and remain a downstream proof prerequisite.",
+            requiresCurrentRunProof: false));
+    }
+
+    [Fact]
+    public void Planning_step_still_rejects_an_explicit_unresolved_blocker()
+    {
+        Assert.True(ProcessProductCompletionStateGate.DeclaresUnresolvedBlocker(
+            "The plan has an unresolved blocker: contradictory authoritative scope.",
+            requiresCurrentRunProof: false));
+    }
 }

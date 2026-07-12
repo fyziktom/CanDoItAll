@@ -33,7 +33,7 @@ using static CanDoItAll.Modules.Processes.ProcessExecutionResultFactory;
 using static CanDoItAll.Modules.Processes.ProcessManagedArtifactService;
 using static CanDoItAll.Modules.Processes.ProcessManagedArtifactFormatter;
 using static CanDoItAll.Modules.Processes.ProcessManagedArtifactOutcomeParser;
-using static CanDoItAll.Modules.Processes.ProcessRuntimeLifecycleReceiptFacts;
+using static CanDoItAll.Modules.Processes.ProcessOutcomeGroundingValidator;
 using static CanDoItAll.Modules.Processes.ProcessSubprocessState;
 
 namespace CanDoItAll.Modules.Processes;
@@ -221,7 +221,6 @@ internal static class ProcessSubprocessCompletionPolicy
                    text,
                    "direct child-work tools",
                    "direct implementation",
-                   "direct scaffold",
                    "direct validation",
                    "parent toolset",
                    "child-work capability") &&
@@ -343,6 +342,26 @@ internal static class ProcessSubprocessCompletionPolicy
             ProcessDiagnosticIdempotencyClassification.Unknown);
     }
 
+    internal static ProcessCompletionIssue CreateSubprocessLaunchFailedIssue(
+        ProcessRuntimeStepAssignment assignment,
+        string subprocessDefinitionKey,
+        Exception exception)
+    {
+        ArgumentNullException.ThrowIfNull(exception);
+
+        var safeDetail = LimitDiagnosticText(exception.Message);
+        var requestedSlots = assignment.ProducedArtifactSlotIds.Count > 0
+            ? assignment.ProducedArtifactSlotIds
+            : assignment.RequiredArtifactSlotIds;
+        return new ProcessCompletionIssue(
+            "process.adapter.subprocess_launch_failed",
+            $"Step '{assignment.StepKey}' could not launch mapped subprocess DefinitionKey '{subprocessDefinitionKey}'. The runtime preserved the parent step instead of retrying an indeterminate launch. Review the launch contract or child-process boundary before rework. Detail: {safeDetail}",
+            $"{assignment.RunId}:{assignment.StepInstanceId}:subprocess-launch-failed:{subprocessDefinitionKey}:{exception.GetType().FullName}:{safeDetail}",
+            requestedSlots,
+            ProcessDiagnosticRetrySafety.UnsafeToRetry,
+            ProcessDiagnosticIdempotencyClassification.Unknown);
+    }
+
     internal static ProcessCompletionIssue CreateSubprocessContractMissingIssue(
         ProcessRuntimeStepAssignment assignment)
     {
@@ -389,6 +408,22 @@ internal static class ProcessSubprocessCompletionPolicy
             "process.adapter.subprocess_child_accepted_output_missing",
             $"Step '{assignment.StepKey}' has completed child run '{childRunId.Value:D}', but none of the typed accepted child outputs were materialized. Expected one of: {acceptedOutputs}. Do not complete the parent from a generic child folder.",
             $"{assignment.RunId}:{assignment.StepInstanceId}:subprocess-child-accepted-output-missing:{childRunId}:{acceptedOutputs}",
+            assignment.ProducedArtifactSlotIds.Count > 0 ? assignment.ProducedArtifactSlotIds : assignment.RequiredArtifactSlotIds,
+            ProcessDiagnosticRetrySafety.UnsafeToRetry,
+            ProcessDiagnosticIdempotencyClassification.Idempotent);
+    }
+
+    internal static ProcessCompletionIssue CreateSubprocessChildForwardedContextIssue(
+        ProcessRuntimeStepAssignment assignment,
+        ProcessRunId childRunId,
+        ParentSubprocessForwardedContextIssue forwardedContextIssue)
+    {
+        ArgumentNullException.ThrowIfNull(forwardedContextIssue);
+
+        return new ProcessCompletionIssue(
+            forwardedContextIssue.Code,
+            $"Step '{assignment.StepKey}' has completed child run '{childRunId.Value:D}', but the runtime could not forward a typed child context artifact required by the parent contract. {forwardedContextIssue.SafeSummary}",
+            $"{assignment.RunId}:{assignment.StepInstanceId}:subprocess-child-forwarded-context:{childRunId}:{forwardedContextIssue.Evidence}",
             assignment.ProducedArtifactSlotIds.Count > 0 ? assignment.ProducedArtifactSlotIds : assignment.RequiredArtifactSlotIds,
             ProcessDiagnosticRetrySafety.UnsafeToRetry,
             ProcessDiagnosticIdempotencyClassification.Idempotent);

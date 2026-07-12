@@ -6,12 +6,14 @@ Use the grounded product root from project structure or parent artifacts. If no 
 
 Project-structure mindmap values override examples and defaults. If the mindmap names `net10.0`, MSTest, a solution name, an app project name, or a specific feature list, copy those values exactly. Do not add unrequested features or write older framework guidance as a fallback.
 
-For a greenfield .NET app, use this layout unless the parent contract explicitly says otherwise:
+Record one target framework as the source of truth for both application and test projects. It is not an application template option, so do not write `--framework` or its value among allowed template switches and do not rely on an installed SDK default. If the selected app and test templates have no common supported target framework, block and return the concrete architecture conflict.
 
-- solution file at the product root as `<SolutionName>.slnx` or `<SolutionName>.sln`
-- app project under `<ProductRoot>/src/<AppProjectName>`
-- test project under `<ProductRoot>/tests/<TestProjectName>`
+The application and test template fields must use exact one-token `dotnet new` identifiers, not human display names. For example, record `blazorwasm` rather than "Blazor WebAssembly App", and `xunit` rather than "xUnit test project". Put any optional approved app flag only in `application.templateOptions`; do not attach values or inline flags to the template identifier.
 
-Select the app template from grounded requirements. Select the test template from the parent contract or existing repository convention. Escalate when those choices cannot be made without guessing.
+For a greenfield .NET app, record the topology supplied by the parent contract or current launch variables:
 
-Do not use the product root itself as the app project parent after creating the solution file. A solution file and a project directory may share the same base name, but the project directory still belongs under `src/`.
+- solution file location and accepted `.slnx` / `.sln` candidates
+- app project directory and project file name
+- test project directory and project file name, when tests are in scope
+
+The setup template does not prescribe a `src`/`tests` layout or prohibit an app project at the product root. Select the app template from grounded requirements and the test template from the parent contract or existing repository convention. Block only when a required topology or template choice cannot be determined safely from authoritative current-run context.

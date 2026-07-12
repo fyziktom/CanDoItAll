@@ -162,7 +162,7 @@ public static class AgentStructuredOutputContracts
     public static AgentStructuredOutputContract ProcessStepOutcomeResult { get; } =
         AgentStructuredOutputContract.For<ProcessStepOutcomeResult>(
             ProcessStepOutcomeResultKey,
-            "Validated machine contract for process step completion, branch selection, next actions, and display-only markdown summary.");
+            "Validated machine contract for process step completion, branch selection, acceptance-criterion proof, next actions, and display-only markdown summary.");
 
     public static AgentStructuredOutputContract CodeReviewResult { get; } =
         AgentStructuredOutputContract.For<CodeReviewResult>(
@@ -427,6 +427,23 @@ public sealed class ProcessStepOutcomeResult
     public string BranchOutcomeKey { get; init; } = string.Empty;
     public string BranchOutcomeTitle { get; init; } = string.Empty;
     public IReadOnlyList<string> EvidenceRefs { get; init; } = [];
+    public IReadOnlyList<ProcessAcceptanceCriterionEvidence> AcceptanceCriteriaEvidence { get; init; } = [];
     public IReadOnlyList<string> NextActions { get; init; } = [];
     public string? HumanReadableSummaryMarkdown { get; init; }
+}
+
+[JsonConverter(typeof(JsonStringEnumConverter<ProcessAcceptanceCriterionEvidenceStatus>))]
+public enum ProcessAcceptanceCriterionEvidenceStatus
+{
+    Passed,
+    Failed,
+    NotVerified
+}
+
+public sealed class ProcessAcceptanceCriterionEvidence
+{
+    public required string CriterionId { get; init; }
+    public required ProcessAcceptanceCriterionEvidenceStatus Status { get; init; }
+    public required string Summary { get; init; }
+    public IReadOnlyList<string> EvidenceRefs { get; init; } = [];
 }

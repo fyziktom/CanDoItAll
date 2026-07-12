@@ -2,8 +2,8 @@ using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Globalization;
-using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.Processes.Abstractions;
 using CanDoItAll.Processes.Application;
 using CanDoItAll.Processes.Projections;
@@ -42,7 +42,7 @@ public partial class ProjectStructurePage
     private IProcessHistoricalRunCostReader ProcessHistoricalRunCostReader { get; set; } = default!;
 
     [Inject]
-    private IEnumerable<IProjectStructureProcessLaunchVariableContributor> ProcessLaunchVariableContributors { get; set; } = default!;
+    private ProcessLaunchVariablePreparationService ProcessLaunchVariablePreparationService { get; set; } = default!;
 
     private ProjectStructureProcessLinkDialogState? processLinkDialog;
     private ProjectStructureProcessStartDialogState? processStartDialog;
@@ -610,20 +610,16 @@ public partial class ProjectStructurePage
             return;
         }
 
-        var context = new ProjectStructureProcessLaunchVariableContext(
-            ProjectId,
+        var contextSummary = variables.TryGetValue("ProjectStructureContextSummary", out var value)
+            ? value
+            : string.Empty;
+        var context = ProjectStructureProcessLaunchSourceSnapshotMapper.Create(
             surface,
             targetNode,
             dialog.DefinitionKey,
-            dialog.ProcessDefinitionId,
-            ParentRunId: null,
-            ParentStepId: null,
-            ParentAssignment: null,
-            IsSubprocess: false);
-        foreach (var contributor in ProcessLaunchVariableContributors)
-        {
-            contributor.Enrich(context, variables);
-        }
+            isSubprocess: false,
+            contextSummary);
+        ProcessLaunchVariablePreparationService.Enrich(context, variables);
     }
 
     private string ResolveProcessDefinitionKey(Guid processDefinitionId)
@@ -1566,17 +1562,6 @@ public partial class ProjectStructurePage
         var normalizedOutputRoot = outputRoot.Trim();
         variables["OutputRoot"] = normalizedOutputRoot;
         variables["ProductRoot"] = normalizedOutputRoot;
-
-        var externalTargetAlias = AgentWorkspaceToolAccessMetadata.NormalizeExternalTargetAlias(normalizedOutputRoot);
-        if (string.IsNullOrWhiteSpace(externalTargetAlias))
-        {
-            return;
-        }
-
-        variables["ExternalTargetRoot"] = externalTargetAlias;
-        variables["OutputRootAlias"] = externalTargetAlias;
-        variables["ProductRootAlias"] = externalTargetAlias;
-        variables["WorkspaceAlias"] = externalTargetAlias;
     }
 
     private static string ResolveOutputRoot(ProjectStructureSurface currentSurface, ProjectStructureNode targetNode)

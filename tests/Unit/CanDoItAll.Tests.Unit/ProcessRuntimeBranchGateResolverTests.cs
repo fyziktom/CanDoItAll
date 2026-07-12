@@ -76,6 +76,52 @@ public sealed class ProcessRuntimeBranchGateResolverTests
         Assert.Equal("feature-accepted", repairedHandoff.DependsOnBranchOutcomeKey);
     }
 
+    [Fact]
+    public void Shipped_process_templates_use_at_most_one_branch_gate_per_step()
+    {
+        var loader = new ProcessTemplatePackLoader(Path.Combine(FindRepositoryRoot(), "Templates", "Processes"));
+
+        foreach (var template in loader.Load().Manifest.Processes)
+        {
+            var definition = loader.LoadDefinition(template.Key);
+            Assert.All(definition.Steps, step =>
+            {
+                var distinctBranchDependencies = ProcessTemplateKernelBuilder.EnumerateDependencies(step)
+                    .Where(dependency => !string.IsNullOrWhiteSpace(dependency.BranchOutcomeKey))
+                    .DistinctBy(
+                        dependency => $"{dependency.StepKey}\u001f{dependency.BranchOutcomeKey}",
+                        StringComparer.OrdinalIgnoreCase)
+                    .ToArray();
+
+                Assert.True(
+                    distinctBranchDependencies.Length <= 1,
+                    $"Template '{definition.Key}' step '{step.Key}' declares unsupported branch gates: {string.Join(", ", distinctBranchDependencies.Select(dependency => $"{dependency.StepKey}:{dependency.BranchOutcomeKey}"))}");
+            });
+        }
+    }
+
+    [Fact]
+    public void Development_slice_handoff_uses_transitive_accepted_branch_dependency()
+    {
+        var loader = new ProcessTemplatePackLoader(Path.Combine(FindRepositoryRoot(), "Templates", "Processes"));
+        var definition = loader.LoadDefinition("dotnet-development-slice");
+        var handoff = Assert.Single(definition.Steps, step => step.Key == "slice-handoff");
+        var branchDependencies = ProcessTemplateKernelBuilder.EnumerateDependencies(handoff)
+            .Where(dependency => !string.IsNullOrWhiteSpace(dependency.BranchOutcomeKey))
+            .DistinctBy(
+                dependency => $"{dependency.StepKey}\u001f{dependency.BranchOutcomeKey}",
+                StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
+        var branchDependency = Assert.Single(branchDependencies);
+        Assert.Equal("add-tests-and-proof", branchDependency.StepKey);
+        Assert.Equal("slice-accepted", branchDependency.BranchOutcomeKey);
+        Assert.DoesNotContain(
+            branchDependencies,
+            dependency => dependency.StepKey == "implement-code-change" &&
+                          dependency.BranchOutcomeKey == "implementation-ready");
+    }
+
     private static ProcessTemplateDefinitionStepDocument NewStep(
         params ProcessTemplateDefinitionStepDependencyDocument[] dependencies)
         => new()

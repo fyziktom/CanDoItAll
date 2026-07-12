@@ -1,18 +1,12 @@
-using System.Text.RegularExpressions;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.Processes.Abstractions;
+using CanDoItAll.Processes.Drivers.Abstractions;
 using CanDoItAll.Processes.Runtime;
 
 namespace CanDoItAll.Modules.Workbench;
 
 internal static class ProcessSubprocessParentArtifactContextBuilder
 {
-    private static readonly Regex ManagedChildStepArtifactRefRegex = new(
-        @"\bartifacts/process-runs/(?<runId>[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})/steps/[A-Za-z0-9_-]+\.md\b",
-        RegexOptions.Compiled | RegexOptions.CultureInvariant);
-    private static readonly Regex MatchingChildRunIdRegex = new(
-        @"\bMatching child process run ['`]?(?<runId>[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})['`]?\b",
-        RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
     public static void Apply(
         IDictionary<string, string> launchVariables,
@@ -30,20 +24,64 @@ internal static class ProcessSubprocessParentArtifactContextBuilder
         ArgumentNullException.ThrowIfNull(parentState);
 
         launchVariables.Remove(ProcessRuntimeLaunchVariables.ParentRequiredArtifactRefs);
-        var artifactRefs = ResolveRequiredArtifactRefs(parentState, parentStepId, workspaceFiles);
-        if (artifactRefs.Count == 0)
+        launchVariables.Remove(ProcessRuntimeLaunchVariables.ParentRequiredArtifactBindings);
+
+        var requiredDescriptors = ResolveRequiredArtifactDescriptors(parentState, parentStepId);
+        if (requiredDescriptors.Count == 0)
         {
             return;
         }
 
-        launchVariables[ProcessRuntimeLaunchVariables.ParentRequiredArtifactRefs] =
-            ProcessRuntimeLaunchVariables.SerializeParentRequiredArtifactRefs(artifactRefs);
+        var bindings = ResolveRequiredArtifactBindings(parentState, parentStepId);
+        if (bindings.Count > 0)
+        {
+            launchVariables[ProcessRuntimeLaunchVariables.ParentRequiredArtifactBindings] =
+                ProcessRuntimeLaunchVariables.SerializeParentRequiredArtifactBindings(bindings);
+        }
+
+        var artifactRefs = ResolveRequiredArtifactRefs(requiredDescriptors, workspaceFiles);
+        if (artifactRefs.Count > 0)
+        {
+            launchVariables[ProcessRuntimeLaunchVariables.ParentRequiredArtifactRefs] =
+                ProcessRuntimeLaunchVariables.SerializeParentRequiredArtifactRefs(artifactRefs);
+        }
     }
 
     internal static IReadOnlyList<string> ResolveRequiredArtifactRefs(
         ProcessRuntimeStateSnapshot parentState,
         ProcessStepInstanceId parentStepId,
         IWorkspaceFileService? workspaceFiles = null)
+    {
+        ArgumentNullException.ThrowIfNull(parentState);
+
+        return ResolveRequiredArtifactRefs(
+            ResolveRequiredArtifactDescriptors(parentState, parentStepId),
+            workspaceFiles);
+    }
+
+    internal static IReadOnlyList<ProcessParentArtifactBindingRef> ResolveRequiredArtifactBindings(
+        ProcessRuntimeStateSnapshot parentState,
+        ProcessStepInstanceId parentStepId)
+    {
+        ArgumentNullException.ThrowIfNull(parentState);
+
+        return ResolveRequiredArtifactDescriptors(parentState, parentStepId)
+            .Where(descriptor => !string.IsNullOrWhiteSpace(descriptor.PrimaryManagedRef))
+            .Select(descriptor => new ProcessParentArtifactBindingRef(
+                descriptor.StepKey,
+                descriptor.ArtifactExpectationKey,
+                descriptor.PrimaryManagedRef))
+            .Distinct()
+            .OrderBy(binding => binding.SourceStepKey, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(binding => binding.ArtifactExpectationKey, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(binding => binding.ArtifactRef, StringComparer.OrdinalIgnoreCase)
+            .Take(32)
+            .ToArray();
+    }
+
+    private static IReadOnlyList<ProcessArtifactSlotDescriptor> ResolveRequiredArtifactDescriptors(
+        ProcessRuntimeStateSnapshot parentState,
+        ProcessStepInstanceId parentStepId)
     {
         ArgumentNullException.ThrowIfNull(parentState);
 
@@ -56,54 +94,18 @@ internal static class ProcessSubprocessParentArtifactContextBuilder
         var requiredDescriptors = parentStep.ArtifactDescriptors
             .Where(descriptor => parentStep.RequiredArtifactSlots.Contains(descriptor.SlotId))
             .ToArray();
+        return requiredDescriptors;
+    }
+
+    private static IReadOnlyList<string> ResolveRequiredArtifactRefs(
+        IReadOnlyList<ProcessArtifactSlotDescriptor> requiredDescriptors,
+        IWorkspaceFileService? _)
+    {
         var directRefs = requiredDescriptors
             .Select(descriptor => descriptor.PrimaryManagedRef)
             .Where(artifactRef => !string.IsNullOrWhiteSpace(artifactRef))
             .ToArray();
-        if (workspaceFiles is null)
-        {
-            return NormalizeRefs(directRefs);
-        }
-
-        var bridgedChildRefs = requiredDescriptors
-            .SelectMany(descriptor => ReadBridgedChildRefs(workspaceFiles, descriptor.PrimaryManagedRef));
-        return NormalizeRefs(directRefs.Concat(bridgedChildRefs));
-    }
-
-    private static IEnumerable<string> ReadBridgedChildRefs(
-        IWorkspaceFileService workspaceFiles,
-        string parentArtifactRef)
-    {
-        if (string.IsNullOrWhiteSpace(parentArtifactRef))
-        {
-            yield break;
-        }
-
-        var readResult = workspaceFiles.ReadTextFile(parentArtifactRef, maxCharacters: 100000);
-        if (!readResult.Succeeded)
-        {
-            yield break;
-        }
-
-        var childRunMatch = MatchingChildRunIdRegex.Match(readResult.Content);
-        if (!childRunMatch.Success ||
-            !readResult.Content.Contains("## Subprocess handoff completed", StringComparison.Ordinal) ||
-            !readResult.Content.Contains("## Child evidence", StringComparison.Ordinal) ||
-            !readResult.Content.Contains("## Runtime Accepted Completion Gates", StringComparison.Ordinal))
-        {
-            yield break;
-        }
-
-        foreach (Match match in ManagedChildStepArtifactRefRegex.Matches(readResult.Content))
-        {
-            if (string.Equals(
-                    match.Groups["runId"].Value,
-                    childRunMatch.Groups["runId"].Value,
-                    StringComparison.OrdinalIgnoreCase))
-            {
-                yield return match.Value;
-            }
-        }
+        return NormalizeRefs(directRefs);
     }
 
     private static IReadOnlyList<string> NormalizeRefs(IEnumerable<string> artifactRefs)

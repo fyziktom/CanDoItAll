@@ -294,7 +294,6 @@ public sealed class MafAgentRuntimeAttachmentTests
             TargetScope: "ExternalProductTargetMutable",
             IsGovernedProcessStep: true,
             BrowserToolsAllowed: false,
-            ScaffoldToolOnly: false,
             AllowsProductMutation: true,
             WorkspaceToolProfile: null,
             WorkspaceScope: WorkspaceScopeDescriptor.Project(Guid.NewGuid().ToString("D")),

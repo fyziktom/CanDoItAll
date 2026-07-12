@@ -36,7 +36,10 @@ internal static class ProcessRuntimeOwnedToolReceiptFactory
                 ? $"Succeeded (exit {result.ExitCode}): {result.Message}"
                 : $"Failed (exit {result.ExitCode}): {result.Message}",
             result.Receipt.StartedAtUtc,
-            result.Receipt.CompletedAtUtc);
+            result.Receipt.CompletedAtUtc)
+        {
+            DeclaredSideEffectMode = result.Receipt.DeclaredSideEffectMode
+        };
 
     private static ToolExecutionReceiptRecord FromWorkspaceReceipt(
         Guid executionRunId,

@@ -348,6 +348,82 @@ public sealed class ProcessLaunchExecutorResolverTests
     }
 
     [Fact]
+    public async Task ResolveAsync_uses_template_specialization_tags_to_select_dotnet_qa_over_generic_qa()
+    {
+        var providerId = Guid.Parse("b7cc83e6-2d22-43a8-8b71-5c4320231ff8");
+        var genericQaAgent = CreateAgent(
+            providerId,
+            Guid.Parse("f653b0a9-c090-4be8-898d-2b82bc581963"),
+            "Delivery QA Observer",
+            "QA lead",
+            "Reviews generic delivery evidence.",
+            AgentWorkloadKind.Qa,
+            AgentWorkspaceToolProfileKind.QualityValidation,
+            ["qa"]);
+        var dotnetQaAgent = CreateAgent(
+            providerId,
+            Guid.Parse("280d3904-33e5-4207-9524-c4b50cd6dff6"),
+            ".NET QA Review Lead",
+            ".NET QA specialist",
+            "Reviews .NET product evidence.",
+            AgentWorkloadKind.Qa,
+            AgentWorkspaceToolProfileKind.QualityValidation,
+            ["dotnet", "qa"]);
+        var workspace = new ResolverWorkspaceService([genericQaAgent, dotnetQaAgent], [CreateProvider(providerId)]);
+        var workspaceFactory = new ResolverWorkspaceFactory(workspace);
+        var resolver = CreateResolver(workspaceFactory);
+        var definition = new ProcessTemplateDefinitionDocument
+        {
+            Key = "specialized-qa-test",
+            RoleUsages =
+            [
+                new ProcessTemplateDefinitionRoleUsageDocument
+                {
+                    Key = "qa-lead",
+                    RoleResourceKey = "qa-lead",
+                    DisplayName = "QA lead",
+                    PreferredExecutorKind = ProcessLaunchExecutorKinds.Agent,
+                    PreferredProjectAssignmentRole = "QA",
+                    IsRequired = true
+                }
+            ],
+            Steps =
+            [
+                new ProcessTemplateDefinitionStepDocument
+                {
+                    Key = "validate",
+                    Title = "Validate product",
+                    StepKind = "Review",
+                    ExecutorPreferredSpecializationTags = ["dotnet", "qa"],
+                    AllowedOperations = [ProcessOperationContractNames.ReadProcessContext],
+                    OperationTargetScope = ProcessOperationContractNames.ExternalProductTargetReadOnly,
+                    RoleAssignments =
+                    [
+                        new ProcessTemplateDefinitionStepRoleAssignmentDocument
+                        {
+                            RoleKey = "qa-lead",
+                            ResponsibilityKind = "Responsible",
+                            IsRequired = true
+                        }
+                    ]
+                }
+            ]
+        };
+
+        var result = await resolver.ResolveAsync(new ProcessLaunchExecutorResolutionRequest(
+            definition,
+            CreatePlan("validate"),
+            LiveRunProfile: null,
+            Variables: new Dictionary<string, string>()));
+
+        Assert.DoesNotContain(result.Findings, finding => finding.Severity == ProcessLaunchReadinessSeverity.Error);
+        var binding = Assert.Single(result.Bindings);
+        Assert.Equal(dotnetQaAgent.Id.ToString("D"), binding.ExecutorId);
+        Assert.NotEqual(genericQaAgent.Id.ToString("D"), binding.ExecutorId);
+        Assert.Contains("preferred specialization", binding.AssignmentReason, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public async Task ResolveAsync_rejects_dotnet_setup_template_when_agent_lacks_required_tool_capability()
     {
         var providerId = Guid.Parse("52ee790f-23d9-432c-8e8e-c15ca95115fb");
@@ -610,7 +686,7 @@ public sealed class ProcessLaunchExecutorResolverTests
     }
 
     [Fact]
-    public async Task ResolveAsync_rejects_architecture_subprocess_contract_with_runtime_proof_tools()
+    public async Task ResolveAsync_allows_structurally_valid_subprocess_contract_regardless_of_role_or_title_text()
     {
         var providerId = Guid.Parse("e785895d-a164-4175-a28f-9cc12fdf7fa5");
         var architectAgent = CreateAgent(
@@ -627,6 +703,9 @@ public sealed class ProcessLaunchExecutorResolverTests
         var resolver = CreateResolver(workspaceFactory);
         var definition = CreateTechnicalSubprocessDefinition();
         var architectureStep = Assert.Single(definition.Steps, step => string.Equals(step.Key, "architecture-review", StringComparison.Ordinal));
+        var architectureRole = Assert.Single(definition.RoleUsages, role => string.Equals(role.Key, "solution-architect", StringComparison.Ordinal));
+        architectureRole.DisplayName = "Řídící koordinátor 合意";
+        architectureStep.Title = "Příprava provozního návrhu";
         architectureStep.AllowedOperations =
         [
             .. architectureStep.AllowedOperations,
@@ -640,11 +719,42 @@ public sealed class ProcessLaunchExecutorResolverTests
             LiveRunProfile: null,
             Variables: new Dictionary<string, string>()));
 
+        Assert.DoesNotContain(result.Findings, finding =>
+            finding.Code == "process.launch.step_operation_contract_invalid");
+    }
+
+    [Fact]
+    public async Task ResolveAsync_rejects_subprocess_contract_without_child_execution_operation_or_controlled_scope()
+    {
+        var providerId = Guid.Parse("e8bca6d2-5ef8-41a7-a9a1-ec856eb7e1f4");
+        var workspace = new ResolverWorkspaceService([CreateAgent(providerId)], [CreateProvider(providerId)]);
+        var workspaceFactory = new ResolverWorkspaceFactory(workspace);
+        var resolver = CreateResolver(workspaceFactory);
+        var definition = CreateTechnicalSubprocessDefinition();
+        var architectureStep = Assert.Single(definition.Steps, step => string.Equals(step.Key, "architecture-review", StringComparison.Ordinal));
+        architectureStep.Title = "Spuštění 子流程";
+        architectureStep.AllowedOperations =
+        [
+            ProcessOperationContractNames.ReadProcessContext,
+            ProcessOperationContractNames.WriteManagedProcessArtifacts
+        ];
+        architectureStep.OperationTargetScope = ProcessOperationContractNames.ExternalProductTargetReadOnly;
+
+        var result = await resolver.ResolveAsync(new ProcessLaunchExecutorResolutionRequest(
+            definition,
+            CreatePlan("architecture-review"),
+            LiveRunProfile: null,
+            Variables: new Dictionary<string, string>()));
+
         Assert.Empty(result.Bindings);
         Assert.Contains(result.Findings, finding =>
             finding.Severity == ProcessLaunchReadinessSeverity.Error &&
             finding.Code == "process.launch.step_operation_contract_invalid" &&
-            finding.Message.Contains("runtime/browser proof", StringComparison.OrdinalIgnoreCase));
+            finding.Message.Contains(ProcessOperationContractNames.ExecuteExternalAction, StringComparison.Ordinal));
+        Assert.Contains(result.Findings, finding =>
+            finding.Severity == ProcessLaunchReadinessSeverity.Error &&
+            finding.Code == "process.launch.step_operation_contract_invalid" &&
+            finding.Message.Contains(ProcessOperationContractNames.ExternalActionControlled, StringComparison.Ordinal));
     }
 
     [Fact]
@@ -770,7 +880,7 @@ public sealed class ProcessLaunchExecutorResolverTests
     }
 
     [Fact]
-    public async Task ResolveAsync_rejects_mutable_implementation_work_step_without_mutation_contract()
+    public async Task ResolveAsync_allows_activity_contract_regardless_of_localized_role_or_title_text()
     {
         var providerId = Guid.Parse("b4309322-2334-4b52-805b-5fa16e290043");
         var developerAgent = CreateAgent(
@@ -785,19 +895,20 @@ public sealed class ProcessLaunchExecutorResolverTests
         var workspace = new ResolverWorkspaceService([developerAgent], [CreateProvider(providerId)]);
         var workspaceFactory = new ResolverWorkspaceFactory(workspace);
         var resolver = CreateResolver(workspaceFactory);
-        var definition = CreateBrokenImplementationWorkDefinition();
+        var definition = CreateLocalizedActivityDefinition();
 
         var result = await resolver.ResolveAsync(new ProcessLaunchExecutorResolutionRequest(
             definition,
-            CreatePlan("code-change"),
+            CreatePlan("doplnit-実装"),
             LiveRunProfile: null,
             Variables: new Dictionary<string, string>()));
 
-        Assert.Empty(result.Bindings);
-        Assert.Contains(result.Findings, finding =>
-            finding.Severity == ProcessLaunchReadinessSeverity.Error &&
-            finding.Code == "process.launch.step_operation_contract_invalid" &&
-            finding.Message.Contains(ProcessOperationContractNames.MutateProductTarget, StringComparison.Ordinal));
+        Assert.DoesNotContain(result.Findings, finding =>
+            finding.Code == "process.launch.step_operation_contract_invalid");
+        var binding = Assert.Single(result.Bindings);
+        Assert.Equal("doplnit-実装", binding.StepKey);
+        Assert.Equal("vývojář-検証", binding.RoleKey);
+        Assert.Equal(developerAgent.Id.ToString("D"), binding.ExecutorId);
     }
 
     [Fact]
@@ -1222,18 +1333,18 @@ public sealed class ProcessLaunchExecutorResolverTests
         };
     }
 
-    private static ProcessTemplateDefinitionDocument CreateBrokenImplementationWorkDefinition()
+    private static ProcessTemplateDefinitionDocument CreateLocalizedActivityDefinition()
     {
         return new ProcessTemplateDefinitionDocument
         {
-            Key = "dotnet-feature-function-implementation",
+            Key = "obecny-activity-contract",
             RoleUsages =
             [
                 new ProcessTemplateDefinitionRoleUsageDocument
                 {
-                    Key = "software-engineer",
-                    RoleResourceKey = "software-engineer",
-                    DisplayName = ".NET feature implementer",
+                    Key = "vývojář-検証",
+                    RoleResourceKey = "lead-engineer",
+                    DisplayName = "Разработчик browser implementation",
                     PreferredExecutorKind = ProcessLaunchExecutorKinds.Agent,
                     PreferredProjectAssignmentRole = "Developer",
                     IsRequired = true
@@ -1243,9 +1354,9 @@ public sealed class ProcessLaunchExecutorResolverTests
             [
                 new ProcessTemplateDefinitionStepDocument
                 {
-                    Key = "code-change",
-                    Title = "Implement code change",
-                    StepKind = "Work",
+                    Key = "doplnit-実装",
+                    Title = "Browser implementation repair",
+                    StepKind = "Activity",
                     AllowedOperations =
                     [
                         ProcessOperationContractNames.ReadProcessContext,
@@ -1258,7 +1369,7 @@ public sealed class ProcessLaunchExecutorResolverTests
                     [
                         new ProcessTemplateDefinitionStepRoleAssignmentDocument
                         {
-                            RoleKey = "software-engineer",
+                            RoleKey = "vývojář-検証",
                             ResponsibilityKind = "Responsible",
                             IsRequired = true
                         }

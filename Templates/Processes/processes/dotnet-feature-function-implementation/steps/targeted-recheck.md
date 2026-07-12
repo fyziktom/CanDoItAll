@@ -2,7 +2,7 @@
 
 Re-run the failing build/test proof and the smallest regression checks needed to verify the repair. This step has `RunValidation`; missing build/test receipts are not a reason to escalate until you have attempted the commands yourself.
 
-When `DotNetSolutionFileAlias` or `DotNetSolutionFile` is present, use it for restore and build proof. When `DotNetTestProjectFileAlias` or `DotNetTestProjectFile` is present, use that test project target for `workspace_dotnet_test`, preferably with `noBuild=true` after a successful solution build; do not run solution-level tests for Blazor WebAssembly targets unless no test project target exists.
+When `DotNetSolutionFileAlias` or `DotNetSolutionFile` is present, use it for restore and build proof. When `DotNetTestProjectFileAlias` or `DotNetTestProjectFile` is present, use that test project target for `workspace_dotnet_test`, preferably with `noBuild=true` after a successful solution build; use solution-level tests only when no explicit test project target exists.
 
 This step must emit its own `workspace_dotnet_restore`, `workspace_dotnet_build`, and `workspace_dotnet_test` receipts when those commands are required by the validation contract. Upstream repair receipts are useful inputs, but they do not satisfy this step's current-execution proof contract by themselves. Do not select `feature-accepted` from upstream receipt text alone.
 
@@ -10,10 +10,12 @@ Before deciding the branch, call `workspace_read_file` in this recheck execution
 
 When selecting a recheck branch, put the exact selected key on one line near the top of the artifact as `Branch outcome key: feature-accepted` or `Branch outcome key: feature-repair-escalation`. Do not write only a heading such as `## Branch outcome key` with the key on the next line.
 
+When `ProductAcceptanceCriteriaContract` is present, add an `Acceptance-criteria coverage` table with every literal criterion id, proof owner, current-run proof ref when this recheck owns it, and one of `Focused pass`, `Parent runtime proof required`, or `Fail`. Parent-owned browser or visual proof is not a failed focused recheck criterion.
+
 This step owns the repaired feature branch decision:
 
-- Select `feature-accepted` only when current-execution build/test command receipts emitted by this recheck step prove the repaired evidence satisfies the accepted behavior.
-- Select `feature-repair-escalation` only after you attempted the required current-execution focused build/test proof and that proof still fails, remains unmapped, the inherited repair target remains unresolved, or another repair would exceed this subprocess scope.
+- `feature-accepted` means the repaired implementation is ready for parent QA, not that the overall product is released. Select it when current-execution build/test receipts and owning-source readback prove the inherited repair target and every behavior this recheck owns. Keep parent-owned runtime proof as an explicit follow-up.
+- Select `feature-repair-escalation` only after you attempted the required current-execution focused build/test proof and that proof still fails, the inherited repair target remains unresolved, or another repair would exceed this subprocess scope. Do not escalate solely because parent-owned runtime proof remains pending.
 - If the repair artifact says validation receipts are missing, run the validation commands before deciding. Do not choose `feature-repair-escalation` merely because an upstream repair step did not run validation.
 - If validation tools, the product root, or the validation contract are unavailable, return `Blocked` with the missing capability/root/contract details instead of producing a no-go packet.
 - For repair-sourced runs, re-run the same failing proof recorded by the parent repair target and include the before/after metric or assertion in the artifact.

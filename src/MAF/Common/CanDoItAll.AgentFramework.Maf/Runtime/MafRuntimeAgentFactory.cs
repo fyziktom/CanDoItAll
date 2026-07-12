@@ -370,11 +370,12 @@ internal sealed class MafRuntimeAgentFactory
                 ReadOnlyExternalTargetAliases: auditScope?.ReadOnlyExternalTargetAliases ?? [],
                 ApprovalWrapperEffectiveForProvider: featureMatrix.SupportsApprovalRequiredAIFunction,
                 ApplicationApprovalAvailable: false,
-                ProcessScaffoldToolOnly: auditScope?.ProcessScaffoldToolOnly == true,
                 ProcessAllowsProductMutation: auditScope?.ProcessAllowsProductMutation != false,
                 ProcessRequiresProductMutationBeforeManagedOutput:
                     auditScope?.ProcessRequiresProductMutationBeforeManagedOutput == true,
                 ProcessProductMutationToolNames: auditScope?.ProcessProductMutationToolNames ?? [],
+                ProcessProductMutationRequiredBranchOutcomeKeys:
+                    auditScope?.ProcessProductMutationRequiredBranchOutcomeKeys ?? [],
                 ProcessStepAllowedOperations: auditScope?.ProcessStepAllowedOperations ?? [],
                 ProcessStepTargetScope: auditScope?.ProcessStepTargetScope ?? string.Empty,
                 ContextWorkspaceScopeKind: auditScope?.ContextWorkspaceScope?.Kind.ToString() ?? string.Empty,
@@ -452,7 +453,6 @@ internal sealed class MafRuntimeAgentFactory
                 succeeded = MafRuntimeToolInvocationResultClassifier.IsSuccessful(result);
                 if (succeeded)
                 {
-                    toolPolicy.RecordSuccessfulInvocation(policyContext);
                     if (IsRequiredFinalizerTool(functionName, finalizerPolicy, finalizerMode))
                     {
                         logger?.LogInformation(

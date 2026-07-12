@@ -82,7 +82,7 @@ internal static partial class ProcessRuntimeOperatorDiagnosticDetailsBuilder
             .ToArray();
 
     private static IReadOnlyList<string> ExtractReceiptRuleIds(string summary)
-        => RuntimeToolRegex()
+        => ToolReceiptIdentifierRegex()
             .Matches(summary)
             .Select(match => match.Value.Trim())
             .Distinct(StringComparer.OrdinalIgnoreCase)
@@ -97,10 +97,11 @@ internal static partial class ProcessRuntimeOperatorDiagnosticDetailsBuilder
                 ? "Follow the configured completion issue route."
                 : $"Follow routed branch '{ExtractRouteTargetBranchOutcomeKey(code, summary)}'.",
             "process.adapter.acceptance_criteria_missing" => "Retry accepted-branch QA with criterion-by-criterion evidence, or select a repair branch when criteria fail.",
-            "process.adapter.runtime_lifecycle_correlation_missing" => "Rerun runtime proof with current start receipt, browser navigation to that host, and matching stop cleanup.",
+            "process.adapter.runtime_lifecycle_correlation_missing" => "Repeat the configured current-execution lifecycle with correlated operation, observation, and cleanup receipts before completing this branch.",
             "process.adapter.product_required_tool_receipt_missing" => "Invoke the missing current-run product proof tools before completing this branch.",
             "process.adapter.required_tool_receipt_missing" => "Invoke the missing current-run process capability tools before completing this branch.",
             "process.adapter.product_required_file_content_missing" => "Repair the deterministic product content defect or route to the configured repair branch.",
+            ProcessCompletionDiagnosticCodes.ArtifactPayloadSchemaInvalid => "Rewrite the declared schema-bound artifact from its template contract before completing this branch.",
             ProcessCompletionDiagnosticCodes.ToolReceiptEvidenceContentRejected => "Repair the rejected current-run tool evidence or route to the configured repair branch.",
             "process.adapter.branch_outcome_defect_evidence_missing" => "Provide deterministic defect evidence before using the configured repair route.",
             _ => "Inspect the diagnostic and retry only after the stated gate is satisfied."
@@ -116,6 +117,6 @@ internal static partial class ProcessRuntimeOperatorDiagnosticDetailsBuilder
     [GeneratedRegex(@"\bAC-\d{3,}\b", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
     private static partial Regex CriteriaIdRegex();
 
-    [GeneratedRegex(@"\b(?:workspace|browser|project_structure)_[A-Za-z0-9_]+\b", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
-    private static partial Regex RuntimeToolRegex();
+    [GeneratedRegex(@"\b[A-Za-z][A-Za-z0-9]*(?:_[A-Za-z0-9]+)+\b", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
+    private static partial Regex ToolReceiptIdentifierRegex();
 }

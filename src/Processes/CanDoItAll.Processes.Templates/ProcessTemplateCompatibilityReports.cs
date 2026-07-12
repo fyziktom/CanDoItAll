@@ -110,6 +110,7 @@ public enum ProcessTemplateContractDiagnosticKind
     ProseOnlyHardGate,
     MissingExecutionContract,
     InvalidExecutionClass,
+    MissingRuntimeOwnedExecutorKey,
     MissingDeterministicToolPlan,
     InvalidDeterministicToolPlan,
     MissingRequiredReceiptMetadata,

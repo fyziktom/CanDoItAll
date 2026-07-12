@@ -1,8 +1,6 @@
 # Apply the diagnosis-guided repair or correct the proof plan
 
-Inspect the diagnosed owning boundary and classify the action from evidence. If the diagnosis identifies a product defect, implement the smallest source change, read every changed file back, run restore/build/tests plus focused proof, and select `product-repair-applied`.
-
-When current diagnosis and product readback prove the stock Blazor Counter/Weather navigation, pages, ASP.NET Core link, or missing hidden `#blazor-error-ui` rule remain, execute `DotNetScaffoldRepairExecutionPlan` before writing this step artifact. Write `DotNetScaffoldRepairScript` verbatim to `DotNetScaffoldRepairScriptRef`, verify the script artifact, run it with `workspace_pwsh_run_script`, `ProductRootAlias` as `workingDirectory`, and `DotNetScaffoldRepairSideEffectManifest`, then read/stat the affected product files. Do not merely copy the plan into the artifact. The supplied helper is fingerprint-guarded and must not be used to delete a product-specific Counter or Weather feature that does not match the stock template.
+Inspect the diagnosed owning boundary and classify the action from evidence. For `product-repair-applied`, mutate the grounded external target before writing the final primary managed artifact. If that write is denied because no mutation receipt exists, do not treat it as a missing permission or blocker: mutate the product, read it back, run focused proof, then write final evidence. If the diagnosis identifies a product defect, implement the smallest source change, read every changed file back, run restore/build/tests plus focused proof, and select `product-repair-applied`.
 
 If the diagnosis proves the product is already clean and the defect is only an incorrect route, selector, or proof recipe, do not manufacture a source edit. The expected control or behavior must already exist and work in the product; only the prior proof targeted it incorrectly. Run the corrected current-execution validation and runtime/browser proof, record the exact proof contract, and select `proof-only-revalidation-prepared`.
 
@@ -12,4 +10,4 @@ Do not spend this attempt on unrelated cleanup or claim final acceptance; indepe
 
 Never write `product-repair-applied` or describe changed/deleted files unless this execution has a successful product-target mutation receipt and current product readback proving those exact changes. A diagnosis artifact, intended change list, or green build/test receipt is not evidence that a repair occurred.
 
-For a visible Blazor unhandled-error banner with no matching console exception, inspect the loaded stylesheet and the `#blazor-error-ui` visibility rule before assuming an application exception. Preserve or restore the framework error UI's hidden default state, while still treating a real exception as a product defect.
+For a visible UI error with no matching console exception, diagnose the rendered state, style/loading path, and owning source before changing code. Preserve useful failure visibility while repairing the actual product defect; do not hide an observed failure merely to make proof look clean.

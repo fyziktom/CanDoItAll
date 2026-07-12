@@ -4,11 +4,12 @@ using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Modules.Processes;
 using CanDoItAll.Processes.Abstractions;
 using CanDoItAll.Processes.Application;
+using CanDoItAll.Processes.Drivers.Abstractions;
 using CanDoItAll.Processes.Runtime;
 
 namespace CanDoItAll.Tests.Unit;
 
-public sealed class ProcessRequiredProductSourceInspectionGateTests
+public sealed class WorkspaceProductSourceInspectionCompletionGateContributionTests
 {
     private static readonly Guid ExecutionRunId = Guid.NewGuid();
 
@@ -20,7 +21,7 @@ public sealed class ProcessRequiredProductSourceInspectionGateTests
             Receipt("artifacts/process-runs/run/steps/qa-validation.md")
         ]);
 
-        var issue = new ProcessRequiredProductSourceInspectionGate().Validate(context);
+        var issue = new WorkspaceProductSourceInspectionCompletionGateContribution().Validate(context);
 
         Assert.NotNull(issue);
         Assert.Equal(ProcessCompletionDiagnosticCodes.ProductSourceInspectionEvidenceMissing, issue.Code);
@@ -35,7 +36,7 @@ public sealed class ProcessRequiredProductSourceInspectionGateTests
         ],
         excludeShellFiles: true);
 
-        var issue = new ProcessRequiredProductSourceInspectionGate().Validate(context);
+        var issue = new WorkspaceProductSourceInspectionCompletionGateContribution().Validate(context);
 
         Assert.Null(issue);
     }
@@ -49,7 +50,7 @@ public sealed class ProcessRequiredProductSourceInspectionGateTests
         ],
         excludeShellFiles: true);
 
-        var issue = new ProcessRequiredProductSourceInspectionGate().Validate(context);
+        var issue = new WorkspaceProductSourceInspectionCompletionGateContribution().Validate(context);
 
         Assert.NotNull(issue);
         Assert.Equal(ProcessCompletionDiagnosticCodes.ProductSourceInspectionEvidenceMissing, issue.Code);
@@ -68,7 +69,7 @@ public sealed class ProcessRequiredProductSourceInspectionGateTests
         ],
         excludedPathFragments: ["/Layout/", "/wwwroot/", "/Program.cs", "/App.razor", ".csproj"]);
 
-        var issue = new ProcessRequiredProductSourceInspectionGate().Validate(context);
+        var issue = new WorkspaceProductSourceInspectionCompletionGateContribution().Validate(context);
 
         Assert.NotNull(issue);
         Assert.Equal(ProcessCompletionDiagnosticCodes.ProductSourceInspectionEvidenceMissing, issue.Code);
@@ -85,7 +86,7 @@ public sealed class ProcessRequiredProductSourceInspectionGateTests
             branchOutcomeKey: "repair-required",
             sourceInspectionBranchOutcomeKeys: ["quality-accepted"]);
 
-        var issue = new ProcessRequiredProductSourceInspectionGate().Validate(context);
+        var issue = new WorkspaceProductSourceInspectionCompletionGateContribution().Validate(context);
 
         Assert.Null(issue);
     }
@@ -99,10 +100,32 @@ public sealed class ProcessRequiredProductSourceInspectionGateTests
             branchOutcomeKey: "quality-accepted",
             sourceInspectionBranchOutcomeKeys: ["quality-accepted"]);
 
-        var issue = new ProcessRequiredProductSourceInspectionGate().Validate(context);
+        var issue = new WorkspaceProductSourceInspectionCompletionGateContribution().Validate(context);
 
         Assert.NotNull(issue);
         Assert.Equal(ProcessCompletionDiagnosticCodes.ProductSourceInspectionEvidenceMissing, issue.Code);
+    }
+
+    [Theory]
+    [InlineData(ProcessRuntimeLaunchVariables.ProductSourceInspectionRequiredStepKeys)]
+    [InlineData(ProcessRuntimeLaunchVariables.ProductSourceInspectionRequiredBranchOutcomeKeysByStep)]
+    [InlineData(ProcessRuntimeLaunchVariables.ProductSourceInspectionExcludedPathFragmentsByStep)]
+    public void Validate_MalformedPolicyJson_ReturnsDeterministicConfigurationIssue(string variableName)
+    {
+        var context = CreateContext(
+            [Receipt("external-target/C/work/product/src/App/Pages/Home.razor")],
+            policyOverrides: new Dictionary<string, string>(StringComparer.Ordinal)
+            {
+                [variableName] = "{"
+            });
+
+        var issue = new WorkspaceProductSourceInspectionCompletionGateContribution().Validate(context);
+
+        Assert.NotNull(issue);
+        Assert.Equal("process.runtime.product_source_inspection_policy_invalid", issue.Code);
+        Assert.Equal(ProcessDiagnosticRetrySafety.UnsafeToRetry, issue.RetrySafety);
+        Assert.Contains(variableName, issue.Summary, StringComparison.Ordinal);
+        Assert.Contains(variableName, issue.Evidence, StringComparison.Ordinal);
     }
 
     private static ProcessCompletionGateContext CreateContext(
@@ -110,7 +133,8 @@ public sealed class ProcessRequiredProductSourceInspectionGateTests
         bool excludeShellFiles = false,
         string branchOutcomeKey = "",
         IReadOnlyList<string>? sourceInspectionBranchOutcomeKeys = null,
-        IReadOnlyList<string>? excludedPathFragments = null)
+        IReadOnlyList<string>? excludedPathFragments = null,
+        IReadOnlyDictionary<string, string>? policyOverrides = null)
     {
         var launchVariables = new Dictionary<string, string>(StringComparer.Ordinal)
         {
@@ -133,6 +157,14 @@ public sealed class ProcessRequiredProductSourceInspectionGateTests
                 {
                     ["diagnose-quality-failure"] = sourceInspectionBranchOutcomeKeys
                 });
+        }
+
+        if (policyOverrides is not null)
+        {
+            foreach (var policyOverride in policyOverrides)
+            {
+                launchVariables[policyOverride.Key] = policyOverride.Value;
+            }
         }
 
         var assignment = new ProcessRuntimeStepAssignment(

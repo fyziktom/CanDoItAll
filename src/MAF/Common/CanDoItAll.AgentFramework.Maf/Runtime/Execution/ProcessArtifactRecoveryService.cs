@@ -1,4 +1,5 @@
 using CanDoItAll.AgentFramework.Core;
+using CanDoItAll.AgentFramework.Core.Execution;
 using CanDoItAll.AgentFramework.Models;
 
 namespace CanDoItAll.AgentFramework.Maf;
@@ -12,8 +13,6 @@ internal enum ProcessArtifactRecoveryCause
 internal static class ProcessArtifactRecoveryService
 {
     private const int MaxRecoveredProcessArtifactSummaryCharacters = 1_200;
-    private const string ProcessArtifactBranchOutcomeKeyLineKey = "Branch outcome key";
-
     internal static bool TryCreateProcessStepOutcomeFromPrimaryArtifact(
         AgentRuntimeContextIntent contextIntent,
         string primaryArtifactRef,
@@ -40,14 +39,15 @@ internal static class ProcessArtifactRecoveryService
             return false;
         }
 
-        var statusWasDeclared = TryReadProcessArtifactStatus(artifactMarkdown, out var status, out var hasStatusLine);
-        if (!statusWasDeclared &&
-            hasStatusLine)
+        var parsedArtifactOutcome = ManagedProcessArtifactOutcomeReader.Read(artifactMarkdown);
+        if (!parsedArtifactOutcome.IsValid)
         {
-            failureMessage = "The primary process artifact does not contain a recoverable Status line.";
+            failureMessage = parsedArtifactOutcome.FailureMessage!;
             return false;
         }
 
+        var statusWasDeclared = parsedArtifactOutcome.HasStatus;
+        var status = parsedArtifactOutcome.Status ?? default;
         if (!statusWasDeclared &&
             !TryInferProcessArtifactStatus(artifactMarkdown, out status))
         {
@@ -63,15 +63,6 @@ internal static class ProcessArtifactRecoveryService
             return false;
         }
 
-        if (!TryReadProcessArtifactBranchOutcomeKey(
-            artifactMarkdown,
-            out var branchOutcomeKey,
-            out var branchOutcomeFailure))
-        {
-            failureMessage = branchOutcomeFailure;
-            return false;
-        }
-
         var recoveryClause = ResolveRecoveryClause(recoveryCause);
         var reason =
             statusWasDeclared
@@ -81,7 +72,7 @@ internal static class ProcessArtifactRecoveryService
         {
             Status = status,
             Reason = reason,
-            BranchOutcomeKey = branchOutcomeKey,
+            BranchOutcomeKey = parsedArtifactOutcome.BranchOutcomeKey,
             EvidenceRefs = [primaryArtifactRef],
             NextActions = CreateRecoveredProcessArtifactNextActions(status, primaryArtifactRef),
             HumanReadableSummaryMarkdown = BuildRecoveredProcessArtifactSummary(
@@ -130,130 +121,6 @@ internal static class ProcessArtifactRecoveryService
             $"artifacts/process-runs/{processRunId:D}/steps/{sourceId}.md");
         return true;
     }
-
-    private static bool TryReadProcessArtifactStatus(
-        string artifactMarkdown,
-        out ProcessStepOutcomeStatus status,
-        out bool hasStatusLine)
-    {
-        status = default;
-        hasStatusLine = false;
-        foreach (var rawLine in artifactMarkdown.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries))
-        {
-            var line = rawLine.Trim().TrimStart('#', '-', '*', ' ');
-            var separatorIndex = line.IndexOf(':', StringComparison.Ordinal);
-            if (separatorIndex <= 0)
-            {
-                continue;
-            }
-
-            var key = line[..separatorIndex].Trim(' ', '*', '`');
-            if (!string.Equals(key, "Status", StringComparison.OrdinalIgnoreCase))
-            {
-                continue;
-            }
-
-            hasStatusLine = true;
-            return TryMapProcessArtifactStatus(line[(separatorIndex + 1)..], out status);
-        }
-
-        return false;
-    }
-
-    private static bool TryReadProcessArtifactBranchOutcomeKey(
-        string artifactMarkdown,
-        out string branchOutcomeKey,
-        out string failureMessage)
-    {
-        branchOutcomeKey = string.Empty;
-        failureMessage = string.Empty;
-        var declaredKeys = new HashSet<string>(StringComparer.Ordinal);
-        var lines = artifactMarkdown.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries);
-
-        for (var index = 0; index < lines.Length; index++)
-        {
-            var line = NormalizeProcessArtifactMetadataLine(lines[index]);
-            var separatorIndex = line.IndexOf(':', StringComparison.Ordinal);
-            if (separatorIndex <= 0)
-            {
-                if (!string.Equals(line, ProcessArtifactBranchOutcomeKeyLineKey, StringComparison.OrdinalIgnoreCase))
-                {
-                    continue;
-                }
-
-                if (index + 1 >= lines.Length ||
-                    !TryAddProcessArtifactBranchOutcomeKey(
-                        NormalizeProcessArtifactBranchOutcomeKeyValue(NormalizeProcessArtifactMetadataLine(lines[index + 1])),
-                        declaredKeys,
-                        out failureMessage))
-                {
-                    failureMessage = string.IsNullOrWhiteSpace(failureMessage)
-                        ? "The primary process artifact contains an invalid Branch outcome key section."
-                        : failureMessage;
-                    return false;
-                }
-
-                continue;
-            }
-
-            var key = line[..separatorIndex].Trim(' ', '*', '`');
-            if (!string.Equals(key, ProcessArtifactBranchOutcomeKeyLineKey, StringComparison.OrdinalIgnoreCase))
-            {
-                continue;
-            }
-
-            var value = NormalizeProcessArtifactBranchOutcomeKeyValue(line[(separatorIndex + 1)..]);
-            if (!TryAddProcessArtifactBranchOutcomeKey(value, declaredKeys, out failureMessage))
-            {
-                return false;
-            }
-        }
-
-        branchOutcomeKey = declaredKeys.SingleOrDefault() ?? string.Empty;
-        return true;
-    }
-
-    private static string NormalizeProcessArtifactMetadataLine(string value)
-        => value.Trim().TrimStart('#', '-', '*', ' ');
-
-    private static bool TryAddProcessArtifactBranchOutcomeKey(
-        string value,
-        ISet<string> declaredKeys,
-        out string failureMessage)
-    {
-        failureMessage = string.Empty;
-        if (!IsSafeProcessArtifactBranchOutcomeKey(value))
-        {
-            failureMessage = "The primary process artifact contains an invalid Branch outcome key line.";
-            return false;
-        }
-
-        declaredKeys.Add(value);
-        if (declaredKeys.Count <= 1)
-        {
-            return true;
-        }
-
-        failureMessage = "The primary process artifact contains multiple different Branch outcome key lines.";
-        return false;
-    }
-
-    private static string NormalizeProcessArtifactBranchOutcomeKeyValue(string value)
-    {
-        var trimmed = value.Trim().Trim('*', '`', '.', ';');
-        var commentIndex = trimmed.IndexOf('#', StringComparison.Ordinal);
-        if (commentIndex >= 0)
-        {
-            trimmed = trimmed[..commentIndex].Trim();
-        }
-
-        return trimmed.Trim('*', '`', '.', ';');
-    }
-
-    private static bool IsSafeProcessArtifactBranchOutcomeKey(string value)
-        => !string.IsNullOrWhiteSpace(value) &&
-           char.IsLetterOrDigit(value[0]) &&
-           value.All(character => char.IsLetterOrDigit(character) || character is '-' or '_' or '.');
 
     private static bool TryInferProcessArtifactStatus(
         string artifactMarkdown,
@@ -340,44 +207,6 @@ internal static class ProcessArtifactRecoveryService
             "boundary",
             "evidence",
             "receipt");
-    }
-
-    private static bool TryMapProcessArtifactStatus(
-        string value,
-        out ProcessStepOutcomeStatus status)
-    {
-        status = default;
-        var normalized = NormalizeProcessArtifactStatusValue(value);
-        status = normalized switch
-        {
-            "completed" or "complete" or "succeeded" or "success" => ProcessStepOutcomeStatus.Completed,
-            "blocked" or "waiting" or "waitingonchild" or "waitingforchild" => ProcessStepOutcomeStatus.Blocked,
-            "failed" or "failure" => ProcessStepOutcomeStatus.Failed,
-            "waitingapproval" or "pendingapproval" => ProcessStepOutcomeStatus.WaitingApproval,
-            "refused" or "rejected" => ProcessStepOutcomeStatus.Refused,
-            _ => default
-        };
-        return normalized is "completed" or "complete" or "succeeded" or "success" or
-            "blocked" or "waiting" or "waitingonchild" or "waitingforchild" or
-            "failed" or "failure" or
-            "waitingapproval" or "pendingapproval" or
-            "refused" or "rejected";
-    }
-
-    private static string NormalizeProcessArtifactStatusValue(string value)
-    {
-        var trimmed = value.Trim().Trim('*', '`', '.', ';');
-        var commentIndex = trimmed.IndexOf('#', StringComparison.Ordinal);
-        if (commentIndex >= 0)
-        {
-            trimmed = trimmed[..commentIndex].Trim();
-        }
-
-        return new string(
-            trimmed
-                .Where(character => char.IsLetterOrDigit(character))
-                .Select(char.ToLowerInvariant)
-                .ToArray());
     }
 
     private static IReadOnlyList<string> CreateRecoveredProcessArtifactNextActions(

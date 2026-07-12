@@ -32,7 +32,6 @@ using static CanDoItAll.Modules.Processes.ProcessManagedArtifactEvidence;
 using static CanDoItAll.Modules.Processes.ProcessManagedArtifactService;
 using static CanDoItAll.Modules.Processes.ProcessManagedArtifactFormatter;
 using static CanDoItAll.Modules.Processes.ProcessManagedArtifactOutcomeParser;
-using static CanDoItAll.Modules.Processes.ProcessRuntimeLifecycleReceiptFacts;
 
 namespace CanDoItAll.Modules.Processes;
 
@@ -150,6 +149,7 @@ internal static class ProcessCompletionRetryPolicy
             BranchOutcomeKey = output.BranchOutcomeKey,
             BranchOutcomeTitle = output.BranchOutcomeTitle,
             EvidenceRefs = output.EvidenceRefs,
+            AcceptanceCriteriaEvidence = output.AcceptanceCriteriaEvidence,
             NextActions = output.NextActions,
             HumanReadableSummaryMarkdown = output.HumanReadableSummaryMarkdown
         };
@@ -166,6 +166,7 @@ internal static class ProcessCompletionRetryPolicy
             BranchOutcomeKey = branchOutcomeKey,
             BranchOutcomeTitle = output.BranchOutcomeTitle,
             EvidenceRefs = output.EvidenceRefs,
+            AcceptanceCriteriaEvidence = output.AcceptanceCriteriaEvidence,
             NextActions = output.NextActions,
             HumanReadableSummaryMarkdown = output.HumanReadableSummaryMarkdown
         };

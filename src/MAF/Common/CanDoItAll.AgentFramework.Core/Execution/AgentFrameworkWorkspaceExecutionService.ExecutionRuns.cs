@@ -1512,7 +1512,6 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
             TargetScope: ExecutionInvocationMetadata.ResolveProcessStepTargetScope(run),
             IsGovernedProcessStep: isGovernedProcessStep,
             BrowserToolsAllowed: ExecutionInvocationMetadata.ResolveProcessBrowserToolsAllowed(run),
-            ScaffoldToolOnly: ExecutionInvocationMetadata.ResolveProcessScaffoldToolOnly(run),
             AllowsProductMutation: ExecutionInvocationMetadata.ResolveProcessAllowsProductMutation(run),
             WorkspaceToolProfile: ExecutionInvocationMetadata.ResolveProcessWorkspaceToolProfile(run),
             WorkspaceScope: workspaceScope,
@@ -1624,6 +1623,22 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
             var errorSummary = FormatValidationErrors(result.Errors);
             var message =
                 $"Finalizer tool '{policy.ToolName}' in {finalizerMode} mode failed validation. Raw output hash: {result.RawOutputHash}. Errors: {errorSummary}";
+            if (RequiredFinalizerStructuredOutputRecoveryPolicy.CanRecover(
+                    ExecutionInvocationMetadata.ResolveAllowRequiredFinalizerStructuredOutputRecovery(run),
+                    finalizerMode,
+                    result))
+            {
+                await AppendExecutionLogAsync(
+                    run.Id,
+                    run.AgentId,
+                    run.ChatSessionId,
+                    ExecutionState.Persisting,
+                    "Finalizer recovery",
+                    $"Required finalizer tool '{policy.ToolName}' was not called. Explicit structured-output recovery is enabled; the raw response will be validated and, when needed, repaired against '{structuredOutput.ContractKey}'. Completion evidence gates remain authoritative.",
+                    cancellationToken);
+                return response;
+            }
+
             await AppendExecutionLogAsync(
                 run.Id,
                 run.AgentId,

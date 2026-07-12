@@ -135,7 +135,7 @@ public sealed class AgentFinalizerPolicyTests
 
         Assert.False(recovered);
         Assert.Null(outcome);
-        Assert.Contains("multiple different Branch outcome key lines", recoveryFailure, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("multiple different Branch outcome key values", recoveryFailure, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -164,7 +164,7 @@ public sealed class AgentFinalizerPolicyTests
 
         Assert.False(recovered);
         Assert.Null(outcome);
-        Assert.Contains("multiple different Branch outcome key lines", recoveryFailure, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("multiple different Branch outcome key values", recoveryFailure, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -187,7 +187,7 @@ public sealed class AgentFinalizerPolicyTests
 
         Assert.False(recovered);
         Assert.Null(outcome);
-        Assert.Contains("recoverable Status line", failure, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("invalid Status field", failure, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -1153,7 +1153,8 @@ public sealed class AgentFinalizerPolicyTests
             new ExecutionInvocationPolicy(
                 FinalizerMode: AgentFinalizerMode.Required,
                 MaxStructuredOutputRepairAttempts: 9,
-                RequireStructuredOutputValidation: true));
+                RequireStructuredOutputValidation: true,
+                AllowRequiredFinalizerStructuredOutputRecovery: true));
 
         using var document = JsonDocument.Parse(metadataJson);
         var root = document.RootElement;
@@ -1165,6 +1166,52 @@ public sealed class AgentFinalizerPolicyTests
             ExecutionInvocationMetadata.MaxRepairAttempts,
             root.GetProperty(ExecutionInvocationMetadata.MaxStructuredOutputRepairAttemptsMetadataKey).GetInt32());
         Assert.True(root.GetProperty(ExecutionInvocationMetadata.RequireStructuredOutputValidationMetadataKey).GetBoolean());
+        Assert.True(root.GetProperty(
+            ExecutionInvocationMetadata.AllowRequiredFinalizerStructuredOutputRecoveryMetadataKey).GetBoolean());
+    }
+
+    [Fact]
+    public void Required_finalizer_structured_output_recovery_allows_only_missing_finalizer_when_explicitly_enabled()
+    {
+        var policy = AgentFinalizerPolicy.Required<ProcessStepOutcomeResult>(
+            AgentFinalizerPolicies.SubmitProcessStepOutcomeToolName);
+        var missing = AgentFinalizerValidationResult.Failure(
+            policy,
+            matchingInvocationCount: 0,
+            rawOutputHash: "sha256:missing",
+            new AgentOutputValidationError
+            {
+                Code = "agent.finalizer.missing",
+                Message = "Required finalizer was not called.",
+                Path = "$.finalizer"
+            });
+        var malformed = AgentFinalizerValidationResult.Failure(
+            policy,
+            matchingInvocationCount: 1,
+            rawOutputHash: "sha256:malformed",
+            new AgentOutputValidationError
+            {
+                Code = "agent.output.invalid",
+                Message = "Finalizer arguments are malformed.",
+                Path = "$.finalizer"
+            });
+
+        Assert.True(RequiredFinalizerStructuredOutputRecoveryPolicy.CanRecover(
+            recoveryEnabled: true,
+            finalizerMode: AgentFinalizerMode.Required,
+            validation: missing));
+        Assert.False(RequiredFinalizerStructuredOutputRecoveryPolicy.CanRecover(
+            recoveryEnabled: false,
+            finalizerMode: AgentFinalizerMode.Required,
+            validation: missing));
+        Assert.False(RequiredFinalizerStructuredOutputRecoveryPolicy.CanRecover(
+            recoveryEnabled: true,
+            finalizerMode: AgentFinalizerMode.Required,
+            validation: malformed));
+        Assert.False(RequiredFinalizerStructuredOutputRecoveryPolicy.CanRecover(
+            recoveryEnabled: true,
+            finalizerMode: AgentFinalizerMode.Shadow,
+            validation: missing));
     }
 
     [Fact]
@@ -1418,7 +1465,6 @@ public sealed class AgentFinalizerPolicyTests
             TargetScope: "ExternalProductTargetMutable",
             IsGovernedProcessStep: true,
             BrowserToolsAllowed: false,
-            ScaffoldToolOnly: false,
             AllowsProductMutation: true,
             WorkspaceToolProfile: null,
             WorkspaceScope: WorkspaceScopeDescriptor.Project(Guid.NewGuid().ToString("D")),

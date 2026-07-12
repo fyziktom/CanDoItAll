@@ -45,12 +45,13 @@ internal sealed class AgentFrameworkProcessStepExecutor : IAgentFrameworkProcess
     private readonly IAgentReferenceDataProvider agentReferenceDataProvider;
     private readonly IProcessRuntimeStepAssignmentStore assignmentStore;
     private readonly IProcessRuntimeStateStore stateStore;
-    private readonly IProcessRuntimeToolPreflightService? runtimeToolPreflightService;
+    private readonly IProcessRuntimeToolPreflightService runtimeToolPreflightService;
     private readonly ProcessRuntimeOwnedStepCoordinator runtimeOwnedStepCoordinator;
     private readonly ProcessSubprocessCoordinator subprocessCoordinator;
     private readonly ProcessStepCompletionCoordinator completionCoordinator;
     private readonly ProcessSubprocessContractResolver subprocessContractResolver;
     private readonly ProcessParentSubprocessArtifactContextHydrator parentArtifactContextHydrator;
+    private readonly ProcessExecutionMetadataComposer executionMetadataComposer;
 
     public AgentFrameworkProcessStepExecutor(
         ICanDoItAllAgentWorkspaceFactory workspaceFactory,
@@ -62,18 +63,22 @@ internal sealed class AgentFrameworkProcessStepExecutor : IAgentFrameworkProcess
         ProcessSubprocessCoordinator subprocessCoordinator,
         ProcessStepCompletionCoordinator completionCoordinator,
         ProcessSubprocessContractResolver subprocessContractResolver,
-        ProcessParentSubprocessArtifactContextHydrator parentArtifactContextHydrator)
+        ProcessParentSubprocessArtifactContextHydrator parentArtifactContextHydrator,
+        ProcessExecutionMetadataComposer executionMetadataComposer)
     {
         this.workspaceFactory = workspaceFactory;
         this.agentReferenceDataProvider = agentReferenceDataProvider;
         this.assignmentStore = assignmentStore;
         this.stateStore = stateStore;
-        this.runtimeToolPreflightService = runtimeToolPreflightService;
+        this.runtimeToolPreflightService = runtimeToolPreflightService ??
+            throw new ArgumentNullException(nameof(runtimeToolPreflightService));
         this.runtimeOwnedStepCoordinator = runtimeOwnedStepCoordinator;
         this.subprocessCoordinator = subprocessCoordinator;
         this.completionCoordinator = completionCoordinator;
         this.subprocessContractResolver = subprocessContractResolver;
         this.parentArtifactContextHydrator = parentArtifactContextHydrator;
+        this.executionMetadataComposer = executionMetadataComposer ??
+            throw new ArgumentNullException(nameof(executionMetadataComposer));
     }
 
     public async ValueTask<ProcessExecutionAdapterResult> ExecuteAsync(
@@ -95,7 +100,8 @@ internal sealed class AgentFrameworkProcessStepExecutor : IAgentFrameworkProcess
 
         if (await subprocessCoordinator.TryResolveExistingSubprocessBridgeAsync(
                 assignment,
-                cancellationToken).ConfigureAwait(false) is { } existingBridgeResult)
+                cancellationToken,
+                request.StepContract).ConfigureAwait(false) is { } existingBridgeResult)
         {
             return existingBridgeResult;
         }
@@ -104,9 +110,18 @@ internal sealed class AgentFrameworkProcessStepExecutor : IAgentFrameworkProcess
                 assignment,
                 assignmentStore,
                 stateStore,
-                cancellationToken).ConfigureAwait(false) is { } launchedSubprocessResult)
+                cancellationToken,
+                request.StepContract).ConfigureAwait(false) is { } launchedSubprocessResult)
         {
             return launchedSubprocessResult;
+        }
+
+        if (await runtimeOwnedStepCoordinator.TryExecuteRuntimeOwnedStepAsync(
+                assignment,
+                cancellationToken,
+                request.StepContract).ConfigureAwait(false) is { } runtimeOwnedStepResult)
+        {
+            return runtimeOwnedStepResult;
         }
 
         if (!string.Equals(assignment.ExecutorKind, ProcessLaunchExecutorKinds.Agent, StringComparison.OrdinalIgnoreCase) ||
@@ -139,37 +154,27 @@ internal sealed class AgentFrameworkProcessStepExecutor : IAgentFrameworkProcess
                 $"{assignment.RunId}:{assignment.StepInstanceId}:{agentId}:{readiness.ReadinessHash}");
         }
 
-        if (runtimeToolPreflightService is not null)
-        {
-            var runtimeToolPreflight = await runtimeToolPreflightService
-                .EvaluateAsync(
-                    new ProcessRuntimeToolPreflightRequest(
-                        assignment,
-                        agent,
-                        ResolvePreflightRequiredRuntimeToolNames(assignment, request.StepContract)),
-                    cancellationToken)
-                .ConfigureAwait(false);
-            if (!runtimeToolPreflight.IsSatisfied)
-            {
-                var issue = CreateRuntimeToolPreflightIssue(assignment, runtimeToolPreflight);
-                return NeedsManagerForCompletionIssue(
+        var runtimeToolPreflight = await runtimeToolPreflightService
+            .EvaluateAsync(
+                new ProcessRuntimeToolPreflightRequest(
                     assignment,
-                    ComputeHash(issue.Evidence),
-                    issue);
-            }
-        }
-
-        if (await runtimeOwnedStepCoordinator.TryExecuteRuntimeOwnedStepAsync(
-                assignment,
-                cancellationToken).ConfigureAwait(false) is { } runtimeOwnedStepResult)
+                    agent,
+                    ResolvePreflightRequiredRuntimeToolNames(assignment, request.StepContract)),
+                cancellationToken)
+            .ConfigureAwait(false);
+        if (!runtimeToolPreflight.IsSatisfied)
         {
-            return runtimeOwnedStepResult;
+            var issue = CreateRuntimeToolPreflightIssue(assignment, runtimeToolPreflight);
+            return NeedsManagerForCompletionIssue(
+                assignment,
+                ComputeHash(issue.Evidence),
+                issue);
         }
 
         try
         {
             var workspaceService = workspaceFactory.GetOrganizationWorkspaceService();
-            var metadataJson = BuildProcessExecutionMetadata(assignment);
+            var metadataJson = executionMetadataComposer.Compose(assignment);
             var parentArtifactContext = parentArtifactContextHydrator.Hydrate(assignment);
             if (parentArtifactContext.Issue is { } parentArtifactContextIssue)
             {
@@ -207,7 +212,8 @@ internal sealed class AgentFrameworkProcessStepExecutor : IAgentFrameworkProcess
                             ProcessRunId: request.RunId.ToString(),
                             ProcessStepId: stepId.ToString(),
                             Policy: new ExecutionInvocationPolicy(
-                                MaxStructuredOutputRepairAttempts: ExecutionInvocationMetadata.DefaultGovernedRepairAttempts)),
+                                MaxStructuredOutputRepairAttempts: ExecutionInvocationMetadata.DefaultGovernedRepairAttempts,
+                                AllowRequiredFinalizerStructuredOutputRecovery: true)),
                         AutoApprovePendingToolCalls: true,
                         StructuredOutput: AgentStructuredOutputContracts.ProcessStepOutcomeResult),
                     cancellationToken)
@@ -215,7 +221,8 @@ internal sealed class AgentFrameworkProcessStepExecutor : IAgentFrameworkProcess
 
             if (await subprocessCoordinator.TryResolveExistingSubprocessBridgeAsync(
                     assignment,
-                    cancellationToken).ConfigureAwait(false) is { } bridgeResultAfterExecution)
+                    cancellationToken,
+                    request.StepContract).ConfigureAwait(false) is { } bridgeResultAfterExecution)
             {
                 return bridgeResultAfterExecution;
             }
@@ -245,7 +252,8 @@ internal sealed class AgentFrameworkProcessStepExecutor : IAgentFrameworkProcess
                     validation.Output,
                     assignmentStore,
                     stateStore,
-                    cancellationToken).ConfigureAwait(false) is { } subprocessResult)
+                    cancellationToken,
+                    request.StepContract).ConfigureAwait(false) is { } subprocessResult)
             {
                 return subprocessResult;
             }
@@ -269,14 +277,16 @@ internal sealed class AgentFrameworkProcessStepExecutor : IAgentFrameworkProcess
                     materialization.Output,
                     assignmentStore,
                     stateStore,
-                    cancellationToken).ConfigureAwait(false) is { } materializedSubprocessResult)
+                    cancellationToken,
+                    request.StepContract).ConfigureAwait(false) is { } materializedSubprocessResult)
             {
                 return materializedSubprocessResult;
             }
 
             if (await subprocessCoordinator.TryResolveExistingSubprocessBridgeAsync(
                     assignment,
-                    cancellationToken).ConfigureAwait(false) is { } materializedBridgeResult)
+                    cancellationToken,
+                    request.StepContract).ConfigureAwait(false) is { } materializedBridgeResult)
             {
                 return materializedBridgeResult;
             }
@@ -295,7 +305,8 @@ internal sealed class AgentFrameworkProcessStepExecutor : IAgentFrameworkProcess
                 validation.RawOutputHash,
                 result.ExecutionRunId,
                 completionToolReceipts,
-                appendRuntimeGateFindings: true);
+                appendRuntimeGateFindings: true,
+                stepContract: request.StepContract);
         }
         catch (ProcessRuntimeDispatchDeferredException)
         {

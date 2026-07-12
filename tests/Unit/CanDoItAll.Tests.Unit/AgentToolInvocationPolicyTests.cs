@@ -1156,123 +1156,27 @@ public sealed class AgentToolInvocationPolicyTests
     }
 
     [Fact]
-    public async Task EvaluateAsync_denies_direct_product_write_for_scaffold_tool_only_process_step()
+    public async Task EvaluateAsync_denies_dotnet_new_parent_outside_grounded_external_target_even_when_name_matches()
     {
         var policy = new DefaultAgentToolInvocationPolicy();
         var context = CreateContext(
-            "workspace_write_file",
+            "workspace_dotnet_new",
             ToolInvocationClassification.Mutation,
             isKnownTool: true,
             autoApprovalAllowed: true,
             approvalWrapperAvailable: false,
             arguments: new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
             {
-                ["path"] = "external-target/C/programovani/candoitall-processes5-dotnet-cli-a/TodoSummary.sln",
-                ["content"] = "Microsoft Visual Studio Solution File, Format Version 12.00"
+                ["parentDirectory"] = "external-target/C/workspace",
+                ["name"] = "AllowedProduct",
+                ["template"] = "console"
             },
-            allowedExternalTargetAliases: ["external-target/C/programovani/candoitall-processes5-dotnet-cli-a"],
-            processScaffoldToolOnly: true);
+            allowedExternalTargetAliases: ["external-target/C/workspace/AllowedProduct"]);
 
         var decision = await policy.EvaluateAsync(context, CancellationToken.None);
 
         Assert.Equal(ToolInvocationDecisionKind.Deny, decision.Kind);
-        Assert.Contains("scaffold step is tool-only", decision.Reason, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("workspace_dotnet_new", decision.Reason, StringComparison.Ordinal);
-        Assert.Contains("workspace_pwsh_run_script", decision.Reason, StringComparison.Ordinal);
-        Assert.Contains("Do not retry workspace_write_file", decision.Reason, StringComparison.Ordinal);
-    }
-
-    [Fact]
-    public async Task EvaluateAsync_allows_artifact_write_for_scaffold_tool_only_process_step()
-    {
-        var policy = new DefaultAgentToolInvocationPolicy();
-        var context = CreateContext(
-            "workspace_write_file",
-            ToolInvocationClassification.Mutation,
-            isKnownTool: true,
-            autoApprovalAllowed: true,
-            approvalWrapperAvailable: false,
-            arguments: new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-            {
-                ["path"] = "artifacts/process-runs/process-run-001/02-solution-skeleton-change-set.md",
-                ["content"] = "Created solution and requested project with scaffold tools."
-            },
-            allowedExternalTargetAliases: ["external-target/C/programovani/candoitall-processes5-dotnet-cli-a"],
-            processScaffoldToolOnly: true);
-
-        var decision = await policy.EvaluateAsync(context, CancellationToken.None);
-
-        Assert.Equal(ToolInvocationDecisionKind.Allow, decision.Kind);
-    }
-
-    [Fact]
-    public async Task EvaluateAsync_allows_dotnet_new_parent_when_parent_and_name_resolve_to_grounded_external_target()
-    {
-        var policy = new DefaultAgentToolInvocationPolicy();
-        var context = CreateContext(
-            "workspace_dotnet_new",
-            ToolInvocationClassification.Mutation,
-            isKnownTool: true,
-            autoApprovalAllowed: true,
-            approvalWrapperAvailable: false,
-            arguments: new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-            {
-                ["parentDirectory"] = "external-target/C/programovani/dotnet",
-                ["name"] = "PocketMeetingCostPlanner",
-                ["template"] = "blazor"
-            },
-            allowedExternalTargetAliases: ["external-target/C/programovani/dotnet/PocketMeetingCostPlanner"]);
-
-        var decision = await policy.EvaluateAsync(context, CancellationToken.None);
-
-        Assert.Equal(ToolInvocationDecisionKind.Allow, decision.Kind);
-    }
-
-    [Fact]
-    public async Task EvaluateAsync_allows_dotnet_new_for_scaffold_tool_only_process_step()
-    {
-        var policy = new DefaultAgentToolInvocationPolicy();
-        var context = CreateContext(
-            "workspace_dotnet_new",
-            ToolInvocationClassification.Mutation,
-            isKnownTool: true,
-            autoApprovalAllowed: true,
-            approvalWrapperAvailable: false,
-            arguments: new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-            {
-                ["parentDirectory"] = "external-target/C/programovani",
-                ["name"] = "candoitall-processes5-dotnet-cli-a",
-                ["template"] = "console"
-            },
-            allowedExternalTargetAliases: ["external-target/C/programovani/candoitall-processes5-dotnet-cli-a"],
-            processScaffoldToolOnly: true);
-
-        var decision = await policy.EvaluateAsync(context, CancellationToken.None);
-
-        Assert.Equal(ToolInvocationDecisionKind.Allow, decision.Kind);
-    }
-
-    [Fact]
-    public async Task EvaluateAsync_allows_dotnet_new_parent_with_duplicate_slashes_when_scaffold_root_is_grounded()
-    {
-        var policy = new DefaultAgentToolInvocationPolicy();
-        var context = CreateContext(
-            "workspace_dotnet_new",
-            ToolInvocationClassification.Mutation,
-            isKnownTool: true,
-            autoApprovalAllowed: true,
-            approvalWrapperAvailable: true,
-            arguments: new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-            {
-                ["parentDirectory"] = "external-target/C/programovani//dotnet/",
-                ["name"] = "PocketMeetingCostPlanner",
-                ["template"] = "blazor"
-            },
-            allowedExternalTargetAliases: ["external-target/C/programovani/dotnet/PocketMeetingCostPlanner"]);
-
-        var decision = await policy.EvaluateAsync(context, CancellationToken.None);
-
-        Assert.Equal(ToolInvocationDecisionKind.Allow, decision.Kind);
+        Assert.Contains("outside the current run boundary", decision.Reason, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -1322,7 +1226,7 @@ public sealed class AgentToolInvocationPolicyTests
     }
 
     [Fact]
-    public async Task EvaluateAsync_allows_dotnet_new_support_library_under_grounded_external_target_root()
+    public async Task EvaluateAsync_allows_dotnet_new_with_parent_under_grounded_external_target()
     {
         var policy = new DefaultAgentToolInvocationPolicy();
         var context = CreateContext(
@@ -1333,11 +1237,11 @@ public sealed class AgentToolInvocationPolicyTests
             approvalWrapperAvailable: false,
             arguments: new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
             {
-                ["parentDirectory"] = "external-target/C/programovani/dotnet/PocketMeetingCostPlanner/src",
-                ["name"] = "PocketMeetingCostPlanner.Domain",
-                ["template"] = "classlib"
+                ["parentDirectory"] = "external-target/C/workspace/AllowedProduct/child",
+                ["name"] = "CreatedProduct",
+                ["template"] = "console"
             },
-            allowedExternalTargetAliases: ["external-target/C/programovani/dotnet/PocketMeetingCostPlanner]"]);
+            allowedExternalTargetAliases: ["external-target/C/workspace/AllowedProduct"]);
 
         var decision = await policy.EvaluateAsync(context, CancellationToken.None);
 
@@ -1345,7 +1249,7 @@ public sealed class AgentToolInvocationPolicyTests
     }
 
     [Fact]
-    public async Task EvaluateAsync_denies_dotnet_new_template_switch_for_successful_same_scaffold_root()
+    public async Task EvaluateAsync_allows_dotnet_new_template_change_for_grounded_target()
     {
         var policy = new DefaultAgentToolInvocationPolicy();
         var firstContext = CreateContext(
@@ -1356,11 +1260,11 @@ public sealed class AgentToolInvocationPolicyTests
             approvalWrapperAvailable: false,
             arguments: new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
             {
-                ["parentDirectory"] = "external-target/C/programovani/dotnet/PocketMeetingCostPlanner/tests",
-                ["name"] = "PocketMeetingCostPlanner.Tests",
-                ["template"] = "mstest"
+                ["parentDirectory"] = "external-target/C/workspace/AllowedProduct",
+                ["name"] = "CreatedProduct",
+                ["template"] = "console"
             },
-            allowedExternalTargetAliases: ["external-target/C/programovani/dotnet/PocketMeetingCostPlanner"]);
+            allowedExternalTargetAliases: ["external-target/C/workspace/AllowedProduct"]);
         var secondContext = CreateContext(
             "workspace_dotnet_new",
             ToolInvocationClassification.Mutation,
@@ -1369,71 +1273,17 @@ public sealed class AgentToolInvocationPolicyTests
             approvalWrapperAvailable: false,
             arguments: new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
             {
-                ["parentDirectory"] = "external-target/C/programovani/dotnet/PocketMeetingCostPlanner/tests",
-                ["name"] = "PocketMeetingCostPlanner.Tests",
-                ["template"] = "xunit"
+                ["parentDirectory"] = "external-target/C/workspace/AllowedProduct",
+                ["name"] = "CreatedProduct",
+                ["template"] = "webapi"
             },
-            allowedExternalTargetAliases: ["external-target/C/programovani/dotnet/PocketMeetingCostPlanner"]);
+            allowedExternalTargetAliases: ["external-target/C/workspace/AllowedProduct"]);
 
         var firstDecision = await policy.EvaluateAsync(firstContext, CancellationToken.None);
-        policy.RecordSuccessfulInvocation(firstContext);
         var secondDecision = await policy.EvaluateAsync(secondContext, CancellationToken.None);
 
         Assert.Equal(ToolInvocationDecisionKind.Allow, firstDecision.Kind);
-        Assert.Equal(ToolInvocationDecisionKind.Deny, secondDecision.Kind);
-        Assert.Contains("already scaffolded", secondDecision.Reason, StringComparison.OrdinalIgnoreCase);
-    }
-
-    [Fact]
-    public async Task EvaluateAsync_does_not_record_solution_template_as_project_scaffold_root()
-    {
-        var policy = new DefaultAgentToolInvocationPolicy();
-        var solutionContext = CreateContext(
-            "workspace_dotnet_new",
-            ToolInvocationClassification.Mutation,
-            isKnownTool: true,
-            autoApprovalAllowed: true,
-            approvalWrapperAvailable: false,
-            arguments: new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-            {
-                ["parentDirectory"] = "external-target/C/programovani/dotnet/PocketMeetingCostPlanner",
-                ["name"] = "PocketMeetingCostPlanner",
-                ["template"] = "sln"
-            },
-            allowedExternalTargetAliases: ["external-target/C/programovani/dotnet/PocketMeetingCostPlanner"]);
-        var appContext = CreateContext(
-            "workspace_dotnet_new",
-            ToolInvocationClassification.Mutation,
-            isKnownTool: true,
-            autoApprovalAllowed: true,
-            approvalWrapperAvailable: false,
-            arguments: new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-            {
-                ["parentDirectory"] = "external-target/C/programovani/dotnet/PocketMeetingCostPlanner",
-                ["name"] = "PocketMeetingCostPlanner",
-                ["template"] = "blazor"
-            },
-            allowedExternalTargetAliases: ["external-target/C/programovani/dotnet/PocketMeetingCostPlanner"]);
-        var conflictingProjectContext = appContext with
-        {
-            RedactedArguments = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-            {
-                ["parentDirectory"] = "external-target/C/programovani/dotnet/PocketMeetingCostPlanner",
-                ["name"] = "PocketMeetingCostPlanner",
-                ["template"] = "xunit"
-            }
-        };
-
-        var solutionDecision = await policy.EvaluateAsync(solutionContext, CancellationToken.None);
-        policy.RecordSuccessfulInvocation(solutionContext);
-        var appDecision = await policy.EvaluateAsync(appContext, CancellationToken.None);
-        policy.RecordSuccessfulInvocation(appContext);
-        var conflictingProjectDecision = await policy.EvaluateAsync(conflictingProjectContext, CancellationToken.None);
-
-        Assert.Equal(ToolInvocationDecisionKind.Allow, solutionDecision.Kind);
-        Assert.Equal(ToolInvocationDecisionKind.Allow, appDecision.Kind);
-        Assert.Equal(ToolInvocationDecisionKind.Deny, conflictingProjectDecision.Kind);
-        Assert.Contains("already scaffolded", conflictingProjectDecision.Reason, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(ToolInvocationDecisionKind.Allow, secondDecision.Kind);
     }
 
     [Fact]
@@ -1466,123 +1316,6 @@ public sealed class AgentToolInvocationPolicyTests
         Assert.Contains("force=true", decision.Reason, StringComparison.OrdinalIgnoreCase);
         Assert.True(recovered);
         Assert.Contains("unsafe scaffold overwrite", recoverableResult, StringComparison.OrdinalIgnoreCase);
-    }
-
-    [Fact]
-    public async Task EvaluateAsync_allows_dotnet_new_template_switch_when_previous_attempt_was_not_successful()
-    {
-        var policy = new DefaultAgentToolInvocationPolicy();
-        var firstContext = CreateContext(
-            "workspace_dotnet_new",
-            ToolInvocationClassification.Mutation,
-            isKnownTool: true,
-            autoApprovalAllowed: true,
-            approvalWrapperAvailable: false,
-            arguments: new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-            {
-                ["parentDirectory"] = "external-target/C/programovani/dotnet/PocketMeetingCostPlanner",
-                ["name"] = "PocketMeetingCostPlanner.Tests",
-                ["template"] = "unsupported-template"
-            },
-            allowedExternalTargetAliases: ["external-target/C/programovani/dotnet/PocketMeetingCostPlanner"]);
-        var secondContext = CreateContext(
-            "workspace_dotnet_new",
-            ToolInvocationClassification.Mutation,
-            isKnownTool: true,
-            autoApprovalAllowed: true,
-            approvalWrapperAvailable: false,
-            arguments: new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-            {
-                ["parentDirectory"] = "external-target/C/programovani/dotnet/PocketMeetingCostPlanner",
-                ["name"] = "PocketMeetingCostPlanner.Tests",
-                ["template"] = "xunit"
-            },
-            allowedExternalTargetAliases: ["external-target/C/programovani/dotnet/PocketMeetingCostPlanner"]);
-
-        var firstDecision = await policy.EvaluateAsync(firstContext, CancellationToken.None);
-        var secondDecision = await policy.EvaluateAsync(secondContext, CancellationToken.None);
-
-        Assert.Equal(ToolInvocationDecisionKind.Allow, firstDecision.Kind);
-        Assert.Equal(ToolInvocationDecisionKind.Allow, secondDecision.Kind);
-    }
-
-    [Fact]
-    public async Task EvaluateAsync_denies_dotnet_new_parent_when_scaffold_root_is_not_grounded_external_target()
-    {
-        var policy = new DefaultAgentToolInvocationPolicy();
-        var context = CreateContext(
-            "workspace_dotnet_new",
-            ToolInvocationClassification.Mutation,
-            isKnownTool: true,
-            autoApprovalAllowed: true,
-            approvalWrapperAvailable: false,
-            arguments: new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-            {
-                ["parentDirectory"] = "external-target/C/programovani/dotnet",
-                ["name"] = "OtherProject",
-                ["template"] = "blazor"
-            },
-            allowedExternalTargetAliases: ["external-target/C/programovani/dotnet/PocketMeetingCostPlanner"]);
-
-        var decision = await policy.EvaluateAsync(context, CancellationToken.None);
-
-        Assert.Equal(ToolInvocationDecisionKind.Deny, decision.Kind);
-        Assert.Contains("current run", decision.Reason, StringComparison.OrdinalIgnoreCase);
-    }
-
-    [Fact]
-    public async Task EvaluateAsync_denies_dotnet_new_support_library_sibling_beside_grounded_external_target_root()
-    {
-        var policy = new DefaultAgentToolInvocationPolicy();
-        var context = CreateContext(
-            "workspace_dotnet_new",
-            ToolInvocationClassification.Mutation,
-            isKnownTool: true,
-            autoApprovalAllowed: true,
-            approvalWrapperAvailable: false,
-            arguments: new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-            {
-                ["parentDirectory"] = "external-target/C/programovani/dotnet",
-                ["name"] = "PocketMeetingCostPlanner.Domain",
-                ["template"] = "classlib"
-            },
-            allowedExternalTargetAliases: ["external-target/C/programovani/dotnet/PocketMeetingCostPlanner"]);
-
-        var decision = await policy.EvaluateAsync(context, CancellationToken.None);
-
-        Assert.Equal(ToolInvocationDecisionKind.Deny, decision.Kind);
-        Assert.Contains("outside the current run boundary", decision.Reason, StringComparison.Ordinal);
-        Assert.Contains("parentDirectory under the grounded product root", decision.Reason, StringComparison.Ordinal);
-        Assert.Contains("external-target/C/programovani/dotnet/PocketMeetingCostPlanner/src", decision.Reason, StringComparison.Ordinal);
-    }
-
-    [Fact]
-    public async Task EvaluateAsync_denies_dotnet_new_test_project_sibling_with_corrected_nested_guidance()
-    {
-        var policy = new DefaultAgentToolInvocationPolicy();
-        var context = CreateContext(
-            "workspace_dotnet_new",
-            ToolInvocationClassification.Mutation,
-            isKnownTool: true,
-            autoApprovalAllowed: true,
-            approvalWrapperAvailable: false,
-            arguments: new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-            {
-                ["template"] = "mstest",
-                ["parentDirectory"] = "external-target/C/programovani/dotnet",
-                ["name"] = "LegacyWeatherLog.Tests"
-            },
-            allowedExternalTargetAliases:
-            [
-                "external-target/C/programovani/dotnet/LegacyWeatherLog"
-            ]);
-
-        var decision = await policy.EvaluateAsync(context, CancellationToken.None);
-
-        Assert.Equal(ToolInvocationDecisionKind.Deny, decision.Kind);
-        Assert.Contains("outside the current run boundary", decision.Reason, StringComparison.Ordinal);
-        Assert.Contains("external-target/C/programovani/dotnet/LegacyWeatherLog/tests", decision.Reason, StringComparison.Ordinal);
-        Assert.Contains("not the product parent", decision.Reason, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -2053,7 +1786,7 @@ public sealed class AgentToolInvocationPolicyTests
     }
 
     [Fact]
-    public async Task EvaluateAsync_denies_managed_test_project_scaffold_for_external_target_process_run()
+    public async Task EvaluateAsync_denies_ungrounded_managed_creation_for_external_target_process_run()
     {
         var policy = new DefaultAgentToolInvocationPolicy();
         var context = CreateContext(
@@ -2064,9 +1797,9 @@ public sealed class AgentToolInvocationPolicyTests
             approvalWrapperAvailable: false,
             arguments: new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
             {
-                ["parentDirectory"] = "tests/PocketMeetingCostPlanner.Tests",
-                ["name"] = "PocketMeetingCostPlanner.Tests",
-                ["template"] = "xunit"
+                ["parentDirectory"] = "scratch/GeneratedProduct",
+                ["name"] = "GeneratedProduct",
+                ["template"] = "console"
             },
             allowedExternalTargetAliases: ["external-target/C/programovani/dotnet/PocketMeetingCostPlanner"]);
 
@@ -2077,7 +1810,7 @@ public sealed class AgentToolInvocationPolicyTests
     }
 
     [Fact]
-    public async Task EvaluateAsync_denies_managed_source_write_for_external_target_process_run()
+    public async Task EvaluateAsync_denies_ungrounded_managed_write_for_external_target_process_run()
     {
         var policy = new DefaultAgentToolInvocationPolicy();
         var context = CreateContext(
@@ -2088,8 +1821,8 @@ public sealed class AgentToolInvocationPolicyTests
             approvalWrapperAvailable: false,
             arguments: new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
             {
-                ["path"] = "src/PocketMeetingCostPlanner/App.cs",
-                ["content"] = "namespace PocketMeetingCostPlanner;"
+                ["path"] = "scratch/GeneratedProduct/App.cs",
+                ["content"] = "namespace GeneratedProduct;"
             },
             allowedExternalTargetAliases: ["external-target/C/programovani/dotnet/PocketMeetingCostPlanner"]);
 
@@ -2100,7 +1833,7 @@ public sealed class AgentToolInvocationPolicyTests
     }
 
     [Fact]
-    public async Task EvaluateAsync_denies_managed_output_scaffold_for_external_target_process_run()
+    public async Task EvaluateAsync_denies_managed_output_creation_for_external_target_process_run()
     {
         var policy = new DefaultAgentToolInvocationPolicy();
         var context = CreateContext(
@@ -2146,7 +1879,7 @@ public sealed class AgentToolInvocationPolicyTests
     }
 
     [Fact]
-    public async Task EvaluateAsync_allows_external_target_test_project_scaffold_for_external_target_process_run()
+    public async Task EvaluateAsync_allows_creation_under_grounded_external_target_for_external_target_process_run()
     {
         var policy = new DefaultAgentToolInvocationPolicy();
         var context = CreateContext(
@@ -2157,11 +1890,11 @@ public sealed class AgentToolInvocationPolicyTests
             approvalWrapperAvailable: false,
             arguments: new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
             {
-                ["parentDirectory"] = "external-target/C/programovani/dotnet/PocketMeetingCostPlanner/tests",
-                ["name"] = "PocketMeetingCostPlanner.Tests",
-                ["template"] = "xunit"
+                ["parentDirectory"] = "external-target/C/workspace/AllowedProduct/modules",
+                ["name"] = "CreatedProduct",
+                ["template"] = "console"
             },
-            allowedExternalTargetAliases: ["external-target/C/programovani/dotnet/PocketMeetingCostPlanner"]);
+            allowedExternalTargetAliases: ["external-target/C/workspace/AllowedProduct"]);
 
         var decision = await policy.EvaluateAsync(context, CancellationToken.None);
 
@@ -2608,7 +2341,101 @@ public sealed class AgentToolInvocationPolicyTests
         Assert.Equal(ToolInvocationDecisionKind.Deny, decision.Kind);
         Assert.Contains("before a successful current-execution product-target mutation", decision.Reason, StringComparison.Ordinal);
         Assert.True(recoverable);
-        Assert.Contains("Continue the step's required product", result, StringComparison.Ordinal);
+        Assert.Contains("ordering rule", result, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Do not retry the primary managed artifact write yet", result, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Policy_denies_mutation_required_branch_before_product_mutation()
+    {
+        var policy = new DefaultAgentToolInvocationPolicy();
+        const string runId = "11111111-2222-3333-4444-555555555555";
+        var context = CreateContext(
+            ToolContractCatalog.WorkspaceWriteFile,
+            ToolInvocationClassification.Mutation,
+            isKnownTool: true,
+            autoApprovalAllowed: true,
+            approvalWrapperAvailable: false,
+            arguments: new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["path"] = $"artifacts/process-runs/{runId}/steps/repair.md",
+                ["content"] = "Status: Completed\nBranch outcome key: product-repair-applied\n\n# Repair"
+            },
+            allowedExternalTargetAliases: ["external-target/C/work/product"],
+            processRequiresProductMutationBeforeManagedOutput: true,
+            processProductMutationToolNames: [ToolContractCatalog.WorkspaceWriteFile],
+            processProductMutationRequiredBranchOutcomeKeys: ["product-repair-applied"],
+            processRunId: runId,
+            sourceId: "repair");
+
+        var decision = await policy.EvaluateAsync(context, CancellationToken.None);
+
+        Assert.Equal(ToolInvocationDecisionKind.Deny, decision.Kind);
+        Assert.Contains("before a successful current-execution product-target mutation", decision.Reason, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Policy_allows_proof_only_branch_before_product_mutation()
+    {
+        var policy = new DefaultAgentToolInvocationPolicy();
+        const string runId = "11111111-2222-3333-4444-555555555555";
+        var context = CreateContext(
+            ToolContractCatalog.WorkspaceWriteFile,
+            ToolInvocationClassification.Mutation,
+            isKnownTool: true,
+            autoApprovalAllowed: true,
+            approvalWrapperAvailable: false,
+            arguments: new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["path"] = $"artifacts/process-runs/{runId}/steps/repair.md",
+                ["content"] = "Status: Completed\nBranch outcome key: proof-only-revalidation-prepared\n\n# Proof"
+            },
+            allowedExternalTargetAliases: ["external-target/C/work/product"],
+            processRequiresProductMutationBeforeManagedOutput: true,
+            processProductMutationToolNames: [ToolContractCatalog.WorkspaceWriteFile],
+            processProductMutationRequiredBranchOutcomeKeys: ["product-repair-applied"],
+            processRunId: runId,
+            sourceId: "repair");
+
+        var decision = await policy.EvaluateAsync(context, CancellationToken.None);
+
+        Assert.Equal(ToolInvocationDecisionKind.Allow, decision.Kind);
+    }
+
+    [Fact]
+    public async Task Policy_denies_branch_specific_mutation_output_without_canonical_branch_key()
+    {
+        var policy = new DefaultAgentToolInvocationPolicy();
+        const string runId = "11111111-2222-3333-4444-555555555555";
+        var context = CreateContext(
+            ToolContractCatalog.WorkspaceWriteFile,
+            ToolInvocationClassification.Mutation,
+            isKnownTool: true,
+            autoApprovalAllowed: true,
+            approvalWrapperAvailable: false,
+            arguments: new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["path"] = $"artifacts/process-runs/{runId}/steps/repair.md",
+                ["content"] = "Status: Completed\n\n# Repair"
+            },
+            allowedExternalTargetAliases: ["external-target/C/work/product"],
+            processRequiresProductMutationBeforeManagedOutput: true,
+            processProductMutationToolNames: [ToolContractCatalog.WorkspaceWriteFile],
+            processProductMutationRequiredBranchOutcomeKeys: ["product-repair-applied"],
+            processRunId: runId,
+            sourceId: "repair");
+
+        var decision = await policy.EvaluateAsync(context, CancellationToken.None);
+        var recoverable = AgentToolPolicyBlockGuard.TryCreateRecoverableDeniedResult(
+            ToolContractCatalog.WorkspaceWriteFile,
+            decision,
+            context,
+            out var result);
+
+        Assert.Equal(ToolInvocationDecisionKind.Deny, decision.Kind);
+        Assert.Contains("must declare exactly one valid Branch outcome key", decision.Reason, StringComparison.Ordinal);
+        Assert.True(recoverable);
+        Assert.Contains("branch-selection rule", result, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -4028,7 +3855,6 @@ public sealed class AgentToolInvocationPolicyTests
         IReadOnlyList<string>? allowedExternalTargetAliases = null,
         IReadOnlyList<string>? readOnlyExternalTargetAliases = null,
         IReadOnlyList<string>? allowedManagedArtifactReadRefs = null,
-        bool processScaffoldToolOnly = false,
         bool processAllowsProductMutation = true,
         bool processRequiresProductMutationBeforeManagedOutput = false,
         IReadOnlyList<string>? processProductMutationToolNames = null,
@@ -4041,7 +3867,8 @@ public sealed class AgentToolInvocationPolicyTests
         string sourceId = "feature-intake",
         string contextWorkspaceScopeKind = "",
         string contextWorkspaceScopeKey = "",
-        IReadOnlyList<AgentToolInvocationTrace>? toolInvocationTraces = null)
+        IReadOnlyList<AgentToolInvocationTrace>? toolInvocationTraces = null,
+        IReadOnlyList<string>? processProductMutationRequiredBranchOutcomeKeys = null)
     {
         return new ToolInvocationPolicyContext(
             AgentId: Guid.Parse("11111111-1111-1111-1111-111111111111"),
@@ -4060,7 +3887,6 @@ public sealed class AgentToolInvocationPolicyTests
             ReadOnlyExternalTargetAliases: readOnlyExternalTargetAliases,
             ApprovalWrapperEffectiveForProvider: approvalWrapperEffectiveForProvider,
             ApplicationApprovalAvailable: applicationApprovalAvailable,
-            ProcessScaffoldToolOnly: processScaffoldToolOnly,
             ProcessAllowsProductMutation: processAllowsProductMutation,
             ProcessRequiresProductMutationBeforeManagedOutput: processRequiresProductMutationBeforeManagedOutput,
             ProcessProductMutationToolNames: processProductMutationToolNames,
@@ -4071,7 +3897,8 @@ public sealed class AgentToolInvocationPolicyTests
             InspectedScriptContent: inspectedScriptContent,
             ScriptInspectionFailure: scriptInspectionFailure,
             ScriptSideEffectManifestJson: scriptSideEffectManifestJson,
-            ToolInvocationTraces: toolInvocationTraces)
+            ToolInvocationTraces: toolInvocationTraces,
+            ProcessProductMutationRequiredBranchOutcomeKeys: processProductMutationRequiredBranchOutcomeKeys)
         {
             SourceId = sourceId,
             AllowedManagedArtifactReadRefs = allowedManagedArtifactReadRefs ?? []

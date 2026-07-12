@@ -28,26 +28,34 @@ using static CanDoItAll.Modules.Processes.ProcessCompletionIssueResultFactory;
 using static CanDoItAll.Modules.Processes.ProcessCompletionReceiptGate;
 using static CanDoItAll.Modules.Processes.ProcessManagedArtifactEvidence;
 using static CanDoItAll.Modules.Processes.ProcessOutcomeGroundingValidator;
-using static CanDoItAll.Modules.Processes.ProcessProductCompletionPathGate;
 using static CanDoItAll.Modules.Processes.ProcessProductCompletionStateGate;
 using static CanDoItAll.Modules.Processes.ProcessRequiredReceiptMatcher;
-using static CanDoItAll.Modules.Processes.ProcessRuntimeLifecycleReceiptGate;
 
 namespace CanDoItAll.Modules.Processes;
 
 internal sealed class ProcessCompletionGateFactory(
     ProcessToolReceiptPolicyCatalog toolReceiptPolicies,
     ProcessToolReceiptEvidenceGate toolReceiptEvidenceGate,
-    ProcessRequiredProductSourceInspectionGate requiredProductSourceInspectionGate,
-    ProcessInteractiveUiAcceptanceGate interactiveUiAcceptanceGate)
+    IEnumerable<IProcessCompletionGateContribution> gateContributions,
+    ProcessCompletionIssueResultFactory completionIssueResultFactory)
 {
+    private readonly IReadOnlyList<IProcessCompletionGateContribution> completionGateContributions =
+        CreateCompletionGateContributions(gateContributions);
+
     internal ProcessCompletionGateEvaluator CreateCompletionGateEvaluator()
-        => new(
-        [
+    {
+        var earlyContributions = completionGateContributions
+            .Where(contribution => contribution.Stage == ProcessCompletionGateContributionStage.BeforeToolReceiptEvidence)
+            .ToArray();
+        var lateContributions = completionGateContributions
+            .Where(contribution => contribution.Stage == ProcessCompletionGateContributionStage.AfterToolReceiptEvidence)
+            .ToArray();
+        var gates = new List<Func<ProcessCompletionGateContext, ProcessCompletionIssue?>>
+        {
             context => ValidateGroundedOutcomeReferences(context.Assignment, context.Output, context.ToolReceipts),
             context => ValidateRequiredBranchOutcomeSelection(context.Assignment, context.Output),
             context => ValidateRuntimeRoutedBranchWasNotSelectedDirectly(context.Assignment, context.Output),
-            context => ValidateProductMutationCompletion(context.Assignment, context.Output),
+            context => ProcessProductMutationEvidenceGate.Validate(context.Assignment, context.Output),
             context => ValidateProductMutationWriteReceipt(
                 context.Assignment,
                 context.Output,
@@ -79,29 +87,55 @@ internal sealed class ProcessCompletionGateFactory(
                         context.Assignment,
                         applicableProductToolReceiptRules));
             },
-            context =>
-            {
-                var applicableProductToolReceiptRules = ResolveApplicableProductCompletionRequiredToolReceiptRules(
-                    context.Assignment,
-                    context.Output.BranchOutcomeKey);
-                return ValidateRuntimeLifecycleReceipts(
-                    context.Assignment,
-                    context.Output,
-                    context.ToolReceipts,
-                    context.CurrentExecutionRunId,
-                    applicableProductToolReceiptRules);
-            },
-            toolReceiptEvidenceGate.Validate,
-            requiredProductSourceInspectionGate.Validate,
-            interactiveUiAcceptanceGate.Validate,
-            context => ValidateBranchOutcomeDefectEvidence(context.Assignment, context.Output, context.ToolReceipts),
-            context => ValidateAcceptanceCriteriaCompletion(context.Assignment, context.Output),
-            context => ValidateRequiredProductStateCompletion(context.Assignment, context.Output),
-            context => ValidateCompletedOutcomeDoesNotDeclareBlockers(
+        };
+
+        gates.AddRange(earlyContributions.Select(
+            contribution => (Func<ProcessCompletionGateContext, ProcessCompletionIssue?>)contribution.Validate));
+        gates.Add(toolReceiptEvidenceGate.Validate);
+        gates.AddRange(lateContributions.Select(
+            contribution => (Func<ProcessCompletionGateContext, ProcessCompletionIssue?>)contribution.Validate));
+        gates.AddRange(
+        [
+            context => completionIssueResultFactory.ValidateBranchOutcomeDefectEvidence(
                 context.Assignment,
                 context.Output,
-                toolReceiptPolicies),
+                context.ToolReceipts,
+                context.CurrentExecutionRunId),
+            context => ValidateAcceptanceCriteriaCompletion(context.Assignment, context.Output),
+            context => ValidateCompletedOutcomeDoesNotDeclareBlockers(
+                context.Assignment,
+                context.Output),
             context => ValidateManagedArtifactCompletion(context.Assignment, context.Output),
             context => ValidateManagedArtifactWriteReceipt(context.Assignment, context.ToolReceipts)
         ]);
+
+        return new ProcessCompletionGateEvaluator(gates);
+    }
+
+    private static IReadOnlyList<IProcessCompletionGateContribution> CreateCompletionGateContributions(
+        IEnumerable<IProcessCompletionGateContribution> gateContributions)
+    {
+        ArgumentNullException.ThrowIfNull(gateContributions);
+
+        var contributions = gateContributions
+            .OrderBy(contribution => contribution.Order)
+            .ThenBy(contribution => contribution.ContributionKey, StringComparer.Ordinal)
+            .ToArray();
+        if (contributions.Any(contribution => string.IsNullOrWhiteSpace(contribution.ContributionKey)))
+        {
+            throw new InvalidOperationException(
+                "A process completion gate contribution must declare a stable contribution key.");
+        }
+
+        var duplicate = contributions
+            .GroupBy(contribution => contribution.ContributionKey, StringComparer.OrdinalIgnoreCase)
+            .FirstOrDefault(group => group.Count() > 1);
+        if (duplicate is not null)
+        {
+            throw new InvalidOperationException(
+                $"Duplicate process completion gate contribution key '{duplicate.Key}' is registered.");
+        }
+
+        return contributions;
+    }
 }

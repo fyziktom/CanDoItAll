@@ -51,10 +51,13 @@ internal static class ProcessRequiredReceiptRetryPolicy
             return false;
         }
 
-        var requiredToolReceipts = ResolveApplicableProductCompletionRequiredToolReceiptRules(assignment, output.BranchOutcomeKey)
-            .Select(rule => rule.ToolReceipt)
-            .Where(receipt => !string.IsNullOrWhiteSpace(receipt))
-            .Distinct(StringComparer.OrdinalIgnoreCase)
+        var requiredToolReceiptRequirements =
+            ConsolidateRequiredProductToolReceiptRequirements(
+                ResolveApplicableProductCompletionRequiredToolReceiptRules(
+                    assignment,
+                    output.BranchOutcomeKey));
+        var requiredToolReceipts = requiredToolReceiptRequirements
+            .Select(requirement => requirement.ToolReceipt)
             .ToArray();
         if (!ShouldEnforceRequiredProductToolReceipts(assignment, requiredToolReceipts))
         {
@@ -62,13 +65,14 @@ internal static class ProcessRequiredReceiptRetryPolicy
         }
 
         var observedToolReceipts = toolReceipts ?? [];
-        var allowFailedExecutionReceipt = AllowsFailedRequiredToolReceipt(assignment);
-        var missingToolReceipts = requiredToolReceipts
-            .Where(requiredToolReceipt => !HasRequiredToolReceipt(
+        var canUseFailedExecutionReceipt = AllowsFailedRequiredToolReceipt(assignment);
+        var missingToolReceipts = requiredToolReceiptRequirements
+            .Where(requirement => !HasRequiredToolReceipt(
                 observedToolReceipts,
-                requiredToolReceipt,
-                allowFailedExecutionReceipt,
+                requirement.ToolReceipt,
+                canUseFailedExecutionReceipt && requirement.AllowFailedExecutionReceipt,
                 toolReceiptPolicies))
+            .Select(requirement => requirement.ToolReceipt)
             .ToArray();
         var outputReportsMissingRequiredToolReceipts = OutputReportsMissingRequiredToolReceipts(
             output,
@@ -111,7 +115,7 @@ internal static class ProcessRequiredReceiptRetryPolicy
             assignment,
             observedToolReceipts,
             retryToolReceipts,
-            allowFailedExecutionReceipt,
+            allowFailedExecutionReceipt: false,
             toolReceiptPolicies);
         var scriptHelperOrderingGuidance = hasRecoverableScriptHelperOrdering
             ? " A required script execution was denied before a current-run helper script was available, but the same run now has a successful helper script write receipt. Retry by verifying that helper path and invoking the missing script execution tool before returning a final status. This is not a manager grant or reassignment case unless the verified retry is denied for a concrete policy, permission, or environment boundary."

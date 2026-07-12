@@ -2,6 +2,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using CanDoItAll.AgentFramework.Core.Execution;
 using CanDoItAll.AgentFramework.Models;
 
 namespace CanDoItAll.AgentFramework.Core;
@@ -85,7 +86,6 @@ public sealed record ToolInvocationPolicyContext(
     IReadOnlyList<string>? ReadOnlyExternalTargetAliases = null,
     bool ApprovalWrapperEffectiveForProvider = false,
     bool ApplicationApprovalAvailable = false,
-    bool ProcessScaffoldToolOnly = false,
     bool ProcessAllowsProductMutation = true,
     bool ProcessRequiresProductMutationBeforeManagedOutput = false,
     IReadOnlyList<string>? ProcessProductMutationToolNames = null,
@@ -96,7 +96,8 @@ public sealed record ToolInvocationPolicyContext(
     string InspectedScriptContent = "",
     string ScriptInspectionFailure = "",
     string ScriptSideEffectManifestJson = "",
-    IReadOnlyList<AgentToolInvocationTrace>? ToolInvocationTraces = null)
+    IReadOnlyList<AgentToolInvocationTrace>? ToolInvocationTraces = null,
+    IReadOnlyList<string>? ProcessProductMutationRequiredBranchOutcomeKeys = null)
 {
     public string SourceId { get; init; } = string.Empty;
 
@@ -105,6 +106,9 @@ public sealed record ToolInvocationPolicyContext(
     public IReadOnlyList<AgentToolInvocationTrace> RecentToolInvocationTraces { get; } = ToolInvocationTraces ?? [];
 
     public IReadOnlyList<string> ProductMutationToolNames { get; } = ProcessProductMutationToolNames ?? [];
+
+    public IReadOnlyList<string> ProductMutationRequiredBranchOutcomeKeys { get; } =
+        ProcessProductMutationRequiredBranchOutcomeKeys ?? [];
 
     public bool HasEffectiveApprovalPath =>
         (ApprovalWrapperAvailable && ApprovalWrapperEffectiveForProvider) ||
@@ -153,6 +157,10 @@ public static class AgentToolPolicyBlockGuard
         "cannot write primary managed output";
     private const string OwnPrimaryManagedOutputBlockedPlaceholderWriteDenialMarker =
         "cannot write a status-only Blocked placeholder";
+    internal const string ProductMutationBeforeManagedOutputDenialMarker =
+        "before a successful current-execution product-target mutation";
+    internal const string ProductMutationBranchOutcomeRequiredDenialMarker =
+        "must declare exactly one valid Branch outcome key";
     private const string GovernedDotnetNewForceDeniedMarker =
         "cannot run workspace_dotnet_new with force=true";
 
@@ -216,6 +224,18 @@ public static class AgentToolPolicyBlockGuard
 
         if (context.Classification == ToolInvocationClassification.Mutation &&
             IsManagedOutputWriteTool(toolName) &&
+            IsRecoverableProductMutationBeforeManagedOutputDenial(decision))
+        {
+            result = decision.Reason.Contains(
+                ProductMutationBranchOutcomeRequiredDenialMarker,
+                StringComparison.OrdinalIgnoreCase)
+                ? $"PolicyDenied: Tool '{toolName}' was denied for this governed process step. {decision.Reason} This is a branch-selection rule, not a missing tool permission and not a blocker. Do not retry the same artifact blindly. Select one declared branch outcome. If it requires a product mutation, mutate the grounded external target, read it back, and run focused proof before writing final evidence. If it is a proof-only branch, record its current-run proof and branch key before the final write."
+                : $"PolicyDenied: Tool '{toolName}' was denied for this governed process step. {decision.Reason} This is an ordering rule, not a missing tool permission and not a blocker. Do not retry the primary managed artifact write yet. First mutate the grounded external-target product file with an allowed product-mutation tool, read the changed file back, and run the required focused proof. Only then create or overwrite the primary managed artifact with final evidence and return submit_process_step_outcome.";
+            return true;
+        }
+
+        if (context.Classification == ToolInvocationClassification.Mutation &&
+            IsManagedOutputWriteTool(toolName) &&
             IsRecoverableCurrentStepOwnOutputPlaceholderWriteDenial(decision))
         {
             result = $"PolicyDenied: Tool '{toolName}' was denied for this governed process step. {decision.Reason} This is not a missing tool permission and not a blocker. Do not retry the placeholder write. Continue the step's required product, validation, or external work from launch variables, upstream artifacts, project-structure context, or product readback. When the work is complete, create or overwrite the primary managed artifact with final evidence and Status: Completed, Failed, Blocked, WaitingApproval, or Refused, then return submit_process_step_outcome with matching evidenceRefs.";
@@ -270,6 +290,15 @@ public static class AgentToolPolicyBlockGuard
         return decision.Reason.Contains(OwnPrimaryManagedOutputInProgressWriteDenialMarker, StringComparison.OrdinalIgnoreCase) ||
                decision.Reason.Contains(OwnPrimaryManagedOutputBlockedPlaceholderWriteDenialMarker, StringComparison.OrdinalIgnoreCase);
     }
+
+    private static bool IsRecoverableProductMutationBeforeManagedOutputDenial(
+        ToolInvocationPolicyDecision decision)
+        => decision.Reason.Contains(
+            ProductMutationBeforeManagedOutputDenialMarker,
+            StringComparison.OrdinalIgnoreCase) ||
+           decision.Reason.Contains(
+               ProductMutationBranchOutcomeRequiredDenialMarker,
+               StringComparison.OrdinalIgnoreCase);
 
     private static bool IsManagedOutputWriteTool(string toolName)
     {
@@ -443,14 +472,6 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
         AgentToolInvocationPolicyMetadata.WorkspacePythonRunFile,
         AgentToolInvocationPolicyMetadata.RunSkillScript
     };
-    private static readonly HashSet<string> DirectProductFileMutationTools = new(StringComparer.OrdinalIgnoreCase)
-    {
-        ToolContractCatalog.WorkspaceWriteFile,
-        ToolContractCatalog.WorkspaceAppendFile,
-        ToolContractCatalog.WorkspaceCopyPath,
-        ToolContractCatalog.WorkspaceMovePath,
-        ToolContractCatalog.WorkspaceDeletePath
-    };
     private static readonly string[] ManagedWorkspacePathArgumentFragments =
     [
         "directory",
@@ -472,16 +493,6 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
         "output",
         "process-artifacts",
         "process-runs"
-    ];
-    private static readonly string[] DeniedExternalRunManagedRoots =
-    [
-        "bin",
-        "managed-files",
-        "obj",
-        "scripts",
-        "src",
-        "tests",
-        "tools"
     ];
     private static readonly HashSet<string> ExternalProductArchiveSourceSegments = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -526,7 +537,6 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
     private const string OperationEscalateOrDecide = ProcessOperationContractNames.EscalateOrDecide;
 
     private readonly RepeatInvocationGuard repeatInvocationGuard = new();
-    private readonly DotnetNewTemplateConsistencyPolicy dotnetNewTemplateConsistencyPolicy = new();
 
     public ValueTask<ToolInvocationPolicyDecision> EvaluateAsync(
         ToolInvocationPolicyContext context,
@@ -631,22 +641,10 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
             return ValueTask.FromResult(readOnlyExternalTargetDecision);
         }
 
-        var scaffoldToolOnlyDecision = EvaluateScaffoldToolOnlyDirectProductMutation(context, signature);
-        if (scaffoldToolOnlyDecision is not null)
-        {
-            return ValueTask.FromResult(scaffoldToolOnlyDecision);
-        }
-
         var dotnetNewForceDecision = EvaluateGovernedDotnetNewForce(context, signature);
         if (dotnetNewForceDecision is not null)
         {
             return ValueTask.FromResult(dotnetNewForceDecision);
-        }
-
-        var dotnetNewTemplateConsistencyDecision = EvaluateDotnetNewTemplateConsistency(context, signature);
-        if (dotnetNewTemplateConsistencyDecision is not null)
-        {
-            return ValueTask.FromResult(dotnetNewTemplateConsistencyDecision);
         }
 
         var repeatInvocationDecision = repeatInvocationGuard.Evaluate(context, signature);
@@ -783,13 +781,34 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
         if (!writesPrimaryManagedOutput ||
             !TryResolveManagedArtifactWriteContent(context.RedactedArguments, out var content) ||
             !TryResolveManagedArtifactStatus(content, out var status) ||
-            !string.Equals(status, "Completed", StringComparison.OrdinalIgnoreCase) ||
-            HasSuccessfulProductTargetMutation(context))
+            !string.Equals(status, "Completed", StringComparison.OrdinalIgnoreCase))
         {
             return null;
         }
 
         var primaryRef = BuildCurrentStepPrimaryManagedArtifactPath(context);
+        var mutationRequiredBranches = context.ProductMutationRequiredBranchOutcomeKeys;
+        if (mutationRequiredBranches.Count > 0)
+        {
+            var artifactOutcome = ManagedProcessArtifactOutcomeReader.Read(content);
+            if (!artifactOutcome.IsValid || !artifactOutcome.HasBranchOutcomeKey)
+            {
+                return ToolInvocationPolicyDecision.Deny(
+                    signature,
+                    $"Governed process step '{context.SourceId}' cannot write primary managed output '{primaryRef}' with status Completed because the artifact {AgentToolPolicyBlockGuard.ProductMutationBranchOutcomeRequiredDenialMarker} when the step uses branch-specific mutation evidence. Select one declared branch outcome before finalizing. If the selected branch requires a product mutation, perform it under a grounded external-target alias, verify the changed product file, and then write final evidence. If it does not require a mutation, record the current proof for that branch.");
+            }
+
+            if (!mutationRequiredBranches.Contains(artifactOutcome.BranchOutcomeKey, StringComparer.OrdinalIgnoreCase))
+            {
+                return null;
+            }
+        }
+
+        if (HasSuccessfulProductTargetMutation(context))
+        {
+            return null;
+        }
+
         return ToolInvocationPolicyDecision.Deny(
             signature,
             $"Governed process step '{context.SourceId}' cannot write primary managed output '{primaryRef}' with status Completed before a successful current-execution product-target mutation. Perform the required product mutation under a grounded external-target alias first, verify the changed product file, then write the final managed artifact. A planned changed-file list or an unchanged successful build is not product mutation evidence.");
@@ -1649,72 +1668,6 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
             : context.ToolName;
     }
 
-    public void RecordSuccessfulInvocation(ToolInvocationPolicyContext context)
-    {
-        ArgumentNullException.ThrowIfNull(context);
-        dotnetNewTemplateConsistencyPolicy.RecordSuccessfulInvocation(context);
-    }
-
-    private ToolInvocationPolicyDecision? EvaluateDotnetNewTemplateConsistency(
-        ToolInvocationPolicyContext context,
-        string signature)
-        => dotnetNewTemplateConsistencyPolicy.Evaluate(context, signature);
-
-    private sealed class DotnetNewTemplateConsistencyPolicy
-    {
-        private readonly Dictionary<string, string> dotnetNewTemplatesByScaffoldRoot = new(StringComparer.OrdinalIgnoreCase);
-
-        public ToolInvocationPolicyDecision? Evaluate(
-            ToolInvocationPolicyContext context,
-            string signature)
-        {
-            if (!string.Equals(context.ToolName, "workspace_dotnet_new", StringComparison.OrdinalIgnoreCase) ||
-                !context.RedactedArguments.TryGetValue("template", out var template))
-            {
-                return null;
-            }
-
-            var scaffoldRoot = ResolveDotnetNewScaffoldRoot(context.RedactedArguments);
-            var normalizedTemplate = NormalizeToolArgument(template);
-            if (IsSolutionDotnetNewTemplate(normalizedTemplate) ||
-                string.IsNullOrWhiteSpace(scaffoldRoot) ||
-                string.IsNullOrWhiteSpace(normalizedTemplate))
-            {
-                return null;
-            }
-
-            if (dotnetNewTemplatesByScaffoldRoot.TryGetValue(scaffoldRoot, out var previousTemplate) &&
-                !string.Equals(previousTemplate, normalizedTemplate, StringComparison.OrdinalIgnoreCase))
-            {
-                return ToolInvocationPolicyDecision.Deny(
-                    signature,
-                    $"workspace_dotnet_new already scaffolded target '{scaffoldRoot}' with template '{previousTemplate}' in this run. Do not layer a second template such as '{normalizedTemplate}' into the same project root; inspect and repair the existing scaffold explicitly.");
-            }
-
-            return null;
-        }
-
-        public void RecordSuccessfulInvocation(ToolInvocationPolicyContext context)
-        {
-            if (!string.Equals(context.ToolName, "workspace_dotnet_new", StringComparison.OrdinalIgnoreCase) ||
-                !context.RedactedArguments.TryGetValue("template", out var template))
-            {
-                return;
-            }
-
-            var scaffoldRoot = ResolveDotnetNewScaffoldRoot(context.RedactedArguments);
-            var normalizedTemplate = NormalizeToolArgument(template);
-            if (IsSolutionDotnetNewTemplate(normalizedTemplate) ||
-                string.IsNullOrWhiteSpace(scaffoldRoot) ||
-                string.IsNullOrWhiteSpace(normalizedTemplate))
-            {
-                return;
-            }
-
-            dotnetNewTemplatesByScaffoldRoot[scaffoldRoot] = normalizedTemplate;
-        }
-    }
-
     private sealed class BrowserProofPolicy
     {
         public ToolInvocationPolicyDecision? EvaluateGovernedToolBounds(
@@ -1821,9 +1774,6 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
         }
     }
 
-    private static bool IsSolutionDotnetNewTemplate(string template)
-        => string.Equals(template, "sln", StringComparison.OrdinalIgnoreCase);
-
     private static ToolInvocationPolicyDecision? EvaluateGovernedExternalTargetIsolation(
         ToolInvocationPolicyContext context,
         string signature)
@@ -1848,8 +1798,7 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
             .ToArray();
         foreach (var referencedAlias in referencedAliases)
         {
-            if (IsAllowedExternalTargetAlias(referencedAlias, readableAliases) ||
-                IsAllowedScaffoldParentAlias(context, referencedAlias, allowedAliases))
+            if (IsAllowedExternalTargetAlias(referencedAlias, readableAliases))
             {
                 continue;
             }
@@ -1858,10 +1807,9 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
                 ? "no external-target roots are grounded for this run"
                 : $"current-run roots: {string.Join(", ", readableAliases)}";
             var currentRunGuidance = BuildCurrentRunExternalTargetGuidance(allowedAliases, readOnlyAliases);
-            var scaffoldGuidance = BuildScaffoldParentGuidance(context, allowedAliases);
             return ToolInvocationPolicyDecision.Deny(
                 signature,
-                $"Governed process runs may only access external-target paths grounded by the current run. The requested external-target path is outside the current run boundary; {allowedSummary}.{currentRunGuidance}{scaffoldGuidance}");
+                $"Governed process runs may only access external-target paths grounded by the current run. The requested external-target path is outside the current run boundary; {allowedSummary}.{currentRunGuidance}");
         }
 
         return null;
@@ -1966,33 +1914,6 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
         return " No external product root is grounded for this run, so abandon the denied external-target path instead of retrying it.";
     }
 
-    private static string BuildScaffoldParentGuidance(
-        ToolInvocationPolicyContext context,
-        IReadOnlyList<string> allowedAliases)
-    {
-        if (!string.Equals(context.ToolName, "workspace_dotnet_new", StringComparison.OrdinalIgnoreCase) ||
-            allowedAliases.Count == 0 ||
-            !context.RedactedArguments.TryGetValue("name", out var name))
-        {
-            return string.Empty;
-        }
-
-        var normalizedName = NormalizeExternalTargetChildName(name);
-        if (string.IsNullOrWhiteSpace(normalizedName))
-        {
-            return string.Empty;
-        }
-
-        var groundedRoot = allowedAliases[0];
-        if (normalizedName.EndsWith(".Tests", StringComparison.OrdinalIgnoreCase) ||
-            normalizedName.EndsWith(".Test", StringComparison.OrdinalIgnoreCase))
-        {
-            return $" For test scaffolds, use a parentDirectory under the grounded product root, for example '{groundedRoot}/tests' with name '{normalizedName}', not the product parent.";
-        }
-
-        return $" For additional scaffolds, use a parentDirectory under the grounded product root, for example '{groundedRoot}/src' or '{groundedRoot}/tests', not the product parent.";
-    }
-
     private static ToolInvocationPolicyDecision? EvaluateExternalTargetManagedWorkspaceIsolation(
         ToolInvocationPolicyContext context,
         string signature)
@@ -2034,6 +1955,11 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
                 return ToolInvocationPolicyDecision.Deny(
                     signature,
                     "This governed run has a grounded external product target. Broad managed-workspace root discovery is denied because it can pull stale source or helper files from unrelated runs; list or search the grounded external-target alias or current-run artifact folders instead.");
+            }
+
+            if (IsExplicitManagedWorkspaceFileRead(context, rawPath))
+            {
+                continue;
             }
 
             var nativeAbsolutePathDecision = EvaluateNativeAbsoluteWorkspaceToolPath(
@@ -2120,12 +2046,9 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
                     "This governed run has a grounded external product target. Broad managed-workspace root discovery is denied because it can pull stale source or helper files from unrelated runs; list or search the grounded external-target alias or current-run artifact folders instead.");
             }
 
-            if (IsDeniedExternalRunManagedPath(normalizedPath))
-            {
-                return ToolInvocationPolicyDecision.Deny(
-                    signature,
-                    $"This governed run has a grounded external product target. Managed workspace path '{normalizedPath}' is outside current-run evidence folders and may contain stale source or helper files from unrelated runs; use the grounded external-target alias or current-run artifacts instead.");
-            }
+            return ToolInvocationPolicyDecision.Deny(
+                signature,
+                $"This governed run has a grounded external product target. Managed workspace path '{normalizedPath}' is outside current-run evidence folders and may contain stale source or helper files from unrelated runs; use the grounded external-target alias or current-run artifacts instead.");
         }
 
         return null;
@@ -2206,11 +2129,6 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
                 $"This governed run has a grounded external product target. Native absolute path '{rawPath}' is outside the workspace-tool boundary; use a grounded external-target alias or a relative current-run artifact path.");
         }
 
-        if (IsExplicitManagedWorkspaceFileRead(context, rawPath))
-        {
-            return null;
-        }
-
         if (IsAllowedExternalTargetAlias(normalizedAlias, readableAliases))
         {
             return ToolInvocationPolicyDecision.Deny(
@@ -2256,37 +2174,6 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
             $"This governed step has read-only access to product target '{matchedAlias}'. Use read, build, test, run, browser, and durable evidence-artifact tools for validation; route defects to a repair implementation step instead of mutating product files from a review or QA step.");
     }
 
-    private static ToolInvocationPolicyDecision? EvaluateScaffoldToolOnlyDirectProductMutation(
-        ToolInvocationPolicyContext context,
-        string signature)
-    {
-        if (!context.ProcessScaffoldToolOnly ||
-            !DirectProductFileMutationTools.Contains(context.ToolName))
-        {
-            return null;
-        }
-
-        var referencedAliases = ResolveReferencedExternalTargetAliases(context.RedactedArguments);
-        if (referencedAliases.Count == 0)
-        {
-            return null;
-        }
-
-        var allowedAliases = NormalizeAllowedExternalTargetAliases(context.AllowedExternalTargetAliases);
-        var matchedAlias = referencedAliases.FirstOrDefault(referencedAlias =>
-            allowedAliases.Any(allowedAlias =>
-                string.Equals(referencedAlias, allowedAlias, StringComparison.OrdinalIgnoreCase) ||
-                referencedAlias.StartsWith(allowedAlias + "/", StringComparison.OrdinalIgnoreCase)));
-        if (string.IsNullOrWhiteSpace(matchedAlias))
-        {
-            return null;
-        }
-
-        return ToolInvocationPolicyDecision.Deny(
-            signature,
-            $"This governed .NET scaffold step is tool-only for product files. Use {ToolContractCatalog.WorkspaceDotNetNew} for new scaffolds or {ToolContractCatalog.WorkspacePowerShellRunScript} with a ProductMutation sideEffectManifest for surgical dotnet CLI operations or project-file repair. Do not retry {ToolContractCatalog.WorkspaceWriteFile} against external-target product paths; use it only for current-run artifacts.");
-    }
-
     private static ToolInvocationPolicyDecision? EvaluateGovernedDotnetNewForce(
         ToolInvocationPolicyContext context,
         string signature)
@@ -2300,7 +2187,7 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
 
         return ToolInvocationPolicyDecision.Deny(
             signature,
-            $"Governed process steps cannot run {ToolContractCatalog.WorkspaceDotNetNew} with force=true because it can overwrite existing product scaffold files during retries. Use force=false for missing scaffolds, inspect existing files first, and repair drift with focused product-mutation tools or a reviewed ProductMutation helper script.");
+            $"Governed process steps cannot run {ToolContractCatalog.WorkspaceDotNetNew} with force=true because it can overwrite existing target files during retries. Use force=false for missing targets, inspect existing files first, and repair drift with focused product-mutation tools or a reviewed ProductMutation helper script.");
     }
 
     private static bool TryResolveTruthyToolArgument(
@@ -2370,75 +2257,9 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
             referencedAlias.StartsWith(allowedAlias + "/", StringComparison.OrdinalIgnoreCase));
     }
 
-    private static bool IsAllowedScaffoldParentAlias(
-        ToolInvocationPolicyContext context,
-        string referencedAlias,
-        IReadOnlyList<string> allowedAliases)
-    {
-        if (!string.Equals(context.ToolName, "workspace_dotnet_new", StringComparison.OrdinalIgnoreCase) ||
-            !context.RedactedArguments.TryGetValue("parentDirectory", out var parentDirectory) ||
-            !context.RedactedArguments.TryGetValue("name", out var name))
-        {
-            return false;
-        }
-
-        var normalizedParentDirectory = NormalizeExternalTargetAlias(parentDirectory);
-        if (!string.Equals(referencedAlias, normalizedParentDirectory, StringComparison.OrdinalIgnoreCase))
-        {
-            return false;
-        }
-
-        var normalizedName = NormalizeExternalTargetChildName(name);
-        if (string.IsNullOrWhiteSpace(normalizedName))
-        {
-            return false;
-        }
-
-        var requestedScaffoldRoot = NormalizeExternalTargetAlias($"{normalizedParentDirectory}/{normalizedName}");
-        return allowedAliases.Any(allowedAlias =>
-            string.Equals(requestedScaffoldRoot, allowedAlias, StringComparison.OrdinalIgnoreCase));
-    }
-
     private static string NormalizeExternalTargetAlias(string? alias)
     {
         return AgentWorkspaceToolAccessMetadata.NormalizeExternalTargetAlias(alias) ?? string.Empty;
-    }
-
-    private static string NormalizeExternalTargetChildName(string? name)
-    {
-        if (string.IsNullOrWhiteSpace(name))
-        {
-            return string.Empty;
-        }
-
-        var normalizedName = name
-            .Replace('\\', '/')
-            .Trim()
-            .Trim('`', '"', '\'')
-            .Trim('/');
-
-        return normalizedName.Split('/', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-            .Any(segment => string.Equals(segment, ".", StringComparison.Ordinal) || string.Equals(segment, "..", StringComparison.Ordinal))
-                ? string.Empty
-                : normalizedName;
-    }
-
-    private static string ResolveDotnetNewScaffoldRoot(IReadOnlyDictionary<string, string> arguments)
-    {
-        arguments.TryGetValue("parentDirectory", out var parentDirectory);
-        arguments.TryGetValue("name", out var name);
-
-        var normalizedName = NormalizeExternalTargetChildName(name);
-        if (string.IsNullOrWhiteSpace(normalizedName))
-        {
-            return string.Empty;
-        }
-
-        var combinedPath = string.IsNullOrWhiteSpace(parentDirectory)
-            ? normalizedName
-            : $"{parentDirectory}/{normalizedName}";
-
-        return NormalizeToolPath(combinedPath);
     }
 
     private static string NormalizeToolArgument(string? value)
@@ -2446,28 +2267,6 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
         return string.IsNullOrWhiteSpace(value)
             ? string.Empty
             : value.Trim().Trim('`', '"', '\'');
-    }
-
-    private static string NormalizeToolPath(string? path)
-    {
-        if (string.IsNullOrWhiteSpace(path))
-        {
-            return string.Empty;
-        }
-
-        var normalizedPath = path
-            .Replace('\\', '/')
-            .Trim()
-            .Trim('`', '"', '\'')
-            .TrimEnd('/', '.', ',', ';', ':', ')', ']', '}');
-        normalizedPath = ConsecutiveSlashRegex.Replace(normalizedPath, "/");
-
-        while (normalizedPath.StartsWith("./", StringComparison.Ordinal))
-        {
-            normalizedPath = normalizedPath[2..];
-        }
-
-        return normalizedPath.TrimStart('/');
     }
 
     private static IReadOnlyList<KeyValuePair<string, string>> ResolveManagedWorkspacePathArguments(
@@ -2548,13 +2347,6 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
     {
         return string.Equals(normalizedPath, "output", StringComparison.OrdinalIgnoreCase) ||
                normalizedPath.StartsWith("output/", StringComparison.OrdinalIgnoreCase);
-    }
-
-    private static bool IsDeniedExternalRunManagedPath(string normalizedPath)
-    {
-        return DeniedExternalRunManagedRoots.Any(root =>
-            string.Equals(normalizedPath, root, StringComparison.OrdinalIgnoreCase) ||
-            normalizedPath.StartsWith(root + "/", StringComparison.OrdinalIgnoreCase));
     }
 
     private static bool IsBroadManagedEvidenceDiscoveryPath(string normalizedPath)
@@ -2643,8 +2435,7 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
         }
 
         payload = NormalizeManagedWorkspacePath(payload);
-        if (IsBroadManagedWorkspacePath(payload) ||
-            IsDeniedExternalRunManagedPath(payload))
+        if (IsBroadManagedWorkspacePath(payload))
         {
             return false;
         }

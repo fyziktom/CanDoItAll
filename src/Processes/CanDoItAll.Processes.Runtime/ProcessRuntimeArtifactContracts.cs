@@ -409,7 +409,9 @@ public static class ProcessRuntimeArtifactContracts
                 .Append(':')
                 .Append(descriptor.PrimaryManagedRef)
                 .Append(':')
-                .Append(descriptor.MaterializationMode);
+                .Append(descriptor.MaterializationMode)
+                .Append(':')
+                .Append(descriptor.PayloadSchema);
         }
 
         foreach (var mapping in subprocessArtifactMappings)

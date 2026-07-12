@@ -1,21 +1,41 @@
 {
   "Kind": "process-template-definition",
   "Key": "dotnet-solution-setup",
-  "DisplayName": ".NET solution setup subprocess",
-  "Summary": "Atomic subprocess for creating or validating a named .NET solution, app project, test project, project references, and first build proof using the application archetype grounded by the parent scope.",
-  "ValueStatement": "Turns the fragile first implementation step into a small observable child process with explicit naming, scaffold, test-project, and build validation checkpoints without hardcoding a specific app archetype.",
+  "DisplayName": ".NET solution baseline subprocess",
+  "Summary": "Atomic subprocess that either initializes an explicitly planned .NET baseline or verifies an explicitly declared existing solution context before feature work.",
+  "ValueStatement": "Turns the fragile first implementation step into a small observable child process with explicit context, initialization, verification, and build-validation checkpoints without hardcoding a specific app archetype.",
   "CustomerName": "Software delivery process",
   "OwnerName": "Engineering manager",
-  "InterfaceContractSummary": "The parent process supplies the solution name, project names, product root, app archetype, target framework, test framework preference, and any existing constraints; this subprocess returns scaffold and first-build evidence.",
-  "GovernanceNotes": "Do not hide scaffold failures behind later implementation steps. Naming, project layout, test-project inclusion, and build output must be observable before feature work starts.",
-  "ChangeSummary": "Introduces a reusable child process for generic .NET bootstrap lanes required by larger software-development processes.",
-  "GovernancePolicySummary": "A development slice may proceed only after the solution scaffold and test project are present or explicitly documented as already existing.",
-  "ConstitutionRuleSummary": "The scaffolded solution, app project, and test project are durable process artifacts, not transient agent chat decisions.",
+  "InterfaceContractSummary": "The parent supplies a typed solution context. Only an initialize context supplies creation details; verify-existing supplies only declared paths and returns read-only verification evidence.",
+  "GovernanceNotes": "Do not hide initialization or existing-context failures behind later implementation steps. The selected provisioning mode, declared paths, and build output must be observable before feature work starts.",
+  "ChangeSummary": "Introduces a reusable child process for explicit .NET baseline initialization or verification lanes required by larger software-development processes.",
+  "GovernancePolicySummary": "A development slice may proceed only after its declared baseline is initialized or its declared existing context is verified.",
+  "ConstitutionRuleSummary": "The typed solution context and baseline evidence are durable process artifacts, not transient agent chat decisions.",
   "OperatingModeSummary": "Assisted execution with explicit manager observation is sufficient because each step has a narrow, verifiable output.",
   "SimulationReadinessSummary": "Small enough for local validation and nested subprocess tests while still representing a real .NET project bootstrap.",
   "Criticality": "Standard",
   "AutonomyLevel": "Assisted",
   "OperatingMode": "AssistedExecution",
+  "LaunchDriverActivations": [
+    {
+      "DriverKey": "dotnet.launch-contract",
+      "Settings": {
+        "Mode": "solution-setup",
+        "ProductCompletionRequiredPathsByStep": "{\"create-dotnet-project\":[\"${DotNetSolutionFileForwardSlash}\",\"${DotNetAppProjectFileForwardSlash}\"],\"add-test-project\":[\"${DotNetSolutionFileForwardSlash}\",\"${DotNetAppProjectFileForwardSlash}\",\"${DotNetTestProjectFileForwardSlash}\"],\"repair-solution-setup\":[\"${DotNetSolutionFileForwardSlash}\",\"${DotNetAppProjectFileForwardSlash}\",\"${DotNetTestProjectFileForwardSlash}\"]}",
+        "ProductCompletionRequiredToolReceiptsByStep": "{\"create-dotnet-project\":[\"template=sln\",\"template=${DotNetAppTemplate}\",\"workspace_pwsh_run_script\"],\"add-test-project\":[\"workspace_pwsh_run_script\"],\"repair-solution-setup\":[\"workspace_pwsh_run_script\"],\"validate-first-build\":[\"workspace_dotnet_restore\",\"workspace_dotnet_build\",\"workspace_dotnet_test\"],\"validate-first-build-after-repair\":[\"workspace_dotnet_restore\",\"workspace_dotnet_build\",\"workspace_dotnet_test\"]}",
+        "ProductCompletionRequiredFileContentChecksByStep": "{\"create-dotnet-project\":[{\"pathCandidates\":[\"${DotNetSolutionFileForwardSlash}\"],\"requiredTextAnyGroups\":[[\"${DotNetAppProjectSolutionRelativePath}\"]]},{\"pathCandidates\":[\"${DotNetAppProjectFileForwardSlash}\"],\"requiredTextAnyGroups\":[[\"<TargetFramework>${DotNetTargetFramework}</TargetFramework>\"]]}],\"add-test-project\":[{\"pathCandidates\":[\"${DotNetSolutionFileForwardSlash}\"],\"requiredTextAnyGroups\":[[\"${DotNetAppProjectSolutionRelativePath}\"],[\"${DotNetTestProjectSolutionRelativePath}\"]]},{\"pathCandidates\":[\"${DotNetTestProjectFileForwardSlash}\"],\"requiredTextAnyGroups\":[[\"${DotNetAppProjectReferenceRelativePath}\",\"${DotNetAppProjectReferenceRelativePathWindows}\"]]}],\"repair-solution-setup\":[{\"pathCandidates\":[\"${DotNetSolutionFileForwardSlash}\"],\"requiredTextAnyGroups\":[[\"${DotNetAppProjectSolutionRelativePath}\"],[\"${DotNetTestProjectSolutionRelativePath}\"]]},{\"pathCandidates\":[\"${DotNetTestProjectFileForwardSlash}\"],\"requiredTextAnyGroups\":[[\"${DotNetAppProjectReferenceRelativePath}\",\"${DotNetAppProjectReferenceRelativePathWindows}\"]]}]}",
+        "ProcessStepScopedLaunchVariablePrefixesByStep": "{\"scaffold-contract\":[\"DotNetCreateProject\",\"DotNetAddTestProject\"],\"create-dotnet-project\":[\"DotNetCreateProject\"],\"add-test-project\":[\"DotNetAddTestProject\"],\"repair-solution-setup\":[\"DotNetCreateProject\",\"DotNetAddTestProject\"]}"
+      },
+      "InputArtifactBindings": [
+        {
+          "BindingKey": "solution-context",
+          "SourceStepKey": "slice-architecture-check",
+          "ArtifactExpectationKey": "dotnet-solution-context",
+          "PayloadSchema": "dotnet.solution-context/v1"
+        }
+      ]
+    }
+  ],
   "SourceFrameworkKeys": [
     "nist-ssdf",
     "owasp-samm"
@@ -39,9 +59,9 @@
   "LocalValidationRefs": [],
   "LocalPromptRefs": [],
   "Metrics": [
-    "Time from naming contract to first successful solution build.",
-    "Percentage of scaffold runs with an included test project and project reference.",
-    "Number of scaffold defects discovered after implementation work begins."
+    "Time from declared solution context to first successful solution build.",
+    "Percentage of initialization runs with an included planned test project and reference.",
+    "Number of baseline defects discovered after implementation work begins."
   ],
   "Risks": [
     "Wrong solution or project names leak into generated namespaces and test references.",
@@ -49,7 +69,7 @@
     "Template command succeeds but first build fails because dependencies or target frameworks are wrong."
   ],
   "TailoringRules": [
-    "For an existing repository, keep this subprocess only when the solution skeleton is missing or materially wrong.",
+    "For an existing repository, use provisioningMode verify-existing; it validates only explicitly declared paths and must not create or repair product files.",
     "Select the project template from current-run project structure or upstream architecture notes. Do not let generic examples or remembered prior runs provide the stack. Escalate when the stack or archetype is missing or conflicts with requested validation.",
     "Select the test project template from the parent contract or existing repository convention. Do not hardcode xUnit, MSTest, or NUnit in the process."
   ],
@@ -106,7 +126,7 @@
       "Key": "scaffold-contract",
       "Title": "Capture solution scaffold contract",
       "Subtitle": "Names before files",
-      "Notes": "Record solution name, app project name, app project directory, test project name, test project directory, target framework, product root, requested .NET archetype, test framework preference, and allowed template switches. Use the grounded product root from project structure or parent artifacts. If no product root is grounded, block unless the parent explicitly defines a managed output root as the product. For greenfield .NET apps, keep the solution file at the product root, the app project under productRoot/src, and the test project under productRoot/tests unless the parent contract says otherwise. Copy explicit project-structure values exactly and do not add unrequested features, framework defaults, or test-framework defaults.",
+      "Notes": "Record solution name, app project name, app project directory, test project name, test project directory, target framework, product root, requested .NET archetype, test framework preference, allowed template switches, and the explicit project topology. Use the grounded product root from project structure or parent artifacts. If no product root is grounded, block unless the parent explicitly defines a managed output root as the product. Copy explicit project-structure directories exactly; do not impose a src/tests layout, infer a UI stack, or add unrequested framework or test-framework defaults. When a required project directory is not supplied, derive it only from current launch variables or an authoritative upstream setup contract and record the assumption.",
       "StepKind": "Start",
       "AllowsManualSkip": false,
       "AllowsSafeRefusal": false,
@@ -157,6 +177,9 @@
       "DocRefs": [
         "processes/dotnet-solution-setup/steps/scaffold-contract.md"
       ],
+      "ExecutionGuidanceRefs": [
+        "processes/dotnet-solution-setup/steps/scaffold-contract.md"
+      ],
       "AllowedOperations": [
         "ReadProcessContext",
         "ReadProjectStructure",
@@ -170,7 +193,7 @@
       "Key": "create-dotnet-project",
       "Title": "Create .NET solution and app project",
       "Subtitle": "Solution skeleton",
-      "Notes": "Create the solution file and requested .NET app project with the agreed names, paths, archetype, and template, then ensure the solution contains the app project before this step completes. Do not cite project-media file paths as source document context unless they are present in current launch variables, current prompt context, inherited upstream artifacts, or current-run tool receipts. Write the primary scaffold artifact using only grounded external-target aliases, managed process refs, project-structure node ids, and current-run tool receipt refs; do not write native absolute paths, scoped storage paths under artifacts/scopes/..., tool-run stdout/stderr paths, managed-files paths, project-media paths, or SourceDocLink values in the artifact body, reason, summary, next actions, or evidenceRefs. Use workspace_create_directory for the grounded product root and productRoot/src when they do not exist, then use workspace_dotnet_new with template sln for the solution and the contracted app template under productRoot/src. A solution-only workspace_dotnet_new receipt does not satisfy the app scaffold requirement. When DotNetCreateProjectExecutionPlan is present, execute it in order: scaffold or verify solution/app files, write DotNetCreateProjectScript to DotNetCreateProjectScriptRef, verify that .ps1 ref, run it with workspace_pwsh_run_script and DotNetCreateProjectSideEffectManifest, then read back the solution and app project file. Do not write the primary steps/create-dotnet-project.md artifact or Completed outcome before the workspace_pwsh_run_script receipt exists; if a retry diagnostic says that receipt is missing, write or verify the helper and run it instead of rerunning workspace_dotnet_new or using force=true. The ProductCompletionRequiredPaths, ProductCompletionRequiredToolReceipts, and ProductCompletionRequiredFileContentChecks launch variables are hard completion gates; do not report Completed until required paths, template receipts, the helper receipt, and the solution app-membership file-content check pass. Existing files are not enough proof: inspect and repair stale template-critical app files before handoff, especially Blazor WebAssembly Program.cs, App.razor, _Imports.razor, and PWA assets. Do not create the test project, add feature code, run dotnet build/test/run, start a browser, or default to guessed external-target paths in this step.",
+      "Notes": "Create the solution file and requested .NET app project with the agreed names, topology, archetype, template, and target framework, then ensure the solution contains the app project before this step completes. Do not cite project-media file paths as source document context unless they are present in current launch variables, current prompt context, inherited upstream artifacts, or current-run tool receipts. Write the primary scaffold artifact using only grounded external-target aliases, managed process refs, project-structure node ids, and current-run tool receipt refs; do not write native absolute paths, scoped storage paths under artifacts/scopes/..., tool-run stdout/stderr paths, managed-files paths, project-media paths, or SourceDocLink values in the artifact body, reason, summary, next actions, or evidenceRefs. Create the grounded product root and contracted app parent directory when they do not exist, then use workspace_dotnet_new with template sln for the solution and the contracted app template at the contracted app directory. A solution-only workspace_dotnet_new receipt does not satisfy the app scaffold requirement. When DotNetCreateProjectExecutionPlan is present, execute it in order: scaffold or verify solution/app files, write DotNetCreateProjectScript to DotNetCreateProjectScriptRef, verify that .ps1 ref, run it with workspace_pwsh_run_script and DotNetCreateProjectSideEffectManifest, then read back the solution and app project file. Do not write the primary steps/create-dotnet-project.md artifact or Completed outcome before the workspace_pwsh_run_script receipt exists; if a retry diagnostic says that receipt is missing, write or verify the helper and run it instead of rerunning workspace_dotnet_new or using force=true. The ProductCompletionRequiredPaths, ProductCompletionRequiredToolReceipts, and ProductCompletionRequiredFileContentChecks launch variables are hard completion gates; do not report Completed until required paths, template receipts, the helper receipt, solution app-membership file-content checks, and target-framework file-content checks pass. Existing files are not enough proof: inspect only the files and generated outputs named by the selected template contract or current diagnostic, and repair setup-only drift without changing requested product behavior. Do not create the test project, add feature code, run dotnet build/test/run, start a browser, or default to guessed external-target paths in this step.",
       "StepKind": "Work",
       "AllowsManualSkip": false,
       "AllowsSafeRefusal": false,
@@ -239,9 +262,10 @@
         "WriteManagedProcessArtifacts"
       ],
       "OperationTargetScope": "ExternalProductTargetMutable",
-      "ExecutionClass": "AgentWithToolPlanGuard",
+      "ExecutionClass": "RuntimeOwnedToolPlan",
       "ExecutionContract": {
-        "ExecutionClass": "AgentWithToolPlanGuard",
+        "ExecutionClass": "RuntimeOwnedToolPlan",
+        "RuntimeOwnedExecutorKey": "dotnet.solution-setup",
         "RequiredRuntimeToolNames": [
           "workspace_create_directory",
           "workspace_dotnet_new",
@@ -261,7 +285,7 @@
           {
             "Key": "create-app-project",
             "ToolName": "workspace_dotnet_new",
-            "Predicate": "contracted app template under productRoot/src",
+            "Predicate": "contracted app template at the contracted app directory",
             "RequireSuccessfulExit": true,
             "RequireCurrentRun": true
           },
@@ -299,6 +323,8 @@
           "ScriptRefLaunchVariable": "DotNetCreateProjectScriptRef",
           "ScriptLaunchVariable": "DotNetCreateProjectScript",
           "SideEffectManifestLaunchVariable": "DotNetCreateProjectSideEffectManifest",
+          "ExecutionPlanLaunchVariable": "DotNetCreateProjectExecutionPlan",
+          "RequiresReadbackChecks": true,
           "Operations": [
             {
               "Key": "create-solution",
@@ -347,7 +373,7 @@
             {
               "Key": "create-app-project",
               "ToolName": "workspace_dotnet_new",
-              "Predicate": "contracted app template under productRoot/src",
+            "Predicate": "contracted app template at the contracted app directory",
               "RequireSuccessfulExit": true,
               "RequireCurrentRun": true
             },
@@ -465,9 +491,10 @@
         "WriteManagedProcessArtifacts"
       ],
       "OperationTargetScope": "ExternalProductTargetMutable",
-      "ExecutionClass": "AgentWithToolPlanGuard",
+      "ExecutionClass": "RuntimeOwnedToolPlan",
       "ExecutionContract": {
-        "ExecutionClass": "AgentWithToolPlanGuard",
+        "ExecutionClass": "RuntimeOwnedToolPlan",
+        "RuntimeOwnedExecutorKey": "dotnet.solution-setup",
         "RequiredRuntimeToolNames": [
           "workspace_write_file",
           "workspace_stat_path",
@@ -516,6 +543,8 @@
           "ScriptRefLaunchVariable": "DotNetAddTestProjectScriptRef",
           "ScriptLaunchVariable": "DotNetAddTestProjectScript",
           "SideEffectManifestLaunchVariable": "DotNetAddTestProjectSideEffectManifest",
+          "ExecutionPlanLaunchVariable": "DotNetAddTestProjectExecutionPlan",
+          "RequiresReadbackChecks": true,
           "Operations": [
             {
               "Key": "write-helper-script",
@@ -692,6 +721,9 @@
       "DocRefs": [
         "processes/dotnet-solution-setup/steps/validate-first-build.md"
       ],
+      "ExecutionGuidanceRefs": [
+        "processes/dotnet-solution-setup/steps/validate-first-build.md"
+      ],
       "AllowedOperations": [
         "ReadProcessContext",
         "ReadProjectStructure",
@@ -821,9 +853,10 @@
         "WriteManagedProcessArtifacts"
       ],
       "OperationTargetScope": "ExternalProductTargetMutable",
-      "ExecutionClass": "AgentWithToolPlanGuard",
+      "ExecutionClass": "RuntimeOwnedToolPlan",
       "ExecutionContract": {
-        "ExecutionClass": "AgentWithToolPlanGuard",
+        "ExecutionClass": "RuntimeOwnedToolPlan",
+        "RuntimeOwnedExecutorKey": "dotnet.solution-setup",
         "RequiredRuntimeToolNames": [
           "workspace_write_file",
           "workspace_stat_path",
@@ -872,6 +905,8 @@
           "ScriptRefLaunchVariable": "DotNetAddTestProjectScriptRef",
           "ScriptLaunchVariable": "DotNetAddTestProjectScript",
           "SideEffectManifestLaunchVariable": "DotNetAddTestProjectSideEffectManifest",
+          "ExecutionPlanLaunchVariable": "DotNetRepairSolutionSetupExecutionPlan",
+          "RequiresReadbackChecks": true,
           "Operations": [
             {
               "Key": "write-helper-script",
@@ -1031,6 +1066,9 @@
       "DocRefs": [
         "processes/dotnet-solution-setup/steps/validate-first-build-after-repair.md"
       ],
+      "ExecutionGuidanceRefs": [
+        "processes/dotnet-solution-setup/steps/validate-first-build-after-repair.md"
+      ],
       "AllowedOperations": [
         "ReadProcessContext",
         "ReadProjectStructure",
@@ -1152,6 +1190,9 @@
       "DocRefs": [
         "processes/dotnet-solution-setup/steps/setup-handoff.md"
       ],
+      "ExecutionGuidanceRefs": [
+        "processes/dotnet-solution-setup/steps/setup-handoff.md"
+      ],
       "AllowedOperations": [
         "ReadProcessContext",
         "ReadProjectStructure",
@@ -1238,6 +1279,9 @@
       "DocRefs": [
         "processes/dotnet-solution-setup/steps/setup-handoff-after-repair.md"
       ],
+      "ExecutionGuidanceRefs": [
+        "processes/dotnet-solution-setup/steps/setup-handoff-after-repair.md"
+      ],
       "AllowedOperations": [
         "ReadProcessContext",
         "ReadProjectStructure",
@@ -1322,6 +1366,9 @@
       "ValidationRefs": [],
       "PromptRefs": [],
       "DocRefs": [
+        "processes/dotnet-solution-setup/steps/setup-repair-escalation.md"
+      ],
+      "ExecutionGuidanceRefs": [
         "processes/dotnet-solution-setup/steps/setup-repair-escalation.md"
       ],
       "AllowedOperations": [

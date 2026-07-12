@@ -19,7 +19,7 @@ internal sealed class BrowserInteractionToolReceiptPolicyContribution : IProcess
         ToolContractCatalog.BrowserWaitFor
     };
 
-    public bool IsProductMutationTool(string toolName)
+    public bool IsProductMutationReceipt(ToolExecutionReceiptRecord receipt)
         => false;
 
     public bool IsProductValidationTool(string toolName)
@@ -43,17 +43,4 @@ internal sealed class BrowserInteractionToolReceiptPolicyContribution : IProcess
         => string.Equals(requirement, InteractionProofRequirement, StringComparison.OrdinalIgnoreCase)
             ? InteractionToolNames
             : [];
-
-    public bool TryResolveScriptHelper(
-        ProcessRuntimeStepAssignment assignment,
-        out ProcessScriptHelperDescriptor descriptor)
-    {
-        descriptor = null!;
-        return false;
-    }
-
-    public bool AllowsCompletedOutcomeWithDeclaredBlockers(
-        ProcessRuntimeStepAssignment assignment,
-        ProcessStepOutcomeResult output)
-        => false;
 }

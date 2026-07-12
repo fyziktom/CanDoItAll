@@ -20,6 +20,8 @@ public sealed record WorkspaceToolReceipt(
     DateTimeOffset CompletedAtUtc)
 {
     public Guid? ExecutionRunId { get; init; }
+
+    public ToolExecutionSideEffectMode DeclaredSideEffectMode { get; init; }
 }
 
 public sealed record WorkspaceFileListEntry(

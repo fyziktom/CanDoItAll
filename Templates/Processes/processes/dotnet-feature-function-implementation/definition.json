@@ -181,6 +181,9 @@
       "DocRefs": [
         "processes/dotnet-feature-function-implementation/steps/feature-slice-intake.md"
       ],
+      "ExecutionGuidanceRefs": [
+        "processes/dotnet-feature-function-implementation/steps/feature-slice-intake.md"
+      ],
       "AllowedOperations": [
         "ReadProcessContext",
         "ReadProjectStructure",
@@ -267,6 +270,9 @@
       "DocRefs": [
         "processes/dotnet-feature-function-implementation/steps/implementation-approach.md"
       ],
+      "ExecutionGuidanceRefs": [
+        "processes/dotnet-feature-function-implementation/steps/implementation-approach.md"
+      ],
       "AllowedOperations": [
         "ReadProcessContext",
         "ReadProjectStructure",
@@ -281,15 +287,15 @@
       "Key": "test-contract",
       "Title": "Define focused validation contract",
       "Subtitle": "Proof before broad work",
-      "Notes": "Plan the smallest reliable proof commands and browser checks needed for the accepted behavior. Do not execute build, test, launch, or browser tools in this step. When defining arithmetic, state-machine, or other deterministic behavior tests, ensure expected values and recorded history follow from the exact action sequence; do not combine state from different sequences. Map every behavioral acceptance criterion to proof that executes the owning production behavior. Source-text, markup-content, selector-presence, or copied-label assertions may prove content hygiene only; they cannot prove interaction, state transition, calculation, persistence, reload restoration, timing, or recovery. Require deterministic behavior proof through the typed production boundary, and identify missing executable proof as a validation gap that must route feature-repair-required rather than weakening the criterion. For UI proof, require the later validation step to obtain a launch receipt such as workspace_dotnet_run and navigate only to the returned URL instead of a guessed localhost port.",
+      "Notes": "Plan the smallest reliable proof commands and browser checks needed for the accepted behavior. Do not execute build, test, launch, or browser tools in this step. When defining arithmetic, state-machine, or other deterministic behavior tests, ensure expected values and recorded history follow from the exact action sequence; do not combine state from different sequences. Map every behavioral acceptance criterion to proof that executes the owning production behavior. Source-text, markup-content, selector-presence, or copied-label assertions may prove content hygiene only; they cannot prove interaction, state transition, calculation, persistence, reload restoration, timing, or recovery. Require deterministic behavior proof through the typed production boundary, and identify missing executable proof as a validation gap that must route feature-repair-required rather than weakening the criterion. For UI proof, require the later validation step to obtain a launch receipt such as workspace_dotnet_run and navigate only to the returned URL instead of a guessed localhost port. When ProductAcceptanceCriteriaContract is present, write an Acceptance-criteria coverage table that repeats every literal criterion id, owning production boundary, planned proof, and expected result; carry it into validation and recheck.",
       "StepKind": "Review",
       "AllowsManualSkip": false,
       "AllowsSafeRefusal": false,
       "RequiresApproval": false,
       "RequiresDecisionRecord": true,
       "InputContractSummary": "Feature scope, acceptance criteria, and implementation plan.",
-      "OutputContractSummary": "Validation contract with required tests, commands, exit-code expectations, and UI proof when applicable.",
-      "EvidenceContractSummary": "Mapped acceptance criteria to test/proof actions and any known validation gaps.",
+      "OutputContractSummary": "Validation contract with required tests, commands, exit-code expectations, literal acceptance-criteria coverage when supplied, and UI proof when applicable.",
+      "EvidenceContractSummary": "Mapped acceptance criteria to test/proof actions, literal criterion ids when supplied, and any known validation gaps.",
       "DecisionRightsSummary": "Validation owner can require a narrower implementation or additional proof when the behavior cannot be validated deterministically.",
       "ExceptionPolicySummary": "Block only when no focused validation route can be designed, acceptance criteria are missing and cannot be inferred, or artifact recovery is required for missing or invalid validation-contract evidence before branch routing. Missing launch/runtime tooling is a validation prerequisite to document for the later validation step, not a blocker for writing the contract.",
       "TargetLeadHours": 2,
@@ -330,7 +336,7 @@
           "SensitivityLevel": "Internal",
           "RetentionDays": 365,
           "AllowedFutureUsageSummary": "Reusable by implementation, targeted validation, and parent QA.",
-          "ValidationRequirementSummary": "Must list focused test/build/browser proof commands and map each proof item to acceptance criteria."
+          "ValidationRequirementSummary": "Must list focused test/build/browser proof commands and an Acceptance-criteria coverage table that maps every supplied literal criterion id to its owning boundary, planned proof, and expected result."
         }
       ],
       "ArtifactInputs": [
@@ -350,6 +356,9 @@
       "DocRefs": [
         "processes/dotnet-feature-function-implementation/steps/test-contract.md"
       ],
+      "ExecutionGuidanceRefs": [
+        "processes/dotnet-feature-function-implementation/steps/test-contract.md"
+      ],
       "AllowedOperations": [
         "ReadProcessContext",
         "ReadProjectStructure",
@@ -364,7 +373,7 @@
       "Key": "code-change",
       "Title": "Implement the .NET feature or function",
       "Subtitle": "Minimal code path",
-      "Notes": "Make the smallest production and test changes that satisfy the validation contract. Follow existing project conventions, keep state changes explicit, and avoid introducing fallback behavior that hides errors. Implement every acceptance-critical behavior assigned to this bounded slice. A visible control or product shell without the assigned event wiring and observable state transition is incomplete even when the page renders and source-text assertions pass. Source-text and markup-content checks may supplement content-hygiene proof only; they cannot prove interaction, calculation, persistence, reload restoration, timing, or recovery. Do not defer a criterion already assigned by the intake or validation contract merely to make the current change smaller; implement it now or record incomplete implementation so targeted-validation routes feature-repair-required. Budget the tool loop around product mutation: use one bounded scaffold listing, read only direct mutation targets, and apply a product mutation before writing final evidence. For several related files, prefer one bounded current-run product mutation operation scoped to the grounded target, then read back representative changed files. If the grounded product root is empty, incomplete, or missing the expected app/test scaffold, create or repair the scaffold inside that product root with the available product-mutation tools before implementing the behavior; do not report that there are no files to mutate when this step has MutateProductTarget unless the tool boundary denies product mutation. Keep generated tests deterministic and bounded: avoid loops that depend only on mutable product state without a maximum iteration guard and an assertion that each state transition succeeded. When implementing or repairing deterministic tests, verify that expected assertions and recorded history are internally consistent with the exact action sequence and accepted behavior; repair an invalid generated test rather than forcing product code to satisfy a contradictory expectation. Use a workspace_dotnet_test timeout of 300 seconds or less for focused generated-app tests unless a current diagnostic proves the test suite needs more time. For Blazor WebAssembly targets, read _Imports.razor before finalizing app changes and restore scaffold-critical shared imports such as System.Net.Http.Json, the app root namespace, and the app layout namespace when App, MainLayout, Router, HeadOutlet, or GetFromJsonAsync are used by generated template files. If Razor markup references members from a companion ComponentBase class, the product file readback must show @inherits <BaseClass>, a same-name partial class binding, or same-file @code members before completion. Do not create a separate ComponentBase class and then only state in the artifact that the page derives from it; the product file must contain the binding that makes the markup compile. Prefer shared _Imports.razor repairs over page-specific layout guesses when several scaffold files depend on the same namespace wiring. Do not cite stale source document paths, managed-files paths, project-media paths, email summaries, or unrelated domain notes unless those exact refs appear in current launch variables, the selected project structure node, or required upstream artifacts. This implementation step does not own final acceptance and does not own runtime launch, browser navigation, screenshots, viewport proof, or downstream acceptance validation; those belong to targeted validation or parent runtime-command and screenshot writeback steps. It owns the implementation attempt and change-set evidence. Complete this step after current-run product source/test files were mutated under the grounded product root, changed product files were read back or stat-checked, and the changed-file inventory plus current implementation evidence were written to the managed step artifact. Focused build/test commands may be run here when they help catch immediate wiring mistakes, but missing restore/build/test receipts are not a manager escalation reason because targeted-validation owns the required validation proof. If product files were changed and focused build/test proof fails because of compile errors, test failures, missing imports, or incomplete implementation, do not return Failed or Blocked. Write Status: Completed for the change-set artifact, include failing command receipt/output refs, and state that targeted validation must choose feature-repair-required. Do not claim the defect was corrected unless the corrected product file was read back from the grounded product target and a later command receipt proves the corrected build or test path. Current file readback and current command receipts are authoritative over upstream summaries and over the intended change list. Return Succeeded / Completed once product mutation and the grounded change-set artifact are complete, even when restore/build/test, runtime launch, browser proof, screenshot comparison, or final acceptance remain for downstream steps. Do not return NeedsManager, WaitingApproval, Failed, or Blocked only because downstream proof is pending, command receipts are missing from this implementation step, or validation still needs to choose feature-accepted versus feature-repair-required. Block only for environment, permission, unavailable product-mutation tool, missing grounded product root, unsafe architecture conflict, or process-contract issues that prevent producing a change-set artifact. Do not block this step only because browser proof is missing.",
+      "Notes": "Make the smallest production and test changes that satisfy the validation contract. Follow existing project conventions, keep state changes explicit, and avoid introducing fallback behavior that hides errors. Implement every acceptance-critical behavior assigned to this bounded slice. A visible control or product shell without the assigned event wiring and observable state transition is incomplete even when the page renders and source-text assertions pass. Source-text and markup-content checks may supplement content-hygiene proof only; they cannot prove interaction, calculation, persistence, reload restoration, timing, or recovery. Do not defer a criterion already assigned by the intake or validation contract merely to make the current change smaller; implement it now or record incomplete implementation so targeted-validation routes feature-repair-required. Budget the tool loop around product mutation: use one bounded scaffold listing, read only direct mutation targets, and apply a product mutation before writing final evidence. For several related files, prefer one bounded current-run product mutation operation scoped to the grounded target, then read back representative changed files. If the grounded product root is empty, incomplete, or missing the expected app/test scaffold, create or repair the scaffold inside that product root with the available product-mutation tools before implementing the behavior; do not report that there are no files to mutate when this step has MutateProductTarget unless the tool boundary denies product mutation. Keep generated tests deterministic and bounded: avoid loops that depend only on mutable product state without a maximum iteration guard and an assertion that each state transition succeeded. When implementing or repairing deterministic tests, verify that expected assertions and recorded history are internally consistent with the exact action sequence and accepted behavior; repair an invalid generated test rather than forcing product code to satisfy a contradictory expectation. Use a workspace_dotnet_test timeout of 300 seconds or less for focused generated-app tests unless a current diagnostic proves the test suite needs more time. For a framework, host, or component-binding diagnostic, inspect the actual project hosting, imports, generated bindings, registrations, and component wiring named by the current compiler or runtime evidence. Repair only the owning boundary and do not assume a particular scaffold, framework template, file layout, route, root component, or hosting model. Do not cite stale source document paths, managed-files paths, project-media paths, email summaries, or unrelated domain notes unless those exact refs appear in current launch variables, the selected project structure node, or required upstream artifacts. This implementation step does not own final acceptance and does not own runtime launch, browser navigation, screenshots, viewport proof, or downstream acceptance validation; those belong to targeted validation or parent runtime-command and screenshot writeback steps. It owns the implementation attempt and change-set evidence. Complete this step after current-run product source/test files were mutated under the grounded product root, changed product files were read back or stat-checked, and the changed-file inventory plus current implementation evidence were written to the managed step artifact. Focused build/test commands may be run here when they help catch immediate wiring mistakes, but missing restore/build/test receipts are not a manager escalation reason because targeted-validation owns the required validation proof. If product files were changed and focused build/test proof fails because of compile errors, test failures, missing imports, or incomplete implementation, do not return Failed or Blocked. Write Status: Completed for the change-set artifact, include failing command receipt/output refs, and state that targeted validation must choose feature-repair-required. Do not claim the defect was corrected unless the corrected product file was read back from the grounded product target and a later command receipt proves the corrected build or test path. Current file readback and current command receipts are authoritative over upstream summaries and over the intended change list. Return Succeeded / Completed once product mutation and the grounded change-set artifact are complete, even when restore/build/test, runtime launch, browser proof, screenshot comparison, or final acceptance remain for downstream steps. Do not return NeedsManager, WaitingApproval, Failed, or Blocked only because downstream proof is pending, command receipts are missing from this implementation step, or validation still needs to choose feature-accepted versus feature-repair-required. Block only for environment, permission, unavailable product-mutation tool, missing grounded product root, unsafe architecture conflict, or process-contract issues that prevent producing a change-set artifact. Do not block this step only because browser proof is missing.",
       "StepKind": "Work",
       "AllowsManualSkip": false,
       "AllowsSafeRefusal": false,
@@ -447,6 +456,9 @@
       "DocRefs": [
         "processes/dotnet-feature-function-implementation/steps/code-change.md"
       ],
+      "ExecutionGuidanceRefs": [
+        "processes/dotnet-feature-function-implementation/steps/code-change.md"
+      ],
       "AllowedOperations": [
         "ReadProcessContext",
         "ReadProjectStructure",
@@ -455,22 +467,51 @@
         "RunValidation",
         "WriteManagedProcessArtifacts"
       ],
-      "OperationTargetScope": "ExternalProductTargetMutable"
+      "OperationTargetScope": "ExternalProductTargetMutable",
+      "CompletionPolicy": {
+        "RequiredProductToolReceipts": [],
+        "CompletionIssueRoutes": [
+          {
+            "IssueCode": "process.adapter.product_mutation_receipt_missing",
+            "SourceBranchOutcomeKeys": [],
+            "TargetBranchOutcomeKey": "implementation-attempt-incomplete",
+            "TargetBranchOutcomeTitle": "Implementation attempt incomplete",
+            "RequiresDefectEvidence": false,
+            "OnlyAfterAutomaticRetry": false
+          }
+        ],
+        "RequiresProductSourceInspection": true,
+        "ProductSourceInspectionRequiredBranchOutcomeKeys": [],
+        "ProductMutationRequiredBranchOutcomeKeys": [],
+        "RequiresProductMutationBeforeManagedOutput": true,
+        "ProductMutationToolNames": [
+          "workspace_write_file",
+          "workspace_append_file",
+          "workspace_copy_path",
+          "workspace_move_path",
+          "workspace_delete_path",
+          "workspace_pwsh_run_script",
+          "workspace_dotnet_new"
+        ],
+        "RuntimeRoutedBranchOutcomeKeys": [
+          "implementation-attempt-incomplete"
+        ]
+      }
     },
     {
       "Order": 4,
       "Key": "targeted-validation",
       "Title": "Run focused validation",
       "Subtitle": "Pass or request rework",
-      "Notes": "Run the agreed focused build and test validation commands for this atomic feature change. For .NET product changes, run the grounded solution or project dotnet build and focused dotnet test commands from the validation contract unless the contract names a narrower equivalent command; do not accept from upstream prose alone. When using no-restore build or test checks, first emit a fresh successful restore receipt in this validation execution; if build fails in ResolvePackageAssets or another stale asset-file path before source compilation, rerun restore and build before choosing repair. Required validation receipts must be emitted by this validation step execution; upstream implementation receipts may explain what happened, but they do not satisfy this step's current-execution proof contract by themselves. Read the code-change artifact, at least one representative production source file, and the mapped test file in this validation execution before judging proof. Verify that the mapped test invokes an owning production component, service, or domain/application type. A test-only helper that copies the intended algorithm or state transition is fabricated proof even when it passes; choose feature-repair-required, cite both files, and describe the missing production boundary. A green source-text, markup-content, selector-presence, or copied-label assertion proves content presence only; it cannot prove interaction, state transition, calculation, persistence, reload restoration, timing, or recovery. Choose feature-repair-required when an acceptance-critical behavior is unwired, unexecuted, replaced by fabricated test-only state, or deferred to a later slice. Missing browser receipts alone are not a repair defect because this step does not own browser tools; judge implementation and focused-test completeness here, then leave live interaction proof to parent QA/runtime steps. If the code-change artifact is Status: Completed but records failed build/test proof, compile errors, test failures, missing imports, or incomplete implementation, use those current-run receipts as validation evidence and choose feature-repair-required unless your own rerun proves the failure is already repaired. Write or update artifacts/process-runs/<current-process-run-id>/steps/targeted-validation.md with final evidence before returning; do not leave the artifact as in progress. When selecting a validation branch, put the exact selected key on one line near the top of the artifact as Branch outcome key: feature-accepted or Branch outcome key: feature-repair-required; do not write only a heading with the key on the next line. Cite the targeted-validation artifact and generated command receipt/output refs in evidenceRefs, and do not return Blocked with empty evidence refs after proof artifacts exist. When visual target ImageAsset ids or media paths are part of the feature boundary, verify that the change set and tests preserve those acceptance inputs, then leave live screenshot comparison to the parent runtime-command and screenshot writeback steps that own LaunchRuntime and CaptureRuntimeProof. For repair-sourced runs, the focused proof must include the inherited repair target; do not accept a different behavior while the triggering defect remains untested or failing. Keep focused validation bounded: use a workspace_dotnet_test timeout of 300 seconds or less for generated or focused tests unless a current diagnostic proves the test suite needs more time. If validation hangs or times out, record the command and timeout as failing proof and choose the feature-repair-required branch instead of waiting on a broad unbounded run. If build/test receipts are missing, proof fails because an artifact is missing, validation commands fail, the completed code-change artifact records failed proof, the implementation is incomplete, or evidence does not map to the accepted behavior, choose feature-repair-required and route the defect to the owning implementation role. Return Status: Completed in the targeted-validation artifact and final process-step outcome when selecting feature-repair-required; product proof failure is a completed validation decision, not a Blocked status. Select feature-accepted only when current-execution build/test command receipts emitted by this validation step and the targeted-validation artifact prove the focused behavior. Use blocked status only for an unrecoverable environment, permission, unavailable validation tool, product-root, or process-contract problem that prevents validation execution or prevents repair from being requested inside this subprocess.",
+      "Notes": "Run the agreed focused build and test validation commands for this atomic feature change. For .NET product changes, run the grounded solution or project dotnet build and focused dotnet test commands from the validation contract unless the contract names a narrower equivalent command; do not accept from upstream prose alone. When using no-restore build or test checks, first emit a fresh successful restore receipt in this validation execution; if build fails in ResolvePackageAssets or another stale asset-file path before source compilation, rerun restore and build before choosing repair. Required validation receipts must be emitted by this validation step execution; upstream implementation receipts may explain what happened, but they do not satisfy this step's current-execution proof contract by themselves. Read the code-change artifact, at least one representative production source file, and the mapped test file in this validation execution before judging proof. Verify that the mapped test invokes an owning production component, service, or domain/application type. A test-only helper that copies the intended algorithm or state transition is fabricated proof even when it passes; choose feature-repair-required, cite both files, and describe the missing production boundary. A green source-text, markup-content, selector-presence, or copied-label assertion proves content presence only; it cannot prove interaction, state transition, calculation, persistence, reload restoration, timing, or recovery. Choose feature-repair-required when an acceptance-critical behavior is unwired, unexecuted, replaced by fabricated test-only state, or deferred to a later slice. Missing browser receipts alone are not a repair defect because this step does not own browser tools; judge implementation and focused-test completeness here, then leave live interaction proof to parent QA/runtime steps. If the code-change artifact is Status: Completed but records failed build/test proof, compile errors, test failures, missing imports, or incomplete implementation, use those current-run receipts as validation evidence and choose feature-repair-required unless your own rerun proves the failure is already repaired. Write or update artifacts/process-runs/<current-process-run-id>/steps/targeted-validation.md with final evidence before returning; do not leave the artifact as in progress. When selecting a validation branch, put the exact selected key on one line near the top of the artifact as Branch outcome key: feature-accepted or Branch outcome key: feature-repair-required; do not write only a heading with the key on the next line. When ProductAcceptanceCriteriaContract is present, write an Acceptance-criteria coverage table with every literal criterion id, current-run proof ref, and Pass or Fail result. Before selecting feature-accepted, repeat every criterion id with its proof ref and Pass result in the final process-step outcome summary or reason; artifact-only coverage is insufficient. A missing, failed, or unmapped criterion must select feature-repair-required. Cite the targeted-validation artifact and generated command receipt/output refs in evidenceRefs, and do not return Blocked with empty evidence refs after proof artifacts exist. When visual target ImageAsset ids or media paths are part of the feature boundary, verify that the change set and tests preserve those acceptance inputs, then leave live screenshot comparison to the parent runtime-command and screenshot writeback steps that own LaunchRuntime and CaptureRuntimeProof. For repair-sourced runs, the focused proof must include the inherited repair target; do not accept a different behavior while the triggering defect remains untested or failing. Keep focused validation bounded: use a workspace_dotnet_test timeout of 300 seconds or less for generated or focused tests unless a current diagnostic proves the test suite needs more time. If validation hangs or times out, record the command and timeout as failing proof and choose the feature-repair-required branch instead of waiting on a broad unbounded run. If build/test receipts are missing, proof fails because an artifact is missing, validation commands fail, the completed code-change artifact records failed proof, the implementation is incomplete, or evidence does not map to the accepted behavior, choose feature-repair-required and route the defect to the owning implementation role. Return Status: Completed in the targeted-validation artifact and final process-step outcome when selecting feature-repair-required; product proof failure is a completed validation decision, not a Blocked status. Select feature-accepted only when current-execution build/test command receipts emitted by this validation step and the targeted-validation artifact prove the focused behavior. Use blocked status only for an unrecoverable environment, permission, unavailable validation tool, product-root, or process-contract problem that prevents validation execution or prevents repair from being requested inside this subprocess.",
       "StepKind": "Review",
       "AllowsManualSkip": false,
       "AllowsSafeRefusal": false,
       "RequiresApproval": false,
       "RequiresDecisionRecord": true,
       "InputContractSummary": "Feature change set and validation contract.",
-      "OutputContractSummary": "Focused validation evidence plus an explicit feature-accepted or feature-repair-required branch.",
-      "EvidenceContractSummary": "Commands, exit codes, relevant logs, and acceptance-criteria mapping. Live runtime screenshots are owned by parent runtime-command and screenshot writeback steps.",
+      "OutputContractSummary": "Focused validation evidence, literal acceptance-criteria coverage when supplied, and an explicit feature-accepted or feature-repair-required branch.",
+      "EvidenceContractSummary": "Commands, exit codes, relevant logs, literal acceptance-criteria coverage, and final-outcome criterion citations for accepted branches. Live runtime screenshots are owned by parent runtime-command and screenshot writeback steps.",
       "DecisionRightsSummary": "Validation owner can accept proof or route targeted rework, but cannot mutate product files in this step.",
       "ExceptionPolicySummary": "Select feature-repair-required for failing proof, completed code-change artifacts that record failed proof, missing artifacts, validation command failures, incomplete implementation, or evidence that does not map to the accepted behavior. Block only when repair cannot be attempted because the environment, permissions, or process contract is unavailable.",
       "TargetLeadHours": 4,
@@ -518,7 +559,7 @@
           "SensitivityLevel": "Internal",
           "RetentionDays": 365,
           "AllowedFutureUsageSummary": "Reusable by parent QA and release readiness.",
-          "ValidationRequirementSummary": "Must include the finalized targeted-validation artifact path, current-run build/test command receipt/output refs, commands, exit codes, relevant output, acceptance mapping, and unresolved gaps. Must not accept from upstream prose alone, remain in progress, or return empty evidence refs when proof receipts exist. Runtime screenshot comparison belongs to parent runtime-command and screenshot writeback steps."
+          "ValidationRequirementSummary": "Must include the finalized targeted-validation artifact path, current-run build/test command receipt/output refs, commands, exit codes, relevant output, an Acceptance-criteria coverage table with every supplied literal criterion id, and unresolved gaps. For feature-accepted, the final process-step outcome must repeat every criterion id with current-run passing proof; artifact-only mapping is insufficient. Must not accept from upstream prose alone, remain in progress, or return empty evidence refs when proof receipts exist. Runtime screenshot comparison belongs to parent runtime-command and screenshot writeback steps."
         }
       ],
       "ArtifactInputs": [
@@ -549,6 +590,9 @@
       "DocRefs": [
         "processes/dotnet-feature-function-implementation/steps/targeted-validation.md"
       ],
+      "ExecutionGuidanceRefs": [
+        "processes/dotnet-feature-function-implementation/steps/targeted-validation.md"
+      ],
       "AllowedOperations": [
         "ReadProcessContext",
         "ReadProjectStructure",
@@ -557,7 +601,44 @@
         "WriteManagedProcessArtifacts"
       ],
       "OperationTargetScope": "ExternalProductTargetReadOnly",
-      "ExecutionClass": "BranchDecision"
+      "ExecutionClass": "BranchDecision",
+      "CompletionPolicy": {
+        "RequiredProductToolReceipts": [
+          {
+            "ToolName": "workspace_dotnet_restore",
+            "Purpose": "AcceptanceProof",
+            "EnforceBranchOutcomeKeys": [
+              "feature-accepted"
+            ],
+            "Reason": "Current-run proof required for the selected branch outcome."
+          },
+          {
+            "ToolName": "workspace_dotnet_build",
+            "Purpose": "AcceptanceProof",
+            "EnforceBranchOutcomeKeys": [
+              "feature-accepted"
+            ],
+            "Reason": "Current-run proof required for the selected branch outcome."
+          },
+          {
+            "ToolName": "workspace_dotnet_test",
+            "Purpose": "AcceptanceProof",
+            "EnforceBranchOutcomeKeys": [
+              "feature-accepted"
+            ],
+            "Reason": "Current-run proof required for the selected branch outcome."
+          }
+        ],
+        "CompletionIssueRoutes": [],
+        "RequiresProductSourceInspection": true,
+        "ProductSourceInspectionRequiredBranchOutcomeKeys": [
+          "feature-accepted"
+        ],
+        "ProductMutationRequiredBranchOutcomeKeys": [],
+        "RequiresProductMutationBeforeManagedOutput": false,
+        "ProductMutationToolNames": [],
+        "RuntimeRoutedBranchOutcomeKeys": []
+      }
     },
     {
       "Order": 5,
@@ -633,6 +714,9 @@
       "DocRefs": [
         "processes/dotnet-feature-function-implementation/steps/feature-handoff.md"
       ],
+      "ExecutionGuidanceRefs": [
+        "processes/dotnet-feature-function-implementation/steps/feature-handoff.md"
+      ],
       "AllowedOperations": [
         "ReadProcessContext",
         "ReadProjectStructure",
@@ -646,7 +730,7 @@
       "Key": "feature-repair",
       "Title": "Repair .NET focused validation findings",
       "Subtitle": "Targeted implementation rework",
-      "Notes": "Repair the concrete defects, failed build/test proof, or missing artifacts identified by targeted validation, plus sequential same-validation-target build/test blockers revealed while proving the repair. Stay inside the accepted feature scope and product target. Treat current product file readback and current command receipts as authoritative; if a summary says a repair is already present but product file readback or command output disproves it, repair the product file instead of repeating the summary. Rerun the smallest useful validation command before handing back to QA recheck when the validation tool is available. If a no-restore build fails in ResolvePackageAssets, run restore and rerun build before classifying source defects. If the rerun still fails, inspect the failing output, mutate the product file again when the defect is inside the same product target and validation boundary, and rerun validation. Compile errors, scoped CSS errors, missing components, missing handlers, missing state fields, missing namespace imports, and failing tests in the same validation boundary remain repair work for this step when product mutation and validation tools are available; do not treat a later compiler or test failure as outside scope merely because it appeared after fixing the first failure. When a failing generated test has expected values or recorded history that contradict its own action sequence or an explicit deterministic rule, repair the test expectation instead of changing product code to satisfy an invalid test. For Razor component symbol errors, verify the actual component binding in product file readback: @inherits <BaseClass>, matching partial class, or same-file @code members. For Blazor WebAssembly scaffold wiring, prefer shared _Imports.razor repairs for System.Net.Http.Json, app root namespace, and layout namespace over page-specific layout guesses when App, MainLayout, Router, HeadOutlet, or GetFromJsonAsync fail to resolve. Do not cite stale source document paths, managed-files paths, project-media paths, email summaries, or unrelated domain notes unless those exact refs appear in current launch variables, the selected project structure node, or required upstream artifacts. Do not select feature-repair-required from feature-repair while same-validation-target compile or test errors remain and product mutation plus validation tools are available; continue repairing and rerunning proof. Do not write Status: Completed by relying on inspection until current-run build/test receipts prove the corrected validation target no longer reproduces the defect. Do not write Status: Completed for a repair artifact that says validation still fails for a corrected validation-target product defect. If the validation tool or product root is unavailable, record that as a blocker with the exact missing capability/root; do not silently skip validation and mark the repair complete as fully proved. If the repair target shows the grounded product root lacks the expected app/test scaffold, create or repair that scaffold inside the product root with the available product-mutation tools before returning. Live runtime or screenshot proof belongs to parent runtime-command and screenshot writeback steps, not this repair step.",
+      "Notes": "Repair the concrete defects, failed build/test proof, or missing artifacts identified by targeted validation, plus sequential same-validation-target build/test blockers revealed while proving the repair. Stay inside the accepted feature scope and product target. Treat current product file readback and current command receipts as authoritative; if a summary says a repair is already present but product file readback or command output disproves it, repair the product file instead of repeating the summary. Rerun the smallest useful validation command before handing back to QA recheck when the validation tool is available. If a no-restore build fails in ResolvePackageAssets, run restore and rerun build before classifying source defects. If the rerun still fails, inspect the failing output, mutate the product file again when the defect is inside the same product target and validation boundary, and rerun validation. Compile errors, scoped CSS errors, missing components, missing handlers, missing state fields, missing namespace imports, and failing tests in the same validation boundary remain repair work for this step when product mutation and validation tools are available; do not treat a later compiler or test failure as outside scope merely because it appeared after fixing the first failure. When a failing generated test has expected values or recorded history that contradict its own action sequence or an explicit deterministic rule, repair the test expectation instead of changing product code to satisfy an invalid test. For a framework, host, or component-binding error, derive the owning source, symbol, import, registration, and runtime boundary from the current diagnostic and product readback; repair the real mismatch without assuming a stock scaffold layout or generated component. Do not cite stale source document paths, managed-files paths, project-media paths, email summaries, or unrelated domain notes unless those exact refs appear in current launch variables, the selected project structure node, or required upstream artifacts. Do not select feature-repair-required from feature-repair while same-validation-target compile or test errors remain and product mutation plus validation tools are available; continue repairing and rerunning proof. Do not write Status: Completed by relying on inspection until current-run build/test receipts prove the corrected validation target no longer reproduces the defect. Do not write Status: Completed for a repair artifact that says validation still fails for a corrected validation-target product defect. If the validation tool or product root is unavailable, record that as a blocker with the exact missing capability/root; do not silently skip validation and mark the repair complete as fully proved. If the repair target shows the grounded product root lacks the expected app/test scaffold, create or repair that scaffold inside the product root with the available product-mutation tools before returning. Live runtime or screenshot proof belongs to parent runtime-command and screenshot writeback steps, not this repair step.",
       "StepKind": "Work",
       "AllowsManualSkip": false,
       "AllowsSafeRefusal": false,
@@ -733,6 +817,9 @@
       "DocRefs": [
         "processes/dotnet-feature-function-implementation/steps/feature-repair.md"
       ],
+      "ExecutionGuidanceRefs": [
+        "processes/dotnet-feature-function-implementation/steps/feature-repair.md"
+      ],
       "AllowedOperations": [
         "ReadProcessContext",
         "ReadProjectStructure",
@@ -741,22 +828,98 @@
         "RunValidation",
         "WriteManagedProcessArtifacts"
       ],
-      "OperationTargetScope": "ExternalProductTargetMutable"
+      "OperationTargetScope": "ExternalProductTargetMutable",
+      "CompletionPolicy": {
+        "RequiredProductToolReceipts": [
+          {
+            "ToolName": "workspace_dotnet_restore",
+            "Purpose": "FocusedValidation",
+            "EnforceBranchOutcomeKeys": [],
+            "Reason": "Current-run validation proof is required for the repair attempt."
+          },
+          {
+            "ToolName": "workspace_dotnet_build",
+            "Purpose": "FocusedValidation",
+            "EnforceBranchOutcomeKeys": [],
+            "Reason": "Current-run validation proof is required for the repair attempt."
+          },
+          {
+            "ToolName": "workspace_dotnet_test",
+            "Purpose": "FocusedValidation",
+            "EnforceBranchOutcomeKeys": [],
+            "Reason": "Current-run validation proof is required for the repair attempt."
+          }
+        ],
+        "CompletionIssueRoutes": [
+          {
+            "IssueCode": "process.adapter.product_mutation_receipt_missing",
+            "SourceBranchOutcomeKeys": [],
+            "TargetBranchOutcomeKey": "repair-attempt-incomplete",
+            "TargetBranchOutcomeTitle": "Repair attempt incomplete",
+            "RequiresDefectEvidence": false,
+            "OnlyAfterAutomaticRetry": false
+          },
+          {
+            "IssueCode": "process.adapter.managed_artifact_write_receipt_missing",
+            "SourceBranchOutcomeKeys": [],
+            "TargetBranchOutcomeKey": "repair-attempt-incomplete",
+            "TargetBranchOutcomeTitle": "Repair attempt incomplete",
+            "RequiresDefectEvidence": false,
+            "OnlyAfterAutomaticRetry": true
+          },
+          {
+            "IssueCode": "process.adapter.product_required_tool_receipt_missing",
+            "SourceBranchOutcomeKeys": [],
+            "TargetBranchOutcomeKey": "repair-attempt-incomplete",
+            "TargetBranchOutcomeTitle": "Repair attempt incomplete",
+            "RequiresDefectEvidence": false,
+            "OnlyAfterAutomaticRetry": false
+          },
+          {
+            "IssueCode": "process.adapter.product_source_inspection_evidence_missing",
+            "SourceBranchOutcomeKeys": [],
+            "TargetBranchOutcomeKey": "repair-attempt-incomplete",
+            "TargetBranchOutcomeTitle": "Repair attempt incomplete",
+            "RequiresDefectEvidence": false,
+            "OnlyAfterAutomaticRetry": false
+          }
+        ],
+        "RequiresProductSourceInspection": true,
+        "ProductSourceInspectionRequiredBranchOutcomeKeys": [
+          "feature-repair-applied"
+        ],
+        "ProductMutationRequiredBranchOutcomeKeys": [
+          "feature-repair-applied"
+        ],
+        "RequiresProductMutationBeforeManagedOutput": true,
+        "ProductMutationToolNames": [
+          "workspace_write_file",
+          "workspace_append_file",
+          "workspace_copy_path",
+          "workspace_move_path",
+          "workspace_delete_path",
+          "workspace_pwsh_run_script",
+          "workspace_dotnet_new"
+        ],
+        "RuntimeRoutedBranchOutcomeKeys": [
+          "repair-attempt-incomplete"
+        ]
+      }
     },
     {
       "Order": 7,
       "Key": "targeted-recheck",
       "Title": "Re-run focused validation after repair",
       "Subtitle": "Repair proof",
-      "Notes": "Re-run the failing build/test proof and the smallest regression commands needed to verify the repair. This step has RunValidation; missing build/test receipts are not a reason to escalate until this step has attempted the commands itself. This step must emit its own workspace_dotnet_restore, workspace_dotnet_build, and workspace_dotnet_test receipts when those commands are required by the validation contract; upstream repair receipts are useful inputs, but they do not satisfy this step's current-execution proof contract by themselves. When selecting a recheck branch, put the exact selected key on one line near the top of the artifact as Branch outcome key: feature-accepted or Branch outcome key: feature-repair-escalation; do not write only a heading with the key on the next line. Select feature-accepted only when current-execution build/test command receipts emitted by this recheck step prove the repaired evidence satisfies the accepted behavior and any inherited repair target. Select feature-repair-escalation only after the required current-execution focused proof was attempted and still fails, remains unmapped, or another repair would exceed the subprocess scope. If the repair artifact says validation receipts are missing, run the validation commands before deciding; do not choose feature-repair-escalation merely because an upstream repair step did not run validation. Live runtime or screenshot proof belongs to parent runtime-command and screenshot writeback steps; do not choose feature-repair-escalation only because runtime/browser proof or visual comparison is absent. If focused build/test proof passes, record live proof as a parent follow-up requirement and select feature-accepted. Return Blocked only when the validation tool, product root, or process contract is unavailable. For repair-sourced runs, include the before/after metric or assertion from the parent repair target in the artifact.",
+      "Notes": "Re-run the failing build/test proof and the smallest regression commands needed to verify the repair. This step has RunValidation; missing build/test receipts are not a reason to escalate until this step has attempted the commands itself. This step must emit its own workspace_dotnet_restore, workspace_dotnet_build, and workspace_dotnet_test receipts when those commands are required by the validation contract; upstream repair receipts are useful inputs, but they do not satisfy this step's current-execution proof contract by themselves. When selecting a recheck branch, put the exact selected key on one line near the top of the artifact as Branch outcome key: feature-accepted or Branch outcome key: feature-repair-escalation; do not write only a heading with the key on the next line. When ProductAcceptanceCriteriaContract is present, write an Acceptance-criteria coverage table with every literal criterion id, current-run proof ref, and Pass or Fail result. Before selecting feature-accepted, repeat every criterion id with its proof ref and Pass result in the final process-step outcome summary or reason; artifact-only coverage is insufficient. A missing, failed, or unmapped criterion must select feature-repair-escalation. Select feature-accepted only when current-execution build/test command receipts emitted by this recheck step prove the repaired evidence satisfies the accepted behavior and any inherited repair target. Select feature-repair-escalation only after the required current-execution focused proof was attempted and still fails, remains unmapped, or another repair would exceed the subprocess scope. If the repair artifact says validation receipts are missing, run the validation commands before deciding; do not choose feature-repair-escalation merely because an upstream repair step did not run validation. Live runtime or screenshot proof belongs to parent runtime-command and screenshot writeback steps; do not choose feature-repair-escalation only because runtime/browser proof or visual comparison is absent. If focused build/test proof passes, record live proof as a parent follow-up requirement and select feature-accepted. Return Blocked only when the validation tool, product root, or process contract is unavailable. For repair-sourced runs, include the before/after metric or assertion from the parent repair target in the artifact.",
       "StepKind": "Review",
       "AllowsManualSkip": false,
       "AllowsSafeRefusal": false,
       "RequiresApproval": false,
       "RequiresDecisionRecord": true,
       "InputContractSummary": "Original validation failure, repair change set, and validation contract.",
-      "OutputContractSummary": "Recheck evidence plus an explicit feature-accepted or feature-repair-escalation branch.",
-      "EvidenceContractSummary": "Rerun commands, exit codes, focused acceptance mapping, before/after repair target assessment, and unresolved gaps after repair. Live UI/browser/runtime proof belongs to parent runtime-command and screenshot writeback steps.",
+      "OutputContractSummary": "Recheck evidence, literal acceptance-criteria coverage when supplied, and an explicit feature-accepted or feature-repair-escalation branch.",
+      "EvidenceContractSummary": "Rerun commands, exit codes, literal acceptance-criteria coverage, final-outcome criterion citations for accepted branches, before/after repair target assessment, and unresolved gaps after repair. Live UI/browser/runtime proof belongs to parent runtime-command and screenshot writeback steps.",
       "DecisionRightsSummary": "Validation owner can accept repaired evidence or escalate unresolved repair findings; QA still does not mutate product files.",
       "ExceptionPolicySummary": "Select feature-repair-escalation only when required current-run focused proof was attempted and remains failing, detached, or unmapped after repair. Missing receipts must trigger validation execution first. Block only for environment, permission, unavailable validation tool, product-root, or process-contract failures that prevent recheck execution.",
       "TargetLeadHours": 4,
@@ -800,7 +963,7 @@
           "SensitivityLevel": "Internal",
           "RetentionDays": 365,
           "AllowedFutureUsageSummary": "Reusable by parent QA and release readiness.",
-          "ValidationRequirementSummary": "Must include rerun commands, exit codes, relevant output, focused acceptance mapping, and unresolved gaps after repair. Live UI/browser/runtime proof belongs to parent runtime-command and screenshot writeback steps."
+          "ValidationRequirementSummary": "Must include rerun commands, exit codes, relevant output, an Acceptance-criteria coverage table with every supplied literal criterion id, and unresolved gaps after repair. For feature-accepted, the final process-step outcome must repeat every criterion id with current-run passing proof; artifact-only mapping is insufficient. Live UI/browser/runtime proof belongs to parent runtime-command and screenshot writeback steps."
         }
       ],
       "ArtifactInputs": [
@@ -835,6 +998,9 @@
       "DocRefs": [
         "processes/dotnet-feature-function-implementation/steps/targeted-recheck.md"
       ],
+      "ExecutionGuidanceRefs": [
+        "processes/dotnet-feature-function-implementation/steps/targeted-recheck.md"
+      ],
       "AllowedOperations": [
         "ReadProcessContext",
         "ReadProjectStructure",
@@ -843,7 +1009,44 @@
         "WriteManagedProcessArtifacts"
       ],
       "OperationTargetScope": "ExternalProductTargetReadOnly",
-      "ExecutionClass": "BranchDecision"
+      "ExecutionClass": "BranchDecision",
+      "CompletionPolicy": {
+        "RequiredProductToolReceipts": [
+          {
+            "ToolName": "workspace_dotnet_restore",
+            "Purpose": "AcceptanceProof",
+            "EnforceBranchOutcomeKeys": [
+              "feature-accepted"
+            ],
+            "Reason": "Current-run proof required for the selected branch outcome."
+          },
+          {
+            "ToolName": "workspace_dotnet_build",
+            "Purpose": "AcceptanceProof",
+            "EnforceBranchOutcomeKeys": [
+              "feature-accepted"
+            ],
+            "Reason": "Current-run proof required for the selected branch outcome."
+          },
+          {
+            "ToolName": "workspace_dotnet_test",
+            "Purpose": "AcceptanceProof",
+            "EnforceBranchOutcomeKeys": [
+              "feature-accepted"
+            ],
+            "Reason": "Current-run proof required for the selected branch outcome."
+          }
+        ],
+        "CompletionIssueRoutes": [],
+        "RequiresProductSourceInspection": true,
+        "ProductSourceInspectionRequiredBranchOutcomeKeys": [
+          "feature-accepted"
+        ],
+        "ProductMutationRequiredBranchOutcomeKeys": [],
+        "RequiresProductMutationBeforeManagedOutput": false,
+        "ProductMutationToolNames": [],
+        "RuntimeRoutedBranchOutcomeKeys": []
+      }
     },
     {
       "Order": 8,
@@ -917,6 +1120,9 @@
       "ValidationRefs": [],
       "PromptRefs": [],
       "DocRefs": [
+        "processes/dotnet-feature-function-implementation/steps/feature-handoff-after-repair.md"
+      ],
+      "ExecutionGuidanceRefs": [
         "processes/dotnet-feature-function-implementation/steps/feature-handoff-after-repair.md"
       ],
       "AllowedOperations": [
@@ -995,6 +1201,9 @@
       "ValidationRefs": [],
       "PromptRefs": [],
       "DocRefs": [
+        "processes/dotnet-feature-function-implementation/steps/feature-repair-escalation.md"
+      ],
+      "ExecutionGuidanceRefs": [
         "processes/dotnet-feature-function-implementation/steps/feature-repair-escalation.md"
       ],
       "AllowedOperations": [

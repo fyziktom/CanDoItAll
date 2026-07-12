@@ -2,7 +2,6 @@ using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
-using System.Text.RegularExpressions;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Modules.AgentFramework;
@@ -35,17 +34,22 @@ using static CanDoItAll.Modules.Processes.ProcessManagedArtifactFormatter;
 using static CanDoItAll.Modules.Processes.ProcessManagedArtifactOutcomeParser;
 using static CanDoItAll.Modules.Processes.ProcessProductCompletionPathGate;
 using static CanDoItAll.Modules.Processes.ProcessRequiredReceiptMatcher;
-using static CanDoItAll.Modules.Processes.ProcessRuntimeLifecycleReceiptFacts;
 
 namespace CanDoItAll.Modules.Processes;
 
-internal sealed class ProcessCompletionIssueResultFactory(IWorkspaceFileService workspaceFiles)
+internal sealed class ProcessCompletionIssueResultFactory
 {
-    private const string BrowserConsoleMessagesToolName = "browser_console_messages";
+    private readonly IWorkspaceFileService workspaceFiles;
+    private readonly ProcessCompletionDefectEvidenceCatalog completionDefectEvidenceCatalog;
 
-    private static readonly Regex BrowserConsoleDefectRegex = new(
-        @"\b(?:[1-9]\d*|an?|one|some|multiple|with|reported)\s+console\s+errors?\b",
-        RegexOptions.Compiled | RegexOptions.CultureInvariant | RegexOptions.IgnoreCase);
+    public ProcessCompletionIssueResultFactory(
+        IWorkspaceFileService workspaceFiles,
+        ProcessCompletionDefectEvidenceCatalog completionDefectEvidenceCatalog)
+    {
+        this.workspaceFiles = workspaceFiles ?? throw new ArgumentNullException(nameof(workspaceFiles));
+        this.completionDefectEvidenceCatalog = completionDefectEvidenceCatalog ??
+            throw new ArgumentNullException(nameof(completionDefectEvidenceCatalog));
+    }
 
     internal static ProcessExecutionAdapterResult NeedsManagerForCompletionIssue(
         ProcessRuntimeStepAssignment assignment,
@@ -99,11 +103,13 @@ internal sealed class ProcessCompletionIssueResultFactory(IWorkspaceFileService 
             ComputeHash($"{rawOutputHash}:completion-gates:{string.Join("|", issues.Select(issue => $"{issue.Code}:{issue.Evidence}"))}"));
     }
 
-    internal static bool TryCreateRoutedCompletionIssueResult(
+    internal bool TryCreateRoutedCompletionIssueResult(
         ProcessRuntimeStepAssignment assignment,
         ProcessStepOutcomeResult output,
         string rawOutputHash,
         ProcessCompletionGateEvaluation evaluation,
+        IReadOnlyList<ToolExecutionReceiptRecord>? toolReceipts,
+        Guid? currentExecutionRunId,
         IReadOnlyDictionary<ArtifactSlotId, string>? producedArtifactContentHashes,
         out ProcessExecutionAdapterResult result)
     {
@@ -115,7 +121,13 @@ internal sealed class ProcessCompletionIssueResultFactory(IWorkspaceFileService 
 
         var defectSummary = string.Empty;
         if (route.RequiresDefectEvidence &&
-            !HasCompletionDefectEvidence(assignment, output, null, primaryIssue, out defectSummary))
+            !HasCompletionDefectEvidence(
+                assignment,
+                output,
+                toolReceipts,
+                primaryIssue,
+                currentExecutionRunId,
+                out defectSummary))
         {
             result = NeedsManagerForCompletionIssue(
                 assignment,
@@ -176,7 +188,8 @@ internal sealed class ProcessCompletionIssueResultFactory(IWorkspaceFileService 
         ProcessRuntimeStepAssignment assignment,
         ProcessStepOutcomeResult output,
         Guid executionRunId,
-        ProcessCompletionGateEvaluation evaluation)
+        ProcessCompletionGateEvaluation evaluation,
+        IReadOnlyList<ToolExecutionReceiptRecord>? toolReceipts)
     {
         if (!TryResolveCompletionIssueRoute(assignment, output, evaluation, out var primaryIssue, out var route))
         {
@@ -184,7 +197,13 @@ internal sealed class ProcessCompletionIssueResultFactory(IWorkspaceFileService 
         }
 
         if (route.RequiresDefectEvidence &&
-            !HasCompletionDefectEvidence(assignment, output, null, primaryIssue, out _))
+            !HasCompletionDefectEvidence(
+                assignment,
+                output,
+                toolReceipts,
+                primaryIssue,
+                executionRunId,
+                out _))
         {
             return null;
         }
@@ -258,10 +277,11 @@ internal sealed class ProcessCompletionIssueResultFactory(IWorkspaceFileService 
         return builder.ToString();
     }
 
-    internal static ProcessCompletionIssue? ValidateBranchOutcomeDefectEvidence(
+    internal ProcessCompletionIssue? ValidateBranchOutcomeDefectEvidence(
         ProcessRuntimeStepAssignment assignment,
         ProcessStepOutcomeResult output,
-        IReadOnlyList<ToolExecutionReceiptRecord>? toolReceipts)
+        IReadOnlyList<ToolExecutionReceiptRecord>? toolReceipts,
+        Guid? currentExecutionRunId)
     {
         if (output.Status != ProcessStepOutcomeStatus.Completed ||
             string.IsNullOrWhiteSpace(output.BranchOutcomeKey))
@@ -274,25 +294,32 @@ internal sealed class ProcessCompletionIssueResultFactory(IWorkspaceFileService 
                 candidate.RequiresDefectEvidence &&
                 string.Equals(candidate.TargetBranchOutcomeKey, output.BranchOutcomeKey, StringComparison.OrdinalIgnoreCase));
         if (route is null ||
-            HasCompletionDefectEvidence(assignment, output, toolReceipts, issue: null, out _))
+            HasCompletionDefectEvidence(
+                assignment,
+                output,
+                toolReceipts,
+                issue: null,
+                currentExecutionRunId,
+                out _))
         {
             return null;
         }
 
         return new ProcessCompletionIssue(
             "process.adapter.branch_outcome_defect_evidence_missing",
-            $"Step '{assignment.StepKey}' selected branch '{output.BranchOutcomeKey}', but that branch requires deterministic defect evidence and none was found in failed validation receipts, current-run browser diagnostics, or product content checks.",
+            $"Step '{assignment.StepKey}' selected branch '{output.BranchOutcomeKey}', but that branch requires deterministic defect evidence and none was found in failed validation receipts, current-run contributed diagnostics, or product content checks.",
             $"{assignment.RunId}:{assignment.StepInstanceId}:branch-outcome-defect-evidence-missing:{output.BranchOutcomeKey}",
             assignment.ProducedArtifactSlotIds,
             ProcessDiagnosticRetrySafety.SafeToRetry,
             ProcessDiagnosticIdempotencyClassification.Idempotent);
     }
 
-    internal static bool HasCompletionDefectEvidence(
+    internal bool HasCompletionDefectEvidence(
         ProcessRuntimeStepAssignment assignment,
         ProcessStepOutcomeResult output,
         IReadOnlyList<ToolExecutionReceiptRecord>? toolReceipts,
         ProcessCompletionIssue? issue,
+        Guid? currentExecutionRunId,
         out string defectSummary)
     {
         if (issue is not null &&
@@ -318,80 +345,33 @@ internal sealed class ProcessCompletionIssueResultFactory(IWorkspaceFileService 
             return true;
         }
 
+        if (ProcessAcceptanceCriteriaGate.TryGetFailedCriterionEvidence(
+                assignment,
+                output,
+                out defectSummary))
+        {
+            return true;
+        }
+
         if (HasProductFileContentDefectEvidence(assignment, output, out defectSummary))
         {
             return true;
         }
 
-        if (HasCurrentRunBrowserConsoleDefectEvidence(assignment, output, toolReceipts, out defectSummary))
+        if (completionDefectEvidenceCatalog.TryDescribeDefectEvidence(
+                new ProcessCompletionDefectEvidenceContext(
+                    assignment,
+                    output,
+                    toolReceipts,
+                    issue,
+                    currentExecutionRunId),
+                out defectSummary))
         {
             return true;
         }
 
-        var failedValidationReceipts = (toolReceipts ?? [])
-            .Where(receipt => !IsSuccessfulReceipt(receipt.ExitSummary) && IsValidationDefectEvidenceReceipt(receipt))
-            .Select(receipt => $"{receipt.ToolName} ({SummarizeReceiptExit(receipt.ExitSummary)})")
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .Take(5)
-            .ToArray();
-        if (failedValidationReceipts.Length == 0)
-        {
-            defectSummary = string.Empty;
-            return false;
-        }
-
-        defectSummary = string.Join("; ", failedValidationReceipts);
-        return true;
-    }
-
-    internal static bool HasCurrentRunBrowserConsoleDefectEvidence(
-        ProcessRuntimeStepAssignment assignment,
-        ProcessStepOutcomeResult output,
-        IReadOnlyList<ToolExecutionReceiptRecord>? toolReceipts,
-        out string defectSummary)
-    {
-        var outcomeText = string.Join(
-            " ",
-            new[]
-            {
-                output.Reason,
-                output.BranchOutcomeTitle,
-                output.HumanReadableSummaryMarkdown
-            }
-            .Concat(output.NextActions)
-            .Where(value => !string.IsNullOrWhiteSpace(value)));
-        if (!BrowserConsoleDefectRegex.IsMatch(outcomeText))
-        {
-            defectSummary = string.Empty;
-            return false;
-        }
-
-        var currentRunRoot = $"process-runs/{assignment.RunId.Value:D}";
-        var receipt = (toolReceipts ?? [])
-            .Where(candidate =>
-                string.Equals(candidate.ToolName, BrowserConsoleMessagesToolName, StringComparison.OrdinalIgnoreCase) &&
-                IsSuccessfulReceipt(candidate.ExitSummary) &&
-                ProcessOutcomeGroundingValidator.NormalizeOutcomeReferenceText(candidate.RequestSummary)
-                    .Contains(currentRunRoot, StringComparison.OrdinalIgnoreCase))
-            .OrderByDescending(candidate => candidate.CompletedAtUtc)
-            .FirstOrDefault();
-        if (receipt is null)
-        {
-            defectSummary = string.Empty;
-            return false;
-        }
-
-        defectSummary = "Current-run browser console collection reported one or more console errors on the validated product route.";
-        return true;
-    }
-
-    internal static bool IsValidationDefectEvidenceReceipt(ToolExecutionReceiptRecord receipt)
-    {
-        return receipt.ToolName.Contains("build", StringComparison.OrdinalIgnoreCase) ||
-               receipt.ToolName.Contains("test", StringComparison.OrdinalIgnoreCase) ||
-               receipt.ToolName.Contains("restore", StringComparison.OrdinalIgnoreCase) ||
-               receipt.ToolName.Contains("browser", StringComparison.OrdinalIgnoreCase) ||
-               receipt.ToolName.Contains("validation", StringComparison.OrdinalIgnoreCase);
+        defectSummary = string.Empty;
+        return false;
     }
 
     internal static IReadOnlyList<ArtifactSlotId> ResolveRequestedArtifactSlots(

@@ -244,7 +244,14 @@ internal static class ProcessTemplateKernelBuilder
     private static string ComputeDefinitionContentHash(ProcessTemplateDefinitionDocument definition)
     {
         var json = JsonSerializer.Serialize(definition, ProcessTemplateJsonContext.Default.ProcessTemplateDefinitionDocument);
-        var bytes = SHA256.HashData(Encoding.UTF8.GetBytes(json));
+        var executionGuidanceFingerprint = string.Join(
+            "|",
+            definition.Steps
+                .OrderBy(step => step.Key, StringComparer.Ordinal)
+                .SelectMany(step => step.ResolvedExecutionGuidance
+                    .OrderBy(guidance => guidance.Reference, StringComparer.Ordinal)
+                    .Select(guidance => $"{step.Key}:{guidance.Reference}:{guidance.ContentHash}")));
+        var bytes = SHA256.HashData(Encoding.UTF8.GetBytes($"{json}\n{executionGuidanceFingerprint}"));
         return "sha256:" + Convert.ToHexString(bytes).ToLowerInvariant();
     }
 

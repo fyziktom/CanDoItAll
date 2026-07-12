@@ -1,19 +1,22 @@
-using System.Text.Json;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Processes.Application;
 using CanDoItAll.Processes.Runtime;
-
 using static CanDoItAll.Modules.Processes.ProcessRuntimeOwnedToolReceiptFactory;
 
 namespace CanDoItAll.Modules.Processes;
 
 internal sealed class DotNetSolutionSetupRuntimeExecutor(
-    IWorkspaceFileService workspaceFiles,
-    IWorkspaceCommandExecutionService workspaceCommands) : IProcessRuntimeOwnedStepExecutor
+    IWorkspaceCommandExecutionService workspaceCommands,
+    WorkspaceManagedScriptPlanExecutor managedScriptPlanExecutor,
+    DotNetExistingSolutionVerifier? existingSolutionVerifier = null) : IProcessRuntimeOwnedStepExecutor
 {
+    internal const string DriverKey = "dotnet.solution-setup";
     private const string WorkspaceDotnetNew = "workspace_dotnet_new";
     private const string WorkspacePowerShellRunScript = "workspace_pwsh_run_script";
+    private readonly DotNetExistingSolutionVerifier existingSolutionVerifier = existingSolutionVerifier ?? new DotNetExistingSolutionVerifier();
+
+    public string ExecutorKey => DriverKey;
 
     public async ValueTask<ProcessRuntimeOwnedStepExecutionResult?> TryExecuteAsync(
         ProcessRuntimeStepAssignment assignment,
@@ -21,14 +24,37 @@ internal sealed class DotNetSolutionSetupRuntimeExecutor(
     {
         ArgumentNullException.ThrowIfNull(assignment);
 
+        if (DotNetSolutionProvisioningModeReader.TryRead(
+                assignment.LaunchVariables,
+                out var provisioningMode,
+                out var provisioningIssue))
+        {
+            if (provisioningMode == DotNetSolutionProvisioningMode.VerifyExisting)
+            {
+                return await this.existingSolutionVerifier
+                    .VerifyAsync(assignment, cancellationToken)
+                    .ConfigureAwait(false);
+            }
+        }
+        else if (!string.IsNullOrWhiteSpace(provisioningIssue))
+        {
+            var modeExecutionRunId = Guid.NewGuid();
+            return RuntimeOwnedStepExecutionResultFailure(
+                modeExecutionRunId,
+                [],
+                provisioningIssue,
+                $"{assignment.RunId}:{assignment.StepInstanceId}:runtime-owned-dotnet-setup:provisioning-mode:{provisioningIssue}");
+        }
+
         var guard = DotNetSolutionSetupToolPlanGuard.Evaluate(assignment);
-        if (guard.Plan is null)
+        var plan = guard.Plan;
+        if (plan is null && guard.IsSatisfied)
         {
             return null;
         }
 
         var executionRunId = Guid.NewGuid();
-        if (!guard.IsSatisfied)
+        if (!guard.IsSatisfied || plan is null)
         {
             return RuntimeOwnedStepExecutionResultFailure(
                 executionRunId,
@@ -37,7 +63,6 @@ internal sealed class DotNetSolutionSetupRuntimeExecutor(
                 $"{assignment.RunId}:{assignment.StepInstanceId}:runtime-owned-dotnet-setup:guard:{string.Join("|", guard.Issues.Select(issue => issue.Evidence))}");
         }
 
-        var plan = guard.Plan;
         var receipts = new List<ToolExecutionReceiptRecord>();
         if (!TryResolveExecutionInputs(assignment, plan, out var inputs, out var inputIssue))
         {
@@ -50,12 +75,36 @@ internal sealed class DotNetSolutionSetupRuntimeExecutor(
 
         if (plan.Kind == DotNetSolutionSetupToolPlanKind.CreateProject)
         {
+            if (!TryBuildTemplateSpecification(
+                    ResolveLaunchVariable(assignment.LaunchVariables, "DotNetAppTemplate"),
+                    ResolveLaunchVariable(assignment.LaunchVariables, "DotNetAppTemplateOptions"),
+                    out var appTemplate,
+                    out var templateIssue))
+            {
+                return RuntimeOwnedStepExecutionResultFailure(
+                    executionRunId,
+                    receipts,
+                    $"Runtime-owned .NET setup cannot execute because the deterministic tool plan is invalid: {templateIssue}",
+                    $"{assignment.RunId}:{assignment.StepInstanceId}:runtime-owned-dotnet-setup:guard:{templateIssue}");
+            }
+
+            var targetFramework = ResolveLaunchVariable(assignment.LaunchVariables, "DotNetTargetFramework");
+            if (string.IsNullOrWhiteSpace(targetFramework))
+            {
+                return RuntimeOwnedStepExecutionResultFailure(
+                    executionRunId,
+                    receipts,
+                    "Runtime-owned .NET setup cannot execute because the deterministic tool plan is invalid: dotnet.setup.plan.target_framework_missing",
+                    $"{assignment.RunId}:{assignment.StepInstanceId}:runtime-owned-dotnet-setup:guard:dotnet.setup.plan.target_framework_missing");
+            }
+
             var solutionScaffold = await EnsureDotNetNewTargetAsync(
                     executionRunId,
-                    inputs.SolutionFile,
+                    inputs.SolutionCandidateFiles,
                     "sln",
                     Path.GetFileNameWithoutExtension(inputs.SolutionFile),
-                    inputs.ProductRoot,
+                    ResolveDotNetNewParentDirectory(inputs.SolutionFile, inputs.ProductRoot),
+                    null,
                     receipts,
                     cancellationToken)
                 .ConfigureAwait(false);
@@ -80,10 +129,11 @@ internal sealed class DotNetSolutionSetupRuntimeExecutor(
 
             var appScaffold = await EnsureDotNetNewTargetAsync(
                     executionRunId,
-                    appProject,
-                    ResolveLaunchVariable(assignment.LaunchVariables, "DotNetAppTemplate", "console"),
+                    [appProject],
+                    appTemplate,
                     Path.GetFileNameWithoutExtension(appProject),
-                    ResolveDotNetNewParentDirectory(appProject, inputs.ProductRoot),
+                    ResolveDotNetProjectCreationParentDirectory(appProject, inputs.ProductRoot),
+                    targetFramework,
                     receipts,
                     cancellationToken)
                 .ConfigureAwait(false);
@@ -97,53 +147,36 @@ internal sealed class DotNetSolutionSetupRuntimeExecutor(
             }
         }
 
-        var writeScript = workspaceFiles.WriteTextFile(plan.ScriptRef, plan.Script, overwrite: true);
-        receipts.Add(From(executionRunId, writeScript));
-        if (!writeScript.Succeeded)
-        {
-            return RuntimeOwnedStepExecutionResultFailure(
-                executionRunId,
-                receipts,
-                $"Runtime-owned .NET setup could not write helper script '{plan.ScriptRef}': {writeScript.Message}",
-                $"{assignment.RunId}:{assignment.StepInstanceId}:runtime-owned-dotnet-setup:script-write:{plan.ScriptRef}:{writeScript.Message}");
-        }
-
-        var scriptStat = workspaceFiles.StatPath(plan.ScriptRef);
-        receipts.Add(From(executionRunId, scriptStat));
-        if (!scriptStat.Succeeded || !scriptStat.Exists || !string.Equals(scriptStat.PathKind, "file", StringComparison.OrdinalIgnoreCase))
-        {
-            return RuntimeOwnedStepExecutionResultFailure(
-                executionRunId,
-                receipts,
-                $"Runtime-owned .NET setup could not verify helper script '{plan.ScriptRef}': {scriptStat.Message}",
-                $"{assignment.RunId}:{assignment.StepInstanceId}:runtime-owned-dotnet-setup:script-stat:{plan.ScriptRef}:{scriptStat.Message}");
-        }
-
-        var scriptRun = await workspaceCommands.PowerShellRunScript(
-                plan.ScriptRef,
-                arguments: null,
-                outputPaths: [BuildRuntimeOwnedOutputPath(assignment, plan)],
-                workingDirectory: inputs.ProductRootAlias,
-                timeoutSeconds: 300,
-                sideEffectManifest: plan.SideEffectManifest)
-            .ConfigureAwait(false);
-        receipts.Add(From(executionRunId, scriptRun));
-        if (!scriptRun.Succeeded)
-        {
-            return RuntimeOwnedStepExecutionResultFailure(
-                executionRunId,
-                receipts,
-                $"Runtime-owned .NET setup helper failed for step '{assignment.StepKey}': {scriptRun.Message}",
-                $"{assignment.RunId}:{assignment.StepInstanceId}:runtime-owned-dotnet-setup:script-run:{scriptRun.ExitCode}:{scriptRun.Message}:{scriptRun.StderrPreview}");
-        }
-
-        if (!ValidateRequiredReadback(assignment, inputs.ProductRoot, out var readbackIssue))
+        if (!TryResolveReadbackChecks(assignment.LaunchVariables, out var readbackChecks, out var readbackIssue))
         {
             return RuntimeOwnedStepExecutionResultFailure(
                 executionRunId,
                 receipts,
                 readbackIssue,
                 $"{assignment.RunId}:{assignment.StepInstanceId}:runtime-owned-dotnet-setup:readback:{readbackIssue}");
+        }
+
+        var managedScriptResult = await managedScriptPlanExecutor.ExecuteAsync(
+                new WorkspaceManagedScriptPlanExecutionRequest(
+                    executionRunId,
+                    plan.ScriptRef,
+                    plan.Script,
+                    plan.SideEffectManifest,
+                    inputs.ProductRootAlias,
+                    BuildRuntimeOwnedOutputPath(assignment, plan),
+                    inputs.ProductRoot,
+                    readbackChecks,
+                    $"{assignment.RunId}:{assignment.StepInstanceId}:runtime-owned-dotnet-setup"),
+                cancellationToken)
+            .ConfigureAwait(false);
+        receipts.AddRange(managedScriptResult.ToolReceipts);
+        if (!managedScriptResult.Succeeded)
+        {
+            return RuntimeOwnedStepExecutionResultFailure(
+                executionRunId,
+                receipts,
+                managedScriptResult.Summary,
+                managedScriptResult.Evidence);
         }
 
         var evidenceRefs = receipts
@@ -172,23 +205,25 @@ internal sealed class DotNetSolutionSetupRuntimeExecutor(
 
     private async Task<DotNetSolutionSetupOperationResult> EnsureDotNetNewTargetAsync(
         Guid executionRunId,
-        string targetPath,
+        IReadOnlyList<string> targetPaths,
         string template,
         string name,
         string parentDirectory,
+        string? targetFramework,
         List<ToolExecutionReceiptRecord> receipts,
         CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        if (File.Exists(targetPath) || Directory.Exists(targetPath))
+        var existingTarget = targetPaths.FirstOrDefault(targetPath => File.Exists(targetPath) || Directory.Exists(targetPath));
+        if (existingTarget is not null)
         {
             receipts.Add(CreateIdempotentSkipReceipt(
                 executionRunId,
                 WorkspaceDotnetNew,
                 $"new {template} idempotent-skip existing target",
                 ToExternalTargetAliasOrNative(parentDirectory),
-                $"Succeeded: Existing .NET target '{Path.GetFileName(targetPath)}' was verified; destructive regeneration was skipped."));
+                $"Succeeded: Existing .NET target '{Path.GetFileName(existingTarget)}' was verified; destructive regeneration was skipped."));
             return DotNetSolutionSetupOperationResult.Ok;
         }
 
@@ -198,15 +233,28 @@ internal sealed class DotNetSolutionSetupRuntimeExecutor(
                 name,
                 ToExternalTargetAliasOrNative(parentDirectory),
                 force: false,
-                timeoutSeconds: 300)
+                timeoutSeconds: 300,
+                targetFramework: targetFramework)
             .ConfigureAwait(false);
         receipts.Add(From(executionRunId, dotnetNew));
-        return dotnetNew.Succeeded
-            ? DotNetSolutionSetupOperationResult.Ok
-            : new DotNetSolutionSetupOperationResult(
+        if (!dotnetNew.Succeeded)
+        {
+            return new DotNetSolutionSetupOperationResult(
                 false,
                 $"Runtime-owned .NET setup failed to scaffold '{name}' with template '{template}': {dotnetNew.Message}",
                 $"dotnet-new:{template}:{name}:{dotnetNew.ExitCode}:{dotnetNew.Message}:{dotnetNew.StderrPreview}");
+        }
+
+        var createdTarget = targetPaths.FirstOrDefault(File.Exists);
+        if (createdTarget is null)
+        {
+            return new DotNetSolutionSetupOperationResult(
+                false,
+                $"Runtime-owned .NET setup completed dotnet new for '{name}', but none of the contracted target candidates were created: {string.Join(", ", targetPaths.Select(Path.GetFileName))}.",
+                $"dotnet-new-target-missing:{template}:{name}:{string.Join("|", targetPaths)}");
+        }
+
+        return DotNetSolutionSetupOperationResult.Ok;
     }
 
     private static ProcessRuntimeOwnedStepExecutionResult RuntimeOwnedStepExecutionResultFailure(
@@ -221,6 +269,51 @@ internal sealed class DotNetSolutionSetupRuntimeExecutor(
             executionRunId,
             summary,
             evidence);
+
+    private static bool TryBuildTemplateSpecification(
+        string template,
+        string options,
+        out string specification,
+        out string issue)
+    {
+        specification = string.Empty;
+        issue = "dotnet.setup.plan.app_template_missing";
+        var normalizedTemplate = template.Trim();
+        if (string.IsNullOrWhiteSpace(normalizedTemplate))
+        {
+            return false;
+        }
+
+        var templateTokens = normalizedTemplate.Split(
+            [' ', '\t', '\r', '\n'],
+            StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+        if (templateTokens.Length != 1)
+        {
+            issue = "dotnet.setup.plan.app_template_invalid";
+            return false;
+        }
+
+        var optionTokens = string.IsNullOrWhiteSpace(options)
+            ? []
+            : options.Split(
+                [' ', '\t', '\r', '\n'],
+                StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+        if (optionTokens.Any(option => !option.StartsWith("--", StringComparison.Ordinal)))
+        {
+            issue = "dotnet.setup.plan.app_template_options_invalid";
+            return false;
+        }
+
+        if (optionTokens.Any(option => string.Equals(option, "--framework", StringComparison.OrdinalIgnoreCase)))
+        {
+            issue = "dotnet.setup.plan.app_template_framework_option_conflict";
+            return false;
+        }
+
+        specification = string.Join(" ", [templateTokens[0], .. optionTokens]);
+        issue = string.Empty;
+        return true;
+    }
 
     private static bool TryResolveExecutionInputs(
         ProcessRuntimeStepAssignment assignment,
@@ -238,198 +331,179 @@ internal sealed class DotNetSolutionSetupRuntimeExecutor(
             return false;
         }
 
-        productRoot = Path.GetFullPath(productRoot);
-        var solutionFile = ResolveLaunchVariable(assignment.LaunchVariables, "DotNetSolutionFile");
-        if (string.IsNullOrWhiteSpace(solutionFile))
+        try
         {
-            solutionFile = plan.RequiredPaths.FirstOrDefault(path =>
-                path.EndsWith(".slnx", StringComparison.OrdinalIgnoreCase) ||
-                path.EndsWith(".sln", StringComparison.OrdinalIgnoreCase)) ?? string.Empty;
+            productRoot = Path.GetFullPath(productRoot);
         }
-
-        if (string.IsNullOrWhiteSpace(solutionFile))
+        catch (Exception exception) when (exception is ArgumentException or NotSupportedException or PathTooLongException)
         {
-            issue = "Runtime-owned .NET setup could not resolve DotNetSolutionFile.";
+            issue = "Runtime-owned .NET setup received an invalid ProductRoot or ExternalTargetRoot.";
             return false;
         }
 
-        var appProjectFile = ResolveLaunchVariable(assignment.LaunchVariables, "DotNetAppProjectFile");
-        if (string.IsNullOrWhiteSpace(appProjectFile))
+        if (!TryResolveContractedProductFile(
+                assignment.LaunchVariables,
+                "DotNetSolutionFile",
+                productRoot,
+                out var solutionFile,
+                out issue) ||
+            !TryResolveSolutionCandidateFiles(
+                assignment.LaunchVariables,
+                productRoot,
+                solutionFile,
+                out var solutionCandidateFiles,
+                out issue) ||
+            !TryResolveContractedProductFile(
+                assignment.LaunchVariables,
+                "DotNetAppProjectFile",
+                productRoot,
+                out var appProjectFile,
+                out issue))
         {
-            appProjectFile = plan.RequiredPaths.FirstOrDefault(path =>
-                path.EndsWith(".csproj", StringComparison.OrdinalIgnoreCase)) ?? string.Empty;
+            return false;
         }
 
-        var testProjectFile = ResolveLaunchVariable(assignment.LaunchVariables, "DotNetTestProjectFile");
+        var testProjectFile = string.Empty;
+        if (plan.Kind != DotNetSolutionSetupToolPlanKind.CreateProject &&
+            !TryResolveContractedProductFile(
+                assignment.LaunchVariables,
+                "DotNetTestProjectFile",
+                productRoot,
+                out testProjectFile,
+                out issue))
+        {
+            return false;
+        }
+
         inputs = new DotNetSolutionSetupRuntimeExecutionInputs(
             productRoot,
             ToExternalTargetAliasOrNative(productRoot),
-            Path.GetFullPath(solutionFile),
-            string.IsNullOrWhiteSpace(appProjectFile) ? string.Empty : Path.GetFullPath(appProjectFile),
-            string.IsNullOrWhiteSpace(testProjectFile) ? string.Empty : Path.GetFullPath(testProjectFile));
+            solutionFile,
+            solutionCandidateFiles,
+            appProjectFile,
+            testProjectFile);
         return true;
     }
 
-    private static bool ValidateRequiredReadback(
-        ProcessRuntimeStepAssignment assignment,
+    private static bool TryResolveContractedProductFile(
+        IReadOnlyDictionary<string, string> launchVariables,
+        string variableKey,
         string productRoot,
+        out string path,
         out string issue)
     {
-        issue = string.Empty;
-        var checks = ResolveReadbackChecks(assignment.LaunchVariables, assignment.StepKey);
-        if (checks.Count == 0)
+        var configuredPath = ResolveLaunchVariable(launchVariables, variableKey);
+        if (string.IsNullOrWhiteSpace(configuredPath))
         {
+            path = string.Empty;
+            issue = $"Runtime-owned .NET setup requires authoritative launch variable '{variableKey}' from its bound bootstrap decision.";
+            return false;
+        }
+
+        return TryNormalizeContractedProductFile(configuredPath, variableKey, productRoot, out path, out issue);
+    }
+
+    private static bool TryResolveSolutionCandidateFiles(
+        IReadOnlyDictionary<string, string> launchVariables,
+        string productRoot,
+        string solutionFile,
+        out IReadOnlyList<string> candidateFiles,
+        out string issue)
+    {
+        var configuredCandidates = ResolveLaunchVariable(launchVariables, "DotNetSolutionFileCandidates");
+        if (string.IsNullOrWhiteSpace(configuredCandidates))
+        {
+            candidateFiles = [solutionFile];
+            issue = string.Empty;
             return true;
         }
 
-        foreach (var check in checks)
+        var normalizedCandidates = new List<string> { solutionFile };
+        foreach (var configuredCandidate in configuredCandidates.Split(';', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries))
         {
-            var path = check.PathCandidates
-                .Select(candidate => ResolveProductPath(productRoot, candidate))
-                .FirstOrDefault(File.Exists);
-            if (string.IsNullOrWhiteSpace(path))
+            if (!TryNormalizeContractedProductFile(
+                    configuredCandidate,
+                    "DotNetSolutionFileCandidates",
+                    productRoot,
+                    out var candidate,
+                    out issue))
             {
-                if (!check.MustExist)
-                {
-                    continue;
-                }
-
-                issue = $"Required readback path was not found for step '{assignment.StepKey}'.";
+                candidateFiles = [];
                 return false;
             }
 
-            var content = File.ReadAllText(path);
-            var normalizedContent = NormalizeReadbackText(content);
-            var hasRequiredGroup = check.RequiredTextAnyGroups.Count == 0 ||
-                                   check.RequiredTextAnyGroups.Any(group =>
-                                       group.Any(value => normalizedContent.Contains(NormalizeReadbackText(value), StringComparison.OrdinalIgnoreCase)));
-            if (!hasRequiredGroup)
+            if (!normalizedCandidates.Contains(candidate, StringComparer.OrdinalIgnoreCase))
             {
-                issue = $"Required readback content was not found for step '{assignment.StepKey}'.";
-                return false;
+                normalizedCandidates.Add(candidate);
             }
+        }
+
+        candidateFiles = normalizedCandidates;
+        issue = string.Empty;
+        return true;
+    }
+
+    private static bool TryNormalizeContractedProductFile(
+        string configuredPath,
+        string variableKey,
+        string productRoot,
+        out string path,
+        out string issue)
+    {
+        path = configuredPath;
+        issue = string.Empty;
+        if (!Path.IsPathRooted(path))
+        {
+            issue = $"Runtime-owned .NET setup requires '{variableKey}' to be an absolute path under ProductRoot.";
+            return false;
+        }
+
+        try
+        {
+            path = Path.GetFullPath(path);
+        }
+        catch (Exception exception) when (exception is ArgumentException or NotSupportedException or PathTooLongException)
+        {
+            issue = $"Runtime-owned .NET setup received an invalid '{variableKey}' path.";
+            return false;
+        }
+
+        var normalizedRoot = EnsureTrailingDirectorySeparator(productRoot);
+        if (!path.StartsWith(normalizedRoot, StringComparison.OrdinalIgnoreCase))
+        {
+            issue = $"Runtime-owned .NET setup requires '{variableKey}' to remain under ProductRoot.";
+            return false;
         }
 
         return true;
     }
 
-    private static IReadOnlyList<DotNetSolutionSetupReadbackCheck> ResolveReadbackChecks(
-        IReadOnlyDictionary<string, string> launchVariables,
-        string stepKey)
-    {
-        var value = ResolveLaunchVariable(launchVariables, ProcessRuntimeLaunchVariables.ProductCompletionRequiredFileContentChecks);
-        if (!string.IsNullOrWhiteSpace(value))
-        {
-            return ParseReadbackChecks(value);
-        }
+    private static string EnsureTrailingDirectorySeparator(string path)
+        => path.EndsWith(Path.DirectorySeparatorChar) || path.EndsWith(Path.AltDirectorySeparatorChar)
+            ? path
+            : path + Path.DirectorySeparatorChar;
 
-        value = ResolveLaunchVariable(launchVariables, ProcessRuntimeLaunchVariables.ProductCompletionRequiredFileContentChecksByStep);
+    private static bool TryResolveReadbackChecks(
+        IReadOnlyDictionary<string, string> launchVariables,
+        out IReadOnlyList<WorkspaceManagedScriptReadbackCheck> checks,
+        out string issue)
+    {
+        checks = [];
+        var value = ResolveLaunchVariable(launchVariables, ProcessRuntimeLaunchVariables.ProductCompletionRequiredFileContentChecks);
         if (string.IsNullOrWhiteSpace(value))
         {
-            return [];
+            issue = "Runtime-owned .NET setup cannot execute because the deterministic tool plan is invalid: dotnet.setup.plan.readback_checks_missing.";
+            return false;
         }
 
-        try
+        if (WorkspaceManagedScriptReadbackContractParser.TryParse(value, out checks, out _))
         {
-            using var document = JsonDocument.Parse(value);
-            if (document.RootElement.ValueKind != JsonValueKind.Object)
-            {
-                return [];
-            }
-
-            foreach (var property in document.RootElement.EnumerateObject())
-            {
-                if (string.Equals(property.Name, stepKey, StringComparison.OrdinalIgnoreCase))
-                {
-                    return ParseReadbackChecks(property.Value);
-                }
-            }
-        }
-        catch (JsonException)
-        {
-            return [];
+            issue = string.Empty;
+            return true;
         }
 
-        return [];
-    }
-
-    private static IReadOnlyList<DotNetSolutionSetupReadbackCheck> ParseReadbackChecks(string value)
-    {
-        try
-        {
-            using var document = JsonDocument.Parse(value);
-            return ParseReadbackChecks(document.RootElement);
-        }
-        catch (JsonException)
-        {
-            return [];
-        }
-    }
-
-    private static IReadOnlyList<DotNetSolutionSetupReadbackCheck> ParseReadbackChecks(JsonElement element)
-    {
-        var elements = element.ValueKind == JsonValueKind.Array
-            ? element.EnumerateArray().ToArray()
-            : [element];
-        return elements
-            .Where(item => item.ValueKind == JsonValueKind.Object)
-            .Select(item => new DotNetSolutionSetupReadbackCheck(
-                ReadStringArray(item, "pathCandidates"),
-                ReadStringGroupArray(item, "requiredTextAnyGroups"),
-                ReadBoolean(item, "mustExist", defaultValue: true)))
-            .Where(check => check.PathCandidates.Count > 0)
-            .ToArray();
-    }
-
-    private static IReadOnlyList<string> ReadStringArray(JsonElement element, string propertyName)
-    {
-        if (!element.TryGetProperty(propertyName, out var property) ||
-            property.ValueKind != JsonValueKind.Array)
-        {
-            return [];
-        }
-
-        return property.EnumerateArray()
-            .Where(item => item.ValueKind == JsonValueKind.String)
-            .Select(item => item.GetString() ?? string.Empty)
-            .Where(value => !string.IsNullOrWhiteSpace(value))
-            .ToArray();
-    }
-
-    private static IReadOnlyList<IReadOnlyList<string>> ReadStringGroupArray(JsonElement element, string propertyName)
-    {
-        if (!element.TryGetProperty(propertyName, out var property) ||
-            property.ValueKind != JsonValueKind.Array)
-        {
-            return [];
-        }
-
-        return property.EnumerateArray()
-            .Where(item => item.ValueKind == JsonValueKind.Array)
-            .Select(item => (IReadOnlyList<string>)item.EnumerateArray()
-                .Where(value => value.ValueKind == JsonValueKind.String)
-                .Select(value => value.GetString() ?? string.Empty)
-                .Where(value => !string.IsNullOrWhiteSpace(value))
-                .ToArray())
-            .Where(group => group.Count > 0)
-            .ToArray();
-    }
-
-    private static bool ReadBoolean(JsonElement element, string propertyName, bool defaultValue)
-        => element.TryGetProperty(propertyName, out var property) && property.ValueKind is JsonValueKind.True or JsonValueKind.False
-            ? property.GetBoolean()
-            : defaultValue;
-
-    private static string ResolveProductPath(string productRoot, string path)
-    {
-        if (string.IsNullOrWhiteSpace(path))
-        {
-            return string.Empty;
-        }
-
-        return Path.IsPathRooted(path)
-            ? Path.GetFullPath(path)
-            : Path.GetFullPath(Path.Combine(productRoot, path));
+        issue = "Runtime-owned .NET setup cannot execute because the deterministic tool plan is invalid: dotnet.setup.plan.readback_check_invalid.";
+        return false;
     }
 
     private static string ResolveDotNetNewParentDirectory(string projectFile, string productRoot)
@@ -440,11 +514,19 @@ internal sealed class DotNetSolutionSetupRuntimeExecutor(
             return productRoot;
         }
 
-        return Directory.GetParent(projectDirectory)?.FullName ?? productRoot;
+        return projectDirectory;
     }
 
-    private static string NormalizeReadbackText(string value)
-        => value.Replace('\\', '/').ReplaceLineEndings("\n");
+    private static string ResolveDotNetProjectCreationParentDirectory(string projectFile, string productRoot)
+    {
+        var projectDirectory = Path.GetDirectoryName(projectFile);
+        if (string.IsNullOrWhiteSpace(projectDirectory))
+        {
+            return productRoot;
+        }
+
+        return Directory.GetParent(projectDirectory)?.FullName ?? productRoot;
+    }
 
     private static string ResolveLaunchVariable(
         IReadOnlyDictionary<string, string> launchVariables,
@@ -515,13 +597,9 @@ internal sealed class DotNetSolutionSetupRuntimeExecutor(
         string ProductRoot,
         string ProductRootAlias,
         string SolutionFile,
+        IReadOnlyList<string> SolutionCandidateFiles,
         string AppProjectFile,
         string TestProjectFile);
-
-    private sealed record DotNetSolutionSetupReadbackCheck(
-        IReadOnlyList<string> PathCandidates,
-        IReadOnlyList<IReadOnlyList<string>> RequiredTextAnyGroups,
-        bool MustExist);
 
     private sealed record DotNetSolutionSetupOperationResult(
         bool Succeeded,

@@ -29,7 +29,6 @@ using static CanDoItAll.Modules.Processes.ProcessExecutionMetadataBuilder;
 using static CanDoItAll.Modules.Processes.ProcessExecutionResultFactory;
 using static CanDoItAll.Modules.Processes.ProcessManagedArtifactEvidence;
 using static CanDoItAll.Modules.Processes.ProcessManagedArtifactService;
-using static CanDoItAll.Modules.Processes.ProcessRuntimeLifecycleReceiptFacts;
 
 namespace CanDoItAll.Modules.Processes;
 
@@ -86,6 +85,7 @@ internal static class ProcessManagedArtifactFormatter
         }
 
         AppendList(builder, "Agent Evidence Refs", output.EvidenceRefs);
+        AppendAcceptanceCriteriaEvidence(builder, "Acceptance Criteria Evidence", output.AcceptanceCriteriaEvidence);
         AppendList(builder, "Next Actions", output.NextActions);
         return builder.ToString();
     }
@@ -143,6 +143,7 @@ internal static class ProcessManagedArtifactFormatter
         }
 
         AppendList(builder, "Agent Evidence Refs", output.EvidenceRefs);
+        AppendAcceptanceCriteriaEvidence(builder, "Acceptance Criteria Evidence", output.AcceptanceCriteriaEvidence);
         AppendList(builder, "Next Actions", output.NextActions);
         return builder.ToString();
     }
@@ -194,6 +195,44 @@ internal static class ProcessManagedArtifactFormatter
 
         builder.AppendLine();
     }
+
+    internal static void AppendAcceptanceCriteriaEvidence(
+        StringBuilder builder,
+        string heading,
+        IReadOnlyList<ProcessAcceptanceCriterionEvidence> evidence)
+    {
+        var items = (evidence ?? [])
+            .Where(item => item is not null && !string.IsNullOrWhiteSpace(item.CriterionId))
+            .ToArray();
+        if (items.Length == 0)
+        {
+            return;
+        }
+
+        builder.AppendLine($"## {heading}");
+        builder.AppendLine();
+        builder.AppendLine("| Criterion | Status | Summary | Evidence refs |");
+        builder.AppendLine("| --- | --- | --- | --- |");
+        foreach (var item in items)
+        {
+            var refs = string.Join(
+                "; ",
+                (item.EvidenceRefs ?? [])
+                    .Where(reference => !string.IsNullOrWhiteSpace(reference))
+                    .Select(reference => reference.Trim()));
+            builder.AppendLine($"| {EscapeTableCell(item.CriterionId)} | {item.Status} | {EscapeTableCell(item.Summary)} | {EscapeTableCell(refs)} |");
+        }
+
+        builder.AppendLine();
+    }
+
+    private static string EscapeTableCell(string? value)
+        => string.IsNullOrWhiteSpace(value)
+            ? string.Empty
+            : value
+                .Replace("|", "\\|", StringComparison.Ordinal)
+                .ReplaceLineEndings(" ")
+                .Trim();
 
     internal static ToolExecutionReceiptRecord CreateManagedOutcomeArtifactReceipt(
         Guid executionRunId,

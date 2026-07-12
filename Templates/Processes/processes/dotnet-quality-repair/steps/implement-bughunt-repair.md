@@ -1,8 +1,6 @@
 # Apply the specialist-guided repair or correct the proof plan
 
-Apply the bughunt diagnosis to the exact owning boundary. For a product defect, mutate the smallest owning source/configuration surface, read changed files back, run restore/build/tests plus focused proof, state how the action differs from the first repair, and select `product-repair-applied`.
-
-When current diagnosis and product readback prove the stock Blazor Counter/Weather navigation, pages, ASP.NET Core link, or missing hidden `#blazor-error-ui` rule remain, execute `DotNetScaffoldRepairExecutionPlan` before writing this step artifact. Write `DotNetScaffoldRepairScript` verbatim to `DotNetScaffoldRepairScriptRef`, verify it, run it with `workspace_pwsh_run_script`, `ProductRootAlias` as `workingDirectory`, and `DotNetScaffoldRepairSideEffectManifest`, then read/stat the affected product files. The helper is fingerprint-guarded; do not use it to delete a product-specific Counter or Weather feature that does not match the stock template.
+Apply the bughunt diagnosis to the exact owning boundary. For `product-repair-applied`, mutate the grounded external target before writing the final primary managed artifact. A premature artifact-write denial is an ordering instruction, not a missing permission: mutate, read back, run focused proof, then write final evidence. For a product defect, mutate the smallest owning source/configuration surface, read changed files back, run restore/build/tests plus focused proof, state how the action differs from the first repair, and select `product-repair-applied`.
 
 When the specialist proves the expected control and behavior already exist and work, and the remaining defect is only an incorrect proof target, selector, or validation recipe, do not manufacture a source edit. Execute the corrected current-run validation/runtime/browser proof, document the precise proof delta, and select `proof-only-revalidation-prepared`.
 
@@ -12,4 +10,4 @@ This is the final bounded repair action inside this subprocess. Do not widen sco
 
 Never write `product-repair-applied` or describe changed/deleted files unless this execution has a successful product-target mutation receipt and current product readback proving those exact changes. A prior diagnosis, prior repair claim, or green build/test receipt is not product mutation evidence.
 
-For a visible Blazor unhandled-error banner with no matching console exception, inspect the loaded stylesheet and the `#blazor-error-ui` visibility rule before assuming an application exception. Preserve or restore the framework error UI's hidden default state, while still treating a real exception as a product defect.
+For a visible UI error with no matching console exception, diagnose the rendered state, style/loading path, and owning source before changing code. Preserve useful failure visibility while repairing the actual product defect; do not hide an observed failure merely to make proof look clean.

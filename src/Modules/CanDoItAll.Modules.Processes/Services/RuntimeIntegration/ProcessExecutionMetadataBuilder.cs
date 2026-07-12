@@ -32,16 +32,21 @@ namespace CanDoItAll.Modules.Processes;
 internal static class ProcessExecutionMetadataBuilder
 {
     internal static string BuildProcessExecutionMetadata(ProcessRuntimeStepAssignment assignment)
+        => BuildProcessExecutionMetadata(assignment, new Dictionary<string, object>(StringComparer.Ordinal));
+
+    internal static string BuildProcessExecutionMetadata(
+        ProcessRuntimeStepAssignment assignment,
+        IReadOnlyDictionary<string, object> metadataAdditions)
     {
+        ArgumentNullException.ThrowIfNull(metadataAdditions);
+
         var allowedOperations = NormalizeOperations(assignment.AllowedOperations);
         var targetScope = string.IsNullOrWhiteSpace(assignment.OperationTargetScope)
             ? string.Empty
             : assignment.OperationTargetScope.Trim();
         var allowsProductMutation = AllowsProductMutation(allowedOperations, targetScope);
-        var allowsBrowserProof = AllowsBrowserRuntimeProof(allowedOperations);
         var metadata = new Dictionary<string, object>(StringComparer.Ordinal)
         {
-            [ExecutionInvocationMetadata.ProcessBrowserToolsAllowedMetadataKey] = allowsBrowserProof,
             [ExecutionInvocationMetadata.ProcessStepAllowedOperationsMetadataKey] = allowedOperations,
             [ExecutionInvocationMetadata.ProcessStepTargetScopeMetadataKey] = targetScope,
             [ExecutionInvocationMetadata.ProcessStepAllowsProductMutationMetadataKey] = allowsProductMutation,
@@ -54,6 +59,15 @@ internal static class ProcessExecutionMetadataBuilder
         if (productMutationToolNames.Count > 0)
         {
             metadata[ExecutionInvocationMetadata.ProcessProductMutationToolNamesMetadataKey] = productMutationToolNames;
+        }
+        var productMutationRequiredBranchOutcomeKeys =
+            ProcessProductCompletionRuleParser.ResolveProductMutationRequiredBranchOutcomeKeys(
+                assignment.LaunchVariables,
+                assignment.StepKey);
+        if (productMutationRequiredBranchOutcomeKeys.Count > 0)
+        {
+            metadata[ExecutionInvocationMetadata.ProcessProductMutationRequiredBranchOutcomeKeysMetadataKey] =
+                productMutationRequiredBranchOutcomeKeys;
         }
         var allowedManagedArtifactReadRefs = new List<string>();
         if (ProcessRuntimeLaunchVariables.TryReadParentRequiredArtifactRefs(
@@ -85,6 +99,20 @@ internal static class ProcessExecutionMetadataBuilder
                 : ExecutionInvocationMetadata.ReadOnlyExternalTargetAliasesMetadataKey] = trustedAliases;
         }
 
+        foreach (var item in metadataAdditions)
+        {
+            if (string.IsNullOrWhiteSpace(item.Key))
+            {
+                throw new InvalidOperationException("Process execution metadata additions cannot contain an empty key.");
+            }
+
+            if (!metadata.TryAdd(item.Key, item.Value))
+            {
+                throw new InvalidOperationException(
+                    $"Process execution metadata key '{item.Key}' conflicts with a generic process metadata key.");
+            }
+        }
+
         var metadataJson = ApplyLaunchContextMetadata(
             JsonSerializer.Serialize(metadata, AgentOutputJson.SerializerOptions),
             assignment.LaunchVariables);
@@ -95,7 +123,8 @@ internal static class ProcessExecutionMetadataBuilder
             metadataJson,
             new ExecutionInvocationPolicy(
                 FinalizerMode: AgentFinalizerMode.Required,
-                MaxStructuredOutputRepairAttempts: ExecutionInvocationMetadata.DefaultGovernedRepairAttempts));
+                MaxStructuredOutputRepairAttempts: ExecutionInvocationMetadata.DefaultGovernedRepairAttempts,
+                AllowRequiredFinalizerStructuredOutputRecovery: true));
     }
 
     internal static string ApplyLaunchContextMetadata(
@@ -182,11 +211,6 @@ internal static class ProcessExecutionMetadataBuilder
         return allowedOperations.Contains(ProcessOperationContractNames.MutateProductTarget, StringComparer.OrdinalIgnoreCase) ||
             string.Equals(targetScope, ProcessOperationContractNames.ExternalProductTargetMutable, StringComparison.OrdinalIgnoreCase) ||
             string.Equals(targetScope, ProcessOperationContractNames.ManagedOutputProduct, StringComparison.OrdinalIgnoreCase);
-    }
-
-    internal static bool AllowsBrowserRuntimeProof(IReadOnlyList<string> allowedOperations)
-    {
-        return allowedOperations.Contains(ProcessOperationContractNames.CaptureRuntimeProof, StringComparer.OrdinalIgnoreCase);
     }
 
     internal static bool RequiresProductMutationBeforeManagedOutput(ProcessRuntimeStepAssignment assignment)

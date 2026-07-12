@@ -1198,7 +1198,6 @@ public sealed class MafAgentRuntimeToolProviderCompositionTests
             TargetScope: ProcessOperationContractNames.ManagedOutputProduct,
             IsGovernedProcessStep: true,
             BrowserToolsAllowed: allowedOperations.Contains(ProcessOperationContractNames.CaptureRuntimeProof, StringComparer.OrdinalIgnoreCase),
-            ScaffoldToolOnly: false,
             AllowsProductMutation: allowedOperations.Contains(ProcessOperationContractNames.MutateProductTarget, StringComparer.OrdinalIgnoreCase),
             WorkspaceToolProfile: null,
             WorkspaceScope: WorkspaceScopeDescriptor.Sandbox,

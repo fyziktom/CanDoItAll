@@ -18,7 +18,7 @@ public sealed class ProcessRuntimeToolPreflightServiceTests
             agent.Id,
             [ProcessOperationContractNames.MutateProductTarget],
             ProcessOperationContractNames.ExternalProductTargetMutable);
-        var service = new ProcessRuntimeToolPreflightService([], [new DotNetSolutionSetupRuntimeToolPlanGuard()]);
+        var service = new ProcessRuntimeToolPreflightService([], [new DotNetSolutionSetupRuntimeToolPlanGuard()], ProcessRuntimeToolPreflightContributionCatalog.Empty);
 
         var result = await service.EvaluateAsync(
             new ProcessRuntimeToolPreflightRequest(
@@ -46,7 +46,7 @@ public sealed class ProcessRuntimeToolPreflightServiceTests
             agent.Id,
             [ProcessOperationContractNames.MutateProductTarget],
             ProcessOperationContractNames.ExternalProductTargetMutable);
-        var service = new ProcessRuntimeToolPreflightService([], [new DotNetSolutionSetupRuntimeToolPlanGuard()]);
+        var service = new ProcessRuntimeToolPreflightService([], [new DotNetSolutionSetupRuntimeToolPlanGuard()], ProcessRuntimeToolPreflightContributionCatalog.Empty);
 
         var result = await service.EvaluateAsync(
             new ProcessRuntimeToolPreflightRequest(
@@ -70,7 +70,7 @@ public sealed class ProcessRuntimeToolPreflightServiceTests
             agent.Id,
             [ProcessOperationContractNames.MutateProductTarget],
             ProcessOperationContractNames.ExternalProductTargetMutable);
-        var service = new ProcessRuntimeToolPreflightService([], [new DotNetSolutionSetupRuntimeToolPlanGuard()]);
+        var service = new ProcessRuntimeToolPreflightService([], [new DotNetSolutionSetupRuntimeToolPlanGuard()], ProcessRuntimeToolPreflightContributionCatalog.Empty);
 
         var result = await service.EvaluateAsync(
             new ProcessRuntimeToolPreflightRequest(
@@ -94,7 +94,7 @@ public sealed class ProcessRuntimeToolPreflightServiceTests
             agent.Id,
             [ProcessOperationContractNames.WriteManagedProcessArtifacts],
             ProcessOperationContractNames.ManagedProcessArtifactsOnly);
-        var service = new ProcessRuntimeToolPreflightService([], [new DotNetSolutionSetupRuntimeToolPlanGuard()]);
+        var service = new ProcessRuntimeToolPreflightService([], [new DotNetSolutionSetupRuntimeToolPlanGuard()], ProcessRuntimeToolPreflightContributionCatalog.Empty);
 
         var result = await service.EvaluateAsync(
             new ProcessRuntimeToolPreflightRequest(
@@ -118,7 +118,7 @@ public sealed class ProcessRuntimeToolPreflightServiceTests
             agent.Id,
             [ProcessOperationContractNames.WriteManagedProcessArtifacts],
             ProcessOperationContractNames.ManagedProcessArtifactsOnly);
-        var service = new ProcessRuntimeToolPreflightService([], [new DotNetSolutionSetupRuntimeToolPlanGuard()]);
+        var service = new ProcessRuntimeToolPreflightService([], [new DotNetSolutionSetupRuntimeToolPlanGuard()], ProcessRuntimeToolPreflightContributionCatalog.Empty);
 
         var result = await service.EvaluateAsync(
             new ProcessRuntimeToolPreflightRequest(
@@ -147,7 +147,7 @@ public sealed class ProcessRuntimeToolPreflightServiceTests
                 ProcessOperationContractNames.WriteManagedProcessArtifacts
             ],
             ProcessOperationContractNames.ExternalProductTargetReadOnly);
-        var service = new ProcessRuntimeToolPreflightService([], [new DotNetSolutionSetupRuntimeToolPlanGuard()]);
+        var service = CreateBrowserPreflightService();
 
         var result = await service.EvaluateAsync(
             new ProcessRuntimeToolPreflightRequest(
@@ -176,7 +176,7 @@ public sealed class ProcessRuntimeToolPreflightServiceTests
             agent.Id,
             [ProcessOperationContractNames.RunValidation],
             ProcessOperationContractNames.ExternalProductTargetReadOnly);
-        var service = new ProcessRuntimeToolPreflightService([], [new DotNetSolutionSetupRuntimeToolPlanGuard()]);
+        var service = CreateBrowserPreflightService();
 
         var result = await service.EvaluateAsync(
             new ProcessRuntimeToolPreflightRequest(
@@ -198,7 +198,7 @@ public sealed class ProcessRuntimeToolPreflightServiceTests
             agent.Id,
             [ProcessOperationContractNames.CaptureRuntimeProof],
             ProcessOperationContractNames.ExternalProductTargetReadOnly);
-        var service = new ProcessRuntimeToolPreflightService([], [new DotNetSolutionSetupRuntimeToolPlanGuard()]);
+        var service = CreateBrowserPreflightService();
 
         var result = await service.EvaluateAsync(
             new ProcessRuntimeToolPreflightRequest(
@@ -215,6 +215,66 @@ public sealed class ProcessRuntimeToolPreflightServiceTests
     }
 
     [Fact]
+    public void Preflight_contribution_context_normalizes_and_limits_handled_tools_to_declared_requirements()
+    {
+        var context = CreatePreflightContributionContext(["test-runtime-tool"]);
+
+        context.MarkToolHandled("test-runtime-tool");
+
+        Assert.Equal(["test_runtime_tool"], context.RequiredToolNames);
+        Assert.Contains("test_runtime_tool", context.HandledToolNames);
+        var exception = Assert.Throws<InvalidOperationException>(() =>
+            context.MarkToolHandled("workspace_read_file"));
+
+        Assert.Contains("not required by the current process preflight request", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Preflight_contribution_context_requires_ownership_before_claiming_a_tool_as_composed()
+    {
+        var context = CreatePreflightContributionContext(["test_runtime_tool"]);
+
+        var exception = Assert.Throws<InvalidOperationException>(() =>
+            context.AddComposedToolName("test_runtime_tool"));
+
+        Assert.Contains("must be marked as handled", exception.Message, StringComparison.Ordinal);
+
+        context.MarkToolHandled("test_runtime_tool");
+        context.AddComposedToolName("test-runtime-tool");
+
+        Assert.Contains("test_runtime_tool", context.ComposedToolNames);
+    }
+
+    [Fact]
+    public void Preflight_contribution_catalog_runs_contributions_by_order_then_stable_key()
+    {
+        var calls = new List<string>();
+        var catalog = new ProcessRuntimeToolPreflightContributionCatalog(
+        [
+            new TrackingPreflightContribution("last", 200, _ => calls.Add("last")),
+            new TrackingPreflightContribution("bravo", 100, _ => calls.Add("bravo")),
+            new TrackingPreflightContribution("alpha", 100, _ => calls.Add("alpha"))
+        ]);
+
+        catalog.Contribute(CreatePreflightContributionContext(["test_runtime_tool"]));
+
+        Assert.Equal(["alpha", "bravo", "last"], calls);
+    }
+
+    [Fact]
+    public void Preflight_contribution_catalog_rejects_duplicate_keys_case_insensitively()
+    {
+        var exception = Assert.Throws<InvalidOperationException>(() =>
+            new ProcessRuntimeToolPreflightContributionCatalog(
+            [
+                new TrackingPreflightContribution("test.contribution", 100, _ => { }),
+                new TrackingPreflightContribution("TEST.CONTRIBUTION", 200, _ => { })
+            ]));
+
+        Assert.Contains("Duplicate process runtime tool preflight contribution key", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task EvaluateAsync_rejects_dotnet_create_plan_when_helper_receipt_is_missing()
     {
         var agent = CreateAgent(AgentWorkspaceToolProfileKind.SoftwareDevelopment);
@@ -225,7 +285,7 @@ public sealed class ProcessRuntimeToolPreflightServiceTests
                 "template=sln",
                 "template=blazorwasm"
             ]));
-        var service = new ProcessRuntimeToolPreflightService([], [new DotNetSolutionSetupRuntimeToolPlanGuard()]);
+        var service = new ProcessRuntimeToolPreflightService([], [new DotNetSolutionSetupRuntimeToolPlanGuard()], ProcessRuntimeToolPreflightContributionCatalog.Empty);
 
         var result = await service.EvaluateAsync(
             new ProcessRuntimeToolPreflightRequest(
@@ -250,7 +310,7 @@ public sealed class ProcessRuntimeToolPreflightServiceTests
             agent.Id,
             CreateDotNetCreateProjectLaunchVariables(
                 scriptRef: "artifacts/process-runs/{CurrentProcessRunId}/scripts/create-dotnet-project.ps1"));
-        var service = new ProcessRuntimeToolPreflightService([], [new DotNetSolutionSetupRuntimeToolPlanGuard()]);
+        var service = new ProcessRuntimeToolPreflightService([], [new DotNetSolutionSetupRuntimeToolPlanGuard()], ProcessRuntimeToolPreflightContributionCatalog.Empty);
 
         var result = await service.EvaluateAsync(
             new ProcessRuntimeToolPreflightRequest(
@@ -280,7 +340,7 @@ public sealed class ProcessRuntimeToolPreflightServiceTests
         var assignment = CreateDotNetCreateProjectAssignment(
             agent.Id,
             CreateDotNetCreateProjectLaunchVariables(sideEffectManifest: manifest));
-        var service = new ProcessRuntimeToolPreflightService([], [new DotNetSolutionSetupRuntimeToolPlanGuard()]);
+        var service = new ProcessRuntimeToolPreflightService([], [new DotNetSolutionSetupRuntimeToolPlanGuard()], ProcessRuntimeToolPreflightContributionCatalog.Empty);
 
         var result = await service.EvaluateAsync(
             new ProcessRuntimeToolPreflightRequest(
@@ -306,7 +366,7 @@ public sealed class ProcessRuntimeToolPreflightServiceTests
                 @"C:\temp\Other\Calculator.slnx",
                 @"C:\temp\CanDoItAll\Calculator\src\Calculator\Calculator.csproj"
             ]));
-        var service = new ProcessRuntimeToolPreflightService([], [new DotNetSolutionSetupRuntimeToolPlanGuard()]);
+        var service = new ProcessRuntimeToolPreflightService([], [new DotNetSolutionSetupRuntimeToolPlanGuard()], ProcessRuntimeToolPreflightContributionCatalog.Empty);
 
         var result = await service.EvaluateAsync(
             new ProcessRuntimeToolPreflightRequest(
@@ -330,7 +390,7 @@ public sealed class ProcessRuntimeToolPreflightServiceTests
         var assignment = CreateDotNetCreateProjectAssignment(
             agent.Id,
             CreateDotNetCreateProjectLaunchVariables());
-        var service = new ProcessRuntimeToolPreflightService([], [new DotNetSolutionSetupRuntimeToolPlanGuard()]);
+        var service = new ProcessRuntimeToolPreflightService([], [new DotNetSolutionSetupRuntimeToolPlanGuard()], ProcessRuntimeToolPreflightContributionCatalog.Empty);
 
         var result = await service.EvaluateAsync(
             new ProcessRuntimeToolPreflightRequest(
@@ -343,6 +403,117 @@ public sealed class ProcessRuntimeToolPreflightServiceTests
         Assert.Empty(result.MissingToolNames);
         Assert.Empty(result.PlanIssues);
         Assert.Empty(result.CapabilityDiagnostics);
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_rejects_selected_dotnet_executor_with_mismatched_descriptor_plan_kind()
+    {
+        var agent = CreateAgent(AgentWorkspaceToolProfileKind.SoftwareDevelopment);
+        var launchVariables = new Dictionary<string, string>(
+            CreateDotNetCreateProjectLaunchVariables(),
+            StringComparer.OrdinalIgnoreCase)
+        {
+            [ProcessRuntimeLaunchVariables.ProcessStepScriptHelperDescriptorJson] =
+                ProcessRuntimeLaunchVariables.SerializeProcessStepScriptHelperDescriptor(
+                    new ProcessRuntimeScriptHelperDescriptor(
+                        "DotNetCreateProjectScript",
+                        "DotNetCreateProjectScriptRef",
+                        "DotNetCreateProjectSideEffectManifest",
+                        "dotnet.create-project",
+                        "DotNetSolutionAddTestProject",
+                        "DotNetCreateProjectExecutionPlan"))
+        };
+        var assignment = CreateDotNetCreateProjectAssignment(agent.Id, launchVariables);
+        var service = new ProcessRuntimeToolPreflightService([], [new DotNetSolutionSetupRuntimeToolPlanGuard()], ProcessRuntimeToolPreflightContributionCatalog.Empty);
+
+        var result = await service.EvaluateAsync(
+            new ProcessRuntimeToolPreflightRequest(
+                assignment,
+                agent,
+                []),
+            CancellationToken.None);
+
+        Assert.False(result.IsSatisfied);
+        Assert.Contains(result.PlanIssues, issue => issue.Code == "dotnet.setup.plan.descriptor_invalid");
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_does_not_claim_a_dotnet_plan_owned_by_another_runtime_executor()
+    {
+        var agent = CreateAgent(AgentWorkspaceToolProfileKind.SoftwareDevelopment);
+        var assignment = CreateAssignment(
+            agent.Id,
+            [ProcessOperationContractNames.MutateProductTarget],
+            ProcessOperationContractNames.ExternalProductTargetMutable) with
+        {
+            LaunchVariables = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                [ProcessRuntimeLaunchVariables.ProcessStepRuntimeOwnedExecutorKey] = "other.runtime-owned",
+                [ProcessRuntimeLaunchVariables.ProcessStepScriptHelperDescriptorJson] =
+                    ProcessRuntimeLaunchVariables.SerializeProcessStepScriptHelperDescriptor(
+                        new ProcessRuntimeScriptHelperDescriptor(
+                            "OtherScript",
+                            "OtherScriptRef",
+                            "OtherManifest",
+                            "dotnet.other-runtime-plan",
+                            "OtherDotNetPlan",
+                            "OtherExecutionPlan"))
+            }
+        };
+        var service = new ProcessRuntimeToolPreflightService([], [new DotNetSolutionSetupRuntimeToolPlanGuard()], ProcessRuntimeToolPreflightContributionCatalog.Empty);
+
+        var result = await service.EvaluateAsync(
+            new ProcessRuntimeToolPreflightRequest(
+                assignment,
+                agent,
+                []),
+            CancellationToken.None);
+
+        Assert.True(result.IsSatisfied, result.Summary);
+        Assert.Empty(result.PlanIssues);
+    }
+
+    private static ProcessRuntimeToolPreflightService CreateBrowserPreflightService()
+    {
+        return new ProcessRuntimeToolPreflightService(
+            [],
+            [new DotNetSolutionSetupRuntimeToolPlanGuard()],
+            new ProcessRuntimeToolPreflightContributionCatalog(
+            [
+                new BrowserRuntimeToolPreflightContribution()
+            ]));
+    }
+
+    private static ProcessRuntimeToolPreflightContributionContext CreatePreflightContributionContext(
+        IReadOnlyList<string> requiredToolNames)
+    {
+        var agent = CreateAgent(AgentWorkspaceToolProfileKind.QualityValidation);
+        var assignment = CreateAssignment(
+            agent.Id,
+            [ProcessOperationContractNames.ReadProcessContext],
+            ProcessOperationContractNames.ManagedProcessArtifactsOnly);
+
+        return new ProcessRuntimeToolPreflightContributionContext(
+            new ProcessRuntimeToolPreflightRequest(assignment, agent, requiredToolNames),
+            requiredToolNames,
+            ProcessRuntimeProviderContextFactory.Create(assignment));
+    }
+
+    private sealed class TrackingPreflightContribution(
+        string contributionKey,
+        int order,
+        Action<ProcessRuntimeToolPreflightContributionContext> callback) : IProcessRuntimeToolPreflightContribution
+    {
+        public string ContributionKey => contributionKey;
+
+        public int Order => order;
+
+        public void Contribute(ProcessRuntimeToolPreflightContributionContext context)
+        {
+            ArgumentNullException.ThrowIfNull(context);
+
+            callback(context);
+        }
     }
 
     private static AgentDefinition CreateAgent(
@@ -460,37 +631,44 @@ public sealed class ProcessRuntimeToolPreflightServiceTests
             ["DotNetCreateProjectScript"] = "dotnet sln $SolutionFile add $AppProjectFile; dotnet sln $SolutionFile list",
             ["DotNetCreateProjectSideEffectManifest"] = sideEffectManifest,
             ["DotNetCreateProjectExecutionPlan"] =
-                $"Invoke workspace_dotnet_new for template 'sln'. Invoke workspace_dotnet_new for template 'blazorwasm'. Invoke workspace_pwsh_run_script with path '{scriptRef}', workingDirectory 'external-target/calculator', sideEffectManifest from DotNetCreateProjectSideEffectManifest. Read back the solution file.",
-            [ProcessRuntimeLaunchVariables.ProductCompletionRequiredToolReceiptsByStep] = JsonSerializer.Serialize(
-                new Dictionary<string, string[]>(StringComparer.Ordinal)
+                JsonSerializer.Serialize(new
                 {
-                    ["create-dotnet-project"] = (requiredReceipts ??
-                    [
-                        "template=sln",
-                        "template=blazorwasm",
-                        "workspace_pwsh_run_script"
-                    ]).ToArray()
+                    PlanKey = "dotnet.create-project",
+                    ScriptRef = scriptRef,
+                    WorkspaceAlias = "external-target/calculator",
+                    RequiresScaffold = true
                 }),
-            [ProcessRuntimeLaunchVariables.ProductCompletionRequiredPathsByStep] = JsonSerializer.Serialize(
-                new Dictionary<string, string[]>(StringComparer.Ordinal)
+            [ProcessRuntimeLaunchVariables.ProcessStepRuntimeOwnedExecutorKey] = "dotnet.solution-setup",
+            [ProcessRuntimeLaunchVariables.ProcessStepScriptHelperDescriptorJson] =
+                ProcessRuntimeLaunchVariables.SerializeProcessStepScriptHelperDescriptor(
+                    new ProcessRuntimeScriptHelperDescriptor(
+                        "DotNetCreateProjectScript",
+                        "DotNetCreateProjectScriptRef",
+                        "DotNetCreateProjectSideEffectManifest",
+                        "dotnet.create-project",
+                        "DotNetSolutionCreate",
+                        "DotNetCreateProjectExecutionPlan")),
+            [ProcessRuntimeLaunchVariables.ProductCompletionRequiredToolReceipts] = JsonSerializer.Serialize(
+                (requiredReceipts ??
+                [
+                    "template=sln",
+                    "template=blazorwasm",
+                    "workspace_pwsh_run_script"
+                ]).ToArray()),
+            [ProcessRuntimeLaunchVariables.ProductCompletionRequiredPaths] = JsonSerializer.Serialize(
+                (requiredPaths ??
+                [
+                    solutionFile,
+                    appProjectFile
+                ]).ToArray()),
+            [ProcessRuntimeLaunchVariables.ProductCompletionRequiredFileContentChecks] = JsonSerializer.Serialize(
+                new object[]
                 {
-                    ["create-dotnet-project"] = (requiredPaths ??
-                    [
-                        solutionFile,
-                        appProjectFile
-                    ]).ToArray()
-                }),
-            [ProcessRuntimeLaunchVariables.ProductCompletionRequiredFileContentChecksByStep] = JsonSerializer.Serialize(
-                new Dictionary<string, object[]>(StringComparer.Ordinal)
-                {
-                    ["create-dotnet-project"] =
-                    [
-                        new Dictionary<string, object>(StringComparer.Ordinal)
-                        {
-                            ["pathCandidates"] = new[] { solutionFile },
-                            ["requiredTextAnyGroups"] = new[] { new[] { "src/Calculator/Calculator.csproj" } }
-                        }
-                    ]
+                    new Dictionary<string, object>(StringComparer.Ordinal)
+                    {
+                        ["pathCandidates"] = new[] { solutionFile },
+                        ["requiredTextAnyGroups"] = new[] { new[] { "src/Calculator/Calculator.csproj" } }
+                    }
                 })
         };
     }

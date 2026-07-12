@@ -8,7 +8,7 @@ using CanDoItAll.Processes.Runtime;
 
 namespace CanDoItAll.Tests.Unit;
 
-public sealed class ProcessInteractiveUiAcceptanceGateTests
+public sealed class BrowserInteractiveAcceptanceCompletionGateContributionTests
 {
     private static readonly Guid ExecutionRunId = Guid.NewGuid();
     private static readonly DateTimeOffset StartedAtUtc = new(2026, 7, 10, 20, 0, 0, TimeSpan.Zero);
@@ -23,10 +23,10 @@ public sealed class ProcessInteractiveUiAcceptanceGateTests
             Receipt(ToolContractCatalog.BrowserSnapshot, "filename=state.yml", 3)
         ]);
 
-        var issue = new ProcessInteractiveUiAcceptanceGate().Validate(context);
+        var issue = new BrowserInteractiveAcceptanceCompletionGateContribution().Validate(context);
 
         Assert.NotNull(issue);
-        Assert.Equal(ProcessCompletionDiagnosticCodes.ProductSourceInspectionEvidenceMissing, issue.Code);
+        Assert.Equal(ProcessCompletionDiagnosticCodes.UiInteractionEvidenceMissing, issue.Code);
     }
 
     [Fact]
@@ -40,7 +40,7 @@ public sealed class ProcessInteractiveUiAcceptanceGateTests
             Receipt(ToolContractCatalog.BrowserSnapshot, "filename=state.yml", 4)
         ]);
 
-        var issue = new ProcessInteractiveUiAcceptanceGate().Validate(context);
+        var issue = new BrowserInteractiveAcceptanceCompletionGateContribution().Validate(context);
 
         Assert.NotNull(issue);
         Assert.Equal(ProcessCompletionDiagnosticCodes.UiInteractionEvidenceMissing, issue.Code);
@@ -58,7 +58,40 @@ public sealed class ProcessInteractiveUiAcceptanceGateTests
             Receipt(ToolContractCatalog.BrowserPressKey, "key=ArrowRight", 5)
         ]);
 
-        var issue = new ProcessInteractiveUiAcceptanceGate().Validate(context);
+        var issue = new BrowserInteractiveAcceptanceCompletionGateContribution().Validate(context);
+
+        Assert.NotNull(issue);
+        Assert.Equal(ProcessCompletionDiagnosticCodes.UiPostInteractionStateEvidenceMissing, issue.Code);
+    }
+
+    [Fact]
+    public void Validate_FailedInteraction_DoesNotCountAsInteractiveProof()
+    {
+        var context = CreateContext(
+        [
+            Receipt(ToolContractCatalog.BrowserNavigate, "http://127.0.0.1:5000", 1),
+            Receipt(ToolContractCatalog.BrowserPressKey, "key=ArrowRight", 2, "Failed: selector was not found."),
+            Receipt(ToolContractCatalog.BrowserEvaluate, "filename=after.json", 3),
+            Receipt(ToolContractCatalog.BrowserTakeScreenshot, "filename=after.png", 4)
+        ]);
+
+        var issue = new BrowserInteractiveAcceptanceCompletionGateContribution().Validate(context);
+
+        Assert.NotNull(issue);
+        Assert.Equal(ProcessCompletionDiagnosticCodes.UiInteractionEvidenceMissing, issue.Code);
+    }
+
+    [Fact]
+    public void Validate_FailedPostInteractionState_DoesNotCountAsStateProof()
+    {
+        var context = CreateContext(
+        [
+            Receipt(ToolContractCatalog.BrowserNavigate, "http://127.0.0.1:5000", 1),
+            Receipt(ToolContractCatalog.BrowserPressKey, "key=ArrowRight", 2),
+            Receipt(ToolContractCatalog.BrowserEvaluate, "filename=after.json", 3, "Failed: evaluation timed out.")
+        ]);
+
+        var issue = new BrowserInteractiveAcceptanceCompletionGateContribution().Validate(context);
 
         Assert.NotNull(issue);
         Assert.Equal(ProcessCompletionDiagnosticCodes.UiPostInteractionStateEvidenceMissing, issue.Code);
@@ -77,7 +110,7 @@ public sealed class ProcessInteractiveUiAcceptanceGateTests
             Receipt(ToolContractCatalog.BrowserTakeScreenshot, "filename=after.png", 6)
         ]);
 
-        var issue = new ProcessInteractiveUiAcceptanceGate().Validate(context);
+        var issue = new BrowserInteractiveAcceptanceCompletionGateContribution().Validate(context);
 
         Assert.Null(issue);
     }
@@ -140,7 +173,11 @@ public sealed class ProcessInteractiveUiAcceptanceGateTests
             ["applicableBranchOutcomeKeys"] = new[] { "quality-accepted" }
         };
 
-    private static ToolExecutionReceiptRecord Receipt(string toolName, string requestSummary, int second)
+    private static ToolExecutionReceiptRecord Receipt(
+        string toolName,
+        string requestSummary,
+        int second,
+        string exitSummary = "Succeeded (exit 0)")
     {
         var observedAtUtc = StartedAtUtc.AddSeconds(second);
         return new ToolExecutionReceiptRecord(
@@ -153,7 +190,7 @@ public sealed class ProcessInteractiveUiAcceptanceGateTests
             "Test receipt.",
             requestSummary,
             ".",
-            "Succeeded (exit 0)",
+            exitSummary,
             observedAtUtc,
             observedAtUtc);
     }

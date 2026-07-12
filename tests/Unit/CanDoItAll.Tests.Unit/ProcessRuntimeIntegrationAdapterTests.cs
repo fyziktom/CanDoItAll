@@ -402,9 +402,15 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
                 LaunchVariables = WithLaunchVariables(
                     baseAssignment,
                     (ProcessRuntimeLaunchVariables.ProductCompletionRequiredToolReceiptsByStep, requiredToolReceiptMap),
-                    ("DotNetAddTestProjectScript", "$ErrorActionPreference = 'Stop'"),
-                    ("DotNetAddTestProjectScriptRef", "artifacts/process-runs/{CurrentProcessRunId}/scripts/add-test-project.ps1"),
-                    ("DotNetAddTestProjectSideEffectManifest", """{"version":1,"mode":"ProductMutation"}"""))
+                    (ProcessRuntimeLaunchVariables.ProcessStepScriptHelperDescriptorJson,
+                        ProcessRuntimeLaunchVariables.SerializeProcessStepScriptHelperDescriptor(
+                            new ProcessRuntimeScriptHelperDescriptor(
+                                "RequiredProductMutationHelper",
+                                "RequiredProductMutationHelperRef",
+                                "RequiredProductMutationSideEffectManifest"))),
+                    ("RequiredProductMutationHelper", "$ErrorActionPreference = 'Stop'"),
+                    ("RequiredProductMutationHelperRef", "artifacts/process-runs/{CurrentProcessRunId}/scripts/add-test-project.ps1"),
+                    ("RequiredProductMutationSideEffectManifest", """{"version":1,"mode":"ProductMutation"}"""))
             };
             var productAlias = AgentWorkspaceToolAccessMetadata.NormalizeExternalTargetAlias(outputRoot) ?? outputRoot;
             var result = ToAdapterResult(
@@ -430,7 +436,7 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
             Assert.Equal("process.adapter.product_required_tool_receipt_missing", diagnostic.Code.Value);
             Assert.Equal(ProcessDiagnosticRetrySafety.SafeToRetry, diagnostic.RetrySafety);
             Assert.Contains("workspace_pwsh_run_script", result.UserSafeSummary, StringComparison.OrdinalIgnoreCase);
-            Assert.Contains("DotNetAddTestProjectScript", diagnostic.SafeSummary, StringComparison.Ordinal);
+            Assert.Contains("RequiredProductMutationHelper", diagnostic.SafeSummary, StringComparison.Ordinal);
             Assert.Contains("artifacts/process-runs/{CurrentProcessRunId}/scripts/add-test-project.ps1", diagnostic.SafeSummary, StringComparison.Ordinal);
             Assert.Empty(result.ProducedArtifacts);
         }
@@ -456,7 +462,16 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
                 StepKey = "repair-solution-setup",
                 LaunchVariables = WithLaunchVariables(
                     baseAssignment,
-                    (ProcessRuntimeLaunchVariables.ProductCompletionRequiredToolReceipts, "workspace_pwsh_run_script"))
+                    (
+                        ProcessRuntimeLaunchVariables.ProductCompletionRequiredToolReceipts,
+                        JsonSerializer.Serialize(new[]
+                        {
+                            new
+                            {
+                                toolName = "workspace_pwsh_run_script",
+                                allowFailedExecutionReceipt = true
+                            }
+                        })))
             };
             var primaryRef = BuildStepArtifactRef(assignment);
             var productAlias = AgentWorkspaceToolAccessMetadata.NormalizeExternalTargetAlias(outputRoot) ?? outputRoot;
@@ -957,7 +972,7 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
     }
 
     [Fact]
-    public void Validation_completion_accepts_failed_required_product_tool_receipts_as_evidence()
+    public void Validation_completion_accepts_failed_required_product_tool_receipts_when_the_rule_explicitly_allows_it()
     {
         var baseAssignment = CreateManagedArtifactAssignment(
             "targeted-validation",
@@ -978,7 +993,24 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
             LaunchVariables = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
             {
                 [ProcessRuntimeLaunchVariables.ProductCompletionRequiredToolReceipts] =
-                    "workspace_dotnet_restore;workspace_dotnet_build;workspace_dotnet_test"
+                    JsonSerializer.Serialize(new[]
+                    {
+                        new
+                        {
+                            toolName = "workspace_dotnet_restore",
+                            allowFailedExecutionReceipt = true
+                        },
+                        new
+                        {
+                            toolName = "workspace_dotnet_build",
+                            allowFailedExecutionReceipt = true
+                        },
+                        new
+                        {
+                            toolName = "workspace_dotnet_test",
+                            allowFailedExecutionReceipt = true
+                        }
+                    })
             }
         };
         var primaryRef = BuildStepArtifactRef(assignment);
@@ -1003,6 +1035,55 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
         Assert.Empty(result.Diagnostics);
         Assert.Contains(result.ProducedArtifacts, artifact => artifact.SlotId == assignment.ProducedArtifactSlotIds[0]);
         Assert.Contains(result.ManagerSignals, signal => signal.Code.Value == ProcessBranchSignalCodes.Outcome("feature-repair-required").Value);
+    }
+
+    [Fact]
+    public void Validation_completion_rejects_failed_required_product_tool_receipts_without_explicit_policy()
+    {
+        var baseAssignment = CreateManagedArtifactAssignment(
+            "targeted-validation",
+            allowedOperations:
+            [
+                ProcessOperationContractNames.ReadProcessContext,
+                ProcessOperationContractNames.ReadUpstreamArtifacts,
+                ProcessOperationContractNames.RunValidation,
+                ProcessOperationContractNames.WriteManagedProcessArtifacts
+            ]);
+        var assignment = baseAssignment with
+        {
+            Prompt = """
+            Branch outcomes:
+            - feature-accepted: Feature accepted - Validation passed.
+            - feature-repair-required: Repair required - Validation failed but repair is possible.
+            """,
+            LaunchVariables = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                [ProcessRuntimeLaunchVariables.ProductCompletionRequiredToolReceipts] =
+                    "workspace_dotnet_restore;workspace_dotnet_build;workspace_dotnet_test"
+            }
+        };
+        var primaryRef = BuildStepArtifactRef(assignment);
+
+        var result = ToAdapterResult(
+            assignment,
+            new ProcessStepOutcomeResult
+            {
+                Status = ProcessStepOutcomeStatus.Completed,
+                Reason = "Focused validation found a compile blocker.",
+                EvidenceRefs = [primaryRef],
+                NextActions = ["Repair the compile error and rerun validation."],
+                HumanReadableSummaryMarkdown = "Status: Completed\n\n## Validation decision\nBranch outcome key: feature-repair-required"
+            },
+            [
+                CreateToolReceipt("workspace_dotnet_restore", "restore Calculator.slnx", "Succeeded (exit 0)"),
+                CreateToolReceipt("workspace_dotnet_build", "build Calculator.slnx", "Failed (exit 1)"),
+                CreateToolReceipt("workspace_dotnet_test", "test Calculator.slnx", "Failed (exit 1)"),
+                CreateToolReceipt("workspace_write_file", primaryRef, "Succeeded: Created file.")
+            ]);
+
+        Assert.Equal(StrategyOutcome.NeedsManager, result.Outcome);
+        Assert.Contains(result.Diagnostics, diagnostic =>
+            diagnostic.Code.Value == "process.adapter.product_required_tool_receipt_missing");
     }
 
     [Fact]
@@ -1438,7 +1519,10 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
                         "workspace_pwsh_run_script",
                         $"dotnet sln add {productAlias}/src/Calculator/Calculator.csproj",
                         "Succeeded (exit 0)",
-                        productAlias),
+                        productAlias) with
+                    {
+                        DeclaredSideEffectMode = ToolExecutionSideEffectMode.ProductMutation
+                    },
                     CreateToolReceipt("workspace_write_file", BuildStepArtifactRef(assignment), "Succeeded: Created file.")
                 ]);
 
@@ -1503,7 +1587,10 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
                         "workspace_pwsh_run_script",
                         $"dotnet sln add {productAlias}/src/Calculator/Calculator.csproj",
                         "Succeeded (exit 0)",
-                        productAlias),
+                        productAlias) with
+                    {
+                        DeclaredSideEffectMode = ToolExecutionSideEffectMode.ProductMutation
+                    },
                     CreateToolReceipt("workspace_write_file", BuildStepArtifactRef(assignment), "Succeeded: Created file.")
                 ]);
 
@@ -1514,6 +1601,35 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
             Assert.Contains("Calculator.slnx", result.UserSafeSummary, StringComparison.OrdinalIgnoreCase);
             Assert.Contains("src/Calculator/Calculator.csproj", result.UserSafeSummary, StringComparison.OrdinalIgnoreCase);
             Assert.Empty(result.ProducedArtifacts);
+        }
+        finally
+        {
+            DeleteDirectory(outputRoot);
+        }
+    }
+
+    [Fact]
+    public void Product_mutation_completion_without_evidence_does_not_add_missing_product_output()
+    {
+        var outputRoot = CreateTempProductRoot();
+        try
+        {
+            var result = ToAdapterResult(
+                CreateProductMutationAssignment(outputRoot),
+                new ProcessStepOutcomeResult
+                {
+                    Status = ProcessStepOutcomeStatus.Completed,
+                    Reason = "Implemented the app.",
+                    EvidenceRefs = [],
+                    NextActions = []
+                });
+
+            Assert.Contains(
+                result.Diagnostics,
+                candidate => candidate.Code.Value == "process.adapter.product_output_evidence_missing");
+            Assert.DoesNotContain(
+                result.Diagnostics,
+                candidate => candidate.Code.Value == "process.adapter.product_output_missing");
         }
         finally
         {
@@ -2080,6 +2196,84 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
     }
 
     [Fact]
+    public void Product_mutation_completion_rejects_read_only_script_receipt_targeting_product()
+    {
+        var outputRoot = CreateTempProductRoot();
+        try
+        {
+            File.WriteAllText(Path.Combine(outputRoot, "SampleApp.csproj"), "<Project />");
+            var assignment = CreateProductMutationAssignment(outputRoot);
+            var productAlias = AgentWorkspaceToolAccessMetadata.NormalizeExternalTargetAlias(outputRoot) ?? outputRoot;
+            var result = ToAdapterResult(
+                assignment,
+                new ProcessStepOutcomeResult
+                {
+                    Status = ProcessStepOutcomeStatus.Completed,
+                    Reason = "Inspected the current product state.",
+                    EvidenceRefs = [BuildStepArtifactRef(assignment)],
+                    NextActions = []
+                },
+                [
+                    CreateToolReceipt(
+                        "workspace_pwsh_run_script",
+                        "scripts/inspect-product.ps1",
+                        "Succeeded (exit 0)",
+                        productAlias),
+                    CreateToolReceipt("workspace_write_file", BuildStepArtifactRef(assignment), "Succeeded: Created file.")
+                ]);
+
+            Assert.Equal(StrategyOutcome.NeedsManager, result.Outcome);
+            Assert.Contains(result.Diagnostics, diagnostic =>
+                diagnostic.Code.Value == ProcessCompletionDiagnosticCodes.ProductMutationReceiptMissing);
+            Assert.Empty(result.ProducedArtifacts);
+        }
+        finally
+        {
+            DeleteDirectory(outputRoot);
+        }
+    }
+
+    [Fact]
+    public void Product_mutation_completion_accepts_script_receipt_with_declared_product_mutation()
+    {
+        var outputRoot = CreateTempProductRoot();
+        try
+        {
+            File.WriteAllText(Path.Combine(outputRoot, "SampleApp.csproj"), "<Project />");
+            var assignment = CreateProductMutationAssignment(outputRoot);
+            var productAlias = AgentWorkspaceToolAccessMetadata.NormalizeExternalTargetAlias(outputRoot) ?? outputRoot;
+            var result = ToAdapterResult(
+                assignment,
+                new ProcessStepOutcomeResult
+                {
+                    Status = ProcessStepOutcomeStatus.Completed,
+                    Reason = "Applied the requested product update.",
+                    EvidenceRefs = [BuildStepArtifactRef(assignment)],
+                    NextActions = []
+                },
+                [
+                    CreateToolReceipt(
+                        "workspace_pwsh_run_script",
+                        "scripts/apply-product-update.ps1",
+                        "Succeeded (exit 0)",
+                        productAlias) with
+                    {
+                        DeclaredSideEffectMode = ToolExecutionSideEffectMode.ProductMutation
+                    },
+                    CreateToolReceipt("workspace_write_file", BuildStepArtifactRef(assignment), "Succeeded: Created file.")
+                ]);
+
+            Assert.Equal(StrategyOutcome.Succeeded, result.Outcome);
+            Assert.Contains(result.ProducedArtifacts, artifact => artifact.SlotId == assignment.ProducedArtifactSlotIds[0]);
+            Assert.Empty(result.Diagnostics);
+        }
+        finally
+        {
+            DeleteDirectory(outputRoot);
+        }
+    }
+
+    [Fact]
     public void Branch_gate_does_not_implicitly_turn_product_mutation_step_into_validation_only_completion()
     {
         var outputRoot = CreateTempProductRoot();
@@ -2471,9 +2665,15 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
     [Fact]
     public void Managed_artifact_completion_accepts_no_go_escalation_record_that_declares_unresolved_blockers()
     {
-        var assignment = CreateManagedArtifactAssignment("repair-escalation") with
+        var baseAssignment = CreateManagedArtifactAssignment("repair-escalation");
+        var assignment = baseAssignment with
         {
-            BranchGate = new ProcessRuntimeBranchGate("qa-recheck", "repair-escalation")
+            BranchGate = new ProcessRuntimeBranchGate("qa-recheck", "repair-escalation"),
+            LaunchVariables = WithLaunchVariables(
+                baseAssignment,
+                (ProcessRuntimeLaunchVariables.ProcessStepCompletionDispositionJson,
+                    ProcessRuntimeLaunchVariables.SerializeProcessStepCompletionDisposition(
+                        new ProcessRuntimeCompletionDisposition(true, []))))
         };
         var primaryRef = BuildStepArtifactRef(assignment);
         var result = ToAdapterResult(
@@ -2493,9 +2693,19 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
     }
 
     [Fact]
-    public void Managed_artifact_completion_accepts_explicit_dotnet_no_go_branch_that_declares_failed_proof()
+    public void Managed_artifact_completion_accepts_declared_open_issue_branch_with_failed_proof()
     {
-        var assignment = CreateManagedArtifactAssignment("revalidate-bughunt-repair");
+        var baseAssignment = CreateManagedArtifactAssignment("revalidate-bughunt-repair");
+        var assignment = baseAssignment with
+        {
+            LaunchVariables = WithLaunchVariables(
+                baseAssignment,
+                (ProcessRuntimeLaunchVariables.ProcessStepCompletionDispositionJson,
+                    ProcessRuntimeLaunchVariables.SerializeProcessStepCompletionDisposition(
+                        new ProcessRuntimeCompletionDisposition(
+                            false,
+                            ["quality-repair-no-go"]))))
+        };
         var primaryRef = BuildStepArtifactRef(assignment);
         var result = ToAdapterResult(
             assignment,
@@ -2846,6 +3056,153 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
     }
 
     [Fact]
+    public void Routed_completion_issue_uses_current_browser_console_receipt_as_defect_evidence()
+    {
+        var assignment = CreateManagedArtifactAssignment("qa-validation") with
+        {
+            LaunchVariables = new Dictionary<string, string>(StringComparer.Ordinal)
+            {
+                [ProcessRuntimeLaunchVariables.CompletionIssueRoutes] = JsonSerializer.Serialize<object[]>(
+                [
+                    new
+                    {
+                        issueCode = "process.adapter.synthetic_console_defect",
+                        sourceBranchOutcomeKeys = new[] { "quality-accepted" },
+                        targetBranchOutcomeKey = "repair-required",
+                        targetBranchOutcomeTitle = "Repair required",
+                        requiresDefectEvidence = true
+                    }
+                ])
+            }
+        };
+        var output = new ProcessStepOutcomeResult
+        {
+            Status = ProcessStepOutcomeStatus.Completed,
+            Reason = "Validation observed 2 console errors on the product route.",
+            BranchOutcomeKey = "quality-accepted",
+            BranchOutcomeTitle = "Quality accepted",
+            EvidenceRefs = [BuildStepArtifactRef(assignment)],
+            NextActions = []
+        };
+        var issue = new ProcessCompletionIssue(
+            "process.adapter.synthetic_console_defect",
+            "The configured completion rule found a product defect.",
+            "synthetic-console-defect",
+            [],
+            ProcessDiagnosticRetrySafety.SafeToRetry,
+            ProcessDiagnosticIdempotencyClassification.Idempotent);
+        var executionRunId = Guid.NewGuid();
+        IReadOnlyList<ToolExecutionReceiptRecord> receipts =
+        [
+            CreateToolReceipt(
+                ToolContractCatalog.BrowserConsoleMessages,
+                $"artifacts/process-runs/{assignment.RunId.Value:D}/browser/console.log",
+                "Succeeded: Collected 2 console errors.",
+                executionRunId: executionRunId)
+        ];
+
+        var completionIssueResultFactory = new ProcessCompletionIssueResultFactory(
+            new WorkspaceFileService(Path.GetTempPath()),
+            new ProcessCompletionDefectEvidenceCatalog(
+            [
+                new BrowserConsoleDefectEvidenceContribution()
+            ]));
+        var routed = completionIssueResultFactory.TryCreateRoutedCompletionIssueResult(
+            assignment,
+            output,
+            "sha256:raw-output",
+            new ProcessCompletionGateEvaluation([issue], [issue]),
+            receipts,
+            executionRunId,
+            producedArtifactContentHashes: null,
+            out var result);
+
+        Assert.True(routed);
+        Assert.Equal(StrategyOutcome.Succeeded, result.Outcome);
+        Assert.Contains(result.ManagerSignals, signal =>
+            signal.Code.Value == ProcessBranchSignalCodes.Outcome("repair-required").Value);
+        Assert.DoesNotContain(result.Diagnostics, diagnostic =>
+            diagnostic.Code.Value == "process.adapter.branch_route_defect_evidence_missing");
+    }
+
+    [Theory]
+    [InlineData(true, "Failed (exit 1): browser transport timed out.")]
+    [InlineData(false, "Succeeded: Collected 2 console errors.")]
+    public void Routed_completion_issue_rejects_failed_or_stale_browser_console_evidence(
+        bool receiptUsesCurrentExecution,
+        string exitSummary)
+    {
+        var assignment = CreateManagedArtifactAssignment("qa-validation") with
+        {
+            LaunchVariables = new Dictionary<string, string>(StringComparer.Ordinal)
+            {
+                [ProcessRuntimeLaunchVariables.CompletionIssueRoutes] = JsonSerializer.Serialize<object[]>(
+                [
+                    new
+                    {
+                        issueCode = "process.adapter.synthetic_console_defect",
+                        sourceBranchOutcomeKeys = new[] { "quality-accepted" },
+                        targetBranchOutcomeKey = "repair-required",
+                        targetBranchOutcomeTitle = "Repair required",
+                        requiresDefectEvidence = true
+                    }
+                ])
+            }
+        };
+        var output = new ProcessStepOutcomeResult
+        {
+            Status = ProcessStepOutcomeStatus.Completed,
+            Reason = "Validation observed 2 console errors on the product route.",
+            BranchOutcomeKey = "quality-accepted",
+            BranchOutcomeTitle = "Quality accepted",
+            EvidenceRefs = [BuildStepArtifactRef(assignment)],
+            NextActions = []
+        };
+        var issue = new ProcessCompletionIssue(
+            "process.adapter.synthetic_console_defect",
+            "The configured completion rule found a product defect.",
+            "synthetic-console-defect",
+            [],
+            ProcessDiagnosticRetrySafety.SafeToRetry,
+            ProcessDiagnosticIdempotencyClassification.Idempotent);
+        var currentExecutionRunId = Guid.NewGuid();
+        var receiptExecutionRunId = receiptUsesCurrentExecution
+            ? currentExecutionRunId
+            : Guid.NewGuid();
+        IReadOnlyList<ToolExecutionReceiptRecord> receipts =
+        [
+            CreateToolReceipt(
+                ToolContractCatalog.BrowserConsoleMessages,
+                $"artifacts/process-runs/{assignment.RunId.Value:D}/browser/console.log",
+                exitSummary,
+                executionRunId: receiptExecutionRunId)
+        ];
+        var completionIssueResultFactory = new ProcessCompletionIssueResultFactory(
+            new WorkspaceFileService(Path.GetTempPath()),
+            new ProcessCompletionDefectEvidenceCatalog(
+            [
+                new BrowserConsoleDefectEvidenceContribution()
+            ]));
+
+        var routed = completionIssueResultFactory.TryCreateRoutedCompletionIssueResult(
+            assignment,
+            output,
+            "sha256:raw-output",
+            new ProcessCompletionGateEvaluation([issue], [issue]),
+            receipts,
+            currentExecutionRunId,
+            producedArtifactContentHashes: null,
+            out var result);
+
+        Assert.True(routed);
+        Assert.Equal(StrategyOutcome.NeedsManager, result.Outcome);
+        Assert.Contains(result.Diagnostics, diagnostic =>
+            diagnostic.Code.Value == "process.adapter.branch_route_defect_evidence_missing");
+        Assert.DoesNotContain(result.ManagerSignals, signal =>
+            signal.Code.Value == ProcessBranchSignalCodes.Outcome("repair-required").Value);
+    }
+
+    [Fact]
     public void Missing_required_browser_interaction_routes_only_after_automatic_retry()
     {
         var outputRoot = CreateTempProductRoot();
@@ -2922,7 +3279,7 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
     }
 
     [Fact]
-    public void QualityAccepted_with_full_browser_receipts_requires_acceptance_criteria_ids()
+    public void QualityAccepted_with_textual_criterion_ids_requires_typed_criterion_evidence()
     {
         var outputRoot = CreateTempProductRoot();
         try
@@ -2942,7 +3299,7 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
                     BranchOutcomeTitle = "Quality accepted",
                     EvidenceRefs = [primaryRef],
                     NextActions = [],
-                    HumanReadableSummaryMarkdown = "Browser proof and build/test proof completed, but no criterion ids were cited."
+                    HumanReadableSummaryMarkdown = "Browser proof and build/test proof completed for AC-001 and AC-002, but no typed criterion evidence was submitted."
                 },
                 CreateFullQaValidationReceipts(primaryRef, executionRunId),
                 executionRunId);
@@ -2979,6 +3336,23 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
                     BranchOutcomeKey = "quality-accepted",
                     BranchOutcomeTitle = "Quality accepted",
                     EvidenceRefs = [primaryRef],
+                    AcceptanceCriteriaEvidence =
+                    [
+                        new ProcessAcceptanceCriterionEvidence
+                        {
+                            CriterionId = "AC-001",
+                            Status = ProcessAcceptanceCriterionEvidenceStatus.Passed,
+                            Summary = "Browser proof shows falling blocks can move and rotate.",
+                            EvidenceRefs = [primaryRef]
+                        },
+                        new ProcessAcceptanceCriterionEvidence
+                        {
+                            CriterionId = "AC-002",
+                            Status = ProcessAcceptanceCriterionEvidenceStatus.Passed,
+                            Summary = "Test proof shows completed lines update score.",
+                            EvidenceRefs = [primaryRef]
+                        }
+                    ],
                     NextActions = [],
                     HumanReadableSummaryMarkdown = """
                     AC-001: Browser proof shows falling blocks can move and rotate.
@@ -3171,6 +3545,7 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
                 page);
             var primaryRef = BuildStepArtifactRef(assignment);
             var consoleRef = $"artifacts/process-runs/{assignment.RunId.Value:D}/browser-console.log";
+            var executionRunId = Guid.NewGuid();
 
             var result = ToAdapterResult(
                 assignment,
@@ -3184,12 +3559,65 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
                     NextActions = ["Repair the browser runtime error and rerun QA."]
                 },
                 [
-                    CreateToolReceipt("workspace_write_file", primaryRef, "Succeeded: Wrote QA evidence."),
+                    CreateToolReceipt(
+                        "workspace_write_file",
+                        primaryRef,
+                        "Succeeded: Wrote QA evidence.",
+                        executionRunId: executionRunId),
                     CreateToolReceipt(
                         "browser_console_messages",
                         $"level=\"error\", filename=\"{consoleRef}\"",
-                        "Succeeded")
-                ]);
+                        "Succeeded",
+                        executionRunId: executionRunId)
+                ],
+                executionRunId);
+
+            Assert.Equal(StrategyOutcome.Succeeded, result.Outcome);
+            Assert.Contains(result.ManagerSignals, signal =>
+                signal.Code.Value == ProcessBranchSignalCodes.Outcome("repair-required").Value);
+            Assert.DoesNotContain(result.Diagnostics, diagnostic =>
+                diagnostic.Code.Value == "process.adapter.branch_outcome_defect_evidence_missing");
+        }
+        finally
+        {
+            DeleteDirectory(outputRoot);
+        }
+    }
+
+    [Fact]
+    public void RepairRequired_with_typed_failed_acceptance_criterion_is_accepted_as_defect_evidence()
+    {
+        var outputRoot = CreateTempProductRoot();
+        try
+        {
+            var page = Path.Combine(outputRoot, "src", "App", "Pages", "Home.razor");
+            Directory.CreateDirectory(Path.GetDirectoryName(page)!);
+            File.WriteAllText(page, "<h1>Incomplete app</h1>");
+            var assignment = CreateQaValidationAssignmentWithAcceptanceMatrix(outputRoot, page);
+            var primaryRef = BuildStepArtifactRef(assignment);
+
+            var result = ToAdapterResult(
+                assignment,
+                new ProcessStepOutcomeResult
+                {
+                    Status = ProcessStepOutcomeStatus.Completed,
+                    Reason = "QA found the required workflow missing from the inspected product.",
+                    BranchOutcomeKey = "repair-required",
+                    BranchOutcomeTitle = "Repair required",
+                    EvidenceRefs = [primaryRef],
+                    AcceptanceCriteriaEvidence =
+                    [
+                        new ProcessAcceptanceCriterionEvidence
+                        {
+                            CriterionId = "AC-001",
+                            Status = ProcessAcceptanceCriterionEvidenceStatus.Failed,
+                            Summary = "The inspected product does not implement the required movement workflow.",
+                            EvidenceRefs = [primaryRef]
+                        }
+                    ],
+                    NextActions = ["Repair the missing workflow and re-run focused validation."]
+                },
+                [CreateToolReceipt("workspace_write_file", primaryRef, "Succeeded: Wrote QA defect evidence.")]);
 
             Assert.Equal(StrategyOutcome.Succeeded, result.Outcome);
             Assert.Contains(result.ManagerSignals, signal =>
@@ -3814,7 +4242,24 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
             LaunchVariables = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
             {
                 [ProcessRuntimeLaunchVariables.ProductCompletionRequiredToolReceipts] =
-                    "workspace_dotnet_restore;workspace_dotnet_build;workspace_dotnet_test"
+                    JsonSerializer.Serialize(new[]
+                    {
+                        new
+                        {
+                            toolName = "workspace_dotnet_restore",
+                            allowFailedExecutionReceipt = true
+                        },
+                        new
+                        {
+                            toolName = "workspace_dotnet_build",
+                            allowFailedExecutionReceipt = true
+                        },
+                        new
+                        {
+                            toolName = "workspace_dotnet_test",
+                            allowFailedExecutionReceipt = true
+                        }
+                    })
             }
         };
         var primaryRef = BuildStepArtifactRef(assignment);
@@ -4939,6 +5384,131 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
     }
 
     [Fact]
+    public async Task ExecuteAsync_reports_subprocess_launch_exception_as_non_retryable_manager_issue_before_invoking_parent_agent()
+    {
+        var parentRunId = ProcessRunId.New();
+        var agent = NewAgent(
+            ".NET Application Developer",
+            ".NET implementation specialist",
+            AgentWorkloadKind.Programming,
+            [
+                "software-engineer",
+                "dotnet"
+            ],
+            AgentWorkspaceToolProfileKind.ArchitectureReview);
+        var assignment = CreateSubprocessAssignment() with
+        {
+            RunId = parentRunId,
+            ExecutorId = agent.Id.ToString("D")
+        };
+        var launchCoordinator = new ThrowingSubprocessLaunchCoordinator(
+            new InvalidOperationException("Declared child launch contract cannot be prepared."));
+        var workspace = new ThrowingWorkspaceService(
+            agent,
+            new InvalidOperationException("The parent agent should not be invoked after a subprocess launch fault."));
+        var workspaceFiles = CreateWorkspaceFileService(out var workspaceRoot);
+
+        try
+        {
+            var adapter = CreateAdapter(
+                new FakeWorkspaceFactory(workspace),
+                CreateReferenceDataProvider(workspace),
+                new InMemoryAssignmentStore(assignment),
+                new InMemoryRuntimeStateStore(NewRuntimeState(parentRunId, parentRunId, ProcessRuntimeStatus.Active)),
+                workspaceFiles,
+                [launchCoordinator]);
+
+            var result = await adapter.ExecuteAsync(
+                new ProcessExecutionAdapterRequest(
+                    parentRunId,
+                    assignment.StepInstanceId,
+                    ProcessExecutionAdapterKind.Workflow,
+                    new ProcessExecutionAdapterOperationKey("execute"),
+                    Binding,
+                    [],
+                    []));
+
+            Assert.Equal(StrategyOutcome.NeedsManager, result.Outcome);
+            Assert.True(launchCoordinator.Called);
+            Assert.False(workspace.ExecuteRunCalled);
+            Assert.Contains(
+                result.Diagnostics,
+                diagnostic =>
+                    diagnostic.Code.Value == "process.adapter.subprocess_launch_failed" &&
+                    diagnostic.RetrySafety == ProcessDiagnosticRetrySafety.UnsafeToRetry &&
+                    diagnostic.Idempotency == ProcessDiagnosticIdempotencyClassification.Unknown);
+            Assert.Contains(
+                result.ManagerSignals,
+                signal => signal.Code.Value == "process.adapter.subprocess_launch_failed");
+        }
+        finally
+        {
+            DeleteDirectory(workspaceRoot);
+        }
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_converts_pending_child_reconciliation_failure_to_manager_issue()
+    {
+        var parentRunId = ProcessRunId.New();
+        var agent = NewAgent(
+            ".NET Application Developer",
+            ".NET implementation specialist",
+            AgentWorkloadKind.Programming,
+            [
+                "software-engineer",
+                "dotnet"
+            ],
+            AgentWorkspaceToolProfileKind.ArchitectureReview);
+        var assignment = CreateSubprocessAssignment() with
+        {
+            RunId = parentRunId,
+            ExecutorId = agent.Id.ToString("D")
+        };
+        var launchCoordinator = new ThrowingSubprocessLaunchCoordinator(
+            new InvalidOperationException("Declared child launch contract cannot be prepared."));
+        var workspace = new ThrowingWorkspaceService(
+            agent,
+            new InvalidOperationException("The parent agent should not be invoked after a subprocess launch fault."));
+        var workspaceFiles = CreateWorkspaceFileService(out var workspaceRoot);
+
+        try
+        {
+            var adapter = CreateAdapter(
+                new FakeWorkspaceFactory(workspace),
+                CreateReferenceDataProvider(workspace),
+                new InMemoryAssignmentStore(assignment),
+                new ThrowingRuntimeStateStore(new InvalidOperationException("Pending child state lookup failed.")),
+                workspaceFiles,
+                [launchCoordinator],
+                parentSubprocessArtifactBridge: new NoMatchingChildSubprocessArtifactBridge());
+
+            var result = await adapter.ExecuteAsync(
+                new ProcessExecutionAdapterRequest(
+                    parentRunId,
+                    assignment.StepInstanceId,
+                    ProcessExecutionAdapterKind.Workflow,
+                    new ProcessExecutionAdapterOperationKey("execute"),
+                    Binding,
+                    [],
+                    []));
+
+            Assert.Equal(StrategyOutcome.NeedsManager, result.Outcome);
+            Assert.True(launchCoordinator.Called);
+            Assert.False(workspace.ExecuteRunCalled);
+            Assert.Contains(
+                result.Diagnostics,
+                diagnostic =>
+                    diagnostic.Code.Value == "process.adapter.subprocess_launch_failed" &&
+                    diagnostic.RetrySafety == ProcessDiagnosticRetrySafety.UnsafeToRetry);
+        }
+        finally
+        {
+            DeleteDirectory(workspaceRoot);
+        }
+    }
+
+    [Fact]
     public async Task ExecuteAsync_completes_subprocess_parent_from_completed_child_without_reinvoking_agent()
     {
         var parentRunId = ProcessRunId.New();
@@ -4977,19 +5547,42 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
         var workspace = new ThrowingWorkspaceService(
             agent,
             new InvalidOperationException("The parent agent should not be reinvoked for a completed child run."));
+        var childState = NewRuntimeState(
+            parentRunId,
+            childRunId,
+            ProcessRuntimeStatus.Completed,
+            childAssignment,
+            ProcessRuntimeStepStatus.Completed,
+            [CreateProducedArtifactReceipt(childAssignment, childArtifactSlotId)]);
+        var childStepState = Assert.Single(childState.Steps);
+        childState = childState with
+        {
+            Steps =
+            [
+                childStepState with
+                {
+                    ArtifactDescriptors =
+                    [
+                        new ProcessArtifactSlotDescriptor(
+                            childArtifactSlotId,
+                            "slice-handoff",
+                            childAssignment.StepKey,
+                            "slice-handoff-packet",
+                            "Implementation slice handoff packet",
+                            "markdown",
+                            childEvidenceRef,
+                            ProcessArtifactMaterializationMode.AgentWritten)
+                    ]
+                }
+            ]
+        };
         var adapter = CreateAdapter(
             new FakeWorkspaceFactory(workspace),
             CreateReferenceDataProvider(workspace),
             new InMemoryAssignmentStore(assignment, childAssignment),
             new InMemoryRuntimeStateStore(
                 NewRuntimeState(parentRunId, parentRunId, ProcessRuntimeStatus.Active),
-                NewRuntimeState(
-                    parentRunId,
-                    childRunId,
-                    ProcessRuntimeStatus.Completed,
-                    childAssignment,
-                    ProcessRuntimeStepStatus.Completed,
-                    [CreateProducedArtifactReceipt(childAssignment, childArtifactSlotId)])),
+                childState),
             workspaceFiles);
 
         try
@@ -5485,7 +6078,8 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
                 workspaceFiles,
                 runtimeToolPreflightService: new ProcessRuntimeToolPreflightService(
                     [],
-                    [new DotNetSolutionSetupRuntimeToolPlanGuard()]));
+                    [new DotNetSolutionSetupRuntimeToolPlanGuard()],
+                    ProcessRuntimeToolPreflightContributionCatalog.Empty));
 
             var result = await adapter.ExecuteAsync(
                 new ProcessExecutionAdapterRequest(
@@ -5532,7 +6126,11 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
             RoleResourceKey = "dotnet-developer",
             RoleDisplayName = ".NET developer",
             ExecutorId = agent.Id.ToString("D"),
-            ExecutorDisplayName = agent.Name
+            ExecutorDisplayName = agent.Name,
+            LaunchVariables = new Dictionary<string, string>(StringComparer.Ordinal)
+            {
+                [ProcessRuntimeLaunchVariables.ProcessStepRuntimeOwnedExecutorKey] = FakeRuntimeOwnedStepExecutor.RuntimeOwnedExecutorKey
+            }
         };
         var executionRunId = Guid.NewGuid();
         var runtimeExecutor = new FakeRuntimeOwnedStepExecutor(new ProcessRuntimeOwnedStepExecutionResult(
@@ -5759,6 +6357,169 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
             Assert.Contains("Runtime Captured Structured Outcome", content, StringComparison.Ordinal);
             Assert.Contains("Runtime Accepted Completion Gates", content, StringComparison.Ordinal);
             Assert.Contains("Clarified the requested software scope.", content, StringComparison.Ordinal);
+        }
+        finally
+        {
+            DeleteDirectory(workspaceRoot);
+        }
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_blocks_schema_invalid_architecture_artifact_before_dependent_subprocess_launch()
+    {
+        var agent = NewAgent(
+            ".NET Solution Architect",
+            "Solution architect",
+            AgentWorkloadKind.Programming,
+            [
+                "solution-architect",
+                "dotnet",
+                "architecture"
+            ],
+            AgentWorkspaceToolProfileKind.ArchitectureReview);
+        var assignment = CreateManagedArtifactAssignment("slice-architecture-check", agent.Id);
+        var executionRunId = Guid.NewGuid();
+        var primaryRef = BuildStepArtifactRef(assignment);
+        var responseText = $$"""
+            {
+              "status": "Completed",
+              "reason": "The architecture decision is ready for downstream setup.",
+              "branchOutcomeKey": "",
+              "branchOutcomeTitle": "",
+              "evidenceRefs": ["{{primaryRef}}"],
+              "nextActions": [],
+              "humanReadableSummaryMarkdown": "Architecture decision completed."
+            }
+            """;
+        var workspace = new ThrowingWorkspaceService(
+            agent,
+            executeException: null,
+            executeResult: CreateExecutionRunResult(agent.Id, executionRunId, responseText),
+            executionDetail: CreateExecutionRunDetail(agent.Id, executionRunId, responseText, []));
+        var workspaceFiles = CreateWorkspaceFileService(out var workspaceRoot);
+        var descriptor = new ProcessArtifactSlotDescriptor(
+            assignment.ProducedArtifactSlotIds[0],
+            "slice-architecture-check:dotnet-solution-context",
+            assignment.StepKey,
+            "dotnet-solution-context",
+            ".NET solution context",
+            "Decision",
+            primaryRef,
+            ProcessArtifactMaterializationMode.AgentWritten)
+        {
+            PayloadSchema = DotNetSolutionContextParser.Schema
+        };
+        var stepContract = new ProcessStepExecutionContract(
+            [],
+            [new ExpectedProducedArtifactRef(descriptor.SlotId)],
+            [],
+            "sha256:architecture-context")
+        {
+            ArtifactDescriptors = [descriptor]
+        };
+
+        try
+        {
+            var adapter = CreateAdapter(
+                new FakeWorkspaceFactory(workspace),
+                CreateReferenceDataProvider(workspace),
+                new InMemoryAssignmentStore(assignment),
+                new InMemoryRuntimeStateStore(NewRuntimeState(assignment.RunId, assignment.RunId, ProcessRuntimeStatus.Active)),
+                workspaceFiles);
+
+            var result = await adapter.ExecuteAsync(
+                new ProcessExecutionAdapterRequest(
+                    assignment.RunId,
+                    assignment.StepInstanceId,
+                    ProcessExecutionAdapterKind.Workflow,
+                    new ProcessExecutionAdapterOperationKey("execute"),
+                    Binding,
+                    [],
+                    [])
+                {
+                    StepContract = stepContract
+                });
+
+            Assert.Equal(StrategyOutcome.NeedsManager, result.Outcome);
+            Assert.Contains(
+                result.Diagnostics,
+                diagnostic =>
+                    diagnostic.Code.Value == "process.adapter.artifact_payload_schema_invalid" &&
+                    diagnostic.RetrySafety == ProcessDiagnosticRetrySafety.SafeToRetry);
+            Assert.True(workspace.ExecuteRunCalled);
+            var artifact = workspaceFiles.ReadTextFile(primaryRef);
+            Assert.True(artifact.Succeeded);
+            Assert.Contains("Runtime Captured Structured Outcome", artifact.Content, StringComparison.Ordinal);
+            Assert.DoesNotContain("Runtime Accepted Completion Gates", artifact.Content, StringComparison.Ordinal);
+        }
+        finally
+        {
+            DeleteDirectory(workspaceRoot);
+        }
+    }
+
+    [Fact]
+    public void ToAdapterResult_blocks_schema_invalid_artifact_when_step_contract_is_supplied()
+    {
+        var assignment = CreateManagedArtifactAssignment("slice-architecture-check");
+        var primaryRef = BuildStepArtifactRef(assignment);
+        var descriptor = new ProcessArtifactSlotDescriptor(
+            assignment.ProducedArtifactSlotIds[0],
+            "slice-architecture-check:dotnet-solution-context",
+            assignment.StepKey,
+            "dotnet-solution-context",
+            ".NET solution context",
+            "Decision",
+            primaryRef,
+            ProcessArtifactMaterializationMode.AgentWritten)
+        {
+            PayloadSchema = DotNetSolutionContextParser.Schema
+        };
+        var stepContract = new ProcessStepExecutionContract(
+            [],
+            [new ExpectedProducedArtifactRef(descriptor.SlotId)],
+            [],
+            "sha256:architecture-context")
+        {
+            ArtifactDescriptors = [descriptor]
+        };
+        var workspaceFiles = CreateWorkspaceFileService(out var workspaceRoot);
+
+        try
+        {
+            Assert.True(workspaceFiles.WriteTextFile(primaryRef, "Status: Completed\n\nArchitecture narrative only.").Succeeded);
+            var toolReceiptPolicies = CreateToolReceiptPolicyCatalog();
+            var completionIssueResultFactory = new ProcessCompletionIssueResultFactory(
+                workspaceFiles,
+                ProcessCompletionDefectEvidenceCatalog.Empty);
+            var completionGateEvaluator = new ProcessCompletionGateFactory(
+                    toolReceiptPolicies,
+                    new ProcessToolReceiptEvidenceGate(workspaceFiles, []),
+                    [new DotNetSolutionContextCompletionGateContribution(workspaceFiles)],
+                    completionIssueResultFactory)
+                .CreateCompletionGateEvaluator();
+            var resultConverter = new ProcessExecutionResultConverter(
+                completionGateEvaluator,
+                toolReceiptPolicies,
+                completionIssueResultFactory);
+
+            var result = resultConverter.ToAdapterResult(
+                assignment,
+                new ProcessStepOutcomeResult
+                {
+                    Status = ProcessStepOutcomeStatus.Completed,
+                    Reason = "Architecture decision completed.",
+                    EvidenceRefs = [primaryRef],
+                    NextActions = [],
+                    HumanReadableSummaryMarkdown = "Architecture decision completed."
+                },
+                "sha256:raw",
+                stepContract: stepContract);
+
+            Assert.Equal(StrategyOutcome.NeedsManager, result.Outcome);
+            Assert.Contains(
+                result.Diagnostics,
+                diagnostic => diagnostic.Code.Value == ProcessCompletionDiagnosticCodes.ArtifactPayloadSchemaInvalid);
         }
         finally
         {
@@ -6257,6 +7018,99 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
                 diagnostic.Code.Value == "process.adapter.ungrounded_outcome_reference");
             Assert.DoesNotContain("managed-files", result.UserSafeSummary, StringComparison.OrdinalIgnoreCase);
             Assert.Contains(result.ProducedArtifacts, artifact => artifact.SlotId == assignment.ProducedArtifactSlotIds[0]);
+        }
+        finally
+        {
+            DeleteDirectory(workspaceRoot);
+        }
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_recovers_declared_branch_from_current_primary_artifact_when_finalizer_omits_it()
+    {
+        var agent = NewAgent(
+            ".NET Solution Architect",
+            "Solution architect",
+            AgentWorkloadKind.Programming,
+            ["dotnet", "solution-architect", "architecture"],
+            AgentWorkspaceToolProfileKind.ArchitectureReview);
+        var baseAssignment = CreateManagedArtifactAssignment("feature-repair", agent.Id);
+        var assignment = baseAssignment with
+        {
+            Prompt = """
+            Apply the repair and record the evidence.
+
+            Available branch outcomes:
+            - feature-repair-applied: Feature repair applied - The repair has current-run evidence.
+            """
+        };
+        var executionRunId = Guid.NewGuid();
+        var primaryRef = BuildStepArtifactRef(assignment);
+        var responseText = $$"""
+            {
+              "status": "Completed",
+              "reason": "Applied the repair and revalidated it.",
+              "branchOutcomeKey": "",
+              "branchOutcomeTitle": "",
+              "evidenceRefs": ["{{primaryRef}}"],
+              "nextActions": [],
+              "humanReadableSummaryMarkdown": "The finalizer omitted the branch key."
+            }
+            """;
+        var workspace = new ThrowingWorkspaceService(
+            agent,
+            executeException: null,
+            executeResult: CreateExecutionRunResult(agent.Id, executionRunId, responseText),
+            executionDetail: CreateExecutionRunDetail(
+                agent.Id,
+                executionRunId,
+                responseText,
+                [CreateToolReceipt(
+                    "workspace_write_file",
+                    primaryRef,
+                    "Succeeded: Created file.",
+                    executionRunId: executionRunId)]));
+        var workspaceFiles = CreateWorkspaceFileService(out var workspaceRoot);
+        try
+        {
+            var writeResult = workspaceFiles.WriteTextFile(
+                primaryRef,
+                """
+                # feature-repair Process Step Outcome
+
+                ## Status
+                Completed
+
+                ## Branch Outcome
+                - BranchOutcomeKey: feature-repair-applied
+                - BranchOutcomeTitle: Feature repair applied
+                """,
+                overwrite: true);
+            Assert.True(writeResult.Succeeded, writeResult.Message);
+
+            var adapter = CreateAdapter(
+                new FakeWorkspaceFactory(workspace),
+                CreateReferenceDataProvider(workspace),
+                new InMemoryAssignmentStore(assignment),
+                new InMemoryRuntimeStateStore(NewRuntimeState(assignment.RunId, assignment.RunId, ProcessRuntimeStatus.Active)),
+                workspaceFiles);
+
+            var result = await adapter.ExecuteAsync(
+                new ProcessExecutionAdapterRequest(
+                    assignment.RunId,
+                    assignment.StepInstanceId,
+                    ProcessExecutionAdapterKind.Workflow,
+                    new ProcessExecutionAdapterOperationKey("execute"),
+                    Binding,
+                    [],
+                    []));
+
+            Assert.Equal(StrategyOutcome.Succeeded, result.Outcome);
+            Assert.Contains(result.ProducedArtifacts, artifact => artifact.SlotId == assignment.ProducedArtifactSlotIds[0]);
+            Assert.Contains(result.ManagerSignals, signal =>
+                signal.Code.Value == ProcessBranchSignalCodes.Outcome("feature-repair-applied").Value);
+            Assert.DoesNotContain(result.Diagnostics, diagnostic =>
+                diagnostic.Code.Value == ProcessCompletionDiagnosticCodes.RequiredBranchOutcomeMissing);
         }
         finally
         {
@@ -6831,15 +7685,27 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
         Guid? currentExecutionRunId = null)
     {
         var toolReceiptPolicies = CreateToolReceiptPolicyCatalog();
+        var completionIssueResultFactory = new ProcessCompletionIssueResultFactory(
+            new WorkspaceFileService(Path.GetTempPath()),
+            new ProcessCompletionDefectEvidenceCatalog(
+            [
+                new BrowserConsoleDefectEvidenceContribution()
+            ]));
         var completionGateEvaluator = new ProcessCompletionGateFactory(
                 toolReceiptPolicies,
                 new ProcessToolReceiptEvidenceGate(new WorkspaceFileService(Path.GetTempPath()), []),
-                new ProcessRequiredProductSourceInspectionGate(),
-                new ProcessInteractiveUiAcceptanceGate())
+                [
+                    new WorkspaceProductSourceInspectionCompletionGateContribution(),
+                    new WorkspaceProductFilesystemCompletionGateContribution(),
+                    new BrowserRuntimeLifecycleCompletionGateContribution(),
+                    new BrowserInteractiveAcceptanceCompletionGateContribution()
+                ],
+                completionIssueResultFactory)
             .CreateCompletionGateEvaluator();
         var resultConverter = new ProcessExecutionResultConverter(
             completionGateEvaluator,
-            toolReceiptPolicies);
+            toolReceiptPolicies,
+            completionIssueResultFactory);
         var effectiveExecutionRunId = currentExecutionRunId ?? toolReceipts?.FirstOrDefault()?.ExecutionRunId;
         return resultConverter.ToAdapterResult(
             assignment,
@@ -7136,37 +8002,43 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
                 ["allowShellDelegation"] = true
             }),
             ["DotNetCreateProjectExecutionPlan"] =
-                $"Invoke workspace_dotnet_new for template 'sln'. Invoke workspace_dotnet_new for template 'blazorwasm'. Invoke workspace_pwsh_run_script with path '{scriptRef}', workingDirectory 'external-target/calculator', sideEffectManifest from DotNetCreateProjectSideEffectManifest. Read back the solution file.",
-            [ProcessRuntimeLaunchVariables.ProductCompletionRequiredToolReceiptsByStep] = JsonSerializer.Serialize(
-                new Dictionary<string, string[]>(StringComparer.Ordinal)
+                JsonSerializer.Serialize(new
                 {
-                    ["create-dotnet-project"] = (requiredReceipts ??
-                    [
-                        "template=sln",
-                        "template=blazorwasm",
-                        "workspace_pwsh_run_script"
-                    ]).ToArray()
+                    PlanKey = "dotnet.create-project",
+                    ScriptRef = scriptRef,
+                    WorkspaceAlias = "external-target/calculator",
+                    RequiresScaffold = true
                 }),
-            [ProcessRuntimeLaunchVariables.ProductCompletionRequiredPathsByStep] = JsonSerializer.Serialize(
-                new Dictionary<string, string[]>(StringComparer.Ordinal)
+            [ProcessRuntimeLaunchVariables.ProcessStepScriptHelperDescriptorJson] =
+                ProcessRuntimeLaunchVariables.SerializeProcessStepScriptHelperDescriptor(
+                    new ProcessRuntimeScriptHelperDescriptor(
+                        "DotNetCreateProjectScript",
+                        "DotNetCreateProjectScriptRef",
+                        "DotNetCreateProjectSideEffectManifest",
+                        "dotnet.create-project",
+                        "DotNetSolutionCreate",
+                        "DotNetCreateProjectExecutionPlan")),
+            [ProcessRuntimeLaunchVariables.ProductCompletionRequiredToolReceipts] = JsonSerializer.Serialize(
+                (requiredReceipts ??
+                [
+                    "template=sln",
+                    "template=blazorwasm",
+                    "workspace_pwsh_run_script"
+                ]).ToArray()),
+            [ProcessRuntimeLaunchVariables.ProductCompletionRequiredPaths] = JsonSerializer.Serialize(
+                new[]
                 {
-                    ["create-dotnet-project"] =
-                    [
-                        solutionFile,
-                        appProjectFile
-                    ]
+                    solutionFile,
+                    appProjectFile
                 }),
-            [ProcessRuntimeLaunchVariables.ProductCompletionRequiredFileContentChecksByStep] = JsonSerializer.Serialize(
-                new Dictionary<string, object[]>(StringComparer.Ordinal)
+            [ProcessRuntimeLaunchVariables.ProductCompletionRequiredFileContentChecks] = JsonSerializer.Serialize(
+                new object[]
                 {
-                    ["create-dotnet-project"] =
-                    [
-                        new Dictionary<string, object>(StringComparer.Ordinal)
-                        {
-                            ["pathCandidates"] = new[] { solutionFile },
-                            ["requiredTextAnyGroups"] = new[] { new[] { "src/Calculator/Calculator.csproj" } }
-                        }
-                    ]
+                    new Dictionary<string, object>(StringComparer.Ordinal)
+                    {
+                        ["pathCandidates"] = new[] { solutionFile },
+                        ["requiredTextAnyGroups"] = new[] { new[] { "src/Calculator/Calculator.csproj" } }
+                    }
                 })
         };
     }
@@ -7226,7 +8098,37 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
             new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
             {
                 [ProcessRuntimeLaunchVariables.ProcessStepKind] = ProcessTemplateStepKinds.Subprocess,
-                [ProcessRuntimeLaunchVariables.ProcessStepSubprocessDefinitionKey] = "dotnet-development-slice"
+                [ProcessRuntimeLaunchVariables.ProcessStepSubprocessDefinitionKey] = "dotnet-development-slice",
+                [ProcessRuntimeLaunchVariables.ProcessStepSubprocessContractJson] =
+                    ProcessRuntimeLaunchVariables.SerializeProcessStepSubprocessContract(
+                        new ProcessSubprocessContract
+                        {
+                            DefinitionKey = "dotnet-development-slice",
+                            LaunchMode = ProcessSubprocessLaunchMode.RuntimeOwned,
+                            ParentProducedArtifactExpectationKey = "implementation-change-set",
+                            AcceptedChildOutputs =
+                            [
+                                new ProcessSubprocessChildOutputContract
+                                {
+                                    StepKey = "slice-handoff",
+                                    ArtifactExpectationKey = "slice-handoff-packet",
+                                    ArtifactTitle = "Implementation slice handoff packet"
+                                },
+                                new ProcessSubprocessChildOutputContract
+                                {
+                                    StepKey = "slice-handoff-after-repair",
+                                    ArtifactExpectationKey = "slice-handoff-packet-after-repair",
+                                    ArtifactTitle = "Implementation slice handoff packet after repair"
+                                },
+                                new ProcessSubprocessChildOutputContract
+                                {
+                                    StepKey = "slice-handoff-after-manager-repair",
+                                    ArtifactExpectationKey = "slice-handoff-packet-after-manager-repair",
+                                    ArtifactTitle = "Implementation slice handoff packet after manager-assisted repair"
+                                }
+                            ],
+                            MaterializationMode = ProcessSubprocessMaterializationMode.RuntimeSynthesizedParentHandoff
+                        })
             },
             BranchGate: null,
             DateTimeOffset.UtcNow);
@@ -7279,23 +8181,35 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
         IEnumerable<IProcessRuntimeOwnedStepExecutor>? runtimeOwnedStepExecutors = null)
     {
         var toolReceiptPolicies = CreateToolReceiptPolicyCatalog();
+        var completionIssueResultFactory = new ProcessCompletionIssueResultFactory(
+            workspaceFiles,
+            new ProcessCompletionDefectEvidenceCatalog(
+            [
+                new BrowserConsoleDefectEvidenceContribution()
+            ]));
         var completionGateEvaluator = new ProcessCompletionGateFactory(
                 toolReceiptPolicies,
                 new ProcessToolReceiptEvidenceGate(
                     workspaceFiles,
-                    [new DotNetBrowserSnapshotEvidencePolicyContribution()]),
-                new ProcessRequiredProductSourceInspectionGate(),
-                new ProcessInteractiveUiAcceptanceGate())
+                    []),
+                [
+                    new WorkspaceProductSourceInspectionCompletionGateContribution(),
+                    new WorkspaceProductFilesystemCompletionGateContribution(),
+                    new DotNetSolutionContextCompletionGateContribution(workspaceFiles),
+                    new BrowserRuntimeLifecycleCompletionGateContribution(),
+                    new BrowserInteractiveAcceptanceCompletionGateContribution()
+                ],
+                completionIssueResultFactory)
             .CreateCompletionGateEvaluator();
         var resultConverter = new ProcessExecutionResultConverter(
             completionGateEvaluator,
-            toolReceiptPolicies);
-        var subprocessContractResolver = new ProcessSubprocessContractResolver(
-            [new DotNetSoftwareDeliverySubprocessContractProvider()]);
+            toolReceiptPolicies,
+            completionIssueResultFactory);
+        var subprocessContractResolver = new ProcessSubprocessContractResolver();
         var managedArtifactService = new ProcessManagedArtifactService(workspaceFiles);
         var groundingValidator = new ProcessOutcomeGroundingValidator(workspaceFiles);
         var completionCoordinator = new ProcessStepCompletionCoordinator(
-            new ProcessCompletionIssueResultFactory(workspaceFiles),
+            completionIssueResultFactory,
             managedArtifactService,
             groundingValidator,
             completionGateEvaluator,
@@ -7313,17 +8227,26 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
         var runtimeOwnedStepCoordinator = new ProcessRuntimeOwnedStepCoordinator(
             runtimeOwnedStepExecutors ?? [],
             completionCoordinator);
+        var effectiveRuntimeToolPreflightService = runtimeToolPreflightService ??
+            new ProcessRuntimeToolPreflightService(
+                [],
+                [],
+                ProcessRuntimeToolPreflightContributionCatalog.Empty);
         var executor = new AgentFrameworkProcessStepExecutor(
             workspaceFactory,
             agentReferenceDataProvider,
             assignmentStore,
             stateStore,
-            runtimeToolPreflightService!,
+            effectiveRuntimeToolPreflightService,
             runtimeOwnedStepCoordinator,
             subprocessCoordinator,
             completionCoordinator,
             subprocessContractResolver,
-            new ProcessParentSubprocessArtifactContextHydrator(workspaceFiles));
+            new ProcessParentSubprocessArtifactContextHydrator(workspaceFiles),
+            new ProcessExecutionMetadataComposer(
+            [
+                new BrowserExecutionMetadataContribution()
+            ]));
         return new AgentFrameworkProcessExecutionAdapter(executor);
     }
 
@@ -7642,6 +8565,10 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
 
     private sealed class FakeRuntimeOwnedStepExecutor(ProcessRuntimeOwnedStepExecutionResult? result) : IProcessRuntimeOwnedStepExecutor
     {
+        public const string RuntimeOwnedExecutorKey = "test.runtime-owned";
+
+        public string ExecutorKey => RuntimeOwnedExecutorKey;
+
         public int CallCount { get; private set; }
 
         public ValueTask<ProcessRuntimeOwnedStepExecutionResult?> TryExecuteAsync(
@@ -7858,6 +8785,19 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
         }
     }
 
+    private sealed class ThrowingSubprocessLaunchCoordinator(Exception exception) : IProcessSubprocessLaunchCoordinator
+    {
+        public bool Called { get; private set; }
+
+        public ValueTask<ProcessSubprocessLaunchCoordinatorResult?> TryLaunchAsync(
+            ProcessSubprocessLaunchCoordinatorRequest request,
+            CancellationToken cancellationToken = default)
+        {
+            Called = true;
+            throw exception;
+        }
+    }
+
     private sealed class InMemoryRuntimeStateStore(params ProcessRuntimeStateSnapshot[] states) : IProcessRuntimeStateStore
     {
         private readonly IReadOnlyDictionary<ProcessRunId, ProcessRuntimeStateSnapshot> stateByRunId =
@@ -7870,6 +8810,28 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
             stateByRunId.TryGetValue(runId, out var state);
             return Task.FromResult(state);
         }
+    }
+
+    private sealed class ThrowingRuntimeStateStore(Exception exception) : IProcessRuntimeStateStore
+    {
+        public Task<ProcessRuntimeStateSnapshot?> LoadAsync(
+            ProcessRunId runId,
+            CancellationToken cancellationToken = default)
+            => Task.FromException<ProcessRuntimeStateSnapshot?>(exception);
+    }
+
+    private sealed class NoMatchingChildSubprocessArtifactBridge : IParentSubprocessArtifactBridge
+    {
+        public ValueTask<ParentSubprocessArtifactBridgeResult> ResolveExistingAsync(
+            ProcessRuntimeStepAssignment assignment,
+            CancellationToken cancellationToken = default)
+            => ValueTask.FromResult(ParentSubprocessArtifactBridgeResult.NoMatchingChildRun);
+
+        public ValueTask<ParentSubprocessArtifactBridgeResult> ResolveFromOutputAsync(
+            ProcessRuntimeStepAssignment assignment,
+            ProcessStepOutcomeResult output,
+            CancellationToken cancellationToken = default)
+            => ValueTask.FromResult(ParentSubprocessArtifactBridgeResult.NoMatchingChildRun);
     }
 
     private sealed class InMemoryAssignmentStore(params ProcessRuntimeStepAssignment[] initialAssignments) : IProcessRuntimeStepAssignmentStore

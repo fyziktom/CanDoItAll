@@ -448,6 +448,9 @@ internal static class MafProviderRuntimeSettings
     public static TimeSpan ResolveStreamingIdleTimeout(ProviderProfile provider)
         => ResolveNetworkTimeout(provider) + StreamingIdleTimeoutGrace;
 
+    public static TimeSpan ResolveStreamingAbsoluteTimeout(ProviderProfile provider)
+        => TimeSpan.FromTicks(checked(ResolveStreamingIdleTimeout(provider).Ticks * 2));
+
     public static bool ShouldUseDefaultOpenAiEndpoint(string? baseUrl)
     {
         if (string.IsNullOrWhiteSpace(baseUrl))

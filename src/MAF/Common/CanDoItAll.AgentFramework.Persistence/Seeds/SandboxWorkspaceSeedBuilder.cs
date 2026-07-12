@@ -80,7 +80,11 @@ internal static class SandboxWorkspaceSeedBuilder
                 true,
                 true,
                 false,
-                SerializeConfiguration(new { history = "framework-managed", timeoutSeconds = 600 }),
+                SerializeConfiguration(new
+                {
+                    history = "framework-managed",
+                    timeoutSeconds = ManagedSeedProviderFallbacks.OpenAiDefaultTimeoutSeconds
+                }),
                 "Chat-completions profile for local history, approvals, compaction, and workload-specific skill runs.",
                 "Not checked",
                 null,
@@ -572,6 +576,7 @@ internal static class SandboxWorkspaceSeedBuilder
         return SerializeConfiguration(new
         {
             history,
+            timeoutSeconds = ManagedSeedProviderFallbacks.OpenAiDefaultTimeoutSeconds,
             reasoningEffort = ManagedSeedProviderFallbacks.DefaultReasoningEffort,
             modelParameters = new
             {

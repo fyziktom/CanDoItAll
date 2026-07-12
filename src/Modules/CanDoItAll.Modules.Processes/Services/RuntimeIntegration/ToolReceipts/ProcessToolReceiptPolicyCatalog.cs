@@ -14,8 +14,8 @@ internal sealed class ProcessToolReceiptPolicyCatalog
         this.contributions = contributions.ToArray();
     }
 
-    public bool IsProductMutationTool(string toolName)
-        => contributions.Any(contribution => contribution.IsProductMutationTool(toolName));
+    public bool IsProductMutationReceipt(ToolExecutionReceiptRecord receipt)
+        => contributions.Any(contribution => contribution.IsProductMutationReceipt(receipt));
 
     public bool IsProductValidationTool(string toolName)
         => contributions.Any(contribution => contribution.IsProductValidationTool(toolName));
@@ -43,35 +43,4 @@ internal sealed class ProcessToolReceiptPolicyCatalog
             .Where(term => !string.IsNullOrWhiteSpace(term))
             .Distinct(StringComparer.OrdinalIgnoreCase);
 
-    public bool TryResolveScriptHelper(
-        ProcessRuntimeStepAssignment assignment,
-        out ProcessScriptHelperDescriptor descriptor)
-    {
-        var matches = contributions
-            .Select(contribution => contribution.TryResolveScriptHelper(assignment, out var candidate)
-                ? candidate
-                : null)
-            .Where(candidate => candidate is not null)
-            .ToArray();
-        switch (matches.Length)
-        {
-            case 0:
-                descriptor = null!;
-                return false;
-
-            case 1:
-                descriptor = matches[0]!;
-                return true;
-
-            default:
-                throw new InvalidOperationException(
-                    $"Multiple process tool receipt policies supplied script-helper guidance for step '{assignment.StepKey}'. Policy ownership must be unambiguous.");
-        }
-    }
-
-    public bool AllowsCompletedOutcomeWithDeclaredBlockers(
-        ProcessRuntimeStepAssignment assignment,
-        ProcessStepOutcomeResult output)
-        => contributions.Any(contribution =>
-            contribution.AllowsCompletedOutcomeWithDeclaredBlockers(assignment, output));
 }

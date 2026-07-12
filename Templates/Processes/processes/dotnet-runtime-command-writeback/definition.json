@@ -145,6 +145,9 @@
       "DocRefs": [
         "processes/dotnet-runtime-command-writeback/steps/resolve-dotnet-run-commands.md"
       ],
+      "ExecutionGuidanceRefs": [
+        "processes/dotnet-runtime-command-writeback/steps/resolve-dotnet-run-commands.md"
+      ],
       "AllowedOperations": [
         "ReadProcessContext",
         "ReadProjectStructure",
@@ -226,6 +229,9 @@
       "DocRefs": [
         "processes/dotnet-runtime-command-writeback/steps/write-run-command-nodes.md"
       ],
+      "ExecutionGuidanceRefs": [
+        "processes/dotnet-runtime-command-writeback/steps/write-run-command-nodes.md"
+      ],
       "AllowedOperations": [
         "ReadProcessContext",
         "ReadProjectStructure",
@@ -299,6 +305,9 @@
       "ValidationRefs": [],
       "PromptRefs": [],
       "DocRefs": [
+        "processes/dotnet-runtime-command-writeback/steps/runtime-command-handoff.md"
+      ],
+      "ExecutionGuidanceRefs": [
         "processes/dotnet-runtime-command-writeback/steps/runtime-command-handoff.md"
       ],
       "AllowedOperations": [

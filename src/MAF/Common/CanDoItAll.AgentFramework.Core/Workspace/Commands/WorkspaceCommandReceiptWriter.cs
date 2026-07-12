@@ -33,7 +33,8 @@ internal sealed class WorkspaceCommandReceiptWriter
         IReadOnlyList<string> targetPaths,
         bool mutatesWorkspace,
         string message,
-        WorkspaceProcessExecutionResult processResult)
+        WorkspaceProcessExecutionResult processResult,
+        ToolExecutionSideEffectMode declaredSideEffectMode = ToolExecutionSideEffectMode.Unspecified)
     {
         var artifactDirectory = ResolveArtifactDirectory(recipeId, processResult.StartedAtUtc);
         Directory.CreateDirectory(artifactDirectory.FullPath);
@@ -134,7 +135,8 @@ internal sealed class WorkspaceCommandReceiptWriter
             workingDirectory: workingDirectory,
             exitSummary: processResult.Started
                 ? $"{outcome} (exit {processResult.ExitCode})"
-                : $"Failed ({processResult.FailureMessage})");
+                : $"Failed ({processResult.FailureMessage})",
+            declaredSideEffectMode: declaredSideEffectMode);
     }
 
     public WorkspaceToolReceipt PersistDescriptorReceipt(
@@ -223,7 +225,8 @@ internal sealed class WorkspaceCommandReceiptWriter
         string isolationGuarantee,
         string requestSummary,
         string workingDirectory,
-        string exitSummary)
+        string exitSummary,
+        ToolExecutionSideEffectMode declaredSideEffectMode = ToolExecutionSideEffectMode.Unspecified)
     {
         var receipt = new WorkspaceToolReceipt(
             Operation: operation,
@@ -237,7 +240,8 @@ internal sealed class WorkspaceCommandReceiptWriter
             StartedAtUtc: startedAtUtc,
             CompletedAtUtc: completedAtUtc)
         {
-            ExecutionRunId = WorkspaceExecutionAuditContext.Current?.ExecutionRunId
+            ExecutionRunId = WorkspaceExecutionAuditContext.Current?.ExecutionRunId,
+            DeclaredSideEffectMode = declaredSideEffectMode
         };
 
         WorkspaceExecutionAuditTrailWriter.PersistReceipt(

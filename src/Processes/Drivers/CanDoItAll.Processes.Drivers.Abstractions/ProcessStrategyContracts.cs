@@ -91,7 +91,10 @@ public sealed record ProcessArtifactSlotDescriptor(
     string ArtifactTitle,
     string ArtifactKind,
     string PrimaryManagedRef,
-    ProcessArtifactMaterializationMode MaterializationMode);
+    ProcessArtifactMaterializationMode MaterializationMode)
+{
+    public string PayloadSchema { get; init; } = string.Empty;
+}
 
 public sealed record SubprocessArtifactMappingDescriptor(
     ArtifactSlotId ParentSlotId,

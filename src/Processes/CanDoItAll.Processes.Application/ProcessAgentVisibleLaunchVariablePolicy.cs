@@ -19,6 +19,7 @@ internal static class ProcessAgentVisibleLaunchVariablePolicy
         ProcessRuntimeLaunchVariables.ProductMutationRequiredBranchOutcomeKeysByStep,
         ProcessRuntimeLaunchVariables.ProductMutationBeforeManagedOutputRequiredStepKeys,
         ProcessRuntimeLaunchVariables.ProductMutationToolNames,
+        ProcessRuntimeLaunchVariables.RuntimeRoutedBranchOutcomeKeys,
         ProcessRuntimeLaunchVariables.RuntimeRoutedBranchOutcomeKeysByStep,
         ProcessRuntimeLaunchVariables.ExecutorPreferredSpecializationTags,
         ProcessRuntimeLaunchVariables.ProductSourceInspectionRequiredStepKeys,
@@ -28,6 +29,7 @@ internal static class ProcessAgentVisibleLaunchVariablePolicy
         ProcessRuntimeLaunchVariables.CompletionIssueRoutesByStep,
         ProcessRuntimeLaunchVariables.AcceptanceCriteriaMatrix,
         ProcessRuntimeLaunchVariables.AcceptanceCriteriaAcceptedBranchOutcomeKeys,
+        ProcessRuntimeLaunchVariables.ProcessStepRuntimeOwnedExecutorKey,
         ProcessRuntimeLaunchVariables.ProcessStepScopedLaunchVariablePrefixesByStep
     };
 

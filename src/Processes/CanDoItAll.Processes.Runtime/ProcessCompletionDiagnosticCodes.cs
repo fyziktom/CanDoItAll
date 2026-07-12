@@ -4,6 +4,7 @@ public static class ProcessCompletionDiagnosticCodes
 {
     public const string ProductMutationReceiptMissing = "process.adapter.product_mutation_receipt_missing";
     public const string ManagedArtifactWriteReceiptMissing = "process.adapter.produced_artifact_write_receipt_missing";
+    public const string ArtifactPayloadSchemaInvalid = "process.adapter.artifact_payload_schema_invalid";
     public const string ProductRequiredToolReceiptMissing = "process.adapter.product_required_tool_receipt_missing";
     public const string ToolReceiptEvidenceContentRejected = "process.adapter.tool_receipt_evidence_content_rejected";
     public const string ProductSourceInspectionEvidenceMissing = "process.adapter.product_source_inspection_evidence_missing";

@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Text.Json;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Processes.Application;
 using CanDoItAll.Processes.Contracts;
@@ -169,12 +170,12 @@ public sealed class ProcessDefinitionCatalogProjectionTests
         Assert.Contains("Budget the tool loop around product mutation", codeChange.Notes, StringComparison.Ordinal);
         Assert.Contains("one bounded current-run product mutation operation", codeChange.Notes, StringComparison.Ordinal);
         Assert.Contains("scoped to the grounded target", codeChange.Notes, StringComparison.Ordinal);
-        Assert.Contains("System.Net.Http.Json", codeChange.Notes, StringComparison.Ordinal);
-        Assert.Contains("@inherits <BaseClass>", codeChange.Notes, StringComparison.Ordinal);
+        Assert.DoesNotContain("System.Net.Http.Json", codeChange.Notes, StringComparison.Ordinal);
+        Assert.DoesNotContain("@inherits <BaseClass>", codeChange.Notes, StringComparison.Ordinal);
         Assert.Contains("invalid generated test", codeChange.Notes, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("Do not cite stale source document paths", codeChange.Notes, StringComparison.Ordinal);
-        Assert.Contains("Do not create a separate ComponentBase class", codeChange.Notes, StringComparison.Ordinal);
-        Assert.Contains("shared _Imports.razor repairs", featureRepair.Notes, StringComparison.Ordinal);
+        Assert.DoesNotContain("ComponentBase", codeChange.Notes, StringComparison.Ordinal);
+        Assert.DoesNotContain("shared _Imports.razor repairs", featureRepair.Notes, StringComparison.Ordinal);
         Assert.Contains(
             featureRepair.BranchOutcomes,
             branch => string.Equals(branch.Key, "repair-attempt-incomplete", StringComparison.Ordinal));
@@ -186,7 +187,8 @@ public sealed class ProcessDefinitionCatalogProjectionTests
             targetedRecheck.Dependencies,
             dependency => dependency.DependsOnStepKey == "feature-repair" &&
                           dependency.DependsOnBranchOutcomeKey == "feature-repair-applied");
-        Assert.Contains("Razor component symbol errors", featureRepair.Notes, StringComparison.Ordinal);
+        Assert.Contains("derive the owning source, symbol, import, registration, and runtime boundary", featureRepair.Notes, StringComparison.Ordinal);
+        Assert.Contains("without assuming a stock scaffold layout or generated component", featureRepair.Notes, StringComparison.Ordinal);
         Assert.Contains("current-run build/test receipts prove the corrected validation target no longer reproduces the defect", featureRepair.Notes, StringComparison.Ordinal);
         Assert.Contains("do not write Status: Completed by relying on inspection", featureRepair.Notes, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("failing generated test", featureRepair.Notes, StringComparison.OrdinalIgnoreCase);
@@ -245,47 +247,15 @@ public sealed class ProcessDefinitionCatalogProjectionTests
         Assert.DoesNotContain(ProcessOperationContractNames.CaptureRuntimeProof, addTestsRecheck.AllowedOperations);
         Assert.DoesNotContain("read-only", addTestsAndProof.Subtitle, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("read-only", addTestsRecheck.Subtitle, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("validation-command ownership", addTestsAndProof.Notes, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("validation-command ownership", addTestsRecheck.Notes, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("workspace_dotnet_restore", addTestsAndProof.Notes, StringComparison.Ordinal);
-        Assert.Contains("missing receipts are not a repair finding by themselves", addTestsAndProof.Notes, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("Managed artifact evidence rule", addTestsAndProof.Notes, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("Do not put product source/test file aliases", addTestsAndProof.Notes, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("grounded receipt-based proof instead of selecting slice-repair-required", addTestsAndProof.Notes, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("workspace_dotnet_test", addTestsRecheck.Notes, StringComparison.Ordinal);
-        Assert.Contains("missing receipts are not an escalation finding by themselves", addTestsRecheck.Notes, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("Managed artifact evidence rule", addTestsRecheck.Notes, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("Do not put product source/test file aliases", addTestsRecheck.Notes, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("grounded receipt-based proof instead of selecting slice-repair-escalation", addTestsRecheck.Notes, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("root runtime-command and screenshot writeback steps", addTestsAndProof.Notes, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("typed dotnet-solution-context artifact first", addTestsAndProof.Notes, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("typed dotnet-solution-context artifact first", addTestsRecheck.Notes, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("without constructing conventional names or layouts", addTestsAndProof.Notes, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("without constructing conventional names or layouts", addTestsRecheck.Notes, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("<SolutionName>", addTestsAndProof.Notes, StringComparison.Ordinal);
+        Assert.DoesNotContain("<SolutionName>", addTestsRecheck.Notes, StringComparison.Ordinal);
         Assert.Contains("root runtime-command and screenshot writeback steps", addTestsRecheck.EvidenceContractSummary, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain(ProcessOperationContractNames.ExecuteExternalAction, addTestsAndProof.AllowedOperations);
         Assert.DoesNotContain(ProcessOperationContractNames.ExecuteExternalAction, addTestsRecheck.AllowedOperations);
-        Assert.Contains("current-run implement-code-change coordinator artifact", addTestsAndProof.Notes, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("trace links, not direct read requirements", addTestsAndProof.Notes, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("trace links, not direct read requirements", addTestsRecheck.Notes, StringComparison.OrdinalIgnoreCase);
-        Assert.DoesNotContain("read-only QA step", addTestsAndProof.Notes, StringComparison.OrdinalIgnoreCase);
-        Assert.DoesNotContain("read-only QA step", addTestsRecheck.Notes, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("dotnet restore", addTestsAndProof.Notes, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("dotnet build --no-restore", addTestsAndProof.Notes, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("dotnet test --no-restore", addTestsAndProof.Notes, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("resolve the actual solution target", addTestsAndProof.Notes, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains(".slnx", addTestsAndProof.Notes, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("never synthesize or require <SolutionName>.sln", addTestsAndProof.Notes, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("rerun the current-run validation chain against the discovered .slnx or .sln target", addTestsAndProof.Notes, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("do not call workspace_git_status as a validation precondition", addTestsAndProof.Notes, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("not a git repository result", addTestsAndProof.Notes, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("continue immediately with product-root file listing plus the restore/build/test validation chain", addTestsAndProof.Notes, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("dotnet restore", addTestsRecheck.Notes, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("dotnet build --no-restore", addTestsRecheck.Notes, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("dotnet test --no-restore", addTestsRecheck.Notes, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("resolve the actual solution target", addTestsRecheck.Notes, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains(".slnx", addTestsRecheck.Notes, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("never synthesize or require <SolutionName>.sln", addTestsRecheck.Notes, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("rerun the current-run validation chain against the discovered .slnx or .sln target", addTestsRecheck.Notes, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("do not call workspace_git_status as a validation precondition", addTestsRecheck.Notes, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("not a git repository result", addTestsRecheck.Notes, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("continue immediately with product-root file listing plus the restore/build/test validation chain", addTestsRecheck.Notes, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -306,13 +276,14 @@ public sealed class ProcessDefinitionCatalogProjectionTests
             "classify-dotnet-application.md"));
 
         Assert.NotNull(classify);
-        Assert.Contains("cite those launch variable names as source evidence", classify.Notes, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("Do not cite source document paths, native absolute paths", classify.Notes, StringComparison.Ordinal);
-        Assert.Contains("even when those path-like values appear in the current step brief", classify.Notes, StringComparison.Ordinal);
-        Assert.Contains("cite those launch variable names as source evidence", classifyDoc, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("project structure and scope identify the intended app type", classify.Notes, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Cite stable project-structure node ids", classify.Notes, StringComparison.Ordinal);
+        Assert.DoesNotContain("DotNetAppArchetype", classify.Notes, StringComparison.Ordinal);
+        Assert.Contains("Classify the intended app type only from the project structure", classifyDoc, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("stable project-structure node ids, artifact refs, titles", classifyDoc, StringComparison.Ordinal);
+        Assert.DoesNotContain("DotNetAppArchetype", classifyDoc, StringComparison.Ordinal);
         Assert.Contains("Do not cite source document paths, native absolute paths", classifyDoc, StringComparison.Ordinal);
-        Assert.Contains("even when those path-like values appear in the current step brief", classifyDoc, StringComparison.Ordinal);
-        Assert.Contains("stable document id, project-structure node id, title, or current-run workspace tool receipt", classifyDoc, StringComparison.Ordinal);
+        Assert.Contains("Cite stable project-structure node ids, artifact refs, titles, or current-run workspace tool receipts", classifyDoc, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -330,35 +301,72 @@ public sealed class ProcessDefinitionCatalogProjectionTests
         Assert.Contains(ProcessOperationContractNames.CaptureRuntimeProof, qaValidation.AllowedOperations);
         Assert.Contains(ProcessOperationContractNames.LaunchRuntime, qaRecheck.AllowedOperations);
         Assert.Contains(ProcessOperationContractNames.CaptureRuntimeProof, qaRecheck.AllowedOperations);
-        Assert.Contains("missing restore/build/test receipts are not a reason to route repair", qaValidation.Notes, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("run restore and then rerun build/test", qaValidation.Notes, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("runtime-forwarded typed child context", qaValidation.Notes, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("without constructing conventional names or layouts", qaValidation.Notes, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("missing restore/build/test receipts must trigger validation execution first", qaValidation.ExceptionPolicySummary, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("do not call workspace_git_status as a validation precondition", qaValidation.Notes, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("not a git repository result", qaValidation.Notes, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("continue immediately with product-root file listing plus the restore/build/test validation chain", qaValidation.Notes, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("do not probe a guessed product-root <App>.csproj", qaValidation.ExceptionPolicySummary, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("ask a manager to assign another agent", qaValidation.ExceptionPolicySummary, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("grounded external-target aliases", qaValidation.Notes, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("final submit_process_step_outcome evidenceRefs", qaValidation.Notes, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("exact restore/build/test receipt refs", qaValidation.EvidenceContractSummary, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("missing restore/build/test receipts are not a reason to escalate", qaRecheck.Notes, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("runtime-forwarded typed child context", qaRecheck.Notes, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("without constructing conventional names or layouts", qaRecheck.Notes, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("required current-run repaired validation was attempted", qaRecheck.ExceptionPolicySummary, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("do not call workspace_git_status as a validation precondition", qaRecheck.Notes, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("not a git repository result", qaRecheck.Notes, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("grounded external-target aliases", qaRecheck.Notes, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("final submit_process_step_outcome evidenceRefs", qaRecheck.Notes, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("exact restore/build/test receipt refs", qaRecheck.EvidenceContractSummary, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("continue immediately with product-root file listing plus the restore/build/test validation chain", qaRecheck.Notes, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("do not probe a guessed product-root <App>.csproj", qaRecheck.ExceptionPolicySummary, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("ask a manager to assign another agent", qaRecheck.ExceptionPolicySummary, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("workspace_dotnet_run", qaValidation.Notes, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("workspace_analyze_images", qaValidation.EvidenceContractSummary, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("stock scaffold UI", qaValidation.Notes, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("missing interaction proof", qaValidation.Notes, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("workspace_dotnet_run", qaRecheck.Notes, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("workspace_analyze_images", qaRecheck.EvidenceContractSummary, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("stock scaffold UI", qaRecheck.Notes, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("missing interaction proof", qaRecheck.Notes, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void Software_delivery_propagates_architecture_and_validation_plan_to_implementation_qa_and_repair()
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        var loader = new ProcessTemplatePackLoader(Path.Combine(repositoryRoot, "Templates", "Processes"));
+        var delivery = loader.LoadDefinition("software-delivery");
+        var architecture = loader.LoadDefinition("dotnet-architecture-design-review");
+
+        var architectureReview = Assert.Single(delivery.Steps, step => string.Equals(step.Key, "architecture-review", StringComparison.Ordinal));
+        var implementation = Assert.Single(delivery.Steps, step => string.Equals(step.Key, "implementation", StringComparison.Ordinal));
+        var qaValidation = Assert.Single(delivery.Steps, step => string.Equals(step.Key, "qa-validation", StringComparison.Ordinal));
+        var qualityRepair = Assert.Single(delivery.Steps, step => string.Equals(step.Key, "quality-repair", StringComparison.Ordinal));
+        var qaRecheck = Assert.Single(delivery.Steps, step => string.Equals(step.Key, "qa-recheck", StringComparison.Ordinal));
+        var validationPlan = Assert.Single(architecture.Steps, step => string.Equals(step.Key, "design-validation-plan", StringComparison.Ordinal));
+        var sliceIntakeDoc = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Templates",
+            "Processes",
+            "processes",
+            "dotnet-development-slice",
+            "steps",
+            "slice-intake.md"));
+
+        Assert.Contains(architectureReview.ArtifactExpectations, artifact =>
+            string.Equals(artifact.Key, "acceptance-validation-plan", StringComparison.Ordinal) &&
+            string.Equals(artifact.SubprocessChildStepKey, "design-validation-plan", StringComparison.Ordinal));
+        Assert.Equal("implementation-plan", validationPlan.ArtifactExpectations.Single(artifact =>
+            string.Equals(artifact.Key, "acceptance-validation-plan", StringComparison.Ordinal)).TemplateKey);
+
+        var architectureContract = Assert.IsType<ProcessSubprocessContract>(architectureReview.SubprocessContract);
+        Assert.Contains(architectureContract.AcceptedChildOutputs, output =>
+            string.Equals(output.StepKey, "design-validation-plan", StringComparison.Ordinal) &&
+            string.Equals(output.ArtifactExpectationKey, "acceptance-validation-plan", StringComparison.Ordinal));
+
+        foreach (var step in new[] { implementation, qaValidation, qualityRepair, qaRecheck })
+        {
+            Assert.Contains(step.ArtifactInputs, input =>
+                string.Equals(input.ArtifactExpectationKey, "architecture-decision-record", StringComparison.Ordinal) &&
+                string.Equals(input.SourceStepKey, "architecture-review", StringComparison.Ordinal));
+            Assert.Contains(step.ArtifactInputs, input =>
+                string.Equals(input.ArtifactExpectationKey, "acceptance-validation-plan", StringComparison.Ordinal) &&
+                string.Equals(input.SourceStepKey, "architecture-review", StringComparison.Ordinal));
+        }
+
+        Assert.Contains("ProductAcceptanceCriteriaContract", qaValidation.InputContractSummary, StringComparison.Ordinal);
+        Assert.Contains("acceptance-driven validation plan", qaRecheck.InputContractSummary, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("acceptance-driven validation plan", qualityRepair.InputContractSummary, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("For a game", sliceIntakeDoc, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("local best score", sliceIntakeDoc, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("gameplay", sliceIntakeDoc, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -385,18 +393,28 @@ public sealed class ProcessDefinitionCatalogProjectionTests
         Assert.Contains("ProductCompletionRequiredToolReceipts", create.Notes, StringComparison.Ordinal);
         Assert.Contains("workspace_pwsh_run_script", create.Notes, StringComparison.Ordinal);
         Assert.Contains("ensure the solution contains the app project", create.Notes, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("target-framework file-content checks", create.Notes, StringComparison.Ordinal);
         Assert.Contains("DotNetCreateProjectScript", create.Notes, StringComparison.Ordinal);
         Assert.Contains("solution app-membership file-content check", create.Notes, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("workspace_create_directory", create.Notes, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Create the grounded product root and contracted app parent directory", create.Notes, StringComparison.Ordinal);
         Assert.Contains("Do not write native absolute paths", create.Notes, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("scoped storage paths under artifacts/scopes", create.Notes, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("tool-run stdout/stderr paths", create.Notes, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(ProcessTemplateStepExecutionClasses.RuntimeOwnedToolPlan, create.ExecutionClass);
+        Assert.Equal("dotnet.solution-setup", create.ExecutionContract?.RuntimeOwnedExecutorKey);
+        Assert.Equal("dotnet.create-project", create.ExecutionContract?.DeterministicToolPlan?.PlanKey);
+        Assert.Equal("DotNetCreateProjectExecutionPlan", create.ExecutionContract?.DeterministicToolPlan?.ExecutionPlanLaunchVariable);
+        Assert.True(create.ExecutionContract?.DeterministicToolPlan?.RequiresReadbackChecks);
 
         Assert.Contains("ProductCompletionRequiredToolReceipts", addTest.Notes, StringComparison.Ordinal);
         Assert.Contains("workspace_pwsh_run_script", addTest.Notes, StringComparison.Ordinal);
         Assert.Contains("sideEffectManifest mode ProductMutation", addTest.Notes, StringComparison.Ordinal);
         Assert.Contains("dotnet add <test-project-file> reference <app-project-file>", addTest.Notes, StringComparison.Ordinal);
         Assert.Contains("convert command output to scalar strings before membership or ProjectReference regex checks", addTest.Notes, StringComparison.Ordinal);
+        Assert.Equal(ProcessTemplateStepExecutionClasses.RuntimeOwnedToolPlan, addTest.ExecutionClass);
+        Assert.Equal("dotnet.solution-setup", addTest.ExecutionContract?.RuntimeOwnedExecutorKey);
+        Assert.Equal("dotnet.add-test-project", addTest.ExecutionContract?.DeterministicToolPlan?.PlanKey);
+        Assert.True(addTest.ExecutionContract?.DeterministicToolPlan?.RequiresReadbackChecks);
 
         Assert.Equal("validate-first-build", repair.DependsOnStepKey);
         Assert.Equal("setup-repair-required", repair.DependsOnBranchOutcomeKey);
@@ -411,6 +429,10 @@ public sealed class ProcessDefinitionCatalogProjectionTests
         Assert.Contains("DotNetAddTestProjectScript", repair.Notes, StringComparison.Ordinal);
         Assert.Contains("System.IO.Path.GetRelativePath", repair.Notes, StringComparison.Ordinal);
         Assert.Contains("Do not hardcode escaped relative ProjectReference strings", repair.Notes, StringComparison.Ordinal);
+        Assert.Equal(ProcessTemplateStepExecutionClasses.RuntimeOwnedToolPlan, repair.ExecutionClass);
+        Assert.Equal("dotnet.solution-setup", repair.ExecutionContract?.RuntimeOwnedExecutorKey);
+        Assert.Equal("dotnet.repair-solution-setup", repair.ExecutionContract?.DeterministicToolPlan?.PlanKey);
+        Assert.True(repair.ExecutionContract?.DeterministicToolPlan?.RequiresReadbackChecks);
 
         Assert.Equal("repair-solution-setup", revalidate.DependsOnStepKey);
         Assert.Contains(revalidate.BranchOutcomes, outcome => string.Equals(outcome.Key, "setup-validated", StringComparison.Ordinal));
@@ -511,6 +533,8 @@ public sealed class ProcessDefinitionCatalogProjectionTests
         var sliceRepair = Assert.Single(developmentSlice.Steps, step => string.Equals(step.Key, "slice-repair-code-change", StringComparison.Ordinal));
         var sliceRecheck = Assert.Single(developmentSlice.Steps, step => string.Equals(step.Key, "add-tests-recheck", StringComparison.Ordinal));
         var repairedHandoff = Assert.Single(developmentSlice.Steps, step => string.Equals(step.Key, "slice-handoff-after-repair", StringComparison.Ordinal));
+        var initialManagerRepair = Assert.Single(developmentSlice.Steps, step => string.Equals(step.Key, "initial-manager-assisted-repair", StringComparison.Ordinal));
+        var initialManagerRepairedHandoff = Assert.Single(developmentSlice.Steps, step => string.Equals(step.Key, "slice-handoff-after-initial-manager-repair", StringComparison.Ordinal));
         var managerRepair = Assert.Single(developmentSlice.Steps, step => string.Equals(step.Key, "slice-manager-assisted-repair", StringComparison.Ordinal));
         var managerRepairedHandoff = Assert.Single(developmentSlice.Steps, step => string.Equals(step.Key, "slice-handoff-after-manager-repair", StringComparison.Ordinal));
         var featureIntake = Assert.Single(featureImplementation.Steps, step => string.Equals(step.Key, "feature-slice-intake", StringComparison.Ordinal));
@@ -555,20 +579,31 @@ public sealed class ProcessDefinitionCatalogProjectionTests
         Assert.Contains("do not launch this child", sliceImplementation.Notes, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("do not launch the child", sliceImplementationDoc, StringComparison.OrdinalIgnoreCase);
         var initialContract = Assert.IsType<ProcessSubprocessContract>(sliceImplementation.SubprocessContract);
-        Assert.Contains(initialContract.AcceptedChildOutputs, output => output.StepKey == "feature-repair-escalation");
+        Assert.Contains(initialContract.AcceptedChildOutputs, output =>
+            output.StepKey == "feature-handoff" &&
+            output.ParentBranchOutcomeKey == "implementation-ready");
+        Assert.Contains(initialContract.NoGoChildOutputs, output =>
+            output.StepKey == "feature-repair-escalation" &&
+            output.ParentBranchOutcomeKey == "implementation-needs-manager-repair");
         Assert.Contains(
-            initialContract.AcceptedChildOutputs,
+            initialContract.NoGoChildOutputs,
             output => output.StepKey == "targeted-recheck" &&
-                      output.BranchOutcomeKey == "feature-repair-escalation");
-        Assert.DoesNotContain(initialContract.NoGoChildOutputs, output => output.StepKey == "feature-repair-escalation");
-        Assert.Contains("select `slice-repair-required`", sliceImplementationDoc, StringComparison.Ordinal);
+                      output.BranchOutcomeKey == "feature-repair-escalation" &&
+                      output.ParentBranchOutcomeKey == "implementation-needs-manager-repair");
+        Assert.Contains(sliceImplementation.BranchOutcomes, outcome => outcome.Key == "implementation-ready");
+        Assert.Contains(sliceImplementation.BranchOutcomes, outcome => outcome.Key == "implementation-needs-manager-repair");
+        Assert.Contains(
+            sliceValidation.Dependencies,
+            dependency => dependency.DependsOnStepKey == "implement-code-change" &&
+                          dependency.DependsOnBranchOutcomeKey == "implementation-ready");
+        Assert.Contains("select `implementation-needs-manager-repair`", sliceImplementationDoc, StringComparison.Ordinal);
         Assert.Contains("must not be scaffold-only", featureIntake.Notes, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("not a valid derived behavior", featureIntakeDoc, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("every explicitly named core MVP behavior", sliceIntake.Notes, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("do not silently invent a later slice", sliceIntakeDoc, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("explicit remaining-slice schedule", featureIntake.Notes, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("complete runnable core workflow", featureIntakeDoc, StringComparison.OrdinalIgnoreCase);
-        foreach (var step in new[] { sliceImplementation, sliceValidation, sliceRepair, sliceRecheck, repairedHandoff, managerRepair, managerRepairedHandoff })
+        foreach (var step in new[] { sliceImplementation, sliceValidation, sliceRepair, sliceRecheck, repairedHandoff, initialManagerRepair, initialManagerRepairedHandoff, managerRepair, managerRepairedHandoff })
         {
             Assert.Contains(
                 step.ArtifactInputs,
@@ -587,6 +622,7 @@ public sealed class ProcessDefinitionCatalogProjectionTests
         Assert.Contains(managerRepairContract.NoGoChildOutputs, output => output.StepKey == "quality-repair-no-go");
 
         var deliveryContract = Assert.IsType<ProcessSubprocessContract>(deliveryImplementation.SubprocessContract);
+        Assert.Contains(deliveryContract.AcceptedChildOutputs, output => output.StepKey == "slice-handoff-after-initial-manager-repair");
         Assert.Contains(deliveryContract.AcceptedChildOutputs, output => output.StepKey == "slice-handoff-after-manager-repair");
         Assert.DoesNotContain(deliveryContract.NoGoChildOutputs, output => output.StepKey == "slice-repair-escalation");
 
@@ -631,7 +667,9 @@ public sealed class ProcessDefinitionCatalogProjectionTests
             "steps",
             "feature-slice-intake.md"));
 
-        Assert.Contains("repair target packet", sliceValidation.Notes, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains(sliceValidation.ArtifactInputs, input =>
+            string.Equals(input.ArtifactExpectationKey, "slice-architecture-decision", StringComparison.Ordinal) &&
+            string.Equals(input.SourceStepKey, "slice-architecture-check", StringComparison.Ordinal));
         Assert.Contains("Do not ask the child subprocess to select a fresh MVP behavior", sliceRepair.Notes, StringComparison.Ordinal);
         Assert.Contains("original repair target", sliceRecheck.Notes, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("Do not derive a new MVP behavior", featureIntake.Notes, StringComparison.Ordinal);
@@ -700,6 +738,59 @@ public sealed class ProcessDefinitionCatalogProjectionTests
         Assert.Contains("ParentDeferredOutcomeJson", implementationDoc, StringComparison.Ordinal);
         Assert.Contains("project_structure_process_subprocess_launch", repairDoc, StringComparison.Ordinal);
         Assert.Contains("ParentDeferredOutcomeJson", repairDoc, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Dotnet_solution_setup_requires_the_architecture_target_framework_in_app_readback()
+    {
+        var loader = new ProcessTemplatePackLoader(Path.Combine(FindRepositoryRoot(), "Templates", "Processes"));
+        var definition = loader.LoadDefinition("dotnet-solution-setup");
+        var activation = Assert.Single(definition.LaunchDriverActivations);
+        var serializedChecks = activation.Settings["ProductCompletionRequiredFileContentChecksByStep"];
+        using var document = JsonDocument.Parse(serializedChecks);
+        var createChecks = document.RootElement
+            .GetProperty("create-dotnet-project")
+            .EnumerateArray()
+            .ToArray();
+
+        Assert.Contains(createChecks, check =>
+            check.GetProperty("pathCandidates")
+                .EnumerateArray()
+                .Select(candidate => candidate.GetString())
+                .Contains("${DotNetAppProjectFileForwardSlash}", StringComparer.Ordinal) &&
+            check.GetProperty("requiredTextAnyGroups")
+                .EnumerateArray()
+                .SelectMany(group => group.EnumerateArray())
+                .Select(value => value.GetString())
+                .Contains("<TargetFramework>${DotNetTargetFramework}</TargetFramework>", StringComparer.Ordinal));
+    }
+
+    [Fact]
+    public void Dotnet_solution_setup_accepts_platform_path_variants_for_project_reference_readback()
+    {
+        var loader = new ProcessTemplatePackLoader(Path.Combine(FindRepositoryRoot(), "Templates", "Processes"));
+        var definition = loader.LoadDefinition("dotnet-solution-setup");
+        var activation = Assert.Single(definition.LaunchDriverActivations);
+        var serializedChecks = activation.Settings["ProductCompletionRequiredFileContentChecksByStep"];
+        using var document = JsonDocument.Parse(serializedChecks);
+
+        foreach (var stepKey in new[] { "add-test-project", "repair-solution-setup" })
+        {
+            var checks = document.RootElement.GetProperty(stepKey).EnumerateArray().ToArray();
+            var testProjectCheck = checks.Single(check =>
+                check.GetProperty("pathCandidates")
+                    .EnumerateArray()
+                    .Select(candidate => candidate.GetString())
+                    .Contains("${DotNetTestProjectFileForwardSlash}", StringComparer.Ordinal));
+            var referenceGroup = testProjectCheck
+                .GetProperty("requiredTextAnyGroups")
+                .EnumerateArray()
+                .Select(group => group.EnumerateArray().Select(value => value.GetString()).ToArray())
+                .Single(group => group.Contains("${DotNetAppProjectReferenceRelativePath}", StringComparer.Ordinal));
+
+            Assert.Contains("${DotNetAppProjectReferenceRelativePath}", referenceGroup, StringComparer.Ordinal);
+            Assert.Contains("${DotNetAppProjectReferenceRelativePathWindows}", referenceGroup, StringComparer.Ordinal);
+        }
     }
 
     [Fact]
@@ -786,7 +877,10 @@ public sealed class ProcessDefinitionCatalogProjectionTests
         var revalidation = Assert.Single(definition.Steps, step => step.Key == "revalidate-bughunt-repair");
         var noGo = Assert.Single(definition.Steps, step => step.Key == "quality-repair-no-go");
 
-        AssertResponsibleRole(diagnosis, "repair-manager");
+        AssertResponsibleRole(diagnosis, "bughunt-specialist");
+        Assert.Contains(diagnosis.RoleAssignments, assignment =>
+            string.Equals(assignment.RoleKey, "repair-manager", StringComparison.Ordinal) &&
+            string.Equals(assignment.ResponsibilityKind, "Reviewer", StringComparison.Ordinal));
         AssertResponsibleRole(repair, "dotnet-repair-engineer");
         AssertResponsibleRole(validation, "quality-reviewer");
         AssertResponsibleRole(bughunt, "bughunt-specialist");
@@ -806,8 +900,13 @@ public sealed class ProcessDefinitionCatalogProjectionTests
         Assert.Contains(validation.BranchOutcomes, outcome => outcome.Key == "bughunt-required");
         Assert.Contains(revalidation.BranchOutcomes, outcome => outcome.Key == "quality-repair-accepted");
         Assert.Contains(revalidation.BranchOutcomes, outcome => outcome.Key == "quality-repair-no-go");
+        Assert.Contains(validation.BranchOutcomes, outcome =>
+            outcome.Key == "bughunt-required" && outcome.AllowsCompletedOutcomeWithOpenIssues);
+        Assert.Contains(revalidation.BranchOutcomes, outcome =>
+            outcome.Key == "quality-repair-no-go" && outcome.AllowsCompletedOutcomeWithOpenIssues);
+        Assert.True(noGo.AllowsCompletedOutcomeWithOpenIssues);
         Assert.Contains("read representative current product source", diagnosis.Notes, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("#blazor-error-ui visibility rule", diagnosis.Notes, StringComparison.Ordinal);
+        Assert.Contains("visible UI error", diagnosis.Notes, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("read representative current product source", bughunt.Notes, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("read the diagnosed current product source", repair.Notes, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("read the diagnosed current product source", secondRepair.Notes, StringComparison.OrdinalIgnoreCase);
@@ -846,10 +945,95 @@ public sealed class ProcessDefinitionCatalogProjectionTests
             "dotnet-quality-repair",
             "steps",
             "implement-bughunt-repair.md"));
-        Assert.Contains("DotNetScaffoldRepairExecutionPlan", repairDoc, StringComparison.Ordinal);
+        Assert.DoesNotContain("DotNetScaffoldRepairExecutionPlan", repairDoc, StringComparison.Ordinal);
         Assert.Contains("successful product-target mutation receipt", repairDoc, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("DotNetScaffoldRepairExecutionPlan", bughuntRepairDoc, StringComparison.Ordinal);
+        Assert.DoesNotContain("DotNetScaffoldRepairExecutionPlan", bughuntRepairDoc, StringComparison.Ordinal);
         Assert.Contains("successful product-target mutation receipt", bughuntRepairDoc, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void Quality_delivery_templates_own_completion_policy_without_workbench_named_workflow_builder()
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        var loader = new ProcessTemplatePackLoader(Path.Combine(repositoryRoot, "Templates", "Processes"));
+
+        var qualityRepair = loader.LoadDefinition("dotnet-quality-repair");
+        var diagnosis = Assert.Single(qualityRepair.Steps, step => step.Key == "diagnose-quality-failure");
+        var repair = Assert.Single(qualityRepair.Steps, step => step.Key == "implement-quality-repair");
+        var validation = Assert.Single(qualityRepair.Steps, step => step.Key == "validate-quality-repair");
+        var bughuntRepair = Assert.Single(qualityRepair.Steps, step => step.Key == "implement-bughunt-repair");
+        var revalidation = Assert.Single(qualityRepair.Steps, step => step.Key == "revalidate-bughunt-repair");
+        var diagnosisPolicy = Assert.IsType<ProcessTemplateStepCompletionPolicyDocument>(diagnosis.CompletionPolicy);
+        var repairPolicy = Assert.IsType<ProcessTemplateStepCompletionPolicyDocument>(repair.CompletionPolicy);
+        var validationPolicy = Assert.IsType<ProcessTemplateStepCompletionPolicyDocument>(validation.CompletionPolicy);
+        var bughuntRepairPolicy = Assert.IsType<ProcessTemplateStepCompletionPolicyDocument>(bughuntRepair.CompletionPolicy);
+        var revalidationPolicy = Assert.IsType<ProcessTemplateStepCompletionPolicyDocument>(revalidation.CompletionPolicy);
+
+        Assert.True(diagnosisPolicy.RequiresProductSourceInspection);
+        Assert.False(diagnosisPolicy.RequiresProductMutationBeforeManagedOutput);
+        Assert.Contains(repairPolicy.ProductMutationRequiredBranchOutcomeKeys, key => key == "product-repair-applied");
+        Assert.True(repairPolicy.RequiresProductMutationBeforeManagedOutput);
+        Assert.Contains(repairPolicy.ProductMutationToolNames, tool => tool == "workspace_write_file");
+        Assert.Contains(repairPolicy.RuntimeRoutedBranchOutcomeKeys, key => key == "repair-attempt-incomplete");
+        Assert.Contains(repairPolicy.CompletionIssueRoutes, route =>
+            route.TargetBranchOutcomeKey == "repair-attempt-incomplete" &&
+            route.IssueCode == "process.adapter.product_mutation_receipt_missing");
+        Assert.Contains(validationPolicy.RequiredProductToolReceipts, receipt => receipt.ToolName == "workspace_dotnet_build");
+        Assert.Contains(validationPolicy.AcceptanceCriteriaRequiredBranchOutcomeKeys, key => key == "quality-repair-accepted");
+        Assert.DoesNotContain(validationPolicy.RequiredProductToolReceipts, receipt => receipt.ToolName == "workspace_dotnet_run");
+        Assert.Contains(validationPolicy.CompletionIssueRoutes, route => route.TargetBranchOutcomeKey == "bughunt-required");
+        Assert.False(validationPolicy.RequiresProductMutationBeforeManagedOutput);
+        Assert.Empty(validationPolicy.ProductMutationToolNames);
+        Assert.Contains(bughuntRepairPolicy.ProductMutationRequiredBranchOutcomeKeys, key => key == "product-repair-applied");
+        Assert.True(bughuntRepairPolicy.RequiresProductMutationBeforeManagedOutput);
+        Assert.Contains(bughuntRepairPolicy.ProductMutationToolNames, tool => tool == "workspace_write_file");
+        Assert.Contains(revalidationPolicy.CompletionIssueRoutes, route => route.TargetBranchOutcomeKey == "quality-repair-no-go");
+
+        var softwareDelivery = loader.LoadDefinition("software-delivery");
+        var peerReview = Assert.Single(softwareDelivery.Steps, step => step.Key == "peer-review");
+        var qaValidation = Assert.Single(softwareDelivery.Steps, step => step.Key == "qa-validation");
+        var qaRecheck = Assert.Single(softwareDelivery.Steps, step => step.Key == "qa-recheck");
+        var peerReviewPolicy = Assert.IsType<ProcessTemplateStepCompletionPolicyDocument>(peerReview.CompletionPolicy);
+        var qaValidationPolicy = Assert.IsType<ProcessTemplateStepCompletionPolicyDocument>(qaValidation.CompletionPolicy);
+        var qaRecheckPolicy = Assert.IsType<ProcessTemplateStepCompletionPolicyDocument>(qaRecheck.CompletionPolicy);
+
+        Assert.True(peerReviewPolicy.RequiresProductSourceInspection);
+        Assert.Contains(qaValidationPolicy.CompletionIssueRoutes, route => route.TargetBranchOutcomeKey == "repair-required");
+        Assert.Contains(qaRecheckPolicy.CompletionIssueRoutes, route => route.TargetBranchOutcomeKey == "repair-escalation");
+        Assert.Contains(qaValidationPolicy.AcceptanceCriteriaRequiredBranchOutcomeKeys, key => key == "quality-accepted");
+        Assert.Contains(qaRecheckPolicy.AcceptanceCriteriaRequiredBranchOutcomeKeys, key => key == "quality-accepted");
+
+        foreach (var definitionKey in new[]
+                 {
+                     "blazor-app-delivery",
+                     "blazor-app-repair-fix",
+                     "blazor-backend-feature",
+                     "blazor-frontend-feature",
+                     "blazor-fullstack-feature"
+                 })
+        {
+            var blazorDefinition = loader.LoadDefinition(definitionKey);
+            var blazorValidation = Assert.Single(blazorDefinition.Steps, step => step.Key == "validate-blazor-runtime");
+            var blazorRepair = Assert.Single(blazorDefinition.Steps, step => step.Key == "repair-blazor-findings");
+            var blazorRevalidation = Assert.Single(blazorDefinition.Steps, step => step.Key == "revalidate-blazor-repair");
+            var blazorValidationPolicy = Assert.IsType<ProcessTemplateStepCompletionPolicyDocument>(blazorValidation.CompletionPolicy);
+            var blazorRepairPolicy = Assert.IsType<ProcessTemplateStepCompletionPolicyDocument>(blazorRepair.CompletionPolicy);
+            var blazorRevalidationPolicy = Assert.IsType<ProcessTemplateStepCompletionPolicyDocument>(blazorRevalidation.CompletionPolicy);
+
+            Assert.Contains(blazorValidationPolicy.RequiredProductToolReceipts, receipt => receipt.ToolName == "browser interaction proof");
+            Assert.Contains(blazorValidationPolicy.CompletionIssueRoutes, route => route.TargetBranchOutcomeKey == "repair-required");
+            Assert.Contains(blazorValidationPolicy.AcceptanceCriteriaRequiredBranchOutcomeKeys, key => key == "quality-accepted");
+            Assert.Contains(blazorRepairPolicy.RequiredProductToolReceipts, receipt => receipt.ToolName == "workspace_dotnet_test");
+            Assert.Contains(blazorRevalidationPolicy.CompletionIssueRoutes, route => route.TargetBranchOutcomeKey == "repair-escalation");
+        }
+
+        Assert.False(File.Exists(Path.Combine(
+            repositoryRoot,
+            "src",
+            "Modules",
+            "CanDoItAll.Modules.Workbench",
+            "ProjectStructure",
+            "DotNetDeliveryQualityLaunchPolicyBuilder.cs")));
     }
 
     [Fact]
@@ -900,27 +1084,19 @@ public sealed class ProcessDefinitionCatalogProjectionTests
         Assert.Contains(ProcessOperationContractNames.LaunchRuntime, step.AllowedOperations);
         Assert.Contains(ProcessOperationContractNames.CaptureRuntimeProof, step.AllowedOperations);
         Assert.Contains("launch-required manifest", applicabilityStep.Notes, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("Missing base URL or missing Run app node is not a successful capture result", step.Notes, StringComparison.Ordinal);
-        Assert.Contains("Do not write Status: Completed", step.Notes, StringComparison.Ordinal);
+        Assert.Contains("runtime-forwarded typed bootstrap context", step.Notes, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Do not construct a conventional solution, project, or directory path", step.Notes, StringComparison.Ordinal);
         Assert.Contains("Missing base URL or missing Run app node is not a successful capture result", captureDoc, StringComparison.Ordinal);
-        Assert.Contains("declared required runtime tool receipts", captureDoc, StringComparison.Ordinal);
+        Assert.Contains("required receipts only for the `ui-capture-complete` outcome", captureDoc, StringComparison.Ordinal);
         Assert.Contains("Do not return `Blocked` only because the base URL is absent", captureDoc, StringComparison.Ordinal);
         Assert.Contains("Do not write `Status: Completed`", captureDoc, StringComparison.Ordinal);
-        Assert.Contains("only scaffold chrome", step.Notes, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("visible defect is evidence for QA", step.Notes, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("not a capture blocker", captureDoc, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("materially inconsistent with a named source visual target", captureDoc, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("workspace_dotnet_run", step.Notes, StringComparison.Ordinal);
-        Assert.Contains("DotNetAppProjectFileAlias", step.Notes, StringComparison.Ordinal);
-        Assert.Contains("workspace_dotnet_run accepts project files only", step.Notes, StringComparison.Ordinal);
-        Assert.Contains("never pass DotNetSolutionFile", step.Notes, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("DotNetAppProjectFileAlias", captureDoc, StringComparison.Ordinal);
         Assert.Contains(".csproj", captureDoc, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("declared as required runtime tool receipts", step.Notes, StringComparison.Ordinal);
-        Assert.Contains("Do not return Blocked only because the base URL is absent", step.Notes, StringComparison.Ordinal);
-        Assert.Contains("browser_navigate", step.Notes, StringComparison.Ordinal);
-        Assert.Contains("browser_snapshot", step.Notes, StringComparison.Ordinal);
-        Assert.Contains("browser_take_screenshot", step.Notes, StringComparison.Ordinal);
-        Assert.Contains("browser_console_messages", step.Notes, StringComparison.Ordinal);
-        Assert.Contains("workspace_dotnet_stop", step.Notes, StringComparison.Ordinal);
+        Assert.Contains("workspace_dotnet_run requires a declared runnable project file", step.Notes, StringComparison.Ordinal);
+        Assert.Contains("current-run browser navigation, snapshot, screenshot, console, and cleanup receipts", step.Notes, StringComparison.Ordinal);
         Assert.Contains("browser_take_screenshot", step.EvidenceContractSummary, StringComparison.Ordinal);
     }
 
@@ -950,7 +1126,7 @@ public sealed class ProcessDefinitionCatalogProjectionTests
         Assert.Contains("workspace_analyze_image", step.Notes, StringComparison.Ordinal);
         Assert.Contains("workspace_analyze_images", step.Notes, StringComparison.Ordinal);
         Assert.Contains("Visual target comparison", step.Notes, StringComparison.Ordinal);
-        Assert.Contains("declared as required runtime tool receipts", step.Notes, StringComparison.Ordinal);
+        Assert.Contains("required runtime tool receipts only for ui-evidence-stored", step.Notes, StringComparison.Ordinal);
         Assert.Contains("Do not infer these tools are unavailable from memory", step.Notes, StringComparison.Ordinal);
         Assert.Contains("sourceWorkspacePath", step.Notes, StringComparison.Ordinal);
         Assert.Contains("sourceFileName", step.Notes, StringComparison.Ordinal);
@@ -971,12 +1147,174 @@ public sealed class ProcessDefinitionCatalogProjectionTests
         Assert.Contains("workspace_analyze_image", storeDoc, StringComparison.Ordinal);
         Assert.Contains("workspace_analyze_images", storeDoc, StringComparison.Ordinal);
         Assert.Contains("Visual target comparison", storeDoc, StringComparison.Ordinal);
-        Assert.Contains("declared required runtime tool receipts", storeDoc, StringComparison.Ordinal);
+        Assert.Contains("required receipts only for `ui-evidence-stored`", storeDoc, StringComparison.Ordinal);
         Assert.Contains("do not infer the writeback tools are unavailable", storeDoc, StringComparison.Ordinal);
         Assert.Contains("Do not write `Status: Completed`", storeDoc, StringComparison.Ordinal);
         Assert.Contains("sourceWorkspacePath", storeDoc, StringComparison.Ordinal);
         Assert.Contains("invalid base64", storeDoc, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("return `Blocked`", storeDoc, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Screenshot_visual_defects_are_completed_evidence_for_qa_not_child_no_go()
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        var loader = new ProcessTemplatePackLoader(Path.Combine(repositoryRoot, "Templates", "Processes"));
+        var screenshotDefinition = loader.LoadDefinition("dotnet-ui-screenshot-writeback");
+        var deliveryDefinition = loader.LoadDefinition("software-delivery");
+
+        var assessment = Assert.Single(
+            screenshotDefinition.Steps,
+            step => string.Equals(step.Key, "assess-ui-screenshot-evidence", StringComparison.Ordinal));
+        var handoff = Assert.Single(
+            screenshotDefinition.Steps,
+            step => string.Equals(step.Key, "screenshot-handoff", StringComparison.Ordinal));
+        var assessmentContract = Assert.IsType<ProcessTemplateStepExecutionContractDocument>(assessment.ExecutionContract);
+
+        Assert.Equal("Decision", assessment.StepKind);
+        Assert.Equal(ProcessTemplateStepExecutionClasses.BranchDecision, assessment.ExecutionClass);
+        Assert.Contains(
+            assessment.BranchOutcomes,
+            outcome => outcome.Key == "visual-accepted");
+        Assert.Contains(
+            assessment.BranchOutcomes,
+            outcome => outcome.Key == "visual-defect-observed" && outcome.AllowsCompletedOutcomeWithOpenIssues);
+        Assert.Contains(
+            handoff.BranchOutcomes,
+            outcome => outcome.Key == "visual-defect-observed" && outcome.AllowsCompletedOutcomeWithOpenIssues);
+        Assert.Contains(
+            assessment.BranchOutcomes,
+            outcome => outcome.Key == "no-ui-evidence-recorded" &&
+                       outcome.Description.Contains("inapplicable", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(
+            handoff.BranchOutcomes,
+            outcome => outcome.Key == "no-ui-evidence-recorded" &&
+                       outcome.Description.Contains("inapplicable", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(assessment.ArtifactInputs, input =>
+            input.SourceStepKey == "store-ui-screenshots" &&
+            input.ArtifactExpectationKey == "screenshots-node-storage-receipts");
+        Assert.Contains(handoff.ArtifactInputs, input =>
+            input.SourceStepKey == "assess-ui-screenshot-evidence" &&
+            input.ArtifactExpectationKey == "ui-screenshot-evidence-disposition");
+        Assert.Empty(assessmentContract.RequiredRuntimeToolNames);
+        Assert.Contains(
+            assessment.CapabilityScope.RequiredReceipts,
+            receipt => string.Equals(receipt.ToolName, "workspace_analyze_image", StringComparison.Ordinal) &&
+                       receipt.ApplicableBranchOutcomeKeys.Contains("visual-accepted", StringComparer.OrdinalIgnoreCase) &&
+                       receipt.ApplicableBranchOutcomeKeys.Contains("visual-defect-observed", StringComparer.OrdinalIgnoreCase) &&
+                       !receipt.ApplicableBranchOutcomeKeys.Contains("no-ui-evidence-recorded", StringComparer.OrdinalIgnoreCase));
+
+        var captureEvidence = Assert.Single(
+            screenshotDefinition.Steps,
+            step => string.Equals(step.Key, "capture-ui-screenshots", StringComparison.Ordinal));
+        var storageEvidence = Assert.Single(
+            screenshotDefinition.Steps,
+            step => string.Equals(step.Key, "store-ui-screenshots", StringComparison.Ordinal));
+
+        Assert.Contains(captureEvidence.BranchOutcomes, outcome => outcome.Key == "ui-capture-complete");
+        Assert.Contains(captureEvidence.BranchOutcomes, outcome => outcome.Key == "no-ui-evidence-recorded");
+        Assert.Contains(storageEvidence.BranchOutcomes, outcome => outcome.Key == "ui-evidence-stored");
+        Assert.Contains(storageEvidence.BranchOutcomes, outcome => outcome.Key == "no-ui-evidence-recorded");
+        Assert.All(
+            captureEvidence.CapabilityScope.RequiredReceipts,
+            receipt => Assert.DoesNotContain(
+                "no-ui-evidence-recorded",
+                receipt.ApplicableBranchOutcomeKeys,
+                StringComparer.OrdinalIgnoreCase));
+        Assert.All(
+            storageEvidence.CapabilityScope.RequiredReceipts,
+            receipt => Assert.DoesNotContain(
+                "no-ui-evidence-recorded",
+                receipt.ApplicableBranchOutcomeKeys,
+                StringComparer.OrdinalIgnoreCase));
+
+        var initialCapture = Assert.Single(
+            deliveryDefinition.Steps,
+            step => string.Equals(step.Key, "capture-ui-screenshots", StringComparison.Ordinal));
+        var repairedCapture = Assert.Single(
+            deliveryDefinition.Steps,
+            step => string.Equals(step.Key, "capture-ui-screenshots-after-repair", StringComparison.Ordinal));
+        var qaValidation = Assert.Single(
+            deliveryDefinition.Steps,
+            step => string.Equals(step.Key, "qa-validation", StringComparison.Ordinal));
+        var qaRecheck = Assert.Single(
+            deliveryDefinition.Steps,
+            step => string.Equals(step.Key, "qa-recheck", StringComparison.Ordinal));
+
+        foreach (var capture in new[] { initialCapture, repairedCapture })
+        {
+            var contract = Assert.IsType<ProcessSubprocessContract>(capture.SubprocessContract);
+
+            Assert.Empty(contract.NoGoChildOutputs);
+            Assert.Empty(contract.RequiredChildReceipts);
+            Assert.Contains(contract.AcceptedChildOutputs, output =>
+                output.StepKey == "screenshot-handoff" &&
+                output.ArtifactExpectationKey == "ui-screenshot-writeback-handoff" &&
+                output.BranchOutcomeKey == "visual-accepted" &&
+                string.IsNullOrWhiteSpace(output.ParentBranchOutcomeKey));
+            Assert.Contains(contract.AcceptedChildOutputs, output =>
+                output.StepKey == "screenshot-handoff" &&
+                output.ArtifactExpectationKey == "ui-screenshot-writeback-handoff" &&
+                output.BranchOutcomeKey == "visual-defect-observed" &&
+                string.IsNullOrWhiteSpace(output.ParentBranchOutcomeKey));
+            Assert.Contains(contract.AcceptedChildOutputs, output =>
+                output.StepKey == "screenshot-handoff" &&
+                output.ArtifactExpectationKey == "ui-screenshot-writeback-handoff" &&
+                output.BranchOutcomeKey == "no-ui-evidence-recorded" &&
+                string.IsNullOrWhiteSpace(output.ParentBranchOutcomeKey));
+        }
+
+        Assert.Contains(initialCapture.Dependencies, dependency => dependency.DependsOnStepKey == "implementation");
+        Assert.Contains(initialCapture.Dependencies, dependency => dependency.DependsOnStepKey == "architecture-review");
+        Assert.Contains(initialCapture.Dependencies, dependency => dependency.DependsOnStepKey == "peer-review");
+        Assert.DoesNotContain(initialCapture.Dependencies, dependency => dependency.DependsOnStepKey == "qa-validation");
+        Assert.DoesNotContain(initialCapture.Dependencies, dependency => dependency.DependsOnStepKey == "record-runtime-commands");
+        Assert.Contains(repairedCapture.Dependencies, dependency => dependency.DependsOnStepKey == "quality-repair");
+        Assert.Contains(repairedCapture.Dependencies, dependency =>
+            dependency.DependsOnStepKey == "qa-validation" && dependency.DependsOnBranchOutcomeKey == "repair-required");
+        Assert.DoesNotContain(repairedCapture.Dependencies, dependency => dependency.DependsOnStepKey == "qa-recheck");
+        Assert.DoesNotContain(repairedCapture.Dependencies, dependency => dependency.DependsOnStepKey == "record-runtime-commands-after-repair");
+        Assert.Contains(qaValidation.Dependencies, dependency => dependency.DependsOnStepKey == "capture-ui-screenshots");
+        Assert.Contains(qaRecheck.Dependencies, dependency => dependency.DependsOnStepKey == "capture-ui-screenshots-after-repair");
+        Assert.Contains(qaValidation.ArtifactInputs, input =>
+            input.SourceStepKey == "capture-ui-screenshots" && input.ArtifactExpectationKey == "ui-screenshot-writeback");
+        Assert.Contains(qaRecheck.ArtifactInputs, input =>
+            input.SourceStepKey == "capture-ui-screenshots-after-repair" &&
+            input.ArtifactExpectationKey == "ui-screenshot-writeback-after-repair");
+        Assert.Contains(
+            qaValidation.CapabilityScope.InstructionFragments,
+            fragment => fragment.Content.Contains("visual-defect-observed", StringComparison.Ordinal) &&
+                        fragment.Content.Contains("repair-required", StringComparison.Ordinal) &&
+                        fragment.Content.Contains("no-ui-evidence-recorded", StringComparison.Ordinal));
+        Assert.Contains(
+            qaRecheck.CapabilityScope.InstructionFragments,
+            fragment => fragment.Content.Contains("visual-defect-observed", StringComparison.Ordinal) &&
+                        fragment.Content.Contains("repair-escalation", StringComparison.Ordinal) &&
+                        fragment.Content.Contains("no-ui-evidence-recorded", StringComparison.Ordinal));
+
+        var qaValidationDoc = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Templates",
+            "Processes",
+            "processes",
+            "software-delivery",
+            "steps",
+            "qa-validation.md"));
+        var qaRecheckDoc = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Templates",
+            "Processes",
+            "processes",
+            "software-delivery",
+            "steps",
+            "qa-recheck.md"));
+
+        Assert.Contains("visual-defect-observed", qaValidationDoc, StringComparison.Ordinal);
+        Assert.Contains("repair-required", qaValidationDoc, StringComparison.Ordinal);
+        Assert.Contains("no-ui-evidence-recorded", qaValidationDoc, StringComparison.Ordinal);
+        Assert.Contains("visual-defect-observed", qaRecheckDoc, StringComparison.Ordinal);
+        Assert.Contains("repair-escalation", qaRecheckDoc, StringComparison.Ordinal);
+        Assert.Contains("no-ui-evidence-recorded", qaRecheckDoc, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -1032,16 +1370,8 @@ public sealed class ProcessDefinitionCatalogProjectionTests
             Assert.Contains("workspace_dotnet_run", stepContract, StringComparison.Ordinal);
             Assert.Contains("workspace_analyze_image", stepContract, StringComparison.Ordinal);
             Assert.Contains("workspace_analyze_images", stepContract, StringComparison.Ordinal);
-            Assert.Contains("stock scaffold UI", stepContract, StringComparison.OrdinalIgnoreCase);
-            Assert.Contains("missing interaction proof", stepContract, StringComparison.OrdinalIgnoreCase);
-            Assert.Contains("dotnet restore", stepContract, StringComparison.OrdinalIgnoreCase);
-            Assert.Contains("dotnet build --no-restore", stepContract, StringComparison.OrdinalIgnoreCase);
-            Assert.Contains("dotnet test --no-restore", stepContract, StringComparison.OrdinalIgnoreCase);
-            Assert.Contains("source ImageAsset", stepContract, StringComparison.Ordinal);
-            Assert.Contains("media path", stepContract, StringComparison.Ordinal);
-            Assert.Contains("screenshot/browser proof requirements", stepContract, StringComparison.Ordinal);
-            Assert.Contains("final evidenceRefs", stepContract, StringComparison.Ordinal);
-            Assert.Contains("native absolute product paths", stepContract, StringComparison.OrdinalIgnoreCase);
+            Assert.Contains("runtime-forwarded typed child context", stepContract, StringComparison.OrdinalIgnoreCase);
+            Assert.Contains("without constructing conventional names or layouts", stepContract, StringComparison.OrdinalIgnoreCase);
         }
 
         var stepDocs = string.Join(
@@ -1110,7 +1440,17 @@ public sealed class ProcessDefinitionCatalogProjectionTests
         var definition = loader.LoadDefinition("dotnet-architecture-design-review");
 
         var draft = Assert.Single(definition.Steps, step => string.Equals(step.Key, "draft-architecture-design", StringComparison.Ordinal));
+        var validationPlan = Assert.Single(definition.Steps, step => string.Equals(step.Key, "design-validation-plan", StringComparison.Ordinal));
         var review = Assert.Single(definition.Steps, step => string.Equals(step.Key, "review-architecture-design", StringComparison.Ordinal));
+        var handoff = Assert.Single(definition.Steps, step => string.Equals(step.Key, "architecture-handoff", StringComparison.Ordinal));
+        var validationPlanDoc = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Templates",
+            "Processes",
+            "processes",
+            "dotnet-architecture-design-review",
+            "steps",
+            "design-validation-plan.md"));
         var reviewDoc = File.ReadAllText(Path.Combine(
             repositoryRoot,
             "Templates",
@@ -1121,10 +1461,145 @@ public sealed class ProcessDefinitionCatalogProjectionTests
             "review-architecture-design.md"));
 
         Assert.Contains("ProjectStructureContextSummary", draft.Notes, StringComparison.Ordinal);
+        AssertResponsibleRole(validationPlan, "qa-reviewer");
+        Assert.Contains(validationPlan.ArtifactExpectations, artifact =>
+            string.Equals(artifact.Key, "acceptance-validation-plan", StringComparison.Ordinal));
+        Assert.Contains("criterion-to-proof matrix", validationPlan.EvidenceContractSummary, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("browser or visual proof only", validationPlanDoc, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("available scope/acceptance evidence", review.InputContractSummary, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains(review.ArtifactInputs, artifact =>
+            string.Equals(artifact.SourceStepKey, "design-validation-plan", StringComparison.Ordinal) &&
+            string.Equals(artifact.ArtifactExpectationKey, "acceptance-validation-plan", StringComparison.Ordinal));
+        Assert.Contains(handoff.ArtifactInputs, artifact =>
+            string.Equals(artifact.SourceStepKey, "design-validation-plan", StringComparison.Ordinal) &&
+            string.Equals(artifact.ArtifactExpectationKey, "acceptance-validation-plan", StringComparison.Ordinal));
         Assert.Contains("Missing standalone acceptance/user-story files are not a hard block", review.DecisionRightsSummary, StringComparison.Ordinal);
         Assert.Contains("Do not block solely because a separate acceptance-criteria or user-story artifact is absent", review.ExceptionPolicySummary, StringComparison.Ordinal);
         Assert.Contains("Do not hard-block solely because a standalone acceptance-criteria or user-story file is absent", reviewDoc, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Critical_agent_steps_attach_execution_guidance_and_qa_supports_planning_mode()
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        var loader = new ProcessTemplatePackLoader(Path.Combine(repositoryRoot, "Templates", "Processes"));
+        var expectedGuidance = new[]
+        {
+            ("dotnet-architecture-design-review", "classify-dotnet-application", "processes/dotnet-architecture-design-review/steps/classify-dotnet-application.md"),
+            ("dotnet-architecture-design-review", "draft-architecture-design", "processes/dotnet-architecture-design-review/steps/draft-architecture-design.md"),
+            ("dotnet-architecture-design-review", "design-validation-plan", "processes/dotnet-architecture-design-review/steps/design-validation-plan.md"),
+            ("dotnet-architecture-design-review", "review-architecture-design", "processes/dotnet-architecture-design-review/steps/review-architecture-design.md"),
+            ("dotnet-architecture-design-review", "architecture-handoff", "processes/dotnet-architecture-design-review/steps/architecture-handoff.md"),
+            ("dotnet-feature-function-implementation", "test-contract", "processes/dotnet-feature-function-implementation/steps/test-contract.md"),
+            ("dotnet-feature-function-implementation", "code-change", "processes/dotnet-feature-function-implementation/steps/code-change.md"),
+            ("dotnet-feature-function-implementation", "targeted-validation", "processes/dotnet-feature-function-implementation/steps/targeted-validation.md"),
+            ("dotnet-feature-function-implementation", "feature-repair", "processes/dotnet-feature-function-implementation/steps/feature-repair.md"),
+            ("dotnet-feature-function-implementation", "targeted-recheck", "processes/dotnet-feature-function-implementation/steps/targeted-recheck.md"),
+            ("dotnet-quality-repair", "revalidate-bughunt-repair", "processes/dotnet-quality-repair/steps/revalidate-bughunt-repair.md"),
+            ("dotnet-quality-repair", "quality-repair-no-go", "processes/dotnet-quality-repair/steps/quality-repair-no-go.md"),
+            ("software-delivery", "peer-review", "processes/software-delivery/steps/peer-review.md"),
+            ("software-delivery", "repair-escalation", "processes/software-delivery/steps/repair-escalation.md")
+        };
+
+        foreach (var (definitionKey, stepKey, guidanceReference) in expectedGuidance)
+        {
+            var definition = loader.LoadDefinition(definitionKey);
+            var step = Assert.Single(definition.Steps, candidate => string.Equals(candidate.Key, stepKey, StringComparison.Ordinal));
+            var configuredReference = Assert.Single(step.ExecutionGuidanceRefs);
+            var resolvedGuidance = Assert.Single(step.ResolvedExecutionGuidance);
+
+            Assert.Equal(guidanceReference, configuredReference);
+            Assert.Equal(guidanceReference, resolvedGuidance.Reference);
+            Assert.StartsWith("sha256:", resolvedGuidance.ContentHash, StringComparison.Ordinal);
+        }
+
+        var qaInstructions = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Templates",
+            "Agents",
+            "teams",
+            "dotnet-delivery",
+            "members",
+            "dotnet-qa-review-lead",
+            "instructions.md"));
+
+        Assert.Contains("read-only architecture or validation-plan step", qaInstructions, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Do not require a generated host", qaInstructions, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void E2e_delivery_dependency_closure_direct_agent_steps_resolve_their_document_guidance()
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        var loader = new ProcessTemplatePackLoader(Path.Combine(repositoryRoot, "Templates", "Processes"));
+        var definitionKeys = new[]
+        {
+            "software-delivery",
+            "dotnet-development-slice",
+            "dotnet-solution-setup",
+            "dotnet-feature-function-implementation",
+            "dotnet-quality-repair",
+            "dotnet-runtime-command-writeback",
+            "dotnet-ui-screenshot-writeback",
+            "dotnet-architecture-design-review"
+        };
+
+        foreach (var definitionKey in definitionKeys)
+        {
+            var definition = loader.LoadDefinition(definitionKey);
+            var definitionPath = Path.Combine(
+                repositoryRoot,
+                "Templates",
+                "Processes",
+                "processes",
+                definitionKey,
+                "definition.json");
+            using var rawDefinition = JsonDocument.Parse(File.ReadAllText(definitionPath));
+            foreach (var rawStep in rawDefinition.RootElement.GetProperty("Steps").EnumerateArray())
+            {
+                var executionClass = rawStep.TryGetProperty("ExecutionClass", out var executionClassElement)
+                    ? executionClassElement.GetString()
+                    : string.Empty;
+                var documentReferences = ReadStringArray(rawStep, "DocRefs");
+                if ((executionClass ?? string.Empty).StartsWith("RuntimeOwned", StringComparison.Ordinal) ||
+                    documentReferences.Count == 0)
+                {
+                    continue;
+                }
+
+                var stepKey = rawStep.GetProperty("Key").GetString();
+                Assert.False(string.IsNullOrWhiteSpace(stepKey));
+                var step = Assert.Single(definition.Steps, candidate =>
+                    string.Equals(candidate.Key, stepKey, StringComparison.Ordinal));
+                var configuredGuidanceReferences = ReadStringArray(rawStep, "ExecutionGuidanceRefs");
+
+                Assert.Equal(documentReferences, configuredGuidanceReferences);
+                Assert.Equal(configuredGuidanceReferences, step.ExecutionGuidanceRefs);
+                Assert.Equal(
+                    configuredGuidanceReferences,
+                    step.ResolvedExecutionGuidance.Select(guidance => guidance.Reference).ToArray());
+                Assert.All(step.ResolvedExecutionGuidance, guidance =>
+                {
+                    Assert.StartsWith("sha256:", guidance.ContentHash, StringComparison.Ordinal);
+                    Assert.False(string.IsNullOrWhiteSpace(guidance.Content));
+                });
+            }
+        }
+    }
+
+    private static IReadOnlyList<string> ReadStringArray(JsonElement element, string propertyName)
+    {
+        if (!element.TryGetProperty(propertyName, out var property) ||
+            property.ValueKind != JsonValueKind.Array)
+        {
+            return [];
+        }
+
+        return property.EnumerateArray()
+            .Select(item => item.GetString())
+            .Where(value => !string.IsNullOrWhiteSpace(value))
+            .Select(value => value!)
+            .ToArray();
     }
 
     private static string FindRepositoryRoot()

@@ -405,6 +405,168 @@
       ],
       "OperationTargetScope": "ExternalProductTargetReadOnly",
       "ExecutionClass": "BranchDecision",
+      "ExecutionClass": "BranchDecision",
+      "CompletionPolicy": {
+        "AcceptanceCriteriaRequiredBranchOutcomeKeys": [
+          "quality-accepted"
+        ],
+        "RequiredProductToolReceipts": [
+          {
+            "ToolName": "workspace_dotnet_restore",
+            "Purpose": "AcceptanceProof",
+            "EnforceBranchOutcomeKeys": [
+              "quality-accepted"
+            ],
+            "Reason": "Current-run proof is required for the selected branch outcome."
+          },
+          {
+            "ToolName": "workspace_dotnet_build",
+            "Purpose": "AcceptanceProof",
+            "EnforceBranchOutcomeKeys": [
+              "quality-accepted"
+            ],
+            "Reason": "Current-run proof is required for the selected branch outcome."
+          },
+          {
+            "ToolName": "workspace_dotnet_test",
+            "Purpose": "AcceptanceProof",
+            "EnforceBranchOutcomeKeys": [
+              "quality-accepted"
+            ],
+            "Reason": "Current-run proof is required for the selected branch outcome."
+          },
+          {
+            "ToolName": "workspace_dotnet_run",
+            "Purpose": "AcceptanceProof",
+            "EnforceBranchOutcomeKeys": [
+              "quality-accepted"
+            ],
+            "Reason": "Current-run proof is required for the selected branch outcome."
+          },
+          {
+            "ToolName": "browser_navigate",
+            "Purpose": "AcceptanceProof",
+            "EnforceBranchOutcomeKeys": [
+              "quality-accepted"
+            ],
+            "Reason": "Current-run proof is required for the selected branch outcome."
+          },
+          {
+            "ToolName": "browser interaction proof",
+            "Purpose": "AcceptanceProof",
+            "EnforceBranchOutcomeKeys": [
+              "quality-accepted"
+            ],
+            "Reason": "Current-run proof is required for the selected branch outcome."
+          },
+          {
+            "ToolName": "browser_evaluate",
+            "Purpose": "AcceptanceProof",
+            "EnforceBranchOutcomeKeys": [
+              "quality-accepted"
+            ],
+            "Reason": "Current-run proof is required for the selected branch outcome."
+          },
+          {
+            "ToolName": "browser_snapshot",
+            "Purpose": "AcceptanceProof",
+            "EnforceBranchOutcomeKeys": [
+              "quality-accepted"
+            ],
+            "Reason": "Current-run proof is required for the selected branch outcome."
+          },
+          {
+            "ToolName": "browser_take_screenshot",
+            "Purpose": "AcceptanceProof",
+            "EnforceBranchOutcomeKeys": [
+              "quality-accepted"
+            ],
+            "Reason": "Current-run proof is required for the selected branch outcome."
+          },
+          {
+            "ToolName": "browser_console_messages",
+            "Purpose": "AcceptanceProof",
+            "EnforceBranchOutcomeKeys": [
+              "quality-accepted"
+            ],
+            "Reason": "Current-run proof is required for the selected branch outcome."
+          },
+          {
+            "ToolName": "workspace_dotnet_stop",
+            "Purpose": "AcceptanceProof",
+            "EnforceBranchOutcomeKeys": [
+              "quality-accepted"
+            ],
+            "Reason": "Current-run proof is required for the selected branch outcome."
+          }
+        ],
+        "CompletionIssueRoutes": [
+          {
+            "IssueCode": "process.adapter.product_required_tool_receipt_missing",
+            "SourceBranchOutcomeKeys": [
+              "quality-accepted"
+            ],
+            "TargetBranchOutcomeKey": "repair-required",
+            "TargetBranchOutcomeTitle": "Repair required",
+            "RequiresDefectEvidence": false,
+            "OnlyAfterAutomaticRetry": true
+          },
+          {
+            "IssueCode": "process.adapter.product_required_file_content_missing",
+            "SourceBranchOutcomeKeys": [
+              "quality-accepted"
+            ],
+            "TargetBranchOutcomeKey": "repair-required",
+            "TargetBranchOutcomeTitle": "Repair required",
+            "RequiresDefectEvidence": true,
+            "OnlyAfterAutomaticRetry": false
+          },
+          {
+            "IssueCode": "process.adapter.tool_receipt_evidence_content_rejected",
+            "SourceBranchOutcomeKeys": [
+              "quality-accepted"
+            ],
+            "TargetBranchOutcomeKey": "repair-required",
+            "TargetBranchOutcomeTitle": "Repair required",
+            "RequiresDefectEvidence": true,
+            "OnlyAfterAutomaticRetry": false
+          },
+          {
+            "IssueCode": "process.adapter.product_source_inspection_evidence_missing",
+            "SourceBranchOutcomeKeys": [
+              "quality-accepted"
+            ],
+            "TargetBranchOutcomeKey": "repair-required",
+            "TargetBranchOutcomeTitle": "Repair required",
+            "RequiresDefectEvidence": true,
+            "OnlyAfterAutomaticRetry": false
+          },
+          {
+            "IssueCode": "process.adapter.ui_interaction_evidence_missing",
+            "SourceBranchOutcomeKeys": [
+              "quality-accepted"
+            ],
+            "TargetBranchOutcomeKey": "repair-required",
+            "TargetBranchOutcomeTitle": "Repair required",
+            "RequiresDefectEvidence": true,
+            "OnlyAfterAutomaticRetry": false
+          },
+          {
+            "IssueCode": "process.adapter.ui_post_interaction_state_evidence_missing",
+            "SourceBranchOutcomeKeys": [
+              "quality-accepted"
+            ],
+            "TargetBranchOutcomeKey": "repair-required",
+            "TargetBranchOutcomeTitle": "Repair required",
+            "RequiresDefectEvidence": true,
+            "OnlyAfterAutomaticRetry": false
+          }
+        ],
+        "RequiresProductSourceInspection": true,
+        "ProductSourceInspectionRequiredBranchOutcomeKeys": [
+          "quality-accepted"
+        ]
+      },
       "ExecutionContract": {
         "ExecutionClass": "BranchDecision",
         "RequiredRuntimeToolNames": [
@@ -594,7 +756,29 @@
         "CaptureRuntimeProof",
         "WriteManagedProcessArtifacts"
       ],
-      "OperationTargetScope": "ExternalProductTargetMutable"
+      "OperationTargetScope": "ExternalProductTargetMutable",
+      "CompletionPolicy": {
+        "RequiredProductToolReceipts": [
+          {
+            "ToolName": "workspace_dotnet_restore",
+            "Purpose": "FocusedValidation",
+            "EnforceBranchOutcomeKeys": [],
+            "Reason": "Current-run validation proof is required for the repair attempt."
+          },
+          {
+            "ToolName": "workspace_dotnet_build",
+            "Purpose": "FocusedValidation",
+            "EnforceBranchOutcomeKeys": [],
+            "Reason": "Current-run validation proof is required for the repair attempt."
+          },
+          {
+            "ToolName": "workspace_dotnet_test",
+            "Purpose": "FocusedValidation",
+            "EnforceBranchOutcomeKeys": [],
+            "Reason": "Current-run validation proof is required for the repair attempt."
+          }
+        ]
+      }
     },
     {
       "Order": 4,
@@ -691,6 +875,168 @@
       ],
       "OperationTargetScope": "ExternalProductTargetReadOnly",
       "ExecutionClass": "BranchDecision",
+      "ExecutionClass": "BranchDecision",
+      "CompletionPolicy": {
+        "AcceptanceCriteriaRequiredBranchOutcomeKeys": [
+          "quality-accepted"
+        ],
+        "RequiredProductToolReceipts": [
+          {
+            "ToolName": "workspace_dotnet_restore",
+            "Purpose": "AcceptanceProof",
+            "EnforceBranchOutcomeKeys": [
+              "quality-accepted"
+            ],
+            "Reason": "Current-run proof is required for the selected branch outcome."
+          },
+          {
+            "ToolName": "workspace_dotnet_build",
+            "Purpose": "AcceptanceProof",
+            "EnforceBranchOutcomeKeys": [
+              "quality-accepted"
+            ],
+            "Reason": "Current-run proof is required for the selected branch outcome."
+          },
+          {
+            "ToolName": "workspace_dotnet_test",
+            "Purpose": "AcceptanceProof",
+            "EnforceBranchOutcomeKeys": [
+              "quality-accepted"
+            ],
+            "Reason": "Current-run proof is required for the selected branch outcome."
+          },
+          {
+            "ToolName": "workspace_dotnet_run",
+            "Purpose": "AcceptanceProof",
+            "EnforceBranchOutcomeKeys": [
+              "quality-accepted"
+            ],
+            "Reason": "Current-run proof is required for the selected branch outcome."
+          },
+          {
+            "ToolName": "browser_navigate",
+            "Purpose": "AcceptanceProof",
+            "EnforceBranchOutcomeKeys": [
+              "quality-accepted"
+            ],
+            "Reason": "Current-run proof is required for the selected branch outcome."
+          },
+          {
+            "ToolName": "browser interaction proof",
+            "Purpose": "AcceptanceProof",
+            "EnforceBranchOutcomeKeys": [
+              "quality-accepted"
+            ],
+            "Reason": "Current-run proof is required for the selected branch outcome."
+          },
+          {
+            "ToolName": "browser_evaluate",
+            "Purpose": "AcceptanceProof",
+            "EnforceBranchOutcomeKeys": [
+              "quality-accepted"
+            ],
+            "Reason": "Current-run proof is required for the selected branch outcome."
+          },
+          {
+            "ToolName": "browser_snapshot",
+            "Purpose": "AcceptanceProof",
+            "EnforceBranchOutcomeKeys": [
+              "quality-accepted"
+            ],
+            "Reason": "Current-run proof is required for the selected branch outcome."
+          },
+          {
+            "ToolName": "browser_take_screenshot",
+            "Purpose": "AcceptanceProof",
+            "EnforceBranchOutcomeKeys": [
+              "quality-accepted"
+            ],
+            "Reason": "Current-run proof is required for the selected branch outcome."
+          },
+          {
+            "ToolName": "browser_console_messages",
+            "Purpose": "AcceptanceProof",
+            "EnforceBranchOutcomeKeys": [
+              "quality-accepted"
+            ],
+            "Reason": "Current-run proof is required for the selected branch outcome."
+          },
+          {
+            "ToolName": "workspace_dotnet_stop",
+            "Purpose": "AcceptanceProof",
+            "EnforceBranchOutcomeKeys": [
+              "quality-accepted"
+            ],
+            "Reason": "Current-run proof is required for the selected branch outcome."
+          }
+        ],
+        "CompletionIssueRoutes": [
+          {
+            "IssueCode": "process.adapter.product_required_tool_receipt_missing",
+            "SourceBranchOutcomeKeys": [
+              "quality-accepted"
+            ],
+            "TargetBranchOutcomeKey": "repair-escalation",
+            "TargetBranchOutcomeTitle": "Repair escalation",
+            "RequiresDefectEvidence": false,
+            "OnlyAfterAutomaticRetry": true
+          },
+          {
+            "IssueCode": "process.adapter.product_required_file_content_missing",
+            "SourceBranchOutcomeKeys": [
+              "quality-accepted"
+            ],
+            "TargetBranchOutcomeKey": "repair-escalation",
+            "TargetBranchOutcomeTitle": "Repair escalation",
+            "RequiresDefectEvidence": true,
+            "OnlyAfterAutomaticRetry": false
+          },
+          {
+            "IssueCode": "process.adapter.tool_receipt_evidence_content_rejected",
+            "SourceBranchOutcomeKeys": [
+              "quality-accepted"
+            ],
+            "TargetBranchOutcomeKey": "repair-escalation",
+            "TargetBranchOutcomeTitle": "Repair escalation",
+            "RequiresDefectEvidence": true,
+            "OnlyAfterAutomaticRetry": false
+          },
+          {
+            "IssueCode": "process.adapter.product_source_inspection_evidence_missing",
+            "SourceBranchOutcomeKeys": [
+              "quality-accepted"
+            ],
+            "TargetBranchOutcomeKey": "repair-escalation",
+            "TargetBranchOutcomeTitle": "Repair escalation",
+            "RequiresDefectEvidence": true,
+            "OnlyAfterAutomaticRetry": false
+          },
+          {
+            "IssueCode": "process.adapter.ui_interaction_evidence_missing",
+            "SourceBranchOutcomeKeys": [
+              "quality-accepted"
+            ],
+            "TargetBranchOutcomeKey": "repair-escalation",
+            "TargetBranchOutcomeTitle": "Repair escalation",
+            "RequiresDefectEvidence": true,
+            "OnlyAfterAutomaticRetry": false
+          },
+          {
+            "IssueCode": "process.adapter.ui_post_interaction_state_evidence_missing",
+            "SourceBranchOutcomeKeys": [
+              "quality-accepted"
+            ],
+            "TargetBranchOutcomeKey": "repair-escalation",
+            "TargetBranchOutcomeTitle": "Repair escalation",
+            "RequiresDefectEvidence": true,
+            "OnlyAfterAutomaticRetry": false
+          }
+        ],
+        "RequiresProductSourceInspection": true,
+        "ProductSourceInspectionRequiredBranchOutcomeKeys": [
+          "quality-accepted"
+        ]
+      },
       "ExecutionContract": {
         "ExecutionClass": "BranchDecision",
         "RequiredRuntimeToolNames": [

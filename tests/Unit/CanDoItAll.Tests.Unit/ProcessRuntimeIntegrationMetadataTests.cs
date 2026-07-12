@@ -134,6 +134,22 @@ public sealed class ProcessRuntimeIntegrationMetadataTests
     }
 
     [Fact]
+    public void Governed_process_without_browser_metadata_fails_closed()
+    {
+        var run = CreateTrustedProcessRun("{}");
+
+        Assert.False(ExecutionInvocationMetadata.ResolveProcessBrowserToolsAllowed(run));
+    }
+
+    [Fact]
+    public void Governed_process_with_malformed_browser_metadata_fails_closed()
+    {
+        var run = CreateTrustedProcessRun("""{"agentProcessBrowserToolsAllowed":"not-a-boolean"}""");
+
+        Assert.False(ExecutionInvocationMetadata.ResolveProcessBrowserToolsAllowed(run));
+    }
+
+    [Fact]
     public void Process_execution_metadata_does_not_infer_browser_tools_from_screenshot_step_key()
     {
         var assignment = CreateAssignment(
@@ -201,7 +217,9 @@ public sealed class ProcessRuntimeIntegrationMetadataTests
                 [ProcessRuntimeLaunchVariables.ProductMutationBeforeManagedOutputRequiredStepKeys] =
                     JsonSerializer.Serialize(new[] { "code-change", "feature-repair" }),
                 [ProcessRuntimeLaunchVariables.ProductMutationToolNames] =
-                    JsonSerializer.Serialize(new[] { "workspace_write_file", "workspace_dotnet_new" })
+                    JsonSerializer.Serialize(new[] { "workspace_write_file", "workspace_dotnet_new" }),
+                [ProcessRuntimeLaunchVariables.ProductMutationRequiredBranchOutcomeKeys] =
+                    JsonSerializer.Serialize(new[] { "product-repair-applied" })
             }
         };
 
@@ -213,6 +231,49 @@ public sealed class ProcessRuntimeIntegrationMetadataTests
         Assert.Equal(
             ["workspace_dotnet_new", "workspace_write_file"],
             ExecutionInvocationMetadata.ResolveProcessProductMutationToolNames(run));
+        Assert.Equal(
+            ["product-repair-applied"],
+            ExecutionInvocationMetadata.ResolveProcessProductMutationRequiredBranchOutcomeKeys(run));
+
+        using (WorkspaceExecutionAuditContext.BeginScope(run))
+        {
+            var auditScope = Assert.IsType<WorkspaceExecutionAuditContext.WorkspaceExecutionAuditScopeState>(
+                WorkspaceExecutionAuditContext.Current);
+            Assert.Equal(["product-repair-applied"], auditScope.ProcessProductMutationRequiredBranchOutcomeKeys);
+        }
+    }
+
+    [Fact]
+    public void Process_execution_metadata_rejects_contribution_key_owned_by_late_generic_metadata()
+    {
+        var assignment = CreateAssignment(Guid.NewGuid());
+        assignment = assignment with
+        {
+            LaunchVariables = new Dictionary<string, string>(assignment.LaunchVariables, StringComparer.OrdinalIgnoreCase)
+            {
+                [ProcessRuntimeLaunchVariables.ProductMutationToolNames] =
+                    JsonSerializer.Serialize(new[] { "workspace_write_file" })
+            }
+        };
+        var composer = new ProcessExecutionMetadataComposer(
+        [
+            new FixedMetadataContribution(
+                "test.generic-key-collision",
+                100,
+                new Dictionary<string, object>(StringComparer.Ordinal)
+                {
+                    [ExecutionInvocationMetadata.ProcessProductMutationToolNamesMetadataKey] =
+                        new[] { "workspace_read_file" }
+                })
+        ]);
+
+        var exception = Assert.Throws<InvalidOperationException>(() => composer.Compose(assignment));
+
+        Assert.Contains(
+            ExecutionInvocationMetadata.ProcessProductMutationToolNamesMetadataKey,
+            exception.Message,
+            StringComparison.Ordinal);
+        Assert.Contains("conflicts with a generic process metadata key", exception.Message, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -702,7 +763,10 @@ public sealed class ProcessRuntimeIntegrationMetadataTests
     }
 
     private static string BuildProcessExecutionMetadata(ProcessRuntimeStepAssignment assignment)
-        => ProcessExecutionMetadataBuilder.BuildProcessExecutionMetadata(assignment);
+        => new ProcessExecutionMetadataComposer(
+        [
+            new BrowserExecutionMetadataContribution()
+        ]).Compose(assignment);
 
     private static ExecutionRunRecord CreateTrustedProcessRun(string metadataJson)
     {
@@ -733,6 +797,24 @@ public sealed class ProcessRuntimeIntegrationMetadataTests
             PendingApprovals: [],
             ProcessRunId: "run-001",
             ProcessStepId: "step-001");
+    }
+
+    private sealed class FixedMetadataContribution(
+        string contributionKey,
+        int order,
+        IReadOnlyDictionary<string, object> metadata) : IProcessExecutionMetadataContribution
+    {
+        public string ContributionKey => contributionKey;
+
+        public int Order => order;
+
+        public IReadOnlyDictionary<string, object> BuildMetadata(
+            ProcessExecutionMetadataContributionContext context)
+        {
+            ArgumentNullException.ThrowIfNull(context);
+
+            return metadata;
+        }
     }
 
     private sealed class UsageTelemetryWorkspaceService(

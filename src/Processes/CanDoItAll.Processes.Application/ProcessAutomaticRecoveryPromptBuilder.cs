@@ -21,6 +21,8 @@ internal static class ProcessAutomaticRecoveryPromptBuilder
         "Input contract:",
         "Output contract:",
         "Evidence contract:",
+        "Required upstream artifact slots:",
+        "Produced artifact slots:",
         "Available branch outcomes:"
     ];
 
@@ -97,19 +99,21 @@ internal static class ProcessAutomaticRecoveryPromptBuilder
                 ProcessCompletionDiagnosticCodes.ProductSourceInspectionEvidenceMissing,
                 StringComparison.OrdinalIgnoreCase))
         {
-            items.Add("Read concrete owning product source under the grounded external-target alias in this execution. For a workflow defect, read application/component/domain source rather than only navigation or styling.");
+            items.Add("Read the concrete product material responsible for the diagnosed behavior in this execution; do not rely only on ancillary or presentation material.");
         }
 
         if (runtimeRecoveryInstruction.Contains(
                 "process.adapter.runtime_lifecycle_correlation_missing",
                 StringComparison.OrdinalIgnoreCase))
         {
-            items.Add("Start the product, collect browser proof against that same host, and stop it in this execution using the matching startup receipt.");
+            items.Add("Repeat the complete lifecycle required by this step in causal order, and cite only successful receipts created by this execution.");
         }
 
-        if (items.Any(item => item.Contains("`browser_evaluate`", StringComparison.OrdinalIgnoreCase)))
+        if (runtimeRecoveryInstruction.Contains(
+                ProcessCompletionDiagnosticCodes.ArtifactPayloadSchemaInvalid,
+                StringComparison.OrdinalIgnoreCase))
         {
-            items.Add("Run `browser_evaluate` after the representative interaction and before stopping the runtime.");
+            items.Add("Reread the schema-bound Produced artifact slot and rewrite its declared payload exactly before finalizing.");
         }
 
         var distinctItems = items

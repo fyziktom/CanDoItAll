@@ -864,7 +864,7 @@ public sealed class ProcessRuntimeDispatchApplicationServiceTests
             assignmentStore,
             strategyResolver,
             NewNoOpCatchupService(),
-            recoveryInstructionBuilder: CreateDotNetRecoveryInstructionBuilder());
+            recoveryInstructionBuilder: CreateRecoveryInstructionBuilder());
 
         var result = await service.ExecuteReadyAsync(RunId, "unit-test");
 
@@ -875,8 +875,8 @@ public sealed class ProcessRuntimeDispatchApplicationServiceTests
         Assert.Contains("Runtime diagnostic rework instruction:", prompt, StringComparison.Ordinal);
         Assert.Contains(ProcessAutomaticRecoveryPromptBuilder.ExecutionFocusHeading, prompt, StringComparison.Ordinal);
         Assert.Contains("workspace_pwsh_run_script", prompt, StringComparison.Ordinal);
-        Assert.Contains("scripts/create-dotnet-project.ps1", prompt, StringComparison.Ordinal);
-        Assert.Contains("workspace_dotnet_new", prompt, StringComparison.Ordinal);
+        Assert.Contains("Generic receipt recovery", prompt, StringComparison.Ordinal);
+        Assert.Contains("missing current-run receipt contract", prompt, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("Runtime manager recovery instruction:", prompt, StringComparison.Ordinal);
         Assert.DoesNotContain("{CurrentProcessRunId}", prompt, StringComparison.Ordinal);
     }
@@ -1534,8 +1534,8 @@ public sealed class ProcessRuntimeDispatchApplicationServiceTests
         };
     }
 
-    private static ProcessStepRecoveryInstructionBuilder CreateDotNetRecoveryInstructionBuilder()
-        => new([new DotNetSoftwareDeliveryRecoveryAdviceProvider()]);
+    private static ProcessStepRecoveryInstructionBuilder CreateRecoveryInstructionBuilder()
+        => new([new GenericProcessRecoveryAdviceProvider()]);
 
     private static ProcessRuntimeProjectionCatchupService NewNoOpCatchupService()
         => new(

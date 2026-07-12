@@ -53,12 +53,37 @@ public static partial class ProcessTemplateCompatibilityScanner
             }
 
             ValidateDeterministicToolPlan(processKey, stepKey, executionClass, executionContract, hasHardGateProse, diagnostics);
+            ValidateRuntimeOwnedExecutor(processKey, stepKey, executionClass, executionContract, diagnostics);
             ValidateSubprocessContract(processKey, stepKey, step, executionClass, definitionsByKey, diagnostics);
             ValidateBranchContract(processKey, stepKey, step, executionClass, diagnostics);
             ValidateProducedArtifactSlots(processKey, stepKey, step, executionContract, diagnostics);
         }
 
         return diagnostics;
+    }
+
+    private static void ValidateRuntimeOwnedExecutor(
+        string processKey,
+        string stepKey,
+        string executionClass,
+        JsonElement? executionContract,
+        List<ProcessTemplateContractDiagnostic> diagnostics)
+    {
+        if (!ProcessTemplateStepExecutionClasses.IsRuntimeOwnedToolPlan(executionClass))
+        {
+            return;
+        }
+
+        if (executionContract is null ||
+            !TryGetString(executionContract.Value, "runtimeOwnedExecutorKey", out _))
+        {
+            AddDiagnostic(
+                diagnostics,
+                processKey,
+                stepKey,
+                ProcessTemplateContractDiagnosticKind.MissingRuntimeOwnedExecutorKey,
+                "RuntimeOwnedToolPlan requires executionContract.runtimeOwnedExecutorKey.");
+        }
     }
 
     private static void ValidateDeterministicToolPlan(
@@ -232,15 +257,8 @@ public static partial class ProcessTemplateCompatibilityScanner
     }
 
     private static bool PlanRequiresReadbackChecks(JsonElement plan)
-    {
-        if (TryGetString(plan, "planKind", out var planKind) &&
-            planKind.Contains("DotNetSolution", StringComparison.OrdinalIgnoreCase))
-        {
-            return true;
-        }
-
-        return false;
-    }
+        => TryGetProperty(plan, "requiresReadbackChecks", out var value) &&
+           value.ValueKind == JsonValueKind.True;
 
     private static bool PlanContainsTool(JsonElement plan, string toolName)
     {
@@ -344,13 +362,14 @@ public static partial class ProcessTemplateCompatibilityScanner
             return;
         }
 
-        ValidateChildOutputs(processKey, stepKey, childDefinition, contract, "acceptedChildOutputs", diagnostics);
-        ValidateChildOutputs(processKey, stepKey, childDefinition, contract, "noGoChildOutputs", diagnostics);
+        ValidateChildOutputs(processKey, stepKey, step, childDefinition, contract, "acceptedChildOutputs", diagnostics);
+        ValidateChildOutputs(processKey, stepKey, step, childDefinition, contract, "noGoChildOutputs", diagnostics);
     }
 
     private static void ValidateChildOutputs(
         string processKey,
         string parentStepKey,
+        JsonElement parentStep,
         JsonElement childDefinition,
         JsonElement subprocessContract,
         string propertyName,
@@ -390,6 +409,17 @@ public static partial class ProcessTemplateCompatibilityScanner
                     parentStepKey,
                     ProcessTemplateContractDiagnosticKind.UnknownSubprocessChildArtifactExpectation,
                     $"{propertyName} references child step '{childStepKey}' artifact expectation '{artifactExpectationKey}', but the child step does not declare it.");
+            }
+
+            if (TryGetString(output, "parentBranchOutcomeKey", out var parentBranchOutcomeKey) &&
+                !StepHasBranchOutcome(parentStep, parentBranchOutcomeKey))
+            {
+                AddDiagnostic(
+                    diagnostics,
+                    processKey,
+                    parentStepKey,
+                    ProcessTemplateContractDiagnosticKind.InvalidBranchOutcomeKey,
+                    $"{propertyName} routes to unknown parent branch outcome '{parentBranchOutcomeKey}'.");
             }
         }
     }
@@ -539,6 +569,20 @@ public static partial class ProcessTemplateCompatibilityScanner
         }
 
         return false;
+    }
+
+    private static bool StepHasBranchOutcome(JsonElement step, string branchOutcomeKey)
+    {
+        if (!TryGetProperty(step, "branchOutcomes", out var outcomes) ||
+            outcomes.ValueKind != JsonValueKind.Array)
+        {
+            return false;
+        }
+
+        return outcomes.EnumerateArray().Any(outcome =>
+            outcome.ValueKind == JsonValueKind.Object &&
+            TryGetString(outcome, "key", out var key) &&
+            string.Equals(key, branchOutcomeKey, StringComparison.OrdinalIgnoreCase));
     }
 
     private static string ReadOptionalString(JsonElement element, string propertyName)

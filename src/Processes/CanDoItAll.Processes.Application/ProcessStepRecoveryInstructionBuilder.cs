@@ -98,6 +98,8 @@ public sealed class ProcessStepRecoveryInstructionBuilder : IProcessStepRecovery
     private const string RequiredToolReceiptMissingCode = "process.adapter.required_tool_receipt_missing";
     private const string RequiredToolReceiptBlockedRetryCode = "process.adapter.required_tool_receipt_blocked_retry";
     private const string ProductRequiredFileContentMissingCode = "process.adapter.product_required_file_content_missing";
+    private const string ProductMutationReceiptMissingCode = "process.adapter.product_mutation_receipt_missing";
+    private const string RuntimeLifecycleCorrelationMissingCode = "process.adapter.runtime_lifecycle_correlation_missing";
     private const string UngroundedOutcomeReferenceCode = "process.adapter.ungrounded_outcome_reference";
     private const string UngroundedManagedArtifactReferenceCode = "process.adapter.ungrounded_managed_artifact_reference";
     private static readonly Regex UnresolvedPlaceholderRegex = new(@"\{[A-Za-z][A-Za-z0-9_.:-]*\}", RegexOptions.CultureInvariant);
@@ -139,7 +141,10 @@ public sealed class ProcessStepRecoveryInstructionBuilder : IProcessStepRecovery
         AddRecoveryDecision(lines, request.Receipt?.RecoveryDecision);
         AddDiagnosticCodes(lines, diagnostics);
         AddRequiredReceiptGuidance(lines, request.Assignment, diagnostics);
+        AddArtifactPayloadSchemaGuidance(lines, diagnostics);
+        AddRuntimeLifecycleGuidance(lines, diagnostics);
         AddProductReadbackGuidance(lines, request.Assignment, diagnostics);
+        AddRequiredProductMutationGuidance(lines, request.Assignment, diagnostics);
         AddUngroundedReferenceGuidance(lines, request, diagnostics);
         var providerAddedAdvice = AddProviderAdvice(lines, adviceContext);
         AddPrimaryArtifactGuidance(lines, request, diagnostics, providerAddedAdvice);
@@ -188,6 +193,10 @@ public sealed class ProcessStepRecoveryInstructionBuilder : IProcessStepRecovery
     private static bool IsDiagnosticRecoveryCandidate(ProcessRecoveryDiagnosticFact diagnostic)
         => IsRequiredToolReceiptDiagnostic(diagnostic.Code) ||
            string.Equals(diagnostic.Code, ProductRequiredFileContentMissingCode, StringComparison.Ordinal) ||
+           string.Equals(diagnostic.Code, ProductMutationReceiptMissingCode, StringComparison.Ordinal) ||
+           string.Equals(diagnostic.Code, RuntimeLifecycleCorrelationMissingCode, StringComparison.Ordinal) ||
+           string.Equals(diagnostic.Code, ProcessCompletionDiagnosticCodes.ArtifactPayloadSchemaInvalid, StringComparison.Ordinal) ||
+           string.Equals(diagnostic.Code, ProcessCompletionDiagnosticCodes.ManagedArtifactWriteReceiptMissing, StringComparison.Ordinal) ||
            diagnostic.Code.StartsWith("process.adapter.product_", StringComparison.Ordinal) ||
            diagnostic.Code.StartsWith("process.adapter.produced_artifact_", StringComparison.Ordinal) ||
            diagnostic.Code.StartsWith("process.adapter.ungrounded_", StringComparison.Ordinal);
@@ -265,6 +274,22 @@ public sealed class ProcessStepRecoveryInstructionBuilder : IProcessStepRecovery
         lines.Add("Invoke each listed tool now in this exact execution attempt before finalizing. The gate accepts only receipts whose execution id belongs to this attempt; upstream receipts and receipts from prior attempts of this step do not count. Artifacts, summaries, planned actions, or text claiming verification are not current-execution tool receipts.");
     }
 
+    private static void AddArtifactPayloadSchemaGuidance(
+        List<string> lines,
+        IReadOnlyList<ProcessRecoveryDiagnosticFact> diagnostics)
+    {
+        if (!diagnostics.Any(diagnostic =>
+                string.Equals(
+                    diagnostic.Code,
+                    ProcessCompletionDiagnosticCodes.ArtifactPayloadSchemaInvalid,
+                    StringComparison.Ordinal)))
+        {
+            return;
+        }
+
+        lines.Add("Schema-bound artifact recovery: reread the Produced artifact slots contract and rewrite the primary managed artifact so every declared payload schema and validation requirement is satisfied exactly. Keep the required evidence narrative, but do not substitute narrative for a schema-bound payload. Do not create a sibling artifact or guess a schema; correct the declared output and verify it before finalizing.");
+    }
+
     private static void AddProductReadbackGuidance(
         List<string> lines,
         ProcessRuntimeStepAssignment assignment,
@@ -302,6 +327,60 @@ public sealed class ProcessStepRecoveryInstructionBuilder : IProcessStepRecovery
         }
 
         lines.Add("Mutate or remove every failing product file/content marker, read each affected file back, and rerun required validation. Do not complete after changing only visible or linked files while dormant product files still fail configured checks.");
+    }
+
+    private static void AddRuntimeLifecycleGuidance(
+        List<string> lines,
+        IReadOnlyList<ProcessRecoveryDiagnosticFact> diagnostics)
+    {
+        if (!diagnostics.Any(diagnostic =>
+                string.Equals(diagnostic.Code, RuntimeLifecycleCorrelationMissingCode, StringComparison.Ordinal)))
+        {
+            return;
+        }
+
+        lines.Add("Current-execution lifecycle recovery: repeat the required execution lifecycle within this retry and cite only receipts created by this execution. Do not reuse lifecycle, validation, capture, or cleanup evidence from a prior attempt.");
+    }
+
+    private static void AddRequiredProductMutationGuidance(
+        List<string> lines,
+        ProcessRuntimeStepAssignment assignment,
+        IReadOnlyList<ProcessRecoveryDiagnosticFact> diagnostics)
+    {
+        var mutationReceiptMissing = diagnostics.Any(diagnostic =>
+            string.Equals(diagnostic.Code, ProductMutationReceiptMissingCode, StringComparison.Ordinal) ||
+            string.Equals(diagnostic.Code, ProcessCompletionDiagnosticCodes.ManagedArtifactWriteReceiptMissing, StringComparison.Ordinal));
+        if (!mutationReceiptMissing ||
+            !RequiresProductMutationBeforeManagedOutput(assignment))
+        {
+            return;
+        }
+
+        lines.Add("Required product-mutation recovery: this step must produce a successful current-execution mutation of the diagnosed product target before it writes the managed outcome, reruns validation, or returns a final branch.");
+        lines.Add("Read the diagnosed owning source, make the smallest real product or test change justified by the current evidence, and read the changed target back before validation. Do not satisfy this failure by rewriting only the managed artifact, repeating read-only commands, or changing an unrelated file.");
+        lines.Add("If no in-scope mutation can be justified, return Blocked with the concrete missing input, access boundary, or contradictory diagnosis rather than manufacturing a change.");
+    }
+
+    private static bool RequiresProductMutationBeforeManagedOutput(
+        ProcessRuntimeStepAssignment assignment)
+    {
+        if (!assignment.LaunchVariables.TryGetValue(
+                ProcessRuntimeLaunchVariables.ProductMutationBeforeManagedOutputRequiredStepKeys,
+                out var value) ||
+            string.IsNullOrWhiteSpace(value))
+        {
+            return false;
+        }
+
+        try
+        {
+            return JsonSerializer.Deserialize<string[]>(value)?.Any(stepKey =>
+                string.Equals(stepKey, assignment.StepKey, StringComparison.OrdinalIgnoreCase)) == true;
+        }
+        catch (JsonException)
+        {
+            return false;
+        }
     }
 
     private static void AddUngroundedReferenceGuidance(

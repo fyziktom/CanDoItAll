@@ -117,7 +117,7 @@ internal static class ProcessManagedArtifactEvidence
         IReadOnlyList<string> productTargetRefs,
         ProcessToolReceiptPolicyCatalog toolReceiptPolicies)
         => toolReceipts.Any(receipt =>
-            toolReceiptPolicies.IsProductMutationTool(receipt.ToolName) &&
+            toolReceiptPolicies.IsProductMutationReceipt(receipt) &&
             IsSuccessfulReceipt(receipt.ExitSummary) &&
             (ReceiptTargetsAnyProductRef(receipt.RequestSummary, productTargetRefs) ||
              ReceiptTargetsAnyProductRef(receipt.WorkingDirectory, productTargetRefs)));

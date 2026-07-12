@@ -8,6 +8,7 @@ public static class ExecutionInvocationMetadata
 {
     public const string MaxStructuredOutputRepairAttemptsMetadataKey = "agentMaxStructuredOutputRepairAttempts";
     public const string RequireStructuredOutputValidationMetadataKey = "agentRequireStructuredOutputValidation";
+    public const string AllowRequiredFinalizerStructuredOutputRecoveryMetadataKey = "agentAllowRequiredFinalizerStructuredOutputRecovery";
     public const string AllowedExternalTargetAliasesMetadataKey = "agentAllowedExternalTargetAliases";
     public const string ReadOnlyExternalTargetAliasesMetadataKey = "agentReadOnlyExternalTargetAliases";
     public const string AllowedManagedArtifactReadRefsMetadataKey = "agentAllowedManagedArtifactReadRefs";
@@ -15,13 +16,13 @@ public static class ExecutionInvocationMetadata
     public const string ProcessWorkspaceToolProfileMetadataKey = "agentProcessWorkspaceToolProfile";
     public const string ProcessCooperationSummaryMetadataKey = "agentProcessCooperationSummary";
     public const string ProcessBrowserToolsAllowedMetadataKey = "agentProcessBrowserToolsAllowed";
-    public const string ProcessScaffoldToolOnlyMetadataKey = "agentProcessScaffoldToolOnly";
     public const string ProcessStepExecutionBoundaryMetadataKey = "agentProcessStepExecutionBoundary";
     public const string ProcessStepAllowedOperationsMetadataKey = "agentProcessStepAllowedOperations";
     public const string ProcessStepTargetScopeMetadataKey = "agentProcessStepTargetScope";
     public const string ProcessStepAllowsProductMutationMetadataKey = "agentProcessStepAllowsProductMutation";
     public const string ProcessStepRequiresProductMutationBeforeManagedOutputMetadataKey = "agentProcessStepRequiresProductMutationBeforeManagedOutput";
     public const string ProcessProductMutationToolNamesMetadataKey = "agentProcessProductMutationToolNames";
+    public const string ProcessProductMutationRequiredBranchOutcomeKeysMetadataKey = "agentProcessProductMutationRequiredBranchOutcomeKeys";
     public const string ProcessGroundedTargetAliasLedgerMetadataKey = "agentProcessGroundedTargetAliasLedger";
     public const string ContextWorkspaceScopeMetadataKey = "agentContextWorkspaceScope";
     public const string ProjectStructureLaunchAgentMetadataKey = "agentProjectStructureLaunchAgent";
@@ -65,6 +66,8 @@ public static class ExecutionInvocationMetadata
         }
 
         metadata[RequireStructuredOutputValidationMetadataKey] = policy.RequireStructuredOutputValidation;
+        metadata[AllowRequiredFinalizerStructuredOutputRecoveryMetadataKey] =
+            policy.AllowRequiredFinalizerStructuredOutputRecovery;
         return metadata.ToJsonString(AgentOutputJson.SerializerOptions);
     }
 
@@ -263,6 +266,17 @@ public static class ExecutionInvocationMetadata
         return TryReadBoolean(run.MetadataJson, RequireStructuredOutputValidationMetadataKey) ?? true;
     }
 
+    public static bool ResolveAllowRequiredFinalizerStructuredOutputRecovery(
+        ExecutionRunRecord run)
+    {
+        ArgumentNullException.ThrowIfNull(run);
+
+        return TryReadBoolean(
+                   run.MetadataJson,
+                   AllowRequiredFinalizerStructuredOutputRecoveryMetadataKey) ??
+               false;
+    }
+
     public static IReadOnlyList<string> ResolveAllowedExternalTargetAliases(
         ExecutionRunRecord run)
     {
@@ -344,15 +358,7 @@ public static class ExecutionInvocationMetadata
         ArgumentNullException.ThrowIfNull(run);
 
         return !IsTrustedGovernedProcessRun(run) ||
-               TryReadBoolean(run.MetadataJson, ProcessBrowserToolsAllowedMetadataKey) != false;
-    }
-
-    public static bool ResolveProcessScaffoldToolOnly(ExecutionRunRecord run)
-    {
-        ArgumentNullException.ThrowIfNull(run);
-
-        return IsTrustedGovernedProcessRun(run) &&
-               TryReadBoolean(run.MetadataJson, ProcessScaffoldToolOnlyMetadataKey) == true;
+               TryReadBoolean(run.MetadataJson, ProcessBrowserToolsAllowedMetadataKey) == true;
     }
 
     public static bool ResolveRuntimeToolProvidersEnabled(ExecutionRunRecord run)
@@ -401,6 +407,23 @@ public static class ExecutionInvocationMetadata
         }
 
         return ResolveStringArray(run.MetadataJson, ProcessProductMutationToolNamesMetadataKey)
+            .Where(item => !string.IsNullOrWhiteSpace(item))
+            .Select(item => item.Trim())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(item => item, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+    }
+
+    public static IReadOnlyList<string> ResolveProcessProductMutationRequiredBranchOutcomeKeys(ExecutionRunRecord run)
+    {
+        ArgumentNullException.ThrowIfNull(run);
+
+        if (!IsTrustedGovernedProcessRun(run))
+        {
+            return [];
+        }
+
+        return ResolveStringArray(run.MetadataJson, ProcessProductMutationRequiredBranchOutcomeKeysMetadataKey)
             .Where(item => !string.IsNullOrWhiteSpace(item))
             .Select(item => item.Trim())
             .Distinct(StringComparer.OrdinalIgnoreCase)
@@ -646,6 +669,7 @@ public static class ExecutionInvocationMetadata
     {
         return metadata.ContainsKey(ProcessStepAllowsProductMutationMetadataKey) ||
                metadata.ContainsKey(ProcessStepRequiresProductMutationBeforeManagedOutputMetadataKey) ||
+               metadata.ContainsKey(ProcessProductMutationRequiredBranchOutcomeKeysMetadataKey) ||
                metadata.ContainsKey(ProcessStepAllowedOperationsMetadataKey) ||
                metadata.ContainsKey(ProcessStepTargetScopeMetadataKey) ||
                metadata.ContainsKey(ProcessStepExecutionBoundaryMetadataKey);

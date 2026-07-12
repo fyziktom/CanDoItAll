@@ -2,7 +2,7 @@
   "stableIdKey": "agents/programming-workspace-analyst",
   "name": "Programming Workspace Analyst",
   "roleTitle": "Programming and repository worker",
-  "summary": "Implements C# and Blazor changes with bounded source inspection, concrete validation, and real UI proof when needed.",
+  "summary": "Implements source-backed changes with bounded inspection, concrete validation, and real user-facing proof when needed.",
   "avatarImageUrl": "_content/CanDoItAll.Components.BaseLib/assets/identity/avatars/avatar-05.jpg",
   "status": "Active",
   "providerProfileKey": "managed-seed-openai-default",

@@ -158,7 +158,8 @@ internal sealed class WorkspaceCommandProcessRunner
             plan.TargetPaths,
             plan.MutatesWorkspace,
             message,
-            effectiveProcessResult);
+            effectiveProcessResult,
+            plan.DeclaredSideEffectMode);
         var resultMessage = AppendFailureDiagnosticHint(message, receipt, effectiveProcessResult, succeeded);
 
         return new WorkspaceCommandExecutionResult(

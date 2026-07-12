@@ -107,7 +107,12 @@ internal sealed record ProductCompletionRequiredToolReceiptRule(
     IReadOnlyList<string> SkippedBranchOutcomeKeys,
     string Purpose,
     string Key,
-    string Reason);
+    string Reason,
+    bool AllowFailedExecutionReceipt = false);
+
+internal sealed record ProductCompletionRequiredToolReceiptRequirement(
+    string ToolReceipt,
+    bool AllowFailedExecutionReceipt);
 
 internal sealed record ProcessCompletionIssueRoute(
     string IssueCode,

@@ -11,13 +11,19 @@ internal enum DotNetSolutionSetupToolPlanKind
     RepairSolutionSetup
 }
 
+internal sealed record DotNetSolutionSetupExecutionPlan(
+    string PlanKey,
+    string ScriptRef,
+    string WorkspaceAlias,
+    bool RequiresScaffold);
+
 internal sealed record DotNetSolutionSetupToolPlan(
     DotNetSolutionSetupToolPlanKind Kind,
-    string StepKey,
-    string ScriptRefKey,
-    string ScriptKey,
-    string SideEffectManifestKey,
-    string ExecutionPlanKey,
+    string PlanKey,
+    string ScriptRefVariableName,
+    string ScriptVariableName,
+    string SideEffectManifestVariableName,
+    string ExecutionPlanVariableName,
     IReadOnlyList<string> RequiredReceipts,
     IReadOnlyList<string> RequiredPaths,
     string ScriptRef,
@@ -42,16 +48,72 @@ internal sealed record DotNetSolutionSetupToolPlanGuardResult(
 internal static class DotNetSolutionSetupToolPlanGuard
 {
     private const string WorkspacePwshRunScript = "workspace_pwsh_run_script";
-    private const string WorkspaceDotnetNew = "workspace_dotnet_new";
     private const string ProductMutationMode = "ProductMutation";
+    private const string CreateProjectPlanKey = "dotnet.create-project";
+    private const string AddTestProjectPlanKey = "dotnet.add-test-project";
+    private const string RepairSolutionSetupPlanKey = "dotnet.repair-solution-setup";
+    private const string CreateProjectPlanKind = "DotNetSolutionCreate";
+    private const string AddTestProjectPlanKind = "DotNetSolutionAddTestProject";
+    private const string RepairSolutionSetupPlanKind = "DotNetSolutionRepair";
 
     public static DotNetSolutionSetupToolPlanGuardResult Evaluate(ProcessRuntimeStepAssignment assignment)
     {
         ArgumentNullException.ThrowIfNull(assignment);
 
-        if (!TryResolvePlan(assignment, out var plan))
+        var selectsDotNetSetupExecutor =
+            ProcessRuntimeLaunchVariables.TryReadProcessStepRuntimeOwnedExecutorKey(
+                assignment.LaunchVariables,
+                out var executorKey) &&
+            string.Equals(executorKey, DotNetSolutionSetupRuntimeExecutor.DriverKey, StringComparison.OrdinalIgnoreCase);
+
+        if (DotNetSolutionProvisioningModeReader.TryRead(
+                assignment.LaunchVariables,
+                out var provisioningMode,
+                out var provisioningIssue))
         {
-            return DotNetSolutionSetupToolPlanGuardResult.Satisfied;
+            if (provisioningMode == DotNetSolutionProvisioningMode.VerifyExisting)
+            {
+                return DotNetExistingSolutionVerifier.TryResolveInputs(
+                    assignment.LaunchVariables,
+                    out _,
+                    out var verificationIssue)
+                    ? DotNetSolutionSetupToolPlanGuardResult.Satisfied
+                    : new DotNetSolutionSetupToolPlanGuardResult(
+                        null,
+                        [new ProcessRuntimeToolPlanGuardIssue(
+                            "dotnet.existing_solution.context_invalid",
+                            $"Step '{assignment.StepKey}' declares an invalid existing .NET solution context: {verificationIssue}",
+                            $"{assignment.RunId}:{assignment.StepInstanceId}:dotnet.existing_solution.context_invalid:{verificationIssue}")]);
+            }
+        }
+        else if (selectsDotNetSetupExecutor && !string.IsNullOrWhiteSpace(provisioningIssue))
+        {
+            return new DotNetSolutionSetupToolPlanGuardResult(
+                null,
+                [new ProcessRuntimeToolPlanGuardIssue(
+                    "dotnet.solution_context.provisioning_mode_invalid",
+                    $"Step '{assignment.StepKey}' declares an invalid .NET solution provisioning mode: {provisioningIssue}",
+                    $"{assignment.RunId}:{assignment.StepInstanceId}:dotnet.solution_context.provisioning_mode_invalid:{provisioningIssue}")]);
+        }
+
+        if (!ProcessRuntimeLaunchVariables.TryReadProcessStepScriptHelperDescriptor(
+                assignment.LaunchVariables,
+                out var descriptor))
+        {
+            return selectsDotNetSetupExecutor
+                ? new DotNetSolutionSetupToolPlanGuardResult(
+                    null,
+                    [CreateMissingDescriptorIssue(assignment)])
+                : DotNetSolutionSetupToolPlanGuardResult.Satisfied;
+        }
+
+        if (!TryResolvePlan(assignment, descriptor, out var plan))
+        {
+            return selectsDotNetSetupExecutor
+                ? new DotNetSolutionSetupToolPlanGuardResult(
+                    null,
+                    [CreateInvalidDescriptorIssue(assignment, descriptor)])
+                : DotNetSolutionSetupToolPlanGuardResult.Satisfied;
         }
 
         var issues = new List<ProcessRuntimeToolPlanGuardIssue>();
@@ -61,7 +123,7 @@ internal static class DotNetSolutionSetupToolPlanGuard
         ValidateManifest(assignment, plan, issues);
         ValidateExecutionPlan(assignment, plan, issues);
         ValidateRequiredPaths(assignment, plan, issues);
-        ValidateReadbackChecks(assignment, plan, issues);
+        ValidateReadbackChecks(assignment, issues);
 
         return issues.Count == 0
             ? new DotNetSolutionSetupToolPlanGuardResult(plan, [])
@@ -70,49 +132,89 @@ internal static class DotNetSolutionSetupToolPlanGuard
 
     private static bool TryResolvePlan(
         ProcessRuntimeStepAssignment assignment,
+        ProcessRuntimeScriptHelperDescriptor descriptor,
         out DotNetSolutionSetupToolPlan plan)
     {
         plan = null!;
-        var stepKey = assignment.StepKey.Trim();
-        if (!IsDotNetSetupStep(stepKey) || !HasDotNetSetupPlanVariables(assignment.LaunchVariables))
+        if (!TryMapPlanKind(descriptor.PlanKey, descriptor.PlanKind, out var kind))
         {
             return false;
         }
 
-        var kind = stepKey switch
-        {
-            "create-dotnet-project" => DotNetSolutionSetupToolPlanKind.CreateProject,
-            "add-test-project" => DotNetSolutionSetupToolPlanKind.AddTestProject,
-            "repair-solution-setup" => DotNetSolutionSetupToolPlanKind.RepairSolutionSetup,
-            _ => throw new InvalidOperationException($"Unsupported .NET setup step key '{stepKey}'.")
-        };
-        var useCreatePlan = kind == DotNetSolutionSetupToolPlanKind.CreateProject;
-        var scriptRefKey = useCreatePlan ? "DotNetCreateProjectScriptRef" : "DotNetAddTestProjectScriptRef";
-        var scriptKey = useCreatePlan ? "DotNetCreateProjectScript" : "DotNetAddTestProjectScript";
-        var manifestKey = useCreatePlan ? "DotNetCreateProjectSideEffectManifest" : "DotNetAddTestProjectSideEffectManifest";
-        var executionPlanKey = useCreatePlan ? "DotNetCreateProjectExecutionPlan" : "DotNetAddTestProjectExecutionPlan";
-
+        var planKey = NormalizeDescriptorValue(descriptor.PlanKey);
+        var scriptRefVariableName = NormalizeDescriptorValue(descriptor.ScriptRefVariableName);
+        var scriptVariableName = NormalizeDescriptorValue(descriptor.ScriptVariableName);
+        var manifestVariableName = NormalizeDescriptorValue(descriptor.ManifestVariableName);
+        var executionPlanVariableName = NormalizeDescriptorValue(descriptor.ExecutionPlanVariableName);
         plan = new DotNetSolutionSetupToolPlan(
             kind,
-            stepKey,
-            scriptRefKey,
-            scriptKey,
-            manifestKey,
-            executionPlanKey,
-            ReadStepStringList(
+            planKey,
+            scriptRefVariableName,
+            scriptVariableName,
+            manifestVariableName,
+            executionPlanVariableName,
+            ReadStringList(
                 assignment.LaunchVariables,
-                ProcessRuntimeLaunchVariables.ProductCompletionRequiredToolReceiptsByStep,
-                stepKey),
-            ReadStepStringList(
+                ProcessRuntimeLaunchVariables.ProductCompletionRequiredToolReceipts),
+            ReadStringList(
                 assignment.LaunchVariables,
-                ProcessRuntimeLaunchVariables.ProductCompletionRequiredPathsByStep,
-                stepKey),
-            ReadLaunchVariable(assignment.LaunchVariables, scriptRefKey),
-            ReadLaunchVariable(assignment.LaunchVariables, scriptKey),
-            ReadLaunchVariable(assignment.LaunchVariables, manifestKey),
-            ReadLaunchVariable(assignment.LaunchVariables, executionPlanKey));
+                ProcessRuntimeLaunchVariables.ProductCompletionRequiredPaths),
+            ReadLaunchVariable(assignment.LaunchVariables, scriptRefVariableName),
+            ReadLaunchVariable(assignment.LaunchVariables, scriptVariableName),
+            ReadLaunchVariable(assignment.LaunchVariables, manifestVariableName),
+            ReadLaunchVariable(assignment.LaunchVariables, executionPlanVariableName));
         return true;
     }
+
+    private static string NormalizeDescriptorValue(string? value)
+        => value?.Trim() ?? string.Empty;
+
+    private static bool TryMapPlanKind(
+        string planKey,
+        string planKind,
+        out DotNetSolutionSetupToolPlanKind kind)
+    {
+        var normalizedPlanKey = planKey?.Trim() ?? string.Empty;
+        var normalizedPlanKind = planKind?.Trim() ?? string.Empty;
+        if (string.Equals(normalizedPlanKey, CreateProjectPlanKey, StringComparison.OrdinalIgnoreCase) &&
+            string.Equals(normalizedPlanKind, CreateProjectPlanKind, StringComparison.OrdinalIgnoreCase))
+        {
+            kind = DotNetSolutionSetupToolPlanKind.CreateProject;
+            return true;
+        }
+
+        if (string.Equals(normalizedPlanKey, AddTestProjectPlanKey, StringComparison.OrdinalIgnoreCase) &&
+            string.Equals(normalizedPlanKind, AddTestProjectPlanKind, StringComparison.OrdinalIgnoreCase))
+        {
+            kind = DotNetSolutionSetupToolPlanKind.AddTestProject;
+            return true;
+        }
+
+        if (string.Equals(normalizedPlanKey, RepairSolutionSetupPlanKey, StringComparison.OrdinalIgnoreCase) &&
+            string.Equals(normalizedPlanKind, RepairSolutionSetupPlanKind, StringComparison.OrdinalIgnoreCase))
+        {
+            kind = DotNetSolutionSetupToolPlanKind.RepairSolutionSetup;
+            return true;
+        }
+
+        kind = default;
+        return false;
+    }
+
+    private static ProcessRuntimeToolPlanGuardIssue CreateInvalidDescriptorIssue(
+        ProcessRuntimeStepAssignment assignment,
+        ProcessRuntimeScriptHelperDescriptor descriptor)
+        => new(
+            "dotnet.setup.plan.descriptor_invalid",
+            $"Step '{assignment.StepKey}' declares an unsupported .NET solution setup plan descriptor '{descriptor.PlanKey}' / '{descriptor.PlanKind}'.",
+            $"{assignment.RunId}:{assignment.StepInstanceId}:dotnet.setup.plan.descriptor_invalid:{descriptor.PlanKey}:{descriptor.PlanKind}");
+
+    private static ProcessRuntimeToolPlanGuardIssue CreateMissingDescriptorIssue(
+        ProcessRuntimeStepAssignment assignment)
+        => new(
+            "dotnet.setup.plan.descriptor_missing",
+            $"Step '{assignment.StepKey}' selects the .NET solution setup executor but does not declare a valid script-helper descriptor.",
+            $"{assignment.RunId}:{assignment.StepInstanceId}:dotnet.setup.plan.descriptor_missing");
 
     private static void ValidateRequiredReceipts(
         ProcessRuntimeStepAssignment assignment,
@@ -124,9 +226,9 @@ internal static class DotNetSolutionSetupToolPlanGuard
             AddIssue(
                 issues,
                 "dotnet.setup.plan.required_receipts_missing",
-                $"Step '{plan.StepKey}' does not declare typed required tool receipts.",
+                $"Step '{assignment.StepKey}' does not declare typed required tool receipts.",
                 assignment,
-                plan.StepKey);
+                plan.PlanKey);
             return;
         }
 
@@ -138,10 +240,18 @@ internal static class DotNetSolutionSetupToolPlanGuard
 
         RequireReceipt(assignment, plan, issues, "template=sln");
         var appTemplate = ReadLaunchVariable(assignment.LaunchVariables, "DotNetAppTemplate");
-        var appTemplateReceipt = string.IsNullOrWhiteSpace(appTemplate)
-            ? WorkspaceDotnetNew
-            : $"template={appTemplate.Trim()}";
-        RequireReceipt(assignment, plan, issues, appTemplateReceipt);
+        if (string.IsNullOrWhiteSpace(appTemplate))
+        {
+            AddIssue(
+                issues,
+                "dotnet.setup.plan.app_template_missing",
+                $"Step '{assignment.StepKey}' requires a selected DotNetAppTemplate for project creation.",
+                assignment,
+                "DotNetAppTemplate");
+            return;
+        }
+
+        RequireReceipt(assignment, plan, issues, $"template={appTemplate.Trim()}");
     }
 
     private static void RequireReceipt(
@@ -158,9 +268,9 @@ internal static class DotNetSolutionSetupToolPlanGuard
         AddIssue(
             issues,
             "dotnet.setup.plan.required_receipt_missing",
-            $"Step '{plan.StepKey}' deterministic tool plan is missing required receipt '{requiredReceipt}'.",
+            $"Step '{assignment.StepKey}' deterministic tool plan is missing required receipt '{requiredReceipt}'.",
             assignment,
-            $"{plan.StepKey}:{requiredReceipt}");
+            $"{plan.PlanKey}:{requiredReceipt}");
     }
 
     private static void ValidateScriptRef(
@@ -173,9 +283,9 @@ internal static class DotNetSolutionSetupToolPlanGuard
             AddIssue(
                 issues,
                 "dotnet.setup.plan.script_ref_missing",
-                $"Step '{plan.StepKey}' is missing launch variable '{plan.ScriptRefKey}'.",
+                $"Step '{assignment.StepKey}' is missing launch variable '{plan.ScriptRefVariableName}'.",
                 assignment,
-                plan.ScriptRefKey);
+                plan.ScriptRefVariableName);
             return;
         }
 
@@ -185,7 +295,7 @@ internal static class DotNetSolutionSetupToolPlanGuard
             AddIssue(
                 issues,
                 "dotnet.setup.plan.script_ref_unresolved",
-                $"Step '{plan.StepKey}' has unresolved script ref '{plan.ScriptRefKey}'.",
+                $"Step '{assignment.StepKey}' has unresolved script ref '{plan.ScriptRefVariableName}'.",
                 assignment,
                 plan.ScriptRef);
         }
@@ -198,7 +308,7 @@ internal static class DotNetSolutionSetupToolPlanGuard
             AddIssue(
                 issues,
                 "dotnet.setup.plan.script_ref_invalid",
-                $"Step '{plan.StepKey}' script ref must be a current-run managed .ps1 path under artifacts/process-runs/.../scripts, not '{plan.ScriptRef}'.",
+                $"Step '{assignment.StepKey}' script ref must be a current-run managed .ps1 path under artifacts/process-runs/.../scripts, not '{plan.ScriptRef}'.",
                 assignment,
                 plan.ScriptRef);
         }
@@ -214,9 +324,9 @@ internal static class DotNetSolutionSetupToolPlanGuard
             AddIssue(
                 issues,
                 "dotnet.setup.plan.script_missing",
-                $"Step '{plan.StepKey}' is missing deterministic helper script launch variable '{plan.ScriptKey}'.",
+                $"Step '{assignment.StepKey}' is missing deterministic helper script launch variable '{plan.ScriptVariableName}'.",
                 assignment,
-                plan.ScriptKey);
+                plan.ScriptVariableName);
             return;
         }
 
@@ -226,9 +336,9 @@ internal static class DotNetSolutionSetupToolPlanGuard
             AddIssue(
                 issues,
                 "dotnet.setup.plan.script_missing_solution_wiring",
-                $"Step '{plan.StepKey}' helper script does not include solution membership wiring.",
+                $"Step '{assignment.StepKey}' helper script does not include solution membership wiring.",
                 assignment,
-                plan.ScriptKey);
+                plan.ScriptVariableName);
         }
     }
 
@@ -242,9 +352,9 @@ internal static class DotNetSolutionSetupToolPlanGuard
             AddIssue(
                 issues,
                 "dotnet.setup.plan.manifest_missing",
-                $"Step '{plan.StepKey}' is missing side-effect manifest launch variable '{plan.SideEffectManifestKey}'.",
+                $"Step '{assignment.StepKey}' is missing side-effect manifest launch variable '{plan.SideEffectManifestVariableName}'.",
                 assignment,
-                plan.SideEffectManifestKey);
+                plan.SideEffectManifestVariableName);
             return;
         }
 
@@ -256,9 +366,9 @@ internal static class DotNetSolutionSetupToolPlanGuard
                 AddIssue(
                     issues,
                     "dotnet.setup.plan.manifest_invalid",
-                    $"Step '{plan.StepKey}' side-effect manifest must be a JSON object.",
+                    $"Step '{assignment.StepKey}' side-effect manifest must be a JSON object.",
                     assignment,
-                    plan.SideEffectManifestKey);
+                    plan.SideEffectManifestVariableName);
                 return;
             }
 
@@ -269,9 +379,9 @@ internal static class DotNetSolutionSetupToolPlanGuard
                 AddIssue(
                     issues,
                     "dotnet.setup.plan.manifest_mode_invalid",
-                    $"Step '{plan.StepKey}' side-effect manifest must use mode '{ProductMutationMode}'.",
+                    $"Step '{assignment.StepKey}' side-effect manifest must use mode '{ProductMutationMode}'.",
                     assignment,
-                    plan.SideEffectManifestKey);
+                    plan.SideEffectManifestVariableName);
             }
 
             if (!root.TryGetProperty("allowShellDelegation", out var allowShellDelegation) ||
@@ -280,9 +390,9 @@ internal static class DotNetSolutionSetupToolPlanGuard
                 AddIssue(
                     issues,
                     "dotnet.setup.plan.manifest_shell_delegation_missing",
-                    $"Step '{plan.StepKey}' side-effect manifest must explicitly allow shell delegation for dotnet commands.",
+                    $"Step '{assignment.StepKey}' side-effect manifest must explicitly allow shell delegation for dotnet commands.",
                     assignment,
-                    plan.SideEffectManifestKey);
+                    plan.SideEffectManifestVariableName);
             }
 
             ValidateManifestPathArray(assignment, plan, root, "declaredReadPaths", issues);
@@ -293,9 +403,9 @@ internal static class DotNetSolutionSetupToolPlanGuard
             AddIssue(
                 issues,
                 "dotnet.setup.plan.manifest_invalid",
-                $"Step '{plan.StepKey}' side-effect manifest is not valid JSON: {exception.Message}",
+                $"Step '{assignment.StepKey}' side-effect manifest is not valid JSON: {exception.Message}",
                 assignment,
-                plan.SideEffectManifestKey);
+                plan.SideEffectManifestVariableName);
         }
     }
 
@@ -313,15 +423,15 @@ internal static class DotNetSolutionSetupToolPlanGuard
             AddIssue(
                 issues,
                 "dotnet.setup.plan.manifest_paths_missing",
-                $"Step '{plan.StepKey}' side-effect manifest must declare non-empty '{propertyName}'.",
+                $"Step '{assignment.StepKey}' side-effect manifest must declare non-empty '{propertyName}'.",
                 assignment,
-                $"{plan.SideEffectManifestKey}:{propertyName}");
+                $"{plan.SideEffectManifestVariableName}:{propertyName}");
             return;
         }
 
         foreach (var path in paths.EnumerateArray().Where(item => item.ValueKind == JsonValueKind.String))
         {
-            ValidateNativeProductPathScope(assignment, plan, propertyName, path.GetString() ?? string.Empty, issues);
+            ValidateNativeProductPathScope(assignment, propertyName, path.GetString() ?? string.Empty, issues);
         }
     }
 
@@ -330,69 +440,93 @@ internal static class DotNetSolutionSetupToolPlanGuard
         DotNetSolutionSetupToolPlan plan,
         List<ProcessRuntimeToolPlanGuardIssue> issues)
     {
-        if (string.IsNullOrWhiteSpace(plan.ExecutionPlan))
+        if (!TryParseExecutionPlan(plan.ExecutionPlan, out var executionPlan))
         {
             AddIssue(
                 issues,
-                "dotnet.setup.plan.execution_plan_missing",
-                $"Step '{plan.StepKey}' is missing deterministic execution plan launch variable '{plan.ExecutionPlanKey}'.",
+                "dotnet.setup.plan.execution_plan_invalid",
+                $"Step '{assignment.StepKey}' must declare a valid structured execution plan in launch variable '{plan.ExecutionPlanVariableName}'.",
                 assignment,
-                plan.ExecutionPlanKey);
+                plan.ExecutionPlanVariableName);
             return;
         }
 
-        if (ContainsUnresolvedTemplateToken(plan.ExecutionPlan))
+        if (!string.Equals(executionPlan.PlanKey, plan.PlanKey, StringComparison.OrdinalIgnoreCase))
         {
             AddIssue(
                 issues,
-                "dotnet.setup.plan.execution_plan_unresolved",
-                $"Step '{plan.StepKey}' execution plan still contains unresolved template placeholders.",
+                "dotnet.setup.plan.execution_plan_key_mismatch",
+                $"Step '{assignment.StepKey}' structured execution plan does not match deterministic plan key '{plan.PlanKey}'.",
                 assignment,
-                plan.ExecutionPlanKey);
+                plan.ExecutionPlanVariableName);
         }
 
-        if (!string.IsNullOrWhiteSpace(plan.ScriptRef) &&
-            !plan.ExecutionPlan.Contains(plan.ScriptRef, StringComparison.OrdinalIgnoreCase))
+        if (!string.Equals(
+                NormalizeRef(executionPlan.ScriptRef),
+                NormalizeRef(plan.ScriptRef),
+                StringComparison.OrdinalIgnoreCase))
         {
             AddIssue(
                 issues,
                 "dotnet.setup.plan.execution_plan_script_ref_mismatch",
-                $"Step '{plan.StepKey}' execution plan does not invoke the resolved script ref '{plan.ScriptRef}'.",
+                $"Step '{assignment.StepKey}' structured execution plan does not match the resolved script ref.",
                 assignment,
-                plan.ExecutionPlanKey);
+                plan.ExecutionPlanVariableName);
         }
 
-        if (!plan.ExecutionPlan.Contains(WorkspacePwshRunScript, StringComparison.OrdinalIgnoreCase))
+        if (!executionPlan.WorkspaceAlias.StartsWith("external-target/", StringComparison.OrdinalIgnoreCase))
         {
             AddIssue(
                 issues,
-                "dotnet.setup.plan.execution_plan_missing_script_tool",
-                $"Step '{plan.StepKey}' execution plan does not require '{WorkspacePwshRunScript}'.",
+                "dotnet.setup.plan.execution_plan_workspace_alias_invalid",
+                $"Step '{assignment.StepKey}' structured execution plan must declare an external-target workspace alias.",
                 assignment,
-                plan.ExecutionPlanKey);
+                plan.ExecutionPlanVariableName);
         }
 
-        if (plan.Kind == DotNetSolutionSetupToolPlanKind.CreateProject &&
-            !plan.ExecutionPlan.Contains(WorkspaceDotnetNew, StringComparison.OrdinalIgnoreCase))
+        var requiresScaffold = plan.Kind == DotNetSolutionSetupToolPlanKind.CreateProject;
+        if (executionPlan.RequiresScaffold != requiresScaffold)
         {
             AddIssue(
                 issues,
-                "dotnet.setup.plan.execution_plan_missing_scaffold_tool",
-                $"Step '{plan.StepKey}' execution plan does not require '{WorkspaceDotnetNew}'.",
+                "dotnet.setup.plan.execution_plan_scaffold_mismatch",
+                $"Step '{assignment.StepKey}' structured execution plan does not match the plan's scaffold requirement.",
                 assignment,
-                plan.ExecutionPlanKey);
+                plan.ExecutionPlanVariableName);
+        }
+    }
+
+    private static bool TryParseExecutionPlan(
+        string value,
+        out DotNetSolutionSetupExecutionPlan executionPlan)
+    {
+        executionPlan = null!;
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return false;
         }
 
-        var productRoot = ReadLaunchVariable(assignment.LaunchVariables, "ProductRoot");
-        if (!string.IsNullOrWhiteSpace(productRoot) &&
-            plan.ExecutionPlan.Contains($"workingDirectory '{productRoot}'", StringComparison.OrdinalIgnoreCase))
+        try
         {
-            AddIssue(
-                issues,
-                "dotnet.setup.plan.execution_plan_wrong_scope",
-                $"Step '{plan.StepKey}' execution plan must use the external-target workspace alias for workspace tool workingDirectory, not ProductRoot.",
-                assignment,
-                plan.ExecutionPlanKey);
+            var parsed = JsonSerializer.Deserialize<DotNetSolutionSetupExecutionPlan>(
+                value,
+                new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                });
+            if (parsed is null)
+            {
+                return false;
+            }
+
+            executionPlan = parsed;
+            return !string.IsNullOrWhiteSpace(executionPlan.PlanKey) &&
+                   !string.IsNullOrWhiteSpace(executionPlan.ScriptRef) &&
+                   !string.IsNullOrWhiteSpace(executionPlan.WorkspaceAlias);
+        }
+        catch (JsonException)
+        {
+            return false;
         }
     }
 
@@ -407,9 +541,9 @@ internal static class DotNetSolutionSetupToolPlanGuard
             AddIssue(
                 issues,
                 "dotnet.setup.plan.required_paths_missing",
-                $"Step '{plan.StepKey}' must declare solution/project required paths for product completion.",
+                $"Step '{assignment.StepKey}' must declare solution/project required paths for product completion.",
                 assignment,
-                ProcessRuntimeLaunchVariables.ProductCompletionRequiredPathsByStep);
+                ProcessRuntimeLaunchVariables.ProductCompletionRequiredPaths);
         }
 
         if (!plan.RequiredPaths.Any(path => path.EndsWith(".slnx", StringComparison.OrdinalIgnoreCase) ||
@@ -418,9 +552,9 @@ internal static class DotNetSolutionSetupToolPlanGuard
             AddIssue(
                 issues,
                 "dotnet.setup.plan.solution_path_missing",
-                $"Step '{plan.StepKey}' required paths do not include a solution file.",
+                $"Step '{assignment.StepKey}' required paths do not include a solution file.",
                 assignment,
-                ProcessRuntimeLaunchVariables.ProductCompletionRequiredPathsByStep);
+                ProcessRuntimeLaunchVariables.ProductCompletionRequiredPaths);
         }
 
         if (!plan.RequiredPaths.Any(path => path.EndsWith(".csproj", StringComparison.OrdinalIgnoreCase)))
@@ -428,38 +562,39 @@ internal static class DotNetSolutionSetupToolPlanGuard
             AddIssue(
                 issues,
                 "dotnet.setup.plan.project_path_missing",
-                $"Step '{plan.StepKey}' required paths do not include a project file.",
+                $"Step '{assignment.StepKey}' required paths do not include a project file.",
                 assignment,
-                ProcessRuntimeLaunchVariables.ProductCompletionRequiredPathsByStep);
+                ProcessRuntimeLaunchVariables.ProductCompletionRequiredPaths);
         }
 
         foreach (var path in plan.RequiredPaths)
         {
-            ValidateNativeProductPathScope(assignment, plan, "requiredPaths", path, issues);
+            ValidateNativeProductPathScope(assignment, "requiredPaths", path, issues);
         }
     }
 
     private static void ValidateReadbackChecks(
         ProcessRuntimeStepAssignment assignment,
-        DotNetSolutionSetupToolPlan plan,
         List<ProcessRuntimeToolPlanGuardIssue> issues)
     {
-        var checks = ReadStepArrayElement(
+        var checks = ReadCanonicalArrayElement(
             assignment.LaunchVariables,
-            ProcessRuntimeLaunchVariables.ProductCompletionRequiredFileContentChecksByStep,
-            plan.StepKey);
+            ProcessRuntimeLaunchVariables.ProductCompletionRequiredFileContentChecks);
         if (checks is null)
         {
             AddIssue(
                 issues,
                 "dotnet.setup.plan.readback_checks_missing",
-                $"Step '{plan.StepKey}' must declare solution membership readback file-content checks.",
+                $"Step '{assignment.StepKey}' must declare solution membership readback file-content checks.",
                 assignment,
-                ProcessRuntimeLaunchVariables.ProductCompletionRequiredFileContentChecksByStep);
+                ProcessRuntimeLaunchVariables.ProductCompletionRequiredFileContentChecks);
             return;
         }
 
-        foreach (var check in checks.Value.EnumerateArray())
+        var checkElements = checks.Value.ValueKind == JsonValueKind.Array
+            ? checks.Value.EnumerateArray().ToArray()
+            : [checks.Value];
+        foreach (var check in checkElements)
         {
             if (check.ValueKind != JsonValueKind.Object ||
                 !check.TryGetProperty("pathCandidates", out var pathCandidates) ||
@@ -467,22 +602,36 @@ internal static class DotNetSolutionSetupToolPlanGuard
                 pathCandidates.GetArrayLength() == 0 ||
                 !check.TryGetProperty("requiredTextAnyGroups", out var textGroups) ||
                 textGroups.ValueKind != JsonValueKind.Array ||
-                textGroups.GetArrayLength() == 0)
+                textGroups.GetArrayLength() == 0 ||
+                !HasOnlyNonEmptyStrings(pathCandidates) ||
+                !HasOnlyNonEmptyStringGroups(textGroups) ||
+                check.TryGetProperty("mustExist", out var mustExist) &&
+                mustExist.ValueKind is not (JsonValueKind.True or JsonValueKind.False))
             {
                 AddIssue(
                     issues,
                     "dotnet.setup.plan.readback_check_invalid",
-                    $"Step '{plan.StepKey}' readback check must declare pathCandidates and requiredTextAnyGroups.",
+                    $"Step '{assignment.StepKey}' readback check must declare pathCandidates and requiredTextAnyGroups.",
                     assignment,
-                    ProcessRuntimeLaunchVariables.ProductCompletionRequiredFileContentChecksByStep);
+                    ProcessRuntimeLaunchVariables.ProductCompletionRequiredFileContentChecks);
                 return;
             }
         }
     }
 
+    private static bool HasOnlyNonEmptyStrings(JsonElement values)
+        => values.EnumerateArray().All(value =>
+            value.ValueKind == JsonValueKind.String &&
+            !string.IsNullOrWhiteSpace(value.GetString()));
+
+    private static bool HasOnlyNonEmptyStringGroups(JsonElement groups)
+        => groups.EnumerateArray().All(group =>
+            group.ValueKind == JsonValueKind.Array &&
+            group.GetArrayLength() > 0 &&
+            HasOnlyNonEmptyStrings(group));
+
     private static void ValidateNativeProductPathScope(
         ProcessRuntimeStepAssignment assignment,
-        DotNetSolutionSetupToolPlan plan,
         string source,
         string path,
         List<ProcessRuntimeToolPlanGuardIssue> issues)
@@ -498,7 +647,7 @@ internal static class DotNetSolutionSetupToolPlanGuard
             AddIssue(
                 issues,
                 "dotnet.setup.plan.native_path_scope_invalid",
-                $"Step '{plan.StepKey}' {source} must use native ProductRoot/DotNet paths, not external-target aliases: '{path}'.",
+                $"Step '{assignment.StepKey}' {source} must use native ProductRoot/DotNet paths, not external-target aliases: '{path}'.",
                 assignment,
                 $"{source}:{path}");
             return;
@@ -509,7 +658,7 @@ internal static class DotNetSolutionSetupToolPlanGuard
             AddIssue(
                 issues,
                 "dotnet.setup.plan.path_unresolved",
-                $"Step '{plan.StepKey}' {source} contains unresolved template placeholder: '{path}'.",
+                $"Step '{assignment.StepKey}' {source} contains unresolved template placeholder: '{path}'.",
                 assignment,
                 $"{source}:{path}");
             return;
@@ -529,19 +678,18 @@ internal static class DotNetSolutionSetupToolPlanGuard
             AddIssue(
                 issues,
                 "dotnet.setup.plan.path_outside_product_root",
-                $"Step '{plan.StepKey}' {source} path is outside ProductRoot: '{path}'.",
+                $"Step '{assignment.StepKey}' {source} path is outside ProductRoot: '{path}'.",
                 assignment,
                 $"{source}:{path}");
         }
     }
 
-    private static IReadOnlyList<string> ReadStepStringList(
+    private static IReadOnlyList<string> ReadStringList(
         IReadOnlyDictionary<string, string> launchVariables,
-        string variableKey,
-        string stepKey)
+        string variableKey)
     {
-        if (!launchVariables.TryGetValue(variableKey, out var value) ||
-            string.IsNullOrWhiteSpace(value))
+        var value = ReadLaunchVariable(launchVariables, variableKey);
+        if (string.IsNullOrWhiteSpace(value))
         {
             return [];
         }
@@ -549,26 +697,20 @@ internal static class DotNetSolutionSetupToolPlanGuard
         try
         {
             using var document = JsonDocument.Parse(value);
-            if (TryResolveStepElement(document.RootElement, stepKey, out var stepElement))
-            {
-                return ReadStringList(stepElement);
-            }
+            return ReadStringList(document.RootElement);
         }
         catch (JsonException)
         {
-            return [];
+            return SplitStringList(value);
         }
-
-        return [];
     }
 
-    private static JsonElement? ReadStepArrayElement(
+    private static JsonElement? ReadCanonicalArrayElement(
         IReadOnlyDictionary<string, string> launchVariables,
-        string variableKey,
-        string stepKey)
+        string variableKey)
     {
-        if (!launchVariables.TryGetValue(variableKey, out var value) ||
-            string.IsNullOrWhiteSpace(value))
+        var value = ReadLaunchVariable(launchVariables, variableKey);
+        if (string.IsNullOrWhiteSpace(value))
         {
             return null;
         }
@@ -576,45 +718,19 @@ internal static class DotNetSolutionSetupToolPlanGuard
         try
         {
             using var document = JsonDocument.Parse(value);
-            if (!TryResolveStepElement(document.RootElement, stepKey, out var stepElement) ||
-                stepElement.ValueKind != JsonValueKind.Array ||
-                stepElement.GetArrayLength() == 0)
+            var element = document.RootElement;
+            if (element.ValueKind is not (JsonValueKind.Array or JsonValueKind.Object) ||
+                element.ValueKind == JsonValueKind.Array && element.GetArrayLength() == 0)
             {
                 return null;
             }
 
-            return stepElement.Clone();
+            return element.Clone();
         }
         catch (JsonException)
         {
             return null;
         }
-    }
-
-    private static bool TryResolveStepElement(
-        JsonElement root,
-        string stepKey,
-        out JsonElement stepElement)
-    {
-        if (root.ValueKind == JsonValueKind.Object)
-        {
-            foreach (var property in root.EnumerateObject())
-            {
-                if (string.Equals(property.Name, stepKey, StringComparison.OrdinalIgnoreCase))
-                {
-                    stepElement = property.Value;
-                    return true;
-                }
-            }
-        }
-        else if (root.ValueKind == JsonValueKind.Array)
-        {
-            stepElement = root;
-            return true;
-        }
-
-        stepElement = default;
-        return false;
     }
 
     private static IReadOnlyList<string> ReadStringList(JsonElement element)
@@ -646,18 +762,11 @@ internal static class DotNetSolutionSetupToolPlanGuard
     private static string ReadLaunchVariable(
         IReadOnlyDictionary<string, string> launchVariables,
         string key)
-        => launchVariables.TryGetValue(key, out var value) ? value.Trim() : string.Empty;
-
-    private static bool HasDotNetSetupPlanVariables(IReadOnlyDictionary<string, string> launchVariables)
-        => launchVariables.Keys.Any(key =>
-            key.StartsWith("DotNetCreateProject", StringComparison.OrdinalIgnoreCase) ||
-            key.StartsWith("DotNetAddTestProject", StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(key, ProcessRuntimeLaunchVariables.ProductCompletionRequiredToolReceiptsByStep, StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(key, ProcessRuntimeLaunchVariables.ProductCompletionRequiredPathsByStep, StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(key, ProcessRuntimeLaunchVariables.ProductCompletionRequiredFileContentChecksByStep, StringComparison.OrdinalIgnoreCase));
-
-    private static bool IsDotNetSetupStep(string stepKey)
-        => stepKey is "create-dotnet-project" or "add-test-project" or "repair-solution-setup";
+        => !string.IsNullOrWhiteSpace(key) &&
+           launchVariables.TryGetValue(key, out var value) &&
+           !string.IsNullOrWhiteSpace(value)
+            ? value.Trim()
+            : string.Empty;
 
     private static bool ReceiptMatches(string actual, string expected)
         => string.Equals(actual.Trim(), expected, StringComparison.OrdinalIgnoreCase);
@@ -689,4 +798,3 @@ internal static class DotNetSolutionSetupToolPlanGuard
             $"{assignment.RunId}:{assignment.StepInstanceId}:{code}:{evidence}"));
     }
 }
-

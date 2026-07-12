@@ -38,31 +38,80 @@ internal sealed class ProcessRuntimeOwnedStepCoordinator(
     IEnumerable<IProcessRuntimeOwnedStepExecutor> runtimeOwnedStepExecutors,
     ProcessStepCompletionCoordinator completionCoordinator)
 {
-    private readonly IReadOnlyList<IProcessRuntimeOwnedStepExecutor> runtimeOwnedStepExecutors = runtimeOwnedStepExecutors.ToArray();
+    private readonly IReadOnlyDictionary<string, IProcessRuntimeOwnedStepExecutor> runtimeOwnedStepExecutorsByKey = CreateExecutorMap(runtimeOwnedStepExecutors);
 
     internal async ValueTask<ProcessExecutionAdapterResult?> TryExecuteRuntimeOwnedStepAsync(
         ProcessRuntimeStepAssignment assignment,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        ProcessStepExecutionContract? stepContract = null)
     {
-        foreach (var executor in runtimeOwnedStepExecutors)
+        if (!ProcessRuntimeLaunchVariables.TryReadProcessStepRuntimeOwnedExecutorKey(
+                assignment.LaunchVariables,
+                out var executorKey))
         {
-            var runtimeResult = await executor
-                .TryExecuteAsync(assignment, cancellationToken)
-                .ConfigureAwait(false);
-            if (runtimeResult is null)
-            {
-                continue;
-            }
-
-            return ResolveRuntimeOwnedStepResult(assignment, runtimeResult);
+            return null;
         }
 
-        return null;
+        if (!runtimeOwnedStepExecutorsByKey.TryGetValue(executorKey, out var executor))
+        {
+            return NeedsManagerForCompletionIssue(
+                assignment,
+                ComputeHash($"runtime-owned-executor-not-registered:{executorKey}"),
+                new ProcessCompletionIssue(
+                    "process.adapter.runtime_owned_executor_unavailable",
+                    $"Step '{assignment.StepKey}' declares runtime-owned executor '{executorKey}', but no matching executor is registered.",
+                    $"{assignment.RunId}:{assignment.StepInstanceId}:runtime-owned-executor-unavailable:{executorKey}",
+                    assignment.ProducedArtifactSlotIds,
+                    ProcessDiagnosticRetrySafety.SafeToRetry,
+                    ProcessDiagnosticIdempotencyClassification.Idempotent));
+        }
+
+        var runtimeResult = await executor
+            .TryExecuteAsync(assignment, cancellationToken)
+            .ConfigureAwait(false);
+        if (runtimeResult is null)
+        {
+            return NeedsManagerForCompletionIssue(
+                assignment,
+                ComputeHash($"runtime-owned-executor-declined:{executorKey}"),
+                new ProcessCompletionIssue(
+                    "process.adapter.runtime_owned_executor_declined",
+                    $"Step '{assignment.StepKey}' declares runtime-owned executor '{executorKey}', but that executor declined the typed execution contract.",
+                    $"{assignment.RunId}:{assignment.StepInstanceId}:runtime-owned-executor-declined:{executorKey}",
+                    assignment.ProducedArtifactSlotIds,
+                    ProcessDiagnosticRetrySafety.SafeToRetry,
+                    ProcessDiagnosticIdempotencyClassification.Idempotent));
+        }
+
+        return ResolveRuntimeOwnedStepResult(assignment, runtimeResult, stepContract);
+    }
+
+    private static IReadOnlyDictionary<string, IProcessRuntimeOwnedStepExecutor> CreateExecutorMap(
+        IEnumerable<IProcessRuntimeOwnedStepExecutor> executors)
+    {
+        ArgumentNullException.ThrowIfNull(executors);
+
+        var map = new Dictionary<string, IProcessRuntimeOwnedStepExecutor>(StringComparer.OrdinalIgnoreCase);
+        foreach (var executor in executors)
+        {
+            if (string.IsNullOrWhiteSpace(executor.ExecutorKey))
+            {
+                throw new InvalidOperationException("A runtime-owned step executor must declare a stable executor key.");
+            }
+
+            if (!map.TryAdd(executor.ExecutorKey.Trim(), executor))
+            {
+                throw new InvalidOperationException($"Duplicate runtime-owned step executor key '{executor.ExecutorKey.Trim()}' is registered.");
+            }
+        }
+
+        return map;
     }
 
     private ProcessExecutionAdapterResult ResolveRuntimeOwnedStepResult(
         ProcessRuntimeStepAssignment assignment,
-        ProcessRuntimeOwnedStepExecutionResult runtimeResult)
+        ProcessRuntimeOwnedStepExecutionResult runtimeResult,
+        ProcessStepExecutionContract? stepContract)
     {
         if (!runtimeResult.Succeeded || runtimeResult.Output is null)
         {
@@ -94,6 +143,7 @@ internal sealed class ProcessRuntimeOwnedStepCoordinator(
             materialization,
             rawOutputHash,
             runtimeResult.ExecutionRunId,
-            materialization.ToolReceipts);
+            materialization.ToolReceipts,
+            stepContract: stepContract);
     }
 }

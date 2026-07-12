@@ -886,7 +886,10 @@ public sealed class ProcessLaunchApplicationService(
             FirstNonEmpty(expectation?.Title, expectationKey),
             FirstNonEmpty(expectation?.ArtifactKind, "Artifact"),
             primaryManagedRef,
-            materializationMode);
+            materializationMode)
+        {
+            PayloadSchema = expectation?.PayloadSchema?.Trim() ?? string.Empty
+        };
     }
 
     private static ProcessArtifactMaterializationMode ResolveProducedArtifactMaterializationMode(
@@ -1212,7 +1215,11 @@ public sealed class ProcessLaunchApplicationService(
             ProcessRuntimeLaunchVariables.ProductCompletionRequiredToolReceipts);
         RemoveCanonicalLaunchVariable(enriched, ProcessRuntimeLaunchVariables.ProcessStepKind);
         RemoveCanonicalLaunchVariable(enriched, ProcessRuntimeLaunchVariables.ProcessStepSubprocessContractJson);
+        RemoveCanonicalLaunchVariable(enriched, ProcessRuntimeLaunchVariables.ProcessStepScriptHelperDescriptorJson);
+        RemoveCanonicalLaunchVariable(enriched, ProcessRuntimeLaunchVariables.ProcessStepRuntimeOwnedExecutorKey);
+        RemoveCanonicalLaunchVariable(enriched, ProcessRuntimeLaunchVariables.ProcessStepCompletionDispositionJson);
         RemoveCanonicalLaunchVariable(enriched, ProcessRuntimeLaunchVariables.ProcessStepSubprocessDefinitionKey);
+        RemoveCanonicalLaunchVariable(enriched, ProcessRuntimeLaunchVariables.ExecutorPreferredSpecializationTags);
         RemoveCanonicalLaunchVariable(enriched, ProcessRuntimeLaunchVariables.ProductCompletionRequiredPaths);
         RemoveCanonicalLaunchVariable(enriched, ProcessRuntimeLaunchVariables.ProductCompletionRequiredFileContentChecks);
         RemoveCanonicalLaunchVariable(enriched, ProcessRuntimeLaunchVariables.ProductCompletionRequiredToolReceipts);
@@ -1220,6 +1227,20 @@ public sealed class ProcessLaunchApplicationService(
         if (!string.IsNullOrWhiteSpace(step.StepKind))
         {
             SetCanonicalLaunchVariable(enriched, ProcessRuntimeLaunchVariables.ProcessStepKind, step.StepKind.Trim());
+        }
+
+        var executorPreferredSpecializationTags = step.ExecutorPreferredSpecializationTags
+            .Where(tag => !string.IsNullOrWhiteSpace(tag))
+            .Select(tag => tag.Trim())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(tag => tag, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        if (executorPreferredSpecializationTags.Length > 0)
+        {
+            SetCanonicalLaunchVariable(
+                enriched,
+                ProcessRuntimeLaunchVariables.ExecutorPreferredSpecializationTags,
+                JsonSerializer.Serialize(executorPreferredSpecializationTags));
         }
 
         if (!string.IsNullOrWhiteSpace(step.SubprocessProcessKey))
@@ -1236,6 +1257,49 @@ public sealed class ProcessLaunchApplicationService(
                 enriched,
                 ProcessRuntimeLaunchVariables.ProcessStepSubprocessContractJson,
                 ProcessRuntimeLaunchVariables.SerializeProcessStepSubprocessContract(step.SubprocessContract));
+        }
+
+        if (step.ExecutionContract?.DeterministicToolPlan is { } deterministicToolPlan &&
+            !string.IsNullOrWhiteSpace(deterministicToolPlan.ScriptLaunchVariable) &&
+            !string.IsNullOrWhiteSpace(deterministicToolPlan.ScriptRefLaunchVariable))
+        {
+            SetCanonicalLaunchVariable(
+                enriched,
+                ProcessRuntimeLaunchVariables.ProcessStepScriptHelperDescriptorJson,
+                ProcessRuntimeLaunchVariables.SerializeProcessStepScriptHelperDescriptor(
+                    new ProcessRuntimeScriptHelperDescriptor(
+                        deterministicToolPlan.ScriptLaunchVariable.Trim(),
+                        deterministicToolPlan.ScriptRefLaunchVariable.Trim(),
+                        deterministicToolPlan.SideEffectManifestLaunchVariable.Trim(),
+                        deterministicToolPlan.PlanKey.Trim(),
+                        deterministicToolPlan.PlanKind.Trim(),
+                        deterministicToolPlan.ExecutionPlanLaunchVariable.Trim())));
+        }
+
+        if (!string.IsNullOrWhiteSpace(step.ExecutionContract?.RuntimeOwnedExecutorKey))
+        {
+            SetCanonicalLaunchVariable(
+                enriched,
+                ProcessRuntimeLaunchVariables.ProcessStepRuntimeOwnedExecutorKey,
+                step.ExecutionContract.RuntimeOwnedExecutorKey.Trim());
+        }
+
+        var openIssueBranchOutcomeKeys = step.BranchOutcomes
+            .Where(outcome => outcome.AllowsCompletedOutcomeWithOpenIssues)
+            .Select(outcome => outcome.Key)
+            .Where(key => !string.IsNullOrWhiteSpace(key))
+            .Select(key => key.Trim())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        if (step.AllowsCompletedOutcomeWithOpenIssues || openIssueBranchOutcomeKeys.Length > 0)
+        {
+            SetCanonicalLaunchVariable(
+                enriched,
+                ProcessRuntimeLaunchVariables.ProcessStepCompletionDispositionJson,
+                ProcessRuntimeLaunchVariables.SerializeProcessStepCompletionDisposition(
+                    new ProcessRuntimeCompletionDisposition(
+                        step.AllowsCompletedOutcomeWithOpenIssues,
+                        openIssueBranchOutcomeKeys)));
         }
 
         if (TryResolveStepProductCompletionRequiredPaths(enriched, step.Key, out var stepProductCompletionPaths))
@@ -1281,6 +1345,11 @@ public sealed class ProcessLaunchApplicationService(
                 enriched,
                 ProcessRuntimeLaunchVariables.ProductCompletionRequiredFileContentChecks,
                 inheritedProductCompletionFileContentChecks);
+        }
+
+        if (step.CompletionPolicy is not null)
+        {
+            ProcessTemplateStepCompletionPolicyMaterializer.Apply(enriched, step);
         }
 
         return enriched;

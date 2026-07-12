@@ -51,11 +51,8 @@ internal static class ProcessAcceptanceCriteriaGate
             return null;
         }
 
-        var outcomeText = string.Join(
-            " ",
-            EnumerateOutcomeText(output).Where(value => !string.IsNullOrWhiteSpace(value)));
         var missingCriteria = matrix.RequiredCriteria
-            .Where(criterion => !ContainsCriterionId(outcomeText, criterion.Id))
+            .Where(criterion => !HasPassedCriterionEvidence(output, criterion.Id))
             .ToArray();
         if (missingCriteria.Length == 0)
         {
@@ -69,7 +66,7 @@ internal static class ProcessAcceptanceCriteriaGate
                 : $"{criterion.Id} ({criterion.Summary})"));
         return new ProcessCompletionIssue(
             "process.adapter.acceptance_criteria_missing",
-            $"Step '{assignment.StepKey}' selected acceptance branch '{output.BranchOutcomeKey}', but required acceptance criteria id(s) were not cited with proof: {missingSummary}. Retry the same step with criterion-by-criterion evidence, or select a non-acceptance branch when criteria remain failed.",
+            $"Step '{assignment.StepKey}' selected acceptance branch '{output.BranchOutcomeKey}', but required acceptance criteria lack passed typed evidence entries with proof refs: {missingSummary}. Retry the same step with criterion-by-criterion evidence, or select a non-acceptance branch when criteria remain failed.",
             $"{assignment.RunId}:{assignment.StepInstanceId}:acceptance-criteria-missing:{output.BranchOutcomeKey}:{missingSummary}",
             assignment.ProducedArtifactSlotIds,
             ProcessDiagnosticRetrySafety.SafeToRetry,
@@ -90,10 +87,55 @@ internal static class ProcessAcceptanceCriteriaGate
             .Contains(branchOutcomeKey.Trim(), StringComparer.OrdinalIgnoreCase);
     }
 
-    internal static bool ContainsCriterionId(string text, string criterionId)
-        => !string.IsNullOrWhiteSpace(text) &&
-           !string.IsNullOrWhiteSpace(criterionId) &&
-           text.Contains(criterionId.Trim(), StringComparison.OrdinalIgnoreCase);
+    internal static bool HasPassedCriterionEvidence(
+        ProcessStepOutcomeResult output,
+        string criterionId)
+        => !string.IsNullOrWhiteSpace(criterionId) &&
+           (output.AcceptanceCriteriaEvidence ?? []).Any(evidence =>
+               evidence is not null &&
+               string.Equals(evidence.CriterionId?.Trim(), criterionId.Trim(), StringComparison.OrdinalIgnoreCase) &&
+               evidence.Status == ProcessAcceptanceCriterionEvidenceStatus.Passed &&
+               !string.IsNullOrWhiteSpace(evidence.Summary) &&
+               (evidence.EvidenceRefs ?? []).Any(reference => !string.IsNullOrWhiteSpace(reference)));
+
+    internal static bool TryGetFailedCriterionEvidence(
+        ProcessRuntimeStepAssignment assignment,
+        ProcessStepOutcomeResult output,
+        out string defectSummary)
+    {
+        defectSummary = string.Empty;
+        if (!assignment.LaunchVariables.TryGetValue(
+                ProcessRuntimeLaunchVariables.AcceptanceCriteriaMatrix,
+                out var rawMatrix) ||
+            !ProcessAcceptanceCriteriaMatrixJson.TryDeserialize(rawMatrix, out var matrix) ||
+            matrix.RequiredCriteria.Count == 0)
+        {
+            return false;
+        }
+
+        var requiredCriterionIds = matrix.RequiredCriteria
+            .Select(criterion => criterion.Id)
+            .Where(id => !string.IsNullOrWhiteSpace(id))
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var failedCriteria = (output.AcceptanceCriteriaEvidence ?? [])
+            .Where(evidence => evidence is not null &&
+                               evidence.Status == ProcessAcceptanceCriterionEvidenceStatus.Failed &&
+                               !string.IsNullOrWhiteSpace(evidence.CriterionId) &&
+                               requiredCriterionIds.Contains(evidence.CriterionId.Trim()) &&
+                               !string.IsNullOrWhiteSpace(evidence.Summary) &&
+                               (evidence.EvidenceRefs ?? []).Any(reference => !string.IsNullOrWhiteSpace(reference)))
+            .Select(evidence => evidence.CriterionId.Trim())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Take(5)
+            .ToArray();
+        if (failedCriteria.Length == 0)
+        {
+            return false;
+        }
+
+        defectSummary = $"Typed failed acceptance-criterion evidence: {string.Join(", ", failedCriteria)}.";
+        return true;
+    }
 
     internal static IReadOnlyList<string> SplitLaunchVariableList(string value)
         => string.IsNullOrWhiteSpace(value)

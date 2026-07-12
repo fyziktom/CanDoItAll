@@ -120,9 +120,57 @@ public sealed class ProcessAutomaticRecoveryPromptBuilderTests
         Assert.Contains(ProcessAutomaticRecoveryPromptBuilder.CompletionChecklistHeading, prompt, StringComparison.Ordinal);
         Assert.Contains("Invoke `browser_evaluate` successfully in this exact execution attempt.", prompt, StringComparison.Ordinal);
         Assert.Contains("Invoke `workspace_dotnet_test` successfully in this exact execution attempt.", prompt, StringComparison.Ordinal);
-        Assert.Contains("Read concrete owning product source", prompt, StringComparison.Ordinal);
-        Assert.Contains("Run `browser_evaluate` after the representative interaction and before stopping the runtime.", prompt, StringComparison.Ordinal);
+        Assert.Contains("Read the concrete product material responsible for the diagnosed behavior", prompt, StringComparison.Ordinal);
+        Assert.Contains("Repeat the complete lifecycle required by this step in causal order", prompt, StringComparison.Ordinal);
         Assert.Contains("compare the checklist with the current execution's actual tool calls", prompt, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Build_LifecycleDiagnostic_UsesGenericLifecycleGuidanceWithoutBrowserAssumptions()
+    {
+        var prompt = ProcessAutomaticRecoveryPromptBuilder.Build(
+            CreateAssignment("Repair the rejected step."),
+            """
+            Runtime diagnostic rework instruction:
+            process.adapter.runtime_lifecycle_correlation_missing: Current-execution lifecycle proof was stale.
+            """);
+
+        Assert.Contains("Repeat the complete lifecycle required by this step in causal order", prompt, StringComparison.Ordinal);
+        Assert.DoesNotContain("browser", prompt, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void Build_SchemaDiagnostic_RetainsArtifactContractsAndAddsSchemaRewriteChecklist()
+    {
+        var assignment = CreateAssignment($"""
+            Step instructions:
+            Produce the governed output.
+
+            Required upstream artifact slots:
+            - Slot input-one
+              Payload schema: example.input/v1
+
+            Produced artifact slots:
+            - Slot output-one
+              Payload schema: opaque.example/v1
+              Validation: Must contain exactly one declared payload.
+
+            Available branch outcomes:
+            - corrected
+            """);
+
+        var prompt = ProcessAutomaticRecoveryPromptBuilder.Build(
+            assignment,
+            $"""
+            Runtime diagnostic rework instruction:
+            {ProcessCompletionDiagnosticCodes.ArtifactPayloadSchemaInvalid}: The declared output payload is invalid.
+            """);
+
+        Assert.Contains("Required upstream artifact slots:", prompt, StringComparison.Ordinal);
+        Assert.Contains("Produced artifact slots:", prompt, StringComparison.Ordinal);
+        Assert.Contains("Payload schema: opaque.example/v1", prompt, StringComparison.Ordinal);
+        Assert.Contains("Must contain exactly one declared payload.", prompt, StringComparison.Ordinal);
+        Assert.Contains("Reread the schema-bound Produced artifact slot and rewrite its declared payload exactly before finalizing.", prompt, StringComparison.Ordinal);
     }
 
     private static ProcessRuntimeStepAssignment CreateAssignment(

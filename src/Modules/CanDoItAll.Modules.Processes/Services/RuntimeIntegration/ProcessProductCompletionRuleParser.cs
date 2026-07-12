@@ -65,7 +65,7 @@ internal static class ProcessProductCompletionRuleParser
         string stepKey)
         => ResolveProductCompletionRequiredStringList(
             launchVariables,
-            "RuntimeRoutedBranchOutcomeKeys",
+            ProcessRuntimeLaunchVariables.RuntimeRoutedBranchOutcomeKeys,
             ProcessRuntimeLaunchVariables.RuntimeRoutedBranchOutcomeKeysByStep,
             stepKey);
 
@@ -251,7 +251,12 @@ internal static class ProcessProductCompletionRuleParser
             ReadStringPropertyValues(element, "skipBranchOutcomeKeys", "skippedBranchOutcomeKeys", "excludedBranchOutcomeKeys"),
             ReadFirstStringProperty(element, "purpose", "receiptPurpose"),
             ReadFirstStringProperty(element, "key", "id"),
-            ReadFirstStringProperty(element, "reason", "description"));
+            ReadFirstStringProperty(element, "reason", "description"),
+            ReadBooleanProperty(
+                element,
+                defaultValue: false,
+                "allowFailedExecutionReceipt",
+                "allowsFailedExecutionReceipt"));
         return true;
     }
 

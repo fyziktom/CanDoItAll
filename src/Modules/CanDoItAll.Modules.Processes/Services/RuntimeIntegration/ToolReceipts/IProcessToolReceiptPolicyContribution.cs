@@ -13,14 +13,9 @@ internal readonly record struct ProcessToolReceiptRequirementMatch(bool IsHandle
     public static ProcessToolReceiptRequirementMatch NotMatched { get; } = new(true, false);
 }
 
-internal sealed record ProcessScriptHelperDescriptor(
-    string ScriptVariableName,
-    string ScriptRefVariableName,
-    string ManifestVariableName);
-
 internal interface IProcessToolReceiptPolicyContribution
 {
-    bool IsProductMutationTool(string toolName);
+    bool IsProductMutationReceipt(ToolExecutionReceiptRecord receipt);
 
     bool IsProductValidationTool(string toolName);
 
@@ -29,12 +24,4 @@ internal interface IProcessToolReceiptPolicyContribution
         string requirement);
 
     IEnumerable<string> EnumerateRequirementSearchTerms(string requirement);
-
-    bool TryResolveScriptHelper(
-        ProcessRuntimeStepAssignment assignment,
-        out ProcessScriptHelperDescriptor descriptor);
-
-    bool AllowsCompletedOutcomeWithDeclaredBlockers(
-        ProcessRuntimeStepAssignment assignment,
-        ProcessStepOutcomeResult output);
 }

@@ -132,6 +132,7 @@ public sealed class ProcessRuntimeArchitectureBaselineTests
             "ProcessCompletionRuleParser.cs",
             "ProcessExecutionResultConverter.cs",
             "ProcessManagedArtifactService.cs",
+            "ProcessOutcomeCitationSanitizer.cs",
             "ProcessOutcomeGroundingValidator.cs",
             "ProcessRequiredReceiptMatcher.cs",
             "ProcessRequiredReceiptRetryPolicy.cs",
@@ -145,6 +146,26 @@ public sealed class ProcessRuntimeArchitectureBaselineTests
             .ToArray();
 
         Assert.Empty(oversizedFiles);
+    }
+
+    [Fact]
+    public void Outcome_grounding_validator_delegates_citation_sanitization_to_a_dedicated_type()
+    {
+        var root = FindRepositoryRoot();
+        var adapterDirectory = Path.Combine(
+            root,
+            "src",
+            "Modules",
+            "CanDoItAll.Modules.Processes",
+            "Services",
+            "RuntimeIntegration");
+        var validatorSource = File.ReadAllText(Path.Combine(adapterDirectory, "ProcessOutcomeGroundingValidator.cs"));
+        var sanitizerSource = File.ReadAllText(Path.Combine(adapterDirectory, "ProcessOutcomeCitationSanitizer.cs"));
+
+        Assert.DoesNotContain("RemoveNonCitableSourceMetadataFromOutcome", validatorSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("RemoveNonCitableSourceMetadataFragments", validatorSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("RemoveNonCitableEvidenceRef", validatorSource, StringComparison.Ordinal);
+        Assert.Contains("internal static class ProcessOutcomeCitationSanitizer", sanitizerSource, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -348,6 +369,45 @@ public sealed class ProcessRuntimeArchitectureBaselineTests
         Assert.DoesNotContain("IDotNetSolutionSetupRuntimeExecutor", adapterSource, StringComparison.Ordinal);
         Assert.DoesNotContain("TryExecuteRuntimeOwnedDotNetSetupAsync", adapterSource, StringComparison.Ordinal);
         Assert.DoesNotContain("dotNetSolutionSetupRuntimeExecutor", adapterSource, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Generic_runtime_integration_delegates_browser_protocol_semantics_to_browser_drivers()
+    {
+        var root = FindRepositoryRoot();
+        var integrationDirectory = Path.Combine(
+            root,
+            "src",
+            "Modules",
+            "CanDoItAll.Modules.Processes",
+            "Services",
+            "RuntimeIntegration");
+        var genericFiles = new[]
+        {
+            "ProcessCompletionIssueResultFactory.cs",
+            "ProcessRuntimeToolPreflightService.cs",
+            "ProcessExecutionMetadataBuilder.cs"
+        };
+        var forbiddenTerms = new[]
+        {
+            "browser_",
+            "playwright",
+            "BrowserConsole",
+            "ProcessBrowserToolsAllowedMetadataKey"
+        };
+
+        var findings = genericFiles
+            .SelectMany(fileName => forbiddenTerms.Select(term => new
+            {
+                FileName = fileName,
+                Term = term,
+                Source = File.ReadAllText(Path.Combine(integrationDirectory, fileName))
+            }))
+            .Where(candidate => candidate.Source.Contains(candidate.Term, StringComparison.OrdinalIgnoreCase))
+            .Select(candidate => $"{candidate.FileName} contains {candidate.Term}")
+            .ToArray();
+
+        Assert.Empty(findings);
     }
 
     private static bool IsAllowedCurrentDomainTermHit(string relativePath)

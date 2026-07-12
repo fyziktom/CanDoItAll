@@ -51,8 +51,7 @@ public static class RuntimeToolProcessIntentPolicy
             return true;
         }
 
-        return contextIntent.ScaffoldToolOnly ||
-               HasAnyOperation(
+        return HasAnyOperation(
                    contextIntent,
                    ProcessOperationContractNames.MutateProductTarget,
                    ProcessOperationContractNames.WriteExternalArtifactDestination,

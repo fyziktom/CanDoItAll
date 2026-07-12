@@ -6,6 +6,8 @@ namespace CanDoItAll.Modules.Processes;
 
 internal interface IProcessRuntimeOwnedStepExecutor
 {
+    string ExecutorKey { get; }
+
     ValueTask<ProcessRuntimeOwnedStepExecutionResult?> TryExecuteAsync(
         ProcessRuntimeStepAssignment assignment,
         CancellationToken cancellationToken = default);

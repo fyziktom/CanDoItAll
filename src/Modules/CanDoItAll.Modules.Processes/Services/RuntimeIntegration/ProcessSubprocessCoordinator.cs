@@ -45,7 +45,8 @@ internal sealed class ProcessSubprocessCoordinator(
         ProcessRuntimeStepAssignment assignment,
         IProcessRuntimeStepAssignmentStore assignmentStore,
         IProcessRuntimeStateStore stateStore,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        ProcessStepExecutionContract? stepContract = null)
     {
         if (!RequiresSubprocessLaunch(assignment))
         {
@@ -72,13 +73,66 @@ internal sealed class ProcessSubprocessCoordinator(
                 issue);
         }
 
-        var launch = await coordinator
-            .TryLaunchAsync(
-                new ProcessSubprocessLaunchCoordinatorRequest(
+        ProcessSubprocessLaunchCoordinatorResult? launch;
+        try
+        {
+            launch = await coordinator
+                .TryLaunchAsync(
+                    new ProcessSubprocessLaunchCoordinatorRequest(
+                        assignment,
+                        subprocessDefinitionKey),
+                    cancellationToken)
+                .ConfigureAwait(false);
+        }
+        catch (ProcessRuntimeDispatchDeferredException)
+        {
+            throw;
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception exception)
+        {
+            ProcessRunId? pendingChildRunId;
+            try
+            {
+                pendingChildRunId = await TryResolveExistingPendingChildRunAsync(
+                        assignment,
+                        assignmentStore,
+                        stateStore,
+                        CancellationToken.None)
+                    .ConfigureAwait(false);
+            }
+            catch (Exception reconciliationException)
+            {
+                var reconciliationIssue = CreateSubprocessLaunchFailedIssue(
                     assignment,
-                    subprocessDefinitionKey),
-                cancellationToken)
-            .ConfigureAwait(false);
+                    subprocessDefinitionKey,
+                    new InvalidOperationException(
+                        $"The subprocess launch failed and pending-child reconciliation also failed: {reconciliationException.Message}",
+                        exception));
+                return NeedsManagerForCompletionIssue(
+                    assignment,
+                    ComputeHash(reconciliationIssue.Evidence),
+                    reconciliationIssue);
+            }
+
+            if (pendingChildRunId is { } resolvedPendingChildRunId)
+            {
+                throw CreatePendingChildRunDeferredException(assignment, resolvedPendingChildRunId);
+            }
+
+            var issue = CreateSubprocessLaunchFailedIssue(
+                assignment,
+                subprocessDefinitionKey,
+                exception);
+            return NeedsManagerForCompletionIssue(
+                assignment,
+                ComputeHash(issue.Evidence),
+                issue);
+        }
+
         if (launch is null)
         {
             var issue = CreateSubprocessLaunchNotHandledIssue(assignment, subprocessDefinitionKey);
@@ -120,7 +174,8 @@ internal sealed class ProcessSubprocessCoordinator(
                 validation.Output,
                 assignmentStore,
                 stateStore,
-                cancellationToken).ConfigureAwait(false) is { } subprocessResult)
+                cancellationToken,
+                stepContract).ConfigureAwait(false) is { } subprocessResult)
         {
             return subprocessResult;
         }
@@ -141,7 +196,8 @@ internal sealed class ProcessSubprocessCoordinator(
             materialization,
             validation.RawOutputHash,
             subprocessLaunchReceipt.ExecutionRunId,
-            materialization.ToolReceipts);
+            materialization.ToolReceipts,
+            stepContract: stepContract);
     }
 
     internal static bool IsActiveSubprocessLaunchStage(string stage)
@@ -152,17 +208,19 @@ internal sealed class ProcessSubprocessCoordinator(
 
     internal async ValueTask<ProcessExecutionAdapterResult?> TryResolveExistingSubprocessBridgeAsync(
         ProcessRuntimeStepAssignment assignment,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        ProcessStepExecutionContract? stepContract = null)
     {
         var result = await parentSubprocessArtifactBridge
             .ResolveExistingAsync(assignment, cancellationToken)
             .ConfigureAwait(false);
-        return TranslateSubprocessBridgeResult(assignment, result);
+        return TranslateSubprocessBridgeResult(assignment, result, stepContract);
     }
 
     private ProcessExecutionAdapterResult? TranslateSubprocessBridgeResult(
         ProcessRuntimeStepAssignment assignment,
-        ParentSubprocessArtifactBridgeResult result)
+        ParentSubprocessArtifactBridgeResult result,
+        ProcessStepExecutionContract? stepContract)
     {
         return result.Kind switch
         {
@@ -170,8 +228,10 @@ internal sealed class ProcessSubprocessCoordinator(
                 ParentSubprocessArtifactBridgeResultKind.NoMatchingChildRun => null,
             ParentSubprocessArtifactBridgeResultKind.ChildActive when result.ChildRunId is { } childRunId =>
                 throw CreatePendingChildRunDeferredException(assignment, childRunId),
-            ParentSubprocessArtifactBridgeResultKind.AcceptedChildOutputBridged when result.AcceptedOutcome is { } acceptedOutcome =>
-                CompleteSynthesizedSubprocessOutcome(assignment, acceptedOutcome),
+            ParentSubprocessArtifactBridgeResultKind.AcceptedChildOutputBridged or
+                ParentSubprocessArtifactBridgeResultKind.NoGoChildOutputBridged
+                when result.BridgedOutcome is { } bridgedOutcome =>
+                CompleteSynthesizedSubprocessOutcome(assignment, bridgedOutcome, stepContract),
             ParentSubprocessArtifactBridgeResultKind.ContractMissing =>
                 NeedsManagerForCompletionIssue(
                     assignment,
@@ -186,6 +246,11 @@ internal sealed class ProcessSubprocessCoordinator(
                 BuildSubprocessBridgeIssueResult(
                     assignment,
                     CreateSubprocessChildAcceptedOutputMissingIssue(assignment, childRunId, contract)),
+            ParentSubprocessArtifactBridgeResultKind.ChildForwardedContextUnavailable
+                when result.ChildRunId is { } childRunId && result.ForwardedContextIssue is { } forwardedContextIssue =>
+                BuildSubprocessBridgeIssueResult(
+                    assignment,
+                    CreateSubprocessChildForwardedContextIssue(assignment, childRunId, forwardedContextIssue)),
             ParentSubprocessArtifactBridgeResultKind.ChildStoppedBlocked
                 when result.ChildRunId is { } childRunId && result.StoppedChild is { } stoppedChild =>
                 BuildSubprocessBridgeIssueResult(
@@ -210,7 +275,8 @@ internal sealed class ProcessSubprocessCoordinator(
 
     private ProcessExecutionAdapterResult CompleteSynthesizedSubprocessOutcome(
         ProcessRuntimeStepAssignment assignment,
-        ParentSubprocessBridgedOutcome completedChildOutcome)
+        ParentSubprocessBridgedOutcome completedChildOutcome,
+        ProcessStepExecutionContract? stepContract)
     {
         var materialization = completionCoordinator.Materialize(
             assignment,
@@ -227,7 +293,8 @@ internal sealed class ProcessSubprocessCoordinator(
             materialization,
             completedChildOutcome.RawOutputHash,
             completedChildOutcome.SyntheticExecutionRunId,
-            materialization.ToolReceipts);
+            materialization.ToolReceipts,
+            stepContract: stepContract);
     }
 
     internal async ValueTask<ProcessExecutionAdapterResult?> TryResolveDeferredOrCompletedSubprocessOutputAsync(
@@ -235,12 +302,13 @@ internal sealed class ProcessSubprocessCoordinator(
         ProcessStepOutcomeResult output,
         IProcessRuntimeStepAssignmentStore assignmentStore,
         IProcessRuntimeStateStore stateStore,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        ProcessStepExecutionContract? stepContract = null)
     {
         var bridgeResult = await parentSubprocessArtifactBridge
             .ResolveFromOutputAsync(assignment, output, cancellationToken)
             .ConfigureAwait(false);
-        return TranslateSubprocessBridgeResult(assignment, bridgeResult);
+        return TranslateSubprocessBridgeResult(assignment, bridgeResult, stepContract);
     }
 
 }

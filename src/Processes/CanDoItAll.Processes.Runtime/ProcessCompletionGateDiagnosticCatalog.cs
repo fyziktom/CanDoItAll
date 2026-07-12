@@ -25,6 +25,7 @@ internal static class ProcessCompletionGateDiagnosticCatalog
                string.Equals(code, "process.adapter.runtime_lifecycle_correlation_missing", StringComparison.OrdinalIgnoreCase) ||
                string.Equals(code, "process.adapter.runtime_gate_findings_append_failed", StringComparison.OrdinalIgnoreCase) ||
                string.Equals(code, ProcessCompletionDiagnosticCodes.ToolReceiptEvidenceContentRejected, StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(code, ProcessCompletionDiagnosticCodes.ArtifactPayloadSchemaInvalid, StringComparison.OrdinalIgnoreCase) ||
                IsManagedArtifactCompletionRetryCode(code);
     }
 

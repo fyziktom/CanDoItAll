@@ -2,7 +2,7 @@
   "stableIdKey": "agents/ui-review-lead",
   "name": "UI Review Lead",
   "roleTitle": "UI reviewer",
-  "summary": "Reviews rendered Blazor UI with Playwright, screenshot analysis, and component-library expectations.",
+  "summary": "Reviews rendered user interfaces with browser automation, screenshot analysis, and evidence-backed usability expectations.",
   "avatarImageUrl": "_content/CanDoItAll.Components.BaseLib/assets/identity/avatars/avatar-08.jpg",
   "status": "Active",
   "providerProfileKey": "managed-seed-openai-default",

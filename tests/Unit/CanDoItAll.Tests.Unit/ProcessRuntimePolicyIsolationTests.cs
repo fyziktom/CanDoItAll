@@ -2,6 +2,7 @@ using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Modules.Processes;
 using CanDoItAll.Processes.Abstractions;
+using CanDoItAll.Processes.Application;
 using CanDoItAll.Processes.Contracts;
 using CanDoItAll.Processes.Drivers.Abstractions;
 using CanDoItAll.Processes.Runtime;
@@ -28,11 +29,22 @@ public sealed class ProcessRuntimePolicyIsolationTests
         Assert.False(catalog.MatchRequirement(
             CreateToolReceipt(ToolContractCatalog.BrowserSnapshot, "filename=state.yml"),
             BrowserInteractionToolReceiptPolicyContribution.InteractionProofRequirement).IsMatch);
-        Assert.True(catalog.IsProductMutationTool("workspace_write_file"));
-        Assert.True(catalog.IsProductMutationTool("workspace_dotnet_new"));
+        Assert.True(catalog.IsProductMutationReceipt(CreateToolReceipt("workspace_write_file", "path=product/app.cs")));
+        Assert.True(catalog.IsProductMutationReceipt(CreateToolReceipt("workspace_dotnet_new", "new blazorwasm")));
+        Assert.False(catalog.IsProductMutationReceipt(CreateToolReceipt("workspace_pwsh_run_script", "path=scripts/read.ps1")));
+        Assert.True(catalog.IsProductMutationReceipt(
+            CreateToolReceipt("workspace_pwsh_run_script", "path=scripts/repair.ps1") with
+            {
+                DeclaredSideEffectMode = ToolExecutionSideEffectMode.ProductMutation
+            }));
+        Assert.True(catalog.IsProductMutationReceipt(
+            CreateToolReceipt("workspace_python_run_file", "path=scripts/repair.py") with
+            {
+                DeclaredSideEffectMode = ToolExecutionSideEffectMode.ProductMutation
+            }));
         Assert.True(catalog.IsProductValidationTool("workspace_dotnet_build"));
         Assert.False(catalog.IsProductValidationTool("workspace_npm_install"));
-        Assert.False(catalog.IsProductMutationTool("browser_navigate"));
+        Assert.False(catalog.IsProductMutationReceipt(CreateToolReceipt("browser_navigate", "url=https://example.test")));
     }
 
     [Fact]
@@ -51,20 +63,18 @@ public sealed class ProcessRuntimePolicyIsolationTests
     }
 
     [Fact]
-    public void Subprocess_contract_resolver_uses_domain_provider_without_generic_defaults()
+    public void Subprocess_contract_resolver_uses_template_supplied_contract_without_fallbacks()
     {
-        var genericResolver = new ProcessSubprocessContractResolver([]);
-        var dotNetResolver = new ProcessSubprocessContractResolver(
-            [new DotNetSoftwareDeliverySubprocessContractProvider()]);
+        var resolver = new ProcessSubprocessContractResolver();
         var launchVariables = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
         {
-            [ProcessRuntimeLaunchVariables.ProcessDefinitionKey] = "software-delivery",
-            [ProcessRuntimeLaunchVariables.ProcessStepSubprocessDefinitionKey] = "dotnet-development-slice"
+            [ProcessRuntimeLaunchVariables.ProcessStepSubprocessContractJson] =
+                """{"definitionKey":"example-child-process","parentProducedArtifactExpectationKey":"handoff"}"""
         };
 
-        Assert.False(genericResolver.TryResolve(launchVariables, "implementation", out _));
-        Assert.True(dotNetResolver.TryResolve(launchVariables, "implementation", out var contract));
-        Assert.Equal("dotnet-development-slice", contract.DefinitionKey);
+        Assert.True(resolver.TryResolve(launchVariables, "implementation", out var contract));
+        Assert.Equal("example-child-process", contract.DefinitionKey);
+        Assert.False(resolver.TryResolve(new Dictionary<string, string>(), "implementation", out _));
     }
 
     [Fact]
@@ -75,12 +85,29 @@ public sealed class ProcessRuntimePolicyIsolationTests
         services.AddProcessesModule(new ConfigurationBuilder().Build());
 
         Assert.Contains(services, descriptor => descriptor.ServiceType == typeof(IProcessToolReceiptPolicyContribution));
+        Assert.Contains(services, descriptor => descriptor.ServiceType == typeof(IProcessExecutionMetadataContribution));
+        Assert.Contains(services, descriptor => descriptor.ServiceType == typeof(IProcessRuntimeToolPreflightContribution));
+        Assert.Contains(services, descriptor => descriptor.ServiceType == typeof(IProcessCompletionDefectEvidenceContribution));
+        Assert.Contains(
+            services,
+            descriptor => descriptor.ServiceType == typeof(IProcessLaunchVariableContributor) &&
+                          descriptor.ImplementationType == typeof(WorkspaceProductTargetFilesystemStateLaunchVariableContributor));
         Assert.Contains(services, descriptor => descriptor.ServiceType == typeof(ProcessToolReceiptPolicyCatalog));
-        Assert.Contains(services, descriptor => descriptor.ServiceType == typeof(IProcessSubprocessContractProvider));
         Assert.Contains(services, descriptor => descriptor.ServiceType == typeof(ProcessSubprocessContractResolver));
         Assert.Contains(services, descriptor => descriptor.ServiceType == typeof(IProcessRuntimeToolPlanGuard));
-        Assert.Contains(services, descriptor => descriptor.ServiceType == typeof(IProcessToolReceiptEvidencePolicyContribution));
         Assert.Contains(services, descriptor => descriptor.ServiceType == typeof(ProcessToolReceiptEvidenceGate));
+        Assert.Contains(
+            services,
+            descriptor => descriptor.ServiceType == typeof(IProcessCompletionGateContribution) &&
+                           descriptor.ImplementationType == typeof(WorkspaceProductFilesystemCompletionGateContribution));
+        Assert.Contains(
+            services,
+            descriptor => descriptor.ServiceType == typeof(IProcessCompletionGateContribution) &&
+                           descriptor.ImplementationType == typeof(DotNetSolutionContextCompletionGateContribution));
+        Assert.Contains(
+            services,
+            descriptor => descriptor.ServiceType == typeof(IProcessCompletionGateContribution) &&
+                           descriptor.ImplementationType == typeof(BrowserRuntimeLifecycleCompletionGateContribution));
     }
 
     [Fact]
@@ -171,138 +198,56 @@ public sealed class ProcessRuntimePolicyIsolationTests
     }
 
     [Fact]
-    public void Dotnet_browser_evidence_gate_rejects_current_run_blazor_error_banner()
+    public void Completion_disposition_contract_allows_open_issues_only_for_declared_branch()
     {
-        var issue = EvaluateBrowserSnapshotEvidence(
-            $"- generic: Tetris{Environment.NewLine}- generic: {DotNetBrowserSnapshotEvidencePolicyContribution.BlazorUnhandledErrorBanner}",
-            receiptBelongsToCurrentExecution: true,
-            processDefinitionKey: "software-delivery");
+        var launchVariables = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            [ProcessRuntimeLaunchVariables.ProcessStepCompletionDispositionJson] =
+                ProcessRuntimeLaunchVariables.SerializeProcessStepCompletionDisposition(
+                    new ProcessRuntimeCompletionDisposition(
+                        false,
+                        ["repair-required"]))
+        };
 
-        Assert.NotNull(issue);
-        Assert.Equal(ProcessCompletionDiagnosticCodes.ToolReceiptEvidenceContentRejected, issue.Code);
-        Assert.Contains("visible unhandled-error banner", issue.Summary, StringComparison.OrdinalIgnoreCase);
+        Assert.True(ProcessRuntimeLaunchVariables.TryReadProcessStepCompletionDisposition(
+            launchVariables,
+            out var disposition));
+        Assert.Equal(["repair-required"], disposition.OpenIssueBranchOutcomeKeys);
+        Assert.True(ProcessRuntimeLaunchVariables.AllowsCompletedOutcomeWithOpenIssues(
+            launchVariables,
+            "repair-required"));
+        Assert.False(ProcessRuntimeLaunchVariables.AllowsCompletedOutcomeWithOpenIssues(
+            launchVariables,
+            "accepted"));
     }
 
     [Fact]
-    public void Dotnet_browser_evidence_gate_accepts_clean_current_run_snapshot()
+    public void Runtime_owned_executor_contract_is_explicit_and_template_materializable()
     {
-        var issue = EvaluateBrowserSnapshotEvidence(
-            "- generic: Tetris playable session ready",
-            receiptBelongsToCurrentExecution: true,
-            processDefinitionKey: "software-delivery");
+        var launchVariables = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            [ProcessRuntimeLaunchVariables.ProcessStepRuntimeOwnedExecutorKey] = "dotnet.solution-setup",
+            [ProcessRuntimeLaunchVariables.ProcessStepScriptHelperDescriptorJson] =
+                ProcessRuntimeLaunchVariables.SerializeProcessStepScriptHelperDescriptor(
+                    new ProcessRuntimeScriptHelperDescriptor(
+                        "SetupScript",
+                        "SetupScriptRef",
+                        "SetupManifest",
+                        "dotnet.create-project",
+                        "DotNetSolutionCreate",
+                        "SetupExecutionPlan"))
+        };
 
-        Assert.Null(issue);
-    }
-
-    [Fact]
-    public void Dotnet_browser_evidence_gate_rejects_fatal_banner_during_mutation_capable_quality_repair()
-    {
-        var issue = EvaluateBrowserSnapshotEvidence(
-            $"- generic: {DotNetBrowserSnapshotEvidencePolicyContribution.BlazorUnhandledErrorBanner}",
-            receiptBelongsToCurrentExecution: true,
-            processDefinitionKey: "software-delivery",
-            stepKey: "quality-repair",
-            branchOutcomeKey: string.Empty);
-
-        Assert.NotNull(issue);
-        Assert.Equal(ProcessCompletionDiagnosticCodes.ToolReceiptEvidenceContentRejected, issue.Code);
-    }
-
-    [Fact]
-    public void Dotnet_browser_evidence_gate_rejects_fatal_banner_on_quality_repair_accepted_branch()
-    {
-        var issue = EvaluateBrowserSnapshotEvidence(
-            $"- generic: {DotNetBrowserSnapshotEvidencePolicyContribution.BlazorUnhandledErrorBanner}",
-            receiptBelongsToCurrentExecution: true,
-            processDefinitionKey: "dotnet-quality-repair",
-            stepKey: "validate-quality-repair",
-            branchOutcomeKey: "quality-repair-accepted");
-
-        Assert.NotNull(issue);
-        Assert.Equal(ProcessCompletionDiagnosticCodes.ToolReceiptEvidenceContentRejected, issue.Code);
-    }
-
-    [Fact]
-    public void Dotnet_browser_evidence_gate_ignores_previous_execution_snapshot()
-    {
-        var issue = EvaluateBrowserSnapshotEvidence(
-            $"- generic: {DotNetBrowserSnapshotEvidencePolicyContribution.BlazorUnhandledErrorBanner}",
-            receiptBelongsToCurrentExecution: false,
-            processDefinitionKey: "software-delivery");
-
-        Assert.Null(issue);
-    }
-
-    [Fact]
-    public void Dotnet_browser_evidence_policy_does_not_apply_to_generic_processes()
-    {
-        var issue = EvaluateBrowserSnapshotEvidence(
-            $"- generic: {DotNetBrowserSnapshotEvidencePolicyContribution.BlazorUnhandledErrorBanner}",
-            receiptBelongsToCurrentExecution: true,
-            processDefinitionKey: "generic-browser-review");
-
-        Assert.Null(issue);
-    }
-
-    [Fact]
-    public void Dotnet_development_slice_evidence_gate_rejects_typed_child_no_go_on_accepted_branch()
-    {
-        var issue = EvaluateDevelopmentSliceCoordinatorEvidence(
-            "Child evidence: artifacts/process-runs/child/steps/feature-repair-escalation.md",
-            "slice-accepted");
-
-        Assert.NotNull(issue);
-        Assert.Equal(ProcessCompletionDiagnosticCodes.ToolReceiptEvidenceContentRejected, issue.Code);
-        Assert.Contains("typed child repair-escalation no-go", issue.Summary, StringComparison.OrdinalIgnoreCase);
-    }
-
-    [Fact]
-    public void Dotnet_development_slice_evidence_gate_accepts_child_handoff_on_accepted_branch()
-    {
-        var issue = EvaluateDevelopmentSliceCoordinatorEvidence(
-            "Child evidence: artifacts/process-runs/child/steps/feature-handoff-after-repair.md",
-            "slice-accepted");
-
-        Assert.Null(issue);
-    }
-
-    [Fact]
-    public void Dotnet_development_slice_recheck_rejects_typed_child_no_go_on_accepted_branch()
-    {
-        var issue = EvaluateDevelopmentSliceCoordinatorEvidence(
-            "Child evidence: artifacts/process-runs/child/steps/feature-repair-escalation.md",
-            "slice-accepted",
-            stepKey: "add-tests-recheck",
-            coordinatorArtifactName: "slice-repair-code-change.md");
-
-        Assert.NotNull(issue);
-        Assert.Equal(ProcessCompletionDiagnosticCodes.ToolReceiptEvidenceContentRejected, issue.Code);
-        Assert.Contains("typed child repair-escalation no-go", issue.Summary, StringComparison.OrdinalIgnoreCase);
-    }
-
-    [Fact]
-    public void Dotnet_development_slice_recheck_accepts_repaired_child_handoff_on_accepted_branch()
-    {
-        var issue = EvaluateDevelopmentSliceCoordinatorEvidence(
-            "Child evidence: artifacts/process-runs/child/steps/feature-handoff-after-repair.md",
-            "slice-accepted",
-            stepKey: "add-tests-recheck",
-            coordinatorArtifactName: "slice-repair-code-change.md");
-
-        Assert.Null(issue);
-    }
-
-    [Fact]
-    public void Dotnet_development_slice_evidence_gate_reads_persisted_scoped_workspace_receipt()
-    {
-        var issue = EvaluateDevelopmentSliceCoordinatorEvidence(
-            "Child evidence: artifacts/process-runs/child/steps/feature-repair-escalation.md",
-            "slice-accepted",
-            usePersistedScopedReceipt: true);
-
-        Assert.NotNull(issue);
-        Assert.Equal(ProcessCompletionDiagnosticCodes.ToolReceiptEvidenceContentRejected, issue.Code);
-        Assert.Contains("typed child repair-escalation no-go", issue.Summary, StringComparison.OrdinalIgnoreCase);
+        Assert.True(ProcessRuntimeLaunchVariables.TryReadProcessStepRuntimeOwnedExecutorKey(
+            launchVariables,
+            out var executorKey));
+        Assert.Equal("dotnet.solution-setup", executorKey);
+        Assert.True(ProcessRuntimeLaunchVariables.TryReadProcessStepScriptHelperDescriptor(
+            launchVariables,
+            out var descriptor));
+        Assert.Equal("dotnet.create-project", descriptor.PlanKey);
+        Assert.Equal("DotNetSolutionCreate", descriptor.PlanKind);
+        Assert.Equal("SetupExecutionPlan", descriptor.ExecutionPlanVariableName);
     }
 
     private static ProcessToolReceiptPolicyCatalog CreateToolReceiptPolicyCatalog()
@@ -328,164 +273,9 @@ public sealed class ProcessRuntimePolicyIsolationTests
             DateTimeOffset.UtcNow,
             DateTimeOffset.UtcNow);
 
-    private static ProcessCompletionIssue? EvaluateBrowserSnapshotEvidence(
-        string content,
-        bool receiptBelongsToCurrentExecution,
-        string processDefinitionKey,
-        string stepKey = "qa-validation",
-        string branchOutcomeKey = "quality-accepted")
-    {
-        var workspaceRoot = Path.Combine(Path.GetTempPath(), $"CanDoItAll.ProcessEvidenceGate.{Guid.NewGuid():N}");
-        Directory.CreateDirectory(workspaceRoot);
-        try
-        {
-            var workspaceFiles = new WorkspaceFileService(workspaceRoot);
-            var runId = new ProcessRunId(Guid.NewGuid());
-            var executionRunId = Guid.NewGuid();
-            var artifactPath = $"artifacts/process-runs/{runId.Value:D}/qa-browser-snapshot.yml";
-            var writeResult = workspaceFiles.WriteTextFile(artifactPath, content);
-            Assert.True(writeResult.Succeeded, writeResult.Message);
-            var assignment = new ProcessRuntimeStepAssignment(
-                runId,
-                ProcessInstancePlanId.New(),
-                ProcessStepInstanceId.New(),
-                stepKey,
-                "qa",
-                "qa",
-                "QA",
-                "Agent",
-                Guid.NewGuid().ToString("D"),
-                "QA",
-                "Validate browser evidence.",
-                "sha256:readiness",
-                "Test assignment.",
-                [ArtifactSlotId.New()],
-                [],
-                [],
-                "ExternalProductTargetReadOnly",
-                new Dictionary<string, string>(StringComparer.Ordinal)
-                {
-                    [ProcessRuntimeLaunchVariables.ProcessDefinitionKey] = processDefinitionKey
-                },
-                BranchGate: null,
-                DateTimeOffset.UtcNow);
-            var output = new ProcessStepOutcomeResult
-            {
-                Status = ProcessStepOutcomeStatus.Completed,
-                Reason = "QA accepted the browser evidence.",
-                BranchOutcomeKey = branchOutcomeKey,
-                EvidenceRefs = [artifactPath],
-                NextActions = [],
-                HumanReadableSummaryMarkdown = "Status: Completed"
-            };
-            var receiptExecutionRunId = receiptBelongsToCurrentExecution
-                ? executionRunId
-                : Guid.NewGuid();
-            var receipt = CreateToolReceipt(
-                "browser_snapshot",
-                $"boxes=False, depth=2, filename=\"{artifactPath}\"") with
-            {
-                ExecutionRunId = receiptExecutionRunId
-            };
-            var gate = new ProcessToolReceiptEvidenceGate(
-                workspaceFiles,
-                [new DotNetBrowserSnapshotEvidencePolicyContribution()]);
-
-            return gate.Validate(new ProcessCompletionGateContext(
-                assignment,
-                output,
-                [receipt],
-                executionRunId));
-        }
-        finally
-        {
-            Directory.Delete(workspaceRoot, recursive: true);
-        }
-    }
-
-    private static ProcessCompletionIssue? EvaluateDevelopmentSliceCoordinatorEvidence(
-        string coordinatorContent,
-        string branchOutcomeKey,
-        bool usePersistedScopedReceipt = false,
-        string stepKey = "add-tests-and-proof",
-        string coordinatorArtifactName = "implement-code-change.md")
-    {
-        var workspaceRoot = Path.Combine(Path.GetTempPath(), $"CanDoItAll.ProcessNoGoEvidenceGate.{Guid.NewGuid():N}");
-        Directory.CreateDirectory(workspaceRoot);
-        try
-        {
-            var workspaceFiles = new WorkspaceFileService(workspaceRoot);
-            var runId = new ProcessRunId(Guid.NewGuid());
-            var executionRunId = Guid.NewGuid();
-            var artifactPath = usePersistedScopedReceipt
-                ? $"artifacts/scopes/organization/test/process-runs/{runId.Value:D}/steps/{coordinatorArtifactName}"
-                : $"artifacts/process-runs/{runId.Value:D}/steps/{coordinatorArtifactName}";
-            Assert.True(workspaceFiles.WriteTextFile(artifactPath, coordinatorContent).Succeeded);
-            var assignment = new ProcessRuntimeStepAssignment(
-                runId,
-                ProcessInstancePlanId.New(),
-                ProcessStepInstanceId.New(),
-                stepKey,
-                "qa",
-                "qa",
-                "QA",
-                "Agent",
-                Guid.NewGuid().ToString("D"),
-                "QA",
-                "Validate implementation evidence.",
-                "sha256:readiness",
-                "Test assignment.",
-                [ArtifactSlotId.New()],
-                [],
-                [],
-                "ExternalProductTargetReadOnly",
-                new Dictionary<string, string>(StringComparer.Ordinal)
-                {
-                    [ProcessRuntimeLaunchVariables.ProcessDefinitionKey] = "dotnet-development-slice"
-                },
-                BranchGate: null,
-                DateTimeOffset.UtcNow);
-            var output = new ProcessStepOutcomeResult
-            {
-                Status = ProcessStepOutcomeStatus.Completed,
-                Reason = "Validation completed.",
-                BranchOutcomeKey = branchOutcomeKey,
-                EvidenceRefs = [artifactPath],
-                NextActions = [],
-                HumanReadableSummaryMarkdown = "Status: Completed"
-            };
-            var requestSummary = usePersistedScopedReceipt
-                ? artifactPath
-                : $"maxCharacters=12000,path={artifactPath}";
-            var receipt = CreateToolReceipt("workspace_read_file", requestSummary) with
-            {
-                ExecutionRunId = executionRunId
-            };
-            var unrelatedReceipt = CreateToolReceipt(
-                "workspace_read_file",
-                $"maxCharacters=12000,path=artifacts/process-runs/{runId.Value:D}/steps/slice-intake.md") with
-            {
-                ExecutionRunId = executionRunId
-            };
-            var gate = new ProcessToolReceiptEvidenceGate(
-                workspaceFiles,
-                [new DotNetSubprocessNoGoEvidencePolicyContribution()]);
-
-            return gate.Validate(new ProcessCompletionGateContext(
-                assignment,
-                output,
-                [unrelatedReceipt, receipt],
-                executionRunId));
-        }
-        finally
-        {
-            Directory.Delete(workspaceRoot, recursive: true);
-        }
-    }
-
     private sealed class AlwaysMatchingToolReceiptPolicyContribution : IProcessToolReceiptPolicyContribution
     {
-        public bool IsProductMutationTool(string toolName)
+        public bool IsProductMutationReceipt(ToolExecutionReceiptRecord receipt)
             => false;
 
         public bool IsProductValidationTool(string toolName)
@@ -498,18 +288,5 @@ public sealed class ProcessRuntimePolicyIsolationTests
 
         public IEnumerable<string> EnumerateRequirementSearchTerms(string requirement)
             => [];
-
-        public bool TryResolveScriptHelper(
-            ProcessRuntimeStepAssignment assignment,
-            out ProcessScriptHelperDescriptor descriptor)
-        {
-            descriptor = null!;
-            return false;
-        }
-
-        public bool AllowsCompletedOutcomeWithDeclaredBlockers(
-            ProcessRuntimeStepAssignment assignment,
-            ProcessStepOutcomeResult output)
-            => false;
     }
 }

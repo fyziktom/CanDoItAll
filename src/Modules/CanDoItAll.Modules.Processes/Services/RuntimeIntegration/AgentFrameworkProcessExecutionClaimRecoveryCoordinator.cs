@@ -36,6 +36,7 @@ internal sealed class AgentFrameworkProcessExecutionClaimRecoveryCoordinator(
     IProcessRuntimeDispatchQueue dispatchQueue,
     ProcessRuntimeBranchSignalApplicationService branchSignalRouter,
     ProcessRuntimeProjectionCatchupService projectionCatchupService,
+    ProcessManagedArtifactService managedArtifactService,
     ProcessExecutionResultConverter resultConverter,
     ILogger<AgentFrameworkProcessExecutionClaimRecoveryCoordinator> logger)
 {
@@ -269,12 +270,18 @@ internal sealed class AgentFrameworkProcessExecutionClaimRecoveryCoordinator(
                 executionRun,
                 cancellationToken)
             .ConfigureAwait(false);
-        var adapterResult = resultConverter.ToAdapterResult(
+        var normalizedOutput = managedArtifactService.RecoverUnambiguousBranchOutcomeFromCurrentPrimaryArtifact(
             assignment,
             validation.Output,
+            executionRun.Id,
+            toolReceipts);
+        var adapterResult = resultConverter.ToAdapterResult(
+            assignment,
+            normalizedOutput,
             validation.RawOutputHash,
             toolReceipts,
-            executionRun.Id);
+            executionRun.Id,
+            stepContract: ProcessRuntimeArtifactContracts.BuildStepContract(state, step));
         var result = CreateRecoveredStrategyResult(executionRun, adapterResult);
         var engine = new ProcessRuntimeEngine(unitOfWork);
         var commit = await engine.SubmitStrategyResultAsync(

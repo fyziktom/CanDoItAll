@@ -33,7 +33,7 @@ using static CanDoItAll.Modules.Processes.ProcessExecutionResultFactory;
 using static CanDoItAll.Modules.Processes.ProcessManagedArtifactService;
 using static CanDoItAll.Modules.Processes.ProcessManagedArtifactFormatter;
 using static CanDoItAll.Modules.Processes.ProcessManagedArtifactOutcomeParser;
-using static CanDoItAll.Modules.Processes.ProcessOutcomeGroundingValidator;
+using static CanDoItAll.Modules.Processes.ProcessOutcomeCitationSanitizer;
 using static CanDoItAll.Modules.Processes.ProcessProductCompletionRetryPolicy;
 using static CanDoItAll.Modules.Processes.ProcessRequiredReceiptRetryPolicy;
 using static CanDoItAll.Modules.Processes.ProcessSubprocessCompletionPolicy;
@@ -42,7 +42,8 @@ namespace CanDoItAll.Modules.Processes;
 
 internal sealed class ProcessExecutionResultConverter(
     ProcessCompletionGateEvaluator completionGateEvaluator,
-    ProcessToolReceiptPolicyCatalog toolReceiptPolicies)
+    ProcessToolReceiptPolicyCatalog toolReceiptPolicies,
+    ProcessCompletionIssueResultFactory completionIssueResultFactory)
 {
     internal ProcessExecutionAdapterResult ToAdapterResult(
         ProcessRuntimeStepAssignment assignment,
@@ -50,7 +51,8 @@ internal sealed class ProcessExecutionResultConverter(
         string rawOutputHash,
         IReadOnlyList<ToolExecutionReceiptRecord>? toolReceipts = null,
         Guid? currentExecutionRunId = null,
-        IReadOnlyDictionary<ArtifactSlotId, string>? producedArtifactContentHashes = null)
+        IReadOnlyDictionary<ArtifactSlotId, string>? producedArtifactContentHashes = null,
+        ProcessStepExecutionContract? stepContract = null)
     {
         var rawOutput = output;
         output = RemoveNonCitableSourceMetadataFromOutcome(output);
@@ -178,14 +180,19 @@ internal sealed class ProcessExecutionResultConverter(
                 assignment,
                 output,
                 toolReceipts,
-                currentExecutionRunId));
+                currentExecutionRunId)
+            {
+                StepContract = stepContract ?? ProcessStepExecutionContract.Empty
+            });
             if (!completionGateEvaluation.IsSatisfied)
             {
-                if (TryCreateRoutedCompletionIssueResult(
+                if (completionIssueResultFactory.TryCreateRoutedCompletionIssueResult(
                     assignment,
                     output,
                     rawOutputHash,
                     completionGateEvaluation,
+                    toolReceipts,
+                    currentExecutionRunId,
                     producedArtifactContentHashes,
                     out var routedResult))
                 {

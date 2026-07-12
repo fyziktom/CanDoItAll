@@ -59,6 +59,55 @@ public sealed class ProcessRecoveryClassifierTests
     }
 
     [Fact]
+    public void RecoveryClassifier_allows_one_schema_artifact_correction_then_requires_manager_review()
+    {
+        var classifier = new ProcessRecoveryClassifier(new ProcessRecoveryClassifierOptions(3, 1));
+        var firstDiagnostic = Diagnostic(
+            ProcessCompletionDiagnosticCodes.ArtifactPayloadSchemaInvalid,
+            "sha256:missing-initialization-plan");
+
+        var first = classifier.ClassifyBlocked(CreateInput(
+            firstDiagnostic,
+            failureCategory: ProcessFailureCategory.Unknown));
+        var priorReceipt = CreateReceipt(firstDiagnostic, first, "sha256:first-schema-correction");
+        var secondDiagnostic = Diagnostic(
+            ProcessCompletionDiagnosticCodes.ArtifactPayloadSchemaInvalid,
+            "sha256:missing-validation-rules");
+        var second = classifier.ClassifyBlocked(CreateInput(
+            secondDiagnostic,
+            [priorReceipt],
+            ProcessFailureCategory.Unknown));
+
+        Assert.Equal(ProcessRecoveryDecisionKind.SafeRetry, first.DecisionKind);
+        Assert.Equal(ProcessRecoveryRouteKind.CurrentStepRetry, first.RouteKind);
+        Assert.Equal(ProcessRecoveryDecisionKind.ManagerRequired, second.DecisionKind);
+        Assert.Equal("process.current-step-safe-retry-budget-exhausted", second.Policy);
+        Assert.Equal(2, second.SameDiagnosticFingerprintAttempt);
+        Assert.Equal(first.DiagnosticFingerprint, second.DiagnosticFingerprint);
+    }
+
+    [Fact]
+    public void RecoveryClassifier_keeps_distinct_non_schema_diagnostic_evidence_as_separate_identities()
+    {
+        var classifier = new ProcessRecoveryClassifier(new ProcessRecoveryClassifierOptions(3, 1));
+        var firstDiagnostic = Diagnostic(
+            "process.adapter.product_required_tool_receipt_missing",
+            "sha256:missing-build-receipt");
+        var first = classifier.ClassifyBlocked(CreateInput(firstDiagnostic));
+        var priorReceipt = CreateReceipt(firstDiagnostic, first, "sha256:first-retry");
+        var secondDiagnostic = Diagnostic(
+            "process.adapter.product_required_tool_receipt_missing",
+            "sha256:missing-validation-receipt");
+
+        var second = classifier.ClassifyBlocked(CreateInput(secondDiagnostic, [priorReceipt]));
+
+        Assert.Equal(ProcessRecoveryDecisionKind.SafeRetry, second.DecisionKind);
+        Assert.Equal(2, second.AutomaticRetryAttempt);
+        Assert.Equal(1, second.SameDiagnosticFingerprintAttempt);
+        Assert.NotEqual(first.DiagnosticFingerprint, second.DiagnosticFingerprint);
+    }
+
+    [Fact]
     public void RecoveryClassifier_routes_direct_runtime_branch_selection_to_one_current_step_retry()
     {
         var classifier = new ProcessRecoveryClassifier();

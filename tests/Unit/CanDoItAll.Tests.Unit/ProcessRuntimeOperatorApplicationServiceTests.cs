@@ -86,7 +86,7 @@ public sealed class ProcessRuntimeOperatorApplicationServiceTests
                 new ProcessRuntimeProjectionProjector(projectionStore, ProcessProjectionJsonCodec.Default, clock),
                 clock),
             [],
-            recoveryInstructionBuilder: CreateDotNetRecoveryInstructionBuilder());
+            recoveryInstructionBuilder: CreateRecoveryInstructionBuilder());
 
         var result = await service.ExecuteAsync(new ProcessRuntimeOperatorActionCommand(
             runId,
@@ -100,9 +100,8 @@ public sealed class ProcessRuntimeOperatorApplicationServiceTests
         Assert.Contains("Operator rework instruction:", prompt, StringComparison.Ordinal);
         Assert.Contains("Diagnostic recovery packet:", prompt, StringComparison.Ordinal);
         Assert.Contains("workspace_pwsh_run_script", prompt, StringComparison.Ordinal);
-        Assert.Contains("scripts/create-dotnet-project.ps1", prompt, StringComparison.Ordinal);
-        Assert.Contains("Calculator.slnx", prompt, StringComparison.Ordinal);
-        Assert.Contains("src/Calculator/Calculator.csproj", prompt, StringComparison.Ordinal);
+        Assert.Contains("Generic receipt recovery", prompt, StringComparison.Ordinal);
+        Assert.Contains("missing current-run receipt contract", prompt, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("{CurrentProcessRunId}", prompt, StringComparison.Ordinal);
         Assert.Single(dispatchQueue.Requests);
     }
@@ -598,8 +597,8 @@ public sealed class ProcessRuntimeOperatorApplicationServiceTests
         };
     }
 
-    private static ProcessStepRecoveryInstructionBuilder CreateDotNetRecoveryInstructionBuilder()
-        => new([new DotNetSoftwareDeliveryRecoveryAdviceProvider()]);
+    private static ProcessStepRecoveryInstructionBuilder CreateRecoveryInstructionBuilder()
+        => new([new GenericProcessRecoveryAdviceProvider()]);
 
     private static ProcessPersistenceDbContext CreateDbContext()
     {

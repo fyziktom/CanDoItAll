@@ -162,13 +162,22 @@ public sealed class ProcessRecoveryClassifier(ProcessRecoveryClassifierOptions? 
 
     private static string CreateDiagnosticIdentityFingerprint(StrategyResultDiagnosticReceipt diagnostic)
     {
-        var stableEvidenceHash = string.Equals(
-            diagnostic.Code,
-            "process.adapter.completed_outcome_declares_unresolved_blocker",
-            StringComparison.OrdinalIgnoreCase)
+        var stableEvidenceHash = UsesCodeOnlyDiagnosticIdentity(diagnostic.Code)
             ? string.Empty
             : diagnostic.EvidenceHash;
         return CreateDiagnosticIdentityFingerprint(diagnostic.Code, stableEvidenceHash);
+    }
+
+    private static bool UsesCodeOnlyDiagnosticIdentity(string code)
+    {
+        return string.Equals(
+                   code,
+                   "process.adapter.completed_outcome_declares_unresolved_blocker",
+                   StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(
+                   code,
+                   ProcessCompletionDiagnosticCodes.ArtifactPayloadSchemaInvalid,
+                   StringComparison.OrdinalIgnoreCase);
     }
 
     private static string CreateDiagnosticIdentityFingerprint(string code, string evidenceHash)

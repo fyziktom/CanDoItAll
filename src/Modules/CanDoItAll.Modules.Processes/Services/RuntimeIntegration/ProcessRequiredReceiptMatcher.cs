@@ -35,7 +35,6 @@ using static CanDoItAll.Modules.Processes.ProcessManagedArtifactEvidence;
 using static CanDoItAll.Modules.Processes.ProcessManagedArtifactService;
 using static CanDoItAll.Modules.Processes.ProcessManagedArtifactFormatter;
 using static CanDoItAll.Modules.Processes.ProcessManagedArtifactOutcomeParser;
-using static CanDoItAll.Modules.Processes.ProcessRuntimeLifecycleReceiptFacts;
 
 namespace CanDoItAll.Modules.Processes;
 
@@ -119,6 +118,22 @@ internal static class ProcessRequiredReceiptMatcher
         var operations = NormalizeOperations(assignment.AllowedOperations);
         return operations.Contains(ProcessOperationContractNames.RunValidation, StringComparer.OrdinalIgnoreCase) &&
                !AllowsProductMutation(operations, assignment.OperationTargetScope);
+    }
+
+    internal static IReadOnlyList<ProductCompletionRequiredToolReceiptRequirement>
+        ConsolidateRequiredProductToolReceiptRequirements(
+            IReadOnlyList<ProductCompletionRequiredToolReceiptRule> rules)
+    {
+        ArgumentNullException.ThrowIfNull(rules);
+
+        return rules
+            .Where(rule => !string.IsNullOrWhiteSpace(rule.ToolReceipt))
+            .GroupBy(rule => rule.ToolReceipt.Trim(), StringComparer.OrdinalIgnoreCase)
+            .Select(group => new ProductCompletionRequiredToolReceiptRequirement(
+                group.Key,
+                group.All(rule => rule.AllowFailedExecutionReceipt)))
+            .OrderBy(requirement => requirement.ToolReceipt, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
     }
 
     internal static bool HasRequiredToolReceipt(
@@ -229,8 +244,7 @@ internal static class ProcessRequiredReceiptMatcher
 
     internal static string BuildMissingRequiredToolReceiptGuidance(
         ProcessRuntimeStepAssignment assignment,
-        IReadOnlyList<string> missingToolReceipts,
-        ProcessToolReceiptPolicyCatalog toolReceiptPolicies)
+        IReadOnlyList<string> missingToolReceipts)
     {
         if (!missingToolReceipts.Any(required =>
                 string.Equals(required.Trim(), "workspace_pwsh_run_script", StringComparison.OrdinalIgnoreCase)))
@@ -238,7 +252,9 @@ internal static class ProcessRequiredReceiptMatcher
             return string.Empty;
         }
 
-        if (!toolReceiptPolicies.TryResolveScriptHelper(assignment, out var scriptHelper))
+        if (!ProcessRuntimeLaunchVariables.TryReadProcessStepScriptHelperDescriptor(
+                assignment.LaunchVariables,
+                out var scriptHelper))
         {
             return " Before retrying, invoke the reviewed current-run helper with workspace_pwsh_run_script and read back the affected product files before rewriting the primary managed artifact.";
         }
