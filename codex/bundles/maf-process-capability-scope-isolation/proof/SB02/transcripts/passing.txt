@@ -1,0 +1,6 @@
+Command: dotnet test tests\Unit\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj --filter "FullyQualifiedName~CapabilityAccessPolicyEvaluatorTests|FullyQualifiedName~MafRuntimeArchitectureServicesTests.RuntimeToolProviderComposer_allow_only_provider_key_policy_prunes_other_provider_tools" --artifacts-path artifacts\dotnet-test-isolated --no-restore
+Test: Evaluate_DenyAllPolicy_AllowsOnlyExplicitAllowRuleMatches
+Test: RuntimeToolProviderComposer_allow_only_provider_key_policy_prunes_other_provider_tools
+Invariant: MAF-SB02-SCOPED-CAPABILITY
+Output: focused scoped capability policy tests passed
+ExitCode: 0

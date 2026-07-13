@@ -1,0 +1,1 @@
+PASS: no native CognitiveMemory/Qdrant/OpenAI/RAG references in generic memory UI/application/persistence.

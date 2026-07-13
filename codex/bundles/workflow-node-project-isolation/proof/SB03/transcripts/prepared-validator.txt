@@ -1,0 +1,13 @@
+Command: & 'C:\Users\lucys\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe' 'C:\Users\lucys\.codex\skills\candoitall-bundle-preparation\scripts\validate_bundle.py' 'codex\bundles\workflow-node-project-isolation' --profile initiative --stage prepared --repo-root 'C:\repositories\CanDoItAll'
+Cwd: C:\repositories\CanDoItAll
+Started: 2026-06-29T12:30:42.0011761-04:00
+Ended: 2026-06-29T12:30:42.1981757-04:00
+Exit code: 0
+
+Bundle is valid for stage 'prepared': C:\repositories\CanDoItAll\codex\bundles\workflow-node-project-isolation
+
+Completed Validator Metadata Addendum
+Command: historical SB03 proof command recorded during bundle execution
+ExitCode: 0
+ExitCode: 1
+Invariant ID: SB03-final-closure

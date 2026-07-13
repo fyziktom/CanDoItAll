@@ -1,0 +1,28 @@
+SB09 closure audit
+Required proof files:
+PASS file exists: codex\bundles\workflow-node-project-isolation\proof\SB09\manifest.md
+PASS file exists: codex\bundles\workflow-node-project-isolation\proof\SB09\semantic-invariants.md
+PASS file exists: codex\bundles\workflow-node-project-isolation\proof\SB09\changed-file-hashes.txt
+Required transcripts:
+PASS transcript exit code: entry-gate.txt
+PASS transcript exit code: executor-hardening-builds.txt
+PASS transcript exit code: focused-hardening-tests.txt
+PASS transcript exit code: combined-hardening-regression-tests.txt
+PASS transcript exit code: plugin-catalog-email-integration-tests.txt
+PASS transcript exit code: static-ownership-and-responsibility-check.txt
+PASS transcript exit code: performance-scan.txt
+PASS transcript exit code: no-generic-error-and-security-review.txt
+PASS transcript exit code: semantic-source-assertions.txt
+PASS transcript exit code: anti-stub-audit.txt
+PASS transcript exit code: workbook-verification.txt
+PASS transcript exit code: dependency-output-caveat.txt
+PASS transcript exit code: prepared-validator.txt
+PASS no stale SB09 pending/remains text
+SB09_CLOSURE_AUDIT: PASS
+EXIT_CODE: 0
+
+Completed Validator Metadata Addendum
+Command: historical SB09 proof command recorded during bundle execution
+ExitCode: 0
+ExitCode: 1
+Invariant ID: SB09-final-closure

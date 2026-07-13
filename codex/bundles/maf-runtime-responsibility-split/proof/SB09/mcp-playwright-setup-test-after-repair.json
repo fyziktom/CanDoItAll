@@ -1,0 +1,36 @@
+{
+  "isSuccess": false,
+  "identity": {
+    "kind": 2,
+    "key": {
+      "value": "playwright-local-mcp"
+    }
+  },
+  "serverKey": {
+    "value": "playwright-local"
+  },
+  "correlationId": "SB09_MCP_PLAYWRIGHT_AFTER_REPAIR",
+  "discoveredTools": [],
+  "allowedTools": [],
+  "diagnostics": [
+    {
+      "category": 5,
+      "severity": 2,
+      "capabilityKind": 2,
+      "capabilityKey": {
+        "value": "playwright-local-mcp"
+      },
+      "templatePath": null,
+      "fieldPath": "$.timeout",
+      "implementationKey": null,
+      "transport": 4,
+      "exitCode": null,
+      "httpStatusCode": null,
+      "timeout": "00:02:00",
+      "correlationId": "SB09_MCP_PLAYWRIGHT_AFTER_REPAIR",
+      "maskedDetail": "MCP setup for 'playwright-local' timed out. MCP initialize handshake exceeded 00:02:00.",
+      "repairHint": "Increase timeout only after confirming the MCP server starts and responds predictably."
+    }
+  ],
+  "cleanupCompleted": true
+}

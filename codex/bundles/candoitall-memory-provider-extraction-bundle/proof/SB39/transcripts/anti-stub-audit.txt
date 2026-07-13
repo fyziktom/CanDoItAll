@@ -1,0 +1,32 @@
+SB39 source, partial-class, and anti-stub audit
+Captured: 2026-07-12
+Command: scan external production source for oversized files, prohibited partials, cross-root references, and stub markers
+Exit code: 0
+
+Scope:
+  Handwritten production C# under the external repository's src tree, external project references, service routes/manifest, and targeted security/protocol tests.
+
+Modularity results:
+  - Maximum handwritten production file length: 171 lines.
+  - Production files over 220 lines: 0.
+  - Partial-class audit: only the conventional Program test-host/WebApplicationFactory seam.
+  - Authentication, request authorization, access policy, mapper, persistence operations, and protocol owners are responsibility-named non-partial types.
+
+Boundary results:
+  - Cross-root ProjectReference entries: 0.
+  - Main Memory/AgentFramework implementation namespace dependencies: 0.
+  - Contracts owns Protocol/V1 and Protocol/V1/Http records without project or package references.
+  - Raw hosted HTTP tests replace compile-time coupling to the main remote driver.
+
+Anti-stub results:
+  - No targeted production TODO, FIXME, NotImplementedException, or placeholder capability marker was found.
+  - Authentication and project authorization execute through hosted requests.
+  - Recall behavior is exercised with allowed and forbidden records rather than mapper-only fixtures.
+  - JSON conformance tests consume checked-in context-query and ingestion fixtures.
+  - External local and isolated suites both passed 59/59.
+
+SB39-INV-01 result:
+  PASS at the external hosted boundary: security/access-policy negative cases and project-scoped persistence behavior are part of the passing external suite.
+
+SB39-INV-03 qualification:
+  PASS for the external service's hosted/raw HTTP contract. The actual main NativeRemoteMemoryProviderDriver process call has not yet been executed and remains SB40 work.

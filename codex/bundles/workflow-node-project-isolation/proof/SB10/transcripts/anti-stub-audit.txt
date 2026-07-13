@@ -1,0 +1,33 @@
+# SB10 Anti-Stub And Fallback Audit
+
+## Stub markers in template project and focused tests
+src\CanDoItAll.AgentFramework.Workflows.Templates\WorkflowPreviewSimulationTemplateLoader.cs:16:            return new WorkflowPreviewSimulationTemplateCatalog();
+src\CanDoItAll.AgentFramework.Workflows.Templates\WorkflowTemplateModelMaterializer.cs:117:            return null;
+rg exit code: 0 (1 means no stub markers matched; empty preview catalog return is audited separately below if present)
+
+## Empty preview catalog return is only the documented no-fixture-file case
+13-        var path = Path.Combine(root, PreviewSimulationsDirectoryName, ExecutorsFileName);
+14-        if (!File.Exists(path))
+15-        {
+16:            return new WorkflowPreviewSimulationTemplateCatalog();
+17-        }
+18-
+19-        WorkflowPreviewSimulationTemplateCatalog catalog;
+
+## No UI-owned fallback implementation file
+src\CanDoItAll.Modules.AgentFramework\Catalog\WorkflowTemplatePackLoader.cs exists: False
+
+## No catch-and-skip template load behavior
+src\CanDoItAll.AgentFramework.Workflows.Templates\WorkflowTemplateSerialization.cs:49:        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or YamlException)
+src\CanDoItAll.AgentFramework.Workflows.Templates\WorkflowPreviewSimulationTemplateLoader.cs:27:        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or JsonException)
+src\CanDoItAll.AgentFramework.Workflows.Templates\WorkflowTemplatePackValidator.cs:40:                    continue;
+src\CanDoItAll.AgentFramework.Workflows.Templates\WorkflowTemplatePackValidator.cs:90:            catch (WorkflowTemplatePackException)
+src\CanDoItAll.AgentFramework.Workflows.Templates\WorkflowTemplatePackValidator.cs:94:            catch (InvalidOperationException exception)
+src\CanDoItAll.AgentFramework.Workflows.Templates\WorkflowTemplatePackValidator.cs:107:                continue;
+
+## Audit interpretation
+
+- `WorkflowTemplateModelMaterializer.NormalizeSettingValue` returns null only to preserve explicit null executor setting values during JSON serialization.
+- `WorkflowPreviewSimulationTemplateLoader` returns an empty catalog only when `preview-simulations/executors.json` is absent; malformed JSON and malformed fixture entries throw `WorkflowTemplatePackException` with repair context.
+- `WorkflowTemplatePackValidator` `continue` statements skip descriptor validation only for nodes without an executor block or for descriptors without settings schema. Missing or invalid executor ids throw typed template exceptions.
+- No `NotImplementedException`, TODO stub, UI fallback loader file, or silent template-load skip was found.

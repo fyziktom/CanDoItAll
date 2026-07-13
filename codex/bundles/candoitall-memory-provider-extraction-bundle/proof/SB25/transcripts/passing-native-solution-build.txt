@@ -1,0 +1,22 @@
+Command: dotnet build .\CanDoItAll.CognitiveMemory.slnx --no-restore
+Working directory: C:\repositories\CanDoItAll.CognitiveMemory
+Start time UTC: 2026-07-05T23:31:24.3946316Z
+Output:
+  CanDoItAll.Memory.Abstractions -> C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Abstractions\bin\Debug\net10.0\CanDoItAll.Memory.Abstractions.dll
+  CanDoItAll.CognitiveMemory.Domain -> C:\repositories\CanDoItAll.CognitiveMemory\src\CanDoItAll.CognitiveMemory.Domain\bin\Debug\net10.0\CanDoItAll.CognitiveMemory.Domain.dll
+  CanDoItAll.CognitiveMemory.Contracts -> C:\repositories\CanDoItAll.CognitiveMemory\src\CanDoItAll.CognitiveMemory.Contracts\bin\Debug\net10.0\CanDoItAll.CognitiveMemory.Contracts.dll
+  CanDoItAll.CognitiveMemory.Projection.Rag -> C:\repositories\CanDoItAll.CognitiveMemory\src\CanDoItAll.CognitiveMemory.Projection.Rag\bin\Debug\net10.0\CanDoItAll.CognitiveMemory.Projection.Rag.dll
+  CanDoItAll.CognitiveMemory.UI -> C:\repositories\CanDoItAll.CognitiveMemory\src\CanDoItAll.CognitiveMemory.UI\bin\Debug\net10.0\CanDoItAll.CognitiveMemory.UI.dll
+  CanDoItAll.CognitiveMemory.Persistence -> C:\repositories\CanDoItAll.CognitiveMemory\src\CanDoItAll.CognitiveMemory.Persistence\bin\Debug\net10.0\CanDoItAll.CognitiveMemory.Persistence.dll
+  CanDoItAll.CognitiveMemory.Application -> C:\repositories\CanDoItAll.CognitiveMemory\src\CanDoItAll.CognitiveMemory.Application\bin\Debug\net10.0\CanDoItAll.CognitiveMemory.Application.dll
+  CanDoItAll.CognitiveMemory.Maf -> C:\repositories\CanDoItAll.CognitiveMemory\src\CanDoItAll.CognitiveMemory.Maf\bin\Debug\net10.0\CanDoItAll.CognitiveMemory.Maf.dll
+  CanDoItAll.CognitiveMemory.Workers -> C:\repositories\CanDoItAll.CognitiveMemory\src\CanDoItAll.CognitiveMemory.Workers\bin\Debug\net10.0\CanDoItAll.CognitiveMemory.Workers.dll
+  CanDoItAll.CognitiveMemory.Tests -> C:\repositories\CanDoItAll.CognitiveMemory\tests\CanDoItAll.CognitiveMemory.Tests\bin\Debug\net10.0\CanDoItAll.CognitiveMemory.Tests.dll
+  CanDoItAll.CognitiveMemory.Service -> C:\repositories\CanDoItAll.CognitiveMemory\src\CanDoItAll.CognitiveMemory.Service\bin\Debug\net10.0\CanDoItAll.CognitiveMemory.Service.dll
+
+Vytváření sestavení bylo úspěšně dokončeno.
+    0 upozornění
+    Počet chyb: 0
+
+Uplynulý čas 00:00:02.24
+Exit code: 0

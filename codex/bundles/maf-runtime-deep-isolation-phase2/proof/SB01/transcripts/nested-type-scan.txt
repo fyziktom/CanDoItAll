@@ -1,0 +1,52 @@
+Command: rg -n 'private sealed class|private sealed partial class|private sealed record|private enum|internal sealed class|public sealed partial class' src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime -g 'MafAgentRuntime*.cs'
+WorkingDirectory: C:\repositories\CanDoItAll
+StartedUtc: 2026-07-06T12:04:15.8669471-04:00
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\MafAgentRuntime.AgentFactory.cs:15:public sealed partial class MafAgentRuntime
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\MafAgentRuntime.cs:14:public sealed partial class MafAgentRuntime : IAgentRuntime
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\MafAgentRuntime.cs:2364:    private sealed class RequiredFinalizerCapturedException(string toolName) : Exception(
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\MafAgentRuntime.cs:2370:    private sealed class RepeatedToolInvocationGuard
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\MafAgentRuntime.InputAttachments.cs:9:public sealed partial class MafAgentRuntime
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\MafAgentRuntime.InputAttachments.cs:193:    private sealed record PreparedInputAttachments(
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\MafAgentRuntime.InputAttachments.cs:198:    private sealed record InputAttachmentAnalysis(
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Workspace\MafAgentRuntime.StorageRuntimePlugin.cs:7:internal sealed class StorageRuntimePlugin(
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Workspace\MafAgentRuntime.WorkspaceRuntimePlugin.cs:9:public sealed partial class MafAgentRuntime
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Workspace\MafAgentRuntime.WorkspaceRuntimePlugin.cs:18:    private sealed class WorkspaceRuntimePlugin(
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Workspace\MafAgentRuntime.WorkspaceSearchSupport.cs:6:public sealed partial class MafAgentRuntime
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Providers\MafAgentRuntime.ProviderHealth.cs:6:public sealed partial class MafAgentRuntime
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\MafAgentRuntime.Capabilities.Access.CatalogDescriptors.cs:17:public sealed partial class MafAgentRuntime
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\MafAgentRuntime.Capabilities.Access.cs:9:public sealed partial class MafAgentRuntime
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\MafAgentRuntime.Capabilities.Access.RuntimeToolDescriptors.cs:8:public sealed partial class MafAgentRuntime
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\MafAgentRuntime.Capabilities.Access.Policies.cs:7:public sealed partial class MafAgentRuntime
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\MafAgentRuntime.Capabilities.Mcp.cs:17:public sealed partial class MafAgentRuntime
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\MafAgentRuntime.Capabilities.Mcp.cs:19:    private sealed class McpCapabilityBuilder(MafAgentRuntime owner)
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\MafAgentRuntime.Capabilities.Mcp.cs:875:        private sealed class BrowserMcpModelContextBoundedAIFunction(
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\MafAgentRuntime.Capabilities.Mcp.cs:902:        private sealed class LocalMcpRuntimeAIFunction(
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\MafAgentRuntime.Capabilities.Mcp.cs:909:        private sealed class LocalMcpRuntimeClientLease(IMcpRuntimeClient client) : IAsyncDisposable
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\MafAgentRuntime.Capabilities.Context.cs:11:public sealed partial class MafAgentRuntime
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\MafAgentRuntime.Capabilities.Context.cs:13:    private sealed class ContextCapabilityBuilder(MafAgentRuntime owner)
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\MafAgentRuntime.Capabilities.Context.cs:238:    private sealed class WorkspaceMemoryContextProvider(
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\MafAgentRuntime.Capabilities.Context.cs:305:    private sealed class StaticMessageContextProvider(ChatMessage message) : MessageAIContextProvider
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\MafAgentRuntime.Capabilities.cs:16:public sealed partial class MafAgentRuntime
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\MafAgentRuntime.Capabilities.cs:983:    private sealed class AgentRuntimeConfiguration
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\MafAgentRuntime.Capabilities.cs:1000:    private sealed record FileSkillExecutionPolicy(
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\MafAgentRuntime.Capabilities.cs:1005:    private enum AgentRuntimeContextPolicyKind
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\MafAgentRuntime.Capabilities.cs:1013:    private sealed record RuntimeCompactionDecision(
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\MafAgentRuntime.Capabilities.cs:1033:    private sealed record RuntimeCapabilityComposition(
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\MafAgentRuntime.Capabilities.cs:1044:    private sealed class SkillCapabilityConfiguration
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\MafAgentRuntime.Capabilities.cs:1061:    private sealed class FileSkillScriptExecutionConfiguration
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\MafAgentRuntime.Capabilities.cs:1068:    private sealed class InlineSkillDefinition
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\MafAgentRuntime.Capabilities.cs:1079:    private sealed class InlineSkillResourceDefinition
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\MafAgentRuntime.Capabilities.cs:1088:    private sealed class McpCapabilityConfiguration
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\MafAgentRuntime.Capabilities.cs:1123:    private sealed class RagCapabilityConfiguration
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\MafAgentRuntime.Capabilities.cs:1146:    private sealed class AiContextCapabilityConfiguration
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\MafAgentRuntime.Capabilities.cs:1153:    private sealed class MemoryCapabilityConfiguration
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\MafAgentRuntime.Capabilities.cs:1176:    private sealed class PluginCapabilityConfiguration
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\MafAgentRuntime.Capabilities.cs:1183:    private sealed class BuiltInToolConfiguration
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\MafAgentRuntime.Capabilities.Skills.cs:6:public sealed partial class MafAgentRuntime
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\MafAgentRuntime.Capabilities.Skills.cs:8:    private sealed class SkillCapabilityBuilder(MafAgentRuntime owner)
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\MafAgentRuntime.Capabilities.Tools.cs:9:public sealed partial class MafAgentRuntime
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\MafAgentRuntime.Capabilities.Tools.cs:11:    private sealed partial class ToolCapabilityBuilder(
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\MafAgentRuntime.Capabilities.Tools.ConfiguredWorkspace.cs:9:public sealed partial class MafAgentRuntime
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\MafAgentRuntime.Capabilities.Tools.ConfiguredWorkspace.cs:11:    private sealed partial class ToolCapabilityBuilder
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\MafAgentRuntime.Capabilities.RuntimeToolProviders.cs:11:public sealed partial class MafAgentRuntime
+ExitCode: 0

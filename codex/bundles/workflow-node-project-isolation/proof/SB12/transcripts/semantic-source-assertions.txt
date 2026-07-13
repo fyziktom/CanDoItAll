@@ -1,0 +1,63 @@
+SB12 semantic source assertions
+Timestamp: 2026-06-29T19:36:25.5213699-04:00
+Working directory: C:\repositories\CanDoItAll
+Command: rg -n "WorkflowFailureDisplayFormatter|TryResolveDiagnostic|WorkflowEventPayloadEnvelope|PayloadJson|ResolveEventDisplayMessage|ResolveWorkflowStatusMessage|FormatWorkflowUiException" <SB12 production files>
+
+src\CanDoItAll.Modules.Workbench\Pages\ProjectStructurePage.SelectionPanel.cs:210:            ? WorkflowFailureDisplayFormatter.ToUserMessage(message)
+src\CanDoItAll.Modules.Workbench\Pages\ProjectStructurePage.WorkflowNodes.cs:49:            workflowAddDialog = BuildWorkflowAddErrorDialog(node, inputSettings, FormatWorkflowUiException(exception));
+src\CanDoItAll.Modules.Workbench\Pages\ProjectStructurePage.WorkflowNodes.cs:158:            workflowAddDialog = dialog with { Error = FormatWorkflowUiException(exception) };
+src\CanDoItAll.Modules.Workbench\Pages\ProjectStructurePage.WorkflowNodes.cs:191:            error = FormatWorkflowUiException(exception);
+src\CanDoItAll.Modules.Workbench\Pages\ProjectStructurePage.WorkflowNodes.cs:248:            var message = FormatWorkflowUiException(exception);
+src\CanDoItAll.Modules.Workbench\Pages\ProjectStructurePage.WorkflowNodes.cs:334:            workflowFeedback = FormatWorkflowUiException(exception);
+src\CanDoItAll.Modules.Workbench\Pages\ProjectStructurePage.WorkflowNodes.cs:414:            workflowAddDialog = requested with { Error = FormatWorkflowUiException(exception) };
+src\CanDoItAll.Modules.Workbench\Pages\ProjectStructurePage.WorkflowNodes.cs:494:    private static string FormatWorkflowUiException(Exception exception)
+src\CanDoItAll.Modules.Workbench\Pages\ProjectStructurePage.WorkflowNodes.cs:495:        => WorkflowFailureDisplayFormatter.ToUserMessage(exception.GetBaseException().Message);
+src\CanDoItAll.Modules.AgentFramework\Pages\Components\WorkflowCanvasEditor.razor.cs:669:            errorMessage = WorkflowFailureDisplayFormatter.ToUserMessage(exception.GetBaseException().Message);
+src\CanDoItAll.Modules.AgentFramework\Pages\Components\WorkflowCanvasEditor.razor.cs:829:                errorMessage = WorkflowFailureDisplayFormatter.ToUserMessage(testResult.ErrorMessage);
+src\CanDoItAll.Modules.AgentFramework\Pages\Components\WorkflowCanvasEditor.razor.cs:838:            errorMessage = WorkflowFailureDisplayFormatter.ToUserMessage(exception.GetBaseException().Message);
+src\CanDoItAll.Modules.AgentFramework\Pages\Components\WorkflowCanvasEditor.razor.cs:939:            errorMessage = WorkflowFailureDisplayFormatter.ToUserMessage(exception.GetBaseException().Message);
+src\CanDoItAll.Modules.Workbench\ProjectStructure\ProjectStructureWorkflowNodeService.cs:828:        var normalizedMessage = ResolveWorkflowStatusMessage(state, message, events);
+src\CanDoItAll.Modules.Workbench\ProjectStructure\ProjectStructureWorkflowNodeService.cs:1028:            WorkflowFailureDisplayFormatter.ToUserMessage(workflowEvent),
+src\CanDoItAll.Modules.Workbench\ProjectStructure\ProjectStructureWorkflowNodeService.cs:1031:            workflowEvent.PayloadJson);
+src\CanDoItAll.Modules.Workbench\ProjectStructure\ProjectStructureWorkflowNodeService.cs:1140:    internal static string ResolveWorkflowStatusMessage(
+src\CanDoItAll.Modules.Workbench\ProjectStructure\ProjectStructureWorkflowNodeService.cs:1150:                .Select(WorkflowFailureDisplayFormatter.ToUserMessage)
+src\CanDoItAll.Modules.Workbench\ProjectStructure\ProjectStructureWorkflowNodeService.cs:1161:                ? WorkflowFailureDisplayFormatter.ToUserMessage(message)
+src\CanDoItAll.Modules.AgentFramework\Pages\WorkflowsPage.razor.cs:497:                errorMessage = WorkflowFailureDisplayFormatter.ToUserMessage(testResult.ErrorMessage);
+src\CanDoItAll.Modules.AgentFramework\Pages\WorkflowsPage.razor.cs:977:            var payloadJson = ResolveEventPayloadJson(outputEvent);
+src\CanDoItAll.Modules.AgentFramework\Pages\WorkflowsPage.razor.cs:986:            var payloadJson = ResolveEventPayloadJson(completedEvent);
+src\CanDoItAll.Modules.AgentFramework\Pages\WorkflowsPage.razor.cs:996:    private static string ResolveEventPayloadJson(WorkflowEventRecord workflowEvent)
+src\CanDoItAll.Modules.AgentFramework\Pages\WorkflowsPage.razor.cs:998:        if (!string.IsNullOrWhiteSpace(workflowEvent.PayloadJson))
+src\CanDoItAll.Modules.AgentFramework\Pages\WorkflowsPage.razor.cs:1000:            return workflowEvent.PayloadJson;
+src\CanDoItAll.Modules.AgentFramework\Pages\WorkflowsPage.razor.cs:1003:        return TryExtractLegacyPayloadJson(workflowEvent.Message, out var payloadJson)
+src\CanDoItAll.Modules.AgentFramework\Pages\WorkflowsPage.razor.cs:1008:    private static bool TryExtractLegacyPayloadJson(string message, out string payloadJson)
+src\CanDoItAll.Modules.AgentFramework\Pages\WorkflowsPage.razor.cs:1011:        const string marker = "PayloadJson = ";
+src\CanDoItAll.Modules.AgentFramework\Pages\WorkflowsPage.razor.cs:1206:        => WorkflowFailureDisplayFormatter.ToUserMessage(message);
+src\CanDoItAll.Modules.AgentFramework\Pages\WorkflowsPage.razor.cs:1210:            ? WorkflowFailureDisplayFormatter.ToUserMessage(run.Summary)
+src\CanDoItAll.Modules.AgentFramework\Pages\WorkflowsPage.razor.cs:1213:    private static string ResolveEventDisplayMessage(WorkflowEventRecord workflowEvent)
+src\CanDoItAll.Modules.AgentFramework\Pages\WorkflowsPage.razor.cs:1214:        => WorkflowFailureDisplayFormatter.ToUserMessage(workflowEvent);
+src\CanDoItAll.Modules.AgentFramework\Pages\WorkflowsPage.razor.cs:1218:        if (WorkflowFailureDisplayFormatter.TryResolveDiagnosticTechnicalDetail(workflowEvent, out var technicalDetail))
+src\CanDoItAll.Modules.AgentFramework\Pages\WorkflowsPage.razor.cs:1221:                ResolveEventDisplayMessage(workflowEvent),
+src\CanDoItAll.Modules.AgentFramework\Pages\WorkflowsPage.razor.cs:1228:                   ResolveEventDisplayMessage(workflowEvent),
+src\CanDoItAll.Modules.AgentFramework\Pages\WorkflowsPage.razor.cs:1234:        => WorkflowFailureDisplayFormatter.TryResolveDiagnosticTechnicalDetail(workflowEvent, out var technicalDetail)
+src\CanDoItAll.Modules.AgentFramework\Pages\WorkflowsPage.razor.cs:1239:        => WorkflowFailureDisplayFormatter.ToUserMessage(exception.GetBaseException().Message);
+src\CanDoItAll.AgentFramework.Workflows.Core\WorkflowFailureDisplayFormatter.cs:8:public static class WorkflowFailureDisplayFormatter
+src\CanDoItAll.AgentFramework.Workflows.Core\WorkflowFailureDisplayFormatter.cs:19:        if (TryResolveDiagnosticUserMessage(workflowEvent, out var diagnosticMessage))
+src\CanDoItAll.AgentFramework.Workflows.Core\WorkflowFailureDisplayFormatter.cs:29:    public static bool TryResolveDiagnosticUserMessage(
+src\CanDoItAll.AgentFramework.Workflows.Core\WorkflowFailureDisplayFormatter.cs:36:        if (!TryResolveDiagnostic(workflowEvent, out var diagnostic))
+src\CanDoItAll.AgentFramework.Workflows.Core\WorkflowFailureDisplayFormatter.cs:45:    public static bool TryResolveDiagnosticTechnicalDetail(
+src\CanDoItAll.AgentFramework.Workflows.Core\WorkflowFailureDisplayFormatter.cs:52:        if (!TryResolveDiagnostic(workflowEvent, out var diagnostic) ||
+src\CanDoItAll.AgentFramework.Workflows.Core\WorkflowFailureDisplayFormatter.cs:62:    private static bool TryResolveDiagnostic(
+src\CanDoItAll.AgentFramework.Workflows.Core\WorkflowFailureDisplayFormatter.cs:67:        if (string.IsNullOrWhiteSpace(workflowEvent.PayloadJson))
+src\CanDoItAll.AgentFramework.Workflows.Core\WorkflowFailureDisplayFormatter.cs:74:            var envelope = JsonSerializer.Deserialize<WorkflowEventPayloadEnvelope>(
+src\CanDoItAll.AgentFramework.Workflows.Core\WorkflowFailureDisplayFormatter.cs:75:                workflowEvent.PayloadJson,
+src\CanDoItAll.Modules.AgentFramework\Pages\WorkflowsPage.razor:507:                                                    <span class="workflows-clamped-text">@Truncate(ResolveEventDisplayMessage(workflowEvent), 140)</span>
+src\CanDoItAll.Modules.AgentFramework\Pages\WorkflowsPage.razor:782:                var resultPayloadJson = ResolveRunResultPayload(runDetailEvents);
+src\CanDoItAll.Modules.AgentFramework\Pages\WorkflowsPage.razor:783:                var resultPreview = ResolveRunResultPreview(resultPayloadJson);
+src\CanDoItAll.Modules.AgentFramework\Pages\WorkflowsPage.razor:856:                                                <span>@ResolveEventDisplayMessage(workflowEvent)</span>
+src\CanDoItAll.Modules.AgentFramework\Pages\WorkflowsPage.razor:857:                                                @if (!string.IsNullOrWhiteSpace(workflowEvent.PayloadJson))
+src\CanDoItAll.Modules.AgentFramework\Pages\WorkflowsPage.razor:859:                                                    <pre class="workflows-detail-pre">@workflowEvent.PayloadJson</pre>
+src\CanDoItAll.Modules.AgentFramework\Pages\WorkflowsPage.razor:890:                var eventDetailMessage = ResolveEventDisplayMessage(currentEventDetail);
+src\CanDoItAll.Modules.AgentFramework\Pages\WorkflowsPage.razor:921:                        @if (!string.IsNullOrWhiteSpace(currentEventDetail.PayloadJson))
+src\CanDoItAll.Modules.AgentFramework\Pages\WorkflowsPage.razor:925:                                <pre class="workflows-detail-pre">@currentEventDetail.PayloadJson</pre>
+PASS: SB12 production paths route failure display through typed event payload diagnostics and the shared formatter.
+Exit code: 0

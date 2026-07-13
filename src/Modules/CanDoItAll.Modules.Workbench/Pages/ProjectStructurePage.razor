@@ -26,13 +26,15 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
 @inject IProjectWorkbenchSeedService ProjectWorkbenchSeedService
 @inject IProjectStructureLocalFileOpener LocalFileOpener
 @inject IProjectStructureRuntimeLauncher RuntimeLauncher
+@inject ProjectStructureFileActionCoordinator FileActionCoordinator
+@inject ProjectStructureKnownFileInteractionCoordinator KnownFileInteractionCoordinator
 @inject WorkspaceService WorkspaceService
 @inject SecretService SecretService
 @inject ProviderExecutionService ProviderExecutionService
 @inject NavigationManager Navigation
 @inject IJSRuntime JSRuntime
 @inject ILogger<ProjectStructurePage> Logger
-@implements IDisposable
+@implements IAsyncDisposable
 
 <PageTitle>@ProjectStructurePageTitleBuilder.Build(surface?.ProjectName)</PageTitle>
 
@@ -92,6 +94,7 @@ else
                                                        HealthWindowVisible="@HealthWindowState.IsVisible"
                                                        ToolboxWindowVisible="@ToolboxWindowState.IsVisible"
                                                        ObjectIndexWindowVisible="@ObjectIndexWindowState.IsVisible"
+                                                       FileBrowserWindowVisible="@FileBrowserWindowState.IsVisible"
                                                        SignalsWindowVisible="@SignalsWindowState.IsVisible"
                                                        AgentWindowVisible="@AgentWindowState.IsVisible"
                                                        ActiveTool="@canvasToolMode"
@@ -105,6 +108,7 @@ else
                                                        ToggleHealthWindow="ToggleHealthWindowAsync"
                                                        ToggleToolboxWindow="ToggleToolboxWindowAsync"
                                                        ToggleObjectIndexWindow="ToggleObjectIndexWindowAsync"
+                                                       OpenFileBrowserWindow="OpenProjectFileBrowserAsync"
                                                        ToggleSignalsWindow="ToggleSignalsWindowAsync"
                                                        ToggleAgentWindow="ToggleAgentWindowAsync"
                                                        RecomposeBranch="RecomposeSelectedBranchAsync" />
@@ -160,6 +164,13 @@ else
                                                                ResolveContextActions="ResolveSupportPanelContextActions"
                                                                OnExecuteNodeContextAction="ExecuteOutlineContextActionAsync"
                                                                DefaultWidth="@ObjectIndexWindowDefaultWidth" />
+                        }
+                        @if (FileBrowserWindowState.IsVisible)
+                        {
+                            <ProjectStructureFileBrowserWindow WindowId="@FileBrowserWindowKey"
+                                                               Request="@CurrentFileBrowserRequest"
+                                                               State="@FileBrowserWindowState"
+                                                               StateChanged="HandleFileBrowserWindowStateChangedAsync" />
                         }
                         @if (HealthWindowState.IsVisible)
                         {
@@ -272,16 +283,12 @@ else
                                                            CloseQuickActionDialog="CloseQuickActionDialog"
                                                            ExecuteQuickAction="ExecuteQuickActionAsync"
                                                            PreviewNode="@previewNode"
-                                                           CloseAttachmentPreview="CloseAttachmentPreview"
+                                                           PreviewInteraction="@PreviewInteraction"
+                                                           CloseAttachmentPreview="CloseAttachmentPreviewAsync"
                                                            OpenAttachmentLocally="OpenAttachmentLocallyAsync"
                                                            EditPreviewNode="EditAttachmentPreviewNodeAsync"
                                                            CanShowLocalOpen="CanShowLocalOpen"
-                                                           CanEditPreviewNode="CanEditNode"
-                                                           ResolveAttachmentDisplayName="ProjectStructureNodeHelpers.ResolveAttachmentDisplayName"
-                                                           ResolveAttachmentLeadCopy="ProjectStructureNodeHelpers.ResolveAttachmentLeadCopy"
-                                                           ResolveAttachmentPreviewKind="ProjectStructureNodeHelpers.ResolveAttachmentPreviewKind"
-                                                           ResolveAttachmentPreviewSource="ProjectStructureNodeHelpers.ResolveAttachmentPreviewSource"
-                                                           ResolveAttachmentTextContent="ProjectStructureNodeHelpers.ResolveAttachmentTextContent" />
+                                                           CanEditPreviewNode="CanEditNode" />
                         </ProjectStructureDeferredSurface>
                     </OverlayContent>
                 </CanvasWorkbench>
@@ -535,12 +542,7 @@ else
                                    ExecuteHrManagerMatch="ExecuteHrManagerMatchAsync"
                                    EditPreviewNode="EditAttachmentPreviewNodeAsync"
                                    CanShowLocalOpen="CanShowLocalOpen"
-                                   CanEditPreviewNode="CanEditNode"
-                                   ResolveAttachmentDisplayName="ProjectStructureNodeHelpers.ResolveAttachmentDisplayName"
-                                   ResolveAttachmentLeadCopy="ProjectStructureNodeHelpers.ResolveAttachmentLeadCopy"
-                                   ResolveAttachmentPreviewKind="ProjectStructureNodeHelpers.ResolveAttachmentPreviewKind"
-                                   ResolveAttachmentPreviewSource="ProjectStructureNodeHelpers.ResolveAttachmentPreviewSource"
-                                   ResolveAttachmentTextContent="ProjectStructureNodeHelpers.ResolveAttachmentTextContent" />
+                                   CanEditPreviewNode="CanEditNode" />
 </ProjectStructureDeferredSurface>
 
 @if (isSecretReferenceDialogOpen)
@@ -745,6 +747,7 @@ else
     private CancellationTokenSource? pendingCanvasViewStatePersistCts;
     private string? pendingClientSelectionId;
     private ProjectStructureNode? previewNode;
+    private ProjectStructureKnownFileInteractionSlot? previewInteractionSlot;
     private string? localOpenFeedback;
     private string? localOpenFeedbackNodeId;
     private string localOpenFeedbackTone = "neutral";
@@ -886,12 +889,14 @@ else
     {
         if (loadedProjectId != ProjectId)
         {
+            await CloseAttachmentPreviewAsync();
             loadedProjectId = ProjectId;
             currentViewStateJson = null;
             selectedNodeIds = [];
             canvasToolMode = CanvasAuthoringMode.Select;
             linkModeSourceId = null;
             pendingClientSelectionId = null;
+            fileBrowserRequest = null;
         }
 
         await ReloadSurfaceAsync();
@@ -912,7 +917,7 @@ else
             unavailableState = loadResult.UnavailableState;
             surface = null;
             canvasSurface = null;
-            previewNode = null;
+            await CloseAttachmentPreviewAsync();
             quickActionDialog = null;
             currentViewStateJson = null;
             selectedNodeIds = [];
@@ -933,7 +938,16 @@ else
 
         if (previewNode is not null)
         {
-            previewNode = reloadedSurface.Nodes.FirstOrDefault(node => string.Equals(node.Id, previewNode.Id, StringComparison.Ordinal));
+            ProjectStructureNode? reloadedPreview = reloadedSurface.Nodes.FirstOrDefault(
+                node => string.Equals(node.Id, previewNode.Id, StringComparison.Ordinal));
+            if (reloadedPreview is null)
+            {
+                await CloseAttachmentPreviewAsync();
+            }
+            else
+            {
+                previewNode = reloadedPreview;
+            }
         }
 
         if (quickActionDialog is not null)
@@ -1295,7 +1309,7 @@ else
         if (HasMermaidViewer(node))
         {
             CloseQuickActionDialog();
-            OpenMermaidViewer(node);
+            await OpenMermaidViewerAsync(node);
             await InvokeAsync(StateHasChanged);
             return;
         }
@@ -1310,7 +1324,7 @@ else
         if (ProjectStructureNodeHelpers.CanRenderAttachmentPreview(node))
         {
             CloseQuickActionDialog();
-            OpenAttachmentPreview(node);
+            await OpenAttachmentPreviewAsync(node);
             await InvokeAsync(StateHasChanged);
             return;
         }
@@ -1409,6 +1423,11 @@ else
 
     private async Task HandleCanvasActionAsync(string actionId, string? nodeId, double x, double y)
     {
+        if (await TryHandleFileBrowserActionAsync(actionId, nodeId))
+        {
+            return;
+        }
+
         if (await TryHandleCopyActionAsync(actionId, nodeId))
         {
             return;
@@ -1630,7 +1649,7 @@ else
             ProjectStructureNodeHelpers.CanRenderAttachmentPreview(attachmentNode))
         {
             CloseQuickActionDialog();
-            OpenAttachmentPreview(attachmentNode);
+            await OpenAttachmentPreviewAsync(attachmentNode);
             await InvokeAsync(StateHasChanged);
             return;
         }
@@ -2551,32 +2570,82 @@ else
     }
 
 
-    private void OpenAttachmentPreview(ProjectStructureNode node)
+    private ProjectStructureKnownFileInteractionSlot PreviewInteractionSlot
+        => previewInteractionSlot ??= new ProjectStructureKnownFileInteractionSlot(
+            KnownFileInteractionCoordinator.OpenAsync);
+
+    private ProjectStructureKnownFileInteraction? PreviewInteraction
+        => previewInteractionSlot?.Current;
+
+    private async Task OpenAttachmentPreviewAsync(ProjectStructureNode node)
     {
         if (!ProjectStructureNodeHelpers.CanRenderAttachmentPreview(node))
         {
             return;
         }
 
-        previewNode = node;
+        previewNode = null;
+        try
+        {
+            ProjectStructureKnownFileInteraction? opened = await PreviewInteractionSlot.OpenAsync(
+                ProjectId,
+                node.Id);
+            if (opened is null)
+            {
+                return;
+            }
+
+            previewNode = node;
+        }
+        catch (Exception exception)
+        {
+            Logger.LogWarning(
+                "Project Structure file interaction failed. ProjectId={ProjectId} NodeId={NodeId} FailureType={FailureType}.",
+                ProjectId,
+                node.Id,
+                exception.GetType().Name);
+            workflowFeedback = exception switch
+            {
+                FileBrowserProviderException providerException => providerException.Error.Message,
+                FileAccessDeniedException deniedException => deniedException.Message,
+                _ => "Unable to authorize this project asset."
+            };
+            workflowFeedbackTone = "warn";
+        }
     }
 
-    private void CloseAttachmentPreview()
-        => previewNode = null;
+    private async Task CloseAttachmentPreviewAsync()
+    {
+        previewNode = null;
+        if (previewInteractionSlot is not null)
+        {
+            await previewInteractionSlot.CloseAsync();
+        }
+    }
 
     private async Task EditAttachmentPreviewNodeAsync(ProjectStructureNode node)
     {
-        CloseAttachmentPreview();
+        await CloseAttachmentPreviewAsync();
         await OpenEditDialogAsync(node);
     }
 
-    public void Dispose()
+    private void DisposeSynchronousState()
     {
         CancelPendingCanvasViewStatePersistence();
         ResetProcessStartEstimateState();
         deferredCompletionCts.Cancel();
         deferredCompletionCts.Dispose();
         nodeMoveCommitGate.Dispose();
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        DisposeSynchronousState();
+        if (previewInteractionSlot is not null)
+        {
+            await previewInteractionSlot.DisposeAsync();
+            previewInteractionSlot = null;
+        }
     }
 
 }

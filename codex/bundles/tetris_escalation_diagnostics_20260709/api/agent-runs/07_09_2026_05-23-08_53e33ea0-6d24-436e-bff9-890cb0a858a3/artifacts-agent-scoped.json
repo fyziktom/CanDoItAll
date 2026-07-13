@@ -1,0 +1,101 @@
+[
+  {
+    "id": "115b82d8-a289-575b-8331-04953ced6adf",
+    "executionRunId": "53e33ea0-6d24-436e-bff9-890cb0a858a3",
+    "artifactKind": "generated-output",
+    "displayName": "dotnet_test stderr",
+    "relativePath": "artifacts/scopes/organization/e5df9ad633dbc6974a0678a74976013c/process-runs/c4888f4f-eabd-469f-80a6-3fccf6018a12/tool-runs/20260709-092327078-dotnet-test/stderr.txt",
+    "contentType": "text/plain",
+    "producedBy": "workspace_dotnet_test",
+    "summary": "Captured stderr preview.",
+    "createdAtUtc": "2026-07-09T05:23:29.3733101-04:00"
+  },
+  {
+    "id": "58b4ebab-6717-f750-9d8a-ad0a253bfb1a",
+    "executionRunId": "53e33ea0-6d24-436e-bff9-890cb0a858a3",
+    "artifactKind": "generated-output",
+    "displayName": "dotnet_test stdout",
+    "relativePath": "artifacts/scopes/organization/e5df9ad633dbc6974a0678a74976013c/process-runs/c4888f4f-eabd-469f-80a6-3fccf6018a12/tool-runs/20260709-092327078-dotnet-test/stdout.txt",
+    "contentType": "text/plain",
+    "producedBy": "workspace_dotnet_test",
+    "summary": "Captured stdout preview.",
+    "createdAtUtc": "2026-07-09T05:23:29.3733101-04:00"
+  },
+  {
+    "id": "b5cabbd6-18ef-4e50-8a57-f10b1f6aa7eb",
+    "executionRunId": "53e33ea0-6d24-436e-bff9-890cb0a858a3",
+    "artifactKind": "generated-output",
+    "displayName": "TetrisGame.Tests.csproj",
+    "relativePath": "external-target/C/programovani/dotnet/output/tests/TetrisGame.Tests/TetrisGame.Tests.csproj",
+    "contentType": "application/octet-stream",
+    "producedBy": "workspace_dotnet_test",
+    "summary": "Workspace path touched or targeted by the recipe.",
+    "createdAtUtc": "2026-07-09T05:23:29.3733101-04:00"
+  },
+  {
+    "id": "2f669756-a750-f354-b479-25596371faa9",
+    "executionRunId": "53e33ea0-6d24-436e-bff9-890cb0a858a3",
+    "artifactKind": "generated-output",
+    "displayName": "dotnet_build stdout",
+    "relativePath": "artifacts/scopes/organization/e5df9ad633dbc6974a0678a74976013c/process-runs/c4888f4f-eabd-469f-80a6-3fccf6018a12/tool-runs/20260709-092322792-dotnet-build/stdout.txt",
+    "contentType": "text/plain",
+    "producedBy": "workspace_dotnet_build",
+    "summary": "Captured stdout preview.",
+    "createdAtUtc": "2026-07-09T05:23:25.7915935-04:00"
+  },
+  {
+    "id": "961bb5a4-a33d-665e-a4c6-9239bf38b279",
+    "executionRunId": "53e33ea0-6d24-436e-bff9-890cb0a858a3",
+    "artifactKind": "generated-output",
+    "displayName": "dotnet_build stderr",
+    "relativePath": "artifacts/scopes/organization/e5df9ad633dbc6974a0678a74976013c/process-runs/c4888f4f-eabd-469f-80a6-3fccf6018a12/tool-runs/20260709-092322792-dotnet-build/stderr.txt",
+    "contentType": "text/plain",
+    "producedBy": "workspace_dotnet_build",
+    "summary": "Captured stderr preview.",
+    "createdAtUtc": "2026-07-09T05:23:25.7915935-04:00"
+  },
+  {
+    "id": "da9a562f-7e5c-5c56-bd33-1007257916d3",
+    "executionRunId": "53e33ea0-6d24-436e-bff9-890cb0a858a3",
+    "artifactKind": "generated-output",
+    "displayName": "TetrisGame.slnx",
+    "relativePath": "external-target/C/programovani/dotnet/output/TetrisGame.slnx",
+    "contentType": "application/octet-stream",
+    "producedBy": "workspace_dotnet_build",
+    "summary": "Workspace path touched or targeted by the recipe.",
+    "createdAtUtc": "2026-07-09T05:23:25.7915935-04:00"
+  },
+  {
+    "id": "33ba1425-9098-3e5d-8c9a-8b3b928d7fdc",
+    "executionRunId": "53e33ea0-6d24-436e-bff9-890cb0a858a3",
+    "artifactKind": "generated-output",
+    "displayName": "dotnet_restore stderr",
+    "relativePath": "artifacts/scopes/organization/e5df9ad633dbc6974a0678a74976013c/process-runs/c4888f4f-eabd-469f-80a6-3fccf6018a12/tool-runs/20260709-092319519-dotnet-restore/stderr.txt",
+    "contentType": "text/plain",
+    "producedBy": "workspace_dotnet_restore",
+    "summary": "Captured stderr preview.",
+    "createdAtUtc": "2026-07-09T05:23:21.3235248-04:00"
+  },
+  {
+    "id": "4abbcfa9-3549-545d-a9b3-7166b3b42946",
+    "executionRunId": "53e33ea0-6d24-436e-bff9-890cb0a858a3",
+    "artifactKind": "generated-output",
+    "displayName": "dotnet_restore stdout",
+    "relativePath": "artifacts/scopes/organization/e5df9ad633dbc6974a0678a74976013c/process-runs/c4888f4f-eabd-469f-80a6-3fccf6018a12/tool-runs/20260709-092319519-dotnet-restore/stdout.txt",
+    "contentType": "text/plain",
+    "producedBy": "workspace_dotnet_restore",
+    "summary": "Captured stdout preview.",
+    "createdAtUtc": "2026-07-09T05:23:21.3235248-04:00"
+  },
+  {
+    "id": "d7fdf5b2-db3c-1059-8274-469c3cd8711e",
+    "executionRunId": "53e33ea0-6d24-436e-bff9-890cb0a858a3",
+    "artifactKind": "generated-output",
+    "displayName": "TetrisGame.slnx",
+    "relativePath": "external-target/C/programovani/dotnet/output/TetrisGame.slnx",
+    "contentType": "application/octet-stream",
+    "producedBy": "workspace_dotnet_restore",
+    "summary": "Workspace path touched or targeted by the recipe.",
+    "createdAtUtc": "2026-07-09T05:23:21.3235248-04:00"
+  }
+]

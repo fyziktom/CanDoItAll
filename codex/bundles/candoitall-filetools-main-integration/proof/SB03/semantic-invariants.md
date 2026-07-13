@@ -1,0 +1,17 @@
+# SB03 Semantic Invariants
+
+Date: 2026-07-12.
+
+| Invariant | Required behavior | Positive evidence | Adversarial evidence |
+| --- | --- | --- | --- |
+| `SB03_INV_BOUNDED_PAGE_ONE` | Page one inspects only bounded provider-native entries and retains only a signed continuation. | `transcripts/passing-bounded-page-one.txt` reports 25 returned, 26 inspected/enumerated, and 379 retained bytes from 1,000 entries. | `transcripts/failing-first-bounded-page-one.txt` captures the intentionally shallow implementation inspecting/enumerating all 1,000 entries before returning 25. |
+| `SB03_INV_SCALE_100K` | Real large-directory first/next pages remain within declared work, allocation, and retained-state bounds. | `transcripts/scale-100000.txt` uses 100,000 direct files; first page inspects 51, second page 101, retained state is 379 bytes, worst allocation is 238,000 bytes. | The test rejects any page-one full materialization through production enumeration counters and allocation/state ceilings. |
+| `SB03_INV_CONFINEMENT` | Relative traversal and reparse traversal are rejected without disclosing the configured root. | `transcripts/passing-security-freshness-cancellation.txt`. | Named traversal and symbolic-link tests require typed `AccessDenied` and root-redacted messages. |
+| `SB03_INV_CURSOR` | Continuations are signed, query-bound, source-version-bound, and fail when the directory changes. | `transcripts/passing-security-freshness-cancellation.txt`. | A mutation between pages requires typed `SourceChanged`; request/cursor mismatch requires `InvalidCursor`. |
+| `SB03_INV_FRESHNESS` | Disabled browse state observes current metadata and content independently of a browser session. | `transcripts/passing-security-freshness-cancellation.txt` reads replaced content through the existing content driver and observes the new size through browse. | No provider or host listing/content cache exists in the changed source. |
+| `SB03_INV_CANCELLATION` | Cancellation publishes no completed page or success diagnostic. | `transcripts/passing-security-freshness-cancellation.txt`. | Instrumented enumeration cancels after ten entries; the operation throws and logs cancellation without a completed event. |
+| `SB03_INV_ORDERING` | Only provider-native forward order is advertised; global name ordering is rejected. | `transcripts/passing-security-freshness-cancellation.txt`. | Named negative requires typed `UnsupportedOperation`; source audit rejects `OrderBy` and unbounded materialization. |
+| `SB03_INV_BUDGET` | Inspection/time/metadata limits produce an explicit typed partial page or typed provider-limit failure. | Focused adversarial rerun passes nine non-scale invariants, including a five-entry inspection-limit page with `PartialInspectionLimit` and a continuation. | Contract validation rejects invalid/provider-exceeding budgets; continuation offsets beyond the current inspection budget throw `BudgetExceeded`. |
+| `SB03_INV_REDACTION` | Raw paths and I/O details are absent from public failures and logs. | Focused adversarial rerun passes the provider-failure redaction test. | An injected `IOException` contains both the absolute root and a secret marker; neither reaches the typed error nor captured logs. |
+
+The invariants apply to the production `FileSystemStorageBrowseDriver`, `FileSystemStoragePathPolicy`, cursor codec, entry mapper, and existing content driver. Test-only counters observe the production enumeration delegate boundary; no fixture-seeded metric substitutes for the production page metrics.

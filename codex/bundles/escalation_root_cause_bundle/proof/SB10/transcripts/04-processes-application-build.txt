@@ -1,0 +1,34 @@
+Command: dotnet build src\Processes\CanDoItAll.Processes.Application\CanDoItAll.Processes.Application.csproj -m:1 -p:UseArtifactsOutput=true -p:ArtifactsPath=C:\repositories\CanDoItAll\artifacts\sb10-proof2-application-build -p:WarningsNotAsErrors=NU1903
+Working directory: C:\repositories\CanDoItAll
+StartUtc: 2026-07-08T20:47:46.8432690Z
+
+  Zjišťují se projekty, které se mají obnovit...
+  Obnovil se projekt C:\repositories\CanDoItAll\src\Processes\CanDoItAll.Processes.Core\CanDoItAll.Processes.Core.csproj (v 172 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll\src\Processes\CanDoItAll.Processes.Contracts\CanDoItAll.Processes.Contracts.csproj (v 166 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll\src\Processes\CanDoItAll.Processes.Runtime\CanDoItAll.Processes.Runtime.csproj (v 173 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll\src\Processes\CanDoItAll.Processes.Builder\CanDoItAll.Processes.Builder.csproj (v 173 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll\src\Processes\CanDoItAll.Processes.Projections\CanDoItAll.Processes.Projections.csproj (v 172 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll\src\Processes\CanDoItAll.Processes.Application\CanDoItAll.Processes.Application.csproj (v 175 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll\src\Processes\CanDoItAll.Processes.Templates\CanDoItAll.Processes.Templates.csproj (v 172 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll\src\Foundation\CanDoItAll.Git\CanDoItAll.Git.csproj (v 166 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll\src\Processes\CanDoItAll.Processes.Abstractions\CanDoItAll.Processes.Abstractions.csproj (v 172 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll\src\Processes\Drivers\CanDoItAll.Processes.Drivers.Abstractions\CanDoItAll.Processes.Drivers.Abstractions.csproj (v 173 ms).
+  CanDoItAll.Processes.Contracts -> C:\repositories\CanDoItAll\artifacts\sb10-proof2-application-build\bin\CanDoItAll.Processes.Contracts\debug\CanDoItAll.Processes.Contracts.dll
+  CanDoItAll.Processes.Abstractions -> C:\repositories\CanDoItAll\artifacts\sb10-proof2-application-build\bin\CanDoItAll.Processes.Abstractions\debug\CanDoItAll.Processes.Abstractions.dll
+  CanDoItAll.Processes.Core -> C:\repositories\CanDoItAll\artifacts\sb10-proof2-application-build\bin\CanDoItAll.Processes.Core\debug\CanDoItAll.Processes.Core.dll
+  CanDoItAll.Processes.Templates -> C:\repositories\CanDoItAll\artifacts\sb10-proof2-application-build\bin\CanDoItAll.Processes.Templates\debug\CanDoItAll.Processes.Templates.dll
+  CanDoItAll.Processes.Drivers.Abstractions -> C:\repositories\CanDoItAll\artifacts\sb10-proof2-application-build\bin\CanDoItAll.Processes.Drivers.Abstractions\debug\CanDoItAll.Processes.Drivers.Abstractions.dll
+  CanDoItAll.Processes.Builder -> C:\repositories\CanDoItAll\artifacts\sb10-proof2-application-build\bin\CanDoItAll.Processes.Builder\debug\CanDoItAll.Processes.Builder.dll
+  CanDoItAll.Processes.Runtime -> C:\repositories\CanDoItAll\artifacts\sb10-proof2-application-build\bin\CanDoItAll.Processes.Runtime\debug\CanDoItAll.Processes.Runtime.dll
+  CanDoItAll.Processes.Projections -> C:\repositories\CanDoItAll\artifacts\sb10-proof2-application-build\bin\CanDoItAll.Processes.Projections\debug\CanDoItAll.Processes.Projections.dll
+  CanDoItAll.Git -> C:\repositories\CanDoItAll\artifacts\sb10-proof2-application-build\bin\CanDoItAll.Git\debug\CanDoItAll.Git.dll
+  CanDoItAll.Processes.Application -> C:\repositories\CanDoItAll\artifacts\sb10-proof2-application-build\bin\CanDoItAll.Processes.Application\debug\CanDoItAll.Processes.Application.dll
+
+Vytváření sestavení bylo úspěšně dokončeno.
+    0 upozornění
+    Počet chyb: 0
+
+Uplynulý čas 00:00:19.75
+
+ExitCode: 0
+EndUtc: 2026-07-08T20:48:08.8957621Z

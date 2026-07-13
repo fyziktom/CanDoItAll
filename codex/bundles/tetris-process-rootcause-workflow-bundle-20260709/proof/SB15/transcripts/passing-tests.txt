@@ -1,0 +1,19 @@
+Passing validation
+
+1. ProcessRecoveryClassifierTests
+   Result: 10/10 passed.
+
+2. Recovery/runtime/dispatch/instruction focused group
+   Result: 75/75 passed.
+
+3. Post-extraction affected test group
+   Command: dotnet test tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj --no-restore --filter <seven affected test classes>
+   Result: 127/127 passed.
+
+4. Full unit suite
+   Command: dotnet test tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj --no-restore
+   Result: 1,998/1,998 passed in 6m56s.
+
+5. Solution build
+   Command: dotnet build CanDoItAll.slnx --no-restore
+   Result: succeeded with zero errors. Eight existing NU1903 warnings report Microsoft.OpenApi 2.0.0.

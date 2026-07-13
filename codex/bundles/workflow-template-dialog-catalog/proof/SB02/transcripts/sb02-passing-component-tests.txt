@@ -1,0 +1,17 @@
+Command:
+dotnet test tests/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj --filter "FullyQualifiedName~Workflows_page_defers_component_library_until_component_sections_need_it|FullyQualifiedName~Workflows_template_catalogue" --no-restore
+
+Purpose:
+Validate SB02 after implementation.
+
+Observed passing result:
+Successful.
+Failed: 0, Passed: 3, Skipped: 0, Total: 3, Duration: 21 seconds, Target: CanDoItAll.Tests.Components.dll (net10.0).
+
+Covered tests:
+- Workflows_page_defers_component_library_until_component_sections_need_it
+- Workflows_template_catalogue_dialog_loads_examples_from_workflows_tab
+- Workflows_template_catalogue_loads_pack_only_when_dialog_opens
+ExitCode: 0
+Invariant ID: SB02-INV-001
+Invariant ID: SB02-INV-002

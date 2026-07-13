@@ -1,0 +1,31 @@
+Command: dotnet build src/CanDoItAll.AgentFramework.Maf/CanDoItAll.AgentFramework.Maf.csproj --no-restore
+Started: 2026-06-29T06:45:13.2776860-04:00
+  CanDoItAll.Git -> C:\repositories\CanDoItAll\src\CanDoItAll.Git\bin\Debug\net10.0\CanDoItAll.Git.dll
+  CanDoItAll.SharedKernel -> C:\repositories\CanDoItAll\src\CanDoItAll.SharedKernel\bin\Debug\net10.0\CanDoItAll.SharedKernel.dll
+  CanDoItAll.Tools.Documents -> C:\repositories\CanDoItAll\src\CanDoItAll.Tools.Documents\bin\Debug\net10.0\CanDoItAll.Tools.Documents.dll
+  CanDoItAll.AgentFramework.Capabilities.Abstractions -> C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Capabilities.Abstractions\bin\Debug\net10.0\CanDoItAll.AgentFramework.Capabilities.Abstractions.dll
+  CanDoItAll.AgentFramework.Models -> C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Models\bin\Debug\net10.0\CanDoItAll.AgentFramework.Models.dll
+  CanDoItAll.AgentFramework.Capabilities.Access -> C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Capabilities.Access\bin\Debug\net10.0\CanDoItAll.AgentFramework.Capabilities.Access.dll
+  CanDoItAll.AgentFramework.Tools.Abstractions -> C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Tools.Abstractions\bin\Debug\net10.0\CanDoItAll.AgentFramework.Tools.Abstractions.dll
+  CanDoItAll.Infrastructure -> C:\repositories\CanDoItAll\src\CanDoItAll.Infrastructure\bin\Debug\net10.0\CanDoItAll.Infrastructure.dll
+  CanDoItAll.AgentFramework.Mcp.Abstractions -> C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Mcp.Abstractions\bin\Debug\net10.0\CanDoItAll.AgentFramework.Mcp.Abstractions.dll
+  CanDoItAll.AgentFramework.Skills.Abstractions -> C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Skills.Abstractions\bin\Debug\net10.0\CanDoItAll.AgentFramework.Skills.Abstractions.dll
+  CanDoItAll.AgentFramework.Core -> C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Core\bin\Debug\net10.0\CanDoItAll.AgentFramework.Core.dll
+  CanDoItAll.AgentFramework.ProviderPipelines -> C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.ProviderPipelines\bin\Debug\net10.0\CanDoItAll.AgentFramework.ProviderPipelines.dll
+  CanDoItAll.AgentFramework.Tooling -> C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Tooling\bin\Debug\net10.0\CanDoItAll.AgentFramework.Tooling.dll
+  CanDoItAll.AgentFramework.Skills -> C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Skills\bin\Debug\net10.0\CanDoItAll.AgentFramework.Skills.dll
+  CanDoItAll.AgentFramework.Tools -> C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Tools\bin\Debug\net10.0\CanDoItAll.AgentFramework.Tools.dll
+  CanDoItAll.Modules.Security -> C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Security\bin\Debug\net10.0\CanDoItAll.Modules.Security.dll
+  CanDoItAll.AgentFramework.Mcp -> C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Mcp\bin\Debug\net10.0\CanDoItAll.AgentFramework.Mcp.dll
+  CanDoItAll.Modules.Projects -> C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Projects\bin\Debug\net10.0\CanDoItAll.Modules.Projects.dll
+  CanDoItAll.AgentFramework.Providers -> C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Providers\bin\Debug\net10.0\CanDoItAll.AgentFramework.Providers.dll
+  CanDoItAll.Modules.Workspace -> C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Workspace\bin\Debug\net10.0\CanDoItAll.Modules.Workspace.dll
+  CanDoItAll.AgentFramework.Maf -> C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Maf\bin\Debug\net10.0\CanDoItAll.AgentFramework.Maf.dll
+
+Vytváření sestavení bylo úspěšně dokončeno.
+    0 upozornění
+    Počet chyb: 0
+
+Uplynulý čas 00:00:24.54
+Exit Code: 0
+Completed: 2026-06-29T06:45:38.8078054-04:00

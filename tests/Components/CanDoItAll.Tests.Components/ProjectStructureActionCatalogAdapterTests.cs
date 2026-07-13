@@ -106,11 +106,48 @@ public sealed class ProjectStructureActionCatalogAdapterTests
         Assert.Contains(actions, action => action.ActionId == "project:open-structure");
         Assert.Contains(actions, action => action.ActionId == "project:add-subproject");
         Assert.Contains(actions, action => action.ActionId == "project:reconnect-subproject");
+        Assert.Single(actions, action => action.ActionId == "browse-files");
         Assert.Contains(actions, action => action.ActionId == "add-note");
         Assert.Contains(actions, action => action.ActionId == "group-blocks");
         Assert.DoesNotContain(actions, action => action.ActionId == "reconnect");
         Assert.DoesNotContain(actions, action => action.ActionId == "disconnect");
         Assert.DoesNotContain(actions, action => action.ActionId == "delete");
+    }
+
+    [Fact]
+    public void Storage_backed_infrastructure_node_exposes_one_browse_action_separate_from_open_local()
+    {
+        var adapter = new ProjectStructureActionCatalogAdapter();
+        var node = CreateNode(
+            "storage-node",
+            ProjectObjectType.Infrastructure,
+            "Delivery storage",
+            0,
+            0,
+            nodeReferences: new ProjectNodeReferenceCollection
+            {
+                InfrastructureStorageCatalogId = Guid.NewGuid()
+            });
+
+        var actions = adapter.BuildNodeContextActions(
+            node,
+            canLaunchRuntime: false,
+            canOpenInFileExplorer: true,
+            canOpenInNewTab: false);
+
+        Assert.Single(actions, action => action.ActionId == "browse-files");
+        Assert.Single(actions, action => action.ActionId == "open-local");
+    }
+
+    [Fact]
+    public void Unsupported_node_does_not_expose_collection_browsing()
+    {
+        var adapter = new ProjectStructureActionCatalogAdapter();
+        var node = CreateNode("note", ProjectObjectType.Note, "Note", 0, 0);
+
+        var actions = adapter.BuildNodeContextActions(node);
+
+        Assert.DoesNotContain(actions, action => action.ActionId == "browse-files");
     }
 
     [Fact]
@@ -371,7 +408,8 @@ public sealed class ProjectStructureActionCatalogAdapterTests
         double y,
         ProjectStructureProjectRole projectRole = ProjectStructureProjectRole.None,
         Guid? relatedProjectId = null,
-        int parentProjectCount = 0)
+        int parentProjectCount = 0,
+        ProjectNodeReferenceCollection? nodeReferences = null)
         => new(
             id,
             null,
@@ -400,7 +438,8 @@ public sealed class ProjectStructureActionCatalogAdapterTests
             0,
             ProjectRole: projectRole,
             RelatedProjectId: relatedProjectId,
-            ParentProjectCount: parentProjectCount);
+            ParentProjectCount: parentProjectCount,
+            NodeReferences: nodeReferences);
 
     private static void AssertShortcut(IEnumerable<CanvasWorkbenchAction> actions, string actionId, string expectedShortcut)
         => Assert.Equal(expectedShortcut, FindAction(actions, actionId).ShortcutKey);

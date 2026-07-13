@@ -1,0 +1,217 @@
+@namespace CanDoItAll.Modules.Workbench.Pages
+@inject FileInteractionComponentComposition InteractionComposition
+
+<ProjectStructureOverlayDialog CanvasScoped="true"
+                               AriaLabel="@($"{ProjectStructureNodeHelpers.ResolveAttachmentDisplayName(Node)} file interaction")"
+                               Kicker="Governed file"
+                               Title="@ProjectStructureNodeHelpers.ResolveAttachmentDisplayName(Node)"
+                               Summary="@(Interaction?.HostNotice ?? ProjectStructureNodeHelpers.ResolveAttachmentLeadCopy(Node))"
+                               BodyClass="project-structure-file-interaction-dialog__body"
+                               Close="RequestCloseAsync">
+    <Actions>
+        @if (state is not null)
+        {
+            <StatusBadge Tone="@ResolveStateTone()" Text="@ResolveStateLabel()" />
+        }
+        @if (CanEditNode(Node))
+        {
+            <Button Text="Edit node details"
+                    ButtonStyle="ButtonStyle.Info"
+                    Disabled="HasGuardedWork"
+                    Click="@(() => EditNode.InvokeAsync(Node))" />
+        }
+        @if (CanShowLocalOpen(Node))
+        {
+            <Button Text="Open in File Explorer"
+                    ButtonStyle="ButtonStyle.Primary"
+                    Click="@(() => OpenLocally.InvokeAsync(Node))" />
+        }
+        <Button Text="Close"
+                Variant="Variant.Text"
+                ButtonStyle="ButtonStyle.Base"
+                Click="RequestCloseAsync" />
+    </Actions>
+    <Body>
+        @if (Interaction is null || activeRequest is null)
+        {
+            <Alert AlertStyle="AlertStyle.Danger"
+                   Variant="Variant.Outlined"
+                   data-testid="project-structure-direct-file-interaction-unavailable">
+                The current file authority could not be established. No unsigned preview is available.
+            </Alert>
+        }
+        else
+        {
+            <Stack GapScale="LayoutGap.Small"
+                   Class="project-structure-file-interaction-layout h-full min-h-0 w-full">
+                <Alert AlertStyle="AlertStyle.Info"
+                       Variant="Variant.Outlined"
+                       data-testid="project-structure-file-interaction-policy">
+                    @Interaction.HostNotice
+                </Alert>
+
+                <SurfaceCard Class="project-structure-direct-file-interaction"
+                             data-testid="project-structure-direct-file-interaction">
+                    <FileInteraction @key="interactionKey"
+                                     Request="activeRequest"
+                                     ContentSource="Interaction.Session.ContentSource"
+                                     Composition="InteractionComposition"
+                                     SaveRequested="SaveCallback"
+                                     ModeChanged="HandleModeChanged"
+                                     StateChanged="HandleStateChangedAsync"
+                                     AllowModeSwitch="Interaction.CanEdit"
+                                     MaximumContentBytes="ProjectStructureFileInteractionPolicy.MaximumContentBytes"
+                                     AriaLabel="@($"Governed project structure file {activeRequest.FileName}")" />
+                </SurfaceCard>
+
+                @if (showCloseGuard)
+                {
+                    <Alert AlertStyle="AlertStyle.Warning"
+                           Variant="Variant.Filled"
+                           data-testid="project-structure-interaction-close-guard">
+                        <Stack GapScale="LayoutGap.Small">
+                            <TextBlock TextStyle="TextStyle.Subtitle2"
+                                       Value="@(state?.IsSaving == true ? "Save is still in progress" : "Unsaved work remains")" />
+                            <TextBlock TextStyle="TextStyle.Note"
+                                       Value="@(state?.IsSaving == true
+                                           ? "Wait for the awaited save before closing this interaction."
+                                           : "Close and discard the in-memory edit session?")" />
+                            <Cluster JustifyContent="JustifyContent.End" Gap="LayoutGap.Small">
+                                <Button Text="Keep editing"
+                                        Variant="Variant.Text"
+                                        Click="CancelClose" />
+                                <Button Text="Discard and close"
+                                        ButtonStyle="ButtonStyle.Danger"
+                                        Disabled="@(state?.IsSaving == true)"
+                                        data-testid="project-structure-interaction-close-confirm"
+                                        Click="ConfirmCloseAsync" />
+                            </Cluster>
+                        </Stack>
+                    </Alert>
+                }
+            </Stack>
+        }
+    </Body>
+</ProjectStructureOverlayDialog>
+
+@code {
+    [Parameter, EditorRequired]
+    public ProjectStructureNode Node { get; set; } = default!;
+
+    [Parameter]
+    public ProjectStructureKnownFileInteraction? Interaction { get; set; }
+
+    [Parameter]
+    public EventCallback Close { get; set; }
+
+    [Parameter]
+    public EventCallback<ProjectStructureNode> OpenLocally { get; set; }
+
+    [Parameter]
+    public EventCallback<ProjectStructureNode> EditNode { get; set; }
+
+    [Parameter, EditorRequired]
+    public Func<ProjectStructureNode, bool> CanShowLocalOpen { get; set; } = default!;
+
+    [Parameter, EditorRequired]
+    public Func<ProjectStructureNode, bool> CanEditNode { get; set; } = default!;
+
+    private ProjectStructureKnownFileInteraction? activeInteraction;
+    private FileInteractionRequest? activeRequest;
+    private FileInteractionState? state;
+    private long interactionKey;
+    private bool showCloseGuard;
+
+    private bool HasGuardedWork =>
+        state is { IsDirty: true } or { IsSaving: true } or { HasConflict: true };
+
+    private EventCallback<FileInteractionSaveRequestedEventArgs> SaveCallback
+        => Interaction?.CanEdit == true
+            ? EventCallback.Factory.Create<FileInteractionSaveRequestedEventArgs>(this, HandleSaveRequestedAsync)
+            : default;
+
+    protected override void OnParametersSet()
+    {
+        if (ReferenceEquals(activeInteraction, Interaction))
+        {
+            return;
+        }
+
+        activeInteraction = Interaction;
+        activeRequest = Interaction?.Request;
+        state = null;
+        showCloseGuard = false;
+        interactionKey++;
+    }
+
+    private Task HandleSaveRequestedAsync(FileInteractionSaveRequestedEventArgs args)
+        => Interaction?.SaveAsync(args)
+           ?? Task.FromException(new InvalidOperationException("The file interaction is no longer available."));
+
+    private void HandleModeChanged(FileInteractionMode mode)
+    {
+        if (Interaction is not null)
+        {
+            activeRequest = Interaction.WithMode(mode);
+        }
+    }
+
+    private Task HandleStateChangedAsync(FileInteractionState next)
+    {
+        state = next;
+        if (showCloseGuard && !next.IsDirty && !next.IsSaving && !next.HasConflict)
+        {
+            showCloseGuard = false;
+        }
+
+        if (Interaction is not null && activeRequest?.Mode != next.Mode)
+        {
+            activeRequest = Interaction.WithMode(next.Mode);
+        }
+
+        return Task.CompletedTask;
+    }
+
+    private async Task RequestCloseAsync()
+    {
+        if (HasGuardedWork)
+        {
+            showCloseGuard = true;
+            return;
+        }
+
+        await Close.InvokeAsync();
+    }
+
+    private void CancelClose() => showCloseGuard = false;
+
+    private async Task ConfirmCloseAsync()
+    {
+        if (state?.IsSaving != true)
+        {
+            await Close.InvokeAsync();
+        }
+    }
+
+    private string ResolveStateLabel()
+        => state switch
+        {
+            null => "Loading",
+            { IsSaving: true } => "Saving",
+            { HasConflict: true } => "Conflict",
+            { IsDirty: true } => "Unsaved",
+            { Lifecycle: FileInteractionLifecycleState.Unsupported } => "Inert",
+            { Lifecycle: FileInteractionLifecycleState.Error } => "Error",
+            _ => Interaction?.CanEdit == true ? "Revision guarded" : "Read only"
+        };
+
+    private string ResolveStateTone()
+        => state switch
+        {
+            { IsSaving: true } => "info",
+            { HasConflict: true } or { Lifecycle: FileInteractionLifecycleState.Error } => "danger",
+            { IsDirty: true } => "warning",
+            { Lifecycle: FileInteractionLifecycleState.Unsupported } => "neutral",
+            _ => "success"
+        };
+}

@@ -1,0 +1,33 @@
+{
+  "created_utc": "2026-07-08T10:19:18.987251+00:00",
+  "zip_path": "/mnt/data/candoitall-process-maf-hardening-analysis.zip",
+  "root_folder": "/mnt/data/candoitall-process-maf-hardening-analysis",
+  "files": [
+    "README.md",
+    "analysis/00-findings-summary.md",
+    "analysis/01-executive-root-cause.md",
+    "analysis/02-architecture-map.md",
+    "analysis/03-code-findings.md",
+    "analysis/04-concrete-incident-prepare-solution-skeleton.md",
+    "analysis/05-template-and-contract-findings.md",
+    "analysis/06-maf-wrapper-and-tool-policy.md",
+    "analysis/07-prioritized-remediation-roadmap.md",
+    "checklists/hardening-checklist.csv",
+    "codex/00-CODEX-INSTRUCTIONS.md",
+    "codex/acceptance-criteria.md",
+    "codex/bundles/B01-observability-and-diagnostics.md",
+    "codex/bundles/B02-subprocess-runtime-bridge.md",
+    "codex/bundles/B03-artifact-contract-and-ledger.md",
+    "codex/bundles/B04-capability-tool-preflight.md",
+    "codex/bundles/B05-structured-result-persistence.md",
+    "codex/bundles/B06-template-hardening.md",
+    "codex/bundles/B07-regression-harness.md",
+    "data/findings.json",
+    "data/source-map.csv",
+    "evidence/calculator-output-inspection.md",
+    "evidence/static-analysis-notes.md",
+    "mermaid/current-flow.mmd",
+    "mermaid/target-flow.mmd"
+  ],
+  "sha256": "9df08bbdb6fff798e3648ce031682585c180efb059f41394eee2756d6d27a664"
+}

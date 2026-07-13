@@ -1,0 +1,90 @@
+[
+  {
+    "id": "51ec81dc-ac9f-605c-872a-3406e939df99",
+    "executionRunId": "48c3753c-d0bb-4679-9eae-2f295d2b8181",
+    "artifactKind": "generated-output",
+    "displayName": "dotnet_new stderr",
+    "relativePath": "artifacts/scopes/organization/e5df9ad633dbc6974a0678a74976013c/process-runs/ab4a1ed8-8b1b-4974-973d-93983bf41f09/tool-runs/20260708-161531719-dotnet-new/stderr.txt",
+    "contentType": "text/plain",
+    "producedBy": "workspace_dotnet_new",
+    "summary": "Captured stderr preview.",
+    "createdAtUtc": "2026-07-08T12:15:35.226864-04:00"
+  },
+  {
+    "id": "8b0bd941-e44c-fa59-9b4a-472f74f204c8",
+    "executionRunId": "48c3753c-d0bb-4679-9eae-2f295d2b8181",
+    "artifactKind": "generated-output",
+    "displayName": "dotnet_new stdout",
+    "relativePath": "artifacts/scopes/organization/e5df9ad633dbc6974a0678a74976013c/process-runs/ab4a1ed8-8b1b-4974-973d-93983bf41f09/tool-runs/20260708-161531719-dotnet-new/stdout.txt",
+    "contentType": "text/plain",
+    "producedBy": "workspace_dotnet_new",
+    "summary": "Captured stdout preview.",
+    "createdAtUtc": "2026-07-08T12:15:35.226864-04:00"
+  },
+  {
+    "id": "9751a823-f5bf-f959-8ee4-1237b723afe5",
+    "executionRunId": "48c3753c-d0bb-4679-9eae-2f295d2b8181",
+    "artifactKind": "generated-output",
+    "displayName": "Calculator",
+    "relativePath": "external-target/C/programovani/dotnet/calculator-output/src/Calculator",
+    "contentType": "application/octet-stream",
+    "producedBy": "workspace_dotnet_new",
+    "summary": "Workspace path touched or targeted by the recipe.",
+    "createdAtUtc": "2026-07-08T12:15:35.226864-04:00"
+  },
+  {
+    "id": "5a7fa015-26dc-ae5a-8036-a09f194a2d9e",
+    "executionRunId": "48c3753c-d0bb-4679-9eae-2f295d2b8181",
+    "artifactKind": "generated-output",
+    "displayName": "Calculator.slnx",
+    "relativePath": "external-target/C/programovani/dotnet/calculator-output/Calculator.slnx",
+    "contentType": "application/octet-stream",
+    "producedBy": "workspace_dotnet_new",
+    "summary": "Workspace path touched or targeted by the recipe.",
+    "createdAtUtc": "2026-07-08T12:15:31.6957699-04:00"
+  },
+  {
+    "id": "761d5630-d6d1-6151-b5d3-229b544a9b8e",
+    "executionRunId": "48c3753c-d0bb-4679-9eae-2f295d2b8181",
+    "artifactKind": "generated-output",
+    "displayName": "Calculator.sln",
+    "relativePath": "external-target/C/programovani/dotnet/calculator-output/Calculator.sln",
+    "contentType": "application/octet-stream",
+    "producedBy": "workspace_dotnet_new",
+    "summary": "Workspace path touched or targeted by the recipe.",
+    "createdAtUtc": "2026-07-08T12:15:31.6957699-04:00"
+  },
+  {
+    "id": "a32b31b3-d319-5059-a892-83d992f91a0b",
+    "executionRunId": "48c3753c-d0bb-4679-9eae-2f295d2b8181",
+    "artifactKind": "generated-output",
+    "displayName": "dotnet_new stderr",
+    "relativePath": "artifacts/scopes/organization/e5df9ad633dbc6974a0678a74976013c/process-runs/ab4a1ed8-8b1b-4974-973d-93983bf41f09/tool-runs/20260708-161530202-dotnet-new/stderr.txt",
+    "contentType": "text/plain",
+    "producedBy": "workspace_dotnet_new",
+    "summary": "Captured stderr preview.",
+    "createdAtUtc": "2026-07-08T12:15:31.6957699-04:00"
+  },
+  {
+    "id": "ab548062-4ef4-6357-ad87-9f3500905d42",
+    "executionRunId": "48c3753c-d0bb-4679-9eae-2f295d2b8181",
+    "artifactKind": "generated-output",
+    "displayName": "dotnet_new stdout",
+    "relativePath": "artifacts/scopes/organization/e5df9ad633dbc6974a0678a74976013c/process-runs/ab4a1ed8-8b1b-4974-973d-93983bf41f09/tool-runs/20260708-161530202-dotnet-new/stdout.txt",
+    "contentType": "text/plain",
+    "producedBy": "workspace_dotnet_new",
+    "summary": "Captured stdout preview.",
+    "createdAtUtc": "2026-07-08T12:15:31.6957699-04:00"
+  },
+  {
+    "id": "338ddb42-cab2-e45b-8bba-2ba2c7428a5a",
+    "executionRunId": "48c3753c-d0bb-4679-9eae-2f295d2b8181",
+    "artifactKind": "generated-output",
+    "displayName": "src",
+    "relativePath": "external-target/C/programovani/dotnet/calculator-output/src",
+    "contentType": "application/octet-stream",
+    "producedBy": "workspace_create_directory",
+    "summary": "workspace_create_directory target",
+    "createdAtUtc": "2026-07-08T12:15:30.1836257-04:00"
+  }
+]

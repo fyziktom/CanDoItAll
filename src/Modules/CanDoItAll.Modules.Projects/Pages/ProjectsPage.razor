@@ -33,21 +33,22 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
 
     <ChildContent>
         <ProjectsBoard ProjectSummaries="projectSummaries"
-                       FilteredProjectSummaries="FilteredProjectSummaries"
+                       ProjectProjection="projectFileProjection"
                        HierarchyLinks="hierarchyLinks"
                        ProjectSearch="@projectSearch"
-                       ProjectSearchChanged="@(value => { projectSearch = value; })"
+                       ProjectSearchChanged="HandleProjectSearchChanged"
                        StatusFilter="@statusFilter"
-                       StatusFilterChanged="@(value => { statusFilter = value; })"
+                       StatusFilterChanged="HandleStatusFilterChanged"
                        RelatedPartyCategoryFilter="@relatedPartyCategoryFilter"
                        RelatedPartyCategoryFilterChanged="HandleRelatedPartyCategoryFilterChanged"
                        RelatedPartyValueFilter="@relatedPartyValueFilter"
                        RelatedPartyValueFilterChanged="HandleRelatedPartyValueFilterChanged"
-                       AvailableRelatedPartyValues="@AvailableRelatedPartyValues"
                        HierarchyFilterProjectId="@hierarchyFilterProjectId"
-                       HierarchyFilterProjectIdChanged="@(value => { hierarchyFilterProjectId = value; })"
+                       HierarchyFilterProjectIdChanged="HandleHierarchyFilterProjectChanged"
                        HierarchyFilterMode="@hierarchyFilterMode"
-                       HierarchyFilterModeChanged="@(value => { hierarchyFilterMode = value; })"
+                       HierarchyFilterModeChanged="HandleHierarchyFilterModeChanged"
+                       IncludeSubprojects="@includeSubprojects"
+                       IncludeSubprojectsChanged="HandleIncludeSubprojectsChanged"
                        HierarchyFilterHelper="@HierarchyFilterHelper"
                        LatestUpdatedProjectLabel="@LatestUpdatedProjectLabel"
                        LatestUpdatedProjectHelper="@LatestUpdatedProjectHelper"
@@ -55,6 +56,7 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
                        NavigateHome="NavigateHome"
                        ResetFilters="ResetFilters"
                        OpenProjectPreview="OpenProjectPreviewAsync"
+                       OpenProjectFiles="OpenProjectFiles"
                        OpenHierarchyModal="OpenHierarchyModalAsync"
                        OpenProjectDashboard="OpenProjectDashboard"
                        OpenProcesses="OpenProcesses"
@@ -105,6 +107,11 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
                        OpenProjectPreview="OpenProjectPreviewFromHierarchyAsync"
                        OpenStructure="OpenStructure"
                        OpenHierarchy="OpenHierarchyModalAsync" />
+
+<ProjectFilesDialog IsOpen="@(projectFilesDialogProject is not null)"
+                    ProjectId="@(projectFilesDialogProject?.Id ?? Guid.Empty)"
+                    ProjectName="@(projectFilesDialogProject?.Name ?? string.Empty)"
+                    Closed="CloseProjectFiles" />
 
 @if (showGanttPreviewModal)
 {
@@ -214,21 +221,27 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
 
     private IReadOnlyList<ProjectSummary> projectSummaries = [];
     private IReadOnlyList<ProjectHierarchyLinkSummary> hierarchyLinks = [];
+    private ProjectFileFilterProjection projectFileProjection = ProjectFileFilterProjection.Create(
+        [],
+        [],
+        new ProjectFileFilter());
     private ProjectEditorModel editor = new();
     private readonly List<StarterObjectDraft> starterObjects = [];
     private string? message;
     private int wizardStep;
     private bool showProjectModal;
     private string projectSearch = string.Empty;
-    private string statusFilter = string.Empty;
-    private string relatedPartyCategoryFilter = string.Empty;
+    private ProjectStatus? statusFilter;
+    private ProjectPartyPortfolioCategory? relatedPartyCategoryFilter;
     private string relatedPartyValueFilter = string.Empty;
-    private string hierarchyFilterMode = string.Empty;
-    private string hierarchyFilterProjectId = string.Empty;
+    private ProjectHierarchyFilterMode hierarchyFilterMode = ProjectHierarchyFilterMode.Descendants;
+    private Guid? hierarchyFilterProjectId;
+    private bool includeSubprojects = true;
     private ProjectModalMode modalMode = ProjectModalMode.Overview;
     private bool modalOpenedFromRoute;
     private Guid? handledProjectQueryId;
     private ProjectHierarchyDialogState? hierarchyDialog;
+    private ProjectSummary? projectFilesDialogProject;
     private ProjectGanttPreview? ganttPreviewDialog;
     private string? ganttPreviewError;
     private bool showGanttPreviewModal;
@@ -237,42 +250,22 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
     private bool projectPackageMessageIsError;
     private bool projectPackageBusy;
 
-    private IReadOnlyList<ProjectSummary> FilteredProjectSummaries => projectSummaries
-        .Where(project =>
-            (string.IsNullOrWhiteSpace(projectSearch) ||
-             project.Name.Contains(projectSearch, StringComparison.OrdinalIgnoreCase) ||
-             project.CurrentPhase.Contains(projectSearch, StringComparison.OrdinalIgnoreCase) ||
-             project.RelatedPartySearchText.Contains(projectSearch, StringComparison.OrdinalIgnoreCase)) &&
-            (string.IsNullOrWhiteSpace(statusFilter) ||
-             string.Equals(project.Status.ToString(), statusFilter, StringComparison.OrdinalIgnoreCase)) &&
-            MatchesRelatedPartyFilter(project) &&
-            MatchesHierarchyFilter(project))
-        .OrderByDescending(project => project.UpdatedAtUtc)
-        .ToList();
-
-    private IReadOnlyList<string> AvailableRelatedPartyValues => projectSummaries
-        .SelectMany(project => project.RelatedParties ?? [])
-        .Where(item =>
-            string.IsNullOrWhiteSpace(relatedPartyCategoryFilter) ||
-            string.Equals(item.Category.ToString(), relatedPartyCategoryFilter, StringComparison.OrdinalIgnoreCase))
-        .Select(item => item.DisplayName)
-        .Distinct(StringComparer.OrdinalIgnoreCase)
-        .OrderBy(item => item, StringComparer.OrdinalIgnoreCase)
-        .ToList();
-
-    private Guid? SelectedHierarchyFilterProjectId
-        => Guid.TryParse(hierarchyFilterProjectId, out var parsedProjectId) ? parsedProjectId : null;
-
     private string HierarchyFilterHelper
-        => !SelectedHierarchyFilterProjectId.HasValue
+        => !hierarchyFilterProjectId.HasValue
             ? "Showing main projects. Choose a project to show it with its subprojects or narrow by direct links."
             : hierarchyFilterMode switch
             {
-                "" => $"Showing {ResolveProjectName(SelectedHierarchyFilterProjectId.Value)} and its subprojects.",
-                "children" => $"Showing direct subprojects of {ResolveProjectName(SelectedHierarchyFilterProjectId.Value)}.",
-                "parents" => $"Showing direct parents of {ResolveProjectName(SelectedHierarchyFilterProjectId.Value)}.",
-                "related" => $"Showing the direct relationship neighborhood around {ResolveProjectName(SelectedHierarchyFilterProjectId.Value)}.",
-                _ => $"Showing {ResolveProjectName(SelectedHierarchyFilterProjectId.Value)} and its subprojects."
+                ProjectHierarchyFilterMode.Descendants when includeSubprojects
+                    => $"Showing {ResolveProjectName(hierarchyFilterProjectId.Value)} and its subprojects.",
+                ProjectHierarchyFilterMode.Descendants
+                    => $"Showing only {ResolveProjectName(hierarchyFilterProjectId.Value)}.",
+                ProjectHierarchyFilterMode.Children
+                    => $"Showing direct subprojects of {ResolveProjectName(hierarchyFilterProjectId.Value)}.",
+                ProjectHierarchyFilterMode.Parents
+                    => $"Showing direct parents of {ResolveProjectName(hierarchyFilterProjectId.Value)}.",
+                ProjectHierarchyFilterMode.Related
+                    => $"Showing the direct relationship neighborhood around {ResolveProjectName(hierarchyFilterProjectId.Value)}.",
+                _ => throw new ArgumentOutOfRangeException(nameof(hierarchyFilterMode))
             };
 
     private IReadOnlyList<ProjectOptionEditorModel> MeaningfulOptions => editor.Options
@@ -327,41 +320,71 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
         }
     }
 
-    private Task HandleRelatedPartyCategoryFilterChanged(string value)
+    private Task HandleProjectSearchChanged(string value)
+    {
+        projectSearch = value;
+        RebuildProjectFileProjection();
+        return Task.CompletedTask;
+    }
+
+    private Task HandleStatusFilterChanged(ProjectStatus? value)
+    {
+        statusFilter = value;
+        RebuildProjectFileProjection();
+        return Task.CompletedTask;
+    }
+
+    private Task HandleRelatedPartyCategoryFilterChanged(ProjectPartyPortfolioCategory? value)
     {
         relatedPartyCategoryFilter = value;
         if (!string.IsNullOrWhiteSpace(relatedPartyValueFilter) &&
-            !AvailableRelatedPartyValues.Contains(relatedPartyValueFilter, StringComparer.OrdinalIgnoreCase))
+            !ProjectFileFilterProjection.Create(
+                projectSummaries,
+                hierarchyLinks,
+                CreateProjectFileFilter()).AvailableRelatedPartyValues.Contains(
+                    relatedPartyValueFilter,
+                    StringComparer.OrdinalIgnoreCase))
         {
             relatedPartyValueFilter = string.Empty;
         }
 
+        RebuildProjectFileProjection();
         return Task.CompletedTask;
     }
 
     private Task HandleRelatedPartyValueFilterChanged(string value)
     {
         relatedPartyValueFilter = value;
+        RebuildProjectFileProjection();
         return Task.CompletedTask;
     }
 
-    private bool MatchesRelatedPartyFilter(ProjectSummary project)
+    private Task HandleHierarchyFilterProjectChanged(Guid? value)
     {
-        var relatedParties = project.RelatedParties ?? [];
-        if (!string.IsNullOrWhiteSpace(relatedPartyCategoryFilter) &&
-            !relatedParties.Any(item => string.Equals(item.Category.ToString(), relatedPartyCategoryFilter, StringComparison.OrdinalIgnoreCase)))
-        {
-            return false;
-        }
+        hierarchyFilterProjectId = value;
+        RebuildProjectFileProjection();
+        return Task.CompletedTask;
+    }
 
-        return string.IsNullOrWhiteSpace(relatedPartyValueFilter) ||
-               relatedParties.Any(item => string.Equals(item.DisplayName, relatedPartyValueFilter, StringComparison.OrdinalIgnoreCase));
+    private Task HandleHierarchyFilterModeChanged(ProjectHierarchyFilterMode value)
+    {
+        hierarchyFilterMode = value;
+        RebuildProjectFileProjection();
+        return Task.CompletedTask;
+    }
+
+    private Task HandleIncludeSubprojectsChanged(bool value)
+    {
+        includeSubprojects = value;
+        RebuildProjectFileProjection();
+        return Task.CompletedTask;
     }
 
     private async Task LoadProjectSummariesAsync()
     {
         projectSummaries = await ProjectsService.ListAsync();
         hierarchyLinks = await ProjectsService.ListHierarchyLinksAsync();
+        RebuildProjectFileProjection();
     }
 
     private async Task LoadEditorAsync(Guid? projectId)
@@ -576,11 +599,13 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
     private void ResetFilters()
     {
         projectSearch = string.Empty;
-        statusFilter = string.Empty;
-        relatedPartyCategoryFilter = string.Empty;
+        statusFilter = null;
+        relatedPartyCategoryFilter = null;
         relatedPartyValueFilter = string.Empty;
-        hierarchyFilterMode = string.Empty;
-        hierarchyFilterProjectId = string.Empty;
+        hierarchyFilterMode = ProjectHierarchyFilterMode.Descendants;
+        hierarchyFilterProjectId = null;
+        includeSubprojects = true;
+        RebuildProjectFileProjection();
     }
 
     private async Task SaveAsync()
@@ -643,58 +668,42 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
         }
     }
 
-    private bool MatchesHierarchyFilter(ProjectSummary project)
-    {
-        if (!SelectedHierarchyFilterProjectId.HasValue)
-        {
-            return IsMainProject(project);
-        }
+    private ProjectFileFilter CreateProjectFileFilter()
+        => new(
+            projectSearch,
+            statusFilter,
+            relatedPartyCategoryFilter,
+            relatedPartyValueFilter,
+            hierarchyFilterProjectId,
+            hierarchyFilterMode,
+            includeSubprojects);
 
-        if (string.IsNullOrWhiteSpace(hierarchyFilterMode))
-        {
-            return BuildSelectedProjectScopeIds(SelectedHierarchyFilterProjectId.Value).Contains(project.Id);
-        }
-
-        return hierarchyFilterMode switch
-        {
-            "children" => hierarchyLinks.Any(link => link.ParentProjectId == SelectedHierarchyFilterProjectId.Value && link.ChildProjectId == project.Id),
-            "parents" => hierarchyLinks.Any(link => link.ChildProjectId == SelectedHierarchyFilterProjectId.Value && link.ParentProjectId == project.Id),
-            "related" => hierarchyLinks.Any(link =>
-                (link.ParentProjectId == SelectedHierarchyFilterProjectId.Value && link.ChildProjectId == project.Id) ||
-                (link.ChildProjectId == SelectedHierarchyFilterProjectId.Value && link.ParentProjectId == project.Id)),
-            _ => true
-        };
-    }
-
-    private bool IsMainProject(ProjectSummary project)
-        => project.ParentCount == 0 &&
-           hierarchyLinks.All(link => link.ChildProjectId != project.Id);
-
-    private HashSet<Guid> BuildSelectedProjectScopeIds(Guid projectId)
-    {
-        var projectIds = new HashSet<Guid> { projectId };
-        AddSubprojectScopeIds(projectId, projectIds);
-        return projectIds;
-    }
-
-    private void AddSubprojectScopeIds(Guid parentProjectId, HashSet<Guid> projectIds)
-    {
-        var childProjectIds = hierarchyLinks
-            .Where(link => link.ParentProjectId == parentProjectId)
-            .Select(link => link.ChildProjectId)
-            .ToArray();
-
-        foreach (var childProjectId in childProjectIds)
-        {
-            if (projectIds.Add(childProjectId))
-            {
-                AddSubprojectScopeIds(childProjectId, projectIds);
-            }
-        }
-    }
+    private void RebuildProjectFileProjection()
+        => projectFileProjection = ProjectFileFilterProjection.Create(
+            projectSummaries,
+            hierarchyLinks,
+            CreateProjectFileFilter());
 
     private string ResolveProjectName(Guid projectId)
         => projectSummaries.FirstOrDefault(project => project.Id == projectId)?.Name ?? "Selected project";
+
+    private async Task OpenProjectFiles(Guid projectId)
+    {
+        projectFilesDialogProject = projectSummaries.FirstOrDefault(project => project.Id == projectId);
+        if (projectFilesDialogProject is not null)
+        {
+            return;
+        }
+
+        await LoadProjectSummariesAsync();
+        projectFilesDialogProject = projectSummaries.FirstOrDefault(project => project.Id == projectId);
+    }
+
+    private Task CloseProjectFiles()
+    {
+        projectFilesDialogProject = null;
+        return Task.CompletedTask;
+    }
 
     private async Task OpenHierarchyModalAsync(Guid projectId)
     {

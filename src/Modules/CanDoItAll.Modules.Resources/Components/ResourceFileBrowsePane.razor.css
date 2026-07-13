@@ -1,0 +1,29 @@
+.resources-file-browse-pane {
+    height: calc(100vh - 13.5rem);
+    min-height: 42rem;
+    overflow: hidden;
+}
+
+.resources-file-browse-pane ::deep .cda-list-detail-shell,
+.resources-file-browse-pane ::deep .cda-list-detail-shell__grid {
+    height: 100%;
+    min-height: 0;
+}
+
+.resources-file-browse-pane ::deep .cda-list-detail-shell__grid > section {
+    min-height: 0;
+}
+
+.resources-file-browse-pane ::deep .cda-list-detail-shell__grid > section:first-child > div:last-child {
+    overflow-y: auto;
+}
+
+.resources-file-browse-pane ::deep .cda-list-detail-shell__grid > section:last-child > div:last-child {
+    overflow: hidden;
+}
+
+.resources-file-browse-pane ::deep .cdi-ft-interaction {
+    flex: 1 1 0;
+    min-width: 0;
+    width: 100%;
+}

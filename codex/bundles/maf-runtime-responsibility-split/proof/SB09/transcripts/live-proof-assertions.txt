@@ -1,0 +1,60 @@
+Command: PowerShell assertions over proof/SB09 live API, UI, capability, and cleanup JSON artifacts
+ExitCode: 0
+
+PASS: api-local-ollama-run-detail.json provider is Local Ollama
+PASS: api-local-ollama-run-detail.json model is gemma4-12b-256k
+PASS: api-local-ollama-run-detail.json run state is completed
+PASS: api-local-ollama-run-detail.json run outcome is succeeded
+PASS: api-local-ollama-run-detail.json resultSummary is UI-LOCAL-OK
+RUN: api-local-ollama-run-detail.json id=bb2b3631-e361-44a4-9f7a-55a3ffc5925f sourceKind=chat-session
+PASS: api-project-structure-local-ollama-run-detail.json provider is Local Ollama
+PASS: api-project-structure-local-ollama-run-detail.json model is gemma4-12b-256k
+PASS: api-project-structure-local-ollama-run-detail.json run state is completed
+PASS: api-project-structure-local-ollama-run-detail.json run outcome is succeeded
+PASS: api-project-structure-local-ollama-run-detail.json resultSummary is PROJECT-UI-OK
+RUN: api-project-structure-local-ollama-run-detail.json id=87539c86-f549-43f1-9715-f69eff1fb1d7 sourceKind=project-structure
+PASS: api-local-ollama-playwright-mcp-run-detail.json provider is Local Ollama
+PASS: api-local-ollama-playwright-mcp-run-detail.json model is gemma4-12b-256k
+PASS: api-local-ollama-playwright-mcp-run-detail.json run state is completed
+PASS: api-local-ollama-playwright-mcp-run-detail.json run outcome is succeeded
+PASS: api-local-ollama-playwright-mcp-run-detail.json resultSummary is MCP-LOCAL-OK
+RUN: api-local-ollama-playwright-mcp-run-detail.json id=f4a66826-4b9c-40bd-a273-a810b5a2e53d sourceKind=codex-proof
+PASS: browser-ui-local-ollama-chat-run-detail.json provider is Local Ollama
+PASS: browser-ui-local-ollama-chat-run-detail.json model is gemma4-12b-256k
+PASS: browser-ui-local-ollama-chat-run-detail.json run state is completed
+PASS: browser-ui-local-ollama-chat-run-detail.json run outcome is succeeded
+PASS: browser-ui-local-ollama-chat-run-detail.json resultSummary is UI-SEND-LOCAL-OK
+RUN: browser-ui-local-ollama-chat-run-detail.json id=03050a56-2451-4ee4-93a9-99af0d0784f4 sourceKind=chat-session
+PASS: browser-ui-local-ollama-playwright-mcp-run-detail.json provider is Local Ollama
+PASS: browser-ui-local-ollama-playwright-mcp-run-detail.json model is gemma4-12b-256k
+PASS: browser-ui-local-ollama-playwright-mcp-run-detail.json run state is completed
+PASS: browser-ui-local-ollama-playwright-mcp-run-detail.json run outcome is succeeded
+PASS: browser-ui-local-ollama-playwright-mcp-run-detail.json resultSummary is MCP-UI-LOCAL-OK
+RUN: browser-ui-local-ollama-playwright-mcp-run-detail.json id=d40c8615-d3a8-4ad1-98ae-3f2c49e7b3bb sourceKind=chat-session
+PASS: API MCP run persisted browser_navigate receipt
+PASS: API MCP run persisted browser_snapshot receipt
+PASS: API MCP run persisted local_mcp_launch receipt
+PASS: UI MCP run persisted browser_navigate receipt
+PASS: UI MCP run persisted browser_snapshot receipt
+PASS: UI MCP run persisted local_mcp_launch receipt
+PASS: UI simple chat run has persisted runtime receipts
+PASS: Playwright MCP setup test succeeded
+PASS: Setup discovered browser_navigate
+PASS: Setup discovered browser_snapshot
+PASS: browser_navigate setup tool has inputSchema
+PASS: browser_snapshot setup tool has inputSchema
+PASS: Live Playwright capability messageFraming is newlineDelimitedJson
+PASS: Live Playwright capability timeoutSeconds is 120
+PASS: Live Playwright capability allows browser_navigate
+PASS: Live Playwright capability allows browser_snapshot
+PASS: Completed UI DOM snapshot contains browser_navigate
+PASS: Completed UI DOM snapshot contains browser_snapshot
+PASS: Completed UI DOM snapshot contains MCP-UI-LOCAL-OK marker
+PASS: Disposable API proof agent was cleaned up
+PASS: Disposable UI proof agent was cleaned up
+All SB09 live proof assertions passed.
+
+Invariant ID: SB09-I01 - PASS: Local Ollama model resolution proof artifacts assert provider/model/results.
+Invariant ID: SB09-I02 - PASS: Local Playwright MCP runtime proof artifacts assert schemas and tool receipts.
+Invariant ID: SB09-I03 - PASS: Capability descriptor proof artifacts assert newlineDelimitedJson, timeout, and allowed tools.
+Invariant ID: SB09-I04 - PASS: Real UI proof and cleanup artifacts assert completed UI thread and deleted disposable agents.

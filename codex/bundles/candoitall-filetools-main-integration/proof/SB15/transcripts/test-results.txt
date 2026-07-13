@@ -1,0 +1,25 @@
+SB15 final validation, 2026-07-13
+
+Unit command:
+dotnet test tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj -c Release --no-restore --nologo --filter "FullyQualifiedName~ResourceFileSourceCatalogTests|FullyQualifiedName~ResourceStorageObjectPromotionTests|FullyQualifiedName~StorageObjectResourceConnectorTests"
+Result: PASS. Failed 0, passed 22, skipped 0, total 22.
+
+Component command:
+dotnet test tests/Components/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj -c Release --no-restore --nologo --filter "FullyQualifiedName~ResourceFileBrowsePaneTests"
+Result: PASS. Failed 0, passed 3, skipped 0, total 3.
+
+Integration command:
+dotnet test tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj -c Release --no-restore --nologo --filter "FullyQualifiedName~ResourceStorageObjectIntegrationTests"
+Result: PASS. Failed 0, passed 1, skipped 0, total 1. Real TestApplication PostgreSQL and bootstrap filesystem.
+
+Build command:
+dotnet build src/App/CanDoItAll.Web/CanDoItAll.Web.csproj -c Release --no-restore --nologo -warnaserror
+Result: PASS. 0 warnings, 0 errors.
+
+Format command:
+dotnet format src/Modules/CanDoItAll.Modules.Resources/CanDoItAll.Modules.Resources.csproj --verify-no-changes --no-restore --verbosity minimal
+Result: PASS.
+
+Diff hygiene:
+git diff --check -- [SB15 Resources and direct tests]
+Result: PASS. Only working-copy LF-to-CRLF notices; no whitespace error.

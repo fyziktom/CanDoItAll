@@ -1,0 +1,5 @@
+Command: SB30 anti-stub and XML documentation audit
+PASS: SB30 changed files contain no TODO/HACK/NotImplemented/stub markers and no XML documentation comments.
+ExitCode: 0
+
+InvariantIds: SB30-CLOSURE

@@ -1,0 +1,21 @@
+Source assertions
+
+1. Generic runtime/application leak scan
+   Files: ProcessRecoveryClassifier.cs, ProcessStepRecoveryInstructionBuilder.cs, ProcessRuntimeDispatchApplicationService.cs
+   Forbidden tokens: tetris, calculator, work-time, svg, blazor, dotnet, quality-repair, qa-validation, browser, IsDotNetRuntimeLifecycleTool
+   Result: no matches.
+
+2. Sample-app leak scan
+   Scope: dotnet-quality-repair templates, parent quality-repair instructions, .NET quality launch policy, .NET subprocess contract provider
+   Forbidden tokens: tetris, calculator
+   Result: no matches.
+
+3. Stub scan
+   Tokens: TODO, FIXME, NotImplementedException, NotSupportedException
+   Result: no matches in new process/template/policy source.
+
+4. Partial-class gate
+   The launch contributor changed from partial to non-partial. Its source decreased from 1,614 to 1,448 lines. The extracted builder is a separate cohesive policy type; no partial declaration was added.
+
+5. Diff integrity
+   git diff --check passed. Only repository line-ending notices were emitted.

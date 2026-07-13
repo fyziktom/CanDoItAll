@@ -1,0 +1,6 @@
+Command: dotnet ef migrations has-pending-model-changes --project src/Foundation/CanDoItAll.Migrations.PostgreSql/CanDoItAll.Migrations.PostgreSql.csproj --startup-project src/App/CanDoItAll.Web/CanDoItAll.Web.csproj --context AppDbContext
+WorkingDirectory: repo://
+ExitCode: 0
+Invariant: SB04-EF-MODEL-ISOLATION
+Result: no pending model changes; see bundle://proof/SB04/ef-pending-model-check.txt.
+

@@ -1,0 +1,13 @@
+-[ RECORD 1 ]---------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+RunId                 | ab4a1ed8-8b1b-4974-973d-93983bf41f09
+StepInstanceId        | 53d370f4-04c6-4f9c-8ce0-9cd89efda764
+StrategyId            | strategy.adapter.workflow.execute
+IdempotencyKey        | 5a2ae444-1030-4589-80bc-b0cb949ad703
+Outcome               | NeedsManager
+AppliedStepStatus     | Blocked
+ResultHash            | sha256:678476277ec066d43f1c7c2771a4521a2c8e62d5fa55628254eec6a3084cba78
+DiagnosticsJson       | [{"code":"process.adapter.product_required_file_content_missing","sensitivity":"Normal","evidenceHash":"sha256:0296264dbb8718dc114c6ec4dd2615b9002b640b0b82b379cd9aba73cf494272","safeSummary":"Step \u0027create-dotnet-project\u0027 claimed completion but required product file content/readback check(s) failed: C:\\programovani\\dotnet\\calculator-output\\Calculator.slnx does not contain any expected text from [src\\Calculator\\Calculator.csproj | src/Calculator/Calculator.csproj].","retrySafety":"SafeToRetry","idempotency":"Idempotent"}]
+ProducedArtifactsJson | []
+RecoveryDecisionJson  | {"failureCategory":"Unknown","decisionKind":"ManagerRequired","sourceDiagnosticCode":"process.adapter.product_required_file_content_missing","policy":"process.manager-review-required","safeReason":"The strategy result blocked the step and requires manager or operator decision before rework.","routeKind":"ManagerAction","responsibleStepInstanceId":"53d370f4-04c6-4f9c-8ce0-9cd89efda764"}
+
+

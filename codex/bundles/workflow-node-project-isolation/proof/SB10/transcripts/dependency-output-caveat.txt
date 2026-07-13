@@ -1,0 +1,18 @@
+# SB10 Dependency Output Caveat
+
+An existing CanDoItAll.Web process was running during SB10 and locked default Web build outputs. The implementation did not stop that process. Focused test/build proof used isolated output paths instead:
+- Unit tests: C:\repositories\CanDoItAll\artifacts\sb10-unit-output\
+- Component compile: C:\repositories\CanDoItAll\artifacts\sb10-components-output\
+- Component compile used -m:1 to avoid shared output copy contention.
+
+## Current Web process evidence
+
+  Id ProcessName    Path
+  -- -----------    ----
+7576 CanDoItAll.Web C:\repositories\CanDoItAll\src\CanDoItAll.Web\bin\Debug\net10.0\CanDoItAll.Web.exe
+
+
+
+## Verification commands using isolated output
+dotnet test tests\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj --filter WorkflowTemplatePackLoaderTests -v:minimal -p:OutputPath=C:\repositories\CanDoItAll\artifacts\sb10-unit-output\
+dotnet build tests\CanDoItAll.Tests.Components\CanDoItAll.Tests.Components.csproj -m:1 -v:minimal -p:OutputPath=C:\repositories\CanDoItAll\artifacts\sb10-components-output\

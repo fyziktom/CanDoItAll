@@ -32,20 +32,40 @@ public sealed class ProjectStructureNodeHelpersTests
         var kind = ProjectStructureNodeHelpers.ResolveAttachmentPreviewKind(node);
 
         Assert.Equal(AttachmentPreviewKind.TextDocument, kind);
-        Assert.Equal("# Notes", ProjectStructureNodeHelpers.ResolveAttachmentTextContent(node));
+        Assert.False(ProjectStructureNodeHelpers.CanRenderAttachmentPreview(node));
     }
 
     [Fact]
-    public void ResolveAttachmentPreviewSource_hides_pdf_toolbar()
+    public void Unsigned_route_alone_is_not_a_managed_attachment()
     {
         var node = CreateNode(
             objectType: ProjectObjectType.File,
             route: "/managed-files/report.pdf",
             mediaOriginalFileName: "report.pdf");
 
-        var source = ProjectStructureNodeHelpers.ResolveAttachmentPreviewSource(node);
+        Assert.False(ProjectStructureNodeHelpers.HasManagedAttachment(node));
+        Assert.False(ProjectStructureNodeHelpers.CanRenderAttachmentPreview(node));
+    }
 
-        Assert.Equal("/managed-files/report.pdf#toolbar=0&navpanes=0&view=FitH", source);
+    [Theory]
+    [InlineData(ProjectObjectType.ImageAsset, "image/png", "asset.png", true)]
+    [InlineData(ProjectObjectType.File, "application/pdf", "report.pdf", true)]
+    [InlineData(ProjectObjectType.VideoAsset, "video/mp4", "clip.mp4", true)]
+    [InlineData(ProjectObjectType.File, "text/plain", "notes.txt", true)]
+    public void Storage_backed_attachments_use_direct_FileInteraction_for_every_type(
+        ProjectObjectType objectType,
+        string mediaType,
+        string fileName,
+        bool expected)
+    {
+        var node = CreateNode(
+            objectType: objectType,
+            route: $"/managed-files/{fileName}",
+            mediaRelativePath: fileName,
+            mediaContentType: mediaType,
+            mediaOriginalFileName: fileName);
+
+        Assert.Equal(expected, ProjectStructureNodeHelpers.UsesDirectFileInteractionPreview(node));
     }
 
     [Fact]
@@ -70,6 +90,7 @@ public sealed class ProjectStructureNodeHelpersTests
         string title = "Node",
         string notes = "",
         string route = "",
+        string mediaRelativePath = "",
         string mediaContentType = "",
         string mediaOriginalFileName = "",
         IReadOnlyList<ProjectNodeMarker>? markers = null)
@@ -85,7 +106,7 @@ public sealed class ProjectStructureNodeHelpersTests
             Route: route,
             ArtifactKind: string.Empty,
             ArtifactId: null,
-            MediaRelativePath: string.Empty,
+            MediaRelativePath: mediaRelativePath,
             MediaContentType: mediaContentType,
             MediaOriginalFileName: mediaOriginalFileName,
             X: 0,

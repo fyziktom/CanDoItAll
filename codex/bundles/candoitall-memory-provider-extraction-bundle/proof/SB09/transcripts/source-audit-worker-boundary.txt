@@ -1,0 +1,4 @@
+Command: Historical SB09 proof transcript: source-audit-worker-boundary.txt
+src/Memory/CanDoItAll.Memory.Abstractions\MemoryExtensionData.cs:11:        "native.cognitiveMemory.",
+src/Memory/CanDoItAll.Memory.Abstractions\MemoryProtocolIdentifiers.cs:50:            "Extension keys must start with one of the reserved namespaces: host.candoitall.*, native.cognitiveMemory.*, or provider.vendor.*.",
+ExitCode: 0

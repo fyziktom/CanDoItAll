@@ -100,14 +100,14 @@ internal static class ProjectStructureNodeHelpers
 
     public static bool HasManagedAttachment(ProjectStructureNode? node)
         => node is not null &&
-            !string.IsNullOrWhiteSpace(node.Route) &&
             (!string.IsNullOrWhiteSpace(node.StorageObjectReferenceJson) ||
-             !string.IsNullOrWhiteSpace(node.MediaRelativePath) ||
-             node.Route.StartsWith("/managed-files/", StringComparison.OrdinalIgnoreCase) ||
-             node.Route.StartsWith("/storage/objects/", StringComparison.OrdinalIgnoreCase));
+             !string.IsNullOrWhiteSpace(node.MediaRelativePath));
 
     public static bool CanRenderAttachmentPreview(ProjectStructureNode? node)
-        => ResolveAttachmentPreviewKind(node) is not AttachmentPreviewKind.None;
+        => HasManagedAttachment(node);
+
+    public static bool UsesDirectFileInteractionPreview(ProjectStructureNode? node)
+        => HasManagedAttachment(node);
 
     public static AttachmentPreviewKind ResolveAttachmentPreviewKind(ProjectStructureNode? node)
     {
@@ -116,7 +116,7 @@ internal static class ProjectStructureNodeHelpers
             return AttachmentPreviewKind.TextDocument;
         }
 
-        if (!HasManagedAttachment(node) || !SupportsInlinePreview(node))
+        if (!HasManagedAttachment(node))
         {
             return AttachmentPreviewKind.None;
         }
@@ -195,33 +195,16 @@ internal static class ProjectStructureNodeHelpers
     public static string ResolveAttachmentLeadCopy(ProjectStructureNode node)
         => ResolveAttachmentPreviewKind(node) switch
         {
-            AttachmentPreviewKind.Image => "The image stays attached to this node and can expand without leaving the structure canvas.",
-            AttachmentPreviewKind.Video => "The video stays attached to this node and can expand without leaving the structure canvas.",
-            AttachmentPreviewKind.Audio => "Audio files now stay playable in the selection panel and can still jump into a desktop app when needed.",
-            AttachmentPreviewKind.TextDocument => "Text-based assets open into a readable source preview before you choose whether to edit node details.",
+            AttachmentPreviewKind.Image => "The image opens through current file authority without an unsigned route.",
+            AttachmentPreviewKind.Video => "No video renderer is registered; the governed interaction remains inert and explicit.",
+            AttachmentPreviewKind.Audio => "No audio renderer is registered; the governed interaction remains inert and explicit.",
+            AttachmentPreviewKind.TextDocument => "Text-based assets support bounded view/edit and awaited revision-aware save when storage is writable.",
             AttachmentPreviewKind.Document when ResolveAttachmentContentType(node).Equals("application/pdf", StringComparison.OrdinalIgnoreCase)
-                => "PDF files now render directly in the inspector and can expand into a focused modal preview.",
+                => "PDF files use the governed browser-native renderer with its embedded-action limitation stated explicitly.",
             AttachmentPreviewKind.Document
-                => "Supported document types can render directly in the inspector without leaving the workbench.",
-            _ => "This attachment is stored with the node even when the browser cannot embed it inline."
+                => "Only explicitly registered document renderers can load content; other formats remain inert.",
+            _ => "This attachment opens through governed FileInteraction and remains inert when its type is unsupported."
         };
-
-    public static string ResolveAttachmentPreviewSource(ProjectStructureNode node)
-    {
-        var route = node.Route;
-        if (string.IsNullOrWhiteSpace(route))
-        {
-            return string.Empty;
-        }
-
-        return ResolveAttachmentContentType(node).Equals("application/pdf", StringComparison.OrdinalIgnoreCase) &&
-            !route.Contains('#', StringComparison.Ordinal)
-            ? $"{route}#toolbar=0&navpanes=0&view=FitH"
-            : route;
-    }
-
-    public static string ResolveAttachmentTextContent(ProjectStructureNode node)
-        => HasInlineTextAssetPreview(node) ? node.Notes : string.Empty;
 
     private static bool HasInlineTextAssetPreview(ProjectStructureNode? node)
     {
@@ -266,21 +249,4 @@ internal static class ProjectStructureNodeHelpers
         return ResolveAttachmentExtension(node) is ".pdf" or ".txt" or ".md" or ".json" or ".xml" or ".csv" or ".log" or ".yaml" or ".yml";
     }
 
-    private static bool SupportsInlinePreview(ProjectStructureNode? node)
-    {
-        if (node is null)
-        {
-            return false;
-        }
-
-        if (StorageJson.TryParseReference(node.StorageObjectReferenceJson, out var reference) &&
-            reference is not null)
-        {
-            return reference.ProviderKind != StorageProviderKind.Ftp;
-        }
-
-        return !string.IsNullOrWhiteSpace(node.MediaRelativePath) ||
-               node.Route.StartsWith("/managed-files/", StringComparison.OrdinalIgnoreCase) ||
-               node.Route.StartsWith("/storage/objects/", StringComparison.OrdinalIgnoreCase);
-    }
 }

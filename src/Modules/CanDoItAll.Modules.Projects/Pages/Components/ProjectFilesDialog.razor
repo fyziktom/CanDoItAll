@@ -1,0 +1,275 @@
+@implements IAsyncDisposable
+@inject IProjectFilesPilotCoordinator Coordinator
+@inject ILogger<ProjectFilesDialog> Logger
+
+@if (IsOpen)
+{
+    <Dialog IsOpen="true"
+            Eyebrow="Project workspace"
+            Title="@DialogTitle"
+            Subtitle="@DialogSubtitle"
+            Size="ModalSize.Full"
+            DenseChrome="true"
+            CloseOnBackdrop="false"
+            TestId="project-files-dialog"
+            OnClose="CloseAsync">
+        <HeaderActions>
+            @if (browserSnapshot?.Search is { } search)
+            {
+                <StatusBadge Tone="neutral" Text="@($"{browserSnapshot.Items.Count} visible")" />
+                <StatusBadge Tone="info" Text="@($"{search.ScannedItems} inspected")" />
+                <StatusBadge Tone="neutral" Text="@($"{search.RetainedItems} retained")" />
+            }
+        </HeaderActions>
+        <ChildContent>
+            @if (isLoading)
+            {
+                <LoadingState Eyebrow="Authorized source"
+                              Title="Opening project files"
+                              Description="Resolving the current project scope and its bounded file source." />
+            }
+            else if (!string.IsNullOrWhiteSpace(openError))
+            {
+                <EmptyState Eyebrow="Project files unavailable"
+                            Title="Unable to open this project file scope"
+                            Description="@openError">
+                    <Actions>
+                        <Button Text="Retry"
+                                data-testid="project-files-retry"
+                                Click="RetryAsync" />
+                    </Actions>
+                </EmptyState>
+            }
+            else if (interaction is not null)
+            {
+                <FileInteraction Request="interaction.Request"
+                                 ContentSource="interaction.Session.ContentSource"
+                                 AllowModeSwitch="false"
+                                 MaximumContentBytes="@(4 * 1024 * 1024)"
+                                 AriaLabel="@($"Read-only project file {interaction.Request.FileName}")" />
+            }
+            else if (workspace is not null)
+            {
+                @if (!string.IsNullOrWhiteSpace(activationError))
+                {
+                    <Alert AlertStyle="AlertStyle.Danger"
+                           Variant="Variant.Outlined"
+                           data-testid="project-files-activation-error">
+                        @activationError
+                    </Alert>
+                }
+
+                <FileBrowser Session="workspace.Browser"
+                             AriaLabel="@($"Files for {workspace.ProjectName}")"
+                             DisplayMode="FileBrowserDisplayMode.Compact"
+                             InitialViewMode="FileBrowserViewMode.List"
+                             SearchDebounceMilliseconds="280"
+                             SnapshotChanged="HandleSnapshotChanged"
+                             ItemInvoked="ActivateAsync" />
+            }
+        </ChildContent>
+    </Dialog>
+}
+
+@code {
+    private readonly CancellationTokenSource lifetime = new();
+    private ProjectFilesPilotWorkspace? workspace;
+    private ProjectFilesPilotInteraction? interaction;
+    private CancellationTokenSource? operation;
+    private FileBrowserSnapshot? browserSnapshot;
+    private Guid? activeProjectId;
+    private string? openError;
+    private string? activationError;
+    private bool isLoading;
+    private bool disposed;
+
+    [Parameter]
+    public bool IsOpen { get; set; }
+
+    [Parameter]
+    public Guid ProjectId { get; set; }
+
+    [Parameter]
+    public string ProjectName { get; set; } = string.Empty;
+
+    [Parameter]
+    public EventCallback Closed { get; set; }
+
+    private string DialogTitle => interaction?.Request.FileName ?? $"Files · {ProjectName}";
+
+    private string DialogSubtitle => interaction is null
+        ? "Browse and search this project's authorized text-file source. Activate a file to replace browsing with a read-only interaction."
+        : "Read-only content is authorized independently from the disposed browser session.";
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (!IsOpen)
+        {
+            await ResetAsync();
+            return;
+        }
+
+        if (activeProjectId == ProjectId)
+        {
+            return;
+        }
+
+        await OpenAsync();
+    }
+
+    private async Task OpenAsync()
+    {
+        await ResetAsync();
+        activeProjectId = ProjectId;
+        openError = null;
+        activationError = null;
+        isLoading = true;
+        operation = CancellationTokenSource.CreateLinkedTokenSource(lifetime.Token);
+        CancellationTokenSource currentOperation = operation;
+        try
+        {
+            ProjectFilesPilotWorkspace opened = await Coordinator.OpenAsync(
+                ProjectId,
+                ProjectName,
+                currentOperation.Token);
+            if (!ReferenceEquals(operation, currentOperation) || currentOperation.IsCancellationRequested)
+            {
+                await opened.DisposeAsync();
+                return;
+            }
+
+            workspace = opened;
+        }
+        catch (OperationCanceledException) when (currentOperation.IsCancellationRequested)
+        {
+        }
+        catch (Exception exception)
+        {
+            openError = SafeMessage(exception, "Unable to open project files.");
+        }
+        finally
+        {
+            if (ReferenceEquals(operation, currentOperation))
+            {
+                isLoading = false;
+            }
+        }
+    }
+
+    private Task RetryAsync() => OpenAsync();
+
+    private async Task ActivateAsync(FileBrowserItemInvokedEventArgs args)
+    {
+        if (workspace is null || args.Item.IsContainer)
+        {
+            return;
+        }
+
+        activationError = null;
+        CancellationTokenSource currentOperation = ReplaceOperation();
+        ProjectFilesPilotInteraction? activated = null;
+        try
+        {
+            activated = await Coordinator.ActivateAsync(
+                workspace,
+                args.Item.Key,
+                currentOperation.Token);
+            if (!ReferenceEquals(operation, currentOperation) || currentOperation.IsCancellationRequested)
+            {
+                return;
+            }
+
+            await workspace.DisposeAsync();
+            workspace = null;
+            interaction = activated;
+            activated = null;
+        }
+        catch (OperationCanceledException) when (currentOperation.IsCancellationRequested)
+        {
+        }
+        catch (Exception exception)
+        {
+            activationError = SafeMessage(exception, "Unable to open the selected file.");
+        }
+        finally
+        {
+            if (activated is not null)
+            {
+                await activated.DisposeAsync();
+            }
+        }
+    }
+
+    private void HandleSnapshotChanged(FileBrowserSnapshot snapshot)
+    {
+        browserSnapshot = snapshot;
+        if (snapshot.Search is not { } search || snapshot.IsBusy)
+        {
+            return;
+        }
+
+        Logger.LogInformation(
+            "Project file search completed with {ReturnedItems} returned, {InspectedItems} inspected, {RetainedItems} retained, {RetainedBytes} retained bytes, {DurationMs} duration milliseconds, and partial={IsPartial}.",
+            snapshot.Items.Count,
+            search.ScannedItems,
+            search.RetainedItems,
+            search.RetainedBytes,
+            search.Elapsed.TotalMilliseconds,
+            search.IsPartial);
+    }
+
+    private async Task CloseAsync()
+    {
+        await ResetAsync();
+        await Closed.InvokeAsync();
+    }
+
+    private CancellationTokenSource ReplaceOperation()
+    {
+        operation?.Cancel();
+        operation?.Dispose();
+        operation = CancellationTokenSource.CreateLinkedTokenSource(lifetime.Token);
+        return operation;
+    }
+
+    private async ValueTask ResetAsync()
+    {
+        operation?.Cancel();
+        operation?.Dispose();
+        operation = null;
+        isLoading = false;
+        activeProjectId = null;
+        openError = null;
+        activationError = null;
+        browserSnapshot = null;
+        if (interaction is not null)
+        {
+            await interaction.DisposeAsync();
+            interaction = null;
+        }
+
+        if (workspace is not null)
+        {
+            await workspace.DisposeAsync();
+            workspace = null;
+        }
+    }
+
+    private static string SafeMessage(Exception exception, string fallback)
+        => exception is FileBrowserProviderException providerException
+            ? providerException.Error.Message
+            : fallback;
+
+    public async ValueTask DisposeAsync()
+    {
+        if (disposed)
+        {
+            return;
+        }
+
+        disposed = true;
+        lifetime.Cancel();
+        await ResetAsync();
+        lifetime.Dispose();
+    }
+}

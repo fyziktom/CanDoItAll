@@ -1,0 +1,15 @@
+Command: dotnet test tests\Memory\CanDoItAll.Memory.Tests\CanDoItAll.Memory.Tests.csproj --filter FullyQualifiedName~MemoryProtocolContractsTests
+WorkingDirectory: C:\repositories\CanDoItAll
+RunLabel: SB01 passing memory protocol serialization and validation tests
+Invariant IDs: SB01_MP001, SB01_MP002, SB01_MP003, SB01_MP004, SB01_MP005, SB01_MP006
+Test names: SB01_MP001_Query_envelope_round_trips_structured_context, SB01_MP002_All_required_envelopes_round_trip, SB01_MP003_Provider_response_models_round_trip, SB01_MP004_Invalid_identifiers_and_protocol_versions_fail_predictably, SB01_MP005_Native_extension_namespace_is_stored_without_generic_branching, SB01_MP006_Unqualified_extension_namespaces_are_rejected
+ExitCode: 0
+Output:
+  Zjišťují se projekty, které se mají obnovit...
+  Všechny projekty jsou v aktuálním stavu pro obnovení.
+  CanDoItAll.Memory.Abstractions -> C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Abstractions\bin\Debug\net10.0\CanDoItAll.Memory.Abstractions.dll
+  CanDoItAll.Memory.Tests -> C:\repositories\CanDoItAll\tests\Memory\CanDoItAll.Memory.Tests\bin\Debug\net10.0\CanDoItAll.Memory.Tests.dll
+Testovací běh pro C:\repositories\CanDoItAll\tests\Memory\CanDoItAll.Memory.Tests\bin\Debug\net10.0\CanDoItAll.Memory.Tests.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+
+Úspěšné!    - Neúspěšné:     0, Úspěšné:     6, Přeskočeno:     0, Celkem:     6, Doba trvání: 407 ms - CanDoItAll.Memory.Tests.dll (net10.0)

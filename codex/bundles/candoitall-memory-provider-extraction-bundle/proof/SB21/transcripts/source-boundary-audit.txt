@@ -1,0 +1,8 @@
+Production generic Memory UI boundary audit
+Command: rg -n 'CanDoItAll\.Modules\.CognitiveMemory|CognitiveMemory|Qdrant|CanDoItAll\.AgentFramework\.Rag|OpenAI|OPENAI' src\Modules\CanDoItAll.Modules.Memory src\Memory\CanDoItAll.Memory.Application src\Memory\CanDoItAll.Memory.Persistence tests\Components\CanDoItAll.Tests.Components\MemoryProviderOperationsPageTests.cs
+No production generic Memory UI/native Cognitive Memory/Qdrant/OpenAI/RAG boundary leaks detected.
+
+Playwright host Qdrant audit
+Command: rg -n 'Rag__Qdrant__Enabled' tests\Playwright\CanDoItAll.Tests.Playwright\MemoryProviderManagementPlaywrightTests.cs
+454:        processStartInfo.Environment["Rag__Qdrant__Enabled"] = "false";
+Expected browser-test environment override: Qdrant is disabled for /memory Playwright proof.

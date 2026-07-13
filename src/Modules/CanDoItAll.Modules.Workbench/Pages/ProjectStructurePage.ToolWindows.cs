@@ -1,4 +1,5 @@
 using CanDoItAll.Components.CanvasLib;
+using CanDoItAll.FileTools.FileBrowser;
 using CanDoItAll.SharedKernel;
 
 namespace CanDoItAll.Modules.Workbench.Pages;
@@ -10,10 +11,20 @@ public partial class ProjectStructurePage
     private string structureToolboxSearchText = string.Empty;
     private string objectIndexSearchText = string.Empty;
     private string? expandedToolboxGroupKey;
+    private ProjectStructureFileCollectionRequest? fileBrowserRequest;
 
     private CanvasWorkbenchWindowState ToolboxWindowState => ResolveToolboxWindowState();
 
     private CanvasWorkbenchWindowState ObjectIndexWindowState => ResolveObjectIndexWindowState();
+
+    private string FileBrowserWindowKey => ProjectStructureFileBrowserWindowKey.Persisted.Value;
+
+    private CanvasWorkbenchWindowState FileBrowserWindowState => ResolveFileBrowserWindowState();
+
+    private ProjectStructureFileCollectionRequest CurrentFileBrowserRequest
+        => fileBrowserRequest ?? new ProjectStructureProjectFileCollectionRequest(
+            ProjectId,
+            surface?.ProjectName ?? "Project files");
 
     private bool IsObjectIndexWindowLoaded
         => ObjectIndexWindowState is { IsVisible: true, IsMinimized: false };
@@ -43,6 +54,9 @@ public partial class ProjectStructurePage
     private Task HandleObjectIndexWindowStateChangedAsync(CanvasWorkbenchWindowState state)
         => PersistWindowStateAsync(ObjectIndexWindowKey, state);
 
+    private Task HandleFileBrowserWindowStateChangedAsync(CanvasWorkbenchWindowState state)
+        => PersistWindowStateAsync(FileBrowserWindowKey, state);
+
     private Task HandleObjectIndexSearchTextChangedAsync(string value)
     {
         objectIndexSearchText = value;
@@ -55,6 +69,46 @@ public partial class ProjectStructurePage
         state.IsVisible = true;
         state.IsMinimized = false;
         await PersistWindowStateAsync(ToolboxWindowKey, state);
+    }
+
+    private Task OpenProjectFileBrowserAsync()
+        => TryHandleFileBrowserActionAsync(ProjectStructureFileActions.BrowseFilesId, nodeId: null);
+
+    private async Task<bool> TryHandleFileBrowserActionAsync(string actionId, string? nodeId)
+    {
+        if (!ProjectStructureFileActions.IsBrowseFiles(actionId) || surface is null)
+        {
+            return false;
+        }
+
+        ProjectStructureNode? node = string.IsNullOrWhiteSpace(nodeId) ? null : ResolveNode(nodeId);
+        if (!string.IsNullOrWhiteSpace(nodeId) && node is null)
+        {
+            workflowFeedback = "The selected file collection no longer exists.";
+            workflowFeedbackTone = "warn";
+            await InvokeAsync(StateHasChanged);
+            return true;
+        }
+
+        try
+        {
+            fileBrowserRequest = FileActionCoordinator.CreateRequest(
+                ProjectId,
+                surface.ProjectName,
+                node);
+            CanvasWorkbenchWindowState state = ResolveFileBrowserWindowState();
+            state.IsVisible = true;
+            state.IsMinimized = false;
+            await PersistWindowStateAsync(FileBrowserWindowKey, state);
+        }
+        catch (FileBrowserProviderException exception)
+        {
+            workflowFeedback = exception.Error.Message;
+            workflowFeedbackTone = "warn";
+            await InvokeAsync(StateHasChanged);
+        }
+
+        return true;
     }
 
     private CanvasWorkbenchWindowState ResolveToolboxWindowState()
@@ -75,6 +129,17 @@ public partial class ProjectStructurePage
     {
         var uiState = ResolveEditableUiState();
         return uiState.WindowStates.TryGetValue(ObjectIndexWindowKey, out var state)
+            ? CanvasWorkbenchWindowState.Normalize(state)
+            : CanvasWorkbenchWindowState.Normalize(new CanvasWorkbenchWindowState
+            {
+                IsVisible = false
+            });
+    }
+
+    private CanvasWorkbenchWindowState ResolveFileBrowserWindowState()
+    {
+        var uiState = ResolveEditableUiState();
+        return uiState.WindowStates.TryGetValue(FileBrowserWindowKey, out var state)
             ? CanvasWorkbenchWindowState.Normalize(state)
             : CanvasWorkbenchWindowState.Normalize(new CanvasWorkbenchWindowState
             {

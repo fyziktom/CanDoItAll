@@ -1,0 +1,12 @@
+CodeAnalytics architecture snapshot
+
+Snapshot: snap-20260710134114-0791a892
+Scope: Processes.Runtime, Processes.Application, Processes.Templates, Modules.Processes, Modules.Workbench, Tests.Unit
+Projects: 6
+Types: 1,466
+Members: 13,414
+Project-reference edges: 10
+Dependency cycles: 0
+Error findings: 0
+
+Warnings are existing broad inventory findings such as large source files and duplicate generated attribute display names. No new dependency cycle or blocking architecture error was reported.

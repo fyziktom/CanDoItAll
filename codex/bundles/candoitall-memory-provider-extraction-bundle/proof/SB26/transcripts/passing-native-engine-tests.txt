@@ -1,0 +1,32 @@
+Command: dotnet test CanDoItAll.CognitiveMemory.slnx --no-build --logger "console;verbosity=normal"
+Working directory: C:\repositories\CanDoItAll.CognitiveMemory
+Start time UTC: 2026-07-05T23:52:22.9879564Z
+Output:
+Testovací běh pro C:\repositories\CanDoItAll.CognitiveMemory\tests\CanDoItAll.CognitiveMemory.Tests\bin\Debug\net10.0\CanDoItAll.CognitiveMemory.Tests.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v3.1.4+50e68bbb8b (64-bit .NET 10.0.8)
+[xUnit.net 00:00:01.80]   Discovering: CanDoItAll.CognitiveMemory.Tests
+[xUnit.net 00:00:01.85]   Discovered:  CanDoItAll.CognitiveMemory.Tests
+[xUnit.net 00:00:01.88]   Starting:    CanDoItAll.CognitiveMemory.Tests
+  Úspěšné CanDoItAll.CognitiveMemory.Tests.NativeScaffoldArchitectureTests.NativePersistenceOwnsMigrationSnapshot [13 ms]
+  Úspěšné CanDoItAll.CognitiveMemory.Tests.NativeScaffoldArchitectureTests.NativeProductionSourceDoesNotReferenceHostPersistenceOrMainModules [9 ms]
+  Úspěšné CanDoItAll.CognitiveMemory.Tests.NativeScaffoldArchitectureTests.NativeProjectsDoNotReferenceMainAppOrModuleProjects [8 ms]
+  Úspěšné CanDoItAll.CognitiveMemory.Tests.NativeScaffoldArchitectureTests.NativeSolutionContainsExpectedProjects [1 ms]
+  Úspěšné CanDoItAll.CognitiveMemory.Tests.NativeScaffoldArchitectureTests.RagProjectionDoesNotRequireQdrantPackageByDefault [< 1 ms]
+  Úspěšné CanDoItAll.CognitiveMemory.Tests.CognitiveMemoryProtocolMappingTests.CreateManifest_ExposesNativeProviderWithoutQdrantRequirement [56 ms]
+  Úspěšné CanDoItAll.CognitiveMemory.Tests.CognitiveMemoryProtocolMappingTests.ToRecallRequest_MapsGenericProtocolRequest [12 ms]
+  Úspěšné CanDoItAll.CognitiveMemory.Tests.CognitiveMemoryProtocolMappingTests.ToRecallRequest_RejectsEmptyQuery [< 1 ms]
+  Úspěšné CanDoItAll.CognitiveMemory.Tests.CognitiveMemoryPersistenceTests.PostgreSqlProfile_GeneratesNativeFoundationSchemaWithoutOpeningHostDbContext [775 ms]
+[xUnit.net 00:00:03.49]   Finished:    CanDoItAll.CognitiveMemory.Tests
+  Úspěšné CanDoItAll.CognitiveMemory.Tests.CognitiveMemoryPersistenceTests.AddCognitiveMemoryPersistence_StoresFoundationRecordsWithoutHostDbContext [431 ms]
+  Úspěšné CanDoItAll.CognitiveMemory.Tests.CognitiveMemoryPersistenceTests.CognitiveMemoryDbContext_StampsConcurrencyTokenOnAddAndUpdate [23 ms]
+  Úspěšné CanDoItAll.CognitiveMemory.Tests.NativeEngineServiceTests.QualityReviewAndProbe_UpdateNativeState [1 s]
+  Úspěšné CanDoItAll.CognitiveMemory.Tests.NativeEngineServiceTests.Consolidation_CreatesNativeMemoryRecordsForUnlinkedSourceItems [81 ms]
+  Úspěšné CanDoItAll.CognitiveMemory.Tests.NativeEngineServiceTests.ProfessorTemporalReplayAndSelfRegulation_ReadNativeOperationalState [54 ms]
+  Úspěšné CanDoItAll.CognitiveMemory.Tests.NativeEngineServiceTests.IngestionAndRecall_UseNativePersistenceWithoutHostDbContext [100 ms]
+
+Testovací běh byl úspěšný.
+Celkový počet testů: 15
+     Úspěšné: 15
+ Celkový čas: 4,4621 Sekundy
+Exit code: 0

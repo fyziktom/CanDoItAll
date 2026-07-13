@@ -1,0 +1,14 @@
+Command: & 'C:\Users\lucys\.cache\codex-runtimes\codex-primary-runtime\dependencies\node\bin\node.exe' 'C:\repositories\CanDoItAll\codex\bundles\workflow-node-project-isolation\proof\SB01\tools\inspect-workbook.mjs'
+Working directory: C:\repositories\CanDoItAll
+Start: 2026-06-29T11:30:49.9540834-04:00
+End: 2026-06-29T11:31:03.3305700-04:00
+Exit code: 0
+
+Rendered 9 sheets to C:\repositories\CanDoItAll\codex\bundles\workflow-node-project-isolation\proof\SB01\workbook-previews
+
+
+Completed Validator Metadata Addendum
+Command: historical SB01 proof command recorded during bundle execution
+ExitCode: 0
+ExitCode: 1
+Invariant ID: SB01-final-closure

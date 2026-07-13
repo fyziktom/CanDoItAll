@@ -1,0 +1,13 @@
+Command: Source adapter size/refactor inventory
+Working directory: C:\repositories\CanDoItAll
+Start: 2026-07-05T14:15:55.8149158-04:00
+src\MAF\Common\CanDoItAll.AgentFramework.Core\Sources\MemorySourceSnapshotSecurity.cs	51 lines
+src\Memory\CanDoItAll.Memory.Application\MemorySourceGateway.cs	137 lines
+src\Memory\CanDoItAll.Memory.Application\ManualMemorySourceGatewayAdapter.cs	189 lines
+src\Modules\CanDoItAll.Modules.Workbench\ProjectStructure\WorkbenchProjectStructureSourceSnapshotProvider.cs	342 lines
+src\Modules\CanDoItAll.Modules.Processes\Services\RuntimeIntegration\ProcessRuntimeEvidenceSourceProvider.cs	1284 lines
+src\Modules\CanDoItAll.Modules.AgentFramework\Persistence\WorkflowRuntimeEvidenceSourceProvider.cs	462 lines
+src\Modules\CanDoItAll.Modules.CrmHr\Services\CrmHrSourceSnapshotProvider.cs	422 lines
+src\Modules\CanDoItAll.Modules.Resources\ResourceSourceSnapshotProvider.cs	202 lines
+Checkpoint decision: common permission/hash policy and inline secret redaction were extracted to MemorySourceSnapshotSecurity; large process/workflow files remain module-specific mapper inventories and are not provider-driver leaks. No SB15 blocker found by gateway tests or boundary audits.
+Exit code: 0

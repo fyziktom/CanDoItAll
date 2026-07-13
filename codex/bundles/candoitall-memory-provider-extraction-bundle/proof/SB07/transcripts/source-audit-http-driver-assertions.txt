@@ -1,0 +1,64 @@
+Command: rg HTTP driver behavior assertions over src\Memory\CanDoItAll.Memory.Http, src\Memory\CanDoItAll.Memory.Application\MemoryRuntimeDriverContracts.cs, src\Memory\CanDoItAll.Memory.Persistence\MemoryRuntimeService.cs
+WorkingDirectory: C:\repositories\CanDoItAll
+RunLabel: SB07 HTTP driver source assertions after partial split
+ExitCode: 0
+Summary: Source includes typed HTTP factory registration, auth header application, structured envelope mapping, timeout/cancellation handling, health driver contract, and typed response classifications.
+Missing: 
+
+Output:
+src\Memory\CanDoItAll.Memory.Http\HttpMemoryProviderDriver.cs:37:        timeout.CancelAfter(configuration.Timeout);
+src\Memory\CanDoItAll.Memory.Http\HttpMemoryProviderDriver.cs:84:        timeout.CancelAfter(configuration.Timeout);
+src\Memory\CanDoItAll.Memory.Http\HttpMemoryProviderDriver.cs:36:        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+src\Memory\CanDoItAll.Memory.Http\HttpMemoryProviderDriver.cs:83:        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+src\Memory\CanDoItAll.Memory.Http\HttpMemoryProviderDriver.cs:10:    IHttpClientFactory httpClientFactory,
+src\Memory\CanDoItAll.Memory.Http\HttpMemoryServiceCollectionExtensions.cs:18:        services.AddHttpClient(options.ClientName, client =>
+src\Memory\CanDoItAll.Memory.Http\HttpMemoryProviderDriver.Requests.cs:33:        if (string.Equals(configuration.AuthHeaderName, "Authorization", StringComparison.OrdinalIgnoreCase))
+src\Memory\CanDoItAll.Memory.Http\HttpMemoryProviderDriver.Requests.cs:35:            request.Headers.Authorization = new AuthenticationHeaderValue(
+src\Memory\CanDoItAll.Memory.Http\HttpMemoryProviderConfiguration.cs:53:            ReadString(values, HttpMemoryProviderConfigurationKeys.AuthHeaderName) ?? "Authorization",
+src\Memory\CanDoItAll.Memory.Http\HttpMemoryProviderContracts.cs:14:    MemoryOperationEnvelope<MemoryContextQueryRequest> Envelope);
+src\Memory\CanDoItAll.Memory.Http\HttpMemoryProviderDriver.Requests.cs:49:        var envelope = new MemoryOperationEnvelope<MemoryContextQueryRequest>(
+src\Memory\CanDoItAll.Memory.Application\MemoryRuntimeDriverContracts.cs:23:public enum MemoryProviderDriverResultKind
+src\Memory\CanDoItAll.Memory.Application\MemoryRuntimeDriverContracts.cs:34:    MemoryProviderDriverResultKind Kind,
+src\Memory\CanDoItAll.Memory.Application\MemoryRuntimeDriverContracts.cs:44:            MemoryProviderDriverResultKind.ContextPack,
+src\Memory\CanDoItAll.Memory.Application\MemoryRuntimeDriverContracts.cs:54:            MemoryProviderDriverResultKind.OperationAccepted,
+src\Memory\CanDoItAll.Memory.Application\MemoryRuntimeDriverContracts.cs:61:        MemoryProviderDriverResultKind kind,
+src\Memory\CanDoItAll.Memory.Application\MemoryRuntimeDriverContracts.cs:67:            kind == MemoryProviderDriverResultKind.Timeout ? MemoryLedgerStatus.TimedOut : MemoryLedgerStatus.Failed,
+src\Memory\CanDoItAll.Memory.Http\HttpMemoryProviderDriver.cs:30:                MemoryProviderDriverResultKind.UnsupportedCapability,
+src\Memory\CanDoItAll.Memory.Http\HttpMemoryProviderDriver.cs:59:                    MemoryProviderDriverResultKind.Timeout,
+src\Memory\CanDoItAll.Memory.Http\HttpMemoryProviderDriver.cs:65:                    MemoryProviderDriverResultKind.Unavailable,
+src\Memory\CanDoItAll.Memory.Http\HttpMemoryProviderDriver.cs:71:            MemoryProviderDriverResultKind.Unavailable,
+src\Memory\CanDoItAll.Memory.Http\HttpMemoryProviderDriver.Responses.cs:20:                MemoryProviderDriverResultKind.Timeout,
+src\Memory\CanDoItAll.Memory.Http\HttpMemoryProviderDriver.Responses.cs:27:                MemoryProviderDriverResultKind.UnsupportedCapability,
+src\Memory\CanDoItAll.Memory.Http\HttpMemoryProviderDriver.Responses.cs:34:                MemoryProviderDriverResultKind.Unavailable,
+src\Memory\CanDoItAll.Memory.Http\HttpMemoryProviderDriver.Responses.cs:41:                MemoryProviderDriverResultKind.ProviderError,
+src\Memory\CanDoItAll.Memory.Http\HttpMemoryProviderDriver.Responses.cs:55:                MemoryProviderDriverResultKind.ProviderError,
+src\Memory\CanDoItAll.Memory.Http\HttpMemoryProviderDriver.Responses.cs:69:                MemoryProviderDriverResultKind.ProviderError,
+src\Memory\CanDoItAll.Memory.Http\HttpMemoryProviderDriver.Responses.cs:85:                    MemoryProviderDriverResultKind.UnsupportedCapability,
+src\Memory\CanDoItAll.Memory.Http\HttpMemoryProviderDriver.Responses.cs:89:                    MemoryProviderDriverResultKind.ProviderError,
+src\Memory\CanDoItAll.Memory.Http\HttpMemoryProviderDriver.Responses.cs:92:                MemoryProviderDriverResultKind.ProviderError,
+src\Memory\CanDoItAll.Memory.Application\MemoryRuntimeDriverContracts.cs:19:    MemoryOperationAccepted? AcceptedOperation,
+src\Memory\CanDoItAll.Memory.Application\MemoryRuntimeDriverContracts.cs:26:    OperationAccepted = 1,
+src\Memory\CanDoItAll.Memory.Application\MemoryRuntimeDriverContracts.cs:36:    MemoryOperationAccepted? AcceptedOperation,
+src\Memory\CanDoItAll.Memory.Application\MemoryRuntimeDriverContracts.cs:51:        MemoryOperationAccepted acceptedOperation,
+src\Memory\CanDoItAll.Memory.Application\MemoryRuntimeDriverContracts.cs:54:            MemoryProviderDriverResultKind.OperationAccepted,
+src\Memory\CanDoItAll.Memory.Http\HttpMemoryProviderContracts.cs:19:    OperationAccepted = 1,
+src\Memory\CanDoItAll.Memory.Http\HttpMemoryProviderContracts.cs:31:    MemoryOperationAccepted? AcceptedOperation,
+src\Memory\CanDoItAll.Memory.Http\HttpMemoryProviderContracts.cs:44:    public static HttpMemoryProviderResponse FromAccepted(MemoryOperationAccepted acceptedOperation)
+src\Memory\CanDoItAll.Memory.Http\HttpMemoryProviderContracts.cs:48:            HttpMemoryProviderResponseKind.OperationAccepted,
+src\Memory\CanDoItAll.Memory.Http\HttpMemoryProviderDriver.Responses.cs:79:            HttpMemoryProviderResponseKind.OperationAccepted when response.AcceptedOperation is not null =>
+src\Memory\CanDoItAll.Memory.Application\MemoryRuntimeDriverContracts.cs:30:    UnsupportedCapability = 5
+src\Memory\CanDoItAll.Memory.Http\HttpMemoryProviderDriver.cs:30:                MemoryProviderDriverResultKind.UnsupportedCapability,
+src\Memory\CanDoItAll.Memory.Http\HttpMemoryProviderDriver.Responses.cs:27:                MemoryProviderDriverResultKind.UnsupportedCapability,
+src\Memory\CanDoItAll.Memory.Http\HttpMemoryProviderDriver.Responses.cs:83:            HttpMemoryProviderResponseKind.UnsupportedCapability =>
+src\Memory\CanDoItAll.Memory.Http\HttpMemoryProviderDriver.Responses.cs:85:                    MemoryProviderDriverResultKind.UnsupportedCapability,
+src\Memory\CanDoItAll.Memory.Http\HttpMemoryProviderContracts.cs:21:    UnsupportedCapability = 3
+src\Memory\CanDoItAll.Memory.Http\HttpMemoryProviderContracts.cs:65:    public static HttpMemoryProviderResponse UnsupportedCapability(string message) =>
+src\Memory\CanDoItAll.Memory.Http\HttpMemoryProviderContracts.cs:67:            HttpMemoryProviderResponseKind.UnsupportedCapability,
+src\Memory\CanDoItAll.Memory.Http\HttpMemoryProviderDriver.cs:94:                    response.StatusCode == HttpStatusCode.ServiceUnavailable
+src\Memory\CanDoItAll.Memory.Http\HttpMemoryProviderDriver.Responses.cs:31:        if (response.StatusCode == HttpStatusCode.ServiceUnavailable)
+src\Memory\CanDoItAll.Memory.Http\HttpMemoryProviderDriver.Responses.cs:16:        if (response.StatusCode == HttpStatusCode.RequestTimeout ||
+src\Memory\CanDoItAll.Memory.Http\HttpMemoryProviderDriver.Requests.cs:117:            ((int)statusCode >= 500 || statusCode == HttpStatusCode.RequestTimeout);
+src\Memory\CanDoItAll.Memory.Http\HttpMemoryProviderDriver.Responses.cs:17:            response.StatusCode == HttpStatusCode.GatewayTimeout)
+src\Memory\CanDoItAll.Memory.Application\MemoryRuntimeDriverContracts.cs:71:public interface IMemoryProviderHealthDriver
+src\Memory\CanDoItAll.Memory.Http\HttpMemoryProviderDriver.cs:11:    HttpMemoryProviderOptions options) : IMemoryProviderDriver, IMemoryProviderHealthDriver
+src\Memory\CanDoItAll.Memory.Http\HttpMemoryServiceCollectionExtensions.cs:25:        services.AddSingleton<IMemoryProviderHealthDriver>(provider =>

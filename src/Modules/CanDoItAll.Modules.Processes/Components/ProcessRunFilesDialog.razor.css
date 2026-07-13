@@ -1,0 +1,13 @@
+.process-run-files-dialog__content {
+    display: flex;
+    flex-direction: column;
+    height: min(70vh, 760px);
+    min-height: 0;
+    overflow: hidden;
+}
+
+.process-run-files-dialog__browser {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: hidden;
+}

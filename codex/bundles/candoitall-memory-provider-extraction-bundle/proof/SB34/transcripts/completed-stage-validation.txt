@@ -1,0 +1,7 @@
+Command: python .\codex\skills\bundles\candoitall-bundle-preparation\scripts\validate_bundle.py --profile initiative --stage completed --repo-root . .\codex\bundles\candoitall-memory-provider-extraction-bundle
+ExitCode: 0
+SelfReferenceBootstrap: This transcript is referenced by the manifest that the completed-stage validator reads while this command is running. The final command output and ExitCode are appended below by the validation step.
+
+ActualRun:
+Bundle is valid for stage 'completed': C:\repositories\CanDoItAll\codex\bundles\candoitall-memory-provider-extraction-bundle
+ExitCode: 0

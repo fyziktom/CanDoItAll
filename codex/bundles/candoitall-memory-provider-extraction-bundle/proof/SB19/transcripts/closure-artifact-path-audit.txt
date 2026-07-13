@@ -1,0 +1,17 @@
+Command: validate SB19 manifest bundle:// artifact paths exist
+PASS exists: bundle://evidence/24-prepared-stage-validation-after-sb19.txt
+PASS exists: bundle://proof/SB19/semantic-invariants.md
+PASS exists: bundle://proof/SB19/transcripts/closure-artifact-path-audit.txt
+PASS exists: bundle://proof/SB19/transcripts/failing-first-maf-integration-checkpoint-tests.txt
+PASS exists: bundle://proof/SB19/transcripts/passing-maf-integration-checkpoint-tests.txt
+PASS exists: bundle://proof/SB19/transcripts/passing-maf-memory-regression-tests.txt
+PASS exists: bundle://proof/SB19/transcripts/passing-solution-build.txt
+PASS exists: bundle://proof/SB19/transcripts/source-audit-maf-memory-anti-stub.txt
+PASS exists: bundle://proof/SB19/transcripts/source-audit-maf-memory-dispatch-boundary.txt
+PASS exists: bundle://proof/SB19/transcripts/source-audit-maf-memory-duplicate-logic.txt
+PASS exists: bundle://proof/SB19/transcripts/source-audit-maf-memory-file-size.txt
+PASS exists: bundle://proof/SB19/transcripts/source-audit-maf-native-dependency-boundary.txt
+Checked path count: 12
+Result: PASS - every SB19 manifest bundle:// artifact path exists.
+ExitCode: 0
+

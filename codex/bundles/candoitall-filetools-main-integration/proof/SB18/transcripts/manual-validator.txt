@@ -1,0 +1,20 @@
+SB18 manual bundle validator
+Date: 2026-07-13
+Decision: Pass.
+
+Readiness and closure checks:
+- The bundle contains the required raw inputs, requirements, architecture, plan, dependency graph, traceability, subbundles, reviews, and proof roles.
+- R001-R040 have owners, validation methods, and final Pass results; N001-N018 close as Solved with evidence.
+- SB01-SB18 have exact status Completed. No subbundle remains Ready, In progress, Blocked, or Not started.
+- Declared subbundle dependencies and progression gates are consistent; all prerequisite gates passed before final closure.
+- Governed proof covers package identity, builds, tests, formatting, static assets, dependency direction, security, scale, browser behavior, source assertions, and architecture review.
+- The final package manifest matches all 14 accepted artifacts. The published FileInteraction assembly matches the repaired package payload.
+- The Projects page preserves the recursive BaseLib TreeView and its nested project/subproject selection regression passes.
+- The Project Structure PDF defect has a failing-first cause, a minimal FileTools repair, focused and full passing tests, a repacked accepted artifact, and inspected real-browser evidence at both required viewports.
+- The final managed browser run has no unexplained console problems, failed requests, bad responses, or horizontal overflow across Projects, Project Structure, Processes, and Resources.
+- The unsigned preview endpoint red-team returns 401, and source audits find no legacy known-file preview route, authorization bypass, new partial class, runtime service locator, or stub.
+- The final C# architecture review is an unqualified Pass. Code, package, proof, traceability, status, and raw-note surfaces agree.
+- CodeAnalytics and Components MCP transport failures and unrelated unrestricted repository-wide baseline failures are recorded explicitly; deterministic owned-scope substitutes pass and no unavailable result is represented as successful.
+
+Manual conclusion:
+The bundle satisfies its completed-stage contract. Any later contradiction in package payload, project hierarchy, PDF activation, authority, revision behavior, or the shipped desktop flows must reopen the owning subbundle and SB18.

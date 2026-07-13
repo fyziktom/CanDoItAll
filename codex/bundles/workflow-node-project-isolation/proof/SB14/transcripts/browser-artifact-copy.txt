@@ -1,0 +1,15 @@
+SB14 browser artifact copy
+Timestamp: 2026-06-29T20:51:45.0317209-04:00
+Fresh browser validation proof is in SB14 Playwright transcripts. Screenshots are copied from latest matching large-screen proof set because the sb12-playwright rerun did not emit new named screenshot files.
+Copied files:
+- proof/SB14/browser/workflow-shell-runtime-large.png
+- proof/SB14/browser/project-structure-add-workflow-desktop.png
+- proof/SB14/browser/project-structure-start-workflow-confirmation.png
+- proof/SB14/browser/project-structure-workflow-selection-status.png
+- proof/SB14/browser/project-structure-workflow-result-child-desktop.png
+
+Completed Validator Metadata Addendum
+Command: historical SB14 proof command recorded during bundle execution
+ExitCode: 0
+ExitCode: 1
+Invariant ID: SB14-final-closure

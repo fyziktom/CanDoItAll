@@ -1,0 +1,12 @@
+SB16 dispatch boundary audit
+Handler calls:
+10:    IMemoryOperationHandler operationHandler,
+19:    private readonly IMemoryOperationHandler operationHandler = operationHandler;
+153:        var result = await operationHandler.ExecuteQueryAsync(handlerRequest, cancellationToken);
+208:        var result = await operationHandler.CaptureSourceForIngestionAsync(handlerRequest, cancellationToken);
+241:        var result = await operationHandler.SubmitFeedbackAsync(handlerRequest, cancellationToken);
+267:        var result = await operationHandler.GetStatusAsync(handlerRequest, cancellationToken);
+294:        var result = await operationHandler.CancelAsync(handlerRequest, cancellationToken);
+324:        var result = await operationHandler.AcknowledgeEventAsync(handlerRequest, cancellationToken);
+
+No direct provider registry or memory driver dispatch references found in the MAF tool provider.

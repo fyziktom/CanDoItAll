@@ -1,0 +1,10 @@
+{
+  "apiEnabled": true,
+  "openApiEnabled": true,
+  "authorizationEnabled": false,
+  "signingKeyConfigured": false,
+  "issuer": "CanDoItAll.Api",
+  "audience": "CanDoItAll.Api",
+  "defaultTokenLifetimeMinutes": 480,
+  "maxTokenLifetimeMinutes": 1440
+}

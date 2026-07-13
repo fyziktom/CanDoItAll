@@ -1,0 +1,16 @@
+Command: dotnet test tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj --filter ProcessTemplateCompatibilityHistoryTests
+ExitCode: 0
+Result: 12 passed, 0 failed.
+Test name: ProcessTemplateCompatibilityHistoryTests
+Test name: Template_compatibility_strict_scan_rejects_file_only_artifact_acceptance_contract
+Invariant ID: SB07-INV-TEMPLATE-ARTIFACT-CONTRACTS
+Command: artifact semantic contract inventory
+ExitCode: 0
+Result: ArtifactTemplateCount=20; MissingSemanticAcceptanceContract=0; FileOnlyAcceptanceAllowed=0.
+Command: process template inventory
+ExitCode: 0
+Result: ProcessTemplateCount=24; TemplatesWithBranchRules=21; TemplatesWithSubprocessContracts=2; TemplatesWithTypedExecutionContracts=3.
+Command: CodeAnalytics dependencies for snap-20260709182007-390484e5
+ExitCode: 0
+Result: cycles: []
+Anti-stub audit: No prompt-only artifact acceptance path remains; strict scanner negative test rejects file-only acceptance.

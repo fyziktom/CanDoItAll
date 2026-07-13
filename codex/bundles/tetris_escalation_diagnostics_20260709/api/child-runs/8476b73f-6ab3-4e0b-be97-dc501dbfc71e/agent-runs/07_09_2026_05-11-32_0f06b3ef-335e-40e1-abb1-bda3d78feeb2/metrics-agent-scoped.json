@@ -1,0 +1,16 @@
+{
+  "id": "00f1b5d6-63ad-40c1-a8be-3437fa66a525",
+  "agentId": "38d4deb5-74ce-8e55-bf1a-17e88b437472",
+  "chatSessionId": null,
+  "createdAtUtc": "2026-07-09T05:11:54.1506137-04:00",
+  "outcome": 0,
+  "providerName": "OpenAI chat completions",
+  "model": "gpt-5.4-mini",
+  "durationMs": 21763,
+  "inputTokens": 0,
+  "outputTokens": 0,
+  "toolCalls": 2,
+  "executionRunId": "0f06b3ef-335e-40e1-abb1-bda3d78feeb2",
+  "cachedInputTokens": 0,
+  "costUsd": 0.0
+}

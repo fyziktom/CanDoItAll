@@ -99,14 +99,23 @@ public static class InfrastructureServiceCollectionExtensions
         services.AddSingleton<IWorkspacePathResolver, WorkspacePathResolver>();
         services.AddSingleton<IWorkspacePathAccessGuard, WorkspacePathAccessGuard>();
         services.AddSingleton<IStorageCatalogService, StorageCatalogService>();
+        services.AddSingleton<FileSystemStoragePathPolicy>();
+        services.AddHttpClient<IIpfsStorageTransport, IpfsHttpStorageTransport>();
+        services.AddSingleton<IFtpStorageTransport, FtpWebStorageTransport>();
         services.AddSingleton<IStorageDriver, FileSystemStorageDriver>();
         services.AddSingleton<IStorageDriver, IpfsStorageDriver>();
         services.AddSingleton<IStorageDriver, FtpStorageDriver>();
         services.AddSingleton<IStorageDriverRegistry, StorageDriverRegistry>();
+        services.AddSingleton<IStorageBrowseDriver, FileSystemStorageBrowseDriver>();
+        services.AddSingleton<IStorageBrowseDriver, IpfsStorageBrowseDriver>();
+        services.AddSingleton<IStorageBrowseDriver, FtpStorageBrowseDriver>();
+        services.AddSingleton<IStorageBrowseDriverRegistry, StorageBrowseDriverRegistry>();
         services.AddSingleton<IStorageRoutingService, DefaultStorageRoutingService>();
         services.AddSingleton<IStorageConnectionTestService, StorageConnectionTestService>();
         services.AddSingleton<IStorageAccessService, StorageAccessService>();
-        services.AddSingleton<IStoragePlacementService, StoragePlacementService>();
+        services.AddSingleton<StoragePlacementService>();
+        services.AddSingleton<IStoragePlacementService>(provider =>
+            provider.GetRequiredService<StoragePlacementService>());
         services.AddSingleton<IStorageTransferPipeline, StorageTransferPipeline>();
         services.AddScoped<IFileStore, LocalFileStore>();
         services.AddScoped<IManagedArtifactStore, ManagedArtifactStore>();

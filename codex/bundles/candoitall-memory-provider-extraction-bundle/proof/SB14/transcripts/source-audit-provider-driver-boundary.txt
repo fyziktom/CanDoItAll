@@ -1,0 +1,12 @@
+Command: Provider driver boundary audit for Memory.Http and Memory.Mcp
+Working directory: C:\repositories\CanDoItAll
+Start: 2026-07-05T14:16:48.8700210-04:00
+Project: src\Memory\CanDoItAll.Memory.Http\CanDoItAll.Memory.Http.csproj
+  ProjectReference: ..\CanDoItAll.Memory.Application\CanDoItAll.Memory.Application.csproj
+  ProjectReference: ..\CanDoItAll.Memory.Abstractions\CanDoItAll.Memory.Abstractions.csproj
+Project: src\Memory\CanDoItAll.Memory.Mcp\CanDoItAll.Memory.Mcp.csproj
+  ProjectReference: ..\CanDoItAll.Memory.Application\CanDoItAll.Memory.Application.csproj
+  ProjectReference: ..\CanDoItAll.Memory.Abstractions\CanDoItAll.Memory.Abstractions.csproj
+  ProjectReference: ..\..\MAF\Mcp\CanDoItAll.AgentFramework.Mcp.Abstractions\CanDoItAll.AgentFramework.Mcp.Abstractions.csproj
+PASS: Memory provider driver projects do not reference source modules, AppDbContext, or EF source data access.
+Exit code: 0

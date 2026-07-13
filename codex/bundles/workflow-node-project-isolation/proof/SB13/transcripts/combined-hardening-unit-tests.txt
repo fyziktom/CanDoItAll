@@ -1,0 +1,16 @@
+SB13 combined hardening unit tests
+Timestamp: 2026-06-29T19:56:43.2025615-04:00
+Working directory: C:\repositories\CanDoItAll
+Command: dotnet test tests\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj --no-build --filter "WorkflowAdoptionHardeningCheckpointTests|MafWorkflowAdapterIsolationTests|WorkflowExecutorHardeningCheckpointTests|WorkflowTemplatePackLoaderTests|WorkflowCoreExtractionTests|ProjectStructureWorkflowPreviewSimulationSupportTests" -m:1 -v:minimal -p:OutputPath=C:\repositories\CanDoItAll\artifacts\sb13-unit-output\
+
+Testovací běh pro C:\repositories\CanDoItAll\artifacts\sb13-unit-output\CanDoItAll.Tests.Unit.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+
+Úspěšné!    - Neúspěšné:     0, Úspěšné:    37, Přeskočeno:     0, Celkem:    37, Doba trvání: 9 s - CanDoItAll.Tests.Unit.dll (net10.0)
+Exit code: 0
+
+Completed Validator Metadata Addendum
+Command: historical SB13 proof command recorded during bundle execution
+ExitCode: 0
+ExitCode: 1
+Invariant ID: SB13-final-closure

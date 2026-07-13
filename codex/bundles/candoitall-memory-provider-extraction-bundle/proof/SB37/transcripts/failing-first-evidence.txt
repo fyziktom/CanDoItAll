@@ -1,0 +1,10 @@
+Run label: SB37 pre-repair characterization inventory
+Working directory: bundle://
+Command: no standalone pre-change command transcript was retained for modes/directives/fan-out.
+Exit code: N/A
+
+SB37-INV-01: SB35 source inventory established that typed invocation modes and ordered provider bindings did not exist.
+SB37-INV-02: SB35 source inventory established that /mem:<alias> parsing/sanitization/authorization did not exist.
+SB37-INV-03: SB35 source inventory established single-provider/module-owned runtime behavior and no dedicated AgentFramework.Memory owner.
+
+This is an explicit proof-depth gap, not a fabricated failing command. SB40 must perform fresh adversarial terminal negatives before final closure.

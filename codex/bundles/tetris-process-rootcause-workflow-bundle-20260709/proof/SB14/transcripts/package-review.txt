@@ -1,0 +1,18 @@
+SB14 package compatibility review
+
+UPDATED
+- Microsoft.Extensions.AI.Abstractions 10.5.1 -> 10.7.0 in CanDoItAll.AgentFramework.Tooling.
+- Microsoft.Extensions.AI.Abstractions 10.6.0 -> 10.7.0 in CanDoItAll.AgentFramework.Workflows.MafAdapter.
+
+RETAINED
+- Microsoft.Agents.AI, Microsoft.Agents.AI.OpenAI, and Microsoft.Agents.AI.Workflows remain on 1.13.0.
+- Azure.AI.OpenAI remains on 2.9.0-beta.1.
+- Preview A2A/hosting packages remain unchanged to avoid an unrelated preview-line migration.
+
+COMPATIBILITY PROOF
+- Restore/build completed through the full unit build graph.
+- Processes.Runtime, Processes.Application, Modules.Processes, and AgentFramework.Maf each built with zero warnings and zero errors.
+- Production provider observations used OpenAI chat completions on gpt-5.4-mini.
+
+KNOWN UNRELATED WARNING
+- Microsoft.OpenApi 2.0.0 emits NU1903 in projects outside this package-alignment scope.

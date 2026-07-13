@@ -1,0 +1,9 @@
+Anti-stub audit
+
+- Diagnostic recurrence is computed from prior persisted same-step SafeRetry receipts.
+- Identity comparison uses diagnostic code plus evidence hash and does not accept caller-supplied progress flags.
+- Tests cover recurrence with incidental diagnostic churn and replacement diagnostics.
+- Recovery receipt counters and wording expose the actual bounded decision.
+- No placeholder implementation, silent fallback, hard-coded sample app, or summary-text heuristic is present.
+
+Result: passed.

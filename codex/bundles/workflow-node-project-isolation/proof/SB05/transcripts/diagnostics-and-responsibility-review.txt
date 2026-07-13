@@ -1,0 +1,73 @@
+Command: PowerShell SB05 diagnostics and responsibility review
+CWD: C:\repositories\CanDoItAll
+Start: 2026-06-29T13:34:09.0425522-04:00
+End: 2026-06-29T13:34:09.2423689-04:00
+Exit code: 0
+
+Output:
+# SB05 Diagnostics And Responsibility Review
+File size review:
+- src\CanDoItAll.AgentFramework.Workflows.Abstractions\WorkflowFailureDiagnostics.cs: 200 line(s)
+- src\CanDoItAll.AgentFramework.Workflows.Abstractions\WorkflowServiceContracts.cs: 67 line(s)
+- src\CanDoItAll.AgentFramework.Workflows.Builder\WorkflowDefinitionBuilder.cs: 140 line(s)
+- src\CanDoItAll.AgentFramework.Workflows.Builder\WorkflowEdgeBuilder.cs: 58 line(s)
+- src\CanDoItAll.AgentFramework.Workflows.Builder\WorkflowFixtureFactory.cs: 103 line(s)
+- src\CanDoItAll.AgentFramework.Workflows.Builder\WorkflowInputParameterBuilder.cs: 106 line(s)
+- src\CanDoItAll.AgentFramework.Workflows.Builder\WorkflowNodeBuilder.cs: 169 line(s)
+- src\CanDoItAll.AgentFramework.Workflows.Builder\WorkflowPortBuilder.cs: 60 line(s)
+- src\CanDoItAll.AgentFramework.Workflows.Core\InMemoryWorkflowCatalogStore.cs: 14 line(s)
+- src\CanDoItAll.AgentFramework.Workflows.Core\WorkflowCatalogServices.cs: 715 line(s)
+- src\CanDoItAll.AgentFramework.Workflows.Core\WorkflowCoreServiceCollectionExtensions.cs: 39 line(s)
+- src\CanDoItAll.AgentFramework.Workflows.Core\WorkflowDefinitionValidationOptions.cs: 8 line(s)
+- src\CanDoItAll.AgentFramework.Workflows.Core\WorkflowDefinitionValidator.cs: 643 line(s)
+- src\CanDoItAll.AgentFramework.Workflows.Core\WorkflowFailureDiagnosticsMapper.cs: 125 line(s)
+- src\CanDoItAll.AgentFramework.Workflows.Core\WorkflowFailureDisplayFormatter.cs: 110 line(s)
+- src\CanDoItAll.AgentFramework.Workflows.Core\WorkflowPayloadPolicyService.cs: 318 line(s)
+- src\CanDoItAll.AgentFramework.Workflows.Core\WorkflowPreviewSimulationRenderer.cs: 246 line(s)
+- src\CanDoItAll.AgentFramework.Workflows.Core\WorkflowProcessExecutorBridge.cs: 17 line(s)
+- src\CanDoItAll.AgentFramework.Workflows.Core\WorkflowRoutingCompiler.cs: 492 line(s)
+- src\CanDoItAll.AgentFramework.Workflows.Core\WorkflowRuntimeBackendCatalog.cs: 86 line(s)
+- src\CanDoItAll.AgentFramework.Workflows.Core\WorkflowRuntimePolicyValidator.cs: 41 line(s)
+- src\CanDoItAll.AgentFramework.Workflows.Core\WorkflowTestRunner.cs: 108 line(s)
+- src\CanDoItAll.AgentFramework.Workflows.Runtime\InMemoryWorkflowArtifactContentStore.cs: 32 line(s)
+- src\CanDoItAll.AgentFramework.Workflows.Runtime\InMemoryWorkflowRunStore.cs: 324 line(s)
+- src\CanDoItAll.AgentFramework.Workflows.Runtime\NullWorkflowEventSink.cs: 11 line(s)
+- src\CanDoItAll.AgentFramework.Workflows.Runtime\WorkflowArtifactContentStores.cs: 217 line(s)
+- src\CanDoItAll.AgentFramework.Workflows.Runtime\WorkflowContracts.cs: 280 line(s)
+- src\CanDoItAll.AgentFramework.Workflows.Runtime\WorkflowEventPayloads.cs: 99 line(s)
+- src\CanDoItAll.AgentFramework.Workflows.Runtime\WorkflowExternalRequestRuntime.cs: 136 line(s)
+- src\CanDoItAll.AgentFramework.Workflows.Runtime\WorkflowNodeExecutionProgress.cs: 60 line(s)
+- src\CanDoItAll.AgentFramework.Workflows.Runtime\WorkflowRuntimeFailureDiagnostics.cs: 175 line(s)
+- src\CanDoItAll.AgentFramework.Workflows.Runtime\WorkflowRuntimeManager.cs: 280 line(s)
+- src\CanDoItAll.AgentFramework.Workflows.Runtime\WorkflowRuntimeServiceCollectionExtensions.cs: 57 line(s)
+
+Single-owner review:
+- src\CanDoItAll.AgentFramework.Workflows.Core\WorkflowCatalogServices.cs: InMemoryWorkflowCatalogService
+- src\CanDoItAll.AgentFramework.Workflows.Core\WorkflowDefinitionValidator.cs: WorkflowDefinitionValidator
+- src\CanDoItAll.AgentFramework.Workflows.Runtime\WorkflowRuntimeManager.cs: WorkflowRuntimeManager
+- src\CanDoItAll.AgentFramework.Workflows.Runtime\WorkflowArtifactContentStores.cs: FileWorkflowArtifactContentStore
+
+Typed diagnostics review:
+- Failure contract envelope: present
+- Failure repair hint: present
+- Failure redacted detail: present
+- Core exception diagnostics key: present
+- Runtime exception diagnostics key: present
+- Runtime text redaction: present
+- Event JSON redaction: present
+
+Loose diagnostic/generic error review:
+- Dictionary<string, object: absent
+- IDictionary<string, object: absent
+- IReadOnlyDictionary<string, object: absent
+- generic error: absent
+- unknown error: absent
+- something went wrong: absent
+
+Result: Passed. Diagnostics remain typed/repairable/redacted; no loose object diagnostic payloads or generic error phrases; moved oversized files have explicit single owners after SB05 splits.
+
+Completed Validator Metadata Addendum
+Command: historical SB05 proof command recorded during bundle execution
+ExitCode: 0
+ExitCode: 1
+Invariant ID: SB05-final-closure

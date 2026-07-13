@@ -1,0 +1,55 @@
+# SB03 changed file hashes
+
+| File | Before | After |
+| --- | --- | --- |
+| `CanDoItAll.slnx` | git-blob:8e68dc6c1b8cb3eb59a7b54792de80f48b3beb65 | sha256:ba3945f2e445107cc38ed98ffae23a89d9999fe3f9ca5575f9bd57e4332aedda |
+| `src/CanDoItAll.AgentFramework.Core/Workflows/WorkflowCatalogServices.cs` | git-blob:deb5dee13e366636bd0d5e57a1690e9f32bf1d21 | (deleted) |
+| `src/CanDoItAll.AgentFramework.Core/Workflows/WorkflowDefinitionValidator.cs` | git-blob:5d2bdb0e4400a0286cc5e2d2909f93de175a8a00 | (deleted) |
+| `src/CanDoItAll.AgentFramework.Core/Workflows/WorkflowEventPayloads.cs` | git-blob:c26c742f2dc21d876c7a3b3e06d0bf5cd57b5528 | sha256:bcbe088b7570543bd15b5faceadd4e16ab4f77b78d29c00d420af5968bdb22b7 |
+| `src/CanDoItAll.AgentFramework.Core/Workflows/WorkflowFailureDisplayFormatter.cs` | git-blob:dd45e57cf47e54958ef69e2eb5bdf3c983444444 | (deleted) |
+| `src/CanDoItAll.AgentFramework.Core/Workflows/WorkflowPayloadPolicyService.cs` | git-blob:28c26d50982eeeace485c84041d0ca067015c748 | (deleted) |
+| `src/CanDoItAll.AgentFramework.Core/Workflows/WorkflowPreviewSimulationRenderer.cs` | git-blob:4468298f61c4fa0c37e0ec53adb8be3111c0631d | (deleted) |
+| `src/CanDoItAll.AgentFramework.Core/Workflows/WorkflowProcessExecutorBridge.cs` | git-blob:322fb911f9d16c1e286d0ac62a473356efce6818 | (deleted) |
+| `src/CanDoItAll.AgentFramework.Core/Workflows/WorkflowRoutingCompiler.cs` | git-blob:5cad6944e3b19bb4a280315f81c8654a004d05fe | (deleted) |
+| `src/CanDoItAll.AgentFramework.Hosting/AgentFrameworkServiceCollectionExtensions.cs` | git-blob:6e2ba3f7a0d7c73bf8f6ad869c58a66c020cdf58 | sha256:14da6b63feb698da4844ac6761ffd70f65df52b87b5ce7c1119c4791aea2c2cc |
+| `src/CanDoItAll.AgentFramework.Hosting/CanDoItAll.AgentFramework.Hosting.csproj` | git-blob:abd4cb362a2ec3a9ff5d53a2cf18766be105e455 | sha256:7ca0d25fecfb10389df66190206648076a008b91ca044e2edd68e8601b26e75d |
+| `src/CanDoItAll.AgentFramework.Maf/CanDoItAll.AgentFramework.Maf.csproj` | git-blob:afe121ded95bb308217da5a2bf6260591ffb690b | sha256:f2ef090f109c18130ef3be949b17e60e9965bc96d6e8e3d1510f5d7d8a533094 |
+| `src/CanDoItAll.AgentFramework.Persistence/CanDoItAll.AgentFramework.Persistence.csproj` | git-blob:ae66385e891ad43cb2eee89c2b4f53624b795950 | sha256:474b239cbea827fdfaef02b7e628618a0c15ea47180aa502eaad1c68e85afbde |
+| `src/CanDoItAll.AgentFramework.Workflows.Core/CanDoItAll.AgentFramework.Workflows.Core.csproj` | (new file or ignored by git) | sha256:d876fce601fb70b731979031f5f656ada3ebcba47bce1e0b700e8e778cc3d343 |
+| `src/CanDoItAll.AgentFramework.Workflows.Core/WorkflowCatalogServices.cs` | (new file or ignored by git) | sha256:e9f55e8a5645bab274edf0a11465dbd17b8dec0c902f89a91b696d5213180085 |
+| `src/CanDoItAll.AgentFramework.Workflows.Core/WorkflowCoreServiceCollectionExtensions.cs` | (new file or ignored by git) | sha256:c204b9075573f729c2150396648b7c98582104ca3e05afe7fd462103c4827cda |
+| `src/CanDoItAll.AgentFramework.Workflows.Core/WorkflowDefinitionValidator.cs` | (new file or ignored by git) | sha256:198b3fffe6e011b308b9b36c553a589ee77ea4d0b84b2bae87153cc532524616 |
+| `src/CanDoItAll.AgentFramework.Workflows.Core/WorkflowFailureDiagnosticsMapper.cs` | (new file or ignored by git) | sha256:abc0ccfff122660982dcf255a80bf09db500297e5184be27b521994481ea42b8 |
+| `src/CanDoItAll.AgentFramework.Workflows.Core/WorkflowFailureDisplayFormatter.cs` | (new file or ignored by git) | sha256:d96ed0338df4ae23ac5809cf907db116566069ee7f3083b1cc23c47bcf327be6 |
+| `src/CanDoItAll.AgentFramework.Workflows.Core/WorkflowPayloadPolicyService.cs` | (new file or ignored by git) | sha256:cf491ac1721aa6f47f24103c22db06c408a648b855f88c0d1cab76e44c086e9b |
+| `src/CanDoItAll.AgentFramework.Workflows.Core/WorkflowPreviewSimulationRenderer.cs` | (new file or ignored by git) | sha256:5b042a3066c0d607c9d540b581f081147e3c3fbc44434f0cf41f4eee70d48ea7 |
+| `src/CanDoItAll.AgentFramework.Workflows.Core/WorkflowProcessExecutorBridge.cs` | (new file or ignored by git) | sha256:5c8dec2162b67cc8c251b6b69114f7aee6331b418260f79b8131a8eae74a8171 |
+| `src/CanDoItAll.AgentFramework.Workflows.Core/WorkflowRoutingCompiler.cs` | (new file or ignored by git) | sha256:1cbd3d8127ad5ff40b65aa4d6d9db59c2cdc9eaf1a5ce7f2bf71b53ba5b6e357 |
+| `src/CanDoItAll.Modules.AgentFramework/CanDoItAll.Modules.AgentFramework.csproj` | git-blob:2991ccff5655c59c8c84ea6dca922edd9e0c1677 | sha256:7634a51ffee07ee844093d5650c05f8ab281c3d42496e26c4ce571f812a018ad |
+| `src/CanDoItAll.Modules.AgentFramework/Services/AgentFrameworkModuleServiceCollectionExtensions.cs` | git-blob:c344344df4083d2338abe712256d33ded4d9b9d4 | sha256:1533bf28a58b146343be4384596c64d0c7bdeeeda84a5a53069e7ec55b338c2d |
+| `src/CanDoItAll.Modules.Plugins/CanDoItAll.Modules.Plugins.csproj` | git-blob:ea40a24ad63aed3e0113221f812688c39324c291 | sha256:8ac40a31bef901df57b6ef3d1dbf76e5029e062e1c69f157409eed3f0579e8db |
+| `src/plugins/CanDoItAll.Plugin.Email/CanDoItAll.Plugin.Email.csproj` | git-blob:7ca23f91ee0c1ef3f2bc0efb95f597a211f3886b | sha256:01ef3b60aaa4e47174c5c26c7d563a9b3785ef549827817b8879939de814b484 |
+| `tests/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj` | git-blob:8148472c932e8de3c275724a9a91ee271e11f836 | sha256:e1f98d55ba84b65c1fbbc7fe675d7b34a6bcbf3e51614ad8e08920558e8f5312 |
+| `tests/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj` | git-blob:6e87fa96cdc0dbef51f35f4d00abd5dc88bf5e3b | sha256:609e7d3358ad1ae7ae80ced7e6ae234f872c7e7f99701ed5252b6637886b26b9 |
+| `tests/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj` | git-blob:d86193e5a1d521d5d9aee8c8d73dac95b8d82f7a | sha256:dbfb77aca5433473326e34f553dcad567e6547f2d2423de019071990b0ac12a1 |
+| `tests/CanDoItAll.Tests.Unit/WorkflowCoreExtractionTests.cs` | (new file or ignored by git) | sha256:f49b5da85d00446e5d53ba2e97d6f9717af5116a002c9dd090462b71630703bf |
+| `codex/bundles/workflow-node-project-isolation/README.md` | (new file or ignored by git) | sha256:e2e0e9680878f54020ac4c5ff1773b96c9a77cb13c7399ec95485212951c6e06 |
+| `codex/bundles/workflow-node-project-isolation/architecture/02-project-map-and-adoption-boundary.md` | (new file or ignored by git) | sha256:8f5362af8979fd74bbec89b2233ce5dd160bcc8298367fd27a5d60e979da0286 |
+| `codex/bundles/workflow-node-project-isolation/architecture/04-failure-diagnostics-and-error-state-boundary.md` | (new file or ignored by git) | sha256:cf64e4d6e1fb0f6ef04231f01a6058b268431b35f13f0490304950f07ca5e0f7 |
+| `codex/bundles/workflow-node-project-isolation/inventories/02-workflow-source-inventory.md` | (new file or ignored by git) | sha256:f60ea5b0687c6f107d737359e682bc09a9062162e0a2eec0bee535568278f3e5 |
+| `codex/bundles/workflow-node-project-isolation/reviews/01-execution-report.md` | (new file or ignored by git) | sha256:b35be1588a06edaa0b7e3bfbc7b01df25557d2317d7134c6a7a2428adcfec19e |
+| `codex/bundles/workflow-node-project-isolation/subbundles/03-workflow-core-services-extraction/README.md` | (new file or ignored by git) | sha256:cc179199287ec4e51bb4dab33807c28403f1f1e7ff4aed1f6c46ba442bcd1d52 |
+| `codex/bundles/workflow-node-project-isolation/subbundles/10-workflow-template-and-descriptor-loading/README.md` | (new file or ignored by git) | sha256:8b28a0085056dc8edda05a713495313c9d1fabd719b3b1a6ab49b1ad4468438f |
+| `codex/bundles/workflow-node-project-isolation/traceability/01-requirement-traceability.md` | (new file or ignored by git) | sha256:9358519a060f6a8e125177bd7e1048f5ee94f97d66a6776b3be6f7ff5887440c |
+| `codex/bundles/workflow-node-project-isolation/proof/SB03/manifest.md` | (new file or ignored by git) | sha256:7e768b1d6b5eafaf50235ba2b0efd7f24e55a8d0226ea06384200895fdf0de4a |
+| `codex/bundles/workflow-node-project-isolation/proof/SB03/semantic-invariants.md` | (new file or ignored by git) | sha256:af5dabd9575fddb510bb19604783564783ef7daec5015d9891b24a11d92d6b30 |
+| `codex/bundles/workflow-node-project-isolation/proof/SB03/transcripts/anti-stub-audit.txt` | (new file or ignored by git) | sha256:ea42bc3a79853e62d227e67bc6d12242ffffb98eb368bdc11793b13b8faebcb2 |
+| `codex/bundles/workflow-node-project-isolation/proof/SB03/transcripts/build-consumers.txt` | (new file or ignored by git) | sha256:2699896c05f6dc86920aac48c4897a250f827c98cda7f49ea4b0652b46480c39 |
+| `codex/bundles/workflow-node-project-isolation/proof/SB03/transcripts/build-workflows-core.txt` | (new file or ignored by git) | sha256:f317b9bb25bac700750a557a8a4ee6d6c82cfc63efb184e3e42827a5ef3d4a72 |
+| `codex/bundles/workflow-node-project-isolation/proof/SB03/transcripts/dependency-boundary.txt` | (new file or ignored by git) | sha256:234cda8a0bae9c3721a453684bb2260c828169bf917f89eddb65de5a78a2be08 |
+| `codex/bundles/workflow-node-project-isolation/proof/SB03/transcripts/di-registration-proof.txt` | (new file or ignored by git) | sha256:c044762e65d743afb22ec5807cbe7a9cded099ae7f658566218f7cdf3d95bbd5 |
+| `codex/bundles/workflow-node-project-isolation/proof/SB03/transcripts/executor-routing-policy-tests.txt` | (new file or ignored by git) | sha256:931b6efb15baa89ffbd5730de7e2bff50b9431f9dbcfef833300142e9924feb5 |
+| `codex/bundles/workflow-node-project-isolation/proof/SB03/transcripts/focused-workflow-core-tests.txt` | (new file or ignored by git) | sha256:b399b7b2940c5f53f119913de4f5fce101b16fc216c561db3042eb7d1e8aeb98 |
+| `codex/bundles/workflow-node-project-isolation/proof/SB03/transcripts/moved-file-audit.txt` | (new file or ignored by git) | sha256:de3e7e7796220b55331663c71dd13eeaa9aaa2afc814ec46b5cefdc9079e4072 |
+| `codex/bundles/workflow-node-project-isolation/proof/SB03/transcripts/prepared-validator.txt` | (new file or ignored by git) | sha256:7920645808e0a42ec98e721c9198e502594194bfdd52129b2f0aee46514cfbf4 |
+| `codex/bundles/workflow-node-project-isolation/proof/SB03/transcripts/workflow-parity-tests.txt` | (new file or ignored by git) | sha256:a26aec53197acffa0a36f6171ed1de2894f6ea942dc1c36058116e83b916142b |

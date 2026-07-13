@@ -1,0 +1,45 @@
+SB15 source and architecture audit, 2026-07-13
+
+CodeAnalytics:
+- Focused solution snapshot requested for Resources, FileTools Integration/Abstractions, Infrastructure.Storage, and Projects with DI, persistence, and risks.
+- Result: MCP transport closed before a snapshot was produced.
+- No snapshot identifier is claimed. Deterministic fallback evidence follows.
+
+Components MCP:
+- Exact catalog/example discovery was attempted for shared Resources layout/dialog building blocks.
+- Result: MCP transport closed.
+- Existing repository use of BaseLib Tabs, ListDetailShell, Dialog, Stack, Cluster, SurfaceCard, Button, Alert, StatusBadge, and related wrappers was inspected and reused.
+
+Checked Resources project references:
+- AgentFramework.Core
+- Memory.Abstractions / Memory.Application
+- SharedKernel / Infrastructure
+- FileTools.Integration / FileTools.Integration.Abstractions
+- Modules.Projects / Security / Workspace
+
+Reverse dependency scan:
+- rg over src/Integration for Modules.Resources or Modules.Workbench project/source references returned no match.
+- Full Release Web graph built with zero warnings/errors, proving the checked graph remains acyclic at build time.
+
+Responsibility/partial scan:
+- New SB15 backend owners are focused top-level types; no new partial class.
+- Existing ResourcesPage Razor partial remains UI selection/registry orchestration only.
+- Existing ResourceSourceSnapshotProvider partial is unrelated memory ingestion and was not reused or expanded.
+- No Workbench reference, command hierarchy, generalized Resources redesign, or page-owned persistence/authorization decision.
+
+Pattern scan:
+- No Task.Run, .Result, Wait, GetAwaiter().GetResult, or per-call HttpClient in new SB15 owners.
+- DI GetRequiredService match is the pre-existing composition-root alias from IConnectorManifestSource to the connector registry, not product service location.
+- Broad catches in new code are confined to typed UI redaction, persistence exception translation, and finally-block authority cleanup.
+- Unknown UI exceptions map to generic text; cleanup logs only source key and exception type.
+
+Scale:
+- Project catalog: Take(513), explicit >512 failure.
+- Binding roots: exactly one.
+- Browser search: 32 containers, 2,000 items, 5 seconds, concurrency 1, 200 matches, 2 MiB retained; retention Disabled.
+- Interaction content: 16 MiB.
+- Connector JSON: strict unmapped-member rejection.
+
+Formatting and hygiene:
+- dotnet format Resources --verify-no-changes: pass.
+- focused git diff --check: pass; line-ending notices only.

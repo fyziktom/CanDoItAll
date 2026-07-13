@@ -1,0 +1,3 @@
+Command: rg -n "TODO|NotImplementedException|throw new NotImplemented|placeholder|fixture-specific|stubbed|fake-only" relevant SB11 source/test files
+ExitCode: 1
+Result: no TODO, NotImplementedException, placeholder, fixture-specific, stubbed, or fake-only markers found in SB11 relevant sources/tests.

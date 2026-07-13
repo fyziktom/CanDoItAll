@@ -1,0 +1,12 @@
+Command: Historical SB33 proof transcript: file-size-and-hash-audit.txt
+SB33 changed-file size and SHA-256 audit.
+PASS tests\Memory\CanDoItAll.Memory.Tests\MemoryEndToEndObservabilityProofTests.cs | 32103 bytes | SHA256 c303b63433cc826f222163b07483850a300504d81ea4111565e02bb7f255d3fa
+PASS tests\Playwright\CanDoItAll.Tests.Playwright\MemoryProviderManagementPlaywrightTests.cs | 34997 bytes | SHA256 b79966148f29de30e81b49c7798966efdb7d7017628d4dfcbce3d31a891a5dea
+PASS codex\bundles\candoitall-memory-provider-extraction-bundle\README.md | 8804 bytes | SHA256 105433763ff02b1778cd8a78cba3194b2c63f95be7e7bc782565bc004f9ec73b
+PASS codex\bundles\candoitall-memory-provider-extraction-bundle\subbundles\33-end-to-end-regression-and-observability-proof\README.md | 7666 bytes | SHA256 9e5be00bacca698a48dd4a5542499053ea03108349372e706f3a94b38cfd02b2
+PASS codex\bundles\candoitall-memory-provider-extraction-bundle\reviews\01-execution-report.md | 99230 bytes | SHA256 74db8b4218e14e9ba2228e4c03e7137a86144cb7425f83323da5e1ed2cedb131
+PASS codex\bundles\candoitall-memory-provider-extraction-bundle\proof\SB33\manifest.md | 9798 bytes | SHA256 04f1b51a104d22a2b633b0c4d05d9f557c3d23e369587929c6ed1fe39aea624a
+PASS codex\bundles\candoitall-memory-provider-extraction-bundle\proof\SB33\semantic-invariants.md | 8336 bytes | SHA256 64a6046250479ee854907b7af787fc8e0d4f9cbd79b4e647dc360f41fec910f8
+PASS codex\bundles\candoitall-memory-provider-extraction-bundle\proof\SB33\artifacts\memory-e2e-ledger-snapshot.json | 6660 bytes | SHA256 08515ad3f19ae89304db84d38caf6b91404839a6b4d2c48f402054f0986dcd41
+ExitCode: 0
+

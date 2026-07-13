@@ -1,0 +1,7 @@
+Command: audit src\Memory for duplicate MemorySourceSnapshot contract family
+WorkingDirectory: C:\repositories\CanDoItAll
+RunLabel: SB04 source snapshot contract family audit
+Invariant IDs: SB04_SG001, SB04_SG005, SB04_SG006
+ExitCode: 0
+Output:
+No second MemorySourceSnapshot record/class/provider family was introduced under src\Memory; SB04 Source Gateway returns the existing CanDoItAll.AgentFramework.Core.MemorySourceSnapshot contract through a compatibility adapter.

@@ -1,0 +1,133 @@
+Command: rg -n "ManualMemorySourceIngestionService|MemorySourceIngestionJobRecord|CapturedSnapshotId|OperationId|MemoryCapabilityIds.IngestionSnapshot|ManualMemorySourceIngestionResult" src\Memory tests\Memory -S
+Working directory: C:\repositories\CanDoItAll
+Start: 2026-07-05T13:41:40.4235991-04:00
+tests\Memory\CanDoItAll.Memory.Tests\MemoryAsyncWorkerTests.cs:29:            .GetAsync(operation.OperationId);
+tests\Memory\CanDoItAll.Memory.Tests\MemoryAsyncWorkerTests.cs:50:            .GetAsync(operation.OperationId);
+tests\Memory\CanDoItAll.Memory.Tests\MemoryAsyncWorkerTests.cs:66:            .TransitionAsync(operation.OperationId, MemoryLedgerStatus.Running, Now.AddSeconds(-5), "provider running");
+tests\Memory\CanDoItAll.Memory.Tests\MemoryAsyncWorkerTests.cs:69:            .CancelOperationAsync(operation.OperationId, "user cancelled operation");
+tests\Memory\CanDoItAll.Memory.Tests\MemoryAsyncWorkerTests.cs:89:            .GetAsync(operation.OperationId);
+tests\Memory\CanDoItAll.Memory.Tests\MemoryAsyncWorkerTests.cs:212:        return await store.TransitionAsync(operation.OperationId, MemoryLedgerStatus.Accepted, createdAtUtc, "provider accepted");
+tests\Memory\CanDoItAll.Memory.Tests\MemoryAsyncWorkerTests.cs:255:            MemoryOperationId.New(),
+tests\Memory\CanDoItAll.Memory.Tests\MemoryAsyncWorkerTests.cs:327:                    new MemoryOperationResult(operation.OperationId, status, MemoryPayload.FromText("done"), [], [], []),
+tests\Memory\CanDoItAll.Memory.Tests\ManualMemorySourceIngestionTests.cs:21:        var service = scopedProvider.GetRequiredService<ManualMemorySourceIngestionService>();
+tests\Memory\CanDoItAll.Memory.Tests\ManualMemorySourceIngestionTests.cs:37:        var operation = await operationStore.GetAsync(result.OperationId);
+tests\Memory\CanDoItAll.Memory.Tests\ManualMemorySourceIngestionTests.cs:40:        Assert.Equal(result.CapturedSnapshotId, sourceRecord.CapturedSnapshotId);
+tests\Memory\CanDoItAll.Memory.Tests\ManualMemorySourceIngestionTests.cs:41:        Assert.Equal(result.OperationId, sourceRecord.OperationId);
+tests\Memory\CanDoItAll.Memory.Tests\ManualMemorySourceIngestionTests.cs:45:            snapshotId => snapshotId.Value == result.CapturedSnapshotId.Value);
+tests\Memory\CanDoItAll.Memory.Tests\ManualMemorySourceIngestionTests.cs:55:        var service = scopedProvider.GetRequiredService<ManualMemorySourceIngestionService>();
+tests\Memory\CanDoItAll.Memory.Tests\ManualMemorySourceIngestionTests.cs:86:        Assert.All(sourceRecords, record => Assert.NotNull(record.CapturedSnapshotId));
+tests\Memory\CanDoItAll.Memory.Tests\ManualMemorySourceIngestionTests.cs:95:        var service = scopedProvider.GetRequiredService<ManualMemorySourceIngestionService>();
+tests\Memory\CanDoItAll.Memory.Tests\MemoryHttpDriverTests.cs:32:        Assert.Equal(operation.OperationId.Value.ToString("D"), body.RootElement.GetProperty("operationId").GetString());
+tests\Memory\CanDoItAll.Memory.Tests\MemoryHttpDriverTests.cs:44:                new MemoryOperationId(Guid.Parse("11111111-1111-1111-1111-111111111111")),
+tests\Memory\CanDoItAll.Memory.Tests\MemoryHttpDriverTests.cs:202:            MemoryOperationId.New(),
+tests\Memory\CanDoItAll.Memory.Tests\MemoryMcpDriverTests.cs:53:        Assert.Equal(operation.OperationId.Value.ToString("D"), root.GetProperty("operationId").GetString());
+tests\Memory\CanDoItAll.Memory.Tests\MemoryMcpDriverTests.cs:70:            [MemoryCapabilityIds.ContextQuerySync, MemoryCapabilityIds.IngestionSnapshot],
+tests\Memory\CanDoItAll.Memory.Tests\MemoryMcpDriverTests.cs:75:            CreateOperation(MemoryCapabilityIds.IngestionSnapshot, MemoryOperationKind.Ingestion),
+tests\Memory\CanDoItAll.Memory.Tests\MemoryMcpDriverTests.cs:80:                [MemoryCapabilityIds.IngestionSnapshot]),
+tests\Memory\CanDoItAll.Memory.Tests\MemoryMcpDriverTests.cs:94:            operation.OperationId,
+tests\Memory\CanDoItAll.Memory.Tests\MemoryMcpDriverTests.cs:113:            new MemoryOperationStatusRequest(operation.OperationId),
+tests\Memory\CanDoItAll.Memory.Tests\MemoryMcpDriverTests.cs:121:        Assert.Equal(operation.OperationId.Value.ToString("D"), arguments.RootElement.GetProperty("operationId").GetString());
+tests\Memory\CanDoItAll.Memory.Tests\MemoryMcpDriverTests.cs:200:        Assert.DoesNotContain(manifest.Capabilities, capability => capability.Id == MemoryCapabilityIds.IngestionSnapshot);
+tests\Memory\CanDoItAll.Memory.Tests\MemoryMcpDriverTests.cs:245:            new MemoryOperationId(Guid.Parse("11111111-1111-1111-1111-111111111111")),
+tests\Memory\CanDoItAll.Memory.Tests\MemoryLedgerLifecycleTests.cs:35:            operation.OperationId,
+tests\Memory\CanDoItAll.Memory.Tests\MemoryLedgerLifecycleTests.cs:46:            delivery.OperationId,
+tests\Memory\CanDoItAll.Memory.Tests\MemoryLedgerLifecycleTests.cs:70:                MemoryOperationId.New(),
+tests\Memory\CanDoItAll.Memory.Tests\MemoryLedgerLifecycleTests.cs:152:            MemoryOperationId.New(),
+tests\Memory\CanDoItAll.Memory.Tests\MemoryRuntimeCheckpointTests.cs:104:        var operationId = runtimeResult.OperationRecord.OperationId;
+tests\Memory\CanDoItAll.Memory.Tests\MemoryRuntimeCheckpointTests.cs:111:        Assert.Equal(operationId, accepted.OperationId);
+tests\Memory\CanDoItAll.Memory.Tests\MemoryRuntimeCheckpointTests.cs:229:                operation.OperationId,
+tests\Memory\CanDoItAll.Memory.Tests\MemoryRuntimeCheckpointTests.cs:230:                $"/memory/operations/{operation.OperationId}",
+tests\Memory\CanDoItAll.Memory.Tests\MemoryProtocolContractsTests.cs:105:                OperationId: MemoryOperationId.New()));
+tests\Memory\CanDoItAll.Memory.Tests\MemoryProtocolContractsTests.cs:111:        Assert.Equal(status.Payload.OperationId, RoundTrip(status).Payload.OperationId);
+tests\Memory\CanDoItAll.Memory.Tests\MemoryProtocolContractsTests.cs:133:            OperationId: MemoryOperationId.New(),
+tests\Memory\CanDoItAll.Memory.Tests\MemoryProtocolContractsTests.cs:140:            accepted.OperationId,
+tests\Memory\CanDoItAll.Memory.Tests\MemoryRuntimePersistenceTests.cs:60:        var running = await store.TransitionAsync(operation.OperationId, MemoryLedgerStatus.Running, Now.AddSeconds(5), "worker started");
+tests\Memory\CanDoItAll.Memory.Tests\MemoryRuntimePersistenceTests.cs:61:        var persisted = await store.GetAsync(operation.OperationId);
+tests\Memory\CanDoItAll.Memory.Tests\MemoryRuntimePersistenceTests.cs:202:            MemoryOperationId.New(),
+tests\Memory\CanDoItAll.Memory.Tests\MemoryRuntimePersistenceTests.cs:254:    private static MemorySourceIngestionJobRecord CreateSourceJobRecord()
+tests\Memory\CanDoItAll.Memory.Tests\MemoryRuntimePersistenceTests.cs:256:        return new MemorySourceIngestionJobRecord(
+src\Memory\CanDoItAll.Memory.Http\HttpMemoryProviderContracts.cs:6:    string OperationId,
+src\Memory\CanDoItAll.Memory.Abstractions\MemoryFeedbackLedgerRecords.cs:6:    MemoryOperationId? OperationId,
+src\Memory\CanDoItAll.Memory.Abstractions\MemoryFeedbackLedgerRecords.cs:24:        MemoryOperationId operationId,
+src\Memory\CanDoItAll.Memory.Abstractions\MemoryFeedbackLedgerRecords.cs:83:        MemoryOperationId? operationId,
+src\Memory\CanDoItAll.Memory.Application\ManualMemorySourceContracts.cs:119:public sealed record ManualMemorySourceIngestionResult(
+src\Memory\CanDoItAll.Memory.Application\ManualMemorySourceContracts.cs:121:    MemoryOperationId OperationId,
+src\Memory\CanDoItAll.Memory.Application\ManualMemorySourceContracts.cs:122:    MafMemorySourceSnapshotId CapturedSnapshotId,
+src\Memory\CanDoItAll.Memory.Persistence\EfMemoryOperationLedgerStore.cs:22:        MemoryOperationId operationId,
+src\Memory\CanDoItAll.Memory.Persistence\EfMemoryOperationLedgerStore.cs:28:            .SingleOrDefaultAsync(item => item.OperationId == operationId.Value, cancellationToken);
+src\Memory\CanDoItAll.Memory.Persistence\EfMemoryOperationLedgerStore.cs:61:        MemoryOperationId operationId,
+src\Memory\CanDoItAll.Memory.Persistence\EfMemoryOperationLedgerStore.cs:77:        MemoryOperationId operationId,
+src\Memory\CanDoItAll.Memory.Persistence\EfMemoryOperationLedgerStore.cs:96:        MemoryOperationId operationId,
+src\Memory\CanDoItAll.Memory.Persistence\EfMemoryOperationLedgerStore.cs:105:            .SingleOrDefaultAsync(item => item.OperationId == operationId.Value, cancellationToken)
+src\Memory\CanDoItAll.Memory.Persistence\EfMemoryOperationLedgerStore.cs:128:        MemoryOperationId operationId,
+src\Memory\CanDoItAll.Memory.Persistence\EfMemoryOperationLedgerStore.cs:136:            .SingleOrDefaultAsync(item => item.OperationId == operationId.Value, cancellationToken)
+src\Memory\CanDoItAll.Memory.Application\ManualMemorySourceIngestionService.cs:7:public sealed class ManualMemorySourceIngestionService(
+src\Memory\CanDoItAll.Memory.Application\ManualMemorySourceIngestionService.cs:13:    public async Task<ManualMemorySourceIngestionResult> EnqueueAsync(
+src\Memory\CanDoItAll.Memory.Application\ManualMemorySourceIngestionService.cs:29:        var operationId = MemoryOperationId.New();
+src\Memory\CanDoItAll.Memory.Application\ManualMemorySourceIngestionService.cs:36:                MemoryCapabilityIds.IngestionSnapshot,
+src\Memory\CanDoItAll.Memory.Application\ManualMemorySourceIngestionService.cs:48:            new MemorySourceIngestionJobRecord(
+src\Memory\CanDoItAll.Memory.Application\ManualMemorySourceIngestionService.cs:60:        return new ManualMemorySourceIngestionResult(
+src\Memory\CanDoItAll.Memory.Persistence\EfMemoryRetentionProjectionStore.Apply.cs:39:            .SingleOrDefaultAsync(item => item.OperationId == operationId, cancellationToken)
+src\Memory\CanDoItAll.Memory.Http\HttpMemoryProviderDriver.Requests.cs:51:            operation.OperationId,
+src\Memory\CanDoItAll.Memory.Http\HttpMemoryProviderDriver.Requests.cs:64:            operation.OperationId.Value.ToString("D"),
+src\Memory\CanDoItAll.Memory.Persistence\EfMemoryRetentionProjectionStore.cs:30:                entity.OperationId.ToString(),
+src\Memory\CanDoItAll.Memory.Persistence\EfMemorySourceRequestLedgerStore.cs:12:        MemorySourceIngestionJobRecord record,
+src\Memory\CanDoItAll.Memory.Persistence\EfMemorySourceRequestLedgerStore.cs:21:    public async Task<IReadOnlyList<MemorySourceIngestionJobRecord>> ListByProviderAsync(
+src\Memory\CanDoItAll.Memory.Abstractions\MemoryOperationEnvelope.cs:34:        MemoryOperationId operationId,
+src\Memory\CanDoItAll.Memory.Abstractions\MemoryOperationEnvelope.cs:56:        OperationId = operationId;
+src\Memory\CanDoItAll.Memory.Abstractions\MemoryOperationEnvelope.cs:72:    public MemoryOperationId OperationId { get; }
+src\Memory\CanDoItAll.Memory.Abstractions\MemoryOperationEnvelope.cs:108:            MemoryOperationId.New(),
+src\Memory\CanDoItAll.Memory.Abstractions\MemoryOperationLedgerRecords.cs:5:    MemoryOperationId OperationId,
+src\Memory\CanDoItAll.Memory.Abstractions\MemoryOperationLedgerRecords.cs:26:        MemoryOperationId operationId,
+src\Memory\CanDoItAll.Memory.Abstractions\MemoryOperationLedgerRecords.cs:67:        MemoryOperationId operationId,
+src\Memory\CanDoItAll.Memory.Abstractions\MemoryOperationLedgerRecords.cs:82:    MemoryOperationId OperationId,
+src\Memory\CanDoItAll.Memory.Abstractions\MemoryOperationLedgerRecords.cs:93:        MemoryOperationId operationId,
+src\Memory\CanDoItAll.Memory.Application\MemoryAsyncOperationWorker.cs:44:                await operationLedgerStore.TransitionAsync(operation.OperationId, MemoryLedgerStatus.TimedOut, now, "Memory operation timed out.", cancellationToken);
+src\Memory\CanDoItAll.Memory.Application\MemoryAsyncOperationWorker.cs:46:                diagnostics.Add($"Timed out memory operation '{operation.OperationId}'.");
+src\Memory\CanDoItAll.Memory.Application\MemoryAsyncOperationWorker.cs:85:        MemoryOperationId operationId,
+src\Memory\CanDoItAll.Memory.Application\MemoryAsyncOperationWorker.cs:146:        await operationLedgerStore.TransitionAsync(operation.OperationId, nextStatus, now, diagnostic, cancellationToken);
+src\Memory\CanDoItAll.Memory.Application\MemoryAsyncOperationWorker.cs:164:            await operationLedgerStore.TransitionAsync(operation.OperationId, MemoryLedgerStatus.Running, now, diagnostic, cancellationToken);
+src\Memory\CanDoItAll.Memory.Application\MemoryAsyncOperationWorker.cs:168:        await operationLedgerStore.DeferAsync(operation.OperationId, now, diagnostic, incrementRetry: false, cancellationToken);
+src\Memory\CanDoItAll.Memory.Application\MemoryAsyncOperationWorker.cs:183:        await operationLedgerStore.DeferAsync(operation.OperationId, now, diagnostic, incrementRetry: true, cancellationToken);
+src\Memory\CanDoItAll.Memory.Application\MemoryAsyncOperationWorker.cs:193:        await operationLedgerStore.TransitionAsync(operation.OperationId, MemoryLedgerStatus.Failed, now, diagnostic, cancellationToken);
+src\Memory\CanDoItAll.Memory.Abstractions\MemoryOperationIdentifiers.cs:5:public readonly record struct MemoryOperationId
+src\Memory\CanDoItAll.Memory.Abstractions\MemoryOperationIdentifiers.cs:8:    public MemoryOperationId(Guid value)
+src\Memory\CanDoItAll.Memory.Abstractions\MemoryOperationIdentifiers.cs:15:    public static MemoryOperationId New() => new(Guid.NewGuid());
+src\Memory\CanDoItAll.Memory.Mcp\McpMemoryProviderDriver.Requests.cs:14:            operation.OperationId.Value.ToString("D"),
+src\Memory\CanDoItAll.Memory.Mcp\McpMemoryProviderDriver.Requests.cs:32:            operation.OperationId.Value.ToString("D"),
+src\Memory\CanDoItAll.Memory.Mcp\McpMemoryProviderDriver.Requests.cs:48:            operation.OperationId,
+src\Memory\CanDoItAll.Memory.Persistence\MemoryEventAndSourceEntities.cs:90:    public static MemorySourceRequestLedgerEntity FromRecord(MemorySourceIngestionJobRecord record) =>
+src\Memory\CanDoItAll.Memory.Persistence\MemoryEventAndSourceEntities.cs:101:    public MemorySourceIngestionJobRecord ToRecord() =>
+src\Memory\CanDoItAll.Memory.Persistence\MemoryEventAndSourceEntities.cs:102:        MemoryPersistenceJson.Deserialize<MemorySourceIngestionJobRecord>(RecordJson);
+src\Memory\CanDoItAll.Memory.Mcp\McpMemoryProviderManifestFactory.cs:22:        AddIfTool(capabilities, toolMap.IngestionTool, MemoryCapabilityIds.IngestionSnapshot);
+src\Memory\CanDoItAll.Memory.Mcp\McpMemoryProviderDriver.cs:62:                $"MCP memory provider '{provider.InstanceId}' has no '{MemoryCapabilityIds.IngestionSnapshot}' tool configured.");
+src\Memory\CanDoItAll.Memory.Mcp\McpMemoryProviderDriver.cs:91:            request.OperationId.Value.ToString("D"),
+src\Memory\CanDoItAll.Memory.Mcp\McpMemoryProviderDriver.cs:96:            request.OperationId.Value.ToString("D"),
+src\Memory\CanDoItAll.Memory.Mcp\McpMemoryProviderDriver.cs:135:            new MemoryOperationStatusRequest(operation.OperationId),
+src\Memory\CanDoItAll.Memory.Mcp\McpMemoryProviderRequests.cs:6:    string OperationId,
+src\Memory\CanDoItAll.Memory.Mcp\McpMemoryProviderRequests.cs:17:    string OperationId,
+src\Memory\CanDoItAll.Memory.Mcp\McpMemoryProviderRequests.cs:26:    string OperationId,
+src\Memory\CanDoItAll.Memory.Application\MemoryAsyncWorkerContracts.cs:77:        MemoryOperationId operationId,
+src\Memory\CanDoItAll.Memory.Persistence\MemoryPersistenceConfigurations.cs:30:        builder.HasIndex(item => item.OperationId).IsUnique();
+src\Memory\CanDoItAll.Memory.Persistence\MemoryPersistenceEntities.cs:75:    public Guid OperationId { get; set; }
+src\Memory\CanDoItAll.Memory.Persistence\MemoryPersistenceEntities.cs:91:            OperationId = record.OperationId.Value,
+src\Memory\CanDoItAll.Memory.Persistence\MemoryPersistenceServiceCollectionExtensions.cs:32:        services.AddScoped<ManualMemorySourceIngestionService>();
+src\Memory\CanDoItAll.Memory.Persistence\MemoryRuntimeService.cs:35:            MemoryOperationId.New(),
+src\Memory\CanDoItAll.Memory.Persistence\MemoryRuntimeService.cs:51:                operation.OperationId,
+src\Memory\CanDoItAll.Memory.Persistence\MemoryRuntimeService.cs:72:                operation.OperationId,
+src\Memory\CanDoItAll.Memory.Persistence\MemoryRuntimeService.cs:78:                operation.OperationId,
+src\Memory\CanDoItAll.Memory.Abstractions\MemoryRequests.cs:32:    MemoryOperationId OperationId);
+src\Memory\CanDoItAll.Memory.Abstractions\MemoryResponses.cs:26:    MemoryOperationId OperationId,
+src\Memory\CanDoItAll.Memory.Abstractions\MemoryResponses.cs:33:    MemoryOperationId OperationId,
+src\Memory\CanDoItAll.Memory.Application\MemoryLedgerTransitionRules.cs:14:        EnsureOperationTransition(record.Status, nextStatus, record.OperationId);
+src\Memory\CanDoItAll.Memory.Application\MemoryLedgerTransitionRules.cs:76:        MemoryOperationId operationId)
+src\Memory\CanDoItAll.Memory.Application\MemoryRuntimeContracts.cs:22:        MemoryOperationId operationId,
+src\Memory\CanDoItAll.Memory.Application\MemoryRuntimeContracts.cs:32:        MemoryOperationId operationId,
+src\Memory\CanDoItAll.Memory.Application\MemoryRuntimeContracts.cs:39:        MemoryOperationId operationId,
+src\Memory\CanDoItAll.Memory.Application\MemoryRuntimeContracts.cs:47:        MemoryOperationId operationId,
+src\Memory\CanDoItAll.Memory.Application\MemoryRuntimeContracts.cs:138:        MemorySourceIngestionJobRecord record,
+src\Memory\CanDoItAll.Memory.Application\MemoryRuntimeContracts.cs:141:    Task<IReadOnlyList<MemorySourceIngestionJobRecord>> ListByProviderAsync(
+src\Memory\CanDoItAll.Memory.Application\MemorySourceIngestionContracts.cs:78:public sealed record MemorySourceIngestionJobRecord(
+src\Memory\CanDoItAll.Memory.Application\MemorySourceIngestionContracts.cs:86:    MafMemorySourceSnapshotId? CapturedSnapshotId = null,
+src\Memory\CanDoItAll.Memory.Application\MemorySourceIngestionContracts.cs:87:    MemoryOperationId? OperationId = null);
+Exit code: 0

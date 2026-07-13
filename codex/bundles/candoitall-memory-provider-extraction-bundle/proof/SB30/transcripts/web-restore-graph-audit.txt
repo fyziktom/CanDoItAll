@@ -1,0 +1,3 @@
+Command: SB30 web restore graph forbidden dependency audit
+MsBuildExitCode: 0
+PASS: Web restore graph contains no CanDoItAll.Modules.CognitiveMemory, Rag.Qdrant, or SemanticCompletion.Driver dependency.

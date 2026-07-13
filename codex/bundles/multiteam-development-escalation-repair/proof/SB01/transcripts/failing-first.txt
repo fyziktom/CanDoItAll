@@ -1,0 +1,4 @@
+Command: inspect live 5032 Calculator run root 481109e7-8b25-472d-8554-43a97a53786a and child 122f95e0-f6dd-418a-9d87-4b7291652b21 for repeated false escalation
+Exit code: 1
+Invariant: MTE-SB01-DIAGNOSIS
+Observed failure: implementation waited on child subprocess work that blocked in architect implementation-approach before code mutation, while HR/readiness accepted the declared but semantically insufficient contracts.

@@ -1,0 +1,20 @@
+Command: native MAF boundary audit
+ForbiddenExitCode: 1
+AllowedExitCode: 0
+Allowed references:
+C:\repositories\CanDoItAll.CognitiveMemory\src\CanDoItAll.CognitiveMemory.Maf\CanDoItAll.CognitiveMemory.Maf.csproj:10:    <ProjectReference Include="..\..\..\CanDoItAll\src\MAF\Common\CanDoItAll.AgentFramework.Core\CanDoItAll.AgentFramework.Core.csproj" />
+C:\repositories\CanDoItAll.CognitiveMemory\src\CanDoItAll.CognitiveMemory.Maf\CognitiveMemoryNativeContextContributor.cs:1:using CanDoItAll.AgentFramework.Core;
+C:\repositories\CanDoItAll.CognitiveMemory\src\CanDoItAll.CognitiveMemory.Maf\CognitiveMemoryNativeContextContributor.cs:2:using CanDoItAll.AgentFramework.Models;
+C:\repositories\CanDoItAll.CognitiveMemory\src\CanDoItAll.CognitiveMemory.Maf\CognitiveMemoryNativeMafContracts.cs:93:    IReadOnlyList<MemoryProviderEvent> ProviderEvents,
+C:\repositories\CanDoItAll.CognitiveMemory\src\CanDoItAll.CognitiveMemory.Maf\CognitiveMemoryNativeMafContracts.cs:109:        IReadOnlyList<MemoryProviderEvent> providerEvents,
+C:\repositories\CanDoItAll.CognitiveMemory\src\CanDoItAll.CognitiveMemory.Maf\CognitiveMemoryNativeMafServices.cs:48:    ICognitiveMemoryProviderEventStore eventStore,
+C:\repositories\CanDoItAll.CognitiveMemory\src\CanDoItAll.CognitiveMemory.Maf\CognitiveMemoryNativeMafServices.cs:89:            ? MemoryProviderEventKind.VerificationRequest
+C:\repositories\CanDoItAll.CognitiveMemory\src\CanDoItAll.CognitiveMemory.Maf\CognitiveMemoryNativeMafServices.cs:90:            : MemoryProviderEventKind.Hypothesis;
+C:\repositories\CanDoItAll.CognitiveMemory\src\CanDoItAll.CognitiveMemory.Maf\CognitiveMemoryNativeMafServices.cs:125:    ICognitiveMemoryProviderEventStore eventStore,
+C:\repositories\CanDoItAll.CognitiveMemory\src\CanDoItAll.CognitiveMemory.Maf\CognitiveMemoryNativeMafServices.cs:161:            MemoryProviderEventKind.VerificationRequest,
+C:\repositories\CanDoItAll.CognitiveMemory\src\CanDoItAll.CognitiveMemory.Maf\CognitiveMemoryNativeMafServices.cs:177:    ICognitiveMemoryProviderEventStore eventStore,
+C:\repositories\CanDoItAll.CognitiveMemory\src\CanDoItAll.CognitiveMemory.Maf\CognitiveMemoryNativeMafServices.cs:215:            MemoryProviderEventKind.MaintenanceSignal,
+C:\repositories\CanDoItAll.CognitiveMemory\src\CanDoItAll.CognitiveMemory.Maf\CognitiveMemoryNativeMafServices.cs:236:    public static MemoryProviderEvent CreateProviderEvent(
+C:\repositories\CanDoItAll.CognitiveMemory\src\CanDoItAll.CognitiveMemory.Maf\CognitiveMemoryNativeMafServices.cs:237:        MemoryProviderEventKind eventKind,
+C:\repositories\CanDoItAll.CognitiveMemory\src\CanDoItAll.CognitiveMemory.Maf\CognitiveMemoryNativeMafServices.cs:241:            MemoryProviderEventId.New(),
+PASS: Native MAF uses generic MAF/provider contracts without referencing CanDoItAll.Modules.AgentFramework or main-app layers.

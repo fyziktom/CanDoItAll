@@ -1,0 +1,91 @@
+# SB10 Semantic Source Assertions
+
+## Project and solution registration
+tests\CanDoItAll.Tests.Components\CanDoItAll.Tests.Components.csproj:28:    <ProjectReference Include="..\..\src\CanDoItAll.AgentFramework.Workflows.Templates\CanDoItAll.AgentFramework.Workflows.Templates.csproj" />
+tests\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj:41:    <ProjectReference Include="..\..\src\CanDoItAll.AgentFramework.Workflows.Templates\CanDoItAll.AgentFramework.Workflows.Templates.csproj" />
+src\CanDoItAll.Modules.AgentFramework\CanDoItAll.Modules.AgentFramework.csproj:27:    <ProjectReference Include="..\CanDoItAll.AgentFramework.Workflows.Templates\CanDoItAll.AgentFramework.Workflows.Templates.csproj" />
+CanDoItAll.slnx:28:    <Project Path="src/CanDoItAll.AgentFramework.Workflows.Templates/CanDoItAll.AgentFramework.Workflows.Templates.csproj" />
+
+## Descriptor validation consumes executor catalog
+src\CanDoItAll.AgentFramework.Workflows.Templates\WorkflowTemplatePackValidator.cs:10:        IWorkflowExecutorCatalog? executorCatalog)
+src\CanDoItAll.AgentFramework.Workflows.Templates\WorkflowTemplatePackValidator.cs:27:        IWorkflowExecutorCatalog? executorCatalog)
+src\CanDoItAll.AgentFramework.Workflows.Templates\WorkflowTemplatePackValidator.cs:74:        IWorkflowExecutorCatalog? executorCatalog)
+src\CanDoItAll.AgentFramework.Workflows.Templates\WorkflowTemplatePack.cs:46:    private readonly IWorkflowExecutorCatalog? executorCatalog;
+src\CanDoItAll.AgentFramework.Workflows.Templates\WorkflowTemplatePack.cs:54:    public WorkflowTemplatePackLoader(IWorkflowExecutorCatalog executorCatalog)
+src\CanDoItAll.AgentFramework.Workflows.Templates\WorkflowTemplatePack.cs:61:        IWorkflowExecutorCatalog? executorCatalog)
+src\CanDoItAll.AgentFramework.Workflows.Templates\WorkflowTemplatePack.cs:141:            serviceProvider.GetRequiredService<IWorkflowExecutorCatalog>()));
+
+## Typed template diagnostics and repair hints
+src\CanDoItAll.AgentFramework.Workflows.Templates\WorkflowTemplateDiagnostics.cs:16:public sealed record WorkflowTemplateDiagnostic(
+src\CanDoItAll.AgentFramework.Workflows.Templates\WorkflowTemplateDiagnostics.cs:20:    string YamlPath,
+src\CanDoItAll.AgentFramework.Workflows.Templates\WorkflowTemplateDiagnostics.cs:21:    string NodeId,
+src\CanDoItAll.AgentFramework.Workflows.Templates\WorkflowTemplateDiagnostics.cs:22:    string ExecutorId,
+src\CanDoItAll.AgentFramework.Workflows.Templates\WorkflowTemplateDiagnostics.cs:23:    string RepairHint,
+src\CanDoItAll.AgentFramework.Workflows.Templates\WorkflowTemplateDiagnostics.cs:26:public sealed class WorkflowTemplatePackException : InvalidOperationException
+src\CanDoItAll.AgentFramework.Workflows.Templates\WorkflowTemplateDiagnostics.cs:28:    public WorkflowTemplatePackException(
+src\CanDoItAll.AgentFramework.Workflows.Templates\WorkflowTemplateDiagnostics.cs:31:        WorkflowTemplateDiagnostic diagnostic,
+src\CanDoItAll.AgentFramework.Workflows.Templates\WorkflowTemplateDiagnostics.cs:41:    public WorkflowTemplateDiagnostic Diagnostic { get; }
+src\CanDoItAll.AgentFramework.Workflows.Templates\WorkflowTemplateDiagnostics.cs:45:        WorkflowTemplateDiagnostic diagnostic)
+src\CanDoItAll.AgentFramework.Workflows.Templates\WorkflowTemplateDiagnostics.cs:51:        AddPart(parts, "YAML path", diagnostic.YamlPath);
+src\CanDoItAll.AgentFramework.Workflows.Templates\WorkflowTemplateDiagnostics.cs:52:        AddPart(parts, "node id", diagnostic.NodeId);
+src\CanDoItAll.AgentFramework.Workflows.Templates\WorkflowTemplateDiagnostics.cs:53:        AddPart(parts, "executor id", diagnostic.ExecutorId);
+src\CanDoItAll.AgentFramework.Workflows.Templates\WorkflowTemplateDiagnostics.cs:54:        AddPart(parts, "repair hint", diagnostic.RepairHint);
+src\CanDoItAll.AgentFramework.Workflows.Templates\WorkflowTemplateDiagnostics.cs:71:    string YamlPath,
+src\CanDoItAll.AgentFramework.Workflows.Templates\WorkflowTemplateDiagnostics.cs:72:    string NodeId = "",
+src\CanDoItAll.AgentFramework.Workflows.Templates\WorkflowTemplateDiagnostics.cs:73:    string ExecutorId = "")
+src\CanDoItAll.AgentFramework.Workflows.Templates\WorkflowTemplateDiagnostics.cs:77:    public WorkflowTemplateContext WithYamlPath(string yamlPath)
+src\CanDoItAll.AgentFramework.Workflows.Templates\WorkflowTemplateDiagnostics.cs:78:        => this with { YamlPath = yamlPath };
+src\CanDoItAll.AgentFramework.Workflows.Templates\WorkflowTemplateDiagnostics.cs:81:        => this with { NodeId = nodeId, YamlPath = yamlPath };
+src\CanDoItAll.AgentFramework.Workflows.Templates\WorkflowTemplateDiagnostics.cs:84:        => this with { NodeId = nodeId, ExecutorId = executorId, YamlPath = yamlPath };
+src\CanDoItAll.AgentFramework.Workflows.Templates\WorkflowTemplateDiagnostics.cs:86:    public WorkflowTemplateDiagnostic ToDiagnostic(
+src\CanDoItAll.AgentFramework.Workflows.Templates\WorkflowTemplateDiagnostics.cs:93:            YamlPath,
+src\CanDoItAll.AgentFramework.Workflows.Templates\WorkflowTemplateDiagnostics.cs:94:            NodeId,
+src\CanDoItAll.AgentFramework.Workflows.Templates\WorkflowTemplateDiagnostics.cs:95:            ExecutorId,
+src\CanDoItAll.AgentFramework.Workflows.Templates\WorkflowTemplateDiagnostics.cs:100:internal static class WorkflowTemplateDiagnostics
+src\CanDoItAll.AgentFramework.Workflows.Templates\WorkflowTemplateDiagnostics.cs:102:    public static WorkflowTemplatePackException CreateException(
+src\CanDoItAll.AgentFramework.Workflows.Templates\WorkflowTemplatePackValidator.cs:46:                var executorId = WorkflowTemplateDiagnostics.Require(
+src\CanDoItAll.AgentFramework.Workflows.Templates\WorkflowTemplatePackValidator.cs:51:                if (!executorCatalog.TryGetExecutor(new WorkflowExecutorId(executorId), out var descriptor))
+src\CanDoItAll.AgentFramework.Workflows.Templates\WorkflowTemplatePackValidator.cs:53:                    throw WorkflowTemplateDiagnostics.CreateException(
+src\CanDoItAll.AgentFramework.Workflows.Templates\WorkflowTemplatePackValidator.cs:62:                    throw WorkflowTemplateDiagnostics.CreateException(
+src\CanDoItAll.AgentFramework.Workflows.Templates\WorkflowTemplatePackValidator.cs:90:            catch (WorkflowTemplatePackException)
+src\CanDoItAll.AgentFramework.Workflows.Templates\WorkflowTemplatePackValidator.cs:96:                throw WorkflowTemplateDiagnostics.CreateException(
+src\CanDoItAll.AgentFramework.Workflows.Templates\WorkflowTemplatePackValidator.cs:111:            throw WorkflowTemplateDiagnostics.CreateException(
+src\CanDoItAll.AgentFramework.Workflows.Templates\WorkflowTemplatePackValidator.cs:141:        if (issue.NodeId is { } nodeId)
+src\CanDoItAll.AgentFramework.Workflows.Templates\WorkflowTemplatePackValidator.cs:154:            return context.WithYamlPath($"graph.edges[{edgeId.Value}]");
+src\CanDoItAll.AgentFramework.Workflows.Templates\WorkflowTemplatePackValidator.cs:165:                var location = issue.NodeId is { } nodeId
+src\CanDoItAll.AgentFramework.Workflows.Templates\WorkflowPreviewSimulationTemplateLoader.cs:29:            throw WorkflowTemplateDiagnostics.CreateException(
+src\CanDoItAll.AgentFramework.Workflows.Templates\WorkflowPreviewSimulationTemplateLoader.cs:51:                ExecutorId: executor);
+src\CanDoItAll.AgentFramework.Workflows.Templates\WorkflowPreviewSimulationTemplateLoader.cs:54:                throw WorkflowTemplateDiagnostics.CreateException(
+src\CanDoItAll.AgentFramework.Workflows.Templates\WorkflowPreviewSimulationTemplateLoader.cs:63:                var operationContext = executorContext.WithYamlPath($"executors.{executor}.operations.{operation}");
+src\CanDoItAll.AgentFramework.Workflows.Templates\WorkflowPreviewSimulationTemplateLoader.cs:66:                    throw WorkflowTemplateDiagnostics.CreateException(
+src\CanDoItAll.AgentFramework.Workflows.Templates\WorkflowPreviewSimulationTemplateLoader.cs:75:                    throw WorkflowTemplateDiagnostics.CreateException(
+src\CanDoItAll.AgentFramework.Workflows.Templates\WorkflowPreviewSimulationTemplateLoader.cs:78:                        operationContext.WithYamlPath($"{operationContext.YamlPath}.description"),
+src\CanDoItAll.AgentFramework.Workflows.Templates\WorkflowPreviewSimulationTemplateLoader.cs:84:                    throw WorkflowTemplateDiagnostics.CreateException(
+src\CanDoItAll.AgentFramework.Workflows.Templates\WorkflowPreviewSimulationTemplateLoader.cs:87:                        operationContext.WithYamlPath($"{operationContext.YamlPath}.outputTemplate"),
+
+## Preview simulations moved out of Blazor page support
+src\CanDoItAll.AgentFramework.Workflows.Templates\WorkflowTemplateDocuments.cs:184:public sealed class WorkflowPreviewSimulationTemplateCatalog
+src\CanDoItAll.Modules.AgentFramework\Pages\WorkflowPreviewInputSupport.cs:57:    private static readonly Lazy<WorkflowPreviewSimulationTemplateCatalog> SimulationTemplateCatalog = new(
+src\CanDoItAll.Modules.AgentFramework\Pages\WorkflowPreviewInputSupport.cs:58:        () => new WorkflowPreviewSimulationTemplateLoader().Load());
+src\CanDoItAll.AgentFramework.Workflows.Templates\WorkflowPreviewSimulationTemplateLoader.cs:5:public sealed class WorkflowPreviewSimulationTemplateLoader
+src\CanDoItAll.AgentFramework.Workflows.Templates\WorkflowPreviewSimulationTemplateLoader.cs:7:    private const string PreviewSimulationsDirectoryName = "preview-simulations";
+src\CanDoItAll.AgentFramework.Workflows.Templates\WorkflowPreviewSimulationTemplateLoader.cs:10:    public WorkflowPreviewSimulationTemplateCatalog Load(string? packRoot = null)
+src\CanDoItAll.AgentFramework.Workflows.Templates\WorkflowPreviewSimulationTemplateLoader.cs:16:            return new WorkflowPreviewSimulationTemplateCatalog();
+src\CanDoItAll.AgentFramework.Workflows.Templates\WorkflowPreviewSimulationTemplateLoader.cs:19:        WorkflowPreviewSimulationTemplateCatalog catalog;
+src\CanDoItAll.AgentFramework.Workflows.Templates\WorkflowPreviewSimulationTemplateLoader.cs:23:            catalog = JsonSerializer.Deserialize<WorkflowPreviewSimulationTemplateCatalog>(
+src\CanDoItAll.AgentFramework.Workflows.Templates\WorkflowPreviewSimulationTemplateLoader.cs:25:                WorkflowTemplateJson.Options) ?? new WorkflowPreviewSimulationTemplateCatalog();
+src\CanDoItAll.AgentFramework.Workflows.Templates\WorkflowPreviewSimulationTemplateLoader.cs:32:                new WorkflowTemplateContext(path, string.Empty, "preview-simulations/executors.json"),
+src\CanDoItAll.AgentFramework.Workflows.Templates\WorkflowPreviewSimulationTemplateLoader.cs:33:                "Fix preview-simulations/executors.json path, permissions, and JSON syntax.",
+src\CanDoItAll.AgentFramework.Workflows.Templates\WorkflowPreviewSimulationTemplateLoader.cs:42:        WorkflowPreviewSimulationTemplateCatalog catalog,
+
+## Focused positive and negative tests
+11:    public void Load_default_pack_materializes_every_current_template_and_preview_fixture()
+39:    public void Load_default_pack_validates_current_executor_references_against_descriptor_catalog()
+59:    public void Load_rejects_missing_executor_with_typed_repairable_context()
+78:    public void Load_rejects_invalid_routing_with_yaml_path_context()
+112:    public void Load_rejects_invalid_input_parameter_with_typed_context()
+145:    public void Load_rejects_invalid_runtime_policy()
+161:    public void Load_rejects_invalid_executor_settings_against_descriptor_schema()
+188:    public void Load_rejects_invalid_yaml_with_file_context()
+202:    public void Preview_loader_rejects_invalid_preview_simulation_json()
+217:    public void Template_loading_is_owned_by_workflow_template_project_without_ui_fallback()

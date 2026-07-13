@@ -1,0 +1,277 @@
+{
+  "isSuccess": true,
+  "identity": {
+    "kind": 2,
+    "key": {
+      "value": "playwright-local-mcp"
+    }
+  },
+  "serverKey": {
+    "value": "playwright-local"
+  },
+  "correlationId": "SB09_MCP_PLAYWRIGHT_AFTER_NDJSON_CACHED_REPAIR",
+  "discoveredTools": [
+    {
+      "name": {
+        "value": "browser_close"
+      },
+      "description": "Close the page"
+    },
+    {
+      "name": {
+        "value": "browser_resize"
+      },
+      "description": "Resize the browser window"
+    },
+    {
+      "name": {
+        "value": "browser_console_messages"
+      },
+      "description": "Returns all console messages"
+    },
+    {
+      "name": {
+        "value": "browser_handle_dialog"
+      },
+      "description": "Handle a dialog"
+    },
+    {
+      "name": {
+        "value": "browser_evaluate"
+      },
+      "description": "Evaluate JavaScript expression on page or element"
+    },
+    {
+      "name": {
+        "value": "browser_file_upload"
+      },
+      "description": "Upload one or multiple files"
+    },
+    {
+      "name": {
+        "value": "browser_drop"
+      },
+      "description": "Drop files or MIME-typed data onto an element, as if dragged from outside the page. At least one of \"paths\" or \"data\" must be provided."
+    },
+    {
+      "name": {
+        "value": "browser_fill_form"
+      },
+      "description": "Fill multiple form fields"
+    },
+    {
+      "name": {
+        "value": "browser_press_key"
+      },
+      "description": "Press a key on the keyboard"
+    },
+    {
+      "name": {
+        "value": "browser_type"
+      },
+      "description": "Type text into editable element"
+    },
+    {
+      "name": {
+        "value": "browser_mouse_move_xy"
+      },
+      "description": "Move mouse to a given position"
+    },
+    {
+      "name": {
+        "value": "browser_mouse_click_xy"
+      },
+      "description": "Click mouse button at a given position"
+    },
+    {
+      "name": {
+        "value": "browser_mouse_drag_xy"
+      },
+      "description": "Drag left mouse button to a given position"
+    },
+    {
+      "name": {
+        "value": "browser_mouse_down"
+      },
+      "description": "Press mouse down"
+    },
+    {
+      "name": {
+        "value": "browser_mouse_up"
+      },
+      "description": "Press mouse up"
+    },
+    {
+      "name": {
+        "value": "browser_mouse_wheel"
+      },
+      "description": "Scroll mouse wheel"
+    },
+    {
+      "name": {
+        "value": "browser_navigate"
+      },
+      "description": "Navigate to a URL"
+    },
+    {
+      "name": {
+        "value": "browser_navigate_back"
+      },
+      "description": "Go back to the previous page in the history"
+    },
+    {
+      "name": {
+        "value": "browser_network_requests"
+      },
+      "description": "Returns a numbered list of network requests since loading the page. Use browser_network_request with the number to get full details."
+    },
+    {
+      "name": {
+        "value": "browser_network_request"
+      },
+      "description": "Returns full details (headers and body) of a single network request, or a single part if `part` is set. Use the number from browser_network_requests."
+    },
+    {
+      "name": {
+        "value": "browser_run_code_unsafe"
+      },
+      "description": "Run a Playwright code snippet. Unsafe: executes arbitrary JavaScript in the Playwright server process and is RCE-equivalent."
+    },
+    {
+      "name": {
+        "value": "browser_take_screenshot"
+      },
+      "description": "Take a screenshot of the current page. You can't perform actions based on the screenshot, use browser_snapshot for actions."
+    },
+    {
+      "name": {
+        "value": "browser_snapshot"
+      },
+      "description": "Capture accessibility snapshot of the current page, this is better than screenshot"
+    },
+    {
+      "name": {
+        "value": "browser_click"
+      },
+      "description": "Perform click on a web page"
+    },
+    {
+      "name": {
+        "value": "browser_drag"
+      },
+      "description": "Perform drag and drop between two elements"
+    },
+    {
+      "name": {
+        "value": "browser_hover"
+      },
+      "description": "Hover over element on page"
+    },
+    {
+      "name": {
+        "value": "browser_select_option"
+      },
+      "description": "Select an option in a dropdown"
+    },
+    {
+      "name": {
+        "value": "browser_tabs"
+      },
+      "description": "List, create, close, or select a browser tab."
+    },
+    {
+      "name": {
+        "value": "browser_wait_for"
+      },
+      "description": "Wait for text to appear or disappear or a specified time to pass"
+    }
+  ],
+  "allowedTools": [
+    {
+      "name": {
+        "value": "browser_close"
+      },
+      "description": "Close the page"
+    },
+    {
+      "name": {
+        "value": "browser_resize"
+      },
+      "description": "Resize the browser window"
+    },
+    {
+      "name": {
+        "value": "browser_console_messages"
+      },
+      "description": "Returns all console messages"
+    },
+    {
+      "name": {
+        "value": "browser_evaluate"
+      },
+      "description": "Evaluate JavaScript expression on page or element"
+    },
+    {
+      "name": {
+        "value": "browser_fill_form"
+      },
+      "description": "Fill multiple form fields"
+    },
+    {
+      "name": {
+        "value": "browser_press_key"
+      },
+      "description": "Press a key on the keyboard"
+    },
+    {
+      "name": {
+        "value": "browser_type"
+      },
+      "description": "Type text into editable element"
+    },
+    {
+      "name": {
+        "value": "browser_navigate"
+      },
+      "description": "Navigate to a URL"
+    },
+    {
+      "name": {
+        "value": "browser_take_screenshot"
+      },
+      "description": "Take a screenshot of the current page. You can't perform actions based on the screenshot, use browser_snapshot for actions."
+    },
+    {
+      "name": {
+        "value": "browser_snapshot"
+      },
+      "description": "Capture accessibility snapshot of the current page, this is better than screenshot"
+    },
+    {
+      "name": {
+        "value": "browser_click"
+      },
+      "description": "Perform click on a web page"
+    },
+    {
+      "name": {
+        "value": "browser_hover"
+      },
+      "description": "Hover over element on page"
+    },
+    {
+      "name": {
+        "value": "browser_select_option"
+      },
+      "description": "Select an option in a dropdown"
+    },
+    {
+      "name": {
+        "value": "browser_wait_for"
+      },
+      "description": "Wait for text to appear or disappear or a specified time to pass"
+    }
+  ],
+  "diagnostics": [],
+  "cleanupCompleted": true
+}

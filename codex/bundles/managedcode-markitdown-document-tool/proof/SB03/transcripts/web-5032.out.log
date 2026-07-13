@@ -1,0 +1,190 @@
+Použití nastavení spuštění z src\App\CanDoItAll.Web\Properties\launchSettings.json...
+info: CanDoItAll.Infrastructure.ControlPlane.DatabaseProfileControlPlaneService[0]
+      Resolved database profile Configured PostgreSQL override (e5df9ad6-33db-c697-4a06-78a74976013c) via ExplicitOverride. Provider=PostgreSql. Fingerprint=postgres:127.0.0.1:5432:candoitall_development:candoitall. RuntimeLocked=True.
+info: CanDoItAll.Infrastructure.ControlPlane.CanonicalRuntimeDatabase[0]
+      Initialized canonical runtime database profile e5df9ad6-33db-c697-4a06-78a74976013c (Configured PostgreSQL override). Provider=PostgreSql. Fingerprint=postgres:127.0.0.1:5432:candoitall_development:candoitall. Generation=0.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring runtime database profile e5df9ad6-33db-c697-4a06-78a74976013c (Configured PostgreSQL override) is ready. Provider=PostgreSql, Source=PostgresConnection.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Applying EF migrations for profile e5df9ad6-33db-c697-4a06-78a74976013c.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring CRM/HR schema for profile e5df9ad6-33db-c697-4a06-78a74976013c.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring plugin runtime schema for profile e5df9ad6-33db-c697-4a06-78a74976013c.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring scheduler planner schema for profile e5df9ad6-33db-c697-4a06-78a74976013c.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring agent provider bootstrap for profile e5df9ad6-33db-c697-4a06-78a74976013c.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Runtime database profile e5df9ad6-33db-c697-4a06-78a74976013c is ready.
+info: Quartz.Core.SchedulerSignalerImpl[0]
+      Initialized Scheduler Signaller of type: Quartz.Core.SchedulerSignalerImpl
+info: Quartz.Core.QuartzScheduler[0]
+      Quartz Scheduler created
+info: Quartz.Core.QuartzScheduler[0]
+      JobFactory set to: Quartz.Simpl.MicrosoftDependencyInjectionJobFactory
+info: Quartz.Simpl.RAMJobStore[0]
+      RAMJobStore initialized.
+info: Quartz.Impl.StdSchedulerFactory[0]
+      Quartz Scheduler 3.13.1.0 - 'CanDoItAll SchedulerPlanner' with instanceId 'CanDoItAll.SchedulerPlanner' initialized
+info: Quartz.Impl.StdSchedulerFactory[0]
+      Using thread pool 'Quartz.Simpl.DefaultThreadPool', size: 10
+info: Quartz.Impl.StdSchedulerFactory[0]
+      Using job store 'Quartz.Simpl.RAMJobStore', supports persistence: False, clustered: False
+info: CanDoItAll.Modules.SchedulerPlanner.SchedulerPlannerTriggerScheduler[0]
+      Projected scheduler plan aa141648-524a-4b15-8992-ee6a8b024d5f into local Quartz runtime. Enabled=True, NextFireAtUtc=07/07/2026 13:00:00 +00:00.
+info: CanDoItAll.Modules.SchedulerPlanner.SchedulerPlannerProjectionHostedService[0]
+      SchedulerPlanner projected saved plans into the local Quartz runtime.
+info: Microsoft.Hosting.Lifetime[14]
+      Now listening on: http://localhost:5032
+info: Microsoft.Hosting.Lifetime[0]
+      Application started. Press Ctrl+C to shut down.
+info: Microsoft.Hosting.Lifetime[0]
+      Hosting environment: Development
+info: Microsoft.Hosting.Lifetime[0]
+      Content root path: C:\repositories\CanDoItAll\src\App\CanDoItAll.Web
+info: Quartz.Core.QuartzScheduler[0]
+      Scheduler CanDoItAll SchedulerPlanner_$_CanDoItAll.SchedulerPlanner started.
+warn: Microsoft.AspNetCore.HttpsPolicy.HttpsRedirectionMiddleware[3]
+      Failed to determine the https port for redirect.
+warn: CanDoItAll.Modules.AgentFramework.WorkflowExampleCatalogSeedService[0]
+      Skipping workflow example seed 'Example: Gmail Label Email Summary To Project' because one or more optional workflow executors are unavailable in this host: Workflow executor 'gmail.messages-by-label' is not runnable: Plugin 'gmail.mail' is not installed. Workflow executor 'gmail.mark-message-processed' is not runnable: Plugin 'gmail.mail' is not installed.
+warn: CanDoItAll.Modules.AgentFramework.WorkflowExampleCatalogSeedService[0]
+      Skipping workflow example seed 'Example: Gmail Label Email Tasks To Project' because one or more optional workflow executors are unavailable in this host: Workflow executor 'gmail.messages-by-label' is not runnable: Plugin 'gmail.mail' is not installed. Workflow executor 'gmail.mark-message-processed' is not runnable: Plugin 'gmail.mail' is not installed.
+info: CanDoItAll.Modules.AgentFramework.AgentFrameworkCatalogWarmupService[0]
+      Completed AgentFramework catalog repair and projection warmup in 10500 ms.
+info: CanDoItAll.AgentFramework.Maf.MafAgentRuntime[0]
+      Agent tool policy decision Allow for tool load_skill on agent 3e914b12-2369-ed5f-bf79-f26db10ef5cd. ExecutionRunId=056a7122-28b1-42d2-9085-54950b4850a2 SourceKind=project-structure ProcessRunId= ProcessStepId= RuntimeToolProviderKey= Signature=load_skill|skillName=concrete-deliverable-delivery
+info: CanDoItAll.AgentFramework.Maf.MafAgentRuntime[0]
+      Agent tool policy decision Allow for tool project_structure_read on agent 3e914b12-2369-ed5f-bf79-f26db10ef5cd. ExecutionRunId=056a7122-28b1-42d2-9085-54950b4850a2 SourceKind=project-structure ProcessRunId= ProcessStepId= RuntimeToolProviderKey=project-structure.runtime-tools Signature=project_structure_read|projectId=f28c07cd-982c-4d2d-bcf2-3e60a32eca72,request={"nodeIds":["custom:a7bbaa78a950420086616a910909e037"],"includeAssets":true,"includeNotes":true,"includeMetadata":true}
+info: CanDoItAll.AgentFramework.Maf.MafAgentRuntime[0]
+      Agent tool policy decision Allow for tool project_structure_read on agent 3e914b12-2369-ed5f-bf79-f26db10ef5cd. ExecutionRunId=056a7122-28b1-42d2-9085-54950b4850a2 SourceKind=project-structure ProcessRunId= ProcessStepId= RuntimeToolProviderKey=project-structure.runtime-tools Signature=project_structure_read|projectId=f28c07cd-982c-4d2d-bcf2-3e60a32eca72,request={"subtreeRootIds":["project:f28c07cd-982c-4d2d-bcf2-3e60a32eca72"],"objectTypes":["File","ImageAsset","VideoAsset","Link","Note","Decision","WorkItem","ProjectB...#bcf41e3e2db5
+info: CanDoItAll.AgentFramework.Maf.MafAgentRuntime[0]
+      Agent tool policy decision Allow for tool project_structure_asset_content_get on agent 3e914b12-2369-ed5f-bf79-f26db10ef5cd. ExecutionRunId=056a7122-28b1-42d2-9085-54950b4850a2 SourceKind=project-structure ProcessRunId= ProcessStepId= RuntimeToolProviderKey=project-structure.runtime-tools Signature=project_structure_asset_content_get|nodeId=custom:620a9f84c37b487385471967a8713252,projectId=f28c07cd-982c-4d2d-bcf2-3e60a32eca72
+info: CanDoItAll.AgentFramework.Maf.MafAgentRuntime[0]
+      Agent tool policy decision Allow for tool workspace_convert_document on agent 3e914b12-2369-ed5f-bf79-f26db10ef5cd. ExecutionRunId=056a7122-28b1-42d2-9085-54950b4850a2 SourceKind=project-structure ProcessRunId= ProcessStepId= RuntimeToolProviderKey= Signature=workspace_convert_document|outputPath=/mnt/data/xray_quotation_markdown.md,path=managed-files/project-media/files/f28c07cd982c4d2dbcf23e60a32eca72/x-ray-machine-agent-quotation-list2018-e1d6363d36484d81b06dad6ea06d9af8.pdf,previewCharacters=6000
+fail: Microsoft.Extensions.AI.FunctionInvokingChatClient[1784604714]
+      workspace_convert_document invocation failed.
+      System.InvalidOperationException: External workspace path 'external-target/C/mnt/data/xray_quotation_markdown.md' is not in this agent's allowed external workspace roots.
+         at CanDoItAll.AgentFramework.Maf.WorkspaceRuntimePlugin.EnsureExternalAliasAllowed(String path, Boolean requireWrite) in C:\repositories\CanDoItAll\src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Workspace\WorkspaceRuntimePlugin.cs:line 733
+         at CanDoItAll.AgentFramework.Maf.WorkspaceRuntimePlugin.EnsureFileReadAllowed(String path) in C:\repositories\CanDoItAll\src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Workspace\WorkspaceRuntimePlugin.cs:line 506
+         at CanDoItAll.AgentFramework.Maf.WorkspaceRuntimePlugin.EnsureArtifactTransformationAllowed(String path) in C:\repositories\CanDoItAll\src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Workspace\WorkspaceRuntimePlugin.cs:line 571
+         at CanDoItAll.AgentFramework.Maf.WorkspaceRuntimePlugin.PrepareArtifactTransformationWritePath(String path) in C:\repositories\CanDoItAll\src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Workspace\WorkspaceRuntimePlugin.cs:line 490
+         at CanDoItAll.AgentFramework.Maf.WorkspaceRuntimePlugin.ConvertDocumentToMarkdown(String path, String outputPath, Int32 previewCharacters) in C:\repositories\CanDoItAll\src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Workspace\WorkspaceRuntimePlugin.cs:line 241
+         at System.RuntimeMethodHandle.InvokeMethod(ObjectHandleOnStack target, Void** arguments, ObjectHandleOnStack sig, BOOL isConstructor, ObjectHandleOnStack result)
+         at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+         at System.Reflection.MethodBaseInvoker.InvokeDirectByRefWithFewArgs(Object obj, Span`1 copyOfArgs, BindingFlags invokeAttr)
+         at System.Reflection.MethodBaseInvoker.InvokeWithFewArgs(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+         at System.Reflection.RuntimeMethodInfo.Invoke(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+         at Microsoft.Extensions.AI.AIFunctionFactory.ReflectionInvoke(MethodInfo method, Object target, Object[] arguments)
+         at Microsoft.Extensions.AI.AIFunctionFactory.ReflectionAIFunction.InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
+         at Microsoft.Extensions.AI.AIFunctionFactory.ReflectionAIFunction.InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
+         at CanDoItAll.AgentFramework.Maf.MafRuntimeAgentFactory.<>c__DisplayClass12_0.<<CreateInstrumentedAgent>b__6>d.MoveNext() in C:\repositories\CanDoItAll\src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\MafRuntimeAgentFactory.cs:line 443
+      --- End of stack trace from previous location ---
+         at Microsoft.Agents.AI.FunctionInvocationDelegatingAgent.MiddlewareEnabledFunction.InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
+         at Microsoft.Extensions.AI.FunctionInvocationProcessor.InstrumentedInvokeFunctionAsync(FunctionInvocationContext context, CancellationToken cancellationToken)
+info: CanDoItAll.AgentFramework.Maf.MafAgentRuntime[0]
+      Agent tool policy decision Allow for tool workspace_stat_path on agent 3e914b12-2369-ed5f-bf79-f26db10ef5cd. ExecutionRunId=056a7122-28b1-42d2-9085-54950b4850a2 SourceKind=project-structure ProcessRunId= ProcessStepId= RuntimeToolProviderKey= Signature=workspace_stat_path|path=managed-files/project-media/files/f28c07cd982c4d2dbcf23e60a32eca72/x-ray-machine-agent-quotation-list2018-e1d6363d36484d81b06dad6ea06d9af8.pdf
+info: CanDoItAll.AgentFramework.Maf.MafAgentRuntime[0]
+      Agent tool policy decision Allow for tool workspace_list_files on agent 3e914b12-2369-ed5f-bf79-f26db10ef5cd. ExecutionRunId=056a7122-28b1-42d2-9085-54950b4850a2 SourceKind=project-structure ProcessRunId= ProcessStepId= RuntimeToolProviderKey= Signature=workspace_list_files|maxResults=20,relativePath=.,searchPattern=**/*x-ray-machine-agent-quotation-list2018*.pdf
+info: CanDoItAll.AgentFramework.Maf.MafAgentRuntime[0]
+      Agent tool policy decision Allow for tool workspace_convert_document on agent 3e914b12-2369-ed5f-bf79-f26db10ef5cd. ExecutionRunId=056a7122-28b1-42d2-9085-54950b4850a2 SourceKind=project-structure ProcessRunId= ProcessStepId= RuntimeToolProviderKey= Signature=workspace_convert_document|path=managed-files/project-media/files/f28c07cd982c4d2dbcf23e60a32eca72/x-ray-machine-agent-quotation-list2018-e1d6363d36484d81b06dad6ea06d9af8.pdf,previewCharacters=3000
+fail: Microsoft.Extensions.AI.FunctionInvokingChatClient[1784604714]
+      workspace_convert_document invocation failed.
+      System.IO.IOException: Název souboru či adresáře nebo jmenovka svazku je nesprávná. : 'C:\Users\lucys\AppData\Local\CanDoItAll\workspace\artifacts\scopes\organization\e5df9ad633dbc6974a0678a74976013c\tool-receipts\20260706\203356589-workspace-convert-document-managed-files-project-media-files-f28c07cd982c4d2dbcf23e60a32eca72-x-ray-machine-agent-quotation-list2018-e1d6363d36484d81b06dad6ea06d9af8-pdf-artifacts-scopes-organization-e5df9ad633dbc6974a0678a74976013c-converted-documents-20260706203353141-x-ray-machine-agent-quotation-list2018-e1d6363d36484d81b06dad6ea06d9af8-md.json'.
+         at System.IO.File.OpenHandle(String path, FileMode mode, FileAccess access, FileShare share, FileOptions options, Int64 preallocationSize)
+         at System.IO.File.WriteToFile(String path, FileMode mode, ReadOnlySpan`1 contents, Encoding encoding)
+         at System.IO.File.WriteAllText(String path, String contents, Encoding encoding)
+         at CanDoItAll.AgentFramework.Core.WorkspaceFileReceiptWriter.WriteMutationReceipt(String operation, String message, IReadOnlyList`1 targetPaths, IReadOnlyList`1 targetArtifacts, DateTimeOffset startedAtUtc) in C:\repositories\CanDoItAll\src\MAF\Common\CanDoItAll.AgentFramework.Core\Workspace\Files\WorkspaceFileReceiptWriter.cs:line 94
+         at CanDoItAll.AgentFramework.Core.WorkspaceArtifactToolService.CreateDocumentConversionReceipt(Boolean succeeded, String outcome, String message, DateTimeOffset startedAtUtc, IReadOnlyList`1 targetPaths) in C:\repositories\CanDoItAll\src\MAF\Common\CanDoItAll.AgentFramework.Core\Workspace\Tools\WorkspaceArtifactToolService.cs:line 457
+         at CanDoItAll.AgentFramework.Core.WorkspaceArtifactToolService.ConvertDocumentToMarkdown(String path, String outputPath, Int32 previewCharacters) in C:\repositories\CanDoItAll\src\MAF\Common\CanDoItAll.AgentFramework.Core\Workspace\Tools\WorkspaceArtifactToolService.cs:line 121
+         at Microsoft.Extensions.AI.AIFunctionFactory.ReflectionAIFunctionDescriptor.<>c__DisplayClass41_1.<<GetReturnParameterMarshaller>b__12>d.MoveNext()
+      --- End of stack trace from previous location ---
+         at Microsoft.Extensions.AI.AIFunctionFactory.ReflectionAIFunction.InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
+         at Microsoft.Extensions.AI.AIFunctionFactory.ReflectionAIFunction.InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
+         at CanDoItAll.AgentFramework.Maf.MafRuntimeAgentFactory.<>c__DisplayClass12_0.<<CreateInstrumentedAgent>b__6>d.MoveNext() in C:\repositories\CanDoItAll\src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\MafRuntimeAgentFactory.cs:line 443
+      --- End of stack trace from previous location ---
+         at Microsoft.Agents.AI.FunctionInvocationDelegatingAgent.MiddlewareEnabledFunction.InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
+         at Microsoft.Extensions.AI.FunctionInvocationProcessor.InstrumentedInvokeFunctionAsync(FunctionInvocationContext context, CancellationToken cancellationToken)
+info: CanDoItAll.AgentFramework.Maf.MafAgentRuntime[0]
+      Agent tool policy decision Allow for tool workspace_list_files on agent 3e914b12-2369-ed5f-bf79-f26db10ef5cd. ExecutionRunId=056a7122-28b1-42d2-9085-54950b4850a2 SourceKind=project-structure ProcessRunId= ProcessStepId= RuntimeToolProviderKey= Signature=workspace_list_files|maxResults=50,relativePath=.,searchPattern=**/*quotation*.md
+info: CanDoItAll.AgentFramework.Maf.MafAgentRuntime[0]
+      Agent tool policy decision Allow for tool workspace_read_file on agent 3e914b12-2369-ed5f-bf79-f26db10ef5cd. ExecutionRunId=056a7122-28b1-42d2-9085-54950b4850a2 SourceKind=project-structure ProcessRunId= ProcessStepId= RuntimeToolProviderKey= Signature=workspace_read_file|maxCharacters=12000,path=artifacts/scopes/organization/e5df9ad633dbc6974a0678a74976013c/converted-documents/20260706203353141-x-ray-machine-agent-quotation-list2018-e1d6363d36484d81b06d...#623772eb6c1b
+info: CanDoItAll.AgentFramework.Maf.MafAgentRuntime[0]
+      Agent tool policy decision Allow for tool project_structure_node_catalog on agent 3e914b12-2369-ed5f-bf79-f26db10ef5cd. ExecutionRunId=056a7122-28b1-42d2-9085-54950b4850a2 SourceKind=project-structure ProcessRunId= ProcessStepId= RuntimeToolProviderKey=project-structure.runtime-tools Signature=project_structure_node_catalog
+info: CanDoItAll.AgentFramework.Maf.MafAgentRuntime[0]
+      Agent tool policy decision Allow for tool workspace_execution_boundary on agent 3e914b12-2369-ed5f-bf79-f26db10ef5cd. ExecutionRunId=056a7122-28b1-42d2-9085-54950b4850a2 SourceKind=project-structure ProcessRunId= ProcessStepId= RuntimeToolProviderKey= Signature=workspace_execution_boundary
+info: CanDoItAll.AgentFramework.Maf.MafAgentRuntime[0]
+      Agent tool policy decision Allow for tool project_structure_read on agent 3e914b12-2369-ed5f-bf79-f26db10ef5cd. ExecutionRunId=056a7122-28b1-42d2-9085-54950b4850a2 SourceKind=project-structure ProcessRunId= ProcessStepId= RuntimeToolProviderKey=project-structure.runtime-tools Signature=project_structure_read|projectId=f28c07cd-982c-4d2d-bcf2-3e60a32eca72,request={"nodeIds":["custom:a7bbaa78a950420086616a910909e037"],"includeAssets":true,"includeMetadata":true,"includeNotes":true}
+info: CanDoItAll.AgentFramework.Maf.MafAgentRuntime[0]
+      Agent tool policy decision Allow for tool project_structure_read on agent 3e914b12-2369-ed5f-bf79-f26db10ef5cd. ExecutionRunId=056a7122-28b1-42d2-9085-54950b4850a2 SourceKind=project-structure ProcessRunId= ProcessStepId= RuntimeToolProviderKey=project-structure.runtime-tools Signature=project_structure_read|projectId=f28c07cd-982c-4d2d-bcf2-3e60a32eca72,request={"subtreeRootIds":["project:f28c07cd-982c-4d2d-bcf2-3e60a32eca72"],"objectTypes":["File"],"includeAssets":true,"includeMetadata":true,"includeNotes":true,"take"...#7204833f3cbe
+info: CanDoItAll.AgentFramework.Maf.MafAgentRuntime[0]
+      Agent tool policy decision Allow for tool project_structure_node_catalog on agent 3e914b12-2369-ed5f-bf79-f26db10ef5cd. ExecutionRunId=056a7122-28b1-42d2-9085-54950b4850a2 SourceKind=project-structure ProcessRunId= ProcessStepId= RuntimeToolProviderKey=project-structure.runtime-tools Signature=project_structure_node_catalog
+info: CanDoItAll.AgentFramework.Maf.MafAgentRuntime[0]
+      Agent tool policy decision Allow for tool project_structure_asset_content_get on agent 3e914b12-2369-ed5f-bf79-f26db10ef5cd. ExecutionRunId=056a7122-28b1-42d2-9085-54950b4850a2 SourceKind=project-structure ProcessRunId= ProcessStepId= RuntimeToolProviderKey=project-structure.runtime-tools Signature=project_structure_asset_content_get|nodeId=custom:620a9f84c37b487385471967a8713252,projectId=f28c07cd-982c-4d2d-bcf2-3e60a32eca72
+info: CanDoItAll.AgentFramework.Maf.MafAgentRuntime[0]
+      Agent tool policy decision Allow for tool load_skill on agent 3e914b12-2369-ed5f-bf79-f26db10ef5cd. ExecutionRunId=056a7122-28b1-42d2-9085-54950b4850a2 SourceKind=project-structure ProcessRunId= ProcessStepId= RuntimeToolProviderKey= Signature=load_skill|skillName=concrete-deliverable-delivery
+info: CanDoItAll.AgentFramework.Maf.MafAgentRuntime[0]
+      Agent tool policy decision Allow for tool workspace_convert_document on agent 3e914b12-2369-ed5f-bf79-f26db10ef5cd. ExecutionRunId=056a7122-28b1-42d2-9085-54950b4850a2 SourceKind=project-structure ProcessRunId= ProcessStepId= RuntimeToolProviderKey= Signature=workspace_convert_document|path=managed-files/project-media/files/f28c07cd982c4d2dbcf23e60a32eca72/x-ray-machine-agent-quotation-list2018-e1d6363d36484d81b06dad6ea06d9af8.pdf,previewCharacters=6000
+fail: Microsoft.Extensions.AI.FunctionInvokingChatClient[1784604714]
+      workspace_convert_document invocation failed.
+      System.IO.IOException: Název souboru či adresáře nebo jmenovka svazku je nesprávná. : 'C:\Users\lucys\AppData\Local\CanDoItAll\workspace\artifacts\scopes\organization\e5df9ad633dbc6974a0678a74976013c\tool-receipts\20260706\204109594-workspace-convert-document-managed-files-project-media-files-f28c07cd982c4d2dbcf23e60a32eca72-x-ray-machine-agent-quotation-list2018-e1d6363d36484d81b06dad6ea06d9af8-pdf-artifacts-scopes-organization-e5df9ad633dbc6974a0678a74976013c-converted-documents-20260706204109293-x-ray-machine-agent-quotation-list2018-e1d6363d36484d81b06dad6ea06d9af8-md.json'.
+         at System.IO.File.OpenHandle(String path, FileMode mode, FileAccess access, FileShare share, FileOptions options, Int64 preallocationSize)
+         at System.IO.File.WriteToFile(String path, FileMode mode, ReadOnlySpan`1 contents, Encoding encoding)
+         at System.IO.File.WriteAllText(String path, String contents, Encoding encoding)
+         at CanDoItAll.AgentFramework.Core.WorkspaceFileReceiptWriter.WriteMutationReceipt(String operation, String message, IReadOnlyList`1 targetPaths, IReadOnlyList`1 targetArtifacts, DateTimeOffset startedAtUtc) in C:\repositories\CanDoItAll\src\MAF\Common\CanDoItAll.AgentFramework.Core\Workspace\Files\WorkspaceFileReceiptWriter.cs:line 94
+         at CanDoItAll.AgentFramework.Core.WorkspaceArtifactToolService.CreateDocumentConversionReceipt(Boolean succeeded, String outcome, String message, DateTimeOffset startedAtUtc, IReadOnlyList`1 targetPaths) in C:\repositories\CanDoItAll\src\MAF\Common\CanDoItAll.AgentFramework.Core\Workspace\Tools\WorkspaceArtifactToolService.cs:line 457
+         at CanDoItAll.AgentFramework.Core.WorkspaceArtifactToolService.ConvertDocumentToMarkdown(String path, String outputPath, Int32 previewCharacters) in C:\repositories\CanDoItAll\src\MAF\Common\CanDoItAll.AgentFramework.Core\Workspace\Tools\WorkspaceArtifactToolService.cs:line 121
+         at Microsoft.Extensions.AI.AIFunctionFactory.ReflectionAIFunctionDescriptor.<>c__DisplayClass41_1.<<GetReturnParameterMarshaller>b__12>d.MoveNext()
+      --- End of stack trace from previous location ---
+         at Microsoft.Extensions.AI.AIFunctionFactory.ReflectionAIFunction.InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
+         at Microsoft.Extensions.AI.AIFunctionFactory.ReflectionAIFunction.InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
+         at CanDoItAll.AgentFramework.Maf.MafRuntimeAgentFactory.<>c__DisplayClass12_0.<<CreateInstrumentedAgent>b__6>d.MoveNext() in C:\repositories\CanDoItAll\src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\MafRuntimeAgentFactory.cs:line 443
+      --- End of stack trace from previous location ---
+         at Microsoft.Agents.AI.FunctionInvocationDelegatingAgent.MiddlewareEnabledFunction.InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
+         at Microsoft.Extensions.AI.FunctionInvocationProcessor.InstrumentedInvokeFunctionAsync(FunctionInvocationContext context, CancellationToken cancellationToken)
+info: CanDoItAll.AgentFramework.Maf.MafAgentRuntime[0]
+      Agent tool policy decision Allow for tool workspace_stat_path on agent 3e914b12-2369-ed5f-bf79-f26db10ef5cd. ExecutionRunId=056a7122-28b1-42d2-9085-54950b4850a2 SourceKind=project-structure ProcessRunId= ProcessStepId= RuntimeToolProviderKey= Signature=workspace_stat_path|path=managed-files/project-media/files/f28c07cd982c4d2dbcf23e60a32eca72/x-ray-machine-agent-quotation-list2018-e1d6363d36484d81b06dad6ea06d9af8.pdf
+info: CanDoItAll.AgentFramework.Maf.MafAgentRuntime[0]
+      Agent tool policy decision Allow for tool load_skill on agent 3e914b12-2369-ed5f-bf79-f26db10ef5cd. ExecutionRunId=056a7122-28b1-42d2-9085-54950b4850a2 SourceKind=project-structure ProcessRunId= ProcessStepId= RuntimeToolProviderKey= Signature=load_skill|skillName=spreadsheet
+info: CanDoItAll.AgentFramework.Maf.MafAgentRuntime[0]
+      Agent tool policy decision Allow for tool workspace_list_files on agent 3e914b12-2369-ed5f-bf79-f26db10ef5cd. ExecutionRunId=056a7122-28b1-42d2-9085-54950b4850a2 SourceKind=project-structure ProcessRunId= ProcessStepId= RuntimeToolProviderKey= Signature=workspace_list_files|maxResults=20,relativePath=.,searchPattern=**/*x-ray-machine-agent-quotation-list2018*
+info: CanDoItAll.AgentFramework.Maf.MafAgentRuntime[0]
+      Agent tool policy decision Allow for tool workspace_read_file on agent 3e914b12-2369-ed5f-bf79-f26db10ef5cd. ExecutionRunId=056a7122-28b1-42d2-9085-54950b4850a2 SourceKind=project-structure ProcessRunId= ProcessStepId= RuntimeToolProviderKey= Signature=workspace_read_file|maxCharacters=12000,path=artifacts/scopes/organization/e5df9ad633dbc6974a0678a74976013c/converted-documents/20260706204109293-x-ray-machine-agent-quotation-list2018-e1d6363d36484d81b06d...#44a22f76e2a9
+fail: LoggingAgent[1784604714]
+      RunStreamingAsync failed.
+      System.InvalidOperationException: ToolApprovalRequestContent found with FunctionCall.CallId(s) 'call_szhwMazgIssl2x69mORFhUXK' that have no matching ToolApprovalResponseContent.
+         at Microsoft.Shared.Diagnostics.Throw.InvalidOperationException(String message)
+         at Microsoft.Extensions.AI.FunctionInvokingChatClient.ExtractAndRemoveApprovalRequestsAndResponses(List`1 messages)
+         at Microsoft.Extensions.AI.FunctionInvokingChatClient.ProcessFunctionApprovalResponses(List`1 originalMessages, Boolean hasConversationId, String toolMessageId, String functionCallContentFallbackMessageId)
+         at Microsoft.Extensions.AI.FunctionInvokingChatClient.GetStreamingResponseAsync(IEnumerable`1 messages, ChatOptions options, CancellationToken cancellationToken)+MoveNext()
+         at Microsoft.Extensions.AI.FunctionInvokingChatClient.GetStreamingResponseAsync(IEnumerable`1 messages, ChatOptions options, CancellationToken cancellationToken)+System.Threading.Tasks.Sources.IValueTaskSource<System.Boolean>.GetResult()
+         at Microsoft.Extensions.AI.ConfigureOptionsChatClient.GetStreamingResponseAsync(IEnumerable`1 messages, ChatOptions options, CancellationToken cancellationToken)+MoveNext()
+         at Microsoft.Extensions.AI.ConfigureOptionsChatClient.GetStreamingResponseAsync(IEnumerable`1 messages, ChatOptions options, CancellationToken cancellationToken)+MoveNext()
+         at Microsoft.Extensions.AI.ConfigureOptionsChatClient.GetStreamingResponseAsync(IEnumerable`1 messages, ChatOptions options, CancellationToken cancellationToken)+System.Threading.Tasks.Sources.IValueTaskSource<System.Boolean>.GetResult()
+         at Microsoft.Extensions.AI.OpenTelemetryChatClient.GetStreamingResponseAsync(IEnumerable`1 messages, ChatOptions options, CancellationToken cancellationToken)+MoveNext()
+         at Microsoft.Extensions.AI.OpenTelemetryChatClient.GetStreamingResponseAsync(IEnumerable`1 messages, ChatOptions options, CancellationToken cancellationToken)+MoveNext()
+         at Microsoft.Extensions.AI.OpenTelemetryChatClient.GetStreamingResponseAsync(IEnumerable`1 messages, ChatOptions options, CancellationToken cancellationToken)+System.Threading.Tasks.Sources.IValueTaskSource<System.Boolean>.GetResult()
+         at Microsoft.Agents.AI.ChatClientAgent.RunCoreStreamingAsync(IEnumerable`1 messages, AgentSession session, AgentRunOptions options, CancellationToken cancellationToken)+MoveNext()
+         at Microsoft.Agents.AI.ChatClientAgent.RunCoreStreamingAsync(IEnumerable`1 messages, AgentSession session, AgentRunOptions options, CancellationToken cancellationToken)+MoveNext()
+         at Microsoft.Agents.AI.ChatClientAgent.RunCoreStreamingAsync(IEnumerable`1 messages, AgentSession session, AgentRunOptions options, CancellationToken cancellationToken)+MoveNext()
+         at Microsoft.Agents.AI.ChatClientAgent.RunCoreStreamingAsync(IEnumerable`1 messages, AgentSession session, AgentRunOptions options, CancellationToken cancellationToken)+System.Threading.Tasks.Sources.IValueTaskSource<System.Boolean>.GetResult()
+         at Microsoft.Agents.AI.AIAgent.RunStreamingAsync(IEnumerable`1 messages, AgentSession session, AgentRunOptions options, CancellationToken cancellationToken)+MoveNext()
+         at Microsoft.Agents.AI.AIAgent.RunStreamingAsync(IEnumerable`1 messages, AgentSession session, AgentRunOptions options, CancellationToken cancellationToken)+MoveNext()
+         at Microsoft.Agents.AI.AIAgent.RunStreamingAsync(IEnumerable`1 messages, AgentSession session, AgentRunOptions options, CancellationToken cancellationToken)+System.Threading.Tasks.Sources.IValueTaskSource<System.Boolean>.GetResult()
+         at Microsoft.Agents.AI.OpenTelemetryAgent.ForwardingChatClient.GetStreamingResponseAsync(IEnumerable`1 messages, ChatOptions options, CancellationToken cancellationToken)+MoveNext()
+         at Microsoft.Agents.AI.OpenTelemetryAgent.ForwardingChatClient.GetStreamingResponseAsync(IEnumerable`1 messages, ChatOptions options, CancellationToken cancellationToken)+MoveNext()
+         at Microsoft.Agents.AI.OpenTelemetryAgent.ForwardingChatClient.GetStreamingResponseAsync(IEnumerable`1 messages, ChatOptions options, CancellationToken cancellationToken)+System.Threading.Tasks.Sources.IValueTaskSource<System.Boolean>.GetResult()
+         at Microsoft.Extensions.AI.OpenTelemetryChatClient.GetStreamingResponseAsync(IEnumerable`1 messages, ChatOptions options, CancellationToken cancellationToken)+MoveNext()
+         at Microsoft.Extensions.AI.OpenTelemetryChatClient.GetStreamingResponseAsync(IEnumerable`1 messages, ChatOptions options, CancellationToken cancellationToken)+MoveNext()
+         at Microsoft.Extensions.AI.OpenTelemetryChatClient.GetStreamingResponseAsync(IEnumerable`1 messages, ChatOptions options, CancellationToken cancellationToken)+System.Threading.Tasks.Sources.IValueTaskSource<System.Boolean>.GetResult()
+         at Microsoft.Agents.AI.OpenTelemetryAgent.RunCoreStreamingAsync(IEnumerable`1 messages, AgentSession session, AgentRunOptions options, CancellationToken cancellationToken)+MoveNext()
+         at Microsoft.Agents.AI.OpenTelemetryAgent.RunCoreStreamingAsync(IEnumerable`1 messages, AgentSession session, AgentRunOptions options, CancellationToken cancellationToken)+MoveNext()
+         at Microsoft.Agents.AI.OpenTelemetryAgent.RunCoreStreamingAsync(IEnumerable`1 messages, AgentSession session, AgentRunOptions options, CancellationToken cancellationToken)+System.Threading.Tasks.Sources.IValueTaskSource<System.Boolean>.GetResult()
+         at Microsoft.Agents.AI.AIAgent.RunStreamingAsync(IEnumerable`1 messages, AgentSession session, AgentRunOptions options, CancellationToken cancellationToken)+MoveNext()
+         at Microsoft.Agents.AI.AIAgent.RunStreamingAsync(IEnumerable`1 messages, AgentSession session, AgentRunOptions options, CancellationToken cancellationToken)+MoveNext()
+         at Microsoft.Agents.AI.AIAgent.RunStreamingAsync(IEnumerable`1 messages, AgentSession session, AgentRunOptions options, CancellationToken cancellationToken)+System.Threading.Tasks.Sources.IValueTaskSource<System.Boolean>.GetResult()
+         at Microsoft.Agents.AI.AIAgent.RunStreamingAsync(IEnumerable`1 messages, AgentSession session, AgentRunOptions options, CancellationToken cancellationToken)+MoveNext()
+         at Microsoft.Agents.AI.AIAgent.RunStreamingAsync(IEnumerable`1 messages, AgentSession session, AgentRunOptions options, CancellationToken cancellationToken)+MoveNext()
+         at Microsoft.Agents.AI.AIAgent.RunStreamingAsync(IEnumerable`1 messages, AgentSession session, AgentRunOptions options, CancellationToken cancellationToken)+System.Threading.Tasks.Sources.IValueTaskSource<System.Boolean>.GetResult()
+         at Microsoft.Agents.AI.LoggingAgent.RunCoreStreamingAsync(IEnumerable`1 messages, AgentSession session, AgentRunOptions options, CancellationToken cancellationToken)+MoveNext()

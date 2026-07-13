@@ -1,7 +1,16 @@
+using System.Security.Cryptography;
+
 namespace CanDoItAll.Infrastructure.Storage;
 
-public sealed class FileSystemStorageDriver(IWorkspacePathResolver workspacePathResolver) : IStorageDriver
+public sealed class FileSystemStorageDriver(FileSystemStoragePathPolicy pathPolicy)
+    : IStorageDriver, IStorageRevisionedContentDriver
 {
+    private const int WriteLockCount = 64;
+    private static readonly SemaphoreSlim[] WriteLocks = Enumerable
+        .Range(0, WriteLockCount)
+        .Select(_ => new SemaphoreSlim(1, 1))
+        .ToArray();
+
     public StorageProviderKind ProviderKind => StorageProviderKind.FileSystem;
 
     public StorageCapability SupportedCapabilities =>
@@ -30,7 +39,7 @@ public sealed class FileSystemStorageDriver(IWorkspacePathResolver workspacePath
 
             return Task.FromResult(new StorageConnectionTestResult(
                 true,
-                $"Accessible local root '{rootPath}'.",
+                "Accessible local root.",
                 StorageHealthStatus.Healthy,
                 SupportedCapabilities,
                 DateTimeOffset.UtcNow));
@@ -39,7 +48,7 @@ public sealed class FileSystemStorageDriver(IWorkspacePathResolver workspacePath
         {
             return Task.FromResult(new StorageConnectionTestResult(
                 false,
-                $"Local filesystem storage is unavailable: {ex.Message}",
+                $"Local filesystem storage is unavailable ({ex.GetType().Name}).",
                 StorageHealthStatus.Unavailable,
                 SupportedCapabilities & ~StorageCapability.ConnectionTest,
                 DateTimeOffset.UtcNow));
@@ -55,7 +64,7 @@ public sealed class FileSystemStorageDriver(IWorkspacePathResolver workspacePath
         ArgumentNullException.ThrowIfNull(request);
 
         var relativePath = ResolveRelativePath(request.RelativePathHint, request.FileName);
-        var fullPath = ResolveFullPath(storage, relativePath);
+        var fullPath = pathPolicy.ResolveFullPath(storage, relativePath);
         var directory = Path.GetDirectoryName(fullPath);
         if (!string.IsNullOrWhiteSpace(directory))
         {
@@ -98,7 +107,13 @@ public sealed class FileSystemStorageDriver(IWorkspacePathResolver workspacePath
         ArgumentNullException.ThrowIfNull(storage);
         ArgumentNullException.ThrowIfNull(reference);
 
-        Stream stream = File.OpenRead(ResolveFullPath(storage, reference.Locator));
+        Stream stream = new FileStream(
+            pathPolicy.ResolveFullPath(storage, reference.Locator),
+            FileMode.Open,
+            FileAccess.Read,
+            FileShare.ReadWrite | FileShare.Delete,
+            bufferSize: 80 * 1024,
+            FileOptions.Asynchronous | FileOptions.SequentialScan);
         return Task.FromResult(stream);
     }
 
@@ -110,7 +125,7 @@ public sealed class FileSystemStorageDriver(IWorkspacePathResolver workspacePath
         ArgumentNullException.ThrowIfNull(storage);
         ArgumentNullException.ThrowIfNull(reference);
 
-        var fullPath = ResolveFullPath(storage, reference.Locator);
+        var fullPath = pathPolicy.ResolveFullPath(storage, reference.Locator);
         if (File.Exists(fullPath))
         {
             File.Delete(fullPath);
@@ -119,41 +134,131 @@ public sealed class FileSystemStorageDriver(IWorkspacePathResolver workspacePath
         return Task.CompletedTask;
     }
 
-    internal string ResolveFullPath(StorageCatalogRecord storage, string relativePath)
+    public Task<StorageContentRevision?> GetRevisionAsync(
+        StorageCatalogRecord storage,
+        StorageObjectReference reference,
+        CancellationToken cancellationToken = default)
     {
-        var rootPath = ResolveRootPath(storage);
-        var normalizedPath = NormalizeRelativePath(relativePath);
-        var fullPath = Path.GetFullPath(Path.Combine(rootPath, normalizedPath));
-        var normalizedRoot = rootPath.TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
-        if (!fullPath.StartsWith(normalizedRoot, StringComparison.OrdinalIgnoreCase) &&
-            !string.Equals(fullPath, rootPath, StringComparison.OrdinalIgnoreCase))
-        {
-            throw new InvalidOperationException("The resolved path is outside the configured storage root.");
-        }
-
-        return fullPath;
+        ArgumentNullException.ThrowIfNull(storage);
+        ArgumentNullException.ThrowIfNull(reference);
+        cancellationToken.ThrowIfCancellationRequested();
+        string fullPath = pathPolicy.ResolveFullPath(storage, reference.Locator);
+        return Task.FromResult(CreateRevision(fullPath));
     }
+
+    public async Task<StorageRevisionedWriteResult> ReplaceAsync(
+        StorageCatalogRecord storage,
+        StorageRevisionedWriteRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(storage);
+        ArgumentNullException.ThrowIfNull(request);
+        string fullPath = pathPolicy.ResolveFullPath(storage, request.Reference.Locator);
+        SemaphoreSlim writeLock = ResolveWriteLock(fullPath);
+        await writeLock.WaitAsync(cancellationToken);
+        try
+        {
+            StorageContentRevision? actualRevision = CreateRevision(fullPath);
+            if (request.ExpectedRevision is { } expected && expected != actualRevision)
+            {
+                throw new StorageContentConflictException(expected, actualRevision);
+            }
+
+            if (request.ExpectedRevision is null && !request.AllowOverwrite)
+            {
+                throw new StorageContentConflictException(null, actualRevision);
+            }
+
+            string? directory = Path.GetDirectoryName(fullPath);
+            if (!string.IsNullOrWhiteSpace(directory))
+            {
+                Directory.CreateDirectory(directory);
+            }
+
+            string temporaryPath = fullPath + "." + Convert.ToHexStringLower(RandomNumberGenerator.GetBytes(16)) + ".tmp";
+            try
+            {
+                await File.WriteAllBytesAsync(temporaryPath, request.Content, cancellationToken);
+                if (request.ExpectedRevision is { } expectedBeforeCommit)
+                {
+                    StorageContentRevision? revisionBeforeCommit = CreateRevision(fullPath);
+                    if (expectedBeforeCommit != revisionBeforeCommit)
+                    {
+                        throw new StorageContentConflictException(expectedBeforeCommit, revisionBeforeCommit);
+                    }
+                }
+
+                File.Move(temporaryPath, fullPath, overwrite: true);
+            }
+            finally
+            {
+                if (File.Exists(temporaryPath))
+                {
+                    File.Delete(temporaryPath);
+                }
+            }
+
+            StorageContentRevision persistedRevision = CreateRevision(fullPath)
+                ?? throw new IOException("The storage object was not persisted.");
+            StorageObjectReference persistedReference = request.Reference with
+            {
+                ContentLength = request.Content.LongLength
+            };
+            string token = StorageJson.EncodeReferenceToken(persistedReference);
+            var result = new StorageWriteResult(
+                persistedReference,
+                new StorageAccessDescriptor(
+                    $"/storage/objects/preview?ref={Uri.EscapeDataString(token)}",
+                    $"/storage/objects/download?ref={Uri.EscapeDataString(token)}",
+                    null,
+                    true,
+                    true,
+                    IsTrustedForLocalOpen(storage),
+                    persistedReference.DisplayName,
+                    persistedReference.ContentType,
+                    persistedReference.ContentLength,
+                    string.Empty));
+            return new StorageRevisionedWriteResult(result, persistedRevision);
+        }
+        finally
+        {
+            writeLock.Release();
+        }
+    }
+
+    internal string ResolveFullPath(StorageCatalogRecord storage, string relativePath)
+        => pathPolicy.ResolveFullPath(storage, relativePath);
 
     internal string ResolveRootPath(StorageCatalogRecord storage)
-    {
-        var configuredRoot = string.IsNullOrWhiteSpace(storage.EndpointOrRoot)
-            ? workspacePathResolver.ResolveWorkspaceRoot()
-            : storage.EndpointOrRoot;
-        return Path.GetFullPath(configuredRoot);
-    }
+        => pathPolicy.ResolveRootPath(storage);
 
     internal bool IsTrustedForLocalOpen(StorageCatalogRecord storage)
+        => pathPolicy.IsTrustedForLocalOpen(storage);
+
+    private static SemaphoreSlim ResolveWriteLock(string fullPath)
     {
-        var workspaceRoot = Path.GetFullPath(workspacePathResolver.ResolveWorkspaceRoot());
-        var storageRoot = ResolveRootPath(storage);
-        return storageRoot.StartsWith(workspaceRoot, StringComparison.OrdinalIgnoreCase);
+        int hash = StringComparer.OrdinalIgnoreCase.GetHashCode(fullPath) & int.MaxValue;
+        return WriteLocks[hash % WriteLockCount];
+    }
+
+    private static StorageContentRevision? CreateRevision(string fullPath)
+    {
+        var file = new FileInfo(fullPath);
+        if (!file.Exists)
+        {
+            return null;
+        }
+
+        string state = FormattableString.Invariant($"{file.Length}:{file.LastWriteTimeUtc.Ticks}");
+        byte[] hash = SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(state));
+        return new StorageContentRevision(Convert.ToHexStringLower(hash));
     }
 
     private static string ResolveRelativePath(string? relativePathHint, string fileName)
     {
         if (!string.IsNullOrWhiteSpace(relativePathHint))
         {
-            return NormalizeRelativePath(relativePathHint);
+            return FileSystemStoragePathPolicy.NormalizeRelativeKey(relativePathHint);
         }
 
         var sanitizedFileName = string.Concat(fileName.Select(character =>
@@ -161,14 +266,6 @@ public sealed class FileSystemStorageDriver(IWorkspacePathResolver workspacePath
         return string.IsNullOrWhiteSpace(sanitizedFileName)
             ? "artifact.bin"
             : sanitizedFileName;
-    }
-
-    private static string NormalizeRelativePath(string relativePath)
-    {
-        return relativePath
-            .Trim()
-            .Replace(Path.AltDirectorySeparatorChar, Path.DirectorySeparatorChar)
-            .TrimStart(Path.DirectorySeparatorChar);
     }
 
     private static string NormalizeRoutePath(string relativePath)

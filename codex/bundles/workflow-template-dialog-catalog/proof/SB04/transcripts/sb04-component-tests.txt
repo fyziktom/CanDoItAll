@@ -1,0 +1,8 @@
+COMMAND: dotnet test tests\CanDoItAll.Tests.Components\CanDoItAll.Tests.Components.csproj --filter "FullyQualifiedName~Workflows_page_defers_component_library_until_component_sections_need_it|FullyQualifiedName~Workflows_template_catalogue|FullyQualifiedName~Workflows_template_preview_dialog|FullyQualifiedName~Workflows_template_add_to_drafts" --no-build
+
+Testovací běh pro C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Components\bin\Debug\net10.0\CanDoItAll.Tests.Components.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+
+Úspěšné!    - Neúspěšné:     0, Úspěšné:     5, Přeskočeno:     0, Celkem:     5, Doba trvání: 25 s - CanDoItAll.Tests.Components.dll (net10.0)
+ExitCode: 0
+Invariant ID: SB04-INV-003

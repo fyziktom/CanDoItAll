@@ -1,0 +1,26 @@
+SB32 closure artifact path audit passed.
+PASS bundle://analysis/04-live-repo-reentry-alignment.md
+PASS bundle://architecture/07-testing-and-mocking-strategy.md
+PASS bundle://plan/01-phase-plan.md
+PASS bundle://proof/SB32/manifest.md
+PASS bundle://proof/SB32/semantic-invariants.md
+PASS bundle://proof/SB32/transcripts/anti-stub-and-xml-doc-audit.txt
+PASS bundle://proof/SB32/transcripts/closure-artifact-path-audit.txt
+PASS bundle://proof/SB32/transcripts/file-size-and-hash-audit.txt
+PASS bundle://proof/SB32/transcripts/main-solution-build.txt
+PASS bundle://proof/SB32/transcripts/passing-generic-memory-tests.txt
+PASS bundle://proof/SB32/transcripts/passing-memory-provider-component-tests.txt
+PASS bundle://proof/SB32/transcripts/semantic-invariant-assertions.txt
+PASS bundle://proof/SB32/transcripts/source-boundary-audit.txt
+PASS bundle://proof/SB32/transcripts/test-inventory-classification-audit.txt
+PASS bundle://README.md
+PASS bundle://requirements/01-normalized-requirements.md
+PASS bundle://reviews/01-execution-report.md
+PASS bundle://subbundles/32-test-suite-rebalance-with-mock-providers/README.md
+PASS repo://docs/cognitive-memory/operations/memory-test-suite-rebalance.md
+PASS repo://docs/cognitive-memory/operations/validation-and-testing.md
+PASS repo://docs/cognitive-memory/README.md
+PASS repo://tests/Memory/CanDoItAll.Memory.Tests/GenericMockMemoryProviderFixture.cs
+PASS repo://tests/Memory/CanDoItAll.Memory.Tests/MemoryTestSuiteRebalanceCheckpointTests.cs
+PASS repo://tests/Support/CanDoItAll.Tests.Support/CognitiveMemory/CognitiveMemoryFakes.cs
+PASS repo://tests/Unit/CanDoItAll.Tests.Unit/CognitiveMemoryModuleRegistrationTests.cs

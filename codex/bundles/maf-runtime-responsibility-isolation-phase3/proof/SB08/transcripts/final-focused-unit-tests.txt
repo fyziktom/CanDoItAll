@@ -1,0 +1,17 @@
+Command:
+dotnet test tests\Unit\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj --filter "MafRuntimeArchitectureServicesTests|MafAgentRuntimeToolProviderCompositionTests|MafAgentRuntimeImageAnalysisModelTests" --no-restore --logger "console;verbosity=minimal" -p:OutputPath=C:\repositories\CanDoItAll\artifacts\codex-test-bin\unit\
+
+Result:
+Passed.
+
+Summary:
+- Failed: 0.
+- Passed: 56.
+- Skipped: 0.
+- Total: 56.
+- Duration: 634 ms.
+
+Warnings:
+- Existing Microsoft.OpenApi NU1903 advisory warnings.
+- Existing NuGet vulnerability index lookup warning in CanDoItAll.Modules.CognitiveMemory.
+

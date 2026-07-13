@@ -1,0 +1,24 @@
+SB07 final source/architecture audit — 2026-07-12
+
+Build and format:
+- CanDoItAll.Web Release --no-restore -warnaserror: 0 warnings, 0 errors.
+- Focused production and unit dotnet format --verify-no-changes: Pass.
+
+CodeAnalytics:
+- Snapshot: snap-20260713042852-baab347b
+- Scope: Infrastructure, Integration.Abstractions, Integration, Composition, Web.
+- 5 projects, 127 documents, 402 types, 2,439 members, 52 services.
+- Graph: Composition -> Integration/Infrastructure; Integration -> Abstractions/Infrastructure; Web -> Composition/Integration/Infrastructure.
+- No project cycle or reverse Infrastructure edge. The sole module cycle is the pre-existing Infrastructure Persistence/ControlPlane cycle.
+- No large-file finding in an affected FileTools integration or Web security owner. Largest affected owner: FileSystemStorageDriver 281 lines; largest integration security owner: FileAccessHandleRegistry 278 lines.
+- Three diagnostics are existing DI-factory partial-interpretation notices. No SB07 compilation diagnostic.
+
+Source assertions:
+- Infrastructure contains no FileTools or Integration dependency.
+- No partial security owner.
+- No service locator or sync-over-async in the authority/effect boundary; IServiceProvider use is restricted to the DI composition extension.
+- No raw handle/path/actor/content/secret structured log placeholder.
+- No per-call HttpClient, Task.Run, OrderBy, or unbounded source materialization in the security path.
+- ToArray sites are bounded: 64 fixed write locks, configured registry capacity revocation, native page/breadcrumb budgets, and 64 MiB save ceiling.
+- Both integration projects reference exact FileTools Abstractions and FileInteraction.Core 0.1.0; Integration also references only Integration.Abstractions and Infrastructure projects.
+- Legacy ref routes require the named handle header; /managed-files is unconditional Gone.

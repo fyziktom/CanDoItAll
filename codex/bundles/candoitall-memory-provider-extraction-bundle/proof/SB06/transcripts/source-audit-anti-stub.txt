@@ -1,0 +1,7 @@
+Command: rg -n -i NotImplementedException|TODO|HACK|throw new NotSupportedException|return default|return null;|stub|placeholder src\Memory\CanDoItAll.Memory.Application\MemoryRuntimeContracts.cs src\Memory\CanDoItAll.Memory.Application\MemoryRuntimeDriverContracts.cs src\Memory\CanDoItAll.Memory.Persistence tests\Memory\CanDoItAll.Memory.Tests\MemoryRuntimePersistenceTests.cs
+WorkingDirectory: C:\repositories\CanDoItAll
+RunLabel: SB06 anti-stub audit
+ExitCode: 0
+Summary: No placeholder/stub patterns found in SB06 runtime, persistence, or focused tests.
+Output:
+InvariantIds: SB06-CLOSURE

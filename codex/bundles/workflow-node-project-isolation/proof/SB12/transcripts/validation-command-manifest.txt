@@ -1,0 +1,51 @@
+SB12 validation command manifest
+Timestamp: 2026-06-29
+Working directory: C:\repositories\CanDoItAll
+
+Unit diagnostics:
+dotnet test tests\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj --no-build --filter "WorkflowCoreExtractionTests|ProjectStructureWorkflowPreviewSimulationSupportTests" -m:1 -v:minimal -p:OutputPath=C:\repositories\CanDoItAll\artifacts\sb12-unit-output\
+Transcript: bundle://proof/SB12/transcripts/unit-diagnostics-tests.txt
+Result: Passed, 13/13
+
+Workflow UI component diagnostics:
+dotnet test tests\CanDoItAll.Tests.Components\CanDoItAll.Tests.Components.csproj --no-build --filter "WorkflowsPageTests" -m:1 -v:minimal -p:OutputPath=C:\repositories\CanDoItAll\artifacts\sb12-components-output\
+Transcript: bundle://proof/SB12/transcripts/component-workflows-page-tests.txt
+Result: Passed, 21/21
+
+API and Workbench integration:
+dotnet test tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --no-build --filter "FullyQualifiedName~WorkflowApiIntegrationTests|Name=Email_workflow_uses_switch_and_creates_project_structure_task_nodes" -m:1 -v:minimal -p:OutputPath=C:\repositories\CanDoItAll\artifacts\sb12-integration-output\
+Transcript: bundle://proof/SB12/transcripts/api-workbench-integration-tests.txt
+Result: Passed, 14/14
+
+Workflow shell large-screen browser proof:
+$env:CANDOITALL_TEST_CONFIGURATION='sb12-playwright'; dotnet test tests\CanDoItAll.Tests.Playwright\CanDoItAll.Tests.Playwright.csproj -c sb12-playwright --no-build --filter "FullyQualifiedName~WorkflowShellSmokeTests" -m:1 -v:minimal
+Transcript: bundle://proof/SB12/transcripts/playwright-workflow-shell-large.txt
+Result: Passed, 1/1
+
+Workbench workflow-node large-screen browser proof:
+$env:CANDOITALL_TEST_CONFIGURATION='sb12-playwright'; dotnet test tests\CanDoItAll.Tests.Playwright\CanDoItAll.Tests.Playwright.csproj -c sb12-playwright --no-build --filter "FullyQualifiedName~Project_structure_workflow_nodes_can_be_added_started_and_inspected_in_browser" -m:1 -v:minimal
+Transcript: bundle://proof/SB12/transcripts/playwright-workbench-workflow-node-large.txt
+Result: Passed, 1/1
+
+Static adoption check:
+PowerShell static source and browser-scope audit over SB12 source/test files.
+Transcript: bundle://proof/SB12/transcripts/static-adoption-check.txt
+Result: Passed
+
+Semantic source assertions:
+rg -n "WorkflowFailureDisplayFormatter|TryResolveDiagnostic|WorkflowEventPayloadEnvelope|PayloadJson|ResolveEventDisplayMessage|ResolveWorkflowStatusMessage|FormatWorkflowUiException" <SB12 production files>
+Transcript: bundle://proof/SB12/transcripts/semantic-source-assertions.txt
+Result: Passed
+
+Anti-stub audit:
+rg -n "TODO|NotImplemented|throw new NotImplementedException|fixture-specific|Catalog\\WorkflowTemplatePackLoader|AddBuiltInWorkflowExecutors|MafWorkflowCompiler|MafInProcessWorkflowExecutionBackend" <SB12 production files>
+Transcript: bundle://proof/SB12/transcripts/anti-stub-audit.txt
+Result: Passed
+
+Workbook update and render:
+node codex\bundles\workflow-node-project-isolation\proof\tools\update-workbook-sb12.mjs
+Transcript: bundle://proof/SB12/transcripts/workbook-update-and-render.txt
+Result: Passed; all workbook sheets rendered and formula-error scan matched 0 entries.
+
+Output isolation caveat:
+Default Web Debug output remains locked by an existing app process. SB12 browser proof used the isolated configuration `sb12-playwright` instead of stopping that process.

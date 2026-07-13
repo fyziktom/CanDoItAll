@@ -1,0 +1,12 @@
+SB14 final source assertions
+
+PASS: AgentFrameworkProcessExecutionAdapter.cs is 33 lines and delegates through IAgentFrameworkProcessStepExecutor.
+PASS: zero partial type declarations exist under Services/RuntimeIntegration.
+PASS: no AgentFrameworkProcessExecutionAdapter.*.cs partial files remain.
+PASS: completion, managed-artifact, grounding, subprocess, result-conversion, and runtime-owned execution are top-level collaborators.
+PASS: the generic tool-receipt evidence gate composes IProcessToolReceiptEvidencePolicyContribution values and does not name Blazor/Tetris.
+PASS: the Blazor fatal-banner literal is present only in Drivers/DotNet/DotNetBrowserSnapshotEvidencePolicyContribution.cs.
+PASS: .NET lifecycle/setup/tool-plan/subprocess policy implementations are under Drivers/DotNet.
+PASS: generic process prompts do not name concrete .NET lifecycle tools.
+PASS: current-run evidence paths are constrained to artifacts/process-runs/{processRunId}.
+PASS: ProcessRuntimeArchitectureBaselineTests and ProcessRuntimePolicyIsolationTests enforce the boundary.

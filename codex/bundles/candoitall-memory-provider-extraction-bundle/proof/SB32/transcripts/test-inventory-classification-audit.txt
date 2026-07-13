@@ -1,0 +1,5 @@
+SB32 test inventory classification audit passed.
+Generic suite: tests/Memory/CanDoItAll.Memory.Tests with GenericMockMemoryProviderFixture and MemoryTestSuiteRebalanceCheckpointTests.
+Legacy native retained suite: tests/Unit and tests/Integration CognitiveMemory* plus tests/Support CognitiveMemory fakes.
+Base host coupling guard owner: HostCompositionDependencyRemovalTests.
+Documentation: docs/cognitive-memory/operations/memory-test-suite-rebalance.md.

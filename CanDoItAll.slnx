@@ -9,6 +9,10 @@
     <Project Path="src/Foundation/CanDoItAll.Migrations.PostgreSql/CanDoItAll.Migrations.PostgreSql.csproj" />
     <Project Path="src/Foundation/CanDoItAll.Git/CanDoItAll.Git.csproj" />
   </Folder>
+  <Folder Name="/src/Integration/">
+    <Project Path="src/Integration/CanDoItAll.FileTools.Integration.Abstractions/CanDoItAll.FileTools.Integration.Abstractions.csproj" />
+    <Project Path="src/Integration/CanDoItAll.FileTools.Integration/CanDoItAll.FileTools.Integration.csproj" />
+  </Folder>
   <Folder Name="/src/Memory/">
     <Project Path="src/Memory/CanDoItAll.Memory.Abstractions/CanDoItAll.Memory.Abstractions.csproj" />
     <Project Path="src/Memory/CanDoItAll.Memory.Application/CanDoItAll.Memory.Application.csproj" />

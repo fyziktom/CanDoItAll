@@ -1,0 +1,5 @@
+Command: SB30 legacy CognitiveMemory API retirement audit
+PASS: Legacy native endpoint partials are removed.
+PASS: Remaining /api/cognitive-memory compatibility API is a provider-neutral retired endpoint surface with 410 responses and a contract endpoint.
+ExitCode: 0
+

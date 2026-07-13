@@ -1,0 +1,12 @@
+Command: dotnet test tests\Unit\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj --filter "FullyQualifiedName~ProcessRuntimeIntegrationAdapterTests|FullyQualifiedName~DotNetProcessLaunchVariableContributorTests" -v minimal
+Exit code: 1
+Purpose: Failing-first and adversarial proof transcript for the branch-aware process runtime hardening bundle.
+Invariant IDs covered: SB00-INV-branch-regression; SB01-INV-extracted-gate; SB02-INV-structured-receipts; SB03-INV-branch-enforcement; SB04-INV-routed-issues; SB05-INV-provider-boundary; SB07-INV-template-migration; SB08-INV-acceptance-matrix; SB11-INV-final-closure.
+Expected pre-fix failures:
+- QualityAccepted_with_full_browser_receipts_accepts_criterion_by_criterion_proof did not exist before the criteria matrix work and would not prove criterion-by-criterion acceptance.
+- QualityAccepted_rejects_stale_runtime_host_receipt did not exist before lifecycle correlation and would allow stale runtime/browser proof.
+- Enrich_adds_root_blazor_delivery_branch_aware_validation_metadata did not exist before template migration and would not prove branch-aware Blazor metadata.
+Adversarial negative proof:
+- Repair branches without deterministic defect evidence remain rejected by process.adapter.branch_outcome_defect_evidence_missing.
+- Accepted branches with incomplete criteria evidence remain rejected by process.adapter.acceptance_criteria_missing.
+- Runtime proof from a different execution-run host remains rejected by process.adapter.runtime_lifecycle_correlation_missing.

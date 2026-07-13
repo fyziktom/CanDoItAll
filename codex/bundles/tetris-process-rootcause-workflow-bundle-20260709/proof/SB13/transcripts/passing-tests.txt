@@ -1,0 +1,13 @@
+SB13 passing tests
+
+ProcessRuntimePolicyIsolationTests and related architecture/preflight tests:
+Result: 27 passed, 0 failed.
+
+Covered positive and negative cases:
+- generic workspace receipt ownership;
+- .NET receipt ownership through the .NET contribution;
+- unrelated tool rejection;
+- ambiguous ownership throws;
+- generic subprocess resolver has no domain default;
+- .NET provider resolves supported software-delivery contracts;
+- module composition registers the intended strategies.

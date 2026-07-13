@@ -1,0 +1,68 @@
+SB16 managed browser proof, 2026-07-13
+
+Final runtime:
+- Session: app_243a5c6830394e0583f412fa32b4ba58
+- Lane: PublishedActive / PublishedDll / RunOnce
+- URL: http://127.0.0.1:5506/projects/{temporary-project}/structure
+- State: Healthy before proof; explicitly stopped after cleanup.
+
+Controlled temporary data:
+- Nine-node project with editable Markdown, hostile Markdown, Mermaid, 1x1 raster, PDF, hostile SVG, unknown ZIP, and 16,777,217-byte text.
+- Project-scoped public API lease held only for setup/proof and released before project deletion.
+
+Per-type results:
+1. Markdown opened directly in FileInteraction View, switched to Edit, rendered safe preview, saved, survived runtime restart, and reopened with persisted content.
+2. Close while dirty showed a discard guard and retained the editor when Keep editing was chosen.
+3. Hostile Markdown produced scripts 0, images 0, JavaScript links 0, and attack sentinel false.
+4. Mermaid rendered SVG in the direct interaction with foreignObject 0, script 0, text elements 5, strict security, and disabled source actions.
+5. Raster used a blob URL, completed, and reported naturalWidth 1; no managed route was requested.
+6. PDF used a blob object and displayed the explicit browser-controlled embedded-action notice; Edit was disabled.
+7. Hostile SVG stayed metadata-only with image/script 0 and attack sentinel false.
+8. Unknown ZIP stayed inert with no object/image/script/iframe/video/audio and Edit disabled.
+9. Oversized text showed the configured 16,777,216-byte limit error with no source materialization, view, editor, or active content.
+
+Concurrent save/rebase result:
+- Tab A opened the current revision and retained local 80-byte text.
+- Tab B opened the same current revision, saved a concurrent 70-byte update, and reached Saved.
+- Tab A save reached exact status Save conflict, retained its local text, and exposed Retry against current revision plus Retry without revision.
+- Retry against current revision reached exact status Saved, removed conflict actions, retained the local text, and displayed revision 4.
+- API content read decoded to exactly '# SB16 Conflict Proof' plus 'Explicit rebase retry persisted this stale editor safely.' (80 bytes).
+- SHA-256: 4c59757dbede866eeb3ea2a435b029ff7cb3298941b154f2f2150b31109550ce.
+
+Managed log result:
+- Authorized opens at sequences 8562-8565.
+- Concurrent save: sequence 8567, 70 bytes.
+- Rebased save: sequence 8569, 80 bytes.
+- Content API GET: 200.
+- Lease release POST: 200.
+- Temporary project DELETE: 200.
+
+Final 1440x900 geometry:
+- dialog client/scroll width: 1150/1150
+- body client/scroll width: 1115/1115
+- interaction client/scroll width: 1071/1071
+- workspace client/scroll width: 1071/1071
+- editor client/scroll width: 535/535
+- preview client/scroll width: 534/534
+- all interaction heights fit the dialog; no lateral clipping or competing page scroll
+
+Final clean navigation diagnostics:
+- Console errors: 0
+- Console warnings: 0
+- GET /_blazor/initializers: 200
+- POST /_blazor/negotiate: 200
+- No unexpected non-static request or preview-route request.
+
+Screenshot visual review while visible:
+- Does the overlay leave the canvas visually subordinate and keep all dialog actions reachable? Yes at both desktop viewports.
+- Does the direct interaction use the available width without lateral clipping or a competing scroll owner? Yes; the final 1440 geometry and visible split editor/preview both fit.
+- Is hostile Markdown visibly inert rather than disappearing behind an unverifiable blank surface? Yes; script text is displayed literally and the remote image is represented only by safe text while DOM/network assertions remain zero.
+- Is strict Mermaid readable without HTML labels or clipped nodes/connectors? Yes; three text-labelled nodes and two connectors are visible with ample whitespace and zero `foreignObject`.
+- Is the oversize state explicit, readable, and non-editable? Yes; the 16,777,216-byte limit message, Error badge, disabled Edit, Retry, and Close are visible.
+- Does the successful rebase visibly show the retained local text, safe Markdown preview, Saved state, and new revision? Yes; the final 1440 screenshot shows the exact text, Saved, and revision 4.
+
+Cleanup:
+- Lease current returned empty after release.
+- Deleted project no longer appeared in the public project list.
+- Repository file scan found no temporary project ID or compact ID path.
+- Managed runtime explicitly stopped.

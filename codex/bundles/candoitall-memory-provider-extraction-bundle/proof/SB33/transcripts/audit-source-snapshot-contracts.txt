@@ -1,0 +1,8 @@
+Command: Historical SB33 proof transcript: audit-source-snapshot-contracts.txt
+src\MAF\Common\CanDoItAll.AgentFramework.Core\Sources\MemorySourceSnapshotContracts.cs:314:public sealed record MemorySourceSnapshotCursorDescriptor(
+src\MAF\Common\CanDoItAll.AgentFramework.Core\Sources\MemorySourceSnapshotContracts.cs:331:public sealed class MemorySourceSnapshotCursorException : InvalidOperationException
+src\MAF\Common\CanDoItAll.AgentFramework.Core\Sources\MemorySourceSnapshotContracts.cs:361:public enum MemorySourceKind
+src\MAF\Common\CanDoItAll.AgentFramework.Core\Sources\MemorySourceSnapshotContracts.cs:508:public sealed record MemorySourceSnapshot(
+src\MAF\Common\CanDoItAll.AgentFramework.Core\Sources\MemorySourceSnapshotContracts.cs:512:public sealed record MemorySourceSnapshotManifest(
+ExitCode: 0
+

@@ -1,0 +1,4 @@
+Command: dotnet test tests\Unit\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj --filter "FullyQualifiedName~WorkspaceArtifactToolServiceTests|FullyQualifiedName~AgentFrameworkHostingServiceCollectionTests|FullyQualifiedName~WorkspaceExternalTargetAliasTests" --disable-build-servers
+Exit code: 0
+Invariant ID: SB02-INV-001
+Result: Passed as part of the focused 21-test run after the receipt filename fix. The workspace artifact service tests covered converter success, converter failure, image rejection, and bounded receipt filenames.

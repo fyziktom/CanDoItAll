@@ -9,10 +9,11 @@
     <PackageReference Include="CanDoItAll.Components.BaseLib" Version="0.1.2" />
     <PackageReference Include="CanDoItAll.Components.CanvasLib" Version="0.1.2" />
     <PackageReference Include="CanDoItAll.Components.Charts" Version="0.1.2" />
-    <PackageReference Include="CanDoItAll.Components.Mermaid" Version="0.1.2" />
+    <PackageReference Include="CanDoItAll.Components.Mermaid" Version="0.1.3" />
     <ProjectReference Include="..\CanDoItAll.Composition\CanDoItAll.Composition.csproj" />
     <ProjectReference Include="..\..\Foundation\CanDoItAll.SharedKernel\CanDoItAll.SharedKernel.csproj" />
     <ProjectReference Include="..\..\Foundation\CanDoItAll.Infrastructure\CanDoItAll.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\Integration\CanDoItAll.FileTools.Integration\CanDoItAll.FileTools.Integration.csproj" />
     <ProjectReference Include="..\..\Foundation\CanDoItAll.Migrations.PostgreSql\CanDoItAll.Migrations.PostgreSql.csproj" />
     <ProjectReference Include="..\..\Modules\CanDoItAll.Modules.AgentFramework\CanDoItAll.Modules.AgentFramework.csproj" />
     <ProjectReference Include="..\..\Modules\CanDoItAll.Modules.Collaboration\CanDoItAll.Modules.Collaboration.csproj" />

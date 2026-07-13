@@ -1,3 +1,4 @@
+using CanDoItAll.FileTools.Integration;
 using CanDoItAll.Infrastructure.Storage;
 using Microsoft.Extensions.Logging.Abstractions;
 
@@ -27,11 +28,14 @@ public sealed class StoragePlacementServiceTests
                 HealthStatus = StorageHealthStatus.Healthy,
                 IsEnabled = true
             };
-            var sut = new StoragePlacementService(
+            var revisions = new ProcessLocalFileCatalogRevisionService();
+            var sut = new RevisionPublishingStoragePlacementService(new StoragePlacementService(
                 new TestStorageCatalogService(storage),
                 new TestStorageRoutingService(storage.Id, storage.Name, storage.ProviderKind, storage.CapabilityMask),
-                new TestStorageDriverRegistry(new FileSystemStorageDriver(new TestWorkspacePathResolver(workspaceRoot))),
-                NullLogger<StoragePlacementService>.Instance);
+                new TestStorageDriverRegistry(new FileSystemStorageDriver(
+                    new FileSystemStoragePathPolicy(new TestWorkspacePathResolver(workspaceRoot)))),
+                NullLogger<StoragePlacementService>.Instance),
+                revisions);
 
             var result = await sut.PlaceAsync(
                 new StoragePlacementRequest(
@@ -48,6 +52,9 @@ public sealed class StoragePlacementServiceTests
             Assert.StartsWith("/storage/objects/preview?ref=", result.Route, StringComparison.Ordinal);
             Assert.True(File.Exists(result.Location));
             Assert.Equal("alpha", await File.ReadAllTextAsync(result.Location));
+            Assert.Equal(
+                new FileCatalogRevision(1, 0),
+                revisions.Get(CreateProjectScope(), storage.Id));
         }
         finally
         {
@@ -68,11 +75,13 @@ public sealed class StoragePlacementServiceTests
             HealthStatus = StorageHealthStatus.Healthy,
             IsEnabled = true
         };
-        var sut = new StoragePlacementService(
+        var revisions = new ProcessLocalFileCatalogRevisionService();
+        var sut = new RevisionPublishingStoragePlacementService(new StoragePlacementService(
             new TestStorageCatalogService(storage),
             new TestStorageRoutingService(storage.Id, storage.Name, storage.ProviderKind, storage.CapabilityMask),
             new TestStorageDriverRegistry(new TestStorageDriver(storage.ProviderKind, storage.CapabilityMask)),
-            NullLogger<StoragePlacementService>.Instance);
+            NullLogger<StoragePlacementService>.Instance),
+            revisions);
 
         var error = await Assert.ThrowsAsync<InvalidOperationException>(() => sut.PlaceAsync(
             new StoragePlacementRequest(
@@ -85,7 +94,14 @@ public sealed class StoragePlacementServiceTests
                 PreferredStorageId: storage.Id)));
 
         Assert.Contains("required capabilities", error.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(new FileCatalogRevision(0, 0), revisions.Get(CreateProjectScope(), storage.Id));
     }
+
+    private static FileToolsSemanticScope CreateProjectScope()
+        => new(
+            FileToolsSemanticScopeKind.Project,
+            new FileToolsSemanticScopeId("placement-project"),
+            "Placement project");
 
     private sealed class TestStorageCatalogService(params StorageCatalogRecord[] storages) : IStorageCatalogService
     {

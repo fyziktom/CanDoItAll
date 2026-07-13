@@ -1,0 +1,32 @@
+  CanDoItAll.Memory.Abstractions -> C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Abstractions\bin\Debug\net10.0\CanDoItAll.Memory.Abstractions.dll
+  CanDoItAll.CognitiveMemory.Domain -> C:\repositories\CanDoItAll.CognitiveMemory\src\CanDoItAll.CognitiveMemory.Domain\bin\Debug\net10.0\CanDoItAll.CognitiveMemory.Domain.dll
+  CanDoItAll.CognitiveMemory.Contracts -> C:\repositories\CanDoItAll.CognitiveMemory\src\CanDoItAll.CognitiveMemory.Contracts\bin\Debug\net10.0\CanDoItAll.CognitiveMemory.Contracts.dll
+  CanDoItAll.CognitiveMemory.Application -> C:\repositories\CanDoItAll.CognitiveMemory\src\CanDoItAll.CognitiveMemory.Application\bin\Debug\net10.0\CanDoItAll.CognitiveMemory.Application.dll
+C:\repositories\CanDoItAll\src\MAF\Common\CanDoItAll.AgentFramework.Core\CanDoItAll.AgentFramework.Core.csproj : warning NU1900: Při získávání dat o ohrožení zabezpečení balíčku došlo k chybě: Nepovedlo se načíst index služby pro zdroj https://api.nuget.org/v3/index.json.
+  CanDoItAll.CognitiveMemory.Projection.Rag -> C:\repositories\CanDoItAll.CognitiveMemory\src\CanDoItAll.CognitiveMemory.Projection.Rag\bin\Debug\net10.0\CanDoItAll.CognitiveMemory.Projection.Rag.dll
+  CanDoItAll.AgentFramework.Capabilities.Abstractions -> C:\repositories\CanDoItAll\src\MAF\Capabilities\CanDoItAll.AgentFramework.Capabilities.Abstractions\bin\Debug\net10.0\CanDoItAll.AgentFramework.Capabilities.Abstractions.dll
+C:\repositories\CanDoItAll\src\MAF\WorkflowExecutors\CanDoItAll.AgentFramework.WorkflowExecutors.Core\CanDoItAll.AgentFramework.WorkflowExecutors.Core.csproj : warning NU1900: Při získávání dat o ohrožení zabezpečení balíčku došlo k chybě: Nepovedlo se načíst index služby pro zdroj https://api.nuget.org/v3/index.json.
+  CanDoItAll.CognitiveMemory.Workers -> C:\repositories\CanDoItAll.CognitiveMemory\src\CanDoItAll.CognitiveMemory.Workers\bin\Debug\net10.0\CanDoItAll.CognitiveMemory.Workers.dll
+  CanDoItAll.CognitiveMemory.Persistence -> C:\repositories\CanDoItAll.CognitiveMemory\src\CanDoItAll.CognitiveMemory.Persistence\bin\Debug\net10.0\CanDoItAll.CognitiveMemory.Persistence.dll
+  CanDoItAll.Git -> C:\repositories\CanDoItAll\src\Foundation\CanDoItAll.Git\bin\Debug\net10.0\CanDoItAll.Git.dll
+  CanDoItAll.CognitiveMemory.UI -> C:\repositories\CanDoItAll.CognitiveMemory\src\CanDoItAll.CognitiveMemory.UI\bin\Debug\net10.0\CanDoItAll.CognitiveMemory.UI.dll
+  CanDoItAll.SharedKernel -> C:\repositories\CanDoItAll\src\Foundation\CanDoItAll.SharedKernel\bin\Debug\net10.0\CanDoItAll.SharedKernel.dll
+  CanDoItAll.AgentFramework.Models -> C:\repositories\CanDoItAll\src\MAF\Common\CanDoItAll.AgentFramework.Models\bin\Debug\net10.0\CanDoItAll.AgentFramework.Models.dll
+  CanDoItAll.AgentFramework.Workflows.Abstractions -> C:\repositories\CanDoItAll\src\MAF\Workflows\CanDoItAll.AgentFramework.Workflows.Abstractions\bin\Debug\net10.0\CanDoItAll.AgentFramework.Workflows.Abstractions.dll
+  CanDoItAll.AgentFramework.WorkflowExecutors.Abstractions -> C:\repositories\CanDoItAll\src\MAF\WorkflowExecutors\CanDoItAll.AgentFramework.WorkflowExecutors.Abstractions\bin\Debug\net10.0\CanDoItAll.AgentFramework.WorkflowExecutors.Abstractions.dll
+  CanDoItAll.AgentFramework.WorkflowExecutors.Core -> C:\repositories\CanDoItAll\src\MAF\WorkflowExecutors\CanDoItAll.AgentFramework.WorkflowExecutors.Core\bin\Debug\net10.0\CanDoItAll.AgentFramework.WorkflowExecutors.Core.dll
+  CanDoItAll.AgentFramework.Core -> C:\repositories\CanDoItAll\src\MAF\Common\CanDoItAll.AgentFramework.Core\bin\Debug\net10.0\CanDoItAll.AgentFramework.Core.dll
+  CanDoItAll.CognitiveMemory.Maf -> C:\repositories\CanDoItAll.CognitiveMemory\src\CanDoItAll.CognitiveMemory.Maf\bin\Debug\net10.0\CanDoItAll.CognitiveMemory.Maf.dll
+  CanDoItAll.Memory.Application -> C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Application\bin\Debug\net10.0\CanDoItAll.Memory.Application.dll
+  CanDoItAll.Memory.Http -> C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Http\bin\Debug\net10.0\CanDoItAll.Memory.Http.dll
+  CanDoItAll.CognitiveMemory.Service -> C:\repositories\CanDoItAll.CognitiveMemory\src\CanDoItAll.CognitiveMemory.Service\bin\Debug\net10.0\CanDoItAll.CognitiveMemory.Service.dll
+  CanDoItAll.CognitiveMemory.Tests -> C:\repositories\CanDoItAll.CognitiveMemory\tests\CanDoItAll.CognitiveMemory.Tests\bin\Debug\net10.0\CanDoItAll.CognitiveMemory.Tests.dll
+
+Vytváření sestavení bylo úspěšně dokončeno.
+
+C:\repositories\CanDoItAll\src\MAF\Common\CanDoItAll.AgentFramework.Core\CanDoItAll.AgentFramework.Core.csproj : warning NU1900: Při získávání dat o ohrožení zabezpečení balíčku došlo k chybě: Nepovedlo se načíst index služby pro zdroj https://api.nuget.org/v3/index.json.
+C:\repositories\CanDoItAll\src\MAF\WorkflowExecutors\CanDoItAll.AgentFramework.WorkflowExecutors.Core\CanDoItAll.AgentFramework.WorkflowExecutors.Core.csproj : warning NU1900: Při získávání dat o ohrožení zabezpečení balíčku došlo k chybě: Nepovedlo se načíst index služby pro zdroj https://api.nuget.org/v3/index.json.
+    2 upozornění
+    Počet chyb: 0
+
+Uplynulý čas 00:00:19.63

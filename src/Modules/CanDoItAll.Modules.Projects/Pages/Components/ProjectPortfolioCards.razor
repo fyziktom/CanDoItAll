@@ -1,0 +1,187 @@
+@using CanDoItAll.Components.Common
+
+<div class="projects-board__cards-scroll h-full min-h-0 overflow-y-auto pr-1"
+     style="scrollbar-gutter:stable;"
+     data-testid="projects-cards-scroll">
+    @if (Projects.Count == 0)
+    {
+        <EmptyState Eyebrow="No matching projects"
+                    Title="Adjust the filters or start a new project"
+                    Description="When projects match the current filters, they appear here as compact cards with overview and dashboard actions.">
+            <Actions>
+                <Button Text="New project" Click="OpenNewProject" />
+            </Actions>
+        </EmptyState>
+    }
+    else
+    {
+        <Grid Gap="LayoutGap.Medium"
+              ColumnsLg="2"
+              Columns2Xl="3">
+            @foreach (ProjectSummary project in Projects)
+            {
+                <article class="@ProjectsPresentation.GetProjectCardCss(project.Status)"
+                         data-testid="project-card">
+                    <Cluster AlignItems="AlignItems.Start"
+                             Wrap="FlexWrap.NoWrap"
+                             Gap="LayoutGap.Medium">
+                        <div class="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-white/70 bg-white/90 text-xs font-bold uppercase tracking-[0.18em] text-slate-600 shadow-sm">
+                            @ProjectsPresentation.GetProjectMonogram(project.Name)
+                        </div>
+                        <div class="min-w-0 flex-1">
+                            <Split Breakpoint="LayoutBreakpoint.None"
+                                   Gap="LayoutGap.Medium"
+                                   AlignItems="AlignItems.Start"
+                                   JustifyContent="JustifyContent.SpaceBetween"
+                                   Wrap="FlexWrap.Wrap">
+                                <div class="min-w-0">
+                                    <p class="cda-eyebrow cda-eyebrow--tight text-slate-400">Project</p>
+                                    <h3 class="mt-1 text-base font-bold tracking-tight text-slate-950">@project.Name</h3>
+                                </div>
+                                <StatusBadge Tone="@ProjectsPresentation.GetStatusTone(project.Status)"
+                                             Text="@project.Status.ToString()" />
+                            </Split>
+                            <p class="mt-2 text-sm leading-5 text-slate-500">@(string.IsNullOrWhiteSpace(project.CurrentPhase) ? "Current phase not set yet." : project.CurrentPhase)</p>
+                            @if (!string.IsNullOrWhiteSpace(project.PrimaryCustomerName) ||
+                                 !string.IsNullOrWhiteSpace(project.PrimaryDeliveryUnitName) ||
+                                 !string.IsNullOrWhiteSpace(project.PrimaryOwnerName))
+                            {
+                                <div class="mt-3 space-y-1.5 text-sm text-slate-600"
+                                     data-testid="project-card-related-parties">
+                                    @if (!string.IsNullOrWhiteSpace(project.PrimaryCustomerName))
+                                    {
+                                        <p><span class="font-semibold text-slate-800">Customer:</span> @project.PrimaryCustomerName</p>
+                                    }
+                                    @if (!string.IsNullOrWhiteSpace(project.PrimaryDeliveryUnitName))
+                                    {
+                                        <p><span class="font-semibold text-slate-800">Delivery unit:</span> @project.PrimaryDeliveryUnitName</p>
+                                    }
+                                    @if (!string.IsNullOrWhiteSpace(project.PrimaryOwnerName))
+                                    {
+                                        <p><span class="font-semibold text-slate-800">Owner:</span> @project.PrimaryOwnerName</p>
+                                    }
+                                </div>
+                            }
+                            @if ((project.RelatedParties?.Count ?? 0) > 0)
+                            {
+                                <Cluster Gap="LayoutGap.XSmall"
+                                         Class="mt-3">
+                                    @foreach (ProjectPortfolioPartyItem item in project.RelatedParties!.Take(4))
+                                    {
+                                        <Pill Tone="@(item.IsPrimary ? PillTone.Info : PillTone.Neutral)"
+                                              Text="@($"{item.Label}: {item.DisplayName}")" />
+                                    }
+                                </Cluster>
+                            }
+                        </div>
+                    </Cluster>
+
+                    <Cluster Gap="LayoutGap.XSmall"
+                             Class="mt-4">
+                        <StatusBadge Tone="neutral" Text="@($"{project.PhaseCount} phases")" />
+                        <StatusBadge Tone="neutral" Text="@($"{project.ParentCount} parents")" />
+                        <StatusBadge Tone="info" Text="@($"{project.ChildCount} subprojects")" />
+                        <StatusBadge Tone="neutral" Text="@($"Updated {project.UpdatedAtUtc.LocalDateTime:g}")" />
+                    </Cluster>
+
+                    <CardActions Secondary="true"
+                                 Class="mt-4 border-white/70">
+                        <Cluster>
+                            <Button Class="cda-button--quick"
+                                    Icon="visibility"
+                                    title="Preview project"
+                                    aria-label="Preview project"
+                                    data-testid="project-card-details-button"
+                                    Click="@(() => OpenProjectPreview.InvokeAsync(project.Id))" />
+                            <Button ButtonStyle="ButtonStyle.Light"
+                                    Class="cda-button--quick"
+                                    Icon="subdirectory_arrow_right"
+                                    title="Open hierarchy"
+                                    aria-label="Open hierarchy"
+                                    data-testid="project-card-subprojects-button"
+                                    Click="@(() => OpenHierarchyModal.InvokeAsync(project.Id))" />
+                        </Cluster>
+                        <Cluster Gap="LayoutGap.XSmall">
+                            <Button ButtonStyle="ButtonStyle.Light"
+                                    Size="ButtonSize.Small"
+                                    Class="cda-button--quick"
+                                    Icon="folder_open"
+                                    title="Open project files"
+                                    aria-label="Open project files"
+                                    data-testid="project-card-files-button"
+                                    Click="@(() => OpenProjectFiles.InvokeAsync(project.Id))" />
+                            <Button ButtonStyle="ButtonStyle.Light"
+                                    Size="ButtonSize.Small"
+                                    Class="cda-button--quick"
+                                    Icon="dashboard"
+                                    title="Open dashboard tab"
+                                    aria-label="Open dashboard tab"
+                                    Click="@(() => OpenProjectDashboard.InvokeAsync(project.Id))" />
+                            <Button ButtonStyle="ButtonStyle.Light"
+                                    Size="ButtonSize.Small"
+                                    Class="cda-button--quick"
+                                    Icon="account_tree"
+                                    title="Open structure"
+                                    aria-label="Open structure"
+                                    Click="@(() => OpenStructure.InvokeAsync(project.Id))" />
+                            <Button ButtonStyle="ButtonStyle.Light"
+                                    Size="ButtonSize.Small"
+                                    Class="cda-button--quick"
+                                    Icon="hub"
+                                    title="Open processes"
+                                    aria-label="Open processes"
+                                    Click="@(() => OpenProcesses.InvokeAsync(project.Id))" />
+                            <Button ButtonStyle="ButtonStyle.Light"
+                                    Size="ButtonSize.Small"
+                                    Class="cda-button--quick"
+                                    Icon="calendar_month"
+                                    title="Open calendar"
+                                    aria-label="Open calendar"
+                                    Click="@(() => OpenCalendar.InvokeAsync(project.Id))" />
+                            <Button ButtonStyle="ButtonStyle.Light"
+                                    Size="ButtonSize.Small"
+                                    Class="cda-button--quick"
+                                    Icon="timeline"
+                                    title="Open Mermaid Gantt"
+                                    aria-label="Open Mermaid Gantt"
+                                    data-testid="project-card-gantt-button"
+                                    Click="@(() => OpenGanttPreview.InvokeAsync(project.Id))" />
+                        </Cluster>
+                    </CardActions>
+                </article>
+            }
+        </Grid>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public IReadOnlyList<ProjectSummary> Projects { get; set; } = default!;
+
+    [Parameter]
+    public EventCallback OpenNewProject { get; set; }
+
+    [Parameter]
+    public EventCallback<Guid> OpenProjectPreview { get; set; }
+
+    [Parameter]
+    public EventCallback<Guid> OpenHierarchyModal { get; set; }
+
+    [Parameter]
+    public EventCallback<Guid> OpenProjectFiles { get; set; }
+
+    [Parameter]
+    public EventCallback<Guid> OpenProjectDashboard { get; set; }
+
+    [Parameter]
+    public EventCallback<Guid> OpenStructure { get; set; }
+
+    [Parameter]
+    public EventCallback<Guid> OpenProcesses { get; set; }
+
+    [Parameter]
+    public EventCallback<Guid> OpenCalendar { get; set; }
+
+    [Parameter]
+    public EventCallback<Guid> OpenGanttPreview { get; set; }
+}

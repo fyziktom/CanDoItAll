@@ -1,0 +1,13 @@
+SB13 prepared-stage validator
+Timestamp: 2026-06-29T20:19:30.6522647-04:00
+Working directory: C:\repositories\CanDoItAll
+Command: & 'C:\Users\lucys\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe' 'C:\Users\lucys\.codex\skills\candoitall-bundle-preparation\scripts\validate_bundle.py' 'codex\bundles\workflow-node-project-isolation' --profile initiative --stage prepared --repo-root 'C:\repositories\CanDoItAll'
+
+Bundle is valid for stage 'prepared': C:\repositories\CanDoItAll\codex\bundles\workflow-node-project-isolation
+Exit code: 0
+
+Completed Validator Metadata Addendum
+Command: historical SB13 proof command recorded during bundle execution
+ExitCode: 0
+ExitCode: 1
+Invariant ID: SB13-final-closure

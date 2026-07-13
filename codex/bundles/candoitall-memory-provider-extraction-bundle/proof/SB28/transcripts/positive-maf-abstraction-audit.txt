@@ -1,0 +1,10 @@
+Workdir: C:\repositories\CanDoItAll
+Started: 2026-07-05T20:38:17.6134418-04:00
+
+Command: rg -n "IAgentContextContributor|CanDoItAll.AgentFramework.Core" native MAF project
+C:\repositories\CanDoItAll.CognitiveMemory\src\CanDoItAll.CognitiveMemory.Maf\CanDoItAll.CognitiveMemory.Maf.csproj:10:    <ProjectReference Include="..\..\..\CanDoItAll\src\MAF\Common\CanDoItAll.AgentFramework.Core\CanDoItAll.AgentFramework.Core.csproj" />
+C:\repositories\CanDoItAll.CognitiveMemory\src\CanDoItAll.CognitiveMemory.Maf\CognitiveMemoryNativeContextContributor.cs:1:using CanDoItAll.AgentFramework.Core;
+C:\repositories\CanDoItAll.CognitiveMemory\src\CanDoItAll.CognitiveMemory.Maf\CognitiveMemoryNativeContextContributor.cs:12:    ICognitiveMemoryRecallService recallService) : IAgentContextContributor
+C:\repositories\CanDoItAll.CognitiveMemory\src\CanDoItAll.CognitiveMemory.Maf\CognitiveMemoryNativeContextContributor.cs:113:        services.TryAddEnumerable(ServiceDescriptor.Scoped<IAgentContextContributor, CognitiveMemoryNativeContextContributor>());
+
+ExitCode: 0

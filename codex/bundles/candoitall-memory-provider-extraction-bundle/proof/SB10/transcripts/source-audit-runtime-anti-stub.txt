@@ -1,0 +1,4 @@
+Command: Historical SB10 proof transcript: source-audit-runtime-anti-stub.txt
+src/Memory\CanDoItAll.Memory.Http\HttpMemoryProviderDriver.Responses.cs:24:        if (response.StatusCode == HttpStatusCode.NotImplemented)
+ExitCode: 0
+InvariantIds: SB10-CLOSURE

@@ -1,0 +1,85 @@
+Command: structured subprocess and shared artifact template inventory
+WorkingDirectory: C:\repositories\CanDoItAll
+Snapshot: snap-20260708111133-0494a6f9
+ExitCode: 0
+
+Subprocess parent steps:
+- parent=dotnet-development-slice; step=prepare-solution-skeleton; childProcess=dotnet-solution-setup; manualSkip=True; ops=ReadProcessContext,ReadProjectStructure,ReadUpstreamArtifacts,WriteManagedProcessArtifacts,ExecuteExternalAction; artifacts=solution-skeleton-evidence [implementation-plan] required=True; childStep=setup-handoff; childArtifact=Setup handoff packet; childExpectationId=
+- parent=dotnet-development-slice; step=implement-code-change; childProcess=dotnet-feature-function-implementation; manualSkip=False; ops=ReadProcessContext,ReadProjectStructure,ReadUpstreamArtifacts,WriteManagedProcessArtifacts,ExecuteExternalAction; artifacts=slice-change-set [implementation-change-set] required=True; childStep=code-change; childArtifact=Feature implementation change set; childExpectationId=
+- parent=dotnet-development-slice; step=slice-repair-code-change; childProcess=dotnet-feature-function-implementation; manualSkip=False; ops=ReadProcessContext,ReadProjectStructure,ReadUpstreamArtifacts,WriteManagedProcessArtifacts,ExecuteExternalAction; artifacts=slice-repair-change-set [implementation-change-set] required=True; childStep=code-change; childArtifact=Feature implementation change set; childExpectationId=
+- parent=software-delivery; step=architecture-review; childProcess=dotnet-architecture-design-review; manualSkip=False; ops=ReadProcessContext,ReadProjectStructure,ReadUpstreamArtifacts,WriteManagedProcessArtifacts,ExecuteExternalAction; artifacts=project-structure-context-brief [project-structure-context-brief] required=True; childStep=classify-dotnet-application; childArtifact=.NET application classification and project context; childExpectationId= | architecture-decision-record [architecture-decision-record] required=True; childStep=architecture-handoff; childArtifact=.NET architecture design and review handoff; childExpectationId=
+- parent=software-delivery; step=implementation; childProcess=dotnet-development-slice; manualSkip=False; ops=ReadProcessContext,ReadProjectStructure,ReadUpstreamArtifacts,WriteManagedProcessArtifacts,ExecuteExternalAction; artifacts=implementation-change-set [implementation-change-set] required=True; childStep=implement-code-change; childArtifact=Slice implementation change set; childExpectationId= | migration-rollout-preparation-checklist [rollback-plan] required=True; childStep=slice-handoff; childArtifact=Implementation slice handoff packet; childExpectationId=
+- parent=software-delivery; step=record-runtime-commands; childProcess=dotnet-runtime-command-writeback; manualSkip=False; ops=ReadProcessContext,ReadProjectStructure,ReadUpstreamArtifacts,WriteManagedProcessArtifacts,ExecuteExternalAction; artifacts=runtime-command-writeback [implementation-plan] required=True; childStep=runtime-command-handoff; childArtifact=.NET runtime command handoff; childExpectationId=
+- parent=software-delivery; step=capture-ui-screenshots; childProcess=dotnet-ui-screenshot-writeback; manualSkip=False; ops=ReadProcessContext,ReadProjectStructure,ReadUpstreamArtifacts,WriteManagedProcessArtifacts,ExecuteExternalAction; artifacts=ui-screenshot-writeback [implementation-plan] required=True; childStep=screenshot-handoff; childArtifact=.NET UI screenshot writeback handoff; childExpectationId=
+- parent=software-delivery; step=record-runtime-commands-after-repair; childProcess=dotnet-runtime-command-writeback; manualSkip=False; ops=ReadProcessContext,ReadProjectStructure,ReadUpstreamArtifacts,WriteManagedProcessArtifacts,ExecuteExternalAction; artifacts=runtime-command-writeback-after-repair [implementation-plan] required=True; childStep=runtime-command-handoff; childArtifact=.NET runtime command handoff; childExpectationId=
+- parent=software-delivery; step=capture-ui-screenshots-after-repair; childProcess=dotnet-ui-screenshot-writeback; manualSkip=False; ops=ReadProcessContext,ReadProjectStructure,ReadUpstreamArtifacts,WriteManagedProcessArtifacts,ExecuteExternalAction; artifacts=ui-screenshot-writeback-after-repair [implementation-plan] required=True; childStep=screenshot-handoff; childArtifact=.NET UI screenshot writeback handoff; childExpectationId=
+
+Shared artifact templates with handoff/proof/escalation/runtime/screenshot gates:
+- acceptance-criteria-pack.json: keywords=evidence,review,implementation,required,must
+- acceptance-criteria-pack.md: keywords=evidence,review,implementation,required,must
+- architecture-decision-record.json: keywords=review,required,must
+- architecture-decision-record.md: keywords=must
+- blast-radius-assessment.json: keywords=evidence,review,required,must
+- blast-radius-assessment.md: keywords=evidence,review,required,must
+- diagnosis-evidence-pack.json: keywords=evidence,review,required,must
+- diagnosis-evidence-pack.md: keywords=evidence,review,required,must
+- emergency-bridge-log.json: keywords=review,command,required,must
+- emergency-bridge-log.md: keywords=review,command,required,must
+- emergency-validation-evidence-pack.json: keywords=evidence,review,required,must
+- emergency-validation-evidence-pack.md: keywords=evidence,review,required,must
+- emergency-window-approval-record.json: keywords=evidence,review,must
+- emergency-window-approval-record.md: keywords=evidence,review,must
+- hotfix-package.json: keywords=review,required,must
+- hotfix-package.md: keywords=review,required,must
+- implementation-change-set.json: keywords=review,implementation,required,must
+- implementation-change-set.md: keywords=review,implementation,required,must
+- implementation-plan.json: keywords=proof,evidence,review,implementation,required,must
+- implementation-plan.md: keywords=proof,evidence,review,implementation,required,must
+- incident-timeline.json: keywords=evidence,review,command,required,must
+- incident-timeline.md: keywords=evidence,review,command,required,must
+- incident-triage-note.json: keywords=escalation,review,required,must
+- incident-triage-note.md: keywords=escalation,review,required,must
+- intake-brief.json: keywords=review,required,must
+- intake-brief.md: keywords=review,required,must
+- kickoff-packet.json: keywords=review,implementation,required,must
+- kickoff-packet.md: keywords=review,implementation,required,must
+- merge-readiness-note.json: keywords=review,required,must
+- merge-readiness-note.md: keywords=review,required,must
+- mitigation-approval-record.json: keywords=review,must
+- mitigation-approval-record.md: keywords=review,must
+- project-structure-context-brief.json: keywords=review,implementation,required,must
+- project-structure-context-brief.md: keywords=review,implementation,required,must
+- prompt-package.json: keywords=review,required,must
+- prompt-package.md: keywords=review,required,must
+- provenance-report.json: keywords=evidence,review,required,must
+- provenance-report.md: keywords=evidence,review,required,must
+- pull-request-readiness-packet.json: keywords=screenshot,review,required,must
+- pull-request-readiness-packet.md: keywords=screenshot,review,required,must
+- regression-evidence-pack.json: keywords=proof,evidence,receipt,runtime,screenshot,review,required,must
+- regression-evidence-pack.md: keywords=proof,evidence,receipt,runtime,screenshot,review,must
+- release-approval-record.json: keywords=must
+- release-approval-record.md: keywords=must
+- release-readiness-report.json: keywords=review,must
+- release-readiness-report.md: keywords=review,must
+- retrospective-improvement-log.json: keywords=review,required,must
+- retrospective-improvement-log.md: keywords=review,required,must
+- review-normalization-note.json: keywords=review,required,must
+- review-normalization-note.md: keywords=review,required,must
+- review-routing-decision-record.json: keywords=review,required,must,block
+- review-routing-decision-record.md: keywords=review,required,must,block
+- review-workflow-failure-record.json: keywords=escalation,review,must
+- review-workflow-failure-record.md: keywords=escalation,review,must
+- rollback-plan.json: keywords=review,required,must
+- rollback-plan.md: keywords=review,required,must
+- sbom-manifest.json: keywords=evidence,review,required,must
+- sbom-manifest.md: keywords=evidence,review,required,must
+- scope-boundary-packet.json: keywords=review,implementation,required,must
+- scope-boundary-packet.md: keywords=review,implementation,required,must
+- security-exception-assessment.json: keywords=review,required,must,block
+- security-exception-assessment.md: keywords=review,must,block
+- security-review-note.json: keywords=review,required,must
+- security-review-note.md: keywords=review,required,must
+- staffing-readiness-note.json: keywords=review,required,must
+- staffing-readiness-note.md: keywords=review,required,must
+- test-evidence-pack.json: keywords=evidence,must
+- test-evidence-pack.md: keywords=evidence,must
