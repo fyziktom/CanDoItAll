@@ -310,9 +310,10 @@ public sealed class PersistentWorkflowUsageObservationStore(
         IReadOnlyList<WorkflowUsageObservation> observations)
     {
         var canonical = new Dictionary<WorkflowUsageObservationId, WorkflowUsageObservation>();
-        foreach (var observation in observations)
+        foreach (var suppliedObservation in observations)
         {
-            WorkflowUsageObservationValidator.ThrowIfNotPersistable(observation);
+            WorkflowUsageObservationValidator.ThrowIfNotPersistable(suppliedObservation);
+            var observation = CanonicalizeForPersistence(suppliedObservation);
             if (canonical.TryGetValue(observation.Id, out var stored) && stored != observation)
             {
                 throw new WorkflowUsageObservationConflictException(observation.Id);
@@ -322,6 +323,29 @@ public sealed class PersistentWorkflowUsageObservationStore(
         }
 
         return canonical;
+    }
+
+    private static WorkflowUsageObservation CanonicalizeForPersistence(
+        WorkflowUsageObservation observation)
+        => observation with
+        {
+            // PostgreSQL timestamp with time zone stores UTC instants at microsecond precision.
+            // Canonicalize before both insertion and immutable-fact comparison so an idempotent
+            // append cannot conflict only because the database discarded sub-microsecond ticks.
+            StartedAtUtc = CanonicalizeTimestamp(observation.StartedAtUtc),
+            CompletedAtUtc = CanonicalizeTimestamp(observation.CompletedAtUtc),
+            RecordedAtUtc = CanonicalizeTimestamp(observation.RecordedAtUtc)
+        };
+
+    private static DateTimeOffset? CanonicalizeTimestamp(DateTimeOffset? value)
+        => value.HasValue ? CanonicalizeTimestamp(value.Value) : null;
+
+    private static DateTimeOffset CanonicalizeTimestamp(DateTimeOffset value)
+    {
+        var utc = value.ToUniversalTime();
+        return new DateTimeOffset(
+            utc.Ticks - utc.Ticks % TimeSpan.TicksPerMicrosecond,
+            TimeSpan.Zero);
     }
 
     private static IQueryable<WorkflowUsageObservationRecordEntity> ApplyQuery(

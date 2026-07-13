@@ -57,7 +57,10 @@ public sealed class WorkflowUsagePersistenceIntegrationTests
             CostUsd: 0m,
             inputTokens: 10) with
         {
-            Origin = origin
+            Origin = origin,
+            StartedAtUtc = RecordedAtUtc.AddSeconds(-1).AddTicks(7),
+            CompletedAtUtc = RecordedAtUtc.AddTicks(7),
+            RecordedAtUtc = RecordedAtUtc.AddTicks(7)
         };
         var unknown = CreateObservation(
             WorkflowUsageObservationId.New(),
@@ -74,6 +77,7 @@ public sealed class WorkflowUsagePersistenceIntegrationTests
 
         await runStore.SaveRunAsync(run);
         await usageStore.AppendRangeAsync([known, unknown, known]);
+        await usageStore.AppendAsync(known);
 
         var persistedRun = await runStore.GetRunAsync(runId);
         var persistedFacts = await usageStore.ListAsync(new WorkflowUsageObservationQuery
@@ -87,6 +91,10 @@ public sealed class WorkflowUsagePersistenceIntegrationTests
         Assert.Equal(RecordedAtUtc, persistedRun.TerminalAtUtc);
         Assert.Equal(origin, persistedRun.Origin);
         Assert.Equal(2, persistedFacts.Count);
+        var persistedKnown = Assert.Single(persistedFacts, fact => fact.Id == known.Id);
+        Assert.Equal(RecordedAtUtc.AddSeconds(-1), persistedKnown.StartedAtUtc);
+        Assert.Equal(RecordedAtUtc, persistedKnown.CompletedAtUtc);
+        Assert.Equal(RecordedAtUtc, persistedKnown.RecordedAtUtc);
         Assert.Equal(2, aggregate.Usage.ObservationCount);
         Assert.Equal(14, aggregate.Usage.InputTokens);
         Assert.Equal(1, aggregate.Usage.PricingKnownObservationCount);
