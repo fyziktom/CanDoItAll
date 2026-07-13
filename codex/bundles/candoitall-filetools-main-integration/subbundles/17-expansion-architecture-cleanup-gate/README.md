@@ -2,7 +2,7 @@
 
 ## Status
 
-- `Ready`
+- `Completed`
 
 ## Objective
 
@@ -90,12 +90,12 @@
 
 ## Acceptance Checklist
 
-- [ ] Unqualified C# architecture Pass.
-- [ ] Owners/dependencies/packages/patterns/test seams match target.
-- [ ] No duplicate/bypass/new partial/service locator.
-- [ ] Cross-story desktop/browser/console and affected checks pass.
-- [ ] Large-source bounds and known-file/browser intent separation remain intact.
-- [ ] SB18 unlock explicit.
+- [x] Unqualified C# architecture Pass.
+- [x] Owners/dependencies/packages/patterns/test seams match target.
+- [x] No duplicate/bypass/new partial/service locator.
+- [x] Cross-story desktop/browser/console and affected checks pass.
+- [x] Large-source bounds and known-file/browser intent separation remain intact.
+- [x] SB18 unlock explicit.
 
 ## Proof Required
 
@@ -108,6 +108,13 @@
 ## Progression Gate
 
 - Only unqualified Pass unlocks SB18.
+
+## Closure
+
+- Unqualified `Pass`; SB18 is unlocked.
+- The Project Structure page delegates known-file interaction lifetime to a focused, directly tested slot; the final implementation also closes a replacement/disposal cancellation race found during the gate.
+- Dependency, package, partial/service-locator, duplicate-authority, scale/performance, warning-clean build, affected tests, and cross-story desktop browser checks pass.
+- Proof: `bundle://proof/SB17/manifest.md`, `bundle://proof/SB17/behavioral-proof.md`, and `bundle://proof/SB17/semantic-invariants.md`.
 
 ## Reopen Triggers
 

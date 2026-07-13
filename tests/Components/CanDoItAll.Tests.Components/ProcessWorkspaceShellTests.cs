@@ -919,6 +919,7 @@ public sealed class ProcessWorkspaceShellTests
         Assert.NotNull(cut.Find("[data-testid='live-processes-run-detail-manager-summary']"));
         Assert.NotNull(cut.Find("[data-testid='live-processes-run-detail-decision']"));
         Assert.NotNull(cut.Find("[data-testid='live-processes-dialog-operator-note']"));
+        Assert.NotNull(cut.Find("[data-testid='live-processes-run-files']"));
         Assert.Contains("Manager summary", cut.Markup, StringComparison.Ordinal);
 
         cut.Find("[data-testid='live-processes-dialog-operator-note']").Change("Reuse the approved architecture and keep the Tetris output folder.");

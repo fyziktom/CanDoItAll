@@ -2,7 +2,7 @@
 
 ## Status
 
-- `Ready`
+- `Completed — unqualified architecture gate Pass 2026-07-12`
 
 ## Objective
 
@@ -90,12 +90,12 @@
 
 ## Acceptance Checklist
 
-- [ ] Architecture gate Pass.
-- [ ] No fake separation/duplicate policy/false capability.
-- [ ] Dependency/cycle and no-FileTools proof pass.
-- [ ] All affected checks and dependent smoke pass.
-- [ ] Large-source bounds and remote streaming/connection reuse pass from measurements and structural counters.
-- [ ] SB06 unlock decision is explicit.
+- [x] Architecture gate Pass.
+- [x] No fake separation/duplicate policy/false capability.
+- [x] Dependency/cycle and no-FileTools proof pass.
+- [x] All affected checks and dependent smoke pass.
+- [x] Large-source bounds and remote streaming/connection reuse pass from measurements and structural counters.
+- [x] SB06 unlock decision is explicit.
 
 ## Proof Required
 

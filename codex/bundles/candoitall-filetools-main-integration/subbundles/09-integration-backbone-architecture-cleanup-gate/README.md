@@ -2,7 +2,7 @@
 
 ## Status
 
-- `Ready`
+- `Completed — unqualified Checkpoint B Pass; SB10 unlocked`
 
 ## Objective
 
@@ -91,12 +91,12 @@
 
 ## Acceptance Checklist
 
-- [ ] Package/reference/architecture/security/cache gates Pass.
-- [ ] One authorized content open and aggregate revision smoke Pass.
-- [ ] Native/FileTools budget/completeness mapping and direct known-file zero-browser-call proof Pass.
-- [ ] No unsigned/path fallback or duplicate mapping.
-- [ ] Components/watch/browser tools are ready for SB10.
-- [ ] UI unlock is explicit.
+- [x] Package/reference/architecture/security/cache gates Pass.
+- [x] One authorized content open and aggregate revision smoke Pass.
+- [x] Native/FileTools budget/completeness mapping and direct known-file zero-browser-call proof Pass.
+- [x] No unsigned/path fallback or duplicate mapping.
+- [x] Components/watch/browser tools are ready for SB10.
+- [x] UI unlock is explicit.
 
 ## Proof Required
 

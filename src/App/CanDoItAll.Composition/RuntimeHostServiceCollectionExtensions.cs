@@ -1,6 +1,7 @@
 ﻿using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Infrastructure.Configuration;
 using CanDoItAll.Infrastructure.Persistence;
+using CanDoItAll.FileTools.Integration;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Persistence;
@@ -64,6 +65,7 @@ public static class RuntimeHostServiceCollectionExtensions
         services.AddCollaborationModule();
         services.AddCrmHrModule();
         services.AddSchedulerPlannerWorkflowInputOptionProviders();
+        services.AddCanDoItAllFileToolsIntegration();
         return services;
     }
 

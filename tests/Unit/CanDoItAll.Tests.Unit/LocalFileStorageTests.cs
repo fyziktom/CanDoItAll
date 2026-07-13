@@ -53,7 +53,9 @@ public sealed class LocalFileStorageTests
         return new LocalFileStore(
             new WorkspacePathAccessGuard(workspacePathResolver),
             new TestStorageCatalogService(workspaceRoot),
-            new StorageDriverRegistry([new FileSystemStorageDriver(workspacePathResolver)]));
+            new StorageDriverRegistry([
+                new FileSystemStorageDriver(new FileSystemStoragePathPolicy(workspacePathResolver))
+            ]));
     }
 
     private sealed class TestWorkspacePathResolver(string workspaceRoot) : IWorkspacePathResolver

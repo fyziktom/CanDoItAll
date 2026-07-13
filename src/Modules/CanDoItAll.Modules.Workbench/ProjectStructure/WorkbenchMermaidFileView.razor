@@ -1,0 +1,45 @@
+@namespace CanDoItAll.Modules.Workbench
+@using CanDoItAll.Components.Mermaid
+@implements IFileInteractionRendererComponent
+
+@if (Context.Text is null)
+{
+    <Alert AlertStyle="AlertStyle.Warning"
+           Variant="Variant.Outlined"
+           data-testid="workbench-mermaid-unavailable">
+        Mermaid source is unavailable.
+    </Alert>
+}
+else if (Context.Text.Length == 0)
+{
+    <Alert AlertStyle="AlertStyle.Info"
+           Variant="Variant.Outlined"
+           data-testid="workbench-mermaid-empty">
+        This Mermaid file is empty.
+    </Alert>
+}
+else
+{
+    <MermaidDiagram Title="@Context.Request.FileName"
+                    Description="Strict rendering: HTML labels and interactive source actions are disabled."
+                    Source="@Context.Text"
+                    Options="StrictOptions"
+                    PanZoomEnabled="true"
+                    ShowControls="true"
+                    Class="workbench-file-interaction-mermaid"
+                    Style="--cda-mermaid-min-height:24rem; --cda-mermaid-height:min(58dvh, 42rem);"
+                    data-testid="workbench-mermaid-file-view" />
+}
+
+@code {
+    private static readonly MermaidDiagramOptions StrictOptions = new()
+    {
+        SecurityLevel = "strict",
+        HtmlLabels = false,
+        FlowchartUseMaxWidth = true,
+        ArchitectureRandomize = false
+    };
+
+    [Parameter, EditorRequired]
+    public FileInteractionRenderContext Context { get; set; } = default!;
+}

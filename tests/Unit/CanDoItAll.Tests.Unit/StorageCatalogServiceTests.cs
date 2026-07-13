@@ -98,6 +98,42 @@ public sealed class StorageCatalogServiceTests
         }
     }
 
+    [Fact]
+    public async Task SaveAsync_InvalidBrowseCacheConfiguration_DoesNotPersistStorage()
+    {
+        var workspaceRoot = TestFileSystem.CreateTemporaryRoot("storage-catalog");
+
+        try
+        {
+            string databaseName = $"storage-catalog-{Guid.NewGuid():N}";
+            StorageCatalogService sut = CreateSut(databaseName, workspaceRoot);
+            var record = new StorageCatalogRecord
+            {
+                Name = "Invalid cache",
+                ProviderKind = StorageProviderKind.Ftp,
+                ConfigJson = """
+                    {
+                      "browseCache": {
+                        "enabled": true,
+                        "mode": "disabled"
+                      }
+                    }
+                    """
+            };
+
+            StorageBrowseException exception = await Assert.ThrowsAsync<StorageBrowseException>(() =>
+                sut.SaveAsync(record));
+            IReadOnlyList<StorageCatalogRecord> persisted = await sut.ListAsync();
+
+            Assert.Equal(StorageBrowseErrorCode.InvalidConfiguration, exception.Error.Code);
+            Assert.DoesNotContain(persisted, item => item.Id == record.Id);
+        }
+        finally
+        {
+            TestFileSystem.DeleteDirectoryWithRetry(workspaceRoot);
+        }
+    }
+
     private static StorageCatalogService CreateSut(string databaseName, string workspaceRoot)
     {
         var options = AppDbContextTestOptionsBuilder.Create()

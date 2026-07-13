@@ -273,6 +273,15 @@ public sealed class ResourcesService(
         }
 
         var connectorPlugin = resourceConnectorPluginRegistry.Resolve(ResolveRequestedConnectorPluginKey(model));
+        if (string.Equals(
+            connectorPlugin.Manifest.PluginKey,
+            StorageObjectResourceConnectorPlugin.PluginKey,
+            StringComparison.OrdinalIgnoreCase))
+        {
+            return Result<Guid>.Failure(Error.Validation(
+                "Storage-object resources can only be created through an authorized Resources browse promotion."));
+        }
+
         var configSchemaVersion = string.IsNullOrWhiteSpace(model.ConfigSchemaVersion)
             ? connectorPlugin.Manifest.ConfigurationSchema.Version
             : model.ConfigSchemaVersion.Trim();

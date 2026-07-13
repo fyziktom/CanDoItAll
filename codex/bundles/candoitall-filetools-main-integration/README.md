@@ -57,12 +57,20 @@ The dependency graph and stop/reopen rules are in `bundle://plan/01-phase-plan.m
 ## Validation Summary
 
 - Bundle preparation status: `Ready — prepared validator and manual readiness review passed 2026-07-12`
-- Execution status: `Not started — bundle preparation only`
-- Subbundle gate review: `SB01-SB18 entry, closure, progression, and reopen rules are defined; none executed`
+- Execution status: `In progress — SB01-SB17 completed; SB18 final closure next`
+- Subbundle gate review: `SB05 unqualified Pass after repairing O(total-response) IPFS page one, shared cursor protection, FTP responsibility split, and rerunning scale/regression/architecture proof`
 - Final closure gate: `Not started — requires implementation proof from SB01-SB18`
 - Main CodeAnalytics baseline: `snap-20260713002602-7de53bec`, seven product projects, 1,029 types, 8,284 members, no project cycle; one pre-existing Infrastructure module cycle between Persistence and ControlPlane.
-- FileTools CodeAnalytics baseline: unavailable because the repo pins SDK `10.0.301` and this machine has `10.0.300`; direct source/package-boundary inspection is recorded and SB01 must close this environment gate before packaging.
-- Components MCP baseline: unavailable after two calls returned `Transport closed`; SB01 must repeat library/recommendation/component/example discovery before UI markup or CSS work.
+- FileTools CodeAnalytics baseline: `snap-20260713013754-65c579d0`, 15 projects, 388 types, 2,849 members, no dependency cycle; SDK `10.0.301` is provisioned user-locally without changing the pin.
+- Components MCP baseline: library and SB10 pilot recommendation discovery passed again after direct server recovery at SB09; exact component, usage, and example discovery remains mandatory before UI editing.
+- SB10 pilot closure: real `/projects` search/browse/read-only interaction passes at `1900x1200` and `1440x900`; behavioral proof is `proof/SB10/behavioral-proof.md` and focused architecture snapshot is `snap-20260713072501-9c272781` with zero scoped cycles.
+- SB11 Checkpoint C closure: pilot binding, coordination, and lifetime owners are physically separated; cancellation-safe cleanup, extension smoke, scoped performance scan, component/host/browser reruns, and snapshot `snap-20260713080121-9c272781` pass with zero scoped cycles. Proof: `proof/SB11/behavioral-review.md`.
+- SB12 portfolio closure: Cards and Files share one directly tested cycle-safe projection; aggregate source revisions replace stale sources atomically; focused pane/dialog, independent read-only handoff, stale/error negatives, two desktop viewports, and snapshot `snap-20260713091027-759c0917` pass with zero scoped cycles. Proof: `proof/SB12/behavioral-proof.md`.
+- SB13 Project Structure closure: project/node collections use one authorized coordinator/window, image/PDF nodes retain direct zero-browser FileInteraction, hostile metadata fails before provider I/O, the desktop floating contract passes, and process-run root semantics now live in Processes.Application. Proof: `proof/SB13/behavioral-proof.md`.
+- SB14 Process run closure: Processes-owned current-root policy accepts only managed artifact/output namespaces, stale and escaped roots fail closed, host/session retention is Disabled, the dashboard remains thin, the binding graph is scope-correct, and a real managed run proved live creation/replacement at both desktop viewports. Proof: `proof/SB14/behavioral-proof.md`.
+- SB15 Resources closure: current project/filesystem/IPFS/FTP catalog truth, strict provider-neutral stable storage-object persistence, current actor reauthorization, post-save revision, idempotent duplicate promotion, current-authority reopen, hostile negatives, and managed two-viewport browser proof pass. Proof: `proof/SB15/manifest.md`.
+- SB16 FileInteraction migration closure: explicitly selected text/Markdown/Mermaid/raster/PDF renderers, direct zero-browser Project Structure authority, inert hostile SVG/unknown/oversize states, awaited revisioned save, two-session conflict/rebase, overwrite denial, legacy preview-route removal, strict Mermaid, and managed two-viewport proof pass. Proof: `proof/SB16/manifest.md`.
+- SB17 expansion cleanup closure: owner/reference/package inventories, dependency-cycle and duplicate-authority audits, affected tests, scale/performance checks, and cross-story browser proof pass. Project Structure known-file interaction lifetime moved from the page to a directly tested slot, including a repaired cancellation/disposal race. Proof: `proof/SB17/manifest.md`.
 
 ## Non-Goals
 

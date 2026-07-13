@@ -1,0 +1,38 @@
+SB17 managed browser proof, 2026-07-13
+
+Primary cross-story runtime:
+- Session app_c1c2777c13e542889c838ede3f55be31.
+- PublishedActive / PublishedDll / RunOnce at http://127.0.0.1:5507.
+- Fresh Release Web build, 1440x900.
+
+Representative routes:
+1. Projects: opened a real project-card Files dialog. Shared FileBrowser rendered the current authorized source, complete controls, and explicit empty state. Screenshot: sb17-project-files-1440x900.png.
+2. Project Structure collection intent: opened the canvas Files window. It rendered as a bounded floating window over the canvas with one source, current revision, controls, and explicit empty state. Screenshot: sb17-project-structure-files-1440x900.png.
+3. Processes: fresh /processes/live loaded cleanly but contained no runtime runs. Accepted controlled SB14 run-detail/artifact screenshots were therefore reused rather than manufacturing a non-current row.
+4. Resources: opened current Browse, selected the healthy filesystem source, and rendered two root items with zero IPFS/FTP sources explicitly. Screenshot: sb17-resources-browse-1440x900.png.
+5. Direct known-file: controlled Markdown opened in FileInteraction, closed, reopened, switched to Edit, saved 165 bytes, navigated away, and reopened with the persisted paragraph and revision 7. Screenshot: sb17-open-reopen-save-1440x900.png.
+
+Primary direct interaction assertions:
+- Dialog client/scroll width 1150/1150; interaction 1071/1071.
+- FileBrowser roots 0; unsigned preview elements 0.
+- Non-static requests: Blazor initializers 200 and negotiate 200 only; no /storage/objects/preview request.
+- Console errors 0; warnings 0.
+- Logs: masked authorized opens at sequences 4225 and 4227; masked 165-byte save at 4229; no raw handle, actor, path, or content.
+
+Final-source lifecycle rerun after the cancellation race repair:
+- Session app_6788b76f0fed4a46bec53d5191a43566, same managed lane and URL.
+- Controlled final project and Markdown asset opened, closed, and reopened against the rebuilt final DLL.
+- Final DOM: dialogs 1, interaction roots 1, browser roots 0, unsigned preview elements 0, expected content visible.
+- Console errors 0; warnings 0. Non-static requests were only Blazor initializers 200 and negotiate 200.
+
+Visual review:
+- Project-card dialog has one clear scroll/content owner and reachable Close action: Yes.
+- Canvas collection window stays subordinate, bounded, and readable: Yes.
+- Direct interaction uses available width with no lateral clipping; editor and preview are simultaneously readable: Yes.
+- Resources source list and detail browser keep distinct bounded regions and explicit unavailable provider classes: Yes.
+
+Cleanup:
+- Primary controlled project release 200; current lease response body 0; delete 200; project absent; residue-count 0.
+- Final-source controlled project release 200; current lease response body 0; delete 200; project absent; residue-count 0.
+- Both managed runtimes explicitly stopped; no controlled project/storage/credential/profile state remains.
+

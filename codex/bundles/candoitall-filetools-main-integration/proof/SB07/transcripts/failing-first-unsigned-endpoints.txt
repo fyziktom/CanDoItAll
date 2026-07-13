@@ -1,0 +1,14 @@
+SB07 failing-first characterization — 2026-07-12
+
+Pre-hardening production behavior was read from and exercised through the existing ManagedFilesStorageIntegrationTests host:
+- /storage/objects/preview?ref=<unsigned-reference> decoded the reference and served bytes.
+- /storage/objects/download?ref=<unsigned-reference> decoded the reference and served bytes.
+- /managed-files/{path} served content directly from a path.
+
+This correctly failed the SB07 authority invariant because a URL token/path was sufficient authority. The same host suite was rewritten before the production hardening so that it required:
+- unsigned preview/download reference: 401 Unauthorized;
+- direct managed path, including traversal: 410 Gone;
+- fixed authorized content route plus X-CanDoItAll-File-Handle: success;
+- authorization-enabled host without an authenticated principal: 401 Unauthorized.
+
+The final execution of those assertions is recorded in passing-http-host.txt. No old successful unsigned behavior was retained as compatibility fallback.

@@ -1,5 +1,4 @@
 using CanDoItAll.Components.CanvasLib;
-using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.SharedKernel;
 
 namespace CanDoItAll.Modules.Workbench.CanvasAdapters;
@@ -128,7 +127,6 @@ public sealed class ProjectStructureGraphAdapter
         var inlineText = string.IsNullOrWhiteSpace(node.Notes) ? node.Title : node.Notes;
         var isInlineTextNode = node.ObjectType == ProjectObjectType.Note && string.IsNullOrWhiteSpace(node.Subtitle);
         var progress = ResolveProgress(node);
-        var (mediaKind, mediaPreviewUrl) = ResolveMediaPresentation(node);
         var leadPresentation = ProjectStructureNodeDescriptor.BuildLeadPresentation(node);
 
         return new CanvasWorkbenchNode
@@ -174,8 +172,8 @@ public sealed class ProjectStructureGraphAdapter
             IsInlineTextNode = isInlineTextNode,
             InlineText = inlineText,
             InlineTextPlaceholder = "Write note",
-            MediaKind = mediaKind,
-            MediaPreviewUrl = mediaPreviewUrl,
+            MediaKind = string.Empty,
+            MediaPreviewUrl = string.Empty,
             MediaPreviewAlt = node.Title,
             MediaContentType = node.MediaContentType,
             MediaFileName = node.MediaOriginalFileName,
@@ -258,38 +256,6 @@ public sealed class ProjectStructureGraphAdapter
                 FullPath = compactPath.FullPath,
                 PromotedText = compactPath.PromotedText
             };
-
-    private static (string Kind, string PreviewUrl) ResolveMediaPresentation(ProjectStructureNode node)
-    {
-        if (string.IsNullOrWhiteSpace(node.Route) || !SupportsInlinePreview(node))
-        {
-            return (string.Empty, string.Empty);
-        }
-
-        return node.ObjectType switch
-        {
-            ProjectObjectType.ImageAsset => ("image", node.Route),
-            ProjectObjectType.VideoAsset => ("video", node.Route),
-            _ => (string.Empty, string.Empty)
-        };
-    }
-
-    private static bool SupportsInlinePreview(ProjectStructureNode node)
-    {
-        if (TryResolveStorageReference(node, out var reference) && reference is not null)
-        {
-            return reference.ProviderKind != StorageProviderKind.Ftp;
-        }
-
-        return !string.IsNullOrWhiteSpace(node.MediaRelativePath) ||
-               node.Route.StartsWith("/managed-files/", StringComparison.OrdinalIgnoreCase) ||
-               node.Route.StartsWith("/storage/objects/", StringComparison.OrdinalIgnoreCase);
-    }
-
-    private static bool TryResolveStorageReference(ProjectStructureNode node, out StorageObjectReference? reference)
-    {
-        return StorageJson.TryParseReference(node.StorageObjectReferenceJson, out reference);
-    }
 
     private static List<CanvasWorkbenchChip> BuildHeaderChips(ProjectStructureNode node)
         => node.Badges.Select(badge => new CanvasWorkbenchChip { Text = badge, Tone = "accent" }).ToList();

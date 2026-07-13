@@ -13,7 +13,7 @@
          data-testid="@DataTestId"
          @onclick:stopPropagation="true">
         <Stack GapScale="LayoutGap.Large"
-               Style="min-height:0;height:100%;display:grid;grid-template-rows:auto minmax(0, 1fr);overflow:hidden;">
+               Style="min-height:0;height:100%;width:100%;display:grid;grid-template-columns:minmax(0, 1fr);grid-template-rows:auto minmax(0, 1fr);align-items:stretch;justify-content:stretch;overflow:hidden;">
             <Split Breakpoint="LayoutBreakpoint.Lg"
                    Gap="LayoutGap.Medium"
                    AlignItems="AlignItems.Start"

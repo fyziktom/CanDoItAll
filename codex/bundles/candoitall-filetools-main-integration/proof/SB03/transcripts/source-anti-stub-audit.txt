@@ -1,0 +1,33 @@
+Run label: SB03 source, dependency, anti-stub, and effect audit
+Working directory: C:\repositories\CanDoItAll
+Date: 2026-07-12
+
+Scope:
+- FileSystemStorageBrowseCursorCodec.cs
+- FileSystemStorageBrowseDriver.cs
+- FileSystemStorageBrowseEntryMapper.cs
+- FileSystemStoragePathPolicy.cs
+
+PASS absent=Directory.(GetFiles|GetDirectories|GetFileSystemEntries)
+PASS absent=.OrderBy
+PASS absent=.ToArray(
+PASS absent=.Result
+PASS absent=.Wait(
+PASS absent=Task.Run
+PASS absent=new HttpClient
+PASS absent=CanDoItAll.FileTools
+PASS absent=CanDoItAll.Web
+PASS absent=TODO|FIXME|NotImplemented
+PASS absent=MemoryCache|IMemoryCache|HybridCache
+PASS absent=Process.Start|ShellExecute
+PASS absent=partial
+
+Line counts:
+92  FileSystemStorageBrowseCursorCodec.cs
+329 FileSystemStorageBrowseDriver.cs
+136 FileSystemStorageBrowseEntryMapper.cs
+99  FileSystemStoragePathPolicy.cs
+
+git diff --check: Pass; only line-ending normalization notices.
+Changed .csproj diff: empty.
+Audit exit: 0.

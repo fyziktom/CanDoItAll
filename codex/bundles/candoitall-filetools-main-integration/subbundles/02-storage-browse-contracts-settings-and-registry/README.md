@@ -2,7 +2,7 @@
 
 ## Status
 
-- `Ready`
+- `Completed`
 
 ## Objective
 
@@ -96,12 +96,12 @@
 
 ## Acceptance Checklist
 
-- [ ] Contracts are bounded/typed/capability-honest.
-- [ ] A bounded returned page cannot conceal unbounded provider work or retained state.
-- [ ] Legacy JSON becomes Disabled.
-- [ ] Invalid settings and duplicate/unknown providers fail predictably.
-- [ ] Infrastructure remains FileTools-free and acyclic.
-- [ ] Existing storage tests still pass.
+- [x] Contracts are bounded/typed/capability-honest.
+- [x] A bounded returned page carries inspected, metadata, duration, retained-state, completeness, and cursor facts; provider counter proof remains SB03/SB04.
+- [x] Legacy JSON becomes Disabled.
+- [x] Invalid settings and duplicate/unknown providers fail predictably.
+- [x] Infrastructure remains FileTools-free and has no new project/module cycle.
+- [x] Existing storage tests still pass.
 
 ## Proof Required
 

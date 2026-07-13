@@ -2,7 +2,7 @@
 
 ## Status
 
-- `Ready`
+- `Completed`
 
 ## Objective
 
@@ -96,12 +96,12 @@
 
 ## Acceptance Checklist
 
-- [ ] Selected known types resolve correct view/edit profiles; unsupported is explicit.
-- [ ] Project Structure image/PDF double-click/dialog semantics are preserved and the direct path invokes no FileBrowser service/component/session.
-- [ ] Hostile Markdown/SVG/unknown/oversize content remains inert/safe.
-- [ ] Save success/conflict/failure/cancel/edit-during-save/overwrite policy passes.
-- [ ] Old duplicate path removed only after proof; no unsigned bypass.
-- [ ] Desktop renderer/dialog/preview/overlay/console and C# gates pass.
+- [x] Selected known types resolve correct view/edit profiles; unsupported is explicit.
+- [x] Project Structure image/PDF double-click/dialog semantics are preserved and the direct path invokes no FileBrowser service/component/session.
+- [x] Hostile Markdown/SVG/unknown/oversize content remains inert/safe.
+- [x] Save success/conflict/failure/cancel/edit-during-save/overwrite policy passes.
+- [x] Old duplicate path removed only after proof; no unsigned bypass.
+- [x] Desktop renderer/dialog/preview/overlay/console and C# gates pass.
 
 ## Proof Required
 

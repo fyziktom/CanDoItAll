@@ -2,7 +2,7 @@
 
 ## Status
 
-- `Ready`
+- `Completed — Pass (2026-07-13)`
 
 ## Objective
 
@@ -92,11 +92,11 @@
 
 ## Acceptance Checklist
 
-- [ ] All named authorized source classes appear truthfully.
-- [ ] Promotion re-resolves/re-authorizes and persists stable connector identity.
-- [ ] Reopen resolves the persisted object correctly.
-- [ ] Forged/stale/cross-actor/failure/cancel cases leave no resource/revision.
-- [ ] Desktop UI, dependency, persistence, and C# gates pass.
+- [x] All named authorized source classes appear truthfully.
+- [x] Promotion re-resolves/re-authorizes and persists stable connector identity.
+- [x] Reopen resolves the persisted object correctly.
+- [x] Forged/stale/cross-actor/failure/cancel cases leave no resource/revision.
+- [x] Desktop UI, dependency, persistence, and C# gates pass.
 
 ## Proof Required
 

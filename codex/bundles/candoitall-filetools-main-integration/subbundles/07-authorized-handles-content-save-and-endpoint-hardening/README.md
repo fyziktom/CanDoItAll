@@ -2,7 +2,7 @@
 
 ## Status
 
-- `Ready`
+- `Completed — Governed proof passed; SB08 unlocked`
 
 ## Objective
 
@@ -95,12 +95,12 @@
 
 ## Acceptance Checklist
 
-- [ ] Forged/expired/revoked/cross-actor/cross-profile/wrong-operation handles fail before storage call.
-- [ ] Unsigned token/path alone cannot read protected content.
-- [ ] Authorized content survives browser-session disposal.
-- [ ] A known authorized file opens through the content source without constructing or invoking FileBrowser state.
-- [ ] Save conflict/failure/cancel remains dirty and revision unchanged.
-- [ ] Endpoint/auth/DI/log proof passes.
+- [x] Forged/expired/revoked/cross-actor/cross-profile/wrong-operation handles fail before storage call.
+- [x] Unsigned token/path alone cannot read protected content.
+- [x] Authorized content survives browser-session disposal.
+- [x] A known authorized file opens through the content source without constructing or invoking FileBrowser state.
+- [x] Save conflict/failure/cancel remains dirty and revision unchanged.
+- [x] Endpoint/auth/DI/log proof passes.
 
 ## Proof Required
 

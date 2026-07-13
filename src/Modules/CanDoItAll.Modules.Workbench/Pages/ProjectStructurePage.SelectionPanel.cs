@@ -222,9 +222,6 @@ public partial class ProjectStructurePage
             ProjectStructureNodeHelpers.ResolveAttachmentPreviewKind(node),
             ProjectStructureNodeHelpers.ResolveAttachmentDisplayName(node),
             ProjectStructureNodeHelpers.ResolveAttachmentLeadCopy(node),
-            node.Route ?? string.Empty,
-            ProjectStructureNodeHelpers.ResolveAttachmentPreviewSource(node),
-            ProjectStructureNodeHelpers.ResolveAttachmentTextContent(node),
             node.MediaOriginalFileName ?? string.Empty,
             ProjectStructureNodeHelpers.ResolveAttachmentContentType(node),
             CanShowLocalOpen(node),
@@ -694,26 +691,25 @@ public partial class ProjectStructurePage
             ? Task.CompletedTask
             : OpenAttachmentLocallyAsync(selectedNode);
 
-    private Task OpenSelectedAttachmentPreviewAsync()
+    private async Task OpenSelectedAttachmentPreviewAsync()
     {
         if (selectedNode is null)
         {
-            return Task.CompletedTask;
+            return;
         }
 
-        OpenAttachmentPreview(selectedNode);
-        return Task.CompletedTask;
+        await OpenAttachmentPreviewAsync(selectedNode);
     }
 
-    private Task OpenSelectedMermaidViewerAsync()
+    private async Task OpenSelectedMermaidViewerAsync()
     {
         if (selectedNode is null)
         {
-            return Task.CompletedTask;
+            return;
         }
 
-        OpenMermaidViewer(selectedNode);
-        return InvokeAsync(StateHasChanged);
+        await OpenMermaidViewerAsync(selectedNode);
+        await InvokeAsync(StateHasChanged);
     }
 }
 

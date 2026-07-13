@@ -2,7 +2,7 @@
 
 ## Status
 
-- `Ready`
+- `Completed`
 
 ## Objective
 
@@ -96,13 +96,13 @@
 
 ## Acceptance Checklist
 
-- [ ] Real authorized project files search/browse works.
-- [ ] Known Markdown/text opens read-only through handle/content source.
-- [ ] Browsing/search stays within declared work/state/render limits and cancels superseded requests.
-- [ ] After activation, the known file loads independently; closing/disposal of FileBrowser does not affect FileInteraction.
-- [ ] Unauthorized/stale/replaced/no-result/error cases behave explicitly.
-- [ ] Lifetimes/disposal and source replacement are correct.
-- [ ] Desktop DOM/visual/scroll/overlay/console/network proof passes.
+- [x] Real authorized project files search/browse works.
+- [x] Known Markdown/text opens read-only through handle/content source.
+- [x] Browsing/search stays within declared work/state/render limits and cancels superseded requests.
+- [x] After activation, the known file loads independently; closing/disposal of FileBrowser does not affect FileInteraction.
+- [x] Unauthorized/stale/replaced/no-result/error cases behave explicitly.
+- [x] Lifetimes/disposal and source replacement are correct.
+- [x] Desktop DOM/visual/scroll/overlay/console/network proof passes.
 
 ## Proof Required
 
@@ -120,6 +120,8 @@
 ## Progression Gate
 
 - SB11 enters only with complete positive/negative/desktop proof through real production adapters and no unresolved generic gap.
+
+Closure decision: `Pass`. Production, component, host, scale, lifetime, managed-runtime, and Playwright evidence is recorded in `bundle://proof/SB10/behavioral-proof.md`. SB11 is unlocked; broader UI remains blocked until SB11 issues an unqualified Pass.
 
 ## Reopen Triggers
 

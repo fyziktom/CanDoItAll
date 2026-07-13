@@ -107,6 +107,39 @@ public sealed class ProjectStructureGraphAdapterTests
             });
     }
 
+    [Fact]
+    public void Managed_media_does_not_project_unsigned_canvas_preview_routes()
+    {
+        var adapter = new ProjectStructureGraphAdapter();
+        var actionCatalog = new ProjectStructureActionCatalogAdapter();
+        var image = CreateFileNode("image", "image", "#2563eb", ProjectObjectPaletteKeys.Info) with
+        {
+            ObjectType = ProjectObjectType.ImageAsset,
+            Route = "/storage/objects/preview?ref=unsigned-display-reference",
+            MediaRelativePath = "managed-files/project-media/image.png",
+            MediaContentType = "image/png",
+            MediaOriginalFileName = "image.png"
+        };
+        var surface = new ProjectStructureSurface(
+            Guid.NewGuid(),
+            "Safe media projection",
+            [image],
+            [],
+            null);
+
+        var canvasSurface = adapter.BuildSurface(
+            surface,
+            new CanvasWorkbenchUiState(),
+            new CanvasWorkbenchChrome(),
+            actionCatalog);
+
+        var canvasNode = Assert.Single(canvasSurface.Nodes);
+        Assert.Empty(canvasNode.MediaKind);
+        Assert.Empty(canvasNode.MediaPreviewUrl);
+        Assert.Equal("image.png", canvasNode.MediaFileName);
+        Assert.Equal("image/png", canvasNode.MediaContentType);
+    }
+
     private static ProjectStructureNode CreateFileNode(string id, string subtype, string accentColor, string paletteKey)
         => new(
             id,

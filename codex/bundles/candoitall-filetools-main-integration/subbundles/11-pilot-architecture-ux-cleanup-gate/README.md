@@ -2,7 +2,7 @@
 
 ## Status
 
-- `Ready`
+- `Completed`
 
 ## Objective
 
@@ -85,12 +85,12 @@
 
 ## Acceptance Checklist
 
-- [ ] Architecture/UX gate unqualified Pass.
-- [ ] Real pilot positive/negative proof remains green.
-- [ ] Parent owners remain thin and seam is reusable.
-- [ ] Components, scroll, overlay, desktop visual and console proof pass.
-- [ ] Accepted performance envelope and anti-pattern scan pass; direct known-file handoff remains browser-independent.
-- [ ] SB12 unlock explicit.
+- [x] Architecture/UX gate unqualified Pass.
+- [x] Real pilot positive/negative proof remains green.
+- [x] Parent owners remain thin and seam is reusable.
+- [x] Components, scroll, overlay, desktop visual and console proof pass.
+- [x] Accepted performance envelope and anti-pattern scan pass; direct known-file handoff remains browser-independent.
+- [x] SB12 unlock explicit.
 
 ## Proof Required
 
@@ -102,7 +102,7 @@
 
 ## Progression Gate
 
-- Only unqualified Pass unlocks SB12.
+- Unqualified `Pass` recorded in `bundle://proof/SB11/behavioral-review.md`; SB12 is unlocked.
 
 ## Reopen Triggers
 

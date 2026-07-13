@@ -2,7 +2,7 @@
 
 ## Status
 
-- `Ready`
+- `Completed`
 
 ## Objective
 
@@ -63,7 +63,8 @@
 
 ## Scope Exceptions
 
-- No production code, main package intake, component choice, or UI work.
+- No main production code, main package intake, component choice, or UI work.
+- A two-file FileTools culture-stability repair was required because the documented package pipeline failed outside an English locale. The repair and its regression test are recorded in `bundle://proof/SB01/baseline.md`; it is part of the current package provenance.
 
 ## Do Not Do
 
@@ -71,12 +72,12 @@
 
 ## Acceptance Checklist
 
-- [ ] Source pins/status and user changes are recorded.
-- [ ] FileTools validation/pack/hash proof passes on current source.
-- [ ] FileTools snapshot is non-empty and usable.
-- [ ] Main baseline is recorded without hiding failures.
-- [ ] Components/watch availability is known.
-- [ ] Product diff is still empty.
+- [x] Source pins/status and user changes are recorded.
+- [x] FileTools validation/pack/hash proof passes on current source.
+- [x] FileTools snapshot is non-empty and usable.
+- [x] Main baseline is recorded without hiding failures.
+- [x] Components/watch availability is known.
+- [x] Main product diff remained empty during SB01; the required FileTools baseline repair is explicit and hashed.
 
 ## Proof Required
 

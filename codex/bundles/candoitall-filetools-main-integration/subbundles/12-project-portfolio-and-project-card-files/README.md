@@ -2,7 +2,7 @@
 
 ## Status
 
-- `Ready`
+- `Completed — Pass (2026-07-13)`
 
 ## Objective
 
@@ -88,11 +88,11 @@
 
 ## Acceptance Checklist
 
-- [ ] Cards/Files use identical directly tested projection.
-- [ ] Include-subprojects/fingerprint/source replacement works.
-- [ ] Card dialog browses/searches/opens authorized file.
-- [ ] Empty/error/stale/unauthorized cases pass.
-- [ ] Desktop UI/console/network and C# gate pass.
+- [x] Cards/Files use identical directly tested projection.
+- [x] Include-subprojects/fingerprint/source replacement works.
+- [x] Card dialog browses/searches/opens authorized file.
+- [x] Empty/error/stale/unauthorized cases pass.
+- [x] Desktop UI/console/network and C# gate pass.
 
 ## Proof Required
 
@@ -107,6 +107,8 @@
 ## Progression Gate
 
 - SB13 enters after the story's C# gate and downstream project-scope reuse smoke pass.
+
+Progression decision: `Pass`. Behavioral proof is `bundle://proof/SB12/behavioral-proof.md`; final focused architecture snapshot is `snap-20260713091027-759c0917`. SB13 is unlocked.
 
 ## Reopen Triggers
 

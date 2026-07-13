@@ -2,7 +2,7 @@
 
 ## Status
 
-- `Ready`
+- `Completed`
 
 ## Objective
 
@@ -22,7 +22,7 @@
 - `repo://src/Processes/CanDoItAll.Processes.Application/ProcessLaunchApplicationService.cs`
 - `repo://src/Processes/CanDoItAll.Processes.Application/ProcessLaunchArtifactContracts.cs`
 - `repo://src/Modules/CanDoItAll.Modules.Processes/Services/WorkspaceProcessLaunchArtifactInitializer.cs`
-- `repo://src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureProcessRunFolderProjectionPolicy.cs`
+- `repo://src/Processes/CanDoItAll.Processes.Application/ProcessRunArtifactRootPolicy.cs`
 - `repo://tests/Unit/CanDoItAll.Tests.Unit/WorkspaceProcessRunArtifactPathTests.cs`
 - `repo://tests/Playwright/CanDoItAll.Tests.Playwright/ProcessShellSmokeTests.cs`
 
@@ -90,11 +90,11 @@
 
 ## Acceptance Checklist
 
-- [ ] Managed/output/product roots resolve from current run data.
-- [ ] Unauthorized/escaped roots fail.
-- [ ] New/replaced file is visible next open/refresh.
-- [ ] Dashboard stays thin; dependency direction correct.
-- [ ] Desktop browser/console/C# gate pass.
+- [x] Managed/output/product roots resolve from current run data.
+- [x] Unauthorized/escaped roots fail.
+- [x] New/replaced file is visible next open/refresh.
+- [x] Dashboard stays thin; dependency direction correct.
+- [x] Desktop browser/console/C# gate pass.
 
 ## Proof Required
 
@@ -108,7 +108,14 @@
 
 ## Progression Gate
 
-- SB15 enters after Processes ownership, Disabled freshness, UI, and C# gates pass.
+- Passed 2026-07-13. Processes ownership, Disabled freshness, UI, lifetime, dependency, and C# gates pass; SB15 is unlocked.
+
+## Closure Evidence
+
+- `bundle://proof/SB14/behavioral-proof.md`
+- Focused unit `17/17`, affected lifetime/authority unit `43/43`, component `3/3`, integration `8/8`.
+- Warning-as-error Release Web build: 0 warnings, 0 errors.
+- Managed browser proof at 1900x1200 and 1440x900 covers real run detail entry, current managed root, read-only open, live creation/replacement, refresh, console/network review, and fixture cleanup.
 
 ## Reopen Triggers
 

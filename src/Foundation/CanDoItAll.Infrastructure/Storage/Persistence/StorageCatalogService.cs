@@ -98,6 +98,7 @@ public sealed class StorageCatalogService(
     public async Task<StorageCatalogRecord> SaveAsync(StorageCatalogRecord record, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(record);
+        StorageJson.ParseProviderConfiguration(record.ConfigJson);
 
         await EnsureBootstrapFileSystemStorageAsync(cancellationToken);
 

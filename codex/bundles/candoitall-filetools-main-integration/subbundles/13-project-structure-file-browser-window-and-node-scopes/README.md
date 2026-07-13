@@ -2,7 +2,7 @@
 
 ## Status
 
-- `Ready`
+- `Completed`
 
 ## Objective
 
@@ -97,12 +97,12 @@
 
 ## Acceptance Checklist
 
-- [ ] Supported project/node scopes browse and open through authorized seam.
-- [ ] Image/PDF double-click still opens the existing dialog lifecycle with direct FileInteraction and zero FileBrowser calls.
-- [ ] Arbitrary absolute/escaped/stale metadata fails before provider.
-- [ ] No new partial or duplicated action logic.
-- [ ] Floating window has one scroll owner and unclipped overlays.
-- [ ] Desktop browser/console/C# gate pass.
+- [x] Supported project/node scopes browse and open through authorized seam.
+- [x] Image/PDF double-click still opens the existing dialog lifecycle with direct FileInteraction and zero FileBrowser calls.
+- [x] Arbitrary absolute/escaped/stale metadata fails before provider.
+- [x] No new partial or duplicated action logic.
+- [x] Floating window has one scroll owner and unclipped overlays.
+- [x] Desktop browser/console/C# gate pass.
 
 ## Proof Required
 

@@ -250,7 +250,15 @@ public sealed class StorageProviderConfiguration
 
     public bool UsePassiveMode { get; set; } = true;
 
+    public StorageBrowseCacheSettings BrowseCache { get; set; } = new();
+
     public string MetadataJson { get; set; } = "{}";
+
+    public void Validate()
+    {
+        BrowseCache ??= new StorageBrowseCacheSettings();
+        BrowseCache.Validate();
+    }
 }
 
 public sealed class StorageReferenceEnvelope

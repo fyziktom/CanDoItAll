@@ -348,7 +348,7 @@ internal sealed class ProjectStructureProcessProjectionContributor(
         ProjectStructureProjectionContext context,
         ProjectStructureProcessRuntimeState state,
         int runIndex,
-        IReadOnlyList<ProjectStructureProcessRunFolderProjection> outputFolders)
+        IReadOnlyList<ProcessRunArtifactRootResolution> outputFolders)
     {
         var runNodeKey = ProjectStructureProcessNodeKeys.BuildProcessRunNodeKey(state.RunId);
         if (!context.ContainsNode(runNodeKey))
@@ -357,7 +357,7 @@ internal sealed class ProjectStructureProcessProjectionContributor(
         }
 
         var projectableFolders = outputFolders.Count == 0
-            ? [ProjectStructureProcessRunFolderProjectionPolicy.Resolve(BuildManagedArtifactRoot(state.RunId), state.RunId)]
+            ? ProcessRunArtifactRootPolicy.ResolveCurrentRunRoots(state.RunId, [])
             : outputFolders;
         var folderIndex = 0;
         foreach (var outputFolder in projectableFolders
@@ -614,14 +614,14 @@ internal sealed class ProjectStructureProcessProjectionContributor(
         return merged;
     }
 
-    private static IReadOnlyDictionary<Guid, IReadOnlyList<ProjectStructureProcessRunFolderProjection>> BuildOutputFolderMap(
+    private static IReadOnlyDictionary<Guid, IReadOnlyList<ProcessRunArtifactRootResolution>> BuildOutputFolderMap(
         IReadOnlyList<ProjectScopedProcessRunReference> projectScopedRunReferences)
     {
         return projectScopedRunReferences
             .GroupBy(reference => reference.RunId)
             .ToDictionary(
                 group => group.Key,
-                group => (IReadOnlyList<ProjectStructureProcessRunFolderProjection>)group
+                group => (IReadOnlyList<ProcessRunArtifactRootResolution>)group
                     .SelectMany(reference => reference.OutputFolders)
                     .Where(folder => folder.ShouldProject)
                     .GroupBy(folder => folder.DirectoryPath, StringComparer.OrdinalIgnoreCase)
@@ -699,31 +699,10 @@ internal sealed class ProjectStructureProcessProjectionContributor(
                string.Equals(currentRunNodeId, processRunNodeId, StringComparison.Ordinal);
     }
 
-    private static IReadOnlyList<ProjectStructureProcessRunFolderProjection> EnumerateProjectableOutputFolders(
+    private static IReadOnlyList<ProcessRunArtifactRootResolution> EnumerateProjectableOutputFolders(
         Guid runId,
         IReadOnlyDictionary<string, string> variables)
-    {
-        var folders = new List<ProjectStructureProcessRunFolderProjection>
-        {
-            ProjectStructureProcessRunFolderProjectionPolicy.Resolve(BuildManagedArtifactRoot(runId), runId)
-        };
-
-        foreach (var value in variables.Values)
-        {
-            var folder = ProjectStructureProcessRunFolderProjectionPolicy.Resolve(value, runId);
-            if (folder.ShouldProject)
-            {
-                folders.Add(folder);
-            }
-        }
-
-        return folders
-            .Where(folder => folder.ShouldProject)
-            .GroupBy(folder => folder.DirectoryPath, StringComparer.OrdinalIgnoreCase)
-            .Select(group => group.First())
-            .OrderBy(folder => folder.DirectoryPath, StringComparer.OrdinalIgnoreCase)
-            .ToArray();
-    }
+        => ProcessRunArtifactRootPolicy.ResolveCurrentRunRoots(runId, [variables]);
 
     private static IReadOnlyList<string> EnumerateProductRoots(IReadOnlyDictionary<string, string> variables)
     {
@@ -946,25 +925,25 @@ internal sealed class ProjectStructureProcessProjectionContributor(
         });
     }
 
-    private static string ResolveRunOutputTitle(ProjectStructureProcessRunFolderProjectionKind kind)
+    private static string ResolveRunOutputTitle(ProcessRunArtifactRootKind kind)
         => kind switch
         {
-            ProjectStructureProcessRunFolderProjectionKind.ManagedProductOutputRoot => "Product output",
-            ProjectStructureProcessRunFolderProjectionKind.ManagedArtifactRunRoot => "Run artifacts",
+            ProcessRunArtifactRootKind.ManagedProductOutputRoot => "Product output",
+            ProcessRunArtifactRootKind.ManagedArtifactRunRoot => "Run artifacts",
             _ => "Run output"
         };
 
-    private static string ResolveRunOutputSubtitle(ProjectStructureProcessRunFolderProjectionKind kind)
+    private static string ResolveRunOutputSubtitle(ProcessRunArtifactRootKind kind)
         => kind switch
         {
-            ProjectStructureProcessRunFolderProjectionKind.ManagedProductOutputRoot => "Managed product output folder",
-            ProjectStructureProcessRunFolderProjectionKind.ManagedArtifactRunRoot => "Managed artifact folder",
+            ProcessRunArtifactRootKind.ManagedProductOutputRoot => "Managed product output folder",
+            ProcessRunArtifactRootKind.ManagedArtifactRunRoot => "Managed artifact folder",
             _ => "Managed process run folder"
         };
 
     private static string BuildRunOutputNotes(
         Guid runId,
-        ProjectStructureProcessRunFolderProjection outputFolder)
+        ProcessRunArtifactRootResolution outputFolder)
         => string.Join(
             Environment.NewLine,
             new[]
@@ -974,7 +953,7 @@ internal sealed class ProjectStructureProcessProjectionContributor(
                 $"Managed path: {outputFolder.DirectoryPath}"
             });
 
-    private static string BuildRunOutputMetadataJson(ProjectStructureProcessRunFolderProjection outputFolder)
+    private static string BuildRunOutputMetadataJson(ProcessRunArtifactRootResolution outputFolder)
     {
         return JsonSerializer.Serialize(new
         {
@@ -985,9 +964,6 @@ internal sealed class ProjectStructureProcessProjectionContributor(
             }
         });
     }
-
-    private static string BuildManagedArtifactRoot(Guid runId)
-        => $"artifacts/process-runs/{runId:D}";
 
     private IReadOnlyList<ProjectedProcessRunFile> EnumerateRunScreenshots(Guid runId)
     {
@@ -1251,7 +1227,7 @@ internal sealed class ProjectStructureProcessProjectionContributor(
     private sealed record ProjectScopedProcessRunReference(
         Guid RunId,
         string ProjectNodeKey,
-        IReadOnlyList<ProjectStructureProcessRunFolderProjection> OutputFolders,
+        IReadOnlyList<ProcessRunArtifactRootResolution> OutputFolders,
         IReadOnlyList<string> ProductRoots,
         DateTimeOffset CreatedAtUtc);
 

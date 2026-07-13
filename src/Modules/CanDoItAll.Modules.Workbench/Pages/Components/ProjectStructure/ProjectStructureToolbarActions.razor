@@ -77,6 +77,16 @@
             data-testid="project-structure-object-index-toggle"
             Click="ToggleObjectIndexWindow" />
 
+    <Button Icon="folder_open"
+            aria-label="Files"
+            title="Files: browse the authorized project file collection"
+            Variant="Variant.Text"
+            ButtonStyle="ButtonStyle.Base"
+            Style="@ToolbarToggleStyle"
+            Class="@ResolveToolbarButtonCssClass(FileBrowserWindowVisible)"
+            data-testid="project-structure-files-toggle"
+            Click="OpenFileBrowserWindow" />
+
     <Button Icon="notifications_active"
             aria-label="Signals"
             title="Signals: show or hide the node signals toolbox"
@@ -126,6 +136,9 @@
     public bool ObjectIndexWindowVisible { get; set; }
 
     [Parameter]
+    public bool FileBrowserWindowVisible { get; set; }
+
+    [Parameter]
     public bool SignalsWindowVisible { get; set; }
 
     [Parameter]
@@ -154,6 +167,9 @@
 
     [Parameter]
     public EventCallback ToggleObjectIndexWindow { get; set; }
+
+    [Parameter]
+    public EventCallback OpenFileBrowserWindow { get; set; }
 
     [Parameter]
     public EventCallback ToggleSignalsWindow { get; set; }

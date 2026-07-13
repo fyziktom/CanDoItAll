@@ -1,0 +1,23 @@
+SB08 final affected unit run — 2026-07-12
+
+Command:
+dotnet test tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj -c Release --no-build --filter "FullyQualifiedName~StorageBrowseCacheTests|FullyQualifiedName~FileAccessAuthorizationTests|FullyQualifiedName~StorageJsonTests|FullyQualifiedName~StoragePlacementServiceTests|FullyQualifiedName~FileToolsIntegrationBoundaryTests" --logger "console;verbosity=minimal"
+
+Result:
+Passed: 39
+Failed: 0
+Skipped: 0
+Total: 39
+
+Covered final-source behavior:
+- disabled zero-cache interaction;
+- HybridCache same-key coalescing and hits;
+- scope/runtime/source-set/query/revision isolation;
+- deterministic eviction metrics, TTL reload, exact byte and continuation bypass;
+- cancelled/failed load non-retention;
+- mutable IPFS immutable-policy rejection;
+- stale cached listing cannot authorize removed native occurrence;
+- successful semantic revision selects a new aggregate listing;
+- oversized provider config and source-set rejection;
+- save and placement revision only after successful persistence;
+- SB06/SB07 mapping, composition, handle, endpoint contract, save, and log regression.

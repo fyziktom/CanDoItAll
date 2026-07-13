@@ -2,7 +2,7 @@
 
 ## Status
 
-- `Ready`
+- `Completed — Governed proof passed; SB09 unlocked`
 
 ## Objective
 
@@ -90,11 +90,11 @@
 
 ## Acceptance Checklist
 
-- [ ] Missing config -> Disabled and zero cache interaction.
-- [ ] Cross-actor/runtime/source/query entries do not collide.
-- [ ] Mutable sources never claim immutable from config alone.
-- [ ] Success bumps after persistence; failure/cancel does not.
-- [ ] Distributed mode without prerequisite fails.
+- [x] Missing config -> Disabled and zero cache interaction.
+- [x] Cross-actor/runtime/source/query entries do not collide; the selected raw-provider model shares only safe descriptive facts and reauthorizes every actor effect.
+- [x] Mutable sources never claim immutable from config alone.
+- [x] Success bumps after persistence; failure/cancel does not.
+- [x] Distributed mode without prerequisite fails.
 
 ## Proof Required
 

@@ -1,8 +1,11 @@
-using System.Net;
+using Microsoft.Extensions.Logging;
 
 namespace CanDoItAll.Infrastructure.Storage;
 
-public sealed class FtpStorageDriver(IStorageSecretResolver secretResolver) : IStorageDriver
+public sealed class FtpStorageDriver(
+    IStorageSecretResolver secretResolver,
+    IFtpStorageTransport transport,
+    ILogger<FtpStorageDriver> logger) : IStorageDriver
 {
     public StorageProviderKind ProviderKind => StorageProviderKind.Ftp;
 
@@ -21,24 +24,25 @@ public sealed class FtpStorageDriver(IStorageSecretResolver secretResolver) : IS
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(storage);
-
         try
         {
-            var request = CreateRequest(storage, secretValue, string.Empty, WebRequestMethods.Ftp.ListDirectory);
-            using var response = (FtpWebResponse)await request.GetResponseAsync();
-
+            await transport.TestConnectionAsync(storage, secretValue, cancellationToken);
             return new StorageConnectionTestResult(
                 true,
-                $"FTP server responded with status '{response.StatusDescription?.Trim() ?? "OK"}'.",
+                "FTP server responded successfully.",
                 StorageHealthStatus.Healthy,
                 SupportedCapabilities,
                 DateTimeOffset.UtcNow);
         }
-        catch (Exception ex)
+        catch (Exception exception) when (exception is not OperationCanceledException)
         {
+            logger.LogWarning(
+                "FTP connection test failed for storage {StorageId} with {FailureType}.",
+                storage.Id,
+                exception.GetType().Name);
             return new StorageConnectionTestResult(
                 false,
-                $"FTP storage is unavailable: {ex.Message}",
+                "FTP storage is unavailable.",
                 StorageHealthStatus.Unavailable,
                 SupportedCapabilities & ~StorageCapability.ConnectionTest,
                 DateTimeOffset.UtcNow);
@@ -52,40 +56,44 @@ public sealed class FtpStorageDriver(IStorageSecretResolver secretResolver) : IS
     {
         ArgumentNullException.ThrowIfNull(storage);
         ArgumentNullException.ThrowIfNull(request);
-
-        var remotePath = NormalizeRemotePath(request.RelativePathHint, request.FileName);
-        var secretValue = await secretResolver.ResolveCredentialAsync(storage.CredentialSecretId, cancellationToken);
-        await EnsureParentDirectoriesAsync(storage, secretValue, remotePath, cancellationToken);
-
-        var uploadRequest = CreateRequest(storage, secretValue, remotePath, WebRequestMethods.Ftp.UploadFile);
-        await using (var requestStream = await uploadRequest.GetRequestStreamAsync())
+        try
         {
-            await requestStream.WriteAsync(request.Content, cancellationToken);
+            string remotePath = NormalizeRemotePath(request.RelativePathHint, request.FileName);
+            string? password = await secretResolver.ResolveCredentialAsync(
+                storage.CredentialSecretId,
+                cancellationToken);
+            await transport.UploadAsync(storage, password, remotePath, request.Content, cancellationToken);
+            var reference = new StorageObjectReference(
+                storage.Id,
+                ProviderKind,
+                StorageLocatorKind.RemotePath,
+                remotePath,
+                request.FileName,
+                string.IsNullOrWhiteSpace(request.ContentType) ? "application/octet-stream" : request.ContentType,
+                request.Content.LongLength);
+
+            return new StorageWriteResult(
+                reference,
+                new StorageAccessDescriptor(
+                    string.Empty,
+                    StorageJson.BuildDownloadUrl(reference),
+                    null,
+                    false,
+                    true,
+                    false,
+                    string.IsNullOrWhiteSpace(request.FileName) ? remotePath : request.FileName,
+                    reference.ContentType,
+                    reference.ContentLength,
+                    "FTP storage supports download but not inline preview or local open."));
         }
-
-        using var uploadResponse = (FtpWebResponse)await uploadRequest.GetResponseAsync();
-        var reference = new StorageObjectReference(
-            storage.Id,
-            ProviderKind,
-            StorageLocatorKind.RemotePath,
-            remotePath,
-            request.FileName,
-            string.IsNullOrWhiteSpace(request.ContentType) ? "application/octet-stream" : request.ContentType,
-            request.Content.LongLength);
-
-        return new StorageWriteResult(
-            reference,
-            new StorageAccessDescriptor(
-                string.Empty,
-                StorageJson.BuildDownloadUrl(reference),
-                null,
-                false,
-                true,
-                false,
-                string.IsNullOrWhiteSpace(request.FileName) ? remotePath : request.FileName,
-                reference.ContentType,
-                reference.ContentLength,
-                "FTP storage supports download but not inline preview or local open."));
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception exception)
+        {
+            throw CreateFailure(storage, "write", exception);
+        }
     }
 
     public async Task<Stream> OpenReadAsync(
@@ -95,17 +103,25 @@ public sealed class FtpStorageDriver(IStorageSecretResolver secretResolver) : IS
     {
         ArgumentNullException.ThrowIfNull(storage);
         ArgumentNullException.ThrowIfNull(reference);
-
-        var secretValue = await secretResolver.ResolveCredentialAsync(storage.CredentialSecretId, cancellationToken);
-        var request = CreateRequest(storage, secretValue, reference.Locator, WebRequestMethods.Ftp.DownloadFile);
-        using var response = (FtpWebResponse)await request.GetResponseAsync();
-        await using var responseStream = response.GetResponseStream()
-            ?? throw new InvalidOperationException("FTP download did not return a response stream.");
-
-        var buffer = new MemoryStream();
-        await responseStream.CopyToAsync(buffer, cancellationToken);
-        buffer.Position = 0;
-        return buffer;
+        try
+        {
+            string? password = await secretResolver.ResolveCredentialAsync(
+                storage.CredentialSecretId,
+                cancellationToken);
+            return await transport.OpenReadAsync(
+                storage,
+                password,
+                reference.Locator,
+                cancellationToken);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception exception)
+        {
+            throw CreateFailure(storage, "read", exception);
+        }
     }
 
     public async Task DeleteAsync(
@@ -115,40 +131,20 @@ public sealed class FtpStorageDriver(IStorageSecretResolver secretResolver) : IS
     {
         ArgumentNullException.ThrowIfNull(storage);
         ArgumentNullException.ThrowIfNull(reference);
-
-        var secretValue = await secretResolver.ResolveCredentialAsync(storage.CredentialSecretId, cancellationToken);
-        var request = CreateRequest(storage, secretValue, reference.Locator, WebRequestMethods.Ftp.DeleteFile);
-        using var response = (FtpWebResponse)await request.GetResponseAsync();
-    }
-
-    private async Task EnsureParentDirectoriesAsync(
-        StorageCatalogRecord storage,
-        string? secretValue,
-        string remotePath,
-        CancellationToken cancellationToken)
-    {
-        var segments = remotePath.Split('/', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-        if (segments.Length <= 1)
+        try
         {
-            return;
+            string? password = await secretResolver.ResolveCredentialAsync(
+                storage.CredentialSecretId,
+                cancellationToken);
+            await transport.DeleteAsync(storage, password, reference.Locator, cancellationToken);
         }
-
-        var currentPath = string.Empty;
-        for (var index = 0; index < segments.Length - 1; index++)
+        catch (OperationCanceledException)
         {
-            currentPath = string.IsNullOrWhiteSpace(currentPath)
-                ? segments[index]
-                : $"{currentPath}/{segments[index]}";
-
-            try
-            {
-                var request = CreateRequest(storage, secretValue, currentPath, WebRequestMethods.Ftp.MakeDirectory);
-                using var response = (FtpWebResponse)await request.GetResponseAsync();
-            }
-            catch (WebException ex) when (ex.Response is FtpWebResponse ftpResponse &&
-                                          ftpResponse.StatusCode == FtpStatusCode.ActionNotTakenFileUnavailable)
-            {
-            }
+            throw;
+        }
+        catch (Exception exception)
+        {
+            throw CreateFailure(storage, "delete", exception);
         }
     }
 
@@ -159,68 +155,21 @@ public sealed class FtpStorageDriver(IStorageSecretResolver secretResolver) : IS
             return relativePathHint.Trim().Replace('\\', '/').TrimStart('/');
         }
 
-        var sanitizedFileName = string.Concat(fileName.Select(character =>
+        string sanitizedFileName = string.Concat(fileName.Select(character =>
             Path.GetInvalidFileNameChars().Contains(character) ? '-' : character));
-        return string.IsNullOrWhiteSpace(sanitizedFileName)
-            ? "artifact.bin"
-            : sanitizedFileName;
+        return string.IsNullOrWhiteSpace(sanitizedFileName) ? "artifact.bin" : sanitizedFileName;
     }
 
-    private static FtpWebRequest CreateRequest(
+    private InvalidOperationException CreateFailure(
         StorageCatalogRecord storage,
-        string? secretValue,
-        string remotePath,
-        string method)
+        string operation,
+        Exception exception)
     {
-        var configuration = StorageJson.ParseProviderConfiguration(storage.ConfigJson);
-        var requestUri = BuildRequestUri(storage.EndpointOrRoot, configuration, remotePath);
-
-#pragma warning disable SYSLIB0014
-        var request = (FtpWebRequest)WebRequest.Create(requestUri);
-#pragma warning restore SYSLIB0014
-
-        request.Method = method;
-        request.UseBinary = true;
-        request.UsePassive = configuration.UsePassiveMode;
-        request.EnableSsl = configuration.UseSsl;
-        request.KeepAlive = false;
-
-        if (!string.IsNullOrWhiteSpace(configuration.Username))
-        {
-            request.Credentials = new NetworkCredential(configuration.Username, secretValue ?? string.Empty);
-        }
-
-        return request;
-    }
-
-    private static Uri BuildRequestUri(
-        string endpointOrRoot,
-        StorageProviderConfiguration configuration,
-        string remotePath)
-    {
-        if (string.IsNullOrWhiteSpace(endpointOrRoot))
-        {
-            throw new InvalidOperationException("FTP storage requires a host or ftp:// endpoint.");
-        }
-
-        var endpoint = endpointOrRoot.StartsWith("ftp://", StringComparison.OrdinalIgnoreCase) ||
-                       endpointOrRoot.StartsWith("ftps://", StringComparison.OrdinalIgnoreCase)
-            ? endpointOrRoot
-            : $"ftp://{endpointOrRoot.Trim()}";
-        var builder = new UriBuilder(endpoint);
-        if (configuration.Port.HasValue)
-        {
-            builder.Port = configuration.Port.Value;
-        }
-
-        var pathSegments = new[]
-            {
-                builder.Path.Trim('/'),
-                configuration.BasePath.Trim('/'),
-                remotePath.Trim('/')
-            }
-            .Where(segment => !string.IsNullOrWhiteSpace(segment));
-        builder.Path = string.Join('/', pathSegments);
-        return builder.Uri;
+        logger.LogWarning(
+            "FTP {Operation} failed for storage {StorageId} with {FailureType}.",
+            operation,
+            storage.Id,
+            exception.GetType().Name);
+        return new InvalidOperationException($"The FTP {operation} operation failed.");
     }
 }

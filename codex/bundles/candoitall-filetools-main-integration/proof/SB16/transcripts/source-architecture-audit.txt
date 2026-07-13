@@ -1,0 +1,67 @@
+SB16 source and architecture audit, 2026-07-13
+Working directories: C:\repositories\CanDoItAll, C:\repositories\CanDoItAll.FileTools, and C:\repositories\CanDoItAll.Components as identified below.
+Run label: SB16-final-source-architecture.
+
+CodeAnalytics:
+- Fresh scoped snapshot requested for CanDoItAll.FileTools.Integration and CanDoItAll.Modules.Workbench with DI and risk collection.
+- Result: MCP transport closed before a snapshot was produced.
+- No snapshot identifier is claimed. Deterministic fallback evidence follows.
+
+Components MCP:
+- Exact recommendation requested for the existing BaseLib/OverlayLib/Mermaid dialog composition and strict Mermaid policy.
+- Result: MCP transport closed.
+- Existing repository components and the shared Mermaid wrapper were inspected directly; no custom raw layout/render substitute was introduced.
+
+Checked Workbench project references:
+- Foundation Infrastructure and SharedKernel
+- FileTools Integration.Abstractions
+- existing AgentFramework, Memory, Projects, Resources, Security, TestLab, Workspace, and Processes dependencies
+
+Checked Integration project references:
+- Foundation Infrastructure
+- FileTools Integration.Abstractions
+- no Workbench, Projects, Resources, Components, Mermaid, or Markdown reference
+
+Package placement:
+- Workbench direct: Components.Mermaid 0.1.3; FileInteraction Components/Core/Markdown 0.1.0; existing FileBrowser packages for browser surfaces.
+- Infrastructure transitive scan: no FileTools interaction, Components, Mermaid, or Markdig package.
+- Mermaid direct references aligned to 0.1.3 in Web, Workbench, Projects, test Support, and Components tests.
+
+No-bypass scan:
+- No /storage/objects/preview, iframe, video, audio, or raw img branch in the migrated Project Structure path.
+- ProjectStructureGraphAdapter explicitly emits MediaPreviewUrl = string.Empty.
+- ProjectStructureKnownFileInteractionCoordinator and direct dialog have no FileBrowser component/session/service dependency.
+- Legacy tracked owners changed by 22 insertions and 129 deletions; route/type-specific behavior moved to focused owners only after proof.
+
+C# architecture scan:
+- No new partial class in SB16 owners.
+- No IServiceProvider, GetRequiredService, ActivatorUtilities, runtime renderer discovery, or service-locator access.
+- No Markdig/Mermaid/UI dependency in Integration or Infrastructure.
+- Coordinator 159 lines; policy 89; composition 51; Mermaid adapter 45; direct dialog 217 + 26 CSS; save target 144.
+- Full Release Web graph built with zero warnings/errors, proving the checked graph remains build-acyclic.
+
+Performance and scale:
+- Content 16 MiB, checked before and during read.
+- Mermaid history 50 entries / 2 MiB; preview debounce 400 ms.
+- FileTools save coordinator owns one active save and latest-edit coalescing.
+- No Task.Run, .Result, Wait, GetAwaiter().GetResult, per-call HttpClient, unbounded provider enumeration, or retained FileBrowser session in SB16 owners.
+
+Security and redaction:
+- Handle remains exact-file/context/operation authority.
+- Overwrite requires separately authorized Overwrite operation.
+- Storage driver remains revision comparison authority; removing the immutable issuance-revision pre-check enables valid later revisions without accepting stale ones.
+- Save logs expose only hashed handle/actor, byte count, and correlation ID; no raw path, token, content, credential, or actor.
+
+Formatting and hygiene:
+- Focused dotnet format verify: pass.
+- git diff --check in all three repositories: pass; line-ending notices only.
+
+Exact deterministic commands and exits:
+- dotnet list src/Modules/CanDoItAll.Modules.Workbench/CanDoItAll.Modules.Workbench.csproj reference — exit 0.
+- dotnet list src/Modules/CanDoItAll.Modules.Workbench/CanDoItAll.Modules.Workbench.csproj package --include-transitive — exit 0.
+- dotnet list src/Integration/CanDoItAll.FileTools.Integration/CanDoItAll.FileTools.Integration.csproj reference — exit 0.
+- dotnet list src/Foundation/CanDoItAll.Infrastructure/CanDoItAll.Infrastructure.csproj package --include-transitive — exit 0.
+- rg route/media/iframe/video/audio/img patterns over the migrated Project Structure sources — exit 1, expected no match except the separately verified `MediaPreviewUrl = string.Empty` assignment.
+- rg FileBrowser/service-locator/partial/Markdig patterns over the focused SB16 backend owners — exit 1, expected no match.
+- dotnet format CanDoItAll.slnx --verify-no-changes --no-restore --include [focused SB16 paths] — exit 0.
+- git diff --check in each repository — exit 0; line-ending notices only.

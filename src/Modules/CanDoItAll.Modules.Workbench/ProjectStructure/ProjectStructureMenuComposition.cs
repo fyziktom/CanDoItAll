@@ -50,6 +50,7 @@ internal static class ProjectStructureMenuComposition
                 "project:open-structure",
                 "project:add-subproject",
                 "project:reconnect-subproject",
+                ProjectStructureFileActions.BrowseFilesId,
                 "open",
                 "summary"
             ]);
@@ -89,6 +90,7 @@ internal static class ProjectStructureMenuComposition
             "runtime:open",
             "open-local",
             "open-new-tab",
+            ProjectStructureFileActions.BrowseFilesId,
             "open",
             "summary",
             "add-process",

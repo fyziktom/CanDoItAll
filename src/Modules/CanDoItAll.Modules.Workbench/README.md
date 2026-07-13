@@ -40,7 +40,7 @@ Direct package references:
 
 This module owns product semantics for its bounded area. Keep business behavior here and expose it through typed services, Razor components, and module contracts. MCP projects should call into these services instead of duplicating module logic.
 
-`ProjectStructureProcessRunFolderProjectionPolicy` owns process-run folder projection. It projects current-run managed roots, collapses artifact evidence under `artifacts/.../process-runs/{runId}` to the run artifact folder, collapses generated or external-delivery output persisted under `output/.../process-runs/{runId}/{productRoot}` to the product folder, and ignores wrong-run, dated receipt, absolute, traversal, or otherwise unanchored paths instead of mirroring noisy artifact subtrees. Raw `external-target/...` aliases remain Processes grounding metadata; Workbench projects the managed output root that records the run-owned delivery evidence.
+Processes.Application owns process-run root semantics through `ProcessRunArtifactRootPolicy`. Workbench consumes its typed resolution when projecting current-run managed roots, collapses artifact evidence under `artifacts/.../process-runs/{runId}` to the run artifact folder, and collapses generated or external-delivery output persisted under `output/.../process-runs/{runId}/{productRoot}` to the product folder. Wrong-run, dated receipt, absolute, traversal, or otherwise unanchored paths are ignored instead of mirroring noisy artifact subtrees. Raw `external-target/...` aliases remain Processes grounding metadata; Workbench projects the managed output root that records the run-owned delivery evidence.
 
 ## Related Docs
 

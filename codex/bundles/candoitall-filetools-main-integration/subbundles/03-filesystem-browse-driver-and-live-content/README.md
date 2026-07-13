@@ -2,7 +2,7 @@
 
 ## Status
 
-- `Ready`
+- `Completed — governed proof passed 2026-07-12`
 
 ## Objective
 
@@ -93,12 +93,12 @@
 
 ## Acceptance Checklist
 
-- [ ] Traversal/reparse/root disclosure negatives pass.
-- [ ] Bounded deterministic pages and stale cursor behavior pass.
-- [ ] Page-one inspected entries, metadata calls, memory/state, and cancellation stay within declared budgets at large cardinality.
-- [ ] Mutation/replacement is visible on next Disabled read.
-- [ ] Cancellation/failure publishes no partial success.
-- [ ] Existing filesystem storage behavior remains green.
+- [x] Traversal/reparse/root disclosure negatives pass.
+- [x] Bounded deterministic pages and stale cursor behavior pass.
+- [x] Page-one inspected entries, metadata calls, memory/state, and cancellation stay within declared budgets at large cardinality.
+- [x] Mutation/replacement is visible on next Disabled read.
+- [x] Cancellation/failure publishes no partial success.
+- [x] Existing filesystem storage behavior remains green.
 
 ## Proof Required
 

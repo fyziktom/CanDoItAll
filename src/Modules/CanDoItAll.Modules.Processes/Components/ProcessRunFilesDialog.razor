@@ -1,0 +1,299 @@
+@namespace CanDoItAll.Modules.Processes
+@implements IAsyncDisposable
+@inject ProcessRunFilesCoordinator Coordinator
+@inject ILogger<ProcessRunFilesDialog> Logger
+
+@if (IsOpen)
+{
+    <Dialog IsOpen="true"
+            Eyebrow="Process run"
+            Title="@DialogTitle"
+            Subtitle="@DialogSubtitle"
+            Size="ModalSize.Full"
+            DenseChrome="true"
+            CloseOnBackdrop="false"
+            TestId="process-run-files-dialog"
+            OnClose="CloseAsync">
+        <HeaderActions>
+            @if (workspace is not null)
+            {
+                <StatusBadge Tone="info" Text="@($"{workspace.SourceCount} root(s)")" />
+                <StatusBadge Tone="neutral" Text="@($"revision {workspace.Revision[..12]}")" />
+            }
+            <StatusBadge Tone="neutral" Text="Always current" />
+        </HeaderActions>
+        <ChildContent>
+            <div class="process-run-files-dialog__content">
+                @if (isLoading)
+                {
+                    <LoadingState Eyebrow="Authorized run roots"
+                                  Title="Resolving current process files"
+                                  Description="Loading managed artifact and product-output roots from current run data." />
+                }
+                else if (!string.IsNullOrWhiteSpace(openError))
+                {
+                    <EmptyState Eyebrow="Run files unavailable"
+                                Title="Unable to open this process-run scope"
+                                Description="@openError">
+                        <Actions>
+                            <Button Text="Retry"
+                                    data-testid="process-run-files-retry"
+                                    Click="RefreshAsync" />
+                        </Actions>
+                    </EmptyState>
+                }
+                else if (interaction is not null)
+                {
+                    <Stack GapScale="LayoutGap.Small"
+                           AlignItems="AlignItems.Stretch"
+                           Class="h-full min-h-0 overflow-hidden">
+                        <Cluster Gap="LayoutGap.XSmall" Class="shrink-0">
+                            <Button ButtonStyle="ButtonStyle.Light"
+                                    Icon="arrow_back"
+                                    Text="Back to run files"
+                                    data-testid="process-run-files-back"
+                                    Click="RefreshAsync" />
+                            <StatusBadge Tone="info" Text="Read only" />
+                        </Cluster>
+                        <FileInteraction Request="interaction.Request"
+                                         ContentSource="interaction.Session.ContentSource"
+                                         AllowModeSwitch="false"
+                                         MaximumContentBytes="@(16 * 1024 * 1024)"
+                                         AriaLabel="@($"Read-only process-run file {interaction.Request.FileName}")" />
+                    </Stack>
+                }
+                else if (workspace is not null)
+                {
+                    @if (!string.IsNullOrWhiteSpace(activationError))
+                    {
+                        <Alert AlertStyle="AlertStyle.Danger"
+                               Variant="Variant.Outlined"
+                               data-testid="process-run-files-activation-error">
+                            @activationError
+                        </Alert>
+                    }
+
+                    <FileBrowser Session="workspace.Browser"
+                                 Class="process-run-files-dialog__browser w-full flex-1 min-h-0"
+                                 AriaLabel="@($"Managed files for process run {RunId:D}")"
+                                 DisplayMode="FileBrowserDisplayMode.Compact"
+                                 InitialViewMode="FileBrowserViewMode.List"
+                                 SearchDebounceMilliseconds="280"
+                                 SnapshotChanged="HandleSnapshotChanged"
+                                 ItemInvoked="ActivateAsync" />
+                }
+            </div>
+        </ChildContent>
+        <Footer>
+            <Split Gap="LayoutGap.Small">
+                <Cluster Gap="LayoutGap.Small">
+                    <Button Icon="refresh"
+                            Text="Refresh sources"
+                            ButtonStyle="ButtonStyle.Light"
+                            Size="ButtonSize.Small"
+                            Disabled="@isLoading"
+                            data-testid="process-run-files-refresh"
+                            Click="RefreshAsync" />
+                    <TextBlock TextStyle="TextStyle.Caption"
+                               Value="Host cache and session retention are disabled for live run roots." />
+                </Cluster>
+                <Button Text="Close"
+                        ButtonStyle="ButtonStyle.Light"
+                        Size="ButtonSize.Small"
+                        Click="CloseAsync" />
+            </Split>
+        </Footer>
+    </Dialog>
+}
+
+@code {
+    private readonly CancellationTokenSource lifetime = new();
+    private ProcessRunFileWorkspace? workspace;
+    private ProcessRunFileInteraction? interaction;
+    private CancellationTokenSource? operation;
+    private Guid? activeRunId;
+    private string? openError;
+    private string? activationError;
+    private bool isLoading;
+    private bool disposed;
+
+    [Parameter]
+    public bool IsOpen { get; set; }
+
+    [Parameter]
+    public Guid RunId { get; set; }
+
+    [Parameter]
+    public EventCallback Closed { get; set; }
+
+    private string DialogTitle => interaction?.Request.FileName ?? $"Files · Run {RunId.ToString("N")[..8]}";
+
+    private string DialogSubtitle => interaction is null
+        ? "Browse current managed artifacts and product outputs. Refresh re-resolves run data and re-enumerates storage."
+        : "Read-only content remains authorized independently from the disposed browser session.";
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (!IsOpen)
+        {
+            await ResetAsync();
+            return;
+        }
+
+        if (activeRunId == RunId)
+        {
+            return;
+        }
+
+        await OpenAsync();
+    }
+
+    private Task RefreshAsync() => OpenAsync();
+
+    private async Task OpenAsync()
+    {
+        await ResetAsync();
+        activeRunId = RunId;
+        isLoading = true;
+        operation = CancellationTokenSource.CreateLinkedTokenSource(lifetime.Token);
+        CancellationTokenSource currentOperation = operation;
+        try
+        {
+            ProcessRunFileWorkspace opened = await Coordinator.OpenAsync(RunId, currentOperation.Token);
+            if (!ReferenceEquals(operation, currentOperation) || currentOperation.IsCancellationRequested)
+            {
+                await opened.DisposeAsync();
+                return;
+            }
+
+            workspace = opened;
+        }
+        catch (OperationCanceledException) when (currentOperation.IsCancellationRequested)
+        {
+        }
+        catch (Exception exception)
+        {
+            Logger.LogWarning(exception, "Process-run files could not be opened. RunId={RunId}.", RunId);
+            openError = SafeMessage(exception, "Unable to open process-run files.");
+        }
+        finally
+        {
+            if (ReferenceEquals(operation, currentOperation))
+            {
+                isLoading = false;
+            }
+        }
+    }
+
+    private async Task ActivateAsync(FileBrowserItemInvokedEventArgs args)
+    {
+        if (workspace is null || args.Item.IsContainer)
+        {
+            return;
+        }
+
+        activationError = null;
+        CancellationTokenSource currentOperation = ReplaceOperation();
+        ProcessRunFileInteraction? activated = null;
+        try
+        {
+            activated = await Coordinator.ActivateAsync(workspace, args.Item.Key, currentOperation.Token);
+            if (!ReferenceEquals(operation, currentOperation) || currentOperation.IsCancellationRequested)
+            {
+                return;
+            }
+
+            await workspace.DisposeAsync();
+            workspace = null;
+            interaction = activated;
+            activated = null;
+        }
+        catch (OperationCanceledException) when (currentOperation.IsCancellationRequested)
+        {
+        }
+        catch (Exception exception)
+        {
+            Logger.LogWarning(exception, "Process-run file activation failed. RunId={RunId}.", RunId);
+            activationError = SafeMessage(exception, "Unable to open the selected process-run file.");
+        }
+        finally
+        {
+            if (activated is not null)
+            {
+                await activated.DisposeAsync();
+            }
+        }
+    }
+
+    private void HandleSnapshotChanged(FileBrowserSnapshot snapshot)
+    {
+        if (snapshot.Search is not { } search || snapshot.IsBusy)
+        {
+            return;
+        }
+
+        Logger.LogInformation(
+            "Process-run file search completed. RunId={RunId} Returned={ReturnedItems} Inspected={InspectedItems} Retained={RetainedItems} RetainedBytes={RetainedBytes} DurationMs={DurationMs} Partial={IsPartial}.",
+            RunId,
+            snapshot.Items.Count,
+            search.ScannedItems,
+            search.RetainedItems,
+            search.RetainedBytes,
+            search.Elapsed.TotalMilliseconds,
+            search.IsPartial);
+    }
+
+    private async Task CloseAsync()
+    {
+        await ResetAsync();
+        await Closed.InvokeAsync();
+    }
+
+    private CancellationTokenSource ReplaceOperation()
+    {
+        operation?.Cancel();
+        operation?.Dispose();
+        operation = CancellationTokenSource.CreateLinkedTokenSource(lifetime.Token);
+        return operation;
+    }
+
+    private async ValueTask ResetAsync()
+    {
+        operation?.Cancel();
+        operation?.Dispose();
+        operation = null;
+        isLoading = false;
+        activeRunId = null;
+        openError = null;
+        activationError = null;
+        if (interaction is not null)
+        {
+            await interaction.DisposeAsync();
+            interaction = null;
+        }
+
+        if (workspace is not null)
+        {
+            await workspace.DisposeAsync();
+            workspace = null;
+        }
+    }
+
+    private static string SafeMessage(Exception exception, string fallback)
+        => exception is FileBrowserProviderException providerException
+            ? providerException.Error.Message
+            : fallback;
+
+    public async ValueTask DisposeAsync()
+    {
+        if (disposed)
+        {
+            return;
+        }
+
+        disposed = true;
+        lifetime.Cancel();
+        await ResetAsync();
+        lifetime.Dispose();
+    }
+}

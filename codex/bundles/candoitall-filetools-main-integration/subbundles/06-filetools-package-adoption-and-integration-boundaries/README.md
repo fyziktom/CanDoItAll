@@ -2,7 +2,7 @@
 
 ## Status
 
-- `Ready`
+- `Completed — Behavioral proof passed; SB07 unlocked`
 
 ## Objective
 
@@ -94,11 +94,11 @@
 
 ## Acceptance Checklist
 
-- [ ] Exact validated packages restore and assets load.
-- [ ] Boundary projects compile with intended references only.
-- [ ] Native fake provider maps semantically to FileTools.
-- [ ] No project/module cycle or forbidden edge.
-- [ ] Composition registration is declarative/tested.
+- [x] Exact validated packages restore; required Abstractions package has no static web assets.
+- [x] Boundary projects compile with intended references only.
+- [x] Native fake provider maps semantically to FileTools.
+- [x] No project cycle, new module cycle, or forbidden edge.
+- [x] Composition registration is declarative/tested.
 
 ## Proof Required
 

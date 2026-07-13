@@ -15,6 +15,7 @@ internal static class ProjectStructureNodeActionCapabilityResolver
         var canLaunchRuntime = runtimeLauncher.IsAvailable && runtimeResolution.IsSuccess && runtimeResolution.Plan is not null;
         var canOpenInFileExplorer = localFileOpener.IsAvailable && localFileOpener.CanOpen(node);
         var canOpenInNewTab = IsIpfsBackedNode(node) && CanOpenNodeInNewTab(node);
+        var canBrowseFiles = ProjectStructureFileActions.CanBrowseFiles(node);
         var storage = ResolveStorage(node);
 
         if (canLaunchRuntime && runtimeResolution.Plan is { } runtimePlan)
@@ -44,11 +45,11 @@ internal static class ProjectStructureNodeActionCapabilityResolver
                 StorageProvider: storage.Provider,
                 StorageLocatorKind: storage.LocatorKind,
                 StorageLocator: storage.Locator,
-                Actions: BuildFileActions(actions, guidance, canOpenInFileExplorer, canOpenInNewTab),
+                Actions: BuildFileActions(actions, guidance, canOpenInFileExplorer, canOpenInNewTab, canBrowseFiles),
                 Guidance: guidance);
         }
 
-        BuildFileActions(actions, guidance, canOpenInFileExplorer, canOpenInNewTab);
+        BuildFileActions(actions, guidance, canOpenInFileExplorer, canOpenInNewTab, canBrowseFiles);
         if (actions.Count == 0 && string.IsNullOrWhiteSpace(storage.Provider))
         {
             return null;
@@ -74,8 +75,15 @@ internal static class ProjectStructureNodeActionCapabilityResolver
         List<ProjectStructureNodeActionDescriptor> actions,
         List<string> guidance,
         bool canOpenInFileExplorer,
-        bool canOpenInNewTab)
+        bool canOpenInNewTab,
+        bool canBrowseFiles)
     {
+        if (canBrowseFiles)
+        {
+            actions.Add(ProjectStructureFileActions.CreateDescriptor());
+            guidance.Add("Collection browsing uses the authorized canvas file window and remains separate from direct asset preview and File Explorer launch.");
+        }
+
         if (canOpenInFileExplorer)
         {
             actions.Add(new ProjectStructureNodeActionDescriptor(

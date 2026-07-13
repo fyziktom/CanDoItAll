@@ -2,7 +2,7 @@
 
 ## Status
 
-- `Ready`
+- `Completed — behavioral proof passed 2026-07-12`
 
 ## Objective
 
@@ -91,12 +91,12 @@
 
 ## Acceptance Checklist
 
-- [ ] CID/DAG and MFS policies differ correctly.
-- [ ] FTP classifies only proven facts and rejects unsupported operations.
-- [ ] Bounds/cursors/cancellation/malformed/partial response tests pass.
-- [ ] Transport counters prove connection reuse and bounded streamed content/listing work.
-- [ ] Logs/errors mask secrets and endpoints.
-- [ ] Capabilities match behavior.
+- [x] CID/DAG and MFS policies differ correctly.
+- [x] FTP classifies only proven facts and rejects unsupported operations.
+- [x] Bounds/cursors/cancellation/malformed/partial response tests pass.
+- [x] Transport counters prove connection reuse and bounded streamed content/listing work.
+- [x] Logs/errors mask secrets and endpoints.
+- [x] Capabilities match behavior.
 
 ## Proof Required
 
