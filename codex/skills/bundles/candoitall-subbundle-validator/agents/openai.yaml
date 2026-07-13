@@ -1,4 +1,4 @@
 interface:
   display_name: "CanDoItAll Subbundle Validator"
   short_description: "Validate subbundle entry and closure gates"
-  default_prompt: "Audit the current subbundle's owned scope, prerequisites, proof, and progression gate. Return Pass, Fail, or Blocked before downstream work continues."
+  default_prompt: "Use $candoitall-subbundle-validator to gate this work unit's scope, prerequisites, declared proof tier, and downstream progression."

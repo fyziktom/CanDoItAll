@@ -1,10 +1,10 @@
 # Semantic Adequacy Proof
 
-Use this reference when preparing, executing, or validating critical subbundles. Critical proof must show that the shipped behavior satisfies the intended domain outcome, not merely that files, rows, statuses, or template strings exist.
+Use this reference when preparing, executing, or validating Behavioral or Governed subbundles. Proof must show that shipped behavior satisfies the intended outcome, not merely that files, rows, statuses, or template strings exist.
 
 ## Required Evidence
 
-Each critical subbundle must record these fields in the execution report or a linked proof artifact:
+Each Behavioral or Governed subbundle must record these fields in the execution report or a linked proof artifact:
 
 - Raw note owned: quote the literal request or normalized requirement, including scope words such as `all`, `every`, `must`, `exactly`, and `same flow`.
 - Shipped behavior: describe the production behavior that now satisfies that note.
@@ -18,7 +18,7 @@ Each critical subbundle must record these fields in the execution report or a li
 
 ## Artifact-Backed Evidence
 
-Semantic labels do not count unless the underlying evidence is durable. For every critical subbundle, the execution report must cite `proof/SBxx/manifest.md`, and that manifest must point to existing transcripts or artifacts for:
+For Governed proof, semantic labels do not count unless the underlying evidence is durable. The execution report must cite `proof/SBxx/manifest.md`, and that manifest must point to existing transcripts or artifacts for:
 
 - failing-first negative proof when behavior changes;
 - passing positive proof after implementation;
@@ -28,7 +28,7 @@ Semantic labels do not count unless the underlying evidence is durable. For ever
 - anti-stub audit output;
 - browser, host, downstream smoke, or red-team artifacts when those proof types are required.
 
-If the manifest is missing or a cited path does not exist, the semantic gate fails even when the prose labels are present.
+For Governed proof, the semantic gate fails when the manifest is missing or a cited path does not exist. Behavioral proof may keep exact commands and results in the execution report without separate transcripts.
 
 ## What Does Not Count
 

@@ -13,6 +13,7 @@
 ## Commands
 
 - List the targeted commands and their outcomes.
+- For each subbundle, record its `Standard`, `Behavioral`, or `Governed` proof tier.
 
 ## Browser Artifacts
 
@@ -29,6 +30,8 @@
 | Subbundle | Route | Viewport | Playwright MCP evidence | Screenshots | Result |
 | --- | --- | --- | --- | --- | --- |
 | `01-example` | `/example` | `1600x900` | `Navigate, click, evaluate, screenshot` | `evidence/example-desktop.png` | `Pending` |
+
+- Application rows target large-screen desktop viewports. Add small/medium rows only for reusable basic BaseLib or explicit scope.
 
 ## Analytics Review
 

@@ -67,7 +67,8 @@ Dependent subbundle :after foundation, dependent, 1d
 ## Critical Subbundles
 
 - Identify the foundation subbundles whose correctness unlocks later phases.
-- State the deeper validation required before dependent subbundles may continue.
+- Assign `Standard`, `Behavioral`, or `Governed` proof to each subbundle.
+- State the downstream check required before dependent subbundles may continue. Full manifests and transcripts apply only to `Governed` proof.
 
 ## Phase Gates
 
@@ -75,6 +76,11 @@ Dependent subbundle :after foundation, dependent, 1d
 - Gate before each subbundle: confirm prerequisites are complete and still valid.
 - Gate after each subbundle: capture proof, review screenshots, and decide whether downstream work may continue.
 - Gate before closure: rerun validators, close raw notes, and reopen anything with weak proof.
+
+## UI Target Policy
+
+- CanDoItAll applications target large-screen desktop viewports. Do not add small/medium/mobile tuning unless explicitly requested.
+- Reusable basic `CanDoItAll.Components.BaseLib` work validates small, medium, and large viewports.
 """
 
 

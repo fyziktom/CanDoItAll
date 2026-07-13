@@ -41,14 +41,15 @@ Use this checklist when UI iteration speed matters more than broad exploratory w
 - target element class list
 - target element computed style
 - nearby spacing and overflow
-- desktop, tablet, and mobile widths after meaningful layout changes
+- the target large-screen desktop viewport after meaningful application layout changes
+- small, medium, and large widths only for reusable basic `CanDoItAll.Components.BaseLib` work or explicit user scope
 
 ## Proof order
 
 1. exact DOM or computed-style assertion
 2. optional screenshot after the assertion passes
 3. screenshot review answers recorded while the image is fresh
-4. broader responsive pass only after the local proof is stable
+4. broader viewport proof only for reusable basic BaseLib work or explicit user scope
 
 ## Stop conditions
 

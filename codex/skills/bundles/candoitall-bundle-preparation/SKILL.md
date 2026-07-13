@@ -1,240 +1,136 @@
 ---
 name: candoitall-bundle-preparation
-description: Prepare structured, implementation-ready CanDoItAll bundles from raw requests, testing feedback, docx notes, screenshots, or mixed artifacts. Use when work is large, multi-phase, UI-heavy, cross-project, risky, or ambiguous enough that Codex should create a bundle with normalized requirements, dependency-aware subbundles, validation gates, proof rules, and self-review before implementation starts.
+description: "Prepare or repair an implementation-ready CanDoItAll bundle from requests, feedback, documents, screenshots, existing bundle artifacts, or multi-repo context. Use when work is broad, phased, risky, UI-heavy, architecture-heavy, long-running, or ambiguous enough to need durable requirements, dependencies, work units, proof tiers, and closure mapping before implementation."
 ---
 
 # CanDoItAll Bundle Preparation
 
-Prepare the bundle first. Do not implement feature code while preparing the bundle.
+Create the smallest durable coordination artifact that removes execution guesswork. Do not implement feature code during preparation.
 
-Turn messy inputs into a bundle that an implementation agent can execute without rediscovering the problem. Save the raw inputs, structure them, split the work into explicit subbundles, model the dependency chain, and validate that the bundle is complete before handing it off.
+## GPT-5.6 Preparation Contract
 
-## GPT-5.5 Preparation Posture
+- Start from the user-visible outcome, constraints, evidence, completion bar, and stop conditions.
+- Inspect current repositories before freezing scope or source references.
+- Preserve explicit user values and literal scope. Use decision rules where judgment is required.
+- Keep reusable context in bundle files; omit repeated prose and process that do not change execution behavior.
+- Make validation proportional to risk through explicit proof tiers.
 
-- Build the smallest bundle that removes ambiguity for execution. Do not add sections, prose, or subbundles that do not improve coverage, sequencing, proof, or handoff quality.
-- Write outcome-first prompts and acceptance criteria: desired end state, hard constraints, owned inputs, allowed boundaries, proof required, and stop conditions.
-- Preserve detailed reasoning in bundle artifacts where it will be reused; keep user-facing progress concise.
-- Use tools persistently enough to ground the current-state analysis in the repo. If a lookup is empty or suspiciously thin, try a different path before assuming the gap is real.
-- For long-running or resumed work, make the bundle itself the durable state: current subbundle, gate status, proof paths, raw-note closure, blockers, and reopen triggers must be recoverable from files.
+## Decide Whether A Bundle Is Needed
 
-## Choose The Bundle Profile
+Do not create a bundle for a small coherent change that one agent can implement and validate without durable decomposition. Create or repair one when at least one is true:
 
-- Use the `feedback` profile for testing notes, QA findings, screenshots, docx review docs, or a short list of concrete issues.
-- Use the `initiative` profile for migrations, refactors, new features, architecture work, cross-repo consolidation, or anything that needs inventories and templates in addition to the baseline bundle structure.
-- Start from `feedback` unless the task clearly needs architectural decomposition across multiple workstreams.
+- multiple work units have real dependency order;
+- several repositories, products, or evidence sources are involved;
+- work is likely to span long-running or resumed sessions;
+- failure would invalidate substantial downstream work;
+- architecture, migration, UI/host proof, security, or production orchestration needs explicit gates;
+- the user asks for a bundle.
 
-## Required Flow
+## Preserve Existing Shapes
 
-1. Save the raw request and every source artifact under `inputs`.
-2. If the source includes `.docx`, use `scripts/extract_docx_feedback.py` to extract text before summarizing it.
-3. Normalize the task into explicit objectives, hard constraints, assumptions, risks, dependency signals, and validation expectations.
-4. Build an input-coverage matrix that keeps every raw note or artifact visible through execution.
-5. Build the current-state analysis from the real repo, not from the user’s memory of the repo.
-6. Split execution into numbered subbundles. Every subbundle must be independently actionable and must own a coherent slice of work.
-7. For every subbundle, define prerequisites, dependency impact, validation depth, and the progression gate that must pass before downstream work may continue.
-8. Build a real subbundle dependency map in `plan/01-phase-plan.md`, preferably as a mermaid gantt or equivalent graph that a human can audit quickly.
-9. Mark the critical foundation subbundles whose correctness unlocks later phases or would invalidate downstream proof if they are wrong.
-10. For every critical subbundle, add a Semantic Adequacy Gate requirement covering shallow-pass trap, adversarial negative proof, semantic positive proof, anti-stub audit, and raw-note literal closure.
-11. For every critical subbundle, require an artifact-backed proof manifest under `proof/SBxx/manifest.md` with changed-file hashes, command transcript paths, source assertions, anti-stub audit output, and any required browser, host, downstream smoke, or red-team artifacts.
-12. When a critical subbundle names a new production signal, state, record, or event, require a `## Production Behavior Artifact Matrix` in both `proof/SBxx/manifest.md` and `proof/SBxx/semantic-invariants.*` with producer, consumer, lifecycle, and negative-test citations.
-13. When an early process subbundle changes bundle skills, validators, or proof rules, require active Codex skill-root synchronization proof with repo and active SHA-256 hashes before downstream feature subbundles can start.
-14. Write reusable implementation and QA prompts under `shared-prompts`.
-15. Pre-create browser-validation logging instructions for each subbundle and seed the execution report with browser analytics and subbundle gate sections.
-16. Complete traceability so every requirement points to at least one concrete bundle file and one owning subbundle.
-17. Run `scripts/validate_bundle.py --stage prepared` before declaring the bundle ready.
-18. Run `candoitall-bundle-validator` as the readiness gate and repair the bundle until it passes.
-19. Finish the self-review from QA, architect, and manager perspectives. Do not mark the bundle ready while any of those three reviews is incomplete or inconclusive.
+For an existing bundle, map its files to these semantic roles before changing structure:
 
-## Bundle Contract
+- raw inputs;
+- normalized requirements and constraints;
+- current-state evidence;
+- dependency and execution plan;
+- independently actionable work units;
+- proof and status;
+- input closure.
 
-Always create these root sections:
+If all roles are usable, preserve the shape. Add a compatibility map to the root README only when needed. Repair missing meaning in place. Do not force a legacy or external bundle through the canonical scaffold solely to satisfy folder names.
 
-- `README.md`
-- `inputs/`
-- `analysis/`
-- `requirements/`
-- `architecture/`
-- `plan/`
-- `traceability/`
-- `shared-prompts/`
-- `subbundles/`
-- `reviews/`
+## Content Profiles
 
-Create these additional sections when the task needs them:
+- `feedback`: QA notes, screenshots, review documents, concrete defects, or short issue lists. Emphasize literal note closure and observable regression proof.
+- `initiative`: features, migrations, refactors, cross-repo programs, or architecture changes. Emphasize inventories, boundaries, state/data flow, failure behavior, and dependency gates.
 
-- `inventories/`
-- `templates/`
-- `evidence/`
+Profiles describe content, not proof depth. Select `Standard`, `Behavioral`, or `Governed` proof separately for every subbundle using the coordinator skill’s proof-tier rules.
 
-The `initiative` profile usually needs `inventories` and `templates`. The `feedback` profile usually does not.
+## Canonical Preparation Flow
+
+Use this flow for a new canonical bundle:
+
+1. Save the raw request and source artifacts under `inputs`. Extract `.docx` text with `scripts/extract_docx_feedback.py` before summarizing it.
+2. Normalize objectives, constraints, explicit non-goals, assumptions, risks, UI target, and validation expectations.
+3. Build input coverage so every raw note remains visible through closure.
+4. Inspect the real repo or workspace and record current state, source ownership, package boundaries, and relevant tests.
+5. Split work by coherent outcome and ownership. Avoid arbitrary file-count or “misc” phases.
+6. Model prerequisites, critical foundations, parallel-safe work, reopen triggers, and downstream invalidation.
+7. Give each subbundle a proof tier and observable progression gate.
+8. Add domain overlays only where applicable: C# architecture, UI/browser, host behavior, production workflow/process E2E, memory/lifecycle artifacts, security, or migration rollback.
+9. Complete traceability from input to requirement, owner, proof, and closure.
+10. Run `scripts/validate_bundle.py --stage prepared` for canonical bundles, then `candoitall-bundle-validator`. For compatible non-canonical bundles, record a manual semantic readiness gate.
+
+## Canonical Bundle Contract
+
+Required semantic surfaces:
+
+- root status and validation summary;
+- raw inputs and source artifacts;
+- current-state evidence;
+- normalized requirements;
+- dependency/phase plan;
+- requirement/input traceability;
+- numbered subbundles;
+- execution report and closure table.
+
+Use `architecture/`, `shared-prompts/`, `inventories/`, `templates/`, `evidence/`, and `proof/` only when the task or proof tier needs them. The scaffold may create these folders, but empty ceremony is not completion evidence.
 
 ## Subbundle Contract
 
-Every subbundle README must include:
+Every work unit must state, under any clear headings:
 
-- `## Status`
-- `## Objective`
-- `## Covered Inputs` or `## Covered Notes`
-- `## Prerequisites`
-- `## Exact Source References`
-- `## Deliverables` or `## Scope`
-- `## Dependency Impact`
-- `## Validation Depth`
-- `## Implementation Steps`
-- `## Scope Exceptions` when any raw note cannot be fully closed in the current phase
-- `## Do Not Do`
-- `## Acceptance Checklist`
-- `## Proof Required`
-- `## Browser Validation Logging`
-- `## Progression Gate`
-- `## Suggested Agent Prompt`
+- status and outcome;
+- owned inputs/requirements and explicit non-goals;
+- prerequisites, dependency impact, and reopen triggers;
+- exact source references or discovery instructions;
+- implementation boundary and acceptance criteria;
+- proof tier and required validation;
+- progression decision;
+- browser/host proof only when applicable.
 
-Do not create vague `misc cleanup` or `remaining fixes` buckets. If the work cannot be named precisely, the bundle is not ready yet.
+Suggested agent prompts must be outcome-first: goal, success criteria, constraints, relevant tools, required output/proof, and stop rules. Do not restate the whole bundle.
 
-## Feedback Closure Matrix
+## Dependency Planning
 
-Create a note-by-note closure table under `traceability/` or `requirements/` for feedback-profile bundles.
+- Use a Mermaid graph or a compact dependency table when there are meaningful branches; a linear list is enough for a truly linear plan.
+- Mark a phase as a critical foundation when a wrong result would invalidate dependent work.
+- Critical foundations require a meaningful downstream check, but only `Governed` phases require full manifests/hashes/transcripts.
+- State which later proof becomes untrustworthy when a prerequisite is reopened.
+- Keep parallel candidates explicit, but never parallelize work whose source ownership overlaps unsafely or whose result selects the next action.
 
-Every row must include:
+## CanDoItAll UI Planning
 
-- raw note id and exact wording
-- normalized requirement ids
-- impacted UI or data surface
-- planned proof method
-- owning subbundle
-- prerequisite or sequencing signal when the note must land before other work
-- exception status when the literal request cannot be implemented exactly as written
+- CanDoItAll application UI targets a maximized or explicitly named large-screen desktop viewport, including sibling application repos.
+- Do not plan small/medium/tablet/mobile tuning or validation for application pages unless explicitly requested.
+- For reusable basic `CanDoItAll.Components.BaseLib` components, plan small, medium, and large viewport behavior and proof.
+- Preserve existing responsive behavior in other shared libraries when touched; expanding it is separate scope.
+- For CanDoItAll UI, plan `candoitall-components-mcp` before custom structure or CSS and use real browser proof for rendered behavior.
+- Plan open-state checks for menus, tooltips, dropdowns, dialogs, floating windows, clipping, layering, scroll ownership, and lateral overflow at the target viewport.
 
-If the user says `all`, `every`, `each type`, `same flow`, or equivalent absolute language, do not collapse that into `supported` or `eligible` without explicitly enumerating the unsupported cases and why.
+## C# Architecture Overlay
 
-## Literal Language Rule
+When work changes large classes, partial classes, project references, runtime composition, providers, tools, processes, workflows, factories, builders, catalogs, or memory protocols:
 
-When raw feedback uses absolute or high-risk wording such as `all`, `every`, `each`, `must`, `missing ability`, `same flow`, `exactly`, or `twice`:
+- load `candoitall-csharp-architecture-bundle-guard`, `csharp-architecture-governor`, and `candoitall-codeanalytics-mcp`;
+- record current ownership, target boundaries, dependency direction, pattern decisions, testability seams, composition impact, and partial-class policy;
+- create only the architecture artifacts that those decisions need;
+- require architecture review before dependent feature work proceeds.
 
-- preserve that wording in the normalized requirements or state the exact justified narrowing
-- enumerate the affected inventory instead of hand-waving with `supported`
-- call out system-managed, synced, relation-backed, upload-backed, or host-only cases explicitly if they may be exceptions
-- do not leave exception discovery to the implementation phase when the current repo already exposes the gap
+## Quality Gate
 
-## Dependency And Risk Planning
-
-When later subbundles depend on earlier ones:
-
-- capture the dependency explicitly in `plan/01-phase-plan.md`
-- state the prerequisite subbundle or proof artifact in the dependent subbundle README
-- state which downstream phases would become untrustworthy if the current subbundle is wrong
-- mark the subbundle `Critical foundation` when later phases depend on it for behavior, layout, data shape, or shared-component semantics
-- require a deeper progression gate for critical foundations before later work may continue
-- require semantic proof for critical foundations: shallow-pass trap, adversarial negative proof, semantic positive proof, anti-stub audit, and raw-note literal closure
-- require artifact-backed proof manifests for critical foundations, with transcript paths and changed-file hashes that downstream validators can inspect before continuing
-- define reopen triggers so execution knows when to go back instead of pretending the later proof is enough
-
-## UI And Host Proof Planning
-
-When the feedback source includes screenshots, layout complaints, or desktop actions:
-
-- plan Playwright MCP and the `playwright` skill as the default browser-proof path for UI work
-- for CanDoItAll Blazor, BaseLib, or CanvasLib UI work, plan `candoitall-components-mcp` before custom page structure or page-local CSS
-- plan the first browser validation pass in a maximized headed browser window or an equivalent large-screen desktop viewport that fills the available work area
-- plan a large-screen screenshot capture for real visual review, not just as an artifact to attach
-- add the visual validation question set to the QA prompt and subbundle proof requirements
-- plan how each UI subbundle will log browser-validation analytics: route, viewport, Playwright MCP actions, assertions, screenshot paths, and result
-- when a subbundle is a critical foundation, plan one dependent-flow smoke or downstream proof pass before letting later subbundles proceed
-- if the change touches overlays such as tooltips, help affordances, dropdowns, menus, dialogs, or floating-window popovers, explicitly plan open-state proof for:
-  - full readable content
-  - no clipping by the viewport or parent container
-  - no harmful lateral overflow
-  - correct layering above neighboring chrome or floating windows
-- after desktop validation is planned, add a narrower-width pass when the change affects layout or responsive behavior
-- plan host-level proof for shell launch, file open, admin elevation, or other desktop integrations
-- use the `screenshot` skill when fullscreen, active-window, or OS-level capture is needed beyond what Playwright can see
-- if the visual target is unclear and a quick mock or alternative composition would reduce implementation guesswork, mention `imagegen` only as a planning aid and never as acceptance proof
-- if the proof cannot reasonably be captured, mark that as an explicit open validation gap before implementation starts
-
-When the likely implementation loop includes repeated test churn:
-
-- detect whether the relevant test projects use Microsoft Testing Platform
-- if they do, mention `mtp-hot-reload` in the implementation or QA prompts as an optional acceleration path
-- still require a clean non-hot-reload confirmation run in the planned proof
-
-## C# Architecture Gate Addendum
-
-When the bundle touches C# architecture, large-class refactoring, partial classes, tools, providers, memory protocols, process drivers, workflow executors, runtime composition, factories, builders, adapters, catalogs, or project references:
-
-- Load `candoitall-csharp-architecture-bundle-guard` and `csharp-architecture-governor` before finalizing the bundle split.
-- Use `candoitall-codeanalytics-mcp` for source orientation: build the narrowest useful snapshot, check dashboard health, inspect solution/project inventory, run `code_analytics_dependencies_get` for dependency direction and cycles, and use `code_analytics_findings_get` for hotspots before deciding subbundle boundaries.
-- Add the required C# architecture files:
-  - `architecture/00-csharp-current-state-inventory.md`
-  - `architecture/01-csharp-boundary-map.md`
-  - `architecture/02-csharp-dependency-direction.md`
-  - `architecture/03-csharp-pattern-selection-records.md`
-  - `architecture/04-csharp-testability-plan.md`
-  - `plan/architecture-checkpoints.md`
-  - `reviews/csharp-architecture-gate.md`
-- Every architecture-relevant subbundle must include:
-  - `## C# Architecture Impact`
-  - `## Boundary Ownership`
-  - `## Dependency Direction`
-  - `## Pattern Decision`
-  - `## Testability Contract`
-  - `## Partial Class Policy`
-  - `## Architecture Proof Required`
-- Critical foundation subbundles must close before dependent feature work starts.
-- Do not accept partial-class expansion as the planned final architecture unless it passes the partial-class policy and has a removal plan when temporary.
-- Require proof that extracted behavior can be unit-tested without constructing the original large class.
-- Require source assertions that moved behavior no longer lives in the old runtime or partial-class cluster.
-
-## Quality Bar
-
-- Use the smallest complete bundle that still removes ambiguity for the implementation agent.
-- Keep source references exact. A future agent should be able to open the right files immediately.
-- Make acceptance criteria observable. Prefer concrete browser, test, build, and artifact proof over subjective claims.
-- Expand UI validation beyond `does it work`. Require readability, spacing, hierarchy, alignment, affordance, shared-component usage, and space-use checks.
-- For UI work, require that screenshots are actually reviewed against explicit questions, not merely attached.
-- For UI work, require that the bundle already says where the browser-validation analytics and subbundle gate results will be recorded and what counts as sufficient Playwright proof.
-- Require dependency-aware phase gates. If a later subbundle cannot safely start before earlier proof is strong, say that in the bundle instead of hoping the executor notices.
-- Require semantic proof gates for critical work. Tests that only assert non-empty output, diagnostic template markers, table rows, counts, or happy-path fixture status are not enough.
-- Production-only signals must not be manually seeded by positive tests unless the test is explicitly a migration, backfill, or validator fixture; feature proof must exercise the production emitter and lifecycle path.
-- Dream synthesis proof must not accept diagnostic evidence-count templates such as `Conclusion: ... supported by N source-backed observation(s)` as shipped memory text.
-- Require artifact-backed proof manifests for critical work. Prose-only proof, uncaptured commands, and missing manifest paths must be planned as blocking validation failures.
-- Preserve the rule from the successful packs: the bundle is a coordination artifact first, not a place to sneak in implementation work.
-- Do not silently weaken raw feedback scope during normalization. If you narrow scope, show the exception list and make the follow-up path explicit inside the bundle.
+Reject preparation when execution would still need to guess the intended outcome, scope, owner, prerequisite, proof tier, validation, or reopen condition. Do not reject it merely because optional canonical files are absent or headings use different names.
 
 ## References
 
-- Read [references/bundle-profiles.md](references/bundle-profiles.md) before choosing the structure.
+- Read [references/bundle-profiles.md](references/bundle-profiles.md) when selecting content emphasis.
 - Read [references/subbundle-contract.md](references/subbundle-contract.md) while splitting work.
-- Read [references/bundle-validation-rubric.md](references/bundle-validation-rubric.md) before the final self-review.
-- Read [../candoitall-bundle-execution/references/semantic-adequacy-proof.md](../candoitall-bundle-execution/references/semantic-adequacy-proof.md) before authoring critical subbundles.
-- Use `scripts/scaffold_bundle.py` to create the initial folder skeleton.
-- Use `scripts/extract_docx_feedback.py` when the source artifact is a `.docx`.
-- Use `scripts/validate_bundle.py --stage prepared` before declaring the bundle implementation-ready.
-- Use `candoitall-bundle-validator` for the readiness gate.
-- Use `candoitall-subbundle-validator` when defining progression gates or dependency-heavy validation requirements.
-- Use `candoitall-csharp-architecture-bundle-guard`, `csharp-architecture-governor`, and `candoitall-codeanalytics-mcp` when C# architecture, project references, large classes, providers, tools, memory protocols, process drivers, or runtime composition are in scope.
-- Use `candoitall-components-mcp` when CanDoItAll Blazor, BaseLib, CanvasLib, or shared component usage is in scope.
-- Use `playwright`, `screenshot`, `imagegen`, and `frontend-skill` when the planned proof needs them.
+- Read [references/bundle-validation-rubric.md](references/bundle-validation-rubric.md) before readiness review.
+- Read [../candoitall-bundle-execution/references/semantic-adequacy-proof.md](../candoitall-bundle-execution/references/semantic-adequacy-proof.md) for `Behavioral` or `Governed` proof.
+- Read [../candoitall-bundle-execution/references/artifact-backed-proof-manifest.md](../candoitall-bundle-execution/references/artifact-backed-proof-manifest.md) only for `Governed` proof.
+- Use `scripts/scaffold_bundle.py` for a new canonical bundle and `scripts/validate_bundle.py` for canonical validation.
 
-## Output Rule
+## Exit Condition
 
-The bundle is only ready when a different implementation agent could execute it phase by phase without guessing the desired outcome, what to change, what must land first, how to prove it, which raw notes are still open, or how to record completion.
-
-## Validator Expectations
-
-The validator is not just a folder-shape check.
-
-- `plan/01-phase-plan.md` must include `## Subbundle Dependency Map`, `## Critical Subbundles`, and `## Phase Gates`
-- the dependency map must include a mermaid diagram
-- `analysis/02-assumptions-and-risks.md` must include `## Critical Path Risks`, `## Validation Risks`, and `## Reopen Triggers`
-- subbundle READMEs must include `## Prerequisites`, `## Dependency Impact`, `## Validation Depth`, and `## Progression Gate`
-- subbundle `## Exact Source References` must prefer portable `repo://relative/path` and `bundle://relative/path` references; native absolute paths are allowed only as local development aids and must not be the only durable source reference
-- subbundle READMEs must include `## Browser Validation Logging`, using `N/A` only when the subbundle does not affect browser-visible or host-visible proof
-- critical subbundle READMEs must require Semantic Adequacy Gate proof with shallow-pass trap, adversarial negative proof, semantic positive proof, anti-stub audit, and raw-note literal closure
-- critical subbundle READMEs must require `proof/SBxx/manifest.md` with changed-file hashes, validation transcripts, source assertions, anti-stub audit output, and red-team or verifier artifacts when the subbundle closes final quality
-- critical proof for new production signals, states, records, or events must include a production behavior artifact matrix in both the manifest and semantic invariant contract
-- C# architecture-heavy bundles must include the C# architecture files, architecture-relevant subbundle sections, dependency-direction proof, partial-class policy, testability plan, and a seeded `reviews/csharp-architecture-gate.md`
-- architecture-heavy preparation must record the CodeAnalytics snapshot id or explicitly state why CodeAnalytics MCP evidence was unavailable
-- feedback-profile execution reports must already include `## Status`, `## Subbundle Gate Results`, `## Browser Validation Analytics`, `## Analytics Review`, and `## Raw Note Closure`
-- if validation fails, repair the bundle before calling it ready
-
-Keep these checks in mind while preparing the bundle so the first validation pass is not a surprise.
+Preparation is complete when another agent can execute the bundle without rediscovering the request, repository ownership, dependency order, validation bar, or closure rules—and without being blocked by structure that adds no semantic value.

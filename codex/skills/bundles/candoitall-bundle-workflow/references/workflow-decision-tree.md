@@ -7,6 +7,9 @@ Ask:
 1. Is there already a bundle for this task?
 2. Is that bundle still accurate and implementation-ready?
 3. Does the requested work still match the bundle?
+4. Can the task be completed coherently without durable decomposition?
+
+If the answer to 4 is yes and the user did not ask for a bundle, work directly.
 
 ## If No Bundle Exists
 
@@ -29,6 +32,7 @@ Use bundle execution when:
 - prerequisites and progression gates are defined
 - the dependency map and critical path are explicit
 - the bundle still matches the repo state
+- its semantic roles are recoverable even when the folder or heading shape is non-canonical
 
 Return to preparation when:
 
@@ -36,6 +40,8 @@ Return to preparation when:
 - the bundle has no usable dependency map or critical foundation plan
 - the repo changed enough that source references are stale
 - execution exposes missing requirements or false assumptions
+
+Do not return to preparation solely for cosmetic structure differences. Add a compatibility map and continue when meaning and durable state are intact.
 
 ## If State Was Lost
 

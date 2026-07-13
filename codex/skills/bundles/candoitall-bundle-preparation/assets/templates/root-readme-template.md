@@ -22,10 +22,10 @@ This bundle is a coordination and execution package for `{{BUNDLE_NAME}}`.
 - `inputs/` raw request, artifacts, and structured input
 - `analysis/` current state, assumptions, and risks
 - `requirements/` normalized, testable requirements
-- `architecture/` target solution and important boundaries
+- `architecture/` target solution and important boundaries when architecture decisions are material
 - `plan/` execution order and dependencies
 - `traceability/` requirement-to-bundle mapping
-- `shared-prompts/` reusable implementation and QA prompts
+- `shared-prompts/` reusable implementation and QA prompts when repeated handoff needs them
 - `subbundles/` numbered execution-ready workstreams
 - `reviews/` bundle self-review and execution report
 
@@ -39,6 +39,11 @@ This bundle is a coordination and execution package for `{{BUNDLE_NAME}}`.
 
 - Keep the mermaid dependency map, critical-subbundle notes, and phase gates current in `plan/01-phase-plan.md`.
 - If the bundle is resumed after compaction or by a different agent, use this README, the current subbundle README, and `reviews/01-execution-report.md` as the durable state.
+
+## UI Target Policy
+
+- CanDoItAll applications target large-screen desktop use; do not add small/medium/mobile tuning unless explicitly requested.
+- Reusable basic `CanDoItAll.Components.BaseLib` components remain responsible for small, medium, and large viewport behavior.
 
 ## Validation Summary
 

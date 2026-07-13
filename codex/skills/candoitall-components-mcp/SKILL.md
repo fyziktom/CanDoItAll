@@ -15,12 +15,19 @@ description: Use whenever a repository consumes any non-WebGL CanDoItAll Compone
 6. Prefer shared parameters such as `Columns*`, `ColumnTemplate*`, `Gap`, `AlignItems`, `JustifyContent`, variants, sizes, asset components, and service registrations before page-local structural classes or direct library imports.
 7. If the shared components cannot express the shape cleanly, improve the relevant shared library or sandbox coverage instead of normalizing a one-off structural wrapper.
 
+## Viewport Scope
+
+- CanDoItAll applications, including sibling application repositories, target large-screen desktop use. Choose and validate components at a maximized or named desktop viewport.
+- Do not add or tune small/medium/tablet/mobile application behavior unless the user explicitly requests it.
+- Reusable basic components in `CanDoItAll.Components.BaseLib` are the exception: design and validate them for small, medium, and large viewports.
+- For CanvasLib, Charts, Mermaid, OverlayLib, QRCode, and other shared libraries, preserve existing responsive behavior when touched; new cross-viewport behavior is separate scope.
+
 ## Layout Rules
 
 - Use `ThemeHost` once around the full interactive application.
 - Use `Layout` as the app frame. For viewport-owned apps, pair `FitViewport="true"` and `LockOverflow="true"` with exactly one child scroll owner.
 - Put `SideMenu` directly inside `Layout` beside `Body`; `SideMenu` is already an aside, so do not wrap it in `Sidebar`.
-- Use a stable `SideMenu.MenuId`, route selections through `ItemSelected` or `SideMenuService`, and let the component own its automatic small-screen rail-to-top-menu transition and height-measured More overflow.
+- Use a stable `SideMenu.MenuId`, route selections through `ItemSelected` or `SideMenuService`, and let the component own its existing overflow and responsive behavior. Do not build a separate application mobile menu without explicit scope.
 - Use `Items` for runtime menu models, `MenuItems` for declarative entries, and never duplicate IDs across the composed sources. Put secondary destinations in More and account/settings/help utilities at the bottom.
 - Use `PageScaffold` on routed pages, not as a replacement for the application shell. Use `FillHeight` and `FocusWorkbench` only when the inner surface owns overflow.
 - Use `Stack` for one-dimensional vertical or horizontal flows.
@@ -33,7 +40,7 @@ description: Use whenever a repository consumes any non-WebGL CanDoItAll Compone
 ## Recommended Tool Sequence
 
 - `components_libraries_list` for package, registration, asset, and style setup.
-- `components_recommend useCase="responsive page with a side navigation and metrics"` to choose a component path.
+- `components_recommend useCase="large-screen desktop page with a side navigation and metrics"` to choose a component path.
 - `app_shell_guide_get mode="full-height"` for an application shell or primary menu.
 - `component_get component="SideMenu"` and the other shortlisted components.
 - `component_usage_examples component="SideMenu"` and `component_examples component="SideMenu"` to review real usage and proof routes.
@@ -49,5 +56,6 @@ description: Use whenever a repository consumes any non-WebGL CanDoItAll Compone
 ## Output Expectations
 
 - Name the shared components and library setup you chose and why.
-- For application shell work, state the chosen scroll owner, menu `MenuId`, routing/selection path, and responsive proof route.
+- For application shell work, state the chosen scroll owner, menu `MenuId`, routing/selection path, and large-screen desktop proof route.
+- For reusable basic BaseLib work, state the small, medium, and large proof routes or viewports.
 - If custom CSS is still required, state which shared component path was insufficient and whether BaseLib should be improved.

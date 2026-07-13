@@ -9,7 +9,10 @@ Confirm all of these before execution starts:
 - `plan/01-phase-plan.md` contains a usable mermaid dependency map
 - critical foundations and phase gates are explicit
 - every subbundle has prerequisites, dependency impact, validation depth, and progression gate sections
+- every subbundle declares a `Standard`, `Behavioral`, or `Governed` proof tier
 - readiness validation passes with `scripts/validate_bundle.py --stage prepared`
+
+For a compatible non-canonical shape, replace the structural script result with a recorded manual semantic readiness gate.
 
 ## Final Closure Gate
 
@@ -21,3 +24,4 @@ Confirm all of these before the bundle is finished:
 - the root `README.md` validation summary matches reality
 - final validation passes with `scripts/validate_bundle.py --stage completed`, including proof-depth checks for completed critical subbundles
 - any proof gap that matters to user-visible behavior has reopened the affected subbundle instead of being hidden in residual risks
+- Governed artifacts are required only from Governed subbundles; Behavioral proof still includes realistic positive and meaningful negative evidence

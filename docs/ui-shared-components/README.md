@@ -12,7 +12,7 @@ CanDoItAll shared UI is split across two repositories. Reusable component librar
 | `C:\repositories\CanDoItAll.Components\src\CanDoItAll.Components.OverlayLib` | Floating overlay/window components used by workbench surfaces. |
 | `C:\repositories\CanDoItAll.Components\src\CanDoItAll.Components.WebGlLib` | WebGL workbench concept runtime and typed scene contracts. |
 | `C:\repositories\CanDoItAll\src\UI\CanDoItAll.AppComponents` | Compatibility/facade package for app shell, tab strip, tuning boundary, and package references to core component libraries. |
-| `C:\repositories\CanDoItAll.Components\src\CanDoItAll.Components.Sandbox` | Preview and regression host for shared components. |
+| `C:\repositories\CanDoItAll.Components\samples\CanDoItAll.Components.Sandbox` | Preview and regression host for shared components. |
 | `C:\repositories\CanDoItAll\src\CanDoItAll.Components.WebGlSandbox` | WebGL process workbench sandbox. |
 
 The web host registers BaseLib through `AddCanDoItAllBaseLib()` and loads module/component assemblies through `CanDoItAll.Composition.ModuleAssemblies`.

@@ -12,7 +12,7 @@ Use one managed app session and one persistent Playwright page. The loop is only
 - keep hot-reload loops near plain `dotnet watch` speed
 - use Playwright as the browser truth, not the watch log
 - prevent overlapping edits, repeated waits, and stale-page confusion
-- tune the layout from a large-screen view first, then narrow it down responsively
+- tune CanDoItAll applications at the target large-screen desktop viewport
 - record the screenshot review and gate decision while the proof is fresh
 
 ## Required loop
@@ -102,8 +102,9 @@ Use the smallest proof that matches the edit.
 - When the current edit is a critical foundation for later subbundles, validate one downstream interaction or dependent surface before proceeding.
 - If any answer about readability, overlap, spacing, alignment, or space usage is not acceptable, fix that before proceeding.
 - Prefer one exact assertion over a broad page snapshot. Proof should name the element, text, class, or style that changed.
-- For responsive checks, resize or reuse the same page context instead of reopening the route in a fresh browser session.
-- Re-check desktop, tablet, and mobile after meaningful UI changes.
+- Do not run tablet/mobile/small/medium application checks unless the user explicitly requests them.
+- For reusable basic `CanDoItAll.Components.BaseLib` changes, reuse the same page context and re-check small, medium, and large viewports.
+- For other shared libraries, preserve existing responsive behavior when touched without expanding responsive scope implicitly.
 - Refresh only after the managed wait completes.
 - Because automatic browser refresh is suppressed, expect to refresh manually for markup and C# edits.
 - Use the `screenshot` skill when browser capture is insufficient or when desktop/window context matters.

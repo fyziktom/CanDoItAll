@@ -67,8 +67,8 @@ For custom keys, keep the theme key descriptive and set `ColorScheme` explicitly
 
 The sandbox pattern is the current reference:
 
-- state holder: `src/CanDoItAll.Components.Sandbox/SandboxThemeState.cs`
-- layout-level scope: `src/CanDoItAll.Components.Sandbox/Components/Layout/MainLayout.razor`
+- state holder: `samples/CanDoItAll.Components.Sandbox/SandboxThemeState.cs`
+- layout-level scope: `samples/CanDoItAll.Components.Sandbox/Components/Layout/MainLayout.razor`
 
 The important rule is scope ownership. Put `ThemeHost` high enough that the entire shell switches, not only one inner content card.
 
@@ -83,5 +83,5 @@ The important rule is scope ownership. Put `ThemeHost` high enough that the enti
 
 - Does one token change propagate to all expected shared surfaces?
 - Does the shell switch theme, not only the inner content?
-- Are large-screen and narrower widths still readable?
+- Is the target large-screen desktop viewport readable? Check small and medium widths only for reusable basic BaseLib work or explicit user scope.
 - If using a custom theme key, is `color-scheme` still correct for inputs and scrollbars?
