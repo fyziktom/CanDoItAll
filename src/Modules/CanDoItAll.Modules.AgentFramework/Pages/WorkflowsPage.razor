@@ -231,6 +231,18 @@
                                     <StatusBadge Tone="info" Text="@($"Backend {selectedDefinition.RuntimePolicy.PreferredBackend}")" />
                                     <StatusBadge Tone="secondary" Text="@($"{selectedDefinition.Graph.Nodes.Count} node(s)")" />
                                     <StatusBadge Tone="secondary" Text="@($"{selectedDefinition.Graph.Edges.Count} edge(s)")" />
+                                    @if (selectedDefinition.Status == WorkflowLifecycleStatus.Draft)
+                                    {
+                                        <Button Text="Publish"
+                                                Icon="publish"
+                                                ButtonStyle="ButtonStyle.Primary"
+                                                Size="ButtonSize.Small"
+                                                Click="PublishSelectedDefinitionAsync"
+                                                Disabled="@(isBusy || validationIssues.Count > 0)"
+                                                IsBusy="@isBusy"
+                                                title="@PublishButtonTitle"
+                                                data-testid="workflows-publish" />
+                                    }
                                 </Cluster>
 
                                 <div class="workflows-section">

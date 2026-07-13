@@ -4,6 +4,7 @@ using CanDoItAll.FileTools.FileInteraction;
 using CanDoItAll.FileTools.FileInteraction.Components;
 using CanDoItAll.FileTools.FileInteraction.Markdown;
 using CanDoItAll.FileTools.Integration;
+using CanDoItAll.Components.Mermaid;
 using CanDoItAll.Modules.Workbench;
 using CanDoItAll.Modules.Workbench.Pages;
 using CanDoItAll.SharedKernel;
@@ -118,12 +119,25 @@ public sealed class ProjectStructureAttachmentPreviewDialogTests
     }
 
     [Fact]
-    public void Hostile_markdown_is_inert_and_mermaid_uses_strict_options()
+    public void Markdown_uses_advanced_markdig_with_inert_content_and_strict_mermaid_fences()
     {
         using var context = new TestContext();
         context.JSInterop.Mode = JSRuntimeMode.Loose;
         RegisterComposition(context);
-        string markdown = "<script>window.pwned=true</script>\n[bad](javascript:alert(1))\n![remote](https://example.invalid/x.png)";
+        string markdown = """
+            <script>window.pwned=true</script>
+            [bad](javascript:alert(1))
+            ![remote](https://example.invalid/x.png)
+
+            | Feature | State |
+            | --- | --- |
+            | Markdig | **active** |
+
+            ```mermaid
+            flowchart LR
+            A-->B
+            ```
+            """;
         IRenderedComponent<ProjectStructureAttachmentPreviewDialog> markdownCut = RenderReadOnly(
             context,
             "hostile.md",
@@ -136,6 +150,11 @@ public sealed class ProjectStructureAttachmentPreviewDialogTests
             Assert.DoesNotContain("<script", markdownCut.Markup, StringComparison.OrdinalIgnoreCase);
             Assert.DoesNotContain("javascript:", markdownCut.Markup, StringComparison.OrdinalIgnoreCase);
             Assert.DoesNotContain("<img", markdownCut.Markup, StringComparison.OrdinalIgnoreCase);
+            Assert.Contains("<table", markdownCut.Markup, StringComparison.OrdinalIgnoreCase);
+            var diagram = markdownCut.FindComponent<MermaidDiagram>();
+            Assert.Equal("strict", diagram.Instance.Options.SecurityLevel);
+            Assert.False(diagram.Instance.Options.HtmlLabels);
+            Assert.Equal("flowchart LR\nA-->B", diagram.Instance.Source);
         });
 
         IRenderedComponent<ProjectStructureAttachmentPreviewDialog> mermaidCut = RenderReadOnly(
@@ -146,7 +165,7 @@ public sealed class ProjectStructureAttachmentPreviewDialogTests
 
         mermaidCut.WaitForAssertion(() =>
         {
-            var diagram = mermaidCut.FindComponent<CanDoItAll.Components.Mermaid.MermaidDiagram>();
+            var diagram = mermaidCut.FindComponent<MermaidDiagram>();
             Assert.Equal("strict", diagram.Instance.Options.SecurityLevel);
             Assert.False(diagram.Instance.Options.HtmlLabels);
         });
@@ -212,11 +231,15 @@ public sealed class ProjectStructureAttachmentPreviewDialogTests
     }
 
     private static void RegisterComposition(TestContext context)
-        => context.Services.AddSingleton(new FileInteractionComponentBuilder()
+    {
+        context.Services.AddSingleton(new FileInteractionComponentBuilder()
             .AddBuiltIns()
             .AddMarkdown()
             .AddWorkbenchMermaid()
             .Build());
+        context.Services.AddSingleton<IMarkdownFencedCodeComponentRegistration,
+            WorkbenchMarkdownMermaidComponentRegistration>();
+    }
 
     private static IRenderedComponent<ProjectStructureAttachmentPreviewDialog> RenderReadOnly(
         TestContext context,

@@ -25,6 +25,9 @@ public static class WorkbenchModuleServiceCollectionExtensions
             .AddBuiltIns()
             .AddMarkdown()
             .AddWorkbenchMermaid());
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<
+            IMarkdownFencedCodeComponentRegistration,
+            WorkbenchMarkdownMermaidComponentRegistration>());
         services.AddHttpClient();
         services.AddScoped<WorkbenchStateService>();
         services.AddScoped<ProjectCrossModuleMutationCoordinator>();

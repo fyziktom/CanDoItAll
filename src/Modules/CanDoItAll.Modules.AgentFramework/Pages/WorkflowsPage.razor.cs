@@ -128,6 +128,11 @@ public partial class WorkflowsPage
 
     private string SelectedDefinitionTitle => selectedDefinition?.Name ?? SelectedDefinitionSummary?.Name ?? "Workflow detail";
 
+    private string PublishButtonTitle
+        => validationIssues.Count == 0
+            ? "Publish this workflow for production runs."
+            : "Resolve validation issues before publishing.";
+
     private bool IsSelectedDefinitionDetailPending
         => CurrentDefinitionId.HasValue && !selectedDefinitionDetailLoaded && !selectedDefinitionDetailUnavailable;
 
@@ -609,6 +614,42 @@ public partial class WorkflowsPage
         {
             errorMessage = FormatWorkflowException(exception);
             NotificationService.Error("Workflow create failed", errorMessage);
+        }
+        finally
+        {
+            isBusy = false;
+        }
+    }
+
+    private async Task PublishSelectedDefinitionAsync()
+    {
+        if (isBusy || selectedDefinition is not { Status: WorkflowLifecycleStatus.Draft } draft)
+        {
+            return;
+        }
+
+        isBusy = true;
+        errorMessage = string.Empty;
+
+        try
+        {
+            var published = await CatalogService.ChangeDefinitionStatusAsync(
+                new WorkflowDefinitionStatusChangeRequest(
+                    draft.Id,
+                    draft.VersionId,
+                    WorkflowLifecycleStatus.Active));
+
+            NotificationService.Success(
+                "Workflow published",
+                $"{published.Name} is ready for production runs.");
+            ClearSelectedDefinitionState();
+            await LoadPageAsync(preferredDefinitionId: published.Id);
+            await EnsureSelectedDefinitionLoadedAsync();
+        }
+        catch (Exception exception)
+        {
+            errorMessage = FormatWorkflowException(exception);
+            NotificationService.Error("Workflow publish failed", errorMessage);
         }
         finally
         {

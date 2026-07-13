@@ -23,7 +23,7 @@ else
     <MermaidDiagram Title="@Context.Request.FileName"
                     Description="Strict rendering: HTML labels and interactive source actions are disabled."
                     Source="@Context.Text"
-                    Options="StrictOptions"
+                    Options="WorkbenchMermaidRenderingPolicy.StrictOptions"
                     PanZoomEnabled="true"
                     ShowControls="true"
                     Class="workbench-file-interaction-mermaid"
@@ -32,14 +32,6 @@ else
 }
 
 @code {
-    private static readonly MermaidDiagramOptions StrictOptions = new()
-    {
-        SecurityLevel = "strict",
-        HtmlLabels = false,
-        FlowchartUseMaxWidth = true,
-        ArchitectureRandomize = false
-    };
-
     [Parameter, EditorRequired]
     public FileInteractionRenderContext Context { get; set; } = default!;
 }
