@@ -1,0 +1,105 @@
+Command: rg -n 'new MafAgentRuntime|MafAgentRuntime\.|typeof\(MafAgentRuntime\)|GetNestedType|GetMethod\(' tests -g '*.cs'
+WorkingDirectory: C:\repositories\CanDoItAll
+StartedUtc: 2026-07-06T12:04:15.9192964-04:00
+tests\Integration\CanDoItAll.Tests.Integration\AgentFrameworkExecutionRecoveryIntegrationTests.cs:225:        var recoverMethod = recoveryServiceType.GetMethod(
+tests\Integration\CanDoItAll.Tests.Integration\AgentFrameworkExecutionCapabilityFilteringIntegrationTests.cs:302:            .GetMethod("ResolveAttachedCapabilities", BindingFlags.NonPublic | BindingFlags.Static)
+tests\Integration\CanDoItAll.Tests.Integration\AgentFrameworkExecutionCapabilityFilteringIntegrationTests.cs:319:            .GetMethod("ResolveAgentMemoryForRun", BindingFlags.NonPublic | BindingFlags.Static)
+tests\Unit\CanDoItAll.Tests.Unit\AgentContextContributionTests.cs:128:        var runtime = new MafAgentRuntime(Path.GetTempPath(), services.BuildServiceProvider());
+tests\Unit\CanDoItAll.Tests.Unit\AgentContextContributionTests.cs:175:        var runtime = new MafAgentRuntime(
+tests\Unit\CanDoItAll.Tests.Unit\AgentContextContributionTests.cs:202:        var runtime = new MafAgentRuntime(Path.GetTempPath(), services.BuildServiceProvider());
+tests\Unit\CanDoItAll.Tests.Unit\AgentContextContributionTests.cs:540:        var method = typeof(MafAgentRuntime).GetMethod(
+tests\Unit\CanDoItAll.Tests.Unit\AgentContextContributionTests.cs:573:        var method = typeof(MafAgentRuntime).GetMethod(
+tests\Unit\CanDoItAll.Tests.Unit\AgentFinalizerPolicyTests.cs:19:        var pathResolved = MafAgentRuntime.TryBuildCurrentStepPrimaryManagedArtifactPath(
+tests\Unit\CanDoItAll.Tests.Unit\AgentFinalizerPolicyTests.cs:23:        var recovered = MafAgentRuntime.TryCreateProcessStepOutcomeFromPrimaryArtifact(
+tests\Unit\CanDoItAll.Tests.Unit\AgentFinalizerPolicyTests.cs:53:        var recovered = MafAgentRuntime.TryCreateProcessStepOutcomeFromPrimaryArtifact(
+tests\Unit\CanDoItAll.Tests.Unit\AgentFinalizerPolicyTests.cs:83:        var recovered = MafAgentRuntime.TryCreateProcessStepOutcomeFromPrimaryArtifact(
+tests\Unit\CanDoItAll.Tests.Unit\AgentFinalizerPolicyTests.cs:115:        var recovered = MafAgentRuntime.TryCreateProcessStepOutcomeFromPrimaryArtifact(
+tests\Unit\CanDoItAll.Tests.Unit\AgentFinalizerPolicyTests.cs:142:        var recovered = MafAgentRuntime.TryCreateProcessStepOutcomeFromPrimaryArtifact(
+tests\Unit\CanDoItAll.Tests.Unit\AgentFinalizerPolicyTests.cs:169:        var recovered = MafAgentRuntime.TryCreateProcessStepOutcomeFromPrimaryArtifact(
+tests\Unit\CanDoItAll.Tests.Unit\AgentFinalizerPolicyTests.cs:191:        var recovered = MafAgentRuntime.TryCreateProcessStepOutcomeFromPrimaryArtifact(
+tests\Unit\CanDoItAll.Tests.Unit\AgentFinalizerPolicyTests.cs:213:        var recovered = MafAgentRuntime.TryCreateProcessStepOutcomeFromPrimaryArtifact(
+tests\Unit\CanDoItAll.Tests.Unit\AgentFinalizerPolicyTests.cs:240:        var recovered = MafAgentRuntime.TryCreateProcessStepOutcomeFromPrimaryArtifact(
+tests\Unit\CanDoItAll.Tests.Unit\AgentFinalizerPolicyTests.cs:270:        var recovered = MafAgentRuntime.TryCreateProcessStepOutcomeFromPrimaryArtifact(
+tests\Unit\CanDoItAll.Tests.Unit\AgentFinalizerPolicyTests.cs:294:        var resolved = MafAgentRuntime.TryBuildCurrentStepPrimaryManagedArtifactPath(
+tests\Unit\CanDoItAll.Tests.Unit\AgentFinalizerPolicyTests.cs:1104:        var method = typeof(AgentFrameworkWorkspaceExecutionService).GetMethod(
+tests\Integration\CanDoItAll.Tests.Integration\EmailPluginClientTests.cs:946:        => (Office365MessageAddressFilterSettings)(typeof(Office365DownloadByAddressWorkflowExecutor).GetMethod(
+tests\Integration\CanDoItAll.Tests.Integration\EmailPluginClientTests.cs:957:        => (string)(typeof(TExecutor).GetMethod(
+tests\Integration\CanDoItAll.Tests.Integration\EmailPluginClientTests.cs:966:        => (string)(typeof(TExecutor).GetMethod(
+tests\Unit\CanDoItAll.Tests.Unit\CapabilityMigrationCleanupGuardTests.cs:37:        var policySource = ReadRepositoryFile("src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/Capabilities/MafAgentRuntime.Capabilities.Access.Policies.cs");
+tests\Integration\CanDoItAll.Tests.Integration\ManagedSeedExecutionFallbackIntegrationTests.cs:32:            var resolveProviderMethod = executionService.GetType().GetMethod(
+tests\Unit\CanDoItAll.Tests.Unit\AgentFramework\Providers\ProviderArchitectureFoundationTests.cs:170:            File.ReadAllText(Path.Combine(root, "src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/Providers/MafAgentRuntime.ProviderHealth.cs")),
+tests\Unit\CanDoItAll.Tests.Unit\MafAgentRuntimeAttachmentTests.cs:56:        var scrubbed = MafAgentRuntime.RemoveRequestScopedDataContentFromSerializedSession(serializedSession);
+tests\Unit\CanDoItAll.Tests.Unit\MafAgentRuntimeAttachmentTests.cs:72:            MafAgentRuntime.EnsureInputAttachmentsSupported(provider, provider.DefaultModel, options));
+tests\Unit\CanDoItAll.Tests.Unit\MafAgentRuntimeAttachmentTests.cs:88:            MafAgentRuntime.EnsureInputAttachmentsSupported(provider, provider.DefaultModel, options));
+tests\Unit\CanDoItAll.Tests.Unit\MafAgentRuntimeAttachmentTests.cs:106:            MafAgentRuntime.EnsureInputAttachmentsSupported(provider, provider.DefaultModel, options));
+tests\Unit\CanDoItAll.Tests.Unit\MafAgentRuntimeAttachmentTests.cs:118:        MafAgentRuntime.EnsureInputAttachmentsSupported(provider, "gemma4:12b", options);
+tests\Unit\CanDoItAll.Tests.Unit\MafAgentRuntimeAttachmentTests.cs:127:        var model = MafAgentRuntime.ResolveRuntimeModelForInputAttachments(provider, "llama3.2:3b", options);
+tests\Unit\CanDoItAll.Tests.Unit\MafAgentRuntimeAttachmentTests.cs:138:        var model = MafAgentRuntime.ResolveRuntimeModelForInputAttachments(provider, "qwen3.5:9b", options);
+tests\Unit\CanDoItAll.Tests.Unit\MafAgentRuntimeAttachmentTests.cs:154:        var model = MafAgentRuntime.ResolveRuntimeModelForInputAttachments(provider, "llama3.2:3b", options);
+tests\Unit\CanDoItAll.Tests.Unit\MafAgentRuntimeAttachmentTests.cs:165:        var model = MafAgentRuntime.ResolveRuntimeModelForInputAttachments(provider, provider.DefaultModel, options);
+tests\Unit\CanDoItAll.Tests.Unit\MafAgentRuntimeAttachmentTests.cs:347:        var analysisType = typeof(MafAgentRuntime).GetNestedType("InputAttachmentAnalysis", BindingFlags.NonPublic)
+tests\Unit\CanDoItAll.Tests.Unit\MafAgentRuntimeAttachmentTests.cs:361:        var method = typeof(MafAgentRuntime).GetMethod("AppendInputAttachmentAnalysis", BindingFlags.NonPublic | BindingFlags.Static)
+tests\Unit\CanDoItAll.Tests.Unit\MafAgentRuntimeImageAnalysisModelTests.cs:17:        var model = MafAgentRuntime.ResolveProviderImageAnalysisModel(provider, "qwen3.5:2b");
+tests\Unit\CanDoItAll.Tests.Unit\MafAgentRuntimeImageAnalysisModelTests.cs:33:        var model = MafAgentRuntime.ResolveProviderImageAnalysisModel(provider, "llama3.2:3b");
+tests\Unit\CanDoItAll.Tests.Unit\MafAgentRuntimeImageAnalysisModelTests.cs:48:        var model = MafAgentRuntime.ResolveProviderImageAnalysisModel(provider, "llama3.2:3b");
+tests\Unit\CanDoItAll.Tests.Unit\MafAgentRuntimeToolInvocationResultTests.cs:13:        var succeeded = MafAgentRuntime.IsSuccessfulToolInvocationResult(result);
+tests\Unit\CanDoItAll.Tests.Unit\MafAgentRuntimeToolInvocationResultTests.cs:26:        var succeeded = MafAgentRuntime.IsSuccessfulToolInvocationResult(result);
+tests\Unit\CanDoItAll.Tests.Unit\MafAgentRuntimeToolInvocationResultTests.cs:39:        var message = MafAgentRuntime.ResolveToolInvocationFailureMessage(result);
+tests\Unit\CanDoItAll.Tests.Unit\MafAgentRuntimeProviderHealthTests.cs:22:        var messages = MafAgentRuntime.BuildProviderTestInputMessages(request);
+tests\Unit\CanDoItAll.Tests.Unit\MafAgentRuntimeProviderHealthTests.cs:42:        var messages = MafAgentRuntime.BuildProviderTestInputMessages(request);
+tests\Unit\CanDoItAll.Tests.Unit\MafAgentRuntimeProviderHealthTests.cs:65:        var runtime = new MafAgentRuntime(Path.GetTempPath(), services);
+tests\Unit\CanDoItAll.Tests.Unit\MafAgentRuntimeToolProviderCompositionTests.cs:27:        var runtime = new MafAgentRuntime(Path.GetTempPath(), new ServiceCollection().BuildServiceProvider());
+tests\Unit\CanDoItAll.Tests.Unit\MafAgentRuntimeToolProviderCompositionTests.cs:50:        var runtime = new MafAgentRuntime(Path.GetTempPath(), services.BuildServiceProvider());
+tests\Unit\CanDoItAll.Tests.Unit\MafAgentRuntimeToolProviderCompositionTests.cs:81:        var runtime = new MafAgentRuntime(Path.GetTempPath(), services.BuildServiceProvider());
+tests\Unit\CanDoItAll.Tests.Unit\MafAgentRuntimeToolProviderCompositionTests.cs:110:        var runtime = new MafAgentRuntime(Path.GetTempPath(), services.BuildServiceProvider());
+tests\Unit\CanDoItAll.Tests.Unit\MafAgentRuntimeToolProviderCompositionTests.cs:140:            var runtime = new MafAgentRuntime(Path.GetTempPath(), services.BuildServiceProvider());
+tests\Unit\CanDoItAll.Tests.Unit\MafAgentRuntimeToolProviderCompositionTests.cs:179:        var runtime = new MafAgentRuntime(Path.GetTempPath(), services.BuildServiceProvider());
+tests\Unit\CanDoItAll.Tests.Unit\MafAgentRuntimeToolProviderCompositionTests.cs:213:        var runtime = new MafAgentRuntime(Path.GetTempPath(), services.BuildServiceProvider());
+tests\Unit\CanDoItAll.Tests.Unit\MafAgentRuntimeToolProviderCompositionTests.cs:228:        var runtime = new MafAgentRuntime(Path.GetTempPath(), services.BuildServiceProvider());
+tests\Unit\CanDoItAll.Tests.Unit\MafAgentRuntimeToolProviderCompositionTests.cs:246:        var runtime = new MafAgentRuntime(Path.GetTempPath(), services.BuildServiceProvider());
+tests\Unit\CanDoItAll.Tests.Unit\MafAgentRuntimeToolProviderCompositionTests.cs:265:        var runtime = new MafAgentRuntime(Path.GetTempPath(), services.BuildServiceProvider());
+tests\Unit\CanDoItAll.Tests.Unit\MafAgentRuntimeToolProviderCompositionTests.cs:297:        var runtime = new MafAgentRuntime(Path.GetTempPath(), services.BuildServiceProvider());
+tests\Unit\CanDoItAll.Tests.Unit\MafAgentRuntimeToolProviderCompositionTests.cs:324:        var runtime = new MafAgentRuntime(Path.GetTempPath(), services.BuildServiceProvider());
+tests\Unit\CanDoItAll.Tests.Unit\MafAgentRuntimeToolProviderCompositionTests.cs:354:        var runtime = new MafAgentRuntime(Path.GetTempPath(), services.BuildServiceProvider());
+tests\Unit\CanDoItAll.Tests.Unit\MafAgentRuntimeToolProviderCompositionTests.cs:380:            var runtime = new MafAgentRuntime(workspaceRoot, new ServiceCollection().BuildServiceProvider());
+tests\Unit\CanDoItAll.Tests.Unit\MafAgentRuntimeToolProviderCompositionTests.cs:418:        var runtime = new MafAgentRuntime(Path.GetTempPath(), services.BuildServiceProvider());
+tests\Unit\CanDoItAll.Tests.Unit\MafAgentRuntimeToolProviderCompositionTests.cs:545:            var runtime = new MafAgentRuntime(workspaceRoot, services.BuildServiceProvider());
+tests\Unit\CanDoItAll.Tests.Unit\MafAgentRuntimeToolProviderCompositionTests.cs:591:        var runtime = new MafAgentRuntime(Path.GetTempPath(), new ServiceCollection().BuildServiceProvider());
+tests\Unit\CanDoItAll.Tests.Unit\MafAgentRuntimeToolProviderCompositionTests.cs:614:        var runtime = new MafAgentRuntime(Path.GetTempPath(), new ServiceCollection().BuildServiceProvider());
+tests\Unit\CanDoItAll.Tests.Unit\MafAgentRuntimeToolProviderCompositionTests.cs:637:        var runtime = new MafAgentRuntime(Path.GetTempPath(), new ServiceCollection().BuildServiceProvider());
+tests\Unit\CanDoItAll.Tests.Unit\MafAgentRuntimeToolProviderCompositionTests.cs:661:        var runtime = new MafAgentRuntime(Path.GetTempPath(), new ServiceCollection().BuildServiceProvider());
+tests\Unit\CanDoItAll.Tests.Unit\MafAgentRuntimeToolProviderCompositionTests.cs:696:        var runtime = new MafAgentRuntime(Path.GetTempPath(), new ServiceCollection().BuildServiceProvider());
+tests\Unit\CanDoItAll.Tests.Unit\MafAgentRuntimeToolProviderCompositionTests.cs:720:        var runtime = new MafAgentRuntime(Path.GetTempPath(), new ServiceCollection().BuildServiceProvider());
+tests\Unit\CanDoItAll.Tests.Unit\MafAgentRuntimeToolProviderCompositionTests.cs:750:        var runtime = new MafAgentRuntime(Path.GetTempPath(), new ServiceCollection().BuildServiceProvider());
+tests\Unit\CanDoItAll.Tests.Unit\MafAgentRuntimeToolProviderCompositionTests.cs:770:        var runtime = new MafAgentRuntime(Path.GetTempPath(), new ServiceCollection().BuildServiceProvider());
+tests\Unit\CanDoItAll.Tests.Unit\MafAgentRuntimeToolProviderCompositionTests.cs:793:        var runtime = new MafAgentRuntime(Path.GetTempPath(), new ServiceCollection().BuildServiceProvider());
+tests\Unit\CanDoItAll.Tests.Unit\MafAgentRuntimeToolProviderCompositionTests.cs:837:        var runtime = new MafAgentRuntime(Path.GetTempPath(), new ServiceCollection().BuildServiceProvider());
+tests\Unit\CanDoItAll.Tests.Unit\MafAgentRuntimeToolProviderCompositionTests.cs:865:        var runtime = new MafAgentRuntime(Path.GetTempPath(), new ServiceCollection().BuildServiceProvider());
+tests\Unit\CanDoItAll.Tests.Unit\MafAgentRuntimeToolProviderCompositionTests.cs:911:            var runtime = new MafAgentRuntime(workspaceRoot, new ServiceCollection().BuildServiceProvider());
+tests\Unit\CanDoItAll.Tests.Unit\MafAgentRuntimeToolProviderCompositionTests.cs:936:        var runtime = new MafAgentRuntime(Path.GetTempPath(), services.BuildServiceProvider());
+tests\Unit\CanDoItAll.Tests.Unit\MafAgentRuntimeToolProviderCompositionTests.cs:995:        var method = typeof(MafAgentRuntime).GetMethod(
+tests\Unit\CanDoItAll.Tests.Unit\MafAgentRuntimeToolProviderCompositionTests.cs:1029:        var method = typeof(MafAgentRuntime).GetMethod(
+tests\Unit\CanDoItAll.Tests.Unit\MafAgentRuntimeToolProviderCompositionTests.cs:1065:        var method = typeof(MafAgentRuntime).GetMethod(
+tests\Unit\CanDoItAll.Tests.Unit\MafWorkflowAdapterIsolationTests.cs:25:            typeof(MafAgentRuntime).Assembly.GetName().Name);
+tests\Unit\CanDoItAll.Tests.Unit\MafWorkspaceSearchSupportTests.cs:10:        var terms = MafAgentRuntime.WorkspaceSearchSupport.TokenizeRagQuery(
+tests\Unit\CanDoItAll.Tests.Unit\MafWorkspaceSearchSupportTests.cs:14:        Assert.False(MafAgentRuntime.WorkspaceSearchSupport.HasEnoughRagSignal(terms, minimumTermCount: 2));
+tests\Unit\CanDoItAll.Tests.Unit\MafWorkspaceSearchSupportTests.cs:20:        var terms = MafAgentRuntime.WorkspaceSearchSupport.TokenizeRagQuery(
+tests\Unit\CanDoItAll.Tests.Unit\MafWorkspaceSearchSupportTests.cs:28:        Assert.True(MafAgentRuntime.WorkspaceSearchSupport.HasEnoughRagSignal(terms, minimumTermCount: 2));
+tests\Unit\CanDoItAll.Tests.Unit\MafWorkspaceSearchSupportTests.cs:36:        Assert.Equal(0, MafAgentRuntime.WorkspaceSearchSupport.CountWholeTermOccurrences(text, "call"));
+tests\Unit\CanDoItAll.Tests.Unit\MafWorkspaceSearchSupportTests.cs:37:        Assert.Equal(1, MafAgentRuntime.WorkspaceSearchSupport.CountWholeTermOccurrences(text, "backend"));
+tests\Unit\CanDoItAll.Tests.Unit\MafWorkspaceSearchSupportTests.cs:54:        var extracted = MafAgentRuntime.WorkspaceSearchSupport.ExtractUserRequestForRag(query);
+tests\Unit\CanDoItAll.Tests.Unit\MafWorkspaceSearchSupportTests.cs:55:        var terms = MafAgentRuntime.WorkspaceSearchSupport.TokenizeRagQuery(query);
+tests\Unit\CanDoItAll.Tests.Unit\MafWorkspaceSearchSupportTests.cs:59:        Assert.False(MafAgentRuntime.WorkspaceSearchSupport.HasEnoughRagSignal(terms, minimumTermCount: 2));
+tests\Unit\CanDoItAll.Tests.Unit\MafWorkspaceSearchSupportTests.cs:75:        var terms = MafAgentRuntime.WorkspaceSearchSupport.TokenizeRagQuery(query);
+tests\Components\CanDoItAll.Tests.Components\PromptFactoryPageTests.cs:67:            .GetMethod("BuildAttachmentStorageSummary", BindingFlags.Static | BindingFlags.NonPublic)!
+tests\Components\CanDoItAll.Tests.Components\PromptFactoryPageTests.cs:189:            var loadAsync = typeof(PromptFactoryPage).GetMethod("LoadAsync", BindingFlags.Instance | BindingFlags.NonPublic)
+tests\Components\CanDoItAll.Tests.Components\PromptFactoryPageTests.cs:196:                .GetMethod("StateHasChanged", BindingFlags.Instance | BindingFlags.NonPublic)!
+tests\Components\CanDoItAll.Tests.Components\PromptFactoryPageTests.cs:211:                .GetMethod("StateHasChanged", BindingFlags.Instance | BindingFlags.NonPublic)!
+tests\Unit\CanDoItAll.Tests.Unit\ProcessRuntimeIntegrationAdapterTests.cs:4160:        var method = adapterType.GetMethod(
+tests\Unit\CanDoItAll.Tests.Unit\ProcessRuntimeIntegrationAdapterTests.cs:4174:        var method = adapterType.GetMethod(
+tests\Unit\CanDoItAll.Tests.Unit\ProcessRuntimeIntegrationMetadataTests.cs:200:        var method = typeof(AgentFrameworkWorkspaceExecutionService).GetMethod(
+tests\Unit\CanDoItAll.Tests.Unit\ProcessRuntimeIntegrationMetadataTests.cs:228:        var method = typeof(AgentFrameworkWorkspaceExecutionService).GetMethod(
+tests\Unit\CanDoItAll.Tests.Unit\ProcessRuntimeIntegrationMetadataTests.cs:281:        var method = readerType.GetMethod("MapUsageObservation", BindingFlags.NonPublic | BindingFlags.Static)
+tests\Unit\CanDoItAll.Tests.Unit\ProcessRuntimeIntegrationMetadataTests.cs:507:        var method = adapterType.GetMethod(
+tests\Components\CanDoItAll.Tests.Components\WorkflowsPageTests.cs:1240:        var openWorkflows = typeof(AgentsHomePage).GetMethod(
+ExitCode: 0

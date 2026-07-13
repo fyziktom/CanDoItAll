@@ -1,0 +1,159 @@
+Command: PowerShell SB34 retained CognitiveMemory reference classification audit
+SB34 retained CognitiveMemory reference classification
+
+Release rule: base composition, generic memory runtime, generic memory UI, and generic MAF memory paths must not depend on native Cognitive Memory. Retained references below are classified as legacy/native coverage, legacy export/retirement, native service, or historical docs.
+
+1. Base composition direct dependency check
+PASS: no base composition references to native Cognitive Memory module registration or marker.
+
+2. Retained old main-repo native module
+RETAINED: src/Modules/CanDoItAll.Modules.CognitiveMemory exists as legacy/native regression code until native-suite migration. It is not registered by base composition.
+
+3. Retained test project references to legacy/native module
+RETAINED TEST PROJECT: .\tests\Integration\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj:41:    <ProjectReference Include="..\..\..\src\Modules\CanDoItAll.Modules.CognitiveMemory\CanDoItAll.Modules.CognitiveMemory.csproj" />
+RETAINED TEST PROJECT: .\tests\Components\CanDoItAll.Tests.Components\CanDoItAll.Tests.Components.csproj:38:    <ProjectReference Include="..\..\..\src\Modules\CanDoItAll.Modules.CognitiveMemory\CanDoItAll.Modules.CognitiveMemory.csproj" />
+RETAINED TEST PROJECT: .\tests\Unit\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj:61:    <ProjectReference Include="..\..\..\..\CanDoItAll.AgentFramework.Rag\src\CanDoItAll.AgentFramework.Rag.Driver\CanDoItAll.AgentFramework.Rag.Driver.csproj" />
+RETAINED TEST PROJECT: .\tests\Unit\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj:62:    <ProjectReference Include="..\..\..\..\CanDoItAll.AgentFramework.SemanticCompletion\src\CanDoItAll.AgentFramework.SemanticCompletion.Driver\CanDoItAll.AgentFramework.SemanticCompletion.Driver.csproj" />
+RETAINED TEST PROJECT: .\tests\Unit\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj:72:    <ProjectReference Include="..\..\..\src\Modules\CanDoItAll.Modules.CognitiveMemory\CanDoItAll.Modules.CognitiveMemory.csproj" />
+RETAINED TEST PROJECT: .\tests\Support\CanDoItAll.Tests.Support\CanDoItAll.Tests.Support.csproj:24:    <ProjectReference Include="..\..\..\src\Modules\CanDoItAll.Modules.CognitiveMemory\CanDoItAll.Modules.CognitiveMemory.csproj" />
+
+4. Retained legacy/native test files
+RETAINED TEST FILES: 50 C# files still contain CognitiveMemory coverage. These are retained native/legacy regressions, not generic memory startup proof.
+  .\tests\Unit\CanDoItAll.Tests.Unit\AgentContextContributionTests.cs
+  .\tests\Memory\CanDoItAll.Memory.Tests\HostCompositionDependencyRemovalTests.cs
+  .\tests\Support\CanDoItAll.Tests.Support\CognitiveMemory\CognitiveMemoryScoreGeometryFakes.cs
+  .\tests\Support\CanDoItAll.Tests.Support\CognitiveMemory\CognitiveMemoryFakes.cs
+  .\tests\Memory\CanDoItAll.Memory.Tests\MemoryFoundationCheckpointTests.cs
+  .\tests\Integration\CanDoItAll.Tests.Integration\CognitiveMemoryConsolidationPersistenceModelTests.cs
+  .\tests\Integration\CanDoItAll.Tests.Integration\CognitiveMemoryAdvancedPersistenceModelTests.cs
+  .\tests\Integration\CanDoItAll.Tests.Integration\CognitiveMemoryPersistenceModelTests.cs
+  .\tests\Integration\CanDoItAll.Tests.Integration\CognitiveMemoryProceduralPersistenceModelTests.cs
+  .\tests\Integration\CanDoItAll.Tests.Integration\CognitiveMemoryNeuroFoundationPersistenceModelTests.cs
+  .\tests\Integration\CanDoItAll.Tests.Integration\CognitiveMemoryQualityPersistenceModelTests.cs
+  .\tests\Components\CanDoItAll.Tests.Components\CognitiveMemoryPageTests.cs
+  .\tests\Integration\CanDoItAll.Tests.Integration\CognitiveMemoryRecallPersistenceModelTests.cs
+  .\tests\Memory\CanDoItAll.Memory.Tests\MemoryRuntimeCheckpointTests.cs
+  .\tests\Integration\CanDoItAll.Tests.Integration\CognitiveMemoryScoreGeometryPersistenceModelTests.cs
+  .\tests\Integration\CanDoItAll.Tests.Integration\CognitiveMemorySignalPersistenceModelTests.cs
+  .\tests\Integration\CanDoItAll.Tests.Integration\CognitiveMemorySourceIngestionPersistenceTests.cs
+  .\tests\Integration\CanDoItAll.Tests.Integration\CognitiveMemoryTaxonomyPersistenceModelTests.cs
+  .\tests\Memory\CanDoItAll.Memory.Tests\MemoryTestSuiteRebalanceCheckpointTests.cs
+  .\tests\Integration\CanDoItAll.Tests.Integration\CognitiveMemoryTemporalReplayPersistenceModelTests.cs
+  .\tests\Integration\CanDoItAll.Tests.Integration\CognitiveMemoryWorkspacePersistenceModelTests.cs
+  .\tests\Playwright\CanDoItAll.Tests.Playwright\CognitiveMemoryReviewUiPlaywrightTests.cs
+  .\tests\Integration\CanDoItAll.Tests.Integration\DatabaseMigrationIntegrationTests.cs
+  .\tests\Integration\CanDoItAll.Tests.Integration\DatabaseRuntimeSwitchingIntegrationTests.cs
+  .\tests\Unit\CanDoItAll.Tests.Unit\CognitiveMemoryAdvancedServicesTests.cs
+  .\tests\Unit\CanDoItAll.Tests.Unit\CognitiveMemoryCommonGuardrailTests.cs
+  .\tests\Unit\CanDoItAll.Tests.Unit\CognitiveMemoryConsolidationEngineTests.cs
+  .\tests\Unit\CanDoItAll.Tests.Unit\CognitiveMemoryFoundationTests.cs
+  .\tests\Unit\CanDoItAll.Tests.Unit\CognitiveMemoryNeuroFoundationTests.cs
+  .\tests\Unit\CanDoItAll.Tests.Unit\CognitiveMemoryModuleRegistrationTests.cs
+  .\tests\Unit\CanDoItAll.Tests.Unit\CognitiveMemoryOperationalServicesTests.cs
+  .\tests\Unit\CanDoItAll.Tests.Unit\CognitiveMemoryOperationalSettingsTests.cs
+  .\tests\Unit\CanDoItAll.Tests.Unit\CognitiveMemoryProcedureSkillMemoryTests.cs
+  .\tests\Unit\CanDoItAll.Tests.Unit\CognitiveMemoryProjectionAdapterTests.cs
+  .\tests\Unit\CanDoItAll.Tests.Unit\CognitiveMemoryQualityCollaboratorTests.cs
+  .\tests\Unit\CanDoItAll.Tests.Unit\CognitiveMemoryQualityFoundationTests.cs
+  .\tests\Unit\CanDoItAll.Tests.Unit\CognitiveMemoryRecallOrchestratorTests.cs
+  .\tests\Unit\CanDoItAll.Tests.Unit\CognitiveMemoryReviewUiServiceTests.cs
+  .\tests\Unit\CanDoItAll.Tests.Unit\CognitiveMemoryScoreGeometryTests.cs
+  .\tests\Unit\CanDoItAll.Tests.Unit\CognitiveMemorySignalLedgerTests.cs
+  ... 10 more retained test files omitted from transcript summary.
+
+5. Legacy main DB export/retirement artifacts
+LEGACY EXPORT/RETIREMENT: .\docs\cognitive-memory\operations\legacy-main-db-retirement.md:3:The native Cognitive Memory module has been removed from base host composition. Existing installations may still have historical `CognitiveMemory_*` tables in the main application database. Those tables are treated as a read-only archive until the data is imported into the native service through a proven native import path or explicitly deleted by an operator-approved migration.
+LEGACY EXPORT/RETIREMENT: .\docs\cognitive-memory\operations\legacy-main-db-retirement.md:7:Use `ILegacyCognitiveMemoryExportServiceFactory` from the infrastructure layer with a PostgreSQL connection to the old main database.
+LEGACY EXPORT/RETIREMENT: .\docs\cognitive-memory\operations\legacy-main-db-retirement.md:11:var factory = serviceProvider.GetRequiredService<ILegacyCognitiveMemoryExportServiceFactory>();
+LEGACY EXPORT/RETIREMENT: .\docs\cognitive-memory\operations\legacy-main-db-retirement.md:14:var result = await exporter.ExportAsync(new LegacyCognitiveMemoryExportRequest(
+LEGACY EXPORT/RETIREMENT: .\docs\cognitive-memory\operations\legacy-main-db-retirement.md:42:The EF migration `RetireLegacyCognitiveMemoryMainDbModel` updates the main `AppDbContext` model snapshot so new code no longer carries native Cognitive Memory model registrations. Its `Up` and `Down` methods are intentionally no-op. Applying it must not drop, recreate, or mutate historical `CognitiveMemory_*` tables.
+LEGACY EXPORT/RETIREMENT: .\docs\cognitive-memory\operations\legacy-main-db-retirement.md:46:1. Keep historical main DB `CognitiveMemory_*` tables read-only.
+LEGACY EXPORT/RETIREMENT: .\src\Foundation\CanDoItAll.Infrastructure\Persistence\PostgreSqlLegacyCognitiveMemoryDataReader.cs:7:public sealed class PostgreSqlLegacyCognitiveMemoryDataReader(DbConnection connection) : ILegacyCognitiveMemoryDataReader
+LEGACY EXPORT/RETIREMENT: .\src\Foundation\CanDoItAll.Infrastructure\Persistence\PostgreSqlLegacyCognitiveMemoryDataReader.cs:13:    public async Task<IReadOnlyList<LegacyCognitiveMemoryTableSnapshot>> ReadLegacyTablesAsync(
+LEGACY EXPORT/RETIREMENT: .\src\Foundation\CanDoItAll.Infrastructure\Persistence\PostgreSqlLegacyCognitiveMemoryDataReader.cs:27:            var tables = new List<LegacyCognitiveMemoryTableSnapshot>(tableNames.Count);
+LEGACY EXPORT/RETIREMENT: .\src\Foundation\CanDoItAll.Infrastructure\Persistence\PostgreSqlLegacyCognitiveMemoryDataReader.cs:29:                if (!LegacyCognitiveMemoryExportConstants.IsLegacyTableName(tableName)) {
+LEGACY EXPORT/RETIREMENT: .\src\Foundation\CanDoItAll.Infrastructure\Persistence\PostgreSqlLegacyCognitiveMemoryDataReader.cs:36:                tables.Add(new LegacyCognitiveMemoryTableSnapshot(tableName, columnNames, rows));
+LEGACY EXPORT/RETIREMENT: .\src\Foundation\CanDoItAll.Infrastructure\Persistence\PostgreSqlLegacyCognitiveMemoryDataReader.cs:79:    private async Task<IReadOnlyList<LegacyCognitiveMemoryRow>> ReadRowsAsync(
+LEGACY EXPORT/RETIREMENT: .\src\Foundation\CanDoItAll.Infrastructure\Persistence\PostgreSqlLegacyCognitiveMemoryDataReader.cs:90:        var rows = new List<LegacyCognitiveMemoryRow>();
+LEGACY EXPORT/RETIREMENT: .\src\Foundation\CanDoItAll.Infrastructure\Persistence\PostgreSqlLegacyCognitiveMemoryDataReader.cs:97:            rows.Add(new LegacyCognitiveMemoryRow(values));
+LEGACY EXPORT/RETIREMENT: .\src\Foundation\CanDoItAll.Infrastructure\Persistence\LegacyCognitiveMemoryExportService.cs:9:public sealed class LegacyCognitiveMemoryExportService(
+LEGACY EXPORT/RETIREMENT: .\src\Foundation\CanDoItAll.Infrastructure\Persistence\LegacyCognitiveMemoryExportService.cs:10:    ILegacyCognitiveMemoryDataReader dataReader,
+LEGACY EXPORT/RETIREMENT: .\src\Foundation\CanDoItAll.Infrastructure\Persistence\LegacyCognitiveMemoryExportService.cs:12:    ILogger<LegacyCognitiveMemoryExportService>? logger = null) : ILegacyCognitiveMemoryExportService
+LEGACY EXPORT/RETIREMENT: .\src\Foundation\CanDoItAll.Infrastructure\Persistence\LegacyCognitiveMemoryExportService.cs:40:    public async Task<LegacyCognitiveMemoryExportResult> ExportAsync(
+LEGACY EXPORT/RETIREMENT: .\src\Foundation\CanDoItAll.Infrastructure\Persistence\LegacyCognitiveMemoryExportService.cs:41:        LegacyCognitiveMemoryExportRequest request,
+LEGACY EXPORT/RETIREMENT: .\src\Foundation\CanDoItAll.Infrastructure\Persistence\LegacyCognitiveMemoryExportService.cs:48:            request.CompatibilityMode == LegacyCognitiveMemoryCompatibilityMode.Disabled) {
+LEGACY EXPORT/RETIREMENT: .\src\Foundation\CanDoItAll.Infrastructure\Persistence\LegacyCognitiveMemoryExportService.cs:49:            return new LegacyCognitiveMemoryExportResult(
+LEGACY EXPORT/RETIREMENT: .\src\Foundation\CanDoItAll.Infrastructure\Persistence\LegacyCognitiveMemoryExportService.cs:50:                LegacyCognitiveMemoryExportResultKind.Disabled,
+LEGACY EXPORT/RETIREMENT: .\src\Foundation\CanDoItAll.Infrastructure\Persistence\LegacyCognitiveMemoryExportService.cs:60:        var manifestPath = Path.Combine(exportDirectory, LegacyCognitiveMemoryExportConstants.ManifestFileName);
+LEGACY EXPORT/RETIREMENT: .\src\Foundation\CanDoItAll.Infrastructure\Persistence\LegacyCognitiveMemoryExportService.cs:62:            return new LegacyCognitiveMemoryExportResult(
+LEGACY EXPORT/RETIREMENT: .\src\Foundation\CanDoItAll.Infrastructure\Persistence\LegacyCognitiveMemoryExportService.cs:63:                LegacyCognitiveMemoryExportResultKind.DuplicateBlocked,
+LEGACY EXPORT/RETIREMENT: .\src\Foundation\CanDoItAll.Infrastructure\Persistence\LegacyCognitiveMemoryExportService.cs:76:            var tableManifests = new List<LegacyCognitiveMemoryTableExportManifest>();
+LEGACY EXPORT/RETIREMENT: .\src\Foundation\CanDoItAll.Infrastructure\Persistence\LegacyCognitiveMemoryExportService.cs:85:                ? LegacyCognitiveMemoryExportResultKind.NoLegacyData
+LEGACY EXPORT/RETIREMENT: .\src\Foundation\CanDoItAll.Infrastructure\Persistence\LegacyCognitiveMemoryExportService.cs:86:                : LegacyCognitiveMemoryExportResultKind.Exported;
+LEGACY EXPORT/RETIREMENT: .\src\Foundation\CanDoItAll.Infrastructure\Persistence\LegacyCognitiveMemoryExportService.cs:94:            return new LegacyCognitiveMemoryExportResult(
+LEGACY EXPORT/RETIREMENT: .\src\Foundation\CanDoItAll.Infrastructure\Persistence\LegacyCognitiveMemoryExportService.cs:112:                LegacyCognitiveMemoryExportResultKind.Failed,
+LEGACY EXPORT/RETIREMENT: .\src\Foundation\CanDoItAll.Infrastructure\Persistence\LegacyCognitiveMemoryExportService.cs:117:            return new LegacyCognitiveMemoryExportResult(
+LEGACY EXPORT/RETIREMENT: .\src\Foundation\CanDoItAll.Infrastructure\Persistence\LegacyCognitiveMemoryExportService.cs:118:                LegacyCognitiveMemoryExportResultKind.Failed,
+LEGACY EXPORT/RETIREMENT: .\src\Foundation\CanDoItAll.Infrastructure\Persistence\LegacyCognitiveMemoryExportService.cs:128:    private async Task<LegacyCognitiveMemoryTableExportManifest> WriteTableAsync(
+LEGACY EXPORT/RETIREMENT: .\src\Foundation\CanDoItAll.Infrastructure\Persistence\LegacyCognitiveMemoryExportService.cs:130:        LegacyCognitiveMemoryTableSnapshot table,
+LEGACY EXPORT/RETIREMENT: .\src\Foundation\CanDoItAll.Infrastructure\Persistence\LegacyCognitiveMemoryExportService.cs:140:        return new LegacyCognitiveMemoryTableExportManifest(
+LEGACY EXPORT/RETIREMENT: .\src\Foundation\CanDoItAll.Infrastructure\Persistence\LegacyCognitiveMemoryExportService.cs:142:            LegacyCognitiveMemoryTableDisposition.ReadOnlyArchive,
+LEGACY EXPORT/RETIREMENT: .\src\Foundation\CanDoItAll.Infrastructure\Persistence\LegacyCognitiveMemoryExportService.cs:152:        IReadOnlyList<LegacyCognitiveMemoryRow> rows,
+LEGACY EXPORT/RETIREMENT: .\src\Foundation\CanDoItAll.Infrastructure\Persistence\LegacyCognitiveMemoryExportService.cs:167:        LegacyCognitiveMemoryTableSnapshot table,
+LEGACY EXPORT/RETIREMENT: .\src\Foundation\CanDoItAll.Infrastructure\Persistence\LegacyCognitiveMemoryExportService.cs:180:            var entry = new LegacyCognitiveMemoryReferenceMapEntry(
+LEGACY EXPORT/RETIREMENT: .\src\Foundation\CanDoItAll.Infrastructure\Persistence\LegacyCognitiveMemoryExportService.cs:214:    private static void ValidateTableSnapshot(LegacyCognitiveMemoryTableSnapshot table) {
+LEGACY EXPORT/RETIREMENT: .\src\Foundation\CanDoItAll.Infrastructure\Persistence\LegacyCognitiveMemoryExportService.cs:217:        if (!LegacyCognitiveMemoryExportConstants.IsLegacyTableName(table.TableName)) {
+LEGACY EXPORT/RETIREMENT: .\src\Foundation\CanDoItAll.Infrastructure\Persistence\LegacyCognitiveMemoryExportService.cs:233:    private LegacyCognitiveMemoryExportManifest CreateManifest(
+LEGACY EXPORT/RETIREMENT: .\src\Foundation\CanDoItAll.Infrastructure\Persistence\LegacyCognitiveMemoryExportService.cs:234:        LegacyCognitiveMemoryExportRequest request,
+LEGACY EXPORT/RETIREMENT: .\src\Foundation\CanDoItAll.Infrastructure\Persistence\LegacyCognitiveMemoryExportService.cs:235:        LegacyCognitiveMemoryExportResultKind resultKind,
+LEGACY EXPORT/RETIREMENT: .\src\Foundation\CanDoItAll.Infrastructure\Persistence\LegacyCognitiveMemoryExportService.cs:236:        IReadOnlyList<LegacyCognitiveMemoryTableExportManifest> tableManifests,
+LEGACY EXPORT/RETIREMENT: .\src\Foundation\CanDoItAll.Infrastructure\Persistence\LegacyCognitiveMemoryExportService.cs:239:            LegacyCognitiveMemoryExportConstants.SchemaVersion,
+LEGACY EXPORT/RETIREMENT: .\src\Foundation\CanDoItAll.Infrastructure\Persistence\LegacyCognitiveMemoryExportService.cs:244:            LegacyCognitiveMemoryExportConstants.NativeImportPolicy,
+LEGACY EXPORT/RETIREMENT: .\src\Foundation\CanDoItAll.Infrastructure\Persistence\LegacyCognitiveMemoryExportService.cs:245:            LegacyCognitiveMemoryExportConstants.RetentionPolicy,
+LEGACY EXPORT/RETIREMENT: .\src\Foundation\CanDoItAll.Infrastructure\Persistence\LegacyCognitiveMemoryExportService.cs:253:        LegacyCognitiveMemoryExportManifest manifest,
+LEGACY EXPORT/RETIREMENT: .\src\Foundation\CanDoItAll.Infrastructure\Persistence\LegacyCognitiveMemoryExportService.cs:261:        LegacyCognitiveMemoryExportManifest manifest,
+LEGACY EXPORT/RETIREMENT: .\src\Foundation\CanDoItAll.Infrastructure\Persistence\LegacyCognitiveMemoryExportService.cs:263:        ILogger<LegacyCognitiveMemoryExportService>? logger) {
+LEGACY EXPORT/RETIREMENT: .\src\Foundation\CanDoItAll.Infrastructure\Persistence\LegacyCognitiveMemoryExportService.cs:310:public sealed class LegacyCognitiveMemoryExportServiceFactory(
+LEGACY EXPORT/RETIREMENT: .\src\Foundation\CanDoItAll.Infrastructure\Persistence\LegacyCognitiveMemoryExportService.cs:311:    ILoggerFactory loggerFactory) : ILegacyCognitiveMemoryExportServiceFactory
+LEGACY EXPORT/RETIREMENT: .\src\Foundation\CanDoItAll.Infrastructure\Persistence\LegacyCognitiveMemoryExportService.cs:313:    public ILegacyCognitiveMemoryExportService Create(DbConnection legacyMainDatabaseConnection) {
+LEGACY EXPORT/RETIREMENT: .\src\Foundation\CanDoItAll.Infrastructure\Persistence\LegacyCognitiveMemoryExportService.cs:315:        return new LegacyCognitiveMemoryExportService(
+LEGACY EXPORT/RETIREMENT: .\src\Foundation\CanDoItAll.Infrastructure\Persistence\LegacyCognitiveMemoryExportService.cs:316:            new PostgreSqlLegacyCognitiveMemoryDataReader(legacyMainDatabaseConnection),
+LEGACY EXPORT/RETIREMENT: .\src\Foundation\CanDoItAll.Infrastructure\Persistence\LegacyCognitiveMemoryExportService.cs:317:            logger: loggerFactory.CreateLogger<LegacyCognitiveMemoryExportService>());
+LEGACY EXPORT/RETIREMENT: .\src\Foundation\CanDoItAll.Infrastructure\Persistence\LegacyCognitiveMemoryExportContracts.cs:5:public enum LegacyCognitiveMemoryCompatibilityMode
+LEGACY EXPORT/RETIREMENT: .\src\Foundation\CanDoItAll.Infrastructure\Persistence\LegacyCognitiveMemoryExportContracts.cs:11:public enum LegacyCognitiveMemoryExportResultKind
+LEGACY EXPORT/RETIREMENT: .\src\Foundation\CanDoItAll.Infrastructure\Persistence\LegacyCognitiveMemoryExportContracts.cs:20:public enum LegacyCognitiveMemoryTableDisposition
+LEGACY EXPORT/RETIREMENT: .\src\Foundation\CanDoItAll.Infrastructure\Persistence\LegacyCognitiveMemoryExportContracts.cs:25:public sealed record LegacyCognitiveMemoryExportRequest(
+LEGACY EXPORT/RETIREMENT: .\src\Foundation\CanDoItAll.Infrastructure\Persistence\LegacyCognitiveMemoryExportContracts.cs:30:    LegacyCognitiveMemoryCompatibilityMode CompatibilityMode = LegacyCognitiveMemoryCompatibilityMode.ReadOnlyArchive);
+LEGACY EXPORT/RETIREMENT: .\src\Foundation\CanDoItAll.Infrastructure\Persistence\LegacyCognitiveMemoryExportContracts.cs:32:public sealed record LegacyCognitiveMemoryExportResult(
+LEGACY EXPORT/RETIREMENT: .\src\Foundation\CanDoItAll.Infrastructure\Persistence\LegacyCognitiveMemoryExportContracts.cs:33:    LegacyCognitiveMemoryExportResultKind Kind,
+LEGACY EXPORT/RETIREMENT: .\src\Foundation\CanDoItAll.Infrastructure\Persistence\LegacyCognitiveMemoryExportContracts.cs:41:public sealed record LegacyCognitiveMemoryExportManifest(
+LEGACY EXPORT/RETIREMENT: .\src\Foundation\CanDoItAll.Infrastructure\Persistence\LegacyCognitiveMemoryExportContracts.cs:45:    LegacyCognitiveMemoryCompatibilityMode CompatibilityMode,
+LEGACY EXPORT/RETIREMENT: .\src\Foundation\CanDoItAll.Infrastructure\Persistence\LegacyCognitiveMemoryExportContracts.cs:46:    LegacyCognitiveMemoryExportResultKind ResultKind,
+LEGACY EXPORT/RETIREMENT: .\src\Foundation\CanDoItAll.Infrastructure\Persistence\LegacyCognitiveMemoryExportContracts.cs:51:    IReadOnlyList<LegacyCognitiveMemoryTableExportManifest> Tables,
+LEGACY EXPORT/RETIREMENT: .\src\Foundation\CanDoItAll.Infrastructure\Persistence\LegacyCognitiveMemoryExportContracts.cs:54:public sealed record LegacyCognitiveMemoryTableExportManifest(
+LEGACY EXPORT/RETIREMENT: .\src\Foundation\CanDoItAll.Infrastructure\Persistence\LegacyCognitiveMemoryExportContracts.cs:56:    LegacyCognitiveMemoryTableDisposition Disposition,
+LEGACY EXPORT/RETIREMENT: .\src\Foundation\CanDoItAll.Infrastructure\Persistence\LegacyCognitiveMemoryExportContracts.cs:63:public sealed record LegacyCognitiveMemoryTableSnapshot(
+LEGACY EXPORT/RETIREMENT: .\src\Foundation\CanDoItAll.Infrastructure\Persistence\LegacyCognitiveMemoryExportContracts.cs:66:    IReadOnlyList<LegacyCognitiveMemoryRow> Rows);
+LEGACY EXPORT/RETIREMENT: .\src\Foundation\CanDoItAll.Infrastructure\Persistence\LegacyCognitiveMemoryExportContracts.cs:68:public sealed record LegacyCognitiveMemoryRow(
+LEGACY EXPORT/RETIREMENT: .\src\Foundation\CanDoItAll.Infrastructure\Persistence\LegacyCognitiveMemoryExportContracts.cs:71:public sealed record LegacyCognitiveMemoryReferenceMapEntry(
+LEGACY EXPORT/RETIREMENT: .\src\Foundation\CanDoItAll.Infrastructure\Persistence\LegacyCognitiveMemoryExportContracts.cs:77:public interface ILegacyCognitiveMemoryDataReader
+LEGACY EXPORT/RETIREMENT: .\src\Foundation\CanDoItAll.Infrastructure\Persistence\LegacyCognitiveMemoryExportContracts.cs:79:    Task<IReadOnlyList<LegacyCognitiveMemoryTableSnapshot>> ReadLegacyTablesAsync(
+LEGACY EXPORT/RETIREMENT: .\src\Foundation\CanDoItAll.Infrastructure\Persistence\LegacyCognitiveMemoryExportContracts.cs:83:public interface ILegacyCognitiveMemoryExportService
+LEGACY EXPORT/RETIREMENT: .\src\Foundation\CanDoItAll.Infrastructure\Persistence\LegacyCognitiveMemoryExportContracts.cs:85:    Task<LegacyCognitiveMemoryExportResult> ExportAsync(
+LEGACY EXPORT/RETIREMENT: .\src\Foundation\CanDoItAll.Infrastructure\Persistence\LegacyCognitiveMemoryExportContracts.cs:86:        LegacyCognitiveMemoryExportRequest request,
+LEGACY EXPORT/RETIREMENT: .\src\Foundation\CanDoItAll.Infrastructure\Persistence\LegacyCognitiveMemoryExportContracts.cs:90:public interface ILegacyCognitiveMemoryExportServiceFactory
+LEGACY EXPORT/RETIREMENT: .\src\Foundation\CanDoItAll.Infrastructure\Persistence\LegacyCognitiveMemoryExportContracts.cs:92:    ILegacyCognitiveMemoryExportService Create(DbConnection legacyMainDatabaseConnection);
+LEGACY EXPORT/RETIREMENT: .\src\Foundation\CanDoItAll.Infrastructure\Persistence\LegacyCognitiveMemoryExportContracts.cs:95:public static class LegacyCognitiveMemoryExportConstants
+LEGACY EXPORT/RETIREMENT: .\src\Foundation\CanDoItAll.Migrations.PostgreSql\Migrations\20260706015654_RetireLegacyCognitiveMemoryMainDbModel.cs:7:    public partial class RetireLegacyCognitiveMemoryMainDbModel : Migration
+LEGACY EXPORT/RETIREMENT: .\src\Foundation\CanDoItAll.Migrations.PostgreSql\Migrations\20260706015654_RetireLegacyCognitiveMemoryMainDbModel.cs:11:            // Legacy CognitiveMemory_* tables are retained read-only for export/native-service import.
+LEGACY EXPORT/RETIREMENT: .\src\Foundation\CanDoItAll.Migrations.PostgreSql\Migrations\20260706015654_RetireLegacyCognitiveMemoryMainDbModel.Designer.cs:15:    [Migration("20260706015654_RetireLegacyCognitiveMemoryMainDbModel")]
+LEGACY EXPORT/RETIREMENT: .\src\Foundation\CanDoItAll.Migrations.PostgreSql\Migrations\20260706015654_RetireLegacyCognitiveMemoryMainDbModel.Designer.cs:16:    partial class RetireLegacyCognitiveMemoryMainDbModel
+
+6. Native service repository
+NATIVE SERVICE: C:\repositories\CanDoItAll.CognitiveMemory owns native Cognitive Memory service/provider code and is validated separately.
+
+7. Historical docs
+HISTORICAL DOCS: docs/cognitive-memory/operations/api.md and docs/cognitive-memory/roadmap/roadmap.md now carry historical/native-provider status notes.
+
+PASS: retained references are classified and no base/generic startup coupling was found.
+ExitCode: 0

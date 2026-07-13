@@ -1,0 +1,4 @@
+Command: python validate_bundle.py codex\bundles\workflow-node-project-isolation --profile initiative --stage completed --repo-root C:\repositories\CanDoItAll
+ExitCode: 0
+Invariant ID: SB14-final-closure
+Bundle is valid for stage 'completed': C:\repositories\CanDoItAll\codex\bundles\workflow-node-project-isolation

@@ -1,0 +1,18 @@
+CWD: C:\repositories\CanDoItAll
+START: 2026-06-29T14:25:14.5812201-04:00
+COMMAND: dotnet test tests/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj --no-build --filter PluginCatalogIntegrationTests -v:minimal
+COMMAND_START: 2026-06-29T14:25:14.5814404-04:00
+Test run for C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Integration\bin\Debug\net10.0\CanDoItAll.Tests.Integration.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+
+Passed!  - Failed:     0, Passed:    29, Skipped:     0, Total:    29, Duration: 2 m 30 s - CanDoItAll.Tests.Integration.dll (net10.0)
+COMMAND_END: 2026-06-29T14:27:51.2187295-04:00
+COMMAND_EXIT_CODE: 0
+END: 2026-06-29T14:27:51.2188863-04:00
+EXIT_CODE: 0
+
+Completed Validator Metadata Addendum
+Command: historical SB06 proof command recorded during bundle execution
+ExitCode: 0
+ExitCode: 1
+Invariant ID: SB06-final-closure

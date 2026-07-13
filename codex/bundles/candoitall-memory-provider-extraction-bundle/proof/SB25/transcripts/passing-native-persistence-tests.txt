@@ -1,0 +1,9 @@
+Command: dotnet test .\tests\CanDoItAll.CognitiveMemory.Tests\CanDoItAll.CognitiveMemory.Tests.csproj --no-build
+Working directory: C:\repositories\CanDoItAll.CognitiveMemory
+Start time UTC: 2026-07-05T23:31:51.1961040Z
+Output:
+Testovací běh pro C:\repositories\CanDoItAll.CognitiveMemory\tests\CanDoItAll.CognitiveMemory.Tests\bin\Debug\net10.0\CanDoItAll.CognitiveMemory.Tests.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+
+Úspěšné!    - Neúspěšné:     0, Úspěšné:    11, Přeskočeno:     0, Celkem:    11, Doba trvání: 1 s - CanDoItAll.CognitiveMemory.Tests.dll (net10.0)
+Exit code: 0

@@ -1,0 +1,63 @@
+SB14 file-size and responsibility review
+Timestamp: 2026-06-29T20:29:37.4398051-04:00
+Policy: files over 450 lines require explicit disposition; existing large UI/page/project-structure orchestration files are approved exceptions only for current responsibilities.
+Exception policy documented: True
+Result: PASS
+Large files and disposition:
+
+Path                                                                                                               Lines Disposition
+----                                                                                                               ----- -----------
+.\src\CanDoItAll.Modules.AgentFramework\Pages\Components\WorkflowCanvasEditor.razor.cs                              3609 Approved existing UI page orchestration exception; new diagnostics/runtime/template/executor logic must stay out.
+.\src\CanDoItAll.Modules.Workbench\Pages\ProjectStructurePage.razor                                                 2584 Approved existing UI page orchestration exception; new diagnostics/runtime/template/executor logic must stay out.
+.\src\CanDoItAll.Modules.AgentFramework\Pages\Components\WorkflowCanvasEditor.razor                                 1778 Approved existing UI page orchestration exception; new diagnostics/runtime/template/executor logic must stay out.
+.\src\CanDoItAll.Modules.Workbench\ProjectStructure\ProjectStructureAgentService.cs                                 1757 Approved existing Workbench project-structure orchestration exception; new workflow behavior must split into focused s…
+.\src\CanDoItAll.Modules.Workbench\Pages\ProjectStructurePage.Processes.cs                                          1623 Approved existing UI page orchestration exception; new diagnostics/runtime/template/executor logic must stay out.
+.\src\CanDoItAll.Modules.AgentFramework\Pages\Components\WorkflowCanvasModels.cs                                    1372 Approved existing UI page orchestration exception; new diagnostics/runtime/template/executor logic must stay out.
+.\src\CanDoItAll.Modules.Workbench\Pages\Components\ProjectStructure\ProjectStructureCanvasDialogs.razor            1322 Approved existing UI page orchestration exception; new diagnostics/runtime/template/executor logic must stay out.
+.\src\CanDoItAll.Modules.Workbench\ProjectStructure\ProjectStructureProcessProjectionContributor.cs                 1302 Approved existing Workbench project-structure orchestration exception; new workflow behavior must split into focused s…
+.\src\CanDoItAll.Modules.Workbench\ProjectStructure\ProjectStructureWorkflowNodeService.cs                          1292 Approved existing Workbench project-structure orchestration exception; new workflow behavior must split into focused s…
+.\src\CanDoItAll.Modules.AgentFramework\Pages\WorkflowsPage.razor.cs                                                1271 Approved existing UI page orchestration exception; new diagnostics/runtime/template/executor logic must stay out.
+.\src\CanDoItAll.Modules.AgentFramework\Pages\Components\AgentDetailsDialog.razor.cs                                1224 Approved existing UI page orchestration exception; new diagnostics/runtime/template/executor logic must stay out.
+.\src\CanDoItAll.Modules.Workbench\ProjectStructure\ProjectStructureProcessNodeService.cs                           1130 Approved existing Workbench project-structure orchestration exception; new workflow behavior must split into focused s…
+.\src\CanDoItAll.Modules.Workbench\Pages\ProjectStructurePage.Workflows.cs                                          1025 Approved existing UI page orchestration exception; new diagnostics/runtime/template/executor logic must stay out.
+.\src\CanDoItAll.Modules.Workbench\Pages\Components\ProjectStructure\ProjectStructureProcessAssignmentDialog.razor  1015 Approved existing UI page orchestration exception; new diagnostics/runtime/template/executor logic must stay out.
+.\src\CanDoItAll.Modules.Workbench\ProjectStructure\ProjectStructureAssemblyService.cs                               958 Approved existing Workbench project-structure orchestration exception; new workflow behavior must split into focused s…
+.\src\CanDoItAll.Modules.AgentFramework\Pages\WorkflowsPage.razor                                                    940 Approved existing UI page orchestration exception; new diagnostics/runtime/template/executor logic must stay out.
+.\src\CanDoItAll.Modules.Workbench\ProjectStructure\ProjectStructureAgentContracts.cs                                903 Approved existing Workbench project-structure orchestration exception; new workflow behavior must split into focused s…
+.\src\CanDoItAll.Modules.AgentFramework\Pages\Components\AgentDetailsDialog.razor                                    891 Approved existing UI page orchestration exception; new diagnostics/runtime/template/executor logic must stay out.
+.\src\CanDoItAll.Modules.AgentFramework\Pages\Components\AgentChatPanel.razor.cs                                     864 Approved existing UI page orchestration exception; new diagnostics/runtime/template/executor logic must stay out.
+.\src\CanDoItAll.Modules.AgentFramework\Pages\Components\CapabilityConfigurationEditorSupport.cs                     776 Approved existing UI page orchestration exception; new diagnostics/runtime/template/executor logic must stay out.
+.\src\CanDoItAll.Modules.Workbench\Pages\ProjectStructurePage.SelectionPanel.cs                                      743 Approved existing UI page orchestration exception; new diagnostics/runtime/template/executor logic must stay out.
+.\src\CanDoItAll.AgentFramework.Workflows.Core\WorkflowCatalogServices.cs                                            715 Approved cohesive workflow core service/validator/compiler from SB05 review.
+.\src\CanDoItAll.Modules.Workbench\ProjectStructure\ProjectStructureCanvasCatalog.cs                                 672 Approved existing Workbench project-structure orchestration exception; new workflow behavior must split into focused s…
+.\src\CanDoItAll.Modules.Workbench\ProjectStructure\ProjectStructureImportService.cs                                 646 Approved existing Workbench project-structure orchestration exception; new workflow behavior must split into focused s…
+.\src\CanDoItAll.AgentFramework.Workflows.Core\WorkflowDefinitionValidator.cs                                        643 Approved cohesive workflow core service/validator/compiler from SB05 review.
+.\src\CanDoItAll.Modules.AgentFramework\Pages\Components\AgentCatalogPanel.razor.cs                                  588 Approved existing UI page orchestration exception; new diagnostics/runtime/template/executor logic must stay out.
+.\src\CanDoItAll.Modules.AgentFramework\Pages\AgentsHomePage.razor.cs                                                584 Approved existing UI page orchestration exception; new diagnostics/runtime/template/executor logic must stay out.
+.\src\CanDoItAll.Modules.AgentFramework\Pages\Components\WorkflowExecutorCanvasCatalog.cs                            582 Approved existing UI page orchestration exception; new diagnostics/runtime/template/executor logic must stay out.
+.\src\CanDoItAll.Modules.Workbench\ProjectStructure\ProjectStructureRuntimeLauncher.cs                               574 Approved existing Workbench project-structure orchestration exception; new workflow behavior must split into focused s…
+.\src\CanDoItAll.Modules.Workbench\ProjectStructure\WorkbenchProjectStructureRuntimeGateway.cs                       567 Approved existing Workbench project-structure orchestration exception; new workflow behavior must split into focused s…
+.\src\CanDoItAll.Modules.AgentFramework\Pages\Components\CapabilityDetailsDialog.razor                               560 Approved existing UI page orchestration exception; new diagnostics/runtime/template/executor logic must stay out.
+.\src\CanDoItAll.Modules.Workbench\Pages\ProjectStructureSelectionPanel.razor                                        531 Approved existing UI page orchestration exception; new diagnostics/runtime/template/executor logic must stay out.
+.\src\CanDoItAll.Modules.AgentFramework\Pages\Components\CapabilitySetupWizardDialog.razor                           528 Approved existing UI page orchestration exception; new diagnostics/runtime/template/executor logic must stay out.
+.\src\CanDoItAll.Modules.Workbench\Pages\ProjectStructurePage.PartyIntegration.cs                                    526 Approved existing UI page orchestration exception; new diagnostics/runtime/template/executor logic must stay out.
+.\src\CanDoItAll.Modules.Workbench\ProjectStructure\ProjectStructureNodeKindRequestJsonConverters.cs                 515 Approved existing Workbench project-structure orchestration exception; new workflow behavior must split into focused s…
+.\src\CanDoItAll.Modules.AgentFramework\Pages\Components\AgentCapabilitiesPanel.razor.cs                             512 Approved existing UI page orchestration exception; new diagnostics/runtime/template/executor logic must stay out.
+.\src\CanDoItAll.Modules.Workbench\Pages\ProjectStructurePage.WorkflowNodes.cs                                       496 Approved existing UI page orchestration exception; new diagnostics/runtime/template/executor logic must stay out.
+.\src\CanDoItAll.AgentFramework.Workflows.Core\WorkflowRoutingCompiler.cs                                            492 Approved cohesive workflow core service/validator/compiler from SB05 review.
+.\src\CanDoItAll.Modules.Workbench\ProjectStructure\ProjectStructureNodeDescriptor.cs                                475 Approved existing Workbench project-structure orchestration exception; new workflow behavior must split into focused s…
+.\src\CanDoItAll.Modules.AgentFramework\Pages\Components\CapabilitySetupWizardDialog.razor.cs                        472 Approved existing UI page orchestration exception; new diagnostics/runtime/template/executor logic must stay out.
+.\src\CanDoItAll.Modules.Workbench\ProjectStructure\ProjectStructureCanvasCatalog.RichDefinitions.cs                 469 Approved existing Workbench project-structure orchestration exception; new workflow behavior must split into focused s…
+.\src\CanDoItAll.AgentFramework.Workflows.MafAdapter\MafInProcessWorkflowExecutionBackend.cs                         451 Approved near-threshold adapter backend; backend helper responsibilities are split into focused files.
+
+
+Unexpected large files:
+
+Diagnostic parser search exit code: 1
+Unexpected UI/Workbench diagnostic parser matches:
+
+Completed Validator Metadata Addendum
+Command: historical SB14 proof command recorded during bundle execution
+ExitCode: 0
+ExitCode: 1
+Invariant ID: SB14-final-closure

@@ -1,0 +1,97 @@
+Command: SB29 semantic implementation assertions
+Check: CognitiveMemoryProviderEventRecord ExitCode: 0
+C:\repositories\CanDoItAll.CognitiveMemory\src\CanDoItAll.CognitiveMemory.Persistence\CognitiveMemoryDbContext.cs:26:    public DbSet<CognitiveMemoryProviderEventRecord> ProviderEvents => Set<CognitiveMemoryProviderEventRecord>();
+C:\repositories\CanDoItAll.CognitiveMemory\src\CanDoItAll.CognitiveMemory.Persistence\CognitiveMemoryFoundationEntityConfigurations.cs:209:internal sealed class CognitiveMemoryProviderEventRecordConfiguration : IEntityTypeConfiguration<CognitiveMemoryProviderEventRecord>
+C:\repositories\CanDoItAll.CognitiveMemory\src\CanDoItAll.CognitiveMemory.Persistence\CognitiveMemoryFoundationEntityConfigurations.cs:211:    public void Configure(EntityTypeBuilder<CognitiveMemoryProviderEventRecord> builder)
+C:\repositories\CanDoItAll.CognitiveMemory\src\CanDoItAll.CognitiveMemory.Persistence\EfCognitiveMemoryProviderEventStore.cs:102:    private static CognitiveMemoryProviderEventRecord ToRecord(
+C:\repositories\CanDoItAll.CognitiveMemory\src\CanDoItAll.CognitiveMemory.Persistence\EfCognitiveMemoryProviderEventStore.cs:108:        return new CognitiveMemoryProviderEventRecord
+C:\repositories\CanDoItAll.CognitiveMemory\src\CanDoItAll.CognitiveMemory.Persistence\EfCognitiveMemoryProviderEventStore.cs:127:    private static MemoryProviderEvent ToProviderEvent(CognitiveMemoryProviderEventRecord record)
+C:\repositories\CanDoItAll.CognitiveMemory\src\CanDoItAll.CognitiveMemory.Domain\CognitiveMemoryFoundationRecords.cs:343:public sealed class CognitiveMemoryProviderEventRecord : IHasCognitiveMemoryConcurrencyToken
+C:\repositories\CanDoItAll.CognitiveMemory\src\CanDoItAll.CognitiveMemory.Persistence\Migrations\CognitiveMemoryDbContextModelSnapshot.cs:95:            modelBuilder.Entity("CanDoItAll.CognitiveMemory.Domain.CognitiveMemoryProviderEventRecord", b =>
+C:\repositories\CanDoItAll.CognitiveMemory\src\CanDoItAll.CognitiveMemory.Persistence\Migrations\20260706005349_NativeProviderEvents.Designer.cs:97:            modelBuilder.Entity("CanDoItAll.CognitiveMemory.Domain.CognitiveMemoryProviderEventRecord", b =>
+Check: ICognitiveMemoryProviderEventStore ExitCode: 0
+C:\repositories\CanDoItAll.CognitiveMemory\src\CanDoItAll.CognitiveMemory.Application\CognitiveMemoryProviderEventContracts.cs:13:public interface ICognitiveMemoryProviderEventStore
+C:\repositories\CanDoItAll.CognitiveMemory\src\CanDoItAll.CognitiveMemory.Maf\CognitiveMemoryNativeMafServices.cs:48:    ICognitiveMemoryProviderEventStore eventStore,
+C:\repositories\CanDoItAll.CognitiveMemory\src\CanDoItAll.CognitiveMemory.Maf\CognitiveMemoryNativeMafServices.cs:125:    ICognitiveMemoryProviderEventStore eventStore,
+C:\repositories\CanDoItAll.CognitiveMemory\src\CanDoItAll.CognitiveMemory.Maf\CognitiveMemoryNativeMafServices.cs:177:    ICognitiveMemoryProviderEventStore eventStore,
+C:\repositories\CanDoItAll.CognitiveMemory\tests\CanDoItAll.CognitiveMemory.Tests\NativeServiceHardeningTests.cs:54:        var store = scope.ServiceProvider.GetRequiredService<ICognitiveMemoryProviderEventStore>();
+C:\repositories\CanDoItAll.CognitiveMemory\tests\CanDoItAll.CognitiveMemory.Tests\NativeServiceHardeningTests.cs:73:        var store = scope.ServiceProvider.GetRequiredService<ICognitiveMemoryProviderEventStore>();
+C:\repositories\CanDoItAll.CognitiveMemory\src\CanDoItAll.CognitiveMemory.Service\CognitiveMemoryProtocolApi.cs:172:        ICognitiveMemoryProviderEventStore eventStore,
+C:\repositories\CanDoItAll.CognitiveMemory\src\CanDoItAll.CognitiveMemory.Workers\CognitiveMemoryWorkerPulse.cs:30:    ICognitiveMemoryProviderEventStore eventStore,
+C:\repositories\CanDoItAll.CognitiveMemory\src\CanDoItAll.CognitiveMemory.Persistence\CognitiveMemoryPersistenceServiceCollectionExtensions.cs:43:        services.AddScoped<ICognitiveMemoryProviderEventStore, EfCognitiveMemoryProviderEventStore>();
+C:\repositories\CanDoItAll.CognitiveMemory\src\CanDoItAll.CognitiveMemory.Persistence\EfCognitiveMemoryProviderEventStore.cs:11:    TimeProvider timeProvider) : ICognitiveMemoryProviderEventStore
+Check: EfCognitiveMemoryProviderEventStore ExitCode: 0
+C:\repositories\CanDoItAll.CognitiveMemory\src\CanDoItAll.CognitiveMemory.Persistence\CognitiveMemoryPersistenceServiceCollectionExtensions.cs:43:        services.AddScoped<ICognitiveMemoryProviderEventStore, EfCognitiveMemoryProviderEventStore>();
+C:\repositories\CanDoItAll.CognitiveMemory\src\CanDoItAll.CognitiveMemory.Persistence\EfCognitiveMemoryProviderEventStore.cs:9:public sealed class EfCognitiveMemoryProviderEventStore(
+Check: ProviderEvents ExitCode: 0
+C:\repositories\CanDoItAll.CognitiveMemory\src\CanDoItAll.CognitiveMemory.Contracts\CognitiveMemoryProtocolMetadata.cs:33:                SupportsProviderEvents: true),
+C:\repositories\CanDoItAll.CognitiveMemory\src\CanDoItAll.CognitiveMemory.Persistence\CognitiveMemoryDbContext.cs:26:    public DbSet<CognitiveMemoryProviderEventRecord> ProviderEvents => Set<CognitiveMemoryProviderEventRecord>();
+C:\repositories\CanDoItAll.CognitiveMemory\src\CanDoItAll.CognitiveMemory.Persistence\CognitiveMemoryFoundationEntityConfigurations.cs:213:        builder.ToTable("CognitiveMemory_ProviderEvents");
+C:\repositories\CanDoItAll.CognitiveMemory\tests\CanDoItAll.CognitiveMemory.Tests\NativeServiceHardeningTests.cs:21:    public async Task NativeService_RegistersMafAndPollsPersistedProviderEvents()
+C:\repositories\CanDoItAll.CognitiveMemory\src\CanDoItAll.CognitiveMemory.Maf\CognitiveMemoryNativeMafContracts.cs:93:    IReadOnlyList<MemoryProviderEvent> ProviderEvents,
+C:\repositories\CanDoItAll.CognitiveMemory\src\CanDoItAll.CognitiveMemory.Maf\CognitiveMemoryNativeMafContracts.cs:103:            ProviderEvents: [],
+C:\repositories\CanDoItAll.CognitiveMemory\src\CanDoItAll.CognitiveMemory.Maf\CognitiveMemoryNativeMafContracts.cs:125:            ProviderEvents: [],
+C:\repositories\CanDoItAll.CognitiveMemory\src\CanDoItAll.CognitiveMemory.Persistence\EfCognitiveMemoryProviderEventStore.cs:28:        var existingIds = await dbContext.ProviderEvents
+C:\repositories\CanDoItAll.CognitiveMemory\src\CanDoItAll.CognitiveMemory.Persistence\EfCognitiveMemoryProviderEventStore.cs:46:            dbContext.ProviderEvents.Add(ToRecord(providerEvent, now));
+C:\repositories\CanDoItAll.CognitiveMemory\src\CanDoItAll.CognitiveMemory.Persistence\EfCognitiveMemoryProviderEventStore.cs:68:        var records = await dbContext.ProviderEvents
+C:\repositories\CanDoItAll.CognitiveMemory\src\CanDoItAll.CognitiveMemory.Persistence\EfCognitiveMemoryProviderEventStore.cs:88:        var remaining = await dbContext.ProviderEvents
+C:\repositories\CanDoItAll.CognitiveMemory\src\CanDoItAll.CognitiveMemory.Persistence\EfCognitiveMemoryProviderEventStore.cs:97:        return await dbContext.ProviderEvents
+C:\repositories\CanDoItAll.CognitiveMemory\tests\CanDoItAll.CognitiveMemory.Tests\NativeMafIntegrationTests.cs:33:        var providerEvent = Assert.Single(result.ProviderEvents);
+C:\repositories\CanDoItAll.CognitiveMemory\tests\CanDoItAll.CognitiveMemory.Tests\NativeMafIntegrationTests.cs:59:        Assert.Empty(result.ProviderEvents);
+C:\repositories\CanDoItAll.CognitiveMemory\tests\CanDoItAll.CognitiveMemory.Tests\NativeMafIntegrationTests.cs:79:        var providerEvent = Assert.Single(result.ProviderEvents);
+C:\repositories\CanDoItAll.CognitiveMemory\tests\CanDoItAll.CognitiveMemory.Tests\NativeMafIntegrationTests.cs:99:        var providerEvent = Assert.Single(result.ProviderEvents);
+C:\repositories\CanDoItAll.CognitiveMemory\src\CanDoItAll.CognitiveMemory.Persistence\Migrations\CognitiveMemoryDbContextModelSnapshot.cs:147:                    b.ToTable("CognitiveMemory_ProviderEvents", (string)null);
+C:\repositories\CanDoItAll.CognitiveMemory\src\CanDoItAll.CognitiveMemory.Persistence\Migrations\20260706005349_NativeProviderEvents.Designer.cs:15:    [Migration("20260706005349_NativeProviderEvents")]
+C:\repositories\CanDoItAll.CognitiveMemory\src\CanDoItAll.CognitiveMemory.Persistence\Migrations\20260706005349_NativeProviderEvents.Designer.cs:16:    partial class NativeProviderEvents
+C:\repositories\CanDoItAll.CognitiveMemory\src\CanDoItAll.CognitiveMemory.Persistence\Migrations\20260706005349_NativeProviderEvents.Designer.cs:149:                    b.ToTable("CognitiveMemory_ProviderEvents", (string)null);
+C:\repositories\CanDoItAll.CognitiveMemory\src\CanDoItAll.CognitiveMemory.Persistence\Migrations\20260706005349_NativeProviderEvents.cs:8:    public partial class NativeProviderEvents : Migration
+C:\repositories\CanDoItAll.CognitiveMemory\src\CanDoItAll.CognitiveMemory.Persistence\Migrations\20260706005349_NativeProviderEvents.cs:13:                name: "CognitiveMemory_ProviderEvents",
+C:\repositories\CanDoItAll.CognitiveMemory\src\CanDoItAll.CognitiveMemory.Persistence\Migrations\20260706005349_NativeProviderEvents.cs:31:                    table.PrimaryKey("PK_CognitiveMemory_ProviderEvents", x => x.Id);
+C:\repositories\CanDoItAll.CognitiveMemory\src\CanDoItAll.CognitiveMemory.Persistence\Migrations\20260706005349_NativeProviderEvents.cs:35:                name: "IX_CognitiveMemory_ProviderEvents_CorrelationId",
+C:\repositories\CanDoItAll.CognitiveMemory\src\CanDoItAll.CognitiveMemory.Persistence\Migrations\20260706005349_NativeProviderEvents.cs:36:                table: "CognitiveMemory_ProviderEvents",
+C:\repositories\CanDoItAll.CognitiveMemory\src\CanDoItAll.CognitiveMemory.Persistence\Migrations\20260706005349_NativeProviderEvents.cs:40:                name: "IX_CognitiveMemory_ProviderEvents_ProviderEventId",
+C:\repositories\CanDoItAll.CognitiveMemory\src\CanDoItAll.CognitiveMemory.Persistence\Migrations\20260706005349_NativeProviderEvents.cs:41:                table: "CognitiveMemory_ProviderEvents",
+C:\repositories\CanDoItAll.CognitiveMemory\src\CanDoItAll.CognitiveMemory.Persistence\Migrations\20260706005349_NativeProviderEvents.cs:46:                name: "IX_CognitiveMemory_ProviderEvents_Status_CreatedAtUtc",
+C:\repositories\CanDoItAll.CognitiveMemory\src\CanDoItAll.CognitiveMemory.Persistence\Migrations\20260706005349_NativeProviderEvents.cs:47:                table: "CognitiveMemory_ProviderEvents",
+C:\repositories\CanDoItAll.CognitiveMemory\src\CanDoItAll.CognitiveMemory.Persistence\Migrations\20260706005349_NativeProviderEvents.cs:54:                name: "CognitiveMemory_ProviderEvents");
+Check: CognitiveMemory_ProviderEvents ExitCode: 0
+C:\repositories\CanDoItAll.CognitiveMemory\src\CanDoItAll.CognitiveMemory.Persistence\CognitiveMemoryFoundationEntityConfigurations.cs:213:        builder.ToTable("CognitiveMemory_ProviderEvents");
+C:\repositories\CanDoItAll.CognitiveMemory\src\CanDoItAll.CognitiveMemory.Persistence\Migrations\CognitiveMemoryDbContextModelSnapshot.cs:147:                    b.ToTable("CognitiveMemory_ProviderEvents", (string)null);
+C:\repositories\CanDoItAll.CognitiveMemory\src\CanDoItAll.CognitiveMemory.Persistence\Migrations\20260706005349_NativeProviderEvents.cs:13:                name: "CognitiveMemory_ProviderEvents",
+C:\repositories\CanDoItAll.CognitiveMemory\src\CanDoItAll.CognitiveMemory.Persistence\Migrations\20260706005349_NativeProviderEvents.cs:31:                    table.PrimaryKey("PK_CognitiveMemory_ProviderEvents", x => x.Id);
+C:\repositories\CanDoItAll.CognitiveMemory\src\CanDoItAll.CognitiveMemory.Persistence\Migrations\20260706005349_NativeProviderEvents.cs:35:                name: "IX_CognitiveMemory_ProviderEvents_CorrelationId",
+C:\repositories\CanDoItAll.CognitiveMemory\src\CanDoItAll.CognitiveMemory.Persistence\Migrations\20260706005349_NativeProviderEvents.cs:36:                table: "CognitiveMemory_ProviderEvents",
+C:\repositories\CanDoItAll.CognitiveMemory\src\CanDoItAll.CognitiveMemory.Persistence\Migrations\20260706005349_NativeProviderEvents.cs:40:                name: "IX_CognitiveMemory_ProviderEvents_ProviderEventId",
+C:\repositories\CanDoItAll.CognitiveMemory\src\CanDoItAll.CognitiveMemory.Persistence\Migrations\20260706005349_NativeProviderEvents.cs:41:                table: "CognitiveMemory_ProviderEvents",
+C:\repositories\CanDoItAll.CognitiveMemory\src\CanDoItAll.CognitiveMemory.Persistence\Migrations\20260706005349_NativeProviderEvents.cs:46:                name: "IX_CognitiveMemory_ProviderEvents_Status_CreatedAtUtc",
+C:\repositories\CanDoItAll.CognitiveMemory\src\CanDoItAll.CognitiveMemory.Persistence\Migrations\20260706005349_NativeProviderEvents.cs:47:                table: "CognitiveMemory_ProviderEvents",
+C:\repositories\CanDoItAll.CognitiveMemory\src\CanDoItAll.CognitiveMemory.Persistence\Migrations\20260706005349_NativeProviderEvents.cs:54:                name: "CognitiveMemory_ProviderEvents");
+C:\repositories\CanDoItAll.CognitiveMemory\src\CanDoItAll.CognitiveMemory.Persistence\Migrations\20260706005349_NativeProviderEvents.Designer.cs:149:                    b.ToTable("CognitiveMemory_ProviderEvents", (string)null);
+Check: AddCognitiveMemoryNativeMaf ExitCode: 0
+C:\repositories\CanDoItAll.CognitiveMemory\tests\CanDoItAll.CognitiveMemory.Tests\NativeMafIntegrationTests.cs:189:        services.AddCognitiveMemoryNativeMaf(configure);
+C:\repositories\CanDoItAll.CognitiveMemory\src\CanDoItAll.CognitiveMemory.Maf\CognitiveMemoryNativeContextContributor.cs:99:    public static IServiceCollection AddCognitiveMemoryNativeMaf(
+C:\repositories\CanDoItAll.CognitiveMemory\src\CanDoItAll.CognitiveMemory.Service\Program.cs:13:builder.Services.AddCognitiveMemoryNativeMaf(options =>
+Check: PollAsync(maxEvents: 25 ExitCode: 0
+C:\repositories\CanDoItAll.CognitiveMemory\src\CanDoItAll.CognitiveMemory.Service\CognitiveMemoryProtocolApi.cs:175:        var result = await eventStore.PollAsync(maxEvents: 25, cancellationToken);
+Check: CognitiveMemoryWorkerPulse ExitCode: 0
+C:\repositories\CanDoItAll.CognitiveMemory\tests\CanDoItAll.CognitiveMemory.Tests\NativeServiceHardeningTests.cs:75:        var pulse = scope.ServiceProvider.GetRequiredService<ICognitiveMemoryWorkerPulse>();
+C:\repositories\CanDoItAll.CognitiveMemory\src\CanDoItAll.CognitiveMemory.Workers\CognitiveMemoryWorkerPulse.cs:20:public sealed record CognitiveMemoryWorkerPulseResult(
+C:\repositories\CanDoItAll.CognitiveMemory\src\CanDoItAll.CognitiveMemory.Workers\CognitiveMemoryWorkerPulse.cs:24:public interface ICognitiveMemoryWorkerPulse
+C:\repositories\CanDoItAll.CognitiveMemory\src\CanDoItAll.CognitiveMemory.Workers\CognitiveMemoryWorkerPulse.cs:26:    Task<CognitiveMemoryWorkerPulseResult> PulseAsync(CancellationToken cancellationToken = default);
+C:\repositories\CanDoItAll.CognitiveMemory\src\CanDoItAll.CognitiveMemory.Workers\CognitiveMemoryWorkerPulse.cs:29:public sealed class CognitiveMemoryWorkerPulse(
+C:\repositories\CanDoItAll.CognitiveMemory\src\CanDoItAll.CognitiveMemory.Workers\CognitiveMemoryWorkerPulse.cs:31:    TimeProvider timeProvider) : ICognitiveMemoryWorkerPulse
+C:\repositories\CanDoItAll.CognitiveMemory\src\CanDoItAll.CognitiveMemory.Workers\CognitiveMemoryWorkerPulse.cs:33:    public async Task<CognitiveMemoryWorkerPulseResult> PulseAsync(CancellationToken cancellationToken = default)
+C:\repositories\CanDoItAll.CognitiveMemory\src\CanDoItAll.CognitiveMemory.Workers\CognitiveMemoryWorkerPulse.cs:36:        return new CognitiveMemoryWorkerPulseResult(pendingEvents, timeProvider.GetUtcNow());
+C:\repositories\CanDoItAll.CognitiveMemory\src\CanDoItAll.CognitiveMemory.Workers\CognitiveMemoryWorkerPulse.cs:52:        services.TryAddScoped<ICognitiveMemoryWorkerPulse, CognitiveMemoryWorkerPulse>();
+C:\repositories\CanDoItAll.CognitiveMemory\src\CanDoItAll.CognitiveMemory.Workers\Worker.cs:4:    ICognitiveMemoryWorkerPulse pulse,
+Check: NativeService_RegistersMafAndPollsPersistedProviderEvents ExitCode: 0
+C:\repositories\CanDoItAll.CognitiveMemory\tests\CanDoItAll.CognitiveMemory.Tests\NativeServiceHardeningTests.cs:21:    public async Task NativeService_RegistersMafAndPollsPersistedProviderEvents()
+Check: ProviderEventStore_DeduplicatesAndMarksPolledEventsDelivered ExitCode: 0
+C:\repositories\CanDoItAll.CognitiveMemory\tests\CanDoItAll.CognitiveMemory.Tests\NativeServiceHardeningTests.cs:50:    public async Task ProviderEventStore_DeduplicatesAndMarksPolledEventsDelivered()
+Check: WorkerPulse_ReadsPendingEventsWithoutDrainingProtocolPoll ExitCode: 0
+C:\repositories\CanDoItAll.CognitiveMemory\tests\CanDoItAll.CognitiveMemory.Tests\NativeServiceHardeningTests.cs:69:    public async Task WorkerPulse_ReadsPendingEventsWithoutDrainingProtocolPoll()
+Check: NativeProviderEvents ExitCode: 0
+C:\repositories\CanDoItAll.CognitiveMemory\src\CanDoItAll.CognitiveMemory.Persistence\Migrations\20260706005349_NativeProviderEvents.cs:8:    public partial class NativeProviderEvents : Migration
+C:\repositories\CanDoItAll.CognitiveMemory\src\CanDoItAll.CognitiveMemory.Persistence\Migrations\20260706005349_NativeProviderEvents.Designer.cs:15:    [Migration("20260706005349_NativeProviderEvents")]
+C:\repositories\CanDoItAll.CognitiveMemory\src\CanDoItAll.CognitiveMemory.Persistence\Migrations\20260706005349_NativeProviderEvents.Designer.cs:16:    partial class NativeProviderEvents
+PASS: SB29 native hardening semantic markers are present across domain, application, persistence, MAF, service, worker, migration, and tests.

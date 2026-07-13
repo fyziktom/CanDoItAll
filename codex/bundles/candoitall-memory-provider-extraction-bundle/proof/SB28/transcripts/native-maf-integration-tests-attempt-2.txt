@@ -1,0 +1,104 @@
+  Zjišťují se projekty, které se mají obnovit...
+C:\repositories\CanDoItAll\src\MAF\Common\CanDoItAll.AgentFramework.Core\CanDoItAll.AgentFramework.Core.csproj : warning NU1900: Při získávání dat o ohrožení zabezpečení balíčku došlo k chybě: Nepovedlo se načíst index služby pro zdroj https://api.nuget.org/v3/index.json. [C:\repositories\CanDoItAll.CognitiveMemory\tests\CanDoItAll.CognitiveMemory.Tests\CanDoItAll.CognitiveMemory.Tests.csproj]
+C:\repositories\CanDoItAll\src\MAF\WorkflowExecutors\CanDoItAll.AgentFramework.WorkflowExecutors.Core\CanDoItAll.AgentFramework.WorkflowExecutors.Core.csproj : warning NU1900: Při získávání dat o ohrožení zabezpečení balíčku došlo k chybě: Nepovedlo se načíst index služby pro zdroj https://api.nuget.org/v3/index.json. [C:\repositories\CanDoItAll.CognitiveMemory\tests\CanDoItAll.CognitiveMemory.Tests\CanDoItAll.CognitiveMemory.Tests.csproj]
+  Všechny projekty jsou v aktuálním stavu pro obnovení.
+C:\repositories\CanDoItAll\src\MAF\WorkflowExecutors\CanDoItAll.AgentFramework.WorkflowExecutors.Core\CanDoItAll.AgentFramework.WorkflowExecutors.Core.csproj : warning NU1900: Při získávání dat o ohrožení zabezpečení balíčku došlo k chybě: Nepovedlo se načíst index služby pro zdroj https://api.nuget.org/v3/index.json.
+C:\repositories\CanDoItAll\src\MAF\Common\CanDoItAll.AgentFramework.Core\CanDoItAll.AgentFramework.Core.csproj : warning NU1900: Při získávání dat o ohrožení zabezpečení balíčku došlo k chybě: Nepovedlo se načíst index služby pro zdroj https://api.nuget.org/v3/index.json.
+  CanDoItAll.CognitiveMemory.Domain -> C:\repositories\CanDoItAll.CognitiveMemory\src\CanDoItAll.CognitiveMemory.Domain\bin\Debug\net10.0\CanDoItAll.CognitiveMemory.Domain.dll
+  CanDoItAll.Git -> C:\repositories\CanDoItAll\src\Foundation\CanDoItAll.Git\bin\Debug\net10.0\CanDoItAll.Git.dll
+  CanDoItAll.Memory.Abstractions -> C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Abstractions\bin\Debug\net10.0\CanDoItAll.Memory.Abstractions.dll
+  CanDoItAll.AgentFramework.Capabilities.Abstractions -> C:\repositories\CanDoItAll\src\MAF\Capabilities\CanDoItAll.AgentFramework.Capabilities.Abstractions\bin\Debug\net10.0\CanDoItAll.AgentFramework.Capabilities.Abstractions.dll
+  CanDoItAll.SharedKernel -> C:\repositories\CanDoItAll\src\Foundation\CanDoItAll.SharedKernel\bin\Debug\net10.0\CanDoItAll.SharedKernel.dll
+  CanDoItAll.CognitiveMemory.Contracts -> C:\repositories\CanDoItAll.CognitiveMemory\src\CanDoItAll.CognitiveMemory.Contracts\bin\Debug\net10.0\CanDoItAll.CognitiveMemory.Contracts.dll
+  CanDoItAll.AgentFramework.Models -> C:\repositories\CanDoItAll\src\MAF\Common\CanDoItAll.AgentFramework.Models\bin\Debug\net10.0\CanDoItAll.AgentFramework.Models.dll
+  CanDoItAll.CognitiveMemory.Projection.Rag -> C:\repositories\CanDoItAll.CognitiveMemory\src\CanDoItAll.CognitiveMemory.Projection.Rag\bin\Debug\net10.0\CanDoItAll.CognitiveMemory.Projection.Rag.dll
+  CanDoItAll.CognitiveMemory.Application -> C:\repositories\CanDoItAll.CognitiveMemory\src\CanDoItAll.CognitiveMemory.Application\bin\Debug\net10.0\CanDoItAll.CognitiveMemory.Application.dll
+  CanDoItAll.AgentFramework.WorkflowExecutors.Abstractions -> C:\repositories\CanDoItAll\src\MAF\WorkflowExecutors\CanDoItAll.AgentFramework.WorkflowExecutors.Abstractions\bin\Debug\net10.0\CanDoItAll.AgentFramework.WorkflowExecutors.Abstractions.dll
+  CanDoItAll.AgentFramework.Workflows.Abstractions -> C:\repositories\CanDoItAll\src\MAF\Workflows\CanDoItAll.AgentFramework.Workflows.Abstractions\bin\Debug\net10.0\CanDoItAll.AgentFramework.Workflows.Abstractions.dll
+  CanDoItAll.CognitiveMemory.Persistence -> C:\repositories\CanDoItAll.CognitiveMemory\src\CanDoItAll.CognitiveMemory.Persistence\bin\Debug\net10.0\CanDoItAll.CognitiveMemory.Persistence.dll
+  CanDoItAll.AgentFramework.WorkflowExecutors.Core -> C:\repositories\CanDoItAll\src\MAF\WorkflowExecutors\CanDoItAll.AgentFramework.WorkflowExecutors.Core\bin\Debug\net10.0\CanDoItAll.AgentFramework.WorkflowExecutors.Core.dll
+  CanDoItAll.AgentFramework.Core -> C:\repositories\CanDoItAll\src\MAF\Common\CanDoItAll.AgentFramework.Core\bin\Debug\net10.0\CanDoItAll.AgentFramework.Core.dll
+  CanDoItAll.Memory.Application -> C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Application\bin\Debug\net10.0\CanDoItAll.Memory.Application.dll
+  CanDoItAll.Memory.Http -> C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Http\bin\Debug\net10.0\CanDoItAll.Memory.Http.dll
+  CanDoItAll.CognitiveMemory.Maf -> C:\repositories\CanDoItAll.CognitiveMemory\src\CanDoItAll.CognitiveMemory.Maf\bin\Debug\net10.0\CanDoItAll.CognitiveMemory.Maf.dll
+  CanDoItAll.CognitiveMemory.Service -> C:\repositories\CanDoItAll.CognitiveMemory\src\CanDoItAll.CognitiveMemory.Service\bin\Debug\net10.0\CanDoItAll.CognitiveMemory.Service.dll
+  CanDoItAll.CognitiveMemory.Tests -> C:\repositories\CanDoItAll.CognitiveMemory\tests\CanDoItAll.CognitiveMemory.Tests\bin\Debug\net10.0\CanDoItAll.CognitiveMemory.Tests.dll
+Testovací běh pro C:\repositories\CanDoItAll.CognitiveMemory\tests\CanDoItAll.CognitiveMemory.Tests\bin\Debug\net10.0\CanDoItAll.CognitiveMemory.Tests.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+[xUnit.net 00:00:02.08]     CanDoItAll.CognitiveMemory.Tests.NativeMafIntegrationTests.ContextContributor_ProvidesNativeRecallThroughMafAbstraction [FAIL]
+[xUnit.net 00:00:02.10]     CanDoItAll.CognitiveMemory.Tests.NativeMafIntegrationTests.ProfessorFlow_EmitsVerificationEventForPendingReviewWhenAllowed [FAIL]
+[xUnit.net 00:00:02.10]     CanDoItAll.CognitiveMemory.Tests.NativeMafIntegrationTests.CuratorFlow_CapturesTrustedMemoryAndEmitsVerificationEventWhenAllowed [FAIL]
+[xUnit.net 00:00:02.10]     CanDoItAll.CognitiveMemory.Tests.NativeMafIntegrationTests.SelfRegulationFlow_EmitsMaintenanceSignalForHighRiskPendingReview [FAIL]
+[xUnit.net 00:00:02.11]     CanDoItAll.CognitiveMemory.Tests.NativeMafIntegrationTests.ProfessorFlow_DeniesVerificationEventWhenPolicyDisallowsRequests [FAIL]
+  Neúspěšné CanDoItAll.CognitiveMemory.Tests.NativeMafIntegrationTests.ContextContributor_ProvidesNativeRecallThroughMafAbstraction [58 ms]
+  Chybová zpráva:
+   System.InvalidOperationException : Cannot resolve scoped service 'CanDoItAll.CognitiveMemory.Application.ICognitiveMemoryIngestionService' from root provider.
+  Trasování zásobníku:
+     at Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteValidator.ValidateResolution(ServiceCallSite callSite, IServiceScope scope, IServiceScope rootScope)
+   at Microsoft.Extensions.DependencyInjection.ServiceProvider.GetService(ServiceIdentifier serviceIdentifier, ServiceProviderEngineScope serviceProviderEngineScope)
+   at Microsoft.Extensions.DependencyInjection.ServiceProvider.GetService(Type serviceType)
+   at Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetRequiredService(IServiceProvider provider, Type serviceType)
+   at Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetRequiredService[T](IServiceProvider provider)
+   at CanDoItAll.CognitiveMemory.Tests.NativeMafIntegrationTests.ContextContributor_ProvidesNativeRecallThroughMafAbstraction() in C:\repositories\CanDoItAll.CognitiveMemory\tests\CanDoItAll.CognitiveMemory.Tests\NativeMafIntegrationTests.cs:line 129
+   at CanDoItAll.CognitiveMemory.Tests.NativeMafIntegrationTests.ContextContributor_ProvidesNativeRecallThroughMafAbstraction() in C:\repositories\CanDoItAll.CognitiveMemory\tests\CanDoItAll.CognitiveMemory.Tests\NativeMafIntegrationTests.cs:line 147
+--- End of stack trace from previous location ---
+  Neúspěšné CanDoItAll.CognitiveMemory.Tests.NativeMafIntegrationTests.ProfessorFlow_EmitsVerificationEventForPendingReviewWhenAllowed [9 ms]
+  Chybová zpráva:
+   System.InvalidOperationException : Cannot resolve scoped service 'CanDoItAll.CognitiveMemory.Application.ICognitiveMemoryIngestionService' from root provider.
+  Trasování zásobníku:
+     at Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteValidator.ValidateResolution(ServiceCallSite callSite, IServiceScope scope, IServiceScope rootScope)
+   at Microsoft.Extensions.DependencyInjection.ServiceProvider.GetService(ServiceIdentifier serviceIdentifier, ServiceProviderEngineScope serviceProviderEngineScope)
+   at Microsoft.Extensions.DependencyInjection.ServiceProvider.GetService(Type serviceType)
+   at Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetRequiredService(IServiceProvider provider, Type serviceType)
+   at Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetRequiredService[T](IServiceProvider provider)
+   at CanDoItAll.CognitiveMemory.Tests.NativeMafIntegrationTests.SeedReviewRequiredMemoryAsync(ServiceProvider provider, Guid projectId) in C:\repositories\CanDoItAll.CognitiveMemory\tests\CanDoItAll.CognitiveMemory.Tests\NativeMafIntegrationTests.cs:line 152
+   at CanDoItAll.CognitiveMemory.Tests.NativeMafIntegrationTests.ProfessorFlow_EmitsVerificationEventForPendingReviewWhenAllowed() in C:\repositories\CanDoItAll.CognitiveMemory\tests\CanDoItAll.CognitiveMemory.Tests\NativeMafIntegrationTests.cs:line 64
+   at CanDoItAll.CognitiveMemory.Tests.NativeMafIntegrationTests.ProfessorFlow_EmitsVerificationEventForPendingReviewWhenAllowed() in C:\repositories\CanDoItAll.CognitiveMemory\tests\CanDoItAll.CognitiveMemory.Tests\NativeMafIntegrationTests.cs:line 75
+--- End of stack trace from previous location ---
+  Neúspěšné CanDoItAll.CognitiveMemory.Tests.NativeMafIntegrationTests.CuratorFlow_CapturesTrustedMemoryAndEmitsVerificationEventWhenAllowed [2 ms]
+  Chybová zpráva:
+   System.InvalidOperationException : Cannot consume scoped service 'CanDoItAll.CognitiveMemory.Application.ICognitiveMemoryEngineStore' from singleton 'CanDoItAll.CognitiveMemory.Maf.ICognitiveMemoryNativeCuratorFlow'.
+  Trasování zásobníku:
+     at Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteValidator.VisitCallSite(ServiceCallSite callSite, CallSiteValidatorState argument)
+   at Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteValidator.VisitConstructor(ConstructorCallSite constructorCallSite, CallSiteValidatorState state)
+   at Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteVisitor`2.VisitCallSite(ServiceCallSite callSite, TArgument argument)
+   at Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteValidator.VisitCallSite(ServiceCallSite callSite, CallSiteValidatorState argument)
+   at Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteValidator.VisitConstructor(ConstructorCallSite constructorCallSite, CallSiteValidatorState state)
+   at Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteValidator.VisitCallSite(ServiceCallSite callSite, CallSiteValidatorState argument)
+   at Microsoft.Extensions.DependencyInjection.ServiceProvider.CreateServiceAccessor(ServiceIdentifier serviceIdentifier)
+   at System.Collections.Concurrent.ConcurrentDictionary`2.GetOrAdd(TKey key, Func`2 valueFactory)
+   at Microsoft.Extensions.DependencyInjection.ServiceProvider.GetService(ServiceIdentifier serviceIdentifier, ServiceProviderEngineScope serviceProviderEngineScope)
+   at Microsoft.Extensions.DependencyInjection.ServiceProvider.GetService(Type serviceType)
+   at Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetRequiredService(IServiceProvider provider, Type serviceType)
+   at Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetRequiredService[T](IServiceProvider provider)
+   at CanDoItAll.CognitiveMemory.Tests.NativeMafIntegrationTests.CuratorFlow_CapturesTrustedMemoryAndEmitsVerificationEventWhenAllowed() in C:\repositories\CanDoItAll.CognitiveMemory\tests\CanDoItAll.CognitiveMemory.Tests\NativeMafIntegrationTests.cs:line 22
+   at CanDoItAll.CognitiveMemory.Tests.NativeMafIntegrationTests.CuratorFlow_CapturesTrustedMemoryAndEmitsVerificationEventWhenAllowed() in C:\repositories\CanDoItAll.CognitiveMemory\tests\CanDoItAll.CognitiveMemory.Tests\NativeMafIntegrationTests.cs:line 38
+--- End of stack trace from previous location ---
+  Neúspěšné CanDoItAll.CognitiveMemory.Tests.NativeMafIntegrationTests.SelfRegulationFlow_EmitsMaintenanceSignalForHighRiskPendingReview [< 1 ms]
+  Chybová zpráva:
+   System.InvalidOperationException : Cannot resolve scoped service 'CanDoItAll.CognitiveMemory.Application.ICognitiveMemoryIngestionService' from root provider.
+  Trasování zásobníku:
+     at Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteValidator.ValidateResolution(ServiceCallSite callSite, IServiceScope scope, IServiceScope rootScope)
+   at Microsoft.Extensions.DependencyInjection.ServiceProvider.GetService(ServiceIdentifier serviceIdentifier, ServiceProviderEngineScope serviceProviderEngineScope)
+   at Microsoft.Extensions.DependencyInjection.ServiceProvider.GetService(Type serviceType)
+   at Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetRequiredService(IServiceProvider provider, Type serviceType)
+   at Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetRequiredService[T](IServiceProvider provider)
+   at CanDoItAll.CognitiveMemory.Tests.NativeMafIntegrationTests.SeedReviewRequiredMemoryAsync(ServiceProvider provider, Guid projectId) in C:\repositories\CanDoItAll.CognitiveMemory\tests\CanDoItAll.CognitiveMemory.Tests\NativeMafIntegrationTests.cs:line 152
+   at CanDoItAll.CognitiveMemory.Tests.NativeMafIntegrationTests.SelfRegulationFlow_EmitsMaintenanceSignalForHighRiskPendingReview() in C:\repositories\CanDoItAll.CognitiveMemory\tests\CanDoItAll.CognitiveMemory.Tests\NativeMafIntegrationTests.cs:line 83
+   at CanDoItAll.CognitiveMemory.Tests.NativeMafIntegrationTests.SelfRegulationFlow_EmitsMaintenanceSignalForHighRiskPendingReview() in C:\repositories\CanDoItAll.CognitiveMemory\tests\CanDoItAll.CognitiveMemory.Tests\NativeMafIntegrationTests.cs:line 93
+--- End of stack trace from previous location ---
+  Neúspěšné CanDoItAll.CognitiveMemory.Tests.NativeMafIntegrationTests.ProfessorFlow_DeniesVerificationEventWhenPolicyDisallowsRequests [1 ms]
+  Chybová zpráva:
+   System.InvalidOperationException : Cannot resolve scoped service 'CanDoItAll.CognitiveMemory.Application.ICognitiveMemoryIngestionService' from root provider.
+  Trasování zásobníku:
+     at Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteValidator.ValidateResolution(ServiceCallSite callSite, IServiceScope scope, IServiceScope rootScope)
+   at Microsoft.Extensions.DependencyInjection.ServiceProvider.GetService(ServiceIdentifier serviceIdentifier, ServiceProviderEngineScope serviceProviderEngineScope)
+   at Microsoft.Extensions.DependencyInjection.ServiceProvider.GetService(Type serviceType)
+   at Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetRequiredService(IServiceProvider provider, Type serviceType)
+   at Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetRequiredService[T](IServiceProvider provider)
+   at CanDoItAll.CognitiveMemory.Tests.NativeMafIntegrationTests.SeedReviewRequiredMemoryAsync(ServiceProvider provider, Guid projectId) in C:\repositories\CanDoItAll.CognitiveMemory\tests\CanDoItAll.CognitiveMemory.Tests\NativeMafIntegrationTests.cs:line 152
+   at CanDoItAll.CognitiveMemory.Tests.NativeMafIntegrationTests.ProfessorFlow_DeniesVerificationEventWhenPolicyDisallowsRequests() in C:\repositories\CanDoItAll.CognitiveMemory\tests\CanDoItAll.CognitiveMemory.Tests\NativeMafIntegrationTests.cs:line 46
+   at CanDoItAll.CognitiveMemory.Tests.NativeMafIntegrationTests.ProfessorFlow_DeniesVerificationEventWhenPolicyDisallowsRequests() in C:\repositories\CanDoItAll.CognitiveMemory\tests\CanDoItAll.CognitiveMemory.Tests\NativeMafIntegrationTests.cs:line 56
+--- End of stack trace from previous location ---
+
+Neúspěšné!  - Neúspěšné:     5, Úspěšné:     1, Přeskočeno:     0, Celkem:     6, Doba trvání: 110 ms - CanDoItAll.CognitiveMemory.Tests.dll (net10.0)

@@ -1,0 +1,137 @@
+**********************
+PowerShell transcript start
+Start time: 20260629180444
+Username: LUCYSPOWER\lucys
+RunAs User: LUCYSPOWER\lucys
+Configuration Name: 
+Machine: LUCYSPOWER (Microsoft Windows NT 10.0.26200.0)
+Host Application: C:\Program Files\PowerShell\7\pwsh.dll -Command try { [Console]::OutputEncoding=[System.Text.Encoding]::UTF8 } catch {}
+$ErrorActionPreference = 'Stop'
+$path = 'codex\bundles\workflow-node-project-isolation\proof\SB11\transcripts\static-architecture-check.txt'
+Start-Transcript -Path $path -Force | Out-Null
+function Assert-Condition([bool] $condition, [string] $message) {
+    if (-not $condition) { throw "CHECK FAILED: $message" }
+    Write-Output "PASS: $message"
+}
+$adapterProject = 'src\CanDoItAll.AgentFramework.Workflows.MafAdapter\CanDoItAll.AgentFramework.Workflows.MafAdapter.csproj'
+Assert-Condition (Test-Path $adapterProject) 'MAF workflow adapter project exists.'
+$slnText = Get-Content 'CanDoItAll.slnx' -Raw
+Assert-Condition ($slnText.Contains('CanDoItAll.AgentFramework.Workflows.MafAdapter.csproj')) 'Solution includes MAF workflow adapter project.'
+$adapterProjectText = Get-Content $adapterProject -Raw
+Assert-Condition (-not $adapterProjectText.Contains('CanDoItAll.AgentFramework.Maf')) 'Adapter project does not reference the MAF project.'
+$workflowProjects = @(
+    'src\CanDoItAll.AgentFramework.Workflows.Abstractions\CanDoItAll.AgentFramework.Workflows.Abstractions.csproj',
+    'src\CanDoItAll.AgentFramework.Workflows.Builder\CanDoItAll.AgentFramework.Workflows.Builder.csproj',
+    'src\CanDoItAll.AgentFramework.Workflows.Core\CanDoItAll.AgentFramework.Workflows.Core.csproj',
+    'src\CanDoItAll.AgentFramework.Workflows.Runtime\CanDoItAll.AgentFramework.Workflows.Runtime.csproj',
+    'src\CanDoItAll.AgentFramework.Workflows.Templates\CanDoItAll.AgentFramework.Workflows.Templates.csproj',
+    'src\CanDoItAll.AgentFramework.WorkflowExecutors.Abstractions\CanDoItAll.AgentFramework.WorkflowExecutors.Abstractions.csproj',
+    'src\CanDoItAll.AgentFramework.WorkflowExecutors.Core\CanDoItAll.AgentFramework.WorkflowExecutors.Core.csproj',
+    'src\CanDoItAll.AgentFramework.WorkflowExecutors.Standard\CanDoItAll.AgentFramework.WorkflowExecutors.Standard.csproj',
+    'src\CanDoItAll.AgentFramework.WorkflowExecutors.Plugins\CanDoItAll.AgentFramework.WorkflowExecutors.Plugins.csproj'
+)
+foreach ($project in $workflowProjects) {
+    $projectText = Get-Content $project -Raw
+    Assert-Condition (-not $projectText.Contains('CanDoItAll.AgentFramework.Maf')) "$project has no MAF project reference."
+    Assert-Condition (-not $projectText.Contains('CanDoItAll.AgentFramework.Workflows.MafAdapter')) "$project has no MAF adapter reference."
+}
+$mafWorkflowDirectory = 'src\CanDoItAll.AgentFramework.Maf\Runtime\Workflows'
+$remainingMafWorkflowFiles = if (Test-Path $mafWorkflowDirectory) { @(Get-ChildItem $mafWorkflowDirectory -Filter '*.cs' -Recurse) } else { @() }
+Assert-Condition ($remainingMafWorkflowFiles.Count -eq 0) 'MAF Runtime\Workflows has no remaining C# workflow implementation files.'
+$hostRegistration = Get-Content 'src\CanDoItAll.AgentFramework.Hosting\AgentFrameworkServiceCollectionExtensions.cs' -Raw
+$moduleRegistration = Get-Content 'src\CanDoItAll.Modules.AgentFramework\Services\AgentFrameworkModuleServiceCollectionExtensions.cs' -Raw
+Assert-Condition ($hostRegistration.Contains('AddMafWorkflowAdapterServices(ServiceLifetime.Singleton)')) 'Hosting delegates MAF workflow registration to adapter extension.'
+Assert-Condition ($moduleRegistration.Contains('AddMafWorkflowAdapterServices(ServiceLifetime.Scoped)')) 'AgentFramework module delegates MAF workflow registration to adapter extension.'
+foreach ($registration in @($hostRegistration, $moduleRegistration)) {
+    Assert-Condition (-not $registration.Contains('TryAddScoped<MafWorkflowCompiler>')) 'No host/module direct MafWorkflowCompiler registration.'
+    Assert-Condition (-not $registration.Contains('MafInProcessWorkflowExecutionBackend>')) 'No host/module direct MAF backend registration.'
+    Assert-Condition (-not $registration.Contains('AddStandardWorkflowExecutors(')) 'No host/module direct standard executor registration.'
+}
+$oldAliasMatches = & rg -n 'AddBuiltInWorkflowExecutors' src tests
+$oldAliasExit = $LASTEXITCODE
+Assert-Condition ($oldAliasExit -eq 1) 'Old AddBuiltInWorkflowExecutors alias is absent from source and tests.'
+if ($oldAliasMatches) { Write-Output $oldAliasMatches }
+$adapterRoot = 'src\CanDoItAll.AgentFramework.Workflows.MafAdapter'
+$expectedFiles = @(
+    'MafInProcessWorkflowExecutionBackend.cs',
+    'MafWorkflowCompiler.cs',
+    'MafWorkflowEventNormalizer.cs',
+    'MafWorkflowLlmComponentInvoker.cs',
+    'MafHandoffWorkflowFactory.cs',
+    'MafConfiguredFileArtifactResolver.cs',
+    'MafWorkflowAdapterFailureDiagnostics.cs',
+    'WorkflowBackendExternalRequestCapture.cs',
+    'WorkflowBackendProgressEventObserver.cs',
+    'MafWorkflowAdapterServiceCollectionExtensions.cs'
+)
+foreach ($fileName in $expectedFiles) {
+    Assert-Condition (Test-Path (Join-Path $adapterRoot $fileName)) "Adapter split file exists: $fileName"
+}
+$backendLines = (Get-Content (Join-Path $adapterRoot 'MafInProcessWorkflowExecutionBackend.cs') | Measure-Object -Line).Lines
+Write-Output "MafInProcessWorkflowExecutionBackend.cs lines: $backendLines"
+Assert-Condition ($backendLines -le 500) 'MAF backend remains under 500-line responsibility guard.'
+Stop-Transcript | Out-Null
+Process ID: 63244
+PSVersion: 7.5.5
+PSEdition: Core
+GitCommitId: 7.5.5
+OS: Microsoft Windows 10.0.26200
+Platform: Win32NT
+PSCompatibleVersions: 1.0, 2.0, 3.0, 4.0, 5.0, 5.1, 6.0, 7.0
+PSRemotingProtocolVersion: 2.3
+SerializationVersion: 1.1.0.1
+WSManStackVersion: 3.0
+**********************
+PASS: MAF workflow adapter project exists.
+PASS: Solution includes MAF workflow adapter project.
+PASS: Adapter project does not reference the MAF project.
+PASS: src\CanDoItAll.AgentFramework.Workflows.Abstractions\CanDoItAll.AgentFramework.Workflows.Abstractions.csproj has no MAF project reference.
+PASS: src\CanDoItAll.AgentFramework.Workflows.Abstractions\CanDoItAll.AgentFramework.Workflows.Abstractions.csproj has no MAF adapter reference.
+PASS: src\CanDoItAll.AgentFramework.Workflows.Builder\CanDoItAll.AgentFramework.Workflows.Builder.csproj has no MAF project reference.
+PASS: src\CanDoItAll.AgentFramework.Workflows.Builder\CanDoItAll.AgentFramework.Workflows.Builder.csproj has no MAF adapter reference.
+PASS: src\CanDoItAll.AgentFramework.Workflows.Core\CanDoItAll.AgentFramework.Workflows.Core.csproj has no MAF project reference.
+PASS: src\CanDoItAll.AgentFramework.Workflows.Core\CanDoItAll.AgentFramework.Workflows.Core.csproj has no MAF adapter reference.
+PASS: src\CanDoItAll.AgentFramework.Workflows.Runtime\CanDoItAll.AgentFramework.Workflows.Runtime.csproj has no MAF project reference.
+PASS: src\CanDoItAll.AgentFramework.Workflows.Runtime\CanDoItAll.AgentFramework.Workflows.Runtime.csproj has no MAF adapter reference.
+PASS: src\CanDoItAll.AgentFramework.Workflows.Templates\CanDoItAll.AgentFramework.Workflows.Templates.csproj has no MAF project reference.
+PASS: src\CanDoItAll.AgentFramework.Workflows.Templates\CanDoItAll.AgentFramework.Workflows.Templates.csproj has no MAF adapter reference.
+PASS: src\CanDoItAll.AgentFramework.WorkflowExecutors.Abstractions\CanDoItAll.AgentFramework.WorkflowExecutors.Abstractions.csproj has no MAF project reference.
+PASS: src\CanDoItAll.AgentFramework.WorkflowExecutors.Abstractions\CanDoItAll.AgentFramework.WorkflowExecutors.Abstractions.csproj has no MAF adapter reference.
+PASS: src\CanDoItAll.AgentFramework.WorkflowExecutors.Core\CanDoItAll.AgentFramework.WorkflowExecutors.Core.csproj has no MAF project reference.
+PASS: src\CanDoItAll.AgentFramework.WorkflowExecutors.Core\CanDoItAll.AgentFramework.WorkflowExecutors.Core.csproj has no MAF adapter reference.
+PASS: src\CanDoItAll.AgentFramework.WorkflowExecutors.Standard\CanDoItAll.AgentFramework.WorkflowExecutors.Standard.csproj has no MAF project reference.
+PASS: src\CanDoItAll.AgentFramework.WorkflowExecutors.Standard\CanDoItAll.AgentFramework.WorkflowExecutors.Standard.csproj has no MAF adapter reference.
+PASS: src\CanDoItAll.AgentFramework.WorkflowExecutors.Plugins\CanDoItAll.AgentFramework.WorkflowExecutors.Plugins.csproj has no MAF project reference.
+PASS: src\CanDoItAll.AgentFramework.WorkflowExecutors.Plugins\CanDoItAll.AgentFramework.WorkflowExecutors.Plugins.csproj has no MAF adapter reference.
+PASS: MAF Runtime\Workflows has no remaining C# workflow implementation files.
+PASS: Hosting delegates MAF workflow registration to adapter extension.
+PASS: AgentFramework module delegates MAF workflow registration to adapter extension.
+PASS: No host/module direct MafWorkflowCompiler registration.
+PASS: No host/module direct MAF backend registration.
+PASS: No host/module direct standard executor registration.
+PASS: No host/module direct MafWorkflowCompiler registration.
+PASS: No host/module direct MAF backend registration.
+PASS: No host/module direct standard executor registration.
+PASS: Old AddBuiltInWorkflowExecutors alias is absent from source and tests.
+PASS: Adapter split file exists: MafInProcessWorkflowExecutionBackend.cs
+PASS: Adapter split file exists: MafWorkflowCompiler.cs
+PASS: Adapter split file exists: MafWorkflowEventNormalizer.cs
+PASS: Adapter split file exists: MafWorkflowLlmComponentInvoker.cs
+PASS: Adapter split file exists: MafHandoffWorkflowFactory.cs
+PASS: Adapter split file exists: MafConfiguredFileArtifactResolver.cs
+PASS: Adapter split file exists: MafWorkflowAdapterFailureDiagnostics.cs
+PASS: Adapter split file exists: WorkflowBackendExternalRequestCapture.cs
+PASS: Adapter split file exists: WorkflowBackendProgressEventObserver.cs
+PASS: Adapter split file exists: MafWorkflowAdapterServiceCollectionExtensions.cs
+MafInProcessWorkflowExecutionBackend.cs lines: 421
+PASS: MAF backend remains under 500-line responsibility guard.
+**********************
+PowerShell transcript end
+End time: 20260629180444
+**********************
+
+Completed Validator Metadata Addendum
+Command: historical SB11 proof command recorded during bundle execution
+ExitCode: 0
+ExitCode: 1
+Invariant ID: SB11-final-closure

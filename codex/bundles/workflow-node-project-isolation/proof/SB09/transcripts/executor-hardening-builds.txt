@@ -1,0 +1,186 @@
+CWD: C:\repositories\CanDoItAll
+START: 2026-06-29T16:13:37.7179027-04:00
+COMMAND: dotnet build src\CanDoItAll.AgentFramework.WorkflowExecutors.Abstractions\CanDoItAll.AgentFramework.WorkflowExecutors.Abstractions.csproj -v:minimal
+  Zjišťují se projekty, které se mají obnovit...
+  Všechny projekty jsou v aktuálním stavu pro obnovení.
+  CanDoItAll.SharedKernel -> C:\repositories\CanDoItAll\src\CanDoItAll.SharedKernel\bin\Debug\net10.0\CanDoItAll.SharedKernel.dll
+  CanDoItAll.AgentFramework.Models -> C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Models\bin\Debug\net10.0\CanDoItAll.AgentFramework.Models.dll
+  CanDoItAll.AgentFramework.WorkflowExecutors.Abstractions -> C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.WorkflowExecutors.Abstractions\bin\Debug\net10.0\CanDoItAll.AgentFramework.WorkflowExecutors.Abstractions.dll
+
+Vytváření sestavení bylo úspěšně dokončeno.
+    0 upozornění
+    Počet chyb: 0
+
+Uplynulý čas 00:00:03.00
+COMMAND_EXIT_CODE: 0
+COMMAND: dotnet build src\CanDoItAll.AgentFramework.WorkflowExecutors.Core\CanDoItAll.AgentFramework.WorkflowExecutors.Core.csproj -v:minimal
+  Zjišťují se projekty, které se mají obnovit...
+  Všechny projekty jsou v aktuálním stavu pro obnovení.
+  CanDoItAll.SharedKernel -> C:\repositories\CanDoItAll\src\CanDoItAll.SharedKernel\bin\Debug\net10.0\CanDoItAll.SharedKernel.dll
+  CanDoItAll.AgentFramework.Models -> C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Models\bin\Debug\net10.0\CanDoItAll.AgentFramework.Models.dll
+  CanDoItAll.AgentFramework.Workflows.Abstractions -> C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Workflows.Abstractions\bin\Debug\net10.0\CanDoItAll.AgentFramework.Workflows.Abstractions.dll
+  CanDoItAll.AgentFramework.WorkflowExecutors.Abstractions -> C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.WorkflowExecutors.Abstractions\bin\Debug\net10.0\CanDoItAll.AgentFramework.WorkflowExecutors.Abstractions.dll
+  CanDoItAll.AgentFramework.WorkflowExecutors.Core -> C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.WorkflowExecutors.Core\bin\Debug\net10.0\CanDoItAll.AgentFramework.WorkflowExecutors.Core.dll
+
+Vytváření sestavení bylo úspěšně dokončeno.
+    0 upozornění
+    Počet chyb: 0
+
+Uplynulý čas 00:00:02.38
+COMMAND_EXIT_CODE: 0
+COMMAND: dotnet build src\CanDoItAll.AgentFramework.WorkflowExecutors.Standard\CanDoItAll.AgentFramework.WorkflowExecutors.Standard.csproj -v:minimal
+  Zjišťují se projekty, které se mají obnovit...
+  Všechny projekty jsou v aktuálním stavu pro obnovení.
+  CanDoItAll.Tools.Documents -> C:\repositories\CanDoItAll\src\CanDoItAll.Tools.Documents\bin\Debug\net10.0\CanDoItAll.Tools.Documents.dll
+  CanDoItAll.AgentFramework.Capabilities.Abstractions -> C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Capabilities.Abstractions\bin\Debug\net10.0\CanDoItAll.AgentFramework.Capabilities.Abstractions.dll
+  CanDoItAll.Git -> C:\repositories\CanDoItAll\src\CanDoItAll.Git\bin\Debug\net10.0\CanDoItAll.Git.dll
+  CanDoItAll.SharedKernel -> C:\repositories\CanDoItAll\src\CanDoItAll.SharedKernel\bin\Debug\net10.0\CanDoItAll.SharedKernel.dll
+  CanDoItAll.Infrastructure -> C:\repositories\CanDoItAll\src\CanDoItAll.Infrastructure\bin\Debug\net10.0\CanDoItAll.Infrastructure.dll
+  CanDoItAll.Modules.Security -> C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Security\bin\Debug\net10.0\CanDoItAll.Modules.Security.dll
+  CanDoItAll.AgentFramework.Models -> C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Models\bin\Debug\net10.0\CanDoItAll.AgentFramework.Models.dll
+  CanDoItAll.AgentFramework.Workflows.Abstractions -> C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Workflows.Abstractions\bin\Debug\net10.0\CanDoItAll.AgentFramework.Workflows.Abstractions.dll
+  CanDoItAll.AgentFramework.WorkflowExecutors.Abstractions -> C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.WorkflowExecutors.Abstractions\bin\Debug\net10.0\CanDoItAll.AgentFramework.WorkflowExecutors.Abstractions.dll
+  CanDoItAll.AgentFramework.WorkflowExecutors.Core -> C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.WorkflowExecutors.Core\bin\Debug\net10.0\CanDoItAll.AgentFramework.WorkflowExecutors.Core.dll
+  CanDoItAll.AgentFramework.Core -> C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Core\bin\Debug\net10.0\CanDoItAll.AgentFramework.Core.dll
+  CanDoItAll.AgentFramework.Workflows.Runtime -> C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Workflows.Runtime\bin\Debug\net10.0\CanDoItAll.AgentFramework.Workflows.Runtime.dll
+  CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Media -> C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Media\bin\Debug\net10.0\CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Media.dll
+  CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Workspace -> C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Workspace\bin\Debug\net10.0\CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Workspace.dll
+  CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Documents -> C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Documents\bin\Debug\net10.0\CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Documents.dll
+  CanDoItAll.AgentFramework.Workflows.Core -> C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Workflows.Core\bin\Debug\net10.0\CanDoItAll.AgentFramework.Workflows.Core.dll
+  CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Control -> C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Control\bin\Debug\net10.0\CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Control.dll
+  CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Transforms -> C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Transforms\bin\Debug\net10.0\CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Transforms.dll
+  CanDoItAll.AgentFramework.WorkflowExecutors.Standard.ProjectStructure -> C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.WorkflowExecutors.Standard.ProjectStructure\bin\Debug\net10.0\CanDoItAll.AgentFramework.WorkflowExecutors.Standard.ProjectStructure.dll
+  CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Network -> C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Network\bin\Debug\net10.0\CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Network.dll
+  CanDoItAll.AgentFramework.WorkflowExecutors.Standard -> C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.WorkflowExecutors.Standard\bin\Debug\net10.0\CanDoItAll.AgentFramework.WorkflowExecutors.Standard.dll
+
+Vytváření sestavení bylo úspěšně dokončeno.
+    0 upozornění
+    Počet chyb: 0
+
+Uplynulý čas 00:00:06.68
+COMMAND_EXIT_CODE: 0
+COMMAND: dotnet build src\CanDoItAll.AgentFramework.WorkflowExecutors.Plugins\CanDoItAll.AgentFramework.WorkflowExecutors.Plugins.csproj -v:minimal
+  Zjišťují se projekty, které se mají obnovit...
+  Všechny projekty jsou v aktuálním stavu pro obnovení.
+  CanDoItAll.SharedKernel -> C:\repositories\CanDoItAll\src\CanDoItAll.SharedKernel\bin\Debug\net10.0\CanDoItAll.SharedKernel.dll
+  CanDoItAll.AgentFramework.Models -> C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Models\bin\Debug\net10.0\CanDoItAll.AgentFramework.Models.dll
+  CanDoItAll.AgentFramework.WorkflowExecutors.Abstractions -> C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.WorkflowExecutors.Abstractions\bin\Debug\net10.0\CanDoItAll.AgentFramework.WorkflowExecutors.Abstractions.dll
+  CanDoItAll.Plugins.Abstractions -> C:\repositories\CanDoItAll\src\CanDoItAll.Plugins.Abstractions\bin\Debug\net10.0\CanDoItAll.Plugins.Abstractions.dll
+  CanDoItAll.AgentFramework.WorkflowExecutors.Plugins -> C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.WorkflowExecutors.Plugins\bin\Debug\net10.0\CanDoItAll.AgentFramework.WorkflowExecutors.Plugins.dll
+
+Vytváření sestavení bylo úspěšně dokončeno.
+    0 upozornění
+    Počet chyb: 0
+
+Uplynulý čas 00:00:02.33
+COMMAND_EXIT_CODE: 0
+COMMAND: dotnet build src\plugins\CanDoItAll.Plugin.Docker\CanDoItAll.Plugin.Docker.csproj --no-restore -v:minimal
+  CanDoItAll.SharedKernel -> C:\repositories\CanDoItAll\src\CanDoItAll.SharedKernel\bin\Debug\net10.0\CanDoItAll.SharedKernel.dll
+  CanDoItAll.Git -> C:\repositories\CanDoItAll\src\CanDoItAll.Git\bin\Debug\net10.0\CanDoItAll.Git.dll
+  CanDoItAll.AgentFramework.Capabilities.Abstractions -> C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Capabilities.Abstractions\bin\Debug\net10.0\CanDoItAll.AgentFramework.Capabilities.Abstractions.dll
+  CanDoItAll.AgentFramework.Models -> C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Models\bin\Debug\net10.0\CanDoItAll.AgentFramework.Models.dll
+  CanDoItAll.Infrastructure -> C:\repositories\CanDoItAll\src\CanDoItAll.Infrastructure\bin\Debug\net10.0\CanDoItAll.Infrastructure.dll
+  CanDoItAll.Plugins.Abstractions -> C:\repositories\CanDoItAll\src\CanDoItAll.Plugins.Abstractions\bin\Debug\net10.0\CanDoItAll.Plugins.Abstractions.dll
+  CanDoItAll.AgentFramework.WorkflowExecutors.Abstractions -> C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.WorkflowExecutors.Abstractions\bin\Debug\net10.0\CanDoItAll.AgentFramework.WorkflowExecutors.Abstractions.dll
+  CanDoItAll.AgentFramework.Workflows.Abstractions -> C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Workflows.Abstractions\bin\Debug\net10.0\CanDoItAll.AgentFramework.Workflows.Abstractions.dll
+  CanDoItAll.Modules.Security -> C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Security\bin\Debug\net10.0\CanDoItAll.Modules.Security.dll
+  CanDoItAll.AgentFramework.WorkflowExecutors.Plugins -> C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.WorkflowExecutors.Plugins\bin\Debug\net10.0\CanDoItAll.AgentFramework.WorkflowExecutors.Plugins.dll
+  CanDoItAll.AgentFramework.WorkflowExecutors.Core -> C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.WorkflowExecutors.Core\bin\Debug\net10.0\CanDoItAll.AgentFramework.WorkflowExecutors.Core.dll
+  CanDoItAll.AgentFramework.Core -> C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Core\bin\Debug\net10.0\CanDoItAll.AgentFramework.Core.dll
+  CanDoItAll.AgentFramework.Workflows.Runtime -> C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Workflows.Runtime\bin\Debug\net10.0\CanDoItAll.AgentFramework.Workflows.Runtime.dll
+  CanDoItAll.AgentFramework.Workflows.Core -> C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Workflows.Core\bin\Debug\net10.0\CanDoItAll.AgentFramework.Workflows.Core.dll
+  CanDoItAll.Modules.Plugins -> C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Plugins\bin\Debug\net10.0\CanDoItAll.Modules.Plugins.dll
+  CanDoItAll.Plugin.Docker -> C:\repositories\CanDoItAll\src\plugins\CanDoItAll.Plugin.Docker\bin\Debug\net10.0\CanDoItAll.Plugin.Docker.dll
+
+Vytváření sestavení bylo úspěšně dokončeno.
+    0 upozornění
+    Počet chyb: 0
+
+Uplynulý čas 00:00:05.14
+COMMAND_EXIT_CODE: 0
+COMMAND: dotnet build src\plugins\CanDoItAll.Plugin.Gmail\CanDoItAll.Plugin.Gmail.csproj --no-restore -v:minimal
+  CanDoItAll.SharedKernel -> C:\repositories\CanDoItAll\src\CanDoItAll.SharedKernel\bin\Debug\net10.0\CanDoItAll.SharedKernel.dll
+  CanDoItAll.Git -> C:\repositories\CanDoItAll\src\CanDoItAll.Git\bin\Debug\net10.0\CanDoItAll.Git.dll
+  CanDoItAll.AgentFramework.Capabilities.Abstractions -> C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Capabilities.Abstractions\bin\Debug\net10.0\CanDoItAll.AgentFramework.Capabilities.Abstractions.dll
+  CanDoItAll.AgentFramework.Models -> C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Models\bin\Debug\net10.0\CanDoItAll.AgentFramework.Models.dll
+  CanDoItAll.Infrastructure -> C:\repositories\CanDoItAll\src\CanDoItAll.Infrastructure\bin\Debug\net10.0\CanDoItAll.Infrastructure.dll
+  CanDoItAll.Plugins.Abstractions -> C:\repositories\CanDoItAll\src\CanDoItAll.Plugins.Abstractions\bin\Debug\net10.0\CanDoItAll.Plugins.Abstractions.dll
+  CanDoItAll.AgentFramework.WorkflowExecutors.Abstractions -> C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.WorkflowExecutors.Abstractions\bin\Debug\net10.0\CanDoItAll.AgentFramework.WorkflowExecutors.Abstractions.dll
+  CanDoItAll.Modules.Security -> C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Security\bin\Debug\net10.0\CanDoItAll.Modules.Security.dll
+  CanDoItAll.AgentFramework.Workflows.Abstractions -> C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Workflows.Abstractions\bin\Debug\net10.0\CanDoItAll.AgentFramework.Workflows.Abstractions.dll
+  CanDoItAll.AgentFramework.WorkflowExecutors.Plugins -> C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.WorkflowExecutors.Plugins\bin\Debug\net10.0\CanDoItAll.AgentFramework.WorkflowExecutors.Plugins.dll
+  CanDoItAll.AgentFramework.WorkflowExecutors.Core -> C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.WorkflowExecutors.Core\bin\Debug\net10.0\CanDoItAll.AgentFramework.WorkflowExecutors.Core.dll
+  CanDoItAll.AgentFramework.Core -> C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Core\bin\Debug\net10.0\CanDoItAll.AgentFramework.Core.dll
+  CanDoItAll.AgentFramework.Workflows.Runtime -> C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Workflows.Runtime\bin\Debug\net10.0\CanDoItAll.AgentFramework.Workflows.Runtime.dll
+  CanDoItAll.AgentFramework.Workflows.Core -> C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Workflows.Core\bin\Debug\net10.0\CanDoItAll.AgentFramework.Workflows.Core.dll
+  CanDoItAll.Plugin.Email -> C:\repositories\CanDoItAll\src\plugins\CanDoItAll.Plugin.Email\bin\Debug\net10.0\CanDoItAll.Plugin.Email.dll
+  CanDoItAll.Modules.Plugins -> C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Plugins\bin\Debug\net10.0\CanDoItAll.Modules.Plugins.dll
+  CanDoItAll.Plugin.Gmail -> C:\repositories\CanDoItAll\src\plugins\CanDoItAll.Plugin.Gmail\bin\Debug\net10.0\CanDoItAll.Plugin.Gmail.dll
+
+Vytváření sestavení bylo úspěšně dokončeno.
+    0 upozornění
+    Počet chyb: 0
+
+Uplynulý čas 00:00:04.33
+COMMAND_EXIT_CODE: 0
+COMMAND: dotnet build src\plugins\CanDoItAll.Plugin.Office365\CanDoItAll.Plugin.Office365.csproj --no-restore -v:minimal
+  CanDoItAll.Git -> C:\repositories\CanDoItAll\src\CanDoItAll.Git\bin\Debug\net10.0\CanDoItAll.Git.dll
+  CanDoItAll.SharedKernel -> C:\repositories\CanDoItAll\src\CanDoItAll.SharedKernel\bin\Debug\net10.0\CanDoItAll.SharedKernel.dll
+  CanDoItAll.AgentFramework.Models -> C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Models\bin\Debug\net10.0\CanDoItAll.AgentFramework.Models.dll
+  CanDoItAll.AgentFramework.Capabilities.Abstractions -> C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Capabilities.Abstractions\bin\Debug\net10.0\CanDoItAll.AgentFramework.Capabilities.Abstractions.dll
+  CanDoItAll.AgentFramework.WorkflowExecutors.Abstractions -> C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.WorkflowExecutors.Abstractions\bin\Debug\net10.0\CanDoItAll.AgentFramework.WorkflowExecutors.Abstractions.dll
+  CanDoItAll.Infrastructure -> C:\repositories\CanDoItAll\src\CanDoItAll.Infrastructure\bin\Debug\net10.0\CanDoItAll.Infrastructure.dll
+  CanDoItAll.Plugins.Abstractions -> C:\repositories\CanDoItAll\src\CanDoItAll.Plugins.Abstractions\bin\Debug\net10.0\CanDoItAll.Plugins.Abstractions.dll
+  CanDoItAll.AgentFramework.Workflows.Abstractions -> C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Workflows.Abstractions\bin\Debug\net10.0\CanDoItAll.AgentFramework.Workflows.Abstractions.dll
+  CanDoItAll.Modules.Security -> C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Security\bin\Debug\net10.0\CanDoItAll.Modules.Security.dll
+  CanDoItAll.AgentFramework.WorkflowExecutors.Plugins -> C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.WorkflowExecutors.Plugins\bin\Debug\net10.0\CanDoItAll.AgentFramework.WorkflowExecutors.Plugins.dll
+  CanDoItAll.AgentFramework.WorkflowExecutors.Core -> C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.WorkflowExecutors.Core\bin\Debug\net10.0\CanDoItAll.AgentFramework.WorkflowExecutors.Core.dll
+  CanDoItAll.AgentFramework.Core -> C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Core\bin\Debug\net10.0\CanDoItAll.AgentFramework.Core.dll
+  CanDoItAll.AgentFramework.Workflows.Runtime -> C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Workflows.Runtime\bin\Debug\net10.0\CanDoItAll.AgentFramework.Workflows.Runtime.dll
+  CanDoItAll.AgentFramework.Workflows.Core -> C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Workflows.Core\bin\Debug\net10.0\CanDoItAll.AgentFramework.Workflows.Core.dll
+  CanDoItAll.Plugin.Email -> C:\repositories\CanDoItAll\src\plugins\CanDoItAll.Plugin.Email\bin\Debug\net10.0\CanDoItAll.Plugin.Email.dll
+  CanDoItAll.Modules.Plugins -> C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Plugins\bin\Debug\net10.0\CanDoItAll.Modules.Plugins.dll
+  CanDoItAll.Plugin.Office365 -> C:\repositories\CanDoItAll\src\plugins\CanDoItAll.Plugin.Office365\bin\Debug\net10.0\CanDoItAll.Plugin.Office365.dll
+
+Vytváření sestavení bylo úspěšně dokončeno.
+    0 upozornění
+    Počet chyb: 0
+
+Uplynulý čas 00:00:05.39
+COMMAND_EXIT_CODE: 0
+COMMAND: dotnet build src\plugins\CanDoItAll.Plugin.Email\CanDoItAll.Plugin.Email.csproj --no-restore -v:minimal
+  CanDoItAll.Git -> C:\repositories\CanDoItAll\src\CanDoItAll.Git\bin\Debug\net10.0\CanDoItAll.Git.dll
+  CanDoItAll.AgentFramework.Capabilities.Abstractions -> C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Capabilities.Abstractions\bin\Debug\net10.0\CanDoItAll.AgentFramework.Capabilities.Abstractions.dll
+  CanDoItAll.SharedKernel -> C:\repositories\CanDoItAll\src\CanDoItAll.SharedKernel\bin\Debug\net10.0\CanDoItAll.SharedKernel.dll
+  CanDoItAll.AgentFramework.Models -> C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Models\bin\Debug\net10.0\CanDoItAll.AgentFramework.Models.dll
+  CanDoItAll.AgentFramework.Workflows.Abstractions -> C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Workflows.Abstractions\bin\Debug\net10.0\CanDoItAll.AgentFramework.Workflows.Abstractions.dll
+  CanDoItAll.AgentFramework.WorkflowExecutors.Abstractions -> C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.WorkflowExecutors.Abstractions\bin\Debug\net10.0\CanDoItAll.AgentFramework.WorkflowExecutors.Abstractions.dll
+  CanDoItAll.AgentFramework.WorkflowExecutors.Core -> C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.WorkflowExecutors.Core\bin\Debug\net10.0\CanDoItAll.AgentFramework.WorkflowExecutors.Core.dll
+  CanDoItAll.AgentFramework.Core -> C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Core\bin\Debug\net10.0\CanDoItAll.AgentFramework.Core.dll
+  CanDoItAll.AgentFramework.Workflows.Runtime -> C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Workflows.Runtime\bin\Debug\net10.0\CanDoItAll.AgentFramework.Workflows.Runtime.dll
+  CanDoItAll.AgentFramework.Workflows.Core -> C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Workflows.Core\bin\Debug\net10.0\CanDoItAll.AgentFramework.Workflows.Core.dll
+  CanDoItAll.Plugin.Email -> C:\repositories\CanDoItAll\src\plugins\CanDoItAll.Plugin.Email\bin\Debug\net10.0\CanDoItAll.Plugin.Email.dll
+
+Vytváření sestavení bylo úspěšně dokončeno.
+    0 upozornění
+    Počet chyb: 0
+
+Uplynulý čas 00:00:04.02
+COMMAND_EXIT_CODE: 0
+COMMAND: dotnet build tests\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj --no-restore --no-dependencies -v:minimal
+  CanDoItAll.Tests.Unit -> C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Unit\bin\Debug\net10.0\CanDoItAll.Tests.Unit.dll
+
+Vytváření sestavení bylo úspěšně dokončeno.
+    0 upozornění
+    Počet chyb: 0
+
+Uplynulý čas 00:00:08.31
+COMMAND_EXIT_CODE: 0
+END: 2026-06-29T16:14:28.2874444-04:00
+EXIT_CODE: 0
+
+Completed Validator Metadata Addendum
+Command: historical SB09 proof command recorded during bundle execution
+ExitCode: 0
+ExitCode: 1
+Invariant ID: SB09-final-closure

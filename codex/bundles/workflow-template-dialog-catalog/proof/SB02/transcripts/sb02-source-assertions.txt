@@ -1,0 +1,27 @@
+Source assertion commands:
+
+1. Stale tab/eager-load audit:
+rg -n "TODO|NotImplemented|Template preview pending|throw new NotImplemented|workflows-tab-templates|TemplatesTabIndex|WorkflowTabRequiresTemplatePack|EnsureTemplatePackLoadedAsync\(|TemplatePackLoader\.Load\(" src/CanDoItAll.Modules.AgentFramework/Pages tests/CanDoItAll.Tests.Components/WorkflowsPageTests.cs
+
+Relevant output:
+- tests/CanDoItAll.Tests.Components/WorkflowsPageTests.cs:100 and :300 assert that [data-testid='workflows-tab-templates'] is absent.
+- src/CanDoItAll.Modules.AgentFramework/Pages/WorkflowsPage.razor.cs:339 is the only caller of EnsureTemplatePackLoadedAsync and is inside OpenTemplateCatalogueDialogAsync.
+- src/CanDoItAll.Modules.AgentFramework/Pages/WorkflowsPage.razor.cs:852-854 contains the only TemplatePackLoader.Load() call on the page.
+
+2. Catalogue wiring audit:
+rg -n "isTemplateCatalogueDialogOpen|OpenTemplateCatalogueDialogAsync|EnsureTemplatePackLoadedAsync|WorkflowTabRequiresComponentLibrary|workflows-template-catalogue-dialog|workflows-open-template-catalogue|workflows-template-preview" src/CanDoItAll.Modules.AgentFramework/Pages/WorkflowsPage.razor src/CanDoItAll.Modules.AgentFramework/Pages/WorkflowsPage.razor.cs tests/CanDoItAll.Tests.Components/WorkflowsPageTests.cs
+
+Relevant output:
+- Workflows tab button: src/CanDoItAll.Modules.AgentFramework/Pages/WorkflowsPage.razor:167-169.
+- Catalogue dialog: src/CanDoItAll.Modules.AgentFramework/Pages/WorkflowsPage.razor:613-624.
+- Preview buttons: src/CanDoItAll.Modules.AgentFramework/Pages/WorkflowsPage.razor:692.
+- Open method: src/CanDoItAll.Modules.AgentFramework/Pages/WorkflowsPage.razor.cs:320-350.
+- Component library tab requirements no longer include templates: src/CanDoItAll.Modules.AgentFramework/Pages/WorkflowsPage.razor.cs:858-859.
+
+Anti-stub result:
+No TODO, NotImplemented, or placeholder preview-pending code was found in the modified Workflows page sources.
+
+Command: completed-stage transcript metadata normalization
+ExitCode: 0
+Invariant ID: SB02-INV-001
+Invariant ID: SB02-INV-002

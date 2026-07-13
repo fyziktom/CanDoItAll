@@ -1,0 +1,19 @@
+SB24 failing-first native scaffold audit
+Native repo: C:\repositories\CanDoItAll.CognitiveMemory
+
+Initial git status:
+## main...origin/main
+
+EXPECTED FAIL: CanDoItAll.CognitiveMemory.slnx is missing before SB24 scaffold
+EXPECTED FAIL: src\CanDoItAll.CognitiveMemory.Contracts\CanDoItAll.CognitiveMemory.Contracts.csproj is missing before SB24 scaffold
+EXPECTED FAIL: src\CanDoItAll.CognitiveMemory.Domain\CanDoItAll.CognitiveMemory.Domain.csproj is missing before SB24 scaffold
+EXPECTED FAIL: src\CanDoItAll.CognitiveMemory.Persistence\CanDoItAll.CognitiveMemory.Persistence.csproj is missing before SB24 scaffold
+EXPECTED FAIL: src\CanDoItAll.CognitiveMemory.Application\CanDoItAll.CognitiveMemory.Application.csproj is missing before SB24 scaffold
+EXPECTED FAIL: src\CanDoItAll.CognitiveMemory.Projection.Rag\CanDoItAll.CognitiveMemory.Projection.Rag.csproj is missing before SB24 scaffold
+EXPECTED FAIL: src\CanDoItAll.CognitiveMemory.Maf\CanDoItAll.CognitiveMemory.Maf.csproj is missing before SB24 scaffold
+EXPECTED FAIL: src\CanDoItAll.CognitiveMemory.Service\CanDoItAll.CognitiveMemory.Service.csproj is missing before SB24 scaffold
+EXPECTED FAIL: src\CanDoItAll.CognitiveMemory.Workers\CanDoItAll.CognitiveMemory.Workers.csproj is missing before SB24 scaffold
+EXPECTED FAIL: src\CanDoItAll.CognitiveMemory.UI\CanDoItAll.CognitiveMemory.UI.csproj is missing before SB24 scaffold
+EXPECTED FAIL: tests\CanDoItAll.CognitiveMemory.Tests\CanDoItAll.CognitiveMemory.Tests.csproj is missing before SB24 scaffold
+
+Result: failing-first audit failed as expected with 11 missing scaffold artifact(s).

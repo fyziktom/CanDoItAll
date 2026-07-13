@@ -1,0 +1,6 @@
+Command: rg -n "CanDoItAll\.Infrastructure|AppDbContext|CanDoItAll\.Composition|CanDoItAll\.Modules\.AgentFramework|CanDoItAll\.Modules\.CognitiveMemory" C:\repositories\CanDoItAll.CognitiveMemory\src -g "*.cs" -g "*.csproj"
+Working directory: C:\repositories\CanDoItAll
+Start time UTC: 2026-07-05T23:54:10.0155429Z
+Output:
+PASS: native production source has no forbidden host persistence, host composition, main module, or main AgentFramework references.
+Exit code: 0

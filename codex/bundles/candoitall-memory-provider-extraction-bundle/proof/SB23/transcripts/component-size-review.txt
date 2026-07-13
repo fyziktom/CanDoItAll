@@ -1,0 +1,23 @@
+Command: Historical SB23 proof transcript: component-size-review.txt
+SB23 component size and extraction review
+Limit: MemoryProvidersPage.razor must stay <= 1300 lines after extracting provider list, provider UI host, operation rows, feedback rows, and event rows.
+
+1200 lines PASS src\Modules\CanDoItAll.Modules.Memory\Pages\MemoryProvidersPage.razor
+  73 lines PASS src\Modules\CanDoItAll.Modules.Memory\Components\MemoryProviderListPanel.razor
+  85 lines PASS src\Modules\CanDoItAll.Modules.Memory\Components\MemoryProviderUiSurfaceHost.razor
+  56 lines PASS src\Modules\CanDoItAll.Modules.Memory\Components\MemoryOperationLedgerRow.razor
+  16 lines PASS src\Modules\CanDoItAll.Modules.Memory\Components\MemoryFeedbackLedgerRow.razor
+  27 lines PASS src\Modules\CanDoItAll.Modules.Memory\Components\MemoryEventInboxRow.razor
+  42 lines PASS src\Modules\CanDoItAll.Modules.Memory\Components\MemoryUiFormatting.cs
+ 741 lines PASS src\Modules\CanDoItAll.Modules.Memory\Services\MemoryProviderManagementUiService.cs
+ 353 lines PASS src\Modules\CanDoItAll.Modules.Memory\Services\MemoryProviderManagementUiContracts.cs
+  65 lines PASS tests\Components\CanDoItAll.Tests.Components\MemoryUiRefactoringCheckpointTests.cs
+
+PASS: page no longer contains extracted helper RenderProviderUiSurface(
+PASS: page no longer contains extracted helper RenderOperationRow(
+PASS: page no longer contains extracted helper RenderFeedbackRow(
+PASS: page no longer contains extracted helper RenderEventRow(
+
+PASS: UI composition has focused child components and the page remains within the checkpoint line budget.
+ExitCode: 0
+

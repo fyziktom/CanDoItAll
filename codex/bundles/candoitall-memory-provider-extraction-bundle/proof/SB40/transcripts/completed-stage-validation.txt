@@ -1,0 +1,17 @@
+Run label: SB40 final bundle validator results
+Captured: 2026-07-12
+Working directory: repo://
+
+Command: python C:/Users/lucys/.codex/skills/candoitall-bundle-preparation/scripts/validate_bundle.py C:/repositories/CanDoItAll/codex/bundles/candoitall-memory-provider-extraction-bundle --stage completed --profile initiative --repo-root C:/repositories/CanDoItAll
+Exit code: 0
+Output: Bundle is valid for stage 'completed': C:\repositories\CanDoItAll\codex\bundles\candoitall-memory-provider-extraction-bundle
+
+Command: python C:/Users/lucys/.codex/skills/candoitall-bundle-preparation/scripts/validate_bundle.py C:/repositories/CanDoItAll/codex/bundles/candoitall-memory-provider-extraction-bundle --stage prepared --profile initiative --repo-root C:/repositories/CanDoItAll
+Exit code: 0
+Output: Bundle is valid for stage 'prepared': C:\repositories\CanDoItAll\codex\bundles\candoitall-memory-provider-extraction-bundle
+
+Command: python C:/Users/lucys/.codex/skills/candoitall-bundle-preparation/scripts/validate_bundle.py C:/repositories/CanDoItAll/codex/bundles/candoitall-memory-provider-extraction-bundle --stage completed --profile feedback --repo-root C:/repositories/CanDoItAll
+Exit code: 0
+Output: Bundle is valid for stage 'completed': C:\repositories\CanDoItAll\codex\bundles\candoitall-memory-provider-extraction-bundle
+
+Qualification: the final reruns occurred after Mem0 bypass retirement, Context/Tools/DependencyInjection namespace cleanup, refreshed CodeAnalytics, changed-file hash refresh, and stale broad-test qualification were synchronized.

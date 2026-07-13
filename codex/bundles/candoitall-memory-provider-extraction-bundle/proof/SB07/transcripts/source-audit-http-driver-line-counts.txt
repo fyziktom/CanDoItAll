@@ -1,0 +1,15 @@
+Command: count lines in src\Memory\CanDoItAll.Memory.Http\*.cs and require each file <= 220 lines
+WorkingDirectory: C:\repositories\CanDoItAll
+RunLabel: SB07 HTTP driver cohesion line-count audit
+ExitCode: 0
+Summary: HTTP driver files are split into bounded cohesive partials under the foundation checkpoint limit.
+Output:
+.\src\Memory\CanDoItAll.Memory.Http\HttpMemoryProviderConfiguration.cs: 142 lines
+.\src\Memory\CanDoItAll.Memory.Http\HttpMemoryProviderContracts.cs: 83 lines
+.\src\Memory\CanDoItAll.Memory.Http\HttpMemoryProviderDriver.cs: 129 lines
+.\src\Memory\CanDoItAll.Memory.Http\HttpMemoryProviderDriver.Requests.cs: 119 lines
+.\src\Memory\CanDoItAll.Memory.Http\HttpMemoryProviderDriver.Responses.cs: 96 lines
+.\src\Memory\CanDoItAll.Memory.Http\HttpMemoryProviderOptions.cs: 30 lines
+.\src\Memory\CanDoItAll.Memory.Http\HttpMemoryServiceCollectionExtensions.cs: 30 lines
+Overgrown:
+

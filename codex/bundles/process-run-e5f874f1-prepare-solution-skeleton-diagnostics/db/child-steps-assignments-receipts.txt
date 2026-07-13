@@ -1,0 +1,227 @@
+-[ RECORD 1 ]----------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+StepKey                      | add-test-project
+StepInstanceId               | 770973bf-feed-46bb-8e8c-a0dfa5013421
+Status                       | Pending
+AttemptNumber                | 0
+RequiredArtifactSlotIds      | 1bfd05e1-400c-2819-6fe5-696b701f5423
+ProducedArtifactSlotIds      | 6226467d-640e-c010-ecc1-e466bec54851
+RequiredRuntimeToolNamesJson | ["workspace_pwsh_run_script"]
+ArtifactDescriptorsJson      | [{"slotId":"6226467d-640e-c010-ecc1-e466bec54851","slotKey":"add-test-project:test-project-change-set","stepKey":"add-test-project","artifactExpectationKey":"test-project-change-set","artifactTitle":"Test project change set","artifactKind":"Deliverable","primaryManagedRef":"artifacts/process-runs/ab4a1ed8-8b1b-4974-973d-93983bf41f09/steps/add-test-project.md","materializationMode":"AgentWritten"},{"slotId":"1bfd05e1-400c-2819-6fe5-696b701f5423","slotKey":"create-dotnet-project:solution-skeleton-change-set","stepKey":"create-dotnet-project","artifactExpectationKey":"solution-skeleton-change-set","artifactTitle":"Solution skeleton change set","artifactKind":"Deliverable","primaryManagedRef":"artifacts/process-runs/ab4a1ed8-8b1b-4974-973d-93983bf41f09/steps/create-dotnet-project.md","materializationMode":"AgentWritten"}]
+ExecutorKind                 | agent
+ExecutorId                   | 1e267ce2-bf18-ce52-9743-9b36b9314994
+ExecutorDisplayName          | .NET Application Developer
+RoleKey                      | software-engineer
+RoleDisplayName              | .NET scaffold engineer
+AllowedOperations            | MutateProductTarget;ReadProcessContext;ReadProjectStructure;ReadUpstreamArtifacts;WriteManagedProcessArtifacts
+OperationTargetScope         | ExternalProductTargetMutable
+AssignedProducedSlots        | 6226467d-640e-c010-ecc1-e466bec54851
+AssignedRequiredSlots        | 1bfd05e1-400c-2819-6fe5-696b701f5423
+Outcome                      | 
+AppliedStepStatus            | 
+StrategyId                   | 
+IdempotencyKey               | 
+DiagnosticsJson              | 
+ProducedArtifactsJson        | 
+RecoveryDecisionJson         | 
+-[ RECORD 2 ]----------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+StepKey                      | create-dotnet-project
+StepInstanceId               | 53d370f4-04c6-4f9c-8ce0-9cd89efda764
+Status                       | Blocked
+AttemptNumber                | 1
+RequiredArtifactSlotIds      | 5afd4ee1-ec0e-32cc-e683-16994a39ade4
+ProducedArtifactSlotIds      | 1bfd05e1-400c-2819-6fe5-696b701f5423
+RequiredRuntimeToolNamesJson | ["workspace_pwsh_run_script"]
+ArtifactDescriptorsJson      | [{"slotId":"1bfd05e1-400c-2819-6fe5-696b701f5423","slotKey":"create-dotnet-project:solution-skeleton-change-set","stepKey":"create-dotnet-project","artifactExpectationKey":"solution-skeleton-change-set","artifactTitle":"Solution skeleton change set","artifactKind":"Deliverable","primaryManagedRef":"artifacts/process-runs/ab4a1ed8-8b1b-4974-973d-93983bf41f09/steps/create-dotnet-project.md","materializationMode":"AgentWritten"},{"slotId":"5afd4ee1-ec0e-32cc-e683-16994a39ade4","slotKey":"scaffold-contract:scaffold-plan","stepKey":"scaffold-contract","artifactExpectationKey":"scaffold-plan","artifactTitle":"Scaffold contract","artifactKind":"Brief","primaryManagedRef":"artifacts/process-runs/ab4a1ed8-8b1b-4974-973d-93983bf41f09/steps/scaffold-contract.md","materializationMode":"AgentWritten"}]
+ExecutorKind                 | agent
+ExecutorId                   | 1e267ce2-bf18-ce52-9743-9b36b9314994
+ExecutorDisplayName          | .NET Application Developer
+RoleKey                      | software-engineer
+RoleDisplayName              | .NET scaffold engineer
+AllowedOperations            | MutateProductTarget;ReadProcessContext;ReadProjectStructure;ReadUpstreamArtifacts;WriteManagedProcessArtifacts
+OperationTargetScope         | ExternalProductTargetMutable
+AssignedProducedSlots        | 1bfd05e1-400c-2819-6fe5-696b701f5423
+AssignedRequiredSlots        | 5afd4ee1-ec0e-32cc-e683-16994a39ade4
+Outcome                      | NeedsManager
+AppliedStepStatus            | Blocked
+StrategyId                   | strategy.adapter.workflow.execute
+IdempotencyKey               | 5a2ae444-1030-4589-80bc-b0cb949ad703
+DiagnosticsJson              | [{"code":"process.adapter.product_required_file_content_missing","sensitivity":"Normal","evidenceHash":"sha256:0296264dbb8718dc114c6ec4dd2615b9002b640b0b82b379cd9aba73cf494272","safeSummary":"Step \u0027create-dotnet-project\u0027 claimed completion but required product file content/readback check(s) failed: C:\\programovani\\dotnet\\calculator-output\\Calculator.slnx does not contain any expected text from [src\\Calculator\\Calculator.csproj | src/Calculator/Calculator.csproj].","retrySafety":"SafeToRetry","idempotency":"Idempotent"}]
+ProducedArtifactsJson        | []
+RecoveryDecisionJson         | {"failureCategory":"Unknown","decisionKind":"ManagerRequired","sourceDiagnosticCode":"process.adapter.product_required_file_content_missing","policy":"process.manager-review-required","safeReason":"The strategy result blocked the step and requires manager or operator decision before rework.","routeKind":"ManagerAction","responsibleStepInstanceId":"53d370f4-04c6-4f9c-8ce0-9cd89efda764"}
+-[ RECORD 3 ]----------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+StepKey                      | repair-solution-setup
+StepInstanceId               | 1bf59a1e-de81-42d3-959f-956f78360109
+Status                       | Blocked
+AttemptNumber                | 0
+RequiredArtifactSlotIds      | 21796a92-fcb3-7051-3f42-3e9e616f495a
+ProducedArtifactSlotIds      | 82a429af-2113-f4ad-5dcf-b42ee515e997
+RequiredRuntimeToolNamesJson | ["workspace_pwsh_run_script"]
+ArtifactDescriptorsJson      | [{"slotId":"82a429af-2113-f4ad-5dcf-b42ee515e997","slotKey":"repair-solution-setup:setup-repair-change-set","stepKey":"repair-solution-setup","artifactExpectationKey":"setup-repair-change-set","artifactTitle":"Setup repair change set","artifactKind":"Deliverable","primaryManagedRef":"artifacts/process-runs/ab4a1ed8-8b1b-4974-973d-93983bf41f09/steps/repair-solution-setup.md","materializationMode":"AgentWritten"},{"slotId":"21796a92-fcb3-7051-3f42-3e9e616f495a","slotKey":"validate-first-build:first-build-evidence","stepKey":"validate-first-build","artifactExpectationKey":"first-build-evidence","artifactTitle":"First build and test discovery evidence","artifactKind":"Evidence","primaryManagedRef":"artifacts/process-runs/ab4a1ed8-8b1b-4974-973d-93983bf41f09/steps/validate-first-build.md","materializationMode":"AgentWritten"}]
+ExecutorKind                 | agent
+ExecutorId                   | 1e267ce2-bf18-ce52-9743-9b36b9314994
+ExecutorDisplayName          | .NET Application Developer
+RoleKey                      | software-engineer
+RoleDisplayName              | .NET scaffold engineer
+AllowedOperations            | MutateProductTarget;ReadProcessContext;ReadProjectStructure;ReadUpstreamArtifacts;WriteManagedProcessArtifacts
+OperationTargetScope         | ExternalProductTargetMutable
+AssignedProducedSlots        | 82a429af-2113-f4ad-5dcf-b42ee515e997
+AssignedRequiredSlots        | 21796a92-fcb3-7051-3f42-3e9e616f495a
+Outcome                      | 
+AppliedStepStatus            | 
+StrategyId                   | 
+IdempotencyKey               | 
+DiagnosticsJson              | 
+ProducedArtifactsJson        | 
+RecoveryDecisionJson         | 
+-[ RECORD 4 ]----------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+StepKey                      | scaffold-contract
+StepInstanceId               | 4b98612d-0233-46fe-8742-3cd940ca8e72
+Status                       | Completed
+AttemptNumber                | 1
+RequiredArtifactSlotIds      | 
+ProducedArtifactSlotIds      | 5afd4ee1-ec0e-32cc-e683-16994a39ade4
+RequiredRuntimeToolNamesJson | []
+ArtifactDescriptorsJson      | [{"slotId":"5afd4ee1-ec0e-32cc-e683-16994a39ade4","slotKey":"scaffold-contract:scaffold-plan","stepKey":"scaffold-contract","artifactExpectationKey":"scaffold-plan","artifactTitle":"Scaffold contract","artifactKind":"Brief","primaryManagedRef":"artifacts/process-runs/ab4a1ed8-8b1b-4974-973d-93983bf41f09/steps/scaffold-contract.md","materializationMode":"AgentWritten"}]
+ExecutorKind                 | agent
+ExecutorId                   | b0c2a317-a417-385f-9f59-0f4a2c5b7ff2
+ExecutorDisplayName          | Delivery Manager
+RoleKey                      | delivery-manager
+RoleDisplayName              | Setup manager
+AllowedOperations            | ReadProcessContext;ReadProjectStructure;ReadUpstreamArtifacts;WriteManagedProcessArtifacts
+OperationTargetScope         | ExternalProductTargetReadOnly
+AssignedProducedSlots        | 5afd4ee1-ec0e-32cc-e683-16994a39ade4
+AssignedRequiredSlots        | 
+Outcome                      | Succeeded
+AppliedStepStatus            | Completed
+StrategyId                   | strategy.adapter.workflow.execute
+IdempotencyKey               | 6c9ccfc3-65cd-4a61-b386-bd908ba827f9
+DiagnosticsJson              | []
+ProducedArtifactsJson        | [{"slotId":"5afd4ee1-ec0e-32cc-e683-16994a39ade4","artifactId":"6a04f644-4bd8-460f-8da0-b71bc8213152","contentHash":"sha256:a351df93999400879b14c639f412e1036ae06d58055681914bf5856ea7fb6ac2"}]
+RecoveryDecisionJson         | 
+-[ RECORD 5 ]----------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+StepKey                      | setup-handoff
+StepInstanceId               | 0aa3d923-6620-4ac2-b1de-94f9abedab7d
+Status                       | Blocked
+AttemptNumber                | 0
+RequiredArtifactSlotIds      | 21796a92-fcb3-7051-3f42-3e9e616f495a
+ProducedArtifactSlotIds      | 1cb1d533-0455-9e6d-f733-bfde63f6529f
+RequiredRuntimeToolNamesJson | []
+ArtifactDescriptorsJson      | [{"slotId":"1cb1d533-0455-9e6d-f733-bfde63f6529f","slotKey":"setup-handoff:setup-handoff-packet","stepKey":"setup-handoff","artifactExpectationKey":"setup-handoff-packet","artifactTitle":"Setup handoff packet","artifactKind":"Evidence","primaryManagedRef":"artifacts/process-runs/ab4a1ed8-8b1b-4974-973d-93983bf41f09/steps/setup-handoff.md","materializationMode":"AgentWritten"},{"slotId":"21796a92-fcb3-7051-3f42-3e9e616f495a","slotKey":"validate-first-build:first-build-evidence","stepKey":"validate-first-build","artifactExpectationKey":"first-build-evidence","artifactTitle":"First build and test discovery evidence","artifactKind":"Evidence","primaryManagedRef":"artifacts/process-runs/ab4a1ed8-8b1b-4974-973d-93983bf41f09/steps/validate-first-build.md","materializationMode":"AgentWritten"}]
+ExecutorKind                 | agent
+ExecutorId                   | b0c2a317-a417-385f-9f59-0f4a2c5b7ff2
+ExecutorDisplayName          | Delivery Manager
+RoleKey                      | delivery-manager
+RoleDisplayName              | Setup manager
+AllowedOperations            | ReadProcessContext;ReadProjectStructure;ReadUpstreamArtifacts;WriteManagedProcessArtifacts
+OperationTargetScope         | ExternalProductTargetReadOnly
+AssignedProducedSlots        | 1cb1d533-0455-9e6d-f733-bfde63f6529f
+AssignedRequiredSlots        | 21796a92-fcb3-7051-3f42-3e9e616f495a
+Outcome                      | 
+AppliedStepStatus            | 
+StrategyId                   | 
+IdempotencyKey               | 
+DiagnosticsJson              | 
+ProducedArtifactsJson        | 
+RecoveryDecisionJson         | 
+-[ RECORD 6 ]----------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+StepKey                      | setup-handoff-after-repair
+StepInstanceId               | 69eef1dd-a037-42dd-b3b5-8623b023985c
+Status                       | Blocked
+AttemptNumber                | 0
+RequiredArtifactSlotIds      | 21796a92-fcb3-7051-3f42-3e9e616f495a;82a429af-2113-f4ad-5dcf-b42ee515e997;a6d01404-a569-7550-4073-ec1c427eaa34
+ProducedArtifactSlotIds      | ccb0f010-5411-036f-202a-0b5362394e95
+RequiredRuntimeToolNamesJson | []
+ArtifactDescriptorsJson      | [{"slotId":"82a429af-2113-f4ad-5dcf-b42ee515e997","slotKey":"repair-solution-setup:setup-repair-change-set","stepKey":"repair-solution-setup","artifactExpectationKey":"setup-repair-change-set","artifactTitle":"Setup repair change set","artifactKind":"Deliverable","primaryManagedRef":"artifacts/process-runs/ab4a1ed8-8b1b-4974-973d-93983bf41f09/steps/repair-solution-setup.md","materializationMode":"AgentWritten"},{"slotId":"ccb0f010-5411-036f-202a-0b5362394e95","slotKey":"setup-handoff-after-repair:setup-handoff-packet-after-repair","stepKey":"setup-handoff-after-repair","artifactExpectationKey":"setup-handoff-packet-after-repair","artifactTitle":"Repaired setup handoff packet","artifactKind":"Evidence","primaryManagedRef":"artifacts/process-runs/ab4a1ed8-8b1b-4974-973d-93983bf41f09/steps/setup-handoff-after-repair.md","materializationMode":"AgentWritten"},{"slotId":"21796a92-fcb3-7051-3f42-3e9e616f495a","slotKey":"validate-first-build:first-build-evidence","stepKey":"validate-first-build","artifactExpectationKey":"first-build-evidence","artifactTitle":"First build and test discovery evidence","artifactKind":"Evidence","primaryManagedRef":"artifacts/process-runs/ab4a1ed8-8b1b-4974-973d-93983bf41f09/steps/validate-first-build.md","materializationMode":"AgentWritten"},{"slotId":"a6d01404-a569-7550-4073-ec1c427eaa34","slotKey":"validate-first-build-after-repair:repaired-first-build-evidence","stepKey":"validate-first-build-after-repair","artifactExpectationKey":"repaired-first-build-evidence","artifactTitle":"Repaired first build and test discovery evidence","artifactKind":"Evidence","primaryManagedRef":"artifacts/process-runs/ab4a1ed8-8b1b-4974-973d-93983bf41f09/steps/validate-first-build-after-repair.md","materializationMode":"AgentWritten"}]
+ExecutorKind                 | agent
+ExecutorId                   | b0c2a317-a417-385f-9f59-0f4a2c5b7ff2
+ExecutorDisplayName          | Delivery Manager
+RoleKey                      | delivery-manager
+RoleDisplayName              | Setup manager
+AllowedOperations            | ReadProcessContext;ReadProjectStructure;ReadUpstreamArtifacts;WriteManagedProcessArtifacts
+OperationTargetScope         | ExternalProductTargetReadOnly
+AssignedProducedSlots        | ccb0f010-5411-036f-202a-0b5362394e95
+AssignedRequiredSlots        | 21796a92-fcb3-7051-3f42-3e9e616f495a;82a429af-2113-f4ad-5dcf-b42ee515e997;a6d01404-a569-7550-4073-ec1c427eaa34
+Outcome                      | 
+AppliedStepStatus            | 
+StrategyId                   | 
+IdempotencyKey               | 
+DiagnosticsJson              | 
+ProducedArtifactsJson        | 
+RecoveryDecisionJson         | 
+-[ RECORD 7 ]----------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+StepKey                      | setup-repair-escalation
+StepInstanceId               | af53947a-444c-44d4-8870-ef92c4822306
+Status                       | Blocked
+AttemptNumber                | 0
+RequiredArtifactSlotIds      | 21796a92-fcb3-7051-3f42-3e9e616f495a;82a429af-2113-f4ad-5dcf-b42ee515e997;a6d01404-a569-7550-4073-ec1c427eaa34
+ProducedArtifactSlotIds      | 86401a71-3aca-3422-9641-97b861c9e0e6
+RequiredRuntimeToolNamesJson | []
+ArtifactDescriptorsJson      | [{"slotId":"82a429af-2113-f4ad-5dcf-b42ee515e997","slotKey":"repair-solution-setup:setup-repair-change-set","stepKey":"repair-solution-setup","artifactExpectationKey":"setup-repair-change-set","artifactTitle":"Setup repair change set","artifactKind":"Deliverable","primaryManagedRef":"artifacts/process-runs/ab4a1ed8-8b1b-4974-973d-93983bf41f09/steps/repair-solution-setup.md","materializationMode":"AgentWritten"},{"slotId":"86401a71-3aca-3422-9641-97b861c9e0e6","slotKey":"setup-repair-escalation:setup-repair-escalation-packet","stepKey":"setup-repair-escalation","artifactExpectationKey":"setup-repair-escalation-packet","artifactTitle":"Setup repair escalation packet","artifactKind":"Evidence","primaryManagedRef":"artifacts/process-runs/ab4a1ed8-8b1b-4974-973d-93983bf41f09/steps/setup-repair-escalation.md","materializationMode":"AgentWritten"},{"slotId":"21796a92-fcb3-7051-3f42-3e9e616f495a","slotKey":"validate-first-build:first-build-evidence","stepKey":"validate-first-build","artifactExpectationKey":"first-build-evidence","artifactTitle":"First build and test discovery evidence","artifactKind":"Evidence","primaryManagedRef":"artifacts/process-runs/ab4a1ed8-8b1b-4974-973d-93983bf41f09/steps/validate-first-build.md","materializationMode":"AgentWritten"},{"slotId":"a6d01404-a569-7550-4073-ec1c427eaa34","slotKey":"validate-first-build-after-repair:repaired-first-build-evidence","stepKey":"validate-first-build-after-repair","artifactExpectationKey":"repaired-first-build-evidence","artifactTitle":"Repaired first build and test discovery evidence","artifactKind":"Evidence","primaryManagedRef":"artifacts/process-runs/ab4a1ed8-8b1b-4974-973d-93983bf41f09/steps/validate-first-build-after-repair.md","materializationMode":"AgentWritten"}]
+ExecutorKind                 | agent
+ExecutorId                   | b0c2a317-a417-385f-9f59-0f4a2c5b7ff2
+ExecutorDisplayName          | Delivery Manager
+RoleKey                      | delivery-manager
+RoleDisplayName              | Setup manager
+AllowedOperations            | ReadProcessContext;ReadProjectStructure;ReadUpstreamArtifacts;WriteManagedProcessArtifacts
+OperationTargetScope         | ExternalProductTargetReadOnly
+AssignedProducedSlots        | 86401a71-3aca-3422-9641-97b861c9e0e6
+AssignedRequiredSlots        | 21796a92-fcb3-7051-3f42-3e9e616f495a;82a429af-2113-f4ad-5dcf-b42ee515e997;a6d01404-a569-7550-4073-ec1c427eaa34
+Outcome                      | 
+AppliedStepStatus            | 
+StrategyId                   | 
+IdempotencyKey               | 
+DiagnosticsJson              | 
+ProducedArtifactsJson        | 
+RecoveryDecisionJson         | 
+-[ RECORD 8 ]----------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+StepKey                      | validate-first-build
+StepInstanceId               | 3f7f8453-b6c9-4692-bb9d-87aa1545f6a2
+Status                       | Pending
+AttemptNumber                | 0
+RequiredArtifactSlotIds      | 1bfd05e1-400c-2819-6fe5-696b701f5423;6226467d-640e-c010-ecc1-e466bec54851
+ProducedArtifactSlotIds      | 21796a92-fcb3-7051-3f42-3e9e616f495a
+RequiredRuntimeToolNamesJson | ["workspace_dotnet_build","workspace_dotnet_restore","workspace_dotnet_test"]
+ArtifactDescriptorsJson      | [{"slotId":"6226467d-640e-c010-ecc1-e466bec54851","slotKey":"add-test-project:test-project-change-set","stepKey":"add-test-project","artifactExpectationKey":"test-project-change-set","artifactTitle":"Test project change set","artifactKind":"Deliverable","primaryManagedRef":"artifacts/process-runs/ab4a1ed8-8b1b-4974-973d-93983bf41f09/steps/add-test-project.md","materializationMode":"AgentWritten"},{"slotId":"1bfd05e1-400c-2819-6fe5-696b701f5423","slotKey":"create-dotnet-project:solution-skeleton-change-set","stepKey":"create-dotnet-project","artifactExpectationKey":"solution-skeleton-change-set","artifactTitle":"Solution skeleton change set","artifactKind":"Deliverable","primaryManagedRef":"artifacts/process-runs/ab4a1ed8-8b1b-4974-973d-93983bf41f09/steps/create-dotnet-project.md","materializationMode":"AgentWritten"},{"slotId":"21796a92-fcb3-7051-3f42-3e9e616f495a","slotKey":"validate-first-build:first-build-evidence","stepKey":"validate-first-build","artifactExpectationKey":"first-build-evidence","artifactTitle":"First build and test discovery evidence","artifactKind":"Evidence","primaryManagedRef":"artifacts/process-runs/ab4a1ed8-8b1b-4974-973d-93983bf41f09/steps/validate-first-build.md","materializationMode":"AgentWritten"}]
+ExecutorKind                 | agent
+ExecutorId                   | 549a3e86-5ffc-0d58-bf8c-10952fcdaac4
+ExecutorDisplayName          | Delivery QA Observer
+RoleKey                      | qa-lead
+RoleDisplayName              | Validation reviewer
+AllowedOperations            | ReadProcessContext;ReadProjectStructure;ReadUpstreamArtifacts;RunValidation;WriteManagedProcessArtifacts
+OperationTargetScope         | ExternalProductTargetReadOnly
+AssignedProducedSlots        | 21796a92-fcb3-7051-3f42-3e9e616f495a
+AssignedRequiredSlots        | 1bfd05e1-400c-2819-6fe5-696b701f5423;6226467d-640e-c010-ecc1-e466bec54851
+Outcome                      | 
+AppliedStepStatus            | 
+StrategyId                   | 
+IdempotencyKey               | 
+DiagnosticsJson              | 
+ProducedArtifactsJson        | 
+RecoveryDecisionJson         | 
+-[ RECORD 9 ]----------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+StepKey                      | validate-first-build-after-repair
+StepInstanceId               | 96d776ee-436d-4796-a777-c9531b2a71fd
+Status                       | Pending
+AttemptNumber                | 0
+RequiredArtifactSlotIds      | 21796a92-fcb3-7051-3f42-3e9e616f495a;82a429af-2113-f4ad-5dcf-b42ee515e997
+ProducedArtifactSlotIds      | a6d01404-a569-7550-4073-ec1c427eaa34
+RequiredRuntimeToolNamesJson | ["workspace_dotnet_build","workspace_dotnet_restore","workspace_dotnet_test"]
+ArtifactDescriptorsJson      | [{"slotId":"82a429af-2113-f4ad-5dcf-b42ee515e997","slotKey":"repair-solution-setup:setup-repair-change-set","stepKey":"repair-solution-setup","artifactExpectationKey":"setup-repair-change-set","artifactTitle":"Setup repair change set","artifactKind":"Deliverable","primaryManagedRef":"artifacts/process-runs/ab4a1ed8-8b1b-4974-973d-93983bf41f09/steps/repair-solution-setup.md","materializationMode":"AgentWritten"},{"slotId":"21796a92-fcb3-7051-3f42-3e9e616f495a","slotKey":"validate-first-build:first-build-evidence","stepKey":"validate-first-build","artifactExpectationKey":"first-build-evidence","artifactTitle":"First build and test discovery evidence","artifactKind":"Evidence","primaryManagedRef":"artifacts/process-runs/ab4a1ed8-8b1b-4974-973d-93983bf41f09/steps/validate-first-build.md","materializationMode":"AgentWritten"},{"slotId":"a6d01404-a569-7550-4073-ec1c427eaa34","slotKey":"validate-first-build-after-repair:repaired-first-build-evidence","stepKey":"validate-first-build-after-repair","artifactExpectationKey":"repaired-first-build-evidence","artifactTitle":"Repaired first build and test discovery evidence","artifactKind":"Evidence","primaryManagedRef":"artifacts/process-runs/ab4a1ed8-8b1b-4974-973d-93983bf41f09/steps/validate-first-build-after-repair.md","materializationMode":"AgentWritten"}]
+ExecutorKind                 | agent
+ExecutorId                   | 549a3e86-5ffc-0d58-bf8c-10952fcdaac4
+ExecutorDisplayName          | Delivery QA Observer
+RoleKey                      | qa-lead
+RoleDisplayName              | Validation reviewer
+AllowedOperations            | ReadProcessContext;ReadProjectStructure;ReadUpstreamArtifacts;RunValidation;WriteManagedProcessArtifacts
+OperationTargetScope         | ExternalProductTargetReadOnly
+AssignedProducedSlots        | a6d01404-a569-7550-4073-ec1c427eaa34
+AssignedRequiredSlots        | 21796a92-fcb3-7051-3f42-3e9e616f495a;82a429af-2113-f4ad-5dcf-b42ee515e997
+Outcome                      | 
+AppliedStepStatus            | 
+StrategyId                   | 
+IdempotencyKey               | 
+DiagnosticsJson              | 
+ProducedArtifactsJson        | 
+RecoveryDecisionJson         | 
+
+

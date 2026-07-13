@@ -1,0 +1,23 @@
+Command: Historical SB23 proof transcript: screenshot-review.txt
+SB23 screenshot review
+Route: /memory
+Desktop viewport: 1440x1000
+Mobile viewport: 390x900
+
+Questions:
+1. Does zero-provider state keep provider management available while provider-backed commands are disabled?
+Answer: PASS. bundle://proof/SB23/screenshots/memory-ui-checkpoint-zero-provider-desktop.png and memory-ui-checkpoint-zero-provider-query-disabled-desktop.png show provider editor/list availability and disabled query submit with explicit diagnostic.
+2. Do extracted provider-list/detail components keep readable spacing, alignment, and updated counts after creating a provider?
+Answer: PASS. bundle://proof/SB23/screenshots/memory-ui-checkpoint-provider-list-desktop.png shows provider/detail layout, capability chips, and updated tab/summary counts after the tab remount key fix.
+3. Does query/feedback/operation rendering remain readable after row extraction and use provider-agnostic labels?
+Answer: PASS. bundle://proof/SB23/screenshots/memory-ui-checkpoint-query-desktop.png, memory-ui-checkpoint-feedback-desktop.png, memory-ui-checkpoint-ingestion-desktop.png, and memory-ui-checkpoint-operations-desktop.png show context pack, feedback, ingestion, and operation rows without native-memory text.
+4. Do provider-specific RCL and iframe surfaces render through the generic host with safe framing?
+Answer: PASS. bundle://proof/SB23/screenshots/memory-ui-checkpoint-provider-ui-desktop.png shows RCL and iframe surface containers, availability labels, and controlled iframe rendering.
+5. Does narrow-width layout avoid incoherent overlap or lateral overflow?
+Answer: PASS. bundle://proof/SB23/screenshots/memory-ui-checkpoint-provider-ui-mobile.png shows wrapped tabs and provider surface content inside the mobile viewport.
+6. Does fallback block missing component and unsafe URL states without leaking the unsafe URL string?
+Answer: PASS. bundle://proof/SB23/screenshots/memory-ui-checkpoint-provider-ui-fallback-desktop.png shows explicit missing-component and invalid-URL diagnostics; the Playwright assertion verifies javascript:alert is not visible.
+
+Result: PASS. Browser screenshots support SB23 layout/readability, provider switching, zero-provider command denial, provider surface fallback, and provider-agnostic UI composition.
+ExitCode: 0
+

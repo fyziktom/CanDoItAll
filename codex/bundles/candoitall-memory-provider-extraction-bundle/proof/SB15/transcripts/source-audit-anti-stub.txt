@@ -1,0 +1,31 @@
+Command: Historical SB15 proof transcript: source-audit-anti-stub.txt
+SB15 anti-stub audit
+
+Check: caller metadata persisted
+src\Memory\CanDoItAll.Memory.Application\MemoryOperationHandler.Status.cs:70:            existing.Extensions.WithMemoryOperationCaller(request.Caller),
+src\Memory\CanDoItAll.Memory.Application\MemoryOperationHandler.Helpers.cs:34:            extensions: request.Extensions.WithMemoryOperationCaller(request.Caller));
+src\Memory\CanDoItAll.Memory.Application\MemoryRuntimeOperationExtensions.cs:25:    public static MemoryExtensionData WithMemoryOperationCaller(
+
+Check: feedback handle generated/persisted
+src\Memory\CanDoItAll.Memory.Application\MemoryOperationHandler.cs:116:            extensions = extensions.WithContextDelivery(output.ContextPackId, feedbackHandle);
+src\Memory\CanDoItAll.Memory.Application\MemoryOperationHandler.Helpers.cs:50:            FeedbackHandle = MemoryFeedbackHandle.Parse(
+src\Memory\CanDoItAll.Memory.Application\MemoryRuntimeOperationExtensions.cs:77:    public static MemoryExtensionData WithContextDelivery(
+
+Check: source capture creates ingestion job
+45:        var jobRecord = new MemorySourceIngestionJobRecord(
+
+Check: no-provider handler assertions
+59:        Assert.Equal(MemoryOperationHandlerStatus.NoProviderConfigured, result.Status);
+60:        Assert.Equal(MemoryProviderSelectionStatus.NoProviderConfigured, result.Selection.Status);
+
+Check: capability mismatch handler assertions
+84:        Assert.Equal(MemoryOperationHandlerStatus.CapabilityUnavailable, result.Status);
+85:        Assert.Equal(MemoryProviderSelectionStatus.CapabilityUnavailable, result.Selection.Status);
+
+Check: manual ingestion caller assertion
+44:        Assert.Equal(MemoryOperationCallerKind.ManualIngestion, operation!.Extensions.GetMemoryOperationCaller()?.Kind);
+
+AUDIT RESULT: PASSED
+ExitCode: 0
+
+InvariantIds: SB15-CLOSURE

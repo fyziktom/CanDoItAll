@@ -1,0 +1,18 @@
+
+File                                                                                                                                     Bytes Sha256
+----                                                                                                                                     ----- ------
+.\src\Foundation\CanDoItAll.Infrastructure\DependencyInjection\InfrastructureServiceCollectionExtensions.cs                               6580 365b9546ba861c4ecc86ae93c8fcaed9ab782a47e701a2fad4f8de3ea16aeba0
+.\src\Foundation\CanDoItAll.Infrastructure\Persistence\LegacyCognitiveMemoryExportContracts.cs                                            3392 8047a15fd3db7572d67f55962b6358d3791724b2a7443acfe10243ff0cc93c3d
+.\src\Foundation\CanDoItAll.Infrastructure\Persistence\LegacyCognitiveMemoryExportService.cs                                             13189 3a397c0890bc4c1f83b9771346b2c1cf332a440466f794e2d44d7bbd4210f5a4
+.\src\Foundation\CanDoItAll.Infrastructure\Persistence\PostgreSqlLegacyCognitiveMemoryDataReader.cs                                       6831 39947e0be90e8032d00783cbab815977f47d0a836c02e85b3efca6a46c813385
+.\src\Foundation\CanDoItAll.Migrations.PostgreSql\Migrations\20260706015654_RetireLegacyCognitiveMemoryMainDbModel.cs                      607 604f34952ec5f55c453f3d76952a77b942601d0951281b868220840ebc7d01d1
+.\src\Foundation\CanDoItAll.Migrations.PostgreSql\Migrations\20260706015654_RetireLegacyCognitiveMemoryMainDbModel.Designer.cs          211177 3dcaa445121aa2cd034509667c44f409116a949a34e124ec2d4542d7433b3f47
+.\src\Foundation\CanDoItAll.Migrations.PostgreSql\Migrations\AppDbContextModelSnapshot.cs                                               211023 42eea89849154d9a90357236e51342bb34a7d21c0bd08de16d6f22ecef59c377
+.\tests\Unit\CanDoItAll.Tests.Unit\LegacyCognitiveMemoryExportServiceTests.cs                                                            11804 585de0515036e154d44fd8cb770722a508081865f9468ff9ef62ccd960ee3778
+.\docs\cognitive-memory\README.md                                                                                                         5160 a8cfbc06d1c227057c0eb3a3f7016ddadca38f910876425bb9baca6ad9ecd9b1
+.\docs\cognitive-memory\operations\legacy-main-db-retirement.md                                                                           4311 50198ddbaa1608f4346fa8211c386b3f07026b3d418e1300474d0c5541fad933
+.\codex\bundles\candoitall-memory-provider-extraction-bundle\subbundles\31-data-migration-export-retirement-and-compatibility\README.md   6504 c75fd4715546accb3238d0daef51fe81316f749d2babc25e011971b7ec6973db
+.\codex\bundles\candoitall-memory-provider-extraction-bundle\README.md                                                                    8612 70e95547c207467d95dd66032b98f11714d312fa0db7ffe0cf53199a5a272e0b
+.\codex\bundles\candoitall-memory-provider-extraction-bundle\reviews\01-execution-report.md                                              91333 0f7b4fbb9d3b8d77d58051241dd621020a6477a760ab1a182f31f90da43acdef
+
+

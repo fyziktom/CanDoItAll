@@ -1,0 +1,76 @@
+{
+  "toolName": "workspace_dotnet_new",
+  "recipeId": "dotnet_new",
+  "decision": {
+    "toolName": "workspace_dotnet_new",
+    "recipeId": "dotnet_new",
+    "riskClass": "WorkspaceMutation",
+    "allowed": true,
+    "approvalRequired": true,
+    "networkAllowed": false,
+    "externalRootsAllowed": true,
+    "reason": "Recipe \u0027dotnet_new\u0027 passed workspace policy checks and may access mapped external-target aliases."
+  },
+  "boundary": {
+    "mode": "PolicyOnlyLocal",
+    "filesystemScope": "Workspace-relative request shaping only. Child processes still inherit the host OS filesystem rights.",
+    "networkScope": "Not host-enforced. Child processes inherit the host network access that the local machine already has.",
+    "credentialScope": "Scrubbed environment allowlist only. No container or remote credential boundary is enforced by AgentFramework.",
+    "hostLabel": "Local best-effort process host",
+    "isEnforcedByHost": false,
+    "notes": "This host centralizes process policy, timeout, output caps, and tree-kill behavior, but it is not a true OS or container sandbox."
+  },
+  "workingDirectory": "external-target/C/programovani/dotnet/calculator-output",
+  "argumentsSummary": "new sln -n Calculator",
+  "exitCode": 0,
+  "timedOut": false,
+  "stdoutTruncated": false,
+  "stderrTruncated": false,
+  "failureMessage": "",
+  "startedAtUtc": "2026-07-08T16:15:30.2029527+00:00",
+  "completedAtUtc": "2026-07-08T16:15:31.6957699+00:00",
+  "artifactReferences": [
+    {
+      "zone": "tool-receipt",
+      "relativePath": "artifacts/scopes/organization/e5df9ad633dbc6974a0678a74976013c/process-runs/ab4a1ed8-8b1b-4974-973d-93983bf41f09/tool-runs/20260708-161530202-dotnet-new/receipt.json",
+      "displayName": "dotnet_new receipt",
+      "contentType": "application/json",
+      "summary": "Durable process receipt."
+    },
+    {
+      "zone": "tool-receipt",
+      "relativePath": "artifacts/scopes/organization/e5df9ad633dbc6974a0678a74976013c/process-runs/ab4a1ed8-8b1b-4974-973d-93983bf41f09/tool-runs/20260708-161530202-dotnet-new/request.json",
+      "displayName": "dotnet_new request",
+      "contentType": "application/json",
+      "summary": "Captured recipe request payload."
+    },
+    {
+      "zone": "generated-output",
+      "relativePath": "artifacts/scopes/organization/e5df9ad633dbc6974a0678a74976013c/process-runs/ab4a1ed8-8b1b-4974-973d-93983bf41f09/tool-runs/20260708-161530202-dotnet-new/stdout.txt",
+      "displayName": "dotnet_new stdout",
+      "contentType": "text/plain",
+      "summary": "Captured stdout preview."
+    },
+    {
+      "zone": "generated-output",
+      "relativePath": "artifacts/scopes/organization/e5df9ad633dbc6974a0678a74976013c/process-runs/ab4a1ed8-8b1b-4974-973d-93983bf41f09/tool-runs/20260708-161530202-dotnet-new/stderr.txt",
+      "displayName": "dotnet_new stderr",
+      "contentType": "text/plain",
+      "summary": "Captured stderr preview."
+    },
+    {
+      "zone": "generated-output",
+      "relativePath": "external-target/C/programovani/dotnet/calculator-output/Calculator.slnx",
+      "displayName": "Calculator.slnx",
+      "contentType": "application/octet-stream",
+      "summary": "Workspace path touched or targeted by the recipe."
+    },
+    {
+      "zone": "generated-output",
+      "relativePath": "external-target/C/programovani/dotnet/calculator-output/Calculator.sln",
+      "displayName": "Calculator.sln",
+      "contentType": "application/octet-stream",
+      "summary": "Workspace path touched or targeted by the recipe."
+    }
+  ]
+}

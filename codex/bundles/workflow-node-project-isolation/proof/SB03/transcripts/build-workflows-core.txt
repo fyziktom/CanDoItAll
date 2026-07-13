@@ -1,0 +1,28 @@
+Command: dotnet build 'src\CanDoItAll.AgentFramework.Workflows.Core\CanDoItAll.AgentFramework.Workflows.Core.csproj'
+Cwd: C:\repositories\CanDoItAll
+Started: 2026-06-29T12:22:15.4667131-04:00
+
+  Zjišťují se projekty, které se mají obnovit...
+  Všechny projekty jsou v aktuálním stavu pro obnovení.
+  CanDoItAll.SharedKernel -> C:\repositories\CanDoItAll\src\CanDoItAll.SharedKernel\bin\Debug\net10.0\CanDoItAll.SharedKernel.dll
+  CanDoItAll.Git -> C:\repositories\CanDoItAll\src\CanDoItAll.Git\bin\Debug\net10.0\CanDoItAll.Git.dll
+  CanDoItAll.AgentFramework.Models -> C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Models\bin\Debug\net10.0\CanDoItAll.AgentFramework.Models.dll
+  CanDoItAll.AgentFramework.Capabilities.Abstractions -> C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Capabilities.Abstractions\bin\Debug\net10.0\CanDoItAll.AgentFramework.Capabilities.Abstractions.dll
+  CanDoItAll.AgentFramework.Workflows.Abstractions -> C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Workflows.Abstractions\bin\Debug\net10.0\CanDoItAll.AgentFramework.Workflows.Abstractions.dll
+  CanDoItAll.AgentFramework.Core -> C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Core\bin\Debug\net10.0\CanDoItAll.AgentFramework.Core.dll
+  CanDoItAll.AgentFramework.Workflows.Core -> C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Workflows.Core\bin\Debug\net10.0\CanDoItAll.AgentFramework.Workflows.Core.dll
+
+Vytváření sestavení bylo úspěšně dokončeno.
+    0 upozornění
+    Počet chyb: 0
+
+Uplynulý čas 00:00:03.53
+
+Finished: 2026-06-29T12:22:19.6563951-04:00
+Exit code: 0
+
+Completed Validator Metadata Addendum
+Command: historical SB03 proof command recorded during bundle execution
+ExitCode: 0
+ExitCode: 1
+Invariant ID: SB03-final-closure

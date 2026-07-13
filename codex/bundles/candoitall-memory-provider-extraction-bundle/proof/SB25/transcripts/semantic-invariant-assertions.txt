@@ -1,0 +1,17 @@
+Command: SB25 semantic invariant source assertions
+Working directory: C:\repositories\CanDoItAll.CognitiveMemory
+Start time UTC: 2026-07-05T23:33:51.1241843Z
+PASS SB25-I01: foundation source manifest record moved to native domain.
+PASS SB25-I01: foundation run record moved to native domain.
+PASS SB25-I02: native DbContext exposes foundation DbSets.
+PASS SB25-I02: native DbContext applies persistence configurations from native assembly.
+PASS SB25-I03: native configurations preserve foundation table names.
+PASS SB25-I03: native migration creates schema tables.
+PASS SB25-I04: PostgreSQL profile is explicit.
+PASS SB25-I04: InMemory test profile is explicit.
+PASS SB25-I05: native context stamps native concurrency tokens without host infrastructure.
+PASS SB25-I05: tests verify no-tracking read queries.
+PASS SB25-I06: native production source has no host AppDbContext reference.
+PASS SB25-I06: native production source has no host infrastructure dependency.
+PASS SB25-I06: host AppDbContext has no direct CognitiveMemory DbSet/configuration references.
+Exit code: 0

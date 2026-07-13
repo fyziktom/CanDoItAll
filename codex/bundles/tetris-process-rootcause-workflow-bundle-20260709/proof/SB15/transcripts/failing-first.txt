@@ -1,0 +1,9 @@
+Failing-first regression
+
+Test:
+ProcessRecoveryClassifierTests.RecoveryClassifier_escalates_when_one_diagnostic_persists_while_incidental_diagnostics_change
+
+Baseline result:
+Failed under the aggregate diagnostic-batch fingerprint implementation. The persistent blocker was combined with incidental diagnostic churn, producing a new aggregate fingerprint and another SafeRetry instead of ManagerRequired.
+
+The production classifier was changed only after this regression reproduced the root cause.

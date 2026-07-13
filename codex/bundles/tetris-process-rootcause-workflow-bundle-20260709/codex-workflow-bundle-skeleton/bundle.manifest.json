@@ -1,0 +1,27 @@
+{
+  "key": "process-runtime-branch-aware-qa-hardening",
+  "title": "Process runtime branch-aware QA hardening",
+  "purpose": "Fix unnecessary process escalations by separating acceptance proof gates from defect branch routing while keeping runtime generic.",
+  "phases": [
+    "00-baseline-incident-regression.md",
+    "01-completion-gate-service-extraction.md",
+    "02-branch-aware-receipt-rule-contract.md",
+    "03-receipt-gate-branch-filtering.md",
+    "04-branch-routable-completion-issues.md",
+    "05-domain-recovery-provider-separation.md",
+    "06-software-delivery-template-hardening.md",
+    "07-acceptance-criteria-matrix.md",
+    "08-dotnet-runtime-lifecycle-hardening.md",
+    "09-observability-and-final-regression.md"
+  ],
+  "nonGoals": [
+    "No Tetris-specific runtime logic",
+    "No Blazor-specific generic process core logic",
+    "No prompt-only fixes without runtime tests"
+  ],
+  "requiredFinalChecks": [
+    "Calculator scenario still passes",
+    "Tetris-like incident routes repair instead of manager escalation",
+    "Generic core domain boundary test passes"
+  ]
+}

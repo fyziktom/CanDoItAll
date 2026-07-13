@@ -1,0 +1,50 @@
+SB39 external local and copied-isolation validation
+Captured: 2026-07-12
+Command: sequential external local and copied-isolation build/test commands listed below
+Exit code: 0
+
+External working-tree local validation reported during repair:
+  dotnet build CanDoItAll.CognitiveMemory.slnx
+  Result: PASS, 0 warnings, 0 errors.
+
+  dotnet test tests/CanDoItAll.CognitiveMemory.Tests/CanDoItAll.CognitiveMemory.Tests.csproj
+  Result: PASS, failed 0, passed 59, skipped 0, total 59.
+
+Copied-isolation setup result reported during repair:
+  Restore reached all nine solution projects.
+  The isolated repository parent contained no sibling directory named CanDoItAll.
+  MAIN_REPOSITORY_PRESENT=False
+
+Fresh copied-isolation verification:
+  Host-local temporary root:
+    C:/Users/lucys/AppData/Local/Temp/candoitall-cognitive-memory-isolation-873258a2be3d424f910f64d1b4bf90f2/CanDoItAll.CognitiveMemory
+
+  Precondition check:
+    IsolationExists=True
+    MainSiblingExists=False
+
+  Command:
+    dotnet build CanDoItAll.CognitiveMemory.slnx --no-restore
+
+  Result:
+    PASS
+    0 warnings
+    0 errors
+    Elapsed 00:00:06.80
+
+  Command:
+    dotnet test tests/CanDoItAll.CognitiveMemory.Tests/CanDoItAll.CognitiveMemory.Tests.csproj --no-build --no-restore
+
+  Result:
+    PASS
+    failed 0
+    passed 59
+    skipped 0
+    total 59
+    duration 4 s
+
+Interpretation:
+  SB39-INV-02 is proven at the build/test boundary: the external repository compiles and its suite passes without the main checkout available as a sibling.
+
+Not claimed:
+  This transcript does not run the main repository's NativeRemoteMemoryProviderDriver against the process. That cross-repository runtime proof remains an SB40 terminal gate.

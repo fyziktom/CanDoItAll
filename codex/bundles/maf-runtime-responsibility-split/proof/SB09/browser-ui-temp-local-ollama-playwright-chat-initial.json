@@ -1,0 +1,8 @@
+{
+  "hasPromptInput": true,
+  "hasSendButton": true,
+  "runtimeDetailsDisabled": true,
+  "selected": "Selected agent: SB09 UI Local Ollama MCP 20260704-191547",
+  "title": "Agents",
+  "url": "http://127.0.0.1:5032/agents?tab=chat&agentId=a22e9f8f-98de-4884-b4e7-995281f46f1b"
+}

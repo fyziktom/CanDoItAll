@@ -1,0 +1,15 @@
+flowchart TD
+    T[Typed SubprocessContract] --> A[Runtime assignment with artifact descriptors]
+    A --> P[Exact tool/capability preflight]
+    P -->|missing/denied| X[Concrete runtime diagnostic before agent]
+    P -->|ok or runtime-owned| B[Runtime-owned subprocess coordinator]
+    B --> C{Child state}
+    C -->|No child| D[Launch child and defer parent]
+    C -->|Active| E[Parent waits/deferred]
+    C -->|Completed accepted handoff| F[ParentSubprocessArtifactBridge]
+    C -->|Completed no-go| G[Parent blocked with child no-go evidence]
+    F --> H[Write parent managed evidence artifact]
+    H --> I[Produced slot available with content hash]
+    I --> J[Parent step completed]
+    G --> K[Operator action shows exact child run/step/artifact]
+    X --> K

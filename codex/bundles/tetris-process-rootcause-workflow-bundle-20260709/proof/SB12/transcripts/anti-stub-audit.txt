@@ -1,0 +1,7 @@
+SB12 anti-stub audit
+
+PASS: no forwarding partial files remain.
+PASS: behavior was not moved into a single replacement manager.
+PASS: extracted collaborators are registered in DI and exercised by direct tests.
+PASS: adapter tests directly instantiate extracted policies/services instead of reflecting into the adapter.
+PASS: no silent fallback was added for ambiguous strategy ownership.

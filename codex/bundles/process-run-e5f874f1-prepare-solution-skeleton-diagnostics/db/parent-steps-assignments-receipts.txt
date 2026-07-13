@@ -1,0 +1,252 @@
+-[ RECORD 1 ]----------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+StepKey                      | add-tests-and-proof
+StepInstanceId               | 5de0f8fe-5d88-4445-b958-bfc5c5a6815f
+Status                       | Pending
+AttemptNumber                | 0
+RequiredArtifactSlotIds      | 7569b684-3c04-18eb-cda9-f1532151896c
+ProducedArtifactSlotIds      | 8c649741-b244-aa99-97eb-ea6fab19b668
+RequiredRuntimeToolNamesJson | ["workspace_dotnet_build","workspace_dotnet_restore","workspace_dotnet_test"]
+ArtifactDescriptorsJson      | [{"slotId":"8c649741-b244-aa99-97eb-ea6fab19b668","slotKey":"add-tests-and-proof:slice-test-evidence","stepKey":"add-tests-and-proof","artifactExpectationKey":"slice-test-evidence","artifactTitle":"Slice test evidence","artifactKind":"Evidence","primaryManagedRef":"artifacts/process-runs/e5f874f1-02b9-43c8-9c2d-ee932972e992/steps/add-tests-and-proof.md","materializationMode":"AgentWritten"},{"slotId":"7569b684-3c04-18eb-cda9-f1532151896c","slotKey":"implement-code-change:slice-change-set","stepKey":"implement-code-change","artifactExpectationKey":"slice-change-set","artifactTitle":"Slice implementation change set","artifactKind":"Deliverable","primaryManagedRef":"artifacts/process-runs/e5f874f1-02b9-43c8-9c2d-ee932972e992/steps/implement-code-change.md","materializationMode":"AgentWritten"}]
+ExecutorKind                 | agent
+ExecutorId                   | 549a3e86-5ffc-0d58-bf8c-10952fcdaac4
+ExecutorDisplayName          | Delivery QA Observer
+RoleKey                      | qa-lead
+RoleDisplayName              | Validation owner
+AllowedOperations            | ReadProcessContext;ReadProjectStructure;ReadUpstreamArtifacts;RunValidation;WriteManagedProcessArtifacts
+OperationTargetScope         | ExternalProductTargetReadOnly
+AssignedProducedSlots        | 8c649741-b244-aa99-97eb-ea6fab19b668
+AssignedRequiredSlots        | 7569b684-3c04-18eb-cda9-f1532151896c
+Outcome                      | 
+AppliedStepStatus            | 
+StrategyId                   | 
+IdempotencyKey               | 
+DiagnosticsJson              | 
+ProducedArtifactsJson        | 
+RecoveryDecisionJson         | 
+-[ RECORD 2 ]----------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+StepKey                      | add-tests-recheck
+StepInstanceId               | ce35cbd2-3115-4f9e-b530-b8924ded4dfb
+Status                       | Blocked
+AttemptNumber                | 0
+RequiredArtifactSlotIds      | 8c649741-b244-aa99-97eb-ea6fab19b668;fdcedc32-c49b-5db6-f0b8-500235df0181
+ProducedArtifactSlotIds      | c5324d37-5ef3-456c-ad0d-6863180e6f8d
+RequiredRuntimeToolNamesJson | ["workspace_dotnet_build","workspace_dotnet_restore","workspace_dotnet_test"]
+ArtifactDescriptorsJson      | [{"slotId":"8c649741-b244-aa99-97eb-ea6fab19b668","slotKey":"add-tests-and-proof:slice-test-evidence","stepKey":"add-tests-and-proof","artifactExpectationKey":"slice-test-evidence","artifactTitle":"Slice test evidence","artifactKind":"Evidence","primaryManagedRef":"artifacts/process-runs/e5f874f1-02b9-43c8-9c2d-ee932972e992/steps/add-tests-and-proof.md","materializationMode":"AgentWritten"},{"slotId":"c5324d37-5ef3-456c-ad0d-6863180e6f8d","slotKey":"add-tests-recheck:slice-recheck-evidence","stepKey":"add-tests-recheck","artifactExpectationKey":"slice-recheck-evidence","artifactTitle":"Repaired slice test evidence","artifactKind":"Evidence","primaryManagedRef":"artifacts/process-runs/e5f874f1-02b9-43c8-9c2d-ee932972e992/steps/add-tests-recheck.md","materializationMode":"AgentWritten"},{"slotId":"fdcedc32-c49b-5db6-f0b8-500235df0181","slotKey":"slice-repair-code-change:slice-repair-change-set","stepKey":"slice-repair-code-change","artifactExpectationKey":"slice-repair-change-set","artifactTitle":"Slice repair change set","artifactKind":"Deliverable","primaryManagedRef":"artifacts/process-runs/e5f874f1-02b9-43c8-9c2d-ee932972e992/steps/slice-repair-code-change.md","materializationMode":"AgentWritten"}]
+ExecutorKind                 | agent
+ExecutorId                   | 549a3e86-5ffc-0d58-bf8c-10952fcdaac4
+ExecutorDisplayName          | Delivery QA Observer
+RoleKey                      | qa-lead
+RoleDisplayName              | Validation owner
+AllowedOperations            | ReadProcessContext;ReadProjectStructure;ReadUpstreamArtifacts;RunValidation;WriteManagedProcessArtifacts
+OperationTargetScope         | ExternalProductTargetReadOnly
+AssignedProducedSlots        | c5324d37-5ef3-456c-ad0d-6863180e6f8d
+AssignedRequiredSlots        | 8c649741-b244-aa99-97eb-ea6fab19b668;fdcedc32-c49b-5db6-f0b8-500235df0181
+Outcome                      | 
+AppliedStepStatus            | 
+StrategyId                   | 
+IdempotencyKey               | 
+DiagnosticsJson              | 
+ProducedArtifactsJson        | 
+RecoveryDecisionJson         | 
+-[ RECORD 3 ]----------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+StepKey                      | implement-code-change
+StepInstanceId               | 64913da0-a56e-4e56-af94-208024c243c7
+Status                       | Pending
+AttemptNumber                | 0
+RequiredArtifactSlotIds      | 59c6c061-cc08-ca74-cf4c-e77a68fb429b;fd2eedff-c00f-0b6c-ef09-e0d57dca7d53
+ProducedArtifactSlotIds      | 7569b684-3c04-18eb-cda9-f1532151896c
+RequiredRuntimeToolNamesJson | []
+ArtifactDescriptorsJson      | [{"slotId":"7569b684-3c04-18eb-cda9-f1532151896c","slotKey":"implement-code-change:slice-change-set","stepKey":"implement-code-change","artifactExpectationKey":"slice-change-set","artifactTitle":"Slice implementation change set","artifactKind":"Deliverable","primaryManagedRef":"artifacts/process-runs/e5f874f1-02b9-43c8-9c2d-ee932972e992/steps/implement-code-change.md","materializationMode":"RuntimeSynthesizedParentHandoff"},{"slotId":"fd2eedff-c00f-0b6c-ef09-e0d57dca7d53","slotKey":"prepare-solution-skeleton:solution-skeleton-evidence","stepKey":"prepare-solution-skeleton","artifactExpectationKey":"solution-skeleton-evidence","artifactTitle":"Solution skeleton evidence","artifactKind":"Evidence","primaryManagedRef":"artifacts/process-runs/e5f874f1-02b9-43c8-9c2d-ee932972e992/steps/prepare-solution-skeleton.md","materializationMode":"AgentWritten"},{"slotId":"59c6c061-cc08-ca74-cf4c-e77a68fb429b","slotKey":"slice-architecture-check:slice-architecture-decision","stepKey":"slice-architecture-check","artifactExpectationKey":"slice-architecture-decision","artifactTitle":"Slice architecture decision record","artifactKind":"Decision","primaryManagedRef":"artifacts/process-runs/e5f874f1-02b9-43c8-9c2d-ee932972e992/steps/slice-architecture-check.md","materializationMode":"AgentWritten"}]
+ExecutorKind                 | agent
+ExecutorId                   | 1e267ce2-bf18-ce52-9743-9b36b9314994
+ExecutorDisplayName          | .NET Application Developer
+RoleKey                      | software-engineer
+RoleDisplayName              | .NET implementation engineer
+AllowedOperations            | ExecuteExternalAction;ReadProcessContext;ReadProjectStructure;ReadUpstreamArtifacts;WriteManagedProcessArtifacts
+OperationTargetScope         | ExternalActionControlled
+AssignedProducedSlots        | 7569b684-3c04-18eb-cda9-f1532151896c
+AssignedRequiredSlots        | 59c6c061-cc08-ca74-cf4c-e77a68fb429b;fd2eedff-c00f-0b6c-ef09-e0d57dca7d53
+Outcome                      | 
+AppliedStepStatus            | 
+StrategyId                   | 
+IdempotencyKey               | 
+DiagnosticsJson              | 
+ProducedArtifactsJson        | 
+RecoveryDecisionJson         | 
+-[ RECORD 4 ]----------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+StepKey                      | prepare-solution-skeleton
+StepInstanceId               | db3e7295-b523-4343-8be6-85598427385b
+Status                       | Blocked
+AttemptNumber                | 2
+RequiredArtifactSlotIds      | 59c6c061-cc08-ca74-cf4c-e77a68fb429b
+ProducedArtifactSlotIds      | fd2eedff-c00f-0b6c-ef09-e0d57dca7d53
+RequiredRuntimeToolNamesJson | []
+ArtifactDescriptorsJson      | [{"slotId":"fd2eedff-c00f-0b6c-ef09-e0d57dca7d53","slotKey":"prepare-solution-skeleton:solution-skeleton-evidence","stepKey":"prepare-solution-skeleton","artifactExpectationKey":"solution-skeleton-evidence","artifactTitle":"Solution skeleton evidence","artifactKind":"Evidence","primaryManagedRef":"artifacts/process-runs/e5f874f1-02b9-43c8-9c2d-ee932972e992/steps/prepare-solution-skeleton.md","materializationMode":"RuntimeSynthesizedParentHandoff"},{"slotId":"59c6c061-cc08-ca74-cf4c-e77a68fb429b","slotKey":"slice-architecture-check:slice-architecture-decision","stepKey":"slice-architecture-check","artifactExpectationKey":"slice-architecture-decision","artifactTitle":"Slice architecture decision record","artifactKind":"Decision","primaryManagedRef":"artifacts/process-runs/e5f874f1-02b9-43c8-9c2d-ee932972e992/steps/slice-architecture-check.md","materializationMode":"AgentWritten"}]
+ExecutorKind                 | agent
+ExecutorId                   | 1e267ce2-bf18-ce52-9743-9b36b9314994
+ExecutorDisplayName          | .NET Application Developer
+RoleKey                      | software-engineer
+RoleDisplayName              | .NET implementation engineer
+AllowedOperations            | ExecuteExternalAction;ReadProcessContext;ReadProjectStructure;ReadUpstreamArtifacts;WriteManagedProcessArtifacts
+OperationTargetScope         | ExternalActionControlled
+AssignedProducedSlots        | fd2eedff-c00f-0b6c-ef09-e0d57dca7d53
+AssignedRequiredSlots        | 59c6c061-cc08-ca74-cf4c-e77a68fb429b
+Outcome                      | NeedsManager
+AppliedStepStatus            | Blocked
+StrategyId                   | strategy.adapter.workflow.execute
+IdempotencyKey               | c82ce65c-9b33-46c3-9a8d-228318c182f6
+DiagnosticsJson              | [{"code":"process.adapter.agent_blocked","sensitivity":"Normal","evidenceHash":"sha256:fd56428d99a632a995b8f332c3e14f8961407b76b7b73ce032fc024054028f58","safeSummary":"Step \u0027prepare-solution-skeleton\u0027 returned Blocked: Child process run ab4a1ed8-8b1b-4974-973d-93983bf41f09 is Blocked; this parent step must not launch a replacement child automatically. Grounded product-target launch variables are included in the parent handoff summary. Next action(s): Inspect stopped child process run ab4a1ed8-8b1b-4974-973d-93983bf41f09 at /projects/be2ebfd7-7766-43f9-9b2e-8051d0b0d99d/processes/live?runId=ab4a1ed8-8b1b-4974-973d-93983bf41f09 and propagate its concrete blocker, or explicitly rework that child before relaunch. Inspect stopped child process run ab4a1ed8-8b1b-4974-973d-93983bf41f09 at /projects/be2ebfd7-7766-43f9-9b2e-8051d0b0d99d/processes/live?runId=ab4a1ed8-8b1b-4974-973d-93983bf41f09 and propagate its concrete blocker, or explicitly rework that child before relaunch.","retrySafety":"Unknown","idempotency":"Unknown"}]
+ProducedArtifactsJson        | []
+RecoveryDecisionJson         | {"failureCategory":"Unknown","decisionKind":"ManagerRequired","sourceDiagnosticCode":"process.adapter.agent_blocked","policy":"process.manager-review-required","safeReason":"The strategy result blocked the step and requires manager or operator decision before rework.","routeKind":"ManagerAction","responsibleStepInstanceId":"db3e7295-b523-4343-8be6-85598427385b"}
+-[ RECORD 5 ]----------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+StepKey                      | slice-architecture-check
+StepInstanceId               | 3fc89640-f27e-4c38-ac05-0a304ff93313
+Status                       | Completed
+AttemptNumber                | 1
+RequiredArtifactSlotIds      | 494dcfd1-4745-40a6-7f6a-f33ec32c8cf8
+ProducedArtifactSlotIds      | 59c6c061-cc08-ca74-cf4c-e77a68fb429b
+RequiredRuntimeToolNamesJson | []
+ArtifactDescriptorsJson      | [{"slotId":"59c6c061-cc08-ca74-cf4c-e77a68fb429b","slotKey":"slice-architecture-check:slice-architecture-decision","stepKey":"slice-architecture-check","artifactExpectationKey":"slice-architecture-decision","artifactTitle":"Slice architecture decision record","artifactKind":"Decision","primaryManagedRef":"artifacts/process-runs/e5f874f1-02b9-43c8-9c2d-ee932972e992/steps/slice-architecture-check.md","materializationMode":"AgentWritten"},{"slotId":"494dcfd1-4745-40a6-7f6a-f33ec32c8cf8","slotKey":"slice-intake:slice-scope-packet","stepKey":"slice-intake","artifactExpectationKey":"slice-scope-packet","artifactTitle":"Implementation slice scope packet","artifactKind":"Evidence","primaryManagedRef":"artifacts/process-runs/e5f874f1-02b9-43c8-9c2d-ee932972e992/steps/slice-intake.md","materializationMode":"AgentWritten"}]
+ExecutorKind                 | agent
+ExecutorId                   | 38d4deb5-74ce-8e55-bf1a-17e88b437472
+ExecutorDisplayName          | .NET Solution Architect
+RoleKey                      | solution-architect
+RoleDisplayName              | Slice architect
+AllowedOperations            | EscalateOrDecide;ReadProcessContext;ReadProjectStructure;ReadUpstreamArtifacts;WriteManagedProcessArtifacts
+OperationTargetScope         | ExternalProductTargetReadOnly
+AssignedProducedSlots        | 59c6c061-cc08-ca74-cf4c-e77a68fb429b
+AssignedRequiredSlots        | 494dcfd1-4745-40a6-7f6a-f33ec32c8cf8
+Outcome                      | Succeeded
+AppliedStepStatus            | Completed
+StrategyId                   | strategy.adapter.workflow.execute
+IdempotencyKey               | 753bca88-4860-4a99-97ab-a077dfba5409
+DiagnosticsJson              | []
+ProducedArtifactsJson        | [{"slotId":"59c6c061-cc08-ca74-cf4c-e77a68fb429b","artifactId":"316be419-6a6e-45ca-9396-cab3cabaed84","contentHash":"sha256:00afb2192f925b8a513a26f404e04700a151aa4658410f9dc8b981af9ef63a87"}]
+RecoveryDecisionJson         | 
+-[ RECORD 6 ]----------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+StepKey                      | slice-handoff
+StepInstanceId               | 7b13b9de-35aa-48f8-99c2-8701a1f231e4
+Status                       | Blocked
+AttemptNumber                | 0
+RequiredArtifactSlotIds      | 7569b684-3c04-18eb-cda9-f1532151896c;8c649741-b244-aa99-97eb-ea6fab19b668
+ProducedArtifactSlotIds      | 8df20233-e4e3-ee39-f14f-e08009a515b2
+RequiredRuntimeToolNamesJson | []
+ArtifactDescriptorsJson      | [{"slotId":"8c649741-b244-aa99-97eb-ea6fab19b668","slotKey":"add-tests-and-proof:slice-test-evidence","stepKey":"add-tests-and-proof","artifactExpectationKey":"slice-test-evidence","artifactTitle":"Slice test evidence","artifactKind":"Evidence","primaryManagedRef":"artifacts/process-runs/e5f874f1-02b9-43c8-9c2d-ee932972e992/steps/add-tests-and-proof.md","materializationMode":"AgentWritten"},{"slotId":"7569b684-3c04-18eb-cda9-f1532151896c","slotKey":"implement-code-change:slice-change-set","stepKey":"implement-code-change","artifactExpectationKey":"slice-change-set","artifactTitle":"Slice implementation change set","artifactKind":"Deliverable","primaryManagedRef":"artifacts/process-runs/e5f874f1-02b9-43c8-9c2d-ee932972e992/steps/implement-code-change.md","materializationMode":"AgentWritten"},{"slotId":"8df20233-e4e3-ee39-f14f-e08009a515b2","slotKey":"slice-handoff:slice-handoff-packet","stepKey":"slice-handoff","artifactExpectationKey":"slice-handoff-packet","artifactTitle":"Implementation slice handoff packet","artifactKind":"Evidence","primaryManagedRef":"artifacts/process-runs/e5f874f1-02b9-43c8-9c2d-ee932972e992/steps/slice-handoff.md","materializationMode":"AgentWritten"}]
+ExecutorKind                 | agent
+ExecutorId                   | b0c2a317-a417-385f-9f59-0f4a2c5b7ff2
+ExecutorDisplayName          | Delivery Manager
+RoleKey                      | delivery-manager
+RoleDisplayName              | Slice manager
+AllowedOperations            | ReadProcessContext;ReadProjectStructure;ReadUpstreamArtifacts;WriteManagedProcessArtifacts
+OperationTargetScope         | ExternalProductTargetReadOnly
+AssignedProducedSlots        | 8df20233-e4e3-ee39-f14f-e08009a515b2
+AssignedRequiredSlots        | 7569b684-3c04-18eb-cda9-f1532151896c;8c649741-b244-aa99-97eb-ea6fab19b668
+Outcome                      | 
+AppliedStepStatus            | 
+StrategyId                   | 
+IdempotencyKey               | 
+DiagnosticsJson              | 
+ProducedArtifactsJson        | 
+RecoveryDecisionJson         | 
+-[ RECORD 7 ]----------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+StepKey                      | slice-handoff-after-repair
+StepInstanceId               | d97cab67-193c-4b3b-adf6-7a699064e75d
+Status                       | Blocked
+AttemptNumber                | 0
+RequiredArtifactSlotIds      | 7569b684-3c04-18eb-cda9-f1532151896c;c5324d37-5ef3-456c-ad0d-6863180e6f8d;fdcedc32-c49b-5db6-f0b8-500235df0181
+ProducedArtifactSlotIds      | 215c9fd3-89e5-dec7-5024-22ca3cfa9f4f
+RequiredRuntimeToolNamesJson | []
+ArtifactDescriptorsJson      | [{"slotId":"c5324d37-5ef3-456c-ad0d-6863180e6f8d","slotKey":"add-tests-recheck:slice-recheck-evidence","stepKey":"add-tests-recheck","artifactExpectationKey":"slice-recheck-evidence","artifactTitle":"Repaired slice test evidence","artifactKind":"Evidence","primaryManagedRef":"artifacts/process-runs/e5f874f1-02b9-43c8-9c2d-ee932972e992/steps/add-tests-recheck.md","materializationMode":"AgentWritten"},{"slotId":"7569b684-3c04-18eb-cda9-f1532151896c","slotKey":"implement-code-change:slice-change-set","stepKey":"implement-code-change","artifactExpectationKey":"slice-change-set","artifactTitle":"Slice implementation change set","artifactKind":"Deliverable","primaryManagedRef":"artifacts/process-runs/e5f874f1-02b9-43c8-9c2d-ee932972e992/steps/implement-code-change.md","materializationMode":"AgentWritten"},{"slotId":"215c9fd3-89e5-dec7-5024-22ca3cfa9f4f","slotKey":"slice-handoff-after-repair:slice-handoff-packet-after-repair","stepKey":"slice-handoff-after-repair","artifactExpectationKey":"slice-handoff-packet-after-repair","artifactTitle":"Repaired implementation slice handoff packet","artifactKind":"Evidence","primaryManagedRef":"artifacts/process-runs/e5f874f1-02b9-43c8-9c2d-ee932972e992/steps/slice-handoff-after-repair.md","materializationMode":"AgentWritten"},{"slotId":"fdcedc32-c49b-5db6-f0b8-500235df0181","slotKey":"slice-repair-code-change:slice-repair-change-set","stepKey":"slice-repair-code-change","artifactExpectationKey":"slice-repair-change-set","artifactTitle":"Slice repair change set","artifactKind":"Deliverable","primaryManagedRef":"artifacts/process-runs/e5f874f1-02b9-43c8-9c2d-ee932972e992/steps/slice-repair-code-change.md","materializationMode":"AgentWritten"}]
+ExecutorKind                 | agent
+ExecutorId                   | b0c2a317-a417-385f-9f59-0f4a2c5b7ff2
+ExecutorDisplayName          | Delivery Manager
+RoleKey                      | delivery-manager
+RoleDisplayName              | Slice manager
+AllowedOperations            | ReadProcessContext;ReadProjectStructure;ReadUpstreamArtifacts;WriteManagedProcessArtifacts
+OperationTargetScope         | ExternalProductTargetReadOnly
+AssignedProducedSlots        | 215c9fd3-89e5-dec7-5024-22ca3cfa9f4f
+AssignedRequiredSlots        | 7569b684-3c04-18eb-cda9-f1532151896c;c5324d37-5ef3-456c-ad0d-6863180e6f8d;fdcedc32-c49b-5db6-f0b8-500235df0181
+Outcome                      | 
+AppliedStepStatus            | 
+StrategyId                   | 
+IdempotencyKey               | 
+DiagnosticsJson              | 
+ProducedArtifactsJson        | 
+RecoveryDecisionJson         | 
+-[ RECORD 8 ]----------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+StepKey                      | slice-intake
+StepInstanceId               | 59f9f890-4ac1-49a9-b052-a4ead67120aa
+Status                       | Completed
+AttemptNumber                | 1
+RequiredArtifactSlotIds      | 
+ProducedArtifactSlotIds      | 494dcfd1-4745-40a6-7f6a-f33ec32c8cf8
+RequiredRuntimeToolNamesJson | []
+ArtifactDescriptorsJson      | [{"slotId":"494dcfd1-4745-40a6-7f6a-f33ec32c8cf8","slotKey":"slice-intake:slice-scope-packet","stepKey":"slice-intake","artifactExpectationKey":"slice-scope-packet","artifactTitle":"Implementation slice scope packet","artifactKind":"Evidence","primaryManagedRef":"artifacts/process-runs/e5f874f1-02b9-43c8-9c2d-ee932972e992/steps/slice-intake.md","materializationMode":"AgentWritten"}]
+ExecutorKind                 | agent
+ExecutorId                   | b0c2a317-a417-385f-9f59-0f4a2c5b7ff2
+ExecutorDisplayName          | Delivery Manager
+RoleKey                      | delivery-manager
+RoleDisplayName              | Slice manager
+AllowedOperations            | ReadProcessContext;ReadProjectStructure;ReadUpstreamArtifacts;WriteManagedProcessArtifacts
+OperationTargetScope         | ExternalProductTargetReadOnly
+AssignedProducedSlots        | 494dcfd1-4745-40a6-7f6a-f33ec32c8cf8
+AssignedRequiredSlots        | 
+Outcome                      | Succeeded
+AppliedStepStatus            | Completed
+StrategyId                   | strategy.adapter.workflow.execute
+IdempotencyKey               | bcf52fb5-739b-4eef-ab4d-5f4956abd7c1
+DiagnosticsJson              | []
+ProducedArtifactsJson        | [{"slotId":"494dcfd1-4745-40a6-7f6a-f33ec32c8cf8","artifactId":"32b6116b-33a4-4caf-8449-5c4497008197","contentHash":"sha256:c76d6f07512a7ad8a562648faa5ddb63af8ce6442a7a4dfd4173d0606d28e152"}]
+RecoveryDecisionJson         | 
+-[ RECORD 9 ]----------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+StepKey                      | slice-repair-code-change
+StepInstanceId               | 0e4af715-9190-487b-9ed6-51ccfe986dcb
+Status                       | Blocked
+AttemptNumber                | 0
+RequiredArtifactSlotIds      | 7569b684-3c04-18eb-cda9-f1532151896c;8c649741-b244-aa99-97eb-ea6fab19b668
+ProducedArtifactSlotIds      | fdcedc32-c49b-5db6-f0b8-500235df0181
+RequiredRuntimeToolNamesJson | []
+ArtifactDescriptorsJson      | [{"slotId":"8c649741-b244-aa99-97eb-ea6fab19b668","slotKey":"add-tests-and-proof:slice-test-evidence","stepKey":"add-tests-and-proof","artifactExpectationKey":"slice-test-evidence","artifactTitle":"Slice test evidence","artifactKind":"Evidence","primaryManagedRef":"artifacts/process-runs/e5f874f1-02b9-43c8-9c2d-ee932972e992/steps/add-tests-and-proof.md","materializationMode":"AgentWritten"},{"slotId":"7569b684-3c04-18eb-cda9-f1532151896c","slotKey":"implement-code-change:slice-change-set","stepKey":"implement-code-change","artifactExpectationKey":"slice-change-set","artifactTitle":"Slice implementation change set","artifactKind":"Deliverable","primaryManagedRef":"artifacts/process-runs/e5f874f1-02b9-43c8-9c2d-ee932972e992/steps/implement-code-change.md","materializationMode":"AgentWritten"},{"slotId":"fdcedc32-c49b-5db6-f0b8-500235df0181","slotKey":"slice-repair-code-change:slice-repair-change-set","stepKey":"slice-repair-code-change","artifactExpectationKey":"slice-repair-change-set","artifactTitle":"Slice repair change set","artifactKind":"Deliverable","primaryManagedRef":"artifacts/process-runs/e5f874f1-02b9-43c8-9c2d-ee932972e992/steps/slice-repair-code-change.md","materializationMode":"RuntimeSynthesizedParentHandoff"}]
+ExecutorKind                 | agent
+ExecutorId                   | 1e267ce2-bf18-ce52-9743-9b36b9314994
+ExecutorDisplayName          | .NET Application Developer
+RoleKey                      | software-engineer
+RoleDisplayName              | .NET implementation engineer
+AllowedOperations            | ExecuteExternalAction;ReadProcessContext;ReadProjectStructure;ReadUpstreamArtifacts;WriteManagedProcessArtifacts
+OperationTargetScope         | ExternalActionControlled
+AssignedProducedSlots        | fdcedc32-c49b-5db6-f0b8-500235df0181
+AssignedRequiredSlots        | 7569b684-3c04-18eb-cda9-f1532151896c;8c649741-b244-aa99-97eb-ea6fab19b668
+Outcome                      | 
+AppliedStepStatus            | 
+StrategyId                   | 
+IdempotencyKey               | 
+DiagnosticsJson              | 
+ProducedArtifactsJson        | 
+RecoveryDecisionJson         | 
+-[ RECORD 10 ]---------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+StepKey                      | slice-repair-escalation
+StepInstanceId               | fd592fc2-34ef-4cec-bca3-9468641800ee
+Status                       | Blocked
+AttemptNumber                | 0
+RequiredArtifactSlotIds      | 8c649741-b244-aa99-97eb-ea6fab19b668;c5324d37-5ef3-456c-ad0d-6863180e6f8d;fdcedc32-c49b-5db6-f0b8-500235df0181
+ProducedArtifactSlotIds      | a97ef175-7d1c-b45c-ebab-e466ed14877b
+RequiredRuntimeToolNamesJson | []
+ArtifactDescriptorsJson      | [{"slotId":"8c649741-b244-aa99-97eb-ea6fab19b668","slotKey":"add-tests-and-proof:slice-test-evidence","stepKey":"add-tests-and-proof","artifactExpectationKey":"slice-test-evidence","artifactTitle":"Slice test evidence","artifactKind":"Evidence","primaryManagedRef":"artifacts/process-runs/e5f874f1-02b9-43c8-9c2d-ee932972e992/steps/add-tests-and-proof.md","materializationMode":"AgentWritten"},{"slotId":"c5324d37-5ef3-456c-ad0d-6863180e6f8d","slotKey":"add-tests-recheck:slice-recheck-evidence","stepKey":"add-tests-recheck","artifactExpectationKey":"slice-recheck-evidence","artifactTitle":"Repaired slice test evidence","artifactKind":"Evidence","primaryManagedRef":"artifacts/process-runs/e5f874f1-02b9-43c8-9c2d-ee932972e992/steps/add-tests-recheck.md","materializationMode":"AgentWritten"},{"slotId":"fdcedc32-c49b-5db6-f0b8-500235df0181","slotKey":"slice-repair-code-change:slice-repair-change-set","stepKey":"slice-repair-code-change","artifactExpectationKey":"slice-repair-change-set","artifactTitle":"Slice repair change set","artifactKind":"Deliverable","primaryManagedRef":"artifacts/process-runs/e5f874f1-02b9-43c8-9c2d-ee932972e992/steps/slice-repair-code-change.md","materializationMode":"AgentWritten"},{"slotId":"a97ef175-7d1c-b45c-ebab-e466ed14877b","slotKey":"slice-repair-escalation:slice-repair-escalation-packet","stepKey":"slice-repair-escalation","artifactExpectationKey":"slice-repair-escalation-packet","artifactTitle":"Slice repair escalation packet","artifactKind":"Evidence","primaryManagedRef":"artifacts/process-runs/e5f874f1-02b9-43c8-9c2d-ee932972e992/steps/slice-repair-escalation.md","materializationMode":"AgentWritten"}]
+ExecutorKind                 | agent
+ExecutorId                   | b0c2a317-a417-385f-9f59-0f4a2c5b7ff2
+ExecutorDisplayName          | Delivery Manager
+RoleKey                      | delivery-manager
+RoleDisplayName              | Slice manager
+AllowedOperations            | ReadProcessContext;ReadProjectStructure;ReadUpstreamArtifacts;WriteManagedProcessArtifacts
+OperationTargetScope         | ExternalProductTargetReadOnly
+AssignedProducedSlots        | a97ef175-7d1c-b45c-ebab-e466ed14877b
+AssignedRequiredSlots        | 8c649741-b244-aa99-97eb-ea6fab19b668;c5324d37-5ef3-456c-ad0d-6863180e6f8d;fdcedc32-c49b-5db6-f0b8-500235df0181
+Outcome                      | 
+AppliedStepStatus            | 
+StrategyId                   | 
+IdempotencyKey               | 
+DiagnosticsJson              | 
+ProducedArtifactsJson        | 
+RecoveryDecisionJson         | 
+
+

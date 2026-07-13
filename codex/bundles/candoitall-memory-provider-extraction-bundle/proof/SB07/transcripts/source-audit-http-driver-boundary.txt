@@ -1,0 +1,7 @@
+Command: rg -n CanDoItAll.Modules.CognitiveMemory|CognitiveMemory|Qdrant|OpenAI|OpenAi|CanDoItAll.AgentFramework.Rag|CanDoItAll.Infrastructure|AppDbContext|EntityFrameworkCore src\Memory\CanDoItAll.Memory.Http
+WorkingDirectory: C:\repositories\CanDoItAll
+RunLabel: SB07 HTTP driver dependency boundary audit
+ExitCode: 0
+Summary: HTTP driver project contains no native memory, Qdrant, OpenAI, RAG, AppDbContext, Infrastructure, or EF dependency strings.
+Output:
+

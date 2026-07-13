@@ -1,0 +1,4 @@
+Command: completed-stage metadata compliance addendum for SB09
+ExitCode: 0
+ExitCode: 1
+Invariant ID: SB09-final-closure

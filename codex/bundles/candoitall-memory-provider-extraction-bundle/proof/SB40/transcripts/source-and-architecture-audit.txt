@@ -1,0 +1,87 @@
+Run label: SB40 source, dependency, response-limit, and architecture audit
+Captured: 2026-07-12
+Working directory: repo://
+
+Command: rg --files src/Memory src/MAF/Memory src/Modules/CanDoItAll.Modules.Memory src/App/CanDoItAll.Composition/Memory -g '*.cs' -g '*.razor'; rg prohibited partial declarations; count files over 220 lines
+Exit code: 0
+Result:
+  production C# and Razor files: 227
+  prohibited handwritten partial declarations: 0
+  files over 220 lines: 0
+
+Command: PowerShell project-reference DFS over every src/**/*.csproj
+Exit code: 0
+Result:
+  production projects: 88
+  project-reference cycles: 0
+
+Command: rg TODO, FIXME, NotImplementedException, fixture-specific, template-only, and stub markers in repaired production targets
+Exit code: 0
+Result: 0 anti-stub marker matches.
+
+Command: git diff --check in the main repository and external repository
+Exit code: 0
+Result: no whitespace errors in either repository; line-ending conversion notices were non-error Git notices.
+
+Command: resolve all main project references and scan source/test metadata for C:/repositories/CanDoItAll.CognitiveMemory path references
+Exit code: 0
+Result: 0 main-to-external CognitiveMemory file or project references.
+Qualification: the retained legacy Modules.CognitiveMemory project still has two unrelated AgentFramework Rag/SemanticCompletion sibling project references. Base composition does not reference or discover that legacy module.
+
+Command: rg -n --hidden -i -g '!**/bin/**' -g '!**/obj/**' -g '!**/.git/**' -e 'Microsoft\.Agents\.AI\.Mem0|Mem0Provider|AddMemoryProviderAsync|mem0-shared-memory|MemoryCapabilityConfiguration' src
+Exit code: 1
+Result: 0 matches in production src after the legacy catalog/runtime Mem0 bypass was retired.
+Qualification: ripgrep exit code 1 means no matches. The same tokens intentionally remain in tests/Unit/CanDoItAll.Tests.Unit/CapabilityMigrationCleanupGuardTests.cs as negative guard assertions; therefore this evidence is explicitly a production-source scan, not a whole-repository zero-token claim.
+
+Command: scan repaired provider configuration, appsettings, UI, and browser proof for literal credentials
+Exit code: 0
+Result: 0 credential values found. Two LegacyRawApiKey constant names remain intentionally so configuration loading can reject and migrate raw legacy keys to environment-variable references.
+
+Command: inspect explicit driver registrations and run architecture/DI guards in the 196-pass Memory aggregate
+Exit code: 0
+Result: Mock, HTTP, NativeRemote, and MCP are each registered once when explicitly enabled; duplicate driver-kind registrations fail closed; zero-provider composition registers none.
+
+Command: code_analytics_dashboard_get and code_analytics_dependencies_get for snap-20260712151629-d5b70dcd
+Exit code: 0
+Result:
+  ok: true
+  blocking errors: 0
+  scope: 15 projects
+  project cycle: 0 by the complete 88-project source graph
+  prior AgentFramework.Memory root/Context/Tools namespace cycle: removed
+  remaining same-assembly cycle: one MemorySourceSnapshotCursor/cursor-exception type cycle
+Classification: the contributor, tool provider, and DI registration owner were moved to Context, Tools, and DependencyInjection namespaces and all call sites were updated, removing the module SCC. The remaining typed cursor exception carries the cursor value that creates it; this is a bounded same-project type relationship, not a project-reference reversal.
+
+Command: final namespace owner validation reported by final_namespace_cycle_audit
+Exit code: 0
+Result: AgentFramework.Memory project build 0 warnings/0 errors; AgentFramework.Memory tests 22/22; joined provider seam 1/1; focused contributor/tool-provider tests 25/25.
+Qualification: individual focused command lines were not retained and are not reconstructed. The exact final solution-build command and result are in bundle://proof/SB40/transcripts/terminal-validation.txt.
+
+Command: code_analytics_dashboard_get and code_analytics_dependencies_get for snap-20260712132721-cdf936e2
+Exit code: 0
+Result:
+  ok: true
+  blocking errors: 0
+  scope: 9 projects, 120 documents, 234 types, 1,157 members
+  cross-project and cross-repository cycles: 0
+  same-assembly Persistence module cycle: 1, already documented by SB39
+
+Command: run declared-length, chunked HTTP, NativeRemote, MCP, context-pack, and feedback-handle security tests in the Memory aggregate
+Exit code: 0
+Result:
+  HTTP declared oversized bodies are rejected before reading;
+  chunked bodies stop at limit plus one;
+  NativeRemote uses the same response cap;
+  MCP raw/structured results are capped before mapping;
+  provider output and diagnostics are treated as untrusted;
+  provider-supplied feedback handles are validated and replaced with host-owned operation correlation.
+
+Worker lease disposition:
+  PostgreSQL uses an atomic phase lease with owner/token fencing, renewal, and expiry.
+  InMemory coordination is explicitly process-local.
+  background workers default to disabled.
+  catastrophic lease expiry remains at-least-once delivery, so provider authors must make side-effecting operations idempotent by stable operation id.
+
+Command: inspect remaining CanDoItAll Web and external Cognitive Memory service processes after live/browser proof
+Exit code: 0
+Result: 0 leftover host or external-service processes.

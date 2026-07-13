@@ -1,0 +1,17 @@
+CWD: C:\repositories\CanDoItAll
+START: 2026-06-29T15:15:07.2931147-04:00
+
+PATTERN: NotImplementedException
+PASS no matches
+
+PATTERN: TODO
+PASS no matches
+
+PATTERN: STUB
+PASS no matches
+
+PATTERN: throw new InvalidOperationException\("TODO
+PASS no matches
+
+END: 2026-06-29T15:15:07.5729111-04:00
+EXIT_CODE: 0

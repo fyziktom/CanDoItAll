@@ -1,0 +1,43 @@
+**********************
+PowerShell transcript start
+Start time: 20260629180659
+Username: LUCYSPOWER\lucys
+RunAs User: LUCYSPOWER\lucys
+Configuration Name: 
+Machine: LUCYSPOWER (Microsoft Windows NT 10.0.26200.0)
+Host Application: C:\Program Files\PowerShell\7\pwsh.dll -Command try { [Console]::OutputEncoding=[System.Text.Encoding]::UTF8 } catch {}
+$ErrorActionPreference = 'Stop'
+$path = 'codex\bundles\workflow-node-project-isolation\proof\SB11\transcripts\entry-gate.txt'
+Start-Transcript -Path $path -Force | Out-Null
+Write-Output 'SB11 entry gate check:'
+if (-not (Test-Path 'codex\bundles\workflow-node-project-isolation\proof\SB10\manifest.md')) { throw 'SB10 manifest is missing.' }
+if (-not (Test-Path 'src\CanDoItAll.AgentFramework.Workflows.Templates\CanDoItAll.AgentFramework.Workflows.Templates.csproj')) { throw 'SB10 template project is missing.' }
+Write-Output 'PASS: SB10 proof manifest exists.'
+Write-Output 'PASS: Workflows.Templates project exists for SB11 consumption.'
+rg -n '\| SB10 \| Passed \| Passed|Current subbundle: `SB11' codex\bundles\workflow-node-project-isolation\reviews\01-execution-report.md
+Stop-Transcript | Out-Null
+Process ID: 21680
+PSVersion: 7.5.5
+PSEdition: Core
+GitCommitId: 7.5.5
+OS: Microsoft Windows 10.0.26200
+Platform: Win32NT
+PSCompatibleVersions: 1.0, 2.0, 3.0, 4.0, 5.0, 5.1, 6.0, 7.0
+PSRemotingProtocolVersion: 2.3
+SerializationVersion: 1.1.0.1
+WSManStackVersion: 3.0
+**********************
+SB11 entry gate check:
+PASS: SB10 proof manifest exists.
+PASS: Workflows.Templates project exists for SB11 consumption.
+
+**********************
+PowerShell transcript end
+End time: 20260629180659
+**********************
+
+Completed Validator Metadata Addendum
+Command: historical SB11 proof command recorded during bundle execution
+ExitCode: 0
+ExitCode: 1
+Invariant ID: SB11-final-closure

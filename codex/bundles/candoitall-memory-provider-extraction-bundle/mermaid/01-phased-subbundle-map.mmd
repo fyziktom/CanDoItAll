@@ -1,0 +1,77 @@
+flowchart TD
+    SB01[SB01 Protocol envelope]
+    SB02[SB02 Provider registry]
+    SB03[SB03 Operation feedback events]
+    SB04[SB04 Source snapshot contracts]
+    SB05[SB05 Foundation checkpoint]
+    SB06[SB06 Generic persistence services]
+    SB07[SB07 HTTP driver]
+    SB08[SB08 MCP driver]
+    SB09[SB09 Async workers]
+    SB10[SB10 Runtime checkpoint]
+    SB11[SB11 Project sources]
+    SB12[SB12 Process workflow sources]
+    SB13[SB13 CRM resource manual sources]
+    SB14[SB14 Source gateway checkpoint]
+    SB15[SB15 Shared operation handler]
+    SB16[SB16 MAF tool selection]
+    SB17[SB17 Workflow executor]
+    SB18[SB18 Generic context contributor]
+    SB19[SB19 MAF checkpoint]
+    SB20[SB20 Memory UI shell]
+    SB21[SB21 Query operations feedback UI]
+    SB22[SB22 Provider UI surfaces]
+    SB23[SB23 UI checkpoint]
+    SB24[SB24 Native repo scaffold]
+    SB25[SB25 Native DB extraction]
+    SB26[SB26 Native engine migration]
+    SB27[SB27 Native protocol API]
+    SB28[SB28 Native MAF integration]
+    SB29[SB29 Native checkpoint]
+    SB30[SB30 Host dependency removal]
+    SB31[SB31 Data migration retirement]
+    SB32[SB32 Test rebalance]
+    SB33[SB33 E2E observability]
+    SB34[SB34 Final cleanup]
+
+    SB01 --> SB02
+    SB01 --> SB03
+    SB01 --> SB04
+    SB02 --> SB05
+    SB03 --> SB05
+    SB04 --> SB05
+    SB05 --> SB06
+    SB06 --> SB07
+    SB06 --> SB08
+    SB06 --> SB09
+    SB07 --> SB10
+    SB08 --> SB10
+    SB09 --> SB10
+    SB10 --> SB11
+    SB10 --> SB12
+    SB10 --> SB13
+    SB11 --> SB14
+    SB12 --> SB14
+    SB13 --> SB14
+    SB14 --> SB15
+    SB15 --> SB16
+    SB15 --> SB17
+    SB16 --> SB18
+    SB17 --> SB18
+    SB18 --> SB19
+    SB19 --> SB20
+    SB20 --> SB21
+    SB20 --> SB22
+    SB21 --> SB23
+    SB22 --> SB23
+    SB23 --> SB24
+    SB24 --> SB25
+    SB25 --> SB26
+    SB26 --> SB27
+    SB27 --> SB28
+    SB28 --> SB29
+    SB29 --> SB30
+    SB30 --> SB31
+    SB31 --> SB32
+    SB32 --> SB33
+    SB33 --> SB34

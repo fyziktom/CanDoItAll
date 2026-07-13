@@ -1,0 +1,50 @@
+[
+  {
+    "id": "c6aedbee-e77b-cf58-942f-6b6bdc02666a",
+    "executionRunId": "723f46c4-a8a0-40c2-ac9e-e2657fbfdf9b",
+    "toolFamily": "workspace-file",
+    "toolName": "workspace_write_file",
+    "riskClass": "MutatingWorkspace",
+    "approvalMode": "NotRequired",
+    "isolationGuarantee": "Workspace file service with support for mapped external-target/<drive>/... aliases. No host process execution.",
+    "requestSummary": "artifacts/scopes/organization/e5df9ad633dbc6974a0678a74976013c/process-runs/8476b73f-6ab3-4e0b-be97-dc501dbfc71e/steps/review-architecture-design.md",
+    "workingDirectory": ".",
+    "exitSummary": "Succeeded: Created 'artifacts/scopes/organization/e5df9ad633dbc6974a0678a74976013c/process-runs/8476b73f-6ab3-4e0b-be97-dc501dbfc71e/steps/review-architecture-design.md' with 6767 characters.",
+    "startedAtUtc": "2026-07-09T05:13:00.5254845-04:00",
+    "completedAtUtc": "2026-07-09T05:13:00.5325889-04:00",
+    "runtimeToolProviderKey": "",
+    "runtimeToolProviderName": ""
+  },
+  {
+    "id": "4932cd15-1724-c150-a7e0-c2a3fae16096",
+    "executionRunId": "723f46c4-a8a0-40c2-ac9e-e2657fbfdf9b",
+    "toolFamily": "workspace-file",
+    "toolName": "workspace_read_file",
+    "riskClass": "ReadOnlyWorkspace",
+    "approvalMode": "NotRequired",
+    "isolationGuarantee": "Workspace file service with support for mapped external-target/<drive>/... aliases. No host process execution.",
+    "requestSummary": "artifacts/scopes/organization/e5df9ad633dbc6974a0678a74976013c/process-runs/8476b73f-6ab3-4e0b-be97-dc501dbfc71e/steps/draft-architecture-design.md",
+    "workingDirectory": ".",
+    "exitSummary": "Succeeded: Read 'artifacts/scopes/organization/e5df9ad633dbc6974a0678a74976013c/process-runs/8476b73f-6ab3-4e0b-be97-dc501dbfc71e/steps/draft-architecture-design.md'.",
+    "startedAtUtc": "2026-07-09T05:12:49.7854095-04:00",
+    "completedAtUtc": "2026-07-09T05:12:49.7856787-04:00",
+    "runtimeToolProviderKey": "",
+    "runtimeToolProviderName": ""
+  },
+  {
+    "id": "7bdb8964-0c8a-875d-8d4c-3da4e4f140a6",
+    "executionRunId": "723f46c4-a8a0-40c2-ac9e-e2657fbfdf9b",
+    "toolFamily": "workspace-file",
+    "toolName": "workspace_read_file",
+    "riskClass": "ReadOnlyWorkspace",
+    "approvalMode": "NotRequired",
+    "isolationGuarantee": "Workspace file service with support for mapped external-target/<drive>/... aliases. No host process execution.",
+    "requestSummary": "artifacts/scopes/organization/e5df9ad633dbc6974a0678a74976013c/process-runs/8476b73f-6ab3-4e0b-be97-dc501dbfc71e/steps/classify-dotnet-application.md",
+    "workingDirectory": ".",
+    "exitSummary": "Succeeded: Read 'artifacts/scopes/organization/e5df9ad633dbc6974a0678a74976013c/process-runs/8476b73f-6ab3-4e0b-be97-dc501dbfc71e/steps/classify-dotnet-application.md'.",
+    "startedAtUtc": "2026-07-09T05:12:49.7829377-04:00",
+    "completedAtUtc": "2026-07-09T05:12:49.7832425-04:00",
+    "runtimeToolProviderKey": "",
+    "runtimeToolProviderName": ""
+  }
+]

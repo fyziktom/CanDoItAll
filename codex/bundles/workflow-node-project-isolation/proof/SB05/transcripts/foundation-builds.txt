@@ -1,0 +1,115 @@
+## Build Workflows.Abstractions
+Command: dotnet build src\CanDoItAll.AgentFramework.Workflows.Abstractions\CanDoItAll.AgentFramework.Workflows.Abstractions.csproj --artifacts-path artifacts\codex-sb05-build-abstractions
+CWD: C:\repositories\CanDoItAll
+Start: 2026-06-29T13:23:50.0141135-04:00
+End: 2026-06-29T13:23:56.2691941-04:00
+Exit code: 0
+
+Output:
+  Zjišťují se projekty, které se mají obnovit...
+  Obnovil se projekt C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Models\CanDoItAll.AgentFramework.Models.csproj (v 94 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll\src\CanDoItAll.SharedKernel\CanDoItAll.SharedKernel.csproj (v 90 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Workflows.Abstractions\CanDoItAll.AgentFramework.Workflows.Abstractions.csproj (v 94 ms).
+  CanDoItAll.SharedKernel -> C:\repositories\CanDoItAll\artifacts\codex-sb05-build-abstractions\bin\CanDoItAll.SharedKernel\debug\CanDoItAll.SharedKernel.dll
+  CanDoItAll.AgentFramework.Models -> C:\repositories\CanDoItAll\artifacts\codex-sb05-build-abstractions\bin\CanDoItAll.AgentFramework.Models\debug\CanDoItAll.AgentFramework.Models.dll
+  CanDoItAll.AgentFramework.Workflows.Abstractions -> C:\repositories\CanDoItAll\artifacts\codex-sb05-build-abstractions\bin\CanDoItAll.AgentFramework.Workflows.Abstractions\debug\CanDoItAll.AgentFramework.Workflows.Abstractions.dll
+
+Vytváření sestavení bylo úspěšně dokončeno.
+    0 upozornění
+    Počet chyb: 0
+
+Uplynulý čas 00:00:05.49
+
+## Build Workflows.Builder
+Command: dotnet build src\CanDoItAll.AgentFramework.Workflows.Builder\CanDoItAll.AgentFramework.Workflows.Builder.csproj --artifacts-path artifacts\codex-sb05-build-builder
+CWD: C:\repositories\CanDoItAll
+Start: 2026-06-29T13:23:56.2853969-04:00
+End: 2026-06-29T13:24:03.9927455-04:00
+Exit code: 0
+
+Output:
+  Zjišťují se projekty, které se mají obnovit...
+  Obnovil se projekt C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Workflows.Abstractions\CanDoItAll.AgentFramework.Workflows.Abstractions.csproj (v 108 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Workflows.Builder\CanDoItAll.AgentFramework.Workflows.Builder.csproj (v 108 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll\src\CanDoItAll.SharedKernel\CanDoItAll.SharedKernel.csproj (v 106 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Models\CanDoItAll.AgentFramework.Models.csproj (v 108 ms).
+  CanDoItAll.SharedKernel -> C:\repositories\CanDoItAll\artifacts\codex-sb05-build-builder\bin\CanDoItAll.SharedKernel\debug\CanDoItAll.SharedKernel.dll
+  CanDoItAll.AgentFramework.Models -> C:\repositories\CanDoItAll\artifacts\codex-sb05-build-builder\bin\CanDoItAll.AgentFramework.Models\debug\CanDoItAll.AgentFramework.Models.dll
+  CanDoItAll.AgentFramework.Workflows.Abstractions -> C:\repositories\CanDoItAll\artifacts\codex-sb05-build-builder\bin\CanDoItAll.AgentFramework.Workflows.Abstractions\debug\CanDoItAll.AgentFramework.Workflows.Abstractions.dll
+  CanDoItAll.AgentFramework.Workflows.Builder -> C:\repositories\CanDoItAll\artifacts\codex-sb05-build-builder\bin\CanDoItAll.AgentFramework.Workflows.Builder\debug\CanDoItAll.AgentFramework.Workflows.Builder.dll
+
+Vytváření sestavení bylo úspěšně dokončeno.
+    0 upozornění
+    Počet chyb: 0
+
+Uplynulý čas 00:00:06.67
+
+## Build Workflows.Runtime
+Command: dotnet build src\CanDoItAll.AgentFramework.Workflows.Runtime\CanDoItAll.AgentFramework.Workflows.Runtime.csproj --artifacts-path artifacts\codex-sb05-build-runtime
+CWD: C:\repositories\CanDoItAll
+Start: 2026-06-29T13:24:03.9936100-04:00
+End: 2026-06-29T13:24:16.1161722-04:00
+Exit code: 0
+
+Output:
+  Zjišťují se projekty, které se mají obnovit...
+  Obnovil se projekt C:\repositories\CanDoItAll\src\CanDoItAll.Git\CanDoItAll.Git.csproj (v 143 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Workflows.Abstractions\CanDoItAll.AgentFramework.Workflows.Abstractions.csproj (v 146 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Capabilities.Abstractions\CanDoItAll.AgentFramework.Capabilities.Abstractions.csproj (v 143 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll\src\CanDoItAll.SharedKernel\CanDoItAll.SharedKernel.csproj (v 143 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Models\CanDoItAll.AgentFramework.Models.csproj (v 146 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Workflows.Runtime\CanDoItAll.AgentFramework.Workflows.Runtime.csproj (v 326 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Core\CanDoItAll.AgentFramework.Core.csproj (v 326 ms).
+  CanDoItAll.SharedKernel -> C:\repositories\CanDoItAll\artifacts\codex-sb05-build-runtime\bin\CanDoItAll.SharedKernel\debug\CanDoItAll.SharedKernel.dll
+  CanDoItAll.Git -> C:\repositories\CanDoItAll\artifacts\codex-sb05-build-runtime\bin\CanDoItAll.Git\debug\CanDoItAll.Git.dll
+  CanDoItAll.AgentFramework.Capabilities.Abstractions -> C:\repositories\CanDoItAll\artifacts\codex-sb05-build-runtime\bin\CanDoItAll.AgentFramework.Capabilities.Abstractions\debug\CanDoItAll.AgentFramework.Capabilities.Abstractions.dll
+  CanDoItAll.AgentFramework.Models -> C:\repositories\CanDoItAll\artifacts\codex-sb05-build-runtime\bin\CanDoItAll.AgentFramework.Models\debug\CanDoItAll.AgentFramework.Models.dll
+  CanDoItAll.AgentFramework.Workflows.Abstractions -> C:\repositories\CanDoItAll\artifacts\codex-sb05-build-runtime\bin\CanDoItAll.AgentFramework.Workflows.Abstractions\debug\CanDoItAll.AgentFramework.Workflows.Abstractions.dll
+  CanDoItAll.AgentFramework.Core -> C:\repositories\CanDoItAll\artifacts\codex-sb05-build-runtime\bin\CanDoItAll.AgentFramework.Core\debug\CanDoItAll.AgentFramework.Core.dll
+  CanDoItAll.AgentFramework.Workflows.Runtime -> C:\repositories\CanDoItAll\artifacts\codex-sb05-build-runtime\bin\CanDoItAll.AgentFramework.Workflows.Runtime\debug\CanDoItAll.AgentFramework.Workflows.Runtime.dll
+
+Vytváření sestavení bylo úspěšně dokončeno.
+    0 upozornění
+    Počet chyb: 0
+
+Uplynulý čas 00:00:11.13
+
+## Build Workflows.Core
+Command: dotnet build src\CanDoItAll.AgentFramework.Workflows.Core\CanDoItAll.AgentFramework.Workflows.Core.csproj --artifacts-path artifacts\codex-sb05-build-core
+CWD: C:\repositories\CanDoItAll
+Start: 2026-06-29T13:24:16.1172392-04:00
+End: 2026-06-29T13:24:29.5598165-04:00
+Exit code: 0
+
+Output:
+  Zjišťují se projekty, které se mají obnovit...
+  Obnovil se projekt C:\repositories\CanDoItAll\src\CanDoItAll.SharedKernel\CanDoItAll.SharedKernel.csproj (v 161 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Workflows.Abstractions\CanDoItAll.AgentFramework.Workflows.Abstractions.csproj (v 166 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Capabilities.Abstractions\CanDoItAll.AgentFramework.Capabilities.Abstractions.csproj (v 161 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Models\CanDoItAll.AgentFramework.Models.csproj (v 166 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll\src\CanDoItAll.Git\CanDoItAll.Git.csproj (v 161 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Core\CanDoItAll.AgentFramework.Core.csproj (v 413 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Workflows.Core\CanDoItAll.AgentFramework.Workflows.Core.csproj (v 413 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Workflows.Runtime\CanDoItAll.AgentFramework.Workflows.Runtime.csproj (v 413 ms).
+  CanDoItAll.Git -> C:\repositories\CanDoItAll\artifacts\codex-sb05-build-core\bin\CanDoItAll.Git\debug\CanDoItAll.Git.dll
+  CanDoItAll.SharedKernel -> C:\repositories\CanDoItAll\artifacts\codex-sb05-build-core\bin\CanDoItAll.SharedKernel\debug\CanDoItAll.SharedKernel.dll
+  CanDoItAll.AgentFramework.Capabilities.Abstractions -> C:\repositories\CanDoItAll\artifacts\codex-sb05-build-core\bin\CanDoItAll.AgentFramework.Capabilities.Abstractions\debug\CanDoItAll.AgentFramework.Capabilities.Abstractions.dll
+  CanDoItAll.AgentFramework.Models -> C:\repositories\CanDoItAll\artifacts\codex-sb05-build-core\bin\CanDoItAll.AgentFramework.Models\debug\CanDoItAll.AgentFramework.Models.dll
+  CanDoItAll.AgentFramework.Workflows.Abstractions -> C:\repositories\CanDoItAll\artifacts\codex-sb05-build-core\bin\CanDoItAll.AgentFramework.Workflows.Abstractions\debug\CanDoItAll.AgentFramework.Workflows.Abstractions.dll
+  CanDoItAll.AgentFramework.Core -> C:\repositories\CanDoItAll\artifacts\codex-sb05-build-core\bin\CanDoItAll.AgentFramework.Core\debug\CanDoItAll.AgentFramework.Core.dll
+  CanDoItAll.AgentFramework.Workflows.Runtime -> C:\repositories\CanDoItAll\artifacts\codex-sb05-build-core\bin\CanDoItAll.AgentFramework.Workflows.Runtime\debug\CanDoItAll.AgentFramework.Workflows.Runtime.dll
+  CanDoItAll.AgentFramework.Workflows.Core -> C:\repositories\CanDoItAll\artifacts\codex-sb05-build-core\bin\CanDoItAll.AgentFramework.Workflows.Core\debug\CanDoItAll.AgentFramework.Workflows.Core.dll
+
+Vytváření sestavení bylo úspěšně dokončeno.
+    0 upozornění
+    Počet chyb: 0
+
+Uplynulý čas 00:00:12.64
+
+Overall exit code: 0
+
+Completed Validator Metadata Addendum
+Command: historical SB05 proof command recorded during bundle execution
+ExitCode: 0
+ExitCode: 1
+Invariant ID: SB05-final-closure

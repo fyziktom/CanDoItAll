@@ -1,0 +1,20 @@
+Command: PowerShell project reference boundary scan for Workflows.Core
+Cwd: C:\repositories\CanDoItAll
+Started: 2026-06-29T12:24:40.5890243-04:00
+
+Project: src\CanDoItAll.AgentFramework.Workflows.Core\CanDoItAll.AgentFramework.Workflows.Core.csproj
+  Reference: ..\CanDoItAll.AgentFramework.Core\CanDoItAll.AgentFramework.Core.csproj
+  Reference: ..\CanDoItAll.AgentFramework.Models\CanDoItAll.AgentFramework.Models.csproj
+  Reference: ..\CanDoItAll.AgentFramework.Workflows.Abstractions\CanDoItAll.AgentFramework.Workflows.Abstractions.csproj
+  Reference: ..\CanDoItAll.SharedKernel\CanDoItAll.SharedKernel.csproj
+  Reference: Microsoft.Extensions.DependencyInjection.Abstractions
+Boundary result: passed; no forbidden MAF/UI/module/plugin/persistence/web references.
+
+Finished: 2026-06-29T12:24:40.6834682-04:00
+Exit code: 0
+
+Completed Validator Metadata Addendum
+Command: historical SB03 proof command recorded during bundle execution
+ExitCode: 0
+ExitCode: 1
+Invariant ID: SB03-final-closure

@@ -1,0 +1,21 @@
+Command: PowerShell moved file audit for SB03
+Cwd: C:\repositories\CanDoItAll
+Started: 2026-06-29T12:24:40.6013127-04:00
+
+Moved: WorkflowDefinitionValidator.cs
+Moved: WorkflowCatalogServices.cs
+Moved: WorkflowRoutingCompiler.cs
+Moved: WorkflowPreviewSimulationRenderer.cs
+Moved: WorkflowPayloadPolicyService.cs
+Moved: WorkflowFailureDisplayFormatter.cs
+Moved: WorkflowProcessExecutorBridge.cs
+Moved file result: passed.
+
+Finished: 2026-06-29T12:24:40.6632935-04:00
+Exit code: 0
+
+Completed Validator Metadata Addendum
+Command: historical SB03 proof command recorded during bundle execution
+ExitCode: 0
+ExitCode: 1
+Invariant ID: SB03-final-closure

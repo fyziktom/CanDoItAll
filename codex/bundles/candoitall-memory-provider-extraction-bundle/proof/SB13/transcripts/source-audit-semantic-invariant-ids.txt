@@ -1,0 +1,19 @@
+Command: rg -n "SB13_(CRM001|RES001|MAN001|ING001|FUT001)" codex\bundles\candoitall-memory-provider-extraction-bundle\proof\SB13\semantic-invariants.md codex\bundles\candoitall-memory-provider-extraction-bundle\proof\SB13\manifest.md
+Working directory: C:\repositories\CanDoItAll
+Start: 2026-07-05T13:47:09.1846077-04:00
+codex\bundles\candoitall-memory-provider-extraction-bundle\proof\SB13\semantic-invariants.md:3:## Invariant SB13_CRM001
+codex\bundles\candoitall-memory-provider-extraction-bundle\proof\SB13\semantic-invariants.md:5:- Invariant ID: `SB13_CRM001`
+codex\bundles\candoitall-memory-provider-extraction-bundle\proof\SB13\semantic-invariants.md:16:## Invariant SB13_RES001
+codex\bundles\candoitall-memory-provider-extraction-bundle\proof\SB13\semantic-invariants.md:18:- Invariant ID: `SB13_RES001`
+codex\bundles\candoitall-memory-provider-extraction-bundle\proof\SB13\semantic-invariants.md:29:## Invariant SB13_MAN001
+codex\bundles\candoitall-memory-provider-extraction-bundle\proof\SB13\semantic-invariants.md:31:- Invariant ID: `SB13_MAN001`
+codex\bundles\candoitall-memory-provider-extraction-bundle\proof\SB13\semantic-invariants.md:42:## Invariant SB13_ING001
+codex\bundles\candoitall-memory-provider-extraction-bundle\proof\SB13\semantic-invariants.md:44:- Invariant ID: `SB13_ING001`
+codex\bundles\candoitall-memory-provider-extraction-bundle\proof\SB13\semantic-invariants.md:55:## Invariant SB13_FUT001
+codex\bundles\candoitall-memory-provider-extraction-bundle\proof\SB13\semantic-invariants.md:57:- Invariant ID: `SB13_FUT001`
+codex\bundles\candoitall-memory-provider-extraction-bundle\proof\SB13\semantic-invariants.md:72:| CRM/HR/client/account source adapters with sensitive redaction | Solved | `SB13_CRM001` and `bundle://proof/SB13/transcripts/passing-crm-resource-source-unit-tests.txt` |
+codex\bundles\candoitall-memory-provider-extraction-bundle\proof\SB13\semantic-invariants.md:73:| Resource metadata snapshots without secret/config leakage | Solved | `SB13_RES001` and `bundle://proof/SB13/transcripts/passing-crm-resource-source-unit-tests.txt` |
+codex\bundles\candoitall-memory-provider-extraction-bundle\proof\SB13\semantic-invariants.md:74:| Manual text/file/link ingestion through Source Gateway | Solved | `SB13_MAN001` and `bundle://proof/SB13/transcripts/passing-manual-source-ingestion-tests.txt` |
+codex\bundles\candoitall-memory-provider-extraction-bundle\proof\SB13\semantic-invariants.md:75:| Manual ingestion ledger records provider id, source snapshot id, and operation id | Solved | `SB13_ING001`, failing-first manual transcript, and passing manual transcript |
+codex\bundles\candoitall-memory-provider-extraction-bundle\proof\SB13\semantic-invariants.md:76:| Future source adapter registration without provider-driver edits | Solved | `SB13_FUT001`, provider-driver boundary audit, and future adapter denied-scope unit test |
+Exit code: 0

@@ -1,0 +1,22 @@
+Command: Get-ChildItem -Path 'src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime' -Recurse -Filter 'MafAgentRuntime*.cs'
+WorkingDirectory: C:\repositories\CanDoItAll
+StartedUtc: 2026-07-06T12:04:15.5903556-04:00
+.\src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\MafAgentRuntime.Capabilities.Access.CatalogDescriptors.cs|431
+.\src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\MafAgentRuntime.Capabilities.Access.cs|163
+.\src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\MafAgentRuntime.Capabilities.Access.Policies.cs|165
+.\src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\MafAgentRuntime.Capabilities.Access.RuntimeToolDescriptors.cs|73
+.\src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\MafAgentRuntime.Capabilities.Context.cs|275
+.\src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\MafAgentRuntime.Capabilities.cs|1024
+.\src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\MafAgentRuntime.Capabilities.Mcp.cs|823
+.\src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\MafAgentRuntime.Capabilities.RuntimeToolProviders.cs|150
+.\src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\MafAgentRuntime.Capabilities.Skills.cs|220
+.\src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\MafAgentRuntime.Capabilities.Tools.ConfiguredWorkspace.cs|167
+.\src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\MafAgentRuntime.Capabilities.Tools.cs|404
+.\src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\MafAgentRuntime.AgentFactory.cs|1160
+.\src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\MafAgentRuntime.cs|2204
+.\src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\MafAgentRuntime.InputAttachments.cs|184
+.\src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Providers\MafAgentRuntime.ProviderHealth.cs|50
+.\src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Workspace\MafAgentRuntime.StorageRuntimePlugin.cs|233
+.\src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Workspace\MafAgentRuntime.WorkspaceRuntimePlugin.cs|924
+.\src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Workspace\MafAgentRuntime.WorkspaceSearchSupport.cs|190
+ExitCode: 0

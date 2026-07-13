@@ -1,0 +1,31 @@
+SB39 before/after hash anchors
+Generated: 2026-07-12
+Command: compute external baseline and repaired SHA-256 hashes for SB39-owned files
+Exit code: 0
+Algorithm: SHA-256
+
+Baseline external revision: 6fdaa2f67a57583076b406b578bf9c86dfb36dbf
+Paths are relative to the CanDoItAll.CognitiveMemory repository root.
+Format: path | baseline revision | repaired working tree
+
+CanDoItAll.CognitiveMemory.slnx | f70b263d89a08f4e09292bacc535639389d395836b041fcc50638aab5bd5f7c3 | a52da0344e616d81c08f142dd723645e0c9ba7bb51fda5136339b9f46207deb1
+src/CanDoItAll.CognitiveMemory.Contracts/CanDoItAll.CognitiveMemory.Contracts.csproj | fc083e27eab5b61053880ebaedba84ab49eedbca6055577434b2f8a484d59364 | 1f2f185441c048f6cf09adf60cb6598535ee9ad74d5ce41e625603420e35275d
+src/CanDoItAll.CognitiveMemory.Contracts/Protocol/V1/MemoryOperationEnvelope.cs | ABSENT | 8bcae2f5542097287014edeb9dfd276b6c2c2ea4bb5220dd25e46c2df68df4ad
+src/CanDoItAll.CognitiveMemory.Contracts/Protocol/V1/Http/HttpMemoryProviderContracts.cs | ABSENT | 31bcb713ae38ba30c174bfe8e200cfb9d2925f7e08c285b8891e16f4e5c1b9d9
+src/CanDoItAll.CognitiveMemory.Domain/DefaultCognitiveMemoryAccessPolicy.cs | ABSENT | 13cecc56e737752f58855f221f672856cc99c30d51f07b0b48abe19485b40d4c
+src/CanDoItAll.CognitiveMemory.Persistence/EfCognitiveMemoryEngineStore.cs | 4fecaae5f2e89bbb4ae12c49a0311b33bc03675a9ec9f7ddba02683d63dfcbfb | 663880f1f323ec2df78d7fa9ebcfcd9bd5d9d92a14eff42012a912948bd4db7a
+src/CanDoItAll.CognitiveMemory.Service/CanDoItAll.CognitiveMemory.Service.csproj | 4ae7904fef32dc864e148810026d21d2e7871d61f32bd588216e187ffb33401b | 2883b2fd3374fc14d8afbc48fe9750b2f5b75f31cc8ba6113d8dd9fb4437e270
+src/CanDoItAll.CognitiveMemory.Service/CognitiveMemoryProtocolApi.cs | 7a3ba1233ef45a21b83a3eaf78a1de6d8ef36986ce440fdbd11249730b8d30a6 | b3e9a3a8ee0f06ec202f561f9ef5e623607eb1c579f5b487436d20f76f5e41dd
+src/CanDoItAll.CognitiveMemory.Service/Security/CognitiveMemoryApiKeyAuthentication.cs | ABSENT | c57a2b6448e59ac6e19c2c0f5cd04ce3597d75bf1de7defd8b27a7273126e87b
+src/CanDoItAll.CognitiveMemory.Service/Security/CognitiveMemoryRequestAuthorization.cs | ABSENT | e47c0c555eadf4a56f576205a63ddf027b3ac22b79ea69cec0ee0412275a9d42
+tests/CanDoItAll.CognitiveMemory.Tests/NativeScaffoldArchitectureTests.cs | 6245c99fd9141682468fa7728bb63aff9f1dec94dc134f3a785ae3afd8dee77e | 340254fb72f90c36a610c0c5526aeb187465d41d3e80c2dbe27577717938f4c0
+tests/CanDoItAll.CognitiveMemory.Tests/MemoryProtocolV1JsonConformanceTests.cs | ABSENT | e2ba1043dbcadfb468af4bb3c78ebbd2ccfa89ca0ea4e1168f0cd7e7b3ec3c7a
+tests/CanDoItAll.CognitiveMemory.Tests/NativeServiceSecurityTests.cs | ABSENT | 70b6d037c228c66e51ddcbb04c19cf1705762ed3208919434ee59a9dd48622a8
+docs/protocol/fixtures/context-query.v1.json | ABSENT | 2edb210940115aa3a01a64e510af486703b2c600547a84901b54ebecd4d2c0a3
+docs/protocol/fixtures/ingestion.v1.json | ABSENT | a250e89f72bb0d2f5e231b999d8d997e377bb4b1aa258314bfd05a087244f0bd
+docs/protocol/memory-protocol-v1-wire.md | ABSENT | 5a4aca6eaf7f5ab0c59699e8409b3b95683cbbc19cb19ad560c2c0ab27569723
+
+Hash method:
+- Baseline: raw `git cat-file blob HEAD:<path>` bytes at the anchored external revision.
+- Repaired: `Get-FileHash -Algorithm SHA256` against the working-tree file.
+- `ABSENT` means the path did not exist at the baseline revision.

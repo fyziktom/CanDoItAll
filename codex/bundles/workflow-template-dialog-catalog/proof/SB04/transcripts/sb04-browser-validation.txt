@@ -1,0 +1,32 @@
+COMMAND: Playwright MCP large-screen validation against live Development instance
+
+Environment:
+- URL: http://localhost:5032/agents/workflows
+- Viewport: 1680x1000
+- Database profile: launch profile `http`; app startup log shows `Provider=PostgreSql` and fingerprint `postgres:127.0.0.1:5432:candoitall_development:candoitall`
+- Small and medium viewport tests: skipped by explicit user request because this app target is large-screen only.
+
+Steps:
+1. Navigated to `http://localhost:5032/agents/workflows`.
+2. Opened workflow workspace tab `workflows-tab-workflows`.
+3. Clicked `workflows-open-template-catalogue`.
+4. Waited for `Offer Document Folder Summary`.
+5. Filled catalogue search with `Offer`.
+6. Selected `Offer Document Folder Summary`.
+7. Captured `bundle://proof/SB04/browser/workflow-template-catalogue-dialog-large-offer-filter.png`.
+8. Clicked the selected template `Preview` action.
+9. Waited for `Add to my drafts`.
+10. Captured `bundle://proof/SB04/browser/workflow-template-preview-dialog-large.png`.
+
+Assertions:
+- The primary Templates tab is absent from the visible workflow tab row.
+- Catalogue dialog states templates load only when opened.
+- Catalogue shows generic offer templates, basic descriptions, metadata, and Preview actions.
+- No SEAMARK wording is visible in the catalogue or preview screenshots.
+- Preview opens as a separate dialog with read-only workflow canvas and `Add to my drafts`.
+- Preview canvas is framed at 48% zoom with all five workflow nodes visible.
+
+Result: Passed.
+ExitCode: 0
+Invariant ID: SB04-INV-003
+Invariant ID: SB04-INV-004

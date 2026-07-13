@@ -1,0 +1,5 @@
+Command: rg -n "TODO|NotImplemented|throw new NotImplementedException" src\Processes\CanDoItAll.Processes.Contracts\ProcessCapabilityScopeModels.cs src\Processes\CanDoItAll.Processes.Persistence\EfProcessRuntimeStepAssignmentStore.cs src\Processes\CanDoItAll.Processes.Templates\ProcessTemplatePackLoader.cs src\Processes\CanDoItAll.Processes.Runtime\ProcessRuntimeStepAssignments.cs
+Test: SB03 anti-stub audit
+Invariant: MAF-SB03-PROCESS-CONTRACT
+Output: no TODO, NotImplemented, or placeholder exception matches
+ExitCode: 1

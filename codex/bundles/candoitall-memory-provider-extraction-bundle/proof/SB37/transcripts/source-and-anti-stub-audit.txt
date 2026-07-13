@@ -1,0 +1,9 @@
+Run label: SB37 live boundary audit
+Working directory: repo://
+Command: inspect AgentFramework.Memory project references; rg partial declarations and TODO/FIXME/NotImplementedException markers in repaired targets.
+Exit code: 0
+
+SB37-INV-03: AgentFramework.Memory references Agent Framework Core/Models/WorkflowExecutors/Tooling and generic Memory Abstractions/Application only; no module UI or native Cognitive Memory reference.
+Prohibited handwritten partial findings in src/MAF/Memory: none.
+Anti-stub marker findings in AgentFramework.Memory: none.
+Real-host desktop/narrow browser evidence was not part of the SB37 checkpoint. It later passed in bundle://proof/SB40/transcripts/browser-validation.txt.

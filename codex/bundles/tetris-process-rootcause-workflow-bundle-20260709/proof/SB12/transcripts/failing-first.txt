@@ -1,0 +1,5 @@
+Run label: SB12 failing-first architecture invariant INV-SB12-001
+Working directory: C:\repositories\CanDoItAll
+Command: dotnet test tests\Unit\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj --no-build --no-restore --filter "FullyQualifiedName=CanDoItAll.Tests.Unit.ProcessRuntimeArchitectureBaselineTests.AgentFrameworkProcessExecutionAdapter_is_one_non_partial_boundary_file" -v normal
+Exit code: 1
+Result: Expected only AgentFrameworkProcessExecutionAdapter.cs, but the current source contained the 20-file AgentFrameworkProcessExecutionAdapter partial cluster. The architecture invariant failed at ProcessRuntimeArchitectureBaselineTests.cs line 43 before production refactoring.

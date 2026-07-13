@@ -1,0 +1,26 @@
+SB12 closure audit
+Timestamp: 2026-06-29T19:45:44.8836211-04:00
+Working directory: C:\repositories\CanDoItAll
+Command: Test-Path over SB12 manifest-critical artifacts; fail on missing paths.
+
+PASS codex\bundles\workflow-node-project-isolation\proof\SB12\manifest.md
+PASS codex\bundles\workflow-node-project-isolation\proof\SB12\semantic-invariants.md
+PASS codex\bundles\workflow-node-project-isolation\proof\SB12\changed-file-hashes.txt
+PASS codex\bundles\workflow-node-project-isolation\proof\SB12\transcripts\entry-gate.txt
+PASS codex\bundles\workflow-node-project-isolation\proof\SB12\transcripts\prepared-validator.txt
+PASS codex\bundles\workflow-node-project-isolation\proof\SB12\transcripts\unit-diagnostics-tests.txt
+PASS codex\bundles\workflow-node-project-isolation\proof\SB12\transcripts\component-workflows-page-tests.txt
+PASS codex\bundles\workflow-node-project-isolation\proof\SB12\transcripts\api-workbench-integration-tests.txt
+PASS codex\bundles\workflow-node-project-isolation\proof\SB12\transcripts\playwright-workflow-shell-large.txt
+PASS codex\bundles\workflow-node-project-isolation\proof\SB12\transcripts\playwright-workbench-workflow-node-large.txt
+PASS codex\bundles\workflow-node-project-isolation\proof\SB12\transcripts\static-adoption-check.txt
+PASS codex\bundles\workflow-node-project-isolation\proof\SB12\transcripts\semantic-source-assertions.txt
+PASS codex\bundles\workflow-node-project-isolation\proof\SB12\transcripts\adversarial-negative-check.txt
+PASS codex\bundles\workflow-node-project-isolation\proof\SB12\transcripts\anti-stub-audit.txt
+PASS codex\bundles\workflow-node-project-isolation\proof\SB12\transcripts\workbook-update-and-render.txt
+PASS codex\bundles\workflow-node-project-isolation\proof\SB12\browser\workflow-shell-runtime-large.png
+PASS codex\bundles\workflow-node-project-isolation\proof\SB12\browser\project-structure-workflow-selection-status.png
+PASS codex\bundles\workflow-node-project-isolation\proof\SB12\workbook-previews\summary.png
+PASS codex\bundles\workflow-node-project-isolation\inventories\workflow-node-project-isolation-map.xlsx
+Decision: Passed. SB12 proof manifest, semantic invariants, transcripts, browser screenshots, workbook previews, and workbook artifact exist.
+Exit code: 0

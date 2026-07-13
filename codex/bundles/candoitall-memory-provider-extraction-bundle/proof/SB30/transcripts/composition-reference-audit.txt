@@ -1,0 +1,5 @@
+Command: SB30 composition direct dependency and optional-driver audit
+PASS: Base composition removed native Cognitive Memory, Qdrant, semantic projection driver, and native module discovery references.
+PASS: Optional generic memory provider drivers are configured only through Memory:Providers sections.
+ExitCode: 0
+

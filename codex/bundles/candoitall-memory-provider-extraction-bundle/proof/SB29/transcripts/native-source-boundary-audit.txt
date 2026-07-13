@@ -1,0 +1,3 @@
+Command: rg -n -g *.cs -g *.csproj -g !**/bin/** -g !**/obj/** -g !**/Migrations/** "AppDbContext|CanDoItAll\.Composition|CanDoItAll\.Web|CanDoItAll\.Modules\." C:\repositories\CanDoItAll.CognitiveMemory\src
+ExitCode: 1
+PASS: Native source has no AppDbContext, CanDoItAll.Composition, CanDoItAll.Web, or CanDoItAll.Modules.* references.

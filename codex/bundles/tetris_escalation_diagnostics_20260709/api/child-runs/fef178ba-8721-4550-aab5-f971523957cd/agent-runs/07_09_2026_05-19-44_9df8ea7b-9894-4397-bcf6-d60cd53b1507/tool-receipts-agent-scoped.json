@@ -1,0 +1,50 @@
+[
+  {
+    "id": "81d3363f-5ca1-7e57-8b71-2a1969fa7936",
+    "executionRunId": "9df8ea7b-9894-4397-bcf6-d60cd53b1507",
+    "toolFamily": "workspace-file",
+    "toolName": "workspace_write_file",
+    "riskClass": "MutatingWorkspace",
+    "approvalMode": "NotRequired",
+    "isolationGuarantee": "Workspace file service with support for mapped external-target/<drive>/... aliases. No host process execution.",
+    "requestSummary": "artifacts/scopes/organization/e5df9ad633dbc6974a0678a74976013c/process-runs/fef178ba-8721-4550-aab5-f971523957cd/steps/targeted-validation.md",
+    "workingDirectory": ".",
+    "exitSummary": "Succeeded: Created 'artifacts/scopes/organization/e5df9ad633dbc6974a0678a74976013c/process-runs/fef178ba-8721-4550-aab5-f971523957cd/steps/targeted-validation.md' with 2602 characters.",
+    "startedAtUtc": "2026-07-09T05:19:53.7370116-04:00",
+    "completedAtUtc": "2026-07-09T05:19:53.7458972-04:00",
+    "runtimeToolProviderKey": "",
+    "runtimeToolProviderName": ""
+  },
+  {
+    "id": "76483929-e945-5756-aa76-72c7e108c7d6",
+    "executionRunId": "9df8ea7b-9894-4397-bcf6-d60cd53b1507",
+    "toolFamily": "workspace-file",
+    "toolName": "workspace_read_file",
+    "riskClass": "ReadOnlyWorkspace",
+    "approvalMode": "NotRequired",
+    "isolationGuarantee": "Workspace file service with support for mapped external-target/<drive>/... aliases. No host process execution.",
+    "requestSummary": "artifacts/scopes/organization/e5df9ad633dbc6974a0678a74976013c/process-runs/fef178ba-8721-4550-aab5-f971523957cd/steps/code-change.md",
+    "workingDirectory": ".",
+    "exitSummary": "Succeeded: Read 'artifacts/scopes/organization/e5df9ad633dbc6974a0678a74976013c/process-runs/fef178ba-8721-4550-aab5-f971523957cd/steps/code-change.md'.",
+    "startedAtUtc": "2026-07-09T05:19:48.2706571-04:00",
+    "completedAtUtc": "2026-07-09T05:19:48.2713032-04:00",
+    "runtimeToolProviderKey": "",
+    "runtimeToolProviderName": ""
+  },
+  {
+    "id": "7f3d07b9-5ffd-5e52-99ce-580cdce13e51",
+    "executionRunId": "9df8ea7b-9894-4397-bcf6-d60cd53b1507",
+    "toolFamily": "workspace-file",
+    "toolName": "workspace_read_file",
+    "riskClass": "ReadOnlyWorkspace",
+    "approvalMode": "NotRequired",
+    "isolationGuarantee": "Workspace file service with support for mapped external-target/<drive>/... aliases. No host process execution.",
+    "requestSummary": "artifacts/scopes/organization/e5df9ad633dbc6974a0678a74976013c/process-runs/fef178ba-8721-4550-aab5-f971523957cd/steps/test-contract.md",
+    "workingDirectory": ".",
+    "exitSummary": "Succeeded: Read 'artifacts/scopes/organization/e5df9ad633dbc6974a0678a74976013c/process-runs/fef178ba-8721-4550-aab5-f971523957cd/steps/test-contract.md'.",
+    "startedAtUtc": "2026-07-09T05:19:48.265864-04:00",
+    "completedAtUtc": "2026-07-09T05:19:48.2664321-04:00",
+    "runtimeToolProviderKey": "",
+    "runtimeToolProviderName": ""
+  }
+]

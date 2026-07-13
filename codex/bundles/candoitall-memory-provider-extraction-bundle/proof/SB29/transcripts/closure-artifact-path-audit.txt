@@ -1,0 +1,39 @@
+Command: SB29 closure artifact path audit
+Audited source files:
+- C:\repositories\CanDoItAll\codex\bundles\candoitall-memory-provider-extraction-bundle\proof\SB29\manifest.md
+- C:\repositories\CanDoItAll\codex\bundles\candoitall-memory-provider-extraction-bundle\proof\SB29\semantic-invariants.md
+- C:\repositories\CanDoItAll\codex\bundles\candoitall-memory-provider-extraction-bundle\subbundles\29-native-service-hardening-checkpoint\README.md
+- C:\repositories\CanDoItAll\codex\bundles\candoitall-memory-provider-extraction-bundle\reviews\01-execution-report.md
+- C:\repositories\CanDoItAll\codex\bundles\candoitall-memory-provider-extraction-bundle\README.md
+Resolved SB29 bundle paths:
+OK E73182321D0DDA1C9EBA13FC7A971309C2620250430A99355B85DC72E7838AB5 bundle://evidence/34-prepared-stage-validation-after-sb29.txt
+OK D77FD494C5B4CA3D453819DC98F5845B987809899E0EF9B883900A82E9E418B2 bundle://proof/SB29/manifest.md
+OK A9BDEEC6EBD75291DED5E72097ABF183BB4A15A59B37EF7ED170AC82D12A000E bundle://proof/SB29/semantic-invariants.md
+SKIP self-hash bundle://proof/SB29/transcripts/closure-artifact-path-audit.txt
+OK 233F2B7B10E08BCC823924B7E807EDAE994A085498E2DBE2E025FCDF6BDA9861 bundle://proof/SB29/transcripts/ef-pending-model-changes.txt
+OK 8A93A5846BA7AA76EB8F463C89480097CC9E54F9F321BC3F441391605DA29445 bundle://proof/SB29/transcripts/failing-first-native-hardening-audit.txt
+OK 0CC39E91E6A60B3FBB27831B4BE6737DA327EC68E868577D786185F4AD64AD89 bundle://proof/SB29/transcripts/main-git-diff-check.txt
+OK 1F90DF12C7CC8780F8BF3E9D7CB830ED6472524DDE1D29153454799A360BBD98 bundle://proof/SB29/transcripts/native-anti-stub-audit.txt
+OK 093B794DE978F14BBDBB7158E263A94571C3778191558889BC65CF106C252072 bundle://proof/SB29/transcripts/native-api-contract-audit.txt
+OK 23391965576A76C9B15A66D5E049496301DEC9311B6F8EA8A29FE50D60DFB691 bundle://proof/SB29/transcripts/native-file-size-audit.txt
+OK 462262D52B99C77B11A3963E9E4C108B5A7897AEE92A425D2C954E35932F5946 bundle://proof/SB29/transcripts/native-git-diff-check.txt
+OK 9D4AEE70D1E48299A7CC97C4FCE3CD92FFFB43F18D3E033868BC5D641894F438 bundle://proof/SB29/transcripts/native-hardening-tests-attempt-1.txt
+OK BAB7FACF0E69E14594B7E6D7D57EA2462DA79562763B28B3236E4E9891F9906A bundle://proof/SB29/transcripts/native-maf-boundary-audit.txt
+OK 2B339AF41BD0B2D6928AC9CF4D762F016AA8951143A568DCAE4D22643774D185 bundle://proof/SB29/transcripts/native-provider-events-migration-add.txt
+OK F91533E304402D0413E41752B7E16BF073B07C91AB2277A73956AC032EE848FC bundle://proof/SB29/transcripts/native-qdrant-isolation-audit.txt
+OK C08D3A32E806C6FB1C33380E34A436EF3248F23D1D893925B3A85D45C05184AD bundle://proof/SB29/transcripts/native-semantic-assertions.txt
+OK EF6EBBEFE46A0178806396120E8AF7BC8939B68B9DB780179A738ADB005EB4F4 bundle://proof/SB29/transcripts/native-source-boundary-audit.txt
+OK 8EF04B7FD1E20AFFBC9D1C84387FA231CAFFAA577878516DE24B6EADD04E99C6 bundle://proof/SB29/transcripts/native-worker-protocol-audit.txt
+OK 97F90EF86147A95B26C5F0A7E603E184D6C11C3F9599BE956F9508F6E0896AEF bundle://proof/SB29/transcripts/native-xml-doc-audit.txt
+OK DF85011633DC57FA90611B17BD4932341568CF3FDD5538CD3B5DB7E16C652564 bundle://proof/SB29/transcripts/passing-main-native-remote-driver-tests.txt
+OK 6EC366752FE778BA51FB36D44E79830D2479843AC78A49C238C1340C382A5207 bundle://proof/SB29/transcripts/passing-main-solution-build.txt
+OK C1463E1C2EAD78FE45366F8E1969E18911EC2972D8C37FE97F6CB7DD10F4DE3E bundle://proof/SB29/transcripts/passing-main-zero-provider-component-tests.txt
+OK 547866E714E71809B0B294628F946FA6BA1BDD96E68363A5ED5C93896D51FD52 bundle://proof/SB29/transcripts/passing-main-zero-provider-runtime-tests.txt
+OK 0A06FD0C041305CDD6C7306BAFF787027730C45FD388FF286F135304EBA49D9A bundle://proof/SB29/transcripts/passing-native-hardening-tests.txt
+OK 8F78B4E96D2550A2356C0BB4C9658CE663622FBD7CE2DEFEE83EB5F89F274871 bundle://proof/SB29/transcripts/passing-native-provider-events-migration-script.txt
+OK 4DDCBF61FCD7002EEBFF7D335D6BC2672378EFA46B922519107867F72BF780ED bundle://proof/SB29/transcripts/passing-native-solution-build.txt
+OK D65BC5E87660916A0A210E7644B4C10909B4DBD9A795492F1B84D94E3A363772 bundle://proof/SB29/transcripts/passing-native-tests.txt
+OK 9346678235C978AABB9FE9E8E9CCB688B3A5DA443BA352A8E57FCBE870D210FB bundle://proof/SB29/transcripts/sb29-file-hashes.txt
+PASS: All non-self SB29 closure artifact paths referenced by manifest, semantic invariants, status docs, and execution report exist and are hashable.
+ExitCode: 0
+

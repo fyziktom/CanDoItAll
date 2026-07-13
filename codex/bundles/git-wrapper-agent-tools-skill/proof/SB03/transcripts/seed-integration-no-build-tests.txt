@@ -1,0 +1,8 @@
+Command: dotnet test tests/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj --filter AgentFrameworkWorkspaceSeedIntegrationTests --no-build --no-restore
+Started: 2026-06-29T06:52:34.8949086-04:00
+Testovací běh pro C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Integration\bin\Debug\net10.0\CanDoItAll.Tests.Integration.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+
+Úspěšné!    - Neúspěšné:     0, Úspěšné:    26, Přeskočeno:     0, Celkem:    26, Doba trvání: 2 m 38 s - CanDoItAll.Tests.Integration.dll (net10.0)
+Exit Code: 0
+Completed: 2026-06-29T06:55:17.4906477-04:00

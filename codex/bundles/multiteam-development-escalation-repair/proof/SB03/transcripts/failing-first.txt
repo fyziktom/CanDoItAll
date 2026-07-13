@@ -1,0 +1,4 @@
+Command: execute pre-repair process adapter and finalizer paths for managed artifact and current-run evidence blockers
+Exit code: 1
+Invariant: MTE-SB03-READINESS
+Observed failure: agent finalizer repair lost prior tool evidence and managed-artifact missing-output blockers escalated instead of retrying through the step's allowed write operation.

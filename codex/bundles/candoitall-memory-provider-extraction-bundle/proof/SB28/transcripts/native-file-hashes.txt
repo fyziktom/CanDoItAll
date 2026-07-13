@@ -1,0 +1,13 @@
+Workdir: C:\repositories\CanDoItAll
+Started: 2026-07-05T20:38:17.9103343-04:00
+
+Command: Get-FileHash for SB28 native changed files
+native-repo:\src\CanDoItAll.CognitiveMemory.Maf\CanDoItAll.CognitiveMemory.Maf.csproj bb818840f43d28bce90f7e0d32bcdd5414c52797748f9f95ace33fb83e41ab25
+native-repo:\src\CanDoItAll.CognitiveMemory.Maf\README.md 1d99d5bd2783e92c7a6ff785dac3727239c9ba63a23ddb75251db18040029ec7
+native-repo:\src\CanDoItAll.CognitiveMemory.Maf\CognitiveMemoryNativeMafContracts.cs 5043ece32676e43fe30326b50b2951330ed081ef187d8483fbf4c2dd17554419
+native-repo:\src\CanDoItAll.CognitiveMemory.Maf\CognitiveMemoryNativeMafServices.cs 5b1bfdbac27a3382573d073efdfe55d2013152b8d8eaf62ed6a6435d1e9edb3b
+native-repo:\src\CanDoItAll.CognitiveMemory.Maf\CognitiveMemoryNativeContextContributor.cs d74085896735c94b47d2885b2ab36b44cf804283ee7cb22dce290ae8178f9b9b
+native-repo:\tests\CanDoItAll.CognitiveMemory.Tests\CanDoItAll.CognitiveMemory.Tests.csproj 825be0ff94ff2307357b3be6f04141d45479fd33c20d5d64c8a8c6f86db09599
+native-repo:\tests\CanDoItAll.CognitiveMemory.Tests\NativeMafIntegrationTests.cs 41e2fcc3c933785664886eb8de3b72238819a895a8e9457a3d111bdf386c15dc
+
+ExitCode: 0

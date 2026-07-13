@@ -1,0 +1,54 @@
+Command: rg async/factory/no-tracking assertions over src\Memory\CanDoItAll.Memory.Persistence\EfMemoryProviderProfileStore.cs, src\Memory\CanDoItAll.Memory.Persistence\EfMemoryOperationLedgerStore.cs, src\Memory\CanDoItAll.Memory.Persistence\EfMemoryFeedbackLedgerStore.cs, src\Memory\CanDoItAll.Memory.Persistence\EfMemoryEventLedgerStore.cs, src\Memory\CanDoItAll.Memory.Persistence\EfMemorySourceRequestLedgerStore.cs, src\Memory\CanDoItAll.Memory.Persistence\EfMemoryRetentionProjectionStore.cs
+WorkingDirectory: C:\repositories\CanDoItAll
+RunLabel: SB06 async persistence and no-tracking source audit
+ExitCode: 0
+Summary: Stores use IDbContextFactory-created DbContext instances; mutation paths save asynchronously; read-list/get/projection paths include AsNoTracking where mutation is not required.
+FactoryAndAsyncOutput:
+src\Memory\CanDoItAll.Memory.Persistence\EfMemoryRetentionProjectionStore.cs:9:    IDbContextFactory<AppDbContext> dbContextFactory) : IMemoryRetentionProjectionStore
+src\Memory\CanDoItAll.Memory.Persistence\EfMemoryRetentionProjectionStore.cs:21:        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+src\Memory\CanDoItAll.Memory.Persistence\EfMemoryRetentionProjectionStore.cs:33:            .ToArrayAsync(cancellationToken);
+src\Memory\CanDoItAll.Memory.Persistence\EfMemoryRetentionProjectionStore.cs:45:            .ToArrayAsync(cancellationToken);
+src\Memory\CanDoItAll.Memory.Persistence\EfMemoryRetentionProjectionStore.cs:57:            .ToArrayAsync(cancellationToken);
+src\Memory\CanDoItAll.Memory.Persistence\EfMemorySourceRequestLedgerStore.cs:9:    IDbContextFactory<AppDbContext> dbContextFactory) : IMemorySourceRequestLedgerStore
+src\Memory\CanDoItAll.Memory.Persistence\EfMemorySourceRequestLedgerStore.cs:16:        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+src\Memory\CanDoItAll.Memory.Persistence\EfMemorySourceRequestLedgerStore.cs:18:        await dbContext.SaveChangesAsync(cancellationToken);
+src\Memory\CanDoItAll.Memory.Persistence\EfMemorySourceRequestLedgerStore.cs:25:        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+src\Memory\CanDoItAll.Memory.Persistence\EfMemorySourceRequestLedgerStore.cs:30:            .ToArrayAsync(cancellationToken);
+src\Memory\CanDoItAll.Memory.Persistence\EfMemoryOperationLedgerStore.cs:9:    IDbContextFactory<AppDbContext> dbContextFactory) : IMemoryOperationLedgerStore
+src\Memory\CanDoItAll.Memory.Persistence\EfMemoryOperationLedgerStore.cs:16:        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+src\Memory\CanDoItAll.Memory.Persistence\EfMemoryOperationLedgerStore.cs:18:        await dbContext.SaveChangesAsync(cancellationToken);
+src\Memory\CanDoItAll.Memory.Persistence\EfMemoryOperationLedgerStore.cs:25:        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+src\Memory\CanDoItAll.Memory.Persistence\EfMemoryOperationLedgerStore.cs:28:            .SingleOrDefaultAsync(item => item.OperationId == operationId.Value, cancellationToken);
+src\Memory\CanDoItAll.Memory.Persistence\EfMemoryOperationLedgerStore.cs:39:        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+src\Memory\CanDoItAll.Memory.Persistence\EfMemoryOperationLedgerStore.cs:41:            .SingleOrDefaultAsync(item => item.OperationId == operationId.Value, cancellationToken)
+src\Memory\CanDoItAll.Memory.Persistence\EfMemoryOperationLedgerStore.cs:50:        await dbContext.SaveChangesAsync(cancellationToken);
+src\Memory\CanDoItAll.Memory.Persistence\EfMemoryEventLedgerStore.cs:9:    IDbContextFactory<AppDbContext> dbContextFactory) : IMemoryEventLedgerStore
+src\Memory\CanDoItAll.Memory.Persistence\EfMemoryEventLedgerStore.cs:16:        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+src\Memory\CanDoItAll.Memory.Persistence\EfMemoryEventLedgerStore.cs:18:        await dbContext.SaveChangesAsync(cancellationToken);
+src\Memory\CanDoItAll.Memory.Persistence\EfMemoryEventLedgerStore.cs:26:        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+src\Memory\CanDoItAll.Memory.Persistence\EfMemoryEventLedgerStore.cs:28:        await dbContext.SaveChangesAsync(cancellationToken);
+src\Memory\CanDoItAll.Memory.Persistence\EfMemoryEventLedgerStore.cs:35:        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+src\Memory\CanDoItAll.Memory.Persistence\EfMemoryEventLedgerStore.cs:41:            .ToArrayAsync(cancellationToken);
+src\Memory\CanDoItAll.Memory.Persistence\EfMemoryEventLedgerStore.cs:49:        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+src\Memory\CanDoItAll.Memory.Persistence\EfMemoryEventLedgerStore.cs:55:            .ToArrayAsync(cancellationToken);
+src\Memory\CanDoItAll.Memory.Persistence\EfMemoryFeedbackLedgerStore.cs:9:    IDbContextFactory<AppDbContext> dbContextFactory) : IMemoryFeedbackLedgerStore
+src\Memory\CanDoItAll.Memory.Persistence\EfMemoryFeedbackLedgerStore.cs:16:        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+src\Memory\CanDoItAll.Memory.Persistence\EfMemoryFeedbackLedgerStore.cs:18:        await dbContext.SaveChangesAsync(cancellationToken);
+src\Memory\CanDoItAll.Memory.Persistence\EfMemoryFeedbackLedgerStore.cs:25:        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+src\Memory\CanDoItAll.Memory.Persistence\EfMemoryFeedbackLedgerStore.cs:30:            .ToArrayAsync(cancellationToken);
+src\Memory\CanDoItAll.Memory.Persistence\EfMemoryProviderProfileStore.cs:9:    IDbContextFactory<AppDbContext> dbContextFactory) : IMemoryProviderProfileStore
+src\Memory\CanDoItAll.Memory.Persistence\EfMemoryProviderProfileStore.cs:17:        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+src\Memory\CanDoItAll.Memory.Persistence\EfMemoryProviderProfileStore.cs:19:        var entity = await set.FindAsync([profile.InstanceId.Value], cancellationToken);
+src\Memory\CanDoItAll.Memory.Persistence\EfMemoryProviderProfileStore.cs:29:        await dbContext.SaveChangesAsync(cancellationToken);
+src\Memory\CanDoItAll.Memory.Persistence\EfMemoryProviderProfileStore.cs:34:        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+src\Memory\CanDoItAll.Memory.Persistence\EfMemoryProviderProfileStore.cs:38:            .ToArrayAsync(cancellationToken);
+NoTrackingOutput:
+src\Memory\CanDoItAll.Memory.Persistence\EfMemoryRetentionProjectionStore.cs:23:            .AsNoTracking()
+src\Memory\CanDoItAll.Memory.Persistence\EfMemoryRetentionProjectionStore.cs:35:            .AsNoTracking()
+src\Memory\CanDoItAll.Memory.Persistence\EfMemoryRetentionProjectionStore.cs:47:            .AsNoTracking()
+src\Memory\CanDoItAll.Memory.Persistence\EfMemoryEventLedgerStore.cs:37:            .AsNoTracking()
+src\Memory\CanDoItAll.Memory.Persistence\EfMemoryEventLedgerStore.cs:51:            .AsNoTracking()
+src\Memory\CanDoItAll.Memory.Persistence\EfMemorySourceRequestLedgerStore.cs:27:            .AsNoTracking()
+src\Memory\CanDoItAll.Memory.Persistence\EfMemoryFeedbackLedgerStore.cs:27:            .AsNoTracking()
+src\Memory\CanDoItAll.Memory.Persistence\EfMemoryOperationLedgerStore.cs:27:            .AsNoTracking()
+src\Memory\CanDoItAll.Memory.Persistence\EfMemoryProviderProfileStore.cs:36:            .AsNoTracking()

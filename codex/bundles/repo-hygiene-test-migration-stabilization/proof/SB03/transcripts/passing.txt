@@ -1,0 +1,6 @@
+Command: dotnet test tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj --filter "FullyQualifiedName~ProcessDefinitionCatalogProjectionTests.Dotnet_feature_code_change_keeps_browser_proof_out_of_atomic_targeted_validation_step|FullyQualifiedName~ProcessRuntimeIntegrationAdapterTests" --logger "console;verbosity=minimal"
+WorkingDirectory: repo://
+ExitCode: 0
+Invariant: SB03-PROCESS-BRANCH-OUTCOME
+Result: 5 tests passed; see bundle://proof/SB03/passing-process-tests.txt.
+

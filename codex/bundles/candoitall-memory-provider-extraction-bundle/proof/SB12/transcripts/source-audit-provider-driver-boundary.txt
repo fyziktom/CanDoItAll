@@ -1,0 +1,1 @@
+No forbidden module/source-adapter references found in generic HTTP/MCP memory drivers.

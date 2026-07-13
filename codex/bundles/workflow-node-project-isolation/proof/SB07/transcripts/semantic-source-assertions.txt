@@ -1,0 +1,61 @@
+CWD: C:\repositories\CanDoItAll
+START: 2026-06-29T15:18:17.7587127-04:00
+
+SB07-I01 Category project homes exist and are in solution
+PASS SB07-I01 path exists: src\CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Control\CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Control.csproj
+PASS SB07-I01 pattern found in CanDoItAll.slnx: CanDoItAll\.AgentFramework\.WorkflowExecutors\.Standard\.Control
+16:    <Project Path="src/CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Control/CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Control.csproj" />
+PASS SB07-I01 path exists: src\CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Transforms\CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Transforms.csproj
+PASS SB07-I01 pattern found in CanDoItAll.slnx: CanDoItAll\.AgentFramework\.WorkflowExecutors\.Standard\.Transforms
+21:    <Project Path="src/CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Transforms/CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Transforms.csproj" />
+PASS SB07-I01 path exists: src\CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Workspace\CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Workspace.csproj
+PASS SB07-I01 pattern found in CanDoItAll.slnx: CanDoItAll\.AgentFramework\.WorkflowExecutors\.Standard\.Workspace
+22:    <Project Path="src/CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Workspace/CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Workspace.csproj" />
+PASS SB07-I01 path exists: src\CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Network\CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Network.csproj
+PASS SB07-I01 pattern found in CanDoItAll.slnx: CanDoItAll\.AgentFramework\.WorkflowExecutors\.Standard\.Network
+19:    <Project Path="src/CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Network/CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Network.csproj" />
+PASS SB07-I01 path exists: src\CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Documents\CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Documents.csproj
+PASS SB07-I01 pattern found in CanDoItAll.slnx: CanDoItAll\.AgentFramework\.WorkflowExecutors\.Standard\.Documents
+17:    <Project Path="src/CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Documents/CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Documents.csproj" />
+PASS SB07-I01 path exists: src\CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Media\CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Media.csproj
+PASS SB07-I01 pattern found in CanDoItAll.slnx: CanDoItAll\.AgentFramework\.WorkflowExecutors\.Standard\.Media
+18:    <Project Path="src/CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Media/CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Media.csproj" />
+PASS SB07-I01 path exists: src\CanDoItAll.AgentFramework.WorkflowExecutors.Standard.ProjectStructure\CanDoItAll.AgentFramework.WorkflowExecutors.Standard.ProjectStructure.csproj
+PASS SB07-I01 pattern found in CanDoItAll.slnx: CanDoItAll\.AgentFramework\.WorkflowExecutors\.Standard\.ProjectStructure
+20:    <Project Path="src/CanDoItAll.AgentFramework.WorkflowExecutors.Standard.ProjectStructure/CanDoItAll.AgentFramework.WorkflowExecutors.Standard.ProjectStructure.csproj" />
+PASS SB07-I01 path exists: src\CanDoItAll.AgentFramework.WorkflowExecutors.Standard\CanDoItAll.AgentFramework.WorkflowExecutors.Standard.csproj
+PASS SB07-I01 pattern found in CanDoItAll.slnx: CanDoItAll\.AgentFramework\.WorkflowExecutors\.Standard
+15:    <Project Path="src/CanDoItAll.AgentFramework.WorkflowExecutors.Standard/CanDoItAll.AgentFramework.WorkflowExecutors.Standard.csproj" />
+16:    <Project Path="src/CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Control/CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Control.csproj" />
+17:    <Project Path="src/CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Documents/CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Documents.csproj" />
+18:    <Project Path="src/CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Media/CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Media.csproj" />
+19:    <Project Path="src/CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Network/CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Network.csproj" />
+
+SB07-I02 Registration delegates to standard aggregate
+PASS SB07-I02 pattern found in src/CanDoItAll.AgentFramework.Maf/Runtime/Workflows/BuiltInWorkflowExecutorServiceCollectionExtensions.cs: AddStandardWorkflowExecutors\(ServiceLifetime\.Singleton\)
+11:        return services.AddStandardWorkflowExecutors(ServiceLifetime.Singleton);
+PASS SB07-I02 pattern found in src/CanDoItAll.Modules.AgentFramework/Services/AgentFrameworkModuleServiceCollectionExtensions.cs: AddStandardWorkflowExecutors\(ServiceLifetime\.Scoped\)
+103:        services.AddStandardWorkflowExecutors(ServiceLifetime.Scoped);
+
+SB07-I03 Descriptor source partition and parity tests exist
+PASS SB07-I03 pattern found in tests/CanDoItAll.Tests.Unit/WorkflowExecutorCategoryIsolationTests.cs: CategoryDescriptorSourcesPartitionBuiltInDescriptors
+54:    public void CategoryDescriptorSourcesPartitionBuiltInDescriptors()
+PASS SB07-I03 pattern found in src/CanDoItAll.AgentFramework.WorkflowExecutors.Core/BuiltInWorkflowExecutorDescriptors.cs: BuiltInWorkflowExecutorDescriptors\.All
+8:        => BuiltInWorkflowExecutorDescriptors.All;
+
+SB07-I04 MAF fallback bucket removed
+PASS SB07-I04 no matches: WorkspaceFileWorkflowExecutor|JsonTransformWorkflowExecutor|MarkdownRenderWorkflowExecutor|HttpFetchWorkflowExecutor|SpreadsheetWorkflowExecutor|ImageGenerationWorkflowExecutor|ProjectStructureWorkflowExecutor|SourceIngestionWorkflowExecutor|PlannedWorkflowExecutor
+
+SB07-I05 Large moved executors split by responsibility
+PASS SB07-I05 path exists: src\CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Workspace\SourceIngestionWorkflowReader.cs
+PASS SB07-I05 path exists: src\CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Workspace\SourceIngestionWorkflowPaths.cs
+PASS SB07-I05 path exists: src\CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Workspace\SourceIngestionWorkflowCandidates.cs
+PASS SB07-I05 path exists: src\CanDoItAll.AgentFramework.WorkflowExecutors.Standard.ProjectStructure\ProjectStructureWorkflowTaskNodes.cs
+PASS SB07-I05 path exists: src\CanDoItAll.AgentFramework.WorkflowExecutors.Standard.ProjectStructure\ProjectStructureWorkflowInputResolution.cs
+PASS SB07-I05 path exists: src\CanDoItAll.AgentFramework.WorkflowExecutors.Standard.ProjectStructure\ProjectStructureWorkflowSupport.cs
+
+SB07-I06 Behavior regression suite names remain in proof
+PASS SB07-I06 pattern found in codex/bundles/workflow-node-project-isolation/proof/SB07/transcripts/executor-regression-tests.txt: WorkflowExecutorTests|WorkflowExecutorPolicyObservabilityTests|WorkflowPreviewSimulationTests
+4:COMMAND: dotnet test 'tests\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj' --no-build --filter 'WorkflowExecutorTests|WorkflowExecutorPolicyObservabilityTests|WorkflowExecutorFoundationExtractionTests|AgentFrameworkHostingServiceCollectionTests|WorkflowPreviewSimulationTests' -v:minimal
+END: 2026-06-29T15:18:18.5191329-04:00
+EXIT_CODE: 0

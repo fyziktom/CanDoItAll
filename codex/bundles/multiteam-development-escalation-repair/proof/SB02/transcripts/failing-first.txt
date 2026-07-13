@@ -1,0 +1,4 @@
+Command: review pre-repair software-delivery and dotnet-feature-function-implementation step contracts
+Exit code: 1
+Invariant: MTE-SB02-CONTRACTS
+Observed failure: parent implementation subprocess orchestration and child implementation-approach evidence rules allowed a planning step to block before implementation, and QA did not require explicit source ImageAsset-to-screenshot comparison.

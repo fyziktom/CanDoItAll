@@ -1,0 +1,34 @@
+SB13 closure audit
+Timestamp: 2026-06-29T20:19:59.5018233-04:00
+Working directory: C:\repositories\CanDoItAll
+Command: Test-Path over SB13 manifest-critical artifacts; fail on missing paths.
+
+PASS codex\bundles\workflow-node-project-isolation\proof\SB13\manifest.md
+PASS codex\bundles\workflow-node-project-isolation\proof\SB13\semantic-invariants.md
+PASS codex\bundles\workflow-node-project-isolation\proof\SB13\changed-file-hashes.txt
+PASS codex\bundles\workflow-node-project-isolation\proof\SB13\transcripts\entry-gate.txt
+PASS codex\bundles\workflow-node-project-isolation\proof\SB13\transcripts\prepared-validator.txt
+PASS codex\bundles\workflow-node-project-isolation\proof\SB13\transcripts\focused-adoption-hardening-tests.txt
+PASS codex\bundles\workflow-node-project-isolation\proof\SB13\transcripts\combined-hardening-unit-tests.txt
+PASS codex\bundles\workflow-node-project-isolation\proof\SB13\transcripts\component-workflows-page-tests.txt
+PASS codex\bundles\workflow-node-project-isolation\proof\SB13\transcripts\integration-adoption-smoke-tests.txt
+PASS codex\bundles\workflow-node-project-isolation\proof\SB13\transcripts\architecture-no-fallback-check.txt
+PASS codex\bundles\workflow-node-project-isolation\proof\SB13\transcripts\no-generic-error-audit.txt
+PASS codex\bundles\workflow-node-project-isolation\proof\SB13\transcripts\file-size-responsibility-review.txt
+PASS codex\bundles\workflow-node-project-isolation\proof\SB13\transcripts\performance-scan.txt
+PASS codex\bundles\workflow-node-project-isolation\proof\SB13\transcripts\playwright-workflow-shell-large.txt
+PASS codex\bundles\workflow-node-project-isolation\proof\SB13\transcripts\playwright-workbench-workflow-node-large.txt
+PASS codex\bundles\workflow-node-project-isolation\proof\SB13\transcripts\anti-stub-audit.txt
+PASS codex\bundles\workflow-node-project-isolation\proof\SB13\transcripts\workbook-update-and-render.txt
+PASS codex\bundles\workflow-node-project-isolation\proof\SB13\browser\workflow-shell-runtime-large.png
+PASS codex\bundles\workflow-node-project-isolation\proof\SB13\browser\project-structure-workflow-selection-status.png
+PASS codex\bundles\workflow-node-project-isolation\proof\SB13\workbook-previews\summary.png
+PASS codex\bundles\workflow-node-project-isolation\inventories\workflow-node-project-isolation-map.xlsx
+Decision: Passed. SB13 proof manifest, semantic invariants, transcripts, browser screenshots, workbook previews, and workbook artifact exist.
+Exit code: 0
+
+Completed Validator Metadata Addendum
+Command: historical SB13 proof command recorded during bundle execution
+ExitCode: 0
+ExitCode: 1
+Invariant ID: SB13-final-closure

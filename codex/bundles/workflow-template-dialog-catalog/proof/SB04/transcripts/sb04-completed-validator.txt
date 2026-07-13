@@ -1,0 +1,7 @@
+Command: python bundle-preparation validate_bundle.py --stage completed codex\bundles\workflow-template-dialog-catalog
+Bundle is valid for stage 'completed': bundle://
+ExitCode: 0
+Invariant ID: SB04-INV-001
+Invariant ID: SB04-INV-002
+Invariant ID: SB04-INV-003
+Invariant ID: SB04-INV-004

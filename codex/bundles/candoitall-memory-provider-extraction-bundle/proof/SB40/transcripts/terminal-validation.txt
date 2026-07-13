@@ -1,0 +1,83 @@
+Run label: SB40 final terminal validation
+Captured: 2026-07-12
+Main working directory: repo://
+External working directory: external-repo://
+
+Invariant IDs covered:
+  SB35-ARCH-READY
+  SB36-SELECTION-OWNERSHIP
+  SB37-AGENT-MEMORY-ROUTING
+  SB38-TRANSPORT-WORKER-INTEGRITY
+  SB39-EXTERNAL-ISOLATION
+  SB40-INV-01
+  SB40-INV-02
+  SB40-INV-03
+  SB40-INV-04
+
+Command: dotnet build .\CanDoItAll.slnx --no-restore --nologo -v:minimal '-clp:WarningsOnly;Summary'
+Working directory: repo://
+Exit code: 0
+Result: final post-Mem0-retirement and post-namespace-cleanup solution build succeeded with 0 warnings and 0 errors.
+Elapsed: 28.30 seconds.
+
+Command: dotnet test tests/Memory/CanDoItAll.Memory.Tests/CanDoItAll.Memory.Tests.csproj --no-build --no-restore --nologo -v:minimal
+Working directory: repo://
+Exit code: 0
+Result: 196 passed, 1 skipped, 0 failed, 197 total.
+Skip qualification: only ExternalCognitiveMemoryLiveConformanceTests was skipped because its live-process environment variables were intentionally absent for this aggregate run.
+
+Command: dotnet test tests/Memory/CanDoItAll.Memory.Tests/CanDoItAll.Memory.Tests.csproj --no-build --no-restore --nologo --filter "FullyQualifiedName~AgentMemoryProviderEndToEndTests" -v:minimal
+Working directory: repo://
+Exit code: 0
+Result: 1 passed, 0 skipped, 0 failed.
+Semantic result: the real MemoryAgentContextContributor invoked the real IMemoryOperationHandler, deterministic mock production driver, and EF in-memory ledger. Automatic mode dispatched two providers in configured order; the explicit programming-memory alias dispatched only that provider and removed the directive from the provider query; unknown alias dispatched zero providers; ledgers completed.
+
+Command: dotnet test tests/MAF/CanDoItAll.AgentFramework.Memory.Tests/CanDoItAll.AgentFramework.Memory.Tests.csproj --no-build --no-restore --nologo -v:minimal
+Working directory: repo://
+Exit code: 0
+Result: 22 passed, 0 skipped, 0 failed.
+
+Command: dotnet test .\tests\Unit\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj --no-build --no-restore --nologo -v:minimal --filter 'FullyQualifiedName~MafAgentRuntimeToolProviderCompositionTests|FullyQualifiedName~CapabilityMigrationCleanupGuardTests|FullyQualifiedName~CapabilityTemplateSeedMaterializationTests'
+Working directory: repo://
+Exit code: 0
+Result: 51 passed, 0 skipped, 0 failed.
+Semantic result: the final selection includes the runtime, template, cleanup, and retired Mem0 capability guards.
+
+Command: dotnet test .\tests\Integration\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --no-build --no-restore --nologo -v:minimal --filter 'FullyQualifiedName=CanDoItAll.Tests.Integration.AgentFrameworkExecutionCapabilityFilteringIntegrationTests.ResolveAttachedCapabilities_filters_retired_catalog_memory_kind|FullyQualifiedName=CanDoItAll.Tests.Integration.AgentFrameworkWorkspaceSeedIntegrationTests.Seed_catalog_loads_generic_reconciliation_skill_and_retires_stale_built_in_skills'
+Working directory: repo://
+Exit code: 0
+Result: 2 passed, 0 skipped, 0 failed.
+Semantic result: the exact changed integration tests remove retired catalog-memory capabilities from execution resolution and seed normalization.
+
+Command: dotnet test .\tests\Components\CanDoItAll.Tests.Components\CanDoItAll.Tests.Components.csproj --no-build --no-restore --nologo -v:minimal --filter 'FullyQualifiedName~AgentMemorySettingsPanelTests|FullyQualifiedName~AgentMemorySettingsPanelOrderingTests'
+Working directory: repo://
+Exit code: 0
+Result: 13 passed, 0 skipped, 0 failed.
+
+Command: namespace-cleanup validation reported by final_namespace_cycle_audit; individual command lines were not retained and are not reconstructed here
+Working directory: repo://
+Exit code: 0
+Result: AgentFramework.Memory project build 0 warnings/0 errors; AgentFramework.Memory tests 22/22; AgentMemoryProviderEndToEndTests 1/1; focused MemoryAgentContextContributorTests and MemoryAgentRuntimeToolProviderTests 25/25.
+Semantic result: the contributor, tool provider, and service-registration extension compile and execute from their Context, Tools, and DependencyInjection namespaces after all production/test call sites were updated.
+
+Qualification: a separate broad seed-instruction test class still has 4 pre-existing stale assertion failures. It is not claimed green by this closure. Those failures are outside the changed Mem0 retirement behavior; the exact changed retirement integration tests above passed 2/2 and the production source scan records zero retired Mem0 tokens.
+
+Command: dotnet build .\CanDoItAll.CognitiveMemory.slnx --configuration Release
+Working directory: external-repo://
+Exit code: 0
+Result: all 9 projects built; 0 warnings and 0 errors.
+
+Command: dotnet test .\CanDoItAll.CognitiveMemory.slnx --configuration Release --no-build
+Working directory: external-repo://
+Exit code: 0
+Result: 59 passed, 0 skipped, 0 failed.
+
+Command: run ExternalCognitiveMemoryLiveConformanceTests with CANDOITALL_EXTERNAL_MEMORY_BASE_URL=http://127.0.0.1:5099 and redacted credential/project environment
+Working directory: repo://
+Exit code: 0
+Result: 1 passed, 0 skipped, 0 failed.
+Process result: the separately launched external service authenticated the request, accepted seeded project memory, and returned it through NativeRemoteMemoryProviderDriver, the generic handler, and the persisted main operation ledger. The service was stopped after the run.
+
+External isolated-copy evidence:
+  bundle://proof/SB39/transcripts/external-local-and-isolated-validation.txt
+  The copy had no main CanDoItAll sibling, built with 0 warnings/errors, and passed 59/59 tests.

@@ -1,0 +1,20 @@
+SB14 final validation transcript
+
+PROCESS-FOCUSED UNIT SLICE
+Command: dotnet test tests\Unit\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj --no-build --no-restore --filter "FullyQualifiedName~Process"
+Result: Passed 701, Failed 0, Skipped 0, Total 701.
+
+FULL UNIT PROJECT
+Command: dotnet test tests\Unit\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj --no-restore
+Result: Passed 1,982, Failed 1, Skipped 0, Total 1,983.
+Only failure: DotNetSolutionSetupRuntimeExecutorTests.TryExecuteAsync_runs_add_test_project_helper_and_verifies_solution_and_project_reference failed while creating a Windows SUBST alias because the drive was already SUBSTed.
+
+TRANSIENT ISOLATION
+Command: dotnet test tests\Unit\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj --no-build --no-restore --filter "FullyQualifiedName=CanDoItAll.Tests.Unit.DotNetSolutionSetupRuntimeExecutorTests.TryExecuteAsync_runs_add_test_project_helper_and_verifies_solution_and_project_reference"
+Result: Passed 1, Failed 0, Total 1, duration 273 ms.
+
+PRODUCTION PROJECT BUILDS
+- CanDoItAll.Processes.Runtime: 0 warnings, 0 errors.
+- CanDoItAll.Processes.Application: 0 warnings, 0 errors.
+- CanDoItAll.Modules.Processes: 0 warnings, 0 errors.
+- CanDoItAll.AgentFramework.Maf: 0 warnings, 0 errors.

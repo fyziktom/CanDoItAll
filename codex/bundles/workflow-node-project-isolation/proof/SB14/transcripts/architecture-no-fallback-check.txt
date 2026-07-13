@@ -1,0 +1,12 @@
+SB14 architecture no-fallback check
+Timestamp: 2026-06-29T20:27:03.5113922-04:00
+Scope: src\CanDoItAll.Modules.AgentFramework\Pages, src\CanDoItAll.Modules.Workbench, src\CanDoItAll.Web
+Forbidden patterns: MafWorkflowCompiler|MafInProcessWorkflowExecutionBackend|MafWorkflowEventNormalizer|MafWorkflowLlmComponentInvoker|Microsoft\.Agents\.AI\.Workflows|AddBuiltInWorkflowExecutors|Runtime\\Workflows
+Result: PASS
+Matches:
+
+Completed Validator Metadata Addendum
+Command: historical SB14 proof command recorded during bundle execution
+ExitCode: 0
+ExitCode: 1
+Invariant ID: SB14-final-closure

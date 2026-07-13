@@ -1,0 +1,14 @@
+{
+  "collectedAtLocal": "2026-07-09T05:33:43.2621941-04:00",
+  "collectedBy": "Codex diagnostics-only turn",
+  "host": "http://localhost:5032",
+  "runId": "c4888f4f-eabd-469f-80a6-3fccf6018a12",
+  "blockedStepInstanceId": "1ebeadbe-98c9-4e9d-af3b-1e9f69a75c62",
+  "projectId": "3324868f-66e2-478a-bb8f-14f32a5db1e9",
+  "noImplementationPerformed": true,
+  "notes": [
+    "User requested diagnostics/analytics only: no implementation, no bundle workflow execution.",
+    "Raw API captures are under api/. Curated analysis files are under analysis/.",
+    "Product output snapshot is copied from C:\\programovani\\dotnet\\output without mutation."
+  ]
+}

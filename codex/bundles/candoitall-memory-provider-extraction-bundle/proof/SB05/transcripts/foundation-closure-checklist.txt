@@ -1,0 +1,17 @@
+Command: record SB05 foundation closure checklist
+WorkingDirectory: C:\repositories\CanDoItAll
+RunLabel: SB05 foundation closure checklist
+Invariant IDs: SB05_CP001, SB05_CP002, SB05_CP003, SB05_CP004
+ExitCode: 0
+Output:
+SB05 foundation closure checklist:
+- SB01 protocol foundation: Closed. Proof: bundle://proof/SB01/manifest.md and bundle://proof/SB01/semantic-invariants.md.
+- SB02 provider registry and selection: Closed. Proof: bundle://proof/SB02/manifest.md and bundle://proof/SB02/semantic-invariants.md.
+- SB03 ledger and event contracts: Closed after refactor split. Full memory suite proves behavior still passes.
+- SB04 source gateway contracts: Closed after refactor split. Source snapshot compatibility audit remains clean.
+- Native/Qdrant/AppDbContext production dependency audit: Passed in bundle://proof/SB05/transcripts/forbidden-dependency-audit.txt.
+- Overgrown production file audit: Passed in bundle://proof/SB05/transcripts/overgrown-file-audit.txt.
+- Duplicate source snapshot family audit: Passed in bundle://proof/SB05/transcripts/source-snapshot-contract-family-audit.txt.
+- Zero-provider no-dispatch proof: Passed in bundle://proof/SB05/transcripts/zero-provider-no-dispatch-proof.txt.
+- Reopened subbundles: None.
+- Downstream SB06 permission: Granted after SB05 manifest and prepared-stage validation are recorded.
