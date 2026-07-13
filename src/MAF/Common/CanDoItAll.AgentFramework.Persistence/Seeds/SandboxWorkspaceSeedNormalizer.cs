@@ -221,19 +221,22 @@ internal static class SandboxWorkspaceSeedNormalizer
 
             idMap[seededAgent.Id] = match.Id;
             var preserveProviderAssignment = ShouldPreserveExplicitProviderAssignment(match, seededAgent, providersById);
-            var mergedAgent = match with
-            {
-                RoleTitle = string.IsNullOrWhiteSpace(match.RoleTitle) ? seededAgent.RoleTitle : match.RoleTitle,
-                Summary = string.IsNullOrWhiteSpace(match.Summary) ? seededAgent.Summary : match.Summary,
-                Instructions = string.IsNullOrWhiteSpace(match.Instructions) ? seededAgent.Instructions : match.Instructions,
-                ProviderProfileId = match.ProviderProfileId ?? seededAgent.ProviderProfileId,
-                Model = ResolveMergedAgentModel(match, seededAgent, preserveProviderAssignment),
-                RequirePerServiceCallChatHistoryPersistence = match.RequirePerServiceCallChatHistoryPersistence || seededAgent.RequirePerServiceCallChatHistoryPersistence,
-                EnableBackgroundResponses = match.EnableBackgroundResponses || seededAgent.EnableBackgroundResponses,
-                ConfigurationJson = string.IsNullOrWhiteSpace(match.ConfigurationJson) ? seededAgent.ConfigurationJson : match.ConfigurationJson,
-                Capabilities = MergeAgentCapabilities(match.Capabilities, seededAgent.Capabilities),
-                Tags = match.Tags.Concat(seededAgent.Tags).Where(item => !string.IsNullOrWhiteSpace(item)).Distinct(StringComparer.OrdinalIgnoreCase).ToList()
-            };
+            var hasCurrentCustomization = AgentManagedSeedCustomizationMetadata.HasCurrentCustomization(match.ConfigurationJson);
+            var mergedAgent = hasCurrentCustomization
+                ? match
+                : match with
+                {
+                    RoleTitle = string.IsNullOrWhiteSpace(match.RoleTitle) ? seededAgent.RoleTitle : match.RoleTitle,
+                    Summary = string.IsNullOrWhiteSpace(match.Summary) ? seededAgent.Summary : match.Summary,
+                    Instructions = string.IsNullOrWhiteSpace(match.Instructions) ? seededAgent.Instructions : match.Instructions,
+                    ProviderProfileId = match.ProviderProfileId ?? seededAgent.ProviderProfileId,
+                    Model = ResolveMergedAgentModel(match, seededAgent, preserveProviderAssignment),
+                    RequirePerServiceCallChatHistoryPersistence = match.RequirePerServiceCallChatHistoryPersistence || seededAgent.RequirePerServiceCallChatHistoryPersistence,
+                    EnableBackgroundResponses = match.EnableBackgroundResponses || seededAgent.EnableBackgroundResponses,
+                    ConfigurationJson = string.IsNullOrWhiteSpace(match.ConfigurationJson) ? seededAgent.ConfigurationJson : match.ConfigurationJson,
+                    Capabilities = MergeAgentCapabilities(match.Capabilities, seededAgent.Capabilities),
+                    Tags = match.Tags.Concat(seededAgent.Tags).Where(item => !string.IsNullOrWhiteSpace(item)).Distinct(StringComparer.OrdinalIgnoreCase).ToList()
+                };
 
             if (ShouldRefreshManagedAgentFromSeed(match, seededAgent))
             {
@@ -303,7 +306,8 @@ internal static class SandboxWorkspaceSeedNormalizer
         if (TryGetManagedSeedVersion(existingAgent, out var currentSeedVersion) &&
             string.Equals(currentSeedVersion, managedSeedVersion, StringComparison.OrdinalIgnoreCase))
         {
-            return HasManagedAgentPolicyDrift(existingAgent, seededAgent);
+            return !AgentManagedSeedCustomizationMetadata.HasCurrentCustomization(existingAgent.ConfigurationJson) &&
+                   HasManagedAgentPolicyDrift(existingAgent, seededAgent);
         }
 
         return !string.IsNullOrWhiteSpace(seededAgent.TemplateKey);

@@ -222,6 +222,48 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
     }
 
     [Fact]
+    public async Task Saving_managed_agent_policy_customization_preserves_dialog_settings()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var workspaceFactory = scope.ServiceProvider.GetRequiredService<ICanDoItAllAgentWorkspaceFactory>();
+        var workspaceService = workspaceFactory.GetOrganizationWorkspaceService();
+
+        var agent = Assert.Single(
+            await workspaceService.ListAgentsAsync(includeTemplates: false),
+            item => string.Equals(item.Name, ".NET Application Developer", StringComparison.Ordinal));
+        var editor = await workspaceService.GetAgentEditorAsync(agent.Id);
+        var removedCapabilityId = Assert.Single(editor.SelectedCapabilityIds.Take(1));
+
+        Assert.False(editor.ProjectStructureAccess.CanWrite);
+        Assert.False(editor.ProcessAccess.CanWrite);
+        Assert.False(editor.ImageGenerationAccess.CanGenerateImages);
+
+        editor.ProjectStructureAccess.CanWrite = true;
+        editor.ProcessAccess.CanWrite = true;
+        editor.ImageGenerationAccess.CanGenerateImages = true;
+        editor.WorkspaceToolAccess.Profile = AgentWorkspaceToolProfileKind.Custom;
+        editor.WorkspaceToolAccess.CanScaffoldProjects = false;
+        editor.Permissions = editor.Permissions with
+        {
+            RequiresApprovalForExternalCalls = !editor.Permissions.RequiresApprovalForExternalCalls
+        };
+        editor.SelectedCapabilityIds.Remove(removedCapabilityId);
+
+        await workspaceService.SaveAgentAsync(editor);
+
+        var saved = await workspaceService.GetAgentEditorAsync(agent.Id);
+        Assert.True(saved.ProjectStructureAccess.CanWrite);
+        Assert.True(saved.ProcessAccess.CanWrite);
+        Assert.True(saved.ImageGenerationAccess.CanGenerateImages);
+        Assert.Equal(AgentWorkspaceToolProfileKind.Custom, saved.WorkspaceToolAccess.Profile);
+        Assert.False(saved.WorkspaceToolAccess.CanScaffoldProjects);
+        Assert.Equal(editor.Permissions.RequiresApprovalForExternalCalls, saved.Permissions.RequiresApprovalForExternalCalls);
+        Assert.DoesNotContain(removedCapabilityId, saved.SelectedCapabilityIds);
+        Assert.True(AgentManagedSeedCustomizationMetadata.HasCurrentCustomization(saved.ConfigurationJson));
+    }
+
+    [Fact]
     public async Task Organization_workspace_seeds_playwright_mcp_for_ui_delivery_agents()
     {
         await using var application = await TestApplication.CreateAsync();

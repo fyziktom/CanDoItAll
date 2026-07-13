@@ -42,6 +42,7 @@ internal sealed partial class AgentFrameworkWorkspaceCatalogService
         configurationJson = AgentImageGenerationAccessMetadata.Write(configurationJson, model.ImageGenerationAccess);
         configurationJson = AgentVoiceAccessMetadata.Write(configurationJson, model.VoiceAccess);
         configurationJson = AgentMemoryAccessMetadata.Write(configurationJson, model.MemoryAccess);
+        configurationJson = AgentManagedSeedCustomizationMetadata.MarkCustomized(configurationJson);
         await UpdateCatalogAsync(catalog =>
         {
             var existingAgent = catalog.Agents.FirstOrDefault(item => item.Id == id);
