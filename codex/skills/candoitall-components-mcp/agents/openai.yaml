@@ -1,4 +1,4 @@
 interface:
   display_name: "CanDoItAll Components MCP"
-  short_description: "Prefer shared components before custom layout CSS"
-  default_prompt: "Use the CanDoItAll components MCP to choose BaseLib or CanvasLib components and layout primitives before adding custom structural CSS."
+  short_description: "Choose shared components and correct library setup"
+  default_prompt: "Use $candoitall-components-mcp to choose supported components, assets, and layout patterns for the target desktop viewport before adding custom structure."

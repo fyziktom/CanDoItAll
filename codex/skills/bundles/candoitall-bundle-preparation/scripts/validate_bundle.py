@@ -11,18 +11,13 @@ COMMON_DIRECTORIES = [
     "inputs",
     "analysis",
     "requirements",
-    "architecture",
     "plan",
     "traceability",
-    "shared-prompts",
     "subbundles",
     "reviews",
 ]
 
-PROFILE_DIRECTORIES = {
-    "feedback": [],
-    "initiative": ["inventories", "templates"],
-}
+PROFILE_DIRECTORIES = {"feedback": [], "initiative": ["inventories"]}
 
 REQUIRED_FILES = [
     "README.md",
@@ -31,12 +26,8 @@ REQUIRED_FILES = [
     "inputs/02-structured-input.md",
     "analysis/01-current-state.md",
     "requirements/01-normalized-requirements.md",
-    "architecture/01-target-solution.md",
     "plan/01-phase-plan.md",
     "traceability/01-requirement-traceability.md",
-    "shared-prompts/implementation-prompt.md",
-    "shared-prompts/qa-prompt.md",
-    "reviews/00-bundle-self-review.md",
     "reviews/01-execution-report.md",
 ]
 
@@ -45,7 +36,6 @@ ROOT_SUMMARY_LABEL_GROUPS = [
     ("Execution status:",),
     ("Subbundle gate review:",),
     ("Final closure gate:",),
-    ("Browser validation analytics:",),
 ]
 
 PHASE_PLAN_HEADING_GROUPS = [
@@ -71,13 +61,9 @@ SUBBUNDLE_HEADING_GROUPS = [
     ("## Deliverables", "## Scope"),
     ("## Dependency Impact",),
     ("## Validation Depth",),
-    ("## Implementation Steps",),
-    ("## Do Not Do",),
     ("## Acceptance Checklist",),
     ("## Proof Required",),
-    ("## Browser Validation Logging",),
     ("## Progression Gate",),
-    ("## Suggested Agent Prompt",),
 ]
 
 SUBBUNDLE_REQUIRED_BULLET_GROUPS = [
@@ -88,17 +74,16 @@ SUBBUNDLE_REQUIRED_BULLET_GROUPS = [
     ("## Validation Depth",),
     ("## Acceptance Checklist",),
     ("## Proof Required",),
-    ("## Browser Validation Logging",),
     ("## Progression Gate",),
 ]
 
 EXECUTION_REPORT_HEADINGS = [
     "## Status",
     "## Subbundle Gate Results",
-    "## Browser Validation Analytics",
-    "## Analytics Review",
     "## Raw Note Closure",
 ]
+
+PROOF_TIER_PATTERN = re.compile(r"\bProof\s+tier\s*:\s*`?(Standard|Behavioral|Governed)`?", re.IGNORECASE)
 
 FINAL_ALLOWED_SUBBUNDLE_STATUSES = {
     "Completed",
@@ -593,8 +578,8 @@ def validate_phase_plan(path: Path) -> list[str]:
     issues = validate_heading_groups(path, content, PHASE_PLAN_HEADING_GROUPS)
 
     dependency_map = extract_markdown_section(content, "## Subbundle Dependency Map")
-    if dependency_map is not None and "```mermaid" not in dependency_map:
-        issues.append(f"{path}: ## Subbundle Dependency Map must include a mermaid diagram")
+    if dependency_map is not None and "```mermaid" not in dependency_map and not has_bullets_or_data_rows(dependency_map):
+        issues.append(f"{path}: ## Subbundle Dependency Map must include a mermaid diagram, populated table, or explicit dependency bullets")
 
     for heading in ("## Critical Subbundles", "## Phase Gates"):
         section_content = extract_markdown_section(content, heading)
@@ -769,6 +754,32 @@ def extract_subbundle_number(subbundle_directory: Path) -> str | None:
         return None
 
     return match.group(1)
+
+
+def extract_explicit_proof_tier(content: str) -> str | None:
+    validation_depth = extract_markdown_section(content, "## Validation Depth") or content
+    match = PROOF_TIER_PATTERN.search(validation_depth)
+    return match.group(1).capitalize() if match is not None else None
+
+
+def extract_governed_subbundle_numbers(phase_plan_path: Path, subbundle_directories: list[Path]) -> set[str]:
+    critical_numbers = extract_critical_subbundle_numbers(phase_plan_path)
+    governed_numbers: set[str] = set()
+
+    for subbundle_directory in subbundle_directories:
+        subbundle_number = extract_subbundle_number(subbundle_directory)
+        if subbundle_number is None or subbundle_number not in critical_numbers:
+            continue
+
+        readme_path = subbundle_directory / "README.md"
+        if not readme_path.is_file():
+            continue
+
+        tier = extract_explicit_proof_tier(readme_path.read_text(encoding="utf-8"))
+        if tier in {None, "Governed"}:
+            governed_numbers.add(subbundle_number)
+
+    return governed_numbers
 
 
 def extract_semantic_evidence_section(content: str, subbundle_number: str) -> str | None:
@@ -1121,15 +1132,14 @@ def validate_completed_semantic_proof(bundle_path: Path, subbundle_directories: 
     if not phase_plan_path.is_file() or not execution_report_path.is_file():
         return issues
 
-    critical_subbundle_numbers = extract_critical_subbundle_numbers(phase_plan_path)
-    if not critical_subbundle_numbers:
-        issues.append(f"{phase_plan_path}: completed-stage semantic validation could not identify critical SBxx subbundles")
+    governed_subbundle_numbers = extract_governed_subbundle_numbers(phase_plan_path, subbundle_directories)
+    if not governed_subbundle_numbers:
         return issues
 
     report_content = execution_report_path.read_text(encoding="utf-8")
     for subbundle_directory in subbundle_directories:
         subbundle_number = extract_subbundle_number(subbundle_directory)
-        if subbundle_number is None or subbundle_number not in critical_subbundle_numbers:
+        if subbundle_number is None or subbundle_number not in governed_subbundle_numbers:
             continue
 
         readme_path = subbundle_directory / "README.md"
@@ -1142,7 +1152,7 @@ def validate_completed_semantic_proof(bundle_path: Path, subbundle_directories: 
 
         section_content = extract_semantic_evidence_section(report_content, subbundle_number)
         if section_content is None:
-            issues.append(f"{execution_report_path}: completed critical subbundle SB{subbundle_number} is missing semantic adequacy evidence")
+            issues.append(f"{execution_report_path}: completed Governed subbundle SB{subbundle_number} is missing semantic adequacy evidence")
             continue
 
         issues.extend(validate_semantic_evidence_block(execution_report_path, subbundle_number, section_content))
@@ -1374,8 +1384,8 @@ def validate_completed_proof_manifests(bundle_path: Path, repo_root: Path, subbu
     if not phase_plan_path.is_file() or not execution_report_path.is_file():
         return issues
 
-    critical_subbundle_numbers = extract_critical_subbundle_numbers(phase_plan_path)
-    if not critical_subbundle_numbers:
+    governed_subbundle_numbers = extract_governed_subbundle_numbers(phase_plan_path, subbundle_directories)
+    if not governed_subbundle_numbers:
         return issues
 
     report_content = execution_report_path.read_text(encoding="utf-8")
@@ -1383,7 +1393,7 @@ def validate_completed_proof_manifests(bundle_path: Path, repo_root: Path, subbu
 
     for subbundle_directory in subbundle_directories:
         subbundle_number = extract_subbundle_number(subbundle_directory)
-        if subbundle_number is None or subbundle_number not in critical_subbundle_numbers:
+        if subbundle_number is None or subbundle_number not in governed_subbundle_numbers:
             continue
 
         readme_path = subbundle_directory / "README.md"
@@ -1401,10 +1411,10 @@ def validate_completed_proof_manifests(bundle_path: Path, repo_root: Path, subbu
         normalized_readme_content = readme_content.replace("\\", "/")
 
         if manifest_citation not in normalized_report_content and manifest_citation not in normalized_readme_content:
-            issues.append(f"{execution_report_path}: completed critical subbundle SB{subbundle_number} must cite {manifest_relative}")
+            issues.append(f"{execution_report_path}: completed Governed subbundle SB{subbundle_number} must cite {manifest_relative}")
 
         if not manifest_path.is_file():
-            issues.append(f"{manifest_path}: completed critical subbundle SB{subbundle_number} is missing proof manifest")
+            issues.append(f"{manifest_path}: completed Governed subbundle SB{subbundle_number} is missing proof manifest")
             continue
 
         manifest_content = manifest_path.read_text(encoding="utf-8")

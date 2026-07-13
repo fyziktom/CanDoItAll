@@ -35,10 +35,12 @@
 ## Evidence Contract
 
 - List the commands, screenshots, browser checks, host checks, or artifacts that must exist before closure.
+- Assign `Standard`, `Behavioral`, or `Governed` proof per subbundle.
 
 ## UI Validation Strategy
 
-- If the task is UI-related, note the large-screen Playwright pass, screenshot review questions, and narrower-width follow-up plan.
+- For CanDoItAll application UI, note the large-screen desktop Playwright pass and screenshot review questions; omit small/medium work unless explicitly requested.
+- For reusable basic `CanDoItAll.Components.BaseLib` work, include small, medium, and large viewport proof.
 
 ## Browser Validation Analytics
 

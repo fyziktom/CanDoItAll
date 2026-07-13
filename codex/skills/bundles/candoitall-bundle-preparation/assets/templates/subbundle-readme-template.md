@@ -35,7 +35,8 @@
 
 ## Validation Depth
 
-- State the exact validation depth or closure type for this phase, for example `Critical foundation`, `Critical UI foundation`, `UI, component-test, and browser-proof`, `End-to-end regression and closure`, or `Process-critical closure`.
+- Proof tier: `Standard`, `Behavioral`, or `Governed`.
+- State whether this is a critical foundation and name the affected validation surface.
 
 ## Implementation Steps
 
@@ -56,12 +57,13 @@
 ## Proof Required
 
 - List the commands, screenshots, artifact paths, or DOM checks required to prove completion.
-- If this subbundle changes UI, require a maximized large-screen browser pass, screenshot review, and narrower-width follow-up when layout is affected.
+- For CanDoItAll application UI, require a maximized or named large-screen desktop pass and screenshot review. Do not add narrower-width proof unless explicitly requested.
+- For reusable basic `CanDoItAll.Components.BaseLib` work, require small, medium, and large viewport proof.
 
 ## Browser Validation Logging
 
 - Record the target route or window under test.
-- Record the required viewport passes.
+- Record the target desktop viewport. Add small/medium viewports only for reusable basic BaseLib or explicit scope.
 - Record the Playwright MCP actions or assertions that must happen before the subbundle can close.
 - Record the screenshot file names or evidence paths that should appear in the execution report.
 - Record the screenshot review questions or visual findings that must be answered before the next dependent subbundle may start.
@@ -70,6 +72,10 @@
 ## Progression Gate
 
 - State the exact proof or condition that must be true before downstream subbundles may continue.
+
+## Reopen Triggers
+
+- State which later findings invalidate this subbundle and which downstream work must be rechecked.
 
 ## Suggested Agent Prompt
 

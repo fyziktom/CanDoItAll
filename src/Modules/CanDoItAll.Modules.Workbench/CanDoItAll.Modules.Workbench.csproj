@@ -24,9 +24,9 @@
     <ProjectReference Include="..\..\MAF\Workflows\CanDoItAll.AgentFramework.Workflows.Runtime\CanDoItAll.AgentFramework.Workflows.Runtime.csproj" />
     <ProjectReference Include="..\..\MAF\Tools\CanDoItAll.AgentFramework.Tooling\CanDoItAll.AgentFramework.Tooling.csproj" />
     <ProjectReference Include="..\..\MAF\Common\CanDoItAll.AgentFramework.Components\CanDoItAll.AgentFramework.Components.csproj" />
-    <PackageReference Include="CanDoItAll.Components.BaseLib" Version="0.1.0" />
-    <PackageReference Include="CanDoItAll.Components.CanvasLib" Version="0.1.1" />
-    <PackageReference Include="CanDoItAll.Components.Mermaid" Version="0.1.0" />
+    <PackageReference Include="CanDoItAll.Components.BaseLib" Version="0.1.2" />
+    <PackageReference Include="CanDoItAll.Components.CanvasLib" Version="0.1.2" />
+    <PackageReference Include="CanDoItAll.Components.Mermaid" Version="0.1.2" />
     <ProjectReference Include="..\..\Foundation\CanDoItAll.SharedKernel\CanDoItAll.SharedKernel.csproj" />
     <ProjectReference Include="..\..\Foundation\CanDoItAll.Infrastructure\CanDoItAll.Infrastructure.csproj" />
     <ProjectReference Include="..\..\Memory\CanDoItAll.Memory.Abstractions\CanDoItAll.Memory.Abstractions.csproj" />

@@ -1,93 +1,60 @@
 ---
 name: candoitall-subbundle-validator
-description: Validate a CanDoItAll subbundle before implementation starts and after proof is captured. Use when Codex must confirm prerequisites, dependency impact, and progression-gate quality so downstream work does not proceed on weak foundations.
+description: "Validate a CanDoItAll work unit before implementation and after proof, using its actual bundle shape and declared Standard, Behavioral, or Governed proof tier. Use to protect prerequisites, dependency trust, progression decisions, and reopen behavior without imposing unrelated evidence."
 ---
 
 # CanDoItAll Subbundle Validator
 
-Use this skill before and after each subbundle. It exists to stop dependency mistakes early, when they are still cheap to fix.
+Gate the current work unit against current repo evidence. Return `Pass`, `Fail`, or `Blocked` with the exact determining issue and downstream impact.
 
-## GPT-5.5 Gate Posture
+## Entry Gate
 
-- Validate the current subbundle against the actual bundle files and repo state, not memory from earlier conversation turns.
-- Keep the decision compact: `Pass`, `Fail`, or `Blocked`, followed by the exact prerequisite, proof, or downstream gate issue that drives the result.
-- Treat the progression gate as the durable state handoff for the next agent or resumed session.
-- If proof is weak but the work may still continue, record the explicit risk and the dependent subbundle that must re-check it. Do not silently lend trust to downstream work.
+Confirm:
 
-## Required Flow
+- the subbundle still owns the intended raw inputs and requirements;
+- its outcome, non-goals, acceptance criteria, and proof tier are explicit;
+- prerequisites are complete and their proof remains trusted;
+- source references/discovery instructions still identify the correct surfaces;
+- dependency order and parallel work do not create unsafe overlap;
+- applicable architecture, UI, host, security, migration, or production overlays are ready.
 
-1. Read the root `README.md`, `plan/01-phase-plan.md`, the selected subbundle README, and the relevant traceability rows.
-2. Run the entry gate before editing:
-   - confirm the current subbundle still owns the intended inputs
-   - confirm every listed prerequisite is complete and still trusted
-   - confirm the exact source references still match the repo
-   - confirm any critical foundation it depends on has strong enough proof for downstream work
-3. If the entry gate fails, stop. Repair the bundle or reopen the prerequisite phase before implementing.
-4. After implementation, run the closure gate:
-   - acceptance checklist and proof required are complete
-   - tests, builds, Playwright proof, screenshots, and host proof ran when required
-   - screenshot review questions were actually answered, not only captured
-   - `## Browser Validation Analytics` and `## Subbundle Gate Results` were updated while the proof was fresh
-   - critical subbundles include Semantic Adequacy Gate evidence for shallow-pass trap, adversarial negative proof, semantic positive proof, anti-stub audit, and raw-note literal closure
-   - critical subbundles include `proof/SBxx/manifest.md` and `proof/SBxx/semantic-invariants.md` or `.json`, and every transcript, hash, source assertion, browser, host, smoke, or red-team path cited by that manifest exists
-   - critical manifests use portable `repo://` or `bundle://` references and do not rely only on machine-specific absolute paths
-5. If the subbundle is a critical foundation, run one dependent-flow smoke or dependent-surface validation before allowing the next subbundle to start.
-6. If later work exposes a defect in the current subbundle, reopen it immediately and rerun the closure gate after repair.
+Stop and repair/reopen when any prerequisite is stale, weak, or contradicted.
 
-## Rules
+## Closure Gate
 
-- Do not start work because the next file looks easy when the prerequisite proof is weak.
-- Do not pass the closure gate when browser proof is missing or visually wrong.
-- Do not let a later subbundle bury evidence that an earlier foundation was incomplete.
-- Treat `Progression Gate` as a real stop sign, not as bundle decoration.
-- Do not pass a critical closure gate when proof only checks structure, counts, status flags, non-empty output, or template markers instead of domain behavior.
-- Do not pass a critical closure gate when the proof manifest or semantic invariant contract is missing, cites missing files, omits changed-file hashes, lacks portable proof references, or lacks failing-first and passing transcripts for behavior-changing work.
+Confirm:
 
-## Semantic Adequacy Closure Rule
+- acceptance criteria and required affected-scope validation are complete;
+- the selected proof tier is satisfied;
+- actual code and tests support the recorded behavior;
+- applicable screenshots were inspected, not only captured;
+- CanDoItAll app UI was proven at the target large-screen desktop viewport, with small/medium checks required only for reusable basic BaseLib or explicit scope;
+- host-visible behavior has host proof;
+- raw-input closure and progression state were updated while evidence was fresh;
+- a critical foundation has the dependent-flow check needed to lend trust downstream.
 
-Closure for a critical subbundle is `Fail` unless the proof names the shallow-pass trap and demonstrates both:
+## Proof Tiers
 
-- an adversarial negative case that the shallow implementation would mishandle
-- a semantic positive case that represents the intended realistic behavior
+- `Standard`: exact affected checks and results.
+- `Behavioral`: Standard plus realistic positive and meaningful negative/boundary/regression proof.
+- `Governed`: Behavioral plus manifest, semantic invariant contract, hashes, transcripts, source assertions, anti-stub evidence, and applicable browser/host/downstream/red-team artifacts.
 
-The closure gate also fails when the anti-stub audit is missing or when raw-note closure silently narrows literal request language. Use `../candoitall-bundle-execution/references/semantic-adequacy-proof.md` as the checklist.
+Do not require Governed proof from a lower tier. Do not accept lower-tier evidence when the subbundle declared Governed.
 
-Artifact-backed proof is part of the closure gate. A critical subbundle with only execution-report prose, table rows, or uncited command names is `Fail`; repair the proof manifest before downstream work starts.
+## Reopen Rule
 
-## C# Architecture Subbundle Checks
+Reopen immediately when later observations contradict ownership, behavior, dependency direction, or proof. State which downstream phases must be revalidated.
 
-For architecture-relevant C# subbundles, the entry gate passes only when:
+## C# Architecture Checks
 
-- prerequisite architecture checkpoints passed
-- current source references are still valid
-- dependency direction plan is present
-- partial-class policy is present
-- testability contract is present
-- pattern decision is present or explicitly not needed
-- target owner type or project is named
-- CodeAnalytics snapshot scope and health are recorded, or the subbundle records an explicit MCP-unavailable validation gap
-
-The closure gate passes only when:
-
-- build and targeted tests passed or a blocker is honestly recorded
-- extracted behavior has direct unit tests
-- source assertion proves behavior moved or new behavior lives in the new owner
-- no new partial class was added without policy-compliant justification
-- project reference changes match the target dependency direction
-- old class did not gain a new unrelated responsibility
-- `csharp-architecture-review-gate` result is `Pass` or `Pass with follow-up`
-- follow-up subbundles exist for temporary bridges
-- CodeAnalytics dependency or findings proof was refreshed when the subbundle changed project references, large classes, providers, tools, drivers, memory protocols, or runtime composition
+When relevant, require planned dependency direction, target owner, testability seam, partial-class policy, composition impact, and architecture review/CodeAnalytics evidence appropriate to the proof tier. Stop on cyclic references, unplanned project references, fake separation, or tests that still require the original god object.
 
 ## References
 
-- Read [references/prerequisite-and-closure-gates.md](references/prerequisite-and-closure-gates.md) for the phase checklist.
-- Read [../candoitall-bundle-execution/references/semantic-adequacy-proof.md](../candoitall-bundle-execution/references/semantic-adequacy-proof.md) when validating a critical subbundle.
-- Read [../candoitall-bundle-execution/references/artifact-backed-proof-manifest.md](../candoitall-bundle-execution/references/artifact-backed-proof-manifest.md) when validating critical proof manifests.
-- Use `candoitall-csharp-architecture-bundle-guard`, `csharp-architecture-review-gate`, and `candoitall-codeanalytics-mcp` when validating architecture-relevant C# subbundles.
-- Use `candoitall-watch-playwright-loop` when the proof depends on fast nearby browser validation.
-- Use `candoitall-bundle-validator` for bundle-level readiness and final closure.
+- Read [references/prerequisite-and-closure-gates.md](references/prerequisite-and-closure-gates.md).
+- Read [../candoitall-bundle-execution/references/semantic-adequacy-proof.md](../candoitall-bundle-execution/references/semantic-adequacy-proof.md) for Behavioral/Governed proof.
+- Read [../candoitall-bundle-execution/references/artifact-backed-proof-manifest.md](../candoitall-bundle-execution/references/artifact-backed-proof-manifest.md) only for Governed proof.
 
 ## Exit Condition
 
-The subbundle passes only when its prerequisites, proof, and downstream progression decision are explicit enough that the next phase can proceed without borrowing trust from wishful thinking.
+Pass only when downstream work can rely on the current phase without borrowing trust from intent or excessive ceremony.
