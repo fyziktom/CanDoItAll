@@ -1,0 +1,10 @@
+Run label: SB38 pre-repair characterization inventory
+Working directory: bundle://
+Command: no complete standalone pre-change transport/profile/worker transcript set was retained.
+Exit code: N/A
+
+SB38-INV-01: SB35 inventory recorded missing project context and destructive profile editing.
+SB38-INV-02: SB35 inventory recorded capability-grouping HTTP/MCP partials, absent production MCP registration, and overclaimed capabilities.
+SB38-INV-03: SB35 inventory recorded unhosted worker lifecycle.
+
+This explicit proof-depth gap is assigned to SB40 red-team validation; no pre-change output is fabricated.

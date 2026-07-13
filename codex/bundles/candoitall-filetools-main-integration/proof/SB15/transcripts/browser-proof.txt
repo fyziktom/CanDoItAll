@@ -1,0 +1,44 @@
+SB15 managed browser proof, 2026-07-13
+
+Runtime:
+- Final session: app_7918e62ad1d24750830dd3f6adad5dec
+- Lane: PublishedActive / PublishedDll / RunOnce
+- URL: http://127.0.0.1:5505/resources
+- State: Healthy before proof; explicitly stopped after cleanup.
+
+Real flow:
+1. Browse catalog rendered four Projects, one Filesystem, zero IPFS, and zero FTP sources.
+2. Workspace file system opened with a bounded 50-row page.
+3. body-text.txt was promoted to the current TetrisGame project.
+4. Promotion reported source revision 1 and registry counters became 1/1/1/1.
+5. Registry rendered a governed read-only storage object and Browse Sources action.
+6. After runtime restart, the same stable promotion returned Already registered and revision 0.
+7. Open stored object re-resolved current source and actor and returned actual body-text.txt content.
+8. The controlled proof resource was deleted; final resource counters and matching row count returned to zero.
+
+Final 1900x1200 DOM:
+- browse pane: 1670x984, scroll 1670x984, overflow hidden
+- FileInteraction: 1262x756, scroll 1262x756, flex 1 1 0px
+- governed interaction region: 1262x756
+
+Final 1440x900 DOM:
+- browse pane: 1218x684, scroll 1218x684, overflow hidden
+- source list: client 521, scroll 1142, overflow-y auto
+- detail: client/scroll 540/540, overflow hidden
+- FileInteraction: 810x456, scroll height 456, flex 1 1 0px
+
+Final clean navigation diagnostics:
+- Console errors: 0
+- Console warnings: 0
+- GET /_blazor/initializers: 200
+- POST /_blazor/negotiate: 200
+- No unexpected non-static network failure.
+
+Runtime log outcomes:
+- current filesystem source opened with retention Disabled
+- filesystem browse returned 50, inspected 51
+- duplicate promotion Created=False, ScopeRevision=0
+- authorized current content opened
+- no raw locator, path, credential, token, or content in Resources logs
+
+Browser proof discovered one runtime-only defect: the packaged FileInteraction component does not accept a Class parameter. The unsupported parameter was removed; the final width/flex behavior is owned by scoped CSS targeting the rendered root. The final browser run has no component parameter error.

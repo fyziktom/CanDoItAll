@@ -42,6 +42,11 @@ public sealed class ProjectStructureActionCatalogAdapter
             BuildDeleteAction(selectedNodeCount)
         };
 
+        if (ProjectStructureFileActions.CanBrowseFiles(node))
+        {
+            actions.Insert(1, ProjectStructureFileActions.CreateCanvasAction());
+        }
+
         if (canLaunchRuntime)
         {
             actions.InsertRange(
@@ -402,6 +407,7 @@ public sealed class ProjectStructureActionCatalogAdapter
                 Icon = "open",
                 Tone = "accent"
             },
+            ProjectStructureFileActions.CreateCanvasAction(),
             new()
             {
                 ActionId = "copy-id",

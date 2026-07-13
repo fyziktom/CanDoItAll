@@ -1,0 +1,215 @@
+@namespace CanDoItAll.Modules.Resources
+@implements IDisposable
+@inject ResourceStorageObjectPromotionService PromotionService
+@inject ILogger<ResourceStorageObjectPromotionDialog> Logger
+
+<Dialog IsOpen="isOpen"
+        Eyebrow="Governed promotion"
+        Title="Save storage object as resource"
+        Subtitle="The object will be re-resolved and authorized for the current actor before its stable identity is persisted."
+        Size="ModalSize.Medium"
+        CloseOnBackdrop="false"
+        TestId="resources-promotion-dialog"
+        OnClose="CancelPromotion">
+    <ChildContent>
+        <Stack GapScale="LayoutGap.Large" Class="w-full">
+            @if (item is not null)
+            {
+                <SurfaceCard Soft="true">
+                    <TextBlock TextStyle="TextStyle.Eyebrow" Value="Selected object" />
+                    <h3 class="mt-1 text-base font-semibold text-slate-950">@item.Name</h3>
+                    <TextBlock TextStyle="TextStyle.Caption"
+                               Value="@($"{sourceName} · {FileBrowserDisplayFormatter.FormatSize(item.Size)}")" />
+                </SurfaceCard>
+            }
+            @if (!string.IsNullOrWhiteSpace(error))
+            {
+                <Alert AlertStyle="AlertStyle.Danger" data-testid="resources-promotion-error">
+                    @error
+                </Alert>
+            }
+            <div class="w-full">
+                <label class="cda-field-label">Target project</label>
+                <InputSelect @bind-Value="projectId" class="cda-input w-full" data-testid="resources-promotion-project">
+                    <option value="">Select a project</option>
+                    @foreach (KeyValuePair<Guid, string> project in projects.OrderBy(project => project.Value))
+                    {
+                        <option value="@project.Key">@project.Value</option>
+                    }
+                </InputSelect>
+            </div>
+            <div class="w-full">
+                <label class="cda-field-label">Resource name</label>
+                <InputText @bind-Value="resourceName" class="cda-input w-full" data-testid="resources-promotion-name" />
+            </div>
+            <div class="w-full">
+                <label class="cda-field-label">Sensitivity</label>
+                <InputSelect @bind-Value="sensitivity" class="cda-input w-full" data-testid="resources-promotion-sensitivity">
+                    @foreach (ResourceSensitivity option in Enum.GetValues<ResourceSensitivity>())
+                    {
+                        <option value="@option">@option</option>
+                    }
+                </InputSelect>
+            </div>
+        </Stack>
+    </ChildContent>
+    <Footer>
+        <Cluster Gap="LayoutGap.Small" Class="justify-end">
+            <Button Text="Cancel"
+                    ButtonStyle="ButtonStyle.Light"
+                    Disabled="@isSaving"
+                    Click="CancelPromotion" />
+            <Button Text="Save resource"
+                    Icon="add_link"
+                    Disabled="@(!CanSave)"
+                    data-testid="resources-promotion-save"
+                    Click="SaveAsync" />
+        </Cluster>
+    </Footer>
+</Dialog>
+
+@code {
+    private readonly CancellationTokenSource lifetime = new();
+    private ResourceFileSourceKey? sourceKey;
+    private string sourceName = string.Empty;
+    private Guid? sourceProjectId;
+    private FileBrowserItem? item;
+    private IReadOnlyDictionary<Guid, string> projects = new Dictionary<Guid, string>();
+    private Guid? projectId;
+    private string resourceName = string.Empty;
+    private string? error;
+    private ResourceSensitivity sensitivity;
+    private bool isOpen;
+    private bool isSaving;
+    private bool disposed;
+
+    [Parameter]
+    public EventCallback<ResourceStorageObjectPromotionUiResult> Promoted { get; set; }
+
+    private bool CanSave => !isSaving &&
+                            sourceKey.HasValue &&
+                            item is not null &&
+                            projectId.HasValue &&
+                            !string.IsNullOrWhiteSpace(resourceName);
+
+    public void Open(
+        string selectedSourceKey,
+        string selectedSourceName,
+        Guid? selectedSourceProjectId,
+        FileBrowserItem selectedItem,
+        IReadOnlyDictionary<Guid, string> availableProjects)
+    {
+        if (!ResourceFileSourceKey.TryParse(selectedSourceKey, out ResourceFileSourceKey parsedSourceKey))
+        {
+            throw new ArgumentException("A valid Resources file-source identity is required.", nameof(selectedSourceKey));
+        }
+
+        ArgumentException.ThrowIfNullOrWhiteSpace(selectedSourceName);
+        sourceKey = parsedSourceKey;
+        sourceName = selectedSourceName.Trim();
+        sourceProjectId = selectedSourceProjectId;
+        item = selectedItem ?? throw new ArgumentNullException(nameof(selectedItem));
+        projects = availableProjects ?? throw new ArgumentNullException(nameof(availableProjects));
+        resourceName = item.Name;
+        projectId = sourceProjectId.HasValue
+            ? sourceProjectId
+            : projects.Count > 0
+                ? projects.First().Key
+                : null;
+        sensitivity = ResourceSensitivity.Normal;
+        error = null;
+        isOpen = true;
+        StateHasChanged();
+    }
+
+    private async Task SaveAsync()
+    {
+        if (!CanSave || !sourceKey.HasValue || item is null || !projectId.HasValue)
+        {
+            return;
+        }
+
+        isSaving = true;
+        error = null;
+        try
+        {
+            ResourceStorageObjectPromotionResult result = await PromotionService.PromoteAsync(
+                new ResourceStorageObjectPromotionCommand(
+                    sourceKey.Value,
+                    item.Key,
+                    projectId.Value,
+                    resourceName,
+                    sensitivity),
+                lifetime.Token);
+            string completedSourceKey = sourceKey.Value.Value;
+            Reset();
+            await Promoted.InvokeAsync(new ResourceStorageObjectPromotionUiResult(
+                completedSourceKey,
+                result.ResourceId,
+                result.Created,
+                result.Revision.Scope));
+        }
+        catch (OperationCanceledException) when (lifetime.IsCancellationRequested)
+        {
+        }
+        catch (Exception exception)
+        {
+            Logger.LogWarning(
+                "Storage-object promotion failed. SourceKey={SourceKey} ProjectId={ProjectId} FailureType={FailureType} FailureCode={FailureCode}.",
+                sourceKey.Value.Value,
+                projectId,
+                exception.GetType().Name,
+                exception is ResourcePromotionException promotionException
+                    ? promotionException.Code
+                    : null);
+            error = SafeMessage(exception);
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+
+    private Task CancelPromotion()
+    {
+        if (!isSaving)
+        {
+            Reset();
+        }
+
+        return Task.CompletedTask;
+    }
+
+    private void Reset()
+    {
+        isOpen = false;
+        sourceKey = null;
+        sourceName = string.Empty;
+        sourceProjectId = null;
+        item = null;
+        projects = new Dictionary<Guid, string>();
+        projectId = null;
+        resourceName = string.Empty;
+        error = null;
+    }
+
+    private static string SafeMessage(Exception exception)
+        => exception switch
+        {
+            FileBrowserProviderException providerException => providerException.Error.Message,
+            ResourcePromotionException promotionException => promotionException.Message,
+            _ => "Unable to save the selected storage object as a resource."
+        };
+
+    public void Dispose()
+    {
+        if (disposed)
+        {
+            return;
+        }
+
+        disposed = true;
+        lifetime.Cancel();
+        lifetime.Dispose();
+    }
+}

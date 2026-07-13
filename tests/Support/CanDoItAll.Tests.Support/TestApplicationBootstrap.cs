@@ -2,6 +2,7 @@ using System.Reflection;
 using CanDoItAll.Components.BaseLib;
 using CanDoItAll.Components.Mermaid.Infrastructure;
 using CanDoItAll.Composition;
+using CanDoItAll.FileTools.Integration;
 using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Infrastructure.DependencyInjection;
 using CanDoItAll.Infrastructure.Persistence;
@@ -66,6 +67,7 @@ public static class TestApplicationBootstrap
         services.AddCanDoItAllInfrastructure(configuration, environment, ModuleAssemblies);
         services.AddCanDoItAllRuntimeDatabaseSwitching();
         services.AddCanDoItAllRuntimeModules(configuration, environment.ContentRootPath);
+        services.AddCanDoItAllFileToolsStoragePlacementRevision();
         services.AddCanDoItAllMermaid();
         services.AddScoped<IWorkbenchStateStore, InMemoryWorkbenchStateStore>();
     }

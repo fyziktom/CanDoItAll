@@ -1,0 +1,21 @@
+SB08 failing-first cache serialization — 2026-07-12
+
+Initial implementation passed StorageBrowsePage directly to HybridCache. The first focused run produced:
+- Failed: 4
+- Passed: 18
+- Total: 22
+
+All four cache-enabled cases failed with the same production error:
+System.InvalidOperationException: each deserialization-constructor parameter on StorageBrowsePage must bind to an object property or field.
+
+Cause:
+- the domain constructor accepts IEnumerable path/entries while the exposed properties are IReadOnlyList;
+- HybridCache's default JSON serializer therefore could not round-trip the domain object.
+
+Repair:
+- introduced a narrow positional CachedStorageBrowsePage DTO;
+- serialize it to exact bounded UTF-8 bytes before admission;
+- cache byte[] with distributed cache explicitly disabled;
+- deserialize the DTO and reconstruct through domain constructors so validation still executes.
+
+The same four tests and all added bounds/authority tests pass in passing-cache-revision.txt.

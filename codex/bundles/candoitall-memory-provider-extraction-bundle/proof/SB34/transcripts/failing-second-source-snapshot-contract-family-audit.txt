@@ -1,0 +1,30 @@
+Command: PowerShell SB34 failing-second source snapshot contract audit
+SB34 Source Snapshot Contract Family Audit
+
+Definition hits:
+  .\src\Memory\CanDoItAll.Memory.Abstractions\MemoryProtocolEnums.cs:48:public enum MemorySourceScope
+  .\src\Memory\CanDoItAll.Memory.Abstractions\MemoryProtocolEnums.cs:60:public enum MemorySourceKind
+  .\src\Memory\CanDoItAll.Memory.Application\MemorySourceIngestionContracts.cs:8:public enum MemorySourceIngestionJobStatus
+  .\src\Memory\CanDoItAll.Memory.Application\MemorySourceGatewayContracts.cs:8:public enum MemorySourceGatewayStatus
+  .\src\Memory\CanDoItAll.Memory.Application\MemorySourceGatewayContracts.cs:18:public enum MemorySourcePayloadForm
+  .\src\MAF\Common\CanDoItAll.AgentFramework.Core\Sources\MemorySourceSnapshotContracts.cs:314:public sealed record MemorySourceSnapshotCursorDescriptor(
+  .\src\MAF\Common\CanDoItAll.AgentFramework.Core\Sources\MemorySourceSnapshotContracts.cs:322:public enum MemorySourceSnapshotCursorFailureReason
+  .\src\MAF\Common\CanDoItAll.AgentFramework.Core\Sources\MemorySourceSnapshotContracts.cs:331:public sealed class MemorySourceSnapshotCursorException : InvalidOperationException
+  .\src\MAF\Common\CanDoItAll.AgentFramework.Core\Sources\MemorySourceSnapshotContracts.cs:361:public enum MemorySourceKind
+  .\src\MAF\Common\CanDoItAll.AgentFramework.Core\Sources\MemorySourceSnapshotContracts.cs:371:public enum MemorySourceEntityKind
+  .\src\MAF\Common\CanDoItAll.AgentFramework.Core\Sources\MemorySourceSnapshotContracts.cs:403:public enum MemorySourceSensitivity
+  .\src\MAF\Common\CanDoItAll.AgentFramework.Core\Sources\MemorySourceSnapshotContracts.cs:411:public enum MemorySourceAccessMode
+  .\src\MAF\Common\CanDoItAll.AgentFramework.Core\Sources\MemorySourceSnapshotContracts.cs:417:public enum MemorySourceSnapshotPageStatus
+  .\src\MAF\Common\CanDoItAll.AgentFramework.Core\Sources\MemorySourceSnapshotContracts.cs:423:public enum MemorySourceSnapshotHashScope
+  .\src\MAF\Common\CanDoItAll.AgentFramework.Core\Sources\MemorySourceSnapshotContracts.cs:430:public enum MemorySourceHashClassification
+  .\src\MAF\Common\CanDoItAll.AgentFramework.Core\Sources\MemorySourceSnapshotContracts.cs:437:public enum MemorySourceHashPayloadBasis
+  .\src\MAF\Common\CanDoItAll.AgentFramework.Core\Sources\MemorySourceSnapshotContracts.cs:508:public sealed record MemorySourceSnapshot(
+  .\src\MAF\Common\CanDoItAll.AgentFramework.Core\Sources\MemorySourceSnapshotContracts.cs:512:public sealed record MemorySourceSnapshotManifest(
+
+FAIL: duplicate MemorySourceSnapshot-style definitions found outside the primary MAF contract family:
+  .\src\Memory\CanDoItAll.Memory.Abstractions\MemoryProtocolEnums.cs:48:public enum MemorySourceScope
+  .\src\Memory\CanDoItAll.Memory.Abstractions\MemoryProtocolEnums.cs:60:public enum MemorySourceKind
+  .\src\Memory\CanDoItAll.Memory.Application\MemorySourceIngestionContracts.cs:8:public enum MemorySourceIngestionJobStatus
+  .\src\Memory\CanDoItAll.Memory.Application\MemorySourceGatewayContracts.cs:8:public enum MemorySourceGatewayStatus
+  .\src\Memory\CanDoItAll.Memory.Application\MemorySourceGatewayContracts.cs:18:public enum MemorySourcePayloadForm
+ExitCode: 1

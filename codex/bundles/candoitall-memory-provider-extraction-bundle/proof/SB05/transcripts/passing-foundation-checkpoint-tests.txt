@@ -1,0 +1,27 @@
+Command: dotnet test tests\Memory\CanDoItAll.Memory.Tests\CanDoItAll.Memory.Tests.csproj --filter FullyQualifiedName~MemoryFoundationCheckpointTests
+WorkingDirectory: C:\repositories\CanDoItAll
+RunLabel: SB05 focused foundation checkpoint tests
+Invariant IDs: SB05_CP001, SB05_CP002, SB05_CP003, SB05_CP004
+ExitCode: 0
+Output:
+  Zjišťují se projekty, které se mají obnovit...
+C:\repositories\CanDoItAll\src\MAF\Common\CanDoItAll.AgentFramework.Core\CanDoItAll.AgentFramework.Core.csproj : warning NU1900: Při získávání dat o ohrožení zabezpečení balíčku došlo k chybě: Nepovedlo se načíst index služby pro zdroj https://api.nuget.org/v3/index.json. [C:\repositories\CanDoItAll\tests\Memory\CanDoItAll.Memory.Tests\CanDoItAll.Memory.Tests.csproj]
+C:\repositories\CanDoItAll\src\MAF\WorkflowExecutors\CanDoItAll.AgentFramework.WorkflowExecutors.Core\CanDoItAll.AgentFramework.WorkflowExecutors.Core.csproj : warning NU1900: Při získávání dat o ohrožení zabezpečení balíčku došlo k chybě: Nepovedlo se načíst index služby pro zdroj https://api.nuget.org/v3/index.json. [C:\repositories\CanDoItAll\tests\Memory\CanDoItAll.Memory.Tests\CanDoItAll.Memory.Tests.csproj]
+  Všechny projekty jsou v aktuálním stavu pro obnovení.
+C:\repositories\CanDoItAll\src\MAF\Common\CanDoItAll.AgentFramework.Core\CanDoItAll.AgentFramework.Core.csproj : warning NU1900: Při získávání dat o ohrožení zabezpečení balíčku došlo k chybě: Nepovedlo se načíst index služby pro zdroj https://api.nuget.org/v3/index.json.
+C:\repositories\CanDoItAll\src\MAF\WorkflowExecutors\CanDoItAll.AgentFramework.WorkflowExecutors.Core\CanDoItAll.AgentFramework.WorkflowExecutors.Core.csproj : warning NU1900: Při získávání dat o ohrožení zabezpečení balíčku došlo k chybě: Nepovedlo se načíst index služby pro zdroj https://api.nuget.org/v3/index.json.
+  CanDoItAll.AgentFramework.Capabilities.Abstractions -> C:\repositories\CanDoItAll\src\MAF\Capabilities\CanDoItAll.AgentFramework.Capabilities.Abstractions\bin\Debug\net10.0\CanDoItAll.AgentFramework.Capabilities.Abstractions.dll
+  CanDoItAll.Git -> C:\repositories\CanDoItAll\src\Foundation\CanDoItAll.Git\bin\Debug\net10.0\CanDoItAll.Git.dll
+  CanDoItAll.SharedKernel -> C:\repositories\CanDoItAll\src\Foundation\CanDoItAll.SharedKernel\bin\Debug\net10.0\CanDoItAll.SharedKernel.dll
+  CanDoItAll.Memory.Abstractions -> C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Abstractions\bin\Debug\net10.0\CanDoItAll.Memory.Abstractions.dll
+  CanDoItAll.AgentFramework.Models -> C:\repositories\CanDoItAll\src\MAF\Common\CanDoItAll.AgentFramework.Models\bin\Debug\net10.0\CanDoItAll.AgentFramework.Models.dll
+  CanDoItAll.AgentFramework.Workflows.Abstractions -> C:\repositories\CanDoItAll\src\MAF\Workflows\CanDoItAll.AgentFramework.Workflows.Abstractions\bin\Debug\net10.0\CanDoItAll.AgentFramework.Workflows.Abstractions.dll
+  CanDoItAll.AgentFramework.WorkflowExecutors.Abstractions -> C:\repositories\CanDoItAll\src\MAF\WorkflowExecutors\CanDoItAll.AgentFramework.WorkflowExecutors.Abstractions\bin\Debug\net10.0\CanDoItAll.AgentFramework.WorkflowExecutors.Abstractions.dll
+  CanDoItAll.AgentFramework.WorkflowExecutors.Core -> C:\repositories\CanDoItAll\src\MAF\WorkflowExecutors\CanDoItAll.AgentFramework.WorkflowExecutors.Core\bin\Debug\net10.0\CanDoItAll.AgentFramework.WorkflowExecutors.Core.dll
+  CanDoItAll.AgentFramework.Core -> C:\repositories\CanDoItAll\src\MAF\Common\CanDoItAll.AgentFramework.Core\bin\Debug\net10.0\CanDoItAll.AgentFramework.Core.dll
+  CanDoItAll.Memory.Application -> C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Application\bin\Debug\net10.0\CanDoItAll.Memory.Application.dll
+  CanDoItAll.Memory.Tests -> C:\repositories\CanDoItAll\tests\Memory\CanDoItAll.Memory.Tests\bin\Debug\net10.0\CanDoItAll.Memory.Tests.dll
+Testovací běh pro C:\repositories\CanDoItAll\tests\Memory\CanDoItAll.Memory.Tests\bin\Debug\net10.0\CanDoItAll.Memory.Tests.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+
+Úspěšné!    - Neúspěšné:     0, Úspěšné:     4, Přeskočeno:     0, Celkem:     4, Doba trvání: 544 ms - CanDoItAll.Memory.Tests.dll (net10.0)

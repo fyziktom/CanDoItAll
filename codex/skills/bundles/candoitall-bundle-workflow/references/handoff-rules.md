@@ -11,6 +11,7 @@ Preparation must hand off:
 - critical foundation list
 - numbered subbundles
 - proof rules
+- proof tier per subbundle
 - progression gates
 - readiness-validator result
 - self-review
@@ -39,3 +40,5 @@ After compaction, interruption, or transfer to another agent, the workflow must 
 ## Compatibility Rule
 
 Do not invent a second bundle shape during execution. If the bundle needs improvement, improve the existing structure instead of migrating into a different format mid-task.
+
+When the shape is non-canonical, the root compatibility map must identify the files that own inputs, requirements, current state, dependency plan, work units, proof/status, and closure. Structural validation may be recorded as not applicable when the manual semantic gates pass.

@@ -1,0 +1,20 @@
+Command: Historical SB15 proof transcript: source-audit-shared-handler-boundary.txt
+SB15 shared handler boundary audit
+
+Provider selection call sites under src\Memory:
+src\Memory\CanDoItAll.Memory.Application\MemoryOperationHandler.Helpers.cs:            .SelectProvider(selectionPolicy, selectionContext);
+
+Driver dispatch lookup call sites under src\Memory:
+src\Memory\CanDoItAll.Memory.Application\MemoryOperationHandler.cs:    private readonly IEnumerable<IMemoryProviderDriver> drivers;
+src\Memory\CanDoItAll.Memory.Application\MemoryOperationHandler.cs:        IEnumerable<IMemoryProviderDriver> drivers,
+src\Memory\CanDoItAll.Memory.Application\MemoryOperationHandler.cs:        var driver = drivers.FirstOrDefault(candidate => candidate.DriverKind == selection.SelectedProvider.DriverKind);
+
+Manual/project ingestion bypass scan:
+No bypass patterns found in manual/project ingestion services.
+
+Generic memory/native dependency scan:
+No native memory/provider-specific dependencies found in generic memory projects.
+
+AUDIT RESULT: PASSED
+ExitCode: 0
+

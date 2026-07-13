@@ -1,0 +1,52 @@
+-[ RECORD 1 ]----------------------------------------
+table_name | AgentFramework_WorkflowArtifacts
+-[ RECORD 2 ]----------------------------------------
+table_name | AgentFramework_WorkflowCheckpoints
+-[ RECORD 3 ]----------------------------------------
+table_name | AgentFramework_WorkflowComponents
+-[ RECORD 4 ]----------------------------------------
+table_name | AgentFramework_WorkflowDefinitions
+-[ RECORD 5 ]----------------------------------------
+table_name | AgentFramework_WorkflowEvents
+-[ RECORD 6 ]----------------------------------------
+table_name | AgentFramework_WorkflowExternalRequests
+-[ RECORD 7 ]----------------------------------------
+table_name | AgentFramework_WorkflowRuns
+-[ RECORD 8 ]----------------------------------------
+table_name | AgentFramework_WorkflowSettings
+-[ RECORD 9 ]----------------------------------------
+table_name | CrmHr_AiAgentProfiles
+-[ RECORD 10 ]---------------------------------------
+table_name | process_artifact_ledger_events
+-[ RECORD 11 ]---------------------------------------
+table_name | process_dispatch_claims
+-[ RECORD 12 ]---------------------------------------
+table_name | process_instance_plans
+-[ RECORD 13 ]---------------------------------------
+table_name | process_outbox_messages
+-[ RECORD 14 ]---------------------------------------
+table_name | process_projection_dead_letters
+-[ RECORD 15 ]---------------------------------------
+table_name | process_projection_history
+-[ RECORD 16 ]---------------------------------------
+table_name | process_projection_snapshots
+-[ RECORD 17 ]---------------------------------------
+table_name | process_projector_offsets
+-[ RECORD 18 ]---------------------------------------
+table_name | process_runtime_available_artifact_slots
+-[ RECORD 19 ]---------------------------------------
+table_name | process_runtime_events
+-[ RECORD 20 ]---------------------------------------
+table_name | process_runtime_idempotency_keys
+-[ RECORD 21 ]---------------------------------------
+table_name | process_runtime_input_artifacts
+-[ RECORD 22 ]---------------------------------------
+table_name | process_runtime_states
+-[ RECORD 23 ]---------------------------------------
+table_name | process_runtime_step_assignments
+-[ RECORD 24 ]---------------------------------------
+table_name | process_runtime_steps
+-[ RECORD 25 ]---------------------------------------
+table_name | process_strategy_result_receipts
+
+

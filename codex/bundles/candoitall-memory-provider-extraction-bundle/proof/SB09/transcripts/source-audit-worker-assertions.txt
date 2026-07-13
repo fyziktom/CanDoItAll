@@ -1,0 +1,217 @@
+Command: Historical SB09 proof transcript: source-audit-worker-assertions.txt
+tests/Memory/CanDoItAll.Memory.Tests/MemoryAsyncWorkerTests.cs:16:    public async Task SB09_OP001_Accepted_operation_polls_provider_and_completes()
+tests/Memory/CanDoItAll.Memory.Tests/MemoryAsyncWorkerTests.cs:25:        var worker = provider.GetRequiredService<IMemoryAsyncOperationWorker>();
+tests/Memory/CanDoItAll.Memory.Tests/MemoryAsyncWorkerTests.cs:26:        using var cancellation = new CancellationTokenSource();
+tests/Memory/CanDoItAll.Memory.Tests/MemoryAsyncWorkerTests.cs:27:        var result = await worker.PollOperationsAsync(cancellation.Token);
+tests/Memory/CanDoItAll.Memory.Tests/MemoryAsyncWorkerTests.cs:48:        var result = await provider.GetRequiredService<IMemoryAsyncOperationWorker>().PollOperationsAsync();
+tests/Memory/CanDoItAll.Memory.Tests/MemoryAsyncWorkerTests.cs:68:        var cancelled = await provider.GetRequiredService<IMemoryAsyncOperationWorker>()
+tests/Memory/CanDoItAll.Memory.Tests/MemoryAsyncWorkerTests.cs:69:            .CancelOperationAsync(operation.OperationId, "user cancelled operation");
+tests/Memory/CanDoItAll.Memory.Tests/MemoryAsyncWorkerTests.cs:84:        var worker = provider.GetRequiredService<IMemoryAsyncOperationWorker>();
+tests/Memory/CanDoItAll.Memory.Tests/MemoryAsyncWorkerTests.cs:86:        var first = await worker.PollOperationsAsync();
+tests/Memory/CanDoItAll.Memory.Tests/MemoryAsyncWorkerTests.cs:87:        var second = await worker.PollOperationsAsync();
+tests/Memory/CanDoItAll.Memory.Tests/MemoryAsyncWorkerTests.cs:98:    public async Task SB09_RT001_Retention_worker_forgets_feedback_and_requests_ipfs_unpin()
+tests/Memory/CanDoItAll.Memory.Tests/MemoryAsyncWorkerTests.cs:109:        var result = await provider.GetRequiredService<IMemoryRetentionWorker>().ApplyDueRetentionAsync();
+tests/Memory/CanDoItAll.Memory.Tests/MemoryAsyncWorkerTests.cs:114:        Assert.Equal(1, result.IpfsUnpinRequests);
+tests/Memory/CanDoItAll.Memory.Tests/MemoryAsyncWorkerTests.cs:120:    public async Task SB09_EV001_Event_worker_dedupes_polled_events_and_drains_inbox_outbox()
+tests/Memory/CanDoItAll.Memory.Tests/MemoryAsyncWorkerTests.cs:131:        var worker = provider.GetRequiredService<IMemoryProviderEventWorker>();
+tests/Memory/CanDoItAll.Memory.Tests/MemoryAsyncWorkerTests.cs:159:        var result = await provider.GetRequiredService<IMemoryAsyncOperationWorker>().PollOperationsAsync();
+tests/Memory/CanDoItAll.Memory.Tests/MemoryAsyncWorkerTests.cs:196:                MaxBatchSize = maxBatchSize,
+tests/Memory/CanDoItAll.Memory.Tests/MemoryAsyncWorkerTests.cs:315:        Func<MemoryOperationRecord, MemoryProviderOperationPollResult> next) : IMemoryProviderOperationStatusDriver
+tests/Memory/CanDoItAll.Memory.Tests/MemoryAsyncWorkerTests.cs:321:        public List<CancellationToken> ObservedTokens { get; } = [];
+tests/Memory/CanDoItAll.Memory.Tests/MemoryAsyncWorkerTests.cs:326:                MemoryProviderOperationPollResult.FromResult(
+tests/Memory/CanDoItAll.Memory.Tests/MemoryAsyncWorkerTests.cs:334:                MemoryProviderOperationPollResult.RetryableFailure(diagnostic));
+tests/Memory/CanDoItAll.Memory.Tests/MemoryAsyncWorkerTests.cs:337:        public Task<MemoryProviderOperationPollResult> PollOperationAsync(
+tests/Memory/CanDoItAll.Memory.Tests/MemoryAsyncWorkerTests.cs:340:            CancellationToken cancellationToken = default)
+tests/Memory/CanDoItAll.Memory.Tests/MemoryAsyncWorkerTests.cs:353:        public Task<MemoryProviderEventPollResult> PollEventsAsync(
+tests/Memory/CanDoItAll.Memory.Tests/MemoryAsyncWorkerTests.cs:355:            CancellationToken cancellationToken = default)
+tests/Memory/CanDoItAll.Memory.Tests/MemoryAsyncWorkerTests.cs:357:            return Task.FromResult(MemoryProviderEventPollResult.FromEvents(events, "events returned"));
+tests/Memory/CanDoItAll.Memory.Tests/MemoryAsyncWorkerTests.cs:371:            CancellationToken cancellationToken = default)
+src/Memory\CanDoItAll.Memory.Application\MemoryFeedbackWorker.cs:10:    MemoryAsyncWorkerOptions options) : IMemoryFeedbackWorker
+src/Memory\CanDoItAll.Memory.Application\MemoryFeedbackWorker.cs:12:    public async Task<MemoryAsyncWorkerRunResult> DeliverPendingFeedbackAsync(CancellationToken cancellationToken = default)
+src/Memory\CanDoItAll.Memory.Application\MemoryFeedbackWorker.cs:16:        var feedback = await feedbackLedgerStore.ListDueForDeliveryAsync(
+src/Memory\CanDoItAll.Memory.Application\MemoryFeedbackWorker.cs:19:            options.MaxBatchSize,
+src/Memory\CanDoItAll.Memory.Application\MemoryFeedbackWorker.cs:79:        CancellationToken cancellationToken)
+src/Memory\CanDoItAll.Memory.Application\MemoryFeedbackWorker.cs:97:        CancellationToken cancellationToken)
+src/Memory\CanDoItAll.Memory.Application\MemoryFeedbackWorker.cs:112:        CancellationToken cancellationToken)
+src/Memory\CanDoItAll.Memory.Application\MemoryFeedbackWorker.cs:127:        CancellationToken cancellationToken)
+src/Memory\CanDoItAll.Memory.Application\MemoryAsyncWorkerContracts.cs:6:    int MaxBatchSize,
+src/Memory\CanDoItAll.Memory.Application\MemoryAsyncWorkerContracts.cs:14:        MaxBatchSize: 25,
+src/Memory\CanDoItAll.Memory.Application\MemoryAsyncWorkerContracts.cs:23:        if (MaxBatchSize < 1)
+src/Memory\CanDoItAll.Memory.Application\MemoryAsyncWorkerContracts.cs:25:            throw new ArgumentOutOfRangeException(nameof(MaxBatchSize), "Worker batch size must be positive.");
+src/Memory\CanDoItAll.Memory.Application\MemoryAsyncWorkerContracts.cs:55:    int IpfsUnpinRequests,
+src/Memory\CanDoItAll.Memory.Application\MemoryAsyncWorkerContracts.cs:68:        IpfsUnpinRequests: 0,
+src/Memory\CanDoItAll.Memory.Application\MemoryAsyncWorkerContracts.cs:72:public interface IMemoryAsyncOperationWorker
+src/Memory\CanDoItAll.Memory.Application\MemoryAsyncWorkerContracts.cs:74:    Task<MemoryAsyncWorkerRunResult> PollOperationsAsync(CancellationToken cancellationToken = default);
+src/Memory\CanDoItAll.Memory.Application\MemoryAsyncWorkerContracts.cs:76:    Task<MemoryOperationRecord> CancelOperationAsync(
+src/Memory\CanDoItAll.Memory.Application\MemoryAsyncWorkerContracts.cs:79:        CancellationToken cancellationToken = default);
+src/Memory\CanDoItAll.Memory.Application\MemoryAsyncWorkerContracts.cs:82:public interface IMemoryFeedbackWorker
+src/Memory\CanDoItAll.Memory.Application\MemoryAsyncWorkerContracts.cs:84:    Task<MemoryAsyncWorkerRunResult> DeliverPendingFeedbackAsync(CancellationToken cancellationToken = default);
+src/Memory\CanDoItAll.Memory.Application\MemoryAsyncWorkerContracts.cs:87:public interface IMemoryProviderEventWorker
+src/Memory\CanDoItAll.Memory.Application\MemoryAsyncWorkerContracts.cs:89:    Task<MemoryAsyncWorkerRunResult> PollProviderEventsAsync(CancellationToken cancellationToken = default);
+src/Memory\CanDoItAll.Memory.Application\MemoryAsyncWorkerContracts.cs:95:        CancellationToken cancellationToken = default);
+src/Memory\CanDoItAll.Memory.Application\MemoryAsyncWorkerContracts.cs:97:    Task<MemoryAsyncWorkerRunResult> DrainInboxAsync(CancellationToken cancellationToken = default);
+src/Memory\CanDoItAll.Memory.Application\MemoryAsyncWorkerContracts.cs:99:    Task<MemoryAsyncWorkerRunResult> DrainOutboxAsync(CancellationToken cancellationToken = default);
+src/Memory\CanDoItAll.Memory.Application\MemoryAsyncWorkerContracts.cs:102:public interface IMemoryRetentionWorker
+src/Memory\CanDoItAll.Memory.Application\MemoryAsyncWorkerContracts.cs:104:    Task<MemoryAsyncWorkerRunResult> ApplyDueRetentionAsync(CancellationToken cancellationToken = default);
+src/Memory\CanDoItAll.Memory.Application\MemoryAsyncWorkerContracts.cs:107:public enum MemoryProviderOperationPollResultKind
+src/Memory\CanDoItAll.Memory.Application\MemoryAsyncWorkerContracts.cs:116:public sealed record MemoryProviderOperationPollResult(
+src/Memory\CanDoItAll.Memory.Application\MemoryAsyncWorkerContracts.cs:117:    MemoryProviderOperationPollResultKind Kind,
+src/Memory\CanDoItAll.Memory.Application\MemoryAsyncWorkerContracts.cs:121:    public static MemoryProviderOperationPollResult FromResult(
+src/Memory\CanDoItAll.Memory.Application\MemoryAsyncWorkerContracts.cs:124:        new(MemoryProviderOperationPollResultKind.OperationResult, operationResult, diagnostic);
+src/Memory\CanDoItAll.Memory.Application\MemoryAsyncWorkerContracts.cs:126:    public static MemoryProviderOperationPollResult StillRunning(string diagnostic) =>
+src/Memory\CanDoItAll.Memory.Application\MemoryAsyncWorkerContracts.cs:127:        new(MemoryProviderOperationPollResultKind.StillRunning, OperationResult: null, diagnostic);
+src/Memory\CanDoItAll.Memory.Application\MemoryAsyncWorkerContracts.cs:129:    public static MemoryProviderOperationPollResult RetryableFailure(string diagnostic) =>
+src/Memory\CanDoItAll.Memory.Application\MemoryAsyncWorkerContracts.cs:130:        new(MemoryProviderOperationPollResultKind.RetryableFailure, OperationResult: null, diagnostic);
+src/Memory\CanDoItAll.Memory.Application\MemoryAsyncWorkerContracts.cs:132:    public static MemoryProviderOperationPollResult TerminalFailure(string diagnostic) =>
+src/Memory\CanDoItAll.Memory.Application\MemoryAsyncWorkerContracts.cs:133:        new(MemoryProviderOperationPollResultKind.TerminalFailure, OperationResult: null, diagnostic);
+src/Memory\CanDoItAll.Memory.Application\MemoryAsyncWorkerContracts.cs:135:    public static MemoryProviderOperationPollResult UnsupportedCapability(string diagnostic) =>
+src/Memory\CanDoItAll.Memory.Application\MemoryAsyncWorkerContracts.cs:136:        new(MemoryProviderOperationPollResultKind.UnsupportedCapability, OperationResult: null, diagnostic);
+src/Memory\CanDoItAll.Memory.Application\MemoryAsyncWorkerContracts.cs:164:public enum MemoryProviderEventPollResultKind
+src/Memory\CanDoItAll.Memory.Application\MemoryAsyncWorkerContracts.cs:172:public sealed record MemoryProviderEventPollResult(
+src/Memory\CanDoItAll.Memory.Application\MemoryAsyncWorkerContracts.cs:173:    MemoryProviderEventPollResultKind Kind,
+src/Memory\CanDoItAll.Memory.Application\MemoryAsyncWorkerContracts.cs:177:    public static MemoryProviderEventPollResult FromEvents(
+src/Memory\CanDoItAll.Memory.Application\MemoryAsyncWorkerContracts.cs:180:        new(MemoryProviderEventPollResultKind.Events, events, diagnostic);
+src/Memory\CanDoItAll.Memory.Application\MemoryAsyncWorkerContracts.cs:182:    public static MemoryProviderEventPollResult RetryableFailure(string diagnostic) =>
+src/Memory\CanDoItAll.Memory.Application\MemoryAsyncWorkerContracts.cs:183:        new(MemoryProviderEventPollResultKind.RetryableFailure, Events: [], diagnostic);
+src/Memory\CanDoItAll.Memory.Application\MemoryAsyncWorkerContracts.cs:185:    public static MemoryProviderEventPollResult TerminalFailure(string diagnostic) =>
+src/Memory\CanDoItAll.Memory.Application\MemoryAsyncWorkerContracts.cs:186:        new(MemoryProviderEventPollResultKind.TerminalFailure, Events: [], diagnostic);
+src/Memory\CanDoItAll.Memory.Application\MemoryAsyncWorkerContracts.cs:188:    public static MemoryProviderEventPollResult UnsupportedCapability(string diagnostic) =>
+src/Memory\CanDoItAll.Memory.Application\MemoryAsyncWorkerContracts.cs:189:        new(MemoryProviderEventPollResultKind.UnsupportedCapability, Events: [], diagnostic);
+src/Memory\CanDoItAll.Memory.Application\MemoryAsyncOperationWorker.cs:10:    MemoryAsyncWorkerOptions options) : IMemoryAsyncOperationWorker
+src/Memory\CanDoItAll.Memory.Application\MemoryAsyncOperationWorker.cs:12:    public async Task<MemoryAsyncWorkerRunResult> PollOperationsAsync(CancellationToken cancellationToken = default)
+src/Memory\CanDoItAll.Memory.Application\MemoryAsyncOperationWorker.cs:16:        var operations = await operationLedgerStore.ListDueForPollingAsync(
+src/Memory\CanDoItAll.Memory.Application\MemoryAsyncOperationWorker.cs:19:            options.MaxBatchSize,
+src/Memory\CanDoItAll.Memory.Application\MemoryAsyncOperationWorker.cs:84:    public async Task<MemoryOperationRecord> CancelOperationAsync(
+src/Memory\CanDoItAll.Memory.Application\MemoryAsyncOperationWorker.cs:87:        CancellationToken cancellationToken = default)
+src/Memory\CanDoItAll.Memory.Application\MemoryAsyncOperationWorker.cs:106:        MemoryProviderOperationPollResult result,
+src/Memory\CanDoItAll.Memory.Application\MemoryAsyncOperationWorker.cs:108:        CancellationToken cancellationToken)
+src/Memory\CanDoItAll.Memory.Application\MemoryAsyncOperationWorker.cs:112:            MemoryProviderOperationPollResultKind.OperationResult when result.OperationResult is { } operationResult =>
+src/Memory\CanDoItAll.Memory.Application\MemoryAsyncOperationWorker.cs:114:            MemoryProviderOperationPollResultKind.StillRunning =>
+src/Memory\CanDoItAll.Memory.Application\MemoryAsyncOperationWorker.cs:116:            MemoryProviderOperationPollResultKind.RetryableFailure =>
+src/Memory\CanDoItAll.Memory.Application\MemoryAsyncOperationWorker.cs:118:            MemoryProviderOperationPollResultKind.TerminalFailure or MemoryProviderOperationPollResultKind.UnsupportedCapability =>
+src/Memory\CanDoItAll.Memory.Application\MemoryAsyncOperationWorker.cs:129:        CancellationToken cancellationToken)
+src/Memory\CanDoItAll.Memory.Application\MemoryAsyncOperationWorker.cs:160:        CancellationToken cancellationToken)
+src/Memory\CanDoItAll.Memory.Application\MemoryAsyncOperationWorker.cs:176:        CancellationToken cancellationToken)
+src/Memory\CanDoItAll.Memory.Application\MemoryAsyncOperationWorker.cs:191:        CancellationToken cancellationToken)
+src/Memory\CanDoItAll.Memory.Persistence\EfMemoryEventLedgerStore.cs:13:        CancellationToken cancellationToken = default)
+src/Memory\CanDoItAll.Memory.Persistence\EfMemoryEventLedgerStore.cs:23:        CancellationToken cancellationToken = default)
+src/Memory\CanDoItAll.Memory.Persistence\EfMemoryEventLedgerStore.cs:31:    public async Task<bool> ContainsInboxDedupeKeyAsync(
+src/Memory\CanDoItAll.Memory.Persistence\EfMemoryEventLedgerStore.cs:33:        CancellationToken cancellationToken = default)
+src/Memory\CanDoItAll.Memory.Persistence\EfMemoryEventLedgerStore.cs:44:        CancellationToken cancellationToken = default)
+src/Memory\CanDoItAll.Memory.Persistence\EfMemoryEventLedgerStore.cs:61:        CancellationToken cancellationToken = default)
+src/Memory\CanDoItAll.Memory.Persistence\EfMemoryEventLedgerStore.cs:80:        CancellationToken cancellationToken = default)
+src/Memory\CanDoItAll.Memory.Persistence\EfMemoryEventLedgerStore.cs:101:        CancellationToken cancellationToken = default)
+src/Memory\CanDoItAll.Memory.Persistence\EfMemoryEventLedgerStore.cs:123:        CancellationToken cancellationToken = default)
+src/Memory\CanDoItAll.Memory.Persistence\EfMemoryEventLedgerStore.cs:142:        CancellationToken cancellationToken = default)
+src/Memory\CanDoItAll.Memory.Persistence\EfMemoryOperationLedgerStore.cs:13:        CancellationToken cancellationToken = default)
+src/Memory\CanDoItAll.Memory.Persistence\EfMemoryOperationLedgerStore.cs:23:        CancellationToken cancellationToken = default)
+src/Memory\CanDoItAll.Memory.Persistence\EfMemoryOperationLedgerStore.cs:32:    public async Task<IReadOnlyList<MemoryOperationRecord>> ListDueForPollingAsync(
+src/Memory\CanDoItAll.Memory.Persistence\EfMemoryOperationLedgerStore.cs:36:        CancellationToken cancellationToken = default)
+src/Memory\CanDoItAll.Memory.Persistence\EfMemoryOperationLedgerStore.cs:65:        CancellationToken cancellationToken = default)
+src/Memory\CanDoItAll.Memory.Persistence\EfMemoryOperationLedgerStore.cs:87:        CancellationToken cancellationToken = default)
+src/Memory\CanDoItAll.Memory.Persistence\DeterministicMockMemoryProviderDriver.cs:18:        CancellationToken cancellationToken = default)
+src/Memory\CanDoItAll.Memory.Persistence\EfMemoryFeedbackLedgerStore.cs:13:        CancellationToken cancellationToken = default)
+src/Memory\CanDoItAll.Memory.Persistence\EfMemoryFeedbackLedgerStore.cs:21:    public async Task<IReadOnlyList<MemoryFeedbackRecord>> ListDueForDeliveryAsync(
+src/Memory\CanDoItAll.Memory.Persistence\EfMemoryFeedbackLedgerStore.cs:25:        CancellationToken cancellationToken = default)
+src/Memory\CanDoItAll.Memory.Persistence\EfMemoryFeedbackLedgerStore.cs:51:        CancellationToken cancellationToken = default)
+src/Memory\CanDoItAll.Memory.Persistence\EfMemoryFeedbackLedgerStore.cs:67:        CancellationToken cancellationToken = default)
+src/Memory\CanDoItAll.Memory.Persistence\EfMemoryFeedbackLedgerStore.cs:88:        CancellationToken cancellationToken = default)
+src/Memory\CanDoItAll.Memory.Persistence\EfMemoryRetentionProjectionStore.Apply.cs:14:        CancellationToken cancellationToken = default)
+src/Memory\CanDoItAll.Memory.Persistence\EfMemoryRetentionProjectionStore.Apply.cs:34:        CancellationToken cancellationToken)
+src/Memory\CanDoItAll.Memory.Persistence\EfMemoryRetentionProjectionStore.Apply.cs:58:        CancellationToken cancellationToken)
+src/Memory\CanDoItAll.Memory.Persistence\EfMemoryRetentionProjectionStore.Apply.cs:82:        CancellationToken cancellationToken)
+src/Memory\CanDoItAll.Memory.Persistence\EfMemoryProviderProfileStore.cs:14:        CancellationToken cancellationToken = default)
+src/Memory\CanDoItAll.Memory.Persistence\EfMemoryProviderProfileStore.cs:32:    public async Task<IReadOnlyList<MemoryProviderProfile>> ListAsync(CancellationToken cancellationToken = default)
+src/Memory\CanDoItAll.Memory.Persistence\EfMemoryRetentionProjectionStore.cs:14:        CancellationToken cancellationToken = default)
+src/Memory\CanDoItAll.Memory.Persistence\EfMemorySourceRequestLedgerStore.cs:13:        CancellationToken cancellationToken = default)
+src/Memory\CanDoItAll.Memory.Persistence\EfMemorySourceRequestLedgerStore.cs:23:        CancellationToken cancellationToken = default)
+src/Memory\CanDoItAll.Memory.Application\MemoryProviderEventWorker.cs:11:    MemoryAsyncWorkerOptions options) : IMemoryProviderEventWorker
+src/Memory\CanDoItAll.Memory.Application\MemoryProviderEventWorker.cs:13:    public async Task<MemoryAsyncWorkerRunResult> PollProviderEventsAsync(CancellationToken cancellationToken = default)
+src/Memory\CanDoItAll.Memory.Application\MemoryProviderEventWorker.cs:37:            if (poll.Kind != MemoryProviderEventPollResultKind.Events)
+src/Memory\CanDoItAll.Memory.Application\MemoryProviderEventWorker.cs:44:            foreach (var providerEvent in poll.Events.Take(options.MaxBatchSize))
+src/Memory\CanDoItAll.Memory.Application\MemoryProviderEventWorker.cs:65:        CancellationToken cancellationToken = default)
+src/Memory\CanDoItAll.Memory.Application\MemoryProviderEventWorker.cs:85:        if (await eventLedgerStore.ContainsInboxDedupeKeyAsync(record.DedupeKey, cancellationToken))
+src/Memory\CanDoItAll.Memory.Application\MemoryProviderEventWorker.cs:105:    public async Task<MemoryAsyncWorkerRunResult> DrainInboxAsync(CancellationToken cancellationToken = default)
+src/Memory\CanDoItAll.Memory.Application\MemoryProviderEventWorker.cs:113:            var records = await eventLedgerStore.ListPendingInboxAsync(provider.InstanceId, options.MaxBatchSize, cancellationToken);
+src/Memory\CanDoItAll.Memory.Http\HttpMemoryProviderDriver.cs:21:        CancellationToken cancellationToken = default)
+src/Memory\CanDoItAll.Memory.Http\HttpMemoryProviderDriver.cs:36:        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+src/Memory\CanDoItAll.Memory.Http\HttpMemoryProviderDriver.cs:77:        CancellationToken cancellationToken = default)
+src/Memory\CanDoItAll.Memory.Http\HttpMemoryProviderDriver.cs:83:        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+src/Memory\CanDoItAll.Memory.Application\MemoryProviderEventWorker.Outbox.cs:7:    public async Task<MemoryAsyncWorkerRunResult> DrainOutboxAsync(CancellationToken cancellationToken = default)
+src/Memory\CanDoItAll.Memory.Application\MemoryProviderEventWorker.Outbox.cs:22:                options.MaxBatchSize,
+src/Memory\CanDoItAll.Memory.Application\MemoryProviderEventWorker.Outbox.cs:42:        CancellationToken cancellationToken)
+src/Memory\CanDoItAll.Memory.Application\MemoryProviderEventWorker.Outbox.cs:75:        CancellationToken cancellationToken)
+src/Memory\CanDoItAll.Memory.Application\MemoryProviderEventWorker.Outbox.cs:94:        CancellationToken cancellationToken)
+src/Memory\CanDoItAll.Memory.Application\MemoryProviderEventWorker.Outbox.cs:108:        CancellationToken cancellationToken)
+src/Memory\CanDoItAll.Memory.Persistence\MemoryRuntimeService.cs:14:        CancellationToken cancellationToken = default)
+src/Memory\CanDoItAll.Memory.Application\MemoryRetentionWorker.cs:6:    MemoryAsyncWorkerOptions options) : IMemoryRetentionWorker
+src/Memory\CanDoItAll.Memory.Application\MemoryRetentionWorker.cs:8:    public async Task<MemoryAsyncWorkerRunResult> ApplyDueRetentionAsync(CancellationToken cancellationToken = default)
+src/Memory\CanDoItAll.Memory.Application\MemoryRetentionWorker.cs:14:            options.MaxBatchSize,
+src/Memory\CanDoItAll.Memory.Http\HttpMemoryProviderDriver.Responses.cs:14:        CancellationToken cancellationToken)
+src/Memory\CanDoItAll.Memory.Application\MemoryRuntimeContracts.cs:10:        CancellationToken cancellationToken = default);
+src/Memory\CanDoItAll.Memory.Application\MemoryRuntimeContracts.cs:12:    Task<IReadOnlyList<MemoryProviderProfile>> ListAsync(CancellationToken cancellationToken = default);
+src/Memory\CanDoItAll.Memory.Application\MemoryRuntimeContracts.cs:19:        CancellationToken cancellationToken = default);
+src/Memory\CanDoItAll.Memory.Application\MemoryRuntimeContracts.cs:23:        CancellationToken cancellationToken = default);
+src/Memory\CanDoItAll.Memory.Application\MemoryRuntimeContracts.cs:25:    Task<IReadOnlyList<MemoryOperationRecord>> ListDueForPollingAsync(
+src/Memory\CanDoItAll.Memory.Application\MemoryRuntimeContracts.cs:29:        CancellationToken cancellationToken = default);
+src/Memory\CanDoItAll.Memory.Application\MemoryRuntimeContracts.cs:36:        CancellationToken cancellationToken = default);
+src/Memory\CanDoItAll.Memory.Application\MemoryRuntimeContracts.cs:43:        CancellationToken cancellationToken = default);
+src/Memory\CanDoItAll.Memory.Application\MemoryRuntimeContracts.cs:50:        CancellationToken cancellationToken = default);
+src/Memory\CanDoItAll.Memory.Application\MemoryRuntimeContracts.cs:52:    Task<IReadOnlyList<MemoryFeedbackRecord>> ListDueForDeliveryAsync(
+src/Memory\CanDoItAll.Memory.Application\MemoryRuntimeContracts.cs:56:        CancellationToken cancellationToken = default);
+src/Memory\CanDoItAll.Memory.Application\MemoryRuntimeContracts.cs:60:        CancellationToken cancellationToken = default);
+src/Memory\CanDoItAll.Memory.Application\MemoryRuntimeContracts.cs:67:        CancellationToken cancellationToken = default);
+src/Memory\CanDoItAll.Memory.Application\MemoryRuntimeContracts.cs:73:        CancellationToken cancellationToken = default);
+src/Memory\CanDoItAll.Memory.Application\MemoryRuntimeContracts.cs:80:        CancellationToken cancellationToken = default);
+src/Memory\CanDoItAll.Memory.Application\MemoryRuntimeContracts.cs:84:        CancellationToken cancellationToken = default);
+src/Memory\CanDoItAll.Memory.Application\MemoryRuntimeContracts.cs:86:    Task<bool> ContainsInboxDedupeKeyAsync(
+src/Memory\CanDoItAll.Memory.Application\MemoryRuntimeContracts.cs:88:        CancellationToken cancellationToken = default);
+src/Memory\CanDoItAll.Memory.Application\MemoryRuntimeContracts.cs:93:        CancellationToken cancellationToken = default);
+src/Memory\CanDoItAll.Memory.Application\MemoryRuntimeContracts.cs:98:        CancellationToken cancellationToken = default);
+src/Memory\CanDoItAll.Memory.Application\MemoryRuntimeContracts.cs:105:        CancellationToken cancellationToken = default);
+src/Memory\CanDoItAll.Memory.Application\MemoryRuntimeContracts.cs:112:        CancellationToken cancellationToken = default);
+src/Memory\CanDoItAll.Memory.Application\MemoryRuntimeContracts.cs:118:        CancellationToken cancellationToken = default);
+src/Memory\CanDoItAll.Memory.Application\MemoryRuntimeContracts.cs:124:        CancellationToken cancellationToken = default);
+src/Memory\CanDoItAll.Memory.Application\MemoryRuntimeContracts.cs:131:        CancellationToken cancellationToken = default);
+src/Memory\CanDoItAll.Memory.Application\MemoryRuntimeContracts.cs:135:        CancellationToken cancellationToken = default);
+src/Memory\CanDoItAll.Memory.Application\MemoryRuntimeContracts.cs:154:        CancellationToken cancellationToken = default);
+src/Memory\CanDoItAll.Memory.Application\MemoryRuntimeContracts.cs:160:        CancellationToken cancellationToken = default);
+src/Memory\CanDoItAll.Memory.Persistence\MemoryPersistenceServiceCollectionExtensions.cs:30:        services.AddScoped<IMemoryAsyncOperationWorker, MemoryAsyncOperationWorker>();
+src/Memory\CanDoItAll.Memory.Persistence\MemoryPersistenceServiceCollectionExtensions.cs:31:        services.AddScoped<IMemoryFeedbackWorker, MemoryFeedbackWorker>();
+src/Memory\CanDoItAll.Memory.Persistence\MemoryPersistenceServiceCollectionExtensions.cs:32:        services.AddScoped<IMemoryProviderEventWorker, MemoryProviderEventWorker>();
+src/Memory\CanDoItAll.Memory.Persistence\MemoryPersistenceServiceCollectionExtensions.cs:33:        services.AddScoped<IMemoryRetentionWorker, MemoryRetentionWorker>();
+src/Memory\CanDoItAll.Memory.Mcp\McpMemoryProviderDriver.cs:24:        CancellationToken cancellationToken = default)
+src/Memory\CanDoItAll.Memory.Mcp\McpMemoryProviderDriver.cs:52:        CancellationToken cancellationToken = default)
+src/Memory\CanDoItAll.Memory.Mcp\McpMemoryProviderDriver.cs:78:        CancellationToken cancellationToken = default)
+src/Memory\CanDoItAll.Memory.Mcp\McpMemoryProviderDriver.cs:105:        CancellationToken cancellationToken = default)
+src/Memory\CanDoItAll.Memory.Mcp\McpMemoryProviderDriver.cs:128:    async Task<MemoryProviderOperationPollResult> IMemoryProviderOperationStatusDriver.PollOperationAsync(
+src/Memory\CanDoItAll.Memory.Mcp\McpMemoryProviderDriver.cs:131:        CancellationToken cancellationToken)
+src/Memory\CanDoItAll.Memory.Mcp\McpMemoryProviderDriver.cs:140:                MemoryProviderOperationPollResult.FromResult(result.OperationResult, result.Diagnostic),
+src/Memory\CanDoItAll.Memory.Mcp\McpMemoryProviderDriver.cs:142:                MemoryProviderOperationPollResult.StillRunning(result.Diagnostic),
+src/Memory\CanDoItAll.Memory.Mcp\McpMemoryProviderDriver.cs:144:                MemoryProviderOperationPollResult.RetryableFailure(result.Diagnostic),
+src/Memory\CanDoItAll.Memory.Mcp\McpMemoryProviderDriver.cs:146:                MemoryProviderOperationPollResult.UnsupportedCapability(result.Diagnostic),
+src/Memory\CanDoItAll.Memory.Mcp\McpMemoryProviderDriver.cs:147:            _ => MemoryProviderOperationPollResult.TerminalFailure("Malformed MCP memory operation status result.")
+src/Memory\CanDoItAll.Memory.Mcp\McpMemoryProviderDriver.cs:151:    async Task<MemoryProviderEventPollResult> IMemoryProviderEventPollDriver.PollEventsAsync(
+src/Memory\CanDoItAll.Memory.Mcp\McpMemoryProviderDriver.cs:153:        CancellationToken cancellationToken)
+src/Memory\CanDoItAll.Memory.Mcp\McpMemoryProviderDriver.cs:159:                MemoryProviderEventPollResult.FromEvents(result.Events, result.Diagnostic),
+src/Memory\CanDoItAll.Memory.Mcp\McpMemoryProviderDriver.cs:161:                MemoryProviderEventPollResult.RetryableFailure(result.Diagnostic),
+src/Memory\CanDoItAll.Memory.Mcp\McpMemoryProviderDriver.cs:163:                MemoryProviderEventPollResult.UnsupportedCapability(result.Diagnostic),
+src/Memory\CanDoItAll.Memory.Mcp\McpMemoryProviderDriver.cs:164:            _ => MemoryProviderEventPollResult.TerminalFailure("Malformed MCP memory provider event poll result.")
+src/Memory\CanDoItAll.Memory.Mcp\McpMemoryProviderDriver.cs:173:        CancellationToken cancellationToken)
+src/Memory\CanDoItAll.Memory.Mcp\McpMemoryProviderDriver.cs:184:            await client.StopAsync(CancellationToken.None);
+src/Memory\CanDoItAll.Memory.Mcp\McpMemoryProviderContracts.cs:95:        CancellationToken cancellationToken = default);
+src/Memory\CanDoItAll.Memory.Mcp\McpMemoryProviderContracts.cs:100:        CancellationToken cancellationToken = default);
+src/Memory\CanDoItAll.Memory.Mcp\McpMemoryProviderContracts.cs:104:        CancellationToken cancellationToken = default);
+src/Memory\CanDoItAll.Memory.Application\MemoryRuntimeDriverContracts.cs:77:        CancellationToken cancellationToken = default);
+src/Memory\CanDoItAll.Memory.Application\MemoryRuntimeDriverContracts.cs:88:        CancellationToken cancellationToken = default);
+src/Memory\CanDoItAll.Memory.Application\MemoryRuntimeDriverContracts.cs:95:    Task<MemoryProviderOperationPollResult> PollOperationAsync(
+src/Memory\CanDoItAll.Memory.Application\MemoryRuntimeDriverContracts.cs:98:        CancellationToken cancellationToken = default);
+src/Memory\CanDoItAll.Memory.Application\MemoryRuntimeDriverContracts.cs:108:        CancellationToken cancellationToken = default);
+src/Memory\CanDoItAll.Memory.Application\MemoryRuntimeDriverContracts.cs:115:    Task<MemoryProviderEventPollResult> PollEventsAsync(
+src/Memory\CanDoItAll.Memory.Application\MemoryRuntimeDriverContracts.cs:117:        CancellationToken cancellationToken = default);
+src/Memory\CanDoItAll.Memory.Application\MemoryRuntimeDriverContracts.cs:127:        CancellationToken cancellationToken = default);
+src/Memory\CanDoItAll.Memory.Application\MemoryRuntimeDriverContracts.cs:135:        CancellationToken cancellationToken = default);
+src/Memory\CanDoItAll.Memory.Application\MemorySourceGateway.cs:21:        CancellationToken cancellationToken = default)
+src/Memory\CanDoItAll.Memory.Application\MemorySourceGatewayContracts.cs:114:        CancellationToken cancellationToken = default);
+src/Memory\CanDoItAll.Memory.Application\MemorySourceGatewayContracts.cs:121:        CancellationToken cancellationToken = default);
+ExitCode: 0

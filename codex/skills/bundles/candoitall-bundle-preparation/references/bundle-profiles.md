@@ -56,3 +56,7 @@ Choose the smallest profile that still removes ambiguity:
 - If the task is mostly “fix these concrete issues,” choose `feedback`.
 - If the task is “design and stage a broader change program,” choose `initiative`.
 - If the task starts as feedback but reveals structural migration work, upgrade to `initiative`.
+
+Profiles select content emphasis, not evidence weight. Assign each subbundle a separate `Standard`, `Behavioral`, or `Governed` proof tier. Do not create a bundle at all for a small coherent change that has no durable coordination need.
+
+For an existing bundle, preserve its shape when raw inputs, requirements, current state, dependencies, work units, proof/status, and closure are recoverable. Add a compatibility map instead of migrating merely to match this profile.

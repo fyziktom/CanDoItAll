@@ -1,0 +1,15 @@
+Command: dotnet test tests\Memory\CanDoItAll.Memory.Tests\CanDoItAll.Memory.Tests.csproj --filter FullyQualifiedName~MemoryLedgerLifecycleTests
+WorkingDirectory: C:\repositories\CanDoItAll
+RunLabel: SB03 passing ledger lifecycle tests
+Invariant IDs: SB03_LG001, SB03_LG002, SB03_LG003, SB03_LG004, SB03_LG005
+ExitCode: 0
+Output:
+  Zjišťují se projekty, které se mají obnovit...
+  Všechny projekty jsou v aktuálním stavu pro obnovení.
+  CanDoItAll.Memory.Abstractions -> C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Abstractions\bin\Debug\net10.0\CanDoItAll.Memory.Abstractions.dll
+  CanDoItAll.Memory.Application -> C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Application\bin\Debug\net10.0\CanDoItAll.Memory.Application.dll
+  CanDoItAll.Memory.Tests -> C:\repositories\CanDoItAll\tests\Memory\CanDoItAll.Memory.Tests\bin\Debug\net10.0\CanDoItAll.Memory.Tests.dll
+Testovací běh pro C:\repositories\CanDoItAll\tests\Memory\CanDoItAll.Memory.Tests\bin\Debug\net10.0\CanDoItAll.Memory.Tests.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+
+Úspěšné!    - Neúspěšné:     0, Úspěšné:     5, Přeskočeno:     0, Celkem:     5, Doba trvání: 61 ms - CanDoItAll.Memory.Tests.dll (net10.0)

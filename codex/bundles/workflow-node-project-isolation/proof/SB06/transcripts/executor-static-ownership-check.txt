@@ -1,0 +1,34 @@
+CWD: C:\repositories\CanDoItAll
+START: 2026-06-29T14:29:12.1769424-04:00
+PASS old executor-owned file removed: src/CanDoItAll.AgentFramework.Core/Workflows/WorkflowExecutorContracts.cs
+PASS old executor-owned file removed: src/CanDoItAll.AgentFramework.Core/Workflows/WorkflowExecutorObservability.cs
+PASS old executor-owned file removed: src/CanDoItAll.AgentFramework.Maf/Runtime/Workflows/WorkflowExecutorJson.cs
+PASS new executor project exists: src/CanDoItAll.AgentFramework.WorkflowExecutors.Abstractions/CanDoItAll.AgentFramework.WorkflowExecutors.Abstractions.csproj
+PASS no forbidden dependency 'CanDoItAll.AgentFramework.Maf' in src/CanDoItAll.AgentFramework.WorkflowExecutors.Abstractions/CanDoItAll.AgentFramework.WorkflowExecutors.Abstractions.csproj
+PASS no forbidden dependency 'CanDoItAll.Modules.' in src/CanDoItAll.AgentFramework.WorkflowExecutors.Abstractions/CanDoItAll.AgentFramework.WorkflowExecutors.Abstractions.csproj
+PASS no forbidden dependency 'CanDoItAll.Web' in src/CanDoItAll.AgentFramework.WorkflowExecutors.Abstractions/CanDoItAll.AgentFramework.WorkflowExecutors.Abstractions.csproj
+PASS no forbidden dependency 'CanDoItAll.AgentFramework.Components' in src/CanDoItAll.AgentFramework.WorkflowExecutors.Abstractions/CanDoItAll.AgentFramework.WorkflowExecutors.Abstractions.csproj
+PASS no forbidden dependency 'CanDoItAll.Plugin.' in src/CanDoItAll.AgentFramework.WorkflowExecutors.Abstractions/CanDoItAll.AgentFramework.WorkflowExecutors.Abstractions.csproj
+PASS new executor project exists: src/CanDoItAll.AgentFramework.WorkflowExecutors.Core/CanDoItAll.AgentFramework.WorkflowExecutors.Core.csproj
+PASS no forbidden dependency 'CanDoItAll.AgentFramework.Maf' in src/CanDoItAll.AgentFramework.WorkflowExecutors.Core/CanDoItAll.AgentFramework.WorkflowExecutors.Core.csproj
+PASS no forbidden dependency 'CanDoItAll.Modules.' in src/CanDoItAll.AgentFramework.WorkflowExecutors.Core/CanDoItAll.AgentFramework.WorkflowExecutors.Core.csproj
+PASS no forbidden dependency 'CanDoItAll.Web' in src/CanDoItAll.AgentFramework.WorkflowExecutors.Core/CanDoItAll.AgentFramework.WorkflowExecutors.Core.csproj
+PASS no forbidden dependency 'CanDoItAll.AgentFramework.Components' in src/CanDoItAll.AgentFramework.WorkflowExecutors.Core/CanDoItAll.AgentFramework.WorkflowExecutors.Core.csproj
+PASS no forbidden dependency 'CanDoItAll.Plugin.' in src/CanDoItAll.AgentFramework.WorkflowExecutors.Core/CanDoItAll.AgentFramework.WorkflowExecutors.Core.csproj
+PASS MAF descriptor source no longer contains 'BindingFlags'
+PASS MAF descriptor source no longer contains 'CreateSettingsConfigurationSchema'
+PASS MAF descriptor source no longer contains 'JsonSerializer.Serialize'
+PASS executor-owned source present: src/CanDoItAll.AgentFramework.WorkflowExecutors.Abstractions/WorkflowExecutorContracts.cs SHA256=F0245E178F94AC3AC8652C2E05E2214701414071200ED85543980CD8FFD77FF5
+PASS executor-owned source present: src/CanDoItAll.AgentFramework.WorkflowExecutors.Abstractions/WorkflowExecutorObservabilityContracts.cs SHA256=60D3549648E2052C0E0D0E7EC70D6556EE9540898A01DB7B6AB7EF21E28BC453
+PASS executor-owned source present: src/CanDoItAll.AgentFramework.WorkflowExecutors.Core/WorkflowExecutorCatalog.cs SHA256=F574051FA2393A7B4291754632E34FF5FD8256D8F482ABD1C3A30FDABE921529
+PASS executor-owned source present: src/CanDoItAll.AgentFramework.WorkflowExecutors.Core/WorkflowExecutorInvoker.cs SHA256=2269249AB58B30919B9006AD6298762969029BFD3F1E1C0CAC63A13F1CC4F9E3
+PASS executor-owned source present: src/CanDoItAll.AgentFramework.WorkflowExecutors.Core/WorkflowExecutorJson.cs SHA256=C57FD579A17311964316BC8FD06747DC684045AFC3E5D98CBD804DE9566533C3
+PASS executor-owned source present: src/CanDoItAll.AgentFramework.WorkflowExecutors.Core/WorkflowExecutorFailureDiagnostics.cs SHA256=53E6C598CEDC4D9E6D389CA42BCCACD3D7041FF651FA8E279620275767C9676C
+END: 2026-06-29T14:29:12.2038838-04:00
+EXIT_CODE: 0
+
+Completed Validator Metadata Addendum
+Command: historical SB06 proof command recorded during bundle execution
+ExitCode: 0
+ExitCode: 1
+Invariant ID: SB06-final-closure

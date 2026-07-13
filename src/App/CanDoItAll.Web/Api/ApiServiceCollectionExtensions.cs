@@ -1,4 +1,6 @@
 using System.Text;
+using CanDoItAll.FileTools.Integration;
+using CanDoItAll.Web.Infrastructure;
 using CanDoItAll.Modules.Workspace.ApiAccess;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -30,6 +32,9 @@ public static class ApiServiceCollectionExtensions
         services.TryAddSingleton<IApiTokenService, ApiTokenService>();
         services.AddOpenApi();
         services.AddAuthorization();
+        services.AddHttpContextAccessor();
+        services.Replace(ServiceDescriptor.Scoped<IFileAccessContextProvider, HttpFileAccessContextProvider>());
+        services.Replace(ServiceDescriptor.Singleton<IFileAccessPolicy, WebFileAccessPolicy>());
 
         if (!configuredOptions.Authorization.Enabled)
         {

@@ -1,0 +1,16 @@
+Command:
+dotnet test tests/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj --filter "FullyQualifiedName~Workflows_template_preview_dialog|FullyQualifiedName~Workflows_template_add_to_drafts" --no-restore
+
+Purpose:
+Validate SB03 after implementation.
+
+Observed passing result:
+Successful.
+Failed: 0, Passed: 2, Skipped: 0, Total: 2, Duration: 6 seconds, Target: CanDoItAll.Tests.Components.dll (net10.0).
+
+Covered tests:
+- Workflows_template_preview_dialog_renders_canvas_without_saving
+- Workflows_template_add_to_drafts_uses_next_prefix_when_name_exists
+ExitCode: 0
+Invariant ID: SB03-INV-001
+Invariant ID: SB03-INV-002

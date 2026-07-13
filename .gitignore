@@ -10,17 +10,10 @@
 output
 evidence
 
-# Codex transient work-package outputs. The bundle preparation skill under
-# codex/skills/bundles is source tooling and must remain tracked.
+# Codex transient work-package outputs. Prepared bundles are repository
+# artifacts and intentionally remain visible to Git.
 01-execution-report.md
-codex/bundles/**
-!codex/bundles/
-!codex/bundles/skill-tool-mcp-isolation-template-migration/
-!codex/bundles/skill-tool-mcp-isolation-template-migration/**
-!codex/bundles/process-module-architecture*/
-!codex/bundles/process-module-architecture*/**
-!codex/bundles/process-module-rewrite-reference*/
-!codex/bundles/process-module-rewrite-reference*/**
+!codex/bundles/**/01-execution-report.md
 codex/bundle-exports/**
 codex/**/*.zip
 !codex/skills/**

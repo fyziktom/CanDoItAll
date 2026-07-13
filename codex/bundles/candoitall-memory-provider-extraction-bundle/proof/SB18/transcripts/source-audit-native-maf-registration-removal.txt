@@ -1,0 +1,3 @@
+Command: rg "IAgentContextContributor, CognitiveMemoryAgentContextContributor|IWorkflowExecutor, CognitiveMemoryRecallWorkflowExecutor|IWorkflowExecutor, CognitiveMemoryProbeWorkflowExecutor|IWorkflowExecutor, CognitiveMemoryLearningProposalWorkflowExecutor" src\Modules\CanDoItAll.Modules.CognitiveMemory\CognitiveMemoryModuleServiceCollectionExtensions.cs -n
+rg exit code: 1
+Result: PASS - native MAF context and workflow executor registrations are absent from the Cognitive Memory module registration path.

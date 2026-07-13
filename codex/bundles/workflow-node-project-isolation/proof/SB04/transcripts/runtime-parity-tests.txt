@@ -1,0 +1,86 @@
+Command: dotnet test 'tests\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj' --filter 'FullyQualifiedName~WorkflowRuntimeExtractionTests|FullyQualifiedName~WorkflowFoundationTests|FullyQualifiedName~MafWorkflowEventNormalizerTests|FullyQualifiedName~AgentFrameworkHostingServiceCollectionTests|FullyQualifiedName~WorkflowExecutorPolicyObservabilityTests' --artifacts-path 'artifacts\codex-sb04-unit'
+Cwd: C:\repositories\CanDoItAll
+Started: 2026-06-29T12:57:31.0883046-04:00
+Ended: 2026-06-29T12:58:02.4416486-04:00
+Exit code: 0
+
+  Zjišťují se projekty, které se mají obnovit...
+  Všechny projekty jsou v aktuálním stavu pro obnovení.
+  CanDoItAll.SharedKernel -> C:\repositories\CanDoItAll\artifacts\codex-sb04-unit\bin\CanDoItAll.SharedKernel\debug\CanDoItAll.SharedKernel.dll
+  CanDoItAll.AgentFramework.Capabilities.Abstractions -> C:\repositories\CanDoItAll\artifacts\codex-sb04-unit\bin\CanDoItAll.AgentFramework.Capabilities.Abstractions\debug\CanDoItAll.AgentFramework.Capabilities.Abstractions.dll
+  CanDoItAll.Git -> C:\repositories\CanDoItAll\artifacts\codex-sb04-unit\bin\CanDoItAll.Git\debug\CanDoItAll.Git.dll
+  CanDoItAll.AgentFramework.Rag.Driver -> C:\repositories\CanDoItAll\artifacts\codex-sb04-unit\bin\CanDoItAll.AgentFramework.Rag.Driver\debug\CanDoItAll.AgentFramework.Rag.Driver.dll
+  CanDoItAll.Processes.Contracts -> C:\repositories\CanDoItAll\artifacts\codex-sb04-unit\bin\CanDoItAll.Processes.Contracts\debug\CanDoItAll.Processes.Contracts.dll
+  CanDoItAll.Tools.Documents -> C:\repositories\CanDoItAll\artifacts\codex-sb04-unit\bin\CanDoItAll.Tools.Documents\debug\CanDoItAll.Tools.Documents.dll
+  CanDoItAll.AgentFramework.SemanticCompletion.Driver -> C:\repositories\CanDoItAll\artifacts\codex-sb04-unit\bin\CanDoItAll.AgentFramework.SemanticCompletion.Driver\debug\CanDoItAll.AgentFramework.SemanticCompletion.Driver.dll
+  CanDoItAll.AgentFramework.Mcp.Abstractions -> C:\repositories\CanDoItAll\artifacts\codex-sb04-unit\bin\CanDoItAll.AgentFramework.Mcp.Abstractions\debug\CanDoItAll.AgentFramework.Mcp.Abstractions.dll
+  CanDoItAll.Processes.Abstractions -> C:\repositories\CanDoItAll\artifacts\codex-sb04-unit\bin\CanDoItAll.Processes.Abstractions\debug\CanDoItAll.Processes.Abstractions.dll
+  CanDoItAll.AgentFramework.Capabilities.Templates -> C:\repositories\CanDoItAll\artifacts\codex-sb04-unit\bin\CanDoItAll.AgentFramework.Capabilities.Templates\debug\CanDoItAll.AgentFramework.Capabilities.Templates.dll
+  CanDoItAll.AgentFramework.Models -> C:\repositories\CanDoItAll\artifacts\codex-sb04-unit\bin\CanDoItAll.AgentFramework.Models\debug\CanDoItAll.AgentFramework.Models.dll
+  CanDoItAll.AgentFramework.Capabilities.Access -> C:\repositories\CanDoItAll\artifacts\codex-sb04-unit\bin\CanDoItAll.AgentFramework.Capabilities.Access\debug\CanDoItAll.AgentFramework.Capabilities.Access.dll
+  CanDoItAll.Infrastructure -> C:\repositories\CanDoItAll\artifacts\codex-sb04-unit\bin\CanDoItAll.Infrastructure\debug\CanDoItAll.Infrastructure.dll
+  CanDoItAll.AgentFramework.Skills.Abstractions -> C:\repositories\CanDoItAll\artifacts\codex-sb04-unit\bin\CanDoItAll.AgentFramework.Skills.Abstractions\debug\CanDoItAll.AgentFramework.Skills.Abstractions.dll
+  CanDoItAll.AgentFramework.Tools.Abstractions -> C:\repositories\CanDoItAll\artifacts\codex-sb04-unit\bin\CanDoItAll.AgentFramework.Tools.Abstractions\debug\CanDoItAll.AgentFramework.Tools.Abstractions.dll
+  CanDoItAll.Components.Git -> C:\repositories\CanDoItAll\artifacts\codex-sb04-unit\bin\CanDoItAll.Components.Git\debug\CanDoItAll.Components.Git.dll
+  CanDoItAll.AgentFramework.Tools -> C:\repositories\CanDoItAll\artifacts\codex-sb04-unit\bin\CanDoItAll.AgentFramework.Tools\debug\CanDoItAll.AgentFramework.Tools.dll
+  CanDoItAll.Processes.Core -> C:\repositories\CanDoItAll\artifacts\codex-sb04-unit\bin\CanDoItAll.Processes.Core\debug\CanDoItAll.Processes.Core.dll
+  CanDoItAll.AgentFramework.Rag.Qdrant -> C:\repositories\CanDoItAll\artifacts\codex-sb04-unit\bin\CanDoItAll.AgentFramework.Rag.Qdrant\debug\CanDoItAll.AgentFramework.Rag.Qdrant.dll
+  CanDoItAll.Modules.Security -> C:\repositories\CanDoItAll\artifacts\codex-sb04-unit\bin\CanDoItAll.Modules.Security\debug\CanDoItAll.Modules.Security.dll
+  CanDoItAll.Processes.Drivers.Abstractions -> C:\repositories\CanDoItAll\artifacts\codex-sb04-unit\bin\CanDoItAll.Processes.Drivers.Abstractions\debug\CanDoItAll.Processes.Drivers.Abstractions.dll
+  CanDoItAll.Processes.Projections -> C:\repositories\CanDoItAll\artifacts\codex-sb04-unit\bin\CanDoItAll.Processes.Projections\debug\CanDoItAll.Processes.Projections.dll
+  CanDoItAll.AgentFramework.Workflows.Abstractions -> C:\repositories\CanDoItAll\artifacts\codex-sb04-unit\bin\CanDoItAll.AgentFramework.Workflows.Abstractions\debug\CanDoItAll.AgentFramework.Workflows.Abstractions.dll
+  CanDoItAll.AgentFramework.Tooling -> C:\repositories\CanDoItAll\artifacts\codex-sb04-unit\bin\CanDoItAll.AgentFramework.Tooling\debug\CanDoItAll.AgentFramework.Tooling.dll
+  CanDoItAll.AgentFramework.Workflows.Builder -> C:\repositories\CanDoItAll\artifacts\codex-sb04-unit\bin\CanDoItAll.AgentFramework.Workflows.Builder\debug\CanDoItAll.AgentFramework.Workflows.Builder.dll
+  CanDoItAll.AppComponents -> C:\repositories\CanDoItAll\artifacts\codex-sb04-unit\bin\CanDoItAll.AppComponents\debug\CanDoItAll.AppComponents.dll
+  CanDoItAll.Plugins.Abstractions -> C:\repositories\CanDoItAll\artifacts\codex-sb04-unit\bin\CanDoItAll.Plugins.Abstractions\debug\CanDoItAll.Plugins.Abstractions.dll
+  CanDoItAll.Processes.Templates -> C:\repositories\CanDoItAll\artifacts\codex-sb04-unit\bin\CanDoItAll.Processes.Templates\debug\CanDoItAll.Processes.Templates.dll
+  CanDoItAll.AgentFramework.Core -> C:\repositories\CanDoItAll\artifacts\codex-sb04-unit\bin\CanDoItAll.AgentFramework.Core\debug\CanDoItAll.AgentFramework.Core.dll
+  CanDoItAll.Modules.Collaboration -> C:\repositories\CanDoItAll\artifacts\codex-sb04-unit\bin\CanDoItAll.Modules.Collaboration\debug\CanDoItAll.Modules.Collaboration.dll
+  CanDoItAll.Processes.Drivers.Standard -> C:\repositories\CanDoItAll\artifacts\codex-sb04-unit\bin\CanDoItAll.Processes.Drivers.Standard\debug\CanDoItAll.Processes.Drivers.Standard.dll
+  CanDoItAll.Modules.Projects -> C:\repositories\CanDoItAll\artifacts\codex-sb04-unit\bin\CanDoItAll.Modules.Projects\debug\CanDoItAll.Modules.Projects.dll
+  CanDoItAll.Manager -> C:\repositories\CanDoItAll\artifacts\codex-sb04-unit\bin\CanDoItAll.Manager\debug\CanDoItAll.Manager.dll
+  CanDoItAll.AgentFramework.ProviderPipelines -> C:\repositories\CanDoItAll\artifacts\codex-sb04-unit\bin\CanDoItAll.AgentFramework.ProviderPipelines\debug\CanDoItAll.AgentFramework.ProviderPipelines.dll
+  CanDoItAll.Processes.Builder -> C:\repositories\CanDoItAll\artifacts\codex-sb04-unit\bin\CanDoItAll.Processes.Builder\debug\CanDoItAll.Processes.Builder.dll
+  CanDoItAll.AgentFramework.Workflows.Runtime -> C:\repositories\CanDoItAll\artifacts\codex-sb04-unit\bin\CanDoItAll.AgentFramework.Workflows.Runtime\debug\CanDoItAll.AgentFramework.Workflows.Runtime.dll
+  CanDoItAll.AgentFramework.Mcp -> C:\repositories\CanDoItAll\artifacts\codex-sb04-unit\bin\CanDoItAll.AgentFramework.Mcp\debug\CanDoItAll.AgentFramework.Mcp.dll
+  CanDoItAll.AgentFramework.Skills -> C:\repositories\CanDoItAll\artifacts\codex-sb04-unit\bin\CanDoItAll.AgentFramework.Skills\debug\CanDoItAll.AgentFramework.Skills.dll
+  CanDoItAll.AgentFramework.Providers -> C:\repositories\CanDoItAll\artifacts\codex-sb04-unit\bin\CanDoItAll.AgentFramework.Providers\debug\CanDoItAll.AgentFramework.Providers.dll
+  CanDoItAll.AgentFramework.Workflows.Core -> C:\repositories\CanDoItAll\artifacts\codex-sb04-unit\bin\CanDoItAll.AgentFramework.Workflows.Core\debug\CanDoItAll.AgentFramework.Workflows.Core.dll
+  CanDoItAll.Modules.TestLab -> C:\repositories\CanDoItAll\artifacts\codex-sb04-unit\bin\CanDoItAll.Modules.TestLab\debug\CanDoItAll.Modules.TestLab.dll
+  CanDoItAll.AgentFramework.Voice -> C:\repositories\CanDoItAll\artifacts\codex-sb04-unit\bin\CanDoItAll.AgentFramework.Voice\debug\CanDoItAll.AgentFramework.Voice.dll
+  CanDoItAll.Processes.Runtime -> C:\repositories\CanDoItAll\artifacts\codex-sb04-unit\bin\CanDoItAll.Processes.Runtime\debug\CanDoItAll.Processes.Runtime.dll
+  CanDoItAll.Modules.SchedulerPlanner -> C:\repositories\CanDoItAll\artifacts\codex-sb04-unit\bin\CanDoItAll.Modules.SchedulerPlanner\debug\CanDoItAll.Modules.SchedulerPlanner.dll
+  CanDoItAll.Modules.Workspace -> C:\repositories\CanDoItAll\artifacts\codex-sb04-unit\bin\CanDoItAll.Modules.Workspace\debug\CanDoItAll.Modules.Workspace.dll
+  CanDoItAll.Processes.Application -> C:\repositories\CanDoItAll\artifacts\codex-sb04-unit\bin\CanDoItAll.Processes.Application\debug\CanDoItAll.Processes.Application.dll
+  CanDoItAll.Processes.Persistence -> C:\repositories\CanDoItAll\artifacts\codex-sb04-unit\bin\CanDoItAll.Processes.Persistence\debug\CanDoItAll.Processes.Persistence.dll
+  CanDoItAll.Plugin.Email -> C:\repositories\CanDoItAll\artifacts\codex-sb04-unit\bin\CanDoItAll.Plugin.Email\debug\CanDoItAll.Plugin.Email.dll
+  CanDoItAll.AgentFramework.Components -> C:\repositories\CanDoItAll\artifacts\codex-sb04-unit\bin\CanDoItAll.AgentFramework.Components\debug\CanDoItAll.AgentFramework.Components.dll
+  CanDoItAll.AgentFramework.Persistence -> C:\repositories\CanDoItAll\artifacts\codex-sb04-unit\bin\CanDoItAll.AgentFramework.Persistence\debug\CanDoItAll.AgentFramework.Persistence.dll
+  CanDoItAll.Modules.Plugins -> C:\repositories\CanDoItAll\artifacts\codex-sb04-unit\bin\CanDoItAll.Modules.Plugins\debug\CanDoItAll.Modules.Plugins.dll
+  CanDoItAll.Modules.Resources -> C:\repositories\CanDoItAll\artifacts\codex-sb04-unit\bin\CanDoItAll.Modules.Resources\debug\CanDoItAll.Modules.Resources.dll
+  CanDoItAll.Modules.CrmHr -> C:\repositories\CanDoItAll\artifacts\codex-sb04-unit\bin\CanDoItAll.Modules.CrmHr\debug\CanDoItAll.Modules.CrmHr.dll
+  CanDoItAll.Modules.Prompts -> C:\repositories\CanDoItAll\artifacts\codex-sb04-unit\bin\CanDoItAll.Modules.Prompts\debug\CanDoItAll.Modules.Prompts.dll
+  CanDoItAll.Plugin.Gmail -> C:\repositories\CanDoItAll\artifacts\codex-sb04-unit\bin\CanDoItAll.Plugin.Gmail\debug\CanDoItAll.Plugin.Gmail.dll
+  CanDoItAll.Plugin.Office365 -> C:\repositories\CanDoItAll\artifacts\codex-sb04-unit\bin\CanDoItAll.Plugin.Office365\debug\CanDoItAll.Plugin.Office365.dll
+  CanDoItAll.Modules.CognitiveMemory -> C:\repositories\CanDoItAll\artifacts\codex-sb04-unit\bin\CanDoItAll.Modules.CognitiveMemory\debug\CanDoItAll.Modules.CognitiveMemory.dll
+  CanDoItAll.AgentFramework.Maf -> C:\repositories\CanDoItAll\artifacts\codex-sb04-unit\bin\CanDoItAll.AgentFramework.Maf\debug\CanDoItAll.AgentFramework.Maf.dll
+  CanDoItAll.AgentFramework.Hosting -> C:\repositories\CanDoItAll\artifacts\codex-sb04-unit\bin\CanDoItAll.AgentFramework.Hosting\debug\CanDoItAll.AgentFramework.Hosting.dll
+  CanDoItAll.Modules.Factory -> C:\repositories\CanDoItAll\artifacts\codex-sb04-unit\bin\CanDoItAll.Modules.Factory\debug\CanDoItAll.Modules.Factory.dll
+  CanDoItAll.Modules.Workbench -> C:\repositories\CanDoItAll\artifacts\codex-sb04-unit\bin\CanDoItAll.Modules.Workbench\debug\CanDoItAll.Modules.Workbench.dll
+  CanDoItAll.Modules.AgentFramework -> C:\repositories\CanDoItAll\artifacts\codex-sb04-unit\bin\CanDoItAll.Modules.AgentFramework\debug\CanDoItAll.Modules.AgentFramework.dll
+  CanDoItAll.Modules.Processes -> C:\repositories\CanDoItAll\artifacts\codex-sb04-unit\bin\CanDoItAll.Modules.Processes\debug\CanDoItAll.Modules.Processes.dll
+  CanDoItAll.Composition -> C:\repositories\CanDoItAll\artifacts\codex-sb04-unit\bin\CanDoItAll.Composition\debug\CanDoItAll.Composition.dll
+  CanDoItAll.Migrations.PostgreSql -> C:\repositories\CanDoItAll\artifacts\codex-sb04-unit\bin\CanDoItAll.Migrations.PostgreSql\debug\CanDoItAll.Migrations.PostgreSql.dll
+  CanDoItAll.Web -> C:\repositories\CanDoItAll\artifacts\codex-sb04-unit\bin\CanDoItAll.Web\debug\CanDoItAll.Web.dll
+  CanDoItAll.Tests.Support -> C:\repositories\CanDoItAll\artifacts\codex-sb04-unit\bin\CanDoItAll.Tests.Support\debug\CanDoItAll.Tests.Support.dll
+  CanDoItAll.Tests.Unit -> C:\repositories\CanDoItAll\artifacts\codex-sb04-unit\bin\CanDoItAll.Tests.Unit\debug\CanDoItAll.Tests.Unit.dll
+Testovací běh pro C:\repositories\CanDoItAll\artifacts\codex-sb04-unit\bin\CanDoItAll.Tests.Unit\debug\CanDoItAll.Tests.Unit.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+
+Úspěšné!    - Neúspěšné:     0, Úspěšné:    49, Přeskočeno:     0, Celkem:    49, Doba trvání: 352 ms - CanDoItAll.Tests.Unit.dll (net10.0)
+
+Completed Validator Metadata Addendum
+Command: historical SB04 proof command recorded during bundle execution
+ExitCode: 0
+ExitCode: 1
+Invariant ID: SB04-final-closure

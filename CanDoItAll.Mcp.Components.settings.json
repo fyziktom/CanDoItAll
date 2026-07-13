@@ -16,6 +16,6 @@
     "MermaidRoot": "..\\CanDoItAll.Components\\src\\CanDoItAll.Components.Mermaid",
     "OverlayLibRoot": "..\\CanDoItAll.Components\\src\\CanDoItAll.Components.OverlayLib",
     "QrCodeRoot": "..\\CanDoItAll.Components\\src\\CanDoItAll.Components.QRCode",
-    "SandboxRoot": "..\\CanDoItAll.Components\\src\\CanDoItAll.Components.Sandbox"
+    "SandboxRoot": "..\\CanDoItAll.Components\\samples\\CanDoItAll.Components.Sandbox"
   }
 }

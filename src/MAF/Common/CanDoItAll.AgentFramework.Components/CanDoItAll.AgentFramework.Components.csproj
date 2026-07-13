@@ -20,8 +20,8 @@
     <ProjectReference Include="..\CanDoItAll.AgentFramework.Models\CanDoItAll.AgentFramework.Models.csproj" />
     <ProjectReference Include="..\CanDoItAll.AgentFramework.Core\CanDoItAll.AgentFramework.Core.csproj" />
     <ProjectReference Include="..\CanDoItAll.AgentFramework.Voice\CanDoItAll.AgentFramework.Voice.csproj" />
-    <PackageReference Include="CanDoItAll.Components.BaseLib" Version="0.1.0" />
-    <PackageReference Include="CanDoItAll.Components.CanvasLib" Version="0.1.1" />
+    <PackageReference Include="CanDoItAll.Components.BaseLib" Version="0.1.2" />
+    <PackageReference Include="CanDoItAll.Components.CanvasLib" Version="0.1.2" />
   </ItemGroup>
 
 </Project>

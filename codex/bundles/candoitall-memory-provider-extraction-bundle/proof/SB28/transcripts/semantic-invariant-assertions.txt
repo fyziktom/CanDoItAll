@@ -1,0 +1,17 @@
+Workdir: C:\repositories\CanDoItAll
+Started: 2026-07-05T20:38:17.8335518-04:00
+
+Found 'CognitiveMemoryNativeCuratorFlow' in native-repo:\src\CanDoItAll.CognitiveMemory.Maf\CognitiveMemoryNativeMafServices.cs line 45.
+Found 'CognitiveMemoryNativeProfessorFlow' in native-repo:\src\CanDoItAll.CognitiveMemory.Maf\CognitiveMemoryNativeMafServices.cs line 120.
+Found 'CognitiveMemoryNativeSelfRegulationFlow' in native-repo:\src\CanDoItAll.CognitiveMemory.Maf\CognitiveMemoryNativeMafServices.cs line 169.
+Found 'CognitiveMemoryNativeMafPolicyGate' in native-repo:\src\CanDoItAll.CognitiveMemory.Maf\CognitiveMemoryNativeMafServices.cs line 9.
+Found 'MemoryProviderEventKind.VerificationRequest' in native-repo:\src\CanDoItAll.CognitiveMemory.Maf\CognitiveMemoryNativeMafServices.cs line 88.
+Found 'MemoryProviderEventKind.MaintenanceSignal' in native-repo:\src\CanDoItAll.CognitiveMemory.Maf\CognitiveMemoryNativeMafServices.cs line 208.
+Found 'IAgentContextContributor' in native-repo:\src\CanDoItAll.CognitiveMemory.Maf\CognitiveMemoryNativeContextContributor.cs line 12.
+Found 'AddCognitiveMemoryNativeMaf' in native-repo:\src\CanDoItAll.CognitiveMemory.Maf\CognitiveMemoryNativeContextContributor.cs line 99.
+Found 'CuratorFlow_CapturesTrustedMemoryAndEmitsVerificationEventWhenAllowed' in native-repo:\tests\CanDoItAll.CognitiveMemory.Tests\NativeMafIntegrationTests.cs line 18.
+Found 'ProfessorFlow_DeniesVerificationEventWhenPolicyDisallowsRequests' in native-repo:\tests\CanDoItAll.CognitiveMemory.Tests\NativeMafIntegrationTests.cs line 44.
+Found 'PolicyGate_RejectsProviderReentryLoop' in native-repo:\tests\CanDoItAll.CognitiveMemory.Tests\NativeMafIntegrationTests.cs line 105.
+Found 'ContextContributor_ProvidesNativeRecallThroughMafAbstraction' in native-repo:\tests\CanDoItAll.CognitiveMemory.Tests\NativeMafIntegrationTests.cs line 135.
+
+ExitCode: 0

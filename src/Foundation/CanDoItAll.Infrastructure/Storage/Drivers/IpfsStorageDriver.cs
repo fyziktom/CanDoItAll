@@ -1,16 +1,12 @@
-using System.Net.Http.Json;
-using System.Text.Json;
 using Microsoft.Extensions.Logging;
-using System.Net.Http;
 
 namespace CanDoItAll.Infrastructure.Storage;
 
 public sealed class IpfsStorageDriver(
     ILogger<IpfsStorageDriver> logger,
-    IStorageSecretResolver secretResolver) : IStorageDriver
+    IStorageSecretResolver secretResolver,
+    IIpfsStorageTransport transport) : IStorageDriver
 {
-    private static readonly JsonSerializerOptions SerializerOptions = new(JsonSerializerDefaults.Web);
-
     public StorageProviderKind ProviderKind => StorageProviderKind.Ipfs;
 
     public StorageCapability SupportedCapabilities =>
@@ -32,10 +28,7 @@ public sealed class IpfsStorageDriver(
 
         try
         {
-            using var client = CreateClient(secretValue);
-            using var response = await client.GetAsync(BuildApiUri(storage, "version"), cancellationToken);
-            response.EnsureSuccessStatusCode();
-
+            await transport.TestConnectionAsync(storage, secretValue, cancellationToken);
             return new StorageConnectionTestResult(
                 true,
                 "IPFS API responded successfully.",
@@ -43,12 +36,15 @@ public sealed class IpfsStorageDriver(
                 SupportedCapabilities,
                 DateTimeOffset.UtcNow);
         }
-        catch (Exception ex)
+        catch (Exception exception) when (exception is not OperationCanceledException)
         {
-            logger.LogWarning(ex, "IPFS connection test failed for {Endpoint}.", storage.EndpointOrRoot);
+            logger.LogWarning(
+                "IPFS connection test failed for storage {StorageId} with {FailureType}.",
+                storage.Id,
+                exception.GetType().Name);
             return new StorageConnectionTestResult(
                 false,
-                $"IPFS storage is unavailable: {ex.Message}",
+                "IPFS storage is unavailable.",
                 StorageHealthStatus.Unavailable,
                 SupportedCapabilities & ~StorageCapability.ConnectionTest,
                 DateTimeOffset.UtcNow);
@@ -63,57 +59,58 @@ public sealed class IpfsStorageDriver(
         ArgumentNullException.ThrowIfNull(storage);
         ArgumentNullException.ThrowIfNull(request);
 
-        var secretValue = await secretResolver.ResolveCredentialAsync(storage.CredentialSecretId, cancellationToken);
-        using var client = CreateClient(secretValue);
-        using var content = new MultipartFormDataContent();
-        using var fileContent = new ByteArrayContent(request.Content);
-        content.Add(fileContent, "file", string.IsNullOrWhiteSpace(request.FileName) ? "artifact.bin" : request.FileName);
-
-        using var addResponse = await client.PostAsync(BuildApiUri(storage, "add"), content, cancellationToken);
-        addResponse.EnsureSuccessStatusCode();
-
-        var addPayload = await addResponse.Content.ReadFromJsonAsync<IpfsAddResponse>(
-            SerializerOptions,
-            cancellationToken);
-        if (addPayload is null || string.IsNullOrWhiteSpace(addPayload.Hash))
+        try
         {
-            throw new InvalidOperationException("The IPFS add response did not return a CID.");
-        }
-
-        var configuration = StorageJson.ParseProviderConfiguration(storage.ConfigJson);
-        if (configuration.PinOnUpload)
-        {
-            using var pinResponse = await client.PostAsync(
-                BuildApiUri(storage, "pin/add", addPayload.Hash),
-                content: null,
+            string? secretValue = await secretResolver.ResolveCredentialAsync(
+                storage.CredentialSecretId,
                 cancellationToken);
-            pinResponse.EnsureSuccessStatusCode();
+            string fileName = string.IsNullOrWhiteSpace(request.FileName) ? "artifact.bin" : request.FileName;
+            IpfsAddResult add = await transport.AddAsync(
+                storage,
+                secretValue,
+                fileName,
+                request.Content,
+                cancellationToken);
+
+            StorageProviderConfiguration configuration = StorageJson.ParseProviderConfiguration(storage.ConfigJson);
+            if (configuration.PinOnUpload)
+            {
+                await transport.PinAsync(storage, secretValue, add.ContentId, cancellationToken);
+            }
+
+            string directUrl = ResolveDirectUrl(storage, add.ContentId);
+            var reference = new StorageObjectReference(
+                storage.Id,
+                ProviderKind,
+                StorageLocatorKind.ContentAddress,
+                add.ContentId,
+                request.FileName,
+                string.IsNullOrWhiteSpace(request.ContentType) ? "application/octet-stream" : request.ContentType,
+                request.Content.LongLength,
+                directUrl);
+
+            return new StorageWriteResult(
+                reference,
+                new StorageAccessDescriptor(
+                    StorageJson.BuildPreviewUrl(reference),
+                    StorageJson.BuildDownloadUrl(reference),
+                    directUrl,
+                    true,
+                    true,
+                    false,
+                    string.IsNullOrWhiteSpace(request.FileName) ? add.ContentId : request.FileName,
+                    reference.ContentType,
+                    reference.ContentLength,
+                    string.Empty));
         }
-
-        var directUrl = ResolveDirectUrl(storage, addPayload.Hash);
-        var reference = new StorageObjectReference(
-            storage.Id,
-            ProviderKind,
-            StorageLocatorKind.ContentAddress,
-            addPayload.Hash,
-            request.FileName,
-            string.IsNullOrWhiteSpace(request.ContentType) ? "application/octet-stream" : request.ContentType,
-            request.Content.LongLength,
-            directUrl);
-
-        return new StorageWriteResult(
-            reference,
-            new StorageAccessDescriptor(
-                StorageJson.BuildPreviewUrl(reference),
-                StorageJson.BuildDownloadUrl(reference),
-                directUrl,
-                true,
-                true,
-                false,
-                string.IsNullOrWhiteSpace(request.FileName) ? addPayload.Hash : request.FileName,
-                reference.ContentType,
-                reference.ContentLength,
-                string.Empty));
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception exception)
+        {
+            throw CreateFailure(storage, "write", exception);
+        }
     }
 
     public async Task<Stream> OpenReadAsync(
@@ -124,79 +121,49 @@ public sealed class IpfsStorageDriver(
         ArgumentNullException.ThrowIfNull(storage);
         ArgumentNullException.ThrowIfNull(reference);
 
-        var secretValue = await secretResolver.ResolveCredentialAsync(storage.CredentialSecretId, cancellationToken);
-        using var client = CreateClient(secretValue);
-        using var response = string.IsNullOrWhiteSpace(reference.Route)
-            ? await client.GetAsync(BuildApiUri(storage, "cat", reference.Locator), cancellationToken)
-            : await client.GetAsync(reference.Route, cancellationToken);
-        response.EnsureSuccessStatusCode();
-
-        var bytes = await response.Content.ReadAsByteArrayAsync(cancellationToken);
-        return new MemoryStream(bytes, writable: false);
+        try
+        {
+            string? secretValue = await secretResolver.ResolveCredentialAsync(
+                storage.CredentialSecretId,
+                cancellationToken);
+            return await transport.OpenReadAsync(
+                storage,
+                secretValue,
+                reference.Locator,
+                reference.Route,
+                cancellationToken);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception exception)
+        {
+            throw CreateFailure(storage, "read", exception);
+        }
     }
 
     public Task DeleteAsync(
         StorageCatalogRecord storage,
         StorageObjectReference reference,
         CancellationToken cancellationToken = default)
+        => throw new NotSupportedException("IPFS delete is not supported by this storage driver.");
+
+    internal static string ResolveDirectUrl(StorageCatalogRecord storage, string contentId)
     {
-        throw new NotSupportedException("IPFS delete is not supported in the initial storage driver.");
-    }
-
-    private HttpClient CreateClient(string? secretValue)
-    {
-        var client = new HttpClient();
-        if (!string.IsNullOrWhiteSpace(secretValue))
-        {
-            client.DefaultRequestHeaders.Authorization =
-                new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", secretValue);
-        }
-
-        return client;
-    }
-
-    private static Uri BuildApiUri(StorageCatalogRecord storage, string action, string? arg = null)
-    {
-        if (string.IsNullOrWhiteSpace(storage.EndpointOrRoot))
-        {
-            throw new InvalidOperationException("IPFS storage requires an API base URL.");
-        }
-
-        var baseUri = new Uri(storage.EndpointOrRoot.EndsWith("/", StringComparison.Ordinal)
-            ? storage.EndpointOrRoot
-            : storage.EndpointOrRoot + "/");
-        var apiRoot = baseUri.AbsolutePath.TrimEnd('/').EndsWith("/api/v0", StringComparison.OrdinalIgnoreCase)
-            ? baseUri
-            : new Uri(baseUri, "api/v0/");
-        var endpoint = new Uri(apiRoot, action);
-        if (string.IsNullOrWhiteSpace(arg))
-        {
-            return endpoint;
-        }
-
-        var builder = new UriBuilder(endpoint)
-        {
-            Query = $"arg={Uri.EscapeDataString(arg)}"
-        };
-        return builder.Uri;
-    }
-
-    private static string ResolveDirectUrl(StorageCatalogRecord storage, string cid)
-    {
-        var configuration = StorageJson.ParseProviderConfiguration(storage.ConfigJson);
-        var gatewayBaseUrl = !string.IsNullOrWhiteSpace(configuration.GatewayBaseUrl)
+        StorageProviderConfiguration configuration = StorageJson.ParseProviderConfiguration(storage.ConfigJson);
+        string gatewayBaseUrl = !string.IsNullOrWhiteSpace(configuration.GatewayBaseUrl)
             ? configuration.GatewayBaseUrl
             : DeriveGatewayBaseUrl(storage.EndpointOrRoot);
-
         if (string.IsNullOrWhiteSpace(gatewayBaseUrl))
         {
             return string.Empty;
         }
 
-        var normalizedGateway = gatewayBaseUrl.EndsWith("/", StringComparison.Ordinal)
+        string normalizedGateway = gatewayBaseUrl.EndsWith("/", StringComparison.Ordinal)
             ? gatewayBaseUrl
             : gatewayBaseUrl + "/";
-        return new Uri(new Uri(normalizedGateway), cid).ToString();
+        return new Uri(new Uri(normalizedGateway), contentId).ToString();
     }
 
     private static string DeriveGatewayBaseUrl(string apiBaseUrl)
@@ -209,9 +176,19 @@ public sealed class IpfsStorageDriver(
         var apiBaseUri = new Uri(apiBaseUrl.EndsWith("/", StringComparison.Ordinal)
             ? apiBaseUrl
             : apiBaseUrl + "/");
-        var rootUri = new Uri(apiBaseUri, "../../");
-        return new Uri(rootUri, "ipfs/").ToString();
+        return new Uri(new Uri(apiBaseUri, "../../"), "ipfs/").ToString();
     }
 
-    private sealed record IpfsAddResponse(string Hash, string Name, string Size);
+    private InvalidOperationException CreateFailure(
+        StorageCatalogRecord storage,
+        string operation,
+        Exception exception)
+    {
+        logger.LogWarning(
+            "IPFS {Operation} failed for storage {StorageId} with {FailureType}.",
+            operation,
+            storage.Id,
+            exception.GetType().Name);
+        return new InvalidOperationException($"The IPFS {operation} operation failed.");
+    }
 }

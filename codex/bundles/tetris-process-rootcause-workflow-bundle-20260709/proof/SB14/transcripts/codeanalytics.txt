@@ -1,0 +1,19 @@
+SB14 final CodeAnalytics proof
+
+Snapshot: snap-20260710022410-27d4d127
+Scope:
+- CanDoItAll.Processes.Runtime
+- CanDoItAll.Processes.Application
+- CanDoItAll.Modules.Processes
+- CanDoItAll.AgentFramework.Maf
+
+Projects: 4
+Types: 530
+Members: 4,443
+Service registrations: 1
+Blocking errors: false
+Dependency cycles: 0
+Open questions: 0
+
+Diagnostics: eight existing WS0002/NU1903 warnings caused by Microsoft.OpenApi 2.0.0 in the wider solution load.
+Complexity findings remain informational/warning inventory for pre-existing large runtime files and the two relocated .NET setup driver files. No replacement adapter monolith was introduced: the adapter is 33 lines and the step executor is 343 lines.

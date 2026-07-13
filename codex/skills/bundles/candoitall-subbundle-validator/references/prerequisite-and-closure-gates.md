@@ -9,6 +9,7 @@ Confirm all of these before implementation starts:
 - prerequisite proof is still trusted after the latest repo observations
 - exact source references still exist and still point at the right surfaces
 - the dependency map still matches the intended execution order
+- the proof tier is explicit and proportional to the actual risk
 
 ## Closure Gate
 
@@ -18,5 +19,6 @@ Confirm all of these before the next subbundle starts:
 - proof-required items are finished
 - browser or host proof was captured when required
 - screenshot review questions were answered while the screenshot was visible
+- application proof used the target large-screen desktop viewport; multi-viewport proof was added only for reusable basic BaseLib or explicit scope
 - the subbundle gate row and browser analytics row were updated
 - if the subbundle is a critical foundation, one dependent-flow smoke or downstream surface check passed

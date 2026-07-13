@@ -18,6 +18,7 @@ internal static class ResourceConnectorPluginKeys
     public const string SecretLink = "resource.secret-link";
     public const string PromptLink = "resource.prompt-link";
     public const string WebhookEndpoint = "resource.webhook-endpoint";
+    public const string StorageObject = "resource.storage-object";
 }
 
 internal static class ResourceConnectorFieldKeys

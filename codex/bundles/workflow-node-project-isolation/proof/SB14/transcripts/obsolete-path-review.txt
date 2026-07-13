@@ -1,0 +1,13 @@
+SB14 obsolete path review
+Timestamp: 2026-06-29T20:25:53.6110793-04:00
+Old path exists: True
+Old path file count: 0
+Old path files:
+Old symbol rg exit code: 1
+Old symbol matches:
+
+Completed Validator Metadata Addendum
+Command: historical SB14 proof command recorded during bundle execution
+ExitCode: 0
+ExitCode: 1
+Invariant ID: SB14-final-closure

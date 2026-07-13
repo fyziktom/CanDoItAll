@@ -1,0 +1,6 @@
+Command: dotnet test tests\Unit\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj --artifacts-path artifacts\dotnet-test-isolated --no-build; dotnet test tests\Integration\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --filter "FullyQualifiedName~ProjectStructureAgentIntegrationTests|FullyQualifiedName~AgentFrameworkWorkspaceSeedIntegrationTests" --artifacts-path artifacts\dotnet-integration-isolated
+Test: ProjectStructureAgentIntegrationTests
+Test: AgentFrameworkWorkspaceSeedIntegrationTests
+Invariant: MAF-SB06-ARCHITECTURE-CLOSURE
+Output: full unit suite passed with 1838 tests, filtered integration suite passed with 66 tests, isolated MAF/process/migration builds passed, JSON and text scans passed, CodeAnalytics snapshot snap-20260707140004-71deb81c reported no blocking errors and no dependency cycles.
+ExitCode: 0

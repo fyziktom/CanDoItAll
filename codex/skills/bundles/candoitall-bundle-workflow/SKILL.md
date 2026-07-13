@@ -1,129 +1,88 @@
 ---
 name: candoitall-bundle-workflow
-description: "Run the end-to-end CanDoItAll bundle workflow: decide whether a bundle must be prepared or repaired, validate it, execute it phase by phase, and close it with evidence. Use when the user wants one commandable workflow instead of manually switching between bundle preparation, validation, and execution."
+description: "Run or recover an end-to-end CanDoItAll bundle: select a compatible bundle shape, prepare or repair it, validate dependencies, execute phases, capture risk-proportionate proof, and close raw inputs. Use for broad, multi-repo, risky, UI-heavy, architecture-heavy, long-running, or resumed work that needs durable coordination."
 ---
 
 # CanDoItAll Bundle Workflow
 
-Use this as the coordinator skill. It keeps preparation, validation, execution, and closure aligned without duplicating every checklist from the underlying bundle skills.
+Coordinate preparation, execution, validation, recovery, and closure. The bundle is durable working state, not a document-production exercise.
 
-This skill is the right entry point when the user says `prepare a bundle and execute it`, when a bundle already exists but may be stale, or when the task is too broad, risky, or UI-heavy for direct implementation.
+## GPT-5.6 Operating Contract
 
-## GPT-5.5 Operating Model
+- Define the outcome, hard constraints, available evidence, completion bar, and stop rules. Let Codex choose the efficient path inside those boundaries.
+- State each invariant once. Prefer decision rules over universal process rules.
+- Resolve required discovery before action. Parallelize independent reads; keep dependent decisions sequential; synthesize before editing.
+- Retry an empty or suspiciously narrow lookup with one or two meaningful alternatives before concluding evidence is absent.
+- Validate the changed behavior and affected packages before finishing. If a check cannot run, record why and the next-best check.
+- Update the user at phase changes or when a finding changes the plan; do not narrate routine tool calls.
 
-- Treat the skill as an outcome contract, not ceremonial process. The outcome is a bundle-backed implementation whose source inputs, code changes, proof, and status all agree.
-- Prefer concise phase decisions and explicit success criteria over long process narration. Use detailed checklists only when they materially protect coverage, dependencies, UI truth, or final proof.
-- Assume ChatGPT-5.5 starts at balanced `medium` reasoning. Do not add more process or request higher effort just because the work is large; deepen validation only when risk, ambiguity, or failed gates justify it.
-- Let the model choose efficient tool order when the dependencies are independent, but never parallelize a step whose result determines the next action.
-- After resume, compaction, or a long interruption, re-anchor on the bundle root, current subbundle, raw inputs owned, gate state, proof already captured, and open blockers before continuing.
+This operating contract follows the official [GPT-5.6 prompt guidance](https://developers.openai.com/api/docs/guides/prompt-guidance-gpt-5p6).
 
-## Outcome Contract
+## Completion Contract
 
-The workflow is complete only when all of these are true:
+Finish only when:
 
-- raw inputs are preserved and mapped to requirements, owning subbundles, proof, and closure status
-- the bundle has a usable dependency map, critical-foundation labels, and progression gates
-- every executed subbundle has passed its entry and closure gates or is honestly blocked
-- every completed critical subbundle has an artifact-backed `proof/SBxx/manifest.md` and `proof/SBxx/semantic-invariants.md` or `.json` with changed-file hashes, command transcripts, failing-first and passing proof where behavior changed, source assertions, invariant IDs, and anti-stub audit results
-- any subbundle that changes bundle skills, validators, or proof rules has synchronized the repo skill copy into the active Codex skill root and recorded portable hash proof before dependent feature subbundles start
-- C# architecture-heavy bundles have activated `candoitall-csharp-architecture-bundle-guard`, recorded CodeAnalytics MCP evidence, and included current-state inventory, boundary map, dependency-direction map, pattern selection records, testability plan, partial-class policy, and architecture checkpoints before implementation starts
-- every new production signal, state, record, or event named by critical proof has a `## Production Behavior Artifact Matrix` in both the manifest and semantic invariant contract, with producer, consumer, lifecycle, and negative-test citations
-- critical proof uses portable `repo://` and `bundle://` references so moved bundles, WSL, Linux, CI, and Windows checks can resolve the same evidence
-- code changes, tests, browser or host proof, screenshots, and execution report rows support the same conclusion
-- raw feedback has a note-by-note closure result of `Solved`, `Partially solved`, or `Not solved`
-- unresolved gaps are represented as blockers, reopened work, or explicit follow-up subbundles, not hidden as residual-risk prose
+- source inputs are preserved and mapped to requirements, owning work, proof, and closure status;
+- dependencies, critical foundations, and reopen triggers agree with the current repositories;
+- every executed phase has passed its applicable entry and closure gates or is honestly blocked;
+- code, tests, browser or host proof, and bundle status support the same conclusion;
+- each raw note is `Solved`, `Partially solved`, or `Not solved` with evidence;
+- remaining work is an explicit blocker or follow-up, not hidden residual-risk prose.
+
+## Bundle Compatibility Gate
+
+Do not reject or migrate an existing bundle merely because its folders or headings differ from the canonical scaffold.
+
+1. Locate the files that serve these semantic roles: source inputs, requirements, dependency plan, work units, execution status, proof, and closure.
+2. If every role is recoverable, preserve the existing shape and add a short compatibility map to its root README only when the mapping is not obvious.
+3. Repair missing meaning in place. Do not create a second parallel bundle shape during execution.
+4. Run `validate_bundle.py` when the bundle uses the canonical CanDoItAll contract. For a compatible legacy or external shape, run the same semantic gate manually and record that the structural validator was not applicable.
+5. Migrate structure only when the current shape prevents durable state, automation, or handoff; record the old-to-new map.
+
+Read [references/workflow-decision-tree.md](references/workflow-decision-tree.md) when selecting direct work, preparation, repair, or execution. Read [references/handoff-rules.md](references/handoff-rules.md) when recovering or transferring work.
+
+## Proof Tiers
+
+Select proof per subbundle. Dependency-critical does not automatically mean governed evidence.
+
+- `Standard`: affected build or static checks, targeted tests when present, and a concise execution-report result. Use for low-risk mechanical or local changes.
+- `Behavioral`: Standard proof plus a realistic positive case and a meaningful negative, boundary, or regression case. Use when behavior or user-visible state changes.
+- `Governed`: Behavioral proof plus `proof/SBxx/manifest.md`, durable transcripts, hashes, source assertions, semantic invariants, and any required red-team or downstream evidence. Use for security/privacy boundaries, migrations, destructive or irreversible behavior, production orchestration, disputed acceptance, high-cost rework, cross-agent auditability, or when the user explicitly requests forensic proof.
+
+Increase the tier when evidence shows risk; do not increase it because the task is merely large. Read [../candoitall-bundle-execution/references/artifact-backed-proof-manifest.md](../candoitall-bundle-execution/references/artifact-backed-proof-manifest.md) only for `Governed` proof.
 
 ## Workflow
 
-1. Decide whether a usable bundle already exists.
-2. If no bundle exists, use `candoitall-bundle-preparation`.
-3. If the bundle exists but is stale, incomplete, or inconsistent with the repo, repair it before implementation.
-4. If the bundle touches C# architecture, refactoring, partial classes, tools, providers, memory protocols, process drivers, runtime composition, factories, builders, catalogs, or project references, activate `candoitall-csharp-architecture-bundle-guard`, `csharp-architecture-governor`, and `candoitall-codeanalytics-mcp` before readiness validation.
-5. Run the readiness gate with `candoitall-bundle-validator` and `scripts/validate_bundle.py --stage prepared`.
-6. Review the subbundle dependency map, critical foundations, architecture checkpoints, and phase gates before touching implementation code.
-7. Execute one subbundle at a time with `candoitall-bundle-execution`.
-8. Before each subbundle, run the entry gate with `candoitall-subbundle-validator`.
-9. After each subbundle, record proof and run the closure gate with `candoitall-subbundle-validator`.
-10. Reopen earlier work when later observations weaken a prerequisite or critical foundation.
-11. If the subbundle changed bundle skills, validators, or proof rules, install the updated repo skill into the active Codex skill root, reopen the skill instructions, and record repo/active hashes before continuing.
-12. Before a critical subbundle is marked complete, verify that every path referenced by its proof manifest exists, that the semantic invariant contract exists, and that required failing-first, passing, source-assertion, and anti-stub transcripts are present.
-13. After implementation, audit the original raw notes and source artifacts one by one.
-14. Run the final closure gate with `candoitall-bundle-validator` and `scripts/validate_bundle.py --stage completed`.
-15. Synchronize root status, subbundle status, execution report, analytics rows, proof paths, residual risks, and follow-up items.
+1. Find an existing bundle and run the compatibility gate.
+2. Use `candoitall-bundle-preparation` when no usable bundle exists or material meaning is missing.
+3. Re-anchor stale or resumed work on current repo state, owned inputs, dependency gates, captured proof, blockers, and the next validation action.
+4. Activate only the domain skills that the affected phase needs. Architecture-heavy C# work uses the architecture guard/governor and CodeAnalytics; CanDoItAll UI work uses the Components MCP.
+5. Run readiness validation. Repair failures that affect execution; do not churn structure that is already semantically complete.
+6. Execute one dependency-ready subbundle at a time with `candoitall-bundle-execution`.
+7. Run `candoitall-subbundle-validator` before and after each subbundle at its selected proof tier.
+8. Reopen a prerequisite when later evidence invalidates it.
+9. Audit original inputs note by note, run final closure validation, and synchronize all status and proof surfaces.
+10. If bundle skills or validators changed, synchronize the repo-owned copy to the active Codex skill root and verify hashes before relying on the new contract.
 
-## Decision Rule
+## CanDoItAll UI Target Policy
 
-- Raw notes, docx feedback, screenshots, mixed artifacts, broad initiatives, and architecture-heavy requests start in preparation.
-- Existing validated bundles start in execution.
-- Existing weak bundles start in repair, then readiness validation, then execution.
-- C# architecture-heavy work starts in preparation or repair unless the existing bundle already has the C# architecture gate artifacts and passing checkpoints.
-- If implementation reality forces a scope reduction, repair the bundle and rerun the prepared-stage validator before continuing.
+- CanDoItAll applications, including sibling application repositories, target large-screen desktop use. Plan and prove the named large-screen viewport or maximized desktop window.
+- Do not spend implementation or validation time tuning application pages for tablet, mobile, small, or medium breakpoints unless the user explicitly expands scope or a regression breaks an already-required contract.
+- The exception is reusable basic components in `CanDoItAll.Components.BaseLib`: they must remain prepared and validated for small, medium, and large viewports.
+- Other shared libraries preserve existing responsive behavior when touched, but new cross-viewport work is not implied unless the user requests it.
+- UI proof still covers readability, clipping, scroll ownership, overlays, interaction states, and visual consistency at the target desktop viewport.
 
-## Gate Discipline
+## Domain Overlays
 
-- Do not implement from raw notes when the work clearly needs decomposition.
-- Do not let execution drift away from the documented bundle.
-- Do not weaken words such as `all`, `every`, `each`, `same flow`, `must`, or `missing ability` unless the bundle lists the exception and follow-up path.
-- Do not let a dependent subbundle start before prerequisite gates pass.
-- Do not treat missing proof as a harmless residual risk when that proof is necessary to know whether the request works.
-- Do not close a critical subbundle from prose-only semantic evidence. Missing or invalid `proof/SBxx/manifest.md` is a stop-and-repair condition, not a warning.
-- If targeted tests become the bottleneck and the repo uses Microsoft Testing Platform, `mtp-hot-reload` may speed iteration, but final proof still needs a clean standard confirmation run.
+Keep domain-specific proof out of the generic bundle contract. Add specialized matrices or evidence only when the phase actually involves that domain—for example production workflow dispatch, provider usage, lifecycle signals, memory synthesis, architecture boundaries, browser UI, or host integration.
 
-## Proof Rules
+## Stop And Reopen Rules
 
-- UI-heavy work requires real browser proof through Playwright MCP and the `playwright` skill unless an explicit blocker is documented.
-- The first UI validation pass should use a maximized headed browser window or equivalent large-screen viewport, followed by narrower widths when layout is affected.
-- Browser proof must include route or window, viewport, actions, assertions, screenshots, and pass or fail result in `reviews/01-execution-report.md`.
-- Overlays, contextual help, dropdowns, menus, dialogs, and floating windows require open-state proof for readability, clipping, lateral overflow, and layering.
-- Host-visible behavior such as PowerShell launch, UAC, file opening, or desktop integration requires host-level proof or an explicit validation gap.
-- Critical proof must be artifact-backed: command transcripts, changed-file hashes, source assertions, anti-stub audit output, and failing-first or red-team artifacts must live under `proof/SBxx/`.
-- C# architecture proof must include CodeAnalytics MCP evidence for dependency direction, findings or hotspots, and relevant exact symbols when the MCP is available; if unavailable, the bundle must record that as a validation gap instead of silently falling back to broad text search.
-- Production-only signals must not be manually seeded by positive tests unless the test is explicitly a migration, backfill, or validator fixture. Normal feature proof must show the production emitter and the lifecycle path that consumes it.
-- Dream synthesis proof must reject diagnostic templates such as `Conclusion: ... supported by N source-backed observation(s)` as shipped memory text; those strings belong in diagnostics, not in positive synthesis proof.
-- Use `screenshot` when browser capture cannot prove the desktop or window context.
-- Use `imagegen` only as a planning aid when visual direction is unclear. Generated images never count as shipped proof.
-
-## Resume And Compaction Rule
-
-When the conversation resumes after compaction or a long-running interruption:
-
-- reopen the current bundle files before continuing if the active state is uncertain
-- restate the current subbundle, gate state, owned raw inputs, and next proof step in one concise working note
-- do not trust memory over bundle files, validator output, or fresh repo observations
-- continue from the latest proven gate instead of restarting or skipping ahead
-
-## Feedback Closure Audit
-
-After implementation, reopen the original raw notes, screenshots, and extracted docx text.
-
-- produce note-by-note closure results: `Solved`, `Partially solved`, or `Not solved`
-- map each result to code changes and proof
-- cite browser analytics and subbundle gate rows when UI, host behavior, or prerequisite proof matters
-- if any note is partial or unsolved, repair the bundle or create a concrete follow-up subbundle before exit
-
-## Final Bundle Sync
-
-Before the workflow exits:
-
-- root `README.md` validation summary reflects readiness, execution, subbundle gates, final closure, and browser validation state
-- completed subbundles no longer remain `Ready` or `In progress`
-- `reviews/01-execution-report.md` contains shipped proof, final raw-note closure, browser-validation analytics, and subbundle gate results
-- critical subbundle proof manifests exist, their referenced transcript/source/browser artifacts exist, and final closure cites those artifacts instead of prose-only claims
-- material bundle edits made during execution have passed the prepared-stage validator again
-
-## References
-
-- Read [references/workflow-decision-tree.md](references/workflow-decision-tree.md) when choosing between preparation, repair, and execution.
-- Read [references/handoff-rules.md](references/handoff-rules.md) to keep the bundle structure and execution flow compatible.
-- Read [../candoitall-bundle-execution/references/artifact-backed-proof-manifest.md](../candoitall-bundle-execution/references/artifact-backed-proof-manifest.md) before closing critical subbundles.
-- Use `candoitall-bundle-preparation` for raw inputs and bundle repair.
-- Use `candoitall-bundle-execution` for implementation and proof updates.
-- Use `candoitall-bundle-validator` for readiness and final closure gates.
-- Use `candoitall-subbundle-validator` for per-phase entry and closure gates.
-- Use `candoitall-csharp-architecture-bundle-guard`, `csharp-architecture-governor`, `csharp-architecture-review-gate`, and `candoitall-codeanalytics-mcp` for C# architecture-heavy bundles.
-- Use `mtp-hot-reload` only as an iteration accelerator when the targeted test project already uses Microsoft Testing Platform.
-- Use `playwright`, `screenshot`, `imagegen`, and `frontend-skill` as part of the UI validation loop when the bundle scope justifies them.
+- Stop before a dependent phase when prerequisite proof is missing or contradicted.
+- Repair the bundle when implementation reality changes scope, dependencies, success criteria, or proof—not for harmless wording differences.
+- Ask only for a user decision that materially changes scope or authorization and cannot be inferred safely.
+- Stop retrieval when the core decision has sufficient evidence. Do not search again only to improve phrasing.
 
 ## Exit Condition
 
-The workflow ends only when the bundle is ready, the implementation is complete, every executed subbundle has passed its gate or is honestly blocked, proof is recorded, analytics have been reviewed, raw feedback is closed note by note, final validators pass, and remaining risk is honestly documented.
+Exit when implementation and durable bundle state agree, every applicable gate passes or is honestly blocked, original inputs are closed with evidence, and no required work is disguised as a caveat.

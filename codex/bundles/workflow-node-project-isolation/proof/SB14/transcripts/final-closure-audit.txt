@@ -1,0 +1,12 @@
+Command: SB14 final closure audit
+ExitCode: 0
+Invariant ID: SB14-final-closure
+Completed validator: PASS
+Unit regression: 128/128
+Component regression: 21/21
+Integration regression: 65/65
+Playwright workflow shell large-screen: 1/1
+Playwright Workbench workflow-node large-screen: 1/1
+Temporary workbook node_modules junction: absent
+Temporary workbook inspect file: absent
+Small/medium UI viewports: skipped by user request because the app is large-screen-only

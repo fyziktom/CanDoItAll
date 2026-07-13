@@ -2,12 +2,14 @@
 
 Use these questions during UI validation. They are not optional for screenshot-driven or layout-sensitive work.
 
-## First Pass Environment
+## Target Environment
 
 - Start in a maximized headed browser window or the largest practical desktop viewport on the current machine.
 - Capture a fullscreen or full-page screenshot from that large-screen pass.
-- Do the first visual judgement there before shrinking to narrower widths.
-- After the large-screen pass is acceptable, continue with narrower desktop, tablet, or mobile widths when the change affects layout or responsiveness.
+- Make the visual judgement at the named desktop viewport.
+- Do not spend time on narrower application widths unless the user explicitly requests them.
+- For reusable basic `CanDoItAll.Components.BaseLib` components, also validate small, medium, and large viewports.
+- For other shared libraries, preserve existing responsive behavior when touched without expanding responsive scope implicitly.
 
 ## Readability And Overlap
 

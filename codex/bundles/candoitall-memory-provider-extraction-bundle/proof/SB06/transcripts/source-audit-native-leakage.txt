@@ -1,0 +1,6 @@
+Command: rg -n CanDoItAll.Modules.CognitiveMemory|CognitiveMemory|Qdrant|OpenAI|OpenAi|CanDoItAll.AgentFramework.Rag src\Memory\CanDoItAll.Memory.Abstractions src\Memory\CanDoItAll.Memory.Application src\Memory\CanDoItAll.Memory.Persistence
+WorkingDirectory: C:\repositories\CanDoItAll
+RunLabel: SB06 native provider leakage audit
+ExitCode: 0
+Summary: No forbidden native/OpenAI/Qdrant/RAG dependency strings found in production generic memory code.
+Output:

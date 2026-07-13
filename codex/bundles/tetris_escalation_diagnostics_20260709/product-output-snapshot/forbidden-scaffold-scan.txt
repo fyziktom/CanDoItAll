@@ -1,0 +1,6 @@
+C:\programovani\dotnet\output\src\TetrisGame\Layout\MainLayout.razor:9:            <a href="https://learn.microsoft.com/aspnet/core/" target="_blank">About</a>
+C:\programovani\dotnet\output\src\TetrisGame\Pages\Counter.razor:1:@page "/counter"
+C:\programovani\dotnet\output\src\TetrisGame\Pages\Weather.razor:1:@page "/weather"
+C:\programovani\dotnet\output\src\TetrisGame\Pages\Weather.razor:40:    private WeatherForecast[]? forecasts;
+C:\programovani\dotnet\output\src\TetrisGame\Pages\Weather.razor:44:        forecasts = await Http.GetFromJsonAsync<WeatherForecast[]>("sample-data/weather.json");
+C:\programovani\dotnet\output\src\TetrisGame\Pages\Weather.razor:47:    public class WeatherForecast

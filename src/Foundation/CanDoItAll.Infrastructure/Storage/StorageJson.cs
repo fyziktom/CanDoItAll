@@ -6,6 +6,8 @@ namespace CanDoItAll.Infrastructure.Storage;
 
 public static class StorageJson
 {
+    public const int MaximumProviderConfigurationJsonLength = 64 * 1024;
+
     private static readonly JsonSerializerOptions SerializerOptions = BuildSerializerOptions();
 
     public static string SerializeReference(StorageObjectReference? reference)
@@ -47,7 +49,11 @@ public static class StorageJson
 
     public static string SerializeProviderConfiguration(StorageProviderConfiguration? configuration)
     {
-        return JsonSerializer.Serialize(configuration ?? new StorageProviderConfiguration(), SerializerOptions);
+        StorageProviderConfiguration value = configuration ?? new StorageProviderConfiguration();
+        value.Validate();
+        string json = JsonSerializer.Serialize(value, SerializerOptions);
+        ValidateProviderConfigurationLength(json);
+        return json;
     }
 
     public static StorageProviderConfiguration ParseProviderConfiguration(string? json)
@@ -57,8 +63,13 @@ public static class StorageJson
             return new StorageProviderConfiguration();
         }
 
-        return JsonSerializer.Deserialize<StorageProviderConfiguration>(json, SerializerOptions)
+        ValidateProviderConfigurationLength(json);
+
+        StorageProviderConfiguration configuration =
+            JsonSerializer.Deserialize<StorageProviderConfiguration>(json, SerializerOptions)
             ?? new StorageProviderConfiguration();
+        configuration.Validate();
+        return configuration;
     }
 
     public static IReadOnlyList<Guid> ParseGuidList(string? json)
@@ -164,5 +175,15 @@ public static class StorageJson
 
         options.Converters.Add(new JsonStringEnumConverter(JsonNamingPolicy.CamelCase));
         return options;
+    }
+
+    private static void ValidateProviderConfigurationLength(string json)
+    {
+        if (json.Length > MaximumProviderConfigurationJsonLength)
+        {
+            throw new StorageBrowseException(new StorageBrowseError(
+                StorageBrowseErrorCode.InvalidConfiguration,
+                "The storage provider configuration exceeds the supported bounded size."));
+        }
     }
 }

@@ -1,0 +1,191 @@
+{
+  "capturedAt": "2026-07-04T18:16:20.9312358-04:00",
+  "agent": {
+    "id": "3e914b12-2369-ed5f-bf79-f26db10ef5cd",
+    "name": "Financial Strategist",
+    "configuredModel": "gpt-5.4-mini",
+    "providerProfileId": "bd2bffbb-23d5-d152-82f6-e1d37908b169",
+    "workspaceToolProfile": 6,
+    "capabilityCount": 15
+  },
+  "latestRun": {
+    "id": "bb2b3631-e361-44a4-9f7a-55a3ffc5925f",
+    "chatSessionId": "e3467682-fff8-4de9-8e8e-2ddd99786109",
+    "sourceKind": "chat-session",
+    "inputSummary": "Reply with exactly: UI-LOCAL-OK",
+    "resultSummary": "UI-LOCAL-OK",
+    "providerName": "Local Ollama",
+    "model": "gemma4-12b-256k",
+    "state": 5,
+    "outcome": 0,
+    "startedAtUtc": "2026-07-04T18:11:19.1094579-04:00",
+    "completedAtUtc": "2026-07-04T18:12:02.3218167-04:00"
+  },
+  "selectedLog": [
+    {
+      "phase": "Completed",
+      "state": 5,
+      "message": "Execution run response persisted.",
+      "createdAtUtc": "2026-07-04T18:12:02.3976275-04:00",
+      "executionRunId": "bb2b3631-e361-44a4-9f7a-55a3ffc5925f"
+    },
+    {
+      "phase": "Session",
+      "state": 4,
+      "message": "Serializing the Microsoft Agent Framework session.",
+      "createdAtUtc": "2026-07-04T18:12:02.2468951-04:00",
+      "executionRunId": "bb2b3631-e361-44a4-9f7a-55a3ffc5925f"
+    },
+    {
+      "phase": "Streaming",
+      "state": 2,
+      "message": "The agent is producing streamed output.",
+      "createdAtUtc": "2026-07-04T18:12:02.1267924-04:00",
+      "executionRunId": "bb2b3631-e361-44a4-9f7a-55a3ffc5925f"
+    },
+    {
+      "phase": "Run",
+      "state": 2,
+      "message": "Executing the run through Microsoft Agent Framework streaming.",
+      "createdAtUtc": "2026-07-04T18:11:29.2657071-04:00",
+      "executionRunId": "bb2b3631-e361-44a4-9f7a-55a3ffc5925f"
+    },
+    {
+      "phase": "Session",
+      "state": 1,
+      "message": "Creating a new Microsoft Agent Framework session and hydrating it from the sandbox transcript.",
+      "createdAtUtc": "2026-07-04T18:11:29.1989279-04:00",
+      "executionRunId": "bb2b3631-e361-44a4-9f7a-55a3ffc5925f"
+    },
+    {
+      "phase": "Approval policy",
+      "state": 1,
+      "message": "Omitted mutation tool(s) that require MAF approval because provider 'Local Ollama' using transport 'ChatCompletions' has no effective approval path: project_structure_approval_request, project_structure_asset_create, project_structure_asset_create_revision, project_structure_dependency_link, project_structure_dependency_unlink, project_structure_import, project_structure_lease_release, project_structure_lease_renew, project_structure_link_create, project_structure_link_unlink, project_structure_nodes_delete, project_structure_nodes_marker_update, project_structure_nodes_priority_update, project_structure_nodes_progress_update, project_structure_nodes_status_update, project_structure_nodes_to_new_subproject, project_structure_node_command_execute, project_structure_node_create, project_structure_node_delete, project_structure_node_descendants_to_project_move, project_structure_node_marker_update, project_structure_node_metadata_update, project_structure_node_move, project_structure_node_priority_update, project_structure_node_process_definition_link, project_structure_node_process_start, project_structure_node_progress_update, project_structure_node_recompose, project_structure_node_reparent, project_structure_node_status_update, project_structure_node_type_update, project_structure_node_update, project_structure_node_workflow_definition_create, project_structure_node_workflow_start, project_structure_process_subprocess_launch, project_structure_project_create, project_structure_project_lease_acquire, project_structure_project_update, project_structure_repo_branch_lease_acquire, project_structure_subproject_link, workspace_append_file, workspace_convert_document, workspace_create_directory, workspace_write_file.",
+      "createdAtUtc": "2026-07-04T18:11:29.1315984-04:00",
+      "executionRunId": "bb2b3631-e361-44a4-9f7a-55a3ffc5925f"
+    },
+    {
+      "phase": "Compaction",
+      "state": 1,
+      "message": "Attached Microsoft Agent Framework compaction for InteractiveChat context with defaults of 32 turns, 64000 tokens, and 40 tool messages unless overridden by agent configuration.",
+      "createdAtUtc": "2026-07-04T18:11:29.0547423-04:00",
+      "executionRunId": "bb2b3631-e361-44a4-9f7a-55a3ffc5925f"
+    },
+    {
+      "phase": "Capability compatibility",
+      "state": 1,
+      "message": "Skipping capability 'Provider-Native Code Interpreter' for provider 'Local Ollama'. Provider 'Local Ollama' uses the Ollama integration, which is intentionally limited to local wrapper tools in this repository. Keep using the existing workspace_* tools, or keep using bounded workspace tools such as `workspace_python_run_file`, `workspace_dotnet_build`, and `workspace_dotnet_test`.",
+      "createdAtUtc": "2026-07-04T18:11:28.9900369-04:00",
+      "executionRunId": "bb2b3631-e361-44a4-9f7a-55a3ffc5925f"
+    },
+    {
+      "phase": "Runtime tool providers",
+      "state": 1,
+      "message": "Attached 53 tool(s) from 2 registered runtime tool provider(s). Providers: project-structure.runtime-tools (Project structure runtime tools, 53 tool(s)); image-generation.runtime-tools (Image generation runtime tools, 0 tool(s)).",
+      "createdAtUtc": "2026-07-04T18:11:28.9222811-04:00",
+      "executionRunId": "bb2b3631-e361-44a4-9f7a-55a3ffc5925f"
+    },
+    {
+      "phase": "Workspace tools",
+      "state": 1,
+      "message": "Attached configured workspace file and storage tools from the current agent settings.",
+      "createdAtUtc": "2026-07-04T18:11:28.8574736-04:00",
+      "executionRunId": "bb2b3631-e361-44a4-9f7a-55a3ffc5925f"
+    },
+    {
+      "phase": "Skills",
+      "state": 1,
+      "message": "Loaded 0 file skill root(s), 3 inline skill(s), and 0 DI-provided skill(s) through AgentSkillsProvider.",
+      "createdAtUtc": "2026-07-04T18:11:28.7725738-04:00",
+      "executionRunId": "bb2b3631-e361-44a4-9f7a-55a3ffc5925f"
+    },
+    {
+      "phase": "Context contributors",
+      "state": 1,
+      "message": "Attached 1 registered agent context contributor(s) in deterministic order.",
+      "createdAtUtc": "2026-07-04T18:11:28.6905075-04:00",
+      "executionRunId": "bb2b3631-e361-44a4-9f7a-55a3ffc5925f"
+    },
+    {
+      "phase": "Framework",
+      "state": 1,
+      "message": "Composing the Microsoft Agent Framework runtime for the selected provider and capabilities.",
+      "createdAtUtc": "2026-07-04T18:11:28.5980947-04:00",
+      "executionRunId": "bb2b3631-e361-44a4-9f7a-55a3ffc5925f"
+    },
+    {
+      "phase": "Planning",
+      "state": 1,
+      "message": "Preparing provider Local Ollama.",
+      "createdAtUtc": "2026-07-04T18:11:28.5341373-04:00",
+      "executionRunId": "bb2b3631-e361-44a4-9f7a-55a3ffc5925f"
+    }
+  ],
+  "selectedMetrics": {
+    "providerName": "Local Ollama",
+    "model": "gemma4-12b-256k",
+    "outcome": 0,
+    "durationMs": 33723,
+    "inputTokens": 4415,
+    "outputTokens": 64,
+    "toolCalls": 0,
+    "costUsd": 0.0004543,
+    "executionRunId": "bb2b3631-e361-44a4-9f7a-55a3ffc5925f"
+  },
+  "recentBeforeFailures": [
+    {
+      "id": "8978aeaa-e31b-46d1-b508-324b0f8f7c7c",
+      "sourceKind": "chat-session",
+      "inputSummary": "Reply with exactly: OK",
+      "resultSummary": "The agent run failed while using provider 'Local Ollama'. Provider detail: Response status code does not indicate success: 404 (Not Found).",
+      "providerName": "Local Ollama",
+      "model": "gpt-5.4-mini",
+      "state": 6,
+      "outcome": 1,
+      "startedAtUtc": "2026-07-04T17:54:16.7124081-04:00",
+      "completedAtUtc": "2026-07-04T17:54:51.6796368-04:00"
+    },
+    {
+      "id": "ade53000-68d1-4631-837b-5d499ab8493d",
+      "sourceKind": "chat-session",
+      "inputSummary": "response something smart about finances to show you can reach local llm",
+      "resultSummary": "The agent run failed while using provider 'Local Ollama'. Provider detail: Response status code does not indicate success: 404 (Not Found).",
+      "providerName": "Local Ollama",
+      "model": "gpt-5.4-mini",
+      "state": 6,
+      "outcome": 1,
+      "startedAtUtc": "2026-07-04T13:27:27.0244772-04:00",
+      "completedAtUtc": "2026-07-04T13:28:03.8563438-04:00"
+    },
+    {
+      "id": "8526fa32-2f19-4b6e-b45e-2abd9e5f4d52",
+      "sourceKind": "project-structure",
+      "inputSummary": "Context: - Workspace: project structure. - Selected project id: f28c07cd-982c-4d2d-bcf2-3e60a32eca72. - Selected project-structure node ids: custom:620a9f84c...",
+      "resultSummary": "The agent run failed while using provider 'Local Ollama'. Provider detail: Response status code does not indicate success: 404 (Not Found).",
+      "providerName": "Local Ollama",
+      "model": "gpt-5.4-mini",
+      "state": 6,
+      "outcome": 1,
+      "startedAtUtc": "2026-07-04T13:24:23.3640479-04:00",
+      "completedAtUtc": "2026-07-04T13:25:18.1155231-04:00"
+    },
+    {
+      "id": "25d309ce-9a1f-415d-a2d1-7878dd8239f7",
+      "sourceKind": "project-structure",
+      "inputSummary": "Context: - Workspace: project structure. - Selected project id: f28c07cd-982c-4d2d-bcf2-3e60a32eca72. - Selected project-structure node ids: custom:620a9f84c...",
+      "resultSummary": "The agent run failed while using provider 'Local Ollama'. Provider detail: Response status code does not indicate success: 404 (Not Found).",
+      "providerName": "Local Ollama",
+      "model": "gpt-5.4-mini",
+      "state": 6,
+      "outcome": 1,
+      "startedAtUtc": "2026-07-04T13:19:57.0473468-04:00",
+      "completedAtUtc": "2026-07-04T13:20:40.7922567-04:00"
+    }
+  ],
+  "ollamaPs": {
+    "name": "gemma4-12b-256k:latest",
+    "model": "gemma4-12b-256k:latest",
+    "size_vram": 8328335850,
+    "expires_at": "2026-07-04T18:17:02.2437658-04:00"
+  }
+}

@@ -18,6 +18,23 @@ namespace CanDoItAll.Tests.Components;
 public sealed class MemoryProvidersPageTests
 {
     [Fact]
+    public void MemoryProvidersPage_RendersLoadingStateWhileProviderSnapshotIsPending()
+    {
+        using var context = new TestContext();
+        context.JSInterop.Mode = JSRuntimeMode.Loose;
+        context.Services.AddCanDoItAllBaseLib();
+        context.Services.AddSingleton(new MemoryProvidersPageController(
+            new PendingSnapshotMemoryProviderManagementUiService()));
+
+        var cut = context.RenderComponent<MemoryProvidersPage>();
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("Loading memory providers", cut.Markup, StringComparison.Ordinal);
+        });
+    }
+
+    [Fact]
     public void MemoryProvidersPage_RendersZeroProviderStateWithoutNativeServices()
     {
         var setup = CreateContext();
@@ -295,5 +312,60 @@ public sealed class MemoryProvidersPageTests
                     .OrderBy(profile => profile.InstanceId.Value, StringComparer.Ordinal)
                     .ToArray());
         }
+    }
+
+    private sealed class PendingSnapshotMemoryProviderManagementUiService : IMemoryProviderManagementUiService
+    {
+        private readonly TaskCompletionSource<MemoryProviderManagementSnapshot> snapshotSource =
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public Task<MemoryProviderManagementSnapshot> GetSnapshotAsync(
+            string? selectedProviderInstanceId = null,
+            CancellationToken cancellationToken = default)
+            => snapshotSource.Task;
+
+        public Task<MemoryProviderProfile> SaveProviderAsync(
+            MemoryProviderProfileEditorModel editor,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
+        public Task<IReadOnlyList<MemoryProviderProfile>> CreateDemoProvidersAsync(
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
+        public Task<MemoryProviderQueryUiResult> RunQueryAsync(
+            string? selectedProviderInstanceId,
+            MemoryQueryEditorModel editor,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
+        public Task<MemoryProviderOperationUiResult> RefreshOperationAsync(
+            string operationId,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
+        public Task<MemoryProviderOperationUiResult> CancelOperationAsync(
+            string operationId,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
+        public Task<MemoryProviderFeedbackUiResult> SubmitFeedbackAsync(
+            string? selectedProviderInstanceId,
+            MemoryFeedbackEditorModel editor,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
+        public Task<MemoryProviderManualIngestionUiResult> EnqueueManualIngestionAsync(
+            string? selectedProviderInstanceId,
+            MemoryManualIngestionEditorModel editor,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
+        public Task<MemoryProviderEventAcknowledgeUiResult> AcknowledgeEventAsync(
+            string? selectedProviderInstanceId,
+            string providerEventId,
+            bool accepted,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
     }
 }

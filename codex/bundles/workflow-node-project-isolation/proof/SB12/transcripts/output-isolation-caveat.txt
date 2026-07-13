@@ -1,0 +1,11 @@
+SB12 output isolation caveat
+Timestamp: 2026-06-29
+Working directory: C:\repositories\CanDoItAll
+
+An existing CanDoItAll.Web process was already running and locking the default Debug output file:
+
+src\CanDoItAll.Web\bin\Debug\net10.0\CanDoItAll.Web.exe
+
+SB12 validation did not stop that process. Focused unit, component, and integration runs used isolated OutputPath values under artifacts\sb12-*. Browser proof used configuration `sb12-playwright`, matching the Playwright fixture's `dotnet run --no-build` configuration discovery and avoiding the locked Debug output.
+
+Result: Documented; no user-running app process was stopped.

@@ -1,0 +1,29 @@
+@namespace CanDoItAll.Modules.Workbench
+@using CanDoItAll.Components.Mermaid
+@using CanDoItAll.FileTools.FileInteraction.Markdown
+@implements IMarkdownFencedCodeComponent
+
+@if (string.IsNullOrWhiteSpace(Context.Source))
+{
+    <Alert AlertStyle="AlertStyle.Warning"
+           Variant="Variant.Outlined">
+        Mermaid diagram source is empty.
+    </Alert>
+}
+else
+{
+    <MermaidDiagram Title="@Context.File.Request.FileName"
+                    Description="Markdown Mermaid fence rendered with strict security."
+                    Source="@Context.Source"
+                    Options="WorkbenchMermaidRenderingPolicy.StrictOptions"
+                    PanZoomEnabled="true"
+                    ShowControls="true"
+                    Class="workbench-file-interaction-mermaid"
+                    Style="--cda-mermaid-min-height:20rem; --cda-mermaid-height:min(52dvh, 38rem);"
+                    data-testid="workbench-markdown-mermaid" />
+}
+
+@code {
+    [Parameter, EditorRequired]
+    public MarkdownFencedCodeRenderContext Context { get; set; } = default!;
+}

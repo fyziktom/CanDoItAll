@@ -6,6 +6,9 @@ using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Tooling;
 using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Infrastructure.Storage;
+using CanDoItAll.FileTools.FileInteraction.Components;
+using CanDoItAll.FileTools.FileInteraction.Markdown;
+using CanDoItAll.FileTools.Integration;
 using CanDoItAll.Memory.Application;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Workspace;
@@ -18,6 +21,13 @@ public static class WorkbenchModuleServiceCollectionExtensions
 {
     public static IServiceCollection AddWorkbenchModule(this IServiceCollection services)
     {
+        services.AddFileInteractionComponents(builder => builder
+            .AddBuiltIns()
+            .AddMarkdown()
+            .AddWorkbenchMermaid());
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<
+            IMarkdownFencedCodeComponentRegistration,
+            WorkbenchMarkdownMermaidComponentRegistration>());
         services.AddHttpClient();
         services.AddScoped<WorkbenchStateService>();
         services.AddScoped<ProjectCrossModuleMutationCoordinator>();
@@ -69,6 +79,11 @@ public static class WorkbenchModuleServiceCollectionExtensions
         services.AddScoped<IProjectGanttPreviewService, ProjectGanttPreviewService>();
         services.AddScoped<IProjectStructureLocalFileOpener, ProjectStructureLocalFileOpener>();
         services.AddScoped<IProjectStructureRuntimeLauncher, ProjectStructureRuntimeLauncher>();
+        services.AddSingleton<IProjectStructureNodeFileScopeProvider, ProjectStructureFileScopeResolver>();
+        services.TryAddEnumerable(
+            ServiceDescriptor.Singleton<IFileToolsStorageBindingSource, ProjectStructureFileScopeResolver>());
+        services.AddScoped<ProjectStructureKnownFileInteractionCoordinator>();
+        services.AddScoped<ProjectStructureFileActionCoordinator>();
         services.AddScoped<IProjectWorkbenchSeedService>(serviceProvider => serviceProvider.GetRequiredService<ProjectWorkbenchService>());
         services.AddScoped<IDatabaseTransferHandler, ProjectsDatabaseTransferHandler>();
         services.AddScoped<IProjectPackageService, ProjectPackageService>();

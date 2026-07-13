@@ -1,0 +1,475 @@
+{
+  "rootRunId": "c4888f4f-eabd-469f-80a6-3fccf6018a12",
+  "runId": "fef178ba-8721-4550-aab5-f971523957cd",
+  "status": "Completed",
+  "firstEventAtUtc": "2026-07-09T05:16:06.257523-04:00",
+  "lastEventAtUtc": "2026-07-09T05:21:06.088177-04:00",
+  "freshness": {
+    "observedAtUtc": "2026-07-09T05:21:06.2161426-04:00",
+    "sourceGlobalSequence": 68887,
+    "latestKnownGlobalSequence": 68887,
+    "lastProcessedGlobalSequence": 68887,
+    "backlogEventCount": 0
+  },
+  "recentEvents": [
+    {
+      "eventId": "f64ea354-d87c-433e-89d0-f93dc3c1843f",
+      "globalSequence": 68868,
+      "rootRunId": "c4888f4f-eabd-469f-80a6-3fccf6018a12",
+      "runId": "fef178ba-8721-4550-aab5-f971523957cd",
+      "eventType": "DispatchClaimCreated",
+      "occurredAtUtc": "2026-07-09T05:20:03.841848-04:00",
+      "sensitivity": "Normal",
+      "summary": "DispatchClaimCreated",
+      "restrictedDiagnosticReference": null,
+      "diagnostics": []
+    },
+    {
+      "eventId": "cf7bb966-1106-4492-91bc-7bebcaf41df6",
+      "globalSequence": 68869,
+      "rootRunId": "c4888f4f-eabd-469f-80a6-3fccf6018a12",
+      "runId": "fef178ba-8721-4550-aab5-f971523957cd",
+      "eventType": "StepRunning",
+      "occurredAtUtc": "2026-07-09T05:20:03.99218-04:00",
+      "sensitivity": "Normal",
+      "summary": "StepRunning",
+      "restrictedDiagnosticReference": null,
+      "diagnostics": []
+    },
+    {
+      "eventId": "8f782d0c-c473-40b9-82a9-4bf0a7b5ed63",
+      "globalSequence": 68870,
+      "rootRunId": "c4888f4f-eabd-469f-80a6-3fccf6018a12",
+      "runId": "fef178ba-8721-4550-aab5-f971523957cd",
+      "eventType": "DispatchClaimCompleted",
+      "occurredAtUtc": "2026-07-09T05:20:13.675663-04:00",
+      "sensitivity": "Normal",
+      "summary": "DispatchClaimCompleted",
+      "restrictedDiagnosticReference": null,
+      "diagnostics": []
+    },
+    {
+      "eventId": "f5808221-f0f4-4fb9-94f9-29481f5482b7",
+      "globalSequence": 68871,
+      "rootRunId": "c4888f4f-eabd-469f-80a6-3fccf6018a12",
+      "runId": "fef178ba-8721-4550-aab5-f971523957cd",
+      "eventType": "StepReady",
+      "occurredAtUtc": "2026-07-09T05:20:13.675663-04:00",
+      "sensitivity": "Normal",
+      "summary": "StepReady",
+      "restrictedDiagnosticReference": null,
+      "diagnostics": []
+    },
+    {
+      "eventId": "08efdc5f-c6ca-47fa-9ae6-e99fc5ec9712",
+      "globalSequence": 68872,
+      "rootRunId": "c4888f4f-eabd-469f-80a6-3fccf6018a12",
+      "runId": "fef178ba-8721-4550-aab5-f971523957cd",
+      "eventType": "StepClaimed",
+      "occurredAtUtc": "2026-07-09T05:20:18.202599-04:00",
+      "sensitivity": "Normal",
+      "summary": "StepClaimed",
+      "restrictedDiagnosticReference": null,
+      "diagnostics": []
+    },
+    {
+      "eventId": "107f81ff-319e-4d32-bb2d-7a0d83b568d6",
+      "globalSequence": 68873,
+      "rootRunId": "c4888f4f-eabd-469f-80a6-3fccf6018a12",
+      "runId": "fef178ba-8721-4550-aab5-f971523957cd",
+      "eventType": "DispatchClaimCreated",
+      "occurredAtUtc": "2026-07-09T05:20:18.202599-04:00",
+      "sensitivity": "Normal",
+      "summary": "DispatchClaimCreated",
+      "restrictedDiagnosticReference": null,
+      "diagnostics": []
+    },
+    {
+      "eventId": "3ac3ccf1-5988-441f-aefe-a6c1926ce29b",
+      "globalSequence": 68874,
+      "rootRunId": "c4888f4f-eabd-469f-80a6-3fccf6018a12",
+      "runId": "fef178ba-8721-4550-aab5-f971523957cd",
+      "eventType": "StepRunning",
+      "occurredAtUtc": "2026-07-09T05:20:18.343837-04:00",
+      "sensitivity": "Normal",
+      "summary": "StepRunning",
+      "restrictedDiagnosticReference": null,
+      "diagnostics": []
+    },
+    {
+      "eventId": "8551a483-e13d-451b-a213-7bfe55b435f8",
+      "globalSequence": 68875,
+      "rootRunId": "c4888f4f-eabd-469f-80a6-3fccf6018a12",
+      "runId": "fef178ba-8721-4550-aab5-f971523957cd",
+      "eventType": "DispatchClaimCompleted",
+      "occurredAtUtc": "2026-07-09T05:20:47.783495-04:00",
+      "sensitivity": "Normal",
+      "summary": "DispatchClaimCompleted",
+      "restrictedDiagnosticReference": null,
+      "diagnostics": []
+    },
+    {
+      "eventId": "388df44b-fb04-4dcc-8e69-f8cd4fabc1cf",
+      "globalSequence": 68876,
+      "rootRunId": "c4888f4f-eabd-469f-80a6-3fccf6018a12",
+      "runId": "fef178ba-8721-4550-aab5-f971523957cd",
+      "eventType": "StepCompleted",
+      "occurredAtUtc": "2026-07-09T05:20:47.783495-04:00",
+      "sensitivity": "Normal",
+      "summary": "StepCompleted",
+      "restrictedDiagnosticReference": null,
+      "diagnostics": []
+    },
+    {
+      "eventId": "31a0fc8e-4062-4fc5-a832-3541eb2bb8df",
+      "globalSequence": 68877,
+      "rootRunId": "c4888f4f-eabd-469f-80a6-3fccf6018a12",
+      "runId": "fef178ba-8721-4550-aab5-f971523957cd",
+      "eventType": "StepSkipped",
+      "occurredAtUtc": "2026-07-09T05:20:48.00827-04:00",
+      "sensitivity": "Normal",
+      "summary": "StepSkipped",
+      "restrictedDiagnosticReference": null,
+      "diagnostics": []
+    },
+    {
+      "eventId": "30f49b21-cc40-4da2-9d23-2bdfd8c869da",
+      "globalSequence": 68878,
+      "rootRunId": "c4888f4f-eabd-469f-80a6-3fccf6018a12",
+      "runId": "fef178ba-8721-4550-aab5-f971523957cd",
+      "eventType": "StepSkipped",
+      "occurredAtUtc": "2026-07-09T05:20:48.00827-04:00",
+      "sensitivity": "Normal",
+      "summary": "StepSkipped",
+      "restrictedDiagnosticReference": null,
+      "diagnostics": []
+    },
+    {
+      "eventId": "53766ffa-6736-417d-af4b-42665a747d90",
+      "globalSequence": 68879,
+      "rootRunId": "c4888f4f-eabd-469f-80a6-3fccf6018a12",
+      "runId": "fef178ba-8721-4550-aab5-f971523957cd",
+      "eventType": "StepSkipped",
+      "occurredAtUtc": "2026-07-09T05:20:48.00827-04:00",
+      "sensitivity": "Normal",
+      "summary": "StepSkipped",
+      "restrictedDiagnosticReference": null,
+      "diagnostics": []
+    },
+    {
+      "eventId": "8a3c3f7b-0819-424a-925c-92b0692225e2",
+      "globalSequence": 68880,
+      "rootRunId": "c4888f4f-eabd-469f-80a6-3fccf6018a12",
+      "runId": "fef178ba-8721-4550-aab5-f971523957cd",
+      "eventType": "StepSkipped",
+      "occurredAtUtc": "2026-07-09T05:20:48.00827-04:00",
+      "sensitivity": "Normal",
+      "summary": "StepSkipped",
+      "restrictedDiagnosticReference": null,
+      "diagnostics": []
+    },
+    {
+      "eventId": "fda228fa-5f9d-4fce-8aa8-938b2715eee2",
+      "globalSequence": 68881,
+      "rootRunId": "c4888f4f-eabd-469f-80a6-3fccf6018a12",
+      "runId": "fef178ba-8721-4550-aab5-f971523957cd",
+      "eventType": "StepReady",
+      "occurredAtUtc": "2026-07-09T05:20:48.10954-04:00",
+      "sensitivity": "Normal",
+      "summary": "StepReady",
+      "restrictedDiagnosticReference": null,
+      "diagnostics": []
+    },
+    {
+      "eventId": "183bd89f-0915-43bd-b593-3a5d4f452631",
+      "globalSequence": 68882,
+      "rootRunId": "c4888f4f-eabd-469f-80a6-3fccf6018a12",
+      "runId": "fef178ba-8721-4550-aab5-f971523957cd",
+      "eventType": "StepClaimed",
+      "occurredAtUtc": "2026-07-09T05:20:48.276525-04:00",
+      "sensitivity": "Normal",
+      "summary": "StepClaimed",
+      "restrictedDiagnosticReference": null,
+      "diagnostics": []
+    },
+    {
+      "eventId": "17a3a753-1dca-4252-9adc-a2ab0c5703d5",
+      "globalSequence": 68883,
+      "rootRunId": "c4888f4f-eabd-469f-80a6-3fccf6018a12",
+      "runId": "fef178ba-8721-4550-aab5-f971523957cd",
+      "eventType": "DispatchClaimCreated",
+      "occurredAtUtc": "2026-07-09T05:20:48.276525-04:00",
+      "sensitivity": "Normal",
+      "summary": "DispatchClaimCreated",
+      "restrictedDiagnosticReference": null,
+      "diagnostics": []
+    },
+    {
+      "eventId": "481fdd76-0fc5-4069-9831-662a20f60644",
+      "globalSequence": 68884,
+      "rootRunId": "c4888f4f-eabd-469f-80a6-3fccf6018a12",
+      "runId": "fef178ba-8721-4550-aab5-f971523957cd",
+      "eventType": "StepRunning",
+      "occurredAtUtc": "2026-07-09T05:20:48.426053-04:00",
+      "sensitivity": "Normal",
+      "summary": "StepRunning",
+      "restrictedDiagnosticReference": null,
+      "diagnostics": []
+    },
+    {
+      "eventId": "c1af27ce-56e6-4e71-88c2-0771bb90c420",
+      "globalSequence": 68885,
+      "rootRunId": "c4888f4f-eabd-469f-80a6-3fccf6018a12",
+      "runId": "fef178ba-8721-4550-aab5-f971523957cd",
+      "eventType": "DispatchClaimCompleted",
+      "occurredAtUtc": "2026-07-09T05:21:06.088177-04:00",
+      "sensitivity": "Normal",
+      "summary": "DispatchClaimCompleted",
+      "restrictedDiagnosticReference": null,
+      "diagnostics": []
+    },
+    {
+      "eventId": "cf58c2d8-425f-45a6-9936-4825a707e70d",
+      "globalSequence": 68886,
+      "rootRunId": "c4888f4f-eabd-469f-80a6-3fccf6018a12",
+      "runId": "fef178ba-8721-4550-aab5-f971523957cd",
+      "eventType": "StepCompleted",
+      "occurredAtUtc": "2026-07-09T05:21:06.088177-04:00",
+      "sensitivity": "Normal",
+      "summary": "StepCompleted",
+      "restrictedDiagnosticReference": null,
+      "diagnostics": []
+    },
+    {
+      "eventId": "db8aa929-8a0a-4b66-949e-ec0a3386e767",
+      "globalSequence": 68887,
+      "rootRunId": "c4888f4f-eabd-469f-80a6-3fccf6018a12",
+      "runId": "fef178ba-8721-4550-aab5-f971523957cd",
+      "eventType": "ProcessRunCompleted",
+      "occurredAtUtc": "2026-07-09T05:21:06.088177-04:00",
+      "sensitivity": "Normal",
+      "summary": "ProcessRunCompleted",
+      "restrictedDiagnosticReference": null,
+      "diagnostics": []
+    }
+  ],
+  "diagnostics": [
+    {
+      "runId": "fef178ba-8721-4550-aab5-f971523957cd",
+      "stepInstanceId": "2690841f-ea38-46fd-bad1-c5ac1c2a6191",
+      "stepKey": "targeted-validation",
+      "strategyId": "strategy.adapter.workflow.execute",
+      "resultHash": "sha256:b9f2474f5a9a96ad359085549bbaa296f8e75d8b15f109f99ea874953e31f0eb",
+      "code": "process.adapter.product_required_tool_receipt_missing",
+      "category": "Adapter",
+      "safeSummary": "Step 'targeted-validation' claimed completion but required current-run product tool receipt(s) are missing: workspace_dotnet_restore; workspace_dotnet_build; workspace_dotnet_test.",
+      "sensitivity": "Normal",
+      "retrySafety": "SafeToRetry",
+      "idempotency": "Idempotent",
+      "restrictedDiagnosticReference": null
+    },
+    {
+      "runId": "fef178ba-8721-4550-aab5-f971523957cd",
+      "stepInstanceId": "2690841f-ea38-46fd-bad1-c5ac1c2a6191",
+      "stepKey": "targeted-validation",
+      "strategyId": "strategy.adapter.workflow.execute",
+      "resultHash": "sha256:6b5e021854470f459c91e7f4dcf964b8aa26d28051edb06e0feddeb77e3d556f",
+      "code": "process.adapter.product_required_tool_receipt_missing",
+      "category": "Adapter",
+      "safeSummary": "Step 'targeted-validation' claimed completion but required current-run product tool receipt(s) are missing: workspace_dotnet_restore; workspace_dotnet_build; workspace_dotnet_test.",
+      "sensitivity": "Normal",
+      "retrySafety": "SafeToRetry",
+      "idempotency": "Idempotent",
+      "restrictedDiagnosticReference": null
+    }
+  ],
+  "resultLineage": [
+    {
+      "runId": "fef178ba-8721-4550-aab5-f971523957cd",
+      "stepInstanceId": "df621494-9cae-40ee-a8d4-ea6ba85eadc0",
+      "stepKey": "feature-slice-intake",
+      "strategyId": "strategy.adapter.workflow.execute",
+      "idempotencyKey": "c6990ae9-8209-401c-a8a3-674033ed8e94",
+      "outcome": "Succeeded",
+      "appliedStepStatus": "Completed",
+      "resultHash": "dbb31ee818a516aa1f6ad2555b65b8d38f0e22f2fb317decb9bd53b1f4c31c2a",
+      "diagnostics": [],
+      "producedArtifacts": [
+        {
+          "slotId": "0891620f-fa9d-c14f-5053-e39d714bcc44",
+          "artifactId": "896ad719-391b-4120-ad01-d3ca5e80821d",
+          "contentHash": "sha256:3675c66ee381a4d22dffce17bfc685b9ef05c15e79123f2c761c75cd555f0586"
+        }
+      ],
+      "recoveryDecision": null
+    },
+    {
+      "runId": "fef178ba-8721-4550-aab5-f971523957cd",
+      "stepInstanceId": "a1b8b5b6-e2b2-4375-8531-14f1c26960ad",
+      "stepKey": "implementation-approach",
+      "strategyId": "strategy.adapter.workflow.execute",
+      "idempotencyKey": "c927eb1e-f10a-4d8a-bd33-fab7cc74c878",
+      "outcome": "Succeeded",
+      "appliedStepStatus": "Completed",
+      "resultHash": "c8cfb0c3fdfa9a1133c23e899ca85763e4f4b01ecc5a78eea367621da4918d8e",
+      "diagnostics": [],
+      "producedArtifacts": [
+        {
+          "slotId": "6992d300-2b0c-7be5-b098-a65fa210f707",
+          "artifactId": "0df63acd-76b9-419e-9f8d-d319d04442b1",
+          "contentHash": "sha256:927f4732f2483f5a68794b60eea869ce38c5ea784166441731a8a93f444b07e3"
+        },
+        {
+          "slotId": "97df6bc5-0256-f8f5-d3a3-7749a9cefdf1",
+          "artifactId": "3bd62642-8acf-47e5-9901-a83ff442c04c",
+          "contentHash": "sha256:927f4732f2483f5a68794b60eea869ce38c5ea784166441731a8a93f444b07e3"
+        }
+      ],
+      "recoveryDecision": null
+    },
+    {
+      "runId": "fef178ba-8721-4550-aab5-f971523957cd",
+      "stepInstanceId": "6bb658a9-10af-4938-bec6-579c32bc69d0",
+      "stepKey": "test-contract",
+      "strategyId": "strategy.adapter.workflow.execute",
+      "idempotencyKey": "e9d88740-6e7f-4a24-8294-7ee570444dba",
+      "outcome": "Succeeded",
+      "appliedStepStatus": "Completed",
+      "resultHash": "55a47d3533fcc1359b41d29f4cb61a93106eb49ed271e32f36ca8c9356724edf",
+      "diagnostics": [],
+      "producedArtifacts": [
+        {
+          "slotId": "38b4026d-0f80-fbcd-9c9e-bead1eec6e79",
+          "artifactId": "0a17fb16-b40a-451b-97e2-88c30080ac86",
+          "contentHash": "sha256:825541d6b2e13601d883a5d5ab0c5477e667d94d9c02aeaf21f13c1bcb483868"
+        }
+      ],
+      "recoveryDecision": null
+    },
+    {
+      "runId": "fef178ba-8721-4550-aab5-f971523957cd",
+      "stepInstanceId": "e1ed3550-cb11-4684-b27d-e6e42bc61b25",
+      "stepKey": "code-change",
+      "strategyId": "strategy.adapter.workflow.execute",
+      "idempotencyKey": "80f77f75-ad63-40d2-bc42-1f7eaedf2c80",
+      "outcome": "Succeeded",
+      "appliedStepStatus": "Completed",
+      "resultHash": "9b2134b40261d7aa688b4b08efdd7f89b40af6234c7070c21128f6926d27887f",
+      "diagnostics": [],
+      "producedArtifacts": [
+        {
+          "slotId": "38f6a526-9603-c062-7146-9ed2ed0505e8",
+          "artifactId": "1312a386-bc49-430a-afb5-dd45a6b9a5e3",
+          "contentHash": "sha256:29ee17ca3d5c09721a8fe20bc1876bce52dc780ee6575ccfdd845ed88cf4accd"
+        }
+      ],
+      "recoveryDecision": null
+    },
+    {
+      "runId": "fef178ba-8721-4550-aab5-f971523957cd",
+      "stepInstanceId": "2690841f-ea38-46fd-bad1-c5ac1c2a6191",
+      "stepKey": "targeted-validation",
+      "strategyId": "strategy.adapter.workflow.execute",
+      "idempotencyKey": "53f7c714-6f35-45d1-a21d-295ccf44837b",
+      "outcome": "NeedsManager",
+      "appliedStepStatus": "Ready",
+      "resultHash": "sha256:b9f2474f5a9a96ad359085549bbaa296f8e75d8b15f109f99ea874953e31f0eb",
+      "diagnostics": [
+        {
+          "runId": "fef178ba-8721-4550-aab5-f971523957cd",
+          "stepInstanceId": "2690841f-ea38-46fd-bad1-c5ac1c2a6191",
+          "stepKey": "targeted-validation",
+          "strategyId": "strategy.adapter.workflow.execute",
+          "resultHash": "sha256:b9f2474f5a9a96ad359085549bbaa296f8e75d8b15f109f99ea874953e31f0eb",
+          "code": "process.adapter.product_required_tool_receipt_missing",
+          "category": "Adapter",
+          "safeSummary": "Step 'targeted-validation' claimed completion but required current-run product tool receipt(s) are missing: workspace_dotnet_restore; workspace_dotnet_build; workspace_dotnet_test.",
+          "sensitivity": "Normal",
+          "retrySafety": "SafeToRetry",
+          "idempotency": "Idempotent",
+          "restrictedDiagnosticReference": null
+        }
+      ],
+      "producedArtifacts": [],
+      "recoveryDecision": {
+        "failureCategory": "ProductCompletionGate",
+        "decisionKind": "SafeRetry",
+        "sourceDiagnosticCode": "process.adapter.product_required_tool_receipt_missing",
+        "policy": "process.current-step-safe-retry",
+        "safeReason": "Safe/idempotent completion-gate diagnostics qualify for bounded current-step retry. Diagnostic fingerprint 'sha256:0a1804b9993b862264cfe428118ac4830dd70507c5dabe6938f921c07de671d8', automatic retry 1/3, same-fingerprint retry 1/1."
+      }
+    },
+    {
+      "runId": "fef178ba-8721-4550-aab5-f971523957cd",
+      "stepInstanceId": "2690841f-ea38-46fd-bad1-c5ac1c2a6191",
+      "stepKey": "targeted-validation",
+      "strategyId": "strategy.adapter.workflow.execute",
+      "idempotencyKey": "2621f319-6893-41c5-9abc-dbf3f4530e18",
+      "outcome": "Succeeded",
+      "appliedStepStatus": "Completed",
+      "resultHash": "14ee42ab33a1e7b175ed39140479fe7ddcfe2fbc2a5f2dcc8aa0d021ea9d0935",
+      "diagnostics": [],
+      "producedArtifacts": [
+        {
+          "slotId": "ac25d510-9a9c-89df-5328-607d051c2da8",
+          "artifactId": "c9157db4-2f6b-43e9-99bf-cdc4ab712b2e",
+          "contentHash": "sha256:16bc38ea4e1c569c96bc727b11f7ab4a90c79003c1cc45a3c3b1052119a4dabf"
+        }
+      ],
+      "recoveryDecision": null
+    },
+    {
+      "runId": "fef178ba-8721-4550-aab5-f971523957cd",
+      "stepInstanceId": "2690841f-ea38-46fd-bad1-c5ac1c2a6191",
+      "stepKey": "targeted-validation",
+      "strategyId": "strategy.adapter.workflow.execute",
+      "idempotencyKey": "f5ee7033-e3b1-4e9a-a6df-b3073b9b058e",
+      "outcome": "NeedsManager",
+      "appliedStepStatus": "Ready",
+      "resultHash": "sha256:6b5e021854470f459c91e7f4dcf964b8aa26d28051edb06e0feddeb77e3d556f",
+      "diagnostics": [
+        {
+          "runId": "fef178ba-8721-4550-aab5-f971523957cd",
+          "stepInstanceId": "2690841f-ea38-46fd-bad1-c5ac1c2a6191",
+          "stepKey": "targeted-validation",
+          "strategyId": "strategy.adapter.workflow.execute",
+          "resultHash": "sha256:6b5e021854470f459c91e7f4dcf964b8aa26d28051edb06e0feddeb77e3d556f",
+          "code": "process.adapter.product_required_tool_receipt_missing",
+          "category": "Adapter",
+          "safeSummary": "Step 'targeted-validation' claimed completion but required current-run product tool receipt(s) are missing: workspace_dotnet_restore; workspace_dotnet_build; workspace_dotnet_test.",
+          "sensitivity": "Normal",
+          "retrySafety": "SafeToRetry",
+          "idempotency": "Idempotent",
+          "restrictedDiagnosticReference": null
+        }
+      ],
+      "producedArtifacts": [],
+      "recoveryDecision": {
+        "failureCategory": "ProductCompletionGate",
+        "decisionKind": "SafeRetry",
+        "sourceDiagnosticCode": "process.adapter.product_required_tool_receipt_missing",
+        "policy": "process.current-step-safe-retry",
+        "safeReason": "Safe/idempotent completion-gate diagnostics qualify for bounded current-step retry. Diagnostic fingerprint 'sha256:f096d4dad1643ae0159a3d8188b3d607fe0dbb905e0d2400a5af85e7096bd8b8', automatic retry 2/3, same-fingerprint retry 1/1."
+      }
+    },
+    {
+      "runId": "fef178ba-8721-4550-aab5-f971523957cd",
+      "stepInstanceId": "b4d67418-66f2-4e71-bdac-a3692a7ce0a6",
+      "stepKey": "feature-handoff",
+      "strategyId": "strategy.adapter.workflow.execute",
+      "idempotencyKey": "afcaa965-17d7-4002-bb70-f135276bc1c2",
+      "outcome": "Succeeded",
+      "appliedStepStatus": "Completed",
+      "resultHash": "ff9cc260899acf0821782eed68550cd84ab151b650a33fe90c53f8422b3cfe17",
+      "diagnostics": [],
+      "producedArtifacts": [
+        {
+          "slotId": "89639b1e-33a1-876e-68c4-e81a61bc0caf",
+          "artifactId": "475666ea-9a57-449a-babf-327458a83498",
+          "contentHash": "sha256:16092d9819f7344f2ea9fc64290b0ba9299ba6edd0215f648d29da4501298029"
+        }
+      ],
+      "recoveryDecision": null
+    }
+  ]
+}

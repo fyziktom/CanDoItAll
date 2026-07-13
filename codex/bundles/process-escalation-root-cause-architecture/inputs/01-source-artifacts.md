@@ -1,0 +1,23 @@
+# Source Artifacts
+
+- Run `b5b2e2df-f952-4fb9-913d-3cb22f9f231e`, latest retry after the reverted bad patch, inspected through `/api/processes` and PostgreSQL on 2026-07-07.
+- Run `6f0d229f`, earlier Multi-team software delivery and release governance blocker context from the user report.
+- Child run `8ee277bd-ab2b-4d82-93df-4301737f95ae`, .NET solution setup subprocess, blocked at `create-dotnet-project`.
+- Child run `cddba584-2ed7-4a5d-91a4-82b6059ff7c1`, .NET implementation slice subprocess, blocked at `prepare-solution-skeleton`.
+- CodeAnalytics snapshot `snap-20260707190811-633e2e0e`, scoped to process runtime/application/templates/drivers, MAF runtime/core/models, and process module adapter projects.
+- PostgreSQL tables inspected: `process_runtime_states`, `process_runtime_steps`, `process_runtime_step_assignments`, `process_strategy_result_receipts`, `process_projection_history`, `process_artifact_ledger_events`, `AgentFramework_WorkflowRuns`, `AgentFramework_WorkflowEvents`, and `AgentFramework_WorkflowArtifacts`.
+- `repo://src/Processes/CanDoItAll.Processes.Application/ProcessRuntimeDispatchApplicationService.cs`
+- `repo://src/Processes/CanDoItAll.Processes.Application/ProcessRuntimeProjectionQueryService.cs`
+- `repo://src/Processes/CanDoItAll.Processes.Contracts/ProcessCapabilityScopeModels.cs`
+- `repo://src/Processes/CanDoItAll.Processes.Runtime/ProcessRuntimeEngine.Results.cs`
+- `repo://src/Processes/CanDoItAll.Processes.Runtime/ProcessRuntimePorts.cs`
+- `repo://src/Modules/CanDoItAll.Modules.Processes/Services/RuntimeIntegration/AgentFrameworkProcessExecutionAdapter.ProductCompletionState.cs`
+- `repo://src/Modules/CanDoItAll.Modules.Processes/Services/RuntimeIntegration/ProcessRuntimeEvidenceSourceProvider.cs`
+- `repo://src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/Capabilities/RuntimeCapabilityComposer.Access.Policies.cs`
+- `repo://src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/Workspace/WorkspaceImageAnalysisPromptNormalizer.cs`
+- `repo://Templates/Processes/processes/software-delivery/definition.json`
+- `repo://Templates/Processes/processes/dotnet-solution-setup/definition.json`
+- `repo://Templates/Processes/processes/dotnet-development-slice/definition.json`
+- `repo://Templates/Processes/processes/dotnet-ui-screenshot-writeback/definition.json`
+- `repo://Templates/Agents/teams/dotnet-delivery`
+- `repo://Templates/Agents/teams/visual-automation-templates`

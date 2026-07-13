@@ -1,0 +1,278 @@
+{
+  "run": {
+    "id": "03050a56-2451-4ee4-93a9-99af0d0784f4",
+    "agentId": "a22e9f8f-98de-4884-b4e7-995281f46f1b",
+    "chatSessionId": "94956220-e8b2-4dbf-a911-3149359408e0",
+    "title": "Reply exactly UI-SEND-LOCAL-OK",
+    "sourceKind": "chat-session",
+    "sourceId": "94956220e8b24dbfa9113149359408e0",
+    "correlationId": "",
+    "causationId": "",
+    "requestedBy": "sandbox-chat",
+    "requestedByKind": "interactive",
+    "metadataJson": "{}",
+    "inputSummary": "Reply exactly UI-SEND-LOCAL-OK",
+    "resultSummary": "UI-SEND-LOCAL-OK",
+    "providerName": "Local Ollama",
+    "model": "gemma4-12b-256k",
+    "state": 5,
+    "outcome": 0,
+    "createdAtUtc": "2026-07-04T19:26:34.4135357-04:00",
+    "updatedAtUtc": "2026-07-04T19:26:51.2837425-04:00",
+    "startedAtUtc": "2026-07-04T19:26:34.4135357-04:00",
+    "completedAtUtc": "2026-07-04T19:26:51.2837425-04:00",
+    "runtimeSessionKey": "bb9e52798157447e897d4602be1df13f",
+    "serializedSessionStateJson": "{\"stateBag\":{\"InMemoryChatHistoryProvider\":{\"messages\":[{\"role\":\"user\",\"contents\":[{\"$type\":\"text\",\"text\":\"Reply exactly UI-SEND-LOCAL-OK\"}]},{\"authorName\":\"SB09 UI Local Ollama MCP 20260704-191547\",\"createdAt\":\"2026-07-04T23:26:47.4809735\\u002B00:00\",\"role\":\"assistant\",\"contents\":[{\"$type\":\"reasoning\",\"text\":\"The user wants me to reply with a specific string \\u0022UI-SEND-LOCAL-OK\\u0022. I should check if there are any instructions or tools that require this, but since it\\u0027s a direct instruction for the final answer, I will provide it.\\n\\nWait, looking at the system prompt: \\u0022You are a UI smoke-test agent. When a prompt asks you to use browser tools, call the requested browser_* tools before answering. Keep the final answer concise and include any exact marker requested by the prompt.\\u0022\\n\\nThe user\\u0027s prompt is just \\u0022Reply exactly UI-SEND-LOCAL-OK\\u0022. There are no browser tools involved in this specific request. I should just provide the string.\"},{\"$type\":\"text\",\"text\":\"UI-SEND-LOCAL-OK\"}]}]},\"PipelineCompactionStrategy\":{\"messagegroups\":[{\"kind\":\"User\",\"messages\":[{\"role\":\"user\",\"contents\":[{\"$type\":\"text\",\"text\":\"Reply exactly UI-SEND-LOCAL-OK\"}]}],\"messageCount\":1,\"byteCount\":30,\"tokenCount\":7,\"turnIndex\":1,\"isExcluded\":false}]}}}",
+    "pendingApprovals": [],
+    "autoApprovePendingToolCalls": false,
+    "processRunId": "",
+    "processStepId": "",
+    "schedulerRunId": "",
+    "messageId": "",
+    "revision": 2,
+    "structuredOutputContractKey": "",
+    "structuredOutputTypeName": "",
+    "structuredOutputSchemaName": "",
+    "structuredOutputSchemaDescription": ""
+  },
+  "chatSession": {
+    "id": "94956220-e8b2-4dbf-a911-3149359408e0",
+    "agentId": "a22e9f8f-98de-4884-b4e7-995281f46f1b",
+    "title": "Reply exactly UI-SEND-LOCAL-OK",
+    "createdAtUtc": "2026-07-04T19:26:34.4135357-04:00",
+    "updatedAtUtc": "2026-07-04T19:26:51.2837425-04:00",
+    "messages": [
+      {
+        "id": "5abfc7ad-7087-4be3-b027-e84de25d7c5c",
+        "role": 1,
+        "content": "Reply exactly UI-SEND-LOCAL-OK",
+        "createdAtUtc": "2026-07-04T19:26:34.4135357-04:00",
+        "tokenEstimate": 7
+      },
+      {
+        "id": "9597f291-7e75-4348-a7fb-f5bb3388088a",
+        "role": 2,
+        "content": "UI-SEND-LOCAL-OK",
+        "createdAtUtc": "2026-07-04T19:26:51.2835713-04:00",
+        "tokenEstimate": 153
+      }
+    ],
+    "latestExecutionRunId": "03050a56-2451-4ee4-93a9-99af0d0784f4"
+  },
+  "executionLog": [
+    {
+      "id": "6fa74c22-e1ef-4392-9c9a-fadf9f7764d5",
+      "agentId": "a22e9f8f-98de-4884-b4e7-995281f46f1b",
+      "chatSessionId": "94956220-e8b2-4dbf-a911-3149359408e0",
+      "createdAtUtc": "2026-07-04T19:26:51.394544-04:00",
+      "state": 5,
+      "phase": "Completed",
+      "message": "Execution run response persisted.",
+      "executionRunId": "03050a56-2451-4ee4-93a9-99af0d0784f4"
+    },
+    {
+      "id": "a5f62b53-83dc-4864-bfd9-2c76bffbe90d",
+      "agentId": "a22e9f8f-98de-4884-b4e7-995281f46f1b",
+      "chatSessionId": "94956220-e8b2-4dbf-a911-3149359408e0",
+      "createdAtUtc": "2026-07-04T19:26:51.1171862-04:00",
+      "state": 4,
+      "phase": "Session",
+      "message": "Serializing the Microsoft Agent Framework session.",
+      "executionRunId": "03050a56-2451-4ee4-93a9-99af0d0784f4"
+    },
+    {
+      "id": "c18f924c-0a5f-45e6-aa32-062a2098c657",
+      "agentId": "a22e9f8f-98de-4884-b4e7-995281f46f1b",
+      "chatSessionId": "94956220-e8b2-4dbf-a911-3149359408e0",
+      "createdAtUtc": "2026-07-04T19:26:50.8966752-04:00",
+      "state": 2,
+      "phase": "Streaming",
+      "message": "The agent is producing streamed output.",
+      "executionRunId": "03050a56-2451-4ee4-93a9-99af0d0784f4"
+    },
+    {
+      "id": "ddbac9b6-45b6-45ec-848d-06e457957571",
+      "agentId": "a22e9f8f-98de-4884-b4e7-995281f46f1b",
+      "chatSessionId": "94956220-e8b2-4dbf-a911-3149359408e0",
+      "createdAtUtc": "2026-07-04T19:26:36.0656248-04:00",
+      "state": 2,
+      "phase": "Run",
+      "message": "Executing the run through Microsoft Agent Framework streaming.",
+      "executionRunId": "03050a56-2451-4ee4-93a9-99af0d0784f4"
+    },
+    {
+      "id": "32694f9a-2a33-4c39-a798-78f3d7a3990e",
+      "agentId": "a22e9f8f-98de-4884-b4e7-995281f46f1b",
+      "chatSessionId": "94956220-e8b2-4dbf-a911-3149359408e0",
+      "createdAtUtc": "2026-07-04T19:26:35.9545352-04:00",
+      "state": 1,
+      "phase": "Session",
+      "message": "Creating a new Microsoft Agent Framework session and hydrating it from the sandbox transcript.",
+      "executionRunId": "03050a56-2451-4ee4-93a9-99af0d0784f4"
+    },
+    {
+      "id": "7889a479-ffb7-4bd7-8217-71bc39e783db",
+      "agentId": "a22e9f8f-98de-4884-b4e7-995281f46f1b",
+      "chatSessionId": "94956220-e8b2-4dbf-a911-3149359408e0",
+      "createdAtUtc": "2026-07-04T19:26:35.8445651-04:00",
+      "state": 1,
+      "phase": "Approval policy",
+      "message": "Omitted mutation tool(s) that require MAF approval because provider 'Local Ollama' using transport 'ChatCompletions' has no effective approval path: project_structure_approval_request, project_structure_asset_create, project_structure_asset_create_revision, project_structure_dependency_link, project_structure_dependency_unlink, project_structure_import, project_structure_lease_release, project_structure_lease_renew, project_structure_link_create, project_structure_link_unlink, project_structure_nodes_delete, project_structure_nodes_marker_update, project_structure_nodes_priority_update, project_structure_nodes_progress_update, project_structure_nodes_status_update, project_structure_nodes_to_new_subproject, project_structure_node_command_execute, project_structure_node_create, project_structure_node_delete, project_structure_node_descendants_to_project_move, project_structure_node_marker_update, project_structure_node_metadata_update, project_structure_node_move, project_structure_node_priority_update, project_structure_node_process_definition_link, project_structure_node_process_start, project_structure_node_progress_update, project_structure_node_recompose, project_structure_node_reparent, project_structure_node_status_update, project_structure_node_type_update, project_structure_node_update, project_structure_node_workflow_definition_create, project_structure_node_workflow_start, project_structure_process_subprocess_launch, project_structure_project_create, project_structure_project_lease_acquire, project_structure_project_update, project_structure_repo_branch_lease_acquire, project_structure_subproject_link, workspace_append_file, workspace_convert_document, workspace_create_directory, workspace_pwsh_run_script, workspace_python_run_file, workspace_write_file.",
+      "executionRunId": "03050a56-2451-4ee4-93a9-99af0d0784f4"
+    },
+    {
+      "id": "7ad77147-fa3b-410a-bfd4-74650f3bd8ff",
+      "agentId": "a22e9f8f-98de-4884-b4e7-995281f46f1b",
+      "chatSessionId": "94956220-e8b2-4dbf-a911-3149359408e0",
+      "createdAtUtc": "2026-07-04T19:26:35.7477708-04:00",
+      "state": 1,
+      "phase": "Compaction",
+      "message": "Attached Microsoft Agent Framework compaction for InteractiveChat context with defaults of 32 turns, 64000 tokens, and 40 tool messages unless overridden by agent configuration.",
+      "executionRunId": "03050a56-2451-4ee4-93a9-99af0d0784f4"
+    },
+    {
+      "id": "1f0def0a-b208-4762-94aa-5fab5aee941e",
+      "agentId": "a22e9f8f-98de-4884-b4e7-995281f46f1b",
+      "chatSessionId": "94956220-e8b2-4dbf-a911-3149359408e0",
+      "createdAtUtc": "2026-07-04T19:26:35.6412824-04:00",
+      "state": 1,
+      "phase": "MCP",
+      "message": "Attached 29 MCP tool(s) from 'Playwright Local MCP'.",
+      "executionRunId": "03050a56-2451-4ee4-93a9-99af0d0784f4"
+    },
+    {
+      "id": "5fa7337b-6697-4ca3-9599-d102ae95f60f",
+      "agentId": "a22e9f8f-98de-4884-b4e7-995281f46f1b",
+      "chatSessionId": "94956220-e8b2-4dbf-a911-3149359408e0",
+      "createdAtUtc": "2026-07-04T19:26:34.8846818-04:00",
+      "state": 1,
+      "phase": "Runtime tool providers",
+      "message": "Attached 53 tool(s) from 2 registered runtime tool provider(s). Providers: project-structure.runtime-tools (Project structure runtime tools, 53 tool(s)); image-generation.runtime-tools (Image generation runtime tools, 0 tool(s)).",
+      "executionRunId": "03050a56-2451-4ee4-93a9-99af0d0784f4"
+    },
+    {
+      "id": "36f7f8e2-08a4-468a-aa9f-ec6163d697d6",
+      "agentId": "a22e9f8f-98de-4884-b4e7-995281f46f1b",
+      "chatSessionId": "94956220-e8b2-4dbf-a911-3149359408e0",
+      "createdAtUtc": "2026-07-04T19:26:34.7985669-04:00",
+      "state": 1,
+      "phase": "Workspace tools",
+      "message": "Attached configured workspace file and storage tools from the current agent settings.",
+      "executionRunId": "03050a56-2451-4ee4-93a9-99af0d0784f4"
+    },
+    {
+      "id": "3f687f42-0812-4361-bf0a-1ed2ff257e34",
+      "agentId": "a22e9f8f-98de-4884-b4e7-995281f46f1b",
+      "chatSessionId": "94956220-e8b2-4dbf-a911-3149359408e0",
+      "createdAtUtc": "2026-07-04T19:26:34.7366217-04:00",
+      "state": 1,
+      "phase": "Skills",
+      "message": "Loaded 0 file skill root(s), 6 inline skill(s), and 0 DI-provided skill(s) through AgentSkillsProvider.",
+      "executionRunId": "03050a56-2451-4ee4-93a9-99af0d0784f4"
+    },
+    {
+      "id": "664ca6e4-f8e5-4e95-b747-6d3b31ceba70",
+      "agentId": "a22e9f8f-98de-4884-b4e7-995281f46f1b",
+      "chatSessionId": "94956220-e8b2-4dbf-a911-3149359408e0",
+      "createdAtUtc": "2026-07-04T19:26:34.6624567-04:00",
+      "state": 1,
+      "phase": "Context contributors",
+      "message": "Attached 1 registered agent context contributor(s) in deterministic order.",
+      "executionRunId": "03050a56-2451-4ee4-93a9-99af0d0784f4"
+    },
+    {
+      "id": "258d2da4-3f5b-473b-9d59-3c473e10248e",
+      "agentId": "a22e9f8f-98de-4884-b4e7-995281f46f1b",
+      "chatSessionId": "94956220-e8b2-4dbf-a911-3149359408e0",
+      "createdAtUtc": "2026-07-04T19:26:34.5818648-04:00",
+      "state": 1,
+      "phase": "Framework",
+      "message": "Composing the Microsoft Agent Framework runtime for the selected provider and capabilities.",
+      "executionRunId": "03050a56-2451-4ee4-93a9-99af0d0784f4"
+    },
+    {
+      "id": "873f4460-65f7-44ab-a34d-227952c62670",
+      "agentId": "a22e9f8f-98de-4884-b4e7-995281f46f1b",
+      "chatSessionId": "94956220-e8b2-4dbf-a911-3149359408e0",
+      "createdAtUtc": "2026-07-04T19:26:34.5047792-04:00",
+      "state": 1,
+      "phase": "Planning",
+      "message": "Preparing provider Local Ollama.",
+      "executionRunId": "03050a56-2451-4ee4-93a9-99af0d0784f4"
+    }
+  ],
+  "metrics": [
+    {
+      "id": "6abb80ad-49bd-44f9-ab83-8e4d52c157bd",
+      "agentId": "a22e9f8f-98de-4884-b4e7-995281f46f1b",
+      "chatSessionId": "94956220-e8b2-4dbf-a911-3149359408e0",
+      "createdAtUtc": "2026-07-04T19:26:51.2835733-04:00",
+      "outcome": 0,
+      "providerName": "Local Ollama",
+      "model": "gemma4-12b-256k",
+      "durationMs": 16702,
+      "inputTokens": 5310,
+      "outputTokens": 153,
+      "toolCalls": 0,
+      "executionRunId": "03050a56-2451-4ee4-93a9-99af0d0784f4",
+      "cachedInputTokens": 0,
+      "costUsd": 0.0005616
+    }
+  ],
+  "approvals": [],
+  "artifacts": [],
+  "checkpoints": [],
+  "toolReceipts": [
+    {
+      "id": "1265e16e-2840-ab58-9b3d-71ea6cbaa9f2",
+      "executionRunId": "03050a56-2451-4ee4-93a9-99af0d0784f4",
+      "toolFamily": "workspace-process",
+      "toolName": "local_mcp_launch",
+      "riskClass": "LocalExecution:Mcp",
+      "approvalMode": "NotRequired",
+      "isolationGuarantee": "PolicyOnlyLocal via Local best-effort process host (host-enforced: false)",
+      "requestSummary": "--yes @playwright/mcp@latest --headless --caps vision --ignore-https-errors --isolated",
+      "workingDirectory": "C:\\Users\\lucys\\AppData\\Local\\CanDoItAll\\workspace",
+      "exitSummary": "Prepared",
+      "startedAtUtc": "2026-07-04T19:26:34.9823418-04:00",
+      "completedAtUtc": "2026-07-04T19:26:34.9823418-04:00",
+      "runtimeToolProviderKey": "",
+      "runtimeToolProviderName": ""
+    }
+  ],
+  "usageObservations": [
+    {
+      "id": "d8e00a9a-7f91-4af4-8ebd-a086612fd620",
+      "createdAtUtc": "2026-07-04T19:26:51.2707572-04:00",
+      "providerName": "Local Ollama",
+      "providerKind": 2,
+      "model": "gemma4-12b-256k",
+      "transportKind": 1,
+      "sourcePhase": "agent-runtime",
+      "usageStatus": 0,
+      "inputTokens": 5310,
+      "cachedInputTokens": 0,
+      "outputTokens": 153,
+      "reasoningTokens": 0,
+      "totalTokens": 5463,
+      "toolCallCount": 0,
+      "executionRunId": "03050a56-2451-4ee4-93a9-99af0d0784f4",
+      "agentId": "a22e9f8f-98de-4884-b4e7-995281f46f1b",
+      "chatSessionId": "94956220-e8b2-4dbf-a911-3149359408e0",
+      "providerResponseId": "bb9e52798157447e897d4602be1df13f",
+      "providerRequestId": "",
+      "runtimeSessionKey": "bb9e52798157447e897d4602be1df13f",
+      "processRunId": "",
+      "processStepId": "",
+      "workflowRunId": "",
+      "workflowNodeId": "",
+      "correlationId": "",
+      "providerCostUsd": null,
+      "calculatedCostUsd": 0.0005616,
+      "pricingProfileHash": "",
+      "pricingVersion": "",
+      "rawUsageJson": "{\"inputTokenCount\":5310,\"outputTokenCount\":153,\"totalTokenCount\":5463,\"cachedInputTokenCount\":null,\"reasoningTokenCount\":null,\"inputAudioTokenCount\":null,\"inputTextTokenCount\":null,\"outputAudioTokenCount\":null,\"outputTextTokenCount\":null,\"additionalCounts\":null}",
+      "diagnosticsJson": "{\"diagnostic\":\"Microsoft Agent Framework returned a runtime response.\",\"contextAssemblyManifest\":{\"id\":\"f9d331f0-03b9-4ce4-ab8c-b61f0c68af0c\",\"createdAtUtc\":\"2026-07-04T23:26:36.0656074\\u002B00:00\",\"agentId\":\"a22e9f8f-98de-4884-b4e7-995281f46f1b\",\"agentName\":\"SB09 UI Local Ollama MCP 20260704-191547\",\"providerName\":\"Local Ollama\",\"providerKind\":\"Ollama\",\"model\":\"gemma4-12b-256k\",\"transportKind\":\"ChatCompletions\",\"intent\":{\"sourceKind\":\"chat-session\",\"sourceId\":\"94956220e8b24dbfa9113149359408e0\",\"processRunId\":\"\",\"processStepId\":\"\",\"targetScope\":\"\",\"isGovernedProcessStep\":false,\"browserToolsAllowed\":true,\"scaffoldToolOnly\":false,\"allowsProductMutation\":true,\"allowedOperations\":[],\"runtimeToolProvidersEnabled\":true,\"workspaceToolsEnabled\":true},\"totals\":{\"inputMessageCount\":1,\"inputMessageChars\":30,\"inputMessageEstimatedTokens\":7,\"toolCount\":46,\"toolSchemaEstimatedChars\":12642,\"toolSchemaEstimatedTokens\":3160,\"contextProviderCount\":3,\"frameworkToolCount\":3,\"runtimeToolProviderCount\":1,\"estimatedInputTokens\":7698},\"sources\":[{\"category\":\"agent-instructions\",\"sourceId\":\"agent-instructions\",\"decision\":\"Included\",\"reason\":\"agent instruction text attached to the provider call\",\"itemCount\":1,\"estimatedChars\":212,\"estimatedTokens\":53},{\"category\":\"catalog-capability\",\"sourceId\":\"workspace-analyze-image\",\"decision\":\"Included\",\"reason\":\"catalog capability \\u0027Workspace Analyze Image\\u0027 attached runtime context or tools\",\"itemCount\":1,\"estimatedChars\":322,\"estimatedTokens\":80},{\"category\":\"catalog-capability\",\"sourceId\":\"workspace-analyze-images\",\"decision\":\"Included\",\"reason\":\"catalog capability \\u0027Workspace Analyze Images\\u0027 attached runtime context or tools\",\"itemCount\":1,\"estimatedChars\":338,\"estimatedTokens\":84},{\"category\":\"catalog-capability\",\"sourceId\":\"workspace-append-file\",\"decision\":\"Included\",\"reason\":\"catalog capability \\u0027Workspace Append File\\u0027 attached runtime context or tools\",\"itemCount\":1,\"estimatedChars\":387,\"estimatedTokens\":96},{\"category\":\"catalog-capability\",\"sourceId\":\"workspace-create-directory\",\"decision\":\"Included\",\"reason\":\"catalog capability \\u0027Workspace Create Directory\\u0027 attached runtime context or tools\",\"itemCount\":1,\"estimatedChars\":471,\"estimatedTokens\":117},{\"category\":\"catalog-capability\",\"sourceId\":\"workspace-inspect-image\",\"decision\":\"Included\",\"reason\":\"catalog capability \\u0027Workspace Inspect Image\\u0027 attached runtime context or tools\",\"itemCount\":1,\"estimatedChars\":291,\"estimatedTokens\":72},{\"category\":\"catalog-capability\",\"sourceId\":\"workspace-list-files\",\"decision\":\"Included\",\"reason\":\"catalog capability \\u0027Workspace List Files\\u0027 attached runtime context or tools\",\"itemCount\":1,\"estimatedChars\":480,\"estimatedTokens\":120},{\"category\":\"catalog-capability\",\"sourceId\":\"workspace-pwsh-run-script\",\"decision\":\"Included\",\"reason\":\"catalog capability \\u0027Workspace PowerShell Run Script\\u0027 attached runtime context or tools\",\"itemCount\":1,\"estimatedChars\":277,\"estimatedTokens\":69},{\"category\":\"catalog-capability\",\"sourceId\":\"workspace-read-file\",\"decision\":\"Included\",\"reason\":\"catalog capability \\u0027Workspace Read File\\u0027 attached runtime context or tools\",\"itemCount\":1,\"estimatedChars\":432,\"estimatedTokens\":108},{\"category\":\"catalog-capability\",\"sourceId\":\"workspace-search\",\"decision\":\"Included\",\"reason\":\"catalog capability \\u0027Workspace Search\\u0027 attached runtime context or tools\",\"itemCount\":1,\"estimatedChars\":458,\"estimatedTokens\":114},{\"category\":\"catalog-capability\",\"sourceId\":\"workspace-stat-path\",\"decision\":\"Included\",\"reason\":\"catalog capability \\u0027Workspace Stat Path\\u0027 attached runtime context or tools\",\"itemCount\":1,\"estimatedChars\":380,\"estimatedTokens\":95},{\"category\":\"catalog-capability\",\"sourceId\":\"workspace-write-file\",\"decision\":\"Included\",\"reason\":\"catalog capability \\u0027Workspace Write File\\u0027 attached runtime context or tools\",\"itemCount\":1,\"estimatedChars\":415,\"estimatedTokens\":103},{\"category\":\"compaction\",\"sourceId\":\"microsoft-agent-framework-compaction\",\"decision\":\"Included\",\"reason\":\"Agent configuration explicitly enabled Microsoft Agent Framework compaction.\",\"itemCount\":1,\"estimatedChars\":0,\"estimatedTokens\":0},{\"category\":\"context-contributor\",\"sourceId\":\"cognitive-memory.context\",\"decision\":\"Included\",\"reason\":\"enabled registered context contributor\",\"itemCount\":1,\"estimatedChars\":0,\"estimatedTokens\":0},{\"category\":\"framework-tool\",\"sourceId\":\"load_skill\",\"decision\":\"Included\",\"reason\":\"framework tool exposed by an attached context provider\",\"itemCount\":1,\"estimatedChars\":10,\"estimatedTokens\":2},{\"category\":\"framework-tool\",\"sourceId\":\"read_skill_resource\",\"decision\":\"Included\",\"reason\":\"framework tool exposed by an attached context provider\",\"itemCount\":1,\"estimatedChars\":19,\"estimatedTokens\":4},{\"category\":\"framework-tool\",\"sourceId\":\"run_skill_script\",\"decision\":\"Included\",\"reason\":\"framework tool exposed by an attached context provider\",\"itemCount\":1,\"estimatedChars\":16,\"estimatedTokens\":4},{\"category\":\"input-messages\",\"sourceId\":\"runtime-input\",\"decision\":\"Included\",\"reason\":\"messages passed to Microsoft Agent Framework for this provider call\",\"itemCount\":1,\"estimatedChars\":30,\"estimatedTokens\":7},{\"category\":\"runtime-tool-provider\",\"sourceId\":\"image-generation.runtime-tools\",\"decision\":\"Excluded\",\"reason\":\"registered runtime tool provider returned no tools for this run\",\"itemCount\":0,\"estimatedChars\":0,\"estimatedTokens\":0},{\"category\":\"runtime-tool-provider\",\"sourceId\":\"project-structure.runtime-tools\",\"decision\":\"Included\",\"reason\":\"registered runtime tool provider selected for this run\",\"itemCount\":53,\"estimatedChars\":18921,\"estimatedTokens\":4730},{\"category\":\"skills\",\"sourceId\":\"agent-skills-provider\",\"decision\":\"Included\",\"reason\":\"agent capabilities or configuration resolved skills for this run\",\"itemCount\":6,\"estimatedChars\":0,\"estimatedTokens\":0},{\"category\":\"workspace-tools\",\"sourceId\":\"configured-workspace-tools\",\"decision\":\"Included\",\"reason\":\"workspace tools allowed by agent settings and context profile\",\"itemCount\":25,\"estimatedChars\":7363,\"estimatedTokens\":1840}]},\"contextContributionTraces\":[{\"contributorId\":{\"value\":\"cognitive-memory.context\"},\"status\":\"Skipped\",\"generatedMessageCount\":0,\"traceMetadata\":{\"reason\":\"cognitive-memory-disabled\",\"isEnabled\":\"False\",\"modelAccessMode\":\"AnyEnabledProvider\",\"providerProfileId\":\"bd2bffbb-23d5-d152-82f6-e1d37908b169\"},\"failureMessage\":\"\",\"elapsed\":\"00:00:00.0023968\"}]}"
+    }
+  ]
+}

@@ -1,0 +1,55 @@
+Command: rg -n "CreateTable|DropTable|Memory_" src\Foundation\CanDoItAll.Migrations.PostgreSql\Migrations\20260705163628_GenericMemoryProviderRuntime.cs
+14:            migrationBuilder.CreateTable(
+15:                name: "Memory_EventInbox",
+30:                    table.PrimaryKey("PK_Memory_EventInbox", x => x.InboxRecordId);
+33:            migrationBuilder.CreateTable(
+34:                name: "Memory_EventOutbox",
+48:                    table.PrimaryKey("PK_Memory_EventOutbox", x => x.OutboxRecordId);
+51:            migrationBuilder.CreateTable(
+52:                name: "Memory_FeedbackLedger",
+66:                    table.PrimaryKey("PK_Memory_FeedbackLedger", x => x.FeedbackRecordId);
+69:            migrationBuilder.CreateTable(
+70:                name: "Memory_OperationLedger",
+87:                    table.PrimaryKey("PK_Memory_OperationLedger", x => x.RecordId);
+90:            migrationBuilder.CreateTable(
+91:                name: "Memory_ProviderProfiles",
+109:                    table.PrimaryKey("PK_Memory_ProviderProfiles", x => x.InstanceId);
+112:            migrationBuilder.CreateTable(
+113:                name: "Memory_SourceRequests",
+125:                    table.PrimaryKey("PK_Memory_SourceRequests", x => x.JobId);
+129:                name: "IX_Memory_EventInbox_DedupeKey",
+130:                table: "Memory_EventInbox",
+135:                name: "IX_Memory_EventInbox_ProviderInstanceId_Status_UpdatedAtUtc",
+136:                table: "Memory_EventInbox",
+140:                name: "IX_Memory_EventInbox_Status_ExpiresAtUtc_ForgetAtUtc",
+141:                table: "Memory_EventInbox",
+145:                name: "IX_Memory_EventOutbox_ProviderInstanceId_Status_UpdatedAtUtc",
+146:                table: "Memory_EventOutbox",
+150:                name: "IX_Memory_FeedbackLedger_ProviderInstanceId_Status_UpdatedAtUtc",
+151:                table: "Memory_FeedbackLedger",
+155:                name: "IX_Memory_FeedbackLedger_Status_ExpiresAtUtc_ForgetAtUtc",
+156:                table: "Memory_FeedbackLedger",
+160:                name: "IX_Memory_OperationLedger_OperationId",
+161:                table: "Memory_OperationLedger",
+166:                name: "IX_Memory_OperationLedger_ProviderInstanceId_Status_UpdatedAtU~",
+167:                table: "Memory_OperationLedger",
+171:                name: "IX_Memory_OperationLedger_Status_ExpiresAtUtc_ForgetAtUtc",
+172:                table: "Memory_OperationLedger",
+176:                name: "IX_Memory_ProviderProfiles_DriverKind_IsEnabled",
+177:                table: "Memory_ProviderProfiles",
+181:                name: "IX_Memory_SourceRequests_ProviderInstanceId_Status_UpdatedAtUtc",
+182:                table: "Memory_SourceRequests",
+189:            migrationBuilder.DropTable(
+190:                name: "Memory_EventInbox");
+192:            migrationBuilder.DropTable(
+193:                name: "Memory_EventOutbox");
+195:            migrationBuilder.DropTable(
+196:                name: "Memory_FeedbackLedger");
+198:            migrationBuilder.DropTable(
+199:                name: "Memory_OperationLedger");
+201:            migrationBuilder.DropTable(
+202:                name: "Memory_ProviderProfiles");
+204:            migrationBuilder.DropTable(
+205:                name: "Memory_SourceRequests");
+ExitCode: 0
+Result: migration is scoped to Memory_* generic runtime tables and indexes.

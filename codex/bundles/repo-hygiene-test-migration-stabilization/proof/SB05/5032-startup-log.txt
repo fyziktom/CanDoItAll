@@ -1,0 +1,236 @@
+Použití nastavení spuštění z src\App\CanDoItAll.Web\Properties\launchSettings.json...
+info: CanDoItAll.Infrastructure.ControlPlane.DatabaseProfileControlPlaneService[0]
+      Resolved database profile Configured PostgreSQL override (e5df9ad6-33db-c697-4a06-78a74976013c) via ExplicitOverride. Provider=PostgreSql. Fingerprint=postgres:127.0.0.1:5432:candoitall_development:candoitall. RuntimeLocked=True.
+info: CanDoItAll.Infrastructure.ControlPlane.CanonicalRuntimeDatabase[0]
+      Initialized canonical runtime database profile e5df9ad6-33db-c697-4a06-78a74976013c (Configured PostgreSQL override). Provider=PostgreSql. Fingerprint=postgres:127.0.0.1:5432:candoitall_development:candoitall. Generation=0.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring runtime database profile e5df9ad6-33db-c697-4a06-78a74976013c (Configured PostgreSQL override) is ready. Provider=PostgreSql, Source=PostgresConnection.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Applying EF migrations for profile e5df9ad6-33db-c697-4a06-78a74976013c.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring CRM/HR schema for profile e5df9ad6-33db-c697-4a06-78a74976013c.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring plugin runtime schema for profile e5df9ad6-33db-c697-4a06-78a74976013c.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring scheduler planner schema for profile e5df9ad6-33db-c697-4a06-78a74976013c.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring agent provider bootstrap for profile e5df9ad6-33db-c697-4a06-78a74976013c.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Runtime database profile e5df9ad6-33db-c697-4a06-78a74976013c is ready.
+info: Quartz.Core.SchedulerSignalerImpl[0]
+      Initialized Scheduler Signaller of type: Quartz.Core.SchedulerSignalerImpl
+info: Quartz.Core.QuartzScheduler[0]
+      Quartz Scheduler created
+info: Quartz.Core.QuartzScheduler[0]
+      JobFactory set to: Quartz.Simpl.MicrosoftDependencyInjectionJobFactory
+info: Quartz.Simpl.RAMJobStore[0]
+      RAMJobStore initialized.
+info: Quartz.Impl.StdSchedulerFactory[0]
+      Quartz Scheduler 3.13.1.0 - 'CanDoItAll SchedulerPlanner' with instanceId 'CanDoItAll.SchedulerPlanner' initialized
+info: Quartz.Impl.StdSchedulerFactory[0]
+      Using thread pool 'Quartz.Simpl.DefaultThreadPool', size: 10
+info: Quartz.Impl.StdSchedulerFactory[0]
+      Using job store 'Quartz.Simpl.RAMJobStore', supports persistence: False, clustered: False
+info: CanDoItAll.Modules.SchedulerPlanner.SchedulerPlannerTriggerScheduler[0]
+      Projected scheduler plan aa141648-524a-4b15-8992-ee6a8b024d5f into local Quartz runtime. Enabled=True, NextFireAtUtc=07/07/2026 13:00:00 +00:00.
+info: CanDoItAll.Modules.SchedulerPlanner.SchedulerPlannerProjectionHostedService[0]
+      SchedulerPlanner projected saved plans into the local Quartz runtime.
+info: Microsoft.Hosting.Lifetime[14]
+      Now listening on: http://localhost:5032
+info: Microsoft.Hosting.Lifetime[0]
+      Application started. Press Ctrl+C to shut down.
+info: Microsoft.Hosting.Lifetime[0]
+      Hosting environment: Development
+info: Microsoft.Hosting.Lifetime[0]
+      Content root path: C:\repositories\CanDoItAll\src\App\CanDoItAll.Web
+info: Quartz.Core.QuartzScheduler[0]
+      Scheduler CanDoItAll SchedulerPlanner_$_CanDoItAll.SchedulerPlanner started.
+warn: Microsoft.AspNetCore.HttpsPolicy.HttpsRedirectionMiddleware[3]
+      Failed to determine the https port for redirect.
+warn: CanDoItAll.Modules.AgentFramework.WorkflowExampleCatalogSeedService[0]
+      Skipping workflow example seed 'Example: Gmail Label Email Summary To Project' because one or more optional workflow executors are unavailable in this host: Workflow executor 'gmail.messages-by-label' is not runnable: Plugin 'gmail.mail' is not installed. Workflow executor 'gmail.mark-message-processed' is not runnable: Plugin 'gmail.mail' is not installed.
+warn: CanDoItAll.Modules.AgentFramework.WorkflowExampleCatalogSeedService[0]
+      Skipping workflow example seed 'Example: Gmail Label Email Tasks To Project' because one or more optional workflow executors are unavailable in this host: Workflow executor 'gmail.messages-by-label' is not runnable: Plugin 'gmail.mail' is not installed. Workflow executor 'gmail.mark-message-processed' is not runnable: Plugin 'gmail.mail' is not installed.
+info: CanDoItAll.Modules.AgentFramework.AgentFrameworkCatalogWarmupService[0]
+      Completed AgentFramework catalog repair and projection warmup in 11720 ms.
+info: CanDoItAll.Modules.Workbench.ProjectStructureLocalFileOpener[0]
+      Opened project structure attachment in File Explorer from C:\Users\lucys\AppData\Local\CanDoItAll\workspace\managed-files\project-media\files\f28c07cd982c4d2dbcf23e60a32eca72\fs-xlsx-e2e-20260706-1945-margin-analysis-3687485994df4290b83d8d3168d3b6ea.xlsx.
+info: CanDoItAll.AgentFramework.Maf.MafAgentRuntime[0]
+      Agent tool policy decision Allow for tool project_structure_read on agent 3e914b12-2369-ed5f-bf79-f26db10ef5cd. ExecutionRunId=2ad74efc-bd4a-4199-b912-cecd9600291e SourceKind=project-structure ProcessRunId= ProcessStepId= RuntimeToolProviderKey=project-structure.runtime-tools Signature=project_structure_read|projectId=f28c07cd-982c-4d2d-bcf2-3e60a32eca72,request={"nodeIds":["custom:a7bbaa78a950420086616a910909e037"],"includeAssets":true,"includeMetadata":true,"includeNotes":true,"includeLinks":true,"take":20}
+info: CanDoItAll.AgentFramework.Maf.MafAgentRuntime[0]
+      Agent tool policy decision Allow for tool project_structure_node_catalog on agent 3e914b12-2369-ed5f-bf79-f26db10ef5cd. ExecutionRunId=2ad74efc-bd4a-4199-b912-cecd9600291e SourceKind=project-structure ProcessRunId= ProcessStepId= RuntimeToolProviderKey=project-structure.runtime-tools Signature=project_structure_node_catalog
+info: CanDoItAll.AgentFramework.Maf.MafAgentRuntime[0]
+      Agent tool policy decision Allow for tool project_structure_read on agent 3e914b12-2369-ed5f-bf79-f26db10ef5cd. ExecutionRunId=2ad74efc-bd4a-4199-b912-cecd9600291e SourceKind=project-structure ProcessRunId= ProcessStepId= RuntimeToolProviderKey=project-structure.runtime-tools Signature=project_structure_read|projectId=f28c07cd-982c-4d2d-bcf2-3e60a32eca72,request={"subtreeRootIds":["custom:a7bbaa78a950420086616a910909e037"],"includeAssets":true,"includeMetadata":true,"includeNotes":true,"includeLinks":true,"onlyUnfinishe...#42facee74dfd
+info: CanDoItAll.AgentFramework.Maf.MafAgentRuntime[0]
+      Agent tool policy decision Allow for tool project_structure_read on agent 3e914b12-2369-ed5f-bf79-f26db10ef5cd. ExecutionRunId=2ad74efc-bd4a-4199-b912-cecd9600291e SourceKind=project-structure ProcessRunId= ProcessStepId= RuntimeToolProviderKey=project-structure.runtime-tools Signature=project_structure_read|projectId=f28c07cd-982c-4d2d-bcf2-3e60a32eca72,request={"objectTypes":["File"],"includeAssets":true,"includeMetadata":true,"includeNotes":true,"includeLinks":true,"onlyUnfinished":false,"take":100}
+info: CanDoItAll.AgentFramework.Maf.MafAgentRuntime[0]
+      Agent tool policy decision Allow for tool project_structure_checklist on agent 3e914b12-2369-ed5f-bf79-f26db10ef5cd. ExecutionRunId=2ad74efc-bd4a-4199-b912-cecd9600291e SourceKind=project-structure ProcessRunId= ProcessStepId= RuntimeToolProviderKey=project-structure.runtime-tools Signature=project_structure_checklist|projectId=f28c07cd-982c-4d2d-bcf2-3e60a32eca72,request={"objectTypes":["File","ProjectBlock","WorkItem"],"take":50}
+info: CanDoItAll.AgentFramework.Maf.MafAgentRuntime[0]
+      Agent tool policy decision Allow for tool load_skill on agent 3e914b12-2369-ed5f-bf79-f26db10ef5cd. ExecutionRunId=2ad74efc-bd4a-4199-b912-cecd9600291e SourceKind=project-structure ProcessRunId= ProcessStepId= RuntimeToolProviderKey= Signature=load_skill|skillName=concrete-deliverable-delivery
+info: CanDoItAll.AgentFramework.Maf.MafAgentRuntime[0]
+      Agent tool policy decision Allow for tool load_skill on agent 3e914b12-2369-ed5f-bf79-f26db10ef5cd. ExecutionRunId=2ad74efc-bd4a-4199-b912-cecd9600291e SourceKind=project-structure ProcessRunId= ProcessStepId= RuntimeToolProviderKey= Signature=load_skill|skillName=spreadsheet
+info: CanDoItAll.AgentFramework.Maf.MafAgentRuntime[0]
+      Agent tool policy decision Allow for tool project_structure_asset_content_get on agent 3e914b12-2369-ed5f-bf79-f26db10ef5cd. ExecutionRunId=2ad74efc-bd4a-4199-b912-cecd9600291e SourceKind=project-structure ProcessRunId= ProcessStepId= RuntimeToolProviderKey=project-structure.runtime-tools Signature=project_structure_asset_content_get|nodeId=custom:620a9f84c37b487385471967a8713252,projectId=f28c07cd-982c-4d2d-bcf2-3e60a32eca72
+info: CanDoItAll.AgentFramework.Maf.MafAgentRuntime[0]
+      Agent tool policy decision Allow for tool workspace_convert_document on agent 3e914b12-2369-ed5f-bf79-f26db10ef5cd. ExecutionRunId=2ad74efc-bd4a-4199-b912-cecd9600291e SourceKind=project-structure ProcessRunId= ProcessStepId= RuntimeToolProviderKey= Signature=workspace_convert_document|path=managed-files/project-media/files/f28c07cd982c4d2dbcf23e60a32eca72/x-ray-machine-agent-quotation-list2018-e1d6363d36484d81b06dad6ea06d9af8.pdf,previewCharacters=6000
+info: CanDoItAll.AgentFramework.Maf.MafAgentRuntime[0]
+      Agent tool policy decision Allow for tool workspace_spreadsheet_function_catalog on agent 3e914b12-2369-ed5f-bf79-f26db10ef5cd. ExecutionRunId=2ad74efc-bd4a-4199-b912-cecd9600291e SourceKind=project-structure ProcessRunId= ProcessStepId= RuntimeToolProviderKey= Signature=workspace_spreadsheet_function_catalog|query=AVERAGE IFERROR ROUND formulas for prices and margin
+info: CanDoItAll.AgentFramework.Maf.MafAgentRuntime[0]
+      Agent tool policy decision Allow for tool workspace_spreadsheet_function_catalog on agent 3e914b12-2369-ed5f-bf79-f26db10ef5cd. ExecutionRunId=2ad74efc-bd4a-4199-b912-cecd9600291e SourceKind=project-structure ProcessRunId= ProcessStepId= RuntimeToolProviderKey= Signature=workspace_spreadsheet_function_catalog|query=AVERAGE
+info: CanDoItAll.AgentFramework.Maf.MafAgentRuntime[0]
+      Agent tool policy decision Allow for tool workspace_spreadsheet_function_catalog on agent 3e914b12-2369-ed5f-bf79-f26db10ef5cd. ExecutionRunId=2ad74efc-bd4a-4199-b912-cecd9600291e SourceKind=project-structure ProcessRunId= ProcessStepId= RuntimeToolProviderKey= Signature=workspace_spreadsheet_function_catalog|query=IFERROR
+info: CanDoItAll.AgentFramework.Maf.MafAgentRuntime[0]
+      Agent tool policy decision Allow for tool workspace_read_file on agent 3e914b12-2369-ed5f-bf79-f26db10ef5cd. ExecutionRunId=2ad74efc-bd4a-4199-b912-cecd9600291e SourceKind=project-structure ProcessRunId= ProcessStepId= RuntimeToolProviderKey= Signature=workspace_read_file|maxCharacters=12000,path=artifacts/scopes/organization/e5df9ad633dbc6974a0678a74976013c/converted-documents/20260707114832308-x-ray-machine-agent-quotation-list2018-e1d6363d36484d81b06d...#67ba8cec8197
+info: CanDoItAll.AgentFramework.Maf.MafAgentRuntime[0]
+      Agent tool policy decision Allow for tool workspace_create_directory on agent 3e914b12-2369-ed5f-bf79-f26db10ef5cd. ExecutionRunId=2ad74efc-bd4a-4199-b912-cecd9600291e SourceKind=project-structure ProcessRunId= ProcessStepId= RuntimeToolProviderKey= Signature=workspace_create_directory|path=artifacts/business/quotationpdfs-tests/finance
+info: CanDoItAll.AgentFramework.Maf.MafAgentRuntime[0]
+      Agent tool policy decision Allow for tool project_structure_project_lease_acquire on agent 3e914b12-2369-ed5f-bf79-f26db10ef5cd. ExecutionRunId=2ad74efc-bd4a-4199-b912-cecd9600291e SourceKind=project-structure ProcessRunId= ProcessStepId= RuntimeToolProviderKey=project-structure.runtime-tools Signature=project_structure_project_lease_acquire|durationMinutes=30,projectId=f28c07cd-982c-4d2d-bcf2-3e60a32eca72,reason=Add quotation-derived machine margin findings and spreadsheet asset for selected research block
+info: CanDoItAll.AgentFramework.Maf.MafAgentRuntime[0]
+      Agent tool policy decision Allow for tool workspace_write_spreadsheet on agent 3e914b12-2369-ed5f-bf79-f26db10ef5cd. ExecutionRunId=2ad74efc-bd4a-4199-b912-cecd9600291e SourceKind=project-structure ProcessRunId= ProcessStepId= RuntimeToolProviderKey= Signature=workspace_write_spreadsheet|createWorkbookIfMissing=True,outputWorkbookPath=artifacts/scopes/organization/e5df9ad633dbc6974a0678a74976013c/business/quotationpdfs-tests/finance/xray-machine-pricing-model.xlsx,overwrite=True,rangeWrites=[{"rangeAddress":"A1:J5","values":[["Item","Model","Company Price USD","Marketing Low USD","Marketing High USD","Recommended Price USD","Gross Margin USD","Gros...#baa05f7d78f7,workbookPath=artifacts/scopes/organization/e5df9ad633dbc6974a0678a74976013c/business/quotationpdfs-tests/finance/xray-machine-pricing-model.xlsx,worksheetName=Quotation
+info: CanDoItAll.AgentFramework.Maf.MafAgentRuntime[0]
+      Agent tool policy decision Allow for tool workspace_write_spreadsheet on agent 3e914b12-2369-ed5f-bf79-f26db10ef5cd. ExecutionRunId=2ad74efc-bd4a-4199-b912-cecd9600291e SourceKind=project-structure ProcessRunId= ProcessStepId= RuntimeToolProviderKey= Signature=workspace_write_spreadsheet|createWorkbookIfMissing=True,outputWorkbookPath=artifacts/scopes/organization/e5df9ad633dbc6974a0678a74976013c/business/quotationpdfs-tests/finance/xray-machine-pricing-model.xlsx,overwrite=False,rangeWrites=[{"rangeAddress":"A1:B6","values":[["Assumption","Value"],["Recommended price basis","Midpoint of quoted marketing range"],["Currency","USD"],["Margin formula",...#40d1d8f0d411,workbookPath=artifacts/scopes/organization/e5df9ad633dbc6974a0678a74976013c/business/quotationpdfs-tests/finance/xray-machine-pricing-model.xlsx,worksheetName=Assumptions
+fail: Microsoft.Extensions.AI.FunctionInvokingChatClient[1784604714]
+      workspace_write_spreadsheet invocation failed.
+      System.InvalidOperationException: Spreadsheet output path 'C:\Users\lucys\AppData\Local\CanDoItAll\workspace\artifacts\scopes\organization\e5df9ad633dbc6974a0678a74976013c\business\quotationpdfs-tests\finance\xray-machine-pricing-model.xlsx' already exists.
+         at CanDoItAll.Tools.Documents.ClosedXmlSpreadsheetDocumentService.Write(SpreadsheetWriteRequest request) in C:\repositories\CanDoItAll\src\MAF\Tools\CanDoItAll.Tools.Documents\Spreadsheets\ClosedXmlSpreadsheetDocumentService.cs:line 94
+         at CanDoItAll.AgentFramework.Maf.WorkspaceSpreadsheetRuntimePlugin.WriteSpreadsheetWorkbook(String workbookPath, String worksheetName, String outputWorkbookPath, SpreadsheetCellWrite[] cellWrites, SpreadsheetRangeWrite[] rangeWrites, Boolean createWorkbookIfMissing, Boolean overwrite) in C:\repositories\CanDoItAll\src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Workspace\WorkspaceSpreadsheetRuntimePlugin.cs:line 112
+         at InvokeStub_WorkspaceSpreadsheetRuntimePlugin.WriteSpreadsheetWorkbook(Object, Span`1)
+         at System.Reflection.MethodBaseInvoker.InvokeWithManyArgs(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+         at System.Reflection.RuntimeMethodInfo.Invoke(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+         at Microsoft.Extensions.AI.AIFunctionFactory.ReflectionInvoke(MethodInfo method, Object target, Object[] arguments)
+         at Microsoft.Extensions.AI.AIFunctionFactory.ReflectionAIFunction.InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
+         at Microsoft.Extensions.AI.AIFunctionFactory.ReflectionAIFunction.InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
+         at CanDoItAll.AgentFramework.Maf.MafRuntimeAgentFactory.<>c__DisplayClass12_0.<<CreateInstrumentedAgent>b__6>d.MoveNext() in C:\repositories\CanDoItAll\src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\MafRuntimeAgentFactory.cs:line 443
+      --- End of stack trace from previous location ---
+         at Microsoft.Agents.AI.FunctionInvocationDelegatingAgent.MiddlewareEnabledFunction.InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
+         at Microsoft.Extensions.AI.FunctionInvocationProcessor.InstrumentedInvokeFunctionAsync(FunctionInvocationContext context, CancellationToken cancellationToken)
+info: CanDoItAll.AgentFramework.Maf.MafAgentRuntime[0]
+      Agent tool policy decision Allow for tool workspace_spreadsheet_summary on agent 3e914b12-2369-ed5f-bf79-f26db10ef5cd. ExecutionRunId=2ad74efc-bd4a-4199-b912-cecd9600291e SourceKind=project-structure ProcessRunId= ProcessStepId= RuntimeToolProviderKey= Signature=workspace_spreadsheet_summary|workbookPath=artifacts/scopes/organization/e5df9ad633dbc6974a0678a74976013c/business/quotationpdfs-tests/finance/xray-machine-pricing-model.xlsx
+info: CanDoItAll.AgentFramework.Maf.MafAgentRuntime[0]
+      Agent tool policy decision Allow for tool workspace_write_spreadsheet on agent 3e914b12-2369-ed5f-bf79-f26db10ef5cd. ExecutionRunId=2ad74efc-bd4a-4199-b912-cecd9600291e SourceKind=project-structure ProcessRunId= ProcessStepId= RuntimeToolProviderKey= Signature=workspace_write_spreadsheet|cellWrites=[{"cellAddress":"F2","value":"=AVERAGE(D2:E2)"},{"cellAddress":"G2","value":"=F2-C2"},{"cellAddress":"H2","value":"=IFERROR(G2/F2,\"\")"},{"cellAddress":"F3","v...#2ee196b30d6d,createWorkbookIfMissing=True,outputWorkbookPath=artifacts/scopes/organization/e5df9ad633dbc6974a0678a74976013c/business/quotationpdfs-tests/finance/xray-machine-pricing-model.xlsx,overwrite=False,workbookPath=artifacts/scopes/organization/e5df9ad633dbc6974a0678a74976013c/business/quotationpdfs-tests/finance/xray-machine-pricing-model.xlsx,worksheetName=Quotation
+fail: Microsoft.Extensions.AI.FunctionInvokingChatClient[1784604714]
+      workspace_write_spreadsheet invocation failed.
+      System.InvalidOperationException: Spreadsheet output path 'C:\Users\lucys\AppData\Local\CanDoItAll\workspace\artifacts\scopes\organization\e5df9ad633dbc6974a0678a74976013c\business\quotationpdfs-tests\finance\xray-machine-pricing-model.xlsx' already exists.
+         at CanDoItAll.Tools.Documents.ClosedXmlSpreadsheetDocumentService.Write(SpreadsheetWriteRequest request) in C:\repositories\CanDoItAll\src\MAF\Tools\CanDoItAll.Tools.Documents\Spreadsheets\ClosedXmlSpreadsheetDocumentService.cs:line 94
+         at CanDoItAll.AgentFramework.Maf.WorkspaceSpreadsheetRuntimePlugin.WriteSpreadsheetWorkbook(String workbookPath, String worksheetName, String outputWorkbookPath, SpreadsheetCellWrite[] cellWrites, SpreadsheetRangeWrite[] rangeWrites, Boolean createWorkbookIfMissing, Boolean overwrite) in C:\repositories\CanDoItAll\src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Workspace\WorkspaceSpreadsheetRuntimePlugin.cs:line 112
+         at InvokeStub_WorkspaceSpreadsheetRuntimePlugin.WriteSpreadsheetWorkbook(Object, Span`1)
+         at System.Reflection.MethodBaseInvoker.InvokeWithManyArgs(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+         at System.Reflection.RuntimeMethodInfo.Invoke(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+         at Microsoft.Extensions.AI.AIFunctionFactory.ReflectionInvoke(MethodInfo method, Object target, Object[] arguments)
+         at Microsoft.Extensions.AI.AIFunctionFactory.ReflectionAIFunction.InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
+         at Microsoft.Extensions.AI.AIFunctionFactory.ReflectionAIFunction.InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
+         at CanDoItAll.AgentFramework.Maf.MafRuntimeAgentFactory.<>c__DisplayClass12_0.<<CreateInstrumentedAgent>b__6>d.MoveNext() in C:\repositories\CanDoItAll\src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\MafRuntimeAgentFactory.cs:line 443
+      --- End of stack trace from previous location ---
+         at Microsoft.Agents.AI.FunctionInvocationDelegatingAgent.MiddlewareEnabledFunction.InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
+         at Microsoft.Extensions.AI.FunctionInvocationProcessor.InstrumentedInvokeFunctionAsync(FunctionInvocationContext context, CancellationToken cancellationToken)
+info: CanDoItAll.AgentFramework.Maf.MafAgentRuntime[0]
+      Agent tool policy decision Allow for tool workspace_write_spreadsheet on agent 3e914b12-2369-ed5f-bf79-f26db10ef5cd. ExecutionRunId=2ad74efc-bd4a-4199-b912-cecd9600291e SourceKind=project-structure ProcessRunId= ProcessStepId= RuntimeToolProviderKey= Signature=workspace_write_spreadsheet|createWorkbookIfMissing=True,outputWorkbookPath=artifacts/scopes/organization/e5df9ad633dbc6974a0678a74976013c/business/quotationpdfs-tests/finance/xray-machine-pricing-model.xlsx,overwrite=True,rangeWrites=[{"rangeAddress":"A1:B6","values":[["Assumption","Value"],["Recommended price basis","Midpoint of quoted marketing range"],["Currency","USD"],["Margin formula",...#40d1d8f0d411,workbookPath=artifacts/scopes/organization/e5df9ad633dbc6974a0678a74976013c/business/quotationpdfs-tests/finance/xray-machine-pricing-model.xlsx,worksheetName=Assumptions
+info: CanDoItAll.AgentFramework.Maf.MafAgentRuntime[0]
+      Agent tool policy decision Allow for tool workspace_read_spreadsheet_range on agent 3e914b12-2369-ed5f-bf79-f26db10ef5cd. ExecutionRunId=2ad74efc-bd4a-4199-b912-cecd9600291e SourceKind=project-structure ProcessRunId= ProcessStepId= RuntimeToolProviderKey= Signature=workspace_read_spreadsheet_range|maxColumns=10,maxRows=10,rangeAddress=A1:J4,workbookPath=artifacts/scopes/organization/e5df9ad633dbc6974a0678a74976013c/business/quotationpdfs-tests/finance/xray-machine-pricing-model.xlsx,worksheetName=Quotation
+info: CanDoItAll.AgentFramework.Maf.MafAgentRuntime[0]
+      Agent tool policy decision Allow for tool workspace_write_spreadsheet on agent 3e914b12-2369-ed5f-bf79-f26db10ef5cd. ExecutionRunId=2ad74efc-bd4a-4199-b912-cecd9600291e SourceKind=project-structure ProcessRunId= ProcessStepId= RuntimeToolProviderKey= Signature=workspace_write_spreadsheet|createWorkbookIfMissing=True,outputWorkbookPath=artifacts/scopes/organization/e5df9ad633dbc6974a0678a74976013c/business/quotationpdfs-tests/finance/xray-machine-pricing-model.xlsx,overwrite=True,rangeWrites=[{"rangeAddress":"A1:J4","values":[["Item","Model","Company Price USD","Marketing Low USD","Marketing High USD","Recommended Price USD","Gross Margin USD","Gros...#67a1ac55119d,workbookPath=artifacts/scopes/organization/e5df9ad633dbc6974a0678a74976013c/business/quotationpdfs-tests/finance/xray-machine-pricing-model.xlsx,worksheetName=Quotation
+info: CanDoItAll.AgentFramework.Maf.MafAgentRuntime[0]
+      Agent tool policy decision Allow for tool workspace_write_spreadsheet on agent 3e914b12-2369-ed5f-bf79-f26db10ef5cd. ExecutionRunId=2ad74efc-bd4a-4199-b912-cecd9600291e SourceKind=project-structure ProcessRunId= ProcessStepId= RuntimeToolProviderKey= Signature=workspace_write_spreadsheet|createWorkbookIfMissing=True,outputWorkbookPath=artifacts/scopes/organization/e5df9ad633dbc6974a0678a74976013c/business/quotationpdfs-tests/finance/xray-machine-pricing-model.xlsx,overwrite=False,rangeWrites=[{"rangeAddress":"A1:B8","values":[["Metric","Value"],["Source document","Quotation for Xrays"],["Currency","USD"],["Recommended price basis","Midpoint of compa...#2509dc8c1247,workbookPath=artifacts/scopes/organization/e5df9ad633dbc6974a0678a74976013c/business/quotationpdfs-tests/finance/xray-machine-pricing-model.xlsx,worksheetName=Summary
+fail: Microsoft.Extensions.AI.FunctionInvokingChatClient[1784604714]
+      workspace_write_spreadsheet invocation failed.
+      System.InvalidOperationException: Spreadsheet output path 'C:\Users\lucys\AppData\Local\CanDoItAll\workspace\artifacts\scopes\organization\e5df9ad633dbc6974a0678a74976013c\business\quotationpdfs-tests\finance\xray-machine-pricing-model.xlsx' already exists.
+         at CanDoItAll.Tools.Documents.ClosedXmlSpreadsheetDocumentService.Write(SpreadsheetWriteRequest request) in C:\repositories\CanDoItAll\src\MAF\Tools\CanDoItAll.Tools.Documents\Spreadsheets\ClosedXmlSpreadsheetDocumentService.cs:line 94
+         at CanDoItAll.AgentFramework.Maf.WorkspaceSpreadsheetRuntimePlugin.WriteSpreadsheetWorkbook(String workbookPath, String worksheetName, String outputWorkbookPath, SpreadsheetCellWrite[] cellWrites, SpreadsheetRangeWrite[] rangeWrites, Boolean createWorkbookIfMissing, Boolean overwrite) in C:\repositories\CanDoItAll\src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Workspace\WorkspaceSpreadsheetRuntimePlugin.cs:line 112
+         at InvokeStub_WorkspaceSpreadsheetRuntimePlugin.WriteSpreadsheetWorkbook(Object, Span`1)
+         at System.Reflection.MethodBaseInvoker.InvokeWithManyArgs(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+         at System.Reflection.RuntimeMethodInfo.Invoke(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+         at Microsoft.Extensions.AI.AIFunctionFactory.ReflectionInvoke(MethodInfo method, Object target, Object[] arguments)
+         at Microsoft.Extensions.AI.AIFunctionFactory.ReflectionAIFunction.InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
+         at Microsoft.Extensions.AI.AIFunctionFactory.ReflectionAIFunction.InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
+         at CanDoItAll.AgentFramework.Maf.MafRuntimeAgentFactory.<>c__DisplayClass12_0.<<CreateInstrumentedAgent>b__6>d.MoveNext() in C:\repositories\CanDoItAll\src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\MafRuntimeAgentFactory.cs:line 443
+      --- End of stack trace from previous location ---
+         at Microsoft.Agents.AI.FunctionInvocationDelegatingAgent.MiddlewareEnabledFunction.InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
+         at Microsoft.Extensions.AI.FunctionInvocationProcessor.InstrumentedInvokeFunctionAsync(FunctionInvocationContext context, CancellationToken cancellationToken)
+info: CanDoItAll.AgentFramework.Maf.MafAgentRuntime[0]
+      Agent tool policy decision Allow for tool workspace_write_spreadsheet on agent 3e914b12-2369-ed5f-bf79-f26db10ef5cd. ExecutionRunId=2ad74efc-bd4a-4199-b912-cecd9600291e SourceKind=project-structure ProcessRunId= ProcessStepId= RuntimeToolProviderKey= Signature=workspace_write_spreadsheet|cellWrites=[{"cellAddress":"A1","value":"Metric"},{"cellAddress":"B1","value":"Value"},{"cellAddress":"A2","value":"Source document"},{"cellAddress":"B2","value":"Quotatio...#b3c3247f9b2a,createWorkbookIfMissing=True,outputWorkbookPath=artifacts/scopes/organization/e5df9ad633dbc6974a0678a74976013c/business/quotationpdfs-tests/finance/xray-machine-pricing-model.xlsx,overwrite=True,workbookPath=artifacts/scopes/organization/e5df9ad633dbc6974a0678a74976013c/business/quotationpdfs-tests/finance/xray-machine-pricing-model.xlsx,worksheetName=Summary
+info: CanDoItAll.AgentFramework.Maf.MafAgentRuntime[0]
+      Agent tool policy decision Allow for tool workspace_spreadsheet_summary on agent 3e914b12-2369-ed5f-bf79-f26db10ef5cd. ExecutionRunId=2ad74efc-bd4a-4199-b912-cecd9600291e SourceKind=project-structure ProcessRunId= ProcessStepId= RuntimeToolProviderKey= Signature=workspace_spreadsheet_summary|workbookPath=artifacts/scopes/organization/e5df9ad633dbc6974a0678a74976013c/business/quotationpdfs-tests/finance/xray-machine-pricing-model.xlsx
+info: CanDoItAll.AgentFramework.Maf.MafAgentRuntime[0]
+      Agent tool policy decision Allow for tool project_structure_asset_create on agent 3e914b12-2369-ed5f-bf79-f26db10ef5cd. ExecutionRunId=2ad74efc-bd4a-4199-b912-cecd9600291e SourceKind=project-structure ProcessRunId= ProcessStepId= RuntimeToolProviderKey=project-structure.runtime-tools Signature=project_structure_asset_create|estimatedMinutes=5,projectId=f28c07cd-982c-4d2d-bcf2-3e60a32eca72,request={"objectType":"File","objectSubtype":"excel","title":"X-ray machine pricing model","subtitle":"Quotation-derived pricing and margin workbook","notes":"Workbook ...#d5b11337e07d
+info: CanDoItAll.AgentFramework.Maf.MafAgentRuntime[0]
+      Agent tool policy decision Allow for tool project_structure_node_create on agent 3e914b12-2369-ed5f-bf79-f26db10ef5cd. ExecutionRunId=2ad74efc-bd4a-4199-b912-cecd9600291e SourceKind=project-structure ProcessRunId= ProcessStepId= RuntimeToolProviderKey=project-structure.runtime-tools Signature=project_structure_node_create|estimatedMinutes=5,projectId=f28c07cd-982c-4d2d-bcf2-3e60a32eca72,request={"parentNodeKey":"custom:a7bbaa78a950420086616a910909e037","objectType":"Note","title":"ZM-x5600 target price 40,950 USD","subtitle":"Margin 5,950 USD | 14.53%"...#4b6adfe5e7a7
+info: CanDoItAll.AgentFramework.Maf.MafAgentRuntime[0]
+      Agent tool policy decision Allow for tool project_structure_node_create on agent 3e914b12-2369-ed5f-bf79-f26db10ef5cd. ExecutionRunId=2ad74efc-bd4a-4199-b912-cecd9600291e SourceKind=project-structure ProcessRunId= ProcessStepId= RuntimeToolProviderKey=project-structure.runtime-tools Signature=project_structure_node_create|estimatedMinutes=5,projectId=f28c07cd-982c-4d2d-bcf2-3e60a32eca72,request={"parentNodeKey":"custom:a7bbaa78a950420086616a910909e037","objectType":"Note","title":"ZM-x6600A target price 75,500 USD","subtitle":"Margin 9,500 USD | 12.58%...#239b1b8eb213
+info: CanDoItAll.AgentFramework.Maf.MafAgentRuntime[0]
+      Agent tool policy decision Allow for tool project_structure_node_create on agent 3e914b12-2369-ed5f-bf79-f26db10ef5cd. ExecutionRunId=2ad74efc-bd4a-4199-b912-cecd9600291e SourceKind=project-structure ProcessRunId= ProcessStepId= RuntimeToolProviderKey=project-structure.runtime-tools Signature=project_structure_node_create|estimatedMinutes=5,projectId=f28c07cd-982c-4d2d-bcf2-3e60a32eca72,request={"parentNodeKey":"custom:a7bbaa78a950420086616a910909e037","objectType":"Note","title":"ZM-x6600 target price 47,500 USD","subtitle":"Margin 6,000 USD | 12.63%"...#47e8d14973de
+info: CanDoItAll.AgentFramework.Maf.MafAgentRuntime[0]
+      Agent tool policy decision Allow for tool project_structure_link_create on agent 3e914b12-2369-ed5f-bf79-f26db10ef5cd. ExecutionRunId=2ad74efc-bd4a-4199-b912-cecd9600291e SourceKind=project-structure ProcessRunId= ProcessStepId= RuntimeToolProviderKey=project-structure.runtime-tools Signature=project_structure_link_create|estimatedMinutes=2,projectId=f28c07cd-982c-4d2d-bcf2-3e60a32eca72,request={"sourceNodeId":"custom:507b21edadd8488c9ce1d8983c3ffebc","targetNodeId":"custom:620a9f84c37b487385471967a8713252","kind":"DerivedFrom","leaseToken":"fa113f7ec9...#8f02144f3f9c
+info: CanDoItAll.AgentFramework.Maf.MafAgentRuntime[0]
+      Agent tool policy decision Allow for tool project_structure_nodes_status_update on agent 3e914b12-2369-ed5f-bf79-f26db10ef5cd. ExecutionRunId=2ad74efc-bd4a-4199-b912-cecd9600291e SourceKind=project-structure ProcessRunId= ProcessStepId= RuntimeToolProviderKey=project-structure.runtime-tools Signature=project_structure_nodes_status_update|projectId=f28c07cd-982c-4d2d-bcf2-3e60a32eca72,request={"nodeIds":["custom:507b21edadd8488c9ce1d8983c3ffebc","custom:476d879acf7d4f42b47bae29cfc5e1da","custom:6cc21a2f52ce4556ba39521d98e8499b","custom:d45d19c6a99d4e...#69627af9a787
+info: CanDoItAll.AgentFramework.Maf.MafAgentRuntime[0]
+      Agent tool policy decision Allow for tool project_structure_lease_release on agent 3e914b12-2369-ed5f-bf79-f26db10ef5cd. ExecutionRunId=2ad74efc-bd4a-4199-b912-cecd9600291e SourceKind=project-structure ProcessRunId= ProcessStepId= RuntimeToolProviderKey=project-structure.runtime-tools Signature=project_structure_lease_release|leaseToken=<redacted>,scope={"scopeKind":"Project","projectId":"f28c07cd-982c-4d2d-bcf2-3e60a32eca72"}
+warn: Microsoft.EntityFrameworkCore.Query[10102]
+      The query uses a row limiting operator ('Skip'/'Take') without an 'OrderBy' operator. This may lead to unpredictable results. If the 'Distinct' operator is used after 'OrderBy', then make sure to use the 'OrderBy' operator after 'Distinct' as the ordering would otherwise get erased.
+info: System.Net.Http.HttpClient.PluginOAuthService.LogicalHandler[100]
+      Start processing HTTP request POST https://login.microsoftonline.com/common/oauth2/v2.0/token
+info: System.Net.Http.HttpClient.PluginOAuthService.ClientHandler[100]
+      Sending HTTP request POST https://login.microsoftonline.com/common/oauth2/v2.0/token
+info: System.Net.Http.HttpClient.PluginOAuthService.ClientHandler[101]
+      Received HTTP response headers after 617.2477ms - 200
+info: System.Net.Http.HttpClient.PluginOAuthService.LogicalHandler[101]
+      End processing HTTP request after 624.1945ms - 200
+info: System.Net.Http.HttpClient.Office365GraphClient.LogicalHandler[100]
+      Start processing HTTP request GET https://graph.microsoft.com/v1.0/me/messages?*
+info: System.Net.Http.HttpClient.Office365GraphClient.ClientHandler[100]
+      Sending HTTP request GET https://graph.microsoft.com/v1.0/me/messages?*
+info: System.Net.Http.HttpClient.Office365GraphClient.ClientHandler[101]
+      Received HTTP response headers after 759.0424ms - 200
+info: System.Net.Http.HttpClient.Office365GraphClient.LogicalHandler[101]
+      End processing HTTP request after 759.1455ms - 200
+info: System.Net.Http.HttpClient.Office365GraphClient.LogicalHandler[100]
+      Start processing HTTP request GET https://graph.microsoft.com/v1.0/me/messages?*
+info: System.Net.Http.HttpClient.Office365GraphClient.ClientHandler[100]
+      Sending HTTP request GET https://graph.microsoft.com/v1.0/me/messages?*
+info: System.Net.Http.HttpClient.Office365GraphClient.ClientHandler[101]
+      Received HTTP response headers after 176.2284ms - 200
+info: System.Net.Http.HttpClient.Office365GraphClient.LogicalHandler[101]
+      End processing HTTP request after 176.3078ms - 200
+fail: CanDoItAll.Modules.SchedulerPlanner.SchedulerPlannerRunDispatcher[0]
+      Scheduler plan aa141648-524a-4b15-8992-ee6a8b024d5f failed to dispatch after scheduler fire 4014c89e-04b1-4f6b-9957-da35e31b0f60 at 07/07/2026 13:00:00 +00:00.
+      CanDoItAll.Modules.SchedulerPlanner.SchedulerTargetLaunchException: Workflow run '9f0cc05b-dfb7-4114-b80b-7e605d400f22' failed: Workflow error: Error invoking handler for CanDoItAll.AgentFramework.Models.WorkflowNodeInput
+         at CanDoItAll.Modules.SchedulerPlanner.SchedulerTargetLauncher.LaunchWorkflowAsync(SchedulerPlan plan, CancellationToken cancellationToken) in C:\repositories\CanDoItAll\src\Modules\CanDoItAll.Modules.SchedulerPlanner\SchedulerPlannerService.cs:line 922
+         at CanDoItAll.Modules.SchedulerPlanner.SchedulerTargetLauncher.LaunchAsync(SchedulerPlan plan, DateTimeOffset firedAtUtc, CancellationToken cancellationToken) in C:\repositories\CanDoItAll\src\Modules\CanDoItAll.Modules.SchedulerPlanner\SchedulerPlannerService.cs:line 865
+         at CanDoItAll.Modules.SchedulerPlanner.SchedulerPlannerRunDispatcher.DispatchAsync(SchedulerPlanFireRequest request, CancellationToken cancellationToken) in C:\repositories\CanDoItAll\src\Modules\CanDoItAll.Modules.SchedulerPlanner\SchedulerPlannerService.cs:line 1174
+fail: CanDoItAll.Modules.SchedulerPlanner.SchedulerPlannerQuartzJob[0]
+      SchedulerPlanner Quartz job failed for plan aa141648-524a-4b15-8992-ee6a8b024d5f fired at 07/07/2026 13:00:00 +00:00.
+      CanDoItAll.Modules.SchedulerPlanner.SchedulerTargetLaunchException: Workflow run '9f0cc05b-dfb7-4114-b80b-7e605d400f22' failed: Workflow error: Error invoking handler for CanDoItAll.AgentFramework.Models.WorkflowNodeInput
+         at CanDoItAll.Modules.SchedulerPlanner.SchedulerTargetLauncher.LaunchWorkflowAsync(SchedulerPlan plan, CancellationToken cancellationToken) in C:\repositories\CanDoItAll\src\Modules\CanDoItAll.Modules.SchedulerPlanner\SchedulerPlannerService.cs:line 922
+         at CanDoItAll.Modules.SchedulerPlanner.SchedulerTargetLauncher.LaunchAsync(SchedulerPlan plan, DateTimeOffset firedAtUtc, CancellationToken cancellationToken) in C:\repositories\CanDoItAll\src\Modules\CanDoItAll.Modules.SchedulerPlanner\SchedulerPlannerService.cs:line 865
+         at CanDoItAll.Modules.SchedulerPlanner.SchedulerPlannerRunDispatcher.DispatchAsync(SchedulerPlanFireRequest request, CancellationToken cancellationToken) in C:\repositories\CanDoItAll\src\Modules\CanDoItAll.Modules.SchedulerPlanner\SchedulerPlannerService.cs:line 1174
+         at CanDoItAll.Modules.SchedulerPlanner.SchedulerPlannerRunDispatcher.DispatchAsync(SchedulerPlanFireRequest request, CancellationToken cancellationToken) in C:\repositories\CanDoItAll\src\Modules\CanDoItAll.Modules.SchedulerPlanner\SchedulerPlannerService.cs:line 1236
+         at CanDoItAll.Modules.SchedulerPlanner.SchedulerPlannerRunDispatcher.DispatchAsync(SchedulerPlanFireRequest request, CancellationToken cancellationToken) in C:\repositories\CanDoItAll\src\Modules\CanDoItAll.Modules.SchedulerPlanner\SchedulerPlannerService.cs:line 1237
+         at CanDoItAll.Modules.SchedulerPlanner.SchedulerPlannerQuartzJob.Execute(IJobExecutionContext context) in C:\repositories\CanDoItAll\src\Modules\CanDoItAll.Modules.SchedulerPlanner\SchedulerPlannerScheduling.cs:line 201
+fail: Quartz.Core.JobRunShell[0]
+      Job candoitall-scheduler-planner.plan-aa141648524a4b158992ee6a8b024d5f threw an unhandled Exception: 
+      CanDoItAll.Modules.SchedulerPlanner.SchedulerTargetLaunchException: Workflow run '9f0cc05b-dfb7-4114-b80b-7e605d400f22' failed: Workflow error: Error invoking handler for CanDoItAll.AgentFramework.Models.WorkflowNodeInput
+         at CanDoItAll.Modules.SchedulerPlanner.SchedulerTargetLauncher.LaunchWorkflowAsync(SchedulerPlan plan, CancellationToken cancellationToken) in C:\repositories\CanDoItAll\src\Modules\CanDoItAll.Modules.SchedulerPlanner\SchedulerPlannerService.cs:line 922
+         at CanDoItAll.Modules.SchedulerPlanner.SchedulerTargetLauncher.LaunchAsync(SchedulerPlan plan, DateTimeOffset firedAtUtc, CancellationToken cancellationToken) in C:\repositories\CanDoItAll\src\Modules\CanDoItAll.Modules.SchedulerPlanner\SchedulerPlannerService.cs:line 865
+         at CanDoItAll.Modules.SchedulerPlanner.SchedulerPlannerRunDispatcher.DispatchAsync(SchedulerPlanFireRequest request, CancellationToken cancellationToken) in C:\repositories\CanDoItAll\src\Modules\CanDoItAll.Modules.SchedulerPlanner\SchedulerPlannerService.cs:line 1174
+         at CanDoItAll.Modules.SchedulerPlanner.SchedulerPlannerRunDispatcher.DispatchAsync(SchedulerPlanFireRequest request, CancellationToken cancellationToken) in C:\repositories\CanDoItAll\src\Modules\CanDoItAll.Modules.SchedulerPlanner\SchedulerPlannerService.cs:line 1236
+         at CanDoItAll.Modules.SchedulerPlanner.SchedulerPlannerRunDispatcher.DispatchAsync(SchedulerPlanFireRequest request, CancellationToken cancellationToken) in C:\repositories\CanDoItAll\src\Modules\CanDoItAll.Modules.SchedulerPlanner\SchedulerPlannerService.cs:line 1237
+         at CanDoItAll.Modules.SchedulerPlanner.SchedulerPlannerQuartzJob.Execute(IJobExecutionContext context) in C:\repositories\CanDoItAll\src\Modules\CanDoItAll.Modules.SchedulerPlanner\SchedulerPlannerScheduling.cs:line 201
+         at Quartz.Core.JobRunShell.Run(CancellationToken cancellationToken)
+fail: Quartz.Core.ErrorLogger[0]
+      Job candoitall-scheduler-planner.plan-aa141648524a4b158992ee6a8b024d5f threw an exception.
+      Quartz.SchedulerException: Job threw an unhandled exception.
+       ---> CanDoItAll.Modules.SchedulerPlanner.SchedulerTargetLaunchException: Workflow run '9f0cc05b-dfb7-4114-b80b-7e605d400f22' failed: Workflow error: Error invoking handler for CanDoItAll.AgentFramework.Models.WorkflowNodeInput
+         at CanDoItAll.Modules.SchedulerPlanner.SchedulerTargetLauncher.LaunchWorkflowAsync(SchedulerPlan plan, CancellationToken cancellationToken) in C:\repositories\CanDoItAll\src\Modules\CanDoItAll.Modules.SchedulerPlanner\SchedulerPlannerService.cs:line 922
+         at CanDoItAll.Modules.SchedulerPlanner.SchedulerTargetLauncher.LaunchAsync(SchedulerPlan plan, DateTimeOffset firedAtUtc, CancellationToken cancellationToken) in C:\repositories\CanDoItAll\src\Modules\CanDoItAll.Modules.SchedulerPlanner\SchedulerPlannerService.cs:line 865
+         at CanDoItAll.Modules.SchedulerPlanner.SchedulerPlannerRunDispatcher.DispatchAsync(SchedulerPlanFireRequest request, CancellationToken cancellationToken) in C:\repositories\CanDoItAll\src\Modules\CanDoItAll.Modules.SchedulerPlanner\SchedulerPlannerService.cs:line 1174
+         at CanDoItAll.Modules.SchedulerPlanner.SchedulerPlannerRunDispatcher.DispatchAsync(SchedulerPlanFireRequest request, CancellationToken cancellationToken) in C:\repositories\CanDoItAll\src\Modules\CanDoItAll.Modules.SchedulerPlanner\SchedulerPlannerService.cs:line 1236
+         at CanDoItAll.Modules.SchedulerPlanner.SchedulerPlannerRunDispatcher.DispatchAsync(SchedulerPlanFireRequest request, CancellationToken cancellationToken) in C:\repositories\CanDoItAll\src\Modules\CanDoItAll.Modules.SchedulerPlanner\SchedulerPlannerService.cs:line 1237
+         at CanDoItAll.Modules.SchedulerPlanner.SchedulerPlannerQuartzJob.Execute(IJobExecutionContext context) in C:\repositories\CanDoItAll\src\Modules\CanDoItAll.Modules.SchedulerPlanner\SchedulerPlannerScheduling.cs:line 201
+         at Quartz.Core.JobRunShell.Run(CancellationToken cancellationToken)
+         --- End of inner exception stack trace --- [See nested exception: CanDoItAll.Modules.SchedulerPlanner.SchedulerTargetLaunchException: Workflow run '9f0cc05b-dfb7-4114-b80b-7e605d400f22' failed: Workflow error: Error invoking handler for CanDoItAll.AgentFramework.Models.WorkflowNodeInput
+         at CanDoItAll.Modules.SchedulerPlanner.SchedulerTargetLauncher.LaunchWorkflowAsync(SchedulerPlan plan, CancellationToken cancellationToken) in C:\repositories\CanDoItAll\src\Modules\CanDoItAll.Modules.SchedulerPlanner\SchedulerPlannerService.cs:line 922
+         at CanDoItAll.Modules.SchedulerPlanner.SchedulerTargetLauncher.LaunchAsync(SchedulerPlan plan, DateTimeOffset firedAtUtc, CancellationToken cancellationToken) in C:\repositories\CanDoItAll\src\Modules\CanDoItAll.Modules.SchedulerPlanner\SchedulerPlannerService.cs:line 865
+         at CanDoItAll.Modules.SchedulerPlanner.SchedulerPlannerRunDispatcher.DispatchAsync(SchedulerPlanFireRequest request, CancellationToken cancellationToken) in C:\repositories\CanDoItAll\src\Modules\CanDoItAll.Modules.SchedulerPlanner\SchedulerPlannerService.cs:line 1174
+         at CanDoItAll.Modules.SchedulerPlanner.SchedulerPlannerRunDispatcher.DispatchAsync(SchedulerPlanFireRequest request, CancellationToken cancellationToken) in C:\repositories\CanDoItAll\src\Modules\CanDoItAll.Modules.SchedulerPlanner\SchedulerPlannerService.cs:line 1236
+         at CanDoItAll.Modules.SchedulerPlanner.SchedulerPlannerRunDispatcher.DispatchAsync(SchedulerPlanFireRequest request, CancellationToken cancellationToken) in C:\repositories\CanDoItAll\src\Modules\CanDoItAll.Modules.SchedulerPlanner\SchedulerPlannerService.cs:line 1237
+         at CanDoItAll.Modules.SchedulerPlanner.SchedulerPlannerQuartzJob.Execute(IJobExecutionContext context) in C:\repositories\CanDoItAll\src\Modules\CanDoItAll.Modules.SchedulerPlanner\SchedulerPlannerScheduling.cs:line 201
+         at Quartz.Core.JobRunShell.Run(CancellationToken cancellationToken)]

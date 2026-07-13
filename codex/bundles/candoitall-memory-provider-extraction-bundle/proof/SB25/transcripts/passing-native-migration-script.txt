@@ -1,0 +1,517 @@
+Command: dotnet ef migrations script --idempotent --project .\src\CanDoItAll.CognitiveMemory.Persistence\CanDoItAll.CognitiveMemory.Persistence.csproj --startup-project .\src\CanDoItAll.CognitiveMemory.Persistence\CanDoItAll.CognitiveMemory.Persistence.csproj --no-build
+Working directory: C:\repositories\CanDoItAll.CognitiveMemory
+Start time UTC: 2026-07-05T23:31:51.1958247Z
+Output:
+The Entity Framework tools version '10.0.3' is older than that of the runtime '10.0.4'. Update the tools for the latest features and bug fixes. See https://aka.ms/AAc1fbw for more information.
+CREATE TABLE IF NOT EXISTS "__EFMigrationsHistory" (
+    "MigrationId" character varying(150) NOT NULL,
+    "ProductVersion" character varying(32) NOT NULL,
+    CONSTRAINT "PK___EFMigrationsHistory" PRIMARY KEY ("MigrationId")
+);
+
+START TRANSACTION;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260705232715_InitialNativePersistence') THEN
+    CREATE TABLE "CognitiveMemory_ProjectionStates" (
+        "Id" uuid NOT NULL,
+        "ProjectId" uuid,
+        "ProjectionKind" integer NOT NULL,
+        "TargetProvider" character varying(120) NOT NULL,
+        "ProjectionSchemaVersion" character varying(80) NOT NULL,
+        "AlgorithmVersion" character varying(120) NOT NULL,
+        "Status" integer NOT NULL,
+        "LastSourceHash" character varying(128) NOT NULL,
+        "LastProjectedAtUtc" timestamp with time zone,
+        "FailureCode" character varying(120) NOT NULL,
+        "FailureMessage" TEXT NOT NULL,
+        "RebuildRequired" boolean NOT NULL,
+        "CreatedAtUtc" timestamp with time zone NOT NULL,
+        "UpdatedAtUtc" timestamp with time zone NOT NULL,
+        "ConcurrencyToken" uuid NOT NULL,
+        CONSTRAINT "PK_CognitiveMemory_ProjectionStates" PRIMARY KEY ("Id")
+    );
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260705232715_InitialNativePersistence') THEN
+    CREATE TABLE "CognitiveMemory_RecallTraces" (
+        "Id" uuid NOT NULL,
+        "ProjectId" uuid,
+        "OperationMode" integer NOT NULL,
+        "RecallMode" integer NOT NULL,
+        "RequestedByActorId" character varying(160) NOT NULL,
+        "PolicyProfileId" character varying(120) NOT NULL,
+        "WorkspaceFrameId" uuid,
+        "AttentionDecisionId" uuid,
+        "SelfRegulationAssessmentId" uuid,
+        "AnswerPostureDecisionId" uuid,
+        "AnswerGateDecisionId" uuid,
+        "ContextPackId" uuid,
+        "RequestHashAlgorithm" integer NOT NULL,
+        "RequestHash" character varying(128) NOT NULL,
+        "AlgorithmVersion" character varying(120) NOT NULL,
+        "Outcome" integer NOT NULL,
+        "IncludedRecordCount" integer NOT NULL,
+        "ExcludedRecordCount" integer NOT NULL,
+        "SelectedClaimCount" integer NOT NULL,
+        "SelectedEvidenceAnchorCount" integer NOT NULL,
+        "InhibitedCandidateCount" integer NOT NULL,
+        "LimitingBudget" integer,
+        "TraceJson" TEXT NOT NULL,
+        "StartedAtUtc" timestamp with time zone NOT NULL,
+        "CompletedAtUtc" timestamp with time zone,
+        "ConcurrencyToken" uuid NOT NULL,
+        CONSTRAINT "PK_CognitiveMemory_RecallTraces" PRIMARY KEY ("Id")
+    );
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260705232715_InitialNativePersistence') THEN
+    CREATE TABLE "CognitiveMemory_Records" (
+        "Id" uuid NOT NULL,
+        "ProjectId" uuid,
+        "Kind" integer NOT NULL,
+        "Origin" integer NOT NULL,
+        "Title" character varying(300) NOT NULL,
+        "CanonicalText" TEXT NOT NULL,
+        "SummaryText" TEXT NOT NULL,
+        "TopicKey" character varying(240) NOT NULL,
+        "ValidationState" integer NOT NULL,
+        "StabilityState" integer NOT NULL,
+        "CreatedInMode" integer NOT NULL,
+        "AlgorithmVersion" character varying(120) NOT NULL,
+        "ContentHashAlgorithm" integer NOT NULL,
+        "ContentHash" character varying(128) NOT NULL,
+        "SourceEvidenceCount" integer NOT NULL,
+        "EvidenceAnchorCount" integer NOT NULL,
+        "GeneratedReason" character varying(500) NOT NULL,
+        "PrimaryClaimId" uuid,
+        "PrimaryContextFrameId" uuid,
+        "ConfidenceScoreEvaluationTraceId" uuid,
+        "ActivationScoreEvaluationTraceId" uuid,
+        "ConfidenceBucket" integer NOT NULL,
+        "ActivationBucket" integer NOT NULL,
+        "AccessLevel" integer NOT NULL,
+        "RiskLevel" integer NOT NULL,
+        "CreatedAtUtc" timestamp with time zone NOT NULL,
+        "UpdatedAtUtc" timestamp with time zone NOT NULL,
+        "ConcurrencyToken" uuid NOT NULL,
+        CONSTRAINT "PK_CognitiveMemory_Records" PRIMARY KEY ("Id")
+    );
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260705232715_InitialNativePersistence') THEN
+    CREATE TABLE "CognitiveMemory_ReviewItems" (
+        "Id" uuid NOT NULL,
+        "ProjectId" uuid,
+        "ReviewKind" integer NOT NULL,
+        "Status" integer NOT NULL,
+        "SubjectKind" integer NOT NULL,
+        "SubjectId" uuid NOT NULL,
+        "RiskLevel" integer NOT NULL,
+        "ReasonCode" character varying(120) NOT NULL,
+        "ReasonText" TEXT NOT NULL,
+        "SourceEvidenceCount" integer NOT NULL,
+        "CreatedAtUtc" timestamp with time zone NOT NULL,
+        "DecidedAtUtc" timestamp with time zone,
+        "DecidedByActorId" character varying(160) NOT NULL,
+        "DecisionNotes" TEXT NOT NULL,
+        "ConcurrencyToken" uuid NOT NULL,
+        CONSTRAINT "PK_CognitiveMemory_ReviewItems" PRIMARY KEY ("Id")
+    );
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260705232715_InitialNativePersistence') THEN
+    CREATE TABLE "CognitiveMemory_Runs" (
+        "Id" uuid NOT NULL,
+        "ProjectId" uuid,
+        "RunKind" integer NOT NULL,
+        "Status" integer NOT NULL,
+        "OperationMode" integer NOT NULL,
+        "IdempotencyKey" character varying(240) NOT NULL,
+        "InputHashAlgorithm" integer NOT NULL,
+        "InputHash" character varying(128) NOT NULL,
+        "AlgorithmVersion" character varying(120) NOT NULL,
+        "Cursor" character varying(1000) NOT NULL,
+        "StartedAtUtc" timestamp with time zone NOT NULL,
+        "CompletedAtUtc" timestamp with time zone,
+        "FailureCode" character varying(120) NOT NULL,
+        "FailureMessage" TEXT NOT NULL,
+        "ConcurrencyToken" uuid NOT NULL,
+        CONSTRAINT "PK_CognitiveMemory_Runs" PRIMARY KEY ("Id")
+    );
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260705232715_InitialNativePersistence') THEN
+    CREATE TABLE "CognitiveMemory_SourceManifests" (
+        "Id" uuid NOT NULL,
+        "ProjectId" uuid,
+        "SourceSystem" character varying(80) NOT NULL,
+        "SourceScopeKey" character varying(240) NOT NULL,
+        "SourceSnapshotId" character varying(240) NOT NULL,
+        "SnapshotHashAlgorithm" integer NOT NULL,
+        "SnapshotHash" character varying(128) NOT NULL,
+        "ProviderVersion" character varying(120) NOT NULL,
+        "Cursor" character varying(1000),
+        "ScanStatus" integer NOT NULL,
+        "ObservedAtUtc" timestamp with time zone NOT NULL,
+        "CreatedAtUtc" timestamp with time zone NOT NULL,
+        "UpdatedAtUtc" timestamp with time zone NOT NULL,
+        "ConcurrencyToken" uuid NOT NULL,
+        CONSTRAINT "PK_CognitiveMemory_SourceManifests" PRIMARY KEY ("Id")
+    );
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260705232715_InitialNativePersistence') THEN
+    CREATE TABLE "CognitiveMemory_Relations" (
+        "Id" uuid NOT NULL,
+        "ProjectId" uuid,
+        "SourceMemoryRecordId" uuid NOT NULL,
+        "TargetMemoryRecordId" uuid NOT NULL,
+        "RelationKind" integer NOT NULL,
+        "EvidenceCount" integer NOT NULL,
+        "RelationScoreEvaluationTraceId" uuid,
+        "RelationBucket" integer NOT NULL,
+        "DisplayStrengthProjection" double precision,
+        "Reason" TEXT NOT NULL,
+        "AlgorithmVersion" character varying(120) NOT NULL,
+        "CreatedAtUtc" timestamp with time zone NOT NULL,
+        "ConcurrencyToken" uuid NOT NULL,
+        CONSTRAINT "PK_CognitiveMemory_Relations" PRIMARY KEY ("Id"),
+        CONSTRAINT "FK_CognitiveMemory_Relations_CognitiveMemory_Records_SourceMem~" FOREIGN KEY ("SourceMemoryRecordId") REFERENCES "CognitiveMemory_Records" ("Id") ON DELETE RESTRICT,
+        CONSTRAINT "FK_CognitiveMemory_Relations_CognitiveMemory_Records_TargetMem~" FOREIGN KEY ("TargetMemoryRecordId") REFERENCES "CognitiveMemory_Records" ("Id") ON DELETE RESTRICT
+    );
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260705232715_InitialNativePersistence') THEN
+    CREATE TABLE "CognitiveMemory_SourceItems" (
+        "Id" uuid NOT NULL,
+        "SourceManifestId" uuid NOT NULL,
+        "ProjectId" uuid,
+        "SourceSystem" character varying(80) NOT NULL,
+        "SourceItemKey" character varying(500) NOT NULL,
+        "SourceItemType" character varying(80) NOT NULL,
+        "Title" character varying(300) NOT NULL,
+        "ContentText" TEXT NOT NULL,
+        "Locator" character varying(1000),
+        "ContentHashAlgorithm" integer NOT NULL,
+        "ContentHash" character varying(128) NOT NULL,
+        "RedactionState" integer NOT NULL,
+        "AccessLevel" integer NOT NULL,
+        "AccessScope" character varying(240) NOT NULL,
+        "ProvenanceJson" TEXT NOT NULL,
+        "ObservedAtUtc" timestamp with time zone NOT NULL,
+        "CreatedAtUtc" timestamp with time zone NOT NULL,
+        "UpdatedAtUtc" timestamp with time zone NOT NULL,
+        "ConcurrencyToken" uuid NOT NULL,
+        CONSTRAINT "PK_CognitiveMemory_SourceItems" PRIMARY KEY ("Id"),
+        CONSTRAINT "FK_CognitiveMemory_SourceItems_CognitiveMemory_SourceManifests~" FOREIGN KEY ("SourceManifestId") REFERENCES "CognitiveMemory_SourceManifests" ("Id") ON DELETE CASCADE
+    );
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260705232715_InitialNativePersistence') THEN
+    CREATE TABLE "CognitiveMemory_SourceLinks" (
+        "Id" uuid NOT NULL,
+        "MemoryRecordId" uuid NOT NULL,
+        "SourceManifestId" uuid NOT NULL,
+        "SourceItemId" uuid NOT NULL,
+        "EvidenceRole" integer NOT NULL,
+        "Locator" character varying(1000),
+        "QuoteHash" character varying(128),
+        "Summary" TEXT NOT NULL,
+        "CreatedAtUtc" timestamp with time zone NOT NULL,
+        CONSTRAINT "PK_CognitiveMemory_SourceLinks" PRIMARY KEY ("Id"),
+        CONSTRAINT "FK_CognitiveMemory_SourceLinks_CognitiveMemory_Records_MemoryR~" FOREIGN KEY ("MemoryRecordId") REFERENCES "CognitiveMemory_Records" ("Id") ON DELETE CASCADE,
+        CONSTRAINT "FK_CognitiveMemory_SourceLinks_CognitiveMemory_SourceItems_Sou~" FOREIGN KEY ("SourceItemId") REFERENCES "CognitiveMemory_SourceItems" ("Id") ON DELETE RESTRICT,
+        CONSTRAINT "FK_CognitiveMemory_SourceLinks_CognitiveMemory_SourceManifests~" FOREIGN KEY ("SourceManifestId") REFERENCES "CognitiveMemory_SourceManifests" ("Id") ON DELETE RESTRICT
+    );
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260705232715_InitialNativePersistence') THEN
+    CREATE UNIQUE INDEX "IX_CognitiveMemory_ProjectionStates_ProjectId_ProjectionKind_T~" ON "CognitiveMemory_ProjectionStates" ("ProjectId", "ProjectionKind", "TargetProvider");
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260705232715_InitialNativePersistence') THEN
+    CREATE INDEX "IX_CognitiveMemory_ProjectionStates_Status_RebuildRequired" ON "CognitiveMemory_ProjectionStates" ("Status", "RebuildRequired");
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260705232715_InitialNativePersistence') THEN
+    CREATE INDEX "IX_CognitiveMemory_RecallTraces_AnswerGateDecisionId" ON "CognitiveMemory_RecallTraces" ("AnswerGateDecisionId");
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260705232715_InitialNativePersistence') THEN
+    CREATE INDEX "IX_CognitiveMemory_RecallTraces_AnswerPostureDecisionId" ON "CognitiveMemory_RecallTraces" ("AnswerPostureDecisionId");
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260705232715_InitialNativePersistence') THEN
+    CREATE INDEX "IX_CognitiveMemory_RecallTraces_AttentionDecisionId" ON "CognitiveMemory_RecallTraces" ("AttentionDecisionId");
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260705232715_InitialNativePersistence') THEN
+    CREATE INDEX "IX_CognitiveMemory_RecallTraces_ContextPackId" ON "CognitiveMemory_RecallTraces" ("ContextPackId");
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260705232715_InitialNativePersistence') THEN
+    CREATE INDEX "IX_CognitiveMemory_RecallTraces_ProjectId_OperationMode_Starte~" ON "CognitiveMemory_RecallTraces" ("ProjectId", "OperationMode", "StartedAtUtc");
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260705232715_InitialNativePersistence') THEN
+    CREATE INDEX "IX_CognitiveMemory_RecallTraces_ProjectId_RecallMode_Outcome_S~" ON "CognitiveMemory_RecallTraces" ("ProjectId", "RecallMode", "Outcome", "StartedAtUtc");
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260705232715_InitialNativePersistence') THEN
+    CREATE INDEX "IX_CognitiveMemory_RecallTraces_RequestHash" ON "CognitiveMemory_RecallTraces" ("RequestHash");
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260705232715_InitialNativePersistence') THEN
+    CREATE INDEX "IX_CognitiveMemory_RecallTraces_SelfRegulationAssessmentId" ON "CognitiveMemory_RecallTraces" ("SelfRegulationAssessmentId");
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260705232715_InitialNativePersistence') THEN
+    CREATE INDEX "IX_CognitiveMemory_RecallTraces_WorkspaceFrameId" ON "CognitiveMemory_RecallTraces" ("WorkspaceFrameId");
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260705232715_InitialNativePersistence') THEN
+    CREATE INDEX "IX_CognitiveMemory_Records_ActivationScoreEvaluationTraceId" ON "CognitiveMemory_Records" ("ActivationScoreEvaluationTraceId");
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260705232715_InitialNativePersistence') THEN
+    CREATE INDEX "IX_CognitiveMemory_Records_ConfidenceScoreEvaluationTraceId" ON "CognitiveMemory_Records" ("ConfidenceScoreEvaluationTraceId");
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260705232715_InitialNativePersistence') THEN
+    CREATE INDEX "IX_CognitiveMemory_Records_ContentHash" ON "CognitiveMemory_Records" ("ContentHash");
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260705232715_InitialNativePersistence') THEN
+    CREATE INDEX "IX_CognitiveMemory_Records_PrimaryClaimId" ON "CognitiveMemory_Records" ("PrimaryClaimId");
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260705232715_InitialNativePersistence') THEN
+    CREATE INDEX "IX_CognitiveMemory_Records_PrimaryContextFrameId" ON "CognitiveMemory_Records" ("PrimaryContextFrameId");
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260705232715_InitialNativePersistence') THEN
+    CREATE INDEX "IX_CognitiveMemory_Records_ProjectId_Kind_ValidationState" ON "CognitiveMemory_Records" ("ProjectId", "Kind", "ValidationState");
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260705232715_InitialNativePersistence') THEN
+    CREATE INDEX "IX_CognitiveMemory_Records_ProjectId_StabilityState" ON "CognitiveMemory_Records" ("ProjectId", "StabilityState");
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260705232715_InitialNativePersistence') THEN
+    CREATE INDEX "IX_CognitiveMemory_Records_ProjectId_TopicKey" ON "CognitiveMemory_Records" ("ProjectId", "TopicKey");
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260705232715_InitialNativePersistence') THEN
+    CREATE INDEX "IX_CognitiveMemory_Relations_ProjectId_RelationKind" ON "CognitiveMemory_Relations" ("ProjectId", "RelationKind");
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260705232715_InitialNativePersistence') THEN
+    CREATE UNIQUE INDEX "IX_CognitiveMemory_Relations_ProjectId_SourceMemoryRecordId_Ta~" ON "CognitiveMemory_Relations" ("ProjectId", "SourceMemoryRecordId", "TargetMemoryRecordId", "RelationKind");
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260705232715_InitialNativePersistence') THEN
+    CREATE INDEX "IX_CognitiveMemory_Relations_RelationScoreEvaluationTraceId" ON "CognitiveMemory_Relations" ("RelationScoreEvaluationTraceId");
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260705232715_InitialNativePersistence') THEN
+    CREATE INDEX "IX_CognitiveMemory_Relations_SourceMemoryRecordId" ON "CognitiveMemory_Relations" ("SourceMemoryRecordId");
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260705232715_InitialNativePersistence') THEN
+    CREATE INDEX "IX_CognitiveMemory_Relations_TargetMemoryRecordId" ON "CognitiveMemory_Relations" ("TargetMemoryRecordId");
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260705232715_InitialNativePersistence') THEN
+    CREATE INDEX "IX_CognitiveMemory_ReviewItems_ProjectId_Status_RiskLevel" ON "CognitiveMemory_ReviewItems" ("ProjectId", "Status", "RiskLevel");
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260705232715_InitialNativePersistence') THEN
+    CREATE INDEX "IX_CognitiveMemory_ReviewItems_SubjectKind_SubjectId" ON "CognitiveMemory_ReviewItems" ("SubjectKind", "SubjectId");
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260705232715_InitialNativePersistence') THEN
+    CREATE UNIQUE INDEX "IX_CognitiveMemory_Runs_IdempotencyKey" ON "CognitiveMemory_Runs" ("IdempotencyKey");
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260705232715_InitialNativePersistence') THEN
+    CREATE INDEX "IX_CognitiveMemory_Runs_ProjectId_RunKind_Status" ON "CognitiveMemory_Runs" ("ProjectId", "RunKind", "Status");
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260705232715_InitialNativePersistence') THEN
+    CREATE INDEX "IX_CognitiveMemory_SourceItems_ContentHash" ON "CognitiveMemory_SourceItems" ("ContentHash");
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260705232715_InitialNativePersistence') THEN
+    CREATE INDEX "IX_CognitiveMemory_SourceItems_ProjectId_SourceSystem_SourceIt~" ON "CognitiveMemory_SourceItems" ("ProjectId", "SourceSystem", "SourceItemType");
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260705232715_InitialNativePersistence') THEN
+    CREATE UNIQUE INDEX "IX_CognitiveMemory_SourceItems_SourceManifestId_SourceItemKey" ON "CognitiveMemory_SourceItems" ("SourceManifestId", "SourceItemKey");
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260705232715_InitialNativePersistence') THEN
+    CREATE UNIQUE INDEX "IX_CognitiveMemory_SourceLinks_MemoryRecordId_SourceItemId_Evi~" ON "CognitiveMemory_SourceLinks" ("MemoryRecordId", "SourceItemId", "EvidenceRole");
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260705232715_InitialNativePersistence') THEN
+    CREATE INDEX "IX_CognitiveMemory_SourceLinks_SourceItemId" ON "CognitiveMemory_SourceLinks" ("SourceItemId");
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260705232715_InitialNativePersistence') THEN
+    CREATE INDEX "IX_CognitiveMemory_SourceLinks_SourceManifestId" ON "CognitiveMemory_SourceLinks" ("SourceManifestId");
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260705232715_InitialNativePersistence') THEN
+    CREATE INDEX "IX_CognitiveMemory_SourceManifests_ProjectId_SourceSystem_Obse~" ON "CognitiveMemory_SourceManifests" ("ProjectId", "SourceSystem", "ObservedAtUtc");
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260705232715_InitialNativePersistence') THEN
+    CREATE UNIQUE INDEX "IX_CognitiveMemory_SourceManifests_SourceSystem_SourceScopeKey~" ON "CognitiveMemory_SourceManifests" ("SourceSystem", "SourceScopeKey", "SourceSnapshotId");
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260705232715_InitialNativePersistence') THEN
+    INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
+    VALUES ('20260705232715_InitialNativePersistence', '10.0.4');
+    END IF;
+END $EF$;
+COMMIT;
+
+
+Exit code: 0

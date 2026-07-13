@@ -145,7 +145,7 @@ public sealed partial class AppSmokeTests
             };
 
             processStartInfo.ArgumentList.Add("build");
-            processStartInfo.ArgumentList.Add(Path.Combine("src", "CanDoItAll.Components.Sandbox", "CanDoItAll.Components.Sandbox.csproj"));
+            processStartInfo.ArgumentList.Add(Path.Combine("samples", "CanDoItAll.Components.Sandbox", "CanDoItAll.Components.Sandbox.csproj"));
             processStartInfo.ArgumentList.Add("--nologo");
 
             using var process = Process.Start(processStartInfo) ?? throw new InvalidOperationException("Failed to build the sandbox app for benchmark validation.");

@@ -1,0 +1,8 @@
+Workdir: C:\repositories\CanDoItAll
+Started: 2026-07-05T20:38:17.5850582-04:00
+
+Command: Select-String for allowed MAF abstraction and forbidden main Agent module dependencies in C:\repositories\CanDoItAll.CognitiveMemory\src\CanDoItAll.CognitiveMemory.Maf\CanDoItAll.CognitiveMemory.Maf.csproj
+Allowed MAF abstraction reference: <ProjectReference Include="..\..\..\CanDoItAll\src\MAF\Common\CanDoItAll.AgentFramework.Core\CanDoItAll.AgentFramework.Core.csproj" />
+No forbidden main Agent module, app composition, Web, or host DbContext dependencies found in native MAF project file.
+
+ExitCode: 0

@@ -1,0 +1,11 @@
+Command: SB30 file size and SHA256 audit
+CanDoItAll.slnx | lines=147 | sha256=9de9d5fa1d20ab044575dd9d56eab23b2caa39ce5251b0b7244c344c9d1ebf55
+src/App/CanDoItAll.Composition/CanDoItAll.Composition.csproj | lines=31 | sha256=e0cad4af29796b576f84fc164f130a567c37c75b5641077bf5a1e300a982540f
+src/App/CanDoItAll.Composition/ModuleAssemblies.cs | lines=42 | sha256=952bf4eeba6652cb171d0119417289ed55ca1b63c55032d6a5528b8f482998c6
+src/App/CanDoItAll.Composition/RuntimeHostServiceCollectionExtensions.cs | lines=974 | sha256=66563fae9003a51cd6289519165487b206fd07827c332c0ac692d1b6a71b222e
+src/App/CanDoItAll.Web/Api/CognitiveMemoryApi.cs | lines=93 | sha256=6b96dddd0c027e1b56da80cfa98ea15cff865fc337cfb9ada1661922f6496752
+src/App/CanDoItAll.Web/appsettings.json | lines=73 | sha256=246c495120b100d9a6c219966db0be31a54a8fdf86ff64c79f8e778aea376f3c
+tests/Memory/CanDoItAll.Memory.Tests/CanDoItAll.Memory.Tests.csproj | lines=29 | sha256=b08dfa16430cfc75aca7edb1b5147f1a3d807f283255f24f27f836bf05b7aec8
+tests/Memory/CanDoItAll.Memory.Tests/HostCompositionDependencyRemovalTests.cs | lines=147 | sha256=06a0f93d67430b8c866750cdcb15833802f5ecac6eb7e2e4fb0dba38af414cb3
+ExitCode: 0
+

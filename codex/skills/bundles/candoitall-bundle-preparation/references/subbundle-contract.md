@@ -20,7 +20,7 @@ Bad subbundle boundaries:
 
 ## Required Sections
 
-Every subbundle README must contain:
+Every subbundle must contain these semantic fields under any clear headings:
 
 - objective
 - covered inputs or notes
@@ -33,8 +33,9 @@ Every subbundle README must contain:
 - do-not-do constraints
 - acceptance checklist
 - proof required
+- proof tier: `Standard`, `Behavioral`, or `Governed`
 - progression gate
-- suggested agent prompt
+- reopen triggers
 
 ## Proof Guidance
 
@@ -52,3 +53,4 @@ When a subbundle unlocks later phases:
 - state which later phases depend on it
 - require the exact proof that allows downstream work to continue
 - mark it as a critical foundation when weak proof would invalidate later verification
+- require a dependent-flow check, but require full manifests and transcripts only when its proof tier is `Governed`

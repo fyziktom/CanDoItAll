@@ -1,0 +1,16 @@
+{
+  "id": "6a69c0e2-c782-605e-9699-804d2faefc47",
+  "executionRunId": "0f06b3ef-335e-40e1-abb1-bda3d78feeb2",
+  "toolFamily": "workspace-file",
+  "toolName": "workspace_write_file",
+  "riskClass": "MutatingWorkspace",
+  "approvalMode": "NotRequired",
+  "isolationGuarantee": "Workspace file service with support for mapped external-target/<drive>/... aliases. No host process execution.",
+  "requestSummary": "artifacts/scopes/organization/e5df9ad633dbc6974a0678a74976013c/process-runs/8476b73f-6ab3-4e0b-be97-dc501dbfc71e/steps/classify-dotnet-application.md",
+  "workingDirectory": ".",
+  "exitSummary": "Succeeded: Created 'artifacts/scopes/organization/e5df9ad633dbc6974a0678a74976013c/process-runs/8476b73f-6ab3-4e0b-be97-dc501dbfc71e/steps/classify-dotnet-application.md' with 3649 characters.",
+  "startedAtUtc": "2026-07-09T05:11:51.205908-04:00",
+  "completedAtUtc": "2026-07-09T05:11:51.21371-04:00",
+  "runtimeToolProviderKey": "",
+  "runtimeToolProviderName": ""
+}

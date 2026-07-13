@@ -1,0 +1,3 @@
+Command: rg -n "Workbench|ProjectStructure|ProjectMemory|IProjectStructure" src\Memory\CanDoItAll.Memory.Http src\Memory\CanDoItAll.Memory.Mcp
+ExitCode: 1
+Result: no Workbench/project adapter references appear in generic provider driver projects.

@@ -86,6 +86,37 @@ public sealed class WorkflowsPageTests
     }
 
     [Fact]
+    public async Task Workflows_page_publishes_a_valid_draft_and_refreshes_its_status()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var navigation = harness.Context.Services.GetRequiredService<NavigationManager>();
+        var notificationService = harness.Context.Services.GetRequiredService<NotificationService>();
+        var catalogService = harness.Context.Services.GetRequiredService<IWorkflowCatalogService>();
+
+        navigation.NavigateTo("/agents/workflows");
+        var cut = harness.Context.RenderComponent<WorkflowsPage>();
+
+        cut.WaitForElement("[data-testid='workflows-create-starter']").Click();
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains(notificationService.Messages, message => message.Summary == "Workflow created");
+        });
+
+        cut.Find("[data-testid='workflows-tab-workflows']").Click();
+        cut.WaitForElement("[data-testid='workflows-publish']").Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains(notificationService.Messages, message => message.Summary == "Workflow published");
+            Assert.Contains("Status Active", cut.Find("[data-testid='workflows-detail']").TextContent, StringComparison.Ordinal);
+            Assert.Empty(cut.FindAll("[data-testid='workflows-publish']"));
+        });
+
+        var published = Assert.Single(await catalogService.ListDefinitionsAsync());
+        Assert.Equal(WorkflowLifecycleStatus.Active, published.Status);
+    }
+
+    [Fact]
     public async Task Workflows_page_defers_component_library_until_component_sections_need_it()
     {
         await using var harness = await ComponentTestHarness.CreateAsync(RegisterCountingWorkflowComponentLibrary);

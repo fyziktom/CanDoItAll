@@ -1,0 +1,10 @@
+Command: dotnet test tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj --no-build --filter process-runtime-and-template-focused-filter
+ExitCode: 0
+Result: 50 passed, 0 failed.
+Test name: ProcessRuntimeIntegrationAdapterTests.ExecuteAsync_uses_runtime_owned_dotnet_setup_executor_before_agent_execution
+Test name: ProcessRuntimeArchitectureBaselineTests.WorkspaceCommandReceiptWriter_uses_registered_lifecycle_fact_extractor
+Invariant ID: SB02-INV-CONTRACT-SEAMS
+Command: CodeAnalytics dependencies for snap-20260709182007-390484e5
+ExitCode: 0
+Result: cycles: []
+Anti-stub audit: No generated stubs or fake service locator were introduced for SB02.

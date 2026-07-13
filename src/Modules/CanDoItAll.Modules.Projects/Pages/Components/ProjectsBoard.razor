@@ -77,6 +77,7 @@
                                Class="min-w-0">
                     <input value="@ProjectSearch"
                            @oninput="HandleProjectSearchInput"
+                           maxlength="@ProjectFileFilter.MaximumTextLength"
                            class="cda-input cda-input--toolbar h-10"
                            placeholder="Search by name or current phase"
                            data-testid="projects-search-input" />
@@ -87,7 +88,8 @@
                                SuffixPaddingRem="2.25"
                                StackOnMobile="true"
                                Class="min-w-0">
-                    <InputSelect @bind-Value="StatusFilterProxy"
+                    <InputSelect TValue="ProjectStatus?"
+                                 @bind-Value="StatusFilterProxy"
                                  class="cda-input cda-input--toolbar h-10 appearance-none">
                         <option value="">All statuses</option>
                         @foreach (var status in Enum.GetValues<ProjectStatus>())
@@ -102,7 +104,8 @@
                                SuffixPaddingRem="2.25"
                                StackOnMobile="true"
                                Class="min-w-0">
-                    <InputSelect @bind-Value="RelatedPartyCategoryFilterProxy"
+                    <InputSelect TValue="ProjectPartyPortfolioCategory?"
+                                 @bind-Value="RelatedPartyCategoryFilterProxy"
                                  class="cda-input cda-input--toolbar h-10 appearance-none"
                                  data-testid="project-related-party-category-filter">
                         <option value="">Any relationship</option>
@@ -122,7 +125,7 @@
                                  class="cda-input cda-input--toolbar h-10 appearance-none"
                                  data-testid="project-related-party-value-filter">
                         <option value="">Any party</option>
-                        @foreach (var value in AvailableRelatedPartyValues)
+                        @foreach (var value in ProjectProjection.AvailableRelatedPartyValues)
                         {
                             <option value="@value">@value</option>
                         }
@@ -134,7 +137,8 @@
                                SuffixPaddingRem="2.25"
                                StackOnMobile="true"
                                Class="min-w-0">
-                    <InputSelect @bind-Value="HierarchyFilterProjectIdProxy"
+                    <InputSelect TValue="Guid?"
+                                 @bind-Value="HierarchyFilterProjectIdProxy"
                                  class="cda-input cda-input--toolbar h-10 appearance-none"
                                  data-testid="hierarchy-filter-project">
                         <option value="">Any project</option>
@@ -150,15 +154,26 @@
                                SuffixPaddingRem="2.25"
                                StackOnMobile="true"
                                Class="min-w-0">
-                    <InputSelect @bind-Value="HierarchyFilterModeProxy"
+                    <InputSelect TValue="ProjectHierarchyFilterMode"
+                                 @bind-Value="HierarchyFilterModeProxy"
                                  class="cda-input cda-input--toolbar h-10 appearance-none"
                                  data-testid="hierarchy-filter-mode">
-                        <option value="">All links</option>
-                        <option value="children">Subprojects</option>
-                        <option value="parents">Parents</option>
-                        <option value="related">Related</option>
+                        <option value="@ProjectHierarchyFilterMode.Descendants">Project scope</option>
+                        <option value="@ProjectHierarchyFilterMode.Children">Subprojects</option>
+                        <option value="@ProjectHierarchyFilterMode.Parents">Parents</option>
+                        <option value="@ProjectHierarchyFilterMode.Related">Related</option>
                     </InputSelect>
                 </PrefixedField>
+                <label class="inline-flex h-10 min-w-fit items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700">
+                    <CheckBox TValue="bool"
+                              Value="@IncludeSubprojects"
+                              ValueChanged="IncludeSubprojectsChanged"
+                              Disabled="@(HierarchyFilterProjectId is null || HierarchyFilterMode != ProjectHierarchyFilterMode.Descendants)"
+                              aria-label="Include subprojects"
+                              data-testid="project-include-subprojects-filter" />
+                    <TextBlock TextStyle="TextStyle.Caption"
+                               Value="Include subprojects" />
+                </label>
                 <TooltipTarget Text="Reset filters"
                                Position="TooltipPosition.Bottom"
                                TestId="projects-reset-filters-tooltip">
@@ -278,148 +293,35 @@
             </Cluster>
         </DetailHeader>
         <DetailContent>
-            <div class="projects-board__cards-scroll h-full min-h-0 overflow-y-auto pr-1"
-                 style="scrollbar-gutter:stable;"
-                 data-testid="projects-cards-scroll">
-                @if (FilteredProjectSummaries.Count == 0)
-                {
-                    <EmptyState Eyebrow="No matching projects"
-                                Title="Adjust the filters or start a new project"
-                                Description="When projects match the current filters, they appear here as compact cards with overview and dashboard actions.">
-                        <Actions>
-                            <Button Text="New project" Click="OpenNewProject" />
-                        </Actions>
-                    </EmptyState>
-                }
-                else
-                {
-                    <Grid Gap="LayoutGap.Medium"
-                          ColumnsLg="2"
-                          Columns2Xl="3">
-                        @foreach (var project in FilteredProjectSummaries)
-                        {
-                            <article class="@ProjectsPresentation.GetProjectCardCss(project.Status)" data-testid="project-card">
-                        <Cluster AlignItems="AlignItems.Start"
-                                 Wrap="FlexWrap.NoWrap"
-                                 Gap="LayoutGap.Medium">
-                            <div class="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-white/70 bg-white/90 text-xs font-bold uppercase tracking-[0.18em] text-slate-600 shadow-sm">
-                                @ProjectsPresentation.GetProjectMonogram(project.Name)
-                            </div>
-                            <div class="min-w-0 flex-1">
-                                <Split Breakpoint="LayoutBreakpoint.None"
-                                       Gap="LayoutGap.Medium"
-                                       AlignItems="AlignItems.Start"
-                                       JustifyContent="JustifyContent.SpaceBetween"
-                                       Wrap="FlexWrap.Wrap">
-                                    <div class="min-w-0">
-                                        <p class="cda-eyebrow cda-eyebrow--tight text-slate-400">Project</p>
-                                        <h3 class="mt-1 text-base font-bold tracking-tight text-slate-950">@project.Name</h3>
-                                    </div>
-                                    <StatusBadge Tone="@ProjectsPresentation.GetStatusTone(project.Status)" Text="@project.Status.ToString()" />
-                                </Split>
-                                <p class="mt-2 text-sm leading-5 text-slate-500">@(string.IsNullOrWhiteSpace(project.CurrentPhase) ? "Current phase not set yet." : project.CurrentPhase)</p>
-                                @if (!string.IsNullOrWhiteSpace(project.PrimaryCustomerName) ||
-                                     !string.IsNullOrWhiteSpace(project.PrimaryDeliveryUnitName) ||
-                                     !string.IsNullOrWhiteSpace(project.PrimaryOwnerName))
-                                {
-                                    <div class="mt-3 space-y-1.5 text-sm text-slate-600"
-                                         data-testid="project-card-related-parties">
-                                        @if (!string.IsNullOrWhiteSpace(project.PrimaryCustomerName))
-                                        {
-                                            <p><span class="font-semibold text-slate-800">Customer:</span> @project.PrimaryCustomerName</p>
-                                        }
-                                        @if (!string.IsNullOrWhiteSpace(project.PrimaryDeliveryUnitName))
-                                        {
-                                            <p><span class="font-semibold text-slate-800">Delivery unit:</span> @project.PrimaryDeliveryUnitName</p>
-                                        }
-                                        @if (!string.IsNullOrWhiteSpace(project.PrimaryOwnerName))
-                                        {
-                                            <p><span class="font-semibold text-slate-800">Owner:</span> @project.PrimaryOwnerName</p>
-                                        }
-                                    </div>
-                                }
-                                @if ((project.RelatedParties?.Count ?? 0) > 0)
-                                {
-                                    <Cluster Gap="LayoutGap.XSmall"
-                                             Class="mt-3">
-                                        @foreach (var item in project.RelatedParties!.Take(4))
-                                        {
-                                            <Pill Tone="@(item.IsPrimary ? PillTone.Info : PillTone.Neutral)"
-                                                  Text="@($"{item.Label}: {item.DisplayName}")" />
-                                        }
-                                    </Cluster>
-                                }
-                            </div>
-                        </Cluster>
-
-                        <Cluster Gap="LayoutGap.XSmall"
-                                 Class="mt-4">
-                            <StatusBadge Tone="neutral" Text="@($"{project.PhaseCount} phases")" />
-                            <StatusBadge Tone="neutral" Text="@($"{project.ParentCount} parents")" />
-                            <StatusBadge Tone="info" Text="@($"{project.ChildCount} subprojects")" />
-                            <StatusBadge Tone="neutral" Text="@($"Updated {project.UpdatedAtUtc.LocalDateTime:g}")" />
-                        </Cluster>
-
-                        <CardActions Secondary="true" Class="mt-4 border-white/70">
-                            <Cluster>
-                                <Button Class="cda-button--quick"
-                                        Icon="visibility"
-                                        title="Preview project"
-                                        aria-label="Preview project"
-                                        data-testid="project-card-details-button"
-                                        Click="@(() => OpenProjectPreview.InvokeAsync(project.Id))" />
-                                <Button ButtonStyle="ButtonStyle.Light"
-                                        Class="cda-button--quick"
-                                        Icon="subdirectory_arrow_right"
-                                        title="Open hierarchy"
-                                        aria-label="Open hierarchy"
-                                        data-testid="project-card-subprojects-button"
-                                        Click="@(() => OpenHierarchyModal.InvokeAsync(project.Id))" />
-                            </Cluster>
-                            <Cluster Gap="LayoutGap.XSmall">
-                                <Button ButtonStyle="ButtonStyle.Light"
-                                        Size="ButtonSize.Small"
-                                        Class="cda-button--quick"
-                                        Icon="dashboard"
-                                        title="Open dashboard tab"
-                                        aria-label="Open dashboard tab"
-                                        Click="@(() => OpenProjectDashboard.InvokeAsync(project.Id))" />
-                                <Button ButtonStyle="ButtonStyle.Light"
-                                        Size="ButtonSize.Small"
-                                        Class="cda-button--quick"
-                                        Icon="account_tree"
-                                        title="Open structure"
-                                        aria-label="Open structure"
-                                        Click="@(() => OpenStructure.InvokeAsync(project.Id))" />
-                                <Button ButtonStyle="ButtonStyle.Light"
-                                        Size="ButtonSize.Small"
-                                        Class="cda-button--quick"
-                                        Icon="hub"
-                                        title="Open processes"
-                                        aria-label="Open processes"
-                                        Click="@(() => OpenProcesses.InvokeAsync(project.Id))" />
-                                <Button ButtonStyle="ButtonStyle.Light"
-                                        Size="ButtonSize.Small"
-                                        Class="cda-button--quick"
-                                        Icon="calendar_month"
-                                        title="Open calendar"
-                                        aria-label="Open calendar"
-                                        Click="@(() => OpenCalendar.InvokeAsync(project.Id))" />
-                                <Button ButtonStyle="ButtonStyle.Light"
-                                        Size="ButtonSize.Small"
-                                        Class="cda-button--quick"
-                                        Icon="timeline"
-                                        title="Open Mermaid Gantt"
-                                        aria-label="Open Mermaid Gantt"
-                                        data-testid="project-card-gantt-button"
-                                        Click="@(() => OpenGanttPreview.InvokeAsync(project.Id))" />
-                            </Cluster>
-                        </CardActions>
-                            </article>
-                        }
-                    </Grid>
-                }
-            </div>
+            <Tabs SelectedIndex="@selectedPortfolioTabIndex"
+                  SelectedIndexChanged="HandlePortfolioTabChanged"
+                  Variant="TabsVariant.WorkspaceSecondary"
+                  BorderMode="TabsBorderMode.Soft"
+                  PanelOverflowMode="TabsPanelOverflowMode.Hidden"
+                  FillHeight="true"
+                  AriaLabel="Project portfolio views"
+                  data-testid="projects-portfolio-tabs">
+                <TabItems>
+                    <TabsItem Text="Cards"
+                              Icon="dashboard">
+                        <ProjectPortfolioCards Projects="FilteredProjectSummaries"
+                                               OpenNewProject="OpenNewProject"
+                                               OpenProjectPreview="OpenProjectPreview"
+                                               OpenHierarchyModal="OpenHierarchyModal"
+                                               OpenProjectFiles="OpenProjectFiles"
+                                               OpenProjectDashboard="OpenProjectDashboard"
+                                               OpenStructure="OpenStructure"
+                                               OpenProcesses="OpenProcesses"
+                                               OpenCalendar="OpenCalendar"
+                                               OpenGanttPreview="OpenGanttPreview" />
+                    </TabsItem>
+                    <TabsItem Text="Files"
+                              Icon="folder_open"
+                              BadgeText="@ProjectProjection.Projects.Count.ToString()">
+                        <ProjectFilesPortfolioPane Projection="ProjectProjection" />
+                    </TabsItem>
+                </TabItems>
+            </Tabs>
         </DetailContent>
     </ListDetailShell>
 </section>
@@ -429,7 +331,7 @@
     public IReadOnlyList<ProjectSummary> ProjectSummaries { get; set; } = default!;
 
     [Parameter, EditorRequired]
-    public IReadOnlyList<ProjectSummary> FilteredProjectSummaries { get; set; } = default!;
+    public ProjectFileFilterProjection ProjectProjection { get; set; } = default!;
 
     [Parameter]
     public IReadOnlyList<ProjectHierarchyLinkSummary> HierarchyLinks { get; set; } = [];
@@ -441,16 +343,19 @@
     public EventCallback<string> ProjectSearchChanged { get; set; }
 
     [Parameter]
-    public string StatusFilter { get; set; } = string.Empty;
+    public EventCallback<Guid> OpenProjectFiles { get; set; }
 
     [Parameter]
-    public EventCallback<string> StatusFilterChanged { get; set; }
+    public ProjectStatus? StatusFilter { get; set; }
 
     [Parameter]
-    public string RelatedPartyCategoryFilter { get; set; } = string.Empty;
+    public EventCallback<ProjectStatus?> StatusFilterChanged { get; set; }
 
     [Parameter]
-    public EventCallback<string> RelatedPartyCategoryFilterChanged { get; set; }
+    public ProjectPartyPortfolioCategory? RelatedPartyCategoryFilter { get; set; }
+
+    [Parameter]
+    public EventCallback<ProjectPartyPortfolioCategory?> RelatedPartyCategoryFilterChanged { get; set; }
 
     [Parameter]
     public string RelatedPartyValueFilter { get; set; } = string.Empty;
@@ -459,19 +364,22 @@
     public EventCallback<string> RelatedPartyValueFilterChanged { get; set; }
 
     [Parameter]
-    public IReadOnlyList<string> AvailableRelatedPartyValues { get; set; } = [];
+    public Guid? HierarchyFilterProjectId { get; set; }
 
     [Parameter]
-    public string HierarchyFilterProjectId { get; set; } = string.Empty;
+    public EventCallback<Guid?> HierarchyFilterProjectIdChanged { get; set; }
 
     [Parameter]
-    public EventCallback<string> HierarchyFilterProjectIdChanged { get; set; }
+    public ProjectHierarchyFilterMode HierarchyFilterMode { get; set; } = ProjectHierarchyFilterMode.Descendants;
 
     [Parameter]
-    public string HierarchyFilterMode { get; set; } = string.Empty;
+    public EventCallback<ProjectHierarchyFilterMode> HierarchyFilterModeChanged { get; set; }
 
     [Parameter]
-    public EventCallback<string> HierarchyFilterModeChanged { get; set; }
+    public bool IncludeSubprojects { get; set; } = true;
+
+    [Parameter]
+    public EventCallback<bool> IncludeSubprojectsChanged { get; set; }
 
     [Parameter]
     public string HierarchyFilterHelper { get; set; } = string.Empty;
@@ -536,6 +444,9 @@
     private readonly HashSet<string> expandedProjectTreeNodeIds = [];
     private Guid? selectedTreeProjectId;
     private bool isProjectPackageDialogOpen;
+    private int selectedPortfolioTabIndex;
+
+    private IReadOnlyList<ProjectSummary> FilteredProjectSummaries => ProjectProjection.Projects;
 
     private IReadOnlyList<ProjectSummary> MainProjectOptions
     {
@@ -565,7 +476,7 @@
 
     protected override void OnParametersSet()
     {
-        selectedTreeProjectId = Guid.TryParse(HierarchyFilterProjectId, out var projectId) ? projectId : null;
+        selectedTreeProjectId = HierarchyFilterProjectId;
     }
 
     private async Task HandleProjectTreeSelectAsync(string nodeId)
@@ -576,10 +487,10 @@
         }
 
         selectedTreeProjectId = projectId;
-        await HierarchyFilterProjectIdChanged.InvokeAsync(projectId.ToString("D"));
-        if (!string.IsNullOrWhiteSpace(HierarchyFilterMode))
+        await HierarchyFilterProjectIdChanged.InvokeAsync(projectId);
+        if (HierarchyFilterMode != ProjectHierarchyFilterMode.Descendants)
         {
-            await HierarchyFilterModeChanged.InvokeAsync(string.Empty);
+            await HierarchyFilterModeChanged.InvokeAsync(ProjectHierarchyFilterMode.Descendants);
         }
     }
 
@@ -620,13 +531,13 @@
         return Task.CompletedTask;
     }
 
-    private string StatusFilterProxy
+    private ProjectStatus? StatusFilterProxy
     {
         get => StatusFilter;
         set => _ = StatusFilterChanged.InvokeAsync(value);
     }
 
-    private string RelatedPartyCategoryFilterProxy
+    private ProjectPartyPortfolioCategory? RelatedPartyCategoryFilterProxy
     {
         get => RelatedPartyCategoryFilter;
         set => _ = RelatedPartyCategoryFilterChanged.InvokeAsync(value);
@@ -638,16 +549,22 @@
         set => _ = RelatedPartyValueFilterChanged.InvokeAsync(value);
     }
 
-    private string HierarchyFilterProjectIdProxy
+    private Guid? HierarchyFilterProjectIdProxy
     {
         get => HierarchyFilterProjectId;
         set => _ = HierarchyFilterProjectIdChanged.InvokeAsync(value);
     }
 
-    private string HierarchyFilterModeProxy
+    private ProjectHierarchyFilterMode HierarchyFilterModeProxy
     {
         get => HierarchyFilterMode;
         set => _ = HierarchyFilterModeChanged.InvokeAsync(value);
+    }
+
+    private Task HandlePortfolioTabChanged(int index)
+    {
+        selectedPortfolioTabIndex = index;
+        return Task.CompletedTask;
     }
 
     private bool IsMainProject(ProjectSummary project)

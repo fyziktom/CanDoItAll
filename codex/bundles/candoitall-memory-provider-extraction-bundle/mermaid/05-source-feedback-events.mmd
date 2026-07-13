@@ -1,0 +1,19 @@
+flowchart TD
+    Provider[Memory Provider]
+    Gateway[Source Gateway]
+    SourceAdapter[Source Adapter]
+    EventInbox[Event Inbox]
+    Feedback[Feedback Ledger]
+    Operation[Operation Ledger]
+    Workflow[Workflow Or Agent]
+
+    Provider --> EventInbox
+    EventInbox --> Gateway
+    Gateway --> SourceAdapter
+    SourceAdapter --> Gateway
+    Gateway --> Provider
+    Workflow --> Operation
+    Operation --> Provider
+    Provider --> Operation
+    Workflow --> Feedback
+    Feedback --> Provider

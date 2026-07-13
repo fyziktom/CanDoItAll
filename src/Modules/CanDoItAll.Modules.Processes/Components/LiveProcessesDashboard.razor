@@ -211,7 +211,13 @@
             @RenderRunDetailDialog(runDetailSnapshot)
         </ChildContent>
         <Footer>
-            <Cluster JustifyContent="JustifyContent.End">
+            <Cluster JustifyContent="JustifyContent.End" Gap="LayoutGap.Small">
+                <Button Icon="folder"
+                        Text="Files"
+                        ButtonStyle="ButtonStyle.Light"
+                        Size="ButtonSize.Small"
+                        data-testid="live-processes-run-files"
+                        Click="@(() => OpenRunFilesAsync(runDetailSnapshot.RunId.Value))" />
                 <Button Text="Close"
                         ButtonStyle="ButtonStyle.Light"
                         Size="ButtonSize.Small"
@@ -219,6 +225,13 @@
             </Cluster>
         </Footer>
     </Dialog>
+}
+
+@if (filesRunId is Guid activeFilesRunId)
+{
+    <ProcessRunFilesDialog IsOpen="true"
+                           RunId="activeFilesRunId"
+                           Closed="CloseRunFilesAsync" />
 }
 
 @if (agentDetailDialogOpen && agentDetailAgent is not null)
@@ -380,6 +393,7 @@
     private ProcessProjectedRunStatus? statusFilter;
     private bool runDetailDialogOpen;
     private ProcessLiveProcessSnapshot? runDetailSnapshot;
+    private Guid? filesRunId;
     private bool agentDetailDialogOpen;
     private ProcessRuntimeActiveAgentProjection? agentDetailAgent;
     private Guid? busyOperatorActionStepId;
@@ -2053,6 +2067,23 @@
     {
         runDetailDialogOpen = false;
         runDetailSnapshot = null;
+        return Task.CompletedTask;
+    }
+
+    private Task OpenRunFilesAsync(Guid runId)
+    {
+        if (runId == Guid.Empty)
+        {
+            throw new ArgumentException("A process run identifier is required.", nameof(runId));
+        }
+
+        filesRunId = runId;
+        return Task.CompletedTask;
+    }
+
+    private Task CloseRunFilesAsync()
+    {
+        filesRunId = null;
         return Task.CompletedTask;
     }
 

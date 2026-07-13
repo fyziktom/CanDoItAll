@@ -28,6 +28,15 @@ public partial class ProjectStructurePage
             actions.Add(new ProjectStructureInspectorAction("edit", "Edit", "draw", "accent"));
         }
 
+        if (ProjectStructureFileActions.CanBrowseFiles(node))
+        {
+            actions.Add(new ProjectStructureInspectorAction(
+                ProjectStructureFileActions.BrowseFilesId,
+                ProjectStructureFileActions.BrowseFilesLabel,
+                ProjectStructureFileActions.BrowseFilesIcon,
+                ProjectStructureFileActions.BrowseFilesTone));
+        }
+
         if (HasMermaidViewer(node))
         {
             actions.Add(new ProjectStructureInspectorAction("mermaid:view", "View Mermaid", "schema", "accent"));
@@ -113,6 +122,11 @@ public partial class ProjectStructurePage
         var actions = new List<ProjectStructureInspectorAction>
         {
             new("command:open", "Open", "open", "primary"),
+            new(
+                ProjectStructureFileActions.BrowseFilesId,
+                ProjectStructureFileActions.BrowseFilesLabel,
+                ProjectStructureFileActions.BrowseFilesIcon,
+                ProjectStructureFileActions.BrowseFilesTone),
             new("copy-id", "Copy id", "copy", "ghost"),
             new("copy-info", "Copy info", "copy", "primary"),
             new("copy-subtree-ids", "Copy tree ids", "copy", "sky"),
@@ -182,13 +196,18 @@ public partial class ProjectStructurePage
 
     private async Task ExecuteInspectorActionAsync(ProjectStructureNode node, string actionId)
     {
+        if (await TryHandleFileBrowserActionAsync(actionId, node.Id))
+        {
+            return;
+        }
+
         switch (actionId)
         {
             case "edit":
                 await OpenEditDialogAsync(node);
                 break;
             case "mermaid:view":
-                OpenMermaidViewer(node);
+                await OpenMermaidViewerAsync(node);
                 await InvokeAsync(StateHasChanged);
                 break;
             case "runtime:open":

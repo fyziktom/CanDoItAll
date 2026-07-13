@@ -1,0 +1,8 @@
+Command: Select-String generic memory production/test paths for TODO/NotImplemented/template/stub markers
+WorkingDirectory: C:\repositories\CanDoItAll
+RunLabel: SB05 anti-stub audit
+Invariant IDs: SB05_CP001, SB05_CP002, SB05_CP003, SB05_CP004
+ExitCode: 0
+Output:
+No TODO, NotImplemented, template-only, fixture-specific, or stub markers found in generic memory production/test paths.
+InvariantIds: SB05-CLOSURE

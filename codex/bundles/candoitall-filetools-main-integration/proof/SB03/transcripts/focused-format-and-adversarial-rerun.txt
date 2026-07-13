@@ -1,0 +1,23 @@
+Run label: SB03 focused format and adversarial rerun
+Working directory: C:\repositories\CanDoItAll
+Date: 2026-07-12
+
+Infrastructure focused dotnet format --verify-no-changes:
+- 0 of 58 files formatted.
+- Exit 0.
+
+Unit-test focused dotnet format --verify-no-changes:
+- FileSystemStorageBrowseDriverTests.cs and affected filesystem storage tests.
+- Exit 0.
+
+Command:
+dotnet test .\tests\Unit\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj -c Release --no-restore --filter "FullyQualifiedName~SB03_INV_&Category!=Scale"
+
+Result:
+- Failed: 0
+- Passed: 9
+- Skipped: 0
+- Total: 9
+- Exit 0
+
+The rerun includes `SB03_INV_BUDGET` typed partial inspection behavior and `SB03_INV_REDACTION` injected raw-path/raw-error masking.

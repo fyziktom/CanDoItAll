@@ -1,0 +1,27 @@
+Command:
+dotnet test tests\Unit\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj --no-restore --logger "console;verbosity=minimal" -p:OutputPath=C:\repositories\CanDoItAll\artifacts\codex-test-bin\unit\
+
+Result:
+Failed with unrelated existing failures outside the MAF runtime responsibility isolation slice.
+
+Summary:
+- Failed: 13.
+- Passed: 1791.
+- Skipped: 0.
+- Total: 1804.
+- Duration: 3 m 18 s.
+
+Failed areas observed:
+- ProcessRuntimeIntegrationAdapterTests branch signal recovery assertions.
+- ProcessDefinitionCatalogProjectionTests atomic targeted validation wording assertion.
+- CapabilityTemplateSeedHardeningCheckpointTests expected template pack version v4, actual v6.
+- WorkspaceRuntimeProcessToolsTests stale assets/no-restore assertion.
+- RepositoryNamingHygieneTests existing work-package identifier hygiene failures in integration/memory tests.
+- ProjectStructureRuntimeLauncherTests expected old src\CanDoItAll.Web path, actual src\App\CanDoItAll.Web path.
+- RepositoryTransientArtifactHygieneTests existing tracked codex bundle artifact hygiene failures.
+- LocalWorkspaceProcessHostTests timeout.
+- AppDbContextRuntimeSwitchTests EF Core PendingModelChangesWarning.
+
+Assessment:
+These failures are not introduced by the MAF runtime isolation files changed in this pass. The focused MAF architecture/runtime tests and MAF handoff integration smoke passed.
+

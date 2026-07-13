@@ -1,0 +1,4 @@
+Command: rg -n "CanDoItAll.Processes|software-delivery|dotnet-ui-screenshot-writeback|development-ui-screenshot" src\MAF\Common\CanDoItAll.AgentFramework.Maf src\MAF\Common\CanDoItAll.AgentFramework.Models
+Expected: no MAF source dependency on process modules/templates or software-delivery prompt domain text.
+
+ExitCode: 1

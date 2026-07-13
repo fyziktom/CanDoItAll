@@ -1,0 +1,20 @@
+:global(.project-structure-file-browser-window__body) {
+    min-height: 0;
+    overflow: hidden;
+}
+
+.project-structure-file-browser-window__toolbar {
+    border-bottom: 1px solid rgb(226 232 240);
+    padding-bottom: 0.65rem;
+}
+
+.project-structure-file-browser-window__subprojects {
+    align-items: center;
+    display: inline-flex;
+    gap: 0.5rem;
+    white-space: nowrap;
+}
+
+.project-structure-file-browser-window__browser {
+    overflow: hidden;
+}

@@ -1,0 +1,30 @@
+Command: Assert repaired SB01 source references and mapping rows exist
+Working directory: C:\repositories\CanDoItAll
+Start: 2026-06-29T11:30:49.6167290-04:00
+End: 2026-06-29T11:30:49.8123938-04:00
+Exit code: 0
+
+src\CanDoItAll.Modules.CognitiveMemory\Advanced\CognitiveMemoryMafIntegration.cs exists: True
+src\CanDoItAll.Modules.CognitiveMemory\CognitiveMemoryModuleServiceCollectionExtensions.cs exists: True
+src\CanDoItAll.Modules.Workbench\AgentTools\ProjectStructureAgentRuntimeToolProvider.cs exists: True
+src\CanDoItAll.Modules.SchedulerPlanner\SchedulerWorkflowInputSchemaService.cs exists: True
+src\CanDoItAll.Modules.SchedulerPlanner\SchedulerWorkflowInputOptionService.cs exists: True
+src\CanDoItAll.Composition\SchedulerPlannerWorkflowInputOptionProviders.cs exists: True
+codex\bundles\workflow-node-project-isolation\inventories\workflow-node-project-isolation-map.xlsx exists: True
+
+codex\bundles\workflow-node-project-isolation\inventories\02-workflow-source-inventory.md:28:| Workbench agent workflow tools | `repo://src/CanDoItAll.Modules.Workbench/AgentTools/ProjectStructureAgentRuntimeToolProvider.cs` | Workbench agent-tool API consuming isolated workflow runtime and project-structure workflow node services | SB12, SB13 |
+codex\bundles\workflow-node-project-isolation\inventories\02-workflow-source-inventory.md:29:| Scheduler workflow input options | `repo://src/CanDoItAll.Modules.SchedulerPlanner/SchedulerWorkflowInputSchemaService.cs`, `repo://src/CanDoItAll.Modules.SchedulerPlanner/SchedulerWorkflowInputOptionService.cs`, `repo://src/CanDoItAll.Composition/SchedulerPlannerWorkflowInputOptionProviders.cs` | Scheduler/composition consumers of workflow input option contracts and template/runtime metadata | SB10, SB12 |
+codex\bundles\workflow-node-project-isolation\inventories\02-workflow-source-inventory.md:30:| Cognitive Memory workflow executors | `repo://src/CanDoItAll.Modules.CognitiveMemory/CognitiveMemoryModuleServiceCollectionExtensions.cs`, `repo://src/CanDoItAll.Modules.CognitiveMemory/Advanced/CognitiveMemoryMafIntegration.cs`, `repo://src/CanDoItAll.Modules.CognitiveMemory/Advanced/CognitiveMemoryAdvancedContracts.cs` | Feature-module executor source consuming executor abstractions without MAF/Core executor-contract ownership | SB06, SB09 |
+codex\bundles\workflow-node-project-isolation\inventories\03-executor-inventory.md:21:| Cognitive Memory | `CognitiveMemoryRecallWorkflowExecutor`, `CognitiveMemoryProbeWorkflowExecutor`, `CognitiveMemoryLearningProposalWorkflowExecutor` | `src/CanDoItAll.Modules.CognitiveMemory` | Feature-module executors consuming WorkflowExecutors.Abstractions | Memory recall/probe/learning proposal descriptors, automation settings, semantic input extraction, and no MAF/Core executor-contract ownership after migration. | Missing automation settings, malformed settings JSON, unavailable semantic dependency, payload too large, cancellation, and redacted memory/source context. |
+codex\bundles\workflow-node-project-isolation\inventories\03-executor-inventory.md:26:- Descriptor parity for module-provided executor ids such as `cognitive-memory.recall`, `cognitive-memory.probe`, and `cognitive-memory.learning-proposal`.
+codex\bundles\workflow-node-project-isolation\architecture\02-project-map-and-adoption-boundary.md:44:| Module-provided workflow executors such as Cognitive Memory | Owning feature modules referencing `WorkflowExecutors.Abstractions` plus executor hardening tests | Do not force domain executors into default executor category projects; prove they no longer depend on MAF/Core executor-contract ownership. |
+codex\bundles\workflow-node-project-isolation\architecture\02-project-map-and-adoption-boundary.md:48:| Workbench agent workflow tools | Workbench stays, consumes isolated workflow/project-structure services | Adopt with SB12 and harden in SB13 because these tools expose workflow node creation/start/status outside the Blazor page. |
+codex\bundles\workflow-node-project-isolation\architecture\02-project-map-and-adoption-boundary.md:49:| Scheduler workflow input option services | Scheduler/Composition stays, consumes workflow template/input contracts | Adopt with template extraction and API/UI adoption; do not leave scheduler consumers tied to UI-owned template DTOs. |
+
+
+
+Completed Validator Metadata Addendum
+Command: historical SB01 proof command recorded during bundle execution
+ExitCode: 0
+ExitCode: 1
+Invariant ID: SB01-final-closure

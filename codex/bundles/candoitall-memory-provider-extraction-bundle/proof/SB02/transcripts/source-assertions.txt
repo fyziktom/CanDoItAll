@@ -1,0 +1,69 @@
+Command: Select-String -Path src\Memory\CanDoItAll.Memory.Abstractions\*.cs,src\Memory\CanDoItAll.Memory.Application\*.cs -Pattern MemoryProviderProfile|MemoryProviderSelectionPolicy|MemoryProviderSelectionResult|InMemoryMemoryProviderRegistry|IMemoryProviderRegistry|MemoryProviderAssignment|MemoryProviderKind|MemoryProviderInteractionSupport|MemoryProviderUiSurface|MemoryProviderLimits
+WorkingDirectory: C:\repositories\CanDoItAll
+RunLabel: SB02 production source assertions
+Invariant IDs: SB02_PR001, SB02_PR002, SB02_PR003, SB02_PR004, SB02_PR005, SB02_PR006, SB02_PR007
+ExitCode: 0
+Output:
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Abstractions\MemoryIdentifiers.cs:94:public readonly record struct MemoryProviderKind
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Abstractions\MemoryIdentifiers.cs:97:    public MemoryProviderKind(string value)
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Abstractions\MemoryIdentifiers.cs:104:    public static MemoryProviderKind Parse(string value) => new(value);
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Abstractions\MemoryProviderRegistryContracts.cs:32:public enum MemoryProviderAssignmentScope
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Abstractions\MemoryProviderRegistryContracts.cs:60:public sealed record MemoryProviderProfile(
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Abstractions\MemoryProviderRegistryContracts.cs:68:    MemoryProviderProfilePolicy DefaultPolicy,
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Abstractions\MemoryProviderRegistryContracts.cs:71:public sealed record MemoryProviderProfilePolicy(
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Abstractions\MemoryProviderRegistryContracts.cs:74:    public static readonly MemoryProviderProfilePolicy Default = new(MemoryProviderFallbackBehavior.DenyImplicitFallback);
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Abstractions\MemoryProviderRegistryContracts.cs:77:public sealed record MemoryProviderAssignment(
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Abstractions\MemoryProviderRegistryContracts.cs:78:    MemoryProviderAssignmentScope Scope,
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Abstractions\MemoryProviderRegistryContracts.cs:92:public sealed record MemoryProviderSelectionPolicy(
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Abstractions\MemoryProviderRegistryContracts.cs:96:    IReadOnlyList<MemoryProviderAssignment> Assignments,
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Abstractions\MemoryProviderRegistryContracts.cs:101:    public static MemoryProviderSelectionPolicy RequireCapability(MemoryCapabilityId capability) =>
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Abstractions\MemoryProviderRegistryContracts.cs:112:public sealed record MemoryProviderSelectionResult(
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Abstractions\MemoryProviderRegistryContracts.cs:115:    MemoryProviderProfile? SelectedProvider,
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Abstractions\MemoryProviderRegistryContracts.cs:121:    public static MemoryProviderSelectionResult Selected(
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Abstractions\MemoryProviderRegistryContracts.cs:122:        MemoryProviderProfile provider,
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Abstractions\MemoryProviderRegistryContracts.cs:134:    public static MemoryProviderSelectionResult Rejected(
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Abstractions\MemoryResponses.cs:54:    MemoryProviderKind ProviderKind,
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Abstractions\MemoryResponses.cs:57:    MemoryProviderInteractionSupport InteractionSupport,
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Abstractions\MemoryResponses.cs:58:    IReadOnlyList<MemoryProviderUiSurface> UiSurfaces,
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Abstractions\MemoryResponses.cs:59:    MemoryProviderLimits Limits,
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Abstractions\MemoryResponses.cs:67:public sealed record MemoryProviderInteractionSupport(
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Abstractions\MemoryResponses.cs:74:    public static readonly MemoryProviderInteractionSupport SyncQueryOnly =
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Abstractions\MemoryResponses.cs:83:public enum MemoryProviderUiSurfaceKind
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Abstractions\MemoryResponses.cs:90:public sealed record MemoryProviderUiSurface(
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Abstractions\MemoryResponses.cs:91:    MemoryProviderUiSurfaceKind Kind,
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Abstractions\MemoryResponses.cs:97:public sealed record MemoryProviderLimits
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Abstractions\MemoryResponses.cs:99:    public MemoryProviderLimits(
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Abstractions\MemoryResponses.cs:131:    public static readonly MemoryProviderLimits Default =
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Application\MemoryProviderRegistry.cs:5:public interface IMemoryProviderRegistry
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Application\MemoryProviderRegistry.cs:7:    IReadOnlyList<MemoryProviderProfile> Providers { get; }
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Application\MemoryProviderRegistry.cs:9:    IReadOnlyList<MemoryProviderProfile> GetEnabledProviders();
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Application\MemoryProviderRegistry.cs:11:    IReadOnlyList<MemoryProviderProfile> GetProvidersForCapability(MemoryCapabilityId capability);
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Application\MemoryProviderRegistry.cs:13:    MemoryProviderSelectionResult SelectProvider(
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Application\MemoryProviderRegistry.cs:14:        MemoryProviderSelectionPolicy policy,
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Application\MemoryProviderRegistry.cs:18:public sealed class InMemoryMemoryProviderRegistry : IMemoryProviderRegistry
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Application\MemoryProviderRegistry.cs:20:    private readonly IReadOnlyList<MemoryProviderProfile> providers;
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Application\MemoryProviderRegistry.cs:22:    public InMemoryMemoryProviderRegistry(IReadOnlyList<MemoryProviderProfile> providers)
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Application\MemoryProviderRegistry.cs:27:    public IReadOnlyList<MemoryProviderProfile> Providers => providers;
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Application\MemoryProviderRegistry.cs:29:    public IReadOnlyList<MemoryProviderProfile> GetEnabledProviders() =>
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Application\MemoryProviderRegistry.cs:32:    public IReadOnlyList<MemoryProviderProfile> GetProvidersForCapability(MemoryCapabilityId capability) =>
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Application\MemoryProviderRegistry.cs:37:    public MemoryProviderSelectionResult SelectProvider(
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Application\MemoryProviderRegistry.cs:38:        MemoryProviderSelectionPolicy policy,
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Application\MemoryProviderRegistry.cs:46:            return MemoryProviderSelectionResult.Rejected(
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Application\MemoryProviderRegistry.cs:57:            return MemoryProviderSelectionResult.Rejected(
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Application\MemoryProviderRegistry.cs:67:            return MemoryProviderSelectionResult.Rejected(
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Application\MemoryProviderRegistry.cs:102:            return MemoryProviderSelectionResult.Rejected(
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Application\MemoryProviderRegistry.cs:113:            return MemoryProviderSelectionResult.Rejected(
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Application\MemoryProviderRegistry.cs:121:        return MemoryProviderSelectionResult.Selected(
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Application\MemoryProviderRegistry.cs:127:    private MemoryProviderSelectionResult EvaluateSelectedProvider(
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Application\MemoryProviderRegistry.cs:135:            return MemoryProviderSelectionResult.Rejected(
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Application\MemoryProviderRegistry.cs:145:            return MemoryProviderSelectionResult.Rejected(
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Application\MemoryProviderRegistry.cs:155:            return MemoryProviderSelectionResult.Rejected(
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Application\MemoryProviderRegistry.cs:163:        return MemoryProviderSelectionResult.Selected(provider, reason, requiredCapability);
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Application\MemoryProviderRegistry.cs:167:        MemoryProviderProfile provider,
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Application\MemoryProviderRegistry.cs:174:        MemoryProviderSelectionPolicy policy,
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Application\MemoryProviderRegistry.cs:192:        MemoryProviderAssignment assignment,
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Application\MemoryProviderRegistry.cs:197:            MemoryProviderAssignmentScope.Agent => Matches(context.AgentId, assignment.Key),
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Application\MemoryProviderRegistry.cs:198:            MemoryProviderAssignmentScope.AgentRole => Matches(context.AgentRole, assignment.Key),
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Application\MemoryProviderRegistry.cs:199:            MemoryProviderAssignmentScope.Workflow => Matches(context.WorkflowId, assignment.Key),
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Application\MemoryProviderRegistry.cs:200:            MemoryProviderAssignmentScope.WorkflowNode => Matches(context.WorkflowNodeId, assignment.Key),
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Application\MemoryProviderRegistry.cs:201:            MemoryProviderAssignmentScope.Process => Matches(context.ProcessId, assignment.Key),

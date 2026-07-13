@@ -1,0 +1,97 @@
+CWD: C:\repositories\CanDoItAll
+START: 2026-06-29T15:47:29.6682807-04:00
+COMMAND: dotnet test tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --filter 'PluginCatalogIntegrationTests|EmailPluginClientTests' -v:minimal -p:OutputPath=C:\repositories\CanDoItAll\artifacts\sb08-integration-output\
+  Zjišťují se projekty, které se mají obnovit...
+  Všechny projekty jsou v aktuálním stavu pro obnovení.
+  CanDoItAll.Tools.Documents -> C:\repositories\CanDoItAll\artifacts\sb08-integration-output\CanDoItAll.Tools.Documents.dll
+  CanDoItAll.AgentFramework.Capabilities.Abstractions -> C:\repositories\CanDoItAll\artifacts\sb08-integration-output\CanDoItAll.AgentFramework.Capabilities.Abstractions.dll
+  CanDoItAll.AgentFramework.SemanticCompletion.Driver -> C:\repositories\CanDoItAll\artifacts\sb08-integration-output\CanDoItAll.AgentFramework.SemanticCompletion.Driver.dll
+  CanDoItAll.Git -> C:\repositories\CanDoItAll\artifacts\sb08-integration-output\CanDoItAll.Git.dll
+  CanDoItAll.SharedKernel -> C:\repositories\CanDoItAll\artifacts\sb08-integration-output\CanDoItAll.SharedKernel.dll
+  CanDoItAll.Processes.Contracts -> C:\repositories\CanDoItAll\artifacts\sb08-integration-output\CanDoItAll.Processes.Contracts.dll
+  CanDoItAll.AgentFramework.Capabilities.Access -> C:\repositories\CanDoItAll\artifacts\sb08-integration-output\CanDoItAll.AgentFramework.Capabilities.Access.dll
+  CanDoItAll.AgentFramework.Rag.Driver -> C:\repositories\CanDoItAll\artifacts\sb08-integration-output\CanDoItAll.AgentFramework.Rag.Driver.dll
+  CanDoItAll.AgentFramework.Tools.Abstractions -> C:\repositories\CanDoItAll\artifacts\sb08-integration-output\CanDoItAll.AgentFramework.Tools.Abstractions.dll
+  CanDoItAll.AgentFramework.Capabilities.Templates -> C:\repositories\CanDoItAll\artifacts\sb08-integration-output\CanDoItAll.AgentFramework.Capabilities.Templates.dll
+  CanDoItAll.Processes.Abstractions -> C:\repositories\CanDoItAll\artifacts\sb08-integration-output\CanDoItAll.Processes.Abstractions.dll
+  CanDoItAll.AgentFramework.Mcp.Abstractions -> C:\repositories\CanDoItAll\artifacts\sb08-integration-output\CanDoItAll.AgentFramework.Mcp.Abstractions.dll
+  CanDoItAll.AgentFramework.Rag.Qdrant -> C:\repositories\CanDoItAll\artifacts\sb08-integration-output\CanDoItAll.AgentFramework.Rag.Qdrant.dll
+  CanDoItAll.Processes.Core -> C:\repositories\CanDoItAll\artifacts\sb08-integration-output\CanDoItAll.Processes.Core.dll
+  CanDoItAll.AppComponents -> C:\repositories\CanDoItAll\artifacts\sb08-integration-output\CanDoItAll.AppComponents.dll
+  CanDoItAll.Processes.Drivers.Abstractions -> C:\repositories\CanDoItAll\artifacts\sb08-integration-output\CanDoItAll.Processes.Drivers.Abstractions.dll
+  CanDoItAll.AgentFramework.Tools -> C:\repositories\CanDoItAll\artifacts\sb08-integration-output\CanDoItAll.AgentFramework.Tools.dll
+  CanDoItAll.AgentFramework.Models -> C:\repositories\CanDoItAll\artifacts\sb08-integration-output\CanDoItAll.AgentFramework.Models.dll
+  CanDoItAll.Processes.Projections -> C:\repositories\CanDoItAll\artifacts\sb08-integration-output\CanDoItAll.Processes.Projections.dll
+  CanDoItAll.Infrastructure -> C:\repositories\CanDoItAll\artifacts\sb08-integration-output\CanDoItAll.Infrastructure.dll
+  CanDoItAll.Processes.Drivers.Standard -> C:\repositories\CanDoItAll\artifacts\sb08-integration-output\CanDoItAll.Processes.Drivers.Standard.dll
+  CanDoItAll.Processes.Templates -> C:\repositories\CanDoItAll\artifacts\sb08-integration-output\CanDoItAll.Processes.Templates.dll
+  CanDoItAll.AgentFramework.Skills.Abstractions -> C:\repositories\CanDoItAll\artifacts\sb08-integration-output\CanDoItAll.AgentFramework.Skills.Abstractions.dll
+  CanDoItAll.AgentFramework.ProviderPipelines -> C:\repositories\CanDoItAll\artifacts\sb08-integration-output\CanDoItAll.AgentFramework.ProviderPipelines.dll
+  CanDoItAll.Plugins.Abstractions -> C:\repositories\CanDoItAll\artifacts\sb08-integration-output\CanDoItAll.Plugins.Abstractions.dll
+  CanDoItAll.AgentFramework.WorkflowExecutors.Abstractions -> C:\repositories\CanDoItAll\artifacts\sb08-integration-output\CanDoItAll.AgentFramework.WorkflowExecutors.Abstractions.dll
+  CanDoItAll.AgentFramework.Workflows.Abstractions -> C:\repositories\CanDoItAll\artifacts\sb08-integration-output\CanDoItAll.AgentFramework.Workflows.Abstractions.dll
+  CanDoItAll.AgentFramework.Tooling -> C:\repositories\CanDoItAll\artifacts\sb08-integration-output\CanDoItAll.AgentFramework.Tooling.dll
+  CanDoItAll.Processes.Builder -> C:\repositories\CanDoItAll\artifacts\sb08-integration-output\CanDoItAll.Processes.Builder.dll
+  CanDoItAll.Processes.Runtime -> C:\repositories\CanDoItAll\artifacts\sb08-integration-output\CanDoItAll.Processes.Runtime.dll
+  CanDoItAll.Components.Git -> C:\repositories\CanDoItAll\artifacts\sb08-integration-output\CanDoItAll.Components.Git.dll
+  CanDoItAll.Processes.Application -> C:\repositories\CanDoItAll\artifacts\sb08-integration-output\CanDoItAll.Processes.Application.dll
+  CanDoItAll.AgentFramework.WorkflowExecutors.Core -> C:\repositories\CanDoItAll\artifacts\sb08-integration-output\CanDoItAll.AgentFramework.WorkflowExecutors.Core.dll
+  CanDoItAll.AgentFramework.Providers -> C:\repositories\CanDoItAll\artifacts\sb08-integration-output\CanDoItAll.AgentFramework.Providers.dll
+  CanDoItAll.AgentFramework.WorkflowExecutors.Plugins -> C:\repositories\CanDoItAll\artifacts\sb08-integration-output\CanDoItAll.AgentFramework.WorkflowExecutors.Plugins.dll
+  CanDoItAll.AgentFramework.Skills -> C:\repositories\CanDoItAll\artifacts\sb08-integration-output\CanDoItAll.AgentFramework.Skills.dll
+  CanDoItAll.Modules.Security -> C:\repositories\CanDoItAll\artifacts\sb08-integration-output\CanDoItAll.Modules.Security.dll
+  CanDoItAll.Manager -> C:\repositories\CanDoItAll\artifacts\sb08-integration-output\CanDoItAll.Manager.dll
+  CanDoItAll.Processes.Persistence -> C:\repositories\CanDoItAll\artifacts\sb08-integration-output\CanDoItAll.Processes.Persistence.dll
+  CanDoItAll.Modules.Collaboration -> C:\repositories\CanDoItAll\artifacts\sb08-integration-output\CanDoItAll.Modules.Collaboration.dll
+  CanDoItAll.Modules.Projects -> C:\repositories\CanDoItAll\artifacts\sb08-integration-output\CanDoItAll.Modules.Projects.dll
+  CanDoItAll.AgentFramework.Core -> C:\repositories\CanDoItAll\artifacts\sb08-integration-output\CanDoItAll.AgentFramework.Core.dll
+  CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Workspace -> C:\repositories\CanDoItAll\artifacts\sb08-integration-output\CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Workspace.dll
+  CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Media -> C:\repositories\CanDoItAll\artifacts\sb08-integration-output\CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Media.dll
+  CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Documents -> C:\repositories\CanDoItAll\artifacts\sb08-integration-output\CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Documents.dll
+  CanDoItAll.AgentFramework.Workflows.Runtime -> C:\repositories\CanDoItAll\artifacts\sb08-integration-output\CanDoItAll.AgentFramework.Workflows.Runtime.dll
+  CanDoItAll.AgentFramework.Mcp -> C:\repositories\CanDoItAll\artifacts\sb08-integration-output\CanDoItAll.AgentFramework.Mcp.dll
+  CanDoItAll.Modules.Workspace -> C:\repositories\CanDoItAll\artifacts\sb08-integration-output\CanDoItAll.Modules.Workspace.dll
+  CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Control -> C:\repositories\CanDoItAll\artifacts\sb08-integration-output\CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Control.dll
+  CanDoItAll.Modules.TestLab -> C:\repositories\CanDoItAll\artifacts\sb08-integration-output\CanDoItAll.Modules.TestLab.dll
+  CanDoItAll.AgentFramework.Workflows.Core -> C:\repositories\CanDoItAll\artifacts\sb08-integration-output\CanDoItAll.AgentFramework.Workflows.Core.dll
+  CanDoItAll.AgentFramework.Voice -> C:\repositories\CanDoItAll\artifacts\sb08-integration-output\CanDoItAll.AgentFramework.Voice.dll
+  CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Transforms -> C:\repositories\CanDoItAll\artifacts\sb08-integration-output\CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Transforms.dll
+  CanDoItAll.AgentFramework.WorkflowExecutors.Standard.ProjectStructure -> C:\repositories\CanDoItAll\artifacts\sb08-integration-output\CanDoItAll.AgentFramework.WorkflowExecutors.Standard.ProjectStructure.dll
+  CanDoItAll.Plugin.Email -> C:\repositories\CanDoItAll\artifacts\sb08-integration-output\CanDoItAll.Plugin.Email.dll
+  CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Network -> C:\repositories\CanDoItAll\artifacts\sb08-integration-output\CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Network.dll
+  CanDoItAll.Modules.SchedulerPlanner -> C:\repositories\CanDoItAll\artifacts\sb08-integration-output\CanDoItAll.Modules.SchedulerPlanner.dll
+  CanDoItAll.AgentFramework.Persistence -> C:\repositories\CanDoItAll\artifacts\sb08-integration-output\CanDoItAll.AgentFramework.Persistence.dll
+  CanDoItAll.AgentFramework.WorkflowExecutors.Standard -> C:\repositories\CanDoItAll\artifacts\sb08-integration-output\CanDoItAll.AgentFramework.WorkflowExecutors.Standard.dll
+  CanDoItAll.Modules.CrmHr -> C:\repositories\CanDoItAll\artifacts\sb08-integration-output\CanDoItAll.Modules.CrmHr.dll
+  CanDoItAll.Modules.Prompts -> C:\repositories\CanDoItAll\artifacts\sb08-integration-output\CanDoItAll.Modules.Prompts.dll
+  CanDoItAll.Modules.Resources -> C:\repositories\CanDoItAll\artifacts\sb08-integration-output\CanDoItAll.Modules.Resources.dll
+  CanDoItAll.AgentFramework.Maf -> C:\repositories\CanDoItAll\artifacts\sb08-integration-output\CanDoItAll.AgentFramework.Maf.dll
+  CanDoItAll.Modules.CognitiveMemory -> C:\repositories\CanDoItAll\artifacts\sb08-integration-output\CanDoItAll.Modules.CognitiveMemory.dll
+  CanDoItAll.AgentFramework.Components -> C:\repositories\CanDoItAll\artifacts\sb08-integration-output\CanDoItAll.AgentFramework.Components.dll
+  CanDoItAll.AgentFramework.Hosting -> C:\repositories\CanDoItAll\artifacts\sb08-integration-output\CanDoItAll.AgentFramework.Hosting.dll
+  CanDoItAll.Modules.Plugins -> C:\repositories\CanDoItAll\artifacts\sb08-integration-output\CanDoItAll.Modules.Plugins.dll
+  CanDoItAll.Modules.Factory -> C:\repositories\CanDoItAll\artifacts\sb08-integration-output\CanDoItAll.Modules.Factory.dll
+  CanDoItAll.Plugin.Gmail -> C:\repositories\CanDoItAll\artifacts\sb08-integration-output\CanDoItAll.Plugin.Gmail.dll
+  CanDoItAll.Plugin.Office365 -> C:\repositories\CanDoItAll\artifacts\sb08-integration-output\CanDoItAll.Plugin.Office365.dll
+  CanDoItAll.Plugin.Docker -> C:\repositories\CanDoItAll\artifacts\sb08-integration-output\CanDoItAll.Plugin.Docker.dll
+  CanDoItAll.Modules.Workbench -> C:\repositories\CanDoItAll\artifacts\sb08-integration-output\CanDoItAll.Modules.Workbench.dll
+  CanDoItAll.Modules.AgentFramework -> C:\repositories\CanDoItAll\artifacts\sb08-integration-output\CanDoItAll.Modules.AgentFramework.dll
+  CanDoItAll.Modules.Processes -> C:\repositories\CanDoItAll\artifacts\sb08-integration-output\CanDoItAll.Modules.Processes.dll
+  CanDoItAll.Composition -> C:\repositories\CanDoItAll\artifacts\sb08-integration-output\CanDoItAll.Composition.dll
+  CanDoItAll.Migrations.PostgreSql -> C:\repositories\CanDoItAll\artifacts\sb08-integration-output\CanDoItAll.Migrations.PostgreSql.dll
+  CanDoItAll.Web -> C:\repositories\CanDoItAll\artifacts\sb08-integration-output\CanDoItAll.Web.dll
+  CanDoItAll.Tests.Support -> C:\repositories\CanDoItAll\artifacts\sb08-integration-output\CanDoItAll.Tests.Support.dll
+  CanDoItAll.Tests.Integration -> C:\repositories\CanDoItAll\artifacts\sb08-integration-output\CanDoItAll.Tests.Integration.dll
+Testovací běh pro C:\repositories\CanDoItAll\artifacts\sb08-integration-output\CanDoItAll.Tests.Integration.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+
+Úspěšné!    - Neúspěšné:     0, Úspěšné:    48, Přeskočeno:     0, Celkem:    48, Doba trvání: 2 m 38 s - CanDoItAll.Tests.Integration.dll (net10.0)
+COMMAND_EXIT_CODE: 0
+END: 2026-06-29T15:50:58.7361091-04:00
+EXIT_CODE: 0
+
+Completed Validator Metadata Addendum
+Command: historical SB08 proof command recorded during bundle execution
+ExitCode: 0
+ExitCode: 1
+Invariant ID: SB08-final-closure

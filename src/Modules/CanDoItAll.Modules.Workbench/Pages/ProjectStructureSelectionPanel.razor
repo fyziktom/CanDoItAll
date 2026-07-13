@@ -250,41 +250,11 @@ else if (State.SelectedNode is not null)
                 <h3 class="cw-panel-title">@preview.DisplayName</h3>
                 <p class="cw-panel-copy">@preview.LeadCopy</p>
 
-                @switch (preview.Kind)
-                {
-                    case AttachmentPreviewKind.Image:
-                        <img class="cw-media-preview" src="@preview.Route" alt="@selectedNode.Title" />
-                        break;
-                    case AttachmentPreviewKind.Video:
-                        <video class="cw-media-preview" controls preload="metadata" src="@preview.Route"></video>
-                        break;
-                    case AttachmentPreviewKind.Audio:
-                        <audio class="project-structure-audio-preview" controls preload="metadata" src="@preview.Route"></audio>
-                        break;
-                    case AttachmentPreviewKind.TextDocument:
-                        @if (!string.IsNullOrWhiteSpace(preview.TextContent))
-                        {
-                            <pre class="project-structure-text-asset-preview">@preview.TextContent</pre>
-                        }
-                        else
-                        {
-                            <iframe class="project-structure-document-preview project-structure-document-preview--text"
-                                    src="@preview.PreviewSource"
-                                    title="@($"{preview.DisplayName} text preview")"></iframe>
-                        }
-                        break;
-                    case AttachmentPreviewKind.Document:
-                        <iframe class="project-structure-document-preview"
-                                src="@preview.PreviewSource"
-                                title="@($"{preview.DisplayName} preview")"></iframe>
-                        break;
-                    default:
-                        <div class="project-structure-preview-empty">
-                            <strong>Inline preview is not available for this file type.</strong>
-                            <span>Open the attachment in a new tab when you need the raw browser viewer.</span>
-                        </div>
-                        break;
-                }
+                <Alert AlertStyle="AlertStyle.Info"
+                       Variant="Variant.Outlined"
+                       data-testid="project-structure-governed-preview-summary">
+                    Content opens only through the current authorized FileInteraction. Unsupported formats stay inert instead of loading an unsigned route.
+                </Alert>
 
                 <div class="cw-chip-row">
                     @if (!string.IsNullOrWhiteSpace(preview.OriginalFileName))
@@ -318,13 +288,6 @@ else if (State.SelectedNode is not null)
                         </button>
                     }
 
-                    <a class="cw-button"
-                       data-tone="ghost"
-                       href="@preview.Route"
-                       target="_blank"
-                       rel="noopener noreferrer">
-                        Open in new tab
-                    </a>
                 </div>
 
                 @if (preview.ShowLocalOpenFeedback)

@@ -1,0 +1,11 @@
+Command: dotnet test tests\Unit\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj --filter "FullyQualifiedName~ProcessCapabilityScopeContractTests|FullyQualifiedName~ProcessRuntimeIntegrationMetadataTests|FullyQualifiedName~ProcessRuntimeIntegrationAdapterTests" --logger "console;verbosity=minimal"
+ExitCode: 0
+Raw log: bundle://proof/
+SB04
+/transcripts/focused-tests.log
+Invariant ID: SB04-templates-declare-typed-proof
+Test name: Software_delivery_qa_steps_declare_conditional_browser_and_image_receipts
+Test name: Dotnet_ui_screenshot_writeback_keeps_development_instructions_in_process_scope
+Command: dotnet build src\App\CanDoItAll.Web\CanDoItAll.Web.csproj --no-restore --configuration Debug
+ExitCode: 0
+Raw log: bundle://proof/SB04/transcripts/web-build.log

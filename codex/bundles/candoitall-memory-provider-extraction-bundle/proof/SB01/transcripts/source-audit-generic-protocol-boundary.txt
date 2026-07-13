@@ -1,0 +1,7 @@
+Command: Select-String -Path src\Memory\CanDoItAll.Memory.Abstractions\*.cs -Pattern Qdrant,CanDoItAll.Modules.CognitiveMemory,CognitiveMemoryProviderContracts,CognitiveMemoryCommonContracts
+WorkingDirectory: C:\repositories\CanDoItAll
+RunLabel: SB01 generic protocol source audit
+Invariant IDs: SB01_MP001, SB01_MP002, SB01_MP003, SB01_MP004, SB01_MP005, SB01_MP006
+ExitCode: 0
+Output:
+No forbidden generic protocol references found.

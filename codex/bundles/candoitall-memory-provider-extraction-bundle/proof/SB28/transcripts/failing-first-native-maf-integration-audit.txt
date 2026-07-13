@@ -1,0 +1,8 @@
+FAIL expected: Native curator flow [CognitiveMemoryNativeCuratorFlow] is missing before SB28
+FAIL expected: Native professor flow [CognitiveMemoryNativeProfessorFlow] is missing before SB28
+FAIL expected: Native self regulation flow [CognitiveMemoryNativeSelfRegulationFlow] is missing before SB28
+FAIL expected: Native MAF policy gate [CognitiveMemoryNativeMafPolicyGate] is missing before SB28
+FAIL expected: Native provider event emission [MemoryProviderEventKind.VerificationRequest] is missing before SB28
+FAIL expected: Native MAF context contributor [CognitiveMemoryNativeContextContributor] is missing before SB28
+FAIL expected: Native MAF service registration [AddCognitiveMemoryNativeMaf] is missing before SB28
+FAIL expected: Native MAF integration tests [NativeMafIntegrationTests] is missing before SB28

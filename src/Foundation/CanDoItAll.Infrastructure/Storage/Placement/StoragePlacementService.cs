@@ -156,8 +156,8 @@ public sealed class StoragePlacementService(
     {
         if (storage.ProviderKind == StorageProviderKind.FileSystem)
         {
-            var fileSystemDriver = new FileSystemStorageDriver(new StaticWorkspacePathResolver(storage.EndpointOrRoot));
-            return fileSystemDriver.ResolveFullPath(storage, reference.Locator);
+            var pathPolicy = new FileSystemStoragePathPolicy(new StaticWorkspacePathResolver(storage.EndpointOrRoot));
+            return pathPolicy.ResolveFullPath(storage, reference.Locator);
         }
 
         if (storage.ProviderKind == StorageProviderKind.Ipfs)

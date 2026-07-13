@@ -1,0 +1,20 @@
+-[ RECORD 1 ]-+------------------------------------------------------------------------
+LedgerEventId | 29075fe1-0fa4-4571-8a7d-85f63c97520a
+EventId       | f1e2cac8-7cc1-4d21-a7eb-127983a7378d
+SlotId        | 494dcfd1-4745-40a6-7f6a-f33ec32c8cf8
+ArtifactId    | 32b6116b-33a4-4caf-8449-5c4497008197
+ContentHash   | sha256:c76d6f07512a7ad8a562648faa5ddb63af8ce6442a7a4dfd4173d0606d28e152
+-[ RECORD 2 ]-+------------------------------------------------------------------------
+LedgerEventId | 420002b0-6371-4abf-9756-0cc8ab0b3d8a
+EventId       | 3f276c85-8ca5-49ef-88de-be373f0aba87
+SlotId        | 59c6c061-cc08-ca74-cf4c-e77a68fb429b
+ArtifactId    | 316be419-6a6e-45ca-9396-cab3cabaed84
+ContentHash   | sha256:00afb2192f925b8a513a26f404e04700a151aa4658410f9dc8b981af9ef63a87
+-[ RECORD 3 ]-+------------------------------------------------------------------------
+LedgerEventId | c8e35341-c399-44b4-832e-f0b45b884df8
+EventId       | 69131206-6858-4851-8d3f-53cbeb2484ec
+SlotId        | 5afd4ee1-ec0e-32cc-e683-16994a39ade4
+ArtifactId    | 6a04f644-4bd8-460f-8da0-b71bc8213152
+ContentHash   | sha256:a351df93999400879b14c639f412e1036ae06d58055681914bf5856ea7fb6ac2
+
+

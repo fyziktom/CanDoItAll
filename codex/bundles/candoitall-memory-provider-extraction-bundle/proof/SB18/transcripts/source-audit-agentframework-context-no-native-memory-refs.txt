@@ -1,0 +1,3 @@
+Command: rg "CanDoItAll\.Modules\.CognitiveMemory|CanDoItAll\.CognitiveMemory|CognitiveMemory[A-Za-z]|Qdrant" src\Modules\CanDoItAll.Modules.AgentFramework\Context src\Modules\CanDoItAll.Modules.AgentFramework\Services\AgentFrameworkModuleServiceCollectionExtensions.cs -n
+rg exit code: 1
+Result: PASS - no native Cognitive Memory or Qdrant references in generic AgentFramework context registration paths.

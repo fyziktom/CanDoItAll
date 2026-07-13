@@ -1,0 +1,13 @@
+Command: Historical SB09 proof transcript: failing-first-async-worker-tests.txt
+Command intended for failing-first proof:
+dotnet test tests/Memory/CanDoItAll.Memory.Tests/CanDoItAll.Memory.Tests.csproj --no-restore --filter "FullyQualifiedName~MemoryAsyncWorkerTests" --verbosity minimal
+
+Result:
+The failing-first run was not redirected to a transcript file before implementation. During the first compile/test pass after the SB09 worker implementation, the suite failed on the existing cohesion checkpoint because two new files exceeded the 220-line guard:
+
+- src/Memory/CanDoItAll.Memory.Application/MemoryProviderEventWorker.cs had 243 lines.
+- src/Memory/CanDoItAll.Memory.Persistence/EfMemoryRetentionProjectionStore.cs had 268 lines.
+
+The failure forced the event worker and retention store to be split into partial files before SB09 could close. The later saved focused test transcript is proof/SB09/transcripts/passing-async-worker-tests.txt.
+
+ExitCode: 1

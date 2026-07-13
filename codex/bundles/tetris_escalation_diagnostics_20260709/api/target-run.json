@@ -1,0 +1,820 @@
+{
+  "rootRunId": "c4888f4f-eabd-469f-80a6-3fccf6018a12",
+  "runId": "c4888f4f-eabd-469f-80a6-3fccf6018a12",
+  "status": "NeedsAttention",
+  "firstEventAtUtc": "2026-07-09T05:09:50.686655-04:00",
+  "lastEventAtUtc": "2026-07-09T05:25:31.05606-04:00",
+  "freshness": {
+    "observedAtUtc": "2026-07-09T05:25:31.0750134-04:00",
+    "sourceGlobalSequence": 68946,
+    "latestKnownGlobalSequence": 68946,
+    "lastProcessedGlobalSequence": 68946,
+    "backlogEventCount": 0
+  },
+  "recentEvents": [
+    {
+      "eventId": "f2af2b2c-f6ce-4256-8cbb-d49b8639c066",
+      "globalSequence": 68927,
+      "rootRunId": "c4888f4f-eabd-469f-80a6-3fccf6018a12",
+      "runId": "c4888f4f-eabd-469f-80a6-3fccf6018a12",
+      "eventType": "DispatchClaimCreated",
+      "occurredAtUtc": "2026-07-09T05:23:07.704155-04:00",
+      "sensitivity": "Normal",
+      "summary": "DispatchClaimCreated",
+      "restrictedDiagnosticReference": null,
+      "diagnostics": []
+    },
+    {
+      "eventId": "2068b721-659f-451a-b2f5-c869526ca9f4",
+      "globalSequence": 68928,
+      "rootRunId": "c4888f4f-eabd-469f-80a6-3fccf6018a12",
+      "runId": "c4888f4f-eabd-469f-80a6-3fccf6018a12",
+      "eventType": "StepRunning",
+      "occurredAtUtc": "2026-07-09T05:23:07.855691-04:00",
+      "sensitivity": "Normal",
+      "summary": "StepRunning",
+      "restrictedDiagnosticReference": null,
+      "diagnostics": []
+    },
+    {
+      "eventId": "1e64ad1e-f19d-4aa7-b5ed-bfa576d9be7c",
+      "globalSequence": 68929,
+      "rootRunId": "c4888f4f-eabd-469f-80a6-3fccf6018a12",
+      "runId": "c4888f4f-eabd-469f-80a6-3fccf6018a12",
+      "eventType": "DispatchClaimCompleted",
+      "occurredAtUtc": "2026-07-09T05:23:41.330982-04:00",
+      "sensitivity": "Normal",
+      "summary": "DispatchClaimCompleted",
+      "restrictedDiagnosticReference": null,
+      "diagnostics": []
+    },
+    {
+      "eventId": "212d4d7d-db32-4d0c-be8f-d9b29dc89b65",
+      "globalSequence": 68930,
+      "rootRunId": "c4888f4f-eabd-469f-80a6-3fccf6018a12",
+      "runId": "c4888f4f-eabd-469f-80a6-3fccf6018a12",
+      "eventType": "StepReady",
+      "occurredAtUtc": "2026-07-09T05:23:41.330982-04:00",
+      "sensitivity": "Normal",
+      "summary": "StepReady",
+      "restrictedDiagnosticReference": null,
+      "diagnostics": []
+    },
+    {
+      "eventId": "4d9fb749-de5f-4944-a916-7d89fa94b42b",
+      "globalSequence": 68931,
+      "rootRunId": "c4888f4f-eabd-469f-80a6-3fccf6018a12",
+      "runId": "c4888f4f-eabd-469f-80a6-3fccf6018a12",
+      "eventType": "StepClaimed",
+      "occurredAtUtc": "2026-07-09T05:23:41.536311-04:00",
+      "sensitivity": "Normal",
+      "summary": "StepClaimed",
+      "restrictedDiagnosticReference": null,
+      "diagnostics": []
+    },
+    {
+      "eventId": "e35e6825-0b36-4915-b5af-8939e032ac66",
+      "globalSequence": 68932,
+      "rootRunId": "c4888f4f-eabd-469f-80a6-3fccf6018a12",
+      "runId": "c4888f4f-eabd-469f-80a6-3fccf6018a12",
+      "eventType": "DispatchClaimCreated",
+      "occurredAtUtc": "2026-07-09T05:23:41.536311-04:00",
+      "sensitivity": "Normal",
+      "summary": "DispatchClaimCreated",
+      "restrictedDiagnosticReference": null,
+      "diagnostics": []
+    },
+    {
+      "eventId": "6536b55e-da27-44eb-94fc-acaa0d868adc",
+      "globalSequence": 68933,
+      "rootRunId": "c4888f4f-eabd-469f-80a6-3fccf6018a12",
+      "runId": "c4888f4f-eabd-469f-80a6-3fccf6018a12",
+      "eventType": "StepRunning",
+      "occurredAtUtc": "2026-07-09T05:23:41.564906-04:00",
+      "sensitivity": "Normal",
+      "summary": "StepRunning",
+      "restrictedDiagnosticReference": null,
+      "diagnostics": []
+    },
+    {
+      "eventId": "9e43816d-fb7a-483f-b718-78d07ed6111a",
+      "globalSequence": 68934,
+      "rootRunId": "c4888f4f-eabd-469f-80a6-3fccf6018a12",
+      "runId": "c4888f4f-eabd-469f-80a6-3fccf6018a12",
+      "eventType": "DispatchClaimCompleted",
+      "occurredAtUtc": "2026-07-09T05:24:10.107445-04:00",
+      "sensitivity": "Normal",
+      "summary": "DispatchClaimCompleted",
+      "restrictedDiagnosticReference": null,
+      "diagnostics": []
+    },
+    {
+      "eventId": "785d09a4-7f58-4352-86db-071f90b2b4ae",
+      "globalSequence": 68935,
+      "rootRunId": "c4888f4f-eabd-469f-80a6-3fccf6018a12",
+      "runId": "c4888f4f-eabd-469f-80a6-3fccf6018a12",
+      "eventType": "StepReady",
+      "occurredAtUtc": "2026-07-09T05:24:10.107445-04:00",
+      "sensitivity": "Normal",
+      "summary": "StepReady",
+      "restrictedDiagnosticReference": null,
+      "diagnostics": []
+    },
+    {
+      "eventId": "2697b144-ed39-421e-81ea-0a7cd56b2c8b",
+      "globalSequence": 68936,
+      "rootRunId": "c4888f4f-eabd-469f-80a6-3fccf6018a12",
+      "runId": "c4888f4f-eabd-469f-80a6-3fccf6018a12",
+      "eventType": "StepClaimed",
+      "occurredAtUtc": "2026-07-09T05:24:10.347874-04:00",
+      "sensitivity": "Normal",
+      "summary": "StepClaimed",
+      "restrictedDiagnosticReference": null,
+      "diagnostics": []
+    },
+    {
+      "eventId": "265913e9-48f1-47e0-9a44-681018fc8e1e",
+      "globalSequence": 68937,
+      "rootRunId": "c4888f4f-eabd-469f-80a6-3fccf6018a12",
+      "runId": "c4888f4f-eabd-469f-80a6-3fccf6018a12",
+      "eventType": "DispatchClaimCreated",
+      "occurredAtUtc": "2026-07-09T05:24:10.347874-04:00",
+      "sensitivity": "Normal",
+      "summary": "DispatchClaimCreated",
+      "restrictedDiagnosticReference": null,
+      "diagnostics": []
+    },
+    {
+      "eventId": "7193d6bf-b030-4765-8f4e-f567284b6db6",
+      "globalSequence": 68938,
+      "rootRunId": "c4888f4f-eabd-469f-80a6-3fccf6018a12",
+      "runId": "c4888f4f-eabd-469f-80a6-3fccf6018a12",
+      "eventType": "StepRunning",
+      "occurredAtUtc": "2026-07-09T05:24:10.492492-04:00",
+      "sensitivity": "Normal",
+      "summary": "StepRunning",
+      "restrictedDiagnosticReference": null,
+      "diagnostics": []
+    },
+    {
+      "eventId": "1f32f2ad-9152-4fe1-b6bb-35d9a559e152",
+      "globalSequence": 68939,
+      "rootRunId": "c4888f4f-eabd-469f-80a6-3fccf6018a12",
+      "runId": "c4888f4f-eabd-469f-80a6-3fccf6018a12",
+      "eventType": "DispatchClaimCompleted",
+      "occurredAtUtc": "2026-07-09T05:25:10.50322-04:00",
+      "sensitivity": "Normal",
+      "summary": "DispatchClaimCompleted",
+      "restrictedDiagnosticReference": null,
+      "diagnostics": []
+    },
+    {
+      "eventId": "493aa777-d899-42a7-ac2a-13033e046f89",
+      "globalSequence": 68940,
+      "rootRunId": "c4888f4f-eabd-469f-80a6-3fccf6018a12",
+      "runId": "c4888f4f-eabd-469f-80a6-3fccf6018a12",
+      "eventType": "StepReady",
+      "occurredAtUtc": "2026-07-09T05:25:10.50322-04:00",
+      "sensitivity": "Normal",
+      "summary": "StepReady",
+      "restrictedDiagnosticReference": null,
+      "diagnostics": []
+    },
+    {
+      "eventId": "c7c7b1b0-5641-4144-a8dc-08c21f5136ab",
+      "globalSequence": 68941,
+      "rootRunId": "c4888f4f-eabd-469f-80a6-3fccf6018a12",
+      "runId": "c4888f4f-eabd-469f-80a6-3fccf6018a12",
+      "eventType": "StepClaimed",
+      "occurredAtUtc": "2026-07-09T05:25:10.759189-04:00",
+      "sensitivity": "Normal",
+      "summary": "StepClaimed",
+      "restrictedDiagnosticReference": null,
+      "diagnostics": []
+    },
+    {
+      "eventId": "647eb53f-e426-4370-9465-388dee48b4d8",
+      "globalSequence": 68942,
+      "rootRunId": "c4888f4f-eabd-469f-80a6-3fccf6018a12",
+      "runId": "c4888f4f-eabd-469f-80a6-3fccf6018a12",
+      "eventType": "DispatchClaimCreated",
+      "occurredAtUtc": "2026-07-09T05:25:10.759189-04:00",
+      "sensitivity": "Normal",
+      "summary": "DispatchClaimCreated",
+      "restrictedDiagnosticReference": null,
+      "diagnostics": []
+    },
+    {
+      "eventId": "7de32aa3-116d-48f8-8fbd-a89694e7a154",
+      "globalSequence": 68943,
+      "rootRunId": "c4888f4f-eabd-469f-80a6-3fccf6018a12",
+      "runId": "c4888f4f-eabd-469f-80a6-3fccf6018a12",
+      "eventType": "StepRunning",
+      "occurredAtUtc": "2026-07-09T05:25:10.914582-04:00",
+      "sensitivity": "Normal",
+      "summary": "StepRunning",
+      "restrictedDiagnosticReference": null,
+      "diagnostics": []
+    },
+    {
+      "eventId": "b8fd82fa-fa34-4e74-8cd3-160123736a68",
+      "globalSequence": 68944,
+      "rootRunId": "c4888f4f-eabd-469f-80a6-3fccf6018a12",
+      "runId": "c4888f4f-eabd-469f-80a6-3fccf6018a12",
+      "eventType": "DispatchClaimCompleted",
+      "occurredAtUtc": "2026-07-09T05:25:30.860772-04:00",
+      "sensitivity": "Normal",
+      "summary": "DispatchClaimCompleted",
+      "restrictedDiagnosticReference": null,
+      "diagnostics": []
+    },
+    {
+      "eventId": "d0962051-0644-4922-885e-cab18c200d8e",
+      "globalSequence": 68945,
+      "rootRunId": "c4888f4f-eabd-469f-80a6-3fccf6018a12",
+      "runId": "c4888f4f-eabd-469f-80a6-3fccf6018a12",
+      "eventType": "StepBlocked",
+      "occurredAtUtc": "2026-07-09T05:25:30.860772-04:00",
+      "sensitivity": "Normal",
+      "summary": "StepBlocked: Adapter - Step 'qa-validation' claimed completion but required current-run product tool receipt(s) are missing: workspace_dotnet_run; browser_navigate; browser_snapshot; browser_take_screenshot; browser_console_messages; workspace_dotnet_stop.",
+      "restrictedDiagnosticReference": null,
+      "diagnostics": [
+        {
+          "runId": "c4888f4f-eabd-469f-80a6-3fccf6018a12",
+          "stepInstanceId": "1ebeadbe-98c9-4e9d-af3b-1e9f69a75c62",
+          "stepKey": "qa-validation",
+          "strategyId": "strategy.adapter.workflow.execute",
+          "resultHash": "sha256:23f42ce536ea7edeb6592db40ee5a372bfcd5d12b43bdbc1f6be0a84f1819b1a",
+          "code": "process.adapter.product_required_tool_receipt_missing",
+          "category": "Adapter",
+          "safeSummary": "Step 'qa-validation' claimed completion but required current-run product tool receipt(s) are missing: workspace_dotnet_run; browser_navigate; browser_snapshot; browser_take_screenshot; browser_console_messages; workspace_dotnet_stop.",
+          "sensitivity": "Normal",
+          "retrySafety": "SafeToRetry",
+          "idempotency": "Idempotent",
+          "restrictedDiagnosticReference": null
+        },
+        {
+          "runId": "c4888f4f-eabd-469f-80a6-3fccf6018a12",
+          "stepInstanceId": "1ebeadbe-98c9-4e9d-af3b-1e9f69a75c62",
+          "stepKey": "qa-validation",
+          "strategyId": "strategy.adapter.workflow.execute",
+          "resultHash": "sha256:23f42ce536ea7edeb6592db40ee5a372bfcd5d12b43bdbc1f6be0a84f1819b1a",
+          "code": "process.adapter.required_tool_receipt_missing",
+          "category": "Adapter",
+          "safeSummary": "Step 'qa-validation' claimed completion but required current-run process tool receipt(s) are missing: workspace_dotnet_run (QA must start the app before collecting current-run UI proof when the launch context requires browser validation.); browser_navigate (QA browser proof must navigate to a concrete route before accepting UI evidence.); browser_snapshot (QA browser proof must include durable browser state for the validated route.); browser_take_screenshot (QA browser proof must include a current-run screenshot when UI evidence is required.); browser_console_messages (QA browser proof must include console diagnostics for the validated route.); workspace_dotnet_stop (QA must clean up any app process started for browser validation.). Retry the same step, invoke the missing required tool(s), cite the receipt refs in the managed artifact, and complete only after the typed process capability scope receipt contract is satisfied.",
+          "sensitivity": "Normal",
+          "retrySafety": "SafeToRetry",
+          "idempotency": "Idempotent",
+          "restrictedDiagnosticReference": null
+        },
+        {
+          "runId": "c4888f4f-eabd-469f-80a6-3fccf6018a12",
+          "stepInstanceId": "1ebeadbe-98c9-4e9d-af3b-1e9f69a75c62",
+          "stepKey": "qa-validation",
+          "strategyId": "strategy.adapter.workflow.execute",
+          "resultHash": "sha256:2e8224e2583cb0bb36b1165a66e65a0d1e8caf9e41789523e24f47af4da41628",
+          "code": "process.adapter.product_required_tool_receipt_missing",
+          "category": "Adapter",
+          "safeSummary": "Step 'qa-validation' claimed completion but required current-run product tool receipt(s) are missing: workspace_dotnet_run; browser_navigate; browser_snapshot; browser_take_screenshot; browser_console_messages; workspace_dotnet_stop.",
+          "sensitivity": "Normal",
+          "retrySafety": "SafeToRetry",
+          "idempotency": "Idempotent",
+          "restrictedDiagnosticReference": null
+        },
+        {
+          "runId": "c4888f4f-eabd-469f-80a6-3fccf6018a12",
+          "stepInstanceId": "1ebeadbe-98c9-4e9d-af3b-1e9f69a75c62",
+          "stepKey": "qa-validation",
+          "strategyId": "strategy.adapter.workflow.execute",
+          "resultHash": "sha256:2e8224e2583cb0bb36b1165a66e65a0d1e8caf9e41789523e24f47af4da41628",
+          "code": "process.adapter.required_tool_receipt_missing",
+          "category": "Adapter",
+          "safeSummary": "Step 'qa-validation' claimed completion but required current-run process tool receipt(s) are missing: workspace_dotnet_run (QA must start the app before collecting current-run UI proof when the launch context requires browser validation.); browser_navigate (QA browser proof must navigate to a concrete route before accepting UI evidence.); browser_snapshot (QA browser proof must include durable browser state for the validated route.); browser_take_screenshot (QA browser proof must include a current-run screenshot when UI evidence is required.); browser_console_messages (QA browser proof must include console diagnostics for the validated route.); workspace_dotnet_stop (QA must clean up any app process started for browser validation.). Retry the same step, invoke the missing required tool(s), cite the receipt refs in the managed artifact, and complete only after the typed process capability scope receipt contract is satisfied.",
+          "sensitivity": "Normal",
+          "retrySafety": "SafeToRetry",
+          "idempotency": "Idempotent",
+          "restrictedDiagnosticReference": null
+        },
+        {
+          "runId": "c4888f4f-eabd-469f-80a6-3fccf6018a12",
+          "stepInstanceId": "1ebeadbe-98c9-4e9d-af3b-1e9f69a75c62",
+          "stepKey": "qa-validation",
+          "strategyId": "strategy.adapter.workflow.execute",
+          "resultHash": "sha256:2e8224e2583cb0bb36b1165a66e65a0d1e8caf9e41789523e24f47af4da41628",
+          "code": "process.adapter.completed_outcome_declares_unresolved_blocker",
+          "category": "Adapter",
+          "safeSummary": "Step 'qa-validation' returned Completed while its outcome text still declares unresolved blocker or missing-acceptance state: Current-run upstream artifact evidence was readable for implementation, architecture-review, and peer-review. However, this retry did not execute the required current-run validation/browser tool chain, so the package cannot be accepted as quality-accepted. The step is routed to repair-required because the required runtime proof receipts are still missing for workspace_dotnet_restore, workspace_dotnet_build, workspace_dotnet_test, workspace_dotnet_run, browser_navigate, browser_snapshot, browser_take_screenshot, browser_console_messages, and workspace_dotnet_stop. | Implementation must provide the missing current-run receipts and browser proof, then QA should re-evaluate the live product route for intentional UI, interaction, and scaffold defects before release governance continues.. Return Blocked or repair the missing state before claiming completion.",
+          "sensitivity": "Normal",
+          "retrySafety": "SafeToRetry",
+          "idempotency": "Idempotent",
+          "restrictedDiagnosticReference": null
+        },
+        {
+          "runId": "c4888f4f-eabd-469f-80a6-3fccf6018a12",
+          "stepInstanceId": "1ebeadbe-98c9-4e9d-af3b-1e9f69a75c62",
+          "stepKey": "qa-validation",
+          "strategyId": "strategy.adapter.workflow.execute",
+          "resultHash": "sha256:416121e2cfa637d2e3e28f0c12e2a6aca2e0a0db5ba1ed6239c5a10bcf34cfcd",
+          "code": "process.adapter.product_required_file_content_missing",
+          "category": "Adapter",
+          "safeSummary": "Step 'qa-validation' claimed completion but required product file content/readback check(s) failed: C:\\programovani\\dotnet\\output\\src\\TetrisGame\\Layout\\MainLayout.razor contains forbidden text [learn.microsoft.com/aspnet/core/]; C:\\programovani\\dotnet\\output\\src\\TetrisGame\\Pages\\Counter.razor contains forbidden text [@page \"/counter\"]; C:\\programovani\\dotnet\\output\\src\\TetrisGame\\Pages\\Weather.razor contains forbidden text [@page \"/weather\" | WeatherForecast | sample-data/weather.json].",
+          "sensitivity": "Normal",
+          "retrySafety": "SafeToRetry",
+          "idempotency": "Idempotent",
+          "restrictedDiagnosticReference": null
+        },
+        {
+          "runId": "c4888f4f-eabd-469f-80a6-3fccf6018a12",
+          "stepInstanceId": "1ebeadbe-98c9-4e9d-af3b-1e9f69a75c62",
+          "stepKey": "qa-validation",
+          "strategyId": "strategy.adapter.workflow.execute",
+          "resultHash": "sha256:f98a721bfe074f598e3c5eb015c88583ed29dbdc61c3e619e76b409b21398b41",
+          "code": "process.adapter.required_tool_receipt_missing",
+          "category": "Adapter",
+          "safeSummary": "Step 'qa-validation' claimed completion but required current-run process tool receipt(s) are missing: workspace_dotnet_run (QA must start the app before collecting current-run UI proof when the launch context requires browser validation.); browser_navigate (QA browser proof must navigate to a concrete route before accepting UI evidence.); browser_snapshot (QA browser proof must include durable browser state for the validated route.); browser_take_screenshot (QA browser proof must include a current-run screenshot when UI evidence is required.); browser_console_messages (QA browser proof must include console diagnostics for the validated route.); workspace_dotnet_stop (QA must clean up any app process started for browser validation.). Retry the same step, invoke the missing required tool(s), cite the receipt refs in the managed artifact, and complete only after the typed process capability scope receipt contract is satisfied.",
+          "sensitivity": "Normal",
+          "retrySafety": "SafeToRetry",
+          "idempotency": "Idempotent",
+          "restrictedDiagnosticReference": null
+        }
+      ]
+    },
+    {
+      "eventId": "576c6921-76f9-4646-b272-2659c7e78bd4",
+      "globalSequence": 68946,
+      "rootRunId": "c4888f4f-eabd-469f-80a6-3fccf6018a12",
+      "runId": "c4888f4f-eabd-469f-80a6-3fccf6018a12",
+      "eventType": "ProcessRunBlocked",
+      "occurredAtUtc": "2026-07-09T05:25:31.05606-04:00",
+      "sensitivity": "Normal",
+      "summary": "ProcessRunBlocked: Adapter - Step 'qa-validation' claimed completion but required current-run product tool receipt(s) are missing: workspace_dotnet_run; browser_navigate; browser_snapshot; browser_take_screenshot; browser_console_messages; workspace_dotnet_stop.",
+      "restrictedDiagnosticReference": null,
+      "diagnostics": [
+        {
+          "runId": "c4888f4f-eabd-469f-80a6-3fccf6018a12",
+          "stepInstanceId": "1ebeadbe-98c9-4e9d-af3b-1e9f69a75c62",
+          "stepKey": "qa-validation",
+          "strategyId": "strategy.adapter.workflow.execute",
+          "resultHash": "sha256:23f42ce536ea7edeb6592db40ee5a372bfcd5d12b43bdbc1f6be0a84f1819b1a",
+          "code": "process.adapter.product_required_tool_receipt_missing",
+          "category": "Adapter",
+          "safeSummary": "Step 'qa-validation' claimed completion but required current-run product tool receipt(s) are missing: workspace_dotnet_run; browser_navigate; browser_snapshot; browser_take_screenshot; browser_console_messages; workspace_dotnet_stop.",
+          "sensitivity": "Normal",
+          "retrySafety": "SafeToRetry",
+          "idempotency": "Idempotent",
+          "restrictedDiagnosticReference": null
+        },
+        {
+          "runId": "c4888f4f-eabd-469f-80a6-3fccf6018a12",
+          "stepInstanceId": "1ebeadbe-98c9-4e9d-af3b-1e9f69a75c62",
+          "stepKey": "qa-validation",
+          "strategyId": "strategy.adapter.workflow.execute",
+          "resultHash": "sha256:23f42ce536ea7edeb6592db40ee5a372bfcd5d12b43bdbc1f6be0a84f1819b1a",
+          "code": "process.adapter.required_tool_receipt_missing",
+          "category": "Adapter",
+          "safeSummary": "Step 'qa-validation' claimed completion but required current-run process tool receipt(s) are missing: workspace_dotnet_run (QA must start the app before collecting current-run UI proof when the launch context requires browser validation.); browser_navigate (QA browser proof must navigate to a concrete route before accepting UI evidence.); browser_snapshot (QA browser proof must include durable browser state for the validated route.); browser_take_screenshot (QA browser proof must include a current-run screenshot when UI evidence is required.); browser_console_messages (QA browser proof must include console diagnostics for the validated route.); workspace_dotnet_stop (QA must clean up any app process started for browser validation.). Retry the same step, invoke the missing required tool(s), cite the receipt refs in the managed artifact, and complete only after the typed process capability scope receipt contract is satisfied.",
+          "sensitivity": "Normal",
+          "retrySafety": "SafeToRetry",
+          "idempotency": "Idempotent",
+          "restrictedDiagnosticReference": null
+        },
+        {
+          "runId": "c4888f4f-eabd-469f-80a6-3fccf6018a12",
+          "stepInstanceId": "1ebeadbe-98c9-4e9d-af3b-1e9f69a75c62",
+          "stepKey": "qa-validation",
+          "strategyId": "strategy.adapter.workflow.execute",
+          "resultHash": "sha256:2e8224e2583cb0bb36b1165a66e65a0d1e8caf9e41789523e24f47af4da41628",
+          "code": "process.adapter.product_required_tool_receipt_missing",
+          "category": "Adapter",
+          "safeSummary": "Step 'qa-validation' claimed completion but required current-run product tool receipt(s) are missing: workspace_dotnet_run; browser_navigate; browser_snapshot; browser_take_screenshot; browser_console_messages; workspace_dotnet_stop.",
+          "sensitivity": "Normal",
+          "retrySafety": "SafeToRetry",
+          "idempotency": "Idempotent",
+          "restrictedDiagnosticReference": null
+        },
+        {
+          "runId": "c4888f4f-eabd-469f-80a6-3fccf6018a12",
+          "stepInstanceId": "1ebeadbe-98c9-4e9d-af3b-1e9f69a75c62",
+          "stepKey": "qa-validation",
+          "strategyId": "strategy.adapter.workflow.execute",
+          "resultHash": "sha256:2e8224e2583cb0bb36b1165a66e65a0d1e8caf9e41789523e24f47af4da41628",
+          "code": "process.adapter.required_tool_receipt_missing",
+          "category": "Adapter",
+          "safeSummary": "Step 'qa-validation' claimed completion but required current-run process tool receipt(s) are missing: workspace_dotnet_run (QA must start the app before collecting current-run UI proof when the launch context requires browser validation.); browser_navigate (QA browser proof must navigate to a concrete route before accepting UI evidence.); browser_snapshot (QA browser proof must include durable browser state for the validated route.); browser_take_screenshot (QA browser proof must include a current-run screenshot when UI evidence is required.); browser_console_messages (QA browser proof must include console diagnostics for the validated route.); workspace_dotnet_stop (QA must clean up any app process started for browser validation.). Retry the same step, invoke the missing required tool(s), cite the receipt refs in the managed artifact, and complete only after the typed process capability scope receipt contract is satisfied.",
+          "sensitivity": "Normal",
+          "retrySafety": "SafeToRetry",
+          "idempotency": "Idempotent",
+          "restrictedDiagnosticReference": null
+        },
+        {
+          "runId": "c4888f4f-eabd-469f-80a6-3fccf6018a12",
+          "stepInstanceId": "1ebeadbe-98c9-4e9d-af3b-1e9f69a75c62",
+          "stepKey": "qa-validation",
+          "strategyId": "strategy.adapter.workflow.execute",
+          "resultHash": "sha256:2e8224e2583cb0bb36b1165a66e65a0d1e8caf9e41789523e24f47af4da41628",
+          "code": "process.adapter.completed_outcome_declares_unresolved_blocker",
+          "category": "Adapter",
+          "safeSummary": "Step 'qa-validation' returned Completed while its outcome text still declares unresolved blocker or missing-acceptance state: Current-run upstream artifact evidence was readable for implementation, architecture-review, and peer-review. However, this retry did not execute the required current-run validation/browser tool chain, so the package cannot be accepted as quality-accepted. The step is routed to repair-required because the required runtime proof receipts are still missing for workspace_dotnet_restore, workspace_dotnet_build, workspace_dotnet_test, workspace_dotnet_run, browser_navigate, browser_snapshot, browser_take_screenshot, browser_console_messages, and workspace_dotnet_stop. | Implementation must provide the missing current-run receipts and browser proof, then QA should re-evaluate the live product route for intentional UI, interaction, and scaffold defects before release governance continues.. Return Blocked or repair the missing state before claiming completion.",
+          "sensitivity": "Normal",
+          "retrySafety": "SafeToRetry",
+          "idempotency": "Idempotent",
+          "restrictedDiagnosticReference": null
+        },
+        {
+          "runId": "c4888f4f-eabd-469f-80a6-3fccf6018a12",
+          "stepInstanceId": "1ebeadbe-98c9-4e9d-af3b-1e9f69a75c62",
+          "stepKey": "qa-validation",
+          "strategyId": "strategy.adapter.workflow.execute",
+          "resultHash": "sha256:416121e2cfa637d2e3e28f0c12e2a6aca2e0a0db5ba1ed6239c5a10bcf34cfcd",
+          "code": "process.adapter.product_required_file_content_missing",
+          "category": "Adapter",
+          "safeSummary": "Step 'qa-validation' claimed completion but required product file content/readback check(s) failed: C:\\programovani\\dotnet\\output\\src\\TetrisGame\\Layout\\MainLayout.razor contains forbidden text [learn.microsoft.com/aspnet/core/]; C:\\programovani\\dotnet\\output\\src\\TetrisGame\\Pages\\Counter.razor contains forbidden text [@page \"/counter\"]; C:\\programovani\\dotnet\\output\\src\\TetrisGame\\Pages\\Weather.razor contains forbidden text [@page \"/weather\" | WeatherForecast | sample-data/weather.json].",
+          "sensitivity": "Normal",
+          "retrySafety": "SafeToRetry",
+          "idempotency": "Idempotent",
+          "restrictedDiagnosticReference": null
+        },
+        {
+          "runId": "c4888f4f-eabd-469f-80a6-3fccf6018a12",
+          "stepInstanceId": "1ebeadbe-98c9-4e9d-af3b-1e9f69a75c62",
+          "stepKey": "qa-validation",
+          "strategyId": "strategy.adapter.workflow.execute",
+          "resultHash": "sha256:f98a721bfe074f598e3c5eb015c88583ed29dbdc61c3e619e76b409b21398b41",
+          "code": "process.adapter.required_tool_receipt_missing",
+          "category": "Adapter",
+          "safeSummary": "Step 'qa-validation' claimed completion but required current-run process tool receipt(s) are missing: workspace_dotnet_run (QA must start the app before collecting current-run UI proof when the launch context requires browser validation.); browser_navigate (QA browser proof must navigate to a concrete route before accepting UI evidence.); browser_snapshot (QA browser proof must include durable browser state for the validated route.); browser_take_screenshot (QA browser proof must include a current-run screenshot when UI evidence is required.); browser_console_messages (QA browser proof must include console diagnostics for the validated route.); workspace_dotnet_stop (QA must clean up any app process started for browser validation.). Retry the same step, invoke the missing required tool(s), cite the receipt refs in the managed artifact, and complete only after the typed process capability scope receipt contract is satisfied.",
+          "sensitivity": "Normal",
+          "retrySafety": "SafeToRetry",
+          "idempotency": "Idempotent",
+          "restrictedDiagnosticReference": null
+        }
+      ]
+    }
+  ],
+  "diagnostics": [
+    {
+      "runId": "c4888f4f-eabd-469f-80a6-3fccf6018a12",
+      "stepInstanceId": "1ebeadbe-98c9-4e9d-af3b-1e9f69a75c62",
+      "stepKey": "qa-validation",
+      "strategyId": "strategy.adapter.workflow.execute",
+      "resultHash": "sha256:23f42ce536ea7edeb6592db40ee5a372bfcd5d12b43bdbc1f6be0a84f1819b1a",
+      "code": "process.adapter.product_required_tool_receipt_missing",
+      "category": "Adapter",
+      "safeSummary": "Step 'qa-validation' claimed completion but required current-run product tool receipt(s) are missing: workspace_dotnet_run; browser_navigate; browser_snapshot; browser_take_screenshot; browser_console_messages; workspace_dotnet_stop.",
+      "sensitivity": "Normal",
+      "retrySafety": "SafeToRetry",
+      "idempotency": "Idempotent",
+      "restrictedDiagnosticReference": null
+    },
+    {
+      "runId": "c4888f4f-eabd-469f-80a6-3fccf6018a12",
+      "stepInstanceId": "1ebeadbe-98c9-4e9d-af3b-1e9f69a75c62",
+      "stepKey": "qa-validation",
+      "strategyId": "strategy.adapter.workflow.execute",
+      "resultHash": "sha256:23f42ce536ea7edeb6592db40ee5a372bfcd5d12b43bdbc1f6be0a84f1819b1a",
+      "code": "process.adapter.required_tool_receipt_missing",
+      "category": "Adapter",
+      "safeSummary": "Step 'qa-validation' claimed completion but required current-run process tool receipt(s) are missing: workspace_dotnet_run (QA must start the app before collecting current-run UI proof when the launch context requires browser validation.); browser_navigate (QA browser proof must navigate to a concrete route before accepting UI evidence.); browser_snapshot (QA browser proof must include durable browser state for the validated route.); browser_take_screenshot (QA browser proof must include a current-run screenshot when UI evidence is required.); browser_console_messages (QA browser proof must include console diagnostics for the validated route.); workspace_dotnet_stop (QA must clean up any app process started for browser validation.). Retry the same step, invoke the missing required tool(s), cite the receipt refs in the managed artifact, and complete only after the typed process capability scope receipt contract is satisfied.",
+      "sensitivity": "Normal",
+      "retrySafety": "SafeToRetry",
+      "idempotency": "Idempotent",
+      "restrictedDiagnosticReference": null
+    },
+    {
+      "runId": "c4888f4f-eabd-469f-80a6-3fccf6018a12",
+      "stepInstanceId": "1ebeadbe-98c9-4e9d-af3b-1e9f69a75c62",
+      "stepKey": "qa-validation",
+      "strategyId": "strategy.adapter.workflow.execute",
+      "resultHash": "sha256:2e8224e2583cb0bb36b1165a66e65a0d1e8caf9e41789523e24f47af4da41628",
+      "code": "process.adapter.product_required_tool_receipt_missing",
+      "category": "Adapter",
+      "safeSummary": "Step 'qa-validation' claimed completion but required current-run product tool receipt(s) are missing: workspace_dotnet_run; browser_navigate; browser_snapshot; browser_take_screenshot; browser_console_messages; workspace_dotnet_stop.",
+      "sensitivity": "Normal",
+      "retrySafety": "SafeToRetry",
+      "idempotency": "Idempotent",
+      "restrictedDiagnosticReference": null
+    },
+    {
+      "runId": "c4888f4f-eabd-469f-80a6-3fccf6018a12",
+      "stepInstanceId": "1ebeadbe-98c9-4e9d-af3b-1e9f69a75c62",
+      "stepKey": "qa-validation",
+      "strategyId": "strategy.adapter.workflow.execute",
+      "resultHash": "sha256:2e8224e2583cb0bb36b1165a66e65a0d1e8caf9e41789523e24f47af4da41628",
+      "code": "process.adapter.required_tool_receipt_missing",
+      "category": "Adapter",
+      "safeSummary": "Step 'qa-validation' claimed completion but required current-run process tool receipt(s) are missing: workspace_dotnet_run (QA must start the app before collecting current-run UI proof when the launch context requires browser validation.); browser_navigate (QA browser proof must navigate to a concrete route before accepting UI evidence.); browser_snapshot (QA browser proof must include durable browser state for the validated route.); browser_take_screenshot (QA browser proof must include a current-run screenshot when UI evidence is required.); browser_console_messages (QA browser proof must include console diagnostics for the validated route.); workspace_dotnet_stop (QA must clean up any app process started for browser validation.). Retry the same step, invoke the missing required tool(s), cite the receipt refs in the managed artifact, and complete only after the typed process capability scope receipt contract is satisfied.",
+      "sensitivity": "Normal",
+      "retrySafety": "SafeToRetry",
+      "idempotency": "Idempotent",
+      "restrictedDiagnosticReference": null
+    },
+    {
+      "runId": "c4888f4f-eabd-469f-80a6-3fccf6018a12",
+      "stepInstanceId": "1ebeadbe-98c9-4e9d-af3b-1e9f69a75c62",
+      "stepKey": "qa-validation",
+      "strategyId": "strategy.adapter.workflow.execute",
+      "resultHash": "sha256:2e8224e2583cb0bb36b1165a66e65a0d1e8caf9e41789523e24f47af4da41628",
+      "code": "process.adapter.completed_outcome_declares_unresolved_blocker",
+      "category": "Adapter",
+      "safeSummary": "Step 'qa-validation' returned Completed while its outcome text still declares unresolved blocker or missing-acceptance state: Current-run upstream artifact evidence was readable for implementation, architecture-review, and peer-review. However, this retry did not execute the required current-run validation/browser tool chain, so the package cannot be accepted as quality-accepted. The step is routed to repair-required because the required runtime proof receipts are still missing for workspace_dotnet_restore, workspace_dotnet_build, workspace_dotnet_test, workspace_dotnet_run, browser_navigate, browser_snapshot, browser_take_screenshot, browser_console_messages, and workspace_dotnet_stop. | Implementation must provide the missing current-run receipts and browser proof, then QA should re-evaluate the live product route for intentional UI, interaction, and scaffold defects before release governance continues.. Return Blocked or repair the missing state before claiming completion.",
+      "sensitivity": "Normal",
+      "retrySafety": "SafeToRetry",
+      "idempotency": "Idempotent",
+      "restrictedDiagnosticReference": null
+    },
+    {
+      "runId": "c4888f4f-eabd-469f-80a6-3fccf6018a12",
+      "stepInstanceId": "1ebeadbe-98c9-4e9d-af3b-1e9f69a75c62",
+      "stepKey": "qa-validation",
+      "strategyId": "strategy.adapter.workflow.execute",
+      "resultHash": "sha256:416121e2cfa637d2e3e28f0c12e2a6aca2e0a0db5ba1ed6239c5a10bcf34cfcd",
+      "code": "process.adapter.product_required_file_content_missing",
+      "category": "Adapter",
+      "safeSummary": "Step 'qa-validation' claimed completion but required product file content/readback check(s) failed: C:\\programovani\\dotnet\\output\\src\\TetrisGame\\Layout\\MainLayout.razor contains forbidden text [learn.microsoft.com/aspnet/core/]; C:\\programovani\\dotnet\\output\\src\\TetrisGame\\Pages\\Counter.razor contains forbidden text [@page \"/counter\"]; C:\\programovani\\dotnet\\output\\src\\TetrisGame\\Pages\\Weather.razor contains forbidden text [@page \"/weather\" | WeatherForecast | sample-data/weather.json].",
+      "sensitivity": "Normal",
+      "retrySafety": "SafeToRetry",
+      "idempotency": "Idempotent",
+      "restrictedDiagnosticReference": null
+    },
+    {
+      "runId": "c4888f4f-eabd-469f-80a6-3fccf6018a12",
+      "stepInstanceId": "1ebeadbe-98c9-4e9d-af3b-1e9f69a75c62",
+      "stepKey": "qa-validation",
+      "strategyId": "strategy.adapter.workflow.execute",
+      "resultHash": "sha256:f98a721bfe074f598e3c5eb015c88583ed29dbdc61c3e619e76b409b21398b41",
+      "code": "process.adapter.required_tool_receipt_missing",
+      "category": "Adapter",
+      "safeSummary": "Step 'qa-validation' claimed completion but required current-run process tool receipt(s) are missing: workspace_dotnet_run (QA must start the app before collecting current-run UI proof when the launch context requires browser validation.); browser_navigate (QA browser proof must navigate to a concrete route before accepting UI evidence.); browser_snapshot (QA browser proof must include durable browser state for the validated route.); browser_take_screenshot (QA browser proof must include a current-run screenshot when UI evidence is required.); browser_console_messages (QA browser proof must include console diagnostics for the validated route.); workspace_dotnet_stop (QA must clean up any app process started for browser validation.). Retry the same step, invoke the missing required tool(s), cite the receipt refs in the managed artifact, and complete only after the typed process capability scope receipt contract is satisfied.",
+      "sensitivity": "Normal",
+      "retrySafety": "SafeToRetry",
+      "idempotency": "Idempotent",
+      "restrictedDiagnosticReference": null
+    }
+  ],
+  "resultLineage": [
+    {
+      "runId": "c4888f4f-eabd-469f-80a6-3fccf6018a12",
+      "stepInstanceId": "1ebeadbe-98c9-4e9d-af3b-1e9f69a75c62",
+      "stepKey": "qa-validation",
+      "strategyId": "strategy.adapter.workflow.execute",
+      "idempotencyKey": "b8583e52-44df-463b-8983-dd53bd284a33",
+      "outcome": "NeedsManager",
+      "appliedStepStatus": "Ready",
+      "resultHash": "sha256:23f42ce536ea7edeb6592db40ee5a372bfcd5d12b43bdbc1f6be0a84f1819b1a",
+      "diagnostics": [
+        {
+          "runId": "c4888f4f-eabd-469f-80a6-3fccf6018a12",
+          "stepInstanceId": "1ebeadbe-98c9-4e9d-af3b-1e9f69a75c62",
+          "stepKey": "qa-validation",
+          "strategyId": "strategy.adapter.workflow.execute",
+          "resultHash": "sha256:23f42ce536ea7edeb6592db40ee5a372bfcd5d12b43bdbc1f6be0a84f1819b1a",
+          "code": "process.adapter.product_required_tool_receipt_missing",
+          "category": "Adapter",
+          "safeSummary": "Step 'qa-validation' claimed completion but required current-run product tool receipt(s) are missing: workspace_dotnet_run; browser_navigate; browser_snapshot; browser_take_screenshot; browser_console_messages; workspace_dotnet_stop.",
+          "sensitivity": "Normal",
+          "retrySafety": "SafeToRetry",
+          "idempotency": "Idempotent",
+          "restrictedDiagnosticReference": null
+        },
+        {
+          "runId": "c4888f4f-eabd-469f-80a6-3fccf6018a12",
+          "stepInstanceId": "1ebeadbe-98c9-4e9d-af3b-1e9f69a75c62",
+          "stepKey": "qa-validation",
+          "strategyId": "strategy.adapter.workflow.execute",
+          "resultHash": "sha256:23f42ce536ea7edeb6592db40ee5a372bfcd5d12b43bdbc1f6be0a84f1819b1a",
+          "code": "process.adapter.required_tool_receipt_missing",
+          "category": "Adapter",
+          "safeSummary": "Step 'qa-validation' claimed completion but required current-run process tool receipt(s) are missing: workspace_dotnet_run (QA must start the app before collecting current-run UI proof when the launch context requires browser validation.); browser_navigate (QA browser proof must navigate to a concrete route before accepting UI evidence.); browser_snapshot (QA browser proof must include durable browser state for the validated route.); browser_take_screenshot (QA browser proof must include a current-run screenshot when UI evidence is required.); browser_console_messages (QA browser proof must include console diagnostics for the validated route.); workspace_dotnet_stop (QA must clean up any app process started for browser validation.). Retry the same step, invoke the missing required tool(s), cite the receipt refs in the managed artifact, and complete only after the typed process capability scope receipt contract is satisfied.",
+          "sensitivity": "Normal",
+          "retrySafety": "SafeToRetry",
+          "idempotency": "Idempotent",
+          "restrictedDiagnosticReference": null
+        }
+      ],
+      "producedArtifacts": [],
+      "recoveryDecision": {
+        "failureCategory": "ProductCompletionGate",
+        "decisionKind": "SafeRetry",
+        "sourceDiagnosticCode": "process.adapter.product_required_tool_receipt_missing",
+        "policy": "process.current-step-safe-retry",
+        "safeReason": "Safe/idempotent completion-gate diagnostics qualify for bounded current-step retry. Diagnostic fingerprint 'sha256:799b67ecdc91c7fb83e37fd30889e2e11067bdbe11e56713e314e403620268fa', automatic retry 1/3, same-fingerprint retry 1/1."
+      }
+    },
+    {
+      "runId": "c4888f4f-eabd-469f-80a6-3fccf6018a12",
+      "stepInstanceId": "1ebeadbe-98c9-4e9d-af3b-1e9f69a75c62",
+      "stepKey": "qa-validation",
+      "strategyId": "strategy.adapter.workflow.execute",
+      "idempotencyKey": "2cbc4073-f301-4cdd-898f-79d85867579b",
+      "outcome": "NeedsManager",
+      "appliedStepStatus": "Ready",
+      "resultHash": "sha256:2e8224e2583cb0bb36b1165a66e65a0d1e8caf9e41789523e24f47af4da41628",
+      "diagnostics": [
+        {
+          "runId": "c4888f4f-eabd-469f-80a6-3fccf6018a12",
+          "stepInstanceId": "1ebeadbe-98c9-4e9d-af3b-1e9f69a75c62",
+          "stepKey": "qa-validation",
+          "strategyId": "strategy.adapter.workflow.execute",
+          "resultHash": "sha256:2e8224e2583cb0bb36b1165a66e65a0d1e8caf9e41789523e24f47af4da41628",
+          "code": "process.adapter.product_required_tool_receipt_missing",
+          "category": "Adapter",
+          "safeSummary": "Step 'qa-validation' claimed completion but required current-run product tool receipt(s) are missing: workspace_dotnet_run; browser_navigate; browser_snapshot; browser_take_screenshot; browser_console_messages; workspace_dotnet_stop.",
+          "sensitivity": "Normal",
+          "retrySafety": "SafeToRetry",
+          "idempotency": "Idempotent",
+          "restrictedDiagnosticReference": null
+        },
+        {
+          "runId": "c4888f4f-eabd-469f-80a6-3fccf6018a12",
+          "stepInstanceId": "1ebeadbe-98c9-4e9d-af3b-1e9f69a75c62",
+          "stepKey": "qa-validation",
+          "strategyId": "strategy.adapter.workflow.execute",
+          "resultHash": "sha256:2e8224e2583cb0bb36b1165a66e65a0d1e8caf9e41789523e24f47af4da41628",
+          "code": "process.adapter.required_tool_receipt_missing",
+          "category": "Adapter",
+          "safeSummary": "Step 'qa-validation' claimed completion but required current-run process tool receipt(s) are missing: workspace_dotnet_run (QA must start the app before collecting current-run UI proof when the launch context requires browser validation.); browser_navigate (QA browser proof must navigate to a concrete route before accepting UI evidence.); browser_snapshot (QA browser proof must include durable browser state for the validated route.); browser_take_screenshot (QA browser proof must include a current-run screenshot when UI evidence is required.); browser_console_messages (QA browser proof must include console diagnostics for the validated route.); workspace_dotnet_stop (QA must clean up any app process started for browser validation.). Retry the same step, invoke the missing required tool(s), cite the receipt refs in the managed artifact, and complete only after the typed process capability scope receipt contract is satisfied.",
+          "sensitivity": "Normal",
+          "retrySafety": "SafeToRetry",
+          "idempotency": "Idempotent",
+          "restrictedDiagnosticReference": null
+        },
+        {
+          "runId": "c4888f4f-eabd-469f-80a6-3fccf6018a12",
+          "stepInstanceId": "1ebeadbe-98c9-4e9d-af3b-1e9f69a75c62",
+          "stepKey": "qa-validation",
+          "strategyId": "strategy.adapter.workflow.execute",
+          "resultHash": "sha256:2e8224e2583cb0bb36b1165a66e65a0d1e8caf9e41789523e24f47af4da41628",
+          "code": "process.adapter.completed_outcome_declares_unresolved_blocker",
+          "category": "Adapter",
+          "safeSummary": "Step 'qa-validation' returned Completed while its outcome text still declares unresolved blocker or missing-acceptance state: Current-run upstream artifact evidence was readable for implementation, architecture-review, and peer-review. However, this retry did not execute the required current-run validation/browser tool chain, so the package cannot be accepted as quality-accepted. The step is routed to repair-required because the required runtime proof receipts are still missing for workspace_dotnet_restore, workspace_dotnet_build, workspace_dotnet_test, workspace_dotnet_run, browser_navigate, browser_snapshot, browser_take_screenshot, browser_console_messages, and workspace_dotnet_stop. | Implementation must provide the missing current-run receipts and browser proof, then QA should re-evaluate the live product route for intentional UI, interaction, and scaffold defects before release governance continues.. Return Blocked or repair the missing state before claiming completion.",
+          "sensitivity": "Normal",
+          "retrySafety": "SafeToRetry",
+          "idempotency": "Idempotent",
+          "restrictedDiagnosticReference": null
+        }
+      ],
+      "producedArtifacts": [],
+      "recoveryDecision": {
+        "failureCategory": "ProductCompletionGate",
+        "decisionKind": "SafeRetry",
+        "sourceDiagnosticCode": "process.adapter.product_required_tool_receipt_missing",
+        "policy": "process.current-step-safe-retry",
+        "safeReason": "Safe/idempotent completion-gate diagnostics qualify for bounded current-step retry. Diagnostic fingerprint 'sha256:d233e86bfa222fa5716740ca33de4ffa8e8f6d9b146626f4bab124ea01fb63df', automatic retry 2/3, same-fingerprint retry 1/1."
+      }
+    },
+    {
+      "runId": "c4888f4f-eabd-469f-80a6-3fccf6018a12",
+      "stepInstanceId": "1ebeadbe-98c9-4e9d-af3b-1e9f69a75c62",
+      "stepKey": "qa-validation",
+      "strategyId": "strategy.adapter.workflow.execute",
+      "idempotencyKey": "d220d31a-8f9e-42af-b03a-b4b3409035da",
+      "outcome": "NeedsManager",
+      "appliedStepStatus": "Ready",
+      "resultHash": "sha256:416121e2cfa637d2e3e28f0c12e2a6aca2e0a0db5ba1ed6239c5a10bcf34cfcd",
+      "diagnostics": [
+        {
+          "runId": "c4888f4f-eabd-469f-80a6-3fccf6018a12",
+          "stepInstanceId": "1ebeadbe-98c9-4e9d-af3b-1e9f69a75c62",
+          "stepKey": "qa-validation",
+          "strategyId": "strategy.adapter.workflow.execute",
+          "resultHash": "sha256:416121e2cfa637d2e3e28f0c12e2a6aca2e0a0db5ba1ed6239c5a10bcf34cfcd",
+          "code": "process.adapter.product_required_file_content_missing",
+          "category": "Adapter",
+          "safeSummary": "Step 'qa-validation' claimed completion but required product file content/readback check(s) failed: C:\\programovani\\dotnet\\output\\src\\TetrisGame\\Layout\\MainLayout.razor contains forbidden text [learn.microsoft.com/aspnet/core/]; C:\\programovani\\dotnet\\output\\src\\TetrisGame\\Pages\\Counter.razor contains forbidden text [@page \"/counter\"]; C:\\programovani\\dotnet\\output\\src\\TetrisGame\\Pages\\Weather.razor contains forbidden text [@page \"/weather\" | WeatherForecast | sample-data/weather.json].",
+          "sensitivity": "Normal",
+          "retrySafety": "SafeToRetry",
+          "idempotency": "Idempotent",
+          "restrictedDiagnosticReference": null
+        }
+      ],
+      "producedArtifacts": [],
+      "recoveryDecision": {
+        "failureCategory": "ProductCompletionGate",
+        "decisionKind": "SafeRetry",
+        "sourceDiagnosticCode": "process.adapter.product_required_file_content_missing",
+        "policy": "process.current-step-safe-retry",
+        "safeReason": "Safe/idempotent completion-gate diagnostics qualify for bounded current-step retry. Diagnostic fingerprint 'sha256:31b08868684857dbe970e39dac9ff4c465b075dbff6b09c4fcb5602a67c14e17', automatic retry 3/3, same-fingerprint retry 1/1."
+      }
+    },
+    {
+      "runId": "c4888f4f-eabd-469f-80a6-3fccf6018a12",
+      "stepInstanceId": "1ebeadbe-98c9-4e9d-af3b-1e9f69a75c62",
+      "stepKey": "qa-validation",
+      "strategyId": "strategy.adapter.workflow.execute",
+      "idempotencyKey": "2ca198bd-7e38-45ba-b5bc-1177d1a17a63",
+      "outcome": "NeedsManager",
+      "appliedStepStatus": "Blocked",
+      "resultHash": "sha256:f98a721bfe074f598e3c5eb015c88583ed29dbdc61c3e619e76b409b21398b41",
+      "diagnostics": [
+        {
+          "runId": "c4888f4f-eabd-469f-80a6-3fccf6018a12",
+          "stepInstanceId": "1ebeadbe-98c9-4e9d-af3b-1e9f69a75c62",
+          "stepKey": "qa-validation",
+          "strategyId": "strategy.adapter.workflow.execute",
+          "resultHash": "sha256:f98a721bfe074f598e3c5eb015c88583ed29dbdc61c3e619e76b409b21398b41",
+          "code": "process.adapter.required_tool_receipt_missing",
+          "category": "Adapter",
+          "safeSummary": "Step 'qa-validation' claimed completion but required current-run process tool receipt(s) are missing: workspace_dotnet_run (QA must start the app before collecting current-run UI proof when the launch context requires browser validation.); browser_navigate (QA browser proof must navigate to a concrete route before accepting UI evidence.); browser_snapshot (QA browser proof must include durable browser state for the validated route.); browser_take_screenshot (QA browser proof must include a current-run screenshot when UI evidence is required.); browser_console_messages (QA browser proof must include console diagnostics for the validated route.); workspace_dotnet_stop (QA must clean up any app process started for browser validation.). Retry the same step, invoke the missing required tool(s), cite the receipt refs in the managed artifact, and complete only after the typed process capability scope receipt contract is satisfied.",
+          "sensitivity": "Normal",
+          "retrySafety": "SafeToRetry",
+          "idempotency": "Idempotent",
+          "restrictedDiagnosticReference": null
+        }
+      ],
+      "producedArtifacts": [],
+      "recoveryDecision": {
+        "failureCategory": "ProductCompletionGate",
+        "decisionKind": "ManagerRequired",
+        "sourceDiagnosticCode": "process.adapter.required_tool_receipt_missing",
+        "policy": "process.current-step-safe-retry-budget-exhausted",
+        "safeReason": "Safe/idempotent completion-gate diagnostics exhausted automatic current-step retry budget. Diagnostic fingerprint 'sha256:3246e0174d60a7f9be479c3c505aba35b5a66f87ade4d7a8c31721ea30fd1bf6', automatic retry 4/3, same-fingerprint retry 1/1. Manager review is required before another rework."
+      }
+    },
+    {
+      "runId": "c4888f4f-eabd-469f-80a6-3fccf6018a12",
+      "stepInstanceId": "29219537-7a82-45fb-976c-8127f693c981",
+      "stepKey": "feature-intake",
+      "strategyId": "strategy.adapter.workflow.execute",
+      "idempotencyKey": "fe0b4a9e-f09b-42a0-84cd-9ef760ff0ee6",
+      "outcome": "Succeeded",
+      "appliedStepStatus": "Completed",
+      "resultHash": "778124302f19efc3d5e3804918325e23d10813ea9af96eadd00522bd5accaaf4",
+      "diagnostics": [],
+      "producedArtifacts": [
+        {
+          "slotId": "acfdcb63-5b16-ff2f-185f-2b621f77eb3a",
+          "artifactId": "0d6eaaa9-1c3b-4e60-8651-fc0df60b606b",
+          "contentHash": "sha256:0da89cdc5099ff8f849c3836240699e86a00603a6cfb75ecb1b76064c1abacdc"
+        }
+      ],
+      "recoveryDecision": null
+    },
+    {
+      "runId": "c4888f4f-eabd-469f-80a6-3fccf6018a12",
+      "stepInstanceId": "5fc7ad0a-842a-4346-a1a9-29fae0dfcbb5",
+      "stepKey": "architecture-review",
+      "strategyId": "strategy.adapter.workflow.execute",
+      "idempotencyKey": "783c28fd-2936-4545-a578-c0eaf890290c",
+      "outcome": "Succeeded",
+      "appliedStepStatus": "Completed",
+      "resultHash": "sha256:2c798a7374ee25b1a35426886fc8480c718a2caad17528e2cca7aa880debad2e",
+      "diagnostics": [],
+      "producedArtifacts": [
+        {
+          "slotId": "1db605d2-10f7-5720-6a7a-54c6a4333962",
+          "artifactId": "cd82e574-5202-4001-b841-74d8ea306df8",
+          "contentHash": "sha256:7d136c64f2a54c36de34947e882c79d3e693bf5b28fce1e6bc9be36530348b42"
+        },
+        {
+          "slotId": "e7a7b8e3-f6a7-1dc0-70ce-aaf08d522448",
+          "artifactId": "f76c4007-0f69-4041-8a5b-c4dbed06b26b",
+          "contentHash": "sha256:7d136c64f2a54c36de34947e882c79d3e693bf5b28fce1e6bc9be36530348b42"
+        }
+      ],
+      "recoveryDecision": null
+    },
+    {
+      "runId": "c4888f4f-eabd-469f-80a6-3fccf6018a12",
+      "stepInstanceId": "df7dcc7d-914b-49b2-a75e-18bd46affd5b",
+      "stepKey": "implementation",
+      "strategyId": "strategy.adapter.workflow.execute",
+      "idempotencyKey": "dd3b2648-4500-4785-b6db-8fe7a8da0eeb",
+      "outcome": "Succeeded",
+      "appliedStepStatus": "Completed",
+      "resultHash": "sha256:9f5ecba35885f7d46d1809955c019ca0b49dd4b1cbbfa7df3e9ceb66184262df",
+      "diagnostics": [],
+      "producedArtifacts": [
+        {
+          "slotId": "b4e3712c-30cc-85c3-fa53-8ce58c51a197",
+          "artifactId": "856ec203-0e1e-49dc-8f8e-d67d31d7f721",
+          "contentHash": "sha256:150989cb1760769fb6cddd7d1a274b4d3b6a7eed1a0dda3a3e05bde343d87717"
+        },
+        {
+          "slotId": "c3f10243-5b02-f10c-9132-b48057fc487e",
+          "artifactId": "79a5468e-0b00-4c1c-8182-3ec6d18d71eb",
+          "contentHash": "sha256:150989cb1760769fb6cddd7d1a274b4d3b6a7eed1a0dda3a3e05bde343d87717"
+        }
+      ],
+      "recoveryDecision": null
+    },
+    {
+      "runId": "c4888f4f-eabd-469f-80a6-3fccf6018a12",
+      "stepInstanceId": "91aa7cf0-74c6-40d6-931d-31e1a7f8d60e",
+      "stepKey": "peer-review",
+      "strategyId": "strategy.adapter.workflow.execute",
+      "idempotencyKey": "1c8f8da3-40ad-45bd-bc5f-427be93411b6",
+      "outcome": "Succeeded",
+      "appliedStepStatus": "Completed",
+      "resultHash": "0b490beec55af71009efcb53885452d7b73ed4acdab2690c1f96aab44af81d3c",
+      "diagnostics": [],
+      "producedArtifacts": [
+        {
+          "slotId": "7ecf6f13-73a3-8c42-f443-9b1b958ffc4a",
+          "artifactId": "bd96faa2-ef3f-47dd-aa27-8d6db322f8fd",
+          "contentHash": "sha256:e93f2c89a7fb2edaf431bf9c8c0c0dc92774c3c76000dddfe1d9284e36a0cbce"
+        }
+      ],
+      "recoveryDecision": null
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+SB12 source assertions
+
+PASS: exactly one AgentFrameworkProcessExecutionAdapter source file remains.
+PASS: AgentFrameworkProcessExecutionAdapter is not partial.
+PASS: adapter methods delegate to IAgentFrameworkProcessStepExecutor.
+PASS: RuntimeIntegration contains no partial type declarations.
+PASS: RuntimeIntegration contains no global using static directives.
+PASS: extracted responsibility files covered by the architecture baseline remain below 500 lines.
+PASS: former 20-file partial cluster is deleted.
+PASS: ProcessCompletionModels uses compiled Regex instances instead of GeneratedRegex partial methods.

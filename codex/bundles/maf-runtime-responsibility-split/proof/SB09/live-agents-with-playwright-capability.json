@@ -1,0 +1,172 @@
+[
+  {
+    "id": "1e267ce2-bf18-ce52-9743-9b36b9314994",
+    "name": ".NET Application Developer",
+    "model": "gpt-5.4-mini",
+    "providerProfileId": "c1c103db-707e-3f52-8809-8d804fc171d1",
+    "capabilityCount": 43,
+    "matchedCapabilities": [
+      {
+        "capabilityId": "c0ce2bf9-39a6-835b-9ed4-36f916aa0e55",
+        "capabilityKey": "playwright-local-mcp",
+        "kind": 0,
+        "proofStatus": 0,
+        "lastVerifiedAtUtc": null,
+        "proofNotes": ""
+      }
+    ]
+  },
+  {
+    "id": "752665f3-bf7d-0b54-9208-7809282cd415",
+    "name": ".NET QA Review Lead",
+    "model": "gpt-5.4-mini",
+    "providerProfileId": "c1c103db-707e-3f52-8809-8d804fc171d1",
+    "capabilityCount": 28,
+    "matchedCapabilities": [
+      {
+        "capabilityId": "c0ce2bf9-39a6-835b-9ed4-36f916aa0e55",
+        "capabilityKey": "playwright-local-mcp",
+        "kind": 0,
+        "proofStatus": 0,
+        "lastVerifiedAtUtc": null,
+        "proofNotes": ""
+      }
+    ]
+  },
+  {
+    "id": "4695add2-ccc5-456e-8fa0-73818081a1c0",
+    "name": ".NET QA Review Lead (Local Vision)",
+    "model": "gpt-5.4-mini",
+    "providerProfileId": "c1c103db-707e-3f52-8809-8d804fc171d1",
+    "capabilityCount": 25,
+    "matchedCapabilities": [
+      {
+        "capabilityId": "c0ce2bf9-39a6-835b-9ed4-36f916aa0e55",
+        "capabilityKey": "playwright-local-mcp",
+        "kind": 0,
+        "proofStatus": 0,
+        "lastVerifiedAtUtc": null,
+        "proofNotes": ""
+      }
+    ]
+  },
+  {
+    "id": "e166ec8b-7eeb-9252-aac1-07b4c49e2d82",
+    "name": "Blazor Application Developer",
+    "model": "gpt-5.4-mini",
+    "providerProfileId": "c1c103db-707e-3f52-8809-8d804fc171d1",
+    "capabilityCount": 43,
+    "matchedCapabilities": [
+      {
+        "capabilityId": "c0ce2bf9-39a6-835b-9ed4-36f916aa0e55",
+        "capabilityKey": "playwright-local-mcp",
+        "kind": 0,
+        "proofStatus": 0,
+        "lastVerifiedAtUtc": null,
+        "proofNotes": ""
+      }
+    ]
+  },
+  {
+    "id": "549a3e86-5ffc-0d58-bf8c-10952fcdaac4",
+    "name": "Delivery QA Observer",
+    "model": "gpt-5.4-mini",
+    "providerProfileId": "c1c103db-707e-3f52-8809-8d804fc171d1",
+    "capabilityCount": 26,
+    "matchedCapabilities": [
+      {
+        "capabilityId": "c0ce2bf9-39a6-835b-9ed4-36f916aa0e55",
+        "capabilityKey": "playwright-local-mcp",
+        "kind": 0,
+        "proofStatus": 0,
+        "lastVerifiedAtUtc": null,
+        "proofNotes": ""
+      }
+    ]
+  },
+  {
+    "id": "03f8351b-8325-625a-8a70-8ff8f7bc978b",
+    "name": "JavaScript Application Developer",
+    "model": "gpt-5.4-mini",
+    "providerProfileId": "c1c103db-707e-3f52-8809-8d804fc171d1",
+    "capabilityCount": 29,
+    "matchedCapabilities": [
+      {
+        "capabilityId": "c0ce2bf9-39a6-835b-9ed4-36f916aa0e55",
+        "capabilityKey": "playwright-local-mcp",
+        "kind": 0,
+        "proofStatus": 0,
+        "lastVerifiedAtUtc": null,
+        "proofNotes": ""
+      }
+    ]
+  },
+  {
+    "id": "fbffe181-97b6-f35e-9300-e137e0952744",
+    "name": "JavaScript QA Review Lead",
+    "model": "gpt-5.4-mini",
+    "providerProfileId": "c1c103db-707e-3f52-8809-8d804fc171d1",
+    "capabilityCount": 17,
+    "matchedCapabilities": [
+      {
+        "capabilityId": "c0ce2bf9-39a6-835b-9ed4-36f916aa0e55",
+        "capabilityKey": "playwright-local-mcp",
+        "kind": 0,
+        "proofStatus": 0,
+        "lastVerifiedAtUtc": null,
+        "proofNotes": ""
+      }
+    ]
+  },
+  {
+    "id": "b3636a1c-f005-fe5c-b7a7-35a04c133f76",
+    "name": "Programming Workspace Analyst",
+    "model": "gpt-5.4-mini",
+    "providerProfileId": "c1c103db-707e-3f52-8809-8d804fc171d1",
+    "capabilityCount": 44,
+    "matchedCapabilities": [
+      {
+        "capabilityId": "c0ce2bf9-39a6-835b-9ed4-36f916aa0e55",
+        "capabilityKey": "playwright-local-mcp",
+        "kind": 0,
+        "proofStatus": 0,
+        "lastVerifiedAtUtc": null,
+        "proofNotes": ""
+      }
+    ]
+  },
+  {
+    "id": "6f674c92-3347-dd55-96d3-851db9739b35",
+    "name": "Release Readiness Manager",
+    "model": "gpt-5.4-mini",
+    "providerProfileId": "c1c103db-707e-3f52-8809-8d804fc171d1",
+    "capabilityCount": 11,
+    "matchedCapabilities": [
+      {
+        "capabilityId": "c0ce2bf9-39a6-835b-9ed4-36f916aa0e55",
+        "capabilityKey": "playwright-local-mcp",
+        "kind": 0,
+        "proofStatus": 0,
+        "lastVerifiedAtUtc": null,
+        "proofNotes": ""
+      }
+    ]
+  },
+  {
+    "id": "9ebea979-0d33-8e53-a69a-ca1555c73afe",
+    "name": "UI Review Lead",
+    "model": "gpt-5.4-mini",
+    "providerProfileId": "c1c103db-707e-3f52-8809-8d804fc171d1",
+    "capabilityCount": 18,
+    "matchedCapabilities": [
+      {
+        "capabilityId": "c0ce2bf9-39a6-835b-9ed4-36f916aa0e55",
+        "capabilityKey": "playwright-local-mcp",
+        "kind": 0,
+        "proofStatus": 0,
+        "lastVerifiedAtUtc": null,
+        "proofNotes": ""
+      }
+    ]
+  }
+]

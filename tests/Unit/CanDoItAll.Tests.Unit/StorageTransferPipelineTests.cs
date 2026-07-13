@@ -17,7 +17,7 @@ public sealed class StorageTransferPipelineTests
         try
         {
             var pathResolver = new TestWorkspacePathResolver(workspaceRoot);
-            var driver = new FileSystemStorageDriver(pathResolver);
+            var driver = new FileSystemStorageDriver(new FileSystemStoragePathPolicy(pathResolver));
             var pipeline = new StorageTransferPipeline(
                 new TestStorageCatalogService(),
                 new TestStorageDriverRegistry(driver),

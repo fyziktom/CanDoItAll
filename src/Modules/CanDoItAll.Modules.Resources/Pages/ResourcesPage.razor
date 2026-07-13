@@ -13,8 +13,8 @@
 <PageScaffold MaxWidthClass="max-w-full">
     <Header>
         <PageHeader Eyebrow="Resources"
-                    Title="Typed project resources"
-                    Description="Register repositories, folders, scripts, links, and secret-backed connectors through one shared registry."
+                    Title="Project resources and storage objects"
+                    Description="Manage typed resource records or browse authorized project, filesystem, IPFS, and FTP sources."
                     Compact="true">
             <Stats>
                 <CompactStat Label="resources" Value="@resources.Count.ToString()" TooltipText="Registered resources across all projects." />
@@ -33,6 +33,18 @@
     </Header>
 
     <ChildContent>
+        <Tabs @bind-SelectedIndex="resourcesTabIndex"
+              Variant="TabsVariant.WorkspacePrimary"
+              BorderMode="TabsBorderMode.Soft"
+              PanelOverflowMode="TabsPanelOverflowMode.Hidden"
+              FillHeight="true"
+              AriaLabel="Resources registry and storage browser"
+              data-testid="resources-tabs">
+            <TabItems>
+                <TabsItem Text="Registry"
+                          Icon="inventory_2"
+                          BadgeText="@resources.Count.ToString()"
+                          data-testid="resources-tab-registry">
         <ListDetailShell ListPaneWidth="25rem">
             <ListHeader>
                 <ListPanelHeader Title="Resource registry"
@@ -129,6 +141,48 @@
             </DetailHeader>
 
             <DetailContent>
+                @if (IsGovernedStorageObject)
+                {
+                    <Stack Class="min-h-full" GapScale="LayoutGap.XLarge">
+                        <Alert AlertStyle="AlertStyle.Info" data-testid="resource-governed-storage-object">
+                            This resource stores a stable storage occurrence. Its source, locator, and authority can only be changed through Resources browse promotion.
+                        </Alert>
+                        <FormSection Title="Governed storage object" Description="The opaque browser authority was not persisted. Reopening resolves this stable identity against current source and actor state.">
+                            <Grid Gap="LayoutGap.Large" ColumnsMd="2">
+                                <SurfaceCard Soft="true">
+                                    <TextBlock TextStyle="TextStyle.Eyebrow" Value="Resource" />
+                                    <h3 class="mt-1 text-base font-semibold text-slate-950">@editor.Name</h3>
+                                    <TextBlock TextStyle="TextStyle.Caption" Value="@(SelectedProjectName ?? "Unknown project")" />
+                                </SurfaceCard>
+                                <SurfaceCard Soft="true">
+                                    <TextBlock TextStyle="TextStyle.Eyebrow" Value="Stable identifier" />
+                                    <p class="mt-1 break-all text-sm text-slate-700">@editor.LocationOrIdentifier</p>
+                                </SurfaceCard>
+                            </Grid>
+                            <Cluster Gap="LayoutGap.Small">
+                                <StatusBadge Tone="@ResolveTone(editor.ValidationStatus)" Text="@editor.ValidationStatus.ToString()" />
+                                <StatusBadge Tone="neutral" Text="@editor.Sensitivity.ToString()" />
+                                <StatusBadge Tone="info" Text="Authorized reopen" />
+                            </Cluster>
+                        </FormSection>
+                        <StickyActionFooter StatusLabel="Governed resource state">
+                            <SecondaryActions>
+                                <Button Text="Browse sources"
+                                        Icon="folder_open"
+                                        ButtonStyle="ButtonStyle.Light"
+                                        Click="OpenBrowseTab" />
+                            </SecondaryActions>
+                            <DangerActions>
+                                @if (editor.Id.HasValue)
+                                {
+                                    <Button Text="Delete" ButtonStyle="ButtonStyle.Danger" Click="DeleteAsync" />
+                                }
+                            </DangerActions>
+                        </StickyActionFooter>
+                    </Stack>
+                }
+                else
+                {
                 <EditForm Model="editor" OnValidSubmit="SaveAsync">
                     <Stack Class="min-h-full" GapScale="LayoutGap.XXLarge">
                         <FormSection Title="Identity and ownership" Description="Link the resource to the correct project and choose the connector plugin before editing manifest fields.">
@@ -146,7 +200,7 @@
                                 <div>
                                     <label class="cda-field-label">Connector plugin</label>
                                     <InputSelect @bind-Value="editor.ConnectorPluginKey" class="cda-input" data-testid="resource-plugin-select" @bind-Value:after="HandleConnectorPluginChangedAsync">
-                                        @foreach (var manifest in resourceManifests)
+                                        @foreach (var manifest in EditableResourceManifests)
                                         {
                                             <option value="@manifest.PluginKey">@manifest.DisplayName</option>
                                         }
@@ -262,8 +316,17 @@
                         </StickyActionFooter>
                     </Stack>
                 </EditForm>
+                }
             </DetailContent>
         </ListDetailShell>
+                </TabsItem>
+                <TabsItem Text="Browse"
+                          Icon="folder_open"
+                          data-testid="resources-tab-browse">
+                    <ResourceFileBrowsePane ResourcePromoted="HandleResourcePromotedAsync" />
+                </TabsItem>
+            </TabItems>
+        </Tabs>
     </ChildContent>
 </PageScaffold>
 

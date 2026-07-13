@@ -1,0 +1,13 @@
+Command: PowerShell SB34 anti-stub/XML-doc marker audit
+PASS: no TODO, NotImplementedException, XML doc summary, placeholder, or stub markers found in SB34 docs and generic memory boundary source scope.
+Pattern: TODO|NotImplementedException|<summary>|placeholder|stub
+Paths:
+- .\docs\cognitive-memory
+- .\src\Memory
+- .\src\Modules\CanDoItAll.Modules.Memory
+- .\src\Modules\CanDoItAll.Modules.AgentFramework\AgentTools\MemoryAgentRuntimeToolProvider.cs
+- .\src\Modules\CanDoItAll.Modules.AgentFramework\Context
+- .\src\Modules\CanDoItAll.Modules.AgentFramework\MemoryIntegration
+- .\src\Modules\CanDoItAll.Modules.AgentFramework\WorkflowExecutors
+- .\src\App\CanDoItAll.Composition
+ExitCode: 0

@@ -1,0 +1,6 @@
+Command: dotnet test tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj --filter "FullyQualifiedName~ProcessDefinitionCatalogProjectionTests|FullyQualifiedName~ProcessRuntimeIntegrationAdapterTests"
+WorkingDirectory: repo://
+ExitCode: 1
+Invariant: SB03-PROCESS-BRANCH-OUTCOME
+Result: failing-first state captured in bundle://proof/SB03/failing-process-tests.txt.
+

@@ -1,10 +1,10 @@
 # Artifact-Backed Proof Manifest
 
-Critical subbundles must leave machine-checkable proof artifacts, not only execution-report prose.
+Governed-proof subbundles must leave machine-checkable proof artifacts, not only execution-report prose. Standard and Behavioral subbundles do not require this manifest unless the user explicitly asks for it.
 
 ## Required Manifest
 
-Create `proof/SBxx/manifest.md` before closing each critical subbundle. The manifest must include:
+Create `proof/SBxx/manifest.md` before closing each Governed subbundle. The manifest must include:
 
 - subbundle id, status, owned requirements, and raw notes;
 - a portable semantic invariant contract path, `bundle://proof/SBxx/semantic-invariants.md` or `.json`;
@@ -18,7 +18,7 @@ Create `proof/SBxx/manifest.md` before closing each critical subbundle. The mani
 - downstream smoke proof when the subbundle is a critical foundation for later phases;
 - red-team or verifier artifact path for final closure subbundles.
 
-Use `repo://relative/path` for repository files and `bundle://relative/path` for bundle-owned proof artifacts. Native absolute paths may appear as local context, but a critical manifest must not rely on machine-specific absolute paths as its only durable references.
+Use `repo://relative/path` for repository files and `bundle://relative/path` for bundle-owned proof artifacts. Native absolute paths may appear as local context, but a Governed manifest must not rely on machine-specific absolute paths as its only durable references.
 
 When a critical subbundle introduces or relies on a production signal, state, record, or event, the manifest must include:
 
@@ -64,7 +64,7 @@ Do not cite a command in `reviews/01-execution-report.md` unless the transcript 
 
 ## Blocking Rule
 
-A critical subbundle is not complete when the manifest is missing, when a manifest path points to a missing file, when failing-first proof is absent for behavior-changing work, or when only prose/table evidence exists.
+A Governed subbundle is not complete when the manifest is missing, when a manifest path points to a missing file, when failing-first proof is absent for behavior-changing work, or when only prose/table evidence exists.
 
 If the manifest cannot be produced, stop the phase, mark the subbundle `Blocked`, and repair the bundle or tooling before downstream work starts.
 

@@ -30,12 +30,20 @@ public partial class ResourcesPage
     private string projectFilter = string.Empty;
     private string connectorFilter = string.Empty;
     private string validationFilter = string.Empty;
+    private int resourcesTabIndex;
 
     private ConnectorPluginManifest? SelectedResourceManifest => resourceManifests.FirstOrDefault(manifest =>
             string.Equals(manifest.PluginKey, editor.ConnectorPluginKey, StringComparison.OrdinalIgnoreCase))
         ?? resourceManifests.FirstOrDefault();
 
     private IReadOnlyList<ConfigurationFieldDescriptor> SelectedResourceFields => SelectedResourceManifest?.ConfigurationSchema.Fields ?? [];
+
+    private IReadOnlyList<ConnectorPluginManifest> EditableResourceManifests => resourceManifests
+        .Where(manifest => !string.Equals(
+            manifest.PluginKey,
+            StorageObjectResourceConnectorPlugin.PluginKey,
+            StringComparison.OrdinalIgnoreCase))
+        .ToArray();
 
     private IReadOnlyList<ResourceSummary> FilteredResources => resources
         .Where(resource =>
@@ -59,6 +67,11 @@ public partial class ResourcesPage
 
     private string? SelectedProjectName => projects.FirstOrDefault(project => project.Id == editor.ProjectId)?.Name;
 
+    private bool IsGovernedStorageObject => string.Equals(
+        editor.ConnectorPluginKey,
+        StorageObjectResourceConnectorPlugin.PluginKey,
+        StringComparison.OrdinalIgnoreCase);
+
     protected override async Task OnParametersSetAsync()
     {
         await LoadAsync(ResourceIdQuery, ProjectIdQuery);
@@ -79,8 +92,16 @@ public partial class ResourcesPage
 
     private async Task CreateNewAsync()
     {
+        resourcesTabIndex = 0;
         editor = NewEditor(ProjectIdQuery);
         await LoadResponsiblePartyOptionsAsync();
+    }
+
+    private void OpenBrowseTab() => resourcesTabIndex = 1;
+
+    private async Task HandleResourcePromotedAsync(Guid resourceId)
+    {
+        resources = await ResourcesService.ListAsync();
     }
 
     private async Task EditAsync(Guid id)

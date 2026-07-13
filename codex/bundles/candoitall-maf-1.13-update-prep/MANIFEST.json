@@ -1,0 +1,30 @@
+{
+  "generated": "2026-07-07",
+  "repository": "fyziktom/CanDoItAll",
+  "branch": "memory-providers",
+  "artifact": "candoitall-maf-1.13-update-prep.zip",
+  "purpose": "Architecture map and Codex preparation bundle for conservative Microsoft Agent Framework NuGet package update.",
+  "files": [
+    "MANIFEST.json",
+    "README.md",
+    "checklists/pre-merge-checklist.md",
+    "codex/skills/bundles/maf-1.13-conservative-update/SKILL.md",
+    "codex/skills/bundles/maf-1.13-conservative-update/subbundles/00-inventory-and-freeze/SKILL.md",
+    "codex/skills/bundles/maf-1.13-conservative-update/subbundles/01-package-version-update/SKILL.md",
+    "codex/skills/bundles/maf-1.13-conservative-update/subbundles/02-compile-break-adapter-fixes/SKILL.md",
+    "codex/skills/bundles/maf-1.13-conservative-update/subbundles/03-focused-regression-validation/SKILL.md",
+    "codex/skills/bundles/maf-1.13-conservative-update/subbundles/04-documentation-and-merge-evidence/SKILL.md",
+    "codex/skills/bundles/maf-1.13-conservative-update/subbundles/CHECKPOINT-after-update/SKILL.md",
+    "data/package-update-matrix.json",
+    "docs/01-current-architecture-map.md",
+    "docs/02-nuget-update-inventory.md",
+    "docs/03-breaking-change-risk-map.md",
+    "docs/04-codex-execution-plan.md",
+    "docs/05-validation-and-regression-plan.md",
+    "docs/06-codex-prompts.md",
+    "docs/07-architecture-decision-record.md",
+    "docs/08-file-touch-plan.md",
+    "scripts/Collect-MafInventory.ps1",
+    "scripts/Verify-MafUpdate.ps1"
+  ]
+}

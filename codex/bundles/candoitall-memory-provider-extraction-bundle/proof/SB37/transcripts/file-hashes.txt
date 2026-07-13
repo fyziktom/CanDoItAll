@@ -1,0 +1,19 @@
+Run label: SB37 bundle synchronization
+Command: compute baseline and repaired SHA-256 hashes for SB37-owned files
+Algorithm: SHA-256; baseline revision 7c57e10572086f705a48a8ef24457a3ebfb4705a
+Format: repo-relative path | before | after
+
+src/MAF/Common/CanDoItAll.AgentFramework.Models/Memory/AgentMemoryAccessSettings.cs | ABSENT | 4361541d534f767c5d5fe504ae288fef46940ee9edca9dc8c66af8c79264944e
+src/MAF/Common/CanDoItAll.AgentFramework.Models/Memory/AgentMemoryConfigurationMapper.cs | ABSENT | 8f64053a3b267271fd4ca7b75262d21fde12483b8f12eec796097c0e9c96f774
+src/MAF/Memory/CanDoItAll.AgentFramework.Memory/CanDoItAll.AgentFramework.Memory.csproj | ABSENT | 00e925ab55a59987c7b627763445e0fdeb8a4ab129c6d3228eb9beac842e3c37
+src/MAF/Memory/CanDoItAll.AgentFramework.Memory/Routing/MemoryDirectiveParser.cs | ABSENT | fb267202792cc9f2924e3640c538cebd8f86e827947f0795efc46415560441e5
+src/MAF/Memory/CanDoItAll.AgentFramework.Memory/Routing/AgentMemoryInvocationPlanner.cs | ABSENT | 1df6da27f85c59268d12ddce3ef79ff97b6f0bfed5fceeb52095c6e5d1d95eb9
+src/MAF/Memory/CanDoItAll.AgentFramework.Memory/Context/MemoryAgentContextFanOut.cs | ABSENT | b123bd626271ab7fd2d1684e8b0b61715cbca4702f902c828183eee1dc504c7a
+src/MAF/Memory/CanDoItAll.AgentFramework.Memory/Context/MemoryAgentContextResultMerger.cs | ABSENT | 82a1aace8f58b1647cf6b0aa27f96b95085cf0c38f1953f856d90ab4156b26d2
+src/MAF/Memory/CanDoItAll.AgentFramework.Memory/Context/MemoryContextPackRenderer.cs | ABSENT | c6dddb0e37a5c7819fdcd532eddf7480d8bd6e94ddab8ce0009e469cd928f120
+src/MAF/Memory/CanDoItAll.AgentFramework.Memory/WorkflowExecutors/MemoryWorkflowExecutor.cs | ABSENT | 99c478fc9db6e6e619eecc2c5493037098464acc34cf2860f1b5b81cd8bc5207
+src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentMemorySettingsPanel.razor | ABSENT | ccf3c6d692a8f4a451bffcd661a21fb45b0056321a19950574a131eee8eaebc8
+tests/MAF/CanDoItAll.AgentFramework.Memory.Tests/AgentMemoryInvocationTests.cs | ABSENT | 9584411d53c23f14970807edd231aeac36aca0c58beb92c3981431dab3d3b8a6
+tests/Components/CanDoItAll.Tests.Components/AgentMemorySettingsPanelTests.cs | ABSENT | 237055ed41f547848da7c90eaf06ee689a0a0d0a9da802bf47938bece01e2953
+
+Exit code: 0

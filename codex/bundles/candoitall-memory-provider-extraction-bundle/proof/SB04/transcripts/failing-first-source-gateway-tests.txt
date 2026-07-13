@@ -1,0 +1,28 @@
+Command: dotnet test tests\Memory\CanDoItAll.Memory.Tests\CanDoItAll.Memory.Tests.csproj --filter FullyQualifiedName~MemorySourceGatewayTests
+WorkingDirectory: C:\repositories\CanDoItAll
+RunLabel: SB04 failing-first source gateway tests
+Invariant IDs: SB04_SG001, SB04_SG002, SB04_SG003, SB04_SG004, SB04_SG005
+ExitCode: 1
+Output:
+  Zjišťují se projekty, které se mají obnovit...
+C:\repositories\CanDoItAll\src\MAF\WorkflowExecutors\CanDoItAll.AgentFramework.WorkflowExecutors.Core\CanDoItAll.AgentFramework.WorkflowExecutors.Core.csproj : warning NU1900: Při získávání dat o ohrožení zabezpečení balíčku došlo k chybě: Nepovedlo se načíst index služby pro zdroj https://api.nuget.org/v3/index.json. [C:\repositories\CanDoItAll\tests\Memory\CanDoItAll.Memory.Tests\CanDoItAll.Memory.Tests.csproj]
+C:\repositories\CanDoItAll\src\MAF\Common\CanDoItAll.AgentFramework.Core\CanDoItAll.AgentFramework.Core.csproj : warning NU1900: Při získávání dat o ohrožení zabezpečení balíčku došlo k chybě: Nepovedlo se načíst index služby pro zdroj https://api.nuget.org/v3/index.json. [C:\repositories\CanDoItAll\tests\Memory\CanDoItAll.Memory.Tests\CanDoItAll.Memory.Tests.csproj]
+  Obnovil se projekt C:\repositories\CanDoItAll\tests\Memory\CanDoItAll.Memory.Tests\CanDoItAll.Memory.Tests.csproj (v 1,08 s).
+  10 z 11 projektů jsou v aktuálním stavu pro obnovení.
+C:\repositories\CanDoItAll\src\MAF\Common\CanDoItAll.AgentFramework.Core\CanDoItAll.AgentFramework.Core.csproj : warning NU1900: Při získávání dat o ohrožení zabezpečení balíčku došlo k chybě: Nepovedlo se načíst index služby pro zdroj https://api.nuget.org/v3/index.json.
+C:\repositories\CanDoItAll\src\MAF\WorkflowExecutors\CanDoItAll.AgentFramework.WorkflowExecutors.Core\CanDoItAll.AgentFramework.WorkflowExecutors.Core.csproj : warning NU1900: Při získávání dat o ohrožení zabezpečení balíčku došlo k chybě: Nepovedlo se načíst index služby pro zdroj https://api.nuget.org/v3/index.json.
+  CanDoItAll.AgentFramework.Capabilities.Abstractions -> C:\repositories\CanDoItAll\src\MAF\Capabilities\CanDoItAll.AgentFramework.Capabilities.Abstractions\bin\Debug\net10.0\CanDoItAll.AgentFramework.Capabilities.Abstractions.dll
+  CanDoItAll.Memory.Abstractions -> C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Abstractions\bin\Debug\net10.0\CanDoItAll.Memory.Abstractions.dll
+  CanDoItAll.Git -> C:\repositories\CanDoItAll\src\Foundation\CanDoItAll.Git\bin\Debug\net10.0\CanDoItAll.Git.dll
+  CanDoItAll.SharedKernel -> C:\repositories\CanDoItAll\src\Foundation\CanDoItAll.SharedKernel\bin\Debug\net10.0\CanDoItAll.SharedKernel.dll
+  CanDoItAll.Memory.Application -> C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Application\bin\Debug\net10.0\CanDoItAll.Memory.Application.dll
+  CanDoItAll.AgentFramework.Models -> C:\repositories\CanDoItAll\src\MAF\Common\CanDoItAll.AgentFramework.Models\bin\Debug\net10.0\CanDoItAll.AgentFramework.Models.dll
+  CanDoItAll.AgentFramework.Workflows.Abstractions -> C:\repositories\CanDoItAll\src\MAF\Workflows\CanDoItAll.AgentFramework.Workflows.Abstractions\bin\Debug\net10.0\CanDoItAll.AgentFramework.Workflows.Abstractions.dll
+  CanDoItAll.AgentFramework.WorkflowExecutors.Abstractions -> C:\repositories\CanDoItAll\src\MAF\WorkflowExecutors\CanDoItAll.AgentFramework.WorkflowExecutors.Abstractions\bin\Debug\net10.0\CanDoItAll.AgentFramework.WorkflowExecutors.Abstractions.dll
+  CanDoItAll.AgentFramework.WorkflowExecutors.Core -> C:\repositories\CanDoItAll\src\MAF\WorkflowExecutors\CanDoItAll.AgentFramework.WorkflowExecutors.Core\bin\Debug\net10.0\CanDoItAll.AgentFramework.WorkflowExecutors.Core.dll
+  CanDoItAll.AgentFramework.Core -> C:\repositories\CanDoItAll\src\MAF\Common\CanDoItAll.AgentFramework.Core\bin\Debug\net10.0\CanDoItAll.AgentFramework.Core.dll
+C:\repositories\CanDoItAll\tests\Memory\CanDoItAll.Memory.Tests\MemorySourceGatewayTests.cs(116,9): error CS0246: Typ nebo název oboru názvů MemorySourceGatewayPolicy se nenašel. (Nechybí direktiva using nebo odkaz na sestavení?) [C:\repositories\CanDoItAll\tests\Memory\CanDoItAll.Memory.Tests\CanDoItAll.Memory.Tests.csproj]
+C:\repositories\CanDoItAll\tests\Memory\CanDoItAll.Memory.Tests\MemorySourceGatewayTests.cs(114,20): error CS0246: Typ nebo název oboru názvů MemorySourceGatewayRequest se nenašel. (Nechybí direktiva using nebo odkaz na sestavení?) [C:\repositories\CanDoItAll\tests\Memory\CanDoItAll.Memory.Tests\CanDoItAll.Memory.Tests.csproj]
+C:\repositories\CanDoItAll\tests\Memory\CanDoItAll.Memory.Tests\MemorySourceGatewayTests.cs(185,94): error CS0246: Typ nebo název oboru názvů IMemorySourceGatewayAdapter se nenašel. (Nechybí direktiva using nebo odkaz na sestavení?) [C:\repositories\CanDoItAll\tests\Memory\CanDoItAll.Memory.Tests\CanDoItAll.Memory.Tests.csproj]
+C:\repositories\CanDoItAll\tests\Memory\CanDoItAll.Memory.Tests\MemorySourceGatewayTests.cs(197,13): error CS0246: Typ nebo název oboru názvů MemorySourceGatewayRequest se nenašel. (Nechybí direktiva using nebo odkaz na sestavení?) [C:\repositories\CanDoItAll\tests\Memory\CanDoItAll.Memory.Tests\CanDoItAll.Memory.Tests.csproj]
+C:\repositories\CanDoItAll\tests\Memory\CanDoItAll.Memory.Tests\MemorySourceGatewayTests.cs(187,16): error CS0246: Typ nebo název oboru názvů MemorySourceGatewayAdapterDescriptor se nenašel. (Nechybí direktiva using nebo odkaz na sestavení?) [C:\repositories\CanDoItAll\tests\Memory\CanDoItAll.Memory.Tests\CanDoItAll.Memory.Tests.csproj]

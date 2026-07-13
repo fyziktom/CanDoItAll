@@ -1,0 +1,25 @@
+CWD: C:\repositories\CanDoItAll
+START: 2026-06-29T15:46:43.2309156-04:00
+COMMAND: dotnet build tests\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj --no-restore --no-dependencies -v:minimal
+  CanDoItAll.Tests.Unit -> C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Unit\bin\Debug\net10.0\CanDoItAll.Tests.Unit.dll
+
+Vytváření sestavení bylo úspěšně dokončeno.
+    0 upozornění
+    Počet chyb: 0
+
+Uplynulý čas 00:00:05.54
+COMMAND_EXIT_CODE: 0
+COMMAND: dotnet test tests\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj --no-build --filter PluginWorkflowExecutorBoundaryTests -v:minimal
+Testovací běh pro C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Unit\bin\Debug\net10.0\CanDoItAll.Tests.Unit.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+
+Úspěšné!    - Neúspěšné:     0, Úspěšné:     5, Přeskočeno:     0, Celkem:     5, Doba trvání: 76 ms - CanDoItAll.Tests.Unit.dll (net10.0)
+COMMAND_EXIT_CODE: 0
+END: 2026-06-29T15:46:54.9965584-04:00
+EXIT_CODE: 0
+
+Completed Validator Metadata Addendum
+Command: historical SB08 proof command recorded during bundle execution
+ExitCode: 0
+ExitCode: 1
+Invariant ID: SB08-final-closure

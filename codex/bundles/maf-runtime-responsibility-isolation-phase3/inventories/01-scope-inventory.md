@@ -1,0 +1,30 @@
+# Responsibility Inventory
+
+## Hotspot Map
+
+| Source | Member or area | Responsibility | Dependencies used | Target owner | Test seam | Risk |
+| --- | --- | --- | --- | --- | --- | --- |
+| `repo://src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/MafAgentRuntime.cs` | `RunAsync`, `RunCoreAsync` | Runtime turn orchestration | runtime build, attachments, session builder, provider streaming | `MafRuntimeTurnCoordinator` | fake runtime builder, fake turn executor, fake attachment preparer | High |
+| `repo://src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/MafAgentRuntime.cs` | `ExecuteRunAsync` | Provider streaming loop and response assembly | `IMafProviderStreamingRunner`, finalizer driver, approval cache, usage diagnostics | `MafRuntimeTurnExecutor` | fake streaming runner with scripted updates | High |
+| `repo://src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/MafAgentRuntime.cs` | `TryRunMissingRequiredFinalizerRepairAsync`, JSON fallback helpers | Required finalizer repair workflow | finalizer policy, provider streaming, tool trace recorder | `MafFinalizerRepairCoordinator` | fake finalizer policy, fake streaming runner, fake progress recorder | High |
+| `repo://src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/MafAgentRuntime.cs` | `TrySerializePersistableRuntimeSessionAsync`, `TrySerializeRuntimeSessionAsync` | Session persistence and scrubbing | `AIAgent`, `AgentSession`, request-scoped scrubber | `MafRuntimeSessionPersistenceDriver` | fake serializable session adapter, fake scrubber | High |
+| `repo://src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/MafAgentRuntime.cs` | `GetCachedOrRehydratedApprovals`, `MapPendingApproval`, `RehydratePendingApproval` | Approval continuation | pending approval cache, `ChatSessionRecord` compatibility | `MafApprovalContinuationDriver` | in-memory approval cache and pending records | Medium |
+| `repo://src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/MafRuntimeAgentFactory.cs` | `CreateRuntimeBuildAsync` | Runtime build orchestration | provider credentials, capability composer, model parameters, finalizer capture | `MafRuntimeBuildCoordinator` | fake capability composer, fake provider agent factory | High |
+| `repo://src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/MafRuntimeAgentFactory.cs` | `CreateHandoffRuntimeBuildAsync` | Handoff runtime build | handoff metadata, participants, provider factory | `MafHandoffRuntimeBuilder` | fake participant catalog and provider factory | High |
+| `repo://src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/MafRuntimeAgentFactory.cs` | `CreateInstrumentedAgent`, tool ownership mapping | Tool instrumentation and finalizer capture | `AITool`, trace recorder, finalizer policy | `MafToolPolicyInstrumentor` | fake tools and invocation recorder | Medium |
+| `repo://src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/MafRuntimeAgentFactory.cs` | script policy methods | Script content policy inspection | file system, managed root policy, tool args | `MafScriptPolicyInspectionService` | fake file reader and managed-root rules | High |
+| `repo://src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/Capabilities/RuntimeCapabilityComposer*.cs` | access partial files | Capability access planning and policy rules | capability catalog, workspace profile, process intent | `RuntimeCapabilityAccessPlanner` | policy unit tests with positive and denial cases | High |
+| `repo://src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/Capabilities/RuntimeCapabilityComposer*.cs` | descriptor partial files | Capability descriptor catalog mapping | catalog items, MCP config, skill/tool config | `RuntimeCapabilityDescriptorCatalog` | descriptor mapping tests by capability kind | High |
+| `repo://src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/Capabilities/RuntimeCapabilityComposer.cs` | attachment methods | Capability attachment orchestration | context, skills, tools, MCP, compaction | `RuntimeCapabilityAttachmentOrchestrator` | fake attachment contributors and progress recorder | High |
+| `repo://src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/Workspace/WorkspaceRuntimePlugin.cs` | file/search methods | Workspace file tools | `IWorkspaceFileService`, access policy | `WorkspaceFileToolSet` | fake file service and policy service | Medium |
+| `repo://src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/Workspace/WorkspaceRuntimePlugin.cs` | git/dotnet/script methods | Workspace command tools | `IWorkspaceCommandExecutionService`, access policy, side-effect manifest | `WorkspaceCommandToolSet` and `WorkspaceScriptToolSet` | fake command service and policy denial tests | High |
+| `repo://src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/Workspace/WorkspaceRuntimePlugin.cs` | artifact/image/document methods | Artifact transformation and analysis | artifact service, provider runtime gateway | `WorkspaceArtifactToolSet` and `WorkspaceImageAnalysisToolSet` | fake artifact service and fake provider gateway | High |
+| `repo://src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/Workspace/WorkspaceRuntimePlugin.cs` | path/policy helpers | Workspace access policy and external aliases | workspace scope, audit context, access settings | `WorkspaceToolAccessPolicyService` | deterministic path/policy tests | High |
+
+## Out Of Scope Hotspots
+
+| Source | Reason excluded from this phase |
+| --- | --- |
+| `repo://src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/Capabilities/McpCapabilityBuilder.cs` | Large and important, but should be addressed after `RuntimeCapabilityComposer` no longer owns catalog/attachment orchestration. |
+| `repo://src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/Capabilities/ToolCapabilityBuilder.cs` | Partially in scope only if configured workspace extraction requires it; otherwise downstream. |
+| `repo://src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/MafFinalizerDriver.cs` | Large static policy engine. This phase extracts runtime orchestration around it first; deeper finalizer policy split is a follow-up unless tests force it. |

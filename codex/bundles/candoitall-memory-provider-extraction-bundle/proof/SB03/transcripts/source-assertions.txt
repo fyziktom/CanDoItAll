@@ -1,0 +1,128 @@
+Command: Select-String -Path src\Memory\CanDoItAll.Memory.Abstractions\*.cs,src\Memory\CanDoItAll.Memory.Application\*.cs -Pattern MemoryOperationRecord|MemoryFeedbackRecord|MemoryContextDeliveryRecord|MemoryEventInboxRecord|MemoryEventOutboxRecord|MemoryLedgerRetentionPolicy|MemoryIpfsSnapshotMetadata|MemoryLedgerTransitionRules|MemoryEventAdmissionRules|MemoryLedgerPersistenceContract|MemoryFeedbackStage|MemoryLedgerStatus|MemoryLedgerStatusReasons|MemoryEventOutboxPayloadKinds
+WorkingDirectory: C:\repositories\CanDoItAll
+RunLabel: SB03 production source assertions
+Invariant IDs: SB03_LG001, SB03_LG002, SB03_LG003, SB03_LG004, SB03_LG005
+ExitCode: 0
+Output:
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Abstractions\MemoryLedgerEnums.cs:3:public enum MemoryLedgerStatus
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Abstractions\MemoryLedgerEnums.cs:16:public enum MemoryFeedbackStage
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Abstractions\MemoryLedgerIdentifiers.cs:16:public readonly record struct MemoryOperationRecordId
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Abstractions\MemoryLedgerIdentifiers.cs:18:    public MemoryOperationRecordId(Guid value)
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Abstractions\MemoryLedgerIdentifiers.cs:25:    public static MemoryOperationRecordId New() => new(Guid.NewGuid());
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Abstractions\MemoryLedgerIdentifiers.cs:44:public readonly record struct MemoryFeedbackRecordId
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Abstractions\MemoryLedgerIdentifiers.cs:46:    public MemoryFeedbackRecordId(Guid value)
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Abstractions\MemoryLedgerIdentifiers.cs:53:    public static MemoryFeedbackRecordId New() => new(Guid.NewGuid());
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Abstractions\MemoryLedgerIdentifiers.cs:58:public readonly record struct MemoryEventInboxRecordId
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Abstractions\MemoryLedgerIdentifiers.cs:60:    public MemoryEventInboxRecordId(Guid value)
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Abstractions\MemoryLedgerIdentifiers.cs:67:    public static MemoryEventInboxRecordId New() => new(Guid.NewGuid());
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Abstractions\MemoryLedgerIdentifiers.cs:72:public readonly record struct MemoryEventOutboxRecordId
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Abstractions\MemoryLedgerIdentifiers.cs:74:    public MemoryEventOutboxRecordId(Guid value)
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Abstractions\MemoryLedgerIdentifiers.cs:81:    public static MemoryEventOutboxRecordId New() => new(Guid.NewGuid());
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Abstractions\MemoryLedgerRecords.cs:13:public static class MemoryLedgerStatusReasons
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Abstractions\MemoryLedgerRecords.cs:19:public static class MemoryEventOutboxPayloadKinds
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Abstractions\MemoryLedgerRecords.cs:24:public sealed record MemoryLedgerRetentionPolicy
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Abstractions\MemoryLedgerRecords.cs:26:    public MemoryLedgerRetentionPolicy(
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Abstractions\MemoryLedgerRecords.cs:47:    public static MemoryLedgerRetentionPolicy Expiring(
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Abstractions\MemoryLedgerRecords.cs:54:public sealed record MemoryIpfsSnapshotMetadata(
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Abstractions\MemoryLedgerRecords.cs:61:    public MemoryIpfsSnapshotMetadata RequestUnpin(
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Abstractions\MemoryLedgerRecords.cs:76:public sealed record MemoryOperationRecord(
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Abstractions\MemoryLedgerRecords.cs:77:    MemoryOperationRecordId RecordId,
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Abstractions\MemoryLedgerRecords.cs:86:    MemoryLedgerRetentionPolicy Retention,
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Abstractions\MemoryLedgerRecords.cs:87:    MemoryLedgerStatus Status,
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Abstractions\MemoryLedgerRecords.cs:94:    MemoryIpfsSnapshotMetadata? IpfsSnapshot,
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Abstractions\MemoryLedgerRecords.cs:97:    public static MemoryOperationRecord Create(
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Abstractions\MemoryLedgerRecords.cs:98:        MemoryOperationRecordId recordId,
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Abstractions\MemoryLedgerRecords.cs:107:        MemoryLedgerRetentionPolicy retention,
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Abstractions\MemoryLedgerRecords.cs:109:        MemoryIpfsSnapshotMetadata? ipfsSnapshot = null,
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Abstractions\MemoryLedgerRecords.cs:116:        return new MemoryOperationRecord(
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Abstractions\MemoryLedgerRecords.cs:127:            MemoryLedgerStatus.Pending,
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Abstractions\MemoryLedgerRecords.cs:133:            StatusReason: MemoryLedgerStatusReasons.Created,
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Abstractions\MemoryLedgerRecords.cs:139:        MemoryOperationRecordId recordId,
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Abstractions\MemoryLedgerRecords.cs:153:public sealed record MemoryContextDeliveryRecord(
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Abstractions\MemoryLedgerRecords.cs:160:    MemoryLedgerRetentionPolicy Retention,
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Abstractions\MemoryLedgerRecords.cs:162:    MemoryIpfsSnapshotMetadata? IpfsSnapshot)
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Abstractions\MemoryLedgerRecords.cs:164:    public static MemoryContextDeliveryRecord Create(
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Abstractions\MemoryLedgerRecords.cs:171:        MemoryLedgerRetentionPolicy retention,
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Abstractions\MemoryLedgerRecords.cs:173:        MemoryIpfsSnapshotMetadata? ipfsSnapshot = null)
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Abstractions\MemoryLedgerRecords.cs:182:        return new MemoryContextDeliveryRecord(
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Abstractions\MemoryLedgerRecords.cs:195:public sealed record MemoryFeedbackRecord(
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Abstractions\MemoryLedgerRecords.cs:196:    MemoryFeedbackRecordId FeedbackRecordId,
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Abstractions\MemoryLedgerRecords.cs:200:    MemoryFeedbackStage Stage,
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Abstractions\MemoryLedgerRecords.cs:206:    MemoryLedgerRetentionPolicy Retention,
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Abstractions\MemoryLedgerRecords.cs:207:    MemoryLedgerStatus Status,
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Abstractions\MemoryLedgerRecords.cs:211:    MemoryIpfsSnapshotMetadata? IpfsSnapshot)
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Abstractions\MemoryLedgerRecords.cs:213:    public static MemoryFeedbackRecord CreateMatched(
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Abstractions\MemoryLedgerRecords.cs:214:        MemoryFeedbackRecordId feedbackRecordId,
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Abstractions\MemoryLedgerRecords.cs:218:        MemoryFeedbackStage stage,
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Abstractions\MemoryLedgerRecords.cs:222:        MemoryLedgerRetentionPolicy retention,
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Abstractions\MemoryLedgerRecords.cs:224:        MemoryIpfsSnapshotMetadata? ipfsSnapshot = null)
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Abstractions\MemoryLedgerRecords.cs:244:    public static MemoryFeedbackRecord CreateUnmatched(
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Abstractions\MemoryLedgerRecords.cs:245:        MemoryFeedbackRecordId feedbackRecordId,
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Abstractions\MemoryLedgerRecords.cs:247:        MemoryFeedbackStage stage,
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Abstractions\MemoryLedgerRecords.cs:251:        MemoryLedgerRetentionPolicy retention,
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Abstractions\MemoryLedgerRecords.cs:254:        MemoryIpfsSnapshotMetadata? ipfsSnapshot = null)
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Abstractions\MemoryLedgerRecords.cs:272:    private static MemoryFeedbackRecord Create(
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Abstractions\MemoryLedgerRecords.cs:273:        MemoryFeedbackRecordId feedbackRecordId,
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Abstractions\MemoryLedgerRecords.cs:277:        MemoryFeedbackStage stage,
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Abstractions\MemoryLedgerRecords.cs:283:        MemoryLedgerRetentionPolicy retention,
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Abstractions\MemoryLedgerRecords.cs:285:        MemoryIpfsSnapshotMetadata? ipfsSnapshot)
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Abstractions\MemoryLedgerRecords.cs:292:        return new MemoryFeedbackRecord(
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Abstractions\MemoryLedgerRecords.cs:304:            MemoryLedgerStatus.Pending,
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Abstractions\MemoryLedgerRecords.cs:326:public sealed record MemoryEventInboxRecord(
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Abstractions\MemoryLedgerRecords.cs:327:    MemoryEventInboxRecordId InboxRecordId,
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Abstractions\MemoryLedgerRecords.cs:336:    MemoryLedgerRetentionPolicy Retention,
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Abstractions\MemoryLedgerRecords.cs:337:    MemoryLedgerStatus Status,
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Abstractions\MemoryLedgerRecords.cs:344:    public static MemoryEventInboxRecord Create(
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Abstractions\MemoryLedgerRecords.cs:345:        MemoryEventInboxRecordId inboxRecordId,
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Abstractions\MemoryLedgerRecords.cs:353:        MemoryLedgerRetentionPolicy retention,
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Abstractions\MemoryLedgerRecords.cs:365:        return new MemoryEventInboxRecord(
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Abstractions\MemoryLedgerRecords.cs:376:            MemoryLedgerStatus.Pending,
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Abstractions\MemoryLedgerRecords.cs:380:            StatusReason: MemoryLedgerStatusReasons.Received,
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Abstractions\MemoryLedgerRecords.cs:385:public sealed record MemoryEventOutboxRecord(
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Abstractions\MemoryLedgerRecords.cs:386:    MemoryEventOutboxRecordId OutboxRecordId,
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Abstractions\MemoryLedgerRecords.cs:389:    MemoryEventInboxRecordId? InboxRecordId,
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Abstractions\MemoryLedgerRecords.cs:391:    MemoryLedgerStatus Status,
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Abstractions\MemoryLedgerRecords.cs:398:    public static MemoryEventOutboxRecord CreateAcknowledgement(
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Abstractions\MemoryLedgerRecords.cs:399:        MemoryEventOutboxRecordId outboxRecordId,
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Abstractions\MemoryLedgerRecords.cs:402:        MemoryEventInboxRecordId? inboxRecordId,
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Abstractions\MemoryLedgerRecords.cs:411:        return new MemoryEventOutboxRecord(
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Abstractions\MemoryLedgerRecords.cs:417:            MemoryLedgerStatus.Pending,
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Abstractions\MemoryLedgerRecords.cs:421:            PayloadKind: MemoryEventOutboxPayloadKinds.Acknowledgement,
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Application\MemoryLedgerRules.cs:5:public static class MemoryLedgerTransitionRules
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Application\MemoryLedgerRules.cs:7:    public static MemoryOperationRecord TransitionOperation(
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Application\MemoryLedgerRules.cs:8:        MemoryOperationRecord record,
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Application\MemoryLedgerRules.cs:9:        MemoryLedgerStatus nextStatus,
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Application\MemoryLedgerRules.cs:25:    public static MemoryFeedbackRecord TransitionFeedback(
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Application\MemoryLedgerRules.cs:26:        MemoryFeedbackRecord record,
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Application\MemoryLedgerRules.cs:27:        MemoryLedgerStatus nextStatus,
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Application\MemoryLedgerRules.cs:37:            RetryCount = nextStatus == MemoryLedgerStatus.Running ? record.RetryCount + 1 : record.RetryCount
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Application\MemoryLedgerRules.cs:41:    public static MemoryEventInboxRecord TransitionInboxEvent(
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Application\MemoryLedgerRules.cs:42:        MemoryEventInboxRecord record,
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Application\MemoryLedgerRules.cs:43:        MemoryLedgerStatus nextStatus,
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Application\MemoryLedgerRules.cs:54:            RetryCount = nextStatus == MemoryLedgerStatus.Running ? record.RetryCount + 1 : record.RetryCount
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Application\MemoryLedgerRules.cs:58:    public static MemoryEventOutboxRecord TransitionOutboxEvent(
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Application\MemoryLedgerRules.cs:59:        MemoryEventOutboxRecord record,
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Application\MemoryLedgerRules.cs:60:        MemoryLedgerStatus nextStatus,
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Application\MemoryLedgerRules.cs:69:            RetryCount = nextStatus == MemoryLedgerStatus.Running ? record.RetryCount + 1 : record.RetryCount
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Application\MemoryLedgerRules.cs:74:        MemoryLedgerStatus current,
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Application\MemoryLedgerRules.cs:75:        MemoryLedgerStatus next,
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Application\MemoryLedgerRules.cs:88:        MemoryLedgerStatus current,
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Application\MemoryLedgerRules.cs:89:        MemoryLedgerStatus next,
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Application\MemoryLedgerRules.cs:102:        MemoryLedgerStatus current,
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Application\MemoryLedgerRules.cs:103:        MemoryLedgerStatus next)
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Application\MemoryLedgerRules.cs:107:            MemoryLedgerStatus.Pending => next is MemoryLedgerStatus.Accepted or MemoryLedgerStatus.Running or MemoryLedgerStatus.Completed or MemoryLedgerStatus.Failed or MemoryLedgerStatus.TimedOut or MemoryLedgerStatus.Cancelled or MemoryLedgerStatus.Expired,
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Application\MemoryLedgerRules.cs:108:            MemoryLedgerStatus.Accepted => next is MemoryLedgerStatus.Running or MemoryLedgerStatus.Completed or MemoryLedgerStatus.Failed or MemoryLedgerStatus.TimedOut or MemoryLedgerStatus.Cancelled or MemoryLedgerStatus.Expired,
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Application\MemoryLedgerRules.cs:109:            MemoryLedgerStatus.Running => next is MemoryLedgerStatus.Completed or MemoryLedgerStatus.Failed or MemoryLedgerStatus.TimedOut or MemoryLedgerStatus.Cancelled or MemoryLedgerStatus.Expired,
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Application\MemoryLedgerRules.cs:110:            MemoryLedgerStatus.Completed or MemoryLedgerStatus.Failed or MemoryLedgerStatus.TimedOut or MemoryLedgerStatus.Cancelled or MemoryLedgerStatus.Expired => next == MemoryLedgerStatus.Forgotten,
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Application\MemoryLedgerRules.cs:111:            MemoryLedgerStatus.Forgotten => false,
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Application\MemoryLedgerRules.cs:116:    private static bool IsTerminal(MemoryLedgerStatus status)
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Application\MemoryLedgerRules.cs:118:        return status is MemoryLedgerStatus.Completed or MemoryLedgerStatus.Failed or MemoryLedgerStatus.TimedOut or MemoryLedgerStatus.Cancelled or MemoryLedgerStatus.Expired or MemoryLedgerStatus.Forgotten;
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Application\MemoryLedgerRules.cs:132:        MemoryLedgerRetentionPolicy policy,
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Application\MemoryLedgerRules.cs:148:public static class MemoryEventAdmissionRules
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Application\MemoryLedgerRules.cs:151:        MemoryEventInboxRecord record,
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Application\MemoryLedgerRules.cs:208:public static class MemoryLedgerPersistenceContract
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Application\MemoryLedgerRules.cs:210:    public const string OperationRecords = "MemoryOperationRecords";
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Application\MemoryLedgerRules.cs:211:    public const string ContextDeliveryRecords = "MemoryContextDeliveryRecords";
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Application\MemoryLedgerRules.cs:212:    public const string FeedbackRecords = "MemoryFeedbackRecords";
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Application\MemoryLedgerRules.cs:213:    public const string EventInboxRecords = "MemoryEventInboxRecords";
+C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Application\MemoryLedgerRules.cs:214:    public const string EventOutboxRecords = "MemoryEventOutboxRecords";

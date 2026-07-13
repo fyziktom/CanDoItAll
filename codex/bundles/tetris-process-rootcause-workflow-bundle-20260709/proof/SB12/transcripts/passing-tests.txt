@@ -1,0 +1,14 @@
+SB12 passing tests
+Working directory: C:\repositories\CanDoItAll
+
+Focused architecture, policy-isolation, and preflight slice:
+Result: 27 passed, 0 failed.
+
+Adapter integration and MAF hardening slice after the completion-coordinator extraction:
+Result: 137 passed, 0 failed.
+
+Full process-filtered unit slice:
+Command: dotnet test tests\Unit\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj --filter "FullyQualifiedName~Process" -v minimal
+Result: 688 passed, 0 failed, 0 skipped. Duration: 16 seconds.
+
+One broader-run LocalWorkspaceProcessHost timeout was isolated and passed on immediate retry; the subsequent complete 688-test process slice was green.

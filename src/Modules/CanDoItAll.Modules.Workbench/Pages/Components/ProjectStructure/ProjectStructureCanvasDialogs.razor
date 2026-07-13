@@ -957,79 +957,13 @@
 
 @if (PreviewNode is not null)
 {
-    var previewNode = PreviewNode;
-
-    <ProjectStructureOverlayDialog CanvasScoped="true"
-                                   AriaLabel="@($"{ResolveAttachmentDisplayName.Invoke(previewNode)} preview")"
-                                   Kicker="Canvas preview"
-                                   Title="@ResolveAttachmentDisplayName.Invoke(previewNode)"
-                                   Summary="@ResolveAttachmentLeadCopy.Invoke(previewNode)"
-                                   Close="CloseAttachmentPreview">
-        <Actions>
-            @if (CanEditPreviewNode.Invoke(previewNode))
-            {
-                <Button Text="Edit details"
-                        ButtonStyle="ButtonStyle.Info"
-                        Click="@(() => EditPreviewNode.InvokeAsync(previewNode))" />
-            }
-            @if (CanShowLocalOpen.Invoke(previewNode))
-            {
-                <Button Text="Open in File Explorer"
-                        ButtonStyle="ButtonStyle.Primary"
-                        Click="@(() => OpenAttachmentLocally.InvokeAsync(previewNode))" />
-            }
-            <Button Text="Open in new tab"
-                    Variant="Variant.Text"
-                    ButtonStyle="ButtonStyle.Base"
-                    Href="@previewNode.Route"
-                    Target="_blank"
-                    Rel="noopener noreferrer" />
-            <Button Text="Close"
-                    Variant="Variant.Text"
-                    ButtonStyle="ButtonStyle.Base"
-                    Click="CloseAttachmentPreview" />
-        </Actions>
-        <Body>
-            @switch (ResolveAttachmentPreviewKind.Invoke(previewNode))
-            {
-                case AttachmentPreviewKind.Image:
-                    <img class="project-structure-preview-dialog__media"
-                         src="@previewNode.Route"
-                         alt="@previewNode.Title" />
-                    break;
-                case AttachmentPreviewKind.Video:
-                    <video class="project-structure-preview-dialog__media"
-                           controls
-                           preload="metadata"
-                           src="@previewNode.Route"></video>
-                    break;
-                case AttachmentPreviewKind.Audio:
-                    <audio class="project-structure-audio-preview project-structure-preview-dialog__audio"
-                           controls
-                           preload="metadata"
-                           src="@previewNode.Route"></audio>
-                    break;
-                case AttachmentPreviewKind.TextDocument:
-                    if (!string.IsNullOrWhiteSpace(ResolveAttachmentTextContent.Invoke(previewNode)))
-                    {
-                        <pre class="project-structure-preview-dialog__source"
-                             data-testid="project-structure-text-asset-preview">@ResolveAttachmentTextContent.Invoke(previewNode)</pre>
-                    }
-                    else
-                    {
-                        <iframe class="project-structure-preview-dialog__frame project-structure-preview-dialog__frame--text"
-                                src="@ResolveAttachmentPreviewSource.Invoke(previewNode)"
-                                title="@($"{ResolveAttachmentDisplayName.Invoke(previewNode)} text preview")"></iframe>
-                    }
-                    break;
-                case AttachmentPreviewKind.Document:
-                    <iframe class="project-structure-preview-dialog__frame"
-                            src="@ResolveAttachmentPreviewSource.Invoke(previewNode)"
-                            title="@($"{ResolveAttachmentDisplayName.Invoke(previewNode)} dialog preview")"></iframe>
-                    break;
-            }
-        </Body>
-    </ProjectStructureOverlayDialog>
+    <ProjectStructureAttachmentPreviewDialog Node="PreviewNode"
+                                             Interaction="PreviewInteraction"
+                                             Close="CloseAttachmentPreview"
+                                             OpenLocally="OpenAttachmentLocally"
+                                             EditNode="EditPreviewNode"
+                                             CanShowLocalOpen="CanShowLocalOpen"
+                                             CanEditNode="CanEditPreviewNode" />
 }
 
 @code {
@@ -1187,6 +1121,9 @@
     public ProjectStructureNode? PreviewNode { get; set; }
 
     [Parameter]
+    public ProjectStructureKnownFileInteraction? PreviewInteraction { get; set; }
+
+    [Parameter]
     public EventCallback CloseAttachmentPreview { get; set; }
 
     [Parameter]
@@ -1200,21 +1137,6 @@
 
     [Parameter, EditorRequired]
     public Func<ProjectStructureNode, bool> CanEditPreviewNode { get; set; } = default!;
-
-    [Parameter, EditorRequired]
-    public Func<ProjectStructureNode, string> ResolveAttachmentDisplayName { get; set; } = default!;
-
-    [Parameter, EditorRequired]
-    public Func<ProjectStructureNode, string> ResolveAttachmentLeadCopy { get; set; } = default!;
-
-    [Parameter, EditorRequired]
-    public Func<ProjectStructureNode, AttachmentPreviewKind> ResolveAttachmentPreviewKind { get; set; } = default!;
-
-    [Parameter, EditorRequired]
-    public Func<ProjectStructureNode, string> ResolveAttachmentPreviewSource { get; set; } = default!;
-
-    [Parameter, EditorRequired]
-    public Func<ProjectStructureNode, string> ResolveAttachmentTextContent { get; set; } = default!;
 
     protected override void OnParametersSet()
     {

@@ -1,0 +1,16 @@
+Command: dotnet test tests\Memory\CanDoItAll.Memory.Tests\CanDoItAll.Memory.Tests.csproj --filter FullyQualifiedName~MemoryProviderRegistryTests
+WorkingDirectory: C:\repositories\CanDoItAll
+RunLabel: SB02 failing-first provider registry tests before registry implementation exists
+Invariant IDs: SB02_PR001, SB02_PR002, SB02_PR003, SB02_PR004, SB02_PR005, SB02_PR006
+ExitCode: 1
+Output:
+  Zjišťují se projekty, které se mají obnovit...
+  Projekt C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Application\CanDoItAll.Memory.Application.csproj bude vynechán, protože nebyl nalezen.
+  Projekt C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Application\CanDoItAll.Memory.Application.csproj bude vynechán, protože nebyl nalezen.
+  Všechny projekty jsou v aktuálním stavu pro obnovení.
+  CanDoItAll.Memory.Abstractions -> C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Abstractions\bin\Debug\net10.0\CanDoItAll.Memory.Abstractions.dll
+C:\Program Files\dotnet\sdk\10.0.204\Microsoft.Common.CurrentVersion.targets(2203,5): warning MSB9008: Odkazovaný projekt ..\..\..\src\Memory\CanDoItAll.Memory.Application\CanDoItAll.Memory.Application.csproj neexistuje. [C:\repositories\CanDoItAll\tests\Memory\CanDoItAll.Memory.Tests\CanDoItAll.Memory.Tests.csproj]
+C:\repositories\CanDoItAll\tests\Memory\CanDoItAll.Memory.Tests\MemoryProviderRegistryTests.cs(2,25): error CS0234: Typ nebo název oboru názvů Application neexistuje v oboru názvů CanDoItAll.Memory. (Nechybí odkaz na sestavení?) [C:\repositories\CanDoItAll\tests\Memory\CanDoItAll.Memory.Tests\CanDoItAll.Memory.Tests.csproj]
+C:\repositories\CanDoItAll\tests\Memory\CanDoItAll.Memory.Tests\MemoryProviderRegistryTests.cs(115,9): error CS0246: Typ nebo název oboru názvů MemoryProviderDriverKind se nenašel. (Nechybí direktiva using nebo odkaz na sestavení?) [C:\repositories\CanDoItAll\tests\Memory\CanDoItAll.Memory.Tests\CanDoItAll.Memory.Tests.csproj]
+C:\repositories\CanDoItAll\tests\Memory\CanDoItAll.Memory.Tests\MemoryProviderRegistryTests.cs(112,20): error CS0246: Typ nebo název oboru názvů MemoryProviderProfile se nenašel. (Nechybí direktiva using nebo odkaz na sestavení?) [C:\repositories\CanDoItAll\tests\Memory\CanDoItAll.Memory.Tests\CanDoItAll.Memory.Tests.csproj]
+C:\repositories\CanDoItAll\tests\Memory\CanDoItAll.Memory.Tests\MemoryProviderRegistryTests.cs(115,47): error CS0103: Název MemoryProviderDriverKind v aktuálním kontextu neexistuje. [C:\repositories\CanDoItAll\tests\Memory\CanDoItAll.Memory.Tests\CanDoItAll.Memory.Tests.csproj]

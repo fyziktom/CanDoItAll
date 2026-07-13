@@ -1,0 +1,12 @@
+Command: failing-first SB27 native protocol API and native-remote driver audit
+Working directory: C:\repositories\CanDoItAll
+Start time UTC: 2026-07-06T00:05:41.7635819Z
+Output:
+EXPECTED FAIL: SB27-MISSING-NATIVE-QUERY-ENDPOINT missing 'MapPost("/memory/query"'
+EXPECTED FAIL: SB27-MISSING-NATIVE-INGEST-ENDPOINT missing 'MapPost("/memory/ingest"'
+EXPECTED FAIL: SB27-MISSING-NATIVE-REMOTE-DRIVER missing 'NativeRemoteMemoryProviderDriver'
+EXPECTED FAIL: SB27-MISSING-NATIVE-REMOTE-DI missing 'AddNativeRemoteMemoryProviderDriver'
+EXPECTED FAIL: SB27-MISSING-CONTRACT-TEST missing 'NativeProtocolApiContractTests'
+Result: PASS. SB27 failing-first audit proves required protocol/driver surface is absent before implementation.
+Exit code: 0
+ExitCode: 1

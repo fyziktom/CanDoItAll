@@ -1,0 +1,16 @@
+Command: SB24 semantic invariant source assertions
+Working directory: C:\repositories\CanDoItAll.CognitiveMemory
+Start time UTC: 2026-07-05T23:12:49.3317355Z
+PASS SB24-I01: native solution includes service project scaffold.
+PASS SB24-I01: native solution includes worker project scaffold.
+PASS SB24-I01: native solution includes UI package scaffold.
+PASS SB24-I02: service owns a host-visible health endpoint.
+PASS SB24-I02: health path does not require Qdrant by default.
+PASS SB24-I03: native contracts compile against generic memory protocol abstractions.
+PASS SB24-I04: native persistence owns its own DbContext and record set.
+PASS SB24-I04: native persistence declares its own table mapping.
+PASS SB24-I05: native production source has no main AgentFramework module dependency.
+PASS SB24-I05: native production source has no main app composition dependency.
+PASS SB24-I05: native production source has no host AppDbContext dependency.
+PASS SB24-I06: Qdrant is absent from production package references and only surfaced as optional health/config capability state.
+Exit code: 0

@@ -1,0 +1,20 @@
+Command: native API contract endpoint audit
+Check: /memory/query ExitCode: 0
+C:\repositories\CanDoItAll.CognitiveMemory\src\CanDoItAll.CognitiveMemory.Service\CognitiveMemoryProtocolApi.cs:26:        app.MapPost("/memory/query", ExecuteContextQueryAsync);
+Check: /memory/ingest ExitCode: 0
+C:\repositories\CanDoItAll.CognitiveMemory\src\CanDoItAll.CognitiveMemory.Service\CognitiveMemoryProtocolApi.cs:27:        app.MapPost("/memory/ingest", ExecuteIngestionAsync);
+Check: /memory/feedback ExitCode: 0
+C:\repositories\CanDoItAll.CognitiveMemory\src\CanDoItAll.CognitiveMemory.Service\CognitiveMemoryProtocolApi.cs:29:        app.MapPost("/memory/feedback", UnsupportedFeedback);
+Check: /memory/operations ExitCode: 0
+C:\repositories\CanDoItAll.CognitiveMemory\src\CanDoItAll.CognitiveMemory.Service\CognitiveMemoryProtocolApi.cs:28:        app.MapGet("/memory/operations/{operationId:guid}", GetOperationStatus);
+Check: /memory/health ExitCode: 0
+C:\repositories\CanDoItAll.CognitiveMemory\src\CanDoItAll.CognitiveMemory.Service\CognitiveMemoryProtocolApi.cs:17:        app.MapGet("/memory/health", () =>
+Check: /memory/protocol/manifest ExitCode: 0
+C:\repositories\CanDoItAll.CognitiveMemory\src\CanDoItAll.CognitiveMemory.Service\Program.cs:48:app.MapGet("/memory/protocol/manifest", () =>
+Check: /memory/events ExitCode: 0
+C:\repositories\CanDoItAll.CognitiveMemory\src\CanDoItAll.CognitiveMemory.Service\CognitiveMemoryProtocolApi.cs:30:        app.MapGet("/memory/events", PollEvents);
+Check: ICognitiveMemoryProviderEventStore ExitCode: 0
+C:\repositories\CanDoItAll.CognitiveMemory\src\CanDoItAll.CognitiveMemory.Service\CognitiveMemoryProtocolApi.cs:172:        ICognitiveMemoryProviderEventStore eventStore,
+Check: MemoryProviderEventPollResult.FromEvents ExitCode: 0
+C:\repositories\CanDoItAll.CognitiveMemory\src\CanDoItAll.CognitiveMemory.Service\CognitiveMemoryProtocolApi.cs:176:        return Results.Ok(MemoryProviderEventPollResult.FromEvents(
+PASS: Native protocol API exposes required endpoints and uses persisted provider event polling.

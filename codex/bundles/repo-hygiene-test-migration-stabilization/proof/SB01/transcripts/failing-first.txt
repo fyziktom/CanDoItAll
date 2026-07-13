@@ -1,0 +1,6 @@
+Command: dotnet test tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj --filter "FullyQualifiedName~RepositoryTransientArtifactHygieneTests|FullyQualifiedName~RepositoryNamingHygieneTests"
+WorkingDirectory: repo://
+ExitCode: 1
+Invariant: SB01-HYGIENE-GUARD
+Result: failing-first state captured in bundle://proof/SB01/failing-hygiene-tests.txt.
+

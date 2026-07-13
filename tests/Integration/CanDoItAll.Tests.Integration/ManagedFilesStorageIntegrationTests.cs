@@ -1,8 +1,12 @@
+using CanDoItAll.FileTools.FileInteraction;
+using CanDoItAll.FileTools.Integration;
 using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Infrastructure.Storage;
+using CanDoItAll.Modules.Projects;
 using CanDoItAll.SharedKernel;
 using CanDoItAll.Tests.Support;
 using CanDoItAll.Web.Infrastructure;
+using CanDoItAll.Web.Api;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.Hosting.Server.Features;
@@ -48,7 +52,7 @@ public sealed class ManagedFilesStorageIntegrationTests
     }
 
     [Fact]
-    public async Task ManagedFiles_endpoint_keeps_serving_the_runtime_profile_after_pending_restart_activation()
+    public async Task DirectManagedFiles_endpoint_stays_deprecated_after_pending_restart_activation()
     {
         await using var host = await ManagedFilesTestHost.CreateAsync();
         var betaProfileId = Guid.Empty;
@@ -75,8 +79,7 @@ public sealed class ManagedFilesStorageIntegrationTests
         }
 
         var beforeSwitchResponse = await host.Client.GetAsync("/managed-files/switch-proof/active.txt");
-        beforeSwitchResponse.EnsureSuccessStatusCode();
-        Assert.Equal("alpha-profile", await beforeSwitchResponse.Content.ReadAsStringAsync());
+        Assert.Equal(System.Net.HttpStatusCode.Gone, beforeSwitchResponse.StatusCode);
 
         ResolvedDatabaseProfile betaProfile;
         await using (var switchScope = host.App.Services.CreateAsyncScope())
@@ -102,8 +105,7 @@ public sealed class ManagedFilesStorageIntegrationTests
         }
 
         var afterSwitchResponse = await host.Client.GetAsync("/managed-files/switch-proof/active.txt");
-        afterSwitchResponse.EnsureSuccessStatusCode();
-        Assert.Equal("alpha-profile", await afterSwitchResponse.Content.ReadAsStringAsync());
+        Assert.Equal(System.Net.HttpStatusCode.Gone, afterSwitchResponse.StatusCode);
         Assert.StartsWith(alphaWorkspaceRoot, postSwitchPath, StringComparison.OrdinalIgnoreCase);
         Assert.False(postSwitchPath.StartsWith(betaProfile.Profile.Storage.WorkspaceRoot, StringComparison.OrdinalIgnoreCase));
         Assert.Equal("alpha-profile", await File.ReadAllTextAsync(alphaPath));
@@ -117,11 +119,11 @@ public sealed class ManagedFilesStorageIntegrationTests
 
         var response = await host.Client.GetAsync("/managed-files/..%2F..%2FREADME.md");
 
-        Assert.Equal(System.Net.HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal(System.Net.HttpStatusCode.Gone, response.StatusCode);
     }
 
     [Fact]
-    public async Task StorageObjects_preview_endpoint_serves_managed_file_reference_tokens()
+    public async Task StorageObjects_preview_endpoint_rejects_unsigned_reference_tokens()
     {
         await using var host = await ManagedFilesTestHost.CreateAsync();
 
@@ -138,13 +140,11 @@ public sealed class ManagedFilesStorageIntegrationTests
 
         var response = await host.Client.GetAsync(StorageJson.BuildPreviewUrl(reference));
 
-        response.EnsureSuccessStatusCode();
-        Assert.Equal("preview-alpha", await response.Content.ReadAsStringAsync());
-        Assert.Equal("text/plain", response.Content.Headers.ContentType?.MediaType);
+        Assert.Equal(System.Net.HttpStatusCode.Unauthorized, response.StatusCode);
     }
 
     [Fact]
-    public async Task StorageObjects_download_endpoint_serves_ipfs_gateway_references()
+    public async Task StorageObjects_download_endpoint_rejects_unsigned_ipfs_references()
     {
         await using var server = await FakeIpfsTestServer.StartAsync();
         await using var host = await ManagedFilesTestHost.CreateAsync();
@@ -161,9 +161,67 @@ public sealed class ManagedFilesStorageIntegrationTests
 
         var response = await host.Client.GetAsync(StorageJson.BuildDownloadUrl(reference));
 
+        Assert.Equal(System.Net.HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task AuthorizedFiles_content_endpoint_serves_current_runtime_handle()
+    {
+        await using var host = await ManagedFilesTestHost.CreateAsync();
+        string handle;
+
+        await using (var scope = host.App.Services.CreateAsyncScope())
+        {
+            var artifactStore = scope.ServiceProvider.GetRequiredService<IManagedArtifactStore>();
+            var catalog = scope.ServiceProvider.GetRequiredService<IStorageCatalogService>();
+            var projects = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+            var projectResult = await projects.SaveAsync(new ProjectEditorModel
+            {
+                Name = "Authorized route project",
+                Description = "Host authorization proof",
+                Objective = "Serve one currently bound project file",
+                CurrentPhase = "Verification"
+            });
+            Assert.True(projectResult.IsSuccess);
+            Guid projectId = projectResult.Value;
+            StorageCatalogRecord storage = await catalog.EnsureBootstrapFileSystemStorageAsync();
+            string category = $"project-media/files/{projectId:N}";
+            string relativePath = artifactStore.GetRelativePath(category, "alpha.txt").Replace('\\', '/');
+            await artifactStore.SaveTextAsync(category, "alpha.txt", "authorized-alpha");
+            var reference = new StorageObjectReference(
+                storage.Id,
+                StorageProviderKind.FileSystem,
+                StorageLocatorKind.RelativePath,
+                relativePath,
+                "alpha.txt",
+                "text/plain",
+                "authorized-alpha".Length);
+            FileReference file = await GrantAsync(
+                scope.ServiceProvider,
+                projectId,
+                storage,
+                reference,
+                FileAccessOperation.View);
+            handle = file.Value;
+        }
+
+        using var request = new HttpRequestMessage(HttpMethod.Get, "/authorized-files/content");
+        request.Headers.Add(ManagedFilesEndpointRoutes.FileHandleHeaderName, handle);
+        var response = await host.Client.SendAsync(request);
+
         response.EnsureSuccessStatusCode();
-        Assert.Equal("ipfs-download", await response.Content.ReadAsStringAsync());
-        Assert.Contains("proof.txt", response.Content.Headers.ContentDisposition?.FileNameStar ?? response.Content.Headers.ContentDisposition?.FileName ?? string.Empty, StringComparison.Ordinal);
+        Assert.Equal("authorized-alpha", await response.Content.ReadAsStringAsync());
+        Assert.Equal("text/plain", response.Content.Headers.ContentType?.MediaType);
+    }
+
+    [Fact]
+    public async Task AuthorizedFiles_endpoint_requires_configured_api_authentication()
+    {
+        await using var host = await ManagedFilesTestHost.CreateAsync(authorizationEnabled: true);
+
+        var response = await host.Client.GetAsync("/authorized-files/content");
+
+        Assert.Equal(System.Net.HttpStatusCode.Unauthorized, response.StatusCode);
     }
 
     [Fact]
@@ -204,6 +262,33 @@ public sealed class ManagedFilesStorageIntegrationTests
         Assert.True(updatedStorage.CapabilityMask.HasFlag(StorageCapability.ConnectionTest));
         Assert.Contains("responded successfully", updatedStorage.LastHealthMessage, StringComparison.OrdinalIgnoreCase);
     }
+
+    private static async Task<FileReference> GrantAsync(
+        IServiceProvider services,
+        Guid projectId,
+        StorageCatalogRecord storage,
+        StorageObjectReference reference,
+        FileAccessOperation operations)
+    {
+        await using AsyncServiceScope serviceScope = services.CreateAsyncScope();
+        FileAccessContext context = await serviceScope.ServiceProvider
+            .GetRequiredService<IFileAccessContextProvider>()
+            .GetCurrentAsync();
+        var scope = new FileToolsSemanticScope(
+            FileToolsSemanticScopeKind.Project,
+            new FileToolsSemanticScopeId(projectId.ToString("N")),
+            "Integration project");
+        return await serviceScope.ServiceProvider
+            .GetRequiredService<IStorageFileAccessAuthorizationCoordinator>()
+            .GrantAsync(
+                new FileAccessGrantRequest(
+                    context,
+                    scope,
+                    storage.Id,
+                    reference.Locator,
+                    operations),
+                reference);
+    }
 }
 
 internal sealed class ManagedFilesTestHost : IAsyncDisposable
@@ -224,7 +309,7 @@ internal sealed class ManagedFilesTestHost : IAsyncDisposable
 
     public HttpClient Client { get; }
 
-    public static async Task<ManagedFilesTestHost> CreateAsync()
+    public static async Task<ManagedFilesTestHost> CreateAsync(bool authorizationEnabled = false)
     {
         var testEnvironment = CanDoItAllTestEnvironment.Create("managed-files-host");
         Quartz.Logging.LogProvider.IsDisabled = false;
@@ -237,15 +322,40 @@ internal sealed class ManagedFilesTestHost : IAsyncDisposable
             ApplicationName = "CanDoItAll.Tests.Integration"
         });
 
-        builder.Configuration.AddInMemoryCollection(CreateConfigurationValues(testEnvironment));
+        IReadOnlyDictionary<string, string?> configurationValues = CreateConfigurationValues(testEnvironment);
+        if (authorizationEnabled)
+        {
+            var securedConfiguration = configurationValues.ToDictionary(
+                pair => pair.Key,
+                pair => pair.Value,
+                StringComparer.OrdinalIgnoreCase);
+            securedConfiguration["Api:Enabled"] = "true";
+            securedConfiguration["Api:Authorization:Enabled"] = "true";
+            securedConfiguration["Api:Authorization:Issuer"] = "CanDoItAll.Tests";
+            securedConfiguration["Api:Authorization:Audience"] = "CanDoItAll.Tests";
+            securedConfiguration["Api:Authorization:SigningKey"] = "0123456789abcdef0123456789abcdef";
+            configurationValues = securedConfiguration;
+        }
+
+        builder.Configuration.AddInMemoryCollection(configurationValues);
         TestApplicationBootstrap.ConfigureDefaultServices(
             builder.Services,
             builder.Configuration,
             builder.Environment,
             registerTestHostApplicationLifetime: false);
+        if (authorizationEnabled)
+        {
+            builder.Services.AddCanDoItAllApi(builder.Configuration);
+        }
 
         var app = builder.Build();
         app.Urls.Add("http://127.0.0.1:0");
+        if (authorizationEnabled)
+        {
+            app.UseAuthentication();
+            app.UseAuthorization();
+        }
+
         app.MapCanDoItAllManagedFiles();
 
         var primaryProfile = testEnvironment.CreatePostgreSqlProfile("managed-files-primary");

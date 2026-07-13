@@ -1,0 +1,9 @@
+Run label: SB35 characterization reused by SB36
+Working directory: repo://
+Command: dotnet test tests\Memory\CanDoItAll.Memory.Tests\CanDoItAll.Memory.Tests.csproj --no-restore --filter "FullyQualifiedName~PR008_Deny_implicit_fallback|FullyQualifiedName~Operation_status_and_cancellation_reject" -v minimal
+Recorded exit code: 1
+
+SB36-INV-01: deny-fallback expected no dispatch; production selected an unassigned compatible provider.
+SB36-INV-02: foreign requester expected denial; production disclosed completed status and reached cancellation.
+
+Source: bundle://proof/SB35/manifest.md. This file records the already captured result; the bundle updater did not rerun the pre-repair binary.

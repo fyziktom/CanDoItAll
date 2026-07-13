@@ -1,0 +1,14 @@
+{
+  "endpoints": [
+    "GET /api/processes/contract",
+    "POST /api/processes/launch/check",
+    "POST /api/processes/launch",
+    "POST /api/processes/runs/{runId}/dispatch",
+    "POST /api/processes/runs/{runId}/cancel",
+    "POST /api/processes/runs/{runId}/steps/{stepInstanceId}/rework",
+    "GET /api/processes/live",
+    "GET /api/processes/runs/{runId}",
+    "GET /api/processes/runs/{runId}/history"
+  ],
+  "boundarySummary": "Runtime/core/dispatch remain generic. Module adapters resolve CanDoItAll agent execution through process driver strategies."
+}

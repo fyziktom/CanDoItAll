@@ -1,0 +1,40 @@
+Command: enumerate SB05 refactored foundation source assertions
+WorkingDirectory: C:\repositories\CanDoItAll
+RunLabel: SB05 source assertions
+Invariant IDs: SB05_CP001, SB05_CP002, SB05_CP003, SB05_CP004
+ExitCode: 0
+Output:
+Foundation source assertions:
+- Protocol identifiers split into MemoryProtocolIdentifiers.cs, MemoryOperationIdentifiers.cs, and MemorySourceIdentifiers.cs.
+- Ledger records split into common, operation, feedback, and event record files.
+- Ledger rules split into transition, retention, event admission, and persistence contract files.
+- Source gateway contracts, gateway behavior, payload classification, and ingestion request contracts are separate files.
+- Architecture guard tests exist in tests\Memory\CanDoItAll.Memory.Tests\MemoryFoundationCheckpointTests.cs.
+- SB01-SB04 focused tests still pass through the full memory suite transcript.
+Production files:
+src\Memory\CanDoItAll.Memory.Abstractions\MemoryEventLedgerRecords.cs
+src\Memory\CanDoItAll.Memory.Abstractions\MemoryExtensionData.cs
+src\Memory\CanDoItAll.Memory.Abstractions\MemoryFeedbackLedgerRecords.cs
+src\Memory\CanDoItAll.Memory.Abstractions\MemoryLedgerCommonRecords.cs
+src\Memory\CanDoItAll.Memory.Abstractions\MemoryLedgerEnums.cs
+src\Memory\CanDoItAll.Memory.Abstractions\MemoryLedgerIdentifiers.cs
+src\Memory\CanDoItAll.Memory.Abstractions\MemoryOperationEnvelope.cs
+src\Memory\CanDoItAll.Memory.Abstractions\MemoryOperationIdentifiers.cs
+src\Memory\CanDoItAll.Memory.Abstractions\MemoryOperationLedgerRecords.cs
+src\Memory\CanDoItAll.Memory.Abstractions\MemoryPayload.cs
+src\Memory\CanDoItAll.Memory.Abstractions\MemoryProtocolContexts.cs
+src\Memory\CanDoItAll.Memory.Abstractions\MemoryProtocolEnums.cs
+src\Memory\CanDoItAll.Memory.Abstractions\MemoryProtocolIdentifiers.cs
+src\Memory\CanDoItAll.Memory.Abstractions\MemoryProviderRegistryContracts.cs
+src\Memory\CanDoItAll.Memory.Abstractions\MemoryRequests.cs
+src\Memory\CanDoItAll.Memory.Abstractions\MemoryResponses.cs
+src\Memory\CanDoItAll.Memory.Abstractions\MemorySourceIdentifiers.cs
+src\Memory\CanDoItAll.Memory.Application\MemoryEventAdmissionRules.cs
+src\Memory\CanDoItAll.Memory.Application\MemoryLedgerPersistenceContract.cs
+src\Memory\CanDoItAll.Memory.Application\MemoryLedgerRetentionRules.cs
+src\Memory\CanDoItAll.Memory.Application\MemoryLedgerTransitionRules.cs
+src\Memory\CanDoItAll.Memory.Application\MemoryProviderRegistry.cs
+src\Memory\CanDoItAll.Memory.Application\MemorySourceGateway.cs
+src\Memory\CanDoItAll.Memory.Application\MemorySourceGatewayContracts.cs
+src\Memory\CanDoItAll.Memory.Application\MemorySourceIngestionContracts.cs
+src\Memory\CanDoItAll.Memory.Application\MemorySourcePayloadClassifier.cs

@@ -1,0 +1,4 @@
+Command: managed dotnetwatch focused test retry op_2107ea9a0ce34947a0cac9b9efd11ea8
+Exit code: 1
+Invariant: MTE-SB04-E2E
+Observed failure: backend BuildTest lane stayed queued after a failed managed retry, so closure validation switched to direct CLI tests/build and restarted 5032 afterward.

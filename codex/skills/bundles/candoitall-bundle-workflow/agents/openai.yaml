@@ -1,4 +1,4 @@
 interface:
   display_name: "CanDoItAll Bundle Workflow"
-  short_description: "Coordinate bundle preparation, execution, gates, and closure"
-  default_prompt: "Deliver the requested outcome through the CanDoItAll bundle workflow: prepare or repair the bundle only as needed, execute each gated subbundle, record proof, and close only when evidence matches the original inputs."
+  short_description: "Coordinate adaptive bundles from intake to closure"
+  default_prompt: "Use $candoitall-bundle-workflow to deliver this outcome through a compatible bundle shape, dependency gates, and risk-proportionate proof."

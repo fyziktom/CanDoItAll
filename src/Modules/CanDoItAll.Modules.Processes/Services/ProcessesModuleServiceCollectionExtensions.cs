@@ -1,4 +1,5 @@
 using CanDoItAll.Memory.SourceGateway;
+using CanDoItAll.FileTools.Integration;
 using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.Infrastructure.Persistence;
@@ -48,6 +49,9 @@ public static class ProcessesModuleServiceCollectionExtensions
         services.TryAddScoped<IProcessProjectionStore, EfProcessProjectionStore>();
         services.TryAddScoped<IProcessInstancePlanStore, EfProcessInstancePlanStore>();
         services.TryAddScoped<IProcessRuntimeStepAssignmentStore, EfProcessRuntimeStepAssignmentStore>();
+        services.TryAddScoped<IProcessRunFileScopeProvider, ProcessRunFileScopeProvider>();
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IFileToolsStorageBindingSource, ProcessRunFileScopeProvider>());
+        services.TryAddScoped<ProcessRunFilesCoordinator>();
         services.TryAddScoped<IProcessHistoricalRunCostReader, EfProcessHistoricalRunCostReader>();
         services.TryAddScoped<IProcessRuntimeProjector, ProcessRuntimeProjectionProjector>();
         services.TryAddScoped<ProcessRuntimeProjectionCatchupService>();

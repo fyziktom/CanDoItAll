@@ -1,0 +1,21 @@
+SB12 browser scope
+Timestamp: 2026-06-29
+Working directory: C:\repositories\CanDoItAll
+
+User instruction: the app is large-screen-only for this initiative, so small and medium screen UI tests should be skipped.
+
+Applied scope:
+- Workflow shell browser proof used a large-screen Playwright configuration.
+- Workbench workflow-node browser proof used a large-screen desktop route scenario.
+- The prior small/mobile Workbench viewport assertion was removed from the Playwright test file.
+
+Evidence:
+- bundle://proof/SB12/transcripts/playwright-workflow-shell-large.txt
+- bundle://proof/SB12/transcripts/playwright-workbench-workflow-node-large.txt
+- bundle://proof/SB12/browser/workflow-shell-runtime-large.png
+- bundle://proof/SB12/browser/project-structure-add-workflow-desktop.png
+- bundle://proof/SB12/browser/project-structure-start-workflow-confirmation.png
+- bundle://proof/SB12/browser/project-structure-workflow-selection-status.png
+- bundle://proof/SB12/browser/project-structure-workflow-result-child-desktop.png
+
+Result: Passed for large-screen-only scope; small and medium viewport checks intentionally skipped.

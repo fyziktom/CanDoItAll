@@ -1,0 +1,8 @@
+Command: Select-String SB04 production/test paths for TODO/NotImplemented/template/stub markers
+WorkingDirectory: C:\repositories\CanDoItAll
+RunLabel: SB04 anti-stub audit
+Invariant IDs: SB04_SG001, SB04_SG002, SB04_SG003, SB04_SG004, SB04_SG005, SB04_SG006
+ExitCode: 0
+Output:
+No TODO, NotImplemented, template-only, fixture-specific, or stub markers found in SB04 production/test paths.
+InvariantIds: SB04-CLOSURE

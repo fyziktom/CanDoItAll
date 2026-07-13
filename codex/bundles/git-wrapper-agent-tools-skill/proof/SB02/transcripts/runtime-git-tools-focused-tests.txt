@@ -1,0 +1,9 @@
+Command: dotnet test tests/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj --filter "WorkspaceCommandExecutionServiceTests|AgentWorkspaceToolAccessMetadataTests|MafAgentRuntimeToolProviderCompositionTests" --no-restore -p:BuildProjectReferences=false
+Started: 2026-06-29T06:45:47.9116348-04:00
+  CanDoItAll.Tests.Unit -> C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Unit\bin\Debug\net10.0\CanDoItAll.Tests.Unit.dll
+Testovací běh pro C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Unit\bin\Debug\net10.0\CanDoItAll.Tests.Unit.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+
+Úspěšné!    - Neúspěšné:     0, Úspěšné:    75, Přeskočeno:     0, Celkem:    75, Doba trvání: 1 s - CanDoItAll.Tests.Unit.dll (net10.0)
+Exit Code: 0
+Completed: 2026-06-29T06:46:24.7089602-04:00

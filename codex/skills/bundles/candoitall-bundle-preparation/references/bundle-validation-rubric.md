@@ -11,7 +11,9 @@ Confirm that:
 - each subbundle has observable acceptance criteria
 - each dependent subbundle has a clear prerequisite and progression gate
 - UI-heavy work defines screenshot or browser validation questions
+- CanDoItAll application UI targets a named large-screen desktop viewport; only reusable basic BaseLib components require small, medium, and large coverage by default
 - proof expectations are specific enough to fail
+- proof tiers are proportional to risk and are not silently downgraded
 
 ## Senior C# Blazor Architect Review
 
@@ -45,3 +47,4 @@ Do not accept the bundle as implementation-ready when:
 - a subbundle is too broad to complete in one coherent pass
 - the bundle relies on unstated repo assumptions
 - UI validation is reduced to “looks fine”
+- a compatible existing bundle is rejected only because its headings or folders differ from the canonical scaffold

@@ -1,0 +1,26 @@
+Command: manual/equivalent 5032 validation note
+Exit code: 0
+SB12 manual/equivalent incident validation note
+Date: 2026-07-08
+
+Live 5032 decision:
+- The live blocked 5032 instance was intentionally not mutated during bundle closure.
+- Touching the live blocked process would mix validation with production-state mutation and could destroy the original blocked evidence.
+
+Equivalent local reproduction used:
+- ProcessRuntimeIntegrationAdapterTests.Completion_gate_evaluator_reports_missing_required_script_receipt_and_failed_solution_readback
+- ProcessRuntimeDispatchApplicationServiceTests.ExecuteReady_auto_reworks_safe_adapter_contract_violation_before_manager_review
+- ProcessRuntimeDispatchApplicationServiceTests.ExecuteReady_auto_rework_appends_diagnostic_specific_packet
+- ProcessRuntimeDispatchApplicationServiceTests.ExecuteReady_auto_reworks_adapter_manager_result_once_before_same_fingerprint_block
+- ProcessStepRecoveryInstructionBuilderTests.RecoveryInstructionBuilder_budget_exhausted_packet_includes_attempted_repair_plan
+
+Observed proof:
+- `04-equivalent-incident-regression.txt` passed 5 tests with 0 failures.
+- The covered path models the 5032 failure class: deterministic .NET setup completion without required helper receipt/readback must not be accepted as a valid completed step.
+- First safe/idempotent failure routes to current-step rework.
+- Repeated identical failure fingerprint escalates only after the retry budget is exhausted.
+- The exhausted packet includes root-cause diagnostics and attempted repair evidence.
+
+Conclusion:
+- SB12 satisfies the manual/equivalent validation requirement without altering live 5032 state.
+

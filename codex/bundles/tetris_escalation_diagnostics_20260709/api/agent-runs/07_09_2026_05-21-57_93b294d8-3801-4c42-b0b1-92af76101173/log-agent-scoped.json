@@ -1,0 +1,252 @@
+[
+  {
+    "id": "e1704aad-f56c-47f6-82e4-456faf59d232",
+    "agentId": "1e267ce2-bf18-ce52-9743-9b36b9314994",
+    "chatSessionId": null,
+    "createdAtUtc": "2026-07-09T05:23:03.0656022-04:00",
+    "state": 5,
+    "phase": "Completed",
+    "message": "Execution run response persisted.",
+    "executionRunId": "93b294d8-3801-4c42-b0b1-92af76101173"
+  },
+  {
+    "id": "7744ee72-d4d1-4c36-9836-638fbff40723",
+    "agentId": "1e267ce2-bf18-ce52-9743-9b36b9314994",
+    "chatSessionId": null,
+    "createdAtUtc": "2026-07-09T05:23:02.6921706-04:00",
+    "state": 4,
+    "phase": "Output validation",
+    "message": "Validated structured output contract 'process_step_outcome_result'. Raw output hash: 0b490beec55af71009efcb53885452d7b73ed4acdab2690c1f96aab44af81d3c.",
+    "executionRunId": "93b294d8-3801-4c42-b0b1-92af76101173"
+  },
+  {
+    "id": "73ef58a0-ee54-4562-96dc-c06b72dd9c87",
+    "agentId": "1e267ce2-bf18-ce52-9743-9b36b9314994",
+    "chatSessionId": null,
+    "createdAtUtc": "2026-07-09T05:23:02.5693987-04:00",
+    "state": 4,
+    "phase": "Finalizer validation",
+    "message": "Required finalizer tool 'submit_process_step_outcome' produced a valid 'process_step_outcome_result' result. Raw output hash: cad34030c7b5644b23d44ab1daaccc396c376330e39ae2c166ac46e6239fadb1.",
+    "executionRunId": "93b294d8-3801-4c42-b0b1-92af76101173"
+  },
+  {
+    "id": "3dc1a063-8307-4f34-b75c-bed3619e20af",
+    "agentId": "1e267ce2-bf18-ce52-9743-9b36b9314994",
+    "chatSessionId": null,
+    "createdAtUtc": "2026-07-09T05:23:02.4332055-04:00",
+    "state": 4,
+    "phase": "Session",
+    "message": "Skipped Microsoft Agent Framework session serialization for a governed process step with no pending approvals. Process state is persisted through the typed outcome and artifacts.",
+    "executionRunId": "93b294d8-3801-4c42-b0b1-92af76101173"
+  },
+  {
+    "id": "2741391e-28b6-4926-9a9c-7b1aaf3426c1",
+    "agentId": "1e267ce2-bf18-ce52-9743-9b36b9314994",
+    "chatSessionId": null,
+    "createdAtUtc": "2026-07-09T05:23:02.3107907-04:00",
+    "state": 4,
+    "phase": "Finalizer short-circuit",
+    "message": "Required finalizer tool produced a valid governed result. Persisting the typed result without waiting for redundant post-finalizer assistant prose.",
+    "executionRunId": "93b294d8-3801-4c42-b0b1-92af76101173"
+  },
+  {
+    "id": "703bfb97-ab80-4805-b11f-207ac114b6ae",
+    "agentId": "1e267ce2-bf18-ce52-9743-9b36b9314994",
+    "chatSessionId": null,
+    "createdAtUtc": "2026-07-09T05:23:02.1964472-04:00",
+    "state": 3,
+    "phase": "Tool",
+    "message": "Invoking tool 'submit_process_step_outcome' with result=\"{\"status\":\"Completed\",\"reason\":\"Reviewed the current-run architecture-review and implementation managed artifacts, wrote...#cad34030c7b5\".",
+    "executionRunId": "93b294d8-3801-4c42-b0b1-92af76101173"
+  },
+  {
+    "id": "780ac775-6617-47dd-b257-ed4d2f12b61a",
+    "agentId": "1e267ce2-bf18-ce52-9743-9b36b9314994",
+    "chatSessionId": null,
+    "createdAtUtc": "2026-07-09T05:22:59.251453-04:00",
+    "state": 3,
+    "phase": "Tool",
+    "message": "Invoking tool 'workspace_read_file' with path=\"artifacts/process-runs/c4888f4f-eabd-469f-80a6-3fccf6018a12/steps/peer-review.md\", maxCharacters=\"12000\".",
+    "executionRunId": "93b294d8-3801-4c42-b0b1-92af76101173"
+  },
+  {
+    "id": "d0ca270b-558f-4372-a3c0-8168ee55e05b",
+    "agentId": "1e267ce2-bf18-ce52-9743-9b36b9314994",
+    "chatSessionId": null,
+    "createdAtUtc": "2026-07-09T05:22:57.9409423-04:00",
+    "state": 3,
+    "phase": "Tool",
+    "message": "Invoking tool 'workspace_write_file' with path=\"artifacts/process-runs/c4888f4f-eabd-469f-80a6-3fccf6018a12/steps/peer-review.md\", overwrite=\"True\", content=\"# peer-review Process Step Outcome  Status: Completed  ## Review scope  Peer review of the implementation change set and...#890fb6f3e682\".",
+    "executionRunId": "93b294d8-3801-4c42-b0b1-92af76101173"
+  },
+  {
+    "id": "b74ce9e0-2f82-446d-9d32-0038b433a59e",
+    "agentId": "1e267ce2-bf18-ce52-9743-9b36b9314994",
+    "chatSessionId": null,
+    "createdAtUtc": "2026-07-09T05:22:52.8117263-04:00",
+    "state": 3,
+    "phase": "Tool",
+    "message": "Invoking tool 'workspace_read_file' with path=\"artifacts/process-runs/c4888f4f-eabd-469f-80a6-3fccf6018a12/steps/implementation.md\", maxCharacters=\"12000\".",
+    "executionRunId": "93b294d8-3801-4c42-b0b1-92af76101173"
+  },
+  {
+    "id": "f4ae4974-9e56-4380-b993-38f0feb50c45",
+    "agentId": "1e267ce2-bf18-ce52-9743-9b36b9314994",
+    "chatSessionId": null,
+    "createdAtUtc": "2026-07-09T05:22:52.69158-04:00",
+    "state": 3,
+    "phase": "Tool",
+    "message": "Invoking tool 'workspace_read_file' with path=\"artifacts/process-runs/c4888f4f-eabd-469f-80a6-3fccf6018a12/steps/architecture-review.md\", maxCharacters=\"12000\".",
+    "executionRunId": "93b294d8-3801-4c42-b0b1-92af76101173"
+  },
+  {
+    "id": "335efcc6-ae53-4530-989b-e20f56191e55",
+    "agentId": "1e267ce2-bf18-ce52-9743-9b36b9314994",
+    "chatSessionId": null,
+    "createdAtUtc": "2026-07-09T05:22:50.9782525-04:00",
+    "state": 3,
+    "phase": "Tool",
+    "message": "Invoking tool 'workspace_stat_path' with path=\"artifacts/process-runs/c4888f4f-eabd-469f-80a6-3fccf6018a12/steps/implementation.md\".",
+    "executionRunId": "93b294d8-3801-4c42-b0b1-92af76101173"
+  },
+  {
+    "id": "6bd48801-a59e-4ac4-af03-afdc4df0b3dd",
+    "agentId": "1e267ce2-bf18-ce52-9743-9b36b9314994",
+    "chatSessionId": null,
+    "createdAtUtc": "2026-07-09T05:22:50.8844846-04:00",
+    "state": 3,
+    "phase": "Tool",
+    "message": "Invoking tool 'workspace_stat_path' with path=\"artifacts/process-runs/c4888f4f-eabd-469f-80a6-3fccf6018a12/steps/architecture-review.md\".",
+    "executionRunId": "93b294d8-3801-4c42-b0b1-92af76101173"
+  },
+  {
+    "id": "8aef51d4-8bec-49b6-9bdb-e1e94ffc0474",
+    "agentId": "1e267ce2-bf18-ce52-9743-9b36b9314994",
+    "chatSessionId": null,
+    "createdAtUtc": "2026-07-09T05:22:49.1862544-04:00",
+    "state": 3,
+    "phase": "Tool",
+    "message": "Invoking tool 'load_skill' with skillName=\"concrete-deliverable-delivery\".",
+    "executionRunId": "93b294d8-3801-4c42-b0b1-92af76101173"
+  },
+  {
+    "id": "4590bf57-98a3-4651-b976-607a160f4076",
+    "agentId": "1e267ce2-bf18-ce52-9743-9b36b9314994",
+    "chatSessionId": null,
+    "createdAtUtc": "2026-07-09T05:21:58.577713-04:00",
+    "state": 2,
+    "phase": "Run",
+    "message": "Executing the run through Microsoft Agent Framework streaming.",
+    "executionRunId": "93b294d8-3801-4c42-b0b1-92af76101173"
+  },
+  {
+    "id": "ec953d5d-e850-49fd-afa6-adadacc24335",
+    "agentId": "1e267ce2-bf18-ce52-9743-9b36b9314994",
+    "chatSessionId": null,
+    "createdAtUtc": "2026-07-09T05:21:58.4657946-04:00",
+    "state": 1,
+    "phase": "Session",
+    "message": "Creating an isolated Microsoft Agent Framework session for this governed process step.",
+    "executionRunId": "93b294d8-3801-4c42-b0b1-92af76101173"
+  },
+  {
+    "id": "ae47eca2-7beb-402a-af59-bc274c756541",
+    "agentId": "1e267ce2-bf18-ce52-9743-9b36b9314994",
+    "chatSessionId": null,
+    "createdAtUtc": "2026-07-09T05:21:58.367177-04:00",
+    "state": 1,
+    "phase": "Model parameters",
+    "message": "The runtime will omit temperature for model 'gpt-5.4-mini' and use the provider default.",
+    "executionRunId": "93b294d8-3801-4c42-b0b1-92af76101173"
+  },
+  {
+    "id": "903a2192-e36e-4527-b227-dcd4a56b5aec",
+    "agentId": "1e267ce2-bf18-ce52-9743-9b36b9314994",
+    "chatSessionId": null,
+    "createdAtUtc": "2026-07-09T05:21:58.2526054-04:00",
+    "state": 1,
+    "phase": "Finalizer policy",
+    "message": "Attached Required finalizer tool 'submit_process_step_outcome' for structured output contract 'process_step_outcome_result'.",
+    "executionRunId": "93b294d8-3801-4c42-b0b1-92af76101173"
+  },
+  {
+    "id": "770a40f1-34da-4c0f-a91d-a19f80b1b889",
+    "agentId": "1e267ce2-bf18-ce52-9743-9b36b9314994",
+    "chatSessionId": null,
+    "createdAtUtc": "2026-07-09T05:21:58.1498052-04:00",
+    "state": 1,
+    "phase": "Compaction",
+    "message": "Skipped Microsoft Agent Framework compaction for governed process automation even though the agent requested compaction. Process-step prompts carry required artifact paths and tool-evidence rules, so they must not be summarized before the run starts.",
+    "executionRunId": "93b294d8-3801-4c42-b0b1-92af76101173"
+  },
+  {
+    "id": "e6b1bd0e-5e50-4591-a406-1a6457067a5b",
+    "agentId": "1e267ce2-bf18-ce52-9743-9b36b9314994",
+    "chatSessionId": null,
+    "createdAtUtc": "2026-07-09T05:21:58.0490475-04:00",
+    "state": 1,
+    "phase": "Runtime tool providers",
+    "message": "Attached 13 tool(s) from 3 registered runtime tool provider(s). Providers: project-structure.runtime-tools (Project structure runtime tools, 13 tool(s), 40 pruned); memory.runtime-tools (Memory runtime tools, 0 tool(s)); image-generation.runtime-tools (Image generation runtime tools, 0 tool(s)).",
+    "executionRunId": "93b294d8-3801-4c42-b0b1-92af76101173"
+  },
+  {
+    "id": "574d32bb-824f-429b-ac1c-ba730107d8b1",
+    "agentId": "1e267ce2-bf18-ce52-9743-9b36b9314994",
+    "chatSessionId": null,
+    "createdAtUtc": "2026-07-09T05:21:57.9731483-04:00",
+    "state": 1,
+    "phase": "Workspace tools",
+    "message": "Attached configured workspace file and storage tools from the current agent settings.",
+    "executionRunId": "93b294d8-3801-4c42-b0b1-92af76101173"
+  },
+  {
+    "id": "eb21d14c-e200-47c5-8bbe-270e27de49b7",
+    "agentId": "1e267ce2-bf18-ce52-9743-9b36b9314994",
+    "chatSessionId": null,
+    "createdAtUtc": "2026-07-09T05:21:57.8901641-04:00",
+    "state": 1,
+    "phase": "Skills",
+    "message": "Loaded 0 file skill root(s), 13 inline skill(s), and 0 DI-provided skill(s) through AgentSkillsProvider.",
+    "executionRunId": "93b294d8-3801-4c42-b0b1-92af76101173"
+  },
+  {
+    "id": "a56bf3b7-f5fe-4799-bf30-d27933066dae",
+    "agentId": "1e267ce2-bf18-ce52-9743-9b36b9314994",
+    "chatSessionId": null,
+    "createdAtUtc": "2026-07-09T05:21:57.7979608-04:00",
+    "state": 1,
+    "phase": "Context contributors",
+    "message": "Attached 1 registered agent context contributor(s) in deterministic order.",
+    "executionRunId": "93b294d8-3801-4c42-b0b1-92af76101173"
+  },
+  {
+    "id": "5aaafae3-fe72-49cb-8b9a-2b71f02af399",
+    "agentId": "1e267ce2-bf18-ce52-9743-9b36b9314994",
+    "chatSessionId": null,
+    "createdAtUtc": "2026-07-09T05:21:57.6613706-04:00",
+    "state": 1,
+    "phase": "Approval policy",
+    "message": "Auto-approve is active for this run, so future tool approval gates will be suppressed.",
+    "executionRunId": "93b294d8-3801-4c42-b0b1-92af76101173"
+  },
+  {
+    "id": "6f403f68-42d5-46ea-b5e1-d6742404c0a5",
+    "agentId": "1e267ce2-bf18-ce52-9743-9b36b9314994",
+    "chatSessionId": null,
+    "createdAtUtc": "2026-07-09T05:21:57.5517186-04:00",
+    "state": 1,
+    "phase": "Framework",
+    "message": "Composing the Microsoft Agent Framework runtime for the selected provider and capabilities.",
+    "executionRunId": "93b294d8-3801-4c42-b0b1-92af76101173"
+  },
+  {
+    "id": "f4046dc1-2e82-46c7-9521-849a9299d7d4",
+    "agentId": "1e267ce2-bf18-ce52-9743-9b36b9314994",
+    "chatSessionId": null,
+    "createdAtUtc": "2026-07-09T05:21:57.4782104-04:00",
+    "state": 1,
+    "phase": "Planning",
+    "message": "Preparing provider OpenAI chat completions.",
+    "executionRunId": "93b294d8-3801-4c42-b0b1-92af76101173"
+  }
+]

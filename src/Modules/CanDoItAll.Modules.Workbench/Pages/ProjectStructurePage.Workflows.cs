@@ -51,6 +51,11 @@ public partial class ProjectStructurePage
             return false;
         }
 
+        if (ProjectStructureNodeHelpers.CanRenderAttachmentPreview(node))
+        {
+            return false;
+        }
+
         if (HasMermaidObjectSubtype(node.ObjectSubtype))
         {
             return true;
@@ -656,16 +661,16 @@ public partial class ProjectStructurePage
         };
     }
 
-    private void OpenMermaidViewer(ProjectStructureNode node)
+    private async Task OpenMermaidViewerAsync(ProjectStructureNode node)
     {
         if (!HasMermaidViewer(node))
         {
             mermaidPreviewNode = null;
-            OpenAttachmentPreview(node);
+            await OpenAttachmentPreviewAsync(node);
             return;
         }
 
-        previewNode = null;
+        await CloseAttachmentPreviewAsync();
         mermaidPreviewNode = node;
     }
 

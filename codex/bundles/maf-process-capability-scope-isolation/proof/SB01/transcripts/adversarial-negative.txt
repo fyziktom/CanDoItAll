@@ -1,0 +1,5 @@
+Command: rg -n "software delivery agent|UI state|software behavior|workspace screenshot images|screenshot files|same software UI|visible UI state|requested UI state|screenshot images" src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime Templates\Capabilities\tools.json
+Test: Forbidden common MAF image-domain wording scan
+Invariant: MAF-SB01-DOMAIN-NEUTRAL
+Output: no matches in common MAF runtime or workspace image tool templates
+ExitCode: 1
