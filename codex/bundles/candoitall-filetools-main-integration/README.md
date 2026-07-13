@@ -57,9 +57,9 @@ The dependency graph and stop/reopen rules are in `bundle://plan/01-phase-plan.m
 ## Validation Summary
 
 - Bundle preparation status: `Ready — prepared validator and manual readiness review passed 2026-07-12`
-- Execution status: `In progress — SB01-SB17 completed; SB18 final closure next`
+- Execution status: `Completed — SB01-SB18 passed on 2026-07-13`
 - Subbundle gate review: `SB05 unqualified Pass after repairing O(total-response) IPFS page one, shared cursor protection, FTP responsibility split, and rerunning scale/regression/architecture proof`
-- Final closure gate: `Not started — requires implementation proof from SB01-SB18`
+- Final closure gate: `Pass — governed proof, raw-note closure, final architecture review, and completed/manual validators passed`
 - Main CodeAnalytics baseline: `snap-20260713002602-7de53bec`, seven product projects, 1,029 types, 8,284 members, no project cycle; one pre-existing Infrastructure module cycle between Persistence and ControlPlane.
 - FileTools CodeAnalytics baseline: `snap-20260713013754-65c579d0`, 15 projects, 388 types, 2,849 members, no dependency cycle; SDK `10.0.301` is provisioned user-locally without changing the pin.
 - Components MCP baseline: library and SB10 pilot recommendation discovery passed again after direct server recovery at SB09; exact component, usage, and example discovery remains mandatory before UI editing.
@@ -71,6 +71,7 @@ The dependency graph and stop/reopen rules are in `bundle://plan/01-phase-plan.m
 - SB15 Resources closure: current project/filesystem/IPFS/FTP catalog truth, strict provider-neutral stable storage-object persistence, current actor reauthorization, post-save revision, idempotent duplicate promotion, current-authority reopen, hostile negatives, and managed two-viewport browser proof pass. Proof: `proof/SB15/manifest.md`.
 - SB16 FileInteraction migration closure: explicitly selected text/Markdown/Mermaid/raster/PDF renderers, direct zero-browser Project Structure authority, inert hostile SVG/unknown/oversize states, awaited revisioned save, two-session conflict/rebase, overwrite denial, legacy preview-route removal, strict Mermaid, and managed two-viewport proof pass. Proof: `proof/SB16/manifest.md`.
 - SB17 expansion cleanup closure: owner/reference/package inventories, dependency-cycle and duplicate-authority audits, affected tests, scale/performance checks, and cross-story browser proof pass. Project Structure known-file interaction lifetime moved from the page to a directly tested slot, including a repaired cancellation/disposal race. Proof: `proof/SB17/manifest.md`.
+- SB18 final closure: package payload/static assets, warning-clean Release graph, affected tests, security/performance/source audits, and clean two-viewport cross-story browser proof pass. A hidden PDF-object load deadlock was repaired in FileTools and the Projects hierarchy `TreeView` was reverified live and by recursive selection coverage. Proof: `proof/SB18/manifest.md`.
 
 ## Non-Goals
 

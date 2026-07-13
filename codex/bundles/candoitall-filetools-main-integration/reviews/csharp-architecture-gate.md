@@ -330,3 +330,24 @@ Testability and scale proof: 123 affected unit tests, including the real 100,000
 Component/UX proof: package selections stay explicit per host and known-file dialogs construct no FileBrowser. Managed desktop checks cover Projects, Project Structure, Resources, accepted Process evidence, and a final-source Project Structure open/close/reopen/save/reopen lifecycle with one interaction root, zero browser roots, zero unsigned preview elements, clean console, and no legacy preview request.
 
 Closure decision: unqualified Pass. SB18 is unlocked. Page-owned known-file lifetime, cancellation/disposal races, a new partial, reverse module edge, Infrastructure UI-package leakage, duplicate content/save/cache authority, browser construction for a known file, or cross-story desktop regression reopens the earliest owner and SB17.
+
+### SB18 Final Architecture Gate — 2026-07-13
+
+Status: `Pass`
+
+| Severity | Finding | Evidence | Required action |
+| --- | --- | --- | --- |
+| Blocking, repaired | Reusable runtime-module registration implicitly required an Infrastructure concrete service and failed isolated host compositions | failing Memory composition tests and registration-path review | Keep the placement decorator strict, but invoke it explicitly in the production and test composition roots after Infrastructure registration |
+| Blocking, repaired | The packaged PDF viewer hid its `<object>` while waiting for an event that a hidden object does not reliably raise | real Project Structure PDF remained 0x0 despite a valid `blob:` URL | Mark a successfully bound PDF object ready immediately; retain explicit error fallback and revoke/dispose semantics |
+| Revalidated | The user-required Projects hierarchy must remain the actual recursive project/subproject browser | final live `Portfolio tree`, recursive builder, BaseLib `TreeView`, and nested selection test | Preserve the existing tree; no replacement layer was introduced |
+| Tool fallback | Fresh CodeAnalytics and Components calls ended with `Transport closed` | recorded final retries | Use the checked 90-project/426-edge graph, zero-cycle result, source/package assertions, warning-clean Release graph, direct tests, and published/browser evidence |
+
+Dependency direction: Pass. The checked product graph contains 90 projects and 426 internal project edges with no project cycle. Integration.Abstractions remains dependency-free; Integration owns the Infrastructure adapter; Infrastructure has no FileTools/Components/Markdig dependency; UI modules own FileTools renderers; production and test composition roots explicitly apply the strict storage-placement revision after Infrastructure.
+
+Partial-class and ownership policy: Pass. No partial declaration was added. The SB18 changes are one explicit composition-root call per host and one FileTools renderer state correction with a direct regression test. No service locator, conditional fallback, duplicate authority, unsigned preview, or browser construction for the known-file path was introduced.
+
+Testability and performance: Pass. The repaired package passes all 441 FileTools tests, 17 final main interaction/tree component tests, two real Project Structure PostgreSQL integration tests, the warning-clean full Release graph, package/static-asset verification, and the zero-finding delta performance scan. Earlier final-source affected suites remain 123 unit, 61 component, and 11 real integration tests.
+
+Component/UX proof: Pass. Projects retains its recursive hierarchy tree at both desktop viewports. The real Project Structure PDF now renders a visible 715x470 `application/pdf` object backed by a `blob:` URL at both viewports, with one FileInteraction root, zero FileBrowser roots after handoff, no legacy preview request, no horizontal overflow, and no console/network error.
+
+Closure decision: unqualified Pass. The bundle closes. A hidden PDF surface, project-tree removal or loss of recursive selection, implicit reusable-module Infrastructure prerequisite, unsigned route use, boundary reversal, duplicate authority, or any contradicted governed invariant reopens its earliest owner and SB18.

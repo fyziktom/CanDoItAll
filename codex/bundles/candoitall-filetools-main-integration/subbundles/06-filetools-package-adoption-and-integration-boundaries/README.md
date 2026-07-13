@@ -2,7 +2,9 @@
 
 ## Status
 
-- `Completed — Behavioral proof passed; SB07 unlocked`
+- `Completed`
+
+Behavioral proof passed and SB07 was unlocked.
 
 ## Objective
 

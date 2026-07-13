@@ -2,7 +2,7 @@
 
 ## Status
 
-- `Ready`
+- `Completed`
 
 ## Objective
 
@@ -97,13 +97,13 @@
 
 ## Acceptance Checklist
 
-- [ ] Package/build/test/format/static assets Pass.
-- [ ] Dependencies/cycles/architecture/no-partial/no-bypass Pass.
-- [ ] Security/cache/revision/promotion/save/hostile-content red-team Pass.
-- [ ] Every shipped desktop flow/browser/screenshot/console/network Pass.
-- [ ] Large-source structural budgets, remote streaming/connection reuse, and direct interaction fast path Pass.
-- [ ] Raw notes and requirements close honestly.
-- [ ] Completed and manual validators Pass.
+- [x] Package/build/test/format/static assets Pass.
+- [x] Dependencies/cycles/architecture/no-partial/no-bypass Pass.
+- [x] Security/cache/revision/promotion/save/hostile-content red-team Pass.
+- [x] Every shipped desktop flow/browser/screenshot/console/network Pass.
+- [x] Large-source structural budgets, remote streaming/connection reuse, and direct interaction fast path Pass.
+- [x] Raw notes and requirements close honestly.
+- [x] Completed and manual validators Pass.
 
 ## Proof Required
 
@@ -123,6 +123,12 @@
 ## Reopen Triggers
 
 - Any contradiction reopens the earliest owning subbundle plus affected cleanup gate; SB18 remains In progress until rerun.
+
+## Closure
+
+- Governed final closure passed on 2026-07-13. The final audit repaired a composition-root registration regression and a hidden-PDF object deadlock, revalidated the accepted FileTools package set, and proved the final published candidate across both desktop viewports.
+- The Projects portfolio hierarchy remains the BaseLib `TreeView` with recursive parent/subproject construction, expansion, selection filtering, and cycle protection. Its nested selection regression and final live desktop rendering pass.
+- `bundle://proof/SB18/manifest.md` is the authoritative final evidence index. Any regression in package payload, authority, cache/revision behavior, project hierarchy browsing, PDF visibility, or shipped desktop flows reopens the owning subbundle and SB18.
 
 ## Suggested Agent Prompt
 

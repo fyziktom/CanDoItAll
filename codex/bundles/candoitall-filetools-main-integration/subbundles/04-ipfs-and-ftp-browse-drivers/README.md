@@ -2,7 +2,9 @@
 
 ## Status
 
-- `Completed — behavioral proof passed 2026-07-12`
+- `Completed`
+
+Behavioral proof passed 2026-07-12.
 
 ## Objective
 

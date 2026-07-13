@@ -1,0 +1,17 @@
+SB18 failing-first repairs, 2026-07-13
+
+1. Composition root
+- Failure: MemoryWorkerHostingTests and HostCompositionDependencyRemovalTests failed because AddCanDoItAllRuntimeModules implicitly invoked a decorator requiring the Infrastructure concrete StoragePlacementService.
+- Repair: remove the decorator call from reusable module registration; call AddCanDoItAllFileToolsStoragePlacementRevision explicitly in production Program and TestApplicationBootstrap after Infrastructure/runtime-module registration.
+- Passing proof: 13/13 composition regressions and warning-clean full Release graph.
+
+2. Project Structure PDF
+- Failure: real authorized PDF had a valid blob URL and application/pdf type but remained hidden at 0x0. The component waited for the PDF object's load event while display:none prevented reliable loading.
+- Repair: after successful object-URL binding, PDFs become ready immediately; images still wait for their decode/load event; explicit object error fallback and URL revocation remain.
+- Passing proof: focused 1/1, FileInteraction.Components 72/72, full FileTools 441/441, main interaction filters 17/17, real integration 2/2, and real two-viewport visible PDF browser proof.
+
+3. Projects hierarchy report
+- Report: tree browsing had to be restored.
+- Finding: current final source already contains the required BaseLib TreeView and recursive project/subproject builder; final live rendering also contains the Portfolio tree. No replacement or restoration edit was justified.
+- Passing proof: nested parent/child/grandchild selection regression plus both final desktop screenshots.
+

@@ -2,15 +2,15 @@
 
 ## Status
 
-- Execution state: `In progress`
+- Execution state: `Completed`
 - Preparation state: `Ready`
-- Next action: run SB17 expansion architecture cleanup gate.
+- Next action: none; reopen the earliest owning subbundle if a closure invariant regresses.
 
 ## Outcome Check
 
 - Requested outcome: Storage-first, large-source-safe integration of FileTools browsing and interaction, proven by one project-files pilot before broader stories, preserving direct Project Structure asset dialogs, and interrupted by mandatory architecture/performance cleanup gates.
-- Current closure decision: `SB01-SB16 Passed; SB17 is next`.
-- Evidence still missing: architecture/final closure proof assigned to SB17-SB18.
+- Current closure decision: `SB01-SB18 Passed; bundle closed`.
+- Evidence still missing: none for the required bundle scope.
 
 ## Commands
 
@@ -34,6 +34,7 @@
 - SB15 governed proof: `bundle://proof/SB15/manifest.md`; truthful current source catalog, strict stable connector schema, current promotion/reopen authorization, post-save revision, 22 unit tests, 3 component tests, one real PostgreSQL/filesystem integration test, zero-warning Web build, hostile negatives, idempotent duplicate, and managed two-viewport browser proof passed.
 - SB16 governed proof: `bundle://proof/SB16/manifest.md`; explicit selected renderers, direct zero-browser known-file authority, inert hostile/oversize types, strict Mermaid 0.1.3, revisioned save/conflict/rebase/overwrite denial, 51 main unit, 16 component, 2 PostgreSQL integration, 154 FileTools interaction, 3 Components hardening tests, zero-warning Web build, and managed two-viewport browser proof passed.
 - SB17 behavioral proof: `bundle://proof/SB17/manifest.md`; cross-story ownership/reference/package inventories, no-cycle/no-bypass/no-new-partial gates, a focused known-file interaction lifetime extraction plus cancellation/disposal race repair, 123 unit, 61 component, 11 PostgreSQL integration, warning-clean Web build, focused format/performance audit, and managed cross-story browser proof passed.
+- SB18 governed proof: `bundle://proof/SB18/manifest.md`; exact final package/payload/static-assets audit, 441 FileTools tests, 17 final interaction/tree component tests, 2 real Project Structure PostgreSQL integration tests, prior final-source 123/61/11 affected suites, warning-clean full Release graph, final security/performance/source gates, and clean managed cross-story browser proof passed. The final audit repaired explicit root composition and the PDF object visibility deadlock before rerunning proof.
 
 ## Browser Artifacts
 
@@ -43,6 +44,7 @@
 - SB14 accepted images are under `proof/SB14/browser/`: run details entry, managed root, and initial read-only interaction at `1900x1200`, plus refreshed new-file and replaced-content interaction at `1440x900`.
 - SB15 accepted images are under `proof/SB15/browser/`: real promotion success, governed registry, and current-authority reopen at `1900x1200`, plus bounded reopen/scroll geometry at `1440x900`.
 - SB16 accepted images are under `proof/SB16/browser/`: Markdown view/edit/save/close guard, hostile Markdown, strict Mermaid, governed PDF, and oversize inert states at `1900x1200`, plus edit/preview, conflict, and successful explicit rebase at `1440x900`.
+- SB18 final images are under `proof/SB18/screenshots/`: Projects hierarchy, Project Structure, Processes, Resources, project file browsing/interaction, and the repaired real PDF at both `1900x1200` and `1440x900`.
 
 ## Subbundle Gate Results
 
@@ -65,7 +67,7 @@
 | SB15 | Pass | Pass | Current source truth, stable persistence, hostile rollback, post-save revision, current reopen | Completed; SB16 unlocked | `proof/SB15/manifest.md`; CodeAnalytics/Components transports unavailable, checked graph/build/source substitute recorded |
 | SB16 | Pass | Pass | Direct authority, renderer matrix, hostile input, save/conflict/retry, route removal, strict Mermaid | Completed; SB17 unlocked | `proof/SB16/manifest.md`; CodeAnalytics/Components transports unavailable, checked graph/build/source substitute recorded |
 | SB17 | Pass | Pass | Cross-story owner/package/dependency, scale, interaction lifecycle, and browser regression checks pass | Completed; SB18 unlocked | `proof/SB17/manifest.md`; MCP transports unavailable, checked graph/build/source substitutes recorded |
-| SB18 | Pass after SB17 | Pending | Pending | Ready | Governed final closure |
+| SB18 | Pass after SB17 | Pass | Package/graph/security/scale/browser/raw-note validators passed | Completed; bundle closed | `proof/SB18/manifest.md`; final PDF and composition defects repaired before closure |
 
 ## Browser Validation Analytics
 
@@ -73,44 +75,44 @@
 | --- | --- | --- | --- | --- | --- |
 | SB01 | Non-UI/readiness | N/A | Components catalog/recommendation and shared watch health passed | N/A | Pass |
 | SB02-SB09 | Non-UI/readiness | N/A | Components direct recovery, healthy managed watch, persistent Playwright tab, host checks | N/A | Pass |
-| SB10 | `/projects` pilot | 1900x1200, 1440x900 | Real open/search/folder navigation, pointer/keyboard activation, browser replacement, stale/no-result/error, DOM/geometry, 0 console errors, Blazor 200s | `proof/SB10/browser/*` | Pass |
+| SB10 | Projects pilot | 1900x1200, 1440x900 | Real open/search/folder navigation, pointer/keyboard activation, browser replacement, stale/no-result/error, DOM/geometry, 0 console errors, Blazor 200s | `proof/SB10/browser/*` | Pass |
 | SB11 | Projects pilot review | 1900x1200, 1440x900 | Real source/search/open/no-result/action-overlay rerun; bounded DOM geometry; 0 console errors | accepted SB10 images, unchanged output | Pass |
-| SB12 | `/projects` | 1900x1200, 1440x900 | Shared filters/Files revisions, exact/no-result search, pointer/keyboard open, browser-independent interaction, Back, card dialog, error/retry component branch, overlay/scroll geometry, 0 primary-run console errors | `proof/SB12/browser/*` | Pass |
+| SB12 | Projects | 1900x1200, 1440x900 | Shared filters/Files revisions, exact/no-result search, pointer/keyboard open, browser-independent interaction, Back, card dialog, error/retry component branch, overlay/scroll geometry, 0 primary-run console errors | `proof/SB12/browser/*` | Pass |
 | SB13 | Project Structure | 1900x1200, 1440x900 | image/PDF direct dialog with zero browser calls; project/node collection window, search/open, overlay/scroll, hostile negative | `proof/SB13/browser/*` | Pass |
 | SB14 | Process live routes | 1900x1200, 1440x900 | real run details/files, current root, read-only open, live create/replace refresh, console/network | `proof/SB14/browser/*` | Pass |
 | SB15 | Resources | 1900x1200, 1440x900 | truthful source groups, real promotion, governed registry, duplicate idempotence, current reopen, geometry, console/network | `proof/SB15/browser/*` | Pass |
 | SB16 | Project Structure migrated interaction | 1900x1200, 1440x900 | direct Markdown/text/raster/PDF/Mermaid, inert SVG/unknown/oversize, close guard, save/conflict/rebase, revision/API byte truth, geometry, clean console/network | `proof/SB16/browser/*` | Pass |
 | SB17 | Cross-story regression | 1900x1200, 1440x900 | Projects, Project Structure, Processes accepted evidence, Resources, and final-source open/close/reopen/save lifecycle; clean console and governed network | `proof/SB17/browser/*`; accepted `proof/SB14/browser/*` | Pass |
-| SB18 | Final cross-story regression | 1900x1200, 1440x900 | final representative flows | `proof/SB18/browser/*` | Pending execution |
+| SB18 | Final cross-story regression | 1900x1200, 1440x900 | Projects hierarchy, Project Structure real PDF, Processes, Resources, package interaction hosts; exact DOM/geometry, 0 console warnings/errors, 0 failed/bad requests | `proof/SB18/screenshots/*` | Pass |
 
 ## Analytics Review
 
-- SB10-SB17 pass with exact DOM/state assertions, inspected original artifacts, overlay geometry, live mutation/persistence, and recorded console/network results. SB18 remains pending.
+- SB10-SB18 pass with exact DOM/state assertions, inspected original artifacts, overlay geometry, live mutation/persistence, and recorded console/network results.
 - No small/medium/tablet/mobile rows are required or allowed by current scope.
 
 ## Raw Note Closure
 
 | Raw note | Status | Proof |
 | --- | --- | --- |
-| N001 | Not started | Pending SB18 bundle-only/final audit |
-| N002 | Partially solved | SB02 contracts and SB03-SB04 native providers passed; mandatory cleanup remains SB05 |
-| N003 | Partially solved | Checkpoints A (SB05) and B (SB09) passed; later checkpoints remain |
-| N004 | Partially solved | SB02-SB05 provider foundation, SB08 bounded cache/revision, and SB09 backbone review passed; UI gates remain |
-| N005 | Partially solved | SB01 provenance, SB06 intake, and SB09 repack/hash/static-asset review passed; final package audit remains SB18 |
-| N006 | Partially solved | SB07 authority/effect/endpoint red-team passed; final cross-story audit remains SB18 |
+| N001 | Solved | Preparation made no product edits; execution occurred only after the explicit implementation request, with final scope inventory in SB18 |
+| N002 | Solved | SB02 contracts, SB03-SB04 native providers, and SB05 cleanup passed |
+| N003 | Solved | Mandatory architecture checkpoints A-E and the SB18 final gate passed |
+| N004 | Solved | Provider foundation, bounded cache/revision, backbone, UI adoption, and final cross-story validation passed |
+| N005 | Solved | Final accepted package hashes, payload identity, restore, publish, and static assets passed in SB18 |
+| N006 | Solved | Governed authority/effect/endpoint tests and the final forged unsigned 401/browser red-team passed |
 | N007 | Solved | SB07 authority plus SB10/SB16 real direct known-file view/edit/save/revision proof passed with zero browser construction |
 | N008 | Solved | SB08 governed literal Disabled, bounded memory cache, runtime isolation, and semantic revision proof passed |
 | N009 | Solved | SB10 real pilot and SB11 architecture/UX cleanup, extension, lifecycle, performance, and progression proof passed |
 | N010 | Solved | SB12 project portfolio/card, SB13 Project Structure, SB14 process-run, SB15 Resources, and SB16 interaction migration passed |
-| N011 | Solved | Projects, Project Structure, Processes, Resources, and migrated interaction hosts passed |
-| N012 | Partially solved | All implemented UI stories through SB16 pass at 1900x1200 and 1440x900; final cross-story regression remains SB18 |
-| N013 | Partially solved | SB05 Storage, SB09 backbone, and SB11 pilot cleanup gates passed; SB17 remains |
-| N014 | Partially solved | SB07 governed authorization, mutation, logging, source, and dependency proof passed; remaining gates continue |
-| N015 | Partially solved | Provider/cache bounds plus SB10 120-item rendered/search counters pass; later story scale gates remain |
-| N016 | Partially solved | SB13 direct image/PDF plus SB16 migrated interaction/hostile/overlay proof passed; final regression remains SB18 |
-| N017 | Solved | Direct known-file authority and real adoption now pass in Projects, Project Structure, Processes, Resources, and migrated interaction hosts |
-| N018 | Not started | Bundle is Git-visible now; final preparation-only/product-diff closure remains SB18 |
+| N011 | Solved | Projects, Project Structure, Processes, Resources, and migrated interaction hosts passed; see `bundle://proof/SB18/behavioral-proof.md` |
+| N012 | Solved | All shipped UI stories pass at 1900x1200 and 1440x900, including the final clean cross-story run; see `bundle://proof/SB18/transcripts/browser-proof.txt` |
+| N013 | Solved | Storage, backbone, pilot, expansion, and final architecture cleanup gates passed; see `bundle://reviews/csharp-architecture-gate.md` |
+| N014 | Solved | Authorization, mutation, logging, source, dependency, security, and final source audits passed; see `bundle://proof/SB18/transcripts/security-red-team.txt` and `bundle://proof/SB18/transcripts/source-architecture-audit.txt` |
+| N015 | Solved | 100,000-entry structural proof, cache/provider bounds, rendered/search counters, streaming reuse, and final performance scan passed |
+| N016 | Solved | Direct image/PDF behavior, zero-browser known-file path, hostile/overlay cases, and the repaired real PDF final proof passed |
+| N017 | Solved | Direct known-file authority and real adoption now pass in Projects, Project Structure, Processes, Resources, and migrated interaction hosts; see `bundle://proof/SB18/behavioral-proof.md` |
+| N018 | Solved | Bundle artifacts are Git-visible and final code/proof/status inventory is synchronized |
 
 ## Residual Risks
 
-- None accepted for required scope during preparation. Known entry conditions are explicit in SB01; execution must mark Blocked rather than convert missing SDK/tool/proof into residual risk.
+- None accepted for the required bundle scope. Fresh CodeAnalytics/Components MCP retries ended with `Transport closed`; checked project/package graphs, source assertions, direct tests, warning-clean builds, published assets, and managed browser evidence are recorded as the deterministic substitute. An unrestricted repository-wide test lane also exposed unrelated pre-existing failures outside this bundle; they are recorded in SB18 proof and are not represented as bundle passes.

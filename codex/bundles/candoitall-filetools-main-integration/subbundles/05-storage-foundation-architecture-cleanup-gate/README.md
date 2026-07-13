@@ -2,7 +2,9 @@
 
 ## Status
 
-- `Completed — unqualified architecture gate Pass 2026-07-12`
+- `Completed`
+
+The unqualified architecture gate passed 2026-07-12.
 
 ## Objective
 

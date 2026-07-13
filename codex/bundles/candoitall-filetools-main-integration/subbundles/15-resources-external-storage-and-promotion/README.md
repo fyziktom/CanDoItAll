@@ -2,7 +2,9 @@
 
 ## Status
 
-- `Completed — Pass (2026-07-13)`
+- `Completed`
+
+The subbundle passed 2026-07-13.
 
 ## Objective
 

@@ -2,7 +2,9 @@
 
 ## Status
 
-- `Completed — unqualified Checkpoint B Pass; SB10 unlocked`
+- `Completed`
+
+The unqualified Checkpoint B gate passed and SB10 was unlocked.
 
 ## Objective
 

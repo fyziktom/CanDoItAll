@@ -1,0 +1,21 @@
+SB18 current scoped .NET performance scan, 2026-07-13
+
+Final product delta after the last accepted architecture gate:
+- changed product files scanned: 1 (FileObjectView.razor).
+- async void: 0.
+- sync-over-async Result/Wait: 0.
+- Task.Run: 0.
+- per-call HttpClient: 0.
+- culture-sensitive parameterless ToLower/ToUpper: 0.
+- Substring allocation pattern: 0.
+- per-call JsonSerializerOptions: 0.
+- LINQ materialization additions: 0.
+
+Inherited final-source envelope:
+- SB17 standard scan passed for the affected integration/catalog/scope/interaction/cache owners.
+- real 100,000-entry filesystem structural test remains in the 123-test affected unit pass.
+- bounded catalog/scope/provider materialization is intentional and no optimization claim is made.
+- remote streaming uses pooled HttpClient and headers-first owned-stream behavior; direct known-file interaction constructs no FileBrowser.
+
+Result: Pass. The PDF repair is a constant-time state transition and adds no hot-path work or retained allocation.
+

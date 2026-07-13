@@ -2,7 +2,9 @@
 
 ## Status
 
-- `Completed — governed proof passed 2026-07-12`
+- `Completed`
+
+Governed proof passed 2026-07-12.
 
 ## Objective
 

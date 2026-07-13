@@ -37,3 +37,7 @@
 ## Closure Rule
 
 Execution updates this table only when ownership or proof changes materially. Final raw-note status belongs in `reviews/01-execution-report.md`; a row cannot close Solved from intent, file existence, test count, or screenshot alone.
+
+## Final Closure
+
+- R001-R040: `Pass` on 2026-07-13 through their owning subbundle proof plus the governed SB18 package, architecture, security, scale, browser, raw-note, and validator evidence indexed by `proof/SB18/manifest.md`.

@@ -1,0 +1,32 @@
+SB18 managed browser proof, 2026-07-13
+
+Runtime:
+- launch type: PublishedDll.
+- lane: PublishedCandidate.
+- logical app: filetools-sb18-final.
+- final session: app_ada4e0059ff544369f43f467871e3629.
+- health: Healthy; revision confirmed.
+
+Clean cross-route run at 1900x1200 and 1440x900:
+- /projects: Projects title; Portfolio tree and four live root treeitems; no horizontal overflow.
+- /projects/f28c07cd-982c-4d2d-bcf2-3e60a32eca72/structure: final ready QuotationPDFs Tests workbench; no horizontal overflow.
+- /processes: Processes title; Process definitions and Definition editor rendered; no horizontal overflow.
+- /resources: Resources title; registry/editor rendered; no horizontal overflow.
+- console warnings/errors: 0.
+- request failures: 0.
+- responses >= 400: 0.
+
+Final real PDF flow:
+- opened Project Structure Files, then double-clicked x-ray-machine-agent-quotation-list2018-e1d6363d36484d81b06dad6ea06d9af8.pdf.
+- final object type: application/pdf.
+- final data scheme: blob.
+- surface hidden: false.
+- final 1440x900 surface/object geometry: x 372.02, y 381, width 715.09, height 469.98.
+- FileInteraction roots: 1.
+- FileBrowser roots after handoff: 0.
+- legacy preview requests: 0.
+- horizontal overflow: false.
+- console warnings/errors: 0; request failures: 0; responses >= 400: 0.
+
+Screenshots were visually inspected. The PDF document is readable in the browser viewer at both viewports, the Projects hierarchy remains visible, and the shipped route layouts have no unexplained clipping or layering failure.
+

@@ -2,7 +2,9 @@
 
 ## Status
 
-- `Completed — Governed proof passed; SB08 unlocked`
+- `Completed`
+
+Governed proof passed and SB08 was unlocked.
 
 ## Objective
 
