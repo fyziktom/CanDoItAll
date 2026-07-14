@@ -77,6 +77,7 @@ public sealed class ProcessRunFilesDialogTests
         context.Services.AddSingleton<IFileToolsBrowseItemActivator, ThrowingBrowseItemActivator>();
         context.Services.AddSingleton<IFileToolsKnownFileSessionFactory, ThrowingKnownFileSessionFactory>();
         context.Services.AddSingleton<IFileToolsKnownFileSessionReleaser, NoopKnownFileSessionReleaser>();
+        context.Services.AddSingleton<IFileToolsBrowseItemActionService, UnavailableFileToolsBrowseItemActionService>();
         context.Services.AddSingleton<ProcessRunFilesCoordinator>();
     }
 

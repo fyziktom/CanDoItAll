@@ -286,12 +286,22 @@ public sealed record ProjectStructureQuickActionDialogState(
     string Title,
     string NodeLabel,
     string Copy,
+    string Notes,
     ProjectStructureQuickActionButton EditAction,
     ProjectStructureQuickActionButton PrimaryAction,
     IReadOnlyList<ProjectStructureQuickActionButton> SecondaryActions)
 {
     public IReadOnlyList<ProjectStructureQuickActionButton> Actions => [EditAction, PrimaryAction, .. SecondaryActions];
 }
+
+public sealed record ProjectStructureWebPreviewDialogState(
+    string NodeId,
+    string Title,
+    string SourceLabel,
+    string Url,
+    string Notes,
+    bool CanEmbed,
+    string EmbedUnavailableReason);
 
 public sealed record ProjectStructureQuickActionButton(
     ProjectStructureQuickActionExecutionKind ExecutionKind,

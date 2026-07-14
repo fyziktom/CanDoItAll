@@ -46,6 +46,7 @@ public sealed class ProjectStructureAttachmentPreviewDialogTests
             .Add(component => component.Interaction, interaction)
             .Add(component => component.Close, EventCallback.Empty)
             .Add(component => component.CanShowLocalOpen, _ => false)
+            .Add(component => component.CanOpenInPreferredApplication, _ => false)
             .Add(component => component.CanEditNode, _ => false));
 
         cut.WaitForAssertion(() =>
@@ -59,6 +60,56 @@ public sealed class ProjectStructureAttachmentPreviewDialogTests
             Assert.DoesNotContain("<video", cut.Markup, StringComparison.OrdinalIgnoreCase);
             Assert.DoesNotContain("<audio", cut.Markup, StringComparison.OrdinalIgnoreCase);
         });
+    }
+
+    [Fact]
+    public async Task Dialog_shows_node_notes_and_keeps_open_and_reveal_as_separate_actions()
+    {
+        using var context = new TestContext();
+        context.JSInterop.Mode = JSRuntimeMode.Loose;
+        RegisterComposition(context);
+        var node = CreateNode(
+            ProjectObjectType.File,
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            "forecast.xlsx",
+            "Reviewed by finance.");
+        var file = new FileReference("authorized", "forecast-handle");
+        var session = new FileToolsKnownFileSession(
+            file,
+            new StaticContentSource("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"),
+            FileToolsKnownFileIntent.ReadOnly);
+        var interaction = new ProjectStructureKnownFileInteraction(
+            new FileInteractionRequest(
+                file,
+                "forecast.xlsx",
+                FileInteractionMode.View,
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                3),
+            session,
+            new NoopSessionReleaser());
+        bool opened = false;
+        bool revealed = false;
+
+        var cut = context.RenderComponent<ProjectStructureAttachmentPreviewDialog>(parameters => parameters
+            .Add(component => component.Node, node)
+            .Add(component => component.Interaction, interaction)
+            .Add(component => component.Close, EventCallback.Empty)
+            .Add(component => component.OpenInPreferredApplication, (ProjectStructureNode _) => opened = true)
+            .Add(component => component.OpenLocally, (ProjectStructureNode _) => revealed = true)
+            .Add(component => component.CanShowLocalOpen, _ => true)
+            .Add(component => component.CanOpenInPreferredApplication, _ => true)
+            .Add(component => component.CanEditNode, _ => false));
+
+        Assert.Contains("Reviewed by finance.", cut.Markup, StringComparison.Ordinal);
+        await cut.FindAll("button")
+            .Single(button => button.TextContent.Trim() == "Open in preferred app")
+            .ClickAsync(new());
+        await cut.FindAll("button")
+            .Single(button => button.TextContent.Trim() == "Show in folder")
+            .ClickAsync(new());
+
+        Assert.True(opened);
+        Assert.True(revealed);
     }
 
     [Fact]
@@ -122,6 +173,7 @@ public sealed class ProjectStructureAttachmentPreviewDialogTests
             .Add(component => component.Interaction, interaction)
             .Add(component => component.Close, EventCallback.Factory.Create(this, () => closed = true))
             .Add(component => component.CanShowLocalOpen, _ => false)
+            .Add(component => component.CanOpenInPreferredApplication, _ => false)
             .Add(component => component.CanEditNode, _ => false));
 
         await cut.WaitForElement("[data-testid='interaction-mode-edit']").ClickAsync(new());
@@ -303,12 +355,14 @@ public sealed class ProjectStructureAttachmentPreviewDialogTests
             .Add(component => component.Interaction, interaction)
             .Add(component => component.Close, EventCallback.Empty)
             .Add(component => component.CanShowLocalOpen, _ => false)
+            .Add(component => component.CanOpenInPreferredApplication, _ => false)
             .Add(component => component.CanEditNode, _ => false));
 
     private static ProjectStructureNode CreateNode(
         ProjectObjectType objectType,
         string mediaType,
-        string fileName)
+        string fileName,
+        string notes = "")
         => new(
             Id: $"asset:{fileName}",
             ParentId: null,
@@ -317,7 +371,7 @@ public sealed class ProjectStructureAttachmentPreviewDialogTests
             Title: fileName,
             Subtitle: string.Empty,
             Status: "Ready",
-            Notes: string.Empty,
+            Notes: notes,
             Route: $"/managed-files/{fileName}",
             ArtifactKind: string.Empty,
             ArtifactId: null,

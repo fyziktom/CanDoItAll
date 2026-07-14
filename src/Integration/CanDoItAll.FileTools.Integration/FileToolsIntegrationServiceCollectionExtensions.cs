@@ -2,6 +2,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Caching.Hybrid;
 using CanDoItAll.Infrastructure.Storage;
+using CanDoItAll.FileTools.Desktop;
 
 namespace CanDoItAll.FileTools.Integration;
 
@@ -19,6 +20,8 @@ public static class FileToolsIntegrationServiceCollectionExtensions
                            options.MaximumContentBytes is >= 1024 and <= 256L * 1024 * 1024,
                 "File access handle settings are invalid.")
             .ValidateOnStart();
+        services.AddOptions<FileToolsDesktopLaunchOptions>()
+            .BindConfiguration(FileToolsDesktopLaunchOptions.SectionName);
         services.TryAddSingleton(TimeProvider.System);
         services.AddHybridCache(options =>
         {
@@ -44,7 +47,15 @@ public static class FileToolsIntegrationServiceCollectionExtensions
         services.TryAddScoped<IStorageFileAccessAuthorizationCoordinator, StorageFileAccessAuthorizationCoordinator>();
         services.TryAddScoped<IFileToolsStorageBindingProvider, CompositeFileToolsStorageBindingProvider>();
         services.AddScoped<IFileToolsBrowseSessionFactory, StorageFileToolsBrowseSessionFactory>();
+        services.AddScoped<StorageFileToolsBrowseItemResolver>();
+        services.AddScoped<StorageFileToolsKnownFileResolver>();
         services.AddScoped<IFileToolsBrowseItemActivator, StorageFileToolsBrowseItemActivator>();
+        services.TryAddSingleton<IDesktopFileLauncher, ConfiguredDesktopFileLauncher>();
+        services.AddScoped<FileToolsBrowseItemActionService>();
+        services.AddScoped<IFileToolsBrowseItemActionService>(serviceProvider =>
+            serviceProvider.GetRequiredService<FileToolsBrowseItemActionService>());
+        services.AddScoped<IFileToolsKnownFileActionService>(serviceProvider =>
+            serviceProvider.GetRequiredService<FileToolsBrowseItemActionService>());
         services.AddScoped<IFileToolsKnownFileActivator, StorageFileToolsKnownFileActivator>();
         services.AddScoped<AuthorizedFileContentSource>();
         services.AddScoped<AuthorizedFileSaveTarget>();

@@ -1,3 +1,4 @@
+using CanDoItAll.AppComponents.FileTools;
 using CanDoItAll.FileTools.FileBrowser;
 using CanDoItAll.FileTools.Integration;
 
@@ -39,7 +40,12 @@ internal sealed class ProjectFilesPilotCoordinator(
         FileBrowserSession browser = ProjectFileBrowserPolicy.Create(
             hostSession.Providers,
             hostSession.DefaultSort);
-        return new ProjectFilesPilotWorkspace(projectId, projectName, scope, browser);
+        return new ProjectFilesPilotWorkspace(
+            projectId,
+            projectName,
+            scope,
+            browser,
+            FileToolsHostActionCapabilityCapture.Capture(hostSession.Providers));
     }
 
     public async ValueTask<ProjectFilesPilotInteraction> ActivateAsync(

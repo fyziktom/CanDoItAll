@@ -173,6 +173,61 @@ public sealed class FileSystemStorageBrowseDriverTests(ITestOutputHelper output)
     }
 
     [Fact]
+    public void LocalOpenTrust_rejects_a_reparse_point_storage_root()
+    {
+        string workspaceRoot = CreateRoot();
+        string outsideRoot = CreateRoot();
+        try
+        {
+            string linkedStorageRoot = Path.Combine(workspaceRoot, "linked-storage");
+            Directory.CreateSymbolicLink(linkedStorageRoot, outsideRoot);
+            var pathPolicy = new FileSystemStoragePathPolicy(
+                new TestWorkspacePathResolver(workspaceRoot));
+            StorageCatalogRecord storage = CreateStorage(linkedStorageRoot);
+
+            Assert.False(pathPolicy.IsTrustedForLocalOpen(storage));
+            StorageBrowseException exception = Assert.Throws<StorageBrowseException>(() =>
+                pathPolicy.ResolveTrustedLocalOpenPath(storage, "report.xlsx"));
+            Assert.Equal(StorageBrowseErrorCode.AccessDenied, exception.Error.Code);
+        }
+        finally
+        {
+            DeleteRoot(workspaceRoot);
+            DeleteRoot(outsideRoot);
+        }
+    }
+
+    [Fact]
+    public void TrustedWorkspacePath_uses_platform_path_case_semantics()
+    {
+        string parentRoot = CreateRoot();
+        try
+        {
+            string workspaceRoot = Path.Combine(parentRoot, "workspace");
+            Directory.CreateDirectory(workspaceRoot);
+            string caseDifferentPath = Path.Combine(parentRoot, "Workspace", "report.xlsx");
+            var pathPolicy = new FileSystemStoragePathPolicy(
+                new TestWorkspacePathResolver(workspaceRoot));
+
+            if (OperatingSystem.IsWindows())
+            {
+                Assert.Equal(
+                    Path.GetFullPath(caseDifferentPath),
+                    pathPolicy.ResolveTrustedWorkspacePath(caseDifferentPath));
+                return;
+            }
+
+            StorageBrowseException exception = Assert.Throws<StorageBrowseException>(() =>
+                pathPolicy.ResolveTrustedWorkspacePath(caseDifferentPath));
+            Assert.Equal(StorageBrowseErrorCode.AccessDenied, exception.Error.Code);
+        }
+        finally
+        {
+            DeleteRoot(parentRoot);
+        }
+    }
+
+    [Fact]
     public async Task SB03_INV_CURSOR_DirectoryMutation_InvalidatesContinuation()
     {
         string root = CreateRoot();

@@ -1,0 +1,225 @@
+@using CanDoItAll.Components.BaseLib
+@using CanDoItAll.Components.Common
+@using CanDoItAll.Infrastructure.ControlPlane
+@using Microsoft.Extensions.Logging
+@inject IFileApplicationPreferenceService PreferenceService
+@inject NotificationService NotificationService
+@inject ILogger<FileApplicationSettingsPanel> Logger
+
+<Stack GapScale="LayoutGap.XXLarge" data-testid="file-application-settings">
+    <FormSection Title="Preferred file applications"
+                 Icon="open_in_new"
+                 Description="CanDoItAll uses the operating system association by default. Add an override only when one extension must always open in a specific locally installed application.">
+        <Alert AlertStyle="AlertStyle.Info" Variant="Variant.Outlined">
+            Overrides apply to this machine only. The application receives the selected file as one argument; command templates and shell fragments are not supported.
+        </Alert>
+
+        <EditForm Model="editor" OnValidSubmit="SaveAsync">
+            <Stack GapScale="LayoutGap.Large">
+                <Grid Gap="LayoutGap.Large" ColumnsMd="2">
+                    <div>
+                        <label class="cda-field-label">File extension</label>
+                        <InputText @bind-Value="editor.Extension"
+                                   class="cda-input"
+                                   placeholder=".xlsx"
+                                   data-testid="file-application-extension" />
+                    </div>
+                    <div>
+                        <label class="cda-field-label">Application executable</label>
+                        <InputText @bind-Value="editor.ExecutablePath"
+                                   class="cda-input"
+                                   placeholder="C:\Program Files\...\application.exe"
+                                   data-testid="file-application-executable" />
+                    </div>
+                </Grid>
+
+                <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
+                    <Button Text="Save override"
+                            Icon="save"
+                            Type="submit"
+                            Disabled="isBusy"
+                            data-testid="file-application-save" />
+                    <Button Text="New override"
+                            ButtonStyle="ButtonStyle.Light"
+                            Disabled="isBusy"
+                            Click="ResetEditorAsync" />
+                    @if (selectedExtension.HasValue)
+                    {
+                        <Button Text="Use system default"
+                                ButtonStyle="ButtonStyle.Danger"
+                                Variant="Variant.Outlined"
+                                Disabled="isBusy"
+                                Click="DeleteAsync"
+                                data-testid="file-application-delete" />
+                    }
+                </Cluster>
+            </Stack>
+        </EditForm>
+    </FormSection>
+
+    <FormSection Title="Configured overrides"
+                 Icon="apps"
+                 Description="Extensions not listed here continue to use the application registered by Windows, Linux, or macOS.">
+        @if (isLoading)
+        {
+            <LoadingState Eyebrow="File applications"
+                          Title="Loading machine preferences"
+                          Description="Reading the local control-plane settings." />
+        }
+        else if (!string.IsNullOrWhiteSpace(loadError))
+        {
+            <Alert AlertStyle="AlertStyle.Danger"
+                   Variant="Variant.Outlined"
+                   data-testid="file-application-load-error">
+                @loadError
+            </Alert>
+        }
+        else if (preferences.Count == 0)
+        {
+            <EmptyState Eyebrow="System associations"
+                        Title="All files use the system default"
+                        Description="For example, .xlsx opens in Excel or LibreOffice when that application owns the operating-system association." />
+        }
+        else
+        {
+            <Stack GapScale="LayoutGap.Medium">
+                @foreach (FileApplicationPreference preference in preferences)
+                {
+                    <SelectionListItem Title="@preference.Extension.Value"
+                                       Eyebrow="Application override"
+                                       Meta="@Path.GetFileName(preference.ExecutablePath)"
+                                       Summary="@preference.ExecutablePath"
+                                       IsSelected="@(selectedExtension == preference.Extension)"
+                                       OnSelect="@(() => EditAsync(preference))"
+                                       DataTestId="@($"file-application-{NormalizeTestId(preference.Extension.Value)}")" />
+                }
+            </Stack>
+        }
+    </FormSection>
+</Stack>
+
+@code {
+    private readonly FileApplicationPreferenceEditor editor = new();
+    private IReadOnlyList<FileApplicationPreference> preferences = [];
+    private FileApplicationExtension? selectedExtension;
+    private string? loadError;
+    private bool isLoading = true;
+    private bool isBusy;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await ReloadAsync();
+    }
+
+    private async Task SaveAsync()
+    {
+        if (isBusy)
+        {
+            return;
+        }
+
+        isBusy = true;
+        try
+        {
+            var extension = new FileApplicationExtension(editor.Extension);
+            var preference = new FileApplicationPreference(extension, editor.ExecutablePath);
+            await PreferenceService.SaveAsync(preference);
+            selectedExtension = extension;
+            await ReloadAsync();
+            NotificationService.Success(
+                "Preferred application saved",
+                $"{extension.Value} will open with {Path.GetFileName(preference.ExecutablePath)}.");
+        }
+        catch (Exception exception)
+        {
+            NotificationService.Error("Preferred application was not saved", exception.Message);
+        }
+        finally
+        {
+            isBusy = false;
+        }
+    }
+
+    private async Task DeleteAsync()
+    {
+        if (!selectedExtension.HasValue || isBusy)
+        {
+            return;
+        }
+
+        isBusy = true;
+        try
+        {
+            FileApplicationExtension extension = selectedExtension.Value;
+            await PreferenceService.DeleteAsync(extension);
+            ResetEditor();
+            await ReloadAsync();
+            NotificationService.Success(
+                "System default restored",
+                $"{extension.Value} now uses the operating-system association.");
+        }
+        catch (Exception exception)
+        {
+            NotificationService.Error("Preferred application was not removed", exception.Message);
+        }
+        finally
+        {
+            isBusy = false;
+        }
+    }
+
+    private Task EditAsync(FileApplicationPreference preference)
+    {
+        selectedExtension = preference.Extension;
+        editor.Extension = preference.Extension.Value;
+        editor.ExecutablePath = preference.ExecutablePath;
+        return Task.CompletedTask;
+    }
+
+    private Task ResetEditorAsync()
+    {
+        ResetEditor();
+        return Task.CompletedTask;
+    }
+
+    private void ResetEditor()
+    {
+        selectedExtension = null;
+        editor.Extension = string.Empty;
+        editor.ExecutablePath = string.Empty;
+    }
+
+    private async Task ReloadAsync()
+    {
+        isLoading = true;
+        loadError = null;
+        try
+        {
+            preferences = await PreferenceService.ListAsync();
+        }
+        catch (Exception exception)
+        {
+            preferences = [];
+            Logger.LogWarning(
+                "Preferred file application settings could not be loaded. FailureType={FailureType}.",
+                exception.GetType().Name);
+            loadError = exception is InvalidOperationException
+                ? exception.Message
+                : "The machine-local preferred application settings could not be read. Check the control-plane file permissions and try again.";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private static string NormalizeTestId(string extension)
+        => extension.TrimStart('.').Replace('.', '-');
+
+    private sealed class FileApplicationPreferenceEditor
+    {
+        public string Extension { get; set; } = string.Empty;
+
+        public string ExecutablePath { get; set; } = string.Empty;
+    }
+}

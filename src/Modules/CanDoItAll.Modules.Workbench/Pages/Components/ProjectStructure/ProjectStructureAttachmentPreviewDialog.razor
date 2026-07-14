@@ -21,10 +21,16 @@
                     Disabled="HasGuardedWork"
                     Click="@(() => EditNode.InvokeAsync(Node))" />
         }
+        @if (CanOpenInPreferredApplication(Node))
+        {
+            <Button Text="Open in preferred app"
+                    ButtonStyle="ButtonStyle.Primary"
+                    Click="@(() => OpenInPreferredApplication.InvokeAsync(Node))" />
+        }
         @if (CanShowLocalOpen(Node))
         {
-            <Button Text="Open in File Explorer"
-                    ButtonStyle="ButtonStyle.Primary"
+            <Button Text="Show in folder"
+                    ButtonStyle="ButtonStyle.Info"
                     Click="@(() => OpenLocally.InvokeAsync(Node))" />
         }
         <Button Text="Close"
@@ -51,6 +57,18 @@
                        data-testid="project-structure-file-interaction-policy">
                     @Interaction.HostNotice
                 </Alert>
+
+                @if (!string.IsNullOrWhiteSpace(Node.Notes))
+                {
+                    <PanelCard Soft="true" data-testid="project-structure-file-interaction-notes">
+                        <Stack GapScale="LayoutGap.Tiny">
+                            <TextBlock TextStyle="TextStyle.Eyebrow" Value="Notes" />
+                            <TextBlock TextStyle="TextStyle.Note"
+                                       Value="@Node.Notes"
+                                       Class="whitespace-pre-wrap break-words" />
+                        </Stack>
+                    </PanelCard>
+                }
 
                 <SurfaceCard Class="project-structure-direct-file-interaction"
                              style="flex:1 1 0;min-height:0;overflow:hidden;width:100%;"
@@ -112,10 +130,16 @@
     public EventCallback<ProjectStructureNode> OpenLocally { get; set; }
 
     [Parameter]
+    public EventCallback<ProjectStructureNode> OpenInPreferredApplication { get; set; }
+
+    [Parameter]
     public EventCallback<ProjectStructureNode> EditNode { get; set; }
 
     [Parameter, EditorRequired]
     public Func<ProjectStructureNode, bool> CanShowLocalOpen { get; set; } = default!;
+
+    [Parameter, EditorRequired]
+    public Func<ProjectStructureNode, bool> CanOpenInPreferredApplication { get; set; } = default!;
 
     [Parameter, EditorRequired]
     public Func<ProjectStructureNode, bool> CanEditNode { get; set; } = default!;

@@ -8,6 +8,8 @@ internal sealed class StorageFileToolsBrowseSessionFactory(
     IFileToolsStorageBindingProvider bindingProvider,
     IStorageCatalogService storageCatalog,
     IStorageBrowseDriverRegistry driverRegistry,
+    IStorageDriverRegistry storageDriverRegistry,
+    FileSystemStoragePathPolicy pathPolicy,
     IStorageBrowseCacheStore cache,
     IFileCatalogRevisionReader revisions,
     IDatabaseRuntimeState runtimeState) : IFileToolsBrowseSessionFactory
@@ -70,7 +72,17 @@ internal sealed class StorageFileToolsBrowseSessionFactory(
                 cache,
                 revisions,
                 runtimeState);
-            var provider = new StorageFileBrowserProvider(scope, binding, storage, listingDriver, driver);
+            FileToolsBrowseSourceActionAvailability actionAvailability = ResolveActionAvailability(
+                storage,
+                storageDriverRegistry,
+                pathPolicy);
+            var provider = new StorageFileBrowserProvider(
+                scope,
+                binding,
+                storage,
+                listingDriver,
+                driver,
+                actionAvailability);
             if (!sourceIds.Add(provider.Descriptor.Id))
             {
                 throw new FileBrowserProviderException(new FileBrowserError(
@@ -97,5 +109,26 @@ internal sealed class StorageFileToolsBrowseSessionFactory(
                 sourceSetFingerprint,
                 sourceRevisions,
                 runtimeState.GetSnapshot()));
+    }
+
+    private static FileToolsBrowseSourceActionAvailability ResolveActionAvailability(
+        StorageCatalogRecord storage,
+        IStorageDriverRegistry storageDriverRegistry,
+        FileSystemStoragePathPolicy pathPolicy)
+    {
+        if (!storageDriverRegistry.TryResolve(storage.ProviderKind, out IStorageDriver storageDriver))
+        {
+            return default;
+        }
+
+        bool supportsLocalOpen =
+            storage.ProviderKind == StorageProviderKind.FileSystem &&
+            storage.CapabilityMask.HasFlag(StorageCapability.OpenLocally) &&
+            storageDriver.SupportedCapabilities.HasFlag(StorageCapability.OpenLocally) &&
+            pathPolicy.IsTrustedForLocalOpen(storage);
+        bool supportsDownload =
+            storage.CapabilityMask.HasFlag(StorageCapability.Download) &&
+            storageDriver.SupportedCapabilities.HasFlag(StorageCapability.Download);
+        return new FileToolsBrowseSourceActionAvailability(supportsLocalOpen, supportsDownload);
     }
 }

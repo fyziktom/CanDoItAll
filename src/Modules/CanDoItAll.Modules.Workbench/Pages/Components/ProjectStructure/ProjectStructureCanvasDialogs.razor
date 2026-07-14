@@ -575,28 +575,49 @@
                     Click="CloseQuickActionDialog" />
         </Actions>
         <Body>
-            <Grid Columns="2"
-                  Gap="LayoutGap.Medium"
-                  Class="project-structure-quick-action-grid">
-                @foreach (var action in quickActionDialog.Actions)
+            <Stack GapScale="LayoutGap.Medium">
+                @if (!string.IsNullOrWhiteSpace(quickActionDialog.Notes))
                 {
-                    <Button ButtonStyle="@ResolveButtonStyle(action.Tone)"
-                            Variant="Variant.Outlined"
-                            Class="project-structure-quick-action-card"
-                            data-testid="@ResolveQuickActionTestId(action)"
-                            Disabled="@action.IsDisabled"
-                            Click="@(() => ExecuteQuickAction.InvokeAsync(action))">
-                        <Stack GapScale="LayoutGap.Small"
-                               Class="items-center text-center">
-                            <Icon Name="@action.Icon" />
-                            <TextBlock TextStyle="TextStyle.Subtitle2" Value="@action.Label" />
-                            <TextBlock TextStyle="TextStyle.Note" Value="@action.Description" />
+                    <PanelCard Soft="true" data-testid="project-structure-quick-action-notes">
+                        <Stack GapScale="LayoutGap.Tiny">
+                            <TextBlock TextStyle="TextStyle.Eyebrow" Value="Notes" />
+                            <TextBlock TextStyle="TextStyle.Note"
+                                       Value="@quickActionDialog.Notes"
+                                       Class="whitespace-pre-wrap break-words" />
                         </Stack>
-                    </Button>
+                    </PanelCard>
                 }
-            </Grid>
+
+                <Grid Columns="2"
+                      Gap="LayoutGap.Medium"
+                      Class="project-structure-quick-action-grid">
+                    @foreach (var action in quickActionDialog.Actions)
+                    {
+                        <Button ButtonStyle="@ResolveButtonStyle(action.Tone)"
+                                Variant="Variant.Outlined"
+                                Class="project-structure-quick-action-card"
+                                data-testid="@ResolveQuickActionTestId(action)"
+                                Disabled="@action.IsDisabled"
+                                Click="@(() => ExecuteQuickAction.InvokeAsync(action))">
+                            <Stack GapScale="LayoutGap.Small"
+                                   Class="items-center text-center">
+                                <Icon Name="@action.Icon" />
+                                <TextBlock TextStyle="TextStyle.Subtitle2" Value="@action.Label" />
+                                <TextBlock TextStyle="TextStyle.Note" Value="@action.Description" />
+                            </Stack>
+                        </Button>
+                    }
+                </Grid>
+            </Stack>
         </Body>
     </ProjectStructureOverlayDialog>
+}
+
+@if (WebPreviewDialog is not null)
+{
+    <ProjectStructureWebPreviewDialog State="WebPreviewDialog"
+                                      Close="CloseWebPreviewDialog"
+                                      OpenInBrowser="OpenWebPreviewInBrowser" />
 }
 
 @if (RenderProcessStartDialog && ProcessStartDialog is not null)
@@ -961,8 +982,10 @@
                                              Interaction="PreviewInteraction"
                                              Close="CloseAttachmentPreview"
                                              OpenLocally="OpenAttachmentLocally"
+                                             OpenInPreferredApplication="OpenAttachmentInPreferredApplication"
                                              EditNode="EditPreviewNode"
                                              CanShowLocalOpen="CanShowLocalOpen"
+                                             CanOpenInPreferredApplication="CanOpenInPreferredApplication"
                                              CanEditNode="CanEditPreviewNode" />
 }
 
@@ -1118,6 +1141,15 @@
     public EventCallback<ProjectStructureQuickActionButton> ExecuteQuickAction { get; set; }
 
     [Parameter]
+    public ProjectStructureWebPreviewDialogState? WebPreviewDialog { get; set; }
+
+    [Parameter]
+    public EventCallback CloseWebPreviewDialog { get; set; }
+
+    [Parameter]
+    public EventCallback OpenWebPreviewInBrowser { get; set; }
+
+    [Parameter]
     public ProjectStructureNode? PreviewNode { get; set; }
 
     [Parameter]
@@ -1130,10 +1162,16 @@
     public EventCallback<ProjectStructureNode> OpenAttachmentLocally { get; set; }
 
     [Parameter]
+    public EventCallback<ProjectStructureNode> OpenAttachmentInPreferredApplication { get; set; }
+
+    [Parameter]
     public EventCallback<ProjectStructureNode> EditPreviewNode { get; set; }
 
     [Parameter, EditorRequired]
     public Func<ProjectStructureNode, bool> CanShowLocalOpen { get; set; } = default!;
+
+    [Parameter, EditorRequired]
+    public Func<ProjectStructureNode, bool> CanOpenInPreferredApplication { get; set; } = default!;
 
     [Parameter, EditorRequired]
     public Func<ProjectStructureNode, bool> CanEditPreviewNode { get; set; } = default!;

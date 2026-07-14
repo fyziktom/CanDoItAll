@@ -78,9 +78,9 @@ public sealed class ProjectStructureActionCatalogAdapter
             actions.Insert(1, new CanvasWorkbenchAction
             {
                 ActionId = "open-local",
-                Label = "Open in File Explorer",
+                Label = "Show in folder",
                 MenuLabel = "Explorer",
-                Description = "Open the trusted managed file or folder in the system File Explorer.",
+                Description = "Open the trusted file location in the system file browser.",
                 Icon = "folder_open",
                 Tone = "primary"
             });

@@ -11,6 +11,7 @@ public partial class ProjectStructurePage
     private IJSRuntime JsRuntime { get; set; } = default!;
 
     private ProjectStructureQuickActionDialogState? quickActionDialog;
+    private ProjectStructureWebPreviewDialogState? webPreviewDialog;
 
     private void OpenQuickActionDialog(ProjectStructureNode node)
         => quickActionDialog = BuildQuickActionDialog(node);
@@ -26,10 +27,31 @@ public partial class ProjectStructurePage
             node.Title,
             nodeLabel,
             $"Choose the next step for this {nodeLabel.ToLowerInvariant()} without leaving the canvas.",
+            node.Notes,
             BuildEditQuickAction(node),
             ResolvePrimaryQuickAction(node),
             ResolveSecondaryQuickActions(node));
     }
+
+    private void OpenWebPreviewDialog(ProjectStructureNode node, ProjectStructureWebLink link)
+    {
+        webPreviewDialog = new ProjectStructureWebPreviewDialogState(
+            node.Id,
+            node.Title,
+            link.SourceLabel,
+            link.Uri.ToString(),
+            node.Notes,
+            link.CanEmbed,
+            link.EmbedUnavailableReason);
+    }
+
+    private void CloseWebPreviewDialog()
+        => webPreviewDialog = null;
+
+    private Task OpenWebPreviewInBrowserAsync()
+        => webPreviewDialog is null
+            ? Task.CompletedTask
+            : OpenArtifactInNewTabAsync(webPreviewDialog.Url);
 
     private ProjectStructureQuickActionButton BuildEditQuickAction(ProjectStructureNode node)
         => CanEditNode(node)
@@ -83,8 +105,8 @@ public partial class ProjectStructurePage
         if (CanShowLocalOpen(node))
         {
             return BuildInspectorQuickAction(
-                "Open in File Explorer",
-                "Open the trusted managed file or folder in the system File Explorer.",
+                "Show in folder",
+                "Open the trusted file location in the system file browser.",
                 "folder_open",
                 "primary",
                 "open-local");

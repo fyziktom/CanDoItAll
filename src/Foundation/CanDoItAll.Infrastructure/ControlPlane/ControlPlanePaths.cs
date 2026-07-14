@@ -15,6 +15,8 @@ public interface IControlPlanePathResolver
 
     string ResolveActiveProfileStateFilePath();
 
+    string ResolveFileApplicationPreferencesFilePath();
+
     string ResolveDataProtectionKeysPath();
 }
 
@@ -71,6 +73,9 @@ public sealed class ControlPlanePathResolver(
     public string ResolveCatalogFilePath() => Path.Combine(ResolveDatabaseProfilesRootPath(), "catalog.json");
 
     public string ResolveActiveProfileStateFilePath() => Path.Combine(ResolveDatabaseProfilesRootPath(), "active-profile.json");
+
+    public string ResolveFileApplicationPreferencesFilePath()
+        => Path.Combine(ResolveRootPath(), "file-application-preferences.json");
 
     public string ResolveDataProtectionKeysPath()
     {

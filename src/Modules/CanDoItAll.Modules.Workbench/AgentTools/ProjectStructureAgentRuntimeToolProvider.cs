@@ -163,7 +163,7 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
                 AIFunctionFactory.Create(
                     (Guid projectId, ProjectStructureReadRequest? request = null, CancellationToken cancellationToken = default) => ProjectStructureReadAsync(agent, accessState, projectId, request, cancellationToken),
                     "project_structure_read",
-                    "Reads a filtered project structure with compact node payloads by default. Inspect node.actionCapabilities for runtime run actions (runtime:open/runtime:admin), local File Explorer actions (open-local), and IPFS new-tab actions (open-new-tab)."),
+                    "Reads a filtered project structure with compact node payloads by default. Inspect node.actionCapabilities for runtime run actions (runtime:open/runtime:admin), local folder actions (open-local), and IPFS new-tab actions (open-new-tab)."),
                 AIFunctionFactory.Create(
                     (CancellationToken cancellationToken = default) => ProjectStructureNodeCatalogAsync(agent, accessState, cancellationToken),
                     "project_structure_node_catalog",

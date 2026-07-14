@@ -3,6 +3,8 @@
 @inject IResourceFileSourceCatalog SourceCatalog
 @inject ResourceFileBrowseCoordinator BrowseCoordinator
 @inject ResourceStorageObjectInteractionService InteractionService
+@inject IFileToolsBrowseItemActionService ItemActionService
+@inject IJSRuntime JSRuntime
 @inject ILogger<ResourceFileBrowsePane> Logger
 
 <section class="resources-file-browse-pane" data-testid="resources-browse-pane">
@@ -128,8 +130,22 @@
                                     Click="CloseInteractionAsync" />
                             <StatusBadge Tone="info" Text="Governed reopen" />
                         </Cluster>
+                        @if (!string.IsNullOrWhiteSpace(actionError))
+                        {
+                            <Alert AlertStyle="AlertStyle.Danger" Variant="Variant.Outlined">
+                                @actionError
+                            </Alert>
+                        }
+                        @if (!string.IsNullOrWhiteSpace(actionFeedback))
+                        {
+                            <Alert AlertStyle="AlertStyle.Info" Variant="Variant.Outlined">
+                                @actionFeedback
+                            </Alert>
+                        }
                         <FileInteraction Request="interaction.Request"
                                          ContentSource="interaction.Session.ContentSource"
+                                         OpenExternallyRequested="OpenInteractionExternallyCallback"
+                                         OpenExternallyLabel="Open in preferred app"
                                          AllowModeSwitch="false"
                                          MaximumContentBytes="@(16 * 1024 * 1024)"
                                          AriaLabel="@($"Read-only storage object {interaction.Request.FileName}")" />
@@ -154,13 +170,31 @@
                                 </Split>
                             </Alert>
                         }
+                        @if (!string.IsNullOrWhiteSpace(actionError))
+                        {
+                            <Alert AlertStyle="AlertStyle.Danger"
+                                   Variant="Variant.Outlined"
+                                   data-testid="resources-file-action-error">
+                                @actionError
+                            </Alert>
+                        }
+                        @if (!string.IsNullOrWhiteSpace(actionFeedback))
+                        {
+                            <Alert AlertStyle="AlertStyle.Info"
+                                   Variant="Variant.Outlined"
+                                   data-testid="resources-file-action-feedback">
+                                @actionFeedback
+                            </Alert>
+                        }
                         <FileBrowser Session="workspace.Browser"
+                                     HostActionCatalog="hostActionCatalog"
                                      Class="w-full flex-1 min-h-0"
                                      AriaLabel="@($"Resources files from {workspace.Source.DisplayName}")"
                                      DisplayMode="FileBrowserDisplayMode.Standard"
                                      InitialViewMode="FileBrowserViewMode.List"
                                      SearchDebounceMilliseconds="280"
-                                     ItemInvoked="BeginPromotion" />
+                                     ItemInvoked="ActivateAsync"
+                                     ActionRequested="HandleActionRequestedAsync" />
                     </Stack>
                 }
                 else
@@ -182,15 +216,28 @@
     private ResourceFileSourceCatalogSnapshot? catalog;
     private ResourceFileBrowseWorkspace? workspace;
     private ResourceStorageObjectInteraction? interaction;
+    private IFileBrowserHostActionCatalog? hostActionCatalog;
+    private FileToolsHostActionRunner? actionRunner;
     private ResourceStorageObjectPromotionDialog? promotionDialog;
+    private ResourceFileSelection? pendingPromotionSelection;
+    private ResourceFileInteractionLaunchContext? interactionLaunchContext;
     private ResourceFileSourceKey? selectedSourceKey;
     private Guid? promotedResourceId;
     private string? catalogError;
     private string? sourceError;
     private string? promotionStatus;
+    private string? actionError;
+    private string? actionFeedback;
     private bool isLoadingCatalog;
     private bool isOpeningSource;
     private bool disposed;
+
+    private FileToolsHostActionRunner ActionRunner => actionRunner ??= new FileToolsHostActionRunner(JSRuntime);
+
+    private EventCallback<FileInteractionRequest> OpenInteractionExternallyCallback
+        => CanOpenInteractionExternally()
+            ? EventCallback.Factory.Create<FileInteractionRequest>(this, OpenInteractionExternallyAsync)
+            : default;
 
     [Parameter]
     public EventCallback<Guid> ResourcePromoted { get; set; }
@@ -245,12 +292,17 @@
     {
         isOpeningSource = true;
         sourceError = null;
+        actionError = null;
+        actionFeedback = null;
         selectedSourceKey = sourceKey;
         await DisposeInteractionAsync();
         await DisposeWorkspaceAsync();
         try
         {
             workspace = await BrowseCoordinator.OpenAsync(sourceKey, lifetime.Token);
+            hostActionCatalog = new DefaultFileToolsHostActionCatalog(
+                ResolveActionAvailability,
+                ItemActionService.IsLocalLaunchAvailable);
         }
         catch (OperationCanceledException) when (lifetime.IsCancellationRequested)
         {
@@ -273,7 +325,26 @@
     {
         promotionStatus = null;
         promotedResourceId = null;
+        pendingPromotionSelection = null;
+        interactionLaunchContext = null;
         return OpenSourceAsync(sourceKey);
+    }
+
+    private async Task ActivateAsync(FileBrowserItemInvokedEventArgs args)
+    {
+        if (workspace is null || args.Item.IsContainer)
+        {
+            return;
+        }
+
+        if (args.Kind == FileBrowserInvocationKind.PointerDoubleClick &&
+            SupportsLocalOpen(workspace, args.Item.Key.SourceId))
+        {
+            await ExecuteFileActionAsync(args.Item.Key, FileToolsHostAction.OpenInPreferredApplication);
+            return;
+        }
+
+        BeginPromotion(args);
     }
 
     private void BeginPromotion(FileBrowserItemInvokedEventArgs args)
@@ -283,12 +354,94 @@
             return;
         }
 
+        pendingPromotionSelection = new ResourceFileSelection(
+            workspace.Source.Key,
+            workspace.Source.Scope,
+            args.Item.Key);
         promotionDialog?.Open(
             workspace.Source.Key.Value,
             workspace.Source.DisplayName,
             workspace.Source.Key.TryGetProjectId(out Guid sourceProjectId) ? sourceProjectId : null,
             args.Item,
             (catalog?.Projects ?? []).ToDictionary(project => project.Id, project => project.Name));
+    }
+
+    private async Task HandleActionRequestedAsync(FileBrowserItemActionEventArgs args)
+    {
+        if (workspace is null || args.Origin != FileBrowserActionOrigin.Host)
+        {
+            return;
+        }
+
+        switch (args.ActionId)
+        {
+            case FileBrowserActionIds.Open:
+                await ExecuteFileActionAsync(args.Item.Key, FileToolsHostAction.OpenInPreferredApplication);
+                break;
+            case FileToolsBrowseHostActionIds.OpenContainingFolder:
+                await ExecuteFileActionAsync(args.Item.Key, FileToolsHostAction.OpenContainingFolder);
+                break;
+            case FileBrowserActionIds.Download:
+                await ExecuteFileActionAsync(args.Item.Key, FileToolsHostAction.Download);
+                break;
+            default:
+                actionError = "The selected Resources file action is not supported by this host.";
+                break;
+        }
+    }
+
+    private async Task ExecuteFileActionAsync(
+        FileBrowserItemKey itemKey,
+        FileToolsHostAction action)
+    {
+        if (workspace is null)
+        {
+            return;
+        }
+
+        ResourceFileBrowseWorkspace currentWorkspace = workspace;
+
+        actionError = null;
+        actionFeedback = null;
+        try
+        {
+            FileToolsBrowseItemActionResult result = await ActionRunner.ExecuteAsync(
+                action,
+                (localAction, cancellationToken) => ItemActionService.LaunchAsync(
+                    currentWorkspace.Source.Scope,
+                    itemKey,
+                    localAction,
+                    cancellationToken),
+                cancellationToken => ItemActionService.AuthorizeDownloadAsync(
+                    currentWorkspace.Source.Scope,
+                    itemKey,
+                    cancellationToken),
+                lifetime.Token);
+            if (result.IsSuccess)
+            {
+                actionFeedback = result.Message;
+            }
+            else
+            {
+                actionError = result.Message;
+            }
+        }
+        catch (OperationCanceledException) when (lifetime.IsCancellationRequested)
+        {
+        }
+        catch (Exception exception)
+        {
+            Logger.LogWarning(
+                "Authorized Resources file action failed. SourceKey={SourceKey} Action={Action} FailureType={FailureType}.",
+                currentWorkspace.Source.Key.Value,
+                action,
+                exception.GetType().Name);
+            actionError = SafeMessage(
+                exception,
+                action == FileToolsHostAction.Download
+                    ? "Unable to download the selected Resources file."
+                    : "Unable to open the selected Resources file locally.");
+        }
     }
 
     private async Task HandlePromotionCompletedAsync(ResourceStorageObjectPromotionUiResult completed)
@@ -298,12 +451,24 @@
             throw new InvalidOperationException("The completed storage-object promotion returned an invalid source identity.");
         }
 
+        ResourceFileSelection? promotedSelection =
+            pendingPromotionSelection is { } pending && pending.SourceKey == sourceKey
+                ? pending
+                : null;
+        pendingPromotionSelection = null;
         promotedResourceId = completed.ResourceId;
         promotionStatus = completed.Created
             ? $"Storage object saved. Source revision is now {completed.ScopeRevision}."
             : "This storage object is already registered in the selected project.";
         await ResourcePromoted.InvokeAsync(completed.ResourceId);
         await OpenSourceAsync(sourceKey);
+        if (promotedSelection is not null && CanRetainInteractionLaunch(promotedSelection))
+        {
+            interactionLaunchContext = new ResourceFileInteractionLaunchContext(
+                completed.ResourceId,
+                promotedSelection.Scope,
+                promotedSelection.ItemKey);
+        }
     }
 
     private async Task OpenPromotedResourceAsync()
@@ -318,6 +483,10 @@
         try
         {
             interaction = await InteractionService.OpenAsync(promotedResourceId.Value, lifetime.Token);
+            if (interactionLaunchContext?.ResourceId != interaction.ResourceId)
+            {
+                interactionLaunchContext = null;
+            }
         }
         catch (Exception exception)
         {
@@ -338,6 +507,62 @@
         }
     }
 
+    private async Task OpenInteractionExternallyAsync(FileInteractionRequest request)
+    {
+        if (interaction is null ||
+            interactionLaunchContext is not { } launchContext ||
+            launchContext.ResourceId != interaction.ResourceId ||
+            workspace is null ||
+            request.File != interaction.Request.File ||
+            !CanRetainInteractionLaunch(new ResourceFileSelection(
+                workspace.Source.Key,
+                launchContext.Scope,
+                launchContext.ItemKey)))
+        {
+            return;
+        }
+
+        await ExecuteFileActionAsync(
+            launchContext.ItemKey,
+            FileToolsHostAction.OpenInPreferredApplication);
+    }
+
+    private bool CanOpenInteractionExternally()
+    {
+        if (interaction is null ||
+            interactionLaunchContext is not { } launchContext ||
+            launchContext.ResourceId != interaction.ResourceId ||
+            workspace is null)
+        {
+            return false;
+        }
+
+        return CanRetainInteractionLaunch(new ResourceFileSelection(
+            workspace.Source.Key,
+            launchContext.Scope,
+            launchContext.ItemKey));
+    }
+
+    private bool CanRetainInteractionLaunch(ResourceFileSelection selection)
+        => workspace is not null &&
+           workspace.Source.Key == selection.SourceKey &&
+           workspace.Source.Scope == selection.Scope &&
+           workspace.Browser.Snapshot.Sources.Any(source => source.Id == selection.ItemKey.SourceId) &&
+           SupportsLocalOpen(workspace, selection.ItemKey.SourceId);
+
+    private FileToolsBrowseSourceActionAvailability ResolveActionAvailability(FileBrowserSourceId sourceId)
+        => workspace is not null &&
+           workspace.Browser.Snapshot.Sources.Any(source => source.Id == sourceId)
+            ? workspace.ActionAvailability
+            : default;
+
+    private bool SupportsLocalOpen(
+        ResourceFileBrowseWorkspace currentWorkspace,
+        FileBrowserSourceId sourceId)
+        => ItemActionService.IsLocalLaunchAvailable &&
+           currentWorkspace.Browser.Snapshot.Sources.Any(source => source.Id == sourceId) &&
+           currentWorkspace.ActionAvailability.SupportsLocalOpen;
+
     private async ValueTask DisposeWorkspaceAsync()
     {
         if (workspace is null)
@@ -347,6 +572,9 @@
 
         await workspace.DisposeAsync();
         workspace = null;
+        hostActionCatalog = null;
+        interactionLaunchContext = null;
+        pendingPromotionSelection = null;
     }
 
     private async ValueTask DisposeInteractionAsync()
@@ -389,6 +617,7 @@
         => exception switch
         {
             FileBrowserProviderException providerException => providerException.Error.Message,
+            FileAccessDeniedException deniedException => deniedException.Message,
             ResourcePromotionException promotionException => promotionException.Message,
             _ => fallback
         };
@@ -404,6 +633,22 @@
         lifetime.Cancel();
         await DisposeInteractionAsync();
         await DisposeWorkspaceAsync();
+        if (actionRunner is not null)
+        {
+            await actionRunner.DisposeAsync();
+            actionRunner = null;
+        }
+
         lifetime.Dispose();
     }
+
+    private sealed record ResourceFileSelection(
+        ResourceFileSourceKey SourceKey,
+        FileToolsSemanticScope Scope,
+        FileBrowserItemKey ItemKey);
+
+    private sealed record ResourceFileInteractionLaunchContext(
+        Guid ResourceId,
+        FileToolsSemanticScope Scope,
+        FileBrowserItemKey ItemKey);
 }

@@ -1,3 +1,4 @@
+using CanDoItAll.AppComponents.FileTools;
 using CanDoItAll.FileTools.FileBrowser;
 using CanDoItAll.FileTools.Integration;
 using Microsoft.Extensions.Logging;
@@ -43,13 +44,16 @@ internal sealed class ResourceFileBrowseCoordinator(
             source.Key.Value,
             session.Revision.Value,
             FileBrowserStateRetentionMode.Disabled);
-        return new ResourceFileBrowseWorkspace(source, browser, session.Revision.Value);
+        FileToolsBrowseSourceActionAvailability actionAvailability =
+            FileToolsHostActionCapabilityCapture.Resolve(session.Providers[0]);
+        return new ResourceFileBrowseWorkspace(source, browser, actionAvailability, session.Revision.Value);
     }
 }
 
 internal sealed class ResourceFileBrowseWorkspace(
     ResourceFileSourceDescriptor source,
     FileBrowserSession browser,
+    FileToolsBrowseSourceActionAvailability actionAvailability,
     string revision) : IAsyncDisposable
 {
     private bool disposed;
@@ -57,6 +61,8 @@ internal sealed class ResourceFileBrowseWorkspace(
     public ResourceFileSourceDescriptor Source { get; } = source;
 
     public FileBrowserSession Browser { get; } = browser;
+
+    public FileToolsBrowseSourceActionAvailability ActionAvailability { get; } = actionAvailability;
 
     public string Revision { get; } = revision;
 

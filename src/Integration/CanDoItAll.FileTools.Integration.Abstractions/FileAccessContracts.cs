@@ -2,6 +2,25 @@ using CanDoItAll.FileTools.FileInteraction;
 
 namespace CanDoItAll.FileTools.Integration;
 
+public enum FileAccessFailureCode
+{
+    InvalidHandle,
+    Expired,
+    Revoked,
+    ContextMismatch,
+    OperationDenied,
+    SourceUnavailable,
+    Forbidden,
+    ContentTooLarge,
+    Unsupported
+}
+
+public sealed class FileAccessDeniedException(FileAccessFailureCode code, string message)
+    : InvalidOperationException(message)
+{
+    public FileAccessFailureCode Code { get; } = code;
+}
+
 [Flags]
 public enum FileAccessOperation
 {
@@ -9,7 +28,8 @@ public enum FileAccessOperation
     View = 1 << 0,
     Download = 1 << 1,
     Edit = 1 << 2,
-    Overwrite = 1 << 3
+    Overwrite = 1 << 3,
+    OpenLocally = 1 << 4
 }
 
 public readonly record struct FileAccessActorId
@@ -131,7 +151,8 @@ public sealed record FileAccessGrantRequest
             FileAccessOperation.View |
             FileAccessOperation.Download |
             FileAccessOperation.Edit |
-            FileAccessOperation.Overwrite;
+            FileAccessOperation.Overwrite |
+            FileAccessOperation.OpenLocally;
         if (storageId == Guid.Empty)
         {
             throw new ArgumentException("A storage binding is required.", nameof(storageId));

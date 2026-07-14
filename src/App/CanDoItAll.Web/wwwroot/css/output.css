@@ -431,6 +431,9 @@
   .min-h-\[12rem\] {
     min-height: 12rem;
   }
+  .min-h-\[24rem\] {
+    min-height: 24rem;
+  }
   .min-h-\[26rem\] {
     min-height: 26rem;
   }
@@ -707,6 +710,10 @@
   .border {
     border-style: var(--tw-border-style);
     border-width: 1px;
+  }
+  .border-0 {
+    border-style: var(--tw-border-style);
+    border-width: 0px;
   }
   .border-t {
     border-top-style: var(--tw-border-style);

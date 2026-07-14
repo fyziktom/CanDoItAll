@@ -55,7 +55,7 @@ public partial class ProjectStructurePage
 
         if (CanShowLocalOpen(node))
         {
-            actions.Add(new ProjectStructureInspectorAction("open-local", "Open in File Explorer", "folder_open", "primary"));
+            actions.Add(new ProjectStructureInspectorAction("open-local", "Show in folder", "folder_open", "primary"));
         }
 
         if (CanOpenIpfsNodeInNewTab(node))

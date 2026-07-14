@@ -1,3 +1,4 @@
+using CanDoItAll.AppComponents.FileTools;
 using CanDoItAll.FileTools.FileBrowser;
 using CanDoItAll.FileTools.Integration;
 using Microsoft.Extensions.Logging;
@@ -101,6 +102,7 @@ internal sealed class ProjectFilePortfolioCoordinator(
 
         var providers = new List<IFileBrowserProvider>(projection.Projects.Count);
         var scopes = new Dictionary<FileBrowserSourceId, FileToolsSemanticScope>();
+        var sourceActions = new Dictionary<FileBrowserSourceId, FileToolsBrowseSourceActionAvailability>();
         var revisionParts = new List<string>(projection.Projects.Count);
         FileBrowserSortDescriptor? defaultSort = null;
         foreach (ProjectSummary project in projection.Projects.OrderBy(project => project.Id))
@@ -143,6 +145,10 @@ internal sealed class ProjectFilePortfolioCoordinator(
                         "The filtered project portfolio produced a duplicate file source identifier.");
                 }
 
+                sourceActions.Add(
+                    provider.Descriptor.Id,
+                    FileToolsHostActionCapabilityCapture.Resolve(provider));
+
                 providers.Add(provider);
             }
         }
@@ -151,6 +157,7 @@ internal sealed class ProjectFilePortfolioCoordinator(
         return new ProjectFilePortfolioSourceSet(
             new FileBrowserSourceSet(revision.Value, providers),
             scopes,
+            sourceActions,
             revision,
             projection.Projects.Count,
             defaultSort ?? DefaultSort);

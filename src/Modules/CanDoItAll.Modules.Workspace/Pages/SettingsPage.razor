@@ -93,6 +93,10 @@
         {
             <StorageSettingsPanel />
         }
+        else if (string.Equals(settingsTab, FilesSettingsTabKey, StringComparison.Ordinal))
+        {
+            <FileApplicationSettingsPanel />
+        }
         else if (string.Equals(settingsTab, "secrets", StringComparison.Ordinal))
         {
             <ListDetailShell ListPaneWidth="24rem">

@@ -281,7 +281,7 @@ internal static partial class ProjectStructureCanvasCatalog
                 "Use Environment with subtype python, dotnet-runtime, dotnet-watch, or dotnet-release for language runtimes; .NET nodes need metadata.environment.projectPath and workingDirectory when the project path is relative, while Python nodes need projectPath, pythonProvider, and environmentName.",
                 "Do not store runnable commands as ProjectBlock delivery nodes. If a user should be able to double-click and run a command, use Script, Environment, or Infrastructure with the required runtime metadata.",
                 "Use Infrastructure with objectSubtype docker-mode for Docker runtime nodes; set metadata.infrastructure.runtimeCommand, runtimeArguments, workingDirectory, and folderPath so double-click can offer Run normally and Run as administrator.",
-                "Use Infrastructure with objectSubtype deployment-folder and metadata.infrastructure.folderPath for deployment folders that should open in File Explorer.",
+                "Use Infrastructure with objectSubtype deployment-folder and metadata.infrastructure.folderPath for deployment folders inside the configured workspace that should open in the system file browser.",
                 "When creating several task nodes, decide whether any task depends on another and create DependsOn links from dependent task to prerequisite task.",
                 "Every user-created node must have a parentNodeKey. Use project:{projectId} for top-level nodes or an existing node id for child nodes."
             ]);

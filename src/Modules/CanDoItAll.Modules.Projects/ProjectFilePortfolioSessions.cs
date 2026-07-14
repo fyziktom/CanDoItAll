@@ -25,6 +25,7 @@ public readonly record struct ProjectFilePortfolioRevision
 internal sealed record ProjectFilePortfolioSourceSet(
     FileBrowserSourceSet Sources,
     IReadOnlyDictionary<FileBrowserSourceId, FileToolsSemanticScope> SourceScopes,
+    IReadOnlyDictionary<FileBrowserSourceId, FileToolsBrowseSourceActionAvailability> SourceActions,
     ProjectFilePortfolioRevision Revision,
     int ProjectCount,
     FileBrowserSortDescriptor DefaultSort);
@@ -32,6 +33,7 @@ internal sealed record ProjectFilePortfolioSourceSet(
 public sealed class ProjectFilePortfolioWorkspace : IAsyncDisposable
 {
     private IReadOnlyDictionary<FileBrowserSourceId, FileToolsSemanticScope> sourceScopes;
+    private IReadOnlyDictionary<FileBrowserSourceId, FileToolsBrowseSourceActionAvailability> sourceActions;
     private bool disposed;
 
     internal ProjectFilePortfolioWorkspace(
@@ -41,6 +43,7 @@ public sealed class ProjectFilePortfolioWorkspace : IAsyncDisposable
         Browser = browser ?? throw new ArgumentNullException(nameof(browser));
         ArgumentNullException.ThrowIfNull(sources);
         sourceScopes = sources.SourceScopes;
+        sourceActions = sources.SourceActions;
         Revision = sources.Revision;
         ProjectCount = sources.ProjectCount;
     }
@@ -58,6 +61,9 @@ public sealed class ProjectFilePortfolioWorkspace : IAsyncDisposable
     internal bool TryGetScope(FileBrowserSourceId sourceId, out FileToolsSemanticScope? scope)
         => sourceScopes.TryGetValue(sourceId, out scope);
 
+    internal FileToolsBrowseSourceActionAvailability GetActionAvailability(FileBrowserSourceId sourceId)
+        => sourceActions.GetValueOrDefault(sourceId);
+
     internal async ValueTask ReplaceSourcesAsync(
         ProjectFilePortfolioSourceSet sources,
         CancellationToken cancellationToken)
@@ -70,6 +76,7 @@ public sealed class ProjectFilePortfolioWorkspace : IAsyncDisposable
 
         await Browser.UpdateSourcesAsync(sources.Sources, cancellationToken);
         sourceScopes = sources.SourceScopes;
+        sourceActions = sources.SourceActions;
         Revision = sources.Revision;
         ProjectCount = sources.ProjectCount;
     }
@@ -83,6 +90,7 @@ public sealed class ProjectFilePortfolioWorkspace : IAsyncDisposable
 
         disposed = true;
         sourceScopes = new Dictionary<FileBrowserSourceId, FileToolsSemanticScope>();
+        sourceActions = new Dictionary<FileBrowserSourceId, FileToolsBrowseSourceActionAvailability>();
         await Browser.DisposeAsync();
     }
 }

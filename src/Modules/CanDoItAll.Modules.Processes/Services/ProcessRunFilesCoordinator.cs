@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using System.Text;
+using CanDoItAll.AppComponents.FileTools;
 using CanDoItAll.FileTools.FileBrowser;
 using CanDoItAll.FileTools.FileInteraction;
 using CanDoItAll.FileTools.Integration;
@@ -34,6 +35,7 @@ internal sealed class ProcessRunFilesCoordinator(
         ProcessRunFileScopeSet scopeSet = await scopeProvider.ResolveAsync(runId, cancellationToken);
         var providers = new List<IFileBrowserProvider>(scopeSet.Scopes.Count);
         var sourceScopes = new Dictionary<FileBrowserSourceId, FileToolsSemanticScope>();
+        var sourceActions = new Dictionary<FileBrowserSourceId, FileToolsBrowseSourceActionAvailability>();
         var revisionParts = new List<string>(scopeSet.Scopes.Count);
         FileBrowserSortDescriptor? defaultSort = null;
         foreach (FileToolsSemanticScope scope in scopeSet.Scopes)
@@ -69,6 +71,10 @@ internal sealed class ProcessRunFilesCoordinator(
                         "Process-run browsing produced a duplicate source identifier.");
                 }
 
+                sourceActions.Add(
+                    provider.Descriptor.Id,
+                    FileToolsHostActionCapabilityCapture.Resolve(provider));
+
                 providers.Add(provider);
             }
         }
@@ -94,7 +100,7 @@ internal sealed class ProcessRunFilesCoordinator(
             revision[..12],
             FileToolsHostBrowseCacheMode.Disabled,
             FileBrowserStateRetentionMode.Disabled);
-        return new ProcessRunFileWorkspace(runId, browser, sourceScopes, revision);
+        return new ProcessRunFileWorkspace(runId, browser, sourceScopes, sourceActions, revision);
     }
 
     public async ValueTask<ProcessRunFileInteraction> ActivateAsync(

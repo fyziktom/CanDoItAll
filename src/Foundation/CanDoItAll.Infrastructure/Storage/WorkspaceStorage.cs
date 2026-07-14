@@ -147,9 +147,9 @@ public sealed class WorkspacePathAccessGuard(IWorkspacePathResolver resolver) : 
             ? string.Empty
             : managedFilesRelativeRoot + Path.DirectorySeparatorChar;
 
-        return normalizedPath.Equals(managedFilesRelativeRoot, StringComparison.OrdinalIgnoreCase) ||
+        return normalizedPath.Equals(managedFilesRelativeRoot, PathComparison) ||
                (!string.IsNullOrWhiteSpace(managedPrefix) &&
-                normalizedPath.StartsWith(managedPrefix, StringComparison.OrdinalIgnoreCase))
+                normalizedPath.StartsWith(managedPrefix, PathComparison))
             ? Path.GetFullPath(Path.Combine(workspaceRoot, normalizedPath))
             : Path.GetFullPath(Path.Combine(managedFilesRoot, normalizedPath));
     }
@@ -173,9 +173,13 @@ public sealed class WorkspacePathAccessGuard(IWorkspacePathResolver resolver) : 
     private static bool IsWithinRoot(string root, string candidate)
     {
         var normalizedRoot = root.TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
-        return candidate.StartsWith(normalizedRoot, StringComparison.OrdinalIgnoreCase) ||
-               string.Equals(candidate, root.TrimEnd(Path.DirectorySeparatorChar), StringComparison.OrdinalIgnoreCase);
+        return candidate.StartsWith(normalizedRoot, PathComparison) ||
+               string.Equals(candidate, root.TrimEnd(Path.DirectorySeparatorChar), PathComparison);
     }
+
+    private static StringComparison PathComparison => OperatingSystem.IsWindows()
+        ? StringComparison.OrdinalIgnoreCase
+        : StringComparison.Ordinal;
 }
 
 public sealed class LocalFileStore(

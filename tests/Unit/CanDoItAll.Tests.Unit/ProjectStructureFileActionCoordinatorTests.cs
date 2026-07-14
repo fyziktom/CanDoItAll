@@ -77,9 +77,28 @@ public sealed class ProjectStructureFileActionCoordinatorTests
             new ProjectStructureFileScopeResolver(new ThrowingDbContextFactory()),
             browseSessions,
             new ThrowingBrowseItemActivator(),
+            new ThrowingBrowseItemActionService(),
             new ThrowingKnownFileSessionFactory(),
             new NoopKnownFileSessionReleaser(),
             NullLogger<ProjectStructureFileActionCoordinator>.Instance);
+
+    private sealed class ThrowingBrowseItemActionService : IFileToolsBrowseItemActionService
+    {
+        public bool IsLocalLaunchAvailable => false;
+
+        public ValueTask<FileToolsBrowseItemActionResult> LaunchAsync(
+            FileToolsSemanticScope scope,
+            FileBrowserItemKey itemKey,
+            FileToolsLocalFileAction action,
+            CancellationToken cancellationToken = default)
+            => ValueTask.FromException<FileToolsBrowseItemActionResult>(new InvalidOperationException("Unexpected file launch."));
+
+        public ValueTask<IFileToolsDownloadLease> AuthorizeDownloadAsync(
+            FileToolsSemanticScope scope,
+            FileBrowserItemKey itemKey,
+            CancellationToken cancellationToken = default)
+            => ValueTask.FromException<IFileToolsDownloadLease>(new InvalidOperationException("Unexpected file download."));
+    }
 
     private sealed class RecordingProjectFileScopeProvider(ProjectFileScopeSet? result = null)
         : IProjectFileScopeProvider

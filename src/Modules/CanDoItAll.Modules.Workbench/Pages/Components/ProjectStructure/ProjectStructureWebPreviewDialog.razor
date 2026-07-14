@@ -1,0 +1,75 @@
+@namespace CanDoItAll.Modules.Workbench.Pages
+
+<ProjectStructureOverlayDialog CanvasScoped="true"
+                               CanMaximize="true"
+                               AriaLabel="@($"{State.Title} web preview")"
+                               Kicker="@State.SourceLabel"
+                               Title="@State.Title"
+                               Summary="@State.Url"
+                               BodyClass="project-structure-web-preview-dialog__body"
+                               DataTestId="project-structure-web-preview-dialog"
+                               Close="Close">
+    <Actions>
+        <Button Text="Open in browser"
+                Icon="open_in_new"
+                ButtonStyle="ButtonStyle.Primary"
+                Click="OpenInBrowser"
+                data-testid="project-structure-web-preview-open-browser" />
+        <Button Text="Close"
+                Variant="Variant.Text"
+                ButtonStyle="ButtonStyle.Base"
+                Click="Close" />
+    </Actions>
+    <Body>
+        <Stack GapScale="LayoutGap.Medium" Class="h-full min-h-0">
+            @if (!string.IsNullOrWhiteSpace(State.Notes))
+            {
+                <PanelCard Soft="true" data-testid="project-structure-web-preview-notes">
+                    <Stack GapScale="LayoutGap.Tiny">
+                        <TextBlock TextStyle="TextStyle.Eyebrow" Value="Notes" />
+                        <TextBlock TextStyle="TextStyle.Note"
+                                   Value="@State.Notes"
+                                   Class="whitespace-pre-wrap break-words" />
+                    </Stack>
+                </PanelCard>
+            }
+
+            @if (State.CanEmbed)
+            {
+                <SurfaceCard Class="min-h-0 flex-1 overflow-hidden"
+                             data-testid="project-structure-web-preview-frame">
+                    <iframe src="@State.Url"
+                            title="@($"Web preview for {State.Title}")"
+                            class="h-full min-h-[24rem] w-full border-0"
+                            sandbox="allow-forms allow-popups allow-scripts"
+                            referrerpolicy="no-referrer"
+                            loading="lazy"></iframe>
+                </SurfaceCard>
+            }
+            else
+            {
+                <EmptyState Eyebrow="External page"
+                            Title="This site cannot be embedded"
+                            Description="@State.EmbedUnavailableReason">
+                    <Actions>
+                        <Button Text="Open in browser"
+                                Icon="open_in_new"
+                                ButtonStyle="ButtonStyle.Primary"
+                                Click="OpenInBrowser" />
+                    </Actions>
+                </EmptyState>
+            }
+        </Stack>
+    </Body>
+</ProjectStructureOverlayDialog>
+
+@code {
+    [Parameter, EditorRequired]
+    public ProjectStructureWebPreviewDialogState State { get; set; } = default!;
+
+    [Parameter]
+    public EventCallback Close { get; set; }
+
+    [Parameter]
+    public EventCallback OpenInBrowser { get; set; }
+}

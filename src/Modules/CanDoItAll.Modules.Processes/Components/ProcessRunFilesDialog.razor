@@ -1,6 +1,8 @@
 @namespace CanDoItAll.Modules.Processes
 @implements IAsyncDisposable
 @inject ProcessRunFilesCoordinator Coordinator
+@inject IFileToolsBrowseItemActionService ItemActionService
+@inject IJSRuntime JSRuntime
 @inject ILogger<ProcessRunFilesDialog> Logger
 
 @if (IsOpen)
@@ -55,8 +57,22 @@
                                     Click="RefreshAsync" />
                             <StatusBadge Tone="info" Text="Read only" />
                         </Cluster>
+                        @if (!string.IsNullOrWhiteSpace(activationError))
+                        {
+                            <Alert AlertStyle="AlertStyle.Danger" Variant="Variant.Outlined">
+                                @activationError
+                            </Alert>
+                        }
+                        @if (!string.IsNullOrWhiteSpace(actionFeedback))
+                        {
+                            <Alert AlertStyle="AlertStyle.Info" Variant="Variant.Outlined">
+                                @actionFeedback
+                            </Alert>
+                        }
                         <FileInteraction Request="interaction.Request"
                                          ContentSource="interaction.Session.ContentSource"
+                                         OpenExternallyRequested="OpenInteractionExternallyCallback"
+                                         OpenExternallyLabel="Open in preferred app"
                                          AllowModeSwitch="false"
                                          MaximumContentBytes="@(16 * 1024 * 1024)"
                                          AriaLabel="@($"Read-only process-run file {interaction.Request.FileName}")" />
@@ -73,14 +89,25 @@
                         </Alert>
                     }
 
+                    @if (!string.IsNullOrWhiteSpace(actionFeedback))
+                    {
+                        <Alert AlertStyle="AlertStyle.Info"
+                               Variant="Variant.Outlined"
+                               data-testid="process-run-files-action-feedback">
+                            @actionFeedback
+                        </Alert>
+                    }
+
                     <FileBrowser Session="workspace.Browser"
+                                 HostActionCatalog="hostActionCatalog"
                                  Class="process-run-files-dialog__browser w-full flex-1 min-h-0"
                                  AriaLabel="@($"Managed files for process run {RunId:D}")"
                                  DisplayMode="FileBrowserDisplayMode.Compact"
                                  InitialViewMode="FileBrowserViewMode.List"
                                  SearchDebounceMilliseconds="280"
                                  SnapshotChanged="HandleSnapshotChanged"
-                                 ItemInvoked="ActivateAsync" />
+                                 ItemInvoked="ActivateAsync"
+                                 ActionRequested="HandleActionRequestedAsync" />
                 }
             </div>
         </ChildContent>
@@ -110,12 +137,25 @@
     private readonly CancellationTokenSource lifetime = new();
     private ProcessRunFileWorkspace? workspace;
     private ProcessRunFileInteraction? interaction;
+    private FileBrowserItemKey? interactionItemKey;
+    private IFileBrowserHostActionCatalog? hostActionCatalog;
+    private FileToolsHostActionRunner? actionRunner;
     private CancellationTokenSource? operation;
     private Guid? activeRunId;
     private string? openError;
     private string? activationError;
+    private string? actionFeedback;
     private bool isLoading;
     private bool disposed;
+
+    private FileToolsHostActionRunner ActionRunner => actionRunner ??= new FileToolsHostActionRunner(JSRuntime);
+
+    private EventCallback<FileInteractionRequest> OpenInteractionExternallyCallback
+        => workspace is not null &&
+           interactionItemKey is { } itemKey &&
+           SupportsLocalOpen(workspace, itemKey.SourceId)
+            ? EventCallback.Factory.Create<FileInteractionRequest>(this, OpenInteractionExternallyAsync)
+            : default;
 
     [Parameter]
     public bool IsOpen { get; set; }
@@ -167,6 +207,9 @@
             }
 
             workspace = opened;
+            hostActionCatalog = new DefaultFileToolsHostActionCatalog(
+                opened.GetActionAvailability,
+                ItemActionService.IsLocalLaunchAvailable);
         }
         catch (OperationCanceledException) when (currentOperation.IsCancellationRequested)
         {
@@ -192,7 +235,15 @@
             return;
         }
 
+        if (args.Kind == FileBrowserInvocationKind.PointerDoubleClick &&
+            SupportsLocalOpen(workspace, args.Item.Key.SourceId))
+        {
+            await ExecuteFileActionAsync(args.Item.Key, FileToolsHostAction.OpenInPreferredApplication);
+            return;
+        }
+
         activationError = null;
+        actionFeedback = null;
         CancellationTokenSource currentOperation = ReplaceOperation();
         ProcessRunFileInteraction? activated = null;
         try
@@ -203,9 +254,8 @@
                 return;
             }
 
-            await workspace.DisposeAsync();
-            workspace = null;
             interaction = activated;
+            interactionItemKey = args.Item.Key;
             activated = null;
         }
         catch (OperationCanceledException) when (currentOperation.IsCancellationRequested)
@@ -223,6 +273,128 @@
                 await activated.DisposeAsync();
             }
         }
+    }
+
+    private async Task HandleActionRequestedAsync(FileBrowserItemActionEventArgs args)
+    {
+        if (workspace is null || args.Origin != FileBrowserActionOrigin.Host)
+        {
+            return;
+        }
+
+        switch (args.ActionId)
+        {
+            case FileBrowserActionIds.Open:
+                await ExecuteFileActionAsync(args.Item.Key, FileToolsHostAction.OpenInPreferredApplication);
+                break;
+            case FileToolsBrowseHostActionIds.OpenContainingFolder:
+                await ExecuteFileActionAsync(args.Item.Key, FileToolsHostAction.OpenContainingFolder);
+                break;
+            case FileBrowserActionIds.Download:
+                await ExecuteFileActionAsync(args.Item.Key, FileToolsHostAction.Download);
+                break;
+            default:
+                activationError = "The selected process-run file action is not supported by this host.";
+                break;
+        }
+    }
+
+    private async Task OpenInteractionExternallyAsync(FileInteractionRequest request)
+    {
+        if (interaction is null ||
+            interactionItemKey is not { } itemKey ||
+            request.File != interaction.Request.File)
+        {
+            return;
+        }
+
+        await ExecuteFileActionAsync(itemKey, FileToolsHostAction.OpenInPreferredApplication);
+    }
+
+    private async Task ExecuteFileActionAsync(
+        FileBrowserItemKey itemKey,
+        FileToolsHostAction action)
+    {
+        if (workspace is null)
+        {
+            return;
+        }
+
+        ProcessRunFileWorkspace currentWorkspace = workspace;
+
+        activationError = null;
+        actionFeedback = null;
+        CancellationTokenSource currentOperation = ReplaceOperation();
+        try
+        {
+            FileToolsSemanticScope scope = ResolveScope(currentWorkspace, itemKey.SourceId);
+            FileToolsBrowseItemActionResult result = await ActionRunner.ExecuteAsync(
+                action,
+                (localAction, cancellationToken) => ItemActionService.LaunchAsync(
+                    scope,
+                    itemKey,
+                    localAction,
+                    cancellationToken),
+                cancellationToken => ItemActionService.AuthorizeDownloadAsync(
+                    scope,
+                    itemKey,
+                    cancellationToken),
+                currentOperation.Token);
+            if (!ReferenceEquals(operation, currentOperation) || currentOperation.IsCancellationRequested)
+            {
+                return;
+            }
+
+            if (result.IsSuccess)
+            {
+                actionFeedback = result.Message;
+            }
+            else
+            {
+                activationError = result.Message;
+            }
+        }
+        catch (OperationCanceledException) when (currentOperation.IsCancellationRequested)
+        {
+        }
+        catch (Exception exception)
+        {
+            Logger.LogWarning(
+                "Authorized process-run file action failed. RunId={RunId} Action={Action} FailureType={FailureType}.",
+                RunId,
+                action,
+                exception.GetType().Name);
+            activationError = SafeMessage(
+                exception,
+                action == FileToolsHostAction.Download
+                    ? "Unable to download the selected process-run file."
+                    : "Unable to open the selected process-run file locally.");
+        }
+    }
+
+    private bool SupportsLocalOpen(
+        ProcessRunFileWorkspace currentWorkspace,
+        FileBrowserSourceId sourceId)
+        => ItemActionService.IsLocalLaunchAvailable &&
+           currentWorkspace.GetActionAvailability(sourceId).SupportsLocalOpen;
+
+    private static FileToolsSemanticScope ResolveScope(
+        ProcessRunFileWorkspace currentWorkspace,
+        FileBrowserSourceId sourceId)
+    {
+        if (currentWorkspace.IsDisposed)
+        {
+            throw new ObjectDisposedException(nameof(ProcessRunFileWorkspace));
+        }
+
+        if (!currentWorkspace.TryGetScope(sourceId, out FileToolsSemanticScope? scope) || scope is null)
+        {
+            throw new FileBrowserProviderException(new FileBrowserError(
+                FileBrowserErrorCode.Conflict,
+                "The selected file source is no longer part of the process run."));
+        }
+
+        return scope;
     }
 
     private void HandleSnapshotChanged(FileBrowserSnapshot snapshot)
@@ -266,23 +438,31 @@
         activeRunId = null;
         openError = null;
         activationError = null;
+        actionFeedback = null;
         if (interaction is not null)
         {
             await interaction.DisposeAsync();
             interaction = null;
         }
 
+        interactionItemKey = null;
+
         if (workspace is not null)
         {
             await workspace.DisposeAsync();
             workspace = null;
         }
+
+        hostActionCatalog = null;
     }
 
     private static string SafeMessage(Exception exception, string fallback)
-        => exception is FileBrowserProviderException providerException
-            ? providerException.Error.Message
-            : fallback;
+        => exception switch
+        {
+            FileBrowserProviderException providerException => providerException.Error.Message,
+            FileAccessDeniedException deniedException => deniedException.Message,
+            _ => fallback
+        };
 
     public async ValueTask DisposeAsync()
     {
@@ -294,6 +474,12 @@
         disposed = true;
         lifetime.Cancel();
         await ResetAsync();
+        if (actionRunner is not null)
+        {
+            await actionRunner.DisposeAsync();
+            actionRunner = null;
+        }
+
         lifetime.Dispose();
     }
 }

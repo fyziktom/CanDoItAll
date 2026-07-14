@@ -7,12 +7,14 @@ namespace CanDoItAll.Modules.Processes;
 internal sealed class ProcessRunFileWorkspace : IAsyncDisposable
 {
     private IReadOnlyDictionary<FileBrowserSourceId, FileToolsSemanticScope> sourceScopes;
+    private IReadOnlyDictionary<FileBrowserSourceId, FileToolsBrowseSourceActionAvailability> sourceActions;
     private bool disposed;
 
     public ProcessRunFileWorkspace(
         Guid runId,
         IFileBrowserSession browser,
         IReadOnlyDictionary<FileBrowserSourceId, FileToolsSemanticScope> sourceScopes,
+        IReadOnlyDictionary<FileBrowserSourceId, FileToolsBrowseSourceActionAvailability> sourceActions,
         string revision)
     {
         if (runId == Guid.Empty)
@@ -23,6 +25,11 @@ internal sealed class ProcessRunFileWorkspace : IAsyncDisposable
         RunId = runId;
         Browser = browser ?? throw new ArgumentNullException(nameof(browser));
         this.sourceScopes = sourceScopes ?? throw new ArgumentNullException(nameof(sourceScopes));
+        this.sourceActions = sourceActions ?? throw new ArgumentNullException(nameof(sourceActions));
+        if (!sourceScopes.Keys.ToHashSet().SetEquals(sourceActions.Keys))
+        {
+            throw new ArgumentException("Every process-run file source must declare host action availability.", nameof(sourceActions));
+        }
         ArgumentException.ThrowIfNullOrWhiteSpace(revision);
         Revision = revision;
     }
@@ -40,6 +47,9 @@ internal sealed class ProcessRunFileWorkspace : IAsyncDisposable
     public bool TryGetScope(FileBrowserSourceId sourceId, out FileToolsSemanticScope? scope)
         => sourceScopes.TryGetValue(sourceId, out scope);
 
+    public FileToolsBrowseSourceActionAvailability GetActionAvailability(FileBrowserSourceId sourceId)
+        => sourceActions.GetValueOrDefault(sourceId);
+
     public async ValueTask DisposeAsync()
     {
         if (disposed)
@@ -49,6 +59,7 @@ internal sealed class ProcessRunFileWorkspace : IAsyncDisposable
 
         disposed = true;
         sourceScopes = new Dictionary<FileBrowserSourceId, FileToolsSemanticScope>();
+        sourceActions = new Dictionary<FileBrowserSourceId, FileToolsBrowseSourceActionAvailability>();
         await Browser.DisposeAsync();
     }
 }

@@ -8,6 +8,7 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="CanDoItAll.FileTools.Abstractions" Version="0.1.0" />
+    <PackageReference Include="CanDoItAll.FileTools.Desktop" Version="0.1.1" />
     <PackageReference Include="CanDoItAll.FileTools.FileInteraction.Core" Version="0.1.0" />
     <PackageReference Include="Microsoft.Extensions.Caching.Hybrid" Version="10.0.0" />
   </ItemGroup>

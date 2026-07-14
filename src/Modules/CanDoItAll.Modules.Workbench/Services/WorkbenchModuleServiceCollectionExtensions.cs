@@ -83,6 +83,8 @@ public static class WorkbenchModuleServiceCollectionExtensions
         services.TryAddEnumerable(
             ServiceDescriptor.Singleton<IFileToolsStorageBindingSource, ProjectStructureFileScopeResolver>());
         services.AddScoped<ProjectStructureKnownFileInteractionCoordinator>();
+        services.AddScoped<IProjectStructureCurrentNodeResolver, ProjectStructureCurrentNodeResolver>();
+        services.AddScoped<ProjectStructureLocalFileActionCoordinator>();
         services.AddScoped<ProjectStructureFileActionCoordinator>();
         services.AddScoped<IProjectWorkbenchSeedService>(serviceProvider => serviceProvider.GetRequiredService<ProjectWorkbenchService>());
         services.AddScoped<IDatabaseTransferHandler, ProjectsDatabaseTransferHandler>();

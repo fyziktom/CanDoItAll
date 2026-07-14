@@ -483,6 +483,7 @@ try {
         $env:ASPNETCORE_ENVIRONMENT = "Production"
         $env:DOTNET_ENVIRONMENT = "Production"
         $env:ASPNETCORE_URLS = $bindUrl
+        $env:FileTools__DesktopLaunch__Enabled = "__DESKTOP_LAUNCH_ENABLED__"
         $env:ControlPlane__RootPath = $controlPlaneRoot
         $env:Storage__WorkspaceRoot = $workspaceRoot
         $env:Storage__ManagerArtifactsFolder = $managerArtifactsRoot
@@ -526,7 +527,11 @@ catch {
 }
 '@
 
-    return $template.Replace("__BIND_HOST__", $BindHost).Replace("__PORT__", [string]$Port)
+    $desktopLaunchEnabled = $BindHost -in @("127.0.0.1", "localhost", "::1")
+    $content = $template.Replace("__BIND_HOST__", $BindHost)
+    $content = $content.Replace("__PORT__", [string]$Port)
+    $content = $content.Replace("__DESKTOP_LAUNCH_ENABLED__", $desktopLaunchEnabled.ToString().ToLowerInvariant())
+    return $content
 }
 
 if ([string]::IsNullOrWhiteSpace($RepoRoot)) {

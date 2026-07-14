@@ -4,7 +4,9 @@ using CanDoItAll.Infrastructure.Storage;
 
 namespace CanDoItAll.FileTools.Integration;
 
-public sealed class StorageFileBrowserProvider : IFileBrowserProvider
+public sealed class StorageFileBrowserProvider :
+    IFileBrowserProvider,
+    IFileToolsBrowseSourceActionCapabilities
 {
     private const string PartialWarningCode = "storage-page-partial";
     private readonly StorageCatalogRecord _storage;
@@ -13,13 +15,14 @@ public sealed class StorageFileBrowserProvider : IFileBrowserProvider
     private readonly FileToolsStorageRoot _root;
     private readonly StorageFileBrowserKeyCodec _keyCodec;
     private readonly StorageFileBrowserItemAuthorizer _itemAuthorizer;
+    private readonly FileToolsBrowseSourceActionAvailability _actionAvailability;
 
     public StorageFileBrowserProvider(
         FileToolsSemanticScope scope,
         FileToolsStorageBinding binding,
         StorageCatalogRecord storage,
         IStorageBrowseDriver driver)
-        : this(scope, binding, storage, driver, driver)
+        : this(scope, binding, storage, driver, driver, default)
     {
     }
 
@@ -28,7 +31,8 @@ public sealed class StorageFileBrowserProvider : IFileBrowserProvider
         FileToolsStorageBinding binding,
         StorageCatalogRecord storage,
         IStorageBrowseDriver listingDriver,
-        IStorageBrowseDriver authorityDriver)
+        IStorageBrowseDriver authorityDriver,
+        FileToolsBrowseSourceActionAvailability actionAvailability = default)
     {
         ArgumentNullException.ThrowIfNull(scope);
         ArgumentNullException.ThrowIfNull(binding);
@@ -46,6 +50,7 @@ public sealed class StorageFileBrowserProvider : IFileBrowserProvider
 
         _limits = binding.WorkLimits;
         _root = binding.Root;
+        _actionAvailability = actionAvailability;
         FileBrowserSourceId sourceId = CreateSourceId(scope, storage.Id, _root);
         _keyCodec = new StorageFileBrowserKeyCodec(sourceId);
         _itemAuthorizer = new StorageFileBrowserItemAuthorizer(
@@ -72,6 +77,12 @@ public sealed class StorageFileBrowserProvider : IFileBrowserProvider
     }
 
     public FileBrowserSourceDescriptor Descriptor { get; }
+
+    public FileToolsBrowseSourceActionAvailability ActionAvailability => _actionAvailability;
+
+    public bool SupportsLocalOpen => _actionAvailability.SupportsLocalOpen;
+
+    public bool SupportsDownload => _actionAvailability.SupportsDownload;
 
     public ValueTask<FileBrowserItem> GetRootAsync(
         FileBrowserMetadataRequest metadata,

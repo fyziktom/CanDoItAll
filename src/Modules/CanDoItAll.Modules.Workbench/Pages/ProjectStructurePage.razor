@@ -28,6 +28,7 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
 @inject IProjectStructureRuntimeLauncher RuntimeLauncher
 @inject ProjectStructureFileActionCoordinator FileActionCoordinator
 @inject ProjectStructureKnownFileInteractionCoordinator KnownFileInteractionCoordinator
+@inject ProjectStructureLocalFileActionCoordinator LocalFileActionCoordinator
 @inject WorkspaceService WorkspaceService
 @inject SecretService SecretService
 @inject ProviderExecutionService ProviderExecutionService
@@ -282,12 +283,17 @@ else
                                                            QuickActionDialog="@quickActionDialog"
                                                            CloseQuickActionDialog="CloseQuickActionDialog"
                                                            ExecuteQuickAction="ExecuteQuickActionAsync"
+                                                           WebPreviewDialog="@webPreviewDialog"
+                                                           CloseWebPreviewDialog="CloseWebPreviewDialog"
+                                                           OpenWebPreviewInBrowser="OpenWebPreviewInBrowserAsync"
                                                            PreviewNode="@previewNode"
                                                            PreviewInteraction="@PreviewInteraction"
                                                            CloseAttachmentPreview="CloseAttachmentPreviewAsync"
                                                            OpenAttachmentLocally="OpenAttachmentLocallyAsync"
+                                                           OpenAttachmentInPreferredApplication="OpenAttachmentInPreferredApplicationAsync"
                                                            EditPreviewNode="EditAttachmentPreviewNodeAsync"
                                                            CanShowLocalOpen="CanShowLocalOpen"
+                                                           CanOpenInPreferredApplication="CanOpenInPreferredApplication"
                                                            CanEditPreviewNode="CanEditNode" />
                         </ProjectStructureDeferredSurface>
                     </OverlayContent>
@@ -542,6 +548,7 @@ else
                                    ExecuteHrManagerMatch="ExecuteHrManagerMatchAsync"
                                    EditPreviewNode="EditAttachmentPreviewNodeAsync"
                                    CanShowLocalOpen="CanShowLocalOpen"
+                                   CanOpenInPreferredApplication="CanOpenInPreferredApplication"
                                    CanEditPreviewNode="CanEditNode" />
 </ProjectStructureDeferredSurface>
 
@@ -1318,6 +1325,15 @@ else
         {
             CloseQuickActionDialog();
             await OpenProjectStructureInNewTabAsync(node);
+            return;
+        }
+
+        if (ProjectStructureWebLinkResolver.TryResolve(node, out ProjectStructureWebLink? webLink) &&
+            webLink is not null)
+        {
+            CloseQuickActionDialog();
+            OpenWebPreviewDialog(node, webLink);
+            await InvokeAsync(StateHasChanged);
             return;
         }
 
@@ -2556,17 +2572,61 @@ else
     private bool CanShowLocalOpen(ProjectStructureNode? node)
         => LocalFileOpener.IsAvailable && LocalFileOpener.CanOpen(node);
 
+    private bool CanOpenInPreferredApplication(ProjectStructureNode? node)
+        => LocalFileOpener.IsAvailable && LocalFileOpener.CanOpenInPreferredApplication(node);
+
     private bool IsLocalOpenFeedbackVisible(ProjectStructureNode node)
         => string.Equals(localOpenFeedbackNodeId, node.Id, StringComparison.Ordinal) &&
             !string.IsNullOrWhiteSpace(localOpenFeedback);
 
     private async Task OpenAttachmentLocallyAsync(ProjectStructureNode node)
     {
-        var result = await LocalFileOpener.OpenAsync(node);
+        ProjectStructureLocalFileOpenResult result = await LaunchAttachmentLocalActionAsync(
+            node,
+            FileToolsLocalFileAction.OpenContainingFolder);
         localOpenFeedbackNodeId = node.Id;
         localOpenFeedback = result.Message;
         localOpenFeedbackTone = result.IsSuccess ? "mint" : "warn";
         await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task OpenAttachmentInPreferredApplicationAsync(ProjectStructureNode node)
+    {
+        ProjectStructureLocalFileOpenResult result = await LaunchAttachmentLocalActionAsync(
+            node,
+            FileToolsLocalFileAction.OpenInPreferredApplication);
+        localOpenFeedbackNodeId = node.Id;
+        localOpenFeedback = result.Message;
+        localOpenFeedbackTone = result.IsSuccess ? "mint" : "warn";
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task<ProjectStructureLocalFileOpenResult> LaunchAttachmentLocalActionAsync(
+        ProjectStructureNode requestedNode,
+        FileToolsLocalFileAction action)
+    {
+        try
+        {
+            return await LocalFileActionCoordinator.LaunchAsync(
+                ProjectId,
+                requestedNode.Id,
+                action);
+        }
+        catch (Exception exception)
+        {
+            Logger.LogWarning(
+                "Project Structure local file action was denied. NodeId={NodeId} Action={Action} FailureType={FailureType}.",
+                requestedNode.Id,
+                action,
+                exception.GetType().Name);
+            string message = exception switch
+            {
+                FileAccessDeniedException deniedException => deniedException.Message,
+                FileBrowserProviderException providerException => providerException.Error.Message,
+                _ => "The current file authority could not be established."
+            };
+            return new ProjectStructureLocalFileOpenResult(false, message);
+        }
     }
 
 

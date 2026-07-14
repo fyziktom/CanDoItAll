@@ -10,6 +10,13 @@ internal static class ProjectStructureNodeDetailFactory
     {
         List<ProjectStructureDetailSection> sections = [];
 
+        if (!string.IsNullOrWhiteSpace(node.Notes))
+        {
+            sections.Add(new ProjectStructureDetailSection(
+                "Notes",
+                [new ProjectStructureDetailItem("Note", node.Notes.Trim())]));
+        }
+
         var referenceItems = BuildReferenceItems(node);
         if (referenceItems.Count > 0)
         {

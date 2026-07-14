@@ -3,7 +3,7 @@ using CanDoItAll.FileTools.FileBrowser;
 namespace CanDoItAll.FileTools.Integration;
 
 internal sealed class StorageFileToolsBrowseItemActivator(
-    IFileToolsBrowseSessionFactory browseSessionFactory,
+    StorageFileToolsBrowseItemResolver itemResolver,
     IFileAccessContextProvider contextProvider,
     IStorageFileAccessAuthorizationCoordinator authorizationCoordinator) : IFileToolsBrowseItemActivator
 {
@@ -19,28 +19,10 @@ internal sealed class StorageFileToolsBrowseItemActivator(
             throw new ArgumentOutOfRangeException(nameof(intent));
         }
 
-        FileToolsBrowseSession currentSession = await browseSessionFactory.CreateAsync(scope, cancellationToken);
-        StorageFileBrowserProvider? selectedProvider = null;
-        foreach (IFileBrowserProvider provider in currentSession.Providers)
-        {
-            if (provider is not StorageFileBrowserProvider storageProvider ||
-                storageProvider.Descriptor.Id != itemKey.SourceId)
-            {
-                continue;
-            }
-
-            if (selectedProvider is not null)
-            {
-                throw SourceUnavailable();
-            }
-
-            selectedProvider = storageProvider;
-        }
-
-        if (selectedProvider is null)
-        {
-            throw SourceUnavailable();
-        }
+        StorageFileBrowserProvider selectedProvider = await itemResolver.ResolveProviderAsync(
+            scope,
+            itemKey,
+            cancellationToken);
 
         FileAccessContext context = await contextProvider.GetCurrentAsync(cancellationToken);
         FileAccessOperation operations = intent == FileToolsKnownFileIntent.Edit
@@ -59,9 +41,4 @@ internal sealed class StorageFileToolsBrowseItemActivator(
             authorized.MediaType,
             authorized.Size);
     }
-
-    private static FileAccessDeniedException SourceUnavailable()
-        => new(
-            FileAccessFailureCode.InvalidHandle,
-            "The selected file source is no longer available in this semantic scope.");
 }

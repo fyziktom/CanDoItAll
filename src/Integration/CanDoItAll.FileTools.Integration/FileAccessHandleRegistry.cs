@@ -35,25 +35,6 @@ public sealed class FileAccessHandleOptions
     }
 }
 
-public enum FileAccessFailureCode
-{
-    InvalidHandle,
-    Expired,
-    Revoked,
-    ContextMismatch,
-    OperationDenied,
-    SourceUnavailable,
-    Forbidden,
-    ContentTooLarge,
-    Unsupported
-}
-
-public sealed class FileAccessDeniedException(FileAccessFailureCode code, string message)
-    : InvalidOperationException(message)
-{
-    public FileAccessFailureCode Code { get; } = code;
-}
-
 internal readonly record struct FileAccessHandleId
 {
     private const int EncodedLength = 43;
@@ -179,7 +160,8 @@ internal sealed class FileAccessHandleRegistry : IFileAccessHandleRegistry
         if (operation is not FileAccessOperation.View and
             not FileAccessOperation.Download and
             not FileAccessOperation.Edit and
-            not FileAccessOperation.Overwrite)
+            not FileAccessOperation.Overwrite and
+            not FileAccessOperation.OpenLocally)
         {
             throw new ArgumentOutOfRangeException(nameof(operation));
         }

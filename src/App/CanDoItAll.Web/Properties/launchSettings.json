@@ -12,6 +12,7 @@
         "Database__ConnectionString": "Host=127.0.0.1;Port=5432;Database=candoitall_development;Username=candoitall;Password=candoitall;Include Error Detail=true",
         "Storage__WorkspaceRoot": "%LOCALAPPDATA%\\CanDoItAll\\workspace",
         "ControlPlane__RootPath": "%LOCALAPPDATA%\\CanDoItAll\\control-plane",
+        "FileTools__DesktopLaunch__Enabled": "true",
         "Processes__Runtime__RequirePostgreSqlForAgentAutomation": "true"
       }
     },
@@ -26,6 +27,7 @@
         "Database__ConnectionString": "Host=127.0.0.1;Port=5432;Database=candoitall_development;Username=candoitall;Password=candoitall;Include Error Detail=true",
         "Storage__WorkspaceRoot": "%LOCALAPPDATA%\\CanDoItAll\\workspace",
         "ControlPlane__RootPath": "%LOCALAPPDATA%\\CanDoItAll\\control-plane",
+        "FileTools__DesktopLaunch__Enabled": "true",
         "Processes__Runtime__RequirePostgreSqlForAgentAutomation": "true"
       }
     },
@@ -40,6 +42,7 @@
         "Database__ConnectionString": "Host=127.0.0.1;Port=5432;Database=candoitall_cognitive_memory_multicycle_20260517_03;Username=candoitall;Password=candoitall;Include Error Detail=true",
         "Storage__WorkspaceRoot": ".artifacts/cognitive-memory-multicycle-postgres/workspace",
         "ControlPlane__RootPath": ".artifacts/cognitive-memory-multicycle-postgres/control-plane",
+        "FileTools__DesktopLaunch__Enabled": "true",
         "Processes__Runtime__RequirePostgreSqlForAgentAutomation": "true"
       }
     },
@@ -56,6 +59,7 @@
         "ControlPlane__RootPath": ".artifacts/workflow-routing-postgres/control-plane",
         "Workflows__ExampleSeed__Enabled": "true",
         "Workflows__ExampleSeed__SeedSampleWorkspaceFiles": "true",
+        "FileTools__DesktopLaunch__Enabled": "true",
         "Processes__Runtime__RequirePostgreSqlForAgentAutomation": "true"
       }
     }

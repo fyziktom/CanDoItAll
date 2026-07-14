@@ -119,6 +119,7 @@ public sealed class FileToolsIntegrationBoundaryTests
         services.AddSingleton<IStorageCatalogService>(new FakeStorageCatalog(storage));
         services.AddSingleton<IStorageBrowseDriver>(new FakeBrowseDriver(StorageProviderKind.FileSystem));
         services.AddSingleton<IStorageBrowseDriverRegistry, StorageBrowseDriverRegistry>();
+        AddSourceCapabilityDependencies(services);
         services.AddSingleton<IDatabaseRuntimeState, StaticDatabaseRuntimeState>();
         services.AddCanDoItAllFileToolsIntegration();
         using ServiceProvider provider = services.BuildServiceProvider(validateScopes: true);
@@ -184,6 +185,7 @@ public sealed class FileToolsIntegrationBoundaryTests
         services.AddSingleton<IStorageCatalogService>(new FakeStorageCatalog(storage));
         services.AddSingleton<IStorageBrowseDriver>(new FakeBrowseDriver(StorageProviderKind.FileSystem));
         services.AddSingleton<IStorageBrowseDriverRegistry, StorageBrowseDriverRegistry>();
+        AddSourceCapabilityDependencies(services);
         services.AddSingleton<IDatabaseRuntimeState, StaticDatabaseRuntimeState>();
         services.AddCanDoItAllFileToolsIntegration();
         using ServiceProvider provider = services.BuildServiceProvider(validateScopes: true);
@@ -280,9 +282,18 @@ public sealed class FileToolsIntegrationBoundaryTests
             new FakeBindingProvider(bindings),
             new FakeStorageCatalog(storage),
             new StorageBrowseDriverRegistry([driver]),
+            new StorageDriverRegistry([]),
+            new FileSystemStoragePathPolicy(new StaticWorkspacePathResolver()),
             new DisabledCacheStore(),
             new ProcessLocalFileCatalogRevisionService(),
             new StaticDatabaseRuntimeState());
+    }
+
+    private static void AddSourceCapabilityDependencies(IServiceCollection services)
+    {
+        services.AddSingleton<IStorageDriverRegistry>(new StorageDriverRegistry([]));
+        services.AddSingleton<IWorkspacePathResolver, StaticWorkspacePathResolver>();
+        services.AddSingleton<FileSystemStoragePathPolicy>();
     }
 
     private static FileToolsSemanticScope CreateScope()
@@ -458,5 +469,20 @@ public sealed class FileToolsIntegrationBoundaryTests
 
         public void MarkCurrentProfile(CanDoItAll.Infrastructure.ControlPlane.ResolvedDatabaseProfile profile)
             => throw new NotSupportedException();
+    }
+
+    private sealed class StaticWorkspacePathResolver : IWorkspacePathResolver
+    {
+        private readonly string root = Directory.GetCurrentDirectory();
+
+        public string ResolveWorkspaceRoot() => root;
+
+        public string ResolveManagedFilesRoot() => Path.Combine(root, "managed-files");
+
+        public string ResolveExportsRoot() => Path.Combine(root, "exports");
+
+        public string ResolveEvidenceRoot() => Path.Combine(root, "evidence");
+
+        public string ResolveManagerArtifactsRoot() => Path.Combine(root, "manager-artifacts");
     }
 }

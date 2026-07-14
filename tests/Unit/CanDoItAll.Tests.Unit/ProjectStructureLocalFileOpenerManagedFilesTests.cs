@@ -1,3 +1,5 @@
+using CanDoItAll.FileTools.Desktop;
+using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Modules.Workbench;
 using CanDoItAll.SharedKernel;
@@ -23,6 +25,61 @@ public sealed class ProjectStructureLocalFileOpenerManagedFilesTests
             var node = CreateNode(mediaRelativePath: Path.Combine("proof", "alpha.txt"));
 
             Assert.True(sut.CanOpen(node));
+        }
+        finally
+        {
+            TestFileSystem.DeleteDirectoryWithRetry(workspaceRoot);
+        }
+    }
+
+    [Fact]
+    public async Task Preferred_application_open_uses_the_exact_trusted_document_path()
+    {
+        var workspaceRoot = TestFileSystem.CreateTemporaryRoot("local-file-opener");
+
+        try
+        {
+            var filePath = Path.Combine(workspaceRoot, "managed-files", "reports", "forecast.xlsx");
+            Directory.CreateDirectory(Path.GetDirectoryName(filePath)!);
+            File.WriteAllText(filePath, "forecast");
+            var launcher = new RecordingDesktopFileLauncher();
+            var sut = CreateSut(workspaceRoot, launcher);
+            var node = CreateNode(mediaRelativePath: Path.Combine("reports", "forecast.xlsx"));
+
+            Assert.True(sut.CanOpenInPreferredApplication(node));
+            ProjectStructureLocalFileOpenResult result = await sut.OpenInPreferredApplicationAsync(node);
+
+            Assert.True(result.IsSuccess);
+            Assert.NotNull(launcher.LastRequest);
+            Assert.Equal(Path.GetFullPath(filePath), launcher.LastRequest.TargetPath);
+            Assert.Equal(DesktopFileLaunchOperation.Open, launcher.LastRequest.Operation);
+            Assert.Null(launcher.LastRequest.ExecutablePath);
+        }
+        finally
+        {
+            TestFileSystem.DeleteDirectoryWithRetry(workspaceRoot);
+        }
+    }
+
+    [Fact]
+    public async Task Reveal_uses_the_driver_containing_folder_operation()
+    {
+        var workspaceRoot = TestFileSystem.CreateTemporaryRoot("local-file-opener");
+
+        try
+        {
+            var filePath = Path.Combine(workspaceRoot, "managed-files", "reports", "forecast.xlsx");
+            Directory.CreateDirectory(Path.GetDirectoryName(filePath)!);
+            File.WriteAllText(filePath, "forecast");
+            var launcher = new RecordingDesktopFileLauncher();
+            var sut = CreateSut(workspaceRoot, launcher);
+            var node = CreateNode(mediaRelativePath: Path.Combine("reports", "forecast.xlsx"));
+
+            ProjectStructureLocalFileOpenResult result = await sut.OpenAsync(node);
+
+            Assert.True(result.IsSuccess);
+            Assert.Equal(DesktopFileLaunchOperation.OpenContainingFolder, launcher.LastRequest?.Operation);
+            Assert.Equal(Path.GetFullPath(filePath), launcher.LastRequest?.TargetPath);
         }
         finally
         {
@@ -138,7 +195,7 @@ public sealed class ProjectStructureLocalFileOpenerManagedFilesTests
     }
 
     [Fact]
-    public void CanOpen_returns_true_for_a_repository_folder_path_on_the_local_drive()
+    public void CanOpen_returns_false_for_a_repository_folder_outside_the_active_workspace()
     {
         var workspaceRoot = TestFileSystem.CreateTemporaryRoot("local-file-opener");
         var externalFolder = TestFileSystem.CreateTemporaryRoot("local-file-opener-folder");
@@ -159,7 +216,7 @@ public sealed class ProjectStructureLocalFileOpenerManagedFilesTests
                     }
                 });
 
-            Assert.True(sut.CanOpen(node));
+            Assert.False(sut.CanOpen(node));
         }
         finally
         {
@@ -169,7 +226,7 @@ public sealed class ProjectStructureLocalFileOpenerManagedFilesTests
     }
 
     [Fact]
-    public void CanOpen_returns_true_for_a_file_node_external_path_on_the_local_drive()
+    public void CanOpen_returns_false_for_a_file_node_path_outside_the_active_workspace()
     {
         var workspaceRoot = TestFileSystem.CreateTemporaryRoot("local-file-opener");
         var externalFolder = TestFileSystem.CreateTemporaryRoot("local-file-opener-file");
@@ -194,7 +251,7 @@ public sealed class ProjectStructureLocalFileOpenerManagedFilesTests
                     }
                 });
 
-            Assert.True(sut.CanOpen(node));
+            Assert.False(sut.CanOpen(node));
         }
         finally
         {
@@ -204,16 +261,15 @@ public sealed class ProjectStructureLocalFileOpenerManagedFilesTests
     }
 
     [Fact]
-    public void CanOpen_returns_false_for_a_blocked_external_script_file()
+    public void Script_inside_the_workspace_can_be_revealed_but_not_shell_opened()
     {
         var workspaceRoot = TestFileSystem.CreateTemporaryRoot("local-file-opener");
-        var externalFolder = TestFileSystem.CreateTemporaryRoot("local-file-opener-blocked");
 
         try
         {
-            var externalFile = Path.Combine(externalFolder, "scripts", "run.ps1");
-            Directory.CreateDirectory(Path.GetDirectoryName(externalFile)!);
-            File.WriteAllText(externalFile, "Write-Host blocked");
+            var scriptFile = Path.Combine(workspaceRoot, "scripts", "run.ps1");
+            Directory.CreateDirectory(Path.GetDirectoryName(scriptFile)!);
+            File.WriteAllText(scriptFile, "Write-Host blocked");
 
             var sut = CreateSut(workspaceRoot);
             var node = CreateNode(
@@ -225,21 +281,21 @@ public sealed class ProjectStructureLocalFileOpenerManagedFilesTests
                     File = new ProjectFileMetadata
                     {
                         FileSubtype = ProjectFileSubtype.Text,
-                        ExternalPath = externalFile
+                        ExternalPath = scriptFile
                     }
                 });
 
-            Assert.False(sut.CanOpen(node));
+            Assert.True(sut.CanOpen(node));
+            Assert.False(sut.CanOpenInPreferredApplication(node));
         }
         finally
         {
-            TestFileSystem.DeleteDirectoryWithRetry(externalFolder);
             TestFileSystem.DeleteDirectoryWithRetry(workspaceRoot);
         }
     }
 
     [Fact]
-    public void CanOpen_returns_true_for_an_infrastructure_deployment_folder_path()
+    public void CanOpen_returns_false_for_an_infrastructure_folder_outside_the_active_workspace()
     {
         var workspaceRoot = TestFileSystem.CreateTemporaryRoot("local-file-opener");
         var externalFolder = TestFileSystem.CreateTemporaryRoot("local-file-opener-deploy");
@@ -260,7 +316,7 @@ public sealed class ProjectStructureLocalFileOpenerManagedFilesTests
                     }
                 });
 
-            Assert.True(sut.CanOpen(node));
+            Assert.False(sut.CanOpen(node));
         }
         finally
         {
@@ -269,10 +325,18 @@ public sealed class ProjectStructureLocalFileOpenerManagedFilesTests
         }
     }
 
-    private static ProjectStructureLocalFileOpener CreateSut(string workspaceRoot)
-        => new(
-            new WorkspacePathAccessGuard(new TestWorkspacePathResolver(workspaceRoot)),
+    private static ProjectStructureLocalFileOpener CreateSut(
+        string workspaceRoot,
+        IDesktopFileLauncher? desktopFileLauncher = null)
+    {
+        var pathResolver = new TestWorkspacePathResolver(workspaceRoot);
+        return new ProjectStructureLocalFileOpener(
+            new WorkspacePathAccessGuard(pathResolver),
+            new FileSystemStoragePathPolicy(pathResolver),
+            new EmptyFileApplicationPreferenceService(),
+            desktopFileLauncher ?? new AvailableDesktopFileLauncher(),
             NullLogger<ProjectStructureLocalFileOpener>.Instance);
+    }
 
     private static ProjectStructureNode CreateNode(
         string mediaRelativePath,
@@ -322,5 +386,84 @@ public sealed class ProjectStructureLocalFileOpenerManagedFilesTests
         public string ResolveEvidenceRoot() => Path.Combine(workspaceRoot, "evidence");
 
         public string ResolveManagerArtifactsRoot() => Path.Combine(workspaceRoot, ".artifacts");
+    }
+
+    private sealed class EmptyFileApplicationPreferenceService : IFileApplicationPreferenceService
+    {
+        public Task<IReadOnlyList<FileApplicationPreference>> ListAsync(
+            CancellationToken cancellationToken = default)
+            => Task.FromResult<IReadOnlyList<FileApplicationPreference>>([]);
+
+        public Task SaveAsync(
+            FileApplicationPreference preference,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
+        public Task<bool> DeleteAsync(
+            FileApplicationExtension extension,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
+        public FileApplicationPreference? ResolveForFile(string fileName) => null;
+    }
+
+    private sealed class AvailableDesktopFileLauncher : IDesktopFileLauncher
+    {
+        public bool IsAvailable => true;
+
+        public ValueTask<DesktopFileLaunchResult> LaunchAsync(
+            DesktopFileLaunchRequest request,
+            CancellationToken cancellationToken = default)
+            => ValueTask.FromResult(DesktopFileLaunchResult.Success(request.TargetPath));
+    }
+
+    private sealed class RecordingDesktopFileLauncher : IDesktopFileLauncher
+    {
+        public bool IsAvailable => true;
+
+        public DesktopFileLaunchRequest? LastRequest { get; private set; }
+
+        public ValueTask<DesktopFileLaunchResult> LaunchAsync(
+            DesktopFileLaunchRequest request,
+            CancellationToken cancellationToken = default)
+        {
+            LastRequest = request;
+            return ValueTask.FromResult(DesktopFileLaunchResult.Success(request.TargetPath));
+        }
+    }
+
+    [Fact]
+    public void CanOpen_returns_false_when_a_workspace_path_traverses_a_symbolic_link()
+    {
+        var workspaceRoot = TestFileSystem.CreateTemporaryRoot("local-file-opener");
+        var externalFolder = TestFileSystem.CreateTemporaryRoot("local-file-opener-link-target");
+
+        try
+        {
+            string externalFile = Path.Combine(externalFolder, "forecast.xlsx");
+            File.WriteAllText(externalFile, "forecast");
+            string linkedFolder = Path.Combine(workspaceRoot, "linked");
+            Directory.CreateSymbolicLink(linkedFolder, externalFolder);
+            var sut = CreateSut(workspaceRoot);
+            var node = CreateNode(
+                mediaRelativePath: string.Empty,
+                objectType: ProjectObjectType.File,
+                objectSubtype: "spreadsheet",
+                metadata: new ProjectObjectMetadataEnvelope
+                {
+                    File = new ProjectFileMetadata
+                    {
+                        FileSubtype = ProjectFileSubtype.Excel,
+                        ExternalPath = Path.Combine(linkedFolder, "forecast.xlsx")
+                    }
+                });
+
+            Assert.False(sut.CanOpen(node));
+        }
+        finally
+        {
+            TestFileSystem.DeleteDirectoryWithRetry(workspaceRoot);
+            TestFileSystem.DeleteDirectoryWithRetry(externalFolder);
+        }
     }
 }

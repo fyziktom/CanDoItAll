@@ -22,6 +22,30 @@ public sealed class FileSystemStoragePathPolicy(IWorkspacePathResolver workspace
         return fullPath;
     }
 
+    public string ResolveTrustedWorkspacePath(string path)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(path);
+        string workspaceRoot = Path.GetFullPath(workspacePathResolver.ResolveWorkspaceRoot());
+        string fullPath = Path.GetFullPath(path);
+        EnsureWithinRoot(workspaceRoot, fullPath);
+        EnsureNoReparseTraversal(workspaceRoot, fullPath);
+        return fullPath;
+    }
+
+    public string ResolveTrustedLocalOpenPath(StorageCatalogRecord storage, string relativePath)
+    {
+        ArgumentNullException.ThrowIfNull(storage);
+        ArgumentNullException.ThrowIfNull(relativePath);
+        string workspaceRoot = Path.GetFullPath(workspacePathResolver.ResolveWorkspaceRoot());
+        string storageRoot = ResolveRootPath(storage);
+        EnsureWithinRoot(workspaceRoot, storageRoot);
+        string normalizedPath = NormalizeRelativeKey(relativePath);
+        string fullPath = Path.GetFullPath(Path.Combine(storageRoot, normalizedPath));
+        EnsureWithinRoot(storageRoot, fullPath);
+        EnsureNoReparseTraversal(workspaceRoot, fullPath);
+        return fullPath;
+    }
+
     public string ResolveDirectory(StorageCatalogRecord storage, StorageBrowseContainer container)
     {
         ArgumentNullException.ThrowIfNull(container);
@@ -38,9 +62,23 @@ public sealed class FileSystemStoragePathPolicy(IWorkspacePathResolver workspace
 
     public bool IsTrustedForLocalOpen(StorageCatalogRecord storage)
     {
-        string workspaceRoot = Path.GetFullPath(workspacePathResolver.ResolveWorkspaceRoot());
-        string storageRoot = ResolveRootPath(storage);
-        return IsWithinRoot(workspaceRoot, storageRoot);
+        try
+        {
+            string workspaceRoot = Path.GetFullPath(workspacePathResolver.ResolveWorkspaceRoot());
+            string storageRoot = ResolveRootPath(storage);
+            EnsureWithinRoot(workspaceRoot, storageRoot);
+            EnsureNoReparseTraversal(workspaceRoot, storageRoot);
+            return true;
+        }
+        catch (Exception exception) when (
+            exception is ArgumentException
+                or IOException
+                or NotSupportedException
+                or StorageBrowseException
+                or UnauthorizedAccessException)
+        {
+            return false;
+        }
     }
 
     internal static string NormalizeRelativeKey(string path)
@@ -62,12 +100,16 @@ public sealed class FileSystemStoragePathPolicy(IWorkspacePathResolver workspace
     private static bool IsWithinRoot(string rootPath, string fullPath)
     {
         string normalizedRoot = rootPath.TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
-        return fullPath.StartsWith(normalizedRoot, StringComparison.OrdinalIgnoreCase) ||
+        return fullPath.StartsWith(normalizedRoot, PathComparison) ||
                string.Equals(
                    fullPath,
                    rootPath.TrimEnd(Path.DirectorySeparatorChar),
-                   StringComparison.OrdinalIgnoreCase);
+                   PathComparison);
     }
+
+    private static StringComparison PathComparison => OperatingSystem.IsWindows()
+        ? StringComparison.OrdinalIgnoreCase
+        : StringComparison.Ordinal;
 
     private static void EnsureNoReparseTraversal(string rootPath, string fullPath)
     {

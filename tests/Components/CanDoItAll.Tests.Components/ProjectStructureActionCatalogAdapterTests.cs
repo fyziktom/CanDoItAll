@@ -337,7 +337,7 @@ public sealed class ProjectStructureActionCatalogAdapterTests
             canOpenInFileExplorer: true,
             canOpenInNewTab: false);
 
-        Assert.Contains(actions, action => action.ActionId == "open-local" && action.Label == "Open in File Explorer");
+        Assert.Contains(actions, action => action.ActionId == "open-local" && action.Label == "Show in folder");
         Assert.DoesNotContain(actions, action => action.ActionId == "open-new-tab");
         AssertOrderedBefore(actions, "open-local", "open");
         AssertDistinctShortcuts(actions);

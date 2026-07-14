@@ -47,6 +47,27 @@ public sealed class WorkspacePathResolverGuardTests
         }
     }
 
+    [Fact]
+    public void ResolveWorkspacePath_uses_platform_path_case_semantics()
+    {
+        var parentRoot = TestFileSystem.CreateTemporaryRoot("workspace-path-case");
+
+        try
+        {
+            string workspaceRoot = Path.Combine(parentRoot, "workspace");
+            string caseDifferentSibling = Path.Combine(parentRoot, "Workspace", "escape.txt");
+            var sut = CreateSut(workspaceRoot);
+
+            WorkspacePathAccessResult result = sut.ResolveWorkspacePath(caseDifferentSibling);
+
+            Assert.Equal(OperatingSystem.IsWindows(), result.IsSuccess);
+        }
+        finally
+        {
+            TestFileSystem.DeleteDirectoryWithRetry(parentRoot);
+        }
+    }
+
     private static IWorkspacePathAccessGuard CreateSut(string workspaceRoot)
         => new WorkspacePathAccessGuard(new TestWorkspacePathResolver(workspaceRoot));
 

@@ -1,3 +1,4 @@
+using CanDoItAll.AppComponents.FileTools;
 using CanDoItAll.FileTools.FileBrowser;
 using CanDoItAll.FileTools.FileInteraction;
 using CanDoItAll.FileTools.Integration;
@@ -12,6 +13,7 @@ internal sealed class ProjectStructureFileActionCoordinator(
     IProjectStructureNodeFileScopeProvider nodeScopeResolver,
     IFileToolsBrowseSessionFactory browseSessionFactory,
     IFileToolsBrowseItemActivator itemActivator,
+    IFileToolsBrowseItemActionService itemActionService,
     IFileToolsKnownFileSessionFactory knownFileSessionFactory,
     IFileToolsKnownFileSessionReleaser knownFileSessionReleaser,
     ILogger<ProjectStructureFileActionCoordinator> logger)
@@ -78,6 +80,7 @@ internal sealed class ProjectStructureFileActionCoordinator(
             cancellationToken);
         var providers = new List<IFileBrowserProvider>(scopeResolution.Scopes.Count);
         var sourceScopes = new Dictionary<FileBrowserSourceId, FileToolsSemanticScope>();
+        var sourceActions = new Dictionary<FileBrowserSourceId, FileToolsBrowseSourceActionAvailability>();
         var revisionParts = new List<string>(scopeResolution.Scopes.Count);
         FileBrowserSortDescriptor? defaultSort = null;
         foreach (FileToolsSemanticScope scope in scopeResolution.Scopes)
@@ -113,6 +116,10 @@ internal sealed class ProjectStructureFileActionCoordinator(
                         "Project Structure file browsing produced a duplicate source identifier.");
                 }
 
+                sourceActions.Add(
+                    provider.Descriptor.Id,
+                    FileToolsHostActionCapabilityCapture.Resolve(provider));
+
                 providers.Add(provider);
             }
         }
@@ -141,6 +148,7 @@ internal sealed class ProjectStructureFileActionCoordinator(
             request,
             browser,
             sourceScopes,
+            sourceActions,
             revision,
             includeSubprojects);
     }
@@ -156,12 +164,7 @@ internal sealed class ProjectStructureFileActionCoordinator(
             throw new ObjectDisposedException(nameof(workspace));
         }
 
-        if (!workspace.TryGetScope(itemKey.SourceId, out FileToolsSemanticScope? scope) || scope is null)
-        {
-            throw ProviderError(
-                FileBrowserErrorCode.Conflict,
-                "The selected file source is no longer part of the Project Structure collection.");
-        }
+        FileToolsSemanticScope scope = ResolveScope(workspace, itemKey.SourceId);
 
         FileToolsKnownFileActivation activation = await itemActivator.ActivateAsync(
             scope,
@@ -186,6 +189,45 @@ internal sealed class ProjectStructureFileActionCoordinator(
             await knownFileSessionReleaser.ReleaseAsync(activation.Request.File, CancellationToken.None);
             throw;
         }
+    }
+
+    public ValueTask<FileToolsBrowseItemActionResult> LaunchAsync(
+        ProjectStructureFileBrowserWorkspace workspace,
+        FileBrowserItemKey itemKey,
+        FileToolsLocalFileAction action,
+        CancellationToken cancellationToken = default)
+    {
+        FileToolsSemanticScope scope = ResolveScope(workspace, itemKey.SourceId);
+        return itemActionService.LaunchAsync(scope, itemKey, action, cancellationToken);
+    }
+
+    public ValueTask<IFileToolsDownloadLease> AuthorizeDownloadAsync(
+        ProjectStructureFileBrowserWorkspace workspace,
+        FileBrowserItemKey itemKey,
+        CancellationToken cancellationToken = default)
+    {
+        FileToolsSemanticScope scope = ResolveScope(workspace, itemKey.SourceId);
+        return itemActionService.AuthorizeDownloadAsync(scope, itemKey, cancellationToken);
+    }
+
+    private static FileToolsSemanticScope ResolveScope(
+        ProjectStructureFileBrowserWorkspace workspace,
+        FileBrowserSourceId sourceId)
+    {
+        ArgumentNullException.ThrowIfNull(workspace);
+        if (workspace.IsDisposed)
+        {
+            throw new ObjectDisposedException(nameof(workspace));
+        }
+
+        if (!workspace.TryGetScope(sourceId, out FileToolsSemanticScope? scope) || scope is null)
+        {
+            throw ProviderError(
+                FileBrowserErrorCode.Conflict,
+                "The selected file source is no longer part of the Project Structure collection.");
+        }
+
+        return scope;
     }
 
     private async ValueTask<ScopeResolution> ResolveScopesAsync(
@@ -236,18 +278,25 @@ internal sealed class ProjectStructureFileActionCoordinator(
 internal sealed class ProjectStructureFileBrowserWorkspace : IAsyncDisposable
 {
     private IReadOnlyDictionary<FileBrowserSourceId, FileToolsSemanticScope> sourceScopes;
+    private IReadOnlyDictionary<FileBrowserSourceId, FileToolsBrowseSourceActionAvailability> sourceActions;
     private bool disposed;
 
     public ProjectStructureFileBrowserWorkspace(
         ProjectStructureFileCollectionRequest request,
         IFileBrowserSession browser,
         IReadOnlyDictionary<FileBrowserSourceId, FileToolsSemanticScope> sourceScopes,
+        IReadOnlyDictionary<FileBrowserSourceId, FileToolsBrowseSourceActionAvailability> sourceActions,
         string revision,
         bool includeSubprojects)
     {
         Request = request ?? throw new ArgumentNullException(nameof(request));
         Browser = browser ?? throw new ArgumentNullException(nameof(browser));
         this.sourceScopes = sourceScopes ?? throw new ArgumentNullException(nameof(sourceScopes));
+        this.sourceActions = sourceActions ?? throw new ArgumentNullException(nameof(sourceActions));
+        if (!sourceScopes.Keys.ToHashSet().SetEquals(sourceActions.Keys))
+        {
+            throw new ArgumentException("Every file source must declare host action availability.", nameof(sourceActions));
+        }
         ArgumentException.ThrowIfNullOrWhiteSpace(revision);
         Revision = revision;
         IncludeSubprojects = includeSubprojects;
@@ -268,6 +317,14 @@ internal sealed class ProjectStructureFileBrowserWorkspace : IAsyncDisposable
     public bool TryGetScope(FileBrowserSourceId sourceId, out FileToolsSemanticScope? scope)
         => sourceScopes.TryGetValue(sourceId, out scope);
 
+    public bool SupportsLocalOpen(FileBrowserSourceId sourceId)
+        => sourceActions.TryGetValue(sourceId, out FileToolsBrowseSourceActionAvailability actions) &&
+           actions.SupportsLocalOpen;
+
+    public bool SupportsDownload(FileBrowserSourceId sourceId)
+        => sourceActions.TryGetValue(sourceId, out FileToolsBrowseSourceActionAvailability actions) &&
+           actions.SupportsDownload;
+
     public async ValueTask DisposeAsync()
     {
         if (disposed)
@@ -277,6 +334,7 @@ internal sealed class ProjectStructureFileBrowserWorkspace : IAsyncDisposable
 
         disposed = true;
         sourceScopes = new Dictionary<FileBrowserSourceId, FileToolsSemanticScope>();
+        sourceActions = new Dictionary<FileBrowserSourceId, FileToolsBrowseSourceActionAvailability>();
         await Browser.DisposeAsync();
     }
 }

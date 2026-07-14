@@ -51,6 +51,41 @@ public sealed class ResourceFileBrowsePaneTests
     }
 
     [Fact]
+    public async Task Pointer_double_click_opens_preferred_application_when_local_launch_is_available()
+    {
+        using var context = CreateContext(out ResourceBrowseTestState state, supportsLocalOpen: true);
+        var cut = context.RenderComponent<ResourceFileBrowsePane>();
+        cut.WaitForElement($"[data-testid='resources-source-{state.Source.Key.Value}'] button").Click();
+
+        await cut.WaitForElement(".ft-file-browser__item-main").DoubleClickAsync(new MouseEventArgs());
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Equal(1, state.ItemActions.LaunchCount);
+            Assert.Equal(FileToolsLocalFileAction.OpenInPreferredApplication, state.ItemActions.LastAction);
+            Assert.True(state.ItemActions.LastItemKey.HasValue);
+            Assert.Equal("resource-files", state.ItemActions.LastItemKey.Value.SourceId.Value);
+            Assert.Empty(cut.FindAll("[data-testid='resources-promotion-dialog']"));
+        });
+    }
+
+    [Fact]
+    public void Keyboard_invocation_preserves_promotion_when_local_launch_is_available()
+    {
+        using var context = CreateContext(out ResourceBrowseTestState state, supportsLocalOpen: true);
+        var cut = context.RenderComponent<ResourceFileBrowsePane>();
+        cut.WaitForElement($"[data-testid='resources-source-{state.Source.Key.Value}'] button").Click();
+
+        cut.WaitForElement(".ft-file-browser__item-main").KeyUp("Enter");
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.NotNull(cut.Find("[data-testid='resources-promotion-dialog']"));
+            Assert.Equal(0, state.ItemActions.LaunchCount);
+        });
+    }
+
+    [Fact]
     public async Task Successful_promotion_refreshes_source_and_offers_authorized_reopen()
     {
         using var context = CreateContext(out ResourceBrowseTestState state);
@@ -70,12 +105,14 @@ public sealed class ResourceFileBrowsePaneTests
         });
     }
 
-    private static TestContext CreateContext(out ResourceBrowseTestState state)
+    private static TestContext CreateContext(
+        out ResourceBrowseTestState state,
+        bool supportsLocalOpen = false)
     {
         var context = new TestContext();
         context.JSInterop.Mode = JSRuntimeMode.Loose;
         context.Services.AddLogging();
-        state = new ResourceBrowseTestState();
+        state = new ResourceBrowseTestState(supportsLocalOpen);
         context.Services.AddSingleton<IResourceFileSourceCatalog>(state.SourceCatalog);
         context.Services.AddSingleton<IFileToolsBrowseSessionFactory>(state.BrowseSessions);
         context.Services.AddSingleton<ResourceFileBrowseCoordinator>();
@@ -90,13 +127,17 @@ public sealed class ResourceFileBrowsePaneTests
         context.Services.AddSingleton<IFileToolsKnownFileActivator, ThrowingKnownFileActivator>();
         context.Services.AddSingleton<IFileToolsKnownFileSessionFactory, ThrowingKnownFileSessionFactory>();
         context.Services.AddSingleton<IFileToolsKnownFileSessionReleaser, NoopKnownFileReleaser>();
+        context.Services.AddSingleton<IFileToolsBrowseItemActionService>(
+            supportsLocalOpen
+                ? state.ItemActions
+                : new UnavailableFileToolsBrowseItemActionService());
         context.Services.AddSingleton<ResourceStorageObjectInteractionService>();
         return context;
     }
 
     private sealed class ResourceBrowseTestState
     {
-        public ResourceBrowseTestState()
+        public ResourceBrowseTestState(bool supportsLocalOpen)
         {
             Storage = new StorageCatalogRecord
             {
@@ -125,7 +166,8 @@ public sealed class ResourceFileBrowsePaneTests
                 Storage.HealthStatus);
             Project = new ResourcePromotionProject(Guid.NewGuid(), "Target project");
             SourceCatalog = new StaticSourceCatalog(Source, Project);
-            BrowseSessions = new StaticBrowseSessionFactory();
+            BrowseSessions = new StaticBrowseSessionFactory(supportsLocalOpen);
+            ItemActions = new RecordingBrowseItemActionService();
             var file = new FileReference("authorized", "opaque-handle");
             var request = new FileToolsKnownFileRequest(scope, file, FileToolsKnownFileIntent.ReadOnly);
             ItemActivator = new StaticBrowseItemActivator(new FileToolsKnownFileActivation(
@@ -163,6 +205,8 @@ public sealed class ResourceFileBrowsePaneTests
 
         public StaticBrowseItemActivator ItemActivator { get; }
 
+        public RecordingBrowseItemActionService ItemActions { get; }
+
         public StaticContextProvider ContextProvider { get; }
 
         public StaticAuthorizationCoordinator Authorization { get; }
@@ -185,7 +229,7 @@ public sealed class ResourceFileBrowsePaneTests
             => Task.FromResult(source);
     }
 
-    private sealed class StaticBrowseSessionFactory : IFileToolsBrowseSessionFactory
+    private sealed class StaticBrowseSessionFactory(bool supportsLocalOpen) : IFileToolsBrowseSessionFactory
     {
         public int CreateCount { get; private set; }
 
@@ -196,7 +240,7 @@ public sealed class ResourceFileBrowsePaneTests
             CreateCount++;
             return ValueTask.FromResult(new FileToolsBrowseSession(
                 scope,
-                [new StaticFileBrowserProvider()],
+                [new StaticFileBrowserProvider(supportsLocalOpen)],
                 new FileBrowserSortDescriptor(
                     FileBrowserSortField.ProviderNative,
                     FileBrowserSortDirection.Ascending,
@@ -205,13 +249,17 @@ public sealed class ResourceFileBrowsePaneTests
         }
     }
 
-    private sealed class StaticFileBrowserProvider : IFileBrowserProvider
+    private sealed class StaticFileBrowserProvider
+        : IFileBrowserProvider, IFileToolsBrowseSourceActionCapabilities
     {
         private readonly FileBrowserItem root;
         private readonly FileBrowserItem file;
 
-        public StaticFileBrowserProvider()
+        public StaticFileBrowserProvider(bool supportsLocalOpen)
         {
+            ActionAvailability = new FileToolsBrowseSourceActionAvailability(
+                supportsLocalOpen,
+                SupportsDownload: false);
             Descriptor = new FileBrowserSourceDescriptor(new FileBrowserSourceId("resource-files"), "Resource files");
             root = new FileBrowserItem(
                 new FileBrowserItemKey(Descriptor.Id, "root", "r1"),
@@ -230,10 +278,14 @@ public sealed class ResourceFileBrowsePaneTests
                 childState: FileBrowserChildState.Empty,
                 size: 12,
                 mediaType: "text/markdown",
-                capabilities: FileBrowserItemCapabilities.Select | FileBrowserItemCapabilities.Open);
+                capabilities: FileBrowserItemCapabilities.Select |
+                              FileBrowserItemCapabilities.Open |
+                              FileBrowserItemCapabilities.Preview);
         }
 
         public FileBrowserSourceDescriptor Descriptor { get; }
+
+        public FileToolsBrowseSourceActionAvailability ActionAvailability { get; }
 
         public ValueTask<FileBrowserItem> GetRootAsync(
             FileBrowserMetadataRequest metadata,
@@ -260,6 +312,36 @@ public sealed class ResourceFileBrowsePaneTests
             FileToolsKnownFileIntent intent,
             CancellationToken cancellationToken = default)
             => ValueTask.FromResult(activation);
+    }
+
+    private sealed class RecordingBrowseItemActionService : IFileToolsBrowseItemActionService
+    {
+        public bool IsLocalLaunchAvailable => true;
+
+        public int LaunchCount { get; private set; }
+
+        public FileBrowserItemKey? LastItemKey { get; private set; }
+
+        public FileToolsLocalFileAction? LastAction { get; private set; }
+
+        public ValueTask<FileToolsBrowseItemActionResult> LaunchAsync(
+            FileToolsSemanticScope scope,
+            FileBrowserItemKey itemKey,
+            FileToolsLocalFileAction action,
+            CancellationToken cancellationToken = default)
+        {
+            LaunchCount++;
+            LastItemKey = itemKey;
+            LastAction = action;
+            return ValueTask.FromResult(FileToolsBrowseItemActionResult.Success("Opened report.md."));
+        }
+
+        public ValueTask<IFileToolsDownloadLease> AuthorizeDownloadAsync(
+            FileToolsSemanticScope scope,
+            FileBrowserItemKey itemKey,
+            CancellationToken cancellationToken = default)
+            => ValueTask.FromException<IFileToolsDownloadLease>(
+                new InvalidOperationException("Downloads are not expected in this test."));
     }
 
     private sealed class StaticContextProvider : IFileAccessContextProvider

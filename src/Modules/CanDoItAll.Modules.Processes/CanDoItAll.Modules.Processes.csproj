@@ -13,9 +13,9 @@
     <PackageReference Include="CanDoItAll.Components.CanvasLib" Version="0.1.2" />
     <PackageReference Include="CanDoItAll.Components.Charts" Version="0.1.2" />
     <PackageReference Include="CanDoItAll.Components.OverlayLib" Version="0.1.2" />
-    <PackageReference Include="CanDoItAll.FileTools.FileBrowser.Components" Version="0.1.0" />
+    <PackageReference Include="CanDoItAll.FileTools.FileBrowser.Components" Version="0.2.0" />
     <PackageReference Include="CanDoItAll.FileTools.FileBrowser.Core" Version="0.1.0" />
-    <PackageReference Include="CanDoItAll.FileTools.FileInteraction.Components" Version="0.1.0" />
+    <PackageReference Include="CanDoItAll.FileTools.FileInteraction.Components" Version="0.2.0" />
     <PackageReference Include="CanDoItAll.FileTools.FileInteraction.Core" Version="0.1.0" />
     <PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="10.0.5" />
     <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.4" />
@@ -42,6 +42,7 @@
     <ProjectReference Include="..\..\UI\CanDoItAll.Components.Git\CanDoItAll.Components.Git.csproj" />
     <ProjectReference Include="..\..\Foundation\CanDoItAll.Infrastructure\CanDoItAll.Infrastructure.csproj" />
     <ProjectReference Include="..\..\Integration\CanDoItAll.FileTools.Integration.Abstractions\CanDoItAll.FileTools.Integration.Abstractions.csproj" />
+    <ProjectReference Include="..\..\UI\CanDoItAll.AppComponents\CanDoItAll.AppComponents.csproj" />
     <ProjectReference Include="..\CanDoItAll.Modules.AgentFramework\CanDoItAll.Modules.AgentFramework.csproj" />
     <ProjectReference Include="..\..\Foundation\CanDoItAll.SharedKernel\CanDoItAll.SharedKernel.csproj" />
   </ItemGroup>

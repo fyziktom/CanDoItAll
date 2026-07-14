@@ -81,18 +81,17 @@ internal static class ProjectStructureNodeActionCapabilityResolver
         if (canBrowseFiles)
         {
             actions.Add(ProjectStructureFileActions.CreateDescriptor());
-            guidance.Add("Collection browsing uses the authorized canvas file window and remains separate from direct asset preview and File Explorer launch.");
+            guidance.Add("Collection browsing uses the authorized canvas file window and remains separate from direct asset preview and local folder launch.");
         }
 
         if (canOpenInFileExplorer)
         {
             actions.Add(new ProjectStructureNodeActionDescriptor(
                 "open-local",
-                "Open in File Explorer",
+                "Show in folder",
                 "Double-click quick-action dialog and node context menu",
-                "Opens the trusted managed file, local file location, or folder in the system File Explorer."));
-            guidance.Add("File Explorer launch is available for managed filesystem files plus explicit existing local file, repository folder, and infrastructure folder paths.");
-            guidance.Add("The workbench opener blocks executable and script-like file extensions before launching File Explorer.");
+                "Opens the trusted file location in the system file browser."));
+            guidance.Add("Local folder launch is available only for existing files and folders inside the configured workspace root.");
         }
 
         if (canOpenInNewTab)
@@ -102,7 +101,7 @@ internal static class ProjectStructureNodeActionCapabilityResolver
                 "Open in New Tab",
                 "Double-click quick-action dialog and node context menu",
                 "Opens the IPFS-backed file route in a separate browser tab."));
-            guidance.Add("IPFS-backed file nodes open in a browser tab instead of system File Explorer.");
+            guidance.Add("IPFS-backed file nodes open in a browser tab instead of the system file browser.");
         }
 
         return actions;

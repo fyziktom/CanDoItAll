@@ -7,12 +7,14 @@ namespace CanDoItAll.Modules.Projects;
 public sealed class ProjectFilesPilotWorkspace : IAsyncDisposable
 {
     private bool disposed;
+    private IReadOnlyDictionary<FileBrowserSourceId, FileToolsBrowseSourceActionAvailability> sourceActions;
 
     public ProjectFilesPilotWorkspace(
         Guid projectId,
         string projectName,
         FileToolsSemanticScope scope,
-        IFileBrowserSession browser)
+        IFileBrowserSession browser,
+        IReadOnlyDictionary<FileBrowserSourceId, FileToolsBrowseSourceActionAvailability> sourceActions)
     {
         if (projectId == Guid.Empty)
         {
@@ -24,6 +26,7 @@ public sealed class ProjectFilesPilotWorkspace : IAsyncDisposable
         ProjectName = projectName.Trim();
         Scope = scope ?? throw new ArgumentNullException(nameof(scope));
         Browser = browser ?? throw new ArgumentNullException(nameof(browser));
+        this.sourceActions = sourceActions ?? throw new ArgumentNullException(nameof(sourceActions));
     }
 
     public Guid ProjectId { get; }
@@ -36,6 +39,9 @@ public sealed class ProjectFilesPilotWorkspace : IAsyncDisposable
 
     public bool IsDisposed => disposed;
 
+    internal FileToolsBrowseSourceActionAvailability GetActionAvailability(FileBrowserSourceId sourceId)
+        => sourceActions.GetValueOrDefault(sourceId);
+
     public async ValueTask DisposeAsync()
     {
         if (disposed)
@@ -44,6 +50,7 @@ public sealed class ProjectFilesPilotWorkspace : IAsyncDisposable
         }
 
         disposed = true;
+        sourceActions = new Dictionary<FileBrowserSourceId, FileToolsBrowseSourceActionAvailability>();
         await Browser.DisposeAsync();
     }
 }

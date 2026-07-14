@@ -145,6 +145,7 @@ public sealed class ProjectStructureFileBrowserWindowTests
         context.Services.AddSingleton(nodeScopes);
         context.Services.AddSingleton<IFileToolsBrowseSessionFactory, StaticBrowseSessionFactory>();
         context.Services.AddSingleton(itemActivator ?? new ThrowingBrowseItemActivator());
+        context.Services.AddSingleton<IFileToolsBrowseItemActionService, UnavailableFileToolsBrowseItemActionService>();
         context.Services.AddSingleton(knownFileSessionFactory ?? new ThrowingKnownFileSessionFactory());
         context.Services.AddSingleton<IFileToolsKnownFileSessionReleaser, NoopKnownFileSessionReleaser>();
         context.Services.AddSingleton<ProjectStructureFileActionCoordinator>();
