@@ -46,6 +46,23 @@ internal sealed partial class AgentFrameworkWorkspaceCatalogService
         await UpdateCatalogAsync(catalog =>
         {
             var existingAgent = catalog.Agents.FirstOrDefault(item => item.Id == id);
+            if (model.ExpectedUpdatedAtUtc.HasValue && existingAgent is null)
+            {
+                throw new AgentCatalogConcurrencyException(
+                    id,
+                    model.ExpectedUpdatedAtUtc.Value,
+                    actualUpdatedAtUtc: null);
+            }
+
+            if (model.ExpectedUpdatedAtUtc is DateTimeOffset expectedUpdatedAtUtc &&
+                existingAgent?.UpdatedAtUtc != expectedUpdatedAtUtc)
+            {
+                throw new AgentCatalogConcurrencyException(
+                    id,
+                    expectedUpdatedAtUtc,
+                    existingAgent?.UpdatedAtUtc);
+            }
+
             var capabilities = catalog.Capabilities
                 .Where(item => model.SelectedCapabilityIds.Contains(item.Id))
                 .Select(item =>

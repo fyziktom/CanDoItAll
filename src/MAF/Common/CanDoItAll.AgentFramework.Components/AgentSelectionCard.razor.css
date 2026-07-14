@@ -4,6 +4,7 @@
     border-radius: 1rem;
     color: rgb(15 23 42);
     display: flex;
+    flex-direction: column;
     min-height: 15rem;
     overflow: hidden;
     position: relative;
@@ -39,11 +40,26 @@
     color: inherit;
     cursor: pointer;
     display: block;
+    flex: 1 1 auto;
     font: inherit;
     min-width: 0;
     padding: 1rem;
     text-align: left;
     width: 100%;
+}
+
+.agent-selection-card__actions {
+    align-items: center;
+    border-top: 1px solid rgb(226 232 240);
+    display: flex;
+    flex: 0 0 auto;
+    gap: 0.5rem;
+    justify-content: flex-end;
+    padding: 0.7rem 1rem;
+}
+
+.agent-selection-card__actions:empty {
+    display: none;
 }
 
 .agent-selection-card--has-favorite .agent-selection-card__select {

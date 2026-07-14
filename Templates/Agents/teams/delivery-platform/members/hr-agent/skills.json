@@ -1,0 +1,17 @@
+{
+  "capabilityKeys": [
+    "hr-agent-governance-inline-skill",
+    "hr-agents-search",
+    "hr-agent-settings-get",
+    "hr-agent-creation-options-get",
+    "hr-agent-create",
+    "hr-agent-settings-update",
+    "hr-agent-avatar-generate",
+    "hr-agent-usage-get",
+    "hr-agent-process-history-get",
+    "hr-agent-process-manager-review-request",
+    "hr-crm-search",
+    "hr-crm-item-summary-get"
+  ],
+  "notes": "Privileged managed HR capability set. Runtime providers also verify the immutable HR agent identity and each assigned capability."
+}

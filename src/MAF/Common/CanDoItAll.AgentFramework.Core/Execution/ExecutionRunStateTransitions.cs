@@ -135,7 +135,9 @@ internal static class ExecutionRunStateTransitions
                     ToolName = pendingApproval.ToolName,
                     ToolKind = pendingApproval.ToolKind,
                     Details = pendingApproval.Details,
-                    ArgumentsJson = pendingApproval.ArgumentsJson,
+                    ArgumentsJson = AgentToolInvocationPolicyMetadata.ProtectApprovalArgumentsForAudit(
+                        pendingApproval.ToolName,
+                        pendingApproval.ArgumentsJson),
                     Status = approved ? ExecutionApprovalStatus.Approved : ExecutionApprovalStatus.Rejected,
                     DecidedAtUtc = decidedAtUtc,
                     DecisionSourceKind = decisionSourceKind,

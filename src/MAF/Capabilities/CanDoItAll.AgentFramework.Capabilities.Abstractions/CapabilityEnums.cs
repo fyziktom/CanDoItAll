@@ -83,7 +83,9 @@ public enum CapabilitySideEffectKind
     MediaGeneration,
     DocumentConversion,
     ProviderNative,
-    McpTool
+    McpTool,
+    InternalDataRead,
+    InternalStateMutation
 }
 
 public enum CapabilityTransportKind

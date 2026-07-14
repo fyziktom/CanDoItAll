@@ -8,6 +8,10 @@ namespace CanDoItAll.AgentFramework.Persistence;
 
 public sealed class ZipAgentPackageService(string workspaceRoot, WorkspaceScopeDescriptor? workspaceScope = null) : IAgentPackageService
 {
+    private const string ManagerReviewInputExportSummary = "HR manager-review request redacted for export.";
+    private const string ManagerReviewResultExportSummary = "HR manager-review response redacted for export.";
+    private const string ManagerReviewLogExportMessage = "HR manager-review execution log redacted for export.";
+
     private static readonly JsonSerializerOptions SerializerOptions = new(JsonSerializerDefaults.Web)
     {
         WriteIndented = true
@@ -22,13 +26,25 @@ public sealed class ZipAgentPackageService(string workspaceRoot, WorkspaceScopeD
     {
         Directory.CreateDirectory(exportRoot);
 
-        var exportedRuns = NormalizeExecutionRuns(document.ExecutionRuns.Where(item => item.AgentId == agent.Id).ToList());
+        var sensitiveHrApprovalRunIds = document.ExecutionApprovals
+            .Where(approval => AgentToolInvocationPolicyMetadata.HasSensitiveHrArguments(approval.ToolName))
+            .Select(approval => approval.ExecutionRunId)
+            .ToHashSet();
+        var exportedRuns = NormalizeExecutionRuns(
+            document.ExecutionRuns.Where(item => item.AgentId == agent.Id).ToList(),
+            sensitiveHrApprovalRunIds);
         var latestRunBySessionId = BuildLatestRunBySessionId(exportedRuns);
+        var managerReviewRunIds = exportedRuns
+            .Where(IsManagerReviewRun)
+            .Select(run => run.Id)
+            .ToHashSet();
 
         var manifest = new AgentPackageManifest(
             Agent: agent,
             Sessions: NormalizeChatSessions(document.ChatSessions.Where(item => item.AgentId == agent.Id).ToList(), latestRunBySessionId),
-            ExecutionLog: document.ExecutionLog.Where(item => item.AgentId == agent.Id).ToList(),
+            ExecutionLog: ProtectExecutionLogForExport(
+                document.ExecutionLog.Where(item => item.AgentId == agent.Id),
+                managerReviewRunIds),
             Metrics: document.Metrics.Where(item => item.AgentId == agent.Id).ToList(),
             Memory: document.Memory.Where(item => item.AgentId == agent.Id).ToList(),
             Providers: document.Providers.Where(item => item.Id == agent.ProviderProfileId).ToList(),
@@ -39,7 +55,12 @@ public sealed class ZipAgentPackageService(string workspaceRoot, WorkspaceScopeD
         var runIds = manifest.Runs.Select(item => item.Id).ToHashSet();
         manifest = manifest with
         {
-            Approvals = document.ExecutionApprovals.Where(item => runIds.Contains(item.ExecutionRunId)).ToList(),
+            Approvals = document.ExecutionApprovals
+                .Where(item => runIds.Contains(item.ExecutionRunId))
+                .Select(item => ProtectApprovalForExport(
+                    item,
+                    managerReviewRunIds.Contains(item.ExecutionRunId)))
+                .ToList(),
             Artifacts = document.ExecutionArtifacts.Where(item => runIds.Contains(item.ExecutionRunId)).ToList(),
             Checkpoints = document.ExecutionWorkflowCheckpoints.Where(item => runIds.Contains(item.ExecutionRunId)).ToList(),
             ToolReceipts = document.ToolExecutionReceipts.Where(item => runIds.Contains(item.ExecutionRunId)).ToList()
@@ -177,11 +198,7 @@ public sealed class ZipAgentPackageService(string workspaceRoot, WorkspaceScopeD
                 Messages = session.Messages ?? [],
                 Compatibility = latestRunBySessionId.ContainsKey(session.Id)
                     ? null
-                    : ChatSessionRuntimeCompatibilityRecord.Create(
-                        session.Compatibility?.RuntimeSessionKey,
-                        session.Compatibility?.SerializedSessionStateJson,
-                        session.Compatibility?.PendingApprovals,
-                        session.Compatibility?.AutoApprovePendingToolCalls ?? false),
+                    : ProtectChatSessionCompatibilityForExport(session.Compatibility),
                 LatestExecutionRunId = latestRunBySessionId.TryGetValue(session.Id, out var latestRun)
                     ? latestRun.Id
                     : session.LatestExecutionRunId
@@ -190,17 +207,114 @@ public sealed class ZipAgentPackageService(string workspaceRoot, WorkspaceScopeD
             .ToList();
     }
 
-    private static IReadOnlyList<ExecutionRunRecord> NormalizeExecutionRuns(IReadOnlyList<ExecutionRunRecord> runs)
+    private static IReadOnlyList<ExecutionRunRecord> NormalizeExecutionRuns(
+        IReadOnlyList<ExecutionRunRecord> runs,
+        IReadOnlySet<Guid>? sensitiveHrApprovalRunIds = null)
     {
+        var protectedRunIds = sensitiveHrApprovalRunIds ?? new HashSet<Guid>();
         return runs
-            .Select(run => run with
+            .Select(run =>
             {
-                MetadataJson = string.IsNullOrWhiteSpace(run.MetadataJson) ? "{}" : run.MetadataJson,
-                PendingApprovals = run.PendingApprovals ?? []
+                var pendingApprovals = run.PendingApprovals ?? [];
+                var hasSensitiveHrApproval = protectedRunIds.Contains(run.Id) ||
+                                             pendingApprovals.Any(approval =>
+                                                 AgentToolInvocationPolicyMetadata.HasSensitiveHrArguments(approval.ToolName));
+                var isManagerReview = IsManagerReviewRun(run);
+                return run with
+                {
+                    MetadataJson = string.IsNullOrWhiteSpace(run.MetadataJson) ? "{}" : run.MetadataJson,
+                    InputSummary = isManagerReview ? ManagerReviewInputExportSummary : run.InputSummary,
+                    ResultSummary = isManagerReview ? ManagerReviewResultExportSummary : run.ResultSummary,
+                    RuntimeSessionKey = isManagerReview || hasSensitiveHrApproval
+                        ? string.Empty
+                        : run.RuntimeSessionKey,
+                    SerializedSessionStateJson = isManagerReview || hasSensitiveHrApproval
+                        ? null
+                        : run.SerializedSessionStateJson,
+                    PendingApprovals = ProtectPendingApprovalsForExport(
+                        pendingApprovals,
+                        protectAll: isManagerReview)
+                };
             })
             .OrderByDescending(run => run.UpdatedAtUtc)
             .ThenByDescending(run => run.CreatedAtUtc)
             .ToList();
+    }
+
+    private static ChatSessionRuntimeCompatibilityRecord? ProtectChatSessionCompatibilityForExport(
+        ChatSessionRuntimeCompatibilityRecord? compatibility)
+    {
+        if (compatibility is null)
+        {
+            return null;
+        }
+
+        var hasSensitiveHrApproval = compatibility.PendingApprovals.Any(approval =>
+            AgentToolInvocationPolicyMetadata.HasSensitiveHrArguments(approval.ToolName));
+        return ChatSessionRuntimeCompatibilityRecord.Create(
+            hasSensitiveHrApproval ? string.Empty : compatibility.RuntimeSessionKey,
+            hasSensitiveHrApproval ? null : compatibility.SerializedSessionStateJson,
+            ProtectPendingApprovalsForExport(compatibility.PendingApprovals),
+            compatibility.AutoApprovePendingToolCalls);
+    }
+
+    private static IReadOnlyList<ExecutionLogEntry> ProtectExecutionLogForExport(
+        IEnumerable<ExecutionLogEntry> executionLog,
+        IReadOnlySet<Guid> managerReviewRunIds)
+    {
+        return executionLog
+            .Select(entry => managerReviewRunIds.Contains(entry.ExecutionRunId)
+                ? entry with { Message = ManagerReviewLogExportMessage }
+                : entry)
+            .ToList();
+    }
+
+    private static ExecutionApprovalRecord ProtectApprovalForExport(
+        ExecutionApprovalRecord approval,
+        bool protectAll)
+    {
+        if (protectAll)
+        {
+            return approval with
+            {
+                Details = HrAgentExecutionRetention.ManagerReviewApprovalDetails,
+                ArgumentsJson = HrAgentExecutionRetention.ManagerReviewApprovalArgumentsJson
+            };
+        }
+
+        return approval with
+        {
+            ArgumentsJson = AgentToolInvocationPolicyMetadata.ProtectApprovalArgumentsForAudit(
+                approval.ToolName,
+                approval.ArgumentsJson)
+        };
+    }
+
+    private static IReadOnlyList<PendingToolApprovalRecord> ProtectPendingApprovalsForExport(
+        IReadOnlyList<PendingToolApprovalRecord>? approvals,
+        bool protectAll = false)
+    {
+        return approvals?
+            .Select(approval => approval with
+            {
+                Details = protectAll
+                    ? HrAgentExecutionRetention.ManagerReviewApprovalDetails
+                    : approval.Details,
+                ArgumentsJson = protectAll
+                    ? HrAgentExecutionRetention.ManagerReviewApprovalArgumentsJson
+                    : AgentToolInvocationPolicyMetadata.ProtectApprovalArgumentsForAudit(
+                        approval.ToolName,
+                        approval.ArgumentsJson)
+            })
+            .ToList() ?? [];
+    }
+
+    private static bool IsManagerReviewRun(ExecutionRunRecord run)
+    {
+        return string.Equals(
+            run.SourceKind,
+            HrAgentExecutionSourceKinds.ManagerReview,
+            StringComparison.OrdinalIgnoreCase);
     }
 
     private static IReadOnlyDictionary<Guid, ExecutionRunRecord> BuildLatestRunBySessionId(IReadOnlyList<ExecutionRunRecord> runs)

@@ -112,6 +112,13 @@
             </div>
         </Stack>
     </button>
+
+    @if (Actions is not null)
+    {
+        <div class="agent-selection-card__actions">
+            @Actions
+        </div>
+    }
 </article>
 
 @code {
@@ -186,6 +193,9 @@
 
     [Parameter]
     public EventCallback OnFavoriteToggle { get; set; }
+
+    [Parameter]
+    public RenderFragment? Actions { get; set; }
 
     private Task HandleSelectAsync()
         => OnSelect.InvokeAsync();

@@ -1,4 +1,5 @@
 using System.Text.Json;
+using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.SharedKernel;
 using Microsoft.Extensions.AI;
 
@@ -50,19 +51,20 @@ internal static class MafToolInvocationArgumentFormatter
     {
         ArgumentNullException.ThrowIfNull(toolCall);
 
+        var toolName = ResolveToolName(toolCall);
         return toolCall switch
         {
-            FunctionCallContent functionCall => SummarizeArguments(functionCall.Arguments),
-            McpServerToolCallContent mcpToolCall => SummarizeArguments(mcpToolCall.Arguments),
+            FunctionCallContent functionCall => SummarizeArguments(toolName, functionCall.Arguments),
+            McpServerToolCallContent mcpToolCall => SummarizeArguments(toolName, mcpToolCall.Arguments),
             _ => string.Empty
         };
     }
 
-    public static string DescribeArguments(string? argumentsJson)
+    public static string DescribeArguments(string? argumentsJson, string? toolName = null)
     {
         return string.IsNullOrWhiteSpace(argumentsJson)
             ? string.Empty
-            : FormatArgumentSummary(DeserializeArguments(argumentsJson));
+            : FormatArgumentSummary(toolName, DeserializeArguments(argumentsJson));
     }
 
     public static string FormatInlineArgumentSummary(string argumentSummary)
@@ -73,18 +75,34 @@ internal static class MafToolInvocationArgumentFormatter
     }
 
     public static string SummarizeArguments(IDictionary<string, object?>? arguments)
+        => SummarizeArguments(string.Empty, arguments);
+
+    public static string SummarizeArguments(
+        string? toolName,
+        IDictionary<string, object?>? arguments)
     {
         if (arguments is null || arguments.Count == 0)
         {
             return string.Empty;
         }
 
-        return FormatArgumentSummary(arguments);
+        return FormatArgumentSummary(toolName, arguments);
     }
 
     public static string FormatArgumentSummary(IEnumerable<KeyValuePair<string, object?>> arguments)
+        => FormatArgumentSummary(string.Empty, arguments);
+
+    public static string FormatArgumentSummary(
+        string? toolName,
+        IEnumerable<KeyValuePair<string, object?>> arguments)
     {
         ArgumentNullException.ThrowIfNull(arguments);
+
+        if (AgentToolInvocationPolicyMetadata.HasSensitiveHrArguments(toolName))
+        {
+            var redacted = AgentToolInvocationPolicyMetadata.RedactArguments(toolName, arguments);
+            return string.Join(", ", redacted.Select(item => $"{item.Key}={item.Value}"));
+        }
 
         var parts = arguments
             .Where(item => item.Value is not null)

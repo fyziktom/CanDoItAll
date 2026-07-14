@@ -3,6 +3,7 @@ namespace CanDoItAll.AgentFramework.Models;
 public sealed class AgentEditorModel
 {
     public Guid? Id { get; set; }
+    public DateTimeOffset? ExpectedUpdatedAtUtc { get; set; }
     public string Name { get; set; } = string.Empty;
     public string RoleTitle { get; set; } = string.Empty;
     public string Summary { get; set; } = string.Empty;
@@ -35,6 +36,7 @@ public sealed class AgentEditorModel
         return new AgentEditorModel
         {
             Id = definition.Id,
+            ExpectedUpdatedAtUtc = definition.UpdatedAtUtc,
             Name = definition.Name,
             RoleTitle = definition.RoleTitle,
             Summary = definition.Summary,

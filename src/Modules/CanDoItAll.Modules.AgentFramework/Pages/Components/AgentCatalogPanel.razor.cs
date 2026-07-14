@@ -1,6 +1,7 @@
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Components.BaseLib;
+using CanDoItAll.Components.OverlayLib;
 using Microsoft.AspNetCore.Components;
 
 namespace CanDoItAll.Modules.AgentFramework.Pages.Components;
@@ -11,6 +12,9 @@ public partial class AgentCatalogPanel
     private const string TeamRootTreeNodeId = "agents:teams";
     private const string TeamTreeNodePrefix = "agents:team:";
     private const string AgentTreeNodePrefix = "agents:agent:";
+    private const string HrAgentWindowId = "agents.hr-agent.chat";
+    private const string HrAgentWindowTestId = "agents-hr-agent-window";
+    private const string HrAgentViewportTestId = "agents-hr-agent-viewport";
 
     [Parameter]
     public Guid? RequestedAgentId { get; set; }
@@ -23,6 +27,9 @@ public partial class AgentCatalogPanel
 
     [Parameter]
     public IReadOnlyList<ProviderProfile>? InitialProviders { get; set; }
+
+    [Parameter]
+    public IReadOnlyList<AgentTeamDefinition>? InitialTeams { get; set; }
 
     [Parameter]
     public bool SkipCatalogRepair { get; set; }
@@ -52,6 +59,7 @@ public partial class AgentCatalogPanel
     private Guid? selectedTeamId;
     private Guid? appliedRequestedTeamId;
     private Guid? openedRequestedAgentId;
+    private OverlayWindowState hrAgentWindowState = new() { IsVisible = false };
 
     private IReadOnlyList<AgentDefinition> FilteredAgents => agents
         .Where(MatchesSelectedTeam)
@@ -64,6 +72,9 @@ public partial class AgentCatalogPanel
         : null;
 
     private string TeamPanelTitle => SelectedTeam is null ? "All agents" : SelectedTeam.Name;
+
+    private AgentDefinition? HrAgent
+        => agents.FirstOrDefault(HrAgentIdentity.Matches);
 
     private IReadOnlyList<TreeViewNode> AgentTeamTreeNodes
     {
@@ -193,7 +204,9 @@ public partial class AgentCatalogPanel
             var providersTask = InitialProviders is null
                 ? WorkspaceService.ListProvidersAsync()
                 : Task.FromResult(InitialProviders);
-            var teamsTask = WorkspaceService.ListAgentTeamsAsync();
+            var teamsTask = InitialTeams is null
+                ? WorkspaceService.ListAgentTeamsAsync()
+                : Task.FromResult(InitialTeams);
 
             agents = (await agentsTask).ToList();
             privateProviderById = BuildPrivateProviderMap(await providersTask);
@@ -234,6 +247,27 @@ public partial class AgentCatalogPanel
     private void SelectAgent(Guid agentId)
     {
         selectedAgentId = agentId;
+    }
+
+    private Task OpenHrAgentChatAsync(AgentDefinition agent)
+    {
+        if (!HrAgentIdentity.Matches(agent))
+        {
+            throw new InvalidOperationException("Only the configured HR agent can open the HR chat window.");
+        }
+
+        selectedAgentId = agent.Id;
+        var nextState = OverlayWindowState.Normalize(hrAgentWindowState);
+        nextState.IsVisible = true;
+        nextState.IsMinimized = false;
+        hrAgentWindowState = nextState;
+        return Task.CompletedTask;
+    }
+
+    private Task HandleHrAgentWindowStateChangedAsync(OverlayWindowState state)
+    {
+        hrAgentWindowState = OverlayWindowState.Normalize(state);
+        return Task.CompletedTask;
     }
 
     private Task HandleAgentTeamTreeSelectAsync(string nodeId)

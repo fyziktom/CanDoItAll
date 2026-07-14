@@ -22,7 +22,10 @@ public sealed record AgentImageGenerationRequest(
     string Size,
     string Quality,
     AgentGeneratedImageFormat Format,
-    IReadOnlyList<AgentImageGenerationSource> Sources);
+    IReadOnlyList<AgentImageGenerationSource> Sources)
+{
+    public int? OutputCompression { get; init; }
+}
 
 public sealed record AgentGeneratedImage(
     string ContentType,

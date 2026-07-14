@@ -224,6 +224,19 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         AgentChatRunOptions? options,
         CancellationToken cancellationToken)
     {
+        var defaultContext = new ExecutionInvocationContext(
+            SourceKind: "chat-session",
+            SourceId: session?.Id.ToString("N") ?? string.Empty,
+            CorrelationId: string.Empty,
+            CausationId: string.Empty,
+            RequestedBy: "sandbox-chat",
+            RequestedByKind: "interactive",
+            MetadataJson: "{}");
+        var requestedContext = options?.Context ?? defaultContext;
+        var invocationContext = requestedContext with
+        {
+            MetadataJson = BuildChatMetadataJson(options, requestedContext.MetadataJson)
+        };
         var result = await ExecuteRunCoreAsync(
             agent,
             provider,
@@ -234,14 +247,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                 AgentId: agent.Id,
                 Prompt: prompt.Trim(),
                 ChatSessionId: session?.Id,
-                Context: new ExecutionInvocationContext(
-                    SourceKind: "chat-session",
-                    SourceId: session?.Id.ToString("N") ?? string.Empty,
-                    CorrelationId: string.Empty,
-                    CausationId: string.Empty,
-                    RequestedBy: "sandbox-chat",
-                    RequestedByKind: "interactive",
-                    MetadataJson: BuildChatMetadataJson(options)),
+                Context: invocationContext,
                 AutoApprovePendingToolCalls: false,
                 InputAttachmentPaths: attachmentPaths),
             persistTranscript: true,
@@ -256,9 +262,9 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         };
     }
 
-    private static string BuildChatMetadataJson(AgentChatRunOptions? options)
+    private static string BuildChatMetadataJson(AgentChatRunOptions? options, string? baseMetadataJson)
     {
-        var metadataJson = "{}";
+        var metadataJson = string.IsNullOrWhiteSpace(baseMetadataJson) ? "{}" : baseMetadataJson;
         if (options?.RuntimeToolProvidersEnabled == false)
         {
             metadataJson = ExecutionInvocationMetadata.ApplyRuntimeToolProvidersEnabled(metadataJson, enabled: false);
@@ -267,6 +273,11 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         if (options?.WorkspaceToolsEnabled == false)
         {
             metadataJson = ExecutionInvocationMetadata.ApplyWorkspaceToolsEnabled(metadataJson, enabled: false);
+        }
+
+        if (options?.ToolCapabilitiesEnabled == false)
+        {
+            metadataJson = ExecutionInvocationMetadata.ApplyToolCapabilitiesEnabled(metadataJson, enabled: false);
         }
 
         return metadataJson;

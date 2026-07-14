@@ -64,7 +64,19 @@ internal sealed class CurrentProfileAgentFrameworkWorkspaceService(
     {
         var agentId = await ResolveService().SaveAgentAsync(model, cancellationToken);
         referenceDataCacheInvalidator.Invalidate();
-        await technicalAgentBridge.SynchronizeDirectoryProjectionAsync(cancellationToken);
+        try
+        {
+            await technicalAgentBridge.SynchronizeDirectoryProjectionAsync(cancellationToken);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception exception)
+        {
+            throw new AgentDirectoryProjectionSynchronizationException(agentId, exception);
+        }
+
         return agentId;
     }
 

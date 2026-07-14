@@ -95,6 +95,22 @@
     padding-right: 0.35rem;
 }
 
+.agent-catalog-panel__hr-chat-viewport {
+    inset: 0;
+    pointer-events: none;
+    position: fixed;
+    z-index: 640;
+}
+
+.agent-catalog-panel__hr-chat-viewport ::deep .agent-catalog-panel__hr-chat-body,
+.agent-catalog-panel__hr-chat-viewport ::deep .agent-catalog-panel__hr-chat-content {
+    display: flex;
+    height: 100%;
+    min-height: 0;
+    overflow: hidden;
+    width: 100%;
+}
+
 @media (min-width: 1024px) {
     .agent-catalog-panel__team-panel {
         max-height: 46rem;

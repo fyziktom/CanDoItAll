@@ -98,7 +98,7 @@ internal sealed class MafApprovalContinuationDriver : IMafApprovalContinuationDr
             Environment.NewLine,
             pendingApprovals.Select(item =>
             {
-                var argumentSummary = MafToolInvocationArgumentFormatter.DescribeArguments(item.ArgumentsJson);
+                var argumentSummary = MafToolInvocationArgumentFormatter.DescribeArguments(item.ArgumentsJson, item.ToolName);
                 return item.ToolKind == "mcp"
                     ? $"- Approval required for MCP tool '{item.ToolName}' on server '{item.Details}'{MafToolInvocationArgumentFormatter.FormatInlineArgumentSummary(argumentSummary)}."
                     : $"- Approval required for tool '{item.ToolName}'{MafToolInvocationArgumentFormatter.FormatInlineArgumentSummary(argumentSummary)}.";

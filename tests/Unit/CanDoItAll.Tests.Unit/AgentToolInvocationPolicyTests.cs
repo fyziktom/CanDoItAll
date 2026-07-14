@@ -2061,6 +2061,42 @@ public sealed class AgentToolInvocationPolicyTests
     }
 
     [Fact]
+    public void RedactArguments_masks_HR_business_text_without_collapsing_distinct_targets()
+    {
+        var first = AgentToolInvocationPolicyMetadata.RedactArguments(
+            AgentToolInvocationPolicyMetadata.HrAgentSettingsUpdate,
+        [
+            new KeyValuePair<string, object?>("request", new
+            {
+                agentId = Guid.Parse("11111111-1111-1111-1111-111111111111"),
+                name = "Private Alpha Name",
+                instructions = "Confidential alpha instructions"
+            })
+        ]);
+        var second = AgentToolInvocationPolicyMetadata.RedactArguments(
+            AgentToolInvocationPolicyMetadata.HrAgentSettingsUpdate,
+        [
+            new KeyValuePair<string, object?>("request", new
+            {
+                agentId = Guid.Parse("22222222-2222-2222-2222-222222222222"),
+                name = "Private Beta Name",
+                instructions = "Confidential beta instructions"
+            })
+        ]);
+        var firstSignature = AgentToolInvocationPolicyMetadata.BuildSignature(
+            AgentToolInvocationPolicyMetadata.HrAgentSettingsUpdate,
+            first);
+        var secondSignature = AgentToolInvocationPolicyMetadata.BuildSignature(
+            AgentToolInvocationPolicyMetadata.HrAgentSettingsUpdate,
+            second);
+
+        Assert.DoesNotContain("Private Alpha Name", firstSignature, StringComparison.Ordinal);
+        Assert.DoesNotContain("Confidential alpha instructions", firstSignature, StringComparison.Ordinal);
+        Assert.Contains("11111111-1111-1111-1111-111111111111", firstSignature, StringComparison.Ordinal);
+        Assert.NotEqual(firstSignature, secondSignature);
+    }
+
+    [Fact]
     public void AgentToolPolicyBlockedException_preserves_policy_reason_and_tool_name()
     {
         var exception = new AgentToolPolicyBlockedException(

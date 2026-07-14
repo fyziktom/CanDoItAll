@@ -33,7 +33,10 @@ public sealed class ProviderRuntimeImageGenerationService(
             MapFormat(request.Format),
             request.Sources
                 .Select(source => new ProviderImageSource(source.Name, source.ContentType, source.Bytes))
-                .ToList());
+                .ToList())
+        {
+            OutputCompression = request.OutputCompression
+        };
 
         var result = await handle.DispatchAsync(
             new ProviderRuntimeDispatchRequest<ProviderImageGenerationRequest>(query, payload),
@@ -95,6 +98,16 @@ public sealed class ProviderRuntimeImageGenerationService(
         if (string.IsNullOrWhiteSpace(request.Quality))
         {
             throw new InvalidOperationException("Image generation requires an image quality.");
+        }
+
+        if (request.OutputCompression is < 0 or > 100)
+        {
+            throw new InvalidOperationException("Image output compression must be between 0 and 100.");
+        }
+
+        if (request.OutputCompression.HasValue && request.Format == AgentGeneratedImageFormat.Png)
+        {
+            throw new InvalidOperationException("Image output compression is supported only for JPEG or WebP output.");
         }
 
         foreach (var source in request.Sources)

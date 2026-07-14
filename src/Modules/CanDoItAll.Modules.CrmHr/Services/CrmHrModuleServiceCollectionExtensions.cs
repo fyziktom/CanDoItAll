@@ -18,6 +18,7 @@ public static class CrmHrModuleServiceCollectionExtensions
         services.AddScoped<HrService>();
         services.AddScoped<RecruitingService>();
         services.AddScoped<AiAgentService>();
+        services.AddScoped<ICrmHrAgentQueryService, CrmHrAgentQueryService>();
         services.AddScoped<ProjectPartyAssignmentNodePolicy>();
         services.AddScoped<ProjectPartyIntegrationService>();
         services.AddScoped<ICrmHrSourceSnapshotProvider, CrmHrSourceSnapshotProvider>();

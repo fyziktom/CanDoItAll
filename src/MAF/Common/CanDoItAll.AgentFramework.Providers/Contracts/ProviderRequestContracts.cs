@@ -45,7 +45,10 @@ public sealed record ProviderImageGenerationRequest(
     string Size,
     string Quality,
     ProviderGeneratedImageFormat Format,
-    IReadOnlyList<ProviderImageSource> Sources);
+    IReadOnlyList<ProviderImageSource> Sources)
+{
+    public int? OutputCompression { get; init; }
+}
 
 public sealed record ProviderGeneratedImage(
     string ContentType,

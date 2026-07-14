@@ -120,6 +120,62 @@ public sealed class MafAgentRuntimeToolProviderCompositionTests
     }
 
     [Fact]
+    public async Task MafAgentRuntimeToolProviderComposition_tool_free_context_skips_every_capability_attachment_path()
+    {
+        var provider = new TestRuntimeToolProvider(10, "runtime_tool_should_not_attach");
+        var services = new ServiceCollection();
+        services.AddSingleton<IAgentRuntimeToolProvider>(provider);
+        var runtime = RuntimeCapabilityComposer.CreateDefault(Path.GetTempPath(), services.BuildServiceProvider());
+        var workspaceAccess = AgentWorkspaceToolAccessProfiles.CreateSettings(AgentWorkspaceToolProfileKind.SoftwareDevelopment);
+        var agent = CreateToolEnabledAgent(CreateWorkspaceToolConfiguration(workspaceAccess));
+        var capabilities = new[]
+        {
+            CreateToolCapability("provider-health", "provider_health"),
+            CreateSkillCapability(
+                "inline://tool-free-test",
+                """
+                {
+                  "inlineSkill": {
+                    "name": "tool-free-test",
+                    "instructions": "This skill must not be attached."
+                  }
+                }
+                """)
+        };
+        var progressMessages = new List<string>();
+
+        var state = await InvokeCreateCapabilityStateCoreAsync(
+            runtime,
+            agent,
+            CreateProviderProfile(),
+            capabilities,
+            AgentRuntimeContextIntent.Empty with
+            {
+                ToolCapabilitiesEnabled = false
+            },
+            progressMessages);
+
+        Assert.Empty(provider.Contexts);
+        Assert.Empty(ReadTools(state));
+        Assert.Empty(ReadProviderDescriptors(state));
+        Assert.Empty(ReadContextProviders(state));
+        Assert.Empty(ReadFrameworkToolNames(state));
+        Assert.False(ReadHasApprovalTools(state));
+        Assert.All(ReadContextSources(state), source =>
+            Assert.Equal(AgentRuntimeContextSourceDecision.Excluded, source.Decision));
+        Assert.Contains(ReadContextSources(state), source =>
+            source.Category == AgentRuntimeContextSourceCategories.Skills);
+        Assert.Contains(ReadContextSources(state), source =>
+            source.Category == AgentRuntimeContextSourceCategories.WorkspaceTools);
+        Assert.Contains(ReadContextSources(state), source =>
+            source.Category == AgentRuntimeContextSourceCategories.RuntimeToolProvider);
+        Assert.Contains(ReadContextSources(state), source =>
+            source.Category == AgentRuntimeContextSourceCategories.CatalogCapability);
+        Assert.Contains(progressMessages, message =>
+            message.Contains("explicitly tool-free", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
     public async Task MafAgentRuntimeToolProviderComposition_records_provider_descriptor_metadata()
     {
         var services = new ServiceCollection();

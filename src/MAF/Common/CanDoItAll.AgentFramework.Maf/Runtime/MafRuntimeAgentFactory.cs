@@ -344,7 +344,7 @@ internal sealed class MafRuntimeAgentFactory
         {
             var functionName = context.Function?.Name ?? "unknown";
             var invocationArguments = MafScriptPolicyInspectionService.ResolveFunctionInvocationArguments(context).ToArray();
-            var redactedArguments = AgentToolInvocationPolicyMetadata.RedactArguments(invocationArguments);
+            var redactedArguments = AgentToolInvocationPolicyMetadata.RedactArguments(functionName, invocationArguments);
             var isRequiredFinalizerTool = IsRequiredFinalizerTool(functionName, finalizerPolicy, finalizerMode);
             var classification = isRequiredFinalizerTool
                 ? ToolInvocationClassification.Read

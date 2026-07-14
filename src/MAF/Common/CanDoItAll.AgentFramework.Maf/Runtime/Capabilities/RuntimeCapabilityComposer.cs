@@ -179,6 +179,11 @@ internal sealed class RuntimeCapabilityComposer : IRuntimeCapabilityComposer
         var totalStopwatch = Stopwatch.StartNew();
         try
         {
+            if (!contextIntent.ToolCapabilitiesEnabled)
+            {
+                return await CreateToolFreeCapabilityStateAsync(progressCallback);
+            }
+
             var agentConfiguration = MafRuntimeJson.DeserializeConfiguration<AgentRuntimeConfiguration>(agent.ConfigurationJson) ?? new AgentRuntimeConfiguration();
             var workspaceToolAccess = ResolveWorkspaceToolAccessForRuntime(agent);
             var storageToolsAvailable = HasStorageRuntimePluginServices();
@@ -303,6 +308,30 @@ internal sealed class RuntimeCapabilityComposer : IRuntimeCapabilityComposer
                 RecordCompositionMetric(stage, stopwatch.Elapsed);
             }
         }
+    }
+
+    private static async Task<RuntimeCapabilityState> CreateToolFreeCapabilityStateAsync(
+        Func<ExecutionState, string, string, Task> progressCallback)
+    {
+        const string reason = "all runtime tool and context capability attachment is disabled by execution context";
+        var state = new RuntimeCapabilityState();
+        state.ContextSources.AddRange(
+        [
+            AgentRuntimeContextManifestSource.Excluded(AgentRuntimeContextSourceCategories.Memory, "workspace-memory", reason),
+            AgentRuntimeContextManifestSource.Excluded(AgentRuntimeContextSourceCategories.ContextContributor, "registered-context-contributors", reason),
+            AgentRuntimeContextManifestSource.Excluded(AgentRuntimeContextSourceCategories.Skills, "agent-skills-provider", reason),
+            AgentRuntimeContextManifestSource.Excluded(AgentRuntimeContextSourceCategories.WorkspaceTools, "configured-workspace-tools", reason),
+            AgentRuntimeContextManifestSource.Excluded(AgentRuntimeContextSourceCategories.RuntimeToolProvider, "registered-runtime-tool-providers", reason),
+            AgentRuntimeContextManifestSource.Excluded(AgentRuntimeContextSourceCategories.A2ARemoteAgents, "a2a-remote-agents", reason),
+            AgentRuntimeContextManifestSource.Excluded(AgentRuntimeContextSourceCategories.CatalogCapability, "catalog-capabilities", reason),
+            AgentRuntimeContextManifestSource.Excluded(AgentRuntimeContextSourceCategories.Compaction, "microsoft-agent-framework-compaction", reason),
+            AgentRuntimeContextManifestSource.Excluded(AgentRuntimeContextSourceCategories.FrameworkTool, "framework-tools", reason)
+        ]);
+        await progressCallback(
+            ExecutionState.Preparing,
+            "Capability policy",
+            "Skipped all runtime tool and context capability attachment because this execution is explicitly tool-free.");
+        return state;
     }
 
     private RuntimeCapabilityComposition CreateCapabilityComposition(

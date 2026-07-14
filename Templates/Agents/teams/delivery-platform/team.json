@@ -44,6 +44,10 @@
     {
       "key": "hr-staffing-manager",
       "relativePath": "members/hr-staffing-manager"
+    },
+    {
+      "key": "hr-agent",
+      "relativePath": "members/hr-agent"
     }
   ]
 }

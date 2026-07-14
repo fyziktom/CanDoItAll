@@ -1518,7 +1518,10 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
             AllowedOperations: ExecutionInvocationMetadata.ResolveProcessStepAllowedOperations(run),
             RuntimeToolProvidersEnabled: ExecutionInvocationMetadata.ResolveRuntimeToolProvidersEnabled(run),
             WorkspaceToolsEnabled: ExecutionInvocationMetadata.ResolveWorkspaceToolsEnabled(run),
-            CapabilityScopeOverride: ExecutionInvocationMetadata.ResolveRuntimeCapabilityScopeOverride(run));
+            CapabilityScopeOverride: ExecutionInvocationMetadata.ResolveRuntimeCapabilityScopeOverride(run))
+        {
+            ToolCapabilitiesEnabled = ExecutionInvocationMetadata.ResolveToolCapabilitiesEnabled(run)
+        };
     }
 
     private async Task AppendProcessCooperationLogAsync(

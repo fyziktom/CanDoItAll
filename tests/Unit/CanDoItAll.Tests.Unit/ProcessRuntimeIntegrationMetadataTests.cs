@@ -312,6 +312,7 @@ public sealed class ProcessRuntimeIntegrationMetadataTests
         Assert.False(options.ContextIntent.AllowsProductMutation);
         Assert.True(options.ContextIntent.RuntimeToolProvidersEnabled);
         Assert.True(options.ContextIntent.WorkspaceToolsEnabled);
+        Assert.True(options.ContextIntent.ToolCapabilitiesEnabled);
         Assert.Contains(ProcessOperationContractNames.ReadProcessContext, options.ContextIntent.AllowedOperations);
         Assert.Contains(ProcessOperationContractNames.RunValidation, options.ContextIntent.AllowedOperations);
     }
@@ -319,8 +320,10 @@ public sealed class ProcessRuntimeIntegrationMetadataTests
     [Fact]
     public void Agent_runtime_options_preserve_disabled_runtime_tool_provider_metadata()
     {
-        var metadataJson = ExecutionInvocationMetadata.ApplyWorkspaceToolsEnabled(
-            ExecutionInvocationMetadata.ApplyRuntimeToolProvidersEnabled("{}", enabled: false),
+        var metadataJson = ExecutionInvocationMetadata.ApplyToolCapabilitiesEnabled(
+            ExecutionInvocationMetadata.ApplyWorkspaceToolsEnabled(
+                ExecutionInvocationMetadata.ApplyRuntimeToolProvidersEnabled("{}", enabled: false),
+                enabled: false),
             enabled: false);
         var run = CreateTrustedProcessRun(metadataJson);
         var method = typeof(AgentFrameworkWorkspaceExecutionService).GetMethod(
@@ -333,6 +336,39 @@ public sealed class ProcessRuntimeIntegrationMetadataTests
         Assert.NotNull(options.ContextIntent);
         Assert.False(options.ContextIntent!.RuntimeToolProvidersEnabled);
         Assert.False(options.ContextIntent.WorkspaceToolsEnabled);
+        Assert.False(options.ContextIntent.ToolCapabilitiesEnabled);
+    }
+
+    [Fact]
+    public void Agent_chat_run_options_preserve_default_capabilities_and_can_request_tool_free_execution()
+    {
+        var method = typeof(AgentFrameworkWorkspaceExecutionService).GetMethod(
+            "BuildChatMetadataJson",
+            BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("BuildChatMetadataJson method was not found.");
+        const string baseMetadataJson = "{\"marker\":\"preserved\"}";
+
+        var defaultMetadataJson = Assert.IsType<string>(method.Invoke(
+            null,
+            [new AgentChatRunOptions(), baseMetadataJson]));
+        var toolFreeMetadataJson = Assert.IsType<string>(method.Invoke(
+            null,
+            [new AgentChatRunOptions { ToolCapabilitiesEnabled = false }, baseMetadataJson]));
+
+        using var defaultDocument = JsonDocument.Parse(defaultMetadataJson);
+        using var toolFreeDocument = JsonDocument.Parse(toolFreeMetadataJson);
+        Assert.Equal("preserved", defaultDocument.RootElement.GetProperty("marker").GetString());
+        Assert.False(defaultDocument.RootElement.TryGetProperty(
+            ExecutionInvocationMetadata.ToolCapabilitiesEnabledMetadataKey,
+            out _));
+        Assert.Equal("preserved", toolFreeDocument.RootElement.GetProperty("marker").GetString());
+        Assert.False(toolFreeDocument.RootElement
+            .GetProperty(ExecutionInvocationMetadata.ToolCapabilitiesEnabledMetadataKey)
+            .GetBoolean());
+        Assert.True(ExecutionInvocationMetadata.ResolveToolCapabilitiesEnabled(
+            CreateTrustedProcessRun(defaultMetadataJson)));
+        Assert.False(ExecutionInvocationMetadata.ResolveToolCapabilitiesEnabled(
+            CreateTrustedProcessRun(toolFreeMetadataJson)));
     }
 
     [Fact]

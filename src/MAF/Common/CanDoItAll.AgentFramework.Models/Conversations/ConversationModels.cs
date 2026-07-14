@@ -436,7 +436,12 @@ public sealed record ExecutionApprovalRecord(
 
 public sealed record AgentChatRunOptions(
     bool RuntimeToolProvidersEnabled = true,
-    bool WorkspaceToolsEnabled = true);
+    bool WorkspaceToolsEnabled = true)
+{
+    public ExecutionInvocationContext? Context { get; init; }
+
+    public bool ToolCapabilitiesEnabled { get; init; } = true;
+}
 
 public sealed record ExecutionRunRequest(
     Guid AgentId,

@@ -1,4 +1,5 @@
 using System.Buffers.Binary;
+using System.Globalization;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text;
@@ -247,16 +248,22 @@ public sealed class OpenAiProviderDriver(HttpClient httpClient, IProviderDriverC
     {
         var httpRequest = new HttpRequestMessage(HttpMethod.Post, BuildEndpoint(request.Provider, "images/generations"));
         httpRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", credential.ApiKey);
+        var payload = new Dictionary<string, object>
+        {
+            ["model"] = request.Model,
+            ["prompt"] = request.Prompt,
+            ["n"] = 1,
+            ["size"] = request.Size,
+            ["quality"] = request.Quality,
+            ["output_format"] = FormatToApiValue(request.Format)
+        };
+        if (request.OutputCompression is int outputCompression)
+        {
+            payload["output_compression"] = outputCompression;
+        }
+
         httpRequest.Content = JsonContent.Create(
-            new
-            {
-                model = request.Model,
-                prompt = request.Prompt,
-                n = 1,
-                size = request.Size,
-                quality = request.Quality,
-                output_format = FormatToApiValue(request.Format)
-            },
+            payload,
             options: ProviderDriverJson.Options);
         return httpRequest;
     }
@@ -274,6 +281,10 @@ public sealed class OpenAiProviderDriver(HttpClient httpClient, IProviderDriverC
         AddFormString(form, "size", request.Size);
         AddFormString(form, "quality", request.Quality);
         AddFormString(form, "output_format", FormatToApiValue(request.Format));
+        if (request.OutputCompression is int outputCompression)
+        {
+            AddFormString(form, "output_compression", outputCompression.ToString(CultureInfo.InvariantCulture));
+        }
         foreach (var source in request.Sources)
         {
             var content = new ByteArrayContent(source.Bytes);

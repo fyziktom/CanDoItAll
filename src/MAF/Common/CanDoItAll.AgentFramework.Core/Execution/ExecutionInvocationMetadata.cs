@@ -29,6 +29,7 @@ public static class ExecutionInvocationMetadata
     public const string ProjectStructureProcessNodeContextMetadataKey = "agentProjectStructureProcessNodeContext";
     public const string RuntimeToolProvidersEnabledMetadataKey = "agentRuntimeToolProvidersEnabled";
     public const string WorkspaceToolsEnabledMetadataKey = "agentWorkspaceToolsEnabled";
+    public const string ToolCapabilitiesEnabledMetadataKey = "agentToolCapabilitiesEnabled";
     public const string RuntimeCapabilityScopeOverrideMetadataKey = "agentRuntimeCapabilityScopeOverride";
     public const int DefaultGovernedRepairAttempts = 1;
     public const int MaxRepairAttempts = 2;
@@ -117,6 +118,15 @@ public static class ExecutionInvocationMetadata
     {
         var metadata = ParseObject(metadataJson);
         metadata[WorkspaceToolsEnabledMetadataKey] = enabled;
+        return metadata.ToJsonString(AgentOutputJson.SerializerOptions);
+    }
+
+    public static string ApplyToolCapabilitiesEnabled(
+        string? metadataJson,
+        bool enabled)
+    {
+        var metadata = ParseObject(metadataJson);
+        metadata[ToolCapabilitiesEnabledMetadataKey] = enabled;
         return metadata.ToJsonString(AgentOutputJson.SerializerOptions);
     }
 
@@ -373,6 +383,13 @@ public static class ExecutionInvocationMetadata
         ArgumentNullException.ThrowIfNull(run);
 
         return TryReadBoolean(run.MetadataJson, WorkspaceToolsEnabledMetadataKey) != false;
+    }
+
+    public static bool ResolveToolCapabilitiesEnabled(ExecutionRunRecord run)
+    {
+        ArgumentNullException.ThrowIfNull(run);
+
+        return TryReadBoolean(run.MetadataJson, ToolCapabilitiesEnabledMetadataKey) != false;
     }
 
     public static bool ResolveProcessAllowsProductMutation(ExecutionRunRecord run)

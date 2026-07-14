@@ -37,6 +37,8 @@ public sealed record AgentRuntimeContextIntent(
     bool WorkspaceToolsEnabled = true,
     AgentRuntimeCapabilityScopeOverride? CapabilityScopeOverride = null)
 {
+    public bool ToolCapabilitiesEnabled { get; init; } = true;
+
     public static AgentRuntimeContextIntent Empty { get; } = new(
         SourceKind: string.Empty,
         SourceId: string.Empty,

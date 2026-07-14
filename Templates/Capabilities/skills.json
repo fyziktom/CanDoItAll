@@ -458,6 +458,26 @@
         "document-processing"
       ],
       "proofNotes": "Inline task workflow guidance seeded directly in the workspace catalog."
+    },
+    {
+      "kind": "skill",
+      "key": "hr-agent-governance-inline-skill",
+      "displayName": "HR Agent Governance Skill",
+      "description": "Evidence-first workflow for administering technical agents, reviewing usage and process performance, and handling CRM/HR data safely.",
+      "stableId": "skill:hr-agent-governance:v1",
+      "stableGuidKey": "capabilities/hr-agent-governance-inline-skill",
+      "endpointOrPath": "inline://hr-agent-governance",
+      "skillSource": "inline",
+      "inlineSkill": {
+        "name": "hr-agent-governance",
+        "description": "Govern technical-agent lifecycle changes and workforce reviews with explicit evidence, approvals, and privacy boundaries.",
+        "instructionsAssetKey": "skills/instructions/hr-agent-governance.md"
+      },
+      "operationClassifications": [
+        "read",
+        "validation"
+      ],
+      "proofNotes": "Template-owned skill for the privileged managed HR agent."
     }
   ]
 }

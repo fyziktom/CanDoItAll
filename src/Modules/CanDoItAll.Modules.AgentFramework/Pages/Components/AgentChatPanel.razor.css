@@ -154,3 +154,18 @@
         overflow: visible;
     }
 }
+
+.agents-chat-panel-shell--focused-floating {
+    display: flex;
+    height: 100%;
+    min-height: 0;
+    overflow: hidden;
+    width: 100%;
+}
+
+.agents-chat-panel-shell--focused-floating ::deep .agents-chat-grid {
+    height: 100%;
+    min-height: 0;
+    overflow: hidden;
+    width: 100%;
+}

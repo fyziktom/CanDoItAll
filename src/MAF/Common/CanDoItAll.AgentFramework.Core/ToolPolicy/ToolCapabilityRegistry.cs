@@ -16,7 +16,9 @@ public enum ToolCapabilitySideEffectKind
     MediaGeneration,
     DocumentConversion,
     ProviderNative,
-    McpTool
+    McpTool,
+    InternalDataRead,
+    InternalStateMutation
 }
 
 public enum ToolCapabilityOperationRequirementKind
@@ -292,7 +294,18 @@ public static class ToolCapabilityRegistry
                 AgentToolInvocationPolicyMetadata.WorkflowsExternalResponseSubmit,
                 ToolCapabilitySideEffectKind.RuntimeLaunch,
                 StaticRequirement(ProcessOperationContractNames.ExecuteExternalAction)),
-            Mutation(AgentToolInvocationPolicyMetadata.ImageGenerationCreate, ToolCapabilitySideEffectKind.MediaGeneration, StaticRequirement(ProcessOperationContractNames.ExecuteExternalAction))
+            Mutation(AgentToolInvocationPolicyMetadata.ImageGenerationCreate, ToolCapabilitySideEffectKind.MediaGeneration, StaticRequirement(ProcessOperationContractNames.ExecuteExternalAction)),
+            Read(AgentToolInvocationPolicyMetadata.HrAgentsSearch, ToolCapabilitySideEffectKind.InternalDataRead),
+            Read(AgentToolInvocationPolicyMetadata.HrAgentSettingsGet, ToolCapabilitySideEffectKind.InternalDataRead),
+            Read(AgentToolInvocationPolicyMetadata.HrAgentCreationOptionsGet, ToolCapabilitySideEffectKind.InternalDataRead),
+            Mutation(AgentToolInvocationPolicyMetadata.HrAgentCreate, ToolCapabilitySideEffectKind.InternalStateMutation),
+            Mutation(AgentToolInvocationPolicyMetadata.HrAgentSettingsUpdate, ToolCapabilitySideEffectKind.InternalStateMutation),
+            Mutation(AgentToolInvocationPolicyMetadata.HrAgentAvatarGenerate, ToolCapabilitySideEffectKind.MediaGeneration, StaticRequirement(ProcessOperationContractNames.ExecuteExternalAction)),
+            Read(AgentToolInvocationPolicyMetadata.HrAgentUsageGet, ToolCapabilitySideEffectKind.InternalDataRead),
+            Read(AgentToolInvocationPolicyMetadata.HrAgentProcessHistoryGet, ToolCapabilitySideEffectKind.InternalDataRead),
+            Mutation(AgentToolInvocationPolicyMetadata.HrAgentProcessManagerReviewRequest, ToolCapabilitySideEffectKind.ExternalAction, StaticRequirement(ProcessOperationContractNames.ExecuteExternalAction)),
+            Read(AgentToolInvocationPolicyMetadata.HrCrmSearch, ToolCapabilitySideEffectKind.InternalDataRead),
+            Read(AgentToolInvocationPolicyMetadata.HrCrmItemSummaryGet, ToolCapabilitySideEffectKind.InternalDataRead)
         };
 
         capabilities.AddRange(AgentToolInvocationPolicyMetadata.ProjectStructureReadTools.Select(toolName =>

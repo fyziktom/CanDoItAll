@@ -1,6 +1,7 @@
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
 using CanDoItAll.AgentFramework.Core.Execution;
 using CanDoItAll.AgentFramework.Models;
@@ -2679,6 +2680,35 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
 
 public static class AgentToolInvocationPolicyMetadata
 {
+    private const string HrApprovalAuditRetentionScheme = "hr-approval-redacted-v1";
+
+    private static readonly IReadOnlySet<string> SensitiveHrArgumentToolNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+    {
+        HrAgentsSearch,
+        HrAgentCreate,
+        HrAgentSettingsUpdate,
+        HrAgentAvatarGenerate,
+        HrAgentProcessManagerReviewRequest,
+        HrCrmSearch
+    };
+
+    private static readonly IReadOnlySet<string> SensitiveHrArgumentPropertyNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+    {
+        "displayName",
+        "instructions",
+        "name",
+        "notes",
+        "prompt",
+        "query",
+        "question",
+        "roleTitle",
+        "searchText",
+        "summary",
+        "tags",
+        "text",
+        "visualBrief"
+    };
+
     public const string LoadSkill = "load_skill";
     public const string ReadSkillResource = "read_skill_resource";
     public const string RunSkillScript = "run_skill_script";
@@ -2713,6 +2743,17 @@ public static class AgentToolInvocationPolicyMetadata
     public const string WorkflowsRunCancel = "workflows_run_cancel";
     public const string WorkflowsExternalResponseSubmit = "workflows_external_response_submit";
     public const string ImageGenerationCreate = "image_generation_create";
+    public const string HrAgentsSearch = "hr_agents_search";
+    public const string HrAgentSettingsGet = "hr_agent_settings_get";
+    public const string HrAgentCreationOptionsGet = "hr_agent_creation_options_get";
+    public const string HrAgentCreate = "hr_agent_create";
+    public const string HrAgentSettingsUpdate = "hr_agent_settings_update";
+    public const string HrAgentAvatarGenerate = "hr_agent_avatar_generate";
+    public const string HrAgentUsageGet = "hr_agent_usage_get";
+    public const string HrAgentProcessHistoryGet = "hr_agent_process_history_get";
+    public const string HrAgentProcessManagerReviewRequest = "hr_agent_process_manager_review_request";
+    public const string HrCrmSearch = "hr_crm_search";
+    public const string HrCrmItemSummaryGet = "hr_crm_item_summary_get";
     public const string WorkspaceInspectImage = "workspace_inspect_image";
     public const string WorkspaceAnalyzeImage = "workspace_analyze_image";
     public const string WorkspaceAnalyzeImages = "workspace_analyze_images";
@@ -2868,14 +2909,73 @@ public static class AgentToolInvocationPolicyMetadata
 
     public static IReadOnlyDictionary<string, string> RedactArguments(
         IEnumerable<KeyValuePair<string, object?>> arguments)
+        => RedactArguments(string.Empty, arguments);
+
+    public static IReadOnlyDictionary<string, string> RedactArguments(
+        string? toolName,
+        IEnumerable<KeyValuePair<string, object?>> arguments)
     {
+        var redactHrContent = HasSensitiveHrArguments(toolName);
         return arguments
             .Where(item => !string.IsNullOrWhiteSpace(item.Key))
             .OrderBy(item => item.Key, StringComparer.OrdinalIgnoreCase)
             .ToDictionary(
                 item => item.Key,
-                item => ShouldRedact(item.Key) ? "<redacted>" : FormatArgumentValue(item.Value),
+                item => ShouldRedact(item.Key)
+                    ? "<redacted>"
+                    : redactHrContent
+                        ? FormatSensitiveHrArgumentValue(item.Value)
+                        : FormatArgumentValue(item.Value),
                 StringComparer.OrdinalIgnoreCase);
+    }
+
+    public static bool HasSensitiveHrArguments(string? toolName)
+    {
+        return !string.IsNullOrWhiteSpace(toolName) &&
+               SensitiveHrArgumentToolNames.Contains(toolName.Trim());
+    }
+
+    internal static string ProtectApprovalArgumentsForAudit(
+        string? toolName,
+        string? argumentsJson)
+    {
+        if (!HasSensitiveHrArguments(toolName))
+        {
+            return argumentsJson ?? "{}";
+        }
+
+        var normalizedArgumentsJson = string.IsNullOrWhiteSpace(argumentsJson)
+            ? "{}"
+            : argumentsJson.Trim();
+
+        try
+        {
+            using var document = JsonDocument.Parse(normalizedArgumentsJson);
+            if (IsProtectedHrApprovalAudit(document.RootElement))
+            {
+                return document.RootElement.GetRawText();
+            }
+
+            var canonicalArgumentsJson = CanonicalizeJson(document.RootElement)?.ToJsonString() ?? "null";
+            var protectedArguments = SanitizeHrArgumentElement(document.RootElement, propertyName: null);
+            var audit = new JsonObject
+            {
+                ["retentionScheme"] = HrApprovalAuditRetentionScheme,
+                ["argumentsSha256"] = ComputeSha256Hash(canonicalArgumentsJson),
+                ["arguments"] = protectedArguments
+            };
+            return audit.ToJsonString();
+        }
+        catch (Exception exception) when (exception is JsonException or ArgumentException or InvalidOperationException)
+        {
+            var audit = new JsonObject
+            {
+                ["retentionScheme"] = HrApprovalAuditRetentionScheme,
+                ["argumentsSha256"] = ComputeSha256Hash(normalizedArgumentsJson),
+                ["arguments"] = JsonValue.Create("<redacted-invalid-json>")
+            };
+            return audit.ToJsonString();
+        }
     }
 
     public static string BuildSignature(
@@ -2922,10 +3022,95 @@ public static class AgentToolInvocationPolicyMetadata
         return text.Length <= 160 ? text : text[..160] + $"...#{ComputeStableHash(text)}";
     }
 
+    private static string FormatSensitiveHrArgumentValue(object? value)
+    {
+        if (value is null)
+        {
+            return "<null>";
+        }
+
+        try
+        {
+            var element = value is JsonElement jsonElement
+                ? jsonElement
+                : JsonSerializer.SerializeToElement(value, AgentOutputJson.SerializerOptions);
+            var sanitized = SanitizeHrArgumentElement(element, propertyName: null);
+            return FormatArgumentValue(sanitized?.ToJsonString() ?? "<null>");
+        }
+        catch (Exception exception) when (exception is JsonException or NotSupportedException)
+        {
+            return $"<redacted>#{ComputeStableHash(value.GetType().FullName ?? "unknown")}";
+        }
+    }
+
+    private static JsonNode? SanitizeHrArgumentElement(JsonElement element, string? propertyName)
+    {
+        if (!string.IsNullOrWhiteSpace(propertyName) &&
+            SensitiveHrArgumentPropertyNames.Contains(propertyName))
+        {
+            return JsonValue.Create($"<redacted>#{ComputeStableHash(element.GetRawText())}");
+        }
+
+        return element.ValueKind switch
+        {
+            JsonValueKind.Object => SanitizeHrArgumentObject(element),
+            JsonValueKind.Array => new JsonArray(element.EnumerateArray()
+                .Select(item => SanitizeHrArgumentElement(item, propertyName: null))
+                .ToArray()),
+            JsonValueKind.Null or JsonValueKind.Undefined => null,
+            _ => JsonNode.Parse(element.GetRawText())
+        };
+    }
+
+    private static JsonObject SanitizeHrArgumentObject(JsonElement element)
+    {
+        var result = new JsonObject();
+        foreach (var property in element.EnumerateObject().OrderBy(property => property.Name, StringComparer.Ordinal))
+        {
+            result[property.Name] = SanitizeHrArgumentElement(property.Value, property.Name);
+        }
+
+        return result;
+    }
+
+    private static bool IsProtectedHrApprovalAudit(JsonElement element)
+    {
+        return element.ValueKind == JsonValueKind.Object &&
+               element.TryGetProperty("retentionScheme", out var retentionScheme) &&
+               retentionScheme.ValueKind == JsonValueKind.String &&
+               string.Equals(
+                   retentionScheme.GetString(),
+                   HrApprovalAuditRetentionScheme,
+                   StringComparison.Ordinal);
+    }
+
+    private static JsonNode? CanonicalizeJson(JsonElement element)
+    {
+        return element.ValueKind switch
+        {
+            JsonValueKind.Object => new JsonObject(element.EnumerateObject()
+                .OrderBy(property => property.Name, StringComparer.Ordinal)
+                .Select(property => new KeyValuePair<string, JsonNode?>(
+                    property.Name,
+                    CanonicalizeJson(property.Value)))),
+            JsonValueKind.Array => new JsonArray(element.EnumerateArray()
+                .Select(CanonicalizeJson)
+                .ToArray()),
+            JsonValueKind.Null or JsonValueKind.Undefined => null,
+            _ => JsonNode.Parse(element.GetRawText())
+        };
+    }
+
     private static string ComputeStableHash(string text)
     {
         var bytes = SHA256.HashData(Encoding.UTF8.GetBytes(text));
         return Convert.ToHexString(bytes, 0, 6).ToLowerInvariant();
+    }
+
+    private static string ComputeSha256Hash(string text)
+    {
+        var bytes = SHA256.HashData(Encoding.UTF8.GetBytes(text));
+        return Convert.ToHexString(bytes).ToLowerInvariant();
     }
 
 }

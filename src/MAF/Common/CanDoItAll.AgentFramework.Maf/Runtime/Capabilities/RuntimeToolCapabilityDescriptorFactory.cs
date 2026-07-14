@@ -142,6 +142,8 @@ internal static class RuntimeToolCapabilityDescriptorFactory
         => sideEffectKind switch
         {
             ToolCapabilitySideEffectKind.None => CapabilitySideEffectKind.None,
+            ToolCapabilitySideEffectKind.InternalDataRead => CapabilitySideEffectKind.InternalDataRead,
+            ToolCapabilitySideEffectKind.InternalStateMutation => CapabilitySideEffectKind.InternalStateMutation,
             ToolCapabilitySideEffectKind.WorkspaceRead => CapabilitySideEffectKind.WorkspaceRead,
             ToolCapabilitySideEffectKind.WorkspaceWrite => CapabilitySideEffectKind.WorkspaceWrite,
             ToolCapabilitySideEffectKind.LocalProcessExecution => CapabilitySideEffectKind.LocalProcessExecution,

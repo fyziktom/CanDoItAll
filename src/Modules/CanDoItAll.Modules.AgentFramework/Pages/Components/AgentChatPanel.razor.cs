@@ -17,6 +17,9 @@ public partial class AgentChatPanel : IAsyncDisposable
     [Parameter]
     public Guid? PreferredAgentId { get; set; }
 
+    [Parameter]
+    public AgentChatPanelDisplayMode DisplayMode { get; set; }
+
     [Inject]
     public IAgentFrameworkWorkspaceService WorkspaceService { get; set; } = default!;
 
@@ -57,6 +60,7 @@ public partial class AgentChatPanel : IAsyncDisposable
     private bool isVoiceSpeaking;
     private string voiceStatusText = string.Empty;
     private string voiceStatusTone = "neutral";
+    private string focusedAgentLoadError = string.Empty;
     private readonly HashSet<Guid> sessionsWithVoiceIdentifierOmissionNotice = [];
     private bool hasVoiceIdentifierOmissionNoticeWithoutSession;
 
@@ -79,6 +83,14 @@ public partial class AgentChatPanel : IAsyncDisposable
     private bool CanUseSelectedAgentVoiceMode
         => SelectedAgentVoiceAccess.CanUseVoiceMode;
 
+    private bool IsFocusedFloating
+        => DisplayMode == AgentChatPanelDisplayMode.FocusedFloating;
+
+    private string ChatGridColumnTemplate
+        => IsFocusedFloating
+            ? "minmax(0,1fr)"
+            : "minmax(18rem,0.58fr) minmax(0,1.8fr)";
+
     protected override async Task OnInitializedAsync()
     {
         WorkspaceService.ExecutionUpdated += HandleExecutionUpdated;
@@ -87,6 +99,25 @@ public partial class AgentChatPanel : IAsyncDisposable
 
     protected override async Task OnParametersSetAsync()
     {
+        if (IsFocusedFloating)
+        {
+            if (!PreferredAgentId.HasValue ||
+                agents.All(item => item.Id != PreferredAgentId.Value))
+            {
+                ResetWorkspace();
+                focusedAgentLoadError = "The requested focused agent is not available.";
+                return;
+            }
+
+            focusedAgentLoadError = string.Empty;
+            if (PreferredAgentId != selectedAgentId)
+            {
+                await SelectAgentAsync(PreferredAgentId.Value);
+            }
+
+            return;
+        }
+
         if (PreferredAgentId.HasValue &&
             PreferredAgentId != selectedAgentId &&
             agents.Any(item => item.Id == PreferredAgentId.Value))
@@ -100,14 +131,29 @@ public partial class AgentChatPanel : IAsyncDisposable
         agents = await WorkspaceService.ListAgentsAsync(includeTemplates: false);
         if (agents.Count == 0)
         {
-            workspace = null;
-            selectedAgent = null;
-            selectedAgentId = null;
-            selectedSessionId = null;
-            executionLog = [];
-            metrics = [];
+            ResetWorkspace();
+            focusedAgentLoadError = IsFocusedFloating
+                ? "The requested focused agent is not available."
+                : string.Empty;
             return;
         }
+
+        if (IsFocusedFloating)
+        {
+            if (!PreferredAgentId.HasValue ||
+                agents.All(item => item.Id != PreferredAgentId.Value))
+            {
+                ResetWorkspace();
+                focusedAgentLoadError = "The requested focused agent is not available.";
+                return;
+            }
+
+            focusedAgentLoadError = string.Empty;
+            await LoadWorkspaceAsync(PreferredAgentId.Value, selectedSessionId);
+            return;
+        }
+
+        focusedAgentLoadError = string.Empty;
 
         var initialAgentId = PreferredAgentId.HasValue &&
                              agents.Any(item => item.Id == PreferredAgentId.Value)
@@ -118,6 +164,23 @@ public partial class AgentChatPanel : IAsyncDisposable
                 : agents[0].Id;
 
         await LoadWorkspaceAsync(initialAgentId, selectedSessionId);
+    }
+
+    private void ResetWorkspace()
+    {
+        workspace = null;
+        selectedAgent = null;
+        selectedAgentId = null;
+        selectedSessionId = null;
+        executionLog = [];
+        metrics = [];
+    }
+
+    private string ResolveShellClass()
+    {
+        return IsFocusedFloating
+            ? "agents-chat-panel-shell agents-chat-panel-shell--focused-floating"
+            : "agents-chat-panel-shell";
     }
 
     private async Task RefreshAsync()

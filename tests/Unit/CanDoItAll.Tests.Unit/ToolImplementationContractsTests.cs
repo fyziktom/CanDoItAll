@@ -446,6 +446,8 @@ public sealed class ToolImplementationContractsTests
             ToolCapabilitySideEffectKind.DocumentConversion => CapabilitySideEffectKind.DocumentConversion,
             ToolCapabilitySideEffectKind.ProviderNative => CapabilitySideEffectKind.ProviderNative,
             ToolCapabilitySideEffectKind.McpTool => CapabilitySideEffectKind.McpTool,
+            ToolCapabilitySideEffectKind.InternalDataRead => CapabilitySideEffectKind.InternalDataRead,
+            ToolCapabilitySideEffectKind.InternalStateMutation => CapabilitySideEffectKind.InternalStateMutation,
             _ => CapabilitySideEffectKind.None
         };
     }
