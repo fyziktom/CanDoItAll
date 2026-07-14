@@ -1,5 +1,7 @@
+using CanDoItAll.AppComponents.FileTools;
 using CanDoItAll.FileTools.FileBrowser;
 using CanDoItAll.FileTools.FileInteraction;
+using CanDoItAll.FileTools.FileInteraction.Components;
 using CanDoItAll.FileTools.Integration;
 
 namespace CanDoItAll.Modules.Projects;
@@ -7,7 +9,8 @@ namespace CanDoItAll.Modules.Projects;
 internal sealed class ProjectFileReadOnlyInteractionFactory(
     IFileToolsBrowseItemActivator itemActivator,
     IFileToolsKnownFileSessionFactory knownFileSessionFactory,
-    IFileToolsKnownFileSessionReleaser knownFileSessionReleaser)
+    IFileToolsKnownFileSessionReleaser knownFileSessionReleaser,
+    FileInteractionComponentComposition interactionComposition)
 {
     public async ValueTask<ProjectFilesPilotInteraction> CreateAsync(
         FileToolsSemanticScope scope,
@@ -22,17 +25,23 @@ internal sealed class ProjectFileReadOnlyInteractionFactory(
             cancellationToken);
         try
         {
-            if (!ProjectFileBrowserPolicy.IsSupportedTextFile(activation.FileName, activation.MediaType))
+            var request = new FileInteractionRequest(
+                activation.Request.File,
+                activation.FileName,
+                FileInteractionMode.View,
+                activation.MediaType,
+                activation.Size);
+            if (!FileInteractionDefaultActivationPolicy.ShouldOpenInternally(request, interactionComposition.Core))
             {
                 throw new FileBrowserProviderException(new FileBrowserError(
                     FileBrowserErrorCode.Unsupported,
-                    "Project files open only supported Markdown and plain-text content."));
+                    "No FileInteraction viewer is registered for this project file."));
             }
 
             FileToolsKnownFileSession session = await knownFileSessionFactory.CreateAsync(
                 activation.Request,
                 cancellationToken);
-            var request = new FileInteractionRequest(
+            request = new FileInteractionRequest(
                 session.File,
                 activation.FileName,
                 FileInteractionMode.View,

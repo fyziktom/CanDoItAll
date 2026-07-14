@@ -22,6 +22,16 @@ public static class FileInteractionDefaultActivationPolicy
             FileInteractionMode.View,
             item.MediaType,
             item.Size);
+
+        return ShouldOpenInternally(request, composition);
+    }
+
+    public static bool ShouldOpenInternally(
+        FileInteractionRequest request,
+        FileInteractionCoreComposition composition)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        ArgumentNullException.ThrowIfNull(composition);
         FileInteractionResolution resolution = composition.Profiles.Resolve(request);
 
         return resolution.IsResolved &&

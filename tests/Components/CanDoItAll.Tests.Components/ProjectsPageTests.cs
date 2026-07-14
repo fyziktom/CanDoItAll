@@ -1,6 +1,7 @@
 using Bunit;
 using CanDoItAll.FileTools.FileBrowser;
 using CanDoItAll.FileTools.FileInteraction;
+using CanDoItAll.FileTools.FileInteraction.Components;
 using CanDoItAll.FileTools.Integration;
 using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Modules.Projects;
@@ -15,6 +16,49 @@ namespace CanDoItAll.Tests.Components;
 
 public sealed class ProjectsPageTests
 {
+    [Fact]
+    public async Task Project_files_pilot_accepts_each_registered_viewer_family()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
+        var composition = harness.Context.Services.GetRequiredService<FileInteractionComponentComposition>();
+        var coordinator = harness.Context.Services.GetRequiredService<IProjectFilesPilotCoordinator>();
+        Guid projectId = await CreateProjectAsync(projectsService, "File viewer profiles");
+        string projectFiles = CreateProjectFilesDirectory(harness, projectId);
+        string[] fileNames =
+        [
+            "notes.txt",
+            "README.md",
+            "data.json",
+            "diagram.mermaid",
+            "diagram.svg",
+            "image.png",
+            "manual.pdf"
+        ];
+        foreach (string fileName in fileNames)
+        {
+            await File.WriteAllBytesAsync(Path.Combine(projectFiles, fileName), [1, 2, 3]);
+        }
+
+        await using ProjectFilesPilotWorkspace workspace = await coordinator.OpenAsync(
+            projectId,
+            "File viewer profiles");
+        await workspace.Browser.InitializeAsync();
+        Assert.Equal(fileNames.Length, workspace.Browser.Snapshot.Items.Count);
+
+        foreach (FileBrowserItem item in workspace.Browser.Snapshot.Items)
+        {
+            await using ProjectFilesPilotInteraction interaction = await coordinator.ActivateAsync(workspace, item.Key);
+            FileInteractionResolution resolution = composition.Core.Profiles.Resolve(interaction.Request);
+
+            Assert.True(resolution.IsResolved, item.Name);
+            Assert.NotEqual(FileInteractionMatchKind.Fallback, Assert.Single(resolution.Candidates).MatchKind);
+            Assert.True(
+                composition.Renderers.Resolve(resolution.Profile!.Id, FileInteractionMode.View).IsResolved,
+                item.Name);
+        }
+    }
+
     [Fact]
     public async Task Project_files_pilot_opens_authorized_markdown_after_browser_replacement()
     {

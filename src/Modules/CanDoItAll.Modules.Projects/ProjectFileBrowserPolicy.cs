@@ -24,16 +24,6 @@ internal static class ProjectFileBrowserPolicy
         FileBrowserSortDescriptor defaultSort)
         => new(sources, options: CreateOptions(defaultSort));
 
-    public static bool IsSupportedTextFile(string fileName, string? mediaType)
-    {
-        string extension = Path.GetExtension(fileName);
-        return extension.Equals(".md", StringComparison.OrdinalIgnoreCase) ||
-               extension.Equals(".markdown", StringComparison.OrdinalIgnoreCase) ||
-               extension.Equals(".txt", StringComparison.OrdinalIgnoreCase) ||
-               extension.Equals(".log", StringComparison.OrdinalIgnoreCase) ||
-               mediaType?.StartsWith("text/", StringComparison.OrdinalIgnoreCase) == true;
-    }
-
     private static FileBrowserSessionOptions CreateOptions(FileBrowserSortDescriptor defaultSort)
         => new(
             pageSize: 50,

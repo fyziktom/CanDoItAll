@@ -1,6 +1,7 @@
 using Bunit;
 using CanDoItAll.FileTools.FileBrowser;
 using CanDoItAll.FileTools.FileInteraction;
+using CanDoItAll.FileTools.FileInteraction.Components;
 using CanDoItAll.FileTools.Integration;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Infrastructure.Storage;
@@ -51,9 +52,34 @@ public sealed class ResourceFileBrowsePaneTests
     }
 
     [Fact]
-    public async Task Pointer_double_click_opens_preferred_application_when_local_launch_is_available()
+    public async Task Pointer_double_click_keeps_supported_pdf_in_governed_interaction_flow()
     {
-        using var context = CreateContext(out ResourceBrowseTestState state, supportsLocalOpen: true);
+        using var context = CreateContext(
+            out ResourceBrowseTestState state,
+            supportsLocalOpen: true,
+            fileName: "manual.pdf",
+            mediaType: "application/pdf");
+        var cut = context.RenderComponent<ResourceFileBrowsePane>();
+        cut.WaitForElement($"[data-testid='resources-source-{state.Source.Key.Value}'] button").Click();
+
+        await cut.WaitForElement(".ft-file-browser__item-main").DoubleClickAsync(new MouseEventArgs());
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Equal(0, state.ItemActions.LaunchCount);
+            Assert.NotNull(cut.Find("[data-testid='resources-promotion-dialog']"));
+            Assert.Equal("manual.pdf", cut.Find("[data-testid='resources-promotion-name']").GetAttribute("value"));
+        });
+    }
+
+    [Fact]
+    public async Task Pointer_double_click_opens_unhandled_file_in_preferred_application()
+    {
+        using var context = CreateContext(
+            out ResourceBrowseTestState state,
+            supportsLocalOpen: true,
+            fileName: "report.xlsx",
+            mediaType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
         var cut = context.RenderComponent<ResourceFileBrowsePane>();
         cut.WaitForElement($"[data-testid='resources-source-{state.Source.Key.Value}'] button").Click();
 
@@ -107,12 +133,17 @@ public sealed class ResourceFileBrowsePaneTests
 
     private static TestContext CreateContext(
         out ResourceBrowseTestState state,
-        bool supportsLocalOpen = false)
+        bool supportsLocalOpen = false,
+        string fileName = "report.md",
+        string mediaType = "text/markdown")
     {
         var context = new TestContext();
         context.JSInterop.Mode = JSRuntimeMode.Loose;
         context.Services.AddLogging();
-        state = new ResourceBrowseTestState(supportsLocalOpen);
+        state = new ResourceBrowseTestState(supportsLocalOpen, fileName, mediaType);
+        context.Services.AddSingleton(new FileInteractionComponentBuilder()
+            .AddBuiltIns()
+            .Build());
         context.Services.AddSingleton<IResourceFileSourceCatalog>(state.SourceCatalog);
         context.Services.AddSingleton<IFileToolsBrowseSessionFactory>(state.BrowseSessions);
         context.Services.AddSingleton<ResourceFileBrowseCoordinator>();
@@ -137,7 +168,10 @@ public sealed class ResourceFileBrowsePaneTests
 
     private sealed class ResourceBrowseTestState
     {
-        public ResourceBrowseTestState(bool supportsLocalOpen)
+        public ResourceBrowseTestState(
+            bool supportsLocalOpen,
+            string fileName,
+            string mediaType)
         {
             Storage = new StorageCatalogRecord
             {
@@ -166,14 +200,14 @@ public sealed class ResourceFileBrowsePaneTests
                 Storage.HealthStatus);
             Project = new ResourcePromotionProject(Guid.NewGuid(), "Target project");
             SourceCatalog = new StaticSourceCatalog(Source, Project);
-            BrowseSessions = new StaticBrowseSessionFactory(supportsLocalOpen);
+            BrowseSessions = new StaticBrowseSessionFactory(supportsLocalOpen, fileName, mediaType);
             ItemActions = new RecordingBrowseItemActionService();
             var file = new FileReference("authorized", "opaque-handle");
             var request = new FileToolsKnownFileRequest(scope, file, FileToolsKnownFileIntent.ReadOnly);
             ItemActivator = new StaticBrowseItemActivator(new FileToolsKnownFileActivation(
                 request,
-                "report.md",
-                "text/markdown",
+                fileName,
+                mediaType,
                 12));
             ContextProvider = new StaticContextProvider();
             Authorization = new StaticAuthorizationCoordinator(new AuthorizedStorageFile(
@@ -182,9 +216,9 @@ public sealed class ResourceFileBrowsePaneTests
                     Storage.Id,
                     Storage.ProviderKind,
                     StorageLocatorKind.RelativePath,
-                    "folder/report.md",
-                    "report.md",
-                    "text/markdown",
+                    $"folder/{fileName}",
+                    fileName,
+                    mediaType,
                     12),
                 scope,
                 FileAccessOperation.View,
@@ -229,7 +263,10 @@ public sealed class ResourceFileBrowsePaneTests
             => Task.FromResult(source);
     }
 
-    private sealed class StaticBrowseSessionFactory(bool supportsLocalOpen) : IFileToolsBrowseSessionFactory
+    private sealed class StaticBrowseSessionFactory(
+        bool supportsLocalOpen,
+        string fileName,
+        string mediaType) : IFileToolsBrowseSessionFactory
     {
         public int CreateCount { get; private set; }
 
@@ -240,7 +277,7 @@ public sealed class ResourceFileBrowsePaneTests
             CreateCount++;
             return ValueTask.FromResult(new FileToolsBrowseSession(
                 scope,
-                [new StaticFileBrowserProvider(supportsLocalOpen)],
+                [new StaticFileBrowserProvider(supportsLocalOpen, fileName, mediaType)],
                 new FileBrowserSortDescriptor(
                     FileBrowserSortField.ProviderNative,
                     FileBrowserSortDirection.Ascending,
@@ -255,7 +292,10 @@ public sealed class ResourceFileBrowsePaneTests
         private readonly FileBrowserItem root;
         private readonly FileBrowserItem file;
 
-        public StaticFileBrowserProvider(bool supportsLocalOpen)
+        public StaticFileBrowserProvider(
+            bool supportsLocalOpen,
+            string fileName,
+            string mediaType)
         {
             ActionAvailability = new FileToolsBrowseSourceActionAvailability(
                 supportsLocalOpen,
@@ -270,14 +310,14 @@ public sealed class ResourceFileBrowsePaneTests
                 childState: FileBrowserChildState.HasChildren,
                 capabilities: FileBrowserItemCapabilities.Select | FileBrowserItemCapabilities.Navigate);
             file = new FileBrowserItem(
-                new FileBrowserItemKey(Descriptor.Id, "report", "r1"),
+                new FileBrowserItemKey(Descriptor.Id, fileName, "r1"),
                 root.Key,
-                "report.md",
+                fileName,
                 FileBrowserItemKind.File,
                 FileBrowserItemCategory.Document,
                 childState: FileBrowserChildState.Empty,
                 size: 12,
-                mediaType: "text/markdown",
+                mediaType: mediaType,
                 capabilities: FileBrowserItemCapabilities.Select |
                               FileBrowserItemCapabilities.Open |
                               FileBrowserItemCapabilities.Preview);
