@@ -22,6 +22,7 @@
     else if (projection is not null)
     {
         <Stack GapScale="LayoutGap.Medium"
+               Class="w-full min-w-0"
                AlignItems="AlignItems.Stretch">
             <SurfaceCard Soft="true"
                          Class="p-4">
@@ -105,7 +106,7 @@
                     </Alert>
                 }
 
-                <Stack Class="min-w-0"
+                <Stack Class="w-full min-w-0"
                        data-testid="project-structure-gantt-chart">
                     <GanttChart Tasks="@projection.Tasks"
                                 Dependencies="@projection.Dependencies"

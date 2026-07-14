@@ -103,6 +103,7 @@ else
                                                        FileBrowserWindowVisible="@FileBrowserWindowState.IsVisible"
                                                        SignalsWindowVisible="@SignalsWindowState.IsVisible"
                                                        AgentWindowVisible="@AgentWindowState.IsVisible"
+                                                       GanttViewVisible="@IsGanttViewVisible"
                                                        ActiveTool="@canvasToolMode"
                                                        CanUseDependencyTool="@(selectedNode is not null)"
                                                        CanRecomposeSelectedBranch="@CanRecomposeSelectedBranch"
@@ -117,6 +118,7 @@ else
                                                        OpenFileBrowserWindow="OpenProjectFileBrowserAsync"
                                                        ToggleSignalsWindow="ToggleSignalsWindowAsync"
                                                        ToggleAgentWindow="ToggleAgentWindowAsync"
+                                                       OpenGanttView="OpenGanttViewAsync"
                                                        RecomposeBranch="RecomposeSelectedBranchAsync" />
                     </ToolbarLeftContent>
                     <OverlayContent>
@@ -748,6 +750,7 @@ else
     private const double DefaultCanvasWindowGap = 16;
     private const double SignalsWindowDefaultLeft = ToolboxWindowDefaultWidth + DefaultCanvasWindowMargin + DefaultCanvasWindowGap;
     private const double HealthWindowDefaultLeft = SignalsWindowDefaultLeft + SignalsWindowDefaultWidth + DefaultCanvasWindowGap;
+    private const int GanttViewIndex = 1;
 
     [Parameter]
     public Guid ProjectId { get; set; }
@@ -756,6 +759,15 @@ else
     private CanvasWorkbenchSurface? canvasSurface;
     private CanvasWorkbench? workbenchRef;
     private int structureViewIndex;
+
+    private bool IsGanttViewVisible => structureViewIndex == GanttViewIndex;
+
+    private Task OpenGanttViewAsync()
+    {
+        structureViewIndex = GanttViewIndex;
+        return Task.CompletedTask;
+    }
+
     private readonly ProjectStructureActionCatalogAdapter actionCatalog = new();
     private readonly ProjectStructureGraphAdapter graphAdapter = new();
     private readonly ProjectStructurePlacementPolicy placementPolicy = new();

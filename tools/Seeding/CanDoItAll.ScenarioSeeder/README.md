@@ -4,6 +4,17 @@
 
 Tool for seeding representative CanDoItAll scenarios into local development databases.
 
+The interactive Gantt sample is development-only and idempotent. It persists canonical task schedules,
+finish-to-start dependencies, and person/agent assignments through the normal project services:
+
+```powershell
+dotnet run --project tools/Seeding/CanDoItAll.ScenarioSeeder/CanDoItAll.ScenarioSeeder.csproj -- `
+  --scenario gantt-sample-project `
+  --profile-root <database-profile-root>
+```
+
+The command returns the seeded project's `/projects/{id}/structure` route.
+
 ## Project Type
 
 - SDK: `Microsoft.NET.Sdk`
