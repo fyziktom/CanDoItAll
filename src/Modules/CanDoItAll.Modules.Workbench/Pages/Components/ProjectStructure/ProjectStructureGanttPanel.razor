@@ -1,0 +1,135 @@
+@namespace CanDoItAll.Modules.Workbench.Pages
+@using CanDoItAll.Components.BaseLib
+@using CanDoItAll.Components.Gantt
+@using CanDoItAll.Modules.Workbench.CanvasAdapters
+
+<section data-testid="project-structure-gantt-panel">
+<SectionCard Title="Project schedule"
+             Description="This Gantt view projects authoritative project structure tasks. Interactions request typed project mutations; the chart never writes or owns project data.">
+    @if (isLoading)
+    {
+        <LoadingState Eyebrow="Project schedule"
+                      Title="Building the Gantt projection"
+                      Description="Loading task assignments and validating the project dependency graph." />
+    }
+    else if (loadError is not null)
+    {
+        <Alert AlertStyle="AlertStyle.Danger"
+               data-testid="project-structure-gantt-load-error">
+            @loadError
+        </Alert>
+    }
+    else if (projection is not null)
+    {
+        <Stack GapScale="LayoutGap.Medium"
+               AlignItems="AlignItems.Stretch">
+            <SurfaceCard Soft="true"
+                         Class="p-4">
+                <Stack GapScale="LayoutGap.Small"
+                       AlignItems="AlignItems.Stretch">
+                    <Cluster Gap="LayoutGap.Small">
+                        <Pill Tone="PillTone.Info" Text="@($"{projection.Tasks.Count} tasks")" />
+                        <Pill Tone="PillTone.Neutral" Text="@($"{projection.Dependencies.Count} dependencies")" />
+                        @if (projection.ProjectionOnlyTaskIds.Count > 0)
+                        {
+                            <Pill Tone="PillTone.Warn"
+                                  Text="@($"{projection.ProjectionOnlyTaskIds.Count} projected schedules")" />
+                        }
+                    </Cluster>
+
+                    <TextBlock TextStyle="TextStyle.Note"
+                               Value="Drag task bars to move them, use the green ends to resize, and use blue ports to add or reconnect dependencies." />
+
+                    <Cluster Gap="LayoutGap.Small"
+                             Wrap="FlexWrap.Wrap">
+                        <GanttTaskDragSource Task="@insertionCandidate"
+                                             Disabled="@(!CanInsertTask)"
+                                             AriaLabel="Drag a new project task onto a dependency connection">
+                            <Pill Text="Drag new 8-hour task into a connection"
+                                  Tone="PillTone.Info" />
+                        </GanttTaskDragSource>
+                        <TextBlock TextStyle="TextStyle.Caption"
+                                   Value="Drop it onto a dependency connection to replace that connection and shift the dependent path." />
+                    </Cluster>
+                </Stack>
+            </SurfaceCard>
+
+            @if (projection.ProjectionOnlyTaskIds.Count > 0)
+            {
+                <Alert AlertStyle="AlertStyle.Warning"
+                       data-testid="project-structure-gantt-projection-warning">
+                    @projection.ProjectionOnlyTaskIds.Count task(s) have no complete persisted schedule. Their displayed dates are a read-only projection; title and dependency changes still use authoritative project services.
+                </Alert>
+            }
+
+            @if (NonScheduleWarnings.Count > 0)
+            {
+                <Alert AlertStyle="AlertStyle.Warning">
+                    <strong>The projection includes warnings:</strong>
+                    <ul class="project-structure-gantt-panel__issues">
+                        @foreach (var issue in NonScheduleWarnings)
+                        {
+                            <li>@issue.Message</li>
+                        }
+                    </ul>
+                </Alert>
+            }
+
+            @if (!projection.IsValid)
+            {
+                <Alert AlertStyle="AlertStyle.Danger"
+                       data-testid="project-structure-gantt-validation-error">
+                    <strong>The Gantt projection is blocked until the project structure is corrected:</strong>
+                    <ul class="project-structure-gantt-panel__issues">
+                        @foreach (var issue in ProjectionErrors)
+                        {
+                            <li>@issue.Message</li>
+                        }
+                    </ul>
+                </Alert>
+            }
+            else
+            {
+                @if (mutationError is not null)
+                {
+                    <Alert AlertStyle="AlertStyle.Danger"
+                           data-testid="project-structure-gantt-mutation-error">
+                        @mutationError
+                    </Alert>
+                }
+                else if (mutationStatus is not null)
+                {
+                    <Alert AlertStyle="AlertStyle.Success"
+                           data-testid="project-structure-gantt-mutation-status">
+                        @mutationStatus
+                    </Alert>
+                }
+
+                <Stack Class="min-w-0"
+                       data-testid="project-structure-gantt-chart">
+                    <GanttChart Tasks="@projection.Tasks"
+                                Dependencies="@projection.Dependencies"
+                                TaskTitleChangeRequested="ApplyTitleAsync"
+                                TaskScheduleChangeRequested="ApplyScheduleAsync"
+                                DependencyMutationRequested="ApplyDependencyAsync"
+                                TaskInsertionRequested="ApplyInsertionAsync"
+                                DependencyIdFactory="CreateDependencyId"
+                                ProjectionOnlySelector="IsProjectionOnly"
+                                TaskScheduleReadOnlySelector="IsProjectionOnly"
+                                AllowTaskEditing="@(!mutationInFlight)"
+                                AllowDependencyEditing="@(!mutationInFlight)"
+                                AllowTaskInsertion="@(!mutationInFlight)"
+                                HoursPerManDay="8"
+                                RowHeight="48"
+                                HeaderHeight="40"
+                                BarHeight="26"
+                                TaskTableWidth="600"
+                                MaxHeight="48rem"
+                                ExportFileName="@ExportFileName"
+                                AriaLabel="Interactive project structure Gantt schedule" />
+                </Stack>
+            }
+        </Stack>
+    }
+</SectionCard>
+</section>

@@ -75,6 +75,11 @@ else
         <Stack Gap="1.5rem"
                Class="project-structure-page__stack">
 
+        <Tabs @bind-SelectedIndex="structureViewIndex"
+              AriaLabel="Project structure views"
+              Variant="TabsVariant.WorkspaceSecondary"
+              RenderMode="TabRenderMode.Server">
+            <TabsItem Text="Canvas" Icon="account_tree">
         <CanvasWorkbenchStage Eyebrow="Structure canvas"
                               Title="@($"{surface.ProjectName} workbench")"
                               Description=""
@@ -300,6 +305,13 @@ else
                 </CanvasWorkbench>
             </Canvas>
         </CanvasWorkbenchStage>
+            </TabsItem>
+            <TabsItem Text="Gantt" Icon="view_timeline">
+                <ProjectStructureGanttPanel ProjectId="@ProjectId"
+                                            Surface="@surface"
+                                            MutationCommitted="@(() => ReloadSurfaceAsync())" />
+            </TabsItem>
+        </Tabs>
 
         @if (CanShowPartyEditor)
         {
@@ -743,6 +755,7 @@ else
     private ProjectStructureSurface? surface;
     private CanvasWorkbenchSurface? canvasSurface;
     private CanvasWorkbench? workbenchRef;
+    private int structureViewIndex;
     private readonly ProjectStructureActionCatalogAdapter actionCatalog = new();
     private readonly ProjectStructureGraphAdapter graphAdapter = new();
     private readonly ProjectStructurePlacementPolicy placementPolicy = new();

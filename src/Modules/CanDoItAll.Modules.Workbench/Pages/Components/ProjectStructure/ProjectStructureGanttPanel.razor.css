@@ -1,0 +1,8 @@
+.project-structure-gantt-panel__issues {
+    margin: 0.45rem 0 0;
+    padding-left: 1.2rem;
+}
+
+.project-structure-gantt-panel__issues li + li {
+    margin-top: 0.25rem;
+}

@@ -164,9 +164,15 @@ public sealed record ProjectStructureNode(
     Guid? RelatedProjectId = null,
     int ParentProjectCount = 0,
     int? DurationSeconds = null,
-    ProjectNodeReferenceCollection? NodeReferences = null);
+    ProjectNodeReferenceCollection? NodeReferences = null,
+    bool IsSystemManaged = false);
 
-public sealed record ProjectStructureLink(string SourceId, string TargetId, ProjectObjectLinkKind Kind, bool IsUserAuthored);
+public sealed record ProjectStructureLink(
+    string SourceId,
+    string TargetId,
+    ProjectObjectLinkKind Kind,
+    bool IsUserAuthored,
+    Guid? RecordId = null);
 
 public sealed record ProjectStructureSurface(
     Guid ProjectId,
@@ -355,7 +361,7 @@ ProjectWorkbenchCrossModuleMutationService crossModuleMutationService) : IProjec
                 project.Id,
                 project.Name,
                 mappedNodes,
-                assembly.Links.Select(link => new ProjectStructureLink(link.SourceNodeKey, link.TargetNodeKey, link.LinkKind, !link.IsSystemManaged)).ToList(),
+                assembly.Links.Select(link => new ProjectStructureLink(link.SourceNodeKey, link.TargetNodeKey, link.LinkKind, !link.IsSystemManaged, link.Id)).ToList(),
                 viewState),
             null);
     }
