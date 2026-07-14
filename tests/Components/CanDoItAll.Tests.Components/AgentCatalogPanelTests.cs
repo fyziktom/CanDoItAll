@@ -5,6 +5,8 @@ using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Components.BaseLib;
 using CanDoItAll.Modules.AgentFramework.Pages.Components;
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Web;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace CanDoItAll.Tests.Components;
 
@@ -51,7 +53,10 @@ public sealed class AgentCatalogPanelTests
         Assert.NotNull(agentCard);
         Assert.Equal("HR Agent", agentCard.QuerySelector(".agent-selection-card__name")?.TextContent);
 
-        openButton.Click();
+        var topOpenButton = cut.Find("[data-testid='agents-hr-agent-open-top']");
+        Assert.Contains("HR Agent", topOpenButton.TextContent, StringComparison.Ordinal);
+
+        topOpenButton.Click();
 
         cut.WaitForElement("[data-testid='agents-hr-agent-chat-content']");
         var viewportHost = cut.Find("[data-testid='agents-hr-agent-viewport']");
@@ -62,6 +67,38 @@ public sealed class AgentCatalogPanelTests
         Assert.Equal(
             AgentChatPanelDisplayMode.FocusedFloating,
             focusedChat.Instance.Parameters.Get(component => component.DisplayMode));
+    }
+
+    [Fact]
+    public async Task Catalog_toolbar_uses_icon_reset_tooltip_and_single_line_team_header()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var hrAgent = CreateAgent(HrAgentIdentity.AgentId, "HR Agent", HrAgentIdentity.TemplateKey);
+
+        var cut = harness.Context.RenderComponent<AgentCatalogPanel>(parameters => parameters
+            .Add(component => component.InitialAgents, new[] { hrAgent })
+            .Add(component => component.InitialProviders, Array.Empty<ProviderProfile>())
+            .Add(component => component.InitialTeams, Array.Empty<AgentTeamDefinition>())
+            .Add(component => component.SkipCatalogRepair, true));
+
+        var resetButton = cut.Find("[data-testid='agents-catalog-reset']");
+        Assert.Equal("Reset agent search", resetButton.GetAttribute("aria-label"));
+        Assert.Equal("restart_alt", resetButton.QuerySelector(".material-icons")?.TextContent.Trim());
+        Assert.Null(resetButton.QuerySelector(".rz-button-text"));
+
+        var resetTarget = Assert.IsAssignableFrom<AngleSharp.Dom.IElement>(resetButton.ParentElement);
+        resetTarget.TriggerEvent("onmouseenter", new MouseEventArgs { ClientX = 120, ClientY = 80 });
+
+        var tooltip = harness.Context.Services.GetRequiredService<TooltipService>().Current;
+        Assert.Equal("Reset agent search", tooltip?.Text);
+        Assert.Equal(TooltipPosition.Bottom, tooltip?.Options.Position);
+        Assert.Equal("agents-catalog-reset-tooltip", tooltip?.Options.TestId);
+
+        var teamHeader = cut.Find("[data-testid='agents-team-header']");
+        Assert.Contains("flex-row", teamHeader.ClassList);
+        Assert.DoesNotContain("flex-col", teamHeader.ClassList);
+        var teamHeaderContent = Assert.IsAssignableFrom<AngleSharp.Dom.IElement>(teamHeader.FirstElementChild);
+        Assert.Contains("flex-nowrap", teamHeaderContent.ClassList);
     }
 
     private static AgentDefinition CreateAgent(Guid id, string name, string templateKey)

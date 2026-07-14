@@ -20,13 +20,32 @@
                         ButtonStyle="ButtonStyle.Light"
                         Click="OpenNewAgentDialogAsync"
                         data-testid="agents-catalog-new" />
+                @if (HrAgent is { } toolbarHrAgent)
+                {
+                    <Button Text="HR Agent"
+                            Icon="forum"
+                            Size="ButtonSize.Small"
+                            ButtonStyle="ButtonStyle.Info"
+                            Click="@(() => OpenHrAgentChatAsync(toolbarHrAgent))"
+                            data-testid="agents-hr-agent-open-top" />
+                }
                 <div class="agent-catalog-panel__search" role="search">
                     <input @bind="agentSearch"
                            @bind:event="oninput"
                            class="cda-input agent-catalog-panel__search-input"
                            placeholder="Search agents"
                            data-testid="agents-catalog-search" />
-                    <Button Text="Reset" ButtonStyle="ButtonStyle.Light" Size="ButtonSize.Small" Click="ResetAgentSearch" />
+                    <TooltipTarget Text="Reset agent search"
+                                   Position="TooltipPosition.Bottom"
+                                   Duration="@((TimeSpan?)null)"
+                                   TestId="agents-catalog-reset-tooltip">
+                        <Button Icon="restart_alt"
+                                ButtonStyle="ButtonStyle.Light"
+                                Size="ButtonSize.Small"
+                                Click="ResetAgentSearch"
+                                aria-label="Reset agent search"
+                                data-testid="agents-catalog-reset" />
+                    </TooltipTarget>
                 </div>
                 @if (SelectedTeam is not null)
                 {
@@ -59,11 +78,16 @@
               Class="agent-catalog-panel__workspace"
               data-testid="agents-catalog-workspace">
             <section class="agent-catalog-panel__team-panel" data-testid="agents-team-panel">
-                <Split Gap="LayoutGap.Small" AlignItems="AlignItems.Start">
-                    <div>
+                <Split Breakpoint="LayoutBreakpoint.None"
+                       Gap="LayoutGap.Small"
+                       AlignItems="AlignItems.Center"
+                       data-testid="agents-team-header">
+                    <Cluster Gap="LayoutGap.XSmall"
+                             AlignItems="AlignItems.Center"
+                             Wrap="FlexWrap.NoWrap">
                         <p class="cda-eyebrow">Teams</p>
                         <h3 class="agent-catalog-panel__section-title">@TeamPanelTitle</h3>
-                    </div>
+                    </Cluster>
                     <StatusBadge Tone="info" Text="@teams.Count.ToString()" />
                 </Split>
 

@@ -77,8 +77,10 @@
     font-size: 1rem;
     font-weight: 700;
     line-height: 1.35;
-    margin: 0.15rem 0 0;
-    overflow-wrap: anywhere;
+    margin: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .agent-catalog-panel__agent-results {
