@@ -3,6 +3,7 @@ using CanDoItAll.AppComponents.FileTools;
 using CanDoItAll.FileTools.FileBrowser;
 using CanDoItAll.FileTools.FileBrowser.Components;
 using CanDoItAll.FileTools.FileInteraction;
+using CanDoItAll.FileTools.FileInteraction.Components;
 using CanDoItAll.FileTools.Integration;
 using Microsoft.JSInterop;
 
@@ -12,6 +13,30 @@ public sealed class FileToolsHostActionsTests
 {
     private const string AdditionalActionId = "test:preview";
     private const string ModulePath = "./_content/CanDoItAll.AppComponents/js/file-tools-host-actions.js";
+
+    [Theory]
+    [InlineData("README.md", "text/markdown", true)]
+    [InlineData("notes.txt", "text/plain", true)]
+    [InlineData("diagram.svg", "image/svg+xml", true)]
+    [InlineData("photo.png", "image/png", true)]
+    [InlineData("manual.pdf", "application/pdf", true)]
+    [InlineData("report.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", false)]
+    [InlineData("archive.zip", "application/zip", false)]
+    public void Default_activation_prefers_specific_file_interaction_profiles(
+        string fileName,
+        string mediaType,
+        bool expected)
+    {
+        FileInteractionComponentComposition composition = new FileInteractionComponentBuilder()
+            .AddBuiltIns()
+            .Build();
+
+        bool result = FileInteractionDefaultActivationPolicy.ShouldOpenInternally(
+            CreateFileInteractionItem(fileName, mediaType),
+            composition.Core);
+
+        Assert.Equal(expected, result);
+    }
 
     [Fact]
     public async Task Catalog_orders_default_and_additional_leaf_actions()
@@ -228,6 +253,20 @@ public sealed class FileToolsHostActionsTests
             childState: childState,
             capabilities: capabilities);
         return new FileBrowserHostActionContext(item, source, snapshotRevision: 1);
+    }
+
+    private static FileBrowserItem CreateFileInteractionItem(string fileName, string mediaType)
+    {
+        var sourceId = new FileBrowserSourceId("interaction-routing");
+        return new FileBrowserItem(
+            new FileBrowserItemKey(sourceId, fileName, "r1"),
+            parentKey: null,
+            fileName,
+            FileBrowserItemKind.File,
+            FileBrowserItemCategory.Document,
+            childState: FileBrowserChildState.Empty,
+            mediaType: mediaType,
+            capabilities: FileBrowserItemCapabilities.Open | FileBrowserItemCapabilities.Preview);
     }
 
     private static ValueTask<FileToolsBrowseItemActionResult> UnexpectedLaunchAsync(

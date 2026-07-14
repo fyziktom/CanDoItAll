@@ -1,6 +1,7 @@
 @implements IAsyncDisposable
 @inject IProjectFilesPilotCoordinator Coordinator
 @inject IFileToolsBrowseItemActionService ItemActionService
+@inject FileInteractionComponentComposition InteractionComposition
 @inject IJSRuntime JSRuntime
 @inject ILogger<ProjectFilesDialog> Logger
 
@@ -212,6 +213,7 @@
         }
 
         if (args.Kind == FileBrowserInvocationKind.PointerDoubleClick &&
+            !FileInteractionDefaultActivationPolicy.ShouldOpenInternally(args.Item, InteractionComposition.Core) &&
             SupportsLocalOpen(workspace, args.Item.Key.SourceId))
         {
             await ExecuteFileActionAsync(args.Item.Key, FileToolsHostAction.OpenInPreferredApplication);

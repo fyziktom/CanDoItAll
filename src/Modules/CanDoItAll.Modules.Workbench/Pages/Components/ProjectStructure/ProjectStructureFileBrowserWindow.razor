@@ -275,6 +275,7 @@
         }
 
         if (args.Kind is FileBrowserInvocationKind.PointerDoubleClick or FileBrowserInvocationKind.Keyboard &&
+            !FileInteractionDefaultActivationPolicy.ShouldOpenInternally(args.Item, InteractionComposition.Core) &&
             SupportsLocalOpen(workspace, args.Item.Key.SourceId))
         {
             await ExecuteFileActionAsync(args.Item.Key, FileToolsHostAction.OpenInPreferredApplication);

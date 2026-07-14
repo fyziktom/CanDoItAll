@@ -127,12 +127,47 @@ public sealed class ProjectStructureFileBrowserWindowTests
         });
     }
 
+    [Fact]
+    public async Task Double_click_opens_supported_file_internally_when_desktop_launch_is_available()
+    {
+        using var context = new TestContext();
+        context.JSInterop.Mode = JSRuntimeMode.Loose;
+        Guid projectId = Guid.NewGuid();
+        var scope = new FileToolsSemanticScope(
+            FileToolsSemanticScopeKind.Project,
+            new FileToolsSemanticScopeId(projectId.ToString("N")),
+            "Delivery");
+        var itemActionService = new RecordingBrowseItemActionService();
+        RegisterServices(
+            context,
+            new ProjectFileScopeSet(projectId, [scope], new string('e', 64)),
+            new ThrowingNodeFileScopeProvider(),
+            new StaticBrowseItemActivator(),
+            new StaticKnownFileSessionFactory(),
+            itemActionService);
+        var cut = context.RenderComponent<ProjectStructureFileBrowserWindow>(parameters => parameters
+            .Add(component => component.WindowId, "project-structure.fileBrowser")
+            .Add(
+                component => component.Request,
+                new ProjectStructureProjectFileCollectionRequest(projectId, "Delivery files"))
+            .Add(component => component.State, new CanvasWorkbenchWindowState { IsVisible = true }));
+
+        await cut.WaitForElement(".ft-file-browser__item-main").DoubleClickAsync(new MouseEventArgs());
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Single(cut.FindComponents<FileInteraction>());
+            Assert.Equal(0, itemActionService.LaunchCount);
+        });
+    }
+
     private static void RegisterServices(
         TestContext context,
         ProjectFileScopeSet projectScopes,
         IProjectStructureNodeFileScopeProvider nodeScopes,
         IFileToolsBrowseItemActivator? itemActivator = null,
-        IFileToolsKnownFileSessionFactory? knownFileSessionFactory = null)
+        IFileToolsKnownFileSessionFactory? knownFileSessionFactory = null,
+        IFileToolsBrowseItemActionService? itemActionService = null)
     {
         context.Services.AddLogging();
         context.Services.AddSingleton(new FileInteractionComponentBuilder()
@@ -145,7 +180,8 @@ public sealed class ProjectStructureFileBrowserWindowTests
         context.Services.AddSingleton(nodeScopes);
         context.Services.AddSingleton<IFileToolsBrowseSessionFactory, StaticBrowseSessionFactory>();
         context.Services.AddSingleton(itemActivator ?? new ThrowingBrowseItemActivator());
-        context.Services.AddSingleton<IFileToolsBrowseItemActionService, UnavailableFileToolsBrowseItemActionService>();
+        context.Services.AddSingleton(
+            itemActionService ?? new UnavailableFileToolsBrowseItemActionService());
         context.Services.AddSingleton(knownFileSessionFactory ?? new ThrowingKnownFileSessionFactory());
         context.Services.AddSingleton<IFileToolsKnownFileSessionReleaser, NoopKnownFileSessionReleaser>();
         context.Services.AddSingleton<ProjectStructureFileActionCoordinator>();
@@ -178,7 +214,7 @@ public sealed class ProjectStructureFileBrowserWindowTests
         }
     }
 
-    private sealed class StaticFileBrowserProvider : IFileBrowserProvider
+    private sealed class StaticFileBrowserProvider : IFileBrowserProvider, IFileToolsBrowseSourceActionCapabilities
     {
         private readonly FileBrowserItem root;
         private readonly FileBrowserItem file;
@@ -207,6 +243,10 @@ public sealed class ProjectStructureFileBrowserWindowTests
         }
 
         public FileBrowserSourceDescriptor Descriptor { get; }
+
+        public FileToolsBrowseSourceActionAvailability ActionAvailability { get; } = new(
+            SupportsLocalOpen: true,
+            SupportsDownload: false);
 
         public ValueTask<FileBrowserItem> GetRootAsync(
             FileBrowserMetadataRequest metadata,
@@ -285,6 +325,31 @@ public sealed class ProjectStructureFileBrowserWindowTests
             FileReference file,
             CancellationToken cancellationToken = default)
             => ValueTask.CompletedTask;
+    }
+
+    private sealed class RecordingBrowseItemActionService : IFileToolsBrowseItemActionService
+    {
+        public bool IsLocalLaunchAvailable => true;
+
+        public int LaunchCount { get; private set; }
+
+        public ValueTask<FileToolsBrowseItemActionResult> LaunchAsync(
+            FileToolsSemanticScope scope,
+            FileBrowserItemKey itemKey,
+            FileToolsLocalFileAction action,
+            CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            LaunchCount++;
+            return ValueTask.FromResult(FileToolsBrowseItemActionResult.Success("Opened."));
+        }
+
+        public ValueTask<IFileToolsDownloadLease> AuthorizeDownloadAsync(
+            FileToolsSemanticScope scope,
+            FileBrowserItemKey itemKey,
+            CancellationToken cancellationToken = default)
+            => ValueTask.FromException<IFileToolsDownloadLease>(
+                new InvalidOperationException("Unexpected download authorization."));
     }
 
     private sealed class ThrowingNodeFileScopeProvider : IProjectStructureNodeFileScopeProvider

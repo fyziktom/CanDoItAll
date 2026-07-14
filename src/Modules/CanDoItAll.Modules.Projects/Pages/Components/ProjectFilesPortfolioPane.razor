@@ -2,6 +2,7 @@
 @using CanDoItAll.Components.Common
 @inject IProjectFilePortfolioCoordinator Coordinator
 @inject IFileToolsBrowseItemActionService ItemActionService
+@inject FileInteractionComponentComposition InteractionComposition
 @inject IJSRuntime JSRuntime
 @inject ILogger<ProjectFilesPortfolioPane> Logger
 
@@ -269,6 +270,7 @@
         }
 
         if (args.Kind == FileBrowserInvocationKind.PointerDoubleClick &&
+            !FileInteractionDefaultActivationPolicy.ShouldOpenInternally(args.Item, InteractionComposition.Core) &&
             SupportsLocalOpen(workspace, args.Item.Key.SourceId))
         {
             await ExecuteFileActionAsync(args.Item.Key, FileToolsHostAction.OpenInPreferredApplication);
