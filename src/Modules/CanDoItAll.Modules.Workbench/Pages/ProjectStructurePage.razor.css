@@ -76,6 +76,10 @@
     height: calc(100dvh - 12rem) !important;
 }
 
+.project-structure-page ::deep .cw-workbench-frame:has(.project-structure-preview-backdrop) .cw-stage-surface {
+    z-index: 700;
+}
+
 .project-structure-validation-overlay {
     display: grid;
     gap: 0.8rem;

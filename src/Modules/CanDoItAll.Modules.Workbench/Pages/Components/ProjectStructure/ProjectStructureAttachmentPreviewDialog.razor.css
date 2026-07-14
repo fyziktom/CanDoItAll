@@ -1,26 +1,3 @@
 .project-structure-file-interaction-layout {
     overflow: hidden;
 }
-
-.project-structure-file-interaction-layout ::deep .project-structure-direct-file-interaction {
-    flex: 1 1 0;
-    min-height: 0;
-    overflow: hidden;
-    width: 100%;
-}
-
-.project-structure-file-interaction-layout ::deep .cdi-ft-interaction {
-    height: 100%;
-    min-height: 28rem;
-    width: 100%;
-}
-
-.project-structure-file-interaction-layout ::deep .cdi-ft-interaction__workspace,
-.project-structure-file-interaction-layout ::deep .cdi-ft-interaction__pane {
-    min-height: 0;
-}
-
-.project-structure-file-interaction-layout ::deep .workbench-file-interaction-mermaid {
-    height: 100%;
-    min-height: 24rem;
-}

@@ -50,13 +50,45 @@ public sealed class ProjectStructureAttachmentPreviewDialogTests
 
         cut.WaitForAssertion(() =>
         {
+            bool expectsBrowserFrame = mediaType is "video/mp4" or "image/svg+xml";
             Assert.Single(cut.FindComponents<FileInteraction>());
             Assert.Empty(cut.FindComponents<FileBrowser>());
             Assert.NotNull(cut.Find("[data-testid='project-structure-direct-file-interaction']"));
             Assert.DoesNotContain($"/managed-files/{fileName}", cut.Markup, StringComparison.Ordinal);
-            Assert.DoesNotContain("<iframe", cut.Markup, StringComparison.OrdinalIgnoreCase);
+            Assert.Equal(expectsBrowserFrame, cut.FindAll("iframe").Count == 1);
             Assert.DoesNotContain("<video", cut.Markup, StringComparison.OrdinalIgnoreCase);
             Assert.DoesNotContain("<audio", cut.Markup, StringComparison.OrdinalIgnoreCase);
+        });
+    }
+
+    [Fact]
+    public async Task File_preview_can_maximize_and_restore_within_the_canvas()
+    {
+        using var context = new TestContext();
+        context.JSInterop.Mode = JSRuntimeMode.Loose;
+        RegisterComposition(context);
+        var cut = RenderReadOnly(context, "report.pdf", "application/pdf", "bounded pdf payload");
+
+        var dialog = cut.Find("[role='dialog']");
+        Assert.Equal("false", dialog.GetAttribute("data-maximized"));
+
+        await cut.Find("[data-testid='project-structure-dialog-size-toggle']").ClickAsync(new());
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Equal("true", cut.Find("[role='dialog']").GetAttribute("data-maximized"));
+            Assert.Contains("project-structure-preview-dialog--fullscreen", cut.Find("[role='dialog']").ClassList);
+            Assert.Equal(
+                "Restore preview size",
+                cut.Find("[data-testid='project-structure-dialog-size-toggle']").GetAttribute("aria-label"));
+        });
+
+        await cut.Find("[data-testid='project-structure-dialog-size-toggle']").ClickAsync(new());
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Equal("false", cut.Find("[role='dialog']").GetAttribute("data-maximized"));
+            Assert.DoesNotContain("project-structure-preview-dialog--fullscreen", cut.Find("[role='dialog']").ClassList);
         });
     }
 
@@ -154,7 +186,9 @@ public sealed class ProjectStructureAttachmentPreviewDialogTests
             var diagram = markdownCut.FindComponent<MermaidDiagram>();
             Assert.Equal("strict", diagram.Instance.Options.SecurityLevel);
             Assert.False(diagram.Instance.Options.HtmlLabels);
-            Assert.Equal("flowchart LR\nA-->B", diagram.Instance.Source);
+            Assert.Equal(
+                "flowchart LR\nA-->B",
+                diagram.Instance.Source!.Replace("\r\n", "\n", StringComparison.Ordinal));
         });
 
         IRenderedComponent<ProjectStructureAttachmentPreviewDialog> mermaidCut = RenderReadOnly(
@@ -206,7 +240,7 @@ public sealed class ProjectStructureAttachmentPreviewDialogTests
     }
 
     [Fact]
-    public void Unknown_file_uses_inert_fallback_without_materializing_content()
+    public void Unknown_file_uses_sandboxed_browser_fallback_with_bounded_content()
     {
         using var context = new TestContext();
         context.JSInterop.Mode = JSRuntimeMode.Loose;
@@ -224,9 +258,9 @@ public sealed class ProjectStructureAttachmentPreviewDialogTests
 
         cut.WaitForAssertion(() =>
         {
-            Assert.NotNull(cut.Find("[data-testid='interaction-object-view']"));
-            Assert.Equal(0, source.ReadCount);
-            Assert.DoesNotContain("<iframe", cut.Markup, StringComparison.OrdinalIgnoreCase);
+            Assert.NotNull(cut.Find("[data-testid='interaction-browser-view']"));
+            Assert.True(source.ReadCount > 0);
+            Assert.Equal(string.Empty, cut.Find("iframe").GetAttribute("sandbox"));
         });
     }
 

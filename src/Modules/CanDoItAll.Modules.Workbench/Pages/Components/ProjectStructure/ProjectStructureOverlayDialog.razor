@@ -11,34 +11,45 @@
          aria-modal="true"
          aria-label="@AriaLabel"
          data-testid="@DataTestId"
+         data-maximized="@EffectiveFullScreen.ToString().ToLowerInvariant()"
          @onclick:stopPropagation="true">
-        <Stack GapScale="LayoutGap.Large"
+        <Stack GapScale="LayoutGap.Small"
                Style="min-height:0;height:100%;width:100%;display:grid;grid-template-columns:minmax(0, 1fr);grid-template-rows:auto minmax(0, 1fr);align-items:stretch;justify-content:stretch;overflow:hidden;">
-            <Split Breakpoint="LayoutBreakpoint.Lg"
-                   Gap="LayoutGap.Medium"
-                   AlignItems="AlignItems.Start"
-                   JustifyContent="JustifyContent.SpaceBetween"
-                   Wrap="FlexWrap.Wrap"
-                   Class="project-structure-preview-dialog__header">
+            <div class="project-structure-preview-dialog__header">
                 <Stack GapScale="LayoutGap.Tiny"
                        Class="project-structure-preview-dialog__copy">
-                    <TextBlock TextStyle="TextStyle.Eyebrow" Value="@Kicker" />
-                    <TextBlock TextStyle="TextStyle.H5" Value="@Title" Class="cw-panel-title" />
+                    <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.NoWrap" Class="project-structure-preview-dialog__heading">
+                        <TextBlock TextStyle="TextStyle.Eyebrow" Value="@Kicker" />
+                        <TextBlock TextStyle="TextStyle.H6" Value="@Title" Class="cw-panel-title" />
+                    </Cluster>
                     @if (!string.IsNullOrWhiteSpace(Summary))
                     {
                         <TextBlock TextStyle="TextStyle.Note" Value="@Summary" Class="cw-panel-copy" />
                     }
                 </Stack>
 
-                @if (Actions is not null)
-                {
-                    <Cluster JustifyContent="JustifyContent.End"
-                             Gap="LayoutGap.Small"
-                             Class="project-structure-preview-dialog__actions">
+                <Cluster JustifyContent="JustifyContent.End"
+                         Gap="LayoutGap.XSmall"
+                         Wrap="FlexWrap.NoWrap"
+                         Class="project-structure-preview-dialog__actions">
+                    @if (Actions is not null)
+                    {
                         @Actions
-                    </Cluster>
-                }
-            </Split>
+                    }
+                    @if (CanMaximize && !FullScreen)
+                    {
+                        <Button Icon="@(isMaximized ? "close_fullscreen" : "open_in_full")"
+                                Size="ButtonSize.Small"
+                                Class="cda-button--quick"
+                                ButtonStyle="ButtonStyle.Light"
+                                title="@(isMaximized ? "Restore preview size" : "Maximize preview")"
+                                aria-label="@(isMaximized ? "Restore preview size" : "Maximize preview")"
+                                aria-pressed="@isMaximized"
+                                data-testid="project-structure-dialog-size-toggle"
+                                Click="ToggleMaximize" />
+                    }
+                </Cluster>
+            </div>
 
             @if (Body is not null)
             {
@@ -71,6 +82,9 @@
     public bool FullScreen { get; set; }
 
     [Parameter]
+    public bool CanMaximize { get; set; }
+
+    [Parameter]
     public string DialogClass { get; set; } = string.Empty;
 
     [Parameter]
@@ -88,6 +102,19 @@
     [Parameter]
     public EventCallback Close { get; set; }
 
+    private bool isMaximized;
+    private bool EffectiveFullScreen => FullScreen || isMaximized;
+
+    protected override void OnParametersSet()
+    {
+        if (!CanMaximize)
+        {
+            isMaximized = false;
+        }
+    }
+
+    private void ToggleMaximize() => isMaximized = !isMaximized;
+
     private Task HandleCloseAsync()
         => Close.InvokeAsync();
 
@@ -96,17 +123,17 @@
         return CssClassBuilder.Join(
             "project-structure-preview-backdrop",
             CanvasScoped ? "project-structure-preview-backdrop--canvas" : null,
-            FullScreen ? "project-structure-preview-backdrop--fullscreen" : null);
+            EffectiveFullScreen ? "project-structure-preview-backdrop--fullscreen" : null);
     }
 
     private string ResolveBackdropStyle()
     {
         var position = CanvasScoped ? "absolute" : "fixed";
-        var zIndex = CanvasScoped ? "720" : "900";
+        var zIndex = CanvasScoped ? "1200" : "900";
         var borderRadius = CanvasScoped ? "border-radius:inherit;" : string.Empty;
-        var alignment = FullScreen
-            ? "align-items:stretch;justify-content:stretch;padding:0.8rem;"
-            : "align-items:center;justify-content:center;padding:1.5rem;";
+        var alignment = EffectiveFullScreen
+            ? "align-items:stretch;justify-content:stretch;padding:0.6rem;"
+            : "align-items:center;justify-content:center;padding:1rem;";
         return $"position:{position};inset:0;z-index:{zIndex};display:flex;{alignment}box-sizing:border-box;background:rgba(15, 23, 42, 0.58);backdrop-filter:blur(10px);{borderRadius}";
     }
 
@@ -114,18 +141,18 @@
     {
         return CssClassBuilder.Join(
             "project-structure-preview-dialog",
-            FullScreen ? "project-structure-preview-dialog--fullscreen" : null,
+            EffectiveFullScreen ? "project-structure-preview-dialog--fullscreen" : null,
             DialogClass);
     }
 
     private string ResolveDialogStyle()
     {
-        var width = FullScreen
+        var width = EffectiveFullScreen
             ? "width:100%;height:100%;max-height:none;"
             : CanvasScoped
-                ? "width:min(72rem,calc(100% - 3rem));max-height:calc(100% - 3rem);"
-                : "width:min(72rem,calc(100vw - 3rem));max-height:calc(100dvh - 3rem);";
-        return $"{width}display:grid;grid-template-rows:auto minmax(0, 1fr);gap:1rem;padding:1.1rem;box-sizing:border-box;border:1px solid rgba(148, 163, 184, 0.26);border-radius:1.5rem;background:linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.96));box-shadow:0 24px 64px rgba(15, 23, 42, 0.28);overflow:hidden;min-height:0;";
+                ? "width:min(80rem,calc(100% - 2rem));height:min(52rem,calc(100% - 2rem));max-height:calc(100% - 2rem);"
+                : "width:min(80rem,calc(100vw - 2rem));height:min(52rem,calc(100dvh - 2rem));max-height:calc(100dvh - 2rem);";
+        return $"{width}display:block;padding:0.75rem;box-sizing:border-box;border:1px solid rgba(148, 163, 184, 0.26);border-radius:1rem;background:linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.96));box-shadow:0 24px 64px rgba(15, 23, 42, 0.28);overflow:hidden;min-height:0;";
     }
 
     private string ResolveBodyCssClass()
