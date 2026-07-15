@@ -89,6 +89,47 @@ public sealed class ProcessDefinitionCanvasLayoutTests
     }
 
     [Fact]
+    public void Recompose_equal_priority_end_paths_uses_straight_authored_route_and_is_idempotent()
+    {
+        var start = Step("start", ProcessDefinitionStepKind.Start, x: 100d, y: 400d);
+        var decision = Step("decision", ProcessDefinitionStepKind.Decision, x: 500d, y: 400d);
+        var repair = Step("repair", ProcessDefinitionStepKind.Work, x: 900d, y: 800d);
+        var repairEnd = Step("repair-end", ProcessDefinitionStepKind.End, x: 1_300d, y: 800d);
+        var success = Step("success", ProcessDefinitionStepKind.Work, x: 900d, y: 400d);
+        var successEnd = Step("success-end", ProcessDefinitionStepKind.End, x: 1_300d, y: 400d);
+        var edges = new[]
+        {
+            Edge("start-decision", start, decision),
+            Edge("decision-repair", decision, repair, ProcessDefinitionCanvasEdgeKind.BranchRoute),
+            Edge("repair-end", repair, repairEnd),
+            Edge("decision-success", decision, success, ProcessDefinitionCanvasEdgeKind.BranchRoute),
+            Edge("success-end", success, successEnd)
+        };
+
+        var first = ProcessDefinitionCanvasRecompositionEngine.Recompose(
+            [start, decision, repair, repairEnd, success, successEnd],
+            edges);
+        var second = ProcessDefinitionCanvasRecompositionEngine.Recompose(first.Nodes, first.Edges);
+
+        var positioned = first.Nodes.ToDictionary(node => node.NodeKey);
+        var expectedMainPath = new HashSet<ProcessDefinitionCanvasNodeKey>
+        {
+            start.NodeKey,
+            decision.NodeKey,
+            success.NodeKey,
+            successEnd.NodeKey
+        };
+        Assert.Equal(expectedMainPath, first.MainPathNodeKeys);
+        Assert.Equal(positioned[start.NodeKey].Y, positioned[decision.NodeKey].Y);
+        Assert.Equal(positioned[decision.NodeKey].Y, positioned[success.NodeKey].Y);
+        Assert.Equal(positioned[success.NodeKey].Y, positioned[successEnd.NodeKey].Y);
+        Assert.NotEqual(positioned[decision.NodeKey].Y, positioned[repair.NodeKey].Y);
+        Assert.NotEqual(positioned[decision.NodeKey].Y, positioned[repairEnd.NodeKey].Y);
+        Assert.Equal(first.MainPathNodeKeys, second.MainPathNodeKeys);
+        Assert.Equal(PositionMap(first.Nodes), PositionMap(second.Nodes));
+    }
+
+    [Fact]
     public void Recompose_typed_backward_loop_ignores_loop_for_ranking_and_preserves_route_metadata()
     {
         var start = Step("start", ProcessDefinitionStepKind.Start);

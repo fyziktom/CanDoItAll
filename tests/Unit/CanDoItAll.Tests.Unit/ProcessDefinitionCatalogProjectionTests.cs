@@ -2083,7 +2083,13 @@ public sealed class ProcessDefinitionCatalogProjectionTests
                 .Select(edge => nodesByKey[edge.ToNodeKey])
                 .ToArray();
             Assert.NotEmpty(targets);
-            Assert.All(targets, target => Assert.Equal(representation.StepKey, target.StepKey));
+            Assert.All(targets, target =>
+            {
+                Assert.Equal(representation.StepKey, target.StepKey);
+                Assert.True(
+                    representation.Y < target.Y,
+                    $"Role representation '{representation.NodeKey.Value}' is not placed above its owning step '{target.NodeKey.Value}'.");
+            });
         }
     }
 
@@ -2332,7 +2338,53 @@ public sealed class ProcessDefinitionCatalogProjectionTests
                 recomposed.Receipt.Status == ProcessDefinitionCanvasCommandStatus.Accepted,
                 $"Process template '{definition.Key}' was not recomposed: {recomposed.Receipt.Summary}");
             AssertNoCanvasNodeOverlaps(recomposed.Projection.Nodes, definition.Key);
+
+            var repeated = await ExecuteCanvasCommandAsync(
+                service,
+                recomposed.Projection,
+                ProcessDefinitionCanvasCommandKind.Recompose,
+                ToolboxActionKey: null,
+                recomposed.Projection.Selection.NodeKey);
+
+            Assert.True(
+                repeated.Receipt.Status == ProcessDefinitionCanvasCommandStatus.Accepted,
+                $"Process template '{definition.Key}' was not recomposed a second time: {repeated.Receipt.Summary}");
+            Assert.Equal(
+                recomposed.Projection.Nodes.ToDictionary(node => node.NodeKey, node => (node.X, node.Y)),
+                repeated.Projection.Nodes.ToDictionary(node => node.NodeKey, node => (node.X, node.Y)));
+            AssertNoCanvasNodeOverlaps(repeated.Projection.Nodes, definition.Key);
         }
+    }
+
+    [Fact]
+    public async Task Canvas_recomposition_keeps_software_delivery_success_lane_primary_over_repair_route()
+    {
+        var service = new ProcessDefinitionCanvasEditorProjectionService(
+            new ProcessTemplatePackLoader(),
+            new FixedProcessProjectionClock(Now));
+        var canvas = await service.GetCanvasAsync(
+            ProcessWorkspaceShellScope.Global,
+            new ProcessDefinitionCatalogItemKey("software-delivery"));
+
+        var recomposed = await ExecuteCanvasCommandAsync(
+            service,
+            canvas,
+            ProcessDefinitionCanvasCommandKind.Recompose,
+            ToolboxActionKey: null,
+            canvas.Selection.NodeKey);
+
+        var intake = Assert.Single(recomposed.Projection.Nodes, node =>
+            node.Kind == ProcessDefinitionCanvasNodeKind.Step &&
+            node.StepKey == new ProcessDefinitionStepKey("feature-intake"));
+        var successTerminal = Assert.Single(recomposed.Projection.Nodes, node =>
+            node.Kind == ProcessDefinitionCanvasNodeKind.Step &&
+            node.StepKey == new ProcessDefinitionStepKey("post-release-learning"));
+        var repair = Assert.Single(recomposed.Projection.Nodes, node =>
+            node.Kind == ProcessDefinitionCanvasNodeKind.Step &&
+            node.StepKey == new ProcessDefinitionStepKey("quality-repair"));
+
+        Assert.Equal(intake.Y, successTerminal.Y);
+        Assert.NotEqual(intake.Y, repair.Y);
     }
 
     [Fact]

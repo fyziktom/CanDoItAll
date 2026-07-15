@@ -14,6 +14,70 @@ public sealed class ProcessShellSmokeTests
     }
 
     [Fact]
+    public async Task Process_canvas_stays_maximized_through_selection_and_recomposition()
+    {
+        await using var context = await fixture.Browser.NewContextAsync(new BrowserNewContextOptions
+        {
+            ViewportSize = new ViewportSize
+            {
+                Width = 2048,
+                Height = 1200
+            }
+        });
+        var page = await context.NewPageAsync();
+        var pageErrors = new List<string>();
+        page.PageError += (_, message) => pageErrors.Add(message);
+
+        var response = await page.GotoAsync($"{fixture.BaseUrl}/processes");
+        Assert.NotNull(response);
+        Assert.True(response!.Ok, $"Expected /processes to return 2xx, got {(int)response.Status}.");
+        await DismissStartupModalIfPresentAsync(page, timeoutMs: 15_000);
+        await page.GetByTestId("processes-shell").WaitForAsync();
+        await page.GetByTestId("processes-definition-search").FillAsync("software-delivery");
+        await page.GetByTestId("processes-definition-search-submit").ClickAsync();
+        await page.GetByTestId("processes-definition-software-delivery").ClickAsync();
+        await page.GetByTestId("processes-detail-tab-steps").ClickAsync();
+        await page.GetByTestId("processes-definition-canvas").WaitForAsync();
+        await page.Locator(".cw-canvas-host").WaitForAsync();
+
+        var initial = await ReadProcessCanvasRuntimeAsync(page);
+        await page.GetByTitle("Maximize canvas", new() { Exact = true }).ClickAsync();
+        await page.Locator(".cw-workbench-shell.is-maximized").WaitForAsync();
+        await WaitForTwoAnimationFramesAsync(page);
+
+        var maximized = await ReadProcessCanvasRuntimeAsync(page);
+        Assert.True(maximized.IsMaximized);
+        Assert.True(maximized.StateIsMaximized);
+        Assert.True(maximized.BodyLocked);
+        Assert.InRange(maximized.RenderCount - initial.RenderCount, 1, 10);
+
+        var intakeNode = page.GetByTestId("processes-canvas-node-step-feature-intake");
+        await intakeNode.WaitForAsync(new() { State = WaitForSelectorState.Attached });
+        await intakeNode.EvaluateAsync("element => element.click()");
+        await ExpectTextContainsAsync(page.GetByTestId("processes-canvas-selection"), "Clarify .NET scope");
+        await WaitForTwoAnimationFramesAsync(page);
+
+        var selected = await ReadProcessCanvasRuntimeAsync(page);
+        Assert.True(selected.IsMaximized);
+        Assert.True(selected.StateIsMaximized);
+        Assert.True(selected.BodyLocked);
+        Assert.InRange(selected.RenderCount - maximized.RenderCount, 0, 6);
+
+        await page.GetByTestId("processes-canvas-recompose").ClickAsync();
+        await ExpectTextContainsAsync(page.GetByTestId("processes-canvas-command-receipt"), "recomposed");
+        await page.WaitForTimeoutAsync(500);
+
+        var recomposed = await ReadProcessCanvasRuntimeAsync(page);
+        Assert.True(recomposed.IsMaximized);
+        Assert.True(recomposed.StateIsMaximized);
+        Assert.True(recomposed.BodyLocked);
+        Assert.Equal(recomposed.IntakeY, recomposed.SuccessTerminalY);
+        Assert.NotEqual(recomposed.IntakeY, recomposed.RepairY);
+        Assert.False(await page.Locator("#blazor-error-ui").IsVisibleAsync());
+        Assert.Empty(pageErrors);
+    }
+
+    [Fact]
     public async Task Process_shell_routes_render_global_and_project_scoped_workspaces()
     {
         var artifactDirectory = Path.Combine(
@@ -243,6 +307,29 @@ public sealed class ProcessShellSmokeTests
         Assert.Fail($"Expected locator text to contain '{expectedText}', but saw '{renderedText}'.");
     }
 
+    private static Task WaitForTwoAnimationFramesAsync(IPage page)
+        => page.EvaluateAsync(
+            "() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))");
+
+    private static Task<ProcessCanvasRuntimeSnapshot> ReadProcessCanvasRuntimeAsync(IPage page)
+        => page.EvaluateAsync<ProcessCanvasRuntimeSnapshot>(
+            @"() => {
+                const shell = document.querySelector('.cw-workbench-shell');
+                const host = document.querySelector('.cw-canvas-host');
+                const state = host?.__canvasWorkbenchState;
+                const nodes = Array.isArray(state?.surface?.nodes) ? state.surface.nodes : [];
+                const y = nodeId => nodes.find(node => node.id === nodeId)?.y ?? Number.NaN;
+                return {
+                    isMaximized: shell?.classList.contains('is-maximized') === true,
+                    stateIsMaximized: state?.ui?.isMaximized === true,
+                    bodyLocked: document.body.classList.contains('cw-body-lock'),
+                    renderCount: state?.metrics?.renderCount ?? 0,
+                    intakeY: y('step:feature-intake'),
+                    successTerminalY: y('step:post-release-learning'),
+                    repairY: y('step:quality-repair')
+                };
+            }");
+
     private static Task WriteBrowserValidationSummaryAsync(
         string artifactDirectory,
         IReadOnlyCollection<string> consoleMessages,
@@ -275,5 +362,22 @@ public sealed class ProcessShellSmokeTests
         return File.WriteAllLinesAsync(
             Path.Combine(artifactDirectory, "browser-validation-summary.txt"),
             lines);
+    }
+
+    private sealed class ProcessCanvasRuntimeSnapshot
+    {
+        public bool IsMaximized { get; set; }
+
+        public bool StateIsMaximized { get; set; }
+
+        public bool BodyLocked { get; set; }
+
+        public int RenderCount { get; set; }
+
+        public double IntakeY { get; set; }
+
+        public double SuccessTerminalY { get; set; }
+
+        public double RepairY { get; set; }
     }
 }

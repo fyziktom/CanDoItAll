@@ -398,7 +398,20 @@
         selectedNodeKey = Canvas.Selection.NodeKey;
         selectedEdgeKey = Canvas.Selection.EdgeKey;
         selection = Canvas.Selection;
-        canvasUiState = CreateDefaultUiState(selectedNodeKey is null ? [] : [selectedNodeKey.Value.Value]);
+        List<string> selectedNodeIds = selectedNodeKey is null ? [] : [selectedNodeKey.Value.Value];
+        if (scopeChanged || definitionChanged)
+        {
+            canvasUiState = CreateDefaultUiState(selectedNodeIds);
+        }
+        else
+        {
+            canvasUiState.SelectedNodeIds = selectedNodeIds;
+            if (string.IsNullOrWhiteSpace(canvasUiState.ActiveInspectorTab))
+            {
+                canvasUiState.ActiveInspectorTab = "process-definition";
+            }
+        }
+
         commandNotice = null;
         if (scopeChanged || definitionChanged)
         {

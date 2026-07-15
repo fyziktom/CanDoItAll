@@ -76,14 +76,11 @@ public sealed partial class ProcessDefinitionCanvasEditorProjectionService
             {
                 var bindingGroup = bindingGroups[representationIndex];
                 var stepNode = stepNodes[bindingGroup.Key];
-                var hasAuthoredPosition = representationIndex == 0 && (role.CanvasX != 0 || role.CanvasY != 0);
-                var position = hasAuthoredPosition
-                    ? (X: role.CanvasX, Y: role.CanvasY)
-                    : ProcessDefinitionCanvasPlacementPolicy.PlaceInputAttachment(
-                        nodes.Select(ProcessDefinitionCanvasPlacementPolicy.ResolveBounds).ToList(),
-                        stepNode,
-                        RoleWidth,
-                        RoleHeight);
+                var position = ProcessDefinitionCanvasPlacementPolicy.PlaceInputAttachment(
+                    nodes.Select(ProcessDefinitionCanvasPlacementPolicy.ResolveBounds).ToList(),
+                    stepNode,
+                    RoleWidth,
+                    RoleHeight);
                 var nodeKey = representationIndex == 0
                     ? new ProcessDefinitionCanvasNodeKey($"role:{role.Key}")
                     : BuildUniqueNodeKey($"role-ref:{Slugify(role.Key)}:{Slugify(bindingGroup.Key)}", nodes);

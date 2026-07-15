@@ -605,6 +605,38 @@ public sealed class ProcessWorkspaceShellTests
     }
 
     [Fact]
+    public async Task Canvas_preserves_viewport_state_when_accepted_recompose_refreshes_projection()
+    {
+        using var context = CreateContext(out var client);
+        var cut = context.RenderComponent<ProcessWorkspaceShell>();
+        ActivateProcessDetailTab(cut, "processes-detail-tab-steps", "processes-detail-panel-steps");
+
+        cut.WaitForElement("button[title='Maximize canvas']").Click();
+        cut.WaitForAssertion(() =>
+            Assert.True(cut.FindComponent<CanvasWorkbench>().Instance.Surface.UiState.IsMaximized));
+
+        var viewportState = cut.FindComponent<CanvasWorkbench>().Instance.Surface.UiState;
+        viewportState.Zoom = 0.72;
+        viewportState.PanX = 321;
+        viewportState.PanY = -45;
+        await cut.InvokeAsync(() => cut.FindComponent<CanvasWorkbench>().Instance.OnStateChanged(
+            viewportState.ToJson(),
+            1));
+
+        cut.Find("[data-testid='processes-canvas-recompose']").Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Equal(ProcessDefinitionCanvasCommandKind.Recompose, client.LastCanvasCommand?.CommandKind);
+            var refreshedState = cut.FindComponent<CanvasWorkbench>().Instance.Surface.UiState;
+            Assert.True(refreshedState.IsMaximized);
+            Assert.Equal(0.72, refreshedState.Zoom, 2);
+            Assert.Equal(321, refreshedState.PanX, 2);
+            Assert.Equal(-45, refreshedState.PanY, 2);
+        });
+    }
+
+    [Fact]
     public async Task Canvas_node_move_uses_typed_canvas_command_boundary()
     {
         using var context = CreateContext(out var client);

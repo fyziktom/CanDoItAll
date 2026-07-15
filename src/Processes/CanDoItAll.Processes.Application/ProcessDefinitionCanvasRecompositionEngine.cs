@@ -51,7 +51,7 @@ internal static class ProcessDefinitionCanvasRecompositionEngine
         var mainPath = ResolveMainPath(steps, topologicalOrder, outgoing, incoming, nodeOrder);
         var mainPathNodeKeys = mainPath.NodeKeys.ToHashSet();
         var rankByNodeKey = ResolveRanks(topologicalOrder, incoming);
-        var laneByNodeKey = ResolveLanes(topologicalOrder, incoming, rankByNodeKey, mainPathNodeKeys);
+        var laneByNodeKey = ResolveLanes(steps, topologicalOrder, incoming, rankByNodeKey, mainPathNodeKeys);
         var positionedNodes = PositionNodes(
             nodes,
             edges,
@@ -377,11 +377,16 @@ internal static class ProcessDefinitionCanvasRecompositionEngine
     }
 
     private static IReadOnlyDictionary<ProcessDefinitionCanvasNodeKey, int> ResolveLanes(
+        IReadOnlyList<ProcessDefinitionCanvasEditorNodeProjection> steps,
         IReadOnlyList<ProcessDefinitionCanvasNodeKey> topologicalOrder,
         IReadOnlyDictionary<ProcessDefinitionCanvasNodeKey, IReadOnlyList<StructuralArc>> incoming,
         IReadOnlyDictionary<ProcessDefinitionCanvasNodeKey, int> rankByNodeKey,
         IReadOnlySet<ProcessDefinitionCanvasNodeKey> mainPathNodeKeys)
     {
+        var stepByKey = steps.ToDictionary(step => step.NodeKey);
+        var mainPathY = steps
+            .Where(step => mainPathNodeKeys.Contains(step.NodeKey))
+            .Average(step => step.Y);
         var lanes = new Dictionary<ProcessDefinitionCanvasNodeKey, int>();
         var occupiedRanksByLane = new Dictionary<int, HashSet<int>>
         {
@@ -409,8 +414,9 @@ internal static class ProcessDefinitionCanvasRecompositionEngine
                 .ThenBy(group => group.Key)
                 .Select(group => group.Key);
             var rank = rankByNodeKey[nodeKey];
+            var preferredSide = Math.Sign(stepByKey[nodeKey].Y - mainPathY);
             var lane = inheritedLanes
-                .Concat(EnumerateSideLanes(topologicalOrder.Count))
+                .Concat(EnumerateSideLanes(topologicalOrder.Count, preferredSide))
                 .Distinct()
                 .First(candidate => !occupiedRanksByLane.GetValueOrDefault(candidate, []).Contains(rank));
             lanes[nodeKey] = lane;
@@ -491,6 +497,7 @@ internal static class ProcessDefinitionCanvasRecompositionEngine
                 Suffix = ResolveBestPath(arc.TargetNodeKey, stepByKey, outgoing, nodeOrder, memo)
             })
             .OrderByDescending(candidate => candidate.Suffix.TerminalPriority)
+            .ThenBy(candidate => Math.Abs(stepByKey[candidate.Arc.TargetNodeKey].Y - stepByKey[nodeKey].Y))
             .ThenBy(candidate => nodeOrder[candidate.Arc.TargetNodeKey])
             .ThenByDescending(candidate => candidate.Suffix.NodeKeys.Count)
             .First();
@@ -646,8 +653,23 @@ internal static class ProcessDefinitionCanvasRecompositionEngine
                     .ThenBy(arc => arc.EdgeKey.Value, StringComparer.Ordinal)
                     .ToArray());
 
-    private static IEnumerable<int> EnumerateSideLanes(int nodeCount)
+    private static IEnumerable<int> EnumerateSideLanes(int nodeCount, int preferredSide)
     {
+        if (preferredSide != 0)
+        {
+            for (var lane = 1; lane <= Math.Max(1, nodeCount); lane++)
+            {
+                yield return lane * preferredSide;
+            }
+
+            for (var lane = 1; lane <= Math.Max(1, nodeCount); lane++)
+            {
+                yield return lane * -preferredSide;
+            }
+
+            yield break;
+        }
+
         for (var lane = 1; lane <= Math.Max(1, nodeCount); lane++)
         {
             yield return -lane;
