@@ -1,3 +1,27 @@
+.project-structure-gantt-panel {
+    width: 100%;
+    min-width: 0;
+}
+
+::deep .project-structure-gantt-panel__utility-bar {
+    padding: 0.5rem 0.7rem;
+}
+
+::deep .project-structure-gantt-panel__utility-row {
+    min-width: 0;
+    row-gap: 0.35rem;
+}
+
+::deep .project-structure-gantt-panel__title {
+    flex: none;
+    margin-right: 0.2rem;
+}
+
+::deep .project-structure-gantt-panel__hint {
+    flex: 1 1 18rem;
+    min-width: 12rem;
+}
+
 .project-structure-gantt-panel__issues {
     margin: 0.45rem 0 0;
     padding-left: 1.2rem;

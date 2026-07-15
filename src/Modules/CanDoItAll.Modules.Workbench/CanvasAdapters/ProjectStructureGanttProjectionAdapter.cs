@@ -62,10 +62,7 @@ public sealed class ProjectStructureGanttProjectionAdapter
             return Invalid(issues);
         }
 
-        var nodesById = surface.Nodes
-            .Where(node => !string.IsNullOrWhiteSpace(node.Id))
-            .GroupBy(node => node.Id, StringComparer.Ordinal)
-            .ToDictionary(group => group.Key, group => group.First(), StringComparer.Ordinal);
+        var assignmentIndex = BuildAssignmentIndex(surface, partyAssignments);
         var taskNodesById = taskNodes.ToDictionary(node => new GanttTaskId(node.Id));
         var tasks = validation.TopologicalOrder
             .Select(taskId =>
@@ -77,7 +74,7 @@ public sealed class ProjectStructureGanttProjectionAdapter
                     node.Title,
                     schedule.Start,
                     schedule.End,
-                    BuildAssignments(surface, node, nodesById, partyAssignments, issues));
+                    BuildAssignments(node, assignmentIndex, issues));
             })
             .ToArray();
         var projectionOnlyTaskIds = schedules
@@ -371,74 +368,131 @@ public sealed class ProjectStructureGanttProjectionAdapter
         }
     }
 
-    private static IReadOnlyList<GanttAssignment> BuildAssignments(
+    private static AssignmentIndex BuildAssignmentIndex(
         ProjectStructureSurface surface,
+        IReadOnlyCollection<ProjectPartyAssignmentDetail> partyAssignments)
+    {
+        var nodesById = new Dictionary<string, ProjectStructureNode>(StringComparer.Ordinal);
+        var workflowNodesByTaskId = new Dictionary<string, List<ProjectStructureNode>>(StringComparer.Ordinal);
+        foreach (var node in surface.Nodes)
+        {
+            if (!string.IsNullOrWhiteSpace(node.Id))
+            {
+                nodesById.TryAdd(node.Id, node);
+            }
+
+            if (node.ObjectType != ProjectObjectType.WorkflowDefinition ||
+                node.IsSystemManaged ||
+                string.IsNullOrWhiteSpace(node.ParentId))
+            {
+                continue;
+            }
+
+            AddToLookup(workflowNodesByTaskId, node.ParentId, node);
+        }
+
+        var processNodeIdsByTaskId = new Dictionary<string, HashSet<string>>(StringComparer.Ordinal);
+        foreach (var link in surface.Links)
+        {
+            if (!link.IsUserAuthored ||
+                link.Kind != ProjectObjectLinkKind.Uses ||
+                string.IsNullOrWhiteSpace(link.SourceId) ||
+                string.IsNullOrWhiteSpace(link.TargetId))
+            {
+                continue;
+            }
+
+            if (!processNodeIdsByTaskId.TryGetValue(link.SourceId, out var processNodeIds))
+            {
+                processNodeIds = new HashSet<string>(StringComparer.Ordinal);
+                processNodeIdsByTaskId.Add(link.SourceId, processNodeIds);
+            }
+
+            processNodeIds.Add(link.TargetId);
+        }
+
+        var partyAssignmentsByTaskId = new Dictionary<string, List<ProjectPartyAssignmentDetail>>(StringComparer.Ordinal);
+        foreach (var assignment in partyAssignments)
+        {
+            if (assignment.ProjectId != surface.ProjectId ||
+                assignment.Role != ProjectPartyAssignmentRole.WorkItemAssignee ||
+                string.IsNullOrWhiteSpace(assignment.NodeKey))
+            {
+                continue;
+            }
+
+            AddToLookup(partyAssignmentsByTaskId, assignment.NodeKey, assignment);
+        }
+
+        return new AssignmentIndex(
+            nodesById,
+            processNodeIdsByTaskId,
+            workflowNodesByTaskId,
+            partyAssignmentsByTaskId);
+    }
+
+    private static IReadOnlyList<GanttAssignment> BuildAssignments(
         ProjectStructureNode taskNode,
-        IReadOnlyDictionary<string, ProjectStructureNode> nodesById,
-        IReadOnlyCollection<ProjectPartyAssignmentDetail> partyAssignments,
+        AssignmentIndex index,
         ICollection<ProjectStructureGanttProjectionIssue> issues)
     {
         var taskId = new GanttTaskId(taskNode.Id);
         var assignments = new List<ProjectedAssignment>();
-        var processNodeIds = surface.Links
-            .Where(link =>
-                link.IsUserAuthored &&
-                link.Kind == ProjectObjectLinkKind.Uses &&
-                string.Equals(link.SourceId, taskNode.Id, StringComparison.Ordinal))
-            .Select(link => link.TargetId)
-            .Distinct(StringComparer.Ordinal);
-        foreach (var processNodeId in processNodeIds)
+        if (index.ProcessNodeIdsByTaskId.TryGetValue(taskNode.Id, out var processNodeIds))
         {
-            if (!nodesById.TryGetValue(processNodeId, out var processNode) ||
-                processNode.ObjectType != ProjectObjectType.ProcessDefinition)
+            foreach (var processNodeId in processNodeIds)
             {
-                continue;
-            }
+                if (!index.NodesById.TryGetValue(processNodeId, out var processNode) ||
+                    processNode.ObjectType != ProjectObjectType.ProcessDefinition)
+                {
+                    continue;
+                }
 
-            AddAssignment(
-                assignments,
-                issues,
-                taskId,
-                GanttAssignmentKind.Process,
-                processNode.Title,
-                new AssignmentIdentity(GanttAssignmentKind.Process, processNode.Id));
+                AddAssignment(
+                    assignments,
+                    issues,
+                    taskId,
+                    GanttAssignmentKind.Process,
+                    processNode.Title,
+                    new AssignmentIdentity(GanttAssignmentKind.Process, processNode.Id));
+            }
         }
 
-        foreach (var workflowNode in surface.Nodes.Where(node =>
-                     node.ObjectType == ProjectObjectType.WorkflowDefinition &&
-                     string.Equals(node.ParentId, taskNode.Id, StringComparison.Ordinal) &&
-                     !node.IsSystemManaged))
+        if (index.WorkflowNodesByTaskId.TryGetValue(taskNode.Id, out var workflowNodes))
         {
-            AddAssignment(
-                assignments,
-                issues,
-                taskId,
-                GanttAssignmentKind.Workflow,
-                workflowNode.Title,
-                new AssignmentIdentity(GanttAssignmentKind.Workflow, workflowNode.Id));
+            foreach (var workflowNode in workflowNodes)
+            {
+                AddAssignment(
+                    assignments,
+                    issues,
+                    taskId,
+                    GanttAssignmentKind.Workflow,
+                    workflowNode.Title,
+                    new AssignmentIdentity(GanttAssignmentKind.Workflow, workflowNode.Id));
+            }
         }
 
-        foreach (var partyAssignment in partyAssignments.Where(assignment =>
-                     assignment.ProjectId == surface.ProjectId &&
-                     assignment.Role == ProjectPartyAssignmentRole.WorkItemAssignee &&
-                     string.Equals(assignment.NodeKey, taskNode.Id, StringComparison.Ordinal)))
+        if (index.PartyAssignmentsByTaskId.TryGetValue(taskNode.Id, out var taskPartyAssignments))
         {
-            if (!TryResolvePartyAssignmentKind(partyAssignment.PartyType, out var assignmentKind))
+            foreach (var partyAssignment in taskPartyAssignments)
             {
-                issues.Add(Warning(
-                    ProjectStructureGanttProjectionIssueCode.InvalidAssignment,
-                    $"Task '{taskId}' has an unsupported assignee party type and that decoration is omitted.",
-                    taskId));
-                continue;
-            }
+                if (!TryResolvePartyAssignmentKind(partyAssignment.PartyType, out var assignmentKind))
+                {
+                    issues.Add(Warning(
+                        ProjectStructureGanttProjectionIssueCode.InvalidAssignment,
+                        $"Task '{taskId}' has an unsupported assignee party type and that decoration is omitted.",
+                        taskId));
+                    continue;
+                }
 
-            AddAssignment(
-                assignments,
-                issues,
-                taskId,
-                assignmentKind,
-                partyAssignment.PartyDisplayName,
-                new AssignmentIdentity(assignmentKind, partyAssignment.PartyId.ToString("N")));
+                AddAssignment(
+                    assignments,
+                    issues,
+                    taskId,
+                    assignmentKind,
+                    partyAssignment.PartyDisplayName,
+                    new AssignmentIdentity(assignmentKind, partyAssignment.PartyId.ToString("N")));
+            }
         }
 
         return assignments
@@ -448,6 +502,20 @@ public sealed class ProjectStructureGanttProjectionAdapter
             .ThenBy(assignment => assignment.Name, StringComparer.OrdinalIgnoreCase)
             .Select(assignment => new GanttAssignment(assignment.Kind, assignment.Name))
             .ToArray();
+    }
+
+    private static void AddToLookup<TValue>(
+        IDictionary<string, List<TValue>> lookup,
+        string key,
+        TValue value)
+    {
+        if (!lookup.TryGetValue(key, out var values))
+        {
+            values = [];
+            lookup.Add(key, values);
+        }
+
+        values.Add(value);
     }
 
     private static void AddAssignment(
@@ -555,6 +623,12 @@ public sealed class ProjectStructureGanttProjectionAdapter
         GanttAssignmentKind Kind,
         string Name,
         AssignmentIdentity Identity);
+
+    private sealed record AssignmentIndex(
+        IReadOnlyDictionary<string, ProjectStructureNode> NodesById,
+        IReadOnlyDictionary<string, HashSet<string>> ProcessNodeIdsByTaskId,
+        IReadOnlyDictionary<string, List<ProjectStructureNode>> WorkflowNodesByTaskId,
+        IReadOnlyDictionary<string, List<ProjectPartyAssignmentDetail>> PartyAssignmentsByTaskId);
 
     private readonly record struct AssignmentIdentity(
         GanttAssignmentKind Kind,

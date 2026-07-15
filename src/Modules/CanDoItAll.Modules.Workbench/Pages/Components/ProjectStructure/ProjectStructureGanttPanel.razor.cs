@@ -1,3 +1,4 @@
+using CanDoItAll.Components.BaseLib;
 using CanDoItAll.Components.Gantt;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Workbench.CanvasAdapters;
@@ -18,8 +19,6 @@ public partial class ProjectStructureGanttPanel : ComponentBase, IAsyncDisposabl
     private bool isLoading;
     private bool mutationInFlight;
     private string? loadError;
-    private string? mutationError;
-    private string? mutationStatus;
 
     [Inject]
     private IProjectPartyIntegrationBridge ProjectPartyIntegrationBridge { get; set; } = default!;
@@ -32,6 +31,9 @@ public partial class ProjectStructureGanttPanel : ComponentBase, IAsyncDisposabl
 
     [Inject]
     private ILogger<ProjectStructureGanttPanel> Logger { get; set; } = default!;
+
+    [Inject]
+    private NotificationService NotificationService { get; set; } = default!;
 
     [Parameter]
     public Guid ProjectId { get; set; }
@@ -91,7 +93,6 @@ public partial class ProjectStructureGanttPanel : ComponentBase, IAsyncDisposabl
 
         isLoading = true;
         loadError = null;
-        mutationError = null;
         try
         {
             var assignments = await ProjectPartyIntegrationBridge.ListAssignmentsDetailedAsync(
@@ -148,19 +149,21 @@ public partial class ProjectStructureGanttPanel : ComponentBase, IAsyncDisposabl
     {
         if (!MutationCommitted.HasDelegate)
         {
-            mutationError = "The schedule host is not configured to reload authoritative project data, so the change was not attempted.";
+            NotificationService.Error(
+                "Project schedule change unavailable",
+                "The schedule host is not configured to reload authoritative project data, so the change was not attempted.");
             return;
         }
 
         if (mutationInFlight)
         {
-            mutationError = "Another project schedule change is still being saved.";
+            NotificationService.Warning(
+                "Project schedule change in progress",
+                "Another project schedule change is still being saved.");
             return;
         }
 
         mutationInFlight = true;
-        mutationError = null;
-        mutationStatus = null;
         var mutationCommitted = false;
         try
         {
@@ -172,11 +175,15 @@ public partial class ProjectStructureGanttPanel : ComponentBase, IAsyncDisposabl
             }
 
             await MutationCommitted.InvokeAsync();
-            mutationStatus = BuildMutationStatus(operation, result);
+            NotificationService.Success(
+                "Project schedule saved",
+                BuildMutationStatus(operation, result));
         }
         catch (ProjectStructureGanttMutationException exception)
         {
-            mutationError = exception.Message;
+            NotificationService.Error(
+                "Project schedule change rejected",
+                exception.Message);
             Logger.LogWarning(
                 "Rejected Gantt {Operation} mutation for project {ProjectId} with code {ErrorCode}.",
                 operation,
@@ -188,9 +195,16 @@ public partial class ProjectStructureGanttPanel : ComponentBase, IAsyncDisposabl
         }
         catch (Exception exception)
         {
-            mutationError = mutationCommitted
-                ? "The change was saved, but the authoritative project schedule could not be reloaded. Reload this page before making another change."
-                : "The project schedule change could not be saved. The chart remains unchanged.";
+            const string reloadRequired = "The change was saved, but the authoritative project schedule could not be reloaded. Reload this page before making another change.";
+            const string saveFailed = "The project schedule change could not be saved. The chart remains unchanged.";
+            if (mutationCommitted)
+            {
+                NotificationService.Warning("Project schedule saved; reload required", reloadRequired);
+            }
+            else
+            {
+                NotificationService.Error("Project schedule save failed", saveFailed);
+            }
             Logger.LogError(
                 "Gantt {Operation} processing failed for project {ProjectId} after commit state {MutationCommitted}; failure type {FailureType}.",
                 operation,

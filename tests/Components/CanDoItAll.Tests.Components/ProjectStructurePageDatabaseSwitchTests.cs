@@ -1,4 +1,5 @@
 using Bunit;
+using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Workbench.Pages;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
@@ -28,5 +29,49 @@ public sealed class ProjectStructurePageDatabaseSwitchTests
             .Click();
 
         Assert.EndsWith("/projects", navigation.Uri, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task Changing_projects_resets_to_canvas_and_keeps_gantt_uninitialized_until_selected()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
+        var firstProjectId = await CreateProjectAsync(projectsService, "First lazy Gantt project");
+        var secondProjectId = await CreateProjectAsync(projectsService, "Second lazy Gantt project");
+
+        var cut = harness.Context.RenderComponent<ProjectStructurePage>(
+            parameters => parameters.Add(page => page.ProjectId, firstProjectId));
+
+        cut.WaitForElement(".cad-tabs__tab");
+        cut.WaitForAssertion(() => Assert.Empty(cut.FindAll("[data-testid='project-structure-gantt-panel']")));
+        cut.WaitForAssertion(() =>
+        {
+            cut.FindAll(".cad-tabs__tab")
+                .Single(tab => tab.TextContent.Contains("Gantt", StringComparison.Ordinal))
+                .Click();
+        });
+        cut.WaitForElement("[data-testid='project-structure-gantt-panel']");
+
+        cut.SetParametersAndRender(parameters => parameters.Add(page => page.ProjectId, secondProjectId));
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Empty(cut.FindAll("[data-testid='project-structure-gantt-panel']"));
+            var selectedTab = Assert.Single(cut.FindAll(".cad-tabs__tab[aria-selected='true']"));
+            Assert.Contains("Canvas", selectedTab.TextContent, StringComparison.Ordinal);
+        });
+    }
+
+    private static async Task<Guid> CreateProjectAsync(ProjectsService projectsService, string name)
+    {
+        var project = await projectsService.GetAsync(null);
+        project.Name = name;
+        project.Description = $"{name} description";
+        project.Objective = $"{name} objective";
+        project.CurrentPhase = "Execution";
+
+        var saveResult = await projectsService.SaveAsync(project);
+        Assert.True(saveResult.IsSuccess);
+        return saveResult.Value;
     }
 }

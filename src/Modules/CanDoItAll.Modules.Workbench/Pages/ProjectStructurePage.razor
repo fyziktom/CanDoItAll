@@ -750,6 +750,7 @@ else
     private const double DefaultCanvasWindowGap = 16;
     private const double SignalsWindowDefaultLeft = ToolboxWindowDefaultWidth + DefaultCanvasWindowMargin + DefaultCanvasWindowGap;
     private const double HealthWindowDefaultLeft = SignalsWindowDefaultLeft + SignalsWindowDefaultWidth + DefaultCanvasWindowGap;
+    private const int CanvasViewIndex = 0;
     private const int GanttViewIndex = 1;
 
     [Parameter]
@@ -921,14 +922,15 @@ else
     {
         if (loadedProjectId != ProjectId)
         {
-            await CloseAttachmentPreviewAsync();
             loadedProjectId = ProjectId;
+            structureViewIndex = CanvasViewIndex;
             currentViewStateJson = null;
             selectedNodeIds = [];
             canvasToolMode = CanvasAuthoringMode.Select;
             linkModeSourceId = null;
             pendingClientSelectionId = null;
             fileBrowserRequest = null;
+            await CloseAttachmentPreviewAsync();
         }
 
         await ReloadSurfaceAsync();

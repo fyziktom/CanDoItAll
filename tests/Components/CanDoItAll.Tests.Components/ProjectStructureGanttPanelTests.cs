@@ -1,5 +1,6 @@
 using Bunit;
 using Bunit.TestDoubles;
+using CanDoItAll.Components.BaseLib;
 using CanDoItAll.Components.Gantt;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Workbench;
@@ -53,6 +54,28 @@ public sealed class ProjectStructureGanttPanelTests
         Assert.DoesNotContain("private connection detail", cut.Markup, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public async Task Mutation_feedback_uses_notification_service_instead_of_inline_alerts()
+    {
+        using var context = CreateContext([]);
+        var projectId = Guid.NewGuid();
+        var cut = context.RenderComponent<ProjectStructureGanttPanel>(parameters => parameters
+            .Add(component => component.ProjectId, projectId)
+            .Add(component => component.Surface, CreateSurface(projectId, CreateTask("task-a", "Task"))));
+        var chart = cut.FindComponent<GanttChart>();
+        var task = Assert.Single(chart.Instance.Tasks);
+
+        await cut.InvokeAsync(() => chart.Instance.TaskTitleChangeRequested.InvokeAsync(
+            new GanttTaskTitleChangeRequest(task.Id, task.Title, "Updated task")));
+
+        var notification = Assert.Single(context.Services.GetRequiredService<NotificationService>().Messages);
+        Assert.Equal(NotificationSeverity.Error, notification.Severity);
+        Assert.Equal("Project schedule change unavailable", notification.Summary);
+        Assert.Contains("authoritative project data", notification.Detail, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("project-structure-gantt-mutation-error", cut.Markup, StringComparison.Ordinal);
+        Assert.DoesNotContain("project-structure-gantt-mutation-status", cut.Markup, StringComparison.Ordinal);
+    }
+
     private static TestContext CreateContext(
         IReadOnlyList<ProjectPartyAssignmentDetail> assignments,
         Exception? assignmentFailure = null)
@@ -60,6 +83,7 @@ public sealed class ProjectStructureGanttPanelTests
         var context = new TestContext();
         context.JSInterop.Mode = JSRuntimeMode.Loose;
         context.Services.AddLogging();
+        context.Services.AddSingleton<NotificationService>();
         context.Services.AddSingleton<IProjectPartyIntegrationBridge>(
             new StubProjectPartyIntegrationBridge(assignments, assignmentFailure));
         context.Services.AddSingleton<ProjectStructureGanttProjectionAdapter>();

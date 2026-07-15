@@ -3,9 +3,8 @@
 @using CanDoItAll.Components.Gantt
 @using CanDoItAll.Modules.Workbench.CanvasAdapters
 
-<section data-testid="project-structure-gantt-panel">
-<SectionCard Title="Project schedule"
-             Description="This Gantt view projects authoritative project structure tasks. Interactions request typed project mutations; the chart never writes or owns project data.">
+<section class="project-structure-gantt-panel"
+         data-testid="project-structure-gantt-panel">
     @if (isLoading)
     {
         <LoadingState Eyebrow="Project schedule"
@@ -21,38 +20,34 @@
     }
     else if (projection is not null)
     {
-        <Stack GapScale="LayoutGap.Medium"
+        <Stack GapScale="LayoutGap.Small"
                Class="w-full min-w-0"
                AlignItems="AlignItems.Stretch">
             <SurfaceCard Soft="true"
-                         Class="p-4">
-                <Stack GapScale="LayoutGap.Small"
-                       AlignItems="AlignItems.Stretch">
-                    <Cluster Gap="LayoutGap.Small">
-                        <Pill Tone="PillTone.Info" Text="@($"{projection.Tasks.Count} tasks")" />
-                        <Pill Tone="PillTone.Neutral" Text="@($"{projection.Dependencies.Count} dependencies")" />
-                        @if (projection.ProjectionOnlyTaskIds.Count > 0)
-                        {
-                            <Pill Tone="PillTone.Warn"
-                                  Text="@($"{projection.ProjectionOnlyTaskIds.Count} projected schedules")" />
-                        }
-                    </Cluster>
-
-                    <TextBlock TextStyle="TextStyle.Note"
-                               Value="Drag task bars to move them, use the green ends to resize, and use blue ports to add or reconnect dependencies." />
-
-                    <Cluster Gap="LayoutGap.Small"
-                             Wrap="FlexWrap.Wrap">
-                        <GanttTaskDragSource Task="@insertionCandidate"
-                                             Disabled="@(!CanInsertTask)"
-                                             AriaLabel="Drag a new project task onto a dependency connection">
-                            <Pill Text="Drag new 8-hour task into a connection"
-                                  Tone="PillTone.Info" />
-                        </GanttTaskDragSource>
-                        <TextBlock TextStyle="TextStyle.Caption"
-                                   Value="Drop it onto a dependency connection to replace that connection and shift the dependent path." />
-                    </Cluster>
-                </Stack>
+                         Class="project-structure-gantt-panel__utility-bar">
+                <Cluster Gap="LayoutGap.XSmall"
+                         Wrap="FlexWrap.Wrap"
+                         Class="project-structure-gantt-panel__utility-row">
+                    <TextBlock TextStyle="TextStyle.Subtitle2"
+                               Value="Project schedule"
+                               Class="project-structure-gantt-panel__title" />
+                    <Pill Tone="PillTone.Info" Text="@($"{projection.Tasks.Count} tasks")" />
+                    <Pill Tone="PillTone.Neutral" Text="@($"{projection.Dependencies.Count} dependencies")" />
+                    @if (projection.ProjectionOnlyTaskIds.Count > 0)
+                    {
+                        <Pill Tone="PillTone.Warn"
+                              Text="@($"{projection.ProjectionOnlyTaskIds.Count} projected schedules")" />
+                    }
+                    <TextBlock TextStyle="TextStyle.Caption"
+                               Value="Move bars · resize green handles · connect blue ports."
+                               Class="project-structure-gantt-panel__hint" />
+                    <GanttTaskDragSource Task="@insertionCandidate"
+                                         Disabled="@(!CanInsertTask)"
+                                         AriaLabel="Drag a new project task onto a dependency connection">
+                        <Pill Text="Insert 8 h task on dependency"
+                              Tone="PillTone.Info" />
+                    </GanttTaskDragSource>
+                </Cluster>
             </SurfaceCard>
 
             @if (projection.ProjectionOnlyTaskIds.Count > 0)
@@ -91,21 +86,6 @@
             }
             else
             {
-                @if (mutationError is not null)
-                {
-                    <Alert AlertStyle="AlertStyle.Danger"
-                           data-testid="project-structure-gantt-mutation-error">
-                        @mutationError
-                    </Alert>
-                }
-                else if (mutationStatus is not null)
-                {
-                    <Alert AlertStyle="AlertStyle.Success"
-                           data-testid="project-structure-gantt-mutation-status">
-                        @mutationStatus
-                    </Alert>
-                }
-
                 <Stack Class="w-full min-w-0"
                        data-testid="project-structure-gantt-chart">
                     <GanttChart Tasks="@projection.Tasks"
@@ -132,5 +112,4 @@
             }
         </Stack>
     }
-</SectionCard>
 </section>
