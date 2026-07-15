@@ -11,6 +11,7 @@ using CanDoItAll.FileTools.FileInteraction.Markdown;
 using CanDoItAll.FileTools.Integration;
 using CanDoItAll.Memory.Application;
 using CanDoItAll.Modules.Projects;
+using CanDoItAll.Modules.Workbench.CanvasAdapters;
 using CanDoItAll.Modules.Workspace;
 using CanDoItAll.Processes.Application;
 using CanDoItAll.SharedKernel;
@@ -37,6 +38,8 @@ public static class WorkbenchModuleServiceCollectionExtensions
         services.AddScoped<ProjectWorkbenchLifecycleService>();
         services.AddScoped<ProjectWorkbenchRelationService>();
         services.AddScoped<ProjectStructureAssemblyService>();
+        services.AddScoped<ProjectStructureGanttMutationService>();
+        services.AddSingleton<ProjectStructureGanttProjectionAdapter>();
         services.AddScoped<ProjectStructureProjectionMaintenanceService>();
         services.AddScoped<IProjectStructureProjectionContributor, ProjectHierarchyProjectionContributor>();
         services.AddScoped<IProjectStructureProjectionContributor, ProjectResourceProjectionContributor>();

@@ -107,6 +107,16 @@
             data-testid="project-structure-agents-toggle"
             Click="ToggleAgentWindow" />
 
+    <Button Icon="view_timeline"
+            aria-label="Gantt"
+            title="Gantt: open the interactive project schedule"
+            Variant="Variant.Text"
+            ButtonStyle="ButtonStyle.Base"
+            Style="@ToolbarToggleStyle"
+            Class="@ResolveToolbarButtonCssClass(GanttViewVisible)"
+            data-testid="project-structure-gantt-toggle"
+            Click="OpenGanttView" />
+
     <Button Text="Recompose"
             aria-label="Recompose"
             title="@(IsSubtreeRecompositionInProgress ? "Recompose: redistributing the selected branch" : "Recompose: redistribute descendants under the selected node")"
@@ -145,6 +155,9 @@
     public bool AgentWindowVisible { get; set; }
 
     [Parameter]
+    public bool GanttViewVisible { get; set; }
+
+    [Parameter]
     public string ActiveTool { get; set; } = SelectTool;
 
     [Parameter]
@@ -176,6 +189,9 @@
 
     [Parameter]
     public EventCallback ToggleAgentWindow { get; set; }
+
+    [Parameter]
+    public EventCallback OpenGanttView { get; set; }
 
     [Parameter]
     public EventCallback SelectToolClicked { get; set; }

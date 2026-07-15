@@ -38,6 +38,14 @@ public enum ProjectPartyQuickCreateKind
     AiAgent
 }
 
+public enum ProjectPartyType
+{
+    Person,
+    Organization,
+    OrganizationUnit,
+    AiAgent
+}
+
 public sealed record ProjectPortfolioPartyItem(
     ProjectPartyPortfolioCategory Category,
     string Label,
@@ -66,6 +74,7 @@ public sealed record ProjectPartyAssignmentDetail(
     ProjectPartyAssignmentRole Role,
     string PartyDisplayName,
     string PartyTypeLabel,
+    ProjectPartyType PartyType,
     string NodeKey,
     bool IsPrimary,
     decimal? AllocationPercent,

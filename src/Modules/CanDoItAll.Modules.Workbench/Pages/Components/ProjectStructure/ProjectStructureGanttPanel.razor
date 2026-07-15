@@ -1,0 +1,115 @@
+@namespace CanDoItAll.Modules.Workbench.Pages
+@using CanDoItAll.Components.BaseLib
+@using CanDoItAll.Components.Gantt
+@using CanDoItAll.Modules.Workbench.CanvasAdapters
+
+<section class="project-structure-gantt-panel"
+         data-testid="project-structure-gantt-panel">
+    @if (isLoading && projection is null)
+    {
+        <LoadingState Eyebrow="Project schedule"
+                      Title="Building the Gantt projection"
+                      Description="Loading task assignments and validating the project dependency graph." />
+    }
+    else if (loadError is not null)
+    {
+        <Alert AlertStyle="AlertStyle.Danger"
+               data-testid="project-structure-gantt-load-error">
+            @loadError
+        </Alert>
+    }
+    else if (projection is not null)
+    {
+        <Stack GapScale="LayoutGap.Small"
+               Class="w-full min-w-0"
+               AlignItems="AlignItems.Stretch">
+            <SurfaceCard Soft="true"
+                         Class="project-structure-gantt-panel__utility-bar">
+                <Cluster Gap="LayoutGap.XSmall"
+                         Wrap="FlexWrap.Wrap"
+                         Class="project-structure-gantt-panel__utility-row">
+                    <TextBlock TextStyle="TextStyle.Subtitle2"
+                               Value="Project schedule"
+                               Class="project-structure-gantt-panel__title" />
+                    <Pill Tone="PillTone.Info" Text="@($"{projection.Tasks.Count} tasks")" />
+                    <Pill Tone="PillTone.Neutral" Text="@($"{projection.Dependencies.Count} dependencies")" />
+                    @if (projection.ProjectionOnlyTaskIds.Count > 0)
+                    {
+                        <Pill Tone="PillTone.Warn"
+                              Text="@($"{projection.ProjectionOnlyTaskIds.Count} projected schedules")" />
+                    }
+                    <TextBlock TextStyle="TextStyle.Caption"
+                               Value="Move bars · resize green handles · connect blue ports."
+                               Class="project-structure-gantt-panel__hint" />
+                    <GanttTaskDragSource Task="@insertionCandidate"
+                                         Disabled="@(!CanInsertTask)"
+                                         AriaLabel="Drag a new project task onto a dependency connection">
+                        <Pill Text="Insert 8 h task on dependency"
+                              Tone="PillTone.Info" />
+                    </GanttTaskDragSource>
+                </Cluster>
+            </SurfaceCard>
+
+            @if (projection.ProjectionOnlyTaskIds.Count > 0)
+            {
+                <Alert AlertStyle="AlertStyle.Warning"
+                       data-testid="project-structure-gantt-projection-warning">
+                    @projection.ProjectionOnlyTaskIds.Count task(s) have no complete persisted schedule. Their displayed dates are a read-only projection; title and dependency changes still use authoritative project services.
+                </Alert>
+            }
+
+            @if (NonScheduleWarnings.Count > 0)
+            {
+                <Alert AlertStyle="AlertStyle.Warning">
+                    <strong>The projection includes warnings:</strong>
+                    <ul class="project-structure-gantt-panel__issues">
+                        @foreach (var issue in NonScheduleWarnings)
+                        {
+                            <li>@issue.Message</li>
+                        }
+                    </ul>
+                </Alert>
+            }
+
+            @if (!projection.IsValid)
+            {
+                <Alert AlertStyle="AlertStyle.Danger"
+                       data-testid="project-structure-gantt-validation-error">
+                    <strong>The Gantt projection is blocked until the project structure is corrected:</strong>
+                    <ul class="project-structure-gantt-panel__issues">
+                        @foreach (var issue in ProjectionErrors)
+                        {
+                            <li>@issue.Message</li>
+                        }
+                    </ul>
+                </Alert>
+            }
+            else
+            {
+                <Stack Class="w-full min-w-0"
+                       data-testid="project-structure-gantt-chart">
+                    <GanttChart Tasks="@projection.Tasks"
+                                Dependencies="@projection.Dependencies"
+                                TaskTitleChangeRequested="ApplyTitleAsync"
+                                TaskScheduleChangeRequested="ApplyScheduleAsync"
+                                DependencyMutationRequested="ApplyDependencyAsync"
+                                TaskInsertionRequested="ApplyInsertionAsync"
+                                DependencyIdFactory="CreateDependencyId"
+                                ProjectionOnlySelector="IsProjectionOnly"
+                                TaskScheduleReadOnlySelector="IsProjectionOnly"
+                                AllowTaskEditing="@(!mutationInFlight)"
+                                AllowDependencyEditing="@(!mutationInFlight)"
+                                AllowTaskInsertion="@(!mutationInFlight)"
+                                HoursPerManDay="8"
+                                RowHeight="48"
+                                HeaderHeight="40"
+                                BarHeight="26"
+                                TaskTableWidth="600"
+                                MaxHeight="48rem"
+                                ExportFileName="@ExportFileName"
+                                AriaLabel="Interactive project structure Gantt schedule" />
+                </Stack>
+            }
+        </Stack>
+    }
+</section>

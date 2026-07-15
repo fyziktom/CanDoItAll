@@ -4747,6 +4747,7 @@ public sealed class ProjectPartyIntegrationService(
                 MapRole(item.AssignmentKind),
                 item.DisplayName,
                 ResolvePartyTypeLabel(item.PartyType),
+                MapProjectPartyType(item.PartyType),
                 item.NodeKey,
                 item.IsPrimary,
                 item.AllocationPercent,
@@ -5273,6 +5274,18 @@ public sealed class ProjectPartyIntegrationService(
             PartyType.OrganizationUnit => "Organization unit",
             PartyType.AiAgent => "AI agent",
             _ => partyType.ToString()
+        };
+    }
+
+    private static ProjectPartyType MapProjectPartyType(PartyType partyType)
+    {
+        return partyType switch
+        {
+            PartyType.Person => ProjectPartyType.Person,
+            PartyType.Organization => ProjectPartyType.Organization,
+            PartyType.OrganizationUnit => ProjectPartyType.OrganizationUnit,
+            PartyType.AiAgent => ProjectPartyType.AiAgent,
+            _ => throw new ArgumentOutOfRangeException(nameof(partyType), partyType, "The party type is not supported by project integration.")
         };
     }
 

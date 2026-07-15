@@ -139,6 +139,7 @@ internal static class ProjectWorkbenchNodeMapper
             relatedProjectId,
             parentProjectCount,
             record.DurationSeconds,
-            record.NodeReferences.Clone());
+            record.NodeReferences.Clone(),
+            record.IsSystemManaged);
     }
 }

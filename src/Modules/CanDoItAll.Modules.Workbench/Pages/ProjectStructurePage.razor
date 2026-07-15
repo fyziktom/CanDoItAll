@@ -75,6 +75,11 @@ else
         <Stack Gap="1.5rem"
                Class="project-structure-page__stack">
 
+        <Tabs @bind-SelectedIndex="structureViewIndex"
+              AriaLabel="Project structure views"
+              Variant="TabsVariant.WorkspaceSecondary"
+              RenderMode="TabRenderMode.Server">
+            <TabsItem Text="Canvas" Icon="account_tree">
         <CanvasWorkbenchStage Eyebrow="Structure canvas"
                               Title="@($"{surface.ProjectName} workbench")"
                               Description=""
@@ -98,6 +103,7 @@ else
                                                        FileBrowserWindowVisible="@FileBrowserWindowState.IsVisible"
                                                        SignalsWindowVisible="@SignalsWindowState.IsVisible"
                                                        AgentWindowVisible="@AgentWindowState.IsVisible"
+                                                       GanttViewVisible="@IsGanttViewVisible"
                                                        ActiveTool="@canvasToolMode"
                                                        CanUseDependencyTool="@(selectedNode is not null)"
                                                        CanRecomposeSelectedBranch="@CanRecomposeSelectedBranch"
@@ -112,6 +118,7 @@ else
                                                        OpenFileBrowserWindow="OpenProjectFileBrowserAsync"
                                                        ToggleSignalsWindow="ToggleSignalsWindowAsync"
                                                        ToggleAgentWindow="ToggleAgentWindowAsync"
+                                                       OpenGanttView="OpenGanttViewAsync"
                                                        RecomposeBranch="RecomposeSelectedBranchAsync" />
                     </ToolbarLeftContent>
                     <OverlayContent>
@@ -300,6 +307,13 @@ else
                 </CanvasWorkbench>
             </Canvas>
         </CanvasWorkbenchStage>
+            </TabsItem>
+            <TabsItem Text="Gantt" Icon="view_timeline">
+                <ProjectStructureGanttPanel ProjectId="@ProjectId"
+                                            Surface="@surface"
+                                            MutationCommitted="@(() => ReloadSurfaceAsync())" />
+            </TabsItem>
+        </Tabs>
 
         @if (CanShowPartyEditor)
         {
@@ -736,6 +750,8 @@ else
     private const double DefaultCanvasWindowGap = 16;
     private const double SignalsWindowDefaultLeft = ToolboxWindowDefaultWidth + DefaultCanvasWindowMargin + DefaultCanvasWindowGap;
     private const double HealthWindowDefaultLeft = SignalsWindowDefaultLeft + SignalsWindowDefaultWidth + DefaultCanvasWindowGap;
+    private const int CanvasViewIndex = 0;
+    private const int GanttViewIndex = 1;
 
     [Parameter]
     public Guid ProjectId { get; set; }
@@ -743,6 +759,16 @@ else
     private ProjectStructureSurface? surface;
     private CanvasWorkbenchSurface? canvasSurface;
     private CanvasWorkbench? workbenchRef;
+    private int structureViewIndex;
+
+    private bool IsGanttViewVisible => structureViewIndex == GanttViewIndex;
+
+    private Task OpenGanttViewAsync()
+    {
+        structureViewIndex = GanttViewIndex;
+        return Task.CompletedTask;
+    }
+
     private readonly ProjectStructureActionCatalogAdapter actionCatalog = new();
     private readonly ProjectStructureGraphAdapter graphAdapter = new();
     private readonly ProjectStructurePlacementPolicy placementPolicy = new();
@@ -896,14 +922,15 @@ else
     {
         if (loadedProjectId != ProjectId)
         {
-            await CloseAttachmentPreviewAsync();
             loadedProjectId = ProjectId;
+            structureViewIndex = CanvasViewIndex;
             currentViewStateJson = null;
             selectedNodeIds = [];
             canvasToolMode = CanvasAuthoringMode.Select;
             linkModeSourceId = null;
             pendingClientSelectionId = null;
             fileBrowserRequest = null;
+            await CloseAttachmentPreviewAsync();
         }
 
         await ReloadSurfaceAsync();

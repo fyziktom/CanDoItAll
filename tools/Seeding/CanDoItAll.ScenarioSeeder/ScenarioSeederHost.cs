@@ -22,6 +22,8 @@ internal sealed class ScenarioSeederOptions
         "postgresql-local");
     public const string DefaultScenario = "agentframework-integration-simulation";
 
+    public const string GanttSampleScenario = "gantt-sample-project";
+
     public required string RepositoryRootPath { get; init; }
 
     public required string ScenarioName { get; init; }
@@ -142,6 +144,7 @@ internal static class ScenarioSeederHost
         services.AddCanDoItAllRuntimeDatabaseSwitching();
         services.AddScoped<IWorkbenchStateStore, InMemoryWorkbenchStateStore>();
         services.AddScoped<AgentFrameworkIntegrationSimulationSeeder>();
+        services.AddScoped<GanttSampleProjectSeeder>();
 
         var serviceProvider = services.BuildServiceProvider(ServiceProviderOptions);
         await using var scope = serviceProvider.CreateAsyncScope();

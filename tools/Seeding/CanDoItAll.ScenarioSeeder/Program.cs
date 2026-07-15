@@ -24,6 +24,9 @@ internal static class Program
             ? await ExecuteActionAsync(scope.ServiceProvider, options)
             : options.ScenarioName switch
         {
+            ScenarioSeederOptions.GanttSampleScenario => await scope.ServiceProvider
+                .GetRequiredService<GanttSampleProjectSeeder>()
+                .SeedAsync(),
             _ => await scope.ServiceProvider
                 .GetRequiredService<AgentFrameworkIntegrationSimulationSeeder>()
                 .SeedAsync()
