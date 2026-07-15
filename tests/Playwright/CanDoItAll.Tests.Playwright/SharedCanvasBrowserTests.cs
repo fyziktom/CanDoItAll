@@ -356,6 +356,82 @@ public sealed partial class AppSmokeTests
 
     [Fact]
     [Trait("Surface", "SharedCanvas")]
+    public async Task Project_structure_add_and_remove_keep_viewport_stable()
+    {
+        await using var context = await fixture.Browser.NewContextAsync(new BrowserNewContextOptions
+        {
+            IgnoreHTTPSErrors = true,
+            ViewportSize = new ViewportSize
+            {
+                Width = 1600,
+                Height = 1100
+            }
+        });
+        var page = await context.NewPageAsync();
+
+        var projectId = await CreateProjectAsync(page, "Playwright Stable Mutation Viewport", "Execution");
+        var projectRootId = await ReadNodeIdAsync(page, $".cw-node[data-node-id='project:{projectId}']");
+        var existingNoteId = await InvokeStructureCreateActionAsync(
+            page,
+            "add-note",
+            projectRootId,
+            projectRootId,
+            "Existing viewport anchor",
+            string.Empty,
+            "Keep the viewport away from the root while the graph changes.");
+
+        await CommitCanvasUiStateAsync(
+            page,
+            zoom: 0.68,
+            panX: -360,
+            panY: 240,
+            selectedNodeIds: [existingNoteId]);
+        var baseline = await ReadCanvasDiagnosticsAsync(page);
+
+        await StartCanvasViewportSamplingAsync(page);
+        var createdNoteId = await InvokeStructureCreateActionAsync(
+            page,
+            "add-note",
+            existingNoteId,
+            existingNoteId,
+            "Stable viewport mutation",
+            string.Empty,
+            "Adding this node must not move the current canvas viewport.");
+        await page.WaitForTimeoutAsync(500);
+        var createSamples = await StopCanvasViewportSamplingAsync(page);
+
+        AssertViewportStayedStable("create", baseline, createSamples);
+
+        await StartCanvasViewportSamplingAsync(page);
+        var deleteInvoked = await page.EvaluateAsync<bool>(
+            @"async nodeId => {
+                const host = document.querySelector('.cw-canvas-host');
+                const state = host?.__canvasWorkbenchState;
+                if (!state?.dotNetRef?.invokeMethodAsync) {
+                    return false;
+                }
+
+                await state.dotNetRef.invokeMethodAsync('OnContextAction', nodeId, 'delete', 0, 0);
+                return true;
+            }",
+            createdNoteId);
+        Assert.True(deleteInvoked, "Expected the browser workbench host to expose the delete callback.");
+        await page.WaitForFunctionAsync(
+            @"nodeId => {
+                const state = document.querySelector('.cw-canvas-host')?.__canvasWorkbenchState;
+                return Array.isArray(state?.surface?.nodes)
+                    && !state.surface.nodes.some(node => node.id === nodeId);
+            }",
+            createdNoteId);
+        await page.WaitForTimeoutAsync(500);
+        var deleteSamples = await StopCanvasViewportSamplingAsync(page);
+
+        AssertViewportStayedStable("delete", baseline, deleteSamples);
+        Assert.False(await page.Locator("#blazor-error-ui").IsVisibleAsync());
+    }
+
+    [Fact]
+    [Trait("Surface", "SharedCanvas")]
     public async Task Project_structure_multi_selection_keeps_individual_node_selection_without_an_aggregate_transform_frame()
     {
         await using var context = await fixture.Browser.NewContextAsync(new BrowserNewContextOptions
@@ -599,5 +675,83 @@ public sealed partial class AppSmokeTests
         await page.WaitForSelectorAsync("text=2 nodes selected");
 
         Assert.False(await page.Locator("#blazor-error-ui").IsVisibleAsync());
+    }
+
+    private static async Task StartCanvasViewportSamplingAsync(IPage page)
+    {
+        var started = await page.EvaluateAsync<bool>(
+            @"() => {
+                const host = document.querySelector('.cw-canvas-host');
+                if (!host?.__canvasWorkbenchState) {
+                    return false;
+                }
+
+                const sampler = {
+                    active: true,
+                    samples: []
+                };
+                window.__canvasViewportSampler = sampler;
+                const sample = () => {
+                    const state = host.__canvasWorkbenchState;
+                    if (state?.ui) {
+                        sampler.samples.push({
+                            zoomPercent: Math.round((state.ui.zoom || 1) * 100),
+                            panX: Number(state.ui.panX || 0),
+                            panY: Number(state.ui.panY || 0)
+                        });
+                    }
+
+                    if (sampler.active) {
+                        requestAnimationFrame(sample);
+                    }
+                };
+
+                sample();
+                return true;
+            }");
+        Assert.True(started, "Expected the initialized canvas host to support viewport sampling.");
+    }
+
+    private static async Task<IReadOnlyList<CanvasViewportSample>> StopCanvasViewportSamplingAsync(IPage page)
+    {
+        var samples = await page.EvaluateAsync<CanvasViewportSample[]>(
+            @"() => {
+                const sampler = window.__canvasViewportSampler;
+                if (!sampler) {
+                    return [];
+                }
+
+                sampler.active = false;
+                delete window.__canvasViewportSampler;
+                return sampler.samples;
+            }");
+
+        return samples;
+    }
+
+    private static void AssertViewportStayedStable(
+        string operation,
+        CanvasDiagnosticsSnapshot baseline,
+        IReadOnlyList<CanvasViewportSample> samples)
+    {
+        Assert.True(samples.Count >= 2, $"Expected viewport samples while the {operation} mutation was applied.");
+
+        var maxZoomDelta = samples.Max(sample => Math.Abs(sample.ZoomPercent - baseline.ZoomPercent));
+        var maxPanXDelta = samples.Max(sample => Math.Abs(sample.PanX - baseline.PanX));
+        var maxPanYDelta = samples.Max(sample => Math.Abs(sample.PanY - baseline.PanY));
+        Assert.True(
+            maxZoomDelta == 0 && maxPanXDelta <= 0.5 && maxPanYDelta <= 0.5,
+            $"Expected {operation} to preserve the viewport. " +
+            $"Baseline={baseline.ZoomPercent}%/{baseline.PanX:0.##},{baseline.PanY:0.##}; " +
+            $"max deltas={maxZoomDelta}%/{maxPanXDelta:0.##},{maxPanYDelta:0.##}.");
+    }
+
+    private sealed class CanvasViewportSample
+    {
+        public int ZoomPercent { get; set; }
+
+        public double PanX { get; set; }
+
+        public double PanY { get; set; }
     }
 }
