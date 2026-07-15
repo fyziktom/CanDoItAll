@@ -52,21 +52,23 @@ public sealed partial class ProcessDefinitionCanvasEditorProjectionService
 
         foreach (var step in template.CanvasAuthoringDefaults.Steps.Select((step, index) => new { Step = step, Index = index }))
         {
+            var hasSavedPosition = step.Step.CanvasX != 0 || step.Step.CanvasY != 0;
             var stepNode = CreateNode(
                 new ProcessDefinitionCanvasNodeKey($"step:{step.Step.Key}"),
                 ProcessDefinitionCanvasNodeKind.Step,
                 step.Step.Title,
                 string.IsNullOrWhiteSpace(step.Step.Subtitle) ? step.Step.StepKind : step.Step.Subtitle,
                 string.IsNullOrWhiteSpace(step.Step.Notes) ? $"{step.Step.StepKind} step." : step.Step.Notes,
-                160 + (step.Index * 280),
-                220 + ResolveStepLane(step.Step, step.Index),
+                hasSavedPosition ? step.Step.CanvasX : 240 + (step.Index * 480),
+                hasSavedPosition ? step.Step.CanvasY : 420 + ResolveStepLane(step.Step, step.Index),
                 StepWidth,
                 StepHeight,
                 ResolveStepTone(step.Step.StepKind),
                 new ProcessDefinitionStepKey(step.Step.Key),
                 RoleKey: null,
                 ArtifactKey: null,
-                [step.Step.StepKind]);
+                [step.Step.StepKind],
+                ResolveStepKind(step.Step.StepKind));
             nodes.Add(stepNode);
             stepNodes[step.Step.Key] = stepNode;
         }
@@ -80,14 +82,18 @@ public sealed partial class ProcessDefinitionCanvasEditorProjectionService
 
             if (ShouldCreateBranchRouter(step))
             {
+                var hasSavedBranchPosition = step.BranchCanvasX != 0 || step.BranchCanvasY != 0;
+                var branchPosition = hasSavedBranchPosition
+                    ? (X: step.BranchCanvasX, Y: step.BranchCanvasY)
+                    : ProcessDefinitionCanvasPlacementPolicy.PlaceBranchRouter(nodes, stepNode, BranchWidth, BranchHeight);
                 var branchNode = CreateNode(
                     new ProcessDefinitionCanvasNodeKey($"branch:{step.Key}"),
                     ProcessDefinitionCanvasNodeKind.BranchRouter,
                     $"{step.Title} routes",
                     "Typed branch router",
                     "Branch outcomes are typed route projections; display labels do not decide runtime routing.",
-                    stepNode.X + 250,
-                    stepNode.Y - 118,
+                    branchPosition.X,
+                    branchPosition.Y,
                     BranchWidth,
                     BranchHeight,
                     "warning",
@@ -109,14 +115,19 @@ public sealed partial class ProcessDefinitionCanvasEditorProjectionService
 
             foreach (var artifact in step.ArtifactExpectations.Where(artifact => artifact.IsRequired).Take(3))
             {
+                var artifactPosition = ProcessDefinitionCanvasPlacementPolicy.PlaceAttachment(
+                    nodes,
+                    stepNode,
+                    ArtifactWidth,
+                    ArtifactHeight);
                 var artifactNode = CreateNode(
                     new ProcessDefinitionCanvasNodeKey($"artifact:{step.Key}:{artifact.Key}"),
                     ProcessDefinitionCanvasNodeKind.Artifact,
                     artifact.Title,
                     artifact.ArtifactKind,
                     $"Required artifact expectation for {step.Title}.",
-                    stepNode.X,
-                    stepNode.Y + 150,
+                    artifactPosition.X,
+                    artifactPosition.Y,
                     ArtifactWidth,
                     ArtifactHeight,
                     "accent",
@@ -138,6 +149,11 @@ public sealed partial class ProcessDefinitionCanvasEditorProjectionService
 
             if (IsSubprocessStep(step))
             {
+                var subprocessPosition = ProcessDefinitionCanvasPlacementPolicy.PlaceAttachment(
+                    nodes,
+                    stepNode,
+                    SubprocessWidth,
+                    SubprocessHeight);
                 var subprocessNode = CreateNode(
                     new ProcessDefinitionCanvasNodeKey($"subprocess:{step.Key}"),
                     ProcessDefinitionCanvasNodeKind.SubprocessBoundary,
@@ -146,8 +162,8 @@ public sealed partial class ProcessDefinitionCanvasEditorProjectionService
                     string.IsNullOrWhiteSpace(step.SubprocessProcessKey)
                         ? "Subprocess boundary awaits a child process binding."
                         : $"Subprocess binding: {step.SubprocessProcessKey}.",
-                    stepNode.X,
-                    stepNode.Y + 236,
+                    subprocessPosition.X,
+                    subprocessPosition.Y,
                     SubprocessWidth,
                     SubprocessHeight,
                     "info",
@@ -207,6 +223,10 @@ public sealed partial class ProcessDefinitionCanvasEditorProjectionService
                 var kind = string.IsNullOrWhiteSpace(dependency.DependsOnBranchOutcomeKey)
                     ? ProcessDefinitionCanvasEdgeKind.Dependency
                     : ProcessDefinitionCanvasEdgeKind.BranchRoute;
+                var sourceStep = template.CanvasAuthoringDefaults.Steps.FirstOrDefault(candidate =>
+                    string.Equals(candidate.Key, dependency.DependsOnStepKey, StringComparison.OrdinalIgnoreCase));
+                var branchOutcome = sourceStep?.BranchOutcomes.FirstOrDefault(outcome =>
+                    string.Equals(outcome.Key, dependency.DependsOnBranchOutcomeKey, StringComparison.OrdinalIgnoreCase));
                 edges.Add(CreateEdge(
                     new ProcessDefinitionCanvasEdgeKey($"dependency:{dependency.DependsOnStepKey}:{step.Key}:{dependency.DependsOnBranchOutcomeKey}"),
                     kind,
@@ -215,79 +235,65 @@ public sealed partial class ProcessDefinitionCanvasEditorProjectionService
                     string.IsNullOrWhiteSpace(dependency.DependsOnBranchOutcomeKey) ? "next" : dependency.DependsOnBranchOutcomeKey,
                     $"Route from {fromNode.Title} to {stepNode.Title}.",
                     kind == ProcessDefinitionCanvasEdgeKind.BranchRoute ? "warning" : "info",
-                    IsBackwardRoute: false));
+                    IsBackwardRoute: branchOutcome is not null && IsBackwardBranchOutcome(branchOutcome)));
             }
         }
 
-        var recomposedNodes = RecomposeNodes(nodes, edges);
-        var selection = recomposedNodes.FirstOrDefault(node => node.Kind == ProcessDefinitionCanvasNodeKind.Step) is { } firstStep
+        var orderedSteps = template.CanvasAuthoringDefaults.Steps;
+        for (var sourceIndex = 0; sourceIndex < orderedSteps.Count; sourceIndex++)
+        {
+            var sourceStep = orderedSteps[sourceIndex];
+            if (!stepNodes.TryGetValue(sourceStep.Key, out var sourceNode))
+            {
+                continue;
+            }
+
+            var routeSource = nodes.FirstOrDefault(node => node.NodeKey.Value == $"branch:{sourceStep.Key}") ?? sourceNode;
+            foreach (var outcome in sourceStep.BranchOutcomes)
+            {
+                var targetStepKey = ResolveBranchTargetStepKey(orderedSteps, sourceIndex, outcome);
+                if (targetStepKey is null || !stepNodes.TryGetValue(targetStepKey, out var targetNode))
+                {
+                    continue;
+                }
+
+                edges.RemoveAll(edge =>
+                    edge.Kind == ProcessDefinitionCanvasEdgeKind.BranchRoute &&
+                    edge.FromNodeKey == routeSource.NodeKey &&
+                    edge.ToNodeKey != targetNode.NodeKey &&
+                    string.Equals(edge.Label, outcome.Key, StringComparison.OrdinalIgnoreCase));
+                if (edges.Any(edge =>
+                    edge.Kind == ProcessDefinitionCanvasEdgeKind.BranchRoute &&
+                    edge.FromNodeKey == routeSource.NodeKey &&
+                    edge.ToNodeKey == targetNode.NodeKey &&
+                    string.Equals(edge.Label, outcome.Key, StringComparison.OrdinalIgnoreCase)))
+                {
+                    continue;
+                }
+
+                edges.Add(CreateEdge(
+                    new ProcessDefinitionCanvasEdgeKey($"branch-target:{sourceStep.Key}:{targetStepKey}:{outcome.Key}"),
+                    ProcessDefinitionCanvasEdgeKind.BranchRoute,
+                    routeSource.NodeKey,
+                    targetNode.NodeKey,
+                    outcome.Key,
+                    $"Typed branch route from {sourceStep.Title} to {targetNode.Title}.",
+                    "warning",
+                    IsBackwardBranchOutcome(outcome)));
+            }
+        }
+
+        var selection = nodes.FirstOrDefault(node => node.Kind == ProcessDefinitionCanvasNodeKind.Step) is { } firstStep
             ? CreateSelection(firstStep)
             : ProcessDefinitionCanvasSelectionProjection.None;
         return new ProcessDefinitionCanvasSnapshot(
             scope,
             new ProcessDefinitionCatalogItemKey(template.Key),
             new ProcessDefinitionCanvasVersionToken($"template:{template.Key}:canvas:{template.UpdatedAtUtc.UtcTicks}"),
-            recomposedNodes,
+            nodes,
             edges,
             template.CanvasAuthoringDefaults.ToolboxActions.Select(CreateToolboxAction).ToArray(),
             selection);
-    }
-
-    private static IReadOnlyList<ProcessDefinitionCanvasEditorNodeProjection> RecomposeNodes(
-        IReadOnlyList<ProcessDefinitionCanvasEditorNodeProjection> nodes,
-        IReadOnlyList<ProcessDefinitionCanvasEdgeProjection> edges)
-    {
-        var recomposed = new List<ProcessDefinitionCanvasEditorNodeProjection>(nodes.Count);
-        var stepNodes = nodes
-            .Where(node => node.Kind == ProcessDefinitionCanvasNodeKind.Step)
-            .OrderBy(node => node.X)
-            .ThenBy(node => node.NodeKey.Value, StringComparer.Ordinal)
-            .ToArray();
-        var roleNodes = nodes
-            .Where(node => node.Kind == ProcessDefinitionCanvasNodeKind.Role)
-            .OrderBy(node => node.X)
-            .ThenBy(node => node.NodeKey.Value, StringComparer.Ordinal)
-            .ToArray();
-
-        var positions = new Dictionary<ProcessDefinitionCanvasNodeKey, (double X, double Y)>();
-        for (var index = 0; index < roleNodes.Length; index++)
-        {
-            positions[roleNodes[index].NodeKey] = (160 + (index * 230), 40);
-        }
-
-        for (var index = 0; index < stepNodes.Length; index++)
-        {
-            positions[stepNodes[index].NodeKey] = (160 + (index * 280), 220 + ((index % 3) * 120));
-        }
-
-        foreach (var node in nodes)
-        {
-            if (positions.TryGetValue(node.NodeKey, out var position))
-            {
-                recomposed.Add(node with { X = position.X, Y = position.Y });
-                continue;
-            }
-
-            var sourceEdge = edges.FirstOrDefault(edge => edge.ToNodeKey == node.NodeKey);
-            if (sourceEdge is not null && positions.TryGetValue(sourceEdge.FromNodeKey, out var sourcePosition))
-            {
-                var offset = node.Kind switch
-                {
-                    ProcessDefinitionCanvasNodeKind.BranchRouter => (X: 250d, Y: -112d),
-                    ProcessDefinitionCanvasNodeKind.Artifact => (X: 0d, Y: 148d),
-                    ProcessDefinitionCanvasNodeKind.SubprocessBoundary => (X: 0d, Y: 232d),
-                    _ => (X: 0d, Y: 0d)
-                };
-                var resolved = (sourcePosition.X + offset.X, sourcePosition.Y + offset.Y);
-                positions[node.NodeKey] = resolved;
-                recomposed.Add(node with { X = resolved.Item1, Y = resolved.Item2 });
-                continue;
-            }
-
-            recomposed.Add(node);
-        }
-
-        return recomposed;
     }
 
     private static ProcessDefinitionCanvasViewportProjection CreateViewport(
@@ -298,10 +304,10 @@ public sealed partial class ProcessDefinitionCanvasEditorProjectionService
             return new ProcessDefinitionCanvasViewportProjection(960, 480, "Empty definition canvas.");
         }
 
-        var minX = nodes.Min(node => node.X);
-        var minY = nodes.Min(node => node.Y);
-        var maxX = nodes.Max(node => node.X + node.Width);
-        var maxY = nodes.Max(node => node.Y + node.Height);
+        var minX = nodes.Min(node => node.X - (node.Width / 2d));
+        var minY = nodes.Min(node => node.Y - (node.Height / 2d));
+        var maxX = nodes.Max(node => node.X + (node.Width / 2d));
+        var maxY = nodes.Max(node => node.Y + (node.Height / 2d));
         return new ProcessDefinitionCanvasViewportProjection(
             Math.Max(960, maxX - minX + (Margin * 2)),
             Math.Max(520, maxY - minY + (Margin * 2)),
@@ -322,7 +328,8 @@ public sealed partial class ProcessDefinitionCanvasEditorProjectionService
         ProcessDefinitionStepKey? StepKey,
         ProcessDefinitionRoleKey? RoleKey,
         string? ArtifactKey,
-        IReadOnlyList<string> badges)
+        IReadOnlyList<string> badges,
+        ProcessDefinitionStepKind? stepKind = null)
         => new(
             nodeKey,
             kind,
@@ -338,7 +345,8 @@ public sealed partial class ProcessDefinitionCanvasEditorProjectionService
             RoleKey,
             ArtifactKey,
             badges,
-            CreatePorts(kind, width, height));
+            CreatePorts(kind, width, height),
+            stepKind);
 
     private static IReadOnlyList<ProcessDefinitionCanvasPortProjection> CreatePorts(
         ProcessDefinitionCanvasNodeKind kind,
@@ -387,14 +395,20 @@ public sealed partial class ProcessDefinitionCanvasEditorProjectionService
     private static ProcessDefinitionCanvasEditorNodeProjection CreateBranchNodeForStep(
         ProcessDefinitionCanvasEditorNodeProjection step,
         IReadOnlyList<ProcessDefinitionCanvasEditorNodeProjection> nodes)
-        => CreateNode(
+    {
+        var position = ProcessDefinitionCanvasPlacementPolicy.PlaceBranchRouter(
+            nodes,
+            step,
+            BranchWidth,
+            BranchHeight);
+        return CreateNode(
             BuildUniqueNodeKey($"branch:{step.StepKey?.Value}", nodes),
             ProcessDefinitionCanvasNodeKind.BranchRouter,
             $"{step.Title} routes",
             "Typed branch router",
             "Branch outcomes route through typed targets, not display text.",
-            step.X + 250,
-            step.Y - 112,
+            position.X,
+            position.Y,
             BranchWidth,
             BranchHeight,
             "warning",
@@ -402,4 +416,36 @@ public sealed partial class ProcessDefinitionCanvasEditorProjectionService
             RoleKey: null,
             ArtifactKey: null,
             ["Branch"]);
+    }
+
+    private static bool IsBackwardBranchOutcome(
+        ProcessTemplateDefinitionCanvasBranchOutcomeSummary outcome)
+        => outcome.IsBackwardRoute ||
+           string.Equals(
+               outcome.RouteTargetKind,
+               nameof(ProcessDefinitionRouteTargetKind.PreviousStep),
+               StringComparison.OrdinalIgnoreCase);
+
+    private static string? ResolveBranchTargetStepKey(
+        IReadOnlyList<ProcessTemplateDefinitionCanvasStepSummary> steps,
+        int sourceIndex,
+        ProcessTemplateDefinitionCanvasBranchOutcomeSummary outcome)
+    {
+        if (!string.IsNullOrWhiteSpace(outcome.RouteTargetStepKey))
+        {
+            return outcome.RouteTargetStepKey;
+        }
+
+        if (!Enum.TryParse<ProcessDefinitionRouteTargetKind>(outcome.RouteTargetKind, ignoreCase: true, out var targetKind))
+        {
+            return null;
+        }
+
+        return targetKind switch
+        {
+            ProcessDefinitionRouteTargetKind.PreviousStep when sourceIndex > 0 => steps[sourceIndex - 1].Key,
+            ProcessDefinitionRouteTargetKind.NextStep when sourceIndex + 1 < steps.Count => steps[sourceIndex + 1].Key,
+            _ => null
+        };
+    }
 }

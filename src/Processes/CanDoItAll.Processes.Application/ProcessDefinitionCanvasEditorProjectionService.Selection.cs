@@ -62,7 +62,8 @@ public sealed partial class ProcessDefinitionCanvasEditorProjectionService
             action.Summary,
             ResolveToolboxIcon(action.Kind),
             IsEnabled: true,
-            DisabledReason: null);
+            DisabledReason: null,
+            ResolveStepKind(action.TemplateStepKind));
 
     private static string ResolveToolboxIcon(ProcessTemplateCanvasToolboxActionKind kind)
         => kind switch
@@ -138,4 +139,9 @@ public sealed partial class ProcessDefinitionCanvasEditorProjectionService
             "end" => "neutral",
             _ => "info"
         };
+
+    private static ProcessDefinitionStepKind ResolveStepKind(string stepKind)
+        => Enum.TryParse<ProcessDefinitionStepKind>(stepKind, ignoreCase: true, out var resolved)
+            ? resolved
+            : ProcessDefinitionStepKind.Unspecified;
 }

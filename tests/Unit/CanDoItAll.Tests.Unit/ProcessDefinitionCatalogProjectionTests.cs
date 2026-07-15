@@ -1851,6 +1851,82 @@ public sealed class ProcessDefinitionCatalogProjectionTests
     }
 
     [Fact]
+    public async Task Canvas_projection_prefers_canonical_branch_target_over_stale_dependency_mirror()
+    {
+        using var pack = TemporaryProcessTemplatePack.CreateDefault();
+        var definitionPath = Path.Combine(
+            pack.RootPath,
+            "processes",
+            "architecture-review",
+            "definition.json");
+        var definition = JsonSerializer.Deserialize<ProcessTemplateDefinitionDocument>(
+            File.ReadAllText(definitionPath));
+        Assert.NotNull(definition);
+        var decision = Assert.Single(definition.Steps);
+        var outcome = Assert.Single(decision.BranchOutcomes);
+        outcome.RouteTargetKind = nameof(ProcessDefinitionRouteTargetKind.SpecificStep);
+        outcome.RouteTargetStepKey = "canonical-target";
+        definition.Steps.Add(new ProcessTemplateDefinitionStepDocument
+        {
+            Order = 1,
+            Key = "stale-target",
+            Title = "Stale dependency target",
+            StepKind = nameof(ProcessDefinitionStepKind.Work),
+            DependsOnStepKey = decision.Key,
+            DependsOnBranchOutcomeKey = outcome.Key,
+            CanvasX = 680,
+            CanvasY = 100
+        });
+        definition.Steps.Add(new ProcessTemplateDefinitionStepDocument
+        {
+            Order = 2,
+            Key = "canonical-target",
+            Title = "Canonical route target",
+            StepKind = nameof(ProcessDefinitionStepKind.End),
+            CanvasX = 680,
+            CanvasY = 360
+        });
+        File.WriteAllText(definitionPath, JsonSerializer.Serialize(definition));
+        var service = new ProcessDefinitionCanvasEditorProjectionService(
+            new ProcessTemplatePackLoader(pack.RootPath),
+            new FixedProcessProjectionClock(Now));
+
+        var canvas = await service.GetCanvasAsync(
+            ProcessWorkspaceShellScope.Global,
+            new ProcessDefinitionCatalogItemKey("architecture-review"));
+
+        var route = Assert.Single(canvas.Edges, edge =>
+            edge.Kind == ProcessDefinitionCanvasEdgeKind.BranchRoute &&
+            edge.FromNodeKey == new ProcessDefinitionCanvasNodeKey("branch:architecture-decision") &&
+            string.Equals(edge.Label, "approved", StringComparison.OrdinalIgnoreCase));
+        Assert.Equal(new ProcessDefinitionCanvasNodeKey("step:canonical-target"), route.ToNodeKey);
+    }
+
+    [Fact]
+    public async Task Canvas_projection_preserves_authored_coordinates_until_explicit_recomposition()
+    {
+        using var pack = TemporaryProcessTemplatePack.CreateDefault();
+        var service = new ProcessDefinitionCanvasEditorProjectionService(
+            new ProcessTemplatePackLoader(pack.RootPath),
+            new FixedProcessProjectionClock(Now));
+
+        var canvas = await service.GetCanvasAsync(
+            ProcessWorkspaceShellScope.Global,
+            new ProcessDefinitionCatalogItemKey("architecture-review"));
+
+        var step = Assert.Single(canvas.Nodes, node =>
+            node.Kind == ProcessDefinitionCanvasNodeKind.Step &&
+            node.StepKey == new ProcessDefinitionStepKey("architecture-decision"));
+        var router = Assert.Single(canvas.Nodes, node =>
+            node.Kind == ProcessDefinitionCanvasNodeKind.BranchRouter);
+        Assert.Equal(160d, step.X);
+        Assert.Equal(220d, step.Y);
+        Assert.Equal(ProcessDefinitionStepKind.Decision, step.StepKind);
+        Assert.Equal(420d, router.X);
+        Assert.Equal(120d, router.Y);
+    }
+
+    [Fact]
     public async Task Canvas_toolbox_commands_add_elements_and_recompose()
     {
         using var pack = TemporaryProcessTemplatePack.CreateDefault();
@@ -1886,6 +1962,63 @@ public sealed class ProcessDefinitionCatalogProjectionTests
         Assert.True(addedArtifact.Projection.Nodes.Count(node => node.Kind == ProcessDefinitionCanvasNodeKind.Artifact) >= 2);
         Assert.Equal(ProcessDefinitionCanvasCommandStatus.Accepted, recomposed.Receipt.Status);
         Assert.Contains("recomposed", recomposed.Receipt.Summary, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task Canvas_automatic_addition_places_locally_without_moving_existing_nodes()
+    {
+        using var pack = TemporaryProcessTemplatePack.CreateDefault();
+        var service = new ProcessDefinitionCanvasEditorProjectionService(
+            new ProcessTemplatePackLoader(pack.RootPath),
+            new FixedProcessProjectionClock(Now));
+        var canvas = await service.GetCanvasAsync(
+            ProcessWorkspaceShellScope.Global,
+            new ProcessDefinitionCatalogItemKey("architecture-review"));
+        var beforePositions = canvas.Nodes.ToDictionary(node => node.NodeKey, node => (node.X, node.Y));
+
+        var added = await ExecuteCanvasCommandAsync(
+            service,
+            canvas,
+            ProcessDefinitionCanvasCommandKind.AddStep,
+            new ProcessDefinitionCanvasToolboxActionKey("process-step.implementation"),
+            canvas.Selection.NodeKey);
+
+        Assert.All(canvas.Nodes, node =>
+        {
+            var after = Assert.Single(added.Projection.Nodes, candidate => candidate.NodeKey == node.NodeKey);
+            Assert.Equal(beforePositions[node.NodeKey], (after.X, after.Y));
+        });
+        var newStep = Assert.Single(added.Projection.Nodes, node => node.Title == "Implementation");
+        var anchor = Assert.Single(canvas.Nodes, node => node.NodeKey == canvas.Selection.NodeKey);
+        Assert.NotEqual(anchor.Y, newStep.Y);
+        Assert.DoesNotContain(
+            canvas.Nodes,
+            node => ProcessDefinitionCanvasPlacementPolicy.Intersects(
+                ProcessDefinitionCanvasPlacementPolicy.ResolveBounds(node),
+                ProcessDefinitionCanvasPlacementPolicy.ResolveBounds(newStep)));
+    }
+
+    [Fact]
+    public async Task Canvas_automatic_addition_requires_an_explicit_structural_parent()
+    {
+        using var pack = TemporaryProcessTemplatePack.CreateDefault();
+        var service = new ProcessDefinitionCanvasEditorProjectionService(
+            new ProcessTemplatePackLoader(pack.RootPath),
+            new FixedProcessProjectionClock(Now));
+        var canvas = await service.GetCanvasAsync(
+            ProcessWorkspaceShellScope.Global,
+            new ProcessDefinitionCatalogItemKey("architecture-review"));
+
+        var result = await ExecuteCanvasCommandAsync(
+            service,
+            canvas,
+            ProcessDefinitionCanvasCommandKind.AddStep,
+            new ProcessDefinitionCanvasToolboxActionKey("process-step.implementation"),
+            selectedNodeKey: null);
+
+        Assert.Equal(ProcessDefinitionCanvasCommandStatus.Rejected, result.Receipt.Status);
+        Assert.Contains("structural parent", result.Receipt.Summary, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(canvas.Nodes, result.Projection.Nodes);
     }
 
     [Fact]
@@ -1953,7 +2086,7 @@ public sealed class ProcessDefinitionCatalogProjectionTests
     }
 
     [Fact]
-    public async Task Canvas_accepts_stale_recompose_against_current_projection()
+    public async Task Canvas_rejects_stale_recompose_to_avoid_overwriting_current_projection()
     {
         using var pack = TemporaryProcessTemplatePack.CreateDefault();
         var service = new ProcessDefinitionCanvasEditorProjectionService(
@@ -1979,9 +2112,137 @@ public sealed class ProcessDefinitionCatalogProjectionTests
             SelectedEdgeKey: null,
             ProcessDefinitionCanvasRecompositionMode.BalancedFlow));
 
-        Assert.Equal(ProcessDefinitionCanvasCommandStatus.Accepted, stale.Receipt.Status);
+        Assert.Equal(ProcessDefinitionCanvasCommandStatus.Rejected, stale.Receipt.Status);
         Assert.Contains(stale.Projection.Nodes, node => node.Title == "Implementation");
-        Assert.Contains("recomposed", stale.Receipt.Summary, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("changed before submission", stale.Receipt.Summary, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task Canvas_state_preserves_moves_and_added_nodes_through_recomposition()
+    {
+        using var pack = TemporaryProcessTemplatePack.CreateDefault();
+        var loader = new ProcessTemplatePackLoader(pack.RootPath);
+        var clock = new FixedProcessProjectionClock(Now);
+        var service = new ProcessDefinitionCanvasEditorProjectionService(loader, clock);
+        var initial = await service.GetCanvasAsync(
+            ProcessWorkspaceShellScope.Global,
+            new ProcessDefinitionCatalogItemKey("architecture-review"));
+        var added = await ExecuteCanvasCommandAsync(
+            service,
+            initial,
+            ProcessDefinitionCanvasCommandKind.AddStep,
+            new ProcessDefinitionCanvasToolboxActionKey("process-step.implementation"),
+            initial.Selection.NodeKey);
+        var addedStep = Assert.Single(added.Projection.Nodes, node => node.Title == "Implementation");
+        var moved = await service.ExecuteCommandAsync(new ProcessDefinitionCanvasCommand(
+            ProcessWorkspaceShellScope.Global,
+            added.Projection.DefinitionKey,
+            ProcessDefinitionCanvasCommandKind.MoveNodes,
+            added.Projection.VersionToken,
+            ToolboxActionKey: null,
+            addedStep.NodeKey,
+            SelectedEdgeKey: null,
+            ProcessDefinitionCanvasRecompositionMode.PreserveProjection,
+            [new ProcessDefinitionCanvasNodePosition(addedStep.NodeKey, 1840d, 760d)]));
+
+        var reloaded = await service.GetCanvasAsync(
+            ProcessWorkspaceShellScope.Global,
+            initial.DefinitionKey);
+        var reloadedStep = Assert.Single(reloaded.Nodes, node => node.NodeKey == addedStep.NodeKey);
+        Assert.Equal((1840d, 760d), (reloadedStep.X, reloadedStep.Y));
+
+        var recomposed = await ExecuteCanvasCommandAsync(
+            service,
+            reloaded,
+            ProcessDefinitionCanvasCommandKind.Recompose,
+            ToolboxActionKey: null,
+            reloadedStep.NodeKey);
+
+        Assert.Equal(ProcessDefinitionCanvasCommandStatus.Accepted, moved.Receipt.Status);
+        Assert.Contains(recomposed.Projection.Nodes, node => node.NodeKey == addedStep.NodeKey);
+    }
+
+    [Fact]
+    public async Task Canvas_move_preserves_the_command_selection_in_the_returned_projection()
+    {
+        using var pack = TemporaryProcessTemplatePack.CreateDefault();
+        var service = new ProcessDefinitionCanvasEditorProjectionService(
+            new ProcessTemplatePackLoader(pack.RootPath),
+            new FixedProcessProjectionClock(Now));
+        var canvas = await service.GetCanvasAsync(
+            ProcessWorkspaceShellScope.Global,
+            new ProcessDefinitionCatalogItemKey("architecture-review"));
+        var artifact = Assert.Single(canvas.Nodes, node => node.Kind == ProcessDefinitionCanvasNodeKind.Artifact);
+
+        var moved = await service.ExecuteCommandAsync(new ProcessDefinitionCanvasCommand(
+            ProcessWorkspaceShellScope.Global,
+            canvas.DefinitionKey,
+            ProcessDefinitionCanvasCommandKind.MoveNodes,
+            canvas.VersionToken,
+            ToolboxActionKey: null,
+            artifact.NodeKey,
+            SelectedEdgeKey: null,
+            ProcessDefinitionCanvasRecompositionMode.PreserveProjection,
+            [new ProcessDefinitionCanvasNodePosition(artifact.NodeKey, 640d, 480d)]));
+
+        Assert.Equal(ProcessDefinitionCanvasCommandStatus.Accepted, moved.Receipt.Status);
+        Assert.Equal(artifact.NodeKey, moved.Projection.Selection.NodeKey);
+    }
+
+    [Fact]
+    public async Task Canvas_recomposition_supports_every_default_process_template()
+    {
+        var loader = new ProcessTemplatePackLoader();
+        var service = new ProcessDefinitionCanvasEditorProjectionService(
+            loader,
+            new FixedProcessProjectionClock(Now));
+
+        foreach (var definition in loader.Load().Definitions)
+        {
+            var canvas = await service.GetCanvasAsync(
+                ProcessWorkspaceShellScope.Global,
+                new ProcessDefinitionCatalogItemKey(definition.Key));
+
+            var recomposed = await ExecuteCanvasCommandAsync(
+                service,
+                canvas,
+                ProcessDefinitionCanvasCommandKind.Recompose,
+                ToolboxActionKey: null,
+                canvas.Selection.NodeKey);
+
+            Assert.True(
+                recomposed.Receipt.Status == ProcessDefinitionCanvasCommandStatus.Accepted,
+                $"Process template '{definition.Key}' was not recomposed: {recomposed.Receipt.Summary}");
+            AssertNoCanvasNodeOverlaps(recomposed.Projection.Nodes, definition.Key);
+        }
+    }
+
+    [Fact]
+    public async Task Canvas_recomposition_keeps_shipped_success_lane_primary_when_failure_is_typed_end()
+    {
+        var service = new ProcessDefinitionCanvasEditorProjectionService(
+            new ProcessTemplatePackLoader(),
+            new FixedProcessProjectionClock(Now));
+        var canvas = await service.GetCanvasAsync(
+            ProcessWorkspaceShellScope.Global,
+            new ProcessDefinitionCatalogItemKey("branching-code-review"));
+
+        var recomposed = await ExecuteCanvasCommandAsync(
+            service,
+            canvas,
+            ProcessDefinitionCanvasCommandKind.Recompose,
+            ToolboxActionKey: null,
+            canvas.Selection.NodeKey);
+
+        var start = Assert.Single(recomposed.Projection.Nodes, node => node.StepKind == ProcessDefinitionStepKind.Start);
+        var successfulTerminal = Assert.Single(recomposed.Projection.Nodes, node =>
+            node.Kind == ProcessDefinitionCanvasNodeKind.Step &&
+            node.StepKey == new ProcessDefinitionStepKey("approve-merge-after-qa"));
+        var failure = Assert.Single(recomposed.Projection.Nodes, node =>
+            node.Kind == ProcessDefinitionCanvasNodeKind.Step &&
+            node.StepKey == new ProcessDefinitionStepKey("capture-workflow-failure"));
+        Assert.Equal(start.Y, successfulTerminal.Y);
+        Assert.NotEqual(start.Y, failure.Y);
     }
 
     [Fact]
@@ -2434,6 +2695,25 @@ public sealed class ProcessDefinitionCatalogProjectionTests
             selectedNodeKey,
             SelectedEdgeKey: null,
             ProcessDefinitionCanvasRecompositionMode.BalancedFlow));
+
+    private static void AssertNoCanvasNodeOverlaps(
+        IReadOnlyList<ProcessDefinitionCanvasEditorNodeProjection> nodes,
+        string definitionKey)
+    {
+        for (var leftIndex = 0; leftIndex < nodes.Count; leftIndex++)
+        {
+            for (var rightIndex = leftIndex + 1; rightIndex < nodes.Count; rightIndex++)
+            {
+                var left = nodes[leftIndex];
+                var right = nodes[rightIndex];
+                Assert.False(
+                    ProcessDefinitionCanvasPlacementPolicy.Intersects(
+                        ProcessDefinitionCanvasPlacementPolicy.ResolveBounds(left),
+                        ProcessDefinitionCanvasPlacementPolicy.ResolveBounds(right)),
+                    $"Process template '{definitionKey}' has overlapping canvas nodes '{left.NodeKey.Value}' and '{right.NodeKey.Value}'.");
+            }
+        }
+    }
 
     private static Task<ProcessDefinitionStepEditorCommandResult> ExecuteStepCommandAsync(
         ProcessDefinitionStepEditorProjectionService service,

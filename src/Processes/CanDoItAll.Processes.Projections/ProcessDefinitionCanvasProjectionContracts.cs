@@ -45,7 +45,8 @@ public enum ProcessDefinitionCanvasCommandKind
     AddArtifactExpectation,
     AddSubprocessBoundary,
     CloneArtifactReference,
-    Recompose
+    Recompose,
+    MoveNodes
 }
 
 public enum ProcessDefinitionCanvasCommandStatus
@@ -165,7 +166,13 @@ public sealed record ProcessDefinitionCanvasEditorNodeProjection(
     ProcessDefinitionRoleKey? RoleKey,
     string? ArtifactKey,
     IReadOnlyList<string> Badges,
-    IReadOnlyList<ProcessDefinitionCanvasPortProjection> Ports);
+    IReadOnlyList<ProcessDefinitionCanvasPortProjection> Ports,
+    ProcessDefinitionStepKind? StepKind = null);
+
+public sealed record ProcessDefinitionCanvasNodePosition(
+    ProcessDefinitionCanvasNodeKey NodeKey,
+    double X,
+    double Y);
 
 public sealed record ProcessDefinitionCanvasEdgeProjection(
     ProcessDefinitionCanvasEdgeKey EdgeKey,
@@ -203,7 +210,8 @@ public sealed record ProcessDefinitionCanvasToolboxActionProjection(
     string Summary,
     string Icon,
     bool IsEnabled,
-    string? DisabledReason);
+    string? DisabledReason,
+    ProcessDefinitionStepKind StepKind = ProcessDefinitionStepKind.Unspecified);
 
 public sealed record ProcessDefinitionCanvasCommandProjection(
     ProcessDefinitionCanvasCommandKind Kind,
@@ -228,7 +236,8 @@ public sealed record ProcessDefinitionCanvasCommand(
     ProcessDefinitionCanvasToolboxActionKey? ToolboxActionKey,
     ProcessDefinitionCanvasNodeKey? SelectedNodeKey,
     ProcessDefinitionCanvasEdgeKey? SelectedEdgeKey,
-    ProcessDefinitionCanvasRecompositionMode RecompositionMode);
+    ProcessDefinitionCanvasRecompositionMode RecompositionMode,
+    IReadOnlyList<ProcessDefinitionCanvasNodePosition>? NodePositions = null);
 
 public sealed record ProcessDefinitionCanvasCommandResult(
     ProcessDefinitionCanvasCommandReceipt Receipt,

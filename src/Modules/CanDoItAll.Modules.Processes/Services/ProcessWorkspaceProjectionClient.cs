@@ -39,17 +39,34 @@ public interface IProcessWorkspaceProjectionClient
         CancellationToken cancellationToken = default);
 }
 
-public sealed class ProcessWorkspaceProjectionClient(IServiceScopeFactory scopeFactory) : IProcessWorkspaceProjectionClient
+public sealed class ProcessWorkspaceProjectionClient(
+    IServiceScopeFactory scopeFactory,
+    ProcessDefinitionCanvasEditorProjectionService canvasSessionService) : IProcessWorkspaceProjectionClient
 {
     public async Task<ProcessWorkspaceShellProjection> GetShellAsync(
         ProcessWorkspaceShellRequest request,
         CancellationToken cancellationToken = default)
     {
         using var scope = scopeFactory.CreateScope();
-        return await scope.ServiceProvider
+        var projection = await scope.ServiceProvider
             .GetRequiredService<ProcessWorkspaceShellProjectionService>()
             .GetShellAsync(request, cancellationToken)
             .ConfigureAwait(false);
+        if (projection.DefinitionCatalog.SelectedEditor is not { Canvas: not null } selectedEditor)
+        {
+            return projection;
+        }
+
+        var canvas = await canvasSessionService
+            .GetCanvasAsync(request.Scope, selectedEditor.DefinitionKey, cancellationToken)
+            .ConfigureAwait(false);
+        return projection with
+        {
+            DefinitionCatalog = projection.DefinitionCatalog with
+            {
+                SelectedEditor = selectedEditor with { Canvas = canvas }
+            }
+        };
     }
 
     public async Task<ProcessDefinitionCatalogCommandReceipt> FeedDefaultDefinitionsAsync(
@@ -85,16 +102,10 @@ public sealed class ProcessWorkspaceProjectionClient(IServiceScopeFactory scopeF
             .ConfigureAwait(false);
     }
 
-    public async Task<ProcessDefinitionCanvasCommandResult> ExecuteDefinitionCanvasCommandAsync(
+    public Task<ProcessDefinitionCanvasCommandResult> ExecuteDefinitionCanvasCommandAsync(
         ProcessDefinitionCanvasCommand command,
         CancellationToken cancellationToken = default)
-    {
-        using var scope = scopeFactory.CreateScope();
-        return await scope.ServiceProvider
-            .GetRequiredService<ProcessWorkspaceShellProjectionService>()
-            .ExecuteDefinitionCanvasCommandAsync(command, cancellationToken)
-            .ConfigureAwait(false);
-    }
+        => canvasSessionService.ExecuteCommandAsync(command, cancellationToken);
 
     public async Task<ProcessDefinitionStepEditorCommandResult> ExecuteDefinitionStepEditorCommandAsync(
         ProcessDefinitionStepEditorCommand command,

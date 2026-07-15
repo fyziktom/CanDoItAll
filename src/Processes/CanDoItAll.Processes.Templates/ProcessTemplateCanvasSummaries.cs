@@ -40,7 +40,10 @@ public sealed record ProcessTemplateDefinitionCanvasDependencySummary(
 public sealed record ProcessTemplateDefinitionCanvasBranchOutcomeSummary(
     string Key,
     string Title,
-    string Description);
+    string Description,
+    string RouteTargetKind = "",
+    string RouteTargetStepKey = "",
+    bool IsBackwardRoute = false);
 
 public sealed record ProcessTemplateDefinitionCanvasArtifactExpectationSummary(
     string Key,
@@ -93,7 +96,10 @@ internal static class ProcessTemplateCanvasSummaryBuilder
                 .Select(outcome => new ProcessTemplateDefinitionCanvasBranchOutcomeSummary(
                     NormalizeOptional(outcome.Key, "outcome"),
                     NormalizeOptional(outcome.Title, NormalizeOptional(outcome.Key, "Outcome")),
-                    NormalizeOptional(outcome.Description, string.Empty)))
+                    NormalizeOptional(outcome.Description, string.Empty),
+                    NormalizeOptional(outcome.RouteTargetKind, string.Empty),
+                    NormalizeOptional(outcome.RouteTargetStepKey, string.Empty),
+                    outcome.IsBackwardRoute))
                 .ToArray(),
             step.ArtifactExpectations
                 .Select((artifact, index) => new ProcessTemplateDefinitionCanvasArtifactExpectationSummary(

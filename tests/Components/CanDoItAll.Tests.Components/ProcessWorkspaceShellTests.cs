@@ -1,6 +1,7 @@
 using Bunit;
 using System.Globalization;
 using System.Reflection;
+using System.Text.Json;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Voice;
@@ -552,6 +553,40 @@ public sealed class ProcessWorkspaceShellTests
         Assert.Equal(ProcessDefinitionCanvasRecompositionMode.BalancedFlow, client.LastCanvasCommand?.RecompositionMode);
         Assert.Contains("Canvas recomposed", cut.Markup, StringComparison.Ordinal);
         Assert.NotNull(cut.Find("[data-testid='processes-definition-canvas']"));
+    }
+
+    [Fact]
+    public async Task Canvas_node_move_uses_typed_canvas_command_boundary()
+    {
+        using var context = CreateContext(out var client);
+        var cut = context.RenderComponent<ProcessWorkspaceShell>();
+        ActivateProcessDetailTab(cut, "processes-detail-tab-steps", "processes-detail-panel-steps");
+
+        cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-testid='processes-definition-canvas']")));
+        var workbench = cut.FindComponent<CanvasWorkbench>();
+
+        await cut.InvokeAsync(() => workbench.Instance.OnNodesMoved(JsonSerializer.Serialize<IReadOnlyList<CanvasWorkbenchNodePositionChange>>(
+        [
+            new("step:architecture-decision", 420, 260),
+            new("artifact:architecture-decision:adr", 500, 390)
+        ])));
+
+        cut.WaitForAssertion(() => Assert.Equal(ProcessDefinitionCanvasCommandKind.MoveNodes, client.LastCanvasCommand?.CommandKind));
+        var positions = Assert.IsAssignableFrom<IReadOnlyList<ProcessDefinitionCanvasNodePosition>>(client.LastCanvasCommand?.NodePositions);
+        Assert.Collection(
+            positions,
+            position =>
+            {
+                Assert.Equal(new ProcessDefinitionCanvasNodeKey("step:architecture-decision"), position.NodeKey);
+                Assert.Equal(420, position.X);
+                Assert.Equal(260, position.Y);
+            },
+            position =>
+            {
+                Assert.Equal(new ProcessDefinitionCanvasNodeKey("artifact:architecture-decision:adr"), position.NodeKey);
+                Assert.Equal(500, position.X);
+                Assert.Equal(390, position.Y);
+            });
     }
 
     [Fact]

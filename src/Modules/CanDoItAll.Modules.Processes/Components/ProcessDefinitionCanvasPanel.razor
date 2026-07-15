@@ -267,7 +267,10 @@
     public EventCallback<ProcessDefinitionCanvasCommand> ExecuteCommand { get; set; }
 
     private CanvasWorkbench? workbenchRef;
+    private ProcessWorkspaceShellScope? syncedScope;
+    private ProcessDefinitionCatalogItemKey? syncedDefinitionKey;
     private ProcessDefinitionCanvasVersionToken? syncedVersionToken;
+    private Guid? syncedReceiptId;
     private ProcessDefinitionCanvasNodeKey? selectedNodeKey;
     private ProcessDefinitionCanvasEdgeKey? selectedEdgeKey;
     private ProcessDefinitionCanvasSelectionProjection selection = ProcessDefinitionCanvasSelectionProjection.None;
@@ -280,6 +283,7 @@
     private string? expandedToolboxGroupKey = "process-canvas-authoring";
     private string? commandNotice;
     private string? highlightedArtifactKey;
+    private bool fitViewAfterRecompose;
 
     private CanvasWorkbenchSurface CanvasSurface => BuildCanvasSurface();
 
@@ -363,12 +367,36 @@
 
     protected override void OnParametersSet()
     {
-        if (syncedVersionToken == Canvas.VersionToken)
+        var scopeChanged = syncedScope != Scope;
+        var definitionChanged = syncedDefinitionKey != Canvas.DefinitionKey;
+        var versionChanged = syncedVersionToken != Canvas.VersionToken;
+        var receiptId = Canvas.LastCommandReceipt?.ReceiptId;
+        var receiptChanged = syncedReceiptId != receiptId || (receiptId is not null && versionChanged);
+        if (!scopeChanged && !definitionChanged && !versionChanged && !receiptChanged)
         {
             return;
         }
 
+        var acceptedRecomposition = receiptChanged && Canvas.LastCommandReceipt is
+        {
+            CommandKind: ProcessDefinitionCanvasCommandKind.Recompose,
+            Status: ProcessDefinitionCanvasCommandStatus.Accepted
+        };
+        var rejectedMove = receiptChanged && Canvas.LastCommandReceipt is
+        {
+            CommandKind: ProcessDefinitionCanvasCommandKind.MoveNodes,
+            Status: ProcessDefinitionCanvasCommandStatus.Rejected
+        };
+        if (scopeChanged || definitionChanged || acceptedRecomposition || rejectedMove)
+        {
+            localNodePositions.Clear();
+        }
+
+        syncedScope = Scope;
+        syncedDefinitionKey = Canvas.DefinitionKey;
         syncedVersionToken = Canvas.VersionToken;
+        syncedReceiptId = receiptId;
+        fitViewAfterRecompose = acceptedRecomposition;
         selectedNodeKey = Canvas.Selection.NodeKey;
         selectedEdgeKey = Canvas.Selection.EdgeKey;
         selection = Canvas.Selection;
@@ -383,6 +411,17 @@
         {
             selectionWindowState.IsVisible = true;
         }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!fitViewAfterRecompose || workbenchRef is null)
+        {
+            return;
+        }
+
+        fitViewAfterRecompose = false;
+        await workbenchRef.FitViewToSceneAsync();
     }
 
     private CanvasWorkbenchSurface BuildCanvasSurface()
@@ -472,9 +511,9 @@
             TargetId = edge.ToNodeKey.Value,
             TargetPortId = ResolveTargetPort(edge.Kind),
             Kind = edge.Kind.ToString(),
-            Label = edge.Label,
-            Summary = edge.Summary,
-            Tone = ResolveLinkTone(edge.Tone),
+            Label = edge.IsBackwardRoute ? $"↩ {edge.Label}" : edge.Label,
+            Summary = edge.IsBackwardRoute ? $"Backward loop route. {edge.Summary}" : edge.Summary,
+            Tone = ResolveLinkTone(edge.IsBackwardRoute ? "warning" : edge.Tone),
             IsUserAuthored = true
         };
 
@@ -639,14 +678,27 @@
         return Task.CompletedTask;
     }
 
-    private Task HandleCanvasNodesMovedAsync(CanvasWorkbenchNodesMovedEventArgs args)
+    private async Task HandleCanvasNodesMovedAsync(CanvasWorkbenchNodesMovedEventArgs args)
     {
         foreach (var position in args.Positions)
         {
             localNodePositions[position.NodeId] = (position.X, position.Y);
         }
 
-        return Task.CompletedTask;
+        if (args.Positions.Count == 0)
+        {
+            return;
+        }
+
+        await ExecuteCanvasCommandAsync(
+            ProcessDefinitionCanvasCommandKind.MoveNodes,
+            toolboxActionKey: null,
+            args.Positions
+                .Select(position => new ProcessDefinitionCanvasNodePosition(
+                    new ProcessDefinitionCanvasNodeKey(position.NodeId),
+                    position.X,
+                    position.Y))
+                .ToArray());
     }
 
     private async Task HandleCanvasContextActionAsync(CanvasWorkbenchContextActionRequest request)
@@ -779,7 +831,8 @@
 
     private async Task ExecuteCanvasCommandAsync(
         ProcessDefinitionCanvasCommandKind commandKind,
-        ProcessDefinitionCanvasToolboxActionKey? toolboxActionKey)
+        ProcessDefinitionCanvasToolboxActionKey? toolboxActionKey,
+        IReadOnlyList<ProcessDefinitionCanvasNodePosition>? nodePositions = null)
     {
         var command = new ProcessDefinitionCanvasCommand(
             Scope,
@@ -789,7 +842,8 @@
             toolboxActionKey,
             selectedNodeKey,
             selectedEdgeKey,
-            ProcessDefinitionCanvasRecompositionMode.BalancedFlow);
+            ProcessDefinitionCanvasRecompositionMode.BalancedFlow,
+            nodePositions);
         await ExecuteCommand.InvokeAsync(command);
     }
 
