@@ -711,7 +711,7 @@ ProjectWorkbenchCrossModuleMutationService crossModuleMutationService) : IProjec
             cancellationToken);
     }
 
-    public async Task<ProjectStructureNode?> UpdateObjectMetadataAsync(
+    public Task<ProjectStructureNode?> UpdateObjectMetadataAsync(
         Guid projectId,
         string nodeKey,
         string metadataJson,
@@ -719,6 +719,43 @@ ProjectWorkbenchCrossModuleMutationService crossModuleMutationService) : IProjec
         string? status = null,
         ProjectNodeReferenceCollection? nodeReferences = null,
         CancellationToken cancellationToken = default)
+        => UpdateObjectMetadataCoreAsync(
+            projectId,
+            nodeKey,
+            metadataJson: metadataJson,
+            metadataMutation: null,
+            notes: notes,
+            status: status,
+            nodeReferences: nodeReferences,
+            cancellationToken: cancellationToken);
+
+    public Task<ProjectStructureNode?> MutateObjectMetadataAsync(
+        Guid projectId,
+        string nodeKey,
+        Action<ProjectObjectMetadataEnvelope> metadataMutation,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(metadataMutation);
+        return UpdateObjectMetadataCoreAsync(
+            projectId,
+            nodeKey,
+            metadataJson: null,
+            metadataMutation: metadataMutation,
+            notes: null,
+            status: null,
+            nodeReferences: null,
+            cancellationToken: cancellationToken);
+    }
+
+    private async Task<ProjectStructureNode?> UpdateObjectMetadataCoreAsync(
+        Guid projectId,
+        string nodeKey,
+        string? metadataJson,
+        Action<ProjectObjectMetadataEnvelope>? metadataMutation,
+        string? notes,
+        string? status,
+        ProjectNodeReferenceCollection? nodeReferences,
+        CancellationToken cancellationToken)
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         await ProjectWorkbenchSchemaInitializer.EnsureAsync(dbContext, cancellationToken);
@@ -733,6 +770,13 @@ ProjectWorkbenchCrossModuleMutationService crossModuleMutationService) : IProjec
         if (notes is not null)
         {
             node.Notes = notes.Trim();
+        }
+
+        if (metadataMutation is not null)
+        {
+            var metadata = ProjectObjectMetadataSerializer.Parse(node.MetadataJson);
+            metadataMutation(metadata);
+            metadataJson = ProjectObjectMetadataSerializer.Serialize(metadata);
         }
 
         node.MetadataJson = ProjectWorkbenchObjectModeling.ResolveMetadataJson(node.ObjectType, node.ObjectSubtype, metadataJson, node.MetadataJson, node.Notes, null);

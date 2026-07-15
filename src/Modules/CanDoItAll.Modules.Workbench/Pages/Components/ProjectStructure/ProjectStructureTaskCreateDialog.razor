@@ -1,0 +1,360 @@
+@namespace CanDoItAll.Modules.Workbench.Pages
+@using System.Globalization
+@using CanDoItAll.AppComponents
+@using CanDoItAll.Components.BaseLib
+@using CanDoItAll.Components.CanvasLib
+@inject DialogService DialogService
+
+<Stack GapScale="LayoutGap.Large"
+       AlignItems="AlignItems.Stretch"
+       Class="project-structure-task-create-dialog"
+       data-testid="project-structure-task-create-content">
+    @if (AssigneeWarnings.Count > 0)
+    {
+        <Alert AlertStyle="AlertStyle.Warning"
+               data-testid="project-structure-task-create-assignee-warning">
+            @string.Join(" ", AssigneeWarnings)
+        </Alert>
+    }
+
+    <Grid ColumnTemplate="repeat(2,minmax(0,1fr))"
+          Gap="LayoutGap.Medium"
+          Class="project-structure-task-create-dialog__grid">
+        <FormField Text="Task title"
+                   Class="project-structure-task-create-dialog__wide-field">
+            <TextBox Value="@title"
+                     ValueChanged="HandleTitleChangedAsync"
+                     Placeholder="Describe the task"
+                     Immediate="true"
+                     data-testid="project-structure-task-create-title" />
+        </FormField>
+
+        <FormField Text="Status lane">
+            <TextBox Value="@subtitle"
+                     ValueChanged="HandleSubtitleChangedAsync"
+                     Placeholder="Sprint, phase, or owner"
+                     Immediate="true"
+                     data-testid="project-structure-task-create-subtitle" />
+        </FormField>
+
+        <FormField Text="Due (UTC)">
+            <input type="datetime-local"
+                   class="cda-input"
+                   value="@FormatDateTimeLocal(dueUtc)"
+                   aria-label="Task due date in UTC"
+                   data-testid="project-structure-task-create-due"
+                   @onchange="HandleDueChanged" />
+        </FormField>
+
+        <FormField Text="Repository">
+            <DropDown TValue="string"
+                      Data="@RepositoryOptions"
+                      TextProperty="Label"
+                      ValueProperty="Value"
+                      Value="@repositoryNodeId"
+                      ValueChanged="HandleRepositoryChangedAsync"
+                      Placeholder="Optional repository"
+                      AllowClear="true"
+                      data-testid="project-structure-task-create-repository" />
+        </FormField>
+
+        <FormField Text="Notes"
+                   Class="project-structure-task-create-dialog__wide-field">
+            <TextArea Value="@notes"
+                      ValueChanged="HandleNotesChangedAsync"
+                      Placeholder="Definition of done or context"
+                      Rows="4"
+                      Immediate="true"
+                      data-testid="project-structure-task-create-notes" />
+        </FormField>
+    </Grid>
+
+    <Stack GapScale="LayoutGap.Small"
+           AlignItems="AlignItems.Stretch">
+        <Cluster Gap="LayoutGap.Small"
+                 AlignItems="AlignItems.Center"
+                 JustifyContent="JustifyContent.SpaceBetween"
+                 Wrap="FlexWrap.Wrap">
+            <Stack GapScale="LayoutGap.XSmall">
+                <TextBlock TextStyle="TextStyle.Subtitle2"
+                           Value="Optional person or agent" />
+                <TextBlock TextStyle="TextStyle.Note"
+                           Value="The selected CRM person or synchronized AI agent is assigned directly to this task. No child node is created." />
+            </Stack>
+            @if (selectedAssignee is not null)
+            {
+                <Button Text="Clear selection"
+                        Icon="close"
+                        Size="ButtonSize.Small"
+                        Variant="Variant.Text"
+                        ButtonStyle="ButtonStyle.Base"
+                        data-testid="project-structure-task-create-assignee-clear"
+                        Click="ClearAssignee" />
+            }
+        </Cluster>
+
+        <ResourceCardPicker TItem="ProjectStructureTaskResourceSelection"
+                            Options="@AssigneePickerOptions"
+                            SelectionChanged="SelectAssignee"
+                            SearchPlaceholder="Search CRM people and synchronized agents"
+                            EmptyEyebrow="No assignees"
+                            EmptyTitle="No people or agents match this search"
+                            EmptyDescription="Clear the search or create the task without an assignee."
+                            DataTestId="project-structure-task-create-assignee-picker" />
+    </Stack>
+
+    @if (!string.IsNullOrWhiteSpace(validationError))
+    {
+        <Alert AlertStyle="AlertStyle.Danger"
+               data-testid="project-structure-task-create-validation-error">
+            @validationError
+        </Alert>
+    }
+
+    <Cluster Gap="LayoutGap.Small"
+             JustifyContent="JustifyContent.End">
+        <Button Text="Cancel"
+                Variant="Variant.Outlined"
+                ButtonStyle="ButtonStyle.Base"
+                data-testid="project-structure-task-create-cancel"
+                Click="CancelAsync" />
+        <Button Text="Create task"
+                Icon="add_task"
+                ButtonStyle="ButtonStyle.Info"
+                data-testid="project-structure-task-create-submit"
+                Click="SubmitAsync" />
+    </Cluster>
+</Stack>
+
+@code {
+    private const string DateTimeLocalFormat = "yyyy-MM-ddTHH:mm";
+    private const string TaskSubtype = "task";
+    private static readonly HashSet<string> ControlledInputKeys = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "workItemKind",
+        "assigneeRef",
+        "dueUtc",
+        "repositoryRef"
+    };
+
+    private bool initialized;
+    private string title = string.Empty;
+    private string subtitle = string.Empty;
+    private string notes = string.Empty;
+    private DateTimeOffset? dueUtc;
+    private string? repositoryNodeId;
+    private ProjectStructureTaskResourceSelection? selectedAssignee;
+    private string validationError = string.Empty;
+
+    [CascadingParameter]
+    public DialogReference? DialogReference { get; set; }
+
+    [Parameter, EditorRequired]
+    public CanvasWorkbenchCreateActionRequest CreateRequest { get; set; } = default!;
+
+    [Parameter]
+    public IReadOnlyList<CanvasWorkbenchInputOption> RepositoryOptions { get; set; } = [];
+
+    [Parameter]
+    public IReadOnlyList<ProjectStructureTaskResourceOption> AssigneeOptions { get; set; } = [];
+
+    [Parameter]
+    public IReadOnlyList<string> AssigneeWarnings { get; set; } = [];
+
+    private IReadOnlyList<ResourceCardPickerOption<ProjectStructureTaskResourceSelection>> AssigneePickerOptions =>
+        AssigneeOptions
+            .Where(option => option.Kind is ProjectStructureTaskResourceKind.Person or ProjectStructureTaskResourceKind.Agent)
+            .Select(option => new ResourceCardPickerOption<ProjectStructureTaskResourceSelection>(
+                new ProjectStructureTaskResourceSelection(option.Kind, option.ResourceId),
+                option.DisplayName,
+                option.TypeLabel)
+            {
+                Description = option.IsSensitive
+                    ? "Sensitive resource details are hidden."
+                    : option.Description,
+                Icon = option.Kind == ProjectStructureTaskResourceKind.Agent ? "smart_toy" : "person",
+                VisualKind = ResourceCardPickerVisualKind.Avatar,
+                AvatarFallback = BuildInitials(option.DisplayName),
+                Tags = [option.TypeLabel],
+                IsSelected = selectedAssignee == new ProjectStructureTaskResourceSelection(option.Kind, option.ResourceId),
+                IsFavorite = option.IsFavorite,
+                TestId = $"project-structure-task-create-assignee-{option.Kind.ToString().ToLowerInvariant()}-{option.ResourceId:N}"
+            })
+            .ToList();
+
+    protected override void OnParametersSet()
+    {
+        if (initialized)
+        {
+            return;
+        }
+
+        initialized = true;
+        title = CreateRequest.Title ?? string.Empty;
+        subtitle = CreateRequest.Subtitle ?? string.Empty;
+        notes = CreateRequest.Notes ?? string.Empty;
+        var inputValues = CreateRequest.InputValues ?? [];
+        repositoryNodeId = inputValues
+            .LastOrDefault(value => string.Equals(value.Key, "repositoryRef", StringComparison.OrdinalIgnoreCase))
+            ?.Value;
+        var dueValue = inputValues
+            .LastOrDefault(value => string.Equals(value.Key, "dueUtc", StringComparison.OrdinalIgnoreCase))
+            ?.Value;
+        if (TryParseUtc(dueValue, out var parsedDue))
+        {
+            dueUtc = parsedDue;
+        }
+    }
+
+    private Task HandleTitleChangedAsync(string? value)
+    {
+        title = value ?? string.Empty;
+        validationError = string.Empty;
+        return Task.CompletedTask;
+    }
+
+    private Task HandleSubtitleChangedAsync(string? value)
+    {
+        subtitle = value ?? string.Empty;
+        return Task.CompletedTask;
+    }
+
+    private Task HandleNotesChangedAsync(string? value)
+    {
+        notes = value ?? string.Empty;
+        return Task.CompletedTask;
+    }
+
+    private Task HandleRepositoryChangedAsync(string? value)
+    {
+        repositoryNodeId = string.IsNullOrWhiteSpace(value) ? null : value;
+        return Task.CompletedTask;
+    }
+
+    private void HandleDueChanged(ChangeEventArgs args)
+    {
+        var text = Convert.ToString(args.Value, CultureInfo.InvariantCulture);
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            dueUtc = null;
+            validationError = string.Empty;
+            return;
+        }
+
+        if (!TryParseUtc(text, out var parsedDue))
+        {
+            validationError = "Enter a valid UTC due date and time.";
+            return;
+        }
+
+        dueUtc = parsedDue;
+        validationError = string.Empty;
+    }
+
+    private void SelectAssignee(ProjectStructureTaskResourceSelection selection)
+    {
+        selectedAssignee = selection;
+    }
+
+    private void ClearAssignee()
+    {
+        selectedAssignee = null;
+    }
+
+    private async Task SubmitAsync()
+    {
+        var normalizedTitle = title.Trim();
+        if (normalizedTitle.Length == 0)
+        {
+            validationError = "Task title is required.";
+            return;
+        }
+
+        if (normalizedTitle.Length > 200)
+        {
+            validationError = "Task title cannot exceed 200 characters.";
+            return;
+        }
+
+        var inputValues = (CreateRequest.InputValues ?? [])
+            .Where(value => !ControlledInputKeys.Contains(value.Key))
+            .Select(value => new CanvasWorkbenchInputValue
+            {
+                Key = value.Key,
+                Value = value.Value
+            })
+            .ToList();
+        inputValues.Add(new CanvasWorkbenchInputValue
+        {
+            Key = "workItemKind",
+            Value = "task"
+        });
+        AddInputValue(inputValues, "dueUtc", dueUtc?.ToString("O", CultureInfo.InvariantCulture));
+        AddInputValue(inputValues, "repositoryRef", repositoryNodeId);
+
+        var result = new ProjectStructureTaskDialogResult(
+            CreateRequest with
+            {
+                Title = normalizedTitle,
+                Subtitle = subtitle.Trim(),
+                Notes = notes.Trim(),
+                CreateMode = ProjectStructureTaskActionIds.CreateMode,
+                ObjectSubtype = TaskSubtype,
+                InputValues = inputValues
+            },
+            selectedAssignee);
+        if (DialogReference is null)
+        {
+            await DialogService.CloseAsync(result);
+            return;
+        }
+
+        await DialogReference.CloseAsync(result);
+    }
+
+    private Task CancelAsync()
+        => DialogReference is null
+            ? DialogService.CloseAsync()
+            : DialogReference.CloseAsync();
+
+    private static void AddInputValue(List<CanvasWorkbenchInputValue> values, string key, string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return;
+        }
+
+        values.Add(new CanvasWorkbenchInputValue
+        {
+            Key = key,
+            Value = value
+        });
+    }
+
+    private static string FormatDateTimeLocal(DateTimeOffset? value)
+        => value?.ToUniversalTime().ToString(DateTimeLocalFormat, CultureInfo.InvariantCulture) ?? string.Empty;
+
+    private static bool TryParseUtc(string? value, out DateTimeOffset result)
+    {
+        if (DateTimeOffset.TryParse(
+                value,
+                CultureInfo.InvariantCulture,
+                DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal,
+                out var parsed))
+        {
+            result = parsed.ToUniversalTime();
+            return true;
+        }
+
+        result = default;
+        return false;
+    }
+
+    private static string BuildInitials(string value)
+    {
+        var words = value.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        return words.Length == 0
+            ? "R"
+            : string.Concat(words.Take(2).Select(static word => char.ToUpperInvariant(word[0])));
+    }
+}

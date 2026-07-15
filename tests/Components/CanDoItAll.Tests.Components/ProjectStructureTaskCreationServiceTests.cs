@@ -566,8 +566,12 @@ public sealed class ProjectStructureTaskCreationServiceTests
     {
         var agentService = services.GetRequiredService<ProjectStructureAgentService>();
         var workbenchService = services.GetRequiredService<ProjectWorkbenchService>();
-        var resourceService = new ProjectStructureTaskResourceService(
+        var assigneeService = new ProjectStructureWorkItemAssigneeService(
             partyIntegrationBridge,
+            workbenchService,
+            services.GetRequiredService<ILogger<ProjectStructureWorkItemAssigneeService>>());
+        var resourceService = new ProjectStructureTaskResourceService(
+            assigneeService,
             services.GetRequiredService<IWorkflowCatalogService>(),
             services.GetRequiredService<ProcessDefinitionCatalogProjectionService>(),
             services.GetRequiredService<ProjectStructureWorkflowNodeService>(),

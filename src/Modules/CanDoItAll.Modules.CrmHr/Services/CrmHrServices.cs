@@ -4560,7 +4560,7 @@ public sealed partial class AiAgentService(
     }
 }
 
-public sealed class ProjectPartyIntegrationService(
+public sealed partial class ProjectPartyIntegrationService(
     IDbContextFactory<AppDbContext> dbContextFactory,
     PartyDirectoryService partyDirectoryService,
     ProjectPartyAssignmentNodePolicy projectPartyAssignmentNodePolicy) : IProjectPartyIntegrationBridge
@@ -4781,11 +4781,19 @@ public sealed class ProjectPartyIntegrationService(
             return Result<Guid>.Failure(Error.Validation("Project was not found.", "crmhr.project-assignment.project-not-found"));
         }
 
-        var partyExists = await dbContext.Set<Party>()
-            .AnyAsync(item => item.Id == request.PartyId, cancellationToken);
-        if (!partyExists)
+        var partyType = await dbContext.Set<Party>()
+            .Where(item => item.Id == request.PartyId)
+            .Select(item => (PartyType?)item.PartyType)
+            .SingleOrDefaultAsync(cancellationToken);
+        if (!partyType.HasValue)
         {
             return Result<Guid>.Failure(Error.Validation("Party was not found.", "crmhr.project-assignment.party-not-found"));
+        }
+
+        var partyTypeError = ValidateAssignmentPartyType(request.Role, partyType.Value);
+        if (partyTypeError is not null)
+        {
+            return Result<Guid>.Failure(partyTypeError);
         }
 
         var normalizedNodeKey = request.NodeKey?.Trim() ?? string.Empty;
@@ -4923,14 +4931,26 @@ public sealed class ProjectPartyIntegrationService(
 
         if (desiredPartyIds.Count > 0)
         {
-            var existingPartyIds = await dbContext.Set<Party>()
+            var existingParties = await dbContext.Set<Party>()
                 .Where(item => desiredPartyIds.Contains(item.Id))
-                .Select(item => item.Id)
+                .Select(item => new { item.Id, item.PartyType })
                 .ToListAsync(cancellationToken);
-            var existingPartyIdSet = existingPartyIds.ToHashSet();
+            var existingPartyIdSet = existingParties.Select(item => item.Id).ToHashSet();
             if (desiredPartyIds.Any(id => !existingPartyIdSet.Contains(id)))
             {
                 return Result.Failure(Error.Validation("Party was not found.", "crmhr.project-assignment.party-not-found"));
+            }
+
+            var partyTypesById = existingParties.ToDictionary(item => item.Id, item => item.PartyType);
+            foreach (var desiredAssignment in desiredAssignments)
+            {
+                var partyTypeError = ValidateAssignmentPartyType(
+                    desiredAssignment.Role,
+                    partyTypesById[desiredAssignment.PartyId]);
+                if (partyTypeError is not null)
+                {
+                    return Result.Failure(partyTypeError);
+                }
             }
         }
 

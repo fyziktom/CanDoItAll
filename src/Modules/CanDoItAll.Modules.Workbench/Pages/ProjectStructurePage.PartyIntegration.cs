@@ -2,11 +2,14 @@ using CanDoItAll.AppComponents;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.SharedKernel;
 using Microsoft.AspNetCore.Components;
+using Microsoft.Extensions.Logging;
 
 namespace CanDoItAll.Modules.Workbench.Pages;
 
 public partial class ProjectStructurePage
 {
+    private const string WorkItemEditorAssignmentSource = "project-structure-work-item-editor";
+
     private sealed class ProjectStructurePartyEditorState
     {
         public Guid? SelectedPartyId { get; set; }
@@ -115,7 +118,7 @@ public partial class ProjectStructurePage
         => BuildPartyPickerOptions("project-structure-participant-party-option");
 
     private IReadOnlyList<ResourceCardPickerOption<Guid>> WorkItemPartyPickerOptions
-        => BuildPartyPickerOptions("project-structure-work-item-party-option");
+        => BuildPartyPickerOptions("project-structure-work-item-party-option", IsWorkItemAssigneeParty);
 
     private Task HandleParticipantPartySelectedAsync(Guid partyId)
     {
@@ -136,9 +139,12 @@ public partial class ProjectStructurePage
         return Task.CompletedTask;
     }
 
-    private IReadOnlyList<ResourceCardPickerOption<Guid>> BuildPartyPickerOptions(string testIdPrefix)
+    private IReadOnlyList<ResourceCardPickerOption<Guid>> BuildPartyPickerOptions(
+        string testIdPrefix,
+        Func<ProjectPartyOption, bool>? predicate = null)
     {
         return partyEditorOptions
+            .Where(option => predicate?.Invoke(option) ?? true)
             .Select(option => new ResourceCardPickerOption<Guid>(
                 option.PartyId,
                 option.DisplayName,
@@ -186,6 +192,9 @@ public partial class ProjectStructurePage
     {
         return partyType is ProjectPartyType.Person or ProjectPartyType.AiAgent;
     }
+
+    private static bool IsWorkItemAssigneeParty(ProjectPartyOption option)
+        => option.PartyType is ProjectPartyType.Person or ProjectPartyType.AiAgent;
 
     private static string ResolvePartyPickerIcon(ProjectPartyType partyType)
     {
@@ -442,51 +451,59 @@ public partial class ProjectStructurePage
         isPartyEditorBusy = true;
         try
         {
-            var metadata = ProjectObjectMetadataSerializer.Parse(selectedNode.MetadataJson);
-            metadata.WorkItem ??= new ProjectWorkItemMetadata();
-            var assignmentRoles = GetNodeAssignmentRoles(selectedNode);
-            var preferredRole = GetPreferredNodeAssignmentRole(selectedNode);
-            if (!partyEditor.SelectedPartyId.HasValue)
+            ProjectStructureTaskResourceSelection? selection = null;
+            if (partyEditor.SelectedPartyId.HasValue)
             {
-                if (!await ReplaceNodeAssignmentsAsync(selectedNode.Id, [], assignmentRoles))
+                var option = partyEditorOptions.FirstOrDefault(item => item.PartyId == partyEditor.SelectedPartyId.Value);
+                if (option is null)
                 {
+                    SetPartyEditorMessage("The selected assignee could not be loaded.", "danger");
                     return;
                 }
 
-                metadata.WorkItem.AssigneePartyDisplayName = string.Empty;
-                await SaveNodeMetadataAsync(selectedNode, metadata);
-                SetPartyEditorMessage("Central work-item assignee cleared.", "neutral");
-                return;
+                if (!IsWorkItemAssigneeParty(option))
+                {
+                    SetPartyEditorMessage("A work-item assignee must be a person or AI agent.", "danger");
+                    return;
+                }
+
+                selection = new ProjectStructureTaskResourceSelection(
+                    option.PartyType == ProjectPartyType.AiAgent
+                        ? ProjectStructureTaskResourceKind.Agent
+                        : ProjectStructureTaskResourceKind.Person,
+                    option.PartyId);
             }
 
-            var option = await ProjectPartyIntegrationBridge.GetPartyOptionAsync(partyEditor.SelectedPartyId.Value);
-            if (option is null)
+            await WorkItemAssigneeService.ReplaceAsync(
+                ProjectId,
+                selectedNode.Id,
+                selection,
+                WorkItemEditorAssignmentSource);
+            projectPartyAssignments = await ProjectPartyIntegrationBridge.ListAssignmentsDetailedAsync(ProjectId);
+            var refreshedSurface = await ProjectWorkbenchService.GetStructureAsync(ProjectId);
+            var refreshedTask = refreshedSurface.Nodes.FirstOrDefault(node =>
+                string.Equals(node.Id, selectedNode.Id, StringComparison.Ordinal));
+            if (refreshedTask is not null)
             {
-                SetPartyEditorMessage("The selected assignee could not be loaded.", "danger");
-                return;
+                await ApplySurfaceNodeUpdatesAsync([refreshedTask]);
             }
 
-            if (!await ReplaceNodeAssignmentsAsync(
-                    selectedNode.Id,
-                    [
-                        new ProjectPartyAssignmentUpsertRequest
-                        {
-                            ProjectId = ProjectId,
-                            PartyId = option.PartyId,
-                            Role = preferredRole,
-                            NodeKey = selectedNode.Id,
-                            IsPrimary = true,
-                            Source = "project-structure"
-                        }
-                    ],
-                    assignmentRoles))
-            {
-                return;
-            }
-
-            metadata.WorkItem.AssigneePartyDisplayName = option.DisplayName;
-            await SaveNodeMetadataAsync(selectedNode, metadata);
-            SetPartyEditorMessage("Work-item assignee saved.", "mint");
+            SetPartyEditorMessage(
+                selection is null ? "Central work-item assignee cleared." : "Work-item assignee saved.",
+                selection is null ? "neutral" : "mint");
+        }
+        catch (ProjectStructureAgentException exception)
+        {
+            SetPartyEditorMessage(exception.Message, "danger");
+        }
+        catch (Exception exception)
+        {
+            Logger.LogError(
+                exception,
+                "Failed to save a work-item assignee. ProjectId={ProjectId} WorkItemNodeId={WorkItemNodeId}",
+                ProjectId,
+                selectedNode.Id);
+            SetPartyEditorMessage("The work-item assignee could not be saved.", "danger");
         }
         finally
         {

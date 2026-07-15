@@ -1,5 +1,11 @@
 namespace CanDoItAll.Modules.Workbench;
 
+public static class ProjectStructureTaskActionIds
+{
+    public const string Create = "add-work-task";
+    public const string CreateMode = "project-task-dialog";
+}
+
 public enum ProjectStructureTaskResourceKind
 {
     Person,

@@ -27,6 +27,7 @@ public partial class ProjectStructurePage
     private CanvasWorkbenchAction HydrateCreateAction(CanvasWorkbenchAction action)
     {
         var useSecretReferenceDialog = IsSecretReferenceCreateAction(action.ActionId);
+        var useTaskCreateDialog = IsTaskCreateAction(action.ActionId);
         return new CanvasWorkbenchAction
         {
             ActionId = action.ActionId,
@@ -39,8 +40,12 @@ public partial class ProjectStructurePage
             SubmenuLayout = action.SubmenuLayout,
             Tone = action.Tone,
             SetupRendererKey = action.SetupRendererKey,
-            RequiresInput = useSecretReferenceDialog ? false : action.RequiresInput,
-            CreateMode = useSecretReferenceDialog ? "secret-reference-picker" : action.CreateMode,
+            RequiresInput = useSecretReferenceDialog || useTaskCreateDialog ? false : action.RequiresInput,
+            CreateMode = useSecretReferenceDialog
+                ? "secret-reference-picker"
+                : useTaskCreateDialog
+                    ? ProjectStructureTaskActionIds.CreateMode
+                    : action.CreateMode,
             ObjectSubtype = action.ObjectSubtype,
             TitleLabel = action.TitleLabel,
             TitlePlaceholder = action.TitlePlaceholder,
@@ -101,6 +106,9 @@ public partial class ProjectStructurePage
 
     private static bool IsSecretReferenceCreateAction(string? actionId)
         => string.Equals(actionId, "add-secret-reference", StringComparison.Ordinal);
+
+    private static bool IsTaskCreateAction(string? actionId)
+        => string.Equals(actionId, ProjectStructureCanvasCatalog.WorkTaskActionId, StringComparison.Ordinal);
 
     private IReadOnlyList<CanvasWorkbenchInputOption> BuildNodeOptions(params ProjectObjectType[] objectTypes)
     {

@@ -184,6 +184,7 @@ public sealed class ProjectStructurePartyPickerTests
         });
         cut.WaitForElement("[data-testid='project-structure-work-item-party']");
         cut.WaitForElement($"[data-testid='project-structure-work-item-party-option-{ownerId:N}']");
+        Assert.Empty(cut.FindAll($"[data-testid='project-structure-work-item-party-option-{customerId:N}']"));
         cut.Find($"[data-testid='project-structure-work-item-party-option-{ownerId:N}']").Click();
         cut.Find("[data-testid='project-structure-work-item-save']").Click();
 

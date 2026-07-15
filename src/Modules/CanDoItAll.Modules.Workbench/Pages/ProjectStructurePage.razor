@@ -507,7 +507,7 @@ else
                                     <ResourceCardPicker TItem="Guid"
                                                         Options="@WorkItemPartyPickerOptions"
                                                         SelectionChanged="HandleWorkItemPartySelectedAsync"
-                                                        SearchPlaceholder="Search people, agents, and organizations"
+                                                        SearchPlaceholder="Search people and agents"
                                                         EmptyTitle="No assignees match the current search"
                                                         DataTestId="project-structure-work-item-party" />
                                     <Cluster>
@@ -1438,6 +1438,12 @@ else
             return;
         }
 
+        if (IsTaskCreateAction(request.ActionId))
+        {
+            await OpenTaskCreateDialogAsync(request);
+            return;
+        }
+
         if (ProjectStructureCanvasCatalog.TryResolveCreateDefinition(request.ActionId, out var definition))
         {
             if (IsSecretReferenceCreateAction(request.ActionId))
@@ -1510,6 +1516,15 @@ else
                 "command",
                 definition.ObjectSubtype,
                 null);
+            if (IsTaskCreateAction(actionId))
+            {
+                await OpenTaskCreateDialogAsync(request with
+                {
+                    CreateMode = ProjectStructureTaskActionIds.CreateMode
+                });
+                return;
+            }
+
             if (IsSecretReferenceCreateAction(actionId))
             {
                 var action = HydrateCreateAction(ProjectStructureCanvasCatalog.BuildComposerAction(definition));
@@ -1797,6 +1812,12 @@ else
         if (IsSecretReferenceCreateAction(action.ActionId))
         {
             await OpenSecretReferenceDialogAsync(action, request);
+            return;
+        }
+
+        if (IsTaskCreateAction(action.ActionId))
+        {
+            await OpenTaskCreateDialogAsync(request);
             return;
         }
 

@@ -134,7 +134,10 @@ public sealed class ProjectStructureGanttPanelTests
         var workbenchService = CreateWorkbenchService();
         context.Services.AddSingleton(workbenchService);
         context.Services.AddSingleton(new ProjectStructureTaskResourceService(
-            null!,
+            new ProjectStructureWorkItemAssigneeService(
+                bridge,
+                workbenchService,
+                NullLogger<ProjectStructureWorkItemAssigneeService>.Instance),
             null!,
             null!,
             null!,

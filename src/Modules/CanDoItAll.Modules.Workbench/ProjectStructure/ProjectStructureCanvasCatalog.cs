@@ -45,6 +45,7 @@ public sealed record ProjectStructureInspectorCreateGroup(
 internal static partial class ProjectStructureCanvasCatalog
 {
     internal const string GenerateImageAssetActionId = "generate-image-asset";
+    internal const string WorkTaskActionId = ProjectStructureTaskActionIds.Create;
     internal const string ImageProviderProfileFieldKey = "imageProviderProfileId";
     internal const string ImageModelFieldKey = "imageModel";
     internal const string ImageSizeFieldKey = "imageSize";
