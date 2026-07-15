@@ -9,10 +9,10 @@
     <SupportedPlatform Include="browser" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="CanDoItAll.Components.BaseLib" Version="0.1.3-gantt.20260714.7" />
-    <PackageReference Include="CanDoItAll.Components.CanvasLib" Version="0.1.3-gantt.20260714.7" />
+    <PackageReference Include="CanDoItAll.Components.BaseLib" Version="0.1.3-gantt.20260714.8" />
+    <PackageReference Include="CanDoItAll.Components.CanvasLib" Version="0.1.3-gantt.20260714.8" />
     <PackageReference Include="CanDoItAll.Components.Charts" Version="0.1.2" />
-    <PackageReference Include="CanDoItAll.Components.OverlayLib" Version="0.1.3-gantt.20260714.7" />
+    <PackageReference Include="CanDoItAll.Components.OverlayLib" Version="0.1.3-gantt.20260714.8" />
     <PackageReference Include="CanDoItAll.FileTools.FileBrowser.Components" Version="0.2.0" />
     <PackageReference Include="CanDoItAll.FileTools.FileBrowser.Core" Version="0.1.0" />
     <PackageReference Include="CanDoItAll.FileTools.FileInteraction.Components" Version="0.2.0" />

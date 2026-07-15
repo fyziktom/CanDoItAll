@@ -5,7 +5,7 @@
 
 <section class="project-structure-gantt-panel"
          data-testid="project-structure-gantt-panel">
-    @if (isLoading)
+    @if (isLoading && projection is null)
     {
         <LoadingState Eyebrow="Project schedule"
                       Title="Building the Gantt projection"

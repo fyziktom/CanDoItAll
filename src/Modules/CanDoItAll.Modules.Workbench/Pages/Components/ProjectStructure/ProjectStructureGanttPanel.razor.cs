@@ -87,6 +87,7 @@ public partial class ProjectStructureGanttPanel : ComponentBase, IAsyncDisposabl
         if (projectionProjectId != ProjectId)
         {
             projectionProjectId = ProjectId;
+            projection = null;
             projectionOriginUtc = ResolveProjectionOriginUtc(Surface);
             insertionCandidate = CreateInsertionCandidate(projectionOriginUtc);
         }

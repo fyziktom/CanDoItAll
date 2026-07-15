@@ -76,16 +76,52 @@ public sealed class ProjectStructureGanttPanelTests
         Assert.DoesNotContain("project-structure-gantt-mutation-status", cut.Markup, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public async Task Same_project_refresh_keeps_chart_mounted_until_authoritative_projection_is_ready()
+    {
+        var projectId = Guid.NewGuid();
+        var refreshAssignments = new TaskCompletionSource<IReadOnlyList<ProjectPartyAssignmentDetail>>(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+        var bridge = new StubProjectPartyIntegrationBridge([], null, refreshAssignments);
+        using var context = CreateContext(bridge);
+        var cut = context.RenderComponent<ProjectStructureGanttPanel>(parameters => parameters
+            .Add(component => component.ProjectId, projectId)
+            .Add(component => component.Surface, CreateSurface(projectId, CreateTask("task-a", "Before refresh")))
+            .Add(component => component.MutationCommitted, () => { }));
+        var originalChart = cut.FindComponent<GanttChart>().Instance;
+
+        var refreshTask = cut.InvokeAsync(() => cut.SetParametersAndRender(parameters => parameters
+            .Add(component => component.ProjectId, projectId)
+            .Add(component => component.Surface, CreateSurface(projectId, CreateTask("task-a", "After refresh")))
+            .Add(component => component.MutationCommitted, () => { })));
+        await bridge.RefreshRequested.WaitAsync(TimeSpan.FromSeconds(2));
+
+        Assert.Same(originalChart, cut.FindComponent<GanttChart>().Instance);
+        Assert.Contains("Before refresh", cut.Markup, StringComparison.Ordinal);
+        Assert.DoesNotContain("Building the Gantt projection", cut.Markup, StringComparison.Ordinal);
+
+        refreshAssignments.SetResult([]);
+        await refreshTask;
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Same(originalChart, cut.FindComponent<GanttChart>().Instance);
+            Assert.Contains("After refresh", cut.Markup, StringComparison.Ordinal);
+        });
+    }
+
     private static TestContext CreateContext(
         IReadOnlyList<ProjectPartyAssignmentDetail> assignments,
         Exception? assignmentFailure = null)
+        => CreateContext(new StubProjectPartyIntegrationBridge(assignments, assignmentFailure));
+
+    private static TestContext CreateContext(IProjectPartyIntegrationBridge bridge)
     {
         var context = new TestContext();
         context.JSInterop.Mode = JSRuntimeMode.Loose;
         context.Services.AddLogging();
         context.Services.AddSingleton<NotificationService>();
-        context.Services.AddSingleton<IProjectPartyIntegrationBridge>(
-            new StubProjectPartyIntegrationBridge(assignments, assignmentFailure));
+        context.Services.AddSingleton(bridge);
         context.Services.AddSingleton<ProjectStructureGanttProjectionAdapter>();
         context.Services.AddSingleton(new ProjectStructureGanttMutationService(
             null!,
@@ -146,14 +182,30 @@ public sealed class ProjectStructureGanttPanelTests
 
     private sealed class StubProjectPartyIntegrationBridge(
         IReadOnlyList<ProjectPartyAssignmentDetail> assignments,
-        Exception? assignmentFailure) : IProjectPartyIntegrationBridge
+        Exception? assignmentFailure,
+        TaskCompletionSource<IReadOnlyList<ProjectPartyAssignmentDetail>>? refreshAssignments = null)
+        : IProjectPartyIntegrationBridge
     {
+        private readonly TaskCompletionSource<bool> refreshRequested = new(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+        private int assignmentRequestCount;
+
+        public Task RefreshRequested => refreshRequested.Task;
+
         public Task<IReadOnlyList<ProjectPartyAssignmentDetail>> ListAssignmentsDetailedAsync(
             Guid projectId,
             CancellationToken cancellationToken = default)
-            => assignmentFailure is null
+        {
+            if (Interlocked.Increment(ref assignmentRequestCount) > 1 && refreshAssignments is not null)
+            {
+                refreshRequested.TrySetResult(true);
+                return refreshAssignments.Task;
+            }
+
+            return assignmentFailure is null
                 ? Task.FromResult(assignments)
                 : Task.FromException<IReadOnlyList<ProjectPartyAssignmentDetail>>(assignmentFailure);
+        }
 
         public Task<IReadOnlyDictionary<Guid, ProjectPortfolioPartyContext>> GetPortfolioContextsAsync(
             IReadOnlyCollection<Guid> projectIds,
