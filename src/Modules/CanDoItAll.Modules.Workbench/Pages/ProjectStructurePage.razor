@@ -369,23 +369,26 @@ else
 
                                 @if (!partyEditor.KeepProjectLocalOnly)
                                 {
-                                    <Grid Gap="LayoutGap.Medium"
-                                          ColumnsLg="2">
-                                        <FormField Text="Existing party">
-                                            <InputSelect @bind-Value="ParticipantPartyValue"
-                                                         class="cda-input"
-                                                         data-testid="project-structure-participant-party">
-                                                <option value="">Choose a party</option>
-                                                @foreach (var option in partyEditorOptions)
-                                                {
-                                                    <option value="@option.PartyId">@($"{option.DisplayName} ({option.PartyTypeLabel})")</option>
-                                                }
-                                            </InputSelect>
-                                        </FormField>
-                                        <div class="rounded-[1.25rem] border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
-                                            The synced party can drive reusable staffing, AI-agent reuse, and meeting defaults without forcing every participant node into the central directory.
-                                        </div>
-                                    </Grid>
+                                    <Stack GapScale="LayoutGap.Small">
+                                        <TextBlock TextStyle="TextStyle.Footer"
+                                                   Value="Existing party" />
+                                        <ResourceCardPicker TItem="Guid"
+                                                            Options="@ParticipantPartyPickerOptions"
+                                                            SelectionChanged="HandleParticipantPartySelectedAsync"
+                                                            SearchPlaceholder="Search people, agents, and organizations"
+                                                            EmptyTitle="No parties match the current search"
+                                                            DataTestId="project-structure-participant-party" />
+                                        <Cluster>
+                                            <Button Text="Clear selection"
+                                                    Variant="Variant.Text"
+                                                    ButtonStyle="ButtonStyle.Base"
+                                                    Disabled="@(!partyEditor.SelectedPartyId.HasValue)"
+                                                    data-testid="project-structure-participant-party-clear"
+                                                    Click="ClearPartySelectionAsync" />
+                                        </Cluster>
+                                        <TextBlock TextStyle="TextStyle.Note"
+                                                   Value="The synced party can drive reusable staffing, AI-agent reuse, and meeting defaults without forcing every participant node into the central directory." />
+                                    </Stack>
 
                                     <SurfaceCard Soft="true">
                                         <Stack GapScale="LayoutGap.Medium">
@@ -498,17 +501,24 @@ else
                     {
                         <SurfaceCard>
                             <Stack GapScale="LayoutGap.Large">
-                                <FormField Text="Assignee party">
-                                    <InputSelect @bind-Value="WorkItemPartyValue"
-                                                 class="cda-input"
-                                                 data-testid="project-structure-work-item-party">
-                                        <option value="">No central assignee</option>
-                                        @foreach (var option in partyEditorOptions)
-                                        {
-                                            <option value="@option.PartyId">@($"{option.DisplayName} ({option.PartyTypeLabel})")</option>
-                                        }
-                                    </InputSelect>
-                                </FormField>
+                                <Stack GapScale="LayoutGap.Small">
+                                    <TextBlock TextStyle="TextStyle.Footer"
+                                               Value="Assignee party" />
+                                    <ResourceCardPicker TItem="Guid"
+                                                        Options="@WorkItemPartyPickerOptions"
+                                                        SelectionChanged="HandleWorkItemPartySelectedAsync"
+                                                        SearchPlaceholder="Search people, agents, and organizations"
+                                                        EmptyTitle="No assignees match the current search"
+                                                        DataTestId="project-structure-work-item-party" />
+                                    <Cluster>
+                                        <Button Text="Clear assignee"
+                                                Variant="Variant.Text"
+                                                ButtonStyle="ButtonStyle.Base"
+                                                Disabled="@(!partyEditor.SelectedPartyId.HasValue)"
+                                                data-testid="project-structure-work-item-party-clear"
+                                                Click="ClearPartySelectionAsync" />
+                                    </Cluster>
+                                </Stack>
 
                                 <Cluster>
                                     <Button Text="Save work-item assignee"

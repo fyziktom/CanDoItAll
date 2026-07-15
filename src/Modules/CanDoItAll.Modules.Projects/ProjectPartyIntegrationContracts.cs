@@ -63,6 +63,7 @@ public sealed record ProjectPartyOption(
     Guid PartyId,
     string DisplayName,
     string PartyTypeLabel,
+    ProjectPartyType PartyType,
     string PrimaryEmail,
     string PrimaryPhone,
     bool IsSensitive);

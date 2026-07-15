@@ -18,9 +18,9 @@ public sealed class ProjectStructureGanttProjectionAdapter
         ArgumentNullException.ThrowIfNull(options);
 
         var issues = new List<ProjectStructureGanttProjectionIssue>();
-        var taskNodes = surface.Nodes
-            .Where(IsCanonicalTask)
-            .ToArray();
+        var taskNodes = ApplyPreferredTaskOrder(
+            surface.Nodes.Where(IsCanonicalTask).ToArray(),
+            options.PreferredTaskNodeIds);
         ValidateTaskIdentities(taskNodes, issues);
         if (HasErrors(issues))
         {
@@ -64,7 +64,7 @@ public sealed class ProjectStructureGanttProjectionAdapter
 
         var assignmentIndex = BuildAssignmentIndex(surface, partyAssignments);
         var taskNodesById = taskNodes.ToDictionary(node => new GanttTaskId(node.Id));
-        var tasks = validation.TopologicalOrder
+        var tasks = taskOrder
             .Select(taskId =>
             {
                 var node = taskNodesById[taskId];
@@ -86,6 +86,35 @@ public sealed class ProjectStructureGanttProjectionAdapter
             dependencies,
             projectionOnlyTaskIds,
             issues);
+    }
+
+    private static ProjectStructureNode[] ApplyPreferredTaskOrder(
+        ProjectStructureNode[] taskNodes,
+        IReadOnlyList<string> preferredTaskNodeIds)
+    {
+        if (taskNodes.Length < 2 || preferredTaskNodeIds.Count == 0)
+        {
+            return taskNodes;
+        }
+
+        var preferredIndexByNodeId = preferredTaskNodeIds
+            .Select((nodeId, index) => new { nodeId, index })
+            .ToDictionary(item => item.nodeId, item => item.index, StringComparer.Ordinal);
+
+        return taskNodes
+            .Select((node, originalIndex) => new
+            {
+                Node = node,
+                OriginalIndex = originalIndex,
+                PreferredIndex = node.Id is not null &&
+                    preferredIndexByNodeId.TryGetValue(node.Id, out var preferredIndex)
+                        ? preferredIndex
+                        : int.MaxValue
+            })
+            .OrderBy(item => item.PreferredIndex)
+            .ThenBy(item => item.OriginalIndex)
+            .Select(item => item.Node)
+            .ToArray();
     }
 
     private static void ValidateTaskIdentities(

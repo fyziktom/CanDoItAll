@@ -1,3 +1,4 @@
+using CanDoItAll.AppComponents;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.SharedKernel;
 using Microsoft.AspNetCore.Components;
@@ -110,23 +111,91 @@ public partial class ProjectStructurePage
         ? string.Empty
         : $"{selectedNode.Title} stays on the project canvas while its reusable party identity is managed here.";
 
-    private string ParticipantPartyValue
+    private IReadOnlyList<ResourceCardPickerOption<Guid>> ParticipantPartyPickerOptions
+        => BuildPartyPickerOptions("project-structure-participant-party-option");
+
+    private IReadOnlyList<ResourceCardPickerOption<Guid>> WorkItemPartyPickerOptions
+        => BuildPartyPickerOptions("project-structure-work-item-party-option");
+
+    private Task HandleParticipantPartySelectedAsync(Guid partyId)
     {
-        get => partyEditor.SelectedPartyId?.ToString("D") ?? string.Empty;
-        set
-        {
-            partyEditor.SelectedPartyId = Guid.TryParse(value, out var partyId) ? partyId : null;
-            if (partyEditor.SelectedPartyId.HasValue)
-            {
-                partyEditor.KeepProjectLocalOnly = false;
-            }
-        }
+        partyEditor.SelectedPartyId = partyId;
+        partyEditor.KeepProjectLocalOnly = false;
+        return Task.CompletedTask;
     }
 
-    private string WorkItemPartyValue
+    private Task HandleWorkItemPartySelectedAsync(Guid partyId)
     {
-        get => partyEditor.SelectedPartyId?.ToString("D") ?? string.Empty;
-        set => partyEditor.SelectedPartyId = Guid.TryParse(value, out var partyId) ? partyId : null;
+        partyEditor.SelectedPartyId = partyId;
+        return Task.CompletedTask;
+    }
+
+    private Task ClearPartySelectionAsync()
+    {
+        partyEditor.SelectedPartyId = null;
+        return Task.CompletedTask;
+    }
+
+    private IReadOnlyList<ResourceCardPickerOption<Guid>> BuildPartyPickerOptions(string testIdPrefix)
+    {
+        return partyEditorOptions
+            .Select(option => new ResourceCardPickerOption<Guid>(
+                option.PartyId,
+                option.DisplayName,
+                option.PartyTypeLabel)
+            {
+                Subtitle = ResolvePartyPickerSubtitle(option),
+                Description = option.IsSensitive ? "Sensitive directory record" : string.Empty,
+                Meta = ResolvePartyPickerMeta(option),
+                Icon = ResolvePartyPickerIcon(option.PartyType),
+                VisualKind = UsesPartyAvatar(option.PartyType)
+                    ? ResourceCardPickerVisualKind.Avatar
+                    : ResourceCardPickerVisualKind.Icon,
+                AdditionalSearchText = option.IsSensitive
+                    ? option.PartyTypeLabel
+                    : string.Join(' ', option.PrimaryEmail, option.PrimaryPhone, option.PartyTypeLabel),
+                IsSelected = partyEditor.SelectedPartyId == option.PartyId,
+                TestId = $"{testIdPrefix}-{option.PartyId:N}"
+            })
+            .ToList();
+    }
+
+    private static string ResolvePartyPickerSubtitle(ProjectPartyOption option)
+    {
+        if (option.IsSensitive)
+        {
+            return "Contact details hidden";
+        }
+
+        return !string.IsNullOrWhiteSpace(option.PrimaryEmail)
+            ? option.PrimaryEmail
+            : option.PrimaryPhone;
+    }
+
+    private static string ResolvePartyPickerMeta(ProjectPartyOption option)
+    {
+        if (option.IsSensitive || string.IsNullOrWhiteSpace(option.PrimaryEmail) || string.IsNullOrWhiteSpace(option.PrimaryPhone))
+        {
+            return string.Empty;
+        }
+
+        return option.PrimaryPhone;
+    }
+
+    private static bool UsesPartyAvatar(ProjectPartyType partyType)
+    {
+        return partyType is ProjectPartyType.Person or ProjectPartyType.AiAgent;
+    }
+
+    private static string ResolvePartyPickerIcon(ProjectPartyType partyType)
+    {
+        return partyType switch
+        {
+            ProjectPartyType.OrganizationUnit => "account_tree",
+            ProjectPartyType.Organization => "business",
+            ProjectPartyType.AiAgent => "smart_toy",
+            _ => "person"
+        };
     }
 
     private async Task LoadPartyEditorAsync()

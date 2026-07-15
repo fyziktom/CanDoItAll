@@ -66,8 +66,8 @@ public sealed partial class AppSmokeTests
             await ClickSelectionWindowActionAsync(page, "Add workflow");
             await addDialog.WaitForAsync();
         }
-        await addDialog.GetByTestId("project-structure-workflow-add-select")
-            .SelectOptionAsync(definition.Id.Value.ToString("D"));
+        await addDialog.GetByTestId($"project-structure-workflow-add-option-{definition.Id.Value:N}")
+            .ClickAsync();
         await addDialog.GetByTestId("project-structure-workflow-add-include-subtree")
             .CheckAsync();
         await addDialog.GetByTestId("project-structure-workflow-add-source-value")

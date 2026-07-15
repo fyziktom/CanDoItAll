@@ -2,6 +2,7 @@ using Bunit;
 using Bunit.TestDoubles;
 using CanDoItAll.Components.BaseLib;
 using CanDoItAll.Components.Gantt;
+using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Workbench;
 using CanDoItAll.Modules.Workbench.CanvasAdapters;
@@ -9,6 +10,8 @@ using CanDoItAll.Modules.Workbench.Pages;
 using CanDoItAll.SharedKernel;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 
 namespace CanDoItAll.Tests.Components;
 
@@ -119,6 +122,7 @@ public sealed class ProjectStructureGanttPanelTests
     {
         var context = new TestContext();
         context.JSInterop.Mode = JSRuntimeMode.Loose;
+        context.Services.AddCanDoItAllBaseLib();
         context.Services.AddLogging();
         context.Services.AddSingleton<NotificationService>();
         context.Services.AddSingleton(bridge);
@@ -127,7 +131,47 @@ public sealed class ProjectStructureGanttPanelTests
             null!,
             null!,
             NullLogger<ProjectStructureGanttMutationService>.Instance));
+        var workbenchService = CreateWorkbenchService();
+        context.Services.AddSingleton(workbenchService);
+        context.Services.AddSingleton(new ProjectStructureTaskResourceService(
+            null!,
+            null!,
+            null!,
+            null!,
+            null!,
+            workbenchService));
+        var rowOrderService = new ProjectStructureGanttRowOrderService(null!, workbenchService);
+        context.Services.AddSingleton(rowOrderService);
+        context.Services.AddSingleton(new ProjectStructureTaskCreationService(
+            null!,
+            null!,
+            rowOrderService,
+            workbenchService,
+            NullLogger<ProjectStructureTaskCreationService>.Instance));
         return context;
+    }
+
+    private static ProjectWorkbenchService CreateWorkbenchService()
+    {
+        AppDbContextModelRegistry.ConfigureAssemblies(
+        [
+            typeof(Project).Assembly,
+            typeof(ProjectObjectRecord).Assembly
+        ]);
+        var options = new DbContextOptionsBuilder<AppDbContext>()
+            .UseInMemoryDatabase($"gantt-panel-{Guid.NewGuid():N}")
+            .ConfigureWarnings(warnings => warnings.Ignore(InMemoryEventId.TransactionIgnoredWarning))
+            .Options;
+        var factory = new TestDbContextFactory(options);
+        return new ProjectWorkbenchService(
+            factory,
+            new FixedClock(),
+            null!,
+            null!,
+            null!,
+            null!,
+            null!,
+            null!);
     }
 
     private static ProjectStructureSurface CreateSurface(Guid projectId, params ProjectStructureNode[] nodes)
@@ -257,5 +301,21 @@ public sealed class ProjectStructureGanttPanelTests
             ProjectPartyQuickCreateRequest request,
             CancellationToken cancellationToken = default)
             => throw new NotSupportedException();
+    }
+
+    private sealed class TestDbContextFactory(DbContextOptions<AppDbContext> options)
+        : IDbContextFactory<AppDbContext>
+    {
+        public AppDbContext CreateDbContext()
+            => new(options);
+
+        public Task<AppDbContext> CreateDbContextAsync(CancellationToken cancellationToken = default)
+            => Task.FromResult(CreateDbContext());
+    }
+
+    private sealed class FixedClock : IClock
+    {
+        public DateTimeOffset GetUtcNow()
+            => new(2026, 7, 15, 12, 0, 0, TimeSpan.Zero);
     }
 }

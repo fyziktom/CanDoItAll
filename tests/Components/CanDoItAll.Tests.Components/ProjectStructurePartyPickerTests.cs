@@ -63,7 +63,8 @@ public sealed class ProjectStructurePartyPickerTests
         {
             Assert.Contains("project-structure-participant-party", cut.Markup);
         });
-        cut.Find("[data-testid='project-structure-participant-party']").Change(partyId.ToString());
+        cut.WaitForElement($"[data-testid='project-structure-participant-party-option-{partyId:N}']");
+        cut.Find($"[data-testid='project-structure-participant-party-option-{partyId:N}']").Click();
         cut.Find("[data-testid='project-structure-participant-save']").Click();
 
         cut.WaitForAssertion(() =>
@@ -182,7 +183,8 @@ public sealed class ProjectStructurePartyPickerTests
             Assert.Contains("Work-item party assignment", cut.Markup);
         });
         cut.WaitForElement("[data-testid='project-structure-work-item-party']");
-        cut.Find("[data-testid='project-structure-work-item-party']").Change(ownerId.ToString());
+        cut.WaitForElement($"[data-testid='project-structure-work-item-party-option-{ownerId:N}']");
+        cut.Find($"[data-testid='project-structure-work-item-party-option-{ownerId:N}']").Click();
         cut.Find("[data-testid='project-structure-work-item-save']").Click();
 
         cut.WaitForAssertion(() =>

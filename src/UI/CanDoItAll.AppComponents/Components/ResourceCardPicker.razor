@@ -1,0 +1,304 @@
+@namespace CanDoItAll.AppComponents
+@typeparam TItem
+
+@{
+    var filteredOptions = FilterOptions();
+}
+
+<div class="resource-card-picker"
+     data-testid="@DataTestId">
+    <Stack GapScale="LayoutGap.Medium"
+           AlignItems="AlignItems.Stretch">
+        <TextBox Value="@searchText"
+                 ValueChanged="HandleSearchChangedAsync"
+                 Placeholder="@SearchPlaceholder"
+                 Immediate="true"
+                 Class="resource-card-picker__search"
+                 aria-label="@SearchPlaceholder"
+                 data-testid="@($"{DataTestId}-search")" />
+
+        @if (ShowResultCount)
+        {
+            <Cluster Gap="LayoutGap.Small"
+                     Wrap="FlexWrap.Wrap">
+                <StatusBadge Tone="info"
+                             Text="@($"{filteredOptions.Count} of {Options.Count} options")" />
+                @if (filteredOptions.Any(option => option.IsFavorite))
+                {
+                    <StatusBadge Tone="warning"
+                                 Text="Favorites first" />
+                }
+            </Cluster>
+        }
+
+        <div class="@ResolveResultsClass()"
+             data-testid="@($"{DataTestId}-results")">
+            @if (filteredOptions.Count == 0)
+            {
+                <EmptyState Eyebrow="@EmptyEyebrow"
+                            Title="@EmptyTitle"
+                            Description="@EmptyDescription" />
+            }
+            else
+            {
+                <Grid Gap="LayoutGap.Medium"
+                      ColumnTemplate="repeat(auto-fit,minmax(13rem,1fr))"
+                      Class="w-full">
+                    @foreach (var option in filteredOptions)
+                    {
+                        <article class="@ResolveCardClass(option)"
+                                 data-testid="@ResolveShellTestId(option)">
+                            @if (option.ShowFavorite)
+                            {
+                                <button type="button"
+                                        class="@ResolveFavoriteClass(option)"
+                                        aria-label="@(option.IsFavorite ? $"Remove {option.Title} from favorites" : $"Mark {option.Title} as favorite")"
+                                        aria-pressed="@(option.IsFavorite ? "true" : "false")"
+                                        disabled="@(option.FavoriteDisabled || !FavoriteToggled.HasDelegate)"
+                                        data-testid="@ResolveFavoriteTestId(option)"
+                                        @onclick="() => ToggleFavoriteAsync(option)">
+                                    <Icon Name="star" />
+                                </button>
+                            }
+
+                            <button type="button"
+                                    class="resource-card-picker__select"
+                                    aria-label="@($"Select {option.Title}")"
+                                    aria-pressed="@(option.IsSelected ? "true" : "false")"
+                                    disabled="@option.IsDisabled"
+                                    title="@ResolveSelectTitle(option)"
+                                    data-testid="@ResolveSelectTestId(option)"
+                                    @onclick="() => SelectAsync(option)">
+                                <Stack GapScale="LayoutGap.Small"
+                                       AlignItems="AlignItems.Stretch">
+                                    <div class="resource-card-picker__identity">
+                                        @if (option.VisualKind == ResourceCardPickerVisualKind.Avatar)
+                                        {
+                                            <Avatar Alt="@option.Title"
+                                                    ImageUrl="@option.ImageUrl"
+                                                    FallbackText="@ResolveAvatarFallback(option)"
+                                                    DefaultImageSeed="@option.Title"
+                                                    Size="AvatarSize.Medium"
+                                                    Shape="AvatarShape.Rounded" />
+                                        }
+                                        else
+                                        {
+                                            <span class="resource-card-picker__icon"
+                                                  aria-hidden="true">
+                                                <Icon Name="@option.Icon" />
+                                            </span>
+                                        }
+
+                                        <div class="resource-card-picker__identity-copy">
+                                            <Cluster Gap="LayoutGap.XSmall"
+                                                     Wrap="FlexWrap.Wrap">
+                                                <StatusBadge Tone="neutral"
+                                                             Text="@option.KindLabel" />
+                                                @if (option.IsSelected)
+                                                {
+                                                    <StatusBadge Tone="info"
+                                                                 Text="Selected" />
+                                                }
+                                            </Cluster>
+
+                                            <TextBlock TextStyle="TextStyle.Subtitle2"
+                                                       Value="@option.Title"
+                                                       Class="resource-card-picker__title" />
+
+                                            @if (!string.IsNullOrWhiteSpace(option.Subtitle))
+                                            {
+                                                <TextBlock TextStyle="TextStyle.Note"
+                                                           Value="@option.Subtitle"
+                                                           Class="resource-card-picker__subtitle" />
+                                            }
+                                        </div>
+                                    </div>
+
+                                    @if (!string.IsNullOrWhiteSpace(option.Description))
+                                    {
+                                        <TextBlock TextStyle="TextStyle.Note"
+                                                   Value="@option.Description"
+                                                   Class="resource-card-picker__description" />
+                                    }
+
+                                    @if (option.Tags.Count > 0)
+                                    {
+                                        <Cluster Gap="LayoutGap.XSmall"
+                                                 Wrap="FlexWrap.Wrap">
+                                            @foreach (var tag in option.Tags.Take(MaxVisibleTags))
+                                            {
+                                                <StatusBadge Tone="neutral"
+                                                             Text="@tag" />
+                                            }
+                                        </Cluster>
+                                    }
+
+                                    @if (!string.IsNullOrWhiteSpace(option.Meta))
+                                    {
+                                        <TextBlock TextStyle="TextStyle.Note"
+                                                   Value="@option.Meta"
+                                                   Class="resource-card-picker__meta" />
+                                    }
+
+                                    @if (option.IsDisabled && !string.IsNullOrWhiteSpace(option.DisabledReason))
+                                    {
+                                        <TextBlock TextStyle="TextStyle.Note"
+                                                   Value="@option.DisabledReason"
+                                                   Class="resource-card-picker__disabled-reason" />
+                                    }
+                                </Stack>
+                            </button>
+                        </article>
+                    }
+                </Grid>
+            }
+        </div>
+    </Stack>
+</div>
+
+@code {
+    private string searchText = string.Empty;
+
+    [Parameter, EditorRequired]
+    public IReadOnlyList<ResourceCardPickerOption<TItem>> Options { get; set; } = [];
+
+    [Parameter]
+    public EventCallback<TItem> SelectionChanged { get; set; }
+
+    [Parameter]
+    public EventCallback<TItem> FavoriteToggled { get; set; }
+
+    [Parameter]
+    public string SearchPlaceholder { get; set; } = "Search options";
+
+    [Parameter]
+    public string EmptyEyebrow { get; set; } = "No matches";
+
+    [Parameter]
+    public string EmptyTitle { get; set; } = "No options match the current search";
+
+    [Parameter]
+    public string EmptyDescription { get; set; } = "Clear the search to show all available options.";
+
+    [Parameter]
+    public string DataTestId { get; set; } = "resource-card-picker";
+
+    [Parameter]
+    public bool ShowResultCount { get; set; } = true;
+
+    [Parameter]
+    public int MaxVisibleTags { get; set; } = 3;
+
+    [Parameter]
+    public bool UseBoundedResultsViewport { get; set; } = true;
+
+    private Task HandleSearchChangedAsync(string? value)
+    {
+        searchText = value?.TrimStart() ?? string.Empty;
+        return Task.CompletedTask;
+    }
+
+    private Task SelectAsync(ResourceCardPickerOption<TItem> option)
+    {
+        return option.IsDisabled
+            ? Task.CompletedTask
+            : SelectionChanged.InvokeAsync(option.Item);
+    }
+
+    private Task ToggleFavoriteAsync(ResourceCardPickerOption<TItem> option)
+    {
+        return !option.ShowFavorite || option.FavoriteDisabled || !FavoriteToggled.HasDelegate
+            ? Task.CompletedTask
+            : FavoriteToggled.InvokeAsync(option.Item);
+    }
+
+    private IReadOnlyList<ResourceCardPickerOption<TItem>> FilterOptions()
+    {
+        var query = searchText.Trim();
+        return Options
+            .Where(option => MatchesSearch(option, query))
+            .OrderByDescending(option => option.IsFavorite)
+            .ToList();
+    }
+
+    private static bool MatchesSearch(ResourceCardPickerOption<TItem> option, string query)
+    {
+        if (string.IsNullOrWhiteSpace(query))
+        {
+            return true;
+        }
+
+        return Contains(option.Title, query) ||
+               Contains(option.KindLabel, query) ||
+               Contains(option.Subtitle, query) ||
+               Contains(option.Description, query) ||
+               Contains(option.Meta, query) ||
+               Contains(option.AdditionalSearchText, query) ||
+               option.Tags.Any(tag => Contains(tag, query));
+    }
+
+    private static bool Contains(string value, string query)
+    {
+        return !string.IsNullOrWhiteSpace(value) && value.Contains(query, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string ResolveCardClass(ResourceCardPickerOption<TItem> option)
+    {
+        return string.Join(' ', new[]
+        {
+            "resource-card-picker__card",
+            option.IsSelected ? "resource-card-picker__card--selected" : string.Empty,
+            option.IsDisabled ? "resource-card-picker__card--disabled" : string.Empty,
+            option.ShowFavorite ? "resource-card-picker__card--has-favorite" : string.Empty
+        }.Where(value => !string.IsNullOrWhiteSpace(value)));
+    }
+
+    private string ResolveResultsClass()
+    {
+        return UseBoundedResultsViewport
+            ? "resource-card-picker__results resource-card-picker__results--bounded"
+            : "resource-card-picker__results resource-card-picker__results--unbounded";
+    }
+
+    private static string ResolveFavoriteClass(ResourceCardPickerOption<TItem> option)
+    {
+        return option.IsFavorite
+            ? "resource-card-picker__favorite resource-card-picker__favorite--active"
+            : "resource-card-picker__favorite";
+    }
+
+    private static string ResolveAvatarFallback(ResourceCardPickerOption<TItem> option)
+    {
+        if (!string.IsNullOrWhiteSpace(option.AvatarFallback))
+        {
+            return option.AvatarFallback;
+        }
+
+        var words = option.Title.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        return string.Concat(words.Take(2).Select(word => char.ToUpperInvariant(word[0])));
+    }
+
+    private static string ResolveSelectTitle(ResourceCardPickerOption<TItem> option)
+    {
+        return option.IsDisabled && !string.IsNullOrWhiteSpace(option.DisabledReason)
+            ? option.DisabledReason
+            : option.Title;
+    }
+
+    private static string ResolveSelectTestId(ResourceCardPickerOption<TItem> option)
+    {
+        return string.IsNullOrWhiteSpace(option.TestId)
+            ? "resource-card-picker-option"
+            : option.TestId;
+    }
+
+    private static string ResolveShellTestId(ResourceCardPickerOption<TItem> option)
+    {
+        return $"{ResolveSelectTestId(option)}-shell";
+    }
+
+    private static string ResolveFavoriteTestId(ResourceCardPickerOption<TItem> option)
+    {
+        return $"{ResolveSelectTestId(option)}-favorite";
+    }
+}

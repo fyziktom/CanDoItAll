@@ -63,12 +63,8 @@ public partial class ProjectStructurePage
         workflowAddDialog = null;
     }
 
-    private async Task HandleWorkflowAddSelectionChanged(ChangeEventArgs args)
+    private async Task HandleWorkflowAddSelectionChanged(WorkflowId workflowId)
     {
-        var workflowId = Guid.TryParse(args.Value?.ToString(), out var parsedWorkflowId) && parsedWorkflowId != Guid.Empty
-            ? new WorkflowId(parsedWorkflowId)
-            : (WorkflowId?)null;
-
         await RefreshWorkflowAddDialogAsync(dialog => dialog with
         {
             SelectedWorkflowId = workflowId,

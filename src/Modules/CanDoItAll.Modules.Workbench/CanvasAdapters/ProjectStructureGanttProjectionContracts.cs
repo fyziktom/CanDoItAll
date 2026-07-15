@@ -42,7 +42,8 @@ public sealed class ProjectStructureGanttProjectionOptions
 {
     public ProjectStructureGanttProjectionOptions(
         DateTimeOffset projectionOriginUtc,
-        TimeSpan defaultTaskDuration)
+        TimeSpan defaultTaskDuration,
+        IReadOnlyList<string>? preferredTaskNodeIds = null)
     {
         if (defaultTaskDuration <= TimeSpan.Zero)
         {
@@ -54,11 +55,18 @@ public sealed class ProjectStructureGanttProjectionOptions
 
         ProjectionOriginUtc = projectionOriginUtc.ToUniversalTime();
         DefaultTaskDuration = defaultTaskDuration;
+        PreferredTaskNodeIds = Array.AsReadOnly((preferredTaskNodeIds ?? [])
+            .Where(static nodeId => !string.IsNullOrWhiteSpace(nodeId))
+            .Select(static nodeId => nodeId.Trim())
+            .Distinct(StringComparer.Ordinal)
+            .ToArray());
     }
 
     public DateTimeOffset ProjectionOriginUtc { get; }
 
     public TimeSpan DefaultTaskDuration { get; }
+
+    public IReadOnlyList<string> PreferredTaskNodeIds { get; }
 }
 
 public sealed class ProjectStructureGanttProjectionResult

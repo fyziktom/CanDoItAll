@@ -52,6 +52,45 @@ public sealed class ProcessDefinitionCatalogProjectionTests
     }
 
     [Fact]
+    public async Task Complete_catalog_returns_and_searches_definition_beyond_paged_limit()
+    {
+        var definitions = Enumerable.Range(0, 200)
+            .Select(index => (
+                ManifestKey: $"catalog-{index:D3}",
+                DefinitionKey: $"catalog-{index:D3}",
+                DisplayName: $"Catalog definition {index:D3}",
+                Summary: $"Catalog summary {index:D3}"))
+            .Append((
+                ManifestKey: "catalog-target",
+                DefinitionKey: "catalog-target",
+                DisplayName: "ZZZ searchable target beyond page",
+                Summary: "Definition intentionally sorted after the first 200 items."))
+            .ToArray();
+        using var pack = TemporaryProcessTemplatePack.Create(definitions);
+        var service = new ProcessDefinitionCatalogProjectionService(
+            new ProcessTemplatePackLoader(pack.RootPath),
+            new FixedProcessProjectionClock(Now));
+
+        var paged = await service.GetCatalogAsync(
+            ProcessWorkspaceShellScope.Global,
+            new ProcessDefinitionCatalogQueryProjection(
+                SearchText: null,
+                SelectedDefinitionKey: null,
+                ProcessDefinitionCatalogScopeKind.All,
+                Take: 200));
+        var complete = await service.GetCompleteCatalogItemsAsync(ProcessWorkspaceShellScope.Global);
+        var searched = await service.GetCompleteCatalogItemsAsync(
+            ProcessWorkspaceShellScope.Global,
+            "searchable target");
+
+        Assert.Equal(200, paged.Items.Count);
+        Assert.DoesNotContain(paged.Items, item => item.Key.Value == "catalog-target");
+        Assert.Equal(201, complete.Count);
+        Assert.Contains(complete, item => item.Key.Value == "catalog-target");
+        Assert.Equal("catalog-target", Assert.Single(searched).Key.Value);
+    }
+
+    [Fact]
     public async Task Template_catalog_query_uses_ordinal_search_independent_of_current_culture()
     {
         using var culture = UseCulture("tr-TR");

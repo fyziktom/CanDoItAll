@@ -78,6 +78,26 @@ public sealed class ProcessDefinitionCatalogProjectionService
             lastCommandReceipt));
     }
 
+    public Task<IReadOnlyList<ProcessDefinitionCatalogItemProjection>> GetCompleteCatalogItemsAsync(
+        ProcessWorkspaceShellScope scope,
+        string? searchText = null,
+        ProcessDefinitionCatalogScopeKind scopeFilter = ProcessDefinitionCatalogScopeKind.All,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        ValidateScope(scope);
+
+        var normalizedSearchText = string.IsNullOrWhiteSpace(searchText)
+            ? string.Empty
+            : searchText.Trim();
+        IReadOnlyList<ProcessDefinitionCatalogItemProjection> items = FilterItems(
+                FilterByScope(catalogItems.Value, scopeFilter).ToArray(),
+                normalizedSearchText)
+            .ToArray();
+
+        return Task.FromResult(items);
+    }
+
     private IReadOnlyList<ProcessDefinitionCatalogItemProjection> LoadCatalogItems()
     {
         return templatePackLoader.Load().Definitions

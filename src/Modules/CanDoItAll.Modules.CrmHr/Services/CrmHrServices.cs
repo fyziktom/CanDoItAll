@@ -4671,6 +4671,7 @@ public sealed class ProjectPartyIntegrationService(
                     item.Id,
                     item.DisplayName,
                     ResolvePartyTypeLabel(item.PartyType),
+                    MapProjectPartyType(item.PartyType),
                     ResolvePrimaryContactValue(partyContacts, PartyContactType.Email),
                     ResolvePrimaryContactValue(partyContacts, PartyContactType.Phone),
                     item.IsSensitive);
@@ -4705,6 +4706,7 @@ public sealed class ProjectPartyIntegrationService(
             party.Id,
             party.DisplayName,
             ResolvePartyTypeLabel(party.PartyType),
+            MapProjectPartyType(party.PartyType),
             ResolvePrimaryContactValue(contacts, PartyContactType.Email),
             ResolvePrimaryContactValue(contacts, PartyContactType.Phone),
             party.IsSensitive);

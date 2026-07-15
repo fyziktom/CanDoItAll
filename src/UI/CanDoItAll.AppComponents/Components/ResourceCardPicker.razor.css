@@ -1,0 +1,178 @@
+.resource-card-picker {
+    min-width: 0;
+    width: 100%;
+}
+
+.resource-card-picker__search {
+    width: 100%;
+}
+
+.resource-card-picker__results {
+    min-width: 0;
+    width: 100%;
+}
+
+.resource-card-picker__results--bounded {
+    box-sizing: border-box;
+    max-height: min(30rem, 55vh);
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior-y: contain;
+    padding: 0.15rem 0.4rem 0.4rem 0.15rem;
+    scrollbar-gutter: stable;
+}
+
+.resource-card-picker__results--unbounded {
+    max-height: none;
+    overflow: visible;
+}
+
+.resource-card-picker__card {
+    background: rgb(248 250 252);
+    border: 1px solid rgb(226 232 240);
+    border-radius: 1rem;
+    color: rgb(15 23 42);
+    display: flex;
+    min-height: 11rem;
+    overflow: hidden;
+    position: relative;
+    transition: border-color 120ms ease, box-shadow 120ms ease, transform 120ms ease;
+    width: 100%;
+}
+
+.resource-card-picker__card:hover,
+.resource-card-picker__card:focus-within {
+    border-color: rgb(14 165 233);
+    box-shadow: 0 12px 28px rgb(15 23 42 / 0.08);
+    transform: translateY(-1px);
+}
+
+.resource-card-picker__card--selected {
+    background: rgb(240 249 255);
+    border-color: rgb(56 189 248);
+    box-shadow: inset 0 0 0 1px rgb(56 189 248 / 0.4);
+}
+
+.resource-card-picker__card--disabled {
+    background: rgb(241 245 249);
+    transform: none;
+}
+
+.resource-card-picker__select {
+    background: transparent;
+    border: 0;
+    color: inherit;
+    cursor: pointer;
+    display: block;
+    flex: 1 1 auto;
+    font: inherit;
+    min-width: 0;
+    padding: 1rem;
+    text-align: left;
+    width: 100%;
+}
+
+.resource-card-picker__card--has-favorite .resource-card-picker__select {
+    padding-top: 1.35rem;
+}
+
+.resource-card-picker__select:focus-visible {
+    outline: 2px solid rgb(14 165 233);
+    outline-offset: -0.25rem;
+}
+
+.resource-card-picker__select:disabled {
+    cursor: not-allowed;
+    opacity: 0.66;
+}
+
+.resource-card-picker__favorite {
+    align-items: center;
+    background: rgb(255 255 255 / 0.92);
+    border: 1px solid rgb(226 232 240);
+    border-radius: 999px;
+    color: rgb(148 163 184);
+    cursor: pointer;
+    display: inline-flex;
+    height: 2rem;
+    justify-content: center;
+    position: absolute;
+    right: 0.65rem;
+    top: 0.65rem;
+    transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease, transform 120ms ease;
+    width: 2rem;
+    z-index: 2;
+}
+
+.resource-card-picker__favorite:hover:not(:disabled),
+.resource-card-picker__favorite:focus-visible {
+    border-color: rgb(250 204 21);
+    color: rgb(202 138 4);
+    outline: none;
+    transform: scale(1.04);
+}
+
+.resource-card-picker__favorite--active {
+    background: rgb(254 249 195);
+    border-color: rgb(250 204 21);
+    color: rgb(202 138 4);
+}
+
+.resource-card-picker__favorite:disabled {
+    cursor: not-allowed;
+    opacity: 0.62;
+}
+
+.resource-card-picker__identity {
+    align-items: flex-start;
+    display: flex;
+    gap: 0.85rem;
+    min-width: 0;
+}
+
+.resource-card-picker__identity-copy {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.resource-card-picker__icon {
+    align-items: center;
+    background: rgb(224 242 254);
+    border-radius: 0.75rem;
+    color: rgb(3 105 161);
+    display: inline-flex;
+    flex: 0 0 auto;
+    font-size: 1.35rem;
+    height: 2.5rem;
+    justify-content: center;
+    width: 2.5rem;
+}
+
+.resource-card-picker__title {
+    margin-top: 0.65rem;
+    overflow-wrap: anywhere;
+}
+
+.resource-card-picker__subtitle,
+.resource-card-picker__description,
+.resource-card-picker__meta,
+.resource-card-picker__disabled-reason {
+    overflow-wrap: anywhere;
+}
+
+.resource-card-picker__description {
+    color: rgb(71 85 105);
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+}
+
+.resource-card-picker__meta {
+    color: rgb(100 116 139);
+}
+
+.resource-card-picker__disabled-reason {
+    color: rgb(180 83 9);
+    font-weight: 600;
+}

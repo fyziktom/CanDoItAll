@@ -102,7 +102,7 @@ public sealed class ProjectPartyAssignmentFlowTests
         await page.GetByTestId("project-structure-participant-local-only").WaitForAsync();
         await page.GetByTestId("project-structure-participant-local-only").UncheckAsync();
         await page.GetByTestId("project-structure-participant-party").WaitForAsync();
-        await page.GetByTestId("project-structure-participant-party").SelectOptionAsync(seed.OwnerId.ToString());
+        await page.GetByTestId($"project-structure-participant-party-option-{seed.OwnerId:N}").ClickAsync();
         await page.GetByTestId("project-structure-participant-save").ClickAsync();
         await ExpectTextContainsAsync(page.GetByTestId("project-structure-party-editor-message"), "Participant linked to the directory.");
 
@@ -126,7 +126,7 @@ public sealed class ProjectPartyAssignmentFlowTests
 
         await page.GetByTestId(BuildOutlineNodeTestId(seed.WorkItemNodeId)).ClickAsync();
         await page.GetByTestId("project-structure-work-item-party").WaitForAsync();
-        await page.GetByTestId("project-structure-work-item-party").SelectOptionAsync(seed.OwnerId.ToString());
+        await page.GetByTestId($"project-structure-work-item-party-option-{seed.OwnerId:N}").ClickAsync();
         await page.GetByTestId("project-structure-work-item-save").ClickAsync();
         await ExpectTextContainsAsync(page.GetByTestId("project-structure-party-editor-message"), "Work-item assignee saved.");
 

@@ -74,7 +74,10 @@ public sealed class ProjectPartyAssignmentIntegrationTests
         Assert.Contains("Acme Customer", context.SearchText, StringComparison.Ordinal);
 
         var options = await bridge.ListPartyOptionsAsync(projectId);
-        Assert.Contains(options, item => item.PartyId == createdParty!.PartyId && item.PartyTypeLabel == "AI agent");
+        Assert.Contains(options, item =>
+            item.PartyId == createdParty!.PartyId &&
+            item.PartyType == ProjectPartyType.AiAgent &&
+            item.PartyTypeLabel == "AI agent");
     }
 
     [Fact]

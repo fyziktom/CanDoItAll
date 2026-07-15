@@ -334,6 +334,8 @@ ProjectWorkbenchLifecycleService lifecycleService,
 ProjectWorkbenchCommandService commandService,
 ProjectWorkbenchCrossModuleMutationService crossModuleMutationService) : IProjectWorkbenchSeedService
 {
+    private const string GanttTaskSubtype = "task";
+    private const string GanttViewStateSurfaceKind = "gantt";
     private static readonly ProjectStructureInvariantService InvariantService = new();
 
     public async Task<ProjectStructureSurface> GetStructureAsync(Guid projectId, CancellationToken cancellationToken = default)
@@ -1119,22 +1121,125 @@ ProjectWorkbenchCrossModuleMutationService crossModuleMutationService) : IProjec
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         await ProjectWorkbenchSchemaInitializer.EnsureAsync(dbContext, cancellationToken);
-        var record = await dbContext.Set<ProjectWorkbenchViewStateRecord>()
-            .FirstOrDefaultAsync(item => item.ProjectId == projectId && item.SurfaceKind == surfaceKind, cancellationToken);
-        if (record is null)
-        {
-            record = new ProjectWorkbenchViewStateRecord
-            {
-                ProjectId = projectId,
-                SurfaceKind = surfaceKind
-            };
+        await UpsertViewStateAsync(dbContext, projectId, surfaceKind, stateJson, cancellationToken);
+        await dbContext.SaveChangesAsync(cancellationToken);
+    }
 
-            await dbContext.Set<ProjectWorkbenchViewStateRecord>().AddAsync(record, cancellationToken);
+    public async Task<ProjectStructureGanttViewState> LoadGanttViewStateAsync(
+        Guid projectId,
+        CancellationToken cancellationToken = default)
+    {
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        await ProjectWorkbenchSchemaInitializer.EnsureAsync(dbContext, cancellationToken);
+
+        var state = ProjectStructureGanttViewState.Parse(await LoadViewStateAsync(
+            dbContext,
+            projectId,
+            GanttViewStateSurfaceKind,
+            cancellationToken));
+        var taskNodeIds = await LoadCanonicalGanttTaskNodeIdsAsync(dbContext, projectId, cancellationToken);
+        return new ProjectStructureGanttViewState(state.ResolveOrderedTaskNodeIds(taskNodeIds));
+    }
+
+    internal async Task SaveGanttViewStateAsync(
+        Guid projectId,
+        ProjectStructureGanttViewState state,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(state);
+
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        await ProjectWorkbenchSchemaInitializer.EnsureAsync(dbContext, cancellationToken);
+
+        var taskNodeIds = await LoadCanonicalGanttTaskNodeIdsAsync(dbContext, projectId, cancellationToken);
+        var normalizedState = new ProjectStructureGanttViewState(state.ResolveOrderedTaskNodeIds(taskNodeIds));
+        await PersistGanttViewStateAsync(dbContext, projectId, normalizedState, cancellationToken);
+    }
+
+    internal async Task<ProjectStructureGanttViewState> InsertGanttTaskIntoRowOrderAsync(
+        Guid projectId,
+        string taskNodeId,
+        string? afterTaskNodeId,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(taskNodeId);
+        if (string.Equals(taskNodeId, afterTaskNodeId, StringComparison.Ordinal))
+        {
+            throw new ArgumentException("A Gantt task cannot be inserted after itself.", nameof(afterTaskNodeId));
         }
 
-        record.StateJson = string.IsNullOrWhiteSpace(stateJson) ? "{}" : stateJson;
-        record.UpdatedAtUtc = clock.GetUtcNow();
-        await dbContext.SaveChangesAsync(cancellationToken);
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        await ProjectWorkbenchSchemaInitializer.EnsureAsync(dbContext, cancellationToken);
+
+        var taskNodeIds = await LoadCanonicalGanttTaskNodeIdsAsync(dbContext, projectId, cancellationToken);
+        EnsureCanonicalGanttTask(taskNodeIds, taskNodeId);
+        var state = await LoadNormalizedGanttViewStateAsync(dbContext, projectId, taskNodeIds, cancellationToken);
+        var orderedTaskNodeIds = state.OrderedTaskNodeIds.ToList();
+        orderedTaskNodeIds.Remove(taskNodeId);
+
+        if (string.IsNullOrWhiteSpace(afterTaskNodeId))
+        {
+            orderedTaskNodeIds.Add(taskNodeId);
+        }
+        else
+        {
+            var anchorIndex = orderedTaskNodeIds.IndexOf(afterTaskNodeId);
+            if (anchorIndex < 0)
+            {
+                throw new InvalidOperationException($"Gantt row anchor '{afterTaskNodeId}' is not a canonical task in project '{projectId}'.");
+            }
+
+            orderedTaskNodeIds.Insert(anchorIndex + 1, taskNodeId);
+        }
+
+        var updatedState = new ProjectStructureGanttViewState(orderedTaskNodeIds);
+        await PersistGanttViewStateAsync(dbContext, projectId, updatedState, cancellationToken);
+        return updatedState;
+    }
+
+    internal async Task<ProjectStructureGanttViewState> MoveGanttTaskInRowOrderAsync(
+        Guid projectId,
+        ProjectStructureGanttRowMoveRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        ArgumentException.ThrowIfNullOrWhiteSpace(request.TaskNodeId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(request.AnchorTaskNodeId);
+        if (string.Equals(request.TaskNodeId, request.AnchorTaskNodeId, StringComparison.Ordinal))
+        {
+            throw new ArgumentException("A Gantt task cannot be moved relative to itself.", nameof(request));
+        }
+
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        await ProjectWorkbenchSchemaInitializer.EnsureAsync(dbContext, cancellationToken);
+
+        var taskNodeIds = await LoadCanonicalGanttTaskNodeIdsAsync(dbContext, projectId, cancellationToken);
+        EnsureCanonicalGanttTask(taskNodeIds, request.TaskNodeId);
+        EnsureCanonicalGanttTask(taskNodeIds, request.AnchorTaskNodeId);
+        var state = await LoadNormalizedGanttViewStateAsync(dbContext, projectId, taskNodeIds, cancellationToken);
+        var orderedTaskNodeIds = state.OrderedTaskNodeIds.ToList();
+        var taskIndex = orderedTaskNodeIds.IndexOf(request.TaskNodeId);
+        var anchorIndex = orderedTaskNodeIds.IndexOf(request.AnchorTaskNodeId);
+        var hasExpectedAdjacency = request.Placement switch
+        {
+            ProjectStructureGanttRowPlacement.Before => anchorIndex == taskIndex - 1,
+            ProjectStructureGanttRowPlacement.After => anchorIndex == taskIndex + 1,
+            _ => throw new ArgumentOutOfRangeException(nameof(request), request.Placement, "Unsupported Gantt row placement.")
+        };
+        if (!hasExpectedAdjacency)
+        {
+            throw new ProjectStructureGanttRowOrderConflictException(
+                request.TaskNodeId,
+                request.AnchorTaskNodeId,
+                request.Placement);
+        }
+
+        (orderedTaskNodeIds[taskIndex], orderedTaskNodeIds[anchorIndex]) =
+            (orderedTaskNodeIds[anchorIndex], orderedTaskNodeIds[taskIndex]);
+
+        var updatedState = new ProjectStructureGanttViewState(orderedTaskNodeIds);
+        await PersistGanttViewStateAsync(dbContext, projectId, updatedState, cancellationToken);
+        return updatedState;
     }
 
     public async Task<ArtifactReference?> ExecuteNodeCommandAsync(Guid projectId, string nodeKey, ProjectStructureCommandKind commandKind, CancellationToken cancellationToken = default)
@@ -1253,6 +1358,89 @@ ProjectWorkbenchCrossModuleMutationService crossModuleMutationService) : IProjec
             string.Empty,
             string.Empty,
             string.Empty);
+    }
+
+    private static async Task<IReadOnlyList<string>> LoadCanonicalGanttTaskNodeIdsAsync(
+        AppDbContext dbContext,
+        Guid projectId,
+        CancellationToken cancellationToken)
+    {
+        var workItems = await dbContext.Set<ProjectObjectRecord>()
+            .Where(item =>
+                item.ProjectId == projectId &&
+                item.ObjectType == ProjectObjectType.WorkItem &&
+                !item.IsSystemManaged)
+            .OrderBy(item => item.PositionY)
+            .ThenBy(item => item.PositionX)
+            .ThenBy(item => item.NodeKey)
+            .Select(item => new { item.NodeKey, item.ObjectSubtype })
+            .ToListAsync(cancellationToken);
+
+        return workItems
+            .Where(item => string.Equals(item.ObjectSubtype, GanttTaskSubtype, StringComparison.OrdinalIgnoreCase))
+            .Select(item => item.NodeKey)
+            .ToArray();
+    }
+
+    private static void EnsureCanonicalGanttTask(IReadOnlyList<string> taskNodeIds, string taskNodeId)
+    {
+        if (!taskNodeIds.Contains(taskNodeId, StringComparer.Ordinal))
+        {
+            throw new InvalidOperationException($"Project structure node '{taskNodeId}' is not a canonical Gantt task.");
+        }
+    }
+
+    private static async Task<ProjectStructureGanttViewState> LoadNormalizedGanttViewStateAsync(
+        AppDbContext dbContext,
+        Guid projectId,
+        IReadOnlyList<string> taskNodeIds,
+        CancellationToken cancellationToken)
+    {
+        var state = ProjectStructureGanttViewState.Parse(await LoadViewStateAsync(
+            dbContext,
+            projectId,
+            GanttViewStateSurfaceKind,
+            cancellationToken));
+        return new ProjectStructureGanttViewState(state.ResolveOrderedTaskNodeIds(taskNodeIds));
+    }
+
+    private async Task PersistGanttViewStateAsync(
+        AppDbContext dbContext,
+        Guid projectId,
+        ProjectStructureGanttViewState state,
+        CancellationToken cancellationToken)
+    {
+        await UpsertViewStateAsync(
+            dbContext,
+            projectId,
+            GanttViewStateSurfaceKind,
+            state.ToJson(),
+            cancellationToken);
+        await dbContext.SaveChangesAsync(cancellationToken);
+    }
+
+    private async Task UpsertViewStateAsync(
+        AppDbContext dbContext,
+        Guid projectId,
+        string surfaceKind,
+        string stateJson,
+        CancellationToken cancellationToken)
+    {
+        var record = await dbContext.Set<ProjectWorkbenchViewStateRecord>()
+            .FirstOrDefaultAsync(item => item.ProjectId == projectId && item.SurfaceKind == surfaceKind, cancellationToken);
+        if (record is null)
+        {
+            record = new ProjectWorkbenchViewStateRecord
+            {
+                ProjectId = projectId,
+                SurfaceKind = surfaceKind
+            };
+
+            await dbContext.Set<ProjectWorkbenchViewStateRecord>().AddAsync(record, cancellationToken);
+        }
+
+        record.StateJson = string.IsNullOrWhiteSpace(stateJson) ? "{}" : stateJson;
+        record.UpdatedAtUtc = clock.GetUtcNow();
     }
 
     private static async Task<string?> LoadViewStateAsync(AppDbContext dbContext, Guid projectId, string surfaceKind, CancellationToken cancellationToken)

@@ -49,10 +49,32 @@ public sealed class ProjectStructureGanttProjectionAdapterTests
             });
         Assert.Equal(2, result.Dependencies.Count);
         Assert.DoesNotContain(result.Tasks, task => task.Id == new GanttTaskId("projected-task"));
-        Assert.All(
-            result.Dependencies,
-            dependency => Assert.True(
-                IndexOf(result.Tasks, dependency.PredecessorId) < IndexOf(result.Tasks, dependency.SuccessorId)));
+        Assert.Equal(
+            ["task-c", "task-b", "task-a"],
+            result.Tasks.Select(task => task.Id.Value));
+    }
+
+    [Fact]
+    public void Preferred_row_order_controls_rendering_while_dependencies_control_schedule_propagation()
+    {
+        var projectId = Guid.NewGuid();
+        var predecessor = CreateTask("task-a", "Predecessor", ProjectionOrigin, ProjectionOrigin.AddHours(2));
+        var independent = CreateTask("task-b", "Independent", ProjectionOrigin, ProjectionOrigin.AddHours(1));
+        var successor = CreateTask("task-c", "Successor", durationSeconds: 60 * 60);
+        var surface = CreateSurface(
+            projectId,
+            [predecessor, independent, successor],
+            [new ProjectStructureLink(successor.Id, predecessor.Id, ProjectObjectLinkKind.DependsOn, true, Guid.NewGuid())]);
+
+        var result = Build(surface, preferredTaskNodeIds: [successor.Id, independent.Id, predecessor.Id]);
+
+        Assert.True(result.IsValid);
+        Assert.Equal(
+            [successor.Id, independent.Id, predecessor.Id],
+            result.Tasks.Select(task => task.Id.Value));
+        Assert.Equal(
+            (ProjectionOrigin.AddHours(2), ProjectionOrigin.AddHours(3)),
+            Dates(result, successor.Id));
     }
 
     [Fact]
@@ -171,12 +193,16 @@ public sealed class ProjectStructureGanttProjectionAdapterTests
 
     private static ProjectStructureGanttProjectionResult Build(
         ProjectStructureSurface surface,
-        IReadOnlyCollection<ProjectPartyAssignmentDetail>? assignments = null)
+        IReadOnlyCollection<ProjectPartyAssignmentDetail>? assignments = null,
+        IReadOnlyList<string>? preferredTaskNodeIds = null)
     {
         return new ProjectStructureGanttProjectionAdapter().Build(
             surface,
             assignments ?? [],
-            new ProjectStructureGanttProjectionOptions(ProjectionOrigin, TimeSpan.FromHours(8)));
+            new ProjectStructureGanttProjectionOptions(
+                ProjectionOrigin,
+                TimeSpan.FromHours(8),
+                preferredTaskNodeIds));
     }
 
     private static ProjectStructureSurface CreateSurface(
@@ -268,19 +294,6 @@ public sealed class ProjectStructureGanttProjectionAdapterTests
             null,
             null,
             string.Empty);
-    }
-
-    private static int IndexOf(IReadOnlyList<GanttTask> tasks, GanttTaskId taskId)
-    {
-        for (var index = 0; index < tasks.Count; index++)
-        {
-            if (tasks[index].Id == taskId)
-            {
-                return index;
-            }
-        }
-
-        return -1;
     }
 
     private static (DateTimeOffset Start, DateTimeOffset End) Dates(

@@ -1,0 +1,376 @@
+@namespace CanDoItAll.Modules.Workbench.Pages
+@using System.Globalization
+@using CanDoItAll.AppComponents
+@using CanDoItAll.Components.BaseLib
+@inject DialogService DialogService
+
+<Stack GapScale="LayoutGap.Large"
+       AlignItems="AlignItems.Stretch"
+       Class="project-structure-gantt-task-dialog"
+       data-testid="project-structure-gantt-task-dialog-content">
+    @if (ResourceWarnings.Count > 0)
+    {
+        <Alert AlertStyle="AlertStyle.Warning"
+               data-testid="project-structure-gantt-task-resource-warning">
+            @string.Join(" ", ResourceWarnings)
+        </Alert>
+    }
+
+    <Grid ColumnTemplate="repeat(2,minmax(0,1fr))"
+          Gap="LayoutGap.Medium"
+          Class="project-structure-gantt-task-dialog__schedule-grid">
+        <FormField Text="Task title"
+                   Class="project-structure-gantt-task-dialog__title-field">
+            <TextBox Value="@title"
+                     ValueChanged="HandleTitleChangedAsync"
+                     Placeholder="Describe the task"
+                     Immediate="true"
+                     data-testid="project-structure-gantt-task-title" />
+        </FormField>
+
+        <FormField Text="Length (hours)">
+            <input type="number"
+                   class="project-structure-gantt-task-dialog__input"
+                   min="0.25"
+                   max="8760"
+                   step="0.25"
+                   value="@FormatDurationHours()"
+                   aria-label="Task length in hours"
+                   data-testid="project-structure-gantt-task-duration"
+                   @onchange="HandleDurationChanged" />
+        </FormField>
+
+        <FormField Text="Start (UTC)">
+            <input type="datetime-local"
+                   class="project-structure-gantt-task-dialog__input"
+                   value="@FormatDateTimeLocal(startUtc)"
+                   aria-label="Task start in UTC"
+                   data-testid="project-structure-gantt-task-start"
+                   @onchange="HandleStartChanged" />
+        </FormField>
+
+        <FormField Text="End (UTC)">
+            <input type="datetime-local"
+                   class="project-structure-gantt-task-dialog__input"
+                   value="@FormatDateTimeLocal(endUtc)"
+                   aria-label="Task end in UTC"
+                   data-testid="project-structure-gantt-task-end"
+                   @onchange="HandleEndChanged" />
+        </FormField>
+    </Grid>
+
+    <SurfaceCard Soft="true"
+                 Class="project-structure-gantt-task-dialog__presets">
+        <Cluster Gap="LayoutGap.Small"
+                 Wrap="FlexWrap.Wrap"
+                 AlignItems="AlignItems.Center">
+            <TextBlock TextStyle="TextStyle.Note"
+                       Value="Quick length" />
+            @foreach (var preset in DurationPresets)
+            {
+                <Button Text="@preset.Label"
+                        Size="ButtonSize.Small"
+                        Variant="Variant.Outlined"
+                        ButtonStyle="ButtonStyle.Info"
+                        data-testid="@($"project-structure-gantt-task-preset-{preset.Hours:0.##}")"
+                        Click="@(() => ApplyDurationPreset(preset.Hours))" />
+            }
+            <TextBlock TextStyle="TextStyle.Note"
+                       Value="@(FormatScheduleSummary())"
+                       Class="project-structure-gantt-task-dialog__schedule-summary" />
+        </Cluster>
+    </SurfaceCard>
+
+    <Stack GapScale="LayoutGap.Small"
+           AlignItems="AlignItems.Stretch">
+        <Cluster Gap="LayoutGap.Small"
+                 AlignItems="AlignItems.Center"
+                 JustifyContent="JustifyContent.SpaceBetween"
+                 Wrap="FlexWrap.Wrap">
+            <Stack GapScale="LayoutGap.XSmall">
+                <TextBlock TextStyle="TextStyle.Subtitle2"
+                           Value="Optional task resource" />
+                <TextBlock TextStyle="TextStyle.Note"
+                           Value="Assign one person, agent, workflow, or process now. You can change it later in the project structure." />
+            </Stack>
+            @if (selectedResource is not null)
+            {
+                <Button Text="Clear selection"
+                        Icon="close"
+                        Size="ButtonSize.Small"
+                        Variant="Variant.Text"
+                        ButtonStyle="ButtonStyle.Base"
+                        data-testid="project-structure-gantt-task-resource-clear"
+                        Click="ClearResource" />
+            }
+        </Cluster>
+
+        <ResourceCardPicker TItem="ProjectStructureTaskResourceSelection"
+                            Options="@PickerOptions"
+                            SelectionChanged="SelectResource"
+                            SearchPlaceholder="Search people, agents, workflows, and processes"
+                            EmptyEyebrow="No resources"
+                            EmptyTitle="No resources match this search"
+                            EmptyDescription="Clear the search or create the task without a resource."
+                            DataTestId="project-structure-gantt-task-resource-picker" />
+    </Stack>
+
+    @if (!string.IsNullOrWhiteSpace(validationError))
+    {
+        <Alert AlertStyle="AlertStyle.Danger"
+               data-testid="project-structure-gantt-task-validation-error">
+            @validationError
+        </Alert>
+    }
+
+    <Cluster Gap="LayoutGap.Small"
+             JustifyContent="JustifyContent.End">
+        <Button Text="Cancel"
+                Variant="Variant.Outlined"
+                ButtonStyle="ButtonStyle.Base"
+                data-testid="project-structure-gantt-task-cancel"
+                Click="CancelAsync" />
+        <Button Text="Create task"
+                Icon="add_task"
+                ButtonStyle="ButtonStyle.Info"
+                data-testid="project-structure-gantt-task-submit"
+                Click="SubmitAsync" />
+    </Cluster>
+</Stack>
+
+@code {
+    private const decimal DefaultDurationHours = 8m;
+    private const decimal MaximumDurationHours = 8760m;
+    private const string DateTimeLocalFormat = "yyyy-MM-ddTHH:mm";
+    private static readonly (string Label, decimal Hours)[] DurationPresets =
+    [
+        ("1 h", 1m),
+        ("4 h", 4m),
+        ("1 d", 8m),
+        ("1 w", 40m)
+    ];
+
+    private bool initialized;
+    private string title = "New task";
+    private DateTimeOffset startUtc;
+    private DateTimeOffset endUtc;
+    private ProjectStructureTaskResourceSelection? selectedResource;
+    private string validationError = string.Empty;
+
+    [CascadingParameter]
+    public DialogReference? DialogReference { get; set; }
+
+    [Parameter, EditorRequired]
+    public DateTimeOffset DefaultStartUtc { get; set; }
+
+    [Parameter, EditorRequired]
+    public DateTimeOffset DefaultEndUtc { get; set; }
+
+    [Parameter]
+    public string? AfterTaskNodeId { get; set; }
+
+    [Parameter]
+    public IReadOnlyList<ProjectStructureTaskResourceOption> ResourceOptions { get; set; } = [];
+
+    [Parameter]
+    public IReadOnlyList<string> ResourceWarnings { get; set; } = [];
+
+    private decimal DurationHours => (decimal)(endUtc - startUtc).TotalHours;
+
+    private IReadOnlyList<ResourceCardPickerOption<ProjectStructureTaskResourceSelection>> PickerOptions =>
+        ResourceOptions
+            .Select(option => new ResourceCardPickerOption<ProjectStructureTaskResourceSelection>(
+                new ProjectStructureTaskResourceSelection(option.Kind, option.ResourceId, option.VersionId),
+                option.DisplayName,
+                option.TypeLabel)
+            {
+                Description = option.IsSensitive
+                    ? "Sensitive resource details are hidden."
+                    : option.Description,
+                Icon = ResolveResourceIcon(option.Kind),
+                VisualKind = option.Kind is ProjectStructureTaskResourceKind.Person or ProjectStructureTaskResourceKind.Agent
+                    ? ResourceCardPickerVisualKind.Avatar
+                    : ResourceCardPickerVisualKind.Icon,
+                AvatarFallback = BuildInitials(option.DisplayName),
+                Tags = [option.TypeLabel],
+                IsSelected = selectedResource == new ProjectStructureTaskResourceSelection(option.Kind, option.ResourceId, option.VersionId),
+                IsFavorite = option.IsFavorite,
+                TestId = $"project-structure-gantt-task-resource-{option.Kind.ToString().ToLowerInvariant()}-{option.ResourceId:N}"
+            })
+            .ToList();
+
+    protected override void OnParametersSet()
+    {
+        if (initialized)
+        {
+            return;
+        }
+
+        initialized = true;
+        startUtc = DefaultStartUtc.ToUniversalTime();
+        endUtc = DefaultEndUtc > DefaultStartUtc
+            ? DefaultEndUtc.ToUniversalTime()
+            : startUtc.AddHours((double)DefaultDurationHours);
+    }
+
+    private Task HandleTitleChangedAsync(string? value)
+    {
+        title = value ?? string.Empty;
+        validationError = string.Empty;
+        return Task.CompletedTask;
+    }
+
+    private void HandleStartChanged(ChangeEventArgs args)
+    {
+        if (!TryParseUtc(args.Value, out var nextStart))
+        {
+            validationError = "Enter a valid UTC start date and time.";
+            return;
+        }
+
+        var duration = endUtc - startUtc;
+        startUtc = nextStart;
+        endUtc = startUtc + (duration > TimeSpan.Zero ? duration : TimeSpan.FromHours((double)DefaultDurationHours));
+        validationError = string.Empty;
+    }
+
+    private void HandleEndChanged(ChangeEventArgs args)
+    {
+        if (!TryParseUtc(args.Value, out var nextEnd))
+        {
+            validationError = "Enter a valid UTC end date and time.";
+            return;
+        }
+
+        if (nextEnd <= startUtc)
+        {
+            validationError = "End must be later than start.";
+            return;
+        }
+
+        endUtc = nextEnd;
+        validationError = string.Empty;
+    }
+
+    private void HandleDurationChanged(ChangeEventArgs args)
+    {
+        if (!TryParseDuration(args.Value, out var hours))
+        {
+            validationError = $"Length must be between 0.25 and {MaximumDurationHours:0} hours.";
+            return;
+        }
+
+        ApplyDurationPreset(hours);
+    }
+
+    private void ApplyDurationPreset(decimal hours)
+    {
+        endUtc = startUtc.AddHours((double)hours);
+        validationError = string.Empty;
+    }
+
+    private void SelectResource(ProjectStructureTaskResourceSelection selection)
+    {
+        selectedResource = selection;
+    }
+
+    private void ClearResource()
+    {
+        selectedResource = null;
+    }
+
+    private async Task SubmitAsync()
+    {
+        var normalizedTitle = title.Trim();
+        if (normalizedTitle.Length == 0)
+        {
+            validationError = "Task title is required.";
+            return;
+        }
+
+        if (normalizedTitle.Length > 200)
+        {
+            validationError = "Task title cannot exceed 200 characters.";
+            return;
+        }
+
+        if (endUtc <= startUtc || DurationHours is < 0.25m or > MaximumDurationHours)
+        {
+            validationError = $"Length must be between 0.25 and {MaximumDurationHours:0} hours.";
+            return;
+        }
+
+        var result = new ProjectStructureTaskCreateRequest(
+            normalizedTitle,
+            startUtc,
+            endUtc,
+            AfterTaskNodeId,
+            selectedResource);
+        if (DialogReference is null)
+        {
+            await DialogService.CloseAsync(result);
+            return;
+        }
+
+        await DialogReference.CloseAsync(result);
+    }
+
+    private Task CancelAsync()
+        => DialogReference is null
+            ? DialogService.CloseAsync()
+            : DialogReference.CloseAsync();
+
+    private string FormatDurationHours()
+        => DurationHours.ToString("0.##", CultureInfo.InvariantCulture);
+
+    private string FormatScheduleSummary()
+        => $"{DurationHours:0.##} h · {DurationHours / 8m:0.##} man-day(s)";
+
+    private static string FormatDateTimeLocal(DateTimeOffset value)
+        => value.ToUniversalTime().ToString(DateTimeLocalFormat, CultureInfo.InvariantCulture);
+
+    private static bool TryParseUtc(object? value, out DateTimeOffset result)
+    {
+        var text = Convert.ToString(value, CultureInfo.InvariantCulture);
+        if (DateTimeOffset.TryParse(
+                text,
+                CultureInfo.InvariantCulture,
+                DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal,
+                out var parsed))
+        {
+            result = parsed.ToUniversalTime();
+            return true;
+        }
+
+        result = default;
+        return false;
+    }
+
+    private static bool TryParseDuration(object? value, out decimal hours)
+    {
+        return decimal.TryParse(
+                   value?.ToString(),
+                   NumberStyles.Number,
+                   CultureInfo.InvariantCulture,
+                   out hours) &&
+               hours is >= 0.25m and <= MaximumDurationHours;
+    }
+
+    private static string ResolveResourceIcon(ProjectStructureTaskResourceKind kind)
+        => kind switch
+        {
+            ProjectStructureTaskResourceKind.Person => "person",
+            ProjectStructureTaskResourceKind.Agent => "smart_toy",
+            ProjectStructureTaskResourceKind.Workflow => "account_tree",
+            ProjectStructureTaskResourceKind.Process => "schema",
+            _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, "Unknown task resource kind.")
+        };
+
+    private static string BuildInitials(string value)
+    {
+        var words = value.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        return words.Length == 0
+            ? "R"
+            : string.Concat(words.Take(2).Select(static word => char.ToUpperInvariant(word[0])));
+    }
+}

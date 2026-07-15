@@ -103,19 +103,16 @@ public partial class ProjectStructurePage
         processLinkDialog = null;
     }
 
-    private void HandleProcessLinkSelectionChanged(ChangeEventArgs args)
+    private void HandleProcessLinkSelectionChanged(Guid definitionId)
     {
         if (processLinkDialog is null)
         {
             return;
         }
 
-        var selectedDefinitionId = Guid.TryParse(args.Value?.ToString(), out var parsedDefinitionId)
-            ? parsedDefinitionId
-            : (Guid?)null;
         processLinkDialog = processLinkDialog with
         {
-            SelectedDefinitionId = selectedDefinitionId,
+            SelectedDefinitionId = definitionId,
             Error = string.Empty
         };
     }

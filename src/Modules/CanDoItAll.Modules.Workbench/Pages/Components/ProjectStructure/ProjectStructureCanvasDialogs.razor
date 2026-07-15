@@ -213,7 +213,7 @@
             <Button Text="@processDialog.SubmitLabel"
                     ButtonStyle="ButtonStyle.Info"
                     data-testid="project-structure-process-link-submit"
-                    Disabled="@(processDialog.Options.Count == 0)"
+                    Disabled="@(processDialog.Options.Count == 0 || !processDialog.SelectedDefinitionId.HasValue)"
                     Click="ExecuteProcessLink" />
         </Actions>
         <Body>
@@ -221,16 +221,12 @@
                 <PanelCard>
                     <Stack GapScale="LayoutGap.Small">
                         <TextBlock TextStyle="TextStyle.Footer" Value="Process" Class="cw-panel-copy" />
-                        <select class="cw-context-toolbox__search"
-                                data-testid="project-structure-process-link-select"
-                                value="@(processDialog.SelectedDefinitionId?.ToString() ?? string.Empty)"
-                                @onchange="ProcessLinkSelectionChanged">
-                            <option value="">Select a process</option>
-                            @foreach (var option in processDialog.Options)
-                            {
-                                <option value="@option.DefinitionId">@option.DisplayName</option>
-                            }
-                        </select>
+                        <ResourceCardPicker TItem="Guid"
+                                            Options="@BuildProcessLinkPickerOptions(processDialog)"
+                                            SelectionChanged="ProcessLinkSelectionChanged"
+                                            SearchPlaceholder="Search process definitions"
+                                            EmptyTitle="No processes match the current search"
+                                            DataTestId="project-structure-process-link-select" />
                     </Stack>
                 </PanelCard>
 
@@ -298,19 +294,12 @@
                 <PanelCard>
                     <Stack GapScale="LayoutGap.Small">
                         <TextBlock TextStyle="TextStyle.Footer" Value="Workflow" Class="cw-panel-copy" />
-                        <select class="cw-context-toolbox__search"
-                                data-testid="project-structure-workflow-add-select"
-                                value="@(workflowDialog.SelectedWorkflowId?.Value.ToString("D") ?? string.Empty)"
-                                @onchange="WorkflowAddSelectionChanged">
-                            <option value="">Select a workflow</option>
-                            @foreach (var option in workflowDialog.Options)
-                            {
-                                <option value="@option.WorkflowId.Value"
-                                        disabled="@(!option.IsSelectable)">
-                                    @($"{option.DisplayName} ({option.Status})")
-                                </option>
-                            }
-                        </select>
+                        <ResourceCardPicker TItem="WorkflowId"
+                                            Options="@BuildWorkflowPickerOptions(workflowDialog)"
+                                            SelectionChanged="WorkflowAddSelectionChanged"
+                                            SearchPlaceholder="Search workflow definitions"
+                                            EmptyTitle="No workflows match the current search"
+                                            DataTestId="project-structure-workflow-add-select" />
                     </Stack>
                 </PanelCard>
 
@@ -1048,7 +1037,7 @@
     public EventCallback CloseProcessLink { get; set; }
 
     [Parameter]
-    public EventCallback<ChangeEventArgs> ProcessLinkSelectionChanged { get; set; }
+    public EventCallback<Guid> ProcessLinkSelectionChanged { get; set; }
 
     [Parameter]
     public EventCallback ExecuteProcessLink { get; set; }
@@ -1060,7 +1049,7 @@
     public EventCallback CloseWorkflowAdd { get; set; }
 
     [Parameter]
-    public EventCallback<ChangeEventArgs> WorkflowAddSelectionChanged { get; set; }
+    public EventCallback<WorkflowId> WorkflowAddSelectionChanged { get; set; }
 
     [Parameter]
     public EventCallback<ChangeEventArgs> WorkflowAddIncludeParentSubtreeChanged { get; set; }
@@ -1207,6 +1196,50 @@
 
     private static string FormatUsd(decimal amount)
         => string.Concat("$", amount.ToString("N2", System.Globalization.CultureInfo.InvariantCulture));
+
+    private static IReadOnlyList<ResourceCardPickerOption<Guid>> BuildProcessLinkPickerOptions(
+        ProjectStructureProcessLinkDialogState dialog)
+    {
+        return dialog.Options
+            .Select(option => new ResourceCardPickerOption<Guid>(
+                option.DefinitionId,
+                option.DisplayName,
+                "Process")
+            {
+                Subtitle = $"{option.ScopeLabel} scope",
+                Description = option.HasPublishedVersion
+                    ? "A published version is available."
+                    : "No published version is available yet.",
+                Meta = option.Status,
+                Icon = "account_tree",
+                Tags = [option.Status],
+                IsSelected = dialog.SelectedDefinitionId == option.DefinitionId,
+                TestId = $"project-structure-process-link-option-{option.DefinitionId:N}"
+            })
+            .ToList();
+    }
+
+    private static IReadOnlyList<ResourceCardPickerOption<WorkflowId>> BuildWorkflowPickerOptions(
+        ProjectStructureWorkflowAddDialogState dialog)
+    {
+        return dialog.Options
+            .Select(option => new ResourceCardPickerOption<WorkflowId>(
+                option.WorkflowId,
+                option.DisplayName,
+                "Workflow")
+            {
+                Subtitle = $"{option.PreferredBackend} backend",
+                Description = option.Description,
+                Meta = option.Status.ToString(),
+                Icon = "account_tree",
+                Tags = [option.Status.ToString()],
+                IsSelected = dialog.SelectedWorkflowId == option.WorkflowId,
+                IsDisabled = !option.IsSelectable,
+                DisabledReason = option.DisabledReason,
+                TestId = $"project-structure-workflow-add-option-{option.WorkflowId.Value:N}"
+            })
+            .ToList();
+    }
 
     private static string NormalizeTestIdToken(string value)
         => string.IsNullOrWhiteSpace(value)
