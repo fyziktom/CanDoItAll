@@ -239,7 +239,8 @@ public sealed class ProjectStructureWorkflowNodeService(
                 ExternalBinding: new ProjectObjectExternalBindingRequest(
                     BuildWorkflowRoute(projectId, detail.Definition.Id),
                     "workflow-definition",
-                    detail.Definition.Id.Value)),
+                    detail.Definition.Id.Value),
+                PlacementIntent: ProjectObjectPlacementIntent.AutomaticAroundParent),
             cancellationToken);
 
         return new ProjectStructureWorkflowNodeCreateResult(

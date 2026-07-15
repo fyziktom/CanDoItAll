@@ -157,6 +157,7 @@ public sealed class ProjectStructurePageMoveTests
             Assert.Contains(movedTask.Id, workbench.Instance.Surface.UiState.SelectedNodeIds);
             Assert.Contains(movedEvidence.Id, workbench.Instance.Surface.UiState.SelectedNodeIds);
             Assert.Contains("2 nodes selected", cut.Markup);
+            Assert.False(workbench.Instance.Surface.Chrome.TransformHandles.IsEnabled);
         });
 
         await cut.InvokeAsync(() => cut.FindComponent<CanvasWorkbench>().Instance.OnNodesMoved(JsonSerializer.Serialize<IReadOnlyList<CanvasWorkbenchNodePositionChange>>(
@@ -172,6 +173,7 @@ public sealed class ProjectStructurePageMoveTests
             Assert.Contains(movedTask.Id, workbench.Instance.Surface.UiState.SelectedNodeIds);
             Assert.Contains(movedEvidence.Id, workbench.Instance.Surface.UiState.SelectedNodeIds);
             Assert.Contains("2 nodes selected", cut.Markup);
+            Assert.False(workbench.Instance.Surface.Chrome.TransformHandles.IsEnabled);
         });
 
         var reloadedSurface = await workbenchService.GetStructureAsync(projectId);
@@ -186,6 +188,7 @@ public sealed class ProjectStructurePageMoveTests
         Assert.Equal(260d, movedEvidenceNode.Y);
         Assert.Contains(movedTask.Id, frame.AnchorNodeIds);
         Assert.Contains(movedEvidence.Id, frame.AnchorNodeIds);
+
     }
 
     private static async Task<Guid> CreateProjectAsync(ProjectsService projectsService, string name)

@@ -215,13 +215,14 @@ internal sealed class ProjectStructureProcessProjectionContributor(
                 preferredDefinitionParentByNodeKey);
         }
 
+        var placementSession = new ProjectStructureAutomaticPlacementSession(context.AllNodes);
         foreach (var run in runtimeStates.Select((state, index) => new { State = state, Index = index }))
         {
             plansById.TryGetValue(run.State.PlanId, out var plan);
             var definitionItem = plan is null
                 ? null
                 : catalogItemsByDefinitionId.GetValueOrDefault(plan.DefinitionId);
-            AddRunNode(
+            var runNode = AddRunNode(
                 context,
                 run.State,
                 plan,
@@ -229,18 +230,23 @@ internal sealed class ProjectStructureProcessProjectionContributor(
                 stepStatsByRunId.GetValueOrDefault(run.State.RunId, ProcessRunProjectionStats.Empty(run.State.RunId)),
                 run.Index,
                 preferredRunParentByNodeKey);
+            if (runNode is not null)
+            {
+                placementSession.Add(runNode);
+            }
+
             AddRunOutputNodes(
                 context,
+                placementSession,
                 run.State,
-                run.Index,
                 outputFoldersByRunId.GetValueOrDefault(run.State.RunId, []));
             AddRunEvidenceNodes(
                 context,
+                placementSession,
                 run.State,
                 plan,
                 definitionItem,
                 stepStatsByRunId.GetValueOrDefault(run.State.RunId, ProcessRunProjectionStats.Empty(run.State.RunId)),
-                run.Index,
                 projectScopedRunReferencesByRunId.GetValueOrDefault(run.State.RunId, []));
         }
     }
@@ -291,7 +297,7 @@ internal sealed class ProjectStructureProcessProjectionContributor(
         }
     }
 
-    private static void AddRunNode(
+    private static ProjectObjectRecord? AddRunNode(
         ProjectStructureProjectionContext context,
         ProjectStructureProcessRuntimeState state,
         ProjectStructureProcessPlan? plan,
@@ -314,7 +320,7 @@ internal sealed class ProjectStructureProcessProjectionContributor(
             ? -1
             : Math.Clamp((int)Math.Round(stats.CompletedStepCount * 100d / stats.TotalStepCount, MidpointRounding.AwayFromZero), 0, 100);
 
-        context.AddNode(new ProjectObjectRecord
+        var runNode = new ProjectObjectRecord
         {
             ProjectId = context.ProjectId,
             NodeKey = runNodeKey,
@@ -334,20 +340,22 @@ internal sealed class ProjectStructureProcessProjectionContributor(
             ProgressPercent = progressPercent,
             CreatedAtUtc = plan?.CreatedAtUtc ?? state.UpdatedAtUtc,
             UpdatedAtUtc = state.UpdatedAtUtc
-        });
+        };
+        context.AddNode(runNode);
 
         if (!context.ContainsNode(runNodeKey))
         {
-            return;
+            return null;
         }
 
         context.AddLink(parentNodeKey, runNodeKey, ProjectObjectLinkKind.Contains);
+        return runNode;
     }
 
     private static void AddRunOutputNodes(
         ProjectStructureProjectionContext context,
+        ProjectStructureAutomaticPlacementSession placementSession,
         ProjectStructureProcessRuntimeState state,
-        int runIndex,
         IReadOnlyList<ProcessRunArtifactRootResolution> outputFolders)
     {
         var runNodeKey = ProjectStructureProcessNodeKeys.BuildProcessRunNodeKey(state.RunId);
@@ -359,7 +367,6 @@ internal sealed class ProjectStructureProcessProjectionContributor(
         var projectableFolders = outputFolders.Count == 0
             ? ProcessRunArtifactRootPolicy.ResolveCurrentRunRoots(state.RunId, [])
             : outputFolders;
-        var folderIndex = 0;
         foreach (var outputFolder in projectableFolders
             .Where(folder => folder.ShouldProject)
             .GroupBy(folder => folder.DirectoryPath, StringComparer.OrdinalIgnoreCase)
@@ -367,8 +374,7 @@ internal sealed class ProjectStructureProcessProjectionContributor(
             .OrderBy(folder => folder.DirectoryPath, StringComparer.OrdinalIgnoreCase))
         {
             var nodeKey = ProjectStructureProcessNodeKeys.BuildProcessRunOutputNodeKey(state.RunId, outputFolder.DirectoryPath);
-            var position = ProjectWorkbenchGraphConventions.GetDefaultPosition(ProjectObjectType.File, (runIndex * 4) + folderIndex);
-            context.AddNode(new ProjectObjectRecord
+            AddRunChildNode(context, placementSession, new ProjectObjectRecord
             {
                 ProjectId = context.ProjectId,
                 NodeKey = nodeKey,
@@ -384,28 +390,19 @@ internal sealed class ProjectStructureProcessProjectionContributor(
                     ProcessRunOutputFolderArtifactKind,
                     state.RunId),
                 ParentNodeKey = runNodeKey,
-                PositionX = position.X,
-                PositionY = position.Y,
                 CreatedAtUtc = state.UpdatedAtUtc,
                 UpdatedAtUtc = state.UpdatedAtUtc
             });
-
-            if (context.ContainsNode(nodeKey))
-            {
-                context.AddLink(runNodeKey, nodeKey, ProjectObjectLinkKind.Contains);
-            }
-
-            folderIndex++;
         }
     }
 
     private void AddRunEvidenceNodes(
         ProjectStructureProjectionContext context,
+        ProjectStructureAutomaticPlacementSession placementSession,
         ProjectStructureProcessRuntimeState state,
         ProjectStructureProcessPlan? plan,
         ProcessDefinitionCatalogItemProjection? definition,
         ProcessRunProjectionStats stats,
-        int runIndex,
         IReadOnlyList<ProjectScopedProcessRunReference> runReferences)
     {
         var runNodeKey = ProjectStructureProcessNodeKeys.BuildProcessRunNodeKey(state.RunId);
@@ -414,23 +411,22 @@ internal sealed class ProjectStructureProcessProjectionContributor(
             return;
         }
 
-        AddRunSummaryNode(context, state, plan, definition, stats, runIndex);
-        AddRunScreenshotNodes(context, state, runIndex);
-        AddRunRuntimeNodes(context, state, runIndex, runReferences);
+        AddRunSummaryNode(context, placementSession, state, plan, definition, stats);
+        AddRunScreenshotNodes(context, placementSession, state);
+        AddRunRuntimeNodes(context, placementSession, state, runReferences);
     }
 
     private static void AddRunSummaryNode(
         ProjectStructureProjectionContext context,
+        ProjectStructureAutomaticPlacementSession placementSession,
         ProjectStructureProcessRuntimeState state,
         ProjectStructureProcessPlan? plan,
         ProcessDefinitionCatalogItemProjection? definition,
-        ProcessRunProjectionStats stats,
-        int runIndex)
+        ProcessRunProjectionStats stats)
     {
         var runNodeKey = ProjectStructureProcessNodeKeys.BuildProcessRunNodeKey(state.RunId);
         var nodeKey = ProjectStructureProcessNodeKeys.BuildProcessRunSummaryNodeKey(state.RunId);
-        var position = ProjectWorkbenchGraphConventions.GetDefaultPosition(ProjectObjectType.Note, (runIndex * 8) + 1);
-        context.AddNode(new ProjectObjectRecord
+        AddRunChildNode(context, placementSession, new ProjectObjectRecord
         {
             ProjectId = context.ProjectId,
             NodeKey = nodeKey,
@@ -446,22 +442,15 @@ internal sealed class ProjectStructureProcessProjectionContributor(
                 ProcessRunSummaryArtifactKind,
                 state.RunId),
             ParentNodeKey = runNodeKey,
-            PositionX = position.X,
-            PositionY = position.Y,
             CreatedAtUtc = plan?.CreatedAtUtc ?? state.UpdatedAtUtc,
             UpdatedAtUtc = state.UpdatedAtUtc
         });
-
-        if (context.ContainsNode(nodeKey))
-        {
-            context.AddLink(runNodeKey, nodeKey, ProjectObjectLinkKind.Contains);
-        }
     }
 
     private void AddRunScreenshotNodes(
         ProjectStructureProjectionContext context,
-        ProjectStructureProcessRuntimeState state,
-        int runIndex)
+        ProjectStructureAutomaticPlacementSession placementSession,
+        ProjectStructureProcessRuntimeState state)
     {
         var runNodeKey = ProjectStructureProcessNodeKeys.BuildProcessRunNodeKey(state.RunId);
         var screenshots = EnumerateRunScreenshots(state.RunId);
@@ -469,13 +458,12 @@ internal sealed class ProjectStructureProcessProjectionContributor(
         {
             var screenshot = screenshots[index];
             var nodeKey = ProjectStructureProcessNodeKeys.BuildProcessRunScreenshotNodeKey(state.RunId, screenshot.RelativePath);
-            var position = ProjectWorkbenchGraphConventions.GetDefaultPosition(ProjectObjectType.ImageAsset, (runIndex * 8) + 2 + index);
             var storageReference = StorageJson.CreateLegacyManagedFileReference(
                 screenshot.RelativePath,
                 screenshot.ContentType,
                 screenshot.FileName,
                 screenshot.Length);
-            context.AddNode(new ProjectObjectRecord
+            AddRunChildNode(context, placementSession, new ProjectObjectRecord
             {
                 ProjectId = context.ProjectId,
                 NodeKey = nodeKey,
@@ -495,23 +483,16 @@ internal sealed class ProjectStructureProcessProjectionContributor(
                     screenshot.FileName,
                     StorageJson.SerializeReference(storageReference)),
                 ParentNodeKey = runNodeKey,
-                PositionX = position.X,
-                PositionY = position.Y,
                 CreatedAtUtc = screenshot.LastWriteTimeUtc,
                 UpdatedAtUtc = screenshot.LastWriteTimeUtc
             });
-
-            if (context.ContainsNode(nodeKey))
-            {
-                context.AddLink(runNodeKey, nodeKey, ProjectObjectLinkKind.Contains);
-            }
         }
     }
 
     private void AddRunRuntimeNodes(
         ProjectStructureProjectionContext context,
+        ProjectStructureAutomaticPlacementSession placementSession,
         ProjectStructureProcessRuntimeState state,
-        int runIndex,
         IReadOnlyList<ProjectScopedProcessRunReference> runReferences)
     {
         var runNodeKey = ProjectStructureProcessNodeKeys.BuildProcessRunNodeKey(state.RunId);
@@ -520,11 +501,10 @@ internal sealed class ProjectStructureProcessProjectionContributor(
         {
             var runtimeProject = runtimeProjects[index];
             var nodeKey = ProjectStructureProcessNodeKeys.BuildProcessRunRuntimeNodeKey(state.RunId, runtimeProject.ProjectPath);
-            var position = ProjectWorkbenchGraphConventions.GetDefaultPosition(ProjectObjectType.Environment, (runIndex * 8) + 8 + index);
             var title = runtimeProjects.Count == 1
                 ? "Run final app"
                 : $"Run {runtimeProject.ProjectName}";
-            context.AddNode(new ProjectObjectRecord
+            AddRunChildNode(context, placementSession, new ProjectObjectRecord
             {
                 ProjectId = context.ProjectId,
                 NodeKey = nodeKey,
@@ -540,16 +520,36 @@ internal sealed class ProjectStructureProcessProjectionContributor(
                     ProcessRunRuntimeArtifactKind,
                     state.RunId),
                 ParentNodeKey = runNodeKey,
-                PositionX = position.X,
-                PositionY = position.Y,
                 CreatedAtUtc = state.UpdatedAtUtc,
                 UpdatedAtUtc = state.UpdatedAtUtc
             });
+        }
+    }
 
-            if (context.ContainsNode(nodeKey))
-            {
-                context.AddLink(runNodeKey, nodeKey, ProjectObjectLinkKind.Contains);
-            }
+    private static void AddRunChildNode(
+        ProjectStructureProjectionContext context,
+        ProjectStructureAutomaticPlacementSession placementSession,
+        ProjectObjectRecord node)
+    {
+        var runNodeKey = node.ParentNodeKey ??
+                         throw new InvalidOperationException($"Projected process child '{node.NodeKey}' requires a process run parent.");
+        var direction = placementSession.ResolveIncomingDirection(runNodeKey);
+        var position = placementSession.Resolve(
+            new ProjectStructureAutomaticPlacementRequest(
+                runNodeKey,
+                node.ObjectType,
+                node.Title,
+                node.Subtitle,
+                node.Notes,
+                RequiredDirection: direction));
+        node.PositionX = position.X;
+        node.PositionY = position.Y;
+        context.AddNode(node);
+
+        if (context.ContainsNode(node.NodeKey))
+        {
+            placementSession.Add(node);
+            context.AddLink(runNodeKey, node.NodeKey, ProjectObjectLinkKind.Contains);
         }
     }
 

@@ -616,12 +616,20 @@ public sealed class ProjectStructureAgentIntegrationTests
         Assert.Equal(ProjectEnvironmentKind.DotNetWatch, runtimeMetadata.Environment?.EnvironmentKind);
         Assert.Equal(appProjectPath, runtimeMetadata.Environment?.ProjectPath);
 
+        ProjectStructureNode[] projectedChildren = [outputNode, summaryNode, screenshotNode, runtimeNode];
+        Assert.All(projectedChildren, child => AssertNodeIsOnOutgoingSide(deliveryNode, runNode, child));
+        AssertNodesDoNotOverlap(projectedChildren);
+
         var refreshedSurface = await workbench.GetStructureAsync(projectId);
-        Assert.Single(refreshedSurface.Nodes, node => string.Equals(node.Id, runNodeId, StringComparison.Ordinal));
-        Assert.Single(refreshedSurface.Nodes, node => string.Equals(node.Id, outputNodeId, StringComparison.Ordinal));
-        Assert.Single(refreshedSurface.Nodes, node => string.Equals(node.Id, summaryNode.Id, StringComparison.Ordinal));
-        Assert.Single(refreshedSurface.Nodes, node => string.Equals(node.Id, screenshotNodeId, StringComparison.Ordinal));
-        Assert.Single(refreshedSurface.Nodes, node => string.Equals(node.Id, runtimeNodeId, StringComparison.Ordinal));
+        ProjectStructureNode[] projectedNodes = [runNode, .. projectedChildren];
+        foreach (var projectedNode in projectedNodes)
+        {
+            var refreshedNode = Assert.Single(
+                refreshedSurface.Nodes,
+                node => string.Equals(node.Id, projectedNode.Id, StringComparison.Ordinal));
+            Assert.Equal(projectedNode.X, refreshedNode.X);
+            Assert.Equal(projectedNode.Y, refreshedNode.Y);
+        }
     }
 
     [Fact]
@@ -3176,6 +3184,74 @@ public sealed class ProjectStructureAgentIntegrationTests
     private static AgentWorkspaceToolAccessSettings WorkspaceAccess(AgentWorkspaceToolProfileKind profile)
     {
         return AgentWorkspaceToolAccessProfiles.CreateSettings(profile);
+    }
+
+    private static void AssertNodeIsOnOutgoingSide(
+        ProjectStructureNode sourceNode,
+        ProjectStructureNode runNode,
+        ProjectStructureNode childNode)
+    {
+        var outgoingDeltaX = runNode.X - sourceNode.X;
+        var outgoingDeltaY = runNode.Y - sourceNode.Y;
+        Assert.True(
+            Math.Abs(outgoingDeltaX) > 0.5d || Math.Abs(outgoingDeltaY) > 0.5d,
+            $"Process run '{runNode.Id}' must not occupy the same position as its source node '{sourceNode.Id}'.");
+
+        var runSize = EstimateProjectStructureCardSize(runNode);
+        var childSize = EstimateProjectStructureCardSize(childNode);
+        var isHorizontal = Math.Abs(outgoingDeltaX) >= Math.Abs(outgoingDeltaY);
+        var outgoingClearance = isHorizontal
+            ? outgoingDeltaX > 0d
+                ? (childNode.X - (childSize.Width / 2d)) - (runNode.X + (runSize.Width / 2d))
+                : (runNode.X - (runSize.Width / 2d)) - (childNode.X + (childSize.Width / 2d))
+            : outgoingDeltaY > 0d
+                ? (childNode.Y - (childSize.Height / 2d)) - (runNode.Y + (runSize.Height / 2d))
+                : (runNode.Y - (runSize.Height / 2d)) - (childNode.Y + (childSize.Height / 2d));
+
+        Assert.True(
+            outgoingClearance >= -0.5d,
+            $"Projected child '{childNode.Id}' is not on the outgoing side of process run '{runNode.Id}'.");
+    }
+
+    private static void AssertNodesDoNotOverlap(IReadOnlyList<ProjectStructureNode> nodes)
+    {
+        for (var firstIndex = 0; firstIndex < nodes.Count; firstIndex++)
+        {
+            var first = nodes[firstIndex];
+            var firstSize = EstimateProjectStructureCardSize(first);
+            for (var secondIndex = firstIndex + 1; secondIndex < nodes.Count; secondIndex++)
+            {
+                var second = nodes[secondIndex];
+                var secondSize = EstimateProjectStructureCardSize(second);
+                var separatedHorizontally = Math.Abs(first.X - second.X) >=
+                                            ((firstSize.Width + secondSize.Width) / 2d) - 0.5d;
+                var separatedVertically = Math.Abs(first.Y - second.Y) >=
+                                          ((firstSize.Height + secondSize.Height) / 2d) - 0.5d;
+
+                Assert.True(
+                    separatedHorizontally || separatedVertically,
+                    $"Projected nodes '{first.Id}' and '{second.Id}' overlap.");
+            }
+        }
+    }
+
+    private static (double Width, double Height) EstimateProjectStructureCardSize(ProjectStructureNode node)
+    {
+        return node.ObjectType switch
+        {
+            ProjectObjectType.ProjectRoot => (288d, 210d),
+            ProjectObjectType.Phase or
+                ProjectObjectType.PromptSession or
+                ProjectObjectType.PromptFlow or
+                ProjectObjectType.ProjectBlock or
+                ProjectObjectType.ProcessDefinition => (272d, 196d),
+            ProjectObjectType.ProcessRun or
+                ProjectObjectType.ValidationRun or
+                ProjectObjectType.TestPlan or
+                ProjectObjectType.Decision or
+                ProjectObjectType.SecretReference => (248d, 178d),
+            _ => (256d, 190d)
+        };
     }
 
     private static byte[] BuildXmindJsonPackage()

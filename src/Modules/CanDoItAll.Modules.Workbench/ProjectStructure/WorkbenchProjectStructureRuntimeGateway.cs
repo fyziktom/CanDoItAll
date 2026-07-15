@@ -121,7 +121,8 @@ public sealed class WorkbenchProjectStructureRuntimeGateway(
                             objectSubtype,
                             MapMedia(request.Media),
                             BuildIdempotentMetadataJson(metadataJson, idempotencyKey, request.IdempotencyBatchKey),
-                            request.DurationSeconds),
+                            request.DurationSeconds,
+                            PlacementIntent: ProjectObjectPlacementIntent.AutomaticAroundParent),
                         cancellationToken);
                     return MapNode(createdNode, createdNode.Priority, FullNodeReadRequest);
                 },
@@ -171,7 +172,8 @@ public sealed class WorkbenchProjectStructureRuntimeGateway(
                             request.ParentNodeKey,
                             ObjectSubtype: ProjectStructureRequestedNodeKindParser.NormalizeSubtypeForType(request.ObjectType, request.ObjectSubtype),
                             Media: media,
-                            MetadataJson: BuildIdempotentMetadataJson(request.MetadataJson, idempotencyKey, request.IdempotencyBatchKey)),
+                            MetadataJson: BuildIdempotentMetadataJson(request.MetadataJson, idempotencyKey, request.IdempotencyBatchKey),
+                            PlacementIntent: ProjectObjectPlacementIntent.AutomaticAroundParent),
                         cancellationToken);
                     return MapNode(createdNode, createdNode.Priority, FullNodeReadRequest);
                 },

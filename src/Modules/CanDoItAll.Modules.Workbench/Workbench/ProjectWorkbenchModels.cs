@@ -22,6 +22,12 @@ public enum ProjectStructureCommandKind
     MarkUsed
 }
 
+public enum ProjectObjectPlacementIntent
+{
+    CallerControlled,
+    AutomaticAroundParent
+}
+
 public sealed partial class ProjectObjectRecord : IProjectObject
 {
     public Guid Id { get; set; } = Guid.NewGuid();
@@ -236,7 +242,8 @@ public sealed record ProjectObjectCreateRequest(
     int? DurationSeconds = null,
     ProjectNodeReferenceCollection? NodeReferences = null,
     ProjectObjectExternalBindingRequest? ExternalBinding = null,
-    string? Status = null);
+    string? Status = null,
+    ProjectObjectPlacementIntent PlacementIntent = ProjectObjectPlacementIntent.CallerControlled);
 
 public sealed record ProjectObjectExternalBindingRequest(
     string Route,
@@ -423,10 +430,21 @@ ProjectWorkbenchCrossModuleMutationService crossModuleMutationService) : IProjec
         var existingNodes = (await projectStructureAssemblyService.LoadAsync(dbContext, projectId, cancellationToken)).Nodes;
         InvariantService.ValidateParentAssignment(projectId, $"pending:{Guid.NewGuid():N}", normalizedParentNodeKey, existingNodes);
 
+        var hasRequestedPosition = request.X.HasValue && request.Y.HasValue;
         var existingCount = existingNodes.Count(item => !item.IsSystemManaged);
-        var position = request.X.HasValue && request.Y.HasValue
-            ? (request.X.Value, request.Y.Value)
-            : ProjectWorkbenchGraphConventions.GetDefaultPosition(request.ObjectType, existingCount + 1);
+        var position = request.PlacementIntent == ProjectObjectPlacementIntent.AutomaticAroundParent
+            ? ProjectStructureAutomaticPlacementPolicy.Resolve(
+                existingNodes,
+                new ProjectStructureAutomaticPlacementRequest(
+                    normalizedParentNodeKey,
+                    request.ObjectType,
+                    request.Title,
+                    request.Subtitle,
+                    request.Notes,
+                    hasRequestedPosition ? (request.X!.Value, request.Y!.Value) : null))
+            : hasRequestedPosition
+                ? (request.X!.Value, request.Y!.Value)
+                : ProjectWorkbenchGraphConventions.GetDefaultPosition(request.ObjectType, existingCount + 1);
         var media = await SaveMediaAsync(projectId, request.ObjectType, request.Media, cancellationToken);
         var binding = ResolveCreateBinding(projectId, request.ObjectType, media, request.ExternalBinding);
         var metadataJson = ProjectWorkbenchObjectModeling.ResolveMetadataJson(request.ObjectType, request.ObjectSubtype, request.MetadataJson, null, request.Notes, media);

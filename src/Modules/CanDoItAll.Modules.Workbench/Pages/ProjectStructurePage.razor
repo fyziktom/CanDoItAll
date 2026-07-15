@@ -1198,6 +1198,10 @@ else
                 SiblingNoteActionId = "add-note",
                 InlineNotePlaceholder = "Write note",
                 CollapseOnDoubleClick = false,
+                TransformHandles = new CanvasWorkbenchTransformHandleOptions
+                {
+                    IsEnabled = false
+                },
                 QuickCreateActions = BuildQuickCreateActions().ToList(),
                 GroupContextActions = actionCatalog.BuildGroupContextActions().ToList()
             },

@@ -197,7 +197,8 @@ public sealed class ProjectStructureAgentService(
                         objectSubtype,
                         request.Media,
                         metadataJson,
-                        request.DurationSeconds),
+                        request.DurationSeconds,
+                        PlacementIntent: ProjectObjectPlacementIntent.AutomaticAroundParent),
                     cancellationToken);
                 return MapNodeSummary(createdNode, createdNode.Priority, FullNodeReadRequest);
             },
@@ -1072,7 +1073,8 @@ public sealed class ProjectStructureAgentService(
                         "approval-request",
                         null,
                         metadataJson,
-                        null),
+                        null,
+                        PlacementIntent: ProjectObjectPlacementIntent.AutomaticAroundParent),
                     cancellationToken);
 
                 return MapNodeSummary(createdNode, createdNode.Priority, FullNodeReadRequest);
@@ -1225,7 +1227,8 @@ public sealed class ProjectStructureAgentService(
                         string.IsNullOrWhiteSpace(request.ObjectSubtype) ? originalNode.ObjectSubtype : request.ObjectSubtype,
                         request.Media,
                         string.IsNullOrWhiteSpace(request.MetadataJson) ? originalAsset.MetadataJson : request.MetadataJson,
-                        originalNode.DurationSeconds),
+                        originalNode.DurationSeconds,
+                        PlacementIntent: ProjectObjectPlacementIntent.AutomaticAroundParent),
                     cancellationToken);
 
                 await projectWorkbenchService.LinkObjectsAsync(projectId, createdRevision.Id, nodeId, ProjectObjectLinkKind.DerivedFrom, cancellationToken);

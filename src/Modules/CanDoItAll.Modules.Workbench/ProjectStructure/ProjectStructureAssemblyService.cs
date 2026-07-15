@@ -48,7 +48,8 @@ public sealed class ProjectStructureProjectionContext(
     AppDbContext dbContext,
     Guid projectId,
     DateTimeOffset assembledAtUtc,
-    IReadOnlyDictionary<string, ProjectStructureProjectionLayoutRecord> layoutOverrides)
+    IReadOnlyDictionary<string, ProjectStructureProjectionLayoutRecord> layoutOverrides,
+    IReadOnlyList<ProjectObjectRecord>? canonicalNodes = null)
 {
     private readonly Dictionary<string, ProjectObjectRecord> _nodesByKey = new(StringComparer.Ordinal);
     private readonly Dictionary<string, ProjectObjectLinkRecord> _linksByKey = new(StringComparer.Ordinal);
@@ -60,6 +61,9 @@ public sealed class ProjectStructureProjectionContext(
     public DateTimeOffset AssembledAtUtc => assembledAtUtc;
 
     public IReadOnlyList<ProjectObjectRecord> Nodes => _nodesByKey.Values.ToList();
+
+    public IReadOnlyList<ProjectObjectRecord> AllNodes =>
+        [.. canonicalNodes ?? [], .. _nodesByKey.Values];
 
     public IReadOnlyList<ProjectObjectLinkRecord> Links => _linksByKey.Values.ToList();
 
@@ -164,7 +168,8 @@ public sealed class ProjectStructureAssemblyService(
             dbContext,
             projectId,
             clock.GetUtcNow(),
-            layoutOverrides);
+            layoutOverrides,
+            canonicalNodes);
 
         foreach (var contributor in _projectionContributors)
         {

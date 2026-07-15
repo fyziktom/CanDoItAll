@@ -356,6 +356,90 @@ public sealed partial class AppSmokeTests
 
     [Fact]
     [Trait("Surface", "SharedCanvas")]
+    public async Task Project_structure_multi_selection_keeps_individual_node_selection_without_an_aggregate_transform_frame()
+    {
+        await using var context = await fixture.Browser.NewContextAsync(new BrowserNewContextOptions
+        {
+            IgnoreHTTPSErrors = true,
+            ViewportSize = new ViewportSize
+            {
+                Width = 1900,
+                Height = 1200
+            }
+        });
+        var page = await context.NewPageAsync();
+
+        var projectId = await CreateProjectAsync(page, "Playwright Individual Multi-selection", "Validation");
+        var projectRootId = await ReadNodeIdAsync(page, $".cw-node[data-node-id='project:{projectId}']");
+        var firstNodeId = await InvokeStructureCreateActionAsync(
+            page,
+            "add-block-feature",
+            projectRootId,
+            projectRootId,
+            "First selected node",
+            "Selection proof",
+            "Keep an individual selection outline around this node.");
+        var secondNodeId = await InvokeStructureCreateActionAsync(
+            page,
+            "add-block-support",
+            projectRootId,
+            projectRootId,
+            "Second selected node",
+            "Selection proof",
+            "Keep an individual selection outline around this node.");
+
+        await CommitCanvasNodePositionsAsync(
+            page,
+            [
+                (firstNodeId, 820, 430),
+                (secondNodeId, 1220, 760)
+            ]);
+        await SelectCanvasNodesAsync(page, [firstNodeId, secondNodeId], firstNodeId);
+
+        var selectedNodeIds = (await ReadSelectedNodePositionsAsync(page))
+            .Select(position => position.Id)
+            .Order(StringComparer.Ordinal)
+            .ToArray();
+        Assert.Equal(
+            new[] { firstNodeId, secondNodeId }.Order(StringComparer.Ordinal),
+            selectedNodeIds);
+        Assert.Equal(0, await page.Locator(".cw-transform-frame").CountAsync());
+
+        var beforeDragPositions = await ReadNodePositionsAsync(page, [firstNodeId, secondNodeId]);
+        await page.Keyboard.DownAsync("Control");
+        try
+        {
+            await DragCanvasNodeAsync(page, firstNodeId, 170, 120, controlModifier: true);
+        }
+        finally
+        {
+            await page.Keyboard.UpAsync("Control");
+        }
+
+        var afterDragPositions = await ReadNodePositionsAsync(page, [firstNodeId, secondNodeId]);
+        var firstBefore = beforeDragPositions.Single(position => position.Id == firstNodeId);
+        var firstAfter = afterDragPositions.Single(position => position.Id == firstNodeId);
+        var secondBefore = beforeDragPositions.Single(position => position.Id == secondNodeId);
+        var secondAfter = afterDragPositions.Single(position => position.Id == secondNodeId);
+        Assert.Equal(firstAfter.Left - firstBefore.Left, secondAfter.Left - secondBefore.Left);
+        Assert.Equal(firstAfter.Top - firstBefore.Top, secondAfter.Top - secondBefore.Top);
+        Assert.True(
+            Math.Abs(firstAfter.Left - firstBefore.Left) > 40 || Math.Abs(firstAfter.Top - firstBefore.Top) > 40,
+            "Expected the Ctrl group drag to move both selected nodes.");
+
+        selectedNodeIds = (await ReadSelectedNodePositionsAsync(page))
+            .Select(position => position.Id)
+            .Order(StringComparer.Ordinal)
+            .ToArray();
+        Assert.Equal(
+            new[] { firstNodeId, secondNodeId }.Order(StringComparer.Ordinal),
+            selectedNodeIds);
+        Assert.Equal(0, await page.Locator(".cw-transform-frame").CountAsync());
+        Assert.False(await page.Locator("#blazor-error-ui").IsVisibleAsync());
+    }
+
+    [Fact]
+    [Trait("Surface", "SharedCanvas")]
     public async Task Shared_canvas_dirty_drag_loop_limits_patch_scope_and_preserves_guides_and_group_frame_updates()
     {
         var repoRoot = GetRepoRoot();
