@@ -42,9 +42,12 @@ public sealed partial class ProcessDefinitionCanvasEditorProjectionService
         };
 
     private static string ResolveNodeKeyText(ProcessDefinitionCanvasEditorNodeProjection node)
-        => node.Kind == ProcessDefinitionCanvasNodeKind.Artifact && !string.IsNullOrWhiteSpace(node.ArtifactKey)
-            ? node.ArtifactKey
-            : node.StepKey?.Value ?? node.RoleKey?.Value ?? node.NodeKey.Value;
+        => node.Kind switch
+        {
+            ProcessDefinitionCanvasNodeKind.Artifact when !string.IsNullOrWhiteSpace(node.ArtifactKey) => node.ArtifactKey,
+            ProcessDefinitionCanvasNodeKind.Role when node.RoleKey is { } roleKey => roleKey.Value,
+            _ => node.StepKey?.Value ?? node.NodeKey.Value
+        };
 
     private static ProcessDefinitionCanvasToolboxActionProjection CreateToolboxAction(
         ProcessTemplateDefinitionCanvasToolboxActionSummary action)

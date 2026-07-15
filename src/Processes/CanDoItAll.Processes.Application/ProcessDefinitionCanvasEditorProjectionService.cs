@@ -111,6 +111,7 @@ public sealed partial class ProcessDefinitionCanvasEditorProjectionService
                 ProcessDefinitionCanvasCommandKind.AddArtifactExpectation => ExecuteAddArtifactExpectation(stateKey, baseline, command, observedAtUtc),
                 ProcessDefinitionCanvasCommandKind.AddSubprocessBoundary => ExecuteAddSubprocessBoundary(stateKey, baseline, command, observedAtUtc),
                 ProcessDefinitionCanvasCommandKind.CloneArtifactReference => ExecuteCloneArtifactReference(stateKey, baseline, command, observedAtUtc),
+                ProcessDefinitionCanvasCommandKind.CloneRoleReference => ExecuteCloneRoleReference(stateKey, baseline, command, observedAtUtc),
                 ProcessDefinitionCanvasCommandKind.Recompose => ExecuteRecompose(stateKey, baseline, command, observedAtUtc),
                 _ => throw new ArgumentOutOfRangeException(nameof(command), command.CommandKind, "Unknown definition canvas command.")
             };

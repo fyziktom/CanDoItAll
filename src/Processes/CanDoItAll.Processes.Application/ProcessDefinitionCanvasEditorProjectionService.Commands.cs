@@ -229,7 +229,9 @@ public sealed partial class ProcessDefinitionCanvasEditorProjectionService
         DateTimeOffset observedAtUtc)
     {
         var step = ResolveSelectedNode(baseline, command.SelectedNodeKey) ?? FindLastStepNode(baseline);
-        var role = baseline.Nodes.FirstOrDefault(node => node.Kind == ProcessDefinitionCanvasNodeKind.Role);
+        var role = baseline.Nodes.FirstOrDefault(node =>
+            node.Kind == ProcessDefinitionCanvasNodeKind.Role &&
+            node.RoleKey is not null);
         if (step is null || step.Kind != ProcessDefinitionCanvasNodeKind.Step)
         {
             return CreateRejectedResult(baseline, command.CommandKind, observedAtUtc, "Select a step before adding a role binding.");
@@ -240,20 +242,69 @@ public sealed partial class ProcessDefinitionCanvasEditorProjectionService
             return CreateRejectedResult(baseline, command.CommandKind, observedAtUtc, "No role node is available to bind to the selected step.");
         }
 
+        var roleKey = role.RoleKey!.Value;
+        var roleNodesByKey = baseline.Nodes
+            .Where(node => node.Kind == ProcessDefinitionCanvasNodeKind.Role)
+            .ToDictionary(node => node.NodeKey);
         if (baseline.Edges.Any(edge =>
             edge.Kind == ProcessDefinitionCanvasEdgeKind.RoleBinding &&
-            edge.FromNodeKey == role.NodeKey &&
-            edge.ToNodeKey == step.NodeKey))
+            edge.ToNodeKey == step.NodeKey &&
+            roleNodesByKey.TryGetValue(edge.FromNodeKey, out var source) &&
+            source.RoleKey == roleKey))
         {
             return CreateRejectedResult(baseline, command.CommandKind, observedAtUtc, $"Role '{role.Title}' is already bound to '{step.Title}'.");
         }
 
+        var boundRoleNodeKeys = baseline.Edges
+            .Where(edge => edge.Kind == ProcessDefinitionCanvasEdgeKind.RoleBinding)
+            .Select(edge => edge.FromNodeKey)
+            .ToHashSet();
+        var reusableRole = baseline.Nodes.FirstOrDefault(node =>
+            node.Kind == ProcessDefinitionCanvasNodeKind.Role &&
+            node.RoleKey == roleKey &&
+            !boundRoleNodeKeys.Contains(node.NodeKey));
+        var occupied = baseline.Nodes
+            .Where(node => node.NodeKey != reusableRole?.NodeKey)
+            .Select(ProcessDefinitionCanvasPlacementPolicy.ResolveBounds)
+            .ToList();
+        var rolePosition = ProcessDefinitionCanvasPlacementPolicy.PlaceInputAttachment(
+            occupied,
+            step,
+            role.Width,
+            role.Height);
+        var roleRepresentation = reusableRole is null
+            ? CreateNode(
+                BuildUniqueNodeKey($"role-ref:{Slugify(roleKey.Value)}:{Slugify(step.StepKey?.Value ?? step.NodeKey.Value)}", baseline.Nodes),
+                ProcessDefinitionCanvasNodeKind.Role,
+                role.Title,
+                "Role reference",
+                $"Role representation for {step.Title}; the shared role definition remains '{roleKey.Value}'.",
+                rolePosition.X,
+                rolePosition.Y,
+                role.Width,
+                role.Height,
+                role.Tone,
+                step.StepKey,
+                roleKey,
+                ArtifactKey: null,
+                BuildReferenceBadges(role.Badges))
+            : reusableRole with
+            {
+                StepKey = step.StepKey,
+                X = rolePosition.X,
+                Y = rolePosition.Y
+            };
+        IReadOnlyList<ProcessDefinitionCanvasEditorNodeProjection> nodes = reusableRole is null
+            ? [.. baseline.Nodes, roleRepresentation]
+            : baseline.Nodes
+                .Select(node => node.NodeKey == reusableRole.NodeKey ? roleRepresentation : node)
+                .ToArray();
         var edges = new List<ProcessDefinitionCanvasEdgeProjection>(baseline.Edges.Count + 1);
         edges.AddRange(baseline.Edges);
         edges.Add(CreateEdge(
-            BuildUniqueEdgeKey($"role-binding:{role.NodeKey.Value}:{step.NodeKey.Value}", edges),
+            BuildUniqueEdgeKey($"role-binding:{roleRepresentation.NodeKey.Value}:{step.NodeKey.Value}", edges),
             ProcessDefinitionCanvasEdgeKind.RoleBinding,
-            role.NodeKey,
+            roleRepresentation.NodeKey,
             step.NodeKey,
             "Responsible",
             $"Role {role.Title} is responsible for {step.Title}.",
@@ -265,7 +316,7 @@ public sealed partial class ProcessDefinitionCanvasEditorProjectionService
             baseline,
             command.CommandKind,
             observedAtUtc,
-            baseline.Nodes,
+            nodes,
             edges,
             CreateSelection(edges[^1]),
             $"Role binding added between '{role.Title}' and '{step.Title}'.");
@@ -429,7 +480,7 @@ public sealed partial class ProcessDefinitionCanvasEditorProjectionService
             StepKey: null,
             RoleKey: null,
             artifact.ArtifactKey,
-            BuildArtifactReferenceBadges(artifact.Badges));
+            BuildReferenceBadges(artifact.Badges));
         var nodes = new List<ProcessDefinitionCanvasEditorNodeProjection>(baseline.Nodes.Count + 1);
         nodes.AddRange(baseline.Nodes);
         nodes.Add(clone);
@@ -443,6 +494,56 @@ public sealed partial class ProcessDefinitionCanvasEditorProjectionService
             baseline.Edges,
             CreateSelection(clone),
             $"Artifact reference cloned for '{artifact.Title}' using shared key '{artifact.ArtifactKey}'.");
+    }
+
+    private ProcessDefinitionCanvasCommandResult ExecuteCloneRoleReference(
+        ProcessDefinitionCanvasStateKey stateKey,
+        ProcessDefinitionCanvasSnapshot baseline,
+        ProcessDefinitionCanvasCommand command,
+        DateTimeOffset observedAtUtc)
+    {
+        var role = ResolveSelectedNode(baseline, command.SelectedNodeKey);
+        if (role is null ||
+            role.Kind != ProcessDefinitionCanvasNodeKind.Role ||
+            role.RoleKey is null)
+        {
+            return CreateRejectedResult(baseline, command.CommandKind, observedAtUtc, "Select a role representation before cloning it.");
+        }
+
+        var roleKey = role.RoleKey.Value;
+        var clonePosition = ProcessDefinitionCanvasPlacementPolicy.PlaceReference(
+            baseline.Nodes,
+            role,
+            role.Width,
+            role.Height);
+        var clone = CreateNode(
+            BuildUniqueNodeKey($"role-ref:{Slugify(roleKey.Value)}", baseline.Nodes),
+            ProcessDefinitionCanvasNodeKind.Role,
+            role.Title,
+            "Role reference",
+            $"Reference clone for the shared role key '{roleKey.Value}'. Place it near another consuming step without duplicating the role definition.",
+            clonePosition.X,
+            clonePosition.Y,
+            role.Width,
+            role.Height,
+            role.Tone,
+            StepKey: null,
+            roleKey,
+            ArtifactKey: null,
+            BuildReferenceBadges(role.Badges));
+        var nodes = new List<ProcessDefinitionCanvasEditorNodeProjection>(baseline.Nodes.Count + 1);
+        nodes.AddRange(baseline.Nodes);
+        nodes.Add(clone);
+
+        return StoreAccepted(
+            stateKey,
+            baseline,
+            command.CommandKind,
+            observedAtUtc,
+            nodes,
+            baseline.Edges,
+            CreateSelection(clone),
+            $"Role representation cloned for '{role.Title}' using shared key '{roleKey.Value}'.");
     }
 
     private ProcessDefinitionCanvasCommandResult ExecuteRecompose(
@@ -533,7 +634,7 @@ public sealed partial class ProcessDefinitionCanvasEditorProjectionService
         return new ProcessDefinitionCanvasCommandResult(receipt, CreateProjection(snapshot, receipt));
     }
 
-    private static IReadOnlyList<string> BuildArtifactReferenceBadges(IReadOnlyList<string> badges)
+    private static IReadOnlyList<string> BuildReferenceBadges(IReadOnlyList<string> badges)
     {
         var result = badges
             .Where(badge => !string.Equals(badge, "Reference", StringComparison.OrdinalIgnoreCase))

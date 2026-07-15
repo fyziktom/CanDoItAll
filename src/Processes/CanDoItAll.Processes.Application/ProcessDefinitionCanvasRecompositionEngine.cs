@@ -10,11 +10,11 @@ internal sealed record ProcessDefinitionCanvasLayoutResult(
 internal static class ProcessDefinitionCanvasRecompositionEngine
 {
     private const double FirstStepX = 240d;
-    private const double StepColumnGap = 480d;
-    private const double FirstStructuralLaneY = 420d;
-    private const double StructuralLaneGap = 320d;
-    private const double RoleRowY = 130d;
-    private const double RoleGap = 80d;
+    private const double FirstGroupTop = 180d;
+    private const double MinimumStepColumnGap = 560d;
+    private const double MinimumStructuralLaneGap = 400d;
+    private const double StepGroupGap = 112d;
+    private const double UnownedNodeGap = 80d;
 
     public static ProcessDefinitionCanvasLayoutResult Recompose(
         IReadOnlyList<ProcessDefinitionCanvasEditorNodeProjection> nodes,
@@ -71,81 +71,52 @@ internal static class ProcessDefinitionCanvasRecompositionEngine
         IReadOnlyDictionary<ProcessDefinitionCanvasNodeKey, int> rankByNodeKey,
         IReadOnlyDictionary<ProcessDefinitionCanvasNodeKey, int> laneByNodeKey)
     {
-        var minimumLane = laneByNodeKey.Values.Min();
-        var mainLaneY = FirstStructuralLaneY - (minimumLane * StructuralLaneGap);
+        var stepByNodeKey = steps.ToDictionary(step => step.NodeKey);
+        var ownerStepKeys = ResolveOwnerStepKeys(nodes, edges, steps, nodeOrder);
+        var localGroups = ComposeLocalStepGroups(nodes, steps, ownerStepKeys, nodeOrder);
+        var groupBounds = localGroups.ToDictionary(
+            group => group.Key,
+            group => ResolveBounds(group.Value));
+        var rankPositions = ResolveRankPositions(steps, rankByNodeKey, groupBounds);
+        var lanePositions = ResolveLanePositions(steps, laneByNodeKey, groupBounds);
         var positionedByKey = new Dictionary<ProcessDefinitionCanvasNodeKey, ProcessDefinitionCanvasEditorNodeProjection>();
-        var occupied = new List<ProcessDefinitionCanvasBounds>();
 
         foreach (var step in steps.OrderBy(step => nodeOrder[step.NodeKey]))
         {
-            var positioned = step with
+            var offsetX = rankPositions[rankByNodeKey[step.NodeKey]];
+            var offsetY = lanePositions[laneByNodeKey[step.NodeKey]];
+            foreach (var localNode in localGroups[step.NodeKey])
             {
-                X = FirstStepX + (rankByNodeKey[step.NodeKey] * StepColumnGap),
-                Y = mainLaneY + (laneByNodeKey[step.NodeKey] * StructuralLaneGap)
-            };
-            positionedByKey[positioned.NodeKey] = positioned;
-            occupied.Add(ProcessDefinitionCanvasPlacementPolicy.ResolveBounds(positioned));
+                positionedByKey[localNode.NodeKey] = localNode with
+                {
+                    X = localNode.X + offsetX,
+                    Y = localNode.Y + offsetY
+                };
+            }
         }
 
-        var roles = nodes
-            .Where(node => node.Kind == ProcessDefinitionCanvasNodeKind.Role)
+        var unownedNodes = nodes
+            .Where(node => !stepByNodeKey.ContainsKey(node.NodeKey) && !ownerStepKeys.ContainsKey(node.NodeKey))
             .OrderBy(node => nodeOrder[node.NodeKey])
             .ToArray();
-        for (var index = 0; index < roles.Length; index++)
+        if (unownedNodes.Length > 0)
         {
-            var role = roles[index] with
+            var occupied = positionedByKey.Values
+                .Select(ProcessDefinitionCanvasPlacementPolicy.ResolveBounds)
+                .ToArray();
+            var rowHeight = unownedNodes.Max(node => node.Height);
+            var rowY = occupied.Length == 0
+                ? FirstGroupTop + (rowHeight / 2d)
+                : occupied.Min(bounds => bounds.Top) - StepGroupGap - (rowHeight / 2d);
+            var cursorX = occupied.Length == 0
+                ? FirstStepX
+                : occupied.Min(bounds => bounds.Left);
+            foreach (var node in unownedNodes)
             {
-                X = FirstStepX + (index * (roles[index].Width + RoleGap)),
-                Y = RoleRowY
-            };
-            positionedByKey[role.NodeKey] = role;
-            occupied.Add(ProcessDefinitionCanvasPlacementPolicy.ResolveBounds(role));
-        }
-
-        var routers = nodes
-            .Where(node => node.Kind == ProcessDefinitionCanvasNodeKind.BranchRouter)
-            .OrderBy(node => nodeOrder[node.NodeKey])
-            .ToArray();
-        foreach (var router in routers)
-        {
-            var anchor = ResolveRouterAnchor(router, positionedByKey, nodes, edges)
-                ?? throw new InvalidOperationException(
-                    $"Branch router '{router.NodeKey.Value}' must be associated with an owning process step before recomposition.");
-
-            var position = ProcessDefinitionCanvasPlacementPolicy.PlaceBranchRouter(
-                occupied,
-                anchor,
-                router.Width,
-                router.Height);
-            var positioned = router with { X = position.X, Y = position.Y };
-            positionedByKey[positioned.NodeKey] = positioned;
-            occupied.Add(ProcessDefinitionCanvasPlacementPolicy.ResolveBounds(positioned));
-        }
-
-        var satellites = nodes
-            .Where(node => node.Kind is ProcessDefinitionCanvasNodeKind.Artifact or ProcessDefinitionCanvasNodeKind.SubprocessBoundary)
-            .OrderBy(node => nodeOrder[node.NodeKey])
-            .ToArray();
-        foreach (var satellite in satellites)
-        {
-            var anchor = ResolveSatelliteAnchor(satellite, positionedByKey, nodes, edges)
-                ?? throw new InvalidOperationException(
-                    $"Canvas node '{satellite.NodeKey.Value}' must be associated with a structural process step before recomposition.");
-
-            var position = satellite.StepKey is null
-                ? ProcessDefinitionCanvasPlacementPolicy.PlaceReference(
-                    positionedByKey.Values.ToArray(),
-                    anchor,
-                    satellite.Width,
-                    satellite.Height)
-                : ProcessDefinitionCanvasPlacementPolicy.PlaceAttachment(
-                    occupied,
-                    anchor,
-                    satellite.Width,
-                    satellite.Height);
-            var positioned = satellite with { X = position.X, Y = position.Y };
-            positionedByKey[positioned.NodeKey] = positioned;
-            occupied.Add(ProcessDefinitionCanvasPlacementPolicy.ResolveBounds(positioned));
+                var x = cursorX + (node.Width / 2d);
+                positionedByKey[node.NodeKey] = node with { X = x, Y = rowY };
+                cursorX = x + (node.Width / 2d) + UnownedNodeGap;
+            }
         }
 
         return nodes
@@ -153,72 +124,239 @@ internal static class ProcessDefinitionCanvasRecompositionEngine
             .ToArray();
     }
 
-    private static ProcessDefinitionCanvasEditorNodeProjection? ResolveRouterAnchor(
-        ProcessDefinitionCanvasEditorNodeProjection router,
-        IReadOnlyDictionary<ProcessDefinitionCanvasNodeKey, ProcessDefinitionCanvasEditorNodeProjection> positionedByKey,
+    private static IReadOnlyDictionary<ProcessDefinitionCanvasNodeKey, ProcessDefinitionCanvasNodeKey> ResolveOwnerStepKeys(
         IReadOnlyList<ProcessDefinitionCanvasEditorNodeProjection> nodes,
-        IReadOnlyList<ProcessDefinitionCanvasEdgeProjection> edges)
+        IReadOnlyList<ProcessDefinitionCanvasEdgeProjection> edges,
+        IReadOnlyList<ProcessDefinitionCanvasEditorNodeProjection> steps,
+        IReadOnlyDictionary<ProcessDefinitionCanvasNodeKey, int> nodeOrder)
     {
-        if (router.StepKey is { } stepKey)
+        var stepByNodeKey = steps.ToDictionary(step => step.NodeKey);
+        var stepByStepKey = steps
+            .Where(step => step.StepKey is not null)
+            .GroupBy(step => step.StepKey!.Value)
+            .ToDictionary(group => group.Key, group => group.First());
+        var owners = new Dictionary<ProcessDefinitionCanvasNodeKey, ProcessDefinitionCanvasNodeKey>();
+        foreach (var node in nodes.Where(node => node.Kind != ProcessDefinitionCanvasNodeKind.Step))
         {
-            var matchingStep = positionedByKey.Values.FirstOrDefault(node =>
-                node.Kind == ProcessDefinitionCanvasNodeKind.Step &&
-                node.StepKey == stepKey);
-            if (matchingStep is not null)
+            var directOwner = ResolveDirectOwnerStepKey(node, edges, stepByNodeKey, stepByStepKey);
+            if (directOwner is not null)
             {
-                return matchingStep;
+                owners[node.NodeKey] = directOwner.Value;
             }
         }
 
-        var sourceNodeKey = edges.FirstOrDefault(edge =>
-            edge.ToNodeKey == router.NodeKey &&
-            edge.Kind == ProcessDefinitionCanvasEdgeKind.BranchRoute)?.FromNodeKey;
-        return sourceNodeKey is { } key && positionedByKey.TryGetValue(key, out var source)
-            ? source
-            : null;
+        foreach (var reference in nodes
+            .Where(node =>
+                !owners.ContainsKey(node.NodeKey) &&
+                node.Kind is ProcessDefinitionCanvasNodeKind.Role or ProcessDefinitionCanvasNodeKind.Artifact)
+            .OrderBy(node => nodeOrder[node.NodeKey]))
+        {
+            var matchingOwner = nodes
+                .Where(candidate =>
+                    candidate.NodeKey != reference.NodeKey &&
+                    owners.ContainsKey(candidate.NodeKey) &&
+                    HasSameSharedIdentity(reference, candidate))
+                .OrderBy(candidate => nodeOrder[candidate.NodeKey])
+                .Select(candidate => (ProcessDefinitionCanvasNodeKey?)owners[candidate.NodeKey])
+                .FirstOrDefault();
+            if (matchingOwner is not null)
+            {
+                owners[reference.NodeKey] = matchingOwner.Value;
+            }
+        }
+
+        return owners;
     }
 
-    private static ProcessDefinitionCanvasEditorNodeProjection? ResolveSatelliteAnchor(
-        ProcessDefinitionCanvasEditorNodeProjection satellite,
-        IReadOnlyDictionary<ProcessDefinitionCanvasNodeKey, ProcessDefinitionCanvasEditorNodeProjection> positionedByKey,
-        IReadOnlyList<ProcessDefinitionCanvasEditorNodeProjection> nodes,
-        IReadOnlyList<ProcessDefinitionCanvasEdgeProjection> edges)
+    private static ProcessDefinitionCanvasNodeKey? ResolveDirectOwnerStepKey(
+        ProcessDefinitionCanvasEditorNodeProjection node,
+        IReadOnlyList<ProcessDefinitionCanvasEdgeProjection> edges,
+        IReadOnlyDictionary<ProcessDefinitionCanvasNodeKey, ProcessDefinitionCanvasEditorNodeProjection> stepByNodeKey,
+        IReadOnlyDictionary<ProcessDefinitionStepKey, ProcessDefinitionCanvasEditorNodeProjection> stepByStepKey)
     {
-        var sourceNodeKey = edges.FirstOrDefault(edge => edge.ToNodeKey == satellite.NodeKey)?.FromNodeKey;
-        if (sourceNodeKey is { } key && positionedByKey.TryGetValue(key, out var source))
+        ProcessDefinitionCanvasNodeKey? ownerFromStepKey = null;
+        if (node.StepKey is { } stepKey && stepByStepKey.TryGetValue(stepKey, out var step))
         {
-            return source;
+            ownerFromStepKey = step.NodeKey;
         }
 
-        if (satellite.StepKey is { } stepKey)
+        if (node.Kind == ProcessDefinitionCanvasNodeKind.Role)
         {
-            var step = positionedByKey.Values.FirstOrDefault(node =>
-                node.Kind == ProcessDefinitionCanvasNodeKind.Step &&
-                node.StepKey == stepKey);
-            if (step is not null)
+            var targets = edges
+                .Where(edge =>
+                    edge.Kind == ProcessDefinitionCanvasEdgeKind.RoleBinding &&
+                    edge.FromNodeKey == node.NodeKey &&
+                    stepByNodeKey.ContainsKey(edge.ToNodeKey))
+                .Select(edge => edge.ToNodeKey)
+                .Distinct()
+                .ToArray();
+            if (targets.Length > 1)
             {
-                return step;
+                throw new InvalidOperationException(
+                    $"Role representation '{node.NodeKey.Value}' targets multiple process steps. Clone the representation so each consuming step owns one local role node.");
             }
-        }
 
-        if (!string.IsNullOrWhiteSpace(satellite.ArtifactKey))
-        {
-            var original = nodes.FirstOrDefault(node =>
-                node.NodeKey != satellite.NodeKey &&
-                node.Kind == ProcessDefinitionCanvasNodeKind.Artifact &&
-                node.StepKey is not null &&
-                string.Equals(node.ArtifactKey, satellite.ArtifactKey, StringComparison.OrdinalIgnoreCase));
-            if (original is not null && positionedByKey.TryGetValue(original.NodeKey, out var positionedOriginal))
+            if (ownerFromStepKey is { } ownedStep && targets.Any(target => target != ownedStep))
             {
-                return positionedOriginal;
+                throw new InvalidOperationException(
+                    $"Role representation '{node.NodeKey.Value}' has a StepKey that disagrees with its role-binding target.");
             }
+
+            return ownerFromStepKey ?? (targets.Length == 1 ? targets[0] : null);
         }
 
-        return positionedByKey.Values
-            .Where(node => node.Kind == ProcessDefinitionCanvasNodeKind.Step)
-            .OrderBy(node => node.X)
-            .FirstOrDefault();
+        if (ownerFromStepKey is not null)
+        {
+            return ownerFromStepKey;
+        }
+
+        var edgeKind = node.Kind switch
+        {
+            ProcessDefinitionCanvasNodeKind.BranchRouter => ProcessDefinitionCanvasEdgeKind.BranchRoute,
+            ProcessDefinitionCanvasNodeKind.Artifact => ProcessDefinitionCanvasEdgeKind.ArtifactExpectation,
+            ProcessDefinitionCanvasNodeKind.SubprocessBoundary => ProcessDefinitionCanvasEdgeKind.SubprocessBoundary,
+            _ => (ProcessDefinitionCanvasEdgeKind?)null
+        };
+        return edgeKind is null
+            ? null
+            : edges.FirstOrDefault(edge =>
+                edge.Kind == edgeKind &&
+                edge.ToNodeKey == node.NodeKey &&
+                stepByNodeKey.ContainsKey(edge.FromNodeKey))?.FromNodeKey;
     }
+
+    private static IReadOnlyDictionary<ProcessDefinitionCanvasNodeKey, IReadOnlyList<ProcessDefinitionCanvasEditorNodeProjection>> ComposeLocalStepGroups(
+        IReadOnlyList<ProcessDefinitionCanvasEditorNodeProjection> nodes,
+        IReadOnlyList<ProcessDefinitionCanvasEditorNodeProjection> steps,
+        IReadOnlyDictionary<ProcessDefinitionCanvasNodeKey, ProcessDefinitionCanvasNodeKey> ownerStepKeys,
+        IReadOnlyDictionary<ProcessDefinitionCanvasNodeKey, int> nodeOrder)
+    {
+        var groups = new Dictionary<ProcessDefinitionCanvasNodeKey, IReadOnlyList<ProcessDefinitionCanvasEditorNodeProjection>>();
+        foreach (var step in steps.OrderBy(step => nodeOrder[step.NodeKey]))
+        {
+            var localStep = step with { X = 0d, Y = 0d };
+            var localNodes = new List<ProcessDefinitionCanvasEditorNodeProjection> { localStep };
+            var occupied = new List<ProcessDefinitionCanvasBounds>
+            {
+                ProcessDefinitionCanvasPlacementPolicy.ResolveBounds(localStep)
+            };
+            var members = nodes
+                .Where(node => ownerStepKeys.GetValueOrDefault(node.NodeKey) == step.NodeKey)
+                .OrderBy(ResolveGroupMemberOrder)
+                .ThenBy(node => nodeOrder[node.NodeKey]);
+            foreach (var member in members)
+            {
+                var position = member.Kind switch
+                {
+                    ProcessDefinitionCanvasNodeKind.BranchRouter => ProcessDefinitionCanvasPlacementPolicy.PlaceBranchRouter(
+                        occupied,
+                        localStep,
+                        member.Width,
+                        member.Height),
+                    ProcessDefinitionCanvasNodeKind.Role => ProcessDefinitionCanvasPlacementPolicy.PlaceInputAttachment(
+                        occupied,
+                        localStep,
+                        member.Width,
+                        member.Height),
+                    _ => ProcessDefinitionCanvasPlacementPolicy.PlaceOutputAttachment(
+                        occupied,
+                        localStep,
+                        member.Width,
+                        member.Height)
+                };
+                var positioned = member with { X = position.X, Y = position.Y };
+                localNodes.Add(positioned);
+                occupied.Add(ProcessDefinitionCanvasPlacementPolicy.ResolveBounds(positioned));
+            }
+
+            groups[step.NodeKey] = localNodes;
+        }
+
+        return groups;
+    }
+
+    private static IReadOnlyDictionary<int, double> ResolveRankPositions(
+        IReadOnlyList<ProcessDefinitionCanvasEditorNodeProjection> steps,
+        IReadOnlyDictionary<ProcessDefinitionCanvasNodeKey, int> rankByNodeKey,
+        IReadOnlyDictionary<ProcessDefinitionCanvasNodeKey, ProcessDefinitionCanvasBounds> groupBounds)
+    {
+        var extents = steps
+            .GroupBy(step => rankByNodeKey[step.NodeKey])
+            .ToDictionary(
+                group => group.Key,
+                group => new AxisExtents(
+                    group.Max(step => -groupBounds[step.NodeKey].Left),
+                    group.Max(step => groupBounds[step.NodeKey].Right)));
+        return ResolveAxisPositions(extents, FirstStepX, MinimumStepColumnGap);
+    }
+
+    private static IReadOnlyDictionary<int, double> ResolveLanePositions(
+        IReadOnlyList<ProcessDefinitionCanvasEditorNodeProjection> steps,
+        IReadOnlyDictionary<ProcessDefinitionCanvasNodeKey, int> laneByNodeKey,
+        IReadOnlyDictionary<ProcessDefinitionCanvasNodeKey, ProcessDefinitionCanvasBounds> groupBounds)
+    {
+        var extents = steps
+            .GroupBy(step => laneByNodeKey[step.NodeKey])
+            .ToDictionary(
+                group => group.Key,
+                group => new AxisExtents(
+                    group.Max(step => -groupBounds[step.NodeKey].Top),
+                    group.Max(step => groupBounds[step.NodeKey].Bottom)));
+        var firstLane = extents.Keys.Min();
+        return ResolveAxisPositions(
+            extents,
+            FirstGroupTop + extents[firstLane].Before,
+            MinimumStructuralLaneGap);
+    }
+
+    private static IReadOnlyDictionary<int, double> ResolveAxisPositions(
+        IReadOnlyDictionary<int, AxisExtents> extents,
+        double firstPosition,
+        double minimumCenterGap)
+    {
+        var orderedKeys = extents.Keys.OrderBy(key => key).ToArray();
+        var positions = new Dictionary<int, double> { [orderedKeys[0]] = firstPosition };
+        for (var index = 1; index < orderedKeys.Length; index++)
+        {
+            var previousKey = orderedKeys[index - 1];
+            var key = orderedKeys[index];
+            var requiredGap = extents[previousKey].After + StepGroupGap + extents[key].Before;
+            positions[key] = positions[previousKey] + Math.Max(minimumCenterGap, requiredGap);
+        }
+
+        return positions;
+    }
+
+    private static ProcessDefinitionCanvasBounds ResolveBounds(
+        IReadOnlyList<ProcessDefinitionCanvasEditorNodeProjection> nodes)
+        => new(
+            nodes.Min(node => node.X - (node.Width / 2d)),
+            nodes.Min(node => node.Y - (node.Height / 2d)),
+            nodes.Max(node => node.X + (node.Width / 2d)),
+            nodes.Max(node => node.Y + (node.Height / 2d)));
+
+    private static bool HasSameSharedIdentity(
+        ProcessDefinitionCanvasEditorNodeProjection left,
+        ProcessDefinitionCanvasEditorNodeProjection right)
+        => left.Kind == right.Kind &&
+           left.Kind switch
+           {
+               ProcessDefinitionCanvasNodeKind.Role => left.RoleKey is not null && left.RoleKey == right.RoleKey,
+               ProcessDefinitionCanvasNodeKind.Artifact =>
+                   !string.IsNullOrWhiteSpace(left.ArtifactKey) &&
+                   string.Equals(left.ArtifactKey, right.ArtifactKey, StringComparison.OrdinalIgnoreCase),
+               _ => false
+           };
+
+    private static int ResolveGroupMemberOrder(ProcessDefinitionCanvasEditorNodeProjection node)
+        => node.Kind switch
+        {
+            ProcessDefinitionCanvasNodeKind.BranchRouter => 0,
+            ProcessDefinitionCanvasNodeKind.Role => 1,
+            ProcessDefinitionCanvasNodeKind.Artifact => 2,
+            ProcessDefinitionCanvasNodeKind.SubprocessBoundary => 3,
+            _ => 4
+        };
 
     private static IReadOnlyDictionary<ProcessDefinitionCanvasNodeKey, int> ResolveRanks(
         IReadOnlyList<ProcessDefinitionCanvasNodeKey> topologicalOrder,
@@ -538,4 +676,8 @@ internal static class ProcessDefinitionCanvasRecompositionEngine
     private sealed record MainPath(
         IReadOnlyList<ProcessDefinitionCanvasNodeKey> NodeKeys,
         int TerminalPriority);
+
+    private sealed record AxisExtents(
+        double Before,
+        double After);
 }

@@ -469,6 +469,14 @@ public sealed class ProcessWorkspaceShellTests
             string.Equals(link.Kind, ProcessDefinitionCanvasEdgeKind.BranchRoute.ToString(), StringComparison.Ordinal) &&
             link.SourceId == "step:architecture-decision" &&
             link.TargetId == "branch:architecture-decision");
+        var stepNode = workbench.Instance.Surface.Nodes.Single(node => node.Id == "step:architecture-decision");
+        var roleNode = workbench.Instance.Surface.Nodes.Single(node => node.Id == "role:solution-architect");
+        Assert.Contains(stepNode.InputPorts, port => port.Id == "process:role");
+        Assert.Contains(roleNode.OutputPorts, port => port.Id == "process:role");
+        Assert.Contains(workbench.Instance.Surface.Links, link =>
+            string.Equals(link.Kind, ProcessDefinitionCanvasEdgeKind.RoleBinding.ToString(), StringComparison.Ordinal) &&
+            link.SourcePortId == "process:role" &&
+            link.TargetPortId == "process:role");
         Assert.NotNull(cut.Find("[data-testid='processes-canvas-toolbox-window']"));
         Assert.NotNull(cut.Find("[data-testid='processes-canvas-toolbox']"));
         Assert.NotNull(cut.Find("[data-testid='processes-canvas-node-step-architecture-decision']"));
@@ -476,6 +484,9 @@ public sealed class ProcessWorkspaceShellTests
         Assert.NotNull(cut.Find("[data-testid='processes-canvas-node-role-solution-architect']"));
         Assert.NotNull(cut.Find("[data-testid='processes-canvas-node-artifact-architecture-decision-adr']"));
         Assert.NotNull(cut.Find("[data-testid='processes-canvas-edge-branch-route-architecture-decision-router']"));
+        Assert.All(
+            cut.FindComponents<CanvasFloatingWindow>(),
+            window => Assert.Equal(".cw-toolbar", window.Instance.SafeTopSelector));
 
         await cut.InvokeAsync(() => workbench.Instance.OnSelectionChanged("artifact:architecture-decision:adr", "[\"artifact:architecture-decision:adr\"]", 1));
 
@@ -537,6 +548,44 @@ public sealed class ProcessWorkspaceShellTests
         });
         Assert.Contains("Highlighted 1 canvas reference(s)", cut.Markup, StringComparison.Ordinal);
         Assert.Equal(ProcessDefinitionCanvasCommandKind.CloneArtifactReference, client.LastCanvasCommand?.CommandKind);
+    }
+
+    [Fact]
+    public async Task Canvas_role_context_actions_clone_and_highlight_shared_representations()
+    {
+        using var context = CreateContext(out var client);
+        var cut = context.RenderComponent<ProcessWorkspaceShell>();
+        ActivateProcessDetailTab(cut, "processes-detail-tab-steps", "processes-detail-panel-steps");
+
+        cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-testid='processes-definition-canvas']")));
+        var workbench = cut.FindComponent<CanvasWorkbench>();
+        var roleNode = workbench.Instance.Surface.Nodes.Single(node => node.Id == "role:solution-architect");
+        var cloneAction = roleNode.ContextActions.Single(action =>
+            string.Equals(action.Label, "Clone", StringComparison.Ordinal) &&
+            action.ActionId.StartsWith("process-canvas:role-reference:clone:", StringComparison.Ordinal));
+        var highlightAction = roleNode.ContextActions.Single(action =>
+            string.Equals(action.Label, "Highlight", StringComparison.Ordinal) &&
+            action.ActionId.StartsWith("process-canvas:role-reference:highlight:", StringComparison.Ordinal));
+
+        await cut.InvokeAsync(() => workbench.Instance.OnContextAction(roleNode.Id, cloneAction.ActionId, 0, 0));
+
+        cut.WaitForAssertion(() => Assert.Equal(ProcessDefinitionCanvasCommandKind.CloneRoleReference, client.LastCanvasCommand?.CommandKind));
+        Assert.Equal(new ProcessDefinitionCanvasNodeKey("role:solution-architect"), client.LastCanvasCommand?.SelectedNodeKey);
+        Assert.Null(client.LastCanvasCommand?.ToolboxActionKey);
+
+        workbench = cut.FindComponent<CanvasWorkbench>();
+        roleNode = workbench.Instance.Surface.Nodes.Single(node => node.Id == "role:solution-architect");
+        highlightAction = roleNode.ContextActions.Single(action => string.Equals(action.Label, "Highlight", StringComparison.Ordinal));
+        await cut.InvokeAsync(() => workbench.Instance.OnContextAction(roleNode.Id, highlightAction.ActionId, 0, 0));
+
+        cut.WaitForAssertion(() =>
+        {
+            var highlighted = cut.FindComponent<CanvasWorkbench>().Instance.Surface.Nodes.Single(node => node.Id == "role:solution-architect");
+            Assert.Equal("Highlighted role", highlighted.StatusPill);
+            Assert.Contains(highlighted.Chips, chip => string.Equals(chip.Text, "Highlighted", StringComparison.Ordinal));
+        });
+        Assert.Contains("Highlighted 1 canvas representation(s)", cut.Markup, StringComparison.Ordinal);
+        Assert.Equal(ProcessDefinitionCanvasCommandKind.CloneRoleReference, client.LastCanvasCommand?.CommandKind);
     }
 
     [Fact]
@@ -2803,7 +2852,38 @@ public sealed class ProcessWorkspaceShellTests
                 RoleKey,
                 ArtifactKey,
                 badges,
-                []);
+                CreateCanvasPorts(kind));
+
+        private static IReadOnlyList<ProcessDefinitionCanvasPortProjection> CreateCanvasPorts(
+            ProcessDefinitionCanvasNodeKind kind)
+            => kind switch
+            {
+                ProcessDefinitionCanvasNodeKind.Step =>
+                [
+                    new("in", ProcessDefinitionCanvasPortKind.StructuralInput, "Input", 0, 46),
+                    new("out", ProcessDefinitionCanvasPortKind.StructuralOutput, "Output", 220, 46),
+                    new("role", ProcessDefinitionCanvasPortKind.RoleBinding, "Role", 110, 0),
+                    new("artifact", ProcessDefinitionCanvasPortKind.ArtifactExpectation, "Artifact", 110, 92)
+                ],
+                ProcessDefinitionCanvasNodeKind.BranchRouter =>
+                [
+                    new("in", ProcessDefinitionCanvasPortKind.StructuralInput, "Decision input", 0, 46),
+                    new("out", ProcessDefinitionCanvasPortKind.BranchOutcome, "Outcome", 168, 46)
+                ],
+                ProcessDefinitionCanvasNodeKind.Role =>
+                [
+                    new("role-out", ProcessDefinitionCanvasPortKind.RoleBinding, "Responsibility", 220, 46)
+                ],
+                ProcessDefinitionCanvasNodeKind.Artifact =>
+                [
+                    new("artifact-in", ProcessDefinitionCanvasPortKind.ArtifactExpectation, "Expectation", 0, 36)
+                ],
+                ProcessDefinitionCanvasNodeKind.SubprocessBoundary =>
+                [
+                    new("subprocess-in", ProcessDefinitionCanvasPortKind.SubprocessBoundary, "Child process", 0, 46)
+                ],
+                _ => []
+            };
 
         private static ProcessDefinitionEditorLintProjection CreateEditorLint(
             ProcessDefinitionEditorCommand command)

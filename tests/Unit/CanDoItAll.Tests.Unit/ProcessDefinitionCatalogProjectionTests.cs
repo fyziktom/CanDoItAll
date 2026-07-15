@@ -2055,6 +2055,124 @@ public sealed class ProcessDefinitionCatalogProjectionTests
     }
 
     [Fact]
+    public async Task Canvas_projection_materializes_shared_roles_as_step_owned_representations()
+    {
+        var service = new ProcessDefinitionCanvasEditorProjectionService(
+            new ProcessTemplatePackLoader(),
+            new FixedProcessProjectionClock(Now));
+
+        var canvas = await service.GetCanvasAsync(
+            ProcessWorkspaceShellScope.Global,
+            new ProcessDefinitionCatalogItemKey("software-delivery"));
+
+        var roleKey = new ProcessDefinitionRoleKey("delivery-manager");
+        var representations = canvas.Nodes
+            .Where(node => node.Kind == ProcessDefinitionCanvasNodeKind.Role && node.RoleKey == roleKey)
+            .ToArray();
+        Assert.True(representations.Length > 1);
+        Assert.Equal(representations.Length, representations.Select(node => node.NodeKey).Distinct().Count());
+        Assert.All(representations, representation => Assert.NotNull(representation.StepKey));
+
+        var nodesByKey = canvas.Nodes.ToDictionary(node => node.NodeKey);
+        foreach (var representation in representations)
+        {
+            var targets = canvas.Edges
+                .Where(edge =>
+                    edge.Kind == ProcessDefinitionCanvasEdgeKind.RoleBinding &&
+                    edge.FromNodeKey == representation.NodeKey)
+                .Select(edge => nodesByKey[edge.ToNodeKey])
+                .ToArray();
+            Assert.NotEmpty(targets);
+            Assert.All(targets, target => Assert.Equal(representation.StepKey, target.StepKey));
+        }
+    }
+
+    [Fact]
+    public async Task Canvas_clone_role_reference_keeps_shared_role_key_without_extra_edge()
+    {
+        using var pack = TemporaryProcessTemplatePack.CreateDefault();
+        var service = new ProcessDefinitionCanvasEditorProjectionService(
+            new ProcessTemplatePackLoader(pack.RootPath),
+            new FixedProcessProjectionClock(Now));
+        var canvas = await service.GetCanvasAsync(
+            ProcessWorkspaceShellScope.Global,
+            new ProcessDefinitionCatalogItemKey("architecture-review"));
+        var role = Assert.Single(canvas.Nodes, node =>
+            node.Kind == ProcessDefinitionCanvasNodeKind.Role &&
+            node.RoleKey == new ProcessDefinitionRoleKey("solution-architect"));
+
+        var cloned = await ExecuteCanvasCommandAsync(
+            service,
+            canvas,
+            ProcessDefinitionCanvasCommandKind.CloneRoleReference,
+            ToolboxActionKey: null,
+            role.NodeKey);
+
+        Assert.Equal(ProcessDefinitionCanvasCommandStatus.Accepted, cloned.Receipt.Status);
+        Assert.Equal(canvas.Edges.Count, cloned.Projection.Edges.Count);
+        var representations = cloned.Projection.Nodes
+            .Where(node => node.Kind == ProcessDefinitionCanvasNodeKind.Role && node.RoleKey == role.RoleKey)
+            .ToArray();
+        Assert.Equal(2, representations.Length);
+        Assert.Contains(representations, node => node.NodeKey != role.NodeKey && node.StepKey is null);
+        Assert.Equal(ProcessDefinitionCanvasSelectionKind.Role, cloned.Projection.Selection.Kind);
+        Assert.Contains("shared key", cloned.Receipt.Summary, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task Canvas_add_role_binding_creates_local_representation_and_rejects_semantic_duplicate()
+    {
+        using var pack = TemporaryProcessTemplatePack.CreateDefault();
+        var service = new ProcessDefinitionCanvasEditorProjectionService(
+            new ProcessTemplatePackLoader(pack.RootPath),
+            new FixedProcessProjectionClock(Now));
+        var canvas = await service.GetCanvasAsync(
+            ProcessWorkspaceShellScope.Global,
+            new ProcessDefinitionCatalogItemKey("architecture-review"));
+        var addedStep = await ExecuteCanvasCommandAsync(
+            service,
+            canvas,
+            ProcessDefinitionCanvasCommandKind.AddStep,
+            new ProcessDefinitionCanvasToolboxActionKey("process-step.implementation"),
+            canvas.Selection.NodeKey);
+        var step = Assert.Single(addedStep.Projection.Nodes, node => node.Title == "Implementation");
+        var roleAction = Assert.Single(
+            addedStep.Projection.ToolboxActions,
+            action => action.Kind == ProcessDefinitionCanvasToolboxActionKind.RoleBinding);
+
+        var addedBinding = await ExecuteCanvasCommandAsync(
+            service,
+            addedStep.Projection,
+            ProcessDefinitionCanvasCommandKind.AddRoleBinding,
+            roleAction.ActionKey,
+            step.NodeKey);
+
+        Assert.Equal(ProcessDefinitionCanvasCommandStatus.Accepted, addedBinding.Receipt.Status);
+        var roleKey = new ProcessDefinitionRoleKey("solution-architect");
+        var roleRepresentations = addedBinding.Projection.Nodes
+            .Where(node => node.Kind == ProcessDefinitionCanvasNodeKind.Role && node.RoleKey == roleKey)
+            .ToArray();
+        Assert.Equal(2, roleRepresentations.Length);
+        var localRole = Assert.Single(roleRepresentations, node => node.StepKey == step.StepKey);
+        Assert.Contains(addedBinding.Projection.Edges, edge =>
+            edge.Kind == ProcessDefinitionCanvasEdgeKind.RoleBinding &&
+            edge.FromNodeKey == localRole.NodeKey &&
+            edge.ToNodeKey == step.NodeKey);
+        Assert.True(localRole.Y < step.Y);
+
+        var duplicate = await ExecuteCanvasCommandAsync(
+            service,
+            addedBinding.Projection,
+            ProcessDefinitionCanvasCommandKind.AddRoleBinding,
+            roleAction.ActionKey,
+            step.NodeKey);
+
+        Assert.Equal(ProcessDefinitionCanvasCommandStatus.Rejected, duplicate.Receipt.Status);
+        Assert.Contains("already bound", duplicate.Receipt.Summary, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(addedBinding.Projection.Nodes, duplicate.Projection.Nodes);
+    }
+
+    [Fact]
     public async Task Canvas_rejects_stale_version_tokens_for_mutating_commands()
     {
         using var pack = TemporaryProcessTemplatePack.CreateDefault();

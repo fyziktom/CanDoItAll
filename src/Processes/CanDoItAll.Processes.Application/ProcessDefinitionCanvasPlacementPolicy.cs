@@ -131,6 +131,20 @@ internal static class ProcessDefinitionCanvasPlacementPolicy
                 occupied.Max(bounds => bounds.Bottom) + CollisionPadding + (height / 2d)));
     }
 
+    internal static (double X, double Y) PlaceInputAttachment(
+        IReadOnlyList<ProcessDefinitionCanvasBounds> occupied,
+        ProcessDefinitionCanvasEditorNodeProjection anchor,
+        double width,
+        double height)
+        => PlaceDirectionalAttachment(occupied, anchor, width, height, placeAbove: true);
+
+    internal static (double X, double Y) PlaceOutputAttachment(
+        IReadOnlyList<ProcessDefinitionCanvasBounds> occupied,
+        ProcessDefinitionCanvasEditorNodeProjection anchor,
+        double width,
+        double height)
+        => PlaceDirectionalAttachment(occupied, anchor, width, height, placeAbove: false);
+
     public static (double X, double Y) PlaceReference(
         IReadOnlyList<ProcessDefinitionCanvasEditorNodeProjection> nodes,
         ProcessDefinitionCanvasEditorNodeProjection anchor,
@@ -195,6 +209,44 @@ internal static class ProcessDefinitionCanvasPlacementPolicy
         {
             yield return lane;
             yield return -lane;
+        }
+    }
+
+    private static (double X, double Y) PlaceDirectionalAttachment(
+        IReadOnlyList<ProcessDefinitionCanvasBounds> occupied,
+        ProcessDefinitionCanvasEditorNodeProjection anchor,
+        double width,
+        double height,
+        bool placeAbove)
+    {
+        var verticalDistance = ((anchor.Height + height) / 2d) + AttachmentGap;
+        var lateralDistance = ((anchor.Width + width) / 2d) + AttachmentGap;
+        var y = anchor.Y + (placeAbove ? -verticalDistance : verticalDistance);
+        var candidates = EnumerateHorizontalSlots(anchor.X, y, lateralDistance, occupied.Count + 2);
+
+        return ResolveFirstAvailable(
+            occupied,
+            width,
+            height,
+            candidates,
+            () => (
+                anchor.X,
+                placeAbove
+                    ? occupied.Min(bounds => bounds.Top) - CollisionPadding - (height / 2d)
+                    : occupied.Max(bounds => bounds.Bottom) + CollisionPadding + (height / 2d)));
+    }
+
+    private static IEnumerable<(double X, double Y)> EnumerateHorizontalSlots(
+        double anchorX,
+        double y,
+        double lateralDistance,
+        int slotCount)
+    {
+        yield return (anchorX, y);
+        for (var slot = 1; slot <= slotCount; slot++)
+        {
+            yield return (anchorX + (slot * lateralDistance), y);
+            yield return (anchorX - (slot * lateralDistance), y);
         }
     }
 

@@ -17,12 +17,6 @@
     width: 100%;
 }
 
-.processes-canvas-overlay-safe-top {
-    display: block;
-    height: 0.25rem;
-    pointer-events: none;
-}
-
 .processes-canvas-floating-window__body {
     max-height: 100%;
     overflow: auto;

@@ -208,6 +208,95 @@ public sealed class ProcessDefinitionCanvasLayoutTests
     }
 
     [Fact]
+    public void Recompose_spaces_complete_step_groups_and_keeps_shared_role_representations_local()
+    {
+        var start = Step("start", ProcessDefinitionStepKind.Start);
+        var finish = Step("finish", ProcessDefinitionStepKind.End);
+        var roleKey = new ProcessDefinitionRoleKey("delivery-manager");
+        var startRole = Node(
+            "role-start",
+            ProcessDefinitionCanvasNodeKind.Role,
+            stepKey: start.StepKey,
+            roleKey: roleKey,
+            width: 220d,
+            height: 120d);
+        var finishRole = Node(
+            "role-finish",
+            ProcessDefinitionCanvasNodeKind.Role,
+            stepKey: finish.StepKey,
+            roleKey: roleKey,
+            width: 220d,
+            height: 120d);
+        var startArtifact = Node(
+            "artifact-start",
+            ProcessDefinitionCanvasNodeKind.Artifact,
+            stepKey: start.StepKey,
+            artifactKey: "start-proof",
+            width: 200d,
+            height: 100d);
+        var finishArtifact = Node(
+            "artifact-finish",
+            ProcessDefinitionCanvasNodeKind.Artifact,
+            stepKey: finish.StepKey,
+            artifactKey: "finish-proof",
+            width: 200d,
+            height: 100d);
+        var edges = new[]
+        {
+            Edge("start-finish", start, finish),
+            Edge("role-start-binding", startRole, start, ProcessDefinitionCanvasEdgeKind.RoleBinding),
+            Edge("role-finish-binding", finishRole, finish, ProcessDefinitionCanvasEdgeKind.RoleBinding),
+            Edge("start-artifact", start, startArtifact, ProcessDefinitionCanvasEdgeKind.ArtifactExpectation),
+            Edge("finish-artifact", finish, finishArtifact, ProcessDefinitionCanvasEdgeKind.ArtifactExpectation)
+        };
+
+        var result = ProcessDefinitionCanvasRecompositionEngine.Recompose(
+            [start, finish, startRole, finishRole, startArtifact, finishArtifact],
+            edges);
+
+        var positioned = result.Nodes.ToDictionary(node => node.NodeKey);
+        Assert.Equal(roleKey, positioned[startRole.NodeKey].RoleKey);
+        Assert.Equal(roleKey, positioned[finishRole.NodeKey].RoleKey);
+        Assert.True(positioned[startRole.NodeKey].Y < positioned[start.NodeKey].Y);
+        Assert.True(positioned[finishRole.NodeKey].Y < positioned[finish.NodeKey].Y);
+        Assert.True(positioned[startArtifact.NodeKey].Y > positioned[start.NodeKey].Y);
+        Assert.True(positioned[finishArtifact.NodeKey].Y > positioned[finish.NodeKey].Y);
+
+        var startGroupBounds = ResolveBounds(
+            positioned[start.NodeKey],
+            positioned[startRole.NodeKey],
+            positioned[startArtifact.NodeKey]);
+        var finishGroupBounds = ResolveBounds(
+            positioned[finish.NodeKey],
+            positioned[finishRole.NodeKey],
+            positioned[finishArtifact.NodeKey]);
+        Assert.True(startGroupBounds.Right + 80d <= finishGroupBounds.Left);
+        AssertNoOverlap(result.Nodes);
+    }
+
+    [Fact]
+    public void Recompose_rejects_role_representation_whose_owner_disagrees_with_binding_target()
+    {
+        var start = Step("start", ProcessDefinitionStepKind.Start);
+        var finish = Step("finish", ProcessDefinitionStepKind.End);
+        var role = Node(
+            "role",
+            ProcessDefinitionCanvasNodeKind.Role,
+            stepKey: start.StepKey,
+            roleKey: new ProcessDefinitionRoleKey("reviewer"));
+        var edges = new[]
+        {
+            Edge("start-finish", start, finish),
+            Edge("role-finish", role, finish, ProcessDefinitionCanvasEdgeKind.RoleBinding)
+        };
+
+        var exception = Assert.Throws<InvalidOperationException>(() =>
+            ProcessDefinitionCanvasRecompositionEngine.Recompose([start, finish, role], edges));
+
+        Assert.Contains("disagrees", exception.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public void PlaceStep_with_existing_continuation_uses_first_free_side_lane_without_moving_existing_nodes()
     {
         var anchor = Step("anchor", ProcessDefinitionStepKind.Work, x: 240d, y: 420d);
@@ -262,6 +351,7 @@ public sealed class ProcessDefinitionCanvasLayoutTests
         ProcessDefinitionCanvasNodeKind kind,
         ProcessDefinitionStepKey? stepKey = null,
         string? artifactKey = null,
+        ProcessDefinitionRoleKey? roleKey = null,
         ProcessDefinitionStepKind? stepKind = null,
         double x = 0d,
         double y = 0d,
@@ -279,11 +369,19 @@ public sealed class ProcessDefinitionCanvasLayoutTests
             height,
             "neutral",
             stepKey,
-            RoleKey: null,
+            roleKey,
             artifactKey,
             Badges: [],
             Ports: [],
             stepKind);
+
+    private static ProcessDefinitionCanvasBounds ResolveBounds(
+        params ProcessDefinitionCanvasEditorNodeProjection[] nodes)
+        => new(
+            nodes.Min(node => node.X - (node.Width / 2d)),
+            nodes.Min(node => node.Y - (node.Height / 2d)),
+            nodes.Max(node => node.X + (node.Width / 2d)),
+            nodes.Max(node => node.Y + (node.Height / 2d)));
 
     private static ProcessDefinitionCanvasEdgeProjection Edge(
         string key,

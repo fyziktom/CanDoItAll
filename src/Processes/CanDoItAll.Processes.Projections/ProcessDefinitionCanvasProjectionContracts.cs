@@ -46,7 +46,8 @@ public enum ProcessDefinitionCanvasCommandKind
     AddSubprocessBoundary,
     CloneArtifactReference,
     Recompose,
-    MoveNodes
+    MoveNodes,
+    CloneRoleReference
 }
 
 public enum ProcessDefinitionCanvasCommandStatus

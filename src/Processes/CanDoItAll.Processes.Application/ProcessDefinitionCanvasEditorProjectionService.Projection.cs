@@ -27,28 +27,6 @@ public sealed partial class ProcessDefinitionCanvasEditorProjectionService
         var nodes = new List<ProcessDefinitionCanvasEditorNodeProjection>();
         var edges = new List<ProcessDefinitionCanvasEdgeProjection>();
         var stepNodes = new Dictionary<string, ProcessDefinitionCanvasEditorNodeProjection>(StringComparer.OrdinalIgnoreCase);
-        var roleNodes = new Dictionary<string, ProcessDefinitionCanvasEditorNodeProjection>(StringComparer.OrdinalIgnoreCase);
-
-        foreach (var role in template.RoleAuthoringDefaults.Roles.Select((role, index) => new { Role = role, Index = index }))
-        {
-            var roleNode = CreateNode(
-                new ProcessDefinitionCanvasNodeKey($"role:{role.Role.Key}"),
-                ProcessDefinitionCanvasNodeKind.Role,
-                role.Role.DisplayName,
-                role.Role.PreferredExecutorKind,
-                role.Role.Purpose,
-                role.Role.CanvasX != 0 || role.Role.CanvasY != 0 ? role.Role.CanvasX : 160 + (role.Index * 230),
-                role.Role.CanvasX != 0 || role.Role.CanvasY != 0 ? role.Role.CanvasY : 40,
-                RoleWidth,
-                RoleHeight,
-                "success",
-                StepKey: null,
-                new ProcessDefinitionRoleKey(role.Role.Key),
-                ArtifactKey: null,
-                [role.Role.IsRequired ? "Required" : "Optional"]);
-            nodes.Add(roleNode);
-            roleNodes[role.Role.Key] = roleNode;
-        }
 
         foreach (var step in template.CanvasAuthoringDefaults.Steps.Select((step, index) => new { Step = step, Index = index }))
         {
@@ -71,6 +49,66 @@ public sealed partial class ProcessDefinitionCanvasEditorProjectionService
                 ResolveStepKind(step.Step.StepKind));
             nodes.Add(stepNode);
             stepNodes[step.Step.Key] = stepNode;
+        }
+
+        foreach (var roleItem in template.RoleAuthoringDefaults.Roles.Select((role, index) => new { Role = role, Index = index }))
+        {
+            var role = roleItem.Role;
+            var bindingGroups = template.RoleAuthoringDefaults.StepRoleBindings
+                .Where(binding =>
+                    string.Equals(binding.RoleKey, role.Key, StringComparison.OrdinalIgnoreCase) &&
+                    stepNodes.ContainsKey(binding.StepKey))
+                .GroupBy(binding => binding.StepKey, StringComparer.OrdinalIgnoreCase)
+                .ToArray();
+            if (bindingGroups.Length == 0)
+            {
+                nodes.Add(CreateRoleRepresentation(
+                    new ProcessDefinitionCanvasNodeKey($"role:{role.Key}"),
+                    role,
+                    stepKey: null,
+                    role.CanvasX != 0 || role.CanvasY != 0 ? role.CanvasX : 160 + (roleItem.Index * 230),
+                    role.CanvasX != 0 || role.CanvasY != 0 ? role.CanvasY : 40,
+                    isReference: false));
+                continue;
+            }
+
+            for (var representationIndex = 0; representationIndex < bindingGroups.Length; representationIndex++)
+            {
+                var bindingGroup = bindingGroups[representationIndex];
+                var stepNode = stepNodes[bindingGroup.Key];
+                var hasAuthoredPosition = representationIndex == 0 && (role.CanvasX != 0 || role.CanvasY != 0);
+                var position = hasAuthoredPosition
+                    ? (X: role.CanvasX, Y: role.CanvasY)
+                    : ProcessDefinitionCanvasPlacementPolicy.PlaceInputAttachment(
+                        nodes.Select(ProcessDefinitionCanvasPlacementPolicy.ResolveBounds).ToList(),
+                        stepNode,
+                        RoleWidth,
+                        RoleHeight);
+                var nodeKey = representationIndex == 0
+                    ? new ProcessDefinitionCanvasNodeKey($"role:{role.Key}")
+                    : BuildUniqueNodeKey($"role-ref:{Slugify(role.Key)}:{Slugify(bindingGroup.Key)}", nodes);
+                var roleNode = CreateRoleRepresentation(
+                    nodeKey,
+                    role,
+                    stepNode.StepKey,
+                    position.X,
+                    position.Y,
+                    isReference: representationIndex > 0);
+                nodes.Add(roleNode);
+
+                foreach (var binding in bindingGroup)
+                {
+                    edges.Add(CreateEdge(
+                        BuildUniqueEdgeKey($"role-binding:{binding.RoleKey}:{binding.StepKey}:{binding.ResponsibilityKind}", edges),
+                        ProcessDefinitionCanvasEdgeKind.RoleBinding,
+                        roleNode.NodeKey,
+                        stepNode.NodeKey,
+                        binding.ResponsibilityKind,
+                        $"{binding.RoleDisplayName} is {binding.ResponsibilityKind} for {stepNode.Title}.",
+                        "success",
+                        IsBackwardRoute: false));
+                }
+            }
         }
 
         foreach (var step in template.CanvasAuthoringDefaults.Steps)
@@ -183,24 +221,6 @@ public sealed partial class ProcessDefinitionCanvasEditorProjectionService
                     IsBackwardRoute: false));
             }
 
-            foreach (var binding in template.RoleAuthoringDefaults.StepRoleBindings.Where(binding =>
-                string.Equals(binding.StepKey, step.Key, StringComparison.OrdinalIgnoreCase)))
-            {
-                if (!roleNodes.TryGetValue(binding.RoleKey, out var roleNode))
-                {
-                    continue;
-                }
-
-                edges.Add(CreateEdge(
-                    new ProcessDefinitionCanvasEdgeKey($"role-binding:{binding.RoleKey}:{step.Key}:{binding.ResponsibilityKind}"),
-                    ProcessDefinitionCanvasEdgeKind.RoleBinding,
-                    roleNode.NodeKey,
-                    stepNode.NodeKey,
-                    binding.ResponsibilityKind,
-                    $"{binding.RoleDisplayName} is {binding.ResponsibilityKind} for {step.Title}.",
-                    "success",
-                    IsBackwardRoute: false));
-            }
         }
 
         foreach (var step in template.CanvasAuthoringDefaults.Steps)
@@ -347,6 +367,33 @@ public sealed partial class ProcessDefinitionCanvasEditorProjectionService
             badges,
             CreatePorts(kind, width, height),
             stepKind);
+
+    private static ProcessDefinitionCanvasEditorNodeProjection CreateRoleRepresentation(
+        ProcessDefinitionCanvasNodeKey nodeKey,
+        ProcessTemplateDefinitionRoleSummary role,
+        ProcessDefinitionStepKey? stepKey,
+        double x,
+        double y,
+        bool isReference)
+        => CreateNode(
+            nodeKey,
+            ProcessDefinitionCanvasNodeKind.Role,
+            role.DisplayName,
+            role.PreferredExecutorKind,
+            isReference
+                ? $"Canvas representation of the shared role definition '{role.Key}'."
+                : role.Purpose,
+            x,
+            y,
+            RoleWidth,
+            RoleHeight,
+            "success",
+            stepKey,
+            new ProcessDefinitionRoleKey(role.Key),
+            ArtifactKey: null,
+            isReference
+                ? BuildReferenceBadges([role.IsRequired ? "Required" : "Optional"])
+                : [role.IsRequired ? "Required" : "Optional"]);
 
     private static IReadOnlyList<ProcessDefinitionCanvasPortProjection> CreatePorts(
         ProcessDefinitionCanvasNodeKind kind,
