@@ -1,5 +1,6 @@
 using CanDoItAll.Components.BaseLib;
 using CanDoItAll.Components.CanvasLib;
+using CanDoItAll.Modules.Projects;
 using CanDoItAll.SharedKernel;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Logging;
@@ -18,6 +19,9 @@ public partial class ProjectStructurePage
 
     [Inject]
     private ProjectStructureWorkItemAssigneeService WorkItemAssigneeService { get; set; } = default!;
+
+    [Inject]
+    private ProjectStructureTaskResourceCostService TaskResourceCostService { get; set; } = default!;
 
     private Task ToggleSelectionWindowAsync()
         => ToggleWindowAsync(SelectionWindowKey);
@@ -94,10 +98,14 @@ public partial class ProjectStructurePage
             "Add task",
             new Dictionary<string, object?>
             {
+                [nameof(ProjectStructureTaskCreateDialog.ProjectId)] = ProjectId,
                 [nameof(ProjectStructureTaskCreateDialog.CreateRequest)] = createRequest,
                 [nameof(ProjectStructureTaskCreateDialog.RepositoryOptions)] = BuildNodeOptions(ProjectObjectType.Repository),
                 [nameof(ProjectStructureTaskCreateDialog.AssigneeOptions)] = assigneeOptions,
-                [nameof(ProjectStructureTaskCreateDialog.AssigneeWarnings)] = assigneeWarnings
+                [nameof(ProjectStructureTaskCreateDialog.AssigneeWarnings)] = assigneeWarnings,
+                [nameof(ProjectStructureTaskCreateDialog.QuoteResolver)] =
+                    new Func<ProjectStructureTaskResourceCostRequest, CancellationToken, Task<ProjectStructureTaskResourceCostQuote>>(
+                        TaskResourceCostService.GetQuoteAsync)
             },
             new DialogOptions
             {
@@ -115,6 +123,199 @@ public partial class ProjectStructurePage
         {
             await CreateTaskFromDialogAsync(submission);
         }
+    }
+
+    private async Task OpenTaskEditDialogAsync(
+        ProjectStructureNode taskNode,
+        ProjectStructureNodeEditModel editModel)
+    {
+        IReadOnlyList<ProjectStructureTaskResourceOption> assigneeOptions = [];
+        IReadOnlyList<string> assigneeWarnings = [];
+        ProjectStructureTaskResourceSelection? initialAssignee = null;
+        try
+        {
+            var optionsTask = WorkItemAssigneeService.ListOptionsAsync(ProjectId, deferredCompletionCts.Token);
+            var assignmentsTask = ProjectPartyIntegrationBridge.ListAssignmentsDetailedAsync(
+                ProjectId,
+                [ProjectPartyAssignmentRole.WorkItemAssignee],
+                deferredCompletionCts.Token);
+            await Task.WhenAll(optionsTask, assignmentsTask);
+            assigneeOptions = await optionsTask;
+            initialAssignee = ResolveTaskAssignee(await assignmentsTask, taskNode.Id);
+        }
+        catch (OperationCanceledException) when (deferredCompletionCts.IsCancellationRequested)
+        {
+            return;
+        }
+        catch (Exception exception)
+        {
+            assigneeWarnings = ["People and agents could not be loaded. Existing task fields can still be edited without changing the assignee."];
+            Logger.LogWarning(
+                exception,
+                "Failed to load task edit assignees for project {ProjectId} and task {TaskNodeId}.",
+                ProjectId,
+                taskNode.Id);
+        }
+
+        var result = await DialogService.OpenAsync<ProjectStructureTaskCreateDialog>(
+            "Edit task",
+            new Dictionary<string, object?>
+            {
+                [nameof(ProjectStructureTaskCreateDialog.ProjectId)] = ProjectId,
+                [nameof(ProjectStructureTaskCreateDialog.CreateRequest)] = editModel.Request,
+                [nameof(ProjectStructureTaskCreateDialog.RepositoryOptions)] = BuildNodeOptions(ProjectObjectType.Repository),
+                [nameof(ProjectStructureTaskCreateDialog.AssigneeOptions)] = assigneeOptions,
+                [nameof(ProjectStructureTaskCreateDialog.AssigneeWarnings)] = assigneeWarnings,
+                [nameof(ProjectStructureTaskCreateDialog.IsEditMode)] = true,
+                [nameof(ProjectStructureTaskCreateDialog.InitialAssignee)] = initialAssignee,
+                [nameof(ProjectStructureTaskCreateDialog.QuoteResolver)] =
+                    new Func<ProjectStructureTaskResourceCostRequest, CancellationToken, Task<ProjectStructureTaskResourceCostQuote>>(
+                        TaskResourceCostService.GetQuoteAsync)
+            },
+            new DialogOptions
+            {
+                Eyebrow = "Project structure task",
+                Subtitle = "Edit task details, pure effort, expected cost, and the direct CRM person or AI agent assignment.",
+                Size = ModalSize.Wide,
+                DenseChrome = true,
+                TestId = "project-structure-task-edit-dialog",
+                AriaLabel = "Edit project structure task",
+                ChromeCloseResult = null
+            },
+            deferredCompletionCts.Token);
+
+        if (result is ProjectStructureTaskDialogResult submission)
+        {
+            await SaveTaskEditDialogAsync(taskNode, submission, initialAssignee);
+        }
+    }
+
+    private async Task SaveTaskEditDialogAsync(
+        ProjectStructureNode taskNode,
+        ProjectStructureTaskDialogResult submission,
+        ProjectStructureTaskResourceSelection? initialAssignee)
+    {
+        if (!TryResolveEditAction(submission.CreateRequest.ActionId, out var createActionId) ||
+            !ProjectStructureCanvasCatalog.TryResolveCreateDefinition(createActionId, out var definition))
+        {
+            NotificationService.Error("Task could not be saved", "The task edit definition is no longer available.");
+            return;
+        }
+
+        ProjectStructureNode? updated;
+        try
+        {
+            var update = ProjectStructureNodeEditor.ComposeUpdate(definition, taskNode, submission.CreateRequest);
+            updated = await ProjectWorkbenchService.UpdateObjectAsync(ProjectId, taskNode.Id, update);
+        }
+        catch (OperationCanceledException) when (deferredCompletionCts.IsCancellationRequested)
+        {
+            return;
+        }
+        catch (Exception exception)
+        {
+            Logger.LogWarning(
+                exception,
+                "Task edit failed before a project structure update was committed. ProjectId={ProjectId} TaskNodeId={TaskNodeId}",
+                ProjectId,
+                taskNode.Id);
+            NotificationService.Error(
+                "Task could not be saved",
+                "The task update failed before it was committed. Review the values and try again.");
+            return;
+        }
+
+        if (updated is null)
+        {
+            NotificationService.Error("Task could not be saved", "The selected task is no longer available.");
+            return;
+        }
+
+        var assigneeChanged = submission.Assignee != initialAssignee;
+        if (assigneeChanged)
+        {
+            try
+            {
+                await WorkItemAssigneeService.ReplaceAsync(
+                    ProjectId,
+                    taskNode.Id,
+                    submission.Assignee,
+                    TaskCreateAssignmentSource,
+                    deferredCompletionCts.Token);
+            }
+            catch (Exception exception)
+            {
+                Logger.LogWarning(
+                    exception,
+                    "Task fields were committed but assignee update failed. ProjectId={ProjectId} TaskNodeId={TaskNodeId}",
+                    ProjectId,
+                    taskNode.Id);
+                try
+                {
+                    await ReloadSurfaceAsync(taskNode.Id);
+                    NotificationService.Warning(
+                        "Task saved; assignee not changed",
+                        "The task fields were saved, but the person or agent assignment could not be changed. Authoritative project data was reloaded.");
+                }
+                catch (Exception reloadFailure)
+                {
+                    Logger.LogError(
+                        reloadFailure,
+                        "Task fields were committed, assignee update failed, and the project structure refresh failed. ProjectId={ProjectId} TaskNodeId={TaskNodeId}",
+                        ProjectId,
+                        taskNode.Id);
+                    NotificationService.Warning(
+                        "Task saved; assignee not changed",
+                        "The task fields were saved, but the assignee was not changed and the view could not refresh. Reload the project structure.");
+                }
+
+                return;
+            }
+        }
+
+        try
+        {
+            await ReloadSurfaceAsync(taskNode.Id);
+            NotificationService.Success("Task saved", $"{submission.CreateRequest.Title} was updated.");
+        }
+        catch (Exception exception)
+        {
+            Logger.LogError(
+                exception,
+                "Task was committed but the project structure refresh failed. ProjectId={ProjectId} TaskNodeId={TaskNodeId}",
+                ProjectId,
+                taskNode.Id);
+            NotificationService.Warning(
+                "Task saved; refresh required",
+                $"{submission.CreateRequest.Title} was saved. Reload the project structure to see the latest state.");
+        }
+    }
+
+    private static ProjectStructureTaskResourceSelection? ResolveTaskAssignee(
+        IReadOnlyList<ProjectPartyAssignmentDetail> assignments,
+        string taskNodeId)
+    {
+        var taskAssignments = assignments
+            .Where(assignment => string.Equals(assignment.NodeKey, taskNodeId, StringComparison.Ordinal))
+            .ToArray();
+        if (taskAssignments.Length > 1)
+        {
+            throw new InvalidOperationException("The task has multiple direct assignees. Resolve the conflict before editing it.");
+        }
+
+        if (taskAssignments.Length == 0)
+        {
+            return null;
+        }
+
+        var assignment = taskAssignments[0];
+        var kind = assignment.PartyType switch
+        {
+            ProjectPartyType.Person => ProjectStructureTaskResourceKind.Person,
+            ProjectPartyType.AiAgent => ProjectStructureTaskResourceKind.Agent,
+            _ => throw new InvalidOperationException("The task has an unsupported direct assignee type.")
+        };
+        return new ProjectStructureTaskResourceSelection(kind, assignment.PartyId);
     }
 
     private async Task CreateTaskFromDialogAsync(ProjectStructureTaskDialogResult submission)

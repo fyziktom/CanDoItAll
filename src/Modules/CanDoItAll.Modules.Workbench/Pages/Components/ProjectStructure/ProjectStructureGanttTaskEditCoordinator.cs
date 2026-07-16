@@ -11,10 +11,12 @@ public sealed record ProjectStructureGanttTaskEditContext(
     Guid ProjectId,
     ProjectStructureSurface Surface,
     ProjectStructureGanttProjectionResult Projection,
-    IReadOnlyList<ProjectPartyAssignmentDetail> Assignments);
+    IReadOnlyList<ProjectPartyAssignmentDetail> Assignments,
+    ProjectStructureAgentContext MutationOwner);
 
 public sealed class ProjectStructureGanttTaskEditCoordinator(
     ProjectStructureTaskResourceService taskResourceService,
+    ProjectStructureTaskResourceCostService taskResourceCostService,
     ProjectStructureTaskDetailsService taskDetailsService,
     DialogService dialogService,
     NotificationService notificationService,
@@ -59,7 +61,7 @@ public sealed class ProjectStructureGanttTaskEditCoordinator(
             return;
         }
 
-        var (resourceOptions, resourceWarnings) = await LoadAssigneeOptionsAsync(
+        var (resourceOptions, resourceWarnings) = await LoadResourceOptionsAsync(
             context,
             taskId.Value,
             assignee,
@@ -77,12 +79,16 @@ public sealed class ProjectStructureGanttTaskEditCoordinator(
             "Edit project task",
             new Dictionary<string, object?>
             {
+                [nameof(ProjectStructureGanttTaskDialog.ProjectId)] = context.ProjectId,
                 [nameof(ProjectStructureGanttTaskDialog.DefaultStartUtc)] = projectedTask.Start,
                 [nameof(ProjectStructureGanttTaskDialog.DefaultEndUtc)] = projectedTask.End,
                 [nameof(ProjectStructureGanttTaskDialog.DefaultCurrencyCode)] = currencyFormatter.CurrencyCode,
                 [nameof(ProjectStructureGanttTaskDialog.EditModel)] = editModel,
                 [nameof(ProjectStructureGanttTaskDialog.ResourceOptions)] = resourceOptions,
-                [nameof(ProjectStructureGanttTaskDialog.ResourceWarnings)] = resourceWarnings
+                [nameof(ProjectStructureGanttTaskDialog.ResourceWarnings)] = resourceWarnings,
+                [nameof(ProjectStructureGanttTaskDialog.QuoteResolver)] =
+                    new Func<ProjectStructureTaskResourceCostRequest, CancellationToken, Task<ProjectStructureTaskResourceCostQuote>>(
+                        taskResourceCostService.GetQuoteAsync)
             },
             new DialogOptions
             {
@@ -114,6 +120,14 @@ public sealed class ProjectStructureGanttTaskEditCoordinator(
             notificationService.Error(
                 "Task details could not be saved",
                 "The task detail result does not belong to the selected task.");
+            return;
+        }
+
+        if (!TryValidateResourceToAttach(proposed.ResourceToAttach, out var resourceValidationError))
+        {
+            notificationService.Error(
+                "Task resource could not be attached",
+                resourceValidationError);
             return;
         }
 
@@ -153,10 +167,65 @@ public sealed class ProjectStructureGanttTaskEditCoordinator(
         {
             var result = await taskDetailsService.UpdateAsync(context.ProjectId, request, cancellationToken);
             mutationCommitted = true;
+            if (proposed.ResourceToAttach is not null)
+            {
+                try
+                {
+                    await taskResourceService.AttachAsync(
+                        context.ProjectId,
+                        current.TaskId.Value,
+                        proposed.ResourceToAttach,
+                        context.MutationOwner,
+                        cancellationToken);
+                }
+                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+                {
+                    notificationService.Warning(
+                        "Task details saved; resource not attached",
+                        "The task changes were saved, but resource attachment was canceled. Reload the project before trying again.");
+                    logger.LogWarning(
+                        "Task details were committed before resource attachment was canceled. ProjectId={ProjectId} TaskId={TaskId} ResourceKind={ResourceKind}",
+                        Mask(context.ProjectId),
+                        Mask(current.TaskId.Value),
+                        proposed.ResourceToAttach.Kind);
+                    return;
+                }
+                catch (Exception exception)
+                {
+                    try
+                    {
+                        await reloadAuthoritativeProject();
+                    }
+                    catch (Exception reloadFailure)
+                    {
+                        logger.LogError(
+                            reloadFailure,
+                            "Task details were committed, resource attachment failed, and the authoritative project could not be reloaded. ProjectId={ProjectId} TaskId={TaskId} ResourceKind={ResourceKind}",
+                            Mask(context.ProjectId),
+                            Mask(current.TaskId.Value),
+                            proposed.ResourceToAttach.Kind);
+                    }
+
+                    notificationService.Warning(
+                        "Task details saved; resource not attached",
+                        "The task changes were saved, but the selected workflow or process could not be attached. Reload the project before trying again.");
+                    logger.LogWarning(
+                        exception,
+                        "Task details were committed but resource attachment failed. ProjectId={ProjectId} TaskId={TaskId} ResourceKind={ResourceKind} FailureType={FailureType}",
+                        Mask(context.ProjectId),
+                        Mask(current.TaskId.Value),
+                        proposed.ResourceToAttach.Kind,
+                        exception.GetType().Name);
+                    return;
+                }
+            }
+
             await reloadAuthoritativeProject();
             notificationService.Success(
                 "Task details saved",
-                $"{proposed.Title} was saved; {result.AffectedTaskIds.Count} project task(s) were affected.");
+                proposed.ResourceToAttach is null
+                    ? $"{proposed.Title} was saved; {result.AffectedTaskIds.Count} project task(s) were affected."
+                    : $"{proposed.Title} was saved with its selected {proposed.ResourceToAttach.Kind.ToString().ToLowerInvariant()}; {result.AffectedTaskIds.Count} project task(s) were affected.");
         }
         catch (ProjectStructureGanttMutationException exception)
         {
@@ -212,7 +281,7 @@ public sealed class ProjectStructureGanttTaskEditCoordinator(
         }
     }
 
-    private async Task<(IReadOnlyList<ProjectStructureTaskResourceOption> Options, IReadOnlyList<string> Warnings)> LoadAssigneeOptionsAsync(
+    private async Task<(IReadOnlyList<ProjectStructureTaskResourceOption> Options, IReadOnlyList<string> Warnings)> LoadResourceOptionsAsync(
         ProjectStructureGanttTaskEditContext context,
         string taskNodeId,
         ProjectStructureTaskResourceSelection? assignee,
@@ -220,9 +289,7 @@ public sealed class ProjectStructureGanttTaskEditCoordinator(
     {
         try
         {
-            var options = (await taskResourceService.ListOptionsAsync(context.ProjectId, cancellationToken))
-                .Where(static option => option.Kind is ProjectStructureTaskResourceKind.Person or ProjectStructureTaskResourceKind.Agent)
-                .ToArray();
+            var options = await taskResourceService.ListOptionsAsync(context.ProjectId, cancellationToken);
             return (IncludeCurrentAssigneeOption(options, context.Assignments, taskNodeId, assignee), []);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -232,13 +299,45 @@ public sealed class ProjectStructureGanttTaskEditCoordinator(
         catch (Exception exception)
         {
             logger.LogWarning(
-                "Failed to load task assignee choices for project {ProjectId}; failure type {FailureType}.",
+                "Failed to load task resource choices for project {ProjectId}; failure type {FailureType}.",
                 Mask(context.ProjectId),
                 exception.GetType().Name);
             return (
                 IncludeCurrentAssigneeOption([], context.Assignments, taskNodeId, assignee),
-                ["People and agents could not be loaded. Existing task details can still be saved without changing the assignee."]);
+                ["Task resources could not be loaded. Existing task details can still be saved without changing the assignee."]);
         }
+    }
+
+    private static bool TryValidateResourceToAttach(
+        ProjectStructureTaskResourceSelection? resource,
+        out string validationError)
+    {
+        validationError = string.Empty;
+        if (resource is null)
+        {
+            return true;
+        }
+
+        if (resource.Kind is not (ProjectStructureTaskResourceKind.Workflow or ProjectStructureTaskResourceKind.Process))
+        {
+            validationError = "Only a workflow or process can be staged as an attached task resource.";
+            return false;
+        }
+
+        if (resource.ResourceId == Guid.Empty)
+        {
+            validationError = "Choose a workflow or process before saving the task.";
+            return false;
+        }
+
+        if (resource.VersionId == Guid.Empty ||
+            (resource.Kind == ProjectStructureTaskResourceKind.Process && resource.VersionId.HasValue))
+        {
+            validationError = "The selected workflow or process version is invalid.";
+            return false;
+        }
+
+        return true;
     }
 
     private static ProjectTaskEstimate ReadEstimate(ProjectStructureNode taskNode)

@@ -221,7 +221,9 @@ public sealed record WorkflowRunPageRequest(
     WorkflowRuntimeBackendKind? Backend = null,
     string Search = "",
     int PageIndex = 0,
-    int PageSize = 10);
+    int PageSize = 10,
+    WorkflowVersionId? VersionId = null,
+    bool IncludeTotalCount = true);
 
 public sealed record WorkflowEventPageRequest(
     WorkflowRunId RunId,

@@ -114,6 +114,7 @@ public sealed class ProjectStructureTaskCreateDialogTests
             "Add task",
             new Dictionary<string, object?>
             {
+                [nameof(ProjectStructureTaskCreateDialog.ProjectId)] = Guid.Parse("10000000-0000-0000-0000-000000000001"),
                 [nameof(ProjectStructureTaskCreateDialog.CreateRequest)] = request,
                 [nameof(ProjectStructureTaskCreateDialog.AssigneeOptions)] = assignees
             },

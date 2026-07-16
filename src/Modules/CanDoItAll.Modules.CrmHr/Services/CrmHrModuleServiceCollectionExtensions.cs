@@ -25,6 +25,7 @@ public static class CrmHrModuleServiceCollectionExtensions
         services.AddMemorySourceGatewayAdapter<CrmHrMemorySourceGatewayAdapter>();
         services.AddScoped<IAutomationSignalSource, CrmHrAutomationSignalProvider>();
         services.AddScoped<IProjectPartyIntegrationBridge>(serviceProvider => serviceProvider.GetRequiredService<ProjectPartyIntegrationService>());
+        services.AddScoped<IProjectPartyCostRateBridge>(serviceProvider => serviceProvider.GetRequiredService<ProjectPartyIntegrationService>());
         services.TryAddScoped<IAiTechnicalAgentBridge, LegacyAiTechnicalAgentBridge>();
         return services;
     }

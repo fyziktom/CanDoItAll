@@ -20,7 +20,8 @@ public sealed record ProjectStructureTaskEditDialogResult(
     int ProgressPercent,
     ProjectTaskEstimate Estimate,
     bool AssigneeChanged,
-    ProjectStructureTaskResourceSelection? Assignee);
+    ProjectStructureTaskResourceSelection? Assignee,
+    ProjectStructureTaskResourceSelection? ResourceToAttach = null);
 
 public sealed record ProjectStructureTaskDetailsUpdateRequest(
     GanttTaskId TaskId,

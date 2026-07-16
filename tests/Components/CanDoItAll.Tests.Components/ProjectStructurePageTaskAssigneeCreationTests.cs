@@ -13,6 +13,76 @@ namespace CanDoItAll.Tests.Components;
 
 public sealed class ProjectStructurePageTaskAssigneeCreationTests
 {
+    [Fact]
+    public async Task Canonical_task_edit_assigns_CRM_person_without_creating_child_node()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
+        var partyDirectoryService = harness.Context.Services.GetRequiredService<PartyDirectoryService>();
+        var workbenchService = harness.Context.Services.GetRequiredService<ProjectWorkbenchService>();
+        var partyBridge = harness.Context.Services.GetRequiredService<IProjectPartyIntegrationBridge>();
+        var projectId = await CreateProjectAsync(projectsService, TaskCreateEntryPoint.CreateActionInvoked);
+        var joeId = await CreateJoeDoeAsync(partyDirectoryService);
+        var task = await workbenchService.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.WorkItem,
+                "Prepare CRM handoff",
+                "Delivery",
+                string.Empty,
+                $"project:{projectId}",
+                420,
+                260,
+                ObjectSubtype: "task",
+                MetadataJson: ProjectObjectMetadataSerializer.Serialize(new ProjectObjectMetadataEnvelope
+                {
+                    WorkItem = new ProjectWorkItemMetadata
+                    {
+                        WorkItemKind = ProjectWorkItemKind.Task
+                    }
+                })));
+        var dialogHost = harness.Context.RenderComponent<DialogHost>();
+        var page = harness.Context.RenderComponent<ProjectStructurePage>(
+            parameters => parameters.Add(component => component.ProjectId, projectId));
+        var canvasWorkbench = WaitForCanvasWorkbench(page);
+
+        await page.InvokeAsync(() => canvasWorkbench.Instance.NodeOpened.InvokeAsync(task.Id));
+        page.WaitForElement("[data-testid='project-structure-node-quick-actions']");
+        var dialogs = page.FindComponents<ProjectStructureCanvasDialogs>()
+            .Single(component => component.Instance.QuickActionDialog is not null);
+        var quickActions = Assert.IsType<ProjectStructureQuickActionDialogState>(dialogs.Instance.QuickActionDialog);
+        var editTask = page.InvokeAsync(() =>
+            dialogs.Instance.ExecuteQuickAction.InvokeAsync(quickActions.EditAction));
+
+        dialogHost.WaitForElement("[data-testid='project-structure-task-create-title']");
+        var joeCardSelector = $"[data-testid='project-structure-task-create-assignee-person-{joeId:N}']";
+        dialogHost.WaitForElement(joeCardSelector);
+        dialogHost.Find(joeCardSelector).Click();
+        dialogHost.Find("[data-testid='project-structure-task-create-submit']").Click();
+
+        await editTask.WaitAsync(TimeSpan.FromSeconds(20));
+
+        var persistedSurface = await workbenchService.GetStructureAsync(projectId);
+        var refreshedTask = Assert.Single(persistedSurface.Nodes, node => node.Id == task.Id);
+        Assert.Equal(
+            "Joe Doe",
+            ProjectObjectMetadataSerializer.Parse(refreshedTask.MetadataJson).WorkItem?.AssigneePartyDisplayName);
+        Assert.Null(refreshedTask.NodeReferences?.WorkItemAssigneeNodeId);
+
+        var assignment = Assert.Single(
+            await partyBridge.ListAssignmentsDetailedAsync(projectId),
+            item => item.NodeKey == task.Id && item.Role == ProjectPartyAssignmentRole.WorkItemAssignee);
+        Assert.Equal(joeId, assignment.PartyId);
+        Assert.True(assignment.IsPrimary);
+        Assert.DoesNotContain(
+            persistedSurface.Nodes,
+            node => node.ParentId == task.Id &&
+                (node.ObjectType == ProjectObjectType.Participant || node.Title == "Joe Doe"));
+        Assert.DoesNotContain(
+            persistedSurface.Links,
+            link => link.SourceId == task.Id && link.Kind == ProjectObjectLinkKind.Uses);
+    }
+
     [Theory]
     [InlineData(TaskCreateEntryPoint.CreateActionInvoked)]
     [InlineData(TaskCreateEntryPoint.ContextActionRequested)]

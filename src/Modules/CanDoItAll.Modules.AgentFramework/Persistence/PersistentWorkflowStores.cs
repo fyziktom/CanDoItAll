@@ -973,6 +973,11 @@ public sealed class PersistentWorkflowRunStore(IDbContextFactory<AppDbContext> d
             query = query.Where(item => item.WorkflowId == request.WorkflowId.Value.Value);
         }
 
+        if (request.VersionId.HasValue)
+        {
+            query = query.Where(item => item.VersionId == request.VersionId.Value.Value);
+        }
+
         if (request.State.HasValue)
         {
             query = query.Where(item => item.State == request.State.Value);
@@ -989,12 +994,14 @@ public sealed class PersistentWorkflowRunStore(IDbContextFactory<AppDbContext> d
             query = query.Where(item => item.Summary.Contains(search) || item.BackendRunId.Contains(search));
         }
 
-        var totalCount = await query.CountAsync(cancellationToken);
         var orderedQuery = query.OrderByDescending(item => item.UpdatedAtUtc).ThenByDescending(item => item.RunId);
         var records = await orderedQuery
             .Skip(pageIndex * pageSize)
             .Take(pageSize)
             .ToListAsync(cancellationToken);
+        var totalCount = request.IncludeTotalCount
+            ? await query.CountAsync(cancellationToken)
+            : records.Count;
 
         return new WorkflowListPage<WorkflowRunSnapshot>(
             records.Select(item => item.ToSnapshot()).ToArray(),

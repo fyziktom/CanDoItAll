@@ -213,8 +213,17 @@ public sealed class ProjectStructureGanttPanelTests
         context.Services.AddSingleton(taskDetailsService);
         var currencyFormatter = new StubCurrencyFormatter();
         context.Services.AddSingleton<ICurrencyFormatter>(currencyFormatter);
+        var taskResourceCostService = new ProjectStructureTaskResourceCostService(
+            null!,
+            null!,
+            null!,
+            null!,
+            null!,
+            TimeProvider.System);
+        context.Services.AddSingleton(taskResourceCostService);
         context.Services.AddScoped(serviceProvider => new ProjectStructureGanttTaskEditCoordinator(
             taskResourceService,
+            taskResourceCostService,
             taskDetailsService,
             serviceProvider.GetRequiredService<DialogService>(),
             serviceProvider.GetRequiredService<NotificationService>(),

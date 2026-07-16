@@ -58,6 +58,7 @@ public static class WorkbenchModuleServiceCollectionExtensions
         services.AddScoped<ProjectStructureImportService>();
         services.AddScoped<ProjectStructureWorkItemAssigneeService>();
         services.AddScoped<ProjectStructureTaskResourceService>();
+        services.AddScoped<ProjectStructureTaskResourceCostService>();
         services.AddScoped<ProjectStructureGanttRowOrderService>();
         services.AddScoped<ProjectStructureTaskCreationService>();
         services.AddScoped<ProjectStructureTaskDetailsService>();

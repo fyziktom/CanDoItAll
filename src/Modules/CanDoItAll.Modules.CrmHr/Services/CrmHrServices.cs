@@ -396,6 +396,8 @@ public sealed class WorkforceProfileEditorModel
     public string TimeZone { get; set; } = string.Empty;
     public decimal? InternalCostRate { get; set; }
     public decimal? ExternalBillingRate { get; set; }
+    public ProjectResourceRateUnit RateUnit { get; set; } = ProjectResourceRateUnit.Hour;
+    public string RateCurrencyCode { get; set; } = "USD";
     public decimal CapacityHoursPerWeek { get; set; } = 40m;
     public string Status { get; set; } = "Planned";
     public string Notes { get; set; } = string.Empty;
@@ -2882,6 +2884,8 @@ public sealed partial class HrService(
                 TimeZone = profile?.TimeZone ?? string.Empty,
                 InternalCostRate = profile?.InternalCostRate,
                 ExternalBillingRate = profile?.ExternalBillingRate,
+                RateUnit = profile?.RateUnit ?? ProjectResourceRateUnit.Hour,
+                RateCurrencyCode = string.IsNullOrWhiteSpace(profile?.RateCurrencyCode) ? "USD" : profile.RateCurrencyCode,
                 CapacityHoursPerWeek = profile?.CapacityHoursPerWeek ?? 40m,
                 Status = string.IsNullOrWhiteSpace(profile?.Status) ? ResolveDefaultStatus(party.LifecycleStatus) : profile.Status,
                 Notes = profile?.Notes ?? string.Empty,
@@ -2921,6 +2925,30 @@ public sealed partial class HrService(
         if (model.HomeUnitPartyId == model.PartyId)
         {
             return Result<Guid>.Failure(Error.Validation("A party cannot reference itself as its home unit.", "crmhr.workforce.self-home-unit"));
+        }
+
+        if (model.InternalCostRate is < 0m || model.ExternalBillingRate is < 0m)
+        {
+            return Result<Guid>.Failure(Error.Validation(
+                "Workforce rates cannot be negative.",
+                "crmhr.workforce.rate-negative"));
+        }
+
+        if (!Enum.IsDefined(model.RateUnit))
+        {
+            return Result<Guid>.Failure(Error.Validation(
+                "Choose a supported workforce rate unit.",
+                "crmhr.workforce.rate-unit-invalid"));
+        }
+
+        var rateCurrencyCode = string.IsNullOrWhiteSpace(model.RateCurrencyCode)
+            ? "USD"
+            : model.RateCurrencyCode.Trim().ToUpperInvariant();
+        if (rateCurrencyCode.Length != 3 || rateCurrencyCode.Any(character => character is < 'A' or > 'Z'))
+        {
+            return Result<Guid>.Failure(Error.Validation(
+                "Rate currency must be a three-letter currency code.",
+                "crmhr.workforce.rate-currency-invalid"));
         }
 
         if (party.PartyType == PartyType.Person && model.WorkforceKind == WorkforceKind.DeliveryUnit)
@@ -2987,6 +3015,8 @@ public sealed partial class HrService(
         profile.TimeZone = model.TimeZone.Trim();
         profile.InternalCostRate = model.InternalCostRate;
         profile.ExternalBillingRate = model.ExternalBillingRate;
+        profile.RateUnit = model.RateUnit;
+        profile.RateCurrencyCode = rateCurrencyCode;
         profile.CapacityHoursPerWeek = model.CapacityHoursPerWeek <= 0m ? 40m : model.CapacityHoursPerWeek;
         profile.Status = model.Status.Trim();
         profile.Notes = model.Notes.Trim();
@@ -4563,7 +4593,9 @@ public sealed partial class AiAgentService(
 public sealed partial class ProjectPartyIntegrationService(
     IDbContextFactory<AppDbContext> dbContextFactory,
     PartyDirectoryService partyDirectoryService,
-    ProjectPartyAssignmentNodePolicy projectPartyAssignmentNodePolicy) : IProjectPartyIntegrationBridge
+    ProjectPartyAssignmentNodePolicy projectPartyAssignmentNodePolicy) :
+    IProjectPartyIntegrationBridge,
+    IProjectPartyCostRateBridge
 {
     public async Task<IReadOnlyList<ProjectPartyAssignmentSummaryModel>> ListAssignmentsAsync(Guid projectId, CancellationToken cancellationToken = default)
     {
@@ -4710,6 +4742,39 @@ public sealed partial class ProjectPartyIntegrationService(
             ResolvePrimaryContactValue(contacts, PartyContactType.Email),
             ResolvePrimaryContactValue(contacts, PartyContactType.Phone),
             party.IsSensitive);
+    }
+
+    public async Task<ProjectPartyCostRate?> GetInternalCostRateAsync(
+        Guid partyId,
+        CancellationToken cancellationToken = default)
+    {
+        if (partyId == Guid.Empty)
+        {
+            return null;
+        }
+
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        var rate = await dbContext.Set<WorkforceProfile>()
+            .AsNoTracking()
+            .Where(profile => profile.PartyId == partyId && profile.InternalCostRate.HasValue)
+            .Select(profile => new
+            {
+                profile.PartyId,
+                Rate = profile.InternalCostRate!.Value,
+                Unit = profile.RateUnit,
+                CurrencyCode = profile.RateCurrencyCode
+            })
+            .SingleOrDefaultAsync(cancellationToken);
+        if (rate is null)
+        {
+            return null;
+        }
+
+        return new ProjectPartyCostRate(
+            rate.PartyId,
+            rate.Rate,
+            rate.Unit,
+            rate.CurrencyCode);
     }
 
     public Task<IReadOnlyList<ProjectPartyAssignmentDetail>> ListAssignmentsDetailedAsync(

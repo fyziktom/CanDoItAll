@@ -352,13 +352,29 @@ public partial class ProjectStructurePage
             return;
         }
 
-        if (!TryBuildNodeEditModel(node, out var model) || workbenchRef is null)
+        if (!TryBuildNodeEditModel(node, out var model))
+        {
+            return;
+        }
+
+        if (IsCanonicalTaskNode(node))
+        {
+            await OpenTaskEditDialogAsync(node, model);
+            return;
+        }
+
+        if (workbenchRef is null)
         {
             return;
         }
 
         await workbenchRef.OpenCreateDialogAsync(model.Action, model.Request);
     }
+
+    private static bool IsCanonicalTaskNode(ProjectStructureNode node)
+        => node.ObjectType == ProjectObjectType.WorkItem &&
+           string.Equals(node.ObjectSubtype, "task", StringComparison.OrdinalIgnoreCase) &&
+           !node.IsSystemManaged;
 
     private async Task<bool> TryApplyNodeEditAsync(CanvasWorkbenchCreateActionRequest request)
     {

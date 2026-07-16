@@ -1,3 +1,4 @@
+using CanDoItAll.Modules.Projects;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -298,6 +299,8 @@ public sealed class WorkforceProfile
     public string TimeZone { get; set; } = string.Empty;
     public decimal? InternalCostRate { get; set; }
     public decimal? ExternalBillingRate { get; set; }
+    public ProjectResourceRateUnit RateUnit { get; set; } = ProjectResourceRateUnit.Hour;
+    public string RateCurrencyCode { get; set; } = "USD";
     public decimal CapacityHoursPerWeek { get; set; } = 40m;
     public string Status { get; set; } = string.Empty;
     public string ExtendedDataJson { get; set; } = "{}";
@@ -541,6 +544,14 @@ internal sealed class WorkforceProfileConfiguration : IEntityTypeConfiguration<W
         builder.Property(profile => profile.Seniority).HasMaxLength(80);
         builder.Property(profile => profile.Location).HasMaxLength(160);
         builder.Property(profile => profile.TimeZone).HasMaxLength(80);
+        builder.Property(profile => profile.RateUnit)
+            .HasConversion<string>()
+            .HasMaxLength(32)
+            .HasDefaultValue(ProjectResourceRateUnit.Hour);
+        builder.Property(profile => profile.RateCurrencyCode)
+            .HasMaxLength(3)
+            .HasDefaultValue("USD")
+            .IsRequired();
         builder.Property(profile => profile.Status).HasMaxLength(80);
         builder.Property(profile => profile.ExtendedDataJson).HasColumnType("TEXT");
         builder.Property(profile => profile.Notes).HasColumnType("TEXT");

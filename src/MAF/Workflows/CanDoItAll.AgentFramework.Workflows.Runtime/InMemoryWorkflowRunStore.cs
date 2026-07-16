@@ -164,6 +164,11 @@ public sealed class InMemoryWorkflowRunStore :
             filtered = filtered.Where(run => run.WorkflowId == request.WorkflowId.Value);
         }
 
+        if (request.VersionId.HasValue)
+        {
+            filtered = filtered.Where(run => run.VersionId == request.VersionId.Value);
+        }
+
         if (request.State.HasValue)
         {
             filtered = filtered.Where(run => run.State == request.State.Value);
@@ -183,10 +188,22 @@ public sealed class InMemoryWorkflowRunStore :
                 run.RunId.ToString().Contains(search, StringComparison.OrdinalIgnoreCase));
         }
 
-        var ordered = filtered
-            .OrderByDescending(run => run.UpdatedAtUtc)
-            .ToArray();
-        var items = ordered
+        var ordered = filtered.OrderByDescending(run => run.UpdatedAtUtc);
+        if (!request.IncludeTotalCount)
+        {
+            var boundedItems = ordered
+                .Skip(pageIndex * pageSize)
+                .Take(pageSize)
+                .ToArray();
+            return Task.FromResult(new WorkflowListPage<WorkflowRunSnapshot>(
+                boundedItems,
+                pageIndex,
+                pageSize,
+                boundedItems.Length));
+        }
+
+        var orderedItems = ordered.ToArray();
+        var items = orderedItems
             .Skip(pageIndex * pageSize)
             .Take(pageSize)
             .ToArray();
@@ -195,7 +212,7 @@ public sealed class InMemoryWorkflowRunStore :
             items,
             pageIndex,
             pageSize,
-            ordered.Length));
+            orderedItems.Length));
     }
 
     public Task SaveEventAsync(WorkflowEventRecord workflowEvent, CancellationToken cancellationToken = default)

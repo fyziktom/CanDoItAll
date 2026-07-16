@@ -1,0 +1,64 @@
+@namespace CanDoItAll.AppComponents
+@typeparam TValue where TValue : notnull
+
+<FilterBar ResultText="@ResultText"
+           data-testid="@DataTestId">
+    <Cluster Gap="LayoutGap.XSmall"
+             Wrap="FlexWrap.Wrap"
+             role="group"
+             aria-label="@AriaLabel">
+        @foreach (var option in Options)
+        {
+            var isChecked = Value.Contains(option.Value);
+            var preventsEmptySelection = !AllowEmpty && isChecked && Value.Count == 1;
+            <Button Text="@option.Label"
+                    Icon="@(isChecked ? "check_box" : "check_box_outline_blank")"
+                    Size="ButtonSize.Small"
+                    Variant="@(isChecked ? Variant.Filled : Variant.Outlined)"
+                    ButtonStyle="@(isChecked ? ButtonStyle.Info : ButtonStyle.Base)"
+                    Disabled="@preventsEmptySelection"
+                    aria-pressed="@(isChecked ? "true" : "false")"
+                    data-testid="@option.TestId"
+                    Click="@(() => ToggleAsync(option.Value))" />
+        }
+    </Cluster>
+</FilterBar>
+
+@code {
+    [Parameter, EditorRequired]
+    public IReadOnlyList<CheckedBadgeFilterOption<TValue>> Options { get; set; } = [];
+
+    [Parameter, EditorRequired]
+    public IReadOnlySet<TValue> Value { get; set; } = new HashSet<TValue>();
+
+    [Parameter]
+    public EventCallback<IReadOnlySet<TValue>> ValueChanged { get; set; }
+
+    [Parameter]
+    public bool AllowEmpty { get; set; } = true;
+
+    [Parameter]
+    public string ResultText { get; set; } = string.Empty;
+
+    [Parameter]
+    public string AriaLabel { get; set; } = "Visible categories";
+
+    [Parameter]
+    public string DataTestId { get; set; } = "checked-badge-filter";
+
+    private Task ToggleAsync(TValue value)
+    {
+        var next = Value.ToHashSet();
+        if (!next.Add(value))
+        {
+            if (!AllowEmpty && next.Count == 1)
+            {
+                return Task.CompletedTask;
+            }
+
+            next.Remove(value);
+        }
+
+        return ValueChanged.InvokeAsync(next);
+    }
+}

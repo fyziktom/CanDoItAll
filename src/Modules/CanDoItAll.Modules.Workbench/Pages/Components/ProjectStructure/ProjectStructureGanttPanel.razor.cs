@@ -43,6 +43,9 @@ public partial class ProjectStructureGanttPanel : ComponentBase, IAsyncDisposabl
     private ProjectStructureTaskResourceService TaskResourceService { get; set; } = default!;
 
     [Inject]
+    private ProjectStructureTaskResourceCostService TaskResourceCostService { get; set; } = default!;
+
+    [Inject]
     private ProjectStructureGanttRowOrderService RowOrderService { get; set; } = default!;
 
     [Inject]
@@ -216,7 +219,8 @@ public partial class ProjectStructureGanttPanel : ComponentBase, IAsyncDisposabl
                     ProjectId,
                     loadedSurface,
                     projection,
-                    loadedAssignments),
+                    loadedAssignments,
+                    uiMutationOwner),
                 taskId,
                 () => MutationCommitted.InvokeAsync(),
                 lifetimeCancellation.Token);
@@ -264,6 +268,7 @@ public partial class ProjectStructureGanttPanel : ComponentBase, IAsyncDisposabl
             "Add project task",
             new Dictionary<string, object?>
             {
+                [nameof(ProjectStructureGanttTaskDialog.ProjectId)] = ProjectId,
                 [nameof(ProjectStructureGanttTaskDialog.DefaultStartUtc)] = normalizedStart,
                 [nameof(ProjectStructureGanttTaskDialog.DefaultEndUtc)] = normalizedStart + DefaultTaskDuration,
                 [nameof(ProjectStructureGanttTaskDialog.DefaultEstimate)] = new ProjectTaskEstimate(
@@ -274,7 +279,10 @@ public partial class ProjectStructureGanttPanel : ComponentBase, IAsyncDisposabl
                 [nameof(ProjectStructureGanttTaskDialog.DefaultCurrencyCode)] = CurrencyFormatter.CurrencyCode,
                 [nameof(ProjectStructureGanttTaskDialog.AfterTaskNodeId)] = afterTaskNodeId,
                 [nameof(ProjectStructureGanttTaskDialog.ResourceOptions)] = resourceOptions,
-                [nameof(ProjectStructureGanttTaskDialog.ResourceWarnings)] = resourceWarnings
+                [nameof(ProjectStructureGanttTaskDialog.ResourceWarnings)] = resourceWarnings,
+                [nameof(ProjectStructureGanttTaskDialog.QuoteResolver)] =
+                    new Func<ProjectStructureTaskResourceCostRequest, CancellationToken, Task<ProjectStructureTaskResourceCostQuote>>(
+                        TaskResourceCostService.GetQuoteAsync)
             },
             new DialogOptions
             {

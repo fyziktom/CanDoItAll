@@ -1,10 +1,62 @@
 using CanDoItAll.Modules.CrmHr;
+using CanDoItAll.Modules.Projects;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace CanDoItAll.Tests.Integration;
 
 public sealed class WorkforceProfileIntegrationTests
 {
+    [Theory]
+    [InlineData(PartyType.Person, PartyRoleKind.Employee)]
+    [InlineData(PartyType.AiAgent, PartyRoleKind.AiSteward)]
+    public async Task Party_cost_rate_bridge_returns_only_the_selected_profile_rate(
+        PartyType partyType,
+        PartyRoleKind roleKind)
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var partyDirectoryService = scope.ServiceProvider.GetRequiredService<PartyDirectoryService>();
+        var hrService = scope.ServiceProvider.GetRequiredService<HrService>();
+        var rateBridge = scope.ServiceProvider.GetRequiredService<IProjectPartyCostRateBridge>();
+
+        var ratedPartyId = await CreatePartyAsync(
+            partyDirectoryService,
+            $"Rated {partyType}",
+            partyType,
+            PartyLifecycleStatus.Active,
+            roleKind,
+            $"rated-{partyType.ToString().ToLowerInvariant()}@example.test");
+        var unratedPartyId = await CreatePartyAsync(
+            partyDirectoryService,
+            $"Unrated {partyType}",
+            partyType,
+            PartyLifecycleStatus.Active,
+            roleKind,
+            $"unrated-{partyType.ToString().ToLowerInvariant()}@example.test");
+
+        var saveResult = await hrService.SaveWorkforceProfileAsync(new WorkforceProfileEditorModel
+        {
+            PartyId = ratedPartyId,
+            WorkforceKind = WorkforceKind.Contractor,
+            InternalCostRate = 175m,
+            RateUnit = ProjectResourceRateUnit.ManDay,
+            RateCurrencyCode = "eur",
+            Status = "Active",
+            LastChangedBy = "integration-tests"
+        });
+
+        Assert.True(saveResult.IsSuccess);
+
+        var rate = await rateBridge.GetInternalCostRateAsync(ratedPartyId);
+
+        Assert.NotNull(rate);
+        Assert.Equal(ratedPartyId, rate.PartyId);
+        Assert.Equal(175m, rate.Rate);
+        Assert.Equal(ProjectResourceRateUnit.ManDay, rate.Unit);
+        Assert.Equal("EUR", rate.CurrencyCode);
+        Assert.Null(await rateBridge.GetInternalCostRateAsync(unratedPartyId));
+    }
+
     [Fact]
     public async Task SaveWorkforceProfileAsync_persists_reporting_line_and_role_alignment()
     {

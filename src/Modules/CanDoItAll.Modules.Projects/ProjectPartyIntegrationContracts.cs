@@ -46,6 +46,12 @@ public enum ProjectPartyType
     AiAgent
 }
 
+public enum ProjectResourceRateUnit
+{
+    Hour,
+    ManDay
+}
+
 public sealed record ProjectPortfolioPartyItem(
     ProjectPartyPortfolioCategory Category,
     string Label,
@@ -67,6 +73,12 @@ public sealed record ProjectPartyOption(
     string PrimaryEmail,
     string PrimaryPhone,
     bool IsSensitive);
+
+public sealed record ProjectPartyCostRate(
+    Guid PartyId,
+    decimal Rate,
+    ProjectResourceRateUnit Unit,
+    string CurrencyCode);
 
 public sealed record ProjectPartyAssignmentDetail(
     Guid Id,
@@ -244,6 +256,13 @@ public interface IProjectPartyIntegrationBridge
         CancellationToken cancellationToken = default);
 }
 
+public interface IProjectPartyCostRateBridge
+{
+    Task<ProjectPartyCostRate?> GetInternalCostRateAsync(
+        Guid partyId,
+        CancellationToken cancellationToken = default);
+}
+
 internal sealed class NoopProjectNodeScopeBridge : IProjectNodeScopeBridge
 {
     public Task<ProjectNodeScopeResolution> ResolveAsync(
@@ -370,5 +389,15 @@ internal sealed class NoopProjectPartyIntegrationBridge : IProjectPartyIntegrati
         return Task.FromResult(Result<ProjectPartyQuickCreateResult>.Failure(Error.Failure(
             "Project-party integration is not available.",
             "projects.party-integration-unavailable")));
+    }
+}
+
+internal sealed class NoopProjectPartyCostRateBridge : IProjectPartyCostRateBridge
+{
+    public Task<ProjectPartyCostRate?> GetInternalCostRateAsync(
+        Guid partyId,
+        CancellationToken cancellationToken = default)
+    {
+        return Task.FromResult<ProjectPartyCostRate?>(null);
     }
 }

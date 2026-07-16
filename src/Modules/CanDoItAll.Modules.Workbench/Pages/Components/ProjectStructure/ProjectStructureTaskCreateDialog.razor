@@ -101,14 +101,24 @@
             }
         </Cluster>
 
-        <ResourceCardPicker TItem="ProjectStructureTaskResourceSelection"
-                            Options="@AssigneePickerOptions"
-                            SelectionChanged="SelectAssignee"
-                            SearchPlaceholder="Search CRM people and synchronized agents"
-                            EmptyEyebrow="No assignees"
-                            EmptyTitle="No people or agents match this search"
-                            EmptyDescription="Clear the search or create the task without an assignee."
-                            DataTestId="project-structure-task-create-assignee-picker" />
+        <ProjectStructureTaskResourcePicker Options="@AssigneeOptions"
+                                            SelectedResource="@selectedAssignee"
+                                            SelectionChanged="SelectAssigneeAsync"
+                                            AllowedKinds="@DirectAssigneeKinds"
+                                            SearchPlaceholder="Search CRM people and synchronized agents"
+                                            EmptyEyebrow="No assignees"
+                                            EmptyTitle="No people or agents match the current filters"
+                                            EmptyDescription="Change the resource-type filters, clear the search, or save without an assignee."
+                                            OptionTestIdPrefix="project-structure-task-create-assignee"
+                                            DataTestId="project-structure-task-create-assignee-picker" />
+
+        <ProjectStructureTaskResourceCostEstimator @ref="costEstimator"
+                                                   ProjectId="@ProjectId"
+                                                   SelectedResource="@selectedAssignee"
+                                                   Estimate="@estimate"
+                                                   EstimateChanged="HandleEstimateChangedAsync"
+                                                   QuoteResolver="@QuoteResolver"
+                                                   DataTestId="project-structure-task-create-resource-cost" />
     </Stack>
 
     @if (!string.IsNullOrWhiteSpace(validationError))
@@ -126,8 +136,8 @@
                 ButtonStyle="ButtonStyle.Base"
                 data-testid="project-structure-task-create-cancel"
                 Click="CancelAsync" />
-        <Button Text="Create task"
-                Icon="add_task"
+        <Button Text="@(IsEditMode ? "Save task" : "Create task")"
+                Icon="@(IsEditMode ? "save" : "add_task")"
                 ButtonStyle="ButtonStyle.Info"
                 data-testid="project-structure-task-create-submit"
                 Click="SubmitAsync" />
@@ -137,6 +147,12 @@
 @code {
     private const string DateTimeLocalFormat = "yyyy-MM-ddTHH:mm";
     private const string TaskSubtype = "task";
+    private static readonly IReadOnlySet<ProjectStructureTaskResourceKind> DirectAssigneeKinds =
+        new HashSet<ProjectStructureTaskResourceKind>
+        {
+            ProjectStructureTaskResourceKind.Person,
+            ProjectStructureTaskResourceKind.Agent
+        };
     private static readonly HashSet<string> ControlledInputKeys = new(StringComparer.OrdinalIgnoreCase)
     {
         "workItemKind",
@@ -158,6 +174,7 @@
     private ProjectStructureTaskResourceSelection? selectedAssignee;
     private ProjectTaskEstimate estimate = ProjectTaskEstimate.Empty();
     private ProjectStructureTaskEstimateEditor? estimateEditor;
+    private ProjectStructureTaskResourceCostEstimator? costEstimator;
     private string validationError = string.Empty;
 
     [CascadingParameter]
@@ -165,6 +182,15 @@
 
     [Parameter, EditorRequired]
     public CanvasWorkbenchCreateActionRequest CreateRequest { get; set; } = default!;
+
+    [Parameter, EditorRequired]
+    public Guid ProjectId { get; set; }
+
+    [Parameter]
+    public bool IsEditMode { get; set; }
+
+    [Parameter]
+    public ProjectStructureTaskResourceSelection? InitialAssignee { get; set; }
 
     [Parameter]
     public IReadOnlyList<CanvasWorkbenchInputOption> RepositoryOptions { get; set; } = [];
@@ -175,26 +201,8 @@
     [Parameter]
     public IReadOnlyList<string> AssigneeWarnings { get; set; } = [];
 
-    private IReadOnlyList<ResourceCardPickerOption<ProjectStructureTaskResourceSelection>> AssigneePickerOptions =>
-        AssigneeOptions
-            .Where(option => option.Kind is ProjectStructureTaskResourceKind.Person or ProjectStructureTaskResourceKind.Agent)
-            .Select(option => new ResourceCardPickerOption<ProjectStructureTaskResourceSelection>(
-                new ProjectStructureTaskResourceSelection(option.Kind, option.ResourceId),
-                option.DisplayName,
-                option.TypeLabel)
-            {
-                Description = option.IsSensitive
-                    ? "Sensitive resource details are hidden."
-                    : option.Description,
-                Icon = option.Kind == ProjectStructureTaskResourceKind.Agent ? "smart_toy" : "person",
-                VisualKind = ResourceCardPickerVisualKind.Avatar,
-                AvatarFallback = BuildInitials(option.DisplayName),
-                Tags = [option.TypeLabel],
-                IsSelected = selectedAssignee == new ProjectStructureTaskResourceSelection(option.Kind, option.ResourceId),
-                IsFavorite = option.IsFavorite,
-                TestId = $"project-structure-task-create-assignee-{option.Kind.ToString().ToLowerInvariant()}-{option.ResourceId:N}"
-            })
-            .ToList();
+    [Parameter]
+    public Func<ProjectStructureTaskResourceCostRequest, CancellationToken, Task<ProjectStructureTaskResourceCostQuote>>? QuoteResolver { get; set; }
 
     protected override void OnParametersSet()
     {
@@ -207,6 +215,7 @@
         title = CreateRequest.Title ?? string.Empty;
         subtitle = CreateRequest.Subtitle ?? string.Empty;
         notes = CreateRequest.Notes ?? string.Empty;
+        selectedAssignee = InitialAssignee;
         var inputValues = CreateRequest.InputValues ?? [];
         estimate = ResolveEstimate(inputValues);
         repositoryNodeId = inputValues
@@ -266,9 +275,13 @@
         validationError = string.Empty;
     }
 
-    private void SelectAssignee(ProjectStructureTaskResourceSelection selection)
+    private async Task SelectAssigneeAsync(ProjectStructureTaskResourceSelection selection)
     {
         selectedAssignee = selection;
+        if (costEstimator is not null)
+        {
+            await costEstimator.EstimateSelectedAsync(selection, estimate);
+        }
     }
 
     private void ClearAssignee()
@@ -483,11 +496,4 @@
         return false;
     }
 
-    private static string BuildInitials(string value)
-    {
-        var words = value.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-        return words.Length == 0
-            ? "R"
-            : string.Concat(words.Take(2).Select(static word => char.ToUpperInvariant(word[0])));
-    }
 }

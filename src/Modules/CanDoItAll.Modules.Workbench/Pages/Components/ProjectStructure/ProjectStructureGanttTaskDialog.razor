@@ -122,11 +122,9 @@
                  Wrap="FlexWrap.Wrap">
             <Stack GapScale="LayoutGap.XSmall">
                 <TextBlock TextStyle="TextStyle.Subtitle2"
-                           Value="@(IsEditMode ? "Optional person or agent" : "Optional task resource")" />
+                           Value="Optional task resource" />
                 <TextBlock TextStyle="TextStyle.Note"
-                           Value="@(IsEditMode
-                               ? "Assign one CRM person or synchronized agent directly to this task. Workflow and process definitions remain child nodes."
-                               : "Assign one person, agent, workflow, or process now. You can change it later in the project structure.")" />
+                           Value="Choose a person or agent as the direct assignee, or attach a workflow or process definition. Definition resources are additive and do not replace the assignee." />
             </Stack>
             @if (selectedResource is not null)
             {
@@ -136,18 +134,25 @@
                         Variant="Variant.Text"
                         ButtonStyle="ButtonStyle.Base"
                         data-testid="project-structure-gantt-task-resource-clear"
-                        Click="ClearResource" />
+                        Click="ClearResourceAsync" />
             }
         </Cluster>
 
-        <ResourceCardPicker TItem="ProjectStructureTaskResourceSelection"
-                            Options="@PickerOptions"
-                            SelectionChanged="SelectResource"
-                            SearchPlaceholder="@(IsEditMode ? "Search CRM people and synchronized agents" : "Search people, agents, workflows, and processes")"
-                            EmptyEyebrow="No resources"
-                            EmptyTitle="No resources match this search"
-                            EmptyDescription="Clear the search or create the task without a resource."
-                            DataTestId="project-structure-gantt-task-resource-picker" />
+        <ProjectStructureTaskResourcePicker Options="@ResourceOptions"
+                                            SelectedResource="@selectedResource"
+                                            SelectionChanged="SelectResourceAsync"
+                                            SearchPlaceholder="Search people, agents, workflows, and processes"
+                                            EmptyDescription="Change the resource-type filters, clear the search, or save without selecting a resource."
+                                            OptionTestIdPrefix="project-structure-gantt-task-resource"
+                                            DataTestId="project-structure-gantt-task-resource-picker" />
+
+        <ProjectStructureTaskResourceCostEstimator @ref="costEstimator"
+                                                   ProjectId="@ProjectId"
+                                                   SelectedResource="@selectedResource"
+                                                   Estimate="@estimate"
+                                                   EstimateChanged="HandleEstimateChangedAsync"
+                                                   QuoteResolver="@QuoteResolver"
+                                                   DataTestId="project-structure-gantt-task-resource-cost" />
     </Stack>
 
     @if (!string.IsNullOrWhiteSpace(validationError))
@@ -192,8 +197,12 @@
     private int progressPercent;
     private ProjectTaskEstimate estimate = ProjectTaskEstimate.Empty();
     private ProjectStructureTaskEstimateEditor? estimateEditor;
+    private ProjectStructureTaskResourceCostEstimator? costEstimator;
     private ProjectStructureTaskResourceSelection? initialAssignee;
+    private ProjectStructureTaskResourceSelection? proposedAssignee;
+    private ProjectStructureTaskResourceSelection? resourceToAttach;
     private ProjectStructureTaskResourceSelection? selectedResource;
+    private ProjectTaskEstimate? estimateBeforeDefinitionSelection;
     private string validationError = string.Empty;
 
     [CascadingParameter]
@@ -201,6 +210,9 @@
 
     [Parameter, EditorRequired]
     public DateTimeOffset DefaultStartUtc { get; set; }
+
+    [Parameter, EditorRequired]
+    public Guid ProjectId { get; set; }
 
     [Parameter, EditorRequired]
     public DateTimeOffset DefaultEndUtc { get; set; }
@@ -227,34 +239,14 @@
     [Parameter]
     public IReadOnlyList<string> ResourceWarnings { get; set; } = [];
 
+    [Parameter]
+    public Func<ProjectStructureTaskResourceCostRequest, CancellationToken, Task<ProjectStructureTaskResourceCostQuote>>? QuoteResolver { get; set; }
+
     private bool IsEditMode => EditModel is not null;
 
     private bool IsScheduleReadOnly => EditModel?.ScheduleReadOnly == true;
 
     private decimal DurationHours => (decimal)(endUtc - startUtc).TotalHours;
-
-    private IReadOnlyList<ResourceCardPickerOption<ProjectStructureTaskResourceSelection>> PickerOptions =>
-        ResourceOptions
-            .Where(option => !IsEditMode || option.Kind is ProjectStructureTaskResourceKind.Person or ProjectStructureTaskResourceKind.Agent)
-            .Select(option => new ResourceCardPickerOption<ProjectStructureTaskResourceSelection>(
-                new ProjectStructureTaskResourceSelection(option.Kind, option.ResourceId, option.VersionId),
-                option.DisplayName,
-                option.TypeLabel)
-            {
-                Description = option.IsSensitive
-                    ? "Sensitive resource details are hidden."
-                    : option.Description,
-                Icon = ResolveResourceIcon(option.Kind),
-                VisualKind = option.Kind is ProjectStructureTaskResourceKind.Person or ProjectStructureTaskResourceKind.Agent
-                    ? ResourceCardPickerVisualKind.Avatar
-                    : ResourceCardPickerVisualKind.Icon,
-                AvatarFallback = BuildInitials(option.DisplayName),
-                Tags = [option.TypeLabel],
-                IsSelected = selectedResource == new ProjectStructureTaskResourceSelection(option.Kind, option.ResourceId, option.VersionId),
-                IsFavorite = option.IsFavorite,
-                TestId = $"project-structure-gantt-task-resource-{option.Kind.ToString().ToLowerInvariant()}-{option.ResourceId:N}"
-            })
-            .ToList();
 
     protected override void OnParametersSet()
     {
@@ -272,6 +264,7 @@
             progressPercent = Math.Clamp(EditModel.ProgressPercent, 0, 100);
             estimate = EditModel.Estimate;
             initialAssignee = EditModel.Assignee;
+            proposedAssignee = EditModel.Assignee;
             selectedResource = EditModel.Assignee;
             return;
         }
@@ -362,14 +355,59 @@
         validationError = string.Empty;
     }
 
-    private void SelectResource(ProjectStructureTaskResourceSelection selection)
+    private async Task SelectResourceAsync(ProjectStructureTaskResourceSelection selection)
     {
         selectedResource = selection;
+        if (selection.Kind is ProjectStructureTaskResourceKind.Person or ProjectStructureTaskResourceKind.Agent)
+        {
+            RestoreEstimateBeforeDefinitionSelection();
+            proposedAssignee = selection;
+            resourceToAttach = null;
+        }
+        else
+        {
+            estimateBeforeDefinitionSelection ??= estimate;
+            resourceToAttach = selection;
+        }
+
+        if (costEstimator is not null)
+        {
+            await costEstimator.EstimateSelectedAsync(selection, estimate);
+        }
     }
 
-    private void ClearResource()
+    private async Task ClearResourceAsync()
     {
+        if (resourceToAttach is not null)
+        {
+            resourceToAttach = null;
+            selectedResource = proposedAssignee;
+            RestoreEstimateBeforeDefinitionSelection();
+            if (proposedAssignee is not null && costEstimator is not null)
+            {
+                await costEstimator.EstimateSelectedAsync(proposedAssignee, estimate);
+            }
+
+            return;
+        }
+
+        proposedAssignee = null;
         selectedResource = null;
+    }
+
+    private void RestoreEstimateBeforeDefinitionSelection()
+    {
+        if (estimateBeforeDefinitionSelection is not { } previousEstimate)
+        {
+            return;
+        }
+
+        estimate = estimate with
+        {
+            ExpectedCostAmount = previousEstimate.ExpectedCostAmount,
+            ExpectedCostCurrencyCode = previousEstimate.ExpectedCostCurrencyCode
+        };
+        estimateBeforeDefinitionSelection = null;
     }
 
     private async Task SubmitAsync()
@@ -411,8 +449,9 @@
                 endUtc,
                 progressPercent,
                 estimate,
-                selectedResource != initialAssignee,
-                selectedResource);
+                proposedAssignee != initialAssignee,
+                proposedAssignee,
+                resourceToAttach);
             if (DialogReference is null)
             {
                 await DialogService.CloseAsync(editResult);
@@ -480,21 +519,4 @@
                hours is >= 0.25m and <= MaximumDurationHours;
     }
 
-    private static string ResolveResourceIcon(ProjectStructureTaskResourceKind kind)
-        => kind switch
-        {
-            ProjectStructureTaskResourceKind.Person => "person",
-            ProjectStructureTaskResourceKind.Agent => "smart_toy",
-            ProjectStructureTaskResourceKind.Workflow => "account_tree",
-            ProjectStructureTaskResourceKind.Process => "schema",
-            _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, "Unknown task resource kind.")
-        };
-
-    private static string BuildInitials(string value)
-    {
-        var words = value.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-        return words.Length == 0
-            ? "R"
-            : string.Concat(words.Take(2).Select(static word => char.ToUpperInvariant(word[0])));
-    }
 }

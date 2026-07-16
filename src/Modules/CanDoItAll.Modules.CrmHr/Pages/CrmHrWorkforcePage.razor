@@ -1,5 +1,6 @@
 @page "/crm-hr/workforce"
 @using CanDoItAll.Components.BaseLib
+@using CanDoItAll.Modules.Projects
 @inject HrService HrService
 @inject PartyDirectoryService PartyDirectoryService
 @inject NavigationManager Navigation
@@ -395,7 +396,7 @@
                                         </div>
                                     </Grid>
 
-                                    <Grid Gap="LayoutGap.Large" ColumnsMd="2" Class="mt-5">
+                                    <Grid Gap="LayoutGap.Large" ColumnsMd="4" Class="mt-5">
                                         <div>
                                             <label class="cda-field-label">Internal cost rate</label>
                                             <InputNumber @bind-Value="profileEditor.InternalCostRate"
@@ -407,6 +408,22 @@
                                             <InputNumber @bind-Value="profileEditor.ExternalBillingRate"
                                                          class="cda-input"
                                                          data-testid="crmhr-workforce-external-rate" />
+                                        </div>
+                                        <div>
+                                            <label class="cda-field-label">Rate unit</label>
+                                            <InputSelect @bind-Value="profileEditor.RateUnit"
+                                                         class="cda-input"
+                                                         data-testid="crmhr-workforce-rate-unit">
+                                                <option value="@ProjectResourceRateUnit.Hour">Per hour</option>
+                                                <option value="@ProjectResourceRateUnit.ManDay">Per man-day</option>
+                                            </InputSelect>
+                                        </div>
+                                        <div>
+                                            <label class="cda-field-label">Rate currency</label>
+                                            <InputText @bind-Value="profileEditor.RateCurrencyCode"
+                                                       class="cda-input"
+                                                       maxlength="3"
+                                                       data-testid="crmhr-workforce-rate-currency" />
                                         </div>
                                     </Grid>
 
@@ -586,6 +603,8 @@
             TimeZone = workspace.Profile.TimeZone,
             InternalCostRate = workspace.Profile.InternalCostRate,
             ExternalBillingRate = workspace.Profile.ExternalBillingRate,
+            RateUnit = workspace.Profile.RateUnit,
+            RateCurrencyCode = workspace.Profile.RateCurrencyCode,
             CapacityHoursPerWeek = workspace.Profile.CapacityHoursPerWeek,
             Status = workspace.Profile.Status,
             Notes = workspace.Profile.Notes,

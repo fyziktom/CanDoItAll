@@ -12,6 +12,7 @@ public static class ProjectsModuleServiceCollectionExtensions
         services.AddScoped<IProjectNodeScopeBridge, NoopProjectNodeScopeBridge>();
         services.AddScoped<IProjectNodeAssignmentPolicyBridge, NoopProjectNodeAssignmentPolicyBridge>();
         services.AddScoped<IProjectPartyIntegrationBridge, NoopProjectPartyIntegrationBridge>();
+        services.AddScoped<IProjectPartyCostRateBridge, NoopProjectPartyCostRateBridge>();
         services.TryAddEnumerable(
             ServiceDescriptor.Singleton<IFileToolsStorageBindingSource, ProjectFileToolsStorageBindingSource>());
         services.AddScoped<ProjectFileReadOnlyInteractionFactory>();
