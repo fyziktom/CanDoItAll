@@ -30,6 +30,16 @@ public sealed class ContextualAgentAccessResolverTests
                     AllowAllProjects = true
                 }),
             tags: ["write"]);
+        var taskWriteAgent = CreateAgent(
+            "Project task writer",
+            AgentProjectStructureAccessMetadata.Write(
+                null,
+                new AgentProjectStructureAccessSettings
+                {
+                    CanWriteTasks = true,
+                    AllowAllProjects = true
+                }),
+            tags: ["tasks"]);
         var wrongProjectAgent = CreateAgent(
             "Other project helper",
             AgentProjectStructureAccessMetadata.Write(
@@ -45,7 +55,7 @@ public sealed class ContextualAgentAccessResolverTests
             isTemplate: true);
 
         var result = ContextualAgentAccessResolver.Resolve(
-            [matchingAgent, writeAgent, wrongProjectAgent, templateAgent],
+            [matchingAgent, taskWriteAgent, writeAgent, wrongProjectAgent, templateAgent],
             ContextualAgentWorkspaceKind.ProjectStructure,
             projectId: projectId);
 
@@ -57,6 +67,14 @@ public sealed class ContextualAgentAccessResolverTests
                 Assert.True(item.CanRead);
                 Assert.False(item.CanWrite);
                 Assert.Equal("This project", item.ScopeLabel);
+            },
+            item =>
+            {
+                Assert.Equal(taskWriteAgent.Id, item.Agent.Id);
+                Assert.True(item.CanRead);
+                Assert.True(item.CanWriteTasks);
+                Assert.False(item.CanWrite);
+                Assert.Equal("All projects", item.ScopeLabel);
             },
             item =>
             {

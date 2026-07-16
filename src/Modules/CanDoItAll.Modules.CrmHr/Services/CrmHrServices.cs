@@ -4712,13 +4712,66 @@ public sealed partial class ProjectPartyIntegrationService(
             party.IsSensitive);
     }
 
-    public async Task<IReadOnlyList<ProjectPartyAssignmentDetail>> ListAssignmentsDetailedAsync(
+    public Task<IReadOnlyList<ProjectPartyAssignmentDetail>> ListAssignmentsDetailedAsync(
+        Guid projectId,
+        CancellationToken cancellationToken = default)
+    {
+        return ListAssignmentsDetailedCoreAsync(
+            projectId,
+            Enum.GetValues<ProjectPartyAssignmentRole>(),
+            orderResults: true,
+            cancellationToken);
+    }
+
+    public Task<IReadOnlyList<ProjectPartyAssignmentDetail>> ListAssignmentsDetailedAsync(
+        Guid projectId,
+        IReadOnlyCollection<ProjectPartyAssignmentRole> roles,
+        CancellationToken cancellationToken = default)
+    {
+        return ListAssignmentsDetailedCoreAsync(
+            projectId,
+            roles,
+            orderResults: false,
+            cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<ProjectWorkItemAssigneeBinding>> ListWorkItemAssigneeBindingsAsync(
         Guid projectId,
         CancellationToken cancellationToken = default)
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         return await dbContext.Set<ProjectPartyAssignment>()
-            .Where(item => item.ProjectId == projectId)
+            .Where(item =>
+                item.ProjectId == projectId &&
+                item.AssignmentKind == ProjectPartyAssignmentKind.WorkItemAssignee)
+            .Join(
+                dbContext.Set<Party>(),
+                assignment => assignment.PartyId,
+                party => party.Id,
+                (assignment, party) => new ProjectWorkItemAssigneeBinding(
+                    assignment.ProjectId,
+                    assignment.NodeKey,
+                    assignment.PartyId,
+                    MapProjectPartyType(party.PartyType)))
+            .ToListAsync(cancellationToken);
+    }
+
+    private async Task<IReadOnlyList<ProjectPartyAssignmentDetail>> ListAssignmentsDetailedCoreAsync(
+        Guid projectId,
+        IReadOnlyCollection<ProjectPartyAssignmentRole> roles,
+        bool orderResults,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(roles);
+        if (roles.Count == 0)
+        {
+            return [];
+        }
+
+        var assignmentKinds = roles.Select(MapRole).Distinct().ToArray();
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        var query = dbContext.Set<ProjectPartyAssignment>()
+            .Where(item => item.ProjectId == projectId && assignmentKinds.Contains(item.AssignmentKind))
             .Join(
                 dbContext.Set<Party>(),
                 assignment => assignment.PartyId,
@@ -4738,11 +4791,17 @@ public sealed partial class ProjectPartyIntegrationService(
                     assignment.Notes,
                     party.DisplayName,
                     party.PartyType
-                })
-            .OrderBy(item => item.NodeKey)
-            .ThenBy(item => item.AssignmentKind)
-            .ThenByDescending(item => item.IsPrimary)
-            .ThenBy(item => item.DisplayName)
+                });
+        if (orderResults)
+        {
+            query = query
+                .OrderBy(item => item.NodeKey)
+                .ThenBy(item => item.AssignmentKind)
+                .ThenByDescending(item => item.IsPrimary)
+                .ThenBy(item => item.DisplayName);
+        }
+
+        return await query
             .Select(item => new ProjectPartyAssignmentDetail(
                 item.Id,
                 item.ProjectId,

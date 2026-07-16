@@ -461,6 +461,26 @@
     },
     {
       "kind": "skill",
+      "key": "project-plan-analysis-inline-skill",
+      "displayName": "Project Plan Analysis Skill",
+      "description": "Guidance for interpreting bounded project-plan summaries, costs, progress, task state, and resource mix without scanning the full project graph.",
+      "stableId": "skill:project-plan-analysis:v1",
+      "stableGuidKey": "capabilities/project-plan-analysis-inline-skill",
+      "endpointOrPath": "inline://project-plan-analysis-inline-skill",
+      "skillSource": "inline",
+      "inlineSkill": {
+        "name": "project-plan-analysis",
+        "description": "Interpret project plan summaries for delivery, resource, and economic analysis while preserving their completeness and currency boundaries.",
+        "instructionsAssetKey": "skills/instructions/project-plan-analysis.md"
+      },
+      "operationClassifications": [
+        "read",
+        "validation"
+      ],
+      "proofNotes": "Template-owned project-planning analysis guidance for the bounded project_plan_summary_get runtime projection."
+    },
+    {
+      "kind": "skill",
       "key": "hr-agent-governance-inline-skill",
       "displayName": "HR Agent Governance Skill",
       "description": "Evidence-first workflow for administering technical agents, reviewing usage and process performance, and handling CRM/HR data safely.",

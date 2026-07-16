@@ -84,6 +84,12 @@ public sealed record ProjectPartyAssignmentDetail(
     string Source,
     string Notes);
 
+public sealed record ProjectWorkItemAssigneeBinding(
+    Guid ProjectId,
+    string NodeKey,
+    Guid PartyId,
+    ProjectPartyType PartyType);
+
 public sealed class ProjectPartyQuickCreateRequest
 {
     public Guid ProjectId { get; set; }
@@ -198,6 +204,15 @@ public interface IProjectPartyIntegrationBridge
         Guid projectId,
         CancellationToken cancellationToken = default);
 
+    Task<IReadOnlyList<ProjectPartyAssignmentDetail>> ListAssignmentsDetailedAsync(
+        Guid projectId,
+        IReadOnlyCollection<ProjectPartyAssignmentRole> roles,
+        CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<ProjectWorkItemAssigneeBinding>> ListWorkItemAssigneeBindingsAsync(
+        Guid projectId,
+        CancellationToken cancellationToken = default);
+
     Task<Result<Guid>> SaveAssignmentAsync(
         ProjectPartyAssignmentUpsertRequest request,
         CancellationToken cancellationToken = default);
@@ -286,6 +301,21 @@ internal sealed class NoopProjectPartyIntegrationBridge : IProjectPartyIntegrati
         CancellationToken cancellationToken = default)
     {
         return Task.FromResult<IReadOnlyList<ProjectPartyAssignmentDetail>>([]);
+    }
+
+    public Task<IReadOnlyList<ProjectPartyAssignmentDetail>> ListAssignmentsDetailedAsync(
+        Guid projectId,
+        IReadOnlyCollection<ProjectPartyAssignmentRole> roles,
+        CancellationToken cancellationToken = default)
+    {
+        return Task.FromResult<IReadOnlyList<ProjectPartyAssignmentDetail>>([]);
+    }
+
+    public Task<IReadOnlyList<ProjectWorkItemAssigneeBinding>> ListWorkItemAssigneeBindingsAsync(
+        Guid projectId,
+        CancellationToken cancellationToken = default)
+    {
+        return Task.FromResult<IReadOnlyList<ProjectWorkItemAssigneeBinding>>([]);
     }
 
     public Task<Result<Guid>> SaveAssignmentAsync(

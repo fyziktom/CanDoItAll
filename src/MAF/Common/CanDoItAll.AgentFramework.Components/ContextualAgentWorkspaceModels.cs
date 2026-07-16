@@ -14,7 +14,8 @@ public enum ContextualAgentAccessLevel
 {
     None = 0,
     Read = 1,
-    Write = 2
+    Write = 2,
+    TaskWrite = 4
 }
 
 public sealed record ContextualAgentAccessSummary(
@@ -25,6 +26,8 @@ public sealed record ContextualAgentAccessSummary(
     public bool CanRead => AccessLevel.HasFlag(ContextualAgentAccessLevel.Read);
 
     public bool CanWrite => AccessLevel.HasFlag(ContextualAgentAccessLevel.Write);
+
+    public bool CanWriteTasks => AccessLevel.HasFlag(ContextualAgentAccessLevel.TaskWrite);
 }
 
 public sealed record ContextualAgentWorkspaceRefreshRequest(
@@ -176,6 +179,10 @@ public static class ContextualAgentAccessResolver
     {
         var access = AgentProjectStructureAccessMetadata.Read(agent.ConfigurationJson);
         var accessLevel = ResolveAccessLevel(access.CanRead, access.CanWrite);
+        if (access.CanWriteTasks)
+        {
+            accessLevel |= ContextualAgentAccessLevel.Read | ContextualAgentAccessLevel.TaskWrite;
+        }
         if (accessLevel == ContextualAgentAccessLevel.None)
         {
             return null;

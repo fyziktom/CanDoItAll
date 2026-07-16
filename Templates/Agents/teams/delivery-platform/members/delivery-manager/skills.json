@@ -1,5 +1,7 @@
 {
   "capabilityKeys": [
+    "project-plan-analysis-inline-skill",
+    "project-plan-summary-get",
     "workspace-list-files",
     "workspace-search",
     "workspace-read-file",

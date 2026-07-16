@@ -358,6 +358,7 @@ internal static class SandboxWorkspaceSeedBuilder
                 {
                     CanRead = projectStructure.CanRead,
                     CanWrite = projectStructure.CanWrite,
+                    CanWriteTasks = projectStructure.CanWriteTasks,
                     AllowAllProjects = projectStructure.AllowAllProjects,
                     AllowedProjectIds = projectStructure.AllowedProjectIds
                 });

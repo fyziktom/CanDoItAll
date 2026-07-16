@@ -721,7 +721,20 @@ public partial class AgentDetailsDialog
         if (!isEnabled)
         {
             editorModel.ProjectStructureAccess.CanWrite = false;
+            editorModel.ProjectStructureAccess.CanWriteTasks = false;
             editorModel.ProjectStructureAccess.AllowAllProjects = false;
+        }
+    }
+
+    private void ToggleProjectStructureTaskWrite(object? rawValue)
+    {
+        var isEnabled = rawValue is bool value && value;
+        editorModel.ProjectStructureAccess.CanWriteTasks = isEnabled;
+        if (isEnabled)
+        {
+            editorModel.ProjectStructureAccess.CanRead = true;
+            projectStructureProjectsRequested = true;
+            _ = EnsureProjectStructureProjectsLoadedAsync();
         }
     }
 

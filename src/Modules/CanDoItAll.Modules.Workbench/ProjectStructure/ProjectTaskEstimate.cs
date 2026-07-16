@@ -27,6 +27,7 @@ public static class ProjectTaskEstimateInputKeys
 public static class ProjectTaskEstimatePolicy
 {
     public const decimal DefaultHoursPerManDay = 8m;
+    public const decimal MaximumExpectedCostAmount = 1_000_000_000_000_000m;
 
     private static readonly decimal MaximumExpectedEffortHours = (decimal)TimeSpan.MaxValue.TotalHours;
 
@@ -71,6 +72,11 @@ public static class ProjectTaskEstimatePolicy
         if (estimate.ExpectedCostAmount is < 0m)
         {
             throw new InvalidOperationException("Expected task cost cannot be negative.");
+        }
+
+        if (estimate.ExpectedCostAmount > MaximumExpectedCostAmount)
+        {
+            throw new InvalidOperationException("Expected task cost exceeds the supported amount range.");
         }
 
         var normalizedCurrencyCode = NormalizeCurrencyCode(

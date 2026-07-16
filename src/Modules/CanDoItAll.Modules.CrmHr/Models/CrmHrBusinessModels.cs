@@ -677,6 +677,7 @@ internal sealed class ProjectPartyAssignmentConfiguration : IEntityTypeConfigura
         builder.Property(assignment => assignment.Source).HasMaxLength(80);
         builder.Property(assignment => assignment.Notes).HasColumnType("TEXT");
         builder.HasIndex(assignment => new { assignment.ProjectId, assignment.PartyId, assignment.AssignmentKind, assignment.NodeKey });
+        builder.HasIndex(assignment => new { assignment.ProjectId, assignment.AssignmentKind, assignment.NodeKey });
         builder.HasIndex(assignment => assignment.ProjectId);
         builder.HasIndex(assignment => assignment.PartyId);
         builder.HasIndex(assignment => assignment.OpportunityId);

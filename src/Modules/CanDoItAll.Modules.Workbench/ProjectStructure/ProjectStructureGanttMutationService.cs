@@ -85,11 +85,13 @@ public sealed class ProjectStructureGanttMutationService(
                 $"Task title must contain between 1 and {MaximumTitleLength} characters.");
         }
 
-        if (request.CurrentProgressPercent is < 0 or > 100 || request.ProposedProgressPercent is < 0 or > 100)
+        if ((request.CurrentProgressPercent != ProjectProgressPolicy.UntrackedPercent &&
+             !ProjectProgressPolicy.IsTrackedPercent(request.CurrentProgressPercent)) ||
+            !ProjectProgressPolicy.IsTrackedPercent(request.ProposedProgressPercent))
         {
             throw new ProjectStructureGanttMutationException(
                 ProjectStructureGanttMutationErrorCode.InvalidTask,
-                "Task progress must be between 0 and 100 percent.");
+                "Current task progress must be untracked (-1) or between 0 and 100 percent; proposed progress must be between 0 and 100 percent.");
         }
 
         var currentEstimate = ProjectTaskEstimatePolicy.ValidateAndNormalize(request.CurrentEstimate);
@@ -104,8 +106,7 @@ public sealed class ProjectStructureGanttMutationService(
                     throw StaleTask(request.TaskId, "title");
                 }
 
-                var persistedProgress = Math.Clamp(task.ProgressPercent, 0, 100);
-                if (persistedProgress != request.CurrentProgressPercent)
+                if (task.ProgressPercent != request.CurrentProgressPercent)
                 {
                     throw StaleTask(request.TaskId, "progress");
                 }

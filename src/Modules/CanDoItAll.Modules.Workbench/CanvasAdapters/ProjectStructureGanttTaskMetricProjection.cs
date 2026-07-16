@@ -76,12 +76,12 @@ internal static class ProjectStructureGanttTaskMetricProjection
         GanttTaskId taskId,
         ICollection<ProjectStructureGanttProjectionIssue> issues)
     {
-        if (progressPercent == -1)
+        if (progressPercent == ProjectProgressPolicy.UntrackedPercent)
         {
             return null;
         }
 
-        if (progressPercent is >= 0 and <= 100)
+        if (ProjectProgressPolicy.IsTrackedPercent(progressPercent))
         {
             return progressPercent;
         }

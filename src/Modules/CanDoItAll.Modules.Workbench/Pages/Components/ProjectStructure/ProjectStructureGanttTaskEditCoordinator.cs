@@ -69,7 +69,7 @@ public sealed class ProjectStructureGanttTaskEditCoordinator(
             taskNode.Title,
             projectedTask.Start,
             projectedTask.End,
-            Math.Clamp(taskNode.ProgressPercent, 0, 100),
+            taskNode.ProgressPercent,
             estimate,
             assignee,
             context.Projection.IsProjectionOnly(projectedTask));

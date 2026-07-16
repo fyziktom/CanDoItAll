@@ -32,12 +32,20 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
         ProjectStructureAgentService agentService,
         ProjectStructureLeaseService leaseService,
         ProjectStructureAnalyticsService analyticsService,
+        ProjectPlanAnalyticsQueryService planAnalyticsService,
+        ProjectStructureAgentAuthorizationService authorizationService,
+        ProjectStructureTaskCreationService taskCreationService,
+        ProjectStructureTaskDetailsService taskDetailsService,
         ProjectManagementKnowledgeService knowledgeService,
         IWorkspacePathResolutionService workspacePaths)
     {
         ArgumentNullException.ThrowIfNull(agentService);
         ArgumentNullException.ThrowIfNull(leaseService);
         ArgumentNullException.ThrowIfNull(analyticsService);
+        ArgumentNullException.ThrowIfNull(planAnalyticsService);
+        ArgumentNullException.ThrowIfNull(authorizationService);
+        ArgumentNullException.ThrowIfNull(taskCreationService);
+        ArgumentNullException.ThrowIfNull(taskDetailsService);
         ArgumentNullException.ThrowIfNull(knowledgeService);
         ArgumentNullException.ThrowIfNull(workspacePaths);
 
@@ -50,6 +58,10 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
             agentService,
             leaseService,
             analyticsService,
+            planAnalyticsService,
+            authorizationService,
+            taskCreationService,
+            taskDetailsService,
             knowledgeService,
             workspaceCommandExecutionService,
             workspacePaths,
@@ -108,6 +120,10 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
         ProjectStructureAgentService agentService,
         ProjectStructureLeaseService leaseService,
         ProjectStructureAnalyticsService analyticsService,
+        ProjectPlanAnalyticsQueryService planAnalyticsService,
+        ProjectStructureAgentAuthorizationService authorizationService,
+        ProjectStructureTaskCreationService taskCreationService,
+        ProjectStructureTaskDetailsService taskDetailsService,
         ProjectManagementKnowledgeService knowledgeService,
         IWorkspaceCommandExecutionService workspaceCommandExecutionService,
         IWorkspacePathResolutionService workspacePaths,
@@ -116,6 +132,10 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
         private readonly ProjectStructureAgentService agentService = agentService;
         private readonly ProjectStructureLeaseService leaseService = leaseService;
         private readonly ProjectStructureAnalyticsService analyticsService = analyticsService;
+        private readonly ProjectPlanAnalyticsQueryService planAnalyticsService = planAnalyticsService;
+        private readonly ProjectStructureAgentAuthorizationService authorizationService = authorizationService;
+        private readonly ProjectStructureTaskCreationService taskCreationService = taskCreationService;
+        private readonly ProjectStructureTaskDetailsService taskDetailsService = taskDetailsService;
         private readonly ProjectManagementKnowledgeService knowledgeService = knowledgeService;
         private readonly IWorkspaceCommandExecutionService workspaceCommandExecutionService = workspaceCommandExecutionService;
         private readonly IWorkspacePathResolutionService workspacePaths = workspacePaths;
@@ -134,7 +154,7 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
                 return [];
             }
 
-            return
+            List<AITool> tools =
             [
                 AIFunctionFactory.Create(
                     (CancellationToken cancellationToken = default) => ProjectStructureProjectsListAsync(agent, accessState, cancellationToken),
@@ -349,6 +369,34 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
                     "project_structure_lease_release",
                     "Releases an existing project, node, or repo-branch lease token.")
             ];
+
+            if (!accessState.CanWrite)
+            {
+                tools.RemoveAll(tool => AgentToolInvocationPolicyMetadata.IsMutationTool(tool.Name));
+            }
+
+            if (accessState.CanRead &&
+                ProjectPlanAgentAuthorizationPolicy.IsPlanSummaryAuthorized(agent, context.Capabilities))
+            {
+                tools.Add(AIFunctionFactory.Create(
+                    (Guid projectId, ProjectPlanSummaryQuery? request = null, CancellationToken cancellationToken = default) => ProjectPlanSummaryGetAsync(agent, accessState, projectId, request, cancellationToken),
+                    AgentToolInvocationPolicyMetadata.ProjectPlanSummaryGet,
+                    "Returns a database-filtered project plan summary with task-state counts, expected cost by currency, schedule metrics, resource-group coverage, and bounded running/blocked/waiting task previews."));
+            }
+
+            if (accessState.CanWriteTasksUnscoped)
+            {
+                tools.Add(AIFunctionFactory.Create(
+                    (Guid projectId, ProjectStructureTaskCreateRequest request, CancellationToken cancellationToken = default) => ProjectTaskCreateAsync(agent, accessState, projectId, request, cancellationToken),
+                    AgentToolInvocationPolicyMetadata.ProjectTaskCreate,
+                    "Creates a typed project task under the Main backlog, applies its delivery schedule and estimate, optionally assigns a person/agent or attaches a workflow/process, and inserts it into the Gantt row order."));
+                tools.Add(AIFunctionFactory.Create(
+                    (Guid projectId, ProjectStructureTaskDetailsUpdateRequest request, CancellationToken cancellationToken = default) => ProjectTaskUpdateAsync(agent, accessState, projectId, request, cancellationToken),
+                    AgentToolInvocationPolicyMetadata.ProjectTaskUpdate,
+                    "Updates a typed project task through the Gantt task-details mutation path. Read the current task first and provide its exact current values for optimistic concurrency; currentProgressPercent accepts -1 for untracked progress, while proposedProgressPercent must be 0-100. Direct assignees may be a person or agent."));
+            }
+
+            return tools;
         }
 
         private Task<IReadOnlyList<ProjectSummary>> ProjectStructureProjectsListAsync(
@@ -376,6 +424,169 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
                         .ToList();
                 },
                 cancellationToken);
+        }
+
+        private Task<ProjectPlanSummary> ProjectPlanSummaryGetAsync(
+            AgentDefinition agent,
+            ProjectStructureAccessState accessState,
+            Guid projectId,
+            ProjectPlanSummaryQuery? request,
+            CancellationToken cancellationToken)
+        {
+            return ExecuteAsync(
+                agent,
+                "plan.summary",
+                projectId,
+                null,
+                null,
+                null,
+                request,
+                async cancellationToken =>
+                {
+                    EnsureProjectReadAllowed(accessState, projectId);
+                    await authorizationService.EnsurePlanSummaryAuthorizedAsync(
+                        agent.Id,
+                        projectId,
+                        cancellationToken);
+                    return await planAnalyticsService.GetSummaryAsync(projectId, request, cancellationToken);
+                },
+                cancellationToken);
+        }
+
+        private Task<ProjectStructureTaskCreateResult> ProjectTaskCreateAsync(
+            AgentDefinition agent,
+            ProjectStructureAccessState accessState,
+            Guid projectId,
+            ProjectStructureTaskCreateRequest request,
+            CancellationToken cancellationToken)
+        {
+            return ExecuteAsync(
+                agent,
+                "tasks.create",
+                projectId,
+                null,
+                ProjectStructureLeaseScopeKind.Project,
+                projectId.ToString("D"),
+                request,
+                async cancellationToken =>
+                {
+                    EnsureProjectTaskWriteAllowed(accessState, projectId);
+                    await authorizationService.EnsureTaskWriteAuthorizedAsync(
+                        agent.Id,
+                        projectId,
+                        AgentToolInvocationPolicyMetadata.ProjectTaskCreate,
+                        cancellationToken);
+                    try
+                    {
+                        return await taskCreationService.CreateAsync(
+                            projectId,
+                            request,
+                            BuildAgentContext(agent, accessState, projectId),
+                            cancellationToken);
+                    }
+                    catch (ProjectStructureTaskCreationException exception)
+                    {
+                        throw MapTaskCreationException(exception);
+                    }
+                    catch (ProjectStructureGanttMutationException exception)
+                    {
+                        throw MapGanttMutationException(exception);
+                    }
+                },
+                cancellationToken);
+        }
+
+        private Task<ProjectStructureGanttMutationResult> ProjectTaskUpdateAsync(
+            AgentDefinition agent,
+            ProjectStructureAccessState accessState,
+            Guid projectId,
+            ProjectStructureTaskDetailsUpdateRequest request,
+            CancellationToken cancellationToken)
+        {
+            return ExecuteAsync(
+                agent,
+                "tasks.update",
+                projectId,
+                request.TaskId.Value,
+                ProjectStructureLeaseScopeKind.Project,
+                projectId.ToString("D"),
+                request,
+                async cancellationToken =>
+                {
+                    EnsureProjectTaskWriteAllowed(accessState, projectId);
+                    await authorizationService.EnsureTaskWriteAuthorizedAsync(
+                        agent.Id,
+                        projectId,
+                        AgentToolInvocationPolicyMetadata.ProjectTaskUpdate,
+                        cancellationToken);
+                    try
+                    {
+                        return await taskDetailsService.UpdateAsync(projectId, request, cancellationToken);
+                    }
+                    catch (ProjectStructureTaskDetailsException exception)
+                    {
+                        throw MapTaskDetailsException(exception);
+                    }
+                    catch (ProjectStructureGanttMutationException exception)
+                    {
+                        throw MapGanttMutationException(exception);
+                    }
+                },
+                cancellationToken);
+        }
+
+        private static ProjectStructureAgentException MapTaskCreationException(
+            ProjectStructureTaskCreationException exception)
+        {
+            return new ProjectStructureAgentException(
+                exception.CompensationSucceeded ? 409 : 500,
+                exception.Code.ToString(),
+                exception.Message,
+                new
+                {
+                    exception.Code,
+                    exception.Stage,
+                    exception.TaskNodeId,
+                    exception.CompensationSucceeded
+                });
+        }
+
+        private static ProjectStructureAgentException MapTaskDetailsException(
+            ProjectStructureTaskDetailsException exception)
+        {
+            var statusCode = exception.Code switch
+            {
+                ProjectStructureTaskDetailsErrorCode.InvalidRequest => 400,
+                ProjectStructureTaskDetailsErrorCode.AssignmentConflict => 409,
+                ProjectStructureTaskDetailsErrorCode.AssignmentCompensationFailed => 500,
+                _ => 500
+            };
+            return new ProjectStructureAgentException(
+                statusCode,
+                exception.Code.ToString(),
+                exception.Message,
+                new { exception.Code });
+        }
+
+        private static ProjectStructureAgentException MapGanttMutationException(
+            ProjectStructureGanttMutationException exception)
+        {
+            var statusCode = exception.Code switch
+            {
+                ProjectStructureGanttMutationErrorCode.ProjectNotFound or
+                ProjectStructureGanttMutationErrorCode.TaskNotFound or
+                ProjectStructureGanttMutationErrorCode.DependencyNotFound => 404,
+                ProjectStructureGanttMutationErrorCode.StaleTask or
+                ProjectStructureGanttMutationErrorCode.DuplicateDependency or
+                ProjectStructureGanttMutationErrorCode.SystemManagedDependency or
+                ProjectStructureGanttMutationErrorCode.CycleDetected => 409,
+                _ => 400
+            };
+            return new ProjectStructureAgentException(
+                statusCode,
+                exception.Code.ToString(),
+                exception.Message,
+                new { exception.Code });
         }
 
         private Task<ProjectSummary> ProjectStructureProjectCreateAsync(
@@ -1858,7 +2069,7 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
                         null,
                         null,
                         ProjectStructureAnalyticsService.SerializeSummary(requestSummary),
-                        ProjectStructureAnalyticsService.SerializeSummary(response)),
+                        ProjectStructureAnalyticsService.SerializeResponseSummary(response)),
                     cancellationToken);
                 return response;
             }
@@ -2241,6 +2452,19 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
             EnsureProjectAllowed(accessState, projectId);
         }
 
+        private static void EnsureProjectTaskWriteAllowed(ProjectStructureAccessState accessState, Guid projectId)
+        {
+            if (!accessState.CanWriteTasksUnscoped)
+            {
+                throw new ProjectStructureAgentException(
+                    403,
+                    "ProjectTaskWriteDenied",
+                    "This agent is not allowed to create or update project tasks. Enable task write access in the agent settings.");
+            }
+
+            EnsureProjectAllowed(accessState, projectId);
+        }
+
         private static ProjectStructureScopedProcessAccess EnsureScopedProcessExternalActionAllowed(ProjectStructureAccessState accessState)
         {
             if (accessState.ScopedProcessAccess is { CanWrite: true } scopedProcessAccess)
@@ -2404,6 +2628,7 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
                 ProjectStructureWorkflowNodeCreateResult workflowNodeCreateResult => workflowNodeCreateResult.Warnings,
                 ProjectStructureWorkflowAddOptionsResult workflowAddOptionsResult => workflowAddOptionsResult.Warnings,
                 ProjectStructureWorkflowNodeStartResult workflowNodeStartResult => workflowNodeStartResult.Warnings,
+                ProjectPlanSummary planSummary => planSummary.Warnings,
                 _ => []
             };
         }
@@ -2444,6 +2669,7 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
             CanRead = normalized.CanRead || scopedProcessAccess?.CanRead == true;
             CanWrite = normalized.CanWrite || scopedProcessAccess?.CanWrite == true;
             CanWriteUnscoped = normalized.CanWrite;
+            CanWriteTasksUnscoped = normalized.CanWrite || normalized.CanWriteTasks;
             AllowAllProjects = normalized.AllowAllProjects;
             AllowedProjectIds = normalized.AllowedProjectIds.ToHashSet();
             ScopedProcessAccess = scopedProcessAccess;
@@ -2458,6 +2684,8 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
         public bool CanWrite { get; }
 
         public bool CanWriteUnscoped { get; }
+
+        public bool CanWriteTasksUnscoped { get; }
 
         public bool AllowAllProjects { get; }
 

@@ -266,7 +266,7 @@ else
                     </TabsItem>
 
                     <TabsItem Text="Project Structure Access">
-                        <FormSection Title="Project Structure Access" Description="Internal agents always carry the project-structure tool family. These settings decide whether the current agent can read or mutate project data and which projects it may touch.">
+                        <FormSection Title="Project Structure Access" Description="Project reads, task-only changes, and unrestricted structure changes are separate permissions. Advanced plan and cost analysis additionally requires its assigned planning skill and tool capability.">
                             <Grid Gap="LayoutGap.Large" ColumnsMd="3" data-testid="agents-catalog-project-structure-access">
                                 <div class="cda-admin-subpanel">
                                     <p class="cda-field-label mb-2">Access mode</p>
@@ -280,10 +280,18 @@ else
                                         </label>
                                         <label class="cda-inline-option">
                                             <input type="checkbox"
+                                                   checked="@(editorModel.ProjectStructureAccess.CanWrite || editorModel.ProjectStructureAccess.CanWriteTasks)"
+                                                   disabled="@editorModel.ProjectStructureAccess.CanWrite"
+                                                   @onchange="args => ToggleProjectStructureTaskWrite(args.Value)"
+                                                   data-testid="agents-catalog-project-structure-task-write" />
+                                            Can write project tasks
+                                        </label>
+                                        <label class="cda-inline-option">
+                                            <input type="checkbox"
                                                    checked="@editorModel.ProjectStructureAccess.CanWrite"
                                                    @onchange="args => ToggleProjectStructureWrite(args.Value)"
                                                    data-testid="agents-catalog-project-structure-write" />
-                                            Can write project structure
+                                            Can write entire project structure (includes tasks)
                                         </label>
                                         <label class="cda-inline-option">
                                             <input type="checkbox"

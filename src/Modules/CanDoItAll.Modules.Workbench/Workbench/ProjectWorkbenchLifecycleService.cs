@@ -64,7 +64,9 @@ public sealed class ProjectWorkbenchLifecycleService(
         };
 
         node.ObjectType = request.TargetObjectType;
-        node.ObjectSubtype = request.TargetObjectSubtype?.Trim() ?? string.Empty;
+        node.ObjectSubtype = ProjectObjectSubtypePolicy.Normalize(
+            request.TargetObjectType,
+            request.TargetObjectSubtype);
         node.Title = string.IsNullOrWhiteSpace(request.Title) ? node.Title : request.Title.Trim();
         node.Subtitle = request.Subtitle?.Trim() ?? string.Empty;
         node.Notes = request.Notes?.Trim() ?? string.Empty;

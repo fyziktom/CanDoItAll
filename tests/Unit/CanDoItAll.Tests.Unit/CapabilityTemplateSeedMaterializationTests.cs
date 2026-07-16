@@ -31,6 +31,10 @@ public sealed class CapabilityTemplateSeedMaterializationTests
         Assert.Equal(CanDoItAll.AgentFramework.Models.CapabilityKind.Tool, byKey["workspace-dotnet-test"].Kind);
         Assert.Equal(CanDoItAll.AgentFramework.Models.CapabilityKind.McpServer, byKey["playwright-local-mcp"].Kind);
         Assert.Equal(CanDoItAll.AgentFramework.Models.CapabilityKind.Skill, byKey["aspnet-core-skill"].Kind);
+        Assert.Equal(CanDoItAll.AgentFramework.Models.CapabilityKind.Skill, byKey["project-plan-analysis-inline-skill"].Kind);
+        Assert.Equal(CanDoItAll.AgentFramework.Models.CapabilityKind.Tool, byKey["project-plan-summary-get"].Kind);
+        Assert.Equal(CanDoItAll.AgentFramework.Models.CapabilityKind.Tool, byKey["project-task-create"].Kind);
+        Assert.Equal(CanDoItAll.AgentFramework.Models.CapabilityKind.Tool, byKey["project-task-update"].Kind);
         Assert.Equal(CanDoItAll.AgentFramework.Models.CapabilityKind.Rag, byKey["workspace-source-rag"].Kind);
         Assert.DoesNotContain(byKey.Keys, key => string.Equals(key, "candoitall-bundle-workflow", StringComparison.OrdinalIgnoreCase));
         Assert.DoesNotContain(capabilities, capability =>
@@ -345,10 +349,26 @@ public sealed class CapabilityTemplateSeedMaterializationTests
         "frontend-skill",
         "generated-app-summary-inline-skill",
         "git-standard-operations",
+        "hr-agent-avatar-generate",
+        "hr-agent-create",
+        "hr-agent-creation-options-get",
+        "hr-agent-governance-inline-skill",
+        "hr-agent-process-history-get",
+        "hr-agent-process-manager-review-request",
+        "hr-agent-settings-get",
+        "hr-agent-settings-update",
+        "hr-agent-usage-get",
+        "hr-agents-search",
+        "hr-crm-item-summary-get",
+        "hr-crm-search",
         "mail-summary-inline-skill",
         "mail-triage-context",
         "mail-triage-inline-skill",
         "playwright-local-mcp",
+        "project-plan-analysis-inline-skill",
+        "project-plan-summary-get",
+        "project-task-create",
+        "project-task-update",
         "provider-health",
         "provider-native-code-interpreter",
         "provider-native-file-search",

@@ -324,6 +324,31 @@ public sealed class ProjectStructureGanttPanelTests
                 : Task.FromException<IReadOnlyList<ProjectPartyAssignmentDetail>>(assignmentFailure);
         }
 
+        public async Task<IReadOnlyList<ProjectPartyAssignmentDetail>> ListAssignmentsDetailedAsync(
+            Guid projectId,
+            IReadOnlyCollection<ProjectPartyAssignmentRole> roles,
+            CancellationToken cancellationToken = default)
+        {
+            var allAssignments = await ListAssignmentsDetailedAsync(projectId, cancellationToken);
+            var allowedRoles = roles.ToHashSet();
+            return allAssignments.Where(assignment => allowedRoles.Contains(assignment.Role)).ToArray();
+        }
+
+        public async Task<IReadOnlyList<ProjectWorkItemAssigneeBinding>> ListWorkItemAssigneeBindingsAsync(
+            Guid projectId,
+            CancellationToken cancellationToken = default)
+        {
+            var allAssignments = await ListAssignmentsDetailedAsync(projectId, cancellationToken);
+            return allAssignments
+                .Where(assignment => assignment.Role == ProjectPartyAssignmentRole.WorkItemAssignee)
+                .Select(assignment => new ProjectWorkItemAssigneeBinding(
+                    assignment.ProjectId,
+                    assignment.NodeKey,
+                    assignment.PartyId,
+                    assignment.PartyType))
+                .ToArray();
+        }
+
         public Task<IReadOnlyDictionary<Guid, ProjectPortfolioPartyContext>> GetPortfolioContextsAsync(
             IReadOnlyCollection<Guid> projectIds,
             CancellationToken cancellationToken = default)

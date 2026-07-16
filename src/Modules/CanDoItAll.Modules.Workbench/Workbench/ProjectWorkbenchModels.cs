@@ -28,6 +28,30 @@ public enum ProjectObjectPlacementIntent
     AutomaticAroundParent
 }
 
+public static class ProjectProgressPolicy
+{
+    public const int UntrackedPercent = -1;
+
+    public static bool IsTrackedPercent(int value)
+    {
+        return value is >= 0 and <= 100;
+    }
+}
+
+public static class ProjectObjectSubtypePolicy
+{
+    public const string Task = "task";
+
+    public static string Normalize(ProjectObjectType objectType, string? value)
+    {
+        var normalized = value?.Trim() ?? string.Empty;
+        return objectType == ProjectObjectType.WorkItem &&
+            string.Equals(normalized, Task, StringComparison.OrdinalIgnoreCase)
+                ? Task
+                : normalized;
+    }
+}
+
 public sealed partial class ProjectObjectRecord : IProjectObject
 {
     public Guid Id { get; set; } = Guid.NewGuid();
@@ -40,7 +64,7 @@ public sealed partial class ProjectObjectRecord : IProjectObject
     public string Notes { get; set; } = string.Empty;
     public string ObjectSubtype { get; set; } = string.Empty;
     public string ProgressMode { get; set; } = string.Empty;
-    public int ProgressPercent { get; set; } = -1;
+    public int ProgressPercent { get; set; } = ProjectProgressPolicy.UntrackedPercent;
     public string MarkersJson { get; set; } = "[]";
     public int Priority { get; set; }
     public string MetadataJson { get; set; } = "{}";
@@ -80,6 +104,8 @@ internal sealed class ProjectObjectRecordConfiguration : IEntityTypeConfiguratio
         builder.Ignore(item => item.Binding);
         builder.Ignore(item => item.NodeReferences);
         builder.HasIndex(item => new { item.ProjectId, item.NodeKey }).IsUnique();
+        builder.HasIndex(item => new { item.ProjectId, item.ObjectType, item.ObjectSubtype, item.IsSystemManaged });
+        builder.HasIndex(item => new { item.ProjectId, item.ParentNodeKey, item.ObjectType, item.IsSystemManaged });
     }
 }
 
@@ -103,6 +129,7 @@ internal sealed class ProjectObjectLinkRecordConfiguration : IEntityTypeConfigur
         builder.Property(item => item.SourceNodeKey).HasMaxLength(160).IsRequired();
         builder.Property(item => item.TargetNodeKey).HasMaxLength(160).IsRequired();
         builder.HasIndex(item => new { item.ProjectId, item.SourceNodeKey, item.TargetNodeKey, item.LinkKind, item.IsSystemManaged }).IsUnique();
+        builder.HasIndex(item => new { item.ProjectId, item.LinkKind, item.IsSystemManaged });
     }
 }
 
@@ -449,7 +476,8 @@ ProjectWorkbenchCrossModuleMutationService crossModuleMutationService) : IProjec
                 : ProjectWorkbenchGraphConventions.GetDefaultPosition(request.ObjectType, existingCount + 1);
         var media = await SaveMediaAsync(projectId, request.ObjectType, request.Media, cancellationToken);
         var binding = ResolveCreateBinding(projectId, request.ObjectType, media, request.ExternalBinding);
-        var metadataJson = ProjectWorkbenchObjectModeling.ResolveMetadataJson(request.ObjectType, request.ObjectSubtype, request.MetadataJson, null, request.Notes, media);
+        var normalizedObjectSubtype = ProjectObjectSubtypePolicy.Normalize(request.ObjectType, request.ObjectSubtype);
+        var metadataJson = ProjectWorkbenchObjectModeling.ResolveMetadataJson(request.ObjectType, normalizedObjectSubtype, request.MetadataJson, null, request.Notes, media);
         var resolvedEndUtc = ProjectWorkbenchObjectModeling.ResolveEndUtc(request.StartUtc, request.EndUtc, request.DurationSeconds);
         var normalizedDurationSeconds = ProjectWorkbenchObjectModeling.NormalizeDurationSeconds(request.DurationSeconds, request.StartUtc, resolvedEndUtc);
         var normalizedStatus = string.IsNullOrWhiteSpace(request.Status) ? "Draft" : request.Status.Trim();
@@ -464,7 +492,7 @@ ProjectWorkbenchCrossModuleMutationService crossModuleMutationService) : IProjec
             Subtitle = request.Subtitle?.Trim() ?? string.Empty,
             Status = normalizedStatus,
             Notes = request.Notes?.Trim() ?? string.Empty,
-            ObjectSubtype = request.ObjectSubtype?.Trim() ?? string.Empty,
+            ObjectSubtype = normalizedObjectSubtype,
             ProgressMode = progress.Mode,
             ProgressPercent = progress.Percent,
             MetadataJson = metadataJson,
@@ -518,6 +546,7 @@ ProjectWorkbenchCrossModuleMutationService crossModuleMutationService) : IProjec
         {
             index++;
             var nodeKey = $"custom:{Guid.NewGuid():N}";
+            var normalizedObjectSubtype = ProjectObjectSubtypePolicy.Normalize(seed.ObjectType, seed.ObjectSubtype);
             var position = ProjectWorkbenchGraphConventions.GetDefaultPosition(seed.ObjectType, existingCount + index);
             var resolvedEndUtc = ProjectWorkbenchObjectModeling.ResolveEndUtc(seed.StartUtc, seed.EndUtc, seed.DurationSeconds);
             var normalizedDurationSeconds = ProjectWorkbenchObjectModeling.NormalizeDurationSeconds(seed.DurationSeconds, seed.StartUtc, resolvedEndUtc);
@@ -530,10 +559,10 @@ ProjectWorkbenchCrossModuleMutationService crossModuleMutationService) : IProjec
                 Subtitle = seed.Subtitle?.Trim() ?? string.Empty,
                 Status = "Planned",
                 Notes = seed.Notes?.Trim() ?? string.Empty,
-                ObjectSubtype = seed.ObjectSubtype?.Trim() ?? string.Empty,
+                ObjectSubtype = normalizedObjectSubtype,
                 ProgressMode = "progress",
                 ProgressPercent = 0,
-                MetadataJson = ProjectWorkbenchObjectModeling.ResolveMetadataJson(seed.ObjectType, seed.ObjectSubtype, seed.MetadataJson, null, seed.Notes, null),
+                MetadataJson = ProjectWorkbenchObjectModeling.ResolveMetadataJson(seed.ObjectType, normalizedObjectSubtype, seed.MetadataJson, null, seed.Notes, null),
                 ParentNodeKey = projectRootNodeKey,
                 PositionX = position.Item1,
                 PositionY = position.Item2,

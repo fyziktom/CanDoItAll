@@ -132,6 +132,43 @@ public sealed class ProjectStructureAnalyticsService(
         }
     }
 
+    public static string SerializeResponseSummary(object? value)
+    {
+        return value is ProjectPlanSummary planSummary
+            ? SerializeSummary(new
+            {
+                planSummary.ProjectId,
+                planSummary.AsOfUtc,
+                planSummary.TotalTaskCount,
+                planSummary.TaskStates,
+                planSummary.Schedule,
+                planSummary.TotalExpectedEffortHours,
+                planSummary.TotalExpectedEffortManDays,
+                planSummary.TaskWeightedProgressPercent,
+                planSummary.EffortWeightedProgressPercent,
+                planSummary.ExpectedCostTotals,
+                planSummary.ResourceGroups,
+                RunningTaskCount = GetTaskStateCount(planSummary, ProjectPlanTaskState.Running),
+                BlockedTaskCount = GetTaskStateCount(planSummary, ProjectPlanTaskState.Blocked),
+                WaitingTaskCount = GetTaskStateCount(planSummary, ProjectPlanTaskState.Waiting),
+                planSummary.Completeness
+            })
+            : SerializeSummary(value);
+    }
+
+    private static int GetTaskStateCount(ProjectPlanSummary summary, ProjectPlanTaskState state)
+    {
+        foreach (var taskState in summary.TaskStates)
+        {
+            if (taskState.State == state)
+            {
+                return taskState.TaskCount;
+            }
+        }
+
+        return 0;
+    }
+
     private static string NormalizeWarnings(IReadOnlyList<string> warnings)
     {
         try

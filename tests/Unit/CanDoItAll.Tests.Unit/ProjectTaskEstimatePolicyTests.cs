@@ -60,4 +60,16 @@ public sealed class ProjectTaskEstimatePolicyTests
 
         Assert.Contains("three-letter currency", exception.Message, StringComparison.Ordinal);
     }
+
+    [Fact]
+    public void Create_rejects_cost_above_supported_aggregate_safe_range()
+    {
+        var exception = Assert.Throws<InvalidOperationException>(() => ProjectTaskEstimatePolicy.Create(
+            4m,
+            ProjectWorkItemEffortUnit.Hours,
+            ProjectTaskEstimatePolicy.MaximumExpectedCostAmount + 1m,
+            "USD"));
+
+        Assert.Contains("supported amount range", exception.Message, StringComparison.Ordinal);
+    }
 }

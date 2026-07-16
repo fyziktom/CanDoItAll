@@ -47,8 +47,17 @@ public sealed class ContextualAgentWorkspaceContextBuilderTests
                     CanWrite = true,
                     AllowAllProjects = true
                 }));
+        var taskWriteAgent = CreateAgent(
+            "Task writer",
+            AgentProjectStructureAccessMetadata.Write(
+                null,
+                new AgentProjectStructureAccessSettings
+                {
+                    CanWriteTasks = true,
+                    AllowAllProjects = true
+                }));
         var agents = ContextualAgentAccessResolver.Resolve(
-            [readAgent, writeAgent],
+            [readAgent, taskWriteAgent, writeAgent],
             ContextualAgentWorkspaceKind.ProjectStructure,
             projectId: projectId);
 
@@ -61,6 +70,11 @@ public sealed class ContextualAgentWorkspaceContextBuilderTests
             agents,
             ContextualAgentWorkspaceKind.ProjectStructure,
             writeAgent.Id,
+            projectId: projectId));
+        Assert.False(ContextualAgentAccessResolver.ShouldAutoApproveContextualRun(
+            agents,
+            ContextualAgentWorkspaceKind.ProjectStructure,
+            taskWriteAgent.Id,
             projectId: projectId));
         Assert.False(ContextualAgentAccessResolver.ShouldAutoApproveContextualRun(
             agents,

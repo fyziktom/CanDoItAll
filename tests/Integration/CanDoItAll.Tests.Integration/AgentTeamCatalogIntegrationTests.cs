@@ -141,7 +141,7 @@ public sealed class AgentTeamCatalogIntegrationTests
     }
 
     [Fact]
-    public void Default_agent_template_pack_exposes_financial_writeback_and_document_conversion_access()
+    public void Default_agent_template_pack_exposes_financial_planning_and_document_conversion_access()
     {
         var pack = new AgentTemplatePackLoader().Load();
         var members = pack.Teams
@@ -150,9 +150,16 @@ public sealed class AgentTeamCatalogIntegrationTests
 
         var financial = members["financial-strategist"];
         Assert.True(financial.Settings.Permissions.AutoApproveExternalCallsByDefault);
-        Assert.True(financial.Settings.Access.ProjectStructure is { CanWrite: true });
+        Assert.True(financial.Settings.Access.ProjectStructure is
+        {
+            CanRead: true,
+            CanWrite: false,
+            CanWriteTasks: false
+        });
         Assert.True(financial.Settings.Access.ImageGeneration is { CanGenerateImages: true });
         Assert.True(financial.Settings.Access.ImageGeneration is { CanStoreImagesAsProjectAssets: true });
+        Assert.Contains("project-plan-analysis-inline-skill", financial.Skills.CapabilityKeys);
+        Assert.Contains("project-plan-summary-get", financial.Skills.CapabilityKeys);
         Assert.Contains("workspace-convert-document", financial.Skills.CapabilityKeys);
         Assert.Contains("workspace-inspect-image", financial.Skills.CapabilityKeys);
         Assert.Contains("workspace-analyze-image", financial.Skills.CapabilityKeys);

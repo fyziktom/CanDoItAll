@@ -239,6 +239,17 @@ public sealed class ProjectStructureTaskDetailsServiceTests
             CancellationToken cancellationToken = default)
             => inner.ListAssignmentsDetailedAsync(projectId, cancellationToken);
 
+        public Task<IReadOnlyList<ProjectPartyAssignmentDetail>> ListAssignmentsDetailedAsync(
+            Guid projectId,
+            IReadOnlyCollection<ProjectPartyAssignmentRole> roles,
+            CancellationToken cancellationToken = default)
+            => inner.ListAssignmentsDetailedAsync(projectId, roles, cancellationToken);
+
+        public Task<IReadOnlyList<ProjectWorkItemAssigneeBinding>> ListWorkItemAssigneeBindingsAsync(
+            Guid projectId,
+            CancellationToken cancellationToken = default)
+            => inner.ListWorkItemAssigneeBindingsAsync(projectId, cancellationToken);
+
         public Task<Result<Guid>> SaveAssignmentAsync(
             ProjectPartyAssignmentUpsertRequest request,
             CancellationToken cancellationToken = default)

@@ -2767,6 +2767,9 @@ public static class AgentToolInvocationPolicyMetadata
     public const string ProjectStructureNodeCatalog = "project_structure_node_catalog";
     public const string ProjectStructureChecklist = "project_structure_checklist";
     public const string ProjectStructureDependenciesQuery = "project_structure_dependencies_query";
+    public const string ProjectPlanSummaryGet = "project_plan_summary_get";
+    public const string ProjectTaskCreate = "project_task_create";
+    public const string ProjectTaskUpdate = "project_task_update";
     public const string ProjectStructureDependencyLink = "project_structure_dependency_link";
     public const string ProjectStructureDependencyUnlink = "project_structure_dependency_unlink";
     public const string ProjectStructureNodeCreate = "project_structure_node_create";
@@ -2819,6 +2822,7 @@ public static class AgentToolInvocationPolicyMetadata
         ProjectStructureNodeCatalog,
         ProjectStructureChecklist,
         ProjectStructureDependenciesQuery,
+        ProjectPlanSummaryGet,
         ProjectStructureAssetGet,
         ProjectStructureAssetContentGet,
         ProjectStructureNodeWorkflowAddOptions,
@@ -2834,6 +2838,8 @@ public static class AgentToolInvocationPolicyMetadata
         ProjectStructureProjectUpdate,
         ProjectStructureSubprojectLink,
         ProjectStructureNodesToNewSubproject,
+        ProjectTaskCreate,
+        ProjectTaskUpdate,
         ProjectStructureDependencyLink,
         ProjectStructureDependencyUnlink,
         ProjectStructureNodeCreate,

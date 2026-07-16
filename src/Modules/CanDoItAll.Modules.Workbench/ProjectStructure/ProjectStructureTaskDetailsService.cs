@@ -78,9 +78,11 @@ public sealed class ProjectStructureTaskDetailsService(
         string taskNodeId,
         CancellationToken cancellationToken)
     {
-        var assignments = (await partyIntegrationBridge.ListAssignmentsDetailedAsync(projectId, cancellationToken))
+        var assignments = (await partyIntegrationBridge.ListAssignmentsDetailedAsync(
+                projectId,
+                WorkItemAssignmentRoles,
+                cancellationToken))
             .Where(assignment =>
-                assignment.Role == ProjectPartyAssignmentRole.WorkItemAssignee &&
                 string.Equals(assignment.NodeKey, taskNodeId, StringComparison.Ordinal))
             .ToArray();
         if (assignments.Length > 1)
@@ -181,11 +183,13 @@ public sealed class ProjectStructureTaskDetailsService(
                 "Task titles cannot be empty.");
         }
 
-        if (request.CurrentProgressPercent is < 0 or > 100 || request.ProposedProgressPercent is < 0 or > 100)
+        if ((request.CurrentProgressPercent != ProjectProgressPolicy.UntrackedPercent &&
+             !ProjectProgressPolicy.IsTrackedPercent(request.CurrentProgressPercent)) ||
+            !ProjectProgressPolicy.IsTrackedPercent(request.ProposedProgressPercent))
         {
             throw new ProjectStructureTaskDetailsException(
                 ProjectStructureTaskDetailsErrorCode.InvalidRequest,
-                "Task progress must be between 0 and 100 percent.");
+                "Current task progress must be untracked (-1) or between 0 and 100 percent; proposed progress must be between 0 and 100 percent.");
         }
 
         if (request.ScheduleChange is not null && request.ScheduleChange.TaskId != request.TaskId)

@@ -9,6 +9,8 @@ public sealed class AgentProjectStructureAccessSettings
 
     public bool CanWrite { get; set; }
 
+    public bool CanWriteTasks { get; set; }
+
     public bool AllowAllProjects { get; set; }
 
     public List<Guid> AllowedProjectIds { get; set; } = [];
@@ -19,6 +21,7 @@ public static class AgentProjectStructureAccessMetadata
     private const string RootPropertyName = "projectStructure";
     private const string CanReadPropertyName = "canRead";
     private const string CanWritePropertyName = "canWrite";
+    private const string CanWriteTasksPropertyName = "canWriteTasks";
     private const string AllowAllProjectsPropertyName = "allowAllProjects";
     private const string AllowedProjectIdsPropertyName = "allowedProjectIds";
 
@@ -42,22 +45,18 @@ public static class AgentProjectStructureAccessMetadata
             {
                 CanRead = TryReadBoolean(projectStructure, CanReadPropertyName),
                 CanWrite = TryReadBoolean(projectStructure, CanWritePropertyName),
+                CanWriteTasks = TryReadBoolean(projectStructure, CanWriteTasksPropertyName),
                 AllowAllProjects = TryReadBoolean(projectStructure, AllowAllProjectsPropertyName)
             };
 
             if (projectStructure[AllowedProjectIdsPropertyName] is JsonArray allowedProjectIds)
             {
-                settings.AllowedProjectIds = allowedProjectIds
-                    .Select(item => item?.GetValue<string>())
-                    .Where(item => Guid.TryParse(item, out _))
-                    .Select(item => Guid.Parse(item!))
-                    .Distinct()
-                    .ToList();
+                settings.AllowedProjectIds = ReadProjectIds(allowedProjectIds);
             }
 
             return Normalize(settings);
         }
-        catch (JsonException)
+        catch (Exception exception) when (exception is JsonException or InvalidOperationException)
         {
             return new AgentProjectStructureAccessSettings();
         }
@@ -72,6 +71,7 @@ public static class AgentProjectStructureAccessMetadata
 
         if (!normalized.CanRead &&
             !normalized.CanWrite &&
+            !normalized.CanWriteTasks &&
             !normalized.AllowAllProjects &&
             normalized.AllowedProjectIds.Count == 0)
         {
@@ -83,6 +83,7 @@ public static class AgentProjectStructureAccessMetadata
         {
             [CanReadPropertyName] = normalized.CanRead,
             [CanWritePropertyName] = normalized.CanWrite,
+            [CanWriteTasksPropertyName] = normalized.CanWriteTasks,
             [AllowAllProjectsPropertyName] = normalized.AllowAllProjects,
             [AllowedProjectIdsPropertyName] = new JsonArray(
                 normalized.AllowedProjectIds
@@ -99,8 +100,9 @@ public static class AgentProjectStructureAccessMetadata
 
         return new AgentProjectStructureAccessSettings
         {
-            CanRead = settings.CanRead || settings.CanWrite,
+            CanRead = settings.CanRead || settings.CanWrite || settings.CanWriteTasks,
             CanWrite = settings.CanWrite,
+            CanWriteTasks = settings.CanWriteTasks,
             AllowAllProjects = settings.AllowAllProjects,
             AllowedProjectIds = settings.AllowedProjectIds
                 .Where(projectId => projectId != Guid.Empty)
@@ -117,6 +119,23 @@ public static class AgentProjectStructureAccessMetadata
                parsedValue;
     }
 
+    private static List<Guid> ReadProjectIds(JsonArray allowedProjectIds)
+    {
+        var projectIds = new HashSet<Guid>();
+        foreach (var item in allowedProjectIds)
+        {
+            if (item is JsonValue value &&
+                value.TryGetValue<string>(out var rawProjectId) &&
+                Guid.TryParse(rawProjectId, out var projectId) &&
+                projectId != Guid.Empty)
+            {
+                projectIds.Add(projectId);
+            }
+        }
+
+        return projectIds.ToList();
+    }
+
     private static JsonObject ParseObject(string? configurationJson)
     {
         if (string.IsNullOrWhiteSpace(configurationJson))
@@ -128,7 +147,7 @@ public static class AgentProjectStructureAccessMetadata
         {
             return JsonNode.Parse(configurationJson)?.AsObject() ?? new JsonObject();
         }
-        catch (JsonException)
+        catch (Exception exception) when (exception is JsonException or InvalidOperationException)
         {
             return new JsonObject();
         }

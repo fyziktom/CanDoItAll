@@ -1,6 +1,8 @@
 {
   "capabilityKeys": [
     "spreadsheet-skill",
+    "project-plan-analysis-inline-skill",
+    "project-plan-summary-get",
     "concrete-deliverable-delivery-inline-skill",
     "document-spreadsheet-reconciliation-inline-skill",
     "workspace-list-files",

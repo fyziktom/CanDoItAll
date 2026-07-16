@@ -149,6 +149,25 @@ public static class ProjectStructureAgentApi
                 (_, cancellationToken) => agentService.GetStructureAsync(projectId, request, cancellationToken),
                 cancellationToken));
 
+        group.MapPost("/projects/{projectId:guid}/plan/summary", async (
+            Guid projectId,
+            HttpContext httpContext,
+            ProjectPlanSummaryQuery request,
+            ProjectPlanAnalyticsQueryService planAnalyticsService,
+            ProjectStructureAnalyticsService analyticsService,
+            CancellationToken cancellationToken) =>
+            await ExecuteAsync(
+                httpContext,
+                analyticsService,
+                "plan.summary",
+                projectId,
+                null,
+                null,
+                null,
+                request,
+                (_, cancellationToken) => planAnalyticsService.GetSummaryAsync(projectId, request, cancellationToken),
+                cancellationToken));
+
         group.MapPost("/projects/{projectId:guid}/nodes", async (
             Guid projectId,
             HttpContext httpContext,
@@ -1101,7 +1120,7 @@ public static class ProjectStructureAgentApi
                     null,
                     null,
                     ProjectStructureAnalyticsService.SerializeSummary(requestSummary),
-                    ProjectStructureAnalyticsService.SerializeSummary(response)),
+                    ProjectStructureAnalyticsService.SerializeResponseSummary(response)),
                 cancellationToken);
             return Results.Ok(response);
         }
@@ -1197,6 +1216,7 @@ public static class ProjectStructureAgentApi
             ProjectStructureImportResult importResult => importResult.Warnings,
             ProjectStructureProcessNodeStartResult processNodeStartResult => processNodeStartResult.Warnings,
             ProjectStructureWorkflowNodeStartResult workflowNodeStartResult => workflowNodeStartResult.Warnings,
+            ProjectPlanSummary planSummary => planSummary.Warnings,
             _ => []
         };
     }

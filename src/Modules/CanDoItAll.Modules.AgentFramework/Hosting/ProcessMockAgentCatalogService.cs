@@ -136,6 +136,7 @@ public sealed class ProcessMockAgentCatalogService(
             editor.Permissions = ProcessMockAgentPermissions;
             editor.ProjectStructureAccess.CanRead = true;
             editor.ProjectStructureAccess.CanWrite = false;
+            editor.ProjectStructureAccess.CanWriteTasks = false;
             editor.ProjectStructureAccess.AllowAllProjects = true;
             editor.ProcessAccess.CanRead = true;
             editor.ProcessAccess.CanWrite = false;
@@ -262,9 +263,10 @@ public sealed class ProcessMockAgentCatalogService(
                crmHrMetadata?.PartyId == role.PartyId &&
                crmHrMetadata.ExecutionMode == AiExecutionMode.Remote &&
                crmHrMetadata.Capabilities.Count == 0 &&
-               projectStructureAccess.CanRead &&
-               !projectStructureAccess.CanWrite &&
-               projectStructureAccess.AllowAllProjects &&
+                projectStructureAccess.CanRead &&
+                !projectStructureAccess.CanWrite &&
+                !projectStructureAccess.CanWriteTasks &&
+                projectStructureAccess.AllowAllProjects &&
                projectStructureAccess.AllowedProjectIds.Count == 0 &&
                processAccess.CanRead &&
                !processAccess.CanWrite &&

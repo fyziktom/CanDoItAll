@@ -1,6 +1,6 @@
 # Agent Runtime Tool Surface
 
-Last source review: 2026-06-29.
+Last source review: 2026-07-16.
 
 This page defines the boundary between internal MAF/runtime-provider tools and the HTTP control-plane APIs.
 
@@ -40,18 +40,25 @@ Source:
 - `src/MAF/Common/CanDoItAll.AgentFramework.Core/ToolPolicy/AgentToolInvocationPolicy.cs`
 - `src/App/CanDoItAll.Web/ProjectStructureAgentApi.cs`
 
-Current direct runtime tools: 51.
+Current direct runtime tools: 54.
 
 | Capability | Direct tools |
 | --- | --- |
 | Project hierarchy | `project_structure_projects_list`, `project_structure_project_create`, `project_structure_project_update`, `project_structure_hierarchy_get`, `project_structure_subproject_link`, `project_structure_nodes_to_new_subproject` |
 | Structure read/write | `project_structure_read`, `project_structure_node_catalog`, `project_structure_node_create`, `project_structure_node_update`, `project_structure_node_type_update`, `project_structure_node_metadata_update`, `project_structure_nodes_status_update`, `project_structure_node_status_update`, `project_structure_nodes_progress_update`, `project_structure_node_progress_update`, `project_structure_nodes_marker_update`, `project_structure_node_marker_update`, `project_structure_nodes_priority_update`, `project_structure_node_priority_update`, `project_structure_node_move`, `project_structure_node_recompose`, `project_structure_node_reparent`, `project_structure_node_descendants_to_project_move`, `project_structure_node_delete` |
 | Node operations | `project_structure_node_command_execute`, `project_structure_node_process_definition_link`, `project_structure_node_process_start`, `project_structure_node_workflow_add_options`, `project_structure_node_workflow_definition_create`, `project_structure_node_workflow_start`, `project_structure_node_workflow_status_get` |
-| Planning and links | `project_structure_checklist`, `project_structure_dependencies_query`, `project_structure_dependency_link`, `project_structure_dependency_unlink`, `project_structure_link_create`, `project_structure_link_unlink`, `project_structure_approval_request`, `project_structure_knowledge_query`, `project_structure_analytics_query` |
+| Planning and links | `project_structure_checklist`, `project_structure_dependencies_query`, `project_structure_dependency_link`, `project_structure_dependency_unlink`, `project_structure_link_create`, `project_structure_link_unlink`, `project_structure_approval_request`, `project_structure_knowledge_query`, `project_structure_analytics_query`, `project_plan_summary_get` |
+| Task-specific mutations | `project_task_create`, `project_task_update` |
 | Assets and imports | `project_structure_asset_create`, `project_structure_asset_get`, `project_structure_asset_content_get`, `project_structure_asset_create_revision`, `project_structure_import` |
 | Leases | `project_structure_project_lease_acquire`, `project_structure_repo_branch_lease_acquire`, `project_structure_lease_get`, `project_structure_lease_renew`, `project_structure_lease_release` |
 
-The current project-structure HTTP route set is covered by typed runtime tools. New project-structure HTTP operations must remain HTTP-only until they have explicit tool registration, policy classification, approval behavior, and tests.
+`project_plan_summary_get` is a bounded plan/economic projection, not a generic graph read. It attaches only when the active non-template agent can use tools, has read access to the requested project, and has exact assigned catalog mappings for both `project-plan-summary-get` and `project-plan-analysis-inline-skill`. Expected-cost totals remain separated by currency; resource binding share is distinct from overlapping task coverage; completeness counters and warnings are part of the result contract. Callers can request zero task previews for aggregate-only dashboards; blocker ids are sampled separately from their full counts.
+
+`CanWriteTasks` is narrower than generic project-structure `CanWrite`. It authorizes only registered task-specific mutation tools for projects in scope; it does not grant generic node, link, project, process, or workflow mutation. Broad `CanWrite` remains a superset for existing agents. `project_task_update` uses optimistic current values and accepts `currentProgressPercent: -1` for an untracked persisted task; proposed progress remains restricted to 0-100.
+
+The authenticated project-structure HTTP API remains a control-plane boundary. Bearer/API authorization is not an internal-agent capability assignment, so HTTP callers do not inherit the runtime provider's skill/tool and task-write gates. Integrations that need agent-level enforcement must invoke the governed runtime surface.
+
+New project-structure HTTP operations must remain HTTP-only until they have explicit tool registration, policy classification, approval behavior, and tests.
 
 ## Adding A Direct Tool
 

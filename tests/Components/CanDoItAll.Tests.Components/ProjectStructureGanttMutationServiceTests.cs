@@ -241,6 +241,34 @@ public sealed class ProjectStructureGanttMutationServiceTests
     }
 
     [Fact]
+    public async Task ApplyTaskDetailsAsync_accepts_exact_untracked_current_progress()
+    {
+        var task = CreateTask("custom:00000000000000000000000000000001", "Untracked", 0, 1);
+        task.ProgressPercent = ProjectProgressPolicy.UntrackedPercent;
+        task.ProgressMode = string.Empty;
+        task.MetadataJson = EstimateMetadata(ProjectTaskEstimate.Empty());
+        await using var fixture = await MutationFixture.CreateAsync(task);
+        var request = new ProjectStructureTaskDetailsUpdateRequest(
+            TaskId(task.NodeKey),
+            "Untracked",
+            "Tracked",
+            ProjectProgressPolicy.UntrackedPercent,
+            30,
+            ProjectTaskEstimate.Empty(),
+            ProjectTaskEstimate.Empty(),
+            ScheduleChange: null,
+            AssigneeChanged: false,
+            ProposedAssignee: null);
+
+        await fixture.Service.ApplyTaskDetailsAsync(fixture.ProjectId, request);
+
+        var persisted = await fixture.FindTaskAsync(task.NodeKey);
+        Assert.Equal("Tracked", persisted.Title);
+        Assert.Equal(30, persisted.ProgressPercent);
+        Assert.Equal("progress", persisted.ProgressMode);
+    }
+
+    [Fact]
     public async Task ApplyTaskDetailsAsync_When_estimate_is_stale_writes_nothing()
     {
         var task = CreateTask("custom:00000000000000000000000000000001", "Authoritative", 0, 1);
