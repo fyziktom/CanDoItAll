@@ -358,6 +358,8 @@ internal static class SandboxWorkspaceSeedNormalizer
         var seeded = AgentProjectStructureAccessMetadata.Read(seededConfigurationJson);
         return existing.CanRead == seeded.CanRead &&
                existing.CanWrite == seeded.CanWrite &&
+               existing.CanWriteNonTaskStructure == seeded.CanWriteNonTaskStructure &&
+               existing.CanWriteTasks == seeded.CanWriteTasks &&
                existing.AllowAllProjects == seeded.AllowAllProjects &&
                existing.AllowedProjectIds.SequenceEqual(seeded.AllowedProjectIds);
     }

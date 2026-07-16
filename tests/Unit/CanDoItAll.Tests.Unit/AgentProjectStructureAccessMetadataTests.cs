@@ -21,6 +21,23 @@ public sealed class AgentProjectStructureAccessMetadataTests
     }
 
     [Fact]
+    public void Normalize_non_task_structure_write_implies_read_without_granting_task_or_broad_write()
+    {
+        var settings = AgentProjectStructureAccessMetadata.Normalize(new AgentProjectStructureAccessSettings
+        {
+            CanRead = false,
+            CanWrite = false,
+            CanWriteNonTaskStructure = true,
+            CanWriteTasks = false
+        });
+
+        Assert.True(settings.CanRead);
+        Assert.False(settings.CanWrite);
+        Assert.True(settings.CanWriteNonTaskStructure);
+        Assert.False(settings.CanWriteTasks);
+    }
+
+    [Fact]
     public void Write_and_read_round_trip_task_write_scope_and_preserve_unrelated_configuration()
     {
         var projectId = Guid.Parse("580e32b9-8955-42c9-9646-0e9675f51f81");
@@ -50,6 +67,35 @@ public sealed class AgentProjectStructureAccessMetadataTests
     }
 
     [Fact]
+    public void Write_and_read_round_trip_non_task_structure_write_without_granting_task_write()
+    {
+        var configurationJson = AgentProjectStructureAccessMetadata.Write(
+            """
+            {
+              "unrelated": {
+                "enabled": true
+              }
+            }
+            """,
+            new AgentProjectStructureAccessSettings
+            {
+                CanWriteNonTaskStructure = true,
+                AllowAllProjects = true
+            });
+
+        var roundTrip = AgentProjectStructureAccessMetadata.Read(configurationJson);
+        var root = JsonNode.Parse(configurationJson)!.AsObject();
+
+        Assert.True(roundTrip.CanRead);
+        Assert.False(roundTrip.CanWrite);
+        Assert.True(roundTrip.CanWriteNonTaskStructure);
+        Assert.False(roundTrip.CanWriteTasks);
+        Assert.True(roundTrip.AllowAllProjects);
+        Assert.True(root["projectStructure"]!["canWriteNonTaskStructure"]!.GetValue<bool>());
+        Assert.True(root["unrelated"]!["enabled"]!.GetValue<bool>());
+    }
+
+    [Fact]
     public void Read_legacy_broad_write_configuration_keeps_superuser_semantics()
     {
         const string configurationJson = """
@@ -67,8 +113,9 @@ public sealed class AgentProjectStructureAccessMetadataTests
 
         Assert.True(settings.CanRead);
         Assert.True(settings.CanWrite);
+        Assert.False(settings.CanWriteNonTaskStructure);
         Assert.False(settings.CanWriteTasks);
         Assert.True(settings.AllowAllProjects);
-        Assert.True(settings.CanWrite || settings.CanWriteTasks);
+        Assert.True(settings.CanWrite || settings.CanWriteNonTaskStructure || settings.CanWriteTasks);
     }
 }

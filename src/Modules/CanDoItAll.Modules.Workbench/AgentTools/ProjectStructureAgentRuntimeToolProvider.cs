@@ -374,6 +374,10 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
             {
                 tools.RemoveAll(tool => AgentToolInvocationPolicyMetadata.IsMutationTool(tool.Name));
             }
+            else if (accessState.RequiresNonTaskWriteGuard)
+            {
+                tools.RemoveAll(tool => ProjectStructureNonTaskWritePolicy.RequiresFullStructureWrite(tool.Name));
+            }
 
             if (accessState.CanRead &&
                 ProjectPlanAgentAuthorizationPolicy.IsPlanSummaryAuthorized(agent, context.Capabilities))
@@ -712,6 +716,12 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
                 async cancellationToken =>
                 {
                     EnsureProjectWriteAllowed(accessState, projectId);
+                    await EnsureTaskFreeTargetsAsync(
+                        accessState,
+                        projectId,
+                        request.NodeIds,
+                        request.IncludeDescendants,
+                        cancellationToken);
                     return await agentService.MoveNodesToNewSubprojectAsync(projectId, request, BuildAgentContext(agent, accessState, projectId), cancellationToken);
                 },
                 cancellationToken);
@@ -880,6 +890,12 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
                 async cancellationToken =>
                 {
                     EnsureProjectWriteAllowed(accessState, projectId);
+                    await EnsureTaskFreeTargetsAsync(
+                        accessState,
+                        projectId,
+                        [request.SourceNodeId, request.TargetNodeId],
+                        includeDescendants: false,
+                        cancellationToken);
                     return await agentService.LinkNodesAsync(
                         projectId,
                         request with { Kind = ProjectObjectLinkKind.DependsOn },
@@ -907,6 +923,12 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
                 async cancellationToken =>
                 {
                     EnsureProjectWriteAllowed(accessState, projectId);
+                    await EnsureTaskFreeTargetsAsync(
+                        accessState,
+                        projectId,
+                        [request.SourceNodeId, request.TargetNodeId],
+                        includeDescendants: false,
+                        cancellationToken);
                     return await agentService.UnlinkNodesAsync(
                         projectId,
                         request with { Kind = ProjectObjectLinkKind.DependsOn },
@@ -936,6 +958,10 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
                 {
                     EnsureProjectWriteAllowed(accessState, projectId);
                     var effectiveRequest = NormalizeGovernedProcessCreateParent(accessState, request);
+                    ProjectStructureNonTaskWritePolicy.EnsureNodeCreateAllowed(
+                        accessState.RequiresNonTaskWriteGuard,
+                        effectiveRequest.ObjectType,
+                        effectiveRequest.ObjectSubtype);
                     if (await TryReuseGovernedProcessNodeCreateAsync(
                             agent,
                             accessState,
@@ -971,6 +997,13 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
                 async cancellationToken =>
                 {
                     EnsureProjectWriteAllowed(accessState, projectId);
+                    await EnsureNodeUpdateAllowedAsync(
+                        accessState,
+                        projectId,
+                        nodeId,
+                        request.ObjectType,
+                        request.ObjectSubtype,
+                        cancellationToken);
                     return await agentService.UpdateNodeAsync(projectId, nodeId, request, BuildAgentContext(agent, accessState, projectId), cancellationToken);
                 },
                 cancellationToken);
@@ -996,6 +1029,13 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
                 async cancellationToken =>
                 {
                     EnsureProjectWriteAllowed(accessState, projectId);
+                    await EnsureNodeUpdateAllowedAsync(
+                        accessState,
+                        projectId,
+                        nodeId,
+                        request.ObjectType,
+                        request.ObjectSubtype,
+                        cancellationToken);
                     return await agentService.UpdateNodeTypeAsync(projectId, nodeId, request, BuildAgentContext(agent, accessState, projectId), cancellationToken);
                 },
                 cancellationToken);
@@ -1021,6 +1061,12 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
                 async cancellationToken =>
                 {
                     EnsureProjectWriteAllowed(accessState, projectId);
+                    await EnsureTaskFreeTargetsAsync(
+                        accessState,
+                        projectId,
+                        [nodeId],
+                        includeDescendants: false,
+                        cancellationToken);
                     return await agentService.UpdateNodeMetadataAsync(projectId, nodeId, request, BuildAgentContext(agent, accessState, projectId), cancellationToken);
                 },
                 cancellationToken);
@@ -1045,6 +1091,7 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
                 async cancellationToken =>
                 {
                     EnsureProjectWriteAllowed(accessState, projectId);
+                    await EnsureTaskFreeTargetsAsync(accessState, projectId, request.NodeIds, includeDescendants: false, cancellationToken);
                     var count = await agentService.UpdateNodeStatusesAsync(projectId, request, BuildAgentContext(agent, accessState, projectId), cancellationToken);
                     return new OperationCount(count);
                 },
@@ -1071,6 +1118,7 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
                 async cancellationToken =>
                 {
                     EnsureProjectWriteAllowed(accessState, projectId);
+                    await EnsureTaskFreeTargetsAsync(accessState, projectId, [nodeId], includeDescendants: false, cancellationToken);
                     var count = await agentService.UpdateNodeStatusesAsync(
                         projectId,
                         new ProjectStructureStatusBatchInput([nodeId], request.Status, request.LeaseToken),
@@ -1100,6 +1148,7 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
                 async cancellationToken =>
                 {
                     EnsureProjectWriteAllowed(accessState, projectId);
+                    await EnsureTaskFreeTargetsAsync(accessState, projectId, request.NodeIds, includeDescendants: false, cancellationToken);
                     var count = await agentService.UpdateNodeProgressAsync(projectId, request, BuildAgentContext(agent, accessState, projectId), cancellationToken);
                     return new OperationCount(count);
                 },
@@ -1126,6 +1175,7 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
                 async cancellationToken =>
                 {
                     EnsureProjectWriteAllowed(accessState, projectId);
+                    await EnsureTaskFreeTargetsAsync(accessState, projectId, [nodeId], includeDescendants: false, cancellationToken);
                     var count = await agentService.UpdateNodeProgressAsync(
                         projectId,
                         new ProjectStructureProgressBatchInput([nodeId], request.ProgressMode, request.ProgressPercent, request.LeaseToken),
@@ -1155,6 +1205,7 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
                 async cancellationToken =>
                 {
                     EnsureProjectWriteAllowed(accessState, projectId);
+                    await EnsureTaskFreeTargetsAsync(accessState, projectId, request.NodeIds, includeDescendants: false, cancellationToken);
                     var count = await agentService.UpdateNodeMarkerAsync(projectId, request, BuildAgentContext(agent, accessState, projectId), cancellationToken);
                     return new OperationCount(count);
                 },
@@ -1181,6 +1232,7 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
                 async cancellationToken =>
                 {
                     EnsureProjectWriteAllowed(accessState, projectId);
+                    await EnsureTaskFreeTargetsAsync(accessState, projectId, [nodeId], includeDescendants: false, cancellationToken);
                     var count = await agentService.ChangeNodeMarkerAsync(projectId, nodeId, request, BuildAgentContext(agent, accessState, projectId), cancellationToken);
                     return new OperationCount(count);
                 },
@@ -1206,6 +1258,7 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
                 async cancellationToken =>
                 {
                     EnsureProjectWriteAllowed(accessState, projectId);
+                    await EnsureTaskFreeTargetsAsync(accessState, projectId, request.NodeIds, includeDescendants: false, cancellationToken);
                     var count = await agentService.UpdateNodePriorityAsync(projectId, request, BuildAgentContext(agent, accessState, projectId), cancellationToken);
                     return new OperationCount(count);
                 },
@@ -1232,6 +1285,7 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
                 async cancellationToken =>
                 {
                     EnsureProjectWriteAllowed(accessState, projectId);
+                    await EnsureTaskFreeTargetsAsync(accessState, projectId, [nodeId], includeDescendants: false, cancellationToken);
                     var count = await agentService.UpdateNodePriorityAsync(
                         projectId,
                         new ProjectStructurePriorityBatchInput([nodeId], request.Priority, request.LeaseToken),
@@ -1261,6 +1315,7 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
                 async cancellationToken =>
                 {
                     EnsureProjectWriteAllowed(accessState, projectId);
+                    await EnsureTaskFreeTargetsAsync(accessState, projectId, [request.NodeId], includeDescendants: false, cancellationToken);
                     await agentService.MoveNodeAsync(projectId, request, BuildAgentContext(agent, accessState, projectId), cancellationToken);
                     return new OperationAck(true);
                 },
@@ -1286,6 +1341,7 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
                 async cancellationToken =>
                 {
                     EnsureProjectWriteAllowed(accessState, projectId);
+                    await EnsureTaskFreeTargetsAsync(accessState, projectId, [request.RootNodeId], includeDescendants: true, cancellationToken);
                     return await agentService.RecomposeNodeAsync(projectId, request, BuildAgentContext(agent, accessState, projectId), cancellationToken);
                 },
                 cancellationToken);
@@ -1310,6 +1366,7 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
                 async cancellationToken =>
                 {
                     EnsureProjectWriteAllowed(accessState, projectId);
+                    await EnsureTaskFreeTargetsAsync(accessState, projectId, [request.NodeId], includeDescendants: false, cancellationToken);
                     return await agentService.ReparentNodeAsync(projectId, request, BuildAgentContext(agent, accessState, projectId), cancellationToken);
                 },
                 cancellationToken);
@@ -1336,6 +1393,7 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
                 {
                     EnsureProjectWriteAllowed(accessState, projectId);
                     EnsureProjectWriteAllowed(accessState, request.TargetProjectId);
+                    await EnsureTaskFreeTargetsAsync(accessState, projectId, [nodeId], includeDescendants: true, cancellationToken);
                     return await agentService.MoveDescendantsToProjectAsync(projectId, nodeId, request, BuildAgentContext(agent, accessState, projectId), cancellationToken);
                 },
                 cancellationToken);
@@ -1361,6 +1419,7 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
                 async cancellationToken =>
                 {
                     EnsureProjectWriteAllowed(accessState, projectId);
+                    await EnsureTaskFreeTargetsAsync(accessState, projectId, [nodeId], includeDescendants: false, cancellationToken);
                     return await agentService.ExecuteNodeCommandAsync(projectId, nodeId, request, BuildAgentContext(agent, accessState, projectId), cancellationToken);
                 },
                 cancellationToken);
@@ -1386,6 +1445,7 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
                 async cancellationToken =>
                 {
                     EnsureProjectWriteAllowed(accessState, projectId);
+                    await EnsureTaskFreeTargetsAsync(accessState, projectId, [nodeId], includeDescendants: false, cancellationToken);
                     return await agentService.LinkProcessDefinitionAsync(projectId, nodeId, request, BuildAgentContext(agent, accessState, projectId), cancellationToken);
                 },
                 cancellationToken);
@@ -1411,6 +1471,7 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
                 async cancellationToken =>
                 {
                     EnsureProjectWriteAllowed(accessState, projectId);
+                    await EnsureTaskFreeTargetsAsync(accessState, projectId, [nodeId], includeDescendants: false, cancellationToken);
                     return await agentService.StartProcessNodeAsync(projectId, nodeId, request, BuildAgentContext(agent, accessState, projectId), cancellationToken);
                 },
                 cancellationToken);
@@ -1515,6 +1576,7 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
                 async cancellationToken =>
                 {
                     EnsureProjectWriteAllowed(accessState, projectId);
+                    await EnsureTaskFreeTargetsAsync(accessState, projectId, [nodeId], includeDescendants: false, cancellationToken);
                     return await agentService.StartWorkflowNodeAsync(projectId, nodeId, request, BuildAgentContext(agent, accessState, projectId), cancellationToken);
                 },
                 cancellationToken);
@@ -1563,6 +1625,7 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
                 async cancellationToken =>
                 {
                     EnsureProjectWriteAllowed(accessState, projectId);
+                    await EnsureTaskFreeTargetsAsync(accessState, projectId, [nodeId], includeDescendants: true, cancellationToken);
                     var count = await agentService.DeleteNodeAsync(projectId, nodeId, request, BuildAgentContext(agent, accessState, projectId), cancellationToken);
                     return new OperationCount(count);
                 },
@@ -1588,6 +1651,7 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
                 async cancellationToken =>
                 {
                     EnsureProjectWriteAllowed(accessState, projectId);
+                    await EnsureTaskFreeTargetsAsync(accessState, projectId, request.NodeIds, includeDescendants: true, cancellationToken);
                     var count = await agentService.DeleteNodesAsync(projectId, request, BuildAgentContext(agent, accessState, projectId), cancellationToken);
                     return new OperationCount(count);
                 },
@@ -1709,6 +1773,7 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
                 async cancellationToken =>
                 {
                     EnsureProjectWriteAllowed(accessState, projectId);
+                    await EnsureTaskFreeTargetsAsync(accessState, projectId, [nodeId], includeDescendants: false, cancellationToken);
                     return await agentService.CreateAssetRevisionAsync(projectId, nodeId, request, BuildAgentContext(agent, accessState, projectId), cancellationToken);
                 },
                 cancellationToken);
@@ -1733,6 +1798,12 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
                 async cancellationToken =>
                 {
                     EnsureProjectWriteAllowed(accessState, projectId);
+                    await EnsureTaskFreeTargetsAsync(
+                        accessState,
+                        projectId,
+                        [request.SourceNodeId, request.TargetNodeId],
+                        includeDescendants: false,
+                        cancellationToken);
                     return await agentService.LinkNodesAsync(projectId, request, BuildAgentContext(agent, accessState, projectId), cancellationToken);
                 },
                 cancellationToken);
@@ -1757,6 +1828,12 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
                 async cancellationToken =>
                 {
                     EnsureProjectWriteAllowed(accessState, projectId);
+                    await EnsureTaskFreeTargetsAsync(
+                        accessState,
+                        projectId,
+                        [request.SourceNodeId, request.TargetNodeId],
+                        includeDescendants: false,
+                        cancellationToken);
                     return await agentService.UnlinkNodesAsync(projectId, request, BuildAgentContext(agent, accessState, projectId), cancellationToken);
                 },
                 cancellationToken);
@@ -1780,6 +1857,9 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
                 async cancellationToken =>
                 {
                     EnsureProjectWriteAllowed(accessState, request.ProjectId);
+                    ProjectStructureNonTaskWritePolicy.EnsureImportAllowed(
+                        accessState.RequiresNonTaskWriteGuard,
+                        request.LeafWorkItemSubtype);
                     return await agentService.ImportAsync(request, BuildAgentContext(agent), cancellationToken);
                 },
                 cancellationToken);
@@ -2401,6 +2481,72 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
                 : Math.Clamp(requestedDurationMinutes, 1, GovernedProcessMaxExplicitLeaseMinutes);
         }
 
+        private async Task EnsureNodeUpdateAllowedAsync(
+            ProjectStructureAccessState accessState,
+            Guid projectId,
+            string nodeId,
+            ProjectObjectType? requestedObjectType,
+            string? requestedObjectSubtype,
+            CancellationToken cancellationToken)
+        {
+            if (!accessState.RequiresNonTaskWriteGuard)
+            {
+                return;
+            }
+
+            var response = await agentService.GetStructureAsync(
+                projectId,
+                new ProjectStructureReadRequest(NodeIds: [nodeId]),
+                cancellationToken);
+            var node = response.Nodes.FirstOrDefault(item => string.Equals(item.Id, nodeId, StringComparison.Ordinal));
+            if (node is null)
+            {
+                throw new ProjectStructureAgentException(
+                    404,
+                    "NodeNotFound",
+                    $"Project-structure node '{nodeId}' was not found in project '{projectId:D}'.");
+            }
+
+            ProjectStructureNonTaskWritePolicy.EnsureNodeUpdateAllowed(
+                requiresNonTaskGuard: true,
+                node,
+                requestedObjectType,
+                requestedObjectSubtype);
+        }
+
+        private async Task EnsureTaskFreeTargetsAsync(
+            ProjectStructureAccessState accessState,
+            Guid projectId,
+            IEnumerable<string> nodeIds,
+            bool includeDescendants,
+            CancellationToken cancellationToken)
+        {
+            if (!accessState.RequiresNonTaskWriteGuard)
+            {
+                return;
+            }
+
+            var normalizedNodeIds = nodeIds
+                .Where(nodeId => !string.IsNullOrWhiteSpace(nodeId))
+                .Select(nodeId => nodeId.Trim())
+                .Distinct(StringComparer.Ordinal)
+                .ToArray();
+            if (normalizedNodeIds.Length == 0)
+            {
+                return;
+            }
+
+            var response = await agentService.GetStructureAsync(
+                projectId,
+                includeDescendants
+                    ? new ProjectStructureReadRequest(SubtreeRootIds: normalizedNodeIds)
+                    : new ProjectStructureReadRequest(NodeIds: normalizedNodeIds),
+                cancellationToken);
+            ProjectStructureNonTaskWritePolicy.EnsureNodesAllowed(
+                requiresNonTaskGuard: true,
+                response.Nodes);
+        }
+
         private static void EnsureReadAllowed(ProjectStructureAccessState accessState)
         {
             if (accessState.CanRead)
@@ -2416,7 +2562,7 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
 
         private static void EnsureWriteAllowed(ProjectStructureAccessState accessState)
         {
-            if (accessState.CanWriteUnscoped)
+            if (accessState.CanWriteStructureUnscoped)
             {
                 return;
             }
@@ -2667,9 +2813,13 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
         {
             var normalized = AgentProjectStructureAccessMetadata.Normalize(settings);
             CanRead = normalized.CanRead || scopedProcessAccess?.CanRead == true;
-            CanWrite = normalized.CanWrite || scopedProcessAccess?.CanWrite == true;
+            CanWrite = ProjectStructureNonTaskWritePolicy.CanUseStructureMutationTools(normalized) || scopedProcessAccess?.CanWrite == true;
             CanWriteUnscoped = normalized.CanWrite;
-            CanWriteTasksUnscoped = normalized.CanWrite || normalized.CanWriteTasks;
+            CanWriteStructureUnscoped = normalized.CanWrite || normalized.CanWriteNonTaskStructure;
+            CanWriteTasksUnscoped = ProjectStructureNonTaskWritePolicy.CanUseTaskMutationTools(normalized);
+            RequiresNonTaskWriteGuard = normalized.CanWriteNonTaskStructure &&
+                !normalized.CanWrite &&
+                scopedProcessAccess?.CanWrite != true;
             AllowAllProjects = normalized.AllowAllProjects;
             AllowedProjectIds = normalized.AllowedProjectIds.ToHashSet();
             ScopedProcessAccess = scopedProcessAccess;
@@ -2685,7 +2835,11 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
 
         public bool CanWriteUnscoped { get; }
 
+        public bool CanWriteStructureUnscoped { get; }
+
         public bool CanWriteTasksUnscoped { get; }
+
+        public bool RequiresNonTaskWriteGuard { get; }
 
         public bool AllowAllProjects { get; }
 

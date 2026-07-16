@@ -266,7 +266,7 @@ else
                     </TabsItem>
 
                     <TabsItem Text="Project Structure Access">
-                        <FormSection Title="Project Structure Access" Description="Project reads, task-only changes, and unrestricted structure changes are separate permissions. Advanced plan and cost analysis additionally requires its assigned planning skill and tool capability.">
+                        <FormSection Title="Project Structure Access" Description="Project reads, non-task structure changes, task-only changes, and unrestricted changes are separate permissions. Advanced plan and cost analysis additionally requires its assigned planning skill and tool capability.">
                             <Grid Gap="LayoutGap.Large" ColumnsMd="3" data-testid="agents-catalog-project-structure-access">
                                 <div class="cda-admin-subpanel">
                                     <p class="cda-field-label mb-2">Access mode</p>
@@ -277,6 +277,14 @@ else
                                                    @onchange="args => ToggleProjectStructureRead(args.Value)"
                                                    data-testid="agents-catalog-project-structure-read" />
                                             Can read project structure
+                                        </label>
+                                        <label class="cda-inline-option">
+                                            <input type="checkbox"
+                                                   checked="@(editorModel.ProjectStructureAccess.CanWrite || editorModel.ProjectStructureAccess.CanWriteNonTaskStructure)"
+                                                   disabled="@editorModel.ProjectStructureAccess.CanWrite"
+                                                   @onchange="args => ToggleProjectStructureNonTaskWrite(args.Value)"
+                                                   data-testid="agents-catalog-project-structure-non-task-write" />
+                                            Can write project structure except tasks
                                         </label>
                                         <label class="cda-inline-option">
                                             <input type="checkbox"

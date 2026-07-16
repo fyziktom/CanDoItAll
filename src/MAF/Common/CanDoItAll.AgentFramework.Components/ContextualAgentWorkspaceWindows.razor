@@ -147,9 +147,16 @@
                                     {
                                         <span class="contextual-agent-window__access-chip contextual-agent-window__access-chip--write">Write</span>
                                     }
-                                    else if (item.CanWriteTasks)
+                                    else
                                     {
-                                        <span class="contextual-agent-window__access-chip contextual-agent-window__access-chip--write">Task write</span>
+                                        @if (item.CanWriteNonTaskStructure)
+                                        {
+                                            <span class="contextual-agent-window__access-chip contextual-agent-window__access-chip--write">Structure write</span>
+                                        }
+                                        @if (item.CanWriteTasks)
+                                        {
+                                            <span class="contextual-agent-window__access-chip contextual-agent-window__access-chip--write">Task write</span>
+                                        }
                                     }
                                     <span class="contextual-agent-window__access-chip contextual-agent-window__access-chip--scope">@item.ScopeLabel</span>
                                 </span>
@@ -1382,9 +1389,18 @@ Use these workspace artifacts as input:
             return "Read Write";
         }
 
+        var writeScopes = new List<string>(2);
+        if (item.CanWriteNonTaskStructure)
+        {
+            writeScopes.Add("Structure write");
+        }
         if (item.CanWriteTasks)
         {
-            return "Read Task write";
+            writeScopes.Add("Task write");
+        }
+        if (writeScopes.Count > 0)
+        {
+            return $"Read {string.Join(' ', writeScopes)}";
         }
 
         return item.CanRead ? "Read" : "No access";

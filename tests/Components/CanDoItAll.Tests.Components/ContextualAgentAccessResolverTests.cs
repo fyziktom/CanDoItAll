@@ -30,6 +30,16 @@ public sealed class ContextualAgentAccessResolverTests
                     AllowAllProjects = true
                 }),
             tags: ["write"]);
+        var nonTaskStructureWriteAgent = CreateAgent(
+            "Project structure writer",
+            AgentProjectStructureAccessMetadata.Write(
+                null,
+                new AgentProjectStructureAccessSettings
+                {
+                    CanWriteNonTaskStructure = true,
+                    AllowAllProjects = true
+                }),
+            tags: ["structure"]);
         var taskWriteAgent = CreateAgent(
             "Project task writer",
             AgentProjectStructureAccessMetadata.Write(
@@ -55,7 +65,7 @@ public sealed class ContextualAgentAccessResolverTests
             isTemplate: true);
 
         var result = ContextualAgentAccessResolver.Resolve(
-            [matchingAgent, taskWriteAgent, writeAgent, wrongProjectAgent, templateAgent],
+            [matchingAgent, nonTaskStructureWriteAgent, taskWriteAgent, writeAgent, wrongProjectAgent, templateAgent],
             ContextualAgentWorkspaceKind.ProjectStructure,
             projectId: projectId);
 
@@ -70,8 +80,18 @@ public sealed class ContextualAgentAccessResolverTests
             },
             item =>
             {
+                Assert.Equal(nonTaskStructureWriteAgent.Id, item.Agent.Id);
+                Assert.True(item.CanRead);
+                Assert.True(item.CanWriteNonTaskStructure);
+                Assert.False(item.CanWriteTasks);
+                Assert.False(item.CanWrite);
+                Assert.Equal("All projects", item.ScopeLabel);
+            },
+            item =>
+            {
                 Assert.Equal(taskWriteAgent.Id, item.Agent.Id);
                 Assert.True(item.CanRead);
+                Assert.False(item.CanWriteNonTaskStructure);
                 Assert.True(item.CanWriteTasks);
                 Assert.False(item.CanWrite);
                 Assert.Equal("All projects", item.ScopeLabel);
@@ -83,6 +103,33 @@ public sealed class ContextualAgentAccessResolverTests
                 Assert.True(item.CanWrite);
                 Assert.Equal("All projects", item.ScopeLabel);
             });
+    }
+
+    [Fact]
+    public void Project_structure_context_preserves_combined_narrow_write_permissions_without_full_write()
+    {
+        var projectId = Guid.NewGuid();
+        var agent = CreateAgent(
+            "Combined narrow writer",
+            AgentProjectStructureAccessMetadata.Write(
+                null,
+                new AgentProjectStructureAccessSettings
+                {
+                    CanWriteNonTaskStructure = true,
+                    CanWriteTasks = true,
+                    AllowedProjectIds = [projectId]
+                }));
+
+        var result = Assert.Single(ContextualAgentAccessResolver.Resolve(
+            [agent],
+            ContextualAgentWorkspaceKind.ProjectStructure,
+            projectId: projectId));
+
+        Assert.True(result.CanRead);
+        Assert.True(result.CanWriteNonTaskStructure);
+        Assert.True(result.CanWriteTasks);
+        Assert.False(result.CanWrite);
+        Assert.Equal("This project", result.ScopeLabel);
     }
 
     [Fact]

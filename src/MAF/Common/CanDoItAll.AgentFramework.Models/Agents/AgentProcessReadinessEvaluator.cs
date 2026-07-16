@@ -207,7 +207,7 @@ public static class AgentProcessReadinessEvaluator
     {
         foreach (var requiredToolName in NormalizeRequiredRuntimeToolNames(request.RequiredRuntimeToolNames))
         {
-            if (requiredToolName.StartsWith("project_structure_", StringComparison.OrdinalIgnoreCase))
+            if (IsProjectRuntimeToolName(requiredToolName))
             {
                 AddRequiredProjectStructureToolReadinessFindings(agent, request, requiredToolName, findings);
                 continue;
@@ -370,9 +370,35 @@ public static class AgentProcessReadinessEvaluator
         var access = AgentProjectStructureAccessMetadata.Normalize(
             AgentProjectStructureAccessMetadata.Read(agent.ConfigurationJson));
 
-        if (ProjectStructureMutationRuntimeToolNames.Contains(requiredToolName))
+        if (ProjectTaskMutationRuntimeToolNames.Contains(requiredToolName))
+        {
+            if (!access.CanWrite && !access.CanWriteTasks)
+            {
+                findings.Add(new AgentProcessReadinessFinding(
+                    AgentProcessReadinessFindingSeverity.Error,
+                    "agent.readiness.required-project-task-write-missing",
+                    $"Step '{request.StepKey}' requires project-task mutation tool '{requiredToolName}', but agent '{agent.Name}' does not have project-task write access."));
+            }
+
+            return;
+        }
+
+        if (ProjectStructureBroadMutationRuntimeToolNames.Contains(requiredToolName))
         {
             if (!access.CanWrite)
+            {
+                findings.Add(new AgentProcessReadinessFinding(
+                    AgentProcessReadinessFindingSeverity.Error,
+                    "agent.readiness.required-project-structure-full-write-missing",
+                    $"Step '{request.StepKey}' requires unrestricted project-structure mutation tool '{requiredToolName}', but agent '{agent.Name}' does not have full project-structure write access."));
+            }
+
+            return;
+        }
+
+        if (ProjectStructureMutationRuntimeToolNames.Contains(requiredToolName))
+        {
+            if (!access.CanWrite && !access.CanWriteNonTaskStructure)
             {
                 findings.Add(new AgentProcessReadinessFinding(
                     AgentProcessReadinessFindingSeverity.Error,
@@ -450,6 +476,13 @@ public static class AgentProcessReadinessEvaluator
 
     private static bool IsBrowserRuntimeToolName(string toolName)
         => toolName.StartsWith("browser_", StringComparison.OrdinalIgnoreCase);
+
+    private static bool IsProjectRuntimeToolName(string toolName)
+    {
+        return toolName.StartsWith("project_structure_", StringComparison.OrdinalIgnoreCase) ||
+               toolName.StartsWith("project_task_", StringComparison.OrdinalIgnoreCase) ||
+               toolName.StartsWith("project_plan_", StringComparison.OrdinalIgnoreCase);
+    }
 
     private static AgentProcessReadinessFinding MissingTool(
         AgentDefinition agent,
@@ -1264,6 +1297,7 @@ public static class AgentProcessReadinessEvaluator
         "project_structure_node_catalog",
         "project_structure_checklist",
         "project_structure_dependencies_query",
+        "project_plan_summary_get",
         "project_structure_asset_get",
         "project_structure_asset_content_get",
         "project_structure_node_workflow_add_options",
@@ -1310,11 +1344,21 @@ public static class AgentProcessReadinessEvaluator
         "project_structure_asset_create_revision",
         "project_structure_link_create",
         "project_structure_link_unlink",
-        "project_structure_import",
         "project_structure_project_lease_acquire",
         "project_structure_repo_branch_lease_acquire",
         "project_structure_lease_renew",
         "project_structure_lease_release"
+    };
+
+    private static readonly HashSet<string> ProjectTaskMutationRuntimeToolNames = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "project_task_create",
+        "project_task_update"
+    };
+
+    private static readonly HashSet<string> ProjectStructureBroadMutationRuntimeToolNames = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "project_structure_import"
     };
 
     private sealed record ExactRoleMatch(

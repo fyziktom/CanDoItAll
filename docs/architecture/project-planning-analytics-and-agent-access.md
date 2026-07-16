@@ -56,7 +56,7 @@ Basic project-structure read access continues to expose ordinary task facts thro
 
 The provider reloads agent settings and capability assignments before the invocation so a stale chat runtime cannot preserve revoked access.
 
-Task mutation is a separate authority. `CanWriteTasks` allows task-specific create/update operations for covered projects without granting generic project-structure mutation. Existing broad `CanWrite` remains a superset for backward compatibility. Analysis capability alone grants no mutation permission, and a task-only writer must not gain generic node, link, process, workflow, or project mutation tools.
+Task mutation and non-task structure mutation are separate authorities. `CanWriteTasks` allows task-specific create/update operations for covered projects without granting generic project-structure mutation. `CanWriteNonTaskStructure` permits guarded generic mutations while rejecting task creation, direct task mutation or reclassification, task links, and subtree operations that would affect a task; adding a non-task child beneath a task remains allowed. Existing broad `CanWrite` remains the unrestricted superset for backward compatibility. Analysis capability alone grants no mutation permission, and neither narrow authority implies the other.
 
 The HTTP project-structure API is a separate control-plane boundary. Its bearer/API authorization does not establish an internal `AgentDefinition`, so it does not pretend to enforce agent capability assignments or `CanWriteTasks`. Clients acting on behalf of an agent must use the governed runtime tool path when agent-level policy is required.
 

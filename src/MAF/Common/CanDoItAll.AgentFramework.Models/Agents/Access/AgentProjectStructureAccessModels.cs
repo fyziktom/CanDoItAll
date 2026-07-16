@@ -9,6 +9,8 @@ public sealed class AgentProjectStructureAccessSettings
 
     public bool CanWrite { get; set; }
 
+    public bool CanWriteNonTaskStructure { get; set; }
+
     public bool CanWriteTasks { get; set; }
 
     public bool AllowAllProjects { get; set; }
@@ -21,6 +23,7 @@ public static class AgentProjectStructureAccessMetadata
     private const string RootPropertyName = "projectStructure";
     private const string CanReadPropertyName = "canRead";
     private const string CanWritePropertyName = "canWrite";
+    private const string CanWriteNonTaskStructurePropertyName = "canWriteNonTaskStructure";
     private const string CanWriteTasksPropertyName = "canWriteTasks";
     private const string AllowAllProjectsPropertyName = "allowAllProjects";
     private const string AllowedProjectIdsPropertyName = "allowedProjectIds";
@@ -45,6 +48,7 @@ public static class AgentProjectStructureAccessMetadata
             {
                 CanRead = TryReadBoolean(projectStructure, CanReadPropertyName),
                 CanWrite = TryReadBoolean(projectStructure, CanWritePropertyName),
+                CanWriteNonTaskStructure = TryReadBoolean(projectStructure, CanWriteNonTaskStructurePropertyName),
                 CanWriteTasks = TryReadBoolean(projectStructure, CanWriteTasksPropertyName),
                 AllowAllProjects = TryReadBoolean(projectStructure, AllowAllProjectsPropertyName)
             };
@@ -71,6 +75,7 @@ public static class AgentProjectStructureAccessMetadata
 
         if (!normalized.CanRead &&
             !normalized.CanWrite &&
+            !normalized.CanWriteNonTaskStructure &&
             !normalized.CanWriteTasks &&
             !normalized.AllowAllProjects &&
             normalized.AllowedProjectIds.Count == 0)
@@ -83,6 +88,7 @@ public static class AgentProjectStructureAccessMetadata
         {
             [CanReadPropertyName] = normalized.CanRead,
             [CanWritePropertyName] = normalized.CanWrite,
+            [CanWriteNonTaskStructurePropertyName] = normalized.CanWriteNonTaskStructure,
             [CanWriteTasksPropertyName] = normalized.CanWriteTasks,
             [AllowAllProjectsPropertyName] = normalized.AllowAllProjects,
             [AllowedProjectIdsPropertyName] = new JsonArray(
@@ -100,8 +106,9 @@ public static class AgentProjectStructureAccessMetadata
 
         return new AgentProjectStructureAccessSettings
         {
-            CanRead = settings.CanRead || settings.CanWrite || settings.CanWriteTasks,
+            CanRead = settings.CanRead || settings.CanWrite || settings.CanWriteNonTaskStructure || settings.CanWriteTasks,
             CanWrite = settings.CanWrite,
+            CanWriteNonTaskStructure = settings.CanWriteNonTaskStructure,
             CanWriteTasks = settings.CanWriteTasks,
             AllowAllProjects = settings.AllowAllProjects,
             AllowedProjectIds = settings.AllowedProjectIds
