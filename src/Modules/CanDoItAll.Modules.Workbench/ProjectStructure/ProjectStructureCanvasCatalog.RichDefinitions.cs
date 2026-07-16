@@ -252,7 +252,7 @@ internal static partial class ProjectStructureCanvasCatalog
         new("add-participant-partner", ProjectObjectType.Participant, "partner", "people", "Partner", "Add a partner organization or external collaborator.", "partner", "mint", "Partner", "Name", "Agency partner", "Role", "Partner role", "Notes", "What this partner contributes", false, string.Empty, "Drop a file here or choose one.", true, "Add participant", ParticipantFields(ProjectParticipantKind.Partner)),
         new("add-participant-ai-agent", ProjectObjectType.Participant, "ai-agent", "people", "AI agent", "Add an AI agent participant with a distinct reusable identity.", "ai", "accent", "AI agent", "Name", "Release copilot", "Role", "Analysis agent", "Notes", "Capabilities, scope, or model notes", false, string.Empty, "Drop a file here or choose one.", true, "Add participant", ParticipantFields(ProjectParticipantKind.AiAgent)),
 
-        new(WorkTaskActionId, ProjectObjectType.WorkItem, "task", "work", "Task", "Track concrete work with a direct person or agent assignee, due date, and optional repository linkage.", "task", "warn", "Task", "Task", "Implement export flow", "Status lane", "Sprint or owner", "Notes", "Definition of done or context", false, string.Empty, "Drop a file here or choose one.", true, "Add work item", TaskWorkItemFields()),
+        new(WorkTaskActionId, ProjectObjectType.WorkItem, "task", "work", "Task", "Track delivery time separately from pure effort and expected cost, with a direct person or agent assignee.", "task", "warn", "Task", "Task", "Implement export flow", "Status lane", "Sprint or owner", "Notes", "Definition of done or context", false, string.Empty, "Drop a file here or choose one.", true, "Add work item", TaskWorkItemFields(), TaskWorkItemDefaults()),
         new("add-work-issue", ProjectObjectType.WorkItem, "issue", "work", "Issue", "Capture a delivery issue with optional repository linkage and ownership.", "issue", "danger", "Issue", "Issue", "Toolbar overlap", "Severity", "P1, P2, blocked...", "Notes", "Describe the issue clearly", false, string.Empty, "Drop a file here or choose one.", true, "Add work item", WorkItemFields(ProjectWorkItemKind.Issue)),
         new("add-work-revision", ProjectObjectType.WorkItem, "revision", "work", "Revision", "Track a revision loop or rework pass explicitly.", "revision", "accent", "Revision", "Revision", "Revise onboarding copy", "Cycle", "Revision round", "Notes", "What must change", false, string.Empty, "Drop a file here or choose one.", true, "Add work item", WorkItemFields(ProjectWorkItemKind.Revision)),
         new("add-work-feedback", ProjectObjectType.WorkItem, "feedback", "work", "Feedback", "Capture structured feedback items without hiding them in notes.", "feedback", "sky", "Feedback", "Feedback", "Client feedback", "Source", "Reviewer or channel", "Notes", "The feedback itself", false, string.Empty, "Drop a file here or choose one.", true, "Add work item", WorkItemFields(ProjectWorkItemKind.Feedback)),
@@ -356,7 +356,24 @@ internal static partial class ProjectStructureCanvasCatalog
         [
             Field("workItemKind", "Kind", "select", "Choose work item kind", true, [Option("task", "Task")]),
             Field("dueUtc", "Due", "datetime-local", "Choose due date"),
-            Field("repositoryRef", "Repository", "select", "Optional repository")
+            Field("repositoryRef", "Repository", "select", "Optional repository"),
+            Field(ProjectTaskEstimateInputKeys.ExpectedEffortValue, "Pure effort", "number", "8"),
+            Field(
+                ProjectTaskEstimateInputKeys.ExpectedEffortUnit,
+                "Effort unit",
+                "select",
+                "Choose effort unit",
+                true,
+                [Option("hours", "Hours"), Option("manDays", "Man-days")]),
+            Field(ProjectTaskEstimateInputKeys.ExpectedCostAmount, "Expected cost", "number", "Optional expected price"),
+            Field(ProjectTaskEstimateInputKeys.ExpectedCostCurrencyCode, "Expected cost currency", "text", "USD")
+        ];
+
+    private static IReadOnlyList<CanvasWorkbenchInputValue> TaskWorkItemDefaults()
+        =>
+        [
+            DefaultValue(ProjectTaskEstimateInputKeys.ExpectedEffortValue, "8"),
+            DefaultValue(ProjectTaskEstimateInputKeys.ExpectedEffortUnit, "hours")
         ];
 
     private static IReadOnlyList<CanvasWorkbenchInputField> PaymentFields()

@@ -64,28 +64,39 @@ public sealed class ProjectStructureGanttProjectionAdapter
 
         var assignmentIndex = BuildAssignmentIndex(surface, partyAssignments);
         var taskNodesById = taskNodes.ToDictionary(node => new GanttTaskId(node.Id));
+        var metricsByTaskId = taskNodes.ToDictionary(
+            node => new GanttTaskId(node.Id),
+            node => ProjectStructureGanttTaskMetricProjection.Build(node, options, issues));
         var tasks = taskOrder
             .Select(taskId =>
             {
                 var node = taskNodesById[taskId];
                 var schedule = schedules[taskId];
+                var metrics = metricsByTaskId[taskId];
                 return new GanttTask(
                     taskId,
                     node.Title,
                     schedule.Start,
                     schedule.End,
-                    BuildAssignments(node, assignmentIndex, issues));
+                    BuildAssignments(node, assignmentIndex, issues))
+                {
+                    ProgressPercent = metrics.ProgressPercent,
+                    ExpectedEffort = metrics.ExpectedEffort
+                };
             })
             .ToArray();
         var projectionOnlyTaskIds = schedules
             .Where(pair => pair.Value.Kind != ScheduleProjectionKind.Canonical)
             .Select(pair => pair.Key);
+        var expectedCostTotals = ProjectStructureGanttTaskMetricProjection.BuildExpectedCostTotals(
+            metricsByTaskId.Values);
 
         return new ProjectStructureGanttProjectionResult(
             tasks,
             dependencies,
             projectionOnlyTaskIds,
-            issues);
+            issues,
+            expectedCostTotals);
     }
 
     private static ProjectStructureNode[] ApplyPreferredTaskOrder(

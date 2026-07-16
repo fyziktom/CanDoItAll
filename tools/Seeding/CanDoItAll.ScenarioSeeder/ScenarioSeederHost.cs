@@ -120,6 +120,7 @@ internal static class ScenarioSeederHost
 
         var configuration = new ConfigurationBuilder()
             .AddInMemoryCollection(BuildConfigurationValues(options))
+            .AddEnvironmentVariables()
             .Build();
 
         var services = new ServiceCollection();
@@ -178,6 +179,12 @@ internal static class ScenarioSeederHost
         ScenarioSeederOptions options,
         CancellationToken cancellationToken)
     {
+        var selection = await profileService.GetCurrentSelectionAsync(cancellationToken);
+        if (selection.IsRuntimeLocked)
+        {
+            return;
+        }
+
         var normalizedWorkspaceRoot = Path.GetFullPath(options.WorkspaceRootPath);
         var profiles = await profileService.ListAsync(cancellationToken);
         DatabaseProfileSummary? requestedProfile = null;
@@ -202,8 +209,7 @@ internal static class ScenarioSeederHost
                 "Create or import the managed profile before running the scenario seeder.");
         }
 
-        var selection = await profileService.GetCurrentSelectionAsync(cancellationToken);
-        if (selection.ActiveProfileId == requestedProfile.Id && !selection.IsRuntimeLocked)
+        if (selection.ActiveProfileId == requestedProfile.Id)
         {
             return;
         }

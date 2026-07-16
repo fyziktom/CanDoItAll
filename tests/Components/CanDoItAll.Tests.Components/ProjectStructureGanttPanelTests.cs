@@ -2,6 +2,7 @@ using Bunit;
 using Bunit.TestDoubles;
 using CanDoItAll.Components.BaseLib;
 using CanDoItAll.Components.Gantt;
+using CanDoItAll.Infrastructure.Configuration;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Workbench;
@@ -37,6 +38,7 @@ public sealed class ProjectStructureGanttPanelTests
         Assert.True(chart.Instance.TaskScheduleReadOnlySelector(task));
         Assert.Null(chart.Instance.TaskTitleReadOnlySelector);
         Assert.True(chart.Instance.AllowTaskEditing);
+        Assert.True(chart.Instance.TaskDoubleClicked.HasDelegate);
         Assert.Contains("read-only projection", cut.Markup, StringComparison.OrdinalIgnoreCase);
     }
 
@@ -113,6 +115,54 @@ public sealed class ProjectStructureGanttPanelTests
         });
     }
 
+    [Fact]
+    public async Task Task_double_click_opens_authoritative_details_with_delivery_progress_and_pure_effort()
+    {
+        var projectId = Guid.NewGuid();
+        var assignment = CreateAssignment(projectId, "task-a", "Joe Doe");
+        using var context = CreateContext([assignment]);
+        var dialogHost = context.RenderComponent<DialogHost>();
+        var metadata = ProjectObjectMetadataSerializer.Serialize(new ProjectObjectMetadataEnvelope
+        {
+            WorkItem = new ProjectWorkItemMetadata
+            {
+                WorkItemKind = ProjectWorkItemKind.Task,
+                ExpectedEffortHours = 8m,
+                ExpectedEffortUnit = ProjectWorkItemEffortUnit.ManDays,
+                ExpectedCostAmount = 900m,
+                ExpectedCostCurrencyCode = "USD"
+            }
+        });
+        var startUtc = new DateTimeOffset(2026, 7, 15, 8, 0, 0, TimeSpan.Zero);
+        var task = CreateTask("task-a", "Customer acceptance") with
+        {
+            StartUtc = startUtc,
+            EndUtc = startUtc.AddDays(7),
+            DurationSeconds = (int)TimeSpan.FromDays(7).TotalSeconds,
+            ProgressMode = "progress",
+            ProgressPercent = 40,
+            MetadataJson = metadata
+        };
+        var cut = context.RenderComponent<ProjectStructureGanttPanel>(parameters => parameters
+            .Add(component => component.ProjectId, projectId)
+            .Add(component => component.Surface, CreateSurface(projectId, task))
+            .Add(component => component.MutationCommitted, () => { }));
+        var chart = cut.FindComponent<GanttChart>();
+
+        var openTask = cut.InvokeAsync(() => chart.Instance.TaskDoubleClicked.InvokeAsync(new GanttTaskId(task.Id)));
+
+        dialogHost.WaitForElement("[data-testid='project-structure-gantt-task-progress']");
+        Assert.Equal(
+            "40",
+            dialogHost.Find("[data-testid='project-structure-gantt-task-progress']").GetAttribute("value"));
+        Assert.Equal(
+            "1",
+            dialogHost.Find("[data-testid='project-structure-gantt-task-estimate-effort']").GetAttribute("value"));
+        Assert.Contains("Joe Doe", dialogHost.Markup, StringComparison.Ordinal);
+        dialogHost.Find("[data-testid='project-structure-gantt-task-cancel']").Click();
+        await openTask.WaitAsync(TimeSpan.FromSeconds(2));
+    }
+
     private static TestContext CreateContext(
         IReadOnlyList<ProjectPartyAssignmentDetail> assignments,
         Exception? assignmentFailure = null)
@@ -127,22 +177,25 @@ public sealed class ProjectStructureGanttPanelTests
         context.Services.AddSingleton<NotificationService>();
         context.Services.AddSingleton(bridge);
         context.Services.AddSingleton<ProjectStructureGanttProjectionAdapter>();
-        context.Services.AddSingleton(new ProjectStructureGanttMutationService(
+        var mutationService = new ProjectStructureGanttMutationService(
             null!,
             null!,
-            NullLogger<ProjectStructureGanttMutationService>.Instance));
+            NullLogger<ProjectStructureGanttMutationService>.Instance);
+        context.Services.AddSingleton(mutationService);
         var workbenchService = CreateWorkbenchService();
         context.Services.AddSingleton(workbenchService);
-        context.Services.AddSingleton(new ProjectStructureTaskResourceService(
-            new ProjectStructureWorkItemAssigneeService(
-                bridge,
-                workbenchService,
-                NullLogger<ProjectStructureWorkItemAssigneeService>.Instance),
+        var assigneeService = new ProjectStructureWorkItemAssigneeService(
+            bridge,
+            workbenchService,
+            NullLogger<ProjectStructureWorkItemAssigneeService>.Instance);
+        var taskResourceService = new ProjectStructureTaskResourceService(
+            assigneeService,
             null!,
             null!,
             null!,
             null!,
-            workbenchService));
+            workbenchService);
+        context.Services.AddSingleton(taskResourceService);
         var rowOrderService = new ProjectStructureGanttRowOrderService(null!, workbenchService);
         context.Services.AddSingleton(rowOrderService);
         context.Services.AddSingleton(new ProjectStructureTaskCreationService(
@@ -151,6 +204,22 @@ public sealed class ProjectStructureGanttPanelTests
             rowOrderService,
             workbenchService,
             NullLogger<ProjectStructureTaskCreationService>.Instance));
+        var taskDetailsService = new ProjectStructureTaskDetailsService(
+            mutationService,
+            assigneeService,
+            bridge,
+            workbenchService,
+            NullLogger<ProjectStructureTaskDetailsService>.Instance);
+        context.Services.AddSingleton(taskDetailsService);
+        var currencyFormatter = new StubCurrencyFormatter();
+        context.Services.AddSingleton<ICurrencyFormatter>(currencyFormatter);
+        context.Services.AddScoped(serviceProvider => new ProjectStructureGanttTaskEditCoordinator(
+            taskResourceService,
+            taskDetailsService,
+            serviceProvider.GetRequiredService<DialogService>(),
+            serviceProvider.GetRequiredService<NotificationService>(),
+            currencyFormatter,
+            NullLogger<ProjectStructureGanttTaskEditCoordinator>.Instance));
         return context;
     }
 
@@ -225,6 +294,7 @@ public sealed class ProjectStructureGanttPanelTests
             null,
             null,
             null,
+            string.Empty,
             string.Empty);
 
     private sealed class StubProjectPartyIntegrationBridge(
@@ -320,5 +390,13 @@ public sealed class ProjectStructureGanttPanelTests
     {
         public DateTimeOffset GetUtcNow()
             => new(2026, 7, 15, 12, 0, 0, TimeSpan.Zero);
+    }
+
+    private sealed class StubCurrencyFormatter : ICurrencyFormatter
+    {
+        public string CurrencyCode => "USD";
+
+        public string Format(decimal value)
+            => $"USD {value:0.##}";
     }
 }

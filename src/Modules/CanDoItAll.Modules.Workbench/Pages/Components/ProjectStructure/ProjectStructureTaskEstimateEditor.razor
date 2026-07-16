@@ -1,0 +1,292 @@
+@namespace CanDoItAll.Modules.Workbench.Pages
+@using System.Globalization
+@using CanDoItAll.Components.BaseLib
+
+<Stack GapScale="LayoutGap.Medium"
+       AlignItems="AlignItems.Stretch"
+       data-testid="@DataTestId">
+    <Grid ColumnTemplate="minmax(0,2fr) minmax(10rem,1fr)"
+          Gap="LayoutGap.Medium">
+        <FormField Text="Pure effort">
+            <input type="number"
+                   class="cda-input"
+                   min="0.01"
+                   step="0.25"
+                   value="@expectedEffortValueText"
+                   aria-label="Expected pure task effort"
+                   data-testid="@TestId("effort")"
+                   @onchange="HandleExpectedEffortChangedAsync" />
+        </FormField>
+
+        <FormField Text="Effort unit">
+            <DropDown TValue="ProjectWorkItemEffortUnit"
+                      Data="@EffortUnitOptions"
+                      TextProperty="Label"
+                      ValueProperty="Value"
+                      Value="@expectedEffortUnit"
+                      ValueChanged="HandleExpectedEffortUnitChangedAsync"
+                      data-testid="@TestId("unit")" />
+        </FormField>
+    </Grid>
+
+    <Cluster Gap="LayoutGap.XSmall"
+             AlignItems="AlignItems.Center"
+             Wrap="FlexWrap.Wrap">
+        <TextBlock TextStyle="TextStyle.Note"
+                   Value="Quick effort:" />
+        @foreach (var preset in EffortPresets)
+        {
+            var capturedPreset = preset;
+            <Button Text="@capturedPreset.Label"
+                    Size="ButtonSize.Small"
+                    Variant="Variant.Outlined"
+                    ButtonStyle="ButtonStyle.Base"
+                    data-testid="@TestId($"preset-{capturedPreset.TestId}")"
+                    Click="@(() => ApplyPresetAsync(capturedPreset))" />
+        }
+    </Cluster>
+
+    <Grid ColumnTemplate="minmax(0,2fr) minmax(10rem,1fr)"
+          Gap="LayoutGap.Medium">
+        <FormField Text="Expected cost">
+            <input type="number"
+                   class="cda-input"
+                   min="0"
+                   step="0.01"
+                   value="@expectedCostAmountText"
+                   aria-label="Expected task cost"
+                   data-testid="@TestId("cost")"
+                   @onchange="HandleExpectedCostChangedAsync" />
+        </FormField>
+
+        <FormField Text="Currency">
+            <TextBox Value="@expectedCostCurrencyCode"
+                     ValueChanged="HandleCurrencyChangedAsync"
+                     Placeholder="@DefaultCurrencyCode"
+                     Immediate="true"
+                     data-testid="@TestId("currency")" />
+        </FormField>
+    </Grid>
+
+    <TextBlock TextStyle="TextStyle.Note"
+               Value="Delivery dates control the Gantt bar. Pure effort and expected cost are independent estimates." />
+
+    @if (!string.IsNullOrWhiteSpace(validationError))
+    {
+        <Alert AlertStyle="AlertStyle.Danger"
+               data-testid="@TestId("validation")">
+            @validationError
+        </Alert>
+    }
+</Stack>
+
+@code {
+    private static readonly IReadOnlyList<EffortUnitOption> EffortUnitOptions =
+    [
+        new(ProjectWorkItemEffortUnit.Hours, "Hours"),
+        new(ProjectWorkItemEffortUnit.ManDays, "Man-days")
+    ];
+
+    private static readonly IReadOnlyList<EffortPreset> EffortPresets =
+    [
+        new("1 h", "1h", 1m, ProjectWorkItemEffortUnit.Hours),
+        new("4 h", "4h", 4m, ProjectWorkItemEffortUnit.Hours),
+        new("1 d", "1d", 1m, ProjectWorkItemEffortUnit.ManDays),
+        new("1 w", "1w", 5m, ProjectWorkItemEffortUnit.ManDays)
+    ];
+
+    private bool initialized;
+    private ProjectTaskEstimate? lastParameterValue;
+    private ProjectTaskEstimate? lastEmittedValue;
+    private string expectedEffortValueText = string.Empty;
+    private ProjectWorkItemEffortUnit expectedEffortUnit;
+    private string expectedCostAmountText = string.Empty;
+    private string expectedCostCurrencyCode = string.Empty;
+    private string validationError = string.Empty;
+
+    [Parameter]
+    public ProjectTaskEstimate Value { get; set; } = ProjectTaskEstimate.Empty();
+
+    [Parameter]
+    public EventCallback<ProjectTaskEstimate> ValueChanged { get; set; }
+
+    [Parameter]
+    public decimal HoursPerManDay { get; set; } = ProjectTaskEstimatePolicy.DefaultHoursPerManDay;
+
+    [Parameter]
+    public string DefaultCurrencyCode { get; set; } = string.Empty;
+
+    [Parameter]
+    public string DataTestId { get; set; } = "project-structure-task-estimate";
+
+    protected override void OnParametersSet()
+    {
+        if (initialized && Equals(Value, lastEmittedValue))
+        {
+            lastParameterValue = Value;
+            return;
+        }
+
+        if (initialized && Equals(Value, lastParameterValue))
+        {
+            return;
+        }
+
+        initialized = true;
+        lastParameterValue = Value;
+        lastEmittedValue = null;
+        SyncFromValue(Value);
+    }
+
+    public bool TryGetValue(out ProjectTaskEstimate estimate, out string error)
+    {
+        try
+        {
+            estimate = BuildEstimate();
+            validationError = string.Empty;
+            error = string.Empty;
+            return true;
+        }
+        catch (Exception exception) when (exception is FormatException or InvalidOperationException or OverflowException or ArgumentException)
+        {
+            estimate = Value;
+            validationError = exception.Message;
+            error = exception.Message;
+            return false;
+        }
+    }
+
+    private void SyncFromValue(ProjectTaskEstimate value)
+    {
+        try
+        {
+            var normalized = ProjectTaskEstimatePolicy.ValidateAndNormalize(value, HoursPerManDay);
+            var effortValue = ProjectTaskEstimatePolicy.ToInputValue(normalized, HoursPerManDay);
+            expectedEffortValueText = FormatDecimal(effortValue);
+            expectedEffortUnit = normalized.ExpectedEffortUnit;
+            expectedCostAmountText = FormatDecimal(normalized.ExpectedCostAmount);
+            expectedCostCurrencyCode = normalized.ExpectedCostAmount.HasValue
+                ? normalized.ExpectedCostCurrencyCode
+                : NormalizeDefaultCurrencyCode();
+            validationError = string.Empty;
+        }
+        catch (Exception exception) when (exception is InvalidOperationException or ArgumentOutOfRangeException)
+        {
+            expectedEffortValueText = string.Empty;
+            expectedEffortUnit = ProjectWorkItemEffortUnit.Hours;
+            expectedCostAmountText = string.Empty;
+            expectedCostCurrencyCode = NormalizeDefaultCurrencyCode();
+            validationError = exception.Message;
+        }
+    }
+
+    private async Task HandleExpectedEffortChangedAsync(ChangeEventArgs args)
+    {
+        expectedEffortValueText = NormalizeInputText(args.Value);
+        await PublishIfValidAsync();
+    }
+
+    private async Task HandleExpectedEffortUnitChangedAsync(ProjectWorkItemEffortUnit value)
+    {
+        if (TryParseOptionalDecimal(expectedEffortValueText, out var currentValue) &&
+            currentValue.HasValue)
+        {
+            var hours = ProjectTaskEstimatePolicy.ToHours(currentValue.Value, expectedEffortUnit, HoursPerManDay);
+            expectedEffortValueText = FormatDecimal(
+                ProjectTaskEstimatePolicy.FromHours(hours, value, HoursPerManDay));
+        }
+
+        expectedEffortUnit = value;
+        await PublishIfValidAsync();
+    }
+
+    private async Task HandleExpectedCostChangedAsync(ChangeEventArgs args)
+    {
+        expectedCostAmountText = NormalizeInputText(args.Value);
+        await PublishIfValidAsync();
+    }
+
+    private async Task HandleCurrencyChangedAsync(string? value)
+    {
+        expectedCostCurrencyCode = value ?? string.Empty;
+        await PublishIfValidAsync();
+    }
+
+    private async Task ApplyPresetAsync(EffortPreset preset)
+    {
+        expectedEffortUnit = preset.Unit;
+        expectedEffortValueText = FormatDecimal(preset.Value);
+        await PublishIfValidAsync();
+    }
+
+    private async Task PublishIfValidAsync()
+    {
+        if (!TryGetValue(out var estimate, out _))
+        {
+            return;
+        }
+
+        lastEmittedValue = estimate;
+        await ValueChanged.InvokeAsync(estimate);
+    }
+
+    private ProjectTaskEstimate BuildEstimate()
+    {
+        if (!TryParseOptionalDecimal(expectedEffortValueText, out var effortValue))
+        {
+            throw new FormatException("Expected task effort must be a number.");
+        }
+
+        if (!TryParseOptionalDecimal(expectedCostAmountText, out var costAmount))
+        {
+            throw new FormatException("Expected task cost must be a number.");
+        }
+
+        return ProjectTaskEstimatePolicy.Create(
+            effortValue,
+            expectedEffortUnit,
+            costAmount,
+            costAmount.HasValue ? expectedCostCurrencyCode : string.Empty,
+            HoursPerManDay);
+    }
+
+    private string NormalizeDefaultCurrencyCode()
+        => string.IsNullOrWhiteSpace(DefaultCurrencyCode)
+            ? string.Empty
+            : DefaultCurrencyCode.Trim().ToUpperInvariant();
+
+    private string TestId(string suffix)
+        => $"{DataTestId}-{suffix}";
+
+    private static string NormalizeInputText(object? value)
+        => Convert.ToString(value, CultureInfo.InvariantCulture)?.Trim() ?? string.Empty;
+
+    private static bool TryParseOptionalDecimal(string value, out decimal? parsed)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            parsed = null;
+            return true;
+        }
+
+        if (decimal.TryParse(value, NumberStyles.Number, CultureInfo.InvariantCulture, out var number))
+        {
+            parsed = number;
+            return true;
+        }
+
+        parsed = null;
+        return false;
+    }
+
+    private static string FormatDecimal(decimal? value)
+        => value?.ToString("0.####", CultureInfo.InvariantCulture) ?? string.Empty;
+
+    private sealed record EffortUnitOption(ProjectWorkItemEffortUnit Value, string Label);
+
+    private sealed record EffortPreset(
+        string Label,
+        string TestId,
+        decimal Value,
+        ProjectWorkItemEffortUnit Unit);
+}

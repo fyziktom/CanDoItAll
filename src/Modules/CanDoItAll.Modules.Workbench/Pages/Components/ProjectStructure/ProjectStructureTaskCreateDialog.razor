@@ -3,7 +3,9 @@
 @using CanDoItAll.AppComponents
 @using CanDoItAll.Components.BaseLib
 @using CanDoItAll.Components.CanvasLib
+@using CanDoItAll.Infrastructure.Configuration
 @inject DialogService DialogService
+@inject ICurrencyFormatter CurrencyFormatter
 
 <Stack GapScale="LayoutGap.Large"
        AlignItems="AlignItems.Stretch"
@@ -68,6 +70,12 @@
                       data-testid="project-structure-task-create-notes" />
         </FormField>
     </Grid>
+
+    <ProjectStructureTaskEstimateEditor @ref="estimateEditor"
+                                        Value="@estimate"
+                                        ValueChanged="HandleEstimateChangedAsync"
+                                        DefaultCurrencyCode="@CurrencyFormatter.CurrencyCode"
+                                        DataTestId="project-structure-task-create-estimate" />
 
     <Stack GapScale="LayoutGap.Small"
            AlignItems="AlignItems.Stretch">
@@ -134,7 +142,11 @@
         "workItemKind",
         "assigneeRef",
         "dueUtc",
-        "repositoryRef"
+        "repositoryRef",
+        ProjectTaskEstimateInputKeys.ExpectedEffortValue,
+        ProjectTaskEstimateInputKeys.ExpectedEffortUnit,
+        ProjectTaskEstimateInputKeys.ExpectedCostAmount,
+        ProjectTaskEstimateInputKeys.ExpectedCostCurrencyCode
     };
 
     private bool initialized;
@@ -144,6 +156,8 @@
     private DateTimeOffset? dueUtc;
     private string? repositoryNodeId;
     private ProjectStructureTaskResourceSelection? selectedAssignee;
+    private ProjectTaskEstimate estimate = ProjectTaskEstimate.Empty();
+    private ProjectStructureTaskEstimateEditor? estimateEditor;
     private string validationError = string.Empty;
 
     [CascadingParameter]
@@ -194,6 +208,7 @@
         subtitle = CreateRequest.Subtitle ?? string.Empty;
         notes = CreateRequest.Notes ?? string.Empty;
         var inputValues = CreateRequest.InputValues ?? [];
+        estimate = ResolveEstimate(inputValues);
         repositoryNodeId = inputValues
             .LastOrDefault(value => string.Equals(value.Key, "repositoryRef", StringComparison.OrdinalIgnoreCase))
             ?.Value;
@@ -261,6 +276,13 @@
         selectedAssignee = null;
     }
 
+    private Task HandleEstimateChangedAsync(ProjectTaskEstimate value)
+    {
+        estimate = value;
+        validationError = string.Empty;
+        return Task.CompletedTask;
+    }
+
     private async Task SubmitAsync()
     {
         var normalizedTitle = title.Trim();
@@ -273,6 +295,18 @@
         if (normalizedTitle.Length > 200)
         {
             validationError = "Task title cannot exceed 200 characters.";
+            return;
+        }
+
+        if (estimateEditor is null)
+        {
+            validationError = "Task estimate details are not ready.";
+            return;
+        }
+
+        if (!estimateEditor.TryGetValue(out estimate, out var estimateError))
+        {
+            validationError = estimateError;
             return;
         }
 
@@ -291,6 +325,7 @@
         });
         AddInputValue(inputValues, "dueUtc", dueUtc?.ToString("O", CultureInfo.InvariantCulture));
         AddInputValue(inputValues, "repositoryRef", repositoryNodeId);
+        AddEstimateInputValues(inputValues, estimate);
 
         var result = new ProjectStructureTaskDialogResult(
             CreateRequest with
@@ -329,6 +364,104 @@
             Key = key,
             Value = value
         });
+    }
+
+    private static void AddEstimateInputValues(
+        List<CanvasWorkbenchInputValue> values,
+        ProjectTaskEstimate value)
+    {
+        var effortValue = ProjectTaskEstimatePolicy.ToInputValue(value);
+        AddInputValue(
+            values,
+            ProjectTaskEstimateInputKeys.ExpectedEffortValue,
+            effortValue?.ToString("0.####", CultureInfo.InvariantCulture));
+        AddInputValue(
+            values,
+            ProjectTaskEstimateInputKeys.ExpectedEffortUnit,
+            ToCamelCaseToken(value.ExpectedEffortUnit));
+        AddInputValue(
+            values,
+            ProjectTaskEstimateInputKeys.ExpectedCostAmount,
+            value.ExpectedCostAmount?.ToString("0.####", CultureInfo.InvariantCulture));
+        AddInputValue(
+            values,
+            ProjectTaskEstimateInputKeys.ExpectedCostCurrencyCode,
+            value.ExpectedCostAmount.HasValue ? value.ExpectedCostCurrencyCode : null);
+    }
+
+    private ProjectTaskEstimate ResolveEstimate(IReadOnlyList<CanvasWorkbenchInputValue> inputValues)
+    {
+        var values = inputValues
+            .Where(value => !string.IsNullOrWhiteSpace(value.Key))
+            .GroupBy(value => value.Key, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(
+                group => group.Key,
+                group => group.Last().Value?.Trim() ?? string.Empty,
+                StringComparer.OrdinalIgnoreCase);
+        try
+        {
+            var unit = ParseEffortUnit(values);
+            var effortValue = values.ContainsKey(ProjectTaskEstimateInputKeys.ExpectedEffortValue)
+                ? ParseOptionalDecimal(values, ProjectTaskEstimateInputKeys.ExpectedEffortValue, "Expected task effort")
+                : 8m;
+            var costAmount = ParseOptionalDecimal(
+                values,
+                ProjectTaskEstimateInputKeys.ExpectedCostAmount,
+                "Expected task cost");
+            var currencyCode = values.TryGetValue(ProjectTaskEstimateInputKeys.ExpectedCostCurrencyCode, out var currency)
+                ? currency
+                : CurrencyFormatter.CurrencyCode;
+            return ProjectTaskEstimatePolicy.Create(
+                effortValue,
+                unit,
+                costAmount,
+                costAmount.HasValue ? currencyCode : string.Empty);
+        }
+        catch (InvalidOperationException exception)
+        {
+            validationError = exception.Message;
+            return ProjectTaskEstimate.Empty(CurrencyFormatter.CurrencyCode);
+        }
+    }
+
+    private static ProjectWorkItemEffortUnit ParseEffortUnit(IReadOnlyDictionary<string, string> values)
+    {
+        if (!values.TryGetValue(ProjectTaskEstimateInputKeys.ExpectedEffortUnit, out var value) ||
+            string.IsNullOrWhiteSpace(value))
+        {
+            return ProjectWorkItemEffortUnit.Hours;
+        }
+
+        if (Enum.TryParse<ProjectWorkItemEffortUnit>(value, true, out var parsed) && Enum.IsDefined(parsed))
+        {
+            return parsed;
+        }
+
+        throw new InvalidOperationException("Expected task effort unit is invalid.");
+    }
+
+    private static decimal? ParseOptionalDecimal(
+        IReadOnlyDictionary<string, string> values,
+        string key,
+        string fieldLabel)
+    {
+        if (!values.TryGetValue(key, out var text) || string.IsNullOrWhiteSpace(text))
+        {
+            return null;
+        }
+
+        if (decimal.TryParse(text, NumberStyles.Number, CultureInfo.InvariantCulture, out var parsed))
+        {
+            return parsed;
+        }
+
+        throw new InvalidOperationException($"{fieldLabel} must be a number.");
+    }
+
+    private static string ToCamelCaseToken(ProjectWorkItemEffortUnit value)
+    {
+        var token = value.ToString();
+        return char.ToLowerInvariant(token[0]) + token[1..];
     }
 
     private static string FormatDateTimeLocal(DateTimeOffset? value)

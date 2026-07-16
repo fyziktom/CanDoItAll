@@ -25,7 +25,15 @@ public sealed class ProjectStructureTaskCreationServiceTests
 
         var first = await creationService.CreateAsync(
             projectId,
-            new ProjectStructureTaskCreateRequest("First task", StartUtc, StartUtc.AddHours(8)),
+            new ProjectStructureTaskCreateRequest(
+                "First task",
+                StartUtc,
+                StartUtc.AddHours(8),
+                Estimate: ProjectTaskEstimatePolicy.Create(
+                    1m,
+                    ProjectWorkItemEffortUnit.ManDays,
+                    800m,
+                    "usd")),
             CreateAgent(projectId));
         var second = await creationService.CreateAsync(
             projectId,
@@ -44,6 +52,7 @@ public sealed class ProjectStructureTaskCreationServiceTests
         var backlog = Assert.Single(backlogs);
         var firstTask = surface.Nodes.Single(node => node.Id == first.TaskNodeId);
         var secondTask = surface.Nodes.Single(node => node.Id == second.TaskNodeId);
+        var firstTaskMetadata = ProjectObjectMetadataSerializer.Parse(firstTask.MetadataJson).WorkItem;
         var rowState = await workbenchService.LoadGanttViewStateAsync(projectId);
 
         Assert.Equal(backlog.Id, first.BacklogNodeId);
@@ -55,6 +64,11 @@ public sealed class ProjectStructureTaskCreationServiceTests
         Assert.Equal(StartUtc, firstTask.StartUtc);
         Assert.Equal(StartUtc.AddHours(8), firstTask.EndUtc);
         Assert.Equal(8 * 60 * 60, firstTask.DurationSeconds);
+        Assert.NotNull(firstTaskMetadata);
+        Assert.Equal(8m, firstTaskMetadata!.ExpectedEffortHours);
+        Assert.Equal(ProjectWorkItemEffortUnit.ManDays, firstTaskMetadata.ExpectedEffortUnit);
+        Assert.Equal(800m, firstTaskMetadata.ExpectedCostAmount);
+        Assert.Equal("USD", firstTaskMetadata.ExpectedCostCurrencyCode);
         Assert.Equal([first.TaskNodeId, second.TaskNodeId], rowState.OrderedTaskNodeIds);
     }
 
@@ -490,10 +504,24 @@ public sealed class ProjectStructureTaskCreationServiceTests
                 projectId,
                 new ProjectStructureTaskCreateRequest(new string('x', 201), StartUtc, StartUtc.AddHours(1)),
                 CreateAgent(projectId)));
+        var estimateException = await Assert.ThrowsAsync<ProjectStructureAgentException>(() =>
+            creationService.CreateAsync(
+                projectId,
+                new ProjectStructureTaskCreateRequest(
+                    "Invalid estimate",
+                    StartUtc,
+                    StartUtc.AddHours(1),
+                    Estimate: new ProjectTaskEstimate(
+                        8m,
+                        ProjectWorkItemEffortUnit.Hours,
+                        -1m,
+                        "USD")),
+                CreateAgent(projectId)));
         var surface = await workbenchService.GetStructureAsync(projectId);
 
         Assert.Equal("TaskDateRangeInvalid", dateException.ErrorCode);
         Assert.Equal("TaskTitleTooLong", titleException.ErrorCode);
+        Assert.Equal("TaskEstimateInvalid", estimateException.ErrorCode);
         Assert.DoesNotContain(surface.Nodes, node =>
             node.ObjectType == ProjectObjectType.ProjectBlock &&
             string.Equals(node.ObjectSubtype, "backlog", StringComparison.OrdinalIgnoreCase) &&

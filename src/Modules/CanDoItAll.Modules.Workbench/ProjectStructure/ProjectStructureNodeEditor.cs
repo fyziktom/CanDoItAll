@@ -26,6 +26,14 @@ internal static class ProjectStructureNodeEditor
         "secretRef"
     ];
 
+    private static readonly HashSet<string> TaskEstimateFieldKeys =
+    [
+        ProjectTaskEstimateInputKeys.ExpectedEffortValue,
+        ProjectTaskEstimateInputKeys.ExpectedEffortUnit,
+        ProjectTaskEstimateInputKeys.ExpectedCostAmount,
+        ProjectTaskEstimateInputKeys.ExpectedCostCurrencyCode
+    ];
+
     public static bool SupportsEditingField(string key)
         => !string.IsNullOrWhiteSpace(key) && !NonEditableFieldKeys.Contains(key);
 
@@ -119,6 +127,11 @@ internal static class ProjectStructureNodeEditor
                 metadata.WorkItem.CurrencyCode = ResolveString(inputValues, submittedKeys, "currencyCode", metadata.WorkItem.CurrencyCode);
                 metadata.WorkItem.Description = notes;
                 metadata.WorkItem.DueUtc = ResolveDate(metadata.WorkItem.DueUtc, inputValues, submittedKeys, "dueUtc");
+                if (submittedKeys.Overlaps(TaskEstimateFieldKeys))
+                {
+                    ApplyTaskEstimate(metadata.WorkItem, inputValues, submittedKeys);
+                }
+
                 break;
             case ProjectObjectType.Repository:
                 metadata.Repository ??= new ProjectRepositoryMetadata();
@@ -265,6 +278,10 @@ internal static class ProjectStructureNodeEditor
             "deliveryChannel" => ToCamelCaseToken(metadata.WorkItem?.DeliveryChannel),
             "amount" => metadata.WorkItem?.Amount?.ToString("0.##", CultureInfo.InvariantCulture) ?? string.Empty,
             "currencyCode" => metadata.WorkItem?.CurrencyCode ?? string.Empty,
+            ProjectTaskEstimateInputKeys.ExpectedEffortValue => ResolveTaskEffortInputValue(metadata.WorkItem),
+            ProjectTaskEstimateInputKeys.ExpectedEffortUnit => ToCamelCaseToken(metadata.WorkItem?.ExpectedEffortUnit),
+            ProjectTaskEstimateInputKeys.ExpectedCostAmount => metadata.WorkItem?.ExpectedCostAmount?.ToString("0.####", CultureInfo.InvariantCulture) ?? string.Empty,
+            ProjectTaskEstimateInputKeys.ExpectedCostCurrencyCode => metadata.WorkItem?.ExpectedCostCurrencyCode ?? string.Empty,
             "repositoryMode" => ToCamelCaseToken(metadata.Repository?.RepositoryMode == default ? ProjectNodeKindRegistry.ResolveRepositoryMode(node.ObjectSubtype) : metadata.Repository?.RepositoryMode),
             "repositoryUrl" => metadata.Repository?.RepositoryUrl ?? string.Empty,
             "localPath" => metadata.Repository?.LocalPath ?? string.Empty,
@@ -383,6 +400,110 @@ internal static class ProjectStructureNodeEditor
             : inputValues.TryGetValue(key, out var value) && decimal.TryParse(value, out var parsed)
                 ? parsed
                 : null;
+
+    private static void ApplyTaskEstimate(
+        ProjectWorkItemMetadata metadata,
+        IReadOnlyDictionary<string, string> inputValues,
+        IReadOnlySet<string> submittedKeys)
+    {
+        var current = ProjectTaskEstimatePolicy.ValidateAndNormalize(new ProjectTaskEstimate(
+            metadata.ExpectedEffortHours,
+            metadata.ExpectedEffortUnit,
+            metadata.ExpectedCostAmount,
+            metadata.ExpectedCostCurrencyCode));
+        var effortUnit = ResolveTaskEffortUnit(inputValues, submittedKeys, current.ExpectedEffortUnit);
+        decimal? currentEffortInputValue = current.ExpectedEffortHours.HasValue
+            ? ProjectTaskEstimatePolicy.FromHours(current.ExpectedEffortHours.Value, effortUnit)
+            : null;
+        var effortValue = ResolveTaskEstimateDecimal(
+            inputValues,
+            submittedKeys,
+            ProjectTaskEstimateInputKeys.ExpectedEffortValue,
+            currentEffortInputValue,
+            "Expected task effort");
+        var costAmount = ResolveTaskEstimateDecimal(
+            inputValues,
+            submittedKeys,
+            ProjectTaskEstimateInputKeys.ExpectedCostAmount,
+            current.ExpectedCostAmount,
+            "Expected task cost");
+        var currencyCode = ResolveString(
+            inputValues,
+            submittedKeys,
+            ProjectTaskEstimateInputKeys.ExpectedCostCurrencyCode,
+            current.ExpectedCostCurrencyCode);
+        var updated = ProjectTaskEstimatePolicy.Create(
+            effortValue,
+            effortUnit,
+            costAmount,
+            currencyCode);
+
+        metadata.ExpectedEffortHours = updated.ExpectedEffortHours;
+        metadata.ExpectedEffortUnit = updated.ExpectedEffortUnit;
+        metadata.ExpectedCostAmount = updated.ExpectedCostAmount;
+        metadata.ExpectedCostCurrencyCode = updated.ExpectedCostCurrencyCode;
+    }
+
+    private static ProjectWorkItemEffortUnit ResolveTaskEffortUnit(
+        IReadOnlyDictionary<string, string> inputValues,
+        IReadOnlySet<string> submittedKeys,
+        ProjectWorkItemEffortUnit currentValue)
+    {
+        if (!submittedKeys.Contains(ProjectTaskEstimateInputKeys.ExpectedEffortUnit))
+        {
+            return currentValue;
+        }
+
+        if (inputValues.TryGetValue(ProjectTaskEstimateInputKeys.ExpectedEffortUnit, out var value) &&
+            Enum.TryParse<ProjectWorkItemEffortUnit>(value, true, out var parsed) &&
+            Enum.IsDefined(parsed))
+        {
+            return parsed;
+        }
+
+        throw new InvalidOperationException("Expected task effort unit is invalid.");
+    }
+
+    private static decimal? ResolveTaskEstimateDecimal(
+        IReadOnlyDictionary<string, string> inputValues,
+        IReadOnlySet<string> submittedKeys,
+        string key,
+        decimal? currentValue,
+        string fieldLabel)
+    {
+        if (!submittedKeys.Contains(key))
+        {
+            return currentValue;
+        }
+
+        if (!inputValues.TryGetValue(key, out var value) || string.IsNullOrWhiteSpace(value))
+        {
+            return null;
+        }
+
+        if (decimal.TryParse(value, NumberStyles.Number, CultureInfo.InvariantCulture, out var parsed))
+        {
+            return parsed;
+        }
+
+        throw new InvalidOperationException($"{fieldLabel} must be a number.");
+    }
+
+    private static string ResolveTaskEffortInputValue(ProjectWorkItemMetadata? metadata)
+    {
+        if (metadata is null)
+        {
+            return string.Empty;
+        }
+
+        var estimate = ProjectTaskEstimatePolicy.ValidateAndNormalize(new ProjectTaskEstimate(
+            metadata.ExpectedEffortHours,
+            metadata.ExpectedEffortUnit,
+            metadata.ExpectedCostAmount,
+            metadata.ExpectedCostCurrencyCode));
+        return ProjectTaskEstimatePolicy.ToInputValue(estimate)?.ToString("0.####", CultureInfo.InvariantCulture)
+            ?? string.Empty;
+    }
 
     private static Guid? ResolveNullableGuid(
         IReadOnlyDictionary<string, string> inputValues,

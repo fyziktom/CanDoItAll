@@ -180,6 +180,106 @@ public sealed class ProjectStructureGanttMutationServiceTests
     }
 
     [Fact]
+    public async Task ApplyTaskDetailsAsync_Persists_title_progress_estimate_and_propagated_schedule_atomically()
+    {
+        var taskA = CreateTask("custom:00000000000000000000000000000001", "A", 0, 1);
+        taskA.ProgressPercent = 25;
+        taskA.ProgressMode = "progress";
+        var currentEstimate = new ProjectTaskEstimate(
+            8m,
+            ProjectWorkItemEffortUnit.ManDays,
+            900m,
+            "USD");
+        taskA.MetadataJson = EstimateMetadata(currentEstimate);
+        var taskB = CreateTask("custom:00000000000000000000000000000002", "B", 1, 2);
+        await using var fixture = await MutationFixture.CreateAsync(
+            [taskA, taskB],
+            [DependsOn(taskB.NodeKey, taskA.NodeKey)]);
+        var proposedEstimate = new ProjectTaskEstimate(
+            4m,
+            ProjectWorkItemEffortUnit.Hours,
+            500m,
+            "EUR");
+        var schedule = new GanttTaskScheduleChangeRequest(
+            TaskId(taskA.NodeKey),
+            GanttScheduleGesture.ResizeEnd,
+            [
+                DateChange(taskA.NodeKey, 0, 1, 0, 2),
+                DateChange(taskB.NodeKey, 1, 2, 2, 3)
+            ],
+            [TaskId(taskA.NodeKey), TaskId(taskB.NodeKey)]);
+        var request = new ProjectStructureTaskDetailsUpdateRequest(
+            TaskId(taskA.NodeKey),
+            "A",
+            "Updated A",
+            25,
+            60,
+            currentEstimate,
+            proposedEstimate,
+            schedule,
+            AssigneeChanged: false,
+            ProposedAssignee: null);
+
+        var result = await fixture.Service.ApplyTaskDetailsAsync(fixture.ProjectId, request);
+
+        Assert.Equal(2, result.AffectedTaskIds.Count);
+        var persistedA = await fixture.FindTaskAsync(taskA.NodeKey);
+        var persistedB = await fixture.FindTaskAsync(taskB.NodeKey);
+        Assert.Equal("Updated A", persistedA.Title);
+        Assert.Equal("progress", persistedA.ProgressMode);
+        Assert.Equal(60, persistedA.ProgressPercent);
+        Assert.Equal(At(0), persistedA.StartUtc);
+        Assert.Equal(At(2), persistedA.EndUtc);
+        Assert.Equal(At(2), persistedB.StartUtc);
+        Assert.Equal(At(3), persistedB.EndUtc);
+        var metadata = ProjectObjectMetadataSerializer.Parse(persistedA.MetadataJson).WorkItem;
+        Assert.NotNull(metadata);
+        Assert.Equal(proposedEstimate.ExpectedEffortHours, metadata.ExpectedEffortHours);
+        Assert.Equal(proposedEstimate.ExpectedEffortUnit, metadata.ExpectedEffortUnit);
+        Assert.Equal(proposedEstimate.ExpectedCostAmount, metadata.ExpectedCostAmount);
+        Assert.Equal(proposedEstimate.ExpectedCostCurrencyCode, metadata.ExpectedCostCurrencyCode);
+    }
+
+    [Fact]
+    public async Task ApplyTaskDetailsAsync_When_estimate_is_stale_writes_nothing()
+    {
+        var task = CreateTask("custom:00000000000000000000000000000001", "Authoritative", 0, 1);
+        task.ProgressPercent = 10;
+        task.MetadataJson = EstimateMetadata(new ProjectTaskEstimate(
+            8m,
+            ProjectWorkItemEffortUnit.Hours,
+            100m,
+            "USD"));
+        await using var fixture = await MutationFixture.CreateAsync(task);
+        var staleEstimate = new ProjectTaskEstimate(
+            4m,
+            ProjectWorkItemEffortUnit.Hours,
+            100m,
+            "USD");
+        var request = new ProjectStructureTaskDetailsUpdateRequest(
+            TaskId(task.NodeKey),
+            "Authoritative",
+            "Should not persist",
+            10,
+            90,
+            staleEstimate,
+            ProjectTaskEstimate.Empty(),
+            ScheduleChange: null,
+            AssigneeChanged: false,
+            ProposedAssignee: null);
+
+        var exception = await Assert.ThrowsAsync<ProjectStructureGanttMutationException>(() =>
+            fixture.Service.ApplyTaskDetailsAsync(fixture.ProjectId, request));
+
+        Assert.Equal(ProjectStructureGanttMutationErrorCode.StaleTask, exception.Code);
+        var persisted = await fixture.FindTaskAsync(task.NodeKey);
+        Assert.Equal("Authoritative", persisted.Title);
+        Assert.Equal(10, persisted.ProgressPercent);
+        Assert.Equal(At(0), persisted.StartUtc);
+        Assert.Equal(At(1), persisted.EndUtc);
+    }
+
+    [Fact]
     public async Task ApplyInsertionAsync_RewiresOnlyBridge_PreservesOtherPrerequisite_AndPersistsCriticalPathDates()
     {
         var taskA = CreateTask("custom:00000000000000000000000000000001", "A", 0, 1);
@@ -290,6 +390,19 @@ public sealed class ProjectStructureGanttMutationServiceTests
             LinkKind = ProjectObjectLinkKind.DependsOn,
             CreatedAtUtc = Baseline
         };
+
+    private static string EstimateMetadata(ProjectTaskEstimate estimate)
+        => ProjectObjectMetadataSerializer.Serialize(new ProjectObjectMetadataEnvelope
+        {
+            WorkItem = new ProjectWorkItemMetadata
+            {
+                WorkItemKind = ProjectWorkItemKind.Task,
+                ExpectedEffortHours = estimate.ExpectedEffortHours,
+                ExpectedEffortUnit = estimate.ExpectedEffortUnit,
+                ExpectedCostAmount = estimate.ExpectedCostAmount,
+                ExpectedCostCurrencyCode = estimate.ExpectedCostCurrencyCode
+            }
+        });
 
     private static GanttDependency Dependency(
         ProjectObjectLinkRecord record,

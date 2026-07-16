@@ -33,6 +33,16 @@
                                Class="project-structure-gantt-panel__title" />
                     <Pill Tone="PillTone.Info" Text="@($"{projection.Tasks.Count} tasks")" />
                     <Pill Tone="PillTone.Neutral" Text="@($"{projection.Dependencies.Count} dependencies")" />
+                    @if (TotalExpectedEffortHours is { } expectedEffortHours)
+                    {
+                        <Pill Tone="PillTone.Neutral"
+                              Text="@($"{expectedEffortHours:0.##} h pure effort")" />
+                    }
+                    @foreach (var expectedCost in projection.ExpectedCostTotals)
+                    {
+                        <Pill Tone="PillTone.Neutral"
+                              Text="@FormatExpectedCost(expectedCost)" />
+                    }
                     @if (projection.ProjectionOnlyTaskIds.Count > 0)
                     {
                         <Pill Tone="PillTone.Warn"
@@ -102,6 +112,7 @@
                                 DependencyMutationRequested="ApplyDependencyAsync"
                                 TaskInsertionRequested="ApplyInsertionAsync"
                                 TimelineDoubleClicked="OpenTimelineTaskDialogAsync"
+                                TaskDoubleClicked="OpenTaskDetailsDialogAsync"
                                 TaskOrderChangeRequested="ApplyTaskOrderAsync"
                                 DependencyIdFactory="CreateDependencyId"
                                 ProjectionOnlySelector="IsProjectionOnly"

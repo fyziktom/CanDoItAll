@@ -57,6 +57,7 @@ public static class WorkbenchModuleServiceCollectionExtensions
         services.AddScoped<ProjectStructureTaskResourceService>();
         services.AddScoped<ProjectStructureGanttRowOrderService>();
         services.AddScoped<ProjectStructureTaskCreationService>();
+        services.AddScoped<ProjectStructureTaskDetailsService>();
         services.AddSingleton<ProjectStructureDeferredNodeCompletionQueue>();
         services.AddSingleton<IProjectStructureDeferredNodeCompletionQueue>(serviceProvider =>
             serviceProvider.GetRequiredService<ProjectStructureDeferredNodeCompletionQueue>());

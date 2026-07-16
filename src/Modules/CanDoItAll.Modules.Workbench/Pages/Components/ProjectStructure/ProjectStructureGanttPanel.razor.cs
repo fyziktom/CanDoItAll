@@ -1,9 +1,11 @@
 using CanDoItAll.Components.BaseLib;
 using CanDoItAll.Components.Gantt;
+using CanDoItAll.Infrastructure.Configuration;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Workbench.CanvasAdapters;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Logging;
+using System.Globalization;
 
 namespace CanDoItAll.Modules.Workbench.Pages;
 
@@ -12,6 +14,7 @@ public partial class ProjectStructureGanttPanel : ComponentBase, IAsyncDisposabl
     private static readonly TimeSpan DefaultTaskDuration = TimeSpan.FromHours(8);
     private readonly CancellationTokenSource lifetimeCancellation = new();
     private readonly ProjectStructureAgentContext uiMutationOwner = CreateUiMutationOwner();
+    private IReadOnlyList<ProjectPartyAssignmentDetail> loadedAssignments = [];
     private ProjectStructureSurface? loadedSurface;
     private ProjectStructureGanttProjectionResult? projection;
     private GanttTask insertionCandidate = CreateInsertionCandidate(DateTimeOffset.UtcNow);
@@ -34,6 +37,9 @@ public partial class ProjectStructureGanttPanel : ComponentBase, IAsyncDisposabl
     private ProjectStructureTaskCreationService TaskCreationService { get; set; } = default!;
 
     [Inject]
+    private ProjectStructureGanttTaskEditCoordinator TaskEditCoordinator { get; set; } = default!;
+
+    [Inject]
     private ProjectStructureTaskResourceService TaskResourceService { get; set; } = default!;
 
     [Inject]
@@ -51,6 +57,9 @@ public partial class ProjectStructureGanttPanel : ComponentBase, IAsyncDisposabl
     [Inject]
     private DialogService DialogService { get; set; } = default!;
 
+    [Inject]
+    private ICurrencyFormatter CurrencyFormatter { get; set; } = default!;
+
     [Parameter]
     public Guid ProjectId { get; set; }
 
@@ -63,6 +72,18 @@ public partial class ProjectStructureGanttPanel : ComponentBase, IAsyncDisposabl
     private bool CanInsertTask =>
         projection is { IsValid: true, Dependencies.Count: > 0 } &&
         !mutationInFlight;
+
+    private decimal? TotalExpectedEffortHours
+    {
+        get
+        {
+            var efforts = projection?.Tasks
+                .Where(static task => task.ExpectedEffort.HasValue)
+                .Select(static task => (decimal)task.ExpectedEffort!.Value.TotalHours)
+                .ToArray() ?? [];
+            return efforts.Length == 0 ? null : efforts.Sum();
+        }
+    }
 
     private IReadOnlyList<ProjectStructureGanttProjectionIssue> ProjectionErrors =>
         projection?.Issues
@@ -120,6 +141,7 @@ public partial class ProjectStructureGanttPanel : ComponentBase, IAsyncDisposabl
                 lifetimeCancellation.Token);
             await Task.WhenAll(assignmentsTask, viewStateTask);
             var assignments = await assignmentsTask;
+            loadedAssignments = assignments;
             var viewState = await viewStateTask;
             projection = ProjectionAdapter.Build(
                 Surface,
@@ -179,6 +201,35 @@ public partial class ProjectStructureGanttPanel : ComponentBase, IAsyncDisposabl
     private Task OpenTimelineTaskDialogAsync(GanttTimelineDoubleClickEventArgs args)
         => OpenTaskDialogAsync(args.ClickedAtUtc, args.RowTaskId.Value);
 
+    private async Task OpenTaskDetailsDialogAsync(GanttTaskId taskId)
+    {
+        if (!EnsureMutationHostAvailable() || projection is null || loadedSurface is null)
+        {
+            return;
+        }
+
+        mutationInFlight = true;
+        try
+        {
+            await TaskEditCoordinator.OpenAsync(
+                new ProjectStructureGanttTaskEditContext(
+                    ProjectId,
+                    loadedSurface,
+                    projection,
+                    loadedAssignments),
+                taskId,
+                () => MutationCommitted.InvokeAsync(),
+                lifetimeCancellation.Token);
+        }
+        catch (OperationCanceledException) when (lifetimeCancellation.IsCancellationRequested)
+        {
+        }
+        finally
+        {
+            mutationInFlight = false;
+        }
+    }
+
     private async Task OpenTaskDialogAsync(DateTimeOffset startUtc, string? afterTaskNodeId)
     {
         if (mutationInFlight)
@@ -215,6 +266,12 @@ public partial class ProjectStructureGanttPanel : ComponentBase, IAsyncDisposabl
             {
                 [nameof(ProjectStructureGanttTaskDialog.DefaultStartUtc)] = normalizedStart,
                 [nameof(ProjectStructureGanttTaskDialog.DefaultEndUtc)] = normalizedStart + DefaultTaskDuration,
+                [nameof(ProjectStructureGanttTaskDialog.DefaultEstimate)] = new ProjectTaskEstimate(
+                    (decimal)DefaultTaskDuration.TotalHours,
+                    ProjectWorkItemEffortUnit.Hours,
+                    null,
+                    string.Empty),
+                [nameof(ProjectStructureGanttTaskDialog.DefaultCurrencyCode)] = CurrencyFormatter.CurrencyCode,
                 [nameof(ProjectStructureGanttTaskDialog.AfterTaskNodeId)] = afterTaskNodeId,
                 [nameof(ProjectStructureGanttTaskDialog.ResourceOptions)] = resourceOptions,
                 [nameof(ProjectStructureGanttTaskDialog.ResourceWarnings)] = resourceWarnings
@@ -489,6 +546,17 @@ public partial class ProjectStructureGanttPanel : ComponentBase, IAsyncDisposabl
             ? string.Empty
             : $", {result.AddedDependencyCount} dependency link(s) added and {result.RemovedDependencyCount} removed";
         return $"The {operation} change was saved for {result.AffectedTaskIds.Count} task(s){dependencySummary}.";
+    }
+
+    private string FormatExpectedCost(ProjectStructureGanttExpectedCostTotal expectedCost)
+    {
+        var value = string.Equals(
+            expectedCost.CurrencyCode,
+            CurrencyFormatter.CurrencyCode,
+            StringComparison.OrdinalIgnoreCase)
+            ? CurrencyFormatter.Format(expectedCost.Amount)
+            : $"{expectedCost.CurrencyCode} {expectedCost.Amount.ToString("0.##", CultureInfo.InvariantCulture)}";
+        return $"{value} expected";
     }
 
     private static bool IsScheduleProjectionIssue(ProjectStructureGanttProjectionIssueCode code)

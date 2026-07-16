@@ -28,7 +28,7 @@
                      data-testid="project-structure-gantt-task-title" />
         </FormField>
 
-        <FormField Text="Length (hours)">
+        <FormField Text="Delivery length (hours)">
             <input type="number"
                    class="project-structure-gantt-task-dialog__input"
                    min="0.25"
@@ -36,6 +36,7 @@
                    step="0.25"
                    value="@FormatDurationHours()"
                    aria-label="Task length in hours"
+                   disabled="@IsScheduleReadOnly"
                    data-testid="project-structure-gantt-task-duration"
                    @onchange="HandleDurationChanged" />
         </FormField>
@@ -45,6 +46,7 @@
                    class="project-structure-gantt-task-dialog__input"
                    value="@FormatDateTimeLocal(startUtc)"
                    aria-label="Task start in UTC"
+                   disabled="@IsScheduleReadOnly"
                    data-testid="project-structure-gantt-task-start"
                    @onchange="HandleStartChanged" />
         </FormField>
@@ -54,6 +56,7 @@
                    class="project-structure-gantt-task-dialog__input"
                    value="@FormatDateTimeLocal(endUtc)"
                    aria-label="Task end in UTC"
+                   disabled="@IsScheduleReadOnly"
                    data-testid="project-structure-gantt-task-end"
                    @onchange="HandleEndChanged" />
         </FormField>
@@ -65,13 +68,14 @@
                  Wrap="FlexWrap.Wrap"
                  AlignItems="AlignItems.Center">
             <TextBlock TextStyle="TextStyle.Note"
-                       Value="Quick length" />
+                       Value="Quick delivery" />
             @foreach (var preset in DurationPresets)
             {
                 <Button Text="@preset.Label"
                         Size="ButtonSize.Small"
                         Variant="Variant.Outlined"
                         ButtonStyle="ButtonStyle.Info"
+                        Disabled="@IsScheduleReadOnly"
                         data-testid="@($"project-structure-gantt-task-preset-{preset.Hours:0.##}")"
                         Click="@(() => ApplyDurationPreset(preset.Hours))" />
             }
@@ -81,6 +85,35 @@
         </Cluster>
     </SurfaceCard>
 
+    @if (IsScheduleReadOnly)
+    {
+        <Alert AlertStyle="AlertStyle.Info"
+               data-testid="project-structure-gantt-task-schedule-readonly">
+            This task has a projected schedule. Add authoritative start and end dates from the project structure before changing its delivery interval.
+        </Alert>
+    }
+
+    @if (IsEditMode)
+    {
+        <FormField Text="Actual progress (%)">
+            <input type="number"
+                   class="project-structure-gantt-task-dialog__input"
+                   min="0"
+                   max="100"
+                   step="1"
+                   value="@progressPercent"
+                   aria-label="Actual task progress percent"
+                   data-testid="project-structure-gantt-task-progress"
+                   @onchange="HandleProgressChanged" />
+        </FormField>
+    }
+
+    <ProjectStructureTaskEstimateEditor @ref="estimateEditor"
+                                        Value="@estimate"
+                                        ValueChanged="HandleEstimateChangedAsync"
+                                        DefaultCurrencyCode="@DefaultCurrencyCode"
+                                        DataTestId="project-structure-gantt-task-estimate" />
+
     <Stack GapScale="LayoutGap.Small"
            AlignItems="AlignItems.Stretch">
         <Cluster Gap="LayoutGap.Small"
@@ -89,9 +122,11 @@
                  Wrap="FlexWrap.Wrap">
             <Stack GapScale="LayoutGap.XSmall">
                 <TextBlock TextStyle="TextStyle.Subtitle2"
-                           Value="Optional task resource" />
+                           Value="@(IsEditMode ? "Optional person or agent" : "Optional task resource")" />
                 <TextBlock TextStyle="TextStyle.Note"
-                           Value="Assign one person, agent, workflow, or process now. You can change it later in the project structure." />
+                           Value="@(IsEditMode
+                               ? "Assign one CRM person or synchronized agent directly to this task. Workflow and process definitions remain child nodes."
+                               : "Assign one person, agent, workflow, or process now. You can change it later in the project structure.")" />
             </Stack>
             @if (selectedResource is not null)
             {
@@ -108,7 +143,7 @@
         <ResourceCardPicker TItem="ProjectStructureTaskResourceSelection"
                             Options="@PickerOptions"
                             SelectionChanged="SelectResource"
-                            SearchPlaceholder="Search people, agents, workflows, and processes"
+                            SearchPlaceholder="@(IsEditMode ? "Search CRM people and synchronized agents" : "Search people, agents, workflows, and processes")"
                             EmptyEyebrow="No resources"
                             EmptyTitle="No resources match this search"
                             EmptyDescription="Clear the search or create the task without a resource."
@@ -130,8 +165,8 @@
                 ButtonStyle="ButtonStyle.Base"
                 data-testid="project-structure-gantt-task-cancel"
                 Click="CancelAsync" />
-        <Button Text="Create task"
-                Icon="add_task"
+        <Button Text="@(IsEditMode ? "Save task" : "Create task")"
+                Icon="@(IsEditMode ? "save" : "add_task")"
                 ButtonStyle="ButtonStyle.Info"
                 data-testid="project-structure-gantt-task-submit"
                 Click="SubmitAsync" />
@@ -154,6 +189,10 @@
     private string title = "New task";
     private DateTimeOffset startUtc;
     private DateTimeOffset endUtc;
+    private int progressPercent;
+    private ProjectTaskEstimate estimate = ProjectTaskEstimate.Empty();
+    private ProjectStructureTaskEstimateEditor? estimateEditor;
+    private ProjectStructureTaskResourceSelection? initialAssignee;
     private ProjectStructureTaskResourceSelection? selectedResource;
     private string validationError = string.Empty;
 
@@ -167,6 +206,19 @@
     public DateTimeOffset DefaultEndUtc { get; set; }
 
     [Parameter]
+    public ProjectTaskEstimate DefaultEstimate { get; set; } = new(
+        DefaultDurationHours,
+        ProjectWorkItemEffortUnit.Hours,
+        null,
+        string.Empty);
+
+    [Parameter]
+    public string DefaultCurrencyCode { get; set; } = "USD";
+
+    [Parameter]
+    public ProjectStructureGanttTaskEditModel? EditModel { get; set; }
+
+    [Parameter]
     public string? AfterTaskNodeId { get; set; }
 
     [Parameter]
@@ -175,10 +227,15 @@
     [Parameter]
     public IReadOnlyList<string> ResourceWarnings { get; set; } = [];
 
+    private bool IsEditMode => EditModel is not null;
+
+    private bool IsScheduleReadOnly => EditModel?.ScheduleReadOnly == true;
+
     private decimal DurationHours => (decimal)(endUtc - startUtc).TotalHours;
 
     private IReadOnlyList<ResourceCardPickerOption<ProjectStructureTaskResourceSelection>> PickerOptions =>
         ResourceOptions
+            .Where(option => !IsEditMode || option.Kind is ProjectStructureTaskResourceKind.Person or ProjectStructureTaskResourceKind.Agent)
             .Select(option => new ResourceCardPickerOption<ProjectStructureTaskResourceSelection>(
                 new ProjectStructureTaskResourceSelection(option.Kind, option.ResourceId, option.VersionId),
                 option.DisplayName,
@@ -207,10 +264,23 @@
         }
 
         initialized = true;
+        if (EditModel is not null)
+        {
+            title = EditModel.Title;
+            startUtc = EditModel.StartUtc.ToUniversalTime();
+            endUtc = EditModel.EndUtc.ToUniversalTime();
+            progressPercent = Math.Clamp(EditModel.ProgressPercent, 0, 100);
+            estimate = EditModel.Estimate;
+            initialAssignee = EditModel.Assignee;
+            selectedResource = EditModel.Assignee;
+            return;
+        }
+
         startUtc = DefaultStartUtc.ToUniversalTime();
         endUtc = DefaultEndUtc > DefaultStartUtc
             ? DefaultEndUtc.ToUniversalTime()
             : startUtc.AddHours((double)DefaultDurationHours);
+        estimate = DefaultEstimate;
     }
 
     private Task HandleTitleChangedAsync(string? value)
@@ -263,6 +333,29 @@
         ApplyDurationPreset(hours);
     }
 
+    private void HandleProgressChanged(ChangeEventArgs args)
+    {
+        if (!int.TryParse(
+                Convert.ToString(args.Value, CultureInfo.InvariantCulture),
+                NumberStyles.Integer,
+                CultureInfo.InvariantCulture,
+                out var value) || value is < 0 or > 100)
+        {
+            validationError = "Actual progress must be between 0 and 100 percent.";
+            return;
+        }
+
+        progressPercent = value;
+        validationError = string.Empty;
+    }
+
+    private Task HandleEstimateChangedAsync(ProjectTaskEstimate value)
+    {
+        estimate = value;
+        validationError = string.Empty;
+        return Task.CompletedTask;
+    }
+
     private void ApplyDurationPreset(decimal hours)
     {
         endUtc = startUtc.AddHours((double)hours);
@@ -300,12 +393,43 @@
             return;
         }
 
+        var estimateError = string.Empty;
+        if (estimateEditor is null || !estimateEditor.TryGetValue(out estimate, out estimateError))
+        {
+            validationError = string.IsNullOrWhiteSpace(estimateError)
+                ? "The task estimate is not ready."
+                : estimateError;
+            return;
+        }
+
+        if (EditModel is not null)
+        {
+            var editResult = new ProjectStructureTaskEditDialogResult(
+                EditModel.TaskId,
+                normalizedTitle,
+                startUtc,
+                endUtc,
+                progressPercent,
+                estimate,
+                selectedResource != initialAssignee,
+                selectedResource);
+            if (DialogReference is null)
+            {
+                await DialogService.CloseAsync(editResult);
+                return;
+            }
+
+            await DialogReference.CloseAsync(editResult);
+            return;
+        }
+
         var result = new ProjectStructureTaskCreateRequest(
             normalizedTitle,
             startUtc,
             endUtc,
             AfterTaskNodeId,
-            selectedResource);
+            selectedResource,
+            estimate);
         if (DialogReference is null)
         {
             await DialogService.CloseAsync(result);

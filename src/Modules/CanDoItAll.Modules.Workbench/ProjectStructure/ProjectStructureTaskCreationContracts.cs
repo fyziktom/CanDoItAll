@@ -34,7 +34,8 @@ public sealed record ProjectStructureTaskCreateRequest(
     DateTimeOffset StartUtc,
     DateTimeOffset EndUtc,
     string? AfterTaskNodeId = null,
-    ProjectStructureTaskResourceSelection? Resource = null)
+    ProjectStructureTaskResourceSelection? Resource = null,
+    ProjectTaskEstimate? Estimate = null)
 {
     public TimeSpan Duration => EndUtc - StartUtc;
 }

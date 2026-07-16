@@ -27,6 +27,8 @@ public enum ProjectStructureGanttProjectionIssueCode
     ScheduleSynthesized,
     ScheduleStartSynthesized,
     ScheduleEndSynthesized,
+    InvalidTaskProgress,
+    InvalidTaskEstimate,
     InvalidAssignment
 }
 
@@ -38,12 +40,17 @@ public sealed record ProjectStructureGanttProjectionIssue(
     GanttTaskId? RelatedTaskId = null,
     GanttDependencyId? DependencyId = null);
 
+public sealed record ProjectStructureGanttExpectedCostTotal(
+    string CurrencyCode,
+    decimal Amount);
+
 public sealed class ProjectStructureGanttProjectionOptions
 {
     public ProjectStructureGanttProjectionOptions(
         DateTimeOffset projectionOriginUtc,
         TimeSpan defaultTaskDuration,
-        IReadOnlyList<string>? preferredTaskNodeIds = null)
+        IReadOnlyList<string>? preferredTaskNodeIds = null,
+        decimal hoursPerManDay = 8m)
     {
         if (defaultTaskDuration <= TimeSpan.Zero)
         {
@@ -53,8 +60,17 @@ public sealed class ProjectStructureGanttProjectionOptions
                 "The default projection duration must be greater than zero.");
         }
 
+        if (hoursPerManDay <= 0m)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(hoursPerManDay),
+                hoursPerManDay,
+                "Hours per man-day must be greater than zero.");
+        }
+
         ProjectionOriginUtc = projectionOriginUtc.ToUniversalTime();
         DefaultTaskDuration = defaultTaskDuration;
+        HoursPerManDay = hoursPerManDay;
         PreferredTaskNodeIds = Array.AsReadOnly((preferredTaskNodeIds ?? [])
             .Where(static nodeId => !string.IsNullOrWhiteSpace(nodeId))
             .Select(static nodeId => nodeId.Trim())
@@ -66,6 +82,8 @@ public sealed class ProjectStructureGanttProjectionOptions
 
     public TimeSpan DefaultTaskDuration { get; }
 
+    public decimal HoursPerManDay { get; }
+
     public IReadOnlyList<string> PreferredTaskNodeIds { get; }
 }
 
@@ -75,12 +93,16 @@ public sealed class ProjectStructureGanttProjectionResult
         IEnumerable<GanttTask> tasks,
         IEnumerable<GanttDependency> dependencies,
         IEnumerable<GanttTaskId> projectionOnlyTaskIds,
-        IEnumerable<ProjectStructureGanttProjectionIssue> issues)
+        IEnumerable<ProjectStructureGanttProjectionIssue> issues,
+        IEnumerable<ProjectStructureGanttExpectedCostTotal>? expectedCostTotals = null)
     {
         Tasks = Array.AsReadOnly(tasks.ToArray());
         Dependencies = Array.AsReadOnly(dependencies.ToArray());
         ProjectionOnlyTaskIds = projectionOnlyTaskIds.ToFrozenSet();
         Issues = Array.AsReadOnly(issues.ToArray());
+        ExpectedCostTotals = Array.AsReadOnly((expectedCostTotals ?? [])
+            .OrderBy(static total => total.CurrencyCode, StringComparer.Ordinal)
+            .ToArray());
     }
 
     public IReadOnlyList<GanttTask> Tasks { get; }
@@ -90,6 +112,8 @@ public sealed class ProjectStructureGanttProjectionResult
     public IReadOnlySet<GanttTaskId> ProjectionOnlyTaskIds { get; }
 
     public IReadOnlyList<ProjectStructureGanttProjectionIssue> Issues { get; }
+
+    public IReadOnlyList<ProjectStructureGanttExpectedCostTotal> ExpectedCostTotals { get; }
 
     public bool IsValid => Issues.All(issue => issue.Severity != ProjectStructureGanttProjectionIssueSeverity.Error);
 

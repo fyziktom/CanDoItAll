@@ -116,6 +116,112 @@ public sealed class ProjectStructureGanttProjectionAdapterTests
     }
 
     [Fact]
+    public void Task_metrics_keep_one_week_delivery_separate_from_one_man_day_effort_and_cost()
+    {
+        var projectId = Guid.NewGuid();
+        var metadataJson = ProjectObjectMetadataSerializer.Serialize(new ProjectObjectMetadataEnvelope
+        {
+            WorkItem = new ProjectWorkItemMetadata
+            {
+                WorkItemKind = ProjectWorkItemKind.Task,
+                ExpectedEffortHours = 8m,
+                ExpectedEffortUnit = ProjectWorkItemEffortUnit.ManDays,
+                ExpectedCostAmount = 1400m,
+                ExpectedCostCurrencyCode = "usd"
+            }
+        });
+        var task = CreateTask(
+            "task-a",
+            "Customer acceptance",
+            ProjectionOrigin,
+            ProjectionOrigin.AddDays(7),
+            metadataJson: metadataJson,
+            progressPercent: 65);
+        var surface = CreateSurface(projectId, [task], []);
+
+        var result = Build(surface);
+
+        Assert.True(result.IsValid);
+        var projectedTask = Assert.Single(result.Tasks);
+        Assert.Equal(TimeSpan.FromDays(7), projectedTask.Duration);
+        Assert.Equal(TimeSpan.FromHours(8), projectedTask.ExpectedEffort);
+        Assert.Equal(65, projectedTask.ProgressPercent);
+        Assert.Equal(
+            new ProjectStructureGanttExpectedCostTotal("USD", 1400m),
+            Assert.Single(result.ExpectedCostTotals));
+        Assert.DoesNotContain(
+            result.Issues,
+            issue => issue.Code is ProjectStructureGanttProjectionIssueCode.InvalidTaskEstimate or
+                ProjectStructureGanttProjectionIssueCode.InvalidTaskProgress);
+    }
+
+    [Fact]
+    public void Invalid_estimate_is_reported_and_omitted_without_hiding_valid_progress()
+    {
+        var projectId = Guid.NewGuid();
+        var metadataJson = ProjectObjectMetadataSerializer.Serialize(new ProjectObjectMetadataEnvelope
+        {
+            WorkItem = new ProjectWorkItemMetadata
+            {
+                WorkItemKind = ProjectWorkItemKind.Task,
+                ExpectedEffortHours = -2m,
+                ExpectedEffortUnit = ProjectWorkItemEffortUnit.Hours,
+                ExpectedCostAmount = 20m,
+                ExpectedCostCurrencyCode = "USD"
+            }
+        });
+        var task = CreateTask(
+            "task-a",
+            "Invalid estimate",
+            ProjectionOrigin,
+            ProjectionOrigin.AddHours(4),
+            metadataJson: metadataJson,
+            progressPercent: 25);
+        var surface = CreateSurface(projectId, [task], []);
+
+        var result = Build(surface);
+
+        Assert.True(result.IsValid);
+        var projectedTask = Assert.Single(result.Tasks);
+        Assert.Null(projectedTask.ExpectedEffort);
+        Assert.Equal(25, projectedTask.ProgressPercent);
+        Assert.Empty(result.ExpectedCostTotals);
+        var issue = Assert.Single(
+            result.Issues,
+            issue => issue.Code == ProjectStructureGanttProjectionIssueCode.InvalidTaskEstimate);
+        Assert.Equal(ProjectStructureGanttProjectionIssueSeverity.Warning, issue.Severity);
+        Assert.Equal(new GanttTaskId(task.Id), issue.TaskId);
+    }
+
+    [Fact]
+    public void Unknown_progress_maps_to_no_decoration_and_corrupt_progress_is_reported()
+    {
+        var projectId = Guid.NewGuid();
+        var unknown = CreateTask(
+            "task-a",
+            "Unknown",
+            ProjectionOrigin,
+            ProjectionOrigin.AddHours(1),
+            progressPercent: -1);
+        var corrupt = CreateTask(
+            "task-b",
+            "Corrupt",
+            ProjectionOrigin,
+            ProjectionOrigin.AddHours(1),
+            progressPercent: 101);
+        var surface = CreateSurface(projectId, [unknown, corrupt], []);
+
+        var result = Build(surface);
+
+        Assert.True(result.IsValid);
+        Assert.All(result.Tasks, task => Assert.Null(task.ProgressPercent));
+        var issue = Assert.Single(
+            result.Issues,
+            issue => issue.Code == ProjectStructureGanttProjectionIssueCode.InvalidTaskProgress);
+        Assert.Equal(new GanttTaskId(corrupt.Id), issue.TaskId);
+    }
+
+    [Fact]
     public void Missing_and_partial_schedules_are_explicit_projection_only_intervals()
     {
         var projectId = Guid.NewGuid();
@@ -218,7 +324,9 @@ public sealed class ProjectStructureGanttProjectionAdapterTests
         string title,
         DateTimeOffset? start = null,
         DateTimeOffset? end = null,
-        int? durationSeconds = null)
+        int? durationSeconds = null,
+        string metadataJson = "{}",
+        int progressPercent = 0)
     {
         return CreateNode(
             id,
@@ -227,7 +335,9 @@ public sealed class ProjectStructureGanttProjectionAdapterTests
             title,
             startUtc: start,
             endUtc: end,
-            durationSeconds: durationSeconds);
+            durationSeconds: durationSeconds,
+            metadataJson: metadataJson,
+            progressPercent: progressPercent);
     }
 
     private static ProjectStructureNode CreateNode(
@@ -239,7 +349,9 @@ public sealed class ProjectStructureGanttProjectionAdapterTests
         DateTimeOffset? startUtc = null,
         DateTimeOffset? endUtc = null,
         int? durationSeconds = null,
-        bool isSystemManaged = false)
+        bool isSystemManaged = false,
+        string metadataJson = "{}",
+        int progressPercent = 0)
     {
         return new ProjectStructureNode(
             Id: id,
@@ -261,7 +373,7 @@ public sealed class ProjectStructureGanttProjectionAdapterTests
             VisualProfile: new ProjectObjectVisualProfile("pill", "#2563eb", "TK", "Task"),
             Badges: [],
             ProgressMode: string.Empty,
-            ProgressPercent: 0,
+            ProgressPercent: progressPercent,
             MarkerIcon: string.Empty,
             MarkerTone: string.Empty,
             MarkerLabel: string.Empty,
@@ -269,6 +381,7 @@ public sealed class ProjectStructureGanttProjectionAdapterTests
             Priority: 0,
             StartUtc: startUtc,
             EndUtc: endUtc,
+            MetadataJson: metadataJson,
             DurationSeconds: durationSeconds,
             IsSystemManaged: isSystemManaged);
     }
@@ -293,6 +406,7 @@ public sealed class ProjectStructureGanttProjectionAdapterTests
             null,
             null,
             null,
+            string.Empty,
             string.Empty);
     }
 

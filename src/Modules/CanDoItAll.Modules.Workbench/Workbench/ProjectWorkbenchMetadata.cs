@@ -334,6 +334,18 @@ public sealed class ProjectWorkItemMetadata
     [JsonPropertyName("assigneePartyName")]
     [ProjectStructurePreviewField("Assignee party", 80)]
     public string AssigneePartyDisplayName { get; set; } = string.Empty;
+
+    [ProjectStructurePreviewField("Expected effort (h)", 90)]
+    public decimal? ExpectedEffortHours { get; set; }
+
+    [ProjectStructurePreviewField("Effort unit", 100)]
+    public ProjectWorkItemEffortUnit ExpectedEffortUnit { get; set; }
+
+    [ProjectStructurePreviewField("Expected cost", 110)]
+    public decimal? ExpectedCostAmount { get; set; }
+
+    [ProjectStructurePreviewField("Expected cost currency", 120)]
+    public string ExpectedCostCurrencyCode { get; set; } = string.Empty;
 }
 
 public sealed class ProjectRepositoryMetadata
@@ -736,6 +748,16 @@ public static class ProjectObjectMetadataSerializer
             metadata.Workflow?.WorkflowId is null)
         {
             throw new InvalidOperationException("Workflow nodes require workflow metadata with a workflow id.");
+        }
+
+        if (objectType == ProjectObjectType.WorkItem && metadata.WorkItem is not null)
+        {
+            var estimate = ProjectTaskEstimatePolicy.ValidateAndNormalize(new ProjectTaskEstimate(
+                metadata.WorkItem.ExpectedEffortHours,
+                metadata.WorkItem.ExpectedEffortUnit,
+                metadata.WorkItem.ExpectedCostAmount,
+                metadata.WorkItem.ExpectedCostCurrencyCode));
+            metadata.WorkItem.ExpectedCostCurrencyCode = estimate.ExpectedCostCurrencyCode;
         }
     }
 

@@ -1,6 +1,7 @@
 using Bunit;
 using CanDoItAll.Components.BaseLib;
 using CanDoItAll.Components.CanvasLib;
+using CanDoItAll.Infrastructure.Configuration;
 using CanDoItAll.Modules.Workbench;
 using CanDoItAll.Modules.Workbench.Pages;
 using Microsoft.Extensions.DependencyInjection;
@@ -9,6 +10,32 @@ namespace CanDoItAll.Tests.Components;
 
 public sealed class ProjectStructureTaskCreateDialogTests
 {
+    [Fact]
+    public async Task Dialog_emits_default_pure_effort_and_normalized_expected_cost()
+    {
+        using var context = CreateContext();
+        var host = context.RenderComponent<DialogHost>();
+        var resultTask = OpenDialog(context, []);
+
+        host.WaitForElement("[data-testid='project-structure-task-create-estimate-preset-1d']");
+        host.Find("[data-testid='project-structure-task-create-title']").Input("Estimate delivery");
+        host.Find("[data-testid='project-structure-task-create-estimate-preset-1d']").Click();
+        host.Find("[data-testid='project-structure-task-create-estimate-cost']").Change("1250.5");
+        host.Find("[data-testid='project-structure-task-create-estimate-currency']").Input("eur");
+        host.Find("[data-testid='project-structure-task-create-submit']").Click();
+
+        var result = Assert.IsType<ProjectStructureTaskDialogResult>(
+            await resultTask.WaitAsync(TimeSpan.FromSeconds(2)));
+        Assert.Contains(result.CreateRequest.InputValues!, value =>
+            value.Key == ProjectTaskEstimateInputKeys.ExpectedEffortValue && value.Value == "1");
+        Assert.Contains(result.CreateRequest.InputValues!, value =>
+            value.Key == ProjectTaskEstimateInputKeys.ExpectedEffortUnit && value.Value == "manDays");
+        Assert.Contains(result.CreateRequest.InputValues!, value =>
+            value.Key == ProjectTaskEstimateInputKeys.ExpectedCostAmount && value.Value == "1250.5");
+        Assert.Contains(result.CreateRequest.InputValues!, value =>
+            value.Key == ProjectTaskEstimateInputKeys.ExpectedCostCurrencyCode && value.Value == "EUR");
+    }
+
     [Fact]
     public async Task Dialog_returns_direct_person_assignment_and_preserves_task_fields()
     {
@@ -55,6 +82,7 @@ public sealed class ProjectStructureTaskCreateDialogTests
         var context = new TestContext();
         context.JSInterop.Mode = JSRuntimeMode.Loose;
         context.Services.AddCanDoItAllBaseLib();
+        context.Services.AddSingleton<ICurrencyFormatter>(new StaticCurrencyFormatter("USD"));
         return context;
     }
 
@@ -101,4 +129,12 @@ public sealed class ProjectStructureTaskCreateDialogTests
         string name,
         string typeLabel)
         => new(kind, id, null, name, typeLabel, string.Empty, false, false);
+
+    private sealed class StaticCurrencyFormatter(string currencyCode) : ICurrencyFormatter
+    {
+        public string CurrencyCode { get; } = currencyCode;
+
+        public string Format(decimal value)
+            => $"{CurrencyCode} {value:0.00}";
+    }
 }

@@ -73,6 +73,7 @@ internal static class ProjectStructureCreateRequestComposer
                 AddLinkIfPresent(pendingLinks, inputValues, "parentParticipantRef", ProjectObjectLinkKind.BelongsTo);
                 break;
             case ProjectObjectType.WorkItem:
+                var taskEstimate = ComposeTaskEstimate(inputValues);
                 metadata.WorkItem = new ProjectWorkItemMetadata
                 {
                     WorkItemKind = ParseEnum(inputValues, "workItemKind", ProjectNodeKindRegistry.ResolveWorkItemKind(subtype)),
@@ -81,7 +82,11 @@ internal static class ProjectStructureCreateRequestComposer
                     Amount = ParseDecimalNullable(inputValues, "amount"),
                     CurrencyCode = GetValue(inputValues, "currencyCode"),
                     Description = notes,
-                    DueUtc = ParseDateTimeOffset(inputValues, "dueUtc")
+                    DueUtc = ParseDateTimeOffset(inputValues, "dueUtc"),
+                    ExpectedEffortHours = taskEstimate.ExpectedEffortHours,
+                    ExpectedEffortUnit = taskEstimate.ExpectedEffortUnit,
+                    ExpectedCostAmount = taskEstimate.ExpectedCostAmount,
+                    ExpectedCostCurrencyCode = taskEstimate.ExpectedCostCurrencyCode
                 };
                 nodeReferences.WorkItemAssigneeNodeId = ParseNodeGuid(inputValues, "assigneeRef");
                 nodeReferences.WorkItemRepositoryResourceId = ParseNodeGuid(inputValues, "repositoryRef");
@@ -260,6 +265,63 @@ internal static class ProjectStructureCreateRequestComposer
 
     private static decimal? ParseNullableDecimal(IReadOnlyDictionary<string, string> inputValues, string key)
         => inputValues.TryGetValue(key, out var value) && decimal.TryParse(value, out var parsed) ? parsed : null;
+
+    private static ProjectTaskEstimate ComposeTaskEstimate(IReadOnlyDictionary<string, string> inputValues)
+    {
+        var effortValue = ParseOptionalInvariantDecimal(
+            inputValues,
+            ProjectTaskEstimateInputKeys.ExpectedEffortValue,
+            "Expected task effort");
+        var effortUnit = ParseTaskEffortUnit(inputValues);
+        var costAmount = ParseOptionalInvariantDecimal(
+            inputValues,
+            ProjectTaskEstimateInputKeys.ExpectedCostAmount,
+            "Expected task cost");
+        return ProjectTaskEstimatePolicy.Create(
+            effortValue,
+            effortUnit,
+            costAmount,
+            GetValue(inputValues, ProjectTaskEstimateInputKeys.ExpectedCostCurrencyCode));
+    }
+
+    private static ProjectWorkItemEffortUnit ParseTaskEffortUnit(
+        IReadOnlyDictionary<string, string> inputValues)
+    {
+        if (!inputValues.TryGetValue(ProjectTaskEstimateInputKeys.ExpectedEffortUnit, out var value) ||
+            string.IsNullOrWhiteSpace(value))
+        {
+            return ProjectWorkItemEffortUnit.Hours;
+        }
+
+        if (Enum.TryParse<ProjectWorkItemEffortUnit>(value, true, out var parsed) && Enum.IsDefined(parsed))
+        {
+            return parsed;
+        }
+
+        throw new InvalidOperationException("Expected task effort unit is invalid.");
+    }
+
+    private static decimal? ParseOptionalInvariantDecimal(
+        IReadOnlyDictionary<string, string> inputValues,
+        string key,
+        string fieldLabel)
+    {
+        if (!inputValues.TryGetValue(key, out var value) || string.IsNullOrWhiteSpace(value))
+        {
+            return null;
+        }
+
+        if (decimal.TryParse(
+                value,
+                System.Globalization.NumberStyles.Number,
+                System.Globalization.CultureInfo.InvariantCulture,
+                out var parsed))
+        {
+            return parsed;
+        }
+
+        throw new InvalidOperationException($"{fieldLabel} must be a number.");
+    }
 
     private static Guid? ParseNodeGuid(IReadOnlyDictionary<string, string> inputValues, string key)
         => inputValues.TryGetValue(key, out var value) && value.StartsWith("custom:", StringComparison.OrdinalIgnoreCase) && Guid.TryParse(value["custom:".Length..], out var parsed)

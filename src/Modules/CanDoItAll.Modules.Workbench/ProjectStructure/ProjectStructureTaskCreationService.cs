@@ -45,7 +45,11 @@ public sealed class ProjectStructureTaskCreationService(
             WorkItem = new ProjectWorkItemMetadata
             {
                 WorkItemKind = ProjectWorkItemKind.Task,
-                Description = request.Title
+                Description = request.Title,
+                ExpectedEffortHours = request.Estimate?.ExpectedEffortHours,
+                ExpectedEffortUnit = request.Estimate?.ExpectedEffortUnit ?? ProjectWorkItemEffortUnit.Hours,
+                ExpectedCostAmount = request.Estimate?.ExpectedCostAmount,
+                ExpectedCostCurrencyCode = request.Estimate?.ExpectedCostCurrencyCode ?? string.Empty
             }
         };
         var task = await agentService.CreateNodeAsync(
@@ -293,6 +297,8 @@ public sealed class ProjectStructureTaskCreationService(
                 $"Task duration cannot exceed {int.MaxValue} seconds.");
         }
 
+        var estimate = NormalizeEstimate(request.Estimate);
+
         return request with
         {
             Title = title,
@@ -300,7 +306,28 @@ public sealed class ProjectStructureTaskCreationService(
             EndUtc = endUtc,
             AfterTaskNodeId = string.IsNullOrWhiteSpace(request.AfterTaskNodeId)
                 ? null
-                : request.AfterTaskNodeId.Trim()
+                : request.AfterTaskNodeId.Trim(),
+            Estimate = estimate
         };
+    }
+
+    private static ProjectTaskEstimate? NormalizeEstimate(ProjectTaskEstimate? estimate)
+    {
+        if (estimate is null)
+        {
+            return null;
+        }
+
+        try
+        {
+            return ProjectTaskEstimatePolicy.ValidateAndNormalize(estimate);
+        }
+        catch (Exception exception) when (exception is InvalidOperationException or ArgumentException or OverflowException)
+        {
+            throw new ProjectStructureAgentException(
+                400,
+                "TaskEstimateInvalid",
+                exception.Message);
+        }
     }
 }

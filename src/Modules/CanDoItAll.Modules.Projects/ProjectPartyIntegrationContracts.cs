@@ -81,6 +81,7 @@ public sealed record ProjectPartyAssignmentDetail(
     decimal? AllocationPercent,
     DateTimeOffset? StartsAtUtc,
     DateTimeOffset? EndsAtUtc,
+    string Source,
     string Notes);
 
 public sealed class ProjectPartyQuickCreateRequest

@@ -60,48 +60,95 @@ public sealed class ProjectStructureGanttMutationService(
         ArgumentNullException.ThrowIfNull(request);
         var result = await ExecuteAsync(
             projectId,
-            (context, state, now, _) =>
-            {
-                ValidateGraph(state.TaskIds, state.Dependencies);
-                var changes = RequireDistinctChanges(request.AffectedTasks);
-                if (changes.Count == 0 || !changes.ContainsKey(request.TaskId.Value))
-                {
-                    throw new ProjectStructureGanttMutationException(
-                        ProjectStructureGanttMutationErrorCode.InvalidSchedule,
-                        $"Schedule request for task '{Mask(request.TaskId)}' must include that task in its affected dates.");
-                }
-
-                RequireEditableTask(state, request.TaskId);
-                var allowedTaskIds = ReachableTaskIds(state.Dependencies, request.TaskId.Value);
-                allowedTaskIds.Add(request.TaskId.Value);
-                if (changes.Keys.Any(taskId => !allowedTaskIds.Contains(taskId)))
-                {
-                    throw new ProjectStructureGanttMutationException(
-                        ProjectStructureGanttMutationErrorCode.InvalidSchedule,
-                        "A schedule request can only update the selected task and its dependent tasks.");
-                }
-
-                var schedule = BuildSchedule(state.TasksByNodeKey.Values);
-                ValidateScheduleConstraints(schedule, state.Dependencies);
-                foreach (var change in changes.Values)
-                {
-                    var task = RequireEditableTask(state, change.TaskId);
-                    ValidateScheduledStaleState(task, change);
-                    schedule[task.NodeKey] = new TaskInterval(change.ProposedStart, change.ProposedEnd);
-                }
-
-                ValidateScheduleConstraints(schedule, state.Dependencies);
-                foreach (var change in changes.Values)
-                {
-                    ApplyDates(state.TasksByNodeKey[change.TaskId.Value], change.ProposedStart, change.ProposedEnd, now);
-                }
-
-                return Task.FromResult(Result(changes.Values.Select(static change => change.TaskId)));
-            },
+            (_, state, now, _) => Task.FromResult(ApplyScheduleChanges(state, request, now)),
             cancellationToken);
 
         logger.LogInformation(
             "Applied Gantt schedule mutation for project {ProjectId}, task {TaskId}, and {AffectedCount} affected tasks.",
+            Mask(projectId),
+            Mask(request.TaskId),
+            result.AffectedTaskIds.Count);
+        return result;
+    }
+
+    public async Task<ProjectStructureGanttMutationResult> ApplyTaskDetailsAsync(
+        Guid projectId,
+        ProjectStructureTaskDetailsUpdateRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        var proposedTitle = request.ProposedTitle.Trim();
+        if (proposedTitle.Length == 0 || proposedTitle.Length > MaximumTitleLength)
+        {
+            throw new ProjectStructureGanttMutationException(
+                ProjectStructureGanttMutationErrorCode.InvalidTitle,
+                $"Task title must contain between 1 and {MaximumTitleLength} characters.");
+        }
+
+        if (request.CurrentProgressPercent is < 0 or > 100 || request.ProposedProgressPercent is < 0 or > 100)
+        {
+            throw new ProjectStructureGanttMutationException(
+                ProjectStructureGanttMutationErrorCode.InvalidTask,
+                "Task progress must be between 0 and 100 percent.");
+        }
+
+        var currentEstimate = ProjectTaskEstimatePolicy.ValidateAndNormalize(request.CurrentEstimate);
+        var proposedEstimate = ProjectTaskEstimatePolicy.ValidateAndNormalize(request.ProposedEstimate);
+        var result = await ExecuteAsync(
+            projectId,
+            (_, state, now, _) =>
+            {
+                var task = RequireEditableTask(state, request.TaskId);
+                if (!string.Equals(task.Title, request.CurrentTitle, StringComparison.Ordinal))
+                {
+                    throw StaleTask(request.TaskId, "title");
+                }
+
+                var persistedProgress = Math.Clamp(task.ProgressPercent, 0, 100);
+                if (persistedProgress != request.CurrentProgressPercent)
+                {
+                    throw StaleTask(request.TaskId, "progress");
+                }
+
+                var metadata = ProjectObjectMetadataSerializer.Parse(task.MetadataJson);
+                var persistedEstimate = ReadEstimate(metadata.WorkItem);
+                if (persistedEstimate != currentEstimate)
+                {
+                    throw StaleTask(request.TaskId, "estimate");
+                }
+
+                var affectedTaskIds = new HashSet<GanttTaskId> { request.TaskId };
+                if (request.ScheduleChange is not null)
+                {
+                    if (request.ScheduleChange.TaskId != request.TaskId)
+                    {
+                        throw new ProjectStructureGanttMutationException(
+                            ProjectStructureGanttMutationErrorCode.InvalidSchedule,
+                            "The schedule change does not belong to the edited task.");
+                    }
+
+                    var scheduleResult = ApplyScheduleChanges(state, request.ScheduleChange, now);
+                    affectedTaskIds.UnionWith(scheduleResult.AffectedTaskIds);
+                }
+
+                metadata.WorkItem ??= new ProjectWorkItemMetadata
+                {
+                    WorkItemKind = ProjectWorkItemKind.Task
+                };
+                WriteEstimate(metadata.WorkItem, proposedEstimate);
+                ProjectObjectMetadataSerializer.Validate(task.ObjectType, task.ObjectSubtype, metadata);
+
+                task.Title = proposedTitle;
+                task.ProgressPercent = request.ProposedProgressPercent;
+                task.ProgressMode = request.ProposedProgressPercent == 100 ? "complete" : "progress";
+                task.MetadataJson = ProjectObjectMetadataSerializer.Serialize(metadata);
+                task.UpdatedAtUtc = now;
+                return Task.FromResult(Result(affectedTaskIds));
+            },
+            cancellationToken);
+
+        logger.LogInformation(
+            "Applied Gantt task detail mutation for project {ProjectId}, task {TaskId}, and {AffectedCount} affected tasks.",
             Mask(projectId),
             Mask(request.TaskId),
             result.AffectedTaskIds.Count);
@@ -712,6 +759,68 @@ public sealed class ProjectStructureGanttMutationService(
         }
 
         return distinct;
+    }
+
+    private static ProjectStructureGanttMutationResult ApplyScheduleChanges(
+        MutationState state,
+        GanttTaskScheduleChangeRequest request,
+        DateTimeOffset now)
+    {
+        ValidateGraph(state.TaskIds, state.Dependencies);
+        var changes = RequireDistinctChanges(request.AffectedTasks);
+        if (changes.Count == 0 || !changes.ContainsKey(request.TaskId.Value))
+        {
+            throw new ProjectStructureGanttMutationException(
+                ProjectStructureGanttMutationErrorCode.InvalidSchedule,
+                $"Schedule request for task '{Mask(request.TaskId)}' must include that task in its affected dates.");
+        }
+
+        RequireEditableTask(state, request.TaskId);
+        var allowedTaskIds = ReachableTaskIds(state.Dependencies, request.TaskId.Value);
+        allowedTaskIds.Add(request.TaskId.Value);
+        if (changes.Keys.Any(taskId => !allowedTaskIds.Contains(taskId)))
+        {
+            throw new ProjectStructureGanttMutationException(
+                ProjectStructureGanttMutationErrorCode.InvalidSchedule,
+                "A schedule request can only update the selected task and its dependent tasks.");
+        }
+
+        var schedule = BuildSchedule(state.TasksByNodeKey.Values);
+        ValidateScheduleConstraints(schedule, state.Dependencies);
+        foreach (var change in changes.Values)
+        {
+            var task = RequireEditableTask(state, change.TaskId);
+            ValidateScheduledStaleState(task, change);
+            schedule[task.NodeKey] = new TaskInterval(change.ProposedStart, change.ProposedEnd);
+        }
+
+        ValidateScheduleConstraints(schedule, state.Dependencies);
+        foreach (var change in changes.Values)
+        {
+            ApplyDates(state.TasksByNodeKey[change.TaskId.Value], change.ProposedStart, change.ProposedEnd, now);
+        }
+
+        return Result(changes.Values.Select(static change => change.TaskId));
+    }
+
+    private static ProjectTaskEstimate ReadEstimate(ProjectWorkItemMetadata? metadata)
+    {
+        var estimate = metadata is null
+            ? new ProjectTaskEstimate(null, ProjectWorkItemEffortUnit.Hours, null, string.Empty)
+            : new ProjectTaskEstimate(
+                metadata.ExpectedEffortHours,
+                metadata.ExpectedEffortUnit,
+                metadata.ExpectedCostAmount,
+                metadata.ExpectedCostCurrencyCode);
+        return ProjectTaskEstimatePolicy.ValidateAndNormalize(estimate);
+    }
+
+    private static void WriteEstimate(ProjectWorkItemMetadata metadata, ProjectTaskEstimate estimate)
+    {
+        metadata.ExpectedEffortHours = estimate.ExpectedEffortHours;
+        metadata.ExpectedEffortUnit = estimate.ExpectedEffortUnit;
+        metadata.ExpectedCostAmount = estimate.ExpectedCostAmount;
+        metadata.ExpectedCostCurrencyCode = estimate.ExpectedCostCurrencyCode;
     }
 
     private static void ValidateScheduledStaleState(

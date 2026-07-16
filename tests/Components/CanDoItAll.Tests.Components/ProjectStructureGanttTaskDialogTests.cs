@@ -36,6 +36,7 @@ public sealed class ProjectStructureGanttTaskDialogTests
         Assert.Equal(StartUtc, result.StartUtc);
         Assert.Equal(StartUtc.AddHours(6), result.EndUtc);
         Assert.Equal(TimeSpan.FromHours(6), result.Duration);
+        Assert.Equal(8m, result.Estimate?.ExpectedEffortHours);
     }
 
     [Fact]
@@ -97,6 +98,58 @@ public sealed class ProjectStructureGanttTaskDialogTests
         Assert.Empty(host.FindAll("[data-testid='project-structure-gantt-task-validation-error']"));
     }
 
+    [Fact]
+    public async Task Edit_mode_returns_progress_effort_cost_and_direct_assignee_change()
+    {
+        using var context = CreateContext();
+        var host = context.RenderComponent<DialogHost>();
+        var personId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+        var assignee = new ProjectStructureTaskResourceSelection(
+            ProjectStructureTaskResourceKind.Person,
+            personId);
+        var editModel = new ProjectStructureGanttTaskEditModel(
+            new CanDoItAll.Components.Gantt.GanttTaskId("custom:task-a"),
+            "Customer acceptance",
+            StartUtc,
+            StartUtc.AddDays(7),
+            30,
+            new ProjectTaskEstimate(8m, ProjectWorkItemEffortUnit.ManDays, 900m, "USD"),
+            assignee);
+        var resultTask = OpenEditDialog(
+            context,
+            editModel,
+            [
+                new ProjectStructureTaskResourceOption(
+                    ProjectStructureTaskResourceKind.Person,
+                    personId,
+                    null,
+                    "Joe Doe",
+                    "Person",
+                    "joe@example.test",
+                    false,
+                    false)
+            ]);
+
+        host.WaitForElement("[data-testid='project-structure-gantt-task-progress']");
+        Assert.Equal(
+            "1",
+            host.Find("[data-testid='project-structure-gantt-task-estimate-effort']").GetAttribute("value"));
+        host.Find("[data-testid='project-structure-gantt-task-progress']").Change("65");
+        host.Find("[data-testid='project-structure-gantt-task-estimate-cost']").Change("1200");
+        host.Find("[data-testid='project-structure-gantt-task-resource-clear']").Click();
+        host.Find("[data-testid='project-structure-gantt-task-submit']").Click();
+
+        var result = Assert.IsType<ProjectStructureTaskEditDialogResult>(
+            await resultTask.WaitAsync(TimeSpan.FromSeconds(2)));
+        Assert.Equal(65, result.ProgressPercent);
+        Assert.Equal(8m, result.Estimate.ExpectedEffortHours);
+        Assert.Equal(ProjectWorkItemEffortUnit.ManDays, result.Estimate.ExpectedEffortUnit);
+        Assert.Equal(1200m, result.Estimate.ExpectedCostAmount);
+        Assert.Equal("USD", result.Estimate.ExpectedCostCurrencyCode);
+        Assert.True(result.AssigneeChanged);
+        Assert.Null(result.Assignee);
+    }
+
     private static TestContext CreateContext()
     {
         var context = new TestContext();
@@ -122,6 +175,27 @@ public sealed class ProjectStructureGanttTaskDialogTests
             new DialogOptions
             {
                 TestId = "project-structure-gantt-task-dialog"
+            });
+    }
+
+    private static Task<object?> OpenEditDialog(
+        TestContext context,
+        ProjectStructureGanttTaskEditModel editModel,
+        IReadOnlyList<ProjectStructureTaskResourceOption> resources)
+    {
+        return context.Services.GetRequiredService<DialogService>().OpenAsync<ProjectStructureGanttTaskDialog>(
+            "Edit project task",
+            new Dictionary<string, object?>
+            {
+                [nameof(ProjectStructureGanttTaskDialog.DefaultStartUtc)] = editModel.StartUtc,
+                [nameof(ProjectStructureGanttTaskDialog.DefaultEndUtc)] = editModel.EndUtc,
+                [nameof(ProjectStructureGanttTaskDialog.DefaultCurrencyCode)] = "USD",
+                [nameof(ProjectStructureGanttTaskDialog.EditModel)] = editModel,
+                [nameof(ProjectStructureGanttTaskDialog.ResourceOptions)] = resources
+            },
+            new DialogOptions
+            {
+                TestId = "project-structure-gantt-task-edit-dialog"
             });
     }
 }

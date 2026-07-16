@@ -4734,6 +4734,7 @@ public sealed partial class ProjectPartyIntegrationService(
                     assignment.AllocationPercent,
                     assignment.StartsAtUtc,
                     assignment.EndsAtUtc,
+                    assignment.Source,
                     assignment.Notes,
                     party.DisplayName,
                     party.PartyType
@@ -4755,6 +4756,7 @@ public sealed partial class ProjectPartyIntegrationService(
                 item.AllocationPercent,
                 item.StartsAtUtc,
                 item.EndsAtUtc,
+                item.Source,
                 item.Notes))
             .ToListAsync(cancellationToken);
     }
