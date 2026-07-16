@@ -202,6 +202,7 @@ public sealed class HrAgentRuntimeToolProviderTests
         services.Replace(ServiceDescriptor.Scoped(_ => CreateUninitialized<HrAgentAvatarGenerationService>()));
         services.Replace(ServiceDescriptor.Scoped(_ => CreateUninitialized<HrAgentUsageAnalyticsService>()));
         services.Replace(ServiceDescriptor.Scoped(_ => CreateUninitialized<HrAgentProcessReviewService>()));
+        services.Replace(ServiceDescriptor.Scoped(_ => CreateUninitialized<HrAgentRuntimeAuthorizationService>()));
         services.Replace(ServiceDescriptor.Scoped<ICrmHrAgentQueryService>(_ => new ThrowingCrmHrAgentQueryService()));
         using var serviceProvider = services.BuildServiceProvider();
         using var scope = serviceProvider.CreateScope();

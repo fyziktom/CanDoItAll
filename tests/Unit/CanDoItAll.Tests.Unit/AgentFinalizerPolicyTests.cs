@@ -1100,6 +1100,81 @@ public sealed class AgentFinalizerPolicyTests
     }
 
     [Fact]
+    public void Transient_application_context_forces_framework_managed_history()
+    {
+        var agent = CreateAgent(AgentChatHistoryMode.ProviderManaged);
+        var provider = CreateProvider(
+            ProviderTransportKind.Responses,
+            preferFrameworkManagedHistory: false);
+        var options = new AgentRuntimeExecutionOptions(
+            StructuredOutput: null,
+            FinalizerMode: AgentFinalizerMode.Disabled,
+            RequireStructuredOutputValidation: false,
+            MaxStructuredOutputRepairAttempts: 0)
+        {
+            TransientContext = new AgentRuntimeTransientContext("Selected CRM account: 42")
+        };
+
+        Assert.True(MafRuntimeSessionBuilder.ShouldUseFrameworkManagedHistory(
+            agent,
+            provider,
+            options));
+    }
+
+    [Fact]
+    public async Task Contextual_approval_continuation_restores_provider_managed_session()
+    {
+        var agent = CreateAgent(AgentChatHistoryMode.ProviderManaged);
+        var provider = CreateProvider(
+            ProviderTransportKind.Responses,
+            preferFrameworkManagedHistory: false);
+        var session = new ChatSessionRecord(
+            Guid.NewGuid(),
+            agent.Id,
+            "Contextual approval",
+            DateTimeOffset.UtcNow,
+            DateTimeOffset.UtcNow,
+            RuntimeSessionKey: "runtime-session",
+            SerializedSessionStateJson: """{"conversationId":"provider-conversation"}""",
+            Messages: [],
+            PendingApprovals:
+            [
+                new PendingToolApprovalRecord(
+                    "approval-1",
+                    "call-1",
+                    "crm_update_partner",
+                    "function",
+                    "Update selected CRM partner",
+                    "{}")
+            ]);
+        var options = new AgentRuntimeExecutionOptions(
+            StructuredOutput: null,
+            FinalizerMode: AgentFinalizerMode.Disabled,
+            RequireStructuredOutputValidation: false,
+            MaxStructuredOutputRepairAttempts: 0)
+        {
+            TransientContext = new AgentRuntimeTransientContext("Selected CRM partner: 42")
+        };
+        var runtimeAgent = new RecordingSessionAgent();
+
+        var restoredSession = await MafRuntimeSessionBuilder.RestoreOrCreateSessionAsync(
+            runtimeAgent,
+            agent,
+            provider,
+            session,
+            options,
+            CancellationToken.None,
+            isApprovalContinuation: true);
+
+        Assert.NotNull(restoredSession);
+        Assert.Equal(1, runtimeAgent.DeserializeSessionCallCount);
+        Assert.Equal(0, runtimeAgent.CreateSessionCallCount);
+        Assert.Equal(
+            "provider-conversation",
+            runtimeAgent.SerializedState.GetProperty("conversationId").GetString());
+    }
+
+    [Fact]
     public void Governed_process_provider_order_prefers_chat_completions_for_framework_managed_steps()
     {
         var responsesProvider = CreateProvider(
@@ -1474,5 +1549,59 @@ public sealed class AgentFinalizerPolicyTests
     private sealed class UnknownOutputContract
     {
         public required string Value { get; init; }
+    }
+
+    private sealed class RecordingSessionAgent : AIAgent
+    {
+        public int CreateSessionCallCount { get; private set; }
+
+        public int DeserializeSessionCallCount { get; private set; }
+
+        public JsonElement SerializedState { get; private set; }
+
+        protected override ValueTask<AgentSession> CreateSessionCoreAsync(
+            CancellationToken cancellationToken = default)
+        {
+            CreateSessionCallCount++;
+            return ValueTask.FromResult<AgentSession>(new RecordingSession());
+        }
+
+        protected override ValueTask<JsonElement> SerializeSessionCoreAsync(
+            AgentSession session,
+            JsonSerializerOptions? jsonSerializerOptions = null,
+            CancellationToken cancellationToken = default)
+        {
+            throw new NotSupportedException();
+        }
+
+        protected override ValueTask<AgentSession> DeserializeSessionCoreAsync(
+            JsonElement serializedState,
+            JsonSerializerOptions? jsonSerializerOptions = null,
+            CancellationToken cancellationToken = default)
+        {
+            DeserializeSessionCallCount++;
+            SerializedState = serializedState.Clone();
+            return ValueTask.FromResult<AgentSession>(new RecordingSession());
+        }
+
+        protected override Task<AgentResponse> RunCoreAsync(
+            IEnumerable<ChatMessage> messages,
+            AgentSession? session = null,
+            AgentRunOptions? options = null,
+            CancellationToken cancellationToken = default)
+        {
+            throw new NotSupportedException();
+        }
+
+        protected override IAsyncEnumerable<AgentResponseUpdate> RunCoreStreamingAsync(
+            IEnumerable<ChatMessage> messages,
+            AgentSession? session = null,
+            AgentRunOptions? options = null,
+            CancellationToken cancellationToken = default)
+        {
+            throw new NotSupportedException();
+        }
+
+        private sealed class RecordingSession : AgentSession;
     }
 }

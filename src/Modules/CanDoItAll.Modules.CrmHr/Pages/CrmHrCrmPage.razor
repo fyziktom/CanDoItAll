@@ -1,8 +1,11 @@
 @page "/crm-hr/crm"
+@using CanDoItAll.AgentFramework.Core
+@using CanDoItAll.AgentFramework.Models
 @using CanDoItAll.Components.BaseLib
 @using CanDoItAll.Modules.Projects
 @inject CrmService CrmService
 @inject ProjectsService ProjectsService
+@inject IAgentChatLauncher AgentChatLauncher
 @inject NavigationManager Navigation
 @inject NotificationService NotificationService
 
@@ -32,6 +35,12 @@
                              Tone="success" />
             </Stats>
             <Actions>
+                <PageHeaderActionButton Icon="smart_toy"
+                                        Label="Agent chats"
+                                        TooltipText="Open the global agent catalog with the current CRM selection as context."
+                                        ButtonStyle="ButtonStyle.Primary"
+                                        Click="OpenAgentChats"
+                                        data-testid="crmhr-crm-agent-chats" />
                 <PageHeaderActionButton Icon="asset"
                                         Label="Open directory"
                                         TooltipText="Open the shared party directory."
@@ -518,6 +527,10 @@
                              Close="CloseOpportunityConversionDialogAsync"
                              Save="SaveOpportunityConversionAsync" />
 
+<CrmAgentChatContextProvider Account="agentChatAccountContext"
+                             Opportunity="agentChatOpportunityContext"
+                             RefreshRequested="HandleAgentChatRefreshRequestedAsync" />
+
 @code {
     [SupplyParameterFromQuery(Name = "accountId")]
     public Guid? AccountIdQuery { get; set; }
@@ -533,6 +546,8 @@
     private CrmInteractionEditorModel interactionEditor = CreateInteractionEditor();
     private CrmOpportunityEditorModel opportunityEditor = CreateOpportunityEditor(null, null);
     private CrmOpportunityConversionEditorModel opportunityConversionEditor = new();
+    private CrmAgentChatAccountContext? agentChatAccountContext;
+    private CrmAgentChatOpportunityContext? agentChatOpportunityContext;
     private Guid? selectedOpportunityId;
     private string searchText = string.Empty;
     private string stageFilter = string.Empty;
@@ -663,6 +678,7 @@
         selectedOpportunityId = null;
         handledAccountKey = "none";
         message = null;
+        UpdateAgentChatContext();
     }
 
     private async Task LoadAccountsAsync()
@@ -808,6 +824,7 @@
         opportunityEditor = CreateOpportunityEditor(selectedAccount, SelectedOpportunity);
         interactionEditor = CreateInteractionEditor(selectedOpportunityId);
         isOpportunityConversionDialogOpen = false;
+        UpdateAgentChatContext();
         return Task.CompletedTask;
     }
 
@@ -869,6 +886,7 @@
         opportunityConversionEditor = new();
         interactionEditor = CreateInteractionEditor();
         isOpportunityConversionDialogOpen = false;
+        UpdateAgentChatContext();
     }
 
     private void AddOpportunityPartyLink()
@@ -1135,6 +1153,7 @@
             opportunityEditor = CreateOpportunityEditor(null, null);
             interactionEditor = CreateInteractionEditor();
             opportunityConversionEditor = new();
+            UpdateAgentChatContext();
             return;
         }
 
@@ -1158,6 +1177,46 @@
         opportunityEditor = CreateOpportunityEditor(selectedAccount, SelectedOpportunity);
         interactionEditor = CreateInteractionEditor(selectedOpportunityId);
         opportunityConversionEditor = CreateOpportunityConversionEditor(SelectedOpportunity);
+        UpdateAgentChatContext();
+    }
+
+    private void UpdateAgentChatContext()
+    {
+        if (selectedAccount is null)
+        {
+            agentChatAccountContext = null;
+            agentChatOpportunityContext = null;
+            return;
+        }
+
+        agentChatAccountContext = new CrmAgentChatAccountContext(
+            selectedAccount.AccountPartyId,
+            selectedAccount.DisplayName,
+            selectedAccount.LifecycleStatus,
+            selectedAccount.Profile.RelationshipStage,
+            selectedAccount.Roles);
+        var opportunity = SelectedOpportunity;
+        agentChatOpportunityContext = opportunity is null
+            ? null
+            : new CrmAgentChatOpportunityContext(
+                selectedAccount.AccountPartyId,
+                opportunity.Id,
+                opportunity.Title,
+                opportunity.Stage,
+                opportunity.OpportunitySource,
+                opportunity.Parties.Select(party => party.Role));
+    }
+
+    private void OpenAgentChats()
+        => AgentChatLauncher.ShowCatalog();
+
+    private async Task HandleAgentChatRefreshRequestedAsync(
+        AgentChatExecutionCompleted notification)
+    {
+        await ReloadSelectedAccountAsync(clearMessage: false);
+        NotifySuccess(
+            "CRM refreshed",
+            "The selected account was refreshed after the agent run completed.");
     }
 
     private PartyOptionModel ResolvePartyFilterOption(Guid id, string displayName, PartyType fallbackPartyType)

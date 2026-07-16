@@ -1,7 +1,6 @@
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Components.BaseLib;
-using CanDoItAll.Components.OverlayLib;
 using Microsoft.AspNetCore.Components;
 
 namespace CanDoItAll.Modules.AgentFramework.Pages.Components;
@@ -12,10 +11,6 @@ public partial class AgentCatalogPanel
     private const string TeamRootTreeNodeId = "agents:teams";
     private const string TeamTreeNodePrefix = "agents:team:";
     private const string AgentTreeNodePrefix = "agents:agent:";
-    private const string HrAgentWindowId = "agents.hr-agent.chat";
-    private const string HrAgentWindowTestId = "agents-hr-agent-window";
-    private const string HrAgentViewportTestId = "agents-hr-agent-viewport";
-
     [Parameter]
     public Guid? RequestedAgentId { get; set; }
 
@@ -46,6 +41,9 @@ public partial class AgentCatalogPanel
     [Inject]
     public DialogService DialogService { get; set; } = default!;
 
+    [Inject]
+    public IAgentChatLauncher AgentChatLauncher { get; set; } = default!;
+
     private IReadOnlyList<AgentDefinition> agents = [];
     private IReadOnlyList<AgentTeamDefinition> teams = [];
     private IReadOnlyDictionary<Guid, bool> privateProviderById = new Dictionary<Guid, bool>();
@@ -59,7 +57,7 @@ public partial class AgentCatalogPanel
     private Guid? selectedTeamId;
     private Guid? appliedRequestedTeamId;
     private Guid? openedRequestedAgentId;
-    private OverlayWindowState hrAgentWindowState = new() { IsVisible = false };
+    private bool isOpeningHrAgentChat;
 
     private IReadOnlyList<AgentDefinition> FilteredAgents => agents
         .Where(MatchesSelectedTeam)
@@ -249,25 +247,33 @@ public partial class AgentCatalogPanel
         selectedAgentId = agentId;
     }
 
-    private Task OpenHrAgentChatAsync(AgentDefinition agent)
+    private async Task OpenHrAgentChatAsync(AgentDefinition agent)
     {
+        if (isOpeningHrAgentChat)
+        {
+            return;
+        }
+
         if (!HrAgentIdentity.Matches(agent))
         {
             throw new InvalidOperationException("Only the configured HR agent can open the HR chat window.");
         }
 
         selectedAgentId = agent.Id;
-        var nextState = OverlayWindowState.Normalize(hrAgentWindowState);
-        nextState.IsVisible = true;
-        nextState.IsMinimized = false;
-        hrAgentWindowState = nextState;
-        return Task.CompletedTask;
-    }
-
-    private Task HandleHrAgentWindowStateChangedAsync(OverlayWindowState state)
-    {
-        hrAgentWindowState = OverlayWindowState.Normalize(state);
-        return Task.CompletedTask;
+        isOpeningHrAgentChat = true;
+        try
+        {
+            await AgentChatLauncher.StartNewChatAsync(agent.Id);
+            NotificationService.Success("Chat ready", $"Opened a new chat with {agent.Name}.");
+        }
+        catch (Exception exception)
+        {
+            NotificationService.Error("Unable to open HR agent chat", exception.Message);
+        }
+        finally
+        {
+            isOpeningHrAgentChat = false;
+        }
     }
 
     private Task HandleAgentTeamTreeSelectAsync(string nodeId)

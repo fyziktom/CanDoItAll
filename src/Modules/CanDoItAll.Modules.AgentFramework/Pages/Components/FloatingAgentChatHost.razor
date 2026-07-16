@@ -1,0 +1,255 @@
+@implements IAsyncDisposable
+
+<div class="floating-agent-chat-host"
+     data-cda-overlay-container="true"
+     data-testid="floating-agent-chat-host">
+    @if (State.IsCatalogVisible)
+    {
+        <OverlayWindow WindowId="floating-agent-catalog"
+                       TestId="floating-agent-catalog-window"
+                       AriaLabel="Floating agent chats"
+                       Kicker="Agents"
+                       Title="Agent chats"
+                       Summary="Start a contextual chat or reopen an active one."
+                       BodyClass="floating-agent-chat-host__catalog-body"
+                       DefaultPlacement="top-right"
+                       DefaultWidth="560"
+                       DefaultHeight="720"
+                       MinWidth="360"
+                       MinHeight="420"
+                       MaxWidth="900"
+                       MaxHeight="900"
+                       State="@ResolveCatalogWindowState()"
+                       StateChanged="HandleCatalogWindowStateChangedAsync">
+            @if (isInitializing)
+            {
+                <LoadingState Title="Initializing agent chats"
+                              Description="Loading floating chat settings and the active agent catalog." />
+            }
+            else if (!string.IsNullOrWhiteSpace(initializationError))
+            {
+                <EmptyState Eyebrow="Agent chats unavailable"
+                            Title="Floating agent chats did not initialize"
+                            Description="@initializationError">
+                    <Actions>
+                        <Button Text="Retry"
+                                Icon="refresh"
+                                ButtonStyle="ButtonStyle.Light"
+                                Click="InitializeHostAsync" />
+                    </Actions>
+                </EmptyState>
+            }
+            else
+            {
+                <Tabs SelectedIndex="@SelectedCatalogTabIndex"
+                  SelectedIndexChanged="HandleCatalogTabChangedAsync"
+                  AriaLabel="Agent chat catalog"
+                  Variant="TabsVariant.WorkspaceSecondary"
+                  RenderMode="TabRenderMode.Server">
+                <TabsItem Text="Agents" Icon="smart_toy">
+                    <div class="floating-agent-chat-host__catalog-tab">
+                        <TextBox Value="@searchText"
+                                 ValueChanged="HandleSearchChangedAsync"
+                                 Placeholder="Search agents"
+                                 Immediate="true"
+                                 aria-label="Search floating chat agents"
+                                 data-testid="floating-agent-chat-search" />
+
+                        @if (CurrentContext is { } context)
+                        {
+                            <Cluster Gap="LayoutGap.XSmall" Wrap="FlexWrap.Wrap">
+                                <StatusBadge Tone="info" Text="@context.Scope.DisplayName" />
+                                <StatusBadge Tone="@(context.Scope.AccessState == AgentChatContextAccessState.Ready ? "neutral" : "warning")"
+                                             Text="@context.Scope.AccessState.ToString()" />
+                                @if (context.Scope.AccessState == AgentChatContextAccessState.Ready)
+                                {
+                                    <StatusBadge Tone="neutral" Text="@($"{VisibleAgents.Count} available")" />
+                                }
+                            </Cluster>
+                        }
+
+                        @if (isLoadingAgents)
+                        {
+                            <LoadingState Title="Loading agents"
+                                          Description="Reading the active agent catalog." />
+                        }
+                        else if (!string.IsNullOrWhiteSpace(loadError))
+                        {
+                            <EmptyState Eyebrow="Agents unavailable"
+                                        Title="Unable to load agents"
+                                        Description="@loadError">
+                                <Actions>
+                                    <Button Text="Retry"
+                                            ButtonStyle="ButtonStyle.Light"
+                                            Click="LoadAgentsAsync" />
+                                </Actions>
+                            </EmptyState>
+                        }
+                        else if (CurrentContext?.Scope.AccessState == AgentChatContextAccessState.Loading)
+                        {
+                            <LoadingState Title="Resolving context access"
+                                          Description="Checking which agents may receive the active module context." />
+                        }
+                        else if (CurrentContext?.Scope.AccessState == AgentChatContextAccessState.Failed)
+                        {
+                            <EmptyState Eyebrow="Context access unavailable"
+                                        Title="Agent access could not be resolved"
+                                        Description="The context remains fail-closed. Retry before starting a contextual chat.">
+                                <Actions>
+                                    <Button Text="Retry"
+                                            Icon="refresh"
+                                            ButtonStyle="ButtonStyle.Light"
+                                            Click="RetryContextAccess" />
+                                </Actions>
+                            </EmptyState>
+                        }
+                        else if (VisibleAgents.Count == 0)
+                        {
+                            <EmptyState Eyebrow="No available agents"
+                                        Title="No agents can read the current context"
+                                        Description="Clear the search, or adjust the agent's access policy for this module context." />
+                        }
+                        else
+                        {
+                            <div class="floating-agent-chat-host__agent-list">
+                                @foreach (var agent in VisibleAgents)
+                                {
+                                    <AgentSelectionCard @key="agent.Id"
+                                                        Agent="@agent"
+                                                        Compact="true"
+                                                        ShowSummary="false"
+                                                        ShowCapabilityCount="false"
+                                                        ShowUpdatedAt="false"
+                                                        ShowChatHistory="true"
+                                                        ShowDetailsTooltip="true"
+                                                        IsSelected="@(selectedAgentId == agent.Id)"
+                                                        SelectedLabel="Selected"
+                                                        ShellTestId="floating-agent-chat-agent-card"
+                                                        SelectTestId="@($"floating-agent-chat-agent-{agent.Id:N}")"
+                                                        OnSelect="@(() => SelectAgent(agent.Id))"
+                                                        OnDoubleClick="@(() => StartNewChatAsync(agent))">
+                                        <Actions>
+                                            <Button Text="New chat"
+                                                    Icon="add_comment"
+                                                    Size="ButtonSize.Small"
+                                                    Disabled="@IsAgentBusy(agent.Id)"
+                                                    Click="@(() => StartNewChatAsync(agent))" />
+                                            <Button Text="History"
+                                                    Icon="history"
+                                                    Size="ButtonSize.Small"
+                                                    ButtonStyle="ButtonStyle.Light"
+                                                    Disabled="@IsAgentBusy(agent.Id)"
+                                                    Click="@(() => OpenHistoryAsync(agent))" />
+                                        </Actions>
+                                    </AgentSelectionCard>
+                                }
+                            </div>
+                        }
+                    </div>
+                </TabsItem>
+                <TabsItem Text="Active chats" Icon="forum">
+                    <div class="floating-agent-chat-host__catalog-tab">
+                        <Cluster Gap="LayoutGap.XSmall" Wrap="FlexWrap.Wrap">
+                            <StatusBadge Tone="info" Text="@($"{State.ActiveChats.Count} active")" />
+                            <StatusBadge Tone="neutral"
+                                         Text="@($"Kept for {Coordinator.CurrentSettings.HiddenActiveChatRetentionMinutes} min")" />
+                        </Cluster>
+
+                        @if (State.ActiveChats.Count == 0)
+                        {
+                            <EmptyState Eyebrow="Active chats"
+                                        Title="No chats are being kept active"
+                                        Description="Double-click an agent to start a contextual conversation." />
+                        }
+                        else
+                        {
+                            <Stack GapScale="LayoutGap.Small" AlignItems="AlignItems.Stretch">
+                                @foreach (var chat in State.ActiveChats)
+                                {
+                                    <SurfaceCard @key="chat.HandleId"
+                                                 Soft="true"
+                                                 Class="floating-agent-chat-host__active-card">
+                                        <Split Gap="LayoutGap.Small">
+                                            <Stack GapScale="LayoutGap.XSmall">
+                                                <TextBlock TextStyle="TextStyle.Subtitle2" Value="@chat.Agent.Name" />
+                                                <Cluster Gap="LayoutGap.XSmall" Wrap="FlexWrap.Wrap">
+                                                    <StatusBadge Tone="@(chat.IsVisible ? "success" : "neutral")"
+                                                                 Text="@(chat.IsVisible ? "Open" : "Kept active")" />
+                                                    <StatusBadge Tone="@ResolveRunStateTone(chat.RunState)"
+                                                                 Text="@ResolveRunStateLabel(chat.RunState)" />
+                                                </Cluster>
+                                            </Stack>
+                                            <Cluster Gap="LayoutGap.XSmall" Wrap="FlexWrap.Wrap">
+                                                <Button Text="Open"
+                                                        Icon="open_in_new"
+                                                        Size="ButtonSize.Small"
+                                                        Disabled="@chat.IsVisible"
+                                                        Click="@(() => ShowChat(chat.HandleId))" />
+                                                <Button Text="Stop"
+                                                        Icon="stop_circle"
+                                                        Size="ButtonSize.Small"
+                                                        ButtonStyle="ButtonStyle.Danger"
+                                                        Disabled="@(!chat.CanStop)"
+                                                        Click="@(() => RequestCloseAsync(chat.HandleId))" />
+                                            </Cluster>
+                                        </Split>
+                                    </SurfaceCard>
+                                }
+                            </Stack>
+                        }
+                    </div>
+                </TabsItem>
+                </Tabs>
+            }
+        </OverlayWindow>
+    }
+
+    @if (State.VisibleChat is { } visibleChat)
+    {
+        <OverlayWindow @key="visibleChat.HandleId"
+                       WindowId="@BuildChatWindowId(visibleChat.HandleId)"
+                       TestId="floating-agent-chat-window"
+                       AriaLabel="@($"Chat with {visibleChat.Agent.Name}")"
+                       Kicker="Active agent chat"
+                       Title="@visibleChat.Agent.Name"
+                       Summary="@visibleChat.Agent.RoleTitle"
+                       BodyClass="floating-agent-chat-host__chat-body"
+                       DefaultPlacement="top-left"
+                       DefaultWidth="760"
+                       DefaultHeight="720"
+                       MinWidth="520"
+                       MinHeight="420"
+                       MaxWidth="1100"
+                       MaxHeight="920"
+                       State="@ResolveChatWindowState(visibleChat.HandleId)"
+                       StateChanged="@((OverlayWindowState value) => HandleChatWindowStateChangedAsync(visibleChat.HandleId, value))">
+            <div class="floating-agent-chat-host__chat-content">
+                <Cluster Gap="LayoutGap.XSmall" Wrap="FlexWrap.Wrap">
+                    @if (CurrentContext is { } activeContext)
+                    {
+                        <StatusBadge Tone="info" Text="@activeContext.Scope.DisplayName" />
+                        <StatusBadge Tone="@(activeContext.CanRead(visibleChat.Agent.AgentId) ? "success" : "warning")"
+                                     Text="@(activeContext.CanRead(visibleChat.Agent.AgentId) ? "Context access allowed" : "Context access blocked")" />
+                    }
+                    else
+                    {
+                        <StatusBadge Tone="neutral" Text="No module context" />
+                    }
+                </Cluster>
+                @if (visibleChat.ChatSessionId is { } sessionId)
+                {
+                    <AgentChatPanel PreferredAgentId="@visibleChat.Agent.AgentId"
+                                    PreferredSessionId="@sessionId"
+                                    ActiveChatHandleId="@visibleChat.HandleId"
+                                    PersistedActiveChatRunState="@visibleChat.RunState"
+                                    DisplayMode="AgentChatPanelDisplayMode.FocusedFloating" />
+                }
+                else
+                {
+                    <LoadingState Title="Preparing chat"
+                                  Description="Reserving the agent and creating a durable conversation." />
+                }
+            </div>
+        </OverlayWindow>
+    }
+</div>

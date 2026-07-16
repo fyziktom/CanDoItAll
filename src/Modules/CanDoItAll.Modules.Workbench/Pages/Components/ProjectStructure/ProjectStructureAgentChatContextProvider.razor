@@ -1,0 +1,254 @@
+@using CanDoItAll.AgentFramework.Core
+@using CanDoItAll.AgentFramework.Models
+@using CanDoItAll.Modules.Workbench.ProjectStructure
+@using Microsoft.Extensions.Logging
+@implements IDisposable
+@inject IAgentChatContextRegistry ContextRegistry
+@inject IAgentChatExecutionNotificationHub ExecutionNotificationHub
+@inject IAgentReferenceDataProvider ReferenceDataProvider
+@inject IAgentReferenceDataCacheInvalidator ReferenceDataCacheInvalidator
+@inject ILogger<ProjectStructureAgentChatContextProvider> Logger
+
+@code {
+    [Parameter, EditorRequired]
+    public Guid ProjectId { get; set; }
+
+    [Parameter, EditorRequired]
+    public string ProjectName { get; set; } = string.Empty;
+
+    [Parameter]
+    public IReadOnlyList<string> SelectedNodeIds { get; set; } = [];
+
+    [Parameter]
+    public EventCallback<AgentChatExecutionCompleted> RefreshRequested { get; set; }
+
+    private readonly CancellationTokenSource disposalCts = new();
+    private IReadOnlyList<AgentDefinition> agents = [];
+    private IAgentChatContextScopeLease? scopeLease;
+    private IAgentChatContextFragmentLease? baseFragmentLease;
+    private IAgentChatContextFragmentLease? selectionFragmentLease;
+    private IAgentChatExecutionNotificationSubscription? notificationSubscription;
+    private AgentChatContextSource? activeSource;
+    private Guid activeProjectId;
+    private string activeProjectName = string.Empty;
+    private string selectionKey = string.Empty;
+    private AgentChatContextAccessState accessState = AgentChatContextAccessState.Loading;
+    private long agentAccessGeneration;
+    private bool isDisposed;
+
+    protected override void OnInitialized()
+    {
+        ReferenceDataCacheInvalidator.Invalidated += HandleReferenceDataInvalidated;
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (ProjectId == Guid.Empty || string.IsNullOrWhiteSpace(ProjectName))
+        {
+            DisposeContext();
+            return;
+        }
+
+        if (activeProjectId != ProjectId)
+        {
+            await ActivateContextAsync();
+            return;
+        }
+
+        if (!string.Equals(activeProjectName, ProjectName, StringComparison.Ordinal))
+        {
+            activeProjectName = ProjectName;
+            scopeLease?.Update(ProjectStructureAgentChatContextBuilder.BuildScope(
+                scopeLease.ScopeId,
+                ProjectId,
+                ProjectName,
+                agents,
+                accessState));
+        }
+
+        UpdateSelectionFragment();
+    }
+
+    private async Task ActivateContextAsync()
+    {
+        DisposeContext();
+        var projectId = ProjectId;
+        var projectName = ProjectName;
+        var loadGeneration = Interlocked.Increment(ref agentAccessGeneration);
+        activeProjectId = projectId;
+        activeProjectName = projectName;
+        accessState = AgentChatContextAccessState.Loading;
+        var scopeId = AgentChatContextScopeId.Create();
+        var source = ProjectStructureAgentChatContextBuilder.BuildSource(projectId);
+        activeSource = source;
+        scopeLease = ContextRegistry.ActivateScope(
+            ProjectStructureAgentChatContextBuilder.BuildScope(
+                scopeId,
+                projectId,
+                projectName,
+                agents: [],
+                accessState));
+        baseFragmentLease = ContextRegistry.RegisterFragment(
+            scopeId,
+            ProjectStructureAgentChatContextBuilder.BuildBaseFragment(projectId));
+        var selectionFragment = ProjectStructureAgentChatContextBuilder.BuildSelectionFragment(SelectedNodeIds);
+        selectionFragmentLease = ContextRegistry.RegisterFragment(scopeId, selectionFragment);
+        selectionKey = BuildSelectionKey(SelectedNodeIds);
+        notificationSubscription = ExecutionNotificationHub.Subscribe(
+            source,
+            HandleExecutionCompletedAsync);
+
+        await LoadAgentAccessAsync(projectId, scopeId, loadGeneration);
+    }
+
+    private async Task LoadAgentAccessAsync(
+        Guid projectId,
+        AgentChatContextScopeId scopeId,
+        long loadGeneration)
+    {
+        try
+        {
+            var referenceData = await ReferenceDataProvider.GetAsync(
+                new AgentReferenceDataRequest(
+                    AgentReferenceDataSections.Agents,
+                    IncludeAgentTemplates: false,
+                    ActiveAgentsOnly: true),
+                disposalCts.Token);
+            if (activeProjectId != projectId ||
+                isDisposed ||
+                loadGeneration != Volatile.Read(ref agentAccessGeneration) ||
+                scopeLease?.ScopeId != scopeId)
+            {
+                return;
+            }
+
+            agents = referenceData.Agents;
+            accessState = AgentChatContextAccessState.Ready;
+            scopeLease.Update(ProjectStructureAgentChatContextBuilder.BuildScope(
+                scopeId,
+                projectId,
+                activeProjectName,
+                agents,
+                accessState));
+        }
+        catch (OperationCanceledException) when (disposalCts.IsCancellationRequested)
+        {
+        }
+        catch (Exception exception)
+        {
+            if (loadGeneration != Volatile.Read(ref agentAccessGeneration) ||
+                activeProjectId != projectId ||
+                isDisposed)
+            {
+                return;
+            }
+
+            Logger.LogError(
+                exception,
+                "Unable to resolve project-structure agent chat access. ProjectId={ProjectId} FailureType={FailureType}.",
+                projectId,
+                exception.GetType().Name);
+            agents = [];
+            accessState = AgentChatContextAccessState.Failed;
+            scopeLease?.Update(ProjectStructureAgentChatContextBuilder.BuildScope(
+                scopeId,
+                projectId,
+                activeProjectName,
+                agents,
+                accessState));
+        }
+    }
+
+    private void HandleReferenceDataInvalidated(object? sender, EventArgs eventArgs)
+    {
+        if (isDisposed)
+        {
+            return;
+        }
+
+        var loadGeneration = Interlocked.Increment(ref agentAccessGeneration);
+        _ = InvokeAsync(async () =>
+        {
+            if (isDisposed ||
+                activeProjectId == Guid.Empty ||
+                scopeLease is null ||
+                loadGeneration != Volatile.Read(ref agentAccessGeneration))
+            {
+                return;
+            }
+
+            var projectId = activeProjectId;
+            var scopeId = scopeLease.ScopeId;
+            agents = [];
+            accessState = AgentChatContextAccessState.Loading;
+            scopeLease.Update(ProjectStructureAgentChatContextBuilder.BuildScope(
+                scopeId,
+                projectId,
+                activeProjectName,
+                agents: [],
+                accessState));
+            await LoadAgentAccessAsync(projectId, scopeId, loadGeneration);
+        });
+    }
+
+    private void UpdateSelectionFragment()
+    {
+        var nextSelectionKey = BuildSelectionKey(SelectedNodeIds);
+        if (string.Equals(selectionKey, nextSelectionKey, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        selectionFragmentLease?.Update(
+            ProjectStructureAgentChatContextBuilder.BuildSelectionFragment(SelectedNodeIds));
+        selectionKey = nextSelectionKey;
+    }
+
+    private Task HandleExecutionCompletedAsync(AgentChatExecutionCompleted notification)
+    {
+        if (isDisposed || activeSource is null || notification.Source != activeSource)
+        {
+            return Task.CompletedTask;
+        }
+
+        return InvokeAsync(() => RefreshRequested.InvokeAsync(notification));
+    }
+
+    private static string BuildSelectionKey(IEnumerable<string>? selectedNodeIds)
+        => string.Join(
+            '\u001F',
+            ContextualAgentWorkspaceContextBuilder.NormalizeSelectedNodeIds(selectedNodeIds));
+
+    private void DisposeContext()
+    {
+        Interlocked.Increment(ref agentAccessGeneration);
+        notificationSubscription?.Dispose();
+        notificationSubscription = null;
+        activeSource = null;
+        selectionFragmentLease?.Dispose();
+        selectionFragmentLease = null;
+        baseFragmentLease?.Dispose();
+        baseFragmentLease = null;
+        scopeLease?.Dispose();
+        scopeLease = null;
+        agents = [];
+        activeProjectId = Guid.Empty;
+        activeProjectName = string.Empty;
+        accessState = AgentChatContextAccessState.Loading;
+        selectionKey = string.Empty;
+    }
+
+    public void Dispose()
+    {
+        if (isDisposed)
+        {
+            return;
+        }
+
+        isDisposed = true;
+        ReferenceDataCacheInvalidator.Invalidated -= HandleReferenceDataInvalidated;
+        disposalCts.Cancel();
+        DisposeContext();
+        disposalCts.Dispose();
+    }
+}

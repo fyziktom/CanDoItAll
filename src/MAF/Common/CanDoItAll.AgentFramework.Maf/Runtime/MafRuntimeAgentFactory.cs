@@ -15,6 +15,7 @@ namespace CanDoItAll.AgentFramework.Maf;
 internal sealed class MafRuntimeAgentFactory
 {
     private static readonly ProviderProfileService ProviderFeatureService = new();
+    private static readonly JsonSerializerOptions LoggingJsonSerializerOptions = new(JsonSerializerDefaults.Web);
 
     private readonly string workspaceRoot;
     private readonly IServiceProvider services;
@@ -141,6 +142,15 @@ internal sealed class MafRuntimeAgentFactory
             effectiveProvider,
             suppressApprovalRequirements,
             progressCallback);
+        if (runtimeOptions.TransientContext is not null)
+        {
+            capabilityState.ContextProviders.Add(
+                new StaticMessageContextProvider(
+                    new ChatMessage(
+                        ChatRole.User,
+                        runtimeOptions.TransientContext.Content)));
+        }
+
         if (finalizerCapture is not null)
         {
             capabilityState.Tools.AddRange(finalizerCapture.Tools);
@@ -249,6 +259,9 @@ internal sealed class MafRuntimeAgentFactory
             var participantAgents = new Dictionary<Guid, AIAgent>();
             foreach (var participant in handoffOptions.Participants.Where(item => participantIds.Contains(item.Agent.Id)))
             {
+                var effectiveParticipantOptions = participant.Agent.Id == handoffOptions.EntryAgentId
+                    ? participantExecutionOptions
+                    : participantExecutionOptions with { TransientContext = null };
                 var participantBuild = await CreateRuntimeBuildAsync(
                     participant.Agent,
                     participant.Provider,
@@ -258,7 +271,7 @@ internal sealed class MafRuntimeAgentFactory
                     cancellationToken,
                     suppressApprovalRequirements,
                     forceOmitTemperature,
-                    participantExecutionOptions,
+                    effectiveParticipantOptions,
                     runtimeSessionKey);
                 participantBuilds.Add(participantBuild);
                 participantAgents[participant.Agent.Id] = participantBuild.Agent;
@@ -339,7 +352,7 @@ internal sealed class MafRuntimeAgentFactory
         var logger = services.GetService<ILogger<MafAgentRuntime>>();
         builder.UseLogging(
             services.GetService<ILoggerFactory>() ?? NullLoggerFactory.Instance,
-            logging => logging.JsonSerializerOptions = new JsonSerializerOptions(JsonSerializerDefaults.Web));
+            logging => logging.JsonSerializerOptions = LoggingJsonSerializerOptions);
         builder.Use(async (innerAgent, context, next, cancellationToken) =>
         {
             var functionName = context.Function?.Name ?? "unknown";

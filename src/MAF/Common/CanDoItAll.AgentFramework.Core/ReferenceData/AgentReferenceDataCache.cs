@@ -5,6 +5,8 @@ public sealed class AgentReferenceDataCache : IAgentReferenceDataCacheInvalidato
     private readonly object syncRoot = new();
     private readonly Dictionary<AgentReferenceDataRequest, AgentReferenceDataCacheEntry> entries = [];
 
+    public event EventHandler? Invalidated;
+
     public async Task<AgentReferenceDataSnapshot> GetOrCreateAsync(
         AgentReferenceDataRequest request,
         DateTimeOffset now,
@@ -46,6 +48,8 @@ public sealed class AgentReferenceDataCache : IAgentReferenceDataCacheInvalidato
         {
             entries.Clear();
         }
+
+        Invalidated?.Invoke(this, EventArgs.Empty);
     }
 
     private void Remove(

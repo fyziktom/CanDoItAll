@@ -86,6 +86,10 @@
         {
             <AgentVoiceSettingsPanel />
         }
+        else if (string.Equals(selectedTab, "floating-chat", StringComparison.Ordinal))
+        {
+            <FloatingAgentChatSettingsPanel />
+        }
         else if (string.Equals(selectedTab, "agents", StringComparison.Ordinal))
         {
             <AgentCatalogPanel RequestedAgentId="@effectiveRequestedAgentId"

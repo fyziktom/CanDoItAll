@@ -114,6 +114,25 @@ public static class AgentFrameworkModuleServiceCollectionExtensions
             serviceProvider.GetRequiredService<AgentReferenceDataCache>());
         services.TryAddScoped<IAgentReferenceDataProvider, WorkspaceBackedAgentReferenceDataProvider>();
         services.TryAddSingleton(TimeProvider.System);
+        services.AddScoped<AgentChatContextRegistry>();
+        services.AddScoped<IAgentChatContextRegistry>(serviceProvider =>
+            serviceProvider.GetRequiredService<AgentChatContextRegistry>());
+        services.AddScoped<AgentChatExecutionNotificationHub>();
+        services.AddScoped<IAgentChatExecutionNotificationHub>(serviceProvider =>
+            serviceProvider.GetRequiredService<AgentChatExecutionNotificationHub>());
+        services.AddScoped<IAgentChatExecutionOrchestrator, AgentChatExecutionOrchestrator>();
+        services.AddScoped<ActiveAgentChatRegistry>();
+        services.AddScoped<IActiveAgentChatRegistry>(serviceProvider =>
+            serviceProvider.GetRequiredService<ActiveAgentChatRegistry>());
+        services.AddScoped<AgentChatPreparationPool>();
+        services.AddScoped<IAgentChatPreparationPool>(serviceProvider =>
+            serviceProvider.GetRequiredService<AgentChatPreparationPool>());
+        services.AddScoped<IFloatingAgentChatSettingsService, FloatingAgentChatSettingsService>();
+        services.AddScoped<FloatingAgentChatCoordinator>();
+        services.AddScoped<IAgentChatLauncher>(serviceProvider =>
+            serviceProvider.GetRequiredService<FloatingAgentChatCoordinator>());
+        services.AddScoped<IFloatingAgentChatCoordinator>(serviceProvider =>
+            serviceProvider.GetRequiredService<FloatingAgentChatCoordinator>());
         services.AddScoped<ICanDoItAllAgentWorkspaceFactory, CanDoItAllAgentWorkspaceFactory>();
         services.AddScoped<CanDoItAllAgentWorkspaceFactory>(serviceProvider =>
             (CanDoItAllAgentWorkspaceFactory)serviceProvider.GetRequiredService<ICanDoItAllAgentWorkspaceFactory>());

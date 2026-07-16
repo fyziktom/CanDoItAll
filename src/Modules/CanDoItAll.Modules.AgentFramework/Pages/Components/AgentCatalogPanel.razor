@@ -26,6 +26,7 @@
                             Icon="forum"
                             Size="ButtonSize.Small"
                             ButtonStyle="ButtonStyle.Info"
+                            Disabled="@isOpeningHrAgentChat"
                             Click="@(() => OpenHrAgentChatAsync(toolbarHrAgent))"
                             data-testid="agents-hr-agent-open-top" />
                 }
@@ -163,6 +164,7 @@
                                                     Icon="forum"
                                                     Size="ButtonSize.Small"
                                                     ButtonStyle="ButtonStyle.Light"
+                                                    Disabled="@isOpeningHrAgentChat"
                                                     Click="@(() => OpenHrAgentChatAsync(agent))"
                                                     data-testid="agents-hr-agent-open" />
                                         }
@@ -177,34 +179,3 @@
     }
 
 </Stack>
-
-@if (HrAgent is { } hrAgent && hrAgentWindowState.IsVisible)
-{
-    <div class="agent-catalog-panel__hr-chat-viewport"
-         data-cda-overlay-container="true"
-         data-testid="@HrAgentViewportTestId">
-        <OverlayWindow @key="hrAgent.Id"
-                       WindowId="@HrAgentWindowId"
-                       TestId="@HrAgentWindowTestId"
-                       AriaLabel="HR agent chat"
-                       Kicker="Human resources"
-                       Title="@hrAgent.Name"
-                       Summary="@hrAgent.RoleTitle"
-                       BodyClass="agent-catalog-panel__hr-chat-body"
-                       DefaultPlacement="top-right"
-                       DefaultWidth="760"
-                       DefaultHeight="700"
-                       MinWidth="520"
-                       MinHeight="420"
-                       MaxWidth="1000"
-                       MaxHeight="860"
-                       State="@hrAgentWindowState"
-                       StateChanged="HandleHrAgentWindowStateChangedAsync">
-            <div class="agent-catalog-panel__hr-chat-content"
-                 data-testid="agents-hr-agent-chat-content">
-                <AgentChatPanel PreferredAgentId="@hrAgent.Id"
-                                DisplayMode="AgentChatPanelDisplayMode.FocusedFloating" />
-            </div>
-        </OverlayWindow>
-    </div>
-}

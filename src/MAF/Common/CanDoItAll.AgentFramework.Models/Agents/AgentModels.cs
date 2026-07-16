@@ -205,4 +205,9 @@ public sealed record AgentChatRunResult(
     AgentRunMetric Metric)
 {
     public Guid ExecutionRunId { get; init; }
+
+    public ExecutionState State { get; init; }
+
+    [JsonIgnore]
+    public AgentChatExecutionCompleted? ContextCompletionNotification { get; init; }
 }

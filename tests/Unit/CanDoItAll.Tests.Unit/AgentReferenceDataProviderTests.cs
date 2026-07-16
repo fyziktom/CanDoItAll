@@ -73,6 +73,21 @@ public sealed class AgentReferenceDataProviderTests
         Assert.Equal(2, workspace.ListProvidersCallCount);
     }
 
+    [Fact]
+    public void Invalidate_notifies_current_subscribers_only()
+    {
+        var cache = new AgentReferenceDataCache();
+        var notificationCount = 0;
+        EventHandler handler = (_, _) => notificationCount++;
+        cache.Invalidated += handler;
+
+        cache.Invalidate();
+        cache.Invalidated -= handler;
+        cache.Invalidate();
+
+        Assert.Equal(1, notificationCount);
+    }
+
     private static AgentDefinition CreateAgent(
         string name,
         AgentLifecycleStatus status,

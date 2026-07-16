@@ -1,0 +1,306 @@
+# Reusable floating agent chats
+
+Status: Accepted for phased implementation, 2026-07-16
+
+## Context
+
+The Project Structure canvas has a useful contextual agent catalog and chat, but the implementation is mounted inside `CanvasWorkbench.OverlayContent`. It is consequently bounded by the Canvas tab and is destroyed when the user switches to Gantt or navigates to another module. The same component also combines catalog filtering, access resolution, window state, durable chat sessions, run execution, approvals, attachments, history export, voice, runtime diagnostics, and module-specific prompt construction in one 1,550-line Razor file.
+
+The required behavior has three independent axes:
+
+- one floating host must survive component, tab, and routed-module changes;
+- the same durable conversation must receive the context of the module that is active for each new turn;
+- hidden conversations may remain active for a bounded time without retaining unsafe runtime resources.
+
+The existing runtime already has a per-turn `IAgentContextContributor` seam. It does not have a UI-context registry, an active-chat lifecycle, or a retained agent pool. A durable `ChatSessionRecord` is only the transcript/session identity. Each send constructs and disposes a fresh MAF `RuntimeBuildResult` containing the agent, context providers, tool providers, approval wrappers, MCP/A2A clients, and other disposables.
+
+The architecture mapping used CodeAnalytics snapshots `snap-20260716185835-0c0d9e98`, `snap-20260716185934-932fd70e`, `snap-20260716190015-48a36a28`, and `snap-20260716190043-94e27f4d`. The affected project graph has no direct project-reference cycle. `CanDoItAll.Modules.AgentFramework` already references Workbench and CRM-HR, so feature modules must never reference that module in return.
+
+## Decision
+
+Implement one circuit-scoped floating-chat coordinator and one global host.
+
+Feature modules integrate through small contracts in `CanDoItAll.AgentFramework.Core`. The implementation and settings persistence remain owned by `CanDoItAll.Modules.AgentFramework`. The global Razor host is composed once by `CanDoItAll.Web` above routed content. Shared transcript/composer presentation continues to use `ChatWorkspacePanel` from `CanDoItAll.AgentFramework.Components`.
+
+The global host uses OverlayLib's `OverlayWindow`, not CanvasLib's `CanvasFloatingWindow`. Canvas windows intentionally clamp to a `.cw-stage-surface` and participate in a canvas-local stacking context. `OverlayWindow` is the package-supported primitive for page and application overlays and owns drag, resize, minimize, focus, and stacking behavior.
+
+The coordinator is scoped to the Blazor circuit and active database-profile service graph. It must not be singleton. A singleton could leak active chats, context, drafts, or profile-specific agent identities across users and organizations.
+
+## Lifetimes
+
+Four identities remain explicit:
+
+| Lifetime | Identity | Owner | Retained data |
+| --- | --- | --- | --- |
+| Durable conversation | `ChatSessionId` | Agent workspace persistence | Transcript, title, run references, approval state |
+| Active floating chat | `AgentChatHandleId` | Circuit-scoped coordinator | Agent/session IDs, visibility, activity time, lightweight UI state |
+| Execution | `ExecutionRunId` | Agent runtime/persistence | One run, logs, receipts, metrics, cancellation state |
+| Prepared catalog entry | `AgentId` | Circuit-scoped preparation cache | Bounded immutable agent-definition metadata only |
+
+Keeping a chat active retains only the lightweight handle and durable session identity. It does not retain a `RuntimeBuildResult`, `AIAgent`, scoped service, credential, tool delegate, MCP client, attachment, voice buffer, or module component.
+
+Stopping a floating chat removes its active handle and clears transient UI state. It does not delete durable conversation history. Deletion or archival, if added later, must remain a separate explicit action.
+
+## Responsibility and dependency map
+
+| Responsibility | Owner |
+| --- | --- |
+| Strongly typed chat/context/settings records | `CanDoItAll.AgentFramework.Models` or pure Core contracts |
+| Launcher, context-registry, and lifecycle contracts | `CanDoItAll.AgentFramework.Core` |
+| Scoped coordinator and persisted settings adapter | `CanDoItAll.Modules.AgentFramework` |
+| Transcript/composer presentation | `CanDoItAll.AgentFramework.Components` |
+| Global catalog/chat `OverlayWindow` host | `CanDoItAll.Modules.AgentFramework`, composed by Web |
+| Project Structure context construction and access projection | `CanDoItAll.Modules.Workbench` |
+| CRM-HR, Processes, and future context construction | their owning modules |
+| Runtime authorization | existing server-side tool and capability policies |
+| Preparation metadata cache | `CanDoItAll.Modules.AgentFramework`, never live runtime objects |
+| Future prepared-resource pooling | MAF/provider runtime infrastructure, only after measurement and lease-safety proof |
+
+```text
+Workbench / CRM-HR / Processes
+        |
+        +--> IAgentChatLauncher
+        +--> IAgentChatContextRegistry
+                    |
+                    v
+       scoped FloatingAgentChatCoordinator
+                    |
+          +---------+----------+
+          |                    |
+          v                    v
+ global OverlayWindow     immutable context snapshot
+          |                    |
+          v                    v
+ AgentChatPanel ------> per-turn execution orchestrator
+          |
+          +--> raw durable user prompt
+          |
+          +--> transient request-scoped context provider
+                       |
+                       v
+            fresh RuntimeBuildResult
+```
+
+No feature module depends on `CanDoItAll.Modules.AgentFramework`. Web is the composition root and may reference both the feature modules and the global host.
+
+## Module context contract
+
+Context is pushed into a registry as immutable values; the registry does not retain a Razor component, domain entity, or callback delegate.
+
+A page activates an `AgentChatContextScope` and receives a disposable registration. The scope identifies the module/surface, provides a user-facing label, and contains an optional workspace-scope descriptor. The page or a nested component updates its registration with immutable `AgentChatContextFragment` values whenever selection or edited values change. Nested contributors use their own stable, strongly typed contributor IDs and deterministic order.
+
+Each scope snapshot contains:
+
+- stable module, surface, and context IDs;
+- a display label for the active location;
+- ordered context fragments whose text is the unavoidable external LLM protocol;
+- a bounded set of agent-access projections for catalog filtering and UI explanation;
+- a monotonically increasing version and capture timestamp;
+- optional sanitized trace metadata, never secrets or complete domain objects.
+
+Access resolution is explicit and fail-closed. A scope reports `Ready`, `Loading`, or `Failed`; only `Ready` can contribute context. `AllowListed` scopes require an agent projection, while `Unrestricted` is reserved for deliberately sanitized surfaces that have no canonical per-agent projection. Neither mode grants runtime tool access.
+
+The active scope is captured once at send initiation. Agent ID, session ID, scope version, ordered fragments, attachment paths, and refresh target form one immutable send command before any asynchronous runtime work begins. Navigation after capture cannot change the in-flight turn. The next turn captures the new active module, allowing one conversation to move safely from Project Structure to CRM-HR or Processes.
+
+Scope and fragment registrations are disposable. Disposal removes their immutable values immediately. A page transition therefore cannot leave an old project or partner selected as an implicit fallback. With no active context, the chat remains usable but sends no module context.
+
+The durable user prompt is stored unchanged apart from trimming. Module context is carried separately as bounded `AgentRuntimeTransientContext`, encoded as JSON inside an explicit untrusted-data boundary, and injected for one run through a User-role `AIContextProvider`. Framework-managed history excludes that provider message, so the context is not copied into durable/provider-native history. The transient value is retained in a bounded in-memory registry only while an approval is pending; approval continuation after a process restart fails explicitly rather than resuming without the exact captured context.
+
+Module context is not an authorization grant. Catalog access projections improve discoverability, but every tool invocation must continue to reload and enforce canonical agent, capability, project, process, and business authorization at the server boundary. The optional workspace descriptor is a typed trusted projection used by existing server-side authorization, never reconstructed from context text.
+
+Successful mutation-capable runs publish a typed completion notification containing the original scope/source, agent, session, and run identities. Module providers subscribe through disposable lifetimes and reload their own canonical state; the runtime never stores a page callback or component reference.
+
+## Active-chat lifecycle
+
+The coordinator exposes separate launcher and lifecycle views:
+
+- show or hide the global catalog;
+- start a new durable session for an agent;
+- open an existing session as an active handle;
+- activate one handle while preserving other hidden handles;
+- mark a handle busy/idle and update its session after a send;
+- keep a closed handle active or stop it;
+- prune expired hidden, idle handles;
+- expose an immutable ordered snapshot and one state-changed event for the host.
+
+Multiple active sessions for the same agent are allowed. Handle identity is not agent identity.
+
+Closing a visible chat opens an explicit decision dialog:
+
+- **Keep active** hides it and starts its inactivity retention window.
+- **Stop** removes the active handle and transient draft/voice state while leaving history intact.
+- **Cancel** leaves the window open.
+
+Visible or busy chats never expire. Hidden idle chats expire after the configured retention period. Cleanup uses one coordinator-level schedule driven by `TimeProvider`, not one timer per chat. Expiry is also checked opportunistically on coordinator operations so delayed timers do not preserve stale handles indefinitely.
+
+The first release does not claim that Stop cancels a running model call. Current cancellation is keyed to process runs, not interactive execution/chat identity. Until run/session cancellation is added and tested, the UI disables Stop while the handle is busy and reports the reason explicitly.
+
+## Settings
+
+Persist a dedicated typed floating-chat settings document under the versioned key `floating-agent-chats.v1`, using the existing keyed settings table without coupling it to `WorkflowSettings` serialization:
+
+- hidden active-chat retention minutes;
+- maximum active chat handles per circuit;
+- maximum prepared agents/resources;
+- adaptive preparation enabled;
+- prepared-resource idle retention minutes.
+
+Normalization enforces bounded positive values. The UI explains that an active handle is lightweight and that prepared-resource capacity is a separate runtime optimization.
+
+`MaximumPreparedAgents` defaults to zero. In the current implementation, a nonzero value warms only bounded, invalidatable active-agent definition metadata. It must not cause the UI layer to retain live runtime builds.
+
+## Prepared-agent stock decision
+
+Pooling the current `RuntimeBuildResult` or `AIAgent` is rejected. Those objects capture turn-specific context intent, runtime session key, tool and approval policy, attachments, credentials/configuration, scoped contributors, MCP/A2A clients, handoff participants, and async disposables. Reusing them can cross-contaminate Project Structure and CRM-HR context, preserve revoked authorization, race concurrent turns, or leak processes and credentials.
+
+The implemented `AgentChatPreparationPool` is therefore intentionally metadata-only. It caches a bounded set of immutable active `AgentDefinition` values, adapts ordering from usage counts when enabled, has idle eviction, serializes refresh, and invalidates on reference-data changes. It can reduce catalog/reference-data work but does not claim provider/model warm-start latency savings.
+
+Prepared capacity is a runtime-infrastructure phase with this order:
+
+1. Measure runtime composition separately from provider/network latency using the existing MAF composition metrics.
+2. Reuse or pool only demonstrated context-free resources such as provider transports, validated immutable agent templates, and immutable capability metadata.
+3. Build context, tools, approval wrappers, attachments, session state, and scoped contributors for every turn.
+4. Use exclusive leases, bounded creation concurrency, bounded total capacity, idle eviction, cancellation, disposal, and creation-failure telemetry.
+5. Key and invalidate prepared entries by organization/workspace, agent revision, provider and credential revision, model, capability/tool-policy revision, and history mode.
+6. Grow adaptive targets from measured recent demand and shrink them on inactivity or memory pressure; never infer demand from open windows alone.
+
+A full-runtime pool requires thread-safety proof and benchmark evidence before it can replace this decision.
+
+## Concurrency and failure closure
+
+The coordinator serializes its own in-memory mutations and emits immutable snapshots after releasing its lock. It never invokes event subscribers while holding the lock.
+
+One active handle permits at most one send at a time. This UI/application gate is necessary but not sufficient: the split-store execution path currently checks for a blocking run and persists a new run in separate operations. A later runtime-hardening phase must add durable optimistic concurrency or idempotency so two circuits/processes cannot double-send the same session.
+
+Context registration updates use a generation/version. A send captures a complete snapshot atomically. No send reads mutable page state after its first await.
+
+Errors are explicit:
+
+- invalid or expired handles fail rather than silently creating another session;
+- unavailable agents fail rather than selecting a different agent;
+- context registration misuse fails rather than attaching to an arbitrary scope;
+- settings validation reports the invalid bound;
+- prepared-resource creation failures are observable and fall back only to the normal fresh-build path when that behavior is explicitly configured and reported.
+
+Logs and traces include handle, agent, session, context source, and context version IDs. They exclude prompt text, secrets, attachment content, partner contact details, and credential material.
+
+## Pattern selection record
+
+Selected patterns:
+
+- **Scoped coordinator/state store** for one circuit-wide source of active-chat truth.
+- **Disposable registration/lease** for module context lifetime without retaining component references.
+- **Immutable snapshot** for per-turn context consistency across asynchronous navigation.
+- **Application host** in the Web composition root for cross-route rendering.
+- **Explicit lease pool** only for a later bounded runtime-resource optimization.
+
+Rejected patterns:
+
+- a singleton chat service, because it crosses user/profile boundaries;
+- a closed workspace enum with central switch statements, because every new module would modify Agent Framework code;
+- service location from Razor or runtime code, because it hides dependencies and lifetime errors;
+- one floating host per module, because chat state and event subscriptions would duplicate and diverge;
+- storing component callbacks or domain entities in the coordinator, because navigation would leave stale references;
+- one timer per active chat, because resource use grows with handle count;
+- retaining a runtime build as the meaning of an active chat, because it retains unsafe per-turn resources;
+- moving the global host into `CanDoItAll.AppComponents`, because that package is generic shell infrastructure and must not acquire an Agent Framework dependency;
+- expanding the legacy Razor partial/monolith, because it would preserve the current false boundary.
+
+## Performance assessment
+
+The initial scan covered Agent Framework Core, MAF, Persistence, Providers, Voice, the Agent Framework module, and related API/UI paths.
+
+Observed hotspots relevant to this design:
+
+- chat session listing performs a summary query followed by one read per session in the split file store;
+- execution progress repeatedly loads and saves run detail during streaming;
+- the global `ExecutionUpdated` event causes every mounted chat coordinator to filter and clone log lists;
+- contextual history applies `Take(25)` after loading sessions;
+- history export performs sequential session/run/detail reads;
+- provider/runtime pools and per-key dispatch semaphores currently have no universal idle-capacity eviction;
+- voice paths can retain encoded audio/chunk arrays and are not canceled by the current close lifecycle;
+- one runtime-build path creates `JsonSerializerOptions` per build;
+- a credential resolver uses synchronous blocking through `Task.Run(...).GetAwaiter().GetResult()`;
+- three manually constructed `HttpClient` instances were confirmed in the audited scope.
+
+The new coordinator therefore uses bounded collections, starts its single cleanup schedule only while hidden handles or prepared entries exist, and emits immutable active-handle events. It does not cache full transcripts or runtime logs. Render-hot host and session filters are cached; context access lookup is built once per immutable scope; completion subscribers run independently so one slow or failing module does not block another. The history dialog consumes indexed session summaries and loads a full session only when it is opened. The focused panel reads detail for only its selected run instead of scanning every run in the conversation.
+
+Voice recorder/playback state is owner-scoped. Agent changes, permission loss, voice-off, unavailable workspace, and panel disposal rotate the owner and cancel in-flight transcription/synthesis. Generation fencing prevents a late voice result from reaching another agent. Browser code releases a stream when `MediaRecorder` construction fails and enforces a five-minute client-side recording watchdog, including when the Blazor circuit disconnects. The per-runtime logging serializer options are now static.
+
+The second-pass feature scan found no sync-over-async, `Task.Run`, culture-sensitive comparison, unbounded static collection, or manually-created `HttpClient` in the new paths. The older bulk `ListChatSessionsAsync` API still has an N+1 split-store implementation for its remaining callers, and execution progress still persists run detail frequently; neither is used as justification to pool unsafe runtime state.
+
+Performance changes are accepted only with before/after measurements. Network/model latency must be reported separately from local runtime composition so a warm-resource change is not credited for unrelated provider variance.
+
+## Phased implementation and closure gates
+
+### Phase 0: characterization and architecture
+
+- Preserve focused tests for Project Structure prompt/access behavior.
+- Record project dependencies and the runtime-build lifecycle.
+- Accept this decision before adding services.
+
+Gate: no new project cycle, no new partial-class boundary, and no live-runtime pooling.
+
+### Phase 1: typed context and active lifecycle — implemented
+
+- Add contracts, settings normalization, scoped coordinator, immutable context registrations, and `TimeProvider`-based expiry.
+- Add unit tests for registration/update/disposal, context replacement, multiple contributors, invalid leases, new/open/keep/stop, busy protection, maximum handles, and deterministic expiry.
+- Add a DI composition smoke test.
+
+Gate: the services are testable without rendering Razor or using a database; negative cases are covered.
+
+### Phase 2: global host and Project Structure migration — implemented
+
+- Compose one `OverlayWindow` host above routed module content.
+- Add catalog tabs for Agents and Active chats.
+- Reuse `AgentChatPanel`/`ChatWorkspacePanel` with exact preferred session identity and immutable context capture per send.
+- Implement keep/stop close confirmation.
+- Replace the Canvas-local Project Structure window with launcher and context registration.
+- Remove the legacy contextual window and its closed workspace enum once its final consumer is migrated.
+
+Gate: Canvas to Gantt preserves the host and session; no feature module references the Agent Framework module; the old monolith shrinks or is deleted.
+
+### Phase 3: settings and additional modules — implemented
+
+- Add the Agent Framework floating-chat settings panel and persisted defaults.
+- Add one second module context adapter, CRM-HR, to prove the contract is open for extension.
+- Prove consecutive turns in one session receive Project Structure then CRM-HR context without retaining the previous selection.
+
+Gate: backward-compatible settings deserialization, cross-module integration proof, and no domain entity retained by the coordinator.
+
+### Phase 4: runtime correctness — partially implemented
+
+Implemented now: exact transient-context retention across approval continuation, provider-native pending-session restoration for contextual approval resumes, fail-closed restart behavior, framework-managed history for new contextual turns, typed completion notifications, per-handle UI send gating after remount, and the indexed summary history path.
+
+- Add interactive cancellation by execution/session identity.
+- Add durable optimistic concurrency/idempotency for chat sends.
+- Make runtime-build disposal failure-tolerant and session-serialization timeout ownership explicit.
+- Add a keyed execution-event path.
+
+Gate: double-send, cancel, disposal-failure, and approval-resume tests pass across persistence modes.
+
+### Phase 5: measured preparation — metadata cache implemented; live resource preparation deferred
+
+- Capture composition histograms by agent/provider/configuration key.
+- Implement bounded context-free preparation leases only where measurements justify them.
+- Add adaptive demand, invalidation, failure, cancellation, concurrency, idle eviction, and memory-pressure tests.
+
+Gate: benchmark shows a meaningful local composition improvement, no stale-context/authorization reuse, bounded memory/process counts, and clean disposal. Otherwise `MaximumPreparedAgents` remains zero and fresh builds remain canonical.
+
+### Final validation
+
+- targeted Unit and bUnit suites after each phase;
+- Agent Framework Core, Components, Workbench, Agent Framework module, and Web builds;
+- integration tests for durable session versus active handle and context changes;
+- deterministic browser proof for Project Structure Canvas/Gantt, navigation, keep/reopen, and stop before rollout;
+- two-pass performance scan with exact finding counts and manual review;
+- refreshed CodeAnalytics snapshot and architecture-review gate.
+
+## Known rollout risks
+
+- A currently running Web process can lock build outputs; validation must use an isolated output path or intentionally stop the development host with user approval.
+- Browser-level MediaRecorder behavior and the full cross-route Canvas/Gantt/CRM journey still require a deterministic smoke test before rollout.
+- CRM currently has no canonical per-agent access projection. Its adapter is explicitly `Unrestricted`, exposes only sanitized identifiers/display labels/typed status/source/role data, and grants no workspace or tool authorization.
+- Automatic Project Structure and CRM refresh after a successful mutation uses typed completion notifications and disposable subscriptions; additional modules must follow the same pattern.
+- Active-handle expiry cannot be represented as durable-session deletion.
+- Context text is external-model input and must remain bounded, sanitized, and visibly sourced even though its identifiers and lifecycle are strongly typed.

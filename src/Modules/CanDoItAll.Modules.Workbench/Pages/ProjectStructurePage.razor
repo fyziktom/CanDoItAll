@@ -9,12 +9,15 @@ risks: stale-node-selection, invalid-command-routing, overlapping-create-placeme
 tests: component:ProjectStructurePageTests, e2e:workbench-structure
 *@
 @using CanDoItAll.Components.CanvasLib
+@using CanDoItAll.AgentFramework.Core
+@using CanDoItAll.AgentFramework.Models
 @using CanDoItAll.Components.BaseLib
 @using CanDoItAll.Components.Common
 @using CanDoItAll.Modules.Projects
 @using CanDoItAll.Modules.Projects.Pages.Components
 @using CanDoItAll.Modules.Security
 @using CanDoItAll.Modules.Workbench.CanvasAdapters
+@using CanDoItAll.Modules.Workbench.Pages.Components.ProjectStructure
 @using CanDoItAll.Modules.Workspace
 @using CanDoItAll.Infrastructure.Storage
 @using CanDoItAll.SharedKernel
@@ -35,6 +38,7 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
 @inject NavigationManager Navigation
 @inject IJSRuntime JSRuntime
 @inject ILogger<ProjectStructurePage> Logger
+@inject IFloatingAgentChatCoordinator FloatingAgentChatCoordinator
 @implements IAsyncDisposable
 
 <PageTitle>@ProjectStructurePageTitleBuilder.Build(surface?.ProjectName)</PageTitle>
@@ -71,6 +75,10 @@ else if (surface is null || canvasSurface is null)
 }
 else
 {
+    <ProjectStructureAgentChatContextProvider ProjectId="@ProjectId"
+                                              ProjectName="@surface.ProjectName"
+                                              SelectedNodeIds="@(structureViewIndex == CanvasViewIndex ? selectedNodeIds : [])"
+                                              RefreshRequested="HandleAgentExecutionCompletedAsync" />
     <div class="project-structure-page">
         <Stack Gap="1.5rem"
                Class="project-structure-page__stack">
@@ -102,7 +110,7 @@ else
                                                        ObjectIndexWindowVisible="@ObjectIndexWindowState.IsVisible"
                                                        FileBrowserWindowVisible="@FileBrowserWindowState.IsVisible"
                                                        SignalsWindowVisible="@SignalsWindowState.IsVisible"
-                                                       AgentWindowVisible="@AgentWindowState.IsVisible"
+                                                       AgentWindowVisible="@FloatingAgentChatCoordinator.Snapshot().IsCatalogVisible"
                                                        GanttViewVisible="@IsGanttViewVisible"
                                                        ActiveTool="@canvasToolMode"
                                                        CanUseDependencyTool="@(selectedNode is not null)"
@@ -122,19 +130,6 @@ else
                                                        RecomposeBranch="RecomposeSelectedBranchAsync" />
                     </ToolbarLeftContent>
                     <OverlayContent>
-                        <ContextualAgentWorkspaceWindows WindowId="@AgentWindowKey"
-                                                         ChatWindowId="@AgentChatWindowKey"
-                                                         TestId="project-structure-agents-window"
-                                                         AriaLabel="Project structure agents"
-                                                         Kicker="Project agents"
-                                                         Title="Project agents"
-                                                         Summary="Search agents with access to this structure, filter by tags, and double-click to open a new thread."
-                                                         WindowState="@AgentWindowState"
-                                                         WindowStateChanged="HandleAgentWindowStateChangedAsync"
-                                                         WorkspaceRefreshRequested="HandleAgentWorkspaceRefreshRequestedAsync"
-                                                         WorkspaceKind="@ContextualAgentWorkspaceKind.ProjectStructure"
-                                                         ProjectId="@ProjectId"
-                                                         SelectedNodeIds="@selectedNodeIds" />
                         @if (ToolboxWindowState.IsVisible)
                         {
                             <ProjectStructureToolboxWindow WindowId="@ToolboxWindowKey"
@@ -311,6 +306,7 @@ else
             <TabsItem Text="Gantt" Icon="view_timeline">
                 <ProjectStructureGanttPanel ProjectId="@ProjectId"
                                             Surface="@surface"
+                                            OpenAgentCatalog="ToggleAgentWindowAsync"
                                             MutationCommitted="@(() => ReloadSurfaceAsync())" />
             </TabsItem>
         </Tabs>
@@ -2762,6 +2758,7 @@ else
 
     public async ValueTask DisposeAsync()
     {
+        DisposeAgentWindowState();
         DisposeSynchronousState();
         if (previewInteractionSlot is not null)
         {

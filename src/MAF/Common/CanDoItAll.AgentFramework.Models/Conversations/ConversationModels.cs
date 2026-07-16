@@ -369,7 +369,35 @@ public sealed record AgentRuntimeExecutionOptions(
     string ResponseFormatSchemaName = "",
     string ResponseFormatSchemaDescription = "",
     AgentRuntimeContextIntent? ContextIntent = null,
-    IReadOnlyList<AgentRuntimeInputAttachment>? InputAttachments = null);
+    IReadOnlyList<AgentRuntimeInputAttachment>? InputAttachments = null)
+{
+    [JsonIgnore]
+    public AgentRuntimeTransientContext? TransientContext { get; init; }
+}
+
+public sealed record AgentRuntimeTransientContext
+{
+    public AgentRuntimeTransientContext(
+        string content,
+        WorkspaceScopeDescriptor? workspaceScope = null)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(content);
+        var normalizedContent = content.Trim();
+        if (normalizedContent.Length > AgentChatContextLimits.MaximumTransientContextLength)
+        {
+            throw new ArgumentException(
+                $"Transient agent context cannot exceed {AgentChatContextLimits.MaximumTransientContextLength} characters.",
+                nameof(content));
+        }
+
+        Content = normalizedContent;
+        WorkspaceScope = workspaceScope;
+    }
+
+    public string Content { get; }
+
+    public WorkspaceScopeDescriptor? WorkspaceScope { get; }
+}
 
 public sealed record AgentRuntimeHandoffExecutionOptions(
     AgentHandoffSettings Settings,
@@ -441,6 +469,9 @@ public sealed record AgentChatRunOptions(
     public ExecutionInvocationContext? Context { get; init; }
 
     public bool ToolCapabilitiesEnabled { get; init; } = true;
+
+    [JsonIgnore]
+    public AgentRuntimeTransientContext? TransientContext { get; init; }
 }
 
 public sealed record ExecutionRunRequest(
@@ -450,7 +481,11 @@ public sealed record ExecutionRunRequest(
     ExecutionInvocationContext? Context = null,
     bool AutoApprovePendingToolCalls = false,
     AgentStructuredOutputContract? StructuredOutput = null,
-    IReadOnlyList<string>? InputAttachmentPaths = null);
+    IReadOnlyList<string>? InputAttachmentPaths = null)
+{
+    [JsonIgnore]
+    public AgentRuntimeTransientContext? TransientContext { get; init; }
+}
 
 public sealed record ExecutionRunQuery(
     Guid? AgentId = null,
@@ -489,7 +524,13 @@ public sealed record ExecutionRunResult(
     Guid? ChatSessionId,
     string ResponseText,
     ChatMessageRecord? AssistantMessage,
-    AgentRunMetric Metric);
+    AgentRunMetric Metric)
+{
+    public ExecutionState State { get; init; }
+
+    [JsonIgnore]
+    public AgentChatExecutionCompleted? ContextCompletionNotification { get; init; }
+}
 
 public sealed record ExecutionEvent(
     Guid EventId,

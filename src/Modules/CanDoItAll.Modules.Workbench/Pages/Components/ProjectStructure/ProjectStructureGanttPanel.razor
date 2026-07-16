@@ -58,6 +58,12 @@
                             Disabled="@mutationInFlight"
                             data-testid="project-structure-gantt-add-task"
                             Click="OpenGeneralTaskDialogAsync" />
+                    <Button Text="Agent chats"
+                            Icon="smart_toy"
+                            Size="ButtonSize.Small"
+                            ButtonStyle="ButtonStyle.Light"
+                            data-testid="project-structure-gantt-agent-chats"
+                            Click="OpenAgentCatalog" />
                     <GanttTaskDragSource Task="@insertionCandidate"
                                          Disabled="@(!CanInsertTask)"
                                          AriaLabel="Drag a new project task onto a dependency connection">

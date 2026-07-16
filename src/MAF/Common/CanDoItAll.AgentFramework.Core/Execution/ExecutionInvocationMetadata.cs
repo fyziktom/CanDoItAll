@@ -31,6 +31,8 @@ public static class ExecutionInvocationMetadata
     public const string WorkspaceToolsEnabledMetadataKey = "agentWorkspaceToolsEnabled";
     public const string ToolCapabilitiesEnabledMetadataKey = "agentToolCapabilitiesEnabled";
     public const string RuntimeCapabilityScopeOverrideMetadataKey = "agentRuntimeCapabilityScopeOverride";
+    public const string TransientContextRequiredMetadataKey = "agentTransientContextRequired";
+    public const string TransientContextDigestMetadataKey = "agentTransientContextDigest";
     public const int DefaultGovernedRepairAttempts = 1;
     public const int MaxRepairAttempts = 2;
     private const string ContextWorkspaceScopeKindPropertyName = "kind";
@@ -144,6 +146,26 @@ public static class ExecutionInvocationMetadata
         metadata[RuntimeCapabilityScopeOverrideMetadataKey] = JsonSerializer.SerializeToNode(
             scopeOverride,
             AgentOutputJson.SerializerOptions);
+        return metadata.ToJsonString(AgentOutputJson.SerializerOptions);
+    }
+
+    public static string ApplyTransientContextRequirement(
+        string? metadataJson,
+        string digest)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(digest);
+        var normalizedDigest = digest.Trim();
+        if (normalizedDigest.Length != 64 ||
+            normalizedDigest.Any(character => !Uri.IsHexDigit(character)))
+        {
+            throw new ArgumentException(
+                "A transient context digest must be a SHA-256 hexadecimal value.",
+                nameof(digest));
+        }
+
+        var metadata = ParseObject(metadataJson);
+        metadata[TransientContextRequiredMetadataKey] = true;
+        metadata[TransientContextDigestMetadataKey] = normalizedDigest.ToLowerInvariant();
         return metadata.ToJsonString(AgentOutputJson.SerializerOptions);
     }
 
@@ -390,6 +412,20 @@ public static class ExecutionInvocationMetadata
         ArgumentNullException.ThrowIfNull(run);
 
         return TryReadBoolean(run.MetadataJson, ToolCapabilitiesEnabledMetadataKey) != false;
+    }
+
+    public static bool RequiresTransientContext(ExecutionRunRecord run)
+    {
+        ArgumentNullException.ThrowIfNull(run);
+
+        return TryReadBoolean(run.MetadataJson, TransientContextRequiredMetadataKey) == true;
+    }
+
+    public static string ResolveTransientContextDigest(ExecutionRunRecord run)
+    {
+        ArgumentNullException.ThrowIfNull(run);
+
+        return TryReadString(run.MetadataJson, TransientContextDigestMetadataKey);
     }
 
     public static bool ResolveProcessAllowsProductMutation(ExecutionRunRecord run)

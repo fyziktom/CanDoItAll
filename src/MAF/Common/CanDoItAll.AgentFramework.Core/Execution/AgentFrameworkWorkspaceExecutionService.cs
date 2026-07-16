@@ -19,6 +19,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService(
     private readonly IAgentExecutionCancellationRegistry executionCancellationRegistry =
         executionCancellationRegistry ?? new AgentExecutionCancellationRegistry();
     private readonly IWorkspacePathResolutionService? workspacePathResolutionService = workspacePathResolutionService;
+    private readonly AgentRunTransientContextRegistry transientContextRegistry = new();
     private static readonly ProviderProfileService ProviderFeatureService = new();
 
     public event EventHandler<ExecutionLogEntry>? ExecutionUpdated;
