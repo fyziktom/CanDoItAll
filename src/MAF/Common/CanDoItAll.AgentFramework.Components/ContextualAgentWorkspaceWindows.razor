@@ -157,6 +157,14 @@
                                         {
                                             <span class="contextual-agent-window__access-chip contextual-agent-window__access-chip--write">Task write</span>
                                         }
+                                        @if (item.CanCreateProjects)
+                                        {
+                                            <span class="contextual-agent-window__access-chip contextual-agent-window__access-chip--write">Create projects</span>
+                                        }
+                                        @if (item.CanCreateSubprojects)
+                                        {
+                                            <span class="contextual-agent-window__access-chip contextual-agent-window__access-chip--write">Create subprojects</span>
+                                        }
                                     }
                                     <span class="contextual-agent-window__access-chip contextual-agent-window__access-chip--scope">@item.ScopeLabel</span>
                                 </span>
@@ -1389,7 +1397,7 @@ Use these workspace artifacts as input:
             return "Read Write";
         }
 
-        var writeScopes = new List<string>(2);
+        var writeScopes = new List<string>(4);
         if (item.CanWriteNonTaskStructure)
         {
             writeScopes.Add("Structure write");
@@ -1397,6 +1405,14 @@ Use these workspace artifacts as input:
         if (item.CanWriteTasks)
         {
             writeScopes.Add("Task write");
+        }
+        if (item.CanCreateProjects)
+        {
+            writeScopes.Add("Project create");
+        }
+        if (item.CanCreateSubprojects)
+        {
+            writeScopes.Add("Subproject create");
         }
         if (writeScopes.Count > 0)
         {

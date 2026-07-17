@@ -1,6 +1,8 @@
 using CanDoItAll.Infrastructure.Search;
 using CanDoItAll.Modules.Projects;
+using CanDoItAll.Tests.Support;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace CanDoItAll.Tests.Integration;
 
@@ -64,6 +66,121 @@ public sealed class ProjectsServiceIntegrationTests
         Assert.Empty(hierarchy.ChildProjects);
         Assert.Contains(hierarchy.ParentProjects, project => project.Id == parentProjectId);
         Assert.Contains(hierarchy.ParentProjects, project => project.Id == sharedParentProjectId);
+    }
+
+    [Fact]
+    public async Task CreateSubprojectAsync_creates_the_project_and_parent_link_together()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projectsService = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var parentProjectId = await CreateProjectAsync(projectsService, "Quotation portfolio");
+        var reservedSubprojectId = Guid.NewGuid();
+
+        var result = await projectsService.CreateSubprojectAsync(
+            parentProjectId,
+            reservedSubprojectId,
+            new ProjectEditorModel
+            {
+                Name = "Machines Details",
+                Description = "Machine types and parameters from quotations.",
+                Objective = "Keep structured machine specifications.",
+                CurrentPhase = "Discovery",
+                Status = ProjectStatus.Active
+            });
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal(reservedSubprojectId, result.Value);
+        var hierarchy = await projectsService.GetHierarchyAsync(parentProjectId);
+        var child = Assert.Single(hierarchy.ChildProjects, project => project.Id == result.Value);
+        Assert.Equal("Machines Details", child.Name);
+        Assert.Equal(ProjectStatus.Active, child.Status);
+    }
+
+    [Fact]
+    public async Task CreateAsync_uses_the_reserved_id_and_rejects_reuse()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projectsService = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var reservedProjectId = Guid.NewGuid();
+
+        var created = await projectsService.CreateAsync(
+            reservedProjectId,
+            new ProjectEditorModel
+            {
+                Name = "Reserved project",
+                Objective = "Prove grant-first project creation.",
+                CurrentPhase = "Discovery"
+            });
+        var duplicate = await projectsService.CreateAsync(
+            reservedProjectId,
+            new ProjectEditorModel
+            {
+                Name = "Duplicate reserved project",
+                Objective = "Must not overwrite the first project.",
+                CurrentPhase = "Discovery"
+            });
+
+        Assert.True(created.IsSuccess);
+        Assert.Equal(reservedProjectId, created.Value);
+        Assert.True(duplicate.IsFailure);
+        var saved = await projectsService.GetAsync(reservedProjectId);
+        Assert.Equal("Reserved project", saved.Name);
+    }
+
+    [Fact]
+    public async Task CreateAsync_returns_the_committed_project_when_search_projection_fails()
+    {
+        await using var application = await TestApplication.CreateAsync(new TestHarnessOptions
+        {
+            ConfigureServices = services =>
+            {
+                services.RemoveAll<ISearchIndexService>();
+                services.AddSingleton<ISearchIndexService, ThrowingSearchIndexService>();
+            }
+        });
+        await using var scope = application.Services.CreateAsyncScope();
+        var projectsService = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var reservedProjectId = Guid.NewGuid();
+
+        var result = await projectsService.CreateAsync(
+            reservedProjectId,
+            new ProjectEditorModel
+            {
+                Name = "Committed despite projection failure",
+                Objective = "Keep authoritative project persistence independent from projections.",
+                CurrentPhase = "Discovery"
+            });
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal(reservedProjectId, result.Value);
+        Assert.Equal(
+            "Committed despite projection failure",
+            (await projectsService.GetAsync(reservedProjectId)).Name);
+    }
+
+    [Fact]
+    public async Task CreateSubprojectAsync_with_missing_parent_does_not_leave_an_orphan_project()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projectsService = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+
+        var result = await projectsService.CreateSubprojectAsync(
+            Guid.NewGuid(),
+            new ProjectEditorModel
+            {
+                Name = "Orphan candidate",
+                Description = "Must not be stored.",
+                Objective = "Validate atomic parent checking.",
+                CurrentPhase = "Discovery"
+            });
+
+        Assert.True(result.IsFailure);
+        Assert.DoesNotContain(
+            await projectsService.ListAsync(),
+            project => string.Equals(project.Name, "Orphan candidate", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -142,5 +259,26 @@ public sealed class ProjectsServiceIntegrationTests
 
         Assert.True(result.IsSuccess);
         return result.Value;
+    }
+
+    private sealed class ThrowingSearchIndexService : ISearchIndexService
+    {
+        public Task UpsertAsync(SearchDocumentInput input, CancellationToken cancellationToken = default)
+        {
+            throw new InvalidOperationException("Expected search projection failure.");
+        }
+
+        public Task DeleteAsync(string sourceType, string sourceKey, CancellationToken cancellationToken = default)
+        {
+            return Task.CompletedTask;
+        }
+
+        public Task<IReadOnlyList<SearchResult>> SearchAsync(
+            string query,
+            int take = 12,
+            CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult<IReadOnlyList<SearchResult>>([]);
+        }
     }
 }

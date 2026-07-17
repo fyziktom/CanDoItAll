@@ -11,6 +11,7 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
 @using CanDoItAll.Components.BaseLib
 @using CanDoItAll.Components.Common
 @using CanDoItAll.Components.Mermaid
+@using CanDoItAll.AgentFramework.Models
 @using CanDoItAll.Modules.Projects
 @using CanDoItAll.Modules.Projects.Pages.Components
 @using CanDoItAll.SharedKernel
@@ -72,6 +73,10 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
                        ImportProjectsPackage="ImportProjectsPackageAsync" />
     </ChildContent>
 </PageScaffold>
+
+<ProjectsAgentChatContextProvider ProjectSummaries="projectSummaries"
+                                  SelectedProjectId="@AgentChatFocusedProjectId"
+                                  RefreshRequested="HandleAgentChatRefreshRequestedAsync" />
 
 <ProjectModalHost IsOpen="showProjectModal"
                   IsEditorMode="@(modalMode == ProjectModalMode.Editor)"
@@ -243,12 +248,41 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
     private ProjectHierarchyDialogState? hierarchyDialog;
     private ProjectSummary? projectFilesDialogProject;
     private ProjectGanttPreview? ganttPreviewDialog;
+    private Guid? ganttPreviewProjectId;
     private string? ganttPreviewError;
     private bool showGanttPreviewModal;
     private string projectPackagePath = string.Empty;
     private string? projectPackageMessage;
     private bool projectPackageMessageIsError;
     private bool projectPackageBusy;
+
+    private Guid? AgentChatFocusedProjectId
+    {
+        get
+        {
+            if (hierarchyDialog is not null)
+            {
+                return hierarchyDialog.ProjectId;
+            }
+
+            if (projectFilesDialogProject is not null)
+            {
+                return projectFilesDialogProject.Id;
+            }
+
+            if (showGanttPreviewModal && ganttPreviewProjectId.HasValue)
+            {
+                return ganttPreviewProjectId;
+            }
+
+            if (showProjectModal)
+            {
+                return editor.Id;
+            }
+
+            return hierarchyFilterProjectId;
+        }
+    }
 
     private string HierarchyFilterHelper
         => !hierarchyFilterProjectId.HasValue
@@ -387,6 +421,9 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
         RebuildProjectFileProjection();
     }
 
+    private Task HandleAgentChatRefreshRequestedAsync(AgentChatExecutionCompleted notification)
+        => LoadProjectSummariesAsync();
+
     private async Task LoadEditorAsync(Guid? projectId)
     {
         editor = await ProjectsService.GetAsync(projectId);
@@ -424,6 +461,7 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
     private async Task OpenGanttPreviewAsync(Guid projectId)
     {
         ganttPreviewDialog = null;
+        ganttPreviewProjectId = projectId;
         ganttPreviewError = null;
         showGanttPreviewModal = true;
 
@@ -735,6 +773,7 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
     {
         showGanttPreviewModal = false;
         ganttPreviewDialog = null;
+        ganttPreviewProjectId = null;
         ganttPreviewError = null;
         return Task.CompletedTask;
     }

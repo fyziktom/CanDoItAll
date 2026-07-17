@@ -29,6 +29,17 @@ public sealed class ProjectStructureAgentRuntimeToolProviderTests
         Assert.True(ProjectStructureAgentRuntimeToolProvider.ShouldAttachForContext(intent));
     }
 
+    [Fact]
+    public void ShouldAttachForContext_returns_true_for_projects_portfolio_chat()
+    {
+        var intent = AgentRuntimeContextIntent.Empty with
+        {
+            SourceKind = "projects"
+        };
+
+        Assert.True(ProjectStructureAgentRuntimeToolProvider.ShouldAttachForContext(intent));
+    }
+
     [Theory]
     [InlineData(ProcessOperationContractNames.ReadProjectStructure)]
     [InlineData(ProcessOperationContractNames.StartProjectNodeProcess)]

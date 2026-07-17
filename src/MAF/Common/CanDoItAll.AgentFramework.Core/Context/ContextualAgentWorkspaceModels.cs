@@ -1,7 +1,6 @@
-using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 
-namespace CanDoItAll.AgentFramework.Components;
+namespace CanDoItAll.AgentFramework.Core;
 
 public enum ContextualAgentWorkspaceKind
 {
@@ -16,7 +15,9 @@ public enum ContextualAgentAccessLevel
     Read = 1,
     Write = 2,
     TaskWrite = 4,
-    NonTaskStructureWrite = 8
+    NonTaskStructureWrite = 8,
+    ProjectCreate = 16,
+    SubprojectCreate = 32
 }
 
 public sealed record ContextualAgentAccessSummary(
@@ -31,6 +32,10 @@ public sealed record ContextualAgentAccessSummary(
     public bool CanWriteTasks => AccessLevel.HasFlag(ContextualAgentAccessLevel.TaskWrite);
 
     public bool CanWriteNonTaskStructure => AccessLevel.HasFlag(ContextualAgentAccessLevel.NonTaskStructureWrite);
+
+    public bool CanCreateProjects => AccessLevel.HasFlag(ContextualAgentAccessLevel.ProjectCreate);
+
+    public bool CanCreateSubprojects => AccessLevel.HasFlag(ContextualAgentAccessLevel.SubprojectCreate);
 }
 
 public sealed record ContextualAgentWorkspaceRefreshRequest(
@@ -213,6 +218,14 @@ public static class ContextualAgentAccessResolver
         {
             accessLevel |= ContextualAgentAccessLevel.Read | ContextualAgentAccessLevel.TaskWrite;
         }
+        if (access.CanCreateProjects)
+        {
+            accessLevel |= ContextualAgentAccessLevel.Read | ContextualAgentAccessLevel.ProjectCreate;
+        }
+        if (access.CanCreateSubprojects)
+        {
+            accessLevel |= ContextualAgentAccessLevel.Read | ContextualAgentAccessLevel.SubprojectCreate;
+        }
         if (accessLevel == ContextualAgentAccessLevel.None)
         {
             return null;
@@ -225,7 +238,9 @@ public static class ContextualAgentAccessResolver
                 return null;
             }
 
-            if (!projectId.HasValue && access.AllowedProjectIds.Count == 0)
+            if (!projectId.HasValue &&
+                access.AllowedProjectIds.Count == 0 &&
+                !access.CanCreateProjects)
             {
                 return null;
             }
@@ -235,7 +250,9 @@ public static class ContextualAgentAccessResolver
             ? "All projects"
             : projectId.HasValue
                 ? "This project"
-                : FormatScopeCount(access.AllowedProjectIds.Count, "project", "projects");
+                : access.AllowedProjectIds.Count > 0
+                    ? FormatScopeCount(access.AllowedProjectIds.Count, "project", "projects")
+                    : "Project creation only";
 
         return new ContextualAgentAccessSummary(agent, accessLevel, scopeLabel);
     }

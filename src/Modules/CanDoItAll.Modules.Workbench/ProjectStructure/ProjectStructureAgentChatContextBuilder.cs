@@ -1,4 +1,4 @@
-using CanDoItAll.AgentFramework.Components;
+using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 
 namespace CanDoItAll.Modules.Workbench.ProjectStructure;
@@ -104,7 +104,11 @@ Current project workspace view: Gantt schedule.
         ContextualAgentAccessSummary access)
     {
         var permissions = AgentChatContextPermission.Read;
-        if (access.CanWrite || access.CanWriteTasks || access.CanWriteNonTaskStructure)
+        if (access.CanWrite ||
+            access.CanWriteTasks ||
+            access.CanWriteNonTaskStructure ||
+            access.CanCreateProjects ||
+            access.CanCreateSubprojects)
         {
             permissions |= AgentChatContextPermission.Mutate;
         }

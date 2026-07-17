@@ -109,9 +109,10 @@ public static class AgentFrameworkModuleServiceCollectionExtensions
             serviceProvider.GetRequiredService<ISandboxWorkspaceStore>());
         services.TryAddSingleton<IAgentExecutionCancellationRegistry, AgentExecutionCancellationRegistry>();
         services.AddScoped<IProviderProfileRegistry, WorkspaceBackedAgentProviderProfileRegistry>();
+        services.TryAddSingleton<AgentReferenceDataInvalidationHub>();
+        services.TryAddSingleton<IAgentReferenceDataCacheInvalidator>(serviceProvider =>
+            serviceProvider.GetRequiredService<AgentReferenceDataInvalidationHub>());
         services.TryAddScoped<AgentReferenceDataCache>();
-        services.TryAddScoped<IAgentReferenceDataCacheInvalidator>(serviceProvider =>
-            serviceProvider.GetRequiredService<AgentReferenceDataCache>());
         services.TryAddScoped<IAgentReferenceDataProvider, WorkspaceBackedAgentReferenceDataProvider>();
         services.TryAddSingleton(TimeProvider.System);
         services.AddScoped<AgentChatContextRegistry>();

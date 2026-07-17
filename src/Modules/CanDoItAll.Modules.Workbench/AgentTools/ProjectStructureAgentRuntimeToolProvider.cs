@@ -15,6 +15,7 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
     private const int GovernedProcessDefaultStructureReadTake = 80;
     private const int GovernedProcessMaxExplicitLeaseMinutes = 5;
     private const string ProjectStructureSourceKind = "project-structure";
+    private const string ProjectsSourceKind = "projects";
     private const string ProjectStructurePlannedStatus = "Planned";
     private const string ProjectStructurePublishedStatus = "Published";
 
@@ -53,6 +54,8 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
         var workspaceCommandExecutionService = new WorkspaceCommandExecutionService(
             workspaceRoot,
             new LocalWorkspaceProcessHost());
+        var projectCreationCoordinator = new ProjectStructureAgentProjectCreationCoordinator(
+            authorizationService);
 
         toolBuilder = new ProjectStructureToolBuilder(
             agentService,
@@ -60,6 +63,7 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
             analyticsService,
             planAnalyticsService,
             authorizationService,
+            projectCreationCoordinator,
             taskCreationService,
             taskDetailsService,
             knowledgeService,
@@ -100,7 +104,8 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
     {
         ArgumentNullException.ThrowIfNull(contextIntent);
 
-        if (string.Equals(contextIntent.SourceKind, ProjectStructureSourceKind, StringComparison.OrdinalIgnoreCase))
+        if (string.Equals(contextIntent.SourceKind, ProjectStructureSourceKind, StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(contextIntent.SourceKind, ProjectsSourceKind, StringComparison.OrdinalIgnoreCase))
         {
             return true;
         }
@@ -122,6 +127,7 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
         ProjectStructureAnalyticsService analyticsService,
         ProjectPlanAnalyticsQueryService planAnalyticsService,
         ProjectStructureAgentAuthorizationService authorizationService,
+        ProjectStructureAgentProjectCreationCoordinator projectCreationCoordinator,
         ProjectStructureTaskCreationService taskCreationService,
         ProjectStructureTaskDetailsService taskDetailsService,
         ProjectManagementKnowledgeService knowledgeService,
@@ -134,6 +140,7 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
         private readonly ProjectStructureAnalyticsService analyticsService = analyticsService;
         private readonly ProjectPlanAnalyticsQueryService planAnalyticsService = planAnalyticsService;
         private readonly ProjectStructureAgentAuthorizationService authorizationService = authorizationService;
+        private readonly ProjectStructureAgentProjectCreationCoordinator projectCreationCoordinator = projectCreationCoordinator;
         private readonly ProjectStructureTaskCreationService taskCreationService = taskCreationService;
         private readonly ProjectStructureTaskDetailsService taskDetailsService = taskDetailsService;
         private readonly ProjectManagementKnowledgeService knowledgeService = knowledgeService;
@@ -149,7 +156,10 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
             var accessState = new ProjectStructureAccessState(
                 accessSettings,
                 ResolveScopedProcessAccess(context));
-            if (!accessState.CanRead && !accessState.CanWrite)
+            if (!accessState.CanRead &&
+                !accessState.CanWrite &&
+                !accessState.CanCreateProjects &&
+                !accessState.CanCreateSubprojects)
             {
                 return [];
             }
@@ -161,10 +171,6 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
                     "project_structure_projects_list",
                     "Lists the CanDoItAll projects that this internal agent is allowed to access."),
                 AIFunctionFactory.Create(
-                    (ProjectStructureProjectSaveRequest request, int? estimatedMinutes = null, CancellationToken cancellationToken = default) => ProjectStructureProjectCreateAsync(agent, accessState, request, estimatedMinutes, cancellationToken),
-                    "project_structure_project_create",
-                    "Creates a new CanDoItAll project through the internal workspace project-structure service."),
-                AIFunctionFactory.Create(
                     (Guid projectId, ProjectStructureProjectSaveRequest request, int? estimatedMinutes = null, CancellationToken cancellationToken = default) => ProjectStructureProjectUpdateAsync(agent, accessState, projectId, request, estimatedMinutes, cancellationToken),
                     "project_structure_project_update",
                     "Updates an existing CanDoItAll project through the internal workspace project-structure service."),
@@ -172,14 +178,6 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
                     (Guid projectId, CancellationToken cancellationToken = default) => ProjectStructureHierarchyGetAsync(agent, accessState, projectId, cancellationToken),
                     "project_structure_hierarchy_get",
                     "Reads the project and subproject hierarchy for a specific project."),
-                AIFunctionFactory.Create(
-                    (Guid parentProjectId, ProjectStructureSubprojectChangeRequest request, int? estimatedMinutes = null, CancellationToken cancellationToken = default) => ProjectStructureSubprojectLinkAsync(agent, accessState, parentProjectId, request, estimatedMinutes, cancellationToken),
-                    "project_structure_subproject_link",
-                    "Adds or reconnects a subproject under a parent project."),
-                AIFunctionFactory.Create(
-                    (Guid projectId, ProjectStructureNodesToSubprojectInput request, int? estimatedMinutes = null, CancellationToken cancellationToken = default) => ProjectStructureNodesToNewSubprojectAsync(agent, accessState, projectId, request, estimatedMinutes, cancellationToken),
-                    "project_structure_nodes_to_new_subproject",
-                    "Creates a new subproject under the opened project and moves the supplied node ids, optionally with descendants, into that subproject in one operation. Use this for prompts like 'take selected nodes and move them to their own new subproject named XYZ'. If the contextual prompt lists selected node ids, pass those exact ids as nodeIds."),
                 AIFunctionFactory.Create(
                     (Guid projectId, ProjectStructureReadRequest? request = null, CancellationToken cancellationToken = default) => ProjectStructureReadAsync(agent, accessState, projectId, request, cancellationToken),
                     "project_structure_read",
@@ -377,6 +375,34 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
             else if (accessState.RequiresNonTaskWriteGuard)
             {
                 tools.RemoveAll(tool => ProjectStructureNonTaskWritePolicy.RequiresFullStructureWrite(tool.Name));
+            }
+
+            if (accessState.CanCreateProjects)
+            {
+                tools.Add(AIFunctionFactory.Create(
+                    (ProjectStructureProjectSaveRequest request, int? estimatedMinutes = null, CancellationToken cancellationToken = default) => ProjectStructureProjectCreateAsync(agent, accessState, request, estimatedMinutes, cancellationToken),
+                    AgentToolInvocationPolicyMetadata.ProjectStructureProjectCreate,
+                    "Creates a standalone CanDoItAll project. Use project_structure_subproject_create when the new project must be attached below a parent project."));
+            }
+
+            if (accessState.CanCreateSubprojects)
+            {
+                tools.Add(AIFunctionFactory.Create(
+                    (Guid parentProjectId, ProjectStructureProjectSaveRequest request, int? estimatedMinutes = null, CancellationToken cancellationToken = default) => ProjectStructureSubprojectCreateAsync(agent, accessState, parentProjectId, request, estimatedMinutes, cancellationToken),
+                    AgentToolInvocationPolicyMetadata.ProjectStructureSubprojectCreate,
+                    "Creates a new project and atomically attaches it as a direct subproject of parentProjectId. Use the returned project id for subsequent project_structure_node_create calls that populate the new subproject."));
+            }
+
+            if (accessState.CanCreateSubprojects && accessState.CanWrite)
+            {
+                tools.Add(AIFunctionFactory.Create(
+                    (Guid parentProjectId, ProjectStructureSubprojectChangeRequest request, int? estimatedMinutes = null, CancellationToken cancellationToken = default) => ProjectStructureSubprojectLinkAsync(agent, accessState, parentProjectId, request, estimatedMinutes, cancellationToken),
+                    AgentToolInvocationPolicyMetadata.ProjectStructureSubprojectLink,
+                    "Adds or reconnects an existing project as a subproject under a parent project."));
+                tools.Add(AIFunctionFactory.Create(
+                    (Guid projectId, ProjectStructureNodesToSubprojectInput request, int? estimatedMinutes = null, CancellationToken cancellationToken = default) => ProjectStructureNodesToNewSubprojectAsync(agent, accessState, projectId, request, estimatedMinutes, cancellationToken),
+                    AgentToolInvocationPolicyMetadata.ProjectStructureNodesToNewSubproject,
+                    "Creates a new subproject under the opened project and moves the supplied node ids, optionally with descendants, into that subproject in one operation. Use this for prompts like 'take selected nodes and move them to their own new subproject named XYZ'. If the contextual prompt lists selected node ids, pass those exact ids as nodeIds."));
             }
 
             if (accessState.CanRead &&
@@ -610,9 +636,61 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
                 request,
                 async cancellationToken =>
                 {
-                    EnsureWriteAllowed(accessState);
+                    await authorizationService.EnsureProjectCreationAuthorizedAsync(agent.Id, cancellationToken);
+                    EnsureProjectCreationAllowed(accessState);
+                    ProjectStructureAgentCreationValidation.EnsureProjectRequest(request);
                     var context = BuildAgentContext(agent);
-                    var created = await agentService.SaveProjectAsync(null, request, context, cancellationToken);
+                    var created = await projectCreationCoordinator.CreateAsync(
+                        agent,
+                        (newProjectId, cancellationToken) => agentService.CreateProjectAsync(
+                            newProjectId,
+                            request,
+                            context,
+                            cancellationToken),
+                        response => response.Id,
+                        cancellationToken);
+                    accessState.AllowedProjectIds.Add(created.Id);
+                    return created;
+                },
+                cancellationToken,
+                projectIdSelector: response => response.Id);
+        }
+
+        private Task<ProjectSummary> ProjectStructureSubprojectCreateAsync(
+            AgentDefinition agent,
+            ProjectStructureAccessState accessState,
+            Guid parentProjectId,
+            ProjectStructureProjectSaveRequest request,
+            int? estimatedMinutes,
+            CancellationToken cancellationToken)
+        {
+            return ExecuteAsync(
+                agent,
+                "projects.subproject-create",
+                parentProjectId,
+                null,
+                ProjectStructureLeaseScopeKind.Project,
+                parentProjectId.ToString("D"),
+                request,
+                async cancellationToken =>
+                {
+                    await authorizationService.EnsureSubprojectCreationAuthorizedAsync(
+                        agent.Id,
+                        parentProjectId,
+                        cancellationToken);
+                    EnsureSubprojectCreationAllowed(accessState);
+                    EnsureProjectAllowed(accessState, parentProjectId);
+                    ProjectStructureAgentCreationValidation.EnsureSubprojectRequest(parentProjectId, request);
+                    var created = await projectCreationCoordinator.CreateAsync(
+                        agent,
+                        (newProjectId, cancellationToken) => agentService.CreateSubprojectAsync(
+                            parentProjectId,
+                            newProjectId,
+                            request,
+                            BuildAgentContext(agent, accessState, parentProjectId),
+                            cancellationToken),
+                        response => response.Id,
+                        cancellationToken);
                     accessState.AllowedProjectIds.Add(created.Id);
                     return created;
                 },
@@ -684,6 +762,13 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
                 request,
                 async cancellationToken =>
                 {
+                    await authorizationService.EnsureSubprojectLinkAuthorizedAsync(
+                        agent.Id,
+                        parentProjectId,
+                        request.ChildProjectId,
+                        request.CurrentParentProjectId,
+                        cancellationToken);
+                    EnsureSubprojectCreationAllowed(accessState);
                     EnsureProjectWriteAllowed(accessState, parentProjectId);
                     EnsureProjectWriteAllowed(accessState, request.ChildProjectId);
                     if (request.CurrentParentProjectId.HasValue)
@@ -715,14 +800,31 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
                 request,
                 async cancellationToken =>
                 {
+                    var authorization = await authorizationService.EnsureNodesToNewSubprojectAuthorizedAsync(
+                        agent.Id,
+                        projectId,
+                        cancellationToken);
+                    EnsureSubprojectCreationAllowed(accessState);
                     EnsureProjectWriteAllowed(accessState, projectId);
+                    ProjectStructureAgentCreationValidation.EnsureNodesToSubprojectRequest(projectId, request);
                     await EnsureTaskFreeTargetsAsync(
-                        accessState,
+                        authorization.RequiresNonTaskWriteGuard,
                         projectId,
                         request.NodeIds,
                         request.IncludeDescendants,
                         cancellationToken);
-                    return await agentService.MoveNodesToNewSubprojectAsync(projectId, request, BuildAgentContext(agent, accessState, projectId), cancellationToken);
+                    var result = await projectCreationCoordinator.CreateAsync(
+                        agent,
+                        (targetProjectId, cancellationToken) => agentService.MoveNodesToNewSubprojectAsync(
+                            projectId,
+                            targetProjectId,
+                            request,
+                            BuildAgentContext(agent, accessState, projectId),
+                            cancellationToken),
+                        response => response.TargetProjectId,
+                        cancellationToken);
+                    accessState.AllowedProjectIds.Add(result.TargetProjectId);
+                    return result;
                 },
                 cancellationToken);
         }
@@ -2514,14 +2616,29 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
                 requestedObjectSubtype);
         }
 
-        private async Task EnsureTaskFreeTargetsAsync(
+        private Task EnsureTaskFreeTargetsAsync(
             ProjectStructureAccessState accessState,
             Guid projectId,
             IEnumerable<string> nodeIds,
             bool includeDescendants,
             CancellationToken cancellationToken)
         {
-            if (!accessState.RequiresNonTaskWriteGuard)
+            return EnsureTaskFreeTargetsAsync(
+                accessState.RequiresNonTaskWriteGuard,
+                projectId,
+                nodeIds,
+                includeDescendants,
+                cancellationToken);
+        }
+
+        private async Task EnsureTaskFreeTargetsAsync(
+            bool requiresNonTaskWriteGuard,
+            Guid projectId,
+            IEnumerable<string> nodeIds,
+            bool includeDescendants,
+            CancellationToken cancellationToken)
+        {
+            if (!requiresNonTaskWriteGuard)
             {
                 return;
             }
@@ -2571,6 +2688,32 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
                 403,
                 "ProjectStructureWriteDenied",
                 "This agent is not allowed to write project structure. Enable write access in the agent settings.");
+        }
+
+        private static void EnsureProjectCreationAllowed(ProjectStructureAccessState accessState)
+        {
+            if (accessState.CanCreateProjects)
+            {
+                return;
+            }
+
+            throw new ProjectStructureAgentException(
+                403,
+                "ProjectCreationDenied",
+                "This agent is not allowed to create standalone projects. Enable project creation in the agent settings.");
+        }
+
+        private static void EnsureSubprojectCreationAllowed(ProjectStructureAccessState accessState)
+        {
+            if (accessState.CanCreateSubprojects)
+            {
+                return;
+            }
+
+            throw new ProjectStructureAgentException(
+                403,
+                "SubprojectCreationDenied",
+                "This agent is not allowed to create or attach subprojects. Enable subproject creation in the agent settings.");
         }
 
         private static void EnsureAnyWriteAllowed(ProjectStructureAccessState accessState)
@@ -2817,6 +2960,8 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
             CanWriteUnscoped = normalized.CanWrite;
             CanWriteStructureUnscoped = normalized.CanWrite || normalized.CanWriteNonTaskStructure;
             CanWriteTasksUnscoped = ProjectStructureNonTaskWritePolicy.CanUseTaskMutationTools(normalized);
+            CanCreateProjects = normalized.CanCreateProjects;
+            CanCreateSubprojects = normalized.CanCreateSubprojects;
             RequiresNonTaskWriteGuard = normalized.CanWriteNonTaskStructure &&
                 !normalized.CanWrite &&
                 scopedProcessAccess?.CanWrite != true;
@@ -2838,6 +2983,10 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
         public bool CanWriteStructureUnscoped { get; }
 
         public bool CanWriteTasksUnscoped { get; }
+
+        public bool CanCreateProjects { get; }
+
+        public bool CanCreateSubprojects { get; }
 
         public bool RequiresNonTaskWriteGuard { get; }
 

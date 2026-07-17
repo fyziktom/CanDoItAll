@@ -47,16 +47,7 @@ public sealed class ProjectStructureAgentService(
     {
         ValidateProjectRequest(request);
 
-        var editor = new ProjectEditorModel
-        {
-            Id = projectId,
-            Name = request.Name.Trim(),
-            Description = request.Description?.Trim() ?? string.Empty,
-            Objective = request.Objective?.Trim() ?? string.Empty,
-            CurrentPhase = request.CurrentPhase?.Trim() ?? string.Empty,
-            Status = request.Status,
-            TargetDateUtc = request.TargetDateUtc
-        };
+        var editor = BuildProjectEditor(projectId, request);
 
         if (projectId.HasValue)
         {
@@ -75,6 +66,74 @@ public sealed class ProjectStructureAgentService(
 
         var createResult = await projectsService.SaveAsync(editor, cancellationToken);
         return await ResolveSavedProjectAsync(createResult, cancellationToken);
+    }
+
+    public async Task<ProjectSummary> CreateProjectAsync(
+        Guid newProjectId,
+        ProjectStructureProjectSaveRequest request,
+        ProjectStructureAgentContext agent,
+        CancellationToken cancellationToken = default)
+    {
+        if (newProjectId == Guid.Empty)
+        {
+            throw new ProjectStructureAgentException(400, "ProjectIdRequired", "A reserved project id is required.");
+        }
+
+        ValidateProjectRequest(request);
+        var createResult = await projectsService.CreateAsync(
+            newProjectId,
+            BuildProjectEditor(projectId: null, request),
+            cancellationToken);
+        return await ResolveSavedProjectAsync(createResult, cancellationToken);
+    }
+
+    public Task<ProjectSummary> CreateSubprojectAsync(
+        Guid parentProjectId,
+        ProjectStructureProjectSaveRequest request,
+        ProjectStructureAgentContext agent,
+        CancellationToken cancellationToken = default)
+    {
+        return CreateSubprojectAsync(
+            parentProjectId,
+            Guid.NewGuid(),
+            request,
+            agent,
+            cancellationToken);
+    }
+
+    public Task<ProjectSummary> CreateSubprojectAsync(
+        Guid parentProjectId,
+        Guid newProjectId,
+        ProjectStructureProjectSaveRequest request,
+        ProjectStructureAgentContext agent,
+        CancellationToken cancellationToken = default)
+    {
+        if (parentProjectId == Guid.Empty)
+        {
+            throw new ProjectStructureAgentException(400, "ParentProjectRequired", "A parent project id is required.");
+        }
+
+        if (newProjectId == Guid.Empty)
+        {
+            throw new ProjectStructureAgentException(400, "SubprojectIdRequired", "A reserved subproject id is required.");
+        }
+
+        ValidateProjectRequest(request);
+        return leaseService.RunWithProjectMutationLeaseAsync(
+            parentProjectId,
+            request.LeaseToken,
+            agent,
+            "create-subproject",
+            async cancellationToken =>
+            {
+                var createResult = await projectsService.CreateSubprojectAsync(
+                    parentProjectId,
+                    newProjectId,
+                    BuildProjectEditor(projectId: null, request),
+                    cancellationToken);
+                return await ResolveSavedProjectAsync(createResult, cancellationToken);
+            },
+            cancellationToken);
     }
 
     public async Task ChangeSubprojectAsync(
@@ -758,13 +817,33 @@ public sealed class ProjectStructureAgentService(
             cancellationToken);
     }
 
-    public async Task<ProjectStructureNodesToSubprojectResult> MoveNodesToNewSubprojectAsync(
+    public Task<ProjectStructureNodesToSubprojectResult> MoveNodesToNewSubprojectAsync(
         Guid sourceProjectId,
         ProjectStructureNodesToSubprojectInput request,
         ProjectStructureAgentContext agent,
         CancellationToken cancellationToken = default)
     {
+        return MoveNodesToNewSubprojectAsync(
+            sourceProjectId,
+            Guid.NewGuid(),
+            request,
+            agent,
+            cancellationToken);
+    }
+
+    public async Task<ProjectStructureNodesToSubprojectResult> MoveNodesToNewSubprojectAsync(
+        Guid sourceProjectId,
+        Guid targetProjectId,
+        ProjectStructureNodesToSubprojectInput request,
+        ProjectStructureAgentContext agent,
+        CancellationToken cancellationToken = default)
+    {
         var requestedNodeIds = NormalizeNodeIds(request.NodeIds);
+        if (targetProjectId == Guid.Empty)
+        {
+            throw new ProjectStructureAgentException(400, "SubprojectIdRequired", "A reserved subproject id is required.");
+        }
+
         if (string.IsNullOrWhiteSpace(request.Name))
         {
             throw new ProjectStructureAgentException(400, "SubprojectNameRequired", "A subproject name is required.");
@@ -809,23 +888,25 @@ public sealed class ProjectStructureAgentService(
                         new { requestedNodeIds });
                 }
 
-                var createResult = await projectsService.SaveAsync(new ProjectEditorModel
-                {
-                    Name = request.Name.Trim(),
-                    Description = string.IsNullOrWhiteSpace(request.Description)
-                        ? $"Extracted from {sourceSurface.ProjectName}."
-                        : request.Description.Trim(),
-                    Objective = string.IsNullOrWhiteSpace(request.Objective)
-                        ? $"Own selected project-structure nodes from {sourceSurface.ProjectName}."
-                        : request.Objective.Trim(),
-                    CurrentPhase = string.IsNullOrWhiteSpace(request.CurrentPhase)
-                        ? "Execution"
-                        : request.CurrentPhase.Trim(),
-                    Status = request.Status
-                }, cancellationToken);
+                var createResult = await projectsService.CreateSubprojectAsync(
+                    sourceProjectId,
+                    targetProjectId,
+                    new ProjectEditorModel
+                    {
+                        Name = request.Name.Trim(),
+                        Description = string.IsNullOrWhiteSpace(request.Description)
+                            ? $"Extracted from {sourceSurface.ProjectName}."
+                            : request.Description.Trim(),
+                        Objective = string.IsNullOrWhiteSpace(request.Objective)
+                            ? $"Own selected project-structure nodes from {sourceSurface.ProjectName}."
+                            : request.Objective.Trim(),
+                        CurrentPhase = string.IsNullOrWhiteSpace(request.CurrentPhase)
+                            ? "Execution"
+                            : request.CurrentPhase.Trim(),
+                        Status = request.Status
+                    },
+                    cancellationToken);
                 var targetProject = await ResolveSavedProjectAsync(createResult, cancellationToken);
-
-                ThrowIfFailure(await projectsService.AddSubprojectAsync(sourceProjectId, targetProject.Id, cancellationToken));
 
                 var transfer = await projectWorkbenchService.MoveNodesToProjectAsync(
                     sourceProjectId,
@@ -1257,7 +1338,7 @@ public sealed class ProjectStructureAgentService(
 
     private async Task<ProjectSummary> ResolveSavedProjectAsync(Result<Guid> result, CancellationToken cancellationToken)
     {
-        ThrowIfFailure(result);
+        ThrowIfProjectCreationRejected(result);
         var projectId = result.Value;
         if (projectId == Guid.Empty)
         {
@@ -1629,12 +1710,41 @@ public sealed class ProjectStructureAgentService(
         }
     }
 
+    private static ProjectEditorModel BuildProjectEditor(
+        Guid? projectId,
+        ProjectStructureProjectSaveRequest request)
+    {
+        return new ProjectEditorModel
+        {
+            Id = projectId,
+            Name = request.Name.Trim(),
+            Description = request.Description?.Trim() ?? string.Empty,
+            Objective = request.Objective?.Trim() ?? string.Empty,
+            CurrentPhase = request.CurrentPhase?.Trim() ?? string.Empty,
+            Status = request.Status,
+            TargetDateUtc = request.TargetDateUtc
+        };
+    }
+
     private static void ValidateProjectRequest(ProjectStructureProjectSaveRequest request)
     {
         if (string.IsNullOrWhiteSpace(request.Name))
         {
             throw new ProjectStructureAgentException(400, "ProjectNameRequired", "Project name is required.");
         }
+    }
+
+    private static void ThrowIfProjectCreationRejected(Result result)
+    {
+        if (result.IsSuccess)
+        {
+            return;
+        }
+
+        var message = string.Join(" ", result.Errors.Select(error => error.Message));
+        throw new ProjectStructureProjectCreationRejectedException(
+            string.IsNullOrWhiteSpace(message) ? "The project could not be created." : message,
+            result.Errors);
     }
 
     private static void ThrowIfFailure(Result result)
@@ -1645,7 +1755,10 @@ public sealed class ProjectStructureAgentService(
         }
 
         var message = string.Join(" ", result.Errors.Select(error => error.Message));
-        throw new ProjectStructureAgentException(400, "ProjectStructureValidation", string.IsNullOrWhiteSpace(message) ? "The request could not be completed." : message);
+        throw new ProjectStructureAgentException(
+            400,
+            "ProjectStructureValidation",
+            string.IsNullOrWhiteSpace(message) ? "The request could not be completed." : message);
     }
 
     private static IReadOnlyList<string> NormalizeNodeIds(IReadOnlyList<string>? nodeIds)

@@ -2761,6 +2761,7 @@ public static class AgentToolInvocationPolicyMetadata
     public const string ProjectStructureProjectCreate = "project_structure_project_create";
     public const string ProjectStructureProjectUpdate = "project_structure_project_update";
     public const string ProjectStructureHierarchyGet = "project_structure_hierarchy_get";
+    public const string ProjectStructureSubprojectCreate = "project_structure_subproject_create";
     public const string ProjectStructureSubprojectLink = "project_structure_subproject_link";
     public const string ProjectStructureNodesToNewSubproject = "project_structure_nodes_to_new_subproject";
     public const string ProjectStructureRead = "project_structure_read";
@@ -2836,6 +2837,7 @@ public static class AgentToolInvocationPolicyMetadata
     [
         ProjectStructureProjectCreate,
         ProjectStructureProjectUpdate,
+        ProjectStructureSubprojectCreate,
         ProjectStructureSubprojectLink,
         ProjectStructureNodesToNewSubproject,
         ProjectTaskCreate,

@@ -13,6 +13,10 @@ public sealed class AgentProjectStructureAccessSettings
 
     public bool CanWriteTasks { get; set; }
 
+    public bool CanCreateProjects { get; set; }
+
+    public bool CanCreateSubprojects { get; set; }
+
     public bool AllowAllProjects { get; set; }
 
     public List<Guid> AllowedProjectIds { get; set; } = [];
@@ -25,6 +29,8 @@ public static class AgentProjectStructureAccessMetadata
     private const string CanWritePropertyName = "canWrite";
     private const string CanWriteNonTaskStructurePropertyName = "canWriteNonTaskStructure";
     private const string CanWriteTasksPropertyName = "canWriteTasks";
+    private const string CanCreateProjectsPropertyName = "canCreateProjects";
+    private const string CanCreateSubprojectsPropertyName = "canCreateSubprojects";
     private const string AllowAllProjectsPropertyName = "allowAllProjects";
     private const string AllowedProjectIdsPropertyName = "allowedProjectIds";
 
@@ -44,12 +50,23 @@ public static class AgentProjectStructureAccessMetadata
                 return new AgentProjectStructureAccessSettings();
             }
 
+            var canWrite = TryReadBoolean(projectStructure, CanWritePropertyName);
+            var canWriteNonTaskStructure = TryReadBoolean(projectStructure, CanWriteNonTaskStructurePropertyName);
+            var legacyCanCreateProjects = canWrite || canWriteNonTaskStructure;
             var settings = new AgentProjectStructureAccessSettings
             {
                 CanRead = TryReadBoolean(projectStructure, CanReadPropertyName),
-                CanWrite = TryReadBoolean(projectStructure, CanWritePropertyName),
-                CanWriteNonTaskStructure = TryReadBoolean(projectStructure, CanWriteNonTaskStructurePropertyName),
+                CanWrite = canWrite,
+                CanWriteNonTaskStructure = canWriteNonTaskStructure,
                 CanWriteTasks = TryReadBoolean(projectStructure, CanWriteTasksPropertyName),
+                CanCreateProjects = ReadBooleanOrLegacyDefault(
+                    projectStructure,
+                    CanCreateProjectsPropertyName,
+                    legacyCanCreateProjects),
+                CanCreateSubprojects = ReadBooleanOrLegacyDefault(
+                    projectStructure,
+                    CanCreateSubprojectsPropertyName,
+                    legacyCanCreateProjects),
                 AllowAllProjects = TryReadBoolean(projectStructure, AllowAllProjectsPropertyName)
             };
 
@@ -77,6 +94,8 @@ public static class AgentProjectStructureAccessMetadata
             !normalized.CanWrite &&
             !normalized.CanWriteNonTaskStructure &&
             !normalized.CanWriteTasks &&
+            !normalized.CanCreateProjects &&
+            !normalized.CanCreateSubprojects &&
             !normalized.AllowAllProjects &&
             normalized.AllowedProjectIds.Count == 0)
         {
@@ -90,6 +109,8 @@ public static class AgentProjectStructureAccessMetadata
             [CanWritePropertyName] = normalized.CanWrite,
             [CanWriteNonTaskStructurePropertyName] = normalized.CanWriteNonTaskStructure,
             [CanWriteTasksPropertyName] = normalized.CanWriteTasks,
+            [CanCreateProjectsPropertyName] = normalized.CanCreateProjects,
+            [CanCreateSubprojectsPropertyName] = normalized.CanCreateSubprojects,
             [AllowAllProjectsPropertyName] = normalized.AllowAllProjects,
             [AllowedProjectIdsPropertyName] = new JsonArray(
                 normalized.AllowedProjectIds
@@ -106,10 +127,17 @@ public static class AgentProjectStructureAccessMetadata
 
         return new AgentProjectStructureAccessSettings
         {
-            CanRead = settings.CanRead || settings.CanWrite || settings.CanWriteNonTaskStructure || settings.CanWriteTasks,
+            CanRead = settings.CanRead ||
+                settings.CanWrite ||
+                settings.CanWriteNonTaskStructure ||
+                settings.CanWriteTasks ||
+                settings.CanCreateProjects ||
+                settings.CanCreateSubprojects,
             CanWrite = settings.CanWrite,
             CanWriteNonTaskStructure = settings.CanWriteNonTaskStructure,
             CanWriteTasks = settings.CanWriteTasks,
+            CanCreateProjects = settings.CanCreateProjects,
+            CanCreateSubprojects = settings.CanCreateSubprojects,
             AllowAllProjects = settings.AllowAllProjects,
             AllowedProjectIds = settings.AllowedProjectIds
                 .Where(projectId => projectId != Guid.Empty)
@@ -124,6 +152,16 @@ public static class AgentProjectStructureAccessMetadata
         return node[propertyName] is JsonValue value &&
                value.TryGetValue<bool>(out var parsedValue) &&
                parsedValue;
+    }
+
+    private static bool ReadBooleanOrLegacyDefault(
+        JsonObject node,
+        string propertyName,
+        bool legacyDefault)
+    {
+        return node.ContainsKey(propertyName)
+            ? TryReadBoolean(node, propertyName)
+            : legacyDefault;
     }
 
     private static List<Guid> ReadProjectIds(JsonArray allowedProjectIds)

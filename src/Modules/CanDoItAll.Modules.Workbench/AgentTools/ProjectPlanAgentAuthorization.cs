@@ -74,9 +74,108 @@ public static class ProjectPlanAgentAuthorizationPolicy
     }
 }
 
+public readonly record struct ProjectStructureNodesToSubprojectAuthorization(
+    bool RequiresNonTaskWriteGuard);
+
 public sealed class ProjectStructureAgentAuthorizationService(
     IAgentFrameworkWorkspaceService workspaceService)
 {
+    public async Task EnsureProjectCreationAuthorizedAsync(
+        Guid agentId,
+        CancellationToken cancellationToken)
+    {
+        var agent = await LoadActorAsync(agentId, cancellationToken);
+        var access = AgentProjectStructureAccessMetadata.Read(agent.ConfigurationJson);
+        if (!access.CanCreateProjects)
+        {
+            throw CreateDeniedException(AgentToolInvocationPolicyMetadata.ProjectStructureProjectCreate);
+        }
+    }
+
+    public async Task EnsureSubprojectCreationAuthorizedAsync(
+        Guid agentId,
+        Guid parentProjectId,
+        CancellationToken cancellationToken)
+    {
+        var agent = await LoadActorAsync(agentId, cancellationToken);
+        var access = AgentProjectStructureAccessMetadata.Read(agent.ConfigurationJson);
+        if (!access.CanCreateSubprojects || !IsProjectAllowed(access, parentProjectId))
+        {
+            throw CreateDeniedException(AgentToolInvocationPolicyMetadata.ProjectStructureSubprojectCreate);
+        }
+    }
+
+    public async Task EnsureSubprojectLinkAuthorizedAsync(
+        Guid agentId,
+        Guid parentProjectId,
+        Guid childProjectId,
+        Guid? currentParentProjectId,
+        CancellationToken cancellationToken)
+    {
+        var agent = await LoadActorAsync(agentId, cancellationToken);
+        var access = AgentProjectStructureAccessMetadata.Read(agent.ConfigurationJson);
+        if (!access.CanCreateSubprojects ||
+            !ProjectStructureNonTaskWritePolicy.CanUseStructureMutationTools(access) ||
+            !IsProjectAllowed(access, parentProjectId) ||
+            !IsProjectAllowed(access, childProjectId) ||
+            currentParentProjectId.HasValue && !IsProjectAllowed(access, currentParentProjectId.Value))
+        {
+            throw CreateDeniedException(AgentToolInvocationPolicyMetadata.ProjectStructureSubprojectLink);
+        }
+    }
+
+    public async Task<ProjectStructureNodesToSubprojectAuthorization> EnsureNodesToNewSubprojectAuthorizedAsync(
+        Guid agentId,
+        Guid projectId,
+        CancellationToken cancellationToken)
+    {
+        var agent = await LoadActorAsync(agentId, cancellationToken);
+        var access = AgentProjectStructureAccessMetadata.Read(agent.ConfigurationJson);
+        if (!access.CanCreateSubprojects ||
+            !ProjectStructureNonTaskWritePolicy.CanUseStructureMutationTools(access) ||
+            !IsProjectAllowed(access, projectId))
+        {
+            throw CreateDeniedException(AgentToolInvocationPolicyMetadata.ProjectStructureNodesToNewSubproject);
+        }
+
+        return new ProjectStructureNodesToSubprojectAuthorization(
+            RequiresNonTaskWriteGuard: access.CanWriteNonTaskStructure && !access.CanWrite);
+    }
+
+    public async Task GrantCreatedProjectAccessAsync(
+        Guid agentId,
+        Guid projectId,
+        CancellationToken cancellationToken)
+    {
+        var agents = await workspaceService.ListAgentsAsync(includeTemplates: false, cancellationToken);
+        var agent = agents.FirstOrDefault(item => item.Id == agentId)
+            ?? throw CreateDeniedException("project-structure.access-grant");
+        var access = AgentProjectStructureAccessMetadata.Read(agent.ConfigurationJson);
+        if (access.AllowAllProjects || access.AllowedProjectIds.Contains(projectId))
+        {
+            return;
+        }
+
+        await workspaceService.GrantAgentProjectStructureAccessAsync(agentId, projectId, cancellationToken);
+    }
+
+    public async Task RevokeCreatedProjectAccessAsync(
+        Guid agentId,
+        Guid projectId,
+        CancellationToken cancellationToken)
+    {
+        var agents = await workspaceService.ListAgentsAsync(includeTemplates: false, cancellationToken);
+        var agent = agents.FirstOrDefault(item => item.Id == agentId)
+            ?? throw CreateDeniedException("project-structure.access-revoke");
+        var access = AgentProjectStructureAccessMetadata.Read(agent.ConfigurationJson);
+        if (access.AllowAllProjects || !access.AllowedProjectIds.Contains(projectId))
+        {
+            return;
+        }
+
+        await workspaceService.RevokeAgentProjectStructureAccessAsync(agentId, projectId, cancellationToken);
+    }
+
     public async Task EnsurePlanSummaryAuthorizedAsync(
         Guid agentId,
         Guid projectId,

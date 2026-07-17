@@ -370,6 +370,45 @@ public static class AgentProcessReadinessEvaluator
         var access = AgentProjectStructureAccessMetadata.Normalize(
             AgentProjectStructureAccessMetadata.Read(agent.ConfigurationJson));
 
+        if (ProjectCreationRuntimeToolNames.Contains(requiredToolName))
+        {
+            if (!access.CanCreateProjects)
+            {
+                findings.Add(new AgentProcessReadinessFinding(
+                    AgentProcessReadinessFindingSeverity.Error,
+                    "agent.readiness.required-project-create-missing",
+                    $"Step '{request.StepKey}' requires standalone project creation tool '{requiredToolName}', but agent '{agent.Name}' does not have project creation access."));
+            }
+
+            return;
+        }
+
+        if (SubprojectCreationRuntimeToolNames.Contains(requiredToolName))
+        {
+            if (!access.CanCreateSubprojects)
+            {
+                findings.Add(new AgentProcessReadinessFinding(
+                    AgentProcessReadinessFindingSeverity.Error,
+                    "agent.readiness.required-subproject-create-missing",
+                    $"Step '{request.StepKey}' requires subproject creation tool '{requiredToolName}', but agent '{agent.Name}' does not have subproject creation access."));
+            }
+
+            return;
+        }
+
+        if (SubprojectStructureMutationRuntimeToolNames.Contains(requiredToolName))
+        {
+            if (!access.CanCreateSubprojects || (!access.CanWrite && !access.CanWriteNonTaskStructure))
+            {
+                findings.Add(new AgentProcessReadinessFinding(
+                    AgentProcessReadinessFindingSeverity.Error,
+                    "agent.readiness.required-subproject-structure-write-missing",
+                    $"Step '{request.StepKey}' requires subproject creation plus project-structure write access for tool '{requiredToolName}', but agent '{agent.Name}' does not have both permissions."));
+            }
+
+            return;
+        }
+
         if (ProjectTaskMutationRuntimeToolNames.Contains(requiredToolName))
         {
             if (!access.CanWrite && !access.CanWriteTasks)
@@ -1307,12 +1346,25 @@ public static class AgentProcessReadinessEvaluator
         "project_structure_lease_get"
     };
 
+    private static readonly HashSet<string> ProjectCreationRuntimeToolNames = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "project_structure_project_create"
+    };
+
+    private static readonly HashSet<string> SubprojectCreationRuntimeToolNames = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "project_structure_subproject_create"
+    };
+
+    private static readonly HashSet<string> SubprojectStructureMutationRuntimeToolNames = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "project_structure_subproject_link",
+        "project_structure_nodes_to_new_subproject"
+    };
+
     private static readonly HashSet<string> ProjectStructureMutationRuntimeToolNames = new(StringComparer.OrdinalIgnoreCase)
     {
-        "project_structure_project_create",
         "project_structure_project_update",
-        "project_structure_subproject_link",
-        "project_structure_nodes_to_new_subproject",
         "project_structure_dependency_link",
         "project_structure_dependency_unlink",
         "project_structure_node_create",

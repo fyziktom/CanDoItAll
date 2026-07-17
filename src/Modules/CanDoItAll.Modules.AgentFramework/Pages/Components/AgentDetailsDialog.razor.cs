@@ -723,8 +723,36 @@ public partial class AgentDetailsDialog
             editorModel.ProjectStructureAccess.CanWrite = false;
             editorModel.ProjectStructureAccess.CanWriteNonTaskStructure = false;
             editorModel.ProjectStructureAccess.CanWriteTasks = false;
+            editorModel.ProjectStructureAccess.CanCreateProjects = false;
+            editorModel.ProjectStructureAccess.CanCreateSubprojects = false;
             editorModel.ProjectStructureAccess.AllowAllProjects = false;
         }
+    }
+
+    private void ToggleProjectCreation(object? rawValue)
+    {
+        var isEnabled = rawValue is bool value && value;
+        editorModel.ProjectStructureAccess.CanCreateProjects = isEnabled;
+        EnsureProjectAccessLoadedWhenEnabled(isEnabled);
+    }
+
+    private void ToggleSubprojectCreation(object? rawValue)
+    {
+        var isEnabled = rawValue is bool value && value;
+        editorModel.ProjectStructureAccess.CanCreateSubprojects = isEnabled;
+        EnsureProjectAccessLoadedWhenEnabled(isEnabled);
+    }
+
+    private void EnsureProjectAccessLoadedWhenEnabled(bool isEnabled)
+    {
+        if (!isEnabled)
+        {
+            return;
+        }
+
+        editorModel.ProjectStructureAccess.CanRead = true;
+        projectStructureProjectsRequested = true;
+        _ = EnsureProjectStructureProjectsLoadedAsync();
     }
 
     private void ToggleProjectStructureNonTaskWrite(object? rawValue)

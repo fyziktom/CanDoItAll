@@ -1,4 +1,4 @@
-using CanDoItAll.AgentFramework.Components;
+using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Modules.Workbench.ProjectStructure;
 

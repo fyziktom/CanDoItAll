@@ -360,6 +360,8 @@ internal static class SandboxWorkspaceSeedNormalizer
                existing.CanWrite == seeded.CanWrite &&
                existing.CanWriteNonTaskStructure == seeded.CanWriteNonTaskStructure &&
                existing.CanWriteTasks == seeded.CanWriteTasks &&
+               existing.CanCreateProjects == seeded.CanCreateProjects &&
+               existing.CanCreateSubprojects == seeded.CanCreateSubprojects &&
                existing.AllowAllProjects == seeded.AllowAllProjects &&
                existing.AllowedProjectIds.SequenceEqual(seeded.AllowedProjectIds);
     }

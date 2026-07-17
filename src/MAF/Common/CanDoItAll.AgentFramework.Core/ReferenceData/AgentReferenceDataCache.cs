@@ -1,9 +1,19 @@
 namespace CanDoItAll.AgentFramework.Core;
 
-public sealed class AgentReferenceDataCache : IAgentReferenceDataCacheInvalidator
+public sealed class AgentReferenceDataCache : IAgentReferenceDataCacheInvalidator, IDisposable
 {
     private readonly object syncRoot = new();
     private readonly Dictionary<AgentReferenceDataRequest, AgentReferenceDataCacheEntry> entries = [];
+    private readonly AgentReferenceDataInvalidationHub? sharedInvalidator;
+
+    public AgentReferenceDataCache(AgentReferenceDataInvalidationHub? sharedInvalidator = null)
+    {
+        this.sharedInvalidator = sharedInvalidator;
+        if (sharedInvalidator is not null)
+        {
+            sharedInvalidator.Invalidated += HandleSharedInvalidation;
+        }
+    }
 
     public event EventHandler? Invalidated;
 
@@ -44,12 +54,30 @@ public sealed class AgentReferenceDataCache : IAgentReferenceDataCacheInvalidato
 
     public void Invalidate()
     {
+        Clear();
+    }
+
+    public void Dispose()
+    {
+        if (sharedInvalidator is not null)
+        {
+            sharedInvalidator.Invalidated -= HandleSharedInvalidation;
+        }
+    }
+
+    private void HandleSharedInvalidation(object? sender, EventArgs eventArgs)
+    {
+        Clear();
+    }
+
+    private void Clear()
+    {
         lock (syncRoot)
         {
             entries.Clear();
         }
 
-        Invalidated?.Invoke(this, EventArgs.Empty);
+        EventHandlerNotification.NotifyAll(Invalidated, this);
     }
 
     private void Remove(

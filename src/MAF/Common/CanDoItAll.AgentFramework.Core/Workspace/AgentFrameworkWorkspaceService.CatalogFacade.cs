@@ -17,6 +17,18 @@ public sealed partial class AgentFrameworkWorkspaceService
     public Task<Guid> SaveAgentAsync(AgentEditorModel model, CancellationToken cancellationToken = default)
         => catalogService.SaveAgentAsync(model, cancellationToken);
 
+    public Task GrantAgentProjectStructureAccessAsync(
+        Guid agentId,
+        Guid projectId,
+        CancellationToken cancellationToken = default)
+        => catalogService.GrantAgentProjectStructureAccessAsync(agentId, projectId, cancellationToken);
+
+    public Task RevokeAgentProjectStructureAccessAsync(
+        Guid agentId,
+        Guid projectId,
+        CancellationToken cancellationToken = default)
+        => catalogService.RevokeAgentProjectStructureAccessAsync(agentId, projectId, cancellationToken);
+
     public Task DeleteAgentAsync(Guid agentId, CancellationToken cancellationToken = default)
         => catalogService.DeleteAgentAsync(agentId, cancellationToken);
 

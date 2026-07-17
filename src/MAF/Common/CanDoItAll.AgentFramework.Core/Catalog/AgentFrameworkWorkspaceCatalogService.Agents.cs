@@ -134,6 +134,74 @@ internal sealed partial class AgentFrameworkWorkspaceCatalogService
         return id;
     }
 
+    public Task GrantAgentProjectStructureAccessAsync(
+        Guid agentId,
+        Guid projectId,
+        CancellationToken cancellationToken = default)
+        => UpdateAgentProjectStructureAccessAsync(
+            agentId,
+            projectId,
+            static (access, id) =>
+            {
+                if (access.AllowAllProjects || access.AllowedProjectIds.Contains(id))
+                {
+                    return false;
+                }
+
+                access.AllowedProjectIds.Add(id);
+                return true;
+            },
+            cancellationToken);
+
+    public Task RevokeAgentProjectStructureAccessAsync(
+        Guid agentId,
+        Guid projectId,
+        CancellationToken cancellationToken = default)
+        => UpdateAgentProjectStructureAccessAsync(
+            agentId,
+            projectId,
+            static (access, id) => access.AllowedProjectIds.Remove(id),
+            cancellationToken);
+
+    private async Task UpdateAgentProjectStructureAccessAsync(
+        Guid agentId,
+        Guid projectId,
+        Func<AgentProjectStructureAccessSettings, Guid, bool> update,
+        CancellationToken cancellationToken)
+    {
+        if (projectId == Guid.Empty)
+        {
+            throw new ArgumentException("A project id is required.", nameof(projectId));
+        }
+
+        var now = DateTimeOffset.UtcNow;
+        await UpdateCatalogAsync(catalog =>
+        {
+            var agent = catalog.Agents.FirstOrDefault(item => item.Id == agentId)
+                ?? throw new InvalidOperationException("Agent was not found.");
+            var access = AgentProjectStructureAccessMetadata.Read(agent.ConfigurationJson);
+            if (!update(access, projectId))
+            {
+                return catalog;
+            }
+
+            var updated = agent with
+            {
+                ConfigurationJson = AgentProjectStructureAccessMetadata.Write(agent.ConfigurationJson, access),
+                UpdatedAtUtc = now
+            };
+
+            return catalog with
+            {
+                Agents = catalog.Agents
+                    .Where(item => item.Id != agentId)
+                    .Append(updated)
+                    .OrderBy(item => item.Name, StringComparer.OrdinalIgnoreCase)
+                    .ToList()
+            };
+        }, cancellationToken);
+    }
+
     private static string NormalizeAgentModelForSave(string? model)
         => string.IsNullOrWhiteSpace(model) ? string.Empty : model.Trim();
 
