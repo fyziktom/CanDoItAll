@@ -1,0 +1,11 @@
+.agent-compact-list {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    gap: 0.4rem;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 0.1rem 0.25rem 0.1rem 0;
+    scrollbar-gutter: stable;
+}

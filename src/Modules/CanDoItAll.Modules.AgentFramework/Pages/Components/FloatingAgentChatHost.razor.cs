@@ -166,11 +166,8 @@ public partial class FloatingAgentChatHost
         while (reloadAgentsRequested && !disposalCts.IsCancellationRequested);
     }
 
-    private void SelectAgent(Guid agentId)
-        => selectedAgentId = agentId;
-
-    private bool IsAgentBusy(Guid agentId)
-        => busyAgentIds.Contains(agentId);
+    private void SelectAgent(AgentDefinition agent)
+        => selectedAgentId = agent.Id;
 
     private async Task StartNewChatAsync(AgentDefinition agent)
     {

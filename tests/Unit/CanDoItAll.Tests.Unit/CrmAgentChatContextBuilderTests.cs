@@ -6,6 +6,31 @@ namespace CanDoItAll.Tests.Unit;
 public sealed class CrmAgentChatContextBuilderTests
 {
     [Fact]
+    public void Workspace_context_identifies_the_crm_surface_without_inventing_an_account_selection()
+    {
+        var scope = CrmAgentChatContextBuilder.BuildWorkspaceScope(AgentChatContextScopeId.Create());
+        var fragment = CrmAgentChatContextBuilder.BuildWorkspaceFragment(accountCount: 0);
+
+        Assert.Equal(CrmAgentChatContextBuilder.WorkspaceSourceKind, scope.Source.Kind.Value);
+        Assert.Equal(CrmAgentChatContextBuilder.WorkspaceSourceId, scope.Source.Id.Value);
+        Assert.Equal("CRM workspace", scope.DisplayName);
+        Assert.Equal(AgentChatContextScopeAccessMode.Unrestricted, scope.AccessMode);
+        Assert.Null(scope.WorkspaceScope);
+        Assert.Empty(scope.AgentAccess);
+        Assert.Equal(CrmAgentChatContextBuilder.WorkspaceContributorId, fragment.ContributorId.Value);
+        Assert.Contains("Subview: CRM", fragment.Content, StringComparison.Ordinal);
+        Assert.Contains("AccountCount: 0", fragment.Content, StringComparison.Ordinal);
+        Assert.Contains("SelectedAccount: None", fragment.Content, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Workspace_fragment_rejects_an_invalid_account_count()
+    {
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
+            CrmAgentChatContextBuilder.BuildWorkspaceFragment(accountCount: -1));
+    }
+
+    [Fact]
     public void BuildScope_explicitly_exposes_only_context_and_keeps_tool_scope_unset()
     {
         var agentId = Guid.NewGuid();

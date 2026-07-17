@@ -1,4 +1,5 @@
 @page "/crm-hr/crm"
+@implements IDisposable
 @using CanDoItAll.AgentFramework.Core
 @using CanDoItAll.AgentFramework.Models
 @using CanDoItAll.Components.BaseLib
@@ -527,7 +528,8 @@
                              Close="CloseOpportunityConversionDialogAsync"
                              Save="SaveOpportunityConversionAsync" />
 
-<CrmAgentChatContextProvider Account="agentChatAccountContext"
+<CrmAgentChatContextProvider AccountCount="accounts.Count"
+                             Account="agentChatAccountContext"
                              Opportunity="agentChatOpportunityContext"
                              RefreshRequested="HandleAgentChatRefreshRequestedAsync" />
 
@@ -558,11 +560,15 @@
     private Guid? opportunityPartnerFilter;
     private string opportunitySourceFilter = string.Empty;
     private string? handledAccountKey;
+    private string? handledQueryKey;
+    private readonly CrmQueryLoadGeneration queryLoadGeneration = new();
+    private CancellationTokenSource? queryLoadCancellation;
     private string? message;
     private string messageTone = "success";
     private bool isOpportunityBusy;
     private bool isOpportunityConversionDialogOpen;
     private bool isOpportunityConversionBusy;
+    private bool isDisposed;
 
     private IReadOnlyList<CrmAccountListItemModel> FilteredAccounts => accounts
         .Where(MatchesSearch)
@@ -637,48 +643,100 @@
 
     protected override async Task OnParametersSetAsync()
     {
-        await LoadAccountsAsync();
-
-        var targetId = AccountIdQuery;
-        if (!targetId.HasValue && accounts.Count > 0)
+        var requestedAccountId = AccountIdQuery;
+        var requestedOpportunityId = OpportunityIdQuery;
+        var queryKey = BuildQueryKey(requestedAccountId, requestedOpportunityId);
+        var loadGeneration = queryLoadGeneration.Begin(queryKey);
+        using var loadCancellation = new CancellationTokenSource();
+        var supersededLoad = Interlocked.Exchange(ref queryLoadCancellation, loadCancellation);
+        supersededLoad?.Cancel();
+        try
         {
-            targetId = accounts[0].AccountPartyId;
-        }
-
-        var targetKey = $"{targetId?.ToString("N") ?? "none"}:{OpportunityIdQuery?.ToString("N") ?? "none"}";
-        if (handledAccountKey == targetKey && selectedAccount is not null)
-        {
-            ApplyOpportunitySelection();
-            return;
-        }
-
-        if (targetId.HasValue)
-        {
-            var account = await CrmService.GetAccountWorkspaceAsync(targetId.Value);
-            if (account is null && accounts.Count > 0)
+            if (handledQueryKey is not null &&
+                !string.Equals(handledQueryKey, queryKey, StringComparison.Ordinal))
             {
-                account = await CrmService.GetAccountWorkspaceAsync(accounts[0].AccountPartyId);
-                targetKey = accounts[0].AccountPartyId.ToString("N");
+                agentChatAccountContext = null;
+                agentChatOpportunityContext = null;
+                await InvokeAsync(StateHasChanged);
             }
 
-            if (account is not null)
+            var loadedAccounts = await CrmService.ListAccountsAsync(
+                loadCancellation.Token);
+            if (!IsCurrentQueryLoad(loadGeneration))
             {
-                ApplyLoadedAccount(account, clearMessage: true);
-                handledAccountKey = targetKey;
                 return;
             }
-        }
 
-        selectedAccount = null;
-        profileEditor = new();
-        stakeholderEditors = [];
-        interactionEditor = CreateInteractionEditor();
-        opportunityEditor = CreateOpportunityEditor(null, null);
-        opportunityConversionEditor = new();
-        selectedOpportunityId = null;
-        handledAccountKey = "none";
-        message = null;
-        UpdateAgentChatContext();
+            accounts = loadedAccounts;
+            var targetId = requestedAccountId;
+            if (!targetId.HasValue && accounts.Count > 0)
+            {
+                targetId = accounts[0].AccountPartyId;
+            }
+
+            var targetKey = BuildQueryKey(targetId, requestedOpportunityId);
+            if (handledAccountKey == targetKey && selectedAccount is not null)
+            {
+                ApplyOpportunitySelection();
+                handledQueryKey = queryKey;
+                return;
+            }
+
+            if (targetId.HasValue)
+            {
+                var account = await CrmService.GetAccountWorkspaceAsync(
+                    targetId.Value,
+                    loadCancellation.Token);
+                if (!IsCurrentQueryLoad(loadGeneration))
+                {
+                    return;
+                }
+
+                if (account is null && accounts.Count > 0)
+                {
+                    var fallbackAccountId = accounts[0].AccountPartyId;
+                    account = await CrmService.GetAccountWorkspaceAsync(
+                        fallbackAccountId,
+                        loadCancellation.Token);
+                    if (!IsCurrentQueryLoad(loadGeneration))
+                    {
+                        return;
+                    }
+
+                    targetKey = BuildQueryKey(fallbackAccountId, requestedOpportunityId);
+                }
+
+                if (account is not null)
+                {
+                    ApplyLoadedAccount(account, clearMessage: true);
+                    handledAccountKey = targetKey;
+                    handledQueryKey = queryKey;
+                    return;
+                }
+            }
+
+            selectedAccount = null;
+            profileEditor = new();
+            stakeholderEditors = [];
+            interactionEditor = CreateInteractionEditor();
+            opportunityEditor = CreateOpportunityEditor(null, null);
+            opportunityConversionEditor = new();
+            selectedOpportunityId = null;
+            handledAccountKey = "none";
+            handledQueryKey = queryKey;
+            message = null;
+            UpdateAgentChatContext();
+        }
+        catch (OperationCanceledException) when (loadCancellation.IsCancellationRequested)
+        {
+        }
+        finally
+        {
+            Interlocked.CompareExchange(
+                ref queryLoadCancellation,
+                null,
+                loadCancellation);
+        }
     }
 
     private async Task LoadAccountsAsync()
@@ -1207,6 +1265,17 @@
                 opportunity.Parties.Select(party => party.Role));
     }
 
+    private bool IsCurrentQueryLoad(CrmQueryLoadStamp loadGeneration)
+    {
+        return !isDisposed &&
+               queryLoadGeneration.IsCurrent(
+                   loadGeneration,
+                   BuildQueryKey(AccountIdQuery, OpportunityIdQuery));
+    }
+
+    private static string BuildQueryKey(Guid? accountId, Guid? opportunityId)
+        => $"{accountId?.ToString("N") ?? "none"}:{opportunityId?.ToString("N") ?? "none"}";
+
     private void OpenAgentChats()
         => AgentChatLauncher.ShowCatalog();
 
@@ -1326,5 +1395,17 @@
             OccurredOn = DateOnly.FromDateTime(DateTime.UtcNow),
             RelatedOpportunityId = relatedOpportunityId
         };
+    }
+
+    public void Dispose()
+    {
+        if (isDisposed)
+        {
+            return;
+        }
+
+        isDisposed = true;
+        queryLoadGeneration.Invalidate();
+        Interlocked.Exchange(ref queryLoadCancellation, null)?.Cancel();
     }
 }

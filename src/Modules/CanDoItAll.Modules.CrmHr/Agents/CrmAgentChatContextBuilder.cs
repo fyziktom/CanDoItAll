@@ -103,6 +103,9 @@ public sealed record CrmAgentChatOpportunityContext
 public static class CrmAgentChatContextBuilder
 {
     public const string SourceKind = "crm-account";
+    public const string WorkspaceSourceKind = "crm-workspace";
+    public const string WorkspaceSourceId = "crm";
+    public const string WorkspaceContributorId = "crm.workspace";
     public const string AccountContributorId = "crm.account-selection";
     public const string OpportunityContributorId = "crm.opportunity-selection";
     private const string ContextAccessLabel = "CRM sanitized selection";
@@ -114,6 +117,39 @@ public static class CrmAgentChatContextBuilder
         return new AgentChatContextSource(
             new AgentChatContextSourceKind(SourceKind),
             new AgentChatContextSourceId(accountId.ToString("D")));
+    }
+
+    public static AgentChatContextSource BuildWorkspaceSource()
+    {
+        return new AgentChatContextSource(
+            new AgentChatContextSourceKind(WorkspaceSourceKind),
+            new AgentChatContextSourceId(WorkspaceSourceId));
+    }
+
+    public static AgentChatContextScope BuildWorkspaceScope(AgentChatContextScopeId scopeId)
+    {
+        return new AgentChatContextScope(
+            scopeId,
+            BuildWorkspaceSource(),
+            "CRM workspace",
+            workspaceScope: null,
+            agentAccess: [],
+            accessMode: AgentChatContextScopeAccessMode.Unrestricted);
+    }
+
+    public static AgentChatContextFragment BuildWorkspaceFragment(int accountCount)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegative(accountCount);
+        var content = $"""
+CRM workspace (sanitized)
+Subview: CRM
+AccountCount: {accountCount}
+SelectedAccount: None
+""";
+        return new AgentChatContextFragment(
+            new AgentChatContextContributorId(WorkspaceContributorId),
+            order: 50,
+            content);
     }
 
     public static AgentChatContextScope BuildScope(

@@ -32,6 +32,8 @@ internal sealed class MafAgentContextContributionProvider(
 
     public AgentContextContributorId ContributorId => contributor.Descriptor.Id;
 
+    public override IReadOnlyList<string> StateKeys => [];
+
     internal async ValueTask<IReadOnlyList<ChatMessage>> ContributeAsync(
         IReadOnlyList<ChatMessage> requestMessages,
         CancellationToken cancellationToken = default)
@@ -158,6 +160,8 @@ internal sealed class MafAgentContextContributionProvider(
 
     private sealed class PreparedContributionProvider(IReadOnlyList<ChatMessage> messages) : MessageAIContextProvider
     {
+        public override IReadOnlyList<string> StateKeys => [];
+
         protected override ValueTask<IEnumerable<ChatMessage>> ProvideMessagesAsync(
             InvokingContext context,
             CancellationToken cancellationToken = default)

@@ -18,6 +18,7 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
 @using CanDoItAll.Modules.Security
 @using CanDoItAll.Modules.Workbench.CanvasAdapters
 @using CanDoItAll.Modules.Workbench.Pages.Components.ProjectStructure
+@using CanDoItAll.Modules.Workbench.ProjectStructure
 @using CanDoItAll.Modules.Workspace
 @using CanDoItAll.Infrastructure.Storage
 @using CanDoItAll.SharedKernel
@@ -77,6 +78,7 @@ else
 {
     <ProjectStructureAgentChatContextProvider ProjectId="@ProjectId"
                                               ProjectName="@surface.ProjectName"
+                                              ActiveView="@(IsGanttViewVisible ? ProjectStructureAgentChatView.Gantt : ProjectStructureAgentChatView.Canvas)"
                                               SelectedNodeIds="@(structureViewIndex == CanvasViewIndex ? selectedNodeIds : [])"
                                               RefreshRequested="HandleAgentExecutionCompletedAsync" />
     <div class="project-structure-page">

@@ -141,11 +141,6 @@ public sealed class FloatingAgentChatCoordinator : IFloatingAgentChatCoordinator
     public ActiveAgentChat ShowChat(AgentChatHandleId handleId)
     {
         ThrowIfDisposed();
-        lock (gate)
-        {
-            isCatalogVisible = false;
-        }
-
         return activeChatRegistry.Show(handleId);
     }
 
@@ -267,9 +262,7 @@ public sealed class FloatingAgentChatCoordinator : IFloatingAgentChatCoordinator
                 agentId,
                 chatSessionId,
                 cancellationToken);
-            var openedChat = activeChatRegistry.Open(identity, chatSessionId, settings);
-            HideCatalogAfterSuccessfulOpen();
-            return openedChat;
+            return activeChatRegistry.Open(identity, chatSessionId, settings);
         }
 
         var previouslyVisibleChat = activeChatRegistry.Snapshot()
@@ -283,9 +276,7 @@ public sealed class FloatingAgentChatCoordinator : IFloatingAgentChatCoordinator
             var session = await workspaceService.GetOrCreateChatSessionAsync(
                 agentId,
                 cancellationToken: cancellationToken);
-            var openedChat = activeChatRegistry.AttachSession(reservedChat.HandleId, session.Id);
-            HideCatalogAfterSuccessfulOpen();
-            return openedChat;
+            return activeChatRegistry.AttachSession(reservedChat.HandleId, session.Id);
         }
         catch
         {
@@ -295,16 +286,6 @@ public sealed class FloatingAgentChatCoordinator : IFloatingAgentChatCoordinator
 
             throw;
         }
-    }
-
-    private void HideCatalogAfterSuccessfulOpen()
-    {
-        lock (gate)
-        {
-            isCatalogVisible = false;
-        }
-
-        RaiseChanged();
     }
 
     private async Task<FloatingAgentChatSettings> EnsureSettingsLoadedAsync(

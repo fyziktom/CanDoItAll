@@ -20,17 +20,22 @@
     public IReadOnlyList<string> SelectedNodeIds { get; set; } = [];
 
     [Parameter]
+    public ProjectStructureAgentChatView ActiveView { get; set; } = ProjectStructureAgentChatView.Canvas;
+
+    [Parameter]
     public EventCallback<AgentChatExecutionCompleted> RefreshRequested { get; set; }
 
     private readonly CancellationTokenSource disposalCts = new();
     private IReadOnlyList<AgentDefinition> agents = [];
     private IAgentChatContextScopeLease? scopeLease;
     private IAgentChatContextFragmentLease? baseFragmentLease;
+    private IAgentChatContextFragmentLease? viewFragmentLease;
     private IAgentChatContextFragmentLease? selectionFragmentLease;
     private IAgentChatExecutionNotificationSubscription? notificationSubscription;
     private AgentChatContextSource? activeSource;
     private Guid activeProjectId;
     private string activeProjectName = string.Empty;
+    private ProjectStructureAgentChatView activeView;
     private string selectionKey = string.Empty;
     private AgentChatContextAccessState accessState = AgentChatContextAccessState.Loading;
     private long agentAccessGeneration;
@@ -66,6 +71,7 @@
                 accessState));
         }
 
+        UpdateViewFragment();
         UpdateSelectionFragment();
     }
 
@@ -91,6 +97,10 @@
         baseFragmentLease = ContextRegistry.RegisterFragment(
             scopeId,
             ProjectStructureAgentChatContextBuilder.BuildBaseFragment(projectId));
+        viewFragmentLease = ContextRegistry.RegisterFragment(
+            scopeId,
+            ProjectStructureAgentChatContextBuilder.BuildViewFragment(ActiveView));
+        activeView = ActiveView;
         var selectionFragment = ProjectStructureAgentChatContextBuilder.BuildSelectionFragment(SelectedNodeIds);
         selectionFragmentLease = ContextRegistry.RegisterFragment(scopeId, selectionFragment);
         selectionKey = BuildSelectionKey(SelectedNodeIds);
@@ -204,6 +214,18 @@
         selectionKey = nextSelectionKey;
     }
 
+    private void UpdateViewFragment()
+    {
+        if (activeView == ActiveView)
+        {
+            return;
+        }
+
+        viewFragmentLease?.Update(
+            ProjectStructureAgentChatContextBuilder.BuildViewFragment(ActiveView));
+        activeView = ActiveView;
+    }
+
     private Task HandleExecutionCompletedAsync(AgentChatExecutionCompleted notification)
     {
         if (isDisposed || activeSource is null || notification.Source != activeSource)
@@ -227,6 +249,8 @@
         activeSource = null;
         selectionFragmentLease?.Dispose();
         selectionFragmentLease = null;
+        viewFragmentLease?.Dispose();
+        viewFragmentLease = null;
         baseFragmentLease?.Dispose();
         baseFragmentLease = null;
         scopeLease?.Dispose();
@@ -234,6 +258,7 @@
         agents = [];
         activeProjectId = Guid.Empty;
         activeProjectName = string.Empty;
+        activeView = ProjectStructureAgentChatView.Canvas;
         accessState = AgentChatContextAccessState.Loading;
         selectionKey = string.Empty;
     }

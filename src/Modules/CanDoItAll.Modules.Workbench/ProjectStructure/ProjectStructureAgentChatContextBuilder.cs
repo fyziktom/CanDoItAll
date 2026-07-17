@@ -3,10 +3,17 @@ using CanDoItAll.AgentFramework.Models;
 
 namespace CanDoItAll.Modules.Workbench.ProjectStructure;
 
+public enum ProjectStructureAgentChatView
+{
+    Canvas,
+    Gantt
+}
+
 public static class ProjectStructureAgentChatContextBuilder
 {
     public const string SourceKind = "project-structure";
     public const string BaseContributorId = "project-structure.guidance";
+    public const string ViewContributorId = "project-structure.view";
     public const string SelectionContributorId = "project-structure.selection";
 
     public static AgentChatContextSource BuildSource(Guid projectId)
@@ -62,6 +69,35 @@ public static class ProjectStructureAgentChatContextBuilder
             new AgentChatContextContributorId(SelectionContributorId),
             order: 200,
             ContextualAgentWorkspaceContextBuilder.BuildProjectStructureSelectionContext(selectedNodeIds));
+    }
+
+    public static AgentChatContextFragment BuildViewFragment(
+        ProjectStructureAgentChatView view)
+    {
+        if (!Enum.IsDefined(view))
+        {
+            throw new ArgumentOutOfRangeException(nameof(view), view, "The project-structure agent-chat view is undefined.");
+        }
+
+        var content = view switch
+        {
+            ProjectStructureAgentChatView.Canvas => """
+Current project workspace view: structure canvas.
+- The visible surface is the interactive project-structure canvas.
+- Selected project-structure node ids are supplied by the separate selection fragment.
+""",
+            ProjectStructureAgentChatView.Gantt => """
+Current project workspace view: Gantt schedule.
+- The visible surface is the interactive Gantt schedule for the selected project.
+- The Gantt UI does not currently expose an individual task selection to agent chat; work at project schedule scope unless the user names a task.
+""",
+            _ => throw new ArgumentOutOfRangeException(nameof(view), view, "The project-structure agent-chat view is undefined.")
+        };
+
+        return new AgentChatContextFragment(
+            new AgentChatContextContributorId(ViewContributorId),
+            order: 150,
+            content);
     }
 
     private static AgentChatContextPermission ResolvePermissions(

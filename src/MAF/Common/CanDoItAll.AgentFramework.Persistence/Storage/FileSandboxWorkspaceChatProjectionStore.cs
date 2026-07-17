@@ -129,7 +129,10 @@ internal sealed class FileSandboxWorkspaceChatProjectionStore(
                 continue;
             }
 
-            var latestRun = await ResolveLatestRunForSessionAsync(session, cancellationToken);
+            var latestRun = await ResolveLatestRunForSessionAsync(
+                session,
+                runSummaries,
+                cancellationToken);
             sessionSummaries.Add(WorkspaceChatProjectionBuilder.CreateChatSessionSummary(session, latestRun));
         }
 
@@ -181,7 +184,10 @@ internal sealed class FileSandboxWorkspaceChatProjectionStore(
                 continue;
             }
 
-            var latestRun = await ResolveLatestRunForSessionAsync(storedSession, cancellationToken);
+            var latestRun = await ResolveLatestRunForSessionAsync(
+                storedSession,
+                currentChatIndex.RunSummaries,
+                cancellationToken);
             sessionSummaries.Add(WorkspaceChatProjectionBuilder.CreateChatSessionSummary(storedSession, latestRun));
         }
 
@@ -248,6 +254,7 @@ internal sealed class FileSandboxWorkspaceChatProjectionStore(
 
     private async Task<ExecutionRunRecord?> ResolveLatestRunForSessionAsync(
         ChatSessionRecord session,
+        IReadOnlyList<ChatRunSummaryRecord> runSummaries,
         CancellationToken cancellationToken)
     {
         if (session.LatestExecutionRunId.HasValue)
@@ -261,37 +268,23 @@ internal sealed class FileSandboxWorkspaceChatProjectionStore(
             }
         }
 
-        return await LoadLatestRunForSessionAsync(session.Id, cancellationToken);
-    }
-
-    private async Task<ExecutionRunRecord?> LoadLatestRunForSessionAsync(
-        Guid chatSessionId,
-        CancellationToken cancellationToken)
-    {
-        if (!Directory.Exists(layout.ExecutionRunsRoot))
+        var latestRunId = runSummaries
+            .Where(item =>
+                item.ChatSessionId == session.Id &&
+                item.ExecutionRunId != session.LatestExecutionRunId)
+            .OrderByDescending(item => item.UpdatedAtUtc)
+            .Select(item => (Guid?)item.ExecutionRunId)
+            .FirstOrDefault();
+        if (!latestRunId.HasValue)
         {
             return null;
         }
 
-        ExecutionRunRecord? latestRun = null;
-        foreach (var runDirectory in Directory.EnumerateDirectories(layout.ExecutionRunsRoot))
-        {
-            var run = await jsonStore.ReadJsonAsync<ExecutionRunRecord>(
-                Path.Combine(runDirectory, "run.json"),
-                cancellationToken);
-            if (run?.ChatSessionId != chatSessionId)
-            {
-                continue;
-            }
-
-            if (latestRun is null ||
-                run.UpdatedAtUtc > latestRun.UpdatedAtUtc ||
-                (run.UpdatedAtUtc == latestRun.UpdatedAtUtc && run.CreatedAtUtc > latestRun.CreatedAtUtc))
-            {
-                latestRun = run;
-            }
-        }
-
-        return latestRun;
+        var indexedRun = await jsonStore.ReadJsonAsync<ExecutionRunRecord>(
+            layout.RunPath(latestRunId.Value),
+            cancellationToken);
+        return indexedRun?.ChatSessionId == session.Id
+            ? indexedRun
+            : null;
     }
 }

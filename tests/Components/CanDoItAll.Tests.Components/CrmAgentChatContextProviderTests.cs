@@ -10,6 +10,78 @@ namespace CanDoItAll.Tests.Components;
 public sealed class CrmAgentChatContextProviderTests
 {
     [Fact]
+    public void Provider_replaces_stale_module_context_and_transitions_between_workspace_and_selection()
+    {
+        using var context = new TestContext();
+        var registry = new AgentChatContextRegistry(TimeProvider.System);
+        context.Services.AddLogging();
+        context.Services.AddSingleton<IAgentChatContextRegistry>(registry);
+        context.Services.AddSingleton<IAgentChatExecutionNotificationHub>(new RecordingNotificationHub());
+        context.Services.AddSingleton<IAgentReferenceDataProvider>(
+            new StubAgentReferenceDataProvider(CreateAgent()));
+        context.Services.AddSingleton<IAgentReferenceDataCacheInvalidator>(
+            new StubReferenceDataCacheInvalidator());
+        using var staleScopeLease = registry.ActivateScope(new AgentChatContextScope(
+            AgentChatContextScopeId.Create(),
+            new AgentChatContextSource(
+                new AgentChatContextSourceKind("project-structure"),
+                new AgentChatContextSourceId(Guid.NewGuid().ToString("D"))),
+            "Stale project structure"));
+
+        var cut = context.RenderComponent<CrmAgentChatContextProvider>(parameters => parameters
+            .Add(component => component.AccountCount, 0)
+            .Add(component => component.Account, (CrmAgentChatAccountContext?)null));
+
+        cut.WaitForAssertion(() =>
+        {
+            var snapshot = Assert.IsType<AgentChatContextSnapshot>(registry.Capture());
+            Assert.Equal(CrmAgentChatContextBuilder.WorkspaceSourceKind, snapshot.Scope.Source.Kind.Value);
+            Assert.Equal(CrmAgentChatContextBuilder.WorkspaceSourceId, snapshot.Scope.Source.Id.Value);
+            var fragment = Assert.Single(snapshot.Fragments);
+            Assert.Equal(CrmAgentChatContextBuilder.WorkspaceContributorId, fragment.ContributorId.Value);
+            Assert.Contains("AccountCount: 0", fragment.Content, StringComparison.Ordinal);
+            Assert.Contains("SelectedAccount: None", fragment.Content, StringComparison.Ordinal);
+        });
+
+        var account = CreateAccount();
+        var opportunity = CreateOpportunity(account.AccountId, "Expansion", OpportunityStage.Qualified);
+        cut.SetParametersAndRender(parameters => parameters
+            .Add(component => component.AccountCount, 1)
+            .Add(component => component.Account, account)
+            .Add(component => component.Opportunity, opportunity));
+
+        cut.WaitForAssertion(() =>
+        {
+            var snapshot = Assert.IsType<AgentChatContextSnapshot>(registry.Capture());
+            Assert.Equal(CrmAgentChatContextBuilder.SourceKind, snapshot.Scope.Source.Kind.Value);
+            Assert.Equal(account.AccountId.ToString("D"), snapshot.Scope.Source.Id.Value);
+            Assert.Collection(
+                snapshot.Fragments,
+                fragment => Assert.Equal(CrmAgentChatContextBuilder.AccountContributorId, fragment.ContributorId.Value),
+                fragment => Assert.Equal(CrmAgentChatContextBuilder.OpportunityContributorId, fragment.ContributorId.Value));
+        });
+
+        cut.SetParametersAndRender(parameters => parameters
+            .Add(component => component.AccountCount, 1)
+            .Add(component => component.Account, (CrmAgentChatAccountContext?)null)
+            .Add(component => component.Opportunity, (CrmAgentChatOpportunityContext?)null));
+
+        cut.WaitForAssertion(() =>
+        {
+            var snapshot = Assert.IsType<AgentChatContextSnapshot>(registry.Capture());
+            Assert.Equal(CrmAgentChatContextBuilder.WorkspaceSourceKind, snapshot.Scope.Source.Kind.Value);
+            var fragment = Assert.Single(snapshot.Fragments);
+            Assert.Contains("AccountCount: 1", fragment.Content, StringComparison.Ordinal);
+            Assert.Contains("SelectedAccount: None", fragment.Content, StringComparison.Ordinal);
+        });
+
+        cut.Instance.Dispose();
+        cut.Dispose();
+
+        Assert.Null(registry.Capture());
+    }
+
+    [Fact]
     public async Task Provider_tracks_selection_publishes_refresh_and_releases_its_scope()
     {
         using var context = new TestContext();

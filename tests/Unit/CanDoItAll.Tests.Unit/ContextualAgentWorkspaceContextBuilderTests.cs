@@ -103,6 +103,10 @@ public sealed class ContextualAgentWorkspaceContextBuilderTests
         var projectId = Guid.NewGuid();
 
         var baseFragment = ProjectStructureAgentChatContextBuilder.BuildBaseFragment(projectId);
+        var canvasViewFragment = ProjectStructureAgentChatContextBuilder.BuildViewFragment(
+            ProjectStructureAgentChatView.Canvas);
+        var ganttViewFragment = ProjectStructureAgentChatContextBuilder.BuildViewFragment(
+            ProjectStructureAgentChatView.Gantt);
         var selectionFragment = ProjectStructureAgentChatContextBuilder.BuildSelectionFragment(
             [" node:alpha ", "node:beta", "node:alpha"]);
 
@@ -110,6 +114,9 @@ public sealed class ContextualAgentWorkspaceContextBuilderTests
         Assert.Contains("project_structure_asset_content_get", baseFragment.Content);
         Assert.Contains("workspace_convert_document", baseFragment.Content);
         Assert.DoesNotContain("node:alpha", baseFragment.Content);
+        Assert.Contains("structure canvas", canvasViewFragment.Content, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Gantt schedule", ganttViewFragment.Content);
+        Assert.Contains("does not currently expose an individual task selection", ganttViewFragment.Content);
         Assert.Contains(
             "Selected project-structure node ids: node:alpha, node:beta.",
             selectionFragment.Content);

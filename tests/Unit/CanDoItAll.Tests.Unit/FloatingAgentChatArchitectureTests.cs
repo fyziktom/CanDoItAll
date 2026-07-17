@@ -798,6 +798,18 @@ public sealed class AgentChatExecutionOrchestratorTests
 
         using (var scopeLease = registry.ActivateScope(CreateScope(
                    agentId,
+                   "project-structure",
+                   "project-1",
+                   "Project Gantt")))
+        using (registry.RegisterFragment(
+                   scopeLease.ScopeId,
+                   CreateFragment("Current project workspace view: Gantt schedule. Selected project-structure node ids: none.")))
+        {
+            await orchestrator.SendMessageAsync(agentId, sessionId, "Continue with the schedule");
+        }
+
+        using (var scopeLease = registry.ActivateScope(CreateScope(
+                   agentId,
                    "crm-partner",
                    "partner-2",
                    "CRM partner")))
@@ -819,10 +831,19 @@ public sealed class AgentChatExecutionOrchestratorTests
             },
             second =>
             {
-                Assert.Equal("Continue", second.Prompt);
-                Assert.Equal("crm-partner", second.Options.Context!.SourceKind);
-                Assert.Contains("Selected partner: Contoso", second.Options.TransientContext!.Content);
+                Assert.Equal("Continue with the schedule", second.Prompt);
+                Assert.Equal("project-structure", second.Options.Context!.SourceKind);
+                Assert.Contains("Gantt schedule", second.Options.TransientContext!.Content);
                 Assert.DoesNotContain("Selected project node: A", second.Options.TransientContext.Content);
+                Assert.DoesNotContain("Selected partner: Contoso", second.Options.TransientContext.Content);
+            },
+            third =>
+            {
+                Assert.Equal("Continue", third.Prompt);
+                Assert.Equal("crm-partner", third.Options.Context!.SourceKind);
+                Assert.Contains("Selected partner: Contoso", third.Options.TransientContext!.Content);
+                Assert.DoesNotContain("Selected project node: A", third.Options.TransientContext.Content);
+                Assert.DoesNotContain("Gantt schedule", third.Options.TransientContext.Content);
             });
     }
 
@@ -1010,7 +1031,7 @@ public sealed class AgentChatExecutionOrchestratorTests
 public sealed class FloatingAgentChatCoordinatorTests
 {
     [Fact]
-    public async Task StartNewChatAsync_attaches_the_exact_created_session()
+    public async Task StartNewChatAsync_attaches_the_exact_created_session_and_preserves_catalog()
     {
         var clock = new ManualTimeProvider();
         var agent = CreateAgent("Launch agent", clock.GetUtcNow());
@@ -1033,10 +1054,62 @@ public sealed class FloatingAgentChatCoordinatorTests
 
         Assert.Equal(sessionId, chat.ChatSessionId);
         var state = coordinator.Snapshot();
-        Assert.False(state.IsCatalogVisible);
+        Assert.True(state.IsCatalogVisible);
         Assert.Equal(AgentChatCatalogTab.ActiveChats, state.CatalogTab);
         Assert.Equal(chat, Assert.Single(state.ActiveChats));
         Assert.Equal([null], workspaceProxy.RequestedSessionIds);
+    }
+
+    [Fact]
+    public async Task OpenChatAsync_preserves_catalog_visibility_and_tab()
+    {
+        var clock = new ManualTimeProvider();
+        var agent = CreateAgent("History agent", clock.GetUtcNow());
+        var sessionId = Guid.NewGuid();
+        var (workspace, workspaceProxy) = CreateWorkspaceService();
+        await using var coordinator = CreateCoordinator(
+            workspace,
+            new ActiveAgentChatRegistry(clock),
+            new CoordinatorPreparationPool(agent),
+            new CoordinatorSettingsService(FloatingAgentChatSettings.Default),
+            clock);
+        coordinator.ShowCatalog(AgentChatCatalogTab.ActiveChats);
+
+        var chat = await coordinator.OpenChatAsync(agent.Id, sessionId);
+
+        var state = coordinator.Snapshot();
+        Assert.True(state.IsCatalogVisible);
+        Assert.Equal(AgentChatCatalogTab.ActiveChats, state.CatalogTab);
+        Assert.Equal(sessionId, chat.ChatSessionId);
+        Assert.Equal([sessionId], workspaceProxy.RequestedSessionIds);
+    }
+
+    [Fact]
+    public async Task ShowChat_preserves_catalog_visibility_and_tab()
+    {
+        var clock = new ManualTimeProvider();
+        var agent = CreateAgent("Active agent", clock.GetUtcNow());
+        var registry = new ActiveAgentChatRegistry(clock);
+        var chat = registry.Open(
+            CreateIdentity(agent),
+            Guid.NewGuid(),
+            FloatingAgentChatSettings.Default);
+        registry.KeepActive(chat.HandleId);
+        var (workspace, _) = CreateWorkspaceService();
+        await using var coordinator = CreateCoordinator(
+            workspace,
+            registry,
+            new CoordinatorPreparationPool(agent),
+            new CoordinatorSettingsService(FloatingAgentChatSettings.Default),
+            clock);
+        coordinator.ShowCatalog(AgentChatCatalogTab.ActiveChats);
+
+        var shownChat = coordinator.ShowChat(chat.HandleId);
+
+        var state = coordinator.Snapshot();
+        Assert.True(state.IsCatalogVisible);
+        Assert.Equal(AgentChatCatalogTab.ActiveChats, state.CatalogTab);
+        Assert.True(shownChat.IsVisible);
     }
 
     [Fact]

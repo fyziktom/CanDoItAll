@@ -7,6 +7,7 @@ namespace CanDoItAll.AgentFramework.Maf;
 
 internal sealed class ContextCapabilityBuilder(string workspaceRoot)
 {
+    private const string RagStateKeyPrefix = "CanDoItAll.Rag.";
     private readonly string workspaceRoot = Path.GetFullPath(workspaceRoot);
 
     public void AddRagProvider(
@@ -55,7 +56,8 @@ internal sealed class ContextCapabilityBuilder(string workspaceRoot)
             new TextSearchProviderOptions
             {
                 SearchTime = searchTime,
-                RecentMessageMemoryLimit = recentMessageMemoryLimit
+                RecentMessageMemoryLimit = recentMessageMemoryLimit,
+                StateKey = $"{RagStateKeyPrefix}{capability.Id:N}"
             }));
     }
 
@@ -154,6 +156,8 @@ internal sealed class ContextCapabilityBuilder(string workspaceRoot)
 internal sealed class StaticMessageContextProvider(ChatMessage message) : MessageAIContextProvider
 {
     private readonly ChatMessage message = message;
+
+    public override IReadOnlyList<string> StateKeys => [];
 
     protected override ValueTask<IEnumerable<ChatMessage>> ProvideMessagesAsync(InvokingContext context, CancellationToken cancellationToken = default)
     {

@@ -16,20 +16,26 @@
     public CrmAgentChatOpportunityContext? Opportunity { get; set; }
 
     [Parameter]
+    public int AccountCount { get; set; }
+
+    [Parameter]
     public EventCallback<AgentChatExecutionCompleted> RefreshRequested { get; set; }
 
     private readonly CancellationTokenSource disposalCts = new();
     private IReadOnlyList<Guid> refreshEligibleAgentIds = [];
     private IAgentChatContextScopeLease? scopeLease;
+    private IAgentChatContextFragmentLease? workspaceFragmentLease;
     private IAgentChatContextFragmentLease? accountFragmentLease;
     private IAgentChatContextFragmentLease? opportunityFragmentLease;
     private IAgentChatExecutionNotificationSubscription? notificationSubscription;
     private CrmAgentChatAccountContext? activeAccount;
     private CrmAgentChatOpportunityContext? activeOpportunity;
     private string scopeStateKey = string.Empty;
+    private string workspaceFragmentContent = string.Empty;
     private string accountFragmentContent = string.Empty;
     private string opportunityFragmentContent = string.Empty;
     private long agentAccessGeneration;
+    private bool isWorkspaceContextActive;
     private bool isDisposed;
 
     protected override void OnInitialized()
@@ -41,7 +47,7 @@
     {
         if (Account is null)
         {
-            DisposeContext();
+            ActivateOrUpdateWorkspaceContext(AccountCount);
             return;
         }
 
@@ -67,6 +73,30 @@
         {
             UpdateOpportunityFragment();
         }
+    }
+
+    private void ActivateOrUpdateWorkspaceContext(int accountCount)
+    {
+        var fragment = CrmAgentChatContextBuilder.BuildWorkspaceFragment(accountCount);
+        if (!isWorkspaceContextActive)
+        {
+            DisposeContext();
+            var scopeId = AgentChatContextScopeId.Create();
+            scopeLease = ContextRegistry.ActivateScope(
+                CrmAgentChatContextBuilder.BuildWorkspaceScope(scopeId));
+            workspaceFragmentLease = ContextRegistry.RegisterFragment(scopeId, fragment);
+            workspaceFragmentContent = fragment.Content;
+            isWorkspaceContextActive = true;
+            return;
+        }
+
+        if (string.Equals(workspaceFragmentContent, fragment.Content, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        workspaceFragmentLease?.Update(fragment);
+        workspaceFragmentContent = fragment.Content;
     }
 
     private async Task ActivateContextAsync(
@@ -277,6 +307,8 @@
         Interlocked.Increment(ref agentAccessGeneration);
         notificationSubscription?.Dispose();
         notificationSubscription = null;
+        workspaceFragmentLease?.Dispose();
+        workspaceFragmentLease = null;
         opportunityFragmentLease?.Dispose();
         opportunityFragmentLease = null;
         accountFragmentLease?.Dispose();
@@ -287,8 +319,10 @@
         activeOpportunity = null;
         refreshEligibleAgentIds = [];
         scopeStateKey = string.Empty;
+        workspaceFragmentContent = string.Empty;
         accountFragmentContent = string.Empty;
         opportunityFragmentContent = string.Empty;
+        isWorkspaceContextActive = false;
     }
 
     public void Dispose()

@@ -42,10 +42,12 @@
             else
             {
                 <Tabs SelectedIndex="@SelectedCatalogTabIndex"
-                  SelectedIndexChanged="HandleCatalogTabChangedAsync"
-                  AriaLabel="Agent chat catalog"
-                  Variant="TabsVariant.WorkspaceSecondary"
-                  RenderMode="TabRenderMode.Server">
+                      SelectedIndexChanged="HandleCatalogTabChangedAsync"
+                      AriaLabel="Agent chat catalog"
+                      Variant="TabsVariant.WorkspaceSecondary"
+                      RenderMode="TabRenderMode.Server"
+                      FillHeight="true"
+                      PanelOverflowMode="TabsPanelOverflowMode.Hidden">
                 <TabsItem Text="Agents" Icon="smart_toy">
                     <div class="floating-agent-chat-host__catalog-tab">
                         <TextBox Value="@searchText"
@@ -111,39 +113,15 @@
                         }
                         else
                         {
-                            <div class="floating-agent-chat-host__agent-list">
-                                @foreach (var agent in VisibleAgents)
-                                {
-                                    <AgentSelectionCard @key="agent.Id"
-                                                        Agent="@agent"
-                                                        Compact="true"
-                                                        ShowSummary="false"
-                                                        ShowCapabilityCount="false"
-                                                        ShowUpdatedAt="false"
-                                                        ShowChatHistory="true"
-                                                        ShowDetailsTooltip="true"
-                                                        IsSelected="@(selectedAgentId == agent.Id)"
-                                                        SelectedLabel="Selected"
-                                                        ShellTestId="floating-agent-chat-agent-card"
-                                                        SelectTestId="@($"floating-agent-chat-agent-{agent.Id:N}")"
-                                                        OnSelect="@(() => SelectAgent(agent.Id))"
-                                                        OnDoubleClick="@(() => StartNewChatAsync(agent))">
-                                        <Actions>
-                                            <Button Text="New chat"
-                                                    Icon="add_comment"
-                                                    Size="ButtonSize.Small"
-                                                    Disabled="@IsAgentBusy(agent.Id)"
-                                                    Click="@(() => StartNewChatAsync(agent))" />
-                                            <Button Text="History"
-                                                    Icon="history"
-                                                    Size="ButtonSize.Small"
-                                                    ButtonStyle="ButtonStyle.Light"
-                                                    Disabled="@IsAgentBusy(agent.Id)"
-                                                    Click="@(() => OpenHistoryAsync(agent))" />
-                                        </Actions>
-                                    </AgentSelectionCard>
-                                }
-                            </div>
+                            <AgentCompactList Agents="@VisibleAgents"
+                                              SelectedAgentId="@selectedAgentId"
+                                              BusyAgentIds="@busyAgentIds"
+                                              AriaLabel="Available chat agents"
+                                              TestId="floating-agent-chat-agent-list"
+                                              AgentSelected="SelectAgent"
+                                              AgentDoubleClicked="StartNewChatAsync"
+                                              NewChatRequested="StartNewChatAsync"
+                                              HistoryRequested="OpenHistoryAsync" />
                         }
                     </div>
                 </TabsItem>
@@ -163,39 +141,41 @@
                         }
                         else
                         {
-                            <Stack GapScale="LayoutGap.Small" AlignItems="AlignItems.Stretch">
-                                @foreach (var chat in State.ActiveChats)
-                                {
-                                    <SurfaceCard @key="chat.HandleId"
-                                                 Soft="true"
-                                                 Class="floating-agent-chat-host__active-card">
-                                        <Split Gap="LayoutGap.Small">
-                                            <Stack GapScale="LayoutGap.XSmall">
-                                                <TextBlock TextStyle="TextStyle.Subtitle2" Value="@chat.Agent.Name" />
+                            <div class="floating-agent-chat-host__active-list">
+                                <Stack GapScale="LayoutGap.Small" AlignItems="AlignItems.Stretch">
+                                    @foreach (var chat in State.ActiveChats)
+                                    {
+                                        <SurfaceCard @key="chat.HandleId"
+                                                     Soft="true"
+                                                     Class="floating-agent-chat-host__active-card">
+                                            <Split Gap="LayoutGap.Small">
+                                                <Stack GapScale="LayoutGap.XSmall">
+                                                    <TextBlock TextStyle="TextStyle.Subtitle2" Value="@chat.Agent.Name" />
+                                                    <Cluster Gap="LayoutGap.XSmall" Wrap="FlexWrap.Wrap">
+                                                        <StatusBadge Tone="@(chat.IsVisible ? "success" : "neutral")"
+                                                                     Text="@(chat.IsVisible ? "Open" : "Kept active")" />
+                                                        <StatusBadge Tone="@ResolveRunStateTone(chat.RunState)"
+                                                                     Text="@ResolveRunStateLabel(chat.RunState)" />
+                                                    </Cluster>
+                                                </Stack>
                                                 <Cluster Gap="LayoutGap.XSmall" Wrap="FlexWrap.Wrap">
-                                                    <StatusBadge Tone="@(chat.IsVisible ? "success" : "neutral")"
-                                                                 Text="@(chat.IsVisible ? "Open" : "Kept active")" />
-                                                    <StatusBadge Tone="@ResolveRunStateTone(chat.RunState)"
-                                                                 Text="@ResolveRunStateLabel(chat.RunState)" />
+                                                    <Button Text="Open"
+                                                            Icon="open_in_new"
+                                                            Size="ButtonSize.Small"
+                                                            Disabled="@chat.IsVisible"
+                                                            Click="@(() => ShowChat(chat.HandleId))" />
+                                                    <Button Text="Stop"
+                                                            Icon="stop_circle"
+                                                            Size="ButtonSize.Small"
+                                                            ButtonStyle="ButtonStyle.Danger"
+                                                            Disabled="@(!chat.CanStop)"
+                                                            Click="@(() => RequestCloseAsync(chat.HandleId))" />
                                                 </Cluster>
-                                            </Stack>
-                                            <Cluster Gap="LayoutGap.XSmall" Wrap="FlexWrap.Wrap">
-                                                <Button Text="Open"
-                                                        Icon="open_in_new"
-                                                        Size="ButtonSize.Small"
-                                                        Disabled="@chat.IsVisible"
-                                                        Click="@(() => ShowChat(chat.HandleId))" />
-                                                <Button Text="Stop"
-                                                        Icon="stop_circle"
-                                                        Size="ButtonSize.Small"
-                                                        ButtonStyle="ButtonStyle.Danger"
-                                                        Disabled="@(!chat.CanStop)"
-                                                        Click="@(() => RequestCloseAsync(chat.HandleId))" />
-                                            </Cluster>
-                                        </Split>
-                                    </SurfaceCard>
-                                }
-                            </Stack>
+                                            </Split>
+                                        </SurfaceCard>
+                                    }
+                                </Stack>
+                            </div>
                         }
                     </div>
                 </TabsItem>
