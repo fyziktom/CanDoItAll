@@ -83,6 +83,17 @@ public interface ISandboxWorkspaceChatQueryStore
         CancellationToken cancellationToken = default);
 }
 
+public interface ISandboxWorkspaceChatProjectionQueryStore
+{
+    Task<ChatWorkspaceProjectionSnapshot> LoadChatWorkspaceProjectionAsync(
+        Guid agentId,
+        CancellationToken cancellationToken = default);
+}
+
+public sealed record ChatWorkspaceProjectionSnapshot(
+    IReadOnlyList<ChatSessionSummaryRecord> SessionSummaries,
+    IReadOnlyList<ChatRunSummaryRecord> RunSummaries);
+
 public interface ISandboxWorkspaceChatSessionStore
 {
     Task<ChatSessionRecord> CreateChatSessionAsync(

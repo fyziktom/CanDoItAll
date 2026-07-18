@@ -148,7 +148,8 @@ internal sealed class MafRuntimeAgentFactory
                 new StaticMessageContextProvider(
                     new ChatMessage(
                         ChatRole.User,
-                        runtimeOptions.TransientContext.Content)));
+                        runtimeOptions.TransientContext.Content),
+                    StaticMessageContextProvider.TransientAgentChatStateKey));
         }
 
         if (finalizerCapture is not null)

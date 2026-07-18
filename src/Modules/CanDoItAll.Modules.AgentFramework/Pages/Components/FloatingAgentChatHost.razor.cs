@@ -40,6 +40,7 @@ public partial class FloatingAgentChatHost
     private OverlayWindowState catalogWindowState = new() { IsVisible = true };
     private IReadOnlyList<AgentDefinition> agents = [];
     private IReadOnlyList<AgentDefinition> visibleAgents = [];
+    private Task initializationTask = Task.CompletedTask;
     private AgentChatContextSnapshot? currentContext;
     private FloatingAgentChatState state = new(false, AgentChatCatalogTab.Agents, []);
     private Guid? selectedAgentId;
@@ -48,6 +49,7 @@ public partial class FloatingAgentChatHost
     private string loadError = string.Empty;
     private long agentCatalogGeneration;
     private bool hasLoadedAgents;
+    private bool hasAttached;
     private bool isDisposed;
     private bool isInitializing;
     private bool isLoadingAgents;
@@ -59,16 +61,38 @@ public partial class FloatingAgentChatHost
 
     private IReadOnlyList<AgentDefinition> VisibleAgents => visibleAgents;
 
+    private AgentDefinition? ResolveFocusedAgent(Guid agentId)
+        => agents.FirstOrDefault(agent => agent.Id == agentId);
+
     private int SelectedCatalogTabIndex
         => State.CatalogTab == AgentChatCatalogTab.ActiveChats ? 1 : 0;
 
-    protected override async Task OnInitializedAsync()
+    protected override Task OnAfterRenderAsync(bool firstRender)
     {
+        if (!firstRender || isDisposed)
+        {
+            return Task.CompletedTask;
+        }
+
+        hasAttached = true;
         Coordinator.Changed += HandleCoordinatorChanged;
         ContextRegistry.Changed += HandleContextChanged;
         ReferenceDataCacheInvalidator.Invalidated += HandleReferenceDataInvalidated;
         RefreshContextAndVisibleAgents();
-        await InitializeHostAsync();
+        SynchronizeState();
+        StateHasChanged();
+        return StartInitializationAsync();
+    }
+
+    private Task StartInitializationAsync()
+    {
+        if (isDisposed || !initializationTask.IsCompleted)
+        {
+            return Task.CompletedTask;
+        }
+
+        initializationTask = InitializeHostAsync();
+        return Task.CompletedTask;
     }
 
     private async Task InitializeHostAsync()
@@ -80,17 +104,11 @@ public partial class FloatingAgentChatHost
 
         isInitializing = true;
         initializationError = string.Empty;
-        var preserveCatalogVisibility = State.IsCatalogVisible;
         try
         {
             await Coordinator.InitializeAsync(disposalCts.Token);
-            if (preserveCatalogVisibility && !Coordinator.Snapshot().IsCatalogVisible)
-            {
-                Coordinator.ShowCatalog();
-            }
-
             SynchronizeState();
-            if (State.IsCatalogVisible)
+            if (State.IsCatalogVisible && !hasLoadedAgents && !isLoadingAgents)
             {
                 await LoadAgentsAsync();
             }
@@ -110,6 +128,11 @@ public partial class FloatingAgentChatHost
         finally
         {
             isInitializing = false;
+        }
+
+        if (!isDisposed)
+        {
+            await InvokeAsync(StateHasChanged);
         }
     }
 
@@ -412,12 +435,21 @@ public partial class FloatingAgentChatHost
             }
 
             SynchronizeState();
-            if (State.IsCatalogVisible && !hasLoadedAgents && string.IsNullOrWhiteSpace(loadError))
+            StateHasChanged();
+            if (State.IsCatalogVisible &&
+                !isInitializing &&
+                !hasLoadedAgents &&
+                !isLoadingAgents &&
+                string.IsNullOrWhiteSpace(loadError))
             {
                 await LoadAgentsAsync();
-            }
+                if (isDisposed)
+                {
+                    return;
+                }
 
-            StateHasChanged();
+                StateHasChanged();
+            }
         });
     }
 
@@ -430,6 +462,11 @@ public partial class FloatingAgentChatHost
 
         _ = InvokeAsync(() =>
         {
+            if (isDisposed)
+            {
+                return;
+            }
+
             RefreshContextAndVisibleAgents();
             StateHasChanged();
         });
@@ -456,7 +493,13 @@ public partial class FloatingAgentChatHost
             RefreshVisibleAgents();
             if (State.IsCatalogVisible && string.IsNullOrWhiteSpace(initializationError))
             {
-                await LoadAgentsAsync();
+                var reloadTask = LoadAgentsAsync();
+                StateHasChanged();
+                await reloadTask;
+                if (isDisposed)
+                {
+                    return;
+                }
             }
 
             StateHasChanged();
@@ -515,11 +558,21 @@ public partial class FloatingAgentChatHost
 
     public async ValueTask DisposeAsync()
     {
+        if (isDisposed)
+        {
+            return;
+        }
+
         isDisposed = true;
-        Coordinator.Changed -= HandleCoordinatorChanged;
-        ContextRegistry.Changed -= HandleContextChanged;
-        ReferenceDataCacheInvalidator.Invalidated -= HandleReferenceDataInvalidated;
+        if (hasAttached)
+        {
+            Coordinator.Changed -= HandleCoordinatorChanged;
+            ContextRegistry.Changed -= HandleContextChanged;
+            ReferenceDataCacheInvalidator.Invalidated -= HandleReferenceDataInvalidated;
+        }
+
         await disposalCts.CancelAsync();
+        await initializationTask;
         disposalCts.Dispose();
     }
 }

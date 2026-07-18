@@ -52,6 +52,478 @@ public sealed class ProcessWorkspaceShellTests
     }
 
     [Fact]
+    public void Process_workspace_publishes_selected_definition_and_updates_semantic_view()
+    {
+        using var context = CreateContext(out _);
+        var navigation = context.Services.GetRequiredService<NavigationManager>();
+        var registry = context.Services.GetRequiredService<IAgentChatContextRegistry>();
+        navigation.NavigateTo("/processes");
+
+        var cut = context.RenderComponent<ProcessWorkspaceShell>();
+
+        cut.WaitForAssertion(() =>
+        {
+            var position = Assert.IsType<AgentChatSurfacePosition>(registry.Capture()?.Scope.SurfacePosition);
+            Assert.Equal("processes", position.Module);
+            Assert.Equal("workspace", position.Surface);
+            Assert.Equal("definition", position.View);
+            Assert.Equal("/processes", position.Route);
+            Assert.Equal("process-definition", position.PrimarySelection?.Kind);
+            Assert.Equal("blazor-app-delivery", position.PrimarySelection?.Id);
+            Assert.Equal("Blazor app delivery", position.PrimarySelection?.DisplayName);
+        });
+        var initialScopeId = Assert.IsType<AgentChatContextSnapshot>(registry.Capture()).Scope.Id;
+
+        ActivateProcessDetailTab(cut, "processes-detail-tab-runs", "processes-detail-panel-runs");
+
+        cut.WaitForAssertion(() =>
+        {
+            var snapshot = Assert.IsType<AgentChatContextSnapshot>(registry.Capture());
+            var position = Assert.IsType<AgentChatSurfacePosition>(snapshot.Scope.SurfacePosition);
+            Assert.Equal(initialScopeId, snapshot.Scope.Id);
+            Assert.Equal("runs.activity", position.View);
+            Assert.Contains(position.Facts, fact => fact.Name == "runtime-history");
+            Assert.DoesNotContain(position.Facts, fact => fact.Name.Contains("event-ledger", StringComparison.Ordinal));
+        });
+    }
+
+    [Fact]
+    public void Live_processes_publishes_selected_run_and_focused_dialog_without_runtime_ledgers()
+    {
+        using var context = CreateContext(out _);
+        var selectedRunId = Guid.Parse("88888888-8888-8888-8888-888888888888");
+        var navigation = context.Services.GetRequiredService<NavigationManager>();
+        var registry = context.Services.GetRequiredService<IAgentChatContextRegistry>();
+        navigation.NavigateTo($"/processes/live?runId={selectedRunId:D}");
+
+        var cut = context.RenderComponent<LiveProcessesDashboard>(parameters => parameters
+            .Add(component => component.RunIdQuery, selectedRunId));
+
+        cut.WaitForAssertion(() =>
+        {
+            var snapshot = Assert.IsType<AgentChatContextSnapshot>(registry.Capture());
+            var position = Assert.IsType<AgentChatSurfacePosition>(snapshot.Scope.SurfacePosition);
+            Assert.Equal("live", position.Surface);
+            Assert.Equal("activity", position.View);
+            Assert.Equal("/processes/live", position.Route);
+            Assert.Equal("process-run", position.PrimarySelection?.Kind);
+            Assert.Equal(selectedRunId.ToString("D"), position.PrimarySelection?.Id);
+            Assert.Equal(WorkspaceScopeKind.Process, snapshot.Scope.WorkspaceScope?.Kind);
+            Assert.Contains(position.Facts, fact => fact.Name == "run-process-name" && fact.Value.Contains("customer onboarding", StringComparison.Ordinal));
+            Assert.DoesNotContain(position.Facts, fact => fact.Name is "events" or "tools" or "diagnostics");
+        });
+        var initialScopeId = Assert.IsType<AgentChatContextSnapshot>(registry.Capture()).Scope.Id;
+
+        cut.Find("[data-testid='live-processes-run-open-details']").Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.NotNull(cut.Find("[data-testid='live-processes-run-detail-dialog']"));
+            var snapshot = Assert.IsType<AgentChatContextSnapshot>(registry.Capture());
+            var position = Assert.IsType<AgentChatSurfacePosition>(snapshot.Scope.SurfacePosition);
+            Assert.Equal(initialScopeId, snapshot.Scope.Id);
+            Assert.Contains(position.Facts, fact => fact.Name == "focused-dialog" && fact.Value == "run-detail");
+        });
+    }
+
+    [Fact]
+    public void Live_processes_fails_closed_when_an_explicit_run_does_not_exist()
+    {
+        using var context = CreateContext(out _);
+        var missingRunId = Guid.Parse("66666666-6666-6666-6666-666666666666");
+        var registry = context.Services.GetRequiredService<IAgentChatContextRegistry>();
+
+        var cut = context.RenderComponent<LiveProcessesDashboard>(parameters => parameters
+            .Add(component => component.RunIdQuery, missingRunId));
+
+        cut.WaitForAssertion(() =>
+        {
+            var snapshot = Assert.IsType<AgentChatContextSnapshot>(registry.Capture());
+            var position = Assert.IsType<AgentChatSurfacePosition>(snapshot.Scope.SurfacePosition);
+            Assert.Equal(AgentChatContextAccessState.Failed, snapshot.Scope.AccessState);
+            Assert.Equal("process-run", position.PrimarySelection?.Kind);
+            Assert.Equal(missingRunId.ToString("D"), position.PrimarySelection?.Id);
+            Assert.DoesNotContain(
+                position.SelectedEntities,
+                entity => entity.Kind == "process-run" && entity.Id != missingRunId.ToString("D"));
+            Assert.DoesNotContain(position.Facts, fact => fact.Name == "run-process-name");
+        });
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void Live_processes_fails_closed_for_an_unresolved_non_run_route(bool useProcessId)
+    {
+        using var context = CreateContext(out _);
+        var unresolvedId = Guid.Parse("66666666-6666-6666-6666-666666666666");
+        var registry = context.Services.GetRequiredService<IAgentChatContextRegistry>();
+
+        var cut = useProcessId
+            ? context.RenderComponent<LiveProcessesDashboard>(parameters => parameters
+                .Add(component => component.ProcessIdQuery, unresolvedId))
+            : context.RenderComponent<LiveProcessesDashboard>(parameters => parameters
+                .Add(component => component.LaunchPlanIdQuery, unresolvedId));
+
+        cut.WaitForAssertion(() =>
+        {
+            var snapshot = Assert.IsType<AgentChatContextSnapshot>(registry.Capture());
+            var position = Assert.IsType<AgentChatSurfacePosition>(snapshot.Scope.SurfacePosition);
+            Assert.Equal(AgentChatContextAccessState.Failed, snapshot.Scope.AccessState);
+            Assert.Null(position.PrimarySelection);
+            Assert.Empty(position.SelectedEntities);
+            Assert.DoesNotContain(position.Facts, fact => fact.Name == "run-process-name");
+        });
+    }
+
+    [Fact]
+    public void Process_workspace_fails_closed_when_an_explicit_run_does_not_exist()
+    {
+        using var context = CreateContext(out _);
+        var missingRunId = Guid.Parse("66666666-6666-6666-6666-666666666666");
+        var registry = context.Services.GetRequiredService<IAgentChatContextRegistry>();
+
+        var cut = context.RenderComponent<ProcessWorkspaceShell>(parameters => parameters
+            .Add(component => component.RunIdQuery, missingRunId));
+
+        cut.WaitForAssertion(() =>
+        {
+            var snapshot = Assert.IsType<AgentChatContextSnapshot>(registry.Capture());
+            var position = Assert.IsType<AgentChatSurfacePosition>(snapshot.Scope.SurfacePosition);
+            Assert.Equal(AgentChatContextAccessState.Failed, snapshot.Scope.AccessState);
+            Assert.Equal("process-run", position.PrimarySelection?.Kind);
+            Assert.Equal(missingRunId.ToString("D"), position.PrimarySelection?.Id);
+            Assert.DoesNotContain(
+                position.SelectedEntities,
+                entity => entity.Kind == "process-run" && entity.Id != missingRunId.ToString("D"));
+            Assert.DoesNotContain(position.Facts, fact => fact.Name == "run-process-name");
+        });
+    }
+
+    [Fact]
+    public void Process_workspace_fails_closed_when_an_explicit_definition_does_not_exist()
+    {
+        using var context = CreateContext(out var client);
+        const string missingDefinitionKey = "missing-route-definition";
+        const string fallbackDefinitionKey = "blazor-app-delivery";
+        var registry = context.Services.GetRequiredService<IAgentChatContextRegistry>();
+        client.ShellResultTransform = (_, projection) =>
+        {
+            var fallback = Assert.Single(
+                projection.DefinitionCatalog.Items,
+                item => item.Key.Value == fallbackDefinitionKey);
+            return projection with
+            {
+                DefinitionCatalog = projection.DefinitionCatalog with
+                {
+                    SelectedDefinitionKey = fallback.Key,
+                    SelectedItem = fallback
+                }
+            };
+        };
+
+        var cut = context.RenderComponent<ProcessWorkspaceShell>(parameters => parameters
+            .Add(component => component.SelectedDefinitionKey, missingDefinitionKey));
+
+        cut.WaitForAssertion(() =>
+        {
+            var snapshot = Assert.IsType<AgentChatContextSnapshot>(registry.Capture());
+            var position = Assert.IsType<AgentChatSurfacePosition>(snapshot.Scope.SurfacePosition);
+            Assert.Equal(AgentChatContextAccessState.Failed, snapshot.Scope.AccessState);
+            Assert.NotEqual(fallbackDefinitionKey, position.PrimarySelection?.Id);
+            Assert.DoesNotContain(
+                position.SelectedEntities,
+                entity => entity.Kind == "process-definition" && entity.Id == fallbackDefinitionKey);
+            Assert.DoesNotContain(
+                position.Facts,
+                IsSelectedDefinitionFact);
+        });
+    }
+
+    [Fact]
+    public void Process_workspace_publishes_the_exact_definition_selected_by_process_id()
+    {
+        using var context = CreateContext(out var client);
+        const string targetDefinitionKey = "architecture-decision-governance";
+        var targetProcessId = ProcessDefinitionCatalogProjectionService.CreateDefinitionId(
+            new ProcessDefinitionCatalogItemKey(targetDefinitionKey)).Value;
+        var registry = context.Services.GetRequiredService<IAgentChatContextRegistry>();
+        client.ShellResultTransform = (_, projection) =>
+        {
+            var target = Assert.Single(
+                projection.DefinitionCatalog.Items,
+                item => item.Key.Value == targetDefinitionKey);
+            return projection with
+            {
+                DefinitionCatalog = projection.DefinitionCatalog with
+                {
+                    SelectedDefinitionKey = target.Key,
+                    SelectedItem = target,
+                    SelectedEditor = null
+                }
+            };
+        };
+
+        var cut = context.RenderComponent<ProcessWorkspaceShell>(parameters => parameters
+            .Add(component => component.ProcessIdQuery, targetProcessId));
+
+        cut.WaitForAssertion(() =>
+        {
+            var snapshot = Assert.IsType<AgentChatContextSnapshot>(registry.Capture());
+            Assert.Equal(AgentChatContextAccessState.Ready, snapshot.Scope.AccessState);
+            Assert.Equal(targetDefinitionKey, snapshot.Scope.SurfacePosition?.PrimarySelection?.Id);
+        });
+    }
+
+    [Fact]
+    public void Process_workspace_fails_closed_when_an_explicit_process_id_does_not_exist()
+    {
+        using var context = CreateContext(out _);
+        var missingProcessId = Guid.Parse("66666666-6666-6666-6666-666666666666");
+        var registry = context.Services.GetRequiredService<IAgentChatContextRegistry>();
+
+        var cut = context.RenderComponent<ProcessWorkspaceShell>(parameters => parameters
+            .Add(component => component.ProcessIdQuery, missingProcessId));
+
+        cut.WaitForAssertion(() =>
+        {
+            var snapshot = Assert.IsType<AgentChatContextSnapshot>(registry.Capture());
+            var position = Assert.IsType<AgentChatSurfacePosition>(snapshot.Scope.SurfacePosition);
+            Assert.Equal(AgentChatContextAccessState.Failed, snapshot.Scope.AccessState);
+            Assert.Null(position.PrimarySelection);
+            Assert.Empty(position.SelectedEntities);
+            Assert.DoesNotContain(
+                position.Facts,
+                IsSelectedDefinitionFact);
+        });
+    }
+
+    [Fact]
+    public void Process_workspace_fails_closed_when_process_id_conflicts_with_definition_key()
+    {
+        using var context = CreateContext(out _);
+        const string requestedDefinitionKey = "blazor-app-delivery";
+        var conflictingProcessId = ProcessDefinitionCatalogProjectionService.CreateDefinitionId(
+            new ProcessDefinitionCatalogItemKey("architecture-decision-governance")).Value;
+        var registry = context.Services.GetRequiredService<IAgentChatContextRegistry>();
+
+        var cut = context.RenderComponent<ProcessWorkspaceShell>(parameters => parameters
+            .Add(component => component.ProcessIdQuery, conflictingProcessId)
+            .Add(component => component.SelectedDefinitionKey, requestedDefinitionKey));
+
+        cut.WaitForAssertion(() =>
+        {
+            var snapshot = Assert.IsType<AgentChatContextSnapshot>(registry.Capture());
+            var position = Assert.IsType<AgentChatSurfacePosition>(snapshot.Scope.SurfacePosition);
+            Assert.Equal(AgentChatContextAccessState.Failed, snapshot.Scope.AccessState);
+            Assert.Null(position.PrimarySelection);
+            Assert.Empty(position.SelectedEntities);
+            Assert.DoesNotContain(
+                position.Facts,
+                IsSelectedDefinitionFact);
+        });
+    }
+
+    [Fact]
+    public void Process_workspace_fails_closed_for_an_unresolved_launch_plan_route()
+    {
+        using var context = CreateContext(out _);
+        var launchPlanId = Guid.Parse("66666666-6666-6666-6666-666666666666");
+        var registry = context.Services.GetRequiredService<IAgentChatContextRegistry>();
+
+        var cut = context.RenderComponent<ProcessWorkspaceShell>(parameters => parameters
+            .Add(component => component.LaunchPlanIdQuery, launchPlanId));
+
+        cut.WaitForAssertion(() =>
+        {
+            var snapshot = Assert.IsType<AgentChatContextSnapshot>(registry.Capture());
+            var position = Assert.IsType<AgentChatSurfacePosition>(snapshot.Scope.SurfacePosition);
+            Assert.Equal(AgentChatContextAccessState.Failed, snapshot.Scope.AccessState);
+            Assert.Null(position.PrimarySelection);
+            Assert.Empty(position.SelectedEntities);
+            Assert.DoesNotContain(position.Facts, fact => fact.Name == "run-process-name");
+            Assert.DoesNotContain(
+                position.Facts,
+                IsSelectedDefinitionFact);
+        });
+    }
+
+    [Fact]
+    public async Task Live_processes_blocks_a_run_query_transition_until_the_new_run_context_is_published()
+    {
+        using var context = CreateContext(out _);
+        var firstRunId = Guid.Parse("88888888-8888-8888-8888-888888888888");
+        var secondRunId = Guid.Parse("77777777-7777-7777-7777-777777777777");
+        var navigation = context.Services.GetRequiredService<NavigationManager>();
+        var registry = context.Services.GetRequiredService<IAgentChatContextRegistry>();
+        navigation.NavigateTo($"/processes/live?runId={firstRunId:D}");
+        using var workspaceLease = registry.RegisterWorkspacePosition(
+            new AgentChatWorkspacePosition("live", "Live processes", "/processes/live", "page"),
+            AgentChatNavigationIdentity.CreateForLocation(navigation.BaseUri, navigation.Uri));
+
+        var cut = context.RenderComponent<LiveProcessesDashboard>(parameters => parameters
+            .Add(component => component.RunIdQuery, firstRunId));
+        cut.WaitForAssertion(() =>
+            Assert.Equal(
+                firstRunId.ToString("D"),
+                registry.Capture()?.Scope.SurfacePosition?.PrimarySelection?.Id));
+        var scopeId = Assert.IsType<AgentChatContextSnapshot>(registry.Capture()).Scope.Id;
+
+        var nextLocation = navigation.ToAbsoluteUri($"/processes/live?runId={secondRunId:D}").AbsoluteUri;
+        var nextNavigationIdentity = AgentChatNavigationIdentity.CreateForLocation(
+            navigation.BaseUri,
+            nextLocation);
+        var staleSurfaceIdentity = AgentChatNavigationIdentity.CreateForLocation(
+            navigation.BaseUri,
+            nextLocation,
+            [new("runId", firstRunId.ToString("D"))]);
+        Assert.NotEqual(staleSurfaceIdentity, nextNavigationIdentity);
+        workspaceLease.Update(
+            new AgentChatWorkspacePosition("live", "Live processes", "/processes/live", "page"),
+            nextNavigationIdentity);
+
+        Assert.Null(registry.Capture());
+        var mismatch = await Assert.ThrowsAsync<AgentChatContextPositionMismatchException>(
+            async () => await registry.CaptureAsync());
+        Assert.Equal(AgentChatContextPositionMismatchReason.NavigationChanged, mismatch.Reason);
+
+        cut.SetParametersAndRender(parameters => parameters
+            .Add(component => component.RunIdQuery, secondRunId));
+
+        cut.WaitForAssertion(() =>
+        {
+            var snapshot = Assert.IsType<AgentChatContextSnapshot>(registry.Capture());
+            Assert.Equal(scopeId, snapshot.Scope.Id);
+            Assert.Equal(
+                secondRunId.ToString("D"),
+                snapshot.Scope.SurfacePosition?.PrimarySelection?.Id);
+        });
+    }
+
+    [Fact]
+    public void Live_processes_ignores_a_late_projection_from_a_superseded_run_selection()
+    {
+        using var context = CreateContext(out var client);
+        var firstRunId = Guid.Parse("77777777-7777-7777-7777-777777777777");
+        var secondRunId = Guid.Parse("88888888-8888-8888-8888-888888888888");
+        var registry = context.Services.GetRequiredService<IAgentChatContextRegistry>();
+        client.DeferShellRequests = true;
+
+        var cut = context.RenderComponent<LiveProcessesDashboard>(parameters => parameters
+            .Add(component => component.RunIdQuery, firstRunId));
+        cut.WaitForAssertion(() => Assert.Single(client.Requests));
+
+        cut.SetParametersAndRender(parameters => parameters
+            .Add(component => component.RunIdQuery, secondRunId));
+        cut.WaitForAssertion(() => Assert.Equal(2, client.Requests.Count));
+        Assert.Equal(
+            AgentChatContextAccessState.Loading,
+            Assert.IsType<AgentChatContextSnapshot>(registry.Capture()).Scope.AccessState);
+
+        client.CompleteShellRequest(1);
+        cut.WaitForAssertion(() =>
+        {
+            var snapshot = Assert.IsType<AgentChatContextSnapshot>(registry.Capture());
+            Assert.Equal(AgentChatContextAccessState.Ready, snapshot.Scope.AccessState);
+            Assert.Equal(secondRunId.ToString("D"), snapshot.Scope.SurfacePosition?.PrimarySelection?.Id);
+        });
+
+        client.CompleteShellRequest(0);
+        cut.WaitForAssertion(() => Assert.Equal(
+            secondRunId.ToString("D"),
+            registry.Capture()?.Scope.SurfacePosition?.PrimarySelection?.Id));
+    }
+
+    [Fact]
+    public void Live_processes_ignores_a_late_filtered_projection_from_a_superseded_project()
+    {
+        using var context = CreateContext(out var client);
+        var firstRunId = Guid.Parse("77777777-7777-7777-7777-777777777777");
+        var secondRunId = Guid.Parse("88888888-8888-8888-8888-888888888888");
+        var nextProjectId = Guid.Parse("99999999-9999-9999-9999-999999999999");
+        var registry = context.Services.GetRequiredService<IAgentChatContextRegistry>();
+        client.DeferShellRequests = true;
+        client.ShellResultTransform = (requestIndex, projection) => requestIndex == 1
+            ? projection with
+            {
+                Runtime = projection.Runtime with
+                {
+                    Runs = projection.Runtime.Runs
+                        .Where(run => run.RunId.Value == secondRunId)
+                        .ToArray()
+                }
+            }
+            : projection;
+
+        var cut = context.RenderComponent<LiveProcessesDashboard>(parameters => parameters
+            .Add(component => component.RunIdQuery, firstRunId));
+        cut.WaitForAssertion(() => Assert.Single(client.Requests));
+        SetPrivateField<Guid?>(cut.Instance, "requiredRouteRunId", null);
+        SetPrivateField(cut.Instance, "statusFilter", ProcessProjectedRunStatus.Active);
+
+        client.CompleteShellRequest(0);
+        Assert.True(
+            SpinWait.SpinUntil(() => client.Requests.Count == 2, TimeSpan.FromSeconds(10)),
+            "The filtered follow-up projection request was not started.");
+
+        SetPrivateField(cut.Instance, "statusFilter", ProcessProjectedRunStatus.NeedsAttention);
+        cut.SetParametersAndRender(parameters => parameters
+            .Add(component => component.ProjectId, nextProjectId)
+            .Add(component => component.RunIdQuery, firstRunId));
+        cut.WaitForAssertion(() => Assert.Equal(3, client.Requests.Count));
+
+        client.CompleteShellRequest(2);
+        cut.WaitForAssertion(() =>
+        {
+            var snapshot = Assert.IsType<AgentChatContextSnapshot>(registry.Capture());
+            Assert.Equal(AgentChatContextAccessState.Ready, snapshot.Scope.AccessState);
+            Assert.Equal(firstRunId.ToString("D"), snapshot.Scope.SurfacePosition?.PrimarySelection?.Id);
+            Assert.Contains(
+                snapshot.Scope.SurfacePosition!.Facts,
+                fact => fact.Name == "run-status" && fact.Value == ProcessProjectedRunStatus.NeedsAttention.ToString());
+        });
+
+        client.CompleteShellRequest(1);
+        Assert.True(
+            SpinWait.SpinUntil(() => client.CompletedShellRequestCount == 3, TimeSpan.FromSeconds(10)),
+            "The superseded filtered projection did not finish.");
+        var finalSnapshot = Assert.IsType<AgentChatContextSnapshot>(registry.Capture());
+        Assert.Equal(firstRunId.ToString("D"), finalSnapshot.Scope.SurfacePosition?.PrimarySelection?.Id);
+        Assert.Contains(
+            finalSnapshot.Scope.SurfacePosition!.Facts,
+            fact => fact.Name == "run-status" && fact.Value == ProcessProjectedRunStatus.NeedsAttention.ToString());
+    }
+
+    [Fact]
+    public void Process_workspace_ignores_a_late_projection_from_a_superseded_definition_selection()
+    {
+        using var context = CreateContext(out var client);
+        var registry = context.Services.GetRequiredService<IAgentChatContextRegistry>();
+        client.DeferShellRequests = true;
+
+        var cut = context.RenderComponent<ProcessWorkspaceShell>(parameters => parameters
+            .Add(component => component.SelectedDefinitionKey, "blazor-app-delivery"));
+        cut.WaitForAssertion(() => Assert.Single(client.Requests));
+
+        cut.SetParametersAndRender(parameters => parameters
+            .Add(component => component.SelectedDefinitionKey, "architecture-decision-governance"));
+        cut.WaitForAssertion(() => Assert.Equal(2, client.Requests.Count));
+        Assert.Equal(
+            AgentChatContextAccessState.Loading,
+            Assert.IsType<AgentChatContextSnapshot>(registry.Capture()).Scope.AccessState);
+
+        client.CompleteShellRequest(1);
+        cut.WaitForAssertion(() => Assert.Equal(
+            "architecture-decision-governance",
+            registry.Capture()?.Scope.SurfacePosition?.PrimarySelection?.Id));
+
+        client.CompleteShellRequest(0);
+        cut.WaitForAssertion(() => Assert.Equal(
+            "architecture-decision-governance",
+            registry.Capture()?.Scope.SurfacePosition?.PrimarySelection?.Id));
+    }
+
+    [Fact]
     public void Initial_shell_requests_lean_definition_and_runtime_projection()
     {
         using var context = CreateContext(out var client);
@@ -313,6 +785,52 @@ public sealed class ProcessWorkspaceShellTests
         Assert.Equal("Architecture owner", client.LastEditorCommand?.Draft.Identity.OwnerName);
         Assert.Equal("Use the architecture board manager.", client.LastEditorCommand?.Draft.Governance.ManagerOverrideSummary);
         Assert.NotNull(cut.Find("[data-testid='processes-definition-editor']"));
+    }
+
+    [Fact]
+    public async Task Definition_editor_ignores_a_late_command_result_after_selecting_another_definition()
+    {
+        using var context = CreateContext(out var client);
+        var registry = context.Services.GetRequiredService<IAgentChatContextRegistry>();
+        client.DeferEditorCommands = true;
+        var cut = context.RenderComponent<ProcessWorkspaceShell>();
+
+        cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-testid='processes-definition-save']")));
+        var commandTask = cut.Find("[data-testid='processes-definition-save']")
+            .ClickAsync(new MouseEventArgs());
+        Assert.True(
+            SpinWait.SpinUntil(() => client.EditorCommandCount == 1, TimeSpan.FromSeconds(10)),
+            "The definition editor command did not start.");
+        Assert.Equal(
+            AgentChatContextAccessState.Loading,
+            Assert.IsType<AgentChatContextSnapshot>(registry.Capture()).Scope.AccessState);
+
+        await cut.Find("[data-testid='processes-definition-architecture-decision-governance']")
+            .ClickAsync(new MouseEventArgs());
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Equal(
+                "Architecture decision governance",
+                cut.Find("[data-testid='processes-definition-editor-name']").GetAttribute("value"));
+            var snapshot = Assert.IsType<AgentChatContextSnapshot>(registry.Capture());
+            Assert.Equal(AgentChatContextAccessState.Ready, snapshot.Scope.AccessState);
+            Assert.Equal(
+                "architecture-decision-governance",
+                snapshot.Scope.SurfacePosition?.PrimarySelection?.Id);
+        });
+
+        client.CompleteEditorCommand(0);
+        await commandTask;
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Equal(
+                "Architecture decision governance",
+                cut.Find("[data-testid='processes-definition-editor-name']").GetAttribute("value"));
+            Assert.DoesNotContain("Draft saved.", cut.Markup, StringComparison.Ordinal);
+            Assert.Equal(
+                "architecture-decision-governance",
+                registry.Capture()?.Scope.SurfacePosition?.PrimarySelection?.Id);
+        });
     }
 
     [Fact]
@@ -1184,6 +1702,8 @@ public sealed class ProcessWorkspaceShellTests
         context.Services.AddSingleton<ICurrencyFormatter>(new StaticCurrencyFormatter("USD"));
         context.Services.AddSingleton<IProcessProjectionClock>(new FixedProcessProjectionClock(Now));
         context.Services.AddSingleton<ProcessWorkspaceMockProjectionFactory>();
+        context.Services.AddSingleton<IAgentChatContextRegistry>(
+            new AgentChatContextRegistry(TimeProvider.System));
         if (agentWorkspaceService is not null)
         {
             context.Services.AddSingleton(agentWorkspaceService);
@@ -1620,9 +2140,41 @@ public sealed class ProcessWorkspaceShellTests
         cut.WaitForAssertion(() => Assert.NotNull(cut.Find($"[data-testid='{panelTestId}']")));
     }
 
+    private static void SetPrivateField<T>(object instance, string fieldName, T value)
+    {
+        var field = instance.GetType().GetField(
+            fieldName,
+            System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+        Assert.NotNull(field);
+        field.SetValue(instance, value);
+    }
+
+    private static bool IsSelectedDefinitionFact(AgentChatContextPositionFact fact)
+        => fact.Name is
+            "definition-status" or
+            "definition-scope" or
+            "definition-criticality" or
+            "definition-operating-mode" or
+            "definition-compatibility-issues";
+
     private sealed class RecordingProcessWorkspaceProjectionClient : IProcessWorkspaceProjectionClient
     {
+        private readonly List<TaskCompletionSource> shellRequestCompletions = [];
+        private readonly List<TaskCompletionSource> editorCommandCompletions = [];
+        private int completedShellRequestCount;
+        private int editorCommandCount;
+
         public List<ProcessWorkspaceShellRequest> Requests { get; } = [];
+
+        public bool DeferShellRequests { get; set; }
+
+        public bool DeferEditorCommands { get; set; }
+
+        public int EditorCommandCount => Volatile.Read(ref editorCommandCount);
+
+        public int CompletedShellRequestCount => Volatile.Read(ref completedShellRequestCount);
+
+        public Func<int, ProcessWorkspaceShellProjection, ProcessWorkspaceShellProjection>? ShellResultTransform { get; set; }
 
         public ProcessWorkspaceShellRequest? LastRequest => Requests.LastOrDefault();
 
@@ -1644,10 +2196,30 @@ public sealed class ProcessWorkspaceShellTests
             ProcessWorkspaceShellRequest request,
             CancellationToken cancellationToken = default)
         {
+            var requestIndex = Requests.Count;
             Requests.Add(request);
-            await Task.Yield();
-            return CreateShell(request, lastReceipt: null);
+            if (DeferShellRequests)
+            {
+                var completion = new TaskCompletionSource(
+                    TaskCreationOptions.RunContinuationsAsynchronously);
+                shellRequestCompletions.Add(completion);
+                await completion.Task.WaitAsync(cancellationToken);
+            }
+            else
+            {
+                await Task.Yield();
+            }
+
+            var projection = CreateShell(request, lastReceipt: null);
+            Interlocked.Increment(ref completedShellRequestCount);
+            return ShellResultTransform?.Invoke(requestIndex, projection) ?? projection;
         }
+
+        public void CompleteShellRequest(int requestIndex)
+            => shellRequestCompletions[requestIndex].TrySetResult();
+
+        public void CompleteEditorCommand(int commandIndex)
+            => editorCommandCompletions[commandIndex].TrySetResult();
 
         public Task<ProcessDefinitionCatalogCommandReceipt> FeedDefaultDefinitionsAsync(
             ProcessDefinitionFeedDefaultsCommand command,
@@ -1664,11 +2236,20 @@ public sealed class ProcessWorkspaceShellTests
                 "2 default process definition(s) are available from template pack test."));
         }
 
-        public Task<ProcessDefinitionEditorCommandResult> ExecuteDefinitionEditorCommandAsync(
+        public async Task<ProcessDefinitionEditorCommandResult> ExecuteDefinitionEditorCommandAsync(
             ProcessDefinitionEditorCommand command,
             CancellationToken cancellationToken = default)
         {
             LastEditorCommand = command;
+            if (DeferEditorCommands)
+            {
+                var completion = new TaskCompletionSource(
+                    TaskCreationOptions.RunContinuationsAsynchronously);
+                editorCommandCompletions.Add(completion);
+                Interlocked.Increment(ref editorCommandCount);
+                await completion.Task.WaitAsync(cancellationToken);
+            }
+
             var lint = CreateEditorLint(command);
             var status = lint.HasBlockingIssues
                 ? ProcessDefinitionEditorCommandStatus.Rejected
@@ -1690,7 +2271,7 @@ public sealed class ProcessWorkspaceShellTests
                     : "Definition was not published because blocking lint issues remain.",
                 lint.Issues);
             var projection = CreateEditor(command.Draft.DefinitionKey, command.Draft, authoringStatus, versionToken, lint, receipt);
-            return Task.FromResult(new ProcessDefinitionEditorCommandResult(receipt, projection));
+            return new ProcessDefinitionEditorCommandResult(receipt, projection);
         }
 
         public Task<ProcessDefinitionRoleEditorCommandResult> ExecuteDefinitionRoleEditorCommandAsync(

@@ -6,6 +6,8 @@ using CanDoItAll.Components.BaseLib;
 using CanDoItAll.Components.CanvasLib;
 using CanDoItAll.Modules.AgentFramework.Pages.Components;
 using CanDoItAll.Modules.Security;
+using CanDoItAll.Modules.Workbench;
+using CanDoItAll.SharedKernel;
 using Microsoft.AspNetCore.Components;
 using System.Text.Json;
 
@@ -66,6 +68,15 @@ public partial class WorkflowsPage
     [Inject]
     public NotificationService NotificationService { get; set; } = default!;
 
+    [SupplyParameterFromQuery(Name = "projectId")]
+    public Guid? RequestedProjectId { get; set; }
+
+    [SupplyParameterFromQuery(Name = "workflowId")]
+    public Guid? RequestedWorkflowId { get; set; }
+
+    [SupplyParameterFromQuery(Name = "runId")]
+    public Guid? RequestedRunId { get; set; }
+
     private IReadOnlyList<WorkflowCatalogItem> definitions = [];
     private IReadOnlyList<LlmCallComponent> components = [];
     private IReadOnlyList<WorkflowProviderOption> providerOptions = [];
@@ -83,6 +94,8 @@ public partial class WorkflowsPage
     private WorkflowId? selectedDefinitionId;
     private WorkflowDefinition? selectedDefinition;
     private WorkflowRunSnapshot? selectedRun;
+    private WorkflowAgentChatProjectSelection? selectedRouteProject;
+    private WorkflowAgentChatNodeSelection? selectedCanvasNode;
     private WorkflowRunSnapshot? runDetail;
     private WorkflowEventRecord? eventDetail;
     private IReadOnlyList<WorkflowEventRecord> runDetailEvents = [];
@@ -113,11 +126,62 @@ public partial class WorkflowsPage
     private bool historyLoaded;
     private bool selectedDefinitionDetailLoaded;
     private bool selectedDefinitionDetailUnavailable;
+    private bool isDefinitionSelectionLoading;
+    private bool isRunsPageLoading;
+    private bool isRunSelectionLoading;
+    private bool hasObservedNavigation;
+    private bool hasRouteIdentityFailure;
+    private long selectedDefinitionGeneration;
+    private long runPageGeneration;
+    private long selectedRunGeneration;
+    private WorkflowRunId? selectedRunRequestId;
     private long analyticsRefreshVersion;
+    private long pageLoadGeneration;
+    private AgentChatNavigationIdentity observedNavigation;
+    private AgentChatNavigationIdentity selectedDefinitionNavigation;
     private Task? componentLibraryLoadTask;
     private readonly HashSet<string> expandedWorkflowTreeNodeIds = [];
     private CanvasWorkbenchUiState templatePreviewCanvasUiState = CreateTemplatePreviewCanvasUiState("start");
     private string? templatePreviewSelectedNodeId = "start";
+
+    private AgentChatContextSurface AgentChatSurface
+        => AgentFrameworkWorkflowsChatContextBuilder.Build(
+            AgentFrameworkWorkflowsChatContextBuilder.ResolveView(activeWorkflowTabIndex),
+            definitions.Count,
+            CurrentDefinitionId,
+            SelectedDefinitionSummary,
+            selectedDefinition,
+            selectedRun,
+            historyLoaded,
+            historyRunTotalCount,
+            pendingRequests.Count,
+            artifacts.Count,
+            validationIssues.Count,
+            selectedCanvasNode,
+            selectedRouteProject);
+
+    private AgentChatNavigationIdentity AgentChatNavigationFence
+        => AgentChatNavigationIdentity.CreateForLocation(
+            Navigation.BaseUri,
+            Navigation.Uri,
+            [
+                new("projectId", RequestedProjectId?.ToString("D")),
+                new("workflowId", RequestedWorkflowId?.ToString("D")),
+                new("runId", RequestedRunId?.ToString("D"))
+            ]);
+
+    private Task HandleCanvasSelectedNodeChangedAsync(WorkflowAgentChatNodeSelection? selection)
+    {
+        selectedCanvasNode = selection;
+        return Task.CompletedTask;
+    }
+
+    private AgentChatContextAccessState AgentChatAccessState
+        => hasRouteIdentityFailure || IsSelectedDefinitionDetailUnavailable
+            ? AgentChatContextAccessState.Failed
+            : isLoading || IsSelectedDefinitionDetailPending || isDefinitionSelectionLoading || isRunsPageLoading || isRunSelectionLoading || isBusy
+                ? AgentChatContextAccessState.Loading
+                : AgentChatContextAccessState.Ready;
 
     private WorkflowId? CurrentDefinitionId => selectedDefinition?.Id ?? selectedDefinitionId;
 
@@ -265,9 +329,20 @@ public partial class WorkflowsPage
 
     private bool CanGoToNextEventPage => historyEventPageIndex + 1 < HistoryEventTotalPages;
 
-    protected override async Task OnInitializedAsync()
+    protected override async Task OnParametersSetAsync()
     {
-        await RefreshAsync();
+        var navigation = AgentChatNavigationFence;
+        if (hasObservedNavigation && observedNavigation == navigation)
+        {
+            return;
+        }
+
+        hasObservedNavigation = true;
+        observedNavigation = navigation;
+        await RefreshRouteAsync(WorkflowRouteRequest.Create(
+            RequestedProjectId,
+            RequestedWorkflowId,
+            RequestedRunId), navigation);
     }
 
     private async Task RefreshAsync()
@@ -277,39 +352,158 @@ public partial class WorkflowsPage
             return;
         }
 
+        var route = WorkflowRouteRequest.Create(
+            RequestedProjectId,
+            RequestedWorkflowId,
+            RequestedRunId);
+        var navigation = AgentChatNavigationFence;
+        var generation = BeginPageLoad(clearSelection: route.HasExplicitSelection);
+        await ExecutePageLoadAsync(
+            route.HasExplicitSelection ? route.WorkflowId : CurrentDefinitionId,
+            route.HasExplicitSelection ? route.RunId : selectedRun?.RunId,
+            route.HasExplicitSelection ? route : null,
+            generation,
+            navigation);
+    }
+
+    private async Task RefreshRouteAsync(
+        WorkflowRouteRequest route,
+        AgentChatNavigationIdentity navigation)
+    {
+        var generation = BeginPageLoad(clearSelection: true);
+        await ExecutePageLoadAsync(
+            route.WorkflowId,
+            route.RunId,
+            route.HasExplicitSelection ? route : null,
+            generation,
+            navigation);
+    }
+
+    private long BeginPageLoad(bool clearSelection)
+    {
+        var generation = ++pageLoadGeneration;
         isBusy = true;
         isLoading = true;
         errorMessage = string.Empty;
+        hasRouteIdentityFailure = false;
+        selectedRouteProject = null;
+        if (clearSelection)
+        {
+            ClearSelectedDefinitionState();
+            ClearHistoryState(markLoaded: false);
+        }
 
+        return generation;
+    }
+
+    private async Task ExecutePageLoadAsync(
+        WorkflowId? preferredDefinitionId,
+        WorkflowRunId? preferredRunId,
+        WorkflowRouteRequest? requiredRoute,
+        long generation,
+        AgentChatNavigationIdentity navigation)
+    {
         try
         {
-            await LoadPageAsync(preferredDefinitionId: CurrentDefinitionId, preferredRunId: selectedRun?.RunId);
+            await LoadPageCoreAsync(
+                preferredDefinitionId,
+                preferredRunId,
+                requiredRoute,
+                generation,
+                navigation);
         }
         catch (Exception exception)
         {
+            if (!IsCurrentPageLoad(generation, navigation))
+            {
+                return;
+            }
+
             errorMessage = FormatWorkflowException(exception);
+            if (requiredRoute is not null)
+            {
+                FailRouteIdentity(errorMessage);
+            }
+
             NotificationService.Error("Workflow refresh failed", errorMessage);
         }
         finally
         {
-            isLoading = false;
-            isBusy = false;
+            if (IsCurrentPageLoad(generation, navigation))
+            {
+                isLoading = false;
+                isBusy = false;
+            }
         }
     }
 
-    private async Task LoadPageAsync(
+    private Task LoadPageAsync(
         WorkflowId? preferredDefinitionId = null,
         WorkflowRunId? preferredRunId = null)
+    {
+        var navigation = AgentChatNavigationFence;
+        var generation = ++pageLoadGeneration;
+        return LoadPageCoreAsync(
+            preferredDefinitionId,
+            preferredRunId,
+            requiredRoute: null,
+            generation,
+            navigation);
+    }
+
+    private async Task LoadPageCoreAsync(
+        WorkflowId? preferredDefinitionId,
+        WorkflowRunId? preferredRunId,
+        WorkflowRouteRequest? requiredRoute,
+        long generation,
+        AgentChatNavigationIdentity navigation)
     {
         analyticsRefreshVersion++;
         var settingsTask = SettingsService.GetSettingsAsync();
         var definitionsTask = CatalogService.ListDefinitionsAsync();
         await Task.WhenAll(settingsTask, definitionsTask);
 
-        settings = await settingsTask;
-        definitions = await definitionsTask;
+        if (!IsCurrentPageLoad(generation, navigation))
+        {
+            return;
+        }
 
-        var definitionId = preferredDefinitionId ??
+        var loadedSettings = await settingsTask;
+        var loadedDefinitions = await definitionsTask;
+        WorkflowAgentChatProjectSelection? routeProject = null;
+        var routeError = requiredRoute?.ValidationError ?? string.Empty;
+        if (string.IsNullOrEmpty(routeError) &&
+            requiredRoute?.WorkflowId is { } requiredDefinitionId &&
+            loadedDefinitions.All(definition => definition.Id != requiredDefinitionId))
+        {
+            routeError = $"Workflow definition '{requiredDefinitionId}' was not found.";
+        }
+
+        if (string.IsNullOrEmpty(routeError) &&
+            requiredRoute is { ProjectId: { } projectId, WorkflowId: { } workflowId })
+        {
+            var projectValidation = await ValidateProjectWorkflowRelationAsync(projectId, workflowId);
+            if (!IsCurrentPageLoad(generation, navigation))
+            {
+                return;
+            }
+
+            routeProject = projectValidation.Project;
+            routeError = projectValidation.ErrorMessage;
+        }
+
+        settings = loadedSettings;
+        definitions = loadedDefinitions;
+        if (!string.IsNullOrEmpty(routeError))
+        {
+            FailRouteIdentity(routeError);
+            return;
+        }
+
+        selectedRouteProject = routeProject;
+
+        var definitionId = requiredRoute?.WorkflowId ??
+                           preferredDefinitionId ??
                            CurrentDefinitionId ??
                            definitions.FirstOrDefault()?.Id;
         if (definitionId.HasValue)
@@ -321,13 +515,43 @@ public partial class WorkflowsPage
             ClearSelectedDefinitionState();
         }
 
-        if (ShouldLoadHistory(preferredRunId))
+        if (requiredRoute?.WorkflowId.HasValue == true)
         {
             await EnsureSelectedDefinitionLoadedAsync();
+            if (!IsCurrentPageLoad(generation, navigation))
+            {
+                return;
+            }
+
+            if (selectedDefinition?.Id != definitionId)
+            {
+                FailRouteIdentity(errorMessage.Length > 0
+                    ? errorMessage
+                    : $"Workflow definition '{definitionId}' could not be loaded.");
+                return;
+            }
+        }
+
+        if (ShouldLoadHistory(preferredRunId))
+        {
+            var definitionGeneration = selectedDefinitionGeneration;
+            await EnsureSelectedDefinitionLoadedAsync();
             await LoadRunsPageAsync(
-                CurrentDefinitionId,
+                definitionId,
                 pageIndex: 0,
-                preferredRunId);
+                preferredRunId,
+                definitionGeneration);
+            if (!IsCurrentPageLoad(generation, navigation))
+            {
+                return;
+            }
+
+            if (requiredRoute?.RunId is { } requiredRunId && selectedRun?.RunId != requiredRunId)
+            {
+                FailRouteIdentity(
+                    $"Workflow run '{requiredRunId}' was not found for workflow '{definitionId}'.");
+                return;
+            }
         }
         else
         {
@@ -344,14 +568,36 @@ public partial class WorkflowsPage
     {
         errorMessage = string.Empty;
         SetSelectedDefinitionPlaceholder(definitionId);
-        await EnsureSelectedDefinitionLoadedAsync();
-        if (historyLoaded || WorkflowTabRequiresHistory(activeWorkflowTabIndex))
+        var selectionGeneration = selectedDefinitionGeneration;
+        isDefinitionSelectionLoading = true;
+        StateHasChanged();
+        try
         {
-            await LoadRunsPageAsync(definitionId, pageIndex: 0);
+            await EnsureSelectedDefinitionLoadedAsync();
+            if (!IsCurrentDefinitionSelection(definitionId, selectionGeneration))
+            {
+                return;
+            }
+
+            if (historyLoaded || WorkflowTabRequiresHistory(activeWorkflowTabIndex))
+            {
+                await LoadRunsPageAsync(
+                    definitionId,
+                    pageIndex: 0,
+                    expectedDefinitionGeneration: selectionGeneration);
+            }
+            else
+            {
+                ClearHistoryState(markLoaded: false);
+            }
         }
-        else
+        finally
         {
-            ClearHistoryState(markLoaded: false);
+            if (IsCurrentDefinitionSelection(definitionId, selectionGeneration))
+            {
+                isDefinitionSelectionLoading = false;
+                StateHasChanged();
+            }
         }
     }
 
@@ -543,9 +789,35 @@ public partial class WorkflowsPage
         return Task.CompletedTask;
     }
 
-    private async Task LoadDefinitionAsync(WorkflowId definitionId)
+    private async Task LoadDefinitionAsync(
+        WorkflowId definitionId,
+        long selectionGeneration)
     {
-        var detail = await CatalogService.GetDefinitionAsync(definitionId);
+        WorkflowDefinitionDetail? detail;
+        try
+        {
+            detail = await CatalogService.GetDefinitionAsync(definitionId);
+        }
+        catch (Exception exception)
+        {
+            if (!IsCurrentDefinitionSelection(definitionId, selectionGeneration))
+            {
+                return;
+            }
+
+            selectedDefinition = null;
+            validationIssues = [];
+            selectedDefinitionDetailLoaded = false;
+            selectedDefinitionDetailUnavailable = true;
+            errorMessage = FormatWorkflowException(exception);
+            throw;
+        }
+
+        if (!IsCurrentDefinitionSelection(definitionId, selectionGeneration))
+        {
+            return;
+        }
+
         if (detail is null)
         {
             selectedDefinitionId = definitionId;
@@ -829,62 +1101,143 @@ public partial class WorkflowsPage
         }
     }
 
-    private async Task SelectRunAsync(WorkflowRunId runId, bool resetEventPage = true)
+    private async Task SelectRunAsync(
+        WorkflowRunId runId,
+        bool resetEventPage = true,
+        WorkflowId? expectedDefinitionId = null,
+        long? expectedDefinitionGeneration = null)
     {
-        selectedRun = await RuntimeManager.GetRunAsync(runId);
-        if (selectedRun is null)
+        var definitionId = expectedDefinitionId ?? CurrentDefinitionId;
+        var definitionGeneration = expectedDefinitionGeneration ?? selectedDefinitionGeneration;
+        var runGeneration = ++selectedRunGeneration;
+        selectedRunRequestId = runId;
+        isRunSelectionLoading = true;
+        StateHasChanged();
+
+        try
         {
-            ClearSelectedRunState();
-            return;
+            var run = await RuntimeManager.GetRunAsync(runId);
+            if (!IsCurrentRunSelection(definitionId, definitionGeneration, runId, runGeneration))
+            {
+                return;
+            }
+
+            if (run is null || definitionId.HasValue && run.WorkflowId != definitionId.Value)
+            {
+                ClearSelectedRunState();
+                return;
+            }
+
+            var eventPageIndex = resetEventPage ? 0 : historyEventPageIndex;
+            var eventsTask = RunStore.ListEventPageAsync(new WorkflowEventPageRequest(
+                runId,
+                eventPageIndex,
+                HistoryEventPageSize));
+            var artifactsTask = RunStore.ListArtifactsAsync(runId);
+            var pendingRequestsTask = RunStore.ListPendingExternalRequestsAsync(runId);
+            await Task.WhenAll(eventsTask, artifactsTask, pendingRequestsTask);
+
+            if (!IsCurrentRunSelection(definitionId, definitionGeneration, runId, runGeneration))
+            {
+                return;
+            }
+
+            var eventPage = await eventsTask;
+            selectedRun = run;
+            runEvents = eventPage.Items;
+            historyEventPageIndex = eventPage.PageIndex;
+            historyEventTotalCount = eventPage.TotalCount;
+            artifacts = await artifactsTask;
+            pendingRequests = await pendingRequestsTask;
         }
-
-        var eventPageIndex = resetEventPage ? 0 : historyEventPageIndex;
-        var eventsTask = RunStore.ListEventPageAsync(new WorkflowEventPageRequest(
-            runId,
-            eventPageIndex,
-            HistoryEventPageSize));
-        var artifactsTask = RunStore.ListArtifactsAsync(runId);
-        var pendingRequestsTask = RunStore.ListPendingExternalRequestsAsync(runId);
-        await Task.WhenAll(eventsTask, artifactsTask, pendingRequestsTask);
-
-        var eventPage = await eventsTask;
-        runEvents = eventPage.Items;
-        historyEventPageIndex = eventPage.PageIndex;
-        historyEventTotalCount = eventPage.TotalCount;
-        artifacts = await artifactsTask;
-        pendingRequests = await pendingRequestsTask;
+        catch
+        {
+            if (IsCurrentRunSelection(definitionId, definitionGeneration, runId, runGeneration))
+            {
+                throw;
+            }
+        }
+        finally
+        {
+            if (IsCurrentRunSelection(definitionId, definitionGeneration, runId, runGeneration))
+            {
+                isRunSelectionLoading = false;
+                StateHasChanged();
+            }
+        }
     }
 
     private async Task LoadRunsPageAsync(
         WorkflowId? workflowId,
         int pageIndex,
-        WorkflowRunId? preferredRunId = null)
+        WorkflowRunId? preferredRunId = null,
+        long? expectedDefinitionGeneration = null)
     {
-        var runPage = await RunStore.ListRunPageAsync(new WorkflowRunPageRequest(
-            workflowId,
-            null,
-            null,
-            string.Empty,
-            pageIndex,
-            HistoryRunPageSize));
-        runs = runPage.Items;
-        historyRunPageIndex = runPage.PageIndex;
-        historyRunTotalCount = runPage.TotalCount;
-        historyLoaded = true;
-
-        WorkflowRunId? retainedRunId = selectedRun is not null && selectedRun.WorkflowId == workflowId
-            ? selectedRun.RunId
-            : null;
-        var runId = preferredRunId ??
-                    retainedRunId ??
-                    runs.FirstOrDefault()?.RunId;
-        if (runId.HasValue)
+        var definitionGeneration = expectedDefinitionGeneration ?? selectedDefinitionGeneration;
+        var pageGeneration = ++runPageGeneration;
+        if (!IsCurrentDefinitionSelection(workflowId, definitionGeneration))
         {
-            await SelectRunAsync(runId.Value);
             return;
         }
 
-        ClearSelectedRunState();
+        selectedRunGeneration++;
+        selectedRunRequestId = null;
+        isRunSelectionLoading = false;
+        isRunsPageLoading = true;
+        StateHasChanged();
+
+        try
+        {
+            var runPage = await RunStore.ListRunPageAsync(new WorkflowRunPageRequest(
+                workflowId,
+                null,
+                null,
+                string.Empty,
+                pageIndex,
+                HistoryRunPageSize));
+
+            if (!IsCurrentRunsPage(workflowId, definitionGeneration, pageGeneration))
+            {
+                return;
+            }
+
+            runs = runPage.Items;
+            historyRunPageIndex = runPage.PageIndex;
+            historyRunTotalCount = runPage.TotalCount;
+            historyLoaded = true;
+
+            WorkflowRunId? retainedRunId = selectedRun is not null && selectedRun.WorkflowId == workflowId
+                ? selectedRun.RunId
+                : null;
+            var runId = preferredRunId ??
+                        retainedRunId ??
+                        runs.FirstOrDefault()?.RunId;
+            if (runId.HasValue)
+            {
+                await SelectRunAsync(
+                    runId.Value,
+                    expectedDefinitionId: workflowId,
+                    expectedDefinitionGeneration: definitionGeneration);
+                return;
+            }
+
+            ClearSelectedRunState();
+        }
+        catch
+        {
+            if (IsCurrentRunsPage(workflowId, definitionGeneration, pageGeneration))
+            {
+                throw;
+            }
+        }
+        finally
+        {
+            if (IsCurrentRunsPage(workflowId, definitionGeneration, pageGeneration))
+            {
+                isRunsPageLoading = false;
+                StateHasChanged();
+            }
+        }
     }
 
     private async Task ChangeRunPageAsync(int delta)
@@ -1091,12 +1444,24 @@ public partial class WorkflowsPage
             return;
         }
 
-        await LoadDefinitionAsync(definitionId);
-        StateHasChanged();
+        var selectionGeneration = selectedDefinitionGeneration;
+        await LoadDefinitionAsync(definitionId, selectionGeneration);
+        if (IsCurrentDefinitionSelection(definitionId, selectionGeneration))
+        {
+            StateHasChanged();
+        }
     }
 
     private void SetSelectedDefinitionPlaceholder(WorkflowId definitionId)
     {
+        selectedDefinitionGeneration++;
+        selectedDefinitionNavigation = AgentChatNavigationFence;
+        runPageGeneration++;
+        selectedRunGeneration++;
+        selectedRunRequestId = null;
+        isDefinitionSelectionLoading = false;
+        isRunsPageLoading = false;
+        isRunSelectionLoading = false;
         if (selectedDefinition?.Id == definitionId && selectedDefinitionDetailLoaded)
         {
             selectedDefinitionId = definitionId;
@@ -1112,6 +1477,14 @@ public partial class WorkflowsPage
 
     private void ClearSelectedDefinitionState()
     {
+        selectedDefinitionGeneration++;
+        selectedDefinitionNavigation = default;
+        runPageGeneration++;
+        selectedRunGeneration++;
+        selectedRunRequestId = null;
+        isDefinitionSelectionLoading = false;
+        isRunsPageLoading = false;
+        isRunSelectionLoading = false;
         selectedDefinitionId = null;
         selectedDefinition = null;
         validationIssues = [];
@@ -1119,8 +1492,39 @@ public partial class WorkflowsPage
         selectedDefinitionDetailUnavailable = false;
     }
 
+    private bool IsCurrentDefinitionSelection(
+        WorkflowId? definitionId,
+        long selectionGeneration)
+        => selectedDefinitionGeneration == selectionGeneration &&
+           selectedDefinitionNavigation == AgentChatNavigationFence &&
+           CurrentDefinitionId == definitionId;
+
+    private bool IsCurrentPageLoad(
+        long generation,
+        AgentChatNavigationIdentity navigation)
+        => pageLoadGeneration == generation &&
+           navigation == AgentChatNavigationFence;
+
+    private bool IsCurrentRunsPage(
+        WorkflowId? definitionId,
+        long definitionGeneration,
+        long pageGeneration)
+        => runPageGeneration == pageGeneration &&
+           IsCurrentDefinitionSelection(definitionId, definitionGeneration);
+
+    private bool IsCurrentRunSelection(
+        WorkflowId? definitionId,
+        long definitionGeneration,
+        WorkflowRunId runId,
+        long runGeneration)
+        => selectedRunGeneration == runGeneration &&
+           selectedRunRequestId == runId &&
+           IsCurrentDefinitionSelection(definitionId, definitionGeneration);
+
     private void ClearHistoryState(bool markLoaded)
     {
+        runPageGeneration++;
+        isRunsPageLoading = false;
         runs = [];
         historyRunPageIndex = 0;
         historyRunTotalCount = 0;
@@ -1130,12 +1534,81 @@ public partial class WorkflowsPage
 
     private void ClearSelectedRunState()
     {
+        selectedRunGeneration++;
+        selectedRunRequestId = null;
+        isRunSelectionLoading = false;
         selectedRun = null;
         runEvents = [];
         artifacts = [];
         pendingRequests = [];
         historyEventPageIndex = 0;
         historyEventTotalCount = 0;
+    }
+
+    private void FailRouteIdentity(string message)
+    {
+        hasRouteIdentityFailure = true;
+        errorMessage = message;
+        selectedRouteProject = null;
+        ClearSelectedDefinitionState();
+        ClearHistoryState(markLoaded: false);
+    }
+
+    private async Task<ProjectWorkflowRouteValidation> ValidateProjectWorkflowRelationAsync(
+        Guid projectId,
+        WorkflowId workflowId)
+    {
+        var projectsTask = ProjectStructureGateway.ListProjectsAsync();
+        var structureTask = ProjectStructureGateway.ReadStructureAsync(
+            projectId,
+            new ProjectStructureRuntimeReadRequest(
+                ObjectTypes: [ProjectObjectType.WorkflowDefinition],
+                IncludeMetadata: true));
+        await Task.WhenAll(projectsTask, structureTask);
+
+        var projects = await projectsTask;
+        var project = projects.FirstOrDefault(item => item.Id == projectId);
+        if (project is null)
+        {
+            return ProjectWorkflowRouteValidation.Failed(
+                $"Project '{projectId:D}' was not found.");
+        }
+
+        var structure = await structureTask;
+        if (structure.ProjectId != projectId)
+        {
+            return ProjectWorkflowRouteValidation.Failed(
+                $"Project structure returned project '{structure.ProjectId:D}' for requested project '{projectId:D}'.");
+        }
+
+        if (!structure.Nodes.Any(node => IsWorkflowNodeForDefinition(node, workflowId)))
+        {
+            return ProjectWorkflowRouteValidation.Failed(
+                $"Workflow '{workflowId}' is not attached to project '{projectId:D}'.");
+        }
+
+        return ProjectWorkflowRouteValidation.Succeeded(new WorkflowAgentChatProjectSelection(
+            project.Id,
+            project.Name));
+    }
+
+    private static bool IsWorkflowNodeForDefinition(
+        ProjectStructureRuntimeNodeSummary node,
+        WorkflowId workflowId)
+    {
+        if (node.ObjectType != ProjectObjectType.WorkflowDefinition)
+        {
+            return false;
+        }
+
+        try
+        {
+            return ProjectObjectMetadataSerializer.Parse(node.MetadataJson).Workflow?.WorkflowId == workflowId;
+        }
+        catch (InvalidOperationException)
+        {
+            return false;
+        }
     }
 
     private bool IsSelectedDefinition(WorkflowCatalogItem item)
@@ -1717,6 +2190,72 @@ public partial class WorkflowsPage
         => WorkflowFailureDisplayFormatter.TryResolveDiagnosticTechnicalDetail(workflowEvent, out var technicalDetail)
             ? technicalDetail
             : workflowEvent.Message;
+
+    private sealed record WorkflowRouteRequest(
+        Guid? ProjectId,
+        WorkflowId? WorkflowId,
+        WorkflowRunId? RunId,
+        bool HasExplicitSelection,
+        string ValidationError)
+    {
+        public static WorkflowRouteRequest Create(
+            Guid? projectId,
+            Guid? workflowId,
+            Guid? runId)
+        {
+            var hasExplicitSelection = projectId.HasValue || workflowId.HasValue || runId.HasValue;
+            if (!hasExplicitSelection)
+            {
+                return new WorkflowRouteRequest(null, null, null, false, string.Empty);
+            }
+
+            if (projectId == Guid.Empty)
+            {
+                return Invalid("The projectId query value cannot be empty.");
+            }
+
+            if (workflowId == Guid.Empty)
+            {
+                return Invalid("The workflowId query value cannot be empty.");
+            }
+
+            if (runId == Guid.Empty)
+            {
+                return Invalid("The runId query value cannot be empty.");
+            }
+
+            if (!workflowId.HasValue && projectId.HasValue)
+            {
+                return Invalid("A projectId workflow route also requires workflowId.");
+            }
+
+            if (!workflowId.HasValue && runId.HasValue)
+            {
+                return Invalid("A runId workflow route also requires workflowId.");
+            }
+
+            return new WorkflowRouteRequest(
+                projectId,
+                workflowId.HasValue ? new WorkflowId(workflowId.Value) : null,
+                runId.HasValue ? new WorkflowRunId(runId.Value) : null,
+                true,
+                string.Empty);
+
+            static WorkflowRouteRequest Invalid(string message)
+                => new(null, null, null, true, message);
+        }
+    }
+
+    private sealed record ProjectWorkflowRouteValidation(
+        WorkflowAgentChatProjectSelection? Project,
+        string ErrorMessage)
+    {
+        public static ProjectWorkflowRouteValidation Succeeded(WorkflowAgentChatProjectSelection project)
+            => new(project, string.Empty);
+
+        public static ProjectWorkflowRouteValidation Failed(string errorMessage)
+            => new(null, errorMessage);
+    }
 
     private static string FormatWorkflowException(Exception exception)
         => WorkflowFailureDisplayFormatter.ToUserMessage(exception.GetBaseException().Message);

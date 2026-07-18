@@ -33,6 +33,9 @@ public sealed class ProjectsAgentChatContextBuilderTests
         Assert.Equal(
             WorkspaceScopeDescriptor.Project(selected.Id.ToString("D")),
             scope.WorkspaceScope);
+        Assert.Equal(
+            AgentChatContextCompletionRefreshMode.OnSuccessfulRun,
+            scope.CompletionRefreshMode);
     }
 
     [Fact]
@@ -52,6 +55,9 @@ public sealed class ProjectsAgentChatContextBuilderTests
         Assert.Equal("projects", scope.Source.Kind.Value);
         Assert.Equal(ProjectsAgentChatContextBuilder.WorkspaceSourceId, scope.Source.Id.Value);
         Assert.Null(scope.WorkspaceScope);
+        Assert.Equal(
+            AgentChatContextCompletionRefreshMode.OnSuccessfulRun,
+            scope.CompletionRefreshMode);
     }
 
     private static ProjectSummary CreateProject(

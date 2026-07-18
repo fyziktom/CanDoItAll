@@ -16,6 +16,15 @@
     public Guid? SelectedProjectId { get; set; }
 
     [Parameter]
+    public ProjectsAgentChatView ActiveView { get; set; } = ProjectsAgentChatView.Cards;
+
+    [Parameter, EditorRequired]
+    public AgentChatNavigationIdentity ContextNavigationIdentity { get; set; }
+
+    [Parameter]
+    public AgentChatContextAccessState ContextAccessState { get; set; } = AgentChatContextAccessState.Ready;
+
+    [Parameter]
     public EventCallback<AgentChatExecutionCompleted> RefreshRequested { get; set; }
 
     private readonly CancellationTokenSource disposalCts = new();
@@ -29,7 +38,7 @@
     private Guid? activeProjectId;
     private string portfolioFragmentContent = string.Empty;
     private string selectionFragmentContent = string.Empty;
-    private string scopeStateKey = string.Empty;
+    private AgentChatContextScope? activeScope;
     private AgentChatContextAccessState accessState = AgentChatContextAccessState.Loading;
     private long agentAccessGeneration;
     private bool hasActiveContext;
@@ -55,6 +64,7 @@
         UpdatePortfolioFragment();
         UpdateSelectionFragment(selection);
         UpdateScope();
+        scopeLease?.SynchronizeNavigation(ContextNavigationIdentity);
     }
 
     private async Task ActivateContextAsync(ProjectsAgentChatSelection? selection)
@@ -74,10 +84,12 @@
             scopeId,
             activeProject,
             agents,
-            accessState);
+            EffectiveAccessState,
+            ActiveView);
         activeSource = scope.Source;
         scopeLease = ContextRegistry.ActivateScope(scope);
-        scopeStateKey = BuildScopeStateKey(scope);
+        scopeLease.SynchronizeNavigation(ContextNavigationIdentity);
+        activeScope = scope;
 
         var portfolioFragment = ProjectsAgentChatContextBuilder.BuildPortfolioFragment();
         portfolioFragmentLease = ContextRegistry.RegisterFragment(scopeId, portfolioFragment);
@@ -162,15 +174,15 @@
             scopeLease.ScopeId,
             activeProject,
             agents,
-            accessState);
-        var nextStateKey = BuildScopeStateKey(scope);
-        if (string.Equals(scopeStateKey, nextStateKey, StringComparison.Ordinal))
+            EffectiveAccessState,
+            ActiveView);
+        if (activeScope is not null && AreEquivalent(activeScope, scope))
         {
             return;
         }
 
         scopeLease.Update(scope);
-        scopeStateKey = nextStateKey;
+        activeScope = scope;
         activeSource = scope.Source;
     }
 
@@ -280,23 +292,65 @@
     private void ValidateParameters()
     {
         ArgumentNullException.ThrowIfNull(ProjectSummaries);
+        if (ContextNavigationIdentity.IsEmpty)
+        {
+            throw new ArgumentException(
+                "A Projects agent-chat navigation identity is required.",
+                nameof(ContextNavigationIdentity));
+        }
+
+        if (!Enum.IsDefined(ContextAccessState))
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(ContextAccessState),
+                ContextAccessState,
+                "The Projects position access state is undefined.");
+        }
     }
 
-    private static string BuildScopeStateKey(AgentChatContextScope scope)
+    private AgentChatContextAccessState EffectiveAccessState
+        => (accessState, ContextAccessState) switch
+        {
+            (AgentChatContextAccessState.Failed, _) or
+            (_, AgentChatContextAccessState.Failed)
+                => AgentChatContextAccessState.Failed,
+            (AgentChatContextAccessState.Loading, _) or
+            (_, AgentChatContextAccessState.Loading)
+                => AgentChatContextAccessState.Loading,
+            _ => AgentChatContextAccessState.Ready
+        };
+
+    private static bool AreEquivalent(
+        AgentChatContextScope left,
+        AgentChatContextScope right)
     {
-        var access = string.Join(
-            "\u001E",
-            scope.AgentAccess.Select(item =>
-                $"{item.AgentId:N}:{(int)item.Permissions}:{item.ScopeLabel}"));
-        return string.Join(
-            "\u001F",
-            scope.Source.Kind.Value,
-            scope.Source.Id.Value,
-            scope.DisplayName,
-            scope.WorkspaceScope?.DisplayName ?? string.Empty,
-            ((int)scope.AccessMode).ToString(),
-            ((int)scope.AccessState).ToString(),
-            access);
+        return left.Source == right.Source &&
+               string.Equals(left.DisplayName, right.DisplayName, StringComparison.Ordinal) &&
+               Equals(left.WorkspaceScope, right.WorkspaceScope) &&
+               left.AccessMode == right.AccessMode &&
+               left.AccessState == right.AccessState &&
+               left.AgentAccess.SequenceEqual(right.AgentAccess) &&
+               AreEquivalent(left.SurfacePosition, right.SurfacePosition);
+    }
+
+    private static bool AreEquivalent(
+        AgentChatSurfacePosition? left,
+        AgentChatSurfacePosition? right)
+    {
+        if (ReferenceEquals(left, right))
+        {
+            return true;
+        }
+
+        return left is not null &&
+               right is not null &&
+               string.Equals(left.Module, right.Module, StringComparison.Ordinal) &&
+               string.Equals(left.Surface, right.Surface, StringComparison.Ordinal) &&
+               string.Equals(left.View, right.View, StringComparison.Ordinal) &&
+               string.Equals(left.Route, right.Route, StringComparison.Ordinal) &&
+               Equals(left.PrimarySelection, right.PrimarySelection) &&
+               left.SelectedEntities.SequenceEqual(right.SelectedEntities) &&
+               left.Facts.SequenceEqual(right.Facts);
     }
 
     private void DisposeContext()
@@ -313,9 +367,9 @@
         scopeLease = null;
         activeProject = null;
         activeProjectId = null;
+        activeScope = null;
         portfolioFragmentContent = string.Empty;
         selectionFragmentContent = string.Empty;
-        scopeStateKey = string.Empty;
         hasActiveContext = false;
     }
 

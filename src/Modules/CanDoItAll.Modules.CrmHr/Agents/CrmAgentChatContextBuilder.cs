@@ -100,6 +100,51 @@ public sealed record CrmAgentChatOpportunityContext
     public IReadOnlyList<OpportunityPartyRole> PartyRoles { get; }
 }
 
+public sealed record CrmAgentChatInteractionContext
+{
+    public CrmAgentChatInteractionContext(
+        Guid accountId,
+        Guid interactionId,
+        string displayLabel,
+        InteractionType interactionType,
+        Guid? relatedOpportunityId)
+    {
+        if (accountId == Guid.Empty)
+        {
+            throw new ArgumentException("A CRM account id is required.", nameof(accountId));
+        }
+
+        if (interactionId == Guid.Empty)
+        {
+            throw new ArgumentException("A CRM interaction id is required.", nameof(interactionId));
+        }
+
+        if (relatedOpportunityId == Guid.Empty)
+        {
+            throw new ArgumentException(
+                "A related CRM opportunity id cannot be empty.",
+                nameof(relatedOpportunityId));
+        }
+
+        CrmAgentChatContextBuilder.ValidateDefined(interactionType, nameof(interactionType));
+        AccountId = accountId;
+        InteractionId = interactionId;
+        DisplayLabel = CrmAgentChatContextBuilder.NormalizeDisplayLabel(displayLabel);
+        InteractionType = interactionType;
+        RelatedOpportunityId = relatedOpportunityId;
+    }
+
+    public Guid AccountId { get; }
+
+    public Guid InteractionId { get; }
+
+    public string DisplayLabel { get; }
+
+    public InteractionType InteractionType { get; }
+
+    public Guid? RelatedOpportunityId { get; }
+}
+
 public static class CrmAgentChatContextBuilder
 {
     public const string SourceKind = "crm-account";
@@ -108,7 +153,7 @@ public static class CrmAgentChatContextBuilder
     public const string WorkspaceContributorId = "crm.workspace";
     public const string AccountContributorId = "crm.account-selection";
     public const string OpportunityContributorId = "crm.opportunity-selection";
-    private const string ContextAccessLabel = "CRM sanitized selection";
+    public const string InteractionContributorId = "crm.interaction-selection";
     private const int MaximumDisplayLabelLength = 160;
 
     public static AgentChatContextSource BuildSource(Guid accountId)
@@ -126,15 +171,20 @@ public static class CrmAgentChatContextBuilder
             new AgentChatContextSourceId(WorkspaceSourceId));
     }
 
-    public static AgentChatContextScope BuildWorkspaceScope(AgentChatContextScopeId scopeId)
+    public static AgentChatContextScope BuildWorkspaceScope(
+        AgentChatContextScopeId scopeId,
+        AgentChatContextAccessState accessState = AgentChatContextAccessState.Ready)
     {
+        ValidateAccessState(accessState);
         return new AgentChatContextScope(
             scopeId,
             BuildWorkspaceSource(),
             "CRM workspace",
             workspaceScope: null,
             agentAccess: [],
-            accessMode: AgentChatContextScopeAccessMode.Unrestricted);
+            accessMode: AgentChatContextScopeAccessMode.Unrestricted,
+            accessState: accessState,
+            surfacePosition: CrmHrAgentChatSurfaceBuilder.BuildCrmPosition(null, null, null));
     }
 
     public static AgentChatContextFragment BuildWorkspaceFragment(int accountCount)
@@ -155,19 +205,13 @@ SelectedAccount: None
     public static AgentChatContextScope BuildScope(
         AgentChatContextScopeId scopeId,
         CrmAgentChatAccountContext account,
-        IEnumerable<Guid> refreshEligibleAgentIds)
+        CrmAgentChatOpportunityContext? opportunity,
+        AgentChatContextAccessState accessState = AgentChatContextAccessState.Ready,
+        CrmAgentChatInteractionContext? interaction = null)
     {
         ArgumentNullException.ThrowIfNull(account);
-        ArgumentNullException.ThrowIfNull(refreshEligibleAgentIds);
-        var access = refreshEligibleAgentIds
-            .Where(agentId => agentId != Guid.Empty)
-            .Distinct()
-            .OrderBy(agentId => agentId)
-            .Select(agentId => new AgentChatContextAgentAccess(
-                agentId,
-                AgentChatContextPermission.Read | AgentChatContextPermission.Mutate,
-                ContextAccessLabel))
-            .ToArray();
+        ValidateAccessState(accessState);
+        ValidateSelection(account, opportunity, interaction);
 
         // CRM has no canonical agent-access projection yet. Unrestricted applies only to this
         // bounded summary; it does not grant CRM, workspace, or tool authorization.
@@ -176,8 +220,25 @@ SelectedAccount: None
             BuildSource(account.AccountId),
             $"CRM account · {account.DisplayLabel}",
             workspaceScope: null,
-            agentAccess: access,
-            accessMode: AgentChatContextScopeAccessMode.Unrestricted);
+            agentAccess: [],
+            accessMode: AgentChatContextScopeAccessMode.Unrestricted,
+            accessState: accessState,
+            surfacePosition: CrmHrAgentChatSurfaceBuilder.BuildCrmPosition(
+                account,
+                opportunity,
+                interaction),
+            completionRefreshMode: AgentChatContextCompletionRefreshMode.OnSuccessfulRun);
+    }
+
+    private static void ValidateAccessState(AgentChatContextAccessState accessState)
+    {
+        if (!Enum.IsDefined(accessState))
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(accessState),
+                accessState,
+                "The CRM agent chat context access state is undefined.");
+        }
     }
 
     public static AgentChatContextFragment BuildAccountFragment(
@@ -223,15 +284,41 @@ PartyRoles: {roles}
             content);
     }
 
+    public static AgentChatContextFragment BuildInteractionFragment(
+        CrmAgentChatInteractionContext interaction)
+    {
+        ArgumentNullException.ThrowIfNull(interaction);
+        var relatedOpportunityId = interaction.RelatedOpportunityId?.ToString("D") ?? "None";
+        var content = $"""
+CRM interaction selection (sanitized)
+AccountId: {interaction.AccountId:D}
+InteractionId: {interaction.InteractionId:D}
+DisplayLabel: {interaction.DisplayLabel}
+InteractionType: {interaction.InteractionType}
+RelatedOpportunityId: {relatedOpportunityId}
+""";
+        return new AgentChatContextFragment(
+            new AgentChatContextContributorId(InteractionContributorId),
+            order: 225,
+            content);
+    }
+
     public static void ValidateSelection(
         CrmAgentChatAccountContext account,
-        CrmAgentChatOpportunityContext? opportunity)
+        CrmAgentChatOpportunityContext? opportunity,
+        CrmAgentChatInteractionContext? interaction = null)
     {
         ArgumentNullException.ThrowIfNull(account);
         if (opportunity is not null && opportunity.AccountId != account.AccountId)
         {
             throw new InvalidOperationException(
                 $"CRM opportunity '{opportunity.OpportunityId:D}' does not belong to context account '{account.AccountId:D}'.");
+        }
+
+        if (interaction is not null && interaction.AccountId != account.AccountId)
+        {
+            throw new InvalidOperationException(
+                $"CRM interaction '{interaction.InteractionId:D}' does not belong to context account '{account.AccountId:D}'.");
         }
     }
 

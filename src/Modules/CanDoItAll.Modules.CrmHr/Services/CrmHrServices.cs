@@ -285,6 +285,12 @@ public sealed record CrmAccountActivityTimelineItemModel(
     string Tone,
     bool IsOverdue);
 
+public sealed record CrmInteractionDetailModel(
+    Guid Id,
+    InteractionType InteractionType,
+    string Subject,
+    Guid? RelatedOpportunityId);
+
 public sealed record CrmAccountListItemModel(
     Guid AccountPartyId,
     string DisplayName,
@@ -343,9 +349,43 @@ public sealed record CrmAccountWorkspaceModel(
     CrmAccountProfileEditorModel Profile,
     IReadOnlyList<CrmAccountStakeholderItemModel> Stakeholders,
     IReadOnlyList<PartyOptionModel> AvailableParties,
+    IReadOnlyList<CrmInteractionDetailModel> Interactions,
     IReadOnlyList<CrmAccountActivityTimelineItemModel> ActivityTimeline,
     IReadOnlyList<CrmNextActionItemModel> OverdueNextActions,
     IReadOnlyList<CrmOpportunityDetailModel> Opportunities);
+
+internal enum CrmRouteSelectionResolutionFailure
+{
+    None,
+    OpportunityNotFound,
+    InteractionNotFound,
+    InteractionAccountAmbiguous,
+    ConflictingAccount
+}
+
+internal readonly record struct CrmRouteSelectionResolution(
+    Guid? AccountPartyId,
+    CrmRouteSelectionResolutionFailure Failure)
+{
+    public bool IsResolved => Failure == CrmRouteSelectionResolutionFailure.None;
+
+    public static CrmRouteSelectionResolution Resolved(Guid? accountPartyId)
+        => new(accountPartyId, CrmRouteSelectionResolutionFailure.None);
+
+    public static CrmRouteSelectionResolution Unresolved(
+        CrmRouteSelectionResolutionFailure failure)
+    {
+        if (failure == CrmRouteSelectionResolutionFailure.None)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(failure),
+                failure,
+                "An unresolved CRM route selection requires a failure reason.");
+        }
+
+        return new CrmRouteSelectionResolution(null, failure);
+    }
+}
 
 public sealed record WorkforceProfileSummaryModel(Guid Id, Guid PartyId, WorkforceKind WorkforceKind, string JobTitle, string Status);
 
@@ -1100,6 +1140,77 @@ public sealed partial class CrmService(
     private const string CrmOpportunityEntityType = "Opportunity";
     private const string CrmOpportunitySearchSourceType = "crm-opportunity";
 
+    internal async Task<CrmRouteSelectionResolution> ResolveRouteSelectionAsync(
+        Guid? requestedAccountId,
+        Guid? requestedOpportunityId,
+        Guid? requestedInteractionId,
+        CancellationToken cancellationToken = default)
+    {
+        if (!requestedOpportunityId.HasValue && !requestedInteractionId.HasValue)
+        {
+            return CrmRouteSelectionResolution.Resolved(requestedAccountId);
+        }
+
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        Guid? opportunityAccountId = null;
+        if (requestedOpportunityId.HasValue)
+        {
+            opportunityAccountId = await dbContext.Set<Opportunity>()
+                .Where(item => item.Id == requestedOpportunityId.Value)
+                .Select(item => (Guid?)item.AccountPartyId)
+                .SingleOrDefaultAsync(cancellationToken);
+            if (!opportunityAccountId.HasValue)
+            {
+                return CrmRouteSelectionResolution.Unresolved(
+                    CrmRouteSelectionResolutionFailure.OpportunityNotFound);
+            }
+        }
+
+        Guid? interactionAccountId = null;
+        if (requestedInteractionId.HasValue)
+        {
+            var interactionAccountIds = await (
+                    from interaction in dbContext.Set<InteractionRecord>()
+                    where interaction.Id == requestedInteractionId.Value
+                    join link in dbContext.Set<InteractionPartyLink>()
+                            .Where(item => item.Role == InteractionPartyRole.Account)
+                        on interaction.Id equals link.InteractionId
+                    select link.PartyId)
+                .Distinct()
+                .Take(2)
+                .ToListAsync(cancellationToken);
+            if (interactionAccountIds.Count == 0)
+            {
+                return CrmRouteSelectionResolution.Unresolved(
+                    CrmRouteSelectionResolutionFailure.InteractionNotFound);
+            }
+
+            if (interactionAccountIds.Count != 1)
+            {
+                return CrmRouteSelectionResolution.Unresolved(
+                    CrmRouteSelectionResolutionFailure.InteractionAccountAmbiguous);
+            }
+
+            interactionAccountId = interactionAccountIds[0];
+        }
+
+        var resolvedAccountIds = new[]
+            {
+                requestedAccountId,
+                opportunityAccountId,
+                interactionAccountId
+            }
+            .Where(item => item.HasValue)
+            .Select(item => item!.Value)
+            .Distinct()
+            .Take(2)
+            .ToList();
+        return resolvedAccountIds.Count <= 1
+            ? CrmRouteSelectionResolution.Resolved(resolvedAccountIds.SingleOrDefault())
+            : CrmRouteSelectionResolution.Unresolved(
+                CrmRouteSelectionResolutionFailure.ConflictingAccount);
+    }
+
     public async Task<IReadOnlyList<OpportunitySummaryModel>> ListOpportunitiesAsync(CancellationToken cancellationToken = default)
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
@@ -1417,6 +1528,14 @@ public sealed partial class CrmService(
             },
             stakeholders,
             availableParties,
+            interactions
+                .OrderByDescending(item => item.OccurredAtUtc)
+                .Select(item => new CrmInteractionDetailModel(
+                    item.Id,
+                    item.InteractionType,
+                    item.Subject,
+                    item.RelatedOpportunityId))
+                .ToList(),
             BuildActivityTimeline(interactions, participantLinks, interactionPartyNames, auditEntries),
             overdueNextActions,
             opportunities

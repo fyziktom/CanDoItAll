@@ -10,10 +10,22 @@ tests: component:ProjectCalendarPageTests, e2e:workbench-calendar
 *@
 @using CanDoItAll.Components.CanvasLib
 @using CanDoItAll.Components.BaseLib
+@using CanDoItAll.AgentFramework.Core
+@using CanDoItAll.AgentFramework.Models
+@using CanDoItAll.Modules.Workbench.Pages.Components.ProjectStructure
+@using CanDoItAll.Modules.Workbench.ProjectStructure
 @inject ProjectWorkbenchService ProjectWorkbenchService
 @inject NavigationManager Navigation
 
 <PageTitle>Project Calendar</PageTitle>
+
+<ProjectStructureAgentChatContextProvider ProjectId="@ProjectId"
+                                          ProjectName="@(surface?.ProjectName ?? "Requested project")"
+                                          ActiveView="ProjectStructureAgentChatView.Calendar"
+                                          SelectedEntityReferences="@SelectedAgentContextEntities"
+                                          ContextNavigationIdentity="@AgentChatNavigationFence"
+                                          ContextAccessState="@agentChatContextAccessState"
+                                          RefreshRequested="HandleAgentExecutionCompletedAsync" />
 
 @if (unavailableState is not null)
 {
@@ -175,8 +187,14 @@ else
     private ProjectCalendarViewState currentViewState = ProjectCalendarViewState.Empty;
     private Guid? selectedEventId;
     private ProjectWorkbenchUnavailableState? unavailableState;
+    private AgentChatContextAccessState agentChatContextAccessState = AgentChatContextAccessState.Loading;
+    private long surfaceReloadGeneration;
 
     private ProjectCalendarEvent? selectedEvent => surface?.Events.FirstOrDefault(item => item.Id == selectedEventId);
+    private IReadOnlyList<AgentChatContextEntityReference> SelectedAgentContextEntities
+        => selectedEvent is { } calendarEvent && !string.IsNullOrWhiteSpace(calendarEvent.NodeKey)
+            ? [new AgentChatContextEntityReference("project-node", calendarEvent.NodeKey, calendarEvent.Title)]
+            : [];
     private string SelectedEventLabel => selectedEvent?.ObjectType.ToString() ?? "None";
     private string StateParserSelectedEventLabel => currentViewState.SelectedEventId?.ToString("D") ?? "None";
     private CanvasCalendarSurface ValidationSurface => BuildValidationSurface();
@@ -193,27 +211,57 @@ else
         string.IsNullOrWhiteSpace(currentViewState.SelectedDate) ? "No selected date" : currentViewState.SelectedDate,
         string.IsNullOrWhiteSpace(surface?.ViewStateJson) ? "No persisted JSON" : "Persisted JSON restored"
     ];
+    private AgentChatNavigationIdentity AgentChatNavigationFence
+        => AgentChatNavigationIdentity.CreateForLocation(
+            Navigation.BaseUri,
+            Navigation.Uri);
 
     protected override async Task OnParametersSetAsync() => await LoadAsync();
 
     private async Task LoadAsync()
     {
-        var loadResult = await ProjectWorkbenchService.TryGetCalendarAsync(ProjectId);
-        if (!loadResult.IsSuccess || loadResult.Surface is null)
+        var requestedProjectId = ProjectId;
+        var reloadGeneration = Interlocked.Increment(ref surfaceReloadGeneration);
+        agentChatContextAccessState = AgentChatContextAccessState.Loading;
+        try
         {
-            unavailableState = loadResult.UnavailableState;
-            surface = null;
-            canvasSurface = null;
-            selectedEventId = null;
-            currentViewState = ProjectCalendarViewState.Empty;
-            return;
-        }
+            var loadResult = await ProjectWorkbenchService.TryGetCalendarAsync(requestedProjectId);
+            if (!IsCurrentSurfaceReload(requestedProjectId, reloadGeneration))
+            {
+                return;
+            }
 
-        unavailableState = null;
-        surface = loadResult.Surface;
-        currentViewState = ProjectCalendarStateParser.Parse(surface.ViewStateJson);
-        selectedEventId ??= currentViewState.SelectedEventId ?? surface.Events.FirstOrDefault()?.Id;
-        canvasSurface = ProjectCalendarAdapter.BuildSurface(surface, currentViewState with { SelectedEventId = selectedEventId });
+            if (!loadResult.IsSuccess || loadResult.Surface is null)
+            {
+                unavailableState = loadResult.UnavailableState;
+                surface = null;
+                canvasSurface = null;
+                selectedEventId = null;
+                currentViewState = ProjectCalendarViewState.Empty;
+                agentChatContextAccessState = AgentChatContextAccessState.Failed;
+                return;
+            }
+
+            unavailableState = null;
+            surface = loadResult.Surface;
+            currentViewState = ProjectCalendarStateParser.Parse(surface.ViewStateJson);
+            selectedEventId = ResolveSelectedEventId(
+                surface.Events,
+                selectedEventId,
+                currentViewState.SelectedEventId);
+            currentViewState = currentViewState with { SelectedEventId = selectedEventId };
+            canvasSurface = ProjectCalendarAdapter.BuildSurface(surface, currentViewState);
+            agentChatContextAccessState = AgentChatContextAccessState.Ready;
+        }
+        catch
+        {
+            if (IsCurrentSurfaceReload(requestedProjectId, reloadGeneration))
+            {
+                agentChatContextAccessState = AgentChatContextAccessState.Failed;
+            }
+
+            throw;
+        }
     }
 
     private Task OpenUnavailableRouteAsync()
@@ -224,7 +272,10 @@ else
 
     private Task HandleEventSelectedAsync(CanvasCalendarSelectionChangedEventArgs args)
     {
-        selectedEventId = Guid.TryParse(args.SelectedEvent?.EventId, out var parsed) ? parsed : null;
+        selectedEventId = Guid.TryParse(args.SelectedEvent?.EventId, out var parsed) &&
+                          surface?.Events.Any(item => item.Id == parsed) == true
+            ? parsed
+            : null;
         if (surface is not null)
         {
             currentViewState = currentViewState with { SelectedEventId = selectedEventId };
@@ -240,11 +291,55 @@ else
         if (surface is not null)
         {
             surface = surface with { ViewStateJson = args.StateJson };
-            selectedEventId = currentViewState.SelectedEventId ?? selectedEventId;
+            selectedEventId = ResolveSelectedEventId(
+                surface.Events,
+                currentViewState.SelectedEventId,
+                selectedEventId);
+            currentViewState = currentViewState with { SelectedEventId = selectedEventId };
             canvasSurface = ProjectCalendarAdapter.BuildSurface(surface, currentViewState with { SelectedEventId = selectedEventId });
         }
 
         await ProjectWorkbenchService.SaveViewStateAsync(ProjectId, "calendar", args.StateJson);
+    }
+
+    private async Task HandleAgentExecutionCompletedAsync(AgentChatExecutionCompleted notification)
+    {
+        if (!string.Equals(
+                notification.Source.Kind.Value,
+                ProjectStructureAgentChatContextBuilder.SourceKind,
+                StringComparison.Ordinal) ||
+            !Guid.TryParse(notification.Source.Id.Value, out var sourceProjectId) ||
+            sourceProjectId != ProjectId)
+        {
+            return;
+        }
+
+        var reloadTask = LoadAsync();
+        await InvokeAsync(StateHasChanged);
+        await reloadTask;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private bool IsCurrentSurfaceReload(Guid projectId, long reloadGeneration)
+        => projectId == ProjectId &&
+           reloadGeneration == Volatile.Read(ref surfaceReloadGeneration);
+
+    private static Guid? ResolveSelectedEventId(
+        IReadOnlyList<ProjectCalendarEvent> events,
+        Guid? preferredEventId,
+        Guid? fallbackEventId)
+    {
+        if (preferredEventId.HasValue && events.Any(item => item.Id == preferredEventId.Value))
+        {
+            return preferredEventId;
+        }
+
+        if (fallbackEventId.HasValue && events.Any(item => item.Id == fallbackEventId.Value))
+        {
+            return fallbackEventId;
+        }
+
+        return events.FirstOrDefault()?.Id;
     }
 
     private CanvasCalendarSurface BuildValidationSurface()

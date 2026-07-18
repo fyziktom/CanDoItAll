@@ -6,6 +6,7 @@
 @using CanDoItAll.AgentFramework.Voice
 @using CanDoItAll.Infrastructure.Configuration
 @using CanDoItAll.Modules.AgentFramework
+@using CanDoItAll.Modules.Processes.AgentChat
 @using CanDoItAll.Processes.Application
 @using Microsoft.Extensions.DependencyInjection
 @using Microsoft.JSInterop
@@ -14,6 +15,9 @@
 @inject ICurrencyFormatter CurrencyFormatter
 @inject NavigationManager Navigation
 @inject IJSRuntime JsRuntime
+
+<AgentChatContextSurfaceProvider Surface="@AgentChatSurface"
+                                 ContextNavigationIdentity="@AgentChatNavigationFence" />
 
 <PageScaffold FillHeight="true"
               MaxWidthClass="max-w-full"
@@ -260,6 +264,16 @@
     private int activeDetailTabIndex;
     private int selectedRunViewIndex = 1;
     private Guid? selectedRuntimeRunId;
+    private Guid? routeSelectionProjectId;
+    private Guid? routeSelectionProcessId;
+    private Guid? routeSelectionRunId;
+    private Guid? routeSelectionLaunchPlanId;
+    private Guid? requiredRouteProcessId;
+    private Guid? requiredRouteRunId;
+    private Guid? requiredRouteLaunchPlanId;
+    private string? routeSelectionDefinitionKey;
+    private string? requiredRouteDefinitionKey;
+    private bool routeSelectionInitialized;
     private ProcessRuntimeHistoryWindow runtimeHistoryWindow = ProcessRuntimeHistoryWindow.LiveHour;
     private ProcessRuntimeHistoryWindow managerChatHistoryWindow = ProcessRuntimeHistoryWindow.OneDay;
     private int runtimeEventPage;
@@ -298,6 +312,7 @@
     private bool activeDetailTabInitialized;
     private bool isBusy;
     private string? errorMessage;
+    private long workspaceGeneration;
     private string? agentContextNotice;
     private string searchText = string.Empty;
     private string pendingSearchText = string.Empty;
@@ -477,14 +492,168 @@
     private ProcessWorkspaceShellProjection CurrentShell
         => shell ?? throw new InvalidOperationException("Process workspace shell is not loaded.");
 
+    private bool HasUnresolvedRouteRunSelection
+        => requiredRouteRunId is { } requestedRunId &&
+           shell is not null &&
+           shell.Runtime.SelectedRunId != requestedRunId;
+
+    private bool HasUnresolvedRouteDefinitionSelection
+        => !string.IsNullOrWhiteSpace(requiredRouteDefinitionKey) &&
+           shell is not null &&
+           !string.Equals(
+               shell.DefinitionCatalog.SelectedItem?.Key.Value,
+               requiredRouteDefinitionKey,
+               StringComparison.Ordinal);
+
+    private bool HasUnresolvedRouteProcessSelection
+        => requiredRouteProcessId is { } requestedProcessId &&
+           shell is not null &&
+           (shell.DefinitionCatalog.SelectedItem is not { } selectedDefinition ||
+            ProcessDefinitionCatalogProjectionService.CreateDefinitionId(selectedDefinition.Key).Value != requestedProcessId);
+
+    private bool HasUnresolvedRouteLaunchPlanSelection
+        => requiredRouteLaunchPlanId.HasValue && shell is not null;
+
+    private bool HasUnresolvedNonRunRouteSelection
+        => HasUnresolvedRouteDefinitionSelection ||
+           HasUnresolvedRouteProcessSelection ||
+           HasUnresolvedRouteLaunchPlanSelection;
+
+    private bool HasUnresolvedRouteSelection
+        => HasUnresolvedRouteRunSelection || HasUnresolvedNonRunRouteSelection;
+
+    private ProcessWorkspaceShellProjection? AgentChatShell
+    {
+        get
+        {
+            if (!HasUnresolvedNonRunRouteSelection || shell is null)
+            {
+                return shell;
+            }
+
+            return shell with
+            {
+                DefinitionCatalog = shell.DefinitionCatalog with
+                {
+                    SelectedDefinitionKey = string.IsNullOrWhiteSpace(requiredRouteDefinitionKey)
+                        ? null
+                        : new ProcessDefinitionCatalogItemKey(requiredRouteDefinitionKey),
+                    SelectedItem = null,
+                    SelectedEditor = null
+                }
+            };
+        }
+    }
+
+    private AgentChatContextSurface AgentChatSurface
+        => ProcessAgentChatContextBuilder.BuildWorkspaceSurface(
+            new ProcessWorkspaceAgentChatContext(
+                Navigation.Uri,
+                ProjectId,
+                AgentChatWorkspaceView,
+                AgentChatRunView,
+                HasUnresolvedNonRunRouteSelection
+                    ? null
+                    : requiredRouteRunId ?? selectedRuntimeRunId ?? shell?.Runtime.SelectedRunId ?? RunIdQuery,
+                AgentChatShell,
+                !HasUnresolvedRouteSelection && runDetailDialogOpen ? runDetailSnapshot : null,
+                !HasUnresolvedRouteSelection && eventDetailDialogOpen ? eventDetail : null,
+                AgentChatAccessState));
+
+    private AgentChatContextAccessState AgentChatAccessState
+        => isBusy
+            ? AgentChatContextAccessState.Loading
+            : shell is not null
+            ? HasUnresolvedRouteSelection
+                ? AgentChatContextAccessState.Failed
+                : AgentChatContextAccessState.Ready
+            : string.IsNullOrWhiteSpace(errorMessage)
+                ? AgentChatContextAccessState.Loading
+                : AgentChatContextAccessState.Failed;
+
+    private AgentChatNavigationIdentity AgentChatNavigationFence
+        => AgentChatNavigationIdentity.CreateForLocation(
+            Navigation.BaseUri,
+            Navigation.Uri,
+            [
+                new("processId", ProcessIdQuery?.ToString("D")),
+                new("runId", RunIdQuery?.ToString("D")),
+                new("launchPlanId", LaunchPlanIdQuery?.ToString("D")),
+                new("q", DefinitionSearchText),
+                new("definitionKey", SelectedDefinitionKey)
+            ]);
+
+    private ProcessAgentChatWorkspaceView AgentChatWorkspaceView
+        => (!activeDetailTabInitialized && ResolvePreferredDetailTab() == ProcessWorkspaceDetailTabKey.Runs
+                ? 3
+                : activeDetailTabIndex) switch
+        {
+            0 => ProcessAgentChatWorkspaceView.Definition,
+            1 => ProcessAgentChatWorkspaceView.Roles,
+            2 => ProcessAgentChatWorkspaceView.Steps,
+            3 => ProcessAgentChatWorkspaceView.Runs,
+            4 => ProcessAgentChatWorkspaceView.Graphs,
+            5 => ProcessAgentChatWorkspaceView.Analytics,
+            6 => ProcessAgentChatWorkspaceView.Exchange,
+            7 => ProcessAgentChatWorkspaceView.ManagerChat,
+            _ => ProcessAgentChatWorkspaceView.Definition
+        };
+
+    private ProcessAgentChatRunView AgentChatRunView
+        => selectedRunViewIndex switch
+        {
+            0 => ProcessAgentChatRunView.Launch,
+            1 => ProcessAgentChatRunView.Activity,
+            2 => ProcessAgentChatRunView.Control,
+            3 => ProcessAgentChatRunView.Execution,
+            4 => ProcessAgentChatRunView.Graphs,
+            5 => ProcessAgentChatRunView.Coordination,
+            6 => ProcessAgentChatRunView.Evidence,
+            _ => ProcessAgentChatRunView.Activity
+        };
+
     protected override async Task OnParametersSetAsync()
     {
+        SynchronizeRouteSelections();
         searchText = DefinitionSearchText?.Trim() ?? string.Empty;
         pendingSearchText = searchText;
         selectedDefinitionKey = string.IsNullOrWhiteSpace(SelectedDefinitionKey)
             ? null
             : SelectedDefinitionKey.Trim();
         await LoadAsync(forceRefresh: false);
+    }
+
+    private void SynchronizeRouteSelections()
+    {
+        var normalizedDefinitionKey = string.IsNullOrWhiteSpace(SelectedDefinitionKey)
+            ? null
+            : SelectedDefinitionKey.Trim();
+        if (routeSelectionInitialized &&
+            routeSelectionProjectId == ProjectId &&
+            routeSelectionProcessId == ProcessIdQuery &&
+            routeSelectionRunId == RunIdQuery &&
+            routeSelectionLaunchPlanId == LaunchPlanIdQuery &&
+            string.Equals(routeSelectionDefinitionKey, normalizedDefinitionKey, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        routeSelectionInitialized = true;
+        routeSelectionProjectId = ProjectId;
+        routeSelectionProcessId = ProcessIdQuery;
+        routeSelectionRunId = RunIdQuery;
+        routeSelectionLaunchPlanId = LaunchPlanIdQuery;
+        requiredRouteProcessId = ProcessIdQuery;
+        requiredRouteRunId = RunIdQuery;
+        requiredRouteLaunchPlanId = LaunchPlanIdQuery;
+        routeSelectionDefinitionKey = normalizedDefinitionKey;
+        requiredRouteDefinitionKey = normalizedDefinitionKey;
+        selectedRuntimeRunId = RunIdQuery;
+        runtimeEventPage = 0;
+        runDetailDialogOpen = false;
+        runDetailSnapshot = null;
+        eventDetailDialogOpen = false;
+        eventDetail = null;
     }
 
     private async Task RefreshAsync()
@@ -494,6 +663,7 @@
 
     private async Task LoadAsync(bool forceRefresh)
     {
+        var generation = Interlocked.Increment(ref workspaceGeneration);
         isBusy = true;
         errorMessage = null;
 
@@ -532,37 +702,57 @@
                     runtimeLoadOptions),
                 definitionLoadOptions);
 
-            shell = await ProjectionClient.GetShellAsync(request);
-            selectedRuntimeRunId = shell.Runtime.SelectedRunId ?? selectedRuntimeRunId ?? RunIdQuery;
+            var loadedShell = await ProjectionClient.GetShellAsync(request);
+            if (generation != Volatile.Read(ref workspaceGeneration))
+            {
+                return;
+            }
+
+            shell = loadedShell;
+            selectedRuntimeRunId = requiredRouteRunId is { } requestedRunId &&
+                loadedShell.Runtime.SelectedRunId != requestedRunId
+                    ? requestedRunId
+                    : loadedShell.Runtime.SelectedRunId ?? selectedRuntimeRunId ?? RunIdQuery;
             if (!activeDetailTabInitialized)
             {
                 activeDetailTabIndex = ResolveDetailTabIndex(ResolvePreferredDetailTab());
                 activeDetailTabInitialized = true;
             }
 
-            if (definitionLoadOptions.IncludeSelectedEditor || shell.DefinitionCatalog.SelectedEditor is not null)
+            if (!HasUnresolvedNonRunRouteSelection &&
+                (definitionLoadOptions.IncludeSelectedEditor || shell.DefinitionCatalog.SelectedEditor is not null))
             {
                 SyncDefinitionEditor(shell.DefinitionCatalog.SelectedEditor);
             }
 
-            if (definitionLoadOptions.IncludeTemplateCatalog || shell.DefinitionCatalog.SelectedEditor?.TemplateCatalog is not null)
+            if (!HasUnresolvedNonRunRouteSelection &&
+                (definitionLoadOptions.IncludeTemplateCatalog || shell.DefinitionCatalog.SelectedEditor?.TemplateCatalog is not null))
             {
                 SyncTemplateCatalogQuery(shell.DefinitionCatalog.SelectedEditor?.TemplateCatalog);
             }
 
-            if (activeDetailTabIndex == ResolveDetailTabIndex(ProcessWorkspaceDetailTabKey.ManagerChat))
+            if (!HasUnresolvedRouteSelection &&
+                activeDetailTabIndex == ResolveDetailTabIndex(ProcessWorkspaceDetailTabKey.ManagerChat))
             {
                 await EnsureManagerChatLoadedAsync();
             }
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
         {
+            if (generation != Volatile.Read(ref workspaceGeneration))
+            {
+                return;
+            }
+
             errorMessage = exception.Message;
             shell = null;
         }
         finally
         {
-            isBusy = false;
+            if (generation == Volatile.Read(ref workspaceGeneration))
+            {
+                isBusy = false;
+            }
         }
     }
 
@@ -773,6 +963,9 @@
 
     private async Task ApplyDefinitionSearchAsync()
     {
+        requiredRouteProcessId = null;
+        requiredRouteLaunchPlanId = null;
+        requiredRouteDefinitionKey = null;
         searchText = pendingSearchText.Trim();
         selectedDefinitionKey = null;
         selectedTemplateItemKey = null;
@@ -781,6 +974,9 @@
 
     private async Task ClearDefinitionSearchAsync()
     {
+        requiredRouteProcessId = null;
+        requiredRouteLaunchPlanId = null;
+        requiredRouteDefinitionKey = null;
         pendingSearchText = string.Empty;
         searchText = string.Empty;
         selectedDefinitionKey = null;
@@ -790,6 +986,9 @@
 
     private async Task SelectDefinitionAsync(ProcessDefinitionCatalogItemKey key)
     {
+        requiredRouteProcessId = null;
+        requiredRouteLaunchPlanId = null;
+        requiredRouteDefinitionKey = null;
         selectedDefinitionKey = key.Value;
         selectedTemplateItemKey = null;
         await LoadAsync(forceRefresh: false);
@@ -797,6 +996,9 @@
 
     private async Task SelectDefinitionScopeAsync(ProcessDefinitionCatalogScopeKind scopeKind)
     {
+        requiredRouteProcessId = null;
+        requiredRouteLaunchPlanId = null;
+        requiredRouteDefinitionKey = null;
         selectedDefinitionScope = scopeKind;
         selectedDefinitionKey = null;
         selectedTemplateItemKey = null;
@@ -2055,6 +2257,9 @@
 
     private async Task SelectRuntimeRunAsync(ChangeEventArgs args)
     {
+        requiredRouteProcessId = null;
+        requiredRouteLaunchPlanId = null;
+        requiredRouteRunId = null;
         var value = ReadChangeValue(args);
         selectedRuntimeRunId = Guid.TryParse(value, out var parsed) && parsed != Guid.Empty
             ? parsed
@@ -2071,6 +2276,9 @@
 
     private async Task SelectRuntimeRunAsync(Guid runId)
     {
+        requiredRouteProcessId = null;
+        requiredRouteLaunchPlanId = null;
+        requiredRouteRunId = null;
         selectedRuntimeRunId = runId == Guid.Empty ? null : runId;
         runtimeEventPage = 0;
         ResetManagerChatForSelectedRunChange();
@@ -2113,6 +2321,9 @@
 
     private Task OpenChildRunAsync(Guid runId)
     {
+        requiredRouteProcessId = null;
+        requiredRouteLaunchPlanId = null;
+        requiredRouteRunId = null;
         selectedRuntimeRunId = runId;
         runDetailSnapshot = CurrentShell.Runtime.Runs.FirstOrDefault(run => run.RunId.Value == runId);
         if (runDetailSnapshot is null)
@@ -3251,8 +3462,11 @@
             return;
         }
 
-        isBusy = true;
-        errorMessage = null;
+        var operation = TryBeginDefinitionEditorOperation(editor.DefinitionKey);
+        if (operation is null)
+        {
+            return;
+        }
 
         try
         {
@@ -3262,76 +3476,95 @@
                 commandKind,
                 editorVersionToken,
                 CreateDefinitionEditorDraft(editor)));
+            if (!IsCurrentDefinitionEditorOperation(operation.Value))
+            {
+                return;
+            }
+
             editorCommandNotice = result.Receipt.Summary;
             ApplyDefinitionEditorProjection(result.Projection);
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
         {
-            errorMessage = exception.Message;
+            if (IsCurrentDefinitionEditorOperation(operation.Value))
+            {
+                errorMessage = exception.Message;
+            }
         }
         finally
         {
-            isBusy = false;
+            CompleteDefinitionEditorOperation(operation.Value);
         }
     }
 
     private void ApplyDefinitionEditorProjection(ProcessDefinitionEditorProjection projection)
     {
-        if (shell is not null)
+        if (shell?.DefinitionCatalog.SelectedEditor is not { } currentEditor ||
+            currentEditor.DefinitionKey != projection.DefinitionKey)
         {
-            var selectedEditor = projection;
-            if (selectedEditor.RoleEditor is null && shell.DefinitionCatalog.SelectedEditor?.RoleEditor is { } roleEditor)
-            {
-                selectedEditor = selectedEditor with { RoleEditor = roleEditor };
-            }
-
-            if (selectedEditor.Canvas is null && shell.DefinitionCatalog.SelectedEditor?.Canvas is { } canvas)
-            {
-                selectedEditor = selectedEditor with { Canvas = canvas };
-            }
-
-            if (selectedEditor.StepEditor is null && shell.DefinitionCatalog.SelectedEditor?.StepEditor is { } stepEditor)
-            {
-                selectedEditor = selectedEditor with { StepEditor = stepEditor };
-            }
-
-            if (selectedEditor.TemplateCatalog is null && shell.DefinitionCatalog.SelectedEditor?.TemplateCatalog is { } templateCatalog)
-            {
-                selectedEditor = selectedEditor with { TemplateCatalog = templateCatalog };
-            }
-
-            shell = shell with
-            {
-                DefinitionCatalog = shell.DefinitionCatalog with
-                {
-                    SelectedDefinitionKey = selectedEditor.DefinitionKey,
-                    SelectedEditor = selectedEditor
-                }
-            };
-            SyncDefinitionEditor(selectedEditor);
             return;
         }
 
-        SyncDefinitionEditor(projection);
+        var selectedEditor = projection;
+        if (selectedEditor.RoleEditor is null && currentEditor.RoleEditor is { } roleEditor)
+        {
+            selectedEditor = selectedEditor with { RoleEditor = roleEditor };
+        }
+
+        if (selectedEditor.Canvas is null && currentEditor.Canvas is { } canvas)
+        {
+            selectedEditor = selectedEditor with { Canvas = canvas };
+        }
+
+        if (selectedEditor.StepEditor is null && currentEditor.StepEditor is { } stepEditor)
+        {
+            selectedEditor = selectedEditor with { StepEditor = stepEditor };
+        }
+
+        if (selectedEditor.TemplateCatalog is null && currentEditor.TemplateCatalog is { } templateCatalog)
+        {
+            selectedEditor = selectedEditor with { TemplateCatalog = templateCatalog };
+        }
+
+        shell = shell with
+        {
+            DefinitionCatalog = shell.DefinitionCatalog with
+            {
+                SelectedDefinitionKey = selectedEditor.DefinitionKey,
+                SelectedEditor = selectedEditor
+            }
+        };
+        SyncDefinitionEditor(selectedEditor);
     }
 
     private async Task ExecuteDefinitionRoleEditorCommandAsync(ProcessDefinitionRoleEditorCommand command)
     {
-        isBusy = true;
-        errorMessage = null;
+        var operation = TryBeginDefinitionEditorOperation(command.DefinitionKey);
+        if (operation is null)
+        {
+            return;
+        }
 
         try
         {
             var result = await ProjectionClient.ExecuteDefinitionRoleEditorCommandAsync(command);
+            if (!IsCurrentDefinitionEditorOperation(operation.Value))
+            {
+                return;
+            }
+
             ApplyDefinitionRoleEditorProjection(result.Projection);
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
         {
-            errorMessage = exception.Message;
+            if (IsCurrentDefinitionEditorOperation(operation.Value))
+            {
+                errorMessage = exception.Message;
+            }
         }
         finally
         {
-            isBusy = false;
+            CompleteDefinitionEditorOperation(operation.Value);
         }
     }
 
@@ -3363,32 +3596,44 @@
 
     private async Task ExecuteTemplateImportCommandAsync(ProcessTemplateImportCommand command)
     {
-        isBusy = true;
-        errorMessage = null;
+        var operation = TryBeginDefinitionEditorOperation(command.TargetDefinitionKey);
+        if (operation is null)
+        {
+            return;
+        }
 
         try
         {
             var result = await ProjectionClient.ExecuteTemplateImportCommandAsync(command);
+            if (!IsCurrentDefinitionEditorOperation(operation.Value))
+            {
+                return;
+            }
+
             ApplyTemplateCatalogProjection(result.Projection);
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
         {
-            errorMessage = exception.Message;
+            if (IsCurrentDefinitionEditorOperation(operation.Value))
+            {
+                errorMessage = exception.Message;
+            }
         }
         finally
         {
-            isBusy = false;
+            CompleteDefinitionEditorOperation(operation.Value);
         }
     }
 
     private void ApplyTemplateCatalogProjection(ProcessTemplateCatalogProjection projection)
     {
-        if (shell?.DefinitionCatalog.SelectedEditor is null)
+        if (shell?.DefinitionCatalog.SelectedEditor is not { } currentEditor ||
+            currentEditor.DefinitionKey != projection.TargetDefinitionKey)
         {
             return;
         }
 
-        var selectedEditor = shell.DefinitionCatalog.SelectedEditor with
+        var selectedEditor = currentEditor with
         {
             TemplateCatalog = projection
         };
@@ -3404,12 +3649,13 @@
 
     private void ApplyDefinitionRoleEditorProjection(ProcessDefinitionRoleEditorProjection projection)
     {
-        if (shell?.DefinitionCatalog.SelectedEditor is null)
+        if (shell?.DefinitionCatalog.SelectedEditor is not { } currentEditor ||
+            currentEditor.DefinitionKey != projection.DefinitionKey)
         {
             return;
         }
 
-        var selectedEditor = shell.DefinitionCatalog.SelectedEditor with
+        var selectedEditor = currentEditor with
         {
             RoleEditor = projection
         };
@@ -3424,32 +3670,44 @@
 
     private async Task ExecuteDefinitionCanvasCommandAsync(ProcessDefinitionCanvasCommand command)
     {
-        isBusy = true;
-        errorMessage = null;
+        var operation = TryBeginDefinitionEditorOperation(command.DefinitionKey);
+        if (operation is null)
+        {
+            return;
+        }
 
         try
         {
             var result = await ProjectionClient.ExecuteDefinitionCanvasCommandAsync(command);
+            if (!IsCurrentDefinitionEditorOperation(operation.Value))
+            {
+                return;
+            }
+
             ApplyDefinitionCanvasProjection(result.Projection);
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
         {
-            errorMessage = exception.Message;
+            if (IsCurrentDefinitionEditorOperation(operation.Value))
+            {
+                errorMessage = exception.Message;
+            }
         }
         finally
         {
-            isBusy = false;
+            CompleteDefinitionEditorOperation(operation.Value);
         }
     }
 
     private void ApplyDefinitionCanvasProjection(ProcessDefinitionCanvasEditorProjection projection)
     {
-        if (shell?.DefinitionCatalog.SelectedEditor is null)
+        if (shell?.DefinitionCatalog.SelectedEditor is not { } currentEditor ||
+            currentEditor.DefinitionKey != projection.DefinitionKey)
         {
             return;
         }
 
-        var selectedEditor = shell.DefinitionCatalog.SelectedEditor with
+        var selectedEditor = currentEditor with
         {
             Canvas = projection
         };
@@ -3464,32 +3722,44 @@
 
     private async Task ExecuteDefinitionStepEditorCommandAsync(ProcessDefinitionStepEditorCommand command)
     {
-        isBusy = true;
-        errorMessage = null;
+        var operation = TryBeginDefinitionEditorOperation(command.DefinitionKey);
+        if (operation is null)
+        {
+            return;
+        }
 
         try
         {
             var result = await ProjectionClient.ExecuteDefinitionStepEditorCommandAsync(command);
+            if (!IsCurrentDefinitionEditorOperation(operation.Value))
+            {
+                return;
+            }
+
             ApplyDefinitionStepEditorProjection(result.Projection);
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
         {
-            errorMessage = exception.Message;
+            if (IsCurrentDefinitionEditorOperation(operation.Value))
+            {
+                errorMessage = exception.Message;
+            }
         }
         finally
         {
-            isBusy = false;
+            CompleteDefinitionEditorOperation(operation.Value);
         }
     }
 
     private void ApplyDefinitionStepEditorProjection(ProcessDefinitionStepEditorProjection projection)
     {
-        if (shell?.DefinitionCatalog.SelectedEditor is null)
+        if (shell?.DefinitionCatalog.SelectedEditor is not { } currentEditor ||
+            currentEditor.DefinitionKey != projection.DefinitionKey)
         {
             return;
         }
 
-        var selectedEditor = shell.DefinitionCatalog.SelectedEditor with
+        var selectedEditor = currentEditor with
         {
             StepEditor = projection
         };
@@ -3501,6 +3771,43 @@
             }
         };
     }
+
+    private DefinitionEditorOperationFence? TryBeginDefinitionEditorOperation(
+        ProcessDefinitionCatalogItemKey definitionKey)
+    {
+        if (shell?.DefinitionCatalog.SelectedEditor is not { } currentEditor ||
+            currentEditor.DefinitionKey != definitionKey)
+        {
+            return null;
+        }
+
+        var operation = new DefinitionEditorOperationFence(
+            Interlocked.Increment(ref workspaceGeneration),
+            currentEditor.DefinitionKey,
+            currentEditor.VersionToken);
+        isBusy = true;
+        errorMessage = null;
+        return operation;
+    }
+
+    private bool IsCurrentDefinitionEditorOperation(DefinitionEditorOperationFence operation)
+        => operation.Generation == Volatile.Read(ref workspaceGeneration) &&
+           shell?.DefinitionCatalog.SelectedEditor is { } currentEditor &&
+           currentEditor.DefinitionKey == operation.DefinitionKey &&
+           currentEditor.VersionToken == operation.VersionToken;
+
+    private void CompleteDefinitionEditorOperation(DefinitionEditorOperationFence operation)
+    {
+        if (operation.Generation == Volatile.Read(ref workspaceGeneration))
+        {
+            isBusy = false;
+        }
+    }
+
+    private readonly record struct DefinitionEditorOperationFence(
+        long Generation,
+        ProcessDefinitionCatalogItemKey DefinitionKey,
+        ProcessDefinitionEditorVersionToken VersionToken);
 
     private ProcessDefinitionEditorDraftProjection CreateDefinitionEditorDraft(ProcessDefinitionEditorProjection editor)
         => new(

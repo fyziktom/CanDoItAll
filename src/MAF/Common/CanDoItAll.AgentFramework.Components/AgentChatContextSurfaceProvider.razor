@@ -1,0 +1,224 @@
+@using CanDoItAll.AgentFramework.Core
+@using CanDoItAll.AgentFramework.Models
+@implements IDisposable
+@inject IAgentChatContextRegistry ContextRegistry
+@inject NavigationManager Navigation
+
+@code {
+    [Parameter, EditorRequired]
+    public AgentChatContextSurface Surface { get; set; } = default!;
+
+    [Parameter]
+    public IReadOnlyList<AgentChatContextFragment> Fragments { get; set; } = [];
+
+    [Parameter]
+    public AgentChatNavigationIdentity? ContextNavigationIdentity { get; set; }
+
+    [Parameter]
+    public AgentChatContextAccessState? ContextAccessState { get; set; }
+
+    private readonly Dictionary<AgentChatContextContributorId, FragmentRegistration> fragmentRegistrations = [];
+    private IAgentChatContextScopeLease? scopeLease;
+    private AgentChatContextSource? activeSource;
+    private AgentChatContextSurface? activeSurface;
+    private bool isDisposed;
+
+    protected override void OnParametersSet()
+    {
+        ObjectDisposedException.ThrowIf(isDisposed, this);
+        ArgumentNullException.ThrowIfNull(Surface);
+        ArgumentNullException.ThrowIfNull(Fragments);
+        ValidateFragments(Fragments);
+        if (ContextAccessState.HasValue && !Enum.IsDefined(ContextAccessState.Value))
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(ContextAccessState),
+                ContextAccessState,
+                "The agent chat context access state is undefined.");
+        }
+
+        var surface = ResolveSurface();
+
+        if (scopeLease is null || activeSource != surface.Source)
+        {
+            ActivateSurface(surface);
+            return;
+        }
+
+        UpdateSurface(surface);
+        ReconcileFragments();
+        scopeLease.SynchronizeNavigation(CurrentNavigationIdentity);
+    }
+
+    private void ActivateSurface(AgentChatContextSurface surface)
+    {
+        DisposeRegistrations();
+        var scopeId = AgentChatContextScopeId.Create();
+        var scope = surface.ToScope(scopeId);
+        scopeLease = ContextRegistry.ActivateScope(scope);
+        activeSource = surface.Source;
+        activeSurface = surface;
+        ReconcileFragments();
+        scopeLease.SynchronizeNavigation(CurrentNavigationIdentity);
+    }
+
+    private AgentChatNavigationIdentity CurrentNavigationIdentity
+        => ContextNavigationIdentity ?? AgentChatNavigationIdentity.CreateForLocation(
+            Navigation.BaseUri,
+            Navigation.Uri);
+
+    private AgentChatContextSurface ResolveSurface()
+    {
+        if (!ContextAccessState.HasValue || ContextAccessState.Value == Surface.AccessState)
+        {
+            return Surface;
+        }
+
+        return new AgentChatContextSurface(
+            Surface.Source,
+            Surface.DisplayName,
+            Surface.Position,
+            Surface.WorkspaceScope,
+            Surface.AgentAccess,
+            Surface.AccessMode,
+            ContextAccessState.Value,
+            Surface.CompletionRefreshMode);
+    }
+
+    private void UpdateSurface(AgentChatContextSurface surface)
+    {
+        if (activeSurface is not null && AreEquivalent(activeSurface, surface))
+        {
+            return;
+        }
+
+        scopeLease!.Update(surface.ToScope(scopeLease.ScopeId));
+        activeSurface = surface;
+    }
+
+    private void ReconcileFragments()
+    {
+        if (Fragments.Count == 0)
+        {
+            foreach (var registration in fragmentRegistrations.Values)
+            {
+                registration.Lease.Dispose();
+            }
+
+            fragmentRegistrations.Clear();
+            return;
+        }
+
+        var nextById = new HashSet<AgentChatContextContributorId>(Fragments.Count);
+        foreach (var fragment in Fragments)
+        {
+            nextById.Add(fragment.ContributorId);
+        }
+
+        foreach (var removedId in fragmentRegistrations.Keys
+                     .Where(id => !nextById.Contains(id))
+                     .ToArray())
+        {
+            fragmentRegistrations.Remove(removedId, out var removed);
+            removed!.Lease.Dispose();
+        }
+
+        foreach (var fragment in Fragments)
+        {
+            if (fragmentRegistrations.TryGetValue(fragment.ContributorId, out var registration))
+            {
+                if (!string.Equals(registration.Content, fragment.Content, StringComparison.Ordinal) ||
+                    registration.Order != fragment.Order)
+                {
+                    registration.Lease.Update(fragment);
+                    fragmentRegistrations[fragment.ContributorId] = new FragmentRegistration(
+                        registration.Lease,
+                        fragment.Order,
+                        fragment.Content);
+                }
+
+                continue;
+            }
+
+            var lease = ContextRegistry.RegisterFragment(scopeLease!.ScopeId, fragment);
+            fragmentRegistrations.Add(
+                fragment.ContributorId,
+                new FragmentRegistration(lease, fragment.Order, fragment.Content));
+        }
+    }
+
+    private static void ValidateFragments(IReadOnlyList<AgentChatContextFragment> fragments)
+    {
+        if (fragments.Count < 2)
+        {
+            return;
+        }
+
+        var contributorIds = new HashSet<AgentChatContextContributorId>(fragments.Count);
+        foreach (var fragment in fragments)
+        {
+            if (!contributorIds.Add(fragment.ContributorId))
+            {
+                throw new InvalidOperationException(
+                    $"Agent chat context contributor '{fragment.ContributorId}' is supplied more than once.");
+            }
+        }
+    }
+
+    private static bool AreEquivalent(
+        AgentChatContextSurface left,
+        AgentChatContextSurface right)
+    {
+        return left.Source == right.Source &&
+               string.Equals(left.DisplayName, right.DisplayName, StringComparison.Ordinal) &&
+               Equals(left.WorkspaceScope, right.WorkspaceScope) &&
+               left.AccessMode == right.AccessMode &&
+               left.AccessState == right.AccessState &&
+               left.CompletionRefreshMode == right.CompletionRefreshMode &&
+               left.AgentAccess.SequenceEqual(right.AgentAccess) &&
+               AreEquivalent(left.Position, right.Position);
+    }
+
+    private static bool AreEquivalent(
+        AgentChatSurfacePosition left,
+        AgentChatSurfacePosition right)
+    {
+        return string.Equals(left.Module, right.Module, StringComparison.Ordinal) &&
+               string.Equals(left.Surface, right.Surface, StringComparison.Ordinal) &&
+               string.Equals(left.View, right.View, StringComparison.Ordinal) &&
+               string.Equals(left.Route, right.Route, StringComparison.Ordinal) &&
+               Equals(left.PrimarySelection, right.PrimarySelection) &&
+               left.SelectedEntities.SequenceEqual(right.SelectedEntities) &&
+               left.Facts.SequenceEqual(right.Facts);
+    }
+
+    private void DisposeRegistrations()
+    {
+        foreach (var registration in fragmentRegistrations.Values)
+        {
+            registration.Lease.Dispose();
+        }
+
+        fragmentRegistrations.Clear();
+        scopeLease?.Dispose();
+        scopeLease = null;
+        activeSource = null;
+        activeSurface = null;
+    }
+
+    public void Dispose()
+    {
+        if (isDisposed)
+        {
+            return;
+        }
+
+        isDisposed = true;
+        DisposeRegistrations();
+    }
+
+    private sealed record FragmentRegistration(
+        IAgentChatContextFragmentLease Lease,
+        int Order,
+        string Content);
+}

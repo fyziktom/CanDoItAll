@@ -38,9 +38,23 @@ public sealed class ProcessWorkspaceShellProjectionService(
         var runtimeWorkspace = await LoadRuntimeWorkspaceAsync(request, observedAtUtc, cancellationToken).ConfigureAwait(false);
 
         var definitionLoadOptions = request.DefinitionLoadOptions ?? ProcessDefinitionWorkspaceLoadOptions.Full;
+        var definitionCatalogQuery = ResolveDefinitionCatalogQuery(
+            request.Selection,
+            request.DefinitionCatalogQuery,
+            out var hasProcessSelectionConflict);
         var definitionCatalog = await definitionCatalogProjectionService
-            .GetCatalogAsync(request.Scope, request.DefinitionCatalogQuery, cancellationToken: cancellationToken)
+            .GetCatalogAsync(request.Scope, definitionCatalogQuery, cancellationToken: cancellationToken)
             .ConfigureAwait(false);
+        if (hasProcessSelectionConflict)
+        {
+            definitionCatalog = definitionCatalog with
+            {
+                SelectedDefinitionKey = request.DefinitionCatalogQuery.SelectedDefinitionKey,
+                SelectedItem = null,
+                SelectedEditor = null
+            };
+        }
+
         ProcessDefinitionEditorProjection? selectedEditor = null;
         if (definitionLoadOptions.IncludeSelectedEditor && definitionCatalog.SelectedItem is { } selectedItem)
         {
@@ -95,6 +109,39 @@ public sealed class ProcessWorkspaceShellProjectionService(
             CreateAgentEntry(request.Scope, request.Selection, authorization))
         {
             Runtime = runtimeWorkspace
+        };
+    }
+
+    private ProcessDefinitionCatalogQueryProjection ResolveDefinitionCatalogQuery(
+        ProcessWorkspaceSelectionProjection selection,
+        ProcessDefinitionCatalogQueryProjection query,
+        out bool hasSelectionConflict)
+    {
+        hasSelectionConflict = false;
+        if (selection.ProcessId is not { } processId)
+        {
+            return query;
+        }
+
+        var definitionKey = definitionCatalogProjectionService.ResolveDefinitionKey(
+            new ProcessDefinitionId(processId));
+        if (string.IsNullOrWhiteSpace(definitionKey))
+        {
+            hasSelectionConflict = true;
+            return query;
+        }
+
+        var processDefinitionKey = new ProcessDefinitionCatalogItemKey(definitionKey);
+        if (query.SelectedDefinitionKey is { } requestedDefinitionKey &&
+            requestedDefinitionKey != processDefinitionKey)
+        {
+            hasSelectionConflict = true;
+            return query;
+        }
+
+        return query with
+        {
+            SelectedDefinitionKey = processDefinitionKey
         };
     }
 

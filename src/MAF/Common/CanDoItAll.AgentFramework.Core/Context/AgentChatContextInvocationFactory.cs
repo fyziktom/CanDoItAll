@@ -12,6 +12,8 @@ public static class AgentChatContextInvocationFactory
     public const string Requester = "floating-agent-chat";
     public const string RequesterKind = "interactive";
     public const string MetadataSchema = "candoitall.agent-chat-context.v1";
+    public const string WorkspacePositionContributorId = "workspace.position";
+    public const string SurfacePositionContributorId = "surface.position";
 
     public static AgentChatContextInvocation Create(
         AgentChatContextSnapshot? context,
@@ -41,8 +43,9 @@ public static class AgentChatContextInvocationFactory
                 context.Scope.Id.ToString(),
                 context.Version,
                 context.CapturedAtUtc,
-                context.Fragments.Select(item => item.ContributorId.Value).ToArray(),
+                ResolveContributorIds(context),
                 access?.Permissions ?? AgentChatContextPermission.Read,
+                context.Scope.CompletionRefreshMode,
                 contextDigest),
             AgentOutputJson.SerializerOptions);
         metadataJson = ExecutionInvocationMetadata.ApplyContextWorkspaceScope(
@@ -81,6 +84,8 @@ public static class AgentChatContextInvocationFactory
             run.Outcome != RunOutcome.Succeeded ||
             !run.ChatSessionId.HasValue ||
             run.AgentId == Guid.Empty ||
+            !string.Equals(run.RequestedBy, Requester, StringComparison.Ordinal) ||
+            !string.Equals(run.RequestedByKind, RequesterKind, StringComparison.Ordinal) ||
             string.IsNullOrWhiteSpace(run.MetadataJson) ||
             string.IsNullOrWhiteSpace(run.SourceKind) ||
             string.IsNullOrWhiteSpace(run.SourceId) ||
@@ -105,9 +110,14 @@ public static class AgentChatContextInvocationFactory
         const AgentChatContextPermission mutationPermissions =
             AgentChatContextPermission.Read |
             AgentChatContextPermission.Mutate;
+        var requestsCompletionRefresh = metadata?.CompletionRefreshMode ==
+            AgentChatContextCompletionRefreshMode.OnSuccessfulRun;
         if (metadata is null ||
             !string.Equals(metadata.Schema, MetadataSchema, StringComparison.Ordinal) ||
-            metadata.Permissions != mutationPermissions ||
+            (metadata.Permissions != AgentChatContextPermission.Read &&
+             metadata.Permissions != mutationPermissions) ||
+            !requestsCompletionRefresh ||
+            !Enum.IsDefined(metadata.CompletionRefreshMode) ||
             !Guid.TryParse(metadata.ScopeId, out var scopeId) ||
             scopeId == Guid.Empty)
         {
@@ -132,5 +142,24 @@ public static class AgentChatContextInvocationFactory
         DateTimeOffset CapturedAtUtc,
         IReadOnlyList<string> Contributors,
         AgentChatContextPermission Permissions,
+        AgentChatContextCompletionRefreshMode CompletionRefreshMode,
         string ContextDigest);
+
+    private static IReadOnlyList<string> ResolveContributorIds(
+        AgentChatContextSnapshot context)
+    {
+        var contributors = new List<string>(context.Fragments.Count + 2);
+        if (context.WorkspacePosition is not null)
+        {
+            contributors.Add(WorkspacePositionContributorId);
+        }
+
+        if (context.Scope.SurfacePosition is not null)
+        {
+            contributors.Add(SurfacePositionContributorId);
+        }
+
+        contributors.AddRange(context.Fragments.Select(item => item.ContributorId.Value));
+        return contributors;
+    }
 }

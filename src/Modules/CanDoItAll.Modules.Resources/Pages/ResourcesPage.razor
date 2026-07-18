@@ -1,4 +1,5 @@
 @page "/resources"
+@using CanDoItAll.AgentFramework.Components
 @using CanDoItAll.Components.BaseLib
 @using CanDoItAll.Modules.Projects
 @using CanDoItAll.Modules.Security
@@ -9,6 +10,10 @@
 @inject IProjectPartyIntegrationBridge ProjectPartyIntegrationBridge
 
 <PageTitle>Resources</PageTitle>
+
+<AgentChatContextSurfaceProvider Surface="@AgentChatSurface"
+                                 ContextNavigationIdentity="@AgentChatNavigationFence"
+                                 ContextAccessState="@CurrentAgentChatContextAccessState" />
 
 <PageScaffold MaxWidthClass="max-w-full">
     <Header>
@@ -189,7 +194,7 @@
                             <Grid Gap="LayoutGap.Large" ColumnsMd="2">
                                 <div>
                                     <label class="cda-field-label">Project</label>
-                                    <InputSelect @bind-Value="editor.ProjectId" class="cda-input" data-testid="resource-project-select" @bind-Value:after="LoadResponsiblePartyOptionsAsync">
+                                    <InputSelect @bind-Value="editor.ProjectId" class="cda-input" data-testid="resource-project-select" @bind-Value:after="RefreshResponsiblePartyOptionsAsync">
                                         <option value="">Select a project</option>
                                         @foreach (var project in projects)
                                         {
@@ -323,7 +328,8 @@
                 <TabsItem Text="Browse"
                           Icon="folder_open"
                           data-testid="resources-tab-browse">
-                    <ResourceFileBrowsePane ResourcePromoted="HandleResourcePromotedAsync" />
+                    <ResourceFileBrowsePane ResourcePromoted="HandleResourcePromotedAsync"
+                                            ContextStateChanged="HandleBrowseContextStateChanged" />
                 </TabsItem>
             </TabItems>
         </Tabs>

@@ -265,6 +265,12 @@ public enum AgentChatContextAccessState
     Failed
 }
 
+public enum AgentChatContextCompletionRefreshMode
+{
+    None,
+    OnSuccessfulRun
+}
+
 public sealed record AgentChatContextScope
 {
     private readonly IReadOnlyDictionary<Guid, AgentChatContextAgentAccess> accessByAgentId;
@@ -276,7 +282,9 @@ public sealed record AgentChatContextScope
         WorkspaceScopeDescriptor? workspaceScope = null,
         IReadOnlyList<AgentChatContextAgentAccess>? agentAccess = null,
         AgentChatContextScopeAccessMode accessMode = AgentChatContextScopeAccessMode.AllowListed,
-        AgentChatContextAccessState accessState = AgentChatContextAccessState.Ready)
+        AgentChatContextAccessState accessState = AgentChatContextAccessState.Ready,
+        AgentChatSurfacePosition? surfacePosition = null,
+        AgentChatContextCompletionRefreshMode completionRefreshMode = AgentChatContextCompletionRefreshMode.None)
     {
         ArgumentNullException.ThrowIfNull(source);
         ArgumentException.ThrowIfNullOrWhiteSpace(displayName);
@@ -325,6 +333,14 @@ public sealed record AgentChatContextScope
                 "The agent chat context access state is invalid.");
         }
 
+        if (!Enum.IsDefined(completionRefreshMode))
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(completionRefreshMode),
+                completionRefreshMode,
+                "The agent chat context completion refresh mode is invalid.");
+        }
+
         var normalizedAgentAccess = agentAccess?.ToArray() ?? [];
         var accessLookup = new Dictionary<Guid, AgentChatContextAgentAccess>(normalizedAgentAccess.Length);
         foreach (var access in normalizedAgentAccess)
@@ -344,6 +360,8 @@ public sealed record AgentChatContextScope
         AgentAccess = normalizedAgentAccess;
         AccessMode = accessMode;
         AccessState = accessState;
+        SurfacePosition = surfacePosition;
+        CompletionRefreshMode = completionRefreshMode;
         accessByAgentId = accessLookup;
     }
 
@@ -361,6 +379,10 @@ public sealed record AgentChatContextScope
 
     public AgentChatContextAccessState AccessState { get; }
 
+    public AgentChatSurfacePosition? SurfacePosition { get; }
+
+    public AgentChatContextCompletionRefreshMode CompletionRefreshMode { get; }
+
     public AgentChatContextAgentAccess? FindAccess(Guid agentId)
         => accessByAgentId.TryGetValue(agentId, out var access) ? access : null;
 }
@@ -371,7 +393,8 @@ public sealed record AgentChatContextSnapshot
         AgentChatContextScope Scope,
         IReadOnlyList<AgentChatContextFragment> Fragments,
         long Version,
-        DateTimeOffset CapturedAtUtc)
+        DateTimeOffset CapturedAtUtc,
+        AgentChatWorkspacePosition? WorkspacePosition = null)
     {
         ArgumentNullException.ThrowIfNull(Scope);
         ArgumentNullException.ThrowIfNull(Fragments);
@@ -384,6 +407,7 @@ public sealed record AgentChatContextSnapshot
         this.Fragments = Fragments.ToArray();
         this.Version = Version;
         this.CapturedAtUtc = CapturedAtUtc;
+        this.WorkspacePosition = WorkspacePosition;
     }
 
     public AgentChatContextScope Scope { get; }
@@ -393,6 +417,8 @@ public sealed record AgentChatContextSnapshot
     public long Version { get; }
 
     public DateTimeOffset CapturedAtUtc { get; }
+
+    public AgentChatWorkspacePosition? WorkspacePosition { get; }
 
     public AgentChatContextAgentAccess? FindAccess(Guid agentId)
         => Scope.FindAccess(agentId);

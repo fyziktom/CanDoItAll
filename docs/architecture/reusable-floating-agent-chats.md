@@ -14,7 +14,7 @@ The required behavior has three independent axes:
 
 The existing runtime already has a per-turn `IAgentContextContributor` seam. It does not have a UI-context registry, an active-chat lifecycle, or a retained agent pool. A durable `ChatSessionRecord` is only the transcript/session identity. Each send constructs and disposes a fresh MAF `RuntimeBuildResult` containing the agent, context providers, tool providers, approval wrappers, MCP/A2A clients, and other disposables.
 
-The architecture mapping used CodeAnalytics snapshots `snap-20260716185835-0c0d9e98`, `snap-20260716185934-932fd70e`, `snap-20260716190015-48a36a28`, and `snap-20260716190043-94e27f4d`. The affected project graph has no direct project-reference cycle. `CanDoItAll.Modules.AgentFramework` already references Workbench and CRM-HR, so feature modules must never reference that module in return.
+The architecture mapping used CodeAnalytics snapshots `snap-20260716185835-0c0d9e98`, `snap-20260716185934-932fd70e`, `snap-20260716190015-48a36a28`, and `snap-20260716190043-94e27f4d`. The affected project graph has no direct project-reference cycle. `CanDoItAll.Modules.AgentFramework` already references Workbench and CRM-HR, so this integration must not add a feature-module reference back to that implementation module. The Processes module has a broader pre-existing Agent Framework module dependency; its context adapter uses only the shared Core/Components contracts and does not deepen that dependency.
 
 ## Decision
 
@@ -81,13 +81,13 @@ Workbench / CRM-HR / Processes
             fresh RuntimeBuildResult
 ```
 
-No feature module depends on `CanDoItAll.Modules.AgentFramework`. Web is the composition root and may reference both the feature modules and the global host.
+No new feature-module dependency on `CanDoItAll.Modules.AgentFramework` is introduced by floating-chat context integration. Web is the composition root and may reference both feature modules and the global host. The pre-existing Processes-to-AgentFramework dependency remains recorded technical debt outside this refactor.
 
 ## Module context contract
 
 Context is pushed into a registry as immutable values; the registry does not retain a Razor component, domain entity, or callback delegate.
 
-A page activates an `AgentChatContextScope` and receives a disposable registration. The scope identifies the module/surface, provides a user-facing label, and contains an optional workspace-scope descriptor. The page or a nested component updates its registration with immutable `AgentChatContextFragment` values whenever selection or edited values change. Nested contributors use their own stable, strongly typed contributor IDs and deterministic order.
+A page activates an `AgentChatContextScope` and receives a disposable registration. The scope identifies the module/surface, provides a user-facing label, and contains an optional workspace-scope descriptor. The routed page is the single registration owner. A nested component never receives a registry scope ID and never registers itself directly; it reports a bounded, immutable, strongly typed selection or load-state value through an awaited component callback. The page validates that value against its current canonical entity and generation, then composes the surface and any stable, deterministically ordered fragments. This keeps component lifetimes out of Core and makes stale child results fail closed.
 
 Each scope snapshot contains:
 
@@ -98,7 +98,9 @@ Each scope snapshot contains:
 - a monotonically increasing version and capture timestamp;
 - optional sanitized trace metadata, never secrets or complete domain objects.
 
-Access resolution is explicit and fail-closed. A scope reports `Ready`, `Loading`, or `Failed`; only `Ready` can contribute context. `AllowListed` scopes require an agent projection, while `Unrestricted` is reserved for deliberately sanitized surfaces that have no canonical per-agent projection. Neither mode grants runtime tool access.
+Access resolution is explicit and fail-closed. Both scopes and reusable surface descriptors default to `AllowListed`. A scope reports `Ready`, `Loading`, or `Failed`; only `Ready` can contribute context. `AllowListed` scopes require an agent projection, while every `Unrestricted` module builder must opt in deliberately and is reserved for bounded, reviewed, sanitized surfaces that have no canonical per-agent projection. Neither mode grants runtime tool access.
+
+Semantic deep-link parameters are requirements, not selection hints. When a route names a project, workflow, run, process definition, account, opportunity, interaction, application, party, resource, or other canonical entity, the owning application boundary must resolve that exact identity and validate all expressed ownership relationships before publishing `Ready`. An explicit missing, conflicting, unsupported, or filtered-out identity publishes `Failed`; it must never fall back to the first catalog row, a default editor, or a generic new-entity context. Routed pages keep a bounded failed/loading scope mounted even when their main surface is unavailable so prompt capture cannot silently degrade to context-free execution. A later explicit user selection may replace the routed selection through the page's normal typed state transition.
 
 The active scope is captured once at send initiation. Agent ID, session ID, scope version, ordered fragments, attachment paths, and refresh target form one immutable send command before any asynchronous runtime work begins. Navigation after capture cannot change the in-flight turn. The next turn captures the new active module, allowing one conversation to move safely from Project Structure to CRM-HR or Processes.
 
@@ -108,7 +110,85 @@ The durable user prompt is stored unchanged apart from trimming. Module context 
 
 Module context is not an authorization grant. Catalog access projections improve discoverability, but every tool invocation must continue to reload and enforce canonical agent, capability, project, process, and business authorization at the server boundary. The optional workspace descriptor is a typed trusted projection used by existing server-side authorization, never reconstructed from context text.
 
-Successful mutation-capable runs publish a typed completion notification containing the original scope/source, agent, session, and run identities. Module providers subscribe through disposable lifetimes and reload their own canonical state; the runtime never stores a page callback or component reference.
+Successful mutation-capable runs publish a typed completion notification containing the original scope/source, agent, session, and run identities. A sanitized scope that cannot project per-agent mutation access may opt into the separate `AgentChatContextCompletionRefreshMode.OnSuccessfulRun` policy; this policy only requests a canonical UI reload and grants no read, mutate, workspace, or tool authority. Module providers subscribe through disposable lifetimes and reload their own canonical state; the runtime never stores a page callback or component reference. Matching subscribers run concurrently and isolate failures, but the orchestrator awaits the publication boundary so canonical module refresh completes before the current chat panel hydrates the completed transcript. Refresh eligibility is notification routing, not authorization, and must never be represented as read/mutate context permissions.
+
+## Current user-position propagation extension
+
+Status: Accepted for implementation, 2026-07-17
+
+The first implementation proves that a conversation can move between Project Structure, Projects, and CRM. It does not yet describe the user's position consistently across the shell and feature modules. The architectural scan in CodeAnalytics snapshot `snap-20260717142824-88cfa7be` found the context registry in Core with a high fan-in and confirmed that the requested feature modules can depend on Core without a reverse dependency from Core to a module. Source inspection found these distinct responsibilities:
+
+| Responsibility | Current owner | Decision |
+| --- | --- | --- |
+| Open tabs and active tab | `WorkbenchStateService` | Publish one sanitized workspace-position value through a disposable ambient lease. |
+| Active routed page and module subview | Owning routed component | Publish a typed surface position; do not infer semantic subviews from the URL. |
+| Selected project, party, workflow, process, schedule, resource, or agent | Owning page/component | Publish explicit allowlisted entity references and facts; never reflect component properties or serialize domain entities. |
+| Agent access for the active surface | Existing module context builder | Remains in `AgentChatContextScope`; the position model is not authorization. |
+| Per-prompt consistency | `AgentChatExecutionOrchestrator` and context registry | Capture one immutable workspace + surface snapshot before runtime execution. |
+| Refresh feedback | Floating `AgentChatPanel` | Show a distinct context-refresh stage before runtime `Preparing`/`Running`. |
+| External-model payload | Core context composer | Serialize the typed positions and existing sanitized fragments only when the prompt is sent. |
+
+The extension adds two bounded, immutable values:
+
+- `AgentChatWorkspacePosition` describes the active workbench tab: tab identity, title, route, tab kind, and optional safe project labels.
+- `AgentChatSurfacePosition` describes the active module, surface, subview, primary selection, additional selections, and a bounded set of explicitly safe facts.
+
+String values in these records are the unavoidable open extension protocol for future modules, but constructors enforce length/count limits and module builders own constants and allowlists. IDs and labels are copied values. The registry never receives a domain entity, `ComponentBase`, service provider, or reflection-based property bag.
+
+The registry gains one ambient workspace-position lease in addition to the existing active-scope and fragment leases. Ambient position and active scope are copied under the same registry lock and share the same monotonically increasing version. Disposing or replacing either registration removes its value immediately. Navigation events can briefly leave an old surface beside a new workspace route (or the inverse), so strict prompt capture compares their normalized routes and fails explicitly instead of submitting that mismatched pair. A successful prompt therefore receives one matching immutable workspace/surface snapshot.
+
+`CaptureAsync` is an awaitable application boundary but performs no database or network work in this phase. UI events push only small typed position values; JSON/model text is built lazily at prompt time. This is deliberately preferred to retaining async component callbacks. If a later module proves that canonical enrichment requires I/O, that work must be a bounded application service keyed by the captured scope/version with cancellation and stale-generation rejection, not a callback to a disposed Razor component.
+
+The agent does not call a “current position” tool. Context preflight is deterministic host behavior and completes before an execution run is created. A model-initiated tool would add latency, consume tokens, and permit the model to omit or delay the lookup.
+
+### Dependency and component boundary
+
+```text
+Web composition root
+  +-- WorkspaceAgentChatContextProvider -> WorkbenchStateService
+  +-- FloatingAgentChatHost             -> IAgentChatContextRegistry
+
+Feature module page
+  +-- reusable AgentChatContextSurfaceProvider (AgentFramework.Components)
+  +-- module-owned sanitized position builder
+          |
+          v
+AgentFramework.Core contracts and scoped registry
+          |
+          v
+per-prompt orchestrator -> immutable invocation -> fresh runtime
+```
+
+`AgentFramework.Components` depends on Core. Feature modules may depend on the shared Components package, but never on `CanDoItAll.Modules.AgentFramework`. Core does not reference Workbench, Projects, CRM-HR, Processes, Scheduler, Resources, or their domain types. Web remains the only composition root that mounts both the workspace publisher and global floating host.
+
+### Pattern selection record
+
+Selected:
+
+- **Observer plus disposable lease** for `WorkbenchStateService.Changed` to ambient workspace-position updates.
+- **Immutable value snapshot** for atomic prompt capture and navigation safety.
+- **Reusable headless Razor component** for active-surface registration and cleanup without duplicating lifecycle code in every page.
+- **Module-owned adapter/builder** for privacy allowlisting and semantic selection mapping.
+
+Rejected:
+
+- raw click/event logging, because clicks do not identify semantic selections and create noisy or sensitive history;
+- URL-only context, because internal tabs and selected rows generally do not update routes;
+- a central enum/switch over every module, because it closes the extension point and couples Core to feature modules;
+- reflection over component fields/parameters, because it is unbounded and can leak credentials, rates, notes, prompts, or personal data;
+- lazy callbacks retained by the registry, because navigation can leave callbacks targeting disposed components;
+- model-initiated position lookup, because context is required before the model run exists.
+
+### Acceptance and phased validation
+
+1. Core contract tests prove workspace/surface replacement, disposal, cancellation, count/length bounds, atomic versioning, and that position-only context contributes to a run.
+2. Shared-component tests prove activation, in-place updates, source replacement, and disposal without a routed page or database.
+3. Module tests prove sanitized position builders for Projects, Project Structure, CRM-HR, Agents, Workflows, Processes, Scheduler, and Resources, including negative privacy assertions.
+4. Dependency tests prove the new context path does not add a Core-to-feature or AgentFramework-to-feature reference, and composition tests prove the Web scope resolves one registry used by workspace, module, and floating host. Existing unrelated module dependencies are recorded rather than hidden by this feature.
+5. Browser tests keep one chat open while moving across module tabs and internal subtabs. Each next prompt must persist the expected `SourceKind`, `SourceId`, contributor list, and a changed context digest; selected names/IDs are also checked through a context-reporting prompt where provider execution is available.
+6. Failure tests prove that navigation/disposal never reuses the previous module context and that an unavailable context blocks the prompt explicitly instead of running with stale data.
+
+Implementation proceeds foundation first, then existing adapters, then new module coverage, then browser proof. Each phase must pass before the next module group is integrated.
 
 ## Active-chat lifecycle
 
@@ -124,6 +204,8 @@ The coordinator exposes separate launcher and lifecycle views:
 - expose an immutable ordered snapshot and one state-changed event for the host.
 
 Multiple active sessions for the same agent are allowed. Handle identity is not agent identity.
+
+Each visible floating panel must acquire a coordinator operation lease before send or approval continuation. The lease spans context capture, runtime execution, completion notification, and transcript hydration. Runtime terminal events therefore cannot mark a handle idle while post-run refresh is still in progress, and a hidden/reopened panel cannot start an overlapping turn. A panel that reopens during an external in-flight operation observes the matching terminal execution event and reloads the durable session once, so assistant output is not stranded in the disposed panel that initiated the turn.
 
 Closing a visible chat opens an explicit decision dialog:
 
@@ -223,7 +305,9 @@ Observed hotspots relevant to this design:
 - a credential resolver uses synchronous blocking through `Task.Run(...).GetAwaiter().GetResult()`;
 - three manually constructed `HttpClient` instances were confirmed in the audited scope.
 
-The new coordinator therefore uses bounded collections, starts its single cleanup schedule only while hidden handles or prepared entries exist, and emits immutable active-handle events. It does not cache full transcripts or runtime logs. Render-hot host and session filters are cached; context access lookup is built once per immutable scope; completion subscribers run independently so one slow or failing module does not block another. The history dialog consumes indexed session summaries and loads a full session only when it is opened. The focused panel reads detail for only its selected run instead of scanning every run in the conversation.
+The new coordinator therefore uses bounded collections, starts its single cleanup schedule only while hidden handles or prepared entries exist, and emits immutable active-handle events. It does not cache full transcripts or runtime logs. Render-hot host and session filters are cached; context access lookup is built once per immutable scope; matching completion subscribers run concurrently and isolate failures. The history dialog consumes indexed session summaries and loads a full session only when it is opened. The focused panel reads detail for only its selected run instead of scanning every run in the conversation.
+
+Focused chat hydration uses an optional combined projection-query capability. The split file store reads and parses the chat index once to obtain the selected agent's session and run summaries, then reuses that immutable projection to resolve the latest run with explicit timestamp ordering. Stores that implement only the original chat-query contract remain source compatible and use the established individual queries. No decoded multi-megabyte chat index is retained in circuit memory, avoiding stale cross-process state and unbounded retry/cache growth.
 
 Voice recorder/playback state is owner-scoped. Agent changes, permission loss, voice-off, unavailable workspace, and panel disposal rotate the owner and cancel in-flight transcription/synthesis. Generation fencing prevents a late voice result from reaching another agent. Browser code releases a stream when `MediaRecorder` construction fails and enforces a five-minute client-side recording watchdog, including when the Blazor circuit disconnects. The per-runtime logging serializer options are now static.
 
@@ -270,7 +354,7 @@ Gate: backward-compatible settings deserialization, cross-module integration pro
 
 ### Phase 4: runtime correctness — partially implemented
 
-Implemented now: exact transient-context retention across approval continuation, provider-native pending-session restoration for contextual approval resumes, fail-closed restart behavior, framework-managed history for new contextual turns, typed completion notifications, per-handle UI send gating after remount, and the indexed summary history path.
+Implemented now: exact transient-context retention across approval continuation, provider-native pending-session restoration for contextual approval resumes, fail-closed restart behavior, framework-managed history for new contextual turns, typed completion notifications, coordinator operation leases with per-handle send gating after remount, terminal-event transcript refresh for reopened panels, and the indexed summary history path.
 
 - Add interactive cancellation by execution/session identity.
 - Add durable optimistic concurrency/idempotency for chat sends.

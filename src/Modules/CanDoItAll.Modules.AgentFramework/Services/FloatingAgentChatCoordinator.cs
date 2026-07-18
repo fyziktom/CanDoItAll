@@ -17,6 +17,7 @@ public sealed class FloatingAgentChatCoordinator : IFloatingAgentChatCoordinator
     private readonly TimeProvider timeProvider;
     private readonly ILogger<FloatingAgentChatCoordinator> logger;
     private readonly Dictionary<AgentChatHandleId, Guid> activeExecutionRunIds = [];
+    private readonly HashSet<AgentChatHandleId> activeOperations = [];
     private bool isCatalogVisible;
     private AgentChatCatalogTab catalogTab;
     private FloatingAgentChatSettings currentSettings = FloatingAgentChatSettings.Default;
@@ -157,6 +158,7 @@ public sealed class FloatingAgentChatCoordinator : IFloatingAgentChatCoordinator
         lock (gate)
         {
             activeExecutionRunIds.Remove(handleId);
+            activeOperations.Remove(handleId);
         }
     }
 
@@ -165,7 +167,75 @@ public sealed class FloatingAgentChatCoordinator : IFloatingAgentChatCoordinator
         ActiveAgentChatRunState runState)
     {
         ThrowIfDisposed();
+        lock (gate)
+        {
+            if (runState == ActiveAgentChatRunState.Idle && activeOperations.Contains(handleId))
+            {
+                return activeChatRegistry.Snapshot()
+                    .First(item => item.HandleId == handleId);
+            }
+        }
+
         return activeChatRegistry.SetRunState(handleId, runState);
+    }
+
+    public bool TryBeginOperation(AgentChatHandleId handleId)
+    {
+        ThrowIfDisposed();
+        lock (gate)
+        {
+            if (!activeOperations.Add(handleId))
+            {
+                return false;
+            }
+        }
+
+        try
+        {
+            activeChatRegistry.SetRunState(handleId, ActiveAgentChatRunState.Running);
+            return true;
+        }
+        catch
+        {
+            lock (gate)
+            {
+                activeOperations.Remove(handleId);
+            }
+
+            throw;
+        }
+    }
+
+    public void ReconcileRunStateAfterOperation(AgentChatHandleId handleId)
+    {
+        ThrowIfDisposed();
+        lock (gate)
+        {
+            activeOperations.Remove(handleId);
+            if (activeExecutionRunIds.ContainsKey(handleId))
+            {
+                return;
+            }
+        }
+
+        var chat = activeChatRegistry.Snapshot()
+            .FirstOrDefault(item => item.HandleId == handleId);
+        if (chat is null || chat.RunState == ActiveAgentChatRunState.Idle)
+        {
+            return;
+        }
+
+        try
+        {
+            activeChatRegistry.SetRunState(handleId, ActiveAgentChatRunState.Idle);
+        }
+        catch (InvalidOperationException exception)
+        {
+            logger.LogDebug(
+                exception,
+                "Skipped optimistic run-state reconciliation for an agent chat handle that is no longer active. HandleId={HandleId}.",
+                handleId);
+        }
     }
 
     public ActiveAgentChat AttachSession(AgentChatHandleId handleId, Guid chatSessionId)
@@ -384,7 +454,7 @@ public sealed class FloatingAgentChatCoordinator : IFloatingAgentChatCoordinator
 
         try
         {
-            activeChatRegistry.SetRunState(chat.HandleId, runState);
+            SetRunState(chat.HandleId, runState);
         }
         catch (InvalidOperationException exception)
         {
@@ -463,6 +533,8 @@ public sealed class FloatingAgentChatCoordinator : IFloatingAgentChatCoordinator
             {
                 activeExecutionRunIds.Remove(handleId);
             }
+
+            activeOperations.RemoveWhere(id => !activeHandleIds.Contains(id));
         }
     }
 

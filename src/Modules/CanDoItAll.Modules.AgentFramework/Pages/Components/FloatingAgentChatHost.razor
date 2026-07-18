@@ -35,7 +35,7 @@
                         <Button Text="Retry"
                                 Icon="refresh"
                                 ButtonStyle="ButtonStyle.Light"
-                                Click="InitializeHostAsync" />
+                                Click="StartInitializationAsync" />
                     </Actions>
                 </EmptyState>
             }
@@ -219,6 +219,7 @@
                 @if (visibleChat.ChatSessionId is { } sessionId)
                 {
                     <AgentChatPanel PreferredAgentId="@visibleChat.Agent.AgentId"
+                                    PreferredAgent="@ResolveFocusedAgent(visibleChat.Agent.AgentId)"
                                     PreferredSessionId="@sessionId"
                                     ActiveChatHandleId="@visibleChat.HandleId"
                                     PersistedActiveChatRunState="@visibleChat.RunState"

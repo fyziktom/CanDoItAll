@@ -537,7 +537,7 @@ public sealed class AgentChatContextInvocationFactoryTests
     }
 
     [Fact]
-    public void CreateCompletionNotification_projects_the_original_mutating_context_boundary()
+    public void CreateCompletionNotification_projects_the_original_explicit_refresh_boundary()
     {
         var agentId = Guid.NewGuid();
         var sessionId = Guid.NewGuid();
@@ -554,7 +554,8 @@ public sealed class AgentChatContextInvocationFactoryTests
             scopeId,
             source,
             AgentChatContextPermission.Read | AgentChatContextPermission.Mutate,
-            completedAtUtc);
+            completedAtUtc,
+            AgentChatContextCompletionRefreshMode.OnSuccessfulRun);
 
         var notification = Assert.IsType<AgentChatExecutionCompleted>(
             AgentChatContextInvocationFactory.CreateCompletionNotification(run));
@@ -565,6 +566,34 @@ public sealed class AgentChatContextInvocationFactoryTests
         Assert.Equal(sessionId, notification.ChatSessionId);
         Assert.Equal(runId, notification.ExecutionRunId);
         Assert.Equal(completedAtUtc, notification.CompletedAtUtc);
+    }
+
+    [Fact]
+    public void CreateCompletionNotification_honors_refresh_policy_without_granting_mutation_access()
+    {
+        var agentId = Guid.NewGuid();
+        var sessionId = Guid.NewGuid();
+        var runId = Guid.NewGuid();
+        var scopeId = AgentChatContextScopeId.Create();
+        var source = new AgentChatContextSource(
+            new AgentChatContextSourceKind("crm-account"),
+            new AgentChatContextSourceId(Guid.NewGuid().ToString("D")));
+        var completedAtUtc = new DateTimeOffset(2026, 7, 16, 15, 30, 0, TimeSpan.Zero);
+        var run = CreateCompletionRun(
+            agentId,
+            sessionId,
+            runId,
+            scopeId,
+            source,
+            AgentChatContextPermission.Read,
+            completedAtUtc,
+            AgentChatContextCompletionRefreshMode.OnSuccessfulRun);
+
+        var notification = Assert.IsType<AgentChatExecutionCompleted>(
+            AgentChatContextInvocationFactory.CreateCompletionNotification(run));
+
+        Assert.Equal(scopeId, notification.ScopeId);
+        Assert.Equal(source, notification.Source);
     }
 
     [Fact]
@@ -596,6 +625,7 @@ public sealed class AgentChatContextInvocationFactoryTests
             completedAtUtc);
 
         Assert.Null(AgentChatContextInvocationFactory.CreateCompletionNotification(readOnlyRun));
+        Assert.Null(AgentChatContextInvocationFactory.CreateCompletionNotification(mutatingRun));
         Assert.Null(AgentChatContextInvocationFactory.CreateCompletionNotification(
             mutatingRun with
             {
@@ -615,6 +645,8 @@ public sealed class AgentChatContextInvocationFactoryTests
             mutatingRun with { MetadataJson = "{" }));
         Assert.Null(AgentChatContextInvocationFactory.CreateCompletionNotification(
             mutatingRun with { MetadataJson = "{}" }));
+        Assert.Null(AgentChatContextInvocationFactory.CreateCompletionNotification(
+            mutatingRun with { RequestedBy = "untrusted-caller" }));
     }
 
     private static ExecutionRunRecord CreateCompletionRun(
@@ -624,7 +656,8 @@ public sealed class AgentChatContextInvocationFactoryTests
         AgentChatContextScopeId scopeId,
         AgentChatContextSource source,
         AgentChatContextPermission permission,
-        DateTimeOffset completedAtUtc)
+        DateTimeOffset completedAtUtc,
+        AgentChatContextCompletionRefreshMode completionRefreshMode = AgentChatContextCompletionRefreshMode.None)
     {
         var context = new AgentChatContextSnapshot(
             new AgentChatContextScope(
@@ -638,7 +671,8 @@ public sealed class AgentChatContextInvocationFactoryTests
                         permission,
                         "Current record")
                 ],
-                accessMode: AgentChatContextScopeAccessMode.AllowListed),
+                accessMode: AgentChatContextScopeAccessMode.AllowListed,
+                completionRefreshMode: completionRefreshMode),
             [
                 new AgentChatContextFragment(
                     new AgentChatContextContributorId("surface"),
@@ -1317,6 +1351,115 @@ public sealed class FloatingAgentChatCoordinatorTests
         Assert.Equal(
             ActiveAgentChatRunState.Idle,
             FindChat(coordinator, chat.HandleId).RunState);
+    }
+
+    [Fact]
+    public async Task ReconcileRunStateAfterOperation_releases_optimistic_running_state_without_an_execution()
+    {
+        var clock = new ManualTimeProvider();
+        var agent = CreateAgent("Preflight agent", clock.GetUtcNow());
+        var registry = new ActiveAgentChatRegistry(clock);
+        var chat = registry.Open(
+            CreateIdentity(agent),
+            Guid.NewGuid(),
+            FloatingAgentChatSettings.Default);
+        registry.SetRunState(chat.HandleId, ActiveAgentChatRunState.Running);
+        registry.KeepActive(chat.HandleId);
+        var (workspace, _) = CreateWorkspaceService();
+        await using var coordinator = CreateCoordinator(
+            workspace,
+            registry,
+            new CoordinatorPreparationPool(agent),
+            new CoordinatorSettingsService(FloatingAgentChatSettings.Default),
+            clock);
+
+        coordinator.ReconcileRunStateAfterOperation(chat.HandleId);
+
+        var reconciled = FindChat(coordinator, chat.HandleId);
+        Assert.False(reconciled.IsVisible);
+        Assert.Equal(ActiveAgentChatRunState.Idle, reconciled.RunState);
+    }
+
+    [Fact]
+    public async Task Operation_lease_rejects_overlap_and_holds_running_state_through_terminal_execution_update()
+    {
+        var clock = new ManualTimeProvider();
+        var agent = CreateAgent("Leased agent", clock.GetUtcNow());
+        var sessionId = Guid.NewGuid();
+        var registry = new ActiveAgentChatRegistry(clock);
+        var chat = registry.Open(
+            CreateIdentity(agent),
+            sessionId,
+            FloatingAgentChatSettings.Default);
+        var (workspace, workspaceProxy) = CreateWorkspaceService();
+        await using var coordinator = CreateCoordinator(
+            workspace,
+            registry,
+            new CoordinatorPreparationPool(agent),
+            new CoordinatorSettingsService(FloatingAgentChatSettings.Default),
+            clock);
+        var executionRunId = Guid.NewGuid();
+
+        Assert.True(coordinator.TryBeginOperation(chat.HandleId));
+        Assert.False(coordinator.TryBeginOperation(chat.HandleId));
+
+        workspaceProxy.RaiseExecutionUpdated(CreateExecutionUpdate(
+            agent.Id,
+            sessionId,
+            executionRunId,
+            ExecutionState.Running));
+        workspaceProxy.RaiseExecutionUpdated(CreateExecutionUpdate(
+            agent.Id,
+            sessionId,
+            executionRunId,
+            ExecutionState.Completed));
+
+        Assert.Equal(
+            ActiveAgentChatRunState.Running,
+            FindChat(coordinator, chat.HandleId).RunState);
+
+        coordinator.ReconcileRunStateAfterOperation(chat.HandleId);
+
+        Assert.Equal(
+            ActiveAgentChatRunState.Idle,
+            FindChat(coordinator, chat.HandleId).RunState);
+        Assert.True(coordinator.TryBeginOperation(chat.HandleId));
+        coordinator.ReconcileRunStateAfterOperation(chat.HandleId);
+    }
+
+    [Fact]
+    public async Task ReconcileRunStateAfterOperation_preserves_a_tracked_execution_and_ignores_removed_handles()
+    {
+        var clock = new ManualTimeProvider();
+        var agent = CreateAgent("Running agent", clock.GetUtcNow());
+        var sessionId = Guid.NewGuid();
+        var registry = new ActiveAgentChatRegistry(clock);
+        var chat = registry.Open(
+            CreateIdentity(agent),
+            sessionId,
+            FloatingAgentChatSettings.Default);
+        var (workspace, workspaceProxy) = CreateWorkspaceService();
+        await using var coordinator = CreateCoordinator(
+            workspace,
+            registry,
+            new CoordinatorPreparationPool(agent),
+            new CoordinatorSettingsService(FloatingAgentChatSettings.Default),
+            clock);
+
+        workspaceProxy.RaiseExecutionUpdated(CreateExecutionUpdate(
+            agent.Id,
+            sessionId,
+            Guid.NewGuid(),
+            ExecutionState.Running));
+
+        coordinator.ReconcileRunStateAfterOperation(chat.HandleId);
+        Assert.Equal(
+            ActiveAgentChatRunState.Running,
+            FindChat(coordinator, chat.HandleId).RunState);
+
+        registry.SetRunState(chat.HandleId, ActiveAgentChatRunState.Idle);
+        registry.Stop(chat.HandleId);
+        coordinator.ReconcileRunStateAfterOperation(chat.HandleId);
     }
 
     private static FloatingAgentChatCoordinator CreateCoordinator(

@@ -29,6 +29,15 @@ public partial class AgentCatalogPanel
     [Parameter]
     public bool SkipCatalogRepair { get; set; }
 
+    [Parameter]
+    public EventCallback<AgentDefinition?> SelectedAgentChanged { get; set; }
+
+    [Parameter]
+    public EventCallback<AgentTeamDefinition?> SelectedTeamChanged { get; set; }
+
+    [Parameter]
+    public EventCallback<AgentChatContextAccessState> ContextAccessStateChanged { get; set; }
+
     [Inject]
     public IAgentFrameworkWorkspaceService WorkspaceService { get; set; } = default!;
 
@@ -58,6 +67,10 @@ public partial class AgentCatalogPanel
     private Guid? appliedRequestedTeamId;
     private Guid? openedRequestedAgentId;
     private bool isOpeningHrAgentChat;
+    private AgentChatContextAccessState? publishedAccessState;
+    private Guid? contextRequestedAgentId;
+    private Guid? contextRequestedTeamId;
+    private bool contextRequestApplied;
 
     private IReadOnlyList<AgentDefinition> FilteredAgents => agents
         .Where(MatchesSelectedTeam)
@@ -150,9 +163,24 @@ public partial class AgentCatalogPanel
 
     protected override async Task OnParametersSetAsync()
     {
+        if (!contextRequestApplied ||
+            contextRequestedAgentId != RequestedAgentId ||
+            contextRequestedTeamId != RequestedTeamId)
+        {
+            contextRequestApplied = true;
+            contextRequestedAgentId = RequestedAgentId;
+            contextRequestedTeamId = RequestedTeamId;
+            publishedAccessState = null;
+            await PublishAccessStateAsync(AgentChatContextAccessState.Loading);
+        }
+
         await EnsureLoadedAsync();
         ApplyRequestedTeam();
-        OpenRequestedAgentDialogIfNeeded();
+        await OpenRequestedAgentDialogIfNeededAsync();
+        await PublishAccessStateAsync(
+            HasValidRequestedSelection()
+                ? AgentChatContextAccessState.Ready
+                : AgentChatContextAccessState.Failed);
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -188,6 +216,7 @@ public partial class AgentCatalogPanel
     private async Task LoadAsync()
     {
         isLoading = true;
+        await PublishAccessStateAsync(AgentChatContextAccessState.Loading);
 
         try
         {
@@ -220,6 +249,15 @@ public partial class AgentCatalogPanel
             ApplyRequestedTeam(force: true);
 
             hasLoaded = true;
+            await PublishAccessStateAsync(
+                HasValidRequestedSelection()
+                    ? AgentChatContextAccessState.Ready
+                    : AgentChatContextAccessState.Failed);
+        }
+        catch
+        {
+            await PublishAccessStateAsync(AgentChatContextAccessState.Failed);
+            throw;
         }
         finally
         {
@@ -228,7 +266,7 @@ public partial class AgentCatalogPanel
         }
     }
 
-    private void OpenRequestedAgentDialogIfNeeded()
+    private async Task OpenRequestedAgentDialogIfNeededAsync()
     {
         if (!RequestedAgentId.HasValue ||
             openedRequestedAgentId == RequestedAgentId.Value ||
@@ -239,12 +277,15 @@ public partial class AgentCatalogPanel
 
         openedRequestedAgentId = RequestedAgentId.Value;
         selectedAgentId = RequestedAgentId.Value;
+        await SelectedAgentChanged.InvokeAsync(agents.First(item => item.Id == RequestedAgentId.Value));
         _ = OpenAgentDetailsDialogAsync(RequestedAgentId.Value);
     }
 
-    private void SelectAgent(Guid agentId)
+    private async Task SelectAgentAsync(Guid agentId)
     {
         selectedAgentId = agentId;
+        await SelectedAgentChanged.InvokeAsync(agents.First(item => item.Id == agentId));
+        await PublishAccessStateAsync(AgentChatContextAccessState.Ready);
     }
 
     private async Task OpenHrAgentChatAsync(AgentDefinition agent)
@@ -260,6 +301,7 @@ public partial class AgentCatalogPanel
         }
 
         selectedAgentId = agent.Id;
+        await SelectedAgentChanged.InvokeAsync(agent);
         isOpeningHrAgentChat = true;
         try
         {
@@ -276,12 +318,13 @@ public partial class AgentCatalogPanel
         }
     }
 
-    private Task HandleAgentTeamTreeSelectAsync(string nodeId)
+    private async Task HandleAgentTeamTreeSelectAsync(string nodeId)
     {
         if (string.Equals(nodeId, AllAgentsTreeNodeId, StringComparison.Ordinal))
         {
             selectedTeamId = null;
-            return Task.CompletedTask;
+            await SelectedTeamChanged.InvokeAsync(null);
+            return;
         }
 
         if (TryParseTeamTreeNodeId(nodeId, out var teamId) &&
@@ -289,16 +332,16 @@ public partial class AgentCatalogPanel
         {
             selectedTeamId = teamId;
             expandedTreeNodeIds.Add(nodeId);
-            return Task.CompletedTask;
+            await SelectedTeamChanged.InvokeAsync(teams.First(item => item.Id == teamId));
+            return;
         }
 
         if (TryParseAgentTreeNodeId(nodeId, out var agentId) &&
             agents.Any(item => item.Id == agentId))
         {
             selectedAgentId = agentId;
+            await SelectedAgentChanged.InvokeAsync(agents.First(item => item.Id == agentId));
         }
-
-        return Task.CompletedTask;
     }
 
     private Task HandleAgentTeamTreeToggleAsync(string nodeId)
@@ -345,6 +388,7 @@ public partial class AgentCatalogPanel
         if (agentId.HasValue)
         {
             selectedAgentId = agentId.Value;
+            await SelectedAgentChanged.InvokeAsync(agents.FirstOrDefault(item => item.Id == agentId.Value));
         }
 
         try
@@ -397,12 +441,17 @@ public partial class AgentCatalogPanel
         if (result.Deleted)
         {
             selectedAgentId = agents.FirstOrDefault()?.Id;
+            await SelectedAgentChanged.InvokeAsync(
+                selectedAgentId.HasValue
+                    ? agents.First(item => item.Id == selectedAgentId.Value)
+                    : null);
             return;
         }
 
         if (result.AgentId.HasValue)
         {
             selectedAgentId = result.AgentId.Value;
+            await SelectedAgentChanged.InvokeAsync(agents.FirstOrDefault(item => item.Id == result.AgentId.Value));
         }
 
         await InvokeAsync(StateHasChanged);
@@ -432,6 +481,7 @@ public partial class AgentCatalogPanel
                 await ReloadCatalogAsync();
                 selectedTeamId = teamResult.TeamId;
                 expandedTreeNodeIds.Add(BuildTeamTreeNodeId(teamResult.TeamId));
+                await SelectedTeamChanged.InvokeAsync(SelectedTeam);
                 await InvokeAsync(StateHasChanged);
             }
         }
@@ -477,6 +527,7 @@ public partial class AgentCatalogPanel
                 await ReloadCatalogAsync();
                 selectedTeamId = membersResult.TeamId;
                 expandedTreeNodeIds.Add(BuildTeamTreeNodeId(membersResult.TeamId));
+                await SelectedTeamChanged.InvokeAsync(SelectedTeam);
                 NotificationService.Success("Team updated", "Agent team membership was saved.");
                 await InvokeAsync(StateHasChanged);
             }
@@ -500,6 +551,7 @@ public partial class AgentCatalogPanel
             await WorkspaceService.DeleteAgentTeamAsync(team.Id);
             selectedTeamId = null;
             await ReloadCatalogAsync();
+            await SelectedTeamChanged.InvokeAsync(null);
             NotificationService.Success("Team deleted", $"Deleted {team.Name}.");
             await InvokeAsync(StateHasChanged);
         }
@@ -576,6 +628,21 @@ public partial class AgentCatalogPanel
         return agent.ProviderProfileId.HasValue &&
                privateProviderById.TryGetValue(agent.ProviderProfileId.Value, out var isPrivateProvider) &&
                isPrivateProvider;
+    }
+
+    private bool HasValidRequestedSelection()
+        => (!RequestedAgentId.HasValue || agents.Any(item => item.Id == RequestedAgentId.Value)) &&
+           (!RequestedTeamId.HasValue || teams.Any(item => item.Id == RequestedTeamId.Value));
+
+    private async Task PublishAccessStateAsync(AgentChatContextAccessState state)
+    {
+        if (publishedAccessState == state)
+        {
+            return;
+        }
+
+        publishedAccessState = state;
+        await ContextAccessStateChanged.InvokeAsync(state);
     }
 
     private IReadOnlyCollection<Guid> ResolvePrivateAgentIds()

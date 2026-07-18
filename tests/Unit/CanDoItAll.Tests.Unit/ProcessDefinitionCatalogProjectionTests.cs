@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Text.Json;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.Processes.Abstractions;
 using CanDoItAll.Processes.Application;
 using CanDoItAll.Processes.Contracts;
 using CanDoItAll.Processes.Projections;
@@ -31,6 +32,91 @@ public sealed class ProcessDefinitionCatalogProjectionTests
         Assert.Equal("Architecture review", catalog.SelectedItem?.Name);
         Assert.Equal(2, catalog.PublishedDefinitionCount);
         Assert.Contains(catalog.ScopeGroups, group => group.ScopeKind == ProcessDefinitionCatalogScopeKind.Global && group.Count == 2);
+    }
+
+    [Fact]
+    public async Task Catalog_query_does_not_replace_a_missing_explicit_selection_with_the_first_item()
+    {
+        using var pack = TemporaryProcessTemplatePack.CreateDefault();
+        var service = new ProcessDefinitionCatalogProjectionService(
+            new ProcessTemplatePackLoader(pack.RootPath),
+            new FixedProcessProjectionClock(Now));
+        var missingKey = new ProcessDefinitionCatalogItemKey("missing-route-definition");
+
+        var explicitSelection = await service.GetCatalogAsync(
+            ProcessWorkspaceShellScope.Global,
+            new ProcessDefinitionCatalogQueryProjection(
+                SearchText: null,
+                missingKey,
+                ProcessDefinitionCatalogScopeKind.All,
+                Take: 20));
+        var automaticSelection = await service.GetCatalogAsync(
+            ProcessWorkspaceShellScope.Global,
+            new ProcessDefinitionCatalogQueryProjection(
+                SearchText: null,
+                SelectedDefinitionKey: null,
+                ProcessDefinitionCatalogScopeKind.All,
+                Take: 20));
+
+        Assert.NotEmpty(explicitSelection.Items);
+        Assert.Equal(missingKey, explicitSelection.SelectedDefinitionKey);
+        Assert.Null(explicitSelection.SelectedItem);
+        Assert.NotNull(automaticSelection.SelectedItem);
+        Assert.Equal(automaticSelection.Items[0].Key, automaticSelection.SelectedDefinitionKey);
+    }
+
+    [Fact]
+    public async Task Workspace_shell_resolves_process_id_exactly_and_rejects_missing_or_conflicting_identity()
+    {
+        using var pack = TemporaryProcessTemplatePack.CreateDefault();
+        var loader = new ProcessTemplatePackLoader(pack.RootPath);
+        var clock = new FixedProcessProjectionClock(Now);
+        var catalogService = new ProcessDefinitionCatalogProjectionService(loader, clock);
+        var service = new ProcessWorkspaceShellProjectionService(
+            clock,
+            catalogService,
+            new ProcessDefinitionEditorProjectionService(loader, clock),
+            new ProcessDefinitionRoleEditorProjectionService(loader, clock),
+            new ProcessDefinitionCanvasEditorProjectionService(loader, clock),
+            new ProcessDefinitionStepEditorProjectionService(loader, clock),
+            new ProcessTemplateCatalogProjectionService(loader, clock));
+        var targetKey = new ProcessDefinitionCatalogItemKey("architecture-review");
+        var conflictingKey = new ProcessDefinitionCatalogItemKey("delivery-default");
+        var targetProcessId = ProcessDefinitionCatalogProjectionService.CreateDefinitionId(targetKey).Value;
+
+        var exact = await service.GetShellAsync(CreateShellRequest(targetProcessId, selectedDefinitionKey: null));
+        var missing = await service.GetShellAsync(CreateShellRequest(
+            Guid.Parse("66666666-6666-6666-6666-666666666666"),
+            selectedDefinitionKey: null));
+        var conflict = await service.GetShellAsync(CreateShellRequest(targetProcessId, conflictingKey));
+
+        Assert.Equal(targetKey, exact.DefinitionCatalog.SelectedDefinitionKey);
+        Assert.Equal(targetKey, exact.DefinitionCatalog.SelectedItem?.Key);
+        Assert.Null(missing.DefinitionCatalog.SelectedDefinitionKey);
+        Assert.Null(missing.DefinitionCatalog.SelectedItem);
+        Assert.Equal(conflictingKey, conflict.DefinitionCatalog.SelectedDefinitionKey);
+        Assert.Null(conflict.DefinitionCatalog.SelectedItem);
+
+        static ProcessWorkspaceShellRequest CreateShellRequest(
+            Guid processId,
+            ProcessDefinitionCatalogItemKey? selectedDefinitionKey)
+            => new(
+                ProcessWorkspaceShellScope.Global,
+                new ProcessWorkspaceSelectionProjection(processId, RunId: null, LaunchPlanId: null),
+                new ProcessDefinitionCatalogQueryProjection(
+                    SearchText: null,
+                    selectedDefinitionKey,
+                    ProcessDefinitionCatalogScopeKind.All,
+                    Take: 20),
+                new ProcessTemplateCatalogQueryProjection(
+                    SearchText: null,
+                    ProcessTemplateCatalogCategoryKind.All,
+                    SelectedItemKey: null,
+                    ProcessTemplateCatalogPreviewTabKind.Overview,
+                    Take: 20),
+                ForceRefresh: false,
+                RuntimeQuery: null,
+                ProcessDefinitionWorkspaceLoadOptions.CatalogOnly);
     }
 
     [Fact]

@@ -14,13 +14,8 @@ public sealed class CrmAgentChatContextProviderTests
     {
         using var context = new TestContext();
         var registry = new AgentChatContextRegistry(TimeProvider.System);
-        context.Services.AddLogging();
         context.Services.AddSingleton<IAgentChatContextRegistry>(registry);
         context.Services.AddSingleton<IAgentChatExecutionNotificationHub>(new RecordingNotificationHub());
-        context.Services.AddSingleton<IAgentReferenceDataProvider>(
-            new StubAgentReferenceDataProvider(CreateAgent()));
-        context.Services.AddSingleton<IAgentReferenceDataCacheInvalidator>(
-            new StubReferenceDataCacheInvalidator());
         using var staleScopeLease = registry.ActivateScope(new AgentChatContextScope(
             AgentChatContextScopeId.Create(),
             new AgentChatContextSource(
@@ -29,7 +24,6 @@ public sealed class CrmAgentChatContextProviderTests
             "Stale project structure"));
 
         var cut = context.RenderComponent<CrmAgentChatContextProvider>(parameters => parameters
-            .Add(component => component.AccountCount, 0)
             .Add(component => component.Account, (CrmAgentChatAccountContext?)null));
 
         cut.WaitForAssertion(() =>
@@ -37,16 +31,16 @@ public sealed class CrmAgentChatContextProviderTests
             var snapshot = Assert.IsType<AgentChatContextSnapshot>(registry.Capture());
             Assert.Equal(CrmAgentChatContextBuilder.WorkspaceSourceKind, snapshot.Scope.Source.Kind.Value);
             Assert.Equal(CrmAgentChatContextBuilder.WorkspaceSourceId, snapshot.Scope.Source.Id.Value);
+            Assert.Equal("crm", snapshot.Scope.SurfacePosition?.Surface);
+            Assert.Null(snapshot.Scope.SurfacePosition?.PrimarySelection);
             var fragment = Assert.Single(snapshot.Fragments);
             Assert.Equal(CrmAgentChatContextBuilder.WorkspaceContributorId, fragment.ContributorId.Value);
-            Assert.Contains("AccountCount: 0", fragment.Content, StringComparison.Ordinal);
             Assert.Contains("SelectedAccount: None", fragment.Content, StringComparison.Ordinal);
         });
 
         var account = CreateAccount();
         var opportunity = CreateOpportunity(account.AccountId, "Expansion", OpportunityStage.Qualified);
         cut.SetParametersAndRender(parameters => parameters
-            .Add(component => component.AccountCount, 1)
             .Add(component => component.Account, account)
             .Add(component => component.Opportunity, opportunity));
 
@@ -55,23 +49,49 @@ public sealed class CrmAgentChatContextProviderTests
             var snapshot = Assert.IsType<AgentChatContextSnapshot>(registry.Capture());
             Assert.Equal(CrmAgentChatContextBuilder.SourceKind, snapshot.Scope.Source.Kind.Value);
             Assert.Equal(account.AccountId.ToString("D"), snapshot.Scope.Source.Id.Value);
+            Assert.Equal(account.AccountId.ToString("D"), snapshot.Scope.SurfacePosition?.PrimarySelection?.Id);
+            Assert.Equal(
+                opportunity.OpportunityId.ToString("D"),
+                Assert.Single(snapshot.Scope.SurfacePosition!.SelectedEntities).Id);
             Assert.Collection(
                 snapshot.Fragments,
                 fragment => Assert.Equal(CrmAgentChatContextBuilder.AccountContributorId, fragment.ContributorId.Value),
                 fragment => Assert.Equal(CrmAgentChatContextBuilder.OpportunityContributorId, fragment.ContributorId.Value));
         });
 
+        var interaction = new CrmAgentChatInteractionContext(
+            account.AccountId,
+            Guid.NewGuid(),
+            "Architecture review",
+            InteractionType.Meeting,
+            opportunity.OpportunityId);
         cut.SetParametersAndRender(parameters => parameters
-            .Add(component => component.AccountCount, 1)
+            .Add(component => component.Account, account)
+            .Add(component => component.Opportunity, (CrmAgentChatOpportunityContext?)null)
+            .Add(component => component.Interaction, interaction));
+
+        cut.WaitForAssertion(() =>
+        {
+            var snapshot = Assert.IsType<AgentChatContextSnapshot>(registry.Capture());
+            var selectedInteraction = Assert.Single(snapshot.Scope.SurfacePosition!.SelectedEntities);
+            Assert.Equal("crm-interaction", selectedInteraction.Kind);
+            Assert.Equal(interaction.InteractionId.ToString("D"), selectedInteraction.Id);
+            Assert.Collection(
+                snapshot.Fragments,
+                fragment => Assert.Equal(CrmAgentChatContextBuilder.AccountContributorId, fragment.ContributorId.Value),
+                fragment => Assert.Equal(CrmAgentChatContextBuilder.InteractionContributorId, fragment.ContributorId.Value));
+        });
+
+        cut.SetParametersAndRender(parameters => parameters
             .Add(component => component.Account, (CrmAgentChatAccountContext?)null)
-            .Add(component => component.Opportunity, (CrmAgentChatOpportunityContext?)null));
+            .Add(component => component.Opportunity, (CrmAgentChatOpportunityContext?)null)
+            .Add(component => component.Interaction, (CrmAgentChatInteractionContext?)null));
 
         cut.WaitForAssertion(() =>
         {
             var snapshot = Assert.IsType<AgentChatContextSnapshot>(registry.Capture());
             Assert.Equal(CrmAgentChatContextBuilder.WorkspaceSourceKind, snapshot.Scope.Source.Kind.Value);
             var fragment = Assert.Single(snapshot.Fragments);
-            Assert.Contains("AccountCount: 1", fragment.Content, StringComparison.Ordinal);
             Assert.Contains("SelectedAccount: None", fragment.Content, StringComparison.Ordinal);
         });
 
@@ -87,14 +107,9 @@ public sealed class CrmAgentChatContextProviderTests
         using var context = new TestContext();
         var registry = new AgentChatContextRegistry(TimeProvider.System);
         var hub = new RecordingNotificationHub();
-        var invalidator = new StubReferenceDataCacheInvalidator();
         var agent = CreateAgent();
-        context.Services.AddLogging();
         context.Services.AddSingleton<IAgentChatContextRegistry>(registry);
         context.Services.AddSingleton<IAgentChatExecutionNotificationHub>(hub);
-        context.Services.AddSingleton<IAgentReferenceDataProvider>(
-            new StubAgentReferenceDataProvider(agent));
-        context.Services.AddSingleton<IAgentReferenceDataCacheInvalidator>(invalidator);
         var account = CreateAccount();
         var opportunity = CreateOpportunity(account.AccountId, "Expansion", OpportunityStage.Qualified);
         var refreshCount = 0;
@@ -110,7 +125,10 @@ public sealed class CrmAgentChatContextProviderTests
             Assert.Equal(account.AccountId.ToString("D"), snapshot.Scope.Source.Id.Value);
             Assert.Equal(AgentChatContextScopeAccessMode.Unrestricted, snapshot.Scope.AccessMode);
             Assert.Null(snapshot.Scope.WorkspaceScope);
-            Assert.True(snapshot.FindAccess(agent.Id)?.CanMutate);
+            Assert.Empty(snapshot.Scope.AgentAccess);
+            Assert.Equal(
+                AgentChatContextCompletionRefreshMode.OnSuccessfulRun,
+                snapshot.Scope.CompletionRefreshMode);
             Assert.Collection(
                 snapshot.Fragments,
                 fragment => Assert.Equal(CrmAgentChatContextBuilder.AccountContributorId, fragment.ContributorId.Value),
@@ -147,6 +165,9 @@ public sealed class CrmAgentChatContextProviderTests
             Assert.Contains(
                 snapshot.Fragments,
                 fragment => fragment.Content.Contains("DisplayLabel: Renewal", StringComparison.Ordinal));
+            Assert.Contains(
+                snapshot.Scope.SurfacePosition!.Facts,
+                fact => fact.Name == "opportunity-stage" && fact.Value == "Negotiation");
         });
 
         cut.SetParametersAndRender(parameters => parameters
@@ -162,6 +183,42 @@ public sealed class CrmAgentChatContextProviderTests
 
         Assert.Null(registry.Capture());
         Assert.Equal(0, hub.SubscriptionCount);
+    }
+
+    [Fact]
+    public void Provider_blocks_transition_context_and_recovers_without_replacing_the_selection_scope()
+    {
+        using var context = new TestContext();
+        var registry = new AgentChatContextRegistry(TimeProvider.System);
+        var agent = CreateAgent();
+        context.Services.AddSingleton<IAgentChatContextRegistry>(registry);
+        context.Services.AddSingleton<IAgentChatExecutionNotificationHub>(new RecordingNotificationHub());
+        var account = CreateAccount();
+
+        var cut = context.RenderComponent<CrmAgentChatContextProvider>(parameters => parameters
+            .Add(component => component.Account, account)
+            .Add(component => component.ContextAccessState, AgentChatContextAccessState.Loading));
+
+        cut.WaitForAssertion(() =>
+        {
+            var snapshot = Assert.IsType<AgentChatContextSnapshot>(registry.Capture());
+            Assert.Equal(AgentChatContextAccessState.Loading, snapshot.Scope.AccessState);
+            Assert.Throws<AgentChatContextUnavailableException>(() =>
+                AgentChatContextContributionComposer.Compose(snapshot, agent.Id));
+        });
+        var loadingSnapshot = Assert.IsType<AgentChatContextSnapshot>(registry.Capture());
+
+        cut.SetParametersAndRender(parameters => parameters
+            .Add(component => component.Account, account)
+            .Add(component => component.ContextAccessState, AgentChatContextAccessState.Ready));
+
+        cut.WaitForAssertion(() =>
+        {
+            var snapshot = Assert.IsType<AgentChatContextSnapshot>(registry.Capture());
+            Assert.Equal(loadingSnapshot.Scope.Id, snapshot.Scope.Id);
+            Assert.Equal(AgentChatContextAccessState.Ready, snapshot.Scope.AccessState);
+            Assert.NotNull(AgentChatContextContributionComposer.Compose(snapshot, agent.Id));
+        });
     }
 
     private static CrmAgentChatAccountContext CreateAccount()
@@ -213,32 +270,6 @@ public sealed class CrmAgentChatContextProviderTests
             Tags: [],
             CreatedAtUtc: timestamp,
             UpdatedAtUtc: timestamp);
-    }
-
-    private sealed class StubAgentReferenceDataProvider(
-        AgentDefinition agent) : IAgentReferenceDataProvider
-    {
-        public Task<AgentReferenceDataSnapshot> GetAsync(
-            AgentReferenceDataRequest request,
-            CancellationToken cancellationToken = default)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            return Task.FromResult(new AgentReferenceDataSnapshot(
-                AgentReferenceDataSections.Agents,
-                [agent],
-                [],
-                new Dictionary<Guid, ProviderProfile>(),
-                DateTimeOffset.UtcNow,
-                TimeSpan.Zero));
-        }
-    }
-
-    private sealed class StubReferenceDataCacheInvalidator : IAgentReferenceDataCacheInvalidator
-    {
-        public event EventHandler? Invalidated;
-
-        public void Invalidate()
-            => Invalidated?.Invoke(this, EventArgs.Empty);
     }
 
     private sealed class RecordingNotificationHub : IAgentChatExecutionNotificationHub

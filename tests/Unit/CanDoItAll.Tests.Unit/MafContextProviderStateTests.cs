@@ -8,15 +8,25 @@ namespace CanDoItAll.Tests.Unit;
 public sealed class MafContextProviderStateTests
 {
     [Fact]
-    public void Static_message_context_providers_are_stateless_when_composed()
+    public void Static_message_context_providers_use_unique_purpose_scoped_state_keys()
     {
+        var capabilityId = Guid.NewGuid();
         AIContextProvider[] providers =
         [
-            new StaticMessageContextProvider(new ChatMessage(ChatRole.System, "Configured context")),
-            new StaticMessageContextProvider(new ChatMessage(ChatRole.User, "Transient UI context"))
+            new StaticMessageContextProvider(
+                new ChatMessage(ChatRole.System, "Configured context"),
+                StaticMessageContextProvider.CreateCapabilityStateKey(capabilityId)),
+            new StaticMessageContextProvider(
+                new ChatMessage(ChatRole.User, "Transient UI context"),
+                StaticMessageContextProvider.TransientAgentChatStateKey)
         ];
 
-        Assert.All(providers, provider => Assert.Empty(provider.StateKeys));
+        Assert.Equal(
+            [
+                $"CanDoItAll.StaticContext.Capability.{capabilityId:N}",
+                "CanDoItAll.StaticContext.TransientAgentChat"
+            ],
+            providers.SelectMany(provider => provider.StateKeys));
         Assert.Empty(FindDuplicateStateKeys(providers));
     }
 

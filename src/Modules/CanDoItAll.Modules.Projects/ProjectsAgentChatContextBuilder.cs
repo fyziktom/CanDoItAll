@@ -7,6 +7,12 @@ namespace CanDoItAll.Modules.Projects;
 public sealed record ProjectsAgentChatSelection(
     ProjectSummary Project);
 
+public enum ProjectsAgentChatView
+{
+    Cards,
+    Files
+}
+
 public static class ProjectsAgentChatContextBuilder
 {
     public const string SourceKind = "projects";
@@ -32,7 +38,8 @@ public static class ProjectsAgentChatContextBuilder
         AgentChatContextScopeId scopeId,
         ProjectSummary? selectedProject,
         IEnumerable<AgentDefinition> agents,
-        AgentChatContextAccessState accessState)
+        AgentChatContextAccessState accessState,
+        ProjectsAgentChatView activeView = ProjectsAgentChatView.Cards)
     {
         ArgumentNullException.ThrowIfNull(agents);
         if (!Enum.IsDefined(accessState))
@@ -64,7 +71,41 @@ public static class ProjectsAgentChatContextBuilder
             workspaceScope,
             access,
             AgentChatContextScopeAccessMode.AllowListed,
-            accessState);
+            accessState,
+            BuildPosition(selectedProject, activeView),
+            completionRefreshMode: AgentChatContextCompletionRefreshMode.OnSuccessfulRun);
+    }
+
+    public static AgentChatSurfacePosition BuildPosition(
+        ProjectSummary? selectedProject,
+        ProjectsAgentChatView activeView = ProjectsAgentChatView.Cards)
+    {
+        if (!Enum.IsDefined(activeView))
+        {
+            throw new ArgumentOutOfRangeException(nameof(activeView), activeView, "The Projects agent-chat view is undefined.");
+        }
+
+        var selection = selectedProject is null
+            ? null
+            : new AgentChatContextEntityReference(
+                "project",
+                selectedProject.Id.ToString("D"),
+                NormalizeRequiredLabel(selectedProject.Name, nameof(selectedProject)));
+        var facts = selectedProject is null
+            ? Array.Empty<AgentChatContextPositionFact>()
+            :
+            [
+                new AgentChatContextPositionFact("status", selectedProject.Status.ToString()),
+                new AgentChatContextPositionFact("phase", NormalizeOptionalLabel(selectedProject.CurrentPhase))
+            ];
+
+        return new AgentChatSurfacePosition(
+            module: "projects",
+            surface: "portfolio",
+            view: activeView == ProjectsAgentChatView.Files ? "files" : "cards",
+            route: "/projects",
+            primarySelection: selection,
+            facts: facts);
     }
 
     public static AgentChatContextFragment BuildPortfolioFragment()

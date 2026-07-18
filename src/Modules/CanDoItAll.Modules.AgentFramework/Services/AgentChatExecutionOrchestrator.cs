@@ -15,8 +15,9 @@ public sealed class AgentChatExecutionOrchestrator(
         IReadOnlyList<string>? attachmentPaths = null,
         CancellationToken cancellationToken = default)
     {
+        var context = await contextRegistry.CaptureAsync(cancellationToken);
         var invocation = AgentChatContextInvocationFactory.Create(
-            contextRegistry.Capture(),
+            context,
             agentId,
             chatSessionId,
             prompt);

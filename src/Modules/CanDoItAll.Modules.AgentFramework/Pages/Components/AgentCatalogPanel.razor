@@ -155,7 +155,7 @@
                                                     ShowDetailsTooltip="true"
                                                     ShellTestId="agents-catalog-card-shell"
                                                     SelectTestId="agents-catalog-card"
-                                                    OnSelect="@(() => SelectAgent(agent.Id))"
+                                                    OnSelect="@(() => SelectAgentAsync(agent.Id))"
                                                     OnDoubleClick="@(() => QueueAgentDetailsDialogAsync(agent.Id))">
                                     <Actions>
                                         @if (HrAgentIdentity.Matches(agent))

@@ -1,6 +1,5 @@
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Modules.Workbench.ProjectStructure;
-using Microsoft.Extensions.Logging;
 
 namespace CanDoItAll.Modules.Workbench.Pages;
 
@@ -37,26 +36,8 @@ public partial class ProjectStructurePage
             return;
         }
 
-        await CaptureCurrentWorkbenchStateAsync();
         await ReloadSurfaceAsync();
         await InvokeAsync(StateHasChanged);
-    }
-
-    private async Task CaptureCurrentWorkbenchStateAsync()
-    {
-        if (workbenchRef is null)
-        {
-            return;
-        }
-
-        try
-        {
-            currentViewStateJson = NormalizePersistedCanvasStateJson(await workbenchRef.GetStateJsonAsync());
-        }
-        catch (Exception exception)
-        {
-            Logger.LogDebug(exception, "Unable to capture project structure canvas state before contextual agent refresh.");
-        }
     }
 
     private void HandleFloatingAgentChatChanged(object? sender, EventArgs eventArgs)

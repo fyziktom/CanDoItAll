@@ -3,6 +3,7 @@ using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Projects.Pages.Components;
+using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace CanDoItAll.Tests.Components;
@@ -21,6 +22,7 @@ public sealed class ProjectsAgentChatContextProviderTests
         var child = CreateProject(Guid.NewGuid(), "Child project", parentCount: 1);
         var unrelated = CreateProject(Guid.NewGuid(), "Unrelated project");
         ProjectSummary[] projects = [root, child, unrelated];
+        var navigationIdentity = AgentChatNavigationIdentity.Create();
         var refreshCount = 0;
         context.Services.AddLogging();
         context.Services.AddSingleton<IAgentChatContextRegistry>(registry);
@@ -31,6 +33,7 @@ public sealed class ProjectsAgentChatContextProviderTests
 
         var cut = context.RenderComponent<ProjectsAgentChatContextProvider>(parameters => parameters
             .Add(component => component.ProjectSummaries, projects)
+            .Add(component => component.ContextNavigationIdentity, navigationIdentity)
             .Add(component => component.RefreshRequested, _ => refreshCount++));
 
         cut.WaitForAssertion(() =>
@@ -108,6 +111,7 @@ public sealed class ProjectsAgentChatContextProviderTests
         var hiddenParent = CreateProject(Guid.NewGuid(), "Hidden parent");
         var hiddenChild = CreateProject(Guid.NewGuid(), "Hidden child", parentCount: 1);
         var restrictedAgent = CreateAgent([selected.Id]);
+        var navigationIdentity = AgentChatNavigationIdentity.Create();
         context.Services.AddLogging();
         context.Services.AddSingleton<IAgentChatContextRegistry>(registry);
         context.Services.AddSingleton<IAgentChatExecutionNotificationHub>(notificationHub);
@@ -117,6 +121,7 @@ public sealed class ProjectsAgentChatContextProviderTests
 
         using var cut = context.RenderComponent<ProjectsAgentChatContextProvider>(parameters => parameters
             .Add(component => component.ProjectSummaries, new[] { selected, hiddenParent, hiddenChild })
+            .Add(component => component.ContextNavigationIdentity, navigationIdentity)
             .Add(component => component.SelectedProjectId, selected.Id));
 
         cut.WaitForAssertion(() =>
@@ -141,6 +146,7 @@ public sealed class ProjectsAgentChatContextProviderTests
         var registry = new AgentChatContextRegistry(TimeProvider.System);
         var project = CreateProject(Guid.NewGuid(), "Retry project");
         var agent = CreateAgent();
+        var navigationIdentity = AgentChatNavigationIdentity.Create();
         var referenceDataProvider = new FailOnceAgentReferenceDataProvider(agent);
         context.Services.AddLogging();
         context.Services.AddSingleton<IAgentChatContextRegistry>(registry);
@@ -150,7 +156,8 @@ public sealed class ProjectsAgentChatContextProviderTests
             new RecordingReferenceDataCacheInvalidator());
 
         var cut = context.RenderComponent<ProjectsAgentChatContextProvider>(parameters => parameters
-            .Add(component => component.ProjectSummaries, new[] { project }));
+            .Add(component => component.ProjectSummaries, new[] { project })
+            .Add(component => component.ContextNavigationIdentity, navigationIdentity));
 
         cut.WaitForAssertion(() =>
         {
@@ -169,6 +176,118 @@ public sealed class ProjectsAgentChatContextProviderTests
             Assert.Equal(AgentChatContextAccessState.Ready, snapshot.Scope.AccessState);
             Assert.True(snapshot.CanRead(agent.Id));
             Assert.Equal(2, referenceDataProvider.CallCount);
+        });
+    }
+
+    [Fact]
+    public void Provider_fences_query_transition_and_keeps_stale_selection_unavailable_until_published()
+    {
+        using var context = new TestContext();
+        var registry = new AgentChatContextRegistry(TimeProvider.System);
+        var notificationHub = new RecordingNotificationHub();
+        var cacheInvalidator = new RecordingReferenceDataCacheInvalidator();
+        var first = CreateProject(Guid.NewGuid(), "First project");
+        var second = CreateProject(Guid.NewGuid(), "Second project");
+        var agent = CreateAgent();
+        context.Services.AddLogging();
+        context.Services.AddSingleton<IAgentChatContextRegistry>(registry);
+        context.Services.AddSingleton<IAgentChatExecutionNotificationHub>(notificationHub);
+        context.Services.AddSingleton<IAgentReferenceDataProvider>(
+            new StubAgentReferenceDataProvider(agent));
+        context.Services.AddSingleton<IAgentReferenceDataCacheInvalidator>(cacheInvalidator);
+        var navigation = context.Services.GetRequiredService<NavigationManager>();
+        navigation.NavigateTo($"/projects?projectId={second.Id:D}");
+        var firstIdentity = AgentChatNavigationIdentity.CreateForLocation(
+            navigation.BaseUri,
+            navigation.Uri,
+            [new("projectId", first.Id.ToString("D"))]);
+        var secondIdentity = AgentChatNavigationIdentity.CreateForLocation(
+            navigation.BaseUri,
+            navigation.Uri,
+            [new("projectId", second.Id.ToString("D"))]);
+        Assert.NotEqual(firstIdentity, secondIdentity);
+
+        using var workspaceLease = registry.RegisterWorkspacePosition(
+            new AgentChatWorkspacePosition(
+                "projects-tab",
+                "Projects",
+                "/projects",
+                "module"),
+            firstIdentity);
+        using var cut = context.RenderComponent<ProjectsAgentChatContextProvider>(parameters => parameters
+            .Add(component => component.ProjectSummaries, new[] { first, second })
+            .Add(component => component.SelectedProjectId, first.Id)
+            .Add(component => component.ContextNavigationIdentity, firstIdentity));
+
+        cut.WaitForAssertion(() =>
+        {
+            var snapshot = Assert.IsType<AgentChatContextSnapshot>(registry.Capture());
+            Assert.Equal(AgentChatContextAccessState.Ready, snapshot.Scope.AccessState);
+            Assert.Equal(first.Id.ToString("D"), snapshot.Scope.Source.Id.Value);
+        });
+
+        workspaceLease.Update(
+            new AgentChatWorkspacePosition(
+                "projects-tab",
+                "Projects",
+                "/projects",
+                "module"),
+            secondIdentity);
+        cut.SetParametersAndRender(parameters => parameters
+            .Add(component => component.ProjectSummaries, new[] { first, second })
+            .Add(component => component.SelectedProjectId, first.Id)
+            .Add(component => component.ContextNavigationIdentity, secondIdentity)
+            .Add(component => component.ContextAccessState, AgentChatContextAccessState.Loading));
+
+        cut.WaitForAssertion(() =>
+        {
+            var snapshot = Assert.IsType<AgentChatContextSnapshot>(registry.Capture());
+            Assert.Equal(AgentChatContextAccessState.Loading, snapshot.Scope.AccessState);
+            Assert.Equal(first.Id.ToString("D"), snapshot.Scope.Source.Id.Value);
+        });
+
+        cut.SetParametersAndRender(parameters => parameters
+            .Add(component => component.ProjectSummaries, new[] { first, second })
+            .Add(component => component.SelectedProjectId, second.Id)
+            .Add(component => component.ContextNavigationIdentity, secondIdentity)
+            .Add(component => component.ContextAccessState, AgentChatContextAccessState.Ready));
+
+        cut.WaitForAssertion(() =>
+        {
+            var snapshot = Assert.IsType<AgentChatContextSnapshot>(registry.Capture());
+            Assert.Equal(AgentChatContextAccessState.Ready, snapshot.Scope.AccessState);
+            Assert.Equal(second.Id.ToString("D"), snapshot.Scope.Source.Id.Value);
+            var selection = FindFragment(snapshot, ProjectsAgentChatContextBuilder.SelectionContributorId);
+            Assert.Contains(second.Name, selection.Content, StringComparison.Ordinal);
+            Assert.DoesNotContain(first.Name, selection.Content, StringComparison.Ordinal);
+        });
+    }
+
+    [Fact]
+    public void Provider_prioritizes_failed_position_state_over_ready_agent_access()
+    {
+        using var context = new TestContext();
+        var registry = new AgentChatContextRegistry(TimeProvider.System);
+        var project = CreateProject(Guid.NewGuid(), "Failed position project");
+        var navigationIdentity = AgentChatNavigationIdentity.Create();
+        context.Services.AddLogging();
+        context.Services.AddSingleton<IAgentChatContextRegistry>(registry);
+        context.Services.AddSingleton<IAgentChatExecutionNotificationHub>(new RecordingNotificationHub());
+        context.Services.AddSingleton<IAgentReferenceDataProvider>(
+            new StubAgentReferenceDataProvider(CreateAgent()));
+        context.Services.AddSingleton<IAgentReferenceDataCacheInvalidator>(
+            new RecordingReferenceDataCacheInvalidator());
+
+        using var cut = context.RenderComponent<ProjectsAgentChatContextProvider>(parameters => parameters
+            .Add(component => component.ProjectSummaries, new[] { project })
+            .Add(component => component.SelectedProjectId, project.Id)
+            .Add(component => component.ContextNavigationIdentity, navigationIdentity)
+            .Add(component => component.ContextAccessState, AgentChatContextAccessState.Failed));
+
+        cut.WaitForAssertion(() =>
+        {
+            var snapshot = Assert.IsType<AgentChatContextSnapshot>(registry.Capture());
+            Assert.Equal(AgentChatContextAccessState.Failed, snapshot.Scope.AccessState);
         });
     }
 

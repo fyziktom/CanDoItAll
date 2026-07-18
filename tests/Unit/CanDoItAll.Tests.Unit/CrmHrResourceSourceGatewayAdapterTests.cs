@@ -48,6 +48,25 @@ public sealed class CrmHrResourceSourceGatewayAdapterTests
         Assert.Contains(result.Snapshot.Items, item => item.EntityKind == MemorySourceEntityKind.CrmOpportunity);
         Assert.Contains(result.Snapshot.Items, item => item.EntityKind == MemorySourceEntityKind.CrmInteraction);
         Assert.Contains(result.Snapshot.Items, item => item.EntityKind == MemorySourceEntityKind.HrWorkforceProfile);
+        var opportunityItem = Assert.Single(
+            result.Snapshot.Items,
+            item => item.EntityKind == MemorySourceEntityKind.CrmOpportunity);
+        Assert.StartsWith(
+            $"/crm-hr/crm?accountId={PartyId:D}&opportunityId=",
+            opportunityItem.Provenance.SourceRoute,
+            StringComparison.Ordinal);
+        var interactionItem = Assert.Single(
+            result.Snapshot.Items,
+            item => item.EntityKind == MemorySourceEntityKind.CrmInteraction);
+        Assert.StartsWith(
+            $"/crm-hr/crm?accountId={PartyId:D}&interactionId=",
+            interactionItem.Provenance.SourceRoute,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            interactionItem.References,
+            reference =>
+                reference.ReferenceKind == "account-party" &&
+                reference.ReferenceId == PartyId.ToString("D"));
 
         var combinedContent = string.Join("\n", result.Snapshot.Items.Select(item => item.Content));
         Assert.Contains("[REDACTED]", combinedContent, StringComparison.Ordinal);

@@ -1,4 +1,5 @@
 @page "/crm-hr/workforce"
+@implements IDisposable
 @using CanDoItAll.Components.BaseLib
 @using CanDoItAll.Modules.Projects
 @inject HrService HrService
@@ -7,6 +8,10 @@
 @inject NotificationService NotificationService
 
 <PageTitle>CRM / HR Workforce</PageTitle>
+
+<AgentChatContextSurfaceProvider Surface="@AgentChatSurface"
+                                 ContextNavigationIdentity="@AgentChatNavigationFence"
+                                 ContextAccessState="@agentChatContextAccessState" />
 
 <PageScaffold MaxWidthClass="max-w-full">
     <Header>
@@ -516,8 +521,26 @@
     private string searchText = string.Empty;
     private string kindFilter = string.Empty;
     private string skillFilter = string.Empty;
+    private AgentChatContextAccessState agentChatContextAccessState = AgentChatContextAccessState.Loading;
+    private long workforceLoadGeneration;
+    private bool isDisposed;
+
+    private AgentChatContextSurface AgentChatSurface => selectedWorkspace is { } workspace &&
+                                                         (!PartyIdQuery.HasValue || PartyIdQuery.Value == workspace.PartyId)
+        ? CrmHrAgentChatSurfaceBuilder.BuildWorkforceSurface(
+            workspace.PartyId,
+            workspace.DisplayName,
+            workspace.LifecycleStatus,
+            workspace.CapacitySummary.AvailabilityState)
+        : CrmHrAgentChatSurfaceBuilder.BuildWorkforceSurface();
+
+    private AgentChatNavigationIdentity AgentChatNavigationFence
+        => AgentChatNavigationIdentity.CreateForLocation(
+            Navigation.BaseUri,
+            Navigation.Uri,
+            [new("partyId", PartyIdQuery?.ToString("D"))]);
+
     private string availabilityFilter = string.Empty;
-    private string? handledPartyKey;
 
     private IReadOnlyList<WorkforceKind> AvailableWorkforceKinds
         => selectedWorkspace is null
@@ -536,53 +559,125 @@
 
     protected override async Task OnParametersSetAsync()
     {
-        await LoadItemsAsync();
-
-        var targetPartyId = PartyIdQuery;
-        if (!targetPartyId.HasValue && workforceItems.Count > 0)
-        {
-            targetPartyId = workforceItems[0].PartyId;
-        }
-
-        var targetKey = targetPartyId?.ToString("N") ?? "none";
-        if (handledPartyKey == targetKey && selectedWorkspace is not null)
+        var requestedPartyId = PartyIdQuery;
+        var request = BeginWorkforceLoad(
+            requestedPartyId,
+            WorkforceLoadBinding.RouteBound,
+            expectedSelectedPartyId: null);
+        var outcome = await LoadAndCommitWorkforceAsync(request);
+        if (outcome == WorkforceLoadOutcome.Stale)
         {
             return;
         }
 
-        if (targetPartyId.HasValue)
+        agentChatContextAccessState = outcome == WorkforceLoadOutcome.Ready
+            ? AgentChatContextAccessState.Ready
+            : AgentChatContextAccessState.Failed;
+    }
+
+    private WorkforceLoadRequest BeginWorkforceLoad(
+        Guid? requestedPartyId,
+        WorkforceLoadBinding binding,
+        Guid? expectedSelectedPartyId)
+    {
+        agentChatContextAccessState = AgentChatContextAccessState.Loading;
+        return new WorkforceLoadRequest(
+            Interlocked.Increment(ref workforceLoadGeneration),
+            requestedPartyId,
+            PartyIdQuery,
+            expectedSelectedPartyId,
+            binding);
+    }
+
+    private async Task<WorkforceLoadOutcome> LoadAndCommitWorkforceAsync(
+        WorkforceLoadRequest request)
+    {
+        try
         {
-            var workspace = await HrService.GetWorkforceWorkspaceAsync(targetPartyId.Value);
-            if (workspace is null && workforceItems.Count > 0)
+            var snapshot = await LoadWorkforceSnapshotAsync(request.RequestedPartyId);
+            if (!IsCurrentWorkforceLoad(request))
             {
-                workspace = await HrService.GetWorkforceWorkspaceAsync(workforceItems[0].PartyId);
-                targetKey = workforceItems[0].PartyId.ToString("N");
+                return WorkforceLoadOutcome.Stale;
             }
 
-            if (workspace is not null)
-            {
-                ApplyLoadedWorkspace(workspace, clearMessage: true);
-                activityTimeline = await PartyDirectoryService.ListPartyActivityTimelineAsync(workspace.PartyId);
-                handledPartyKey = targetKey;
-                return;
-            }
+            CommitWorkforceSnapshot(snapshot);
+            return snapshot.RequestedPartyFound
+                ? WorkforceLoadOutcome.Ready
+                : WorkforceLoadOutcome.Missing;
+        }
+        catch when (!IsCurrentWorkforceLoad(request))
+        {
+            return WorkforceLoadOutcome.Stale;
+        }
+        catch
+        {
+            agentChatContextAccessState = AgentChatContextAccessState.Failed;
+            throw;
+        }
+    }
+
+    private async Task<WorkforceLoadSnapshot> LoadWorkforceSnapshotAsync(Guid? requestedPartyId)
+    {
+        var workforceItemsTask = HrService.ListWorkforceDirectoryAsync();
+        var skillCatalogTask = HrService.ListSkillCatalogAsync();
+        await Task.WhenAll(workforceItemsTask, skillCatalogTask);
+        var loadedWorkforceItems = await workforceItemsTask;
+        var loadedSkillCatalog = await skillCatalogTask;
+
+        var targetPartyId = requestedPartyId;
+        if (!targetPartyId.HasValue && loadedWorkforceItems.Count > 0)
+        {
+            targetPartyId = loadedWorkforceItems[0].PartyId;
         }
 
-        selectedWorkspace = null;
-        activityTimeline = [];
-        profileEditor = new();
-        skillEditor = CreatePartySkillEditor(Guid.Empty);
-        capacityBlockEditor = CreateCapacityBlockEditor(Guid.Empty);
-        handledPartyKey = "none";
+        if (!targetPartyId.HasValue)
+        {
+            return WorkforceLoadSnapshot.Empty(
+                loadedWorkforceItems,
+                loadedSkillCatalog,
+                requestedPartyFound: true);
+        }
+
+        var workspace = await HrService.GetWorkforceWorkspaceAsync(targetPartyId.Value);
+        if (workspace is null)
+        {
+            return WorkforceLoadSnapshot.Empty(
+                loadedWorkforceItems,
+                loadedSkillCatalog,
+                requestedPartyFound: !requestedPartyId.HasValue);
+        }
+
+        var loadedActivityTimeline = await PartyDirectoryService.ListPartyActivityTimelineAsync(workspace.PartyId);
+        return new WorkforceLoadSnapshot(
+            loadedWorkforceItems,
+            loadedSkillCatalog,
+            workspace,
+            loadedActivityTimeline,
+            RequestedPartyFound: true);
     }
 
-    private async Task LoadItemsAsync()
+    private void CommitWorkforceSnapshot(WorkforceLoadSnapshot snapshot)
     {
-        workforceItems = await HrService.ListWorkforceDirectoryAsync();
-        skillCatalog = await HrService.ListSkillCatalogAsync();
+        workforceItems = snapshot.WorkforceItems;
+        skillCatalog = snapshot.SkillCatalog;
+        if (snapshot.Workspace is null)
+        {
+            ClearWorkforceSelection();
+            return;
+        }
+
+        ApplyLoadedWorkspace(snapshot.Workspace);
+        activityTimeline = snapshot.ActivityTimeline;
     }
 
-    private void ApplyLoadedWorkspace(WorkforceWorkspaceModel workspace, bool clearMessage)
+    private bool IsCurrentWorkforceLoad(WorkforceLoadRequest request)
+        => !isDisposed &&
+           request.Generation == Volatile.Read(ref workforceLoadGeneration) &&
+           PartyIdQuery == request.RoutePartyId &&
+           (request.Binding == WorkforceLoadBinding.RouteBound ||
+            selectedWorkspace?.PartyId == request.ExpectedSelectedPartyId);
+
+    private void ApplyLoadedWorkspace(WorkforceWorkspaceModel workspace)
     {
         selectedWorkspace = workspace;
         skillCatalog = workspace.SkillCatalog;
@@ -615,24 +710,59 @@
 
     }
 
-    private async Task ReloadSelectedPartyAsync(bool clearMessage)
+    private async Task<bool> ReloadAfterActionAsync(WorkforceActionStamp action)
     {
-        if (selectedWorkspace is null)
+        if (!IsCurrentWorkforceAction(action))
         {
-            return;
+            return false;
         }
 
-        await LoadItemsAsync();
-        var workspace = await HrService.GetWorkforceWorkspaceAsync(selectedWorkspace.PartyId);
-        if (workspace is not null)
+        var request = BeginWorkforceLoad(
+            action.SelectedPartyId ?? action.RoutePartyId,
+            WorkforceLoadBinding.ActionRefresh,
+            action.SelectedPartyId);
+        var outcome = await LoadAndCommitWorkforceAsync(request);
+        agentChatContextAccessState = outcome switch
         {
-            ApplyLoadedWorkspace(workspace, clearMessage);
-            activityTimeline = await PartyDirectoryService.ListPartyActivityTimelineAsync(workspace.PartyId);
-        }
+            WorkforceLoadOutcome.Ready => AgentChatContextAccessState.Ready,
+            WorkforceLoadOutcome.Missing => AgentChatContextAccessState.Failed,
+            _ => agentChatContextAccessState
+        };
+        return outcome == WorkforceLoadOutcome.Ready;
+    }
+
+    private WorkforceActionStamp CaptureWorkforceAction()
+        => new(
+            Volatile.Read(ref workforceLoadGeneration),
+            PartyIdQuery,
+            selectedWorkspace?.PartyId);
+
+    private bool TryCaptureSelectedWorkforceAction(out WorkforceActionStamp action)
+    {
+        action = CaptureWorkforceAction();
+        return action.SelectedPartyId.HasValue &&
+               IsCurrentWorkforceAction(action);
+    }
+
+    private bool IsCurrentWorkforceAction(WorkforceActionStamp action)
+        => !isDisposed &&
+           action.Generation == Volatile.Read(ref workforceLoadGeneration) &&
+           PartyIdQuery == action.RoutePartyId &&
+           selectedWorkspace?.PartyId == action.SelectedPartyId;
+
+    private void ClearWorkforceSelection()
+    {
+        selectedWorkspace = null;
+        activityTimeline = [];
+        profileEditor = new();
+        skillEditor = CreatePartySkillEditor(Guid.Empty);
+        capacityBlockEditor = CreateCapacityBlockEditor(Guid.Empty);
     }
 
     private Task SelectPartyAsync(Guid partyId)
     {
+        Interlocked.Increment(ref workforceLoadGeneration);
+        agentChatContextAccessState = AgentChatContextAccessState.Loading;
         Navigation.NavigateTo($"/crm-hr/workforce?partyId={partyId}");
         return Task.CompletedTask;
     }
@@ -656,23 +786,46 @@
 
     private async Task SaveWorkforceProfileAsync()
     {
-        var result = await HrService.SaveWorkforceProfileAsync(profileEditor);
-        if (result.IsFailure)
+        if (!TryCaptureSelectedWorkforceAction(out var action))
         {
-            NotificationService.Error("Workforce profile save failed", string.Join(" ", result.Errors.Select(error => error.Message)));
             return;
         }
 
-        await ReloadSelectedPartyAsync(clearMessage: false);
+        var result = await HrService.SaveWorkforceProfileAsync(profileEditor);
+        if (result.IsFailure)
+        {
+            if (IsCurrentWorkforceAction(action))
+            {
+                NotificationService.Error("Workforce profile save failed", string.Join(" ", result.Errors.Select(error => error.Message)));
+            }
+
+            return;
+        }
+
+        if (!await ReloadAfterActionAsync(action))
+        {
+            return;
+        }
+
         NotificationService.Success("Workforce profile saved", "Workforce profile saved.");
     }
 
     private async Task SaveSkillDefinitionAsync()
     {
+        var action = CaptureWorkforceAction();
         var result = await HrService.SaveSkillDefinitionAsync(skillDefinitionEditor);
         if (result.IsFailure)
         {
-            NotificationService.Error("Skill definition save failed", string.Join(" ", result.Errors.Select(error => error.Message)));
+            if (IsCurrentWorkforceAction(action))
+            {
+                NotificationService.Error("Skill definition save failed", string.Join(" ", result.Errors.Select(error => error.Message)));
+            }
+
+            return;
+        }
+
+        if (!IsCurrentWorkforceAction(action))
+        {
             return;
         }
 
@@ -681,61 +834,111 @@
         skillDefinitionEditor.Description = string.Empty;
         skillDefinitionEditor.IsActive = true;
 
-        await ReloadSelectedPartyAsync(clearMessage: false);
+        if (!await ReloadAfterActionAsync(action))
+        {
+            return;
+        }
+
         NotificationService.Success("Skill definition saved", "Skill definition saved.");
     }
 
     private async Task SavePartySkillAsync()
     {
-        if (selectedWorkspace is null)
+        if (!TryCaptureSelectedWorkforceAction(out var action) ||
+            action.SelectedPartyId is not Guid partyId)
         {
             return;
         }
 
-        skillEditor.PartyId = selectedWorkspace.PartyId;
+        skillEditor.PartyId = partyId;
         var result = await HrService.SavePartySkillAsync(skillEditor);
         if (result.IsFailure)
         {
-            NotificationService.Error("Skill save failed", string.Join(" ", result.Errors.Select(error => error.Message)));
+            if (IsCurrentWorkforceAction(action))
+            {
+                NotificationService.Error("Skill save failed", string.Join(" ", result.Errors.Select(error => error.Message)));
+            }
+
             return;
         }
 
-        skillEditor = CreatePartySkillEditor(selectedWorkspace.PartyId);
-        await ReloadSelectedPartyAsync(clearMessage: false);
+        if (!IsCurrentWorkforceAction(action))
+        {
+            return;
+        }
+
+        skillEditor = CreatePartySkillEditor(partyId);
+        if (!await ReloadAfterActionAsync(action))
+        {
+            return;
+        }
+
         NotificationService.Success("Skill saved", "Skill saved.");
     }
 
     private async Task DeletePartySkillAsync(Guid partySkillId)
     {
+        if (!TryCaptureSelectedWorkforceAction(out var action))
+        {
+            return;
+        }
+
         await HrService.DeletePartySkillAsync(partySkillId);
-        await ReloadSelectedPartyAsync(clearMessage: false);
+        if (!await ReloadAfterActionAsync(action))
+        {
+            return;
+        }
+
         NotificationService.Success("Skill removed", "Skill removed.");
     }
 
     private async Task SaveCapacityBlockAsync()
     {
-        if (selectedWorkspace is null)
+        if (!TryCaptureSelectedWorkforceAction(out var action) ||
+            action.SelectedPartyId is not Guid partyId)
         {
             return;
         }
 
-        capacityBlockEditor.PartyId = selectedWorkspace.PartyId;
+        capacityBlockEditor.PartyId = partyId;
         var result = await HrService.SaveCapacityBlockAsync(capacityBlockEditor);
         if (result.IsFailure)
         {
-            NotificationService.Error("Capacity block save failed", string.Join(" ", result.Errors.Select(error => error.Message)));
+            if (IsCurrentWorkforceAction(action))
+            {
+                NotificationService.Error("Capacity block save failed", string.Join(" ", result.Errors.Select(error => error.Message)));
+            }
+
             return;
         }
 
-        capacityBlockEditor = CreateCapacityBlockEditor(selectedWorkspace.PartyId);
-        await ReloadSelectedPartyAsync(clearMessage: false);
+        if (!IsCurrentWorkforceAction(action))
+        {
+            return;
+        }
+
+        capacityBlockEditor = CreateCapacityBlockEditor(partyId);
+        if (!await ReloadAfterActionAsync(action))
+        {
+            return;
+        }
+
         NotificationService.Success("Capacity block saved", "Capacity block saved.");
     }
 
     private async Task DeleteCapacityBlockAsync(Guid capacityBlockId)
     {
+        if (!TryCaptureSelectedWorkforceAction(out var action))
+        {
+            return;
+        }
+
         await HrService.DeleteCapacityBlockAsync(capacityBlockId);
-        await ReloadSelectedPartyAsync(clearMessage: false);
+        if (!await ReloadAfterActionAsync(action))
+        {
+            return;
+        }
+
         NotificationService.Success("Capacity block removed", "Capacity block removed.");
     }
 
@@ -747,6 +950,7 @@
             return;
         }
 
+        var action = CaptureWorkforceAction();
         var saveResult = await PartyDirectoryService.SavePartyAsync(new PartyEditorModel
         {
             PartyType = PartyType.OrganizationUnit,
@@ -767,7 +971,16 @@
         });
         if (saveResult.IsFailure)
         {
-            NotificationService.Error("Delivery unit create failed", string.Join(" ", saveResult.Errors.Select(error => error.Message)));
+            if (IsCurrentWorkforceAction(action))
+            {
+                NotificationService.Error("Delivery unit create failed", string.Join(" ", saveResult.Errors.Select(error => error.Message)));
+            }
+
+            return;
+        }
+
+        if (!IsCurrentWorkforceAction(action))
+        {
             return;
         }
 
@@ -775,14 +988,9 @@
         deliveryUnitEditor.ExternalCode = string.Empty;
         deliveryUnitEditor.Summary = string.Empty;
 
-        await LoadItemsAsync();
-        var workspace = await HrService.GetWorkforceWorkspaceAsync(saveResult.Value);
-        if (workspace is not null)
-        {
-            ApplyLoadedWorkspace(workspace, clearMessage: false);
-            handledPartyKey = workspace.PartyId.ToString("N");
-        }
-
+        Interlocked.Increment(ref workforceLoadGeneration);
+        agentChatContextAccessState = AgentChatContextAccessState.Loading;
+        Navigation.NavigateTo($"/crm-hr/workforce?partyId={saveResult.Value:D}");
         NotificationService.Success("Delivery unit created", "Delivery unit created.");
     }
 
@@ -1006,10 +1214,65 @@
         };
     }
 
+    private enum WorkforceLoadBinding
+    {
+        RouteBound,
+        ActionRefresh
+    }
+
+    private enum WorkforceLoadOutcome
+    {
+        Ready,
+        Missing,
+        Stale
+    }
+
+    private readonly record struct WorkforceLoadRequest(
+        long Generation,
+        Guid? RequestedPartyId,
+        Guid? RoutePartyId,
+        Guid? ExpectedSelectedPartyId,
+        WorkforceLoadBinding Binding);
+
+    private readonly record struct WorkforceActionStamp(
+        long Generation,
+        Guid? RoutePartyId,
+        Guid? SelectedPartyId);
+
+    private sealed record WorkforceLoadSnapshot(
+        IReadOnlyList<WorkforceListItemModel> WorkforceItems,
+        IReadOnlyList<SkillCatalogItemModel> SkillCatalog,
+        WorkforceWorkspaceModel? Workspace,
+        IReadOnlyList<CrmAccountActivityTimelineItemModel> ActivityTimeline,
+        bool RequestedPartyFound)
+    {
+        public static WorkforceLoadSnapshot Empty(
+            IReadOnlyList<WorkforceListItemModel> workforceItems,
+            IReadOnlyList<SkillCatalogItemModel> skillCatalog,
+            bool requestedPartyFound)
+            => new(
+                workforceItems,
+                skillCatalog,
+                Workspace: null,
+                ActivityTimeline: [],
+                RequestedPartyFound: requestedPartyFound);
+    }
+
     private sealed class DeliveryUnitQuickCreateModel
     {
         public string Name { get; set; } = string.Empty;
         public string ExternalCode { get; set; } = string.Empty;
         public string Summary { get; set; } = string.Empty;
+    }
+
+    public void Dispose()
+    {
+        if (isDisposed)
+        {
+            return;
+        }
+
+        isDisposed = true;
+        Interlocked.Increment(ref workforceLoadGeneration);
     }
 }

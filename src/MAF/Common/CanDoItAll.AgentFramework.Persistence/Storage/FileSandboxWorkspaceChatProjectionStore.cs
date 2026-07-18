@@ -9,6 +9,22 @@ internal sealed class FileSandboxWorkspaceChatProjectionStore(
 {
     public bool HasPersistedChatIndex() => File.Exists(layout.ExecutionChatIndexPath);
 
+    public async Task<ChatWorkspaceProjectionSnapshot> LoadChatWorkspaceProjectionAsync(
+        Guid agentId,
+        CancellationToken cancellationToken)
+    {
+        var chatIndex = await LoadOrBuildChatIndexAsync(cancellationToken);
+        return new ChatWorkspaceProjectionSnapshot(
+            chatIndex.SessionSummaries
+                .Where(item => item.AgentId == agentId)
+                .OrderByDescending(item => item.UpdatedAtUtc)
+                .ToList(),
+            chatIndex.RunSummaries
+                .Where(item => item.AgentId == agentId)
+                .OrderByDescending(item => item.UpdatedAtUtc)
+                .ToList());
+    }
+
     public async Task<IReadOnlyList<ChatSessionSummaryRecord>> ListChatSessionSummariesAsync(
         Guid? agentId,
         CancellationToken cancellationToken)
@@ -287,4 +303,5 @@ internal sealed class FileSandboxWorkspaceChatProjectionStore(
             ? indexedRun
             : null;
     }
+
 }

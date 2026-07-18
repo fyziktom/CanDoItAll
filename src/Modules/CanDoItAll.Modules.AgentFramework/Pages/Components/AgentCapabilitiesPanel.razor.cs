@@ -14,6 +14,12 @@ public partial class AgentCapabilitiesPanel
     [Parameter]
     public Guid? PreferredAgentId { get; set; }
 
+    [Parameter]
+    public EventCallback<AgentDefinition?> SelectedAgentChanged { get; set; }
+
+    [Parameter]
+    public EventCallback<AgentChatContextAccessState> ContextAccessStateChanged { get; set; }
+
     [Inject]
     public IAgentFrameworkWorkspaceService WorkspaceService { get; set; } = default!;
 
@@ -45,6 +51,10 @@ public partial class AgentCapabilitiesPanel
     private CapabilityAccessPreviewResult? accessPreviewResult;
     private bool isBusy;
     private bool isAccessPreviewBusy;
+    private long selectionGeneration;
+    private AgentChatContextAccessState? publishedAccessState;
+    private Guid? appliedPreferredAgentId;
+    private bool preferredAgentApplied;
 
     private IReadOnlyList<TreeViewNode> AgentTreeNodes
     {
@@ -105,24 +115,74 @@ public partial class AgentCapabilitiesPanel
 
     protected override async Task OnParametersSetAsync()
     {
-        if (PreferredAgentId.HasValue &&
-            PreferredAgentId != selectedAgentId &&
-            agents.Any(item => item.Id == PreferredAgentId.Value))
+        if (preferredAgentApplied && appliedPreferredAgentId == PreferredAgentId)
         {
-            await SelectAgentAsync(PreferredAgentId.Value);
+            return;
+        }
+
+        preferredAgentApplied = true;
+        appliedPreferredAgentId = PreferredAgentId;
+        if (PreferredAgentId.HasValue &&
+            agents.All(item => item.Id != PreferredAgentId.Value))
+        {
+            Interlocked.Increment(ref selectionGeneration);
+            selectedAgentId = null;
+            selectedAgent = null;
+            selectedAgentEditor = null;
+            await SelectedAgentChanged.InvokeAsync(null);
+            await PublishAccessStateAsync(AgentChatContextAccessState.Failed);
+            return;
+        }
+
+        var agentId = PreferredAgentId ??
+                      (selectedAgentId.HasValue && agents.Any(item => item.Id == selectedAgentId.Value)
+                          ? selectedAgentId.Value
+                          : agents.FirstOrDefault()?.Id);
+        if (agentId.HasValue)
+        {
+            await SelectAgentAsync(agentId.Value);
         }
     }
 
     private async Task LoadAsync()
     {
-        agents = await WorkspaceService.ListAgentsAsync(includeTemplates: false);
-        capabilities = await WorkspaceService.ListCapabilitiesAsync();
+        await PublishAccessStateAsync(AgentChatContextAccessState.Loading);
+        try
+        {
+            agents = await WorkspaceService.ListAgentsAsync(includeTemplates: false);
+            capabilities = await WorkspaceService.ListCapabilitiesAsync();
+            preferredAgentApplied = true;
+            appliedPreferredAgentId = PreferredAgentId;
+        }
+        catch
+        {
+            await PublishAccessStateAsync(AgentChatContextAccessState.Failed);
+            throw;
+        }
+
         expandedAgentTreeNodeIds.Add(AgentRootTreeNodeId);
         if (agents.Count == 0)
         {
             selectedAgent = null;
             selectedAgentEditor = null;
             selectedAgentId = null;
+            await SelectedAgentChanged.InvokeAsync(null);
+            await PublishAccessStateAsync(
+                PreferredAgentId.HasValue
+                    ? AgentChatContextAccessState.Failed
+                    : AgentChatContextAccessState.Ready);
+            return;
+        }
+
+        if (PreferredAgentId.HasValue &&
+            agents.All(item => item.Id != PreferredAgentId.Value))
+        {
+            Interlocked.Increment(ref selectionGeneration);
+            selectedAgent = null;
+            selectedAgentEditor = null;
+            selectedAgentId = null;
+            await SelectedAgentChanged.InvokeAsync(null);
+            await PublishAccessStateAsync(AgentChatContextAccessState.Failed);
             return;
         }
 
@@ -160,9 +220,48 @@ public partial class AgentCapabilitiesPanel
 
     private async Task SelectAgentAsync(Guid agentId)
     {
+        var generation = Interlocked.Increment(ref selectionGeneration);
+        await PublishAccessStateAsync(AgentChatContextAccessState.Loading);
+        var agent = agents.FirstOrDefault(item => item.Id == agentId);
+        AgentEditorModel editor;
+        try
+        {
+            editor = await WorkspaceService.GetAgentEditorAsync(agentId);
+        }
+        catch
+        {
+            if (generation == Volatile.Read(ref selectionGeneration))
+            {
+                await PublishAccessStateAsync(AgentChatContextAccessState.Failed);
+            }
+
+            throw;
+        }
+
+        if (generation != Volatile.Read(ref selectionGeneration))
+        {
+            return;
+        }
+
         selectedAgentId = agentId;
-        selectedAgent = agents.FirstOrDefault(item => item.Id == agentId);
-        selectedAgentEditor = await WorkspaceService.GetAgentEditorAsync(agentId);
+        selectedAgent = agent;
+        selectedAgentEditor = editor;
+        await SelectedAgentChanged.InvokeAsync(agent);
+        await PublishAccessStateAsync(
+            agent is null
+                ? AgentChatContextAccessState.Failed
+                : AgentChatContextAccessState.Ready);
+    }
+
+    private async Task PublishAccessStateAsync(AgentChatContextAccessState state)
+    {
+        if (publishedAccessState == state)
+        {
+            return;
+        }
+
+        publishedAccessState = state;
+        await ContextAccessStateChanged.InvokeAsync(state);
     }
 
     private async Task ToggleCapabilityAsync(Guid capabilityId)

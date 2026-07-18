@@ -216,6 +216,7 @@ public sealed record ProjectStructureSurface(
 
 public sealed record ProjectCalendarEvent(
     Guid Id,
+    string NodeKey,
     string Title,
     DateTimeOffset StartUtc,
     DateTimeOffset EndUtc,
@@ -435,6 +436,7 @@ ProjectWorkbenchCrossModuleMutationService crossModuleMutationService) : IProjec
             .ThenBy(item => item.Title)
             .Select(item => new ProjectCalendarEvent(
                 item.Id,
+                item.NodeKey,
                 item.Title,
                 item.StartUtc!.Value,
                 item.EndUtc!.Value,

@@ -1,14 +1,14 @@
 @using CanDoItAll.AgentFramework.Core
 @using CanDoItAll.AgentFramework.Models
-@using Microsoft.Extensions.Logging
 @implements IDisposable
 @inject IAgentChatContextRegistry ContextRegistry
 @inject IAgentChatExecutionNotificationHub ExecutionNotificationHub
-@inject IAgentReferenceDataProvider ReferenceDataProvider
-@inject IAgentReferenceDataCacheInvalidator ReferenceDataCacheInvalidator
-@inject ILogger<CrmAgentChatContextProvider> Logger
+@inject NavigationManager Navigation
 
 @code {
+    [Parameter]
+    public int AccountCount { get; set; }
+
     [Parameter]
     public CrmAgentChatAccountContext? Account { get; set; }
 
@@ -16,56 +16,75 @@
     public CrmAgentChatOpportunityContext? Opportunity { get; set; }
 
     [Parameter]
-    public int AccountCount { get; set; }
+    public CrmAgentChatInteractionContext? Interaction { get; set; }
+
+    [Parameter]
+    public AgentChatNavigationIdentity? ContextNavigationIdentity { get; set; }
+
+    [Parameter]
+    public AgentChatContextAccessState? ContextAccessState { get; set; }
 
     [Parameter]
     public EventCallback<AgentChatExecutionCompleted> RefreshRequested { get; set; }
 
-    private readonly CancellationTokenSource disposalCts = new();
-    private IReadOnlyList<Guid> refreshEligibleAgentIds = [];
     private IAgentChatContextScopeLease? scopeLease;
     private IAgentChatContextFragmentLease? workspaceFragmentLease;
     private IAgentChatContextFragmentLease? accountFragmentLease;
     private IAgentChatContextFragmentLease? opportunityFragmentLease;
+    private IAgentChatContextFragmentLease? interactionFragmentLease;
     private IAgentChatExecutionNotificationSubscription? notificationSubscription;
     private CrmAgentChatAccountContext? activeAccount;
     private CrmAgentChatOpportunityContext? activeOpportunity;
+    private CrmAgentChatInteractionContext? activeInteraction;
     private string scopeStateKey = string.Empty;
     private string workspaceFragmentContent = string.Empty;
     private string accountFragmentContent = string.Empty;
     private string opportunityFragmentContent = string.Empty;
-    private long agentAccessGeneration;
+    private string interactionFragmentContent = string.Empty;
+    private AgentChatContextAccessState? publishedAccessState;
     private bool isWorkspaceContextActive;
     private bool isDisposed;
 
-    protected override void OnInitialized()
-    {
-        ReferenceDataCacheInvalidator.Invalidated += HandleReferenceDataInvalidated;
-    }
-
     protected override async Task OnParametersSetAsync()
     {
+        if (ContextAccessState.HasValue && !Enum.IsDefined(ContextAccessState.Value))
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(ContextAccessState),
+                ContextAccessState,
+                "The CRM agent chat context access state is undefined.");
+        }
+
         if (Account is null)
         {
-            ActivateOrUpdateWorkspaceContext(AccountCount);
+            ActivateOrUpdateWorkspaceContext();
             return;
         }
 
-        CrmAgentChatContextBuilder.ValidateSelection(Account, Opportunity);
+        CrmAgentChatContextBuilder.ValidateSelection(Account, Opportunity, Interaction);
 
         if (activeAccount?.AccountId != Account.AccountId)
         {
-            await ActivateContextAsync(Account, Opportunity);
+            await ActivateContextAsync(Account, Opportunity, Interaction);
             return;
         }
 
         var accountChanged = !ReferenceEquals(activeAccount, Account);
         var opportunityChanged = !ReferenceEquals(activeOpportunity, Opportunity);
+        var interactionChanged = !ReferenceEquals(activeInteraction, Interaction);
         activeAccount = Account;
         activeOpportunity = Opportunity;
-        if (accountChanged)
+        activeInteraction = Interaction;
+        if (accountChanged ||
+            opportunityChanged ||
+            interactionChanged ||
+            publishedAccessState != EffectiveAccessState)
         {
             UpdateScope();
+        }
+
+        if (accountChanged)
+        {
             UpdateAccountFragment();
         }
 
@@ -73,21 +92,44 @@
         {
             UpdateOpportunityFragment();
         }
+
+        if (interactionChanged)
+        {
+            UpdateInteractionFragment();
+        }
     }
 
-    private void ActivateOrUpdateWorkspaceContext(int accountCount)
+    protected override void OnAfterRender(bool firstRender)
+        => scopeLease?.SynchronizeNavigation(
+            ContextNavigationIdentity ?? AgentChatNavigationIdentity.CreateForLocation(
+                Navigation.BaseUri,
+                Navigation.Uri));
+
+    private AgentChatContextAccessState EffectiveAccessState
+        => ContextAccessState ?? AgentChatContextAccessState.Ready;
+
+    private void ActivateOrUpdateWorkspaceContext()
     {
-        var fragment = CrmAgentChatContextBuilder.BuildWorkspaceFragment(accountCount);
+        var fragment = CrmAgentChatContextBuilder.BuildWorkspaceFragment(AccountCount);
         if (!isWorkspaceContextActive)
         {
             DisposeContext();
             var scopeId = AgentChatContextScopeId.Create();
             scopeLease = ContextRegistry.ActivateScope(
-                CrmAgentChatContextBuilder.BuildWorkspaceScope(scopeId));
+                CrmAgentChatContextBuilder.BuildWorkspaceScope(scopeId, EffectiveAccessState));
+            publishedAccessState = EffectiveAccessState;
             workspaceFragmentLease = ContextRegistry.RegisterFragment(scopeId, fragment);
             workspaceFragmentContent = fragment.Content;
             isWorkspaceContextActive = true;
             return;
+        }
+
+        if (publishedAccessState != EffectiveAccessState && scopeLease is not null)
+        {
+            scopeLease.Update(CrmAgentChatContextBuilder.BuildWorkspaceScope(
+                scopeLease.ScopeId,
+                EffectiveAccessState));
+            publishedAccessState = EffectiveAccessState;
         }
 
         if (string.Equals(workspaceFragmentContent, fragment.Content, StringComparison.Ordinal))
@@ -99,79 +141,39 @@
         workspaceFragmentContent = fragment.Content;
     }
 
-    private async Task ActivateContextAsync(
+    private Task ActivateContextAsync(
         CrmAgentChatAccountContext account,
-        CrmAgentChatOpportunityContext? opportunity)
+        CrmAgentChatOpportunityContext? opportunity,
+        CrmAgentChatInteractionContext? interaction)
     {
         DisposeContext();
         activeAccount = account;
         activeOpportunity = opportunity;
+        activeInteraction = interaction;
         var scopeId = AgentChatContextScopeId.Create();
         var source = CrmAgentChatContextBuilder.BuildSource(account.AccountId);
         var scope = CrmAgentChatContextBuilder.BuildScope(
             scopeId,
             account,
-            refreshEligibleAgentIds: []);
+            opportunity,
+            accessState: EffectiveAccessState,
+            interaction: interaction);
         scopeLease = ContextRegistry.ActivateScope(scope);
-        scopeStateKey = BuildScopeStateKey(account, []);
+        publishedAccessState = EffectiveAccessState;
+        scopeStateKey = BuildScopeStateKey(
+            account,
+            opportunity,
+            interaction,
+            EffectiveAccessState);
         var accountFragment = CrmAgentChatContextBuilder.BuildAccountFragment(account);
         accountFragmentLease = ContextRegistry.RegisterFragment(scopeId, accountFragment);
         accountFragmentContent = accountFragment.Content;
         RegisterOpportunityFragment(scopeId, opportunity);
+        RegisterInteractionFragment(scopeId, interaction);
         notificationSubscription = ExecutionNotificationHub.Subscribe(
             source,
             HandleExecutionCompletedAsync);
-
-        var loadGeneration = Interlocked.Increment(ref agentAccessGeneration);
-        await LoadAgentAccessAsync(account.AccountId, scopeId, loadGeneration);
-    }
-
-    private async Task LoadAgentAccessAsync(
-        Guid accountId,
-        AgentChatContextScopeId scopeId,
-        long loadGeneration)
-    {
-        try
-        {
-            var referenceData = await ReferenceDataProvider.GetAsync(
-                new AgentReferenceDataRequest(
-                    AgentReferenceDataSections.Agents,
-                    IncludeAgentTemplates: false,
-                    ActiveAgentsOnly: true),
-                disposalCts.Token);
-            if (isDisposed ||
-                activeAccount?.AccountId != accountId ||
-                scopeLease?.ScopeId != scopeId ||
-                loadGeneration != Volatile.Read(ref agentAccessGeneration))
-            {
-                return;
-            }
-
-            refreshEligibleAgentIds = referenceData.Agents
-                .Select(agent => agent.Id)
-                .Distinct()
-                .OrderBy(agentId => agentId)
-                .ToArray();
-            UpdateScope();
-        }
-        catch (OperationCanceledException) when (disposalCts.IsCancellationRequested)
-        {
-        }
-        catch (Exception exception)
-        {
-            if (isDisposed ||
-                activeAccount?.AccountId != accountId ||
-                loadGeneration != Volatile.Read(ref agentAccessGeneration))
-            {
-                return;
-            }
-
-            Logger.LogError(
-                exception,
-                "Unable to resolve CRM agent-chat refresh eligibility. AccountId={AccountId} FailureType={FailureType}.",
-                accountId,
-                exception.GetType().Name);
-        }
+        return Task.CompletedTask;
     }
 
     private void UpdateScope()
@@ -181,7 +183,11 @@
             return;
         }
 
-        var nextScopeStateKey = BuildScopeStateKey(activeAccount, refreshEligibleAgentIds);
+        var nextScopeStateKey = BuildScopeStateKey(
+            activeAccount,
+            activeOpportunity,
+            activeInteraction,
+            EffectiveAccessState);
         if (string.Equals(scopeStateKey, nextScopeStateKey, StringComparison.Ordinal))
         {
             return;
@@ -190,8 +196,11 @@
         scopeLease.Update(CrmAgentChatContextBuilder.BuildScope(
             scopeLease.ScopeId,
             activeAccount,
-            refreshEligibleAgentIds));
+            activeOpportunity,
+            EffectiveAccessState,
+            activeInteraction));
         scopeStateKey = nextScopeStateKey;
+        publishedAccessState = EffectiveAccessState;
     }
 
     private void UpdateAccountFragment()
@@ -245,6 +254,40 @@
         opportunityFragmentContent = fragment.Content;
     }
 
+    private void UpdateInteractionFragment()
+    {
+        if (scopeLease is null)
+        {
+            return;
+        }
+
+        if (activeInteraction is null)
+        {
+            interactionFragmentLease?.Dispose();
+            interactionFragmentLease = null;
+            interactionFragmentContent = string.Empty;
+            return;
+        }
+
+        var fragment = CrmAgentChatContextBuilder.BuildInteractionFragment(activeInteraction);
+        if (interactionFragmentLease is null)
+        {
+            interactionFragmentLease = ContextRegistry.RegisterFragment(
+                scopeLease.ScopeId,
+                fragment);
+            interactionFragmentContent = fragment.Content;
+            return;
+        }
+
+        if (string.Equals(interactionFragmentContent, fragment.Content, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        interactionFragmentLease.Update(fragment);
+        interactionFragmentContent = fragment.Content;
+    }
+
     private void RegisterOpportunityFragment(
         AgentChatContextScopeId scopeId,
         CrmAgentChatOpportunityContext? opportunity)
@@ -257,6 +300,20 @@
         var fragment = CrmAgentChatContextBuilder.BuildOpportunityFragment(opportunity);
         opportunityFragmentLease = ContextRegistry.RegisterFragment(scopeId, fragment);
         opportunityFragmentContent = fragment.Content;
+    }
+
+    private void RegisterInteractionFragment(
+        AgentChatContextScopeId scopeId,
+        CrmAgentChatInteractionContext? interaction)
+    {
+        if (interaction is null)
+        {
+            return;
+        }
+
+        var fragment = CrmAgentChatContextBuilder.BuildInteractionFragment(interaction);
+        interactionFragmentLease = ContextRegistry.RegisterFragment(scopeId, fragment);
+        interactionFragmentContent = fragment.Content;
     }
 
     private Task HandleExecutionCompletedAsync(AgentChatExecutionCompleted notification)
@@ -273,55 +330,50 @@
 
     private static string BuildScopeStateKey(
         CrmAgentChatAccountContext account,
-        IEnumerable<Guid> agentIds)
-        => $"{account.DisplayLabel}\u001F{string.Join("\u001E", agentIds)}";
-
-    private void HandleReferenceDataInvalidated(object? sender, EventArgs eventArgs)
-    {
-        if (isDisposed)
-        {
-            return;
-        }
-
-        var loadGeneration = Interlocked.Increment(ref agentAccessGeneration);
-        _ = InvokeAsync(async () =>
-        {
-            if (isDisposed ||
-                activeAccount is null ||
-                scopeLease is null ||
-                loadGeneration != Volatile.Read(ref agentAccessGeneration))
-            {
-                return;
-            }
-
-            var accountId = activeAccount.AccountId;
-            var scopeId = scopeLease.ScopeId;
-            refreshEligibleAgentIds = [];
-            UpdateScope();
-            await LoadAgentAccessAsync(accountId, scopeId, loadGeneration);
-        });
-    }
+        CrmAgentChatOpportunityContext? opportunity,
+        CrmAgentChatInteractionContext? interaction,
+        AgentChatContextAccessState accessState)
+        => string.Join(
+            "\u001F",
+            account.AccountId,
+            account.DisplayLabel,
+            account.LifecycleStatus,
+            account.RelationshipStage,
+            string.Join(",", account.Roles),
+            opportunity?.OpportunityId,
+            opportunity?.DisplayLabel,
+            opportunity?.Stage,
+            opportunity?.Source,
+            opportunity is null ? null : string.Join(",", opportunity.PartyRoles),
+            interaction?.InteractionId,
+            interaction?.DisplayLabel,
+            interaction?.InteractionType,
+            interaction?.RelatedOpportunityId,
+            accessState);
 
     private void DisposeContext()
     {
-        Interlocked.Increment(ref agentAccessGeneration);
         notificationSubscription?.Dispose();
         notificationSubscription = null;
         workspaceFragmentLease?.Dispose();
         workspaceFragmentLease = null;
         opportunityFragmentLease?.Dispose();
         opportunityFragmentLease = null;
+        interactionFragmentLease?.Dispose();
+        interactionFragmentLease = null;
         accountFragmentLease?.Dispose();
         accountFragmentLease = null;
         scopeLease?.Dispose();
         scopeLease = null;
         activeAccount = null;
         activeOpportunity = null;
-        refreshEligibleAgentIds = [];
+        activeInteraction = null;
         scopeStateKey = string.Empty;
         workspaceFragmentContent = string.Empty;
         accountFragmentContent = string.Empty;
         opportunityFragmentContent = string.Empty;
+        interactionFragmentContent = string.Empty;
+        publishedAccessState = null;
         isWorkspaceContextActive = false;
     }
 
@@ -333,9 +385,6 @@
         }
 
         isDisposed = true;
-        ReferenceDataCacheInvalidator.Invalidated -= HandleReferenceDataInvalidated;
-        disposalCts.Cancel();
         DisposeContext();
-        disposalCts.Dispose();
     }
 }

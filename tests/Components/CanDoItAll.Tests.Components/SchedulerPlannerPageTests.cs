@@ -1159,4 +1159,489 @@ public sealed class SchedulerPlannerPageTests
             return Task.FromResult(options);
         }
     }
+
+    [Fact]
+    public async Task Scheduler_edit_selection_keeps_newer_plan_when_previous_editor_load_finishes_late()
+    {
+        var firstPlanId = Guid.NewGuid();
+        var secondPlanId = Guid.NewGuid();
+        var workflowId = Guid.NewGuid();
+        var workflowVersionId = Guid.NewGuid();
+        var workspace = CreateScheduledPlanWorkspace(firstPlanId, workflowId, workflowVersionId);
+        var firstPlan = workspace.Plans.Single() with { Name = "First schedule" };
+        var secondPlan = firstPlan with
+        {
+            Id = secondPlanId,
+            Name = "Second schedule"
+        };
+        workspace = workspace with { Plans = [firstPlan, secondPlan] };
+        var schedulerService = new RacingSchedulerPlannerService(
+            workspace,
+            CreateProcessEditor());
+
+        await using var harness = await ComponentTestHarness.CreateAsync(services =>
+        {
+            services.RemoveAll<ISchedulerPlannerService>();
+            services.AddSingleton<ISchedulerPlannerService>(schedulerService);
+        });
+        var cut = harness.Context.RenderComponent<SchedulerPlannerPage>();
+        cut.WaitForElement("[data-testid='scheduler-tabs']");
+
+        var firstSelection = cut.InvokeAsync(() => InvokeOpenEditScheduleDialogAsync(cut.Instance, firstPlan));
+        await schedulerService.WaitForEditorRequestAsync(firstPlanId);
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Equal(firstPlanId, ReadSelectedPlanForEdit(cut.Instance)?.Id);
+            Assert.Equal(AgentChatContextAccessState.Loading, ReadSchedulerAgentChatAccessState(cut.Instance));
+        });
+
+        var secondSelection = cut.InvokeAsync(() => InvokeOpenEditScheduleDialogAsync(cut.Instance, secondPlan));
+        await schedulerService.WaitForEditorRequestAsync(secondPlanId);
+        schedulerService.CompleteEditorRequest(secondPlanId);
+        await secondSelection;
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Equal(secondPlanId, ReadSelectedPlanForEdit(cut.Instance)?.Id);
+            Assert.Equal(secondPlanId, ReadEditScheduleEditor(cut.Instance)?.Id);
+            Assert.Equal(AgentChatContextAccessState.Ready, ReadSchedulerAgentChatAccessState(cut.Instance));
+        });
+
+        schedulerService.CompleteEditorRequest(firstPlanId);
+        await firstSelection;
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Equal(secondPlanId, ReadSelectedPlanForEdit(cut.Instance)?.Id);
+            Assert.Equal(secondPlanId, ReadEditScheduleEditor(cut.Instance)?.Id);
+            Assert.Equal(AgentChatContextAccessState.Ready, ReadSchedulerAgentChatAccessState(cut.Instance));
+        });
+    }
+
+    [Fact]
+    public async Task Scheduler_target_selection_keeps_newer_schema_when_previous_schema_load_finishes_late()
+    {
+        var firstWorkflowId = Guid.NewGuid();
+        var firstVersionId = Guid.NewGuid();
+        var secondWorkflowId = Guid.NewGuid();
+        var secondVersionId = Guid.NewGuid();
+        var firstTarget = CreateWorkflowTarget(firstWorkflowId, firstVersionId, "First workflow");
+        var secondTarget = CreateWorkflowTarget(secondWorkflowId, secondVersionId, "Second workflow");
+        var workspace = CreateTargetWorkspace(firstTarget, secondTarget);
+        var schedulerService = new RacingSchedulerPlannerService(workspace, CreateProcessEditor());
+        var schemaService = new RacingSchedulerWorkflowInputSchemaService();
+        var optionService = new ValueEchoingWorkflowInputOptionService();
+
+        await using var harness = await ComponentTestHarness.CreateAsync(services =>
+        {
+            services.RemoveAll<ISchedulerPlannerService>();
+            services.RemoveAll<ISchedulerWorkflowInputSchemaService>();
+            services.RemoveAll<ISchedulerWorkflowInputOptionService>();
+            services.AddSingleton<ISchedulerPlannerService>(schedulerService);
+            services.AddSingleton<ISchedulerWorkflowInputSchemaService>(schemaService);
+            services.AddSingleton<ISchedulerWorkflowInputOptionService>(optionService);
+        });
+        var cut = harness.Context.RenderComponent<SchedulerPlannerPage>();
+        cut.WaitForElement("[data-testid='scheduler-tabs']");
+
+        var firstSelection = cut.InvokeAsync(() => InvokeSelectTargetAsync(cut.Instance, firstTarget));
+        await schemaService.WaitForRequestAsync(firstWorkflowId);
+        var secondSelection = cut.InvokeAsync(() => InvokeSelectTargetAsync(cut.Instance, secondTarget));
+        await schemaService.WaitForRequestAsync(secondWorkflowId);
+
+        schemaService.Complete(secondWorkflowId, CreateSingleInputSchema(secondWorkflowId, secondVersionId, "second"));
+        await secondSelection;
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Equal(secondWorkflowId, ReadSchedulerEditor(cut.Instance).TargetId);
+            Assert.Equal(secondWorkflowId, ReadWorkflowInputSchema(cut.Instance)?.WorkflowId.Value);
+            Assert.Contains(
+                ReadWorkflowInputOptions(cut.Instance).SelectMany(pair => pair.Value),
+                option => option.Label == "option-second");
+            Assert.Equal(AgentChatContextAccessState.Ready, ReadSchedulerAgentChatAccessState(cut.Instance));
+        });
+
+        schemaService.Complete(firstWorkflowId, CreateSingleInputSchema(firstWorkflowId, firstVersionId, "first"));
+        await firstSelection;
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Equal(secondWorkflowId, ReadSchedulerEditor(cut.Instance).TargetId);
+            Assert.Equal(secondWorkflowId, ReadWorkflowInputSchema(cut.Instance)?.WorkflowId.Value);
+            Assert.DoesNotContain(
+                ReadWorkflowInputOptions(cut.Instance).SelectMany(pair => pair.Value),
+                option => option.Label == "option-first");
+            Assert.Equal(AgentChatContextAccessState.Ready, ReadSchedulerAgentChatAccessState(cut.Instance));
+        });
+    }
+
+    [Fact]
+    public async Task Scheduler_workflow_options_keep_newer_values_when_previous_options_finish_late()
+    {
+        var workflowId = Guid.NewGuid();
+        var versionId = Guid.NewGuid();
+        var target = CreateWorkflowTarget(workflowId, versionId, "Options workflow");
+        var workspace = CreateTargetWorkspace(target);
+        var schema = CreateSingleInputSchema(workflowId, versionId, "initial");
+        var schedulerService = new RacingSchedulerPlannerService(
+            workspace,
+            new SchedulerPlanEditorModel
+            {
+                TargetKind = SchedulerPlanTargetKind.Workflow,
+                TargetId = workflowId,
+                TargetVersionId = versionId,
+                CronExpression = "0 0 9 ? * *",
+                TimeZoneId = "UTC",
+                InputJson = "{}",
+                IsEnabled = true
+            });
+        var optionService = new RacingWorkflowInputOptionService();
+
+        await using var harness = await ComponentTestHarness.CreateAsync(services =>
+        {
+            services.RemoveAll<ISchedulerPlannerService>();
+            services.RemoveAll<ISchedulerWorkflowInputSchemaService>();
+            services.RemoveAll<ISchedulerWorkflowInputOptionService>();
+            services.AddSingleton<ISchedulerPlannerService>(schedulerService);
+            services.AddSingleton<ISchedulerWorkflowInputSchemaService>(new StubSchedulerWorkflowInputSchemaService(schema));
+            services.AddSingleton<ISchedulerWorkflowInputOptionService>(optionService);
+        });
+        var cut = harness.Context.RenderComponent<SchedulerPlannerPage>();
+        cut.WaitForElement("[data-testid='scheduler-tabs']");
+        cut.WaitForAssertion(() => Assert.Equal(
+            AgentChatContextAccessState.Ready,
+            ReadSchedulerAgentChatAccessState(cut.Instance)));
+        var parameter = schema.Parameters.Single();
+
+        var firstLoad = cut.InvokeAsync(() => InvokeWorkflowInputValueChangedAsync(cut.Instance, parameter, "first"));
+        await optionService.WaitForRequestAsync("first");
+        var secondLoad = cut.InvokeAsync(() => InvokeWorkflowInputValueChangedAsync(cut.Instance, parameter, "second"));
+        await optionService.WaitForRequestAsync("second");
+
+        optionService.Complete("second");
+        await secondLoad;
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains(
+                ReadWorkflowInputOptions(cut.Instance).SelectMany(pair => pair.Value),
+                option => option.Label == "option-second");
+            Assert.Equal(AgentChatContextAccessState.Ready, ReadSchedulerAgentChatAccessState(cut.Instance));
+        });
+
+        optionService.Complete("first");
+        await firstLoad;
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains(
+                ReadWorkflowInputOptions(cut.Instance).SelectMany(pair => pair.Value),
+                option => option.Label == "option-second");
+            Assert.DoesNotContain(
+                ReadWorkflowInputOptions(cut.Instance).SelectMany(pair => pair.Value),
+                option => option.Label == "option-first");
+            Assert.Equal(AgentChatContextAccessState.Ready, ReadSchedulerAgentChatAccessState(cut.Instance));
+        });
+    }
+
+    private static SchedulerPlanEditorModel CreateProcessEditor()
+        => new()
+        {
+            TargetKind = SchedulerPlanTargetKind.Process,
+            TargetId = Guid.NewGuid(),
+            CronExpression = "0 0 9 ? * *",
+            TimeZoneId = "UTC",
+            InputJson = "{}",
+            IsEnabled = true
+        };
+
+    private static SchedulerTargetOption CreateWorkflowTarget(Guid workflowId, Guid versionId, string name)
+        => new(
+            SchedulerPlanTargetKind.Workflow,
+            workflowId,
+            versionId,
+            name,
+            $"{name} description",
+            "Active");
+
+    private static SchedulerPlannerWorkspace CreateTargetWorkspace(params SchedulerTargetOption[] targets)
+        => new(
+            [],
+            [],
+            targets,
+            new CanvasCalendarSurface
+            {
+                SurfaceId = "scheduler-planner-calendar",
+                InitialView = "week",
+                SelectedDate = "2026-05-12",
+                Timezone = "UTC",
+                Locale = "en-US"
+            });
+
+    private static SchedulerWorkflowInputSchema CreateSingleInputSchema(
+        Guid workflowId,
+        Guid versionId,
+        string defaultValue)
+        => new(
+            new WorkflowId(workflowId),
+            new WorkflowVersionId(versionId),
+            "Workflow",
+            [
+                new WorkflowInputParameterDescriptor(
+                    "choice",
+                    "Choice",
+                    WorkflowInputParameterKind.Text,
+                    false,
+                    "Selection value.",
+                    "$.choice",
+                    defaultValue,
+                    WorkflowInputParameterOptionSource.None,
+                    null,
+                    null,
+                    defaultValue)
+            ],
+            UsesRawJsonFallback: false);
+
+    private static Task InvokeOpenEditScheduleDialogAsync(
+        SchedulerPlannerPage page,
+        SchedulerPlanSummary plan)
+        => InvokePrivateTask(page, "OpenEditScheduleDialogAsync", plan);
+
+    private static Task InvokeSelectTargetAsync(
+        SchedulerPlannerPage page,
+        SchedulerTargetOption target)
+        => InvokePrivateTask(page, "SelectTargetAsync", target);
+
+    private static Task InvokeWorkflowInputValueChangedAsync(
+        SchedulerPlannerPage page,
+        WorkflowInputParameterDescriptor parameter,
+        string value)
+        => InvokePrivateTask(page, "HandleWorkflowInputValueChangedAsync", parameter, value);
+
+    private static Task InvokePrivateTask(SchedulerPlannerPage page, string methodName, params object[] arguments)
+    {
+        var method = typeof(SchedulerPlannerPage).GetMethod(
+            methodName,
+            System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+        return Assert.IsAssignableFrom<Task>(method?.Invoke(page, arguments));
+    }
+
+    private static SchedulerPlanSummary? ReadSelectedPlanForEdit(SchedulerPlannerPage page)
+        => ReadPrivateField<SchedulerPlanSummary>(page, "selectedPlanForEdit");
+
+    private static SchedulerPlanEditorModel? ReadEditScheduleEditor(SchedulerPlannerPage page)
+        => ReadPrivateField<SchedulerPlanEditorModel>(page, "editScheduleEditor");
+
+    private static SchedulerPlanEditorModel ReadSchedulerEditor(SchedulerPlannerPage page)
+        => Assert.IsType<SchedulerPlanEditorModel>(ReadPrivateField<SchedulerPlanEditorModel>(page, "editor"));
+
+    private static SchedulerWorkflowInputSchema? ReadWorkflowInputSchema(SchedulerPlannerPage page)
+        => ReadPrivateField<SchedulerWorkflowInputSchema>(page, "workflowInputSchema");
+
+    private static IReadOnlyDictionary<string, IReadOnlyList<WorkflowInputParameterOption>> ReadWorkflowInputOptions(
+        SchedulerPlannerPage page)
+        => Assert.IsAssignableFrom<IReadOnlyDictionary<string, IReadOnlyList<WorkflowInputParameterOption>>>(
+            ReadPrivateField<object>(page, "workflowInputOptionsByKey"));
+
+    private static T? ReadPrivateField<T>(SchedulerPlannerPage page, string fieldName)
+    {
+        var field = typeof(SchedulerPlannerPage).GetField(
+            fieldName,
+            System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+        return (T?)field?.GetValue(page);
+    }
+
+    private static AgentChatContextAccessState ReadSchedulerAgentChatAccessState(SchedulerPlannerPage page)
+    {
+        var property = typeof(SchedulerPlannerPage).GetProperty(
+            "AgentChatAccessState",
+            System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+        return Assert.IsType<AgentChatContextAccessState>(property?.GetValue(page));
+    }
+
+    private sealed class RacingSchedulerPlannerService(
+        SchedulerPlannerWorkspace workspace,
+        SchedulerPlanEditorModel defaultEditor) : ISchedulerPlannerService
+    {
+        private readonly Dictionary<Guid, EditorRequest> editorRequests = workspace.Plans.ToDictionary(
+            plan => plan.Id,
+            plan => new EditorRequest(CreateEditor(plan)));
+
+        public Task<SchedulerPlannerWorkspace> GetWorkspaceAsync(
+            SchedulerHistoryQuery? historyQuery = null,
+            CancellationToken cancellationToken = default)
+            => Task.FromResult(workspace);
+
+        public Task<SchedulerPlanEditorModel> CreateDefaultEditorAsync(CancellationToken cancellationToken = default)
+            => Task.FromResult(defaultEditor);
+
+        public Task<SchedulerPlanEditorModel> GetPlanEditorAsync(
+            Guid planId,
+            CancellationToken cancellationToken = default)
+        {
+            var request = editorRequests[planId];
+            request.Started.TrySetResult();
+            return request.Completion.Task;
+        }
+
+        public Task<SchedulerPlanSummary> SavePlanAsync(
+            SchedulerPlanEditorModel editor,
+            CancellationToken cancellationToken = default)
+            => Task.FromException<SchedulerPlanSummary>(new NotSupportedException());
+
+        public Task SetPlanEnabledAsync(
+            Guid planId,
+            bool isEnabled,
+            CancellationToken cancellationToken = default)
+            => Task.FromException(new NotSupportedException());
+
+        public Task DeletePlanAsync(Guid planId, CancellationToken cancellationToken = default)
+            => Task.FromException(new NotSupportedException());
+
+        public Task WaitForEditorRequestAsync(Guid planId)
+            => editorRequests[planId].Started.Task.WaitAsync(TimeSpan.FromSeconds(5));
+
+        public void CompleteEditorRequest(Guid planId)
+            => editorRequests[planId].Completion.TrySetResult(editorRequests[planId].Editor);
+
+        private static SchedulerPlanEditorModel CreateEditor(SchedulerPlanSummary plan)
+            => new()
+            {
+                Id = plan.Id,
+                Name = plan.Name,
+                Description = plan.Description,
+                TargetKind = plan.TargetKind,
+                TargetId = plan.TargetId,
+                TargetVersionId = plan.TargetVersionId,
+                CronExpression = plan.CronExpression,
+                TimeZoneId = plan.TimeZoneId,
+                MisfirePolicy = plan.MisfirePolicy,
+                IsEnabled = plan.IsEnabled,
+                InputJson = "{}"
+            };
+
+        private sealed record EditorRequest(SchedulerPlanEditorModel Editor)
+        {
+            public TaskCompletionSource Started { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+            public TaskCompletionSource<SchedulerPlanEditorModel> Completion { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        }
+    }
+
+    private sealed class RacingSchedulerWorkflowInputSchemaService : ISchedulerWorkflowInputSchemaService
+    {
+        private readonly Dictionary<Guid, SchemaRequest> requests = [];
+
+        public Task<SchedulerWorkflowInputSchema> ResolveSchemaAsync(
+            WorkflowId workflowId,
+            WorkflowVersionId? versionId = null,
+            CancellationToken cancellationToken = default)
+        {
+            var request = GetRequest(workflowId.Value);
+            request.Started.TrySetResult();
+            return request.Completion.Task;
+        }
+
+        public Task<SchedulerWorkflowInputValidationResult> ValidateInputAsync(
+            WorkflowId workflowId,
+            WorkflowVersionId? versionId,
+            string? inputJson,
+            CancellationToken cancellationToken = default)
+            => Task.FromResult(new SchedulerWorkflowInputValidationResult(true, inputJson ?? "{}", []));
+
+        public Task WaitForRequestAsync(Guid workflowId)
+            => GetRequest(workflowId).Started.Task.WaitAsync(TimeSpan.FromSeconds(5));
+
+        public void Complete(Guid workflowId, SchedulerWorkflowInputSchema schema)
+            => GetRequest(workflowId).Completion.TrySetResult(schema);
+
+        private SchemaRequest GetRequest(Guid workflowId)
+        {
+            if (!requests.TryGetValue(workflowId, out var request))
+            {
+                request = new SchemaRequest();
+                requests.Add(workflowId, request);
+            }
+
+            return request;
+        }
+
+        private sealed class SchemaRequest
+        {
+            public TaskCompletionSource Started { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+            public TaskCompletionSource<SchedulerWorkflowInputSchema> Completion { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        }
+    }
+
+    private sealed class ValueEchoingWorkflowInputOptionService : ISchedulerWorkflowInputOptionService
+    {
+        public Task<IReadOnlyList<WorkflowInputParameterOption>> ListOptionsAsync(
+            WorkflowInputParameterDescriptor parameter,
+            IReadOnlyDictionary<string, string> currentValues,
+            CancellationToken cancellationToken = default)
+        {
+            currentValues.TryGetValue(parameter.Key, out var value);
+            IReadOnlyList<WorkflowInputParameterOption> options =
+            [
+                new(value ?? string.Empty, $"option-{value}", string.Empty)
+            ];
+            return Task.FromResult(options);
+        }
+    }
+
+    private sealed class RacingWorkflowInputOptionService : ISchedulerWorkflowInputOptionService
+    {
+        private readonly Dictionary<string, OptionRequest> requests = new(StringComparer.Ordinal);
+
+        public Task<IReadOnlyList<WorkflowInputParameterOption>> ListOptionsAsync(
+            WorkflowInputParameterDescriptor parameter,
+            IReadOnlyDictionary<string, string> currentValues,
+            CancellationToken cancellationToken = default)
+        {
+            currentValues.TryGetValue(parameter.Key, out var value);
+            value ??= string.Empty;
+            if (value is not ("first" or "second"))
+            {
+                IReadOnlyList<WorkflowInputParameterOption> immediate =
+                [
+                    new(value, $"option-{value}", string.Empty)
+                ];
+                return Task.FromResult(immediate);
+            }
+
+            var request = GetRequest(value);
+            request.Started.TrySetResult();
+            return request.Completion.Task;
+        }
+
+        public Task WaitForRequestAsync(string value)
+            => GetRequest(value).Started.Task.WaitAsync(TimeSpan.FromSeconds(5));
+
+        public void Complete(string value)
+        {
+            IReadOnlyList<WorkflowInputParameterOption> options =
+            [
+                new(value, $"option-{value}", string.Empty)
+            ];
+            GetRequest(value).Completion.TrySetResult(options);
+        }
+
+        private OptionRequest GetRequest(string value)
+        {
+            if (!requests.TryGetValue(value, out var request))
+            {
+                request = new OptionRequest();
+                requests.Add(value, request);
+            }
+
+            return request;
+        }
+
+        private sealed class OptionRequest
+        {
+            public TaskCompletionSource Started { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+            public TaskCompletionSource<IReadOnlyList<WorkflowInputParameterOption>> Completion { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        }
+    }
 }

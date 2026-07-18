@@ -6,6 +6,10 @@
 
 <PageTitle>CRM / HR Directory</PageTitle>
 
+<AgentChatContextSurfaceProvider Surface="@AgentChatSurface"
+                                 ContextNavigationIdentity="@AgentChatNavigationFence"
+                                 ContextAccessState="@agentChatContextAccessState" />
+
 <PageScaffold MaxWidthClass="max-w-full">
     <Header>
         <PageHeader Eyebrow="CRM / HR"
@@ -640,9 +644,26 @@
     private PartyDuplicateCandidateModel? mergeCandidate;
     private bool isMergeDialogOpen;
     private string? handledPartyKey;
+    private bool hasHandledPartyRequest;
+    private long directoryLoadGeneration;
     private string searchText = string.Empty;
     private string typeFilter = string.Empty;
     private string statusFilter = string.Empty;
+    private AgentChatContextAccessState agentChatContextAccessState = AgentChatContextAccessState.Loading;
+
+    private AgentChatContextSurface AgentChatSurface => editor.Id is { } partyId &&
+                                                         (!PartyIdQuery.HasValue || PartyIdQuery.Value == partyId)
+        ? CrmHrAgentChatSurfaceBuilder.BuildDirectorySurface(
+            partyId,
+            editor.DisplayName,
+            editor.LifecycleStatus)
+        : CrmHrAgentChatSurfaceBuilder.BuildDirectorySurface();
+
+    private AgentChatNavigationIdentity AgentChatNavigationFence
+        => AgentChatNavigationIdentity.CreateForLocation(
+            Navigation.BaseUri,
+            Navigation.Uri,
+            [new("partyId", PartyIdQuery?.ToString("D"))]);
 
     private IReadOnlyList<PartyDirectoryListItemModel> FilteredParties => directoryItems
         .Where(MatchesSearch)
@@ -658,57 +679,158 @@
 
     protected override async Task OnParametersSetAsync()
     {
+        var requestedPartyId = PartyIdQuery;
         var currentPartyKey = PartyIdQuery?.ToString("N") ?? "new";
-        if (string.Equals(currentPartyKey, handledPartyKey, StringComparison.Ordinal) && directoryItems.Count > 0)
+        if (hasHandledPartyRequest &&
+            string.Equals(currentPartyKey, handledPartyKey, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        var request = BeginDirectoryLoad(
+            requestedPartyId,
+            DirectoryLoadBinding.RouteBound);
+        var outcome = await LoadAndCommitDirectoryAsync(request);
+        if (outcome == DirectoryLoadOutcome.Stale)
         {
             return;
         }
 
         handledPartyKey = currentPartyKey;
-        await LoadAsync(PartyIdQuery);
+        hasHandledPartyRequest = true;
+        agentChatContextAccessState = outcome == DirectoryLoadOutcome.Ready
+            ? AgentChatContextAccessState.Ready
+            : AgentChatContextAccessState.Failed;
     }
 
     private async Task LoadAsync(Guid? selectedPartyId, bool clearMessage = true)
     {
-        directoryItems = await PartyDirectoryService.ListDirectoryAsync();
-
-        if (selectedPartyId.HasValue)
+        var request = BeginDirectoryLoad(
+            selectedPartyId,
+            DirectoryLoadBinding.Interactive);
+        var outcome = await LoadAndCommitDirectoryAsync(request);
+        if (outcome == DirectoryLoadOutcome.Stale)
         {
-            await LoadEditorAsync(selectedPartyId.Value, clearMessage);
             return;
         }
 
-        editor = PartyEditorViewModel.CreateNew();
-        ResetDirectoryDetailState();
+        handledPartyKey = selectedPartyId?.ToString("N") ?? "new";
+        hasHandledPartyRequest = true;
+        agentChatContextAccessState = outcome == DirectoryLoadOutcome.Ready
+            ? AgentChatContextAccessState.Ready
+            : AgentChatContextAccessState.Failed;
     }
 
-    private async Task SelectPartyAsync(Guid partyId)
+    private Task SelectPartyAsync(Guid partyId)
     {
-        await LoadEditorAsync(partyId);
+        Interlocked.Increment(ref directoryLoadGeneration);
+        agentChatContextAccessState = AgentChatContextAccessState.Loading;
         Navigation.NavigateTo($"/crm-hr/directory?partyId={partyId}", replace: true);
+        return Task.CompletedTask;
     }
 
-    private async Task LoadEditorAsync(Guid partyId, bool clearMessage = true)
+    private DirectoryLoadRequest BeginDirectoryLoad(
+        Guid? requestedPartyId,
+        DirectoryLoadBinding binding)
     {
-        var party = await PartyDirectoryService.GetPartyAsync(partyId);
+        agentChatContextAccessState = AgentChatContextAccessState.Loading;
+        return new DirectoryLoadRequest(
+            requestedPartyId,
+            binding == DirectoryLoadBinding.RouteBound ? PartyIdQuery : null,
+            binding,
+            Interlocked.Increment(ref directoryLoadGeneration));
+    }
+
+    private async Task<DirectoryLoadOutcome> LoadAndCommitDirectoryAsync(DirectoryLoadRequest request)
+    {
+        try
+        {
+            var snapshot = await LoadDirectorySnapshotAsync(request.RequestedPartyId);
+            if (!IsCurrentDirectoryLoad(request))
+            {
+                return DirectoryLoadOutcome.Stale;
+            }
+
+            CommitDirectorySnapshot(snapshot);
+            return snapshot.RequestedPartyFound
+                ? DirectoryLoadOutcome.Ready
+                : DirectoryLoadOutcome.Missing;
+        }
+        catch
+        {
+            if (!IsCurrentDirectoryLoad(request))
+            {
+                return DirectoryLoadOutcome.Stale;
+            }
+
+            agentChatContextAccessState = AgentChatContextAccessState.Failed;
+            throw;
+        }
+    }
+
+    private async Task<DirectoryLoadSnapshot> LoadDirectorySnapshotAsync(Guid? requestedPartyId)
+    {
+        var directoryTask = PartyDirectoryService.ListDirectoryAsync();
+        if (!requestedPartyId.HasValue)
+        {
+            return DirectoryLoadSnapshot.ForNewParty(await directoryTask);
+        }
+
+        var partyId = requestedPartyId.Value;
+        var partyTask = PartyDirectoryService.GetPartyAsync(partyId);
+        await Task.WhenAll(directoryTask, partyTask);
+        var directory = await directoryTask;
+        var party = await partyTask;
         if (party is null)
         {
-            editor = PartyEditorViewModel.CreateNew();
-            ResetDirectoryDetailState();
-        }
-        else
-        {
-            editor = PartyEditorViewModel.FromEditorModel(party);
-            await LoadDirectoryDetailStateAsync(partyId);
+            return DirectoryLoadSnapshot.ForMissingParty(directory);
         }
 
+        var relationshipsTask = ManagementService.ListRelationshipsAsync(partyId);
+        var duplicateCandidatesTask = ManagementService.FindPotentialDuplicatesAsync(partyId);
+        var activityTimelineTask = PartyDirectoryService.ListPartyActivityTimelineAsync(partyId);
+        var projectAssignmentsTask = PartyDirectoryService.ListPartyProjectAssignmentsAsync(partyId);
+        await Task.WhenAll(
+            relationshipsTask,
+            duplicateCandidatesTask,
+            activityTimelineTask,
+            projectAssignmentsTask);
+
+        return new DirectoryLoadSnapshot(
+            directory,
+            PartyEditorViewModel.FromEditorModel(party),
+            (await relationshipsTask).Select(MapRelationship).ToList(),
+            await duplicateCandidatesTask,
+            await activityTimelineTask,
+            await projectAssignmentsTask,
+            RequestedPartyFound: true);
     }
+
+    private void CommitDirectorySnapshot(DirectoryLoadSnapshot snapshot)
+    {
+        directoryItems = snapshot.DirectoryItems;
+        editor = snapshot.Editor;
+        relationships = snapshot.Relationships;
+        duplicateCandidates = snapshot.DuplicateCandidates;
+        activityTimeline = snapshot.ActivityTimeline;
+        projectAssignments = snapshot.ProjectAssignments;
+        mergeCandidate = null;
+        isMergeDialogOpen = false;
+    }
+
+    private bool IsCurrentDirectoryLoad(DirectoryLoadRequest request)
+        => request.Generation == Volatile.Read(ref directoryLoadGeneration) &&
+           (request.Binding == DirectoryLoadBinding.Interactive ||
+            PartyIdQuery == request.RoutePartyId);
 
     private Task CreateNewAsync()
     {
+        Interlocked.Increment(ref directoryLoadGeneration);
         editor = PartyEditorViewModel.CreateNew();
         ResetDirectoryDetailState();
         handledPartyKey = "new";
+        hasHandledPartyRequest = true;
+        agentChatContextAccessState = AgentChatContextAccessState.Ready;
         Navigation.NavigateTo("/crm-hr/directory", replace: true);
         return Task.CompletedTask;
     }
@@ -819,18 +941,6 @@
         handledPartyKey = retainedPartyId.ToString("N");
         await LoadAsync(retainedPartyId, clearMessage: false);
         Navigation.NavigateTo($"/crm-hr/directory?partyId={retainedPartyId}", replace: true);
-    }
-
-    private async Task LoadDirectoryDetailStateAsync(Guid partyId)
-    {
-        relationships = (await ManagementService.ListRelationshipsAsync(partyId))
-            .Select(MapRelationship)
-            .ToList();
-        duplicateCandidates = await ManagementService.FindPotentialDuplicatesAsync(partyId);
-        activityTimeline = await PartyDirectoryService.ListPartyActivityTimelineAsync(partyId);
-        projectAssignments = await PartyDirectoryService.ListPartyProjectAssignmentsAsync(partyId);
-        mergeCandidate = null;
-        isMergeDialogOpen = false;
     }
 
     private void ResetDirectoryDetailState()
@@ -956,6 +1066,55 @@
         }
 
         return value.LocalDateTime.ToString("g");
+    }
+
+    private enum DirectoryLoadBinding
+    {
+        RouteBound,
+        Interactive
+    }
+
+    private enum DirectoryLoadOutcome
+    {
+        Ready,
+        Missing,
+        Stale
+    }
+
+    private readonly record struct DirectoryLoadRequest(
+        Guid? RequestedPartyId,
+        Guid? RoutePartyId,
+        DirectoryLoadBinding Binding,
+        long Generation);
+
+    private sealed record DirectoryLoadSnapshot(
+        IReadOnlyList<PartyDirectoryListItemModel> DirectoryItems,
+        PartyEditorViewModel Editor,
+        List<PartyRelationshipEditorModel> Relationships,
+        IReadOnlyList<PartyDuplicateCandidateModel> DuplicateCandidates,
+        IReadOnlyList<CrmAccountActivityTimelineItemModel> ActivityTimeline,
+        IReadOnlyList<PartyProjectAssignmentItemModel> ProjectAssignments,
+        bool RequestedPartyFound)
+    {
+        public static DirectoryLoadSnapshot ForNewParty(
+            IReadOnlyList<PartyDirectoryListItemModel> directoryItems)
+            => Empty(directoryItems, requestedPartyFound: true);
+
+        public static DirectoryLoadSnapshot ForMissingParty(
+            IReadOnlyList<PartyDirectoryListItemModel> directoryItems)
+            => Empty(directoryItems, requestedPartyFound: false);
+
+        private static DirectoryLoadSnapshot Empty(
+            IReadOnlyList<PartyDirectoryListItemModel> directoryItems,
+            bool requestedPartyFound)
+            => new(
+                directoryItems,
+                PartyEditorViewModel.CreateNew(),
+                [],
+                [],
+                [],
+                [],
+                requestedPartyFound);
     }
 
     private sealed class PartyEditorViewModel

@@ -21,7 +21,9 @@
     <PackageReference Include="CanDoItAll.FileTools.FileBrowser.Core" Version="0.1.0" />
     <PackageReference Include="CanDoItAll.FileTools.FileInteraction.Components" Version="0.2.0" />
     <PackageReference Include="CanDoItAll.FileTools.FileInteraction.Core" Version="0.1.0" />
+    <ProjectReference Include="..\..\MAF\Common\CanDoItAll.AgentFramework.Components\CanDoItAll.AgentFramework.Components.csproj" />
     <ProjectReference Include="..\..\MAF\Common\CanDoItAll.AgentFramework.Core\CanDoItAll.AgentFramework.Core.csproj" />
+    <ProjectReference Include="..\..\MAF\Common\CanDoItAll.AgentFramework.Models\CanDoItAll.AgentFramework.Models.csproj" />
     <ProjectReference Include="..\..\Memory\CanDoItAll.Memory.Abstractions\CanDoItAll.Memory.Abstractions.csproj" />
     <ProjectReference Include="..\..\Memory\CanDoItAll.Memory.Application\CanDoItAll.Memory.Application.csproj" />
     <ProjectReference Include="..\..\Foundation\CanDoItAll.SharedKernel\CanDoItAll.SharedKernel.csproj" />

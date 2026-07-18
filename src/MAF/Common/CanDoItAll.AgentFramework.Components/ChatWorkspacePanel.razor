@@ -17,7 +17,9 @@
                         <StatusBadge Tone="@ResolveSessionTone()" Text="@ResolveSessionBadge()" />
                         @if (!string.IsNullOrWhiteSpace(RunStateText))
                         {
-                            <StatusBadge Tone="@RunStateTone" Text="@RunStateText" />
+                            <StatusBadge Tone="@RunStateTone"
+                                         Text="@RunStateText"
+                                         data-testid="agent-chat-run-state" />
                         }
                         @if (IsAutoApprovalActive())
                         {

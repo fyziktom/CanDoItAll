@@ -6,6 +6,7 @@ using CanDoItAll.FileTools.Integration;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Modules.Resources;
+using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -14,6 +15,60 @@ namespace CanDoItAll.Tests.Components;
 
 public sealed class ResourceFileBrowsePaneTests
 {
+    [Fact]
+    public async Task Late_source_open_cannot_replace_or_publish_current_source_and_is_disposed()
+    {
+        using var context = CreateContext(out _);
+        var gate = new ControlledWorkspaceOpenGate();
+        TestResourceFileBrowsePane.Gate = gate;
+        context.Services.AddSingleton<IResourceFileSourceCatalog>(gate.SourceCatalog);
+        var positions = new List<ResourceBrowseAgentChatPosition?>();
+        var cut = context.RenderComponent<TestResourceFileBrowsePane>(parameters => parameters
+            .Add(
+                component => component.PositionChanged,
+                EventCallback.Factory.Create<ResourceBrowseAgentChatPosition?>(
+                    this,
+                    position => positions.Add(position))));
+
+        try
+        {
+            Task firstOpen = cut
+                .WaitForElement($"[data-testid='resources-source-{gate.FirstSource.Key.Value}'] button")
+                .ClickAsync(new MouseEventArgs());
+            await gate.FirstStarted.Task.WaitAsync(TimeSpan.FromSeconds(10));
+
+            await cut
+                .Find($"[data-testid='resources-source-{gate.SecondSource.Key.Value}'] button")
+                .ClickAsync(new MouseEventArgs());
+            await gate.FirstCanceled.Task.WaitAsync(TimeSpan.FromSeconds(10));
+
+            cut.WaitForAssertion(() =>
+            {
+                ResourceBrowseAgentChatPosition current = Assert.Single(positions.OfType<ResourceBrowseAgentChatPosition>());
+                Assert.Equal(gate.SecondSource.DisplayName, current.DisplayName);
+                Assert.Contains(gate.SecondSource.DisplayName, cut.Markup, StringComparison.Ordinal);
+                Assert.False(gate.SecondWorkspace.IsDisposed);
+            });
+
+            gate.ReleaseFirst();
+            await firstOpen.WaitAsync(TimeSpan.FromSeconds(10));
+
+            cut.WaitForAssertion(() =>
+            {
+                ResourceBrowseAgentChatPosition current = Assert.Single(positions.OfType<ResourceBrowseAgentChatPosition>());
+                Assert.Equal(gate.SecondSource.DisplayName, current.DisplayName);
+                Assert.Contains(gate.SecondSource.DisplayName, cut.Markup, StringComparison.Ordinal);
+                Assert.True(gate.FirstWorkspace.IsDisposed);
+                Assert.False(gate.SecondWorkspace.IsDisposed);
+            });
+        }
+        finally
+        {
+            gate.ReleaseFirst();
+            TestResourceFileBrowsePane.Gate = null!;
+        }
+    }
+
     [Fact]
     public void Catalog_renders_all_source_classes_including_empty_groups()
     {
@@ -352,6 +407,115 @@ public sealed class ResourceFileBrowsePaneTests
             FileToolsKnownFileIntent intent,
             CancellationToken cancellationToken = default)
             => ValueTask.FromResult(activation);
+    }
+
+    public sealed class TestResourceFileBrowsePane : ResourceFileBrowsePane
+    {
+        internal static ControlledWorkspaceOpenGate Gate { get; set; } = null!;
+
+        internal override ValueTask<ResourceFileBrowseWorkspace> OpenWorkspaceAsync(
+            ResourceFileSourceKey sourceKey,
+            CancellationToken cancellationToken)
+            => Gate.OpenAsync(sourceKey, cancellationToken);
+    }
+
+    internal sealed class ControlledWorkspaceOpenGate
+    {
+        private readonly TaskCompletionSource<ResourceFileBrowseWorkspace> firstCompletion = new(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public ControlledWorkspaceOpenGate()
+        {
+            FirstSource = CreateSource("Delayed source");
+            SecondSource = CreateSource("Current source");
+            SourceCatalog = new RaceSourceCatalog([FirstSource, SecondSource]);
+            FirstWorkspace = CreateWorkspace(FirstSource, "first-race-file.md");
+            SecondWorkspace = CreateWorkspace(SecondSource, "second-race-file.md");
+        }
+
+        public ResourceFileSourceDescriptor FirstSource { get; }
+
+        public ResourceFileSourceDescriptor SecondSource { get; }
+
+        public RaceSourceCatalog SourceCatalog { get; }
+
+        public ResourceFileBrowseWorkspace FirstWorkspace { get; }
+
+        public ResourceFileBrowseWorkspace SecondWorkspace { get; }
+
+        public TaskCompletionSource FirstStarted { get; } = new(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public TaskCompletionSource FirstCanceled { get; } = new(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public ValueTask<ResourceFileBrowseWorkspace> OpenAsync(
+            ResourceFileSourceKey sourceKey,
+            CancellationToken cancellationToken)
+        {
+            if (sourceKey == FirstSource.Key)
+            {
+                FirstStarted.TrySetResult();
+                cancellationToken.Register(() => FirstCanceled.TrySetResult());
+                return new ValueTask<ResourceFileBrowseWorkspace>(firstCompletion.Task);
+            }
+
+            if (sourceKey == SecondSource.Key)
+            {
+                return ValueTask.FromResult(SecondWorkspace);
+            }
+
+            return ValueTask.FromException<ResourceFileBrowseWorkspace>(
+                new KeyNotFoundException($"Unknown test source '{sourceKey.Value}'."));
+        }
+
+        public void ReleaseFirst()
+            => firstCompletion.TrySetResult(FirstWorkspace);
+
+        private static ResourceFileSourceDescriptor CreateSource(string displayName)
+        {
+            Guid storageId = Guid.NewGuid();
+            var scope = new FileToolsSemanticScope(
+                FileToolsSemanticScopeKind.ResourceSource,
+                new FileToolsSemanticScopeId($"resource-source:race:{storageId:D}"),
+                displayName);
+            return new ResourceFileSourceDescriptor(
+                ResourceFileSourceKey.ForStorage(storageId),
+                ResourceFileSourceClass.FileSystem,
+                displayName,
+                "Filesystem · Read enabled · Healthy",
+                scope,
+                storageId,
+                StorageProviderKind.FileSystem,
+                false,
+                StorageHealthStatus.Healthy);
+        }
+
+        private static ResourceFileBrowseWorkspace CreateWorkspace(
+            ResourceFileSourceDescriptor source,
+            string fileName)
+        {
+            var provider = new StaticFileBrowserProvider(false, fileName, "text/markdown");
+            var browser = new FileBrowserSession(
+                new FileBrowserSourceSet($"revision-{source.Key.Value}", [provider]));
+            return new ResourceFileBrowseWorkspace(
+                source,
+                browser,
+                provider.ActionAvailability,
+                $"revision-{source.Key.Value}");
+        }
+    }
+
+    internal sealed class RaceSourceCatalog(IReadOnlyList<ResourceFileSourceDescriptor> sources)
+        : IResourceFileSourceCatalog
+    {
+        public Task<ResourceFileSourceCatalogSnapshot> LoadAsync(CancellationToken cancellationToken = default)
+            => Task.FromResult(new ResourceFileSourceCatalogSnapshot(sources, [], "race-catalog"));
+
+        public Task<ResourceFileSourceDescriptor> ResolveAsync(
+            ResourceFileSourceKey key,
+            CancellationToken cancellationToken = default)
+            => Task.FromResult(sources.Single(source => source.Key == key));
     }
 
     private sealed class RecordingBrowseItemActionService : IFileToolsBrowseItemActionService

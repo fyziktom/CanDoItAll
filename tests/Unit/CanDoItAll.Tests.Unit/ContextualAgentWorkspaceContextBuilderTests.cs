@@ -108,7 +108,11 @@ public sealed class ContextualAgentWorkspaceContextBuilderTests
         var ganttViewFragment = ProjectStructureAgentChatContextBuilder.BuildViewFragment(
             ProjectStructureAgentChatView.Gantt);
         var selectionFragment = ProjectStructureAgentChatContextBuilder.BuildSelectionFragment(
-            [" node:alpha ", "node:beta", "node:alpha"]);
+            [
+                new AgentChatContextEntityReference("project-node", "node:alpha", "Alpha node"),
+                new AgentChatContextEntityReference("project-node", "node:beta", "Beta node"),
+                new AgentChatContextEntityReference("project-node", "node:alpha", "Duplicate alpha")
+            ]);
 
         Assert.Contains($"Selected project id: {projectId:D}", baseFragment.Content);
         Assert.Contains("project_structure_asset_content_get", baseFragment.Content);
@@ -118,7 +122,10 @@ public sealed class ContextualAgentWorkspaceContextBuilderTests
         Assert.Contains("Gantt schedule", ganttViewFragment.Content);
         Assert.Contains("does not currently expose an individual task selection", ganttViewFragment.Content);
         Assert.Contains(
-            "Selected project-structure node ids: node:alpha, node:beta.",
+            "Selected project-structure node: node:alpha | Alpha node.",
+            selectionFragment.Content);
+        Assert.Contains(
+            "Selected project-structure node: node:beta | Beta node.",
             selectionFragment.Content);
     }
 
@@ -166,6 +173,9 @@ public sealed class ContextualAgentWorkspaceContextBuilderTests
         Assert.False(scope.AgentAccess.Single(item => item.AgentId == reader.Id).CanMutate);
         Assert.True(scope.AgentAccess.Single(item => item.AgentId == taskWriter.Id).CanMutate);
         Assert.DoesNotContain(scope.AgentAccess, item => item.AgentId == denied.Id);
+        Assert.Equal(
+            AgentChatContextCompletionRefreshMode.OnSuccessfulRun,
+            scope.CompletionRefreshMode);
     }
 
     private static AgentDefinition CreateAgent(

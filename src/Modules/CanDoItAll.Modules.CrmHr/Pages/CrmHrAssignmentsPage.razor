@@ -1,4 +1,5 @@
 @page "/crm-hr/assignments"
+@implements IAsyncDisposable
 @using CanDoItAll.Components.BaseLib
 @using CanDoItAll.Modules.Projects
 @inject ProjectsService ProjectsService
@@ -8,6 +9,10 @@
 @inject NotificationService NotificationService
 
 <PageTitle>CRM / HR Assignments</PageTitle>
+
+<AgentChatContextSurfaceProvider Surface="@AgentChatSurface"
+                                 ContextNavigationIdentity="@AgentChatNavigationFence"
+                                 ContextAccessState="@agentChatContextAccessState" />
 
 <PageScaffold MaxWidthClass="max-w-full">
     <Header>
@@ -96,13 +101,44 @@
     private IReadOnlyList<StaffingCandidateItemModel> staffingCandidates = [];
     private StaffingDashboardModel staffingDashboard = new(0, 0m, 0, 0);
     private Guid? selectedProjectId;
-    private Guid? handledProjectId;
+    private bool isDisposed;
+    private long loadGeneration;
+    private CancellationTokenSource? loadCancellation;
+    private AgentChatContextAccessState agentChatContextAccessState = AgentChatContextAccessState.Loading;
     private string candidateSearchText = string.Empty;
     private string candidateSkillFilter = string.Empty;
     private string candidateAvailabilityFilter = string.Empty;
     private ProjectPartyAssignmentUpsertRequest draftAssignment = CreateProjectAssignmentDraft();
     private ProjectPartyAssignmentUpsertRequest allocationDraft = CreateAllocationDraft();
     private StaffingRequestEditorModel staffingRequestDraft = CreateStaffingRequestDraft();
+
+    private AgentChatContextSurface AgentChatSurface
+    {
+        get
+        {
+            if (selectedProjectId is not { } projectId)
+            {
+                return CrmHrAgentChatSurfaceBuilder.BuildAssignmentsSurface();
+            }
+
+            var project = projectSummaries.FirstOrDefault(item => item.Id == projectId);
+            return project is null
+                ? CrmHrAgentChatSurfaceBuilder.BuildAssignmentsSurface()
+                : CrmHrAgentChatSurfaceBuilder.BuildAssignmentsSurface(
+                    project.Id,
+                    project.Name,
+                    project.Status);
+        }
+    }
+
+    private AgentChatNavigationIdentity AgentChatNavigationFence
+        => AgentChatNavigationIdentity.CreateForLocation(
+            Navigation.BaseUri,
+            Navigation.Uri,
+            [
+                new("projectId", selectedProjectId?.ToString("D")),
+                new("routeProjectId", ProjectIdQuery?.ToString("D"))
+            ]);
 
     private IReadOnlyList<ProjectPartyAssignmentDetail> AllocationAssignments => assignments
         .Where(item =>
@@ -119,63 +155,183 @@
 
     protected override async Task OnParametersSetAsync()
     {
-        projectSummaries = await ProjectsService.ListAsync();
-        if (!selectedProjectId.HasValue && ProjectIdQuery.HasValue)
+        var requestedProjectId = ProjectIdQuery;
+        var generation = BeginLoad(out var cancellation);
+        if (requestedProjectId.HasValue)
         {
-            selectedProjectId = ProjectIdQuery.Value;
-        }
-        else if (!selectedProjectId.HasValue && projectSummaries.Count > 0)
-        {
-            selectedProjectId = projectSummaries[0].Id;
+            selectedProjectId = requestedProjectId;
         }
 
-        if (handledProjectId != selectedProjectId)
+        await InvokeAsync(StateHasChanged);
+        try
         {
-            handledProjectId = selectedProjectId;
-            await ReloadSelectionAsync();
+            var loadedProjects = await ListProjectsAsync(cancellation.Token);
+            if (!IsCurrentRouteLoad(generation, requestedProjectId))
+            {
+                return;
+            }
+
+            var targetProjectId = requestedProjectId;
+            if (!targetProjectId.HasValue)
+            {
+                targetProjectId = selectedProjectId.HasValue &&
+                                  loadedProjects.Any(project => project.Id == selectedProjectId.Value)
+                    ? selectedProjectId
+                    : loadedProjects.FirstOrDefault()?.Id;
+            }
+
+            selectedProjectId = targetProjectId;
+            if (requestedProjectId.HasValue &&
+                loadedProjects.All(project => project.Id != requestedProjectId.Value))
+            {
+                if (!IsCurrentRouteSelectionLoad(generation, requestedProjectId, targetProjectId))
+                {
+                    return;
+                }
+
+                projectSummaries = loadedProjects;
+                ApplySelectionSnapshot(AssignmentSelectionSnapshot.Empty, targetProjectId);
+                agentChatContextAccessState = AgentChatContextAccessState.Failed;
+                return;
+            }
+
+            await InvokeAsync(StateHasChanged);
+            var snapshot = await LoadSelectionSnapshotAsync(
+                targetProjectId,
+                CaptureCandidateFilter(),
+                cancellation.Token);
+            if (!IsCurrentRouteSelectionLoad(generation, requestedProjectId, targetProjectId))
+            {
+                return;
+            }
+
+            projectSummaries = loadedProjects;
+            ApplySelectionSnapshot(snapshot, targetProjectId);
+            agentChatContextAccessState = AgentChatContextAccessState.Ready;
+        }
+        catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
+        {
+        }
+        catch
+        {
+            if (IsCurrentRouteLoad(generation, requestedProjectId))
+            {
+                agentChatContextAccessState = AgentChatContextAccessState.Failed;
+                throw;
+            }
+        }
+        finally
+        {
+            CompleteLoad(cancellation);
         }
     }
 
     private async Task HandleProjectChanged(Guid? projectId)
     {
-        selectedProjectId = projectId;
-        handledProjectId = projectId;
-        await ReloadSelectionAsync();
+        await LoadSelectionAsync(projectId);
     }
 
     private async Task ReloadSelectionAsync()
     {
-        skillCatalog = await HrService.ListSkillCatalogAsync();
-        staffingDashboard = await HrService.GetStaffingDashboardAsync();
-
-        if (!selectedProjectId.HasValue)
-        {
-            partyOptions = [];
-            assignments = [];
-            staffingRequests = [];
-            staffingCandidates = [];
-            ResetDraft();
-            ResetAllocationDraft();
-            ResetStaffingRequestDraft();
-            return;
-        }
-
-        partyOptions = await ProjectPartyIntegrationService.ListPartyOptionsAsync(selectedProjectId.Value);
-        assignments = await ProjectPartyIntegrationService.ListAssignmentsDetailedAsync(selectedProjectId.Value);
-        staffingRequests = await HrService.ListStaffingRequestsAsync(selectedProjectId.Value);
-        await LoadStaffingCandidatesAsync();
-        ResetDraft();
-        ResetAllocationDraft();
-        ResetStaffingRequestDraft();
+        await LoadSelectionAsync(selectedProjectId);
     }
 
-    private async Task LoadStaffingCandidatesAsync()
+    private async Task LoadSelectionAsync(Guid? projectId)
     {
-        staffingCandidates = await HrService.SearchStaffingCandidatesAsync(
+        var generation = BeginLoad(out var cancellation);
+        selectedProjectId = projectId;
+        await InvokeAsync(StateHasChanged);
+        try
+        {
+            if (projectId.HasValue && projectSummaries.All(project => project.Id != projectId.Value))
+            {
+                ApplySelectionSnapshot(AssignmentSelectionSnapshot.Empty, projectId);
+                agentChatContextAccessState = AgentChatContextAccessState.Failed;
+                return;
+            }
+
+            var snapshot = await LoadSelectionSnapshotAsync(
+                projectId,
+                CaptureCandidateFilter(),
+                cancellation.Token);
+            if (!IsCurrentSelectionLoad(generation, projectId))
+            {
+                return;
+            }
+
+            ApplySelectionSnapshot(snapshot, projectId);
+            agentChatContextAccessState = AgentChatContextAccessState.Ready;
+        }
+        catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
+        {
+        }
+        catch
+        {
+            if (IsCurrentSelectionLoad(generation, projectId))
+            {
+                agentChatContextAccessState = AgentChatContextAccessState.Failed;
+                throw;
+            }
+        }
+        finally
+        {
+            CompleteLoad(cancellation);
+        }
+    }
+
+    protected virtual async Task<AssignmentSelectionSnapshot> LoadSelectionSnapshotAsync(
+        Guid? projectId,
+        CandidateFilterSnapshot candidateFilter,
+        CancellationToken cancellationToken)
+    {
+        var skillCatalogTask = HrService.ListSkillCatalogAsync(cancellationToken);
+        var staffingDashboardTask = HrService.GetStaffingDashboardAsync(cancellationToken);
+        var staffingCandidatesTask = SearchStaffingCandidatesAsync(candidateFilter, cancellationToken);
+        var partyOptionsTask = projectId.HasValue
+            ? ProjectPartyIntegrationService.ListPartyOptionsAsync(projectId.Value, cancellationToken)
+            : Task.FromResult<IReadOnlyList<ProjectPartyOption>>([]);
+        var assignmentsTask = projectId.HasValue
+            ? ProjectPartyIntegrationService.ListAssignmentsDetailedAsync(projectId.Value, cancellationToken)
+            : Task.FromResult<IReadOnlyList<ProjectPartyAssignmentDetail>>([]);
+        var staffingRequestsTask = projectId.HasValue
+            ? HrService.ListStaffingRequestsAsync(projectId.Value, cancellationToken)
+            : Task.FromResult<IReadOnlyList<StaffingRequestItemModel>>([]);
+
+        await Task.WhenAll(
+            skillCatalogTask,
+            staffingDashboardTask,
+            staffingCandidatesTask,
+            partyOptionsTask,
+            assignmentsTask,
+            staffingRequestsTask);
+
+        return new AssignmentSelectionSnapshot(
+            await partyOptionsTask,
+            await assignmentsTask,
+            await skillCatalogTask,
+            await staffingRequestsTask,
+            await staffingCandidatesTask,
+            await staffingDashboardTask);
+    }
+
+    protected virtual Task<IReadOnlyList<ProjectSummary>> ListProjectsAsync(
+        CancellationToken cancellationToken)
+        => ProjectsService.ListAsync(cancellationToken);
+
+    protected virtual Task<IReadOnlyList<StaffingCandidateItemModel>> SearchStaffingCandidatesAsync(
+        CandidateFilterSnapshot candidateFilter,
+        CancellationToken cancellationToken)
+        => HrService.SearchStaffingCandidatesAsync(
+            candidateFilter.SkillId,
+            candidateFilter.SearchText,
+            candidateFilter.AvailabilityState,
+            cancellationToken);
+
+    private CandidateFilterSnapshot CaptureCandidateFilter()
+        => new(
             ResolveCandidateSkillId(),
             candidateSearchText,
             ResolveCandidateAvailabilityState());
-    }
 
     private Guid? ResolveCandidateSkillId()
     {
@@ -187,6 +343,54 @@
         return Enum.TryParse<WorkforceAvailabilityState>(candidateAvailabilityFilter, out var availabilityState)
             ? availabilityState
             : null;
+    }
+
+    private long BeginLoad(out CancellationTokenSource cancellation)
+    {
+        var generation = Interlocked.Increment(ref loadGeneration);
+        agentChatContextAccessState = AgentChatContextAccessState.Loading;
+        cancellation = new CancellationTokenSource();
+        var supersededLoad = Interlocked.Exchange(ref loadCancellation, cancellation);
+        supersededLoad?.Cancel();
+        return generation;
+    }
+
+    private void CompleteLoad(CancellationTokenSource cancellation)
+    {
+        Interlocked.CompareExchange(ref loadCancellation, null, cancellation);
+        cancellation.Dispose();
+    }
+
+    private bool IsCurrentRouteLoad(long generation, Guid? expectedRouteProjectId)
+        => !isDisposed &&
+           generation == Volatile.Read(ref loadGeneration) &&
+           ProjectIdQuery == expectedRouteProjectId;
+
+    private bool IsCurrentRouteSelectionLoad(
+        long generation,
+        Guid? expectedRouteProjectId,
+        Guid? expectedProjectId)
+        => IsCurrentRouteLoad(generation, expectedRouteProjectId) &&
+           selectedProjectId == expectedProjectId;
+
+    private bool IsCurrentSelectionLoad(long generation, Guid? expectedProjectId)
+        => !isDisposed &&
+           generation == Volatile.Read(ref loadGeneration) &&
+           selectedProjectId == expectedProjectId;
+
+    private void ApplySelectionSnapshot(
+        AssignmentSelectionSnapshot snapshot,
+        Guid? projectId)
+    {
+        partyOptions = snapshot.PartyOptions;
+        assignments = snapshot.Assignments;
+        skillCatalog = snapshot.SkillCatalog;
+        staffingRequests = snapshot.StaffingRequests;
+        staffingCandidates = snapshot.StaffingCandidates;
+        staffingDashboard = snapshot.StaffingDashboard;
+        draftAssignment = CreateProjectAssignmentDraft(projectId);
+        allocationDraft = CreateAllocationDraft(projectId);
+        staffingRequestDraft = CreateStaffingRequestDraft(projectId);
     }
 
     private async Task SaveDraftAsync()
@@ -246,7 +450,7 @@
 
     private async Task SearchCandidatesAsync()
     {
-        await LoadStaffingCandidatesAsync();
+        await ReloadCandidatesAsync();
     }
 
     private Task HandleCandidateSearchTextChanged(string value)
@@ -290,7 +494,43 @@
         candidateSearchText = string.Empty;
         candidateSkillFilter = string.Empty;
         candidateAvailabilityFilter = string.Empty;
-        await LoadStaffingCandidatesAsync();
+        await ReloadCandidatesAsync();
+    }
+
+    private async Task ReloadCandidatesAsync()
+    {
+        var expectedProjectId = selectedProjectId;
+        var candidateFilter = CaptureCandidateFilter();
+        var generation = BeginLoad(out var cancellation);
+        await InvokeAsync(StateHasChanged);
+        try
+        {
+            var loadedCandidates = await SearchStaffingCandidatesAsync(
+                candidateFilter,
+                cancellation.Token);
+            if (!IsCurrentSelectionLoad(generation, expectedProjectId))
+            {
+                return;
+            }
+
+            staffingCandidates = loadedCandidates;
+            agentChatContextAccessState = AgentChatContextAccessState.Ready;
+        }
+        catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
+        {
+        }
+        catch
+        {
+            if (IsCurrentSelectionLoad(generation, expectedProjectId))
+            {
+                agentChatContextAccessState = AgentChatContextAccessState.Failed;
+                throw;
+            }
+        }
+        finally
+        {
+            CompleteLoad(cancellation);
+        }
     }
 
     private async Task DeleteAssignmentAsync(Guid assignmentId)
@@ -334,6 +574,38 @@
     {
         staffingRequestDraft = CreateStaffingRequestDraft(selectedProjectId);
     }
+
+    public ValueTask DisposeAsync()
+    {
+        isDisposed = true;
+        Interlocked.Increment(ref loadGeneration);
+        var cancellation = Interlocked.Exchange(ref loadCancellation, null);
+        cancellation?.Cancel();
+        cancellation?.Dispose();
+        return ValueTask.CompletedTask;
+    }
+
+    protected sealed record AssignmentSelectionSnapshot(
+        IReadOnlyList<ProjectPartyOption> PartyOptions,
+        IReadOnlyList<ProjectPartyAssignmentDetail> Assignments,
+        IReadOnlyList<SkillCatalogItemModel> SkillCatalog,
+        IReadOnlyList<StaffingRequestItemModel> StaffingRequests,
+        IReadOnlyList<StaffingCandidateItemModel> StaffingCandidates,
+        StaffingDashboardModel StaffingDashboard)
+    {
+        public static AssignmentSelectionSnapshot Empty { get; } = new(
+            [],
+            [],
+            [],
+            [],
+            [],
+            new StaffingDashboardModel(0, 0m, 0, 0));
+    }
+
+    protected readonly record struct CandidateFilterSnapshot(
+        Guid? SkillId,
+        string SearchText,
+        WorkforceAvailabilityState? AvailabilityState);
 
     private static ProjectPartyAssignmentUpsertRequest CreateProjectAssignmentDraft(Guid? projectId = null)
     {

@@ -1,12 +1,14 @@
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.Modules.Workbench;
 
 namespace CanDoItAll.Modules.Workbench.ProjectStructure;
 
 public enum ProjectStructureAgentChatView
 {
     Canvas,
-    Gantt
+    Gantt,
+    Calendar
 }
 
 public static class ProjectStructureAgentChatContextBuilder
@@ -29,7 +31,9 @@ public static class ProjectStructureAgentChatContextBuilder
         Guid projectId,
         string projectName,
         IEnumerable<AgentDefinition> agents,
-        AgentChatContextAccessState accessState = AgentChatContextAccessState.Ready)
+        AgentChatContextAccessState accessState = AgentChatContextAccessState.Ready,
+        ProjectStructureAgentChatView activeView = ProjectStructureAgentChatView.Canvas,
+        IReadOnlyList<AgentChatContextEntityReference>? selectedNodes = null)
     {
         ArgumentNullException.ThrowIfNull(agents);
         ValidateProjectId(projectId);
@@ -46,11 +50,56 @@ public static class ProjectStructureAgentChatContextBuilder
         return new AgentChatContextScope(
             scopeId,
             BuildSource(projectId),
-            BuildDisplayName(projectName),
+            BuildDisplayName(projectName, activeView),
             WorkspaceScopeDescriptor.Project(projectId.ToString("D")),
             access,
             AgentChatContextScopeAccessMode.AllowListed,
-            accessState);
+            accessState,
+            BuildPosition(projectId, projectName, activeView, selectedNodes),
+            completionRefreshMode: AgentChatContextCompletionRefreshMode.OnSuccessfulRun);
+    }
+
+    public static AgentChatSurfacePosition BuildPosition(
+        Guid projectId,
+        string projectName,
+        ProjectStructureAgentChatView activeView,
+        IReadOnlyList<AgentChatContextEntityReference>? selectedNodes)
+    {
+        ValidateProjectId(projectId);
+        if (!Enum.IsDefined(activeView))
+        {
+            throw new ArgumentOutOfRangeException(nameof(activeView), activeView, "The project-structure agent-chat view is undefined.");
+        }
+
+        var normalizedProjectName = NormalizeProjectName(projectName);
+        var selections = NormalizeSelectedNodes(selectedNodes);
+        var (surface, view, route) = activeView switch
+        {
+            ProjectStructureAgentChatView.Canvas => (
+                Surface: "project-structure",
+                View: "canvas",
+                Route: $"/projects/{projectId:D}/structure"),
+            ProjectStructureAgentChatView.Gantt => (
+                Surface: "project-structure",
+                View: "gantt",
+                Route: $"/projects/{projectId:D}/structure"),
+            ProjectStructureAgentChatView.Calendar => (
+                Surface: "project-calendar",
+                View: "calendar",
+                Route: $"/projects/{projectId:D}/calendar"),
+            _ => throw new ArgumentOutOfRangeException(nameof(activeView), activeView, "The project-structure agent-chat view is undefined.")
+        };
+
+        return new AgentChatSurfacePosition(
+            module: "projects",
+            surface,
+            view,
+            route,
+            primarySelection: new AgentChatContextEntityReference(
+                "project",
+                projectId.ToString("D"),
+                normalizedProjectName),
+            selectedEntities: selections);
     }
 
     public static AgentChatContextFragment BuildBaseFragment(Guid projectId)
@@ -63,12 +112,47 @@ public static class ProjectStructureAgentChatContextBuilder
     }
 
     public static AgentChatContextFragment BuildSelectionFragment(
-        IEnumerable<string>? selectedNodeIds)
+        IReadOnlyList<AgentChatContextEntityReference>? selectedNodes)
     {
+        var normalizedSelections = NormalizeSelectedNodes(selectedNodes);
+        var selectionLines = normalizedSelections.Count == 0
+            ? "- Selected project-structure nodes: none."
+            : string.Join(
+                Environment.NewLine,
+                normalizedSelections.Select(node => $"- Selected project-structure node: {node.Id} | {node.DisplayName}."));
+
         return new AgentChatContextFragment(
             new AgentChatContextContributorId(SelectionContributorId),
             order: 200,
-            ContextualAgentWorkspaceContextBuilder.BuildProjectStructureSelectionContext(selectedNodeIds));
+            $"""
+{selectionLines}
+- Treat "selected nodes" as exactly the selected node ids and names listed above. If none are listed, work at selected project scope unless the request specifically requires a node selection.
+""");
+    }
+
+    public static IReadOnlyList<AgentChatContextEntityReference> BuildSelectedNodes(
+        IEnumerable<ProjectStructureNode>? selectedNodes)
+    {
+        return selectedNodes?
+            .Where(node => !string.IsNullOrWhiteSpace(node.Id))
+            .DistinctBy(node => node.Id, StringComparer.Ordinal)
+            .OrderBy(node => node.Id, StringComparer.Ordinal)
+            .Take(AgentChatPositionLimits.MaximumSelectedEntities)
+            .Select(node => new AgentChatContextEntityReference(
+                "project-node",
+                node.Id,
+                string.IsNullOrWhiteSpace(node.Title) ? node.Id : node.Title))
+            .ToArray()
+            ?? [];
+    }
+
+    public static IReadOnlyList<AgentChatContextEntityReference> BuildSelectedEntities(
+        IEnumerable<ProjectStructureNode>? selectedNodes,
+        IEnumerable<AgentChatContextEntityReference>? selectedEntities)
+    {
+        var nodeSelections = BuildSelectedNodes(selectedNodes);
+        return NormalizeSelectedNodes(
+            [.. nodeSelections, .. selectedEntities ?? []]);
     }
 
     public static AgentChatContextFragment BuildViewFragment(
@@ -90,6 +174,11 @@ Current project workspace view: structure canvas.
 Current project workspace view: Gantt schedule.
 - The visible surface is the interactive Gantt schedule for the selected project.
 - The Gantt UI does not currently expose an individual task selection to agent chat; work at project schedule scope unless the user names a task.
+""",
+            ProjectStructureAgentChatView.Calendar => """
+Current project workspace view: project calendar.
+- The visible surface is the calendar of scheduled project-structure nodes.
+- A selected calendar event is supplied as its canonical project-structure node key by the separate selection fragment.
 """,
             _ => throw new ArgumentOutOfRangeException(nameof(view), view, "The project-structure agent-chat view is undefined.")
         };
@@ -116,10 +205,32 @@ Current project workspace view: Gantt schedule.
         return permissions;
     }
 
-    private static string BuildDisplayName(string projectName)
+    private static string BuildDisplayName(
+        string projectName,
+        ProjectStructureAgentChatView activeView)
+    {
+        var surfaceName = activeView == ProjectStructureAgentChatView.Calendar
+            ? "Project calendar"
+            : "Project structure";
+        return $"{surfaceName} · {NormalizeProjectName(projectName)}";
+    }
+
+    private static string NormalizeProjectName(string projectName)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(projectName);
-        return $"Project structure · {projectName.Trim()}";
+        return projectName.Trim();
+    }
+
+    private static IReadOnlyList<AgentChatContextEntityReference> NormalizeSelectedNodes(
+        IReadOnlyList<AgentChatContextEntityReference>? selectedNodes)
+    {
+        return selectedNodes?
+            .Where(node => node is not null && string.Equals(node.Kind, "project-node", StringComparison.Ordinal))
+            .DistinctBy(node => node.Id, StringComparer.Ordinal)
+            .OrderBy(node => node.Id, StringComparer.Ordinal)
+            .Take(AgentChatPositionLimits.MaximumSelectedEntities)
+            .ToArray()
+            ?? [];
     }
 
     private static void ValidateProjectId(Guid projectId)

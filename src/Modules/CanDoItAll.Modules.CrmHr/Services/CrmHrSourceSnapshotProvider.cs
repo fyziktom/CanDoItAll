@@ -158,8 +158,38 @@ public sealed partial class CrmHrSourceSnapshotProvider(
             query = query.Where(interaction => linkedInteractionIds.Contains(interaction.Id));
         }
 
-        var interactions = await query.OrderByDescending(interaction => interaction.OccurredAtUtc).ToListAsync(cancellationToken);
-        return interactions.Select(interaction => MapInteraction(interaction, scopeId)).ToArray();
+        var interactions = await query
+            .OrderByDescending(interaction => interaction.OccurredAtUtc)
+            .ToListAsync(cancellationToken);
+        var interactionIds = interactions.Select(interaction => interaction.Id).ToList();
+        var accountIdsByInteractionId = interactionIds.Count == 0
+            ? new Dictionary<Guid, Guid>()
+            : (await dbContext.Set<InteractionPartyLink>()
+                .AsNoTracking()
+                .Where(link =>
+                    interactionIds.Contains(link.InteractionId) &&
+                    link.Role == InteractionPartyRole.Account)
+                .OrderBy(link => link.PartyId)
+                .Select(link => new { link.InteractionId, link.PartyId })
+                .ToListAsync(cancellationToken))
+                .GroupBy(link => link.InteractionId)
+                .Select(group => new
+                {
+                    InteractionId = group.Key,
+                    AccountPartyIds = group
+                        .Select(link => link.PartyId)
+                        .Distinct()
+                        .Take(2)
+                        .ToArray()
+                })
+                .Where(group => group.AccountPartyIds.Length == 1)
+                .ToDictionary(group => group.InteractionId, group => group.AccountPartyIds[0]);
+        return interactions
+            .Select(interaction => MapInteraction(
+                interaction,
+                accountIdsByInteractionId.GetValueOrDefault(interaction.Id),
+                scopeId))
+            .ToArray();
     }
 
     private static async Task<IReadOnlyList<MemorySourceItem>> ReadWorkforceItemsAsync(
@@ -294,7 +324,7 @@ public sealed partial class CrmHrSourceSnapshotProvider(
             opportunity.CreatedAtUtc,
             opportunity.UpdatedAtUtc,
             hasSensitivePayload: true,
-            $"/crm-hr/crm?opportunityId={opportunity.Id:D}",
+            $"/crm-hr/crm?accountId={opportunity.AccountPartyId:D}&opportunityId={opportunity.Id:D}",
             [
                 new("opportunity", opportunity.Id.ToString("D"), 0),
                 new("account-party", opportunity.AccountPartyId.ToString("D"), 1)
@@ -306,7 +336,10 @@ public sealed partial class CrmHrSourceSnapshotProvider(
             });
     }
 
-    private static MemorySourceItem MapInteraction(InteractionRecord interaction, Guid scopeId)
+    private static MemorySourceItem MapInteraction(
+        InteractionRecord interaction,
+        Guid accountPartyId,
+        Guid scopeId)
     {
         var content = BuildContent(
             ("Subject", interaction.Subject),
@@ -315,6 +348,16 @@ public sealed partial class CrmHrSourceSnapshotProvider(
             ("Summary", RedactText(interaction.Summary)),
             ("Notes", RedactText(interaction.Notes)),
             ("Next action", RedactText(interaction.NextActionText)));
+        var route = accountPartyId == Guid.Empty
+            ? $"/crm-hr/crm?interactionId={interaction.Id:D}"
+            : $"/crm-hr/crm?accountId={accountPartyId:D}&interactionId={interaction.Id:D}";
+        IReadOnlyList<MemorySourceReference> references = accountPartyId == Guid.Empty
+            ? [new("interaction", interaction.Id.ToString("D"), 0)]
+            :
+            [
+                new("interaction", interaction.Id.ToString("D"), 0),
+                new("account-party", accountPartyId.ToString("D"), 1)
+            ];
         return CreateItem(
             scopeId,
             MemorySourceEntityKind.CrmInteraction,
@@ -330,8 +373,8 @@ public sealed partial class CrmHrSourceSnapshotProvider(
             interaction.CreatedAtUtc,
             interaction.UpdatedAtUtc,
             hasSensitivePayload: true,
-            $"/crm-hr/crm?interactionId={interaction.Id:D}",
-            [new("interaction", interaction.Id.ToString("D"), 0)],
+            route,
+            references,
             new Dictionary<string, string>(StringComparer.Ordinal)
             {
                 ["interactionType"] = interaction.InteractionType.ToString()

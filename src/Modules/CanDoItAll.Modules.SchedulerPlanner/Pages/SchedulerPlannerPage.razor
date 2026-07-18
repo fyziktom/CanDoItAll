@@ -3,6 +3,7 @@
 @using System.Globalization
 @using System.Text.Json
 @using System.Text.Json.Nodes
+@using CanDoItAll.AgentFramework.Components
 @using CanDoItAll.AgentFramework.Models
 @using CanDoItAll.Components.BaseLib
 @using CanDoItAll.Components.CanvasLib
@@ -14,6 +15,9 @@
 @inject ISchedulerWorkflowInputOptionService WorkflowInputOptionService
 
 <PageTitle>Scheduler</PageTitle>
+
+<AgentChatContextSurfaceProvider Surface="@AgentChatSurface"
+                                 ContextAccessState="@AgentChatAccessState" />
 
 <PageScaffold MaxWidthClass="max-w-full">
     <Header>
@@ -875,7 +879,17 @@
     private SchedulerPlanEditorModel editor = new();
     private SchedulerPlanEditorModel? editScheduleEditor;
     private SchedulerHistoryQuery historyQuery = new();
-    private bool isBusy;
+    private long uiOperationGeneration;
+    private long completedUiOperationGeneration;
+    private long editSelectionLoadGeneration;
+    private long completedEditSelectionLoadGeneration;
+    private CancellationTokenSource? editSelectionLoadCancellation;
+    private long workflowInputLoadGeneration;
+    private long completedWorkflowInputLoadGeneration;
+    private CancellationTokenSource? workflowInputLoadCancellation;
+    private long workflowInputOptionsLoadGeneration;
+    private long completedWorkflowInputOptionsLoadGeneration;
+    private CancellationTokenSource? workflowInputOptionsLoadCancellation;
     private string errorMessage = string.Empty;
     private int activeTabIndex;
     private bool isTargetPickerOpen;
@@ -929,7 +943,41 @@
         EditSchedule
     }
 
+    private readonly record struct PendingLoad(
+        long Generation,
+        CancellationTokenSource Cancellation);
+
     private IReadOnlyList<SchedulerPlanSummary> Plans => workspace?.Plans ?? [];
+
+    private bool isBusy
+        => Volatile.Read(ref uiOperationGeneration) != Volatile.Read(ref completedUiOperationGeneration);
+
+    private bool IsCurrentContextLoading
+        => isBusy ||
+           Volatile.Read(ref editSelectionLoadGeneration) != Volatile.Read(ref completedEditSelectionLoadGeneration) ||
+           Volatile.Read(ref workflowInputLoadGeneration) != Volatile.Read(ref completedWorkflowInputLoadGeneration) ||
+           Volatile.Read(ref workflowInputOptionsLoadGeneration) != Volatile.Read(ref completedWorkflowInputOptionsLoadGeneration);
+
+    private AgentChatContextSurface AgentChatSurface => SchedulerAgentChatContextBuilder.Build(
+        activeTabIndex switch
+        {
+            CalendarTabIndex => SchedulerAgentChatView.Calendar,
+            SchedulesTabIndex => SchedulerAgentChatView.Schedules,
+            NewScheduleTabIndex => SchedulerAgentChatView.NewSchedule,
+            _ => SchedulerAgentChatView.Calendar
+        },
+        ResolveAgentChatSelectedPlan(),
+        ResolveAgentChatSelectedTarget(),
+        ResolveAgentChatOverlay());
+
+    private AgentChatContextAccessState AgentChatAccessState
+        => workspace is null
+            ? IsCurrentContextLoading || string.IsNullOrWhiteSpace(errorMessage)
+                ? AgentChatContextAccessState.Loading
+                : AgentChatContextAccessState.Failed
+            : IsCurrentContextLoading
+                ? AgentChatContextAccessState.Loading
+                : AgentChatContextAccessState.Ready;
 
     private IReadOnlyList<SchedulerPlanRunSummary> History => workspace?.History ?? [];
 
@@ -938,6 +986,52 @@
     private int CalendarEventCount => workspace?.CalendarSurface.Events.Count ?? 0;
 
     private SchedulerTargetOption? SelectedTarget => ResolveSelectedTarget(editor);
+
+    private SchedulerPlanSummary? ResolveAgentChatSelectedPlan()
+    {
+        if (isDeleteScheduleDialogOpen && selectedPlanForDelete is not null)
+        {
+            return selectedPlanForDelete;
+        }
+
+        if (isEditScheduleDialogOpen && selectedPlanForEdit is not null)
+        {
+            return selectedPlanForEdit;
+        }
+
+        if (activeTabIndex != CalendarTabIndex ||
+            !TryResolvePlanId(selectedCalendarEvent, out var planId))
+        {
+            return null;
+        }
+
+        return Plans.FirstOrDefault(plan => plan.Id == planId);
+    }
+
+    private SchedulerTargetOption? ResolveAgentChatSelectedTarget()
+    {
+        if (isTargetPickerOpen && TargetPickerEditor is not null)
+        {
+            return ResolveSelectedTarget(TargetPickerEditor);
+        }
+
+        return activeTabIndex == NewScheduleTabIndex ? SelectedTarget : null;
+    }
+
+    private string? ResolveAgentChatOverlay()
+    {
+        if (isDeleteScheduleDialogOpen)
+        {
+            return "delete-schedule";
+        }
+
+        if (isEditScheduleDialogOpen)
+        {
+            return "edit-schedule";
+        }
+
+        return isTargetPickerOpen ? "target-picker" : null;
+    }
 
     private string SelectedTargetName => SelectedTarget?.Name ?? "No target selected";
 
@@ -1095,17 +1189,40 @@
 
     private async Task OpenEditScheduleDialogAsync(SchedulerPlanSummary plan)
     {
-        await RunUiOperationAsync(async () =>
+        var load = BeginEditSelectionLoad();
+        selectedPlanForEdit = plan;
+        editScheduleEditor = null;
+        isEditScheduleDialogOpen = false;
+        activeTabIndex = SchedulesTabIndex;
+
+        try
         {
-            selectedPlanForEdit = plan;
-            editScheduleEditor = await SchedulerPlannerService.GetPlanEditorAsync(plan.Id);
-            isEditScheduleDialogOpen = true;
-            activeTabIndex = SchedulesTabIndex;
-        });
+            await RunUiOperationAsync(
+                async () =>
+                {
+                    var loadedEditor = await SchedulerPlannerService.GetPlanEditorAsync(
+                        plan.Id,
+                        load.Cancellation.Token);
+                    if (!IsCurrentEditSelectionLoad(load, plan.Id))
+                    {
+                        return;
+                    }
+
+                    editScheduleEditor = loadedEditor;
+                    isEditScheduleDialogOpen = true;
+                },
+                () => IsCurrentEditSelectionLoad(load, plan.Id),
+                load.Cancellation.Token);
+        }
+        finally
+        {
+            CompleteEditSelectionLoad(load);
+        }
     }
 
     private Task CloseEditScheduleDialogAsync()
     {
+        InvalidateEditSelectionLoad();
         isEditScheduleDialogOpen = false;
         editScheduleEditor = null;
         selectedPlanForEdit = null;
@@ -1408,49 +1525,92 @@
 
     private async Task LoadWorkflowInputEditorAsync()
     {
-        workflowInputSchema = null;
-        workflowInputValues = new Dictionary<string, string>(StringComparer.Ordinal);
-        workflowInputOptionsByKey = new Dictionary<string, IReadOnlyList<WorkflowInputParameterOption>>(StringComparer.Ordinal);
-        workflowInputIssues = [];
+        var load = BeginWorkflowInputLoad();
+        InvalidateWorkflowInputOptionsLoad();
+        var targetKind = editor.TargetKind;
+        var targetId = editor.TargetId;
+        var targetVersionId = SelectedTarget?.VersionId ?? editor.TargetVersionId;
 
-        if (editor.TargetKind != SchedulerPlanTargetKind.Workflow || editor.TargetId == Guid.Empty)
+        try
         {
-            return;
-        }
+            workflowInputSchema = null;
+            workflowInputValues = new Dictionary<string, string>(StringComparer.Ordinal);
+            workflowInputOptionsByKey = new Dictionary<string, IReadOnlyList<WorkflowInputParameterOption>>(StringComparer.Ordinal);
+            workflowInputIssues = [];
 
-        var selectedTarget = SelectedTarget;
-        var versionId = selectedTarget?.VersionId ?? editor.TargetVersionId;
-        workflowInputSchema = await WorkflowInputSchemaService.ResolveSchemaAsync(
-            new WorkflowId(editor.TargetId),
-            versionId.HasValue ? new WorkflowVersionId(versionId.Value) : null);
-        if (workflowInputSchema.Parameters.Count == 0)
+            if (targetKind != SchedulerPlanTargetKind.Workflow || targetId == Guid.Empty)
+            {
+                return;
+            }
+
+            var loadedSchema = await WorkflowInputSchemaService.ResolveSchemaAsync(
+                new WorkflowId(targetId),
+                targetVersionId.HasValue ? new WorkflowVersionId(targetVersionId.Value) : null,
+                load.Cancellation.Token);
+            if (!IsCurrentWorkflowInputLoad(load, targetKind, targetId, targetVersionId))
+            {
+                return;
+            }
+
+            workflowInputSchema = loadedSchema;
+            if (loadedSchema.Parameters.Count == 0)
+            {
+                return;
+            }
+
+            InitializeWorkflowInputValuesFromJson();
+            SynchronizeWorkflowInputJson();
+            await LoadWorkflowInputOptionsAsync();
+        }
+        catch (OperationCanceledException) when (load.Cancellation.IsCancellationRequested)
         {
-            return;
         }
-
-        InitializeWorkflowInputValuesFromJson();
-        SynchronizeWorkflowInputJson();
-        await LoadWorkflowInputOptionsAsync();
+        finally
+        {
+            CompleteWorkflowInputLoad(load);
+        }
     }
 
     private async Task LoadWorkflowInputOptionsAsync()
     {
-        if (workflowInputSchema is null)
+        var schema = workflowInputSchema;
+        if (schema is null)
         {
-            workflowInputOptionsByKey.Clear();
+            InvalidateWorkflowInputOptionsLoad();
+            workflowInputOptionsByKey = new Dictionary<string, IReadOnlyList<WorkflowInputParameterOption>>(StringComparer.Ordinal);
             return;
         }
 
-        var resolved = new Dictionary<string, IReadOnlyList<WorkflowInputParameterOption>>(StringComparer.Ordinal);
-        foreach (var parameter in workflowInputSchema.Parameters)
-        {
-            resolved[parameter.Key] = await WorkflowInputOptionService.ListOptionsAsync(
-                parameter,
-                workflowInputValues,
-                CancellationToken.None);
-        }
+        var load = BeginWorkflowInputOptionsLoad();
+        var targetId = editor.TargetId;
+        var targetVersionId = editor.TargetVersionId;
+        var values = new Dictionary<string, string>(workflowInputValues, StringComparer.Ordinal);
 
-        workflowInputOptionsByKey = resolved;
+        try
+        {
+            var resolved = new Dictionary<string, IReadOnlyList<WorkflowInputParameterOption>>(StringComparer.Ordinal);
+            foreach (var parameter in schema.Parameters)
+            {
+                resolved[parameter.Key] = await WorkflowInputOptionService.ListOptionsAsync(
+                    parameter,
+                    values,
+                    load.Cancellation.Token);
+            }
+
+            if (!IsCurrentWorkflowInputOptionsLoad(load, schema, targetId, targetVersionId, values))
+            {
+                return;
+            }
+
+            workflowInputOptionsByKey = resolved;
+        }
+        catch (OperationCanceledException) when (load.Cancellation.IsCancellationRequested)
+        {
+        }
+        finally
+        {
+            CompleteWorkflowInputOptionsLoad(load);
+        }
     }
 
     private void InitializeWorkflowInputValuesFromJson()
@@ -1750,21 +1910,156 @@
         return false;
     }
 
-    private async Task RunUiOperationAsync(Func<Task> operation)
+    private PendingLoad BeginEditSelectionLoad()
+        => BeginLatestLoad(ref editSelectionLoadGeneration, ref editSelectionLoadCancellation);
+
+    private bool IsCurrentEditSelectionLoad(PendingLoad load, Guid planId)
+        => IsCurrentLatestLoad(load, ref editSelectionLoadGeneration) &&
+           selectedPlanForEdit?.Id == planId;
+
+    private void CompleteEditSelectionLoad(PendingLoad load)
+        => CompleteLatestLoad(
+            load,
+            ref editSelectionLoadGeneration,
+            ref completedEditSelectionLoadGeneration,
+            ref editSelectionLoadCancellation);
+
+    private void InvalidateEditSelectionLoad()
+        => InvalidateLatestLoad(
+            ref editSelectionLoadGeneration,
+            ref completedEditSelectionLoadGeneration,
+            ref editSelectionLoadCancellation);
+
+    private PendingLoad BeginWorkflowInputLoad()
+        => BeginLatestLoad(ref workflowInputLoadGeneration, ref workflowInputLoadCancellation);
+
+    private bool IsCurrentWorkflowInputLoad(
+        PendingLoad load,
+        SchedulerPlanTargetKind targetKind,
+        Guid targetId,
+        Guid? targetVersionId)
+        => IsCurrentLatestLoad(load, ref workflowInputLoadGeneration) &&
+           editor.TargetKind == targetKind &&
+           editor.TargetId == targetId &&
+           (SelectedTarget?.VersionId ?? editor.TargetVersionId) == targetVersionId;
+
+    private void CompleteWorkflowInputLoad(PendingLoad load)
+        => CompleteLatestLoad(
+            load,
+            ref workflowInputLoadGeneration,
+            ref completedWorkflowInputLoadGeneration,
+            ref workflowInputLoadCancellation);
+
+    private void InvalidateWorkflowInputLoad()
+        => InvalidateLatestLoad(
+            ref workflowInputLoadGeneration,
+            ref completedWorkflowInputLoadGeneration,
+            ref workflowInputLoadCancellation);
+
+    private PendingLoad BeginWorkflowInputOptionsLoad()
+        => BeginLatestLoad(ref workflowInputOptionsLoadGeneration, ref workflowInputOptionsLoadCancellation);
+
+    private bool IsCurrentWorkflowInputOptionsLoad(
+        PendingLoad load,
+        SchedulerWorkflowInputSchema schema,
+        Guid targetId,
+        Guid? targetVersionId,
+        IReadOnlyDictionary<string, string> values)
+        => IsCurrentLatestLoad(load, ref workflowInputOptionsLoadGeneration) &&
+           ReferenceEquals(workflowInputSchema, schema) &&
+           editor.TargetId == targetId &&
+           editor.TargetVersionId == targetVersionId &&
+           HaveSameWorkflowInputValues(values, workflowInputValues);
+
+    private void CompleteWorkflowInputOptionsLoad(PendingLoad load)
+        => CompleteLatestLoad(
+            load,
+            ref workflowInputOptionsLoadGeneration,
+            ref completedWorkflowInputOptionsLoadGeneration,
+            ref workflowInputOptionsLoadCancellation);
+
+    private void InvalidateWorkflowInputOptionsLoad()
+        => InvalidateLatestLoad(
+            ref workflowInputOptionsLoadGeneration,
+            ref completedWorkflowInputOptionsLoadGeneration,
+            ref workflowInputOptionsLoadCancellation);
+
+    private static PendingLoad BeginLatestLoad(
+        ref long generation,
+        ref CancellationTokenSource? activeCancellation)
     {
+        var loadGeneration = Interlocked.Increment(ref generation);
+        var cancellation = new CancellationTokenSource();
+        var supersededCancellation = Interlocked.Exchange(ref activeCancellation, cancellation);
+        supersededCancellation?.Cancel();
+        return new PendingLoad(loadGeneration, cancellation);
+    }
+
+    private static bool IsCurrentLatestLoad(PendingLoad load, ref long generation)
+        => !load.Cancellation.IsCancellationRequested &&
+           Volatile.Read(ref generation) == load.Generation;
+
+    private static void CompleteLatestLoad(
+        PendingLoad load,
+        ref long generation,
+        ref long completedGeneration,
+        ref CancellationTokenSource? activeCancellation)
+    {
+        if (Volatile.Read(ref generation) == load.Generation)
+        {
+            Volatile.Write(ref completedGeneration, load.Generation);
+        }
+
+        Interlocked.CompareExchange(ref activeCancellation, null, load.Cancellation);
+        load.Cancellation.Dispose();
+    }
+
+    private static void InvalidateLatestLoad(
+        ref long generation,
+        ref long completedGeneration,
+        ref CancellationTokenSource? activeCancellation)
+    {
+        var invalidationGeneration = Interlocked.Increment(ref generation);
+        Volatile.Write(ref completedGeneration, invalidationGeneration);
+        Interlocked.Exchange(ref activeCancellation, null)?.Cancel();
+    }
+
+    private static bool HaveSameWorkflowInputValues(
+        IReadOnlyDictionary<string, string> expected,
+        IReadOnlyDictionary<string, string> actual)
+        => expected.Count == actual.Count &&
+           expected.All(pair =>
+               actual.TryGetValue(pair.Key, out var value) &&
+               string.Equals(pair.Value, value, StringComparison.Ordinal));
+
+    private async Task RunUiOperationAsync(
+        Func<Task> operation,
+        Func<bool>? isCurrent = null,
+        CancellationToken cancellationToken = default)
+    {
+        var operationGeneration = Interlocked.Increment(ref uiOperationGeneration);
         errorMessage = string.Empty;
-        isBusy = true;
         try
         {
             await operation();
         }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+        }
         catch (Exception exception)
         {
-            errorMessage = exception.Message;
+            if (Volatile.Read(ref uiOperationGeneration) == operationGeneration &&
+                (isCurrent?.Invoke() ?? true))
+            {
+                errorMessage = exception.Message;
+            }
         }
         finally
         {
-            isBusy = false;
+            if (Volatile.Read(ref uiOperationGeneration) == operationGeneration)
+            {
+                Volatile.Write(ref completedUiOperationGeneration, operationGeneration);
+            }
         }
     }
 
@@ -2095,6 +2390,10 @@
 
     public async ValueTask DisposeAsync()
     {
+        InvalidateEditSelectionLoad();
+        InvalidateWorkflowInputLoad();
+        InvalidateWorkflowInputOptionsLoad();
+
         if (schedulerCalendarDoubleClickAttached && schedulerCalendarInterop is not null)
         {
             try

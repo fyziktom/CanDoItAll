@@ -1,8 +1,13 @@
 @page "/crm-hr/agents"
+@implements IAsyncDisposable
 @inject AiAgentService AiAgentService
 @inject NavigationManager Navigation
 
 <PageTitle>CRM / HR Agents</PageTitle>
+
+<AgentChatContextSurfaceProvider Surface="@AgentChatSurface"
+                                 ContextNavigationIdentity="@AgentChatNavigationFence"
+                                 ContextAccessState="@agentChatContextAccessState" />
 
 <PageScaffold MaxWidthClass="max-w-full">
     <Header>
@@ -287,10 +292,28 @@
     private AiAgentWorkspaceModel? selectedWorkspace;
     private string searchText = string.Empty;
     private string validationFilter = string.Empty;
-    private string? handledPartyKey;
     private bool isListLoading = true;
     private bool isWorkspaceLoading = true;
     private bool interactiveReloadAttempted;
+    private bool isDisposed;
+    private long loadGeneration;
+    private CancellationTokenSource? loadCancellation;
+    private AgentChatContextAccessState agentChatContextAccessState = AgentChatContextAccessState.Loading;
+
+    private AgentChatContextSurface AgentChatSurface => selectedWorkspace is { } workspace
+        ? CrmHrAgentChatSurfaceBuilder.BuildAgentsSurface(
+            workspace.PartyId,
+            workspace.DisplayName,
+            workspace.LifecycleStatus,
+            workspace.BindingStatus,
+            workspace.Profile.ValidationStatus)
+        : CrmHrAgentChatSurfaceBuilder.BuildAgentsSurface();
+
+    private AgentChatNavigationIdentity AgentChatNavigationFence
+        => AgentChatNavigationIdentity.CreateForLocation(
+            Navigation.BaseUri,
+            Navigation.Uri,
+            [new("partyId", PartyIdQuery?.ToString("D"))]);
 
     private bool ShouldShowListLoadingState => isListLoading || (!interactiveReloadAttempted && agentItems.Count == 0);
     private bool ShouldShowDetailLoadingState => isListLoading || isWorkspaceLoading;
@@ -303,7 +326,8 @@
 
     protected override async Task OnParametersSetAsync()
     {
-        await LoadAsync(PartyIdQuery);
+        var requestedPartyId = PartyIdQuery;
+        await LoadAsync(requestedPartyId);
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -320,71 +344,90 @@
 
     private async Task LoadAsync(Guid? requestedPartyId)
     {
+        var expectedQueryPartyId = requestedPartyId;
+        var currentGeneration = Interlocked.Increment(ref loadGeneration);
+        agentChatContextAccessState = AgentChatContextAccessState.Loading;
         isListLoading = true;
         isWorkspaceLoading = true;
+        using var cancellation = new CancellationTokenSource();
+        var supersededLoad = Interlocked.Exchange(ref loadCancellation, cancellation);
+        supersededLoad?.Cancel();
 
         try
         {
-            await LoadItemsAsync();
-        }
-        finally
-        {
-            isListLoading = false;
-        }
-
-        await InvokeAsync(StateHasChanged);
-
-        try
-        {
+            var loadedItems = await ListAgentItemsAsync(cancellation.Token);
             var targetPartyId = requestedPartyId;
-            if (!targetPartyId.HasValue && agentItems.Count > 0)
+            if (!targetPartyId.HasValue && loadedItems.Count > 0)
             {
-                targetPartyId = agentItems[0].PartyId;
+                targetPartyId = loadedItems[0].PartyId;
             }
 
-            var targetKey = targetPartyId?.ToString("N") ?? "none";
-            if (handledPartyKey == targetKey && selectedWorkspace is not null)
+            AiAgentWorkspaceModel? loadedWorkspace = null;
+            if (targetPartyId.HasValue)
             {
-                isWorkspaceLoading = false;
+                loadedWorkspace = await GetAgentWorkspaceAsync(targetPartyId.Value, cancellation.Token);
+                if (loadedWorkspace is not null && loadedWorkspace.PartyId != targetPartyId.Value)
+                {
+                    throw new InvalidOperationException(
+                        $"Agent workspace '{loadedWorkspace.PartyId:D}' did not match requested party '{targetPartyId.Value:D}'.");
+                }
+            }
+
+            if (!IsCurrentLoad(currentGeneration, expectedQueryPartyId))
+            {
                 return;
             }
 
-            selectedWorkspace = null;
-
-            if (targetPartyId.HasValue)
+            agentItems = loadedItems;
+            selectedWorkspace = loadedWorkspace;
+            agentChatContextAccessState = requestedPartyId.HasValue && loadedWorkspace is null
+                ? AgentChatContextAccessState.Failed
+                : AgentChatContextAccessState.Ready;
+        }
+        catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
+        {
+        }
+        catch
+        {
+            if (IsCurrentLoad(currentGeneration, expectedQueryPartyId))
             {
-                var workspace = await AiAgentService.GetAgentWorkspaceAsync(targetPartyId.Value);
-                if (workspace is null && agentItems.Count > 0)
-                {
-                    workspace = await AiAgentService.GetAgentWorkspaceAsync(agentItems[0].PartyId);
-                    targetKey = agentItems[0].PartyId.ToString("N");
-                }
-
-                if (workspace is not null)
-                {
-                    ApplyLoadedWorkspace(workspace);
-                    handledPartyKey = targetKey;
-                    return;
-                }
+                agentChatContextAccessState = AgentChatContextAccessState.Failed;
+                throw;
             }
-
-            selectedWorkspace = null;
-            handledPartyKey = "none";
         }
         finally
         {
-            isWorkspaceLoading = false;
+            Interlocked.CompareExchange(ref loadCancellation, null, cancellation);
+            if (IsCurrentLoad(currentGeneration, expectedQueryPartyId))
+            {
+                isListLoading = false;
+                isWorkspaceLoading = false;
+            }
         }
     }
 
-    private async Task LoadItemsAsync()
-    {
-        agentItems = await AiAgentService.ListAgentDirectoryAsync();
-    }
+    protected virtual Task<IReadOnlyList<AiAgentListItemModel>> ListAgentItemsAsync(
+        CancellationToken cancellationToken)
+        => AiAgentService.ListAgentDirectoryAsync(cancellationToken);
 
-    private void ApplyLoadedWorkspace(AiAgentWorkspaceModel workspace)
+    protected virtual Task<AiAgentWorkspaceModel?> GetAgentWorkspaceAsync(
+        Guid partyId,
+        CancellationToken cancellationToken)
+        => AiAgentService.GetAgentWorkspaceAsync(partyId, cancellationToken);
+
+    private bool IsCurrentLoad(long generation, Guid? expectedQueryPartyId)
+        => !isDisposed &&
+           generation == Volatile.Read(ref loadGeneration) &&
+           PartyIdQuery == expectedQueryPartyId;
+
+    public ValueTask DisposeAsync()
     {
-        selectedWorkspace = workspace;
+        isDisposed = true;
+        Interlocked.Increment(ref loadGeneration);
+        var cancellation = Interlocked.Exchange(ref loadCancellation, null);
+        cancellation?.Cancel();
+        cancellation?.Dispose();
+        return ValueTask.CompletedTask;
     }
 
     private Task SelectPartyAsync(Guid partyId)

@@ -47,6 +47,10 @@ public interface IFloatingAgentChatCoordinator : IAgentChatLauncher
         AgentChatHandleId handleId,
         ActiveAgentChatRunState runState);
 
+    bool TryBeginOperation(AgentChatHandleId handleId);
+
+    void ReconcileRunStateAfterOperation(AgentChatHandleId handleId);
+
     ActiveAgentChat AttachSession(AgentChatHandleId handleId, Guid chatSessionId);
 
     int PruneExpired();

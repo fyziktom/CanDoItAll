@@ -96,6 +96,29 @@ public sealed class AgentCatalogPanelTests
         Assert.Contains("flex-nowrap", teamHeaderContent.ClassList);
     }
 
+    [Fact]
+    public void Catalog_reports_the_actual_selected_agent_to_its_page_owner()
+    {
+        var first = CreateAgent(Guid.NewGuid(), "First agent", string.Empty);
+        var second = CreateAgent(Guid.NewGuid(), "Second agent", string.Empty);
+        AgentDefinition? selected = null;
+        using var context = CreateCatalogTestContext(new RecordingAgentChatLauncher(first));
+
+        var cut = context.RenderComponent<AgentCatalogPanel>(parameters => parameters
+            .Add(component => component.InitialAgents, new[] { first, second })
+            .Add(component => component.InitialProviders, Array.Empty<ProviderProfile>())
+            .Add(component => component.InitialTeams, Array.Empty<AgentTeamDefinition>())
+            .Add(component => component.SkipCatalogRepair, true)
+            .Add(component => component.SelectedAgentChanged,
+                EventCallback.Factory.Create<AgentDefinition?>(this, value => selected = value)));
+
+        var secondCard = cut.FindAll("[data-testid='agents-catalog-card-shell']")
+            .Single(card => card.TextContent.Contains(second.Name, StringComparison.Ordinal));
+        secondCard.QuerySelector("[data-testid='agents-catalog-card']")!.Click();
+
+        cut.WaitForAssertion(() => Assert.Same(second, selected));
+    }
+
     private static TestContext CreateCatalogTestContext(IAgentChatLauncher launcher)
     {
         var context = new TestContext();
