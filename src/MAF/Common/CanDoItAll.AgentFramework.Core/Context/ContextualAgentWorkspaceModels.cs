@@ -1,7 +1,6 @@
-using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 
-namespace CanDoItAll.AgentFramework.Components;
+namespace CanDoItAll.AgentFramework.Core;
 
 public enum ContextualAgentWorkspaceKind
 {
@@ -16,7 +15,9 @@ public enum ContextualAgentAccessLevel
     Read = 1,
     Write = 2,
     TaskWrite = 4,
-    NonTaskStructureWrite = 8
+    NonTaskStructureWrite = 8,
+    ProjectCreate = 16,
+    SubprojectCreate = 32
 }
 
 public sealed record ContextualAgentAccessSummary(
@@ -31,6 +32,10 @@ public sealed record ContextualAgentAccessSummary(
     public bool CanWriteTasks => AccessLevel.HasFlag(ContextualAgentAccessLevel.TaskWrite);
 
     public bool CanWriteNonTaskStructure => AccessLevel.HasFlag(ContextualAgentAccessLevel.NonTaskStructureWrite);
+
+    public bool CanCreateProjects => AccessLevel.HasFlag(ContextualAgentAccessLevel.ProjectCreate);
+
+    public bool CanCreateSubprojects => AccessLevel.HasFlag(ContextualAgentAccessLevel.SubprojectCreate);
 }
 
 public sealed record ContextualAgentWorkspaceRefreshRequest(
@@ -51,10 +56,35 @@ public static class ContextualAgentWorkspaceContextBuilder
         IEnumerable<string>? selectedNodeIds,
         string prompt)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(prompt);
+        var context = BuildContext(
+            workspaceKind,
+            projectId,
+            processDefinitionId,
+            selectedNodeIds);
+        return string.IsNullOrWhiteSpace(context)
+            ? prompt
+            : $"""
+{context}
+
+User request:
+{prompt}
+""";
+    }
+
+    public static string BuildContext(
+        ContextualAgentWorkspaceKind workspaceKind,
+        Guid? projectId,
+        Guid? processDefinitionId,
+        IEnumerable<string>? selectedNodeIds)
+    {
         return workspaceKind switch
         {
             ContextualAgentWorkspaceKind.ProjectStructure when projectId.HasValue =>
-                BuildProjectStructurePrompt(projectId.Value, selectedNodeIds, prompt),
+                $"""
+{BuildProjectStructureBaseContext(projectId.Value)}
+{BuildProjectStructureSelectionContext(selectedNodeIds)}
+""",
             ContextualAgentWorkspaceKind.Processes when processDefinitionId.HasValue => $"""
 Context:
 - Workspace: process definition.
@@ -63,11 +93,8 @@ Context:
 - Use process-definition operations for process reads or mutations.
 - For adding one process role, use {AgentToolInvocationPolicyMetadata.ProcessesDefinitionRoleAdd} instead of loading and rewriting the full editor model.
 - Do not use project-structure operations unless the user explicitly asks about project structure.
-
-User request:
-{prompt}
 """,
-            _ => prompt
+            _ => string.Empty
         };
     }
 
@@ -81,23 +108,13 @@ User request:
             ?? [];
     }
 
-    private static string BuildProjectStructurePrompt(
-        Guid projectId,
-        IEnumerable<string>? selectedNodeIds,
-        string prompt)
+    public static string BuildProjectStructureBaseContext(Guid projectId)
     {
-        var normalizedSelectedNodeIds = NormalizeSelectedNodeIds(selectedNodeIds);
-        var selectionLine = normalizedSelectedNodeIds.Count == 0
-            ? "- Selected project-structure node ids: none."
-            : $"- Selected project-structure node ids: {string.Join(", ", normalizedSelectedNodeIds)}.";
-
         return $"""
 Context:
 - Workspace: project structure.
 - Selected project id: {projectId:D}.
-{selectionLine}
 - Treat "this project" and "selected project" as that project structure.
-- Treat "selected nodes" as exactly the selected node ids listed above. If none are listed, work at selected project scope unless the request specifically requires a node selection.
 - Use project-structure operations for structure reads or mutations.
 - Use the project-structure node catalog before creating or reclassifying unfamiliar node kinds.
 - Start asset work with project_structure_read for the selected project or selected node ids; do not search the workspace root to discover project assets.
@@ -105,9 +122,20 @@ Context:
 - For PDF or document File assets, call workspace_convert_document with the exact mediaRelativePath and analyze the returned markdown preview or output path.
 - workspace_list_files searchPattern uses glob syntax, not regex; examples: *quotation*.pdf and **/*.pdf. Avoid broad workspace_search or root list calls unless project-structure reads do not identify the asset.
 - When task ordering matters, create DependsOn dependency links so Gantt and readiness views stay correct.
+""";
+    }
 
-User request:
-{prompt}
+    public static string BuildProjectStructureSelectionContext(
+        IEnumerable<string>? selectedNodeIds)
+    {
+        var normalizedSelectedNodeIds = NormalizeSelectedNodeIds(selectedNodeIds);
+        var selectionLine = normalizedSelectedNodeIds.Count == 0
+            ? "- Selected project-structure node ids: none."
+            : $"- Selected project-structure node ids: {string.Join(", ", normalizedSelectedNodeIds)}.";
+
+        return $"""
+{selectionLine}
+- Treat "selected nodes" as exactly the selected node ids listed above. If none are listed, work at selected project scope unless the request specifically requires a node selection.
 """;
     }
 }
@@ -190,6 +218,14 @@ public static class ContextualAgentAccessResolver
         {
             accessLevel |= ContextualAgentAccessLevel.Read | ContextualAgentAccessLevel.TaskWrite;
         }
+        if (access.CanCreateProjects)
+        {
+            accessLevel |= ContextualAgentAccessLevel.Read | ContextualAgentAccessLevel.ProjectCreate;
+        }
+        if (access.CanCreateSubprojects)
+        {
+            accessLevel |= ContextualAgentAccessLevel.Read | ContextualAgentAccessLevel.SubprojectCreate;
+        }
         if (accessLevel == ContextualAgentAccessLevel.None)
         {
             return null;
@@ -202,7 +238,9 @@ public static class ContextualAgentAccessResolver
                 return null;
             }
 
-            if (!projectId.HasValue && access.AllowedProjectIds.Count == 0)
+            if (!projectId.HasValue &&
+                access.AllowedProjectIds.Count == 0 &&
+                !access.CanCreateProjects)
             {
                 return null;
             }
@@ -212,7 +250,9 @@ public static class ContextualAgentAccessResolver
             ? "All projects"
             : projectId.HasValue
                 ? "This project"
-                : FormatScopeCount(access.AllowedProjectIds.Count, "project", "projects");
+                : access.AllowedProjectIds.Count > 0
+                    ? FormatScopeCount(access.AllowedProjectIds.Count, "project", "projects")
+                    : "Project creation only";
 
         return new ContextualAgentAccessSummary(agent, accessLevel, scopeLabel);
     }

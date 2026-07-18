@@ -138,6 +138,8 @@ public sealed class ProcessMockAgentCatalogService(
             editor.ProjectStructureAccess.CanWrite = false;
             editor.ProjectStructureAccess.CanWriteNonTaskStructure = false;
             editor.ProjectStructureAccess.CanWriteTasks = false;
+            editor.ProjectStructureAccess.CanCreateProjects = false;
+            editor.ProjectStructureAccess.CanCreateSubprojects = false;
             editor.ProjectStructureAccess.AllowAllProjects = true;
             editor.ProcessAccess.CanRead = true;
             editor.ProcessAccess.CanWrite = false;
@@ -265,10 +267,12 @@ public sealed class ProcessMockAgentCatalogService(
                crmHrMetadata.ExecutionMode == AiExecutionMode.Remote &&
                crmHrMetadata.Capabilities.Count == 0 &&
                 projectStructureAccess.CanRead &&
-                !projectStructureAccess.CanWrite &&
-                !projectStructureAccess.CanWriteNonTaskStructure &&
-                !projectStructureAccess.CanWriteTasks &&
-                projectStructureAccess.AllowAllProjects &&
+                 !projectStructureAccess.CanWrite &&
+                 !projectStructureAccess.CanWriteNonTaskStructure &&
+                 !projectStructureAccess.CanWriteTasks &&
+                 !projectStructureAccess.CanCreateProjects &&
+                 !projectStructureAccess.CanCreateSubprojects &&
+                 projectStructureAccess.AllowAllProjects &&
                projectStructureAccess.AllowedProjectIds.Count == 0 &&
                processAccess.CanRead &&
                !processAccess.CanWrite &&

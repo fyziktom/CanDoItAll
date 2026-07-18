@@ -74,6 +74,9 @@ public partial class WorkflowCanvasEditor
     [Parameter]
     public EventCallback ComponentLibraryChanged { get; set; }
 
+    [Parameter]
+    public EventCallback<WorkflowAgentChatNodeSelection?> SelectedNodeChanged { get; set; }
+
     private WorkflowCanvasDocument document = WorkflowCanvasDefinitionMapper.CreateDraft([]);
     private IReadOnlyList<LlmCallComponent> componentOptions = [];
     private IReadOnlyList<WorkflowExecutorDescriptor> executorDescriptors = [];
@@ -198,7 +201,7 @@ public partial class WorkflowCanvasEditor
     private int CountUsedExecutors()
         => document.Nodes.Count(node => node.ExecutorId.HasValue);
 
-    protected override void OnParametersSet()
+    protected override async Task OnParametersSetAsync()
     {
         componentOptions = Components;
         executorDescriptors = ExecutorCatalog.ListExecutors();
@@ -222,6 +225,7 @@ public partial class WorkflowCanvasEditor
         isPreviewInputDialogOpen = false;
         previewInputDefinition = null;
         SyncEdgeDefaults();
+        await NotifySelectedNodeChangedAsync();
     }
 
     protected override async Task OnInitializedAsync()
@@ -271,7 +275,7 @@ public partial class WorkflowCanvasEditor
         return Task.CompletedTask;
     }
 
-    private Task ResetDraftAsync()
+    private async Task ResetDraftAsync()
     {
         document = WorkflowCanvasDefinitionMapper.CreateDraft(componentOptions);
         loadedDefinitionKey = "draft";
@@ -281,7 +285,7 @@ public partial class WorkflowCanvasEditor
         testResult = null;
         errorMessage = string.Empty;
         SyncEdgeDefaults();
-        return Task.CompletedTask;
+        await NotifySelectedNodeChangedAsync();
     }
 
     private async Task AddNodeAsync(
@@ -316,11 +320,11 @@ public partial class WorkflowCanvasEditor
         ApplyCreateRequest(node, request);
         document.Nodes.Add(node);
         InsertNodeBeforeEnd(node);
-        SelectNode(node.Id.Value);
+        await SelectNodeAsync(node.Id.Value);
         SyncEdgeDefaults();
     }
 
-    private Task AddLlmComponentNodeAsync(
+    private async Task AddLlmComponentNodeAsync(
         LlmCallComponent component,
         CanvasWorkbenchCreateActionRequest? request = null)
     {
@@ -336,12 +340,11 @@ public partial class WorkflowCanvasEditor
         ApplyCreateRequest(node, request);
         document.Nodes.Add(node);
         InsertNodeBeforeEnd(node);
-        SelectNode(node.Id.Value);
+        await SelectNodeAsync(node.Id.Value);
         SyncEdgeDefaults();
-        return Task.CompletedTask;
     }
 
-    private Task AddExecutorNodeAsync(
+    private async Task AddExecutorNodeAsync(
         WorkflowExecutorDescriptor? descriptor,
         CanvasWorkbenchCreateActionRequest? request = null)
     {
@@ -361,9 +364,8 @@ public partial class WorkflowCanvasEditor
         ApplyExecutorCreateRequest(node, descriptor, request);
         document.Nodes.Add(node);
         InsertNodeBeforeEnd(node);
-        SelectNode(node.Id.Value);
+        await SelectNodeAsync(node.Id.Value);
         SyncEdgeDefaults();
-        return Task.CompletedTask;
     }
 
     private async Task CreateDefaultComponentAsync()
@@ -500,12 +502,12 @@ public partial class WorkflowCanvasEditor
             : RemoveNodeAsync(selected);
     }
 
-    private Task RemoveNodeAsync(WorkflowCanvasNodeDraft node)
+    private async Task RemoveNodeAsync(WorkflowCanvasNodeDraft node)
     {
         errorMessage = string.Empty;
         if (node.Kind is WorkflowNodeKind.Start or WorkflowNodeKind.End)
         {
-            return Task.CompletedTask;
+            return;
         }
 
         var incomingEdges = document.Edges
@@ -552,9 +554,8 @@ public partial class WorkflowCanvasEditor
         }
 
         isNodeDetailsDialogOpen = isNodeDetailsDialogOpen && SelectedNode is not null && SelectedNode != node;
-        SelectNode(bridge?.TargetNodeId.Value ?? document.StartNodeId.Value);
+        await SelectNodeAsync(bridge?.TargetNodeId.Value ?? document.StartNodeId.Value);
         SyncEdgeDefaults();
-        return Task.CompletedTask;
     }
 
     private RemovalBridge? ResolveRemovalBridge(
@@ -657,7 +658,7 @@ public partial class WorkflowCanvasEditor
                 definition.RuntimePolicy));
             document = WorkflowCanvasDefinitionMapper.FromDefinition(saved, componentOptions);
             loadedDefinitionKey = $"{saved.Id}:{saved.VersionId}";
-            SelectNode(document.StartNodeId.Value);
+            await SelectNodeAsync(document.StartNodeId.Value);
             validationIssues = (await CatalogService.ValidateDefinitionAsync(saved)).Issues;
             NotificationService.Success("Workflow saved", saved.Name);
             await DefinitionSaved.InvokeAsync(saved);
@@ -843,16 +844,15 @@ public partial class WorkflowCanvasEditor
         }
     }
 
-    private Task SelectPreviewNodeAsync(WorkflowNodeId nodeId)
+    private async Task SelectPreviewNodeAsync(WorkflowNodeId nodeId)
     {
         if (!document.Nodes.Any(node => node.Id == nodeId))
         {
-            return Task.CompletedTask;
+            return;
         }
 
-        SelectNode(nodeId.Value);
+        await SelectNodeAsync(nodeId.Value);
         StateHasChanged();
-        return Task.CompletedTask;
     }
 
     private async Task<WorkflowDefinition> ValidateCurrentDefinitionAsync()
@@ -872,21 +872,21 @@ public partial class WorkflowCanvasEditor
         return definition;
     }
 
-    private Task HandleCanvasSelectionChangedAsync(CanvasWorkbenchSelectionChangedEventArgs args)
+    private async Task HandleCanvasSelectionChangedAsync(CanvasWorkbenchSelectionChangedEventArgs args)
     {
         selectedNodeId = args.PrimaryNodeId ?? args.SelectedNodeIds.FirstOrDefault();
         canvasUiState.SelectedNodeIds = string.IsNullOrWhiteSpace(selectedNodeId)
             ? []
             : [selectedNodeId];
-        return Task.CompletedTask;
+        await NotifySelectedNodeChangedAsync();
     }
 
-    private Task HandleCanvasStateChangedAsync(string stateJson)
+    private async Task HandleCanvasStateChangedAsync(string stateJson)
     {
         canvasUiState = CanvasWorkbenchUiState.Parse(stateJson);
         selectedNodeId = canvasUiState.SelectedNodeIds.FirstOrDefault();
         canvasUiState.ActiveInspectorTab = "workflow";
-        return Task.CompletedTask;
+        await NotifySelectedNodeChangedAsync();
     }
 
     private Task HandleCanvasNodesMovedAsync(CanvasWorkbenchNodesMovedEventArgs args)
@@ -971,7 +971,7 @@ public partial class WorkflowCanvasEditor
             return;
         }
 
-        SelectNode(node.Id.Value);
+        await SelectNodeAsync(node.Id.Value);
         switch (request.ActionId)
         {
             case WorkflowCanvasDefinitionMapper.EditNodeActionId:
@@ -999,7 +999,7 @@ public partial class WorkflowCanvasEditor
         };
     }
 
-    private Task CreateEdgeFromCanvasConnectionAsync(CanvasWorkbenchContextActionRequest request)
+    private async Task CreateEdgeFromCanvasConnectionAsync(CanvasWorkbenchContextActionRequest request)
     {
         errorMessage = string.Empty;
         var hasSource = TryResolveCanvasConnectionEndpoint(request.LinkSourceId, isSource: true, out var sourceNode, out var sourceError);
@@ -1008,31 +1008,30 @@ public partial class WorkflowCanvasEditor
         {
             errorMessage = hasSource ? targetError : sourceError;
             NotificationService.Warning("Workflow connection failed", errorMessage);
-            return Task.CompletedTask;
+            return;
         }
 
         if (sourceNode.Id == targetNode.Id)
         {
             errorMessage = "Choose different source and target nodes for the workflow edge.";
             NotificationService.Warning("Workflow connection failed", errorMessage);
-            return Task.CompletedTask;
+            return;
         }
 
         if (document.Edges.Any(edge => edge.SourceNodeId == sourceNode.Id && edge.TargetNodeId == targetNode.Id))
         {
             errorMessage = "That workflow edge already exists.";
             NotificationService.Warning("Workflow connection failed", errorMessage);
-            return Task.CompletedTask;
+            return;
         }
 
         document.Edges.Add(new WorkflowCanvasEdgeDraft(
             CreateEdgeId(sourceNode.Id, targetNode.Id),
             sourceNode.Id,
             targetNode.Id));
-        SelectNode(targetNode.Id.Value);
+        await SelectNodeAsync(targetNode.Id.Value);
         ResetEdgeEditor();
         NotificationService.Success("Workflow edge connected", $"{sourceNode.Name} -> {targetNode.Name}");
-        return Task.CompletedTask;
     }
 
     private Task RemoveEdgeFromCanvasConnectionAsync(CanvasWorkbenchContextActionRequest request)
@@ -1242,18 +1241,28 @@ public partial class WorkflowCanvasEditor
         }
     }
 
-    private void SelectNode(string nodeId)
+    private async Task SelectNodeAsync(string nodeId)
     {
         selectedNodeId = nodeId;
         canvasUiState.SelectedNodeIds = [nodeId];
+        await NotifySelectedNodeChangedAsync();
     }
 
-    private Task HandleCanvasNodeOpenedAsync(string nodeId)
+    private async Task HandleCanvasNodeOpenedAsync(string nodeId)
     {
-        SelectNode(nodeId);
+        await SelectNodeAsync(nodeId);
         isNodeDetailsDialogOpen = SelectedNode is not null;
-        return Task.CompletedTask;
     }
+
+    private Task NotifySelectedNodeChangedAsync()
+        => SelectedNodeChanged.InvokeAsync(
+            SelectedNode is { } node && document.DefinitionId is { } definitionId
+                ? new WorkflowAgentChatNodeSelection(
+                    definitionId,
+                    node.Id,
+                    node.Name,
+                    node.Kind)
+                : null);
 
     private Task OpenSelectedNodeDetailsAsync()
     {
@@ -1695,7 +1704,7 @@ public partial class WorkflowCanvasEditor
         WorkflowCanvasDefinitionMapper.ApplyExecutor(node, descriptor);
     }
 
-    private Task AddDecisionNodeAsync(
+    private async Task AddDecisionNodeAsync(
         WorkflowDecisionBlockKind decisionKind,
         CanvasWorkbenchCreateActionRequest request)
     {
@@ -1721,9 +1730,8 @@ public partial class WorkflowCanvasEditor
         document.Nodes.Add(node);
         InsertNodeBeforeEnd(node);
         AddDefaultDecisionBranches(node, decisionKind, request);
-        SelectNode(node.Id.Value);
+        await SelectNodeAsync(node.Id.Value);
         SyncEdgeDefaults();
-        return Task.CompletedTask;
     }
 
     private void AddDefaultDecisionBranches(

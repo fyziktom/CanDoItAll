@@ -1,0 +1,134 @@
+@using CanDoItAll.AgentFramework.Core
+@using CanDoItAll.AgentFramework.Models
+@using CanDoItAll.SharedKernel
+@using Microsoft.AspNetCore.Components.Routing
+@implements IDisposable
+@inject IAgentChatContextRegistry ContextRegistry
+@inject WorkbenchStateService Workbench
+@inject NavigationManager Navigation
+
+@code {
+    private IAgentChatWorkspacePositionLease? positionLease;
+    private AgentChatWorkspacePosition? currentPosition;
+    private AgentChatNavigationIdentity navigationIdentity;
+    private AgentChatNavigationIdentity? publishedNavigationIdentity;
+    private bool isDisposed;
+
+    protected override void OnInitialized()
+    {
+        Workbench.Changed += HandleWorkspaceChanged;
+        Navigation.LocationChanged += HandleLocationChanged;
+        navigationIdentity = ResolveNavigationIdentity();
+        PublishPosition();
+    }
+
+    private void HandleWorkspaceChanged()
+        => QueuePositionUpdate(navigationChanged: false);
+
+    private void HandleLocationChanged(object? sender, LocationChangedEventArgs eventArgs)
+        => QueuePositionUpdate(navigationChanged: true);
+
+    private void QueuePositionUpdate(bool navigationChanged)
+    {
+        if (isDisposed)
+        {
+            return;
+        }
+
+        _ = InvokeAsync(() =>
+        {
+            if (navigationChanged)
+            {
+                navigationIdentity = ResolveNavigationIdentity();
+            }
+
+            PublishPosition();
+        });
+    }
+
+    private void PublishPosition()
+    {
+        if (isDisposed)
+        {
+            return;
+        }
+
+        var activeTab = ResolveCurrentActiveTab();
+        var route = ResolveCurrentRoute();
+        var next = new AgentChatWorkspacePosition(
+            activeTab?.TabId ?? $"route:{route}",
+            activeTab?.Title ?? "Current workspace",
+            route,
+            activeTab?.TabKind ?? WorkbenchTabKinds.Page,
+            activeTab?.ProjectId,
+            activeTab?.ProjectName,
+            activeTab?.PhaseName);
+        if (currentPosition == next && publishedNavigationIdentity == navigationIdentity)
+        {
+            return;
+        }
+
+        if (positionLease is null)
+        {
+            positionLease = ContextRegistry.RegisterWorkspacePosition(
+                next,
+                navigationIdentity);
+        }
+        else
+        {
+            positionLease.Update(next, navigationIdentity);
+        }
+
+        currentPosition = next;
+        publishedNavigationIdentity = navigationIdentity;
+    }
+
+    private WorkbenchTabState? ResolveCurrentActiveTab()
+    {
+        var activeTab = Workbench.GetActiveTab();
+        if (activeTab is null)
+        {
+            return null;
+        }
+
+        var tabNavigationIdentity = AgentChatNavigationIdentity.CreateForLocation(
+            Navigation.BaseUri,
+            Navigation.ToAbsoluteUri(activeTab.Route).AbsoluteUri);
+        return tabNavigationIdentity == navigationIdentity
+            ? activeTab
+            : null;
+    }
+
+    private string ResolveCurrentRoute()
+    {
+        var relative = Navigation.ToBaseRelativePath(Navigation.Uri);
+        var suffixIndex = relative.IndexOfAny(['?', '#']);
+        if (suffixIndex >= 0)
+        {
+            relative = relative[..suffixIndex];
+        }
+
+        return string.IsNullOrWhiteSpace(relative) ? "/" : $"/{relative}";
+    }
+
+    private AgentChatNavigationIdentity ResolveNavigationIdentity()
+        => AgentChatNavigationIdentity.CreateForLocation(
+            Navigation.BaseUri,
+            Navigation.Uri);
+
+    public void Dispose()
+    {
+        if (isDisposed)
+        {
+            return;
+        }
+
+        isDisposed = true;
+        Workbench.Changed -= HandleWorkspaceChanged;
+        Navigation.LocationChanged -= HandleLocationChanged;
+        positionLease?.Dispose();
+        positionLease = null;
+        currentPosition = null;
+        publishedNavigationIdentity = null;
+    }
+}

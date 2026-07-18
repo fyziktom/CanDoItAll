@@ -36,6 +36,8 @@
     "projectStructure": {
       "canRead": true,
       "canWrite": true,
+      "canCreateProjects": true,
+      "canCreateSubprojects": true,
       "allowAllProjects": true,
       "allowedProjectIds": []
     },

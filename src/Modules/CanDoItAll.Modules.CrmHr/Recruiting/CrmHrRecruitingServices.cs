@@ -246,6 +246,7 @@ public sealed partial class RecruitingService(
 
     public async Task<RecruitmentWorkspaceModel> GetRecruitmentWorkspaceAsync(
         Guid? applicationId = null,
+        Guid? partyId = null,
         CancellationToken cancellationToken = default)
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
@@ -263,7 +264,10 @@ public sealed partial class RecruitingService(
             .Select(item => new RecruitmentProjectOptionModel(item.Id, item.Name, item.CurrentPhase, item.Status))
             .ToList();
 
-        if (!applicationId.HasValue)
+        var resolvedApplicationId = applicationId ?? applications
+            .FirstOrDefault(item => partyId.HasValue && item.PartyId == partyId.Value)
+            ?.Id;
+        if (!resolvedApplicationId.HasValue)
         {
             return new RecruitmentWorkspaceModel(
                 applications,
@@ -288,8 +292,9 @@ public sealed partial class RecruitingService(
         }
 
         var application = await dbContext.Set<RecruitmentApplication>()
-            .SingleOrDefaultAsync(item => item.Id == applicationId.Value, cancellationToken);
-        if (application is null)
+            .SingleOrDefaultAsync(item => item.Id == resolvedApplicationId.Value, cancellationToken);
+        if (application is null ||
+            partyId.HasValue && application.PartyId != partyId.Value)
         {
             return new RecruitmentWorkspaceModel(
                 applications,

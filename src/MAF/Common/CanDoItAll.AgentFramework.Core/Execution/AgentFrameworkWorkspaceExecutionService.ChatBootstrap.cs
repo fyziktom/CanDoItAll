@@ -28,7 +28,18 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         Guid? preferredSessionId = null,
         CancellationToken cancellationToken = default)
     {
-        var sessionSummaries = await LoadChatSessionSummariesAsync(agentId, cancellationToken);
+        IReadOnlyList<ChatRunSummaryRecord>? indexedRunSummaries = null;
+        IReadOnlyList<ChatSessionSummaryRecord> sessionSummaries;
+        if (store is ISandboxWorkspaceChatProjectionQueryStore projectionQueryStore)
+        {
+            var projection = await projectionQueryStore.LoadChatWorkspaceProjectionAsync(agentId, cancellationToken);
+            sessionSummaries = projection.SessionSummaries;
+            indexedRunSummaries = projection.RunSummaries;
+        }
+        else
+        {
+            sessionSummaries = await LoadChatSessionSummariesAsync(agentId, cancellationToken);
+        }
 
         Guid? selectedSessionId = null;
         ChatSessionRecord? selectedSession = null;
@@ -61,8 +72,15 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
             ? await LoadChatSessionAsync(selectedSessionId.Value, cancellationToken)
             : null;
 
-        var latestRun = await LoadLatestChatRunSummaryAsync(agentId, selectedSessionId, cancellationToken);
-        var selectedRun = await LoadLatestChatRunAsync(agentId, selectedSessionId, selectedSession, cancellationToken);
+        var latestRun = indexedRunSummaries is null
+            ? await LoadLatestChatRunSummaryAsync(agentId, selectedSessionId, cancellationToken)
+            : ResolveLatestChatRunSummary(indexedRunSummaries, agentId, selectedSessionId);
+        var selectedRun = await LoadLatestChatRunAsync(
+            agentId,
+            selectedSessionId,
+            selectedSession,
+            indexedRunSummaries,
+            cancellationToken);
         return new ChatAgentWorkspaceSnapshot(agentId, sessionSummaries, selectedSession, selectedSessionId, latestRun)
         {
             SelectedRun = selectedRun
@@ -182,6 +200,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         Guid agentId,
         Guid? chatSessionId,
         ChatSessionRecord? selectedSession,
+        IReadOnlyList<ChatRunSummaryRecord>? indexedRunSummaries,
         CancellationToken cancellationToken)
     {
         if (!chatSessionId.HasValue)
@@ -193,7 +212,16 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         {
             var latestRunId = selectedSession?.LatestExecutionRunId;
             if (!latestRunId.HasValue &&
-                store is ISandboxWorkspaceChatQueryStore chatQueryStore)
+                indexedRunSummaries is not null)
+            {
+                latestRunId = ResolveLatestChatRunSummary(
+                        indexedRunSummaries,
+                        agentId,
+                        chatSessionId)
+                    ?.ExecutionRunId;
+            }
+            else if (!latestRunId.HasValue &&
+                     store is ISandboxWorkspaceChatQueryStore chatQueryStore)
             {
                 latestRunId = (await chatQueryStore.ListChatRunSummariesAsync(agentId, chatSessionId, cancellationToken))
                     .FirstOrDefault()
@@ -235,6 +263,19 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
             .Where(item => item.AgentId == agentId && item.ChatSessionId == chatSessionId.Value)
             .OrderByDescending(item => item.UpdatedAtUtc)
             .ThenByDescending(item => item.CreatedAtUtc)
+            .FirstOrDefault();
+    }
+
+    private static ChatRunSummaryRecord? ResolveLatestChatRunSummary(
+        IReadOnlyList<ChatRunSummaryRecord> runSummaries,
+        Guid agentId,
+        Guid? chatSessionId)
+    {
+        return runSummaries
+            .Where(item =>
+                item.AgentId == agentId &&
+                (!chatSessionId.HasValue || item.ChatSessionId == chatSessionId.Value))
+            .OrderByDescending(item => item.UpdatedAtUtc)
             .FirstOrDefault();
     }
 

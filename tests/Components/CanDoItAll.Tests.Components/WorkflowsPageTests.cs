@@ -9,7 +9,9 @@ using CanDoItAll.Components.CanvasLib;
 using CanDoItAll.Modules.AgentFramework;
 using CanDoItAll.Modules.AgentFramework.Pages;
 using CanDoItAll.Modules.AgentFramework.Pages.Components;
+using CanDoItAll.Modules.Workbench;
 using CanDoItAll.Infrastructure.Persistence;
+using CanDoItAll.SharedKernel;
 using CanDoItAll.Tests.Support;
 using CanDoItAll.Tools.Documents;
 using Microsoft.AspNetCore.Components;
@@ -110,7 +112,7 @@ public sealed class WorkflowsPageTests
             Assert.Contains(notificationService.Messages, message => message.Summary == "Workflow published");
             Assert.Contains("Status Active", cut.Find("[data-testid='workflows-detail']").TextContent, StringComparison.Ordinal);
             Assert.Empty(cut.FindAll("[data-testid='workflows-publish']"));
-        });
+        }, TimeSpan.FromSeconds(30));
 
         var published = Assert.Single(await catalogService.ListDefinitionsAsync());
         Assert.Equal(WorkflowLifecycleStatus.Active, published.Status);
@@ -185,8 +187,11 @@ public sealed class WorkflowsPageTests
 
         cut.Find("[data-testid='workflows-tab-workflows']").Click();
         cut.WaitForElement("[data-testid='workflows-catalog']");
-        cut.FindAll("button")
-            .First(button => button.TextContent.Contains(definition.Name, StringComparison.Ordinal))
+        cut.WaitForAssertion(() => Assert.Contains(
+            cut.FindAll("[data-testid='workflows-catalog-item']"),
+            item => item.TextContent.Contains(definition.Name, StringComparison.Ordinal)));
+        cut.FindAll("[data-testid='workflows-catalog-item']")
+            .First(item => item.TextContent.Contains(definition.Name, StringComparison.Ordinal))
             .Click();
         cut.Find("[data-testid='workflows-tab-editor']").Click();
         cut.WaitForElement("[data-testid='workflow-canvas-editor']");
@@ -198,6 +203,276 @@ public sealed class WorkflowsPageTests
             Assert.Contains(surface.Nodes, node => node.Id == "work");
             Assert.Contains(surface.Links, link => link.SourceId == "start" && link.TargetId == "work");
             Assert.Contains(surface.Links, link => link.SourceId == "work" && link.TargetId == "end");
+        });
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Workflows_page_ignores_late_definition_result_after_newer_selection(bool staleRequestFails)
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync(RegisterRacingWorkflowCatalog);
+        var navigation = harness.Context.Services.GetRequiredService<NavigationManager>();
+        var catalogService = harness.Context.Services.GetRequiredService<IWorkflowCatalogService>();
+        var racingCatalog = harness.Context.Services.GetRequiredService<RacingWorkflowCatalogService>();
+        var firstDefinition = await CreateCanvasLoadDefinitionAsync(catalogService);
+        var secondDefinition = await CreateHistoryDefinitionAsync(catalogService);
+
+        navigation.NavigateTo("/agents/workflows");
+        var cut = harness.Context.RenderComponent<WorkflowsPage>();
+        racingCatalog.Delay(firstDefinition.Id, secondDefinition.Id);
+
+        var firstSelection = cut.InvokeAsync(() => InvokeSelectDefinitionAsync(cut.Instance, firstDefinition.Id));
+        await racingCatalog.WaitForRequestAsync(firstDefinition.Id);
+        cut.WaitForAssertion(() => Assert.Equal(
+            AgentChatContextAccessState.Loading,
+            ReadAgentChatAccessState(cut.Instance)));
+
+        var secondSelection = cut.InvokeAsync(() => InvokeSelectDefinitionAsync(cut.Instance, secondDefinition.Id));
+        await racingCatalog.WaitForRequestAsync(secondDefinition.Id);
+
+        racingCatalog.Complete(secondDefinition.Id);
+        await secondSelection;
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Equal(secondDefinition.Id, ReadSelectedDefinition(cut.Instance)?.Id);
+            Assert.Equal(AgentChatContextAccessState.Ready, ReadAgentChatAccessState(cut.Instance));
+        });
+
+        if (staleRequestFails)
+        {
+            racingCatalog.Fail(firstDefinition.Id);
+        }
+        else
+        {
+            racingCatalog.Complete(firstDefinition.Id);
+        }
+
+        await firstSelection;
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Equal(secondDefinition.Id, ReadSelectedDefinition(cut.Instance)?.Id);
+            Assert.Equal(AgentChatContextAccessState.Ready, ReadAgentChatAccessState(cut.Instance));
+        });
+    }
+
+    [Fact]
+    public async Task Workflows_page_ignores_late_history_page_and_run_selection_results()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var navigation = harness.Context.Services.GetRequiredService<NavigationManager>();
+        var catalogService = harness.Context.Services.GetRequiredService<IWorkflowCatalogService>();
+        var firstDefinition = await CreateCanvasLoadDefinitionAsync(catalogService);
+        var secondDefinition = await CreateHistoryDefinitionAsync(catalogService);
+        var now = DateTimeOffset.UtcNow;
+        var firstRun = CreateRun(firstDefinition, "first-definition-run", now.AddMinutes(-2));
+        var secondRun = CreateRun(secondDefinition, "second-definition-run", now.AddMinutes(-1));
+        var newestSecondRun = CreateRun(secondDefinition, "newest-second-run", now);
+        var runStore = new CountingWorkflowRunStore(new WorkflowRunStoreCallCounter());
+        await runStore.SaveRunAsync(firstRun);
+        await runStore.SaveRunAsync(secondRun);
+        await runStore.SaveRunAsync(newestSecondRun);
+        var runtimeManager = new RacingWorkflowRuntimeManager(firstRun, secondRun, newestSecondRun);
+
+        navigation.NavigateTo("/agents/workflows");
+        var cut = harness.Context.RenderComponent<WorkflowsPage>();
+        cut.Instance.RunStore = runStore;
+        cut.Instance.RuntimeManager = runtimeManager;
+        await cut.InvokeAsync(() => InvokeSelectDefinitionAsync(cut.Instance, firstDefinition.Id));
+
+        runStore.DelayRunPages(firstDefinition.Id, secondDefinition.Id);
+        var staleHistory = cut.InvokeAsync(() => InvokeLoadRunsPageAsync(cut.Instance, firstDefinition.Id));
+        await runStore.WaitForRunPageRequestAsync(firstDefinition.Id);
+        cut.WaitForAssertion(() => Assert.Equal(
+            AgentChatContextAccessState.Loading,
+            ReadAgentChatAccessState(cut.Instance)));
+
+        await cut.InvokeAsync(() => InvokeSelectDefinitionAsync(cut.Instance, secondDefinition.Id));
+        var currentHistory = cut.InvokeAsync(() => InvokeLoadRunsPageAsync(cut.Instance, secondDefinition.Id));
+        await runStore.WaitForRunPageRequestAsync(secondDefinition.Id);
+        runStore.CompleteRunPage(secondDefinition.Id);
+        await currentHistory;
+
+        runStore.CompleteRunPage(firstDefinition.Id);
+        await staleHistory;
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Equal(secondDefinition.Id, ReadSelectedDefinition(cut.Instance)?.Id);
+            Assert.All(ReadRuns(cut.Instance), run => Assert.Equal(secondDefinition.Id, run.WorkflowId));
+            Assert.Equal(secondDefinition.Id, ReadSelectedRun(cut.Instance)?.WorkflowId);
+            Assert.Equal(AgentChatContextAccessState.Ready, ReadAgentChatAccessState(cut.Instance));
+        });
+
+        runtimeManager.DelayRuns(secondRun.RunId, newestSecondRun.RunId);
+        var staleRunSelection = cut.InvokeAsync(() => InvokeSelectRunAsync(cut.Instance, secondRun.RunId));
+        await runtimeManager.WaitForRunRequestAsync(secondRun.RunId);
+        var currentRunSelection = cut.InvokeAsync(() => InvokeSelectRunAsync(cut.Instance, newestSecondRun.RunId));
+        await runtimeManager.WaitForRunRequestAsync(newestSecondRun.RunId);
+        runtimeManager.CompleteRun(newestSecondRun.RunId);
+        await currentRunSelection;
+        runtimeManager.CompleteRun(secondRun.RunId);
+        await staleRunSelection;
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Equal(newestSecondRun.RunId, ReadSelectedRun(cut.Instance)?.RunId);
+            Assert.Equal(secondDefinition.Id, ReadSelectedRun(cut.Instance)?.WorkflowId);
+            Assert.Equal(AgentChatContextAccessState.Ready, ReadAgentChatAccessState(cut.Instance));
+        });
+    }
+
+    [Fact]
+    public async Task Workflows_page_resolves_exact_non_first_project_workflow_and_run_route()
+    {
+        var projectGateway = new WorkflowRouteProjectGateway();
+        await using var harness = await ComponentTestHarness.CreateAsync(services =>
+        {
+            services.RemoveAll<IProjectStructureRuntimeGateway>();
+            services.AddSingleton<IProjectStructureRuntimeGateway>(projectGateway);
+        });
+        var catalogService = harness.Context.Services.GetRequiredService<IWorkflowCatalogService>();
+        var runStore = harness.Context.Services.GetRequiredService<IWorkflowRunStore>();
+        var navigation = harness.Context.Services.GetRequiredService<NavigationManager>();
+        var targetDefinition = await CreateCanvasLoadDefinitionAsync(catalogService);
+        await CreateHistoryDefinitionAsync(catalogService);
+        Assert.NotEqual(targetDefinition.Id, (await catalogService.ListDefinitionsAsync())[0].Id);
+
+        var now = DateTimeOffset.UtcNow;
+        var requestedRun = CreateRun(targetDefinition, "requested-non-first-run", now.AddMinutes(-2));
+        var newerRun = CreateRun(targetDefinition, "newer-run", now);
+        await runStore.SaveRunAsync(requestedRun);
+        await runStore.SaveRunAsync(newerRun);
+        var projectId = Guid.NewGuid();
+        projectGateway.SetProjectWorkflow(projectId, "Exact workflow project", targetDefinition.Id);
+        navigation.NavigateTo(
+            $"/agents/workflows?projectId={projectId:D}&workflowId={targetDefinition.Id.Value:D}&runId={requestedRun.RunId.Value:D}");
+
+        var cut = harness.Context.RenderComponent<WorkflowsPage>();
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Equal(AgentChatContextAccessState.Ready, ReadAgentChatAccessState(cut.Instance));
+            Assert.Equal(targetDefinition.Id, ReadSelectedDefinition(cut.Instance)?.Id);
+            Assert.Equal(requestedRun.RunId, ReadSelectedRun(cut.Instance)?.RunId);
+            var surface = ReadAgentChatSurface(cut.Instance);
+            Assert.Equal(targetDefinition.Id.Value.ToString("D"), surface.Position.PrimarySelection?.Id);
+            Assert.Contains(surface.Position.SelectedEntities, entity =>
+                entity.Kind == "project" && entity.Id == projectId.ToString("D"));
+            Assert.Contains(surface.Position.SelectedEntities, entity =>
+                entity.Kind == "workflow-run" && entity.Id == requestedRun.RunId.Value.ToString("D"));
+            Assert.Contains($"projectId={projectId:D}", surface.Position.Route, StringComparison.Ordinal);
+            Assert.Contains($"workflowId={targetDefinition.Id.Value:D}", surface.Position.Route, StringComparison.Ordinal);
+            Assert.Contains($"runId={requestedRun.RunId.Value:D}", surface.Position.Route, StringComparison.Ordinal);
+        });
+    }
+
+    [Fact]
+    public async Task Workflows_page_fails_closed_when_requested_workflow_is_missing()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var catalogService = harness.Context.Services.GetRequiredService<IWorkflowCatalogService>();
+        var navigation = harness.Context.Services.GetRequiredService<NavigationManager>();
+        var availableDefinition = await CreateCanvasLoadDefinitionAsync(catalogService);
+        var missingWorkflowId = WorkflowId.New();
+        navigation.NavigateTo($"/agents/workflows?workflowId={missingWorkflowId.Value:D}");
+
+        var cut = harness.Context.RenderComponent<WorkflowsPage>();
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Equal(AgentChatContextAccessState.Failed, ReadAgentChatAccessState(cut.Instance));
+            Assert.Null(ReadSelectedDefinitionOrNull(cut.Instance));
+            Assert.Null(ReadSelectedRunOrNull(cut.Instance));
+            Assert.Contains(missingWorkflowId.ToString(), cut.Markup, StringComparison.Ordinal);
+            Assert.DoesNotContain(
+                availableDefinition.Name,
+                ReadAgentChatSurface(cut.Instance).Position.PrimarySelection?.DisplayName ?? string.Empty,
+                StringComparison.Ordinal);
+        });
+    }
+
+    [Fact]
+    public async Task Workflows_page_fails_closed_when_requested_run_belongs_to_another_workflow()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var catalogService = harness.Context.Services.GetRequiredService<IWorkflowCatalogService>();
+        var runStore = harness.Context.Services.GetRequiredService<IWorkflowRunStore>();
+        var navigation = harness.Context.Services.GetRequiredService<NavigationManager>();
+        var requestedDefinition = await CreateCanvasLoadDefinitionAsync(catalogService);
+        var otherDefinition = await CreateHistoryDefinitionAsync(catalogService);
+        var conflictingRun = CreateRun(otherDefinition, "wrong-workflow-run", DateTimeOffset.UtcNow);
+        await runStore.SaveRunAsync(conflictingRun);
+        navigation.NavigateTo(
+            $"/agents/workflows?workflowId={requestedDefinition.Id.Value:D}&runId={conflictingRun.RunId.Value:D}");
+
+        var cut = harness.Context.RenderComponent<WorkflowsPage>();
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Equal(AgentChatContextAccessState.Failed, ReadAgentChatAccessState(cut.Instance));
+            Assert.Null(ReadSelectedDefinitionOrNull(cut.Instance));
+            Assert.Null(ReadSelectedRunOrNull(cut.Instance));
+            Assert.Contains(conflictingRun.RunId.ToString(), cut.Markup, StringComparison.Ordinal);
+        });
+    }
+
+    [Fact]
+    public async Task Workflows_page_fails_closed_when_workflow_is_not_attached_to_requested_project()
+    {
+        var projectGateway = new WorkflowRouteProjectGateway();
+        await using var harness = await ComponentTestHarness.CreateAsync(services =>
+        {
+            services.RemoveAll<IProjectStructureRuntimeGateway>();
+            services.AddSingleton<IProjectStructureRuntimeGateway>(projectGateway);
+        });
+        var catalogService = harness.Context.Services.GetRequiredService<IWorkflowCatalogService>();
+        var navigation = harness.Context.Services.GetRequiredService<NavigationManager>();
+        var requestedDefinition = await CreateCanvasLoadDefinitionAsync(catalogService);
+        var attachedDefinition = await CreateHistoryDefinitionAsync(catalogService);
+        var projectId = Guid.NewGuid();
+        projectGateway.SetProjectWorkflow(projectId, "Different workflow project", attachedDefinition.Id);
+        navigation.NavigateTo(
+            $"/agents/workflows?projectId={projectId:D}&workflowId={requestedDefinition.Id.Value:D}");
+
+        var cut = harness.Context.RenderComponent<WorkflowsPage>();
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Equal(AgentChatContextAccessState.Failed, ReadAgentChatAccessState(cut.Instance));
+            Assert.Null(ReadSelectedDefinitionOrNull(cut.Instance));
+            Assert.Contains("is not attached", cut.Markup, StringComparison.Ordinal);
+        });
+    }
+
+    [Fact]
+    public async Task Workflows_page_ignores_late_route_result_after_newer_route_identity()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync(RegisterRacingWorkflowCatalog);
+        var catalogService = harness.Context.Services.GetRequiredService<IWorkflowCatalogService>();
+        var racingCatalog = harness.Context.Services.GetRequiredService<RacingWorkflowCatalogService>();
+        var navigation = harness.Context.Services.GetRequiredService<NavigationManager>();
+        var staleDefinition = await CreateCanvasLoadDefinitionAsync(catalogService);
+        var currentDefinition = await CreateHistoryDefinitionAsync(catalogService);
+        racingCatalog.Delay(staleDefinition.Id, currentDefinition.Id);
+        navigation.NavigateTo($"/agents/workflows?workflowId={staleDefinition.Id.Value:D}");
+
+        var cut = harness.Context.RenderComponent<WorkflowsPage>();
+        await racingCatalog.WaitForRequestAsync(staleDefinition.Id);
+
+        navigation.NavigateTo($"/agents/workflows?workflowId={currentDefinition.Id.Value:D}");
+        await racingCatalog.WaitForRequestAsync(currentDefinition.Id);
+        racingCatalog.Complete(currentDefinition.Id);
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Equal(currentDefinition.Id, ReadSelectedDefinition(cut.Instance)?.Id);
+            Assert.Equal(AgentChatContextAccessState.Ready, ReadAgentChatAccessState(cut.Instance));
+        });
+
+        racingCatalog.Complete(staleDefinition.Id);
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Equal(currentDefinition.Id, ReadSelectedDefinition(cut.Instance)?.Id);
+            Assert.Equal(AgentChatContextAccessState.Ready, ReadAgentChatAccessState(cut.Instance));
         });
     }
 
@@ -669,6 +944,43 @@ public sealed class WorkflowsPageTests
         Assert.True(durableOption.HasAttribute("disabled"));
         Assert.Contains("Planned", durableOption.TextContent, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("not registered", durableOption.GetAttribute("title"), StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task Workflow_canvas_reports_immutable_current_definition_node_selection()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var definition = CreatePreviewProgressDefinition();
+        WorkflowAgentChatNodeSelection? selected = null;
+
+        var cut = harness.Context.RenderComponent<WorkflowCanvasEditor>(parameters => parameters
+            .Add(component => component.Definition, definition)
+            .Add(component => component.Components, [])
+            .Add(component => component.ProviderOptions, [])
+            .Add(component => component.SelectedNodeChanged,
+                EventCallback.Factory.Create<WorkflowAgentChatNodeSelection?>(
+                    this,
+                    value => selected = value)));
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.NotNull(selected);
+            Assert.Equal(definition.Id, selected!.DefinitionId);
+            Assert.Equal(definition.Graph.StartNodeId, selected.NodeId);
+        });
+
+        var anotherNode = definition.Graph.Nodes.First(node => node.Id != definition.Graph.StartNodeId);
+        var picker = cut.FindAll(".workflow-canvas-node-picker")
+            .Single(item => item.TextContent.Contains(anotherNode.Name, StringComparison.Ordinal));
+        picker.Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Equal(definition.Id, selected?.DefinitionId);
+            Assert.Equal(anotherNode.Id, selected?.NodeId);
+            Assert.Equal(anotherNode.Name, selected?.Name);
+            Assert.Equal(anotherNode.Kind, selected?.Kind);
+        });
     }
 
     [Fact]
@@ -1320,6 +1632,14 @@ public sealed class WorkflowsPageTests
             serviceProvider.GetRequiredService<WorkflowComponentLibraryCallCounter>()));
     }
 
+    private static void RegisterRacingWorkflowCatalog(IServiceCollection services)
+    {
+        services.RemoveAll<IWorkflowCatalogService>();
+        services.AddScoped<RacingWorkflowCatalogService>();
+        services.AddScoped<IWorkflowCatalogService>(serviceProvider =>
+            serviceProvider.GetRequiredService<RacingWorkflowCatalogService>());
+    }
+
     private static void RegisterCountingWorkflowRunStore(IServiceCollection services)
     {
         services.AddSingleton<WorkflowRunStoreCallCounter>();
@@ -1398,6 +1718,101 @@ public sealed class WorkflowsPageTests
     private static IElement FindButtonByTitle(IRenderedFragment cut, string title)
         => cut.FindAll("button")
             .First(button => button.GetAttribute("title")?.Contains(title, StringComparison.Ordinal) == true);
+
+    private static Task InvokeSelectDefinitionAsync(WorkflowsPage page, WorkflowId definitionId)
+    {
+        var method = typeof(WorkflowsPage).GetMethod(
+            "SelectDefinitionAsync",
+            System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+        return Assert.IsAssignableFrom<Task>(method?.Invoke(page, [definitionId]));
+    }
+
+    private static Task InvokeLoadRunsPageAsync(WorkflowsPage page, WorkflowId definitionId)
+    {
+        var method = typeof(WorkflowsPage).GetMethod(
+            "LoadRunsPageAsync",
+            System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+        return Assert.IsAssignableFrom<Task>(method?.Invoke(page, [definitionId, 0, null, null]));
+    }
+
+    private static Task InvokeSelectRunAsync(WorkflowsPage page, WorkflowRunId runId)
+    {
+        var method = typeof(WorkflowsPage).GetMethod(
+            "SelectRunAsync",
+            System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+        return Assert.IsAssignableFrom<Task>(method?.Invoke(page, [runId, true, null, null]));
+    }
+
+    private static WorkflowDefinition? ReadSelectedDefinition(WorkflowsPage page)
+    {
+        var field = typeof(WorkflowsPage).GetField(
+            "selectedDefinition",
+            System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+        return Assert.IsType<WorkflowDefinition>(field?.GetValue(page));
+    }
+
+    private static WorkflowDefinition? ReadSelectedDefinitionOrNull(WorkflowsPage page)
+    {
+        var field = typeof(WorkflowsPage).GetField(
+            "selectedDefinition",
+            System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+        return field?.GetValue(page) as WorkflowDefinition;
+    }
+
+    private static WorkflowRunSnapshot? ReadSelectedRun(WorkflowsPage page)
+    {
+        var field = typeof(WorkflowsPage).GetField(
+            "selectedRun",
+            System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+        return Assert.IsType<WorkflowRunSnapshot>(field?.GetValue(page));
+    }
+
+    private static WorkflowRunSnapshot? ReadSelectedRunOrNull(WorkflowsPage page)
+    {
+        var field = typeof(WorkflowsPage).GetField(
+            "selectedRun",
+            System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+        return field?.GetValue(page) as WorkflowRunSnapshot;
+    }
+
+    private static IReadOnlyList<WorkflowRunSnapshot> ReadRuns(WorkflowsPage page)
+    {
+        var field = typeof(WorkflowsPage).GetField(
+            "runs",
+            System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+        return Assert.IsAssignableFrom<IReadOnlyList<WorkflowRunSnapshot>>(field?.GetValue(page));
+    }
+
+    private static AgentChatContextAccessState ReadAgentChatAccessState(WorkflowsPage page)
+    {
+        var property = typeof(WorkflowsPage).GetProperty(
+            "AgentChatAccessState",
+            System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+        return Assert.IsType<AgentChatContextAccessState>(property?.GetValue(page));
+    }
+
+    private static AgentChatContextSurface ReadAgentChatSurface(WorkflowsPage page)
+    {
+        var property = typeof(WorkflowsPage).GetProperty(
+            "AgentChatSurface",
+            System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+        return Assert.IsType<AgentChatContextSurface>(property?.GetValue(page));
+    }
+
+    private static WorkflowRunSnapshot CreateRun(
+        WorkflowDefinition definition,
+        string backendRunId,
+        DateTimeOffset createdAtUtc)
+        => new(
+            WorkflowRunId.New(),
+            definition.Id,
+            definition.VersionId,
+            WorkflowRunState.Completed,
+            WorkflowRuntimeBackendKind.InProcess,
+            backendRunId,
+            $"{backendRunId} completed.",
+            createdAtUtc,
+            createdAtUtc);
 
     private static void ClickWorkflowCanvasTab(IRenderedFragment cut, string testId)
     {
@@ -1874,6 +2289,196 @@ public sealed class WorkflowsPageTests
             ]);
     }
 
+    private sealed class RacingWorkflowCatalogService(
+        PersistentWorkflowCatalogService inner) : IWorkflowCatalogService
+    {
+        private readonly Dictionary<WorkflowId, PendingDefinitionRequest> pendingRequests = [];
+
+        public void Delay(params WorkflowId[] definitionIds)
+        {
+            foreach (var definitionId in definitionIds)
+            {
+                pendingRequests[definitionId] = new PendingDefinitionRequest();
+            }
+        }
+
+        public Task WaitForRequestAsync(WorkflowId definitionId)
+            => GetPendingRequest(definitionId).Started.Task;
+
+        public void Complete(WorkflowId definitionId)
+            => GetPendingRequest(definitionId).Completion.TrySetResult(null);
+
+        public void Fail(WorkflowId definitionId)
+            => GetPendingRequest(definitionId).Completion.TrySetResult(
+                new InvalidOperationException($"Delayed workflow '{definitionId}' failed."));
+
+        public Task<IReadOnlyList<WorkflowCatalogItem>> ListDefinitionsAsync(
+            CancellationToken cancellationToken = default)
+            => inner.ListDefinitionsAsync(cancellationToken);
+
+        public async Task<WorkflowDefinitionDetail?> GetDefinitionAsync(
+            WorkflowId workflowId,
+            WorkflowVersionId? versionId = null,
+            CancellationToken cancellationToken = default)
+        {
+            if (pendingRequests.TryGetValue(workflowId, out var pendingRequest))
+            {
+                pendingRequest.Started.TrySetResult();
+                var exception = await pendingRequest.Completion.Task.WaitAsync(cancellationToken);
+                if (exception is not null)
+                {
+                    throw exception;
+                }
+            }
+
+            return await inner.GetDefinitionAsync(workflowId, versionId, cancellationToken);
+        }
+
+        public Task<WorkflowDefinitionDetail?> GetLatestDefinitionByStatusAsync(
+            WorkflowId workflowId,
+            WorkflowLifecycleStatus status,
+            CancellationToken cancellationToken = default)
+            => inner.GetLatestDefinitionByStatusAsync(workflowId, status, cancellationToken);
+
+        public Task<WorkflowDefinition> SaveDefinitionAsync(
+            WorkflowDefinitionSaveRequest request,
+            CancellationToken cancellationToken = default)
+            => inner.SaveDefinitionAsync(request, cancellationToken);
+
+        public Task<WorkflowDefinition> ChangeDefinitionStatusAsync(
+            WorkflowDefinitionStatusChangeRequest request,
+            CancellationToken cancellationToken = default)
+            => inner.ChangeDefinitionStatusAsync(request, cancellationToken);
+
+        public Task<WorkflowDefinitionExportEnvelope?> ExportDefinitionAsync(
+            WorkflowId workflowId,
+            WorkflowVersionId? versionId = null,
+            CancellationToken cancellationToken = default)
+            => inner.ExportDefinitionAsync(workflowId, versionId, cancellationToken);
+
+        public Task<WorkflowDefinition> ImportDefinitionAsync(
+            WorkflowDefinitionImportRequest request,
+            CancellationToken cancellationToken = default)
+            => inner.ImportDefinitionAsync(request, cancellationToken);
+
+        public Task DeleteDefinitionAsync(
+            WorkflowId workflowId,
+            CancellationToken cancellationToken = default)
+            => inner.DeleteDefinitionAsync(workflowId, cancellationToken);
+
+        public Task<WorkflowValidationResult> ValidateDefinitionAsync(
+            WorkflowDefinition definition,
+            CancellationToken cancellationToken = default)
+            => inner.ValidateDefinitionAsync(definition, cancellationToken);
+
+        private PendingDefinitionRequest GetPendingRequest(WorkflowId definitionId)
+            => pendingRequests.TryGetValue(definitionId, out var pendingRequest)
+                ? pendingRequest
+                : throw new InvalidOperationException($"Workflow '{definitionId}' is not delayed.");
+
+        private sealed class PendingDefinitionRequest
+        {
+            public TaskCompletionSource Started { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+            public TaskCompletionSource<Exception?> Completion { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        }
+    }
+
+    private sealed class RacingWorkflowRuntimeManager(params WorkflowRunSnapshot[] runs) : IWorkflowRuntimeManager
+    {
+        private readonly IReadOnlyDictionary<WorkflowRunId, WorkflowRunSnapshot> runsById = runs.ToDictionary(run => run.RunId);
+        private readonly Dictionary<WorkflowRunId, PendingRunRequest> pendingRuns = [];
+
+        public void DelayRuns(params WorkflowRunId[] runIds)
+        {
+            foreach (var runId in runIds)
+            {
+                pendingRuns[runId] = new PendingRunRequest();
+            }
+        }
+
+        public Task WaitForRunRequestAsync(WorkflowRunId runId)
+            => GetPendingRun(runId).Started.Task;
+
+        public void CompleteRun(WorkflowRunId runId)
+            => GetPendingRun(runId).Completion.TrySetResult();
+
+        public Task<WorkflowRunSnapshot> StartAsync(
+            WorkflowDefinition definition,
+            WorkflowRunStartRequest request,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
+        public async Task<WorkflowRunSnapshot?> GetRunAsync(
+            WorkflowRunId runId,
+            CancellationToken cancellationToken = default)
+        {
+            if (pendingRuns.TryGetValue(runId, out var pendingRequest))
+            {
+                pendingRequest.Started.TrySetResult();
+                await pendingRequest.Completion.Task.WaitAsync(cancellationToken);
+            }
+
+            return runsById.GetValueOrDefault(runId);
+        }
+
+        public Task<IReadOnlyList<WorkflowRunSnapshot>> ListRunsAsync(
+            WorkflowId? workflowId = null,
+            CancellationToken cancellationToken = default)
+            => Task.FromResult<IReadOnlyList<WorkflowRunSnapshot>>(runsById.Values
+                .Where(run => !workflowId.HasValue || run.WorkflowId == workflowId.Value)
+                .ToList());
+
+        public Task<IReadOnlyList<WorkflowEventRecord>> ListEventsAsync(
+            WorkflowRunId runId,
+            CancellationToken cancellationToken = default)
+            => Task.FromResult<IReadOnlyList<WorkflowEventRecord>>([]);
+
+        public Task<IReadOnlyList<WorkflowCheckpointRecord>> ListCheckpointsAsync(
+            WorkflowRunId runId,
+            CancellationToken cancellationToken = default)
+            => Task.FromResult<IReadOnlyList<WorkflowCheckpointRecord>>([]);
+
+        public Task<WorkflowListPage<WorkflowEventRecord>> ListEventPageAsync(
+            WorkflowEventPageRequest request,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
+        public Task<WorkflowRunSnapshot> CancelAsync(
+            WorkflowRunId runId,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
+        public Task<WorkflowRunCancellationResult> RequestCancellationAsync(
+            WorkflowRunId runId,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
+        public Task<WorkflowRunSnapshot> RespondToExternalRequestAsync(
+            WorkflowExternalRequestId requestId,
+            string responseJson,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
+        public Task<WorkflowExternalResponseResult> SubmitExternalResponseAsync(
+            WorkflowExternalRequestId requestId,
+            string responseJson,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
+        private PendingRunRequest GetPendingRun(WorkflowRunId runId)
+            => pendingRuns.TryGetValue(runId, out var pendingRequest)
+                ? pendingRequest
+                : throw new InvalidOperationException($"Workflow run '{runId}' is not delayed.");
+
+        private sealed class PendingRunRequest
+        {
+            public TaskCompletionSource Started { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+            public TaskCompletionSource Completion { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        }
+    }
+
     private sealed class DeterministicWorkflowLlmComponentInvoker : IWorkflowLlmComponentInvoker
     {
         public ValueTask<WorkflowNodeExecutionResult> ExecuteAsync(
@@ -2000,6 +2605,21 @@ public sealed class WorkflowsPageTests
         IWorkflowExternalRequestStore
     {
         private readonly InMemoryWorkflowRunStore inner = new();
+        private readonly Dictionary<WorkflowId, PendingRunRequest> pendingRunPages = [];
+
+        public void DelayRunPages(params WorkflowId[] workflowIds)
+        {
+            foreach (var workflowId in workflowIds)
+            {
+                pendingRunPages[workflowId] = new PendingRunRequest();
+            }
+        }
+
+        public Task WaitForRunPageRequestAsync(WorkflowId workflowId)
+            => GetPendingRunPage(workflowId).Started.Task;
+
+        public void CompleteRunPage(WorkflowId workflowId)
+            => GetPendingRunPage(workflowId).Completion.TrySetResult();
 
         public Task CreateRunWithStartedEventAsync(
             WorkflowRunSnapshot run,
@@ -2049,12 +2669,19 @@ public sealed class WorkflowsPageTests
             CancellationToken cancellationToken = default)
             => inner.ListRunsAsync(workflowId, cancellationToken);
 
-        public Task<WorkflowListPage<WorkflowRunSnapshot>> ListRunPageAsync(
+        public async Task<WorkflowListPage<WorkflowRunSnapshot>> ListRunPageAsync(
             WorkflowRunPageRequest request,
             CancellationToken cancellationToken = default)
         {
             counter.IncrementListRunPage();
-            return inner.ListRunPageAsync(request, cancellationToken);
+            if (request.WorkflowId is { } workflowId &&
+                pendingRunPages.TryGetValue(workflowId, out var pendingRequest))
+            {
+                pendingRequest.Started.TrySetResult();
+                await pendingRequest.Completion.Task.WaitAsync(cancellationToken);
+            }
+
+            return await inner.ListRunPageAsync(request, cancellationToken);
         }
 
         public Task SaveEventAsync(
@@ -2154,6 +2781,18 @@ public sealed class WorkflowsPageTests
             DateTimeOffset respondedAtUtc,
             CancellationToken cancellationToken)
             => ((IWorkflowExternalRequestStore)inner).MarkRespondedAsync(requestId, responseJson, respondedAtUtc, cancellationToken);
+
+        private PendingRunRequest GetPendingRunPage(WorkflowId workflowId)
+            => pendingRunPages.TryGetValue(workflowId, out var pendingRequest)
+                ? pendingRequest
+                : throw new InvalidOperationException($"Workflow '{workflowId}' does not have a delayed run page.");
+
+        private sealed class PendingRunRequest
+        {
+            public TaskCompletionSource Started { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+            public TaskCompletionSource Completion { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        }
     }
 
     private sealed class CapturingWorkflowTestRunner : IWorkflowTestRunner
@@ -2232,6 +2871,105 @@ public sealed class WorkflowsPageTests
                 PendingExternalRequests: [],
                 ErrorMessage: string.Empty);
         }
+    }
+
+    private sealed class WorkflowRouteProjectGateway : IProjectStructureRuntimeGateway
+    {
+        private ProjectStructureRuntimeProjectSummary? project;
+        private WorkflowId? workflowId;
+
+        public void SetProjectWorkflow(Guid projectId, string projectName, WorkflowId attachedWorkflowId)
+        {
+            project = new ProjectStructureRuntimeProjectSummary(
+                projectId,
+                projectName,
+                ProjectStructureRuntimeProjectStatus.Active,
+                CurrentPhase: "Execution",
+                PhaseCount: 1,
+                ParentCount: 0,
+                ChildCount: 0,
+                DateTimeOffset.UtcNow);
+            workflowId = attachedWorkflowId;
+        }
+
+        public Task<IReadOnlyList<ProjectStructureRuntimeProjectSummary>> ListProjectsAsync(
+            CancellationToken cancellationToken = default)
+            => Task.FromResult<IReadOnlyList<ProjectStructureRuntimeProjectSummary>>(
+                project is null ? [] : [project]);
+
+        public Task<ProjectStructureRuntimeReadResponse> ReadStructureAsync(
+            Guid projectId,
+            ProjectStructureRuntimeReadRequest request,
+            CancellationToken cancellationToken = default)
+        {
+            if (project?.Id != projectId || !workflowId.HasValue)
+            {
+                throw new InvalidOperationException($"Project '{projectId:D}' was not configured for the route test.");
+            }
+
+            var metadata = ProjectObjectMetadataSerializer.Serialize(new ProjectObjectMetadataEnvelope
+            {
+                Workflow = new ProjectWorkflowNodeMetadata
+                {
+                    WorkflowId = workflowId.Value,
+                    WorkflowName = "Attached workflow"
+                }
+            });
+            IReadOnlyList<ProjectStructureRuntimeNodeSummary> nodes =
+            [
+                new ProjectStructureRuntimeNodeSummary(
+                    Id: "workflow-route-node",
+                    ParentId: null,
+                    ObjectType: ProjectObjectType.WorkflowDefinition,
+                    ObjectSubtype: string.Empty,
+                    Title: "Attached workflow",
+                    Subtitle: string.Empty,
+                    Status: "Ready",
+                    Notes: null,
+                    Route: $"/agents/workflows?projectId={projectId:D}&workflowId={workflowId.Value.Value:D}",
+                    ArtifactKind: "workflow-definition",
+                    ArtifactId: workflowId.Value.Value,
+                    MediaRelativePath: null,
+                    MediaContentType: null,
+                    MediaOriginalFileName: null,
+                    Badges: [],
+                    ProgressMode: string.Empty,
+                    ProgressPercent: 0,
+                    MarkerIcon: string.Empty,
+                    MarkerTone: string.Empty,
+                    MarkerLabel: string.Empty,
+                    Priority: 0,
+                    EffectivePriority: 0,
+                    StartUtc: null,
+                    EndUtc: null,
+                    MetadataJson: metadata,
+                    ProjectRole: ProjectStructureRuntimeProjectRole.ActiveProject,
+                    RelatedProjectId: null,
+                    ParentProjectCount: 0,
+                    X: null,
+                    Y: null)
+            ];
+            return Task.FromResult(new ProjectStructureRuntimeReadResponse(
+                projectId,
+                project.Name,
+                nodes,
+                Links: [],
+                Warnings: []));
+        }
+
+        public Task<ProjectStructureRuntimeNodeSummary> CreateNodeAsync(
+            Guid projectId,
+            ProjectStructureRuntimeNodeCreateRequest request,
+            ProjectStructureRuntimeAgentContext agent,
+            CancellationToken cancellationToken = default)
+            => throw new InvalidOperationException("Route tests only read project structure.");
+
+        public Task<ProjectStructureRuntimeNodeSummary> CreateAssetAsync(
+            Guid projectId,
+            ProjectStructureRuntimeAssetCreateRequest request,
+            ProjectStructureRuntimeAgentContext agent,
+            CancellationToken cancellationToken = default)
+            => throw new InvalidOperationException("Route tests only read project structure.");
     }
 
     private sealed class PreviewProjectGateway(Guid projectId) : IProjectStructureRuntimeGateway

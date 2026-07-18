@@ -72,6 +72,9 @@ public partial class ProjectStructureGanttPanel : ComponentBase, IAsyncDisposabl
     [Parameter, EditorRequired]
     public EventCallback MutationCommitted { get; set; }
 
+    [Parameter]
+    public EventCallback OpenAgentCatalog { get; set; }
+
     private bool CanInsertTask =>
         projection is { IsValid: true, Dependencies.Count: > 0 } &&
         !mutationInFlight;

@@ -214,6 +214,7 @@
 
 @code {
     private readonly CancellationTokenSource lifetime = new();
+    private CancellationTokenSource? sourceOpenCancellation;
     private ResourceFileSourceCatalogSnapshot? catalog;
     private ResourceFileBrowseWorkspace? workspace;
     private ResourceStorageObjectInteraction? interaction;
@@ -232,6 +233,7 @@
     private bool isLoadingCatalog;
     private bool isOpeningSource;
     private bool disposed;
+    private long sourceOpenGeneration;
 
     private FileToolsHostActionRunner ActionRunner => actionRunner ??= new FileToolsHostActionRunner(JSRuntime);
 
@@ -242,6 +244,12 @@
 
     [Parameter]
     public EventCallback<Guid> ResourcePromoted { get; set; }
+
+    [Parameter]
+    public EventCallback<ResourceBrowseAgentChatPosition?> PositionChanged { get; set; }
+
+    [Parameter]
+    public EventCallback<ResourceBrowseAgentChatContextState> ContextStateChanged { get; set; }
 
     private string DetailDescription => interaction is not null
         ? "The persisted stable occurrence was re-resolved against the current source and actor."
@@ -255,6 +263,7 @@
     {
         isLoadingCatalog = true;
         catalogError = null;
+        await PublishContextStateAsync(ResourceBrowseAgentChatContextState.Loading);
         try
         {
             catalog = await SourceCatalog.LoadAsync(lifetime.Token);
@@ -273,6 +282,20 @@
         {
             isLoadingCatalog = false;
         }
+
+        if (lifetime.IsCancellationRequested)
+        {
+            return;
+        }
+
+        if (!string.IsNullOrWhiteSpace(catalogError))
+        {
+            await PublishContextStateAsync(ResourceBrowseAgentChatContextState.Failed);
+        }
+        else if (!selectedSourceKey.HasValue)
+        {
+            await PublishContextStateAsync(ResourceBrowseAgentChatContextState.Ready());
+        }
     }
 
     private async Task RefreshCatalogAsync()
@@ -285,41 +308,131 @@
             return;
         }
 
+        InvalidateSourceOpen();
         await DisposeWorkspaceAsync();
         selectedSourceKey = null;
+        await PublishContextStateAsync(ResourceBrowseAgentChatContextState.Ready());
     }
 
     private async Task OpenSourceAsync(ResourceFileSourceKey sourceKey)
     {
+        long generation = Interlocked.Increment(ref sourceOpenGeneration);
+        var operationCancellation = CancellationTokenSource.CreateLinkedTokenSource(lifetime.Token);
+        CancellationTokenSource? supersededCancellation = sourceOpenCancellation;
+        sourceOpenCancellation = operationCancellation;
+        supersededCancellation?.Cancel();
+
         isOpeningSource = true;
         sourceError = null;
         actionError = null;
         actionFeedback = null;
         selectedSourceKey = sourceKey;
+        await PublishContextStateAsync(ResourceBrowseAgentChatContextState.Loading);
         await DisposeInteractionAsync();
         await DisposeWorkspaceAsync();
+
+        ResourceFileBrowseWorkspace? openedWorkspace = null;
+        ResourceFileBrowseWorkspace? committedWorkspace = null;
         try
         {
-            workspace = await BrowseCoordinator.OpenAsync(sourceKey, lifetime.Token);
+            if (!IsCurrentSourceOpen(generation, sourceKey, operationCancellation))
+            {
+                return;
+            }
+
+            openedWorkspace = await OpenWorkspaceAsync(sourceKey, operationCancellation.Token);
+            if (!IsCurrentSourceOpen(generation, sourceKey, operationCancellation))
+            {
+                return;
+            }
+
+            committedWorkspace = openedWorkspace;
+            workspace = committedWorkspace;
+            openedWorkspace = null;
             hostActionCatalog = new DefaultFileToolsHostActionCatalog(
                 ResolveActionAvailability,
                 ItemActionService.IsLocalLaunchAvailable);
+            var projectId = workspace.Source.Key.TryGetProjectId(out var sourceProjectId)
+                ? sourceProjectId
+                : (Guid?)null;
+            var projectName = projectId.HasValue
+                ? catalog?.Projects.FirstOrDefault(project => project.Id == projectId.Value)?.Name
+                : null;
+            if (!IsCurrentSourceOpen(generation, sourceKey, operationCancellation))
+            {
+                await DisposeWorkspaceIfOwnedAsync(committedWorkspace);
+                return;
+            }
+
+            await PublishContextStateAsync(ResourceBrowseAgentChatContextState.Ready(
+                new ResourceBrowseAgentChatPosition(
+                    new ResourceBrowseAgentChatSourceId(workspace.Source.Key.Value),
+                    workspace.Source.SourceClass.ToString(),
+                    workspace.Source.DisplayName,
+                    projectId,
+                    projectName)));
         }
-        catch (OperationCanceledException) when (lifetime.IsCancellationRequested)
+        catch (OperationCanceledException) when (operationCancellation.IsCancellationRequested)
         {
         }
         catch (Exception exception)
         {
+            if (!IsCurrentSourceOpen(generation, sourceKey, operationCancellation))
+            {
+                return;
+            }
+
             Logger.LogWarning(
                 "Resources file source could not be opened. SourceKey={SourceKey} FailureType={FailureType}.",
                 sourceKey.Value,
                 exception.GetType().Name);
             sourceError = SafeMessage(exception, "Unable to open the selected Resources file source.");
+            await PublishContextStateAsync(ResourceBrowseAgentChatContextState.Failed);
         }
         finally
         {
-            isOpeningSource = false;
+            if (openedWorkspace is not null)
+            {
+                await openedWorkspace.DisposeAsync();
+            }
+
+            if (IsCurrentSourceOpen(generation, sourceKey, operationCancellation))
+            {
+                sourceOpenCancellation = null;
+                isOpeningSource = false;
+            }
+
+            operationCancellation.Dispose();
         }
+    }
+
+    private async Task PublishContextStateAsync(ResourceBrowseAgentChatContextState state)
+    {
+        await ContextStateChanged.InvokeAsync(state);
+        await PositionChanged.InvokeAsync(state.Position);
+    }
+
+    private bool IsCurrentSourceOpen(
+        long generation,
+        ResourceFileSourceKey sourceKey,
+        CancellationTokenSource operationCancellation)
+        => !disposed &&
+           Volatile.Read(ref sourceOpenGeneration) == generation &&
+           selectedSourceKey == sourceKey &&
+           ReferenceEquals(sourceOpenCancellation, operationCancellation);
+
+    internal virtual ValueTask<ResourceFileBrowseWorkspace> OpenWorkspaceAsync(
+        ResourceFileSourceKey sourceKey,
+        CancellationToken cancellationToken)
+        => BrowseCoordinator.OpenAsync(sourceKey, cancellationToken);
+
+    private void InvalidateSourceOpen()
+    {
+        Interlocked.Increment(ref sourceOpenGeneration);
+        CancellationTokenSource? pendingCancellation = sourceOpenCancellation;
+        sourceOpenCancellation = null;
+        pendingCancellation?.Cancel();
+        isOpeningSource = false;
     }
 
     private Task SelectSourceAsync(ResourceFileSourceKey sourceKey)
@@ -567,16 +680,30 @@
 
     private async ValueTask DisposeWorkspaceAsync()
     {
-        if (workspace is null)
-        {
-            return;
-        }
-
-        await workspace.DisposeAsync();
+        ResourceFileBrowseWorkspace? currentWorkspace = workspace;
         workspace = null;
         hostActionCatalog = null;
         interactionLaunchContext = null;
         pendingPromotionSelection = null;
+        if (currentWorkspace is null)
+        {
+            return;
+        }
+
+        await currentWorkspace.DisposeAsync();
+    }
+
+    private async ValueTask DisposeWorkspaceIfOwnedAsync(ResourceFileBrowseWorkspace ownedWorkspace)
+    {
+        if (ReferenceEquals(workspace, ownedWorkspace))
+        {
+            workspace = null;
+            hostActionCatalog = null;
+            interactionLaunchContext = null;
+            pendingPromotionSelection = null;
+        }
+
+        await ownedWorkspace.DisposeAsync();
     }
 
     private async ValueTask DisposeInteractionAsync()
@@ -632,6 +759,7 @@
         }
 
         disposed = true;
+        InvalidateSourceOpen();
         lifetime.Cancel();
         await DisposeInteractionAsync();
         await DisposeWorkspaceAsync();

@@ -47,6 +47,74 @@ public sealed class AgentFrameworkHostingServiceCollectionTests
     }
 
     [Fact]
+    public async Task AddAgentFrameworkCore_shares_reference_data_invalidation_across_scopes()
+    {
+        var workspaceRoot = Path.Combine(
+            Path.GetTempPath(),
+            $"candoitall-agent-framework-hosting-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(workspaceRoot);
+
+        try
+        {
+            var services = new ServiceCollection();
+            services.AddAgentFrameworkCore(workspaceRoot);
+
+            await using var provider = services.BuildServiceProvider(new ServiceProviderOptions
+            {
+                ValidateScopes = true
+            });
+            await using var firstScope = provider.CreateAsyncScope();
+            await using var secondScope = provider.CreateAsyncScope();
+            var firstCache = firstScope.ServiceProvider.GetRequiredService<AgentReferenceDataCache>();
+            var secondCache = secondScope.ServiceProvider.GetRequiredService<AgentReferenceDataCache>();
+            var firstInvalidator = firstScope.ServiceProvider.GetRequiredService<IAgentReferenceDataCacheInvalidator>();
+            var secondInvalidator = secondScope.ServiceProvider.GetRequiredService<IAgentReferenceDataCacheInvalidator>();
+            var firstLoadCount = 0;
+            var secondLoadCount = 0;
+            var request = new AgentReferenceDataRequest(AgentReferenceDataSections.Agents);
+            var now = DateTimeOffset.UtcNow;
+            var ttl = TimeSpan.FromMinutes(1);
+
+            await firstCache.GetOrCreateAsync(request, now, ttl, LoadFirstAsync);
+            await secondCache.GetOrCreateAsync(request, now, ttl, LoadSecondAsync);
+            await firstCache.GetOrCreateAsync(request, now, ttl, LoadFirstAsync);
+            await secondCache.GetOrCreateAsync(request, now, ttl, LoadSecondAsync);
+
+            Assert.NotSame(firstCache, secondCache);
+            Assert.Same(firstInvalidator, secondInvalidator);
+            Assert.IsType<AgentReferenceDataInvalidationHub>(firstInvalidator);
+            Assert.Equal(1, firstLoadCount);
+            Assert.Equal(1, secondLoadCount);
+
+            firstInvalidator.Invalidate();
+            await firstCache.GetOrCreateAsync(request, now, ttl, LoadFirstAsync);
+            await secondCache.GetOrCreateAsync(request, now, ttl, LoadSecondAsync);
+
+            Assert.Equal(2, firstLoadCount);
+            Assert.Equal(2, secondLoadCount);
+
+            Task<AgentReferenceDataSnapshot> LoadFirstAsync()
+            {
+                firstLoadCount++;
+                return Task.FromResult(CreateEmptyReferenceDataSnapshot());
+            }
+
+            Task<AgentReferenceDataSnapshot> LoadSecondAsync()
+            {
+                secondLoadCount++;
+                return Task.FromResult(CreateEmptyReferenceDataSnapshot());
+            }
+        }
+        finally
+        {
+            if (Directory.Exists(workspaceRoot))
+            {
+                Directory.Delete(workspaceRoot, recursive: true);
+            }
+        }
+    }
+
+    [Fact]
     public async Task AddAgentFrameworkCore_catalog_service_rejects_unknown_executor()
     {
         var workspaceRoot = Path.Combine(
@@ -121,6 +189,17 @@ public sealed class AgentFrameworkHostingServiceCollectionTests
                 CreateEdge("start-tool", start, tool),
                 CreateEdge("tool-end", tool, end)
             ]);
+    }
+
+    private static AgentReferenceDataSnapshot CreateEmptyReferenceDataSnapshot()
+    {
+        return new AgentReferenceDataSnapshot(
+            AgentReferenceDataSections.Agents,
+            [],
+            [],
+            new Dictionary<Guid, ProviderProfile>(),
+            DateTimeOffset.UtcNow,
+            TimeSpan.Zero);
     }
 
     private static WorkflowNode CreateNode(

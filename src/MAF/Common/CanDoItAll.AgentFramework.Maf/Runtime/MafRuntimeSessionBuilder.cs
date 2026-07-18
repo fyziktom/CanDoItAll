@@ -24,7 +24,7 @@ internal static class MafRuntimeSessionBuilder
             return await runtimeAgent.CreateSessionAsync(cancellationToken);
         }
 
-        if (ShouldRestoreSerializedSession(agent, provider, session, isApprovalContinuation))
+        if (ShouldRestoreSerializedSession(agent, provider, session, runtimeOptions, isApprovalContinuation))
         {
             using var document = JsonDocument.Parse(session.Compatibility!.SerializedSessionStateJson!);
             return await runtimeAgent.DeserializeSessionAsync(document.RootElement.Clone(), cancellationToken: cancellationToken);
@@ -55,7 +55,7 @@ internal static class MafRuntimeSessionBuilder
             ];
         }
 
-        if (ShouldRestoreSerializedSession(agent, provider, session))
+        if (ShouldRestoreSerializedSession(agent, provider, session, runtimeOptions))
         {
             return
             [
@@ -208,7 +208,7 @@ internal static class MafRuntimeSessionBuilder
             return "Creating an isolated Microsoft Agent Framework session for this governed process step.";
         }
 
-        if (ShouldRestoreSerializedSession(agent, provider, session))
+        if (ShouldRestoreSerializedSession(agent, provider, session, runtimeOptions))
         {
             return "Restoring the serialized Microsoft Agent Framework session for this conversation.";
         }
@@ -239,6 +239,7 @@ internal static class MafRuntimeSessionBuilder
         ArgumentNullException.ThrowIfNull(runtimeOptions);
 
         return runtimeOptions.ContextIntent?.IsGovernedProcessStep == true ||
+               runtimeOptions.TransientContext is not null ||
                ShouldUseFrameworkManagedHistory(agent, provider);
     }
 
@@ -253,6 +254,7 @@ internal static class MafRuntimeSessionBuilder
         AgentDefinition agent,
         ProviderProfile provider,
         ChatSessionRecord session,
+        AgentRuntimeExecutionOptions runtimeOptions,
         bool isApprovalContinuation = false)
     {
         var compatibility = session.Compatibility;
@@ -267,6 +269,11 @@ internal static class MafRuntimeSessionBuilder
         }
 
         var containsProviderConversationId = SerializedSessionContainsProviderConversationId(compatibility.SerializedSessionStateJson);
+
+        if (runtimeOptions.TransientContext is not null && !isApprovalContinuation)
+        {
+            return !containsProviderConversationId;
+        }
 
         if (ShouldUseFrameworkManagedHistory(agent, provider))
         {

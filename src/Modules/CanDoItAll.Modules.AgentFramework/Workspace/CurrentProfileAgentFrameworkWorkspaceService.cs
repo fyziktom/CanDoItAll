@@ -1,13 +1,15 @@
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Modules.CrmHr;
+using Microsoft.Extensions.Logging;
 
 namespace CanDoItAll.Modules.AgentFramework;
 
 internal sealed class CurrentProfileAgentFrameworkWorkspaceService(
     ICanDoItAllAgentWorkspaceFactory workspaceFactory,
     IAiTechnicalAgentBridge technicalAgentBridge,
-    IAgentReferenceDataCacheInvalidator referenceDataCacheInvalidator) : IAgentFrameworkWorkspaceService
+    IAgentReferenceDataCacheInvalidator referenceDataCacheInvalidator,
+    ILogger<CurrentProfileAgentFrameworkWorkspaceService> logger) : IAgentFrameworkWorkspaceService
 {
     private readonly HashSet<IAgentFrameworkWorkspaceService> subscribedServices = new();
     private EventHandler<ExecutionLogEntry>? executionUpdated;
@@ -78,6 +80,32 @@ internal sealed class CurrentProfileAgentFrameworkWorkspaceService(
         }
 
         return agentId;
+    }
+
+    public async Task GrantAgentProjectStructureAccessAsync(
+        Guid agentId,
+        Guid projectId,
+        CancellationToken cancellationToken = default)
+    {
+        await ResolveService().GrantAgentProjectStructureAccessAsync(agentId, projectId, cancellationToken);
+        await RefreshProjectStructureAccessProjectionsAsync(
+            agentId,
+            projectId,
+            ProjectStructureAccessChange.Granted,
+            cancellationToken);
+    }
+
+    public async Task RevokeAgentProjectStructureAccessAsync(
+        Guid agentId,
+        Guid projectId,
+        CancellationToken cancellationToken = default)
+    {
+        await ResolveService().RevokeAgentProjectStructureAccessAsync(agentId, projectId, cancellationToken);
+        await RefreshProjectStructureAccessProjectionsAsync(
+            agentId,
+            projectId,
+            ProjectStructureAccessChange.Revoked,
+            cancellationToken);
     }
 
     public async Task DeleteAgentAsync(Guid agentId, CancellationToken cancellationToken = default)
@@ -320,6 +348,41 @@ internal sealed class CurrentProfileAgentFrameworkWorkspaceService(
         return service;
     }
 
+    private async Task RefreshProjectStructureAccessProjectionsAsync(
+        Guid agentId,
+        Guid projectId,
+        ProjectStructureAccessChange change,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            referenceDataCacheInvalidator.Invalidate();
+        }
+        catch (Exception exception)
+        {
+            logger.LogWarning(
+                exception,
+                "Project-structure access was {AccessChange} in the catalog for agent {AgentId} and project {ProjectId}, but reference-data cache invalidation failed.",
+                change,
+                agentId,
+                projectId);
+        }
+
+        try
+        {
+            await technicalAgentBridge.SynchronizeDirectoryProjectionAsync(cancellationToken);
+        }
+        catch (Exception exception)
+        {
+            logger.LogWarning(
+                exception,
+                "Project-structure access was {AccessChange} in the catalog for agent {AgentId} and project {ProjectId}, but agent-directory projection synchronization failed.",
+                change,
+                agentId,
+                projectId);
+        }
+    }
+
     private void EnsureExecutionSubscription(IAgentFrameworkWorkspaceService service)
     {
         if (executionUpdated is null)
@@ -336,5 +399,11 @@ internal sealed class CurrentProfileAgentFrameworkWorkspaceService(
     private void HandleExecutionUpdated(object? sender, ExecutionLogEntry entry)
     {
         executionUpdated?.Invoke(this, entry);
+    }
+
+    private enum ProjectStructureAccessChange
+    {
+        Granted,
+        Revoked
     }
 }

@@ -46,9 +46,10 @@ public static class AgentFrameworkServiceCollectionExtensions
         services.TryAddSingleton<IAgentProviderCredentialResolver, EnvironmentVariableAgentProviderCredentialResolver>();
         services.AddMafProviderRuntimeServices();
         services.TryAddSingleton<IProviderProfileService, ProviderProfileService>();
+        services.TryAddSingleton<AgentReferenceDataInvalidationHub>();
+        services.TryAddSingleton<IAgentReferenceDataCacheInvalidator>(serviceProvider =>
+            serviceProvider.GetRequiredService<AgentReferenceDataInvalidationHub>());
         services.TryAddScoped<AgentReferenceDataCache>();
-        services.TryAddScoped<IAgentReferenceDataCacheInvalidator>(serviceProvider =>
-            serviceProvider.GetRequiredService<AgentReferenceDataCache>());
         services.TryAddScoped<IAgentReferenceDataProvider, WorkspaceBackedAgentReferenceDataProvider>();
         services.TryAddSingleton<IProviderProfileRegistry>(serviceProvider => new WorkspaceBackedProviderProfileRegistry(
             serviceProvider.GetRequiredService<ISandboxWorkspaceStore>(),

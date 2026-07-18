@@ -198,11 +198,7 @@ public sealed class ProcessDefinitionCatalogProjectionService
 
         if (selectedDefinitionKey is { } selectedKey)
         {
-            var selected = items.FirstOrDefault(item => item.Key == selectedKey);
-            if (selected is not null)
-            {
-                return selected;
-            }
+            return items.FirstOrDefault(item => item.Key == selectedKey);
         }
 
         return items[0];

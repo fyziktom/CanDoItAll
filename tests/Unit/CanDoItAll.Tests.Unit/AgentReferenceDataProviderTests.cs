@@ -73,6 +73,98 @@ public sealed class AgentReferenceDataProviderTests
         Assert.Equal(2, workspace.ListProvidersCallCount);
     }
 
+    [Fact]
+    public async Task Shared_invalidation_clears_reference_data_caches_across_scopes()
+    {
+        var invalidationHub = new AgentReferenceDataInvalidationHub();
+        using var firstCache = new AgentReferenceDataCache(invalidationHub);
+        using var secondCache = new AgentReferenceDataCache(invalidationHub);
+        var firstWorkspace = new CountingWorkspaceService(
+            [CreateAgent("First agent", AgentLifecycleStatus.Active)],
+            [CreateProvider("First provider", ProviderProfilePurpose.Chat)]);
+        var secondWorkspace = new CountingWorkspaceService(
+            [CreateAgent("Second agent", AgentLifecycleStatus.Active)],
+            [CreateProvider("Second provider", ProviderProfilePurpose.Chat)]);
+        var firstProvider = new WorkspaceBackedAgentReferenceDataProvider(firstWorkspace, firstCache);
+        var secondProvider = new WorkspaceBackedAgentReferenceDataProvider(secondWorkspace, secondCache);
+        var request = AgentReferenceDataRequest.AgentsAndProviders();
+
+        await firstProvider.GetAsync(request);
+        await secondProvider.GetAsync(request);
+        await firstProvider.GetAsync(request);
+        await secondProvider.GetAsync(request);
+
+        Assert.Equal(1, firstWorkspace.ListAgentsCallCount);
+        Assert.Equal(1, secondWorkspace.ListAgentsCallCount);
+
+        invalidationHub.Invalidate();
+        await firstProvider.GetAsync(request);
+        await secondProvider.GetAsync(request);
+
+        Assert.Equal(2, firstWorkspace.ListAgentsCallCount);
+        Assert.Equal(2, firstWorkspace.ListProvidersCallCount);
+        Assert.Equal(2, secondWorkspace.ListAgentsCallCount);
+        Assert.Equal(2, secondWorkspace.ListProvidersCallCount);
+    }
+
+    [Fact]
+    public async Task Shared_invalidation_clears_later_scopes_when_an_earlier_subscriber_throws()
+    {
+        var invalidationHub = new AgentReferenceDataInvalidationHub();
+        invalidationHub.Invalidated += (_, _) => throw new InvalidOperationException("Expected test failure.");
+        using var firstCache = new AgentReferenceDataCache(invalidationHub);
+        using var secondCache = new AgentReferenceDataCache(invalidationHub);
+        var firstWorkspace = new CountingWorkspaceService(
+            [CreateAgent("First agent", AgentLifecycleStatus.Active)],
+            [CreateProvider("First provider", ProviderProfilePurpose.Chat)]);
+        var secondWorkspace = new CountingWorkspaceService(
+            [CreateAgent("Second agent", AgentLifecycleStatus.Active)],
+            [CreateProvider("Second provider", ProviderProfilePurpose.Chat)]);
+        var firstProvider = new WorkspaceBackedAgentReferenceDataProvider(firstWorkspace, firstCache);
+        var secondProvider = new WorkspaceBackedAgentReferenceDataProvider(secondWorkspace, secondCache);
+        var request = AgentReferenceDataRequest.AgentsAndProviders();
+
+        await firstProvider.GetAsync(request);
+        await secondProvider.GetAsync(request);
+
+        Assert.Throws<InvalidOperationException>(invalidationHub.Invalidate);
+        await firstProvider.GetAsync(request);
+        await secondProvider.GetAsync(request);
+
+        Assert.Equal(2, firstWorkspace.ListAgentsCallCount);
+        Assert.Equal(2, firstWorkspace.ListProvidersCallCount);
+        Assert.Equal(2, secondWorkspace.ListAgentsCallCount);
+        Assert.Equal(2, secondWorkspace.ListProvidersCallCount);
+    }
+
+    [Fact]
+    public void Invalidate_notifies_current_subscribers_only()
+    {
+        var cache = new AgentReferenceDataCache();
+        var notificationCount = 0;
+        EventHandler handler = (_, _) => notificationCount++;
+        cache.Invalidated += handler;
+
+        cache.Invalidate();
+        cache.Invalidated -= handler;
+        cache.Invalidate();
+
+        Assert.Equal(1, notificationCount);
+    }
+
+    [Fact]
+    public void Invalidate_notifies_later_subscribers_when_an_earlier_subscriber_throws()
+    {
+        var cache = new AgentReferenceDataCache();
+        var notificationCount = 0;
+        cache.Invalidated += (_, _) => throw new InvalidOperationException("Expected test failure.");
+        cache.Invalidated += (_, _) => notificationCount++;
+
+        Assert.Throws<InvalidOperationException>(cache.Invalidate);
+
+        Assert.Equal(1, notificationCount);
+    }
+
     private static AgentDefinition CreateAgent(
         string name,
         AgentLifecycleStatus status,

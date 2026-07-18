@@ -7,6 +7,7 @@ namespace CanDoItAll.AgentFramework.Maf;
 
 internal sealed class ContextCapabilityBuilder(string workspaceRoot)
 {
+    private const string RagStateKeyPrefix = "CanDoItAll.Rag.";
     private readonly string workspaceRoot = Path.GetFullPath(workspaceRoot);
 
     public void AddRagProvider(
@@ -55,7 +56,8 @@ internal sealed class ContextCapabilityBuilder(string workspaceRoot)
             new TextSearchProviderOptions
             {
                 SearchTime = searchTime,
-                RecentMessageMemoryLimit = recentMessageMemoryLimit
+                RecentMessageMemoryLimit = recentMessageMemoryLimit,
+                StateKey = $"{RagStateKeyPrefix}{capability.Id:N}"
             }));
     }
 
@@ -70,7 +72,9 @@ internal sealed class ContextCapabilityBuilder(string workspaceRoot)
         }
 
         var role = MafRuntimeChatRoles.Parse(configuration.Role);
-        state.ContextProviders.Add(new StaticMessageContextProvider(new ChatMessage(role, configuration.Message)));
+        state.ContextProviders.Add(new StaticMessageContextProvider(
+            new ChatMessage(role, configuration.Message),
+            StaticMessageContextProvider.CreateCapabilityStateKey(capability.Id)));
     }
 
     private async Task<IEnumerable<TextSearchProvider.TextSearchResult>> SearchWorkspaceAsync(
@@ -151,9 +155,32 @@ internal sealed class ContextCapabilityBuilder(string workspaceRoot)
     }
 }
 
-internal sealed class StaticMessageContextProvider(ChatMessage message) : MessageAIContextProvider
+internal sealed class StaticMessageContextProvider : MessageAIContextProvider
 {
-    private readonly ChatMessage message = message;
+    private const string StateKeyPrefix = "CanDoItAll.StaticContext.";
+    public const string TransientAgentChatStateKey = $"{StateKeyPrefix}TransientAgentChat";
+    private readonly ChatMessage message;
+    private readonly string stateKey;
+
+    public StaticMessageContextProvider(ChatMessage message, string stateKey)
+    {
+        ArgumentNullException.ThrowIfNull(message);
+        ArgumentException.ThrowIfNullOrWhiteSpace(stateKey);
+        this.message = message;
+        this.stateKey = stateKey.Trim();
+    }
+
+    public override IReadOnlyList<string> StateKeys => [stateKey];
+
+    public static string CreateCapabilityStateKey(Guid capabilityId)
+    {
+        if (capabilityId == Guid.Empty)
+        {
+            throw new ArgumentException("A context capability id is required.", nameof(capabilityId));
+        }
+
+        return $"{StateKeyPrefix}Capability.{capabilityId:N}";
+    }
 
     protected override ValueTask<IEnumerable<ChatMessage>> ProvideMessagesAsync(InvokingContext context, CancellationToken cancellationToken = default)
     {

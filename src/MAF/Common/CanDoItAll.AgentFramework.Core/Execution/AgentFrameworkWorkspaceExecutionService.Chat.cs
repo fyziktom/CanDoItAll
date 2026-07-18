@@ -237,19 +237,23 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         {
             MetadataJson = BuildChatMetadataJson(options, requestedContext.MetadataJson)
         };
+        var request = new ExecutionRunRequest(
+            AgentId: agent.Id,
+            Prompt: prompt.Trim(),
+            ChatSessionId: session?.Id,
+            Context: invocationContext,
+            AutoApprovePendingToolCalls: false,
+            InputAttachmentPaths: attachmentPaths)
+        {
+            TransientContext = options?.TransientContext
+        };
         var result = await ExecuteRunCoreAsync(
             agent,
             provider,
             catalog,
             executionState,
             session,
-            new ExecutionRunRequest(
-                AgentId: agent.Id,
-                Prompt: prompt.Trim(),
-                ChatSessionId: session?.Id,
-                Context: invocationContext,
-                AutoApprovePendingToolCalls: false,
-                InputAttachmentPaths: attachmentPaths),
+            request,
             persistTranscript: true,
             cancellationToken);
 
@@ -258,7 +262,9 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
             AssistantMessage: result.AssistantMessage ?? throw new InvalidOperationException("Chat-backed execution runs must produce an assistant message."),
             Metric: result.Metric)
         {
-            ExecutionRunId = result.ExecutionRunId
+            ExecutionRunId = result.ExecutionRunId,
+            State = result.State,
+            ContextCompletionNotification = result.ContextCompletionNotification
         };
     }
 
@@ -302,7 +308,9 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
             AssistantMessage: result.AssistantMessage ?? throw new InvalidOperationException("Chat-backed approval continuations must produce an assistant message."),
             Metric: result.Metric)
         {
-            ExecutionRunId = result.ExecutionRunId
+            ExecutionRunId = result.ExecutionRunId,
+            State = result.State,
+            ContextCompletionNotification = result.ContextCompletionNotification
         };
     }
 

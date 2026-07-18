@@ -83,6 +83,17 @@ public interface ISandboxWorkspaceChatQueryStore
         CancellationToken cancellationToken = default);
 }
 
+public interface ISandboxWorkspaceChatProjectionQueryStore
+{
+    Task<ChatWorkspaceProjectionSnapshot> LoadChatWorkspaceProjectionAsync(
+        Guid agentId,
+        CancellationToken cancellationToken = default);
+}
+
+public sealed record ChatWorkspaceProjectionSnapshot(
+    IReadOnlyList<ChatSessionSummaryRecord> SessionSummaries,
+    IReadOnlyList<ChatRunSummaryRecord> RunSummaries);
+
 public interface ISandboxWorkspaceChatSessionStore
 {
     Task<ChatSessionRecord> CreateChatSessionAsync(
@@ -335,6 +346,20 @@ public interface IAgentFrameworkWorkspaceService : IAgentExecutionHistoryReader
     Task<IReadOnlyList<AgentDefinition>> ListAgentsAsync(bool includeTemplates = true, CancellationToken cancellationToken = default);
     Task<AgentEditorModel> GetAgentEditorAsync(Guid? agentId = null, CancellationToken cancellationToken = default);
     Task<Guid> SaveAgentAsync(AgentEditorModel model, CancellationToken cancellationToken = default);
+    Task GrantAgentProjectStructureAccessAsync(
+        Guid agentId,
+        Guid projectId,
+        CancellationToken cancellationToken = default)
+    {
+        throw new NotSupportedException("This workspace does not support durable project-structure access grants.");
+    }
+    Task RevokeAgentProjectStructureAccessAsync(
+        Guid agentId,
+        Guid projectId,
+        CancellationToken cancellationToken = default)
+    {
+        throw new NotSupportedException("This workspace does not support durable project-structure access revocation.");
+    }
     Task DeleteAgentAsync(Guid agentId, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<AgentTeamDefinition>> ListAgentTeamsAsync(CancellationToken cancellationToken = default);
     Task<AgentTeamEditorModel> GetAgentTeamEditorAsync(Guid? teamId = null, CancellationToken cancellationToken = default);

@@ -2,17 +2,53 @@ window.CanDoItAll = window.CanDoItAll || {};
 window.CanDoItAll.agentFramework = window.CanDoItAll.agentFramework || {};
 
 window.CanDoItAll.agentFramework.voice = (function () {
-    let mediaRecorder = null;
-    let stream = null;
-    let chunks = [];
-    let playbackQueue = Promise.resolve();
-    let playbackGeneration = 0;
-    let currentAudio = null;
-    let currentAudioUrl = null;
-    let stopCurrentPlayback = null;
-    const queuedAudioPayloads = new Set();
-
+    const legacyOwnerId = "__legacy__";
+    const ownerStates = new Map();
     const recordingChunkMilliseconds = 25000;
+    const maximumRecordingMilliseconds = 5 * 60 * 1000;
+
+    function normalizeOwnerId(ownerId) {
+        if (typeof ownerId !== "string" || !ownerId.trim()) {
+            throw new Error("Audio owner id is required.");
+        }
+
+        return ownerId.trim();
+    }
+
+    function createOwnerState(ownerId) {
+        return {
+            ownerId,
+            disposed: false,
+            recordingGeneration: 0,
+            mediaRecorder: null,
+            stream: null,
+            chunks: [],
+            pendingRecordingStop: null,
+            recordingWatchdogId: null,
+            recordingFailure: null,
+            playbackQueue: Promise.resolve(),
+            playbackGeneration: 0,
+            currentAudio: null,
+            currentAudioUrl: null,
+            stopCurrentPlayback: null,
+            queuedAudioPayloads: new Set()
+        };
+    }
+
+    function getOrCreateOwnerState(ownerId) {
+        const normalizedOwnerId = normalizeOwnerId(ownerId);
+        let state = ownerStates.get(normalizedOwnerId);
+        if (!state) {
+            state = createOwnerState(normalizedOwnerId);
+            ownerStates.set(normalizedOwnerId, state);
+        }
+
+        return state;
+    }
+
+    function getOwnerState(ownerId) {
+        return ownerStates.get(normalizeOwnerId(ownerId)) || null;
+    }
 
     function ensureSupported() {
         if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia || !window.MediaRecorder) {
@@ -20,34 +56,97 @@ window.CanDoItAll.agentFramework.voice = (function () {
         }
     }
 
-    async function startRecording() {
+    async function startRecordingForOwner(ownerId) {
         ensureSupported();
-        if (mediaRecorder && mediaRecorder.state === "recording") {
-            throw new Error("Audio recording is already active.");
+        const state = getOrCreateOwnerState(ownerId);
+        if (state.pendingRecordingStop) {
+            throw new Error("Audio recording is still being processed for this owner.");
         }
 
-        stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        chunks = [];
-        mediaRecorder = new MediaRecorder(stream);
-        mediaRecorder.ondataavailable = event => {
-            if (event.data && event.data.size > 0) {
-                chunks.push(event.data);
+        if (state.mediaRecorder && state.mediaRecorder.state !== "inactive") {
+            throw new Error("Audio recording is already active for this owner.");
+        }
+
+        if (state.mediaRecorder) {
+            releaseRecording(state, state.mediaRecorder);
+        }
+
+        state.recordingFailure = null;
+        const generation = ++state.recordingGeneration;
+        const acquiredStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        if (state.disposed ||
+            state.recordingGeneration !== generation ||
+            ownerStates.get(state.ownerId) !== state) {
+            stopMediaStream(acquiredStream);
+            throw new Error("Audio recording owner was disposed.");
+        }
+
+        let recorder;
+        try {
+            recorder = new MediaRecorder(acquiredStream);
+        } catch (error) {
+            stopMediaStream(acquiredStream);
+            throw error;
+        }
+
+        state.stream = acquiredStream;
+        state.chunks = [];
+        state.mediaRecorder = recorder;
+        recorder.ondataavailable = event => {
+            if (state.mediaRecorder === recorder && event.data && event.data.size > 0) {
+                state.chunks.push(event.data);
             }
         };
-        mediaRecorder.start(recordingChunkMilliseconds);
+
+        try {
+            recorder.start(recordingChunkMilliseconds);
+            armRecordingWatchdog(state, recorder);
+        } catch (error) {
+            releaseRecording(state, recorder);
+            throw error;
+        }
     }
 
-    function stopRecording() {
-        if (!mediaRecorder || mediaRecorder.state !== "recording") {
-            throw new Error("Audio recording is not active.");
+    function stopRecordingForOwner(ownerId) {
+        const state = getOwnerState(ownerId);
+        if (state?.recordingFailure) {
+            const recordingFailure = state.recordingFailure;
+            state.recordingFailure = null;
+            throw recordingFailure;
+        }
+
+        const recorder = state?.mediaRecorder;
+        if (!state || !recorder || recorder.state !== "recording") {
+            throw new Error("Audio recording is not active for this owner.");
         }
 
         return new Promise((resolve, reject) => {
-            mediaRecorder.onerror = event => reject(event.error || new Error("Audio recording failed."));
-            mediaRecorder.onstop = async () => {
+            let settled = false;
+            const complete = action => {
+                if (settled) {
+                    return;
+                }
+
+                settled = true;
+                if (state.pendingRecordingStop?.recorder === recorder) {
+                    state.pendingRecordingStop = null;
+                }
+
+                releaseRecording(state, recorder);
+                action();
+            };
+
+            state.pendingRecordingStop = {
+                recorder,
+                cancel: error => complete(() => reject(error))
+            };
+            recorder.onerror = event => complete(
+                () => reject(event.error || new Error("Audio recording failed.")));
+            recorder.onstop = async () => {
+                const contentType = recorder.mimeType || "audio/webm";
+                const recordedChunks = state.chunks.slice();
+                releaseRecording(state, recorder);
                 try {
-                    const contentType = mediaRecorder.mimeType || "audio/webm";
-                    const recordedChunks = chunks.slice();
                     const recordingChunks = await Promise.all(recordedChunks.map(async (chunk, index) => {
                         const chunkContentType = chunk.type || contentType;
                         return {
@@ -57,32 +156,87 @@ window.CanDoItAll.agentFramework.voice = (function () {
                         };
                     }));
                     const base64 = recordingChunks.length === 1 ? recordingChunks[0].base64 : "";
-                    stopTracks();
-                    resolve({
+                    complete(() => resolve({
                         base64,
                         contentType,
                         fileName: resolveFileName(contentType),
                         chunks: recordingChunks
-                    });
+                    }));
                 } catch (error) {
-                    stopTracks();
-                    reject(error);
+                    complete(() => reject(error));
                 }
             };
-            mediaRecorder.stop();
+
+            try {
+                recorder.stop();
+            } catch (error) {
+                complete(() => reject(error));
+            }
         });
     }
 
-    function stopTracks() {
-        if (stream) {
-            for (const track of stream.getTracks()) {
-                track.stop();
+    function releaseRecording(state, recorder) {
+        if (recorder) {
+            recorder.ondataavailable = null;
+            recorder.onerror = null;
+            recorder.onstop = null;
+            if (recorder.state !== "inactive") {
+                try {
+                    recorder.stop();
+                } catch {
+                }
             }
         }
 
-        stream = null;
-        mediaRecorder = null;
-        chunks = [];
+        if (state.mediaRecorder !== recorder) {
+            return;
+        }
+
+        clearRecordingWatchdog(state);
+        stopMediaStream(state.stream);
+        state.stream = null;
+        state.mediaRecorder = null;
+        state.chunks = [];
+    }
+
+    function armRecordingWatchdog(state, recorder) {
+        clearRecordingWatchdog(state);
+        state.recordingWatchdogId = window.setTimeout(() => {
+            state.recordingWatchdogId = null;
+            if (state.disposed ||
+                state.mediaRecorder !== recorder ||
+                recorder.state === "inactive") {
+                return;
+            }
+
+            const error = new Error("Audio recording reached the five-minute limit and was stopped.");
+            if (state.pendingRecordingStop?.recorder === recorder) {
+                state.pendingRecordingStop.cancel(error);
+                return;
+            }
+
+            state.recordingFailure = error;
+            releaseRecording(state, recorder);
+        }, maximumRecordingMilliseconds);
+    }
+
+    function clearRecordingWatchdog(state) {
+        if (state.recordingWatchdogId === null) {
+            return;
+        }
+
+        window.clearTimeout(state.recordingWatchdogId);
+        state.recordingWatchdogId = null;
+    }
+
+    function stopMediaStream(mediaStream) {
+        if (!mediaStream) {
+            return;
+        }
+
+        for (const track of mediaStream.getTracks()) {
+            track.stop();
+        }
     }
 
     function blobToBase64(blob) {
@@ -151,7 +305,7 @@ window.CanDoItAll.agentFramework.voice = (function () {
         });
     }
 
-    function createAudioPayload(base64, contentType) {
+    function createAudioPayload(state, base64, contentType) {
         if (!base64) {
             throw new Error("Audio payload is empty.");
         }
@@ -165,24 +319,41 @@ window.CanDoItAll.agentFramework.voice = (function () {
         const blob = new Blob([base64ToBytes(base64)], { type: playbackContentType });
         const payload = {
             contentType: playbackContentType,
-            url: URL.createObjectURL(blob)
+            url: URL.createObjectURL(blob),
+            released: false
         };
-        queuedAudioPayloads.add(payload);
+        state.queuedAudioPayloads.add(payload);
         return payload;
     }
 
-    async function playAudioPayload(payload, generation) {
-        if (generation !== playbackGeneration) {
-            queuedAudioPayloads.delete(payload);
-            URL.revokeObjectURL(payload.url);
+    function releaseAudioPayload(state, payload) {
+        if (payload.released) {
             return;
         }
 
-        const audio = new Audio(payload.url);
-        currentAudio = audio;
-        currentAudioUrl = payload.url;
+        payload.released = true;
+        state.queuedAudioPayloads.delete(payload);
+        URL.revokeObjectURL(payload.url);
+    }
 
-        return new Promise(async (resolve, reject) => {
+    async function playAudioPayload(state, payload, generation) {
+        if (state.disposed || generation !== state.playbackGeneration) {
+            releaseAudioPayload(state, payload);
+            return;
+        }
+
+        let audio;
+        try {
+            audio = new Audio(payload.url);
+        } catch (error) {
+            releaseAudioPayload(state, payload);
+            throw error;
+        }
+
+        state.currentAudio = audio;
+        state.currentAudioUrl = payload.url;
+
+        return new Promise((resolve, reject) => {
             let completed = false;
             const cleanup = () => {
                 if (completed) {
@@ -192,27 +363,26 @@ window.CanDoItAll.agentFramework.voice = (function () {
                 completed = true;
                 audio.onended = null;
                 audio.onerror = null;
-                if (currentAudio === audio) {
-                    currentAudio = null;
+                if (state.currentAudio === audio) {
+                    state.currentAudio = null;
                 }
 
-                if (currentAudioUrl === payload.url) {
-                    currentAudioUrl = null;
+                if (state.currentAudioUrl === payload.url) {
+                    state.currentAudioUrl = null;
                 }
 
-                if (stopCurrentPlayback === stop) {
-                    stopCurrentPlayback = null;
+                if (state.stopCurrentPlayback === stop) {
+                    state.stopCurrentPlayback = null;
                 }
 
-                URL.revokeObjectURL(payload.url);
-                queuedAudioPayloads.delete(payload);
+                releaseAudioPayload(state, payload);
             };
             const stop = () => {
                 audio.pause();
                 cleanup();
                 resolve();
             };
-            stopCurrentPlayback = stop;
+            state.stopCurrentPlayback = stop;
             audio.onended = () => {
                 cleanup();
                 resolve();
@@ -222,63 +392,118 @@ window.CanDoItAll.agentFramework.voice = (function () {
                 reject(new Error(`Audio playback failed for ${payload.contentType}.`));
             };
 
-            try {
-                await Promise.race([audio.play(), timeoutAfter(5000)]);
-            } catch (error) {
+            const rejectPlayback = error => {
                 cleanup();
                 reject(new Error(`Audio playback failed for ${payload.contentType}: ${error?.message || error}`));
+            };
+            try {
+                Promise.race([audio.play(), timeoutAfter(5000)]).catch(rejectPlayback);
+            } catch (error) {
+                rejectPlayback(error);
             }
         });
     }
 
-    function clearAudioQueue() {
-        playbackGeneration++;
-        playbackQueue = Promise.resolve();
-        if (stopCurrentPlayback) {
-            stopCurrentPlayback();
+    function clearAudioQueueForState(state) {
+        state.playbackGeneration++;
+        state.playbackQueue = Promise.resolve();
+        if (state.stopCurrentPlayback) {
+            state.stopCurrentPlayback();
         }
 
-        if (currentAudio) {
-            currentAudio.pause();
-            currentAudio = null;
+        if (state.currentAudio) {
+            state.currentAudio.pause();
+            state.currentAudio = null;
         }
 
-        if (currentAudioUrl) {
-            URL.revokeObjectURL(currentAudioUrl);
-            currentAudioUrl = null;
+        if (state.currentAudioUrl) {
+            URL.revokeObjectURL(state.currentAudioUrl);
+            state.currentAudioUrl = null;
         }
 
-        for (const payload of queuedAudioPayloads) {
-            URL.revokeObjectURL(payload.url);
+        for (const payload of [...state.queuedAudioPayloads]) {
+            releaseAudioPayload(state, payload);
         }
-
-        queuedAudioPayloads.clear();
     }
 
-    async function enqueueAudio(base64, contentType) {
-        const payload = createAudioPayload(base64, contentType);
-        const generation = playbackGeneration;
-        playbackQueue = playbackQueue.then(
-            () => playAudioPayload(payload, generation).catch(error => console.error(error)),
-            () => playAudioPayload(payload, generation).catch(error => console.error(error)));
+    function clearAudioQueueForOwner(ownerId) {
+        clearAudioQueueForState(getOrCreateOwnerState(ownerId));
     }
 
-    async function playAudio(base64, contentType) {
-        clearAudioQueue();
-        const payload = createAudioPayload(base64, contentType);
-        const generation = playbackGeneration;
+    async function enqueueAudioForOwner(ownerId, base64, contentType) {
+        const state = getOrCreateOwnerState(ownerId);
+        const payload = createAudioPayload(state, base64, contentType);
+        const generation = state.playbackGeneration;
+        state.playbackQueue = state.playbackQueue.then(
+            () => playAudioPayload(state, payload, generation).catch(error => console.error(error)),
+            () => playAudioPayload(state, payload, generation).catch(error => console.error(error)));
+    }
+
+    async function playAudioForOwner(ownerId, base64, contentType) {
+        const state = getOrCreateOwnerState(ownerId);
+        clearAudioQueueForState(state);
+        const payload = createAudioPayload(state, base64, contentType);
+        const generation = state.playbackGeneration;
         try {
-            await playAudioPayload(payload, generation);
+            await playAudioPayload(state, payload, generation);
         } catch (error) {
             throw new Error(error?.message || error);
         }
     }
 
+    function disposeOwner(ownerId) {
+        const normalizedOwnerId = normalizeOwnerId(ownerId);
+        const state = ownerStates.get(normalizedOwnerId);
+        if (!state) {
+            return;
+        }
+
+        state.disposed = true;
+        state.recordingGeneration++;
+        if (state.pendingRecordingStop) {
+            state.pendingRecordingStop.cancel(new Error("Audio recording owner was disposed."));
+        } else {
+            releaseRecording(state, state.mediaRecorder);
+        }
+
+        state.pendingRecordingStop = null;
+        state.recordingFailure = null;
+        clearRecordingWatchdog(state);
+        clearAudioQueueForState(state);
+        ownerStates.delete(normalizedOwnerId);
+    }
+
+    function startRecording() {
+        return startRecordingForOwner(legacyOwnerId);
+    }
+
+    function stopRecording() {
+        return stopRecordingForOwner(legacyOwnerId);
+    }
+
+    function clearAudioQueue() {
+        clearAudioQueueForOwner(legacyOwnerId);
+    }
+
+    function enqueueAudio(base64, contentType) {
+        return enqueueAudioForOwner(legacyOwnerId, base64, contentType);
+    }
+
+    function playAudio(base64, contentType) {
+        return playAudioForOwner(legacyOwnerId, base64, contentType);
+    }
+
     return {
         clearAudioQueue,
+        clearAudioQueueForOwner,
+        disposeOwner,
         enqueueAudio,
+        enqueueAudioForOwner,
+        playAudio,
+        playAudioForOwner,
         startRecording,
+        startRecordingForOwner,
         stopRecording,
-        playAudio
+        stopRecordingForOwner
     };
 })();

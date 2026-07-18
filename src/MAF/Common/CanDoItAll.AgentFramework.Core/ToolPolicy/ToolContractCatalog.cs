@@ -222,6 +222,7 @@ public static class ToolContractCatalog
         AgentToolInvocationPolicyMetadata.ProjectStructureProjectCreate,
         AgentToolInvocationPolicyMetadata.ProjectStructureProjectUpdate,
         AgentToolInvocationPolicyMetadata.ProjectStructureHierarchyGet,
+        AgentToolInvocationPolicyMetadata.ProjectStructureSubprojectCreate,
         AgentToolInvocationPolicyMetadata.ProjectStructureSubprojectLink,
         AgentToolInvocationPolicyMetadata.ProjectStructureNodesToNewSubproject,
         AgentToolInvocationPolicyMetadata.ProjectStructureRead,

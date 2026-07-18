@@ -7,6 +7,10 @@
 
 <PageTitle>CRM / HR Recruiting</PageTitle>
 
+<AgentChatContextSurfaceProvider Surface="@AgentChatSurface"
+                                 ContextNavigationIdentity="@AgentChatNavigationFence"
+                                 ContextAccessState="@agentChatContextAccessState" />
+
 <PageScaffold MaxWidthClass="max-w-full">
     <Header>
         <PageHeader Eyebrow="CRM / HR"
@@ -267,6 +271,9 @@
     [SupplyParameterFromQuery]
     private Guid? ApplicationId { get; set; }
 
+    [SupplyParameterFromQuery]
+    private Guid? PartyId { get; set; }
+
     private RecruitmentWorkspaceModel? currentWorkspace;
     private RecruitmentApplicationEditorModel applicationEditor = new();
     private RecruitmentInterviewEditorModel interviewEditor = new();
@@ -275,8 +282,35 @@
     private RecruitmentConversionEditorModel conversionEditor = new();
     private string searchText = string.Empty;
     private string stageFilter = string.Empty;
+    private AgentChatContextAccessState agentChatContextAccessState = AgentChatContextAccessState.Loading;
+    private long agentChatContextLoadGeneration;
 
     private Guid? SelectedPartyId => currentWorkspace?.HasSelectedApplication == true ? currentWorkspace.Application.PartyId : null;
+
+    private AgentChatContextSurface AgentChatSurface
+    {
+        get
+        {
+            var hasSelectedApplication = currentWorkspace?.HasSelectedApplication == true;
+            var application = hasSelectedApplication ? currentWorkspace!.Application : null;
+            return CrmHrAgentChatSurfaceBuilder.BuildRecruitingSurface(
+                application?.Id ?? ApplicationId,
+                application?.Stage,
+                application?.Decision,
+                application?.PartyId ?? PartyId,
+                hasSelectedApplication ? currentWorkspace!.CandidateDisplayName : null);
+        }
+    }
+
+    private AgentChatNavigationIdentity AgentChatNavigationFence
+        => AgentChatNavigationIdentity.CreateForLocation(
+            Navigation.BaseUri,
+            Navigation.Uri,
+            [
+                new("applicationId", ApplicationId?.ToString("D")),
+                new("partyId", PartyId?.ToString("D"))
+            ]);
+
     private IReadOnlyList<RecruitmentApplicationListItemModel> FilteredApplications => currentWorkspace?.Applications.Where(MatchesApplicationFilters).ToList() ?? [];
 
     protected override async Task OnParametersSetAsync()
@@ -286,9 +320,46 @@
 
     private async Task LoadAsync()
     {
-        currentWorkspace = await RecruitingService.GetRecruitmentWorkspaceAsync(ApplicationId);
-        ApplyWorkspace(currentWorkspace);
+        var loadGeneration = Interlocked.Increment(ref agentChatContextLoadGeneration);
+        var requestedApplicationId = ApplicationId;
+        var requestedPartyId = PartyId;
+        agentChatContextAccessState = AgentChatContextAccessState.Loading;
+        try
+        {
+            var loadedWorkspace = await RecruitingService.GetRecruitmentWorkspaceAsync(
+                requestedApplicationId,
+                requestedPartyId);
+            if (!IsCurrentAgentChatContextLoad(loadGeneration))
+            {
+                return;
+            }
+
+            currentWorkspace = loadedWorkspace;
+            ApplyWorkspace(loadedWorkspace);
+            if (!RecruitmentWorkspaceContextSelection.MatchesRequestedApplication(
+                    requestedApplicationId,
+                    requestedPartyId,
+                    loadedWorkspace))
+            {
+                agentChatContextAccessState = AgentChatContextAccessState.Failed;
+                return;
+            }
+
+            agentChatContextAccessState = AgentChatContextAccessState.Ready;
+        }
+        catch
+        {
+            if (IsCurrentAgentChatContextLoad(loadGeneration))
+            {
+                agentChatContextAccessState = AgentChatContextAccessState.Failed;
+            }
+
+            throw;
+        }
     }
+
+    private bool IsCurrentAgentChatContextLoad(long loadGeneration)
+        => loadGeneration == Volatile.Read(ref agentChatContextLoadGeneration);
 
     private void ApplyWorkspace(RecruitmentWorkspaceModel workspace)
     {

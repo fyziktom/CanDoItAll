@@ -11,6 +11,7 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
 @using CanDoItAll.Components.BaseLib
 @using CanDoItAll.Components.Common
 @using CanDoItAll.Components.Mermaid
+@using CanDoItAll.AgentFramework.Models
 @using CanDoItAll.Modules.Projects
 @using CanDoItAll.Modules.Projects.Pages.Components
 @using CanDoItAll.SharedKernel
@@ -63,6 +64,7 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
                        OpenStructure="OpenStructure"
                        OpenCalendar="OpenCalendar"
                        OpenGanttPreview="OpenGanttPreviewAsync"
+                       PortfolioViewChanged="HandlePortfolioViewChanged"
                        ProjectPackagePath="@projectPackagePath"
                        ProjectPackagePathChanged="@(value => { projectPackagePath = value; })"
                        ProjectPackageMessage="@projectPackageMessage"
@@ -72,6 +74,13 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
                        ImportProjectsPackage="ImportProjectsPackageAsync" />
     </ChildContent>
 </PageScaffold>
+
+<ProjectsAgentChatContextProvider ProjectSummaries="projectSummaries"
+                                  SelectedProjectId="@AgentChatFocusedProjectId"
+                                  ActiveView="@agentChatPortfolioView"
+                                  ContextNavigationIdentity="@AgentChatNavigationFence"
+                                  ContextAccessState="@agentChatPositionAccessState"
+                                  RefreshRequested="HandleAgentChatRefreshRequestedAsync" />
 
 <ProjectModalHost IsOpen="showProjectModal"
                   IsEditorMode="@(modalMode == ProjectModalMode.Editor)"
@@ -239,16 +248,59 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
     private bool includeSubprojects = true;
     private ProjectModalMode modalMode = ProjectModalMode.Overview;
     private bool modalOpenedFromRoute;
-    private Guid? handledProjectQueryId;
     private ProjectHierarchyDialogState? hierarchyDialog;
     private ProjectSummary? projectFilesDialogProject;
     private ProjectGanttPreview? ganttPreviewDialog;
+    private Guid? ganttPreviewProjectId;
     private string? ganttPreviewError;
     private bool showGanttPreviewModal;
     private string projectPackagePath = string.Empty;
     private string? projectPackageMessage;
     private bool projectPackageMessageIsError;
     private bool projectPackageBusy;
+    private ProjectsAgentChatView agentChatPortfolioView = ProjectsAgentChatView.Cards;
+    private AgentChatContextAccessState agentChatPositionAccessState = AgentChatContextAccessState.Loading;
+    private readonly ProjectsPageLoadGeneration projectLoads = new();
+
+    private AgentChatNavigationIdentity AgentChatNavigationFence
+        => AgentChatNavigationIdentity.CreateForLocation(
+            Navigation.BaseUri,
+            Navigation.Uri,
+            [new("projectId", ProjectIdQuery?.ToString("D"))]);
+
+    private Task HandlePortfolioViewChanged(ProjectsAgentChatView view)
+    {
+        agentChatPortfolioView = view;
+        return Task.CompletedTask;
+    }
+
+    private Guid? AgentChatFocusedProjectId
+    {
+        get
+        {
+            if (hierarchyDialog is not null)
+            {
+                return hierarchyDialog.ProjectId;
+            }
+
+            if (projectFilesDialogProject is not null)
+            {
+                return projectFilesDialogProject.Id;
+            }
+
+            if (showGanttPreviewModal && ganttPreviewProjectId.HasValue)
+            {
+                return ganttPreviewProjectId;
+            }
+
+            if (showProjectModal)
+            {
+                return editor.Id;
+            }
+
+            return hierarchyFilterProjectId;
+        }
+    }
 
     private string HierarchyFilterHelper
         => !hierarchyFilterProjectId.HasValue
@@ -293,30 +345,48 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
 
     protected override async Task OnParametersSetAsync()
     {
-        await LoadProjectSummariesAsync();
-
-        if (ProjectIdQuery == handledProjectQueryId)
+        var requestedProjectId = ProjectIdQuery;
+        var loadStamp = BeginProjectLoad(new ProjectsPageLoadKey(
+            ProjectsPageLoadKind.Route,
+            requestedProjectId));
+        try
         {
-            return;
+            var portfolioTask = LoadPortfolioStateAsync();
+            var editorTask = LoadRequiredProjectEditorAsync(requestedProjectId);
+            await Task.WhenAll(portfolioTask, editorTask);
+
+            var loadedPortfolio = await portfolioTask;
+            var loadedEditor = await editorTask;
+            TryCompleteProjectLoad(loadStamp, () =>
+            {
+                ApplyPortfolioState(loadedPortfolio);
+                if (requestedProjectId.HasValue)
+                {
+                    editor = loadedEditor!;
+                    wizardStep = 0;
+                    modalMode = ProjectModalMode.Overview;
+                    showProjectModal = true;
+                    modalOpenedFromRoute = true;
+                    message = null;
+                    return;
+                }
+
+                if (modalOpenedFromRoute)
+                {
+                    showProjectModal = false;
+                    modalOpenedFromRoute = false;
+                    message = null;
+                }
+            });
         }
-
-        handledProjectQueryId = ProjectIdQuery;
-
-        if (ProjectIdQuery.HasValue)
+        catch
         {
-            await LoadEditorAsync(ProjectIdQuery.Value);
-            modalMode = ProjectModalMode.Overview;
-            showProjectModal = true;
-            modalOpenedFromRoute = true;
-            message = null;
-            return;
-        }
+            if (!FailProjectLoad(loadStamp))
+            {
+                return;
+            }
 
-        if (modalOpenedFromRoute)
-        {
-            showProjectModal = false;
-            modalOpenedFromRoute = false;
-            message = null;
+            throw;
         }
     }
 
@@ -380,60 +450,192 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
         return Task.CompletedTask;
     }
 
-    private async Task LoadProjectSummariesAsync()
+    private async Task<ProjectsPortfolioState> LoadPortfolioStateAsync()
     {
-        projectSummaries = await ProjectsService.ListAsync();
-        hierarchyLinks = await ProjectsService.ListHierarchyLinksAsync();
+        var projectSummariesTask = ProjectsService.ListAsync();
+        var hierarchyLinksTask = ProjectsService.ListHierarchyLinksAsync();
+        await Task.WhenAll(projectSummariesTask, hierarchyLinksTask);
+        return new ProjectsPortfolioState(
+            await projectSummariesTask,
+            await hierarchyLinksTask);
+    }
+
+    private void ApplyPortfolioState(ProjectsPortfolioState state)
+    {
+        projectSummaries = state.ProjectSummaries;
+        hierarchyLinks = state.HierarchyLinks;
         RebuildProjectFileProjection();
     }
 
-    private async Task LoadEditorAsync(Guid? projectId)
+    private async Task HandleAgentChatRefreshRequestedAsync(AgentChatExecutionCompleted notification)
     {
-        editor = await ProjectsService.GetAsync(projectId);
-        wizardStep = 0;
+        var expectedProjectId = AgentChatFocusedProjectId;
+        var loadStamp = BeginProjectLoad(new ProjectsPageLoadKey(
+            ProjectsPageLoadKind.CompletionRefresh,
+            expectedProjectId));
+        try
+        {
+            var loadedPortfolio = await LoadPortfolioStateAsync();
+            if (expectedProjectId.HasValue &&
+                loadedPortfolio.ProjectSummaries.All(project => project.Id != expectedProjectId.Value))
+            {
+                FailProjectLoad(loadStamp);
+                return;
+            }
 
+            TryCompleteProjectLoad(loadStamp, () => ApplyPortfolioState(loadedPortfolio));
+        }
+        catch
+        {
+            if (!FailProjectLoad(loadStamp))
+            {
+                return;
+            }
+
+            throw;
+        }
+    }
+
+    private async Task<ProjectEditorModel?> LoadRequiredProjectEditorAsync(Guid? projectId)
+    {
         if (!projectId.HasValue)
         {
-            starterObjects.Clear();
+            return null;
         }
+
+        var loadedEditor = await ProjectsService.GetAsync(projectId.Value);
+        if (loadedEditor.Id != projectId.Value)
+        {
+            throw new InvalidOperationException($"Project '{projectId.Value:D}' is unavailable.");
+        }
+
+        return loadedEditor;
     }
 
     private async Task OpenNewProjectAsync()
     {
-        await LoadEditorAsync(null);
-        showProjectModal = true;
-        modalMode = ProjectModalMode.Editor;
-        modalOpenedFromRoute = false;
-        message = null;
-
-        if (ProjectIdQuery.HasValue)
+        var loadStamp = BeginProjectLoad(new ProjectsPageLoadKey(
+            ProjectsPageLoadKind.NewProject,
+            null));
+        try
         {
-            Navigation.NavigateTo("/projects", replace: true);
+            var loadedEditor = await ProjectsService.GetAsync(null);
+            if (TryCompleteProjectLoad(loadStamp, () =>
+                {
+                    editor = loadedEditor;
+                    wizardStep = 0;
+                    starterObjects.Clear();
+                    showProjectModal = true;
+                    modalMode = ProjectModalMode.Editor;
+                    modalOpenedFromRoute = false;
+                    message = null;
+                }) && ProjectIdQuery.HasValue)
+            {
+                Navigation.NavigateTo("/projects", replace: true);
+            }
+        }
+        catch
+        {
+            if (!FailProjectLoad(loadStamp))
+            {
+                return;
+            }
+
+            throw;
         }
     }
 
     private async Task OpenProjectPreviewAsync(Guid id)
     {
-        await LoadEditorAsync(id);
-        showProjectModal = true;
-        modalMode = ProjectModalMode.Overview;
-        modalOpenedFromRoute = false;
-        message = null;
+        var loadStamp = BeginProjectLoad(new ProjectsPageLoadKey(
+            ProjectsPageLoadKind.Preview,
+            id));
+        try
+        {
+            var loadedEditor = await LoadRequiredProjectEditorAsync(id);
+            TryCompleteProjectLoad(loadStamp, () =>
+            {
+                editor = loadedEditor!;
+                wizardStep = 0;
+                showProjectModal = true;
+                modalMode = ProjectModalMode.Overview;
+                modalOpenedFromRoute = false;
+                message = null;
+            });
+        }
+        catch
+        {
+            if (!FailProjectLoad(loadStamp))
+            {
+                return;
+            }
+
+            throw;
+        }
+    }
+
+    private ProjectsPageLoadStamp BeginProjectLoad(ProjectsPageLoadKey key)
+    {
+        agentChatPositionAccessState = AgentChatContextAccessState.Loading;
+        return projectLoads.Begin(key);
+    }
+
+    private bool TryCompleteProjectLoad(ProjectsPageLoadStamp stamp, Action commit)
+    {
+        return projectLoads.TryCommit(stamp, ProjectIdQuery, () =>
+        {
+            commit();
+            agentChatPositionAccessState = AgentChatContextAccessState.Ready;
+        });
+    }
+
+    private bool CompleteProjectLoad(ProjectsPageLoadStamp stamp)
+    {
+        return projectLoads.TryCommit(
+            stamp,
+            ProjectIdQuery,
+            () => agentChatPositionAccessState = AgentChatContextAccessState.Ready);
+    }
+
+    private bool FailProjectLoad(ProjectsPageLoadStamp stamp)
+    {
+        return projectLoads.TryCommit(
+            stamp,
+            ProjectIdQuery,
+            () => agentChatPositionAccessState = AgentChatContextAccessState.Failed);
+    }
+
+    private void InvalidateProjectLoad()
+    {
+        projectLoads.Invalidate();
+        agentChatPositionAccessState = AgentChatContextAccessState.Ready;
     }
 
     private async Task OpenGanttPreviewAsync(Guid projectId)
     {
+        var loadStamp = BeginProjectLoad(new ProjectsPageLoadKey(
+            ProjectsPageLoadKind.Gantt,
+            projectId));
         ganttPreviewDialog = null;
+        ganttPreviewProjectId = projectId;
         ganttPreviewError = null;
         showGanttPreviewModal = true;
 
         try
         {
-            ganttPreviewDialog = await ProjectGanttPreviewService.BuildAsync(projectId);
+            var loadedGanttPreview = await ProjectGanttPreviewService.BuildAsync(projectId);
+            TryCompleteProjectLoad(loadStamp, () => ganttPreviewDialog = loadedGanttPreview);
         }
         catch (Exception ex)
         {
-            ganttPreviewError = ex.Message;
+            if (projectLoads.TryCommit(loadStamp, ProjectIdQuery, () =>
+                {
+                    ganttPreviewError = ex.Message;
+                    agentChatPositionAccessState = AgentChatContextAccessState.Ready;
+                }))
+            {
+                return;
+            }
         }
     }
 
@@ -485,6 +687,10 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
             return;
         }
 
+        var packagePath = projectPackagePath;
+        var loadStamp = BeginProjectLoad(new ProjectsPageLoadKey(
+            ProjectsPageLoadKind.Import,
+            AgentChatFocusedProjectId));
         projectPackageBusy = true;
         projectPackageMessage = null;
         projectPackageMessageIsError = false;
@@ -493,18 +699,34 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
         {
             var result = await ProjectPackageService.ImportAllAsync(new ProjectPackageImportRequest
             {
-                PackagePath = projectPackagePath
+                PackagePath = packagePath
             });
 
             if (result.IsFailure)
             {
-                projectPackageMessage = string.Join(" ", result.Errors.Select(error => error.Message));
-                projectPackageMessageIsError = true;
+                TryCompleteProjectLoad(loadStamp, () =>
+                {
+                    projectPackageMessage = string.Join(" ", result.Errors.Select(error => error.Message));
+                    projectPackageMessageIsError = true;
+                });
                 return;
             }
 
-            await LoadProjectSummariesAsync();
-            projectPackageMessage = $"Imported {result.Value!.RecordsImported} project record(s) from {result.Value.Manifest.PackageId:N}.";
+            var loadedPortfolio = await LoadPortfolioStateAsync();
+            TryCompleteProjectLoad(loadStamp, () =>
+            {
+                ApplyPortfolioState(loadedPortfolio);
+                projectPackageMessage = $"Imported {result.Value!.RecordsImported} project record(s) from {result.Value.Manifest.PackageId:N}.";
+            });
+        }
+        catch
+        {
+            if (!FailProjectLoad(loadStamp))
+            {
+                return;
+            }
+
+            throw;
         }
         finally
         {
@@ -560,6 +782,7 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
 
     private Task CloseProjectModalAsync()
     {
+        InvalidateProjectLoad();
         showProjectModal = false;
         message = null;
 
@@ -610,42 +833,81 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
 
     private async Task SaveAsync()
     {
-        var result = await ProjectsService.SaveAsync(editor);
-        message = result.IsSuccess ? "Project saved." : string.Join(" ", result.Errors.Select(error => error.Message));
-        await LoadProjectSummariesAsync();
+        await SaveCoreAsync();
+    }
 
-        if (!result.IsSuccess)
+    private async Task<Guid?> SaveCoreAsync()
+    {
+        var editorToSave = CloneProjectEditor(editor);
+        var starterObjectSeeds = starterObjects
+            .Where(item => !string.IsNullOrWhiteSpace(item.Title))
+            .Select(item => new ProjectObjectSeedDraft(item.ObjectType, item.Title, item.Subtitle, item.Subtitle))
+            .ToList();
+        var loadStamp = BeginProjectLoad(new ProjectsPageLoadKey(
+            ProjectsPageLoadKind.Save,
+            editorToSave.Id));
+        try
         {
-            return;
+            var result = await ProjectsService.SaveAsync(editorToSave);
+            if (!result.IsSuccess)
+            {
+                TryCompleteProjectLoad(
+                    loadStamp,
+                    () => message = string.Join(" ", result.Errors.Select(error => error.Message)));
+                return null;
+            }
+
+            if (starterObjectSeeds.Count > 0)
+            {
+                await ProjectWorkbenchSeedService.SeedProjectObjectsAsync(
+                    result.Value,
+                    starterObjectSeeds);
+            }
+
+            var loadedPortfolioTask = LoadPortfolioStateAsync();
+            var loadedEditorTask = LoadRequiredProjectEditorAsync(result.Value);
+            await Task.WhenAll(loadedPortfolioTask, loadedEditorTask);
+            var loadedPortfolio = await loadedPortfolioTask;
+            var loadedEditor = await loadedEditorTask;
+            var committed = TryCompleteProjectLoad(loadStamp, () =>
+            {
+                ApplyPortfolioState(loadedPortfolio);
+                editor = loadedEditor!;
+                wizardStep = 0;
+                starterObjects.Clear();
+                message = starterObjectSeeds.Count > 0
+                    ? "Project saved and starter objects seeded to the structure workbench."
+                    : "Project saved.";
+            });
+            if (!committed)
+            {
+                return null;
+            }
+
+            if (ProjectIdQuery.HasValue && ProjectIdQuery != result.Value)
+            {
+                Navigation.NavigateTo($"/projects?projectId={result.Value}");
+            }
+
+            return result.Value;
         }
-
-        if (starterObjects.Count > 0)
+        catch
         {
-            await ProjectWorkbenchSeedService.SeedProjectObjectsAsync(
-                result.Value,
-                starterObjects
-                    .Where(item => !string.IsNullOrWhiteSpace(item.Title))
-                    .Select(item => new ProjectObjectSeedDraft(item.ObjectType, item.Title, item.Subtitle, item.Subtitle))
-                    .ToList());
-            starterObjects.Clear();
-            message = "Project saved and starter objects seeded to the structure workbench.";
-        }
+            if (!FailProjectLoad(loadStamp))
+            {
+                return null;
+            }
 
-        editor = await ProjectsService.GetAsync(result.Value);
-
-        if (ProjectIdQuery.HasValue && ProjectIdQuery != result.Value)
-        {
-            Navigation.NavigateTo($"/projects?projectId={result.Value}");
+            throw;
         }
     }
 
     private async Task SaveAndOpenStructureAsync()
     {
-        await SaveAsync();
-
-        if (editor.Id.HasValue)
+        var savedProjectId = await SaveCoreAsync();
+        if (savedProjectId.HasValue)
         {
-            Navigation.NavigateTo($"/projects/{editor.Id.Value}/structure");
+            Navigation.NavigateTo($"/projects/{savedProjectId.Value}/structure");
         }
     }
 
@@ -656,15 +918,38 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
             return;
         }
 
-        await ProjectsService.DeleteAsync(editor.Id.Value);
-        await LoadProjectSummariesAsync();
-        showProjectModal = false;
-        message = "Project deleted.";
-
-        if (ProjectIdQuery.HasValue)
+        var projectId = editor.Id.Value;
+        var loadStamp = BeginProjectLoad(new ProjectsPageLoadKey(
+            ProjectsPageLoadKind.Delete,
+            projectId));
+        try
         {
-            modalOpenedFromRoute = false;
-            Navigation.NavigateTo("/projects", replace: true);
+            await ProjectsService.DeleteAsync(projectId);
+            var loadedPortfolio = await LoadPortfolioStateAsync();
+            if (!TryCompleteProjectLoad(loadStamp, () =>
+                {
+                    ApplyPortfolioState(loadedPortfolio);
+                    showProjectModal = false;
+                    message = "Project deleted.";
+                    modalOpenedFromRoute = false;
+                }))
+            {
+                return;
+            }
+
+            if (ProjectIdQuery.HasValue)
+            {
+                Navigation.NavigateTo("/projects", replace: true);
+            }
+        }
+        catch
+        {
+            if (!FailProjectLoad(loadStamp))
+            {
+                return;
+            }
+
+            throw;
         }
     }
 
@@ -689,52 +974,117 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
 
     private async Task OpenProjectFiles(Guid projectId)
     {
-        projectFilesDialogProject = projectSummaries.FirstOrDefault(project => project.Id == projectId);
-        if (projectFilesDialogProject is not null)
+        var loadStamp = BeginProjectLoad(new ProjectsPageLoadKey(
+            ProjectsPageLoadKind.Files,
+            projectId));
+        try
         {
-            return;
-        }
+            var project = projectSummaries.FirstOrDefault(item => item.Id == projectId);
+            ProjectsPortfolioState? loadedPortfolio = null;
+            if (project is null)
+            {
+                loadedPortfolio = await LoadPortfolioStateAsync();
+                project = loadedPortfolio.ProjectSummaries.FirstOrDefault(item => item.Id == projectId);
+            }
 
-        await LoadProjectSummariesAsync();
-        projectFilesDialogProject = projectSummaries.FirstOrDefault(project => project.Id == projectId);
+            if (project is null)
+            {
+                throw new InvalidOperationException($"Project '{projectId:D}' is unavailable.");
+            }
+
+            TryCompleteProjectLoad(loadStamp, () =>
+            {
+                if (loadedPortfolio is not null)
+                {
+                    ApplyPortfolioState(loadedPortfolio);
+                }
+
+                projectFilesDialogProject = project;
+            });
+        }
+        catch
+        {
+            if (!FailProjectLoad(loadStamp))
+            {
+                return;
+            }
+
+            throw;
+        }
     }
 
     private Task CloseProjectFiles()
     {
+        InvalidateProjectLoad();
         projectFilesDialogProject = null;
         return Task.CompletedTask;
     }
 
     private async Task OpenHierarchyModalAsync(Guid projectId)
     {
-        var project = projectSummaries.FirstOrDefault(item => item.Id == projectId);
-
-        if (project is null)
+        var loadStamp = BeginProjectLoad(new ProjectsPageLoadKey(
+            ProjectsPageLoadKind.Hierarchy,
+            projectId));
+        try
         {
-            await LoadProjectSummariesAsync();
-            project = projectSummaries.FirstOrDefault(item => item.Id == projectId);
+            var project = projectSummaries.FirstOrDefault(item => item.Id == projectId);
+            var portfolioTask = project is null ? LoadPortfolioStateAsync() : null;
+            var hierarchyTask = ProjectsService.GetHierarchyAsync(projectId);
+            if (portfolioTask is not null)
+            {
+                await Task.WhenAll(portfolioTask, hierarchyTask);
+                project = (await portfolioTask).ProjectSummaries.FirstOrDefault(item => item.Id == projectId);
+            }
+            else
+            {
+                await hierarchyTask;
+            }
 
             if (project is null)
             {
+                throw new InvalidOperationException($"Project '{projectId:D}' is unavailable.");
+            }
+
+            var hierarchy = await hierarchyTask;
+            var loadedPortfolio = portfolioTask is null ? null : await portfolioTask;
+            var selectedProject = project;
+            TryCompleteProjectLoad(loadStamp, () =>
+            {
+                if (loadedPortfolio is not null)
+                {
+                    ApplyPortfolioState(loadedPortfolio);
+                }
+
+                hierarchyDialog = new ProjectHierarchyDialogState(
+                    selectedProject.Id,
+                    selectedProject.Name,
+                    hierarchy.ParentProjects,
+                    hierarchy.ChildProjects);
+            });
+        }
+        catch
+        {
+            if (!FailProjectLoad(loadStamp))
+            {
                 return;
             }
-        }
 
-        var hierarchy = await ProjectsService.GetHierarchyAsync(projectId);
-        hierarchyDialog = new ProjectHierarchyDialogState(
-            project.Id,
-            project.Name,
-            hierarchy.ParentProjects,
-            hierarchy.ChildProjects);
+            throw;
+        }
     }
 
     private void CloseHierarchyModal()
-        => hierarchyDialog = null;
+    {
+        InvalidateProjectLoad();
+        hierarchyDialog = null;
+    }
 
     private Task CloseGanttPreviewAsync()
     {
+        InvalidateProjectLoad();
         showGanttPreviewModal = false;
         ganttPreviewDialog = null;
+        ganttPreviewProjectId = null;
         ganttPreviewError = null;
         return Task.CompletedTask;
     }
@@ -773,6 +1123,44 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
 
     private void NavigateHome()
         => Navigation.NavigateTo("/");
+
+    private static ProjectEditorModel CloneProjectEditor(ProjectEditorModel source)
+    {
+        return new ProjectEditorModel
+        {
+            Id = source.Id,
+            Name = source.Name,
+            Description = source.Description,
+            Objective = source.Objective,
+            Status = source.Status,
+            CurrentPhase = source.CurrentPhase,
+            TargetDateUtc = source.TargetDateUtc,
+            Phases = source.Phases
+                .Select(phase => new ProjectPhaseEditorModel
+                {
+                    Id = phase.Id,
+                    Name = phase.Name,
+                    Goal = phase.Goal,
+                    Status = phase.Status,
+                    StartDateUtc = phase.StartDateUtc,
+                    EndDateUtc = phase.EndDateUtc
+                })
+                .ToList(),
+            Options = source.Options
+                .Select(option => new ProjectOptionEditorModel
+                {
+                    Id = option.Id,
+                    Category = option.Category,
+                    OptionName = option.OptionName,
+                    Notes = option.Notes
+                })
+                .ToList()
+        };
+    }
+
+    private sealed record ProjectsPortfolioState(
+        IReadOnlyList<ProjectSummary> ProjectSummaries,
+        IReadOnlyList<ProjectHierarchyLinkSummary> HierarchyLinks);
 
     private enum ProjectModalMode
     {

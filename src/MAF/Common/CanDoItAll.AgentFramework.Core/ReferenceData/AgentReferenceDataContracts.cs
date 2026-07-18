@@ -69,5 +69,7 @@ public interface IAgentReferenceDataProvider
 
 public interface IAgentReferenceDataCacheInvalidator
 {
+    event EventHandler? Invalidated;
+
     void Invalidate();
 }

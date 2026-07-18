@@ -1,5 +1,6 @@
-using CanDoItAll.AgentFramework.Components;
+using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.Modules.Workbench.ProjectStructure;
 
 namespace CanDoItAll.Tests.Unit;
 
@@ -94,6 +95,87 @@ public sealed class ContextualAgentWorkspaceContextBuilderTests
             agents,
             ContextualAgentWorkspaceKind.ProjectStructure,
             writeAgent.Id));
+    }
+
+    [Fact]
+    public void Project_structure_floating_context_separates_stable_guidance_from_live_selection()
+    {
+        var projectId = Guid.NewGuid();
+
+        var baseFragment = ProjectStructureAgentChatContextBuilder.BuildBaseFragment(projectId);
+        var canvasViewFragment = ProjectStructureAgentChatContextBuilder.BuildViewFragment(
+            ProjectStructureAgentChatView.Canvas);
+        var ganttViewFragment = ProjectStructureAgentChatContextBuilder.BuildViewFragment(
+            ProjectStructureAgentChatView.Gantt);
+        var selectionFragment = ProjectStructureAgentChatContextBuilder.BuildSelectionFragment(
+            [
+                new AgentChatContextEntityReference("project-node", "node:alpha", "Alpha node"),
+                new AgentChatContextEntityReference("project-node", "node:beta", "Beta node"),
+                new AgentChatContextEntityReference("project-node", "node:alpha", "Duplicate alpha")
+            ]);
+
+        Assert.Contains($"Selected project id: {projectId:D}", baseFragment.Content);
+        Assert.Contains("project_structure_asset_content_get", baseFragment.Content);
+        Assert.Contains("workspace_convert_document", baseFragment.Content);
+        Assert.DoesNotContain("node:alpha", baseFragment.Content);
+        Assert.Contains("structure canvas", canvasViewFragment.Content, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Gantt schedule", ganttViewFragment.Content);
+        Assert.Contains("does not currently expose an individual task selection", ganttViewFragment.Content);
+        Assert.Contains(
+            "Selected project-structure node: node:alpha | Alpha node.",
+            selectionFragment.Content);
+        Assert.Contains(
+            "Selected project-structure node: node:beta | Beta node.",
+            selectionFragment.Content);
+    }
+
+    [Fact]
+    public void Project_structure_floating_scope_is_allowlisted_from_agent_access_metadata()
+    {
+        var projectId = Guid.NewGuid();
+        var reader = CreateAgent(
+            "Reader",
+            AgentProjectStructureAccessMetadata.Write(
+                null,
+                new AgentProjectStructureAccessSettings
+                {
+                    CanRead = true,
+                    AllowedProjectIds = [projectId]
+                }));
+        var taskWriter = CreateAgent(
+            "Task writer",
+            AgentProjectStructureAccessMetadata.Write(
+                null,
+                new AgentProjectStructureAccessSettings
+                {
+                    CanWriteTasks = true,
+                    AllowAllProjects = true
+                }));
+        var denied = CreateAgent(
+            "Denied",
+            AgentProjectStructureAccessMetadata.Write(
+                null,
+                new AgentProjectStructureAccessSettings
+                {
+                    CanRead = true,
+                    AllowedProjectIds = [Guid.NewGuid()]
+                }));
+
+        var scope = ProjectStructureAgentChatContextBuilder.BuildScope(
+            AgentChatContextScopeId.Create(),
+            projectId,
+            "Example",
+            [reader, taskWriter, denied]);
+
+        Assert.Equal(AgentChatContextScopeAccessMode.AllowListed, scope.AccessMode);
+        Assert.Equal(WorkspaceScopeDescriptor.Project(projectId.ToString("D")), scope.WorkspaceScope);
+        Assert.True(scope.AgentAccess.Single(item => item.AgentId == reader.Id).CanRead);
+        Assert.False(scope.AgentAccess.Single(item => item.AgentId == reader.Id).CanMutate);
+        Assert.True(scope.AgentAccess.Single(item => item.AgentId == taskWriter.Id).CanMutate);
+        Assert.DoesNotContain(scope.AgentAccess, item => item.AgentId == denied.Id);
+        Assert.Equal(
+            AgentChatContextCompletionRefreshMode.OnSuccessfulRun,
+            scope.CompletionRefreshMode);
     }
 
     private static AgentDefinition CreateAgent(

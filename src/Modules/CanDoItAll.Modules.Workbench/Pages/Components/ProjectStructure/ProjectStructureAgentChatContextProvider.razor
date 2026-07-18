@@ -1,0 +1,335 @@
+@using CanDoItAll.AgentFramework.Core
+@using CanDoItAll.AgentFramework.Models
+@using CanDoItAll.Modules.Workbench.ProjectStructure
+@using Microsoft.Extensions.Logging
+@implements IDisposable
+@inject IAgentChatContextRegistry ContextRegistry
+@inject IAgentChatExecutionNotificationHub ExecutionNotificationHub
+@inject IAgentReferenceDataProvider ReferenceDataProvider
+@inject IAgentReferenceDataCacheInvalidator ReferenceDataCacheInvalidator
+@inject ILogger<ProjectStructureAgentChatContextProvider> Logger
+@inject NavigationManager Navigation
+
+@code {
+    [Parameter, EditorRequired]
+    public Guid ProjectId { get; set; }
+
+    [Parameter, EditorRequired]
+    public string ProjectName { get; set; } = string.Empty;
+
+    [Parameter]
+    public IReadOnlyList<ProjectStructureNode> SelectedNodes { get; set; } = [];
+
+    [Parameter]
+    public IReadOnlyList<AgentChatContextEntityReference> SelectedEntityReferences { get; set; } = [];
+
+    [Parameter]
+    public ProjectStructureAgentChatView ActiveView { get; set; } = ProjectStructureAgentChatView.Canvas;
+
+    [Parameter]
+    public AgentChatNavigationIdentity? ContextNavigationIdentity { get; set; }
+
+    [Parameter]
+    public AgentChatContextAccessState? ContextAccessState { get; set; }
+
+    [Parameter]
+    public EventCallback<AgentChatExecutionCompleted> RefreshRequested { get; set; }
+
+    private readonly CancellationTokenSource disposalCts = new();
+    private IReadOnlyList<AgentDefinition> agents = [];
+    private IAgentChatContextScopeLease? scopeLease;
+    private IAgentChatContextFragmentLease? baseFragmentLease;
+    private IAgentChatContextFragmentLease? viewFragmentLease;
+    private IAgentChatContextFragmentLease? selectionFragmentLease;
+    private IAgentChatExecutionNotificationSubscription? notificationSubscription;
+    private AgentChatContextSource? activeSource;
+    private Guid activeProjectId;
+    private string activeProjectName = string.Empty;
+    private ProjectStructureAgentChatView activeView;
+    private IReadOnlyList<AgentChatContextEntityReference> activeSelectedNodes = [];
+    private string selectionKey = string.Empty;
+    private AgentChatContextAccessState accessState = AgentChatContextAccessState.Loading;
+    private AgentChatContextAccessState? publishedAccessState;
+    private long agentAccessGeneration;
+    private bool isDisposed;
+
+    protected override void OnInitialized()
+    {
+        ReferenceDataCacheInvalidator.Invalidated += HandleReferenceDataInvalidated;
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (ContextAccessState.HasValue && !Enum.IsDefined(ContextAccessState.Value))
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(ContextAccessState),
+                ContextAccessState,
+                "The project-structure agent chat context access state is undefined.");
+        }
+
+        if (ProjectId == Guid.Empty || string.IsNullOrWhiteSpace(ProjectName))
+        {
+            DisposeContext();
+            return;
+        }
+
+        if (activeProjectId != ProjectId)
+        {
+            await ActivateContextAsync();
+            return;
+        }
+
+        var scopeNeedsUpdate = false;
+        if (!string.Equals(activeProjectName, ProjectName, StringComparison.Ordinal))
+        {
+            activeProjectName = ProjectName;
+            scopeNeedsUpdate = true;
+        }
+
+        scopeNeedsUpdate |= UpdateViewFragment();
+        scopeNeedsUpdate |= UpdateSelectionFragment();
+        scopeNeedsUpdate |= publishedAccessState != EffectiveAccessState;
+        if (scopeNeedsUpdate)
+        {
+            UpdateScope();
+        }
+    }
+
+    protected override void OnAfterRender(bool firstRender)
+        => scopeLease?.SynchronizeNavigation(
+            ContextNavigationIdentity ?? AgentChatNavigationIdentity.CreateForLocation(
+                Navigation.BaseUri,
+                Navigation.Uri));
+
+    private AgentChatContextAccessState EffectiveAccessState
+        => (accessState, ContextAccessState ?? AgentChatContextAccessState.Ready) switch
+        {
+            (AgentChatContextAccessState.Failed, _) or
+            (_, AgentChatContextAccessState.Failed)
+                => AgentChatContextAccessState.Failed,
+            (AgentChatContextAccessState.Loading, _) or
+            (_, AgentChatContextAccessState.Loading)
+                => AgentChatContextAccessState.Loading,
+            _ => AgentChatContextAccessState.Ready
+        };
+
+    private async Task ActivateContextAsync()
+    {
+        DisposeContext();
+        var projectId = ProjectId;
+        var projectName = ProjectName;
+        var loadGeneration = Interlocked.Increment(ref agentAccessGeneration);
+        activeProjectId = projectId;
+        activeProjectName = projectName;
+        activeView = ActiveView;
+        activeSelectedNodes = ProjectStructureAgentChatContextBuilder.BuildSelectedEntities(
+            SelectedNodes,
+            SelectedEntityReferences);
+        accessState = AgentChatContextAccessState.Loading;
+        var scopeId = AgentChatContextScopeId.Create();
+        var source = ProjectStructureAgentChatContextBuilder.BuildSource(projectId);
+        activeSource = source;
+        scopeLease = ContextRegistry.ActivateScope(
+            ProjectStructureAgentChatContextBuilder.BuildScope(
+                scopeId,
+                projectId,
+                projectName,
+                agents: [],
+                EffectiveAccessState,
+                activeView,
+                activeSelectedNodes));
+        publishedAccessState = EffectiveAccessState;
+        baseFragmentLease = ContextRegistry.RegisterFragment(
+            scopeId,
+            ProjectStructureAgentChatContextBuilder.BuildBaseFragment(projectId));
+        viewFragmentLease = ContextRegistry.RegisterFragment(
+            scopeId,
+            ProjectStructureAgentChatContextBuilder.BuildViewFragment(ActiveView));
+        var selectionFragment = ProjectStructureAgentChatContextBuilder.BuildSelectionFragment(activeSelectedNodes);
+        selectionFragmentLease = ContextRegistry.RegisterFragment(scopeId, selectionFragment);
+        selectionKey = BuildSelectionKey(activeSelectedNodes);
+        notificationSubscription = ExecutionNotificationHub.Subscribe(
+            source,
+            HandleExecutionCompletedAsync);
+
+        await LoadAgentAccessAsync(projectId, scopeId, loadGeneration);
+    }
+
+    private async Task LoadAgentAccessAsync(
+        Guid projectId,
+        AgentChatContextScopeId scopeId,
+        long loadGeneration)
+    {
+        try
+        {
+            var referenceData = await ReferenceDataProvider.GetAsync(
+                new AgentReferenceDataRequest(
+                    AgentReferenceDataSections.Agents,
+                    IncludeAgentTemplates: false,
+                    ActiveAgentsOnly: true),
+                disposalCts.Token);
+            if (activeProjectId != projectId ||
+                isDisposed ||
+                loadGeneration != Volatile.Read(ref agentAccessGeneration) ||
+                scopeLease?.ScopeId != scopeId)
+            {
+                return;
+            }
+
+            agents = referenceData.Agents;
+            accessState = AgentChatContextAccessState.Ready;
+            UpdateScope();
+        }
+        catch (OperationCanceledException) when (disposalCts.IsCancellationRequested)
+        {
+        }
+        catch (Exception exception)
+        {
+            if (loadGeneration != Volatile.Read(ref agentAccessGeneration) ||
+                activeProjectId != projectId ||
+                isDisposed)
+            {
+                return;
+            }
+
+            Logger.LogError(
+                exception,
+                "Unable to resolve project-structure agent chat access. ProjectId={ProjectId} FailureType={FailureType}.",
+                projectId,
+                exception.GetType().Name);
+            agents = [];
+            accessState = AgentChatContextAccessState.Failed;
+            UpdateScope();
+        }
+    }
+
+    private void HandleReferenceDataInvalidated(object? sender, EventArgs eventArgs)
+    {
+        if (isDisposed)
+        {
+            return;
+        }
+
+        var loadGeneration = Interlocked.Increment(ref agentAccessGeneration);
+        _ = InvokeAsync(async () =>
+        {
+            if (isDisposed ||
+                activeProjectId == Guid.Empty ||
+                scopeLease is null ||
+                loadGeneration != Volatile.Read(ref agentAccessGeneration))
+            {
+                return;
+            }
+
+            var projectId = activeProjectId;
+            var scopeId = scopeLease.ScopeId;
+            agents = [];
+            accessState = AgentChatContextAccessState.Loading;
+            UpdateScope();
+            await LoadAgentAccessAsync(projectId, scopeId, loadGeneration);
+        });
+    }
+
+    private bool UpdateSelectionFragment()
+    {
+        var nextSelectedNodes = ProjectStructureAgentChatContextBuilder.BuildSelectedEntities(
+            SelectedNodes,
+            SelectedEntityReferences);
+        var nextSelectionKey = BuildSelectionKey(nextSelectedNodes);
+        if (string.Equals(selectionKey, nextSelectionKey, StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        selectionFragmentLease?.Update(
+            ProjectStructureAgentChatContextBuilder.BuildSelectionFragment(nextSelectedNodes));
+        activeSelectedNodes = nextSelectedNodes;
+        selectionKey = nextSelectionKey;
+        return true;
+    }
+
+    private bool UpdateViewFragment()
+    {
+        if (activeView == ActiveView)
+        {
+            return false;
+        }
+
+        viewFragmentLease?.Update(
+            ProjectStructureAgentChatContextBuilder.BuildViewFragment(ActiveView));
+        activeView = ActiveView;
+        return true;
+    }
+
+    private void UpdateScope()
+    {
+        if (scopeLease is null)
+        {
+            return;
+        }
+
+        scopeLease.Update(ProjectStructureAgentChatContextBuilder.BuildScope(
+            scopeLease.ScopeId,
+            activeProjectId,
+            activeProjectName,
+            agents,
+            EffectiveAccessState,
+            activeView,
+            activeSelectedNodes));
+        publishedAccessState = EffectiveAccessState;
+    }
+
+    private Task HandleExecutionCompletedAsync(AgentChatExecutionCompleted notification)
+    {
+        if (isDisposed || activeSource is null || notification.Source != activeSource)
+        {
+            return Task.CompletedTask;
+        }
+
+        return InvokeAsync(() => RefreshRequested.InvokeAsync(notification));
+    }
+
+    private static string BuildSelectionKey(IEnumerable<AgentChatContextEntityReference> selectedNodes)
+        => string.Join(
+            '\u001F',
+            selectedNodes.Select(node => $"{node.Id}\u001E{node.DisplayName}"));
+
+    private void DisposeContext()
+    {
+        Interlocked.Increment(ref agentAccessGeneration);
+        notificationSubscription?.Dispose();
+        notificationSubscription = null;
+        activeSource = null;
+        selectionFragmentLease?.Dispose();
+        selectionFragmentLease = null;
+        viewFragmentLease?.Dispose();
+        viewFragmentLease = null;
+        baseFragmentLease?.Dispose();
+        baseFragmentLease = null;
+        scopeLease?.Dispose();
+        scopeLease = null;
+        agents = [];
+        activeProjectId = Guid.Empty;
+        activeProjectName = string.Empty;
+        activeView = ProjectStructureAgentChatView.Canvas;
+        activeSelectedNodes = [];
+        accessState = AgentChatContextAccessState.Loading;
+        publishedAccessState = null;
+        selectionKey = string.Empty;
+    }
+
+    public void Dispose()
+    {
+        if (isDisposed)
+        {
+            return;
+        }
+
+        isDisposed = true;
+        ReferenceDataCacheInvalidator.Invalidated -= HandleReferenceDataInvalidated;
+        disposalCts.Cancel();
+        DisposeContext();
+        disposalCts.Dispose();
+    }
+}

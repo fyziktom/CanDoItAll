@@ -332,6 +332,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                 if (completionState == ExecutionState.Completed)
                 {
                     AgentFrameworkTelemetry.RecordRunOutcome(updatedRun);
+                    transientContextRegistry.Remove(run.Id);
                 }
 
                 await AppendExecutionLogAsync(
@@ -345,11 +346,16 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                         : "The execution run still requires another approval decision before it can continue.",
                     cancellationToken);
 
-                return new ExecutionRunResult(run.Id, run.ChatSessionId, runtimeResponse.ResponseText, assistantMessage, metric);
+                return new ExecutionRunResult(run.Id, run.ChatSessionId, runtimeResponse.ResponseText, assistantMessage, metric)
+                {
+                    State = completionState,
+                    ContextCompletionNotification = AgentChatContextInvocationFactory.CreateCompletionNotification(updatedRun)
+                };
             }
         }
         catch (Exception exception)
         {
+            transientContextRegistry.Remove(run.Id);
             var cancellationKind = ClassifyExecutionCancellation(exception, executionCancellation, cancellationToken);
             var wasCancelled = cancellationKind != ExecutionCancellationKind.None;
             var outcome = wasCancelled ? RunOutcome.Cancelled : RunOutcome.Failed;
@@ -607,7 +613,8 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         CancellationToken cancellationToken)
     {
         var prompt = request.Prompt.Trim();
-        var context = request.Context ?? ExecutionInvocationContext.Empty;
+        var context = PrepareInvocationContext(request);
+        request = request with { Context = context };
         ChatMessageRecord? userMessage = null;
         ExecutionRunRecord run;
 
@@ -715,6 +722,11 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         IAgentExecutionCancellationRegistration? executionCancellation = null;
         try
         {
+            if (request.TransientContext is not null)
+            {
+                transientContextRegistry.Register(run, request.TransientContext);
+            }
+
             executionCancellation = executionCancellationRegistry.Register(run, cancellationToken);
             var runtimeCancellationToken = executionCancellation.Token;
             var runtimeSession = ChatSessionRuntimeCompatibilityAdapter.CreateRuntimeSession(run, agent.Id, session);
@@ -859,6 +871,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                 if (completionState == ExecutionState.Completed)
                 {
                     AgentFrameworkTelemetry.RecordRunOutcome(updatedRun);
+                    transientContextRegistry.Remove(run.Id);
                 }
 
                 await AppendExecutionLogAsync(
@@ -872,11 +885,16 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                         : "The execution run is waiting for an approval response before it can continue.",
                     cancellationToken);
 
-                return new ExecutionRunResult(run.Id, run.ChatSessionId, runtimeResponse.ResponseText, assistantMessage, metric);
+                return new ExecutionRunResult(run.Id, run.ChatSessionId, runtimeResponse.ResponseText, assistantMessage, metric)
+                {
+                    State = completionState,
+                    ContextCompletionNotification = AgentChatContextInvocationFactory.CreateCompletionNotification(updatedRun)
+                };
             }
         }
         catch (Exception exception)
         {
+            transientContextRegistry.Remove(run.Id);
             var cancellationKind = ClassifyExecutionCancellation(exception, executionCancellation, cancellationToken);
             var wasCancelled = cancellationKind != ExecutionCancellationKind.None;
             var outcome = wasCancelled ? RunOutcome.Cancelled : RunOutcome.Failed;
@@ -1290,7 +1308,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
             string.IsNullOrWhiteSpace(run.CorrelationId) ? run.Id.ToString("D") : run.CorrelationId);
     }
 
-    private static AgentRuntimeExecutionOptions CreateRuntimeExecutionOptions(
+    private AgentRuntimeExecutionOptions CreateRuntimeExecutionOptions(
         ExecutionRunRecord run,
         AgentStructuredOutputContract? structuredOutput,
         AgentRuntimeHandoffExecutionOptions? handoffOptions = null,
@@ -1298,15 +1316,37 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
     {
         ArgumentNullException.ThrowIfNull(run);
 
+        var transientContext = transientContextRegistry.Resolve(run);
         return new AgentRuntimeExecutionOptions(
             StructuredOutput: structuredOutput,
             FinalizerMode: AgentFinalizerPolicies.ResolveMode(run, structuredOutput),
             RequireStructuredOutputValidation: ExecutionInvocationMetadata.ResolveRequireStructuredOutputValidation(run),
             MaxStructuredOutputRepairAttempts: ExecutionInvocationMetadata.ResolveMaxStructuredOutputRepairAttempts(run),
             Handoff: handoffOptions,
-            ContextWorkspaceScope: ExecutionInvocationMetadata.ResolveContextWorkspaceScope(run),
+            ContextWorkspaceScope: transientContext?.WorkspaceScope ?? ExecutionInvocationMetadata.ResolveContextWorkspaceScope(run),
             ContextIntent: CreateRuntimeContextIntent(run),
-            InputAttachments: inputAttachments);
+            InputAttachments: inputAttachments)
+        {
+            TransientContext = transientContext
+        };
+    }
+
+    private static ExecutionInvocationContext PrepareInvocationContext(
+        ExecutionRunRequest request)
+    {
+        var context = request.Context ?? ExecutionInvocationContext.Empty;
+        if (request.TransientContext is null)
+        {
+            return context;
+        }
+
+        var digest = AgentChatContextDigest.Compute(request.TransientContext.Content);
+        return context with
+        {
+            MetadataJson = ExecutionInvocationMetadata.ApplyTransientContextRequirement(
+                context.MetadataJson,
+                digest)
+        };
     }
 
     private async Task<ProviderProfile> ResolveProviderForExecutionRequestAsync(

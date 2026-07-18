@@ -142,6 +142,9 @@ public sealed class AgentContextContributionTests
             .ToList();
 
         Assert.Equal(["early", "late"], contributorIds);
+        Assert.All(
+            contextProviders.OfType<MafAgentContextContributionProvider>(),
+            provider => Assert.Empty(provider.StateKeys));
         Assert.Contains(
             progressMessages,
             message => message.Contains("registered agent context contributor", StringComparison.Ordinal));

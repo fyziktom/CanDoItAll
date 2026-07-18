@@ -421,6 +421,9 @@
     public EventCallback<Guid> OpenGanttPreview { get; set; }
 
     [Parameter]
+    public EventCallback<ProjectsAgentChatView> PortfolioViewChanged { get; set; }
+
+    [Parameter]
     public string ProjectPackagePath { get; set; } = string.Empty;
 
     [Parameter]
@@ -561,10 +564,16 @@
         set => _ = HierarchyFilterModeChanged.InvokeAsync(value);
     }
 
-    private Task HandlePortfolioTabChanged(int index)
+    private async Task HandlePortfolioTabChanged(int index)
     {
         selectedPortfolioTabIndex = index;
-        return Task.CompletedTask;
+        var view = index switch
+        {
+            0 => ProjectsAgentChatView.Cards,
+            1 => ProjectsAgentChatView.Files,
+            _ => throw new ArgumentOutOfRangeException(nameof(index), index, "The Projects portfolio tab is undefined.")
+        };
+        await PortfolioViewChanged.InvokeAsync(view);
     }
 
     private bool IsMainProject(ProjectSummary project)

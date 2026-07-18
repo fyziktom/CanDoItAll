@@ -7,6 +7,8 @@
 
 <PageTitle>CRM / HR</PageTitle>
 
+<AgentChatContextSurfaceProvider Surface="@AgentChatSurface" />
+
 <PageScaffold MaxWidthClass="max-w-full">
     <Header>
         <PageHeader Eyebrow="CRM / HR"
@@ -234,6 +236,9 @@
 </PageScaffold>
 
 @code {
+    private static AgentChatContextSurface AgentChatSurface { get; } =
+        CrmHrAgentChatSurfaceBuilder.BuildHomeSurface();
+
     private IReadOnlyList<PartyDirectoryListItemModel> directoryItems = [];
     private IReadOnlyList<OpportunitySummaryModel> opportunities = [];
     private IReadOnlyList<WorkforceProfileSummaryModel> workforceProfiles = [];

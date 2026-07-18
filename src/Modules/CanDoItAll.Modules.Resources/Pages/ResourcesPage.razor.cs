@@ -1,3 +1,4 @@
+using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Components.BaseLib;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Security;
@@ -20,6 +21,9 @@ public partial class ResourcesPage
     [Inject]
     public NotificationService NotificationService { get; set; } = default!;
 
+    [Inject]
+    public NavigationManager Navigation { get; set; } = default!;
+
     private IReadOnlyList<ResourceSummary> resources = [];
     private IReadOnlyList<ProjectSummary> projects = [];
     private IReadOnlyList<SecretListItem> secrets = [];
@@ -31,6 +35,31 @@ public partial class ResourcesPage
     private string connectorFilter = string.Empty;
     private string validationFilter = string.Empty;
     private int resourcesTabIndex;
+    private ResourceBrowseAgentChatContextState browseContextState = ResourceBrowseAgentChatContextState.Loading;
+    private AgentChatContextAccessState agentChatContextAccessState = AgentChatContextAccessState.Loading;
+    private readonly ResourcesPageLoadGeneration agentChatContextLoads = new();
+    private bool resourcePageStateLoaded;
+
+    private AgentChatContextSurface AgentChatSurface => ResourcesAgentChatContextBuilder.Build(
+        resourcesTabIndex == 1 ? ResourcesAgentChatView.Browse : ResourcesAgentChatView.Registry,
+        editor,
+        SelectedProjectName,
+        SelectedResourceConnectorLabel,
+        browseContextState.Position);
+
+    private AgentChatContextAccessState CurrentAgentChatContextAccessState
+        => resourcesTabIndex == 1
+            ? browseContextState.AccessState
+            : agentChatContextAccessState;
+
+    private AgentChatNavigationIdentity AgentChatNavigationFence
+        => AgentChatNavigationIdentity.CreateForLocation(
+            Navigation.BaseUri,
+            Navigation.Uri,
+            [
+                new("resourceId", ResourceIdQuery?.ToString("D")),
+                new("projectId", ProjectIdQuery?.ToString("D"))
+            ]);
 
     private ConnectorPluginManifest? SelectedResourceManifest => resourceManifests.FirstOrDefault(manifest =>
             string.Equals(manifest.PluginKey, editor.ConnectorPluginKey, StringComparison.OrdinalIgnoreCase))
@@ -79,58 +108,187 @@ public partial class ResourcesPage
 
     private async Task LoadAsync(Guid? resourceId = null, Guid? projectId = null)
     {
-        resourceManifests = ResourcesService.ListConnectorManifests();
-        resources = await ResourcesService.ListAsync();
-        projects = await ProjectsService.ListAsync();
-        secrets = await SecretService.ListForPickerAsync();
-        editor = resourceId.HasValue
-            ? await ResourcesService.GetAsync(resourceId.Value)
-            : NewEditor(projectId);
-        NormalizeResourceEditorForCurrentPlugin();
-        await LoadResponsiblePartyOptionsAsync();
+        var loadGeneration = BeginAgentChatContextLoad();
+        try
+        {
+            var loadedState = await LoadPageStateAsync(resourceId, projectId);
+            TryCompleteAgentChatContextLoad(
+                loadGeneration,
+                () => ApplyLoadedPageState(loadedState),
+                loadedState.RouteContextSelection.IsResolved
+                    ? AgentChatContextAccessState.Ready
+                    : AgentChatContextAccessState.Failed);
+        }
+        catch
+        {
+            FailAgentChatContextLoad(loadGeneration);
+            throw;
+        }
     }
 
     private async Task CreateNewAsync()
     {
-        resourcesTabIndex = 0;
-        editor = NewEditor(ProjectIdQuery);
-        await LoadResponsiblePartyOptionsAsync();
+        var loadGeneration = BeginAgentChatContextLoad();
+        try
+        {
+            if (!resourcePageStateLoaded)
+            {
+                var loadedState = await LoadPageStateAsync(null, ProjectIdQuery);
+                TryCompleteAgentChatContextLoad(loadGeneration, () =>
+                {
+                    ApplyLoadedPageState(loadedState);
+                    resourcesTabIndex = 0;
+                }, ResolveRouteContextAccessState(loadedState));
+                return;
+            }
+
+            var loadedEditor = CreateNewEditor(ProjectIdQuery, resourceManifests);
+            var loadedResponsiblePartyOptions = await LoadResponsiblePartyOptionsAsync(
+                ResponsiblePartySelection.From(loadedEditor));
+            TryCompleteAgentChatContextLoad(loadGeneration, () =>
+            {
+                resourcesTabIndex = 0;
+                editor = loadedEditor;
+                responsiblePartyOptions = loadedResponsiblePartyOptions;
+            });
+        }
+        catch
+        {
+            FailAgentChatContextLoad(loadGeneration);
+            throw;
+        }
     }
 
     private void OpenBrowseTab() => resourcesTabIndex = 1;
 
     private async Task HandleResourcePromotedAsync(Guid resourceId)
     {
-        resources = await ResourcesService.ListAsync();
+        var loadGeneration = BeginAgentChatContextLoad();
+        try
+        {
+            var loadedResources = await ResourcesService.ListAsync();
+            TryCompleteAgentChatContextLoad(loadGeneration, () => resources = loadedResources);
+        }
+        catch
+        {
+            FailAgentChatContextLoad(loadGeneration);
+            throw;
+        }
+    }
+
+    private Task HandleBrowseContextStateChanged(ResourceBrowseAgentChatContextState state)
+    {
+        ArgumentNullException.ThrowIfNull(state);
+        browseContextState = state;
+        return Task.CompletedTask;
     }
 
     private async Task EditAsync(Guid id)
     {
-        editor = await ResourcesService.GetAsync(id);
-        NormalizeResourceEditorForCurrentPlugin();
-        await LoadResponsiblePartyOptionsAsync();
+        var loadGeneration = BeginAgentChatContextLoad();
+        try
+        {
+            if (!resourcePageStateLoaded)
+            {
+                var loadedState = await LoadPageStateAsync(id, ProjectIdQuery);
+                TryCompleteAgentChatContextLoad(
+                    loadGeneration,
+                    () => ApplyLoadedPageState(loadedState),
+                    ResolveRouteContextAccessState(loadedState));
+                return;
+            }
+
+            var loadedEditor = await ResourcesService.GetAsync(id);
+            NormalizeResourceEditor(loadedEditor, resourceManifests);
+            var loadedResponsiblePartyOptions = await LoadResponsiblePartyOptionsAsync(
+                ResponsiblePartySelection.From(loadedEditor));
+            TryCompleteAgentChatContextLoad(loadGeneration, () =>
+            {
+                editor = loadedEditor;
+                responsiblePartyOptions = loadedResponsiblePartyOptions;
+            });
+        }
+        catch
+        {
+            FailAgentChatContextLoad(loadGeneration);
+            throw;
+        }
+    }
+
+    private ResourcesPageLoadStamp BeginAgentChatContextLoad()
+    {
+        agentChatContextAccessState = AgentChatContextAccessState.Loading;
+        return agentChatContextLoads.Begin();
+    }
+
+    private bool CompleteAgentChatContextLoad(ResourcesPageLoadStamp loadGeneration)
+    {
+        return agentChatContextLoads.TryCommit(
+            loadGeneration,
+            () => agentChatContextAccessState = AgentChatContextAccessState.Ready);
+    }
+
+    private bool TryCompleteAgentChatContextLoad(
+        ResourcesPageLoadStamp loadGeneration,
+        Action commit,
+        AgentChatContextAccessState completedState = AgentChatContextAccessState.Ready)
+    {
+        return agentChatContextLoads.TryCommit(loadGeneration, () =>
+        {
+            commit();
+            agentChatContextAccessState = completedState;
+        });
+    }
+
+    private bool FailAgentChatContextLoad(ResourcesPageLoadStamp loadGeneration)
+    {
+        return agentChatContextLoads.TryCommit(
+            loadGeneration,
+            () => agentChatContextAccessState = AgentChatContextAccessState.Failed);
     }
 
     private async Task SaveAsync()
     {
+        var loadGeneration = BeginAgentChatContextLoad();
+        var editorToSave = CloneEditor(editor);
         try
         {
-            var result = await ResourcesService.SaveAsync(editor);
-            resources = await ResourcesService.ListAsync();
+            var result = await ResourcesService.SaveAsync(editorToSave);
             if (!result.IsSuccess)
             {
-                NotificationService.Warning("Resource was not saved", DescribeErrors(result.Errors));
+                if (CompleteAgentChatContextLoad(loadGeneration))
+                {
+                    NotificationService.Warning("Resource was not saved", DescribeErrors(result.Errors));
+                }
+
                 return;
             }
 
-            editor = await ResourcesService.GetAsync(result.Value);
-            NormalizeResourceEditorForCurrentPlugin();
-            await LoadResponsiblePartyOptionsAsync();
-            NotificationService.Success("Resource saved", "Resource saved.");
+            var loadedResourcesTask = ResourcesService.ListAsync();
+            var loadedEditorTask = ResourcesService.GetAsync(result.Value);
+            await Task.WhenAll(loadedResourcesTask, loadedEditorTask);
+
+            var loadedResources = await loadedResourcesTask;
+            var loadedEditor = await loadedEditorTask;
+            NormalizeResourceEditor(loadedEditor, resourceManifests);
+            var loadedResponsiblePartyOptions = await LoadResponsiblePartyOptionsAsync(
+                ResponsiblePartySelection.From(loadedEditor));
+            if (TryCompleteAgentChatContextLoad(loadGeneration, () =>
+                {
+                    resources = loadedResources;
+                    editor = loadedEditor;
+                    responsiblePartyOptions = loadedResponsiblePartyOptions;
+                }))
+            {
+                NotificationService.Success("Resource saved", "Resource saved.");
+            }
         }
         catch (Exception exception)
         {
-            NotificationService.Error("Resource save failed", exception.Message);
+            if (FailAgentChatContextLoad(loadGeneration))
+            {
+                NotificationService.Error("Resource save failed", exception.Message);
+            }
         }
     }
 
@@ -141,15 +299,32 @@ public partial class ResourcesPage
             return;
         }
 
+        var loadGeneration = BeginAgentChatContextLoad();
+        var resourceId = editor.Id.Value;
+        var projectId = ProjectIdQuery;
         try
         {
-            await ResourcesService.DeleteAsync(editor.Id.Value);
-            await LoadAsync(null, ProjectIdQuery);
-            NotificationService.Success("Resource deleted", "Resource deleted.");
+            await ResourcesService.DeleteAsync(resourceId);
+            if (!agentChatContextLoads.IsCurrent(loadGeneration))
+            {
+                return;
+            }
+
+            var loadedState = await LoadPageStateAsync(null, projectId);
+            if (TryCompleteAgentChatContextLoad(
+                    loadGeneration,
+                    () => ApplyLoadedPageState(loadedState),
+                    ResolveRouteContextAccessState(loadedState)))
+            {
+                NotificationService.Success("Resource deleted", "Resource deleted.");
+            }
         }
         catch (Exception exception)
         {
-            NotificationService.Error("Resource delete failed", exception.Message);
+            if (FailAgentChatContextLoad(loadGeneration))
+            {
+                NotificationService.Error("Resource delete failed", exception.Message);
+            }
         }
     }
 
@@ -175,34 +350,195 @@ public partial class ResourcesPage
         return Task.CompletedTask;
     }
 
-    private async Task LoadResponsiblePartyOptionsAsync()
+    private async Task RefreshResponsiblePartyOptionsAsync()
     {
-        responsiblePartyOptions = editor.ProjectId.HasValue
-            ? await ProjectPartyIntegrationBridge.ListPartyOptionsAsync(editor.ProjectId.Value)
-            : [];
-
-        if (editor.OwnerPartyId.HasValue && responsiblePartyOptions.All(option => option.PartyId != editor.OwnerPartyId.Value))
+        var loadGeneration = BeginAgentChatContextLoad();
+        var selection = ResponsiblePartySelection.From(editor);
+        try
         {
-            var owner = await ProjectPartyIntegrationBridge.GetPartyOptionAsync(editor.OwnerPartyId.Value);
-            if (owner is not null)
-            {
-                responsiblePartyOptions = responsiblePartyOptions.Append(owner)
-                    .DistinctBy(option => option.PartyId)
-                    .OrderBy(option => option.DisplayName)
-                    .ToList();
-            }
+            var loadedResponsiblePartyOptions = await LoadResponsiblePartyOptionsAsync(selection);
+            TryCompleteAgentChatContextLoad(
+                loadGeneration,
+                () => responsiblePartyOptions = loadedResponsiblePartyOptions);
+        }
+        catch
+        {
+            FailAgentChatContextLoad(loadGeneration);
+            throw;
+        }
+    }
+
+    private async Task<IReadOnlyList<ProjectPartyOption>> LoadResponsiblePartyOptionsAsync(
+        ResponsiblePartySelection selection)
+    {
+        var options = selection.ProjectId.HasValue
+            ? (await ProjectPartyIntegrationBridge.ListPartyOptionsAsync(selection.ProjectId.Value)).ToList()
+            : [];
+        var missingPartyIds = new[] { selection.OwnerPartyId, selection.MaintainerPartyId }
+            .Where(partyId => partyId.HasValue)
+            .Select(partyId => partyId!.Value)
+            .Distinct()
+            .Where(partyId => options.All(option => option.PartyId != partyId))
+            .ToArray();
+        if (missingPartyIds.Length == 0)
+        {
+            return options;
         }
 
-        if (editor.MaintainerPartyId.HasValue && responsiblePartyOptions.All(option => option.PartyId != editor.MaintainerPartyId.Value))
+        var missingPartyTasks = missingPartyIds
+            .Select(partyId => ProjectPartyIntegrationBridge.GetPartyOptionAsync(partyId))
+            .ToArray();
+        var missingParties = await Task.WhenAll(missingPartyTasks);
+        return options
+            .Concat(missingParties.OfType<ProjectPartyOption>())
+            .DistinctBy(option => option.PartyId)
+            .OrderBy(option => option.DisplayName)
+            .ToList();
+    }
+
+    private async Task<LoadedResourcePageState> LoadPageStateAsync(Guid? resourceId, Guid? projectId)
+    {
+        var loadedResourceManifests = ResourcesService.ListConnectorManifests();
+        var loadedResourcesTask = ResourcesService.ListAsync();
+        var loadedProjectsTask = ProjectsService.ListAsync();
+        var loadedSecretsTask = SecretService.ListForPickerAsync();
+        await Task.WhenAll(loadedResourcesTask, loadedProjectsTask, loadedSecretsTask);
+
+        var loadedResources = await loadedResourcesTask;
+        var loadedProjects = await loadedProjectsTask;
+        var routeContextSelection = ResourceRouteContextSelection.Resolve(
+            resourceId,
+            projectId,
+            loadedResources,
+            loadedProjects);
+        var loadedEditor = routeContextSelection.IsResolved && resourceId.HasValue
+            ? await ResourcesService.GetAsync(resourceId.Value)
+            : routeContextSelection.IsResolved
+                ? CreateNewEditor(projectId, loadedResourceManifests)
+                : CreateUnresolvedRouteEditor(
+                    resourceId,
+                    projectId,
+                    routeContextSelection.Resource,
+                    loadedResourceManifests);
+        NormalizeResourceEditor(loadedEditor, loadedResourceManifests);
+        var loadedResponsiblePartyOptions = routeContextSelection.IsResolved
+            ? await LoadResponsiblePartyOptionsAsync(ResponsiblePartySelection.From(loadedEditor))
+            : [];
+        return new LoadedResourcePageState(
+            loadedResourceManifests,
+            loadedResources,
+            loadedProjects,
+            await loadedSecretsTask,
+            loadedResponsiblePartyOptions,
+            loadedEditor,
+            routeContextSelection);
+    }
+
+    private void ApplyLoadedPageState(LoadedResourcePageState loadedState)
+    {
+        resourceManifests = loadedState.ResourceManifests;
+        resources = loadedState.Resources;
+        projects = loadedState.Projects;
+        secrets = loadedState.Secrets;
+        responsiblePartyOptions = loadedState.ResponsiblePartyOptions;
+        editor = loadedState.Editor;
+        resourcePageStateLoaded = true;
+    }
+
+    private static AgentChatContextAccessState ResolveRouteContextAccessState(
+        LoadedResourcePageState loadedState)
+        => loadedState.RouteContextSelection.IsResolved
+            ? AgentChatContextAccessState.Ready
+            : AgentChatContextAccessState.Failed;
+
+    private static ResourceEditorModel CreateUnresolvedRouteEditor(
+        Guid? resourceId,
+        Guid? projectId,
+        ResourceSummary? resource,
+        IReadOnlyList<ConnectorPluginManifest> manifests)
+    {
+        var model = CreateNewEditor(projectId, manifests);
+        model.Id = resourceId;
+        model.Name = resource?.Name ?? string.Empty;
+        return model;
+    }
+
+    private static ResourceEditorModel CloneEditor(ResourceEditorModel source)
+    {
+        return new ResourceEditorModel
         {
-            var maintainer = await ProjectPartyIntegrationBridge.GetPartyOptionAsync(editor.MaintainerPartyId.Value);
-            if (maintainer is not null)
-            {
-                responsiblePartyOptions = responsiblePartyOptions.Append(maintainer)
-                    .DistinctBy(option => option.PartyId)
-                    .OrderBy(option => option.DisplayName)
-                    .ToList();
-            }
+            Id = source.Id,
+            ProjectId = source.ProjectId,
+            OwnerPartyId = source.OwnerPartyId,
+            MaintainerPartyId = source.MaintainerPartyId,
+            Name = source.Name,
+            Description = source.Description,
+            ConnectorPluginKey = source.ConnectorPluginKey,
+            ConfigSchemaVersion = source.ConfigSchemaVersion,
+            LocationOrIdentifier = source.LocationOrIdentifier,
+            ConfigJson = source.ConfigJson,
+            Configuration = source.Configuration?.Clone() ?? new ConnectorConfigState(),
+            LinkedSecretId = source.LinkedSecretId,
+            ValidationStatus = source.ValidationStatus,
+            Sensitivity = source.Sensitivity,
+            SupportsPreview = source.SupportsPreview,
+            SupportsIndexing = source.SupportsIndexing
+        };
+    }
+
+    private static ResourceEditorModel CreateNewEditor(
+        Guid? projectId,
+        IReadOnlyList<ConnectorPluginManifest> manifests)
+    {
+        var model = new ResourceEditorModel
+        {
+            ProjectId = projectId,
+            ConnectorPluginKey = manifests.FirstOrDefault()?.PluginKey ?? ResourceConnectorPluginKeys.Repository
+        };
+        NormalizeResourceEditor(model, manifests);
+        return model;
+    }
+
+    private static void NormalizeResourceEditor(
+        ResourceEditorModel model,
+        IReadOnlyList<ConnectorPluginManifest> manifests)
+    {
+        var manifest = manifests.FirstOrDefault(candidate =>
+                string.Equals(candidate.PluginKey, model.ConnectorPluginKey, StringComparison.OrdinalIgnoreCase))
+            ?? manifests.FirstOrDefault();
+        if (manifest is null)
+        {
+            return;
+        }
+
+        model.ConnectorPluginKey = manifest.PluginKey;
+        model.ConfigSchemaVersion = manifest.ConfigurationSchema.Version;
+
+        var existingConfiguration = model.Configuration?.Clone() ?? new ConnectorConfigState();
+        existingConfiguration.KeepOnly(manifest.ConfigurationSchema.Fields.Select(field => field.Key));
+        model.Configuration = existingConfiguration;
+    }
+
+    private sealed record LoadedResourcePageState(
+        IReadOnlyList<ConnectorPluginManifest> ResourceManifests,
+        IReadOnlyList<ResourceSummary> Resources,
+        IReadOnlyList<ProjectSummary> Projects,
+        IReadOnlyList<SecretListItem> Secrets,
+        IReadOnlyList<ProjectPartyOption> ResponsiblePartyOptions,
+        ResourceEditorModel Editor,
+        ResourceRouteContextSelection RouteContextSelection);
+
+    private readonly record struct ResponsiblePartySelection(
+        Guid? ProjectId,
+        Guid? OwnerPartyId,
+        Guid? MaintainerPartyId)
+    {
+        public static ResponsiblePartySelection From(ResourceEditorModel model)
+        {
+            return new ResponsiblePartySelection(
+                model.ProjectId,
+                model.OwnerPartyId,
+                model.MaintainerPartyId);
         }
     }
 
@@ -217,35 +553,9 @@ public partial class ResourcesPage
         };
     }
 
-    private ResourceEditorModel NewEditor(Guid? projectId)
-    {
-        var model = new ResourceEditorModel
-        {
-            ProjectId = projectId,
-            ConnectorPluginKey = resourceManifests.FirstOrDefault()?.PluginKey ?? ResourceConnectorPluginKeys.Repository
-        };
-        editor = model;
-        NormalizeResourceEditorForCurrentPlugin();
-        model = editor;
-        return model;
-    }
-
     private void NormalizeResourceEditorForCurrentPlugin()
     {
-        var manifest = resourceManifests.FirstOrDefault(candidate =>
-                string.Equals(candidate.PluginKey, editor.ConnectorPluginKey, StringComparison.OrdinalIgnoreCase))
-            ?? resourceManifests.FirstOrDefault();
-        if (manifest is null)
-        {
-            return;
-        }
-
-        editor.ConnectorPluginKey = manifest.PluginKey;
-        editor.ConfigSchemaVersion = manifest.ConfigurationSchema.Version;
-
-        var existingConfiguration = editor.Configuration?.Clone() ?? new ConnectorConfigState();
-        existingConfiguration.KeepOnly(manifest.ConfigurationSchema.Fields.Select(field => field.Key));
-        editor.Configuration = existingConfiguration;
+        NormalizeResourceEditor(editor, resourceManifests);
     }
 
     private static string? ResolveResourceFieldTestId(

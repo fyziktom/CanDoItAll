@@ -66,6 +66,47 @@ public sealed class AgentTeamCatalogIntegrationTests
     }
 
     [Fact]
+    public async Task Project_access_grant_and_revoke_are_durable_and_idempotent_without_rewriting_the_agent()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var workspaceFactory = scope.ServiceProvider.GetRequiredService<ICanDoItAllAgentWorkspaceFactory>();
+        var workspaceService = workspaceFactory.GetOrganizationWorkspaceService();
+        var agentId = await CreateAgentAsync(workspaceService, "Restricted project creator");
+        var projectId = Guid.NewGuid();
+
+        await workspaceService.GrantAgentProjectStructureAccessAsync(agentId, projectId);
+        var firstGrant = Assert.Single(
+            await workspaceService.ListAgentsAsync(includeTemplates: false),
+            item => item.Id == agentId);
+
+        await workspaceService.GrantAgentProjectStructureAccessAsync(agentId, projectId);
+        var repeatedGrant = Assert.Single(
+            await workspaceService.ListAgentsAsync(includeTemplates: false),
+            item => item.Id == agentId);
+        var grantedAccess = AgentProjectStructureAccessMetadata.Read(repeatedGrant.ConfigurationJson);
+
+        Assert.Equal("Restricted project creator", repeatedGrant.Name);
+        Assert.Equal([projectId], grantedAccess.AllowedProjectIds);
+        Assert.Equal(firstGrant.UpdatedAtUtc, repeatedGrant.UpdatedAtUtc);
+
+        await workspaceService.RevokeAgentProjectStructureAccessAsync(agentId, projectId);
+        var firstRevoke = Assert.Single(
+            await workspaceService.ListAgentsAsync(includeTemplates: false),
+            item => item.Id == agentId);
+
+        await workspaceService.RevokeAgentProjectStructureAccessAsync(agentId, projectId);
+        var repeatedRevoke = Assert.Single(
+            await workspaceService.ListAgentsAsync(includeTemplates: false),
+            item => item.Id == agentId);
+        var revokedAccess = AgentProjectStructureAccessMetadata.Read(repeatedRevoke.ConfigurationJson);
+
+        Assert.Equal("Restricted project creator", repeatedRevoke.Name);
+        Assert.DoesNotContain(projectId, revokedAccess.AllowedProjectIds);
+        Assert.Equal(firstRevoke.UpdatedAtUtc, repeatedRevoke.UpdatedAtUtc);
+    }
+
+    [Fact]
     public void Agent_team_normalization_prunes_unknown_or_duplicate_memberships()
     {
         var seed = SandboxWorkspaceSeedFactory.Create();
@@ -180,6 +221,22 @@ public sealed class AgentTeamCatalogIntegrationTests
 
         var deliveryManager = members["delivery-manager"];
         Assert.Contains("workspace-convert-document", deliveryManager.Skills.CapabilityKeys);
+
+    }
+
+    [Fact]
+    public void Portfolio_architect_template_allows_projects_and_subprojects_to_be_created_independently()
+    {
+        var pack = new AgentTemplatePackLoader().Load();
+        var portfolioArchitect = pack.Teams
+            .SelectMany(team => team.MemberTemplates)
+            .Single(member => string.Equals(member.Key, "portfolio-architect", StringComparison.Ordinal));
+
+        Assert.True(portfolioArchitect.Settings.Access.ProjectStructure is
+        {
+            CanCreateProjects: true,
+            CanCreateSubprojects: true
+        });
     }
 
     [Fact]

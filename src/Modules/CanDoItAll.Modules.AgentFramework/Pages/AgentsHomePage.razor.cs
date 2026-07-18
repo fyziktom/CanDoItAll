@@ -21,6 +21,7 @@ public partial class AgentsHomePage
         "agents",
         "providers",
         "voice",
+        "floating-chat",
         "chat",
         "capabilities",
         "governance",
@@ -64,6 +65,9 @@ public partial class AgentsHomePage
     private string selectedTab = "overview";
     private Guid? effectiveRequestedAgentId;
     private Guid? effectiveRequestedTeamId;
+    private AgentDefinition? selectedContextAgent;
+    private AgentTeamDefinition? selectedContextTeam;
+    private AgentChatContextAccessState selectionAccessState = AgentChatContextAccessState.Loading;
     private bool isLoaded;
     private bool isFeedingDefaults;
     private bool hasOverviewLoadError;
@@ -79,6 +83,39 @@ public partial class AgentsHomePage
         0,
         ExecutionBoundaryDescriptor.Unknown);
     private AgentOverviewSnapshot overview = AgentOverviewSnapshot.Empty;
+
+    private AgentChatContextSurface AgentChatSurface
+        => AgentFrameworkAgentsChatContextBuilder.Build(
+            AgentFrameworkAgentsChatContextBuilder.ResolveView(selectedTab),
+            effectiveRequestedAgentId,
+            effectiveRequestedTeamId,
+            technicalAgentCount,
+            providerCount,
+            boundResourceCount,
+            capabilityCount,
+            activeRunCount,
+            failedRunCount,
+            selectedContextAgent,
+            selectedContextTeam);
+
+    private AgentChatNavigationIdentity AgentChatNavigationFence
+        => AgentChatNavigationIdentity.CreateForLocation(
+            Navigation.BaseUri,
+            Navigation.Uri,
+            [
+                new("tab", RequestedTab),
+                new("agentId", RequestedAgentId?.ToString("D")),
+                new("teamId", RequestedTeamId?.ToString("D"))
+            ]);
+
+    private AgentChatContextAccessState AgentChatAccessState
+        => hasOverviewLoadError
+            ? AgentChatContextAccessState.Failed
+            : isLoaded
+                ? UsesAgentSelection(selectedTab)
+                    ? selectionAccessState
+                    : AgentChatContextAccessState.Ready
+                : AgentChatContextAccessState.Loading;
 
     private static readonly CdaChartOptions ProviderUsageBarChartOptions = new()
     {
@@ -115,6 +152,7 @@ public partial class AgentsHomePage
         new("agents", "Agents", ResolveSummaryValue(technicalAgentCount)),
         new("providers", "Providers", ResolveSummaryValue(providerCount)),
         new("voice", "Voice"),
+        new("floating-chat", "Floating chat"),
         new("chat", "Chat"),
         new("capabilities", "Capabilities", ResolveSummaryValue(capabilityCount)),
         new("governance", "Governance", ResolveSummaryValue(activeRunCount)),
@@ -298,7 +336,6 @@ public partial class AgentsHomePage
         boundResourceCount = await boundResourceCountTask;
 
         isLoaded = true;
-        ApplyRequestedTab();
     }
 
     private async Task<int> LoadBoundResourceCountAsync()
@@ -340,6 +377,13 @@ public partial class AgentsHomePage
     private Task HandleTabChangedAsync(
         string key)
     {
+        if (!string.Equals(selectedTab, key, StringComparison.Ordinal))
+        {
+            selectionAccessState = UsesAgentSelection(key)
+                ? AgentChatContextAccessState.Loading
+                : AgentChatContextAccessState.Ready;
+        }
+
         selectedTab = key;
         Navigation.NavigateTo(
             BuildAgentsRoute(
@@ -350,16 +394,73 @@ public partial class AgentsHomePage
         return Task.CompletedTask;
     }
 
+    private Task HandleSelectedAgentChangedAsync(AgentDefinition? agent)
+    {
+        effectiveRequestedAgentId = agent?.Id;
+        selectedContextAgent = agent;
+        if (!string.Equals(selectedTab, "agents", StringComparison.Ordinal))
+        {
+            effectiveRequestedTeamId = null;
+            selectedContextTeam = null;
+        }
+
+        return Task.CompletedTask;
+    }
+
+    private Task HandleSelectedTeamChangedAsync(AgentTeamDefinition? team)
+    {
+        effectiveRequestedTeamId = team?.Id;
+        selectedContextTeam = team;
+        return Task.CompletedTask;
+    }
+
+    private Task HandleSelectionAccessStateChangedAsync(AgentChatContextAccessState state)
+    {
+        if (!Enum.IsDefined(state))
+        {
+            throw new ArgumentOutOfRangeException(nameof(state), state, "The Agents selection access state is undefined.");
+        }
+
+        selectionAccessState = state;
+        return Task.CompletedTask;
+    }
+
     private void ApplyRequestedTab()
     {
+        var previousTab = selectedTab;
+        var previousAgentId = effectiveRequestedAgentId;
+        var previousTeamId = effectiveRequestedTeamId;
         var requestedTab = ResolveRequestedTab();
-        effectiveRequestedAgentId = ResolveRequestedAgentId();
-        effectiveRequestedTeamId = ResolveRequestedTeamId();
+        var requestedAgentId = ResolveRequestedAgentId();
+        var requestedTeamId = ResolveRequestedTeamId();
+        if (selectedContextAgent?.Id != requestedAgentId)
+        {
+            selectedContextAgent = null;
+        }
+
+        if (selectedContextTeam?.Id != requestedTeamId)
+        {
+            selectedContextTeam = null;
+        }
+
+        effectiveRequestedAgentId = requestedAgentId;
+        effectiveRequestedTeamId = requestedTeamId;
         selectedTab = !string.IsNullOrWhiteSpace(requestedTab) &&
                       AllowedTabs.Contains(requestedTab)
             ? requestedTab
             : "overview";
+        if (!string.Equals(previousTab, selectedTab, StringComparison.Ordinal) ||
+            previousAgentId != effectiveRequestedAgentId ||
+            previousTeamId != effectiveRequestedTeamId)
+        {
+            selectionAccessState = UsesAgentSelection(selectedTab)
+                ? AgentChatContextAccessState.Loading
+                : AgentChatContextAccessState.Ready;
+        }
     }
+
+    private static bool UsesAgentSelection(string tab)
+        => tab is "agents" or "chat" or "capabilities" or "governance";
 
     private string? ResolveRequestedTab()
     {

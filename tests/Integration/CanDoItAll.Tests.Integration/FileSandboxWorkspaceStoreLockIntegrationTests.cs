@@ -212,6 +212,43 @@ public sealed class FileSandboxWorkspaceStoreLockIntegrationTests
     }
 
     [Fact]
+    public async Task CreateChatSessionAsync_does_not_read_unrelated_run_file_when_chat_index_exists()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var workspaceFactory = scope.ServiceProvider.GetRequiredService<ICanDoItAllAgentWorkspaceFactory>();
+        var workspaceService = workspaceFactory.GetOrganizationWorkspaceService();
+        var workspaceScope = workspaceFactory.GetOrganizationScope();
+        var store = new FileSandboxWorkspaceStore(application.ActiveProfile.WorkspaceRootPath, workspaceScope);
+        var layout = new FileSandboxWorkspaceStorageLayout(application.ActiveProfile.WorkspaceRootPath, workspaceScope);
+        var agent = (await workspaceService.ListAgentsAsync(includeTemplates: false)).First();
+        var unrelatedRunId = Guid.NewGuid();
+        await store.SaveExecutionRunDetailAsync(CreateRunDetail(unrelatedRunId, agent.Id, "Unrelated run"));
+        Assert.True(File.Exists(layout.ExecutionChatIndexPath));
+
+        await File.WriteAllTextAsync(
+            layout.RunPath(unrelatedRunId),
+            "{ this is not valid json",
+            CancellationToken.None);
+
+        var now = DateTimeOffset.UtcNow;
+        var session = new ChatSessionRecord(
+            Id: Guid.NewGuid(),
+            AgentId: agent.Id,
+            Title: "New session without a run",
+            CreatedAtUtc: now,
+            UpdatedAtUtc: now,
+            RuntimeSessionKey: string.Empty,
+            SerializedSessionStateJson: null,
+            Messages: [],
+            PendingApprovals: []);
+
+        var createdSession = await ((ISandboxWorkspaceChatSessionStore)store).CreateChatSessionAsync(session);
+
+        Assert.Equal(session.Id, createdSession.Id);
+    }
+
+    [Fact]
     public async Task SaveExecutionRunDetailAsync_does_not_load_unrelated_run_slices_in_split_storage()
     {
         await using var application = await TestApplication.CreateAsync();

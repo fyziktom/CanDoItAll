@@ -1,5 +1,8 @@
 using Bunit;
+using CanDoItAll.AgentFramework.Core;
+using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Modules.Workbench.Pages;
+using CanDoItAll.Modules.Workbench.Pages.Components.ProjectStructure;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -12,6 +15,7 @@ public sealed class ProjectCalendarPageDatabaseSwitchTests
     {
         await using var harness = await ComponentTestHarness.CreateAsync();
         var navigation = harness.Context.Services.GetRequiredService<NavigationManager>();
+        var registry = harness.Context.Services.GetRequiredService<IAgentChatContextRegistry>();
         var missingProjectId = Guid.NewGuid();
 
         var cut = harness.Context.RenderComponent<ProjectCalendarPage>(
@@ -21,12 +25,24 @@ public sealed class ProjectCalendarPageDatabaseSwitchTests
         {
             Assert.Contains("Project calendar unavailable", cut.Markup);
             Assert.Contains("does not exist in the active database profile", cut.Markup);
+            var provider = cut.FindComponent<ProjectStructureAgentChatContextProvider>();
+            Assert.Equal(missingProjectId, provider.Instance.ProjectId);
+            Assert.Equal(
+                AgentChatNavigationIdentity.CreateForLocation(navigation.BaseUri, navigation.Uri),
+                provider.Instance.ContextNavigationIdentity);
+            Assert.Equal(
+                AgentChatContextAccessState.Failed,
+                Assert.IsType<AgentChatContextSnapshot>(registry.Capture()).Scope.AccessState);
         });
+
+        await Assert.ThrowsAsync<AgentChatContextUnavailableException>(
+            async () => await registry.CaptureAsync());
 
         cut.FindAll("button")
             .First(button => button.TextContent.Contains("Open projects", StringComparison.Ordinal))
             .Click();
 
-        Assert.EndsWith("/projects", navigation.Uri, StringComparison.OrdinalIgnoreCase);
+        cut.WaitForAssertion(() =>
+            Assert.EndsWith("/projects", navigation.Uri, StringComparison.OrdinalIgnoreCase));
     }
 }

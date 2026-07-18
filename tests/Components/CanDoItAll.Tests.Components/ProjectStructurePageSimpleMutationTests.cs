@@ -21,6 +21,72 @@ namespace CanDoItAll.Tests.Components;
 public sealed class ProjectStructurePageSimpleMutationTests
 {
     [Fact]
+    public async Task Agent_completion_reload_preserves_immediate_canvas_selection_without_capturing_javascript_state()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
+        var workbenchService = harness.Context.Services.GetRequiredService<ProjectWorkbenchService>();
+        var registry = harness.Context.Services.GetRequiredService<IAgentChatContextRegistry>();
+        var notificationHub = harness.Context.Services.GetRequiredService<IAgentChatExecutionNotificationHub>();
+        var projectId = await CreateProjectAsync(projectsService, "Agent completion selection refresh");
+        var rootNodeId = $"project:{projectId}";
+        var selectedNode = await workbenchService.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.Note,
+                "Immediate selection",
+                "Selection refresh",
+                "Selection published before the debounced canvas state.",
+                rootNodeId,
+                420,
+                240));
+        await SaveSelectedNodeStateAsync(workbenchService, projectId, rootNodeId);
+
+        var cut = harness.Context.RenderComponent<ProjectStructurePage>(
+            parameters => parameters.Add(page => page.ProjectId, projectId));
+        var canvasWorkbench = WaitForCanvasWorkbench(cut);
+
+        await cut.InvokeAsync(() => canvasWorkbench.Instance.OnSelectionChanged(
+            selectedNode.Id,
+            JsonSerializer.Serialize(new[] { selectedNode.Id }),
+            1));
+
+        var refreshedNode = await workbenchService.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.Note,
+                "Created by agent",
+                "Completion refresh",
+                "Authoritative data loaded after agent completion.",
+                rootNodeId,
+                660,
+                240));
+        var contextSnapshot = Assert.IsType<AgentChatContextSnapshot>(registry.Capture());
+        var publishTask = notificationHub.PublishAsync(new AgentChatExecutionCompleted(
+            contextSnapshot.Scope.Id,
+            contextSnapshot.Scope.Source,
+            Guid.NewGuid(),
+            Guid.NewGuid(),
+            Guid.NewGuid(),
+            DateTimeOffset.UtcNow));
+
+        await publishTask.WaitAsync(TimeSpan.FromSeconds(10));
+
+        cut.WaitForAssertion(() =>
+        {
+            var reloadedWorkbench = cut.FindComponent<CanvasWorkbench>();
+            Assert.Contains(reloadedWorkbench.Instance.Surface.Nodes, node => node.Id == refreshedNode.Id);
+            Assert.Equal(new[] { selectedNode.Id }, reloadedWorkbench.Instance.Surface.UiState.SelectedNodeIds);
+        });
+        Assert.DoesNotContain(
+            harness.Context.JSInterop.Invocations,
+            invocation => string.Equals(
+                invocation.Identifier,
+                "CanDoItAll.canvasWorkbench.getState",
+                StringComparison.Ordinal));
+    }
+
+    [Fact]
     public async Task Inline_note_edit_uses_first_non_empty_line_as_title_and_patches_surface_without_structure_reload()
     {
         await using var harness = await ComponentTestHarness.CreateAsync(WrapDbContextFactoryWithCreateCounter);

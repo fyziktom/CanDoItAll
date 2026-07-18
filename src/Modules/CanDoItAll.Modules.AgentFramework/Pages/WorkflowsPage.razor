@@ -301,7 +301,8 @@
                                               ProviderOptions="providerOptions"
                                               DefinitionSaved="HandleCanvasDefinitionSavedAsync"
                                               PreviewRunCompleted="HandleCanvasPreviewRunCompletedAsync"
-                                              ComponentLibraryChanged="RefreshComponentLibraryAsync" />
+                                              ComponentLibraryChanged="RefreshComponentLibraryAsync"
+                                              SelectedNodeChanged="HandleCanvasSelectedNodeChangedAsync" />
                     }
                 </TabsItem>
 
@@ -1116,3 +1117,7 @@ UpdatedAt: @FormatFullDate(currentRunDetail.UpdatedAtUtc)</pre>
         }
     </ChildContent>
 </PageScaffold>
+
+<AgentChatContextSurfaceProvider Surface="@AgentChatSurface"
+                                 ContextNavigationIdentity="@AgentChatNavigationFence"
+                                 ContextAccessState="@AgentChatAccessState" />

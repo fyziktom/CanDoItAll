@@ -4,7 +4,7 @@ using CanDoItAll.AgentFramework.Models;
 
 namespace CanDoItAll.AgentFramework.Persistence;
 
-public sealed class FileSandboxWorkspaceStore : ISandboxWorkspaceStore, ISandboxWorkspaceChatQueryStore, ISandboxWorkspaceChatSessionStore, ISandboxWorkspaceExecutionRunStore
+public sealed class FileSandboxWorkspaceStore : ISandboxWorkspaceStore, ISandboxWorkspaceChatQueryStore, ISandboxWorkspaceChatProjectionQueryStore, ISandboxWorkspaceChatSessionStore, ISandboxWorkspaceExecutionRunStore
 {
     private static readonly TimeSpan CatalogReadNormalizationLockTimeout = TimeSpan.FromMilliseconds(100);
 
@@ -415,6 +415,28 @@ public sealed class FileSandboxWorkspaceStore : ISandboxWorkspaceStore, ISandbox
             await using var workspaceLock = await crossProcessLock.AcquireAsync(cancellationToken);
             await EnsureSplitFilesCoreAsync(cancellationToken);
             return await chatProjectionStore.ListChatSessionSummariesAsync(agentId, cancellationToken);
+        }
+        finally
+        {
+            gate.Release();
+        }
+    }
+
+    public async Task<ChatWorkspaceProjectionSnapshot> LoadChatWorkspaceProjectionAsync(
+        Guid agentId,
+        CancellationToken cancellationToken = default)
+    {
+        if (executionSliceStore.ExecutionStorageExists())
+        {
+            return await chatProjectionStore.LoadChatWorkspaceProjectionAsync(agentId, cancellationToken);
+        }
+
+        await gate.WaitAsync(cancellationToken);
+        try
+        {
+            await using var workspaceLock = await crossProcessLock.AcquireAsync(cancellationToken);
+            await EnsureSplitFilesCoreAsync(cancellationToken);
+            return await chatProjectionStore.LoadChatWorkspaceProjectionAsync(agentId, cancellationToken);
         }
         finally
         {

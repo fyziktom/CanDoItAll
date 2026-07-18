@@ -1,8 +1,10 @@
+using System.Reflection;
 using Bunit;
-using Bunit.TestDoubles;
+using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Components;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Components.BaseLib;
+using CanDoItAll.Modules.AgentFramework;
 using CanDoItAll.Modules.AgentFramework.Pages.Components;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
@@ -34,14 +36,14 @@ public sealed class AgentCatalogPanelTests
     }
 
     [Fact]
-    public async Task Catalog_opens_focused_floating_chat_only_for_the_stable_hr_agent()
+    public void Catalog_delegates_new_chat_to_global_launcher_only_for_the_stable_hr_agent()
     {
-        await using var harness = await ComponentTestHarness.CreateAsync();
-        harness.Context.ComponentFactories.AddStub<AgentChatPanel>();
         var hrAgent = CreateAgent(HrAgentIdentity.AgentId, "HR Agent", HrAgentIdentity.TemplateKey);
         var spoofedAgent = CreateAgent(Guid.NewGuid(), "Spoofed HR Agent", HrAgentIdentity.TemplateKey);
+        var launcher = new RecordingAgentChatLauncher(hrAgent);
+        using var context = CreateCatalogTestContext(launcher);
 
-        var cut = harness.Context.RenderComponent<AgentCatalogPanel>(parameters => parameters
+        var cut = context.RenderComponent<AgentCatalogPanel>(parameters => parameters
             .Add(component => component.InitialAgents, new[] { spoofedAgent, hrAgent })
             .Add(component => component.InitialProviders, Array.Empty<ProviderProfile>())
             .Add(component => component.InitialTeams, Array.Empty<AgentTeamDefinition>())
@@ -58,24 +60,17 @@ public sealed class AgentCatalogPanelTests
 
         topOpenButton.Click();
 
-        cut.WaitForElement("[data-testid='agents-hr-agent-chat-content']");
-        var viewportHost = cut.Find("[data-testid='agents-hr-agent-viewport']");
-        Assert.Equal("true", viewportHost.GetAttribute("data-cda-overlay-container"));
-        Assert.NotNull(viewportHost.QuerySelector("[data-testid='agents-hr-agent-window']"));
-        var focusedChat = cut.FindComponent<Stub<AgentChatPanel>>();
-        Assert.Equal(hrAgent.Id, focusedChat.Instance.Parameters.Get(component => component.PreferredAgentId));
-        Assert.Equal(
-            AgentChatPanelDisplayMode.FocusedFloating,
-            focusedChat.Instance.Parameters.Get(component => component.DisplayMode));
+        cut.WaitForAssertion(() => Assert.Equal(hrAgent.Id, launcher.StartedAgentId));
+        Assert.Empty(cut.FindAll("[data-testid='agents-hr-agent-viewport']"));
     }
 
     [Fact]
-    public async Task Catalog_toolbar_uses_icon_reset_tooltip_and_single_line_team_header()
+    public void Catalog_toolbar_uses_icon_reset_tooltip_and_single_line_team_header()
     {
-        await using var harness = await ComponentTestHarness.CreateAsync();
         var hrAgent = CreateAgent(HrAgentIdentity.AgentId, "HR Agent", HrAgentIdentity.TemplateKey);
+        using var context = CreateCatalogTestContext(new RecordingAgentChatLauncher(hrAgent));
 
-        var cut = harness.Context.RenderComponent<AgentCatalogPanel>(parameters => parameters
+        var cut = context.RenderComponent<AgentCatalogPanel>(parameters => parameters
             .Add(component => component.InitialAgents, new[] { hrAgent })
             .Add(component => component.InitialProviders, Array.Empty<ProviderProfile>())
             .Add(component => component.InitialTeams, Array.Empty<AgentTeamDefinition>())
@@ -89,7 +84,7 @@ public sealed class AgentCatalogPanelTests
         var resetTarget = Assert.IsAssignableFrom<AngleSharp.Dom.IElement>(resetButton.ParentElement);
         resetTarget.TriggerEvent("onmouseenter", new MouseEventArgs { ClientX = 120, ClientY = 80 });
 
-        var tooltip = harness.Context.Services.GetRequiredService<TooltipService>().Current;
+        var tooltip = context.Services.GetRequiredService<TooltipService>().Current;
         Assert.Equal("Reset agent search", tooltip?.Text);
         Assert.Equal(TooltipPosition.Bottom, tooltip?.Options.Position);
         Assert.Equal("agents-catalog-reset-tooltip", tooltip?.Options.TestId);
@@ -99,6 +94,41 @@ public sealed class AgentCatalogPanelTests
         Assert.DoesNotContain("flex-col", teamHeader.ClassList);
         var teamHeaderContent = Assert.IsAssignableFrom<AngleSharp.Dom.IElement>(teamHeader.FirstElementChild);
         Assert.Contains("flex-nowrap", teamHeaderContent.ClassList);
+    }
+
+    [Fact]
+    public void Catalog_reports_the_actual_selected_agent_to_its_page_owner()
+    {
+        var first = CreateAgent(Guid.NewGuid(), "First agent", string.Empty);
+        var second = CreateAgent(Guid.NewGuid(), "Second agent", string.Empty);
+        AgentDefinition? selected = null;
+        using var context = CreateCatalogTestContext(new RecordingAgentChatLauncher(first));
+
+        var cut = context.RenderComponent<AgentCatalogPanel>(parameters => parameters
+            .Add(component => component.InitialAgents, new[] { first, second })
+            .Add(component => component.InitialProviders, Array.Empty<ProviderProfile>())
+            .Add(component => component.InitialTeams, Array.Empty<AgentTeamDefinition>())
+            .Add(component => component.SkipCatalogRepair, true)
+            .Add(component => component.SelectedAgentChanged,
+                EventCallback.Factory.Create<AgentDefinition?>(this, value => selected = value)));
+
+        var secondCard = cut.FindAll("[data-testid='agents-catalog-card-shell']")
+            .Single(card => card.TextContent.Contains(second.Name, StringComparison.Ordinal));
+        secondCard.QuerySelector("[data-testid='agents-catalog-card']")!.Click();
+
+        cut.WaitForAssertion(() => Assert.Same(second, selected));
+    }
+
+    private static TestContext CreateCatalogTestContext(IAgentChatLauncher launcher)
+    {
+        var context = new TestContext();
+        context.JSInterop.Mode = JSRuntimeMode.Loose;
+        context.Services.AddCanDoItAllBaseLib();
+        context.Services.AddSingleton(
+            DispatchProxy.Create<IAgentFrameworkWorkspaceService, UnusedWorkspaceServiceProxy>());
+        context.Services.AddSingleton<IAgentFrameworkOrganizationCatalogRepairService, UnusedOrganizationCatalogRepairService>();
+        context.Services.AddSingleton(launcher);
+        return context;
     }
 
     private static AgentDefinition CreateAgent(Guid id, string name, string templateKey)
@@ -125,5 +155,55 @@ public sealed class AgentCatalogPanelTests
             Tags: [],
             CreatedAtUtc: DateTimeOffset.UtcNow,
             UpdatedAtUtc: DateTimeOffset.UtcNow);
+    }
+
+    private sealed class RecordingAgentChatLauncher(AgentDefinition agent) : IAgentChatLauncher
+    {
+        public Guid? StartedAgentId { get; private set; }
+
+        public void ShowCatalog(AgentChatCatalogTab tab = AgentChatCatalogTab.Agents)
+        {
+        }
+
+        public Task<ActiveAgentChat> StartNewChatAsync(
+            Guid agentId,
+            CancellationToken cancellationToken = default)
+        {
+            StartedAgentId = agentId;
+            return Task.FromResult(CreateActiveChat(chatSessionId: null));
+        }
+
+        public Task<ActiveAgentChat> OpenChatAsync(
+            Guid agentId,
+            Guid chatSessionId,
+            CancellationToken cancellationToken = default)
+            => Task.FromResult(CreateActiveChat(chatSessionId));
+
+        private ActiveAgentChat CreateActiveChat(Guid? chatSessionId)
+        {
+            var now = DateTimeOffset.UtcNow;
+            return new ActiveAgentChat(
+                AgentChatHandleId.Create(),
+                new AgentChatIdentity(agent.Id, agent.Name, agent.RoleTitle, agent.AvatarImageUrl),
+                chatSessionId,
+                ActiveAgentChatVisibility.Visible,
+                ActiveAgentChatRunState.Idle,
+                now,
+                now,
+                HiddenAtUtc: null);
+        }
+    }
+
+    private sealed class UnusedOrganizationCatalogRepairService : IAgentFrameworkOrganizationCatalogRepairService
+    {
+        public Task EnsureCurrentOrganizationCatalogAsync(CancellationToken cancellationToken = default)
+            => Task.CompletedTask;
+    }
+
+    private class UnusedWorkspaceServiceProxy : DispatchProxy
+    {
+        protected override object? Invoke(MethodInfo? targetMethod, object?[]? args)
+            => throw new InvalidOperationException(
+                $"Workspace service member '{targetMethod?.Name}' was not expected in this component test.");
     }
 }

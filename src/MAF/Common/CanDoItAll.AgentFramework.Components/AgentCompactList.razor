@@ -1,0 +1,58 @@
+<div class="@ResolveContainerClass()"
+     role="list"
+     aria-label="@AriaLabel"
+     data-testid="@TestId">
+    @foreach (var agent in Agents)
+    {
+        <AgentCompactListItem @key="agent.Id"
+                              Agent="@agent"
+                              IsSelected="@(SelectedAgentId == agent.Id)"
+                              IsBusy="@(BusyAgentIds?.Contains(agent.Id) == true)"
+                              ShellTestId="@BuildTestId("item", agent.Id)"
+                              SelectTestId="@BuildTestId("select", agent.Id)"
+                              NewChatTestId="@BuildTestId("new-chat", agent.Id)"
+                              HistoryTestId="@BuildTestId("history", agent.Id)"
+                              Selected="@AgentSelected"
+                              DoubleClicked="@AgentDoubleClicked"
+                              NewChatRequested="@NewChatRequested"
+                              HistoryRequested="@HistoryRequested" />
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public IReadOnlyList<AgentDefinition> Agents { get; set; } = [];
+
+    [Parameter]
+    public Guid? SelectedAgentId { get; set; }
+
+    [Parameter]
+    public IReadOnlySet<Guid>? BusyAgentIds { get; set; }
+
+    [Parameter]
+    public string AriaLabel { get; set; } = "Agents";
+
+    [Parameter]
+    public string TestId { get; set; } = "agent-compact-list";
+
+    [Parameter]
+    public string? Class { get; set; }
+
+    [Parameter]
+    public EventCallback<AgentDefinition> AgentSelected { get; set; }
+
+    [Parameter]
+    public EventCallback<AgentDefinition> AgentDoubleClicked { get; set; }
+
+    [Parameter]
+    public EventCallback<AgentDefinition> NewChatRequested { get; set; }
+
+    [Parameter]
+    public EventCallback<AgentDefinition> HistoryRequested { get; set; }
+
+    private string ResolveContainerClass()
+        => CssClassBuilder.Join("agent-compact-list", Class);
+
+    private string BuildTestId(string action, Guid agentId)
+        => $"{TestId}-{action}-{agentId:N}";
+}

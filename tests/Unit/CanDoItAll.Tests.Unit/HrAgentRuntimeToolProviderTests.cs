@@ -184,9 +184,10 @@ public sealed class HrAgentRuntimeToolProviderTests
         AssertScopedRegistration<HrAgentProcessReviewService>(services);
         AssertScopedRegistration<HrAgentRuntimeAuthorizationService>(services);
         var providerDescriptor = Assert.Single(
-            services.Where(descriptor =>
+            services,
+            descriptor =>
                 descriptor.ServiceType == typeof(IAgentRuntimeToolProvider) &&
-                descriptor.ImplementationType == typeof(HrAgentRuntimeToolProvider)));
+                descriptor.ImplementationType == typeof(HrAgentRuntimeToolProvider));
         Assert.Equal(ServiceLifetime.Scoped, providerDescriptor.Lifetime);
 
         foreach (var descriptor in services
@@ -202,6 +203,7 @@ public sealed class HrAgentRuntimeToolProviderTests
         services.Replace(ServiceDescriptor.Scoped(_ => CreateUninitialized<HrAgentAvatarGenerationService>()));
         services.Replace(ServiceDescriptor.Scoped(_ => CreateUninitialized<HrAgentUsageAnalyticsService>()));
         services.Replace(ServiceDescriptor.Scoped(_ => CreateUninitialized<HrAgentProcessReviewService>()));
+        services.Replace(ServiceDescriptor.Scoped(_ => CreateUninitialized<HrAgentRuntimeAuthorizationService>()));
         services.Replace(ServiceDescriptor.Scoped<ICrmHrAgentQueryService>(_ => new ThrowingCrmHrAgentQueryService()));
         using var serviceProvider = services.BuildServiceProvider();
         using var scope = serviceProvider.CreateScope();
@@ -324,9 +326,11 @@ public sealed class HrAgentRuntimeToolProviderTests
 
     private static void AssertScopedRegistration<T>(IEnumerable<ServiceDescriptor> services)
     {
-        var descriptor = Assert.Single(services.Where(item =>
-            item.ServiceType == typeof(T) &&
-            item.ImplementationType == typeof(T)));
+        var descriptor = Assert.Single(
+            services,
+            item =>
+                item.ServiceType == typeof(T) &&
+                item.ImplementationType == typeof(T));
         Assert.Equal(ServiceLifetime.Scoped, descriptor.Lifetime);
     }
 

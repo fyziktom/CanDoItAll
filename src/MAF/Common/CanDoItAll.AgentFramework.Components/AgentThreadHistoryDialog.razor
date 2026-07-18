@@ -1,7 +1,7 @@
 @inject DialogService DialogService
 
 <div class="agent-thread-history-dialog" data-testid="agent-thread-history-dialog-body">
-    @if (VisibleSessions.Count == 0)
+    @if (visibleSessions.Count == 0)
     {
         <EmptyState Eyebrow="Threads"
                     Title="No recent threads"
@@ -11,7 +11,7 @@
     {
         <Stack GapScale="LayoutGap.Medium" AlignItems="AlignItems.Stretch">
             <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
-                <StatusBadge Tone="info" Text="@($"{VisibleSessions.Count} recent threads")" />
+                <StatusBadge Tone="info" Text="@($"{visibleSessions.Count} recent threads")" />
                 @if (Agent is not null)
                 {
                     <StatusBadge Tone="neutral" Text="@ResolveAgentName(Agent)" />
@@ -20,7 +20,7 @@
 
             <div class="agent-thread-history-dialog__list"
                  data-testid="agent-thread-history-list">
-                @foreach (var session in VisibleSessions)
+                @foreach (var session in visibleSessions)
                 {
                     var isSelected = session.Id == SelectedSessionId;
                     <button type="button"
@@ -38,15 +38,15 @@
                             {
                                 <StatusBadge Tone="primary" Text="Open" />
                             }
-                            @if (session.LatestExecutionRunId.HasValue)
+                            @if (session.HasRunEvidence)
                             {
                                 <StatusBadge Tone="info" Text="Run evidence" />
                             }
-                            @if (session.Compatibility?.PendingApprovals.Count > 0)
+                            @if (session.PendingApprovalCount > 0)
                             {
-                                <StatusBadge Tone="warning" Text="@($"{session.Compatibility.PendingApprovals.Count} approvals")" />
+                                <StatusBadge Tone="warning" Text="@($"{session.PendingApprovalCount} approvals")" />
                             }
-                            <StatusBadge Tone="neutral" Text="@($"{session.Messages.Count} messages")" />
+                            <StatusBadge Tone="neutral" Text="@($"{session.MessageCount} messages")" />
                             <span class="agent-thread-history-dialog__time">@session.UpdatedAtUtc.LocalDateTime.ToString("g")</span>
                         </span>
                     </button>
@@ -66,13 +66,23 @@
     public IReadOnlyList<ChatSessionRecord> Sessions { get; set; } = [];
 
     [Parameter]
+    public IReadOnlyList<ChatSessionSummaryRecord> SessionSummaries { get; set; } = [];
+
+    [Parameter]
     public Guid? SelectedSessionId { get; set; }
 
-    private IReadOnlyList<ChatSessionRecord> VisibleSessions
-        => Sessions
+    private IReadOnlyList<ThreadHistoryItem> visibleSessions = [];
+
+    protected override void OnParametersSet()
+    {
+        var items = SessionSummaries.Count > 0
+            ? SessionSummaries.Select(CreateHistoryItem)
+            : Sessions.Select(CreateHistoryItem);
+        visibleSessions = items
             .OrderByDescending(session => session.UpdatedAtUtc)
             .Take(MaxThreadCount)
-            .ToList();
+            .ToArray();
+    }
 
     private Task SelectSessionAsync(Guid sessionId)
     {
@@ -95,10 +105,39 @@
     private static string ResolveAgentRole(AgentDefinition agent)
         => string.IsNullOrWhiteSpace(agent.RoleTitle) ? "Technical agent" : agent.RoleTitle;
 
-    private static string ResolveThreadTitle(ChatSessionRecord session)
+    private static string ResolveThreadTitle(ThreadHistoryItem session)
         => string.IsNullOrWhiteSpace(session.Title)
             ? $"Thread {session.UpdatedAtUtc.LocalDateTime:g}"
             : session.Title;
+
+    private static ThreadHistoryItem CreateHistoryItem(ChatSessionSummaryRecord session)
+    {
+        return new ThreadHistoryItem(
+            session.Id,
+            session.Title,
+            session.UpdatedAtUtc,
+            session.MessageCount,
+            session.LastMessagePreview,
+            session.PendingApprovalCount,
+            HasRunEvidence: false);
+    }
+
+    private static ThreadHistoryItem CreateHistoryItem(ChatSessionRecord session)
+    {
+        return new ThreadHistoryItem(
+            session.Id,
+            session.Title,
+            session.UpdatedAtUtc,
+            session.Messages.Count,
+            ResolvePreview(session),
+            session.Compatibility?.PendingApprovals.Count ?? 0,
+            session.LatestExecutionRunId.HasValue);
+    }
+
+    private static string ResolvePreview(ThreadHistoryItem session)
+        => string.IsNullOrWhiteSpace(session.Preview)
+            ? "No messages captured yet."
+            : session.Preview;
 
     private static string ResolvePreview(ChatSessionRecord session)
     {
@@ -120,4 +159,13 @@
             ? preview
             : $"{preview[..maxLength].TrimEnd()}...";
     }
+
+    private sealed record ThreadHistoryItem(
+        Guid Id,
+        string Title,
+        DateTimeOffset UpdatedAtUtc,
+        int MessageCount,
+        string Preview,
+        int PendingApprovalCount,
+        bool HasRunEvidence);
 }

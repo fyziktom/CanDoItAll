@@ -9,12 +9,16 @@ risks: stale-node-selection, invalid-command-routing, overlapping-create-placeme
 tests: component:ProjectStructurePageTests, e2e:workbench-structure
 *@
 @using CanDoItAll.Components.CanvasLib
+@using CanDoItAll.AgentFramework.Core
+@using CanDoItAll.AgentFramework.Models
 @using CanDoItAll.Components.BaseLib
 @using CanDoItAll.Components.Common
 @using CanDoItAll.Modules.Projects
 @using CanDoItAll.Modules.Projects.Pages.Components
 @using CanDoItAll.Modules.Security
 @using CanDoItAll.Modules.Workbench.CanvasAdapters
+@using CanDoItAll.Modules.Workbench.Pages.Components.ProjectStructure
+@using CanDoItAll.Modules.Workbench.ProjectStructure
 @using CanDoItAll.Modules.Workspace
 @using CanDoItAll.Infrastructure.Storage
 @using CanDoItAll.SharedKernel
@@ -35,9 +39,18 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
 @inject NavigationManager Navigation
 @inject IJSRuntime JSRuntime
 @inject ILogger<ProjectStructurePage> Logger
+@inject IFloatingAgentChatCoordinator FloatingAgentChatCoordinator
 @implements IAsyncDisposable
 
 <PageTitle>@ProjectStructurePageTitleBuilder.Build(surface?.ProjectName)</PageTitle>
+
+<ProjectStructureAgentChatContextProvider ProjectId="@ProjectId"
+                                          ProjectName="@(surface?.ProjectName ?? "Requested project")"
+                                          ActiveView="@(IsGanttViewVisible ? ProjectStructureAgentChatView.Gantt : ProjectStructureAgentChatView.Canvas)"
+                                          SelectedNodes="@(surface is not null && structureViewIndex == CanvasViewIndex ? selectedNodes : [])"
+                                          ContextNavigationIdentity="@AgentChatNavigationFence"
+                                          ContextAccessState="@agentChatContextAccessState"
+                                          RefreshRequested="HandleAgentExecutionCompletedAsync" />
 
 @if (unavailableState is not null)
 {
@@ -102,7 +115,7 @@ else
                                                        ObjectIndexWindowVisible="@ObjectIndexWindowState.IsVisible"
                                                        FileBrowserWindowVisible="@FileBrowserWindowState.IsVisible"
                                                        SignalsWindowVisible="@SignalsWindowState.IsVisible"
-                                                       AgentWindowVisible="@AgentWindowState.IsVisible"
+                                                       AgentWindowVisible="@FloatingAgentChatCoordinator.Snapshot().IsCatalogVisible"
                                                        GanttViewVisible="@IsGanttViewVisible"
                                                        ActiveTool="@canvasToolMode"
                                                        CanUseDependencyTool="@(selectedNode is not null)"
@@ -122,19 +135,6 @@ else
                                                        RecomposeBranch="RecomposeSelectedBranchAsync" />
                     </ToolbarLeftContent>
                     <OverlayContent>
-                        <ContextualAgentWorkspaceWindows WindowId="@AgentWindowKey"
-                                                         ChatWindowId="@AgentChatWindowKey"
-                                                         TestId="project-structure-agents-window"
-                                                         AriaLabel="Project structure agents"
-                                                         Kicker="Project agents"
-                                                         Title="Project agents"
-                                                         Summary="Search agents with access to this structure, filter by tags, and double-click to open a new thread."
-                                                         WindowState="@AgentWindowState"
-                                                         WindowStateChanged="HandleAgentWindowStateChangedAsync"
-                                                         WorkspaceRefreshRequested="HandleAgentWorkspaceRefreshRequestedAsync"
-                                                         WorkspaceKind="@ContextualAgentWorkspaceKind.ProjectStructure"
-                                                         ProjectId="@ProjectId"
-                                                         SelectedNodeIds="@selectedNodeIds" />
                         @if (ToolboxWindowState.IsVisible)
                         {
                             <ProjectStructureToolboxWindow WindowId="@ToolboxWindowKey"
@@ -311,6 +311,7 @@ else
             <TabsItem Text="Gantt" Icon="view_timeline">
                 <ProjectStructureGanttPanel ProjectId="@ProjectId"
                                             Surface="@surface"
+                                            OpenAgentCatalog="ToggleAgentWindowAsync"
                                             MutationCommitted="@(() => ReloadSurfaceAsync())" />
             </TabsItem>
         </Tabs>
@@ -795,6 +796,8 @@ else
     private string? localOpenFeedbackNodeId;
     private string localOpenFeedbackTone = "neutral";
     private Guid loadedProjectId;
+    private AgentChatContextAccessState agentChatContextAccessState = AgentChatContextAccessState.Loading;
+    private long surfaceReloadGeneration;
     private string? pendingWorkbenchSelectionId;
     private ProjectWorkbenchUnavailableState? unavailableState;
     private readonly SemaphoreSlim nodeMoveCommitGate = new(1, 1);
@@ -925,6 +928,11 @@ else
             _ => "Batch-update shared fields, review the selection set, and keep grouping actions close to the canvas."
         };
     private bool CanApplySelectionStatus => selectedNodes.Count > 0 && selectedNodes.All(ProjectStructureNodeHelpers.IsCanvasStatusMutable);
+    private AgentChatNavigationIdentity AgentChatNavigationFence
+        => AgentChatNavigationIdentity.CreateForLocation(
+            Navigation.BaseUri,
+            Navigation.Uri);
+
     private Task RunSelectedValidationAsync()
         => Task.CompletedTask;
 
@@ -948,91 +956,160 @@ else
 
     private async Task ReloadSurfaceAsync(string? preferredSelectionId = null)
     {
-        CancelPendingCanvasViewStatePersistence();
-        pendingWorkbenchSelectionId = null;
-        var loadStructureTask = ProjectWorkbenchService.TryGetStructureAsync(ProjectId);
-        var loadStorageCatalogTask = WorkspaceService.ListStorageCatalogAsync();
-        await Task.WhenAll(loadStructureTask, loadStorageCatalogTask);
-        await LoadImageGenerationProvidersAsync();
-        storageCatalog = await loadStorageCatalogTask;
-        var loadResult = await loadStructureTask;
-        if (!loadResult.IsSuccess || loadResult.Surface is null)
+        IReadOnlyList<string>? liveSelectionSnapshot = surface?.ProjectId == ProjectId
+            ? selectedNodeIds.ToArray()
+            : null;
+        var request = new SurfaceReloadRequest(
+            ProjectId,
+            Interlocked.Increment(ref surfaceReloadGeneration));
+        agentChatContextAccessState = AgentChatContextAccessState.Loading;
+        try
         {
-            unavailableState = loadResult.UnavailableState;
-            surface = null;
-            canvasSurface = null;
-            await CloseAttachmentPreviewAsync();
-            quickActionDialog = null;
-            currentViewStateJson = null;
-            selectedNodeIds = [];
-            pendingClientSelectionId = null;
-            return;
-        }
+            CancelPendingCanvasViewStatePersistence();
+            pendingWorkbenchSelectionId = null;
+            var loadStructureTask = ProjectWorkbenchService.TryGetStructureAsync(request.ProjectId);
+            var loadStorageCatalogTask = WorkspaceService.ListStorageCatalogAsync();
+            await Task.WhenAll(loadStructureTask, loadStorageCatalogTask);
+            if (!IsCurrentSurfaceReload(request))
+            {
+                return;
+            }
 
-        unavailableState = null;
-        var reloadedSurface = loadResult.Surface;
-        var uiState = NormalizePersistedCanvasUiState(
-            !string.IsNullOrWhiteSpace(currentViewStateJson)
-                ? CanvasWorkbenchUiState.Parse(currentViewStateJson)
-                : CanvasWorkbenchUiState.Parse(reloadedSurface.ViewStateJson));
-        if (string.IsNullOrWhiteSpace(currentViewStateJson))
-        {
-            uiState.ShowMinimap = false;
-        }
+            await LoadImageGenerationProvidersAsync();
+            if (!IsCurrentSurfaceReload(request))
+            {
+                return;
+            }
 
-        if (previewNode is not null)
-        {
-            ProjectStructureNode? reloadedPreview = reloadedSurface.Nodes.FirstOrDefault(
-                node => string.Equals(node.Id, previewNode.Id, StringComparison.Ordinal));
-            if (reloadedPreview is null)
+            var nextStorageCatalog = await loadStorageCatalogTask;
+            var loadResult = await loadStructureTask;
+            if (!IsCurrentSurfaceReload(request))
+            {
+                return;
+            }
+
+            if (!loadResult.IsSuccess || loadResult.Surface is null)
             {
                 await CloseAttachmentPreviewAsync();
+                if (!IsCurrentSurfaceReload(request))
+                {
+                    return;
+                }
+
+                storageCatalog = nextStorageCatalog;
+                unavailableState = loadResult.UnavailableState;
+                surface = null;
+                canvasSurface = null;
+                quickActionDialog = null;
+                currentViewStateJson = null;
+                selectedNodeIds = [];
+                pendingClientSelectionId = null;
+                agentChatContextAccessState = AgentChatContextAccessState.Failed;
+                return;
+            }
+
+            var reloadedSurface = loadResult.Surface;
+            var uiState = NormalizePersistedCanvasUiState(
+                !string.IsNullOrWhiteSpace(currentViewStateJson)
+                    ? CanvasWorkbenchUiState.Parse(currentViewStateJson)
+                    : CanvasWorkbenchUiState.Parse(reloadedSurface.ViewStateJson));
+            if (string.IsNullOrWhiteSpace(currentViewStateJson))
+            {
+                uiState.ShowMinimap = false;
+            }
+
+            ProjectStructureNode? reloadedPreview = null;
+            if (previewNode is not null)
+            {
+                reloadedPreview = reloadedSurface.Nodes.FirstOrDefault(
+                    node => string.Equals(node.Id, previewNode.Id, StringComparison.Ordinal));
+                if (reloadedPreview is null)
+                {
+                    await CloseAttachmentPreviewAsync();
+                    if (!IsCurrentSurfaceReload(request))
+                    {
+                        return;
+                    }
+                }
+            }
+
+            var nextQuickActionDialog = quickActionDialog is null
+                ? null
+                : reloadedSurface.Nodes.FirstOrDefault(node =>
+                    string.Equals(node.Id, quickActionDialog.NodeId, StringComparison.Ordinal)) is { } dialogNode
+                    ? BuildQuickActionDialog(dialogNode)
+                    : null;
+            var nextSelectedNodeIds = (liveSelectionSnapshot ?? uiState.SelectedNodeIds)
+                .Where(id => reloadedSurface.Nodes.Any(node => string.Equals(node.Id, id, StringComparison.Ordinal)))
+                .ToList();
+            string? nextPendingClientSelectionId;
+            string? nextPendingWorkbenchSelectionId = null;
+
+            if (!string.IsNullOrWhiteSpace(preferredSelectionId) &&
+                reloadedSurface.Nodes.Any(node => string.Equals(node.Id, preferredSelectionId, StringComparison.Ordinal)))
+            {
+                nextSelectedNodeIds = [preferredSelectionId];
+                nextPendingClientSelectionId = preferredSelectionId;
+                nextPendingWorkbenchSelectionId = preferredSelectionId;
+            }
+            else if (nextSelectedNodeIds.Count == 0)
+            {
+                var rootNodeId = ProjectStructureNodeHelpers.ResolveRootNodeId(reloadedSurface.Nodes);
+                if (!string.IsNullOrWhiteSpace(rootNodeId))
+                {
+                    nextSelectedNodeIds = [rootNodeId];
+                }
+
+                nextPendingClientSelectionId = null;
             }
             else
             {
-                previewNode = reloadedPreview;
+                nextPendingClientSelectionId = null;
             }
-        }
 
-        if (quickActionDialog is not null)
-        {
-            var dialogNode = reloadedSurface.Nodes.FirstOrDefault(node => string.Equals(node.Id, quickActionDialog.NodeId, StringComparison.Ordinal));
-            quickActionDialog = dialogNode is null ? null : BuildQuickActionDialog(dialogNode);
-        }
-
-        selectedNodeIds = uiState.SelectedNodeIds
-            .Where(id => reloadedSurface.Nodes.Any(node => string.Equals(node.Id, id, StringComparison.Ordinal)))
-            .ToList();
-
-        if (!string.IsNullOrWhiteSpace(preferredSelectionId) &&
-            reloadedSurface.Nodes.Any(node => string.Equals(node.Id, preferredSelectionId, StringComparison.Ordinal)))
-        {
-            selectedNodeIds = [preferredSelectionId];
-            pendingClientSelectionId = preferredSelectionId;
-            pendingWorkbenchSelectionId = preferredSelectionId;
-        }
-        else if (selectedNodeIds.Count == 0)
-        {
-            var rootNodeId = ProjectStructureNodeHelpers.ResolveRootNodeId(reloadedSurface.Nodes);
-            if (!string.IsNullOrWhiteSpace(rootNodeId))
+            uiState.SelectedNodeIds = [.. nextSelectedNodeIds];
+            graphAdapter.ExpandSelectionAncestors(reloadedSurface.Nodes, uiState, nextSelectedNodeIds);
+            var nextSurface = reloadedSurface with { ViewStateJson = uiState.ToJson() };
+            if (!IsCurrentSurfaceReload(request))
             {
-                selectedNodeIds = [rootNodeId];
+                return;
             }
 
-            pendingClientSelectionId = null;
+            storageCatalog = nextStorageCatalog;
+            unavailableState = null;
+            previewNode = reloadedPreview;
+            quickActionDialog = nextQuickActionDialog;
+            selectedNodeIds = nextSelectedNodeIds;
+            pendingClientSelectionId = nextPendingClientSelectionId;
+            pendingWorkbenchSelectionId = nextPendingWorkbenchSelectionId;
+            surface = nextSurface;
+            currentViewStateJson = nextSurface.ViewStateJson;
+            RefreshCanvasSurface();
+            await LoadPartyEditorAsync();
+            if (IsCurrentSurfaceReload(request))
+            {
+                agentChatContextAccessState = AgentChatContextAccessState.Ready;
+            }
         }
-        else
+        catch
         {
-            pendingClientSelectionId = null;
-        }
+            if (!IsCurrentSurfaceReload(request))
+            {
+                return;
+            }
 
-        uiState.SelectedNodeIds = [.. selectedNodeIds];
-        graphAdapter.ExpandSelectionAncestors(reloadedSurface.Nodes, uiState, selectedNodeIds);
-        surface = reloadedSurface with { ViewStateJson = uiState.ToJson() };
-        currentViewStateJson = surface.ViewStateJson;
-        RefreshCanvasSurface();
-        await LoadPartyEditorAsync();
+            agentChatContextAccessState = AgentChatContextAccessState.Failed;
+            throw;
+        }
     }
+
+    private bool IsCurrentSurfaceReload(SurfaceReloadRequest request)
+        => request.ProjectId == ProjectId &&
+           request.Generation == Volatile.Read(ref surfaceReloadGeneration);
+
+    private readonly record struct SurfaceReloadRequest(
+        Guid ProjectId,
+        long Generation);
 
     private Task OpenUnavailableRouteAsync()
     {
@@ -2753,6 +2830,7 @@ else
 
     private void DisposeSynchronousState()
     {
+        Interlocked.Increment(ref surfaceReloadGeneration);
         CancelPendingCanvasViewStatePersistence();
         ResetProcessStartEstimateState();
         deferredCompletionCts.Cancel();
@@ -2762,6 +2840,7 @@ else
 
     public async ValueTask DisposeAsync()
     {
+        DisposeAgentWindowState();
         DisposeSynchronousState();
         if (previewInteractionSlot is not null)
         {

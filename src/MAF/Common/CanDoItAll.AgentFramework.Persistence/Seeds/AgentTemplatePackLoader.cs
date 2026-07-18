@@ -289,6 +289,10 @@ internal sealed class AgentTemplateProjectStructureAccess
 
     public bool CanWriteTasks { get; set; }
 
+    public bool CanCreateProjects { get; set; }
+
+    public bool CanCreateSubprojects { get; set; }
+
     public bool AllowAllProjects { get; set; }
 
     public List<Guid> AllowedProjectIds { get; set; } = [];

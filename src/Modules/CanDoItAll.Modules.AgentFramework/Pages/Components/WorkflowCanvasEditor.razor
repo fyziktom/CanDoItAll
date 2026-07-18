@@ -126,7 +126,7 @@
                                 {
                                     <button type="button"
                                             class="workflow-canvas-node-picker @(selectedNodeId == node.Id.Value ? "workflow-canvas-node-picker--selected" : string.Empty)"
-                                            @onclick="@(() => SelectNode(node.Id.Value))"
+                                            @onclick="@(() => SelectNodeAsync(node.Id.Value))"
                                             data-testid="workflow-canvas-select-node">
                                         <span>@node.Name</span>
                                         <small>@node.Kind</small>

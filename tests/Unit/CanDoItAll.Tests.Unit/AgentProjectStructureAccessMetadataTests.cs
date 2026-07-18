@@ -38,6 +38,23 @@ public sealed class AgentProjectStructureAccessMetadataTests
     }
 
     [Fact]
+    public void Normalize_creation_permissions_imply_read_without_granting_structure_write()
+    {
+        var settings = AgentProjectStructureAccessMetadata.Normalize(new AgentProjectStructureAccessSettings
+        {
+            CanCreateProjects = true,
+            CanCreateSubprojects = true
+        });
+
+        Assert.True(settings.CanRead);
+        Assert.False(settings.CanWrite);
+        Assert.False(settings.CanWriteNonTaskStructure);
+        Assert.False(settings.CanWriteTasks);
+        Assert.True(settings.CanCreateProjects);
+        Assert.True(settings.CanCreateSubprojects);
+    }
+
+    [Fact]
     public void Write_and_read_round_trip_task_write_scope_and_preserve_unrelated_configuration()
     {
         var projectId = Guid.Parse("580e32b9-8955-42c9-9646-0e9675f51f81");
@@ -115,7 +132,55 @@ public sealed class AgentProjectStructureAccessMetadataTests
         Assert.True(settings.CanWrite);
         Assert.False(settings.CanWriteNonTaskStructure);
         Assert.False(settings.CanWriteTasks);
+        Assert.True(settings.CanCreateProjects);
+        Assert.True(settings.CanCreateSubprojects);
         Assert.True(settings.AllowAllProjects);
         Assert.True(settings.CanWrite || settings.CanWriteNonTaskStructure || settings.CanWriteTasks);
+    }
+
+    [Fact]
+    public void Write_and_read_keep_project_and_subproject_creation_independent()
+    {
+        var configurationJson = AgentProjectStructureAccessMetadata.Write(
+            configurationJson: null,
+            settings: new AgentProjectStructureAccessSettings
+            {
+                CanCreateProjects = false,
+                CanCreateSubprojects = true,
+                AllowAllProjects = true
+            });
+
+        var settings = AgentProjectStructureAccessMetadata.Read(configurationJson);
+        var root = JsonNode.Parse(configurationJson)!.AsObject();
+
+        Assert.True(settings.CanRead);
+        Assert.False(settings.CanWrite);
+        Assert.False(settings.CanCreateProjects);
+        Assert.True(settings.CanCreateSubprojects);
+        Assert.False(root["projectStructure"]!["canCreateProjects"]!.GetValue<bool>());
+        Assert.True(root["projectStructure"]!["canCreateSubprojects"]!.GetValue<bool>());
+    }
+
+    [Fact]
+    public void Read_explicit_creation_denials_do_not_inherit_legacy_broad_write()
+    {
+        const string configurationJson = """
+            {
+              "projectStructure": {
+                "canRead": true,
+                "canWrite": true,
+                "canCreateProjects": false,
+                "canCreateSubprojects": false,
+                "allowAllProjects": true,
+                "allowedProjectIds": []
+              }
+            }
+            """;
+
+        var settings = AgentProjectStructureAccessMetadata.Read(configurationJson);
+
+        Assert.True(settings.CanWrite);
+        Assert.False(settings.CanCreateProjects);
+        Assert.False(settings.CanCreateSubprojects);
     }
 }

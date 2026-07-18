@@ -1,4 +1,5 @@
 using CanDoItAll.AgentFramework.Components;
+using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 
 namespace CanDoItAll.Tests.Components;
@@ -130,6 +131,64 @@ public sealed class ContextualAgentAccessResolverTests
         Assert.True(result.CanWriteTasks);
         Assert.False(result.CanWrite);
         Assert.Equal("This project", result.ScopeLabel);
+    }
+
+    [Fact]
+    public void Project_structure_context_preserves_independent_creation_permissions()
+    {
+        var projectId = Guid.NewGuid();
+        var agent = CreateAgent(
+            "Subproject creator",
+            AgentProjectStructureAccessMetadata.Write(
+                null,
+                new AgentProjectStructureAccessSettings
+                {
+                    CanCreateProjects = false,
+                    CanCreateSubprojects = true,
+                    AllowedProjectIds = [projectId]
+                }));
+
+        var result = Assert.Single(ContextualAgentAccessResolver.Resolve(
+            [agent],
+            ContextualAgentWorkspaceKind.ProjectStructure,
+            projectId: projectId));
+
+        Assert.True(result.CanRead);
+        Assert.False(result.CanWrite);
+        Assert.False(result.CanCreateProjects);
+        Assert.True(result.CanCreateSubprojects);
+        Assert.Equal("This project", result.ScopeLabel);
+    }
+
+    [Fact]
+    public void Projects_portfolio_includes_a_standalone_project_creator_without_project_scope()
+    {
+        var agent = CreateAgent(
+            "Standalone project creator",
+            AgentProjectStructureAccessMetadata.Write(
+                null,
+                new AgentProjectStructureAccessSettings
+                {
+                    CanCreateProjects = true,
+                    CanCreateSubprojects = false,
+                    AllowAllProjects = false,
+                    AllowedProjectIds = []
+                }));
+
+        var result = Assert.Single(ContextualAgentAccessResolver.Resolve(
+            [agent],
+            ContextualAgentWorkspaceKind.ProjectStructure,
+            projectId: null));
+
+        Assert.True(result.CanRead);
+        Assert.False(result.CanWrite);
+        Assert.True(result.CanCreateProjects);
+        Assert.False(result.CanCreateSubprojects);
+        Assert.Equal("Project creation only", result.ScopeLabel);
+        Assert.Empty(ContextualAgentAccessResolver.Resolve(
+            [agent],
+            ContextualAgentWorkspaceKind.ProjectStructure,
+            projectId: Guid.NewGuid()));
     }
 
     [Fact]

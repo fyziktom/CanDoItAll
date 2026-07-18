@@ -896,6 +896,9 @@ public class ProjectStructureAgentException : Exception
     public object? Details { get; }
 }
 
+public sealed class ProjectStructureProjectCreationRejectedException(string message, object? details = null)
+    : ProjectStructureAgentException(400, "ProjectCreationRejected", message, details);
+
 public sealed class ProjectStructureLeaseConflictException : ProjectStructureAgentException
 {
     public ProjectStructureLeaseConflictException(ProjectStructureLeaseConflict conflict)

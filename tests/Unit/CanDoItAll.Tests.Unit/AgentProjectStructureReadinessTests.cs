@@ -84,6 +84,74 @@ public sealed class AgentProjectStructureReadinessTests
             finding => finding.Code == "agent.readiness.required-project-structure-full-write-missing");
     }
 
+    [Fact]
+    public void Standalone_project_creation_requires_its_own_permission()
+    {
+        var readiness = Evaluate(
+            new AgentProjectStructureAccessSettings
+            {
+                CanWrite = true,
+                CanCreateProjects = false,
+                AllowAllProjects = true
+            },
+            "project_structure_project_create");
+
+        Assert.Contains(
+            readiness.Findings,
+            finding => finding.Code == "agent.readiness.required-project-create-missing");
+    }
+
+    [Fact]
+    public void Subproject_creation_does_not_require_standalone_project_creation()
+    {
+        var readiness = Evaluate(
+            new AgentProjectStructureAccessSettings
+            {
+                CanCreateProjects = false,
+                CanCreateSubprojects = true,
+                AllowAllProjects = true
+            },
+            "project_structure_subproject_create");
+
+        Assert.DoesNotContain(
+            readiness.Findings,
+            finding => finding.Code == "agent.readiness.required-subproject-create-missing");
+    }
+
+    [Fact]
+    public void Moving_nodes_to_new_subproject_requires_write_and_subproject_creation()
+    {
+        var readiness = Evaluate(
+            new AgentProjectStructureAccessSettings
+            {
+                CanWriteNonTaskStructure = true,
+                CanCreateSubprojects = false,
+                AllowAllProjects = true
+            },
+            "project_structure_nodes_to_new_subproject");
+
+        Assert.Contains(
+            readiness.Findings,
+            finding => finding.Code == "agent.readiness.required-subproject-structure-write-missing");
+    }
+
+    [Fact]
+    public void Moving_nodes_to_new_subproject_accepts_both_required_permissions()
+    {
+        var readiness = Evaluate(
+            new AgentProjectStructureAccessSettings
+            {
+                CanWriteNonTaskStructure = true,
+                CanCreateSubprojects = true,
+                AllowAllProjects = true
+            },
+            "project_structure_nodes_to_new_subproject");
+
+        Assert.DoesNotContain(
+            readiness.Findings,
+            finding => finding.Code == "agent.readiness.required-subproject-structure-write-missing");
+    }
+
     private static AgentProcessRoleReadinessResult Evaluate(
         AgentProjectStructureAccessSettings access,
         string requiredToolName)

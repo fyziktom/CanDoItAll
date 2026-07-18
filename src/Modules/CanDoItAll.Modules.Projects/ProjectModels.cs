@@ -3,6 +3,7 @@ using CanDoItAll.Infrastructure.Search;
 using CanDoItAll.SharedKernel;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using Microsoft.Extensions.Logging;
 
 namespace CanDoItAll.Modules.Projects;
 
@@ -232,7 +233,8 @@ public sealed class ProjectsService(
     IClock clock,
     IActivityStream activityStream,
     ISearchIndexService searchIndexService,
-    IProjectPartyIntegrationBridge projectPartyIntegrationBridge)
+    IProjectPartyIntegrationBridge projectPartyIntegrationBridge,
+    ILogger<ProjectsService> logger)
 {
     private sealed record ProjectHierarchyMetrics(
         IReadOnlyDictionary<Guid, int> ParentCounts,
@@ -558,7 +560,88 @@ public sealed class ProjectsService(
         };
     }
 
-    public async Task<Result<Guid>> SaveAsync(ProjectEditorModel model, CancellationToken cancellationToken = default)
+    public Task<Result<Guid>> SaveAsync(
+        ProjectEditorModel model,
+        CancellationToken cancellationToken = default)
+        => SaveCoreAsync(model, parentProjectId: null, newProjectId: null, cancellationToken);
+
+    public Task<Result<Guid>> CreateAsync(
+        Guid newProjectId,
+        ProjectEditorModel model,
+        CancellationToken cancellationToken = default)
+    {
+        if (newProjectId == Guid.Empty)
+        {
+            return Task.FromResult(Result<Guid>.Failure(Error.Validation("A new project id is required.")));
+        }
+
+        if (model.Id.HasValue)
+        {
+            return Task.FromResult(Result<Guid>.Failure(Error.Validation("A new project cannot use an existing project id.")));
+        }
+
+        return SaveCoreAsync(
+            model,
+            parentProjectId: null,
+            newProjectId,
+            cancellationToken);
+    }
+
+    public Task<Result<Guid>> CreateSubprojectAsync(
+        Guid parentProjectId,
+        ProjectEditorModel model,
+        CancellationToken cancellationToken = default)
+    {
+        if (parentProjectId == Guid.Empty)
+        {
+            return Task.FromResult(Result<Guid>.Failure(Error.Validation("A parent project is required.")));
+        }
+
+        if (model.Id.HasValue)
+        {
+            return Task.FromResult(Result<Guid>.Failure(Error.Validation("A new subproject cannot use an existing project id.")));
+        }
+
+        return SaveCoreAsync(
+            model,
+            parentProjectId,
+            newProjectId: null,
+            cancellationToken);
+    }
+
+    public Task<Result<Guid>> CreateSubprojectAsync(
+        Guid parentProjectId,
+        Guid newProjectId,
+        ProjectEditorModel model,
+        CancellationToken cancellationToken = default)
+    {
+        if (parentProjectId == Guid.Empty)
+        {
+            return Task.FromResult(Result<Guid>.Failure(Error.Validation("A parent project is required.")));
+        }
+
+        if (newProjectId == Guid.Empty)
+        {
+            return Task.FromResult(Result<Guid>.Failure(Error.Validation("A new subproject id is required.")));
+        }
+
+        if (model.Id.HasValue)
+        {
+            return Task.FromResult(Result<Guid>.Failure(Error.Validation("A new subproject cannot use an existing project id.")));
+        }
+
+        return SaveCoreAsync(
+            model,
+            parentProjectId,
+            newProjectId,
+            cancellationToken);
+    }
+
+    private async Task<Result<Guid>> SaveCoreAsync(
+        ProjectEditorModel model,
+        Guid? parentProjectId,
+        Guid? newProjectId,
+        CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(model.Name))
         {
@@ -566,6 +649,25 @@ public sealed class ProjectsService(
         }
 
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        if (newProjectId.HasValue && await dbContext.Set<Project>()
+                .AnyAsync(project => project.Id == newProjectId.Value, cancellationToken))
+        {
+            return Result<Guid>.Failure(Error.Failure(
+                "The reserved project id is already in use.",
+                "projects.reserved-id-conflict"));
+        }
+
+        Project? parentProject = null;
+        if (parentProjectId.HasValue)
+        {
+            parentProject = await dbContext.Set<Project>()
+                .FirstOrDefaultAsync(project => project.Id == parentProjectId.Value, cancellationToken);
+            if (parentProject is null)
+            {
+                return Result<Guid>.Failure(Error.Validation("The selected parent project could not be found."));
+            }
+        }
+
         var entity = model.Id.HasValue
             ? await dbContext.Set<Project>().FirstOrDefaultAsync(item => item.Id == model.Id.Value, cancellationToken)
             : null;
@@ -574,10 +676,23 @@ public sealed class ProjectsService(
         {
             entity = new Project
             {
+                Id = newProjectId ?? Guid.NewGuid(),
                 CreatedAtUtc = clock.GetUtcNow()
             };
 
             await dbContext.Set<Project>().AddAsync(entity, cancellationToken);
+        }
+
+        if (parentProject is not null)
+        {
+            await dbContext.Set<ProjectHierarchyLink>().AddAsync(
+                new ProjectHierarchyLink
+                {
+                    ParentProjectId = parentProject.Id,
+                    ChildProjectId = entity.Id,
+                    CreatedAtUtc = clock.GetUtcNow()
+                },
+                cancellationToken);
         }
 
         entity.Name = model.Name.Trim();
@@ -651,25 +766,66 @@ public sealed class ProjectsService(
         }
 
         await dbContext.SaveChangesAsync(cancellationToken);
-        await searchIndexService.UpsertAsync(new SearchDocumentInput(
-            "project",
-            entity.Id.ToString(),
-            "Projects",
-            entity.Name,
-            entity.Description,
-            $"{entity.Objective}\nCurrent phase: {entity.CurrentPhase}\nOptions: {string.Join(", ", model.Options.Where(option => !string.IsNullOrWhiteSpace(option.OptionName)).Select(option => $"{option.Category}:{option.OptionName}"))}",
-            $"/projects?projectId={entity.Id}",
-            entity.Id), cancellationToken);
-        await activityStream.RecordAsync(new ActivityWriteRequest(
-            "projects",
-            model.Id.HasValue ? "update" : "create",
-            $"{(model.Id.HasValue ? "Updated" : "Created")} project",
-            entity.Name,
-            ProjectId: entity.Id,
-            ArtifactKind: "project",
-            ArtifactId: entity.Id,
-            Route: $"/projects?projectId={entity.Id}"), cancellationToken);
+        await RunPostCommitActionAsync(
+            "search-index-upsert",
+            entity.Id,
+            () => searchIndexService.UpsertAsync(new SearchDocumentInput(
+                "project",
+                entity.Id.ToString(),
+                "Projects",
+                entity.Name,
+                entity.Description,
+                $"{entity.Objective}\nCurrent phase: {entity.CurrentPhase}\nOptions: {string.Join(", ", model.Options.Where(option => !string.IsNullOrWhiteSpace(option.OptionName)).Select(option => $"{option.Category}:{option.OptionName}"))}",
+                $"/projects?projectId={entity.Id}",
+                entity.Id), cancellationToken));
+        await RunPostCommitActionAsync(
+            "activity-project-save",
+            entity.Id,
+            () => activityStream.RecordAsync(new ActivityWriteRequest(
+                "projects",
+                model.Id.HasValue ? "update" : "create",
+                $"{(model.Id.HasValue ? "Updated" : "Created")} project",
+                entity.Name,
+                ProjectId: entity.Id,
+                ArtifactKind: "project",
+                ArtifactId: entity.Id,
+                Route: $"/projects?projectId={entity.Id}"), cancellationToken));
+        if (parentProject is not null)
+        {
+            await RunPostCommitActionAsync(
+                "activity-subproject-attach",
+                entity.Id,
+                () => activityStream.RecordAsync(new ActivityWriteRequest(
+                    "projects",
+                    "attach-subproject",
+                    "Created subproject",
+                    $"{entity.Name} is now under {parentProject.Name}.",
+                    ProjectId: entity.Id,
+                    ArtifactKind: "project",
+                    ArtifactId: entity.Id,
+                    Route: $"/projects?projectId={entity.Id}"), cancellationToken));
+        }
+
         return Result<Guid>.Success(entity.Id);
+    }
+
+    private async Task RunPostCommitActionAsync(
+        string action,
+        Guid projectId,
+        Func<Task> operation)
+    {
+        try
+        {
+            await operation();
+        }
+        catch (Exception exception)
+        {
+            logger.LogError(
+                exception,
+                "Project {ProjectId} was committed, but post-commit action {Action} failed.",
+                projectId,
+                action);
+        }
     }
 
     private static DateTime? NormalizeNullableUtc(DateTime? value)

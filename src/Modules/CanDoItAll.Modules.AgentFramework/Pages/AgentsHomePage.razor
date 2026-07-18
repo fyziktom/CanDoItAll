@@ -86,23 +86,36 @@
         {
             <AgentVoiceSettingsPanel />
         }
+        else if (string.Equals(selectedTab, "floating-chat", StringComparison.Ordinal))
+        {
+            <FloatingAgentChatSettingsPanel />
+        }
         else if (string.Equals(selectedTab, "agents", StringComparison.Ordinal))
         {
             <AgentCatalogPanel RequestedAgentId="@effectiveRequestedAgentId"
                                RequestedTeamId="@effectiveRequestedTeamId"
+                               SelectedAgentChanged="HandleSelectedAgentChangedAsync"
+                               SelectedTeamChanged="HandleSelectedTeamChangedAsync"
+                               ContextAccessStateChanged="HandleSelectionAccessStateChangedAsync"
                                SkipCatalogRepair="true" />
         }
         else if (string.Equals(selectedTab, "chat", StringComparison.Ordinal))
         {
-            <AgentChatPanel PreferredAgentId="@effectiveRequestedAgentId" />
+            <AgentChatPanel PreferredAgentId="@effectiveRequestedAgentId"
+                            SelectedAgentChanged="HandleSelectedAgentChangedAsync"
+                            ContextAccessStateChanged="HandleSelectionAccessStateChangedAsync" />
         }
         else if (string.Equals(selectedTab, "capabilities", StringComparison.Ordinal))
         {
-            <AgentCapabilitiesPanel PreferredAgentId="@effectiveRequestedAgentId" />
+            <AgentCapabilitiesPanel PreferredAgentId="@effectiveRequestedAgentId"
+                                    SelectedAgentChanged="HandleSelectedAgentChangedAsync"
+                                    ContextAccessStateChanged="HandleSelectionAccessStateChangedAsync" />
         }
         else if (string.Equals(selectedTab, "governance", StringComparison.Ordinal))
         {
-            <AgentGovernancePanel PreferredAgentId="@effectiveRequestedAgentId" />
+            <AgentGovernancePanel PreferredAgentId="@effectiveRequestedAgentId"
+                                  SelectedAgentChanged="HandleSelectedAgentChangedAsync"
+                                  ContextAccessStateChanged="HandleSelectionAccessStateChangedAsync" />
         }
         else if (string.Equals(selectedTab, "scenarios", StringComparison.Ordinal))
         {
@@ -315,3 +328,7 @@
         }
     </ChildContent>
 </PageScaffold>
+
+<AgentChatContextSurfaceProvider Surface="@AgentChatSurface"
+                                 ContextNavigationIdentity="@AgentChatNavigationFence"
+                                 ContextAccessState="@AgentChatAccessState" />
