@@ -1,6 +1,6 @@
 @inject PartyDirectoryManagementService ManagementService
 
-<SurfaceCard Soft="true">
+<Stack GapScale="LayoutGap.Large">
     <Split Gap="LayoutGap.Large"
            AlignItems="AlignItems.Start"
            JustifyContent="JustifyContent.SpaceBetween">
@@ -33,12 +33,12 @@
 
     @if (!string.IsNullOrWhiteSpace(statusMessage))
     {
-        <div class="mt-4">
+        <div>
             <StatusBadge Tone="@statusTone" Text="@statusMessage" />
         </div>
     }
 
-    <Grid Gap="LayoutGap.Large" ColumnsLg="2" Class="mt-5">
+    <Grid Gap="LayoutGap.Large" ColumnsLg="2">
         <div>
             <label class="cda-field-label">Export preview</label>
             <InputTextArea @bind-Value="exportText"
@@ -57,7 +57,7 @@
 
     @if (preview is not null)
     {
-        <Stack GapScale="LayoutGap.Medium" Class="mt-5">
+        <Stack GapScale="LayoutGap.Medium">
             <p class="cda-eyebrow">Import preview</p>
             <p class="text-sm leading-6 text-slate-600">@($"{preview.ReadyRowCount} ready row(s), {preview.BlockingRowCount} blocking row(s).")</p>
 
@@ -86,7 +86,7 @@
             }
         </Stack>
     }
-</SurfaceCard>
+</Stack>
 
 @code {
     private PartyCsvImportPreviewModel? preview;

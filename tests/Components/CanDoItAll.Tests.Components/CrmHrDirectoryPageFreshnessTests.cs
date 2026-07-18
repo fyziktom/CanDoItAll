@@ -5,6 +5,7 @@ using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.CrmHr;
 using CanDoItAll.Modules.CrmHr.Pages;
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Web;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -12,6 +13,113 @@ namespace CanDoItAll.Tests.Components;
 
 public sealed class CrmHrDirectoryPageFreshnessTests
 {
+    [Fact]
+    public async Task Saving_profile_without_opening_relationships_preserves_existing_relationships()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var partyDirectoryService = harness.Context.Services.GetRequiredService<PartyDirectoryService>();
+        var managementService = harness.Context.Services.GetRequiredService<PartyDirectoryManagementService>();
+        var navigation = harness.Context.Services.GetRequiredService<NavigationManager>();
+        var sourcePartyId = await CreatePartyAsync(partyDirectoryService, "Profile save source");
+        var targetPartyId = await CreatePartyAsync(partyDirectoryService, "Profile save target");
+        var relationshipSave = await managementService.SaveRelationshipsAsync(
+            sourcePartyId,
+            [
+                new PartyRelationshipEditorModel
+                {
+                    RelatedPartyId = targetPartyId,
+                    RelationshipKind = PartyRelationshipKind.ReportsTo,
+                    IsOutgoing = true,
+                    IsPrimary = true,
+                    Notes = "Existing reporting relationship"
+                }
+            ],
+            "component-tests");
+        Assert.True(relationshipSave.IsSuccess);
+
+        navigation.NavigateTo($"/crm-hr/directory?partyId={sourcePartyId:D}");
+        var cut = harness.Context.RenderComponent<CrmHrDirectoryPage>();
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Equal(
+                "Profile save source",
+                cut.Find("[data-testid='crmhr-party-display-name']").GetAttribute("value"));
+            Assert.Equal(
+                "true",
+                cut.Find("[data-testid='crmhr-directory-tab-profile']").GetAttribute("aria-selected"));
+        });
+        cut.WaitForElement("[data-testid='crmhr-party-summary']")
+            .Change("Updated from the default profile tab");
+
+        await cut.Find("[data-testid='crmhr-party-save-button']")
+            .ClickAsync(new MouseEventArgs());
+
+        var savedParty = await partyDirectoryService.GetPartyAsync(sourcePartyId);
+        var preservedRelationship = Assert.Single(
+            await managementService.ListRelationshipsAsync(sourcePartyId));
+
+        Assert.NotNull(savedParty);
+        Assert.Equal("Updated from the default profile tab", savedParty.Summary);
+        Assert.Equal(targetPartyId, preservedRelationship.RelatedPartyId);
+        Assert.Equal(PartyRelationshipKind.ReportsTo, preservedRelationship.RelationshipKind);
+        Assert.True(preservedRelationship.IsOutgoing);
+        Assert.True(preservedRelationship.IsPrimary);
+        Assert.Equal("Existing reporting relationship", preservedRelationship.Notes);
+    }
+
+    [Fact]
+    public async Task Directory_paging_limits_the_slice_and_search_returns_to_the_first_page()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var partyDirectoryService = harness.Context.Services.GetRequiredService<PartyDirectoryService>();
+        for (var index = 1; index <= 10; index++)
+        {
+            await CreatePartyAsync(partyDirectoryService, $"Paging slice party {index:D2}");
+        }
+
+        var cut = harness.Context.RenderComponent<CrmHrDirectoryPage>();
+        cut.WaitForElement("[data-testid='crmhr-directory-search']")
+            .Input("Paging slice");
+
+        cut.WaitForAssertion(() =>
+        {
+            var scrollOwner = Assert.Single(
+                cut.FindAll("[data-testid='crmhr-directory-list-scroll']"));
+            Assert.Equal(8, cut.FindAll("[data-testid='crmhr-directory-item']").Count);
+            Assert.Contains("Paging slice party 01", cut.Markup);
+            Assert.Contains("Paging slice party 08", cut.Markup);
+            Assert.DoesNotContain("Paging slice party 09", cut.Markup);
+            Assert.Contains("Showing 1-8 of 10", cut.Markup);
+            Assert.Contains(
+                "overflow-y: auto",
+                scrollOwner.GetAttribute("style") ?? string.Empty);
+            Assert.Null(scrollOwner.QuerySelector("[data-testid='crmhr-directory-pager']"));
+        });
+
+        cut.Find("[data-testid='crmhr-directory-next-page']").Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Equal(2, cut.FindAll("[data-testid='crmhr-directory-item']").Count);
+            Assert.DoesNotContain("Paging slice party 08", cut.Markup);
+            Assert.Contains("Paging slice party 09", cut.Markup);
+            Assert.Contains("Paging slice party 10", cut.Markup);
+            Assert.Contains("Showing 9-10 of 10", cut.Markup);
+        });
+
+        cut.Find("[data-testid='crmhr-directory-search']")
+            .Input("Paging slice party");
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Equal(8, cut.FindAll("[data-testid='crmhr-directory-item']").Count);
+            Assert.Contains("Paging slice party 01", cut.Markup);
+            Assert.Contains("Paging slice party 08", cut.Markup);
+            Assert.DoesNotContain("Paging slice party 09", cut.Markup);
+            Assert.Contains("Showing 1-8 of 10", cut.Markup);
+        });
+    }
+
     [Fact]
     public async Task Late_previous_party_load_cannot_replace_current_agent_chat_surface()
     {

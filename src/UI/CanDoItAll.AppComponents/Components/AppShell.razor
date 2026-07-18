@@ -16,7 +16,9 @@
             <div class="cda-shell-sidebar__inner">
                 <div class="cda-shell-sidebar__top">
                     <div class="@ResolveBrandClass()">
-                        <span class="cda-shell-brand-mark" aria-hidden="true">CD</span>
+                        <span class="cda-shell-brand-mark" aria-hidden="true">
+                            <Icon Name="@ResolveBrandIconName()" />
+                        </span>
                         @if (IsNavigationExpanded)
                         {
                             <div class="min-w-0">
@@ -62,7 +64,7 @@
                         var isActive = IsRouteMatch(normalizedCurrentRoute, item.Route);
                         <TooltipTarget Position="TooltipPosition.Right"
                                        Delay="@MenuTooltipDelay"
-                                       TriggerClass="w-full"
+                                       TriggerClass="w-full justify-center"
                                        TooltipClass="cda-shell-nav-tooltip"
                                        TestId="@BuildNavigationTooltipTestId(item.Route)">
                             <TooltipContent Context="_">
@@ -350,7 +352,8 @@
                                  CloseOthers="CloseOtherTabs"
                                  CloseRight="CloseTabsToRight"
                                  CloseBackground="CloseBackgroundTabs"
-                                 ReopenRecent="ReopenRecentTab" />
+                                 ReopenRecent="ReopenRecentTab"
+                                 ClearRecent="ClearRecentTabs" />
                 </div>
 
                 @if (TopBar is not null)
@@ -399,6 +402,7 @@
 </div>
 
 @code {
+    private const string DefaultBrandIconName = "apps";
     private const int ExpandedNavigationFallbackRowCapacity = 12;
     private const int CollapsedNavigationFallbackRowCapacity = 13;
     private const int MinimumNavigationRowCapacity = 4;
@@ -439,6 +443,9 @@
 
     [Parameter]
     public bool ShowTabSummary { get; set; } = true;
+
+    [Parameter]
+    public string? BrandIconName { get; set; }
 
     [Parameter]
     public string CollapsedRailLabel { get; set; } = "Workspace context";
@@ -514,6 +521,9 @@
 
     [Parameter]
     public EventCallback<string> ReopenRecentTab { get; set; }
+
+    [Parameter]
+    public EventCallback ClearRecentTabs { get; set; }
 
     [Parameter]
     public RenderFragment? TopBar { get; set; }
@@ -662,6 +672,11 @@
             ? "cda-shell-brand cda-shell-brand--expanded"
             : "cda-shell-brand cda-shell-brand--collapsed";
     }
+
+    private string ResolveBrandIconName()
+        => string.IsNullOrWhiteSpace(BrandIconName)
+            ? DefaultBrandIconName
+            : BrandIconName;
 
     private string ResolveNavigationClass()
     {

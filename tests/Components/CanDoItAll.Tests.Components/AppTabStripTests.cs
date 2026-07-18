@@ -64,6 +64,29 @@ public sealed class AppTabStripTests : TestContext
 
         Assert.DoesNotContain("+2", cut.Markup);
     }
+
+    [Fact]
+    public void Recent_tabs_menu_explains_retention_and_invokes_clear()
+    {
+        var cleared = false;
+        var recentTabs = new[]
+        {
+            new WorkbenchTabState("projects", "Projects", "/projects"),
+            new WorkbenchTabState("settings", "Settings", "/settings")
+        };
+
+        var cut = RenderComponent<AppTabStrip>(parameters => parameters
+            .Add(component => component.Items, [new WorkbenchTabState("dashboard", "Dashboard", "/")])
+            .Add(component => component.RecentTabs, recentTabs)
+            .Add(component => component.ClearRecent, EventCallback.Factory.Create(this, () => cleared = true)));
+
+        Assert.Contains("Reopen (2)", cut.Markup);
+        Assert.Contains($"latest {WorkbenchTabHistoryPolicy.RecentTabCapacity} kept", cut.Markup);
+
+        cut.Find("[data-testid='clear-recent-tabs']").Click();
+
+        Assert.True(cleared);
+    }
 }
 
 

@@ -12,28 +12,54 @@
     </div>
 }
 
-<Cluster Wrap="FlexWrap.Wrap"
-         Gap="LayoutGap.Small"
-         Class="cda-shell-status-row justify-end"
-         data-testid="layout-compact-status-bar">
-    <Cluster Wrap="FlexWrap.NoWrap"
-             Gap="LayoutGap.XSmall"
-             Class="min-w-0 rounded-full border border-slate-200 bg-white/85 px-2.5 py-1 shadow-sm">
-        <span class="cda-eyebrow cda-eyebrow--tight whitespace-nowrap text-[0.62rem]">@ActiveWorkspaceTitle</span>
-        <span class="max-w-[13rem] truncate text-xs font-semibold text-slate-950">@ActiveNavigationTitle</span>
-    </Cluster>
-    @if (!string.IsNullOrWhiteSpace(ActiveProjectTitle))
-    {
-        <StatusBadge Tone="info" Text="@ActiveProjectTitle" />
-    }
-    @if (!string.IsNullOrWhiteSpace(ActivePhaseTitle))
-    {
-        <StatusBadge Tone="neutral" Text="@ActivePhaseTitle" />
-    }
-    <StatusBadge Tone="info" Text="Interactive Server" />
-    <StatusBadge Tone="success" Text="@($"Live items {OpenedItemCount}")" />
-    <StatusBadge Tone="neutral" Text="@($"Tabs {TabCount}")" />
-</Cluster>
+<div class="cda-shell-status-row"
+     data-testid="layout-compact-status-bar">
+    <HelpPopover RootClass="pf-help-popover cda-shell-status-popover-root"
+                 ToggleClass="pf-help-popover__toggle cda-shell-status-trigger"
+                 PanelClass="pf-help-popover__panel cda-shell-status-panel"
+                 PanelTestId="layout-status-popover"
+                 Glyph="i"
+                 AriaLabel="Workspace status"
+                 Title="Show workspace status"
+                 OpenOnHover="true">
+        <PanelContent>
+            <Stack GapScale="LayoutGap.Medium"
+                   Class="cda-shell-status-popover"
+                   data-testid="layout-status-content">
+                <Cluster Gap="LayoutGap.Small"
+                         Wrap="FlexWrap.NoWrap"
+                         AlignItems="AlignItems.Center"
+                         Class="border-b border-slate-200 pb-2.5">
+                    <span class="cda-shell-status-popover__icon" aria-hidden="true">
+                        <Icon Name="monitor_heart" />
+                    </span>
+                    <Stack GapScale="LayoutGap.XSmall" Class="min-w-0">
+                        <p class="cda-shell-status-popover__title">Workspace status</p>
+                        <p class="cda-shell-status-popover__description">Current context and live shell counts</p>
+                    </Stack>
+                </Cluster>
+
+                <Cluster Wrap="FlexWrap.Wrap"
+                         Gap="LayoutGap.XSmall"
+                         AlignItems="AlignItems.Center">
+                    <StatusBadge Tone="neutral" Text="@ActiveWorkspaceTitle" />
+                    <StatusBadge Tone="info" Text="@ActiveNavigationTitle" />
+                    @if (!string.IsNullOrWhiteSpace(ActiveProjectTitle))
+                    {
+                        <StatusBadge Tone="info" Text="@ActiveProjectTitle" />
+                    }
+                    @if (!string.IsNullOrWhiteSpace(ActivePhaseTitle))
+                    {
+                        <StatusBadge Tone="neutral" Text="@ActivePhaseTitle" />
+                    }
+                    <StatusBadge Tone="info" Text="Interactive Server" />
+                    <StatusBadge Tone="success" Text="@($"Live items {OpenedItemCount}")" />
+                    <StatusBadge Tone="neutral" Text="@($"Tabs {TabCount}")" />
+                </Cluster>
+            </Stack>
+        </PanelContent>
+    </HelpPopover>
+</div>
 
 @code {
     [Parameter]

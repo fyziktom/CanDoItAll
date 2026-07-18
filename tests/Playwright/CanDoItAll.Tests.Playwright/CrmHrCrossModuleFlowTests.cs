@@ -53,8 +53,10 @@ public sealed class CrmHrCrossModuleFlowTests
         Assert.False(await page.Locator("#blazor-error-ui").IsVisibleAsync());
 
         await page.GotoAsync($"{fixture.BaseUrl}/crm-hr/directory?partyId={seed.CandidateId:D}");
-        await page.GetByTestId("crmhr-party-assignment-item").WaitForAsync();
+        await page.GetByTestId("crmhr-party-display-name").WaitForAsync();
         await ExpectInputValueContainsAsync(page.GetByTestId("crmhr-party-display-name"), seed.CandidateName);
+        await page.GetByTestId("crmhr-directory-tab-activity").ClickAsync();
+        await page.GetByTestId("crmhr-party-assignment-item").WaitForAsync();
         await page.WaitForSelectorAsync($"text={seed.ProjectName}");
         await page.ScreenshotAsync(new PageScreenshotOptions
         {

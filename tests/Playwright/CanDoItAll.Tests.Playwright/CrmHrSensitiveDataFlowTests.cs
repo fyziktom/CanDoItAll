@@ -39,11 +39,13 @@ public sealed class CrmHrSensitiveDataFlowTests
         await DismissStartupModalIfPresentAsync(page);
         await page.GetByTestId("crmhr-party-save-button").WaitForAsync();
 
+        await page.GetByTestId("crmhr-directory-tab-handling").ClickAsync();
         await ExpectTextContainsAsync(page.GetByTestId("crmhr-directory-sensitive-callout"), "Hidden from global search");
         var confidentialNoteItem = page.GetByTestId("crmhr-confidential-note-item").First;
         await confidentialNoteItem.WaitForAsync();
         Assert.Equal(confidentialNote, await confidentialNoteItem.Locator("textarea").InputValueAsync());
 
+        await page.GetByTestId("crmhr-directory-tab-profile").ClickAsync();
         await page.GetByTestId("crmhr-party-status").SelectOptionAsync(new[] { PartyLifecycleStatus.Archived.ToString() });
         await SavePartyAsync(page);
         await ExpectTextContainsAsync(page.Locator("body"), $"Archived party '{partyName}'.");
@@ -53,6 +55,8 @@ public sealed class CrmHrSensitiveDataFlowTests
         await ExpectTextContainsAsync(page.Locator("body"), $"Reactivated party '{partyName}'.");
         Assert.False(await page.Locator("#blazor-error-ui").IsVisibleAsync());
 
+        await page.GetByTestId("crmhr-directory-tab-handling").ClickAsync();
+        await page.GetByTestId("crmhr-directory-sensitive-callout").WaitForAsync();
         await page.ScreenshotAsync(new PageScreenshotOptions
         {
             Path = Path.Combine(evidenceDirectory, "crm-hr-directory-b12-desktop.png"),

@@ -381,6 +381,88 @@ public sealed class WorkbenchStateServiceTests
         Assert.DoesNotContain(store.SavedSnapshot!.Tabs, tab => tab.TabId == "project-structure");
     }
 
+    [Fact]
+    public async Task CloseAsync_keeps_only_the_latest_recent_tabs()
+    {
+        var clock = new TestClock(new DateTimeOffset(2026, 3, 19, 12, 0, 0, TimeSpan.Zero));
+        var store = new TestWorkbenchStateStore();
+        var service = new WorkbenchStateService(
+            store,
+            Options.Create(new WorkbenchOptions { MaxWarmTabs = 3, SleepAfterMinutes = 15 }),
+            clock);
+
+        await service.InitializeAsync([new WorkbenchTabState("dashboard", "Dashboard", "/", IsPinned: true)]);
+        for (var index = 0; index < WorkbenchTabHistoryPolicy.RecentTabCapacity + 3; index++)
+        {
+            await service.TrackRouteAsync($"/page-{index}", $"Page {index}", false);
+            await service.CloseAsync(service.ActiveTabId!);
+        }
+
+        Assert.Equal(WorkbenchTabHistoryPolicy.RecentTabCapacity, service.RecentTabs.Count);
+        Assert.Equal("Page 14", service.RecentTabs[0].Title);
+        Assert.Equal("Page 3", service.RecentTabs[^1].Title);
+    }
+
+    [Fact]
+    public async Task InitializeAsync_trims_oversized_recent_tab_history()
+    {
+        var now = new DateTimeOffset(2026, 3, 19, 12, 0, 0, TimeSpan.Zero);
+        var clock = new TestClock(now);
+        var recentTabs = Enumerable.Range(0, WorkbenchTabHistoryPolicy.RecentTabCapacity + 3)
+            .OrderBy(index => index % 4)
+            .ThenByDescending(index => index)
+            .Select(index => new WorkbenchTabState(
+                $"recent-{index}",
+                $"Recent {index}",
+                $"/recent-{index}",
+                ClosedAtUtc: now.AddMinutes(-index)))
+            .ToArray();
+        var store = new TestWorkbenchStateStore
+        {
+            Snapshot = new WorkbenchSessionSnapshot(
+                4,
+                "dashboard",
+                [new WorkbenchTabState("dashboard", "Dashboard", "/")],
+                CompatibilityMarker: "candoitall.workbench.v4",
+                RecentTabs: recentTabs)
+        };
+        var service = new WorkbenchStateService(
+            store,
+            Options.Create(new WorkbenchOptions { MaxWarmTabs = 3, SleepAfterMinutes = 15 }),
+            clock);
+
+        await service.InitializeAsync([new WorkbenchTabState("dashboard-default", "Dashboard", "/")]);
+
+        Assert.Equal(WorkbenchTabHistoryPolicy.RecentTabCapacity, service.RecentTabs.Count);
+        Assert.Equal("recent-0", service.RecentTabs[0].TabId);
+        Assert.Equal($"recent-{WorkbenchTabHistoryPolicy.RecentTabCapacity - 1}", service.RecentTabs[^1].TabId);
+        Assert.Equal(WorkbenchTabHistoryPolicy.RecentTabCapacity, store.SavedSnapshot!.RecentTabs!.Count);
+    }
+
+    [Fact]
+    public async Task ClearRecentTabsAsync_clears_and_persists_history()
+    {
+        var clock = new TestClock(new DateTimeOffset(2026, 3, 19, 12, 0, 0, TimeSpan.Zero));
+        var store = new TestWorkbenchStateStore();
+        var service = new WorkbenchStateService(
+            store,
+            Options.Create(new WorkbenchOptions { MaxWarmTabs = 3, SleepAfterMinutes = 15 }),
+            clock);
+
+        await service.InitializeAsync([new WorkbenchTabState("dashboard", "Dashboard", "/", IsPinned: true)]);
+        await service.TrackRouteAsync("/projects", "Projects", false);
+        await service.CloseAsync(service.ActiveTabId!);
+        Assert.Single(service.RecentTabs);
+        var changeCount = 0;
+        service.Changed += () => changeCount++;
+
+        await service.ClearRecentTabsAsync();
+
+        Assert.Empty(service.RecentTabs);
+        Assert.Empty(store.SavedSnapshot!.RecentTabs ?? []);
+        Assert.Equal(1, changeCount);
+    }
+
     private sealed class TestWorkbenchStateStore : IWorkbenchStateStore
     {
         public WorkbenchSessionSnapshot? Snapshot { get; init; }

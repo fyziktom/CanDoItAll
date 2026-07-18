@@ -15,6 +15,11 @@ public static class WorkbenchTabKinds
     public const string Settings = "settings";
 }
 
+public static class WorkbenchTabHistoryPolicy
+{
+    public const int RecentTabCapacity = 12;
+}
+
 public sealed record WorkbenchTabDescriptor(
     string TabId,
     string Title,

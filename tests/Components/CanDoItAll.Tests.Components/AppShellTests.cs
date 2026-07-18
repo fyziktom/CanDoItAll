@@ -77,4 +77,18 @@ public sealed class AppShellTests : TestContext
 
         Assert.Equal(TimeSpan.FromSeconds(2), dashboardTooltip.Instance.Delay);
     }
+
+    [Fact]
+    public void Brand_icon_uses_default_for_missing_values_and_allows_an_override()
+    {
+        var defaultCut = RenderComponent<AppShell>();
+        var blankCut = RenderComponent<AppShell>(parameters => parameters
+            .Add(component => component.BrandIconName, " "));
+        var customCut = RenderComponent<AppShell>(parameters => parameters
+            .Add(component => component.BrandIconName, "rocket_launch"));
+
+        Assert.Equal("apps", defaultCut.Find(".cda-shell-brand-mark").TextContent.Trim());
+        Assert.Equal("apps", blankCut.Find(".cda-shell-brand-mark").TextContent.Trim());
+        Assert.Equal("rocket_launch", customCut.Find(".cda-shell-brand-mark").TextContent.Trim());
+    }
 }

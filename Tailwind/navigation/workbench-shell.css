@@ -43,6 +43,10 @@
     @apply flex shrink-0 items-center justify-between gap-2;
   }
 
+  .cda-shell-sidebar--collapsed .cda-shell-sidebar__top {
+    @apply relative;
+  }
+
   .cda-shell-brand {
     @apply flex min-w-0 items-center gap-2;
   }
@@ -61,6 +65,10 @@
 
   .cda-shell-toggle-button {
     @apply inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-slate-300 transition hover:bg-white/10 hover:text-white;
+  }
+
+  .cda-shell-sidebar--collapsed .cda-shell-toggle-button {
+    @apply absolute -right-4 top-1/2 h-7 w-7 -translate-y-1/2;
   }
 
   .cda-shell-expanded-context {
@@ -496,7 +504,52 @@
   }
 
   .cda-shell-status-row {
-    @apply min-w-0;
+    @apply flex min-w-0 justify-end;
+  }
+
+  .cda-shell-status-popover-root {
+    @apply inline-flex items-center;
+  }
+
+  .cda-shell-status-trigger {
+    @apply inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white/85 text-slate-500 shadow-sm transition hover:border-sky-200 hover:bg-sky-50 hover:text-sky-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-400;
+  }
+
+  .cda-shell-status-trigger > span {
+    @apply text-[0.7rem] font-black leading-none;
+  }
+
+  .cda-shell-status-panel {
+    @apply w-80 max-w-[calc(100vw-2rem)] gap-0 rounded-xl border-slate-200 bg-white p-0 text-slate-900 shadow-2xl shadow-slate-950/15;
+  }
+
+  .cda-shell-status-popover {
+    @apply w-full px-3 py-3;
+  }
+
+  .cda-shell-status-popover__icon {
+    @apply inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-sky-50 text-sky-700;
+  }
+
+  .cda-shell-status-panel .cda-shell-status-popover__title {
+    @apply m-0 text-sm font-semibold leading-5 text-slate-950;
+  }
+
+  .cda-shell-status-panel .cda-shell-status-popover__description {
+    @apply m-0 text-xs font-normal leading-4 text-slate-500;
+  }
+
+  .cda-tab-menu__panel--recent {
+    @apply flex flex-col gap-3;
+    max-height: min(38rem, calc(100vh - 5rem));
+  }
+
+  .cda-tab-menu__panel--recent .cda-tab-menu__list {
+    @apply min-h-0 overflow-y-auto pr-1;
+  }
+
+  .cda-tab-recent-header {
+    @apply shrink-0 border-b border-slate-200 pb-2;
   }
 
   @media (min-width: 1280px) {

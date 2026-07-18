@@ -62,26 +62,58 @@
             @if (RecentTabs.Count > 0)
             {
                 <details class="group cda-tab-menu">
-                    <summary class="cda-tab-menu__summary">
-                        Reopen
+                    <summary class="cda-tab-menu__summary"
+                             data-testid="recent-tabs-menu-trigger">
+                        Reopen (@RecentTabs.Count)
                     </summary>
-                    <div class="cda-tab-menu__panel cda-tab-menu__panel--compact">
+                    <Stack GapScale="LayoutGap.Small"
+                           Class="cda-tab-menu__panel cda-tab-menu__panel--compact cda-tab-menu__panel--recent"
+                           data-testid="recent-tabs-menu-panel">
+                        <Cluster Gap="LayoutGap.Small"
+                                 Wrap="FlexWrap.NoWrap"
+                                 AlignItems="AlignItems.Center"
+                                 JustifyContent="JustifyContent.SpaceBetween"
+                                 Class="cda-tab-recent-header">
+                            <Stack GapScale="LayoutGap.XSmall" Class="min-w-0">
+                                <p class="text-sm font-semibold text-slate-900">Recently closed</p>
+                                <p class="truncate text-xs text-slate-500">
+                                    Stored in this browser · latest @WorkbenchTabHistoryPolicy.RecentTabCapacity kept
+                                </p>
+                            </Stack>
+                            <Button Text="Clear all"
+                                    Icon="delete_sweep"
+                                    ButtonStyle="ButtonStyle.Light"
+                                    Variant="Variant.Text"
+                                    Size="ButtonSize.Small"
+                                    Class="flex-shrink-0"
+                                    Click="@(() => ClearRecent.InvokeAsync())"
+                                    data-testid="clear-recent-tabs" />
+                        </Cluster>
                         <div class="cda-tab-menu__list">
-                            @foreach (var recent in FilteredRecentTabs)
+                            @if (FilteredRecentTabs.Count == 0)
                             {
-                                <button type="button"
-                                        class="cda-tab-menu__item"
-                                        title="Reopen recent tab"
-                                        @onclick="() => ReopenRecent.InvokeAsync(recent.TabId)">
-                                    <span class="min-w-0">
-                                        <span class="block truncate font-semibold text-slate-900">@recent.Title</span>
-                                        <span class="block truncate text-xs text-slate-500">@recent.TabGroup / @recent.Route</span>
-                                    </span>
-                                    <span class="text-slate-500" aria-hidden="true"><Icon Name="restore" /></span>
-                                </button>
+                                <p class="rounded-xl border border-dashed border-slate-200 px-3 py-4 text-center text-sm text-slate-500">
+                                    No recently closed tabs match your search.
+                                </p>
+                            }
+                            else
+                            {
+                                @foreach (var recent in FilteredRecentTabs)
+                                {
+                                    <button type="button"
+                                            class="cda-tab-menu__item"
+                                            title="Reopen recent tab"
+                                            @onclick="() => ReopenRecent.InvokeAsync(recent.TabId)">
+                                        <span class="min-w-0">
+                                            <span class="block truncate font-semibold text-slate-900">@recent.Title</span>
+                                            <span class="block truncate text-xs text-slate-500">@recent.TabGroup / @recent.Route</span>
+                                        </span>
+                                        <span class="text-slate-500" aria-hidden="true"><Icon Name="restore" /></span>
+                                    </button>
+                                }
                             }
                         </div>
-                    </div>
+                    </Stack>
                 </details>
             }
         </Cluster>
@@ -167,6 +199,9 @@
 
     [Parameter]
     public EventCallback<string> ReopenRecent { get; set; }
+
+    [Parameter]
+    public EventCallback ClearRecent { get; set; }
 
     private WorkbenchTabState? ActiveTab => Items.FirstOrDefault(tab => string.Equals(tab.TabId, ActiveTabId, StringComparison.Ordinal));
 

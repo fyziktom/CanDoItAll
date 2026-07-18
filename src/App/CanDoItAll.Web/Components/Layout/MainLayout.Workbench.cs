@@ -78,6 +78,8 @@ public partial class MainLayout
         }
     }
 
+    private Task HandleClearRecentTabsAsync() => Workbench.ClearRecentTabsAsync();
+
     private void HandleWorkbenchChanged() => _ = InvokeAsync(StateHasChanged);
 
     private void HandleLocationChanged(object? sender, LocationChangedEventArgs e)

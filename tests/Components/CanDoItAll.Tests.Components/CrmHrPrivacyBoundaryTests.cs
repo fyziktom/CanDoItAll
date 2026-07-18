@@ -59,6 +59,10 @@ public sealed class CrmHrPrivacyBoundaryTests
 
         navigation.NavigateTo($"/crm-hr/directory?partyId={saveResult.Value}");
         var cut = harness.Context.RenderComponent<CrmHrDirectoryPage>();
+        cut.WaitForAssertion(() => Assert.Equal(
+            "Rhea Sensitive",
+            cut.Find("[data-testid='crmhr-party-display-name']").GetAttribute("value")));
+        cut.WaitForElement("[data-testid='crmhr-directory-tab-handling']").Click();
 
         cut.WaitForAssertion(() =>
         {

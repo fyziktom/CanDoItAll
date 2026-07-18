@@ -47,6 +47,7 @@ public sealed class CrmHrDirectoryFlowTests
         await FillBasicPartyAsync(page, retainedName, sharedEmail, "+1 206 555 0101", PartyRoleKind.Customer, "RETAINED");
         await SavePartyAsync(page);
 
+        await page.GetByTestId("crmhr-directory-tab-contacts").ClickAsync();
         await page.GetByTestId("crmhr-contact-add").ClickAsync();
         var contactType = page.Locator("[data-testid^='crmhr-contact-type-']").First;
         await RequireLocatorAsync(page, contactType, Path.Combine(evidenceDirectory, "crm-hr-directory-b03-contact-missing.html"));
@@ -63,6 +64,7 @@ public sealed class CrmHrDirectoryFlowTests
         await page.Locator("[data-testid^='crmhr-address-primary-']").First.CheckAsync();
         await SavePartyAsync(page);
 
+        await page.GetByTestId("crmhr-directory-tab-relationships").ClickAsync();
         await page.GetByTestId("crmhr-relationship-add").ClickAsync();
         await page.Locator("[data-testid^='crmhr-relationship-kind-']").First.SelectOptionAsync(new[] { PartyRelationshipKind.ManagedBy.ToString() });
         await page.Locator("[data-testid^='crmhr-relationship-party-']").First.SelectOptionAsync(
@@ -75,15 +77,25 @@ public sealed class CrmHrDirectoryFlowTests
             });
         await page.Locator("[data-testid^='crmhr-relationship-notes-']").First.FillAsync("Primary parent");
         await page.GetByTestId("crmhr-party-save-button").ClickAsync();
+
+        var importExportDialog = page.GetByTestId("crmhr-directory-import-export-dialog");
+        await page.GetByTestId("crmhr-directory-import-export-button").ClickAsync();
+        await importExportDialog.WaitForAsync();
         await page.GetByTestId("crmhr-export-refresh").ClickAsync();
         await ExpectTextAreaValueContainsAsync(page.GetByTestId("crmhr-export-textarea"), retainedName);
         await ExpectTextAreaValueContainsAsync(page.GetByTestId("crmhr-export-textarea"), "100 Market Street");
+        await importExportDialog.GetByRole(AriaRole.Button, new() { Name = "Close", Exact = true }).ClickAsync();
+        await importExportDialog.WaitForAsync(new LocatorWaitForOptions
+        {
+            State = WaitForSelectorState.Detached
+        });
 
         await OpenNewPartyAsync(page);
         await FillBasicPartyAsync(page, duplicateName, sharedEmail, "+1 206 555 0102", PartyRoleKind.Customer, "DUPLICATE");
         await SavePartyAsync(page);
 
         await SelectPartyAsync(page, retainedName);
+        await page.GetByTestId("crmhr-directory-tab-relationships").ClickAsync();
         await page.GetByRole(AriaRole.Button, new() { Name = "Merge into current party", Exact = true }).ClickAsync();
         await page.GetByTestId("crmhr-merge-dialog").WaitForAsync();
         await page.GetByTestId("crmhr-merge-reason").FillAsync("Playwright merge validation");
@@ -99,14 +111,21 @@ public sealed class CrmHrDirectoryFlowTests
             {importedName},Person,Active,IMP-{suffix},{importedName} LLC,{importedName},Imported through Playwright,imported,NA,US,America/Chicago,False,Candidate|Candidate|True,Email|Primary|imported.{suffix}@example.test|True|True,Work|200 Lake Street||Chicago|IL|60601|US|True
             """;
 
+        await page.GetByTestId("crmhr-directory-import-export-button").ClickAsync();
+        await importExportDialog.WaitForAsync();
         await page.GetByTestId("crmhr-import-textarea").FillAsync(csvContent);
         await page.GetByTestId("crmhr-import-preview-button").ClickAsync();
         await page.GetByTestId("crmhr-import-row").WaitForAsync();
         await page.WaitForSelectorAsync($"text={importedName}");
         await page.GetByTestId("crmhr-import-apply-button").ClickAsync();
+        await importExportDialog.WaitForAsync(new LocatorWaitForOptions
+        {
+            State = WaitForSelectorState.Detached
+        });
 
         await page.GetByTestId("crmhr-directory-search").FillAsync(importedName);
         await WaitForListItemCountAsync(page, 1);
+        await SelectPartyAsync(page, importedName);
         Assert.False(await page.Locator("#blazor-error-ui").IsVisibleAsync());
 
         await page.ScreenshotAsync(new PageScreenshotOptions

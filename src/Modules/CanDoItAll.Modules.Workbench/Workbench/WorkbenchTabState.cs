@@ -24,7 +24,6 @@ public sealed class WorkbenchStateService(
 {
     private const int SnapshotVersion = 4;
     private const string CompatibilityMarker = "candoitall.workbench.v4";
-    private const int MaxRecentTabs = 12;
     private static readonly string[] RetiredModuleRoutes =
     [
         "/activity",
@@ -95,7 +94,9 @@ public sealed class WorkbenchStateService(
 
         if (snapshot?.RecentTabs is { Count: > 0 })
         {
-            foreach (var recentTab in snapshot.RecentTabs)
+            foreach (var recentTab in snapshot.RecentTabs
+                .OrderByDescending(tab => tab.ClosedAtUtc.HasValue)
+                .ThenByDescending(tab => tab.ClosedAtUtc))
             {
                 if (!TryNormalizeRestoredTab(recentTab, out var normalized, out _))
                 {
@@ -108,8 +109,10 @@ public sealed class WorkbenchStateService(
                     continue;
                 }
 
-                _recentTabs.Add(normalized with { ClosedAtUtc = recentTab.ClosedAtUtc ?? clock.GetUtcNow() });
+                _recentTabs.Add(normalized with { ClosedAtUtc = recentTab.ClosedAtUtc ?? DateTimeOffset.MinValue });
             }
+
+            TrimRecentTabs();
         }
 
         if (_tabs.Count == 0)
@@ -479,6 +482,18 @@ public sealed class WorkbenchStateService(
         NotifyStateChanged();
     }
 
+    public async Task ClearRecentTabsAsync(CancellationToken cancellationToken = default)
+    {
+        if (_recentTabs.Count == 0)
+        {
+            return;
+        }
+
+        _recentTabs.Clear();
+        await PersistAsync(cancellationToken);
+        NotifyStateChanged();
+    }
+
     public async Task TogglePinAsync(string tabId, CancellationToken cancellationToken = default)
     {
         var tab = _tabs.FirstOrDefault(candidate => string.Equals(candidate.TabId, tabId, StringComparison.Ordinal));
@@ -683,9 +698,16 @@ public sealed class WorkbenchStateService(
             IsSleeping = false
         }));
 
-        if (_recentTabs.Count > MaxRecentTabs)
+        TrimRecentTabs();
+    }
+
+    private void TrimRecentTabs()
+    {
+        if (_recentTabs.Count > WorkbenchTabHistoryPolicy.RecentTabCapacity)
         {
-            _recentTabs.RemoveRange(MaxRecentTabs, _recentTabs.Count - MaxRecentTabs);
+            _recentTabs.RemoveRange(
+                WorkbenchTabHistoryPolicy.RecentTabCapacity,
+                _recentTabs.Count - WorkbenchTabHistoryPolicy.RecentTabCapacity);
         }
     }
 
