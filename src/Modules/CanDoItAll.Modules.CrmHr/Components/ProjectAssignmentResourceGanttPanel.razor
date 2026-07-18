@@ -1,0 +1,109 @@
+@using CanDoItAll.Components.BaseLib
+@using CanDoItAll.Components.Gantt
+@using CanDoItAll.Modules.Projects
+
+@{
+    var projection = ProjectAssignmentGanttProjectionAdapter.Build(
+        Assignments,
+        DateOnly.FromDateTime(DateTime.UtcNow));
+}
+
+<SurfaceCard data-testid="crmhr-assignment-resource-schedule">
+    <Stack GapScale="LayoutGap.Large">
+        <Split Breakpoint="LayoutBreakpoint.Lg"
+               Gap="LayoutGap.Medium"
+               AlignItems="AlignItems.Start"
+               JustifyContent="JustifyContent.SpaceBetween">
+            <Stack GapScale="LayoutGap.Tiny" Class="min-w-0">
+                <p class="cda-eyebrow">Resource schedule</p>
+                <h2 class="text-xl font-semibold text-slate-950">@ScheduleTitle</h2>
+                <p class="max-w-3xl text-sm leading-6 text-slate-600">
+                    Read-only assignment windows from CRM/HR. Resource names are displayed on each row; allocation percentages describe commitment and are not treated as delivery progress.
+                </p>
+            </Stack>
+            <Cluster Gap="LayoutGap.Small">
+                <StatusBadge Tone="info" Text="@($"{projection.Tasks.Count} scheduled")" />
+                <StatusBadge Tone="base" Text="@($"{DistinctResourceCount} resources")" />
+            </Cluster>
+        </Split>
+
+        @if (projection.Issues.Count > 0)
+        {
+            <Alert AlertStyle="AlertStyle.Warning"
+                   data-testid="crmhr-assignment-resource-gantt-invalid-date-warning">
+                @projection.Issues.Count assignment(s) cannot be drawn. Their authoritative records remain available in the Relationships and Allocations tabs.
+                <ul class="mt-2 list-disc space-y-1 pl-5">
+                    @foreach (var issue in projection.Issues)
+                    {
+                        <li>@FormatIssue(issue)</li>
+                    }
+                </ul>
+            </Alert>
+        }
+
+        @if (projection.HasOpenBoundary)
+        {
+            <Alert AlertStyle="AlertStyle.Info"
+                   data-testid="crmhr-assignment-resource-gantt-open-boundary">
+                Open assignment boundaries are clipped for display to @projection.HorizonStart.ToString("yyyy-MM-dd") through @projection.HorizonEndInclusive.ToString("yyyy-MM-dd"). Saved assignment dates are unchanged.
+            </Alert>
+        }
+
+        @if (projection.Tasks.Count == 0)
+        {
+            <EmptyState Eyebrow="No scheduled resources"
+                        Title="Add a dated project allocation"
+                        Description="Saved allocations and resource relationships with date windows will appear here. Open-ended assignments are also supported." />
+        }
+        else
+        {
+            <Stack Class="w-full min-w-0"
+                   data-testid="crmhr-assignment-resource-gantt">
+                <GanttChart Tasks="projection.Tasks"
+                            Dependencies="EmptyDependencies"
+                            TimeScale="GanttTimeScale.Day"
+                            ShowTaskTable="true"
+                            ShowToolbar="true"
+                            AllowTaskEditing="false"
+                            AllowTimelineTaskCreation="false"
+                            AllowDependencyEditing="false"
+                            AllowTaskInsertion="false"
+                            AllowTaskReordering="false"
+                            RowHeight="48"
+                            HeaderHeight="40"
+                            BarHeight="26"
+                            TaskTableWidth="560"
+                            MaxHeight="36rem"
+                            ExportFileName="project-resource-assignments.png"
+                            AriaLabel="Read-only project assigned-resource schedule" />
+            </Stack>
+        }
+    </Stack>
+</SurfaceCard>
+
+@code {
+    private static readonly IReadOnlyList<GanttDependency> EmptyDependencies = [];
+
+    [Parameter]
+    public string ProjectName { get; set; } = string.Empty;
+
+    [Parameter]
+    public IReadOnlyList<ProjectPartyAssignmentDetail> Assignments { get; set; } = [];
+
+    private string ScheduleTitle => string.IsNullOrWhiteSpace(ProjectName)
+        ? "Assigned-resource timeline"
+        : $"{ProjectName} resource timeline";
+
+    private int DistinctResourceCount => Assignments
+        .Select(assignment => assignment.PartyId)
+        .Distinct()
+        .Count();
+
+    private static string FormatIssue(ProjectAssignmentGanttProjectionIssue issue)
+    {
+        var resource = string.IsNullOrWhiteSpace(issue.Assignment.PartyDisplayName)
+            ? issue.Assignment.Id.ToString("D")
+            : issue.Assignment.PartyDisplayName;
+        return $"{resource}: {issue.Message}";
+    }
+}

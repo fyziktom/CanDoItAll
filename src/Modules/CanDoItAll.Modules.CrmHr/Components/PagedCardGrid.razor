@@ -1,0 +1,89 @@
+@typeparam TItem
+
+@if (Items.Count > 0)
+{
+    <Grid Gap="LayoutGap.Medium"
+          ColumnsMd="2"
+          ColumnsXl="3"
+          data-testid="@($"{TestIdPrefix}-grid")">
+        @foreach (var item in PagedItems)
+        {
+            <div @key="item" class="h-full">
+                @ItemTemplate(item)
+            </div>
+        }
+    </Grid>
+
+    @if (PageCount > 1)
+    {
+        <Split Breakpoint="LayoutBreakpoint.None"
+               Gap="LayoutGap.Small"
+               AlignItems="AlignItems.Center"
+               JustifyContent="JustifyContent.SpaceBetween"
+               Wrap="FlexWrap.Wrap"
+               Class="mt-3"
+               data-testid="@($"{TestIdPrefix}-pager")">
+            <SmallText Text="@($"Showing {FirstVisibleItem}-{LastVisibleItem} of {Items.Count}")" />
+            <Cluster Gap="LayoutGap.XSmall" Wrap="FlexWrap.NoWrap">
+                <TooltipTarget Text="Previous page" Position="TooltipPosition.Bottom">
+                    <Button ButtonStyle="ButtonStyle.Light"
+                            Class="cda-button--quick"
+                            Icon="chevron_left"
+                            Disabled="@(pageIndex == 0)"
+                            aria-label="Previous page"
+                            data-testid="@($"{TestIdPrefix}-previous-page")"
+                            Click="@(() => MovePage(-1))" />
+                </TooltipTarget>
+                <StatusBadge Tone="neutral" Text="@($"{pageIndex + 1} / {PageCount}")" />
+                <TooltipTarget Text="Next page" Position="TooltipPosition.Bottom">
+                    <Button ButtonStyle="ButtonStyle.Light"
+                            Class="cda-button--quick"
+                            Icon="chevron_right"
+                            Disabled="@(pageIndex >= PageCount - 1)"
+                            aria-label="Next page"
+                            data-testid="@($"{TestIdPrefix}-next-page")"
+                            Click="@(() => MovePage(1))" />
+                </TooltipTarget>
+            </Cluster>
+        </Split>
+    }
+}
+
+@code {
+    [Parameter, EditorRequired]
+    public IReadOnlyList<TItem> Items { get; set; } = [];
+
+    [Parameter, EditorRequired]
+    public RenderFragment<TItem> ItemTemplate { get; set; } = default!;
+
+    [Parameter]
+    public int PageSize { get; set; } = 6;
+
+    [Parameter]
+    public string TestIdPrefix { get; set; } = "crmhr-paged-cards";
+
+    private int pageIndex;
+
+    private int NormalizedPageSize => Math.Max(1, PageSize);
+
+    private int PageCount => Math.Max(1, (int)Math.Ceiling(Items.Count / (double)NormalizedPageSize));
+
+    private int FirstVisibleItem => pageIndex * NormalizedPageSize + 1;
+
+    private int LastVisibleItem => Math.Min((pageIndex + 1) * NormalizedPageSize, Items.Count);
+
+    private IReadOnlyList<TItem> PagedItems => Items
+        .Skip(pageIndex * NormalizedPageSize)
+        .Take(NormalizedPageSize)
+        .ToList();
+
+    protected override void OnParametersSet()
+    {
+        pageIndex = Math.Clamp(pageIndex, 0, PageCount - 1);
+    }
+
+    private void MovePage(int delta)
+    {
+        pageIndex = Math.Clamp(pageIndex + delta, 0, PageCount - 1);
+    }
+}

@@ -1,185 +1,364 @@
+@using CanDoItAll.Components.BaseLib
 @using CanDoItAll.Modules.Projects
 
-<FormSection Title="Staffing requests"
-             Description="Capture demand with explicit role, skills, dates, and allocation so HR and delivery use the same structured request surface.">
-    <SurfaceCard>
-        <p class="cda-eyebrow">Request demand</p>
-        <h3 class="mt-1 text-lg font-semibold text-slate-950">Open a staffing request</h3>
-        <p class="mt-2 text-sm leading-6 text-slate-600">
-            Requests stay scoped to the selected project so demand and project allocations remain traceable to the same portfolio record.
-        </p>
+@{
+    var filteredRequests = FilterRequests();
+}
 
-        <Grid Gap="LayoutGap.Medium" ColumnsMd="2" Class="mt-4">
-            <FormField Text="Request title">
-                <InputText @bind-Value="Draft.Title"
-                           class="cda-input"
-                           data-testid="crmhr-staffing-request-title" />
-            </FormField>
-            <FormField Text="Needed role">
-                <InputText @bind-Value="Draft.NeededRole"
-                           class="cda-input"
-                           data-testid="crmhr-staffing-request-role" />
-            </FormField>
-        </Grid>
+<Stack GapScale="LayoutGap.Medium">
+    <SurfaceCard Soft="true">
+        <Stack GapScale="LayoutGap.Small">
+            <Split Breakpoint="LayoutBreakpoint.None"
+                   Gap="LayoutGap.Small"
+                   AlignItems="AlignItems.Center"
+                   JustifyContent="JustifyContent.SpaceBetween"
+                   Wrap="FlexWrap.Wrap">
+                <div class="min-w-0">
+                    <p class="cda-eyebrow cda-eyebrow--tight">Project demand</p>
+                    <h3 class="mt-1 truncate text-lg font-semibold text-slate-950">Staffing requests</h3>
+                    <SmallText Text="@ProjectContextText" />
+                </div>
+                <TooltipTarget Text="@CreateTooltipText"
+                               Position="TooltipPosition.Bottom"
+                               TestId="crmhr-staffing-request-create-tooltip">
+                    <Button Class="cda-button--quick"
+                            Icon="add"
+                            Size="ButtonSize.Small"
+                            Disabled="@(!CanOpenCreate)"
+                            IsBusy="@isPreparingCreate"
+                            aria-label="Create staffing request"
+                            data-testid="crmhr-staffing-request-create-button"
+                            Click="OpenCreateAsync" />
+                </TooltipTarget>
+            </Split>
 
-        <Grid Gap="LayoutGap.Medium" ColumnsMd="4" Class="mt-4">
-            <FormField Text="Allocation %">
-                <InputNumber @bind-Value="Draft.AllocationPercent"
-                             class="cda-input"
-                             data-testid="crmhr-staffing-request-allocation" />
-            </FormField>
-            <FormField Text="Starts on">
-                <InputDate @bind-Value="Draft.StartDate"
-                           class="cda-input"
-                           data-testid="crmhr-staffing-request-start-date" />
-            </FormField>
-            <FormField Text="Ends on">
-                <InputDate @bind-Value="Draft.EndDate"
-                           class="cda-input"
-                           data-testid="crmhr-staffing-request-end-date" />
-            </FormField>
-            <FormField Text="Status">
-                <InputSelect @bind-Value="Draft.Status"
-                             class="cda-input"
-                             data-testid="crmhr-staffing-request-status">
+            <CompactFilterBar ResultText="@($"{filteredRequests.Count} of {Requests.Count} request(s)")">
+                <input @bind="searchText"
+                       @bind:event="oninput"
+                       class="cda-input cda-input--toolbar h-10 min-w-[16rem] flex-1"
+                       style="width: auto; flex: 1 1 24rem;"
+                       placeholder="Search title, role, project, requester, unit, skill, or notes"
+                       aria-label="Search staffing requests"
+                       data-testid="crmhr-staffing-request-search" />
+                <InputSelect TValue="StaffingRequestStatus?"
+                             @bind-Value="statusFilter"
+                             class="cda-input cda-input--toolbar h-10 min-w-[12rem]"
+                             style="width: 12rem; flex: 0 1 12rem;"
+                             aria-label="Filter staffing requests by status"
+                             data-testid="crmhr-staffing-request-status-filter">
+                    <option value="">All statuses</option>
                     @foreach (var status in Enum.GetValues<StaffingRequestStatus>())
                     {
                         <option value="@status">@status</option>
                     }
                 </InputSelect>
-            </FormField>
-        </Grid>
-
-        <Grid Gap="LayoutGap.Medium" ColumnsMd="2" Class="mt-4">
-            <FormField Text="Requested by">
-                <InputSelect @bind-Value="Draft.RequestedByPartyId"
-                             class="cda-input"
-                             data-testid="crmhr-staffing-request-requested-by">
-                    <option value="">Choose a requester</option>
-                    @foreach (var option in PartyOptions.OrderBy(item => item.DisplayName, StringComparer.OrdinalIgnoreCase))
-                    {
-                        <option value="@option.PartyId">@option.DisplayName (@option.PartyTypeLabel)</option>
-                    }
-                </InputSelect>
-            </FormField>
-            <FormField Text="Delivery unit">
-                <InputSelect @bind-Value="Draft.DeliveryUnitPartyId"
-                             class="cda-input"
-                             data-testid="crmhr-staffing-request-delivery-unit">
-                    <option value="">Choose a delivery unit</option>
-                    @foreach (var option in PartyOptions.OrderBy(item => item.DisplayName, StringComparer.OrdinalIgnoreCase))
-                    {
-                        <option value="@option.PartyId">@option.DisplayName (@option.PartyTypeLabel)</option>
-                    }
-                </InputSelect>
-            </FormField>
-        </Grid>
-
-        <div class="mt-4">
-            <p class="cda-field-label">Needed skills</p>
-            @if (SkillCatalog.Count == 0)
-            {
-                <div class="mt-2 rounded-[1.2rem] border border-amber-200 bg-amber-50 px-4 py-4 text-sm text-amber-700">
-                    Add skills on the workforce page first, then return here to request them.
-                </div>
-            }
-            else
-            {
-                <Grid Gap="LayoutGap.Small" ColumnsMd="2" Class="mt-2">
-                    @foreach (var skill in SkillCatalog.OrderBy(item => item.Category).ThenBy(item => item.Name))
-                    {
-                        <label class="rounded-[1rem] border border-slate-200 bg-slate-50/80 px-3 py-3 text-sm text-slate-700">
-                            <input type="checkbox"
-                                   checked="@Draft.SkillIds.Contains(skill.Id)"
-                                   data-testid="crmhr-staffing-request-skill"
-                                   @onchange="args => ToggleSkill(skill.Id, args)" />
-                            <span class="ml-2 font-medium text-slate-900">@skill.Name</span>
-                            @if (!string.IsNullOrWhiteSpace(skill.Category))
-                            {
-                                <span class="ml-2 text-slate-500">@skill.Category</span>
-                            }
-                        </label>
-                    }
-                </Grid>
-            }
-        </div>
-
-        <div class="mt-4">
-            <FormField Text="Notes">
-                <InputTextArea @bind-Value="Draft.Notes"
-                               class="cda-input cda-input--textarea min-h-[7rem]"
-                               data-testid="crmhr-staffing-request-notes" />
-            </FormField>
-        </div>
-
-        <Cluster Gap="LayoutGap.Small" Class="mt-4">
-            <Button Text="Save staffing request"
-                    Click="SaveRequest"
-                    data-testid="crmhr-staffing-request-save-button" />
-            <Button Text="Reset"
-                    ButtonStyle="ButtonStyle.Light"
-                    Click="ResetRequest"
-                    data-testid="crmhr-staffing-request-reset-button" />
-        </Cluster>
+            </CompactFilterBar>
+        </Stack>
     </SurfaceCard>
 
-    <SurfaceCard Soft="true" Class="mt-6">
-        <p class="cda-eyebrow">Current demand</p>
-        <h3 class="mt-1 text-lg font-semibold text-slate-950">@Requests.Count request(s)</h3>
-
-        @if (Requests.Count == 0)
-        {
-            <div class="mt-4">
-                <EmptyState Eyebrow="No staffing requests"
-                            Title="Capture the first request"
-                            Description="Open requests appear here once the selected project starts requesting staffing." />
-            </div>
-        }
-        else
-        {
-            <Stack GapScale="LayoutGap.Medium" Class="mt-4">
-                @foreach (var request in Requests)
-                {
-                    <PanelCard data-testid="crmhr-staffing-request-item">
-                        <Split Gap="LayoutGap.Medium"
+    @if (filteredRequests.Count == 0)
+    {
+        <EmptyState Eyebrow="@EmptyStateEyebrow"
+                    Title="@EmptyStateTitle"
+                    Description="@EmptyStateDescription" />
+    }
+    else
+    {
+        <PagedCardGrid TItem="StaffingRequestItemModel"
+                       Items="filteredRequests"
+                       PageSize="6"
+                       TestIdPrefix="crmhr-staffing-request">
+            <ItemTemplate Context="request">
+                <PanelCard Class="h-full"
+                           data-testid="crmhr-staffing-request-item">
+                    <Stack GapScale="LayoutGap.Small" Class="h-full">
+                        <Split Breakpoint="LayoutBreakpoint.None"
+                               Gap="LayoutGap.Small"
                                AlignItems="AlignItems.Start"
                                JustifyContent="JustifyContent.SpaceBetween">
-                            <div class="min-w-0 space-y-1">
-                                <p class="text-base font-semibold text-slate-950">@request.Title</p>
-                                <p class="text-sm text-slate-600">@BuildMeta(request)</p>
-                                @if (request.NeededSkills.Count > 0)
-                                {
-                                    <Cluster Gap="LayoutGap.Small" Class="mt-2">
-                                        @foreach (var skill in request.NeededSkills)
-                                        {
-                                            <StatusBadge Tone="info"
-                                                         Text="@skill.Name" />
-                                        }
-                                    </Cluster>
-                                }
-                                @if (!string.IsNullOrWhiteSpace(request.Notes))
-                                {
-                                    <p class="text-sm leading-6 text-slate-600">@request.Notes</p>
-                                }
+                            <div class="min-w-0">
+                                <p class="cda-eyebrow cda-eyebrow--tight">Project</p>
+                                <p class="truncate text-xs font-semibold text-slate-600">@ResolveProjectName(request)</p>
+                                <h3 class="mt-2 line-clamp-2 text-base font-semibold text-slate-950">@request.Title</h3>
                             </div>
-                            <Cluster Gap="LayoutGap.Small">
-                                <StatusBadge Tone="@ResolveStatusTone(request.Status)"
-                                             Text="@request.Status.ToString()" />
-                                <Button Text="Delete"
-                                        ButtonStyle="ButtonStyle.Danger"
-                                        Size="ButtonSize.Small"
-                                        Click="@(() => DeleteRequest.InvokeAsync(request.Id))"
-                                        data-testid="crmhr-staffing-request-delete-button" />
-                            </Cluster>
+                            <StatusBadge Tone="@ResolveStatusTone(request.Status)"
+                                         Text="@request.Status.ToString()" />
                         </Split>
-                    </PanelCard>
+
+                        <p class="text-sm leading-5 text-slate-600">@BuildMeta(request)</p>
+
+                        @if (request.NeededSkills.Count > 0)
+                        {
+                            <Cluster Gap="LayoutGap.XSmall" Wrap="FlexWrap.Wrap">
+                                @foreach (var skill in request.NeededSkills.Take(3))
+                                {
+                                    <StatusBadge Tone="info" Text="@skill.Name" />
+                                }
+                                @if (request.NeededSkills.Count > 3)
+                                {
+                                    <StatusBadge Tone="neutral"
+                                                 Text="@($"+{request.NeededSkills.Count - 3}")" />
+                                }
+                            </Cluster>
+                        }
+
+                        @if (!string.IsNullOrWhiteSpace(request.Notes))
+                        {
+                            <p class="line-clamp-2 text-sm leading-5 text-slate-600">@request.Notes</p>
+                        }
+
+                        <CardActions Secondary="true" Class="mt-auto pt-3">
+                            <StatusBadge Tone="neutral"
+                                         Text="@($"{request.AllocationPercent:0.##}% allocation")" />
+                            <Cluster Gap="LayoutGap.XSmall" Wrap="FlexWrap.NoWrap">
+                                <TooltipTarget Text="Show staffing request details"
+                                               Position="TooltipPosition.Bottom">
+                                    <Button ButtonStyle="ButtonStyle.Light"
+                                            Size="ButtonSize.Small"
+                                            Class="cda-button--quick"
+                                            Icon="visibility"
+                                            aria-label="Show staffing request details"
+                                            data-testid="crmhr-staffing-request-details-button"
+                                            Click="@(() => ShowDetails(request))" />
+                                </TooltipTarget>
+                                <TooltipTarget Text="Delete this staffing request"
+                                               Position="TooltipPosition.Bottom">
+                                    <Button ButtonStyle="ButtonStyle.Danger"
+                                            Size="ButtonSize.Small"
+                                            Class="cda-button--quick"
+                                            Icon="delete"
+                                            aria-label="Delete staffing request"
+                                            data-testid="crmhr-staffing-request-delete-button"
+                                            Click="@(() => DeleteRequest.InvokeAsync(request.Id))" />
+                                </TooltipTarget>
+                            </Cluster>
+                        </CardActions>
+                    </Stack>
+                </PanelCard>
+            </ItemTemplate>
+        </PagedCardGrid>
+    }
+</Stack>
+
+@if (isEditorOpen)
+{
+    <Dialog IsOpen="true"
+            Eyebrow="Staffing request"
+            Title="Open a staffing request"
+            Subtitle="@ProjectName"
+            Size="ModalSize.Wide"
+            DenseChrome="true"
+            TestId="crmhr-staffing-request-dialog"
+            OnClose="CloseEditorAsync">
+        <ChildContent>
+            <Stack GapScale="LayoutGap.Medium">
+                <SmallText Text="Requests stay scoped to the selected project so demand and project allocations remain traceable to the same portfolio record." />
+
+                <Grid Gap="LayoutGap.Medium" ColumnsMd="2">
+                    <FormField Text="Request title">
+                        <InputText @bind-Value="Draft.Title"
+                                   class="cda-input"
+                                   data-testid="crmhr-staffing-request-title" />
+                    </FormField>
+                    <FormField Text="Needed role">
+                        <InputText @bind-Value="Draft.NeededRole"
+                                   class="cda-input"
+                                   data-testid="crmhr-staffing-request-role" />
+                    </FormField>
+                </Grid>
+
+                <Grid Gap="LayoutGap.Medium" ColumnsMd="4">
+                    <FormField Text="Allocation %">
+                        <InputNumber @bind-Value="Draft.AllocationPercent"
+                                     class="cda-input"
+                                     data-testid="crmhr-staffing-request-allocation" />
+                    </FormField>
+                    <FormField Text="Starts on">
+                        <InputDate @bind-Value="Draft.StartDate"
+                                   class="cda-input"
+                                   data-testid="crmhr-staffing-request-start-date" />
+                    </FormField>
+                    <FormField Text="Ends on">
+                        <InputDate @bind-Value="Draft.EndDate"
+                                   class="cda-input"
+                                   data-testid="crmhr-staffing-request-end-date" />
+                    </FormField>
+                    <FormField Text="Status">
+                        <InputSelect @bind-Value="Draft.Status"
+                                     class="cda-input"
+                                     data-testid="crmhr-staffing-request-status">
+                            @foreach (var status in Enum.GetValues<StaffingRequestStatus>())
+                            {
+                                <option value="@status">@status</option>
+                            }
+                        </InputSelect>
+                    </FormField>
+                </Grid>
+
+                <Grid Gap="LayoutGap.Medium" ColumnsMd="2">
+                    <FormField Text="Requested by">
+                        <InputSelect @bind-Value="Draft.RequestedByPartyId"
+                                     class="cda-input"
+                                     data-testid="crmhr-staffing-request-requested-by">
+                            <option value="">Choose a requester</option>
+                            @foreach (var option in PartyOptions.OrderBy(item => item.DisplayName, StringComparer.OrdinalIgnoreCase))
+                            {
+                                <option value="@option.PartyId">@option.DisplayName (@option.PartyTypeLabel)</option>
+                            }
+                        </InputSelect>
+                    </FormField>
+                    <FormField Text="Delivery unit">
+                        <InputSelect @bind-Value="Draft.DeliveryUnitPartyId"
+                                     class="cda-input"
+                                     data-testid="crmhr-staffing-request-delivery-unit">
+                            <option value="">Choose a delivery unit</option>
+                            @foreach (var option in PartyOptions.OrderBy(item => item.DisplayName, StringComparer.OrdinalIgnoreCase))
+                            {
+                                <option value="@option.PartyId">@option.DisplayName (@option.PartyTypeLabel)</option>
+                            }
+                        </InputSelect>
+                    </FormField>
+                </Grid>
+
+                <div>
+                    <p class="cda-field-label">Needed skills</p>
+                    @if (SkillCatalog.Count == 0)
+                    {
+                        <Alert AlertStyle="AlertStyle.Warning" Class="mt-2">
+                            Add skills on the workforce page first, then return here to request them.
+                        </Alert>
+                    }
+                    else
+                    {
+                        <Grid Gap="LayoutGap.Small" ColumnsMd="2" Class="mt-2">
+                            @foreach (var skill in SkillCatalog.OrderBy(item => item.Category).ThenBy(item => item.Name))
+                            {
+                                <label class="rounded-[1rem] border border-slate-200 bg-slate-50/80 px-3 py-3 text-sm text-slate-700">
+                                    <input type="checkbox"
+                                           checked="@Draft.SkillIds.Contains(skill.Id)"
+                                           data-testid="crmhr-staffing-request-skill"
+                                           @onchange="args => ToggleSkill(skill.Id, args)" />
+                                    <span class="ml-2 font-medium text-slate-900">@skill.Name</span>
+                                    @if (!string.IsNullOrWhiteSpace(skill.Category))
+                                    {
+                                        <span class="ml-2 text-slate-500">@skill.Category</span>
+                                    }
+                                </label>
+                            }
+                        </Grid>
+                    }
+                </div>
+
+                <FormField Text="Notes">
+                    <InputTextArea @bind-Value="Draft.Notes"
+                                   class="cda-input cda-input--textarea min-h-[7rem]"
+                                   data-testid="crmhr-staffing-request-notes" />
+                </FormField>
+            </Stack>
+        </ChildContent>
+        <Footer>
+            <Cluster Gap="LayoutGap.Small" JustifyContent="JustifyContent.End">
+                <Button Text="Reset"
+                        ButtonStyle="ButtonStyle.Light"
+                        Disabled="@isSaving"
+                        Click="ResetRequest"
+                        data-testid="crmhr-staffing-request-reset-button" />
+                <Button Text="Save staffing request"
+                        Icon="save"
+                        Disabled="@isSaving"
+                        IsBusy="@isSaving"
+                        Click="HandleSaveAsync"
+                        data-testid="crmhr-staffing-request-save-button" />
+            </Cluster>
+        </Footer>
+    </Dialog>
+}
+
+@if (selectedRequest is not null)
+{
+    <Dialog IsOpen="true"
+            Eyebrow="Staffing request"
+            Title="@selectedRequest.Title"
+            Subtitle="@ResolveProjectName(selectedRequest)"
+            Size="ModalSize.Medium"
+            DenseChrome="true"
+            TestId="crmhr-staffing-request-details-dialog"
+            OnClose="CloseDetailsAsync">
+        <HeaderActions>
+            <StatusBadge Tone="@ResolveStatusTone(selectedRequest.Status)"
+                         Text="@selectedRequest.Status.ToString()" />
+        </HeaderActions>
+        <ChildContent>
+            <Stack GapScale="LayoutGap.Medium">
+                <Grid Gap="LayoutGap.Medium" ColumnsMd="3">
+                    <SurfaceCard Soft="true">
+                        <p class="cda-eyebrow">Needed role</p>
+                        <p class="mt-1 text-sm font-semibold text-slate-950">@FormatValue(selectedRequest.NeededRole)</p>
+                    </SurfaceCard>
+                    <SurfaceCard Soft="true">
+                        <p class="cda-eyebrow">Allocation</p>
+                        <p class="mt-1 text-sm font-semibold text-slate-950">@($"{selectedRequest.AllocationPercent:0.##}%")</p>
+                    </SurfaceCard>
+                    <SurfaceCard Soft="true">
+                        <p class="cda-eyebrow">Period</p>
+                        <p class="mt-1 text-sm font-semibold text-slate-950">@BuildPeriod(selectedRequest)</p>
+                    </SurfaceCard>
+                </Grid>
+
+                <Grid Gap="LayoutGap.Medium" ColumnsMd="2">
+                    <SurfaceCard Soft="true">
+                        <p class="cda-eyebrow">Requested by</p>
+                        <p class="mt-1 text-sm font-semibold text-slate-950">@FormatValue(selectedRequest.RequestedByName)</p>
+                    </SurfaceCard>
+                    <SurfaceCard Soft="true">
+                        <p class="cda-eyebrow">Delivery unit</p>
+                        <p class="mt-1 text-sm font-semibold text-slate-950">@FormatValue(selectedRequest.DeliveryUnitName)</p>
+                    </SurfaceCard>
+                </Grid>
+
+                <SurfaceCard Soft="true">
+                    <p class="cda-eyebrow">Needed skills</p>
+                    @if (selectedRequest.NeededSkills.Count == 0)
+                    {
+                        <SmallText Text="No skills were specified." Class="mt-2" />
+                    }
+                    else
+                    {
+                        <Cluster Gap="LayoutGap.XSmall" Wrap="FlexWrap.Wrap" Class="mt-2">
+                            @foreach (var skill in selectedRequest.NeededSkills)
+                            {
+                                <StatusBadge Tone="info" Text="@skill.Name" />
+                            }
+                        </Cluster>
+                    }
+                </SurfaceCard>
+
+                @if (!string.IsNullOrWhiteSpace(selectedRequest.Notes))
+                {
+                    <SurfaceCard Soft="true">
+                        <p class="cda-eyebrow">Notes</p>
+                        <p class="mt-2 text-sm leading-6 text-slate-700">@selectedRequest.Notes</p>
+                    </SurfaceCard>
                 }
             </Stack>
-        }
-    </SurfaceCard>
-</FormSection>
+        </ChildContent>
+        <Footer>
+            <Cluster JustifyContent="JustifyContent.End">
+                <Button Text="Close"
+                        ButtonStyle="ButtonStyle.Light"
+                        Click="CloseDetailsAsync" />
+            </Cluster>
+        </Footer>
+    </Dialog>
+}
 
 @code {
+    [Parameter, EditorRequired]
+    public string ProjectName { get; set; } = string.Empty;
+
+    [Parameter]
+    public bool CanCreate { get; set; } = true;
+
     [Parameter]
     public StaffingRequestEditorModel Draft { get; set; } = new();
 
@@ -192,14 +371,151 @@
     [Parameter]
     public IReadOnlyList<StaffingRequestItemModel> Requests { get; set; } = [];
 
-    [Parameter]
-    public EventCallback SaveRequest { get; set; }
+    [Parameter, EditorRequired]
+    public Func<Task<bool>> PrepareCreate { get; set; } = default!;
+
+    [Parameter, EditorRequired]
+    public Func<Task<bool>> SaveRequest { get; set; } = default!;
 
     [Parameter]
     public EventCallback ResetRequest { get; set; }
 
     [Parameter]
     public EventCallback<Guid> DeleteRequest { get; set; }
+
+    private string searchText = string.Empty;
+    private StaffingRequestStatus? statusFilter;
+    private StaffingRequestItemModel? selectedRequest;
+    private bool isEditorOpen;
+    private bool isPreparingCreate;
+    private bool isSaving;
+
+    private bool CanOpenCreate => CanCreate
+        && !string.IsNullOrWhiteSpace(ProjectName)
+        && !isPreparingCreate;
+
+    private string ProjectContextText => string.IsNullOrWhiteSpace(ProjectName)
+        ? "Choose a project to create and review staffing demand."
+        : $"{ProjectName} · {Requests.Count} request(s)";
+
+    private string CreateTooltipText => CanCreate && !string.IsNullOrWhiteSpace(ProjectName)
+        ? "Create a staffing request"
+        : "Choose a project before creating a staffing request";
+
+    private string EmptyStateEyebrow => string.IsNullOrWhiteSpace(ProjectName)
+        ? "No project selected"
+        : Requests.Count == 0
+            ? "No staffing requests"
+            : "No matching requests";
+
+    private string EmptyStateTitle => string.IsNullOrWhiteSpace(ProjectName)
+        ? "Choose a project to review demand"
+        : Requests.Count == 0
+            ? "Capture the first request"
+            : "Adjust the staffing filters";
+
+    private string EmptyStateDescription => string.IsNullOrWhiteSpace(ProjectName)
+        ? "The project selector remains available above the workspace tabs."
+        : Requests.Count == 0
+            ? "Open requests appear here once the selected project starts requesting staffing."
+            : "No staffing requests match the current search text and status.";
+
+    private IReadOnlyList<StaffingRequestItemModel> FilterRequests()
+    {
+        IEnumerable<StaffingRequestItemModel> filtered = Requests;
+        if (statusFilter.HasValue)
+        {
+            filtered = filtered.Where(request => request.Status == statusFilter.Value);
+        }
+
+        if (!string.IsNullOrWhiteSpace(searchText))
+        {
+            var term = searchText.Trim();
+            filtered = filtered.Where(request => MatchesSearch(request, term));
+        }
+
+        return filtered.ToList();
+    }
+
+    private static bool MatchesSearch(StaffingRequestItemModel request, string term)
+    {
+        return Contains(request.Title, term)
+            || Contains(request.NeededRole, term)
+            || Contains(request.ProjectName, term)
+            || Contains(request.RequestedByName, term)
+            || Contains(request.DeliveryUnitName, term)
+            || Contains(request.Notes, term)
+            || request.NeededSkills.Any(skill => Contains(skill.Name, term) || Contains(skill.Category, term));
+    }
+
+    private static bool Contains(string? value, string term)
+    {
+        return !string.IsNullOrWhiteSpace(value)
+            && value.Contains(term, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private async Task OpenCreateAsync()
+    {
+        if (!CanOpenCreate)
+        {
+            return;
+        }
+
+        isPreparingCreate = true;
+        try
+        {
+            if (await PrepareCreate())
+            {
+                isEditorOpen = true;
+            }
+        }
+        finally
+        {
+            isPreparingCreate = false;
+        }
+    }
+
+    private Task CloseEditorAsync()
+    {
+        if (!isSaving)
+        {
+            isEditorOpen = false;
+        }
+
+        return Task.CompletedTask;
+    }
+
+    private async Task HandleSaveAsync()
+    {
+        if (isSaving)
+        {
+            return;
+        }
+
+        isSaving = true;
+        try
+        {
+            if (await SaveRequest())
+            {
+                isEditorOpen = false;
+            }
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+
+    private void ShowDetails(StaffingRequestItemModel request)
+    {
+        selectedRequest = request;
+    }
+
+    private Task CloseDetailsAsync()
+    {
+        selectedRequest = null;
+        return Task.CompletedTask;
+    }
 
     private void ToggleSkill(Guid skillId, ChangeEventArgs args)
     {
@@ -219,15 +535,15 @@
 
     private static string BuildMeta(StaffingRequestItemModel request)
     {
-        var parts = new List<string>
+        var parts = new List<string>();
+        if (!string.IsNullOrWhiteSpace(request.NeededRole))
         {
-            request.NeededRole,
-            $"{request.AllocationPercent:0.##}%"
-        };
+            parts.Add(request.NeededRole);
+        }
 
         if (request.StartDate.HasValue || request.EndDate.HasValue)
         {
-            parts.Add($"{FormatDate(request.StartDate)} -> {FormatDate(request.EndDate)}");
+            parts.Add(BuildPeriod(request));
         }
 
         if (!string.IsNullOrWhiteSpace(request.RequestedByName))
@@ -240,7 +556,22 @@
             parts.Add($"Delivery unit {request.DeliveryUnitName}");
         }
 
-        return string.Join(" / ", parts);
+        return parts.Count == 0 ? "No request metadata" : string.Join(" · ", parts);
+    }
+
+    private static string BuildPeriod(StaffingRequestItemModel request)
+    {
+        return $"{FormatDate(request.StartDate)} → {FormatDate(request.EndDate)}";
+    }
+
+    private string ResolveProjectName(StaffingRequestItemModel request)
+    {
+        if (!string.IsNullOrWhiteSpace(request.ProjectName))
+        {
+            return request.ProjectName;
+        }
+
+        return string.IsNullOrWhiteSpace(ProjectName) ? "Unassigned project" : ProjectName;
     }
 
     private static string ResolveStatusTone(StaffingRequestStatus status)
@@ -254,6 +585,11 @@
             StaffingRequestStatus.Closed => "base",
             _ => "warning"
         };
+    }
+
+    private static string FormatValue(string? value)
+    {
+        return string.IsNullOrWhiteSpace(value) ? "Not set" : value;
     }
 
     private static string FormatDate(DateOnly? value)

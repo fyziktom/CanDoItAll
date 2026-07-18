@@ -4096,7 +4096,8 @@ public sealed partial class HrService(
             ProjectPartyAssignmentKind.Reviewer => ProjectPartyAssignmentRole.Reviewer,
             ProjectPartyAssignmentKind.AiAgent => ProjectPartyAssignmentRole.AiAgent,
             ProjectPartyAssignmentKind.BillingContact => ProjectPartyAssignmentRole.BillingContact,
-            _ => ProjectPartyAssignmentRole.TechnicalContact
+            ProjectPartyAssignmentKind.TechnicalContact => ProjectPartyAssignmentRole.TechnicalContact,
+            _ => throw new ArgumentOutOfRangeException(nameof(role), role, "The persisted project assignment role is not supported.")
         };
     }
 
@@ -4823,7 +4824,7 @@ public sealed partial class AiAgentService(
     }
 }
 
-public sealed partial class ProjectPartyIntegrationService(
+public sealed class ProjectPartyIntegrationService(
     IDbContextFactory<AppDbContext> dbContextFactory,
     PartyDirectoryService partyDirectoryService,
     ProjectPartyAssignmentNodePolicy projectPartyAssignmentNodePolicy) :
@@ -5132,6 +5133,12 @@ public sealed partial class ProjectPartyIntegrationService(
             return Result<Guid>.Failure(Error.Validation("Party is required.", "crmhr.project-assignment.party-required"));
         }
 
+        var valueError = ProjectPartyAssignmentInvariantPolicy.ValidateValues(request);
+        if (valueError is not null)
+        {
+            return Result<Guid>.Failure(valueError);
+        }
+
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         var projectExists = await dbContext.Set<Project>()
             .AnyAsync(item => item.Id == request.ProjectId, cancellationToken);
@@ -5149,7 +5156,7 @@ public sealed partial class ProjectPartyIntegrationService(
             return Result<Guid>.Failure(Error.Validation("Party was not found.", "crmhr.project-assignment.party-not-found"));
         }
 
-        var partyTypeError = ValidateAssignmentPartyType(request.Role, partyType.Value);
+        var partyTypeError = ProjectPartyAssignmentInvariantPolicy.ValidatePartyType(request.Role, partyType.Value);
         if (partyTypeError is not null)
         {
             return Result<Guid>.Failure(partyTypeError);
@@ -5260,6 +5267,25 @@ public sealed partial class ProjectPartyIntegrationService(
                 "crmhr.project-assignment.target-role-mismatch"));
         }
 
+        foreach (var desiredAssignment in desiredAssignments)
+        {
+            var valueError = ProjectPartyAssignmentInvariantPolicy.ValidateValues(desiredAssignment);
+            if (valueError is not null)
+            {
+                return Result.Failure(valueError);
+            }
+        }
+
+        var duplicateAssignment = desiredAssignments
+            .GroupBy(item => (item.PartyId, item.Role))
+            .FirstOrDefault(group => group.Count() > 1);
+        if (duplicateAssignment is not null)
+        {
+            return Result.Failure(Error.Validation(
+                "Desired assignments contain the same party and role more than once.",
+                "crmhr.project-assignment.duplicate"));
+        }
+
         var (nodeScope, nodeScopeError) = await projectPartyAssignmentNodePolicy.ResolveScopeAsync(
             projectId,
             normalizedNodeKey,
@@ -5303,7 +5329,7 @@ public sealed partial class ProjectPartyIntegrationService(
             var partyTypesById = existingParties.ToDictionary(item => item.Id, item => item.PartyType);
             foreach (var desiredAssignment in desiredAssignments)
             {
-                var partyTypeError = ValidateAssignmentPartyType(
+                var partyTypeError = ProjectPartyAssignmentInvariantPolicy.ValidatePartyType(
                     desiredAssignment.Role,
                     partyTypesById[desiredAssignment.PartyId]);
                 if (partyTypeError is not null)
@@ -5617,7 +5643,8 @@ public sealed partial class ProjectPartyIntegrationService(
             ProjectPartyAssignmentRole.Reviewer => ProjectPartyAssignmentKind.Reviewer,
             ProjectPartyAssignmentRole.AiAgent => ProjectPartyAssignmentKind.AiAgent,
             ProjectPartyAssignmentRole.BillingContact => ProjectPartyAssignmentKind.BillingContact,
-            _ => ProjectPartyAssignmentKind.TechnicalContact
+            ProjectPartyAssignmentRole.TechnicalContact => ProjectPartyAssignmentKind.TechnicalContact,
+            _ => throw new ArgumentOutOfRangeException(nameof(role), role, "The project assignment role is not supported.")
         };
     }
 

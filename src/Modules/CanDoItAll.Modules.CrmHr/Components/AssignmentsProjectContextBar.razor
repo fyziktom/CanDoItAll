@@ -1,0 +1,117 @@
+@using CanDoItAll.Components.BaseLib
+@using CanDoItAll.Modules.Projects
+
+<SurfaceCard Soft="true"
+             data-testid="crmhr-assignments-project-context">
+    <Split Breakpoint="LayoutBreakpoint.None"
+           Gap="LayoutGap.Medium"
+           AlignItems="AlignItems.Center"
+           JustifyContent="JustifyContent.SpaceBetween"
+           Wrap="FlexWrap.Wrap">
+        <div class="min-w-[20rem] flex-[1_1_34rem]">
+            <FormField Text="Project">
+                <InputSelect TValue="Guid?"
+                             Value="SelectedProjectId"
+                             ValueChanged="HandleProjectChangedAsync"
+                             ValueExpression="@(() => SelectedProjectId)"
+                             class="cda-input"
+                             data-testid="crmhr-assignment-project">
+                    <option value="">Choose a project</option>
+                    @foreach (var project in Projects.OrderBy(item => item.Name, StringComparer.OrdinalIgnoreCase))
+                    {
+                        <option value="@project.Id">@project.Name</option>
+                    }
+                </InputSelect>
+            </FormField>
+        </div>
+
+        @if (SelectedProject is { } project)
+        {
+            <Stack GapScale="LayoutGap.Tiny"
+                   Class="min-w-[20rem] flex-[1_1_32rem]">
+                <p class="cda-eyebrow">Active project</p>
+                <p class="truncate text-base font-semibold text-slate-950">@project.Name</p>
+                <Cluster Gap="LayoutGap.XSmall" Wrap="FlexWrap.Wrap">
+                    <StatusBadge Tone="info" Text="@project.Status.ToString()" />
+                    @if (!string.IsNullOrWhiteSpace(project.CurrentPhase))
+                    {
+                        <StatusBadge Tone="base" Text="@project.CurrentPhase" />
+                    }
+                    <StatusBadge Tone="base" Text="@($"{AssignmentCount} relationships")" />
+                    <StatusBadge Tone="base" Text="@($"{AllocationCount} allocations")" />
+                    <StatusBadge Tone="base" Text="@StaffingRequestLabel" />
+                </Cluster>
+            </Stack>
+        }
+        else
+        {
+            <SmallText Text="Choose a project to load its resource schedule and assignment workflows."
+                       Class="min-w-[20rem] flex-[1_1_32rem]" />
+        }
+
+        @if (SelectedProjectId.HasValue)
+        {
+            <Cluster Gap="LayoutGap.XSmall" Wrap="FlexWrap.NoWrap">
+                <TooltipTarget Text="Switch to the selected project's structure workspace"
+                               Position="TooltipPosition.Bottom"
+                               TestId="crmhr-assignment-open-structure-tooltip">
+                    <Button ButtonStyle="ButtonStyle.Light"
+                            Size="ButtonSize.Small"
+                            Class="cda-button--quick"
+                            Icon="account_tree"
+                            aria-label="Open project structure"
+                            data-testid="crmhr-assignment-open-structure"
+                            Click="@(() => OpenStructure.InvokeAsync(SelectedProjectId.Value))" />
+                </TooltipTarget>
+                <TooltipTarget Text="Switch to the selected project's interactive Gantt workspace"
+                               Position="TooltipPosition.Bottom"
+                               TestId="crmhr-assignment-open-gantt-tooltip">
+                    <Button ButtonStyle="ButtonStyle.Light"
+                            Size="ButtonSize.Small"
+                            Class="cda-button--quick"
+                            Icon="timeline"
+                            aria-label="Open project Gantt"
+                            data-testid="crmhr-assignment-open-gantt"
+                            Click="@(() => OpenGantt.InvokeAsync(SelectedProjectId.Value))" />
+                </TooltipTarget>
+            </Cluster>
+        }
+    </Split>
+</SurfaceCard>
+
+@code {
+    [Parameter]
+    public IReadOnlyList<ProjectSummary> Projects { get; set; } = [];
+
+    [Parameter]
+    public Guid? SelectedProjectId { get; set; }
+
+    [Parameter]
+    public EventCallback<Guid?> SelectedProjectIdChanged { get; set; }
+
+    [Parameter]
+    public int AssignmentCount { get; set; }
+
+    [Parameter]
+    public int AllocationCount { get; set; }
+
+    [Parameter]
+    public int? StaffingRequestCount { get; set; }
+
+    [Parameter]
+    public EventCallback<Guid> OpenStructure { get; set; }
+
+    [Parameter]
+    public EventCallback<Guid> OpenGantt { get; set; }
+
+    private string StaffingRequestLabel => StaffingRequestCount.HasValue
+        ? $"{StaffingRequestCount.Value} staffing requests"
+        : "Staffing on demand";
+
+    private ProjectSummary? SelectedProject => SelectedProjectId.HasValue
+        ? Projects.FirstOrDefault(project => project.Id == SelectedProjectId.Value)
+        : null;
+
+    private Task HandleProjectChangedAsync(Guid? projectId)
+        => SelectedProjectIdChanged.InvokeAsync(projectId);
+}

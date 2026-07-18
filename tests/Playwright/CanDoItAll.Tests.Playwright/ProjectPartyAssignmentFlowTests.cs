@@ -40,6 +40,8 @@ public sealed class ProjectPartyAssignmentFlowTests
 
         await page.GotoAsync($"{fixture.BaseUrl}/crm-hr/assignments?projectId={seed.ProjectId:D}");
         await DismissStartupModalIfPresentAsync(page);
+        await page.GetByTestId("crmhr-assignments-tab-relationships").ClickAsync();
+        await page.GetByTestId("crmhr-assignment-create-button").ClickAsync();
         await page.GetByTestId("crmhr-assignment-role").WaitForAsync();
 
         await page.GetByTestId("crmhr-assignment-role").SelectOptionAsync(ProjectPartyAssignmentRole.Customer.ToString());
@@ -48,17 +50,31 @@ public sealed class ProjectPartyAssignmentFlowTests
         await page.GetByTestId("crmhr-assignment-message").WaitForAsync();
         await ExpectTextContainsAsync(page.GetByTestId("crmhr-assignment-message"), "Project assignment saved.");
 
+        await page.GetByTestId("crmhr-assignment-create-button").ClickAsync();
+        await page.GetByTestId("crmhr-assignment-role").WaitForAsync();
         await page.GetByTestId("crmhr-assignment-role").SelectOptionAsync(ProjectPartyAssignmentRole.DeliveryUnit.ToString());
         await page.GetByTestId("crmhr-assignment-party-select").SelectOptionAsync(seed.DeliveryUnitId.ToString());
         await page.GetByTestId("crmhr-assignment-allocation").FillAsync("60");
         await page.GetByTestId("crmhr-assignment-save-button").ClickAsync();
         await ExpectTextContainsAsync(page.GetByTestId("crmhr-assignment-message"), "Project assignment saved.");
 
+        await page.GetByTestId("crmhr-assignment-create-button").ClickAsync();
+        await page.GetByTestId("crmhr-assignment-role").WaitForAsync();
         await page.GetByTestId("crmhr-assignment-role").SelectOptionAsync(ProjectPartyAssignmentRole.Manager.ToString());
         await page.GetByTestId("crmhr-assignment-party-select").SelectOptionAsync(seed.OwnerId.ToString());
         await page.GetByTestId("crmhr-assignment-allocation").FillAsync(string.Empty);
         await page.GetByTestId("crmhr-assignment-save-button").ClickAsync();
         await ExpectTextContainsAsync(page.GetByTestId("crmhr-assignment-message"), "Project assignment saved.");
+
+        await page.GetByTestId("crmhr-assignments-tab-schedule").ClickAsync();
+        await page.GetByTestId("crmhr-assignment-resource-gantt").WaitForAsync();
+        await page.GetByTestId("crmhr-assignment-resource-schedule")
+            .GetByText(seed.DeliveryUnitName, new LocatorGetByTextOptions
+            {
+                Exact = false
+            })
+            .WaitForAsync();
+        Assert.Equal(0, await page.GetByText("The chart model is invalid:", new() { Exact = false }).CountAsync());
 
         await page.ScreenshotAsync(new PageScreenshotOptions
         {

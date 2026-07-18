@@ -1,0 +1,131 @@
+@using CanDoItAll.Modules.Projects
+
+@if (Assignment is not null)
+{
+    <Dialog IsOpen="true"
+            Eyebrow="Project assignment"
+            Title="@Assignment.PartyDisplayName"
+            Subtitle="@ProjectName"
+            Size="ModalSize.Medium"
+            DenseChrome="true"
+            TestId="crmhr-assignment-details-dialog"
+            OnClose="OnClose">
+        <ChildContent>
+            <Stack GapScale="LayoutGap.Medium">
+                <Grid Gap="LayoutGap.Medium" ColumnsMd="3">
+                    <SurfaceCard Soft="true">
+                        <p class="cda-eyebrow">Role</p>
+                        <p class="mt-1 text-sm font-semibold text-slate-950">@ProjectPartyAssignmentPresentation.ResolveRoleLabel(Assignment.Role)</p>
+                    </SurfaceCard>
+                    <SurfaceCard Soft="true">
+                        <p class="cda-eyebrow">Allocation</p>
+                        <p class="mt-1 text-sm font-semibold text-slate-950">@(Assignment.AllocationPercent.HasValue ? $"{Assignment.AllocationPercent.Value:0.##}%" : "Not set")</p>
+                    </SurfaceCard>
+                    <SurfaceCard Soft="true">
+                        <p class="cda-eyebrow">Period</p>
+                        <p class="mt-1 text-sm font-semibold text-slate-950">@($"{FormatDate(Assignment.StartsAtUtc)} → {FormatDate(Assignment.EndsAtUtc)}")</p>
+                    </SurfaceCard>
+                </Grid>
+
+                @if (!string.IsNullOrWhiteSpace(Assignment.Notes))
+                {
+                    <SurfaceCard Soft="true">
+                        <p class="cda-eyebrow">Assignment notes</p>
+                        <p class="mt-1 text-sm leading-6 text-slate-700">@Assignment.Notes</p>
+                    </SurfaceCard>
+                }
+
+                @if (!string.IsNullOrWhiteSpace(Assignment.NodeKey))
+                {
+                    <SurfaceCard data-testid="crmhr-assignment-task-details">
+                        <Split Breakpoint="LayoutBreakpoint.None"
+                               Gap="LayoutGap.Small"
+                               AlignItems="AlignItems.Start"
+                               JustifyContent="JustifyContent.SpaceBetween"
+                               Wrap="FlexWrap.Wrap">
+                            <div class="min-w-0">
+                                <p class="cda-eyebrow">Linked project work item</p>
+                                @if (IsTaskLoading)
+                                {
+                                    <p class="mt-2 text-sm text-slate-600">Loading work-item details…</p>
+                                }
+                                else if (TaskDetails is not null)
+                                {
+                                    <h3 class="mt-1 text-lg font-semibold text-slate-950">@TaskDetails.Title</h3>
+                                    @if (!string.IsNullOrWhiteSpace(TaskDetails.Subtitle))
+                                    {
+                                        <p class="mt-1 text-sm text-slate-600">@TaskDetails.Subtitle</p>
+                                    }
+                                }
+                                else
+                                {
+                                    <p class="mt-2 text-sm text-slate-600">The linked node is not available in the active project structure.</p>
+                                }
+                            </div>
+                            @if (TaskDetails is not null)
+                            {
+                                <Cluster Gap="LayoutGap.XSmall">
+                                    <StatusBadge Tone="info" Text="@TaskDetails.ObjectType.ToString()" />
+                                    @if (!string.IsNullOrWhiteSpace(TaskDetails.Status))
+                                    {
+                                        <StatusBadge Tone="neutral" Text="@TaskDetails.Status" />
+                                    }
+                                </Cluster>
+                            }
+                        </Split>
+
+                        @if (TaskDetails is not null)
+                        {
+                            <Grid Gap="LayoutGap.Small" ColumnsMd="3" Class="mt-3">
+                                <SmallText Text="@($"Start: {FormatDate(TaskDetails.StartsAtUtc)}")" />
+                                <SmallText Text="@($"End: {FormatDate(TaskDetails.EndsAtUtc)}")" />
+                                <SmallText Text="@(TaskDetails.ProgressPercent >= 0 ? $"Progress: {TaskDetails.ProgressPercent}%" : "Progress: not tracked")" />
+                            </Grid>
+                        }
+
+                        <CopyableMonoValue Label="Node key" Value="@Assignment.NodeKey" Class="mt-3" />
+                    </SurfaceCard>
+                }
+            </Stack>
+        </ChildContent>
+        <Footer>
+            <Split Breakpoint="LayoutBreakpoint.None"
+                   Gap="LayoutGap.Small"
+                   AlignItems="AlignItems.Center"
+                   JustifyContent="JustifyContent.SpaceBetween"
+                   Wrap="FlexWrap.Wrap">
+                <Button Text="Close" ButtonStyle="ButtonStyle.Light" Click="OnClose" />
+                <Cluster Gap="LayoutGap.XSmall">
+                    <Button Text="Structure" Icon="account_tree" ButtonStyle="ButtonStyle.Light" Click="OpenStructure" />
+                    <Button Text="Gantt" Icon="timeline" ButtonStyle="ButtonStyle.Light" Click="OpenGantt" />
+                </Cluster>
+            </Split>
+        </Footer>
+    </Dialog>
+}
+
+@code {
+    [Parameter]
+    public ProjectPartyAssignmentDetail? Assignment { get; set; }
+
+    [Parameter]
+    public ProjectNodeDetails? TaskDetails { get; set; }
+
+    [Parameter]
+    public string ProjectName { get; set; } = string.Empty;
+
+    [Parameter]
+    public bool IsTaskLoading { get; set; }
+
+    [Parameter]
+    public EventCallback OnClose { get; set; }
+
+    [Parameter]
+    public EventCallback OpenStructure { get; set; }
+
+    [Parameter]
+    public EventCallback OpenGantt { get; set; }
+
+    private static string FormatDate(DateTimeOffset? value)
+        => value.HasValue ? value.Value.UtcDateTime.ToString("yyyy-MM-dd") : "Open";
+}

@@ -38,6 +38,8 @@ public sealed class StaffingFlowTests
 
         await page.GotoAsync($"{fixture.BaseUrl}/crm-hr/assignments?projectId={seed.ProjectId:D}");
         await DismissStartupModalIfPresentAsync(page);
+        await page.GetByTestId("crmhr-assignments-tab-staffing").ClickAsync();
+        await page.GetByTestId("crmhr-staffing-request-create-button").ClickAsync();
         await page.GetByTestId("crmhr-staffing-request-title").WaitForAsync();
 
         await page.GetByTestId("crmhr-staffing-request-title").FillAsync("Need senior platform coverage");
@@ -49,6 +51,8 @@ public sealed class StaffingFlowTests
         await page.GetByTestId("crmhr-staffing-request-save-button").ClickAsync();
         await ExpectTextContainsAsync(page.GetByTestId("crmhr-assignment-message"), "Staffing request saved.");
 
+        await page.GetByTestId("crmhr-assignments-tab-allocations").ClickAsync();
+        await page.GetByTestId("crmhr-allocation-create-button").ClickAsync();
         await page.GetByTestId("crmhr-allocation-candidate-skill").SelectOptionAsync(seed.SkillId.ToString());
         await page.GetByTestId("crmhr-allocation-candidate-search-button").ClickAsync();
         await page.GetByTestId("crmhr-staffing-candidate-item")
@@ -67,6 +71,16 @@ public sealed class StaffingFlowTests
         await page.GetByTestId("crmhr-allocation-percent").FillAsync("70");
         await page.GetByTestId("crmhr-allocation-save-button").ClickAsync();
         await ExpectTextContainsAsync(page.GetByTestId("crmhr-assignment-message"), "Project allocation saved.");
+
+        await page.GetByTestId("crmhr-assignments-tab-schedule").ClickAsync();
+        await page.GetByTestId("crmhr-assignment-resource-gantt").WaitForAsync();
+        await page.GetByTestId("crmhr-assignment-resource-schedule")
+            .GetByText(seed.WorkerName, new LocatorGetByTextOptions
+            {
+                Exact = false
+            })
+            .WaitForAsync();
+        Assert.Equal(0, await page.GetByText("The chart model is invalid:", new() { Exact = false }).CountAsync());
 
         await page.ScreenshotAsync(new PageScreenshotOptions
         {

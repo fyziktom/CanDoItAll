@@ -10,6 +10,7 @@ public static class ProjectsModuleServiceCollectionExtensions
     {
         services.AddScoped<ProjectsService>();
         services.AddScoped<IProjectNodeScopeBridge, NoopProjectNodeScopeBridge>();
+        services.TryAddScoped<IProjectNodeDetailsBridge, NoopProjectNodeDetailsBridge>();
         services.AddScoped<IProjectNodeAssignmentPolicyBridge, NoopProjectNodeAssignmentPolicyBridge>();
         services.AddScoped<IProjectPartyIntegrationBridge, NoopProjectPartyIntegrationBridge>();
         services.AddScoped<IProjectPartyCostRateBridge, NoopProjectPartyCostRateBridge>();

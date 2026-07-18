@@ -1,8 +1,21 @@
 @inject NavigationManager Navigation
 
-<SecondaryTabs Items="Tabs"
-               SelectedKey="@SelectedKey"
-               SelectedKeyChanged="HandleSelectedKeyChanged" />
+<Cluster Gap="LayoutGap.XSmall" AlignItems="AlignItems.Center" Wrap="FlexWrap.Wrap">
+    <SecondaryTabs Items="Tabs"
+                   SelectedKey="@SelectedKey"
+                   SelectedKeyChanged="HandleSelectedKeyChanged"
+                   ShowActiveDescription="false" />
+    <TooltipTarget Text="@ActiveDescription"
+                   Position="TooltipPosition.Bottom"
+                   TestId="crmhr-navigation-tooltip">
+        <Button ButtonStyle="ButtonStyle.Light"
+                Variant="Variant.Text"
+                Size="ButtonSize.Small"
+                Class="cda-button--quick"
+                Icon="info"
+                aria-label="@($"{ActiveLabel} tab information")" />
+    </TooltipTarget>
+</Cluster>
 
 @code {
     private static readonly IReadOnlyDictionary<string, string> Routes = new Dictionary<string, string>(StringComparer.Ordinal)
@@ -29,6 +42,16 @@
 
     [Parameter, EditorRequired]
     public string SelectedKey { get; set; } = string.Empty;
+
+    private string ActiveDescription => Tabs
+        .FirstOrDefault(item => string.Equals(item.Key, SelectedKey, StringComparison.Ordinal))
+        ?.Description
+        ?? "CRM / HR module navigation";
+
+    private string ActiveLabel => Tabs
+        .FirstOrDefault(item => string.Equals(item.Key, SelectedKey, StringComparison.Ordinal))
+        ?.Label
+        ?? "CRM / HR";
 
     private Task HandleSelectedKeyChanged(string key)
     {

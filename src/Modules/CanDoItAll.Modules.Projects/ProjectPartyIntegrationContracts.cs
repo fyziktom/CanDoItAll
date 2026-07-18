@@ -170,6 +170,20 @@ public sealed record ProjectNodeScopeResolution(
     ProjectObjectType? ObjectType,
     string ObjectSubtype);
 
+public sealed record ProjectNodeDetails(
+    Guid ProjectId,
+    string NodeKey,
+    ProjectObjectType ObjectType,
+    string ObjectSubtype,
+    string Title,
+    string Subtitle,
+    string Status,
+    string ProgressMode,
+    int ProgressPercent,
+    DateTimeOffset? StartsAtUtc,
+    DateTimeOffset? EndsAtUtc,
+    string ParentNodeKey);
+
 public sealed record ProjectNodeAssignmentSemantics(
     IReadOnlyList<ProjectPartyAssignmentRole> AllowedRoles,
     IReadOnlyList<ProjectPartyAssignmentRole> ReplacementRoles,
@@ -253,6 +267,14 @@ public interface IProjectPartyIntegrationBridge
 
     Task<Result<ProjectPartyQuickCreateResult>> CreatePartyAsync(
         ProjectPartyQuickCreateRequest request,
+        CancellationToken cancellationToken = default);
+}
+
+public interface IProjectNodeDetailsBridge
+{
+    Task<ProjectNodeDetails?> GetAsync(
+        Guid projectId,
+        ProjectNodeReference nodeReference,
         CancellationToken cancellationToken = default);
 }
 
@@ -389,6 +411,18 @@ internal sealed class NoopProjectPartyIntegrationBridge : IProjectPartyIntegrati
         return Task.FromResult(Result<ProjectPartyQuickCreateResult>.Failure(Error.Failure(
             "Project-party integration is not available.",
             "projects.party-integration-unavailable")));
+    }
+}
+
+internal sealed class NoopProjectNodeDetailsBridge : IProjectNodeDetailsBridge
+{
+    public Task<ProjectNodeDetails?> GetAsync(
+        Guid projectId,
+        ProjectNodeReference nodeReference,
+        CancellationToken cancellationToken = default)
+    {
+        return Task.FromException<ProjectNodeDetails?>(new InvalidOperationException(
+            "Project node details integration is not configured."));
     }
 }
 

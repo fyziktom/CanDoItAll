@@ -37,6 +37,8 @@ public sealed class ProjectPartyAssignmentIntegrationTests
             Role = ProjectPartyAssignmentRole.DeliveryUnit,
             IsPrimary = true,
             AllocationPercent = 70m,
+            StartsOn = new DateOnly(2026, 7, 1),
+            EndsOn = new DateOnly(2026, 7, 31),
             Source = "integration-tests"
         })).IsSuccess);
         Assert.True((await bridge.SaveAssignmentAsync(new ProjectPartyAssignmentUpsertRequest
@@ -64,7 +66,11 @@ public sealed class ProjectPartyAssignmentIntegrationTests
         var detailedAssignments = await bridge.ListAssignmentsDetailedAsync(projectId);
         Assert.Equal(3, detailedAssignments.Count);
         Assert.Contains(detailedAssignments, item => item.Role == ProjectPartyAssignmentRole.Customer && item.PartyDisplayName == "Acme Customer");
-        Assert.Contains(detailedAssignments, item => item.Role == ProjectPartyAssignmentRole.DeliveryUnit && item.AllocationPercent == 70m);
+        Assert.Contains(detailedAssignments, item =>
+            item.Role == ProjectPartyAssignmentRole.DeliveryUnit &&
+            item.AllocationPercent == 70m &&
+            item.StartsAtUtc == new DateTimeOffset(2026, 7, 1, 0, 0, 0, TimeSpan.Zero) &&
+            item.EndsAtUtc == new DateTimeOffset(2026, 7, 31, 0, 0, 0, TimeSpan.Zero));
         Assert.Contains(detailedAssignments, item => item.Role == ProjectPartyAssignmentRole.Manager && item.NodeKey == "work-item-alpha");
 
         var contexts = await bridge.GetPortfolioContextsAsync([projectId]);
@@ -78,6 +84,107 @@ public sealed class ProjectPartyAssignmentIntegrationTests
             item.PartyId == createdParty!.PartyId &&
             item.PartyType == ProjectPartyType.AiAgent &&
             item.PartyTypeLabel == "AI agent");
+    }
+
+    [Fact]
+    public async Task Node_details_bridge_reads_the_live_workbench_record()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projectsService = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var workbench = scope.ServiceProvider.GetRequiredService<ProjectWorkbenchService>();
+        var detailsBridge = scope.ServiceProvider.GetRequiredService<IProjectNodeDetailsBridge>();
+
+        var projectId = await CreateProjectAsync(projectsService, "Linked detail project");
+        var workItem = await workbench.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.WorkItem,
+                "Accessibility proof",
+                "Release validation",
+                "Owns export and accessibility proof.",
+                null,
+                420,
+                240,
+                null,
+                null,
+                "task"));
+
+        var details = await detailsBridge.GetAsync(
+            projectId,
+            new ProjectNodeReference(workItem.Id));
+
+        Assert.NotNull(details);
+        Assert.Equal(projectId, details.ProjectId);
+        Assert.Equal(workItem.Id, details.NodeKey);
+        Assert.Equal(ProjectObjectType.WorkItem, details.ObjectType);
+        Assert.Equal("task", details.ObjectSubtype);
+        Assert.Equal("Accessibility proof", details.Title);
+        Assert.Equal("Release validation", details.Subtitle);
+
+        await workbench.UpdateObjectMetadataAsync(
+            projectId,
+            workItem.Id,
+            "{}",
+            status: "In progress");
+
+        var refreshedDetails = await detailsBridge.GetAsync(
+            projectId,
+            new ProjectNodeReference(workItem.Id));
+
+        Assert.NotNull(refreshedDetails);
+        Assert.Equal("In progress", refreshedDetails.Status);
+    }
+
+    [Fact]
+    public async Task Bridge_rejects_invalid_assignment_values_on_both_mutation_paths()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var partyDirectoryService = scope.ServiceProvider.GetRequiredService<PartyDirectoryService>();
+        var projectsService = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var bridge = scope.ServiceProvider.GetRequiredService<IProjectPartyIntegrationBridge>();
+
+        var projectId = await CreateProjectAsync(projectsService, "Assignment invariant project");
+        var partyId = await CreatePartyAsync(partyDirectoryService, PartyType.Person, "Invariant worker");
+
+        var allocationResult = await bridge.SaveAssignmentAsync(new ProjectPartyAssignmentUpsertRequest
+        {
+            ProjectId = projectId,
+            PartyId = partyId,
+            Role = ProjectPartyAssignmentRole.TeamMember,
+            AllocationPercent = 0m,
+            Source = "integration-tests"
+        });
+        var dateResult = await bridge.SaveAssignmentAsync(new ProjectPartyAssignmentUpsertRequest
+        {
+            ProjectId = projectId,
+            PartyId = partyId,
+            Role = ProjectPartyAssignmentRole.TeamMember,
+            AllocationPercent = 100m,
+            StartsOn = new DateOnly(2026, 8, 2),
+            EndsOn = new DateOnly(2026, 8, 1),
+            Source = "integration-tests"
+        });
+        var replacementResult = await bridge.ReplaceNodeAssignmentsAsync(
+            projectId,
+            new ProjectNodeReference("work-item-invariant-check"),
+            [new ProjectPartyAssignmentUpsertRequest
+            {
+                PartyId = partyId,
+                Role = ProjectPartyAssignmentRole.WorkItemAssignee,
+                AllocationPercent = 101m,
+                Source = "integration-tests"
+            }],
+            [ProjectPartyAssignmentRole.WorkItemAssignee]);
+
+        Assert.False(allocationResult.IsSuccess);
+        Assert.Contains(allocationResult.Errors, error => error.Code == "crmhr.project-assignment.allocation-range");
+        Assert.False(dateResult.IsSuccess);
+        Assert.Contains(dateResult.Errors, error => error.Code == "crmhr.project-assignment.date-range-invalid");
+        Assert.True(replacementResult.IsFailure);
+        Assert.Contains(replacementResult.Errors, error => error.Code == "crmhr.project-assignment.allocation-range");
+        Assert.Empty(await bridge.ListAssignmentsDetailedAsync(projectId));
     }
 
     [Fact]

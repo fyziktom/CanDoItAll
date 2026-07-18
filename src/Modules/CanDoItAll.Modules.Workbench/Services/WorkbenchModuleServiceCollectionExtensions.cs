@@ -49,6 +49,7 @@ public static class WorkbenchModuleServiceCollectionExtensions
         services.AddScoped<ProjectWorkbenchService>();
         services.AddScoped<IProjectNodeAssignmentPolicyBridge, ProjectNodeAssignmentPolicyBridge>();
         services.AddScoped<IProjectNodeScopeBridge, ProjectNodeScopeBridge>();
+        services.Replace(ServiceDescriptor.Scoped<IProjectNodeDetailsBridge, ProjectNodeDetailsBridge>());
         services.AddScoped<ProjectStructureLeaseService>();
         services.AddScoped<ProjectStructureAnalyticsService>();
         services.AddSingleton<ProjectPlanSummaryCalculator>();
