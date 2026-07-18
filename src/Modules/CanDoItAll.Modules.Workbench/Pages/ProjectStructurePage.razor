@@ -135,6 +135,17 @@ else
                                                        RecomposeBranch="RecomposeSelectedBranchAsync" />
                     </ToolbarLeftContent>
                     <OverlayContent>
+                        @if ((!SelectionWindowState.IsVisible || SelectionWindowState.IsMinimized) &&
+                            !string.IsNullOrWhiteSpace(workflowFeedback))
+                        {
+                            <PanelCard Class="project-structure-inline-feedback project-structure-clipboard-feedback"
+                                       role="status"
+                                       aria-live="polite"
+                                       data-testid="project-structure-clipboard-feedback"
+                                       data-tone="@workflowFeedbackTone">
+                                @workflowFeedback
+                            </PanelCard>
+                        }
                         @if (ToolboxWindowState.IsVisible)
                         {
                             <ProjectStructureToolboxWindow WindowId="@ToolboxWindowKey"
@@ -941,6 +952,7 @@ else
         if (loadedProjectId != ProjectId)
         {
             loadedProjectId = ProjectId;
+            clipboardState = null;
             structureViewIndex = CanvasViewIndex;
             currentViewStateJson = null;
             selectedNodeIds = [];
@@ -1000,6 +1012,7 @@ else
                 unavailableState = loadResult.UnavailableState;
                 surface = null;
                 canvasSurface = null;
+                clipboardState = null;
                 quickActionDialog = null;
                 currentViewStateJson = null;
                 selectedNodeIds = [];
@@ -1085,6 +1098,7 @@ else
             surface = nextSurface;
             currentViewStateJson = nextSurface.ViewStateJson;
             RefreshCanvasSurface();
+            InvalidateClipboardStateForCurrentSurface();
             await LoadPartyEditorAsync();
             if (IsCurrentSurfaceReload(request))
             {

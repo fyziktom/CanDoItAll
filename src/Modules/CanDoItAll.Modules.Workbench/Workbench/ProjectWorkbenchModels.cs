@@ -333,6 +333,10 @@ public sealed record ProjectStructureSubtreeRecompositionResult(
     int DescendantCount,
     int RepositionedNodeCount);
 
+public sealed record ProjectStructureClipboardCopyResult(
+    IReadOnlyList<string> RootNodeIds,
+    IReadOnlyDictionary<string, string> NodeIdMap);
+
 internal sealed record SavedMediaDescriptor(
     string RelativePath,
     string Route,
@@ -352,7 +356,7 @@ tests: integration:ProjectWorkbenchServiceTests
 inputs: project id, command requests, graph mutations
 outputs: ProjectStructureSurface, ProjectCalendarSurface, ArtifactReference
 */
-public sealed class ProjectWorkbenchService(
+public sealed partial class ProjectWorkbenchService(
 IDbContextFactory<AppDbContext> dbContextFactory,
 IClock clock,
 IStoragePlacementService storagePlacementService,
@@ -618,6 +622,19 @@ ProjectWorkbenchCrossModuleMutationService crossModuleMutationService) : IProjec
         CancellationToken cancellationToken = default)
     {
         return await relationService.ReparentObjectAsync(projectId, nodeKey, parentNodeKey, cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<ProjectStructureNode>> ReparentSubtreesAsync(
+        Guid projectId,
+        IReadOnlyCollection<string> sourceRootNodeKeys,
+        string targetParentNodeKey,
+        CancellationToken cancellationToken = default)
+    {
+        return await relationService.ReparentSubtreesAsync(
+            projectId,
+            sourceRootNodeKeys,
+            targetParentNodeKey,
+            cancellationToken);
     }
 
     public async Task<int> DeleteObjectAsync(Guid projectId, string nodeKey, CancellationToken cancellationToken = default)

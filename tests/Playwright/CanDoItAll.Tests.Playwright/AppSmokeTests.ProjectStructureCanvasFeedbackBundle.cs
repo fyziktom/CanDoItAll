@@ -1,4 +1,3 @@
-using System.Text.Json;
 using Microsoft.Playwright;
 
 namespace CanDoItAll.Tests.Playwright;
@@ -301,7 +300,7 @@ public sealed partial class AppSmokeTests
     }
 
     [Fact]
-    public async Task Project_structure_canvas_feedback_clipboard_subtree_and_subproject_transfer_are_validated_in_browser()
+    public async Task Project_structure_canvas_copy_cut_paste_and_subproject_transfer_are_validated_in_browser()
     {
         var repoRoot = GetRepoRoot();
         var artifactsDir = Path.Combine(repoRoot, "output", "playwright", "feedback-bundle-transfer");
@@ -322,6 +321,14 @@ public sealed partial class AppSmokeTests
         await InstallCanvasClipboardStubAsync(page);
         var projectRootId = await ReadNodeIdAsync(page, ".cw-node[data-node-id^='project:']");
 
+        var destinationBlockId = await InvokeStructureCreateActionAsync(
+            page,
+            "add-block-task-flow",
+            projectRootId,
+            projectRootId,
+            "Clipboard destination",
+            "Delivery container",
+            "Copied and cut roots must become children of this node.");
         var sourceBlockId = await InvokeStructureCreateActionAsync(
             page,
             "add-block-task-flow",
@@ -346,51 +353,95 @@ public sealed partial class AppSmokeTests
             "Store rack photo",
             "Validation",
             "Grandchild evidence node that should follow the subtree.");
+        var secondSourceId = await InvokeStructureCreateActionAsync(
+            page,
+            "add-work-task",
+            projectRootId,
+            projectRootId,
+            "Review rollback plan",
+            "Networking",
+            "Second selected root for the multi-node cut proof.");
 
         await FocusCanvasRootAsync(page);
         await SetCanvasZoomPercentAsync(page, 72);
         await page.WaitForTimeoutAsync(250);
 
-        var beforeSource = await ReadWorkbenchNodeStateAsync(page, sourceBlockId);
-        var beforeTask = await ReadWorkbenchNodeStateAsync(page, movedTaskId);
-        var beforeEvidence = await ReadWorkbenchNodeStateAsync(page, movedEvidenceId);
-
         await EnsureCanvasSelectionAsync(page, SelectorForNodeId(sourceBlockId));
-        await CaptureCanvasSurfaceAsync(page, Path.Combine(artifactsDir, "01-before-cut-paste.png"));
+        await CaptureCanvasSurfaceAsync(page, Path.Combine(artifactsDir, "01-before-copy-paste.png"));
 
-        await PressCanvasShortcutAsync(page, "Control+X");
-        var clipboardPayloadJson = await WaitForCanvasClipboardTextContainingAsync(page, "\"operation\":\"cut\"");
-        using (var clipboardPayload = JsonDocument.Parse(clipboardPayloadJson))
-        {
-            var selectedIds = clipboardPayload.RootElement
-                .GetProperty("selectedNodeIds")
-                .EnumerateArray()
-                .Select(item => item.GetString())
-                .Where(item => !string.IsNullOrWhiteSpace(item))
-                .ToArray();
-            Assert.Equal(new[] { sourceBlockId }, selectedIds);
-        }
+        await PressCanvasShortcutAsync(page, "Control+C");
+        Assert.Equal(string.Empty, await ReadCanvasClipboardTextAsync(page));
+        await AssertNativeDocumentCopyIsNotCapturedAsync(page);
 
-        await RouteCanvasPasteAsync(page, 2000, 1200);
-        var afterSource = await WaitForWorkbenchNodeStateAsync(
+        await EnsureCanvasSelectionAsync(page, SelectorForNodeId(destinationBlockId));
+        await PressCanvasShortcutAsync(page, "Control+V");
+
+        var copiedSourceBlockId = await FindDifferentNodeIdByTitleAsync(
             page,
-            sourceBlockId,
-            node => Math.Abs(node.X - beforeSource.X) > 40 || Math.Abs(node.Y - beforeSource.Y) > 40,
-            "cut subtree moved after paste",
+            "Network orchestration",
+            sourceBlockId);
+        var copiedTaskId = await FindDifferentNodeIdByTitleAsync(
+            page,
+            "Inventory network dependencies",
+            movedTaskId);
+        var copiedEvidenceId = await FindDifferentNodeIdByTitleAsync(
+            page,
+            "Store rack photo",
+            movedEvidenceId);
+
+        await WaitForWorkbenchNodeStateAsync(
+            page,
+            copiedSourceBlockId,
+            node => string.Equals(node.ParentId, destinationBlockId, StringComparison.Ordinal),
+            "copied subtree root parented under the selected destination",
+            timeoutMs: 10_000);
+        await WaitForWorkbenchNodeStateAsync(
+            page,
+            copiedTaskId,
+            node => string.Equals(node.ParentId, copiedSourceBlockId, StringComparison.Ordinal),
+            "copied child parent remapped to the copied root",
+            timeoutMs: 10_000);
+        await WaitForWorkbenchNodeStateAsync(
+            page,
+            copiedEvidenceId,
+            node => string.Equals(node.ParentId, copiedTaskId, StringComparison.Ordinal),
+            "copied grandchild parent remapped to the copied child",
             timeoutMs: 10_000);
 
-        var afterTask = await ReadWorkbenchNodeStateAsync(page, movedTaskId);
-        var afterEvidence = await ReadWorkbenchNodeStateAsync(page, movedEvidenceId);
+        await CaptureCanvasSurfaceAsync(page, Path.Combine(artifactsDir, "02-after-copy-paste.png"));
 
-        var deltaX = afterSource.X - beforeSource.X;
-        var deltaY = afterSource.Y - beforeSource.Y;
-        Assert.True(Math.Abs(deltaX) > 40 || Math.Abs(deltaY) > 40, "Expected cut and paste to move the subtree root to a new canvas location.");
-        Assert.InRange(Math.Abs((afterTask.X - beforeTask.X) - deltaX), 0, 6);
-        Assert.InRange(Math.Abs((afterTask.Y - beforeTask.Y) - deltaY), 0, 6);
-        Assert.InRange(Math.Abs((afterEvidence.X - beforeEvidence.X) - deltaX), 0, 6);
-        Assert.InRange(Math.Abs((afterEvidence.Y - beforeEvidence.Y) - deltaY), 0, 6);
+        await SelectCanvasNodesAsync(page, [sourceBlockId, secondSourceId], sourceBlockId);
+        await PressCanvasShortcutAsync(page, "Control+X");
+        Assert.Equal(string.Empty, await ReadCanvasClipboardTextAsync(page));
 
-        await CaptureCanvasSurfaceAsync(page, Path.Combine(artifactsDir, "02-after-cut-paste.png"));
+        await EnsureCanvasSelectionAsync(page, SelectorForNodeId(destinationBlockId));
+        await PressCanvasShortcutAsync(page, "Control+V");
+        await WaitForWorkbenchNodeStateAsync(
+            page,
+            sourceBlockId,
+            node => string.Equals(node.ParentId, destinationBlockId, StringComparison.Ordinal),
+            "first cut root parented under the selected destination",
+            timeoutMs: 10_000);
+        await WaitForWorkbenchNodeStateAsync(
+            page,
+            secondSourceId,
+            node => string.Equals(node.ParentId, destinationBlockId, StringComparison.Ordinal),
+            "second cut root parented under the selected destination",
+            timeoutMs: 10_000);
+        await WaitForWorkbenchNodeStateAsync(
+            page,
+            movedTaskId,
+            node => string.Equals(node.ParentId, sourceBlockId, StringComparison.Ordinal),
+            "cut descendant retained its existing parent",
+            timeoutMs: 10_000);
+        await WaitForWorkbenchNodeStateAsync(
+            page,
+            movedEvidenceId,
+            node => string.Equals(node.ParentId, movedTaskId, StringComparison.Ordinal),
+            "cut grandchild retained its existing parent",
+            timeoutMs: 10_000);
+
+        await CaptureCanvasSurfaceAsync(page, Path.Combine(artifactsDir, "03-after-multi-cut-paste.png"));
 
         await EnsureCanvasSelectionAsync(page, SelectorForNodeId(sourceBlockId));
         await ClickSelectionWindowActionAsync(page, "To subproject");
@@ -401,7 +452,7 @@ public sealed partial class AppSmokeTests
         await subprojectTransferDialog
             .GetByTestId("project-structure-subproject-transfer-name")
             .FillAsync(subprojectName);
-        await CaptureLocatorAsync(subprojectTransferDialog, Path.Combine(artifactsDir, "03-subproject-transfer-dialog.png"));
+        await CaptureLocatorAsync(subprojectTransferDialog, Path.Combine(artifactsDir, "04-subproject-transfer-dialog.png"));
         await subprojectTransferDialog
             .GetByTestId("project-structure-subproject-transfer-submit")
             .EvaluateAsync("button => button.click()");
@@ -435,7 +486,7 @@ public sealed partial class AppSmokeTests
             "moved evidence is present in the new subproject");
         await WaitForWorkbenchNodeMissingAsync(page, sourceBlockId);
 
-        await CaptureCanvasSurfaceAsync(page, Path.Combine(artifactsDir, "04-subproject-route.png"));
+        await CaptureCanvasSurfaceAsync(page, Path.Combine(artifactsDir, "05-subproject-route.png"));
         Assert.False(await page.Locator("#blazor-error-ui").IsVisibleAsync());
     }
 
@@ -493,49 +544,76 @@ public sealed partial class AppSmokeTests
         await page.WaitForTimeoutAsync(250);
     }
 
-    private static async Task RouteCanvasPasteAsync(IPage page, double anchorX, double anchorY)
+    private static async Task<string> FindDifferentNodeIdByTitleAsync(
+        IPage page,
+        string title,
+        string excludedNodeId,
+        int timeoutMs = 10_000)
     {
-        var routed = await page.EvaluateAsync<bool>(
-            @"async requestedAnchor => {
+        var attempts = Math.Max(1, timeoutMs / 120);
+        string? nodeId = null;
+        for (var attempt = 0; attempt < attempts; attempt++)
+        {
+            nodeId = await page.EvaluateAsync<string?>(
+                @"request => {
                 const host = document.querySelector('.cw-canvas-host');
-                const state = host?.__canvasWorkbenchState;
-                const readClipboardText = window.CanDoItAll?.canvasWorkbenchModule?.readClipboardText;
-                if (!state?.dotNetRef?.invokeMethodAsync || typeof readClipboardText !== 'function') {
-                    return false;
-                }
-
-                const payload = await readClipboardText();
-                if (!payload) {
-                    return false;
-                }
-
-                let surfaceId = state.surface?.surfaceId || '';
-                try {
-                    const parsedPayload = JSON.parse(payload);
-                    if (parsedPayload && typeof parsedPayload.surfaceId === 'string' && parsedPayload.surfaceId.length > 0) {
-                        surfaceId = parsedPayload.surfaceId;
-                    }
-                } catch {
-                }
-
-                const envelope = JSON.stringify({
-                    payloadJson: payload,
-                    anchorWorld: {
-                        x: requestedAnchor.x,
-                        y: requestedAnchor.y
-                    },
-                    surfaceId
-                });
-                await state.dotNetRef.invokeMethodAsync('OnClipboardAction', 'paste', envelope);
-                return true;
+                const nodes = host?.__canvasWorkbenchState?.surface?.nodes || [];
+                const match = nodes.find(node =>
+                    node?.id !== request.excludedNodeId &&
+                    [node?.title, node?.inlineText, node?.leadText].some(candidate => candidate === request.title));
+                return match?.id || null;
             }",
-            new
+                new
+                {
+                    title,
+                    excludedNodeId
+                });
+            if (!string.IsNullOrWhiteSpace(nodeId))
             {
-                x = anchorX,
-                y = anchorY
-            });
-        Assert.True(routed, "Expected the browser canvas bridge to route the clipboard paste request.");
-        await page.WaitForTimeoutAsync(280);
+                return nodeId;
+            }
+
+            await page.WaitForTimeoutAsync(120);
+        }
+
+        throw new InvalidOperationException(
+            $"Timed out waiting for a second node titled '{title}' that differs from '{excludedNodeId}'.");
+    }
+
+    private static async Task AssertNativeDocumentCopyIsNotCapturedAsync(IPage page)
+    {
+        await page.EvaluateAsync(
+            @"() => {
+                document.querySelector('[data-native-copy-probe]')?.remove();
+                const probe = document.createElement('span');
+                probe.dataset.nativeCopyProbe = 'true';
+                probe.textContent = 'native document selection';
+                document.body.appendChild(probe);
+
+                const range = document.createRange();
+                range.selectNodeContents(probe);
+                const selection = window.getSelection();
+                selection?.removeAllRanges();
+                selection?.addRange(range);
+
+                window.__nativeDocumentCopyObserved = false;
+                document.addEventListener('copy', event => {
+                    window.__nativeDocumentCopyObserved = !event.defaultPrevented;
+                }, { once: true });
+                document.body.tabIndex = -1;
+                document.body.focus();
+            }");
+
+        await page.Keyboard.PressAsync("Control+C");
+        var nativeCopyObserved = await page.EvaluateAsync<bool>(
+            "() => window.__nativeDocumentCopyObserved === true");
+        Assert.True(nativeCopyObserved, "Expected Ctrl+C outside the focused canvas to retain native browser copy behavior.");
+        await page.EvaluateAsync(
+            @"() => {
+                window.getSelection()?.removeAllRanges();
+                document.querySelector('[data-native-copy-probe]')?.remove();
+                document.body.removeAttribute('tabindex');
+            }");
     }
 
     private static async Task InstallCanvasClipboardStubAsync(IPage page)
@@ -590,26 +668,6 @@ public sealed partial class AppSmokeTests
 
         throw new InvalidOperationException(
             $"Timed out waiting for clipboard text '{normalizedExpected}'. Last value was '{lastValue ?? string.Empty}'.");
-    }
-
-    private static async Task<string> WaitForCanvasClipboardTextContainingAsync(IPage page, string expectedFragment, int timeoutMs = 4_000)
-    {
-        var normalizedFragment = NormalizeLineEndings(expectedFragment);
-        var attempts = Math.Max(1, timeoutMs / 120);
-        string? lastValue = null;
-        for (var attempt = 0; attempt < attempts; attempt++)
-        {
-            lastValue = await ReadCanvasClipboardTextAsync(page);
-            if (lastValue.Contains(normalizedFragment, StringComparison.Ordinal))
-            {
-                return lastValue;
-            }
-
-            await page.WaitForTimeoutAsync(120);
-        }
-
-        throw new InvalidOperationException(
-            $"Timed out waiting for clipboard text containing '{normalizedFragment}'. Last value was '{lastValue ?? string.Empty}'.");
     }
 
     private static string BuildClipboardTreeEntry(string typeToken, string title, string nodeId)
@@ -714,6 +772,7 @@ public sealed partial class AppSmokeTests
 
                 return {
                     id: node.id || '',
+                    parentId: node.parentId || null,
                     title: node.title || '',
                     notes: node.notes || '',
                     inlineText: node.inlineText || '',
@@ -840,6 +899,8 @@ public sealed partial class AppSmokeTests
     private sealed class CanvasWorkbenchNodeRuntimeSnapshot
     {
         public string Id { get; set; } = string.Empty;
+
+        public string? ParentId { get; set; }
 
         public string Title { get; set; } = string.Empty;
 

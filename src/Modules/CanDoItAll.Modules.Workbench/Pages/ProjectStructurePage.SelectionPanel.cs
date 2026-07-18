@@ -115,6 +115,8 @@ public partial class ProjectStructurePage
             BuildSelectionPanelRenderKey(selectedItems, selectedDetail),
             selectedItems,
             selectedDetail,
+            workflowFeedback,
+            workflowFeedbackTone,
             CanApplySelectionStatus,
             selectionBorderName,
             !string.IsNullOrWhiteSpace(linkModeSourceId),
@@ -243,7 +245,11 @@ public partial class ProjectStructurePage
             .Append('|')
             .Append(linkModeSourceId ?? string.Empty)
             .Append('|')
-            .Append(reconnectNodeId ?? string.Empty);
+            .Append(reconnectNodeId ?? string.Empty)
+            .Append('|')
+            .Append(workflowFeedback ?? string.Empty)
+            .Append('|')
+            .Append(workflowFeedbackTone);
 
         foreach (var item in selectedItems)
         {

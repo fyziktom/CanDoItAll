@@ -7,6 +7,8 @@ public sealed record ProjectStructureSelectionPanelState(
     string RenderKey,
     IReadOnlyList<ProjectStructureSelectionListItem> SelectedNodes,
     ProjectStructureSelectionDetailState? SelectedNode,
+    string? Feedback,
+    string FeedbackTone,
     bool CanApplySelectionStatus,
     string SelectionBorderName,
     bool IsConnectMode,

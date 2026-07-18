@@ -1,6 +1,13 @@
 @using CanDoItAll.Components.BaseLib
 @using CanDoItAll.SharedKernel
 
+@if (State.SelectedNodes.Count != 1 && !string.IsNullOrWhiteSpace(State.Feedback))
+{
+    <div class="project-structure-inline-feedback" data-tone="@State.FeedbackTone">
+        @State.Feedback
+    </div>
+}
+
 @if (State.SelectedNodes.Count == 0)
 {
     <div class="cw-empty-state">

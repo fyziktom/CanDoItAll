@@ -1457,21 +1457,22 @@ public sealed class ProjectStructurePageSimpleMutationTests
     }
 
     [Fact]
-    public async Task Clipboard_cut_and_paste_moves_selected_subtree_without_structure_reload()
+    public async Task Clipboard_copy_and_paste_duplicates_normalized_forest_under_selected_destination_and_remains_reusable()
     {
         await using var harness = await ComponentTestHarness.CreateAsync();
         var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
         var workbenchService = harness.Context.Services.GetRequiredService<ProjectWorkbenchService>();
 
-        var projectId = await CreateProjectAsync(projectsService, "Clipboard subtree patch");
+        var projectId = await CreateProjectAsync(projectsService, "Clipboard copy forest");
+        var projectRootNodeId = $"project:{projectId}";
         var sourceNode = await workbenchService.CreateObjectAsync(
             projectId,
             new ProjectObjectCreateRequest(
                 ProjectObjectType.ProjectBlock,
                 "Network orchestration",
                 "Delivery flow",
-                "Parent subtree node for cut and paste.",
-                $"project:{projectId}",
+                "Parent subtree node for copy and paste.",
+                projectRootNodeId,
                 620,
                 80,
                 null,
@@ -1483,7 +1484,7 @@ public sealed class ProjectStructurePageSimpleMutationTests
                 ProjectObjectType.WorkItem,
                 "Inventory network dependencies",
                 "Networking",
-                "Task child that should move with the subtree.",
+                "Task child that should be duplicated with the subtree.",
                 sourceNode.Id,
                 900,
                 280,
@@ -1500,6 +1501,26 @@ public sealed class ProjectStructurePageSimpleMutationTests
                 taskNode.Id,
                 1180,
                 420));
+        var secondSourceNode = await workbenchService.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.Note,
+                "Field constraints",
+                "Deployment notes",
+                "A second selected root copied in the same forest.",
+                projectRootNodeId,
+                720,
+                560));
+        var destinationNode = await workbenchService.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.ProjectBlock,
+                "Execution package",
+                "Paste destination",
+                "Copied roots become direct children of this node.",
+                projectRootNodeId,
+                1540,
+                560));
 
         var cut = harness.Context.RenderComponent<ProjectStructurePage>(
             parameters => parameters.Add(page => page.ProjectId, projectId));
@@ -1508,60 +1529,339 @@ public sealed class ProjectStructurePageSimpleMutationTests
         cut.WaitForAssertion(() =>
         {
             Assert.Contains("Network orchestration", cut.Markup);
-            Assert.Equal(4, canvasWorkbench.Instance.Surface.Nodes.Count);
+            Assert.Equal(6, canvasWorkbench.Instance.Surface.Nodes.Count);
         });
 
-        var cutPayload = JsonSerializer.Serialize(new
-        {
-            operation = "cut",
-            surfaceId = canvasWorkbench.Instance.Surface.SurfaceId,
-            selectedNodeIds = new[] { sourceNode.Id }
-        });
-        var pasteEnvelope = JsonSerializer.Serialize(new
-        {
-            payloadJson = cutPayload,
-            anchorWorld = new
-            {
-                x = 2000,
-                y = 1200
-            },
-            surfaceId = canvasWorkbench.Instance.Surface.SurfaceId
-        });
+        var surfaceId = canvasWorkbench.Instance.Surface.SurfaceId;
+        await InvokeClipboardActionAsync(
+            cut,
+            canvasWorkbench,
+            new CanvasWorkbenchClipboardRequest(
+                CanvasWorkbenchClipboardAction.Copy,
+                surfaceId,
+                sourceNode.Id,
+                [sourceNode.Id, taskNode.Id, secondSourceNode.Id]));
+        await InvokeClipboardActionAsync(
+            cut,
+            canvasWorkbench,
+            new CanvasWorkbenchClipboardRequest(
+                CanvasWorkbenchClipboardAction.Paste,
+                surfaceId,
+                destinationNode.Id,
+                [destinationNode.Id],
+                new CanvasWorkbenchPoint { X = 8000, Y = 6000 }));
 
-        await cut.InvokeAsync(() => canvasWorkbench.Instance.OnClipboardAction("cut", cutPayload));
-        await cut.InvokeAsync(() => canvasWorkbench.Instance.OnClipboardAction("paste", pasteEnvelope));
+        IReadOnlyList<string> firstCopiedRootNodeIds = [];
+        cut.WaitForAssertion(() =>
+        {
+            firstCopiedRootNodeIds = canvasWorkbench.Instance.Surface.UiState.SelectedNodeIds.ToList();
+            Assert.Equal(2, firstCopiedRootNodeIds.Count);
+            Assert.DoesNotContain(sourceNode.Id, firstCopiedRootNodeIds);
+            Assert.DoesNotContain(secondSourceNode.Id, firstCopiedRootNodeIds);
+            Assert.Contains("Copied 2 branches", cut.Markup, StringComparison.OrdinalIgnoreCase);
+        });
 
         var persistedSurface = await workbenchService.GetStructureAsync(projectId);
-        var persistedSource = Assert.Single(persistedSurface.Nodes, node => string.Equals(node.Id, sourceNode.Id, StringComparison.Ordinal));
-        var persistedTask = Assert.Single(persistedSurface.Nodes, node => string.Equals(node.Id, taskNode.Id, StringComparison.Ordinal));
-        var persistedEvidence = Assert.Single(persistedSurface.Nodes, node => string.Equals(node.Id, evidenceNode.Id, StringComparison.Ordinal));
+        var firstCopiedSource = Assert.Single(
+            persistedSurface.Nodes,
+            node => firstCopiedRootNodeIds.Contains(node.Id, StringComparer.Ordinal) &&
+                    string.Equals(node.Title, sourceNode.Title, StringComparison.Ordinal));
+        var firstCopiedSecondSource = Assert.Single(
+            persistedSurface.Nodes,
+            node => firstCopiedRootNodeIds.Contains(node.Id, StringComparer.Ordinal) &&
+                    string.Equals(node.Title, secondSourceNode.Title, StringComparison.Ordinal));
+        var firstCopiedTask = Assert.Single(
+            persistedSurface.Nodes,
+            node => string.Equals(node.ParentId, firstCopiedSource.Id, StringComparison.Ordinal) &&
+                    string.Equals(node.Title, taskNode.Title, StringComparison.Ordinal));
+        var firstCopiedEvidence = Assert.Single(
+            persistedSurface.Nodes,
+            node => string.Equals(node.ParentId, firstCopiedTask.Id, StringComparison.Ordinal) &&
+                    string.Equals(node.Title, evidenceNode.Title, StringComparison.Ordinal));
 
-        var persistedDeltaX = persistedSource.X - sourceNode.X;
-        var persistedDeltaY = persistedSource.Y - sourceNode.Y;
-        Assert.True(
-            Math.Abs(persistedDeltaX) > 40 || Math.Abs(persistedDeltaY) > 40,
-            $"Expected persisted cut/paste movement, but source remained at ({persistedSource.X}, {persistedSource.Y}). Markup: {cut.Markup}");
-        Assert.InRange(Math.Abs((persistedTask.X - taskNode.X) - persistedDeltaX), 0, 6);
-        Assert.InRange(Math.Abs((persistedTask.Y - taskNode.Y) - persistedDeltaY), 0, 6);
-        Assert.InRange(Math.Abs((persistedEvidence.X - evidenceNode.X) - persistedDeltaX), 0, 6);
-        Assert.InRange(Math.Abs((persistedEvidence.Y - evidenceNode.Y) - persistedDeltaY), 0, 6);
+        Assert.Equal(destinationNode.Id, firstCopiedSource.ParentId);
+        Assert.Equal(destinationNode.Id, firstCopiedSecondSource.ParentId);
+        Assert.NotEqual(taskNode.Id, firstCopiedTask.Id);
+        Assert.NotEqual(evidenceNode.Id, firstCopiedEvidence.Id);
+        Assert.Equal(projectRootNodeId, Assert.Single(persistedSurface.Nodes, node => node.Id == sourceNode.Id).ParentId);
+        Assert.Equal(sourceNode.Id, Assert.Single(persistedSurface.Nodes, node => node.Id == taskNode.Id).ParentId);
+        Assert.Equal(projectRootNodeId, Assert.Single(persistedSurface.Nodes, node => node.Id == secondSourceNode.Id).ParentId);
+
+        await InvokeClipboardActionAsync(
+            cut,
+            canvasWorkbench,
+            new CanvasWorkbenchClipboardRequest(
+                CanvasWorkbenchClipboardAction.Paste,
+                surfaceId,
+                destinationNode.Id,
+                [destinationNode.Id]));
 
         cut.WaitForAssertion(() =>
         {
-            var updatedSource = Assert.Single(canvasWorkbench.Instance.Surface.Nodes, node => string.Equals(node.Id, sourceNode.Id, StringComparison.Ordinal));
-            var updatedTask = Assert.Single(canvasWorkbench.Instance.Surface.Nodes, node => string.Equals(node.Id, taskNode.Id, StringComparison.Ordinal));
-            var updatedEvidence = Assert.Single(canvasWorkbench.Instance.Surface.Nodes, node => string.Equals(node.Id, evidenceNode.Id, StringComparison.Ordinal));
-
-            var deltaX = updatedSource.X - sourceNode.X;
-            var deltaY = updatedSource.Y - sourceNode.Y;
-            Assert.True(Math.Abs(deltaX) > 40 || Math.Abs(deltaY) > 40);
-            Assert.InRange(Math.Abs((updatedTask.X - taskNode.X) - deltaX), 0, 6);
-            Assert.InRange(Math.Abs((updatedTask.Y - taskNode.Y) - deltaY), 0, 6);
-            Assert.InRange(Math.Abs((updatedEvidence.X - evidenceNode.X) - deltaX), 0, 6);
-            Assert.InRange(Math.Abs((updatedEvidence.Y - evidenceNode.Y) - deltaY), 0, 6);
-            Assert.Contains("cut selection was pasted", cut.Markup, StringComparison.OrdinalIgnoreCase);
+            var secondCopiedRootNodeIds = canvasWorkbench.Instance.Surface.UiState.SelectedNodeIds;
+            Assert.Equal(2, secondCopiedRootNodeIds.Count);
+            Assert.DoesNotContain(secondCopiedRootNodeIds, nodeId => firstCopiedRootNodeIds.Contains(nodeId, StringComparer.Ordinal));
+            Assert.Equal(14, canvasWorkbench.Instance.Surface.Nodes.Count);
         });
     }
+
+    [Fact]
+    public async Task Clipboard_cut_and_paste_reparents_normalized_forest_and_consumes_cut_buffer()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
+        var workbenchService = harness.Context.Services.GetRequiredService<ProjectWorkbenchService>();
+
+        var projectId = await CreateProjectAsync(projectsService, "Clipboard cut forest");
+        var projectRootNodeId = $"project:{projectId}";
+        var sourceNode = await workbenchService.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.ProjectBlock,
+                "Source branch",
+                "Cut source",
+                "The first selected subtree root.",
+                projectRootNodeId,
+                520,
+                140));
+        var sourceChildNode = await workbenchService.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.WorkItem,
+                "Source child",
+                "Nested node",
+                "Selecting this child with its parent must not create a second moved root.",
+                sourceNode.Id,
+                760,
+                300));
+        var secondSourceNode = await workbenchService.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.Note,
+                "Second source branch",
+                "Cut source",
+                "The second selected subtree root.",
+                projectRootNodeId,
+                680,
+                520));
+        var destinationNode = await workbenchService.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.ProjectBlock,
+                "Destination branch",
+                "Paste target",
+                "Both cut roots become children of this node.",
+                projectRootNodeId,
+                1320,
+                220));
+        var alternateDestinationNode = await workbenchService.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.ProjectBlock,
+                "Alternate destination",
+                "Second paste target",
+                "A consumed cut buffer must not move the roots here.",
+                projectRootNodeId,
+                1480,
+                520));
+
+        var cut = harness.Context.RenderComponent<ProjectStructurePage>(
+            parameters => parameters.Add(page => page.ProjectId, projectId));
+        var canvasWorkbench = WaitForCanvasWorkbench(cut);
+        var surfaceId = canvasWorkbench.Instance.Surface.SurfaceId;
+
+        await InvokeClipboardActionAsync(
+            cut,
+            canvasWorkbench,
+            new CanvasWorkbenchClipboardRequest(
+                CanvasWorkbenchClipboardAction.Cut,
+                surfaceId,
+                sourceNode.Id,
+                [sourceChildNode.Id, sourceNode.Id, secondSourceNode.Id]));
+        await InvokeClipboardActionAsync(
+            cut,
+            canvasWorkbench,
+            new CanvasWorkbenchClipboardRequest(
+                CanvasWorkbenchClipboardAction.Paste,
+                surfaceId,
+                destinationNode.Id,
+                [destinationNode.Id],
+                new CanvasWorkbenchPoint { X = 9000, Y = 7000 }));
+
+        var persistedSurface = await workbenchService.GetStructureAsync(projectId);
+        Assert.Equal(destinationNode.Id, Assert.Single(persistedSurface.Nodes, node => node.Id == sourceNode.Id).ParentId);
+        Assert.Equal(sourceNode.Id, Assert.Single(persistedSurface.Nodes, node => node.Id == sourceChildNode.Id).ParentId);
+        Assert.Equal(destinationNode.Id, Assert.Single(persistedSurface.Nodes, node => node.Id == secondSourceNode.Id).ParentId);
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.True(
+                canvasWorkbench.Instance.Surface.UiState.SelectedNodeIds
+                    .ToHashSet(StringComparer.Ordinal)
+                    .SetEquals([sourceNode.Id, secondSourceNode.Id]));
+            Assert.Contains("Moved 2 branches", cut.Markup, StringComparison.OrdinalIgnoreCase);
+        });
+
+        await InvokeClipboardActionAsync(
+            cut,
+            canvasWorkbench,
+            new CanvasWorkbenchClipboardRequest(
+                CanvasWorkbenchClipboardAction.Paste,
+                surfaceId,
+                alternateDestinationNode.Id,
+                [alternateDestinationNode.Id]));
+
+        cut.WaitForAssertion(() =>
+            Assert.Contains("clipboard is empty", cut.Markup, StringComparison.OrdinalIgnoreCase));
+        persistedSurface = await workbenchService.GetStructureAsync(projectId);
+        Assert.Equal(destinationNode.Id, Assert.Single(persistedSurface.Nodes, node => node.Id == sourceNode.Id).ParentId);
+        Assert.Equal(destinationNode.Id, Assert.Single(persistedSurface.Nodes, node => node.Id == secondSourceNode.Id).ParentId);
+    }
+
+    [Fact]
+    public async Task Clipboard_rejected_capture_clears_armed_cut_and_shows_feedback_when_selection_window_is_hidden()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
+        var workbenchService = harness.Context.Services.GetRequiredService<ProjectWorkbenchService>();
+
+        var projectId = await CreateProjectAsync(projectsService, "Clipboard rejected capture");
+        var projectRootNodeId = $"project:{projectId}";
+        var sourceNode = await workbenchService.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.ProjectBlock,
+                "Armed cut source",
+                "Cut source",
+                "A rejected replacement capture must disarm this cut buffer.",
+                projectRootNodeId,
+                520,
+                180));
+        var destinationNode = await workbenchService.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.ProjectBlock,
+                "Rejected capture destination",
+                "Paste destination",
+                "The stale cut buffer must not move a node here.",
+                projectRootNodeId,
+                1180,
+                360));
+        await workbenchService.SaveViewStateAsync(
+            projectId,
+            "structure",
+            new CanvasWorkbenchUiState
+            {
+                WindowStates = new Dictionary<string, CanvasWorkbenchWindowState>(StringComparer.Ordinal)
+                {
+                    ["project-structure.selection"] = new CanvasWorkbenchWindowState { IsVisible = false }
+                }
+            }.ToJson());
+
+        var cut = harness.Context.RenderComponent<ProjectStructurePage>(
+            parameters => parameters.Add(page => page.ProjectId, projectId));
+        var canvasWorkbench = WaitForCanvasWorkbench(cut);
+        var surfaceId = canvasWorkbench.Instance.Surface.SurfaceId;
+
+        await InvokeClipboardActionAsync(
+            cut,
+            canvasWorkbench,
+            new CanvasWorkbenchClipboardRequest(
+                CanvasWorkbenchClipboardAction.Cut,
+                surfaceId,
+                sourceNode.Id,
+                [sourceNode.Id]));
+        await InvokeClipboardActionAsync(
+            cut,
+            canvasWorkbench,
+            new CanvasWorkbenchClipboardRequest(
+                CanvasWorkbenchClipboardAction.Copy,
+                surfaceId,
+                projectRootNodeId,
+                [projectRootNodeId]));
+        await InvokeClipboardActionAsync(
+            cut,
+            canvasWorkbench,
+            new CanvasWorkbenchClipboardRequest(
+                CanvasWorkbenchClipboardAction.Paste,
+                surfaceId,
+                destinationNode.Id,
+                [destinationNode.Id]));
+
+        cut.WaitForAssertion(() =>
+        {
+            var feedback = cut.Find("[data-testid='project-structure-clipboard-feedback']");
+            Assert.Contains("clipboard is empty", feedback.TextContent, StringComparison.OrdinalIgnoreCase);
+            Assert.DoesNotContain("project-structure-selection-window", cut.Markup, StringComparison.Ordinal);
+        });
+
+        var persistedSurface = await workbenchService.GetStructureAsync(projectId);
+        Assert.Equal(projectRootNodeId, Assert.Single(persistedSurface.Nodes, node => node.Id == sourceNode.Id).ParentId);
+    }
+
+    [Fact]
+    public async Task Clipboard_paste_rejects_projected_subproject_destination_before_mutation()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
+        var workbenchService = harness.Context.Services.GetRequiredService<ProjectWorkbenchService>();
+
+        var projectId = await CreateProjectAsync(projectsService, "Clipboard projected destination");
+        var subprojectId = await CreateProjectAsync(projectsService, "Clipboard projected subproject");
+        Assert.True((await projectsService.AddSubprojectAsync(projectId, subprojectId)).IsSuccess);
+        var projectRootNodeId = $"project:{projectId}";
+        var projectedSubprojectNodeId = $"project-child:{subprojectId}";
+        var sourceNode = await workbenchService.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.Note,
+                "Projection-safe source",
+                "Copy source",
+                "This node must remain in the active project.",
+                projectRootNodeId,
+                560,
+                220));
+
+        var cut = harness.Context.RenderComponent<ProjectStructurePage>(
+            parameters => parameters.Add(page => page.ProjectId, projectId));
+        var canvasWorkbench = WaitForCanvasWorkbench(cut);
+        cut.WaitForAssertion(() =>
+            Assert.Contains(
+                canvasWorkbench.Instance.Surface.Nodes,
+                node => string.Equals(node.Id, projectedSubprojectNodeId, StringComparison.Ordinal)));
+        var surfaceId = canvasWorkbench.Instance.Surface.SurfaceId;
+
+        await InvokeClipboardActionAsync(
+            cut,
+            canvasWorkbench,
+            new CanvasWorkbenchClipboardRequest(
+                CanvasWorkbenchClipboardAction.Copy,
+                surfaceId,
+                sourceNode.Id,
+                [sourceNode.Id]));
+        await InvokeClipboardActionAsync(
+            cut,
+            canvasWorkbench,
+            new CanvasWorkbenchClipboardRequest(
+                CanvasWorkbenchClipboardAction.Paste,
+                surfaceId,
+                projectedSubprojectNodeId,
+                [projectedSubprojectNodeId]));
+
+        cut.WaitForAssertion(() =>
+            Assert.Contains("project transfer action", cut.Markup, StringComparison.OrdinalIgnoreCase));
+        var persistedSurface = await workbenchService.GetStructureAsync(projectId);
+        Assert.Single(
+            persistedSurface.Nodes,
+            node => string.Equals(node.Title, sourceNode.Title, StringComparison.Ordinal));
+        Assert.Equal(projectRootNodeId, Assert.Single(persistedSurface.Nodes, node => node.Id == sourceNode.Id).ParentId);
+    }
+
+    private static Task InvokeClipboardActionAsync(
+        IRenderedComponent<ProjectStructurePage> cut,
+        IRenderedComponent<CanvasWorkbench> canvasWorkbench,
+        CanvasWorkbenchClipboardRequest request)
+        => cut.InvokeAsync(() => canvasWorkbench.Instance.OnClipboardAction(JsonSerializer.Serialize(request)));
 
     private static async Task<Guid> CreateProjectAsync(ProjectsService projectsService, string name)
     {

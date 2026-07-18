@@ -299,6 +299,93 @@ public sealed class ProjectWorkbenchRelationService(
         return ProjectWorkbenchNodeMapper.MapStructureNode(node);
     }
 
+    public async Task<IReadOnlyList<ProjectStructureNode>> ReparentSubtreesAsync(
+        Guid projectId,
+        IReadOnlyCollection<string> sourceRootNodeKeys,
+        string targetParentNodeKey,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(targetParentNodeKey);
+
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        await ProjectWorkbenchSchemaInitializer.EnsureAsync(dbContext, cancellationToken);
+
+        var normalizedTargetNodeKey = ProjectWorkbenchGraphConventions.NormalizeEditableParentNodeKey(
+            projectId,
+            targetParentNodeKey);
+        var assembly = await projectStructureAssemblyService.LoadAsync(dbContext, projectId, cancellationToken);
+        ProjectStructureEditableForestResolver.ValidateTarget(
+            projectId,
+            normalizedTargetNodeKey,
+            assembly.Nodes);
+        var editableNodes = await dbContext.Set<ProjectObjectRecord>()
+            .Where(node => node.ProjectId == projectId && !node.IsSystemManaged)
+            .ToListAsync(cancellationToken);
+        var forest = ProjectStructureEditableForestResolver.Resolve(
+            projectId,
+            editableNodes,
+            sourceRootNodeKeys);
+
+        foreach (var rootNodeKey in forest.RootNodeKeys)
+        {
+            InvariantService.ValidateParentAssignment(
+                projectId,
+                rootNodeKey,
+                normalizedTargetNodeKey,
+                assembly.Nodes);
+        }
+
+        var forestNodeKeys = forest.Nodes
+            .Select(node => node.NodeKey)
+            .ToHashSet(StringComparer.Ordinal);
+        var placementSession = new ProjectStructureAutomaticPlacementSession(
+            assembly.Nodes.Where(node => !forestNodeKeys.Contains(node.NodeKey)).ToList());
+        var updatedAtUtc = clock.GetUtcNow();
+
+        foreach (var rootNodeKey in forest.RootNodeKeys)
+        {
+            var root = forest.NodesByKey[rootNodeKey];
+            var targetPosition = placementSession.Resolve(new ProjectStructureAutomaticPlacementRequest(
+                normalizedTargetNodeKey,
+                root.ObjectType,
+                root.Title,
+                root.Subtitle,
+                root.Notes,
+                (root.PositionX, root.PositionY)));
+            var deltaX = targetPosition.X - root.PositionX;
+            var deltaY = targetPosition.Y - root.PositionY;
+
+            foreach (var node in forest.Trees[rootNodeKey])
+            {
+                node.PositionX += deltaX;
+                node.PositionY += deltaY;
+                node.UpdatedAtUtc = updatedAtUtc;
+                placementSession.Add(node);
+            }
+
+            root.ParentNodeKey = normalizedTargetNodeKey;
+        }
+
+        var oldParentLinks = await dbContext.Set<ProjectObjectLinkRecord>()
+            .Where(link =>
+                link.ProjectId == projectId &&
+                forest.RootNodeKeys.Contains(link.TargetNodeKey) &&
+                !link.IsSystemManaged &&
+                (link.LinkKind == ProjectObjectLinkKind.BelongsTo ||
+                    link.LinkKind == ProjectObjectLinkKind.Contains))
+            .ToListAsync(cancellationToken);
+        if (oldParentLinks.Count > 0)
+        {
+            dbContext.RemoveRange(oldParentLinks);
+        }
+
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        return forest.RootNodeKeys
+            .Select(rootNodeKey => ProjectWorkbenchNodeMapper.MapStructureNode(forest.NodesByKey[rootNodeKey]))
+            .ToList();
+    }
+
     public Task MoveObjectAsync(
         Guid projectId,
         string nodeKey,

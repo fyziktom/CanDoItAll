@@ -17,28 +17,26 @@ public partial class ProjectStructurePage
         var normalizedIds = selectedIds
             .Where(id => !string.IsNullOrWhiteSpace(id))
             .Distinct(StringComparer.Ordinal)
-            .ToHashSet(StringComparer.Ordinal);
+            .ToList();
         var nodesById = surface.Nodes.ToDictionary(node => node.Id, StringComparer.Ordinal);
+        var candidateNodes = normalizedIds
+            .Select(nodeId => nodesById.GetValueOrDefault(nodeId))
+            .Where(node => node is not null && (predicate is null || predicate(node)))
+            .Cast<ProjectStructureNode>()
+            .ToList();
+        var candidateIds = candidateNodes
+            .Select(node => node.Id)
+            .ToHashSet(StringComparer.Ordinal);
         var roots = new List<ProjectStructureNode>();
 
-        foreach (var nodeId in normalizedIds)
+        foreach (var node in candidateNodes)
         {
-            if (!nodesById.TryGetValue(nodeId, out var node))
-            {
-                continue;
-            }
-
-            if (predicate is not null && !predicate(node))
-            {
-                continue;
-            }
-
             var currentParentId = node.ParentId;
             var isCoveredBySelectedAncestor = false;
             while (!string.IsNullOrWhiteSpace(currentParentId) &&
                    nodesById.TryGetValue(currentParentId, out var parent))
             {
-                if (normalizedIds.Contains(parent.Id))
+                if (candidateIds.Contains(parent.Id))
                 {
                     isCoveredBySelectedAncestor = true;
                     break;
