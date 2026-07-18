@@ -10,8 +10,7 @@ internal enum ProjectsPageLoadKind
     Delete,
     Import,
     Files,
-    Hierarchy,
-    Gantt
+    Hierarchy
 }
 
 internal readonly record struct ProjectsPageLoadKey(

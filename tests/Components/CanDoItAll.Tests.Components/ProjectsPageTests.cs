@@ -7,8 +7,8 @@ using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Projects.Pages;
 using CanDoItAll.Modules.Projects.Pages.Components;
-using CanDoItAll.Modules.Workbench;
 using CanDoItAll.SharedKernel;
+using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
@@ -598,57 +598,30 @@ public sealed class ProjectsPageTests
     }
 
     [Fact]
-    public async Task Project_card_opens_mermaid_gantt_modal()
+    public async Task Project_card_places_gantt_after_structure_and_opens_gantt_tab()
     {
         await using var harness = await ComponentTestHarness.CreateAsync();
         var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
-        var workbenchService = harness.Context.Services.GetRequiredService<ProjectWorkbenchService>();
-        var projectId = await CreateProjectAsync(projectsService, "Gantt preview project");
-        var prerequisiteNote = await workbenchService.CreateObjectAsync(
-            projectId,
-            new ProjectObjectCreateRequest(
-                ProjectObjectType.Note,
-                "Architect plan",
-                "Draft note",
-                "Create the plan before implementation starts.",
-                $"project:{projectId}",
-                420,
-                240));
-        var implementationTask = await workbenchService.CreateObjectAsync(
-            projectId,
-            new ProjectObjectCreateRequest(
-                ProjectObjectType.WorkItem,
-                "Implement feature",
-                "Execution",
-                "Build the project-card Mermaid Gantt preview.",
-                $"project:{projectId}",
-                X: 700,
-                Y: 260,
-                ObjectSubtype: "task",
-                DurationSeconds: 7200));
-        await workbenchService.LinkObjectsAsync(projectId, implementationTask.Id, prerequisiteNote.Id, ProjectObjectLinkKind.DependsOn);
+        var navigation = harness.Context.Services.GetRequiredService<NavigationManager>();
+        var projectId = await CreateProjectAsync(projectsService, "Gantt tab project");
 
         var cut = harness.Context.RenderComponent<ProjectsPage>();
-        cut.WaitForAssertion(() => Assert.Contains("Gantt preview project", cut.Markup));
+        cut.WaitForAssertion(() => Assert.Contains("Gantt tab project", cut.Markup));
         var projectCard = cut.FindAll("[data-testid='project-card']")
-            .Single(card => card.TextContent.Contains("Gantt preview project", StringComparison.Ordinal));
+            .Single(card => card.TextContent.Contains("Gantt tab project", StringComparison.Ordinal));
+        var structureButton = projectCard.QuerySelector("[data-testid='project-card-structure-button']")
+            ?? throw new InvalidOperationException("The project card structure button was not rendered.");
+        var ganttButton = projectCard.QuerySelector("[data-testid='project-card-gantt-button']")
+            ?? throw new InvalidOperationException("The project card Gantt button was not rendered.");
 
-        projectCard.QuerySelector("[data-testid='project-card-gantt-button']")!.Click();
+        Assert.Equal("Open Gantt tab", ganttButton.GetAttribute("title"));
+        Assert.Equal("Open Gantt tab", ganttButton.GetAttribute("aria-label"));
+        Assert.Equal("project-card-gantt-button", structureButton.NextElementSibling?.GetAttribute("data-testid"));
+
+        ganttButton.Click();
 
         cut.WaitForAssertion(() =>
-        {
-            var modal = cut.Find("[data-testid='projects-gantt-modal']");
-            var diagram = cut.Find("[data-testid='projects-gantt-mermaid-diagram']");
-            var source = cut.Find("[data-testid='projects-gantt-mermaid-source']");
-
-            Assert.Contains("Gantt preview project", modal.TextContent);
-            Assert.Contains("cda-mermaid", diagram.ClassList);
-            Assert.NotNull(cut.Find("[data-testid='projects-gantt-copy-source-button']"));
-            Assert.Contains("Architect plan", source.TextContent);
-            Assert.Contains("Implement feature", source.TextContent);
-            Assert.Contains("gantt", source.TextContent, StringComparison.OrdinalIgnoreCase);
-            Assert.Contains("after", source.TextContent, StringComparison.OrdinalIgnoreCase);
-        });
+            Assert.Equal($"{navigation.BaseUri}projects/{projectId:D}/structure?tab=gantt", navigation.Uri));
     }
 
     [Fact]

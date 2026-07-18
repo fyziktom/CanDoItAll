@@ -123,7 +123,16 @@
                                     Icon="account_tree"
                                     title="Open structure"
                                     aria-label="Open structure"
+                                    data-testid="project-card-structure-button"
                                     Click="@(() => OpenStructure.InvokeAsync(project.Id))" />
+                            <Button ButtonStyle="ButtonStyle.Light"
+                                    Size="ButtonSize.Small"
+                                    Class="cda-button--quick"
+                                    Icon="timeline"
+                                    title="Open Gantt tab"
+                                    aria-label="Open Gantt tab"
+                                    data-testid="project-card-gantt-button"
+                                    Click="@(() => OpenGantt.InvokeAsync(project.Id))" />
                             <Button ButtonStyle="ButtonStyle.Light"
                                     Size="ButtonSize.Small"
                                     Class="cda-button--quick"
@@ -138,14 +147,6 @@
                                     title="Open calendar"
                                     aria-label="Open calendar"
                                     Click="@(() => OpenCalendar.InvokeAsync(project.Id))" />
-                            <Button ButtonStyle="ButtonStyle.Light"
-                                    Size="ButtonSize.Small"
-                                    Class="cda-button--quick"
-                                    Icon="timeline"
-                                    title="Open Mermaid Gantt"
-                                    aria-label="Open Mermaid Gantt"
-                                    data-testid="project-card-gantt-button"
-                                    Click="@(() => OpenGanttPreview.InvokeAsync(project.Id))" />
                         </Cluster>
                     </CardActions>
                 </article>
@@ -183,5 +184,5 @@
     public EventCallback<Guid> OpenCalendar { get; set; }
 
     [Parameter]
-    public EventCallback<Guid> OpenGanttPreview { get; set; }
+    public EventCallback<Guid> OpenGantt { get; set; }
 }

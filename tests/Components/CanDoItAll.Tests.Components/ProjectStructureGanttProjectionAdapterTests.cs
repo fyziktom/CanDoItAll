@@ -78,6 +78,74 @@ public sealed class ProjectStructureGanttProjectionAdapterTests
     }
 
     [Fact]
+    public void Mermaid_export_keeps_row_order_and_uses_explicit_dates_for_forward_dependency_references()
+    {
+        var projectId = Guid.NewGuid();
+        var predecessor = CreateTask(
+            "task-a",
+            "Predecessor",
+            ProjectionOrigin,
+            ProjectionOrigin.AddHours(2));
+        var successor = CreateTask("task-b", "Successor", durationSeconds: 60 * 60);
+        var surface = CreateSurface(
+            projectId,
+            [successor, predecessor],
+            [new ProjectStructureLink(successor.Id, predecessor.Id, ProjectObjectLinkKind.DependsOn, true, Guid.NewGuid())]);
+        var projection = Build(surface);
+
+        var source = ProjectStructureGanttMermaidExporter.Build("Gantt test", projection);
+        var taskLines = source
+            .Split('\n', StringSplitOptions.TrimEntries)
+            .Where(line => line.Contains(" :", StringComparison.Ordinal))
+            .ToArray();
+
+        Assert.Equal(2, taskLines.Length);
+        Assert.StartsWith("Successor", taskLines[0], StringComparison.Ordinal);
+        Assert.Contains("2026-07-14 10:00:00", taskLines[0], StringComparison.Ordinal);
+        Assert.DoesNotContain("after", taskLines[0], StringComparison.Ordinal);
+        Assert.StartsWith("Predecessor", taskLines[1], StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Mermaid_export_preserves_start_only_and_end_only_schedules_with_dependencies()
+    {
+        var projectId = Guid.NewGuid();
+        var predecessor = CreateTask(
+            "task-a",
+            "Predecessor",
+            ProjectionOrigin,
+            ProjectionOrigin.AddHours(2));
+        var startOnly = CreateTask(
+            "task-b",
+            "Start only",
+            start: ProjectionOrigin.AddHours(4),
+            durationSeconds: 60 * 60);
+        var endOnly = CreateTask(
+            "task-c",
+            "End only",
+            end: ProjectionOrigin.AddHours(8),
+            durationSeconds: 2 * 60 * 60);
+        var surface = CreateSurface(
+            projectId,
+            [predecessor, startOnly, endOnly],
+            [
+                new ProjectStructureLink(startOnly.Id, predecessor.Id, ProjectObjectLinkKind.DependsOn, true, Guid.NewGuid()),
+                new ProjectStructureLink(endOnly.Id, predecessor.Id, ProjectObjectLinkKind.DependsOn, true, Guid.NewGuid())
+            ]);
+        var projection = Build(surface);
+
+        var source = ProjectStructureGanttMermaidExporter.Build("Gantt test", projection);
+        var taskLines = source
+            .Split('\n', StringSplitOptions.TrimEntries)
+            .Where(line => line.Contains(" :", StringComparison.Ordinal))
+            .ToArray();
+
+        Assert.True(projection.IsValid);
+        Assert.Equal("Start only :task2, 2026-07-14 12:00:00, 1h", taskLines[1]);
+        Assert.Equal("End only :task3, 2026-07-14 14:00:00, 2h", taskLines[2]);
+    }
+
+    [Fact]
     public void Assignments_include_all_processes_workflow_person_and_agent()
     {
         var projectId = Guid.NewGuid();

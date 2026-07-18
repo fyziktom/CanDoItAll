@@ -23,6 +23,7 @@ public partial class ProjectStructureGanttPanel : ComponentBase, IAsyncDisposabl
     private bool isLoading;
     private bool mutationInFlight;
     private string? loadError;
+    private string? mermaidSource;
 
     [Inject]
     private IProjectPartyIntegrationBridge ProjectPartyIntegrationBridge { get; set; } = default!;
@@ -104,6 +105,10 @@ public partial class ProjectStructureGanttPanel : ComponentBase, IAsyncDisposabl
             .ToArray() ?? [];
 
     private const string ExportFileName = "project-schedule-gantt.png";
+    private const string MermaidExportFileName = "project-schedule-gantt.mmd";
+
+    private string MermaidDownloadHref
+        => $"data:text/vnd.mermaid;charset=utf-8,{Uri.EscapeDataString(mermaidSource ?? string.Empty)}";
 
     protected override async Task OnParametersSetAsync()
     {
@@ -111,6 +116,7 @@ public partial class ProjectStructureGanttPanel : ComponentBase, IAsyncDisposabl
         {
             loadError = "A project is required before its Gantt schedule can be displayed.";
             projection = null;
+            mermaidSource = null;
             return;
         }
 
@@ -118,6 +124,7 @@ public partial class ProjectStructureGanttPanel : ComponentBase, IAsyncDisposabl
         {
             loadError = "The project schedule cannot be built because the supplied structure does not match this project.";
             projection = null;
+            mermaidSource = null;
             return;
         }
 
@@ -127,6 +134,7 @@ public partial class ProjectStructureGanttPanel : ComponentBase, IAsyncDisposabl
         }
 
         loadedSurface = Surface;
+        mermaidSource = null;
         if (projectionProjectId != ProjectId)
         {
             projectionProjectId = ProjectId;
@@ -173,6 +181,23 @@ public partial class ProjectStructureGanttPanel : ComponentBase, IAsyncDisposabl
         {
             isLoading = false;
         }
+    }
+
+    private Task OpenMermaidPreviewAsync()
+    {
+        if (projection is not { IsValid: true, Tasks.Count: > 0 })
+        {
+            return Task.CompletedTask;
+        }
+
+        mermaidSource = ProjectStructureGanttMermaidExporter.Build(Surface.ProjectName, projection);
+        return Task.CompletedTask;
+    }
+
+    private Task CloseMermaidPreviewAsync()
+    {
+        mermaidSource = null;
+        return Task.CompletedTask;
     }
 
     private Task ApplyTitleAsync(GanttTaskTitleChangeRequest request)

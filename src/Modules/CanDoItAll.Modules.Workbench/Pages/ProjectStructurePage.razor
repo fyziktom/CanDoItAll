@@ -774,14 +774,19 @@ else
     private const double HealthWindowDefaultLeft = SignalsWindowDefaultLeft + SignalsWindowDefaultWidth + DefaultCanvasWindowGap;
     private const int CanvasViewIndex = 0;
     private const int GanttViewIndex = 1;
+    private const string GanttTabQueryValue = "gantt";
 
     [Parameter]
     public Guid ProjectId { get; set; }
+
+    [SupplyParameterFromQuery(Name = "tab")]
+    public string? RequestedTab { get; set; }
 
     private ProjectStructureSurface? surface;
     private CanvasWorkbenchSurface? canvasSurface;
     private CanvasWorkbench? workbenchRef;
     private int structureViewIndex;
+    private StructureViewNavigationIdentity? appliedStructureViewNavigationIdentity;
 
     private bool IsGanttViewVisible => structureViewIndex == GanttViewIndex;
 
@@ -949,11 +954,12 @@ else
 
     protected override async Task OnParametersSetAsync()
     {
+        ApplyRequestedStructureView();
+
         if (loadedProjectId != ProjectId)
         {
             loadedProjectId = ProjectId;
             clipboardState = null;
-            structureViewIndex = CanvasViewIndex;
             currentViewStateJson = null;
             selectedNodeIds = [];
             canvasToolMode = CanvasAuthoringMode.Select;
@@ -965,6 +971,37 @@ else
 
         await ReloadSurfaceAsync();
     }
+
+    private void ApplyRequestedStructureView()
+    {
+        var navigationIdentity = new StructureViewNavigationIdentity(
+            ProjectId,
+            ResolveRequestedStructureView(RequestedTab));
+        if (appliedStructureViewNavigationIdentity == navigationIdentity)
+        {
+            return;
+        }
+
+        appliedStructureViewNavigationIdentity = navigationIdentity;
+        structureViewIndex = navigationIdentity.View switch
+        {
+            StructureView.Gantt => GanttViewIndex,
+            _ => CanvasViewIndex
+        };
+    }
+
+    private static StructureView ResolveRequestedStructureView(string? tab)
+        => string.Equals(tab, GanttTabQueryValue, StringComparison.OrdinalIgnoreCase)
+            ? StructureView.Gantt
+            : StructureView.Canvas;
+
+    private enum StructureView
+    {
+        Canvas,
+        Gantt
+    }
+
+    private readonly record struct StructureViewNavigationIdentity(Guid ProjectId, StructureView View);
 
     private async Task ReloadSurfaceAsync(string? preferredSelectionId = null)
     {

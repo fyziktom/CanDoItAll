@@ -2,6 +2,7 @@ using Bunit;
 using Bunit.TestDoubles;
 using CanDoItAll.Components.BaseLib;
 using CanDoItAll.Components.Gantt;
+using CanDoItAll.Components.Mermaid;
 using CanDoItAll.Infrastructure.Configuration;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.Projects;
@@ -18,6 +19,102 @@ namespace CanDoItAll.Tests.Components;
 
 public sealed class ProjectStructureGanttPanelTests
 {
+    [Fact]
+    public void Mermaid_export_previews_and_downloads_only_the_gantt_projection_tasks()
+    {
+        using var context = CreateContext([]);
+        var projectId = Guid.NewGuid();
+        var predecessor = CreateTask("task-a", "Plan implementation");
+        var successor = CreateTask("task-b", "Implement feature");
+        var note = CreateTask("note-a", "Architecture note") with
+        {
+            ObjectType = ProjectObjectType.Note,
+            ObjectSubtype = "note"
+        };
+        var nonTaskWorkItem = CreateTask("work-item-a", "Non-task work item") with
+        {
+            ObjectSubtype = "feature"
+        };
+        var systemTask = CreateTask("system-task", "System-managed task") with
+        {
+            IsSystemManaged = true
+        };
+        var dependency = new ProjectStructureLink(
+            successor.Id,
+            predecessor.Id,
+            ProjectObjectLinkKind.DependsOn,
+            true,
+            Guid.NewGuid());
+        var surface = CreateSurface(
+            projectId,
+            [predecessor, successor, note, nonTaskWorkItem, systemTask],
+            [dependency]);
+
+        var cut = context.RenderComponent<ProjectStructureGanttPanel>(parameters => parameters
+            .Add(component => component.ProjectId, projectId)
+            .Add(component => component.Surface, surface)
+            .Add(component => component.MutationCommitted, () => { }));
+
+        cut.Find("[data-testid='project-structure-gantt-export-mermaid']").Click();
+
+        var source = cut.FindComponent<MermaidDiagram>().Instance.Source;
+        Assert.NotNull(source);
+        Assert.Contains("Plan implementation", source, StringComparison.Ordinal);
+        Assert.Contains("Implement feature", source, StringComparison.Ordinal);
+        Assert.Contains("after task1", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("Architecture note", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("Non-task work item", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("System-managed task", source, StringComparison.Ordinal);
+        Assert.Equal(2, source.Split('\n').Count(line => line.Contains(" :", StringComparison.Ordinal)));
+        Assert.NotNull(cut.Find("[data-testid='project-structure-gantt-copy-mermaid']"));
+
+        var download = cut.Find("[data-testid='project-structure-gantt-download-mermaid']");
+        Assert.Equal("project-schedule-gantt.mmd", download.GetAttribute("download"));
+        Assert.StartsWith("data:text/vnd.mermaid;charset=utf-8,", download.GetAttribute("href"), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Mermaid_export_is_disabled_without_canonical_tasks()
+    {
+        using var context = CreateContext([]);
+        var projectId = Guid.NewGuid();
+        var note = CreateTask("note-a", "Architecture note") with
+        {
+            ObjectType = ProjectObjectType.Note,
+            ObjectSubtype = "note"
+        };
+
+        var cut = context.RenderComponent<ProjectStructureGanttPanel>(parameters => parameters
+            .Add(component => component.ProjectId, projectId)
+            .Add(component => component.Surface, CreateSurface(projectId, note))
+            .Add(component => component.MutationCommitted, () => { }));
+
+        Assert.True(cut.Find("[data-testid='project-structure-gantt-export-mermaid']").HasAttribute("disabled"));
+        Assert.Empty(cut.FindAll("[data-testid='project-structure-gantt-mermaid-dialog']"));
+    }
+
+    [Fact]
+    public void Mermaid_preview_closes_when_project_parameters_become_invalid()
+    {
+        using var context = CreateContext([]);
+        var projectId = Guid.NewGuid();
+        var surface = CreateSurface(projectId, CreateTask("task-a", "Task"));
+        var cut = context.RenderComponent<ProjectStructureGanttPanel>(parameters => parameters
+            .Add(component => component.ProjectId, projectId)
+            .Add(component => component.Surface, surface)
+            .Add(component => component.MutationCommitted, () => { }));
+
+        cut.Find("[data-testid='project-structure-gantt-export-mermaid']").Click();
+        Assert.NotEmpty(cut.FindAll("[data-testid='project-structure-gantt-mermaid-dialog']"));
+
+        cut.SetParametersAndRender(parameters => parameters
+            .Add(component => component.ProjectId, Guid.Empty)
+            .Add(component => component.Surface, surface)
+            .Add(component => component.MutationCommitted, () => { }));
+
+        Assert.Empty(cut.FindAll("[data-testid='project-structure-gantt-mermaid-dialog']"));
+    }
+
     [Fact]
     public void Projection_only_task_disables_schedule_edits_but_keeps_title_editing_and_loads_assignments()
     {
@@ -257,6 +354,12 @@ public sealed class ProjectStructureGanttPanelTests
 
     private static ProjectStructureSurface CreateSurface(Guid projectId, params ProjectStructureNode[] nodes)
         => new(projectId, "Gantt test", nodes, [], null);
+
+    private static ProjectStructureSurface CreateSurface(
+        Guid projectId,
+        IReadOnlyList<ProjectStructureNode> nodes,
+        IReadOnlyList<ProjectStructureLink> links)
+        => new(projectId, "Gantt test", nodes, links, null);
 
     private static ProjectStructureNode CreateTask(string id, string title)
         => new(

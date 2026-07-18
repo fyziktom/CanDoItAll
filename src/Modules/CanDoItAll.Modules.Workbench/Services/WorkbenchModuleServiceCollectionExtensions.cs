@@ -88,7 +88,6 @@ public static class WorkbenchModuleServiceCollectionExtensions
         services.AddScoped<IProjectStructureSourceSnapshotProvider, WorkbenchProjectStructureSourceSnapshotProvider>();
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IMemorySourceGatewayAdapter, WorkbenchProjectStructureMemorySourceGatewayAdapter>());
         services.AddScoped<ProjectMemoryIngestionService>();
-        services.AddScoped<IProjectGanttPreviewService, ProjectGanttPreviewService>();
         services.AddScoped<IProjectStructureLocalFileOpener, ProjectStructureLocalFileOpener>();
         services.AddScoped<IProjectStructureRuntimeLauncher, ProjectStructureRuntimeLauncher>();
         services.AddSingleton<IProjectStructureNodeFileScopeProvider, ProjectStructureFileScopeResolver>();

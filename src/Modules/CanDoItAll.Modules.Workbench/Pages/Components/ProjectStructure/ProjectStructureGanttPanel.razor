@@ -1,6 +1,7 @@
 @namespace CanDoItAll.Modules.Workbench.Pages
 @using CanDoItAll.Components.BaseLib
 @using CanDoItAll.Components.Gantt
+@using CanDoItAll.Components.Mermaid
 @using CanDoItAll.Modules.Workbench.CanvasAdapters
 
 <section class="project-structure-gantt-panel"
@@ -51,6 +52,13 @@
                     <TextBlock TextStyle="TextStyle.Caption"
                                Value="Move bars · resize green handles · connect blue ports."
                                Class="project-structure-gantt-panel__hint" />
+                    <Button Text="Export Mermaid"
+                            Icon="download"
+                            Size="ButtonSize.Small"
+                            ButtonStyle="ButtonStyle.Light"
+                            Disabled="@(projection is not { IsValid: true, Tasks.Count: > 0 })"
+                            data-testid="project-structure-gantt-export-mermaid"
+                            Click="OpenMermaidPreviewAsync" />
                     <Button Text="Add task"
                             Icon="add_task"
                             Size="ButtonSize.Small"
@@ -141,3 +149,67 @@
         </Stack>
     }
 </section>
+
+@if (mermaidSource is not null && projection is { } previewProjection)
+{
+    <Dialog IsOpen="true"
+            Eyebrow="Mermaid Gantt"
+            Title="@($"{Surface.ProjectName} schedule")"
+            Subtitle="Preview and download the task-only Mermaid export generated from this Gantt projection."
+            Size="ModalSize.Wide"
+            ShowCloseButton="false"
+            TestId="project-structure-gantt-mermaid-dialog"
+            OnClose="CloseMermaidPreviewAsync">
+        <HeaderActions>
+            <StatusBadge Tone="info" Text="@($"{previewProjection.Tasks.Count} tasks")" />
+            <StatusBadge Tone="neutral" Text="@($"{previewProjection.Dependencies.Count} source dependencies")" />
+            <Button Text="Download .mmd"
+                    Icon="download"
+                    Size="ButtonSize.Small"
+                    Href="@MermaidDownloadHref"
+                    download="@MermaidExportFileName"
+                    data-testid="project-structure-gantt-download-mermaid" />
+            <Button Text="Close"
+                    Size="ButtonSize.Small"
+                    ButtonStyle="ButtonStyle.Light"
+                    Click="CloseMermaidPreviewAsync" />
+        </HeaderActions>
+        <ChildContent>
+            <Stack GapScale="LayoutGap.Medium"
+                   Class="min-w-0">
+                <SurfaceCard>
+                    <Split Gap="LayoutGap.Small"
+                           Breakpoint="LayoutBreakpoint.None"
+                           Wrap="FlexWrap.Wrap">
+                        <Stack GapScale="LayoutGap.Tiny"
+                               Class="min-w-0 flex-1">
+                            <TextBlock TextStyle="TextStyle.Subtitle2"
+                                       Value="Task-only Mermaid preview" />
+                            <TextBlock TextStyle="TextStyle.Caption"
+                                       Value="The export uses the same canonical task rows, order, and projected dates as the interactive Gantt. Dependency anchors are included only when they preserve that schedule." />
+                        </Stack>
+                        <CopyButton Value="@mermaidSource"
+                                    DisplayMode="CopyButtonDisplayMode.IconButton"
+                                    Size="CopyButtonSize.Small"
+                                    AriaLabel="Copy Mermaid Gantt source"
+                                    data-testid="project-structure-gantt-copy-mermaid" />
+                    </Split>
+                    <MermaidDiagram Source="@mermaidSource"
+                                    Options="WorkbenchMermaidRenderingPolicy.StrictOptions"
+                                    PanZoomEnabled="true"
+                                    ShowControls="true"
+                                    Class="mt-4"
+                                    Style="--cda-mermaid-height: 28rem; --cda-mermaid-min-height: 24rem;"
+                                    data-testid="project-structure-gantt-mermaid-diagram" />
+                </SurfaceCard>
+
+                <SurfaceCard>
+                    <TextBlock TextStyle="TextStyle.Subtitle2"
+                               Value="Mermaid source" />
+                    <pre class="mt-4 max-h-60 overflow-auto rounded-[1.35rem] border border-slate-200 bg-slate-950 p-4 text-sm leading-6 text-slate-100"
+                         data-testid="project-structure-gantt-mermaid-source">@mermaidSource</pre>
+                </SurfaceCard>
+            </Stack>
+        </ChildContent>
+    </Dialog>
+}

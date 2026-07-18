@@ -311,9 +311,9 @@
                                                OpenProjectFiles="OpenProjectFiles"
                                                OpenProjectDashboard="OpenProjectDashboard"
                                                OpenStructure="OpenStructure"
+                                               OpenGantt="OpenGantt"
                                                OpenProcesses="OpenProcesses"
-                                               OpenCalendar="OpenCalendar"
-                                               OpenGanttPreview="OpenGanttPreview" />
+                                               OpenCalendar="OpenCalendar" />
                     </TabsItem>
                     <TabsItem Text="Files"
                               Icon="folder_open"
@@ -418,7 +418,7 @@
     public EventCallback<Guid> OpenCalendar { get; set; }
 
     [Parameter]
-    public EventCallback<Guid> OpenGanttPreview { get; set; }
+    public EventCallback<Guid> OpenGantt { get; set; }
 
     [Parameter]
     public EventCallback<ProjectsAgentChatView> PortfolioViewChanged { get; set; }
