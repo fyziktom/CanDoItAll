@@ -64,6 +64,7 @@ public sealed class CrmInteractionFlowTests
         await page.GetByTestId("crmhr-account-save-button").ClickAsync();
         await page.WaitForSelectorAsync("text=CRM account profile saved.");
 
+        await page.GetByTestId("crmhr-crm-tab-stakeholders").ClickAsync();
         await page.GetByTestId("crmhr-stakeholder-add").ClickAsync();
         await page.GetByTestId("crmhr-stakeholder-party-0").SelectOptionAsync(new[]
         {
@@ -78,6 +79,7 @@ public sealed class CrmInteractionFlowTests
         await page.GetByTestId("crmhr-stakeholder-save-button").ClickAsync();
         await page.WaitForSelectorAsync("text=Account stakeholders saved.");
 
+        await page.GetByTestId("crmhr-crm-tab-interactions").ClickAsync();
         await page.GetByLabel($"{contactName} ({PartyType.Person})", new() { Exact = true }).CheckAsync();
         await page.GetByTestId("crmhr-interaction-type").SelectOptionAsync(new[] { InteractionType.Meeting.ToString() });
         await page.GetByTestId("crmhr-interaction-subject").FillAsync("Commercial steering call");

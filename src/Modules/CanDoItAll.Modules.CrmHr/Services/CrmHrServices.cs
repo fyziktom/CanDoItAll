@@ -444,6 +444,26 @@ public sealed class WorkforceProfileEditorModel
     public string LastChangedBy { get; set; } = "crm-hr-ui";
 }
 
+public sealed record WorkforceProfileWorkspaceModel(
+    Guid PartyId,
+    string DisplayName,
+    string Summary,
+    PartyType PartyType,
+    PartyLifecycleStatus LifecycleStatus,
+    bool IsSensitive,
+    string LastChangedBy,
+    DateTimeOffset UpdatedAtUtc,
+    IReadOnlyList<PartyRoleKind> Roles,
+    string PrimaryEmail,
+    string PrimaryPhone,
+    string HomeUnitName,
+    string ManagerName,
+    WorkforceProfileEditorModel Profile,
+    IReadOnlyList<PartyOptionModel> ManagerOptions,
+    IReadOnlyList<PartyOptionModel> HomeUnitOptions,
+    IReadOnlyList<SkillCatalogItemModel> SkillCatalog,
+    IReadOnlyList<PartySkillItemModel> Skills);
+
 public sealed record WorkforceWorkspaceModel(
     Guid PartyId,
     string DisplayName,
@@ -554,6 +574,12 @@ public sealed record WorkforceCapacitySummaryModel(
     DateOnly? NextAvailabilityOn,
     bool IsOverallocated,
     bool IsBench);
+
+public sealed record WorkforceCapacityWorkspaceModel(
+    Guid PartyId,
+    IReadOnlyList<CapacityBlockItemModel> CapacityBlocks,
+    IReadOnlyList<ProjectAllocationItemModel> ProjectAllocations,
+    WorkforceCapacitySummaryModel CapacitySummary);
 
 public sealed class StaffingRequestEditorModel
 {
@@ -2901,6 +2927,56 @@ public sealed partial class HrService(
     public async Task<WorkforceWorkspaceModel?> GetWorkforceWorkspaceAsync(Guid partyId, CancellationToken cancellationToken = default)
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        var profileWorkspace = await GetWorkforceProfileWorkspaceCoreAsync(dbContext, partyId, cancellationToken);
+        if (profileWorkspace is null)
+        {
+            return null;
+        }
+
+        var capacityWorkspace = await GetWorkforceCapacityWorkspaceCoreAsync(
+            dbContext,
+            partyId,
+            profileWorkspace.Profile.CapacityHoursPerWeek,
+            cancellationToken);
+        return CombineWorkforceWorkspaces(profileWorkspace, capacityWorkspace);
+    }
+
+    public async Task<WorkforceProfileWorkspaceModel?> GetWorkforceProfileWorkspaceAsync(
+        Guid partyId,
+        CancellationToken cancellationToken = default)
+    {
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        return await GetWorkforceProfileWorkspaceCoreAsync(dbContext, partyId, cancellationToken);
+    }
+
+    public async Task<WorkforceCapacityWorkspaceModel?> GetWorkforceCapacityWorkspaceAsync(
+        Guid partyId,
+        CancellationToken cancellationToken = default)
+    {
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        var isSupportedParty = await dbContext.Set<Party>()
+            .AnyAsync(item => item.Id == partyId && item.PartyType != PartyType.AiAgent, cancellationToken);
+        if (!isSupportedParty)
+        {
+            return null;
+        }
+
+        var capacityHoursPerWeek = await dbContext.Set<WorkforceProfile>()
+            .Where(item => item.PartyId == partyId)
+            .Select(item => (decimal?)item.CapacityHoursPerWeek)
+            .SingleOrDefaultAsync(cancellationToken) ?? 40m;
+        return await GetWorkforceCapacityWorkspaceCoreAsync(
+            dbContext,
+            partyId,
+            capacityHoursPerWeek,
+            cancellationToken);
+    }
+
+    private async Task<WorkforceProfileWorkspaceModel?> GetWorkforceProfileWorkspaceCoreAsync(
+        AppDbContext dbContext,
+        Guid partyId,
+        CancellationToken cancellationToken)
+    {
         var party = await dbContext.Set<Party>()
             .Select(item => new
             {
@@ -2968,11 +3044,8 @@ public sealed partial class HrService(
         var namesByPartyId = relatedParties.ToDictionary(item => item.Id, item => item.DisplayName);
         var skillCatalog = await GetSkillCatalogItemsAsync(dbContext, cancellationToken);
         var partySkills = (await GetPartySkillMapAsync(dbContext, [partyId], cancellationToken)).GetValueOrDefault(partyId) ?? [];
-        var capacityBlocks = (await GetCapacityBlockMapAsync(dbContext, [partyId], cancellationToken)).GetValueOrDefault(partyId) ?? [];
-        var projectAllocations = (await GetProjectAllocationMapAsync(dbContext, [partyId], cancellationToken)).GetValueOrDefault(partyId) ?? [];
-        var capacitySummary = BuildCapacitySummary(profile?.CapacityHoursPerWeek ?? 40m, projectAllocations, capacityBlocks);
 
-        return new WorkforceWorkspaceModel(
+        return new WorkforceProfileWorkspaceModel(
             party.Id,
             party.DisplayName,
             party.Summary,
@@ -3013,10 +3086,51 @@ public sealed partial class HrService(
             managerOptions,
             homeUnitOptions,
             skillCatalog,
-            partySkills,
+            partySkills);
+    }
+
+    private async Task<WorkforceCapacityWorkspaceModel> GetWorkforceCapacityWorkspaceCoreAsync(
+        AppDbContext dbContext,
+        Guid partyId,
+        decimal capacityHoursPerWeek,
+        CancellationToken cancellationToken)
+    {
+        var capacityBlocks = (await GetCapacityBlockMapAsync(dbContext, [partyId], cancellationToken)).GetValueOrDefault(partyId) ?? [];
+        var projectAllocations = (await GetProjectAllocationMapAsync(dbContext, [partyId], cancellationToken)).GetValueOrDefault(partyId) ?? [];
+
+        return new WorkforceCapacityWorkspaceModel(
+            partyId,
             capacityBlocks,
             projectAllocations,
-            capacitySummary);
+            BuildCapacitySummary(capacityHoursPerWeek, projectAllocations, capacityBlocks));
+    }
+
+    private static WorkforceWorkspaceModel CombineWorkforceWorkspaces(
+        WorkforceProfileWorkspaceModel profileWorkspace,
+        WorkforceCapacityWorkspaceModel capacityWorkspace)
+    {
+        return new WorkforceWorkspaceModel(
+            profileWorkspace.PartyId,
+            profileWorkspace.DisplayName,
+            profileWorkspace.Summary,
+            profileWorkspace.PartyType,
+            profileWorkspace.LifecycleStatus,
+            profileWorkspace.IsSensitive,
+            profileWorkspace.LastChangedBy,
+            profileWorkspace.UpdatedAtUtc,
+            profileWorkspace.Roles,
+            profileWorkspace.PrimaryEmail,
+            profileWorkspace.PrimaryPhone,
+            profileWorkspace.HomeUnitName,
+            profileWorkspace.ManagerName,
+            profileWorkspace.Profile,
+            profileWorkspace.ManagerOptions,
+            profileWorkspace.HomeUnitOptions,
+            profileWorkspace.SkillCatalog,
+            profileWorkspace.Skills,
+            capacityWorkspace.CapacityBlocks,
+            capacityWorkspace.ProjectAllocations,
+            capacityWorkspace.CapacitySummary);
     }
 
     public async Task<Result<Guid>> SaveWorkforceProfileAsync(WorkforceProfileEditorModel model, CancellationToken cancellationToken = default)

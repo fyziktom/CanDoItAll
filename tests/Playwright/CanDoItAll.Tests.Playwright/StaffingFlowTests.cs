@@ -82,7 +82,12 @@ public sealed class StaffingFlowTests
         });
 
         await page.GotoAsync($"{fixture.BaseUrl}/crm-hr/workforce?partyId={seed.WorkerId:D}");
+        await page.GetByTestId("crmhr-workforce-tab-allocations").WaitForAsync();
+        Assert.Equal(0, await page.GetByTestId("crmhr-workforce-allocation-gantt").CountAsync());
+        await page.GetByTestId("crmhr-workforce-tab-allocations").ClickAsync();
         await page.GetByTestId("crmhr-capacity-block-save-button").WaitForAsync();
+        await page.GetByTestId("crmhr-workforce-allocation-gantt").WaitForAsync();
+        Assert.Equal(0, await page.GetByText("The chart model is invalid:", new() { Exact = false }).CountAsync());
         await page.GetByTestId("crmhr-capacity-block-percentage").FillAsync("40");
         await page.GetByTestId("crmhr-capacity-block-notes").FillAsync("Planned leave");
         await page.GetByTestId("crmhr-capacity-block-save-button").ClickAsync();

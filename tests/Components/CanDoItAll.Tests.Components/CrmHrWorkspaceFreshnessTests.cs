@@ -55,6 +55,8 @@ public sealed class CrmHrWorkspaceFreshnessTests
             "Z target account",
             opportunityResult.Value,
             "Non-first account opportunity");
+        cut.WaitForElement("[data-testid='crmhr-opportunity-title']");
+        Assert.Empty(cut.FindAll("[data-testid='crmhr-account-stage']"));
 
         navigation.NavigateTo(
             $"/crm-hr/crm?accountId={firstAccountId:D}&opportunityId={opportunityResult.Value:D}");
@@ -120,6 +122,8 @@ public sealed class CrmHrWorkspaceFreshnessTests
             Assert.Equal(InteractionType.Call, interaction.InteractionType);
             Assert.Null(contextProvider.Instance.Opportunity);
         });
+        cut.WaitForElement("[data-testid='crmhr-interaction-subject']");
+        Assert.Empty(cut.FindAll("[data-testid='crmhr-account-stage']"));
 
         navigation.NavigateTo($"/crm-hr/crm?interactionId={Guid.NewGuid():D}");
         AssertFailedCrmContext(cut);
@@ -219,6 +223,51 @@ public sealed class CrmHrWorkspaceFreshnessTests
                 AgentChatContextAccessState.Failed,
                 contextProvider.Instance.ContextAccessState);
             Assert.Null(contextProvider.Instance.Surface.Position.PrimarySelection);
+        });
+    }
+
+    [Fact]
+    public async Task Workforce_party_without_profile_reports_unloaded_availability_until_allocations_are_requested()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var partyDirectoryService = harness.Context.Services.GetRequiredService<PartyDirectoryService>();
+        var navigation = harness.Context.Services.GetRequiredService<NavigationManager>();
+        var partyId = await CreatePartyAsync(
+            partyDirectoryService,
+            "Worker without profile",
+            PartyType.Person,
+            PartyLifecycleStatus.Active,
+            PartyRoleKind.Employee);
+
+        navigation.NavigateTo($"/crm-hr/workforce?partyId={partyId:D}");
+        var cut = harness.Context.RenderComponent<CrmHrWorkforcePage>();
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Equal(
+                "Not loaded",
+                cut.Find("[data-testid='crmhr-workforce-summary-available']").TextContent.Trim());
+            Assert.Equal(
+                "Not loaded",
+                cut.Find("[data-testid='crmhr-workforce-summary-next-availability']").TextContent.Trim());
+            var contextProvider = cut.FindComponent<AgentChatContextSurfaceProvider>();
+            var fact = Assert.Single(contextProvider.Instance.Surface.Position.Facts);
+            Assert.Equal("lifecycle-status", fact.Name);
+            Assert.Equal("Active", fact.Value);
+        });
+
+        cut.Find("[data-testid='crmhr-workforce-tab-allocations']").Click();
+        cut.WaitForElement("[data-testid='crmhr-capacity-block-save-button']");
+        cut.Find("[data-testid='crmhr-workforce-tab-overview']").Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Equal(
+                "100%",
+                cut.Find("[data-testid='crmhr-workforce-summary-available']").TextContent.Trim());
+            Assert.Equal(
+                "Not set",
+                cut.Find("[data-testid='crmhr-workforce-summary-next-availability']").TextContent.Trim());
         });
     }
 

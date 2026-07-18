@@ -139,7 +139,18 @@
                     }
                     else
                     {
-                        <Stack Class="min-h-full" GapScale="LayoutGap.XXLarge">
+                        <Tabs SelectedIndex="@SelectedCrmRecordTabIndex"
+                              SelectedIndexChanged="HandleCrmRecordTabChanged"
+                              RenderMode="TabRenderMode.Server"
+                              Variant="TabsVariant.WorkspaceSecondary"
+                              BorderMode="TabsBorderMode.Soft"
+                              OverflowMode="TabsOverflowMode.Wrap"
+                              AriaLabel="CRM account sections"
+                              data-testid="crmhr-crm-tabs">
+                            <TabItems>
+                                <TabsItem Text="Overview"
+                                          Icon="dashboard"
+                                          data-testid="crmhr-crm-tab-overview">
                             <EditForm Model="profileEditor" OnValidSubmit="SaveAccountProfileAsync">
                                 <FormSection Title="Relationship profile"
                                              Description="Keep prospect conversion, commercial context, and timing risk on the same account record instead of scattering it across notes.">
@@ -194,7 +205,11 @@
                                     </Cluster>
                                 </FormSection>
                             </EditForm>
+                                </TabsItem>
 
+                                <TabsItem Text="Stakeholders"
+                                          Icon="groups"
+                                          data-testid="crmhr-crm-tab-stakeholders">
                             <FormSection Title="Stakeholders"
                                          Description="Link account-specific contacts and ownership roles so billing, contract, delivery, and sponsor responsibilities remain explicit.">
                                 <Split Gap="LayoutGap.Medium"
@@ -282,6 +297,43 @@
                                             data-testid="crmhr-stakeholder-save-button" />
                                 </Cluster>
                             </FormSection>
+                                </TabsItem>
+
+                                <TabsItem Text="Interactions"
+                                          Icon="forum"
+                                          data-testid="crmhr-crm-tab-interactions">
+                                    <Stack GapScale="LayoutGap.Large">
+                            <Grid Gap="LayoutGap.Large" ColumnsLg="2">
+                                <InteractionTimeline Items="selectedAccount.ActivityTimeline" />
+
+                                <SurfaceCard Soft="true">
+                                    <p class="cda-eyebrow">Overdue next actions</p>
+                                    <h3 class="mt-1 text-lg font-semibold text-slate-950">Follow-up pressure</h3>
+                                    @if (selectedAccount.OverdueNextActions.Count == 0)
+                                    {
+                                        <p class="mt-4 text-sm leading-6 text-slate-600">No overdue next actions for this account.</p>
+                                    }
+                                    else
+                                    {
+                                        <Stack GapScale="LayoutGap.Small" Class="mt-4">
+                                            @foreach (var action in selectedAccount.OverdueNextActions)
+                                            {
+                                                <div class="rounded-[1.2rem] border border-rose-200 bg-rose-50/80 px-4 py-4"
+                                                     data-testid="crmhr-overdue-action-item">
+                                                    <Split Gap="LayoutGap.Medium">
+                                                        <div class="min-w-0">
+                                                            <p class="text-sm font-semibold text-slate-950">@action.NextActionText</p>
+                                                            <p class="mt-1 text-sm leading-6 text-slate-600">From @action.InteractionSubject</p>
+                                                            <p class="mt-1 text-xs uppercase tracking-[0.18em] text-rose-700">Owner: @action.OwnerName</p>
+                                                        </div>
+                                                        <StatusBadge Tone="danger" Text="@action.DueAtUtc.LocalDateTime.ToString("yyyy-MM-dd")" />
+                                                    </Split>
+                                                </div>
+                                            }
+                                        </Stack>
+                                    }
+                                </SurfaceCard>
+                            </Grid>
 
                             <EditForm Model="interactionEditor" OnValidSubmit="SaveInteractionAsync">
                                 <Stack GapScale="LayoutGap.Large">
@@ -378,7 +430,12 @@
                                     </Cluster>
                                 </Stack>
                             </EditForm>
+                                    </Stack>
+                                </TabsItem>
 
+                                <TabsItem Text="Opportunities"
+                                          Icon="trending_up"
+                                          data-testid="crmhr-crm-tab-opportunities">
                             <FormSection Title="Opportunity pipeline"
                                          Description="Track deal progression, partner context, loss reasons, and project handoff without leaving the CRM workspace.">
                                 <ChildContent>
@@ -478,39 +535,9 @@
                                     </Stack>
                                 </ChildContent>
                             </FormSection>
-
-                            <Grid Gap="LayoutGap.Large" ColumnsLg="2">
-                                <InteractionTimeline Items="selectedAccount.ActivityTimeline" />
-
-                                <SurfaceCard Soft="true">
-                                    <p class="cda-eyebrow">Overdue next actions</p>
-                                    <h3 class="mt-1 text-lg font-semibold text-slate-950">Follow-up pressure</h3>
-                                    @if (selectedAccount.OverdueNextActions.Count == 0)
-                                    {
-                                        <p class="mt-4 text-sm leading-6 text-slate-600">No overdue next actions for this account.</p>
-                                    }
-                                    else
-                                    {
-                                        <Stack GapScale="LayoutGap.Small" Class="mt-4">
-                                            @foreach (var action in selectedAccount.OverdueNextActions)
-                                            {
-                                                <div class="rounded-[1.2rem] border border-rose-200 bg-rose-50/80 px-4 py-4"
-                                                     data-testid="crmhr-overdue-action-item">
-                                                    <Split Gap="LayoutGap.Medium">
-                                                        <div class="min-w-0">
-                                                            <p class="text-sm font-semibold text-slate-950">@action.NextActionText</p>
-                                                            <p class="mt-1 text-sm leading-6 text-slate-600">From @action.InteractionSubject</p>
-                                                            <p class="mt-1 text-xs uppercase tracking-[0.18em] text-rose-700">Owner: @action.OwnerName</p>
-                                                        </div>
-                                                        <StatusBadge Tone="danger" Text="@action.DueAtUtc.LocalDateTime.ToString("yyyy-MM-dd")" />
-                                                    </Split>
-                                                </div>
-                                            }
-                                        </Stack>
-                                    }
-                                </SurfaceCard>
-                            </Grid>
-                        </Stack>
+                                </TabsItem>
+                            </TabItems>
+                        </Tabs>
                     }
                 </DetailContent>
             </ListDetailShell>
@@ -560,6 +587,7 @@
     private AgentChatContextAccessState agentChatContextAccessState = AgentChatContextAccessState.Loading;
     private Guid? selectedOpportunityId;
     private Guid? selectedInteractionId;
+    private CrmRecordTab selectedCrmRecordTab = CrmRecordTab.Overview;
     private string searchText = string.Empty;
     private string stageFilter = string.Empty;
     private string opportunitySearchText = string.Empty;
@@ -579,6 +607,8 @@
     private bool isOpportunityConversionDialogOpen;
     private bool isOpportunityConversionBusy;
     private bool isDisposed;
+
+    private int SelectedCrmRecordTabIndex => (int)selectedCrmRecordTab;
 
     private IReadOnlyList<CrmAccountListItemModel> FilteredAccounts => accounts
         .Where(MatchesSearch)
@@ -754,6 +784,11 @@
                 clearMessage: true,
                 requestedOpportunityId,
                 preferredOpportunityId,
+                requestedInteractionId);
+            SelectCrmRecordTabForRoute(
+                account.AccountPartyId,
+                capturedSelectedAccountId,
+                requestedOpportunityId,
                 requestedInteractionId);
             var requestedSelectionFound =
                 (!requestedOpportunityId.HasValue ||
@@ -961,6 +996,41 @@
            selectedOpportunityId == action.SelectedOpportunityId &&
            selectedInteractionId == action.SelectedInteractionId;
 
+    private void HandleCrmRecordTabChanged(int selectedIndex)
+    {
+        var requestedTab = (CrmRecordTab)selectedIndex;
+        if (!Enum.IsDefined(requestedTab))
+        {
+            return;
+        }
+
+        selectedCrmRecordTab = requestedTab;
+    }
+
+    private void SelectCrmRecordTabForRoute(
+        Guid accountPartyId,
+        Guid? previousAccountPartyId,
+        Guid? requestedOpportunityId,
+        Guid? requestedInteractionId)
+    {
+        if (requestedOpportunityId.HasValue)
+        {
+            selectedCrmRecordTab = CrmRecordTab.Opportunities;
+            return;
+        }
+
+        if (requestedInteractionId.HasValue)
+        {
+            selectedCrmRecordTab = CrmRecordTab.Interactions;
+            return;
+        }
+
+        if (previousAccountPartyId != accountPartyId)
+        {
+            selectedCrmRecordTab = CrmRecordTab.Overview;
+        }
+    }
+
     private void ClearAccountSelection()
     {
         selectedAccount = null;
@@ -971,6 +1041,7 @@
         opportunityConversionEditor = new();
         selectedOpportunityId = null;
         selectedInteractionId = null;
+        selectedCrmRecordTab = CrmRecordTab.Overview;
         UpdateAgentChatContext();
     }
 
@@ -1704,6 +1775,14 @@
             OccurredOn = DateOnly.FromDateTime(DateTime.UtcNow),
             RelatedOpportunityId = relatedOpportunityId
         };
+    }
+
+    private enum CrmRecordTab
+    {
+        Overview,
+        Stakeholders,
+        Interactions,
+        Opportunities
     }
 
     private readonly record struct CrmPageActionStamp(

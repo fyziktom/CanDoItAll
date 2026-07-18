@@ -40,6 +40,24 @@ public sealed class CrmHrWorkforceFlowTests
         await DismissStartupModalIfPresentAsync(page);
         await page.GetByTestId("crmhr-workforce-search").WaitForAsync();
 
+        Assert.Equal(0, await page.GetByTestId("crmhr-workforce-delivery-unit-dialog").CountAsync());
+        await page.GetByTestId("crmhr-workforce-new-delivery-unit").ClickAsync();
+        await page.GetByTestId("crmhr-workforce-delivery-unit-dialog").WaitForAsync();
+        await page.GetByTestId("crmhr-workforce-delivery-unit-dialog")
+            .GetByRole(AriaRole.Button, new() { Name = "Cancel", Exact = true })
+            .ClickAsync();
+        await page.GetByTestId("crmhr-workforce-delivery-unit-dialog").WaitForAsync(new LocatorWaitForOptions
+        {
+            State = WaitForSelectorState.Detached
+        });
+
+        Assert.Equal(0, await page.GetByTestId("crmhr-workforce-kind-filter").CountAsync());
+        await page.GetByTestId("crmhr-workforce-filters-button").ClickAsync();
+        await page.GetByTestId("crmhr-workforce-kind-filter").WaitForAsync();
+        await page.GetByTestId("crmhr-workforce-filters-dialog")
+            .GetByRole(AriaRole.Button, new() { Name = "Show results", Exact = true })
+            .ClickAsync();
+
         await page.GetByTestId("crmhr-workforce-search").FillAsync(workerName);
         await page.GetByTestId("crmhr-workforce-item")
             .Filter(new LocatorFilterOptions
@@ -49,10 +67,10 @@ public sealed class CrmHrWorkforceFlowTests
             .Locator("button")
             .First
             .ClickAsync();
-        await page.GetByTestId("crmhr-workforce-save-button").WaitForAsync();
         await page.GetByTestId("crmhr-workforce-summary-home-unit").WaitForAsync();
         await ExpectTextContainsAsync(page.GetByTestId("crmhr-workforce-summary-home-unit"), unitName);
         await ExpectTextContainsAsync(page.GetByTestId("crmhr-workforce-summary-manager"), managerName);
+        Assert.Equal(0, await page.GetByTestId("crmhr-workforce-save-button").CountAsync());
         Assert.False(await page.Locator("#blazor-error-ui").IsVisibleAsync());
 
         await page.ScreenshotAsync(new PageScreenshotOptions
@@ -68,6 +86,8 @@ public sealed class CrmHrWorkforceFlowTests
             FullPage = true
         });
 
+        await page.GetByTestId("crmhr-workforce-tab-profile").ClickAsync();
+        await page.GetByTestId("crmhr-workforce-save-button").WaitForAsync();
         await page.GetByRole(AriaRole.Button, new() { Name = "Open directory record", Exact = true }).First.ClickAsync();
         await WaitForUrlContainsAsync(page, "/crm-hr/directory?partyId=");
         await page.GetByTestId("crmhr-party-display-name").WaitForAsync();

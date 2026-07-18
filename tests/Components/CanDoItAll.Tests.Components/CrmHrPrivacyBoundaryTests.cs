@@ -112,6 +112,12 @@ public sealed class CrmHrPrivacyBoundaryTests
         {
             Assert.Contains("Hidden from global search", workforceCut.Markup);
             Assert.Contains("component-tests", workforceCut.Markup);
+            Assert.DoesNotContain("Saved workforce profile for 'Lena Private'.", workforceCut.Markup);
+        });
+
+        workforceCut.Find("[data-testid='crmhr-workforce-tab-history']").Click();
+        workforceCut.WaitForAssertion(() =>
+        {
             Assert.Contains("Saved workforce profile for 'Lena Private'.", workforceCut.Markup);
         });
     }

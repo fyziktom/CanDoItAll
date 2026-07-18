@@ -2,10 +2,12 @@
 @implements IDisposable
 @using CanDoItAll.Components.BaseLib
 @using CanDoItAll.Modules.Projects
+@using Microsoft.Extensions.Logging
 @inject HrService HrService
 @inject PartyDirectoryService PartyDirectoryService
 @inject NavigationManager Navigation
 @inject NotificationService NotificationService
+@inject ILogger<CrmHrWorkforcePage> Logger
 
 <PageTitle>CRM / HR Workforce</PageTitle>
 
@@ -50,7 +52,7 @@
     </Header>
 
     <ChildContent>
-        <Stack GapScale="LayoutGap.Large">
+        <Stack GapScale="LayoutGap.Medium">
             <CrmHrSecondaryTabs SelectedKey="workforce" />
 
             <ListDetailShell ListPaneWidth="30rem">
@@ -58,87 +60,42 @@
                     <ListPanelHeader Title="Workforce records"
                                      Description="Select a worker or delivery unit to manage employment type, reporting line, home unit, searchable skills, and allocation-driven availability."
                                      Count="@($"{FilteredItems.Count} visible record(s)")">
+                        <Actions>
+                            <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
+                                <Button Text="@FilterButtonText"
+                                        Icon="filter_alt"
+                                        ButtonStyle="ButtonStyle.Light"
+                                        Size="ButtonSize.Small"
+                                        Click="OpenFiltersDialog"
+                                        data-testid="crmhr-workforce-filters-button" />
+                                <Button Text="New delivery unit"
+                                        Icon="add"
+                                        Size="ButtonSize.Small"
+                                        Disabled="@isDeliveryUnitSaving"
+                                        IsBusy="@isDeliveryUnitSaving"
+                                        Click="OpenDeliveryUnitDialog"
+                                        data-testid="crmhr-workforce-new-delivery-unit" />
+                            </Cluster>
+                        </Actions>
                         <Filters>
                             <FilterBar ResultText="@($"{FilteredItems.Count} matching record(s)")">
                                 <input @bind="searchText"
                                        @bind:event="oninput"
-                                       class="cda-input min-w-[16rem] flex-1"
+                                       class="cda-input min-w-0 flex-1"
                                        placeholder="Search person, skill, proficiency, location, seniority, manager, or role"
                                        data-testid="crmhr-workforce-search" />
-                                <InputSelect @bind-Value="kindFilter"
-                                             class="cda-input"
-                                             data-testid="crmhr-workforce-kind-filter">
-                                    <option value="">All workforce kinds</option>
-                                    @foreach (var workforceKind in Enum.GetValues<WorkforceKind>())
-                                    {
-                                        <option value="@workforceKind.ToString()">@workforceKind</option>
-                                    }
-                                </InputSelect>
-                                <InputSelect @bind-Value="skillFilter"
-                                             class="cda-input"
-                                             data-testid="crmhr-workforce-skill-filter">
-                                    <option value="">All skills</option>
-                                    @foreach (var skill in skillCatalog.OrderBy(item => item.Category).ThenBy(item => item.Name))
-                                    {
-                                        <option value="@skill.Id.ToString("D")">@skill.Name (@skill.Category)</option>
-                                    }
-                                </InputSelect>
-                                <InputSelect @bind-Value="availabilityFilter"
-                                             class="cda-input"
-                                             data-testid="crmhr-workforce-availability-filter">
-                                    <option value="">Any availability</option>
-                                    @foreach (var availabilityState in Enum.GetValues<WorkforceAvailabilityState>())
-                                    {
-                                        <option value="@availabilityState.ToString()">@availabilityState</option>
-                                    }
-                                </InputSelect>
-                                <Button Text="Reset"
-                                        ButtonStyle="ButtonStyle.Light"
-                                        Size="ButtonSize.Small"
-                                        Click="ResetFilters" />
+                                @if (!string.IsNullOrWhiteSpace(searchText))
+                                {
+                                    <Button Text="Clear search"
+                                            ButtonStyle="ButtonStyle.Light"
+                                            Size="ButtonSize.Small"
+                                            Click="ClearSearch" />
+                                }
                             </FilterBar>
                         </Filters>
                     </ListPanelHeader>
                 </ListHeader>
                 <ListContent>
-                    <EditForm Model="deliveryUnitEditor" OnValidSubmit="CreateDeliveryUnitAsync">
-                        <SurfaceCard Soft="true">
-                            <p class="cda-eyebrow">Quick create</p>
-                            <h3 class="mt-1 text-lg font-semibold text-slate-950">Delivery unit</h3>
-                            <p class="mt-2 text-sm leading-6 text-slate-600">
-                                Create an organization unit with delivery semantics directly from the workforce route when staffing needs a team home before the broader directory card is filled out.
-                            </p>
-
-                            <Grid Gap="LayoutGap.Medium" ColumnsMd="2" Class="mt-4">
-                                <div>
-                                    <label class="cda-field-label">Unit name</label>
-                                    <InputText @bind-Value="deliveryUnitEditor.Name"
-                                               class="cda-input"
-                                               data-testid="crmhr-delivery-unit-name" />
-                                </div>
-                                <div>
-                                    <label class="cda-field-label">External code</label>
-                                    <InputText @bind-Value="deliveryUnitEditor.ExternalCode"
-                                               class="cda-input"
-                                               data-testid="crmhr-delivery-unit-code" />
-                                </div>
-                            </Grid>
-
-                            <div class="mt-4">
-                                <label class="cda-field-label">Summary</label>
-                                <InputTextArea @bind-Value="deliveryUnitEditor.Summary"
-                                               class="cda-input cda-input--textarea min-h-[6rem]"
-                                               data-testid="crmhr-delivery-unit-summary" />
-                            </div>
-
-                            <Cluster Gap="LayoutGap.Small" Class="mt-4">
-                                <Button Text="Create delivery unit"
-                                        Type="submit"
-                                        data-testid="crmhr-delivery-unit-save-button" />
-                            </Cluster>
-                        </SurfaceCard>
-                    </EditForm>
-
                     @if (FilteredItems.Count == 0)
                     {
                         <EmptyState Eyebrow="No workforce records yet"
@@ -147,7 +104,7 @@
                     }
                     else
                     {
-                        <Stack GapScale="LayoutGap.Medium" Class="mt-5">
+                        <Stack GapScale="LayoutGap.Small">
                             @foreach (var item in FilteredItems)
                             {
                                 <div data-testid="crmhr-workforce-item">
@@ -197,73 +154,30 @@
                     }
                     else
                     {
-                        <SurfaceCard>
+                        <SurfaceCard Soft="true">
                             <Split Gap="LayoutGap.Medium">
                                 <div class="min-w-0">
-                                    <p class="cda-eyebrow">Workforce summary</p>
+                                    <p class="cda-eyebrow">Selected workforce record</p>
                                     <h2 class="mt-1 text-lg font-semibold text-slate-950">@selectedWorkspace.DisplayName</h2>
                                     @if (!string.IsNullOrWhiteSpace(selectedWorkspace.Summary))
                                     {
-                                        <p class="mt-3 text-sm leading-6 text-slate-600">@selectedWorkspace.Summary</p>
+                                        <p class="mt-1 line-clamp-2 text-sm leading-6 text-slate-600">@selectedWorkspace.Summary</p>
                                     }
-                                    <p class="mt-3 text-sm font-medium text-slate-700"
+                                    <p class="mt-2 text-sm font-medium text-slate-700"
                                        data-testid="crmhr-workforce-availability-message">
-                                        @selectedWorkspace.CapacitySummary.AvailabilityMessage
+                                        @SelectedAvailabilityMessage
                                     </p>
                                 </div>
-                                <Cluster Gap="LayoutGap.Small">
+                                <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
                                     <StatusBadge Tone="@ResolveKindTone(profileEditor.WorkforceKind)" Text="@profileEditor.WorkforceKind.ToString()" />
                                     <StatusBadge Tone="@ResolveStatusTone(profileEditor.Status)" Text="@profileEditor.Status" />
-                                    <StatusBadge Tone="@ResolveAvailabilityTone(selectedWorkspace.CapacitySummary.AvailabilityState)"
-                                                 Text="@selectedWorkspace.CapacitySummary.AvailabilityState.ToString()" />
+                                    @if (SelectedAvailabilityState is { } availabilityState)
+                                    {
+                                        <StatusBadge Tone="@ResolveAvailabilityTone(availabilityState)"
+                                                     Text="@availabilityState.ToString()" />
+                                    }
                                 </Cluster>
                             </Split>
-
-                            <div class="mt-5">
-                                <SensitiveDataCallout IsSensitive="selectedWorkspace.IsSensitive"
-                                                     LastChangedBy="@selectedWorkspace.LastChangedBy"
-                                                     UpdatedAtUtc="selectedWorkspace.UpdatedAtUtc"
-                                                     DataTestId="crmhr-workforce-sensitive-callout"
-                                                     StandardDescription="Use this summary before staffing or line-management changes so ownership and broad visibility stay explicit."
-                                                     SensitiveDescription="Sensitive workforce records stay out of global search while still preserving assignment, manager, and capacity context for trusted operators." />
-                            </div>
-
-                            <Grid Gap="LayoutGap.Medium" ColumnsMd="4" Class="mt-5">
-                                <div class="rounded-[1.2rem] border border-slate-200 bg-slate-50/80 px-4 py-4">
-                                    <p class="text-xs uppercase tracking-[0.18em] text-slate-500">Home unit</p>
-                                    <p class="mt-1 text-sm font-medium text-slate-950"
-                                       data-testid="crmhr-workforce-summary-home-unit">@FormatValue(selectedWorkspace.HomeUnitName)</p>
-                                </div>
-                                <div class="rounded-[1.2rem] border border-slate-200 bg-slate-50/80 px-4 py-4">
-                                    <p class="text-xs uppercase tracking-[0.18em] text-slate-500">Manager</p>
-                                    <p class="mt-1 text-sm font-medium text-slate-950"
-                                       data-testid="crmhr-workforce-summary-manager">@FormatValue(selectedWorkspace.ManagerName)</p>
-                                </div>
-                                <div class="rounded-[1.2rem] border border-slate-200 bg-slate-50/80 px-4 py-4">
-                                    <p class="text-xs uppercase tracking-[0.18em] text-slate-500">Primary email</p>
-                                    <p class="mt-1 text-sm font-medium text-slate-950">@FormatValue(selectedWorkspace.PrimaryEmail)</p>
-                                </div>
-                                <div class="rounded-[1.2rem] border border-slate-200 bg-slate-50/80 px-4 py-4">
-                                    <p class="text-xs uppercase tracking-[0.18em] text-slate-500">Primary phone</p>
-                                    <p class="mt-1 text-sm font-medium text-slate-950">@FormatValue(selectedWorkspace.PrimaryPhone)</p>
-                                </div>
-                                <div class="rounded-[1.2rem] border border-slate-200 bg-slate-50/80 px-4 py-4">
-                                    <p class="text-xs uppercase tracking-[0.18em] text-slate-500">Available now</p>
-                                    <p class="mt-1 text-sm font-medium text-slate-950">@FormatPercent(selectedWorkspace.CapacitySummary.AvailablePercent)</p>
-                                </div>
-                                <div class="rounded-[1.2rem] border border-slate-200 bg-slate-50/80 px-4 py-4">
-                                    <p class="text-xs uppercase tracking-[0.18em] text-slate-500">Next availability</p>
-                                    <p class="mt-1 text-sm font-medium text-slate-950">@FormatDate(selectedWorkspace.CapacitySummary.NextAvailabilityOn)</p>
-                                </div>
-                                <div class="rounded-[1.2rem] border border-slate-200 bg-slate-50/80 px-4 py-4">
-                                    <p class="text-xs uppercase tracking-[0.18em] text-slate-500">Contract end</p>
-                                    <p class="mt-1 text-sm font-medium text-slate-950">@FormatDate(selectedWorkspace.Profile.EndDate)</p>
-                                </div>
-                                <div class="rounded-[1.2rem] border border-slate-200 bg-slate-50/80 px-4 py-4">
-                                    <p class="text-xs uppercase tracking-[0.18em] text-slate-500">Searchable skills</p>
-                                    <p class="mt-1 text-sm font-medium text-slate-950">@FormatValue(BuildSkillCoverage(selectedWorkspace.Skills))</p>
-                                </div>
-                            </Grid>
                         </SurfaceCard>
                     }
                 </DetailHeader>
@@ -277,7 +191,68 @@
                     }
                     else
                     {
-                        <Stack GapScale="LayoutGap.Large">
+                        <Tabs SelectedIndex="@selectedDetailTabIndex"
+                              SelectedIndexChanged="HandleDetailTabChangedAsync"
+                              RenderMode="TabRenderMode.Server"
+                              Variant="TabsVariant.WorkspaceSecondary"
+                              OverflowMode="TabsOverflowMode.Wrap"
+                              AriaLabel="Workforce record sections"
+                              data-testid="crmhr-workforce-tabs">
+                            <TabsItem Text="Overview"
+                                      Icon="dashboard"
+                                      data-testid="crmhr-workforce-tab-overview">
+                                <Stack GapScale="LayoutGap.Medium">
+                                    <SensitiveDataCallout IsSensitive="selectedWorkspace.IsSensitive"
+                                                         LastChangedBy="@selectedWorkspace.LastChangedBy"
+                                                         UpdatedAtUtc="selectedWorkspace.UpdatedAtUtc"
+                                                         DataTestId="crmhr-workforce-sensitive-callout"
+                                                         StandardDescription="Use this summary before staffing or line-management changes so ownership and broad visibility stay explicit."
+                                                         SensitiveDescription="Sensitive workforce records stay out of global search while still preserving assignment, manager, and capacity context for trusted operators." />
+
+                                    <Grid Gap="LayoutGap.Medium" ColumnsMd="4">
+                                        <SurfaceCard Soft="true">
+                                            <p class="cda-eyebrow">Home unit</p>
+                                            <p class="mt-1 text-sm font-medium text-slate-950"
+                                               data-testid="crmhr-workforce-summary-home-unit">@FormatValue(selectedWorkspace.HomeUnitName)</p>
+                                        </SurfaceCard>
+                                        <SurfaceCard Soft="true">
+                                            <p class="cda-eyebrow">Manager</p>
+                                            <p class="mt-1 text-sm font-medium text-slate-950"
+                                               data-testid="crmhr-workforce-summary-manager">@FormatValue(selectedWorkspace.ManagerName)</p>
+                                        </SurfaceCard>
+                                        <SurfaceCard Soft="true">
+                                            <p class="cda-eyebrow">Primary email</p>
+                                            <p class="mt-1 text-sm font-medium text-slate-950">@FormatValue(selectedWorkspace.PrimaryEmail)</p>
+                                        </SurfaceCard>
+                                        <SurfaceCard Soft="true">
+                                            <p class="cda-eyebrow">Primary phone</p>
+                                            <p class="mt-1 text-sm font-medium text-slate-950">@FormatValue(selectedWorkspace.PrimaryPhone)</p>
+                                        </SurfaceCard>
+                                        <SurfaceCard Soft="true">
+                                            <p class="cda-eyebrow">Available now</p>
+                                            <p class="mt-1 text-sm font-medium text-slate-950"
+                                               data-testid="crmhr-workforce-summary-available">@FormatOptionalPercent(SelectedAvailablePercent)</p>
+                                        </SurfaceCard>
+                                        <SurfaceCard Soft="true">
+                                            <p class="cda-eyebrow">Next availability</p>
+                                            <p class="mt-1 text-sm font-medium text-slate-950"
+                                               data-testid="crmhr-workforce-summary-next-availability">@(HasSelectedAvailabilityDetails ? FormatDate(SelectedNextAvailabilityOn) : "Not loaded")</p>
+                                        </SurfaceCard>
+                                        <SurfaceCard Soft="true">
+                                            <p class="cda-eyebrow">Contract end</p>
+                                            <p class="mt-1 text-sm font-medium text-slate-950">@FormatDate(selectedWorkspace.Profile.EndDate)</p>
+                                        </SurfaceCard>
+                                        <SurfaceCard Soft="true">
+                                            <p class="cda-eyebrow">Searchable skills</p>
+                                            <p class="mt-1 text-sm font-medium text-slate-950">@FormatValue(BuildSkillCoverage(selectedWorkspace.Skills))</p>
+                                        </SurfaceCard>
+                                    </Grid>
+                                </Stack>
+                            </TabsItem>
+
+                            <TabsItem Text="Profile"
+                                      Icon="badge"
+                                      data-testid="crmhr-workforce-tab-profile">
                             <EditForm Model="profileEditor" OnValidSubmit="SaveWorkforceProfileAsync">
                                 <FormSection Title="Workforce profile"
                                              Description="Keep employment type, commercial rate context, and org-structure metadata attached to the same Party identity used by CRM and project flows.">
@@ -449,36 +424,192 @@
                                     </Cluster>
                                 </FormSection>
                             </EditForm>
+                            </TabsItem>
 
-                            <SkillMatrixPanel SkillCatalog="selectedWorkspace.SkillCatalog"
-                                              Skills="selectedWorkspace.Skills"
-                                              SkillDraft="skillEditor"
-                                              SkillDefinitionDraft="skillDefinitionEditor"
-                                              SavePartySkill="SavePartySkillAsync"
-                                              SaveSkillDefinition="SaveSkillDefinitionAsync"
-                                              DeletePartySkill="DeletePartySkillAsync" />
+                            <TabsItem Text="Skills"
+                                      Icon="psychology"
+                                      BadgeText="@selectedWorkspace.Skills.Count.ToString()"
+                                      data-testid="crmhr-workforce-tab-skills">
+                                <SkillMatrixPanel SkillCatalog="selectedWorkspace.SkillCatalog"
+                                                  Skills="selectedWorkspace.Skills"
+                                                  SkillDraft="skillEditor"
+                                                  SkillDefinitionDraft="skillDefinitionEditor"
+                                                  SavePartySkill="SavePartySkillAsync"
+                                                  SaveSkillDefinition="SaveSkillDefinitionAsync"
+                                                  DeletePartySkill="DeletePartySkillAsync" />
+                            </TabsItem>
 
-                            <CapacityTimelinePanel CapacitySummary="selectedWorkspace.CapacitySummary"
-                                                   CapacityBlocks="selectedWorkspace.CapacityBlocks"
-                                                   ProjectAllocations="selectedWorkspace.ProjectAllocations"
-                                                   CapacityBlockDraft="capacityBlockEditor"
-                                                   SaveCapacityBlock="SaveCapacityBlockAsync"
-                                                   DeleteCapacityBlock="DeleteCapacityBlockAsync"
-                                                   OpenProject="OpenProjectAsync" />
+                            <TabsItem Text="Allocations"
+                                      Icon="view_timeline"
+                                      BadgeText="@AllocationBadgeText"
+                                      data-testid="crmhr-workforce-tab-allocations">
+                                <div data-testid="crmhr-workforce-allocations-panel">
+                                    @if (isCapacityWorkspaceLoading)
+                                    {
+                                        <SurfaceCard Soft="true"
+                                                     data-testid="crmhr-workforce-allocations-loading">
+                                            <p class="cda-eyebrow">Loading allocation workspace</p>
+                                            <p class="mt-2 text-sm leading-6 text-slate-600">
+                                                Reading capacity blocks, project assignments, and the allocation timeline for this record.
+                                            </p>
+                                        </SurfaceCard>
+                                    }
+                                    else if (!string.IsNullOrWhiteSpace(capacityWorkspaceError))
+                                    {
+                                        <SurfaceCard Soft="true"
+                                                     data-testid="crmhr-workforce-allocations-error">
+                                            <p class="cda-eyebrow text-rose-700">Allocation workspace unavailable</p>
+                                            <p class="mt-2 text-sm leading-6 text-slate-700">@capacityWorkspaceError</p>
+                                            <Button Text="Retry"
+                                                    Icon="refresh"
+                                                    ButtonStyle="ButtonStyle.Light"
+                                                    Size="ButtonSize.Small"
+                                                    Class="mt-4"
+                                                    Click="RetryCapacityWorkspaceAsync" />
+                                        </SurfaceCard>
+                                    }
+                                    else if (capacityWorkspace is { } loadedCapacityWorkspace)
+                                    {
+                                        <CapacityTimelinePanel CapacitySummary="loadedCapacityWorkspace.CapacitySummary"
+                                                               CapacityBlocks="loadedCapacityWorkspace.CapacityBlocks"
+                                                               ProjectAllocations="loadedCapacityWorkspace.ProjectAllocations"
+                                                               CapacityBlockDraft="capacityBlockEditor"
+                                                               SaveCapacityBlock="SaveCapacityBlockAsync"
+                                                               DeleteCapacityBlock="DeleteCapacityBlockAsync"
+                                                               OpenProject="OpenProjectAsync" />
+                                    }
+                                </div>
+                            </TabsItem>
 
-                            <div data-testid="crmhr-workforce-timeline">
-                                <InteractionTimeline Items="activityTimeline"
-                                                    Eyebrow="Workforce history"
-                                                    Title="Recent staffing, lifecycle, and audit activity"
-                                                    Description="Workforce profile saves, archive/reactivate events, recruiting transitions, and related CRM-HR changes stay visible here for the selected party."
-                                                    EmptyEyebrow="No workforce history"
-                                                    EmptyTitle="No saved history for this record"
-                                                    EmptyDescription="Save a workforce profile or related CRM-HR workflow to build the shared audit trail." />
-                            </div>
-                        </Stack>
+                            <TabsItem Text="History"
+                                      Icon="history"
+                                      BadgeText="@activityTimeline.Count.ToString()"
+                                      data-testid="crmhr-workforce-tab-history">
+                                <div data-testid="crmhr-workforce-timeline">
+                                    <InteractionTimeline Items="activityTimeline"
+                                                        Eyebrow="Workforce history"
+                                                        Title="Recent staffing, lifecycle, and audit activity"
+                                                        Description="Workforce profile saves, archive/reactivate events, recruiting transitions, and related CRM-HR changes stay visible here for the selected party."
+                                                        EmptyEyebrow="No workforce history"
+                                                        EmptyTitle="No saved history for this record"
+                                                        EmptyDescription="Save a workforce profile or related CRM-HR workflow to build the shared audit trail." />
+                                </div>
+                            </TabsItem>
+                        </Tabs>
                     }
                 </DetailContent>
             </ListDetailShell>
+
+            @if (isDeliveryUnitDialogOpen)
+            {
+                <Dialog IsOpen="true"
+                        Eyebrow="Workforce"
+                        Title="New delivery unit"
+                        Subtitle="Create an organization unit with delivery semantics without displacing the workforce list."
+                        Size="ModalSize.Compact"
+                        DenseChrome="true"
+                        ShowCloseButton="@(!isDeliveryUnitSaving)"
+                        CloseOnBackdrop="@(!isDeliveryUnitSaving)"
+                        TestId="crmhr-workforce-delivery-unit-dialog"
+                        OnClose="CloseDeliveryUnitDialogAsync">
+                    <ChildContent>
+                        <EditForm Model="deliveryUnitEditor" OnValidSubmit="CreateDeliveryUnitAsync">
+                            <Stack GapScale="LayoutGap.Medium">
+                                <Grid Gap="LayoutGap.Medium" ColumnsMd="2">
+                                    <FormField Text="Unit name">
+                                        <InputText @bind-Value="deliveryUnitEditor.Name"
+                                                   class="cda-input"
+                                                   data-testid="crmhr-delivery-unit-name" />
+                                    </FormField>
+                                    <FormField Text="External code">
+                                        <InputText @bind-Value="deliveryUnitEditor.ExternalCode"
+                                                   class="cda-input"
+                                                   data-testid="crmhr-delivery-unit-code" />
+                                    </FormField>
+                                </Grid>
+
+                                <FormField Text="Summary">
+                                    <InputTextArea @bind-Value="deliveryUnitEditor.Summary"
+                                                   class="cda-input cda-input--textarea min-h-[7rem]"
+                                                   data-testid="crmhr-delivery-unit-summary" />
+                                </FormField>
+
+                                <Cluster Gap="LayoutGap.Small" JustifyContent="JustifyContent.End">
+                                    <Button Text="Cancel"
+                                            ButtonStyle="ButtonStyle.Light"
+                                            Disabled="@isDeliveryUnitSaving"
+                                            Click="CloseDeliveryUnitDialogAsync" />
+                                    <Button Text="Create delivery unit"
+                                            Type="submit"
+                                            Disabled="@isDeliveryUnitSaving"
+                                            IsBusy="@isDeliveryUnitSaving"
+                                            data-testid="crmhr-delivery-unit-save-button" />
+                                </Cluster>
+                            </Stack>
+                        </EditForm>
+                    </ChildContent>
+                </Dialog>
+            }
+
+            @if (isFiltersDialogOpen)
+            {
+                <Dialog IsOpen="true"
+                        Eyebrow="Workforce records"
+                        Title="Filters"
+                        Subtitle="Narrow the visible list by workforce kind, skill, or current availability."
+                        Size="ModalSize.Compact"
+                        DenseChrome="true"
+                        TestId="crmhr-workforce-filters-dialog"
+                        OnClose="CloseFiltersDialogAsync">
+                    <ChildContent>
+                        <Stack GapScale="LayoutGap.Medium">
+                            <FormField Text="Workforce kind">
+                                <InputSelect @bind-Value="kindFilter"
+                                             class="cda-input"
+                                             data-testid="crmhr-workforce-kind-filter">
+                                    <option value="">All workforce kinds</option>
+                                    @foreach (var workforceKind in Enum.GetValues<WorkforceKind>())
+                                    {
+                                        <option value="@workforceKind.ToString()">@workforceKind</option>
+                                    }
+                                </InputSelect>
+                            </FormField>
+
+                            <FormField Text="Skill">
+                                <InputSelect @bind-Value="skillFilter"
+                                             class="cda-input"
+                                             data-testid="crmhr-workforce-skill-filter">
+                                    <option value="">All skills</option>
+                                    @foreach (var skill in skillCatalog.OrderBy(item => item.Category).ThenBy(item => item.Name))
+                                    {
+                                        <option value="@skill.Id.ToString("D")">@skill.Name (@skill.Category)</option>
+                                    }
+                                </InputSelect>
+                            </FormField>
+
+                            <FormField Text="Availability">
+                                <InputSelect @bind-Value="availabilityFilter"
+                                             class="cda-input"
+                                             data-testid="crmhr-workforce-availability-filter">
+                                    <option value="">Any availability</option>
+                                    @foreach (var availabilityState in Enum.GetValues<WorkforceAvailabilityState>())
+                                    {
+                                        <option value="@availabilityState.ToString()">@availabilityState</option>
+                                    }
+                                </InputSelect>
+                            </FormField>
+
+                            <Cluster Gap="LayoutGap.Small" JustifyContent="JustifyContent.SpaceBetween">
+                                <Button Text="Reset all"
+                                        ButtonStyle="ButtonStyle.Light"
+                                        Click="ResetFilters" />
+                                <Button Text="Show results"
+                                        Click="CloseFiltersDialogAsync" />
+                            </Cluster>
+                        </Stack>
+                    </ChildContent>
+                </Dialog>
+            }
         </Stack>
     </ChildContent>
 </PageScaffold>
@@ -486,6 +617,12 @@
 @code {
     [SupplyParameterFromQuery(Name = "partyId")]
     public Guid? PartyIdQuery { get; set; }
+
+    private const int OverviewTabIndex = 0;
+    private const int ProfileTabIndex = 1;
+    private const int SkillsTabIndex = 2;
+    private const int AllocationsTabIndex = 3;
+    private const int HistoryTabIndex = 4;
 
     private static readonly IReadOnlyList<string> WorkforceStatuses =
     [
@@ -514,15 +651,28 @@
     private IReadOnlyList<WorkforceListItemModel> workforceItems = [];
     private IReadOnlyList<SkillCatalogItemModel> skillCatalog = [];
     private IReadOnlyList<CrmAccountActivityTimelineItemModel> activityTimeline = [];
-    private WorkforceWorkspaceModel? selectedWorkspace;
+    private WorkforceProfileWorkspaceModel? selectedWorkspace;
+    private WorkforceCapacityWorkspaceModel? capacityWorkspace;
+    private Task<WorkforceCapacityWorkspaceModel?>? capacityWorkspaceLoadTask;
+    private Guid? capacityWorkspaceLoadPartyId;
+    private long capacityWorkspaceLoadWorkforceGeneration;
+    private CancellationTokenSource? deliveryUnitSaveCancellation;
     private WorkforceProfileEditorModel profileEditor = new();
     private PartySkillEditorModel skillEditor = CreatePartySkillEditor(Guid.Empty);
     private CapacityBlockEditorModel capacityBlockEditor = CreateCapacityBlockEditor(Guid.Empty);
     private string searchText = string.Empty;
     private string kindFilter = string.Empty;
     private string skillFilter = string.Empty;
+    private string availabilityFilter = string.Empty;
+    private string capacityWorkspaceError = string.Empty;
     private AgentChatContextAccessState agentChatContextAccessState = AgentChatContextAccessState.Loading;
     private long workforceLoadGeneration;
+    private long deliveryUnitDialogGeneration;
+    private int selectedDetailTabIndex = OverviewTabIndex;
+    private bool isCapacityWorkspaceLoading;
+    private bool isDeliveryUnitDialogOpen;
+    private bool isDeliveryUnitSaving;
+    private bool isFiltersDialogOpen;
     private bool isDisposed;
 
     private AgentChatContextSurface AgentChatSurface => selectedWorkspace is { } workspace &&
@@ -531,7 +681,8 @@
             workspace.PartyId,
             workspace.DisplayName,
             workspace.LifecycleStatus,
-            workspace.CapacitySummary.AvailabilityState)
+            workspace.Profile.Id.HasValue ? SelectedAvailabilityState : null,
+            hasWorkforceProfile: workspace.Profile.Id.HasValue)
         : CrmHrAgentChatSurfaceBuilder.BuildWorkforceSurface();
 
     private AgentChatNavigationIdentity AgentChatNavigationFence
@@ -540,7 +691,38 @@
             Navigation.Uri,
             [new("partyId", PartyIdQuery?.ToString("D"))]);
 
-    private string availabilityFilter = string.Empty;
+    private WorkforceListItemModel? SelectedListItem
+        => selectedWorkspace is { } workspace
+            ? workforceItems.FirstOrDefault(item => item.PartyId == workspace.PartyId)
+            : null;
+
+    private WorkforceAvailabilityState? SelectedAvailabilityState
+        => capacityWorkspace?.CapacitySummary.AvailabilityState ?? SelectedListItem?.AvailabilityState;
+
+    private bool HasSelectedAvailabilityDetails
+        => capacityWorkspace is not null || SelectedListItem?.AvailabilityState.HasValue == true;
+
+    private decimal? SelectedAvailablePercent
+        => capacityWorkspace?.CapacitySummary.AvailablePercent
+           ?? (SelectedListItem is { AvailabilityState: { } } item ? item.AvailablePercent : null);
+
+    private DateOnly? SelectedNextAvailabilityOn
+        => capacityWorkspace?.CapacitySummary.NextAvailabilityOn ?? SelectedListItem?.NextAvailabilityOn;
+
+    private string SelectedAvailabilityMessage
+        => capacityWorkspace?.CapacitySummary.AvailabilityMessage
+           ?? BuildAvailabilityMessage(SelectedListItem);
+
+    private int ActiveFilterCount
+        => Convert.ToInt32(!string.IsNullOrWhiteSpace(kindFilter))
+           + Convert.ToInt32(!string.IsNullOrWhiteSpace(skillFilter))
+           + Convert.ToInt32(!string.IsNullOrWhiteSpace(availabilityFilter));
+
+    private string FilterButtonText
+        => ActiveFilterCount == 0 ? "Filters" : $"Filters ({ActiveFilterCount})";
+
+    private string AllocationBadgeText
+        => capacityWorkspace?.ProjectAllocations.Count.ToString() ?? string.Empty;
 
     private IReadOnlyList<WorkforceKind> AvailableWorkforceKinds
         => selectedWorkspace is null
@@ -573,6 +755,11 @@
         agentChatContextAccessState = outcome == WorkforceLoadOutcome.Ready
             ? AgentChatContextAccessState.Ready
             : AgentChatContextAccessState.Failed;
+
+        if (outcome == WorkforceLoadOutcome.Ready && selectedDetailTabIndex == AllocationsTabIndex)
+        {
+            await EnsureCapacityWorkspaceLoadedAsync();
+        }
     }
 
     private WorkforceLoadRequest BeginWorkforceLoad(
@@ -638,7 +825,7 @@
                 requestedPartyFound: true);
         }
 
-        var workspace = await HrService.GetWorkforceWorkspaceAsync(targetPartyId.Value);
+        var workspace = await HrService.GetWorkforceProfileWorkspaceAsync(targetPartyId.Value);
         if (workspace is null)
         {
             return WorkforceLoadSnapshot.Empty(
@@ -666,6 +853,13 @@
             return;
         }
 
+        var isPartySelectionChanged = selectedWorkspace?.PartyId != snapshot.Workspace.PartyId;
+        if (isPartySelectionChanged)
+        {
+            selectedDetailTabIndex = OverviewTabIndex;
+            InvalidateCapacityWorkspace();
+        }
+
         ApplyLoadedWorkspace(snapshot.Workspace);
         activityTimeline = snapshot.ActivityTimeline;
     }
@@ -677,7 +871,7 @@
            (request.Binding == WorkforceLoadBinding.RouteBound ||
             selectedWorkspace?.PartyId == request.ExpectedSelectedPartyId);
 
-    private void ApplyLoadedWorkspace(WorkforceWorkspaceModel workspace)
+    private void ApplyLoadedWorkspace(WorkforceProfileWorkspaceModel workspace)
     {
         selectedWorkspace = workspace;
         skillCatalog = workspace.SkillCatalog;
@@ -728,6 +922,16 @@
             WorkforceLoadOutcome.Missing => AgentChatContextAccessState.Failed,
             _ => agentChatContextAccessState
         };
+
+        if (outcome == WorkforceLoadOutcome.Ready)
+        {
+            InvalidateCapacityWorkspace();
+            if (selectedDetailTabIndex == AllocationsTabIndex)
+            {
+                await EnsureCapacityWorkspaceLoadedAsync();
+            }
+        }
+
         return outcome == WorkforceLoadOutcome.Ready;
     }
 
@@ -753,6 +957,8 @@
     private void ClearWorkforceSelection()
     {
         selectedWorkspace = null;
+        selectedDetailTabIndex = OverviewTabIndex;
+        InvalidateCapacityWorkspace();
         activityTimeline = [];
         profileEditor = new();
         skillEditor = CreatePartySkillEditor(Guid.Empty);
@@ -761,10 +967,161 @@
 
     private Task SelectPartyAsync(Guid partyId)
     {
+        if (PartyIdQuery == partyId && selectedWorkspace?.PartyId == partyId)
+        {
+            return Task.CompletedTask;
+        }
+
         Interlocked.Increment(ref workforceLoadGeneration);
         agentChatContextAccessState = AgentChatContextAccessState.Loading;
         Navigation.NavigateTo($"/crm-hr/workforce?partyId={partyId}");
         return Task.CompletedTask;
+    }
+
+    private async Task HandleDetailTabChangedAsync(int index)
+    {
+        selectedDetailTabIndex = index;
+        if (index == AllocationsTabIndex)
+        {
+            await EnsureCapacityWorkspaceLoadedAsync();
+        }
+    }
+
+    private async Task EnsureCapacityWorkspaceLoadedAsync()
+    {
+        if (selectedWorkspace is not { } workspace ||
+            capacityWorkspace?.PartyId == workspace.PartyId)
+        {
+            return;
+        }
+
+        var partyId = workspace.PartyId;
+        var workforceGeneration = Volatile.Read(ref workforceLoadGeneration);
+        if (capacityWorkspaceLoadTask is null ||
+            capacityWorkspaceLoadPartyId != partyId ||
+            capacityWorkspaceLoadWorkforceGeneration != workforceGeneration)
+        {
+            capacityWorkspaceLoadPartyId = partyId;
+            capacityWorkspaceLoadWorkforceGeneration = workforceGeneration;
+            capacityWorkspaceLoadTask = HrService.GetWorkforceCapacityWorkspaceAsync(partyId);
+            isCapacityWorkspaceLoading = true;
+            capacityWorkspaceError = string.Empty;
+        }
+
+        var loadTask = capacityWorkspaceLoadTask;
+        workforceGeneration = capacityWorkspaceLoadWorkforceGeneration;
+
+        try
+        {
+            var loadedWorkspace = await loadTask;
+            if (!IsCurrentCapacityRequest(loadTask, partyId, workforceGeneration))
+            {
+                return;
+            }
+
+            if (loadedWorkspace is null)
+            {
+                capacityWorkspaceError = "The selected workforce record no longer exists.";
+                return;
+            }
+
+            capacityWorkspace = loadedWorkspace;
+        }
+        catch (Exception exception)
+        {
+            if (!IsCurrentCapacityRequest(loadTask, partyId, workforceGeneration))
+            {
+                return;
+            }
+
+            Logger.LogError(
+                exception,
+                "Failed to load workforce capacity workspace for party {PartyId}.",
+                partyId);
+            capacityWorkspaceError = "Capacity and allocation data could not be loaded. Retry the request or inspect the application logs.";
+            NotificationService.Error("Allocation workspace load failed", capacityWorkspaceError);
+        }
+        finally
+        {
+            if (IsTrackedCapacityRequest(loadTask, partyId))
+            {
+                capacityWorkspaceLoadTask = null;
+                capacityWorkspaceLoadPartyId = null;
+                capacityWorkspaceLoadWorkforceGeneration = 0;
+                isCapacityWorkspaceLoading = false;
+            }
+        }
+    }
+
+    private bool IsCurrentCapacityRequest(
+        Task<WorkforceCapacityWorkspaceModel?> loadTask,
+        Guid partyId,
+        long workforceGeneration)
+        => !isDisposed &&
+           ReferenceEquals(capacityWorkspaceLoadTask, loadTask) &&
+           capacityWorkspaceLoadPartyId == partyId &&
+           selectedWorkspace?.PartyId == partyId &&
+           workforceGeneration == Volatile.Read(ref workforceLoadGeneration);
+
+    private bool IsTrackedCapacityRequest(
+        Task<WorkforceCapacityWorkspaceModel?> loadTask,
+        Guid partyId)
+        => ReferenceEquals(capacityWorkspaceLoadTask, loadTask) &&
+           capacityWorkspaceLoadPartyId == partyId;
+
+    private async Task RetryCapacityWorkspaceAsync()
+    {
+        InvalidateCapacityWorkspace();
+        await EnsureCapacityWorkspaceLoadedAsync();
+    }
+
+    private void InvalidateCapacityWorkspace()
+    {
+        capacityWorkspace = null;
+        capacityWorkspaceLoadTask = null;
+        capacityWorkspaceLoadPartyId = null;
+        capacityWorkspaceLoadWorkforceGeneration = 0;
+        capacityWorkspaceError = string.Empty;
+        isCapacityWorkspaceLoading = false;
+    }
+
+    private void OpenDeliveryUnitDialog()
+    {
+        if (isDeliveryUnitSaving)
+        {
+            return;
+        }
+
+        Interlocked.Increment(ref deliveryUnitDialogGeneration);
+        isDeliveryUnitDialogOpen = true;
+    }
+
+    private Task CloseDeliveryUnitDialogAsync()
+    {
+        if (!isDeliveryUnitDialogOpen || isDeliveryUnitSaving)
+        {
+            return Task.CompletedTask;
+        }
+
+        isDeliveryUnitDialogOpen = false;
+        Interlocked.Increment(ref deliveryUnitDialogGeneration);
+        return Task.CompletedTask;
+    }
+
+    private void OpenFiltersDialog()
+    {
+        isFiltersDialogOpen = true;
+    }
+
+    private Task CloseFiltersDialogAsync()
+    {
+        isFiltersDialogOpen = false;
+        return Task.CompletedTask;
+    }
+
+    private void ClearSearch()
+    {
+        searchText = string.Empty;
     }
 
     private void OpenDirectory()
@@ -944,55 +1301,90 @@
 
     private async Task CreateDeliveryUnitAsync()
     {
+        if (!isDeliveryUnitDialogOpen || isDeliveryUnitSaving)
+        {
+            return;
+        }
+
         if (string.IsNullOrWhiteSpace(deliveryUnitEditor.Name))
         {
             NotificationService.Warning("Delivery unit not created", "Delivery unit name is required.");
             return;
         }
 
-        var action = CaptureWorkforceAction();
-        var saveResult = await PartyDirectoryService.SavePartyAsync(new PartyEditorModel
+        var dialogGeneration = Volatile.Read(ref deliveryUnitDialogGeneration);
+        using var saveCancellation = new CancellationTokenSource();
+        deliveryUnitSaveCancellation = saveCancellation;
+        isDeliveryUnitSaving = true;
+
+        try
         {
-            PartyType = PartyType.OrganizationUnit,
-            LifecycleStatus = PartyLifecycleStatus.Active,
-            DisplayName = deliveryUnitEditor.Name.Trim(),
-            ExternalCode = deliveryUnitEditor.ExternalCode.Trim(),
-            Summary = deliveryUnitEditor.Summary.Trim(),
-            LastChangedBy = "crm-hr-ui",
-            Roles =
-            [
-                new PartyRoleAssignmentEditorModel
-                {
-                    RoleKind = PartyRoleKind.DeliveryUnit,
-                    Title = "Delivery unit",
-                    IsPrimary = true
-                }
-            ]
-        });
-        if (saveResult.IsFailure)
-        {
-            if (IsCurrentWorkforceAction(action))
+            var saveResult = await PartyDirectoryService.SavePartyAsync(new PartyEditorModel
             {
-                NotificationService.Error("Delivery unit create failed", string.Join(" ", saveResult.Errors.Select(error => error.Message)));
+                PartyType = PartyType.OrganizationUnit,
+                LifecycleStatus = PartyLifecycleStatus.Active,
+                DisplayName = deliveryUnitEditor.Name.Trim(),
+                ExternalCode = deliveryUnitEditor.ExternalCode.Trim(),
+                Summary = deliveryUnitEditor.Summary.Trim(),
+                LastChangedBy = "crm-hr-ui",
+                Roles =
+                [
+                    new PartyRoleAssignmentEditorModel
+                    {
+                        RoleKind = PartyRoleKind.DeliveryUnit,
+                        Title = "Delivery unit",
+                        IsPrimary = true
+                    }
+                ]
+            }, saveCancellation.Token);
+            if (saveResult.IsFailure)
+            {
+                if (IsCurrentDeliveryUnitSave(dialogGeneration, saveCancellation))
+                {
+                    NotificationService.Error("Delivery unit create failed", string.Join(" ", saveResult.Errors.Select(error => error.Message)));
+                }
+
+                return;
             }
 
-            return;
-        }
+            if (!IsCurrentDeliveryUnitSave(dialogGeneration, saveCancellation))
+            {
+                return;
+            }
 
-        if (!IsCurrentWorkforceAction(action))
+            deliveryUnitEditor.Name = string.Empty;
+            deliveryUnitEditor.ExternalCode = string.Empty;
+            deliveryUnitEditor.Summary = string.Empty;
+            isDeliveryUnitDialogOpen = false;
+            Interlocked.Increment(ref deliveryUnitDialogGeneration);
+
+            Interlocked.Increment(ref workforceLoadGeneration);
+            agentChatContextAccessState = AgentChatContextAccessState.Loading;
+            Navigation.NavigateTo($"/crm-hr/workforce?partyId={saveResult.Value:D}");
+            NotificationService.Success("Delivery unit created", "Delivery unit created.");
+        }
+        catch (OperationCanceledException) when (saveCancellation.IsCancellationRequested)
         {
             return;
         }
-
-        deliveryUnitEditor.Name = string.Empty;
-        deliveryUnitEditor.ExternalCode = string.Empty;
-        deliveryUnitEditor.Summary = string.Empty;
-
-        Interlocked.Increment(ref workforceLoadGeneration);
-        agentChatContextAccessState = AgentChatContextAccessState.Loading;
-        Navigation.NavigateTo($"/crm-hr/workforce?partyId={saveResult.Value:D}");
-        NotificationService.Success("Delivery unit created", "Delivery unit created.");
+        finally
+        {
+            if (ReferenceEquals(deliveryUnitSaveCancellation, saveCancellation))
+            {
+                deliveryUnitSaveCancellation = null;
+                isDeliveryUnitSaving = false;
+            }
+        }
     }
+
+    private bool IsCurrentDeliveryUnitSave(
+        long dialogGeneration,
+        CancellationTokenSource saveCancellation)
+        => isDeliveryUnitDialogOpen &&
+           isDeliveryUnitSaving &&
+           !saveCancellation.IsCancellationRequested &&
+           ReferenceEquals(deliveryUnitSaveCancellation, saveCancellation) &&
+           dialogGeneration == Volatile.Read(ref deliveryUnitDialogGeneration);
 
     private void ResetFilters()
     {
@@ -1171,6 +1563,19 @@
         return availabilityState?.ToString() ?? string.Empty;
     }
 
+    private static string BuildAvailabilityMessage(WorkforceListItemModel? item)
+    {
+        if (item?.AvailabilityState is not { } availabilityState)
+        {
+            return "Capacity details are available from the Allocations tab.";
+        }
+
+        var nextAvailability = item.NextAvailabilityOn.HasValue
+            ? $" Next availability: {item.NextAvailabilityOn.Value:yyyy-MM-dd}."
+            : string.Empty;
+        return $"{availabilityState} · {item.AvailablePercent:0.##}% available.{nextAvailability}";
+    }
+
     private static string FormatValue(string value)
     {
         return string.IsNullOrWhiteSpace(value) ? "Not set" : value;
@@ -1181,9 +1586,9 @@
         return value.HasValue ? value.Value.ToString("yyyy-MM-dd") : "Not set";
     }
 
-    private static string FormatPercent(decimal value)
+    private static string FormatOptionalPercent(decimal? value)
     {
-        return $"{value:0.##}%";
+        return value.HasValue ? $"{value.Value:0.##}%" : "Not loaded";
     }
 
     private static string BuildSkillCoverage(IReadOnlyList<PartySkillItemModel> skills)
@@ -1242,7 +1647,7 @@
     private sealed record WorkforceLoadSnapshot(
         IReadOnlyList<WorkforceListItemModel> WorkforceItems,
         IReadOnlyList<SkillCatalogItemModel> SkillCatalog,
-        WorkforceWorkspaceModel? Workspace,
+        WorkforceProfileWorkspaceModel? Workspace,
         IReadOnlyList<CrmAccountActivityTimelineItemModel> ActivityTimeline,
         bool RequestedPartyFound)
     {
@@ -1273,6 +1678,8 @@
         }
 
         isDisposed = true;
+        deliveryUnitSaveCancellation?.Cancel();
         Interlocked.Increment(ref workforceLoadGeneration);
+        Interlocked.Increment(ref deliveryUnitDialogGeneration);
     }
 }

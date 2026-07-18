@@ -11,24 +11,52 @@
 }
 else
 {
-    <Grid Gap="LayoutGap.Large" ColumnsLg="2">
-        <SurfaceCard>
-            <Split Gap="LayoutGap.Medium">
+    <SurfaceCard>
+        <Stack GapScale="LayoutGap.Medium">
+            <Split Gap="LayoutGap.Medium"
+                   AlignItems="AlignItems.Start"
+                   JustifyContent="JustifyContent.SpaceBetween"
+                   Wrap="FlexWrap.Wrap">
                 <div class="min-w-0">
-                    <p class="cda-eyebrow">Account summary</p>
+                    <p class="cda-eyebrow">Account record</p>
                     <h2 class="mt-1 text-lg font-semibold text-slate-950">@Account.DisplayName</h2>
                     @if (!string.IsNullOrWhiteSpace(Account.Summary))
                     {
-                        <p class="mt-3 text-sm leading-6 text-slate-600">@Account.Summary</p>
+                        <p class="mt-2 max-w-4xl text-sm leading-6 text-slate-600">@Account.Summary</p>
                     }
                 </div>
-                <Cluster Gap="LayoutGap.Small">
-                    <StatusBadge Tone="@ResolveStageTone(Account.Profile.RelationshipStage)" Text="@Account.Profile.RelationshipStage.ToString()" />
-                    <StatusBadge Tone="@ResolveLifecycleTone(Account.LifecycleStatus)" Text="@Account.LifecycleStatus.ToString()" />
-                </Cluster>
+
+                <Stack GapScale="LayoutGap.Small">
+                    <Cluster Gap="LayoutGap.Small" JustifyContent="JustifyContent.End">
+                        <StatusBadge Tone="@ResolveStageTone(Account.Profile.RelationshipStage)" Text="@Account.Profile.RelationshipStage.ToString()" />
+                        <StatusBadge Tone="@ResolveLifecycleTone(Account.LifecycleStatus)" Text="@Account.LifecycleStatus.ToString()" />
+                    </Cluster>
+                    <Cluster Gap="LayoutGap.Small" JustifyContent="JustifyContent.End">
+                        <Button Text="Open directory record"
+                                ButtonStyle="ButtonStyle.Light"
+                                Size="ButtonSize.Small"
+                                Click="OpenDirectory" />
+                        @if (Account.Profile.RelationshipStage != CrmAccountRelationshipStage.ActiveCustomer)
+                        {
+                            <Button Text="Convert to active customer"
+                                    Size="ButtonSize.Small"
+                                    Click="MarkActiveCustomer"
+                                    data-testid="crmhr-account-convert-active-button" />
+                        }
+                    </Cluster>
+                </Stack>
             </Split>
 
-            <CompactStatStrip Class="mt-5">
+            <CompactStatStrip>
+                <CompactStat Label="email"
+                             Value="@(string.IsNullOrWhiteSpace(Account.PrimaryEmail) ? "Not set" : Account.PrimaryEmail)"
+                             TooltipText="Primary email from the shared party record." />
+                <CompactStat Label="phone"
+                             Value="@(string.IsNullOrWhiteSpace(Account.PrimaryPhone) ? "Not set" : Account.PrimaryPhone)"
+                             TooltipText="Primary phone from the shared party record." />
+                <CompactStat Label="roles"
+                             Value="@(Account.Roles.Count == 0 ? "None" : string.Join(", ", Account.Roles))"
+                             TooltipText="CRM-facing roles on the shared party record." />
                 <CompactStat Label="stakeholders"
                              Value="@Account.Stakeholders.Count.ToString()"
                              TooltipText="Stakeholders linked to this account." />
@@ -41,46 +69,11 @@ else
                              TooltipText="Overdue next actions for this account."
                              Tone="warning" />
                 <CompactStat Label="tags"
-                             Value="@(Account.Tags.Count == 0 ? "0" : Account.Tags.Count.ToString())"
+                             Value="@Account.Tags.Count.ToString()"
                              TooltipText="Tags currently attached to this account." />
             </CompactStatStrip>
-        </SurfaceCard>
-
-        <SurfaceCard Soft="true">
-            <p class="cda-eyebrow">Operating context</p>
-            <h3 class="mt-1 text-lg font-semibold text-slate-950">Shared party record</h3>
-            <p class="mt-3 text-sm leading-6 text-slate-600">
-                CRM stays anchored to the directory record so customer, partner, vendor, and project-facing flows keep one durable identity.
-            </p>
-
-            <Stack GapScale="LayoutGap.Small" Class="mt-5">
-                <div class="rounded-[1.2rem] border border-slate-200 bg-white px-4 py-3">
-                    <p class="text-xs uppercase tracking-[0.18em] text-slate-500">Primary email</p>
-                    <p class="mt-1 text-sm font-medium text-slate-950">@(string.IsNullOrWhiteSpace(Account.PrimaryEmail) ? "Not set" : Account.PrimaryEmail)</p>
-                </div>
-                <div class="rounded-[1.2rem] border border-slate-200 bg-white px-4 py-3">
-                    <p class="text-xs uppercase tracking-[0.18em] text-slate-500">Primary phone</p>
-                    <p class="mt-1 text-sm font-medium text-slate-950">@(string.IsNullOrWhiteSpace(Account.PrimaryPhone) ? "Not set" : Account.PrimaryPhone)</p>
-                </div>
-                <div class="rounded-[1.2rem] border border-slate-200 bg-white px-4 py-3">
-                    <p class="text-xs uppercase tracking-[0.18em] text-slate-500">Roles</p>
-                    <p class="mt-1 text-sm font-medium text-slate-950">@(Account.Roles.Count == 0 ? "No CRM-facing roles yet" : string.Join(", ", Account.Roles))</p>
-                </div>
-            </Stack>
-
-            <Cluster Gap="LayoutGap.Small" Class="mt-5">
-                <Button Text="Open directory record"
-                        ButtonStyle="ButtonStyle.Light"
-                        Click="OpenDirectory" />
-                @if (Account.Profile.RelationshipStage != CrmAccountRelationshipStage.ActiveCustomer)
-                {
-                    <Button Text="Convert to active customer"
-                            Click="MarkActiveCustomer"
-                            data-testid="crmhr-account-convert-active-button" />
-                }
-            </Cluster>
-        </SurfaceCard>
-    </Grid>
+        </Stack>
+    </SurfaceCard>
 }
 
 @code {

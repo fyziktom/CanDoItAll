@@ -70,6 +70,8 @@ public sealed class CrmHrSensitiveDataFlowTests
         });
 
         await page.GotoAsync($"{fixture.BaseUrl}/crm-hr/workforce?partyId={partyId}");
+        await page.GetByTestId("crmhr-workforce-tab-profile").WaitForAsync();
+        await page.GetByTestId("crmhr-workforce-tab-profile").ClickAsync();
         await page.GetByTestId("crmhr-workforce-job-title").WaitForAsync();
         await page.GetByTestId("crmhr-workforce-kind").SelectOptionAsync(new[] { WorkforceKind.Employee.ToString() });
         await page.GetByTestId("crmhr-workforce-status").SelectOptionAsync(new[] { "Active" });
@@ -80,7 +82,9 @@ public sealed class CrmHrSensitiveDataFlowTests
         await page.GetByTestId("crmhr-workforce-notes").FillAsync("Sensitive workforce proof.");
         await page.GetByTestId("crmhr-workforce-save-button").ClickAsync();
         await page.WaitForSelectorAsync("text=Workforce profile saved.");
+        await page.GetByTestId("crmhr-workforce-tab-overview").ClickAsync();
         await ExpectTextContainsAsync(page.GetByTestId("crmhr-workforce-sensitive-callout"), "Hidden from global search");
+        await page.GetByTestId("crmhr-workforce-tab-history").ClickAsync();
         await ExpectTextContainsAsync(page.GetByTestId("crmhr-workforce-timeline"), $"Saved workforce profile for '{partyName}'.");
         Assert.False(await page.Locator("#blazor-error-ui").IsVisibleAsync());
 
@@ -91,6 +95,7 @@ public sealed class CrmHrSensitiveDataFlowTests
         });
 
         await page.SetViewportSizeAsync(1024, 900);
+        await page.GetByTestId("crmhr-workforce-tab-overview").ClickAsync();
         await page.GetByTestId("crmhr-workforce-sensitive-callout").WaitForAsync();
         await page.ScreenshotAsync(new PageScreenshotOptions
         {

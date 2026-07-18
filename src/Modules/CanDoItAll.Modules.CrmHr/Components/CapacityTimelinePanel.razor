@@ -2,6 +2,7 @@
              Description="Capacity windows and project allocations stay on the same workforce record so conflict detection is grounded in live project commitments.">
     @{
         var capacitySummary = CapacitySummary ?? DefaultCapacitySummary;
+        var ganttProjection = BuildAllocationGanttProjection();
     }
 
     <Grid Gap="LayoutGap.Medium" ColumnsLg="4">
@@ -36,6 +37,67 @@
         <div class="mt-4 rounded-[1.2rem] border border-emerald-200 bg-emerald-50 px-4 py-4 text-sm font-medium text-emerald-700">
             Bench signal: this profile is currently lightly committed and should be considered for open staffing requests.
         </div>
+    }
+
+    @if (ganttProjection.InvalidAllocations.Count > 0)
+    {
+        <Alert AlertStyle="AlertStyle.Warning"
+               Class="mt-6"
+               data-testid="crmhr-workforce-allocation-gantt-invalid-date-warning">
+            @ganttProjection.InvalidAllocations.Count allocation(s) cannot be shown on the Gantt because the date range is invalid or cannot be represented with an exclusive chart end. The authoritative details remain available below; correct the dates in the project record.
+            <ul class="mt-2 list-disc space-y-1 pl-5">
+                @foreach (var allocation in ganttProjection.InvalidAllocations)
+                {
+                    <li>@allocation.ProjectName: @FormatDate(allocation.StartsOn) -> @FormatDate(allocation.EndsOn)</li>
+                }
+            </ul>
+        </Alert>
+    }
+
+    @if (ganttProjection.Tasks.Count > 0)
+    {
+        <SurfaceCard Class="mt-6">
+            <Split Gap="LayoutGap.Medium"
+                   AlignItems="AlignItems.Start"
+                   JustifyContent="JustifyContent.SpaceBetween">
+                <Stack GapScale="LayoutGap.Tiny" Class="min-w-0">
+                    <p class="cda-eyebrow">Allocation schedule</p>
+                    <h3 class="text-lg font-semibold text-slate-950">Project commitment timeline</h3>
+                    <p class="text-sm leading-6 text-slate-600">
+                        Read-only project assignments. Allocation percentages remain in the task titles and are not interpreted as delivery progress.
+                    </p>
+                </Stack>
+                <StatusBadge Tone="info" Text="@($"{ganttProjection.Tasks.Count} allocation(s)")" />
+            </Split>
+
+            @if (ganttProjection.HasOpenBoundary)
+            {
+                <Alert AlertStyle="AlertStyle.Info" Class="mt-4">
+                    Open-ended rows are clipped for this chart to @ganttProjection.HorizonStart.ToString("yyyy-MM-dd") through @ganttProjection.HorizonEndInclusive.ToString("yyyy-MM-dd"). Their authoritative open boundaries remain unchanged in the details below.
+                </Alert>
+            }
+
+            <Stack Class="mt-4 w-full min-w-0"
+                   data-testid="crmhr-workforce-allocation-gantt">
+                <GanttChart Tasks="ganttProjection.Tasks"
+                            Dependencies="EmptyGanttDependencies"
+                            TimeScale="GanttTimeScale.Day"
+                            ShowTaskTable="true"
+                            ShowToolbar="true"
+                            AllowTaskEditing="false"
+                            AllowTimelineTaskCreation="false"
+                            AllowDependencyEditing="false"
+                            AllowTaskInsertion="false"
+                            AllowTaskReordering="false"
+                            RowHeight="48"
+                            HeaderHeight="40"
+                            BarHeight="26"
+                            TaskTableWidth="480"
+                            MaxHeight="30rem"
+                            ExportFileName="@AllocationGanttExportFileName"
+                            AriaLabel="Read-only workforce project allocation schedule" />
+            </Stack>
+        </SurfaceCard>
     }
 
     <Grid Gap="LayoutGap.Large" ColumnsLg="2" Class="mt-6">
@@ -221,6 +283,8 @@
 @code {
     private static readonly WorkforceCapacitySummaryModel DefaultCapacitySummary =
         new(40m, 0m, 0m, 100m, WorkforceAvailabilityState.Bench, "Bench or lightly committed.", null, false, true);
+    private static readonly IReadOnlyList<GanttDependency> EmptyGanttDependencies = [];
+    private const string AllocationGanttExportFileName = "workforce-allocations.png";
 
     [Parameter]
     public WorkforceCapacitySummaryModel? CapacitySummary { get; set; }
@@ -263,4 +327,83 @@
     {
         return value.HasValue ? value.Value.ToString("yyyy-MM-dd") : "Open";
     }
+
+    private AllocationGanttProjection BuildAllocationGanttProjection()
+    {
+        var invalidAllocations = ProjectAllocations
+            .Where(IsInvalidGanttRange)
+            .ToArray();
+        var renderableAllocations = ProjectAllocations
+            .Where(allocation => !IsInvalidGanttRange(allocation))
+            .ToArray();
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var horizonStart = today.AddDays(-30);
+        var horizonEndExclusive = today.AddDays(91);
+
+        foreach (var allocation in renderableAllocations)
+        {
+            if (allocation.StartsOn is { } startsOn && startsOn < horizonStart)
+            {
+                horizonStart = startsOn;
+            }
+
+            if (allocation.EndsOn is { } endsOn)
+            {
+                if (endsOn < horizonStart)
+                {
+                    horizonStart = endsOn;
+                }
+
+                var allocationEndExclusive = endsOn.AddDays(1);
+                if (allocationEndExclusive > horizonEndExclusive)
+                {
+                    horizonEndExclusive = allocationEndExclusive;
+                }
+            }
+
+            if (allocation.StartsOn is { } futureStart && futureStart >= horizonEndExclusive)
+            {
+                horizonEndExclusive = futureStart.AddDays(1);
+            }
+        }
+
+        var tasks = renderableAllocations
+            .Select(allocation => new GanttTask(
+                new GanttTaskId($"allocation:{allocation.AssignmentId:D}"),
+                $"{allocation.ProjectName} · {allocation.Role} · {FormatPercent(allocation.AllocationPercent)}",
+                ToUtcDateTimeOffset(allocation.StartsOn ?? horizonStart),
+                ToUtcDateTimeOffset(allocation.EndsOn?.AddDays(1) ?? horizonEndExclusive)))
+            .ToArray();
+
+        return new AllocationGanttProjection(
+            tasks,
+            invalidAllocations,
+            horizonStart,
+            horizonEndExclusive.AddDays(-1),
+            renderableAllocations.Any(allocation => !allocation.StartsOn.HasValue || !allocation.EndsOn.HasValue));
+    }
+
+    private static bool IsInvalidGanttRange(ProjectAllocationItemModel allocation)
+    {
+        if (allocation.StartsOn == DateOnly.MaxValue || allocation.EndsOn == DateOnly.MaxValue)
+        {
+            return true;
+        }
+
+        return allocation.StartsOn.HasValue &&
+               allocation.EndsOn.HasValue &&
+               allocation.StartsOn.Value > allocation.EndsOn.Value;
+    }
+
+    private static DateTimeOffset ToUtcDateTimeOffset(DateOnly value)
+    {
+        return new DateTimeOffset(value.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc));
+    }
+
+    private sealed record AllocationGanttProjection(
+        IReadOnlyList<GanttTask> Tasks,
+        IReadOnlyList<ProjectAllocationItemModel> InvalidAllocations,
+        DateOnly HorizonStart,
+        DateOnly HorizonEndInclusive,
+        bool HasOpenBoundary);
 }

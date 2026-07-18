@@ -236,6 +236,7 @@ public sealed class OpportunityPipelineTests
         });
 
         await page.ReloadAsync();
+        await page.GetByTestId("crmhr-crm-tab-opportunities").ClickAsync();
         await page.GetByTestId("crmhr-opportunity-column-lost")
             .Locator("[data-testid^='crmhr-opportunity-card-']")
             .Filter(new LocatorFilterOptions
@@ -304,6 +305,7 @@ public sealed class OpportunityPipelineTests
             .Locator("button")
             .First
             .ClickAsync();
+        await page.GetByTestId("crmhr-crm-tab-opportunities").ClickAsync();
     }
 
     private static async Task FillPartyAsync(

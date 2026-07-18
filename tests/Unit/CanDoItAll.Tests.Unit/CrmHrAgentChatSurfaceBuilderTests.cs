@@ -63,6 +63,22 @@ public sealed class CrmHrAgentChatSurfaceBuilderTests
     }
 
     [Fact]
+    public void Workforce_surface_omits_availability_for_a_party_without_a_profile()
+    {
+        var partyId = Guid.NewGuid();
+        var workforce = CrmHrAgentChatSurfaceBuilder.BuildWorkforceSurface(
+            partyId,
+            "Delivery unit",
+            PartyLifecycleStatus.Active,
+            availabilityStatus: null,
+            hasWorkforceProfile: false);
+
+        AssertSelection(workforce.Position, "workforce-party", partyId, "Delivery unit");
+        var fact = Assert.Single(workforce.Position.Facts);
+        AssertFact(fact, "lifecycle-status", "Active");
+    }
+
+    [Fact]
     public void Recruiting_surface_publishes_the_selected_application_and_candidate_party()
     {
         var applicationId = Guid.NewGuid();

@@ -41,7 +41,8 @@ public static class CrmHrAgentChatSurfaceBuilder
         Guid? partyId = null,
         string? displayName = null,
         PartyLifecycleStatus? lifecycleStatus = null,
-        WorkforceAvailabilityState? availabilityStatus = null)
+        WorkforceAvailabilityState? availabilityStatus = null,
+        bool hasWorkforceProfile = true)
     {
         var selection = BuildSelection("workforce-party", partyId, displayName, nameof(partyId));
         return BuildSurface(
@@ -50,12 +51,11 @@ public static class CrmHrAgentChatSurfaceBuilder
             route: WorkforceRoute,
             displayName: "CRM / HR · Workforce",
             primarySelection: selection,
-            facts: BuildFacts(
+            facts: BuildWorkforceFacts(
                 selection,
-                "lifecycle-status",
                 lifecycleStatus,
-                "availability-status",
-                availabilityStatus));
+                availabilityStatus,
+                hasWorkforceProfile));
     }
 
     public static AgentChatContextSurface BuildRecruitingSurface(
@@ -280,6 +280,37 @@ public static class CrmHrAgentChatSurfaceBuilder
         [
             BuildFact(firstName, firstValue),
             BuildFact(secondName, secondValue)
+        ];
+    }
+
+    private static IReadOnlyList<AgentChatContextPositionFact> BuildWorkforceFacts(
+        AgentChatContextEntityReference? selection,
+        PartyLifecycleStatus? lifecycleStatus,
+        WorkforceAvailabilityState? availabilityStatus,
+        bool hasWorkforceProfile)
+    {
+        if (selection is null)
+        {
+            return [];
+        }
+
+        var lifecycleFact = BuildFact("lifecycle-status", lifecycleStatus);
+        if (!hasWorkforceProfile)
+        {
+            if (availabilityStatus.HasValue)
+            {
+                throw new ArgumentException(
+                    "A workforce party without a profile cannot publish availability state.",
+                    nameof(availabilityStatus));
+            }
+
+            return [lifecycleFact];
+        }
+
+        return
+        [
+            lifecycleFact,
+            BuildFact("availability-status", availabilityStatus)
         ];
     }
 
