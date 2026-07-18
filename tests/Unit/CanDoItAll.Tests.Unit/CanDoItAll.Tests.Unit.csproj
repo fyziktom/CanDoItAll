@@ -64,7 +64,7 @@
     <ProjectReference Include="..\..\..\src\plugins\Implementations\CanDoItAll.Plugin.Gmail\CanDoItAll.Plugin.Gmail.csproj" />
     <ProjectReference Include="..\..\..\src\plugins\Implementations\CanDoItAll.Plugin.Office365\CanDoItAll.Plugin.Office365.csproj" />
     <ProjectReference Include="..\..\..\src\MAF\Tools\CanDoItAll.Tools.Documents\CanDoItAll.Tools.Documents.csproj" />
-    <PackageReference Include="CanDoItAll.Components.WebGlLib" Version="0.1.2" />
+    <PackageReference Include="CanDoItAll.Components.WebGlLib" Version="0.1.4" />
     <ProjectReference Include="..\..\..\src\Foundation\CanDoItAll.SharedKernel\CanDoItAll.SharedKernel.csproj" />
     <ProjectReference Include="..\..\..\..\CanDoItAll.AgentFramework.Rag\src\CanDoItAll.AgentFramework.Rag.Driver\CanDoItAll.AgentFramework.Rag.Driver.csproj" />
     <ProjectReference Include="..\..\..\..\CanDoItAll.AgentFramework.SemanticCompletion\src\CanDoItAll.AgentFramework.SemanticCompletion.Driver\CanDoItAll.AgentFramework.SemanticCompletion.Driver.csproj" />

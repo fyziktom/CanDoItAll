@@ -12,14 +12,14 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="10.0.4" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="10.0.5" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\MAF\Common\CanDoItAll.AgentFramework.Core\CanDoItAll.AgentFramework.Core.csproj" />
     <ProjectReference Include="..\..\MAF\Common\CanDoItAll.AgentFramework.Models\CanDoItAll.AgentFramework.Models.csproj" />
-    <PackageReference Include="CanDoItAll.Components.BaseLib" Version="0.1.2" />
-    <PackageReference Include="CanDoItAll.Components.Mermaid" Version="0.1.3" />
+    <PackageReference Include="CanDoItAll.Components.BaseLib" Version="0.1.4" />
+    <PackageReference Include="CanDoItAll.Components.Mermaid" Version="0.1.4" />
     <PackageReference Include="CanDoItAll.FileTools.FileBrowser.Components" Version="0.2.0" />
     <PackageReference Include="CanDoItAll.FileTools.FileBrowser.Core" Version="0.1.0" />
     <PackageReference Include="CanDoItAll.FileTools.FileInteraction.Components" Version="0.2.0" />

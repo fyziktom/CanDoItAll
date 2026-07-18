@@ -9,8 +9,8 @@
 
   <ItemGroup>
     <ProjectReference Include="..\CanDoItAll.Space3D.Mouse.Driver\CanDoItAll.Space3D.Mouse.Driver.csproj" />
-    <PackageReference Include="CanDoItAll.Components.BaseLib" Version="0.1.2" />
-    <PackageReference Include="CanDoItAll.Components.WebGlLib" Version="0.1.2" />
+    <PackageReference Include="CanDoItAll.Components.BaseLib" Version="0.1.4" />
+    <PackageReference Include="CanDoItAll.Components.WebGlLib" Version="0.1.4" />
   </ItemGroup>
 
 </Project>

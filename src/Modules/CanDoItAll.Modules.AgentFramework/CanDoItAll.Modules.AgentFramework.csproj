@@ -40,9 +40,9 @@
     <ProjectReference Include="..\..\MAF\Common\CanDoItAll.AgentFramework.Voice\CanDoItAll.AgentFramework.Voice.csproj" />
     <ProjectReference Include="..\..\Memory\CanDoItAll.Memory.Abstractions\CanDoItAll.Memory.Abstractions.csproj" />
     <ProjectReference Include="..\..\Memory\CanDoItAll.Memory.Application\CanDoItAll.Memory.Application.csproj" />
-    <PackageReference Include="CanDoItAll.Components.BaseLib" Version="0.1.3-processcanvas.20260715.2" />
-    <PackageReference Include="CanDoItAll.Components.Charts" Version="0.1.2" />
-    <PackageReference Include="CanDoItAll.Components.OverlayLib" Version="0.1.3-processcanvas.20260715.2" />
+    <PackageReference Include="CanDoItAll.Components.BaseLib" Version="0.1.4" />
+    <PackageReference Include="CanDoItAll.Components.Charts" Version="0.1.4" />
+    <PackageReference Include="CanDoItAll.Components.OverlayLib" Version="0.1.4" />
     <ProjectReference Include="..\..\Foundation\CanDoItAll.Infrastructure\CanDoItAll.Infrastructure.csproj" />
     <ProjectReference Include="..\CanDoItAll.Modules.Collaboration\CanDoItAll.Modules.Collaboration.csproj" />
     <ProjectReference Include="..\CanDoItAll.Modules.CrmHr\CanDoItAll.Modules.CrmHr.csproj" />
