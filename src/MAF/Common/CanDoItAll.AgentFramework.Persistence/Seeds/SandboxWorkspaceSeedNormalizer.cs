@@ -437,6 +437,9 @@ internal static class SandboxWorkspaceSeedNormalizer
             Permissions = seededAgent.Permissions,
             Capabilities = seededAgent.Capabilities,
             Tags = seededAgent.Tags
+                .Concat(existingAgent.Tags.Where(AgentSpecialTags.IsFavorite))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList()
         };
     }
 

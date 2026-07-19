@@ -1,6 +1,6 @@
 using CanDoItAll.Infrastructure.Persistence;
-using CanDoItAll.Modules.Factory;
 using CanDoItAll.Modules.Projects;
+using CanDoItAll.Modules.Prompts;
 using CanDoItAll.Modules.Resources;
 using CanDoItAll.Modules.TestLab;
 using CanDoItAll.SharedKernel;
@@ -130,34 +130,25 @@ internal sealed class ProjectNodeScopeBridge(
                 connectorPlugin.ResolveWorkbenchObjectSubtype(resourceRecord));
         }
 
-        if (TryParsePrefixedGuidNodeKey(nodeKey, "prompt-run:", out var promptRunId))
+        if (TryParsePrefixedGuidNodeKey(nodeKey, "prompt:", out var promptId))
         {
-            var runProjectId = await dbContext.Set<PromptRun>()
-                .Where(item => item.Id == promptRunId)
-                .Select(item => (Guid?)item.ProjectId)
-                .FirstOrDefaultAsync(cancellationToken);
-            return BuildProjectedResolution(runProjectId, projectId, ProjectObjectType.PromptSession);
-        }
-
-        if (TryParsePrefixedGuidNodeKey(nodeKey, "prompt-node:", out var promptNodeId))
-        {
-            var promptNode = await dbContext.Set<PromptRunNode>()
-                .Where(item => item.Id == promptNodeId)
+            var prompt = await dbContext.Set<PromptArtifact>()
+                .Where(item => item.Id == promptId)
                 .Select(item => new
                 {
-                    item.PromptRunId
+                    item.ProjectId,
+                    item.Kind
                 })
                 .FirstOrDefaultAsync(cancellationToken);
-            if (promptNode is null)
+            if (prompt is null)
             {
                 return null;
             }
 
-            var promptRunProjectId = await dbContext.Set<PromptRun>()
-                .Where(item => item.Id == promptNode.PromptRunId)
-                .Select(item => (Guid?)item.ProjectId)
-                .FirstOrDefaultAsync(cancellationToken);
-            return BuildProjectedResolution(promptRunProjectId, projectId, ProjectObjectType.PromptStep);
+            var objectType = prompt.Kind == PromptGalleryItemKind.FullPrompt
+                ? ProjectObjectType.PromptFlow
+                : ProjectObjectType.PromptStep;
+            return BuildProjectedResolution(prompt.ProjectId, projectId, objectType);
         }
 
         if (TryParsePrefixedGuidNodeKey(nodeKey, "test-plan:", out var testPlanId))

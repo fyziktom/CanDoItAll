@@ -1,9 +1,10 @@
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.AgentFramework.Tooling;
+using CanDoItAll.Composition;
 using CanDoItAll.Memory.Application;
-using CanDoItAll.Modules.Factory;
 using CanDoItAll.Modules.Projects;
+using CanDoItAll.Modules.Prompts;
 using CanDoItAll.Modules.Workbench;
 using CanDoItAll.SharedKernel;
 using Microsoft.EntityFrameworkCore;
@@ -14,7 +15,7 @@ namespace CanDoItAll.Tests.Unit;
 public sealed class ProjectWorkbenchServiceArchitectureTests
 {
     [Fact]
-    public void Constructor_uses_extracted_services_and_drops_direct_prompt_factory_dependency()
+    public void Constructor_uses_extracted_services_for_cross_module_commands()
     {
         var constructor = Assert.Single(typeof(ProjectWorkbenchService).GetConstructors());
         var parameterTypes = constructor.GetParameters()
@@ -33,7 +34,31 @@ public sealed class ProjectWorkbenchServiceArchitectureTests
                 typeof(ProjectWorkbenchCrossModuleMutationService)
             ],
             parameterTypes);
-        Assert.DoesNotContain(typeof(PromptFactoryService), parameterTypes);
+    }
+
+    [Fact]
+    public void Command_service_depends_on_the_prompt_gallery_boundary()
+    {
+        var constructor = Assert.Single(typeof(ProjectWorkbenchCommandService).GetConstructors());
+        var parameterTypes = constructor.GetParameters()
+            .Select(parameter => parameter.ParameterType)
+            .ToArray();
+
+        Assert.Equal(
+            [
+                typeof(IDbContextFactory<AppDbContext>),
+                typeof(IClock),
+                typeof(IPromptGalleryService),
+                typeof(ProjectStructureAssemblyService)
+            ],
+            parameterTypes);
+        Assert.DoesNotContain(typeof(PromptsService), parameterTypes);
+    }
+
+    [Fact]
+    public void Runtime_module_assemblies_include_prompts()
+    {
+        Assert.Contains(typeof(PromptsModuleAssemblyMarker).Assembly, ModuleAssemblies.All);
     }
 
     [Fact]
@@ -50,6 +75,11 @@ public sealed class ProjectWorkbenchServiceArchitectureTests
         AssertScoped<ProjectCrossModuleMutationProcessor>(services);
         AssertScoped<ProjectStructureAssemblyService>(services);
         AssertScoped<ProjectWorkbenchService>(services);
+        Assert.Contains(
+            services,
+            descriptor => descriptor.ServiceType == typeof(IProjectStructureProjectionContributor) &&
+                descriptor.ImplementationType == typeof(PromptGalleryProjectionContributor) &&
+                descriptor.Lifetime == ServiceLifetime.Scoped);
         Assert.Contains(
             services,
             descriptor => descriptor.ServiceType == typeof(IAgentRuntimeToolProvider) &&

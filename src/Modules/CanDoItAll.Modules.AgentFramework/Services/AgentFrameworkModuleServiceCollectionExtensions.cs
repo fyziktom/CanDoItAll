@@ -18,6 +18,7 @@ using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Modules.AgentFramework.Hosting;
 using CanDoItAll.Modules.AgentFramework.Pages.Components;
 using CanDoItAll.Modules.CrmHr;
+using CanDoItAll.Modules.Prompts;
 using CanDoItAll.Modules.Workspace;
 using CanDoItAll.SharedKernel;
 using CanDoItAll.Tools.Documents;
@@ -134,6 +135,8 @@ public static class AgentFrameworkModuleServiceCollectionExtensions
             serviceProvider.GetRequiredService<FloatingAgentChatCoordinator>());
         services.AddScoped<IFloatingAgentChatCoordinator>(serviceProvider =>
             serviceProvider.GetRequiredService<FloatingAgentChatCoordinator>());
+        services.Replace(
+            ServiceDescriptor.Scoped<IPromptGalleryCuratorLauncher, AgentFrameworkPromptGalleryCuratorLauncher>());
         services.AddScoped<ICanDoItAllAgentWorkspaceFactory, CanDoItAllAgentWorkspaceFactory>();
         services.AddScoped<CanDoItAllAgentWorkspaceFactory>(serviceProvider =>
             (CanDoItAllAgentWorkspaceFactory)serviceProvider.GetRequiredService<ICanDoItAllAgentWorkspaceFactory>());
@@ -146,12 +149,17 @@ public static class AgentFrameworkModuleServiceCollectionExtensions
         services.TryAddScoped<HrAgentUsageAnalyticsService>();
         services.TryAddScoped<HrAgentProcessReviewService>();
         services.TryAddScoped<HrAgentRuntimeAuthorizationService>();
+        services.TryAddScoped<PromptsCuratorAgentRuntimeAuthorizationService>();
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IAgentRuntimeToolProvider, ImageGenerationAgentRuntimeToolProvider>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IAgentRuntimeToolProvider, WorkflowAgentRuntimeToolProvider>());
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IAgentRuntimeToolProvider, PromptGalleryAgentRuntimeToolProvider>());
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IAgentRuntimeToolProvider, PromptsCuratorAgentRuntimeToolProvider>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IAgentRuntimeToolProvider, HrAgentRuntimeToolProvider>());
         services.TryAddEnumerable(ServiceDescriptor.Singleton<ISettingsRendererSource, WorkflowSettingsRendererSource>());
         services.AddWorkflowTemplateServices();
         services.AddScoped<WorkflowExampleCatalogSeedService>();
+        services.AddScoped<WorkflowPromptGalleryMigrationService>();
+        services.AddHostedService<WorkflowPromptGalleryMigrationHostedService>();
         services.AddScoped<ProcessMockAgentCatalogService>();
         services.AddScoped<AgentFrameworkExecutionRecoveryService>();
         services.AddScoped<ScenarioHarnessService>();

@@ -337,7 +337,9 @@ public sealed class MafWorkflowCompiler(
                     usage ??= WorkflowUsageCompatibilityProjection.Project(
                         usageObservations,
                         fallbackProviderName: "workflow-provider",
-                        fallbackModel: component.Model);
+                        fallbackModel: string.IsNullOrWhiteSpace(node.Settings.Model)
+                            ? component.Model
+                            : node.Settings.Model.Trim());
                     return new WorkflowNodeInput(result.PayloadJson);
                 }
 

@@ -27,6 +27,7 @@ internal sealed class WorkspaceBackedAgentProviderProfileRegistry(
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         var providers = await dbContext.Set<WorkspaceProviderProfile>()
+            .AsNoTracking()
             .OrderBy(item => item.Name)
             .ToListAsync(cancellationToken);
 
@@ -48,6 +49,7 @@ internal sealed class WorkspaceBackedAgentProviderProfileRegistry(
 
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         var provider = await dbContext.Set<WorkspaceProviderProfile>()
+            .AsNoTracking()
             .SingleOrDefaultAsync(item => item.Id == providerId, cancellationToken);
 
         if (provider is null)
@@ -55,10 +57,7 @@ internal sealed class WorkspaceBackedAgentProviderProfileRegistry(
             return await LoadCatalogProviderAsync(providerId, cancellationToken);
         }
 
-        var mappedProvider = MapToAgentFrameworkProvider(provider);
-        await UpsertCatalogProvidersAsync([mappedProvider], cancellationToken);
-
-        return mappedProvider;
+        return MapToAgentFrameworkProvider(provider);
     }
 
     public async Task<AgentFrameworkProviderProfileEditorModel> GetProviderEditorAsync(

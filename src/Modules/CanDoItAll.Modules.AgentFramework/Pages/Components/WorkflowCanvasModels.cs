@@ -40,6 +40,10 @@ internal sealed class WorkflowCanvasNodeDraft(WorkflowNodeId id, WorkflowNodeKin
 
     public WorkflowComponentId? ComponentId { get; set; }
 
+    public Guid? ProviderProfileId { get; set; }
+
+    public string Model { get; set; } = string.Empty;
+
     public Guid? AgentId { get; set; }
 
     public WorkflowId? SubworkflowId { get; set; }
@@ -179,10 +183,17 @@ internal static class WorkflowCanvasDefinitionMapper
         for (var index = 0; index < definition.Graph.Nodes.Count; index++)
         {
             var node = definition.Graph.Nodes[index];
+            var component = node.Settings.ComponentId is { } componentId
+                ? components.FirstOrDefault(item => item.Id == componentId)
+                : null;
             var draft = new WorkflowCanvasNodeDraft(node.Id, node.Kind)
             {
                 Name = node.Name,
                 ComponentId = node.Settings.ComponentId,
+                ProviderProfileId = node.Settings.ProviderProfileId ?? component?.ProviderProfileId,
+                Model = string.IsNullOrWhiteSpace(node.Settings.Model)
+                    ? component?.Model ?? string.Empty
+                    : node.Settings.Model,
                 AgentId = node.Settings.AgentId,
                 SubworkflowId = node.Settings.SubworkflowId,
                 ExternalRequestKind = node.Settings.ExternalRequestKind,
@@ -232,6 +243,8 @@ internal static class WorkflowCanvasDefinitionMapper
                     CreateShape(node.InputShapeKind),
                     CreateShape(node.ResultShapeKind))
                 {
+                    ProviderProfileId = node.ProviderProfileId,
+                    Model = node.Model.Trim(),
                     ExecutorId = node.ExecutorId,
                     ExecutorSettingsJson = node.ExecutorSettingsJson.Trim(),
                     ExecutionPolicy = node.ExecutionPolicy
@@ -384,11 +397,6 @@ internal static class WorkflowCanvasDefinitionMapper
             node.ExternalRequestKind = WorkflowExternalRequestKind.HumanInput;
         }
 
-        if (kind == WorkflowNodeKind.LlmCall && components.FirstOrDefault() is { } component)
-        {
-            ApplyComponent(node, component);
-        }
-
         return node;
     }
 
@@ -398,6 +406,8 @@ internal static class WorkflowCanvasDefinitionMapper
         ArgumentNullException.ThrowIfNull(component);
 
         node.ComponentId = component.Id;
+        node.ProviderProfileId = component.ProviderProfileId;
+        node.Model = component.Model;
         node.InputShapeKind = component.InputShape.Kind;
         node.ResultShapeKind = component.ResultShape.Kind;
         if (string.IsNullOrWhiteSpace(node.Instructions) ||

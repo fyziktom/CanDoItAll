@@ -3,8 +3,8 @@ using System.Text;
 using CanDoItAll.Infrastructure.Configuration;
 using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Infrastructure.Persistence;
-using CanDoItAll.Modules.Factory;
 using CanDoItAll.Modules.Projects;
+using CanDoItAll.Modules.Prompts;
 using CanDoItAll.Modules.Resources;
 using CanDoItAll.Modules.TestLab;
 using CanDoItAll.SharedKernel;
@@ -845,83 +845,45 @@ internal sealed class ProjectResourceProjectionContributor(
     }
 }
 
-internal sealed class PromptFactoryProjectionContributor : IProjectStructureProjectionContributor
+internal sealed class PromptGalleryProjectionContributor : IProjectStructureProjectionContributor
 {
     public async Task ContributeAsync(ProjectStructureProjectionContext context, CancellationToken cancellationToken)
     {
         var phases = await context.DbContext.Set<ProjectPhase>()
             .Where(item => item.ProjectId == context.ProjectId)
             .ToListAsync(cancellationToken);
-        var runs = (await context.DbContext.Set<PromptRun>()
-                .Where(item => item.ProjectId == context.ProjectId)
+        var prompts = (await context.DbContext.Set<PromptArtifact>()
+                .Where(item => item.ProjectId == context.ProjectId && !item.IsArchived)
                 .ToListAsync(cancellationToken))
             .OrderBy(item => item.CreatedAtUtc)
             .ToList();
-        var runIds = runs.Select(item => item.Id).ToArray();
-        var runNodes = runIds.Length == 0
-            ? []
-            : await context.DbContext.Set<PromptRunNode>()
-                .Where(item => runIds.Contains(item.PromptRunId))
-                .OrderBy(item => item.Sequence)
-                .ToListAsync(cancellationToken);
 
-        foreach (var run in runs.Select((run, index) => new { Run = run, Index = index }))
+        foreach (var prompt in prompts.Select((prompt, index) => new { Prompt = prompt, Index = index }))
         {
             var phaseNodeKey = phases.FirstOrDefault(phase =>
-                string.Equals(phase.Name, run.Run.Phase, StringComparison.OrdinalIgnoreCase)) is { } phase
+                string.Equals(phase.Name, prompt.Prompt.Phase, StringComparison.OrdinalIgnoreCase)) is { } phase
                 ? $"phase:{phase.Id}"
                 : $"project:{context.ProjectId}";
+            var promptNodeKey = $"prompt:{prompt.Prompt.Id}";
             context.AddNode(new ProjectObjectRecord
             {
                 ProjectId = context.ProjectId,
-                NodeKey = $"prompt-run:{run.Run.Id}",
-                ObjectType = ProjectObjectType.PromptSession,
-                Title = run.Run.Name,
-                Subtitle = run.Run.Phase,
-                Status = "Active",
-                Notes = run.Run.Phase,
-                Binding = ProjectStructureProjectionBindingFactory.Create($"/prompt-factory?runId={run.Run.Id}", "prompt-run", run.Run.Id),
+                NodeKey = promptNodeKey,
+                ObjectType = prompt.Prompt.Kind == PromptGalleryItemKind.FullPrompt
+                    ? ProjectObjectType.PromptFlow
+                    : ProjectObjectType.PromptStep,
+                Title = prompt.Prompt.Title,
+                Subtitle = prompt.Prompt.Phase,
+                Status = prompt.Prompt.Status.ToString(),
+                Notes = prompt.Prompt.Summary,
+                Binding = ProjectStructureProjectionBindingFactory.Create($"/prompt-gallery?promptId={prompt.Prompt.Id}", "prompt", prompt.Prompt.Id),
                 ParentNodeKey = phaseNodeKey,
                 PositionX = 1080,
-                PositionY = 100 + (run.Index * 160),
-                CreatedAtUtc = run.Run.CreatedAtUtc,
-                UpdatedAtUtc = context.AssembledAtUtc
+                PositionY = 100 + (prompt.Index * 160),
+                CreatedAtUtc = prompt.Prompt.CreatedAtUtc,
+                UpdatedAtUtc = prompt.Prompt.UpdatedAtUtc
             });
-            context.AddLink(phaseNodeKey, $"prompt-run:{run.Run.Id}", ProjectObjectLinkKind.BelongsTo);
-        }
-
-        foreach (var node in runNodes.Select((node, index) => new { Node = node, Index = index }))
-        {
-            var parentNodeKey = node.Node.ParentPromptRunNodeId.HasValue
-                ? $"prompt-node:{node.Node.ParentPromptRunNodeId.Value}"
-                : $"prompt-run:{node.Node.PromptRunId}";
-            context.AddNode(new ProjectObjectRecord
-            {
-                ProjectId = context.ProjectId,
-                NodeKey = $"prompt-node:{node.Node.Id}",
-                ObjectType = ProjectObjectType.PromptStep,
-                Title = node.Node.Title,
-                Subtitle = node.Node.BranchLabel,
-                Status = node.Node.State.ToString(),
-                Notes = node.Node.Notes,
-                Binding = ProjectStructureProjectionBindingFactory.Create(
-                    node.Node.PromptArtifactId.HasValue
-                        ? $"/prompt-gallery?promptId={node.Node.PromptArtifactId}"
-                        : $"/prompt-factory?runId={node.Node.PromptRunId}",
-                    "prompt-node",
-                    node.Node.Id),
-                ParentNodeKey = parentNodeKey,
-                PositionX = 1400,
-                PositionY = 100 + (node.Index * 120),
-                CreatedAtUtc = context.AssembledAtUtc,
-                UpdatedAtUtc = context.AssembledAtUtc
-            });
-            context.AddLink(
-                parentNodeKey,
-                $"prompt-node:{node.Node.Id}",
-                node.Node.ParentPromptRunNodeId.HasValue
-                    ? ProjectObjectLinkKind.DerivedFrom
-                    : ProjectObjectLinkKind.Contains);
+            context.AddLink(phaseNodeKey, promptNodeKey, ProjectObjectLinkKind.BelongsTo);
         }
     }
 }

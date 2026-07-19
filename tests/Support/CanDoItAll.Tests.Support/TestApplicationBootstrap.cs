@@ -9,7 +9,6 @@ using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.AgentFramework;
 using CanDoItAll.Modules.Collaboration;
 using CanDoItAll.Modules.CrmHr;
-using CanDoItAll.Modules.Factory;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Processes;
 using CanDoItAll.Modules.Prompts;

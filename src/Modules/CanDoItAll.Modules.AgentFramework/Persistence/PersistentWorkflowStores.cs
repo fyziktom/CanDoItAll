@@ -4,6 +4,8 @@ using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Workflows.Abstractions;
 using CanDoItAll.Infrastructure.Persistence;
+using CanDoItAll.Modules.Prompts;
+using CanDoItAll.SharedKernel;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using Npgsql;
@@ -13,16 +15,23 @@ namespace CanDoItAll.Modules.AgentFramework;
 public sealed class PersistentWorkflowCatalogService(
     IDbContextFactory<AppDbContext> dbContextFactory,
     IWorkflowDefinitionValidator validator,
+    IPromptGalleryService promptGallery,
+    IPromptGalleryImportService promptGalleryImporter,
     IProviderProfileRegistry? providerRegistry = null,
     IProviderProfileService? providerProfileService = null,
-    IWorkflowRuntimeBackendCatalog? runtimeBackendCatalog = null) :
+    IWorkflowRuntimeBackendCatalog? runtimeBackendCatalog = null,
+    PromptGalleryCompatibilityEvaluator? promptCompatibilityEvaluator = null) :
     IWorkflowCatalogService,
     IWorkflowComponentLibraryService,
     IWorkflowSettingsService
 {
+    private const string WorkflowPromptSourceCatalog = "agent-framework-workflow-components";
+
     private const string DefaultSettingsId = "default";
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
     private readonly IWorkflowRuntimeBackendCatalog runtimeBackendCatalog = runtimeBackendCatalog ?? new WorkflowRuntimeBackendCatalog();
+    private readonly PromptGalleryCompatibilityEvaluator promptCompatibilityEvaluator =
+        promptCompatibilityEvaluator ?? new PromptGalleryCompatibilityEvaluator();
 
     public async Task<IReadOnlyList<WorkflowCatalogItem>> ListDefinitionsAsync(
         CancellationToken cancellationToken = default)
@@ -129,13 +138,14 @@ public sealed class PersistentWorkflowCatalogService(
         }
 
         var now = DateTimeOffset.UtcNow;
+        var graphSnapshot = await SnapshotGraphAsync(dbContext, request.Graph, cancellationToken);
         var definition = new WorkflowDefinition(
             workflowId,
             WorkflowVersionId.New(),
             request.Name.Trim(),
             request.Description.Trim(),
             request.Status,
-            SnapshotGraph(request.Graph),
+            graphSnapshot,
             request.RuntimePolicy,
             current?.CreatedAtUtc ?? now,
             now)
@@ -215,12 +225,6 @@ public sealed class PersistentWorkflowCatalogService(
         var workflowId = request.PreserveWorkflowId ? source.Id : (WorkflowId?)null;
         var importedName = string.IsNullOrWhiteSpace(request.Name) ? source.Name : request.Name.Trim();
         var importedStatus = request.Status ?? WorkflowLifecycleStatus.Draft;
-        var candidate = source with
-        {
-            Name = importedName,
-            Status = importedStatus
-        };
-        ThrowIfValidationFailed(await ValidateDefinitionAsync(candidate, cancellationToken), "Workflow definition import failed validation");
 
         return await SaveDefinitionAsync(
             new WorkflowDefinitionSaveRequest(
@@ -263,6 +267,7 @@ public sealed class PersistentWorkflowCatalogService(
         var componentSnapshot = await ListReferencedComponentsAsync(definition, cancellationToken);
         var result = validator.Validate(definition, componentSnapshot);
         var issues = result.Issues.ToList();
+        var effectiveNodeComponents = ResolveEffectiveNodeComponents(definition, componentSnapshot);
 
         if (definition.RuntimePolicy.RequireDurableProductionRuns &&
             definition.RuntimePolicy.PreferredBackend == WorkflowRuntimeBackendKind.InProcess)
@@ -285,13 +290,87 @@ public sealed class PersistentWorkflowCatalogService(
                 "Human-in-loop nodes are disabled by workflow settings."));
         }
 
-        foreach (var component in componentSnapshot)
+        var promptArtifactIds = effectiveNodeComponents
+            .Select(component => component.PromptArtifactId)
+            .OfType<Guid>()
+            .Distinct()
+            .ToArray();
+        var compatibilitySnapshotsResult = await promptGallery.GetCompatibilitySnapshotsAsync(
+            promptArtifactIds,
+            cancellationToken);
+        var loadedCompatibilitySnapshots = compatibilitySnapshotsResult.Value;
+        var compatibilitySnapshotsAvailable = compatibilitySnapshotsResult.IsSuccess &&
+            loadedCompatibilitySnapshots is not null;
+        IReadOnlyDictionary<Guid, PromptGalleryCompatibilitySnapshot> compatibilitySnapshots =
+            loadedCompatibilitySnapshots ?? new Dictionary<Guid, PromptGalleryCompatibilitySnapshot>();
+        if (!compatibilitySnapshotsAvailable)
+        {
+            var detail = compatibilitySnapshotsResult.Errors.Count == 0
+                ? "The operation did not return compatibility metadata."
+                : string.Join(" ", compatibilitySnapshotsResult.Errors.Select(error => error.Message));
+            issues.Add(new WorkflowValidationIssue(
+                WorkflowValidationIssueCode.InvalidComponentReference,
+                $"Prompt Gallery execution validation failed closed. {detail}"));
+        }
+
+        var providerSnapshot = await LoadProviderSnapshotAsync(effectiveNodeComponents, cancellationToken);
+
+        foreach (var component in effectiveNodeComponents)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            issues.AddRange(await ValidateProviderCompatibilityAsync(component, cancellationToken));
+            var providerResolution = ResolveProvider(component, providerSnapshot);
+            issues.AddRange(ValidateProviderCompatibility(component, providerResolution));
+            if (compatibilitySnapshotsAvailable)
+            {
+                issues.AddRange(ValidatePromptGalleryExecutionCompatibility(
+                    component,
+                    providerResolution.Provider,
+                    compatibilitySnapshots));
+            }
         }
 
         return new WorkflowValidationResult(issues);
+    }
+
+    private IReadOnlyList<WorkflowValidationIssue> ValidatePromptGalleryExecutionCompatibility(
+        LlmCallComponent component,
+        ProviderProfile? provider,
+        IReadOnlyDictionary<Guid, PromptGalleryCompatibilitySnapshot> compatibilitySnapshots)
+    {
+        if (component.PromptArtifactId is not { } promptArtifactId)
+        {
+            return
+            [
+                new WorkflowValidationIssue(
+                    WorkflowValidationIssueCode.InvalidComponentReference,
+                    $"LLM Call Component '{component.Id}' has no canonical Prompt Gallery binding.")
+            ];
+        }
+
+        if (!compatibilitySnapshots.TryGetValue(promptArtifactId, out var snapshot))
+        {
+            return
+            [
+                new WorkflowValidationIssue(
+                    WorkflowValidationIssueCode.InvalidComponentReference,
+                    $"LLM Call Component '{component.Id}' references unavailable Prompt Gallery item '{promptArtifactId:D}'.")
+            ];
+        }
+
+        var compatibility = promptCompatibilityEvaluator.Evaluate(
+            snapshot,
+            new PromptGalleryConsumerContext(
+                PromptGalleryConsumer.Workflow,
+                PromptGalleryCompatibilityPurpose.Execution,
+                Provider: provider?.Kind.ToString(),
+                Model: component.Model,
+                RequiresFinalVersion: true));
+        return compatibility.Issues
+            .Where(issue => issue.Severity == PromptCompatibilitySeverity.Error)
+            .Select(issue => new WorkflowValidationIssue(
+                WorkflowValidationIssueCode.InvalidComponentReference,
+                $"LLM Call Component '{component.Id}' cannot execute with Prompt Gallery item '{promptArtifactId:D}': {issue.Message}"))
+            .ToArray();
     }
 
     public async Task<IReadOnlyList<WorkflowProviderOption>> ListProviderOptionsAsync(
@@ -322,8 +401,7 @@ public sealed class PersistentWorkflowCatalogService(
             .OrderBy(item => item.Name)
             .ToListAsync(cancellationToken);
 
-        return records
-            .Select(item => Deserialize<LlmCallComponent>(item.ComponentJson))
+        return (await HydrateComponentsAsync(records, cancellationToken))
             .OrderBy(item => item.Name, StringComparer.OrdinalIgnoreCase)
             .ToArray();
     }
@@ -339,7 +417,7 @@ public sealed class PersistentWorkflowCatalogService(
 
         return record is null
             ? null
-            : Deserialize<LlmCallComponent>(record.ComponentJson);
+            : (await HydrateComponentsAsync([record], cancellationToken)).Single();
     }
 
     public async Task<LlmCallComponent> SaveComponentAsync(
@@ -360,7 +438,10 @@ public sealed class PersistentWorkflowCatalogService(
             ? await dbContext.Set<WorkflowComponentRecord>()
                 .SingleOrDefaultAsync(item => item.Id == request.Id.Value.Value, cancellationToken)
             : null;
-        var component = new LlmCallComponent(
+        var currentComponent = current is null
+            ? null
+            : (await HydrateComponentsAsync([current], cancellationToken)).Single();
+        var componentCandidate = new LlmCallComponent(
             request.Id ?? WorkflowComponentId.New(),
             request.Name.Trim(),
             request.ProviderProfileId,
@@ -374,13 +455,56 @@ public sealed class PersistentWorkflowCatalogService(
             current?.CreatedAtUtc ?? now,
             now);
 
-        var validation = validator.Validate(CreateComponentValidationDefinition(component), [component]);
-        var providerIssues = await ValidateProviderCompatibilityAsync(component, cancellationToken);
+        var providerResolution = await ResolveProviderAsync(componentCandidate, cancellationToken);
+        var validation = validator.Validate(CreateComponentValidationDefinition(componentCandidate), [componentCandidate]);
+        var providerIssues = ValidateProviderCompatibility(componentCandidate, providerResolution);
         var issues = validation.Issues.Concat(providerIssues).ToArray();
         if (issues.Length > 0)
         {
             throw new InvalidOperationException(string.Join(" ", issues.Select(issue => issue.Message)));
         }
+
+        var existingPromptArtifactId = request.PromptArtifactId ?? currentComponent?.PromptArtifactId;
+        PromptGalleryItemDetails? promptItem = null;
+        if (existingPromptArtifactId.HasValue)
+        {
+            promptItem = RequirePromptValue(
+                await promptGallery.GetItemAsync(existingPromptArtifactId.Value, cancellationToken),
+                "Prompt Gallery item");
+            EnsurePromptCompatibility(
+                promptItem,
+                componentCandidate,
+                PromptGalleryCompatibilityPurpose.Selection,
+                providerResolution.Provider?.Kind.ToString());
+        }
+
+        var promptSnapshot = await ResolvePromptSnapshotAsync(
+            request,
+            currentComponent,
+            componentCandidate.Id,
+            promptItem,
+            providerResolution.Provider,
+            cancellationToken);
+        var executionItem = promptItem?.Id == promptSnapshot.PromptArtifactId
+            ? promptItem with
+            {
+                Status = PromptArtifactStatus.Final,
+                CurrentVersionNumber = Math.Max(promptItem.CurrentVersionNumber, promptSnapshot.VersionNumber)
+            }
+            : RequirePromptValue(
+                await promptGallery.GetItemAsync(promptSnapshot.PromptArtifactId, cancellationToken),
+                "Prompt Gallery item");
+        EnsurePromptCompatibility(
+            executionItem,
+            componentCandidate,
+            PromptGalleryCompatibilityPurpose.Execution,
+            providerResolution.Provider?.Kind.ToString());
+        var component = componentCandidate with
+        {
+            Instructions = promptSnapshot.Content,
+            PromptArtifactId = promptSnapshot.PromptArtifactId,
+            PromptVersionId = promptSnapshot.PromptVersionId
+        };
 
         if (current is null)
         {
@@ -388,16 +512,173 @@ public sealed class PersistentWorkflowCatalogService(
         }
         else
         {
-            current.Name = component.Name;
-            current.ProviderProfileId = component.ProviderProfileId;
-            current.Model = component.Model;
-            current.Modality = component.Modality;
-            current.ComponentJson = Serialize(component);
-            current.UpdatedAtUtc = component.UpdatedAtUtc;
+            current.Apply(component);
         }
 
         await dbContext.SaveChangesAsync(cancellationToken);
         return component;
+    }
+
+    private void EnsurePromptCompatibility(
+        PromptGalleryItemDetails item,
+        LlmCallComponent component,
+        PromptGalleryCompatibilityPurpose purpose,
+        string? providerKind)
+    {
+        var suppressed = item.WarningSuppressions
+            .Where(preference => preference.Consumer == PromptGalleryConsumer.Workflow)
+            .Select(preference => preference.IssueCode)
+            .ToHashSet();
+        var compatibility = promptCompatibilityEvaluator.Evaluate(
+            item,
+            new PromptGalleryConsumerContext(
+                PromptGalleryConsumer.Workflow,
+                purpose,
+                Provider: providerKind,
+                Model: component.Model,
+                RequiresFinalVersion: purpose == PromptGalleryCompatibilityPurpose.Execution),
+            suppressed);
+        var blockingIssues = purpose == PromptGalleryCompatibilityPurpose.Execution
+            ? compatibility.Issues.Where(issue => issue.Severity == PromptCompatibilitySeverity.Error).ToArray()
+            : compatibility.Issues.Where(issue =>
+                issue.Severity == PromptCompatibilitySeverity.Error ||
+                issue.Code == PromptCompatibilityIssueCode.ProviderModelNotSupported).ToArray();
+        if (blockingIssues.Length > 0)
+        {
+            throw new InvalidOperationException(
+                string.Join(" ", blockingIssues.Select(issue => issue.Message)));
+        }
+    }
+
+    private async Task<PromptVersionSnapshot> ResolvePromptSnapshotAsync(
+        LlmCallComponentSaveRequest request,
+        LlmCallComponent? currentComponent,
+        WorkflowComponentId componentId,
+        PromptGalleryItemDetails? loadedItem,
+        ProviderProfile? provider,
+        CancellationToken cancellationToken)
+    {
+        if (request.PromptVersionId is { } requestedVersionId)
+        {
+            var requestedSnapshot = RequirePromptValue(
+                await promptGallery.GetVersionSnapshotAsync(requestedVersionId, cancellationToken),
+                "Prompt Gallery version");
+            if (request.PromptArtifactId is { } requestedArtifactId &&
+                requestedSnapshot.PromptArtifactId != requestedArtifactId)
+            {
+                throw new InvalidOperationException(
+                    $"Prompt Gallery version '{requestedVersionId:D}' does not belong to item '{requestedArtifactId:D}'.");
+            }
+
+            return requestedSnapshot;
+        }
+
+        var promptArtifactId = request.PromptArtifactId ?? currentComponent?.PromptArtifactId;
+        if (promptArtifactId is null)
+        {
+            var provenance = currentComponent is null
+                ? PromptArtifactProvenance.WorkflowCreated
+                : PromptArtifactProvenance.WorkflowMigration;
+            return await CreateWorkflowPromptAsync(request, componentId, provider, provenance, cancellationToken);
+        }
+
+        if (currentComponent?.PromptArtifactId == promptArtifactId &&
+            currentComponent.PromptVersionId is { } currentVersionId &&
+            string.Equals(currentComponent.Instructions.Trim(), request.Instructions.Trim(), StringComparison.Ordinal))
+        {
+            return RequirePromptValue(
+                await promptGallery.GetVersionSnapshotAsync(currentVersionId, cancellationToken),
+                "Prompt Gallery version");
+        }
+
+        var item = loadedItem?.Id == promptArtifactId.Value
+            ? loadedItem
+            : RequirePromptValue(
+                await promptGallery.GetItemAsync(promptArtifactId.Value, cancellationToken),
+                "Prompt Gallery item");
+        var saveResult = await promptGallery.SaveDraftAsync(
+            new PromptGalleryDraft(
+                item.Id,
+                item.ProjectId,
+                item.CollectionId,
+                item.Title,
+                item.Summary,
+                item.Kind,
+                item.Phase,
+                request.Instructions,
+                item.Tags,
+                item.SupportedModels,
+                item.SupportedConsumers,
+                new PromptModelRecommendations(
+                    request.ModelSettings.Temperature,
+                    request.ModelSettings.MaxOutputTokens,
+                    item.Recommendations.TopP),
+                item.UpdatedAtUtc),
+            cancellationToken);
+        var saveReceipt = RequirePromptValue(saveResult, "Prompt Gallery item");
+
+        return RequirePromptValue(
+            await promptGallery.CreateVersionAsync(
+                saveReceipt.PromptArtifactId,
+                new PromptVersionCreateRequest(
+                    $"Updated by workflow component '{request.Name.Trim()}'",
+                    saveReceipt.UpdatedAtUtc),
+                cancellationToken),
+            "Prompt Gallery version");
+    }
+
+    private async Task<PromptVersionSnapshot> CreateWorkflowPromptAsync(
+        LlmCallComponentSaveRequest request,
+        WorkflowComponentId componentId,
+        ProviderProfile? provider,
+        PromptArtifactProvenance provenance,
+        CancellationToken cancellationToken)
+    {
+        IReadOnlyList<PromptProviderModel> supportedModels = provider is null
+            ? []
+            : [new PromptProviderModel(provider.Kind.ToString(), request.Model.Trim(), IsPreferred: true)];
+        return RequirePromptValue(
+            await promptGalleryImporter.ImportVersionAsync(
+                new PromptGalleryImportRequest(
+                    provenance,
+                    $"workflow-component:{componentId.Value:D}",
+                    WorkflowPromptSourceCatalog,
+                    new PromptGalleryDraft(
+                    Id: null,
+                    ProjectId: null,
+                    CollectionId: null,
+                    request.Name,
+                    provenance == PromptArtifactProvenance.WorkflowMigration
+                        ? $"Reusable instructions migrated from workflow component '{request.Name.Trim()}'."
+                        : $"Reusable instructions created for workflow component '{request.Name.Trim()}'.",
+                    PromptGalleryItemKind.FullPrompt,
+                    Phase: "workflow",
+                    request.Instructions,
+                    Tags: ["workflow", "llm-call"],
+                    SupportedModels: supportedModels,
+                    SupportedConsumers: [PromptGalleryConsumer.Workflow],
+                    Recommendations: new PromptModelRecommendations(
+                        request.ModelSettings.Temperature,
+                        request.ModelSettings.MaxOutputTokens)),
+                    new PromptImportVersionRequest(
+                        provenance == PromptArtifactProvenance.WorkflowMigration
+                            ? $"Migrated from workflow component '{request.Name.Trim()}'"
+                            : $"Created for workflow component '{request.Name.Trim()}'")),
+                cancellationToken),
+            "Prompt Gallery workflow import");
+    }
+
+    private static T RequirePromptValue<T>(Result<T> result, string resourceName)
+    {
+        if (result.IsSuccess && result.Value is not null)
+        {
+            return result.Value;
+        }
+
+        var detail = result.Errors.Count == 0
+            ? "The operation did not return a value."
+            : string.Join(" ", result.Errors.Select(error => $"{error.Code}: {error.Message}"));
+        throw new InvalidOperationException($"{resourceName} operation failed. {detail}");
     }
 
     public async Task DeleteComponentAsync(
@@ -497,23 +778,76 @@ public sealed class PersistentWorkflowCatalogService(
             : Deserialize<WorkflowDefinition>(record.DefinitionJson);
     }
 
-    private async Task<IReadOnlyList<WorkflowValidationIssue>> ValidateProviderCompatibilityAsync(
+    private async Task<ProviderResolution> ResolveProviderAsync(
         LlmCallComponent component,
         CancellationToken cancellationToken)
     {
         if (!component.ProviderProfileId.HasValue || providerRegistry is null)
         {
-            return [];
+            return new ProviderResolution(ShouldValidate: false, Provider: null);
         }
 
         var provider = await providerRegistry.GetProviderAsync(component.ProviderProfileId.Value, cancellationToken);
-        if (provider is null)
+        return new ProviderResolution(
+            ShouldValidate: true,
+            provider is null ? null : NormalizeProvider(provider));
+    }
+
+    private async Task<IReadOnlyDictionary<Guid, ProviderProfile>> LoadProviderSnapshotAsync(
+        IReadOnlyCollection<LlmCallComponent> components,
+        CancellationToken cancellationToken)
+    {
+        if (providerRegistry is null)
+        {
+            return new Dictionary<Guid, ProviderProfile>();
+        }
+
+        var providerIds = components
+            .Select(component => component.ProviderProfileId)
+            .OfType<Guid>()
+            .ToHashSet();
+        if (providerIds.Count == 0)
+        {
+            return new Dictionary<Guid, ProviderProfile>();
+        }
+
+        var providers = await providerRegistry.ListProvidersAsync(cancellationToken);
+        return providers
+            .Where(provider => providerIds.Contains(provider.Id))
+            .Select(NormalizeProvider)
+            .ToDictionary(provider => provider.Id);
+    }
+
+    private ProviderResolution ResolveProvider(
+        LlmCallComponent component,
+        IReadOnlyDictionary<Guid, ProviderProfile> providerSnapshot)
+    {
+        if (!component.ProviderProfileId.HasValue || providerRegistry is null)
+        {
+            return new ProviderResolution(ShouldValidate: false, Provider: null);
+        }
+
+        return new ProviderResolution(
+            ShouldValidate: true,
+            providerSnapshot.GetValueOrDefault(component.ProviderProfileId.Value));
+    }
+
+    private IReadOnlyList<WorkflowValidationIssue> ValidateProviderCompatibility(
+        LlmCallComponent component,
+        ProviderResolution resolution)
+    {
+        if (!resolution.ShouldValidate)
+        {
+            return [];
+        }
+
+        if (resolution.Provider is not { } provider)
         {
             return
             [
                 new WorkflowValidationIssue(
                     WorkflowValidationIssueCode.InvalidProviderModel,
-                    $"LLM Call Component '{component.Id}' references provider '{component.ProviderProfileId.Value:D}', which does not exist.")
+                    $"LLM Call Component '{component.Id}' references provider '{component.ProviderProfileId.GetValueOrDefault():D}', which does not exist.")
             ];
         }
 
@@ -527,7 +861,6 @@ public sealed class PersistentWorkflowCatalogService(
             ];
         }
 
-        provider = NormalizeProvider(provider);
         if (provider.Purpose != ProviderProfilePurpose.Chat)
         {
             return
@@ -576,6 +909,8 @@ public sealed class PersistentWorkflowCatalogService(
 
         return [];
     }
+
+    private sealed record ProviderResolution(bool ShouldValidate, ProviderProfile? Provider);
 
     private ProviderProfile NormalizeProvider(ProviderProfile provider)
     {
@@ -626,8 +961,7 @@ public sealed class PersistentWorkflowCatalogService(
             .OrderBy(item => item.Name)
             .ToListAsync(cancellationToken);
 
-        return records
-            .Select(item => Deserialize<LlmCallComponent>(item.ComponentJson))
+        return (await HydrateComponentsAsync(records, cancellationToken))
             .Where(component => referencedComponentIds.Contains(component.Id.Value))
             .ToArray();
     }
@@ -642,14 +976,119 @@ public sealed class PersistentWorkflowCatalogService(
             .ToArray();
     }
 
-    private static WorkflowGraph SnapshotGraph(WorkflowGraph graph)
+    private async Task<WorkflowGraph> SnapshotGraphAsync(
+        AppDbContext dbContext,
+        WorkflowGraph graph,
+        CancellationToken cancellationToken)
     {
+        var referencedComponentIds = graph.Nodes
+            .Where(node => node.Kind == WorkflowNodeKind.LlmCall)
+            .Select(node => node.Settings.ComponentId?.Value)
+            .OfType<Guid>()
+            .Distinct()
+            .ToArray();
+        var records = referencedComponentIds.Length == 0
+            ? []
+            : await dbContext.Set<WorkflowComponentRecord>()
+                .AsNoTracking()
+                .Where(record => referencedComponentIds.Contains(record.Id))
+                .ToListAsync(cancellationToken);
+        var components = (await HydrateComponentsAsync(records, cancellationToken))
+            .ToDictionary(component => component.Id.Value);
+
         return new WorkflowGraph(
             graph.StartNodeId,
             graph.Nodes
-                .Select(node => node with { Ports = node.Ports.ToArray() })
+                .Select(node => SnapshotNode(node, components))
                 .ToArray(),
             graph.Edges.ToArray());
+    }
+
+    private async Task<IReadOnlyList<LlmCallComponent>> HydrateComponentsAsync(
+        IReadOnlyList<WorkflowComponentRecord> records,
+        CancellationToken cancellationToken)
+    {
+        if (records.Count == 0)
+        {
+            return [];
+        }
+
+        var currentRecords = records
+            .Where(record => record.PromptGalleryBindingSchemaVersion == WorkflowPersistenceSchemaVersions.PromptGalleryBinding)
+            .ToArray();
+        var unsupported = records.FirstOrDefault(record =>
+            record.PromptGalleryBindingSchemaVersion > WorkflowPersistenceSchemaVersions.PromptGalleryBinding);
+        if (unsupported is not null)
+        {
+            throw new InvalidOperationException(
+                $"Workflow component '{unsupported.Id}' uses unsupported Prompt Gallery binding schema version '{unsupported.PromptGalleryBindingSchemaVersion}'.");
+        }
+
+        var versionIds = currentRecords
+            .Select(record => record.PromptVersionId ?? throw new InvalidOperationException(
+                $"Workflow component '{record.Id}' has no Prompt Gallery version binding."))
+            .Distinct()
+            .ToArray();
+        var snapshots = versionIds.Length == 0
+            ? []
+            : RequirePromptValue(
+                await promptGallery.GetVersionSnapshotsAsync(versionIds, cancellationToken),
+                "Prompt Gallery versions");
+        var snapshotsById = snapshots.ToDictionary(snapshot => snapshot.PromptVersionId);
+
+        return records
+            .Select(record => record.PromptGalleryBindingSchemaVersion == WorkflowPersistenceSchemaVersions.PromptGalleryBinding
+                ? record.Hydrate(snapshotsById.GetValueOrDefault(record.PromptVersionId!.Value)
+                    ?? throw new InvalidOperationException(
+                        $"Workflow component '{record.Id}' references missing Prompt Gallery version '{record.PromptVersionId}'."))
+                : Deserialize<LlmCallComponent>(record.ComponentJson))
+            .ToArray();
+    }
+
+    private static WorkflowNode SnapshotNode(
+        WorkflowNode node,
+        IReadOnlyDictionary<Guid, LlmCallComponent> components)
+    {
+        if (node.Kind != WorkflowNodeKind.LlmCall ||
+            node.Settings.ComponentId is not { } componentId ||
+            !components.TryGetValue(componentId.Value, out var component))
+        {
+            return node with { Ports = node.Ports.ToArray() };
+        }
+
+        return node with
+        {
+            Ports = node.Ports.ToArray(),
+            Settings = node.Settings with
+            {
+                ProviderProfileId = node.Settings.ProviderProfileId ?? component.ProviderProfileId,
+                Model = string.IsNullOrWhiteSpace(node.Settings.Model)
+                    ? component.Model
+                    : node.Settings.Model.Trim(),
+                Instructions = string.IsNullOrWhiteSpace(node.Settings.Instructions)
+                    ? component.Instructions
+                    : node.Settings.Instructions
+            }
+        };
+    }
+
+    private static IReadOnlyList<LlmCallComponent> ResolveEffectiveNodeComponents(
+        WorkflowDefinition definition,
+        IReadOnlyList<LlmCallComponent> components)
+    {
+        var componentsById = components.ToDictionary(component => component.Id);
+        return definition.Graph.Nodes
+            .Where(node => node.Kind == WorkflowNodeKind.LlmCall && node.Settings.ComponentId.HasValue)
+            .Select(node => (Node: node, Component: componentsById.GetValueOrDefault(node.Settings.ComponentId!.Value)))
+            .Where(item => item.Component is not null)
+            .Select(item => item.Component! with
+            {
+                ProviderProfileId = item.Node.Settings.ProviderProfileId ?? item.Component.ProviderProfileId,
+                Model = string.IsNullOrWhiteSpace(item.Node.Settings.Model)
+                    ? item.Component.Model
+                    : item.Node.Settings.Model.Trim()
+            })
+            .ToArray();
     }
 
     private static IReadOnlyList<WorkflowInputParameterDescriptor> SnapshotInputParameters(
@@ -714,7 +1153,7 @@ public sealed class PersistentWorkflowCatalogService(
                             AgentId: null,
                             SubworkflowId: null,
                             ExternalRequestKind: null,
-                            Instructions: string.Empty,
+                            Instructions: component.Instructions,
                             InputShape: component.InputShape,
                             ResultShape: component.ResultShape)),
                     new WorkflowNode(
@@ -1335,6 +1774,8 @@ public sealed class PersistentWorkflowRunStore(IDbContextFactory<AppDbContext> d
 
 public sealed class WorkflowDefinitionRecord
 {
+    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
+
     public Guid WorkflowId { get; set; }
 
     public Guid VersionId { get; set; }
@@ -1349,6 +1790,8 @@ public sealed class WorkflowDefinitionRecord
 
     public string DefinitionJson { get; set; } = "{}";
 
+    public int InstructionSnapshotSchemaVersion { get; set; }
+
     public DateTimeOffset CreatedAtUtc { get; set; }
 
     public DateTimeOffset UpdatedAtUtc { get; set; }
@@ -1361,7 +1804,8 @@ public sealed class WorkflowDefinitionRecord
         Description = definition.Description,
         Status = definition.Status,
         PreferredBackend = definition.RuntimePolicy.PreferredBackend,
-        DefinitionJson = JsonSerializer.Serialize(definition, new JsonSerializerOptions(JsonSerializerDefaults.Web)),
+        DefinitionJson = JsonSerializer.Serialize(definition, JsonOptions),
+        InstructionSnapshotSchemaVersion = WorkflowPersistenceSchemaVersions.InstructionSnapshot,
         CreatedAtUtc = definition.CreatedAtUtc,
         UpdatedAtUtc = definition.UpdatedAtUtc
     };
@@ -1369,6 +1813,8 @@ public sealed class WorkflowDefinitionRecord
 
 public sealed class WorkflowComponentRecord
 {
+    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
+
     public Guid Id { get; set; }
 
     public string Name { get; set; } = string.Empty;
@@ -1379,23 +1825,115 @@ public sealed class WorkflowComponentRecord
 
     public WorkflowModality Modality { get; set; }
 
+    public Guid? PromptArtifactId { get; set; }
+
+    public Guid? PromptVersionId { get; set; }
+
+    public int PromptGalleryBindingSchemaVersion { get; set; }
+
     public string ComponentJson { get; set; } = "{}";
 
     public DateTimeOffset CreatedAtUtc { get; set; }
 
     public DateTimeOffset UpdatedAtUtc { get; set; }
 
-    public static WorkflowComponentRecord FromComponent(LlmCallComponent component) => new()
+    public static WorkflowComponentRecord FromComponent(LlmCallComponent component)
     {
-        Id = component.Id.Value,
-        Name = component.Name,
-        ProviderProfileId = component.ProviderProfileId,
-        Model = component.Model,
-        Modality = component.Modality,
-        ComponentJson = JsonSerializer.Serialize(component, new JsonSerializerOptions(JsonSerializerDefaults.Web)),
-        CreatedAtUtc = component.CreatedAtUtc,
-        UpdatedAtUtc = component.UpdatedAtUtc
-    };
+        var record = new WorkflowComponentRecord();
+        record.Apply(component);
+        return record;
+    }
+
+    public void Apply(LlmCallComponent component)
+    {
+        ArgumentNullException.ThrowIfNull(component);
+        if (component.PromptArtifactId is not { } promptArtifactId ||
+            component.PromptVersionId is not { } promptVersionId)
+        {
+            throw new InvalidOperationException(
+                $"Workflow component '{component.Id}' must bind an immutable Prompt Gallery version before persistence.");
+        }
+
+        Id = component.Id.Value;
+        Name = component.Name;
+        ProviderProfileId = component.ProviderProfileId;
+        Model = component.Model;
+        Modality = component.Modality;
+        PromptArtifactId = promptArtifactId;
+        PromptVersionId = promptVersionId;
+        PromptGalleryBindingSchemaVersion = WorkflowPersistenceSchemaVersions.PromptGalleryBinding;
+        ComponentJson = JsonSerializer.Serialize(WorkflowComponentBinding.FromComponent(component), JsonOptions);
+        CreatedAtUtc = component.CreatedAtUtc;
+        UpdatedAtUtc = component.UpdatedAtUtc;
+    }
+
+    public LlmCallComponent Hydrate(PromptVersionSnapshot snapshot)
+    {
+        ArgumentNullException.ThrowIfNull(snapshot);
+        if (PromptArtifactId != snapshot.PromptArtifactId || PromptVersionId != snapshot.PromptVersionId)
+        {
+            throw new InvalidOperationException(
+                $"Workflow component '{Id}' has an inconsistent Prompt Gallery artifact/version binding.");
+        }
+
+        var binding = JsonSerializer.Deserialize<WorkflowComponentBinding>(ComponentJson, JsonOptions)
+            ?? throw new InvalidOperationException($"Workflow component '{Id}' binding JSON deserialized to null.");
+        return binding.ToComponent(snapshot);
+    }
+
+    private sealed record WorkflowComponentBinding(
+        WorkflowComponentId Id,
+        string Name,
+        Guid? ProviderProfileId,
+        string Model,
+        WorkflowModality Modality,
+        WorkflowModelSettings ModelSettings,
+        WorkflowValueShape InputShape,
+        WorkflowValueShape ResultShape,
+        AgentPermissionsPolicy Permissions,
+        DateTimeOffset CreatedAtUtc,
+        DateTimeOffset UpdatedAtUtc)
+    {
+        public static WorkflowComponentBinding FromComponent(LlmCallComponent component)
+            => new(
+                component.Id,
+                component.Name,
+                component.ProviderProfileId,
+                component.Model,
+                component.Modality,
+                component.ModelSettings,
+                component.InputShape,
+                component.ResultShape,
+                component.Permissions,
+                component.CreatedAtUtc,
+                component.UpdatedAtUtc);
+
+        public LlmCallComponent ToComponent(PromptVersionSnapshot snapshot)
+            => new(
+                Id,
+                Name,
+                ProviderProfileId,
+                Model,
+                Modality,
+                ModelSettings,
+                snapshot.Content,
+                InputShape,
+                ResultShape,
+                Permissions,
+                CreatedAtUtc,
+                UpdatedAtUtc)
+            {
+                PromptArtifactId = snapshot.PromptArtifactId,
+                PromptVersionId = snapshot.PromptVersionId
+            };
+    }
+}
+
+internal static class WorkflowPersistenceSchemaVersions
+{
+    public const int PromptGalleryBinding = 1;
+
+    public const int InstructionSnapshot = 2;
 }
 
 public sealed class WorkflowSettingsRecord
@@ -1686,6 +2224,8 @@ internal sealed class WorkflowDefinitionRecordConfiguration : IEntityTypeConfigu
         builder.Property(item => item.DefinitionJson).HasColumnType("TEXT");
         builder.HasIndex(item => item.WorkflowId);
         builder.HasIndex(item => new { item.WorkflowId, item.UpdatedAtUtc });
+        builder.HasIndex(item => new { item.InstructionSnapshotSchemaVersion, item.VersionId })
+            .HasDatabaseName("IX_WorkflowDefinitions_InstructionSnapshotSchema_Id");
     }
 }
 
@@ -1701,6 +2241,18 @@ internal sealed class WorkflowComponentRecordConfiguration : IEntityTypeConfigur
         builder.Property(item => item.ComponentJson).HasColumnType("TEXT");
         builder.HasIndex(item => item.Name);
         builder.HasIndex(item => item.ProviderProfileId);
+        builder.HasIndex(item => new { item.PromptGalleryBindingSchemaVersion, item.Id })
+            .HasDatabaseName("IX_WorkflowComponents_PromptGalleryBindingSchema_Id");
+        builder.HasIndex(item => new { item.PromptArtifactId, item.PromptVersionId })
+            .HasDatabaseName("IX_WorkflowComponents_PromptBinding");
+        builder.HasOne<PromptArtifact>()
+            .WithMany()
+            .HasForeignKey(item => item.PromptArtifactId)
+            .OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<PromptVersion>()
+            .WithMany()
+            .HasForeignKey(item => item.PromptVersionId)
+            .OnDelete(DeleteBehavior.Restrict);
     }
 }
 

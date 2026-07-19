@@ -1250,13 +1250,13 @@ public sealed partial class AppSmokeTests
         await editQuickAction.WaitForAsync();
         await primaryQuickAction.WaitForAsync();
         Assert.Contains("Edit", await editQuickAction.TextContentAsync(), StringComparison.Ordinal);
-        Assert.Contains("Open Wizard in New Tab", await primaryQuickAction.TextContentAsync(), StringComparison.Ordinal);
+        Assert.Contains("Open Prompt in New Tab", await primaryQuickAction.TextContentAsync(), StringComparison.Ordinal);
         await CaptureLocatorAsync(quickActionDialog, Path.Combine(artifactsDir, "02-prompt-quick-actions.png"));
 
         var popupTask = context.WaitForPageAsync();
         await primaryQuickAction.ClickAsync();
         var popup = await popupTask;
-        await popup.WaitForURLAsync("**/prompt-factory?sessionId=*");
+        await popup.WaitForURLAsync("**/prompt-gallery?promptId=*");
         await popup.CloseAsync();
 
         await EnsureCanvasSelectionAsync(page, runtimeSelector);

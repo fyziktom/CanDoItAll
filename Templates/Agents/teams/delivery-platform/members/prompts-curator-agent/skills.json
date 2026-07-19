@@ -1,0 +1,11 @@
+{
+  "capabilityKeys": [
+    "prompts-curator-agent-inline-skill",
+    "prompt-gallery-catalog-search",
+    "prompt-gallery-item-editor-get",
+    "prompt-gallery-draft-create",
+    "prompt-gallery-draft-update",
+    "prompt-gallery-version-create"
+  ],
+  "notes": "Privileged managed Prompts Curator capability set. Runtime tools also verify the immutable curator identity and every exact catalog assignment."
+}

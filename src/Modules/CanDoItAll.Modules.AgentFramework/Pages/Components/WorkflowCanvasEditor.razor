@@ -3,6 +3,8 @@
 @using CanDoItAll.Components.CanvasLib
 @using CanDoItAll.Components.OverlayLib
 @using CanDoItAll.Modules.AgentFramework.Pages
+@using CanDoItAll.Modules.Prompts
+@using CanDoItAll.Modules.Prompts.Components
 @using CanDoItAll.Modules.Workspace.Pages.Components
 
 <div class="workflow-canvas-editor-shell">
@@ -170,11 +172,14 @@
                                     <TextBlock TextStyle="TextStyle.Eyebrow" Value="LLM components" />
                                     <h3 class="workflow-canvas-panel-title">Prepared calls</h3>
                                 </div>
-                                <Button Text="Create"
-                                        Size="ButtonSize.Small"
-                                        Click="CreateDefaultComponentAsync"
-                                        Disabled="@isBusy"
-                                        data-testid="workflow-canvas-create-component" />
+                                <PromptGalleryPickerButton Text="Browse gallery"
+                                                           Icon="library_books"
+                                                           Size="ButtonSize.Small"
+                                                           Consumer="PromptGalleryConsumer.Workflow"
+                                                           Provider="@ResolvePromptPickerProvider(node: null)"
+                                                           Model="@ResolvePromptPickerModel(node: null)"
+                                                           AllowEdit="true"
+                                                           Selected="HandlePromptGallerySelectionForNewNodeAsync" />
                             </Split>
                             <p class="workflows-muted mt-3"
                                data-testid="workflow-canvas-provider-options">@BuildProviderOptionsSummary()</p>
@@ -216,8 +221,8 @@
                             @if (componentOptions.Count == 0)
                             {
                                 <EmptyState Eyebrow="No components"
-                                            Title="Create an LLM component"
-                                            Description="Prepared calls carry provider, model, modality, model settings, instructions, and result shape." />
+                                            Title="Select a Gallery prompt"
+                                            Description="The Gallery provides canonical prompt content; prepared calls retain provider, model, execution settings, and an immutable prompt snapshot." />
                             }
                             else
                             {
@@ -324,27 +329,55 @@
                         @if (selected.Kind == WorkflowNodeKind.LlmCall)
                         {
                             var selectedComponent = ResolveSelectedComponent(selected);
-                            var providerUsageBadge = BuildLlmProviderUsageBadge(selectedComponent);
-                            <label class="workflow-canvas-field">
-                                <span>LLM Call Component</span>
-                                <select class="cda-input"
-                                        value="@FormatComponentId(selected.ComponentId)"
-                                        @onchange="args => HandleSelectedComponentChanged(selected, args)"
-                                        data-testid="workflow-canvas-node-component">
-                                    <option value="">Select component</option>
-                                    @foreach (var component in componentOptions)
-                                    {
-                                        <option value="@component.Id.Value.ToString("D")">@component.Name - @ResolveComponentProviderLabel(component) - @component.Model</option>
-                                    }
-                                </select>
-                            </label>
+                            var selectedProvider = ResolveSelectedNodeProvider(selected);
+                            var providerUsageBadge = BuildLlmProviderUsageBadge(selected);
+                            <div class="workflow-canvas-executor-summary" data-testid="workflow-canvas-node-prompt-identity">
+                                <div class="workflow-canvas-executor-summary__details">
+                                    <strong>Gallery prompt</strong>
+                                    <span>@BuildPromptIdentity(selectedComponent)</span>
+                                </div>
+                            </div>
+                            <PromptGalleryPickerButton Text="Browse prompt gallery"
+                                                       Icon="library_books"
+                                                       Size="ButtonSize.Small"
+                                                       Consumer="PromptGalleryConsumer.Workflow"
+                                                       Provider="@ResolvePromptPickerProvider(selected)"
+                                                       Model="@ResolvePromptPickerModel(selected)"
+                                                       AllowEdit="true"
+                                                       Selected="@(selection => HandlePromptGallerySelectionForNodeAsync(selection, selected))" />
+                            <Grid Gap="LayoutGap.Small" ColumnsLg="2" Class="mt-3">
+                                <label class="workflow-canvas-field">
+                                    <span>Provider</span>
+                                    <select class="cda-input"
+                                            value="@selected.ProviderProfileId?.ToString("D")"
+                                            @onchange="args => HandleSelectedProviderChanged(selected, args)"
+                                            data-testid="workflow-canvas-node-provider">
+                                        <option value="">Select provider</option>
+                                        @foreach (var providerOption in ProviderOptions)
+                                        {
+                                            <option value="@providerOption.ProviderProfileId.ToString("D")"
+                                                    disabled="@(!providerOption.IsEnabled)">@BuildProviderOptionLabel(providerOption)</option>
+                                        }
+                                    </select>
+                                </label>
+                                <ProviderModelSelector ProviderName="@selectedProvider?.Name"
+                                                       ProviderDefaultModel="@selectedProvider?.DefaultModel"
+                                                       ModelOptions="@selectedProvider?.ModelOptions"
+                                                       Value="@selected.Model"
+                                                       ValueChanged="@(value => HandleSelectedModelChangedAsync(selected, value))"
+                                                       UseEmptyValueForProviderDefault="false"
+                                                       TestId="workflow-canvas-node-model-selector"
+                                                       ChoiceTestId="workflow-canvas-node-model"
+                                                       OverrideTestId="workflow-canvas-node-model-override"
+                                                       CustomModelTestId="workflow-canvas-node-model-custom" />
+                            </Grid>
                             <div class="workflow-canvas-executor-summary" data-testid="workflow-canvas-llm-usage-summary">
                                 <div class="workflow-canvas-executor-summary__badges">
                                     <StatusBadge Tone="@providerUsageBadge.Tone"
                                                  Text="@providerUsageBadge.Text" />
                                 </div>
                                 <div class="workflow-canvas-executor-summary__details">
-                                    <span>@BuildLlmProviderUsageDescription(selectedComponent)</span>
+                                    <span>@BuildLlmProviderUsageDescription(selected, selectedComponent)</span>
                                 </div>
                             </div>
                         }
@@ -535,10 +568,11 @@
                         </Grid>
 
                         <label class="workflow-canvas-field">
-                            <span>Instructions</span>
+                            <span>@(selected.Kind == WorkflowNodeKind.LlmCall ? "Immutable prompt snapshot" : "Instructions")</span>
                             <textarea class="cda-input cda-input--textarea workflow-canvas-textarea"
                                       value="@selected.Instructions"
                                       @onchange="args => HandleSelectedInstructionsChanged(selected, args)"
+                                      readonly="@(selected.Kind == WorkflowNodeKind.LlmCall)"
                                       data-testid="workflow-canvas-node-instructions"></textarea>
                         </label>
 
@@ -973,29 +1007,57 @@
                     @if (modalNode.Kind == WorkflowNodeKind.LlmCall)
                     {
                         var modalComponent = ResolveSelectedComponent(modalNode);
-                        var providerUsageBadge = BuildLlmProviderUsageBadge(modalComponent);
+                        var modalProvider = ResolveSelectedNodeProvider(modalNode);
+                        var providerUsageBadge = BuildLlmProviderUsageBadge(modalNode);
                         <section class="workflow-canvas-dialog-section">
                             <TextBlock TextStyle="TextStyle.Eyebrow" Value="LLM call" />
-                            <label class="workflow-canvas-field">
-                                <span>Component</span>
-                                <select class="cda-input"
-                                        value="@FormatComponentId(modalNode.ComponentId)"
-                                        @onchange="args => HandleSelectedComponentChanged(modalNode, args)"
-                                        data-testid="workflow-canvas-node-modal-component">
-                                    <option value="">Select component</option>
-                                    @foreach (var component in componentOptions)
-                                    {
-                                        <option value="@component.Id.Value.ToString("D")">@component.Name - @ResolveComponentProviderLabel(component) - @component.Model</option>
-                                    }
-                                </select>
-                            </label>
+                            <div class="workflow-canvas-executor-summary" data-testid="workflow-canvas-node-modal-prompt-identity">
+                                <div class="workflow-canvas-executor-summary__details">
+                                    <strong>Gallery prompt</strong>
+                                    <span>@BuildPromptIdentity(modalComponent)</span>
+                                </div>
+                            </div>
+                            <PromptGalleryPickerButton Text="Browse prompt gallery"
+                                                       Icon="library_books"
+                                                       Size="ButtonSize.Small"
+                                                       Consumer="PromptGalleryConsumer.Workflow"
+                                                       Provider="@ResolvePromptPickerProvider(modalNode)"
+                                                       Model="@ResolvePromptPickerModel(modalNode)"
+                                                       AllowEdit="true"
+                                                       Selected="@(selection => HandlePromptGallerySelectionForNodeAsync(selection, modalNode))" />
+                            <Grid Gap="LayoutGap.Small" ColumnsLg="2" Class="mt-3">
+                                <label class="workflow-canvas-field">
+                                    <span>Provider</span>
+                                    <select class="cda-input"
+                                            value="@modalNode.ProviderProfileId?.ToString("D")"
+                                            @onchange="args => HandleSelectedProviderChanged(modalNode, args)"
+                                            data-testid="workflow-canvas-node-modal-provider">
+                                        <option value="">Select provider</option>
+                                        @foreach (var providerOption in ProviderOptions)
+                                        {
+                                            <option value="@providerOption.ProviderProfileId.ToString("D")"
+                                                    disabled="@(!providerOption.IsEnabled)">@BuildProviderOptionLabel(providerOption)</option>
+                                        }
+                                    </select>
+                                </label>
+                                <ProviderModelSelector ProviderName="@modalProvider?.Name"
+                                                       ProviderDefaultModel="@modalProvider?.DefaultModel"
+                                                       ModelOptions="@modalProvider?.ModelOptions"
+                                                       Value="@modalNode.Model"
+                                                       ValueChanged="@(value => HandleSelectedModelChangedAsync(modalNode, value))"
+                                                       UseEmptyValueForProviderDefault="false"
+                                                       TestId="workflow-canvas-node-modal-model-selector"
+                                                       ChoiceTestId="workflow-canvas-node-modal-model"
+                                                       OverrideTestId="workflow-canvas-node-modal-model-override"
+                                                       CustomModelTestId="workflow-canvas-node-modal-model-custom" />
+                            </Grid>
                             <div class="workflow-canvas-executor-summary" data-testid="workflow-canvas-node-modal-llm-usage-summary">
                                 <div class="workflow-canvas-executor-summary__badges">
                                     <StatusBadge Tone="@providerUsageBadge.Tone"
                                                  Text="@providerUsageBadge.Text" />
                                 </div>
                                 <div class="workflow-canvas-executor-summary__details">
-                                    <span>@BuildLlmProviderUsageDescription(modalComponent)</span>
+                                    <span>@BuildLlmProviderUsageDescription(modalNode, modalComponent)</span>
                                 </div>
                             </div>
                         </section>
@@ -1343,6 +1405,7 @@
                         <textarea class="cda-input cda-input--textarea workflow-canvas-textarea workflow-canvas-textarea--comfortable"
                                   value="@modalNode.Instructions"
                                   @onchange="args => HandleSelectedInstructionsChanged(modalNode, args)"
+                                  readonly="@(modalNode.Kind == WorkflowNodeKind.LlmCall)"
                                   data-testid="workflow-canvas-node-modal-instructions"></textarea>
                     </section>
 

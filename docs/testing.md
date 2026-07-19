@@ -21,8 +21,7 @@ This is the routine green gate. It intentionally excludes browser automation, pr
 
 Current quarantines:
 
-- `PromptFactoryPageTests`, the prompt-library-backed `PromptFactoryServiceIntegrationTests`, and `ProjectWorkbenchServiceIntegrationTests.CreateObjectAsync_links_prompt_flow_nodes_to_blank_prompt_sessions` require the generated `output/prompt-library/manifest.json` pack. The pack is ignored build output and is not produced by the Release build, so these tests stay out of the default gate until the prompt-library asset generation is wired into a repeatable build/test input.
-- Several Playwright prompt-library, generated-artifact, CRM/HR, process, database-profile, and WebGL smoke flows are marked `Quarantined`. They currently need generated prompt-library output, refreshed browser artifact baselines, or selector/timing repairs before they can be part of the stable browser gate. Browser/runtime owners should remove the trait one test at a time with replacement evidence.
+- Several Playwright generated-artifact, CRM/HR, process, database-profile, and WebGL smoke flows are marked `Quarantined`. They currently need refreshed browser artifact baselines or selector/timing repairs before they can be part of the stable browser gate. Browser/runtime owners should remove the trait one test at a time with replacement evidence.
 - Nine DotNetWatch live-process integration tests are marked `Quarantined` after the no-filter live/long gate exposed current-repository wrapper and resume instability. DotNetWatch owners should isolate wrapper state, harden resume expectations, and update the expected error taxonomy before returning them to the stable live gate.
 
 ## Extended Gates

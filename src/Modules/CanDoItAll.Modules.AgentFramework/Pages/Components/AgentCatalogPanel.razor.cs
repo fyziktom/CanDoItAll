@@ -66,7 +66,7 @@ public partial class AgentCatalogPanel
     private Guid? selectedTeamId;
     private Guid? appliedRequestedTeamId;
     private Guid? openedRequestedAgentId;
-    private bool isOpeningHrAgentChat;
+    private Guid? openingManagedAgentChatId;
     private AgentChatContextAccessState? publishedAccessState;
     private Guid? contextRequestedAgentId;
     private Guid? contextRequestedTeamId;
@@ -86,6 +86,9 @@ public partial class AgentCatalogPanel
 
     private AgentDefinition? HrAgent
         => agents.FirstOrDefault(HrAgentIdentity.Matches);
+
+    private AgentDefinition? PromptsCuratorAgent
+        => agents.FirstOrDefault(PromptsCuratorAgentIdentity.Matches);
 
     private IReadOnlyList<TreeViewNode> AgentTeamTreeNodes
     {
@@ -288,21 +291,22 @@ public partial class AgentCatalogPanel
         await PublishAccessStateAsync(AgentChatContextAccessState.Ready);
     }
 
-    private async Task OpenHrAgentChatAsync(AgentDefinition agent)
+    private async Task OpenManagedAgentChatAsync(AgentDefinition agent)
     {
-        if (isOpeningHrAgentChat)
+        if (openingManagedAgentChatId.HasValue)
         {
             return;
         }
 
-        if (!HrAgentIdentity.Matches(agent))
+        if (!IsManagedQuickChatAgent(agent))
         {
-            throw new InvalidOperationException("Only the configured HR agent can open the HR chat window.");
+            throw new InvalidOperationException(
+                "Only an exact configured managed-agent identity can open a quick chat window.");
         }
 
         selectedAgentId = agent.Id;
         await SelectedAgentChanged.InvokeAsync(agent);
-        isOpeningHrAgentChat = true;
+        openingManagedAgentChatId = agent.Id;
         try
         {
             await AgentChatLauncher.StartNewChatAsync(agent.Id);
@@ -310,12 +314,18 @@ public partial class AgentCatalogPanel
         }
         catch (Exception exception)
         {
-            NotificationService.Error("Unable to open HR agent chat", exception.Message);
+            NotificationService.Error("Unable to open managed agent chat", exception.Message);
         }
         finally
         {
-            isOpeningHrAgentChat = false;
+            openingManagedAgentChatId = null;
         }
+    }
+
+    private static bool IsManagedQuickChatAgent(AgentDefinition agent)
+    {
+        return HrAgentIdentity.Matches(agent) ||
+               PromptsCuratorAgentIdentity.Matches(agent);
     }
 
     private async Task HandleAgentTeamTreeSelectAsync(string nodeId)

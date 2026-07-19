@@ -65,6 +65,40 @@ public sealed class AgentCatalogPanelTests
     }
 
     [Fact]
+    public void Catalog_delegates_new_chat_to_global_launcher_only_for_the_stable_prompts_curator_agent()
+    {
+        var curator = CreateAgent(
+            PromptsCuratorAgentIdentity.AgentId,
+            "Prompts Curator Agent",
+            PromptsCuratorAgentIdentity.TemplateKey);
+        var spoofedCurator = CreateAgent(
+            Guid.NewGuid(),
+            "Spoofed Prompts Curator",
+            PromptsCuratorAgentIdentity.TemplateKey);
+        var launcher = new RecordingAgentChatLauncher(curator);
+        using var context = CreateCatalogTestContext(launcher);
+
+        var cut = context.RenderComponent<AgentCatalogPanel>(parameters => parameters
+            .Add(component => component.InitialAgents, new[] { spoofedCurator, curator })
+            .Add(component => component.InitialProviders, Array.Empty<ProviderProfile>())
+            .Add(component => component.InitialTeams, Array.Empty<AgentTeamDefinition>())
+            .Add(component => component.SkipCatalogRepair, true));
+
+        var openButton = Assert.Single(cut.WaitForElements("[data-testid='agents-prompts-curator-open']"));
+        var agentCard = openButton.Closest("[data-testid='agents-catalog-card-shell']");
+        Assert.NotNull(agentCard);
+        Assert.Equal("Prompts Curator Agent", agentCard.QuerySelector(".agent-selection-card__name")?.TextContent);
+
+        var topOpenButton = cut.Find("[data-testid='agents-prompts-curator-open-top']");
+        Assert.Contains("Prompts Curator", topOpenButton.TextContent, StringComparison.Ordinal);
+
+        topOpenButton.Click();
+
+        cut.WaitForAssertion(() => Assert.Equal(PromptsCuratorAgentIdentity.AgentId, launcher.StartedAgentId));
+        Assert.Empty(cut.FindAll("[data-testid='agents-prompts-curator-viewport']"));
+    }
+
+    [Fact]
     public void Catalog_toolbar_uses_icon_reset_tooltip_and_single_line_team_header()
     {
         var hrAgent = CreateAgent(HrAgentIdentity.AgentId, "HR Agent", HrAgentIdentity.TemplateKey);

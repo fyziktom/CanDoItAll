@@ -9,6 +9,7 @@ using CanDoItAll.Components.CanvasLib;
 using CanDoItAll.Modules.AgentFramework;
 using CanDoItAll.Modules.AgentFramework.Pages;
 using CanDoItAll.Modules.AgentFramework.Pages.Components;
+using CanDoItAll.Modules.Prompts;
 using CanDoItAll.Modules.Workbench;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.SharedKernel;
@@ -798,7 +799,13 @@ public sealed class WorkflowsPageTests
         var navigation = harness.Context.Services.GetRequiredService<NavigationManager>();
         var notificationService = harness.Context.Services.GetRequiredService<NotificationService>();
         var catalogService = harness.Context.Services.GetRequiredService<IWorkflowCatalogService>();
+        var componentLibrary = harness.Context.Services.GetRequiredService<IWorkflowComponentLibraryService>();
         var runStore = harness.Context.Services.GetRequiredService<IWorkflowRunStore>();
+        const string promptTitle = "Workflow canvas prompt";
+        var dialogHost = await PrepareFinalWorkflowPromptAsync(
+            harness,
+            promptTitle,
+            "Return a concise workflow canvas test summary.");
 
         navigation.NavigateTo("/agents/workflows");
         var cut = harness.Context.RenderComponent<WorkflowsPage>();
@@ -808,27 +815,30 @@ public sealed class WorkflowsPageTests
         cut.WaitForElement("[data-testid='workflow-canvas-editor']");
         cut.Find("[data-testid='workflow-canvas-toggle-components']").Click();
         cut.WaitForElement("[data-testid='workflow-canvas-provider-options']");
-        cut.Find("[data-testid='workflow-canvas-create-component']").Click();
+        SelectWorkflowPromptFromGallery(cut, dialogHost, promptTitle);
         cut.WaitForAssertion(() =>
         {
-            Assert.Contains(notificationService.Messages, message => message.Summary == "LLM component created");
+            Assert.Contains(notificationService.Messages, message => message.Summary == "Gallery prompt bound");
             Assert.NotEmpty(cut.FindAll("[data-testid='workflow-canvas-component']"));
         });
         cut.WaitForAssertion(() =>
         {
             Assert.DoesNotContain("disabled", cut.Find("[data-testid='workflow-canvas-validate']").OuterHtml, StringComparison.OrdinalIgnoreCase);
         });
+        var component = Assert.Single(await componentLibrary.ListComponentsAsync());
 
-        cut.Find("[data-testid='workflow-canvas-place-component']").Click();
         ClickWorkflowCanvasTab(cut, "workflow-canvas-tab-routes");
         cut.WaitForAssertion(() =>
         {
-            Assert.Contains("LLM call", cut.Markup);
+            Assert.Contains(component.Name, cut.Markup);
             Assert.NotEmpty(cut.FindAll("[data-testid='workflow-canvas-edge-row']"));
         });
 
         ClickWorkflowCanvasTab(cut, "workflow-canvas-tab-node");
-        cut.Find("[data-testid='workflow-canvas-node-instructions']").Change("Return a concise workflow canvas test summary.");
+        Assert.NotEmpty(cut.FindAll("[data-testid='workflow-canvas-node-prompt-identity']"));
+        Assert.NotEmpty(cut.FindAll("[data-testid='workflow-canvas-node-provider']"));
+        Assert.NotEmpty(cut.FindAll("[data-testid='workflow-canvas-node-model-selector']"));
+        Assert.True(cut.Find("[data-testid='workflow-canvas-node-instructions']").HasAttribute("readonly"));
         cut.Find("[data-testid='workflow-canvas-validate']").Click();
         cut.WaitForAssertion(() =>
         {
@@ -866,8 +876,128 @@ public sealed class WorkflowsPageTests
         var detail = await catalogService.GetDefinitionAsync(definition.Id);
 
         Assert.NotNull(detail);
-        Assert.Contains(detail!.Definition.Graph.Nodes, node => node.Kind == WorkflowNodeKind.LlmCall);
+        var llmNode = Assert.Single(detail!.Definition.Graph.Nodes, node => node.Kind == WorkflowNodeKind.LlmCall);
+        Assert.Equal(component.Id, llmNode.Settings.ComponentId);
+        Assert.Equal(component.ProviderProfileId, llmNode.Settings.ProviderProfileId);
+        Assert.Equal(component.Model, llmNode.Settings.Model);
+        Assert.Equal(component.Instructions, llmNode.Settings.Instructions);
         Assert.Contains(detail.Definition.Graph.Nodes, node => node.CanvasX != 0 && node.CanvasY != 0);
+    }
+
+    [Fact]
+    public async Task Workflow_prompt_details_dialog_preserves_workflow_route_and_parent_dialogs()
+    {
+        await using var environment = CanDoItAllTestEnvironment.Create("workflow-nested-prompt-details-tests");
+        await using var harness = await CreateInMemoryWorkflowHarnessAsync(environment);
+        var navigation = harness.Context.Services.GetRequiredService<NavigationManager>();
+        var notifications = harness.Context.Services.GetRequiredService<NotificationService>();
+        var componentLibrary = harness.Context.Services.GetRequiredService<IWorkflowComponentLibraryService>();
+        var catalogService = harness.Context.Services.GetRequiredService<IWorkflowCatalogService>();
+        const string promptTitle = "Workflow nested prompt details";
+        const string workflowName = "Workflow with nested Gallery details";
+        var dialogHost = await PrepareFinalWorkflowPromptAsync(
+            harness,
+            promptTitle,
+            "Keep the workflow editor active while reviewing these prompt details.");
+        var llmComponent = await componentLibrary.SaveComponentAsync(new LlmCallComponentSaveRequest(
+            Id: null,
+            Name: "Nested Gallery details LLM",
+            ProviderProfileId: null,
+            Model: ManagedSeedProviderFallbacks.OpenAiDefaultModel,
+            WorkflowModality.Text,
+            new WorkflowModelSettings(
+                Temperature: 0.2,
+                MaxOutputTokens: 800,
+                RequireJsonOutput: false,
+                ResponseFormatJsonSchema: string.Empty),
+            Instructions: "Summarize the current workflow payload.",
+            WorkflowValueShape.Text,
+            WorkflowValueShape.Text,
+            AgentPermissionsPolicy.Default));
+        await catalogService.SaveDefinitionAsync(new WorkflowDefinitionSaveRequest(
+            Id: null,
+            ExpectedVersionId: null,
+            workflowName,
+            Description: "Exercises nested Prompt Gallery details from an LLM node.",
+            WorkflowLifecycleStatus.Draft,
+            CreateStarterGraph(llmComponent.Id),
+            new WorkflowRuntimePolicy(
+                WorkflowRuntimeBackendKind.InProcess,
+                AllowInProcessPreviewRuns: true,
+                RequireDurableProductionRuns: false,
+                ExposeAzureFunctionsStatusEndpoint: false,
+                ExposeAzureFunctionsMcpTool: false)));
+
+        navigation.NavigateTo("/agents/workflows");
+        var cut = harness.Context.RenderComponent<WorkflowsPage>();
+
+        cut.WaitForElement("[data-testid='workflows-tab-workflows']").Click();
+        cut.WaitForAssertion(() => Assert.Contains(
+            cut.FindAll("[data-testid='workflows-catalog-item']"),
+            item => item.TextContent.Contains(workflowName, StringComparison.Ordinal)));
+        cut.FindAll("[data-testid='workflows-catalog-item']")
+            .Single(item => item.TextContent.Contains(workflowName, StringComparison.Ordinal))
+            .Click();
+        cut.Find("[data-testid='workflows-tab-editor']").Click();
+        cut.WaitForElement("[data-testid='workflow-canvas-editor']");
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains(
+                cut.FindAll("[data-testid='workflow-canvas-select-node']"),
+                item => item.TextContent.Contains("LlmCall", StringComparison.Ordinal));
+        });
+        cut.FindAll("[data-testid='workflow-canvas-select-node']")
+            .Single(item => item.TextContent.Contains("LlmCall", StringComparison.Ordinal))
+            .Click();
+        cut.WaitForElement("[data-testid='workflow-canvas-open-selected-node-details']").Click();
+
+        var nodeDetails = cut.WaitForElement("[data-testid='workflow-canvas-node-details-modal']");
+        var openGallery = nodeDetails.QuerySelector("[data-testid='prompt-gallery-picker-button']");
+        Assert.NotNull(openGallery);
+        openGallery.Click();
+
+        dialogHost.WaitForElement("[data-testid='prompt-gallery-picker-dialog']");
+        dialogHost.Find("[data-testid='prompt-gallery-search']").Input(promptTitle);
+        dialogHost.WaitForAssertion(() =>
+        {
+            Assert.Contains(promptTitle, dialogHost.Markup, StringComparison.Ordinal);
+            Assert.Single(dialogHost.FindAll("[data-testid='prompt-gallery-edit']"));
+        });
+        dialogHost.Find("[data-testid='prompt-gallery-edit']").Click();
+
+        dialogHost.WaitForAssertion(() =>
+        {
+            Assert.Equal(
+                promptTitle,
+                dialogHost.Find("[data-testid='prompt-gallery-editor-title']").GetAttribute("value"));
+            Assert.Equal("/agents/workflows", new Uri(navigation.Uri).AbsolutePath);
+            Assert.NotEmpty(cut.FindAll("[data-testid='workflow-canvas-node-details-modal']"));
+        });
+
+        var promptEditor = dialogHost.Find("[data-testid='prompt-gallery-item-editor']");
+        var saveDraft = promptEditor.QuerySelector("button[type='submit']");
+        Assert.NotNull(saveDraft);
+        saveDraft.Click();
+        dialogHost.WaitForAssertion(() =>
+        {
+            Assert.Contains(notifications.Messages, message => message.Summary == "Prompt draft saved");
+        });
+
+        var cancel = dialogHost.Find("[data-testid='prompt-gallery-item-editor']")
+            .QuerySelectorAll("button")
+            .Single(button => button.TextContent.Contains("Cancel", StringComparison.Ordinal));
+        cancel.Click();
+
+        dialogHost.WaitForAssertion(() =>
+        {
+            Assert.Empty(dialogHost.FindAll("[data-testid='prompt-gallery-item-editor']"));
+            Assert.NotEmpty(dialogHost.FindAll("[data-testid='prompt-gallery-picker-dialog']"));
+            Assert.Equal(
+                promptTitle,
+                dialogHost.Find("[data-testid='prompt-gallery-search']").GetAttribute("value"));
+            Assert.NotEmpty(cut.FindAll("[data-testid='workflow-canvas-node-details-modal']"));
+            Assert.Equal("/agents/workflows", new Uri(navigation.Uri).AbsolutePath);
+        });
     }
 
     [Fact]
@@ -1051,6 +1181,11 @@ public sealed class WorkflowsPageTests
         await using var harness = await ComponentTestHarness.CreateAsync(RegisterDeterministicWorkflowLlmInvoker);
         var navigation = harness.Context.Services.GetRequiredService<NavigationManager>();
         var notificationService = harness.Context.Services.GetRequiredService<NotificationService>();
+        const string promptTitle = "Linear route prompt";
+        var dialogHost = await PrepareFinalWorkflowPromptAsync(
+            harness,
+            promptTitle,
+            "Keep the workflow route linear.");
 
         navigation.NavigateTo("/agents/workflows");
         var cut = harness.Context.RenderComponent<WorkflowsPage>();
@@ -1059,22 +1194,20 @@ public sealed class WorkflowsPageTests
         cut.Find("[data-testid='workflows-tab-editor']").Click();
         cut.WaitForElement("[data-testid='workflow-canvas-editor']");
         cut.Find("[data-testid='workflow-canvas-toggle-components']").Click();
-        cut.WaitForElement("[data-testid='workflow-canvas-create-component']");
-        cut.Find("[data-testid='workflow-canvas-create-component']").Click();
+        SelectWorkflowPromptFromGallery(cut, dialogHost, promptTitle);
         cut.WaitForAssertion(() =>
         {
-            Assert.Contains(notificationService.Messages, message => message.Summary == "LLM component created");
+            Assert.Contains(notificationService.Messages, message => message.Summary == "Gallery prompt bound");
         });
         cut.WaitForElement("[data-testid='workflow-canvas-place-component']");
 
-        cut.Find("[data-testid='workflow-canvas-place-component']").Click();
         cut.WaitForAssertion(() =>
         {
             Assert.Single(
                 cut.FindComponent<CanvasWorkbench>().Instance.Surface.Nodes,
                 node => node.Kind == WorkflowNodeKind.LlmCall.ToString());
         });
-        cut.Find("[data-testid='workflow-canvas-place-component']").Click();
+        SelectWorkflowPromptFromGallery(cut, dialogHost, promptTitle);
         cut.WaitForAssertion(() =>
         {
             var surface = cut.FindComponent<CanvasWorkbench>().Instance.Surface;
@@ -1139,10 +1272,14 @@ public sealed class WorkflowsPageTests
     [Fact]
     public async Task Workflow_canvas_authors_typed_predicate_route_metadata()
     {
-        await using var environment = CanDoItAllTestEnvironment.Create("workflow-canvas-predicate-route-tests");
-        await using var harness = await CreateInMemoryWorkflowHarnessAsync(environment);
+        await using var harness = await ComponentTestHarness.CreateAsync(RegisterDeterministicWorkflowLlmInvoker);
         var navigation = harness.Context.Services.GetRequiredService<NavigationManager>();
         var notificationService = harness.Context.Services.GetRequiredService<NotificationService>();
+        const string promptTitle = "Predicate route prompt";
+        var dialogHost = await PrepareFinalWorkflowPromptAsync(
+            harness,
+            promptTitle,
+            "Route high-value invoices with a typed predicate.");
 
         navigation.NavigateTo("/agents/workflows");
         var cut = harness.Context.RenderComponent<WorkflowsPage>();
@@ -1151,14 +1288,11 @@ public sealed class WorkflowsPageTests
         cut.Find("[data-testid='workflows-tab-editor']").Click();
         cut.WaitForElement("[data-testid='workflow-canvas-editor']");
         cut.Find("[data-testid='workflow-canvas-toggle-components']").Click();
-        cut.WaitForElement("[data-testid='workflow-canvas-create-component']");
-        cut.Find("[data-testid='workflow-canvas-create-component']").Click();
+        SelectWorkflowPromptFromGallery(cut, dialogHost, promptTitle);
         cut.WaitForAssertion(() =>
         {
-            Assert.Contains(notificationService.Messages, message => message.Summary == "LLM component created");
+            Assert.Contains(notificationService.Messages, message => message.Summary == "Gallery prompt bound");
         });
-        cut.WaitForElement("[data-testid='workflow-canvas-place-component']");
-        cut.Find("[data-testid='workflow-canvas-place-component']").Click();
         ClickWorkflowCanvasTab(cut, "workflow-canvas-tab-routes");
         cut.WaitForElement("[data-testid='workflow-canvas-edit-edge']");
 
@@ -1663,6 +1797,53 @@ public sealed class WorkflowsPageTests
             ActiveProfile = profile,
             SchemaModules = TestSchemaBootstrapModules.Default
         });
+    }
+
+    private static async Task<IRenderedComponent<DialogHost>> PrepareFinalWorkflowPromptAsync(
+        ComponentTestHarness harness,
+        string title,
+        string content)
+    {
+        var promptGallery = harness.Context.Services.GetRequiredService<IPromptGalleryService>();
+        var saveResult = await promptGallery.SaveDraftAsync(new PromptGalleryDraft(
+            Id: null,
+            ProjectId: null,
+            CollectionId: null,
+            title,
+            "Canonical prompt for a workflow canvas component test.",
+            PromptGalleryItemKind.FullPrompt,
+            "workflow",
+            content,
+            Tags: ["workflow"],
+            SupportedConsumers: [PromptGalleryConsumer.Workflow]));
+        Assert.True(saveResult.IsSuccess);
+        var saveReceipt = saveResult.Value;
+        var versionResult = await promptGallery.CreateVersionAsync(
+            saveReceipt.PromptArtifactId,
+            new PromptVersionCreateRequest(
+                "Workflow canvas test fixture",
+                saveReceipt.UpdatedAtUtc));
+        Assert.True(
+            versionResult.IsSuccess,
+            string.Join(" ", versionResult.Errors.Select(error => $"{error.Code}: {error.Message}")));
+        return harness.Context.RenderComponent<DialogHost>();
+    }
+
+    private static void SelectWorkflowPromptFromGallery(
+        IRenderedFragment workflow,
+        IRenderedFragment dialogHost,
+        string promptTitle)
+    {
+        workflow.WaitForElement(
+            "[data-testid='workflow-canvas-components-window'] [data-testid='prompt-gallery-picker-button']").Click();
+        dialogHost.WaitForElement("[data-testid='prompt-gallery-picker-dialog']");
+        dialogHost.Find("[data-testid='prompt-gallery-search']").Input(promptTitle);
+        dialogHost.WaitForAssertion(() =>
+        {
+            Assert.Contains(promptTitle, dialogHost.Markup, StringComparison.Ordinal);
+            Assert.Single(dialogHost.FindAll("[data-testid='prompt-gallery-select']"));
+        });
+        dialogHost.Find("[data-testid='prompt-gallery-select']").Click();
     }
 
     private static void OpenTemplatePreview(IRenderedFragment cut, string templateName)

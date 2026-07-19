@@ -1,0 +1,93 @@
+@inject DialogService DialogService
+@inject NotificationService Notifications
+
+<Button Text="@(IconOnly ? string.Empty : Text)"
+        Icon="@Icon"
+        ButtonStyle="@ButtonStyle"
+        Variant="@Variant"
+        Size="@Size"
+        Disabled="@Disabled"
+        Click="OpenAsync"
+        aria-label="@EffectiveAriaLabel"
+        title="@EffectiveAriaLabel"
+        data-testid="prompt-gallery-picker-button" />
+
+@code {
+    [Parameter]
+    public string Text { get; set; } = "Browse prompt gallery";
+
+    [Parameter]
+    public string Icon { get; set; } = "library_books";
+
+    [Parameter]
+    public string? AriaLabel { get; set; }
+
+    [Parameter]
+    public bool IconOnly { get; set; }
+
+    [Parameter]
+    public bool Disabled { get; set; }
+
+    [Parameter]
+    public ButtonStyle ButtonStyle { get; set; } = ButtonStyle.Light;
+
+    [Parameter]
+    public Variant Variant { get; set; } = Variant.Outlined;
+
+    [Parameter]
+    public ButtonSize Size { get; set; } = ButtonSize.Small;
+
+    [Parameter]
+    public PromptGalleryConsumer Consumer { get; set; } = PromptGalleryConsumer.Chat;
+
+    [Parameter]
+    public string? Provider { get; set; }
+
+    [Parameter]
+    public string? Model { get; set; }
+
+    [Parameter]
+    public bool AllowEdit { get; set; } = true;
+
+    [Parameter]
+    public EventCallback<PromptGallerySelection> Selected { get; set; }
+
+    [Parameter]
+    public EventCallback<Guid> EditRequested { get; set; }
+
+    private string EffectiveAriaLabel => string.IsNullOrWhiteSpace(AriaLabel) ? Text : AriaLabel;
+
+    private async Task OpenAsync()
+    {
+        try
+        {
+            var result = await DialogService.OpenAsync<PromptGalleryPickerDialog>(
+                "Prompt gallery",
+                new Dictionary<string, object?>
+                {
+                    [nameof(PromptGalleryPickerDialog.Consumer)] = Consumer,
+                    [nameof(PromptGalleryPickerDialog.Provider)] = Provider,
+                    [nameof(PromptGalleryPickerDialog.Model)] = Model,
+                    [nameof(PromptGalleryPickerDialog.AllowEdit)] = AllowEdit,
+                    [nameof(PromptGalleryPickerDialog.EditRequested)] = EditRequested
+                },
+                new DialogOptions
+                {
+                    Eyebrow = "Reusable instructions",
+                    Subtitle = "Search the canonical Gallery and insert a prompt or prompt part.",
+                    Size = ModalSize.Full,
+                    DenseChrome = true,
+                    TestId = "prompt-gallery-picker-dialog",
+                    AriaLabel = "Browse prompt gallery"
+                });
+            if (result is PromptGallerySelection selection)
+            {
+                await Selected.InvokeAsync(selection);
+            }
+        }
+        catch (Exception exception)
+        {
+            Notifications.Error("Prompt gallery could not be opened", exception.Message);
+        }
+    }
+}

@@ -1,0 +1,6 @@
+.prompt-gallery-item-editor__choice {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-width: 10rem;
+}

@@ -1,0 +1,77 @@
+{
+  "stableIdKey": "agents/prompts-curator-agent",
+  "name": "Prompts Curator Agent",
+  "roleTitle": "Prompt Gallery curator",
+  "summary": "Searches the full Prompt Gallery catalog, creates and updates drafts with optimistic concurrency, and publishes immutable prompt versions after approval.",
+  "avatarImageUrl": "_content/CanDoItAll.Components.BaseLib/assets/identity/avatars/avatar-08.jpg",
+  "status": "Active",
+  "providerProfileKey": "managed-seed-openai-default",
+  "model": "gpt-5.4-mini",
+  "workload": "Management",
+  "chatHistoryMode": "FrameworkManaged",
+  "temperature": 0.2,
+  "requirePerServiceCallChatHistoryPersistence": false,
+  "enableBackgroundResponses": false,
+  "configuration": {
+    "enableCompaction": true,
+    "maxLocalRagResults": 0,
+    "runtimeUse": "prompts-curator-agent",
+    "memory": {
+      "invocationMode": "Disabled",
+      "canUseMemoryTools": false,
+      "allowedSourceScopes": []
+    }
+  },
+  "applyDefaultReasoningEffort": true,
+  "isTemplate": false,
+  "templateKey": "prompts-curator-agent",
+  "permissions": {
+    "canUseTools": true,
+    "canAskOtherAgents": false,
+    "canEscalateToHuman": true,
+    "canObserveOtherAgents": false,
+    "canScheduleWork": false,
+    "requiresApprovalForExternalCalls": true,
+    "autoApproveExternalCallsByDefault": false
+  },
+  "access": {
+    "projectStructure": {
+      "canRead": false,
+      "canWrite": false,
+      "allowAllProjects": false,
+      "allowedProjectIds": []
+    },
+    "processes": {
+      "canRead": false,
+      "canWrite": false,
+      "allowAllDefinitions": false,
+      "allowedDefinitionIds": []
+    },
+    "workspaceTools": {
+      "profile": "Custom",
+      "canReadFiles": false,
+      "canWriteFiles": false,
+      "canManageWorkspacePaths": false,
+      "canRunValidationCommands": false,
+      "canScaffoldProjects": false,
+      "canRunLocalScripts": false,
+      "canTransformArtifacts": false,
+      "canReadStorage": false,
+      "canWriteStorage": false,
+      "allowAllStorageCatalogs": false,
+      "allowedStorageCatalogIds": [],
+      "allowedExternalTargetAliases": []
+    },
+    "imageGeneration": {
+      "canGenerateImages": false,
+      "preferredProviderProfileKey": "",
+      "defaultModel": "",
+      "canStoreImagesAsProjectAssets": false
+    }
+  },
+  "tags": [
+    "prompts",
+    "curation",
+    "governance"
+  ]
+}

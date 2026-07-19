@@ -15,7 +15,6 @@ using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Modules.AgentFramework;
 using CanDoItAll.Modules.Collaboration;
 using CanDoItAll.Modules.CrmHr;
-using CanDoItAll.Modules.Factory;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Prompts;
 using CanDoItAll.Modules.Resources;
@@ -40,7 +39,6 @@ using System.Diagnostics;
 var builder = WebApplication.CreateBuilder(args);
 builder.WebHost.UseStaticWebAssets();
 var detailedErrorsEnabled = builder.Configuration.GetValue<bool?>("DetailedErrors") ?? builder.Environment.IsDevelopment();
-var promptAttachmentMessageLimitBytes = 8 * 1024 * 1024;
 var databaseOptions = builder.Configuration.GetSection("Database").Get<DatabaseOptions>() ?? new DatabaseOptions();
 
 if (!databaseOptions.EnableEntityFrameworkConsoleLogging)
@@ -50,10 +48,7 @@ if (!databaseOptions.EnableEntityFrameworkConsoleLogging)
 }
 
 builder.Services.AddRazorComponents()
-    .AddInteractiveServerComponents(options => options.DetailedErrors = detailedErrorsEnabled)
-    // Prompt-session attachments are posted through JS interop, so the default 32 KB SignalR limit
-    // is too small for screenshots and other evidence files added from the canvas wizard.
-    .AddHubOptions(options => options.MaximumReceiveMessageSize = promptAttachmentMessageLimitBytes);
+    .AddInteractiveServerComponents(options => options.DetailedErrors = detailedErrorsEnabled);
 
 builder.Services.AddCanDoItAllBaseLib();
 builder.Services.AddCanDoItAllCharts();

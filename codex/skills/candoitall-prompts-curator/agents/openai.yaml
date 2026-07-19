@@ -1,0 +1,4 @@
+interface:
+  display_name: "Prompts Curator"
+  short_description: "Curate canonical Prompt Gallery items safely"
+  default_prompt: "Use $candoitall-prompts-curator to search, create, update, and version canonical Prompt Gallery items."

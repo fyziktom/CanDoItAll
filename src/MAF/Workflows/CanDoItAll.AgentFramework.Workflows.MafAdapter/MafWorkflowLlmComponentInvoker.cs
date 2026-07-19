@@ -22,9 +22,10 @@ public sealed class MafWorkflowLlmComponentInvoker(
         ArgumentNullException.ThrowIfNull(component);
         ArgumentNullException.ThrowIfNull(input);
 
-        var provider = await ResolveProviderAsync(component, cancellationToken);
-        var model = ResolveEffectiveModel(component, provider);
-        var agent = CreateAgent(component, provider, model);
+        var effectiveComponent = ApplyNodeExecutionOverrides(node, component);
+        var provider = await ResolveProviderAsync(effectiveComponent, cancellationToken);
+        var model = ResolveEffectiveModel(effectiveComponent, provider);
+        var agent = CreateAgent(node, effectiveComponent, provider, model);
         var clock = timeProvider ?? TimeProvider.System;
         var now = clock.GetUtcNow();
         var invocationId = Guid.NewGuid();
@@ -52,7 +53,7 @@ public sealed class MafWorkflowLlmComponentInvoker(
                 static (_, _, _) => Task.CompletedTask,
                 cancellationToken,
                 suppressApprovalRequirements: true,
-                executionOptions: CreateExecutionOptions(component, input));
+                executionOptions: CreateExecutionOptions(effectiveComponent, input));
         }
         catch (AgentRuntimeUsageException exception)
         {
@@ -199,17 +200,25 @@ public sealed class MafWorkflowLlmComponentInvoker(
            || provider.SuggestedModels.Any(item => string.Equals(item, model, StringComparison.OrdinalIgnoreCase));
 
     private static AgentDefinition CreateAgent(
+        WorkflowNode node,
         LlmCallComponent component,
         ProviderProfile provider,
         string model)
     {
         var now = DateTimeOffset.UtcNow;
+        if (string.IsNullOrWhiteSpace(node.Settings.Instructions))
+        {
+            throw new InvalidOperationException(
+                $"LLM workflow node '{node.Id}' has no immutable instruction snapshot.");
+        }
+
+        var instructions = node.Settings.Instructions.Trim();
         return new AgentDefinition(
             Id: Guid.NewGuid(),
             Name: component.Name,
             RoleTitle: "Workflow LLM Component",
             Summary: $"Workflow LLM component '{component.Name}'.",
-            Instructions: component.Instructions,
+            Instructions: instructions,
             Status: AgentLifecycleStatus.Active,
             ProviderProfileId: provider.Id,
             Model: model,
@@ -244,6 +253,19 @@ public sealed class MafWorkflowLlmComponentInvoker(
         return string.IsNullOrWhiteSpace(component.Model)
             ? provider.DefaultModel
             : component.Model.Trim();
+    }
+
+    private static LlmCallComponent ApplyNodeExecutionOverrides(
+        WorkflowNode node,
+        LlmCallComponent component)
+    {
+        return component with
+        {
+            ProviderProfileId = node.Settings.ProviderProfileId ?? component.ProviderProfileId,
+            Model = string.IsNullOrWhiteSpace(node.Settings.Model)
+                ? component.Model
+                : node.Settings.Model.Trim()
+        };
     }
 
     private static string BuildPrompt(

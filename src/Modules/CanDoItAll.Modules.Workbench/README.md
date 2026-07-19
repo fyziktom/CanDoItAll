@@ -22,7 +22,7 @@ Project references:
 - `../CanDoItAll.Components.CanvasLib/CanDoItAll.Components.CanvasLib.csproj`
 - `../CanDoItAll.SharedKernel/CanDoItAll.SharedKernel.csproj`
 - `../CanDoItAll.Infrastructure/CanDoItAll.Infrastructure.csproj`
-- `../CanDoItAll.Modules.Factory/CanDoItAll.Modules.Factory.csproj`
+- `../CanDoItAll.Modules.Prompts/CanDoItAll.Modules.Prompts.csproj`
 - `../CanDoItAll.Modules.Processes/CanDoItAll.Modules.Processes.csproj`
 - `../CanDoItAll.Modules.Projects/CanDoItAll.Modules.Projects.csproj`
 - `../CanDoItAll.Modules.Resources/CanDoItAll.Modules.Resources.csproj`

@@ -803,7 +803,7 @@ public sealed class WorkbenchStateService(
     private static string ResolveTabGroup(string tabKind) => tabKind switch
     {
         WorkbenchTabKinds.ProjectOverview or WorkbenchTabKinds.ProjectStructure or WorkbenchTabKinds.ProjectCalendar => "Projects",
-        WorkbenchTabKinds.PromptWizardSession or WorkbenchTabKinds.PromptDetail => "Prompt Sessions",
+        WorkbenchTabKinds.PromptDetail => "Prompt Gallery",
         WorkbenchTabKinds.Processes => "Processes",
         WorkbenchTabKinds.ValidationRun => "Validation",
         WorkbenchTabKinds.TestPlan => "Testing",

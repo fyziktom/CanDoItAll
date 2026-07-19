@@ -1,0 +1,17 @@
+.prompt-gallery-search-list__identity {
+    min-width: 24rem;
+    max-width: 48rem;
+}
+
+.prompt-gallery-search-list__identity ::deep p:last-child {
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+}
+
+.prompt-gallery-search-list__choice {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}

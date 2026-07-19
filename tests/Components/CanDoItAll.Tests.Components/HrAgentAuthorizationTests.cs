@@ -268,6 +268,47 @@ public sealed class HrAgentAuthorizationTests
             StringComparison.OrdinalIgnoreCase);
     }
 
+    [Fact]
+    public async Task HR_administration_cannot_offer_or_grant_prompts_curator_capabilities()
+    {
+        await using var environment = CanDoItAllTestEnvironment.Create("hr-agent-curator-capability-isolation");
+        var profile = environment.CreateInMemoryProfile("primary");
+        var configuration = TestApplicationBootstrap.BuildConfiguration(profile);
+        var services = new ServiceCollection();
+        TestApplicationBootstrap.ConfigureDefaultServices(
+            services,
+            configuration,
+            environment.CreateHostEnvironment("CanDoItAll.HrAgentAuthorizationTests"));
+        await using var serviceProvider = services.BuildServiceProvider();
+        await using var scope = serviceProvider.CreateAsyncScope();
+        var workspace = scope.ServiceProvider.GetRequiredService<IAgentFrameworkWorkspaceService>();
+        var agents = await workspace.ListAgentsAsync(includeTemplates: true);
+        var providers = await workspace.ListProvidersAsync();
+        var capabilities = await workspace.ListCapabilitiesAsync();
+        var hrAgent = Assert.Single(agents, HrAgentIdentity.Matches);
+        var chatProvider = Assert.Single(providers, provider => provider.Id == hrAgent.ProviderProfileId);
+        var curatorCapability = Assert.Single(
+            capabilities,
+            capability => capability.Key == PromptsCuratorAgentCapabilityKeys.DraftCreate);
+        var administration = new HrAgentAdministrationService(
+            workspace,
+            NullLogger<HrAgentAdministrationService>.Instance);
+
+        var options = await administration.GetCreationOptionsAsync(CancellationToken.None);
+
+        Assert.DoesNotContain(
+            options.Capabilities,
+            capability => ManagedAgentPrivilegedCapabilityKeys.All.Contains(capability.Key));
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => administration.CreateAsync(
+            HrAgentIdentity.AgentId,
+            CreateMinimalAgentInput(chatProvider) with
+            {
+                CapabilityIds = [curatorCapability.Id]
+            },
+            CancellationToken.None));
+        Assert.Contains("Privileged managed-agent capabilities", exception.Message, StringComparison.Ordinal);
+    }
+
     private static AgentRuntimeToolProviderContext CreateContext(
         AgentDefinition agent,
         ProviderProfile provider,

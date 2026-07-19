@@ -147,14 +147,14 @@ public partial class ProjectStructurePage
         return node.ObjectType switch
         {
             ProjectObjectType.PromptFlow => BuildCommandQuickAction(
-                "Open Wizard in New Tab",
-                "Keep the canvas open and launch the prompt wizard in a separate tab.",
+                "Open Prompt in New Tab",
+                "Keep the canvas open and launch the bound Gallery prompt in a separate tab.",
                 "prompt",
                 "accent",
                 ProjectStructureCommandKind.Wizard),
             ProjectObjectType.PromptSession or ProjectObjectType.PromptStep => BuildCommandQuickAction(
-                "Open Wizard in New Tab",
-                "Keep the canvas open and jump into the prompt wizard in a separate tab.",
+                "Open Prompt in New Tab",
+                "Keep the canvas open and jump into the bound Gallery prompt in a separate tab.",
                 "prompt",
                 "accent",
                 ProjectStructureCommandKind.Open),

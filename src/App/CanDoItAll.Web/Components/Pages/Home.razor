@@ -66,10 +66,10 @@ tests: component:HomePageTests, e2e:smoke-dashboard
                                            OnSelect="@(() => Navigation.NavigateTo("/projects"))" />
                     </div>
                     <div class="h-full">
-                        <SelectionListItem Eyebrow="Prompt factory"
-                                           Title="Open a prompt session"
-                                           Summary="Move into the focused workbench for prompt assembly and review."
-                                           OnSelect="@(() => Navigation.NavigateTo("/prompt-factory"))" />
+                        <SelectionListItem Eyebrow="Prompt gallery"
+                                           Title="Create or reuse a prompt"
+                                           Summary="Manage reusable full prompts and prompt parts in the canonical gallery."
+                                           OnSelect="@(() => Navigation.NavigateTo("/prompt-gallery"))" />
                     </div>
                     <div class="h-full">
                         <SelectionListItem Eyebrow="Test lab"
@@ -115,7 +115,7 @@ tests: component:HomePageTests, e2e:smoke-dashboard
                 {
                     <EmptyState Eyebrow="No live items"
                                 Title="Nothing is currently open"
-                                Description="Start a project, prompt session, or test plan and it will appear here for quick return." />
+                                Description="Start a project, prompt draft, or test plan and it will appear here for quick return." />
                 }
                 else
                 {

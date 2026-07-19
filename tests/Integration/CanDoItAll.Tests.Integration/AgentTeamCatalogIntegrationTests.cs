@@ -138,8 +138,9 @@ public sealed class AgentTeamCatalogIntegrationTests
     {
         var pack = new AgentTemplatePackLoader().Load();
         Assert.Equal(5, pack.Teams.Count);
+        var members = pack.Teams.SelectMany(item => item.MemberTemplates).ToArray();
         Assert.All(
-            pack.Teams.SelectMany(item => item.MemberTemplates),
+            members,
             member =>
             {
                 Assert.False(string.IsNullOrWhiteSpace(member.Instructions));
@@ -147,13 +148,42 @@ public sealed class AgentTeamCatalogIntegrationTests
                 Assert.True(AgentAvatarImageCatalog.IsBundledAvatarUrl(member.Settings.AvatarImageUrl));
                 Assert.Equal(ManagedSeedProviderFallbacks.OpenAiDefaultModel, member.Settings.Model);
                 Assert.NotNull(member.Settings.Access.ProjectStructure);
-                Assert.True(member.Settings.Access.ProjectStructure.CanRead);
-                Assert.True(member.Settings.Access.ProjectStructure.AllowAllProjects);
                 Assert.NotNull(member.Settings.Access.Processes);
-                Assert.True(member.Settings.Access.Processes.CanRead);
-                Assert.True(member.Settings.Access.Processes.AllowAllDefinitions);
                 Assert.NotEmpty(member.Skills.CapabilityKeys);
             });
+        Assert.All(
+            members.Where(member =>
+                !string.Equals(
+                    member.Key,
+                    HrAgentIdentity.TemplateKey,
+                    StringComparison.Ordinal) &&
+                !string.Equals(
+                    member.Key,
+                    PromptsCuratorAgentIdentity.TemplateKey,
+                    StringComparison.Ordinal)),
+            member =>
+            {
+                Assert.True(member.Settings.Access.ProjectStructure!.CanRead);
+                Assert.True(member.Settings.Access.ProjectStructure.AllowAllProjects);
+                Assert.True(member.Settings.Access.Processes!.CanRead);
+                Assert.True(member.Settings.Access.Processes.AllowAllDefinitions);
+            });
+
+        var curatorTemplate = Assert.Single(
+            members,
+            member => string.Equals(
+                member.Key,
+                PromptsCuratorAgentIdentity.TemplateKey,
+                StringComparison.Ordinal));
+        Assert.False(curatorTemplate.Settings.Access.ProjectStructure!.CanRead);
+        Assert.False(curatorTemplate.Settings.Access.ProjectStructure.CanWrite);
+        Assert.False(curatorTemplate.Settings.Access.ProjectStructure.AllowAllProjects);
+        Assert.False(curatorTemplate.Settings.Access.Processes!.CanRead);
+        Assert.False(curatorTemplate.Settings.Access.Processes.CanWrite);
+        Assert.False(curatorTemplate.Settings.Access.Processes.AllowAllDefinitions);
+        Assert.False(curatorTemplate.Settings.Access.WorkspaceTools!.CanReadFiles);
+        Assert.False(curatorTemplate.Settings.Access.WorkspaceTools.CanWriteFiles);
+        Assert.False(curatorTemplate.Settings.Access.ImageGeneration!.CanGenerateImages);
 
         var seed = SandboxWorkspaceSeedFactory.Create();
         var teams = seed.AgentTeams;
@@ -174,6 +204,19 @@ public sealed class AgentTeamCatalogIntegrationTests
         Assert.Contains(agentsByTemplateKey["portfolio-architect"].Id, deliveryTeam.AgentIds);
         Assert.Contains(agentsByTemplateKey["programming-workspace-analyst"].Id, deliveryTeam.AgentIds);
         Assert.Contains(agentsByTemplateKey["delivery-qa-observer"].Id, deliveryTeam.AgentIds);
+        Assert.Contains(PromptsCuratorAgentIdentity.AgentId, deliveryTeam.AgentIds);
+
+        var curator = agentsByTemplateKey[PromptsCuratorAgentIdentity.TemplateKey];
+        Assert.Equal(PromptsCuratorAgentIdentity.AgentId, curator.Id);
+        Assert.Equal(AgentLifecycleStatus.Active, curator.Status);
+        Assert.False(curator.IsTemplate);
+        Assert.Equal(AgentWorkloadKind.Management, curator.Workload);
+        Assert.True(curator.Permissions.CanUseTools);
+        Assert.False(curator.Permissions.CanAskOtherAgents);
+        Assert.False(curator.Permissions.CanObserveOtherAgents);
+        Assert.Equal(
+            PromptsCuratorAgentCapabilityKeys.PrivilegedKeys.OrderBy(item => item, StringComparer.OrdinalIgnoreCase),
+            curator.Capabilities.Select(item => item.CapabilityKey).OrderBy(item => item, StringComparer.OrdinalIgnoreCase));
 
         var visualTemplateTeam = Assert.Single(teams, item => string.Equals(item.Name, "Visual Automation Template Team", StringComparison.Ordinal));
         Assert.Contains(agentsByTemplateKey["app-screenshot-capture-agent"].Id, visualTemplateTeam.AgentIds);
@@ -291,6 +334,36 @@ public sealed class AgentTeamCatalogIntegrationTests
         });
 
         Assert.Null(clearedAfterUpgrade.Agents.Single(item => item.Id == deliveryManager.Id).AvatarImageUrl);
+    }
+
+    [Fact]
+    public void Managed_agent_refresh_preserves_the_user_favorite_tag()
+    {
+        var seed = SandboxWorkspaceSeedFactory.Create();
+        var curator = Assert.Single(seed.Agents, PromptsCuratorAgentIdentity.Matches);
+        var currentManagedSeedVersion = ReadManagedSeedVersion(curator.ConfigurationJson);
+        var staleCurator = curator with
+        {
+            ConfigurationJson = curator.ConfigurationJson.Replace(
+                currentManagedSeedVersion,
+                "2026-07-agent-template-teams-v58",
+                StringComparison.Ordinal),
+            Tags = curator.Tags
+                .Append("user-only-tag")
+                .Append(AgentSpecialTags.Favorite)
+                .ToList()
+        };
+        var normalized = SandboxWorkspaceSeedFactory.NormalizeCatalog(seed.ToCatalog() with
+        {
+            Agents = seed.Agents
+                .Select(agent => agent.Id == curator.Id ? staleCurator : agent)
+                .ToList()
+        });
+        var refreshed = Assert.Single(normalized.Agents, PromptsCuratorAgentIdentity.Matches);
+
+        Assert.Contains(refreshed.Tags, AgentSpecialTags.IsFavorite);
+        Assert.DoesNotContain("user-only-tag", refreshed.Tags, StringComparer.OrdinalIgnoreCase);
+        Assert.Contains("prompts", refreshed.Tags, StringComparer.OrdinalIgnoreCase);
     }
 
     private static string ReadManagedSeedVersion(string configurationJson)
