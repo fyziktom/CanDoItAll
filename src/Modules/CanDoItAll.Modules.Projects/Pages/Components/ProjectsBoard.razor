@@ -444,7 +444,7 @@
     [Parameter]
     public EventCallback ImportProjectsPackage { get; set; }
 
-    private readonly HashSet<string> expandedProjectTreeNodeIds = [];
+    private readonly Dictionary<string, bool> projectTreeExpansionOverrides = [];
     private Guid? selectedTreeProjectId;
     private bool isProjectPackageDialogOpen;
     private int selectedPortfolioTabIndex;
@@ -470,7 +470,7 @@
             ProjectSummaries,
             HierarchyLinks,
             selectedTreeProjectId,
-            expandedProjectTreeNodeIds);
+            projectTreeExpansionOverrides);
 
     private string SelectedTreeProjectName
         => selectedTreeProjectId.HasValue
@@ -499,12 +499,24 @@
 
     private Task HandleProjectTreeToggleAsync(string nodeId)
     {
-        if (!expandedProjectTreeNodeIds.Add(nodeId))
-        {
-            expandedProjectTreeNodeIds.Remove(nodeId);
-        }
+        var node = EnumerateProjectTreeNodes(ProjectTreeNodes)
+            .First(node => string.Equals(node.Id, nodeId, StringComparison.Ordinal));
+        projectTreeExpansionOverrides[nodeId] = !node.IsExpanded;
 
         return Task.CompletedTask;
+    }
+
+    private static IEnumerable<TreeViewNode> EnumerateProjectTreeNodes(IEnumerable<TreeViewNode> nodes)
+    {
+        foreach (var node in nodes)
+        {
+            yield return node;
+
+            foreach (var child in EnumerateProjectTreeNodes(node.Children))
+            {
+                yield return child;
+            }
+        }
     }
 
     private string ProjectSearchProxy

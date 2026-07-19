@@ -10,7 +10,7 @@ public static class ProjectPortfolioTreeNodeBuilder
         IReadOnlyList<ProjectSummary> projects,
         IReadOnlyList<ProjectHierarchyLinkSummary> hierarchyLinks,
         Guid? selectedProjectId,
-        IReadOnlySet<string> expandedNodeIds)
+        IReadOnlyDictionary<string, bool> expansionOverrides)
     {
         if (projects.Count == 0)
         {
@@ -49,7 +49,7 @@ public static class ProjectPortfolioTreeNodeBuilder
                 project,
                 childrenByParent,
                 selectedProjectId,
-                expandedNodeIds,
+                expansionOverrides,
                 []))
             .ToArray();
     }
@@ -68,7 +68,7 @@ public static class ProjectPortfolioTreeNodeBuilder
         ProjectSummary project,
         IReadOnlyDictionary<Guid, ProjectSummary[]> childrenByParent,
         Guid? selectedProjectId,
-        IReadOnlySet<string> expandedNodeIds,
+        IReadOnlyDictionary<string, bool> expansionOverrides,
         HashSet<Guid> path)
     {
         var nodeId = BuildProjectNodeId(project.Id);
@@ -92,11 +92,14 @@ public static class ProjectPortfolioTreeNodeBuilder
                     child,
                     childrenByParent,
                     selectedProjectId,
-                    expandedNodeIds,
+                    expansionOverrides,
                     new HashSet<Guid>(path)))
                 .ToArray()
             : [];
         var hasSelectedDescendant = childNodes.Any(ContainsSelectedNode);
+        var isExpanded = expansionOverrides.TryGetValue(nodeId, out var expansionOverride)
+            ? expansionOverride
+            : path.Count == 1 || hasSelectedDescendant;
 
         return new TreeViewNode
         {
@@ -105,7 +108,7 @@ public static class ProjectPortfolioTreeNodeBuilder
             Icon = childNodes.Length > 0 ? "account_tree" : "folder_open",
             Tooltip = BuildTooltip(project),
             Children = childNodes,
-            IsExpanded = childNodes.Length > 0 && (path.Count == 1 || expandedNodeIds.Contains(nodeId) || hasSelectedDescendant),
+            IsExpanded = childNodes.Length > 0 && isExpanded,
             IsSelected = selectedProjectId == project.Id,
             BadgeText = BuildBadge(project),
             DataTestId = $"projects-tree-node-{project.Id:N}",

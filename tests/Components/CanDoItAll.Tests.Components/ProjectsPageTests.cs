@@ -560,6 +560,38 @@ public sealed class ProjectsPageTests
     }
 
     [Fact]
+    public async Task Project_tree_toggle_collapses_root_project_children()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
+        var parentProjectId = await CreateProjectAsync(projectsService, "Collapsible parent");
+        var childProjectId = await CreateProjectAsync(projectsService, "Hidden child");
+
+        Assert.True((await projectsService.AddSubprojectAsync(parentProjectId, childProjectId)).IsSuccess);
+
+        var cut = harness.Context.RenderComponent<ProjectsPage>();
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.NotEmpty(cut.FindAll($"[data-testid='projects-tree-children-{parentProjectId:N}']"));
+            Assert.NotEmpty(cut.FindAll($"[data-testid='projects-tree-node-{childProjectId:N}']"));
+        });
+
+        var parentNode = cut.Find($"[data-testid='projects-tree-node-{parentProjectId:N}']");
+        var toggle = parentNode.ParentElement?.QuerySelector("button.cda-treeview__toggle")
+            ?? throw new InvalidOperationException("The project tree toggle was not rendered.");
+
+        toggle.Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Equal("false", cut.Find($"[data-testid='projects-tree-node-{parentProjectId:N}']").GetAttribute("aria-expanded"));
+            Assert.Empty(cut.FindAll($"[data-testid='projects-tree-children-{parentProjectId:N}']"));
+            Assert.Empty(cut.FindAll($"[data-testid='projects-tree-node-{childProjectId:N}']"));
+        });
+    }
+
+    [Fact]
     public async Task Subprojects_modal_supports_recursive_drill_down()
     {
         await using var harness = await ComponentTestHarness.CreateAsync();
