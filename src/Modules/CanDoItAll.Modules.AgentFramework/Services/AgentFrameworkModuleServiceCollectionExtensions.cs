@@ -148,10 +148,13 @@ public static class AgentFrameworkModuleServiceCollectionExtensions
         services.TryAddScoped<HrAgentRuntimeAuthorizationService>();
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IAgentRuntimeToolProvider, ImageGenerationAgentRuntimeToolProvider>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IAgentRuntimeToolProvider, WorkflowAgentRuntimeToolProvider>());
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IAgentRuntimeToolProvider, PromptGalleryAgentRuntimeToolProvider>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IAgentRuntimeToolProvider, HrAgentRuntimeToolProvider>());
         services.TryAddEnumerable(ServiceDescriptor.Singleton<ISettingsRendererSource, WorkflowSettingsRendererSource>());
         services.AddWorkflowTemplateServices();
         services.AddScoped<WorkflowExampleCatalogSeedService>();
+        services.AddScoped<WorkflowPromptGalleryMigrationService>();
+        services.AddHostedService<WorkflowPromptGalleryMigrationHostedService>();
         services.AddScoped<ProcessMockAgentCatalogService>();
         services.AddScoped<AgentFrameworkExecutionRecoveryService>();
         services.AddScoped<ScenarioHarnessService>();

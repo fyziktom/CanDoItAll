@@ -73,9 +73,6 @@ internal static class ProjectStructureMenuComposition
             case ProjectObjectType.Transcript:
                 preferredActions.Add("transcript-llm");
                 break;
-            case ProjectObjectType.PromptStep:
-                preferredActions.Add("branch");
-                break;
             case ProjectObjectType.ProcessDefinition:
                 preferredActions.Add("start-process");
                 preferredActions.Add("estimate-process");

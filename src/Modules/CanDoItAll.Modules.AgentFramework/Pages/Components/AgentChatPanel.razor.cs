@@ -3,6 +3,8 @@ using CanDoItAll.AgentFramework.Components;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Voice;
 using CanDoItAll.Components.BaseLib;
+using CanDoItAll.Modules.Prompts;
+using CanDoItAll.Modules.Prompts.Components;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Forms;
 using Microsoft.Extensions.Logging;
@@ -71,9 +73,16 @@ public partial class AgentChatPanel : IAsyncDisposable
     public NotificationService NotificationService { get; set; } = default!;
 
     [Inject]
+    public IPromptGalleryService PromptGallery { get; set; } = default!;
+
+    [Inject]
+    public NavigationManager NavigationManager { get; set; } = default!;
+
+    [Inject]
     public ILogger<AgentChatPanel> Logger { get; set; } = default!;
 
     private IReadOnlyList<AgentDefinition> agents = [];
+    private IReadOnlyList<ProviderProfile> providers = [];
     private IReadOnlyCollection<Guid> privateAgentIds = [];
     private ChatAgentWorkspaceSnapshot? workspace;
     private IReadOnlyList<ChatSessionSummaryRecord> filteredSessions = [];
@@ -119,6 +128,11 @@ public partial class AgentChatPanel : IAsyncDisposable
                ExecutionState.Preparing or
                ExecutionState.Running or
                ExecutionState.Persisting;
+
+    private string? SelectedAgentProviderKind
+        => selectedAgent?.ProviderProfileId is { } providerProfileId
+            ? providers.FirstOrDefault(provider => provider.Id == providerProfileId)?.Kind.ToString()
+            : null;
 
     private bool BlocksNewMessage
         => isBusy ||
@@ -324,6 +338,92 @@ public partial class AgentChatPanel : IAsyncDisposable
         draftPrompt = value;
         return Task.CompletedTask;
     }
+
+    private async Task HandlePromptGallerySelectionAsync(PromptGallerySelection selection)
+    {
+        var compatibilityResult = await PromptGallery.EvaluateCompatibilityAsync(
+            selection.ArtifactId,
+            new PromptGalleryConsumerContext(
+                PromptGalleryConsumer.Chat,
+                PromptGalleryCompatibilityPurpose.Selection,
+                Provider: SelectedAgentProviderKind,
+                Model: selectedAgent?.Model));
+        if (compatibilityResult.IsFailure || compatibilityResult.Value is null)
+        {
+            NotificationService.Warning(
+                "Prompt compatibility unavailable",
+                DescribePromptGalleryErrors(compatibilityResult.Errors));
+            return;
+        }
+
+        var compatibility = compatibilityResult.Value;
+        var decision = PromptCompatibilityWarningDecision.InsertAnyway;
+        if (!compatibility.CanUse || compatibility.HasVisibleWarnings)
+        {
+            var dialogResult = await DialogService.OpenAsync<PromptCompatibilityWarningDialog>(
+                "Prompt compatibility",
+                new Dictionary<string, object?>
+                {
+                    [nameof(PromptCompatibilityWarningDialog.Selection)] = selection,
+                    [nameof(PromptCompatibilityWarningDialog.Compatibility)] = compatibility
+                },
+                new DialogOptions
+                {
+                    Eyebrow = "Provider and model check",
+                    Subtitle = "Review declared compatibility before inserting this prompt.",
+                    Size = ModalSize.Medium,
+                    DenseChrome = true,
+                    TestId = "prompt-gallery-chat-compatibility-dialog",
+                    AriaLabel = "Prompt compatibility warning"
+                });
+            if (dialogResult is not PromptCompatibilityWarningDecision selectedDecision ||
+                selectedDecision == PromptCompatibilityWarningDecision.Cancel)
+            {
+                return;
+            }
+
+            decision = selectedDecision;
+        }
+
+        if (decision == PromptCompatibilityWarningDecision.InsertAndSuppress)
+        {
+            foreach (var issue in compatibility.Issues.Where(issue =>
+                         !issue.IsSuppressed && issue.IsSuppressible))
+            {
+                var suppression = await PromptGallery.SetWarningSuppressionAsync(
+                    selection.ArtifactId,
+                    PromptGalleryConsumer.Chat,
+                    issue.Code,
+                    suppressed: true);
+                if (suppression.IsFailure)
+                {
+                    NotificationService.Warning(
+                        "Warning preference was not saved",
+                        DescribePromptGalleryErrors(suppression.Errors));
+                }
+            }
+        }
+
+        var content = selection.Content.Trim();
+        if (content.Length == 0)
+        {
+            NotificationService.Warning("Prompt is empty", "The selected Gallery item has no content to insert.");
+            return;
+        }
+
+        draftPrompt = string.IsNullOrWhiteSpace(draftPrompt)
+            ? content
+            : $"{draftPrompt.TrimEnd()}{Environment.NewLine}{Environment.NewLine}{content}";
+        composerKey++;
+    }
+
+    private void OpenPromptGalleryItemEditor(Guid promptArtifactId)
+        => NavigationManager.NavigateTo($"/prompt-gallery?promptId={promptArtifactId:D}");
+
+    private static string DescribePromptGalleryErrors(IReadOnlyList<CanDoItAll.SharedKernel.Error> errors)
+        => errors.Count == 0
+            ? "The Prompt Gallery did not return a result."
+            : string.Join(" ", errors.Select(error => error.Message));
 
     private Task HandleThreadSearchChangedAsync(string? value)
     {
@@ -867,7 +967,8 @@ public partial class AgentChatPanel : IAsyncDisposable
         var agentsTask = WorkspaceService.ListAgentsAsync(includeTemplates: false);
         var providersTask = WorkspaceService.ListProvidersAsync();
         agents = await agentsTask;
-        var privateProviderIds = (await providersTask)
+        providers = await providersTask;
+        var privateProviderIds = providers
             .Where(provider => provider.IsPrivateProvider)
             .Select(provider => provider.Id)
             .ToHashSet();

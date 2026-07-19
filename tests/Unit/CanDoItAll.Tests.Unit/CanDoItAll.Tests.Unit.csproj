@@ -79,7 +79,6 @@
     <ProjectReference Include="..\..\..\src\Modules\CanDoItAll.Modules.Processes\CanDoItAll.Modules.Processes.csproj" />
     <ProjectReference Include="..\..\..\src\Modules\CanDoItAll.Modules.CognitiveMemory\CanDoItAll.Modules.CognitiveMemory.csproj" />
     <ProjectReference Include="..\..\..\src\Modules\CanDoItAll.Modules.Prompts\CanDoItAll.Modules.Prompts.csproj" />
-    <ProjectReference Include="..\..\..\src\Modules\CanDoItAll.Modules.Factory\CanDoItAll.Modules.Factory.csproj" />
     <ProjectReference Include="..\..\..\src\Processes\CanDoItAll.Processes.Templates\CanDoItAll.Processes.Templates.csproj" />
     <ProjectReference Include="..\..\..\src\Processes\Drivers\CanDoItAll.Processes.Drivers.Abstractions\CanDoItAll.Processes.Drivers.Abstractions.csproj" />
     <ProjectReference Include="..\..\..\src\Processes\Drivers\CanDoItAll.Processes.Drivers.Standard\CanDoItAll.Processes.Drivers.Standard.csproj" />

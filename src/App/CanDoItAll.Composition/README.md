@@ -21,7 +21,6 @@ Project references:
 - `../CanDoItAll.Infrastructure/CanDoItAll.Infrastructure.csproj`
 - `../CanDoItAll.Modules.AgentFramework/CanDoItAll.Modules.AgentFramework.csproj`
 - `../CanDoItAll.Modules.Collaboration/CanDoItAll.Modules.Collaboration.csproj`
-- `../CanDoItAll.Modules.Factory/CanDoItAll.Modules.Factory.csproj`
 - `../CanDoItAll.Modules.Projects/CanDoItAll.Modules.Projects.csproj`
 - `../CanDoItAll.Modules.Processes/CanDoItAll.Modules.Processes.csproj`
 - `../CanDoItAll.Modules.Prompts/CanDoItAll.Modules.Prompts.csproj`

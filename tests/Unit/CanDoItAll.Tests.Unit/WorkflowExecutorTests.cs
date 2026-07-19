@@ -850,6 +850,71 @@ public sealed class WorkflowExecutorTests
     }
 
     [Fact]
+    public async Task MafWorkflowLlmComponentInvokerUsesNodeInstructionSnapshot()
+    {
+        var runtime = new CapturingAgentRuntime("{\"ok\":true}");
+        var provider = CreateProviderProfile("gpt-5-mini");
+        var invoker = new MafWorkflowLlmComponentInvoker(
+            runtime,
+            new TestProviderProfileRegistry([provider]),
+            new ProviderProfileService());
+        var component = CreateLlmComponent(JsonObjectShape, JsonPayloadShape) with
+        {
+            Instructions = "A later Gallery edit must not affect this workflow version."
+        };
+        var node = CreateLlmNode("pinned-prompt-version", component.Id) with
+        {
+            Settings = CreateLlmNode("pinned-prompt-version", component.Id).Settings with
+            {
+                Instructions = "Pinned workflow prompt snapshot."
+            }
+        };
+        var definition = CreateDefinition([node], [], node.Id.Value);
+
+        await invoker.ExecuteAsync(
+            definition,
+            node,
+            component,
+            new WorkflowNodeInput("{}"));
+
+        Assert.NotNull(runtime.LastAgent);
+        Assert.Equal("Pinned workflow prompt snapshot.", runtime.LastAgent!.Instructions);
+    }
+
+    [Fact]
+    public async Task MafWorkflowLlmComponentInvokerRejectsBlankNodeInstructionSnapshot()
+    {
+        var runtime = new CapturingAgentRuntime("{\"ok\":true}");
+        var provider = CreateProviderProfile("gpt-5-mini");
+        var invoker = new MafWorkflowLlmComponentInvoker(
+            runtime,
+            new TestProviderProfileRegistry([provider]),
+            new ProviderProfileService());
+        var component = CreateLlmComponent(JsonObjectShape, JsonPayloadShape) with
+        {
+            Instructions = "Mutable component instructions must never be used as an execution fallback."
+        };
+        var node = CreateLlmNode("missing-prompt-snapshot", component.Id) with
+        {
+            Settings = CreateLlmNode("missing-prompt-snapshot", component.Id).Settings with
+            {
+                Instructions = "   "
+            }
+        };
+        var definition = CreateDefinition([node], [], node.Id.Value);
+
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(async () =>
+            await invoker.ExecuteAsync(
+                definition,
+                node,
+                component,
+                new WorkflowNodeInput("{}")));
+
+        Assert.Contains("immutable instruction snapshot", exception.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Null(runtime.LastAgent);
+    }
+
+    [Fact]
     public async Task MafWorkflowLlmComponentInvokerUsesProviderUsageObservationsForWorkflowUsage()
     {
         var runtime = new CapturingAgentRuntime("{\"ok\":true}")
@@ -1873,7 +1938,7 @@ public sealed class WorkflowExecutorTests
                 AgentId: null,
                 SubworkflowId: null,
                 ExternalRequestKind: null,
-                Instructions: string.Empty,
+                Instructions: "Pinned workflow instruction snapshot.",
                 InputShape: WorkflowValueShape.Text,
                 ResultShape: WorkflowValueShape.Text));
 
@@ -2114,6 +2179,8 @@ public sealed class WorkflowExecutorTests
 
     private sealed class CapturingAgentRuntime(string responseText) : IAgentRuntime
     {
+        public AgentDefinition? LastAgent { get; private set; }
+
         public AgentRuntimeExecutionOptions? LastExecutionOptions { get; private set; }
 
         public string LastPrompt { get; private set; } = string.Empty;
@@ -2138,7 +2205,7 @@ public sealed class WorkflowExecutorTests
             AgentStructuredOutputContract? structuredOutput = null,
             AgentRuntimeExecutionOptions? executionOptions = null)
         {
-            _ = agent;
+            LastAgent = agent;
             _ = provider;
             _ = session;
             _ = capabilities;

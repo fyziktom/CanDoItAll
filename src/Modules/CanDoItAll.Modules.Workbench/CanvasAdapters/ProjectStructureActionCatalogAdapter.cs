@@ -170,9 +170,9 @@ public sealed class ProjectStructureActionCatalogAdapter
             actions.Insert(1, new CanvasWorkbenchAction
             {
                 ActionId = "wizard",
-                Label = "Wizard",
-                MenuLabel = "Wizard",
-                Description = "Open the detailed prompt wizard for this flow.",
+                Label = "Open prompt",
+                MenuLabel = "Open prompt",
+                Description = "Open the Gallery prompt bound to this project node.",
                 Icon = "flow",
                 Tone = "sky"
             });
@@ -213,16 +213,6 @@ public sealed class ProjectStructureActionCatalogAdapter
         if (string.IsNullOrWhiteSpace(node.ParentId))
         {
             actions.RemoveAll(action => action.ActionId is "disconnect" or "reconnect");
-        }
-
-        if (node.ObjectType == ProjectObjectType.PromptStep)
-        {
-            actions.AddRange(
-            [
-                new CanvasWorkbenchAction { ActionId = "branch", Label = "Branch", MenuLabel = "Branch", Description = "Create a prompt follow-up from this step.", Icon = "fork", Tone = "accent" },
-                new CanvasWorkbenchAction { ActionId = "mark-used", Label = "Used", MenuLabel = "Used", Description = "Mark this prompt step as consumed.", Icon = "use", Tone = "mint" },
-                new CanvasWorkbenchAction { ActionId = "skip", Label = "Skip", MenuLabel = "Skip", Description = "Skip the selected prompt step.", Icon = "skip", Tone = "warn" }
-            ]);
         }
 
         if (node.ObjectType == ProjectObjectType.ProjectBlock)

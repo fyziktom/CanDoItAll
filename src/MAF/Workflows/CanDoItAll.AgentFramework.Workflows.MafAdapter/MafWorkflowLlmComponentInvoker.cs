@@ -24,7 +24,7 @@ public sealed class MafWorkflowLlmComponentInvoker(
 
         var provider = await ResolveProviderAsync(component, cancellationToken);
         var model = ResolveEffectiveModel(component, provider);
-        var agent = CreateAgent(component, provider, model);
+        var agent = CreateAgent(node, component, provider, model);
         var clock = timeProvider ?? TimeProvider.System;
         var now = clock.GetUtcNow();
         var invocationId = Guid.NewGuid();
@@ -199,17 +199,25 @@ public sealed class MafWorkflowLlmComponentInvoker(
            || provider.SuggestedModels.Any(item => string.Equals(item, model, StringComparison.OrdinalIgnoreCase));
 
     private static AgentDefinition CreateAgent(
+        WorkflowNode node,
         LlmCallComponent component,
         ProviderProfile provider,
         string model)
     {
         var now = DateTimeOffset.UtcNow;
+        if (string.IsNullOrWhiteSpace(node.Settings.Instructions))
+        {
+            throw new InvalidOperationException(
+                $"LLM workflow node '{node.Id}' has no immutable instruction snapshot.");
+        }
+
+        var instructions = node.Settings.Instructions.Trim();
         return new AgentDefinition(
             Id: Guid.NewGuid(),
             Name: component.Name,
             RoleTitle: "Workflow LLM Component",
             Summary: $"Workflow LLM component '{component.Name}'.",
-            Instructions: component.Instructions,
+            Instructions: instructions,
             Status: AgentLifecycleStatus.Active,
             ProviderProfileId: provider.Id,
             Model: model,

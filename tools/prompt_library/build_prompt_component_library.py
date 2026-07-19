@@ -98,7 +98,7 @@ class ComponentDefinition:
     def phase_rules(self) -> str:
         return "|".join(self.phases)
 
-    def to_factory_seed(self) -> dict:
+    def to_gallery_seed(self) -> dict:
         return {
             "id": self.id,
             "key": self.key,
@@ -145,7 +145,7 @@ class FlowDefinition:
     def prompt_type_rules(self) -> str:
         return "|".join(self.prompt_types)
 
-    def to_factory_seed(self, block_lookup: dict[str, ComponentDefinition]) -> dict:
+    def to_gallery_seed(self, block_lookup: dict[str, ComponentDefinition]) -> dict:
         block_ids = [block_lookup[key].id for key in self.block_keys]
         return {
             "id": self.id,
@@ -184,7 +184,7 @@ class BlueprintDefinition:
     def id(self) -> str:
         return str(uuid.uuid5(UUID_NAMESPACE, f"blueprint:{self.key}"))
 
-    def to_factory_seed(self, flows: dict[str, FlowDefinition]) -> dict:
+    def to_gallery_seed(self, flows: dict[str, FlowDefinition]) -> dict:
         return {
             "id": self.id,
             "key": self.key,
@@ -3251,7 +3251,7 @@ def write_docs(groups: list[GroupDefinition], components: list[ComponentDefiniti
         - {len(blueprints)} blueprint types
         - {len(flows)} flow templates
         - {len(simulations)} simulation cases with coverage validation
-        - import-friendly JSON seed files aligned to `CanDoItAll.Modules.Factory`
+        - import-friendly JSON seed files aligned to the Prompt Gallery importer
         - markdown snippet files for each component
         - an Excel catalog at `output/spreadsheet/prompt-component-library.xlsx`
 
@@ -3419,9 +3419,9 @@ def main() -> None:
 
     pack_analysis = analyze_prompt_packs()
     group_catalog = build_group_summary_rows(groups, components)
-    blocks_seed = [component_def.to_factory_seed() for component_def in components]
-    flow_seed = [flow.to_factory_seed(component_lookup) for flow in flows]
-    blueprint_seed = [item.to_factory_seed(flow_lookup) for item in blueprints]
+    blocks_seed = [component_def.to_gallery_seed() for component_def in components]
+    flow_seed = [flow.to_gallery_seed(component_lookup) for flow in flows]
+    blueprint_seed = [item.to_gallery_seed(flow_lookup) for item in blueprints]
     manifest = {"version": 1, "generatedBy": "tools/prompt_library/build_prompt_component_library.py", "componentCount": len(components), "flowCount": len(flows), "blueprintCount": len(blueprints), "simulationCount": len(simulations), "recommendedComponentCount": sum(1 for item in components if item.recommended), "toolboxComponentCount": sum(1 for item in components if item.toolbox_eligible)}
 
     write_json(OUTPUT_ROOT / "manifest.json", manifest)

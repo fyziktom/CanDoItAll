@@ -1,7 +1,6 @@
 using System.ComponentModel.DataAnnotations.Schema;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Infrastructure.Storage;
-using CanDoItAll.Modules.Factory;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Resources;
 using CanDoItAll.Modules.TestLab;
@@ -524,9 +523,9 @@ ProjectWorkbenchCrossModuleMutationService crossModuleMutationService) : IProjec
 
         await dbContext.Set<ProjectObjectRecord>().AddAsync(record, cancellationToken);
 
-        if (request.ObjectType == ProjectObjectType.PromptFlow)
+        if (request.ObjectType is ProjectObjectType.PromptFlow or ProjectObjectType.PromptSession or ProjectObjectType.PromptStep)
         {
-            await commandService.EnsurePromptFlowWizardAsync(dbContext, projectId, record, cancellationToken);
+            await commandService.EnsurePromptGalleryArtifactAsync(dbContext, projectId, record, cancellationToken);
         }
 
         var bindingPlan = await ProjectNodeBindingStorage.PersistAsync(dbContext, record, cancellationToken);

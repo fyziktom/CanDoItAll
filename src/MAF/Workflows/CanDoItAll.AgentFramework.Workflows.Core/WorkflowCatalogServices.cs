@@ -151,7 +151,7 @@ public sealed class InMemoryWorkflowCatalogService :
                 request.Name.Trim(),
                 request.Description.Trim(),
                 request.Status,
-                SnapshotGraph(request.Graph),
+                SnapshotGraph(request.Graph, store.Components),
                 request.RuntimePolicy,
                 current?.CreatedAtUtc ?? now,
                 now)
@@ -260,12 +260,6 @@ public sealed class InMemoryWorkflowCatalogService :
         var workflowId = request.PreserveWorkflowId ? source.Id : (WorkflowId?)null;
         var importedName = string.IsNullOrWhiteSpace(request.Name) ? source.Name : request.Name.Trim();
         var importedStatus = request.Status ?? WorkflowLifecycleStatus.Draft;
-        var candidate = source with
-        {
-            Name = importedName,
-            Status = importedStatus
-        };
-        ThrowIfValidationFailed(await ValidateDefinitionAsync(candidate, cancellationToken), "Workflow definition import failed validation");
 
         return await SaveDefinitionAsync(
             new WorkflowDefinitionSaveRequest(
@@ -611,14 +605,35 @@ public sealed class InMemoryWorkflowCatalogService :
             .ToArray();
     }
 
-    private static WorkflowGraph SnapshotGraph(WorkflowGraph graph)
+    private static WorkflowGraph SnapshotGraph(
+        WorkflowGraph graph,
+        IReadOnlyDictionary<WorkflowComponentId, LlmCallComponent> components)
     {
         return new WorkflowGraph(
             graph.StartNodeId,
             graph.Nodes
-                .Select(node => node with { Ports = node.Ports.ToArray() })
+                .Select(node => SnapshotNode(node, components))
                 .ToArray(),
             graph.Edges.ToArray());
+    }
+
+    private static WorkflowNode SnapshotNode(
+        WorkflowNode node,
+        IReadOnlyDictionary<WorkflowComponentId, LlmCallComponent> components)
+    {
+        if (node.Kind != WorkflowNodeKind.LlmCall ||
+            !string.IsNullOrWhiteSpace(node.Settings.Instructions) ||
+            node.Settings.ComponentId is not { } componentId ||
+            !components.TryGetValue(componentId, out var component))
+        {
+            return node with { Ports = node.Ports.ToArray() };
+        }
+
+        return node with
+        {
+            Ports = node.Ports.ToArray(),
+            Settings = node.Settings with { Instructions = component.Instructions }
+        };
     }
 
     private static IReadOnlyList<WorkflowInputParameterDescriptor> SnapshotInputParameters(
@@ -704,7 +719,7 @@ public sealed class InMemoryWorkflowCatalogService :
                             AgentId: null,
                             SubworkflowId: null,
                             ExternalRequestKind: null,
-                            Instructions: string.Empty,
+                            Instructions: component.Instructions,
                             InputShape: component.InputShape,
                             ResultShape: component.ResultShape)),
                     new WorkflowNode(

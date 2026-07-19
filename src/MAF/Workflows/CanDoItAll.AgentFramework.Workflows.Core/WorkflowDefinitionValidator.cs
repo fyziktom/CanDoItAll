@@ -126,6 +126,14 @@ public sealed class WorkflowDefinitionValidator : IWorkflowDefinitionValidator
                     $"LLM workflow node '{node.Id}' must reference a prepared LLM Call Component.",
                     node.Id));
             }
+
+            if (string.IsNullOrWhiteSpace(node.Settings.Instructions))
+            {
+                issues.Add(new WorkflowValidationIssue(
+                    WorkflowValidationIssueCode.InvalidComponentReference,
+                    $"LLM workflow node '{node.Id}' must contain an immutable instruction snapshot.",
+                    node.Id));
+            }
         }
 
         AddExecutorIssues(graph, issues);

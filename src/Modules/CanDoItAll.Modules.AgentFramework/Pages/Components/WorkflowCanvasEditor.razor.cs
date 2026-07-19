@@ -7,9 +7,12 @@ using CanDoItAll.AgentFramework.Workflows.Abstractions;
 using CanDoItAll.Components.BaseLib;
 using CanDoItAll.Components.CanvasLib;
 using CanDoItAll.Components.OverlayLib;
+using CanDoItAll.SharedKernel;
 using CanDoItAll.SharedKernel.Configuration;
 using CanDoItAll.Modules.Security;
 using CanDoItAll.Modules.AgentFramework.Pages;
+using CanDoItAll.Modules.Prompts;
+using CanDoItAll.Modules.Prompts.Components;
 using CanDoItAll.Modules.Workspace;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Logging;
@@ -52,6 +55,12 @@ public partial class WorkflowCanvasEditor
 
     [Inject]
     public NotificationService NotificationService { get; set; } = default!;
+
+    [Inject]
+    public IPromptGalleryService PromptGallery { get; set; } = default!;
+
+    [Inject]
+    public NavigationManager NavigationManager { get; set; } = default!;
 
     [Inject]
     public ILogger<WorkflowCanvasEditor> Logger { get; set; } = default!;
@@ -409,6 +418,189 @@ public partial class WorkflowCanvasEditor
             isBusy = false;
         }
     }
+
+    private async Task HandlePromptGallerySelectionForNewNodeAsync(PromptGallerySelection selection)
+    {
+        var component = await CreatePromptGalleryBindingAsync(selection, node: null);
+        if (component is not null)
+        {
+            await AddLlmComponentNodeAsync(component);
+        }
+    }
+
+    private async Task HandlePromptGallerySelectionForNodeAsync(
+        PromptGallerySelection selection,
+        WorkflowCanvasNodeDraft node)
+    {
+        var component = await CreatePromptGalleryBindingAsync(selection, node);
+        if (component is null)
+        {
+            return;
+        }
+
+        WorkflowCanvasDefinitionMapper.ApplyComponent(node, component);
+        node.Instructions = selection.Content;
+        node.Name = string.IsNullOrWhiteSpace(node.Name) ? selection.Title : node.Name;
+    }
+
+    private async Task<LlmCallComponent?> CreatePromptGalleryBindingAsync(
+        PromptGallerySelection selection,
+        WorkflowCanvasNodeDraft? node)
+    {
+        if (isBusy)
+        {
+            return null;
+        }
+
+        var provider = ResolvePromptBindingProvider(selection, node);
+        if (provider is null)
+        {
+            NotificationService.Warning(
+                "Provider required",
+                "Configure an enabled chat provider before binding a Gallery prompt to a workflow node.");
+            return null;
+        }
+
+        var model = ResolvePromptBindingModel(selection, provider, node);
+        if (string.IsNullOrWhiteSpace(model))
+        {
+            NotificationService.Warning(
+                "Model required",
+                $"Provider {provider.Name} does not expose a model for this Gallery item.");
+            return null;
+        }
+
+        var compatibility = await PromptGallery.EvaluateCompatibilityAsync(
+            selection.ArtifactId,
+            new PromptGalleryConsumerContext(
+                PromptGalleryConsumer.Workflow,
+                PromptGalleryCompatibilityPurpose.Selection,
+                Provider: provider.Kind.ToString(),
+                Model: model),
+            CancellationToken.None);
+        if (compatibility.IsFailure || compatibility.Value is null)
+        {
+            NotificationService.Warning(
+                "Prompt compatibility unavailable",
+                BuildPromptGalleryError(compatibility.Errors));
+            return null;
+        }
+
+        if (!compatibility.Value.CanUse)
+        {
+            NotificationService.Warning(
+                "Prompt is not compatible",
+                string.Join(" ", compatibility.Value.Issues.Select(issue => issue.Message)));
+            return null;
+        }
+
+        var current = node is null ? null : ResolveSelectedComponent(node);
+        isBusy = true;
+        try
+        {
+            var component = await ComponentLibrary.SaveComponentAsync(
+                new LlmCallComponentSaveRequest(
+                    Id: null,
+                    selection.Title,
+                    provider.ProviderProfileId,
+                    model,
+                    current?.Modality ?? WorkflowModality.Text,
+                    new WorkflowModelSettings(
+                        selection.Recommendations.Temperature ?? current?.ModelSettings.Temperature ?? 0.2,
+                        selection.Recommendations.MaxOutputTokens ?? current?.ModelSettings.MaxOutputTokens ?? 800,
+                        current?.ModelSettings.RequireJsonOutput ?? false,
+                        current?.ModelSettings.ResponseFormatJsonSchema ?? string.Empty),
+                    selection.Content,
+                    current?.InputShape ?? WorkflowValueShape.Text,
+                    current?.ResultShape ?? WorkflowValueShape.Text,
+                    current?.Permissions ?? AgentPermissionsPolicy.Default)
+                {
+                    PromptArtifactId = selection.ArtifactId,
+                    PromptVersionId = selection.VersionId
+                });
+            componentOptions = [.. componentOptions, component];
+            await ComponentLibraryChanged.InvokeAsync();
+            NotificationService.Success(
+                "Gallery prompt bound",
+                $"{selection.Title} is pinned to this workflow component.");
+            return component;
+        }
+        finally
+        {
+            isBusy = false;
+        }
+    }
+
+    private WorkflowProviderOption? ResolvePromptBindingProvider(
+        PromptGallerySelection selection,
+        WorkflowCanvasNodeDraft? node)
+    {
+        var preferred = node is null
+            ? ResolveSelectedNewComponentProvider()
+            : ResolveComponentProviderOption(ResolveSelectedComponent(node));
+        if (preferred is { IsEnabled: true } && SupportsProvider(selection, preferred))
+        {
+            return preferred;
+        }
+
+        return ProviderOptions.FirstOrDefault(option => option.IsEnabled && SupportsProvider(selection, option));
+    }
+
+    private static bool SupportsProvider(
+        PromptGallerySelection selection,
+        WorkflowProviderOption provider)
+        => selection.SupportedModels.Count == 0 ||
+           selection.SupportedModels.Any(item =>
+               string.Equals(item.Provider, provider.Kind.ToString(), StringComparison.OrdinalIgnoreCase));
+
+    private string ResolvePromptBindingModel(
+        PromptGallerySelection selection,
+        WorkflowProviderOption provider,
+        WorkflowCanvasNodeDraft? node)
+    {
+        var declaredModel = selection.SupportedModels
+            .FirstOrDefault(item =>
+                string.Equals(item.Provider, provider.Kind.ToString(), StringComparison.OrdinalIgnoreCase) &&
+                (provider.ModelOptions.Count == 0 || provider.ModelOptions.Contains(item.Model, StringComparer.OrdinalIgnoreCase)))
+            ?.Model;
+        if (!string.IsNullOrWhiteSpace(declaredModel))
+        {
+            return declaredModel;
+        }
+
+        var currentModel = node is null
+            ? newComponentModel
+            : ResolveSelectedComponent(node)?.Model;
+        if (!string.IsNullOrWhiteSpace(currentModel))
+        {
+            return currentModel.Trim();
+        }
+
+        return !string.IsNullOrWhiteSpace(provider.DefaultModel)
+            ? provider.DefaultModel
+            : provider.ModelOptions.FirstOrDefault() ?? string.Empty;
+    }
+
+    private string? ResolvePromptPickerProvider(WorkflowCanvasNodeDraft? node)
+    {
+        var provider = node is null
+            ? ResolveSelectedNewComponentProvider()
+            : ResolveComponentProviderOption(ResolveSelectedComponent(node));
+        return provider?.Kind.ToString();
+    }
+
+    private string? ResolvePromptPickerModel(WorkflowCanvasNodeDraft? node)
+        => node is null
+            ? newComponentModel
+            : ResolveSelectedComponent(node)?.Model;
+
+    private void OpenPromptGalleryItemEditor(Guid promptArtifactId)
+        => NavigationManager.NavigateTo($"/prompt-gallery?promptId={promptArtifactId:D}");
+
+    private static string BuildPromptGalleryError(IReadOnlyList<Error> errors)
+        => errors.Count == 0
+            ? "The Prompt Gallery did not return a result."
+            : string.Join(" ", errors.Select(error => error.Message));
 
     private Task AddEdgeAsync()
     {

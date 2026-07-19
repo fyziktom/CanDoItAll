@@ -57,20 +57,6 @@ public sealed partial class AppSmokeTests
             structureAfter.Metrics.StatePublishCommitCount > structureBefore.Metrics.StatePublishCommitCount,
             $"Expected wheel zoom to publish updated canvas state. Before={structureBefore.Metrics.StatePublishCommitCount}, after={structureAfter.Metrics.StatePublishCommitCount}.");
 
-        var promptFactoryResponse = await page.GotoAsync($"{fixture.BaseUrl}/prompt-factory");
-        Assert.NotNull(promptFactoryResponse);
-        Assert.True(promptFactoryResponse!.Ok, $"Expected /prompt-factory to return 2xx, got {(int)promptFactoryResponse.Status}.");
-        await page.WaitForSelectorAsync("text=Prompt session workbench");
-        await page.Locator(".cw-canvas-host").WaitForAsync();
-        await SetCanvasDiagnosticsVisibleAsync(page, isVisible: true);
-
-        var promptFactoryDiagnostics = await ReadCanvasDiagnosticsAsync(page);
-        Assert.True(promptFactoryDiagnostics.IsVisible);
-        Assert.True(promptFactoryDiagnostics.Metrics.RenderCount >= 1, $"Expected prompt-factory render count to be observable, got {promptFactoryDiagnostics.Metrics.RenderCount}.");
-        Assert.True(promptFactoryDiagnostics.Metrics.NodeLayerRebuildCount >= 1, $"Expected prompt-factory node rebuild count to be observable, got {promptFactoryDiagnostics.Metrics.NodeLayerRebuildCount}.");
-        Assert.True(promptFactoryDiagnostics.Metrics.StatePublishCommitCount >= 1, $"Expected prompt-factory state commit count to be observable, got {promptFactoryDiagnostics.Metrics.StatePublishCommitCount}.");
-        await CapturePrimaryWorkbenchShellAsync(page, Path.Combine(artifactsDir, "bundle-p0-07-prompt-factory-diagnostics.png"));
-
         Assert.False(await page.Locator("#blazor-error-ui").IsVisibleAsync());
     }
 

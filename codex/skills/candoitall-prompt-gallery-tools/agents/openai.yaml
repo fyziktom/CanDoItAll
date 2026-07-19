@@ -1,0 +1,4 @@
+interface:
+  display_name: "CanDoItAll Prompt Gallery Tools"
+  short_description: "Search and retrieve prompts with agent tools"
+  default_prompt: "Use $candoitall-prompt-gallery-tools to find a reusable prompt for this task."

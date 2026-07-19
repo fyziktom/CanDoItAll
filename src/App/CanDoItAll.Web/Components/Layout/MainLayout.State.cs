@@ -11,7 +11,7 @@ public partial class MainLayout
 {
     private readonly IReadOnlyList<ShellWorkspaceItem> workspaces =
     [
-        new("delivery", "Delivery Workspace", "Project authoring, structure, calendars, and prompt sessions.", "/projects"),
+        new("delivery", "Delivery Workspace", "Project authoring, structure, calendars, and prompt drafts.", "/projects"),
         new("quality", "Quality Desk", "Test plans and evidence review.", "/test-lab"),
         new("operations", "Operations Desk", "Scheduler, runtime settings, and environment status.", "/scheduler")
     ];
@@ -62,8 +62,7 @@ public partial class MainLayout
     private bool IsFocusWorkbenchRoute
         => CurrentUri.AbsolutePath.EndsWith("/structure", StringComparison.OrdinalIgnoreCase) ||
            CurrentUri.AbsolutePath.EndsWith("/processes", StringComparison.OrdinalIgnoreCase) ||
-           CurrentUri.AbsolutePath.EndsWith("/processes/live", StringComparison.OrdinalIgnoreCase) ||
-           string.Equals(CurrentUri.AbsolutePath, "/prompt-factory", StringComparison.OrdinalIgnoreCase);
+           CurrentUri.AbsolutePath.EndsWith("/processes/live", StringComparison.OrdinalIgnoreCase);
 
     private IReadOnlyList<WorkbenchTabState> OpenedProjectTabs => Workbench.Tabs
         .Where(tab => tab.ProjectId.HasValue && tab.TabKind is WorkbenchTabKinds.ProjectOverview or WorkbenchTabKinds.ProjectStructure or WorkbenchTabKinds.ProjectCalendar)
@@ -71,8 +70,8 @@ public partial class MainLayout
         .Select(group => group.First())
         .ToList();
 
-    private IReadOnlyList<WorkbenchTabState> OpenedPromptSessionTabs => Workbench.Tabs
-        .Where(tab => string.Equals(tab.TabKind, WorkbenchTabKinds.PromptWizardSession, StringComparison.Ordinal))
+    private IReadOnlyList<WorkbenchTabState> OpenedPromptTabs => Workbench.Tabs
+        .Where(tab => string.Equals(tab.TabKind, WorkbenchTabKinds.PromptDetail, StringComparison.Ordinal))
         .ToList();
 
     private bool CanManageDatabases => databaseSelection?.IsRuntimeLocked != true;

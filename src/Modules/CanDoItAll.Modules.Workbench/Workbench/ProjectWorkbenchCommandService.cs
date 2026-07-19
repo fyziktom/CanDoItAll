@@ -1,6 +1,6 @@
 using CanDoItAll.Infrastructure.Persistence;
-using CanDoItAll.Modules.Factory;
 using CanDoItAll.Modules.Projects;
+using CanDoItAll.Modules.Prompts;
 using CanDoItAll.SharedKernel;
 using Microsoft.EntityFrameworkCore;
 
@@ -9,7 +9,7 @@ namespace CanDoItAll.Modules.Workbench;
 public sealed class ProjectWorkbenchCommandService(
     IDbContextFactory<AppDbContext> dbContextFactory,
     IClock clock,
-    PromptFactoryService promptFactoryService,
+    IPromptGalleryService promptGalleryService,
     ProjectStructureAssemblyService projectStructureAssemblyService)
 {
     public async Task<ArtifactReference?> ExecuteNodeCommandAsync(
@@ -26,10 +26,10 @@ public sealed class ProjectWorkbenchCommandService(
             return null;
         }
 
-        if (node.ObjectType == ProjectObjectType.PromptFlow &&
+        if (IsPromptObject(node.ObjectType) &&
             commandKind is ProjectStructureCommandKind.Open or ProjectStructureCommandKind.Wizard)
         {
-            var artifact = await EnsurePromptFlowWizardAsync(dbContext, projectId, node, cancellationToken);
+            var artifact = await EnsurePromptGalleryArtifactAsync(dbContext, projectId, node, cancellationToken);
             if (!node.IsSystemManaged)
             {
                 await ProjectNodeBindingStorage.PersistAsync(dbContext, node, cancellationToken);
@@ -37,54 +37,6 @@ public sealed class ProjectWorkbenchCommandService(
 
             await dbContext.SaveChangesAsync(cancellationToken);
             return artifact;
-        }
-
-        var binding = ProjectNodeBindingStorage.ResolveForRuntime(node);
-        if (string.Equals(binding.ExternalArtifactKind, "prompt-node", StringComparison.OrdinalIgnoreCase) &&
-            binding.ExternalArtifactId.HasValue)
-        {
-            var promptNode = await dbContext.Set<PromptRunNode>()
-                .FirstOrDefaultAsync(item => item.Id == binding.ExternalArtifactId.Value, cancellationToken);
-            if (promptNode is null)
-            {
-                return null;
-            }
-
-            switch (commandKind)
-            {
-                case ProjectStructureCommandKind.Branch:
-                    var branchNode = new PromptRunNode
-                    {
-                        PromptRunId = promptNode.PromptRunId,
-                        PromptBlockDefinitionId = promptNode.PromptBlockDefinitionId,
-                        ParentPromptRunNodeId = promptNode.Id,
-                        Title = $"{promptNode.Title} follow-up",
-                        BranchKey = $"branch-{clock.GetUtcNow():yyyyMMddHHmmss}",
-                        BranchLabel = "Workbench follow-up",
-                        Sequence = promptNode.Sequence + 1,
-                        State = PromptRunNodeState.Pending,
-                        Notes = "Created from the structure canvas branch action."
-                    };
-                    await dbContext.Set<PromptRunNode>().AddAsync(branchNode, cancellationToken);
-                    await dbContext.SaveChangesAsync(cancellationToken);
-                    return new ArtifactReference(
-                        "prompt-session",
-                        branchNode.PromptRunId,
-                        "Prompt Session",
-                        $"/prompt-factory?runId={branchNode.PromptRunId}",
-                        "Prompt branch session",
-                        projectId,
-                        $"prompt-session:{branchNode.PromptRunId:N}",
-                        TabKind: WorkbenchTabKinds.PromptWizardSession);
-                case ProjectStructureCommandKind.Skip:
-                    promptNode.State = PromptRunNodeState.Skipped;
-                    await dbContext.SaveChangesAsync(cancellationToken);
-                    return null;
-                case ProjectStructureCommandKind.MarkUsed:
-                    promptNode.State = PromptRunNodeState.Used;
-                    await dbContext.SaveChangesAsync(cancellationToken);
-                    return null;
-            }
         }
 
         return commandKind switch
@@ -95,43 +47,75 @@ public sealed class ProjectWorkbenchCommandService(
         };
     }
 
-    public async Task<ArtifactReference?> EnsurePromptFlowWizardAsync(
+    public async Task<ArtifactReference?> EnsurePromptGalleryArtifactAsync(
         AppDbContext dbContext,
         Guid projectId,
         ProjectObjectRecord node,
         CancellationToken cancellationToken)
     {
         var binding = ProjectNodeBindingStorage.ResolveForRuntime(node);
-        var effectiveRoute = binding.Route;
-        if (!string.IsNullOrWhiteSpace(effectiveRoute) &&
-            effectiveRoute.StartsWith("/prompt-factory", StringComparison.OrdinalIgnoreCase))
+        if (string.Equals(binding.ExternalArtifactKind, "prompt", StringComparison.OrdinalIgnoreCase) &&
+            binding.ExternalArtifactId.HasValue)
         {
-            var resolvedSessionId = binding.ExternalArtifactId;
-            if (!resolvedSessionId.HasValue &&
-                TryResolvePromptFactorySessionId(effectiveRoute, out var routeSessionId))
+            var prompt = await dbContext.Set<PromptArtifact>()
+                .AsNoTracking()
+                .Where(item => item.Id == binding.ExternalArtifactId.Value)
+                .Select(item => new { item.ProjectId, item.Kind })
+                .FirstOrDefaultAsync(cancellationToken);
+            if (prompt is null)
             {
-                resolvedSessionId = routeSessionId;
+                throw new InvalidOperationException(
+                    $"Project prompt node '{node.NodeKey}' references missing Gallery prompt '{binding.ExternalArtifactId.Value}'.");
             }
 
-            ApplyPromptSessionBinding(node, effectiveRoute, resolvedSessionId);
+            if (prompt.ProjectId != projectId)
+            {
+                throw new InvalidOperationException(
+                    $"Project prompt node '{node.NodeKey}' references Gallery prompt '{binding.ExternalArtifactId.Value}' owned by another project.");
+            }
+
+            if (prompt.Kind != PromptGalleryItemKind.FullPrompt)
+            {
+                throw new InvalidOperationException(
+                    $"Project prompt node '{node.NodeKey}' references Gallery item '{binding.ExternalArtifactId.Value}' with kind '{prompt.Kind}' instead of a full prompt.");
+            }
+
+            ApplyPromptArtifactBinding(node, binding.ExternalArtifactId.Value);
             node.UpdatedAtUtc = clock.GetUtcNow();
             return BuildArtifactReference(node, projectId);
         }
 
-        var phase = await ResolvePromptFlowPhaseAsync(dbContext, projectId, node, cancellationToken);
-        var sessionId = await promptFactoryService.CreateBlankProjectSessionAsync(projectId, node.Title, phase, cancellationToken);
-        ApplyPromptSessionBinding(node, $"/prompt-factory?sessionId={sessionId}", sessionId);
+        var phase = await ResolvePromptPhaseAsync(dbContext, projectId, node, cancellationToken);
+        var saveResult = await promptGalleryService.SaveDraftAsync(
+            new PromptGalleryDraft(
+                Id: null,
+                ProjectId: projectId,
+                CollectionId: null,
+                Title: node.Title,
+                Summary: node.Notes,
+                Kind: PromptGalleryItemKind.FullPrompt,
+                Phase: phase,
+                Content: string.Empty,
+                SupportedConsumers: [PromptGalleryConsumer.ProjectWorkbench]),
+            cancellationToken);
+        if (saveResult.IsFailure)
+        {
+            throw new InvalidOperationException(
+                $"Could not create a Gallery prompt for project node '{node.NodeKey}': {string.Join(" ", saveResult.Errors.Select(error => error.Message))}");
+        }
+
+        ApplyPromptArtifactBinding(node, saveResult.Value);
         node.UpdatedAtUtc = clock.GetUtcNow();
         return BuildArtifactReference(node, projectId);
     }
 
-    private static void ApplyPromptSessionBinding(ProjectObjectRecord node, string route, Guid? sessionId)
+    private static void ApplyPromptArtifactBinding(ProjectObjectRecord node, Guid promptArtifactId)
     {
         node.Binding = node.Binding with
         {
-            Route = route,
-            ExternalArtifactKind = "prompt-session",
-            ExternalArtifactId = sessionId
+            Route = $"/prompt-gallery?promptId={promptArtifactId}",
+            ExternalArtifactKind = "prompt",
+            ExternalArtifactId = promptArtifactId
         };
     }
 
@@ -146,7 +130,7 @@ public sealed class ProjectWorkbenchCommandService(
         var tabKind = node.ObjectType switch
         {
             ProjectObjectType.ProjectRoot => WorkbenchTabKinds.ProjectOverview,
-            ProjectObjectType.PromptFlow or ProjectObjectType.PromptSession or ProjectObjectType.PromptStep => WorkbenchTabKinds.PromptWizardSession,
+            ProjectObjectType.PromptFlow or ProjectObjectType.PromptSession or ProjectObjectType.PromptStep => WorkbenchTabKinds.PromptDetail,
             ProjectObjectType.ProcessDefinition or ProjectObjectType.ProcessRun => WorkbenchTabKinds.Processes,
             ProjectObjectType.WorkflowDefinition or ProjectObjectType.WorkflowRun => WorkbenchTabKinds.Workflows,
             ProjectObjectType.ValidationRun => WorkbenchTabKinds.ValidationRun,
@@ -167,28 +151,10 @@ public sealed class ProjectWorkbenchCommandService(
             TabKind: tabKind);
     }
 
-    private static bool TryResolvePromptFactorySessionId(string route, out Guid sessionId)
-    {
-        sessionId = Guid.Empty;
-        if (string.IsNullOrWhiteSpace(route))
-        {
-            return false;
-        }
+    private static bool IsPromptObject(ProjectObjectType objectType)
+        => objectType is ProjectObjectType.PromptFlow or ProjectObjectType.PromptSession or ProjectObjectType.PromptStep;
 
-        const string marker = "sessionId=";
-        var start = route.IndexOf(marker, StringComparison.OrdinalIgnoreCase);
-        if (start < 0)
-        {
-            return false;
-        }
-
-        start += marker.Length;
-        var end = route.IndexOf('&', start);
-        var rawValue = end >= start ? route[start..end] : route[start..];
-        return Guid.TryParse(rawValue, out sessionId);
-    }
-
-    private static async Task<string> ResolvePromptFlowPhaseAsync(
+    private static async Task<string> ResolvePromptPhaseAsync(
         AppDbContext dbContext,
         Guid projectId,
         ProjectObjectRecord node,

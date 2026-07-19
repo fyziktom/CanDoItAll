@@ -1,0 +1,119 @@
+@inject DialogService DialogService
+
+<Stack GapScale="LayoutGap.Large" data-testid="prompt-compatibility-warning-dialog">
+    <Alert AlertStyle="@SummaryAlertStyle" Variant="Variant.Outlined">
+        @if (Compatibility.CanUse)
+        {
+            <TextBlock Value="The selected prompt is not declared as fully compatible with this context." />
+        }
+        else
+        {
+            <TextBlock Value="The selected prompt cannot be inserted in this context." />
+        }
+    </Alert>
+
+    <SurfaceCard Soft="true">
+        <Stack GapScale="LayoutGap.Small">
+            <TextBlock TextStyle="TextStyle.Eyebrow" Value="@Selection.Title" />
+            <TextBlock Value="@Selection.Summary" />
+            <Cluster Gap="LayoutGap.Tiny" Wrap="FlexWrap.Wrap">
+                <StatusBadge Tone="accent" Text="@FormatKind(Selection.Kind)" />
+                @if (Selection.VersionNumber.HasValue)
+                {
+                    <StatusBadge Tone="neutral" Text="@($"Version {Selection.VersionNumber.Value}")" />
+                }
+                else
+                {
+                    <StatusBadge Tone="info" Text="Draft" />
+                }
+            </Cluster>
+        </Stack>
+    </SurfaceCard>
+
+    <Stack GapScale="LayoutGap.Small">
+        @foreach (var issue in VisibleIssues)
+        {
+            <Alert AlertStyle="@IssueStyle(issue)" Variant="Variant.Outlined">
+                <Stack GapScale="LayoutGap.Tiny">
+                    <TextBlock Value="@issue.Message" />
+                    <Cluster Gap="LayoutGap.Small">
+                        <StatusBadge Tone="@IssueTone(issue)" Text="@issue.Severity.ToString()" />
+                        <StatusBadge Tone="neutral" Text="@FormatIssueCode(issue.Code)" />
+                        @if (issue.IsSuppressible)
+                        {
+                            <StatusBadge Tone="info" Text="Can be suppressed for this item" />
+                        }
+                    </Cluster>
+                </Stack>
+            </Alert>
+        }
+    </Stack>
+
+    <Cluster Gap="LayoutGap.Small" JustifyContent="JustifyContent.End" Wrap="FlexWrap.Wrap">
+        <Button Text="Cancel"
+                Icon="close"
+                ButtonStyle="ButtonStyle.Light"
+                Variant="Variant.Outlined"
+                Click="CancelAsync" />
+        @if (Compatibility.CanUse)
+        {
+            <Button Text="Insert anyway"
+                    Icon="add_circle"
+                    ButtonStyle="ButtonStyle.Warning"
+                    Click="InsertAsync" />
+            @if (CanSuppressAll)
+            {
+                <Button Text="Insert anyway and do not display on this item anymore"
+                        Icon="notifications_off"
+                        ButtonStyle="ButtonStyle.Warning"
+                        Variant="Variant.Outlined"
+                        Click="InsertAndSuppressAsync" />
+            }
+        }
+    </Cluster>
+</Stack>
+
+@code {
+    [Parameter, EditorRequired]
+    public PromptGallerySelection Selection { get; set; } = default!;
+
+    [Parameter, EditorRequired]
+    public PromptCompatibilityResult Compatibility { get; set; } = default!;
+
+    private IReadOnlyList<PromptCompatibilityIssue> VisibleIssues
+        => Compatibility.Issues.Where(issue => !issue.IsSuppressed).ToArray();
+
+    private bool CanSuppressAll
+        => VisibleIssues.Count > 0 && VisibleIssues.All(issue => issue.IsSuppressible);
+
+    private AlertStyle SummaryAlertStyle
+        => Compatibility.CanUse ? AlertStyle.Warning : AlertStyle.Danger;
+
+    private Task CancelAsync()
+        => DialogService.CloseAsync(PromptCompatibilityWarningDecision.Cancel);
+
+    private Task InsertAsync()
+        => DialogService.CloseAsync(PromptCompatibilityWarningDecision.InsertAnyway);
+
+    private Task InsertAndSuppressAsync()
+        => DialogService.CloseAsync(PromptCompatibilityWarningDecision.InsertAndSuppress);
+
+    private static AlertStyle IssueStyle(PromptCompatibilityIssue issue)
+        => issue.Severity == PromptCompatibilitySeverity.Error ? AlertStyle.Danger : AlertStyle.Warning;
+
+    private static string IssueTone(PromptCompatibilityIssue issue)
+        => issue.Severity == PromptCompatibilitySeverity.Error ? "danger" : "warning";
+
+    private static string FormatKind(PromptGalleryItemKind kind)
+        => kind == PromptGalleryItemKind.FullPrompt ? "Full prompt" : "Prompt part";
+
+    private static string FormatIssueCode(PromptCompatibilityIssueCode code)
+        => code switch
+        {
+            PromptCompatibilityIssueCode.MissingFinalVersion => "Missing final version",
+            PromptCompatibilityIssueCode.ConsumerNotSupported => "Consumer not supported",
+            PromptCompatibilityIssueCode.ItemKindMismatch => "Item kind mismatch",
+            PromptCompatibilityIssueCode.ProviderModelNotSupported => "Provider/model mismatch",
+            _ => code.ToString()
+        };
+}

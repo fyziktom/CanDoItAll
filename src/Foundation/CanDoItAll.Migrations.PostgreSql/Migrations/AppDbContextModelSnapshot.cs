@@ -705,6 +705,15 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                         .HasMaxLength(240)
                         .HasColumnType("character varying(240)");
 
+                    b.Property<Guid?>("PromptArtifactId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("PromptGalleryBindingSchemaVersion")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid?>("PromptVersionId")
+                        .HasColumnType("uuid");
+
                     b.Property<Guid?>("ProviderProfileId")
                         .HasColumnType("uuid");
 
@@ -715,7 +724,15 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
 
                     b.HasIndex("Name");
 
+                    b.HasIndex("PromptVersionId");
+
                     b.HasIndex("ProviderProfileId");
+
+                    b.HasIndex("PromptArtifactId", "PromptVersionId")
+                        .HasDatabaseName("IX_WorkflowComponents_PromptBinding");
+
+                    b.HasIndex("PromptGalleryBindingSchemaVersion", "Id")
+                        .HasDatabaseName("IX_WorkflowComponents_PromptGalleryBindingSchema_Id");
 
                     b.ToTable("AgentFramework_WorkflowComponents", (string)null);
                 });
@@ -738,6 +755,9 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                         .HasMaxLength(2000)
                         .HasColumnType("character varying(2000)");
 
+                    b.Property<int>("InstructionSnapshotSchemaVersion")
+                        .HasColumnType("integer");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(240)
@@ -758,6 +778,9 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                     b.HasKey("VersionId");
 
                     b.HasIndex("WorkflowId");
+
+                    b.HasIndex("InstructionSnapshotSchemaVersion", "VersionId")
+                        .HasDatabaseName("IX_WorkflowDefinitions_InstructionSnapshotSchema_Id");
 
                     b.HasIndex("WorkflowId", "UpdatedAtUtc");
 
@@ -2625,363 +2648,6 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                     b.ToTable("CrmHr_WorkforceProfiles", (string)null);
                 });
 
-            modelBuilder.Entity("CanDoItAll.Modules.Factory.PromptBlockDefinition", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<int>("BlockKind")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("BlueprintRules")
-                        .IsRequired()
-                        .HasMaxLength(300)
-                        .HasColumnType("character varying(300)");
-
-                    b.Property<string>("CatalogSource")
-                        .IsRequired()
-                        .HasMaxLength(80)
-                        .HasColumnType("character varying(80)");
-
-                    b.Property<string>("Content")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("GroupKey")
-                        .IsRequired()
-                        .HasMaxLength(120)
-                        .HasColumnType("character varying(120)");
-
-                    b.Property<bool>("IsRecommendedByDefault")
-                        .HasColumnType("boolean");
-
-                    b.Property<string>("Key")
-                        .IsRequired()
-                        .HasMaxLength(180)
-                        .HasColumnType("character varying(180)");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(160)
-                        .HasColumnType("character varying(160)");
-
-                    b.Property<int>("OrderIndex")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("PhaseRules")
-                        .IsRequired()
-                        .HasMaxLength(300)
-                        .HasColumnType("character varying(300)");
-
-                    b.Property<string>("PromptTypeRules")
-                        .IsRequired()
-                        .HasMaxLength(300)
-                        .HasColumnType("character varying(300)");
-
-                    b.Property<string>("StackTagsJson")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Summary")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("TagsJson")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("TemplateTokensJson")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<bool>("ToolboxEligible")
-                        .HasColumnType("boolean");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("Factory_PromptBlocks", (string)null);
-                });
-
-            modelBuilder.Entity("CanDoItAll.Modules.Factory.PromptBlueprint", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("CatalogSource")
-                        .IsRequired()
-                        .HasMaxLength(80)
-                        .HasColumnType("character varying(80)");
-
-                    b.Property<string>("Guidance")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Key")
-                        .IsRequired()
-                        .HasMaxLength(180)
-                        .HasColumnType("character varying(180)");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(160)
-                        .HasColumnType("character varying(160)");
-
-                    b.Property<int>("OrderIndex")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("PromptType")
-                        .IsRequired()
-                        .HasMaxLength(80)
-                        .HasColumnType("character varying(80)");
-
-                    b.Property<string>("RecommendedBlockKeysJson")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("RecommendedFlowKey")
-                        .IsRequired()
-                        .HasMaxLength(180)
-                        .HasColumnType("character varying(180)");
-
-                    b.Property<Guid?>("RecommendedFlowTemplateId")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("Summary")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("Factory_PromptBlueprints", (string)null);
-                });
-
-            modelBuilder.Entity("CanDoItAll.Modules.Factory.PromptBuildSession", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid?>("BlueprintId")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("BranchName")
-                        .IsRequired()
-                        .HasMaxLength(120)
-                        .HasColumnType("character varying(120)");
-
-                    b.Property<string>("CanvasUiStateJson")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("CommitSha")
-                        .IsRequired()
-                        .HasMaxLength(80)
-                        .HasColumnType("character varying(80)");
-
-                    b.Property<string>("ComponentCustomizationsJson")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<Guid?>("FlowTemplateId")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("GeneratedPrompt")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<bool>("HasCustomizedBlocks")
-                        .HasColumnType("boolean");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
-
-                    b.Property<string>("Phase")
-                        .IsRequired()
-                        .HasMaxLength(120)
-                        .HasColumnType("character varying(120)");
-
-                    b.Property<Guid?>("ProjectId")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid?>("PromptArtifactId")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid?>("PromptRunId")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid?>("ProviderProfileId")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("RepositoryName")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
-
-                    b.Property<string>("SelectedBlockIdsJson")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<Guid?>("SelectedPromptRunNodeId")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("SelectedResourceIdsJson")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("SessionAttachmentsJson")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<DateTimeOffset>("UpdatedAtUtc")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("WarningSummary")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<int>("WizardStepIndex")
-                        .HasColumnType("integer");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("Factory_PromptBuildSessions", (string)null);
-                });
-
-            modelBuilder.Entity("CanDoItAll.Modules.Factory.PromptFlowTemplate", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("AgentSequenceJson")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("BlockIdsJson")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("BlockKeysJson")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("CatalogSource")
-                        .IsRequired()
-                        .HasMaxLength(80)
-                        .HasColumnType("character varying(80)");
-
-                    b.Property<string>("Key")
-                        .IsRequired()
-                        .HasMaxLength(180)
-                        .HasColumnType("character varying(180)");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(160)
-                        .HasColumnType("character varying(160)");
-
-                    b.Property<int>("OrderIndex")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("PromptTypeRules")
-                        .IsRequired()
-                        .HasMaxLength(300)
-                        .HasColumnType("character varying(300)");
-
-                    b.Property<string>("Summary")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("Factory_PromptFlowTemplates", (string)null);
-                });
-
-            modelBuilder.Entity("CanDoItAll.Modules.Factory.PromptRun", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTimeOffset>("CreatedAtUtc")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid>("FlowTemplateId")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
-
-                    b.Property<string>("Phase")
-                        .IsRequired()
-                        .HasMaxLength(120)
-                        .HasColumnType("character varying(120)");
-
-                    b.Property<Guid>("ProjectId")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTimeOffset>("UpdatedAtUtc")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("Factory_PromptRuns", (string)null);
-                });
-
-            modelBuilder.Entity("CanDoItAll.Modules.Factory.PromptRunNode", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("BranchKey")
-                        .IsRequired()
-                        .HasMaxLength(80)
-                        .HasColumnType("character varying(80)");
-
-                    b.Property<string>("BranchLabel")
-                        .IsRequired()
-                        .HasMaxLength(120)
-                        .HasColumnType("character varying(120)");
-
-                    b.Property<string>("Notes")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<Guid?>("ParentPromptRunNodeId")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid?>("PromptArtifactId")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid?>("PromptBlockDefinitionId")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid>("PromptRunId")
-                        .HasColumnType("uuid");
-
-                    b.Property<int>("Sequence")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("State")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("Title")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("Factory_PromptRunNodes", (string)null);
-                });
-
             modelBuilder.Entity("CanDoItAll.Modules.Plugins.PluginCapabilityGrantRecord", b =>
                 {
                     b.Property<Guid>("Id")
@@ -3545,6 +3211,9 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<DateTimeOffset?>("ArchivedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<Guid?>("CollectionId")
                         .HasColumnType("uuid");
 
@@ -3558,6 +3227,12 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                     b.Property<int>("CurrentVersionNumber")
                         .HasColumnType("integer");
 
+                    b.Property<bool>("IsArchived")
+                        .HasColumnType("boolean");
+
+                    b.Property<int>("Kind")
+                        .HasColumnType("integer");
+
                     b.Property<string>("Phase")
                         .IsRequired()
                         .HasMaxLength(80)
@@ -3566,8 +3241,55 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                     b.Property<Guid?>("ProjectId")
                         .HasColumnType("uuid");
 
+                    b.Property<int>("Provenance")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("RecommendedMaxOutputTokens")
+                        .HasColumnType("integer");
+
+                    b.Property<double?>("RecommendedTemperature")
+                        .HasColumnType("double precision");
+
+                    b.Property<double?>("RecommendedTopP")
+                        .HasColumnType("double precision");
+
+                    b.Property<string>("SearchText")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("SourceCatalog")
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)");
+
+                    b.Property<string>("SourceFingerprint")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("SourceGroupKey")
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)");
+
+                    b.Property<string>("SourceGroupName")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("SourceItemKind")
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)");
+
+                    b.Property<string>("SourceKey")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<int?>("SourceOrderIndex")
+                        .HasColumnType("integer");
+
                     b.Property<int>("Status")
                         .HasColumnType("integer");
+
+                    b.Property<string>("Summary")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("Title")
                         .IsRequired()
@@ -3578,6 +3300,14 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("Provenance", "SourceKey")
+                        .IsUnique();
+
+                    b.HasIndex("IsArchived", "Status", "Kind", "UpdatedAtUtc");
+
+                    b.HasIndex("IsArchived", "UpdatedAtUtc", "Title", "Id")
+                        .IsDescending(false, true, false, false);
 
                     b.ToTable("Prompts_PromptArtifacts", (string)null);
                 });
@@ -3591,6 +3321,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                         .HasColumnType("uuid");
 
                     b.HasKey("PromptArtifactId", "PromptTagId");
+
+                    b.HasIndex("PromptTagId");
 
                     b.ToTable("Prompts_PromptArtifactTags", (string)null);
                 });
@@ -3615,6 +3347,71 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                     b.ToTable("Prompts_PromptCollections", (string)null);
                 });
 
+            modelBuilder.Entity("CanDoItAll.Modules.Prompts.PromptCompatibilityWarningPreference", b =>
+                {
+                    b.Property<Guid>("PromptArtifactId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Consumer")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("IssueCode")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("IsSuppressed")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("PromptArtifactId", "Consumer", "IssueCode");
+
+                    b.ToTable("Prompts_PromptCompatibilityWarningPreferences", (string)null);
+                });
+
+            modelBuilder.Entity("CanDoItAll.Modules.Prompts.PromptSupportedConsumer", b =>
+                {
+                    b.Property<Guid>("PromptArtifactId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Consumer")
+                        .HasColumnType("integer");
+
+                    b.HasKey("PromptArtifactId", "Consumer");
+
+                    b.ToTable("Prompts_PromptSupportedConsumers", (string)null);
+                });
+
+            modelBuilder.Entity("CanDoItAll.Modules.Prompts.PromptSupportedProviderModel", b =>
+                {
+                    b.Property<Guid>("PromptArtifactId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ProviderKey")
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)");
+
+                    b.Property<string>("ModelKey")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("Model")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("Provider")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)");
+
+                    b.HasKey("PromptArtifactId", "ProviderKey", "ModelKey");
+
+                    b.HasIndex("ProviderKey", "ModelKey", "PromptArtifactId");
+
+                    b.ToTable("Prompts_PromptSupportedProviderModels", (string)null);
+                });
+
             modelBuilder.Entity("CanDoItAll.Modules.Prompts.PromptTag", b =>
                 {
                     b.Property<Guid>("Id")
@@ -3626,12 +3423,38 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                         .HasMaxLength(120)
                         .HasColumnType("character varying(120)");
 
+                    b.Property<string>("NameKey")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)");
+
                     b.HasKey("Id");
 
                     b.HasIndex("Name")
                         .IsUnique();
 
+                    b.HasIndex("NameKey");
+
                     b.ToTable("Prompts_PromptTags", (string)null);
+                });
+
+            modelBuilder.Entity("CanDoItAll.Modules.Prompts.PromptTemplateToken", b =>
+                {
+                    b.Property<Guid>("PromptArtifactId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("NameKey")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.HasKey("PromptArtifactId", "NameKey");
+
+                    b.ToTable("Prompts_PromptTemplateTokens", (string)null);
                 });
 
             modelBuilder.Entity("CanDoItAll.Modules.Prompts.PromptUsageRecord", b =>
@@ -3687,6 +3510,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("PromptArtifactId");
+
                     b.ToTable("Prompts_PromptUsageRecords", (string)null);
                 });
 
@@ -3708,15 +3533,38 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
 
+                    b.Property<int>("KindSnapshot")
+                        .HasColumnType("integer");
+
                     b.Property<string>("OutputFormat")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)");
 
                     b.Property<Guid>("PromptArtifactId")
                         .HasColumnType("uuid");
 
+                    b.Property<int?>("RecommendedMaxOutputTokensSnapshot")
+                        .HasColumnType("integer");
+
+                    b.Property<double?>("RecommendedTemperatureSnapshot")
+                        .HasColumnType("double precision");
+
+                    b.Property<double?>("RecommendedTopPSnapshot")
+                        .HasColumnType("double precision");
+
                     b.Property<string>("SourceBlueprintId")
-                        .HasColumnType("text");
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("SummarySnapshot")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("TitleSnapshot")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
 
                     b.Property<int>("VersionNumber")
                         .HasColumnType("integer");
@@ -5752,6 +5600,88 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                         .IsUnique();
 
                     b.ToTable("process_strategy_result_receipts", (string)null);
+                });
+
+            modelBuilder.Entity("CanDoItAll.Modules.AgentFramework.WorkflowComponentRecord", b =>
+                {
+                    b.HasOne("CanDoItAll.Modules.Prompts.PromptArtifact", null)
+                        .WithMany()
+                        .HasForeignKey("PromptArtifactId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("CanDoItAll.Modules.Prompts.PromptVersion", null)
+                        .WithMany()
+                        .HasForeignKey("PromptVersionId")
+                        .OnDelete(DeleteBehavior.Restrict);
+                });
+
+            modelBuilder.Entity("CanDoItAll.Modules.Prompts.PromptArtifactTag", b =>
+                {
+                    b.HasOne("CanDoItAll.Modules.Prompts.PromptArtifact", null)
+                        .WithMany()
+                        .HasForeignKey("PromptArtifactId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("CanDoItAll.Modules.Prompts.PromptTag", null)
+                        .WithMany()
+                        .HasForeignKey("PromptTagId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("CanDoItAll.Modules.Prompts.PromptCompatibilityWarningPreference", b =>
+                {
+                    b.HasOne("CanDoItAll.Modules.Prompts.PromptArtifact", null)
+                        .WithMany()
+                        .HasForeignKey("PromptArtifactId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("CanDoItAll.Modules.Prompts.PromptSupportedConsumer", b =>
+                {
+                    b.HasOne("CanDoItAll.Modules.Prompts.PromptArtifact", null)
+                        .WithMany()
+                        .HasForeignKey("PromptArtifactId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("CanDoItAll.Modules.Prompts.PromptSupportedProviderModel", b =>
+                {
+                    b.HasOne("CanDoItAll.Modules.Prompts.PromptArtifact", null)
+                        .WithMany()
+                        .HasForeignKey("PromptArtifactId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("CanDoItAll.Modules.Prompts.PromptTemplateToken", b =>
+                {
+                    b.HasOne("CanDoItAll.Modules.Prompts.PromptArtifact", null)
+                        .WithMany()
+                        .HasForeignKey("PromptArtifactId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("CanDoItAll.Modules.Prompts.PromptUsageRecord", b =>
+                {
+                    b.HasOne("CanDoItAll.Modules.Prompts.PromptArtifact", null)
+                        .WithMany()
+                        .HasForeignKey("PromptArtifactId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("CanDoItAll.Modules.Prompts.PromptVersion", b =>
+                {
+                    b.HasOne("CanDoItAll.Modules.Prompts.PromptArtifact", null)
+                        .WithMany()
+                        .HasForeignKey("PromptArtifactId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("CanDoItAll.Modules.SchedulerPlanner.SchedulerPlanRun", b =>

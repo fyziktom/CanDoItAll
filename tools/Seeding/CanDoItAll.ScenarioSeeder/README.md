@@ -35,7 +35,6 @@ Project references:
 - `../../src/Modules/CanDoItAll.Modules.AgentFramework/CanDoItAll.Modules.AgentFramework.csproj`
 - `../../src/Modules/CanDoItAll.Modules.Collaboration/CanDoItAll.Modules.Collaboration.csproj`
 - `../../src/Modules/CanDoItAll.Modules.CrmHr/CanDoItAll.Modules.CrmHr.csproj`
-- `../../src/Modules/CanDoItAll.Modules.Factory/CanDoItAll.Modules.Factory.csproj`
 - `../../src/Modules/CanDoItAll.Modules.Processes/CanDoItAll.Modules.Processes.csproj`
 - `../../src/Modules/CanDoItAll.Modules.Projects/CanDoItAll.Modules.Projects.csproj`
 - `../../src/Modules/CanDoItAll.Modules.Prompts/CanDoItAll.Modules.Prompts.csproj`

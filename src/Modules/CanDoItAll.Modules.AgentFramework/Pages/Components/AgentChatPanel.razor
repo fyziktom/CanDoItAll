@@ -1,3 +1,6 @@
+@using CanDoItAll.Modules.Prompts
+@using CanDoItAll.Modules.Prompts.Components
+
 <div class="@ResolveShellClass()"
      data-testid="agents-chat-panel">
 <Stack GapScale="LayoutGap.Large"
@@ -174,6 +177,19 @@
                             VoiceModeChanged="HandleVoiceModeChangedAsync"
                             VoiceRecordingToggled="ToggleVoiceRecordingAsync"
                             SpeakLatestAssistantMessageRequested="SpeakLatestAssistantMessageAsync">
+            <ComposerActions>
+                <PromptGalleryPickerButton Text=""
+                                           Icon="library_books"
+                                           IconOnly="true"
+                                           AriaLabel="Insert from prompt gallery"
+                                           Size="ButtonSize.Small"
+                                           Consumer="PromptGalleryConsumer.Chat"
+                                           Provider="@SelectedAgentProviderKind"
+                                           Model="@selectedAgent?.Model"
+                                           AllowEdit="true"
+                                           Selected="HandlePromptGallerySelectionAsync"
+                                           EditRequested="OpenPromptGalleryItemEditor" />
+            </ComposerActions>
             <HeaderActions>
                 @if (IsFocusedFloating)
                 {

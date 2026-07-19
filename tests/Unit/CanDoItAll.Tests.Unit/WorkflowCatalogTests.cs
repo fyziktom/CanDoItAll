@@ -48,6 +48,25 @@ public sealed class WorkflowCatalogTests
     }
 
     [Fact]
+    public async Task CatalogSnapshotsBlankLlmNodeInstructionsFromComponentOnSave()
+    {
+        var catalog = CreateCatalog();
+        var component = await catalog.SaveComponentAsync(CreateComponentRequest());
+        var graph = CreateDefinitionGraph(component.Id);
+        var draftNode = Assert.Single(graph.Nodes, node => node.Kind == WorkflowNodeKind.LlmCall);
+        Assert.True(string.IsNullOrWhiteSpace(draftNode.Settings.Instructions));
+
+        var saved = await catalog.SaveDefinitionAsync(CreateSaveRequest(graph));
+        var detail = await catalog.GetDefinitionAsync(saved.Id, saved.VersionId);
+
+        var savedNode = Assert.Single(
+            detail!.Definition.Graph.Nodes,
+            node => node.Kind == WorkflowNodeKind.LlmCall);
+        Assert.Equal(component.Instructions, savedNode.Settings.Instructions);
+        Assert.True(string.IsNullOrWhiteSpace(draftNode.Settings.Instructions));
+    }
+
+    [Fact]
     public async Task CatalogSnapshotsTypedRouteMetadataOnEdges()
     {
         var catalog = CreateCatalog();

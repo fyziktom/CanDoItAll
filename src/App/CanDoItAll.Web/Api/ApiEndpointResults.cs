@@ -24,6 +24,30 @@ internal static class ApiEndpointResults
             : Results.BadRequest(MapErrors(result.Errors));
     }
 
+    public static IResult FromResult(Result result, params string[] notFoundCodes)
+    {
+        if (result.IsSuccess)
+        {
+            return Results.Ok(new ApiAck(true));
+        }
+
+        return ContainsCode(result.Errors, notFoundCodes)
+            ? Results.NotFound(MapErrors(result.Errors))
+            : Results.BadRequest(MapErrors(result.Errors));
+    }
+
+    public static IResult FromResult<T>(Result<T> result, params string[] notFoundCodes)
+    {
+        if (result.IsSuccess)
+        {
+            return Results.Ok(result.Value);
+        }
+
+        return ContainsCode(result.Errors, notFoundCodes)
+            ? Results.NotFound(MapErrors(result.Errors))
+            : Results.BadRequest(MapErrors(result.Errors));
+    }
+
     public static IResult NotFound(string message, string code)
     {
         return Results.NotFound(MapErrors([Error.Validation(message, code)]));
@@ -46,4 +70,7 @@ internal static class ApiEndpointResults
                 .Select(error => new ApiErrorItem(error.Code, error.Message, error.Severity))
                 .ToList());
     }
+
+    private static bool ContainsCode(IReadOnlyList<Error> errors, IReadOnlyCollection<string> codes)
+        => codes.Count > 0 && errors.Any(error => codes.Contains(error.Code, StringComparer.Ordinal));
 }

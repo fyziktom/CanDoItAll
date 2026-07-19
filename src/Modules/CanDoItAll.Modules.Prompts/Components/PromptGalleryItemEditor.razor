@@ -1,0 +1,619 @@
+@inject IPromptGalleryService Gallery
+@inject NotificationService Notifications
+
+@if (isLoading)
+{
+    <LoadingState Eyebrow="Prompt editor"
+                  Title="Loading prompt item"
+                  Description="Reading the canonical draft, compatibility metadata, and immutable versions." />
+}
+else if (!string.IsNullOrWhiteSpace(loadError))
+{
+    <EmptyState Eyebrow="Prompt unavailable"
+                Title="The prompt item could not be loaded"
+                Description="@loadError">
+        <Actions>
+            <Button Text="Retry" Icon="refresh" Click="LoadAsync" />
+        </Actions>
+    </EmptyState>
+}
+else
+{
+    <EditForm Model="editor" OnValidSubmit="SaveAsync">
+        <Stack GapScale="LayoutGap.XXLarge" data-testid="prompt-gallery-item-editor">
+            <FormSection Title="Prompt identity"
+                         Description="Name and classify this reusable instruction without coupling it to a workflow or agent runtime.">
+                <Grid Gap="LayoutGap.Large" ColumnsXl="2">
+                    <FormField Text="Name">
+                        <InputText @bind-Value="editor.Title"
+                                   class="cda-input"
+                                   data-testid="prompt-gallery-editor-title" />
+                    </FormField>
+                    <FormField Text="Kind">
+                        <InputSelect @bind-Value="editor.Kind"
+                                     class="cda-input"
+                                     data-testid="prompt-gallery-editor-kind">
+                            @foreach (var option in Enum.GetValues<PromptGalleryItemKind>())
+                            {
+                                <option value="@option">@FormatKind(option)</option>
+                            }
+                        </InputSelect>
+                    </FormField>
+                </Grid>
+                <Grid Gap="LayoutGap.Large" ColumnsXl="2">
+                    <FormField Text="Summary">
+                        <InputText @bind-Value="editor.Summary"
+                                   class="cda-input"
+                                   data-testid="prompt-gallery-editor-summary" />
+                    </FormField>
+                    <FormField Text="Phase or group">
+                        <InputText @bind-Value="editor.Phase"
+                                   class="cda-input"
+                                   data-testid="prompt-gallery-editor-phase" />
+                    </FormField>
+                </Grid>
+                <FormField Text="Tags">
+                    <TagEditor Value="@editor.Tags"
+                               ValueChanged="HandleTagsChangedAsync"
+                               Placeholder="Add a tag"
+                               MaxTags="20"
+                               TestId="prompt-gallery-editor-tags"
+                               InputTestId="prompt-gallery-editor-tag-input" />
+                </FormField>
+            </FormSection>
+
+            <FormSection Title="Reusable content"
+                         Description="Keep the editable draft here. Finalization creates a separate immutable version.">
+                <FormField Text="Prompt or prompt-part content">
+                    <InputTextArea @bind-Value="editor.Content"
+                                   class="cda-input cda-input--textarea cda-input--mono min-h-80"
+                                   data-testid="prompt-gallery-editor-content" />
+                </FormField>
+            </FormSection>
+
+            <FormSection Title="Supported consumers"
+                         Description="Leave every option clear to allow all consumers, or explicitly constrain where this item belongs.">
+                <Cluster Gap="LayoutGap.Large" Wrap="FlexWrap.Wrap">
+                    @foreach (var consumer in Enum.GetValues<PromptGalleryConsumer>())
+                    {
+                        <label class="prompt-gallery-item-editor__choice">
+                            <CheckBox TValue="bool"
+                                      Value="@editor.SupportedConsumers.Contains(consumer)"
+                                      ValueChanged="@((bool value) => ToggleConsumerAsync(consumer, value))"
+                                      aria-label="@($"Support {consumer}")" />
+                            <span>@FormatConsumer(consumer)</span>
+                        </label>
+                    }
+                </Cluster>
+            </FormSection>
+
+            @if (loadedItemId.HasValue)
+            {
+                <FormSection Title="Compatibility warning preferences"
+                             Description="These item-level settings control whether a previously accepted selection warning is shown again. Execution errors cannot be suppressed.">
+                    <Grid Gap="LayoutGap.Large" ColumnsXl="2">
+                        @foreach (var consumer in WarningPreferenceConsumers)
+                        {
+                            <SurfaceCard Soft="true">
+                                <Stack GapScale="LayoutGap.Small">
+                                    <TextBlock TextStyle="TextStyle.Eyebrow" Value="@FormatConsumer(consumer)" />
+                                    @foreach (var issueCode in WarningPreferenceIssueCodes)
+                                    {
+                                        var preference = new PromptWarningSuppression(consumer, issueCode);
+                                        <label class="prompt-gallery-item-editor__choice">
+                                            <CheckBox TValue="bool"
+                                                      Value="@editor.WarningSuppressions.Contains(preference)"
+                                                      ValueChanged="@((bool value) => ToggleWarningSuppressionAsync(preference, value))"
+                                                      aria-label="@($"Suppress {FormatWarningIssue(issueCode)} for {FormatConsumer(consumer)}")" />
+                                            <span>Do not repeat @FormatWarningIssue(issueCode)</span>
+                                        </label>
+                                    }
+                                </Stack>
+                            </SurfaceCard>
+                        }
+                    </Grid>
+                </FormSection>
+            }
+
+            <FormSection Title="Supported provider models"
+                         Description="Add only combinations verified for this item. An empty list means the item is model-agnostic.">
+                <Grid Gap="LayoutGap.Medium" ColumnsXl="3">
+                    <FormField Text="Provider">
+                        <InputText @bind-Value="providerToAdd"
+                                   class="cda-input"
+                                   placeholder="OpenAI, Ollama, ..." />
+                    </FormField>
+                    <FormField Text="Model">
+                        <InputText @bind-Value="modelToAdd"
+                                   class="cda-input"
+                                   placeholder="Model identifier" />
+                    </FormField>
+                    <Cluster AlignItems="AlignItems.End">
+                        <Button Text="Add model"
+                                Icon="add"
+                                ButtonStyle="ButtonStyle.Light"
+                                Click="AddSupportedModelAsync" />
+                    </Cluster>
+                </Grid>
+
+                @if (editor.SupportedModels.Count == 0)
+                {
+                    <Alert AlertStyle="AlertStyle.Info" Variant="Variant.Outlined">
+                        <TextBlock Value="No model restriction. This item can be offered for any provider and model." />
+                    </Alert>
+                }
+                else
+                {
+                    <DataGrid TItem="PromptProviderModel" Data="@editor.SupportedModels" AllowPaging="false">
+                        <Columns>
+                            <DataGridColumn TItem="PromptProviderModel" Title="Provider">
+                                <Template Context="supported"><TextBlock Value="@supported.Provider" /></Template>
+                            </DataGridColumn>
+                            <DataGridColumn TItem="PromptProviderModel" Title="Model">
+                                <Template Context="supported"><MonoText Text="@supported.Model" /></Template>
+                            </DataGridColumn>
+                            <DataGridColumn TItem="PromptProviderModel" Title="Action">
+                                <Template Context="supported">
+                                    <Button Text="Remove"
+                                            Icon="delete"
+                                            ButtonStyle="ButtonStyle.Light"
+                                            Size="ButtonSize.Small"
+                                            Click="@(() => RemoveSupportedModelAsync(supported))" />
+                                </Template>
+                            </DataGridColumn>
+                        </Columns>
+                    </DataGrid>
+                }
+            </FormSection>
+
+            <FormSection Title="Recommended generation settings"
+                         Description="Optional recommendations preload compatible workflow and chat settings without becoming runtime policy.">
+                <Grid Gap="LayoutGap.Large" ColumnsXl="3">
+                    <FormField Text="Temperature">
+                        <InputNumber @bind-Value="editor.Temperature"
+                                     class="cda-input"
+                                     min="0"
+                                     max="2"
+                                     step="0.1" />
+                    </FormField>
+                    <FormField Text="Top-p">
+                        <InputNumber @bind-Value="editor.TopP"
+                                     class="cda-input"
+                                     min="0"
+                                     max="1"
+                                     step="0.05" />
+                    </FormField>
+                    <FormField Text="Maximum output tokens">
+                        <InputNumber @bind-Value="editor.MaxOutputTokens"
+                                     class="cda-input"
+                                     min="1" />
+                    </FormField>
+                </Grid>
+            </FormSection>
+
+            @if (versions.Count > 0)
+            {
+                <FormSection Title="Immutable versions"
+                             Description="Existing versions remain addressable even while the draft changes.">
+                    <DataGrid TItem="PromptGalleryVersionInfo" Data="@versions" AllowPaging="false">
+                        <Columns>
+                            <DataGridColumn TItem="PromptGalleryVersionInfo" Title="Version">
+                                <Template Context="version"><StatusBadge Tone="success" Text="@($"v{version.VersionNumber}")" /></Template>
+                            </DataGridColumn>
+                            <DataGridColumn TItem="PromptGalleryVersionInfo" Title="Reason">
+                                <Template Context="version"><TextBlock Value="@version.CreationReason" /></Template>
+                            </DataGridColumn>
+                            <DataGridColumn TItem="PromptGalleryVersionInfo" Title="Format">
+                                <Template Context="version"><StatusBadge Tone="neutral" Text="@version.OutputFormat" /></Template>
+                            </DataGridColumn>
+                            <DataGridColumn TItem="PromptGalleryVersionInfo" Title="Created">
+                                <Template Context="version"><TextBlock Value="@version.CreatedAtUtc.LocalDateTime.ToString("g")" /></Template>
+                            </DataGridColumn>
+                        </Columns>
+                    </DataGrid>
+                </FormSection>
+            }
+
+            <StickyActionFooter StatusLabel="@StatusLabel">
+                <SecondaryActions>
+                    <Button Text="Cancel"
+                            Icon="close"
+                            ButtonStyle="ButtonStyle.Light"
+                            Click="CancelAsync" />
+                    @if (loadedItemId.HasValue)
+                    {
+                        <Button Text="@(isArchived ? "Restore" : "Archive")"
+                                Icon="@(isArchived ? "unarchive" : "archive")"
+                                ButtonStyle="ButtonStyle.Warning"
+                                Variant="Variant.Outlined"
+                                Disabled="@isBusy"
+                                Click="ToggleArchivedAsync" />
+                    }
+                </SecondaryActions>
+                <PrimaryActions>
+                    <Button Text="Save draft"
+                            Icon="save"
+                            Type="submit"
+                            Disabled="@isBusy"
+                            IsBusy="@isBusy" />
+                    <Button Text="Create final version"
+                            Icon="verified"
+                            ButtonStyle="ButtonStyle.Success"
+                            Disabled="@isBusy"
+                            Click="CreateVersionAsync" />
+                </PrimaryActions>
+            </StickyActionFooter>
+        </Stack>
+    </EditForm>
+}
+
+@code {
+    private static readonly PromptGalleryConsumer[] WarningPreferenceConsumers =
+    [
+        PromptGalleryConsumer.Chat,
+        PromptGalleryConsumer.Workflow
+    ];
+
+    private static readonly PromptCompatibilityIssueCode[] WarningPreferenceIssueCodes =
+    [
+        PromptCompatibilityIssueCode.ItemKindMismatch,
+        PromptCompatibilityIssueCode.ProviderModelNotSupported
+    ];
+
+    private readonly EditorState editor = new();
+    private IReadOnlyList<PromptGalleryVersionInfo> versions = [];
+    private Guid? loadedItemId;
+    private Guid? projectId;
+    private Guid? collectionId;
+    private string providerToAdd = string.Empty;
+    private string modelToAdd = string.Empty;
+    private string? loadError;
+    private bool isArchived;
+    private bool isLoading;
+    private bool isBusy;
+
+    [Parameter]
+    public Guid? ItemId { get; set; }
+
+    [Parameter]
+    public EventCallback<Guid> Saved { get; set; }
+
+    [Parameter]
+    public EventCallback Cancelled { get; set; }
+
+    private string StatusLabel => loadedItemId.HasValue
+        ? isArchived ? "Archived Gallery item" : "Saved Gallery item"
+        : "New Gallery item";
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (loadedItemId == ItemId && (ItemId.HasValue || !isLoading))
+        {
+            return;
+        }
+
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        loadError = null;
+        if (!ItemId.HasValue)
+        {
+            loadedItemId = null;
+            projectId = null;
+            collectionId = null;
+            isArchived = false;
+            versions = [];
+            editor.Reset();
+            return;
+        }
+
+        isLoading = true;
+        try
+        {
+            var result = await Gallery.GetItemAsync(ItemId.Value);
+            if (!result.IsSuccess || result.Value is not { } item)
+            {
+                loadError = DescribeErrors(result.Errors);
+                return;
+            }
+
+            loadedItemId = item.Id;
+            projectId = item.ProjectId;
+            collectionId = item.CollectionId;
+            isArchived = item.IsArchived;
+            versions = item.Versions;
+            editor.Load(item);
+        }
+        catch (Exception exception)
+        {
+            loadError = "The prompt item could not be loaded.";
+            Notifications.Error("Prompt item load failed", exception.Message);
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private Task HandleTagsChangedAsync(IReadOnlyList<string> value)
+    {
+        editor.Tags = value;
+        return Task.CompletedTask;
+    }
+
+    private Task ToggleConsumerAsync(PromptGalleryConsumer consumer, bool enabled)
+    {
+        editor.SupportedConsumers = enabled
+            ? editor.SupportedConsumers.Append(consumer).Distinct().Order().ToArray()
+            : editor.SupportedConsumers.Where(item => item != consumer).ToArray();
+        return Task.CompletedTask;
+    }
+
+    private async Task ToggleWarningSuppressionAsync(
+        PromptWarningSuppression preference,
+        bool suppressed)
+    {
+        if (!loadedItemId.HasValue || isBusy)
+        {
+            return;
+        }
+
+        isBusy = true;
+        try
+        {
+            var result = await Gallery.SetWarningSuppressionAsync(
+                loadedItemId.Value,
+                preference.Consumer,
+                preference.IssueCode,
+                suppressed);
+            if (!result.IsSuccess)
+            {
+                Notifications.Warning("Warning preference was not saved", DescribeErrors(result.Errors));
+                return;
+            }
+
+            editor.WarningSuppressions = suppressed
+                ? editor.WarningSuppressions.Append(preference).Distinct().ToArray()
+                : editor.WarningSuppressions.Where(item => item != preference).ToArray();
+        }
+        finally
+        {
+            isBusy = false;
+        }
+    }
+
+    private Task AddSupportedModelAsync()
+    {
+        var provider = providerToAdd.Trim();
+        var model = modelToAdd.Trim();
+        if (provider.Length == 0 || model.Length == 0)
+        {
+            Notifications.Warning("Provider and model required", "Enter both values before adding a supported model.");
+            return Task.CompletedTask;
+        }
+
+        if (editor.SupportedModels.Any(item =>
+                string.Equals(item.Provider, provider, StringComparison.OrdinalIgnoreCase) &&
+                string.Equals(item.Model, model, StringComparison.OrdinalIgnoreCase)))
+        {
+            Notifications.Warning("Model already added", "This provider and model combination is already listed.");
+            return Task.CompletedTask;
+        }
+
+        editor.SupportedModels = editor.SupportedModels
+            .Append(new PromptProviderModel(provider, model))
+            .OrderBy(item => item.Provider, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(item => item.Model, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        providerToAdd = string.Empty;
+        modelToAdd = string.Empty;
+        return Task.CompletedTask;
+    }
+
+    private Task RemoveSupportedModelAsync(PromptProviderModel supported)
+    {
+        editor.SupportedModels = editor.SupportedModels
+            .Where(item => item != supported)
+            .ToArray();
+        return Task.CompletedTask;
+    }
+
+    private async Task SaveAsync()
+    {
+        var savedId = await SaveCoreAsync();
+        if (savedId.HasValue)
+        {
+            Notifications.Success("Prompt draft saved", "The canonical Gallery item was updated.");
+            await Saved.InvokeAsync(savedId.Value);
+        }
+    }
+
+    private async Task CreateVersionAsync()
+    {
+        var savedId = await SaveCoreAsync();
+        if (!savedId.HasValue)
+        {
+            return;
+        }
+
+        var result = await Gallery.CreateVersionAsync(
+            savedId.Value,
+            new PromptVersionCreateRequest("Ready for reuse"));
+        if (!result.IsSuccess)
+        {
+            Notifications.Warning("Final version was not created", DescribeErrors(result.Errors));
+            return;
+        }
+
+        Notifications.Success("Final version created", "The immutable prompt version is ready for reuse.");
+        ItemId = savedId.Value;
+        loadedItemId = null;
+        await LoadAsync();
+        await Saved.InvokeAsync(savedId.Value);
+    }
+
+    private async Task<Guid?> SaveCoreAsync()
+    {
+        if (isBusy)
+        {
+            return null;
+        }
+
+        if (string.IsNullOrWhiteSpace(editor.Title) || string.IsNullOrWhiteSpace(editor.Content))
+        {
+            Notifications.Warning("Name and content required", "Enter a name and reusable prompt content before saving.");
+            return null;
+        }
+
+        isBusy = true;
+        try
+        {
+            var result = await Gallery.SaveDraftAsync(new PromptGalleryDraft(
+                loadedItemId,
+                projectId,
+                collectionId,
+                editor.Title.Trim(),
+                editor.Summary.Trim(),
+                editor.Kind,
+                editor.Phase.Trim(),
+                editor.Content,
+                editor.Tags,
+                editor.SupportedModels,
+                editor.SupportedConsumers,
+                new PromptModelRecommendations(editor.Temperature, editor.MaxOutputTokens, editor.TopP)));
+            if (!result.IsSuccess)
+            {
+                Notifications.Warning("Prompt draft was not saved", DescribeErrors(result.Errors));
+                return null;
+            }
+
+            Guid savedId = result.Value;
+            loadedItemId = savedId;
+            ItemId = savedId;
+            return savedId;
+        }
+        catch (Exception exception)
+        {
+            Notifications.Error("Prompt draft save failed", exception.Message);
+            return null;
+        }
+        finally
+        {
+            isBusy = false;
+        }
+    }
+
+    private async Task ToggleArchivedAsync()
+    {
+        if (!loadedItemId.HasValue || isBusy)
+        {
+            return;
+        }
+
+        isBusy = true;
+        try
+        {
+            var result = await Gallery.ArchiveAsync(loadedItemId.Value, !isArchived);
+            if (!result.IsSuccess)
+            {
+                Notifications.Warning("Archive state was not changed", DescribeErrors(result.Errors));
+                return;
+            }
+
+            isArchived = !isArchived;
+            Notifications.Success(
+                isArchived ? "Prompt item archived" : "Prompt item restored",
+                isArchived ? "The item is hidden from normal Gallery search." : "The item is available in Gallery search again.");
+            await Saved.InvokeAsync(loadedItemId.Value);
+        }
+        finally
+        {
+            isBusy = false;
+        }
+    }
+
+    private Task CancelAsync() => Cancelled.InvokeAsync();
+
+    private static string FormatKind(PromptGalleryItemKind value)
+        => value == PromptGalleryItemKind.FullPrompt ? "Full prompt" : "Prompt part";
+
+    private static string FormatConsumer(PromptGalleryConsumer value)
+        => value switch
+        {
+            PromptGalleryConsumer.AgentRuntime => "Agent runtime",
+            PromptGalleryConsumer.ProjectWorkbench => "Project workbench",
+            _ => value.ToString()
+        };
+
+    private static string FormatWarningIssue(PromptCompatibilityIssueCode value)
+        => value switch
+        {
+            PromptCompatibilityIssueCode.ItemKindMismatch => "item-kind warnings",
+            PromptCompatibilityIssueCode.ProviderModelNotSupported => "provider/model warnings",
+            _ => value.ToString()
+        };
+
+    private static string DescribeErrors(IReadOnlyList<CanDoItAll.SharedKernel.Error> errors)
+        => errors.Count == 0 ? "The operation failed." : string.Join(" ", errors.Select(error => error.Message));
+
+    private sealed class EditorState
+    {
+        public string Title { get; set; } = string.Empty;
+
+        public string Summary { get; set; } = string.Empty;
+
+        public PromptGalleryItemKind Kind { get; set; } = PromptGalleryItemKind.FullPrompt;
+
+        public string Phase { get; set; } = string.Empty;
+
+        public string Content { get; set; } = string.Empty;
+
+        public IReadOnlyList<string> Tags { get; set; } = [];
+
+        public IReadOnlyList<PromptProviderModel> SupportedModels { get; set; } = [];
+
+        public IReadOnlyList<PromptGalleryConsumer> SupportedConsumers { get; set; } = [];
+
+        public IReadOnlyList<PromptWarningSuppression> WarningSuppressions { get; set; } = [];
+
+        public double? Temperature { get; set; }
+
+        public int? MaxOutputTokens { get; set; }
+
+        public double? TopP { get; set; }
+
+        public void Load(PromptGalleryItemDetails item)
+        {
+            Title = item.Title;
+            Summary = item.Summary;
+            Kind = item.Kind;
+            Phase = item.Phase;
+            Content = item.DraftContent;
+            Tags = item.Tags;
+            SupportedModels = item.SupportedModels;
+            SupportedConsumers = item.SupportedConsumers;
+            WarningSuppressions = item.WarningSuppressions;
+            Temperature = item.Recommendations.Temperature;
+            MaxOutputTokens = item.Recommendations.MaxOutputTokens;
+            TopP = item.Recommendations.TopP;
+        }
+
+        public void Reset()
+        {
+            Title = string.Empty;
+            Summary = string.Empty;
+            Kind = PromptGalleryItemKind.FullPrompt;
+            Phase = string.Empty;
+            Content = string.Empty;
+            Tags = [];
+            SupportedModels = [];
+            SupportedConsumers = [];
+            WarningSuppressions = [];
+            Temperature = null;
+            MaxOutputTokens = null;
+            TopP = null;
+        }
+    }
+}

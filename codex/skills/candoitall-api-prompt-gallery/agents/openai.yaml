@@ -1,0 +1,4 @@
+interface:
+  display_name: "CanDoItAll Prompt Gallery API"
+  short_description: "Manage canonical prompts through the HTTP API"
+  default_prompt: "Use $candoitall-api-prompt-gallery to search and manage canonical prompt items."

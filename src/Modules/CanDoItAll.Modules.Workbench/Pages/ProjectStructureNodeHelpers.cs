@@ -14,16 +14,6 @@ internal static class ProjectStructureNodeHelpers
             commands.Add(ProjectStructureCommandKind.Wizard);
         }
 
-        if (node.ObjectType == ProjectObjectType.PromptStep)
-        {
-            commands.AddRange(
-            [
-                ProjectStructureCommandKind.Branch,
-                ProjectStructureCommandKind.MarkUsed,
-                ProjectStructureCommandKind.Skip
-            ]);
-        }
-
         commands.Add(ProjectStructureCommandKind.Test);
         return commands;
     }
@@ -31,6 +21,7 @@ internal static class ProjectStructureNodeHelpers
     public static string ResolveCommandLabel(ProjectStructureCommandKind command)
         => command switch
         {
+            ProjectStructureCommandKind.Wizard => "Open prompt",
             ProjectStructureCommandKind.MarkUsed => "Mark used",
             _ => command.ToString()
         };

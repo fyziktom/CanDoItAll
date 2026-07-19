@@ -498,6 +498,25 @@
         "validation"
       ],
       "proofNotes": "Template-owned skill for the privileged managed HR agent."
+    },
+    {
+      "kind": "skill",
+      "key": "prompt-gallery-tools-inline-skill",
+      "displayName": "Prompt Gallery Tools Skill",
+      "description": "Guidance for finding and retrieving canonical reusable prompts and prompt parts with internal agent tools.",
+      "stableId": "skill:prompt-gallery-tools:v1",
+      "stableGuidKey": "capabilities/prompt-gallery-tools-inline-skill",
+      "endpointOrPath": "inline://prompt-gallery-tools",
+      "skillSource": "inline",
+      "inlineSkill": {
+        "name": "prompt-gallery-tools",
+        "description": "Find and retrieve canonical reusable prompts without creating a duplicate prompt catalog.",
+        "instructionsAssetKey": "skills/instructions/prompt-gallery-tools.md"
+      },
+      "operationClassifications": [
+        "read"
+      ],
+      "proofNotes": "Template-owned guidance for the read-only prompt_gallery_search and prompt_gallery_item_get runtime tools."
     }
   ]
 }

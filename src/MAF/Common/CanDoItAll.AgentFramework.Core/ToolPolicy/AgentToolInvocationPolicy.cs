@@ -2742,6 +2742,8 @@ public static class AgentToolInvocationPolicyMetadata
     public const string WorkflowsRunStatusGet = "workflows_run_status_get";
     public const string WorkflowsRunCancel = "workflows_run_cancel";
     public const string WorkflowsExternalResponseSubmit = "workflows_external_response_submit";
+    public const string PromptGallerySearch = "prompt_gallery_search";
+    public const string PromptGalleryItemGet = "prompt_gallery_item_get";
     public const string ImageGenerationCreate = "image_generation_create";
     public const string HrAgentsSearch = "hr_agents_search";
     public const string HrAgentSettingsGet = "hr_agent_settings_get";

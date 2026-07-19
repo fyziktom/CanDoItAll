@@ -43,7 +43,7 @@ public static class WorkbenchModuleServiceCollectionExtensions
         services.AddScoped<ProjectStructureProjectionMaintenanceService>();
         services.AddScoped<IProjectStructureProjectionContributor, ProjectHierarchyProjectionContributor>();
         services.AddScoped<IProjectStructureProjectionContributor, ProjectResourceProjectionContributor>();
-        services.AddScoped<IProjectStructureProjectionContributor, PromptFactoryProjectionContributor>();
+        services.AddScoped<IProjectStructureProjectionContributor, PromptGalleryProjectionContributor>();
         services.AddScoped<IProjectStructureProjectionContributor, TestPlanProjectionContributor>();
         services.AddScoped<IProjectStructureProjectionContributor, ProjectStructureProcessProjectionContributor>();
         services.AddScoped<ProjectWorkbenchService>();

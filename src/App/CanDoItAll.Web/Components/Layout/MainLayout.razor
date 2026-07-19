@@ -7,7 +7,6 @@
 @using CanDoItAll.Infrastructure.ControlPlane
 @using CanDoItAll.Infrastructure.Persistence
 @using CanDoItAll.Modules.Collaboration
-@using CanDoItAll.Modules.Factory
 @using CanDoItAll.Modules.AgentFramework.Pages.Components
 @using CanDoItAll.Modules.Projects
 @using CanDoItAll.Modules.Workbench
@@ -21,7 +20,6 @@
 @inject CollaborationService CollaborationService
 @inject DatabaseProfileWorkspaceService DatabaseProfileWorkspaceService
 @inject ProjectsService ProjectsService
-@inject PromptFactoryService PromptFactoryService
 @inject IAgentChatLauncher AgentChatLauncher
 @inject IJSRuntime JS
 
@@ -35,7 +33,7 @@
           Tabs="Workbench.Tabs"
           RecentTabs="Workbench.RecentTabs"
           OpenedProjects="OpenedProjectTabs"
-          OpenedSessions="OpenedPromptSessionTabs"
+          OpenedSessions="OpenedPromptTabs"
           ActiveTabId="@Workbench.ActiveTabId"
           ProjectContextTitle="@ActiveProjectTitle"
           PhaseContextTitle="@ActivePhaseTitle"
@@ -216,7 +214,7 @@
                           ActiveProjectTitle="@ActiveProjectTitle"
                           CurrentRouteDisplay="@CurrentRouteDisplay"
                           ActivePhaseTitle="@ActivePhaseTitle"
-                          OpenedItemCount="@(OpenedProjectTabs.Count + OpenedPromptSessionTabs.Count)"
+                          OpenedItemCount="@(OpenedProjectTabs.Count + OpenedPromptTabs.Count)"
                           TabCount="@Workbench.Tabs.Count" />
     </TopBar>
     <Body>

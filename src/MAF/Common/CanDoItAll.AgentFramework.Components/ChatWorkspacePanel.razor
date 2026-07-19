@@ -283,6 +283,7 @@
                                     class="chat-composer__textarea"
                                     data-testid="chat-prompt-input" />
                 <div class="chat-composer__tools">
+                    @ComposerActions
                     @if (AttachmentFilesSelected.HasDelegate)
                     {
                         <label for="@ResolveAttachmentInputId()"
@@ -458,6 +459,9 @@
 
     [Parameter]
     public RenderFragment? HeaderActions { get; set; }
+
+    [Parameter]
+    public RenderFragment? ComposerActions { get; set; }
 
     [Parameter]
     public bool CanUseVoiceMode { get; set; }

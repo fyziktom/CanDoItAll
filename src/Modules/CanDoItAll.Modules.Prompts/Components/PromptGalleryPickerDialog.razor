@@ -1,0 +1,98 @@
+@inject IPromptGalleryService Gallery
+@inject DialogService DialogService
+@inject NotificationService Notifications
+
+<PromptGallerySearchList Consumer="@Consumer"
+                         Provider="@Provider"
+                         Model="@Model"
+                         Compact="true"
+                         PageSize="@PageSize"
+                         AllowEdit="@EffectiveAllowEdit"
+                         SelectText="Insert"
+                         Selected="ResolveSelectionAsync"
+                         EditRequested="HandleEditRequestedAsync" />
+
+@code {
+    [Parameter]
+    public PromptGalleryConsumer Consumer { get; set; } = PromptGalleryConsumer.Chat;
+
+    [Parameter]
+    public string? Provider { get; set; }
+
+    [Parameter]
+    public string? Model { get; set; }
+
+    [Parameter]
+    public int PageSize { get; set; } = 15;
+
+    [Parameter]
+    public bool AllowEdit { get; set; } = true;
+
+    [Parameter]
+    public EventCallback<Guid> EditRequested { get; set; }
+
+    private bool EffectiveAllowEdit => AllowEdit && EditRequested.HasDelegate;
+
+    private async Task ResolveSelectionAsync(PromptGallerySearchItem item)
+    {
+        var detailsResult = await Gallery.GetItemAsync(item.Id);
+        if (!detailsResult.IsSuccess || detailsResult.Value is not { } details)
+        {
+            Notifications.Warning("Prompt item unavailable", DescribeErrors(detailsResult.Errors));
+            return;
+        }
+
+        PromptGallerySelection selection;
+        if (details.CurrentVersionNumber > 0)
+        {
+            var versionResult = await Gallery.GetVersionSnapshotAsync(details.Id, details.CurrentVersionNumber);
+            if (!versionResult.IsSuccess || versionResult.Value is not { } version)
+            {
+                Notifications.Warning("Prompt version unavailable", DescribeErrors(versionResult.Errors));
+                return;
+            }
+
+            selection = new PromptGallerySelection(
+                details.Id,
+                version.PromptVersionId,
+                version.VersionNumber,
+                version.Title,
+                version.Summary,
+                version.Kind,
+                version.Content,
+                details.Tags,
+                details.SupportedModels,
+                version.Recommendations);
+        }
+        else
+        {
+            selection = new PromptGallerySelection(
+                details.Id,
+                VersionId: null,
+                VersionNumber: null,
+                details.Title,
+                details.Summary,
+                details.Kind,
+                details.DraftContent,
+                details.Tags,
+                details.SupportedModels,
+                details.Recommendations);
+        }
+
+        await DialogService.CloseAsync(selection);
+    }
+
+    private async Task HandleEditRequestedAsync(Guid itemId)
+    {
+        await DialogService.CloseAsync();
+        if (EditRequested.HasDelegate)
+        {
+            await EditRequested.InvokeAsync(itemId);
+        }
+    }
+
+    private static string DescribeErrors(IReadOnlyList<CanDoItAll.SharedKernel.Error> errors)
+        => errors.Count == 0
+            ? "The prompt item could not be loaded."
+            : string.Join(" ", errors.Select(error => error.Message));
+}

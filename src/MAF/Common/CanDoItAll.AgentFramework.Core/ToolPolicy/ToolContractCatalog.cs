@@ -206,6 +206,8 @@ public static class ToolContractCatalog
         AgentToolInvocationPolicyMetadata.WorkflowsRunStatusGet,
         AgentToolInvocationPolicyMetadata.WorkflowsRunCancel,
         AgentToolInvocationPolicyMetadata.WorkflowsExternalResponseSubmit,
+        AgentToolInvocationPolicyMetadata.PromptGallerySearch,
+        AgentToolInvocationPolicyMetadata.PromptGalleryItemGet,
         AgentToolInvocationPolicyMetadata.ImageGenerationCreate,
         AgentToolInvocationPolicyMetadata.HrAgentsSearch,
         AgentToolInvocationPolicyMetadata.HrAgentSettingsGet,

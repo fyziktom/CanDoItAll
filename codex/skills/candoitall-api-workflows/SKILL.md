@@ -23,7 +23,7 @@ Use this skill when a task needs workflow authoring, lifecycle control, runtime 
 - Lifecycle: `POST /api/workflows/definitions/{workflowId}/publish`, `/suspend`, and `/archive`; pass `expectedVersionId` when coordinating concurrent edits.
 - Import/export: `GET /api/workflows/definitions/{workflowId}/export`, `POST /api/workflows/definitions/import`.
 - Validation: `POST /api/workflows/definitions/{workflowId}/validate` for saved definitions and `POST /api/workflows/validate` for drafts.
-- LLM components and providers: `GET /api/workflows/provider-options`, `GET /api/workflows/components`, `GET /api/workflows/components/{componentId}`, `POST /api/workflows/components`, `DELETE /api/workflows/components/{componentId}`.
+- LLM execution bindings and providers: `GET /api/workflows/provider-options`, `GET /api/workflows/components`, `GET /api/workflows/components/{componentId}`, `POST /api/workflows/components`, `DELETE /api/workflows/components/{componentId}`. Reusable prompt content is canonical in `/api/prompt-gallery`; workflow components retain provider/model/runtime settings plus an immutable Gallery item/version reference and prompt snapshot.
 
 ## Runtime Work
 
@@ -78,6 +78,7 @@ Use `sourceProcessRunId` and `sourceProcessAssignmentId` when the workflow run i
 - Read `GET /api/workflows/contract` before building clients or smoke tests; use OpenAPI for full schema detail.
 - Prefer explicit lifecycle endpoints over resubmitting a full definition only to change status.
 - Use import/export envelopes for portable workflow definition movement; do not hand-copy internal persistence records.
+- Search and version reusable instructions through the Prompt Gallery API. Treat workflow component endpoints as execution-binding compatibility endpoints, not a second prompt library.
 - Use `expectedVersionId` for lifecycle commands when another agent or UI may be editing the same definition.
 - For long or active runs, prefer paged run and event routes before fetching full run detail.
 - After responding to a pending external request, read back `/runs/{runId}/detail` and `/events` to confirm the state transition.

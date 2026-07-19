@@ -294,6 +294,8 @@ public static class ToolCapabilityRegistry
                 AgentToolInvocationPolicyMetadata.WorkflowsExternalResponseSubmit,
                 ToolCapabilitySideEffectKind.RuntimeLaunch,
                 StaticRequirement(ProcessOperationContractNames.ExecuteExternalAction)),
+            Read(AgentToolInvocationPolicyMetadata.PromptGallerySearch, ToolCapabilitySideEffectKind.InternalDataRead),
+            Read(AgentToolInvocationPolicyMetadata.PromptGalleryItemGet, ToolCapabilitySideEffectKind.InternalDataRead),
             Mutation(AgentToolInvocationPolicyMetadata.ImageGenerationCreate, ToolCapabilitySideEffectKind.MediaGeneration, StaticRequirement(ProcessOperationContractNames.ExecuteExternalAction)),
             Read(AgentToolInvocationPolicyMetadata.HrAgentsSearch, ToolCapabilitySideEffectKind.InternalDataRead),
             Read(AgentToolInvocationPolicyMetadata.HrAgentSettingsGet, ToolCapabilitySideEffectKind.InternalDataRead),

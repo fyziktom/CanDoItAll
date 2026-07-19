@@ -435,7 +435,12 @@ public sealed record LlmCallComponent(
     WorkflowValueShape ResultShape,
     AgentPermissionsPolicy Permissions,
     DateTimeOffset CreatedAtUtc,
-    DateTimeOffset UpdatedAtUtc);
+    DateTimeOffset UpdatedAtUtc)
+{
+    public Guid? PromptArtifactId { get; init; }
+
+    public Guid? PromptVersionId { get; init; }
+}
 
 public sealed record WorkflowNodeSettings(
     WorkflowComponentId? ComponentId,

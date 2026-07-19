@@ -100,7 +100,12 @@ public sealed record LlmCallComponentSaveRequest(
     string Instructions,
     WorkflowValueShape InputShape,
     WorkflowValueShape ResultShape,
-    AgentPermissionsPolicy Permissions);
+    AgentPermissionsPolicy Permissions)
+{
+    public Guid? PromptArtifactId { get; init; }
+
+    public Guid? PromptVersionId { get; init; }
+}
 
 public sealed record WorkflowProviderOption(
     Guid ProviderProfileId,

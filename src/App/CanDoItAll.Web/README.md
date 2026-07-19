@@ -27,7 +27,6 @@ Project references:
 - `../CanDoItAll.Migrations.PostgreSql/CanDoItAll.Migrations.PostgreSql.csproj`
 - `../CanDoItAll.Modules.AgentFramework/CanDoItAll.Modules.AgentFramework.csproj`
 - `../CanDoItAll.Modules.Collaboration/CanDoItAll.Modules.Collaboration.csproj`
-- `../CanDoItAll.Modules.Factory/CanDoItAll.Modules.Factory.csproj`
 - `../CanDoItAll.Modules.Projects/CanDoItAll.Modules.Projects.csproj`
 - `../CanDoItAll.Modules.Processes/CanDoItAll.Modules.Processes.csproj`
 - `../CanDoItAll.Modules.Prompts/CanDoItAll.Modules.Prompts.csproj`
@@ -52,6 +51,8 @@ Direct package references:
 The web host should orchestrate startup, endpoint mapping, and Blazor rendering. Keep non-trivial product behavior in modules or application services.
 
 Development and Visual Studio `http`/`https` launch profiles are PostgreSQL-first. They target `127.0.0.1:5432/candoitall_development` with `candoitall/candoitall` credentials and keep development workspace/control-plane files under `%LOCALAPPDATA%\CanDoItAll`. Use `tools/dev/Ensure-DevelopmentPostgres.ps1` to prepare native PostgreSQL, or `docker compose up -d postgres qdrant` for the repo-managed containers.
+
+The checked-in API configuration is intended for a trusted local host and leaves bearer authorization disabled. Any remotely reachable deployment must enable `Api:Authorization:Enabled` and supply a secret signing key of at least 32 bytes before exposing Prompt Gallery or other mutation endpoints.
 
 ## Related Docs
 

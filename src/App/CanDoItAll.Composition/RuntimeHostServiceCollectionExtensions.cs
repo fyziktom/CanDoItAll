@@ -9,7 +9,6 @@ using CanDoItAll.Composition.Memory;
 using CanDoItAll.Modules.AgentFramework;
 using CanDoItAll.Modules.Collaboration;
 using CanDoItAll.Modules.CrmHr;
-using CanDoItAll.Modules.Factory;
 using CanDoItAll.Modules.Plugins;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Processes;
@@ -22,6 +21,7 @@ using CanDoItAll.Modules.Workbench;
 using CanDoItAll.Modules.Workspace;
 using CanDoItAll.SharedKernel;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -54,7 +54,6 @@ public static class RuntimeHostServiceCollectionExtensions
         services.AddWorkbenchModule();
         services.AddResourcesModule();
         services.AddPromptsModule();
-        services.AddFactoryModule();
         services.AddPluginsModule(configuration, contentRootPath);
         services.AddCanDoItAllGmailPlugin();
         services.AddCanDoItAllOffice365Plugin();
@@ -117,77 +116,20 @@ public sealed class AppDatabaseBootstrapper(
     private static readonly Guid DefaultOpenAiApiKeySecretId = Guid.Parse("86F781F1-1E76-4B45-9F1A-42B8CF13D8C7");
     private const string DefaultOpenAiApiKeySecretName = "OpenAI API key";
     private const string InitialPostgreSqlBaselineMigrationId = "20260528182412_InitialPostgreSqlBaseline";
-    private const string WorkflowCheckpointsMigrationId = "20260529111314_AddWorkflowCheckpoints";
-    private const string SchedulerRunObservabilityMigrationId = "20260529220032_AddSchedulerRunObservability";
-    private const string DisableCognitiveMemoryByDefaultMigrationId = "20260603113251_DisableCognitiveMemoryByDefault";
-    private const string ProcessVerificationAuditRecordsMigrationId = "20260610113813_AddProcessVerificationAuditRecords";
-    private const string SubprocessChildArtifactMappingMigrationId = "20260612173521_PersistSubprocessChildArtifactMapping";
-    private const string WorkspaceCurrencySettingsMigrationId = "20260612222259_AddWorkspaceCurrencySettings";
-    private const string ProcessModuleArchitectureV3RuntimePersistenceMigrationId = "20260615235147_ProcessModuleArchitectureV3RuntimePersistence";
-    private const string ProcessV3RuntimeTablesMigrationId = "20260616144322_ProcessV3RuntimeTables";
-    private const string ProcessRuntimeAssignmentOperationContractsMigrationId = "20260616155920_ProcessRuntimeAssignmentOperationContracts";
-    private const string ProcessRuntimeAssignmentLaunchVariablesMigrationId = "20260616162335_ProcessRuntimeAssignmentLaunchVariables";
-    private const string ProcessRuntimeEventGlobalSequenceIdentityRepairMigrationId = "20260617131500_ProcessRuntimeEventGlobalSequenceIdentityRepair";
-    private const string ProcessRuntimeAssignmentRoleIdentityMigrationId = "20260618103000_ProcessRuntimeAssignmentRoleIdentity";
-    private const string RemoveUnusedValidationActivityAutomationModulesMigrationId = "20260621212712_RemoveUnusedValidationActivityAutomationModules";
-    private const string GenericMemoryProviderRuntimeMigrationId = "20260705163628_GenericMemoryProviderRuntime";
-    private const string RetireLegacyCognitiveMemoryMainDbModelMigrationId = "20260706015654_RetireLegacyCognitiveMemoryMainDbModel";
-    private const string IncludeCognitiveMemoryModuleModelMigrationId = "20260707110549_IncludeCognitiveMemoryModuleModel";
-    private const string ProcessRuntimeAssignmentCapabilityScopeMigrationId = "20260707134848_ProcessRuntimeAssignmentCapabilityScope";
-    private const string ProcessStrategyResultReceiptLineageMigrationId = "20260707195705_ProcessStrategyResultReceiptLineage";
-    private const string ProcessRuntimeInputArtifactContractsMigrationId = "20260707222506_ProcessRuntimeInputArtifactContracts";
-    private static readonly string[] CurrentPostgreSqlMigrationIds =
-    [
-        InitialPostgreSqlBaselineMigrationId,
-        WorkflowCheckpointsMigrationId,
-        SchedulerRunObservabilityMigrationId,
-        DisableCognitiveMemoryByDefaultMigrationId,
-        ProcessVerificationAuditRecordsMigrationId,
-        SubprocessChildArtifactMappingMigrationId,
-        WorkspaceCurrencySettingsMigrationId,
-        ProcessModuleArchitectureV3RuntimePersistenceMigrationId,
-        ProcessV3RuntimeTablesMigrationId,
-        ProcessRuntimeAssignmentOperationContractsMigrationId,
-        ProcessRuntimeAssignmentLaunchVariablesMigrationId,
-        ProcessRuntimeEventGlobalSequenceIdentityRepairMigrationId,
-        ProcessRuntimeAssignmentRoleIdentityMigrationId,
-        RemoveUnusedValidationActivityAutomationModulesMigrationId,
-        GenericMemoryProviderRuntimeMigrationId,
-        RetireLegacyCognitiveMemoryMainDbModelMigrationId,
-        IncludeCognitiveMemoryModuleModelMigrationId,
-        ProcessRuntimeAssignmentCapabilityScopeMigrationId,
-        ProcessStrategyResultReceiptLineageMigrationId,
-        ProcessRuntimeInputArtifactContractsMigrationId
-    ];
     private static readonly string[] BaselineSentinelTables =
     [
         "Projects_Projects",
         "Workspace_ProviderProfiles"
     ];
-    private static readonly PostgreSqlColumnRequirement[] MergedBaselineColumnRequirements =
+    private static readonly string[] RetiredLegacyPromptTables =
     [
-        new("process_runtime_step_assignments", ["CapabilityScopeJson"]),
-        new("process_strategy_result_receipts", ["DiagnosticsJson", "ProducedArtifactsJson", "RecoveryDecisionJson"]),
-        new("process_runtime_steps", ["ProducedArtifactSlotIds", "RequiredRuntimeToolNamesJson"]),
-        new("process_runtime_input_artifacts", [
-            "RunId",
-            "ConsumerStepInstanceId",
-            "RequiredSlotId",
-            "ConnectionHash",
-            "Availability",
-            "ProducerStepInstanceId",
-            "ArtifactId",
-            "ContentHash"
-        ])
+        "Factory_PromptBlocks",
+        "Factory_PromptBlueprints",
+        "Factory_PromptBuildSessions",
+        "Factory_PromptFlowTemplates",
+        "Factory_PromptRunNodes",
+        "Factory_PromptRuns"
     ];
-    private static readonly string[] MergedBaselineIndexRequirements =
-    [
-        "IX_process_runtime_input_artifacts_RunId_ConsumerStepInstanceI~",
-        "IX_process_runtime_input_artifacts_RunId_ProducerStepInstanceId",
-        "IX_process_runtime_input_artifacts_RunId_RequiredSlotId"
-    ];
-
-    private readonly record struct PostgreSqlColumnRequirement(string TableName, string[] ColumnNames);
 
     public Task EnsureCurrentProfileReadyAsync(CancellationToken cancellationToken = default)
     {
@@ -252,6 +194,7 @@ public sealed class AppDatabaseBootstrapper(
 
         var appliedMigrations = (await dbContext.Database.GetAppliedMigrationsAsync(cancellationToken))
             .ToHashSet(StringComparer.Ordinal);
+        var knownMigrationIds = dbContext.Database.GetMigrations().ToArray();
 
         if (appliedMigrations.Contains(InitialPostgreSqlBaselineMigrationId)) {
             return;
@@ -276,16 +219,16 @@ public sealed class AppDatabaseBootstrapper(
         var missingRequirements = await FindMissingPostgreSqlMergedBaselineRequirementsAsync(dbContext, cancellationToken);
         if (missingRequirements.Count > 0) {
             throw new InvalidOperationException(
-                $"PostgreSQL profile '{profile.Profile.DisplayName}' has CanDoItAll tables but does not match the current PostgreSQL migration chain. Missing schema requirements: {string.Join(", ", missingRequirements)}. Refusing to record migrations {string.Join(", ", CurrentPostgreSqlMigrationIds)} automatically.");
+                $"PostgreSQL profile '{profile.Profile.DisplayName}' has CanDoItAll tables but does not match the current PostgreSQL migration chain. Missing schema requirements: {string.Join(", ", missingRequirements)}. Refusing to record migrations {string.Join(", ", knownMigrationIds)} automatically.");
         }
 
         logger.LogWarning(
             "PostgreSQL profile {ProfileId} has an existing current CanDoItAll schema but no recorded EF migration history. Recording current migration chain {MigrationIds} before applying pending migrations.",
             profile.Profile.Id,
-            string.Join(", ", CurrentPostgreSqlMigrationIds));
+            string.Join(", ", knownMigrationIds));
 
         await EnsurePostgreSqlMigrationHistoryTableAsync(dbContext, cancellationToken);
-        foreach (var migrationId in CurrentPostgreSqlMigrationIds) {
+        foreach (var migrationId in knownMigrationIds) {
             if (!appliedMigrations.Contains(migrationId)) {
                 await MarkPostgreSqlMigrationAppliedAsync(dbContext, migrationId, cancellationToken);
             }
@@ -317,76 +260,146 @@ public sealed class AppDatabaseBootstrapper(
         CancellationToken cancellationToken) {
         var missingRequirements = new List<string>();
 
-        var modelTableNames = dbContext.Model.GetEntityTypes()
-            .Select(entityType => entityType.GetTableName())
+        var expectedSchema = BuildExpectedPostgreSqlSchema(dbContext);
+        var actualSchema = await ReadPostgreSqlSchemaAsync(dbContext, cancellationToken);
+        foreach (var (tableName, expectedColumns) in expectedSchema) {
+            if (!actualSchema.TryGetValue(tableName, out var actualColumns)) {
+                missingRequirements.Add($"table {tableName}");
+                continue;
+            }
+
+            foreach (var columnName in expectedColumns.Where(column => !actualColumns.Contains(column))) {
+                missingRequirements.Add($"column {tableName}.{columnName}");
+            }
+        }
+
+        foreach (var retiredTable in RetiredLegacyPromptTables.Where(actualSchema.ContainsKey))
+        {
+            missingRequirements.Add($"retired table {retiredTable}");
+        }
+
+        var expectedIndexNames = dbContext.Model.GetEntityTypes()
+            .SelectMany(entityType => entityType.GetIndexes())
+            .Select(index => index.GetDatabaseName())
             .OfType<string>()
             .Distinct(StringComparer.Ordinal)
-            .OrderBy(tableName => tableName, StringComparer.Ordinal);
-
-        foreach (var tableName in modelTableNames) {
-            if (!await PostgreSqlTableExistsAsync(dbContext, tableName, cancellationToken)) {
-                missingRequirements.Add($"table {tableName}");
-            }
+            .OrderBy(indexName => indexName, StringComparer.Ordinal);
+        var actualIndexNames = await ReadPostgreSqlIndexNamesAsync(dbContext, cancellationToken);
+        foreach (var indexName in expectedIndexNames.Where(indexName => !actualIndexNames.Contains(indexName))) {
+            missingRequirements.Add($"index {indexName}");
         }
 
-        foreach (var requirement in MergedBaselineColumnRequirements) {
-            foreach (var columnName in requirement.ColumnNames) {
-                if (!await PostgreSqlColumnExistsAsync(dbContext, requirement.TableName, columnName, cancellationToken)) {
-                    missingRequirements.Add($"column {requirement.TableName}.{columnName}");
-                }
-            }
-        }
-
-        foreach (var indexName in MergedBaselineIndexRequirements) {
-            if (!await PostgreSqlIndexExistsAsync(dbContext, indexName, cancellationToken)) {
-                missingRequirements.Add($"index {indexName}");
-            }
+        if (await HasIncompletePromptGallerySearchBackfillAsync(dbContext, cancellationToken))
+        {
+            missingRequirements.Add("Prompt Gallery normalized search backfill");
         }
 
         return missingRequirements;
     }
 
-    private static async Task<bool> PostgreSqlColumnExistsAsync(
+    private static async Task<bool> HasIncompletePromptGallerySearchBackfillAsync(
         AppDbContext dbContext,
-        string tableName,
-        string columnName,
-        CancellationToken cancellationToken) {
+        CancellationToken cancellationToken)
+    {
         var result = await ExecutePostgreSqlScalarAsync(
             dbContext,
             """
             SELECT EXISTS (
                 SELECT 1
-                FROM information_schema.columns
-                WHERE table_schema = current_schema()
-                  AND table_name = @tableName
-                  AND column_name = @columnName
+                FROM "Prompts_PromptTags"
+                WHERE BTRIM("NameKey") = ''
+            ) OR EXISTS (
+                SELECT 1
+                FROM "Prompts_PromptArtifacts"
+                WHERE BTRIM("SearchText") = ''
             );
             """,
-            cancellationToken,
-            ("@tableName", tableName),
-            ("@columnName", columnName));
-
+            cancellationToken);
         return result is true;
     }
 
-    private static async Task<bool> PostgreSqlIndexExistsAsync(
+    private static Dictionary<string, HashSet<string>> BuildExpectedPostgreSqlSchema(AppDbContext dbContext)
+    {
+        var expectedSchema = new Dictionary<string, HashSet<string>>(StringComparer.Ordinal);
+        foreach (var entityType in dbContext.Model.GetEntityTypes())
+        {
+            var tableName = entityType.GetTableName();
+            if (string.IsNullOrWhiteSpace(tableName))
+            {
+                continue;
+            }
+
+            if (!expectedSchema.TryGetValue(tableName, out var columns))
+            {
+                columns = new HashSet<string>(StringComparer.Ordinal);
+                expectedSchema[tableName] = columns;
+            }
+
+            var storeObject = StoreObjectIdentifier.Table(tableName, entityType.GetSchema());
+            foreach (var property in entityType.GetProperties())
+            {
+                var columnName = property.GetColumnName(storeObject);
+                if (!string.IsNullOrWhiteSpace(columnName))
+                {
+                    columns.Add(columnName);
+                }
+            }
+        }
+
+        return expectedSchema;
+    }
+
+    private static async Task<Dictionary<string, HashSet<string>>> ReadPostgreSqlSchemaAsync(
         AppDbContext dbContext,
-        string indexName,
-        CancellationToken cancellationToken) {
-        var result = await ExecutePostgreSqlScalarAsync(
+        CancellationToken cancellationToken)
+    {
+        var schema = new Dictionary<string, HashSet<string>>(StringComparer.Ordinal);
+        await ExecutePostgreSqlReaderAsync(
             dbContext,
             """
-            SELECT EXISTS (
-                SELECT 1
-                FROM pg_indexes
-                WHERE schemaname = current_schema()
-                  AND indexname = @indexName
-            );
+            SELECT table_name, column_name
+            FROM information_schema.columns
+            WHERE table_schema = current_schema();
             """,
-            cancellationToken,
-            ("@indexName", indexName));
+            async reader =>
+            {
+                while (await reader.ReadAsync(cancellationToken))
+                {
+                    var tableName = reader.GetString(0);
+                    if (!schema.TryGetValue(tableName, out var columns))
+                    {
+                        columns = new HashSet<string>(StringComparer.Ordinal);
+                        schema[tableName] = columns;
+                    }
 
-        return result is true;
+                    columns.Add(reader.GetString(1));
+                }
+            },
+            cancellationToken);
+        return schema;
+    }
+
+    private static async Task<HashSet<string>> ReadPostgreSqlIndexNamesAsync(
+        AppDbContext dbContext,
+        CancellationToken cancellationToken)
+    {
+        var indexNames = new HashSet<string>(StringComparer.Ordinal);
+        await ExecutePostgreSqlReaderAsync(
+            dbContext,
+            """
+            SELECT indexname
+            FROM pg_indexes
+            WHERE schemaname = current_schema();
+            """,
+            async reader =>
+            {
+                while (await reader.ReadAsync(cancellationToken))
+                {
+                    indexNames.Add(reader.GetString(0));
+                }
+            },
+            cancellationToken);
+        return indexNames;
     }
 
     private static Task EnsurePostgreSqlMigrationHistoryTableAsync(
@@ -447,6 +460,34 @@ public sealed class AppDatabaseBootstrapper(
         }
         finally {
             if (shouldClose) {
+                await connection.CloseAsync();
+            }
+        }
+    }
+
+    private static async Task ExecutePostgreSqlReaderAsync(
+        AppDbContext dbContext,
+        string commandText,
+        Func<DbDataReader, Task> readAsync,
+        CancellationToken cancellationToken)
+    {
+        var connection = dbContext.Database.GetDbConnection();
+        var shouldClose = connection.State != ConnectionState.Open;
+        if (shouldClose)
+        {
+            await connection.OpenAsync(cancellationToken);
+        }
+
+        try
+        {
+            await using var command = CreateCommand(connection, commandText);
+            await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+            await readAsync(reader);
+        }
+        finally
+        {
+            if (shouldClose)
+            {
                 await connection.CloseAsync();
             }
         }

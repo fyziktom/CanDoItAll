@@ -269,7 +269,7 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
                 AIFunctionFactory.Create(
                     (Guid projectId, string nodeId, ProjectStructureNodeCommandInput request, int? estimatedMinutes = null, CancellationToken cancellationToken = default) => ProjectStructureNodeCommandExecuteAsync(agent, accessState, projectId, nodeId, request, estimatedMinutes, cancellationToken),
                     "project_structure_node_command_execute",
-                    "Executes a supported project-structure node command such as Open, Wizard, Branch, Test, Skip, or MarkUsed and returns the resulting artifact reference."),
+                    "Executes a supported project-structure node command such as Open, Wizard, or Test and returns the resulting artifact reference."),
                 AIFunctionFactory.Create(
                     (Guid projectId, string nodeId, ProjectStructureProcessDefinitionLinkInput request, int? estimatedMinutes = null, CancellationToken cancellationToken = default) => ProjectStructureNodeProcessDefinitionLinkAsync(agent, accessState, projectId, nodeId, request, estimatedMinutes, cancellationToken),
                     "project_structure_node_process_definition_link",

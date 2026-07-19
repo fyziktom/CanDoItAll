@@ -3,6 +3,8 @@
 @using CanDoItAll.Components.CanvasLib
 @using CanDoItAll.Components.OverlayLib
 @using CanDoItAll.Modules.AgentFramework.Pages
+@using CanDoItAll.Modules.Prompts
+@using CanDoItAll.Modules.Prompts.Components
 @using CanDoItAll.Modules.Workspace.Pages.Components
 
 <div class="workflow-canvas-editor-shell">
@@ -170,11 +172,15 @@
                                     <TextBlock TextStyle="TextStyle.Eyebrow" Value="LLM components" />
                                     <h3 class="workflow-canvas-panel-title">Prepared calls</h3>
                                 </div>
-                                <Button Text="Create"
-                                        Size="ButtonSize.Small"
-                                        Click="CreateDefaultComponentAsync"
-                                        Disabled="@isBusy"
-                                        data-testid="workflow-canvas-create-component" />
+                                <PromptGalleryPickerButton Text="Browse gallery"
+                                                           Icon="library_books"
+                                                           Size="ButtonSize.Small"
+                                                           Consumer="PromptGalleryConsumer.Workflow"
+                                                           Provider="@ResolvePromptPickerProvider(node: null)"
+                                                           Model="@ResolvePromptPickerModel(node: null)"
+                                                           AllowEdit="true"
+                                                           Selected="HandlePromptGallerySelectionForNewNodeAsync"
+                                                           EditRequested="OpenPromptGalleryItemEditor" />
                             </Split>
                             <p class="workflows-muted mt-3"
                                data-testid="workflow-canvas-provider-options">@BuildProviderOptionsSummary()</p>
@@ -216,8 +222,8 @@
                             @if (componentOptions.Count == 0)
                             {
                                 <EmptyState Eyebrow="No components"
-                                            Title="Create an LLM component"
-                                            Description="Prepared calls carry provider, model, modality, model settings, instructions, and result shape." />
+                                            Title="Select a Gallery prompt"
+                                            Description="The Gallery provides canonical prompt content; prepared calls retain provider, model, execution settings, and an immutable prompt snapshot." />
                             }
                             else
                             {
@@ -338,6 +344,15 @@
                                     }
                                 </select>
                             </label>
+                            <PromptGalleryPickerButton Text="Browse prompt gallery"
+                                                       Icon="library_books"
+                                                       Size="ButtonSize.Small"
+                                                       Consumer="PromptGalleryConsumer.Workflow"
+                                                       Provider="@ResolvePromptPickerProvider(selected)"
+                                                       Model="@ResolvePromptPickerModel(selected)"
+                                                       AllowEdit="true"
+                                                       Selected="@(selection => HandlePromptGallerySelectionForNodeAsync(selection, selected))"
+                                                       EditRequested="OpenPromptGalleryItemEditor" />
                             <div class="workflow-canvas-executor-summary" data-testid="workflow-canvas-llm-usage-summary">
                                 <div class="workflow-canvas-executor-summary__badges">
                                     <StatusBadge Tone="@providerUsageBadge.Tone"
@@ -989,6 +1004,15 @@
                                     }
                                 </select>
                             </label>
+                            <PromptGalleryPickerButton Text="Browse prompt gallery"
+                                                       Icon="library_books"
+                                                       Size="ButtonSize.Small"
+                                                       Consumer="PromptGalleryConsumer.Workflow"
+                                                       Provider="@ResolvePromptPickerProvider(modalNode)"
+                                                       Model="@ResolvePromptPickerModel(modalNode)"
+                                                       AllowEdit="true"
+                                                       Selected="@(selection => HandlePromptGallerySelectionForNodeAsync(selection, modalNode))"
+                                                       EditRequested="OpenPromptGalleryItemEditor" />
                             <div class="workflow-canvas-executor-summary" data-testid="workflow-canvas-node-modal-llm-usage-summary">
                                 <div class="workflow-canvas-executor-summary__badges">
                                     <StatusBadge Tone="@providerUsageBadge.Tone"

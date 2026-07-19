@@ -278,31 +278,6 @@ public partial class MainLayout
                 IsPinned: false);
         }
 
-        if (string.Equals(path, "/prompt-factory", StringComparison.OrdinalIgnoreCase) &&
-            (TryReadGuid(query, "sessionId", out var sessionId) || TryReadGuid(query, "runId", out sessionId)))
-        {
-            var editor = await PromptFactoryService.GetEditorAsync(
-                query.ContainsKey("sessionId") ? sessionId : null,
-                query.ContainsKey("runId") ? sessionId : null);
-            var project = editor.ProjectId.HasValue ? await ProjectsService.GetAsync(editor.ProjectId.Value) : null;
-            var sessionLabel = string.IsNullOrWhiteSpace(editor.Phase) ? "Prompt Session" : $"Prompt Session · {editor.Phase}";
-            return new WorkbenchTabDescriptor(
-                $"prompt-session:{sessionId:N}",
-                sessionLabel,
-                route,
-                WorkbenchTabKinds.PromptWizardSession,
-                ProjectId: editor.ProjectId,
-                ArtifactId: sessionId,
-                ArtifactKind: "prompt-session",
-                ArtifactKey: $"prompt-session:{sessionId:N}",
-                RestoreKey: $"prompt-session:{sessionId:N}",
-                ProjectScope: editor.ProjectId?.ToString(),
-                ProjectName: project?.Name,
-                PhaseName: editor.Phase,
-                Description: "Prompt wizard session with branchable flow state.",
-                TabGroup: "Prompt Sessions");
-        }
-
         if (string.Equals(path, "/test-lab", StringComparison.OrdinalIgnoreCase) &&
             TryReadGuid(query, "planId", out var testPlanId))
         {
@@ -332,7 +307,7 @@ public partial class MainLayout
                 ArtifactKey: $"prompt:{promptId:N}",
                 RestoreKey: $"prompt:{promptId:N}",
                 Description: "Prompt detail artifact.",
-                TabGroup: "Prompt Sessions");
+                TabGroup: "Prompt Gallery");
         }
 
         return BuildPageDescriptor(path, route);

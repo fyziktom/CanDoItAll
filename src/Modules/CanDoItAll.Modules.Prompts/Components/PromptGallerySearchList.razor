@@ -1,0 +1,505 @@
+@implements IAsyncDisposable
+@inject IPromptGalleryService Gallery
+@inject NotificationService Notifications
+
+<Stack GapScale="LayoutGap.Medium"
+       Class="prompt-gallery-search-list"
+       data-testid="prompt-gallery-search-list">
+    <FilterBar ResultText="@ResultText">
+        <TextBox Value="@searchText"
+                 ValueChanged="HandleSearchChangedAsync"
+                 Placeholder="Search names, prompt text, or tags"
+                 Immediate="true"
+                 Class="min-w-[20rem] flex-1"
+                 aria-label="Search prompt gallery"
+                 data-testid="prompt-gallery-search" />
+        <InputSelect TValue="PromptGalleryItemKind?"
+                     Value="@kind"
+                     ValueChanged="HandleKindChangedAsync"
+                     ValueExpression="@(() => kind)"
+                     class="cda-input min-w-[10rem]"
+                     aria-label="Prompt kind"
+                     data-testid="prompt-gallery-kind-filter">
+            <option value="">All kinds</option>
+            @foreach (var option in Enum.GetValues<PromptGalleryItemKind>())
+            {
+                <option value="@option">@FormatKind(option)</option>
+            }
+        </InputSelect>
+        <InputSelect TValue="PromptArtifactStatus?"
+                     Value="@status"
+                     ValueChanged="HandleStatusChangedAsync"
+                     ValueExpression="@(() => status)"
+                     class="cda-input min-w-[10rem]"
+                     aria-label="Prompt status"
+                     data-testid="prompt-gallery-status-filter">
+            <option value="">All statuses</option>
+            @foreach (var option in Enum.GetValues<PromptArtifactStatus>())
+            {
+                <option value="@option">@option</option>
+            }
+        </InputSelect>
+        <Button Text="Clear"
+                Icon="filter_alt_off"
+                ButtonStyle="ButtonStyle.Light"
+                Size="ButtonSize.Small"
+                Click="ClearFiltersAsync"
+                data-testid="prompt-gallery-clear-filters" />
+    </FilterBar>
+
+    <TagEditor Value="@tagFilters"
+               ValueChanged="HandleTagsChangedAsync"
+               Suggestions="@availableTags"
+               Placeholder="Filter by tags"
+               MaxTags="20"
+               TestId="prompt-gallery-tag-filter"
+               InputTestId="prompt-gallery-tag-filter-input" />
+
+    @if (!Compact)
+    {
+        <Grid Gap="LayoutGap.Medium" ColumnsXl="3">
+            <FormField Text="Supported provider">
+                <TextBox Value="@providerFilter"
+                         ValueChanged="HandleProviderFilterChangedAsync"
+                         Placeholder="Any provider"
+                         Immediate="true"
+                         aria-label="Filter by supported provider" />
+            </FormField>
+            <FormField Text="Supported model">
+                <TextBox Value="@modelFilter"
+                         ValueChanged="HandleModelFilterChangedAsync"
+                         Placeholder="Any model"
+                         Immediate="true"
+                         aria-label="Filter by supported model" />
+            </FormField>
+            <Cluster AlignItems="AlignItems.Center">
+                <label class="prompt-gallery-search-list__choice">
+                    <CheckBox TValue="bool"
+                              Value="@includeArchived"
+                              ValueChanged="HandleIncludeArchivedChangedAsync"
+                              aria-label="Include archived prompt items" />
+                    <span>Include archived items</span>
+                </label>
+            </Cluster>
+        </Grid>
+    }
+
+    @if (!string.IsNullOrWhiteSpace(Provider) || !string.IsNullOrWhiteSpace(Model))
+    {
+        <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
+            <TextBlock TextStyle="TextStyle.Eyebrow" Value="Compatibility filter" />
+            @if (!string.IsNullOrWhiteSpace(Provider))
+            {
+                <StatusBadge Tone="info" Text="@Provider" />
+            }
+            @if (!string.IsNullOrWhiteSpace(Model))
+            {
+                <StatusBadge Tone="accent" Text="@Model" />
+            }
+        </Cluster>
+    }
+
+    @if (isLoading)
+    {
+        <LoadingState Eyebrow="Prompt gallery"
+                      Title="Searching reusable prompts"
+                      Description="Loading the requested page from the configured search driver." />
+    }
+    else if (!string.IsNullOrWhiteSpace(loadError))
+    {
+        <EmptyState Eyebrow="Gallery unavailable"
+                    Title="Prompt items could not be loaded"
+                    Description="@loadError">
+            <Actions>
+                <Button Text="Retry" Icon="refresh" Click="ReloadAsync" />
+            </Actions>
+        </EmptyState>
+    }
+    else if (page.Items.Count == 0)
+    {
+        <EmptyState Eyebrow="No matches"
+                    Title="No prompt items match these filters"
+                    Description="Clear one or more filters or create a new gallery item." />
+    }
+    else
+    {
+        <DataGrid TItem="PromptGallerySearchItem"
+                  Data="@(page.Items)"
+                  AllowPaging="false"
+                  data-testid="prompt-gallery-grid">
+            <Columns>
+                <DataGridColumn TItem="PromptGallerySearchItem" Title="Prompt item">
+                    <Template Context="item">
+                        <Stack GapScale="LayoutGap.Tiny" Class="prompt-gallery-search-list__identity">
+                            <TextBlock Value="@item.Title" />
+                            <TextBlock Value="@Excerpt(item)" />
+                        </Stack>
+                    </Template>
+                </DataGridColumn>
+                <DataGridColumn TItem="PromptGallerySearchItem" Title="Kind / status">
+                    <Template Context="item">
+                        <Cluster Gap="LayoutGap.Tiny" Wrap="FlexWrap.Wrap">
+                            <StatusBadge Tone="accent" Text="@FormatKind(item.Kind)" NoWrap="true" />
+                            <StatusBadge Tone="@StatusTone(item)" Text="@StatusLabel(item)" NoWrap="true" />
+                            @if (item.CurrentVersionNumber > 0)
+                            {
+                                <StatusBadge Tone="neutral" Text="@($"v{item.CurrentVersionNumber}")" NoWrap="true" />
+                            }
+                        </Cluster>
+                    </Template>
+                </DataGridColumn>
+                <DataGridColumn TItem="PromptGallerySearchItem" Title="Tags">
+                    <Template Context="item">
+                        <Cluster Gap="LayoutGap.Tiny" Wrap="FlexWrap.Wrap">
+                            @foreach (var tag in item.Tags.Take(5))
+                            {
+                                <StatusBadge Tone="neutral" Text="@tag" NoWrap="true" />
+                            }
+                            @if (item.Tags.Count > 5)
+                            {
+                                <StatusBadge Tone="info" Text="@($"+{item.Tags.Count - 5}")" NoWrap="true" />
+                            }
+                        </Cluster>
+                    </Template>
+                </DataGridColumn>
+                @if (!Compact)
+                {
+                    <DataGridColumn TItem="PromptGallerySearchItem" Title="Model guidance">
+                        <Template Context="item">
+                            <Stack GapScale="LayoutGap.Tiny">
+                                <TextBlock Value="@ModelSummary(item)" />
+                                <TextBlock Value="@RecommendationSummary(item.Recommendations)" />
+                            </Stack>
+                        </Template>
+                    </DataGridColumn>
+                }
+                <DataGridColumn TItem="PromptGallerySearchItem" Title="Actions">
+                    <Template Context="item">
+                        <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.NoWrap">
+                            @if (ShowSelectAction)
+                            {
+                                <Button Text="@SelectText"
+                                        Icon="add_circle"
+                                        Size="ButtonSize.Small"
+                                        Click="@(() => SelectAsync(item))"
+                                        data-testid="prompt-gallery-select" />
+                            }
+                            @if (AllowEdit)
+                            {
+                                <Button Text="Details"
+                                        Icon="edit"
+                                        ButtonStyle="ButtonStyle.Light"
+                                        Size="ButtonSize.Small"
+                                        Click="@(() => EditAsync(item.Id))"
+                                        data-testid="prompt-gallery-edit" />
+                            }
+                        </Cluster>
+                    </Template>
+                </DataGridColumn>
+            </Columns>
+        </DataGrid>
+
+        <Split Gap="LayoutGap.Medium" AlignItems="AlignItems.Center">
+            <Cluster Gap="LayoutGap.Small">
+                <Button Text="Previous"
+                        Icon="chevron_left"
+                        ButtonStyle="ButtonStyle.Light"
+                        Size="ButtonSize.Small"
+                        Disabled="@(page.PageIndex <= 0)"
+                        Click="PreviousPageAsync" />
+                <Button Text="Next"
+                        Icon="chevron_right"
+                        ButtonStyle="ButtonStyle.Light"
+                        Size="ButtonSize.Small"
+                        Disabled="@(page.PageIndex + 1 >= page.TotalPages)"
+                        Click="NextPageAsync" />
+            </Cluster>
+            <StatusBadge Tone="neutral" Text="@PageText" />
+        </Split>
+    }
+</Stack>
+
+@code {
+    private readonly CancellationTokenSource lifetime = new();
+    private PromptGalleryPage<PromptGallerySearchItem> page = new([], 0, 25, 0);
+    private CancellationTokenSource? operation;
+    private IReadOnlyList<string> tagFilters = [];
+    private IReadOnlyList<string> availableTags = [];
+    private string searchText = string.Empty;
+    private string providerFilter = string.Empty;
+    private string modelFilter = string.Empty;
+    private string? loadError;
+    private PromptGalleryItemKind? kind;
+    private PromptArtifactStatus? status;
+    private PromptGalleryConsumer? previousConsumer;
+    private string? previousProvider;
+    private string? previousModel;
+    private bool isLoading = true;
+    private bool includeArchived;
+    private bool disposed;
+
+    [Parameter]
+    public PromptGalleryConsumer? Consumer { get; set; }
+
+    [Parameter]
+    public string? Provider { get; set; }
+
+    [Parameter]
+    public string? Model { get; set; }
+
+    [Parameter]
+    public bool Compact { get; set; }
+
+    [Parameter]
+    public int PageSize { get; set; } = 25;
+
+    [Parameter]
+    public bool AllowEdit { get; set; } = true;
+
+    [Parameter]
+    public bool ShowSelectAction { get; set; } = true;
+
+    [Parameter]
+    public string SelectText { get; set; } = "Select";
+
+    [Parameter]
+    public EventCallback<PromptGallerySearchItem> Selected { get; set; }
+
+    [Parameter]
+    public EventCallback<Guid> EditRequested { get; set; }
+
+    private string ResultText => isLoading ? "Searching" : $"{page.TotalCount:N0} matching item(s)";
+
+    private string PageText => page.TotalPages == 0
+        ? "No pages"
+        : $"Page {page.PageIndex + 1:N0} of {page.TotalPages:N0} · {page.TotalCount:N0} item(s)";
+
+    protected override async Task OnInitializedAsync()
+    {
+        previousConsumer = Consumer;
+        previousProvider = Provider;
+        previousModel = Model;
+        await LoadPageAsync(0);
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (previousConsumer == Consumer &&
+            string.Equals(previousProvider, Provider, StringComparison.Ordinal) &&
+            string.Equals(previousModel, Model, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        previousConsumer = Consumer;
+        previousProvider = Provider;
+        previousModel = Model;
+        if (!isLoading)
+        {
+            await LoadPageAsync(0);
+        }
+    }
+
+    private async Task HandleSearchChangedAsync(string? value)
+    {
+        searchText = value ?? string.Empty;
+        await DebouncedReloadAsync();
+    }
+
+    private async Task HandleTagsChangedAsync(IReadOnlyList<string> value)
+    {
+        tagFilters = value;
+        await LoadPageAsync(0);
+    }
+
+    private async Task HandleKindChangedAsync(PromptGalleryItemKind? value)
+    {
+        kind = value;
+        await LoadPageAsync(0);
+    }
+
+    private async Task HandleStatusChangedAsync(PromptArtifactStatus? value)
+    {
+        status = value;
+        await LoadPageAsync(0);
+    }
+
+    private async Task ClearFiltersAsync()
+    {
+        searchText = string.Empty;
+        tagFilters = [];
+        kind = null;
+        status = null;
+        providerFilter = string.Empty;
+        modelFilter = string.Empty;
+        includeArchived = false;
+        await LoadPageAsync(0);
+    }
+
+    private async Task HandleProviderFilterChangedAsync(string? value)
+    {
+        providerFilter = value ?? string.Empty;
+        await DebouncedReloadAsync();
+    }
+
+    private async Task HandleModelFilterChangedAsync(string? value)
+    {
+        modelFilter = value ?? string.Empty;
+        await DebouncedReloadAsync();
+    }
+
+    private async Task HandleIncludeArchivedChangedAsync(bool value)
+    {
+        includeArchived = value;
+        await LoadPageAsync(0);
+    }
+
+    private Task ReloadAsync() => LoadPageAsync(page.PageIndex);
+
+    private Task PreviousPageAsync() => LoadPageAsync(Math.Max(0, page.PageIndex - 1));
+
+    private Task NextPageAsync() => LoadPageAsync(page.PageIndex + 1);
+
+    private Task SelectAsync(PromptGallerySearchItem item) => Selected.InvokeAsync(item);
+
+    private Task EditAsync(Guid id) => EditRequested.InvokeAsync(id);
+
+    private async Task DebouncedReloadAsync()
+    {
+        CancellationTokenSource currentOperation = ReplaceOperation();
+        try
+        {
+            await Task.Delay(250, currentOperation.Token);
+            await LoadPageCoreAsync(0, currentOperation);
+        }
+        catch (OperationCanceledException) when (currentOperation.IsCancellationRequested)
+        {
+        }
+    }
+
+    private async Task LoadPageAsync(int pageIndex)
+    {
+        CancellationTokenSource currentOperation = ReplaceOperation();
+        await LoadPageCoreAsync(pageIndex, currentOperation);
+    }
+
+    private async Task LoadPageCoreAsync(int pageIndex, CancellationTokenSource currentOperation)
+    {
+        isLoading = true;
+        loadError = null;
+        try
+        {
+            var requestedPageSize = Math.Clamp(PageSize, 1, PromptGalleryQuery.MaximumPageSize);
+            var result = await Gallery.SearchAsync(
+                new PromptGalleryQuery(
+                    Text: searchText,
+                    Tags: tagFilters,
+                    Kind: kind,
+                    Status: status,
+                    IncludeArchived: includeArchived,
+                    Provider: string.IsNullOrWhiteSpace(Provider) ? providerFilter : Provider,
+                    Model: string.IsNullOrWhiteSpace(Model) ? modelFilter : Model,
+                    PageIndex: pageIndex,
+                    PageSize: requestedPageSize,
+                    Consumer: Consumer),
+                currentOperation.Token);
+            if (!ReferenceEquals(operation, currentOperation) || currentOperation.IsCancellationRequested)
+            {
+                return;
+            }
+
+            page = result;
+            availableTags = availableTags
+                .Concat(result.Items.SelectMany(item => item.Tags))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .OrderBy(item => item, StringComparer.OrdinalIgnoreCase)
+                .ToArray();
+        }
+        catch (OperationCanceledException) when (currentOperation.IsCancellationRequested)
+        {
+        }
+        catch (Exception exception)
+        {
+            loadError = "The prompt gallery search failed. Retry after checking the active data source.";
+            Notifications.Error("Prompt gallery search failed", exception.Message);
+        }
+        finally
+        {
+            if (ReferenceEquals(operation, currentOperation))
+            {
+                isLoading = false;
+            }
+        }
+    }
+
+    private CancellationTokenSource ReplaceOperation()
+    {
+        operation?.Cancel();
+        operation?.Dispose();
+        operation = CancellationTokenSource.CreateLinkedTokenSource(lifetime.Token);
+        return operation;
+    }
+
+    private static string Excerpt(PromptGallerySearchItem item)
+    {
+        var preview = string.IsNullOrWhiteSpace(item.ContentPreview)
+            ? item.Summary
+            : item.ContentPreview;
+        return string.IsNullOrWhiteSpace(preview)
+            ? "No prompt content provided."
+            : string.Join(' ', preview.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
+    }
+
+    private static string FormatKind(PromptGalleryItemKind value)
+        => value == PromptGalleryItemKind.FullPrompt ? "Full prompt" : "Prompt part";
+
+    private static string StatusTone(PromptGallerySearchItem item)
+        => item.IsArchived ? "warning" : item.Status == PromptArtifactStatus.Final ? "success" : "info";
+
+    private static string StatusLabel(PromptGallerySearchItem item)
+        => item.IsArchived ? "Archived" : item.Status.ToString();
+
+    private static string ModelSummary(PromptGallerySearchItem item)
+        => item.SupportedModels.Count switch
+        {
+            0 => "Any provider / model",
+            1 => $"{item.SupportedModels[0].Provider} · {item.SupportedModels[0].Model}",
+            _ => $"{item.SupportedModels.Count} supported models"
+        };
+
+    private static string RecommendationSummary(PromptModelRecommendations value)
+    {
+        var parts = new List<string>(3);
+        if (value.Temperature.HasValue)
+        {
+            parts.Add($"temp {value.Temperature.Value:0.##}");
+        }
+
+        if (value.TopP.HasValue)
+        {
+            parts.Add($"top-p {value.TopP.Value:0.##}");
+        }
+
+        if (value.MaxOutputTokens.HasValue)
+        {
+            parts.Add($"max {value.MaxOutputTokens.Value:N0}");
+        }
+
+        return parts.Count == 0 ? "No parameter recommendations" : string.Join(" · ", parts);
+    }
+
+    public ValueTask DisposeAsync()
+    {
+        if (disposed)
+        {
+            return ValueTask.CompletedTask;
+        }
+
+        disposed = true;
+        operation?.Cancel();
+        operation?.Dispose();
+        lifetime.Cancel();
+        lifetime.Dispose();
+        return ValueTask.CompletedTask;
+    }
+}

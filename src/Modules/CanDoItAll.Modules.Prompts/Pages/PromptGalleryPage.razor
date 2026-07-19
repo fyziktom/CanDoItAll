@@ -1,573 +1,115 @@
 @page "/prompt-gallery"
-@using System.Text.Json
-@using CanDoItAll.Components.BaseLib
-@using CanDoItAll.Components.Common
-@using CanDoItAll.SharedKernel
-@inject PromptsService PromptsService
-@inject NotificationService NotificationService
 
 <PageTitle>Prompt Gallery</PageTitle>
 
 <PageScaffold MaxWidthClass="max-w-full">
     <Header>
-        <PageHeader Eyebrow="Prompt Library"
-                    Title="Prompt gallery and versions"
-                    Description="Manage prompt drafts, immutable versions, collections, tags, and clone flows without burying the working surface under reference content."
+        <PageHeader Eyebrow="Shared prompt library"
+                    Title="Prompt gallery"
+                    Description="Browse, filter, version, and maintain the canonical prompts and prompt parts reused by workflows, agents, processes, roles, and chat."
                     Compact="true">
             <Stats>
-                <CompactStat Label="prompts" Value="@prompts.Count.ToString()" TooltipText="Saved prompt artifacts." />
-                <CompactStat Label="final" Value="@prompts.Count(item => item.Status == PromptArtifactStatus.Final).ToString()" TooltipText="Prompts with at least one finalized version." Tone="success" />
-                <CompactStat Label="collections" Value="@collections.Count.ToString()" TooltipText="Available prompt groupings." />
-                <CompactStat Label="versions" Value="@prompts.Sum(item => item.VersionCount).ToString()" TooltipText="Immutable prompt versions stored in the library." Tone="info" />
+                <CompactStat Label="search" Value="Paged" TooltipText="Search is delegated to the active Gallery search driver." Tone="info" />
+                <CompactStat Label="versions" Value="Immutable" TooltipText="Final versions remain stable when a draft changes." Tone="success" />
+                <CompactStat Label="projection" Value="Optional" TooltipText="A projection driver can replace standard database search without changing Gallery consumers." />
             </Stats>
             <Actions>
                 <PageHeaderActionButton Icon="add"
-                                        Label="New prompt"
-                                        TooltipText="Create a new prompt artifact."
+                                        Label="New item"
+                                        TooltipText="Create a reusable prompt or prompt part."
                                         ButtonStyle="ButtonStyle.Primary"
                                         Click="CreateNewAsync" />
-                <PageHeaderActionButton Icon="category"
-                                        Label="Add collection"
-                                        TooltipText="Create a new prompt collection."
-                                        Click="CreateCollectionAsync" />
             </Actions>
         </PageHeader>
     </Header>
 
     <ChildContent>
-        <ListDetailShell ListPaneWidth="25rem">
-            <ListHeader>
-                <ListPanelHeader Title="Saved prompts" Description="Select a prompt to edit it, review versions, or inspect recent usage." Count="@($"{FilteredPrompts.Count} prompt(s)")">
-                    <Filters>
-                        <FilterBar ResultText="@($"{FilteredPrompts.Count} matching prompt(s)")">
-                            <input @bind="promptSearch" @bind:event="oninput" class="cda-input min-w-[14rem] flex-1" placeholder="Search prompts" />
-                            <InputSelect @bind-Value="collectionFilter" class="cda-input">
-                                <option value="">All collections</option>
-                                @foreach (var collection in collections)
-                                {
-                                    <option value="@collection.Name">@collection.Name</option>
-                                }
-                            </InputSelect>
-                            <InputSelect @bind-Value="phaseFilter" class="cda-input">
-                                <option value="">All phases</option>
-                                @foreach (var phase in prompts.Select(item => item.Phase).Where(item => !string.IsNullOrWhiteSpace(item)).Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(item => item))
-                                {
-                                    <option value="@phase">@phase</option>
-                                }
-                            </InputSelect>
-                            <InputSelect @bind-Value="statusFilter" class="cda-input">
-                                <option value="">All statuses</option>
-                                @foreach (var status in Enum.GetValues<PromptArtifactStatus>())
-                                {
-                                    <option value="@status.ToString()">@status</option>
-                                }
-                            </InputSelect>
-                            <Button Text="Reset" ButtonStyle="ButtonStyle.Light" Size="ButtonSize.Small" Click="ResetFilters" />
-                        </FilterBar>
-                    </Filters>
-                </ListPanelHeader>
-            </ListHeader>
-
-            <ListContent>
-                @if (FilteredPrompts.Count == 0)
-                {
-                    <EmptyState Eyebrow="No prompts" Title="Create the first prompt" Description="Prompt drafts appear here after they have been saved into the shared library." />
-                }
-                else
-                {
-                    <Stack GapScale="LayoutGap.Medium">
-                        @foreach (var prompt in FilteredPrompts)
-                        {
-                            <SelectionListItem Title="@prompt.Title"
-                                               Eyebrow="@prompt.Status.ToString()"
-                                               Meta="@BuildPromptMeta(prompt)"
-                                               Summary="@prompt.Tags"
-                                               IsSelected="@(editor.Id == prompt.Id)"
-                                               OnSelect="@(() => EditAsync(prompt.Id))">
-                                <Status>
-                                    <StatusBadge Tone="@(prompt.Status == PromptArtifactStatus.Final ? "success" : "info")" Text="@($"v{prompt.VersionCount}")" />
-                                </Status>
-                            </SelectionListItem>
-                        }
-                    </Stack>
-                }
-            </ListContent>
-
-            <DetailHeader>
-                <Stack GapScale="LayoutGap.Medium">
-                    <Split Gap="LayoutGap.Medium">
-                        <Stack GapScale="LayoutGap.Tiny">
-                            <p class="cda-eyebrow">Prompt editor</p>
-                            <h2 class="cda-title-xl">@EditorTitle</h2>
-                            <p class="cda-body-muted">Draft editing, immutable versions, and recent usage stay together in one detail pane.</p>
-                        </Stack>
-                        <Cluster Gap="LayoutGap.Small">
-                            <StatusBadge Tone="@EditorStatusTone" Text="@EditorStatusLabel" />
-                            <StatusBadge Tone="neutral" Text="@($"{editor.Versions.Count} version(s)")" />
-                            <StatusBadge Tone="info" Text="@($"{editor.UsageHistory.Count} usage record(s)")" />
-                        </Cluster>
-                    </Split>
-
-                    <SecondaryTabs Items="DetailTabs" SelectedKey="@detailTab" SelectedKeyChanged="HandleDetailTabChanged" />
-                </Stack>
-            </DetailHeader>
-
-            <DetailContent>
-                <EditForm Model="editor" OnValidSubmit="SaveDraftAsync">
-                    <Stack Class="min-h-full" GapScale="LayoutGap.XXLarge">
-                        @if (string.Equals(detailTab, "overview", StringComparison.Ordinal))
-                        {
-                            <FormSection Title="Prompt identity" Description="Keep the prompt title, collection, and tags close to the draft itself.">
-                                <Grid Gap="LayoutGap.Large" ColumnsMd="2">
-                                    <div>
-                                        <label class="cda-field-label">Title</label>
-                                        <InputText @bind-Value="editor.Title" class="cda-input" />
-                                    </div>
-                                    <div>
-                                        <label class="cda-field-label">Phase</label>
-                                        <InputText @bind-Value="editor.Phase" class="cda-input" />
-                                    </div>
-                                </Grid>
-                                <Grid Gap="LayoutGap.Large" ColumnsMd="2">
-                                    <div>
-                                        <label class="cda-field-label">Collection</label>
-                                        <InputSelect @bind-Value="editor.CollectionId" class="cda-input">
-                                            <option value="">None</option>
-                                            @foreach (var collection in collections)
-                                            {
-                                                <option value="@collection.Id">@collection.Name</option>
-                                            }
-                                        </InputSelect>
-                                    </div>
-                                    <div>
-                                        <label class="cda-field-label">Tags</label>
-                                        <InputText @bind-Value="editor.TagsCsv" class="cda-input" />
-                                    </div>
-                                </Grid>
-                            </FormSection>
-
-                            <FormSection Title="Draft content" Description="The editable draft remains separate from immutable finalized versions.">
-                                <div>
-                                    <label class="cda-field-label">Draft text</label>
-                                    <InputTextArea @bind-Value="editor.DraftText" class="cda-input cda-input--textarea cda-input--mono min-h-80" />
-                                </div>
-                                <div>
-                                    <label class="cda-field-label">Finalization reason</label>
-                                    <InputText @bind-Value="editor.FinalizationReason" class="cda-input" />
-                                </div>
-                            </FormSection>
-                        }
-                        else if (string.Equals(detailTab, "versions", StringComparison.Ordinal))
-                        {
-                            <FormSection Title="Version history" Description="Each finalization appends a new immutable version instead of overwriting earlier output.">
-                                @if (editor.Versions.Count == 0)
-                                {
-                                    <EmptyState Eyebrow="No versions" Title="No finalized versions yet" Description="Create the first final version when the draft is ready for reuse." />
-                                }
-                                else
-                                {
-                                    <Stack GapScale="LayoutGap.Medium">
-                                        @foreach (var version in editor.Versions)
-                                        {
-                                            <div class="cda-panel-card">
-                                                <Split Breakpoint="LayoutBreakpoint.None"
-                                                       Gap="LayoutGap.Medium"
-                                                       AlignItems="AlignItems.Center"
-                                                       JustifyContent="JustifyContent.SpaceBetween"
-                                                       Wrap="FlexWrap.Wrap">
-                                                    <p class="cda-copy-strong">Version @version.VersionNumber</p>
-                                                    <p class="cda-text-block cda-text-block--caption">@version.CreatedAtUtc.LocalDateTime:g</p>
-                                                </Split>
-                                                <p class="cda-body-muted mt-2">@version.CreationReason</p>
-                                            </div>
-                                        }
-                                    </Stack>
-                                }
-                            </FormSection>
-                        }
-                        else
-                        {
-                            <FormSection Title="Usage history" Description="Recent prompt usage remains tied to the prompt artifact and recorded commit context.">
-                                @if (editor.UsageHistory.Count == 0)
-                                {
-                                    <EmptyState Eyebrow="No usage" Title="No usage records yet" Description="Usage entries will appear here after the prompt is used in a recorded workflow." />
-                                }
-                                else
-                                {
-                                    <Stack GapScale="LayoutGap.Medium">
-                                        @foreach (var usage in editor.UsageHistory)
-                                        {
-                                            <div class="cda-panel-card">
-                                                <Split Breakpoint="LayoutBreakpoint.None"
-                                                       Gap="LayoutGap.Medium"
-                                                       AlignItems="AlignItems.Center"
-                                                       JustifyContent="JustifyContent.SpaceBetween"
-                                                       Wrap="FlexWrap.Wrap">
-                                                    <p class="cda-copy-strong">@usage.ProviderName</p>
-                                                    <p class="cda-text-block cda-text-block--caption">@usage.CreatedAtUtc.LocalDateTime:g</p>
-                                                </Split>
-                                                <p class="cda-text-block cda-text-block--caption mt-2">@usage.RepositoryName / @usage.CommitSha</p>
-                                                <p class="cda-body-muted mt-3">@usage.UsageNote</p>
-                                            </div>
-                                        }
-                                    </Stack>
-                                }
-                            </FormSection>
-                        }
-
-                        <StickyActionFooter StatusLabel="Prompt library">
-                            <SecondaryActions>
-                                <Button Text="Reset" ButtonStyle="ButtonStyle.Light" Click="CreateNewAsync" />
-                            </SecondaryActions>
-                            <PrimaryActions>
-                                <Button Text="Save draft" Type="submit" />
-                                <Button Text="Create final version" ButtonStyle="ButtonStyle.Success" Click="FinalizeAsync" />
-                            </PrimaryActions>
-                            <DangerActions>
-                                @if (editor.Id.HasValue)
-                                {
-                                    <Button Text="Clone" ButtonStyle="ButtonStyle.Light" Click="CloneAsync" />
-                                }
-                            </DangerActions>
-                        </StickyActionFooter>
-                    </Stack>
-                </EditForm>
-            </DetailContent>
-        </ListDetailShell>
-
-        <SectionCard Title="Imported prompt library"
-                     Description="Reference packs, flow templates, and blueprints stay close to the editor, but they no longer push the primary prompt list below the fold.">
-            <HeaderActions>
-                <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
-                    <StatusBadge Tone="accent" Text="@($"{libraryCatalog.ComponentCount} components")" />
-                    <StatusBadge Tone="info" Text="@($"{libraryCatalog.FlowCount} flows")" />
-                    <StatusBadge Tone="success" Text="@($"{libraryCatalog.BlueprintCount} blueprints")" />
-                    <HelpPopover AriaLabel="Show imported library help"
-                                 Title="Show imported library help"
-                                 Heading="Imported library"
-                                 Body="These references stay available for prompt assembly, but the primary editing surface now takes the first-screen priority."
-                                 Tip="Use the three panels below to scan groups, flow templates, and blueprints without losing the main library editor." />
-                </Cluster>
-            </HeaderActions>
-            <ChildContent>
-                <Grid Section="true" Gap="LayoutGap.XXLarge" ColumnsXl="3">
-                    <div class="cda-panel-card h-full p-6 shadow-sm">
-                        <p class="cda-eyebrow">Imported components</p>
-                        <h2 class="cda-title-lg mt-2">Library groups</h2>
-                        <Stack GapScale="LayoutGap.Medium"
-                               Class="mt-4 max-h-[26rem] overflow-auto pr-1">
-                            @foreach (var group in libraryCatalog.Groups.OrderBy(item => item.Order))
-                            {
-                                <div class="cda-panel-card--soft px-4 py-3">
-                                    <p class="cda-copy-strong">@group.Name</p>
-                                    <p class="cda-text-block cda-text-block--caption mt-1 leading-5">@group.Purpose</p>
-                                    <p class="cda-text-block cda-text-block--caption mt-2 font-semibold">@($"{group.ComponentCount} component(s)")</p>
-                                </div>
-                            }
-                        </Stack>
-                    </div>
-
-                    <div class="cda-panel-card h-full p-6 shadow-sm">
-                        <p class="cda-eyebrow">Imported flows</p>
-                        <h2 class="cda-title-lg mt-2">Prompt flow templates</h2>
-                        <Stack GapScale="LayoutGap.Medium"
-                               Class="mt-4 max-h-[26rem] overflow-auto pr-1">
-                            @foreach (var flow in libraryCatalog.Flows.OrderBy(item => item.OrderIndex))
-                            {
-                                <div class="cda-panel-card--soft px-4 py-3">
-                                    <p class="cda-copy-strong">@flow.Name</p>
-                                    <p class="cda-text-block cda-text-block--caption mt-1 leading-5">@flow.Summary</p>
-                                    <p class="cda-text-block cda-text-block--caption mt-2 font-semibold">@($"{flow.AgentSequence.Count} agent step(s) · {flow.BlockKeys.Count} block(s)")</p>
-                                </div>
-                            }
-                        </Stack>
-                    </div>
-
-                    <div class="cda-panel-card h-full p-6 shadow-sm">
-                        <p class="cda-eyebrow">Imported blueprints</p>
-                        <h2 class="cda-title-lg mt-2">Prompt blueprints</h2>
-                        <Stack GapScale="LayoutGap.Medium"
-                               Class="mt-4 max-h-[26rem] overflow-auto pr-1">
-                            @foreach (var blueprint in libraryCatalog.Blueprints.OrderBy(item => item.OrderIndex))
-                            {
-                                <div class="cda-panel-card--soft px-4 py-3">
-                                    <p class="cda-copy-strong">@blueprint.Name</p>
-                                    <p class="cda-text-block cda-text-block--caption mt-1 leading-5">@blueprint.Guidance</p>
-                                    <p class="cda-text-block cda-text-block--caption mt-2 font-semibold">@($"{blueprint.PromptType} · flow: {blueprint.RecommendedFlowKey}")</p>
-                                </div>
-                            }
-                        </Stack>
-                    </div>
-                </Grid>
-            </ChildContent>
+        <SectionCard Title="Gallery items"
+                     Description="Names, excerpts, tags, compatibility guidance, and lifecycle state are queried in bounded pages.">
+            <PromptGallerySearchList @key="listKey"
+                                     PageSize="25"
+                                     Compact="false"
+                                     AllowEdit="true"
+                                     ShowSelectAction="false"
+                                     EditRequested="OpenEditorAsync" />
         </SectionCard>
     </ChildContent>
 </PageScaffold>
 
+<Dialog IsOpen="@editorOpen"
+        Eyebrow="Prompt gallery"
+        Title="@EditorTitle"
+        Subtitle="Edit canonical content and portable model recommendations."
+        Size="ModalSize.Full"
+        DenseChrome="true"
+        CloseOnBackdrop="false"
+        TestId="prompt-gallery-editor-dialog"
+        OnClose="CloseEditorAsync">
+    <ChildContent>
+        <PromptGalleryItemEditor ItemId="@selectedItemId"
+                                 Saved="HandleSavedAsync"
+                                 Cancelled="CloseEditorAsync" />
+    </ChildContent>
+</Dialog>
+
 @code {
+    private Guid listKey = Guid.NewGuid();
+    private Guid? selectedItemId;
+    private Guid? openedQueryItemId;
+    private bool editorDirty;
+    private bool editorOpen;
+
     [SupplyParameterFromQuery(Name = "promptId")]
     public Guid? PromptIdQuery { get; set; }
 
-    private IReadOnlyList<PromptSummary> prompts = [];
-    private IReadOnlyList<PromptCollectionSummary> collections = [];
-    private PromptLibraryPageCatalog libraryCatalog = new();
-    private PromptEditorModel editor = new();
-    private string promptSearch = string.Empty;
-    private string collectionFilter = string.Empty;
-    private string phaseFilter = string.Empty;
-    private string statusFilter = string.Empty;
-    private string detailTab = "overview";
+    private string EditorTitle => selectedItemId.HasValue ? "Edit Gallery item" : "New Gallery item";
 
-    private IReadOnlyList<PromptSummary> FilteredPrompts => prompts
-        .Where(prompt =>
-            (string.IsNullOrWhiteSpace(promptSearch) ||
-             prompt.Title.Contains(promptSearch, StringComparison.OrdinalIgnoreCase) ||
-             prompt.Phase.Contains(promptSearch, StringComparison.OrdinalIgnoreCase) ||
-             prompt.Tags.Contains(promptSearch, StringComparison.OrdinalIgnoreCase) ||
-             (prompt.CollectionName?.Contains(promptSearch, StringComparison.OrdinalIgnoreCase) ?? false)) &&
-            (string.IsNullOrWhiteSpace(collectionFilter) || string.Equals(prompt.CollectionName, collectionFilter, StringComparison.OrdinalIgnoreCase)) &&
-            (string.IsNullOrWhiteSpace(phaseFilter) || string.Equals(prompt.Phase, phaseFilter, StringComparison.OrdinalIgnoreCase)) &&
-            (string.IsNullOrWhiteSpace(statusFilter) || string.Equals(prompt.Status.ToString(), statusFilter, StringComparison.OrdinalIgnoreCase)))
-        .OrderByDescending(prompt => prompt.UpdatedAtUtc)
-        .ToList();
-
-    private IReadOnlyList<SecondaryTabItem> DetailTabs =>
-    [
-        new("overview", "Overview"),
-        new("versions", "Versions", editor.Versions.Count.ToString()),
-        new("usage", "Usage", editor.UsageHistory.Count.ToString())
-    ];
-
-    private string EditorTitle => string.IsNullOrWhiteSpace(editor.Title) ? "New prompt" : editor.Title;
-
-    private string EditorStatusTone => editor.Versions.Count > 0 ? "success" : "info";
-
-    private string EditorStatusLabel => editor.Versions.Count > 0 ? "Finalized" : "Draft only";
-
-    protected override async Task OnParametersSetAsync() => await LoadAsync(PromptIdQuery);
-
-    private async Task LoadAsync(Guid? promptId = null)
+    protected override void OnParametersSet()
     {
-        prompts = await PromptsService.ListAsync();
-        collections = await PromptsService.ListCollectionsAsync();
-        libraryCatalog = LoadPromptLibraryCatalog();
-        editor = promptId.HasValue ? await PromptsService.GetAsync(promptId.Value) : new PromptEditorModel();
-        detailTab = "overview";
-    }
-
-    private Task CreateNewAsync()
-    {
-        editor = new PromptEditorModel();
-        detailTab = "overview";
-        return Task.CompletedTask;
-    }
-
-    private async Task CreateCollectionAsync()
-    {
-        try
-        {
-            await PromptsService.EnsureCollectionAsync($"Collection {collections.Count + 1}");
-            collections = await PromptsService.ListCollectionsAsync();
-            NotificationService.Success("Collection created", "Prompt collection created.");
-        }
-        catch (Exception exception)
-        {
-            NotificationService.Error("Collection create failed", exception.Message);
-        }
-    }
-
-    private async Task EditAsync(Guid id)
-    {
-        editor = await PromptsService.GetAsync(id);
-        detailTab = "overview";
-    }
-
-    private async Task SaveDraftAsync()
-    {
-        try
-        {
-            var result = await PromptsService.SaveDraftAsync(editor);
-            prompts = await PromptsService.ListAsync();
-            if (!result.IsSuccess)
-            {
-                NotificationService.Warning("Draft was not saved", DescribeErrors(result.Errors));
-                return;
-            }
-
-            editor = await PromptsService.GetAsync(result.Value);
-            NotificationService.Success("Draft saved", "Prompt draft saved.");
-        }
-        catch (Exception exception)
-        {
-            NotificationService.Error("Draft save failed", exception.Message);
-        }
-    }
-
-    private async Task FinalizeAsync()
-    {
-        try
-        {
-            var result = await PromptsService.FinalizeAsync(editor);
-            prompts = await PromptsService.ListAsync();
-            if (!result.IsSuccess)
-            {
-                NotificationService.Warning("Final version was not created", DescribeErrors(result.Errors));
-                return;
-            }
-
-            editor = await PromptsService.GetAsync(result.Value);
-            detailTab = "versions";
-            NotificationService.Success("Final version created", "Prompt final version created.");
-        }
-        catch (Exception exception)
-        {
-            NotificationService.Error("Finalization failed", exception.Message);
-        }
-    }
-
-    private async Task CloneAsync()
-    {
-        if (!editor.Id.HasValue)
+        if (!PromptIdQuery.HasValue || openedQueryItemId == PromptIdQuery)
         {
             return;
         }
 
-        var cloneId = await PromptsService.CloneAsync(editor.Id.Value);
-        prompts = await PromptsService.ListAsync();
-        if (cloneId.HasValue)
-        {
-            editor = await PromptsService.GetAsync(cloneId.Value);
-            detailTab = "overview";
-            NotificationService.Success("Prompt cloned", "Prompt cloned into a new draft.");
-        }
+        openedQueryItemId = PromptIdQuery;
+        selectedItemId = PromptIdQuery;
+        editorDirty = false;
+        editorOpen = true;
     }
 
-    private static string DescribeErrors(IEnumerable<Error> errors)
-        => string.Join(" ", errors.Select(error => error.Message));
-
-    private Task HandleDetailTabChanged(string key)
+    private Task CreateNewAsync()
     {
-        detailTab = key;
+        selectedItemId = null;
+        editorDirty = false;
+        editorOpen = true;
         return Task.CompletedTask;
     }
 
-    private void ResetFilters()
+    private Task OpenEditorAsync(Guid itemId)
     {
-        promptSearch = string.Empty;
-        collectionFilter = string.Empty;
-        phaseFilter = string.Empty;
-        statusFilter = string.Empty;
+        selectedItemId = itemId;
+        editorDirty = false;
+        editorOpen = true;
+        return Task.CompletedTask;
     }
 
-    private static string BuildPromptMeta(PromptSummary prompt)
-        => $"{prompt.Phase} / {(string.IsNullOrWhiteSpace(prompt.CollectionName) ? "No collection" : prompt.CollectionName)}";
-
-    private static PromptLibraryPageCatalog LoadPromptLibraryCatalog()
+    private Task HandleSavedAsync(Guid itemId)
     {
-        var root = ResolvePromptLibraryRoot();
-        if (root is null)
+        selectedItemId = itemId;
+        editorDirty = true;
+        return Task.CompletedTask;
+    }
+
+    private Task CloseEditorAsync()
+    {
+        editorOpen = false;
+        selectedItemId = null;
+        if (editorDirty)
         {
-            return new PromptLibraryPageCatalog();
+            listKey = Guid.NewGuid();
+            editorDirty = false;
         }
 
-        var groups = ReadJson<List<PromptLibraryPageGroup>>(Path.Combine(root, "group-catalog.json"));
-        var flows = ReadJson<List<PromptLibraryPageFlow>>(Path.Combine(root, "factory-prompt-flow-templates.seed.json"));
-        var blueprints = ReadJson<List<PromptLibraryPageBlueprint>>(Path.Combine(root, "factory-prompt-blueprints.seed.json"));
-        return new PromptLibraryPageCatalog
-        {
-            Groups = groups,
-            Flows = flows,
-            Blueprints = blueprints,
-            ComponentCount = groups.Sum(item => item.ComponentCount),
-            FlowCount = flows.Count,
-            BlueprintCount = blueprints.Count
-        };
-    }
-
-    private static string? ResolvePromptLibraryRoot()
-    {
-        return AncestorFileLocator.FindContainingDirectory(
-            Path.Combine("output", "prompt-library", "manifest.json"),
-            Directory.GetCurrentDirectory(),
-            AppContext.BaseDirectory);
-    }
-
-    private static T ReadJson<T>(string path) where T : new()
-    {
-        if (!File.Exists(path))
-        {
-            return new T();
-        }
-
-        try
-        {
-            return JsonSerializer.Deserialize<T>(File.ReadAllText(path), new JsonSerializerOptions(JsonSerializerDefaults.Web)
-            {
-                PropertyNameCaseInsensitive = true
-            }) ?? new T();
-        }
-        catch
-        {
-            return new T();
-        }
-    }
-
-    private sealed class PromptLibraryPageCatalog
-    {
-        public List<PromptLibraryPageGroup> Groups { get; set; } = [];
-
-        public List<PromptLibraryPageFlow> Flows { get; set; } = [];
-
-        public List<PromptLibraryPageBlueprint> Blueprints { get; set; } = [];
-
-        public int ComponentCount { get; set; }
-
-        public int FlowCount { get; set; }
-
-        public int BlueprintCount { get; set; }
-    }
-
-    private sealed class PromptLibraryPageGroup
-    {
-        public string Name { get; set; } = string.Empty;
-
-        public string Purpose { get; set; } = string.Empty;
-
-        public int Order { get; set; }
-
-        public int ComponentCount { get; set; }
-    }
-
-    private sealed class PromptLibraryPageFlow
-    {
-        public string Name { get; set; } = string.Empty;
-
-        public string Summary { get; set; } = string.Empty;
-
-        public int OrderIndex { get; set; }
-
-        public List<string> BlockKeys { get; set; } = [];
-
-        public List<PromptLibraryPageFlowAgent> AgentSequence { get; set; } = [];
-    }
-
-    private sealed class PromptLibraryPageFlowAgent
-    {
-        public int Order { get; set; }
-    }
-
-    private sealed class PromptLibraryPageBlueprint
-    {
-        public string Name { get; set; } = string.Empty;
-
-        public string PromptType { get; set; } = string.Empty;
-
-        public string Guidance { get; set; } = string.Empty;
-
-        public string RecommendedFlowKey { get; set; } = string.Empty;
-
-        public int OrderIndex { get; set; }
+        return Task.CompletedTask;
     }
 }
-
-
