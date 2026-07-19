@@ -309,11 +309,6 @@ public partial class WorkflowCanvasEditor
         }
 
         var component = requestedComponent;
-        if (kind == WorkflowNodeKind.LlmCall)
-        {
-            component ??= componentOptions.FirstOrDefault() ?? await CreateDefaultComponentCoreAsync();
-        }
-
         var position = ResolveCreatePosition(request);
         var node = WorkflowCanvasDefinitionMapper.CreateNode(
             kind,
@@ -377,48 +372,6 @@ public partial class WorkflowCanvasEditor
         SyncEdgeDefaults();
     }
 
-    private async Task CreateDefaultComponentAsync()
-    {
-        await CreateDefaultComponentCoreAsync();
-    }
-
-    private async Task<LlmCallComponent> CreateDefaultComponentCoreAsync()
-    {
-        if (isBusy)
-        {
-            throw new InvalidOperationException("Another workflow canvas operation is already running.");
-        }
-
-        isBusy = true;
-        try
-        {
-            var providerOption = ResolveSelectedNewComponentProvider();
-            var component = await ComponentLibrary.SaveComponentAsync(new LlmCallComponentSaveRequest(
-                Id: null,
-                Name: $"Canvas LLM call {DateTimeOffset.UtcNow:HHmmss}",
-                ProviderProfileId: providerOption?.ProviderProfileId,
-                Model: ResolveNewComponentModel(providerOption),
-                Modality: WorkflowModality.Text,
-                ModelSettings: new WorkflowModelSettings(
-                    Temperature: 0.2,
-                    MaxOutputTokens: 800,
-                    RequireJsonOutput: false,
-                    ResponseFormatJsonSchema: string.Empty),
-                Instructions: "Summarize the workflow payload and return a concise result.",
-                InputShape: WorkflowValueShape.Text,
-                ResultShape: WorkflowValueShape.Text,
-                Permissions: AgentPermissionsPolicy.Default));
-            componentOptions = [.. componentOptions, component];
-            NotificationService.Success("LLM component created", component.Name);
-            await ComponentLibraryChanged.InvokeAsync();
-            return component;
-        }
-        finally
-        {
-            isBusy = false;
-        }
-    }
-
     private async Task HandlePromptGallerySelectionForNewNodeAsync(PromptGallerySelection selection)
     {
         var component = await CreatePromptGalleryBindingAsync(selection, node: null);
@@ -452,23 +405,17 @@ public partial class WorkflowCanvasEditor
             return null;
         }
 
-        var provider = ResolvePromptBindingProvider(selection, node);
-        if (provider is null)
+        var executionPair = ResolvePromptBindingExecutionPair(selection, node);
+        if (executionPair is null)
         {
             NotificationService.Warning(
-                "Provider required",
-                "Configure an enabled chat provider before binding a Gallery prompt to a workflow node.");
+                "Provider and model required",
+                "Configure an enabled compatible chat provider and model before binding a Gallery prompt to a workflow node.");
             return null;
         }
 
-        var model = ResolvePromptBindingModel(selection, provider, node);
-        if (string.IsNullOrWhiteSpace(model))
-        {
-            NotificationService.Warning(
-                "Model required",
-                $"Provider {provider.Name} does not expose a model for this Gallery item.");
-            return null;
-        }
+        var provider = executionPair.Provider;
+        var model = executionPair.Model;
 
         var compatibility = await PromptGallery.EvaluateCompatibilityAsync(
             selection.ArtifactId,
@@ -531,68 +478,105 @@ public partial class WorkflowCanvasEditor
         }
     }
 
-    private WorkflowProviderOption? ResolvePromptBindingProvider(
+    private PromptBindingExecutionPair? ResolvePromptBindingExecutionPair(
         PromptGallerySelection selection,
         WorkflowCanvasNodeDraft? node)
     {
-        var preferred = node is null
+        var currentProvider = node is null
             ? ResolveSelectedNewComponentProvider()
-            : ResolveComponentProviderOption(ResolveSelectedComponent(node));
-        if (preferred is { IsEnabled: true } && SupportsProvider(selection, preferred))
+            : ResolveSelectedNodeProvider(node);
+        var currentModel = node is null ? newComponentModel : node.Model;
+
+        foreach (var supported in selection.SupportedModels.Where(item => item.IsPreferred))
         {
-            return preferred;
+            if (TryResolvePromptBindingPair(supported, currentProvider, out var pair))
+            {
+                return pair;
+            }
         }
 
-        return ProviderOptions.FirstOrDefault(option => option.IsEnabled && SupportsProvider(selection, option));
+        if (selection.SupportedModels.Count == 1 &&
+            TryResolvePromptBindingPair(selection.SupportedModels[0], currentProvider, out var singlePair))
+        {
+            return singlePair;
+        }
+
+        if (currentProvider is { IsEnabled: true } &&
+            !string.IsNullOrWhiteSpace(currentModel) &&
+            SupportsExecutionPair(selection, currentProvider, currentModel))
+        {
+            return new PromptBindingExecutionPair(currentProvider, currentModel.Trim());
+        }
+
+        foreach (var supported in selection.SupportedModels)
+        {
+            if (TryResolvePromptBindingPair(supported, currentProvider, out var pair))
+            {
+                return pair;
+            }
+        }
+
+        if (selection.SupportedModels.Count > 0)
+        {
+            return null;
+        }
+
+        var fallbackProvider = currentProvider is { IsEnabled: true }
+            ? currentProvider
+            : ResolveDefaultProviderOption();
+        return fallbackProvider is null
+            ? null
+            : new PromptBindingExecutionPair(fallbackProvider, ResolveDefaultModel(fallbackProvider));
     }
 
-    private static bool SupportsProvider(
-        PromptGallerySelection selection,
-        WorkflowProviderOption provider)
-        => selection.SupportedModels.Count == 0 ||
-           selection.SupportedModels.Any(item =>
-               string.Equals(item.Provider, provider.Kind.ToString(), StringComparison.OrdinalIgnoreCase));
+    private bool TryResolvePromptBindingPair(
+        PromptProviderModel supported,
+        WorkflowProviderOption? currentProvider,
+        out PromptBindingExecutionPair? pair)
+    {
+        var providers = ProviderOptions
+            .Where(option =>
+                option.IsEnabled &&
+                string.Equals(option.Kind.ToString(), supported.Provider, StringComparison.OrdinalIgnoreCase) &&
+                SupportsModel(option, supported.Model))
+            .OrderByDescending(option => option.ProviderProfileId == currentProvider?.ProviderProfileId)
+            .ToArray();
+        pair = providers.FirstOrDefault() is { } provider
+            ? new PromptBindingExecutionPair(provider, supported.Model.Trim())
+            : null;
+        return pair is not null;
+    }
 
-    private string ResolvePromptBindingModel(
+    private static bool SupportsExecutionPair(
         PromptGallerySelection selection,
         WorkflowProviderOption provider,
-        WorkflowCanvasNodeDraft? node)
+        string model)
     {
-        var declaredModel = selection.SupportedModels
-            .FirstOrDefault(item =>
-                string.Equals(item.Provider, provider.Kind.ToString(), StringComparison.OrdinalIgnoreCase) &&
-                (provider.ModelOptions.Count == 0 || provider.ModelOptions.Contains(item.Model, StringComparer.OrdinalIgnoreCase)))
-            ?.Model;
-        if (!string.IsNullOrWhiteSpace(declaredModel))
-        {
-            return declaredModel;
-        }
+        return selection.SupportedModels.Count == 0 ||
+               selection.SupportedModels.Any(item =>
+                   string.Equals(item.Provider, provider.Kind.ToString(), StringComparison.OrdinalIgnoreCase) &&
+                   string.Equals(item.Model, model.Trim(), StringComparison.OrdinalIgnoreCase));
+    }
 
-        var currentModel = node is null
-            ? newComponentModel
-            : ResolveSelectedComponent(node)?.Model;
-        if (!string.IsNullOrWhiteSpace(currentModel))
-        {
-            return currentModel.Trim();
-        }
-
-        return !string.IsNullOrWhiteSpace(provider.DefaultModel)
-            ? provider.DefaultModel
-            : provider.ModelOptions.FirstOrDefault() ?? string.Empty;
+    private static bool SupportsModel(WorkflowProviderOption provider, string model)
+    {
+        return !string.IsNullOrWhiteSpace(model) &&
+               (provider.ModelOptions.Count == 0 ||
+                provider.ModelOptions.Contains(model.Trim(), StringComparer.OrdinalIgnoreCase));
     }
 
     private string? ResolvePromptPickerProvider(WorkflowCanvasNodeDraft? node)
     {
         var provider = node is null
             ? ResolveSelectedNewComponentProvider()
-            : ResolveComponentProviderOption(ResolveSelectedComponent(node));
+            : ResolveSelectedNodeProvider(node);
         return provider?.Kind.ToString();
     }
 
     private string? ResolvePromptPickerModel(WorkflowCanvasNodeDraft? node)
         => node is null
             ? newComponentModel
-            : ResolveSelectedComponent(node)?.Model;
+            : node.Model;
 
     private void OpenPromptGalleryItemEditor(Guid promptArtifactId)
         => NavigationManager.NavigateTo($"/prompt-gallery?promptId={promptArtifactId:D}");
@@ -1379,20 +1363,25 @@ public partial class WorkflowCanvasEditor
         node.ExecutionPolicy = null;
     }
 
-    private void HandleSelectedComponentChanged(WorkflowCanvasNodeDraft node, ChangeEventArgs args)
+    private void HandleSelectedProviderChanged(WorkflowCanvasNodeDraft node, ChangeEventArgs args)
     {
-        if (!Guid.TryParse(args.Value?.ToString(), out var componentGuid))
+        if (!Guid.TryParse(args.Value?.ToString(), out var providerProfileId))
         {
-            node.ComponentId = null;
+            node.ProviderProfileId = null;
+            node.Model = string.Empty;
             return;
         }
 
-        var componentId = new WorkflowComponentId(componentGuid);
-        var component = componentOptions.FirstOrDefault(item => item.Id == componentId);
-        if (component is not null)
-        {
-            WorkflowCanvasDefinitionMapper.ApplyComponent(node, component);
-        }
+        node.ProviderProfileId = providerProfileId;
+        node.Model = ResolveDefaultModel(ResolveSelectedNodeProvider(node));
+    }
+
+    private Task HandleSelectedModelChangedAsync(WorkflowCanvasNodeDraft node, string? model)
+    {
+        node.Model = string.IsNullOrWhiteSpace(model)
+            ? string.Empty
+            : model.Trim();
+        return Task.CompletedTask;
     }
 
     private void HandleSelectedRequestKindChanged(WorkflowCanvasNodeDraft node, ChangeEventArgs args)
@@ -2476,11 +2465,6 @@ public partial class WorkflowCanvasEditor
         return document.Nodes.FirstOrDefault(node => node.Id == nodeId)?.Name ?? nodeId.Value;
     }
 
-    private static string FormatComponentId(WorkflowComponentId? componentId)
-    {
-        return componentId?.Value.ToString("D") ?? string.Empty;
-    }
-
     private WorkflowProviderOption? ResolveDefaultProviderOption()
     {
         return ProviderOptions.FirstOrDefault(option => option.IsEnabled);
@@ -2537,26 +2521,21 @@ public partial class WorkflowCanvasEditor
             : null;
     }
 
-    private WorkflowProviderOption? ResolveComponentProviderOption(LlmCallComponent? component)
+    private WorkflowProviderOption? ResolveSelectedNodeProvider(WorkflowCanvasNodeDraft node)
     {
-        return component?.ProviderProfileId is { } providerProfileId
+        return node.ProviderProfileId is { } providerProfileId
             ? ProviderOptions.FirstOrDefault(option => option.ProviderProfileId == providerProfileId)
             : null;
     }
 
-    private WorkflowExecutorDisplayBadge BuildLlmProviderUsageBadge(LlmCallComponent? component)
+    private WorkflowExecutorDisplayBadge BuildLlmProviderUsageBadge(WorkflowCanvasNodeDraft node)
     {
-        if (component is null)
-        {
-            return new WorkflowExecutorDisplayBadge("Provider unselected", "warning");
-        }
-
-        if (!component.ProviderProfileId.HasValue)
+        if (!node.ProviderProfileId.HasValue)
         {
             return new WorkflowExecutorDisplayBadge("Provider unbound", "warning");
         }
 
-        var provider = ResolveComponentProviderOption(component);
+        var provider = ResolveSelectedNodeProvider(node);
         if (provider is null)
         {
             return new WorkflowExecutorDisplayBadge("Provider missing", "danger");
@@ -2567,22 +2546,24 @@ public partial class WorkflowCanvasEditor
             : new WorkflowExecutorDisplayBadge("Provider disabled", "warning");
     }
 
-    private string BuildLlmProviderUsageDescription(LlmCallComponent? component)
+    private string BuildLlmProviderUsageDescription(
+        WorkflowCanvasNodeDraft node,
+        LlmCallComponent? component)
     {
         if (component is null)
         {
-            return "Select an LLM component before runtime provider usage can be attributed.";
+            return "Select a Gallery prompt before runtime provider usage can be attributed.";
         }
 
-        var provider = ResolveComponentProviderOption(component);
-        if (!component.ProviderProfileId.HasValue)
+        var provider = ResolveSelectedNodeProvider(node);
+        if (!node.ProviderProfileId.HasValue)
         {
-            return $"Component {component.Name} has no provider binding; execution cannot produce provider usage evidence.";
+            return $"Prompt {component.Name} has no node provider binding; execution cannot produce provider usage evidence.";
         }
 
         if (provider is null)
         {
-            return $"Component {component.Name} references provider {component.ProviderProfileId.Value:D}, but that provider is missing from the registry.";
+            return $"This node references provider {node.ProviderProfileId.Value:D}, but that provider is missing from the registry.";
         }
 
         if (!provider.IsEnabled)
@@ -2590,7 +2571,19 @@ public partial class WorkflowCanvasEditor
             return $"Provider {provider.Name} is disabled; runtime usage and cost remain unavailable until the provider is enabled or replaced.";
         }
 
-        return $"Provider {provider.Name} / {component.Model}; actual usage and cost appear only after execution records provider usage observations.";
+        return $"Provider {provider.Name} / {node.Model}; actual usage and cost appear only after execution records provider usage observations.";
+    }
+
+    private static string BuildPromptIdentity(LlmCallComponent? component)
+    {
+        if (component is null)
+        {
+            return "No Gallery prompt selected.";
+        }
+
+        var artifact = component.PromptArtifactId?.ToString("D") ?? "missing artifact";
+        var revision = component.PromptVersionId?.ToString("D") ?? "missing revision";
+        return $"{component.Name} · Gallery item {artifact} · immutable revision {revision}";
     }
 
     private string BuildProviderOptionsSummary()
@@ -2644,6 +2637,10 @@ public partial class WorkflowCanvasEditor
             newComponentModel = ResolveDefaultModel(selectedProvider);
         }
     }
+
+    private sealed record PromptBindingExecutionPair(
+        WorkflowProviderOption Provider,
+        string Model);
 
     private void InsertNodeBeforeEnd(WorkflowCanvasNodeDraft node)
     {

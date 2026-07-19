@@ -29,11 +29,18 @@ public sealed class PromptGalleryProjectionTests
         var factory = PromptGalleryTestSupport.CreateFactory(nameof(Coordinator_upserts_removes_and_rebuilds_from_canonical_items));
         var activeId = Guid.Parse("00000000-0000-0000-0000-000000000001");
         var archivedId = Guid.Parse("00000000-0000-0000-0000-000000000002");
+        var draftId = Guid.Parse("00000000-0000-0000-0000-000000000003");
         await using (var dbContext = factory.CreateDbContext())
         {
+            var active = Artifact(activeId, "Active", archived: false);
+            active.CurrentDraftText = "Unpublished active draft content";
+            var draft = Artifact(draftId, "Draft", archived: false);
+            draft.Status = PromptArtifactStatus.Draft;
             dbContext.AddRange(
-                Artifact(activeId, "Active", archived: false),
-                Artifact(archivedId, "Archived", archived: true));
+                active,
+                Artifact(archivedId, "Archived", archived: true),
+                draft,
+                Version(activeId, "Published active content"));
             await dbContext.SaveChangesAsync();
         }
 
@@ -42,15 +49,21 @@ public sealed class PromptGalleryProjectionTests
 
         var upsert = await coordinator.UpsertAsync(activeId);
         var archiveProjection = await coordinator.UpsertAsync(archivedId);
+        var draftProjection = await coordinator.UpsertAsync(draftId);
         var explicitRemove = await coordinator.RemoveAsync(activeId);
         var rebuild = await coordinator.RebuildAsync();
 
         Assert.Equal(PromptGalleryProjectionOperationState.Applied, upsert.State);
         Assert.Equal([activeId], driver.Upserts.Select(document => document.PromptArtifactId));
-        Assert.Equal([archivedId, activeId], driver.Removals);
+        Assert.Equal("Published active content", Assert.Single(driver.Upserts).Content);
+        Assert.Equal([archivedId, draftId, activeId], driver.Removals.Select(removal => removal.PromptArtifactId));
+        Assert.Equal(PromptGalleryProjectionOperationState.Applied, archiveProjection.State);
+        Assert.Equal(PromptGalleryProjectionOperationState.Applied, draftProjection.State);
         Assert.Equal(PromptGalleryProjectionOperationState.Applied, explicitRemove.State);
         Assert.Equal(1, rebuild.ProcessedCount);
-        Assert.Equal([activeId], Assert.Single(driver.Rebuilds).Select(document => document.PromptArtifactId));
+        var rebuilt = Assert.Single(Assert.Single(driver.Rebuilds));
+        Assert.Equal(activeId, rebuilt.PromptArtifactId);
+        Assert.Equal("Published active content", rebuilt.Content);
     }
 
     private static PromptArtifact Artifact(Guid id, string title, bool archived)
@@ -68,6 +81,18 @@ public sealed class PromptGalleryProjectionTests
             UpdatedAtUtc = DateTimeOffset.UnixEpoch
         };
 
+    private static PromptVersion Version(Guid promptArtifactId, string content)
+        => new()
+        {
+            PromptArtifactId = promptArtifactId,
+            VersionNumber = 1,
+            Content = content,
+            CreationReason = "Projection proof",
+            TitleSnapshot = "Published title",
+            SummarySnapshot = "Published summary",
+            CreatedAtUtc = DateTimeOffset.UnixEpoch
+        };
+
     private sealed class RecordingProjectionDriver : IPromptGalleryProjectionDriver
     {
         private static readonly PromptGalleryProjectionStatus Ready = new(
@@ -78,7 +103,7 @@ public sealed class PromptGalleryProjectionTests
 
         public List<PromptGalleryProjectionDocument> Upserts { get; } = [];
 
-        public List<Guid> Removals { get; } = [];
+        public List<(Guid PromptArtifactId, DateTimeOffset? ExpectedUpdatedAtUtc)> Removals { get; } = [];
 
         public List<IReadOnlyList<PromptGalleryProjectionDocument>> Rebuilds { get; } = [];
 
@@ -97,9 +122,12 @@ public sealed class PromptGalleryProjectionTests
             return Task.CompletedTask;
         }
 
-        public Task RemoveAsync(Guid promptArtifactId, CancellationToken cancellationToken = default)
+        public Task RemoveAsync(
+            Guid promptArtifactId,
+            DateTimeOffset? expectedUpdatedAtUtc,
+            CancellationToken cancellationToken = default)
         {
-            Removals.Add(promptArtifactId);
+            Removals.Add((promptArtifactId, expectedUpdatedAtUtc));
             return Task.CompletedTask;
         }
 

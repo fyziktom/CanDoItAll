@@ -39,7 +39,8 @@ public sealed record PromptGalleryProjectionDocument(
     PromptArtifactStatus Status,
     IReadOnlyList<string> Tags,
     string Route,
-    DateTimeOffset UpdatedAtUtc);
+    DateTimeOffset UpdatedAtUtc,
+    bool IsFavorite = false);
 
 public interface IPromptGalleryProjectionDriver
 {
@@ -51,7 +52,10 @@ public interface IPromptGalleryProjectionDriver
 
     Task UpsertAsync(PromptGalleryProjectionDocument document, CancellationToken cancellationToken = default);
 
-    Task RemoveAsync(Guid promptArtifactId, CancellationToken cancellationToken = default);
+    Task RemoveAsync(
+        Guid promptArtifactId,
+        DateTimeOffset? expectedUpdatedAtUtc,
+        CancellationToken cancellationToken = default);
 
     Task<int> RebuildAsync(
         IAsyncEnumerable<PromptGalleryProjectionDocument> documents,
@@ -93,7 +97,10 @@ public sealed class DisabledPromptGalleryProjectionDriver : IPromptGalleryProjec
         CancellationToken cancellationToken = default)
         => Task.CompletedTask;
 
-    public Task RemoveAsync(Guid promptArtifactId, CancellationToken cancellationToken = default)
+    public Task RemoveAsync(
+        Guid promptArtifactId,
+        DateTimeOffset? expectedUpdatedAtUtc,
+        CancellationToken cancellationToken = default)
         => Task.CompletedTask;
 
     public Task<int> RebuildAsync(
@@ -125,13 +132,13 @@ public sealed class PromptGalleryProjectionCoordinator(
             throw new KeyNotFoundException($"Prompt Gallery item '{promptArtifactId}' was not found for projection.");
         }
 
-        if (document.IsArchived)
+        if (document.ShouldRemove)
         {
-            await driver.RemoveAsync(promptArtifactId, cancellationToken);
+            await driver.RemoveAsync(promptArtifactId, document.UpdatedAtUtc, cancellationToken);
         }
         else
         {
-            await driver.UpsertAsync(document.Document, cancellationToken);
+            await driver.UpsertAsync(document.Document!, cancellationToken);
         }
 
         return Applied(1, await driver.GetStatusAsync(cancellationToken));
@@ -147,7 +154,7 @@ public sealed class PromptGalleryProjectionCoordinator(
             return Disabled(status);
         }
 
-        await driver.RemoveAsync(promptArtifactId, cancellationToken);
+        await driver.RemoveAsync(promptArtifactId, expectedUpdatedAtUtc: null, cancellationToken);
         return Applied(1, await driver.GetStatusAsync(cancellationToken));
     }
 
@@ -177,10 +184,31 @@ public sealed class PromptGalleryProjectionCoordinator(
             return null;
         }
 
+        if (!IsProjectable(artifact))
+        {
+            return new ProjectionDocumentState(
+                ShouldRemove: true,
+                artifact.UpdatedAtUtc,
+                Document: null);
+        }
+
+        var publishedContent = await dbContext.Set<PromptVersion>()
+            .AsNoTracking()
+            .Where(version =>
+                version.PromptArtifactId == artifact.Id &&
+                version.VersionNumber == artifact.CurrentVersionNumber)
+            .Select(version => version.Content)
+            .SingleOrDefaultAsync(cancellationToken)
+            ?? throw new InvalidOperationException(
+                $"Final Prompt Gallery item '{artifact.Id}' has no immutable current version to project.");
         var tags = await LoadTagsAsync(dbContext, [promptArtifactId], cancellationToken);
         return new ProjectionDocumentState(
-            artifact.IsArchived,
-            CreateDocument(artifact, tags.GetValueOrDefault(promptArtifactId, [])));
+            ShouldRemove: false,
+            artifact.UpdatedAtUtc,
+            CreateDocument(
+                artifact,
+                publishedContent,
+                tags.GetValueOrDefault(promptArtifactId, [])));
     }
 
     private async IAsyncEnumerable<PromptGalleryProjectionDocument> LoadDocumentsAsync(
@@ -190,7 +218,7 @@ public sealed class PromptGalleryProjectionCoordinator(
         await using var idDbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         var artifactIds = idDbContext.Set<PromptArtifact>()
             .AsNoTracking()
-            .Where(artifact => !artifact.IsArchived)
+            .Where(IsProjectableExpression)
             .OrderBy(artifact => artifact.Id)
             .Select(artifact => artifact.Id)
             .AsAsyncEnumerable();
@@ -229,14 +257,24 @@ public sealed class PromptGalleryProjectionCoordinator(
         CancellationToken cancellationToken)
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        var artifacts = await dbContext.Set<PromptArtifact>()
-            .AsNoTracking()
-            .Where(artifact => !artifact.IsArchived && promptArtifactIds.Contains(artifact.Id))
-            .OrderBy(artifact => artifact.Id)
+        var artifacts = await (
+                from artifact in dbContext.Set<PromptArtifact>().AsNoTracking()
+                join version in dbContext.Set<PromptVersion>().AsNoTracking()
+                    on new { PromptArtifactId = artifact.Id, VersionNumber = artifact.CurrentVersionNumber }
+                    equals new { version.PromptArtifactId, version.VersionNumber }
+                where !artifact.IsArchived &&
+                      artifact.Status == PromptArtifactStatus.Final &&
+                      artifact.CurrentVersionNumber > 0 &&
+                      promptArtifactIds.Contains(artifact.Id)
+                orderby artifact.Id
+                select new ProjectionSource(artifact, version.Content))
             .ToListAsync(cancellationToken);
         var tags = await LoadTagsAsync(dbContext, promptArtifactIds, cancellationToken);
         return artifacts
-            .Select(artifact => CreateDocument(artifact, tags.GetValueOrDefault(artifact.Id, [])))
+            .Select(source => CreateDocument(
+                source.Artifact,
+                source.PublishedContent,
+                tags.GetValueOrDefault(source.Artifact.Id, [])))
             .ToArray();
     }
 
@@ -267,18 +305,30 @@ public sealed class PromptGalleryProjectionCoordinator(
 
     private static PromptGalleryProjectionDocument CreateDocument(
         PromptArtifact artifact,
+        string publishedContent,
         IReadOnlyList<string> tags)
         => new(
             artifact.Id,
             artifact.ProjectId,
             artifact.Title,
             artifact.Summary,
-            artifact.CurrentDraftText,
+            publishedContent,
             artifact.Kind,
             artifact.Status,
             tags,
             $"/prompt-gallery?promptId={artifact.Id}",
-            artifact.UpdatedAtUtc);
+            artifact.UpdatedAtUtc,
+            artifact.IsFavorite);
+
+    private static bool IsProjectable(PromptArtifact artifact)
+        => !artifact.IsArchived &&
+           artifact.Status == PromptArtifactStatus.Final &&
+           artifact.CurrentVersionNumber > 0;
+
+    private static readonly System.Linq.Expressions.Expression<Func<PromptArtifact, bool>> IsProjectableExpression =
+        artifact => !artifact.IsArchived &&
+                    artifact.Status == PromptArtifactStatus.Final &&
+                    artifact.CurrentVersionNumber > 0;
 
     private static PromptGalleryProjectionOperationResult Disabled(PromptGalleryProjectionStatus status)
         => new(PromptGalleryProjectionOperationState.Disabled, 0, status);
@@ -288,5 +338,12 @@ public sealed class PromptGalleryProjectionCoordinator(
         PromptGalleryProjectionStatus status)
         => new(PromptGalleryProjectionOperationState.Applied, processedCount, status);
 
-    private sealed record ProjectionDocumentState(bool IsArchived, PromptGalleryProjectionDocument Document);
+    private sealed record ProjectionDocumentState(
+        bool ShouldRemove,
+        DateTimeOffset UpdatedAtUtc,
+        PromptGalleryProjectionDocument? Document);
+
+    private sealed record ProjectionSource(
+        PromptArtifact Artifact,
+        string PublishedContent);
 }

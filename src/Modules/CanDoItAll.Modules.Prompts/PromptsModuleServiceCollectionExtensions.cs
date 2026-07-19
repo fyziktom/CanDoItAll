@@ -23,6 +23,7 @@ public static class PromptsModuleServiceCollectionExtensions
             serviceProvider.GetRequiredService<PromptsService>());
         services.TryAddScoped<IPromptGalleryImportService>(serviceProvider =>
             serviceProvider.GetRequiredService<PromptsService>());
+        services.TryAddSingleton<IPromptGalleryCuratorLauncher, UnavailablePromptGalleryCuratorLauncher>();
         services.TryAddEnumerable(
             ServiceDescriptor.Singleton<IHostedService, PromptGallerySeedImportHostedService>());
         return services;

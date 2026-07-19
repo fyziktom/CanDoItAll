@@ -84,7 +84,7 @@ public sealed class HrAgentAdministrationService(
                     provider.IsEnabled))
                 .ToArray(),
             capabilities
-                .Where(capability => !HrAgentCapabilityKeys.PrivilegedKeys.Contains(capability.Key))
+                .Where(capability => !ManagedAgentPrivilegedCapabilityKeys.All.Contains(capability.Key))
                 .OrderBy(capability => capability.Name, StringComparer.OrdinalIgnoreCase)
                 .Select(MapCapability)
                 .ToArray(),
@@ -319,10 +319,10 @@ public sealed class HrAgentAdministrationService(
             throw new InvalidOperationException($"Unknown capability IDs: {string.Join(", ", missing.Select(id => id.ToString("D")))}.");
         }
 
-        var privileged = selected.Where(item => HrAgentCapabilityKeys.PrivilegedKeys.Contains(item.Key)).ToArray();
+        var privileged = selected.Where(item => ManagedAgentPrivilegedCapabilityKeys.All.Contains(item.Key)).ToArray();
         if (privileged.Length > 0)
         {
-            throw new InvalidOperationException($"HR administrative capabilities cannot be granted by an HR runtime tool: {string.Join(", ", privileged.Select(item => item.Key))}.");
+            throw new InvalidOperationException($"Privileged managed-agent capabilities cannot be granted by an HR runtime tool: {string.Join(", ", privileged.Select(item => item.Key))}.");
         }
 
         return selected;

@@ -17,7 +17,7 @@ Operate the canonical prompt and prompt-part library through the CanDoItAll web 
 ## Browse And Read
 
 - Search with `GET /api/prompt-gallery/items`.
-- Use `text`, repeated `tag`, `kind`, `status`, `includeArchived`, `provider`, `model`, `pageIndex`, and `pageSize` query values.
+- Use `text`, repeated `tag`, `kind`, `status`, `includeArchived`, `favoritesOnly`, `provider`, `model`, `pageIndex`, and `pageSize` query values.
 - Read an item with `GET /api/prompt-gallery/items/{promptId}`.
 - Read an immutable version with `GET /api/prompt-gallery/items/{promptId}/versions/{versionId}`.
 - Page instead of fetching the entire catalog. Treat returned totals as point-in-time search metadata.
@@ -25,8 +25,10 @@ Operate the canonical prompt and prompt-part library through the CanDoItAll web 
 ## Change Items
 
 - Create or update a draft with `POST /api/prompt-gallery/items`.
+- Supply the last-read `expectedUpdatedAtUtc` when updating; on a conflict, reread and reconcile instead of overwriting.
 - Create an immutable version with `POST /api/prompt-gallery/items/{promptId}/versions`.
 - Archive with `POST /api/prompt-gallery/items/{promptId}/archive`; do not hard-delete reusable content.
+- Set favourite state with `POST /api/prompt-gallery/items/{promptId}/favorite`.
 - Preserve a supplied item id only when importing or synchronizing an established identity.
 - Treat source keys and provenance as import identity. Do not overwrite user-edited content merely because a packaged seed has the same source key.
 
@@ -40,7 +42,7 @@ Operate the canonical prompt and prompt-part library through the CanDoItAll web 
 
 ## Operating Rules
 
-- Gallery owns title, kind, tags, prompt text, versions, provenance, portable provider/model compatibility, and parameter recommendations.
+- Gallery owns title, kind, tags, favourite state, prompt text, versions, provenance, portable provider/model compatibility, an optional preferred pair, and parameter recommendations.
 - Workflow definitions own execution topology, provider profile selection, permissions, ports, and an immutable prompt snapshot/reference.
 - Read an exact version for reproducible workflow execution. Use current draft content only for interactive authoring.
 - Keep prompt content out of logs, URLs, and error messages. Log ids, version numbers, source keys, and content lengths instead.

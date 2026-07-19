@@ -19,11 +19,18 @@ public sealed class PromptGalleryAgentRuntimeToolProviderTests
     {
         var factory = PromptGalleryTestSupport.CreateFactory(nameof(Item_tool_returns_immutable_current_version_and_enforces_runtime_model));
         var gallery = PromptGalleryTestSupport.CreateService(factory);
-        var promptId = Require(await gallery.SaveDraftAsync(CreateDraft("Immutable version content.")));
+        var saveReceipt = Require(await gallery.SaveDraftAsync(CreateDraft("Immutable version content.")));
+        var promptId = saveReceipt.PromptArtifactId;
         var version = Require(await gallery.CreateVersionAsync(
             promptId,
-            new PromptVersionCreateRequest("Runtime tool proof")));
-        _ = Require(await gallery.SaveDraftAsync(CreateDraft("Mutable draft must not leak.", promptId)));
+            new PromptVersionCreateRequest(
+                "Runtime tool proof",
+                saveReceipt.UpdatedAtUtc)));
+        var finalized = Require(await gallery.GetItemAsync(promptId));
+        _ = Require(await gallery.SaveDraftAsync(CreateDraft(
+            "Mutable draft must not leak.",
+            promptId,
+            finalized.UpdatedAtUtc)));
 
         var toolProvider = new PromptGalleryAgentRuntimeToolProvider(
             gallery,
@@ -56,7 +63,10 @@ public sealed class PromptGalleryAgentRuntimeToolProviderTests
         Assert.Contains("not declared as supported", exception.Message, StringComparison.OrdinalIgnoreCase);
     }
 
-    private static PromptGalleryDraft CreateDraft(string content, Guid? id = null)
+    private static PromptGalleryDraft CreateDraft(
+        string content,
+        Guid? id = null,
+        DateTimeOffset? expectedUpdatedAtUtc = null)
         => new(
             id,
             ProjectId: null,
@@ -69,7 +79,8 @@ public sealed class PromptGalleryAgentRuntimeToolProviderTests
             Tags: ["runtime"],
             SupportedModels: [new PromptProviderModel(ProviderKind.OpenAi.ToString(), "gpt-5-mini")],
             SupportedConsumers: [PromptGalleryConsumer.AgentRuntime],
-            Recommendations: new PromptModelRecommendations(0.2, 800));
+            Recommendations: new PromptModelRecommendations(0.2, 800),
+            ExpectedUpdatedAtUtc: expectedUpdatedAtUtc);
 
     private static AgentRuntimeToolProviderContext CreateContext(string model)
     {

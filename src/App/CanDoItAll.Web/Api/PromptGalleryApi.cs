@@ -80,6 +80,18 @@ internal static class PromptGalleryApi
                     "prompts.gallery.not-found"))
             .WithName("ArchivePromptGalleryItem");
 
+        prompts.MapPost("/items/{promptId:guid}/favorite", async (
+                Guid promptId,
+                PromptGalleryFavoriteRequest? request,
+                IPromptGalleryService gallery,
+                CancellationToken cancellationToken) =>
+            request is null
+                ? ApiEndpointResults.BadRequest("A favorite request is required.", "prompt-gallery.request-required")
+                : ApiEndpointResults.FromResult(
+                    await gallery.SetFavoriteAsync(promptId, request.Favorite, cancellationToken),
+                    "prompts.gallery.not-found"))
+            .WithName("SetPromptGalleryFavorite");
+
         prompts.MapPost("/compatibility/evaluate", async (
                 PromptGalleryCompatibilityApiRequest? request,
                 IPromptGalleryService gallery,
@@ -156,23 +168,27 @@ internal sealed record PromptGalleryApiQuery(
     string? Model = null,
     PromptGalleryConsumer? Consumer = null,
     int PageIndex = 0,
-    int PageSize = 25)
+    int PageSize = 25,
+    bool FavoritesOnly = false)
 {
     public PromptGalleryQuery ToDomain()
         => new(
-            Text,
-            Tag,
-            Kind,
-            Status,
-            IncludeArchived,
-            Provider,
-            Model,
-            PageIndex,
-            PageSize,
-            Consumer);
+            Text: Text,
+            Tags: Tag,
+            Kind: Kind,
+            Status: Status,
+            IncludeArchived: IncludeArchived,
+            Provider: Provider,
+            Model: Model,
+            PageIndex: PageIndex,
+            PageSize: PageSize,
+            Consumer: Consumer,
+            FavoritesOnly: FavoritesOnly);
 }
 
 internal sealed record PromptGalleryArchiveRequest(bool Archived = true);
+
+internal sealed record PromptGalleryFavoriteRequest(bool Favorite = true);
 
 internal sealed record PromptGalleryCompatibilityApiRequest(
     Guid PromptArtifactId,

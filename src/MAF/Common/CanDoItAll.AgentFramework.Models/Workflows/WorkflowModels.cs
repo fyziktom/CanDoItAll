@@ -451,6 +451,10 @@ public sealed record WorkflowNodeSettings(
     WorkflowValueShape? InputShape,
     WorkflowValueShape? ResultShape)
 {
+    public Guid? ProviderProfileId { get; init; }
+
+    public string Model { get; init; } = string.Empty;
+
     public WorkflowExecutorId? ExecutorId { get; init; }
 
     public string ExecutorSettingsJson { get; init; } = string.Empty;

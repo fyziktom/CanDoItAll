@@ -26,9 +26,19 @@
                             Icon="forum"
                             Size="ButtonSize.Small"
                             ButtonStyle="ButtonStyle.Info"
-                            Disabled="@isOpeningHrAgentChat"
-                            Click="@(() => OpenHrAgentChatAsync(toolbarHrAgent))"
+                            Disabled="@openingManagedAgentChatId.HasValue"
+                            Click="@(() => OpenManagedAgentChatAsync(toolbarHrAgent))"
                             data-testid="agents-hr-agent-open-top" />
+                }
+                @if (PromptsCuratorAgent is { } toolbarPromptsCuratorAgent)
+                {
+                    <Button Text="Prompts Curator"
+                            Icon="forum"
+                            Size="ButtonSize.Small"
+                            ButtonStyle="ButtonStyle.Info"
+                            Disabled="@openingManagedAgentChatId.HasValue"
+                            Click="@(() => OpenManagedAgentChatAsync(toolbarPromptsCuratorAgent))"
+                            data-testid="agents-prompts-curator-open-top" />
                 }
                 <div class="agent-catalog-panel__search" role="search">
                     <input @bind="agentSearch"
@@ -164,9 +174,19 @@
                                                     Icon="forum"
                                                     Size="ButtonSize.Small"
                                                     ButtonStyle="ButtonStyle.Light"
-                                                    Disabled="@isOpeningHrAgentChat"
-                                                    Click="@(() => OpenHrAgentChatAsync(agent))"
+                                                    Disabled="@openingManagedAgentChatId.HasValue"
+                                                    Click="@(() => OpenManagedAgentChatAsync(agent))"
                                                     data-testid="agents-hr-agent-open" />
+                                        }
+                                        @if (PromptsCuratorAgentIdentity.Matches(agent))
+                                        {
+                                            <Button Text="Open chat"
+                                                    Icon="forum"
+                                                    Size="ButtonSize.Small"
+                                                    ButtonStyle="ButtonStyle.Light"
+                                                    Disabled="@openingManagedAgentChatId.HasValue"
+                                                    Click="@(() => OpenManagedAgentChatAsync(agent))"
+                                                    data-testid="agents-prompts-curator-open" />
                                         }
                                     </Actions>
                                 </AgentSelectionCard>

@@ -167,7 +167,10 @@ public sealed class PromptGallerySeedTests
             CancellationToken cancellationToken = default)
             => Task.CompletedTask;
 
-        public Task RemoveAsync(Guid promptArtifactId, CancellationToken cancellationToken = default)
+        public Task RemoveAsync(
+            Guid promptArtifactId,
+            DateTimeOffset? expectedUpdatedAtUtc,
+            CancellationToken cancellationToken = default)
             => Task.CompletedTask;
 
         public async Task<int> RebuildAsync(

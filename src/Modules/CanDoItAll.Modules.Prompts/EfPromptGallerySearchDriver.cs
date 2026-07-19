@@ -50,6 +50,11 @@ public sealed class EfPromptGallerySearchDriver(IDbContextFactory<AppDbContext> 
                     candidate.Id == link.PromptTagId && candidate.NameKey == tag)));
         }
 
+        if (query.FavoritesOnly)
+        {
+            artifacts = artifacts.Where(artifact => artifact.IsFavorite);
+        }
+
         var providerKey = NormalizeKey(query.Provider);
         var modelKey = NormalizeKey(query.Model);
         if (providerKey is not null || modelKey is not null)
@@ -80,7 +85,7 @@ public sealed class EfPromptGallerySearchDriver(IDbContextFactory<AppDbContext> 
                 join collection in dbContext.Set<PromptCollection>().AsNoTracking()
                     on artifact.CollectionId equals collection.Id into collections
                 from collection in collections.DefaultIfEmpty()
-                orderby artifact.UpdatedAtUtc descending, artifact.Title, artifact.Id
+                orderby artifact.IsFavorite descending, artifact.UpdatedAtUtc descending, artifact.Title, artifact.Id
                 select new SearchRow(
                     artifact.Id,
                     artifact.Title,
@@ -92,6 +97,7 @@ public sealed class EfPromptGallerySearchDriver(IDbContextFactory<AppDbContext> 
                     artifact.Phase,
                     artifact.Status,
                     artifact.IsArchived,
+                    artifact.IsFavorite,
                     collection == null ? null : collection.Name,
                     artifact.RecommendedTemperature,
                     artifact.RecommendedMaxOutputTokens,
@@ -128,7 +134,8 @@ public sealed class EfPromptGallerySearchDriver(IDbContextFactory<AppDbContext> 
                     row.RecommendedMaxOutputTokens,
                     row.RecommendedTopP),
                 row.CurrentVersionNumber,
-                row.UpdatedAtUtc))
+                row.UpdatedAtUtc,
+                row.IsFavorite))
             .ToList();
 
         return new PromptGalleryPage<PromptGallerySearchItem>(items, query.PageIndex, query.PageSize, totalCount);
@@ -172,9 +179,10 @@ public sealed class EfPromptGallerySearchDriver(IDbContextFactory<AppDbContext> 
         var rows = await dbContext.Set<PromptSupportedProviderModel>()
             .AsNoTracking()
             .Where(model => artifactIds.Contains(model.PromptArtifactId))
-            .OrderBy(model => model.Provider)
+            .OrderByDescending(model => model.IsPreferred)
+            .ThenBy(model => model.Provider)
             .ThenBy(model => model.Model)
-            .Select(model => new { model.PromptArtifactId, model.Provider, model.Model })
+            .Select(model => new { model.PromptArtifactId, model.Provider, model.Model, model.IsPreferred })
             .ToListAsync(cancellationToken);
 
         return rows
@@ -182,7 +190,7 @@ public sealed class EfPromptGallerySearchDriver(IDbContextFactory<AppDbContext> 
             .ToDictionary(
                 group => group.Key,
                 group => (IReadOnlyList<PromptProviderModel>)group
-                    .Select(row => new PromptProviderModel(row.Provider, row.Model))
+                    .Select(row => new PromptProviderModel(row.Provider, row.Model, row.IsPreferred))
                     .ToList());
     }
 
@@ -195,6 +203,7 @@ public sealed class EfPromptGallerySearchDriver(IDbContextFactory<AppDbContext> 
         string Phase,
         PromptArtifactStatus Status,
         bool IsArchived,
+        bool IsFavorite,
         string? CollectionName,
         double? RecommendedTemperature,
         int? RecommendedMaxOutputTokens,

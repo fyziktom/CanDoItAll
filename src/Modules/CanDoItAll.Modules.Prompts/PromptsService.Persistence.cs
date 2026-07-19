@@ -14,6 +14,13 @@ internal static class PromptGalleryPersistence
             errors.Add(Error.Validation("Prompt ID cannot be empty.", "prompts.gallery.id-invalid"));
         }
 
+        if (draft.Id.HasValue && !draft.ExpectedUpdatedAtUtc.HasValue)
+        {
+            errors.Add(Error.Validation(
+                "ExpectedUpdatedAtUtc is required when updating a Prompt Gallery item.",
+                "prompts.gallery.expected-updated-at-required"));
+        }
+
         if (string.IsNullOrWhiteSpace(draft.Title) || draft.Title.Trim().Length > 200)
         {
             errors.Add(Error.Validation(
@@ -86,6 +93,13 @@ internal static class PromptGalleryPersistence
                 "prompts.gallery.models-duplicate"));
         }
 
+        if (draft.SupportedModels?.Count(model => model.IsPreferred) > 1)
+        {
+            errors.Add(Error.Validation(
+                "Only one supported provider/model entry can be preferred.",
+                "prompts.gallery.models-preferred-duplicate"));
+        }
+
         if (draft.SupportedConsumers?.Any(consumer => !Enum.IsDefined(consumer)) == true)
         {
             errors.Add(Error.Validation(
@@ -146,9 +160,10 @@ internal static class PromptGalleryPersistence
         var supportedModels = await dbContext.Set<PromptSupportedProviderModel>()
             .AsNoTracking()
             .Where(item => item.PromptArtifactId == promptArtifactId)
-            .OrderBy(item => item.Provider)
+            .OrderByDescending(item => item.IsPreferred)
+            .ThenBy(item => item.Provider)
             .ThenBy(item => item.Model)
-            .Select(item => new PromptProviderModel(item.Provider, item.Model))
+            .Select(item => new PromptProviderModel(item.Provider, item.Model, item.IsPreferred))
             .ToListAsync(cancellationToken);
         var supportedConsumers = await dbContext.Set<PromptSupportedConsumer>()
             .AsNoTracking()
@@ -206,7 +221,8 @@ internal static class PromptGalleryPersistence
                 artifact.SourceOrderIndex),
             versions,
             artifact.CreatedAtUtc,
-            artifact.UpdatedAtUtc);
+            artifact.UpdatedAtUtc,
+            artifact.IsFavorite);
     }
 
     internal static async Task SyncTagsAsync(
@@ -286,7 +302,8 @@ internal static class PromptGalleryPersistence
                 item.Provider.Trim(),
                 item.Model.Trim(),
                 NormalizeRequiredKey(item.Provider),
-                NormalizeRequiredKey(item.Model)))
+                NormalizeRequiredKey(item.Model),
+                item.IsPreferred))
             .ToDictionary(item => (item.ProviderKey, item.ModelKey));
         var existing = isNewArtifact
             ? []
@@ -303,6 +320,7 @@ internal static class PromptGalleryPersistence
 
             current.Provider = wanted.Provider;
             current.Model = wanted.Model;
+            current.IsPreferred = wanted.IsPreferred;
             desired.Remove((current.ProviderKey, current.ModelKey));
         }
 
@@ -314,7 +332,8 @@ internal static class PromptGalleryPersistence
                 Provider = supportedModel.Provider,
                 Model = supportedModel.Model,
                 ProviderKey = supportedModel.ProviderKey,
-                ModelKey = supportedModel.ModelKey
+                ModelKey = supportedModel.ModelKey,
+                IsPreferred = supportedModel.IsPreferred
             }, cancellationToken);
         }
     }
@@ -380,5 +399,6 @@ internal static class PromptGalleryPersistence
         string Provider,
         string Model,
         string ProviderKey,
-        string ModelKey);
+        string ModelKey,
+        bool IsPreferred);
 }

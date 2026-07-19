@@ -78,6 +78,8 @@ public sealed class PromptArtifact
 
     public bool IsArchived { get; set; }
 
+    public bool IsFavorite { get; set; }
+
     public DateTimeOffset? ArchivedAtUtc { get; set; }
 
     public DateTimeOffset CreatedAtUtc { get; set; }
@@ -152,6 +154,8 @@ public sealed class PromptSupportedProviderModel
     public string ProviderKey { get; set; } = string.Empty;
 
     public string ModelKey { get; set; } = string.Empty;
+
+    public bool IsPreferred { get; set; }
 }
 
 public sealed class PromptSupportedConsumer

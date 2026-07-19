@@ -6,73 +6,73 @@
        Class="prompt-gallery-search-list"
        data-testid="prompt-gallery-search-list">
     <FilterBar ResultText="@ResultText">
-        <TextBox Value="@searchText"
-                 ValueChanged="HandleSearchChangedAsync"
-                 Placeholder="Search names, prompt text, or tags"
-                 Immediate="true"
-                 Class="min-w-[20rem] flex-1"
-                 aria-label="Search prompt gallery"
-                 data-testid="prompt-gallery-search" />
-        <InputSelect TValue="PromptGalleryItemKind?"
-                     Value="@kind"
-                     ValueChanged="HandleKindChangedAsync"
-                     ValueExpression="@(() => kind)"
-                     class="cda-input min-w-[10rem]"
-                     aria-label="Prompt kind"
-                     data-testid="prompt-gallery-kind-filter">
-            <option value="">All kinds</option>
-            @foreach (var option in Enum.GetValues<PromptGalleryItemKind>())
+        <Grid Gap="LayoutGap.Small"
+              AlignItems="AlignItems.Center"
+              ColumnTemplate="@FilterColumnTemplate"
+              Class="min-w-0 flex-1"
+              data-testid="prompt-gallery-filter-rail">
+            <TextBox Value="@searchText"
+                     ValueChanged="HandleSearchChangedAsync"
+                     Placeholder="Search names, prompt text, or tags"
+                     Immediate="true"
+                     aria-label="Search prompt gallery"
+                     data-testid="prompt-gallery-search" />
+            <InputSelect TValue="PromptGalleryItemKind?"
+                         Value="@kind"
+                         ValueChanged="HandleKindChangedAsync"
+                         ValueExpression="@(() => kind)"
+                         class="cda-input"
+                         aria-label="Prompt kind"
+                         data-testid="prompt-gallery-kind-filter">
+                <option value="">All kinds</option>
+                @foreach (var option in Enum.GetValues<PromptGalleryItemKind>())
+                {
+                    <option value="@option">@FormatKind(option)</option>
+                }
+            </InputSelect>
+            <InputSelect TValue="PromptArtifactStatus?"
+                         Value="@status"
+                         ValueChanged="HandleStatusChangedAsync"
+                         ValueExpression="@(() => status)"
+                         class="cda-input"
+                         aria-label="Prompt status"
+                         data-testid="prompt-gallery-status-filter">
+                <option value="">All statuses</option>
+                @foreach (var option in Enum.GetValues<PromptArtifactStatus>())
+                {
+                    <option value="@option">@option</option>
+                }
+            </InputSelect>
+            <TagEditor Value="@tagFilters"
+                       ValueChanged="HandleTagsChangedAsync"
+                       Suggestions="@availableTags"
+                       Placeholder="Filter by tags"
+                       MaxTags="20"
+                       TestId="prompt-gallery-tag-filter"
+                       InputTestId="prompt-gallery-tag-filter-input" />
+            @if (!Compact)
             {
-                <option value="@option">@FormatKind(option)</option>
-            }
-        </InputSelect>
-        <InputSelect TValue="PromptArtifactStatus?"
-                     Value="@status"
-                     ValueChanged="HandleStatusChangedAsync"
-                     ValueExpression="@(() => status)"
-                     class="cda-input min-w-[10rem]"
-                     aria-label="Prompt status"
-                     data-testid="prompt-gallery-status-filter">
-            <option value="">All statuses</option>
-            @foreach (var option in Enum.GetValues<PromptArtifactStatus>())
-            {
-                <option value="@option">@option</option>
-            }
-        </InputSelect>
-        <Button Text="Clear"
-                Icon="filter_alt_off"
-                ButtonStyle="ButtonStyle.Light"
-                Size="ButtonSize.Small"
-                Click="ClearFiltersAsync"
-                data-testid="prompt-gallery-clear-filters" />
-    </FilterBar>
-
-    <TagEditor Value="@tagFilters"
-               ValueChanged="HandleTagsChangedAsync"
-               Suggestions="@availableTags"
-               Placeholder="Filter by tags"
-               MaxTags="20"
-               TestId="prompt-gallery-tag-filter"
-               InputTestId="prompt-gallery-tag-filter-input" />
-
-    @if (!Compact)
-    {
-        <Grid Gap="LayoutGap.Medium" ColumnsXl="3">
-            <FormField Text="Supported provider">
                 <TextBox Value="@providerFilter"
                          ValueChanged="HandleProviderFilterChangedAsync"
                          Placeholder="Any provider"
                          Immediate="true"
                          aria-label="Filter by supported provider" />
-            </FormField>
-            <FormField Text="Supported model">
                 <TextBox Value="@modelFilter"
                          ValueChanged="HandleModelFilterChangedAsync"
                          Placeholder="Any model"
                          Immediate="true"
                          aria-label="Filter by supported model" />
-            </FormField>
-            <Cluster AlignItems="AlignItems.Center">
+            }
+            <label class="prompt-gallery-search-list__choice">
+                <CheckBox TValue="bool"
+                          Value="@favoritesOnly"
+                          ValueChanged="HandleFavoritesOnlyChangedAsync"
+                          aria-label="Show favorite prompt items only"
+                          data-testid="prompt-gallery-favorites-filter" />
+                <span>Favorites</span>
+            </label>
+            @if (!Compact)
+            {
                 <label class="prompt-gallery-search-list__choice">
                     <CheckBox TValue="bool"
                               Value="@includeArchived"
@@ -80,9 +80,18 @@
                               aria-label="Include archived prompt items" />
                     <span>Include archived items</span>
                 </label>
-            </Cluster>
+            }
+            <Button Text=""
+                    Icon="filter_alt_off"
+                    ButtonStyle="ButtonStyle.Light"
+                    Variant="Variant.Text"
+                    Size="ButtonSize.Small"
+                    Click="ClearFiltersAsync"
+                    aria-label="Clear prompt gallery filters"
+                    title="Clear filters"
+                    data-testid="prompt-gallery-clear-filters" />
         </Grid>
-    }
+    </FilterBar>
 
     @if (!string.IsNullOrWhiteSpace(Provider) || !string.IsNullOrWhiteSpace(Model))
     {
@@ -131,7 +140,7 @@
                 <DataGridColumn TItem="PromptGallerySearchItem" Title="Prompt item">
                     <Template Context="item">
                         <Stack GapScale="LayoutGap.Tiny" Class="prompt-gallery-search-list__identity">
-                            <TextBlock Value="@item.Title" />
+                            <TextBlock TextStyle="TextStyle.Subtitle2" Value="@item.Title" />
                             <TextBlock Value="@Excerpt(item)" />
                         </Stack>
                     </Template>
@@ -176,6 +185,17 @@
                 <DataGridColumn TItem="PromptGallerySearchItem" Title="Actions">
                     <Template Context="item">
                         <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.NoWrap">
+                            <Button Text=""
+                                    Icon="@(item.IsFavorite ? "star" : "star_border")"
+                                    ButtonStyle="@(item.IsFavorite ? ButtonStyle.Warning : ButtonStyle.Light)"
+                                    Variant="Variant.Text"
+                                    Size="ButtonSize.Small"
+                                    Disabled="@(favoriteBusyItemId == item.Id)"
+                                    Click="@(() => ToggleFavoriteAsync(item))"
+                                    aria-label="@(item.IsFavorite ? "Remove favorite" : "Mark favorite")"
+                                    aria-pressed="@(item.IsFavorite ? "true" : "false")"
+                                    title="@(item.IsFavorite ? "Remove favorite" : "Mark favorite")"
+                                    data-testid="prompt-gallery-favorite" />
                             @if (ShowSelectAction)
                             {
                                 <Button Text="@SelectText"
@@ -229,12 +249,14 @@
     private string providerFilter = string.Empty;
     private string modelFilter = string.Empty;
     private string? loadError;
+    private Guid? favoriteBusyItemId;
     private PromptGalleryItemKind? kind;
     private PromptArtifactStatus? status;
     private PromptGalleryConsumer? previousConsumer;
     private string? previousProvider;
     private string? previousModel;
     private bool isLoading = true;
+    private bool favoritesOnly;
     private bool includeArchived;
     private bool disposed;
 
@@ -269,6 +291,10 @@
     public EventCallback<Guid> EditRequested { get; set; }
 
     private string ResultText => isLoading ? "Searching" : $"{page.TotalCount:N0} matching item(s)";
+
+    private string FilterColumnTemplate => Compact
+        ? "minmax(18rem,2fr) minmax(8rem,.7fr) minmax(8rem,.7fr) minmax(13rem,1.2fr) auto auto"
+        : "minmax(18rem,2fr) minmax(8rem,.7fr) minmax(8rem,.7fr) minmax(13rem,1.25fr) minmax(9rem,.8fr) minmax(10rem,.9fr) auto auto auto";
 
     private string PageText => page.TotalPages == 0
         ? "No pages"
@@ -332,6 +358,7 @@
         status = null;
         providerFilter = string.Empty;
         modelFilter = string.Empty;
+        favoritesOnly = false;
         includeArchived = false;
         await LoadPageAsync(0);
     }
@@ -352,6 +379,44 @@
     {
         includeArchived = value;
         await LoadPageAsync(0);
+    }
+
+    private async Task HandleFavoritesOnlyChangedAsync(bool value)
+    {
+        favoritesOnly = value;
+        await LoadPageAsync(0);
+    }
+
+    private async Task ToggleFavoriteAsync(PromptGallerySearchItem item)
+    {
+        if (favoriteBusyItemId.HasValue)
+        {
+            return;
+        }
+
+        favoriteBusyItemId = item.Id;
+        try
+        {
+            var result = await Gallery.SetFavoriteAsync(item.Id, !item.IsFavorite, lifetime.Token);
+            if (!result.IsSuccess)
+            {
+                Notifications.Warning("Favorite was not updated", DescribeErrors(result.Errors));
+                return;
+            }
+
+            await LoadPageAsync(page.PageIndex);
+        }
+        catch (OperationCanceledException) when (lifetime.IsCancellationRequested)
+        {
+        }
+        catch (Exception exception)
+        {
+            Notifications.Error("Favorite update failed", exception.Message);
+        }
+        finally
+        {
+            favoriteBusyItemId = null;
+        }
     }
 
     private Task ReloadAsync() => LoadPageAsync(page.PageIndex);
@@ -401,7 +466,8 @@
                     Model: string.IsNullOrWhiteSpace(Model) ? modelFilter : Model,
                     PageIndex: pageIndex,
                     PageSize: requestedPageSize,
-                    Consumer: Consumer),
+                    Consumer: Consumer,
+                    FavoritesOnly: favoritesOnly),
                 currentOperation.Token);
             if (!ReferenceEquals(operation, currentOperation) || currentOperation.IsCancellationRequested)
             {
@@ -460,12 +526,20 @@
         => item.IsArchived ? "Archived" : item.Status.ToString();
 
     private static string ModelSummary(PromptGallerySearchItem item)
-        => item.SupportedModels.Count switch
+    {
+        var preferred = item.SupportedModels.FirstOrDefault(model => model.IsPreferred);
+        if (preferred is not null)
+        {
+            return $"{preferred.Provider} · {preferred.Model} · preferred";
+        }
+
+        return item.SupportedModels.Count switch
         {
             0 => "Any provider / model",
             1 => $"{item.SupportedModels[0].Provider} · {item.SupportedModels[0].Model}",
             _ => $"{item.SupportedModels.Count} supported models"
         };
+    }
 
     private static string RecommendationSummary(PromptModelRecommendations value)
     {
@@ -487,6 +561,11 @@
 
         return parts.Count == 0 ? "No parameter recommendations" : string.Join(" · ", parts);
     }
+
+    private static string DescribeErrors(IReadOnlyList<CanDoItAll.SharedKernel.Error> errors)
+        => errors.Count == 0
+            ? "The prompt item could not be updated."
+            : string.Join(" ", errors.Select(error => error.Message));
 
     public ValueTask DisposeAsync()
     {

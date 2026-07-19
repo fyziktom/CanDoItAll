@@ -104,7 +104,7 @@ public sealed class ProjectWorkbenchCommandService(
                 $"Could not create a Gallery prompt for project node '{node.NodeKey}': {string.Join(" ", saveResult.Errors.Select(error => error.Message))}");
         }
 
-        ApplyPromptArtifactBinding(node, saveResult.Value);
+        ApplyPromptArtifactBinding(node, saveResult.Value.PromptArtifactId);
         node.UpdatedAtUtc = clock.GetUtcNow();
         return BuildArtifactReference(node, projectId);
     }

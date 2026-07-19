@@ -28,7 +28,7 @@ public sealed class PromptGalleryImportTests
                 "Use the canonical prompt snapshot.",
                 Tags: ["workflow"],
                 SupportedConsumers: [PromptGalleryConsumer.Workflow]),
-            new PromptVersionCreateRequest("Imported from workflow component"));
+            new PromptImportVersionRequest("Imported from workflow component"));
 
         var first = await service.ImportVersionAsync(request);
         var retry = await service.ImportVersionAsync(request);

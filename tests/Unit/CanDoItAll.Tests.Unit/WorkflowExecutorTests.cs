@@ -882,6 +882,47 @@ public sealed class WorkflowExecutorTests
     }
 
     [Fact]
+    public async Task MafWorkflowLlmComponentInvokerUsesNodeProviderModelAndInstructionOverrides()
+    {
+        var runtime = new CapturingAgentRuntime("{\"ok\":true}");
+        var componentProvider = CreateProviderProfile("component-model");
+        var nodeProvider = CreateProviderProfile("node-model");
+        var invoker = new MafWorkflowLlmComponentInvoker(
+            runtime,
+            new TestProviderProfileRegistry([componentProvider, nodeProvider]),
+            new ProviderProfileService());
+        var component = CreateLlmComponent(JsonObjectShape, JsonPayloadShape) with
+        {
+            ProviderProfileId = componentProvider.Id,
+            Model = componentProvider.DefaultModel,
+            Instructions = "Component instructions must remain unchanged."
+        };
+        var node = CreateLlmNode("node-execution-overrides", component.Id) with
+        {
+            Settings = CreateLlmNode("node-execution-overrides", component.Id).Settings with
+            {
+                ProviderProfileId = nodeProvider.Id,
+                Model = nodeProvider.DefaultModel,
+                Instructions = "Pinned node instructions."
+            }
+        };
+        var definition = CreateDefinition([node], [], node.Id.Value);
+
+        await invoker.ExecuteAsync(
+            definition,
+            node,
+            component,
+            new WorkflowNodeInput("{}"));
+
+        Assert.Equal(nodeProvider.Id, runtime.LastProvider!.Id);
+        Assert.Equal(nodeProvider.DefaultModel, runtime.LastAgent!.Model);
+        Assert.Equal("Pinned node instructions.", runtime.LastAgent.Instructions);
+        Assert.Equal(componentProvider.Id, component.ProviderProfileId);
+        Assert.Equal(componentProvider.DefaultModel, component.Model);
+        Assert.Equal("Component instructions must remain unchanged.", component.Instructions);
+    }
+
+    [Fact]
     public async Task MafWorkflowLlmComponentInvokerRejectsBlankNodeInstructionSnapshot()
     {
         var runtime = new CapturingAgentRuntime("{\"ok\":true}");
@@ -2181,6 +2222,8 @@ public sealed class WorkflowExecutorTests
     {
         public AgentDefinition? LastAgent { get; private set; }
 
+        public ProviderProfile? LastProvider { get; private set; }
+
         public AgentRuntimeExecutionOptions? LastExecutionOptions { get; private set; }
 
         public string LastPrompt { get; private set; } = string.Empty;
@@ -2206,7 +2249,7 @@ public sealed class WorkflowExecutorTests
             AgentRuntimeExecutionOptions? executionOptions = null)
         {
             LastAgent = agent;
-            _ = provider;
+            LastProvider = provider;
             _ = session;
             _ = capabilities;
             _ = memory;

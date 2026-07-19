@@ -17,7 +17,8 @@ public sealed record PromptGalleryQuery(
     string? Model = null,
     int PageIndex = 0,
     int PageSize = 25,
-    PromptGalleryConsumer? Consumer = null)
+    PromptGalleryConsumer? Consumer = null,
+    bool FavoritesOnly = false)
 {
     public const int MaximumPageSize = 100;
 
@@ -91,7 +92,10 @@ public sealed record PromptGalleryPage<T>(
         : (int)Math.Ceiling(TotalCount / (double)PageSize);
 }
 
-public sealed record PromptProviderModel(string Provider, string Model);
+public sealed record PromptProviderModel(
+    string Provider,
+    string Model,
+    bool IsPreferred = false);
 
 public sealed record PromptModelRecommendations(
     double? Temperature = null,
@@ -112,7 +116,8 @@ public sealed record PromptGallerySearchItem(
     IReadOnlyList<PromptProviderModel> SupportedModels,
     PromptModelRecommendations Recommendations,
     int CurrentVersionNumber,
-    DateTimeOffset UpdatedAtUtc);
+    DateTimeOffset UpdatedAtUtc,
+    bool IsFavorite = false);
 
 public sealed record PromptGalleryVersionInfo(
     Guid Id,
@@ -155,7 +160,8 @@ public sealed record PromptGalleryItemDetails(
     PromptGallerySourceInfo Source,
     IReadOnlyList<PromptGalleryVersionInfo> Versions,
     DateTimeOffset CreatedAtUtc,
-    DateTimeOffset UpdatedAtUtc);
+    DateTimeOffset UpdatedAtUtc,
+    bool IsFavorite = false);
 
 public sealed record PromptGalleryCompatibilitySnapshot(
     Guid PromptArtifactId,
@@ -177,9 +183,19 @@ public sealed record PromptGalleryDraft(
     IReadOnlyList<string>? Tags = null,
     IReadOnlyList<PromptProviderModel>? SupportedModels = null,
     IReadOnlyList<PromptGalleryConsumer>? SupportedConsumers = null,
-    PromptModelRecommendations? Recommendations = null);
+    PromptModelRecommendations? Recommendations = null,
+    DateTimeOffset? ExpectedUpdatedAtUtc = null);
+
+public readonly record struct PromptDraftSaveReceipt(
+    Guid PromptArtifactId,
+    DateTimeOffset UpdatedAtUtc);
 
 public sealed record PromptVersionCreateRequest(
+    string CreationReason,
+    DateTimeOffset ExpectedUpdatedAtUtc,
+    string OutputFormat = "Markdown");
+
+public sealed record PromptImportVersionRequest(
     string CreationReason,
     string OutputFormat = "Markdown");
 
@@ -188,7 +204,7 @@ public sealed record PromptGalleryImportRequest(
     string SourceKey,
     string SourceCatalog,
     PromptGalleryDraft Draft,
-    PromptVersionCreateRequest Version);
+    PromptImportVersionRequest Version);
 
 public sealed record PromptVersionSnapshot(
     Guid PromptArtifactId,
@@ -219,7 +235,7 @@ public interface IPromptGalleryService
         Guid promptArtifactId,
         CancellationToken cancellationToken = default);
 
-    Task<Result<Guid>> SaveDraftAsync(
+    Task<Result<PromptDraftSaveReceipt>> SaveDraftAsync(
         PromptGalleryDraft draft,
         CancellationToken cancellationToken = default);
 
@@ -248,6 +264,11 @@ public interface IPromptGalleryService
     Task<Result> ArchiveAsync(
         Guid promptArtifactId,
         bool archived,
+        CancellationToken cancellationToken = default);
+
+    Task<Result> SetFavoriteAsync(
+        Guid promptArtifactId,
+        bool favorite,
         CancellationToken cancellationToken = default);
 
     Task<Result<PromptCompatibilityResult>> EvaluateCompatibilityAsync(

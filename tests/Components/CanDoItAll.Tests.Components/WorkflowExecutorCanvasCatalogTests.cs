@@ -1,6 +1,9 @@
+using System.Reflection;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Modules.AgentFramework.Pages.Components;
+using CanDoItAll.Modules.Prompts;
+using CanDoItAll.Modules.Prompts.Components;
 using CanDoItAll.Modules.Workspace.Pages.Components;
 using CanDoItAll.SharedKernel.Configuration;
 
@@ -306,6 +309,133 @@ public sealed class WorkflowExecutorCanvasCatalogTests
         Assert.DoesNotContain("UpdateEnumExecutorSettings<", codeBehindSource, StringComparison.Ordinal);
         Assert.DoesNotContain("UpdateHttp", codeBehindSource, StringComparison.Ordinal);
         Assert.DoesNotContain("UpdateSpreadsheet", codeBehindSource, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Workflow_canvas_llm_editor_uses_gallery_identity_and_node_execution_settings()
+    {
+        var root = FindRepositoryRoot();
+        var razorSource = File.ReadAllText(Path.Combine(
+            root,
+            "src",
+            "Modules",
+            "CanDoItAll.Modules.AgentFramework",
+            "Pages",
+            "Components",
+            "WorkflowCanvasEditor.razor"));
+        var codeBehindSource = File.ReadAllText(Path.Combine(
+            root,
+            "src",
+            "Modules",
+            "CanDoItAll.Modules.AgentFramework",
+            "Pages",
+            "Components",
+            "WorkflowCanvasEditor.razor.cs"));
+
+        Assert.DoesNotContain("data-testid=\"workflow-canvas-node-component\"", razorSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("data-testid=\"workflow-canvas-node-modal-component\"", razorSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("HandleSelectedComponentChanged", codeBehindSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("componentOptions.FirstOrDefault() ??", codeBehindSource, StringComparison.Ordinal);
+        Assert.Contains("data-testid=\"workflow-canvas-node-prompt-identity\"", razorSource, StringComparison.Ordinal);
+        Assert.Contains("data-testid=\"workflow-canvas-node-provider\"", razorSource, StringComparison.Ordinal);
+        Assert.Contains("workflow-canvas-node-model-selector", razorSource, StringComparison.Ordinal);
+        Assert.Contains("readonly=\"@(selected.Kind == WorkflowNodeKind.LlmCall)\"", razorSource, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Workflow_canvas_gallery_selection_prefers_declared_pair_then_preserves_compatible_pair()
+    {
+        var currentProvider = CreateProviderOption(
+            "Current provider",
+            ProviderKind.OpenAi,
+            "current-model");
+        var preferredProvider = CreateProviderOption(
+            "Preferred provider",
+            ProviderKind.AzureOpenAi,
+            "preferred-model");
+        var editor = new WorkflowCanvasEditor();
+        typeof(WorkflowCanvasEditor)
+            .GetProperty(nameof(WorkflowCanvasEditor.ProviderOptions))!
+            .SetValue(editor, new WorkflowProviderOption[] { currentProvider, preferredProvider });
+        SetPrivateField(editor, "newComponentProviderProfileId", currentProvider.ProviderProfileId.ToString("D"));
+        SetPrivateField(editor, "newComponentModel", currentProvider.DefaultModel);
+
+        var preferredSelection = CreateSelection(
+        [
+            new PromptProviderModel(ProviderKind.OpenAi.ToString(), currentProvider.DefaultModel),
+            new PromptProviderModel(ProviderKind.AzureOpenAi.ToString(), preferredProvider.DefaultModel, IsPreferred: true)
+        ]);
+        var preferredPair = ResolveExecutionPair(editor, preferredSelection);
+
+        Assert.Equal(preferredProvider.ProviderProfileId, preferredPair.Provider.ProviderProfileId);
+        Assert.Equal(preferredProvider.DefaultModel, preferredPair.Model);
+
+        var compatibleSelection = CreateSelection(
+        [
+            new PromptProviderModel(ProviderKind.OpenAi.ToString(), currentProvider.DefaultModel),
+            new PromptProviderModel(ProviderKind.AzureOpenAi.ToString(), preferredProvider.DefaultModel)
+        ]);
+        var compatiblePair = ResolveExecutionPair(editor, compatibleSelection);
+
+        Assert.Equal(currentProvider.ProviderProfileId, compatiblePair.Provider.ProviderProfileId);
+        Assert.Equal(currentProvider.DefaultModel, compatiblePair.Model);
+    }
+
+    private static PromptGallerySelection CreateSelection(IReadOnlyList<PromptProviderModel> supportedModels)
+        => new(
+            Guid.NewGuid(),
+            Guid.NewGuid(),
+            VersionNumber: 1,
+            "Gallery prompt",
+            "Prompt summary",
+            PromptGalleryItemKind.FullPrompt,
+            "Pinned prompt snapshot.",
+            Tags: [],
+            supportedModels,
+            new PromptModelRecommendations());
+
+    private static WorkflowProviderOption CreateProviderOption(
+        string name,
+        ProviderKind kind,
+        string model)
+        => new(
+            Guid.NewGuid(),
+            name,
+            kind,
+            ProviderTransportKind.Responses,
+            ProviderProfilePurpose.Chat,
+            model,
+            [model],
+            IsEnabled: true,
+            SupportsStreaming: true,
+            SupportsTools: true,
+            SupportsStructuredOutput: true,
+            SupportsVision: true,
+            SupportsBackgroundResponses: true);
+
+    private static (WorkflowProviderOption Provider, string Model) ResolveExecutionPair(
+        WorkflowCanvasEditor editor,
+        PromptGallerySelection selection)
+    {
+        var method = typeof(WorkflowCanvasEditor).GetMethod(
+            "ResolvePromptBindingExecutionPair",
+            BindingFlags.Instance | BindingFlags.NonPublic)
+            ?? throw new InvalidOperationException("Workflow Gallery execution-pair resolver was not found.");
+        var pair = method.Invoke(editor, [selection, null])
+            ?? throw new InvalidOperationException("Workflow Gallery execution-pair resolver returned no pair.");
+        var pairType = pair.GetType();
+        var provider = pairType.GetProperty("Provider")?.GetValue(pair) as WorkflowProviderOption
+            ?? throw new InvalidOperationException("Workflow Gallery execution pair has no provider.");
+        var model = pairType.GetProperty("Model")?.GetValue(pair) as string
+            ?? throw new InvalidOperationException("Workflow Gallery execution pair has no model.");
+        return (provider, model);
+    }
+
+    private static void SetPrivateField(WorkflowCanvasEditor editor, string name, object value)
+    {
+        var field = typeof(WorkflowCanvasEditor).GetField(name, BindingFlags.Instance | BindingFlags.NonPublic)
+            ?? throw new InvalidOperationException($"Workflow canvas field '{name}' was not found.");
+        field.SetValue(editor, value);
     }
 
     private static string FindRepositoryRoot()

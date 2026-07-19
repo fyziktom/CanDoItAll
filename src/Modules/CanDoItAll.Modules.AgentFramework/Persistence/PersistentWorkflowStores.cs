@@ -267,6 +267,7 @@ public sealed class PersistentWorkflowCatalogService(
         var componentSnapshot = await ListReferencedComponentsAsync(definition, cancellationToken);
         var result = validator.Validate(definition, componentSnapshot);
         var issues = result.Issues.ToList();
+        var effectiveNodeComponents = ResolveEffectiveNodeComponents(definition, componentSnapshot);
 
         if (definition.RuntimePolicy.RequireDurableProductionRuns &&
             definition.RuntimePolicy.PreferredBackend == WorkflowRuntimeBackendKind.InProcess)
@@ -289,7 +290,7 @@ public sealed class PersistentWorkflowCatalogService(
                 "Human-in-loop nodes are disabled by workflow settings."));
         }
 
-        var promptArtifactIds = componentSnapshot
+        var promptArtifactIds = effectiveNodeComponents
             .Select(component => component.PromptArtifactId)
             .OfType<Guid>()
             .Distinct()
@@ -312,9 +313,9 @@ public sealed class PersistentWorkflowCatalogService(
                 $"Prompt Gallery execution validation failed closed. {detail}"));
         }
 
-        var providerSnapshot = await LoadProviderSnapshotAsync(componentSnapshot, cancellationToken);
+        var providerSnapshot = await LoadProviderSnapshotAsync(effectiveNodeComponents, cancellationToken);
 
-        foreach (var component in componentSnapshot)
+        foreach (var component in effectiveNodeComponents)
         {
             cancellationToken.ThrowIfCancellationRequested();
             var providerResolution = ResolveProvider(component, providerSnapshot);
@@ -611,14 +612,17 @@ public sealed class PersistentWorkflowCatalogService(
                 new PromptModelRecommendations(
                     request.ModelSettings.Temperature,
                     request.ModelSettings.MaxOutputTokens,
-                    item.Recommendations.TopP)),
+                    item.Recommendations.TopP),
+                item.UpdatedAtUtc),
             cancellationToken);
-        _ = RequirePromptValue(saveResult, "Prompt Gallery item");
+        var saveReceipt = RequirePromptValue(saveResult, "Prompt Gallery item");
 
         return RequirePromptValue(
             await promptGallery.CreateVersionAsync(
-                item.Id,
-                new PromptVersionCreateRequest($"Updated by workflow component '{request.Name.Trim()}'"),
+                saveReceipt.PromptArtifactId,
+                new PromptVersionCreateRequest(
+                    $"Updated by workflow component '{request.Name.Trim()}'",
+                    saveReceipt.UpdatedAtUtc),
                 cancellationToken),
             "Prompt Gallery version");
     }
@@ -632,7 +636,7 @@ public sealed class PersistentWorkflowCatalogService(
     {
         IReadOnlyList<PromptProviderModel> supportedModels = provider is null
             ? []
-            : [new PromptProviderModel(provider.Kind.ToString(), request.Model.Trim())];
+            : [new PromptProviderModel(provider.Kind.ToString(), request.Model.Trim(), IsPreferred: true)];
         return RequirePromptValue(
             await promptGalleryImporter.ImportVersionAsync(
                 new PromptGalleryImportRequest(
@@ -656,7 +660,7 @@ public sealed class PersistentWorkflowCatalogService(
                     Recommendations: new PromptModelRecommendations(
                         request.ModelSettings.Temperature,
                         request.ModelSettings.MaxOutputTokens)),
-                    new PromptVersionCreateRequest(
+                    new PromptImportVersionRequest(
                         provenance == PromptArtifactProvenance.WorkflowMigration
                             ? $"Migrated from workflow component '{request.Name.Trim()}'"
                             : $"Created for workflow component '{request.Name.Trim()}'")),
@@ -1046,7 +1050,6 @@ public sealed class PersistentWorkflowCatalogService(
         IReadOnlyDictionary<Guid, LlmCallComponent> components)
     {
         if (node.Kind != WorkflowNodeKind.LlmCall ||
-            !string.IsNullOrWhiteSpace(node.Settings.Instructions) ||
             node.Settings.ComponentId is not { } componentId ||
             !components.TryGetValue(componentId.Value, out var component))
         {
@@ -1056,8 +1059,36 @@ public sealed class PersistentWorkflowCatalogService(
         return node with
         {
             Ports = node.Ports.ToArray(),
-            Settings = node.Settings with { Instructions = component.Instructions }
+            Settings = node.Settings with
+            {
+                ProviderProfileId = node.Settings.ProviderProfileId ?? component.ProviderProfileId,
+                Model = string.IsNullOrWhiteSpace(node.Settings.Model)
+                    ? component.Model
+                    : node.Settings.Model.Trim(),
+                Instructions = string.IsNullOrWhiteSpace(node.Settings.Instructions)
+                    ? component.Instructions
+                    : node.Settings.Instructions
+            }
         };
+    }
+
+    private static IReadOnlyList<LlmCallComponent> ResolveEffectiveNodeComponents(
+        WorkflowDefinition definition,
+        IReadOnlyList<LlmCallComponent> components)
+    {
+        var componentsById = components.ToDictionary(component => component.Id);
+        return definition.Graph.Nodes
+            .Where(node => node.Kind == WorkflowNodeKind.LlmCall && node.Settings.ComponentId.HasValue)
+            .Select(node => (Node: node, Component: componentsById.GetValueOrDefault(node.Settings.ComponentId!.Value)))
+            .Where(item => item.Component is not null)
+            .Select(item => item.Component! with
+            {
+                ProviderProfileId = item.Node.Settings.ProviderProfileId ?? item.Component.ProviderProfileId,
+                Model = string.IsNullOrWhiteSpace(item.Node.Settings.Model)
+                    ? item.Component.Model
+                    : item.Node.Settings.Model.Trim()
+            })
+            .ToArray();
     }
 
     private static IReadOnlyList<WorkflowInputParameterDescriptor> SnapshotInputParameters(
@@ -1902,7 +1933,7 @@ internal static class WorkflowPersistenceSchemaVersions
 {
     public const int PromptGalleryBinding = 1;
 
-    public const int InstructionSnapshot = 1;
+    public const int InstructionSnapshot = 2;
 }
 
 public sealed class WorkflowSettingsRecord

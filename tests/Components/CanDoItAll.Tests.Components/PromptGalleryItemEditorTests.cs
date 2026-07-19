@@ -76,7 +76,7 @@ public sealed class PromptGalleryItemEditorTests
             CancellationToken cancellationToken = default)
             => throw Unused();
 
-        public Task<Result<Guid>> SaveDraftAsync(
+        public Task<Result<PromptDraftSaveReceipt>> SaveDraftAsync(
             PromptGalleryDraft draft,
             CancellationToken cancellationToken = default)
             => throw Unused();
@@ -111,6 +111,12 @@ public sealed class PromptGalleryItemEditorTests
         public Task<Result> ArchiveAsync(
             Guid promptArtifactId,
             bool archived,
+            CancellationToken cancellationToken = default)
+            => throw Unused();
+
+        public Task<Result> SetFavoriteAsync(
+            Guid promptArtifactId,
+            bool favorite,
             CancellationToken cancellationToken = default)
             => throw Unused();
 

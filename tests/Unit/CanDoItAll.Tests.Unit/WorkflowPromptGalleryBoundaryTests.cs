@@ -65,6 +65,67 @@ public sealed class WorkflowPromptGalleryBoundaryTests
     }
 
     [Fact]
+    public async Task Workflow_publication_rejects_an_intervening_gallery_writer()
+    {
+        var factory = CreateWorkflowFactory("publication-concurrency");
+        var gallery = PromptGalleryTestSupport.CreateService(factory);
+        var provider = CreateProvider();
+        var initialSave = await gallery.SaveDraftAsync(new PromptGalleryDraft(
+            Id: null,
+            ProjectId: null,
+            CollectionId: null,
+            "Concurrent workflow prompt",
+            "Concurrency test prompt.",
+            PromptGalleryItemKind.FullPrompt,
+            "workflow",
+            "Initial published content.",
+            Tags: ["workflow"],
+            SupportedModels: [new PromptProviderModel("OpenAi", provider.DefaultModel, IsPreferred: true)],
+            SupportedConsumers: [PromptGalleryConsumer.Workflow]));
+        Assert.True(initialSave.IsSuccess);
+        var promptId = initialSave.Value.PromptArtifactId;
+        Assert.True((await gallery.CreateVersionAsync(
+            promptId,
+            new PromptVersionCreateRequest(
+                "Initial publication",
+                initialSave.Value.UpdatedAtUtc))).IsSuccess);
+        var concurrentGallery = new InterveningWritePromptGallery(gallery);
+        var catalog = new PersistentWorkflowCatalogService(
+            factory,
+            new WorkflowDefinitionValidator(),
+            concurrentGallery,
+            gallery,
+            new TestProviderProfileRegistry(provider),
+            new ProviderProfileService());
+        var legacyComponent = CreateLegacyComponent();
+        var request = new LlmCallComponentSaveRequest(
+            Id: null,
+            "Concurrent workflow component",
+            provider.Id,
+            provider.DefaultModel,
+            legacyComponent.Modality,
+            legacyComponent.ModelSettings,
+            "Workflow writer content.",
+            legacyComponent.InputShape,
+            legacyComponent.ResultShape,
+            legacyComponent.Permissions)
+        {
+            PromptArtifactId = promptId
+        };
+
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            catalog.SaveComponentAsync(request));
+
+        Assert.Contains("concurrency-conflict", exception.Message, StringComparison.Ordinal);
+        var current = Assert.IsType<PromptGalleryItemDetails>((await gallery.GetItemAsync(promptId)).Value);
+        Assert.Equal("Concurrent writer content.", current.DraftContent);
+        Assert.Equal(PromptArtifactStatus.Draft, current.Status);
+        Assert.Single(current.Versions);
+        await using var dbContext = factory.CreateDbContext();
+        Assert.Empty(await dbContext.Set<WorkflowComponentRecord>().ToListAsync());
+    }
+
+    [Fact]
     public async Task StartupMigrationBatchesLegacyRecordsAndPersistsDurableMarkers()
     {
         var factory = CreateWorkflowFactory("legacy-migration");
@@ -74,7 +135,8 @@ public sealed class WorkflowPromptGalleryBoundaryTests
             new WorkflowDefinitionValidator(),
             gallery,
             gallery);
-        var component = CreateLegacyComponent();
+        var providerProfileId = Guid.NewGuid();
+        var component = CreateLegacyComponent() with { ProviderProfileId = providerProfileId };
         var definition = CreateLegacyDefinition(component.Id);
         await using (var arrangeContext = factory.CreateDbContext())
         {
@@ -116,13 +178,15 @@ public sealed class WorkflowPromptGalleryBoundaryTests
             migratedComponentJson = componentRecord.ComponentJson;
 
             var definitionRecord = await assertContext.Set<WorkflowDefinitionRecord>().SingleAsync();
-            Assert.Equal(1, definitionRecord.InstructionSnapshotSchemaVersion);
+            Assert.Equal(2, definitionRecord.InstructionSnapshotSchemaVersion);
             migratedDefinitionJson = definitionRecord.DefinitionJson;
             var migratedDefinition = JsonSerializer.Deserialize<WorkflowDefinition>(
                 definitionRecord.DefinitionJson,
                 JsonOptions);
             var llmNode = Assert.Single(migratedDefinition!.Graph.Nodes);
             Assert.Equal(component.Instructions, llmNode.Settings.Instructions);
+            Assert.Equal(providerProfileId, llmNode.Settings.ProviderProfileId);
+            Assert.Equal(component.Model, llmNode.Settings.Model);
 
             Assert.Single(await assertContext.Set<PromptArtifact>().ToArrayAsync());
             Assert.Single(await assertContext.Set<PromptVersion>().ToArrayAsync());
@@ -211,6 +275,62 @@ public sealed class WorkflowPromptGalleryBoundaryTests
     }
 
     [Fact]
+    public async Task DefinitionValidationRejectsIncompatibleNodeProviderModelOverride()
+    {
+        var factory = CreateWorkflowFactory("node-provider-model-override");
+        var gallery = PromptGalleryTestSupport.CreateService(factory);
+        var provider = CreateProvider();
+        var catalog = new PersistentWorkflowCatalogService(
+            factory,
+            new WorkflowDefinitionValidator(),
+            gallery,
+            gallery,
+            new TestProviderProfileRegistry(provider),
+            new ProviderProfileService());
+        var legacyComponent = CreateLegacyComponent();
+        var component = await catalog.SaveComponentAsync(new LlmCallComponentSaveRequest(
+            Id: null,
+            legacyComponent.Name,
+            provider.Id,
+            provider.DefaultModel,
+            legacyComponent.Modality,
+            legacyComponent.ModelSettings,
+            legacyComponent.Instructions,
+            legacyComponent.InputShape,
+            legacyComponent.ResultShape,
+            legacyComponent.Permissions));
+        var definition = CreateValidationDefinition(component);
+        var nodes = definition.Graph.Nodes
+            .Select(node => node.Kind == WorkflowNodeKind.LlmCall
+                ? node with
+                {
+                    Settings = node.Settings with
+                    {
+                        ProviderProfileId = provider.Id,
+                        Model = "incompatible-node-model"
+                    }
+                }
+                : node)
+            .ToArray();
+        definition = definition with
+        {
+            Graph = new WorkflowGraph(
+                definition.Graph.StartNodeId,
+                nodes,
+                definition.Graph.Edges)
+        };
+
+        var validation = await catalog.ValidateDefinitionAsync(definition);
+
+        Assert.Contains(validation.Issues, issue =>
+            issue.Code == WorkflowValidationIssueCode.InvalidProviderModel &&
+            issue.Message.Contains("incompatible-node-model", StringComparison.Ordinal));
+        Assert.Contains(validation.Issues, issue =>
+            issue.Code == WorkflowValidationIssueCode.InvalidComponentReference &&
+            issue.Message.Contains("not declared as supported", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
     public async Task StartupMigrationDoesNotDeserializeRecordsMarkedCurrent()
     {
         var factory = CreateWorkflowFactory("current-marker");
@@ -232,7 +352,7 @@ public sealed class WorkflowPromptGalleryBoundaryTests
                 VersionId = Guid.NewGuid(),
                 Name = "Current definition",
                 DefinitionJson = "not-json",
-                InstructionSnapshotSchemaVersion = 1
+                InstructionSnapshotSchemaVersion = 2
             });
             await arrangeContext.SaveChangesAsync();
         }
@@ -478,7 +598,7 @@ public sealed class WorkflowPromptGalleryBoundaryTests
                 now)));
         }
 
-        public Task<Result<Guid>> SaveDraftAsync(
+        public Task<Result<PromptDraftSaveReceipt>> SaveDraftAsync(
             PromptGalleryDraft draft,
             CancellationToken cancellationToken = default)
             => throw Unused();
@@ -511,6 +631,12 @@ public sealed class WorkflowPromptGalleryBoundaryTests
             CancellationToken cancellationToken = default)
             => throw Unused();
 
+        public Task<Result> SetFavoriteAsync(
+            Guid promptArtifactId,
+            bool favorite,
+            CancellationToken cancellationToken = default)
+            => throw Unused();
+
         public Task<Result> SetWarningSuppressionAsync(
             Guid promptArtifactId,
             PromptGalleryConsumer consumer,
@@ -520,6 +646,98 @@ public sealed class WorkflowPromptGalleryBoundaryTests
             => throw Unused();
 
         private static NotSupportedException Unused() => new("This test dependency member is not used.");
+    }
+
+    private sealed class InterveningWritePromptGallery(IPromptGalleryService inner) : IPromptGalleryService
+    {
+        public Task<PromptGalleryPage<PromptGallerySearchItem>> SearchAsync(
+            PromptGalleryQuery query,
+            CancellationToken cancellationToken = default)
+            => inner.SearchAsync(query, cancellationToken);
+
+        public Task<Result<PromptGalleryItemDetails>> GetItemAsync(
+            Guid promptArtifactId,
+            CancellationToken cancellationToken = default)
+            => inner.GetItemAsync(promptArtifactId, cancellationToken);
+
+        public async Task<Result<PromptDraftSaveReceipt>> SaveDraftAsync(
+            PromptGalleryDraft draft,
+            CancellationToken cancellationToken = default)
+        {
+            var workflowSave = await inner.SaveDraftAsync(draft, cancellationToken);
+            if (workflowSave.IsFailure)
+            {
+                return workflowSave;
+            }
+
+            var concurrentSave = await inner.SaveDraftAsync(
+                draft with
+                {
+                    Content = "Concurrent writer content.",
+                    ExpectedUpdatedAtUtc = workflowSave.Value.UpdatedAtUtc
+                },
+                cancellationToken);
+            Assert.True(concurrentSave.IsSuccess);
+            return workflowSave;
+        }
+
+        public Task<Result<PromptVersionSnapshot>> CreateVersionAsync(
+            Guid promptArtifactId,
+            PromptVersionCreateRequest request,
+            CancellationToken cancellationToken = default)
+            => inner.CreateVersionAsync(promptArtifactId, request, cancellationToken);
+
+        public Task<Result<PromptVersionSnapshot>> GetVersionSnapshotAsync(
+            Guid promptVersionId,
+            CancellationToken cancellationToken = default)
+            => inner.GetVersionSnapshotAsync(promptVersionId, cancellationToken);
+
+        public Task<Result<PromptVersionSnapshot>> GetVersionSnapshotAsync(
+            Guid promptArtifactId,
+            int versionNumber,
+            CancellationToken cancellationToken = default)
+            => inner.GetVersionSnapshotAsync(promptArtifactId, versionNumber, cancellationToken);
+
+        public Task<Result<IReadOnlyList<PromptVersionSnapshot>>> GetVersionSnapshotsAsync(
+            IReadOnlyCollection<Guid> promptVersionIds,
+            CancellationToken cancellationToken = default)
+            => inner.GetVersionSnapshotsAsync(promptVersionIds, cancellationToken);
+
+        public Task<Result<IReadOnlyDictionary<Guid, PromptGalleryCompatibilitySnapshot>>> GetCompatibilitySnapshotsAsync(
+            IReadOnlyCollection<Guid> promptArtifactIds,
+            CancellationToken cancellationToken = default)
+            => inner.GetCompatibilitySnapshotsAsync(promptArtifactIds, cancellationToken);
+
+        public Task<Result> ArchiveAsync(
+            Guid promptArtifactId,
+            bool archived,
+            CancellationToken cancellationToken = default)
+            => inner.ArchiveAsync(promptArtifactId, archived, cancellationToken);
+
+        public Task<Result> SetFavoriteAsync(
+            Guid promptArtifactId,
+            bool favorite,
+            CancellationToken cancellationToken = default)
+            => inner.SetFavoriteAsync(promptArtifactId, favorite, cancellationToken);
+
+        public Task<Result<PromptCompatibilityResult>> EvaluateCompatibilityAsync(
+            Guid promptArtifactId,
+            PromptGalleryConsumerContext context,
+            CancellationToken cancellationToken = default)
+            => inner.EvaluateCompatibilityAsync(promptArtifactId, context, cancellationToken);
+
+        public Task<Result> SetWarningSuppressionAsync(
+            Guid promptArtifactId,
+            PromptGalleryConsumer consumer,
+            PromptCompatibilityIssueCode issueCode,
+            bool suppressed,
+            CancellationToken cancellationToken = default)
+            => inner.SetWarningSuppressionAsync(
+                promptArtifactId,
+                consumer,
+                issueCode,
+                suppressed,
+                cancellationToken);
     }
 
     private sealed class UnusedPromptGalleryImporter : IPromptGalleryImportService

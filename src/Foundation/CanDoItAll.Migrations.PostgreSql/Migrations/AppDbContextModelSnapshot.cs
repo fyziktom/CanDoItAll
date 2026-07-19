@@ -3230,6 +3230,9 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                     b.Property<bool>("IsArchived")
                         .HasColumnType("boolean");
 
+                    b.Property<bool>("IsFavorite")
+                        .HasColumnType("boolean");
+
                     b.Property<int>("Kind")
                         .HasColumnType("integer");
 
@@ -3297,6 +3300,7 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                         .HasColumnType("character varying(200)");
 
                     b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .IsConcurrencyToken()
                         .HasColumnType("timestamp with time zone");
 
                     b.HasKey("Id");
@@ -3306,8 +3310,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
 
                     b.HasIndex("IsArchived", "Status", "Kind", "UpdatedAtUtc");
 
-                    b.HasIndex("IsArchived", "UpdatedAtUtc", "Title", "Id")
-                        .IsDescending(false, true, false, false);
+                    b.HasIndex("IsArchived", "IsFavorite", "UpdatedAtUtc", "Title", "Id")
+                        .IsDescending(false, true, true, false, false);
 
                     b.ToTable("Prompts_PromptArtifacts", (string)null);
                 });
@@ -3395,6 +3399,9 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
 
+                    b.Property<bool>("IsPreferred")
+                        .HasColumnType("boolean");
+
                     b.Property<string>("Model")
                         .IsRequired()
                         .HasMaxLength(200)
@@ -3406,6 +3413,10 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                         .HasColumnType("character varying(120)");
 
                     b.HasKey("PromptArtifactId", "ProviderKey", "ModelKey");
+
+                    b.HasIndex("PromptArtifactId")
+                        .IsUnique()
+                        .HasFilter("\"IsPreferred\"");
 
                     b.HasIndex("ProviderKey", "ModelKey", "PromptArtifactId");
 

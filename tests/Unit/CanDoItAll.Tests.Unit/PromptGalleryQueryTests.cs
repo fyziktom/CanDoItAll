@@ -112,6 +112,34 @@ public sealed class PromptGalleryQueryTests
         Assert.Equal("body", item.ContentPreview);
     }
 
+    [Fact]
+    public async Task Ef_driver_filters_and_orders_favorites_before_stable_secondary_order()
+    {
+        var factory = PromptGalleryTestSupport.CreateFactory(
+            nameof(Ef_driver_filters_and_orders_favorites_before_stable_secondary_order));
+        var favoriteId = Guid.Parse("00000000-0000-0000-0000-000000000060");
+        var ordinaryId = Guid.Parse("00000000-0000-0000-0000-000000000070");
+        await using (var dbContext = factory.CreateDbContext())
+        {
+            var favorite = CreateArtifact(favoriteId, "Favorite", "", PromptGalleryItemKind.Part);
+            favorite.IsFavorite = true;
+            favorite.UpdatedAtUtc = DateTimeOffset.UnixEpoch;
+            var ordinary = CreateArtifact(ordinaryId, "Ordinary", "", PromptGalleryItemKind.Part);
+            ordinary.UpdatedAtUtc = DateTimeOffset.UnixEpoch.AddDays(1);
+            dbContext.AddRange(favorite, ordinary);
+            await dbContext.SaveChangesAsync();
+        }
+
+        var driver = new EfPromptGallerySearchDriver(factory);
+        var all = await driver.SearchAsync(new PromptGalleryQuery(PageSize: 10));
+        var favorites = await driver.SearchAsync(new PromptGalleryQuery(PageSize: 10, FavoritesOnly: true));
+
+        Assert.Equal([favoriteId, ordinaryId], all.Items.Select(item => item.Id));
+        var favoriteItem = Assert.Single(favorites.Items);
+        Assert.Equal(favoriteId, favoriteItem.Id);
+        Assert.True(favoriteItem.IsFavorite);
+    }
+
     private static PromptArtifact CreateArtifact(
         Guid id,
         string title,

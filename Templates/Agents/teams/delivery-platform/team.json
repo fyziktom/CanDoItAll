@@ -48,6 +48,10 @@
     {
       "key": "hr-agent",
       "relativePath": "members/hr-agent"
+    },
+    {
+      "key": "prompts-curator-agent",
+      "relativePath": "members/prompts-curator-agent"
     }
   ]
 }

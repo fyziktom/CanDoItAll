@@ -67,6 +67,106 @@ public sealed class WorkflowCatalogTests
     }
 
     [Fact]
+    public async Task CatalogPersistsNodeProviderModelOverridesWithoutMutatingSharedComponent()
+    {
+        var componentProvider = CreateProvider(
+            "Component provider",
+            ProviderKind.OpenAi,
+            ProviderTransportKind.Responses,
+            ProviderProfilePurpose.Chat,
+            "component-model",
+            []) with
+        {
+            ModelPrices = [new ProviderModelTokenPrice("component-model", 1m, 0.1m, 2m)]
+        };
+        var nodeProvider = CreateProvider(
+            "Node provider",
+            ProviderKind.OpenAi,
+            ProviderTransportKind.Responses,
+            ProviderProfilePurpose.Chat,
+            "node-model",
+            []) with
+        {
+            ModelPrices = [new ProviderModelTokenPrice("node-model", 1m, 0.1m, 2m)]
+        };
+        var catalog = CreateCatalog([componentProvider, nodeProvider]);
+        var component = await catalog.SaveComponentAsync(CreateComponentRequest() with
+        {
+            ProviderProfileId = componentProvider.Id,
+            Model = componentProvider.DefaultModel
+        });
+        var graph = CreateDefinitionGraph(component.Id);
+        var nodes = graph.Nodes
+            .Select(node => node.Kind == WorkflowNodeKind.LlmCall
+                ? node with
+                {
+                    Settings = node.Settings with
+                    {
+                        ProviderProfileId = nodeProvider.Id,
+                        Model = nodeProvider.DefaultModel
+                    }
+                }
+                : node)
+            .ToArray();
+
+        var saved = await catalog.SaveDefinitionAsync(CreateSaveRequest(new WorkflowGraph(
+            graph.StartNodeId,
+            nodes,
+            graph.Edges)));
+        var detail = await catalog.GetDefinitionAsync(saved.Id, saved.VersionId);
+        var persistedComponent = await catalog.GetComponentAsync(component.Id);
+
+        var savedNode = Assert.Single(detail!.Definition.Graph.Nodes, node => node.Kind == WorkflowNodeKind.LlmCall);
+        Assert.Equal(nodeProvider.Id, savedNode.Settings.ProviderProfileId);
+        Assert.Equal(nodeProvider.DefaultModel, savedNode.Settings.Model);
+        Assert.Equal(componentProvider.Id, persistedComponent!.ProviderProfileId);
+        Assert.Equal(componentProvider.DefaultModel, persistedComponent.Model);
+    }
+
+    [Fact]
+    public async Task CatalogRejectsIncompatibleNodeModelOverride()
+    {
+        var provider = CreateProvider(
+            "Priced provider",
+            ProviderKind.OpenAi,
+            ProviderTransportKind.Responses,
+            ProviderProfilePurpose.Chat,
+            "priced-model",
+            []) with
+        {
+            ModelPrices = [new ProviderModelTokenPrice("priced-model", 1m, 0.1m, 2m)]
+        };
+        var catalog = CreateCatalog([provider]);
+        var component = await catalog.SaveComponentAsync(CreateComponentRequest() with
+        {
+            ProviderProfileId = provider.Id,
+            Model = provider.DefaultModel
+        });
+        var graph = CreateDefinitionGraph(component.Id);
+        var nodes = graph.Nodes
+            .Select(node => node.Kind == WorkflowNodeKind.LlmCall
+                ? node with
+                {
+                    Settings = node.Settings with
+                    {
+                        ProviderProfileId = provider.Id,
+                        Model = "unpriced-model"
+                    }
+                }
+                : node)
+            .ToArray();
+
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            catalog.SaveDefinitionAsync(CreateSaveRequest(new WorkflowGraph(
+                graph.StartNodeId,
+                nodes,
+                graph.Edges))));
+
+        Assert.Contains("unpriced-model", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("model price row", exception.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public async Task CatalogSnapshotsTypedRouteMetadataOnEdges()
     {
         var catalog = CreateCatalog();

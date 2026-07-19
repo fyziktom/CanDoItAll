@@ -45,11 +45,14 @@ public sealed class PromptGalleryApiIntegrationTests
         Assert.True(
             saveResponse.IsSuccessStatusCode,
             $"{(int)saveResponse.StatusCode} {saveResponse.StatusCode}: {saveBody}");
-        var promptId = JsonSerializer.Deserialize<Guid>(saveBody, JsonOptions);
+        var saveReceipt = JsonSerializer.Deserialize<PromptDraftSaveReceipt>(saveBody, JsonOptions);
+        var promptId = saveReceipt.PromptArtifactId;
 
         var versionResponse = await host.Client.PostAsJsonAsync(
             $"/api/prompt-gallery/items/{promptId:D}/versions",
-            new PromptVersionCreateRequest("API integration proof"));
+            new PromptVersionCreateRequest(
+                "API integration proof",
+                saveReceipt.UpdatedAtUtc));
         var versionBody = await versionResponse.Content.ReadAsStringAsync();
         Assert.True(versionResponse.IsSuccessStatusCode, versionBody);
         var version = JsonSerializer.Deserialize<PromptVersionSnapshot>(versionBody, JsonOptions)!;
@@ -92,6 +95,15 @@ public sealed class PromptGalleryApiIntegrationTests
         Assert.False(projection.Enabled);
         Assert.Equal(PromptGalleryProjectionHealth.Disabled, projection.Health);
         Assert.Equal(PromptGalleryProjectionOperationState.Disabled, rebuild.State);
+
+        var favoriteResponse = await host.Client.PostAsJsonAsync(
+            $"/api/prompt-gallery/items/{promptId:D}/favorite",
+            new { Favorite = true });
+        Assert.True(favoriteResponse.IsSuccessStatusCode, await favoriteResponse.Content.ReadAsStringAsync());
+        var favoriteSearch = await GetAsync<PromptGalleryPage<PromptGallerySearchItem>>(
+            host.Client,
+            $"/api/prompt-gallery/items?text={Uri.EscapeDataString(unique)}&favoritesOnly=true&pageSize=10");
+        Assert.True(Assert.Single(favoriteSearch.Items).IsFavorite);
 
         var archiveResponse = await host.Client.PostAsJsonAsync(
             $"/api/prompt-gallery/items/{promptId:D}/archive",

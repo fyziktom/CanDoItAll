@@ -20,10 +20,11 @@ internal sealed class PromptArtifactConfiguration : IEntityTypeConfiguration<Pro
         builder.Property(prompt => prompt.SourceGroupName).HasMaxLength(200);
         builder.Property(prompt => prompt.SourceItemKind).HasMaxLength(80);
         builder.Property(prompt => prompt.SourceFingerprint).HasMaxLength(64);
+        builder.Property(prompt => prompt.UpdatedAtUtc).IsConcurrencyToken();
         builder.HasIndex(prompt => new { prompt.Provenance, prompt.SourceKey }).IsUnique();
         builder.HasIndex(prompt => new { prompt.IsArchived, prompt.Status, prompt.Kind, prompt.UpdatedAtUtc });
-        builder.HasIndex(prompt => new { prompt.IsArchived, prompt.UpdatedAtUtc, prompt.Title, prompt.Id })
-            .IsDescending(false, true, false, false);
+        builder.HasIndex(prompt => new { prompt.IsArchived, prompt.IsFavorite, prompt.UpdatedAtUtc, prompt.Title, prompt.Id })
+            .IsDescending(false, true, true, false, false);
     }
 }
 
@@ -99,6 +100,9 @@ internal sealed class PromptSupportedProviderModelConfiguration : IEntityTypeCon
         builder.Property(item => item.ProviderKey).HasMaxLength(120).IsRequired();
         builder.Property(item => item.ModelKey).HasMaxLength(200).IsRequired();
         builder.HasIndex(item => new { item.ProviderKey, item.ModelKey, item.PromptArtifactId });
+        builder.HasIndex(item => item.PromptArtifactId)
+            .IsUnique()
+            .HasFilter("\"IsPreferred\"");
         builder.HasOne<PromptArtifact>()
             .WithMany()
             .HasForeignKey(item => item.PromptArtifactId)

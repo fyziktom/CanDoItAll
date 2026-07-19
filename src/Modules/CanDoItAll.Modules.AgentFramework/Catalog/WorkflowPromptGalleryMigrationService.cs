@@ -28,11 +28,11 @@ public sealed class WorkflowPromptGalleryMigrationService(
                 migratedCount);
         }
 
-        var definitionResult = await BackfillDefinitionInstructionSnapshotsAsync(cancellationToken);
+        var definitionResult = await BackfillDefinitionLlmNodeSettingsAsync(cancellationToken);
         if (definitionResult.ProcessedCount > 0)
         {
             logger.LogInformation(
-                "Verified {ProcessedWorkflowDefinitionCount} workflow definitions against instruction snapshot schema {InstructionSnapshotSchemaVersion}; repaired {RepairedWorkflowDefinitionCount} definitions.",
+                "Verified {ProcessedWorkflowDefinitionCount} workflow definitions against LLM node snapshot schema {InstructionSnapshotSchemaVersion}; repaired {RepairedWorkflowDefinitionCount} definitions.",
                 definitionResult.ProcessedCount,
                 WorkflowPersistenceSchemaVersions.InstructionSnapshot,
                 definitionResult.RepairedCount);
@@ -100,7 +100,7 @@ public sealed class WorkflowPromptGalleryMigrationService(
             .ToArray();
     }
 
-    private async Task<DefinitionMigrationResult> BackfillDefinitionInstructionSnapshotsAsync(
+    private async Task<DefinitionMigrationResult> BackfillDefinitionLlmNodeSettingsAsync(
         CancellationToken cancellationToken)
     {
         var processedCount = 0;
@@ -126,7 +126,9 @@ public sealed class WorkflowPromptGalleryMigrationService(
                 .SelectMany(item => item.Definition.Graph.Nodes)
                 .Where(node =>
                     node.Kind == WorkflowNodeKind.LlmCall &&
-                    string.IsNullOrWhiteSpace(node.Settings.Instructions) &&
+                    (string.IsNullOrWhiteSpace(node.Settings.Instructions) ||
+                     !node.Settings.ProviderProfileId.HasValue ||
+                     string.IsNullOrWhiteSpace(node.Settings.Model)) &&
                     node.Settings.ComponentId.HasValue)
                 .Select(node => node.Settings.ComponentId!.Value.Value)
                 .Distinct()
@@ -189,7 +191,10 @@ public sealed class WorkflowPromptGalleryMigrationService(
         WorkflowNode node,
         IReadOnlyDictionary<WorkflowComponentId, LlmCallComponent> components)
     {
-        if (node.Kind != WorkflowNodeKind.LlmCall || !string.IsNullOrWhiteSpace(node.Settings.Instructions))
+        if (node.Kind != WorkflowNodeKind.LlmCall ||
+            !string.IsNullOrWhiteSpace(node.Settings.Instructions) &&
+            node.Settings.ProviderProfileId.HasValue &&
+            !string.IsNullOrWhiteSpace(node.Settings.Model))
         {
             return (node, false);
         }
@@ -205,7 +210,16 @@ public sealed class WorkflowPromptGalleryMigrationService(
         return (
             node with
             {
-                Settings = node.Settings with { Instructions = component.Instructions }
+                Settings = node.Settings with
+                {
+                    ProviderProfileId = node.Settings.ProviderProfileId ?? component.ProviderProfileId,
+                    Model = string.IsNullOrWhiteSpace(node.Settings.Model)
+                        ? component.Model
+                        : node.Settings.Model.Trim(),
+                    Instructions = string.IsNullOrWhiteSpace(node.Settings.Instructions)
+                        ? component.Instructions
+                        : node.Settings.Instructions
+                }
             },
             true);
     }

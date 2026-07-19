@@ -300,6 +300,7 @@ public sealed class InMemoryWorkflowCatalogService :
         var componentSnapshot = await ListReferencedComponentsAsync(definition, cancellationToken);
         var result = validator.Validate(definition, componentSnapshot);
         var issues = result.Issues.ToList();
+        var effectiveNodeComponents = ResolveEffectiveNodeComponents(definition, componentSnapshot);
 
         if (definition.RuntimePolicy.RequireDurableProductionRuns &&
             definition.RuntimePolicy.PreferredBackend == WorkflowRuntimeBackendKind.InProcess)
@@ -322,7 +323,7 @@ public sealed class InMemoryWorkflowCatalogService :
                 "Human-in-loop nodes are disabled by workflow settings."));
         }
 
-        foreach (var component in componentSnapshot)
+        foreach (var component in effectiveNodeComponents)
         {
             cancellationToken.ThrowIfCancellationRequested();
             var providerIssues = await ValidateProviderCompatibilityAsync(component, cancellationToken);
@@ -622,7 +623,6 @@ public sealed class InMemoryWorkflowCatalogService :
         IReadOnlyDictionary<WorkflowComponentId, LlmCallComponent> components)
     {
         if (node.Kind != WorkflowNodeKind.LlmCall ||
-            !string.IsNullOrWhiteSpace(node.Settings.Instructions) ||
             node.Settings.ComponentId is not { } componentId ||
             !components.TryGetValue(componentId, out var component))
         {
@@ -632,8 +632,36 @@ public sealed class InMemoryWorkflowCatalogService :
         return node with
         {
             Ports = node.Ports.ToArray(),
-            Settings = node.Settings with { Instructions = component.Instructions }
+            Settings = node.Settings with
+            {
+                ProviderProfileId = node.Settings.ProviderProfileId ?? component.ProviderProfileId,
+                Model = string.IsNullOrWhiteSpace(node.Settings.Model)
+                    ? component.Model
+                    : node.Settings.Model.Trim(),
+                Instructions = string.IsNullOrWhiteSpace(node.Settings.Instructions)
+                    ? component.Instructions
+                    : node.Settings.Instructions
+            }
         };
+    }
+
+    private static IReadOnlyList<LlmCallComponent> ResolveEffectiveNodeComponents(
+        WorkflowDefinition definition,
+        IReadOnlyList<LlmCallComponent> components)
+    {
+        var componentsById = components.ToDictionary(component => component.Id);
+        return definition.Graph.Nodes
+            .Where(node => node.Kind == WorkflowNodeKind.LlmCall && node.Settings.ComponentId.HasValue)
+            .Select(node => (Node: node, Component: componentsById.GetValueOrDefault(node.Settings.ComponentId!.Value)))
+            .Where(item => item.Component is not null)
+            .Select(item => item.Component! with
+            {
+                ProviderProfileId = item.Node.Settings.ProviderProfileId ?? item.Component.ProviderProfileId,
+                Model = string.IsNullOrWhiteSpace(item.Node.Settings.Model)
+                    ? item.Component.Model
+                    : item.Node.Settings.Model.Trim()
+            })
+            .ToArray();
     }
 
     private static IReadOnlyList<WorkflowInputParameterDescriptor> SnapshotInputParameters(

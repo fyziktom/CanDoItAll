@@ -35,6 +35,18 @@ public sealed class SearchIndexPromptGalleryProjectionDriver(
             await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
             await using var transaction = await dbContext.Database.BeginTransactionAsync(cancellationToken);
             await AcquireDatabaseMutationLockAsync(dbContext, cancellationToken);
+            var canonicalState = await LoadCanonicalStateAsync(
+                dbContext,
+                document.PromptArtifactId,
+                cancellationToken);
+            if (canonicalState is null ||
+                !canonicalState.IsProjectable ||
+                canonicalState.UpdatedAtUtc != document.UpdatedAtUtc)
+            {
+                await transaction.CommitAsync(cancellationToken);
+                return;
+            }
+
             var sourceKey = document.PromptArtifactId.ToString();
             var entity = await dbContext.Set<SearchDocument>()
                 .FirstOrDefaultAsync(
@@ -56,7 +68,10 @@ public sealed class SearchIndexPromptGalleryProjectionDriver(
         }
     }
 
-    public async Task RemoveAsync(Guid promptArtifactId, CancellationToken cancellationToken = default)
+    public async Task RemoveAsync(
+        Guid promptArtifactId,
+        DateTimeOffset? expectedUpdatedAtUtc,
+        CancellationToken cancellationToken = default)
     {
         await MutationGate.WaitAsync(cancellationToken);
         try
@@ -64,6 +79,19 @@ public sealed class SearchIndexPromptGalleryProjectionDriver(
             await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
             await using var transaction = await dbContext.Database.BeginTransactionAsync(cancellationToken);
             await AcquireDatabaseMutationLockAsync(dbContext, cancellationToken);
+            if (expectedUpdatedAtUtc.HasValue)
+            {
+                var canonicalState = await LoadCanonicalStateAsync(
+                    dbContext,
+                    promptArtifactId,
+                    cancellationToken);
+                if (canonicalState is { IsProjectable: true })
+                {
+                    await transaction.CommitAsync(cancellationToken);
+                    return;
+                }
+            }
+
             var sourceKey = promptArtifactId.ToString();
             await dbContext.Set<SearchDocument>()
                 .Where(document => document.SourceType == SourceType && document.SourceKey == sourceKey)
@@ -159,4 +187,22 @@ public sealed class SearchIndexPromptGalleryProjectionDriver(
             $"SELECT pg_advisory_xact_lock({PostgreSqlAdvisoryLockId})",
             cancellationToken);
     }
+
+    private static Task<CanonicalProjectionState?> LoadCanonicalStateAsync(
+        AppDbContext dbContext,
+        Guid promptArtifactId,
+        CancellationToken cancellationToken)
+        => dbContext.Set<PromptArtifact>()
+            .AsNoTracking()
+            .Where(artifact => artifact.Id == promptArtifactId)
+            .Select(artifact => new CanonicalProjectionState(
+                !artifact.IsArchived &&
+                artifact.Status == PromptArtifactStatus.Final &&
+                artifact.CurrentVersionNumber > 0,
+                artifact.UpdatedAtUtc))
+            .SingleOrDefaultAsync(cancellationToken);
+
+    private sealed record CanonicalProjectionState(
+        bool IsProjectable,
+        DateTimeOffset UpdatedAtUtc);
 }

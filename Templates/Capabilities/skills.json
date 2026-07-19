@@ -517,6 +517,27 @@
         "read"
       ],
       "proofNotes": "Template-owned guidance for the read-only prompt_gallery_search and prompt_gallery_item_get runtime tools."
+    },
+    {
+      "kind": "skill",
+      "key": "prompts-curator-agent-inline-skill",
+      "displayName": "Prompts Curator Agent Skill",
+      "description": "Approval-aware workflow for searching, drafting, updating, and versioning canonical Prompt Gallery items with optimistic concurrency.",
+      "stableId": "skill:prompts-curator-agent:v1",
+      "stableGuidKey": "capabilities/prompts-curator-agent-inline-skill",
+      "endpointOrPath": "inline://prompts-curator-agent",
+      "skillSource": "inline",
+      "inlineSkill": {
+        "name": "prompts-curator-agent",
+        "description": "Curate the canonical Prompt Gallery with exact identity, approval, provenance, and concurrency boundaries.",
+        "instructionsAssetKey": "skills/instructions/prompts-curator-agent.md"
+      },
+      "operationClassifications": [
+        "read",
+        "mutation",
+        "validation"
+      ],
+      "proofNotes": "Template-owned skill for the privileged managed Prompts Curator agent."
     }
   ]
 }

@@ -49,7 +49,7 @@ public sealed class PromptsService : IPromptGalleryService, IPromptGalleryImport
             : Result<PromptGalleryItemDetails>.Success(item);
     }
 
-    public async Task<Result<Guid>> SaveDraftAsync(
+    public async Task<Result<PromptDraftSaveReceipt>> SaveDraftAsync(
         PromptGalleryDraft draft,
         CancellationToken cancellationToken = default)
     {
@@ -57,7 +57,7 @@ public sealed class PromptsService : IPromptGalleryService, IPromptGalleryImport
         var errors = PromptGalleryPersistence.ValidateDraft(draft);
         if (errors.Count > 0)
         {
-            return Result<Guid>.Failure(errors);
+            return Result<PromptDraftSaveReceipt>.Failure(errors);
         }
 
         await using var dbContext = await _dbContextFactory.CreateDbContextAsync(cancellationToken);
@@ -78,7 +78,14 @@ public sealed class PromptsService : IPromptGalleryService, IPromptGalleryImport
                 .FirstOrDefaultAsync(item => item.Id == existingId, cancellationToken);
             if (existing is null)
             {
-                return Result<Guid>.Failure(NotFound(existingId));
+                return Result<PromptDraftSaveReceipt>.Failure(NotFound(existingId));
+            }
+
+            if (existing.UpdatedAtUtc != draft.ExpectedUpdatedAtUtc)
+            {
+                return Result<PromptDraftSaveReceipt>.Failure(Error.Failure(
+                    "The Prompt Gallery item changed after it was loaded. Reload it before saving.",
+                    "prompts.gallery.concurrency-conflict"));
             }
 
             entity = existing;
@@ -98,7 +105,7 @@ public sealed class PromptsService : IPromptGalleryService, IPromptGalleryImport
         entity.RecommendedTemperature = draft.Recommendations?.Temperature;
         entity.RecommendedMaxOutputTokens = draft.Recommendations?.MaxOutputTokens;
         entity.RecommendedTopP = draft.Recommendations?.TopP;
-        entity.UpdatedAtUtc = _clock.GetUtcNow();
+        entity.UpdatedAtUtc = NextUpdatedAt(entity.UpdatedAtUtc);
 
         await PromptGalleryPersistence.SyncTagsAsync(dbContext, entity.Id, draft.Tags ?? [], isNew, cancellationToken);
         await PromptGalleryPersistence.SyncSupportedModelsAsync(
@@ -113,7 +120,16 @@ public sealed class PromptsService : IPromptGalleryService, IPromptGalleryImport
             draft.SupportedConsumers ?? [],
             isNew,
             cancellationToken);
-        await dbContext.SaveChangesAsync(cancellationToken);
+        try
+        {
+            await dbContext.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            return Result<PromptDraftSaveReceipt>.Failure(Error.Failure(
+                "The Prompt Gallery item changed while it was being saved. Reload it before retrying.",
+                "prompts.gallery.concurrency-conflict"));
+        }
 
         await ProjectCanonicalChangeAsync(entity.Id, cancellationToken);
         await RecordActivityAsync(
@@ -121,7 +137,7 @@ public sealed class PromptsService : IPromptGalleryService, IPromptGalleryImport
             isNew ? "Created prompt draft" : "Updated prompt draft",
             entity,
             cancellationToken);
-        return Result<Guid>.Success(entity.Id);
+        return Result<PromptDraftSaveReceipt>.Success(new(entity.Id, entity.UpdatedAtUtc));
     }
 
     public async Task<Result<PromptVersionSnapshot>> CreateVersionAsync(
@@ -144,6 +160,13 @@ public sealed class PromptsService : IPromptGalleryService, IPromptGalleryImport
                 Error.Validation("Output format must contain 1 to 80 characters.", "prompts.version.output-format-invalid"));
         }
 
+        if (request.ExpectedUpdatedAtUtc == default)
+        {
+            return Result<PromptVersionSnapshot>.Failure(Error.Validation(
+                "ExpectedUpdatedAtUtc is required when creating a Prompt Gallery version.",
+                "prompts.version.expected-updated-at-required"));
+        }
+
         await using var dbContext = await _dbContextFactory.CreateDbContextAsync(cancellationToken);
         var entity = await dbContext.Set<PromptArtifact>()
             .FirstOrDefaultAsync(item => item.Id == promptArtifactId, cancellationToken);
@@ -156,6 +179,13 @@ public sealed class PromptsService : IPromptGalleryService, IPromptGalleryImport
         {
             return Result<PromptVersionSnapshot>.Failure(
                 Error.Failure("Archived Gallery items cannot create new versions.", "prompts.version.artifact-archived"));
+        }
+
+        if (entity.UpdatedAtUtc != request.ExpectedUpdatedAtUtc)
+        {
+            return Result<PromptVersionSnapshot>.Failure(Error.Failure(
+                "The Prompt Gallery item changed after it was reviewed. Reload it before creating a version.",
+                "prompts.gallery.concurrency-conflict"));
         }
 
         if (string.IsNullOrWhiteSpace(entity.CurrentDraftText))
@@ -174,7 +204,7 @@ public sealed class PromptsService : IPromptGalleryService, IPromptGalleryImport
 
         entity.CurrentVersionNumber += 1;
         entity.Status = PromptArtifactStatus.Final;
-        entity.UpdatedAtUtc = _clock.GetUtcNow();
+        entity.UpdatedAtUtc = NextUpdatedAt(entity.UpdatedAtUtc);
         var version = new PromptVersion
         {
             PromptArtifactId = entity.Id,
@@ -191,7 +221,16 @@ public sealed class PromptsService : IPromptGalleryService, IPromptGalleryImport
             CreatedAtUtc = _clock.GetUtcNow()
         };
         await dbContext.Set<PromptVersion>().AddAsync(version, cancellationToken);
-        await dbContext.SaveChangesAsync(cancellationToken);
+        try
+        {
+            await dbContext.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            return Result<PromptVersionSnapshot>.Failure(Error.Failure(
+                "The Prompt Gallery item changed while its version was being created. Reload it before retrying.",
+                "prompts.gallery.concurrency-conflict"));
+        }
 
         await ProjectCanonicalChangeAsync(entity.Id, cancellationToken);
         await RecordActivityAsync(
@@ -302,7 +341,7 @@ public sealed class PromptsService : IPromptGalleryService, IPromptGalleryImport
         entity.RecommendedMaxOutputTokens = draft.Recommendations?.MaxOutputTokens;
         entity.RecommendedTopP = draft.Recommendations?.TopP;
         entity.SearchText = PromptGalleryPersistence.BuildSearchText(entity);
-        entity.UpdatedAtUtc = now;
+        entity.UpdatedAtUtc = NextUpdatedAt(entity.UpdatedAtUtc);
 
         await PromptGalleryPersistence.SyncTagsAsync(dbContext, entity.Id, draft.Tags ?? [], isNew, cancellationToken);
         await PromptGalleryPersistence.SyncSupportedModelsAsync(
@@ -477,16 +516,17 @@ public sealed class PromptsService : IPromptGalleryService, IPromptGalleryImport
         var supportedModels = await dbContext.Set<PromptSupportedProviderModel>()
             .AsNoTracking()
             .Where(model => ids.Contains(model.PromptArtifactId))
-            .OrderBy(model => model.Provider)
+            .OrderByDescending(model => model.IsPreferred)
+            .ThenBy(model => model.Provider)
             .ThenBy(model => model.Model)
-            .Select(model => new { model.PromptArtifactId, model.Provider, model.Model })
+            .Select(model => new { model.PromptArtifactId, model.Provider, model.Model, model.IsPreferred })
             .ToArrayAsync(cancellationToken);
         var modelsByArtifact = supportedModels
             .GroupBy(model => model.PromptArtifactId)
             .ToDictionary(
                 group => group.Key,
                 group => (IReadOnlyList<PromptProviderModel>)group
-                    .Select(model => new PromptProviderModel(model.Provider, model.Model))
+                    .Select(model => new PromptProviderModel(model.Provider, model.Model, model.IsPreferred))
                     .ToArray());
         var supportedConsumers = await dbContext.Set<PromptSupportedConsumer>()
             .AsNoTracking()
@@ -533,13 +573,58 @@ public sealed class PromptsService : IPromptGalleryService, IPromptGalleryImport
 
         entity.IsArchived = archived;
         entity.ArchivedAtUtc = archived ? _clock.GetUtcNow() : null;
-        entity.UpdatedAtUtc = _clock.GetUtcNow();
-        await dbContext.SaveChangesAsync(cancellationToken);
+        entity.UpdatedAtUtc = NextUpdatedAt(entity.UpdatedAtUtc);
+        try
+        {
+            await dbContext.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            return Result.Failure(ConcurrentMutation("archive or restore"));
+        }
 
         await ProjectCanonicalChangeAsync(entity.Id, cancellationToken);
         await RecordActivityAsync(
             archived ? "archive" : "restore",
             archived ? "Archived prompt" : "Restored prompt",
+            entity,
+            cancellationToken);
+        return Result.Success();
+    }
+
+    public async Task<Result> SetFavoriteAsync(
+        Guid promptArtifactId,
+        bool favorite,
+        CancellationToken cancellationToken = default)
+    {
+        await using var dbContext = await _dbContextFactory.CreateDbContextAsync(cancellationToken);
+        var entity = await dbContext.Set<PromptArtifact>()
+            .FirstOrDefaultAsync(item => item.Id == promptArtifactId, cancellationToken);
+        if (entity is null)
+        {
+            return Result.Failure(NotFound(promptArtifactId));
+        }
+
+        if (entity.IsFavorite == favorite)
+        {
+            return Result.Success();
+        }
+
+        entity.IsFavorite = favorite;
+        entity.UpdatedAtUtc = NextUpdatedAt(entity.UpdatedAtUtc);
+        try
+        {
+            await dbContext.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            return Result.Failure(ConcurrentMutation("favorite update"));
+        }
+
+        await ProjectCanonicalChangeAsync(entity.Id, cancellationToken);
+        await RecordActivityAsync(
+            favorite ? "favorite" : "unfavorite",
+            favorite ? "Marked prompt as favorite" : "Removed prompt from favorites",
             entity,
             cancellationToken);
         return Result.Success();
@@ -660,6 +745,28 @@ public sealed class PromptsService : IPromptGalleryService, IPromptGalleryImport
                 action);
         }
     }
+
+    private DateTimeOffset NextUpdatedAt(DateTimeOffset current)
+    {
+        var now = NormalizeDatabaseTimestamp(_clock.GetUtcNow());
+        var normalizedCurrent = NormalizeDatabaseTimestamp(current);
+        return now > normalizedCurrent
+            ? now
+            : normalizedCurrent.AddTicks(TimeSpan.TicksPerMicrosecond);
+    }
+
+    private static DateTimeOffset NormalizeDatabaseTimestamp(DateTimeOffset value)
+    {
+        var utc = value.ToUniversalTime();
+        return new DateTimeOffset(
+            utc.Ticks - (utc.Ticks % TimeSpan.TicksPerMicrosecond),
+            TimeSpan.Zero);
+    }
+
+    private static Error ConcurrentMutation(string operation)
+        => Error.Failure(
+            $"The Prompt Gallery item changed during the {operation}. Reload it before retrying.",
+            "prompts.gallery.concurrency-conflict");
 
     private async Task ProjectCanonicalChangeAsync(
         Guid promptArtifactId,

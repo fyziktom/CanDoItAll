@@ -116,7 +116,7 @@ else
             }
 
             <FormSection Title="Supported provider models"
-                         Description="Add only combinations verified for this item. An empty list means the item is model-agnostic.">
+                         Description="Add only combinations verified for this item. Mark one optional preferred pair to preload consumers; an empty list means the item is model-agnostic.">
                 <Grid Gap="LayoutGap.Medium" ColumnsXl="3">
                     <FormField Text="Provider">
                         <InputText @bind-Value="providerToAdd"
@@ -146,6 +146,14 @@ else
                 {
                     <DataGrid TItem="PromptProviderModel" Data="@editor.SupportedModels" AllowPaging="false">
                         <Columns>
+                            <DataGridColumn TItem="PromptProviderModel" Title="Preferred">
+                                <Template Context="supported">
+                                    <CheckBox TValue="bool"
+                                              Value="@supported.IsPreferred"
+                                              ValueChanged="@((bool value) => SetPreferredModelAsync(supported, value))"
+                                              aria-label="@($"Prefer {supported.Provider} {supported.Model}")" />
+                                </Template>
+                            </DataGridColumn>
                             <DataGridColumn TItem="PromptProviderModel" Title="Provider">
                                 <Template Context="supported"><TextBlock Value="@supported.Provider" /></Template>
                             </DataGridColumn>
@@ -265,6 +273,7 @@ else
     private Guid? loadedItemId;
     private Guid? projectId;
     private Guid? collectionId;
+    private DateTimeOffset? expectedUpdatedAtUtc;
     private string providerToAdd = string.Empty;
     private string modelToAdd = string.Empty;
     private string? loadError;
@@ -303,6 +312,7 @@ else
             loadedItemId = null;
             projectId = null;
             collectionId = null;
+            expectedUpdatedAtUtc = null;
             isArchived = false;
             versions = [];
             editor.Reset();
@@ -322,6 +332,7 @@ else
             loadedItemId = item.Id;
             projectId = item.ProjectId;
             collectionId = item.CollectionId;
+            expectedUpdatedAtUtc = item.UpdatedAtUtc;
             isArchived = item.IsArchived;
             versions = item.Versions;
             editor.Load(item);
@@ -403,8 +414,9 @@ else
         }
 
         editor.SupportedModels = editor.SupportedModels
-            .Append(new PromptProviderModel(provider, model))
-            .OrderBy(item => item.Provider, StringComparer.OrdinalIgnoreCase)
+            .Append(new PromptProviderModel(provider, model, IsPreferred: editor.SupportedModels.Count == 0))
+            .OrderByDescending(item => item.IsPreferred)
+            .ThenBy(item => item.Provider, StringComparer.OrdinalIgnoreCase)
             .ThenBy(item => item.Model, StringComparer.OrdinalIgnoreCase)
             .ToArray();
         providerToAdd = string.Empty;
@@ -420,27 +432,42 @@ else
         return Task.CompletedTask;
     }
 
+    private Task SetPreferredModelAsync(PromptProviderModel supported, bool preferred)
+    {
+        editor.SupportedModels = editor.SupportedModels
+            .Select(item => item == supported
+                ? item with { IsPreferred = preferred }
+                : preferred ? item with { IsPreferred = false } : item)
+            .OrderByDescending(item => item.IsPreferred)
+            .ThenBy(item => item.Provider, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(item => item.Model, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        return Task.CompletedTask;
+    }
+
     private async Task SaveAsync()
     {
-        var savedId = await SaveCoreAsync();
-        if (savedId.HasValue)
+        var saveReceipt = await SaveCoreAsync();
+        if (saveReceipt.HasValue)
         {
             Notifications.Success("Prompt draft saved", "The canonical Gallery item was updated.");
-            await Saved.InvokeAsync(savedId.Value);
+            await Saved.InvokeAsync(saveReceipt.Value.PromptArtifactId);
         }
     }
 
     private async Task CreateVersionAsync()
     {
-        var savedId = await SaveCoreAsync();
-        if (!savedId.HasValue)
+        var saveReceipt = await SaveCoreAsync();
+        if (!saveReceipt.HasValue)
         {
             return;
         }
 
         var result = await Gallery.CreateVersionAsync(
-            savedId.Value,
-            new PromptVersionCreateRequest("Ready for reuse"));
+            saveReceipt.Value.PromptArtifactId,
+            new PromptVersionCreateRequest(
+                "Ready for reuse",
+                ExpectedUpdatedAtUtc: saveReceipt.Value.UpdatedAtUtc));
         if (!result.IsSuccess)
         {
             Notifications.Warning("Final version was not created", DescribeErrors(result.Errors));
@@ -448,13 +475,13 @@ else
         }
 
         Notifications.Success("Final version created", "The immutable prompt version is ready for reuse.");
-        ItemId = savedId.Value;
+        ItemId = saveReceipt.Value.PromptArtifactId;
         loadedItemId = null;
         await LoadAsync();
-        await Saved.InvokeAsync(savedId.Value);
+        await Saved.InvokeAsync(saveReceipt.Value.PromptArtifactId);
     }
 
-    private async Task<Guid?> SaveCoreAsync()
+    private async Task<PromptDraftSaveReceipt?> SaveCoreAsync()
     {
         if (isBusy)
         {
@@ -482,17 +509,19 @@ else
                 editor.Tags,
                 editor.SupportedModels,
                 editor.SupportedConsumers,
-                new PromptModelRecommendations(editor.Temperature, editor.MaxOutputTokens, editor.TopP)));
+                new PromptModelRecommendations(editor.Temperature, editor.MaxOutputTokens, editor.TopP),
+                ExpectedUpdatedAtUtc: expectedUpdatedAtUtc));
             if (!result.IsSuccess)
             {
                 Notifications.Warning("Prompt draft was not saved", DescribeErrors(result.Errors));
                 return null;
             }
 
-            Guid savedId = result.Value;
-            loadedItemId = savedId;
-            ItemId = savedId;
-            return savedId;
+            var saveReceipt = result.Value;
+            ItemId = saveReceipt.PromptArtifactId;
+            loadedItemId = null;
+            await LoadAsync();
+            return saveReceipt;
         }
         catch (Exception exception)
         {
