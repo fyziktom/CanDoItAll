@@ -1,4 +1,5 @@
 using CanDoItAll.Components.CanvasLib;
+using CanDoItAll.Modules.Workbench.CanvasAdapters;
 using CanDoItAll.SharedKernel;
 
 namespace CanDoItAll.Modules.Workbench.Pages;
@@ -22,11 +23,10 @@ public partial class ProjectStructurePage
             return ResolveProjectInspectorActions(node);
         }
 
-        var actions = new List<ProjectStructureInspectorAction>();
-        if (CanEditNode(node))
+        var actions = new List<ProjectStructureInspectorAction>
         {
-            actions.Add(new ProjectStructureInspectorAction("edit", "Edit", "draw", "accent"));
-        }
+            new(ProjectStructureActionCatalogAdapter.EditActionId, "Edit", "draw", "accent")
+        };
 
         if (ProjectStructureFileActions.CanBrowseFiles(node))
         {
@@ -121,6 +121,7 @@ public partial class ProjectStructurePage
     {
         var actions = new List<ProjectStructureInspectorAction>
         {
+            new(ProjectStructureActionCatalogAdapter.EditActionId, "Edit", "draw", "accent"),
             new("command:open", "Open", "open", "primary"),
             new(
                 ProjectStructureFileActions.BrowseFilesId,
@@ -203,7 +204,7 @@ public partial class ProjectStructurePage
 
         switch (actionId)
         {
-            case "edit":
+            case ProjectStructureActionCatalogAdapter.EditActionId:
                 await OpenEditDialogAsync(node);
                 break;
             case "mermaid:view":
@@ -336,16 +337,23 @@ public partial class ProjectStructurePage
 
     private bool CanEditNode(ProjectStructureNode? node)
     {
-        if (node is null || node.Badges.Contains("Synced", StringComparer.OrdinalIgnoreCase))
+        if (node is null)
         {
             return false;
         }
 
-        return TryBuildNodeEditModel(node, out _);
+        return (!node.IsSystemManaged && TryBuildNodeEditModel(node, out _)) ||
+               ResolveNodeAuthoringRoute(node) is not null;
     }
 
     private async Task OpenEditDialogAsync(ProjectStructureNode node)
     {
+        if (node.IsSystemManaged)
+        {
+            await OpenNodeAuthoringSurfaceOrShowFeedbackAsync(node);
+            return;
+        }
+
         if (node.ObjectType == ProjectObjectType.SecretReference)
         {
             await OpenSecretReferenceEditDialogAsync(node);
@@ -354,6 +362,7 @@ public partial class ProjectStructurePage
 
         if (!TryBuildNodeEditModel(node, out var model))
         {
+            await OpenNodeAuthoringSurfaceOrShowFeedbackAsync(node);
             return;
         }
 
@@ -365,10 +374,43 @@ public partial class ProjectStructurePage
 
         if (workbenchRef is null)
         {
+            workflowFeedback = "The node editor is not available yet. Try the action again after the canvas finishes loading.";
+            workflowFeedbackTone = "warn";
+            await InvokeAsync(StateHasChanged);
             return;
         }
 
         await workbenchRef.OpenCreateDialogAsync(model.Action, model.Request);
+    }
+
+    private async Task OpenNodeAuthoringSurfaceOrShowFeedbackAsync(ProjectStructureNode node)
+    {
+        if (ResolveNodeAuthoringRoute(node) is { } route)
+        {
+            Navigation.NavigateTo(route);
+            return;
+        }
+
+        workflowFeedback = node.IsSystemManaged
+            ? "This projected node has no owning workspace where it can be edited."
+            : "This node type does not expose an editor yet.";
+        workflowFeedbackTone = "warn";
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private string? ResolveNodeAuthoringRoute(ProjectStructureNode node)
+    {
+        if (node.ProjectRole != ProjectStructureProjectRole.None)
+        {
+            var projectId = node.RelatedProjectId ?? ProjectId;
+            return projectId == Guid.Empty
+                ? null
+                : $"/projects?projectId={projectId:D}";
+        }
+
+        return string.IsNullOrWhiteSpace(node.Route)
+            ? null
+            : node.Route.Trim();
     }
 
     private static bool IsCanonicalTaskNode(ProjectStructureNode node)

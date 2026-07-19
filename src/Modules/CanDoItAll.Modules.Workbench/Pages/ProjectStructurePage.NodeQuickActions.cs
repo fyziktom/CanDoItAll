@@ -86,7 +86,7 @@ public partial class ProjectStructurePage
             : new ProjectStructureQuickActionButton(
                 ProjectStructureQuickActionExecutionKind.Edit,
                 "Edit",
-                "This synced or generated node cannot be edited from the canvas.",
+                "This node does not expose an editor or owning workspace.",
                 "draw",
                 "ghost",
                 IsDisabled: true);

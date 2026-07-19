@@ -6,6 +6,8 @@ namespace CanDoItAll.Modules.Workbench.CanvasAdapters;
 
 public sealed class ProjectStructureActionCatalogAdapter
 {
+    public const string EditActionId = "edit";
+
     public IReadOnlyList<CanvasWorkbenchAction> BuildNodeContextActions(ProjectStructureNode node)
         => BuildNodeContextActions(node, canLaunchRuntime: false);
 
@@ -27,6 +29,7 @@ public sealed class ProjectStructureActionCatalogAdapter
         var actions = new List<CanvasWorkbenchAction>
         {
             new() { ActionId = "open", Label = "Open", MenuLabel = "Open", Description = "Open the linked artifact or routed workspace.", Icon = "open", Tone = "accent" },
+            BuildEditAction(),
             new() { ActionId = "copy-id", Label = "Copy id", MenuLabel = "Copy id", Description = "Copy this node id to the clipboard.", Icon = "copy", Tone = "ghost" },
             new() { ActionId = "copy-info", Label = "Copy info", MenuLabel = "Copy info", Description = "Copy this node as type_title:id-hash.", Icon = "copy", Tone = "primary" },
             new() { ActionId = "copy-subtree-ids", Label = "Copy tree ids", MenuLabel = "Copy tree", Description = "Copy this node and descendants as type_title:id-hash entries.", Icon = "copy", Tone = "sky" },
@@ -407,6 +410,7 @@ public sealed class ProjectStructureActionCatalogAdapter
                 Icon = "open",
                 Tone = "accent"
             },
+            BuildEditAction(),
             ProjectStructureFileActions.CreateCanvasAction(),
             new()
             {
@@ -504,6 +508,17 @@ public sealed class ProjectStructureActionCatalogAdapter
 
         return ProjectStructureActionShortcuts.Apply(ProjectStructureMenuComposition.OrderNodeContextActions(node, actions));
     }
+
+    private static CanvasWorkbenchAction BuildEditAction()
+        => new()
+        {
+            ActionId = EditActionId,
+            Label = "Edit",
+            MenuLabel = "Edit",
+            Description = "Edit this node in its available editor or owning workspace.",
+            Icon = "draw",
+            Tone = "accent"
+        };
 
     private static CanvasWorkbenchAction BuildProgressAction()
         => new()

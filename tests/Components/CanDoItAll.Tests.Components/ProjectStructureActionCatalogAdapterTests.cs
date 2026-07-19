@@ -115,6 +115,35 @@ public sealed class ProjectStructureActionCatalogAdapterTests
     }
 
     [Fact]
+    public void Every_individual_node_context_menu_exposes_exactly_one_edit_action()
+    {
+        var adapter = new ProjectStructureActionCatalogAdapter();
+
+        foreach (var objectType in Enum.GetValues<ProjectObjectType>())
+        {
+            AssertUniversalEditAction(
+                adapter,
+                CreateNode($"node-{objectType}", objectType, objectType.ToString(), 0, 0),
+                objectType.ToString());
+        }
+
+        foreach (var projectRole in Enum.GetValues<ProjectStructureProjectRole>().Where(role => role != ProjectStructureProjectRole.None))
+        {
+            AssertUniversalEditAction(
+                adapter,
+                CreateNode(
+                    $"project-{projectRole}",
+                    ProjectObjectType.ProjectRoot,
+                    projectRole.ToString(),
+                    0,
+                    0,
+                    projectRole,
+                    Guid.NewGuid()),
+                projectRole.ToString());
+        }
+    }
+
+    [Fact]
     public void Storage_backed_infrastructure_node_exposes_one_browse_action_separate_from_open_local()
     {
         var adapter = new ProjectStructureActionCatalogAdapter();
@@ -255,7 +284,7 @@ public sealed class ProjectStructureActionCatalogAdapterTests
     }
 
     [Fact]
-    public void Additional_parent_project_nodes_remain_read_only()
+    public void Additional_parent_project_nodes_keep_canvas_mutations_read_only_but_expose_edit()
     {
         var adapter = new ProjectStructureActionCatalogAdapter();
         var node = CreateNode(
@@ -270,6 +299,7 @@ public sealed class ProjectStructureActionCatalogAdapterTests
         var actions = adapter.BuildNodeContextActions(node);
 
         Assert.Contains(actions, action => action.ActionId == "open");
+        Assert.Single(actions, action => action.ActionId == ProjectStructureActionCatalogAdapter.EditActionId);
         Assert.DoesNotContain(actions, action => action.ActionId.StartsWith("add-", StringComparison.Ordinal));
         Assert.DoesNotContain(actions, action => action.ActionId.StartsWith("group-", StringComparison.Ordinal));
     }
@@ -440,6 +470,24 @@ public sealed class ProjectStructureActionCatalogAdapterTests
             RelatedProjectId: relatedProjectId,
             ParentProjectCount: parentProjectCount,
             NodeReferences: nodeReferences);
+
+    private static void AssertUniversalEditAction(
+        ProjectStructureActionCatalogAdapter adapter,
+        ProjectStructureNode node,
+        string scenario)
+    {
+        var editActions = adapter.BuildNodeContextActions(node)
+            .Where(action => action.ActionId == ProjectStructureActionCatalogAdapter.EditActionId)
+            .ToList();
+
+        Assert.True(
+            editActions.Count == 1,
+            $"Expected exactly one Edit action for {scenario}, but found {editActions.Count}.");
+        var edit = editActions[0];
+        Assert.Equal("Edit", edit.Label);
+        Assert.Equal("Edit", edit.MenuLabel);
+        Assert.Equal("draw", edit.Icon);
+    }
 
     private static void AssertShortcut(IEnumerable<CanvasWorkbenchAction> actions, string actionId, string expectedShortcut)
         => Assert.Equal(expectedShortcut, FindAction(actions, actionId).ShortcutKey);

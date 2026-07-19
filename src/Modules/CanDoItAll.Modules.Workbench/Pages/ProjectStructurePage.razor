@@ -1700,6 +1700,12 @@ else
 
         switch (actionId)
         {
+            case ProjectStructureActionCatalogAdapter.EditActionId:
+                if (ResolveNode(nodeId) is { } editNode)
+                {
+                    await OpenEditDialogAsync(editNode);
+                }
+                break;
             case "summary":
                 await OpenSummaryAsync(nodeId);
                 break;
