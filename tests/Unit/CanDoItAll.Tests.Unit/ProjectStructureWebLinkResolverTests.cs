@@ -51,6 +51,70 @@ public sealed class ProjectStructureWebLinkResolverTests
         Assert.Contains("browser", resolved.EmbedUnavailableReason, StringComparison.OrdinalIgnoreCase);
     }
 
+    [Fact]
+    public void TryResolve_marks_Google_as_non_embeddable()
+    {
+        var node = CreateNode(
+            ProjectObjectType.Link,
+            new ProjectObjectMetadataEnvelope
+            {
+                Link = new ProjectLinkMetadata
+                {
+                    Url = "https://google.com/"
+                }
+            });
+
+        bool succeeded = ProjectStructureWebLinkResolver.TryResolve(node, out ProjectStructureWebLink? link);
+
+        Assert.True(succeeded);
+        ProjectStructureWebLink resolved = Assert.IsType<ProjectStructureWebLink>(link);
+        Assert.False(resolved.CanEmbed);
+        Assert.Contains("Google", resolved.EmbedUnavailableReason, StringComparison.Ordinal);
+        Assert.Contains("browser tab", resolved.EmbedUnavailableReason, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Theory]
+    [InlineData("https://www.google.com/maps/embed?pb=map")]
+    [InlineData("https://www.google.com/maps/embed/v1/place?q=La+Paz")]
+    [InlineData("https://docs.google.com/document/d/document-id/preview")]
+    [InlineData("https://docs.google.com/spreadsheets/d/sheet-id/preview?widget=true")]
+    [InlineData("https://www.google.com/recaptcha/api2/anchor?k=site-key")]
+    [InlineData("https://www.google.com/recaptcha/api2/bframe?k=site-key")]
+    [InlineData("https://www.google.co.uk/recaptcha/enterprise/anchor?k=site-key")]
+    public void TryResolve_allows_known_Google_embed_endpoints(string url)
+    {
+        ProjectStructureWebLink resolved = ResolveLink(url);
+
+        Assert.True(resolved.CanEmbed);
+        Assert.Empty(resolved.EmbedUnavailableReason);
+    }
+
+    [Theory]
+    [InlineData("https://www.google.com/")]
+    [InlineData("https://accounts.google.com/signin")]
+    [InlineData("https://www.google.co.uk/search?q=test")]
+    [InlineData("https://maps.google.de./maps")]
+    [InlineData("https://www.google.com./search?q=test")]
+    public void TryResolve_blocks_generic_Google_hosts_including_country_and_trailing_dot_domains(string url)
+    {
+        ProjectStructureWebLink resolved = ResolveLink(url);
+
+        Assert.False(resolved.CanEmbed);
+        Assert.Contains("Google", resolved.EmbedUnavailableReason, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData("https://google.com.example.test/")]
+    [InlineData("https://www.google.co.uk.example.test/search")]
+    [InlineData("https://docs.google.com.example.test/document/d/id/preview")]
+    public void TryResolve_does_not_treat_lookalike_hosts_as_Google(string url)
+    {
+        ProjectStructureWebLink resolved = ResolveLink(url);
+
+        Assert.True(resolved.CanEmbed);
+        Assert.Empty(resolved.EmbedUnavailableReason);
+    }
+
     [Theory]
     [InlineData("javascript:alert('unsafe')")]
     [InlineData("file:///C:/private/report.html")]
@@ -93,6 +157,24 @@ public sealed class ProjectStructureWebLinkResolverTests
         ProjectStructureWebLink resolved = Assert.IsType<ProjectStructureWebLink>(link);
         Assert.True(resolved.Uri.IsLoopback);
         Assert.True(resolved.CanEmbed);
+    }
+
+    private static ProjectStructureWebLink ResolveLink(string url)
+    {
+        var node = CreateNode(
+            ProjectObjectType.Link,
+            new ProjectObjectMetadataEnvelope
+            {
+                Link = new ProjectLinkMetadata
+                {
+                    Url = url
+                }
+            });
+
+        bool succeeded = ProjectStructureWebLinkResolver.TryResolve(node, out ProjectStructureWebLink? link);
+
+        Assert.True(succeeded);
+        return Assert.IsType<ProjectStructureWebLink>(link);
     }
 
     private static ProjectStructureNode CreateNode(

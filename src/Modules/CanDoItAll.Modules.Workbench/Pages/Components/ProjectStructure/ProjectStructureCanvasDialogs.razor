@@ -605,8 +605,7 @@
 @if (WebPreviewDialog is not null)
 {
     <ProjectStructureWebPreviewDialog State="WebPreviewDialog"
-                                      Close="CloseWebPreviewDialog"
-                                      OpenInBrowser="OpenWebPreviewInBrowser" />
+                                      Close="CloseWebPreviewDialog" />
 }
 
 @if (RenderProcessStartDialog && ProcessStartDialog is not null)
@@ -1134,9 +1133,6 @@
 
     [Parameter]
     public EventCallback CloseWebPreviewDialog { get; set; }
-
-    [Parameter]
-    public EventCallback OpenWebPreviewInBrowser { get; set; }
 
     [Parameter]
     public ProjectStructureNode? PreviewNode { get; set; }

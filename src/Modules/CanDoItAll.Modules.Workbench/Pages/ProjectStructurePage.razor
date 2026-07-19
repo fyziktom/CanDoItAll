@@ -303,7 +303,6 @@ else
                                                            ExecuteQuickAction="ExecuteQuickActionAsync"
                                                            WebPreviewDialog="@webPreviewDialog"
                                                            CloseWebPreviewDialog="CloseWebPreviewDialog"
-                                                           OpenWebPreviewInBrowser="OpenWebPreviewInBrowserAsync"
                                                            PreviewNode="@previewNode"
                                                            PreviewInteraction="@PreviewInteraction"
                                                            CloseAttachmentPreview="CloseAttachmentPreviewAsync"
@@ -808,6 +807,7 @@ else
     private string? pendingClientSelectionId;
     private ProjectStructureNode? previewNode;
     private ProjectStructureKnownFileInteractionSlot? previewInteractionSlot;
+    private bool isOpeningAttachmentPreview;
     private string? localOpenFeedback;
     private string? localOpenFeedbackNodeId;
     private string localOpenFeedbackTone = "neutral";
@@ -966,6 +966,7 @@ else
             linkModeSourceId = null;
             pendingClientSelectionId = null;
             fileBrowserRequest = null;
+            webPreviewDialog = null;
             await CloseAttachmentPreviewAsync();
         }
 
@@ -1051,6 +1052,7 @@ else
                 canvasSurface = null;
                 clipboardState = null;
                 quickActionDialog = null;
+                webPreviewDialog = null;
                 currentViewStateJson = null;
                 selectedNodeIds = [];
                 pendingClientSelectionId = null;
@@ -1089,6 +1091,7 @@ else
                     string.Equals(node.Id, quickActionDialog.NodeId, StringComparison.Ordinal)) is { } dialogNode
                     ? BuildQuickActionDialog(dialogNode)
                     : null;
+            var nextWebPreviewDialog = RebuildWebPreviewDialog(reloadedSurface.Nodes);
             var nextSelectedNodeIds = (liveSelectionSnapshot ?? uiState.SelectedNodeIds)
                 .Where(id => reloadedSurface.Nodes.Any(node => string.Equals(node.Id, id, StringComparison.Ordinal)))
                 .ToList();
@@ -1129,6 +1132,7 @@ else
             unavailableState = null;
             previewNode = reloadedPreview;
             quickActionDialog = nextQuickActionDialog;
+            webPreviewDialog = nextWebPreviewDialog;
             selectedNodeIds = nextSelectedNodeIds;
             pendingClientSelectionId = nextPendingClientSelectionId;
             pendingWorkbenchSelectionId = nextPendingWorkbenchSelectionId;
@@ -1212,6 +1216,8 @@ else
             var dialogNode = patchedNodes.FirstOrDefault(node => string.Equals(node.Id, quickActionDialog.NodeId, StringComparison.Ordinal));
             quickActionDialog = dialogNode is null ? null : BuildQuickActionDialog(dialogNode);
         }
+
+        webPreviewDialog = RebuildWebPreviewDialog(patchedNodes);
 
         if (summaryDialog is not null)
         {
@@ -2834,7 +2840,9 @@ else
             return;
         }
 
+        webPreviewDialog = null;
         previewNode = null;
+        isOpeningAttachmentPreview = true;
         try
         {
             ProjectStructureKnownFileInteraction? opened = await PreviewInteractionSlot.OpenAsync(
@@ -2861,6 +2869,10 @@ else
                 _ => "Unable to authorize this project asset."
             };
             workflowFeedbackTone = "warn";
+        }
+        finally
+        {
+            isOpeningAttachmentPreview = false;
         }
     }
 

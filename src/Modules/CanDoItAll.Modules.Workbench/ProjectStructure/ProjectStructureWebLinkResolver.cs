@@ -21,15 +21,15 @@ internal static class ProjectStructureWebLinkResolver
                 continue;
             }
 
-            bool canEmbed = !IsKnownFrameBlockedHost(uri.Host);
-            string hostLabel = ProjectStructureExternalLinkClassifier.DescribeGitHost(uri.ToString());
+            string? frameBlockedProvider = ResolveKnownFrameBlockedProvider(uri);
+            bool canEmbed = frameBlockedProvider is null;
             link = new ProjectStructureWebLink(
                 uri,
                 sourceLabel,
                 canEmbed,
                 canEmbed
                     ? string.Empty
-                    : $"{hostLabel} does not allow repository pages to be embedded. Open the link in your browser instead.");
+                    : $"{frameBlockedProvider} prevents its pages from being displayed inside another site's embedded browser. Open the link in a new browser tab instead.");
             return true;
         }
 
@@ -88,9 +88,81 @@ internal static class ProjectStructureWebLinkResolver
         yield return ("Node route", node.Route);
     }
 
-    private static bool IsKnownFrameBlockedHost(string host)
-        => host.Equals("github.com", StringComparison.OrdinalIgnoreCase) ||
-           host.EndsWith(".github.com", StringComparison.OrdinalIgnoreCase) ||
-           host.Equals("gitlab.com", StringComparison.OrdinalIgnoreCase) ||
-           host.EndsWith(".gitlab.com", StringComparison.OrdinalIgnoreCase);
+    private static string? ResolveKnownFrameBlockedProvider(Uri uri)
+    {
+        string host = NormalizeHost(uri);
+        if (MatchesDomain(host, "github.com"))
+        {
+            return "GitHub";
+        }
+
+        if (MatchesDomain(host, "gitlab.com"))
+        {
+            return "GitLab";
+        }
+
+        return IsGoogleDomain(host) && !IsKnownGoogleEmbed(uri, host)
+            ? "Google"
+            : null;
+    }
+
+    private static bool IsKnownGoogleEmbed(Uri uri, string host)
+    {
+        string path = uri.AbsolutePath.TrimEnd('/');
+        if (host.Equals("www.google.com", StringComparison.OrdinalIgnoreCase) &&
+            (path.Equals("/maps/embed", StringComparison.Ordinal) ||
+             path.StartsWith("/maps/embed/", StringComparison.Ordinal)))
+        {
+            return true;
+        }
+
+        if (host.Equals("docs.google.com", StringComparison.OrdinalIgnoreCase) &&
+            path.EndsWith("/preview", StringComparison.Ordinal))
+        {
+            return true;
+        }
+
+        return IsRecaptchaEmbedPath(path);
+    }
+
+    private static bool IsRecaptchaEmbedPath(string path)
+        => path.Equals("/recaptcha/api2/anchor", StringComparison.Ordinal) ||
+           path.Equals("/recaptcha/api2/bframe", StringComparison.Ordinal) ||
+           path.Equals("/recaptcha/enterprise/anchor", StringComparison.Ordinal) ||
+           path.Equals("/recaptcha/enterprise/bframe", StringComparison.Ordinal);
+
+    private static bool IsGoogleDomain(string host)
+    {
+        string[] labels = host.Split('.', StringSplitOptions.RemoveEmptyEntries);
+        int googleLabelIndex = Array.FindLastIndex(
+            labels,
+            static label => label.Equals("google", StringComparison.OrdinalIgnoreCase));
+        int suffixLabelCount = labels.Length - googleLabelIndex - 1;
+        if (googleLabelIndex < 0 || suffixLabelCount is < 1 or > 2)
+        {
+            return false;
+        }
+
+        if (suffixLabelCount == 1)
+        {
+            string suffix = labels[^1];
+            return suffix.Equals("com", StringComparison.OrdinalIgnoreCase) ||
+                   suffix.Equals("cat", StringComparison.OrdinalIgnoreCase) ||
+                   IsCountryCode(suffix);
+        }
+
+        return IsCountryCode(labels[^1]) &&
+               (labels[^2].Equals("co", StringComparison.OrdinalIgnoreCase) ||
+                labels[^2].Equals("com", StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static bool IsCountryCode(string value)
+        => value.Length == 2 && value.All(char.IsAsciiLetter);
+
+    private static string NormalizeHost(Uri uri)
+        => uri.IdnHost.TrimEnd('.');
+
+    private static bool MatchesDomain(string host, string domain)
+        => host.Equals(domain, StringComparison.OrdinalIgnoreCase) ||
+           host.EndsWith($".{domain}", StringComparison.OrdinalIgnoreCase);
 }

@@ -298,7 +298,7 @@ public sealed record ProjectStructureWebPreviewDialogState(
     string NodeId,
     string Title,
     string SourceLabel,
-    string Url,
+    Uri Url,
     string Notes,
     bool CanEmbed,
     string EmbedUnavailableReason);

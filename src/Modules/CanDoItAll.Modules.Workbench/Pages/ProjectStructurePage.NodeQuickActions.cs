@@ -35,23 +35,45 @@ public partial class ProjectStructurePage
 
     private void OpenWebPreviewDialog(ProjectStructureNode node, ProjectStructureWebLink link)
     {
-        webPreviewDialog = new ProjectStructureWebPreviewDialogState(
+        if (isOpeningAttachmentPreview || previewNode is not null || PreviewInteraction is not null)
+        {
+            return;
+        }
+
+        webPreviewDialog = BuildWebPreviewDialog(node, link);
+    }
+
+    private static ProjectStructureWebPreviewDialogState BuildWebPreviewDialog(
+        ProjectStructureNode node,
+        ProjectStructureWebLink link)
+        => new(
             node.Id,
             node.Title,
             link.SourceLabel,
-            link.Uri.ToString(),
+            link.Uri,
             node.Notes,
             link.CanEmbed,
             link.EmbedUnavailableReason);
+
+    private ProjectStructureWebPreviewDialogState? RebuildWebPreviewDialog(
+        IReadOnlyList<ProjectStructureNode> nodes)
+    {
+        if (webPreviewDialog is null)
+        {
+            return null;
+        }
+
+        var node = nodes.FirstOrDefault(candidate =>
+            string.Equals(candidate.Id, webPreviewDialog.NodeId, StringComparison.Ordinal));
+        return node is not null &&
+               ProjectStructureWebLinkResolver.TryResolve(node, out ProjectStructureWebLink? link) &&
+               link is not null
+            ? BuildWebPreviewDialog(node, link)
+            : null;
     }
 
     private void CloseWebPreviewDialog()
         => webPreviewDialog = null;
-
-    private Task OpenWebPreviewInBrowserAsync()
-        => webPreviewDialog is null
-            ? Task.CompletedTask
-            : OpenArtifactInNewTabAsync(webPreviewDialog.Url);
 
     private ProjectStructureQuickActionButton BuildEditQuickAction(ProjectStructureNode node)
         => CanEditNode(node)

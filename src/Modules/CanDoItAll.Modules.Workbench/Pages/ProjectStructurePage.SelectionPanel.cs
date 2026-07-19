@@ -556,6 +556,28 @@ public partial class ProjectStructurePage
             builder.Append("|quick:");
         }
 
+        if (webPreviewDialog is not null)
+        {
+            builder.Append("|web-preview:")
+                .Append(webPreviewDialog.NodeId)
+                .Append(':')
+                .Append(webPreviewDialog.Url.AbsoluteUri)
+                .Append(':')
+                .Append(webPreviewDialog.CanEmbed)
+                .Append(':')
+                .Append(webPreviewDialog.Title)
+                .Append(':')
+                .Append(webPreviewDialog.SourceLabel)
+                .Append(':')
+                .Append(webPreviewDialog.Notes)
+                .Append(':')
+                .Append(webPreviewDialog.EmbedUnavailableReason);
+        }
+        else
+        {
+            builder.Append("|web-preview:");
+        }
+
         if (previewNode is not null)
         {
             builder.Append("|preview:")

@@ -54,7 +54,7 @@
             @if (Body is not null)
             {
                 <div class="@ResolveBodyCssClass() w-full"
-                     style="min-height:0;height:100%;">
+                     style="@ResolveBodyStyle()">
                     @Body
                 </div>
             }
@@ -89,6 +89,9 @@
 
     [Parameter]
     public string BodyClass { get; set; } = string.Empty;
+
+    [Parameter]
+    public bool FillBody { get; set; }
 
     [Parameter]
     public string DataTestId { get; set; } = string.Empty;
@@ -161,4 +164,9 @@
             ? "project-structure-preview-dialog__body"
             : $"project-structure-preview-dialog__body {BodyClass}";
     }
+
+    private string ResolveBodyStyle()
+        => FillBody
+            ? "min-height:0;height:100%;display:block;overflow:hidden;"
+            : "min-height:0;height:100%;";
 }

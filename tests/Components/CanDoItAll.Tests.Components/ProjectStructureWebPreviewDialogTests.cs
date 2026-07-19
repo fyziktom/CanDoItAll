@@ -14,21 +14,33 @@ public sealed class ProjectStructureWebPreviewDialogTests
             "node-1",
             "Architecture guide",
             "Web link",
-            "https://docs.example.com/architecture",
+            new Uri("https://docs.example.com/architecture"),
             "Review section three.",
             CanEmbed: true,
             EmbedUnavailableReason: string.Empty);
 
         var cut = context.RenderComponent<ProjectStructureWebPreviewDialog>(parameters => parameters
             .Add(component => component.State, state)
-            .Add(component => component.Close, EventCallback.Empty)
-            .Add(component => component.OpenInBrowser, EventCallback.Empty));
+            .Add(component => component.Close, EventCallback.Empty));
 
         var frame = cut.Find("iframe");
-        Assert.Equal(state.Url, frame.GetAttribute("src"));
-        Assert.Equal("allow-forms allow-popups allow-scripts", frame.GetAttribute("sandbox"));
+        Assert.Equal(state.Url.AbsoluteUri, frame.GetAttribute("src"));
+        var sandbox = frame.GetAttribute("sandbox");
+        Assert.Equal("allow-forms allow-popups allow-scripts", sandbox);
+        Assert.DoesNotContain("allow-same-origin", sandbox, StringComparison.Ordinal);
+        Assert.DoesNotContain("allow-top-navigation", sandbox, StringComparison.Ordinal);
         Assert.Equal("no-referrer", frame.GetAttribute("referrerpolicy"));
         Assert.Contains("Review section three.", cut.Markup, StringComparison.Ordinal);
+
+        var notes = cut.Find("[data-testid='project-structure-web-preview-notes']");
+        Assert.Contains("max-height:min(12rem,35%)", notes.GetAttribute("style"), StringComparison.Ordinal);
+        Assert.Contains("overflow:auto", notes.GetAttribute("style"), StringComparison.Ordinal);
+
+        var externalLink = cut.Find("[data-testid='project-structure-web-preview-open-browser']");
+        Assert.Equal("a", externalLink.LocalName);
+        Assert.Equal(state.Url.AbsoluteUri, externalLink.GetAttribute("href"));
+        Assert.Equal("_blank", externalLink.GetAttribute("target"));
+        Assert.Equal("noopener noreferrer", externalLink.GetAttribute("rel"));
     }
 
     [Fact]
@@ -39,20 +51,19 @@ public sealed class ProjectStructureWebPreviewDialogTests
             "node-1",
             "Repository",
             "Repository",
-            "https://github.com/example/project",
+            new Uri("https://github.com/example/project"),
             string.Empty,
             CanEmbed: false,
             EmbedUnavailableReason: "GitHub does not allow repository pages to be embedded.");
 
         var cut = context.RenderComponent<ProjectStructureWebPreviewDialog>(parameters => parameters
             .Add(component => component.State, state)
-            .Add(component => component.Close, EventCallback.Empty)
-            .Add(component => component.OpenInBrowser, EventCallback.Empty));
+            .Add(component => component.Close, EventCallback.Empty));
 
         Assert.Empty(cut.FindAll("iframe"));
         Assert.Contains(state.EmbedUnavailableReason, cut.Markup, StringComparison.Ordinal);
         Assert.Contains(
-            cut.FindAll("button"),
-            button => button.TextContent.Contains("Open in browser", StringComparison.Ordinal));
+            cut.FindAll("a"),
+            link => link.TextContent.Contains("Open in browser", StringComparison.Ordinal));
     }
 }
