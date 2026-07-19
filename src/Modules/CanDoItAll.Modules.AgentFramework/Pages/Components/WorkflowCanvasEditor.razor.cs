@@ -60,9 +60,6 @@ public partial class WorkflowCanvasEditor
     public IPromptGalleryService PromptGallery { get; set; } = default!;
 
     [Inject]
-    public NavigationManager NavigationManager { get; set; } = default!;
-
-    [Inject]
     public ILogger<WorkflowCanvasEditor> Logger { get; set; } = default!;
 
     [Parameter]
@@ -577,9 +574,6 @@ public partial class WorkflowCanvasEditor
         => node is null
             ? newComponentModel
             : node.Model;
-
-    private void OpenPromptGalleryItemEditor(Guid promptArtifactId)
-        => NavigationManager.NavigateTo($"/prompt-gallery?promptId={promptArtifactId:D}");
 
     private static string BuildPromptGalleryError(IReadOnlyList<Error> errors)
         => errors.Count == 0

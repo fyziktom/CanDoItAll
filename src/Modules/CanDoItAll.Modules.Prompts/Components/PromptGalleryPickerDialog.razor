@@ -2,17 +2,21 @@
 @inject DialogService DialogService
 @inject NotificationService Notifications
 
-<PromptGallerySearchList Consumer="@Consumer"
+<PromptGallerySearchList @ref="searchList"
+                         Consumer="@Consumer"
                          Provider="@Provider"
                          Model="@Model"
                          Compact="true"
                          PageSize="@PageSize"
-                         AllowEdit="@EffectiveAllowEdit"
+                         AllowEdit="@AllowEdit"
                          SelectText="Insert"
                          Selected="ResolveSelectionAsync"
                          EditRequested="HandleEditRequestedAsync" />
 
 @code {
+    private PromptGallerySearchList? searchList;
+    private bool itemDetailsDirty;
+
     [Parameter]
     public PromptGalleryConsumer Consumer { get; set; } = PromptGalleryConsumer.Chat;
 
@@ -30,8 +34,6 @@
 
     [Parameter]
     public EventCallback<Guid> EditRequested { get; set; }
-
-    private bool EffectiveAllowEdit => AllowEdit && EditRequested.HasDelegate;
 
     private async Task ResolveSelectionAsync(PromptGallerySearchItem item)
     {
@@ -84,12 +86,59 @@
 
     private async Task HandleEditRequestedAsync(Guid itemId)
     {
-        await DialogService.CloseAsync();
-        if (EditRequested.HasDelegate)
+        if (!EditRequested.HasDelegate)
         {
-            await EditRequested.InvokeAsync(itemId);
+            await OpenItemDetailsAsync(itemId);
+            return;
+        }
+
+        await DialogService.CloseAsync();
+        await EditRequested.InvokeAsync(itemId);
+    }
+
+    private async Task OpenItemDetailsAsync(Guid itemId)
+    {
+        itemDetailsDirty = false;
+        _ = await DialogService.OpenAsync<PromptGalleryItemEditor>(
+            "Prompt details",
+            new Dictionary<string, object?>
+            {
+                [nameof(PromptGalleryItemEditor.ItemId)] = itemId,
+                [nameof(PromptGalleryItemEditor.Saved)] = EventCallback.Factory.Create<Guid>(
+                    this,
+                    (Guid savedItemId) => HandleItemSavedAsync(savedItemId)),
+                [nameof(PromptGalleryItemEditor.Cancelled)] = EventCallback.Factory.Create(
+                    this,
+                    () => CloseItemDetailsAsync())
+            },
+            new DialogOptions
+            {
+                Eyebrow = "Prompt gallery",
+                Subtitle = "Review or edit this canonical prompt without leaving the current workflow or chat.",
+                Size = ModalSize.Full,
+                DenseChrome = true,
+                CloseOnBackdrop = false,
+                TestId = "prompt-gallery-item-details-dialog",
+                AriaLabel = "Prompt Gallery item details"
+            });
+        if (itemDetailsDirty)
+        {
+            itemDetailsDirty = false;
+            if (searchList is not null)
+            {
+                await searchList.RefreshAsync();
+            }
         }
     }
+
+    private Task HandleItemSavedAsync(Guid itemId)
+    {
+        itemDetailsDirty = true;
+        return Task.CompletedTask;
+    }
+
+    private Task CloseItemDetailsAsync()
+        => DialogService.CloseAsync();
 
     private static string DescribeErrors(IReadOnlyList<CanDoItAll.SharedKernel.Error> errors)
         => errors.Count == 0

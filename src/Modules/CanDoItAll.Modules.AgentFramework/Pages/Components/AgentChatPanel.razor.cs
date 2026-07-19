@@ -76,9 +76,6 @@ public partial class AgentChatPanel : IAsyncDisposable
     public IPromptGalleryService PromptGallery { get; set; } = default!;
 
     [Inject]
-    public NavigationManager NavigationManager { get; set; } = default!;
-
-    [Inject]
     public ILogger<AgentChatPanel> Logger { get; set; } = default!;
 
     private IReadOnlyList<AgentDefinition> agents = [];
@@ -416,9 +413,6 @@ public partial class AgentChatPanel : IAsyncDisposable
             : $"{draftPrompt.TrimEnd()}{Environment.NewLine}{Environment.NewLine}{content}";
         composerKey++;
     }
-
-    private void OpenPromptGalleryItemEditor(Guid promptArtifactId)
-        => NavigationManager.NavigateTo($"/prompt-gallery?promptId={promptArtifactId:D}");
 
     private static string DescribePromptGalleryErrors(IReadOnlyList<CanDoItAll.SharedKernel.Error> errors)
         => errors.Count == 0

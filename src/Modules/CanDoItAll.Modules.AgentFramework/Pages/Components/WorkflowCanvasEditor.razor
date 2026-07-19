@@ -179,8 +179,7 @@
                                                            Provider="@ResolvePromptPickerProvider(node: null)"
                                                            Model="@ResolvePromptPickerModel(node: null)"
                                                            AllowEdit="true"
-                                                           Selected="HandlePromptGallerySelectionForNewNodeAsync"
-                                                           EditRequested="OpenPromptGalleryItemEditor" />
+                                                           Selected="HandlePromptGallerySelectionForNewNodeAsync" />
                             </Split>
                             <p class="workflows-muted mt-3"
                                data-testid="workflow-canvas-provider-options">@BuildProviderOptionsSummary()</p>
@@ -345,8 +344,7 @@
                                                        Provider="@ResolvePromptPickerProvider(selected)"
                                                        Model="@ResolvePromptPickerModel(selected)"
                                                        AllowEdit="true"
-                                                       Selected="@(selection => HandlePromptGallerySelectionForNodeAsync(selection, selected))"
-                                                       EditRequested="OpenPromptGalleryItemEditor" />
+                                                       Selected="@(selection => HandlePromptGallerySelectionForNodeAsync(selection, selected))" />
                             <Grid Gap="LayoutGap.Small" ColumnsLg="2" Class="mt-3">
                                 <label class="workflow-canvas-field">
                                     <span>Provider</span>
@@ -1026,8 +1024,7 @@
                                                        Provider="@ResolvePromptPickerProvider(modalNode)"
                                                        Model="@ResolvePromptPickerModel(modalNode)"
                                                        AllowEdit="true"
-                                                       Selected="@(selection => HandlePromptGallerySelectionForNodeAsync(selection, modalNode))"
-                                                       EditRequested="OpenPromptGalleryItemEditor" />
+                                                       Selected="@(selection => HandlePromptGallerySelectionForNodeAsync(selection, modalNode))" />
                             <Grid Gap="LayoutGap.Small" ColumnsLg="2" Class="mt-3">
                                 <label class="workflow-canvas-field">
                                     <span>Provider</span>

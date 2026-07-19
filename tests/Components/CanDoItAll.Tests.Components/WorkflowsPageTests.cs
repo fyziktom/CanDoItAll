@@ -885,6 +885,122 @@ public sealed class WorkflowsPageTests
     }
 
     [Fact]
+    public async Task Workflow_prompt_details_dialog_preserves_workflow_route_and_parent_dialogs()
+    {
+        await using var environment = CanDoItAllTestEnvironment.Create("workflow-nested-prompt-details-tests");
+        await using var harness = await CreateInMemoryWorkflowHarnessAsync(environment);
+        var navigation = harness.Context.Services.GetRequiredService<NavigationManager>();
+        var notifications = harness.Context.Services.GetRequiredService<NotificationService>();
+        var componentLibrary = harness.Context.Services.GetRequiredService<IWorkflowComponentLibraryService>();
+        var catalogService = harness.Context.Services.GetRequiredService<IWorkflowCatalogService>();
+        const string promptTitle = "Workflow nested prompt details";
+        const string workflowName = "Workflow with nested Gallery details";
+        var dialogHost = await PrepareFinalWorkflowPromptAsync(
+            harness,
+            promptTitle,
+            "Keep the workflow editor active while reviewing these prompt details.");
+        var llmComponent = await componentLibrary.SaveComponentAsync(new LlmCallComponentSaveRequest(
+            Id: null,
+            Name: "Nested Gallery details LLM",
+            ProviderProfileId: null,
+            Model: ManagedSeedProviderFallbacks.OpenAiDefaultModel,
+            WorkflowModality.Text,
+            new WorkflowModelSettings(
+                Temperature: 0.2,
+                MaxOutputTokens: 800,
+                RequireJsonOutput: false,
+                ResponseFormatJsonSchema: string.Empty),
+            Instructions: "Summarize the current workflow payload.",
+            WorkflowValueShape.Text,
+            WorkflowValueShape.Text,
+            AgentPermissionsPolicy.Default));
+        await catalogService.SaveDefinitionAsync(new WorkflowDefinitionSaveRequest(
+            Id: null,
+            ExpectedVersionId: null,
+            workflowName,
+            Description: "Exercises nested Prompt Gallery details from an LLM node.",
+            WorkflowLifecycleStatus.Draft,
+            CreateStarterGraph(llmComponent.Id),
+            new WorkflowRuntimePolicy(
+                WorkflowRuntimeBackendKind.InProcess,
+                AllowInProcessPreviewRuns: true,
+                RequireDurableProductionRuns: false,
+                ExposeAzureFunctionsStatusEndpoint: false,
+                ExposeAzureFunctionsMcpTool: false)));
+
+        navigation.NavigateTo("/agents/workflows");
+        var cut = harness.Context.RenderComponent<WorkflowsPage>();
+
+        cut.WaitForElement("[data-testid='workflows-tab-workflows']").Click();
+        cut.WaitForAssertion(() => Assert.Contains(
+            cut.FindAll("[data-testid='workflows-catalog-item']"),
+            item => item.TextContent.Contains(workflowName, StringComparison.Ordinal)));
+        cut.FindAll("[data-testid='workflows-catalog-item']")
+            .Single(item => item.TextContent.Contains(workflowName, StringComparison.Ordinal))
+            .Click();
+        cut.Find("[data-testid='workflows-tab-editor']").Click();
+        cut.WaitForElement("[data-testid='workflow-canvas-editor']");
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains(
+                cut.FindAll("[data-testid='workflow-canvas-select-node']"),
+                item => item.TextContent.Contains("LlmCall", StringComparison.Ordinal));
+        });
+        cut.FindAll("[data-testid='workflow-canvas-select-node']")
+            .Single(item => item.TextContent.Contains("LlmCall", StringComparison.Ordinal))
+            .Click();
+        cut.WaitForElement("[data-testid='workflow-canvas-open-selected-node-details']").Click();
+
+        var nodeDetails = cut.WaitForElement("[data-testid='workflow-canvas-node-details-modal']");
+        var openGallery = nodeDetails.QuerySelector("[data-testid='prompt-gallery-picker-button']");
+        Assert.NotNull(openGallery);
+        openGallery.Click();
+
+        dialogHost.WaitForElement("[data-testid='prompt-gallery-picker-dialog']");
+        dialogHost.Find("[data-testid='prompt-gallery-search']").Input(promptTitle);
+        dialogHost.WaitForAssertion(() =>
+        {
+            Assert.Contains(promptTitle, dialogHost.Markup, StringComparison.Ordinal);
+            Assert.Single(dialogHost.FindAll("[data-testid='prompt-gallery-edit']"));
+        });
+        dialogHost.Find("[data-testid='prompt-gallery-edit']").Click();
+
+        dialogHost.WaitForAssertion(() =>
+        {
+            Assert.Equal(
+                promptTitle,
+                dialogHost.Find("[data-testid='prompt-gallery-editor-title']").GetAttribute("value"));
+            Assert.Equal("/agents/workflows", new Uri(navigation.Uri).AbsolutePath);
+            Assert.NotEmpty(cut.FindAll("[data-testid='workflow-canvas-node-details-modal']"));
+        });
+
+        var promptEditor = dialogHost.Find("[data-testid='prompt-gallery-item-editor']");
+        var saveDraft = promptEditor.QuerySelector("button[type='submit']");
+        Assert.NotNull(saveDraft);
+        saveDraft.Click();
+        dialogHost.WaitForAssertion(() =>
+        {
+            Assert.Contains(notifications.Messages, message => message.Summary == "Prompt draft saved");
+        });
+
+        var cancel = dialogHost.Find("[data-testid='prompt-gallery-item-editor']")
+            .QuerySelectorAll("button")
+            .Single(button => button.TextContent.Contains("Cancel", StringComparison.Ordinal));
+        cancel.Click();
+
+        dialogHost.WaitForAssertion(() =>
+        {
+            Assert.Empty(dialogHost.FindAll("[data-testid='prompt-gallery-item-editor']"));
+            Assert.NotEmpty(dialogHost.FindAll("[data-testid='prompt-gallery-picker-dialog']"));
+            Assert.Equal(
+                promptTitle,
+                dialogHost.Find("[data-testid='prompt-gallery-search']").GetAttribute("value"));
+            Assert.NotEmpty(cut.FindAll("[data-testid='workflow-canvas-node-details-modal']"));
+            Assert.Equal("/agents/workflows", new Uri(navigation.Uri).AbsolutePath);
+        });
+    }
+
+    [Fact]
     public async Task Workflow_canvas_preview_prompts_for_project_context_and_can_skip_project_writes()
     {
         var projectId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");

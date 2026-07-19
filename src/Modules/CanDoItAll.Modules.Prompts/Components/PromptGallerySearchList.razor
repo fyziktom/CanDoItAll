@@ -429,6 +429,17 @@
 
     private Task EditAsync(Guid id) => EditRequested.InvokeAsync(id);
 
+    public async Task RefreshAsync()
+    {
+        ObjectDisposedException.ThrowIf(disposed, this);
+
+        await LoadPageAsync(page.PageIndex);
+        if (page.TotalPages > 0 && page.PageIndex >= page.TotalPages)
+        {
+            await LoadPageAsync(page.TotalPages - 1);
+        }
+    }
+
     private async Task DebouncedReloadAsync()
     {
         CancellationTokenSource currentOperation = ReplaceOperation();
