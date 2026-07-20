@@ -178,6 +178,16 @@
                                                     Click="@(() => OpenManagedAgentChatAsync(agent))"
                                                     data-testid="agents-workflow-curator-open" />
                                         }
+                                        @if (SchedulerAgentIdentity.Matches(agent))
+                                        {
+                                            <Button Text="Open chat"
+                                                    Icon="event_repeat"
+                                                    Size="ButtonSize.Small"
+                                                    ButtonStyle="ButtonStyle.Light"
+                                                    Disabled="@openingManagedAgentChatId.HasValue"
+                                                    Click="@(() => OpenManagedAgentChatAsync(agent))"
+                                                    data-testid="agents-scheduler-agent-open" />
+                                        }
                                     </Actions>
                                 </AgentSelectionCard>
                             }

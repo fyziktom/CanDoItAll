@@ -320,7 +320,8 @@ public partial class AgentCatalogPanel
     {
         return HrAgentIdentity.Matches(agent) ||
                PromptsCuratorAgentIdentity.Matches(agent) ||
-               WorkflowCuratorAgentIdentity.Matches(agent);
+               WorkflowCuratorAgentIdentity.Matches(agent) ||
+               SchedulerAgentIdentity.Matches(agent);
     }
 
     private async Task HandleAgentTeamTreeSelectAsync(string nodeId)

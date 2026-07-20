@@ -75,6 +75,9 @@ public static class ToolContractCatalog
     public const string WorkflowCuratorDraftUpdate = "workflow_curator_draft_update";
     public const string WorkflowCuratorNodeUpdate = "workflow_curator_node_update";
     public const string WorkflowCuratorLifecycleChange = "workflow_curator_lifecycle_change";
+    public const string SchedulerWorkflowTargetsSearch = "scheduler_workflow_targets_search";
+    public const string SchedulerWorkflowSchedulesSearch = "scheduler_workflow_schedules_search";
+    public const string SchedulerWorkflowScheduleCreate = "scheduler_workflow_schedule_create";
 
     public static IReadOnlyList<string> WorkspaceToolNames { get; } =
     [
@@ -233,6 +236,9 @@ public static class ToolContractCatalog
         AgentToolInvocationPolicyMetadata.WorkflowCuratorDraftUpdate,
         AgentToolInvocationPolicyMetadata.WorkflowCuratorNodeUpdate,
         AgentToolInvocationPolicyMetadata.WorkflowCuratorLifecycleChange,
+        AgentToolInvocationPolicyMetadata.SchedulerWorkflowTargetsSearch,
+        AgentToolInvocationPolicyMetadata.SchedulerWorkflowSchedulesSearch,
+        AgentToolInvocationPolicyMetadata.SchedulerWorkflowScheduleCreate,
         AgentToolInvocationPolicyMetadata.ImageGenerationCreate,
         AgentToolInvocationPolicyMetadata.HrAgentsSearch,
         AgentToolInvocationPolicyMetadata.HrAgentSettingsGet,

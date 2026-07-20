@@ -560,6 +560,27 @@
         "runtime-launch"
       ],
       "proofNotes": "Template-owned skill for the privileged managed Workflow Curator agent."
+    },
+    {
+      "kind": "skill",
+      "key": "scheduler-agent-inline-skill",
+      "displayName": "Scheduler Agent Skill",
+      "description": "Approval-aware workflow for discovering schedulable workflows, detecting existing schedules, and creating canonical workflow schedules.",
+      "stableId": "skill:scheduler-agent:v1",
+      "stableGuidKey": "capabilities/scheduler-agent-inline-skill",
+      "endpointOrPath": "inline://scheduler-agent",
+      "skillSource": "inline",
+      "inlineSkill": {
+        "name": "scheduler-agent",
+        "description": "Create workflow-only Scheduler plans with exact target identity, explicit timing semantics, approval, and readback verification.",
+        "instructionsAssetKey": "skills/instructions/scheduler-agent.md"
+      },
+      "operationClassifications": [
+        "read",
+        "mutation",
+        "validation"
+      ],
+      "proofNotes": "Template-owned skill for the privileged managed Scheduler Agent. Process scheduling is explicitly deferred."
     }
   ]
 }

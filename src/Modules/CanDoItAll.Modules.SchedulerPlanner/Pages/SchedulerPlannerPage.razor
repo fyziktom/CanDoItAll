@@ -4,7 +4,9 @@
 @using System.Text.Json
 @using System.Text.Json.Nodes
 @using CanDoItAll.AgentFramework.Components
+@using CanDoItAll.AgentFramework.Core
 @using CanDoItAll.AgentFramework.Models
+@using CanDoItAll.AppComponents
 @using CanDoItAll.Components.BaseLib
 @using CanDoItAll.Components.CanvasLib
 @using Microsoft.JSInterop
@@ -13,6 +15,9 @@
 @inject ICronDescriptionService CronDescriptionService
 @inject ISchedulerWorkflowInputSchemaService WorkflowInputSchemaService
 @inject ISchedulerWorkflowInputOptionService WorkflowInputOptionService
+@inject IAgentFrameworkWorkspaceService AgentWorkspaceService
+@inject IAgentChatLauncher AgentChatLauncher
+@inject NotificationService Notifications
 
 <PageTitle>Scheduler</PageTitle>
 
@@ -34,6 +39,14 @@
                 <CompactStat Label="waiting" Value="@History.Count(item => item.Status == SchedulerPlanRunDispatchStatus.WaitingForApproval).ToString()" TooltipText="Runs paused for explicit approval." Tone="info" />
             </Stats>
             <Actions>
+                <AgentAvatarActionButton AgentName="@SchedulerAgentDisplayName"
+                                         AvatarImageUrl="@SchedulerAgentAvatarImageUrl"
+                                         FallbackText="SA"
+                                         Label="@($"Open {SchedulerAgentDisplayName}")"
+                                         Click="OpenSchedulerAgentAsync"
+                                         Disabled="@(schedulerAgent is null || isOpeningSchedulerAgent || isBusy || AgentChatAccessState != AgentChatContextAccessState.Ready)"
+                                         TestId="scheduler-agent-open"
+                                         TooltipTestId="scheduler-agent-tooltip" />
                 <PageHeaderActionButton Icon="refresh"
                                         Label="Refresh"
                                         TooltipText="Refresh scheduler plans, history, and projected events."
@@ -914,6 +927,8 @@
     private SchedulerPlanTargetKind? scheduleTargetKindFilter;
     private ScheduleStateFilter scheduleStateFilter = ScheduleStateFilter.All;
     private SchedulerWorkflowInputSchema? workflowInputSchema;
+    private AgentDefinition? schedulerAgent;
+    private bool isOpeningSchedulerAgent;
     private Dictionary<string, string> workflowInputValues = new(StringComparer.Ordinal);
     private Dictionary<string, IReadOnlyList<WorkflowInputParameterOption>> workflowInputOptionsByKey = new(StringComparer.Ordinal);
     private IReadOnlyList<SchedulerWorkflowInputValidationIssue> workflowInputIssues = [];
@@ -948,6 +963,12 @@
         CancellationTokenSource Cancellation);
 
     private IReadOnlyList<SchedulerPlanSummary> Plans => workspace?.Plans ?? [];
+
+    private string SchedulerAgentDisplayName
+        => schedulerAgent?.Name ?? SchedulerAgentIdentity.DefaultDisplayName;
+
+    private string SchedulerAgentAvatarImageUrl
+        => schedulerAgent?.AvatarImageUrl ?? SchedulerAgentIdentity.DefaultAvatarImageUrl;
 
     private bool isBusy
         => Volatile.Read(ref uiOperationGeneration) != Volatile.Read(ref completedUiOperationGeneration);
@@ -1110,12 +1131,60 @@
 
     protected override async Task OnInitializedAsync()
     {
+        await ResolveSchedulerAgentAsync();
         await RefreshAsync();
         await RunUiOperationAsync(async () =>
         {
             editor = await SchedulerPlannerService.CreateDefaultEditorAsync();
             await LoadWorkflowInputEditorAsync();
         });
+    }
+
+    private async Task ResolveSchedulerAgentAsync()
+    {
+        try
+        {
+            var agents = await AgentWorkspaceService.ListAgentsAsync(includeTemplates: false);
+            schedulerAgent = agents.SingleOrDefault(SchedulerAgentIdentity.Matches);
+            if (schedulerAgent is null)
+            {
+                Notifications.Warning(
+                    "Scheduler Agent unavailable",
+                    $"The managed agent '{SchedulerAgentIdentity.AgentId:D}' is not available.");
+            }
+        }
+        catch (Exception exception)
+        {
+            schedulerAgent = null;
+            Notifications.Warning("Scheduler Agent unavailable", exception.Message);
+        }
+    }
+
+    private async Task OpenSchedulerAgentAsync()
+    {
+        if (schedulerAgent is null ||
+            !SchedulerAgentIdentity.Matches(schedulerAgent) ||
+            isOpeningSchedulerAgent ||
+            isBusy ||
+            AgentChatAccessState != AgentChatContextAccessState.Ready)
+        {
+            return;
+        }
+
+        isOpeningSchedulerAgent = true;
+        try
+        {
+            await AgentChatLauncher.StartNewChatAsync(schedulerAgent.Id);
+            Notifications.Success("Scheduler Agent ready", "Opened a new workflow scheduling chat.");
+        }
+        catch (Exception exception)
+        {
+            Notifications.Error("Unable to open Scheduler Agent", exception.Message);
+        }
+        finally
+        {
+            isOpeningSchedulerAgent = false;
+        }
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)

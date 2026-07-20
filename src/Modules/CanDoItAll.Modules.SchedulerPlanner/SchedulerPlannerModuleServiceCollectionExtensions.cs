@@ -1,3 +1,4 @@
+using CanDoItAll.AgentFramework.Tooling;
 using CanDoItAll.SharedKernel;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -30,6 +31,9 @@ public static class SchedulerPlannerModuleServiceCollectionExtensions
         services.AddScoped<ISchedulerPlannerTriggerScheduler, SchedulerPlannerTriggerScheduler>();
         services.AddScoped<ISchedulerPlannerRunDispatcher, SchedulerPlannerRunDispatcher>();
         services.AddScoped<ISchedulerPlannerService, SchedulerPlannerService>();
+        services.AddScoped<SchedulerAgentRuntimeAuthorizationService>();
+        services.TryAddEnumerable(
+            ServiceDescriptor.Scoped<IAgentRuntimeToolProvider, SchedulerAgentRuntimeToolProvider>());
 
         if (backgroundWorkersEnabled)
         {

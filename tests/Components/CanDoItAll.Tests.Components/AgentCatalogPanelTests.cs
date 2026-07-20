@@ -126,6 +126,38 @@ public sealed class AgentCatalogPanelTests
     }
 
     [Fact]
+    public void Catalog_delegates_new_chat_only_for_the_exact_scheduler_agent_identity()
+    {
+        var schedulerAgent = CreateAgent(
+            SchedulerAgentIdentity.AgentId,
+            SchedulerAgentIdentity.DefaultDisplayName,
+            SchedulerAgentIdentity.TemplateKey);
+        var spoofedAgent = CreateAgent(
+            Guid.NewGuid(),
+            "Spoofed Scheduler Agent",
+            SchedulerAgentIdentity.TemplateKey);
+        var launcher = new RecordingAgentChatLauncher(schedulerAgent);
+        using var context = CreateCatalogTestContext(launcher);
+
+        var cut = context.RenderComponent<AgentCatalogPanel>(parameters => parameters
+            .Add(component => component.InitialAgents, new[] { spoofedAgent, schedulerAgent })
+            .Add(component => component.InitialProviders, Array.Empty<ProviderProfile>())
+            .Add(component => component.InitialTeams, Array.Empty<AgentTeamDefinition>())
+            .Add(component => component.SkipCatalogRepair, true));
+
+        var openButton = Assert.Single(cut.WaitForElements("[data-testid='agents-scheduler-agent-open']"));
+        var agentCard = openButton.Closest("[data-testid='agents-catalog-card-shell']");
+        Assert.NotNull(agentCard);
+        Assert.Equal(
+            SchedulerAgentIdentity.DefaultDisplayName,
+            agentCard.QuerySelector(".agent-selection-card__name")?.TextContent);
+
+        openButton.Click();
+
+        cut.WaitForAssertion(() => Assert.Equal(SchedulerAgentIdentity.AgentId, launcher.StartedAgentId));
+    }
+
+    [Fact]
     public void Catalog_toolbar_uses_icon_reset_tooltip_and_single_line_team_header()
     {
         var hrAgent = CreateAgent(HrAgentIdentity.AgentId, "HR Agent", HrAgentIdentity.TemplateKey);

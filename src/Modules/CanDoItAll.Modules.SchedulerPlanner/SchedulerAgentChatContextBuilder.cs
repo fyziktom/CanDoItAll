@@ -59,7 +59,15 @@ public static class SchedulerAgentChatContextBuilder
                 primarySelection,
                 selectedEntities,
                 BuildFacts(selectedPlan, selectedTarget, overlay)),
-            accessMode: AgentChatContextScopeAccessMode.Unrestricted);
+            agentAccess:
+            [
+                new AgentChatContextAgentAccess(
+                    SchedulerAgentIdentity.AgentId,
+                    AgentChatContextPermission.Read | AgentChatContextPermission.Mutate,
+                    "Scheduler")
+            ],
+            accessMode: AgentChatContextScopeAccessMode.Unrestricted,
+            completionRefreshMode: AgentChatContextCompletionRefreshMode.OnSuccessfulRun);
     }
 
     private static IReadOnlyList<AgentChatContextPositionFact> BuildFacts(

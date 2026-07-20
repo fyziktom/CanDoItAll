@@ -1,4 +1,5 @@
 using Bunit;
+using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Components.CanvasLib;
 using CanDoItAll.Modules.SchedulerPlanner;
@@ -14,6 +15,42 @@ namespace CanDoItAll.Tests.Components;
 public sealed class SchedulerPlannerPageTests
 {
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
+
+    [Fact]
+    public async Task Scheduler_page_opens_exact_scheduler_agent_from_avatar_action()
+    {
+        var launcher = new RecordingSchedulerAgentChatLauncher();
+        await using var harness = await ComponentTestHarness.CreateAsync(services =>
+        {
+            services.RemoveAll<IAgentChatLauncher>();
+            services.AddSingleton<IAgentChatLauncher>(launcher);
+        });
+
+        var cut = harness.Context.RenderComponent<SchedulerPlannerPage>();
+        cut.WaitForElement("[data-testid='scheduler-agent-open']");
+        cut.WaitForAssertion(() => Assert.False(
+            cut.Find("[data-testid='scheduler-agent-open']").HasAttribute("disabled")));
+        var button = cut.Find("[data-testid='scheduler-agent-open']");
+        Assert.Equal("Open Scheduler Agent", button.GetAttribute("aria-label"));
+        Assert.EndsWith(
+            "/avatar-03.jpg",
+            button.QuerySelector("img")?.GetAttribute("src"),
+            StringComparison.Ordinal);
+
+        var surface = ReadSchedulerAgentChatSurface(cut.Instance);
+        var access = Assert.Single(surface.AgentAccess);
+        Assert.Equal(SchedulerAgentIdentity.AgentId, access.AgentId);
+        Assert.Equal(
+            AgentChatContextPermission.Read | AgentChatContextPermission.Mutate,
+            access.Permissions);
+        Assert.Equal(
+            AgentChatContextCompletionRefreshMode.OnSuccessfulRun,
+            surface.CompletionRefreshMode);
+
+        button.Click();
+
+        cut.WaitForAssertion(() => Assert.Equal(SchedulerAgentIdentity.AgentId, launcher.StartedAgentId));
+    }
 
     [Fact]
     public async Task Scheduler_page_renders_tabs_and_canvas_calendar_host()
@@ -1456,6 +1493,59 @@ public sealed class SchedulerPlannerPageTests
             "AgentChatAccessState",
             System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
         return Assert.IsType<AgentChatContextAccessState>(property?.GetValue(page));
+    }
+
+    private static AgentChatContextSurface ReadSchedulerAgentChatSurface(SchedulerPlannerPage page)
+    {
+        var property = typeof(SchedulerPlannerPage).GetProperty(
+            "AgentChatSurface",
+            System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+        return Assert.IsType<AgentChatContextSurface>(property?.GetValue(page));
+    }
+
+    private sealed class RecordingSchedulerAgentChatLauncher : IAgentChatLauncher
+    {
+        public Guid? StartedAgentId { get; private set; }
+
+        public void ShowCatalog(AgentChatCatalogTab tab = AgentChatCatalogTab.Agents)
+        {
+        }
+
+        public Task<ActiveAgentChat> StartNewChatAsync(
+            Guid agentId,
+            CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            StartedAgentId = agentId;
+            return Task.FromResult(CreateActiveChat(agentId, chatSessionId: null));
+        }
+
+        public Task<ActiveAgentChat> OpenChatAsync(
+            Guid agentId,
+            Guid chatSessionId,
+            CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            return Task.FromResult(CreateActiveChat(agentId, chatSessionId));
+        }
+
+        private static ActiveAgentChat CreateActiveChat(Guid agentId, Guid? chatSessionId)
+        {
+            var now = DateTimeOffset.UtcNow;
+            return new ActiveAgentChat(
+                AgentChatHandleId.Create(),
+                new AgentChatIdentity(
+                    agentId,
+                    SchedulerAgentIdentity.DefaultDisplayName,
+                    "Workflow scheduling assistant",
+                    SchedulerAgentIdentity.DefaultAvatarImageUrl),
+                chatSessionId,
+                ActiveAgentChatVisibility.Visible,
+                ActiveAgentChatRunState.Idle,
+                now,
+                now,
+                HiddenAtUtc: null);
+        }
     }
 
     private sealed class RacingSchedulerPlannerService(

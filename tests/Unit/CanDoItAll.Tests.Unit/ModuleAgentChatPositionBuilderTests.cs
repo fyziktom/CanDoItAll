@@ -111,6 +111,14 @@ public sealed class ModuleAgentChatPositionBuilderTests
         Assert.DoesNotContain(plan.CronExpression, json, StringComparison.Ordinal);
         Assert.DoesNotContain(plan.Description, json, StringComparison.Ordinal);
         Assert.DoesNotContain(plan.LastError, json, StringComparison.Ordinal);
+        var schedulerAccess = Assert.Single(surface.AgentAccess);
+        Assert.Equal(SchedulerAgentIdentity.AgentId, schedulerAccess.AgentId);
+        Assert.Equal(
+            AgentChatContextPermission.Read | AgentChatContextPermission.Mutate,
+            schedulerAccess.Permissions);
+        Assert.Equal(
+            AgentChatContextCompletionRefreshMode.OnSuccessfulRun,
+            surface.CompletionRefreshMode);
     }
 
     [Fact]

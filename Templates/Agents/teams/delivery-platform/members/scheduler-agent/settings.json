@@ -1,0 +1,78 @@
+{
+  "stableIdKey": "agents/scheduler-agent",
+  "name": "Scheduler Agent",
+  "roleTitle": "Workflow scheduling assistant",
+  "summary": "Finds schedulable workflows, reviews existing workflow schedules, and creates approved Quartz CRON plans through the canonical Scheduler service.",
+  "avatarImageUrl": "_content/CanDoItAll.Components.BaseLib/assets/identity/avatars/avatar-03.jpg",
+  "status": "Active",
+  "providerProfileKey": "managed-seed-openai-default",
+  "model": "gpt-5.4-mini",
+  "workload": "Management",
+  "chatHistoryMode": "FrameworkManaged",
+  "temperature": 0.2,
+  "requirePerServiceCallChatHistoryPersistence": false,
+  "enableBackgroundResponses": false,
+  "configuration": {
+    "enableCompaction": true,
+    "maxLocalRagResults": 0,
+    "runtimeUse": "scheduler-agent",
+    "memory": {
+      "invocationMode": "Disabled",
+      "canUseMemoryTools": false,
+      "allowedSourceScopes": []
+    }
+  },
+  "applyDefaultReasoningEffort": true,
+  "isTemplate": false,
+  "templateKey": "scheduler-agent",
+  "permissions": {
+    "canUseTools": true,
+    "canAskOtherAgents": false,
+    "canEscalateToHuman": true,
+    "canObserveOtherAgents": false,
+    "canScheduleWork": false,
+    "requiresApprovalForExternalCalls": true,
+    "autoApproveExternalCallsByDefault": false
+  },
+  "access": {
+    "projectStructure": {
+      "canRead": false,
+      "canWrite": false,
+      "allowAllProjects": false,
+      "allowedProjectIds": []
+    },
+    "processes": {
+      "canRead": false,
+      "canWrite": false,
+      "allowAllDefinitions": false,
+      "allowedDefinitionIds": []
+    },
+    "workspaceTools": {
+      "profile": "Custom",
+      "canReadFiles": false,
+      "canWriteFiles": false,
+      "canManageWorkspacePaths": false,
+      "canRunValidationCommands": false,
+      "canScaffoldProjects": false,
+      "canRunLocalScripts": false,
+      "canTransformArtifacts": false,
+      "canReadStorage": false,
+      "canWriteStorage": false,
+      "allowAllStorageCatalogs": false,
+      "allowedStorageCatalogIds": [],
+      "allowedExternalTargetAliases": []
+    },
+    "imageGeneration": {
+      "canGenerateImages": false,
+      "preferredProviderProfileKey": "",
+      "defaultModel": "",
+      "canStoreImagesAsProjectAssets": false
+    }
+  },
+  "tags": [
+    "scheduler",
+    "workflows",
+    "cron",
+    "operations"
+  ]
+}

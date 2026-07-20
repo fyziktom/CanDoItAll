@@ -2683,6 +2683,7 @@ public static class AgentToolInvocationPolicyMetadata
     private const string HrApprovalAuditRetentionScheme = "hr-approval-redacted-v1";
     private const string PromptCuratorApprovalAuditRetentionScheme = "prompt-curator-approval-redacted-v1";
     private const string WorkflowCuratorApprovalAuditRetentionScheme = "workflow-curator-approval-redacted-v1";
+    private const string SchedulerApprovalAuditRetentionScheme = "scheduler-approval-redacted-v1";
 
     private static readonly IReadOnlySet<string> SensitiveHrArgumentToolNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
     {
@@ -2711,6 +2712,13 @@ public static class AgentToolInvocationPolicyMetadata
         WorkflowCuratorLifecycleChange,
         WorkflowsRunStart,
         WorkflowsExternalResponseSubmit
+    };
+
+    private static readonly IReadOnlySet<string> SensitiveSchedulerArgumentToolNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+    {
+        SchedulerWorkflowTargetsSearch,
+        SchedulerWorkflowSchedulesSearch,
+        SchedulerWorkflowScheduleCreate
     };
 
     private static readonly IReadOnlySet<string> SensitiveManagedArgumentPropertyNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
@@ -2787,6 +2795,9 @@ public static class AgentToolInvocationPolicyMetadata
     public const string WorkflowCuratorDraftUpdate = ToolContractCatalog.WorkflowCuratorDraftUpdate;
     public const string WorkflowCuratorNodeUpdate = ToolContractCatalog.WorkflowCuratorNodeUpdate;
     public const string WorkflowCuratorLifecycleChange = ToolContractCatalog.WorkflowCuratorLifecycleChange;
+    public const string SchedulerWorkflowTargetsSearch = ToolContractCatalog.SchedulerWorkflowTargetsSearch;
+    public const string SchedulerWorkflowSchedulesSearch = ToolContractCatalog.SchedulerWorkflowSchedulesSearch;
+    public const string SchedulerWorkflowScheduleCreate = ToolContractCatalog.SchedulerWorkflowScheduleCreate;
     public const string ImageGenerationCreate = "image_generation_create";
     public const string HrAgentsSearch = "hr_agents_search";
     public const string HrAgentSettingsGet = "hr_agent_settings_get";
@@ -2970,7 +2981,8 @@ public static class AgentToolInvocationPolicyMetadata
     {
         var redactManagedContent = HasSensitiveHrArguments(toolName) ||
                                    HasSensitivePromptCuratorArguments(toolName) ||
-                                   HasSensitiveWorkflowCuratorArguments(toolName);
+                                   HasSensitiveWorkflowCuratorArguments(toolName) ||
+                                   HasSensitiveSchedulerArguments(toolName);
         return arguments
             .Where(item => !string.IsNullOrWhiteSpace(item.Key))
             .OrderBy(item => item.Key, StringComparer.OrdinalIgnoreCase)
@@ -3000,6 +3012,12 @@ public static class AgentToolInvocationPolicyMetadata
     {
         return !string.IsNullOrWhiteSpace(toolName) &&
                SensitiveWorkflowCuratorArgumentToolNames.Contains(toolName.Trim());
+    }
+
+    public static bool HasSensitiveSchedulerArguments(string? toolName)
+    {
+        return !string.IsNullOrWhiteSpace(toolName) &&
+               SensitiveSchedulerArgumentToolNames.Contains(toolName.Trim());
     }
 
     internal static string ProtectApprovalArgumentsForAudit(
@@ -3153,8 +3171,13 @@ public static class AgentToolInvocationPolicyMetadata
             return PromptCuratorApprovalAuditRetentionScheme;
         }
 
-        return HasSensitiveWorkflowCuratorArguments(toolName)
-            ? WorkflowCuratorApprovalAuditRetentionScheme
+        if (HasSensitiveWorkflowCuratorArguments(toolName))
+        {
+            return WorkflowCuratorApprovalAuditRetentionScheme;
+        }
+
+        return HasSensitiveSchedulerArguments(toolName)
+            ? SchedulerApprovalAuditRetentionScheme
             : null;
     }
 
