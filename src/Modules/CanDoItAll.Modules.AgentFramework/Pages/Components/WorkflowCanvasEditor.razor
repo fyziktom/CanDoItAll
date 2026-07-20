@@ -67,8 +67,6 @@
                     </Cluster>
                 </ToolbarLeftContent>
                 <OverlayContent>
-                    <span class="workflow-canvas-overlay-safe-top" aria-hidden="true"></span>
-
                     @if (toolboxWindowState.IsVisible)
                     {
                         <CanvasFloatingWindow WindowId="@ToolboxWindowId"
@@ -76,10 +74,9 @@
                                               AriaLabel="Workflow toolbox floating window"
                                               Kicker="Workflow"
                                               Title="Nodes and executors"
-                                                      Summary="@($"{document.Nodes.Count} nodes · {executorDescriptors.Count(executor => executor.CanExecute)} executors")"
+                                              Summary="@($"{document.Nodes.Count} nodes · {executorDescriptors.Count(executor => executor.CanExecute)} executors")"
                                               BodyClass="workflow-canvas-floating-window__body"
                                               DefaultPlacement="top-left"
-                                              SafeTopSelector=".workflow-canvas-overlay-safe-top"
                                               DefaultWidth="300"
                                               DefaultHeight="380"
                                               MinWidth="260"
@@ -114,7 +111,6 @@
                                               Summary="@SelectionWindowSummary"
                                               BodyClass="workflow-canvas-floating-window__body"
                                               DefaultPlacement="top-right"
-                                              SafeTopSelector=".workflow-canvas-overlay-safe-top"
                                               DefaultWidth="260"
                                               DefaultHeight="320"
                                               MinWidth="240"
@@ -158,7 +154,6 @@
                                               Summary="@BuildProviderOptionsSummary()"
                                               BodyClass="workflow-canvas-floating-window__body"
                                               DefaultPlacement="top-left"
-                                              SafeTopSelector=".workflow-canvas-overlay-safe-top"
                                               DefaultWidth="320"
                                               DefaultHeight="380"
                                               MinWidth="260"

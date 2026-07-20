@@ -1198,6 +1198,27 @@ public sealed class WorkflowsPageTests
     }
 
     [Fact]
+    public async Task Workflow_canvas_floating_windows_stay_below_the_canvas_toolbar()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var definition = CreatePreviewProgressDefinition();
+
+        var cut = harness.Context.RenderComponent<WorkflowCanvasEditor>(parameters => parameters
+            .Add(component => component.Definition, definition)
+            .Add(component => component.Components, [])
+            .Add(component => component.ProviderOptions, []));
+
+        cut.WaitForAssertion(() =>
+        {
+            var windows = cut.FindComponents<CanvasFloatingWindow>();
+
+            Assert.Equal(2, windows.Count);
+            Assert.All(windows, window => Assert.Equal(".cw-toolbar", window.Instance.SafeTopSelector));
+            Assert.Empty(cut.FindAll(".workflow-canvas-overlay-safe-top"));
+        });
+    }
+
+    [Fact]
     public async Task Workflow_canvas_reports_immutable_current_definition_node_selection()
     {
         await using var harness = await ComponentTestHarness.CreateAsync();

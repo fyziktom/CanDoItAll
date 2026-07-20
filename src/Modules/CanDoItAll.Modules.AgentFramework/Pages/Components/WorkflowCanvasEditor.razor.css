@@ -88,15 +88,6 @@
     overflow: auto;
 }
 
-.workflow-canvas-overlay-safe-top {
-    position: absolute;
-    inset-block-start: 0;
-    inset-inline-start: 0;
-    width: 1px;
-    height: 0;
-    pointer-events: none;
-}
-
 .workflow-canvas-floating-window__body {
     display: flex;
     flex-direction: column;
