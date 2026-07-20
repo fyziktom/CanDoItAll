@@ -28,6 +28,12 @@ public static class AgentManagedSeedCustomizationMetadata
                string.Equals(managedSeedVersion, customizationVersion, StringComparison.OrdinalIgnoreCase);
     }
 
+    public static bool HasCustomization(string? configurationJson)
+    {
+        var root = ParseObject(configurationJson);
+        return TryReadString(root, CustomizationVersionPropertyName, out _);
+    }
+
     private static bool TryReadString(JsonObject root, string propertyName, out string value)
     {
         value = string.Empty;

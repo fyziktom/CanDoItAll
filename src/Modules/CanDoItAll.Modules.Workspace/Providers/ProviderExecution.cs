@@ -149,7 +149,7 @@ outputs: ProviderExecutionResponse
 public sealed class OpenAiProviderAdapter(IHttpClientFactory httpClientFactory) : IProviderAdapter, IProviderModelPricingSource
 {
     public const string PluginKey = "provider.openai";
-    public const string DefaultModel = "gpt-5.4-mini";
+    public const string DefaultModel = ManagedSeedProviderFallbacks.OpenAiDefaultModel;
     private static readonly string[] ModelIdPropertyNames = ["id", "model"];
     private static readonly string[] InputPricePropertyNames = ["inputPerMillionTokensUsd", "input_per_million_tokens_usd"];
     private static readonly string[] CachedInputPricePropertyNames = ["cachedInputPerMillionTokensUsd", "cached_input_per_million_tokens_usd"];

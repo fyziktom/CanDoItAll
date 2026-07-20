@@ -336,7 +336,13 @@ public partial class AgentProviderProfilesPanel
                 Model = price.Model,
                 InputPerMillionTokensUsd = price.InputPerMillionTokensUsd,
                 CachedInputPerMillionTokensUsd = price.CachedInputPerMillionTokensUsd,
-                OutputPerMillionTokensUsd = price.OutputPerMillionTokensUsd
+                OutputPerMillionTokensUsd = price.OutputPerMillionTokensUsd,
+                CacheWritePerMillionTokensUsd = price.CacheWritePerMillionTokensUsd,
+                LongContextThresholdTokens = price.LongContextThresholdTokens,
+                LongContextInputPerMillionTokensUsd = price.LongContextInputPerMillionTokensUsd,
+                LongContextCachedInputPerMillionTokensUsd = price.LongContextCachedInputPerMillionTokensUsd,
+                LongContextCacheWritePerMillionTokensUsd = price.LongContextCacheWritePerMillionTokensUsd,
+                LongContextOutputPerMillionTokensUsd = price.LongContextOutputPerMillionTokensUsd
             })
             .ToList();
     }
@@ -369,7 +375,7 @@ public partial class AgentProviderProfilesPanel
             SupportsBackgroundResponses = true,
             PreferFrameworkManagedChatHistory = false,
             ConfigurationJson = "{}",
-            SuggestedModels = [ManagedSeedProviderFallbacks.OpenAiDefaultModel, "gpt-5.4", "gpt-5-mini", "gpt-4.1-mini"],
+            SuggestedModels = ManagedSeedProviderFallbacks.OpenAiSuggestedModels.ToList(),
             IsPrivateProvider = ProviderPricingDefaults.ResolveIsPrivateProvider(ProviderKind.OpenAi, null),
             ModelPrices = ProviderPricingDefaults.CreateDefaultEditorModels(
                 ProviderKind.OpenAi,

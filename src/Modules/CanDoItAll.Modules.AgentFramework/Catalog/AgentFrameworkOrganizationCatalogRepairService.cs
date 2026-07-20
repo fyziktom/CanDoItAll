@@ -148,7 +148,7 @@ internal sealed class AgentFrameworkOrganizationCatalogRepairService(
         var repairedOpenAiProviderConfigurationJson = ManagedSeedProviderFallbacks.EnsureDefaultReasoningConfigurationJson(
             openAiProvider.ConfigurationJson,
             "service-managed");
-        if (!string.Equals(openAiProvider.DefaultModel, ManagedSeedProviderFallbacks.OpenAiDefaultModel, StringComparison.Ordinal) ||
+        if (RequiresManagedOpenAiProviderRepair(openAiProvider) ||
             !string.Equals(openAiProvider.Name, ManagedSeedProviderFallbacks.OpenAiDefaultProviderName, StringComparison.Ordinal) ||
             openAiProvider.Transport != ProviderTransportKind.Responses ||
             openAiProvider.PreferFrameworkManagedChatHistory ||
@@ -163,36 +163,25 @@ internal sealed class AgentFrameworkOrganizationCatalogRepairService(
 
         var providersById = providers.ToDictionary(provider => provider.Id);
         var agents = await currentWorkspace.ListAgentsAsync(includeTemplates: false, cancellationToken);
-        var agentsNeedingRepair = agents
+        var updatedAtUtc = DateTimeOffset.UtcNow;
+        var repairedAgentsById = agents
             .Where(agent => RequiresOpenAiAssignmentRepair(agent, providersById))
-            .Where(agent =>
-                agent.ProviderProfileId != openAiProvider.Id ||
-                !string.Equals(agent.Model, ManagedSeedProviderFallbacks.OpenAiDefaultModel, StringComparison.Ordinal) ||
-                !string.Equals(
-                    agent.ConfigurationJson,
-                    ManagedSeedProviderFallbacks.EnsureDefaultReasoningConfigurationJson(agent.ConfigurationJson),
-                    StringComparison.Ordinal))
-            .ToList();
-        if (agentsNeedingRepair.Count == 0)
+            .Where(agent => !AgentManagedSeedCustomizationMetadata.HasCustomization(agent.ConfigurationJson))
+            .Select(agent => CreateRepairedOpenAiAgent(agent, openAiProvider, updatedAtUtc))
+            .Where(repairedAgent => agents.Any(agent =>
+                agent.Id == repairedAgent.Id &&
+                !Equals(agent, repairedAgent)))
+            .ToDictionary(agent => agent.Id);
+        if (repairedAgentsById.Count == 0)
         {
             return;
         }
 
-        var agentIdsNeedingRepair = agentsNeedingRepair
-            .Select(agent => agent.Id)
-            .ToHashSet();
-        var updatedAtUtc = DateTimeOffset.UtcNow;
         await store.UpdateCatalogAsync(catalog => catalog with
         {
             Agents = catalog.Agents
-                .Select(agent => agentIdsNeedingRepair.Contains(agent.Id)
-                    ? agent with
-                    {
-                        ProviderProfileId = openAiProvider.Id,
-                        Model = ManagedSeedProviderFallbacks.OpenAiDefaultModel,
-                        ConfigurationJson = ManagedSeedProviderFallbacks.EnsureDefaultReasoningConfigurationJson(agent.ConfigurationJson),
-                        UpdatedAtUtc = updatedAtUtc
-                    }
+                .Select(agent => repairedAgentsById.TryGetValue(agent.Id, out var repairedAgent)
+                    ? repairedAgent
                     : agent)
                 .OrderBy(agent => agent.Name, StringComparer.OrdinalIgnoreCase)
                 .ToList()
@@ -214,12 +203,14 @@ internal sealed class AgentFrameworkOrganizationCatalogRepairService(
             ConfigurationJson = ManagedSeedProviderFallbacks.EnsureDefaultReasoningConfigurationJson(
                 openAiProvider.ConfigurationJson,
                 "service-managed"),
-            SuggestedModels =
-            [
+            SuggestedModels = ManagedSeedProviderFallbacks.OpenAiSuggestedModels
+                .Concat(openAiProvider.SuggestedModels)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList(),
+            ModelPrices = ProviderPricingDefaults.MergeKnownDefaultPrices(
+                openAiProvider.Kind,
                 ManagedSeedProviderFallbacks.OpenAiDefaultModel,
-                .. openAiProvider.SuggestedModels
-                    .Where(item => !string.Equals(item, ManagedSeedProviderFallbacks.OpenAiDefaultModel, StringComparison.OrdinalIgnoreCase))
-            ]
+                openAiProvider.ModelPrices)
         };
 
         await store.UpdateCatalogAsync(catalog => catalog with
@@ -231,6 +222,43 @@ internal sealed class AgentFrameworkOrganizationCatalogRepairService(
         }, cancellationToken);
 
         return updatedProvider;
+    }
+
+    private static bool RequiresManagedOpenAiProviderRepair(ProviderProfile provider)
+    {
+        return !string.Equals(
+                   provider.DefaultModel,
+                   ManagedSeedProviderFallbacks.OpenAiDefaultModel,
+                   StringComparison.Ordinal) ||
+               ManagedSeedProviderFallbacks.OpenAiSuggestedModels.Any(model =>
+                   !provider.SuggestedModels.Contains(model, StringComparer.OrdinalIgnoreCase)) ||
+               OpenAiModelIds.Gpt56Models.Any(model =>
+                   !ProviderPricingDefaults.TryFindPrice(provider.ModelPrices, model, out _));
+    }
+
+    private static AgentDefinition CreateRepairedOpenAiAgent(
+        AgentDefinition agent,
+        ProviderProfile provider,
+        DateTimeOffset updatedAtUtc)
+    {
+        var model = ProviderPricingDefaults.TryFindPrice(provider.ModelPrices, agent.Model, out _)
+            ? agent.Model
+            : provider.DefaultModel;
+        var configurationJson = ManagedSeedProviderFallbacks.EnsureDefaultReasoningConfigurationJson(agent.ConfigurationJson);
+        if (agent.ProviderProfileId == provider.Id &&
+            string.Equals(agent.Model, model, StringComparison.Ordinal) &&
+            string.Equals(agent.ConfigurationJson, configurationJson, StringComparison.Ordinal))
+        {
+            return agent;
+        }
+
+        return agent with
+        {
+            ProviderProfileId = provider.Id,
+            Model = model,
+            ConfigurationJson = configurationJson,
+            UpdatedAtUtc = updatedAtUtc
+        };
     }
 
     private static ProviderProfile? SelectManagedSeedOpenAiProvider(

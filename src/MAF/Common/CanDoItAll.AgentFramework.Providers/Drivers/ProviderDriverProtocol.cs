@@ -35,6 +35,33 @@ internal static class ProviderDriverProtocol
         return messages.ToArray();
     }
 
+    public static object[] BuildOpenAiResponsesInput(ProviderChatCompletionRequest request)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+
+        var messages = new List<object>();
+        if (!string.IsNullOrWhiteSpace(request.SystemPrompt))
+        {
+            messages.Add(new { role = "system", content = request.SystemPrompt.Trim() });
+        }
+
+        messages.AddRange(request.Messages
+            .OrderBy(message => message.CreatedAtUtc)
+            .Where(message => !string.IsNullOrWhiteSpace(message.Content))
+            .Select(message => new { role = MapRole(message.Role), content = message.Content.Trim() }));
+        var attachments = NormalizeImageAttachments(request.Attachments);
+        if (!string.IsNullOrWhiteSpace(request.Prompt) || attachments.Count > 0)
+        {
+            messages.Add(new
+            {
+                role = "user",
+                content = CreateOpenAiResponsesUserContent(request.Prompt, attachments)
+            });
+        }
+
+        return messages.ToArray();
+    }
+
     public static object[] BuildOllamaChatMessages(ProviderChatCompletionRequest request)
     {
         ArgumentNullException.ThrowIfNull(request);
@@ -142,6 +169,33 @@ internal static class ProviderDriverProtocol
             {
                 url = BuildDataUrl(attachment)
             }
+        }));
+        return parts;
+    }
+
+    private static object CreateOpenAiResponsesUserContent(
+        string prompt,
+        IReadOnlyList<ProviderChatAttachment> attachments)
+    {
+        if (attachments.Count == 0)
+        {
+            return prompt.Trim();
+        }
+
+        var parts = new List<object>();
+        if (!string.IsNullOrWhiteSpace(prompt))
+        {
+            parts.Add(new
+            {
+                type = "input_text",
+                text = prompt.Trim()
+            });
+        }
+
+        parts.AddRange(attachments.Select(attachment => new
+        {
+            type = "input_image",
+            image_url = BuildDataUrl(attachment)
         }));
         return parts;
     }

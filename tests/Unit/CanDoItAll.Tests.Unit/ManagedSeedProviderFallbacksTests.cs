@@ -5,6 +5,14 @@ namespace CanDoItAll.Tests.Unit;
 public sealed class ManagedSeedProviderFallbacksTests
 {
     [Fact]
+    public void Managed_seed_openai_suggestions_include_all_gpt_5_6_models()
+    {
+        Assert.All(
+            OpenAiModelIds.Gpt56Models,
+            model => Assert.Contains(model, ManagedSeedProviderFallbacks.OpenAiSuggestedModels, StringComparer.OrdinalIgnoreCase));
+    }
+
+    [Fact]
     public void Managed_seed_openai_agents_keep_openai_provider_when_the_openai_key_is_missing()
     {
         var agent = CreateManagedSeedAgent(model: "gpt-4.1");

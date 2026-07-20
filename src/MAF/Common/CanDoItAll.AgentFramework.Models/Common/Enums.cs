@@ -116,5 +116,6 @@ public enum AgentReasoningEffortLevel
     Low,
     Medium,
     High,
-    ExtraHigh
+    ExtraHigh,
+    Max
 }

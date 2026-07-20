@@ -135,13 +135,17 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         var run = prepared.TransitionedRun;
         var session = prepared.Session;
         var agent = prepared.Agent;
-        var provider = await ResolveProviderForAgentAsync(agent, catalog, cancellationToken);
+        var configuredProvider = await ResolveProviderForAgentAsync(agent, catalog, cancellationToken);
+        var provider = ResolveContinuationProvider(run, configuredProvider, catalog.Providers);
+        var runtimeAgent = CreateProviderCompatibleRuntimeAgent(agent, provider, run.Model);
         var attachedCapabilities = ResolveAttachedCapabilities(catalog, agent);
         var memory = ResolveAgentMemoryForRun(catalog, agent.Id, run);
         var structuredOutput = ResolveContinuationStructuredOutputContract(run);
         var handoffOptions = await ResolveHandoffExecutionOptionsAsync(agent, catalog, run, cancellationToken);
         using var runActivity = AgentFrameworkTelemetry.StartRunActivity("agent.run.resume", prepared.OriginalRun);
         AgentFrameworkTelemetry.RecordRunResume(prepared.OriginalRun);
+
+        PrimeProviderCredentialEnvironment(provider);
 
         if (restoredCheckpoint is not null)
         {
@@ -195,7 +199,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
             using (WorkspaceExecutionAuditContext.BeginScope(run))
             {
                 runtimeResponse = await runtime.RespondToPendingApprovalsAsync(
-                    agent,
+                    runtimeAgent,
                     provider,
                     runtimeSession,
                     attachedCapabilities,
@@ -218,7 +222,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                 {
                     var continuation = await ContinueAutoApprovedRunAsync(
                         run,
-                        agent,
+                        runtimeAgent,
                         provider,
                         runtimeSession,
                         run.ChatSessionId,
@@ -263,7 +267,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                         CreatedAtUtc: DateTimeOffset.UtcNow,
                         Outcome: runtimeResponse.PendingApprovals.Count > 0 ? RunOutcome.Cancelled : RunOutcome.Succeeded,
                         ProviderName: provider.Name,
-                        Model: ResolveModel(agent, provider),
+                        Model: ResolveModel(runtimeAgent, provider),
                         DurationMs: Math.Max(1, (long)(DateTimeOffset.UtcNow - startedAt).TotalMilliseconds),
                         InputTokens: totalInputTokens,
                         OutputTokens: totalOutputTokens,
@@ -273,7 +277,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                         ExecutionRunId = run.Id
                     },
                     provider);
-                var usageObservations = BuildUsageObservations(run, agent, provider, metric, runtimeResponse);
+                var usageObservations = BuildUsageObservations(run, runtimeAgent, provider, metric, runtimeResponse);
 
                 var updatedRun = UpdateRunFromResponse(
                     run,
@@ -376,7 +380,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                     CreatedAtUtc: DateTimeOffset.UtcNow,
                     Outcome: outcome,
                     ProviderName: provider.Name,
-                    Model: ResolveModel(agent, provider),
+                    Model: ResolveModel(runtimeAgent, provider),
                     DurationMs: Math.Max(1, (long)(DateTimeOffset.UtcNow - startedAt).TotalMilliseconds),
                     InputTokens: 0,
                     OutputTokens: 0,
@@ -386,8 +390,8 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                 },
                 provider);
             var failureUsageObservations = lastRuntimeResponse is null
-                ? BuildFailureUsageObservations(run, agent, provider, failureMetric, exception)
-                : BuildRuntimeResponseUsageObservations(run, agent, provider, failureMetric, lastRuntimeResponse);
+                ? BuildFailureUsageObservations(run, runtimeAgent, provider, failureMetric, exception)
+                : BuildRuntimeResponseUsageObservations(run, runtimeAgent, provider, failureMetric, lastRuntimeResponse);
 
             var failedRun = run with
             {
@@ -453,7 +457,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                     run.Id,
                     session.Id,
                     provider.Name,
-                    ResolveModel(agent, provider),
+                    ResolveModel(runtimeAgent, provider),
                     exception,
                     failureDisplay!.Message)
                 : new AgentRunFailedException(
@@ -461,7 +465,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                     run.Id,
                     run.ChatSessionId,
                     provider.Name,
-                    ResolveModel(agent, provider),
+                    ResolveModel(runtimeAgent, provider),
                     exception,
                     failureDisplay!.Message);
         }
@@ -698,7 +702,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         CancellationToken cancellationToken)
     {
         var prompt = request.Prompt.Trim();
-        var runtimeAgent = CreateProviderCompatibleRuntimeAgent(agent, provider);
+        var runtimeAgent = CreateProviderCompatibleRuntimeAgent(agent, provider, run.Model);
         var attachedCapabilities = ResolveAttachedCapabilities(catalog, agent);
         var memory = ResolveAgentMemoryForRun(catalog, agent.Id, run);
         var handoffOptions = await ResolveHandoffExecutionOptionsAsync(agent, catalog, run, cancellationToken);
@@ -802,7 +806,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                         CreatedAtUtc: DateTimeOffset.UtcNow,
                         Outcome: runtimeResponse.PendingApprovals.Count > 0 ? RunOutcome.Cancelled : RunOutcome.Succeeded,
                         ProviderName: provider.Name,
-                        Model: ResolveModel(agent, provider),
+                        Model: ResolveModel(runtimeAgent, provider),
                         DurationMs: Math.Max(1, (long)(DateTimeOffset.UtcNow - startedAt).TotalMilliseconds),
                         InputTokens: totalInputTokens,
                         OutputTokens: totalOutputTokens,
@@ -812,7 +816,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                         ExecutionRunId = run.Id
                     },
                     provider);
-                var usageObservations = BuildUsageObservations(run, agent, provider, metric, runtimeResponse);
+                var usageObservations = BuildUsageObservations(run, runtimeAgent, provider, metric, runtimeResponse);
 
                 var updatedRun = UpdateRunFromResponse(
                     run,
@@ -915,7 +919,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                     CreatedAtUtc: DateTimeOffset.UtcNow,
                     Outcome: outcome,
                     ProviderName: provider.Name,
-                    Model: ResolveModel(agent, provider),
+                    Model: ResolveModel(runtimeAgent, provider),
                     DurationMs: Math.Max(1, (long)(DateTimeOffset.UtcNow - startedAt).TotalMilliseconds),
                     InputTokens: userMessage?.TokenEstimate ?? EstimateTokens(prompt),
                     OutputTokens: 0,
@@ -925,8 +929,8 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                 },
                 provider);
             var failureUsageObservations = lastRuntimeResponse is null
-                ? BuildFailureUsageObservations(run, agent, provider, failureMetric, exception)
-                : BuildRuntimeResponseUsageObservations(run, agent, provider, failureMetric, lastRuntimeResponse);
+                ? BuildFailureUsageObservations(run, runtimeAgent, provider, failureMetric, exception)
+                : BuildRuntimeResponseUsageObservations(run, runtimeAgent, provider, failureMetric, lastRuntimeResponse);
 
             var failedRun = run with
             {
@@ -991,7 +995,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                     run.Id,
                     session.Id,
                     provider.Name,
-                    ResolveModel(agent, provider),
+                    ResolveModel(runtimeAgent, provider),
                     exception,
                     failureDisplay!.Message)
                 : new AgentRunFailedException(
@@ -999,7 +1003,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                     run.Id,
                     run.ChatSessionId,
                     provider.Name,
-                    ResolveModel(agent, provider),
+                    ResolveModel(runtimeAgent, provider),
                     exception,
                     failureDisplay!.Message);
         }
@@ -1366,7 +1370,48 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         return selected is null ? configuredProvider : selected;
     }
 
-    private bool ShouldOverrideProviderForGovernedProcessStep(
+    internal static ProviderProfile ResolveContinuationProvider(
+        ExecutionRunRecord run,
+        ProviderProfile configuredProvider,
+        IReadOnlyList<ProviderProfile> catalogProviders)
+    {
+        ArgumentNullException.ThrowIfNull(run);
+        ArgumentNullException.ThrowIfNull(configuredProvider);
+        ArgumentNullException.ThrowIfNull(catalogProviders);
+
+        if (run.ProviderProfileId == configuredProvider.Id ||
+            (!run.ProviderProfileId.HasValue &&
+             (string.IsNullOrWhiteSpace(run.ProviderName) ||
+              string.Equals(run.ProviderName, configuredProvider.Name, StringComparison.OrdinalIgnoreCase))))
+        {
+            return configuredProvider;
+        }
+
+        var matches = run.ProviderProfileId.HasValue
+            ? catalogProviders.Where(provider => provider.Id == run.ProviderProfileId.Value).ToArray()
+            : catalogProviders
+                .Where(provider => string.Equals(provider.Name, run.ProviderName, StringComparison.OrdinalIgnoreCase))
+                .ToArray();
+        if (matches.Length != 1)
+        {
+            var identity = run.ProviderProfileId.HasValue
+                ? $"ID '{run.ProviderProfileId.Value:N}'"
+                : $"name '{run.ProviderName}'";
+            throw new InvalidOperationException(
+                $"The provider recorded for execution run '{run.Id:N}' could not be resolved uniquely by {identity}.");
+        }
+
+        var provider = matches[0];
+        if (!provider.IsEnabled)
+        {
+            throw new InvalidOperationException(
+                $"Provider '{provider.Name}' was disabled while execution run '{run.Id:N}' was waiting for approval.");
+        }
+
+        return provider;
+    }
+
+    internal static bool ShouldOverrideProviderForGovernedProcessStep(
         ExecutionRunRequest request,
         ProviderProfile configuredProvider)
     {
@@ -1377,8 +1422,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         }
 
         var featureMatrix = ProviderFeatureService.ResolveFeatureMatrix(configuredProvider);
-        return !featureMatrix.SupportsStructuredOutput ||
-               ShouldPreferFrameworkManagedProcessProvider(configuredProvider);
+        return !featureMatrix.SupportsStructuredOutput;
     }
 
     private async Task<IReadOnlyList<ProviderProfile>> ResolveGovernedProcessProviderOverrideCandidatesAsync(
@@ -1410,8 +1454,8 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                 FeatureMatrix = providerProfileService.ResolveFeatureMatrix(provider)
             })
             .Where(item => item.FeatureMatrix.SupportsStructuredOutput)
-            .OrderByDescending(item => IsPreferredFrameworkManagedProcessProvider(item.Provider))
-            .ThenByDescending(item => SameProviderFamily(item.Provider, configuredProvider))
+            .OrderByDescending(item => SameProviderFamily(item.Provider, configuredProvider))
+            .ThenByDescending(item => IsPreferredGovernedProcessProvider(item.Provider))
             .ThenByDescending(item => item.Provider.Kind is ProviderKind.OpenAi or ProviderKind.AzureOpenAi)
             .ThenByDescending(item => string.Equals(item.Provider.Name, ManagedSeedProviderFallbacks.OpenAiChatCompletionsProviderName, StringComparison.OrdinalIgnoreCase))
             .ThenByDescending(item => string.Equals(item.Provider.Name, configuredProvider.Name, StringComparison.OrdinalIgnoreCase))
@@ -1420,13 +1464,9 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
             .ToArray();
     }
 
-    private static bool ShouldPreferFrameworkManagedProcessProvider(ProviderProfile provider)
+    private static bool IsPreferredGovernedProcessProvider(ProviderProfile provider)
         => provider.Kind is ProviderKind.OpenAi or ProviderKind.AzureOpenAi &&
            provider.Transport == ProviderTransportKind.Responses;
-
-    private static bool IsPreferredFrameworkManagedProcessProvider(ProviderProfile provider)
-        => provider.Kind is ProviderKind.OpenAi or ProviderKind.AzureOpenAi &&
-           provider.Transport == ProviderTransportKind.ChatCompletions;
 
     private static bool SameProviderFamily(ProviderProfile candidate, ProviderProfile configuredProvider)
     {
@@ -1452,9 +1492,12 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
 
     private static AgentDefinition CreateProviderCompatibleRuntimeAgent(
         AgentDefinition agent,
-        ProviderProfile provider)
+        ProviderProfile provider,
+        string resolvedModel)
     {
-        if (agent.ProviderProfileId == provider.Id)
+        var model = ResolveProviderCompatibleRuntimeModel(agent, provider, resolvedModel);
+        if (agent.ProviderProfileId == provider.Id &&
+            string.Equals(agent.Model, model, StringComparison.Ordinal))
         {
             return agent;
         }
@@ -1462,8 +1505,42 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         return agent with
         {
             ProviderProfileId = provider.Id,
-            Model = provider.DefaultModel
+            Model = model
         };
+    }
+
+    internal static string ResolveProviderCompatibleRuntimeModel(
+        AgentDefinition agent,
+        ProviderProfile provider,
+        string? resolvedModel = null)
+    {
+        ArgumentNullException.ThrowIfNull(agent);
+        ArgumentNullException.ThrowIfNull(provider);
+
+        var candidate = string.IsNullOrWhiteSpace(resolvedModel)
+            ? agent.Model?.Trim() ?? string.Empty
+            : resolvedModel.Trim();
+        if (string.IsNullOrWhiteSpace(candidate))
+        {
+            return provider.DefaultModel;
+        }
+
+        if (agent.ProviderProfileId == provider.Id ||
+            IsProviderSupportedModel(provider, candidate))
+        {
+            return candidate;
+        }
+
+        return provider.DefaultModel;
+    }
+
+    private static bool IsProviderSupportedModel(
+        ProviderProfile provider,
+        string model)
+    {
+        return !string.IsNullOrWhiteSpace(model) &&
+               (string.Equals(provider.DefaultModel, model, StringComparison.OrdinalIgnoreCase) ||
+                provider.SuggestedModels.Contains(model, StringComparer.OrdinalIgnoreCase));
     }
 
     private async Task<IReadOnlyList<AgentRuntimeInputAttachment>> ResolveRuntimeInputAttachmentsAsync(

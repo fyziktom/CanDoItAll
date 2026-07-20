@@ -2,7 +2,7 @@
 @using CanDoItAll.Components.BaseLib
 
 <div class="provider-model-pricing-editor">
-    <FormSection Title="Model pricing" Description="Configure input, cached input, and output prices in USD per one million tokens.">
+    <FormSection Title="Model pricing" Description="Configure standard and long-context prices in USD per one million tokens.">
         <div class="provider-pricing-layout">
             <Stack Class="provider-pricing-main" GapScale="LayoutGap.Medium">
                 <div class="flex flex-wrap items-center justify-between gap-2">
@@ -25,7 +25,13 @@
                                 <th class="px-3 py-2 font-semibold">Model</th>
                                 <th class="px-3 py-2 font-semibold">Input</th>
                                 <th class="px-3 py-2 font-semibold">Cached input</th>
+                                <th class="px-3 py-2 font-semibold">Cache writes</th>
                                 <th class="px-3 py-2 font-semibold">Output</th>
+                                <th class="px-3 py-2 font-semibold">Long-context threshold</th>
+                                <th class="px-3 py-2 font-semibold">Long-context input</th>
+                                <th class="px-3 py-2 font-semibold">Long-context cached</th>
+                                <th class="px-3 py-2 font-semibold">Long-context writes</th>
+                                <th class="px-3 py-2 font-semibold">Long-context output</th>
                                 <th class="px-3 py-2 font-semibold">Actions</th>
                             </tr>
                         </thead>
@@ -51,9 +57,39 @@
                                                      data-testid="@($"provider-pricing-cached-{index}")" />
                                     </td>
                                     <td class="min-w-[10rem] px-3 py-2 align-top">
+                                        <InputNumber @bind-Value="price.CacheWritePerMillionTokensUsd"
+                                                     class="cda-input"
+                                                     data-testid="@($"provider-pricing-cache-write-{index}")" />
+                                    </td>
+                                    <td class="min-w-[10rem] px-3 py-2 align-top">
                                         <InputNumber @bind-Value="price.OutputPerMillionTokensUsd"
                                                      class="cda-input"
                                                      data-testid="@($"provider-pricing-output-{index}")" />
+                                    </td>
+                                    <td class="min-w-[12rem] px-3 py-2 align-top">
+                                        <InputNumber @bind-Value="price.LongContextThresholdTokens"
+                                                     class="cda-input"
+                                                     data-testid="@($"provider-pricing-long-threshold-{index}")" />
+                                    </td>
+                                    <td class="min-w-[10rem] px-3 py-2 align-top">
+                                        <InputNumber @bind-Value="price.LongContextInputPerMillionTokensUsd"
+                                                     class="cda-input"
+                                                     data-testid="@($"provider-pricing-long-input-{index}")" />
+                                    </td>
+                                    <td class="min-w-[10rem] px-3 py-2 align-top">
+                                        <InputNumber @bind-Value="price.LongContextCachedInputPerMillionTokensUsd"
+                                                     class="cda-input"
+                                                     data-testid="@($"provider-pricing-long-cached-{index}")" />
+                                    </td>
+                                    <td class="min-w-[10rem] px-3 py-2 align-top">
+                                        <InputNumber @bind-Value="price.LongContextCacheWritePerMillionTokensUsd"
+                                                     class="cda-input"
+                                                     data-testid="@($"provider-pricing-long-cache-write-{index}")" />
+                                    </td>
+                                    <td class="min-w-[10rem] px-3 py-2 align-top">
+                                        <InputNumber @bind-Value="price.LongContextOutputPerMillionTokensUsd"
+                                                     class="cda-input"
+                                                     data-testid="@($"provider-pricing-long-output-{index}")" />
                                     </td>
                                     <td class="px-3 py-2 align-top">
                                         <Button Text="Remove"
@@ -66,6 +102,8 @@
                         </tbody>
                     </table>
                 </div>
+
+                <p class="cda-body-muted">GPT-5.6 long-context rates apply when a request exceeds 272,000 input tokens.</p>
 
                 <Cluster Gap="LayoutGap.Small">
                     <Button Text="Load from provider"
@@ -158,7 +196,13 @@
             Model = defaultPrice.Model,
             InputPerMillionTokensUsd = defaultPrice.InputPerMillionTokensUsd,
             CachedInputPerMillionTokensUsd = defaultPrice.CachedInputPerMillionTokensUsd,
-            OutputPerMillionTokensUsd = defaultPrice.OutputPerMillionTokensUsd
+            OutputPerMillionTokensUsd = defaultPrice.OutputPerMillionTokensUsd,
+            CacheWritePerMillionTokensUsd = defaultPrice.CacheWritePerMillionTokensUsd,
+            LongContextThresholdTokens = defaultPrice.LongContextThresholdTokens,
+            LongContextInputPerMillionTokensUsd = defaultPrice.LongContextInputPerMillionTokensUsd,
+            LongContextCachedInputPerMillionTokensUsd = defaultPrice.LongContextCachedInputPerMillionTokensUsd,
+            LongContextCacheWritePerMillionTokensUsd = defaultPrice.LongContextCacheWritePerMillionTokensUsd,
+            LongContextOutputPerMillionTokensUsd = defaultPrice.LongContextOutputPerMillionTokensUsd
         });
     }
 

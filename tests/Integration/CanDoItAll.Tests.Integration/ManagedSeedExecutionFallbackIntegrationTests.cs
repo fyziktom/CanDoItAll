@@ -52,7 +52,7 @@ public sealed class ManagedSeedExecutionFallbackIntegrationTests
     }
 
     [Fact]
-    public async Task Organization_catalog_repair_keeps_managed_seed_agents_on_openai_default()
+    public async Task Organization_catalog_repair_preserves_priced_luna_assignment_for_managed_seed_agent()
     {
         var originalOpenAiApiKey = Environment.GetEnvironmentVariable("OPENAI_API_KEY");
         Environment.SetEnvironmentVariable("OPENAI_API_KEY", null);
@@ -74,7 +74,12 @@ public sealed class ManagedSeedExecutionFallbackIntegrationTests
                 item => string.Equals(item.Name, "Delivery QA Observer", StringComparison.Ordinal));
 
             Assert.Equal(openAiDefaultProvider.Id, qaAgentBeforeRepair.ProviderProfileId);
-            Assert.Equal(ManagedSeedProviderFallbacks.OpenAiDefaultModel, qaAgentBeforeRepair.Model);
+            Assert.Equal(ManagedSeedProviderFallbacks.OpenAiDefaultModel, openAiDefaultProvider.DefaultModel);
+            Assert.Equal(OpenAiModelIds.Gpt56Luna, qaAgentBeforeRepair.Model);
+            Assert.True(ProviderPricingDefaults.TryFindPrice(
+                openAiDefaultProvider.ModelPrices,
+                qaAgentBeforeRepair.Model,
+                out _));
 
             await repairService.EnsureCurrentOrganizationCatalogAsync();
 
@@ -88,7 +93,11 @@ public sealed class ManagedSeedExecutionFallbackIntegrationTests
                 item => string.Equals(item.Name, "Delivery QA Observer", StringComparison.Ordinal));
 
             Assert.Equal(openAiDefaultProviderAfterRepair.Id, qaAgentAfterRepair.ProviderProfileId);
-            Assert.Equal(ManagedSeedProviderFallbacks.OpenAiDefaultModel, qaAgentAfterRepair.Model);
+            Assert.Equal(OpenAiModelIds.Gpt56Luna, qaAgentAfterRepair.Model);
+            Assert.True(ProviderPricingDefaults.TryFindPrice(
+                openAiDefaultProviderAfterRepair.ModelPrices,
+                qaAgentAfterRepair.Model,
+                out _));
         }
         finally
         {

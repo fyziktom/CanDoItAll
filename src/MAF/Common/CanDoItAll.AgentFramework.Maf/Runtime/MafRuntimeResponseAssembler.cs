@@ -80,38 +80,104 @@ internal static class MafRuntimeResponseAssembler
             ];
         }
 
-        var response = updates.ToAgentResponse();
+        var usageUpdateGroups = GroupUsageUpdatesByProviderResponse(updates);
+        if (usageUpdateGroups.Count == 0)
+        {
+            return [CreateProviderUsageObservation(
+                provider,
+                model,
+                runtimeSession,
+                runtimeSessionKey,
+                updates.ToAgentResponse(),
+                sourcePhase,
+                diagnostic)];
+        }
+
+        return usageUpdateGroups
+            .Select(group => CreateProviderUsageObservation(
+                provider,
+                model,
+                runtimeSession,
+                runtimeSessionKey,
+                group.ToAgentResponse(),
+                sourcePhase,
+                diagnostic))
+            .ToList();
+    }
+
+    private static ProviderUsageObservation CreateProviderUsageObservation(
+        ProviderProfile provider,
+        string model,
+        AgentSession runtimeSession,
+        string? runtimeSessionKey,
+        AgentResponse response,
+        string sourcePhase,
+        string diagnostic)
+    {
         var runtimeKey = ResolveRuntimeSessionKey(runtimeSession, response, runtimeSessionKey);
         var rawUsageJson = response.Usage is null
             ? string.Empty
             : JsonSerializer.Serialize(response.Usage, SerializerOptions);
 
-        return
-        [
-            DefaultProviderUsageNormalizer.Instance.Normalize(new ProviderUsageNormalizationRequest(
-                Provider: provider,
-                Model: model,
-                SourcePhase: sourcePhase,
-                UsageStatus: response.Usage is null
-                    ? ProviderUsageObservationStatus.UsageUnavailable
-                    : ProviderUsageObservationStatus.Observed,
-                InputTokens: ClampTokenCount(response.Usage?.InputTokenCount),
-                CachedInputTokens: ClampTokenCount(response.Usage?.CachedInputTokenCount),
-                OutputTokens: ClampTokenCount(response.Usage?.OutputTokenCount),
-                ReasoningTokens: 0,
-                TotalTokens: ClampTokenCount(response.Usage?.TotalTokenCount),
-                ToolCallCount: CountToolCalls(response),
-                ProviderResponseId: response.ResponseId ?? response.ContinuationToken?.ToString() ?? string.Empty,
-                ProviderRequestId: string.Empty,
-                RuntimeSessionKey: runtimeKey,
-                RawUsageJson: rawUsageJson,
-                DiagnosticsJson: JsonSerializer.Serialize(
-                    new Dictionary<string, string>
-                    {
-                        ["diagnostic"] = diagnostic
-                    },
-                    SerializerOptions)))
-        ];
+        return DefaultProviderUsageNormalizer.Instance.Normalize(new ProviderUsageNormalizationRequest(
+            Provider: provider,
+            Model: model,
+            SourcePhase: sourcePhase,
+            UsageStatus: response.Usage is null
+                ? ProviderUsageObservationStatus.UsageUnavailable
+                : ProviderUsageObservationStatus.Observed,
+            InputTokens: ClampTokenCount(response.Usage?.InputTokenCount),
+            CachedInputTokens: ClampTokenCount(response.Usage?.CachedInputTokenCount),
+            OutputTokens: ClampTokenCount(response.Usage?.OutputTokenCount),
+            ReasoningTokens: 0,
+            TotalTokens: ClampTokenCount(response.Usage?.TotalTokenCount),
+            ToolCallCount: CountToolCalls(response),
+            ProviderResponseId: response.ResponseId ?? response.ContinuationToken?.ToString() ?? string.Empty,
+            ProviderRequestId: string.Empty,
+            RuntimeSessionKey: runtimeKey,
+            RawUsageJson: rawUsageJson,
+            DiagnosticsJson: JsonSerializer.Serialize(
+                new Dictionary<string, string>
+                {
+                    ["diagnostic"] = diagnostic
+                },
+                SerializerOptions)));
+    }
+
+    private static IReadOnlyList<IReadOnlyList<AgentResponseUpdate>> GroupUsageUpdatesByProviderResponse(
+        IReadOnlyList<AgentResponseUpdate> updates)
+    {
+        var indexedUpdates = updates
+            .Select((update, index) => (Update: update, Index: index))
+            .ToArray();
+        var groups = indexedUpdates
+            .Where(item => HasUsage(item.Update) && !string.IsNullOrWhiteSpace(item.Update.ResponseId))
+            .Select(item => item.Update.ResponseId!)
+            .Distinct(StringComparer.Ordinal)
+            .Select(responseId =>
+            {
+                var responseUpdates = indexedUpdates
+                    .Where(item => string.Equals(item.Update.ResponseId, responseId, StringComparison.Ordinal))
+                    .ToArray();
+                return (
+                    FirstIndex: responseUpdates.Min(item => item.Index),
+                    Updates: (IReadOnlyList<AgentResponseUpdate>)responseUpdates.Select(item => item.Update).ToArray());
+            })
+            .Concat(indexedUpdates
+                .Where(item => HasUsage(item.Update) && string.IsNullOrWhiteSpace(item.Update.ResponseId))
+                .Select(item => (
+                    FirstIndex: item.Index,
+                    Updates: (IReadOnlyList<AgentResponseUpdate>)[item.Update])))
+            .OrderBy(group => group.FirstIndex)
+            .Select(group => group.Updates)
+            .ToList();
+
+        return groups;
+    }
+
+    private static bool HasUsage(AgentResponseUpdate update)
+    {
+        return update.Contents.OfType<UsageContent>().Any();
     }
 
     public static string BuildProviderFailureDiagnostic(Exception exception)

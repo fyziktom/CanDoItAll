@@ -7,7 +7,25 @@ public sealed record ProviderModelTokenPrice(
     string Model,
     decimal InputPerMillionTokensUsd,
     decimal CachedInputPerMillionTokensUsd,
-    decimal OutputPerMillionTokensUsd);
+    decimal OutputPerMillionTokensUsd)
+{
+    public decimal? CacheWritePerMillionTokensUsd { get; init; }
+
+    public int? LongContextThresholdTokens { get; init; }
+
+    public decimal? LongContextInputPerMillionTokensUsd { get; init; }
+
+    public decimal? LongContextCachedInputPerMillionTokensUsd { get; init; }
+
+    public decimal? LongContextCacheWritePerMillionTokensUsd { get; init; }
+
+    public decimal? LongContextOutputPerMillionTokensUsd { get; init; }
+
+    public bool HasConfiguredStandardPrice =>
+        InputPerMillionTokensUsd > 0m ||
+        CachedInputPerMillionTokensUsd > 0m ||
+        OutputPerMillionTokensUsd > 0m;
+}
 
 public sealed record ProviderDiscoveredModelPrice(
     string Model,
@@ -35,6 +53,18 @@ public sealed class ProviderModelTokenPriceEditorModel
     public decimal CachedInputPerMillionTokensUsd { get; set; }
 
     public decimal OutputPerMillionTokensUsd { get; set; }
+
+    public decimal? CacheWritePerMillionTokensUsd { get; set; }
+
+    public int? LongContextThresholdTokens { get; set; }
+
+    public decimal? LongContextInputPerMillionTokensUsd { get; set; }
+
+    public decimal? LongContextCachedInputPerMillionTokensUsd { get; set; }
+
+    public decimal? LongContextCacheWritePerMillionTokensUsd { get; set; }
+
+    public decimal? LongContextOutputPerMillionTokensUsd { get; set; }
 }
 
 public sealed record ProviderPricingMetadataSnapshot(
@@ -50,7 +80,12 @@ public sealed record ProviderRunCostResult(
     decimal InputCostUsd,
     decimal CachedInputCostUsd,
     decimal OutputCostUsd,
-    decimal TotalUsd);
+    decimal TotalUsd)
+{
+    public int CacheWriteTokens { get; init; }
+
+    public decimal CacheWriteCostUsd { get; init; }
+}
 
 public sealed record WorkflowUsageMetrics(
     string ProviderName,
@@ -79,8 +114,42 @@ public static class ProviderPricingDefaults
         0.075m,
         4.50m);
 
+    private static readonly ProviderModelTokenPrice OpenAiGpt56SolPrice = new(
+        OpenAiModelIds.Gpt56Sol,
+        5.00m,
+        0.50m,
+        30.00m)
+    {
+        CacheWritePerMillionTokensUsd = 6.25m,
+        LongContextThresholdTokens = OpenAiModelPricingPolicy.Gpt56LongContextThresholdTokens,
+        LongContextInputPerMillionTokensUsd = 10.00m,
+        LongContextCachedInputPerMillionTokensUsd = 1.00m,
+        LongContextCacheWritePerMillionTokensUsd = 12.50m,
+        LongContextOutputPerMillionTokensUsd = 45.00m
+    };
+
     private static readonly IReadOnlyList<ProviderModelTokenPrice> OpenAiModelPrices =
     [
+        OpenAiGpt56SolPrice with { Model = OpenAiModelIds.Gpt56 },
+        new(OpenAiModelIds.Gpt56Luna, 1.00m, 0.10m, 6.00m)
+        {
+            CacheWritePerMillionTokensUsd = 1.25m,
+            LongContextThresholdTokens = OpenAiModelPricingPolicy.Gpt56LongContextThresholdTokens,
+            LongContextInputPerMillionTokensUsd = 2.00m,
+            LongContextCachedInputPerMillionTokensUsd = 0.20m,
+            LongContextCacheWritePerMillionTokensUsd = 2.50m,
+            LongContextOutputPerMillionTokensUsd = 9.00m
+        },
+        new(OpenAiModelIds.Gpt56Terra, 2.50m, 0.25m, 15.00m)
+        {
+            CacheWritePerMillionTokensUsd = 3.125m,
+            LongContextThresholdTokens = OpenAiModelPricingPolicy.Gpt56LongContextThresholdTokens,
+            LongContextInputPerMillionTokensUsd = 5.00m,
+            LongContextCachedInputPerMillionTokensUsd = 0.50m,
+            LongContextCacheWritePerMillionTokensUsd = 6.25m,
+            LongContextOutputPerMillionTokensUsd = 22.50m
+        },
+        OpenAiGpt56SolPrice,
         new("gpt-5.5", 5.00m, 0.50m, 30.00m),
         new("gpt-5.4", 2.50m, 0.25m, 15.00m),
         OpenAiMiniPrice,
@@ -148,6 +217,28 @@ public static class ProviderPricingDefaults
             .ToList();
     }
 
+    public static IReadOnlyList<ProviderModelTokenPrice> MergeKnownDefaultPrices(
+        ProviderKind kind,
+        string? defaultModel,
+        IEnumerable<ProviderModelTokenPrice>? configuredPrices)
+    {
+        var configured = (configuredPrices ?? [])
+            .Select(NormalizePrice)
+            .Where(price => !string.IsNullOrWhiteSpace(price.Model))
+            .GroupBy(price => price.Model, StringComparer.OrdinalIgnoreCase)
+            .Select(group => group.Last())
+            .ToDictionary(price => price.Model, StringComparer.OrdinalIgnoreCase);
+
+        foreach (var defaultPrice in CreateDefaultPrices(kind, defaultModel))
+        {
+            configured[defaultPrice.Model] = configured.TryGetValue(defaultPrice.Model, out var configuredPrice)
+                ? EnrichKnownPrice(configuredPrice, defaultPrice)
+                : defaultPrice;
+        }
+
+        return NormalizeModelPrices(kind, defaultModel, configured.Values);
+    }
+
     public static ProviderModelPricingMergeResult MergeDiscoveredModelPrices(
         ProviderKind kind,
         string? defaultModel,
@@ -169,20 +260,30 @@ public static class ProviderPricingDefaults
         {
             if (discoveredPrice.HasExplicitPrices)
             {
-                mergedPrices[discoveredPrice.Model] = new ProviderModelTokenPrice(
+                var explicitPrice = new ProviderModelTokenPrice(
                     discoveredPrice.Model,
                     discoveredPrice.InputPerMillionTokensUsd!.Value,
                     discoveredPrice.CachedInputPerMillionTokensUsd!.Value,
                     discoveredPrice.OutputPerMillionTokensUsd!.Value);
+                mergedPrices.TryGetValue(discoveredPrice.Model, out var existingPrice);
+                TryFindKnownDefaultPrice(kind, discoveredPrice.Model, out var knownDefaultPrice);
+                mergedPrices[discoveredPrice.Model] = PreserveOptionalPriceMetadata(
+                    explicitPrice,
+                    existingPrice,
+                    knownDefaultPrice);
                 explicitPriceCount++;
                 continue;
             }
 
             modelNameOnlyCount++;
-            if (!mergedPrices.ContainsKey(discoveredPrice.Model))
+            if (!TryFindKnownDefaultPrice(kind, discoveredPrice.Model, out var defaultPrice))
             {
-                mergedPrices[discoveredPrice.Model] = CreateManualPriceTemplate(kind, discoveredPrice.Model);
+                continue;
             }
+
+            mergedPrices[discoveredPrice.Model] = mergedPrices.TryGetValue(discoveredPrice.Model, out var configuredPrice)
+                ? EnrichKnownPrice(configuredPrice, defaultPrice)
+                : defaultPrice;
         }
 
         return new ProviderModelPricingMergeResult(
@@ -213,7 +314,15 @@ public static class ProviderPricingDefaults
                 model.Model,
                 model.InputPerMillionTokensUsd,
                 model.CachedInputPerMillionTokensUsd,
-                model.OutputPerMillionTokensUsd))
+                model.OutputPerMillionTokensUsd)
+            {
+                CacheWritePerMillionTokensUsd = model.CacheWritePerMillionTokensUsd,
+                LongContextThresholdTokens = model.LongContextThresholdTokens,
+                LongContextInputPerMillionTokensUsd = model.LongContextInputPerMillionTokensUsd,
+                LongContextCachedInputPerMillionTokensUsd = model.LongContextCachedInputPerMillionTokensUsd,
+                LongContextCacheWritePerMillionTokensUsd = model.LongContextCacheWritePerMillionTokensUsd,
+                LongContextOutputPerMillionTokensUsd = model.LongContextOutputPerMillionTokensUsd
+            })
             .ToList();
     }
 
@@ -226,7 +335,13 @@ public static class ProviderPricingDefaults
                 Model = price.Model,
                 InputPerMillionTokensUsd = price.InputPerMillionTokensUsd,
                 CachedInputPerMillionTokensUsd = price.CachedInputPerMillionTokensUsd,
-                OutputPerMillionTokensUsd = price.OutputPerMillionTokensUsd
+                OutputPerMillionTokensUsd = price.OutputPerMillionTokensUsd,
+                CacheWritePerMillionTokensUsd = price.CacheWritePerMillionTokensUsd,
+                LongContextThresholdTokens = price.LongContextThresholdTokens,
+                LongContextInputPerMillionTokensUsd = price.LongContextInputPerMillionTokensUsd,
+                LongContextCachedInputPerMillionTokensUsd = price.LongContextCachedInputPerMillionTokensUsd,
+                LongContextCacheWritePerMillionTokensUsd = price.LongContextCacheWritePerMillionTokensUsd,
+                LongContextOutputPerMillionTokensUsd = price.LongContextOutputPerMillionTokensUsd
             })
             .ToList();
     }
@@ -246,6 +361,11 @@ public static class ProviderPricingDefaults
         var match = (prices ?? [])
             .FirstOrDefault(candidate => string.Equals(candidate.Model, normalizedModel, StringComparison.OrdinalIgnoreCase));
         if (match is null)
+        {
+            return false;
+        }
+
+        if (!match.HasConfiguredStandardPrice)
         {
             return false;
         }
@@ -276,9 +396,33 @@ public static class ProviderPricingDefaults
 
             if (price.InputPerMillionTokensUsd < 0m ||
                 price.CachedInputPerMillionTokensUsd < 0m ||
-                price.OutputPerMillionTokensUsd < 0m)
+                price.OutputPerMillionTokensUsd < 0m ||
+                HasNegativeOptionalPrice(price.CacheWritePerMillionTokensUsd) ||
+                HasNegativeOptionalPrice(price.LongContextInputPerMillionTokensUsd) ||
+                HasNegativeOptionalPrice(price.LongContextCachedInputPerMillionTokensUsd) ||
+                HasNegativeOptionalPrice(price.LongContextCacheWritePerMillionTokensUsd) ||
+                HasNegativeOptionalPrice(price.LongContextOutputPerMillionTokensUsd))
             {
                 validationMessage = $"Model price row '{normalizedModel}' cannot contain negative prices.";
+                return false;
+            }
+
+            if (!HasLongContextConfiguration(price))
+            {
+                continue;
+            }
+
+            if (price.LongContextThresholdTokens is not > 0)
+            {
+                validationMessage = $"Model price row '{normalizedModel}' must include a positive long-context threshold.";
+                return false;
+            }
+
+            if (price.LongContextInputPerMillionTokensUsd is null ||
+                price.LongContextCachedInputPerMillionTokensUsd is null ||
+                price.LongContextOutputPerMillionTokensUsd is null)
+            {
+                validationMessage = $"Model price row '{normalizedModel}' must include long-context input, cached input, and output prices.";
                 return false;
             }
         }
@@ -298,6 +442,60 @@ public static class ProviderPricingDefaults
         {
             Model = NormalizeModelName(price.Model)
         };
+    }
+
+    private static ProviderModelTokenPrice EnrichKnownPrice(
+        ProviderModelTokenPrice configuredPrice,
+        ProviderModelTokenPrice defaultPrice)
+    {
+        var enrichedPrice = configuredPrice.HasConfiguredStandardPrice
+            ? configuredPrice
+            : configuredPrice with
+            {
+                InputPerMillionTokensUsd = defaultPrice.InputPerMillionTokensUsd,
+                CachedInputPerMillionTokensUsd = defaultPrice.CachedInputPerMillionTokensUsd,
+                OutputPerMillionTokensUsd = defaultPrice.OutputPerMillionTokensUsd
+            };
+
+        return PreserveOptionalPriceMetadata(enrichedPrice, configuredPrice, defaultPrice);
+    }
+
+    private static ProviderModelTokenPrice PreserveOptionalPriceMetadata(
+        ProviderModelTokenPrice price,
+        ProviderModelTokenPrice? preferredMetadata,
+        ProviderModelTokenPrice? fallbackMetadata)
+    {
+        return price with
+        {
+            CacheWritePerMillionTokensUsd = preferredMetadata?.CacheWritePerMillionTokensUsd ?? fallbackMetadata?.CacheWritePerMillionTokensUsd,
+            LongContextThresholdTokens = preferredMetadata?.LongContextThresholdTokens ?? fallbackMetadata?.LongContextThresholdTokens,
+            LongContextInputPerMillionTokensUsd = preferredMetadata?.LongContextInputPerMillionTokensUsd ?? fallbackMetadata?.LongContextInputPerMillionTokensUsd,
+            LongContextCachedInputPerMillionTokensUsd = preferredMetadata?.LongContextCachedInputPerMillionTokensUsd ?? fallbackMetadata?.LongContextCachedInputPerMillionTokensUsd,
+            LongContextCacheWritePerMillionTokensUsd = preferredMetadata?.LongContextCacheWritePerMillionTokensUsd ?? fallbackMetadata?.LongContextCacheWritePerMillionTokensUsd,
+            LongContextOutputPerMillionTokensUsd = preferredMetadata?.LongContextOutputPerMillionTokensUsd ?? fallbackMetadata?.LongContextOutputPerMillionTokensUsd
+        };
+    }
+
+    private static bool TryFindKnownDefaultPrice(
+        ProviderKind kind,
+        string model,
+        out ProviderModelTokenPrice price)
+    {
+        price = default!;
+        if (kind is not (ProviderKind.OpenAi or ProviderKind.AzureOpenAi))
+        {
+            return false;
+        }
+
+        var match = OpenAiModelPrices.FirstOrDefault(candidate =>
+            string.Equals(candidate.Model, model, StringComparison.OrdinalIgnoreCase));
+        if (match is null)
+        {
+            return false;
+        }
+
+        price = match;
+        return true;
     }
 
     private static ProviderDiscoveredModelPrice NormalizeDiscoveredPrice(ProviderDiscoveredModelPrice price)
@@ -329,9 +527,25 @@ public static class ProviderPricingDefaults
     {
         return kind switch
         {
-            ProviderKind.OpenAi or ProviderKind.AzureOpenAi => OpenAiMiniPrice with { Model = model },
+            ProviderKind.OpenAi or ProviderKind.AzureOpenAi => OpenAiModelPrices.FirstOrDefault(
+                price => string.Equals(price.Model, model, StringComparison.OrdinalIgnoreCase)) ??
+                new ProviderModelTokenPrice(model, 0m, 0m, 0m),
             _ => CreatePrivateDefaultPrice(model)
         };
+    }
+
+    private static bool HasNegativeOptionalPrice(decimal? value)
+    {
+        return value is < 0m;
+    }
+
+    private static bool HasLongContextConfiguration(ProviderModelTokenPrice price)
+    {
+        return price.LongContextThresholdTokens.HasValue ||
+               price.LongContextInputPerMillionTokensUsd.HasValue ||
+               price.LongContextCachedInputPerMillionTokensUsd.HasValue ||
+               price.LongContextCacheWritePerMillionTokensUsd.HasValue ||
+               price.LongContextOutputPerMillionTokensUsd.HasValue;
     }
 
     private static ProviderModelTokenPrice CreatePrivateDefaultPrice(string model)
@@ -450,6 +664,7 @@ public static class ProviderPricingCalculator
             metric.Model,
             metric.InputTokens,
             metric.CachedInputTokens,
+            metric.CacheWriteTokens,
             metric.OutputTokens,
             provider.ModelPrices,
             out cost);
@@ -464,28 +679,81 @@ public static class ProviderPricingCalculator
         IEnumerable<ProviderModelTokenPrice>? modelPrices,
         out ProviderRunCostResult cost)
     {
+        return TryCalculate(
+            providerName,
+            model,
+            inputTokens,
+            cachedInputTokens,
+            cacheWriteTokens: 0,
+            outputTokens,
+            modelPrices,
+            out cost);
+    }
+
+    public static bool TryCalculate(
+        string providerName,
+        string model,
+        int inputTokens,
+        int cachedInputTokens,
+        int cacheWriteTokens,
+        int outputTokens,
+        IEnumerable<ProviderModelTokenPrice>? modelPrices,
+        out ProviderRunCostResult cost)
+    {
         cost = default!;
         if (!ProviderPricingDefaults.TryFindPrice(modelPrices, model, out var price))
         {
             return false;
         }
 
-        var normalizedCachedInputTokens = Math.Clamp(cachedInputTokens, 0, Math.Max(0, inputTokens));
-        var uncachedInputTokens = Math.Max(0, inputTokens - normalizedCachedInputTokens);
-        var inputCost = uncachedInputTokens / TokensPerMillion * price.InputPerMillionTokensUsd;
-        var cachedInputCost = normalizedCachedInputTokens / TokensPerMillion * price.CachedInputPerMillionTokensUsd;
-        var outputCost = Math.Max(0, outputTokens) / TokensPerMillion * price.OutputPerMillionTokensUsd;
+        var normalizedInputTokens = Math.Max(0, inputTokens);
+        var normalizedCachedInputTokens = Math.Clamp(cachedInputTokens, 0, normalizedInputTokens);
+        var normalizedCacheWriteTokens = Math.Clamp(
+            cacheWriteTokens,
+            0,
+            normalizedInputTokens - normalizedCachedInputTokens);
+        var uncachedInputTokens = normalizedInputTokens - normalizedCachedInputTokens - normalizedCacheWriteTokens;
+        var useLongContextPrice = price.LongContextThresholdTokens is int threshold &&
+                                  normalizedInputTokens > threshold &&
+                                  price.LongContextInputPerMillionTokensUsd.HasValue &&
+                                  price.LongContextCachedInputPerMillionTokensUsd.HasValue &&
+                                  price.LongContextOutputPerMillionTokensUsd.HasValue;
+        var inputRate = useLongContextPrice
+            ? price.LongContextInputPerMillionTokensUsd!.Value
+            : price.InputPerMillionTokensUsd;
+        var cachedInputRate = useLongContextPrice
+            ? price.LongContextCachedInputPerMillionTokensUsd!.Value
+            : price.CachedInputPerMillionTokensUsd;
+        var outputRate = useLongContextPrice
+            ? price.LongContextOutputPerMillionTokensUsd!.Value
+            : price.OutputPerMillionTokensUsd;
+        var cacheWriteRate = useLongContextPrice
+            ? price.LongContextCacheWritePerMillionTokensUsd
+            : price.CacheWritePerMillionTokensUsd;
+        if (normalizedCacheWriteTokens > 0 && cacheWriteRate is null)
+        {
+            return false;
+        }
+
+        var inputCost = uncachedInputTokens / TokensPerMillion * inputRate;
+        var cachedInputCost = normalizedCachedInputTokens / TokensPerMillion * cachedInputRate;
+        var cacheWriteCost = normalizedCacheWriteTokens / TokensPerMillion * (cacheWriteRate ?? 0m);
+        var outputCost = Math.Max(0, outputTokens) / TokensPerMillion * outputRate;
 
         cost = new ProviderRunCostResult(
             providerName,
             price.Model,
-            Math.Max(0, inputTokens),
+            normalizedInputTokens,
             normalizedCachedInputTokens,
             Math.Max(0, outputTokens),
             inputCost,
             cachedInputCost,
             outputCost,
-            inputCost + cachedInputCost + outputCost);
+            inputCost + cachedInputCost + cacheWriteCost + outputCost)
+        {
+            CacheWriteTokens = normalizedCacheWriteTokens,
+            CacheWriteCostUsd = cacheWriteCost
+        };
         return true;
     }
 
@@ -553,6 +821,7 @@ public static class ProviderPricingCalculator
                 observation.Model,
                 observation.InputTokens,
                 observation.CachedInputTokens,
+                observation.CacheWriteTokens,
                 billableOutputTokens,
                 provider.ModelPrices,
                 out var calculatedCost))
@@ -587,7 +856,10 @@ public static class ProviderPricingCalculator
             OutputTokens: knownItems.Sum(item => item.OutputTokens),
             ReasoningTokens: knownItems.Sum(item => item.ReasoningTokens),
             TotalTokens: knownItems.Sum(item => ResolveTotalTokens(item.InputTokens, item.OutputTokens, item.TotalTokens)),
-            KnownCostUsd: decimal.Round(knownCost, 6, MidpointRounding.AwayFromZero));
+            KnownCostUsd: decimal.Round(knownCost, 6, MidpointRounding.AwayFromZero))
+        {
+            CacheWriteTokens = knownItems.Sum(item => item.CacheWriteTokens)
+        };
     }
 
     public static decimal SumKnownCosts(IEnumerable<AgentRunMetric> metrics)

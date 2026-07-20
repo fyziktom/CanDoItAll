@@ -252,6 +252,8 @@ public sealed record AgentRunMetric(
 
     public int CachedInputTokens { get; init; }
 
+    public int CacheWriteTokens { get; init; }
+
     public decimal CostUsd { get; init; }
 }
 
@@ -445,7 +447,8 @@ public sealed record ExecutionRunRecord(
     string StructuredOutputContractKey = "",
     string StructuredOutputTypeName = "",
     string StructuredOutputSchemaName = "",
-    string StructuredOutputSchemaDescription = "");
+    string StructuredOutputSchemaDescription = "",
+    Guid? ProviderProfileId = null);
 
 public sealed record ExecutionApprovalRecord(
     string ApprovalId,

@@ -117,6 +117,12 @@ internal static class SandboxWorkspaceSeedNormalizer
                 SuggestedModels = isManagedSeedOpenAiProvider
                     ? seededProvider.SuggestedModels.Concat(match.SuggestedModels).Where(item => !string.IsNullOrWhiteSpace(item)).Distinct(StringComparer.OrdinalIgnoreCase).ToList()
                     : match.SuggestedModels.Concat(seededProvider.SuggestedModels).Where(item => !string.IsNullOrWhiteSpace(item)).Distinct(StringComparer.OrdinalIgnoreCase).ToList(),
+                ModelPrices = isManagedSeedOpenAiProvider
+                    ? ProviderPricingDefaults.MergeKnownDefaultPrices(
+                        match.Kind,
+                        seededProvider.DefaultModel,
+                        match.ModelPrices)
+                    : match.ModelPrices,
                 Tags = NormalizeTags(match.Tags.Concat(normalizedSeededProvider.Tags))
             };
 
@@ -221,8 +227,8 @@ internal static class SandboxWorkspaceSeedNormalizer
 
             idMap[seededAgent.Id] = match.Id;
             var preserveProviderAssignment = ShouldPreserveExplicitProviderAssignment(match, seededAgent, providersById);
-            var hasCurrentCustomization = AgentManagedSeedCustomizationMetadata.HasCurrentCustomization(match.ConfigurationJson);
-            var mergedAgent = hasCurrentCustomization
+            var hasCustomization = AgentManagedSeedCustomizationMetadata.HasCustomization(match.ConfigurationJson);
+            var mergedAgent = hasCustomization
                 ? match
                 : match with
                 {
@@ -298,6 +304,11 @@ internal static class SandboxWorkspaceSeedNormalizer
 
     private static bool ShouldRefreshManagedAgentFromSeed(AgentDefinition existingAgent, AgentDefinition seededAgent)
     {
+        if (AgentManagedSeedCustomizationMetadata.HasCustomization(existingAgent.ConfigurationJson))
+        {
+            return false;
+        }
+
         if (!TryGetManagedSeedVersion(seededAgent, out var managedSeedVersion))
         {
             return false;
@@ -306,8 +317,7 @@ internal static class SandboxWorkspaceSeedNormalizer
         if (TryGetManagedSeedVersion(existingAgent, out var currentSeedVersion) &&
             string.Equals(currentSeedVersion, managedSeedVersion, StringComparison.OrdinalIgnoreCase))
         {
-            return !AgentManagedSeedCustomizationMetadata.HasCurrentCustomization(existingAgent.ConfigurationJson) &&
-                   HasManagedAgentPolicyDrift(existingAgent, seededAgent);
+            return HasManagedAgentPolicyDrift(existingAgent, seededAgent);
         }
 
         return !string.IsNullOrWhiteSpace(seededAgent.TemplateKey);
@@ -315,7 +325,8 @@ internal static class SandboxWorkspaceSeedNormalizer
 
     private static bool HasManagedAgentPolicyDrift(AgentDefinition existingAgent, AgentDefinition seededAgent)
     {
-        return !ProjectStructureAccessEquals(existingAgent.ConfigurationJson, seededAgent.ConfigurationJson) ||
+        return !string.Equals(existingAgent.Model, seededAgent.Model, StringComparison.OrdinalIgnoreCase) ||
+               !ProjectStructureAccessEquals(existingAgent.ConfigurationJson, seededAgent.ConfigurationJson) ||
                !ProcessAccessEquals(existingAgent.ConfigurationJson, seededAgent.ConfigurationJson) ||
                !WorkspaceToolAccessEquals(existingAgent.ConfigurationJson, seededAgent.ConfigurationJson) ||
                !ImageGenerationAccessEquals(existingAgent.ConfigurationJson, seededAgent.ConfigurationJson) ||

@@ -10,6 +10,24 @@ namespace CanDoItAll.Tests.Integration;
 public sealed class AgentTeamCatalogIntegrationTests
 {
     private const string ManagedSeedVersionPropertyName = "managedSeedVersion";
+    private const string ExpectedAgentTemplateSeedVersion = "2026-07-agent-template-teams-v62";
+
+    private static readonly IReadOnlySet<string> LunaTemplateKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+    {
+        "programming-workspace-analyst",
+        "delivery-qa-observer",
+        "code-review-lead",
+        "ui-review-lead",
+        "security-reviewer",
+        "dotnet-solution-architect",
+        "dotnet-application-developer",
+        "blazor-application-developer",
+        "dotnet-qa-review-lead",
+        "runtime-failure-analyst",
+        "javascript-solution-architect",
+        "javascript-application-developer",
+        "javascript-qa-review-lead"
+    };
 
     [Fact]
     public async Task Agent_team_catalog_persists_many_to_many_memberships_and_prunes_deleted_agents()
@@ -137,6 +155,9 @@ public sealed class AgentTeamCatalogIntegrationTests
     public void Default_agent_template_pack_seeds_team_memberships()
     {
         var pack = new AgentTemplatePackLoader().Load();
+
+        Assert.Equal(ExpectedAgentTemplateSeedVersion, pack.Manifest.Version);
+        Assert.Equal(ExpectedAgentTemplateSeedVersion, pack.Manifest.SeedVersion);
         Assert.Equal(5, pack.Teams.Count);
         var members = pack.Teams.SelectMany(item => item.MemberTemplates).ToArray();
         Assert.All(
@@ -146,11 +167,21 @@ public sealed class AgentTeamCatalogIntegrationTests
                 Assert.False(string.IsNullOrWhiteSpace(member.Instructions));
                 Assert.False(string.IsNullOrWhiteSpace(member.Settings.ProviderProfileKey));
                 Assert.True(AgentAvatarImageCatalog.IsBundledAvatarUrl(member.Settings.AvatarImageUrl));
-                Assert.Equal(ManagedSeedProviderFallbacks.OpenAiDefaultModel, member.Settings.Model);
+                Assert.Equal(
+                    LunaTemplateKeys.Contains(member.Key)
+                        ? OpenAiModelIds.Gpt56Luna
+                        : ManagedSeedProviderFallbacks.OpenAiDefaultModel,
+                    member.Settings.Model);
                 Assert.NotNull(member.Settings.Access.ProjectStructure);
                 Assert.NotNull(member.Settings.Access.Processes);
                 Assert.NotEmpty(member.Skills.CapabilityKeys);
             });
+        Assert.Equal(
+            LunaTemplateKeys.OrderBy(key => key, StringComparer.OrdinalIgnoreCase),
+            members
+                .Where(member => string.Equals(member.Settings.Model, OpenAiModelIds.Gpt56Luna, StringComparison.OrdinalIgnoreCase))
+                .Select(member => member.Key)
+                .OrderBy(key => key, StringComparer.OrdinalIgnoreCase));
         Assert.All(
             members.Where(member =>
                 !string.Equals(
@@ -238,6 +269,12 @@ public sealed class AgentTeamCatalogIntegrationTests
         Assert.All(
             agentsByTemplateKey.Values,
             agent => Assert.True(AgentAvatarImageCatalog.IsBundledAvatarUrl(agent.AvatarImageUrl)));
+        Assert.Equal(
+            LunaTemplateKeys.OrderBy(key => key, StringComparer.OrdinalIgnoreCase),
+            agentsByTemplateKey.Values
+                .Where(agent => string.Equals(agent.Model, OpenAiModelIds.Gpt56Luna, StringComparison.OrdinalIgnoreCase))
+                .Select(agent => agent.TemplateKey)
+                .OrderBy(key => key, StringComparer.OrdinalIgnoreCase));
 
         var deliveryTeam = Assert.Single(teams, item => string.Equals(item.Name, "Delivery Platform Team", StringComparison.Ordinal));
         Assert.Equal("rocket_launch", deliveryTeam.Icon);

@@ -90,6 +90,197 @@ public sealed class ConcreteProviderDriverTests
     }
 
     [Fact]
+    public async Task OpenAiProviderDriver_UsesResponsesEndpointPayloadAndUsage()
+    {
+        var handler = new CapturingHandler((request, body) =>
+            JsonResponse(
+                """
+                {
+                  "status": "completed",
+                  "output_text": "responses answer",
+                  "usage": {
+                    "input_tokens": 13,
+                    "output_tokens": 8
+                  }
+                }
+                """));
+        using var httpClient = new HttpClient(handler);
+        var driver = new OpenAiProviderDriver(httpClient, new FixedCredentialResolver("openai-key"));
+        var provider = CreateProvider(
+            ProviderKind.OpenAi,
+            "https://api.openai.test/v1",
+            OpenAiModelIds.Gpt56Sol,
+            transport: ProviderTransportKind.Responses);
+
+        var result = await driver.CompleteChatAsync(CreateChatRequest(provider, OpenAiModelIds.Gpt56Sol));
+
+        Assert.Equal("responses answer", result.ResponseText);
+        Assert.Equal(13, result.InputTokens);
+        Assert.Equal(8, result.OutputTokens);
+        var request = Assert.Single(handler.Requests);
+        Assert.Equal(HttpMethod.Post, request.Method);
+        Assert.Equal("/v1/responses", request.PathAndQuery);
+        using var body = JsonDocument.Parse(request.Body);
+        var root = body.RootElement;
+        Assert.Equal(OpenAiModelIds.Gpt56Sol, root.GetProperty("model").GetString());
+        Assert.False(root.GetProperty("stream").GetBoolean());
+        Assert.False(root.GetProperty("store").GetBoolean());
+        var input = root.GetProperty("input").EnumerateArray().ToArray();
+        Assert.Collection(
+            input,
+            message => AssertResponseInputMessage(message, "system", "system"),
+            message => AssertResponseInputMessage(message, "user", "hello"),
+            message => AssertResponseInputMessage(message, "user", "prompt"));
+    }
+
+    [Fact]
+    public async Task OpenAiProviderDriver_UsesResponsesWireNamesForReasoningAndMaxOutputTokens()
+    {
+        var handler = new CapturingHandler((request, body) =>
+            JsonResponse("""{"status":"completed","output_text":"configured"}"""));
+        using var httpClient = new HttpClient(handler);
+        var driver = new OpenAiProviderDriver(httpClient, new FixedCredentialResolver("openai-key"));
+        var provider = CreateProvider(
+            ProviderKind.OpenAi,
+            "https://api.openai.test/v1",
+            OpenAiModelIds.Gpt56Sol,
+            """{"modelParameters":{"reasoningEffort":"max","maxOutputTokens":128000}}""",
+            transport: ProviderTransportKind.Responses);
+
+        var result = await driver.CompleteChatAsync(CreateChatRequest(provider, OpenAiModelIds.Gpt56Sol));
+
+        Assert.Equal("configured", result.ResponseText);
+        var request = Assert.Single(handler.Requests);
+        using var body = JsonDocument.Parse(request.Body);
+        var root = body.RootElement;
+        Assert.Equal("max", root.GetProperty("reasoning").GetProperty("effort").GetString());
+        Assert.Equal(128_000, root.GetProperty("max_output_tokens").GetInt32());
+        Assert.False(root.TryGetProperty("reasoning_effort", out _));
+        Assert.False(root.TryGetProperty("max_completion_tokens", out _));
+    }
+
+    [Fact]
+    public async Task OpenAiProviderDriver_UsesChatCompletionsWireNamesForReasoningAndMaxOutputTokens()
+    {
+        var handler = new CapturingHandler((request, body) =>
+            JsonResponse("""{"choices":[{"message":{"content":"configured"}}]}"""));
+        using var httpClient = new HttpClient(handler);
+        var driver = new OpenAiProviderDriver(httpClient, new FixedCredentialResolver("openai-key"));
+        var provider = CreateProvider(
+            ProviderKind.OpenAi,
+            "https://api.openai.test/v1",
+            OpenAiModelIds.Gpt56Luna,
+            """{"modelParameters":{"reasoningEffort":"high","maxOutputTokens":128000}}""");
+
+        var result = await driver.CompleteChatAsync(CreateChatRequest(provider, OpenAiModelIds.Gpt56Luna));
+
+        Assert.Equal("configured", result.ResponseText);
+        var request = Assert.Single(handler.Requests);
+        Assert.Equal("/v1/chat/completions", request.PathAndQuery);
+        using var body = JsonDocument.Parse(request.Body);
+        var root = body.RootElement;
+        Assert.Equal("high", root.GetProperty("reasoning_effort").GetString());
+        Assert.Equal(128_000, root.GetProperty("max_completion_tokens").GetInt32());
+        Assert.False(root.TryGetProperty("reasoning", out _));
+        Assert.False(root.TryGetProperty("max_output_tokens", out _));
+    }
+
+    [Fact]
+    public async Task OpenAiProviderDriver_ResponsesFiltersReasoningTextFromAssistantOutput()
+    {
+        var handler = new CapturingHandler((request, body) =>
+            JsonResponse(
+                """
+                {
+                  "status": "completed",
+                  "output": [
+                    {
+                      "type": "reasoning",
+                      "content": [
+                        { "type": "reasoning_text", "text": "internal reasoning" }
+                      ]
+                    },
+                    {
+                      "type": "message",
+                      "role": "assistant",
+                      "content": [
+                        { "type": "output_text", "text": "final answer" }
+                      ]
+                    }
+                  ]
+                }
+                """));
+        using var httpClient = new HttpClient(handler);
+        var driver = new OpenAiProviderDriver(httpClient, new FixedCredentialResolver("openai-key"));
+        var provider = CreateProvider(
+            ProviderKind.OpenAi,
+            "https://api.openai.test/v1",
+            OpenAiModelIds.Gpt56Sol,
+            transport: ProviderTransportKind.Responses);
+
+        var result = await driver.CompleteChatAsync(CreateChatRequest(provider, OpenAiModelIds.Gpt56Sol));
+
+        Assert.Equal("final answer", result.ResponseText);
+        Assert.DoesNotContain("internal reasoning", result.ResponseText, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task OpenAiProviderDriver_ResponsesReturnsRefusalOutput()
+    {
+        var handler = new CapturingHandler((request, body) =>
+            JsonResponse(
+                """
+                {
+                  "status": "completed",
+                  "output": [
+                    {
+                      "type": "message",
+                      "role": "assistant",
+                      "content": [
+                        { "type": "refusal", "refusal": "I cannot help with that." }
+                      ]
+                    }
+                  ]
+                }
+                """));
+        using var httpClient = new HttpClient(handler);
+        var driver = new OpenAiProviderDriver(httpClient, new FixedCredentialResolver("openai-key"));
+        var provider = CreateProvider(
+            ProviderKind.OpenAi,
+            "https://api.openai.test/v1",
+            OpenAiModelIds.Gpt56Sol,
+            transport: ProviderTransportKind.Responses);
+
+        var result = await driver.CompleteChatAsync(CreateChatRequest(provider, OpenAiModelIds.Gpt56Sol));
+
+        Assert.Equal("I cannot help with that.", result.ResponseText);
+    }
+
+    [Theory]
+    [InlineData("{\"status\":\"failed\",\"error\":{\"message\":\"model overloaded\"}}", "failed", "model overloaded")]
+    [InlineData("{\"status\":\"incomplete\",\"incomplete_details\":{\"reason\":\"max_output_tokens\"}}", "incomplete", "max_output_tokens")]
+    public async Task OpenAiProviderDriver_ResponsesRejectsNonCompletedTwoHundredStatuses(
+        string responseJson,
+        string status,
+        string detail)
+    {
+        var handler = new CapturingHandler((request, body) => JsonResponse(responseJson));
+        using var httpClient = new HttpClient(handler);
+        var driver = new OpenAiProviderDriver(httpClient, new FixedCredentialResolver("openai-key"));
+        var provider = CreateProvider(
+            ProviderKind.OpenAi,
+            "https://api.openai.test/v1",
+            OpenAiModelIds.Gpt56Sol,
+            transport: ProviderTransportKind.Responses);
+
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => driver.CompleteChatAsync(CreateChatRequest(provider, OpenAiModelIds.Gpt56Sol)));
+
+        Assert.Contains($"status '{status}'", exception.Message, StringComparison.Ordinal);
+        Assert.Contains(detail, exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task AzureOpenAiProviderDriver_UsesDeploymentEndpointAndApiKey()
     {
         var handler = new CapturingHandler((request, body) =>
@@ -453,11 +644,21 @@ public sealed class ConcreteProviderDriverTests
             "prompt");
     }
 
+    private static void AssertResponseInputMessage(
+        JsonElement message,
+        string expectedRole,
+        string expectedContent)
+    {
+        Assert.Equal(expectedRole, message.GetProperty("role").GetString());
+        Assert.Equal(expectedContent, message.GetProperty("content").GetString());
+    }
+
     private static ProviderProfile CreateProvider(
         ProviderKind kind,
         string baseUrl,
         string defaultModel,
         string configurationJson = "{}",
+        ProviderTransportKind transport = ProviderTransportKind.ChatCompletions,
         ProviderProfilePurpose purpose = ProviderProfilePurpose.Chat)
     {
         return new ProviderProfile(
@@ -467,7 +668,7 @@ public sealed class ConcreteProviderDriverTests
             baseUrl,
             "TEST_API_KEY",
             defaultModel,
-            ProviderTransportKind.ChatCompletions,
+            transport,
             IsEnabled: true,
             SupportsStreaming: false,
             SupportsTools: false,

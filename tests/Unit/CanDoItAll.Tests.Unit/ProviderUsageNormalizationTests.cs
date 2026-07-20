@@ -15,7 +15,8 @@ public sealed class ProviderUsageNormalizationTests
                                          "usage": {
                                            "input_tokens": 75,
                                            "input_tokens_details": {
-                                             "cached_tokens": 25
+                                             "cached_tokens": 25,
+                                             "cache_write_tokens": 10
                                            },
                                            "output_tokens": 1186,
                                            "output_tokens_details": {
@@ -46,6 +47,7 @@ public sealed class ProviderUsageNormalizationTests
         Assert.Equal(ProviderUsageObservationStatus.Observed, observation.UsageStatus);
         Assert.Equal(75, observation.InputTokens);
         Assert.Equal(25, observation.CachedInputTokens);
+        Assert.Equal(10, observation.CacheWriteTokens);
         Assert.Equal(1186, observation.OutputTokens);
         Assert.Equal(1024, observation.ReasoningTokens);
         Assert.Equal(1261, observation.TotalTokens);
@@ -85,10 +87,48 @@ public sealed class ProviderUsageNormalizationTests
         Assert.Equal(ProviderUsageObservationStatus.UsageUnavailable, observation.UsageStatus);
         Assert.Equal(0, observation.InputTokens);
         Assert.Equal(0, observation.CachedInputTokens);
+        Assert.Equal(0, observation.CacheWriteTokens);
         Assert.Equal(0, observation.OutputTokens);
         Assert.Equal(0, observation.ReasoningTokens);
         Assert.Equal(0, observation.TotalTokens);
         Assert.Equal("resp_null", observation.ProviderResponseId);
+    }
+
+    [Fact]
+    public void Normalize_reads_openai_cache_write_tokens_from_additional_counts()
+    {
+        const string rawUsageJson = """
+                                    {
+                                      "inputTokenCount": 100,
+                                      "cachedInputTokenCount": 20,
+                                      "outputTokenCount": 5,
+                                      "additionalCounts": {
+                                        "input_tokens_details.cache_write_tokens": 30
+                                      }
+                                    }
+                                    """;
+
+        var observation = DefaultProviderUsageNormalizer.Instance.Normalize(new ProviderUsageNormalizationRequest(
+            Provider: CreateOpenAiProvider(),
+            Model: OpenAiModelIds.Gpt56Terra,
+            SourcePhase: ProviderUsageSourcePhases.AgentRuntime,
+            UsageStatus: ProviderUsageObservationStatus.Observed,
+            InputTokens: 0,
+            CachedInputTokens: 0,
+            OutputTokens: 0,
+            ReasoningTokens: 0,
+            TotalTokens: 0,
+            ToolCallCount: 0,
+            ProviderResponseId: string.Empty,
+            ProviderRequestId: string.Empty,
+            RuntimeSessionKey: string.Empty,
+            RawUsageJson: rawUsageJson,
+            DiagnosticsJson: "{}"));
+
+        Assert.Equal(100, observation.InputTokens);
+        Assert.Equal(20, observation.CachedInputTokens);
+        Assert.Equal(30, observation.CacheWriteTokens);
+        Assert.Equal(5, observation.OutputTokens);
     }
 
     [Fact]

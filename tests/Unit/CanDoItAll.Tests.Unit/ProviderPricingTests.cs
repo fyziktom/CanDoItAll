@@ -29,6 +29,57 @@ public sealed class ProviderPricingTests
     }
 
     [Fact]
+    public void OpenAi_defaults_include_exact_gpt_5_6_standard_and_long_context_prices()
+    {
+        var prices = ProviderPricingDefaults.CreateDefaultPrices(ProviderKind.OpenAi, OpenAiModelIds.Gpt56Terra);
+        ProviderModelTokenPrice[] expectedPrices =
+        [
+            new(OpenAiModelIds.Gpt56, 5.00m, 0.50m, 30.00m)
+            {
+                CacheWritePerMillionTokensUsd = 6.25m,
+                LongContextThresholdTokens = OpenAiModelPricingPolicy.Gpt56LongContextThresholdTokens,
+                LongContextInputPerMillionTokensUsd = 10.00m,
+                LongContextCachedInputPerMillionTokensUsd = 1.00m,
+                LongContextCacheWritePerMillionTokensUsd = 12.50m,
+                LongContextOutputPerMillionTokensUsd = 45.00m
+            },
+            new(OpenAiModelIds.Gpt56Luna, 1.00m, 0.10m, 6.00m)
+            {
+                CacheWritePerMillionTokensUsd = 1.25m,
+                LongContextThresholdTokens = OpenAiModelPricingPolicy.Gpt56LongContextThresholdTokens,
+                LongContextInputPerMillionTokensUsd = 2.00m,
+                LongContextCachedInputPerMillionTokensUsd = 0.20m,
+                LongContextCacheWritePerMillionTokensUsd = 2.50m,
+                LongContextOutputPerMillionTokensUsd = 9.00m
+            },
+            new(OpenAiModelIds.Gpt56Terra, 2.50m, 0.25m, 15.00m)
+            {
+                CacheWritePerMillionTokensUsd = 3.125m,
+                LongContextThresholdTokens = OpenAiModelPricingPolicy.Gpt56LongContextThresholdTokens,
+                LongContextInputPerMillionTokensUsd = 5.00m,
+                LongContextCachedInputPerMillionTokensUsd = 0.50m,
+                LongContextCacheWritePerMillionTokensUsd = 6.25m,
+                LongContextOutputPerMillionTokensUsd = 22.50m
+            },
+            new(OpenAiModelIds.Gpt56Sol, 5.00m, 0.50m, 30.00m)
+            {
+                CacheWritePerMillionTokensUsd = 6.25m,
+                LongContextThresholdTokens = OpenAiModelPricingPolicy.Gpt56LongContextThresholdTokens,
+                LongContextInputPerMillionTokensUsd = 10.00m,
+                LongContextCachedInputPerMillionTokensUsd = 1.00m,
+                LongContextCacheWritePerMillionTokensUsd = 12.50m,
+                LongContextOutputPerMillionTokensUsd = 45.00m
+            }
+        ];
+
+        foreach (var expectedPrice in expectedPrices)
+        {
+            Assert.True(ProviderPricingDefaults.TryFindPrice(prices, expectedPrice.Model, out var actualPrice));
+            Assert.Equal(expectedPrice, actualPrice);
+        }
+    }
+
+    [Fact]
     public void Ollama_defaults_are_private_and_non_zero()
     {
         var prices = ProviderPricingDefaults.CreateDefaultPrices(ProviderKind.Ollama, "llama3.1");
@@ -62,6 +113,99 @@ public sealed class ProviderPricingTests
         Assert.Equal(0.025m, cost.CachedInputCostUsd);
         Assert.Equal(2.00m, cost.OutputCostUsd);
         Assert.Equal(2.775m, cost.TotalUsd);
+    }
+
+    [Fact]
+    public void Cost_calculator_uses_long_context_rates_above_the_gpt_5_6_threshold()
+    {
+        var prices = ProviderPricingDefaults.CreateDefaultPrices(ProviderKind.OpenAi, OpenAiModelIds.Gpt56Terra);
+
+        var calculated = ProviderPricingCalculator.TryCalculate(
+            "OpenAI",
+            OpenAiModelIds.Gpt56Terra,
+            inputTokens: 300_000,
+            cachedInputTokens: 100_000,
+            outputTokens: 20_000,
+            prices,
+            out var cost);
+
+        Assert.True(calculated);
+        Assert.Equal(1.00m, cost.InputCostUsd);
+        Assert.Equal(0.05m, cost.CachedInputCostUsd);
+        Assert.Equal(0.45m, cost.OutputCostUsd);
+        Assert.Equal(1.50m, cost.TotalUsd);
+    }
+
+    [Fact]
+    public void Cost_calculator_prices_standard_context_cache_writes_separately()
+    {
+        var prices = ProviderPricingDefaults.CreateDefaultPrices(ProviderKind.OpenAi, OpenAiModelIds.Gpt56Terra);
+
+        var calculated = ProviderPricingCalculator.TryCalculate(
+            "OpenAI",
+            OpenAiModelIds.Gpt56Terra,
+            inputTokens: 200_000,
+            cachedInputTokens: 50_000,
+            cacheWriteTokens: 20_000,
+            outputTokens: 0,
+            prices,
+            out var cost);
+
+        Assert.True(calculated);
+        Assert.Equal(130_000, cost.InputTokens - cost.CachedInputTokens - cost.CacheWriteTokens);
+        Assert.Equal(20_000, cost.CacheWriteTokens);
+        Assert.Equal(0.325m, cost.InputCostUsd);
+        Assert.Equal(0.0125m, cost.CachedInputCostUsd);
+        Assert.Equal(0.0625m, cost.CacheWriteCostUsd);
+        Assert.Equal(0.40m, cost.TotalUsd);
+    }
+
+    [Fact]
+    public void Cost_calculator_prices_long_context_cache_writes_at_the_long_rate()
+    {
+        var prices = ProviderPricingDefaults.CreateDefaultPrices(ProviderKind.OpenAi, OpenAiModelIds.Gpt56Terra);
+
+        var calculated = ProviderPricingCalculator.TryCalculate(
+            "OpenAI",
+            OpenAiModelIds.Gpt56Terra,
+            inputTokens: 400_000,
+            cachedInputTokens: 100_000,
+            cacheWriteTokens: 50_000,
+            outputTokens: 20_000,
+            prices,
+            out var cost);
+
+        Assert.True(calculated);
+        Assert.Equal(1.25m, cost.InputCostUsd);
+        Assert.Equal(0.05m, cost.CachedInputCostUsd);
+        Assert.Equal(0.3125m, cost.CacheWriteCostUsd);
+        Assert.Equal(0.45m, cost.OutputCostUsd);
+        Assert.Equal(2.0625m, cost.TotalUsd);
+    }
+
+    [Fact]
+    public void Usage_summary_applies_long_context_pricing_per_observation_not_to_aggregate_tokens()
+    {
+        var provider = CreateProvider(
+            "Provider A",
+            ProviderPricingDefaults.CreateDefaultPrices(ProviderKind.OpenAi, OpenAiModelIds.Gpt56Terra));
+        var firstRequest = CreateUsageObservation(
+            ProviderUsageObservationStatus.Observed,
+            inputTokens: 200_000,
+            cachedInputTokens: 0,
+            outputTokens: 0,
+            model: OpenAiModelIds.Gpt56Terra);
+        var secondRequest = CreateUsageObservation(
+            ProviderUsageObservationStatus.Observed,
+            inputTokens: 200_000,
+            cachedInputTokens: 0,
+            outputTokens: 0,
+            model: OpenAiModelIds.Gpt56Terra);
+
+        var summary = ProviderPricingCalculator.SummarizeUsage([firstRequest, secondRequest], [provider]);
+
+        Assert.Equal(400_000, summary.InputTokens);
+        Assert.Equal(1.00m, summary.KnownCostUsd);
     }
 
     [Fact]
@@ -236,7 +380,7 @@ public sealed class ProviderPricingTests
     }
 
     [Fact]
-    public void Discovered_prices_override_same_model_but_preserve_manual_rows()
+    public void Discovered_prices_override_same_model_but_preserve_manual_rows_without_fabricating_unknown_prices()
     {
         var currentPrices = new[]
         {
@@ -262,8 +406,101 @@ public sealed class ProviderPricingTests
         Assert.Equal(1.25m, pricedModel.InputPerMillionTokensUsd);
         Assert.True(ProviderPricingDefaults.TryFindPrice(merged.ModelPrices, "manual-only", out var manualOnly));
         Assert.Equal(2.00m, manualOnly.InputPerMillionTokensUsd);
-        Assert.True(ProviderPricingDefaults.TryFindPrice(merged.ModelPrices, "name-only-model", out var nameOnlyModel));
-        Assert.Equal(0.75m, nameOnlyModel.InputPerMillionTokensUsd);
+        Assert.DoesNotContain(
+            merged.ModelPrices,
+            price => string.Equals(price.Model, "name-only-model", StringComparison.OrdinalIgnoreCase));
+        Assert.False(ProviderPricingDefaults.TryFindPrice(merged.ModelPrices, "name-only-model", out _));
+    }
+
+    [Fact]
+    public void Known_defaults_enrich_existing_gpt_5_6_rows_without_overwriting_standard_prices()
+    {
+        var configuredPrices = new[]
+        {
+            new ProviderModelTokenPrice(OpenAiModelIds.Gpt56Terra, 9.00m, 0.90m, 18.00m)
+        };
+
+        var merged = ProviderPricingDefaults.MergeKnownDefaultPrices(
+            ProviderKind.OpenAi,
+            OpenAiModelIds.Gpt56Terra,
+            configuredPrices);
+
+        Assert.True(ProviderPricingDefaults.TryFindPrice(merged, OpenAiModelIds.Gpt56Terra, out var terra));
+        Assert.Equal(9.00m, terra.InputPerMillionTokensUsd);
+        Assert.Equal(0.90m, terra.CachedInputPerMillionTokensUsd);
+        Assert.Equal(18.00m, terra.OutputPerMillionTokensUsd);
+        Assert.Equal(3.125m, terra.CacheWritePerMillionTokensUsd);
+        Assert.Equal(OpenAiModelPricingPolicy.Gpt56LongContextThresholdTokens, terra.LongContextThresholdTokens);
+        Assert.Equal(5.00m, terra.LongContextInputPerMillionTokensUsd);
+        Assert.Equal(0.50m, terra.LongContextCachedInputPerMillionTokensUsd);
+        Assert.Equal(6.25m, terra.LongContextCacheWritePerMillionTokensUsd);
+        Assert.Equal(22.50m, terra.LongContextOutputPerMillionTokensUsd);
+    }
+
+    [Fact]
+    public void Explicit_discovery_preserves_existing_optional_gpt_5_6_pricing_metadata()
+    {
+        var configuredPrices = new[]
+        {
+            new ProviderModelTokenPrice(OpenAiModelIds.Gpt56Terra, 9.00m, 0.90m, 18.00m)
+            {
+                CacheWritePerMillionTokensUsd = 4.00m,
+                LongContextThresholdTokens = 300_000,
+                LongContextInputPerMillionTokensUsd = 8.00m,
+                LongContextCachedInputPerMillionTokensUsd = 0.80m,
+                LongContextCacheWritePerMillionTokensUsd = 10.00m,
+                LongContextOutputPerMillionTokensUsd = 24.00m
+            }
+        };
+        var discoveredPrices = new[]
+        {
+            new ProviderDiscoveredModelPrice(OpenAiModelIds.Gpt56Terra, 2.75m, 0.275m, 16.00m)
+        };
+
+        var merged = ProviderPricingDefaults.MergeDiscoveredModelPrices(
+            ProviderKind.OpenAi,
+            OpenAiModelIds.Gpt56Terra,
+            configuredPrices,
+            discoveredPrices);
+
+        Assert.True(ProviderPricingDefaults.TryFindPrice(merged.ModelPrices, OpenAiModelIds.Gpt56Terra, out var terra));
+        Assert.Equal(2.75m, terra.InputPerMillionTokensUsd);
+        Assert.Equal(0.275m, terra.CachedInputPerMillionTokensUsd);
+        Assert.Equal(16.00m, terra.OutputPerMillionTokensUsd);
+        Assert.Equal(4.00m, terra.CacheWritePerMillionTokensUsd);
+        Assert.Equal(300_000, terra.LongContextThresholdTokens);
+        Assert.Equal(8.00m, terra.LongContextInputPerMillionTokensUsd);
+        Assert.Equal(0.80m, terra.LongContextCachedInputPerMillionTokensUsd);
+        Assert.Equal(10.00m, terra.LongContextCacheWritePerMillionTokensUsd);
+        Assert.Equal(24.00m, terra.LongContextOutputPerMillionTokensUsd);
+    }
+
+    [Fact]
+    public void Name_only_discovery_adds_known_gpt_5_6_default_but_does_not_price_unknown_models()
+    {
+        var configuredPrices = new[]
+        {
+            new ProviderModelTokenPrice("legacy-model", 1.00m, 0.10m, 4.00m)
+        };
+        var discoveredPrices = new[]
+        {
+            new ProviderDiscoveredModelPrice(OpenAiModelIds.Gpt56Terra, null, null, null),
+            new ProviderDiscoveredModelPrice("unknown-model", null, null, null)
+        };
+
+        var merged = ProviderPricingDefaults.MergeDiscoveredModelPrices(
+            ProviderKind.OpenAi,
+            "legacy-model",
+            configuredPrices,
+            discoveredPrices);
+
+        Assert.True(ProviderPricingDefaults.TryFindPrice(merged.ModelPrices, OpenAiModelIds.Gpt56Terra, out var terra));
+        Assert.Equal(2.50m, terra.InputPerMillionTokensUsd);
+        Assert.True(ProviderPricingDefaults.TryFindPrice(merged.ModelPrices, "legacy-model", out _));
+        Assert.False(ProviderPricingDefaults.TryFindPrice(merged.ModelPrices, "unknown-model", out _));
+        Assert.DoesNotContain(
+            merged.ModelPrices,
+            price => string.Equals(price.Model, "unknown-model", StringComparison.OrdinalIgnoreCase));
     }
 
     [Fact]
@@ -392,14 +629,16 @@ public sealed class ProviderPricingTests
         int inputTokens,
         int cachedInputTokens,
         int outputTokens,
-        string sourcePhase = ProviderUsageSourcePhases.AgentRuntime)
+        string sourcePhase = ProviderUsageSourcePhases.AgentRuntime,
+        string model = "model-a",
+        int cacheWriteTokens = 0)
     {
         return new ProviderUsageObservation(
             Id: Guid.NewGuid(),
             CreatedAtUtc: DateTimeOffset.UtcNow,
             ProviderName: "Provider A",
             ProviderKind: ProviderKind.OpenAi,
-            Model: "model-a",
+            Model: model,
             TransportKind: ProviderTransportKind.Responses,
             SourcePhase: sourcePhase,
             UsageStatus: status,
@@ -408,7 +647,10 @@ public sealed class ProviderPricingTests
             OutputTokens: outputTokens,
             ReasoningTokens: 0,
             TotalTokens: inputTokens + outputTokens,
-            ToolCallCount: 0);
+            ToolCallCount: 0)
+        {
+            CacheWriteTokens = cacheWriteTokens
+        };
     }
 
     private sealed class FakeHttpClientFactory(Func<HttpRequestMessage, HttpResponseMessage> handler) : IHttpClientFactory

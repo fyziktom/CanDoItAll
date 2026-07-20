@@ -56,6 +56,10 @@ public static class ManagedSeedProviderFallbacks
     private static readonly IReadOnlyList<string> ManagedSeedOpenAiSuggestedModels =
     [
         OpenAiDefaultModel,
+        OpenAiModelIds.Gpt56,
+        OpenAiModelIds.Gpt56Luna,
+        OpenAiModelIds.Gpt56Terra,
+        OpenAiModelIds.Gpt56Sol,
         "gpt-5.4",
         "gpt-5-mini",
         "gpt-4.1-mini",
@@ -74,6 +78,8 @@ public static class ManagedSeedProviderFallbacks
     public const int FallbackTimeoutSeconds = 600;
     public const int FallbackMaxOutputTokens = 4096;
     public const bool FallbackThinkEnabled = false;
+
+    public static IReadOnlyList<string> OpenAiSuggestedModels => ManagedSeedOpenAiSuggestedModels;
 
     public static ProviderProfile Apply(
         AgentDefinition agent,

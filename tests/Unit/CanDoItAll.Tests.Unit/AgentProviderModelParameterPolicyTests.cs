@@ -93,17 +93,56 @@ public sealed class AgentProviderModelParameterPolicyTests
         Assert.Contains("Unsupported reasoning effort", exception.Message);
     }
 
-    [Fact]
-    public void Openai_chat_completions_transport_does_not_apply_reasoning_effort()
+    [Theory]
+    [InlineData(ProviderTransportKind.Responses)]
+    [InlineData(ProviderTransportKind.ChatCompletions)]
+    public void Openai_supported_transports_apply_reasoning_effort(ProviderTransportKind transport)
     {
         var effort = AgentProviderModelParameterPolicy.ResolveReasoningEffort(
             ProviderKind.OpenAi,
-            ProviderTransportKind.ChatCompletions,
-            "gpt-5.4",
+            transport,
+            OpenAiModelIds.Gpt56Sol,
             "{\"reasoningEffort\":\"medium\"}",
             string.Empty);
 
-        Assert.Null(effort);
+        Assert.True(AgentProviderModelParameterPolicy.CanApplyReasoningEffort(
+            ProviderKind.OpenAi,
+            transport,
+            OpenAiModelIds.Gpt56Sol));
+        Assert.Equal(AgentReasoningEffortLevel.Medium, effort);
+    }
+
+    [Fact]
+    public void Max_reasoning_effort_is_parsed_and_formatted_for_openai_models()
+    {
+        var effort = AgentProviderModelParameterPolicy.ResolveReasoningEffort(
+            ProviderKind.OpenAi,
+            ProviderTransportKind.Responses,
+            OpenAiModelIds.Gpt56Sol,
+            "{\"reasoningEffort\":\"max\"}",
+            string.Empty);
+        var parsedEffort = Assert.IsType<AgentReasoningEffortLevel>(effort);
+
+        Assert.Equal(AgentReasoningEffortLevel.Max, parsedEffort);
+        Assert.Equal("max", AgentProviderModelParameterPolicy.FormatReasoningEffort(parsedEffort));
+    }
+
+    [Theory]
+    [InlineData("gpt-5.4")]
+    [InlineData("gpt-5.5")]
+    [InlineData("o3")]
+    public void Max_reasoning_effort_fails_before_calling_unsupported_openai_models(string model)
+    {
+        var exception = Assert.Throws<InvalidOperationException>(() =>
+            AgentProviderModelParameterPolicy.ResolveReasoningEffort(
+                ProviderKind.OpenAi,
+                ProviderTransportKind.Responses,
+                model,
+                "{\"reasoningEffort\":\"max\"}",
+                string.Empty));
+
+        Assert.Contains("only supported by GPT-5.6", exception.Message);
+        Assert.Contains(model, exception.Message);
     }
 
     [Fact]
@@ -111,10 +150,46 @@ public sealed class AgentProviderModelParameterPolicyTests
     {
         var maxOutputTokens = AgentProviderModelParameterPolicy.ResolveMaxOutputTokens(
             ProviderKind.OpenAi,
+            OpenAiModelIds.Gpt56Luna,
             "{\"modelParameters\":{\"maxOutputTokens\":300}}",
             "{\"maxOutputTokens\":120}");
 
         Assert.Equal(120, maxOutputTokens);
+    }
+
+    [Fact]
+    public void Gpt5_max_output_tokens_accepts_128k_and_rejects_larger_values()
+    {
+        var maxOutputTokens = AgentProviderModelParameterPolicy.ResolveMaxOutputTokens(
+            ProviderKind.OpenAi,
+            OpenAiModelIds.Gpt56Luna,
+            "{\"modelParameters\":{\"maxOutputTokens\":128000}}",
+            string.Empty);
+
+        var exception = Assert.Throws<InvalidOperationException>(() =>
+            AgentProviderModelParameterPolicy.ResolveMaxOutputTokens(
+                ProviderKind.OpenAi,
+                OpenAiModelIds.Gpt56Luna,
+                "{\"modelParameters\":{\"maxOutputTokens\":128001}}",
+                string.Empty));
+
+        Assert.Equal(128_000, maxOutputTokens);
+        Assert.Contains("between 1 and 128000", exception.Message);
+    }
+
+    [Theory]
+    [InlineData("gpt-4.1")]
+    [InlineData("gpt-4o")]
+    public void Older_openai_models_keep_the_conservative_output_token_limit(string model)
+    {
+        var exception = Assert.Throws<InvalidOperationException>(() =>
+            AgentProviderModelParameterPolicy.ResolveMaxOutputTokens(
+                ProviderKind.OpenAi,
+                model,
+                "{\"modelParameters\":{\"maxOutputTokens\":8193}}",
+                string.Empty));
+
+        Assert.Contains("between 1 and 8192", exception.Message);
     }
 
     [Fact]

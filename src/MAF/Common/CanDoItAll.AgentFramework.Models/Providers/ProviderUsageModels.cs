@@ -36,6 +36,8 @@ public sealed record ProviderUsageObservation(
     int TotalTokens,
     int ToolCallCount)
 {
+    public int CacheWriteTokens { get; init; }
+
     public Guid? ExecutionRunId { get; init; }
 
     public Guid? AgentId { get; init; }
@@ -82,5 +84,7 @@ public sealed record ProviderUsageSummary(
     int TotalTokens,
     decimal KnownCostUsd)
 {
+    public int CacheWriteTokens { get; init; }
+
     public bool HasUnknownUsage => UnknownObservationCount > 0;
 }

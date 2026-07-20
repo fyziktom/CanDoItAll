@@ -15,7 +15,8 @@ public static class AgentProviderModelParameterPolicy
     public const bool DefaultOllamaThinkEnabled = false;
 
     private const int MinMaxOutputTokens = 1;
-    private const int MaxMaxOutputTokens = 8192;
+    private const int DefaultMaxOutputTokens = 8192;
+    private const int OpenAiMaxOutputTokens = 128_000;
 
     private static readonly string[] OpenAiDefaultTemperatureModelPrefixes =
     [
@@ -70,8 +71,16 @@ public static class AgentProviderModelParameterPolicy
             return null;
         }
 
-        return TryReadReasoningEffort(agentConfigurationJson, "agent") ??
-               TryReadReasoningEffort(providerConfigurationJson, "provider");
+        var configuredEffort = TryReadReasoningEffort(agentConfigurationJson, "agent") ??
+                               TryReadReasoningEffort(providerConfigurationJson, "provider");
+        if (configuredEffort == AgentReasoningEffortLevel.Max &&
+            !OpenAiModelIds.Gpt56Models.Contains(model.Trim(), StringComparer.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException(
+                $"Reasoning effort 'max' is only supported by GPT-5.6 models. Model '{model}' does not support it.");
+        }
+
+        return configuredEffort;
     }
 
     public static bool CanApplyReasoningEffort(
@@ -80,7 +89,7 @@ public static class AgentProviderModelParameterPolicy
         string model)
     {
         return IsOpenAiLikeProvider(providerKind) &&
-               providerTransport == ProviderTransportKind.Responses &&
+               providerTransport is ProviderTransportKind.Responses or ProviderTransportKind.ChatCompletions &&
                IsOpenAiDefaultTemperatureModel(model);
     }
 
@@ -89,8 +98,22 @@ public static class AgentProviderModelParameterPolicy
         string providerConfigurationJson,
         string agentConfigurationJson)
     {
-        return TryReadMaxOutputTokens(agentConfigurationJson, "agent", providerKind) ??
-               TryReadMaxOutputTokens(providerConfigurationJson, "provider", providerKind);
+        return ResolveMaxOutputTokens(
+            providerKind,
+            model: string.Empty,
+            providerConfigurationJson,
+            agentConfigurationJson);
+    }
+
+    public static int? ResolveMaxOutputTokens(
+        ProviderKind providerKind,
+        string model,
+        string providerConfigurationJson,
+        string agentConfigurationJson)
+    {
+        var maximum = ResolveMaxOutputTokenLimit(providerKind, model);
+        return TryReadMaxOutputTokens(agentConfigurationJson, "agent", providerKind, maximum) ??
+               TryReadMaxOutputTokens(providerConfigurationJson, "provider", providerKind, maximum);
     }
 
     public static bool? ResolveOllamaThink(
@@ -107,6 +130,7 @@ public static class AgentProviderModelParameterPolicy
     {
         return ResolveMaxOutputTokens(
                    ProviderKind.Ollama,
+                   model: string.Empty,
                    providerConfigurationJson,
                    agentConfigurationJson) ??
                DefaultOllamaMaxOutputTokens;
@@ -137,6 +161,20 @@ public static class AgentProviderModelParameterPolicy
             string.Equals(normalizedModel, prefix, StringComparison.Ordinal) ||
             normalizedModel.StartsWith(prefix + "-", StringComparison.Ordinal) ||
             normalizedModel.StartsWith(prefix + ".", StringComparison.Ordinal));
+    }
+
+    public static string FormatReasoningEffort(AgentReasoningEffortLevel effort)
+    {
+        return effort switch
+        {
+            AgentReasoningEffortLevel.None => "none",
+            AgentReasoningEffortLevel.Low => "low",
+            AgentReasoningEffortLevel.Medium => "medium",
+            AgentReasoningEffortLevel.High => "high",
+            AgentReasoningEffortLevel.ExtraHigh => "xhigh",
+            AgentReasoningEffortLevel.Max => "max",
+            _ => throw new ArgumentOutOfRangeException(nameof(effort), effort, "Unsupported reasoning effort.")
+        };
     }
 
     private static AgentReasoningEffortLevel? TryReadReasoningEffort(
@@ -248,7 +286,8 @@ public static class AgentProviderModelParameterPolicy
     private static int? TryReadMaxOutputTokens(
         string configurationJson,
         string configurationOwner,
-        ProviderKind providerKind)
+        ProviderKind providerKind,
+        int maximum)
     {
         if (string.IsNullOrWhiteSpace(configurationJson) ||
             !ConfigurationMayContainMaxOutputTokens(configurationJson, providerKind))
@@ -273,14 +312,18 @@ public static class AgentProviderModelParameterPolicy
                         $"The {configurationOwner} model-parameter configuration property '{ModelParametersConfigurationPropertyName}' must be a JSON object.");
                 }
 
-                var nestedValue = TryReadMaxOutputTokensProperty(modelParametersElement, configurationOwner, providerKind);
+                var nestedValue = TryReadMaxOutputTokensProperty(
+                    modelParametersElement,
+                    configurationOwner,
+                    providerKind,
+                    maximum);
                 if (nestedValue is not null)
                 {
                     return nestedValue;
                 }
             }
 
-            return TryReadMaxOutputTokensProperty(root, configurationOwner, providerKind);
+            return TryReadMaxOutputTokensProperty(root, configurationOwner, providerKind, maximum);
         }
         catch (JsonException exception)
         {
@@ -303,12 +346,14 @@ public static class AgentProviderModelParameterPolicy
     private static int? TryReadMaxOutputTokensProperty(
         JsonElement element,
         string configurationOwner,
-        ProviderKind providerKind)
+        ProviderKind providerKind,
+        int maximum)
     {
         if (TryReadIntegerProperty(
                 element,
                 MaxOutputTokensConfigurationPropertyName,
                 configurationOwner,
+                maximum,
                 out var maxOutputTokens))
         {
             return maxOutputTokens;
@@ -323,6 +368,7 @@ public static class AgentProviderModelParameterPolicy
                 element,
                 OllamaNumPredictConfigurationPropertyName,
                 configurationOwner,
+                maximum,
                 out var numPredict))
         {
             return numPredict;
@@ -332,6 +378,7 @@ public static class AgentProviderModelParameterPolicy
             element,
             OllamaNumPredictSnakeConfigurationPropertyName,
             configurationOwner,
+            maximum,
             out numPredict)
             ? numPredict
             : null;
@@ -341,6 +388,7 @@ public static class AgentProviderModelParameterPolicy
         JsonElement element,
         string propertyName,
         string configurationOwner,
+        int maximum,
         out int value)
     {
         value = default;
@@ -360,13 +408,35 @@ public static class AgentProviderModelParameterPolicy
             _ => throw new InvalidOperationException(
                 $"The {configurationOwner} model-parameter configuration property '{propertyName}' must be an integer.")
         };
-        if (value is < MinMaxOutputTokens or > MaxMaxOutputTokens)
+        if (value is < MinMaxOutputTokens || value > maximum)
         {
             throw new InvalidOperationException(
-                $"The {configurationOwner} model-parameter configuration property '{propertyName}' must be between {MinMaxOutputTokens} and {MaxMaxOutputTokens}.");
+                $"The {configurationOwner} model-parameter configuration property '{propertyName}' must be between {MinMaxOutputTokens} and {maximum}.");
         }
 
         return true;
+    }
+
+    private static int ResolveMaxOutputTokenLimit(
+        ProviderKind providerKind,
+        string model)
+    {
+        return IsOpenAiLikeProvider(providerKind) && IsOpenAiGpt5Model(model)
+            ? OpenAiMaxOutputTokens
+            : DefaultMaxOutputTokens;
+    }
+
+    private static bool IsOpenAiGpt5Model(string model)
+    {
+        if (string.IsNullOrWhiteSpace(model))
+        {
+            return false;
+        }
+
+        var normalizedModel = model.Trim().ToLowerInvariant();
+        return string.Equals(normalizedModel, "gpt-5", StringComparison.Ordinal) ||
+               normalizedModel.StartsWith("gpt-5-", StringComparison.Ordinal) ||
+               normalizedModel.StartsWith("gpt-5.", StringComparison.Ordinal);
     }
 
     private static bool TryReadReasoningEffortProperty(
@@ -427,8 +497,9 @@ public static class AgentProviderModelParameterPolicy
             "medium" => AgentReasoningEffortLevel.Medium,
             "high" => AgentReasoningEffortLevel.High,
             "extra-high" or "extrahigh" or "x-high" or "xhigh" => AgentReasoningEffortLevel.ExtraHigh,
+            "max" => AgentReasoningEffortLevel.Max,
             _ => throw new InvalidOperationException(
-                $"Unsupported reasoning effort '{value}'. Supported values are none, low, medium, high, and extraHigh.")
+                $"Unsupported reasoning effort '{value}'. Supported values are none, low, medium, high, extraHigh, and max.")
         };
     }
 }

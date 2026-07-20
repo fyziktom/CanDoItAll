@@ -1175,7 +1175,7 @@ public sealed class AgentFinalizerPolicyTests
     }
 
     [Fact]
-    public void Governed_process_provider_order_prefers_chat_completions_for_framework_managed_steps()
+    public void Governed_process_provider_order_prefers_responses_for_framework_managed_steps()
     {
         var responsesProvider = CreateProvider(
             ProviderTransportKind.Responses,
@@ -1199,11 +1199,144 @@ public sealed class AgentFinalizerPolicyTests
             responsesProvider,
             new ProviderProfileService());
 
-        Assert.Equal(chatCompletionsProvider.Id, orderedProviders[0].Id);
+        Assert.Equal(responsesProvider.Id, orderedProviders[0].Id);
     }
 
     [Fact]
-    public void Chat_completions_provider_ignores_reasoning_effort_configuration()
+    public void Governed_process_keeps_structured_output_capable_responses_provider()
+    {
+        var provider = CreateProvider(
+            ProviderTransportKind.Responses,
+            preferFrameworkManagedHistory: false);
+        var request = new ExecutionRunRequest(
+            Guid.NewGuid(),
+            "Classify the application.",
+            Context: new ExecutionInvocationContext(
+                SourceKind: "process-step",
+                SourceId: "classify-dotnet-application",
+                CorrelationId: "process-run",
+                CausationId: "process-step",
+                RequestedBy: "process-runtime",
+                RequestedByKind: "system",
+                MetadataJson: "{}"),
+            StructuredOutput: AgentStructuredOutputContracts.ProcessStepOutcomeResult);
+
+        var shouldOverride = AgentFrameworkWorkspaceExecutionService.ShouldOverrideProviderForGovernedProcessStep(
+            request,
+            provider);
+
+        Assert.False(shouldOverride);
+    }
+
+    [Fact]
+    public void Approval_continuation_uses_the_provider_persisted_for_the_original_run()
+    {
+        var configuredProvider = CreateProvider(
+            ProviderTransportKind.ChatCompletions,
+            preferFrameworkManagedHistory: true) with
+        {
+            Name = "Configured provider"
+        };
+        var governedProvider = CreateProvider(
+            ProviderTransportKind.Responses,
+            preferFrameworkManagedHistory: false) with
+        {
+            Name = "Governed provider"
+        };
+        var run = CreateRun("{}") with
+        {
+            ProviderProfileId = governedProvider.Id,
+            ProviderName = governedProvider.Name,
+            Model = OpenAiModelIds.Gpt56Luna
+        };
+
+        var resolvedProvider = AgentFrameworkWorkspaceExecutionService.ResolveContinuationProvider(
+            run,
+            configuredProvider,
+            [configuredProvider, governedProvider]);
+
+        Assert.Equal(governedProvider.Id, resolvedProvider.Id);
+        Assert.Equal(ProviderTransportKind.Responses, resolvedProvider.Transport);
+    }
+
+    [Fact]
+    public void Legacy_approval_continuation_resolves_the_recorded_provider_by_name()
+    {
+        var configuredProvider = CreateProvider(
+            ProviderTransportKind.ChatCompletions,
+            preferFrameworkManagedHistory: true) with
+        {
+            Name = "Configured provider"
+        };
+        var governedProvider = CreateProvider(
+            ProviderTransportKind.Responses,
+            preferFrameworkManagedHistory: false) with
+        {
+            Name = "Governed provider"
+        };
+        var run = CreateRun("{}") with
+        {
+            ProviderProfileId = null,
+            ProviderName = governedProvider.Name
+        };
+
+        var resolvedProvider = AgentFrameworkWorkspaceExecutionService.ResolveContinuationProvider(
+            run,
+            configuredProvider,
+            [configuredProvider, governedProvider]);
+
+        Assert.Equal(governedProvider.Id, resolvedProvider.Id);
+    }
+
+    [Fact]
+    public void Provider_compatible_runtime_model_preserves_advertised_luna_during_profile_switch()
+    {
+        var agent = CreateAgent(AgentChatHistoryMode.FrameworkManaged) with
+        {
+            ProviderProfileId = Guid.NewGuid(),
+            Model = OpenAiModelIds.Gpt56Luna
+        };
+        var provider = CreateProvider(
+            ProviderTransportKind.ChatCompletions,
+            preferFrameworkManagedHistory: true) with
+        {
+            SuggestedModels = [OpenAiModelIds.Gpt56Luna]
+        };
+
+        var model = AgentFrameworkWorkspaceExecutionService.ResolveProviderCompatibleRuntimeModel(
+            agent,
+            provider,
+            agent.Model);
+
+        Assert.Equal(OpenAiModelIds.Gpt56Luna, model);
+    }
+
+    [Fact]
+    public void Provider_compatible_runtime_model_uses_target_default_for_unadvertised_model()
+    {
+        var agent = CreateAgent(AgentChatHistoryMode.FrameworkManaged) with
+        {
+            ProviderProfileId = Guid.NewGuid(),
+            Model = "source-provider-model"
+        };
+        var provider = CreateProvider(
+            ProviderTransportKind.ChatCompletions,
+            preferFrameworkManagedHistory: true) with
+        {
+            DefaultModel = "target-provider-model",
+            SuggestedModels = ["target-provider-model"]
+        };
+
+        var model = AgentFrameworkWorkspaceExecutionService.ResolveProviderCompatibleRuntimeModel(
+            agent,
+            provider,
+            agent.Model);
+
+        Assert.Equal(provider.DefaultModel, model);
+    }
+
+    [Fact]
+    public void Chat_completions_provider_accepts_reasoning_effort_configuration()
     {
         var provider = CreateProvider(
             ProviderTransportKind.ChatCompletions,
@@ -1219,6 +1352,36 @@ public sealed class AgentFinalizerPolicyTests
 
         Assert.False(isUnsupported);
     }
+
+    [Theory]
+    [InlineData(ProviderTransportKind.Responses)]
+    [InlineData(ProviderTransportKind.ChatCompletions)]
+#pragma warning disable OPENAI001
+    public void Max_reasoning_effort_builds_transport_native_OpenAI_options(ProviderTransportKind transport)
+    {
+        var provider = CreateProvider(transport, preferFrameworkManagedHistory: false) with
+        {
+            ConfigurationJson = "{\"reasoningEffort\":\"max\"}"
+        };
+
+        var options = MafModelParametersBuilder.CreateModelCompatibleChatOptions(
+            provider,
+            OpenAiModelIds.Gpt56Luna,
+            requestedTemperature: null,
+            forceOmitTemperature: false);
+        var rawOptions = Assert.IsAssignableFrom<object>(options.RawRepresentationFactory!(null!));
+
+        if (transport == ProviderTransportKind.Responses)
+        {
+            var responseOptions = Assert.IsType<OpenAI.Responses.CreateResponseOptions>(rawOptions);
+            Assert.Equal("max", responseOptions.ReasoningOptions!.ReasoningEffortLevel.ToString());
+            return;
+        }
+
+        var chatOptions = Assert.IsType<OpenAI.Chat.ChatCompletionOptions>(rawOptions);
+        Assert.Equal("max", chatOptions.ReasoningEffortLevel.ToString());
+    }
+#pragma warning restore OPENAI001
 
     [Fact]
     public void ExecutionInvocationMetadata_builds_required_finalizer_and_repair_policy()

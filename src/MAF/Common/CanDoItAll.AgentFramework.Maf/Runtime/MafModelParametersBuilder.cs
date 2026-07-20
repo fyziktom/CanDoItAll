@@ -2,6 +2,8 @@ using CanDoItAll.AgentFramework.Models;
 using Microsoft.Extensions.AI;
 using OllamaSharp;
 using OllamaSharp.Models;
+using OpenAI.Chat;
+using OpenAI.Responses;
 
 namespace CanDoItAll.AgentFramework.Maf;
 
@@ -39,14 +41,22 @@ internal static class MafModelParametersBuilder
             agentConfigurationJson ?? string.Empty);
         if (reasoningEffort is not null)
         {
-            options.Reasoning = new ReasoningOptions
+            if (reasoningEffort == AgentReasoningEffortLevel.Max)
             {
-                Effort = MapReasoningEffort(reasoningEffort.Value)
-            };
+                options.RawRepresentationFactory = _ => CreateMaxReasoningOptions(provider.Transport);
+            }
+            else
+            {
+                options.Reasoning = new ReasoningOptions
+                {
+                    Effort = MapReasoningEffort(reasoningEffort.Value)
+                };
+            }
         }
 
         var maxOutputTokens = AgentProviderModelParameterPolicy.ResolveMaxOutputTokens(
             provider.Kind,
+            model,
             provider.ConfigurationJson,
             agentConfigurationJson ?? string.Empty);
         if (maxOutputTokens is not null)
@@ -112,11 +122,6 @@ internal static class MafModelParametersBuilder
         string model,
         string? agentConfigurationJson)
     {
-        if (provider.Transport == ProviderTransportKind.ChatCompletions)
-        {
-            return false;
-        }
-
         return AgentProviderModelParameterPolicy.ResolveConfiguredReasoningEffort(
                    provider.Kind,
                    model,
@@ -129,7 +134,7 @@ internal static class MafModelParametersBuilder
         ProviderProfile provider,
         string model)
     {
-        return $"Provider '{provider.Name}' has reasoning effort configured for model '{model}', but the {provider.Transport} transport cannot apply it. Use the Responses transport for reasoning-capable OpenAI runs.";
+        return $"Provider '{provider.Name}' has reasoning effort configured for model '{model}', but the {provider.Transport} transport cannot apply it. Use the Responses or Chat Completions transport for reasoning-capable OpenAI runs.";
     }
 
     private static bool IsUnsupportedTemperatureException(Exception exception)
@@ -151,6 +156,28 @@ internal static class MafModelParametersBuilder
             _ => throw new ArgumentOutOfRangeException(nameof(effort), effort, "Unsupported reasoning effort.")
         };
     }
+
+#pragma warning disable OPENAI001
+    private static object CreateMaxReasoningOptions(ProviderTransportKind transport)
+    {
+        return transport switch
+        {
+            ProviderTransportKind.Responses => new CreateResponseOptions
+            {
+                ReasoningOptions = new ResponseReasoningOptions
+                {
+                    ReasoningEffortLevel = new ResponseReasoningEffortLevel("max")
+                }
+            },
+            ProviderTransportKind.ChatCompletions => new ChatCompletionOptions
+            {
+                ReasoningEffortLevel = new ChatReasoningEffortLevel("max")
+            },
+            _ => throw new InvalidOperationException(
+                $"The {transport} transport cannot apply max reasoning effort.")
+        };
+    }
+#pragma warning restore OPENAI001
 
     private static IEnumerable<string> EnumerateExceptionMessages(Exception exception)
     {

@@ -149,6 +149,7 @@ internal static class ChatSessionRuntimeCompatibilityAdapter
             ProcessRunId: string.Empty,
             ProcessStepId: string.Empty,
             SchedulerRunId: string.Empty,
-            MessageId: string.Empty);
+            MessageId: string.Empty,
+            ProviderProfileId: provider.Id);
     }
 }

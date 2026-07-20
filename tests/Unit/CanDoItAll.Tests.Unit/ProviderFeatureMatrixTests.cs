@@ -259,6 +259,9 @@ public sealed class ProviderFeatureMatrixTests
         Assert.Contains("ComfyUiProviderAdapter.PluginKey", source, StringComparison.Ordinal);
         Assert.Contains("ProviderProfilePurpose.ImageGeneration", source, StringComparison.Ordinal);
         Assert.Contains("AgentFrameworkProviderKind.ComfyUi", metadataSource, StringComparison.Ordinal);
+        Assert.Contains("ResolveWorkspaceProviderSuggestedModels", source, StringComparison.Ordinal);
+        Assert.Contains("ManagedSeedProviderFallbacks.OpenAiSuggestedModels", source, StringComparison.Ordinal);
+        Assert.Contains("provider.ConnectorPluginKey != OpenAiProviderAdapter.PluginKey", source, StringComparison.Ordinal);
     }
 
     [Fact]

@@ -389,6 +389,7 @@ public static class WorkflowUsageObservationFactory
                 model,
                 observation.InputTokens,
                 observation.CachedInputTokens,
+                observation.CacheWriteTokens,
                 ProviderPricingCalculator.ResolveBillableOutputTokens(
                     observation.InputTokens,
                     observation.OutputTokens,
@@ -423,7 +424,13 @@ public static class WorkflowUsageObservationFactory
                     price.Model.Trim().ToUpperInvariant(),
                     price.InputPerMillionTokensUsd.ToString(CultureInfo.InvariantCulture),
                     price.CachedInputPerMillionTokensUsd.ToString(CultureInfo.InvariantCulture),
-                    price.OutputPerMillionTokensUsd.ToString(CultureInfo.InvariantCulture))));
+                    price.OutputPerMillionTokensUsd.ToString(CultureInfo.InvariantCulture),
+                    FormatNullable(price.CacheWritePerMillionTokensUsd),
+                    FormatNullable(price.LongContextThresholdTokens),
+                    FormatNullable(price.LongContextInputPerMillionTokensUsd),
+                    FormatNullable(price.LongContextCachedInputPerMillionTokensUsd),
+                    FormatNullable(price.LongContextCacheWritePerMillionTokensUsd),
+                    FormatNullable(price.LongContextOutputPerMillionTokensUsd))));
         var canonical = string.Join(
             '|',
             provider.Id.ToString("D"),
@@ -432,6 +439,11 @@ public static class WorkflowUsageObservationFactory
             provider.IsPrivateProvider,
             prices);
         return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(canonical))).ToLowerInvariant();
+    }
+
+    private static string FormatNullable<T>(T? value) where T : struct, IFormattable
+    {
+        return value?.ToString(null, CultureInfo.InvariantCulture) ?? string.Empty;
     }
 
     private static WorkflowUsageStatus MapUsageStatus(ProviderUsageObservationStatus status)

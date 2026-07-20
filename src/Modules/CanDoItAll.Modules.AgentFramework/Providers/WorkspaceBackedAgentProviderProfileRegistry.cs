@@ -315,13 +315,36 @@ internal sealed class WorkspaceBackedAgentProviderProfileRegistry(
             providerRegistry.Resolve(provider)?.Manifest.DisplayName ?? provider.ConnectorPluginKey,
             provider.LastHealthStatus ?? "Not checked",
             provider.LastHealthCheckAtUtc,
-            string.IsNullOrWhiteSpace(provider.DefaultModel) ? [] : [provider.DefaultModel],
+            ResolveWorkspaceProviderSuggestedModels(provider, mappedKind, mappedPurpose),
             mappedPurpose)
         {
             Tags = ResolveWorkspaceProviderTags(provider, mappedKind, mappedTransport)
         };
 
         return providerProfileService.NormalizeImportedProfile(mappedProvider);
+    }
+
+    private static IReadOnlyList<string> ResolveWorkspaceProviderSuggestedModels(
+        WorkspaceProviderProfile provider,
+        AgentFrameworkProviderKind mappedKind,
+        ProviderProfilePurpose mappedPurpose)
+    {
+        IReadOnlyList<string> defaultModels = string.IsNullOrWhiteSpace(provider.DefaultModel)
+            ? []
+            : [provider.DefaultModel.Trim()];
+        if (provider.ConnectorPluginKey != OpenAiProviderAdapter.PluginKey ||
+            mappedKind != AgentFrameworkProviderKind.OpenAi ||
+            mappedPurpose != ProviderProfilePurpose.Chat)
+        {
+            return defaultModels;
+        }
+
+        return ManagedSeedProviderFallbacks.OpenAiSuggestedModels
+            .Concat(defaultModels)
+            .Where(model => !string.IsNullOrWhiteSpace(model))
+            .Select(model => model.Trim())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
     }
 
     private static IReadOnlyList<string> ResolveWorkspaceProviderTags(

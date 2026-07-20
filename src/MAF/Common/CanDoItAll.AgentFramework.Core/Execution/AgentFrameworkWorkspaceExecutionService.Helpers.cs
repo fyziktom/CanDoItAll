@@ -260,7 +260,10 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                 throw new InvalidOperationException("The selected agent does not have a provider profile.");
             }
 
-            agent = CreateProviderCompatibleRuntimeAgent(agent, provider);
+            agent = CreateProviderCompatibleRuntimeAgent(
+                agent,
+                provider,
+                ResolveEffectiveManagedSeedModel(agent, provider));
 
             var existingSession = chatSessionId.HasValue
                 ? EnsureAgentOwnsSession(executionState, agentId, chatSessionId.Value)
@@ -338,7 +341,10 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
             throw new InvalidOperationException("The selected agent does not have a provider profile.");
         }
 
-        agent = CreateProviderCompatibleRuntimeAgent(agent, provider);
+        agent = CreateProviderCompatibleRuntimeAgent(
+            agent,
+            provider,
+            ResolveEffectiveManagedSeedModel(agent, provider));
 
         var existingSession = chatSessionId.HasValue
             ? EnsureAgentOwnsSession(
@@ -492,7 +498,8 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
             StructuredOutputContractKey: structuredOutput?.ContractKey ?? string.Empty,
             StructuredOutputTypeName: structuredOutput?.OutputType.AssemblyQualifiedName ?? string.Empty,
             StructuredOutputSchemaName: structuredOutput?.SchemaName ?? string.Empty,
-            StructuredOutputSchemaDescription: structuredOutput?.SchemaDescription ?? string.Empty);
+            StructuredOutputSchemaDescription: structuredOutput?.SchemaDescription ?? string.Empty,
+            ProviderProfileId: provider.Id);
     }
 
     private static bool ShouldGroundPromptExternalTargetAliases(
@@ -549,17 +556,11 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         AgentDefinition agent,
         ProviderProfile provider)
     {
-        if (agent.ProviderProfileId.HasValue &&
-            agent.ProviderProfileId.Value != provider.Id &&
-            !string.IsNullOrWhiteSpace(provider.DefaultModel))
-        {
-            return provider.DefaultModel;
-        }
-
-        return ManagedSeedProviderFallbacks.ResolveModel(
+        var resolvedModel = ManagedSeedProviderFallbacks.ResolveModel(
             agent,
             provider,
             ResolveOpenAiCredentialOverride(provider));
+        return ResolveProviderCompatibleRuntimeModel(agent, provider, resolvedModel);
     }
 
     private string ResolveOpenAiCredentialOverride(

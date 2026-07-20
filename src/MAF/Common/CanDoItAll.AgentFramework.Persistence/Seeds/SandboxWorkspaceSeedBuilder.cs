@@ -9,12 +9,16 @@ namespace CanDoItAll.AgentFramework.Persistence;
 internal static class SandboxWorkspaceSeedBuilder
 {
     private const string LatestVersion = "3.0";
-    private const string SeriousDeliveryManagedSeedVersion = "2026-07-agent-template-teams-v37";
+    private const string SeriousDeliveryManagedSeedVersion = "2026-07-agent-template-teams-v62";
     private static readonly DateTimeOffset SeedTimestamp = new(2026, 4, 10, 0, 0, 0, TimeSpan.Zero);
 
     private static readonly IReadOnlyList<string> OpenAiSuggestedModels =
     [
         ManagedSeedProviderFallbacks.OpenAiDefaultModel,
+        OpenAiModelIds.Gpt56,
+        OpenAiModelIds.Gpt56Luna,
+        OpenAiModelIds.Gpt56Terra,
+        OpenAiModelIds.Gpt56Sol,
         "gpt-5.4",
         "gpt-4.1-mini",
         "gpt-4.1"
@@ -65,7 +69,10 @@ internal static class SandboxWorkspaceSeedBuilder
                 null,
                 OpenAiSuggestedModels)
             {
-                Tags = ["openai", "cloud", "responses", "chat"]
+                Tags = ["openai", "cloud", "responses", "chat"],
+                ModelPrices = ProviderPricingDefaults.CreateDefaultPrices(
+                    ProviderKind.OpenAi,
+                    ManagedSeedProviderFallbacks.OpenAiDefaultModel)
             },
             new(
                 openAiChatProviderId,
@@ -90,7 +97,10 @@ internal static class SandboxWorkspaceSeedBuilder
                 null,
                 OpenAiSuggestedModels)
             {
-                Tags = ["openai", "cloud", "chat-completions", "chat"]
+                Tags = ["openai", "cloud", "chat-completions", "chat"],
+                ModelPrices = ProviderPricingDefaults.CreateDefaultPrices(
+                    ProviderKind.OpenAi,
+                    ManagedSeedProviderFallbacks.OpenAiDefaultModel)
             },
             new(
                 openAiImageProviderId,

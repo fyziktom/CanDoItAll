@@ -18,7 +18,10 @@ public sealed record ProviderUsageNormalizationRequest(
     string ProviderRequestId,
     string RuntimeSessionKey,
     string RawUsageJson,
-    string DiagnosticsJson);
+    string DiagnosticsJson)
+{
+    public int CacheWriteTokens { get; init; }
+}
 
 public interface IProviderUsageNormalizer
 {
@@ -62,7 +65,8 @@ public sealed class DefaultProviderUsageNormalizer : IProviderUsageNormalizer
             ProviderRequestId = normalized.ProviderRequestId,
             RuntimeSessionKey = request.RuntimeSessionKey,
             RawUsageJson = request.RawUsageJson,
-            DiagnosticsJson = normalized.DiagnosticsJson
+            DiagnosticsJson = normalized.DiagnosticsJson,
+            CacheWriteTokens = normalized.CacheWriteTokens
         };
     }
 }
@@ -102,6 +106,7 @@ internal static class OpenAiProviderUsageNormalizer
                         UsageStatus = ProviderUsageObservationStatus.UsageUnavailable,
                         InputTokens = 0,
                         CachedInputTokens = 0,
+                        CacheWriteTokens = 0,
                         OutputTokens = 0,
                         ReasoningTokens = 0,
                         TotalTokens = 0,
@@ -120,6 +125,11 @@ internal static class OpenAiProviderUsageNormalizer
                 ?? ReadTokenCount(root, "cached_input_tokens", "cachedInputTokens", "cachedInputTokenCount")
                 ?? ReadAdditionalCount(root, "input_tokens_details.cached_tokens", "cached_tokens", "cachedInputTokens", "CachedInputTokenCount")
                 ?? fallback.CachedInputTokens;
+            var cacheWriteTokens = ReadNestedTokenCount(root, "input_tokens_details", "cache_write_tokens")
+                ?? ReadNestedTokenCount(root, "inputTokensDetails", "cacheWriteTokens")
+                ?? ReadTokenCount(root, "cache_write_tokens", "cacheWriteTokens", "cacheWriteTokenCount")
+                ?? ReadAdditionalCount(root, "input_tokens_details.cache_write_tokens", "cache_write_tokens", "cacheWriteTokens", "CacheWriteTokenCount")
+                ?? fallback.CacheWriteTokens;
             var outputTokens = ReadTokenCount(root, "output_tokens", "outputTokens", "outputTokenCount")
                 ?? fallback.OutputTokens;
             var reasoningTokens = ReadNestedTokenCount(root, "output_tokens_details", "reasoning_tokens")
@@ -135,11 +145,17 @@ internal static class OpenAiProviderUsageNormalizer
                 totalTokens = inputTokens + outputTokens;
             }
 
+            var normalizedInputTokens = Math.Max(0, inputTokens);
+            var normalizedCachedInputTokens = Math.Clamp(cachedInputTokens, 0, normalizedInputTokens);
             return fallback with
             {
                 UsageStatus = ProviderUsageObservationStatus.Observed,
-                InputTokens = Math.Max(0, inputTokens),
-                CachedInputTokens = Math.Clamp(cachedInputTokens, 0, Math.Max(0, inputTokens)),
+                InputTokens = normalizedInputTokens,
+                CachedInputTokens = normalizedCachedInputTokens,
+                CacheWriteTokens = Math.Clamp(
+                    cacheWriteTokens,
+                    0,
+                    normalizedInputTokens - normalizedCachedInputTokens),
                 OutputTokens = Math.Max(0, outputTokens),
                 ReasoningTokens = Math.Max(0, reasoningTokens),
                 TotalTokens = Math.Max(0, totalTokens),
@@ -259,6 +275,8 @@ internal sealed record ProviderUsageNormalizationSnapshot(
     string ProviderRequestId,
     string DiagnosticsJson)
 {
+    public int CacheWriteTokens { get; init; }
+
     public static ProviderUsageNormalizationSnapshot FromRequest(ProviderUsageNormalizationRequest request)
     {
         var inputTokens = Math.Max(0, request.InputTokens);
@@ -276,15 +294,22 @@ internal sealed record ProviderUsageNormalizationSnapshot(
             totalTokens = 0;
         }
 
+        var cachedInputTokens = Math.Clamp(request.CachedInputTokens, 0, inputTokens);
         return new ProviderUsageNormalizationSnapshot(
             request.UsageStatus,
             inputTokens,
-            Math.Clamp(request.CachedInputTokens, 0, inputTokens),
+            cachedInputTokens,
             outputTokens,
             ProviderPricingCalculator.IsKnownUsageStatus(request.UsageStatus) ? Math.Max(0, request.ReasoningTokens) : 0,
             totalTokens,
             request.ProviderResponseId,
             request.ProviderRequestId,
-            request.DiagnosticsJson);
+            request.DiagnosticsJson)
+        {
+            CacheWriteTokens = Math.Clamp(
+                request.CacheWriteTokens,
+                0,
+                inputTokens - cachedInputTokens)
+        };
     }
 }
