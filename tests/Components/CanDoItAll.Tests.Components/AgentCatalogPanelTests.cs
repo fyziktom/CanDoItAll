@@ -55,10 +55,8 @@ public sealed class AgentCatalogPanelTests
         Assert.NotNull(agentCard);
         Assert.Equal("HR Agent", agentCard.QuerySelector(".agent-selection-card__name")?.TextContent);
 
-        var topOpenButton = cut.Find("[data-testid='agents-hr-agent-open-top']");
-        Assert.Contains("HR Agent", topOpenButton.TextContent, StringComparison.Ordinal);
-
-        topOpenButton.Click();
+        Assert.Empty(cut.FindAll("[data-testid='agents-hr-agent-open-top']"));
+        openButton.Click();
 
         cut.WaitForAssertion(() => Assert.Equal(hrAgent.Id, launcher.StartedAgentId));
         Assert.Empty(cut.FindAll("[data-testid='agents-hr-agent-viewport']"));
@@ -89,13 +87,42 @@ public sealed class AgentCatalogPanelTests
         Assert.NotNull(agentCard);
         Assert.Equal("Prompts Curator Agent", agentCard.QuerySelector(".agent-selection-card__name")?.TextContent);
 
-        var topOpenButton = cut.Find("[data-testid='agents-prompts-curator-open-top']");
-        Assert.Contains("Prompts Curator", topOpenButton.TextContent, StringComparison.Ordinal);
-
-        topOpenButton.Click();
+        Assert.Empty(cut.FindAll("[data-testid='agents-prompts-curator-open-top']"));
+        openButton.Click();
 
         cut.WaitForAssertion(() => Assert.Equal(PromptsCuratorAgentIdentity.AgentId, launcher.StartedAgentId));
         Assert.Empty(cut.FindAll("[data-testid='agents-prompts-curator-viewport']"));
+    }
+
+    [Fact]
+    public void Catalog_delegates_new_chat_only_for_the_exact_workflow_curator_identity()
+    {
+        var curator = CreateAgent(
+            WorkflowCuratorAgentIdentity.AgentId,
+            "Workflow Curator Agent",
+            WorkflowCuratorAgentIdentity.TemplateKey);
+        var spoofedCurator = CreateAgent(
+            Guid.NewGuid(),
+            "Spoofed Workflow Curator",
+            WorkflowCuratorAgentIdentity.TemplateKey);
+        var launcher = new RecordingAgentChatLauncher(curator);
+        using var context = CreateCatalogTestContext(launcher);
+
+        var cut = context.RenderComponent<AgentCatalogPanel>(parameters => parameters
+            .Add(component => component.InitialAgents, new[] { spoofedCurator, curator })
+            .Add(component => component.InitialProviders, Array.Empty<ProviderProfile>())
+            .Add(component => component.InitialTeams, Array.Empty<AgentTeamDefinition>())
+            .Add(component => component.SkipCatalogRepair, true));
+
+        var cardOpenButton = Assert.Single(cut.WaitForElements("[data-testid='agents-workflow-curator-open']"));
+        var agentCard = cardOpenButton.Closest("[data-testid='agents-catalog-card-shell']");
+        Assert.NotNull(agentCard);
+        Assert.Equal("Workflow Curator Agent", agentCard.QuerySelector(".agent-selection-card__name")?.TextContent);
+
+        Assert.Empty(cut.FindAll("[data-testid='agents-workflow-curator-open-top']"));
+        cardOpenButton.Click();
+
+        cut.WaitForAssertion(() => Assert.Equal(WorkflowCuratorAgentIdentity.AgentId, launcher.StartedAgentId));
     }
 
     [Fact]

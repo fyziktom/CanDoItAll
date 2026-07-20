@@ -57,6 +57,16 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         bool autoApprovePendingToolCalls,
         CancellationToken cancellationToken)
     {
+        if (store is ISandboxWorkspaceExecutionRunMutationStore mutationStore)
+        {
+            return await BeginPendingApprovalContinuationWithSplitStoreAsync(
+                mutationStore,
+                expectedRun,
+                approved,
+                autoApprovePendingToolCalls,
+                cancellationToken);
+        }
+
         ExecutionRunContinuationStart? result = null;
 
         await store.UpdateWorkspaceAsync(document =>
@@ -143,6 +153,97 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
 
             return SandboxWorkspaceDocument.Combine(catalog, updatedExecutionState);
         }, cancellationToken);
+
+        return result ?? throw new InvalidOperationException("Execution run continuation could not be prepared.");
+    }
+
+    private async Task<ExecutionRunContinuationStart> BeginPendingApprovalContinuationWithSplitStoreAsync(
+        ISandboxWorkspaceExecutionRunMutationStore mutationStore,
+        ExecutionRunRecord expectedRun,
+        bool approved,
+        bool autoApprovePendingToolCalls,
+        CancellationToken cancellationToken)
+    {
+        ExecutionRunContinuationStart? result = null;
+
+        await mutationStore.UpdateExecutionRunDetailAsync(
+            expectedRun.Id,
+            (catalog, currentDetail) =>
+            {
+                var currentRun = currentDetail.Run;
+                var currentSession = currentRun.ChatSessionId.HasValue
+                    ? currentDetail.ChatSession
+                        ?? throw new InvalidOperationException("Chat session was not found.")
+                    : null;
+
+                if (currentRun.PendingApprovals.Count == 0)
+                {
+                    result = new(
+                        currentRun.State is ExecutionState.Completed or ExecutionState.Failed
+                            ? ExecutionRunContinuationDisposition.AlreadyFinalized
+                            : ExecutionRunContinuationDisposition.AlreadyInProgress);
+                    return currentDetail;
+                }
+
+                if (currentRun.State != ExecutionState.WaitingOnTool)
+                {
+                    result = new(ExecutionRunContinuationDisposition.AlreadyInProgress);
+                    return currentDetail;
+                }
+
+                if (!PendingApprovalStateMatches(expectedRun, currentRun))
+                {
+                    throw new InvalidOperationException(
+                        "This execution run's pending approval state changed before the continuation could start. Reload the workspace and try again.");
+                }
+
+                var agent = catalog.Agents.FirstOrDefault(item => item.Id == currentRun.AgentId)
+                    ?? throw new InvalidOperationException("Agent was not found.");
+                if (!agent.ProviderProfileId.HasValue)
+                {
+                    throw new InvalidOperationException("The selected agent does not have a provider profile.");
+                }
+
+                var decidedAtUtc = DateTimeOffset.UtcNow;
+                var effectiveAutoApprove = approved && (autoApprovePendingToolCalls || currentRun.AutoApprovePendingToolCalls);
+                var approvalDecision = ExecutionRunStateTransitions.ApplyApprovalDecision(
+                    currentDetail.Approvals,
+                    currentRun,
+                    approved,
+                    decidedAtUtc,
+                    currentRun.ChatSessionId.HasValue ? "chat-session" : "execution-run",
+                    currentRun.ChatSessionId?.ToString("N") ?? currentRun.Id.ToString("N"));
+                var transitionedRun = ExecutionRunStateTransitions.CreateContinuationStartRun(
+                    currentRun,
+                    approved,
+                    effectiveAutoApprove,
+                    decidedAtUtc);
+                var transitionedSession = currentSession is null
+                    ? null
+                    : ChatSessionRuntimeCompatibilityAdapter.ClearCompatibility(
+                        currentSession,
+                        transitionedRun.UpdatedAtUtc,
+                        currentRun.Id);
+
+                result = new(
+                    ExecutionRunContinuationDisposition.Started,
+                    new PreparedExecutionRunContinuation(
+                        catalog,
+                        currentRun,
+                        transitionedRun,
+                        transitionedSession,
+                        agent,
+                        approvalDecision.RunApprovals,
+                        approvalDecision.Decided));
+
+                return currentDetail with
+                {
+                    Run = transitionedRun,
+                    ChatSession = transitionedSession,
+                    Approvals = approvalDecision.RunApprovals
+                };
+            },
+            cancellationToken);
 
         return result ?? throw new InvalidOperationException("Execution run continuation could not be prepared.");
     }

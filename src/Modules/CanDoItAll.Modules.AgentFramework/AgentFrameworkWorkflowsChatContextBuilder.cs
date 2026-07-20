@@ -124,7 +124,15 @@ public static class AgentFrameworkWorkflowsChatContextBuilder
                     artifactCount,
                     validationIssueCount,
                     node)),
-            accessMode: AgentChatContextScopeAccessMode.Unrestricted);
+            agentAccess:
+            [
+                new AgentChatContextAgentAccess(
+                    WorkflowCuratorAgentIdentity.AgentId,
+                    AgentChatContextPermission.Read | AgentChatContextPermission.Mutate,
+                    "Workflows")
+            ],
+            accessMode: AgentChatContextScopeAccessMode.Unrestricted,
+            completionRefreshMode: AgentChatContextCompletionRefreshMode.OnSuccessfulRun);
     }
 
     private static IReadOnlyList<AgentChatContextPositionFact> BuildFacts(

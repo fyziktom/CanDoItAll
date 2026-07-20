@@ -428,6 +428,14 @@ public sealed class CapabilityTemplateSeedMaterializationTests
         "workspace-write-file",
         "workspace-write-spreadsheet",
         "workspace-zip-path",
+        "workflow-curator-agent-inline-skill",
+        "workflow-curator-authoring-options-get",
+        "workflow-curator-catalog-search",
+        "workflow-curator-definition-editor-get",
+        "workflow-curator-draft-create",
+        "workflow-curator-draft-update",
+        "workflow-curator-lifecycle-change",
+        "workflow-curator-node-update",
         "writing-mstest-tests"
     ];
 

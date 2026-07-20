@@ -737,6 +737,24 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                     b.ToTable("AgentFramework_WorkflowComponents", (string)null);
                 });
 
+            modelBuilder.Entity("CanDoItAll.Modules.AgentFramework.WorkflowDefinitionHeadRecord", b =>
+                {
+                    b.Property<Guid>("WorkflowId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("VersionId")
+                        .IsConcurrencyToken()
+                        .HasColumnType("uuid");
+
+                    b.HasKey("WorkflowId")
+                        .HasName("PK_AgentFramework_WorkflowDefinitionHeads");
+
+                    b.HasIndex("VersionId");
+
+                    b.ToTable("AgentFramework_WorkflowDefinitionHeads", (string)null);
+                });
+
             modelBuilder.Entity("CanDoItAll.Modules.AgentFramework.WorkflowDefinitionRecord", b =>
                 {
                     b.Property<Guid>("VersionId")
@@ -766,6 +784,9 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                     b.Property<int>("PreferredBackend")
                         .HasColumnType("integer");
 
+                    b.Property<long>("Revision")
+                        .HasColumnType("bigint");
+
                     b.Property<int>("Status")
                         .HasColumnType("integer");
 
@@ -781,6 +802,10 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
 
                     b.HasIndex("InstructionSnapshotSchemaVersion", "VersionId")
                         .HasDatabaseName("IX_WorkflowDefinitions_InstructionSnapshotSchema_Id");
+
+                    b.HasIndex("WorkflowId", "Revision")
+                        .IsUnique()
+                        .HasDatabaseName("IX_WorkflowDefinitions_WorkflowId_Revision");
 
                     b.HasIndex("WorkflowId", "UpdatedAtUtc");
 
@@ -5624,6 +5649,15 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                         .WithMany()
                         .HasForeignKey("PromptVersionId")
                         .OnDelete(DeleteBehavior.Restrict);
+                });
+
+            modelBuilder.Entity("CanDoItAll.Modules.AgentFramework.WorkflowDefinitionHeadRecord", b =>
+                {
+                    b.HasOne("CanDoItAll.Modules.AgentFramework.WorkflowDefinitionRecord", null)
+                        .WithMany()
+                        .HasForeignKey("VersionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("CanDoItAll.Modules.Prompts.PromptArtifactTag", b =>

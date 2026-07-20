@@ -296,10 +296,6 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         bool autoApprovePendingToolCalls = false,
         CancellationToken cancellationToken = default)
     {
-        var document = await store.LoadAsync(cancellationToken);
-        EnsureAgentExists(document.ToCatalog(), agentId);
-        EnsureAgentOwnsSession(document.ToExecutionState(), agentId, chatSessionId);
-
         var executionRunId = await ResolveOrCreatePendingExecutionRunIdAsync(agentId, chatSessionId, cancellationToken);
         var result = await ContinueExecutionRunAsync(executionRunId, approved, autoApprovePendingToolCalls, cancellationToken);
 

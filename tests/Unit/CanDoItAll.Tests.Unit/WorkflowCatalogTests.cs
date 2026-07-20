@@ -1,11 +1,61 @@
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Maf;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.AgentFramework.Workflows.Abstractions;
 
 namespace CanDoItAll.Tests.Unit;
 
 public sealed class WorkflowCatalogTests
 {
+    [Theory]
+    [InlineData(-1, 25)]
+    [InlineData(0, 0)]
+    [InlineData(0, 101)]
+    [InlineData(int.MaxValue, 2)]
+    public void CatalogSearchQueryRejectsInvalidOrOverflowingPageBounds(int pageIndex, int pageSize)
+    {
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
+            new WorkflowCatalogSearchQuery(pageIndex: pageIndex, pageSize: pageSize));
+    }
+
+    [Fact]
+    public async Task CatalogSearchFiltersCountsAndPagesLatestDefinitions()
+    {
+        var catalog = CreateCatalog();
+        var component = await catalog.SaveComponentAsync(CreateComponentRequest());
+        var graph = CreateDefinitionGraph(component.Id);
+        var oldest = await catalog.SaveDefinitionAsync(CreateSaveRequest(graph, "Needle oldest"));
+        await catalog.SaveDefinitionAsync(CreateSaveRequest(graph, "Unrelated draft"));
+        await catalog.SaveDefinitionAsync(CreateSaveRequest(graph, "Needle active") with
+        {
+            Status = WorkflowLifecycleStatus.Active
+        });
+        var newest = await catalog.SaveDefinitionAsync(CreateSaveRequest(graph, "needle newest"));
+
+        var firstPage = await catalog.SearchDefinitionsAsync(new WorkflowCatalogSearchQuery(
+            "  NEEDLE  ",
+            WorkflowLifecycleStatus.Draft,
+            pageIndex: 0,
+            pageSize: 1));
+        var secondPage = await catalog.SearchDefinitionsAsync(new WorkflowCatalogSearchQuery(
+            "needle",
+            WorkflowLifecycleStatus.Draft,
+            pageIndex: 1,
+            pageSize: 1));
+        var beyondLastPage = await catalog.SearchDefinitionsAsync(new WorkflowCatalogSearchQuery(
+            "needle",
+            WorkflowLifecycleStatus.Draft,
+            pageIndex: 2,
+            pageSize: 1));
+
+        Assert.Equal(2, firstPage.TotalCount);
+        Assert.Equal(2, firstPage.TotalPages);
+        Assert.Equal(newest.Id, Assert.Single(firstPage.Items).Id);
+        Assert.Equal(oldest.Id, Assert.Single(secondPage.Items).Id);
+        Assert.Equal(2, beyondLastPage.TotalCount);
+        Assert.Empty(beyondLastPage.Items);
+    }
+
     [Fact]
     public async Task CatalogSavesDefinitionsAsNewVersions()
     {

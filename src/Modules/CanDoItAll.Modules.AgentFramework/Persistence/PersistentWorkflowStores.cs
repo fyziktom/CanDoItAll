@@ -22,6 +22,7 @@ public sealed class PersistentWorkflowCatalogService(
     IWorkflowRuntimeBackendCatalog? runtimeBackendCatalog = null,
     PromptGalleryCompatibilityEvaluator? promptCompatibilityEvaluator = null) :
     IWorkflowCatalogService,
+    IWorkflowCatalogSearchService,
     IWorkflowComponentLibraryService,
     IWorkflowSettingsService
 {
@@ -37,41 +38,67 @@ public sealed class PersistentWorkflowCatalogService(
         CancellationToken cancellationToken = default)
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        var latestUpdatedAtQuery = dbContext.Set<WorkflowDefinitionRecord>()
-            .AsNoTracking()
-            .GroupBy(item => item.WorkflowId)
-            .Select(group => new
-            {
-                WorkflowId = group.Key,
-                UpdatedAtUtc = group.Max(item => item.UpdatedAtUtc)
-            });
-        var latestRecordQuery =
-            from record in dbContext.Set<WorkflowDefinitionRecord>().AsNoTracking()
-            join latest in latestUpdatedAtQuery
-                on new { record.WorkflowId, record.UpdatedAtUtc }
-                equals new { latest.WorkflowId, latest.UpdatedAtUtc }
-            select record;
-        var latestRecords = await latestRecordQuery
+        var records = await LatestDefinitionQuery(dbContext)
             .OrderByDescending(item => item.UpdatedAtUtc)
-            .ThenByDescending(item => item.CreatedAtUtc)
-            .ThenByDescending(item => item.VersionId)
-            .ToListAsync(cancellationToken);
-        var records = latestRecords
-            .GroupBy(item => item.WorkflowId)
-            .Select(group => group.First())
-            .OrderByDescending(item => item.UpdatedAtUtc)
-            .ToList();
-
-        return records
-            .Select(item => new WorkflowCatalogItem(
-                new WorkflowId(item.WorkflowId),
-                new WorkflowVersionId(item.VersionId),
+            .Select(item => new WorkflowCatalogProjection(
+                item.WorkflowId,
+                item.VersionId,
                 item.Name,
                 item.Description,
                 item.Status,
                 item.PreferredBackend,
                 item.UpdatedAtUtc))
+            .ToListAsync(cancellationToken);
+
+        return records
+            .Select(MapCatalogItem)
             .ToArray();
+    }
+
+    public async Task<WorkflowCatalogSearchPage> SearchDefinitionsAsync(
+        WorkflowCatalogSearchQuery query,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(query);
+
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        var filtered = LatestDefinitionQuery(dbContext);
+        if (query.Status.HasValue)
+        {
+            filtered = filtered.Where(item => item.Status == query.Status.Value);
+        }
+
+        if (query.Text is not null)
+        {
+            var normalizedText = query.Text.ToUpperInvariant();
+            filtered = filtered.Where(item =>
+                item.Name.ToUpper().Contains(normalizedText) ||
+                item.Description.ToUpper().Contains(normalizedText));
+        }
+
+        var totalCount = await filtered.CountAsync(cancellationToken);
+        var records = await filtered
+            .OrderByDescending(item => item.UpdatedAtUtc)
+            .ThenBy(item => item.Name.ToUpper())
+            .ThenBy(item => item.Name)
+            .ThenBy(item => item.WorkflowId)
+            .Skip(query.Offset)
+            .Take(query.PageSize)
+            .Select(item => new WorkflowCatalogProjection(
+                item.WorkflowId,
+                item.VersionId,
+                item.Name,
+                item.Description,
+                item.Status,
+                item.PreferredBackend,
+                item.UpdatedAtUtc))
+            .ToArrayAsync(cancellationToken);
+
+        return new WorkflowCatalogSearchPage(
+            records.Select(MapCatalogItem).ToArray(),
+            query.PageIndex,
+            query.PageSize,
+            totalCount);
     }
 
     public async Task<WorkflowDefinitionDetail?> GetDefinitionAsync(
@@ -93,12 +120,21 @@ public sealed class PersistentWorkflowCatalogService(
         CancellationToken cancellationToken = default)
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        var record = await dbContext.Set<WorkflowDefinitionRecord>()
-            .AsNoTracking()
-            .Where(item => item.WorkflowId == workflowId.Value && item.Status == status)
-            .OrderByDescending(item => item.UpdatedAtUtc)
-            .ThenByDescending(item => item.CreatedAtUtc)
-            .ThenByDescending(item => item.VersionId)
+        var definitions = dbContext.Set<WorkflowDefinitionRecord>().AsNoTracking();
+        var record = await (
+                from head in dbContext.Set<WorkflowDefinitionHeadRecord>().AsNoTracking()
+                join current in definitions
+                    on new { head.WorkflowId, head.VersionId }
+                    equals new { current.WorkflowId, current.VersionId }
+                join candidate in definitions
+                    on head.WorkflowId equals candidate.WorkflowId
+                where head.WorkflowId == workflowId.Value &&
+                      candidate.Status == status &&
+                      (status != WorkflowLifecycleStatus.Active ||
+                       current.Status == WorkflowLifecycleStatus.Draft ||
+                       current.Status == WorkflowLifecycleStatus.Active)
+                select candidate)
+            .OrderByDescending(item => item.Revision)
             .FirstOrDefaultAsync(cancellationToken);
         if (record is null)
         {
@@ -122,19 +158,36 @@ public sealed class PersistentWorkflowCatalogService(
 
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         var workflowId = request.Id ?? WorkflowId.New();
-        var currentQuery = dbContext.Set<WorkflowDefinitionRecord>()
-            .AsNoTracking()
-            .Where(item => item.WorkflowId == workflowId.Value);
-        var current = await currentQuery
-            .OrderByDescending(item => item.UpdatedAtUtc)
-            .ThenByDescending(item => item.CreatedAtUtc)
-            .ThenByDescending(item => item.VersionId)
-            .FirstOrDefaultAsync(cancellationToken);
-        if (request.ExpectedVersionId is { } expectedVersionId &&
-            current is not null &&
-            current.VersionId != expectedVersionId.Value)
+        var definitions = dbContext.Set<WorkflowDefinitionRecord>();
+        var heads = dbContext.Set<WorkflowDefinitionHeadRecord>();
+        var head = await heads.SingleOrDefaultAsync(
+            item => item.WorkflowId == workflowId.Value,
+            cancellationToken);
+        var current = head is null
+            ? null
+            : await definitions
+                .AsNoTracking()
+                .SingleOrDefaultAsync(
+                    item => item.WorkflowId == workflowId.Value && item.VersionId == head.VersionId,
+                    cancellationToken);
+        if (head is not null && current is null)
         {
-            throw new InvalidOperationException($"Workflow definition '{workflowId}' was updated by another request.");
+            throw new InvalidOperationException(
+                $"Workflow definition '{workflowId}' has a head that references missing version '{head.VersionId:D}'.");
+        }
+
+        if (head is null && await definitions
+            .AsNoTracking()
+            .AnyAsync(item => item.WorkflowId == workflowId.Value, cancellationToken))
+        {
+            throw new InvalidOperationException(
+                $"Workflow definition '{workflowId}' has persisted versions but no current head.");
+        }
+
+        if (request.ExpectedVersionId is { } expectedVersionId &&
+            head?.VersionId != expectedVersionId.Value)
+        {
+            throw CreateDefinitionConcurrencyException(workflowId);
         }
 
         var now = DateTimeOffset.UtcNow;
@@ -157,8 +210,35 @@ public sealed class PersistentWorkflowCatalogService(
             await ValidateDefinitionAsync(definition, cancellationToken),
             "Workflow definition save failed validation");
 
-        dbContext.Set<WorkflowDefinitionRecord>().Add(WorkflowDefinitionRecord.FromDefinition(definition));
-        await dbContext.SaveChangesAsync(cancellationToken);
+        definitions.Add(WorkflowDefinitionRecord.FromDefinition(
+            definition,
+            revision: (current?.Revision ?? 0) + 1));
+        if (head is null)
+        {
+            heads.Add(new WorkflowDefinitionHeadRecord
+            {
+                WorkflowId = workflowId.Value,
+                VersionId = definition.VersionId.Value
+            });
+        }
+        else
+        {
+            head.VersionId = definition.VersionId.Value;
+        }
+
+        try
+        {
+            await dbContext.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateConcurrencyException exception)
+        {
+            throw CreateDefinitionConcurrencyException(workflowId, exception);
+        }
+        catch (DbUpdateException exception) when (IsWorkflowDefinitionWriteCollision(exception))
+        {
+            throw CreateDefinitionConcurrencyException(workflowId, exception);
+        }
+
         return definition;
     }
 
@@ -178,7 +258,7 @@ public sealed class PersistentWorkflowCatalogService(
         return await SaveDefinitionAsync(
             new WorkflowDefinitionSaveRequest(
                 detail.Definition.Id,
-                request.ExpectedVersionId,
+                request.ExpectedVersionId ?? detail.Definition.VersionId,
                 detail.Definition.Name,
                 detail.Definition.Description,
                 request.Status,
@@ -246,12 +326,19 @@ public sealed class PersistentWorkflowCatalogService(
         CancellationToken cancellationToken = default)
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        var head = await dbContext.Set<WorkflowDefinitionHeadRecord>()
+            .SingleOrDefaultAsync(item => item.WorkflowId == workflowId.Value, cancellationToken);
         var records = await dbContext.Set<WorkflowDefinitionRecord>()
             .Where(item => item.WorkflowId == workflowId.Value)
             .ToListAsync(cancellationToken);
-        if (records.Count == 0)
+        if (head is null && records.Count == 0)
         {
             return;
+        }
+
+        if (head is not null)
+        {
+            dbContext.Remove(head);
         }
 
         dbContext.RemoveRange(records);
@@ -767,11 +854,14 @@ public sealed class PersistentWorkflowCatalogService(
             .Where(item => item.WorkflowId == workflowId.Value);
         var record = versionId.HasValue
             ? await query.SingleOrDefaultAsync(item => item.VersionId == versionId.Value.Value, cancellationToken)
-            : await query
-                .OrderByDescending(item => item.UpdatedAtUtc)
-                .ThenByDescending(item => item.CreatedAtUtc)
-                .ThenByDescending(item => item.VersionId)
-                .FirstOrDefaultAsync(cancellationToken);
+            : await (
+                    from head in dbContext.Set<WorkflowDefinitionHeadRecord>().AsNoTracking()
+                    join current in query
+                        on new { head.WorkflowId, head.VersionId }
+                        equals new { current.WorkflowId, current.VersionId }
+                    where head.WorkflowId == workflowId.Value
+                    select current)
+                .SingleOrDefaultAsync(cancellationToken);
 
         return record is null
             ? null
@@ -1116,6 +1206,28 @@ public sealed class PersistentWorkflowCatalogService(
             $"{messagePrefix}: {string.Join(" ", validation.Issues.Select(issue => issue.Message))}");
     }
 
+    private static InvalidOperationException CreateDefinitionConcurrencyException(
+        WorkflowId workflowId,
+        Exception? innerException = null)
+    {
+        var message = $"Workflow definition '{workflowId}' was updated by another request.";
+        return innerException is null
+            ? new InvalidOperationException(message)
+            : new InvalidOperationException(message, innerException);
+    }
+
+    private static bool IsWorkflowDefinitionWriteCollision(DbUpdateException exception)
+    {
+        if (!DbUpdateExceptionClassifier.IsUniqueConstraintViolation(exception))
+        {
+            return false;
+        }
+
+        return DbUpdateExceptionClassifier.GetConstraintName(exception) is
+            WorkflowDefinitionPersistenceConstraints.HeadPrimaryKey or
+            WorkflowDefinitionPersistenceConstraints.RevisionUniqueIndex;
+    }
+
     private static WorkflowDefinition CreateComponentValidationDefinition(LlmCallComponent component)
     {
         var start = new WorkflowNodeId("start");
@@ -1193,6 +1305,22 @@ public sealed class PersistentWorkflowCatalogService(
             DateTimeOffset.UtcNow);
     }
 
+    private static IQueryable<WorkflowDefinitionRecord> LatestDefinitionQuery(AppDbContext dbContext)
+        => from head in dbContext.Set<WorkflowDefinitionHeadRecord>().AsNoTracking()
+           join record in dbContext.Set<WorkflowDefinitionRecord>().AsNoTracking()
+               on new { head.WorkflowId, head.VersionId }
+               equals new { record.WorkflowId, record.VersionId }
+           select record;
+
+    private static WorkflowCatalogItem MapCatalogItem(WorkflowCatalogProjection item) => new(
+        new WorkflowId(item.WorkflowId),
+        new WorkflowVersionId(item.VersionId),
+        item.Name,
+        item.Description,
+        item.Status,
+        item.PreferredBackend,
+        item.UpdatedAtUtc);
+
     private static string Serialize<T>(T value) => JsonSerializer.Serialize(value, JsonOptions);
 
     private static T Deserialize<T>(string json)
@@ -1200,13 +1328,26 @@ public sealed class PersistentWorkflowCatalogService(
         return JsonSerializer.Deserialize<T>(json, JsonOptions)
             ?? throw new InvalidOperationException($"Stored workflow JSON could not be deserialized as '{typeof(T).Name}'.");
     }
+
+    private sealed record WorkflowCatalogProjection(
+        Guid WorkflowId,
+        Guid VersionId,
+        string Name,
+        string Description,
+        WorkflowLifecycleStatus Status,
+        WorkflowRuntimeBackendKind PreferredBackend,
+        DateTimeOffset UpdatedAtUtc);
 }
 
 public sealed class PersistentWorkflowRunStore(IDbContextFactory<AppDbContext> dbContextFactory) :
     IWorkflowRunStore,
     IWorkflowArtifactStore,
-    IWorkflowExternalRequestStore
+    IWorkflowExternalRequestStore,
+    IWorkflowOverviewStore
 {
+    private const int MaximumOverviewRecentTake = 12;
+    private const int MaximumOverviewTopWorkflowTake = 10;
+
     public async Task CreateRunWithStartedEventAsync(
         WorkflowRunSnapshot run,
         WorkflowEventRecord startedEvent,
@@ -1449,6 +1590,65 @@ public sealed class PersistentWorkflowRunStore(IDbContextFactory<AppDbContext> d
             totalCount);
     }
 
+    public async Task<WorkflowOverviewStoreSnapshot> QueryOverviewAsync(
+        WorkflowOverviewStoreQuery request,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        ValidateOverviewTake(request.RecentTake, MaximumOverviewRecentTake, nameof(request.RecentTake));
+        ValidateOverviewTake(
+            request.TopWorkflowTake,
+            MaximumOverviewTopWorkflowTake,
+            nameof(request.TopWorkflowTake));
+
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        var runs = dbContext.Set<WorkflowRunRecordEntity>().AsNoTracking();
+        var stateBackendRows = await runs
+            .GroupBy(run => new { run.State, run.Backend })
+            .Select(group => new
+            {
+                group.Key.State,
+                group.Key.Backend,
+                Count = group.Count()
+            })
+            .ToArrayAsync(cancellationToken);
+        var topWorkflowRows = await runs
+            .GroupBy(run => run.WorkflowId)
+            .Select(group => new
+            {
+                WorkflowId = group.Key,
+                RunCount = group.Count(),
+                FailedRunCount = group.Count(run => run.State == WorkflowRunState.Failed),
+                LastRunAtUtc = group.Max(run => run.UpdatedAtUtc)
+            })
+            .OrderByDescending(row => row.RunCount)
+            .ThenByDescending(row => row.LastRunAtUtc)
+            .ThenBy(row => row.WorkflowId)
+            .Take(request.TopWorkflowTake)
+            .ToArrayAsync(cancellationToken);
+        var recentRecords = await runs
+            .OrderByDescending(run => run.UpdatedAtUtc)
+            .ThenByDescending(run => run.RunId)
+            .Take(request.RecentTake)
+            .ToArrayAsync(cancellationToken);
+
+        return new WorkflowOverviewStoreSnapshot(
+            stateBackendRows
+                .GroupBy(row => row.State)
+                .ToDictionary(group => group.Key, group => group.Sum(row => row.Count)),
+            stateBackendRows
+                .GroupBy(row => row.Backend)
+                .ToDictionary(group => group.Key, group => group.Sum(row => row.Count)),
+            topWorkflowRows
+                .Select(row => new WorkflowOverviewStoreWorkflowRow(
+                    new WorkflowId(row.WorkflowId),
+                    row.RunCount,
+                    row.FailedRunCount,
+                    row.LastRunAtUtc))
+                .ToArray(),
+            recentRecords.Select(record => record.ToSnapshot()).ToArray());
+    }
+
     public async Task SaveEventAsync(
         WorkflowEventRecord workflowEvent,
         CancellationToken cancellationToken = default)
@@ -1471,6 +1671,17 @@ public sealed class PersistentWorkflowRunStore(IDbContextFactory<AppDbContext> d
         }
 
         await dbContext.SaveChangesAsync(cancellationToken);
+    }
+
+    private static void ValidateOverviewTake(int value, int maximum, string parameterName)
+    {
+        if (value is < 1 || value > maximum)
+        {
+            throw new ArgumentOutOfRangeException(
+                parameterName,
+                value,
+                $"Workflow overview take must be between 1 and {maximum}.");
+        }
     }
 
     public async Task<IReadOnlyList<WorkflowEventRecord>> ListEventsAsync(
@@ -1772,6 +1983,19 @@ public sealed class PersistentWorkflowRunStore(IDbContextFactory<AppDbContext> d
         => Math.Clamp(pageSize, 1, 100);
 }
 
+internal static class WorkflowDefinitionPersistenceConstraints
+{
+    public const string HeadPrimaryKey = "PK_AgentFramework_WorkflowDefinitionHeads";
+    public const string RevisionUniqueIndex = "IX_WorkflowDefinitions_WorkflowId_Revision";
+}
+
+public sealed class WorkflowDefinitionHeadRecord
+{
+    public Guid WorkflowId { get; set; }
+
+    public Guid VersionId { get; set; }
+}
+
 public sealed class WorkflowDefinitionRecord
 {
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
@@ -1779,6 +2003,8 @@ public sealed class WorkflowDefinitionRecord
     public Guid WorkflowId { get; set; }
 
     public Guid VersionId { get; set; }
+
+    public long Revision { get; set; }
 
     public string Name { get; set; } = string.Empty;
 
@@ -1796,10 +2022,13 @@ public sealed class WorkflowDefinitionRecord
 
     public DateTimeOffset UpdatedAtUtc { get; set; }
 
-    public static WorkflowDefinitionRecord FromDefinition(WorkflowDefinition definition) => new()
+    public static WorkflowDefinitionRecord FromDefinition(
+        WorkflowDefinition definition,
+        long revision) => new()
     {
         WorkflowId = definition.Id.Value,
         VersionId = definition.VersionId.Value,
+        Revision = revision,
         Name = definition.Name,
         Description = definition.Description,
         Status = definition.Status,
@@ -2223,9 +2452,27 @@ internal sealed class WorkflowDefinitionRecordConfiguration : IEntityTypeConfigu
         builder.Property(item => item.PreferredBackend).HasConversion<int>();
         builder.Property(item => item.DefinitionJson).HasColumnType("TEXT");
         builder.HasIndex(item => item.WorkflowId);
+        builder.HasIndex(item => new { item.WorkflowId, item.Revision })
+            .IsUnique()
+            .HasDatabaseName(WorkflowDefinitionPersistenceConstraints.RevisionUniqueIndex);
         builder.HasIndex(item => new { item.WorkflowId, item.UpdatedAtUtc });
         builder.HasIndex(item => new { item.InstructionSnapshotSchemaVersion, item.VersionId })
             .HasDatabaseName("IX_WorkflowDefinitions_InstructionSnapshotSchema_Id");
+    }
+}
+
+internal sealed class WorkflowDefinitionHeadRecordConfiguration : IEntityTypeConfiguration<WorkflowDefinitionHeadRecord>
+{
+    public void Configure(EntityTypeBuilder<WorkflowDefinitionHeadRecord> builder)
+    {
+        builder.ToTable("AgentFramework_WorkflowDefinitionHeads");
+        builder.HasKey(item => item.WorkflowId)
+            .HasName(WorkflowDefinitionPersistenceConstraints.HeadPrimaryKey);
+        builder.Property(item => item.VersionId).IsConcurrencyToken();
+        builder.HasOne<WorkflowDefinitionRecord>()
+            .WithMany()
+            .HasForeignKey(item => item.VersionId)
+            .OnDelete(DeleteBehavior.Restrict);
     }
 }
 

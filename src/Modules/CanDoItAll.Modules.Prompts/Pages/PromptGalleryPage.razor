@@ -19,16 +19,14 @@
             <Actions>
                 @if (CuratorLauncher.IsAvailable)
                 {
-                    <Button Text="Prompts Curator"
-                            Icon="forum"
-                            Size="ButtonSize.Small"
-                            ButtonStyle="ButtonStyle.Info"
-                            Disabled="@isOpeningCurator"
-                            IsBusy="@isOpeningCurator"
-                            Click="OpenCuratorAsync"
-                            title="Open the Prompts Curator Agent in floating chat."
-                            aria-label="Open the Prompts Curator Agent in floating chat"
-                            data-testid="prompt-gallery-prompts-curator-open" />
+                    <AgentAvatarActionButton AgentName="@CuratorDisplayName"
+                                             AvatarImageUrl="@curatorPresentation?.AvatarImageUrl"
+                                             FallbackText="PC"
+                                             Label="@($"Open {CuratorDisplayName}")"
+                                             Click="OpenCuratorAsync"
+                                             Disabled="@(isOpeningCurator || isLoadingCuratorPresentation)"
+                                             TestId="prompt-gallery-prompts-curator-open"
+                                             TooltipTestId="prompt-gallery-prompts-curator-tooltip" />
                 }
                 <PageHeaderActionButton Icon="add"
                                         Label="New item"
@@ -72,6 +70,8 @@
     private bool editorDirty;
     private bool editorOpen;
     private bool isOpeningCurator;
+    private bool isLoadingCuratorPresentation;
+    private PromptGalleryCuratorPresentation? curatorPresentation;
     private IPromptGalleryCuratorContextLease? curatorContextLease;
 
     [SupplyParameterFromQuery(Name = "promptId")]
@@ -79,12 +79,16 @@
 
     private string EditorTitle => selectedItemId.HasValue ? "Edit Gallery item" : "New Gallery item";
 
-    protected override void OnParametersSet()
+    private string CuratorDisplayName => curatorPresentation?.Name ?? "Prompts Curator Agent";
+
+    protected override async Task OnParametersSetAsync()
     {
         if (CuratorLauncher.IsAvailable)
         {
             curatorContextLease ??= CuratorLauncher.ActivateContext();
             curatorContextLease.SynchronizeNavigation();
+
+            await LoadCuratorPresentationAsync();
         }
 
         if (!PromptIdQuery.HasValue || openedQueryItemId == PromptIdQuery)
@@ -116,7 +120,7 @@
 
     private async Task OpenCuratorAsync()
     {
-        if (isOpeningCurator)
+        if (isOpeningCurator || isLoadingCuratorPresentation || !CuratorLauncher.IsAvailable)
         {
             return;
         }
@@ -124,6 +128,12 @@
         isOpeningCurator = true;
         try
         {
+            await LoadCuratorPresentationAsync();
+            if (curatorPresentation is null)
+            {
+                return;
+            }
+
             await CuratorLauncher.OpenAsync();
             Notifications.Success("Chat ready", "Opened a new chat with Prompts Curator Agent.");
         }
@@ -134,6 +144,28 @@
         finally
         {
             isOpeningCurator = false;
+        }
+    }
+
+    private async Task LoadCuratorPresentationAsync()
+    {
+        if (curatorPresentation is not null || isLoadingCuratorPresentation)
+        {
+            return;
+        }
+
+        isLoadingCuratorPresentation = true;
+        try
+        {
+            curatorPresentation = await CuratorLauncher.GetPresentationAsync();
+        }
+        catch (Exception exception)
+        {
+            Notifications.Error("Unable to load Prompts Curator", exception.Message);
+        }
+        finally
+        {
+            isLoadingCuratorPresentation = false;
         }
     }
 

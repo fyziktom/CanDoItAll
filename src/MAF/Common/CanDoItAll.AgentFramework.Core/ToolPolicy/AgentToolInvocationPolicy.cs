@@ -2682,6 +2682,7 @@ public static class AgentToolInvocationPolicyMetadata
 {
     private const string HrApprovalAuditRetentionScheme = "hr-approval-redacted-v1";
     private const string PromptCuratorApprovalAuditRetentionScheme = "prompt-curator-approval-redacted-v1";
+    private const string WorkflowCuratorApprovalAuditRetentionScheme = "workflow-curator-approval-redacted-v1";
 
     private static readonly IReadOnlySet<string> SensitiveHrArgumentToolNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
     {
@@ -2701,11 +2702,26 @@ public static class AgentToolInvocationPolicyMetadata
         PromptGalleryVersionCreate
     };
 
+    private static readonly IReadOnlySet<string> SensitiveWorkflowCuratorArgumentToolNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+    {
+        WorkflowCuratorCatalogSearch,
+        WorkflowCuratorDraftCreate,
+        WorkflowCuratorDraftUpdate,
+        WorkflowCuratorNodeUpdate,
+        WorkflowCuratorLifecycleChange,
+        WorkflowsRunStart,
+        WorkflowsExternalResponseSubmit
+    };
+
     private static readonly IReadOnlySet<string> SensitiveManagedArgumentPropertyNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
     {
         "displayName",
         "content",
         "creationReason",
+        "description",
+        "executorSettingsJson",
+        "expectedValueJson",
+        "inputJson",
         "instructions",
         "name",
         "notes",
@@ -2714,6 +2730,7 @@ public static class AgentToolInvocationPolicyMetadata
         "prompt",
         "query",
         "question",
+        "responseJson",
         "roleTitle",
         "searchText",
         "summary",
@@ -2763,6 +2780,13 @@ public static class AgentToolInvocationPolicyMetadata
     public const string PromptGalleryDraftCreate = ToolContractCatalog.PromptGalleryDraftCreate;
     public const string PromptGalleryDraftUpdate = ToolContractCatalog.PromptGalleryDraftUpdate;
     public const string PromptGalleryVersionCreate = ToolContractCatalog.PromptGalleryVersionCreate;
+    public const string WorkflowCuratorCatalogSearch = ToolContractCatalog.WorkflowCuratorCatalogSearch;
+    public const string WorkflowCuratorDefinitionEditorGet = ToolContractCatalog.WorkflowCuratorDefinitionEditorGet;
+    public const string WorkflowCuratorAuthoringOptionsGet = ToolContractCatalog.WorkflowCuratorAuthoringOptionsGet;
+    public const string WorkflowCuratorDraftCreate = ToolContractCatalog.WorkflowCuratorDraftCreate;
+    public const string WorkflowCuratorDraftUpdate = ToolContractCatalog.WorkflowCuratorDraftUpdate;
+    public const string WorkflowCuratorNodeUpdate = ToolContractCatalog.WorkflowCuratorNodeUpdate;
+    public const string WorkflowCuratorLifecycleChange = ToolContractCatalog.WorkflowCuratorLifecycleChange;
     public const string ImageGenerationCreate = "image_generation_create";
     public const string HrAgentsSearch = "hr_agents_search";
     public const string HrAgentSettingsGet = "hr_agent_settings_get";
@@ -2945,7 +2969,8 @@ public static class AgentToolInvocationPolicyMetadata
         IEnumerable<KeyValuePair<string, object?>> arguments)
     {
         var redactManagedContent = HasSensitiveHrArguments(toolName) ||
-                                   HasSensitivePromptCuratorArguments(toolName);
+                                   HasSensitivePromptCuratorArguments(toolName) ||
+                                   HasSensitiveWorkflowCuratorArguments(toolName);
         return arguments
             .Where(item => !string.IsNullOrWhiteSpace(item.Key))
             .OrderBy(item => item.Key, StringComparer.OrdinalIgnoreCase)
@@ -2969,6 +2994,12 @@ public static class AgentToolInvocationPolicyMetadata
     {
         return !string.IsNullOrWhiteSpace(toolName) &&
                SensitivePromptCuratorArgumentToolNames.Contains(toolName.Trim());
+    }
+
+    public static bool HasSensitiveWorkflowCuratorArguments(string? toolName)
+    {
+        return !string.IsNullOrWhiteSpace(toolName) &&
+               SensitiveWorkflowCuratorArgumentToolNames.Contains(toolName.Trim());
     }
 
     internal static string ProtectApprovalArgumentsForAudit(
@@ -3117,8 +3148,13 @@ public static class AgentToolInvocationPolicyMetadata
             return HrApprovalAuditRetentionScheme;
         }
 
-        return HasSensitivePromptCuratorArguments(toolName)
-            ? PromptCuratorApprovalAuditRetentionScheme
+        if (HasSensitivePromptCuratorArguments(toolName))
+        {
+            return PromptCuratorApprovalAuditRetentionScheme;
+        }
+
+        return HasSensitiveWorkflowCuratorArguments(toolName)
+            ? WorkflowCuratorApprovalAuditRetentionScheme
             : null;
     }
 

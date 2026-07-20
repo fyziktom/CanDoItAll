@@ -7,6 +7,7 @@ namespace CanDoItAll.Modules.AgentFramework;
 
 internal sealed class AgentFrameworkPromptGalleryCuratorLauncher(
     IAgentChatLauncher agentChatLauncher,
+    IAgentFrameworkWorkspaceService workspaceService,
     IAgentChatContextRegistry contextRegistry,
     NavigationManager navigation) : IPromptGalleryCuratorLauncher
 {
@@ -18,6 +19,21 @@ internal sealed class AgentFrameworkPromptGalleryCuratorLauncher(
         var scopeLease = contextRegistry.ActivateScope(
             surface.ToScope(AgentChatContextScopeId.Create()));
         return new ContextLease(scopeLease, navigation);
+    }
+
+    public async Task<PromptGalleryCuratorPresentation> GetPresentationAsync(
+        CancellationToken cancellationToken = default)
+    {
+        var agents = await workspaceService.ListAgentsAsync(
+            includeTemplates: false,
+            cancellationToken);
+        var curator = agents.SingleOrDefault(PromptsCuratorAgentIdentity.Matches)
+            ?? throw new InvalidOperationException(
+                $"The managed agent '{PromptsCuratorAgentIdentity.AgentId:D}' is not available.");
+
+        return new PromptGalleryCuratorPresentation(
+            curator.Name,
+            curator.AvatarImageUrl);
     }
 
     public async Task OpenAsync(CancellationToken cancellationToken = default)

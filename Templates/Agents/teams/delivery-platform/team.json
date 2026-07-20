@@ -52,6 +52,10 @@
     {
       "key": "prompts-curator-agent",
       "relativePath": "members/prompts-curator-agent"
+    },
+    {
+      "key": "workflow-curator-agent",
+      "relativePath": "members/workflow-curator-agent"
     }
   ]
 }

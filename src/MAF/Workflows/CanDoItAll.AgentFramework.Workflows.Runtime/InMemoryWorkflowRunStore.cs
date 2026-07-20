@@ -7,8 +7,12 @@ namespace CanDoItAll.AgentFramework.Core;
 public sealed class InMemoryWorkflowRunStore :
     IWorkflowRunStore,
     IWorkflowArtifactStore,
-    IWorkflowExternalRequestStore
+    IWorkflowExternalRequestStore,
+    IWorkflowOverviewStore
 {
+    private const int MaximumOverviewRecentTake = 12;
+    private const int MaximumOverviewTopWorkflowTake = 10;
+
     private readonly object mutationSync = new();
     private readonly ConcurrentDictionary<WorkflowRunId, WorkflowRunSnapshot> runs = new();
     private readonly ConcurrentDictionary<WorkflowRunId, ConcurrentQueue<WorkflowEventRecord>> events = new();
@@ -213,6 +217,51 @@ public sealed class InMemoryWorkflowRunStore :
             pageIndex,
             pageSize,
             orderedItems.Length));
+    }
+
+    public Task<WorkflowOverviewStoreSnapshot> QueryOverviewAsync(
+        WorkflowOverviewStoreQuery request,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        ValidateOverviewTake(request.RecentTake, MaximumOverviewRecentTake, nameof(request.RecentTake));
+        ValidateOverviewTake(
+            request.TopWorkflowTake,
+            MaximumOverviewTopWorkflowTake,
+            nameof(request.TopWorkflowTake));
+        cancellationToken.ThrowIfCancellationRequested();
+
+        WorkflowRunSnapshot[] snapshot;
+        lock (mutationSync)
+        {
+            snapshot = runs.Values.ToArray();
+        }
+
+        var result = new WorkflowOverviewStoreSnapshot(
+            snapshot
+                .GroupBy(run => run.State)
+                .ToDictionary(group => group.Key, group => group.Count()),
+            snapshot
+                .GroupBy(run => run.Backend)
+                .ToDictionary(group => group.Key, group => group.Count()),
+            snapshot
+                .GroupBy(run => run.WorkflowId)
+                .Select(group => new WorkflowOverviewStoreWorkflowRow(
+                    group.Key,
+                    group.Count(),
+                    group.Count(run => run.State == WorkflowRunState.Failed),
+                    group.Max(run => run.UpdatedAtUtc)))
+                .OrderByDescending(row => row.RunCount)
+                .ThenByDescending(row => row.LastRunAtUtc)
+                .ThenBy(row => row.WorkflowId.Value)
+                .Take(request.TopWorkflowTake)
+                .ToArray(),
+            snapshot
+                .OrderByDescending(run => run.UpdatedAtUtc)
+                .ThenByDescending(run => run.RunId.Value)
+                .Take(request.RecentTake)
+                .ToArray());
+        return Task.FromResult(result);
     }
 
     public Task SaveEventAsync(WorkflowEventRecord workflowEvent, CancellationToken cancellationToken = default)
@@ -473,4 +522,15 @@ public sealed class InMemoryWorkflowRunStore :
 
     private static int NormalizePageSize(int pageSize)
         => Math.Clamp(pageSize, 1, 100);
+
+    private static void ValidateOverviewTake(int value, int maximum, string parameterName)
+    {
+        if (value is < 1 || value > maximum)
+        {
+            throw new ArgumentOutOfRangeException(
+                parameterName,
+                value,
+                $"Workflow overview take must be between 1 and {maximum}.");
+        }
+    }
 }

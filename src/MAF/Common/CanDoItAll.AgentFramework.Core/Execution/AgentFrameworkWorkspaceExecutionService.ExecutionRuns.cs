@@ -1841,6 +1841,53 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         Guid chatSessionId,
         CancellationToken cancellationToken)
     {
+        if (store is ISandboxWorkspaceExecutionRunStore executionRunStore &&
+            store is ISandboxWorkspaceChatQueryStore chatQueryStore)
+        {
+            var catalog = await store.LoadCatalogAsync(cancellationToken);
+            EnsureAgentExists(catalog, agentId);
+            var splitSession = EnsureAgentOwnsSession(
+                await chatQueryStore.GetChatSessionAsync(chatSessionId, cancellationToken),
+                agentId,
+                chatSessionId);
+
+            ExecutionRunRecord? latestRun = null;
+            if (splitSession.LatestExecutionRunId.HasValue)
+            {
+                latestRun = await executionRunStore.GetExecutionRunAsync(
+                    splitSession.LatestExecutionRunId.Value,
+                    cancellationToken);
+                if (IsPendingApprovalRun(latestRun, agentId, chatSessionId))
+                {
+                    return latestRun!.Id;
+                }
+            }
+
+            var summaries = await chatQueryStore.ListChatRunSummariesAsync(agentId, chatSessionId, cancellationToken);
+            foreach (var summary in summaries)
+            {
+                if (summary.ExecutionRunId == latestRun?.Id || summary.State != ExecutionState.WaitingOnTool)
+                {
+                    continue;
+                }
+
+                var candidate = await executionRunStore.GetExecutionRunAsync(summary.ExecutionRunId, cancellationToken);
+                if (IsPendingApprovalRun(candidate, agentId, chatSessionId))
+                {
+                    return candidate!.Id;
+                }
+            }
+
+            if (latestRun is not null &&
+                latestRun.AgentId == agentId &&
+                latestRun.ChatSessionId == chatSessionId)
+            {
+                return latestRun.Id;
+            }
+
+            throw new InvalidOperationException("This session does not have any pending approvals.");
+        }
+
         var document = await store.LoadAsync(cancellationToken);
         EnsureAgentExists(document.ToCatalog(), agentId);
         var executionState = document.ToExecutionState();
@@ -1881,6 +1928,15 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
 
         throw new InvalidOperationException("This session does not have any pending approvals.");
     }
+
+    private static bool IsPendingApprovalRun(
+        ExecutionRunRecord? run,
+        Guid agentId,
+        Guid chatSessionId)
+        => run is not null &&
+           run.AgentId == agentId &&
+           run.ChatSessionId == chatSessionId &&
+           run.PendingApprovals.Count > 0;
 
     private string ResolveModel(AgentDefinition agent, ProviderProfile provider)
     {

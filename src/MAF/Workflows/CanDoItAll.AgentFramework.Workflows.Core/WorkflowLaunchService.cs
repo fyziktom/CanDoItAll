@@ -370,12 +370,33 @@ public sealed class WorkflowLaunchService(
         WorkflowDefinitionSelection.ExactSavedVersion selection,
         CancellationToken cancellationToken)
     {
-        var detail = await catalog.GetDefinitionAsync(
+        var current = await catalog.GetDefinitionAsync(
             selection.WorkflowId,
-            selection.VersionId,
+            versionId: null,
             cancellationToken)
             ?? throw new KeyNotFoundException(
-                $"Workflow '{selection.WorkflowId}' version '{selection.VersionId}' was not found.");
+                $"Workflow '{selection.WorkflowId}' does not have a current definition.");
+        if (current.Definition.Id != selection.WorkflowId)
+        {
+            throw new InvalidOperationException(
+                $"Workflow catalog returned a different current definition for workflow '{selection.WorkflowId}'.");
+        }
+
+        if (current.Definition.Status is not (WorkflowLifecycleStatus.Draft or WorkflowLifecycleStatus.Active))
+        {
+            throw new InvalidOperationException(
+                $"Workflow '{selection.WorkflowId}' cannot execute saved version '{selection.VersionId}' while its current definition is '{current.Definition.Status}'. " +
+                "Saved-version execution requires a current Draft or Active definition.");
+        }
+
+        var detail = current.Definition.VersionId == selection.VersionId
+            ? current
+            : await catalog.GetDefinitionAsync(
+                selection.WorkflowId,
+                selection.VersionId,
+                cancellationToken)
+              ?? throw new KeyNotFoundException(
+                  $"Workflow '{selection.WorkflowId}' version '{selection.VersionId}' was not found.");
         if (detail.Definition.Id != selection.WorkflowId ||
             detail.Definition.VersionId != selection.VersionId)
         {

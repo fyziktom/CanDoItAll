@@ -140,7 +140,7 @@ public sealed class WorkflowPromptGalleryBoundaryTests
         var definition = CreateLegacyDefinition(component.Id);
         await using (var arrangeContext = factory.CreateDbContext())
         {
-            var definitionRecord = WorkflowDefinitionRecord.FromDefinition(definition);
+            var definitionRecord = WorkflowDefinitionRecord.FromDefinition(definition, revision: 1);
             definitionRecord.InstructionSnapshotSchemaVersion = 0;
             arrangeContext.Add(new WorkflowComponentRecord
             {
@@ -155,6 +155,11 @@ public sealed class WorkflowPromptGalleryBoundaryTests
                 UpdatedAtUtc = component.UpdatedAtUtc
             });
             arrangeContext.Add(definitionRecord);
+            arrangeContext.Add(new WorkflowDefinitionHeadRecord
+            {
+                WorkflowId = definition.Id.Value,
+                VersionId = definition.VersionId.Value
+            });
             await arrangeContext.SaveChangesAsync();
         }
 

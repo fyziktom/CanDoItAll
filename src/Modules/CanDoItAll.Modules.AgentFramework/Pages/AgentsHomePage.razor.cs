@@ -36,6 +36,9 @@ public partial class AgentsHomePage
     public IAgentFrameworkWorkspaceService WorkspaceService { get; set; } = default!;
 
     [Inject]
+    public IAgentChatLauncher AgentChatLauncher { get; set; } = default!;
+
+    [Inject]
     private AgentFrameworkCatalogWarmupService CatalogWarmupService { get; set; } = default!;
 
     [Inject]
@@ -67,9 +70,11 @@ public partial class AgentsHomePage
     private Guid? effectiveRequestedTeamId;
     private AgentDefinition? selectedContextAgent;
     private AgentTeamDefinition? selectedContextTeam;
+    private AgentDefinition? hrAgent;
     private AgentChatContextAccessState selectionAccessState = AgentChatContextAccessState.Loading;
     private bool isLoaded;
     private bool isFeedingDefaults;
+    private bool isOpeningHrAgent;
     private bool hasOverviewLoadError;
     private string? overviewLoadError;
     private SandboxDashboardSnapshot dashboard = new(
@@ -116,6 +121,12 @@ public partial class AgentsHomePage
                     ? selectionAccessState
                     : AgentChatContextAccessState.Ready
                 : AgentChatContextAccessState.Loading;
+
+    private string HrAgentDisplayName
+        => hrAgent?.Name ?? HrAgentIdentity.DefaultDisplayName;
+
+    private string HrAgentAvatarImageUrl
+        => hrAgent?.AvatarImageUrl ?? HrAgentIdentity.DefaultAvatarImageUrl;
 
     private static readonly CdaChartOptions ProviderUsageBarChartOptions = new()
     {
@@ -323,11 +334,18 @@ public partial class AgentsHomePage
     {
         var dashboardTask = WorkspaceService.GetDashboardAsync();
         var overviewTask = WorkspaceService.GetAgentOverviewAsync();
+        var hrAgentTask = TryResolveHrAgentAsync();
         var boundResourceCountTask = LoadBoundResourceCountAsync();
-        await Task.WhenAll(dashboardTask, overviewTask, boundResourceCountTask);
+        await Task.WhenAll(dashboardTask, overviewTask, hrAgentTask, boundResourceCountTask);
 
         dashboard = await dashboardTask;
         overview = await overviewTask;
+        var hrAgentResolution = await hrAgentTask;
+        hrAgent = hrAgentResolution.Agent;
+        if (hrAgentResolution.ErrorMessage is { } hrAgentError)
+        {
+            NotificationService.Warning("HR Agent unavailable", hrAgentError);
+        }
         technicalAgentCount = overview.Totals.AgentCount;
         providerCount = overview.Totals.ProviderCount;
         capabilityCount = overview.Totals.CapabilityCount;
@@ -336,6 +354,22 @@ public partial class AgentsHomePage
         boundResourceCount = await boundResourceCountTask;
 
         isLoaded = true;
+    }
+
+    private async Task<(AgentDefinition? Agent, string? ErrorMessage)> TryResolveHrAgentAsync()
+    {
+        try
+        {
+            var agents = await WorkspaceService.ListAgentsAsync(includeTemplates: false);
+            var agent = agents.SingleOrDefault(HrAgentIdentity.Matches);
+            return agent is null
+                ? (null, $"The managed agent '{HrAgentIdentity.AgentId:D}' is not available.")
+                : (agent, null);
+        }
+        catch (Exception exception)
+        {
+            return (null, exception.Message);
+        }
     }
 
     private async Task<int> LoadBoundResourceCountAsync()
@@ -663,6 +697,32 @@ public partial class AgentsHomePage
     private void OpenCrmHrAgents()
     {
         Navigation.NavigateTo("/crm-hr/agents");
+    }
+
+    private async Task OpenHrAgentAsync()
+    {
+        if (isOpeningHrAgent ||
+            hrAgent is null ||
+            !HrAgentIdentity.Matches(hrAgent) ||
+            AgentChatAccessState != AgentChatContextAccessState.Ready)
+        {
+            return;
+        }
+
+        isOpeningHrAgent = true;
+        try
+        {
+            await AgentChatLauncher.StartNewChatAsync(hrAgent.Id);
+            NotificationService.Success("HR Agent ready", "Opened a new managed HR chat.");
+        }
+        catch (Exception exception)
+        {
+            NotificationService.Error("Unable to open HR Agent", exception.Message);
+        }
+        finally
+        {
+            isOpeningHrAgent = false;
+        }
     }
 
     private void OpenProcesses()

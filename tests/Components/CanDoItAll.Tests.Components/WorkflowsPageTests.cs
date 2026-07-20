@@ -1,9 +1,11 @@
 using Bunit;
 using AngleSharp.Dom;
+using System.Reflection;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Workflows.Abstractions;
 using CanDoItAll.AgentFramework.Workflows.Templates;
+using CanDoItAll.AppComponents;
 using CanDoItAll.Components.BaseLib;
 using CanDoItAll.Components.CanvasLib;
 using CanDoItAll.Modules.AgentFramework;
@@ -16,6 +18,7 @@ using CanDoItAll.SharedKernel;
 using CanDoItAll.Tests.Support;
 using CanDoItAll.Tools.Documents;
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Web;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -30,6 +33,119 @@ namespace CanDoItAll.Tests.Components;
 
 public sealed class WorkflowsPageTests
 {
+    [Fact]
+    public async Task Workflows_page_opens_exact_workflow_curator_only_after_context_is_ready()
+    {
+        var launcher = new RecordingWorkflowCuratorChatLauncher();
+        await using var environment = CanDoItAllTestEnvironment.Create("workflow-curator-launch-tests");
+        await using var harness = await CreateInMemoryWorkflowHarnessAsync(environment, services =>
+        {
+            services.RemoveAll<IWorkflowCatalogService>();
+            services.AddScoped<BlockingInitialWorkflowCatalogService>();
+            services.AddScoped<IWorkflowCatalogService>(serviceProvider =>
+                serviceProvider.GetRequiredService<BlockingInitialWorkflowCatalogService>());
+            services.RemoveAll<IAgentChatLauncher>();
+            services.AddSingleton<IAgentChatLauncher>(launcher);
+        });
+        var navigation = harness.Context.Services.GetRequiredService<NavigationManager>();
+        var catalog = harness.Context.Services.GetRequiredService<BlockingInitialWorkflowCatalogService>();
+        await CreateHistoryDefinitionAsync(catalog);
+
+        navigation.NavigateTo("/agents/workflows");
+        var cut = harness.Context.RenderComponent<WorkflowsPage>();
+        await catalog.WaitForInitialListRequestAsync();
+
+        var openButton = cut.Find("[data-testid='workflows-curator-open']");
+        Assert.True(openButton.HasAttribute("disabled"));
+        Assert.Equal("Open Workflow Curator Agent", openButton.GetAttribute("aria-label"));
+        Assert.True(string.IsNullOrWhiteSpace(openButton.TextContent));
+        Assert.EndsWith(
+            "/avatar-04.jpg",
+            Assert.IsAssignableFrom<IElement>(openButton.QuerySelector("img")).GetAttribute("src"),
+            StringComparison.Ordinal);
+
+        Assert.Equal(AgentChatContextAccessState.Loading, ReadAgentChatAccessState(cut.Instance));
+        openButton.Click();
+        Assert.Empty(launcher.StartedAgentIds);
+
+        catalog.CompleteInitialListRequest();
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Equal(AgentChatContextAccessState.Ready, ReadAgentChatAccessState(cut.Instance));
+            Assert.False(cut.Find("[data-testid='workflows-curator-open']").HasAttribute("disabled"));
+        });
+
+        var avatarAction = Assert.Single(cut.FindComponents<AgentAvatarActionButton>());
+        Assert.Equal("Open Workflow Curator Agent", avatarAction.Instance.Label);
+        var tooltipTarget = Assert.Single(avatarAction.FindComponents<TooltipTarget>());
+        Assert.Equal(TooltipPosition.Bottom, tooltipTarget.Instance.Position);
+        Assert.Equal("workflows-curator-tooltip", tooltipTarget.Instance.TestId);
+
+        var surface = ReadAgentChatSurface(cut.Instance);
+        var curatorAccess = Assert.Single(surface.AgentAccess);
+        Assert.Equal(WorkflowCuratorAgentIdentity.AgentId, curatorAccess.AgentId);
+        Assert.Equal(
+            AgentChatContextPermission.Read | AgentChatContextPermission.Mutate,
+            curatorAccess.Permissions);
+        Assert.Equal(
+            AgentChatContextCompletionRefreshMode.OnSuccessfulRun,
+            surface.CompletionRefreshMode);
+
+        launcher.HoldStartOpen = true;
+        var firstOpenTask = cut.Find("[data-testid='workflows-curator-open']")
+            .TriggerEventAsync("onclick", new MouseEventArgs());
+        await launcher.WaitForStartAsync();
+        var secondOpenTask = cut.Find("[data-testid='workflows-curator-open']")
+            .TriggerEventAsync("onclick", new MouseEventArgs());
+
+        await secondOpenTask.WaitAsync(TimeSpan.FromSeconds(1));
+        var startedAgentId = Assert.Single(launcher.StartedAgentIds);
+        Assert.Equal(WorkflowCuratorAgentIdentity.AgentId, startedAgentId);
+
+        launcher.ReleaseStart();
+        await firstOpenTask;
+        Assert.Single(launcher.StartedAgentIds);
+
+        cut.Find("[data-testid='workflows-tab-workflows']").Click();
+        Assert.Single(cut.FindAll("[data-testid='workflows-curator-open']"));
+    }
+
+    [Fact]
+    public async Task Workflows_page_remains_available_and_retries_when_curator_is_missing()
+    {
+        var workspaceService = DispatchProxy.Create<
+            IAgentFrameworkWorkspaceService,
+            MissingWorkflowCuratorWorkspaceProxy>();
+        var workspace = (MissingWorkflowCuratorWorkspaceProxy)(object)workspaceService;
+        await using var environment = CanDoItAllTestEnvironment.Create("workflow-curator-missing-tests");
+        await using var harness = await CreateInMemoryWorkflowHarnessAsync(environment, services =>
+        {
+            services.RemoveAll<IAgentFrameworkWorkspaceService>();
+            services.AddSingleton(workspaceService);
+        });
+        var navigation = harness.Context.Services.GetRequiredService<NavigationManager>();
+
+        navigation.NavigateTo("/agents/workflows");
+        var cut = harness.Context.RenderComponent<WorkflowsPage>();
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Empty(cut.FindAll("[data-testid='workflows-loading']"));
+            Assert.Empty(cut.FindAll("[data-testid='workflows-error']"));
+            Assert.True(cut.Find("[data-testid='workflows-curator-open']").HasAttribute("disabled"));
+            Assert.Contains(
+                harness.Context.Services.GetRequiredService<NotificationService>().Messages,
+                notification => notification.Summary == "Workflow Curator unavailable");
+        }, TimeSpan.FromSeconds(10));
+
+        Assert.Equal(1, workspace.ListAgentsCallCount);
+        cut.Find("[data-testid='workflows-refresh']").Click();
+        cut.WaitForAssertion(
+            () => Assert.Equal(2, workspace.ListAgentsCallCount),
+            TimeSpan.FromSeconds(10));
+        Assert.Empty(cut.FindAll("[data-testid='workflows-error']"));
+    }
+
     [Fact]
     public async Task Workflows_page_creates_starter_workflow_and_runs_preview()
     {
@@ -503,8 +619,13 @@ public sealed class WorkflowsPageTests
         await using (var dbContext = await dbContextFactory.CreateDbContextAsync())
         {
             dbContext.Set<WorkflowDefinitionRecord>().AddRange(
-                WorkflowDefinitionRecord.FromDefinition(oldDefinition),
-                WorkflowDefinitionRecord.FromDefinition(latestDefinition));
+                WorkflowDefinitionRecord.FromDefinition(oldDefinition, revision: 1),
+                WorkflowDefinitionRecord.FromDefinition(latestDefinition, revision: 2));
+            dbContext.Set<WorkflowDefinitionHeadRecord>().Add(new WorkflowDefinitionHeadRecord
+            {
+                WorkflowId = workflowId.Value,
+                VersionId = latestVersion.Value
+            });
             await dbContext.SaveChangesAsync();
         }
 
@@ -1788,10 +1909,12 @@ public sealed class WorkflowsPageTests
         services.AddSingleton<IWorkflowCheckpointStore>(serviceProvider => serviceProvider.GetRequiredService<CountingWorkflowRunStore>());
     }
 
-    private static Task<ComponentTestHarness> CreateInMemoryWorkflowHarnessAsync(CanDoItAllTestEnvironment environment)
+    private static Task<ComponentTestHarness> CreateInMemoryWorkflowHarnessAsync(
+        CanDoItAllTestEnvironment environment,
+        Action<IServiceCollection>? configureServices = null)
     {
         var profile = environment.CreateInMemoryProfile("primary");
-        return ComponentTestHarness.CreateAsync(options: new TestHarnessOptions
+        return ComponentTestHarness.CreateAsync(configureServices, new TestHarnessOptions
         {
             TestEnvironment = environment,
             ActiveProfile = profile,
@@ -2562,6 +2685,147 @@ public sealed class WorkflowsPageTests
             public TaskCompletionSource Started { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
             public TaskCompletionSource<Exception?> Completion { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        }
+    }
+
+    private sealed class BlockingInitialWorkflowCatalogService(
+        PersistentWorkflowCatalogService inner) : IWorkflowCatalogService
+    {
+        private readonly TaskCompletionSource initialListStarted = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private readonly TaskCompletionSource initialListCompletion = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public Task WaitForInitialListRequestAsync()
+            => initialListStarted.Task;
+
+        public void CompleteInitialListRequest()
+            => initialListCompletion.TrySetResult();
+
+        public async Task<IReadOnlyList<WorkflowCatalogItem>> ListDefinitionsAsync(
+            CancellationToken cancellationToken = default)
+        {
+            initialListStarted.TrySetResult();
+            await initialListCompletion.Task.WaitAsync(cancellationToken);
+            return await inner.ListDefinitionsAsync(cancellationToken);
+        }
+
+        public Task<WorkflowDefinitionDetail?> GetDefinitionAsync(
+            WorkflowId workflowId,
+            WorkflowVersionId? versionId = null,
+            CancellationToken cancellationToken = default)
+            => inner.GetDefinitionAsync(workflowId, versionId, cancellationToken);
+
+        public Task<WorkflowDefinitionDetail?> GetLatestDefinitionByStatusAsync(
+            WorkflowId workflowId,
+            WorkflowLifecycleStatus status,
+            CancellationToken cancellationToken = default)
+            => inner.GetLatestDefinitionByStatusAsync(workflowId, status, cancellationToken);
+
+        public Task<WorkflowDefinition> SaveDefinitionAsync(
+            WorkflowDefinitionSaveRequest request,
+            CancellationToken cancellationToken = default)
+            => inner.SaveDefinitionAsync(request, cancellationToken);
+
+        public Task<WorkflowDefinition> ChangeDefinitionStatusAsync(
+            WorkflowDefinitionStatusChangeRequest request,
+            CancellationToken cancellationToken = default)
+            => inner.ChangeDefinitionStatusAsync(request, cancellationToken);
+
+        public Task<WorkflowDefinitionExportEnvelope?> ExportDefinitionAsync(
+            WorkflowId workflowId,
+            WorkflowVersionId? versionId = null,
+            CancellationToken cancellationToken = default)
+            => inner.ExportDefinitionAsync(workflowId, versionId, cancellationToken);
+
+        public Task<WorkflowDefinition> ImportDefinitionAsync(
+            WorkflowDefinitionImportRequest request,
+            CancellationToken cancellationToken = default)
+            => inner.ImportDefinitionAsync(request, cancellationToken);
+
+        public Task DeleteDefinitionAsync(
+            WorkflowId workflowId,
+            CancellationToken cancellationToken = default)
+            => inner.DeleteDefinitionAsync(workflowId, cancellationToken);
+
+        public Task<WorkflowValidationResult> ValidateDefinitionAsync(
+            WorkflowDefinition definition,
+            CancellationToken cancellationToken = default)
+            => inner.ValidateDefinitionAsync(definition, cancellationToken);
+    }
+
+    private sealed class RecordingWorkflowCuratorChatLauncher : IAgentChatLauncher
+    {
+        private readonly TaskCompletionSource startObserved = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private readonly TaskCompletionSource startRelease = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public List<Guid> StartedAgentIds { get; } = [];
+
+        public bool HoldStartOpen { get; set; }
+
+        public void ShowCatalog(AgentChatCatalogTab tab = AgentChatCatalogTab.Agents)
+        {
+        }
+
+        public async Task<ActiveAgentChat> StartNewChatAsync(
+            Guid agentId,
+            CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            StartedAgentIds.Add(agentId);
+            startObserved.TrySetResult();
+            if (HoldStartOpen)
+            {
+                await startRelease.Task.WaitAsync(cancellationToken);
+            }
+
+            return CreateActiveChat(agentId, chatSessionId: null);
+        }
+
+        public Task WaitForStartAsync()
+            => startObserved.Task.WaitAsync(TimeSpan.FromSeconds(5));
+
+        public void ReleaseStart()
+            => startRelease.TrySetResult();
+
+        public Task<ActiveAgentChat> OpenChatAsync(
+            Guid agentId,
+            Guid chatSessionId,
+            CancellationToken cancellationToken = default)
+            => Task.FromResult(CreateActiveChat(agentId, chatSessionId));
+
+        private static ActiveAgentChat CreateActiveChat(Guid agentId, Guid? chatSessionId)
+        {
+            var now = DateTimeOffset.UtcNow;
+            return new ActiveAgentChat(
+                AgentChatHandleId.Create(),
+                new AgentChatIdentity(agentId, "Workflow Curator Agent", "Workflow specialist", null),
+                chatSessionId,
+                ActiveAgentChatVisibility.Visible,
+                ActiveAgentChatRunState.Idle,
+                now,
+                now,
+                HiddenAtUtc: null);
+        }
+    }
+
+    private class MissingWorkflowCuratorWorkspaceProxy : DispatchProxy
+    {
+        public int ListAgentsCallCount { get; private set; }
+
+        protected override object? Invoke(MethodInfo? targetMethod, object?[]? args)
+        {
+            if (targetMethod?.Name is "add_ExecutionUpdated" or "remove_ExecutionUpdated")
+            {
+                return null;
+            }
+
+            if (targetMethod?.Name == nameof(IAgentFrameworkWorkspaceService.ListAgentsAsync))
+            {
+                ListAgentsCallCount++;
+                return Task.FromResult<IReadOnlyList<AgentDefinition>>([]);
+            }
+
+            throw new InvalidOperationException(
+                $"Workspace service member '{targetMethod?.Name}' was not expected in this component test.");
         }
     }
 

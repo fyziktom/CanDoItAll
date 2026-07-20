@@ -48,6 +48,14 @@ public interface ISandboxWorkspaceExecutionRunStore
         CancellationToken cancellationToken = default);
 }
 
+public interface ISandboxWorkspaceExecutionRunMutationStore
+{
+    Task<ExecutionRunDetail> UpdateExecutionRunDetailAsync(
+        Guid executionRunId,
+        Func<SandboxWorkspaceCatalog, ExecutionRunDetail, ExecutionRunDetail> update,
+        CancellationToken cancellationToken = default);
+}
+
 public interface ISandboxWorkspaceStore : ISandboxWorkspaceCatalogStore, ISandboxWorkspaceExecutionStore
 {
     Task<SandboxWorkspaceDocument> LoadAsync(CancellationToken cancellationToken = default);

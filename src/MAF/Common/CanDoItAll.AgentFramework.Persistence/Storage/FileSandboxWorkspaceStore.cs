@@ -4,7 +4,7 @@ using CanDoItAll.AgentFramework.Models;
 
 namespace CanDoItAll.AgentFramework.Persistence;
 
-public sealed class FileSandboxWorkspaceStore : ISandboxWorkspaceStore, ISandboxWorkspaceChatQueryStore, ISandboxWorkspaceChatProjectionQueryStore, ISandboxWorkspaceChatSessionStore, ISandboxWorkspaceExecutionRunStore
+public sealed class FileSandboxWorkspaceStore : ISandboxWorkspaceStore, ISandboxWorkspaceChatQueryStore, ISandboxWorkspaceChatProjectionQueryStore, ISandboxWorkspaceChatSessionStore, ISandboxWorkspaceExecutionRunStore, ISandboxWorkspaceExecutionRunMutationStore
 {
     private static readonly TimeSpan CatalogReadNormalizationLockTimeout = TimeSpan.FromMilliseconds(100);
 
@@ -350,19 +350,44 @@ public sealed class FileSandboxWorkspaceStore : ISandboxWorkspaceStore, ISandbox
             ValidateExecutionRunDetail(catalog, detail);
 
             var previousDetail = await executionSliceStore.LoadRunDetailAsync(detail.Run.Id, cancellationToken);
-            var saveResult = await executionSliceStore.SaveRunDetailAsync(previousDetail, detail, cancellationToken);
-            var workspaceIndex = await LoadWorkspaceIndexCoreAsync(cancellationToken);
-            var nextWorkspaceIndex = new WorkspaceStorageIndex(
-                Revision: saveResult.Changed ? workspaceIndex.Revision + 1L : workspaceIndex.Revision,
-                UpdatedAtUtc: saveResult.Index.UpdatedAtUtc);
+            return await SaveExecutionRunDetailCoreAsync(previousDetail, detail, cancellationToken);
+        }
+        finally
+        {
+            gate.Release();
+        }
+    }
 
-            if (saveResult.Changed || !File.Exists(layout.WorkspaceIndexPath) || jsonStore.RequiresSave(workspaceIndex, nextWorkspaceIndex))
+    public async Task<ExecutionRunDetail> UpdateExecutionRunDetailAsync(
+        Guid executionRunId,
+        Func<SandboxWorkspaceCatalog, ExecutionRunDetail, ExecutionRunDetail> update,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(update);
+
+        await gate.WaitAsync(cancellationToken);
+        try
+        {
+            await using var workspaceLock = await crossProcessLock.AcquireAsync(cancellationToken);
+            await EnsureSplitFilesCoreAsync(cancellationToken);
+
+            var catalog = await LoadCatalogCoreAsync(cancellationToken);
+            var previousDetail = await executionSliceStore.LoadRunDetailAsync(executionRunId, cancellationToken)
+                ?? throw new InvalidOperationException($"Execution run '{executionRunId:N}' was not found.");
+            var updatedDetail = update(catalog, previousDetail)
+                ?? throw new InvalidOperationException("Execution run update cannot return null.");
+            if (updatedDetail.Run.Id != executionRunId)
             {
-                await SaveWorkspaceIndexCoreAsync(nextWorkspaceIndex, cancellationToken);
+                throw new InvalidOperationException("Execution run update cannot change the run identity.");
             }
 
-            await chatProjectionStore.SaveRunDetailAsync(previousDetail, saveResult.Detail, saveResult.Index, cancellationToken);
-            return saveResult.Detail;
+            if (ReferenceEquals(previousDetail, updatedDetail))
+            {
+                return previousDetail;
+            }
+
+            ValidateExecutionRunDetail(catalog, updatedDetail);
+            return await SaveExecutionRunDetailCoreAsync(previousDetail, updatedDetail, cancellationToken);
         }
         finally
         {
@@ -618,6 +643,26 @@ public sealed class FileSandboxWorkspaceStore : ISandboxWorkspaceStore, ISandbox
                     UpdatedAtUtc: DateTimeOffset.UtcNow),
                 cancellationToken);
         }
+    }
+
+    private async Task<ExecutionRunDetail> SaveExecutionRunDetailCoreAsync(
+        ExecutionRunDetail? previousDetail,
+        ExecutionRunDetail detail,
+        CancellationToken cancellationToken)
+    {
+        var saveResult = await executionSliceStore.SaveRunDetailAsync(previousDetail, detail, cancellationToken);
+        var workspaceIndex = await LoadWorkspaceIndexCoreAsync(cancellationToken);
+        var nextWorkspaceIndex = new WorkspaceStorageIndex(
+            Revision: saveResult.Changed ? workspaceIndex.Revision + 1L : workspaceIndex.Revision,
+            UpdatedAtUtc: saveResult.Index.UpdatedAtUtc);
+
+        if (saveResult.Changed || !File.Exists(layout.WorkspaceIndexPath) || jsonStore.RequiresSave(workspaceIndex, nextWorkspaceIndex))
+        {
+            await SaveWorkspaceIndexCoreAsync(nextWorkspaceIndex, cancellationToken);
+        }
+
+        await chatProjectionStore.SaveRunDetailAsync(previousDetail, saveResult.Detail, saveResult.Index, cancellationToken);
+        return saveResult.Detail;
     }
 
     private async Task<SandboxWorkspaceDocumentSnapshot> LoadSnapshotCoreAsync(CancellationToken cancellationToken)

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Workflows Curator"
+  short_description: "Curate and operate governed workflows safely"
+  default_prompt: "Use $candoitall-workflows-curator to inspect, create, revise, activate, and run a governed workflow."

@@ -1,0 +1,272 @@
+@using CanDoItAll.AgentFramework.Models
+@using CanDoItAll.AgentFramework.Workflows.Abstractions
+
+@if (!IsActive)
+{
+    <Stack data-testid="workflow-overview-inactive">
+        <EmptyState Eyebrow="Workflow dashboard"
+                    Title="Dashboard loads on demand"
+                    Description="Open the Dashboard tab to read the bounded workflow overview projection." />
+    </Stack>
+}
+else if (isLoading)
+{
+    <Stack data-testid="workflow-overview-loading">
+        <LoadingState Eyebrow="Workflow dashboard"
+                      Title="Loading workflow signals"
+                      Description="Reading grouped run counts and bounded workflow activity windows." />
+    </Stack>
+}
+else if (!string.IsNullOrWhiteSpace(loadError))
+{
+    <Stack GapScale="LayoutGap.Medium"
+           data-testid="workflow-overview-error">
+        <EmptyState Eyebrow="Dashboard unavailable"
+                    Title="Workflow signals could not be loaded"
+                    Description="@loadError" />
+        <Cluster JustifyContent="JustifyContent.End">
+            <Button Text="Retry"
+                    Icon="refresh"
+                    Variant="Variant.Outlined"
+                    Click="RefreshAsync"
+                    data-testid="workflow-overview-retry" />
+        </Cluster>
+    </Stack>
+}
+else if (snapshot is not null)
+{
+    <Stack GapScale="LayoutGap.Large"
+           Class="workflow-overview"
+           data-testid="workflow-overview-content">
+        <SurfaceCard Soft="true"
+                     data-testid="workflow-overview-heading">
+            <Cluster Gap="LayoutGap.Large"
+                     AlignItems="AlignItems.Center"
+                     JustifyContent="JustifyContent.SpaceBetween"
+                     Wrap="FlexWrap.Wrap">
+                <Stack GapScale="LayoutGap.Tiny">
+                    <TextBlock TextStyle="TextStyle.Eyebrow" Value="Workflow control plane" />
+                    <TextBlock Value="Operational health across definitions and executions." />
+                </Stack>
+                <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
+                    <StatusBadge Tone="info" Text="Grouped aggregates" />
+                    <StatusBadge Tone="neutral" Text="@($"As of {snapshot.AsOfUtc.LocalDateTime:g}")" />
+                    <Button Text="Refresh dashboard"
+                            Icon="refresh"
+                            Variant="Variant.Outlined"
+                            Size="ButtonSize.Small"
+                            Click="RefreshAsync"
+                            data-testid="workflow-overview-refresh" />
+                </Cluster>
+            </Cluster>
+        </SurfaceCard>
+
+        <Grid Gap="LayoutGap.Medium"
+              ColumnsXl="8"
+              Class="workflow-overview-metrics"
+              data-testid="workflow-overview-metrics">
+            <MetricCard Label="Definitions"
+                        Value="@FormatCount(snapshot.DefinitionCount)"
+                        data-testid="workflow-overview-definition-count" />
+            <MetricCard Label="Active"
+                        Value="@FormatCount(snapshot.ActiveDefinitionCount)"
+                        data-testid="workflow-overview-active-count" />
+            <MetricCard Label="Runs"
+                        Value="@FormatCount(snapshot.RunCount)"
+                        data-testid="workflow-overview-run-count" />
+            <MetricCard Label="Running"
+                        Value="@FormatCount(snapshot.RunningRunCount)"
+                        data-testid="workflow-overview-running-count" />
+            <MetricCard Label="Waiting"
+                        Value="@FormatCount(snapshot.WaitingForInputRunCount)"
+                        data-testid="workflow-overview-waiting-count" />
+            <MetricCard Label="Completed"
+                        Value="@FormatCount(snapshot.CompletedRunCount)"
+                        data-testid="workflow-overview-completed-count" />
+            <MetricCard Label="Failed"
+                        Value="@FormatCount(snapshot.FailedRunCount)"
+                        data-testid="workflow-overview-failed-count" />
+            <MetricCard Label="Success rate"
+                        Value="@FormatSuccessRate(snapshot.SuccessRatePercent)"
+                        data-testid="workflow-overview-success-rate" />
+        </Grid>
+
+        <Grid Gap="LayoutGap.Large"
+              Class="workflow-overview-main-grid"
+              ColumnTemplateXl="minmax(20rem,0.95fr) minmax(0,1.1fr) minmax(16rem,0.72fr) minmax(20rem,0.95fr)">
+            <SurfaceCard Soft="true"
+                         Class="workflow-overview-main-card workflow-overview-list-card"
+                         data-testid="workflow-overview-top-workflows">
+                <Cluster JustifyContent="JustifyContent.SpaceBetween"
+                         AlignItems="AlignItems.Start"
+                         Gap="LayoutGap.Medium"
+                         Wrap="FlexWrap.Wrap">
+                    <Stack GapScale="LayoutGap.Tiny">
+                        <TextBlock TextStyle="TextStyle.Eyebrow" Value="Most used workflows" />
+                        <TextBlock Value="Top 5 by execution count" />
+                    </Stack>
+                    <StatusBadge Tone="info" Text="@($"{snapshot.TopWorkflows.Count} ranked")" />
+                </Cluster>
+
+                @if (snapshot.TopWorkflows.Count == 0)
+                {
+                    <EmptyState Eyebrow="No executions"
+                                Title="No workflow usage is ranked"
+                                Description="Run a workflow to populate this dashboard." />
+                }
+                else
+                {
+                    <ol class="workflow-overview-list" data-testid="workflow-overview-top-workflow-list">
+                        @foreach (var workflow in snapshot.TopWorkflows)
+                        {
+                            <li class="workflow-overview-list-row" data-testid="workflow-overview-top-workflow-row">
+                                <Stack GapScale="LayoutGap.Tiny" Class="workflow-overview-list-row__body">
+                                    <TextBlock Value="@workflow.Name" />
+                                    <Cluster Gap="LayoutGap.Tiny" Wrap="FlexWrap.Wrap">
+                                        <StatusBadge Tone="@ResolveLifecycleTone(workflow.Status)"
+                                                     Text="@(workflow.Status?.ToString() ?? "Deleted")"
+                                                     NoWrap="true" />
+                                        <TextBlock Value="@($"Last run {workflow.LastRunAtUtc.LocalDateTime:g}")" />
+                                    </Cluster>
+                                </Stack>
+                                <Stack GapScale="LayoutGap.Tiny" Class="workflow-overview-list-row__metric">
+                                    <strong>@FormatCount(workflow.RunCount)</strong>
+                                    <span>@FormatFailureCount(workflow.FailedRunCount)</span>
+                                </Stack>
+                            </li>
+                        }
+                    </ol>
+                }
+            </SurfaceCard>
+
+            <Stack GapScale="LayoutGap.Medium"
+                   Class="workflow-overview-main-card workflow-overview-chart-shell"
+                   data-testid="workflow-overview-run-state-chart">
+                <CdaChart Title="Run state distribution"
+                          Description="Exact grouped totals across persisted workflow runs."
+                          Series="@RunStateSeries"
+                          Options="@RunStateChartOptions"
+                          Height="310"
+                          class="workflow-overview-chart-card box-border h-full w-full max-w-full min-w-0 overflow-hidden"
+                          EmptyText="No workflow runs have been recorded." />
+            </Stack>
+
+            <Stack GapScale="LayoutGap.Medium"
+                   Class="workflow-overview-main-card workflow-overview-chart-shell"
+                   data-testid="workflow-overview-backend-chart">
+                <CdaChart Title="Runtime backends"
+                          Description="Share of executions by runtime backend."
+                          Series="@BackendSeries"
+                          Options="@BackendChartOptions"
+                          Height="310"
+                          class="workflow-overview-chart-card box-border h-full w-full max-w-full min-w-0 overflow-hidden"
+                          EmptyText="Runtime backend distribution is not available yet." />
+            </Stack>
+
+            <SurfaceCard Soft="true"
+                         Class="workflow-overview-main-card workflow-overview-list-card"
+                         data-testid="workflow-overview-recent-runs">
+                <Cluster JustifyContent="JustifyContent.SpaceBetween"
+                         AlignItems="AlignItems.Start"
+                         Gap="LayoutGap.Medium"
+                         Wrap="FlexWrap.Wrap">
+                    <Stack GapScale="LayoutGap.Tiny">
+                        <TextBlock TextStyle="TextStyle.Eyebrow" Value="Recent activity" />
+                        <TextBlock Value="Latest workflow executions" />
+                    </Stack>
+                    <StatusBadge Tone="neutral" Text="@($"{snapshot.RecentRuns.Count} shown")" />
+                </Cluster>
+
+                @if (snapshot.RecentRuns.Count == 0)
+                {
+                    <EmptyState Eyebrow="No activity"
+                                Title="No recent runs"
+                                Description="The latest bounded run window will appear here." />
+                }
+                else
+                {
+                    <ol class="workflow-overview-list" data-testid="workflow-overview-recent-run-list">
+                        @foreach (var row in snapshot.RecentRuns)
+                        {
+                            <li class="workflow-overview-list-row" data-testid="workflow-overview-recent-run-row">
+                                <Stack GapScale="LayoutGap.Tiny" Class="workflow-overview-list-row__body">
+                                    <TextBlock Value="@row.WorkflowName" />
+                                    <span class="workflow-overview-summary">@row.Run.Summary</span>
+                                    <TextBlock Value="@row.Run.UpdatedAtUtc.LocalDateTime.ToString("g")" />
+                                </Stack>
+                                <StatusBadge Tone="@ResolveRunTone(row.Run.State)"
+                                             Text="@FormatRunState(row.Run.State)"
+                                             NoWrap="true" />
+                            </li>
+                        }
+                    </ol>
+                }
+            </SurfaceCard>
+        </Grid>
+
+        <Grid Gap="LayoutGap.Large"
+              ColumnTemplateXl="minmax(0,1.25fr) minmax(22rem,0.75fr)"
+              Class="workflow-overview-secondary-grid">
+            <SurfaceCard Soft="true" data-testid="workflow-overview-recent-definitions">
+                <Cluster JustifyContent="JustifyContent.SpaceBetween"
+                         AlignItems="AlignItems.Start"
+                         Gap="LayoutGap.Medium"
+                         Wrap="FlexWrap.Wrap">
+                    <Stack GapScale="LayoutGap.Tiny">
+                        <TextBlock TextStyle="TextStyle.Eyebrow" Value="Definition activity" />
+                        <TextBlock Value="Recently updated workflow definitions" />
+                    </Stack>
+                    <StatusBadge Tone="info" Text="@($"{snapshot.RecentlyUpdatedDefinitions.Count} shown")" />
+                </Cluster>
+
+                @if (snapshot.RecentlyUpdatedDefinitions.Count == 0)
+                {
+                    <EmptyState Eyebrow="Empty catalog"
+                                Title="No definitions are available"
+                                Description="Create a workflow to begin tracking definition activity." />
+                }
+                else
+                {
+                    <div class="workflow-overview-definition-grid" data-testid="workflow-overview-definition-grid">
+                        @foreach (var definition in snapshot.RecentlyUpdatedDefinitions)
+                        {
+                            <SurfaceCard Soft="true"
+                                         Class="workflow-overview-definition-card"
+                                         data-testid="workflow-overview-definition-card">
+                                <Stack GapScale="LayoutGap.Tiny">
+                                    <TextBlock Value="@definition.Name" />
+                                    <span class="workflow-overview-summary">@definition.Description</span>
+                                    <Cluster Gap="LayoutGap.Tiny" Wrap="FlexWrap.Wrap">
+                                        <StatusBadge Tone="@ResolveLifecycleTone(definition.Status)"
+                                                     Text="@definition.Status.ToString()"
+                                                     NoWrap="true" />
+                                        <StatusBadge Tone="info"
+                                                     Text="@FormatBackend(definition.PreferredBackend)"
+                                                     NoWrap="true" />
+                                    </Cluster>
+                                </Stack>
+                            </SurfaceCard>
+                        }
+                    </div>
+                }
+            </SurfaceCard>
+
+            <SurfaceCard Soft="true" data-testid="workflow-overview-lifecycle">
+                <Stack GapScale="LayoutGap.Medium">
+                    <Stack GapScale="LayoutGap.Tiny">
+                        <TextBlock TextStyle="TextStyle.Eyebrow" Value="Lifecycle health" />
+                        <TextBlock Value="Definition readiness by lifecycle state" />
+                    </Stack>
+                    <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
+                        @foreach (var status in LifecycleStatuses)
+                        {
+                            <StatusBadge Tone="@ResolveLifecycleTone(status)"
+                                         Text="@($"{status}: {FormatCount(snapshot.DefinitionsByStatus.GetValueOrDefault(status))}")"
+                                         data-testid="workflow-overview-lifecycle-count" />
+                        }
+                    </Cluster>
+                </Stack>
+            </SurfaceCard>
+        </Grid>
+    </Stack>
+}

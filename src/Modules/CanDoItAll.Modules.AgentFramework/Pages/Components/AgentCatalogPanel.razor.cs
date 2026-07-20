@@ -84,12 +84,6 @@ public partial class AgentCatalogPanel
 
     private string TeamPanelTitle => SelectedTeam is null ? "All agents" : SelectedTeam.Name;
 
-    private AgentDefinition? HrAgent
-        => agents.FirstOrDefault(HrAgentIdentity.Matches);
-
-    private AgentDefinition? PromptsCuratorAgent
-        => agents.FirstOrDefault(PromptsCuratorAgentIdentity.Matches);
-
     private IReadOnlyList<TreeViewNode> AgentTeamTreeNodes
     {
         get
@@ -325,7 +319,8 @@ public partial class AgentCatalogPanel
     private static bool IsManagedQuickChatAgent(AgentDefinition agent)
     {
         return HrAgentIdentity.Matches(agent) ||
-               PromptsCuratorAgentIdentity.Matches(agent);
+               PromptsCuratorAgentIdentity.Matches(agent) ||
+               WorkflowCuratorAgentIdentity.Matches(agent);
     }
 
     private async Task HandleAgentTeamTreeSelectAsync(string nodeId)

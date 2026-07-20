@@ -46,6 +46,14 @@
                                         Click="CreateStarterWorkflowAsync"
                                         Disabled="@isBusy"
                                         data-testid="workflows-create-starter" />
+                <AgentAvatarActionButton AgentName="@WorkflowCuratorDisplayName"
+                                         AvatarImageUrl="@WorkflowCuratorAvatarImageUrl"
+                                         FallbackText="WC"
+                                         Label="@($"Open {WorkflowCuratorDisplayName}")"
+                                         Click="OpenWorkflowCuratorAsync"
+                                         Disabled="@(workflowCuratorAgent is null || isOpeningWorkflowCurator || isBusy || AgentChatAccessState != AgentChatContextAccessState.Ready)"
+                                         TestId="workflows-curator-open"
+                                         TooltipTestId="workflows-curator-tooltip" />
                 <PageHeaderActionButton Icon="support_agent"
                                         Label="Open agents"
                                         TooltipText="Open the technical agents workspace."
@@ -86,65 +94,9 @@
                 <TabsItem Text="Dashboard"
                           Icon="dashboard"
                           data-testid="workflows-tab-dashboard">
-                    <Grid Gap="LayoutGap.Large"
-                          Class="workflows-layout"
-                          ColumnTemplateLg="minmax(0,1.2fr) minmax(20rem,0.8fr)">
-                        <SurfaceCard data-testid="workflows-dashboard-live">
-                            <Split Gap="LayoutGap.Small">
-                                <div>
-                                    <TextBlock TextStyle="TextStyle.Eyebrow" Value="Live dashboard" />
-                                    <h2 class="workflows-card-title">@SelectedDefinitionTitle</h2>
-                                </div>
-                                <StatusBadge Tone="@RunTone" Text="@RunText" />
-                            </Split>
-
-                            @if (selectedDefinition is null)
-                            {
-                                @if (SelectedDefinitionSummary is { } summary)
-                                {
-                                    <p class="workflows-muted mt-3">@summary.Description</p>
-                                    <Cluster Gap="LayoutGap.Small"
-                                             Wrap="FlexWrap.Wrap"
-                                             Class="mt-4">
-                                        <StatusBadge Tone="secondary" Text="@($"Status {summary.Status}")" />
-                                        <StatusBadge Tone="info" Text="@($"Backend {summary.PreferredBackend}")" />
-                                        <StatusBadge Tone="neutral" Text="Detail loading" />
-                                    </Cluster>
-                                }
-                                else
-                                {
-                                    <EmptyState Eyebrow="No workflow selected"
-                                                Title="Choose a workflow"
-                                                Description="Select a workflow definition or create the starter workflow to populate the dashboard." />
-                                }
-                            }
-                            else
-                            {
-                                <p class="workflows-muted mt-3">@selectedDefinition.Description</p>
-                                <Cluster Gap="LayoutGap.Small"
-                                         Wrap="FlexWrap.Wrap"
-                                         Class="mt-4">
-                                    <StatusBadge Tone="@ValidationTone" Text="@($"Status {selectedDefinition.Status}")" />
-                                    <StatusBadge Tone="info" Text="@($"Backend {selectedDefinition.RuntimePolicy.PreferredBackend}")" />
-                                    <StatusBadge Tone="secondary" Text="@($"{selectedDefinition.Graph.Nodes.Count} node(s)")" />
-                                    <StatusBadge Tone="secondary" Text="@($"{selectedDefinition.Graph.Edges.Count} edge(s)")" />
-                                </Cluster>
-                            }
-                        </SurfaceCard>
-
-                        <SurfaceCard data-testid="workflows-dashboard-activity">
-                            <TextBlock TextStyle="TextStyle.Eyebrow" Value="Activity" />
-                            <h2 class="workflows-card-title">Current signals</h2>
-                            <Cluster Gap="LayoutGap.Small"
-                                     Wrap="FlexWrap.Wrap"
-                                     Class="mt-4">
-                                <StatusBadge Tone="@ValidationTone" Text="@($"Validation {ValidationText}")" />
-                                <StatusBadge Tone="warning" Text="@($"{PendingRequestCountText} pending input")" />
-                                <StatusBadge Tone="info" Text="@($"{ArtifactCountText} artifact(s)")" />
-                                <StatusBadge Tone="secondary" Text="@($"Backend {settings.DefaultRuntimePolicy.PreferredBackend}")" />
-                            </Cluster>
-                        </SurfaceCard>
-                    </Grid>
+                    <WorkflowOverviewPanel QueryService="OverviewQueryService"
+                                           IsActive="@(activeWorkflowTabIndex == DashboardTabIndex)"
+                                           RefreshVersion="analyticsRefreshVersion" />
                 </TabsItem>
 
                 <TabsItem Text="Workflows"
@@ -1118,6 +1070,7 @@ UpdatedAt: @FormatFullDate(currentRunDetail.UpdatedAtUtc)</pre>
     </ChildContent>
 </PageScaffold>
 
-<AgentChatContextSurfaceProvider Surface="@AgentChatSurface"
-                                 ContextNavigationIdentity="@AgentChatNavigationFence"
-                                 ContextAccessState="@AgentChatAccessState" />
+<WorkflowAgentChatContextProvider Surface="@AgentChatSurface"
+                                  ContextNavigationIdentity="@AgentChatNavigationFence"
+                                  ContextAccessState="@AgentChatAccessState"
+                                  RefreshRequested="HandleAgentChatExecutionCompletedAsync" />

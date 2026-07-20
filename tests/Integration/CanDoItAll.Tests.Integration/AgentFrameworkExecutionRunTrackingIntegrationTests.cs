@@ -257,6 +257,66 @@ public sealed class AgentFrameworkExecutionRunTrackingIntegrationTests
     }
 
     [Fact]
+    public async Task RespondToPendingApprovalsAsync_continues_chat_run_without_loading_unrelated_run_slices()
+    {
+        await using var testEnvironment = CanDoItAllTestEnvironment.Create("integration-agentframework-approval-split-store");
+        var profile = testEnvironment.CreatePostgreSqlProfile("primary");
+        await using var provider = await TestApplicationBootstrap.BuildServiceProviderAsync(
+            profile,
+            "CanDoItAll.Tests",
+            TestSchemaBootstrapModules.Full,
+            configureServices: services =>
+            {
+                services.RemoveAll<IAgentRuntime>();
+                services.AddSingleton<StructuredOutputApprovalRuntime>();
+                services.AddSingleton<IAgentRuntime>(serviceProvider => serviceProvider.GetRequiredService<StructuredOutputApprovalRuntime>());
+                UseDirectWorkspaceService(services);
+            });
+
+        await using var scope = provider.CreateAsyncScope();
+        var workspaceService = scope.ServiceProvider.GetRequiredService<IAgentFrameworkWorkspaceService>();
+        var executionRunStore = scope.ServiceProvider.GetRequiredService<ISandboxWorkspaceExecutionRunStore>();
+        var workspaceRoot = scope.ServiceProvider.GetRequiredService<IWorkspacePathResolver>().ResolveWorkspaceRoot();
+        var workspaceScope = ResolveWorkspaceScope(scope.ServiceProvider);
+        var layout = new FileSandboxWorkspaceStorageLayout(workspaceRoot, workspaceScope);
+        var agent = (await workspaceService.ListAgentsAsync(includeTemplates: false))
+            .First(item => item.ProviderProfileId.HasValue);
+
+        var unrelatedRunId = Guid.NewGuid();
+        await executionRunStore.SaveExecutionRunDetailAsync(CreateCompletedRunDetail(unrelatedRunId, agent.Id, "Unrelated corrupt approval receipt run"));
+        var unrelatedReceiptsRoot = layout.RunReceiptsRoot(unrelatedRunId);
+        Directory.CreateDirectory(unrelatedReceiptsRoot);
+        await File.WriteAllTextAsync(
+            Path.Combine(unrelatedReceiptsRoot, "corrupt-receipt.json"),
+            "{ this is not valid json",
+            CancellationToken.None);
+
+        var session = await workspaceService.GetOrCreateChatSessionAsync(agent.Id);
+        var pendingResult = await workspaceService.SendMessageAsync(
+            agent.Id,
+            session.Id,
+            "Request approval before completing this chat run.");
+        var pendingDetail = await executionRunStore.GetExecutionRunDetailAsync(pendingResult.ExecutionRunId);
+
+        Assert.NotNull(pendingDetail);
+        Assert.Equal(ExecutionState.WaitingOnTool, pendingDetail!.Run.State);
+        Assert.NotEmpty(pendingDetail.Run.PendingApprovals);
+
+        var completedResult = await workspaceService.RespondToPendingApprovalsAsync(
+            agent.Id,
+            session.Id,
+            approved: true,
+            autoApprovePendingToolCalls: false);
+        var completedDetail = await executionRunStore.GetExecutionRunDetailAsync(completedResult.ExecutionRunId);
+
+        Assert.NotNull(completedDetail);
+        Assert.Equal(pendingResult.ExecutionRunId, completedResult.ExecutionRunId);
+        Assert.Equal(ExecutionState.Completed, completedDetail!.Run.State);
+        Assert.Empty(completedDetail.Run.PendingApprovals);
+        Assert.Contains(completedDetail.ChatSession!.Messages, message => message.Role == ChatMessageRole.Assistant);
+    }
+
+    [Fact]
     public async Task ContinueExecutionRunAsync_preserves_structured_output_contract_after_pending_approval()
     {
         await using var testEnvironment = CanDoItAllTestEnvironment.Create("integration-agentframework-structured-output-continuation");

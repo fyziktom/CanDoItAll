@@ -538,6 +538,28 @@
         "validation"
       ],
       "proofNotes": "Template-owned skill for the privileged managed Prompts Curator agent."
+    },
+    {
+      "kind": "skill",
+      "key": "workflow-curator-agent-inline-skill",
+      "displayName": "Workflow Curator Agent Skill",
+      "description": "Approval-aware workflow for discovering, creating, validating, revising, activating, and operating canonical workflow definitions with optimistic concurrency.",
+      "stableId": "skill:workflow-curator-agent:v1",
+      "stableGuidKey": "capabilities/workflow-curator-agent-inline-skill",
+      "endpointOrPath": "inline://workflow-curator-agent",
+      "skillSource": "inline",
+      "inlineSkill": {
+        "name": "workflow-curator-agent",
+        "description": "Curate canonical workflow definitions with exact identity, bounded discovery, approval, validation, and concurrency boundaries.",
+        "instructionsAssetKey": "skills/instructions/workflow-curator-agent.md"
+      },
+      "operationClassifications": [
+        "read",
+        "mutation",
+        "validation",
+        "runtime-launch"
+      ],
+      "proofNotes": "Template-owned skill for the privileged managed Workflow Curator agent."
     }
   ]
 }

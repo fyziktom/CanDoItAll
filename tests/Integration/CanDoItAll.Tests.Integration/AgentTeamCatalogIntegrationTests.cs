@@ -160,6 +160,10 @@ public sealed class AgentTeamCatalogIntegrationTests
                 !string.Equals(
                     member.Key,
                     PromptsCuratorAgentIdentity.TemplateKey,
+                    StringComparison.Ordinal) &&
+                !string.Equals(
+                    member.Key,
+                    WorkflowCuratorAgentIdentity.TemplateKey,
                     StringComparison.Ordinal)),
             member =>
             {
@@ -185,6 +189,22 @@ public sealed class AgentTeamCatalogIntegrationTests
         Assert.False(curatorTemplate.Settings.Access.WorkspaceTools.CanWriteFiles);
         Assert.False(curatorTemplate.Settings.Access.ImageGeneration!.CanGenerateImages);
 
+        var workflowCuratorTemplate = Assert.Single(
+            members,
+            member => string.Equals(
+                member.Key,
+                WorkflowCuratorAgentIdentity.TemplateKey,
+                StringComparison.Ordinal));
+        Assert.False(workflowCuratorTemplate.Settings.Access.ProjectStructure!.CanRead);
+        Assert.False(workflowCuratorTemplate.Settings.Access.ProjectStructure.CanWrite);
+        Assert.False(workflowCuratorTemplate.Settings.Access.ProjectStructure.AllowAllProjects);
+        Assert.False(workflowCuratorTemplate.Settings.Access.Processes!.CanRead);
+        Assert.False(workflowCuratorTemplate.Settings.Access.Processes.CanWrite);
+        Assert.False(workflowCuratorTemplate.Settings.Access.Processes.AllowAllDefinitions);
+        Assert.False(workflowCuratorTemplate.Settings.Access.WorkspaceTools!.CanReadFiles);
+        Assert.False(workflowCuratorTemplate.Settings.Access.WorkspaceTools.CanWriteFiles);
+        Assert.False(workflowCuratorTemplate.Settings.Access.ImageGeneration!.CanGenerateImages);
+
         var seed = SandboxWorkspaceSeedFactory.Create();
         var teams = seed.AgentTeams;
 
@@ -205,6 +225,7 @@ public sealed class AgentTeamCatalogIntegrationTests
         Assert.Contains(agentsByTemplateKey["programming-workspace-analyst"].Id, deliveryTeam.AgentIds);
         Assert.Contains(agentsByTemplateKey["delivery-qa-observer"].Id, deliveryTeam.AgentIds);
         Assert.Contains(PromptsCuratorAgentIdentity.AgentId, deliveryTeam.AgentIds);
+        Assert.Contains(WorkflowCuratorAgentIdentity.AgentId, deliveryTeam.AgentIds);
 
         var curator = agentsByTemplateKey[PromptsCuratorAgentIdentity.TemplateKey];
         Assert.Equal(PromptsCuratorAgentIdentity.AgentId, curator.Id);
@@ -217,6 +238,18 @@ public sealed class AgentTeamCatalogIntegrationTests
         Assert.Equal(
             PromptsCuratorAgentCapabilityKeys.PrivilegedKeys.OrderBy(item => item, StringComparer.OrdinalIgnoreCase),
             curator.Capabilities.Select(item => item.CapabilityKey).OrderBy(item => item, StringComparer.OrdinalIgnoreCase));
+
+        var workflowCurator = agentsByTemplateKey[WorkflowCuratorAgentIdentity.TemplateKey];
+        Assert.Equal(WorkflowCuratorAgentIdentity.AgentId, workflowCurator.Id);
+        Assert.Equal(AgentLifecycleStatus.Active, workflowCurator.Status);
+        Assert.False(workflowCurator.IsTemplate);
+        Assert.Equal(AgentWorkloadKind.Management, workflowCurator.Workload);
+        Assert.True(workflowCurator.Permissions.CanUseTools);
+        Assert.False(workflowCurator.Permissions.CanAskOtherAgents);
+        Assert.False(workflowCurator.Permissions.CanObserveOtherAgents);
+        Assert.Equal(
+            WorkflowCuratorAgentCapabilityKeys.PrivilegedKeys.OrderBy(item => item, StringComparer.OrdinalIgnoreCase),
+            workflowCurator.Capabilities.Select(item => item.CapabilityKey).OrderBy(item => item, StringComparer.OrdinalIgnoreCase));
 
         var visualTemplateTeam = Assert.Single(teams, item => string.Equals(item.Name, "Visual Automation Template Team", StringComparison.Ordinal));
         Assert.Contains(agentsByTemplateKey["app-screenshot-capture-agent"].Id, visualTemplateTeam.AgentIds);

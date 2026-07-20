@@ -1,0 +1,71 @@
+@using CanDoItAll.AgentFramework.Core
+@using CanDoItAll.AgentFramework.Models
+@implements IDisposable
+@inject IAgentChatExecutionNotificationHub ExecutionNotificationHub
+
+<AgentChatContextSurfaceProvider Surface="Surface"
+                                 ContextNavigationIdentity="ContextNavigationIdentity"
+                                 ContextAccessState="ContextAccessState" />
+
+@code {
+    [Parameter, EditorRequired]
+    public AgentChatContextSurface Surface { get; set; } = default!;
+
+    [Parameter, EditorRequired]
+    public AgentChatNavigationIdentity ContextNavigationIdentity { get; set; }
+
+    [Parameter]
+    public AgentChatContextAccessState ContextAccessState { get; set; } = AgentChatContextAccessState.Ready;
+
+    [Parameter]
+    public EventCallback<AgentChatExecutionCompleted> RefreshRequested { get; set; }
+
+    private IAgentChatExecutionNotificationSubscription? notificationSubscription;
+    private AgentChatContextSource? activeSource;
+    private bool isDisposed;
+
+    protected override void OnParametersSet()
+    {
+        ArgumentNullException.ThrowIfNull(Surface);
+        if (ContextNavigationIdentity.IsEmpty)
+        {
+            throw new ArgumentException(
+                "A workflow agent-chat navigation identity is required.",
+                nameof(ContextNavigationIdentity));
+        }
+
+        if (activeSource == Surface.Source)
+        {
+            return;
+        }
+
+        notificationSubscription?.Dispose();
+        activeSource = Surface.Source;
+        notificationSubscription = ExecutionNotificationHub.Subscribe(
+            Surface.Source,
+            HandleExecutionCompletedAsync);
+    }
+
+    private Task HandleExecutionCompletedAsync(AgentChatExecutionCompleted notification)
+    {
+        if (isDisposed || activeSource is null || notification.Source != activeSource)
+        {
+            return Task.CompletedTask;
+        }
+
+        return InvokeAsync(() => RefreshRequested.InvokeAsync(notification));
+    }
+
+    public void Dispose()
+    {
+        if (isDisposed)
+        {
+            return;
+        }
+
+        isDisposed = true;
+        notificationSubscription?.Dispose();
+        notificationSubscription = null;
+        activeSource = null;
+    }
+}

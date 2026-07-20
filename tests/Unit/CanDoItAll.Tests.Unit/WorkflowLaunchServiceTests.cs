@@ -76,6 +76,7 @@ public sealed class WorkflowLaunchServiceTests
         Assert.Equal(latest.VersionId, latestResult.ResolvedRequest.Definition.VersionId);
         Assert.Collection(
             fixture.Catalog.Requests,
+            request => Assert.Null(request.VersionId),
             request => Assert.Equal(first.VersionId, request.VersionId));
         Assert.Collection(
             fixture.Catalog.LatestStatusRequests,
@@ -98,6 +99,51 @@ public sealed class WorkflowLaunchServiceTests
         Assert.Equal(active.VersionId, result.ResolvedRequest.Definition.VersionId);
         Assert.NotEqual(draft.VersionId, result.ResolvedRequest.Definition.VersionId);
         Assert.Single(fixture.RunLauncher.Requests);
+    }
+
+    [Theory]
+    [InlineData(WorkflowLifecycleStatus.Suspended)]
+    [InlineData(WorkflowLifecycleStatus.Archived)]
+    public async Task LaunchAsync_InactiveCurrentHead_BlocksHistoricalActiveSelections(
+        WorkflowLifecycleStatus inactiveStatus)
+    {
+        var catalog = new InMemoryWorkflowCatalogService(new PassingWorkflowDefinitionValidator());
+        var source = CreateDefinition(status: WorkflowLifecycleStatus.Active);
+        var active = await catalog.SaveDefinitionAsync(new WorkflowDefinitionSaveRequest(
+            source.Id,
+            ExpectedVersionId: null,
+            source.Name,
+            source.Description,
+            WorkflowLifecycleStatus.Active,
+            source.Graph,
+            source.RuntimePolicy));
+        var fixture = CreateLaunchFixture(catalog);
+
+        var exactActive = await fixture.Service.LaunchAsync(CreateIntent(
+            new WorkflowDefinitionSelection.ExactSavedVersion(active.Id, active.VersionId),
+            WorkflowLaunchMode.Production));
+        var latestActive = await fixture.Service.LaunchAsync(CreateIntent(
+            new WorkflowDefinitionSelection.LatestActive(active.Id),
+            WorkflowLaunchMode.Production));
+        await catalog.ChangeDefinitionStatusAsync(new WorkflowDefinitionStatusChangeRequest(
+            active.Id,
+            active.VersionId,
+            inactiveStatus));
+
+        var latestException = await Assert.ThrowsAsync<KeyNotFoundException>(() =>
+            fixture.Service.LaunchAsync(CreateIntent(
+                new WorkflowDefinitionSelection.LatestActive(active.Id),
+                WorkflowLaunchMode.Production)));
+        var exactException = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            fixture.Service.LaunchAsync(CreateIntent(
+                new WorkflowDefinitionSelection.ExactSavedVersion(active.Id, active.VersionId),
+                WorkflowLaunchMode.Production)));
+
+        Assert.Equal(active.VersionId, exactActive.ResolvedRequest.Definition.VersionId);
+        Assert.Equal(active.VersionId, latestActive.ResolvedRequest.Definition.VersionId);
+        Assert.Contains("Active", latestException.Message, StringComparison.Ordinal);
+        Assert.Contains(inactiveStatus.ToString(), exactException.Message, StringComparison.Ordinal);
+        Assert.Equal(2, fixture.RunLauncher.Requests.Count);
     }
 
     [Theory]
@@ -597,6 +643,21 @@ public sealed class WorkflowLaunchServiceTests
         return new TestFixture(service, catalog, runLauncher, runStore);
     }
 
+    private static (WorkflowLaunchService Service, RecordingWorkflowRunLauncher RunLauncher) CreateLaunchFixture(
+        IWorkflowCatalogService catalog)
+    {
+        var runStore = new InMemoryWorkflowRunStore();
+        var runLauncher = new RecordingWorkflowRunLauncher(FixedUtcNow, runStore);
+        var service = new WorkflowLaunchService(
+            catalog,
+            new WorkflowRuntimeBackendCatalog([WorkflowRuntimeBackendKind.InProcess]),
+            runLauncher,
+            new InMemoryWorkflowLaunchIdempotencyStore(),
+            runStore,
+            new FixedTimeProvider(FixedUtcNow));
+        return (service, runLauncher);
+    }
+
     private static WorkflowDefinition CreateDefinition(
         WorkflowId? workflowId = null,
         WorkflowVersionId? versionId = null,
@@ -671,7 +732,13 @@ public sealed class WorkflowLaunchServiceTests
             CancellationToken cancellationToken = default)
         {
             LatestStatusRequests.Add((workflowId, status));
-            var definition = definitions.LastOrDefault(candidate => candidate.Id == workflowId && candidate.Status == status);
+            var current = definitions.LastOrDefault(candidate => candidate.Id == workflowId);
+            var currentAllowsActiveLookup =
+                status != WorkflowLifecycleStatus.Active ||
+                current is { Status: WorkflowLifecycleStatus.Draft or WorkflowLifecycleStatus.Active };
+            var definition = currentAllowsActiveLookup
+                ? definitions.LastOrDefault(candidate => candidate.Id == workflowId && candidate.Status == status)
+                : null;
             return Task.FromResult(CreateDetail(definition));
         }
 

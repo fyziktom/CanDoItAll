@@ -281,6 +281,52 @@ public sealed class FileSandboxWorkspaceStoreLockIntegrationTests
         Assert.Equal(targetRunId, savedDetail!.Run.Id);
     }
 
+    [Fact]
+    public async Task UpdateExecutionRunDetailAsync_serializes_competing_mutations_against_the_latest_run()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var workspaceFactory = scope.ServiceProvider.GetRequiredService<ICanDoItAllAgentWorkspaceFactory>();
+        var workspaceService = workspaceFactory.GetOrganizationWorkspaceService();
+        var workspaceScope = workspaceFactory.GetOrganizationScope();
+        var firstStore = new FileSandboxWorkspaceStore(application.ActiveProfile.WorkspaceRootPath, workspaceScope);
+        var secondStore = new FileSandboxWorkspaceStore(application.ActiveProfile.WorkspaceRootPath, workspaceScope);
+        var firstMutationStore = Assert.IsAssignableFrom<ISandboxWorkspaceExecutionRunMutationStore>(firstStore);
+        var secondMutationStore = Assert.IsAssignableFrom<ISandboxWorkspaceExecutionRunMutationStore>(secondStore);
+        var agent = (await workspaceService.ListAgentsAsync(includeTemplates: false)).First();
+        var runId = Guid.NewGuid();
+        await firstStore.SaveExecutionRunDetailAsync(CreateRunDetail(runId, agent.Id, "Atomic run mutation"));
+        var appliedCount = 0;
+
+        Task MutateAsync(ISandboxWorkspaceExecutionRunMutationStore mutationStore) => mutationStore.UpdateExecutionRunDetailAsync(
+            runId,
+            (_, detail) =>
+            {
+                if (!string.Equals(detail.Run.ResultSummary, "Completed", StringComparison.Ordinal))
+                {
+                    return detail;
+                }
+
+                Interlocked.Increment(ref appliedCount);
+                return detail with
+                {
+                    Run = detail.Run with
+                    {
+                        ResultSummary = "Approved",
+                        Revision = detail.Run.Revision + 1
+                    }
+                };
+            });
+
+        await Task.WhenAll(MutateAsync(firstMutationStore), MutateAsync(secondMutationStore));
+        var savedDetail = await firstStore.GetExecutionRunDetailAsync(runId);
+
+        Assert.Equal(1, appliedCount);
+        Assert.NotNull(savedDetail);
+        Assert.Equal("Approved", savedDetail!.Run.ResultSummary);
+        Assert.Equal(2, savedDetail.Run.Revision);
+    }
+
     private static FileStream OpenExclusiveWorkspaceLock(string lockPath)
     {
         Directory.CreateDirectory(Path.GetDirectoryName(lockPath)!);

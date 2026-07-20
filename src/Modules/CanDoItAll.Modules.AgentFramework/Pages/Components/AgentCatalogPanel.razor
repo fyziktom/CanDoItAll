@@ -20,26 +20,6 @@
                         ButtonStyle="ButtonStyle.Light"
                         Click="OpenNewAgentDialogAsync"
                         data-testid="agents-catalog-new" />
-                @if (HrAgent is { } toolbarHrAgent)
-                {
-                    <Button Text="HR Agent"
-                            Icon="forum"
-                            Size="ButtonSize.Small"
-                            ButtonStyle="ButtonStyle.Info"
-                            Disabled="@openingManagedAgentChatId.HasValue"
-                            Click="@(() => OpenManagedAgentChatAsync(toolbarHrAgent))"
-                            data-testid="agents-hr-agent-open-top" />
-                }
-                @if (PromptsCuratorAgent is { } toolbarPromptsCuratorAgent)
-                {
-                    <Button Text="Prompts Curator"
-                            Icon="forum"
-                            Size="ButtonSize.Small"
-                            ButtonStyle="ButtonStyle.Info"
-                            Disabled="@openingManagedAgentChatId.HasValue"
-                            Click="@(() => OpenManagedAgentChatAsync(toolbarPromptsCuratorAgent))"
-                            data-testid="agents-prompts-curator-open-top" />
-                }
                 <div class="agent-catalog-panel__search" role="search">
                     <input @bind="agentSearch"
                            @bind:event="oninput"
@@ -187,6 +167,16 @@
                                                     Disabled="@openingManagedAgentChatId.HasValue"
                                                     Click="@(() => OpenManagedAgentChatAsync(agent))"
                                                     data-testid="agents-prompts-curator-open" />
+                                        }
+                                        @if (WorkflowCuratorAgentIdentity.Matches(agent))
+                                        {
+                                            <Button Text="Open chat"
+                                                    Icon="account_tree"
+                                                    Size="ButtonSize.Small"
+                                                    ButtonStyle="ButtonStyle.Light"
+                                                    Disabled="@openingManagedAgentChatId.HasValue"
+                                                    Click="@(() => OpenManagedAgentChatAsync(agent))"
+                                                    data-testid="agents-workflow-curator-open" />
                                         }
                                     </Actions>
                                 </AgentSelectionCard>

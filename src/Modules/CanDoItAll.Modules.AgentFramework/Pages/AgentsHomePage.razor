@@ -35,6 +35,14 @@
                              Tone="danger" />
             </Stats>
             <Actions>
+                <AgentAvatarActionButton AgentName="@HrAgentDisplayName"
+                                         AvatarImageUrl="@HrAgentAvatarImageUrl"
+                                         FallbackText="HR"
+                                         Label="@($"Open {HrAgentDisplayName}")"
+                                         Click="OpenHrAgentAsync"
+                                         Disabled="@(hrAgent is null || isOpeningHrAgent || AgentChatAccessState != AgentChatContextAccessState.Ready)"
+                                         TestId="agents-hr-agent-open-header"
+                                         TooltipTestId="agents-hr-agent-tooltip" />
                 <HelpPopover RootClass="pf-help-popover inline-flex items-center"
                              ToggleClass="pf-help-popover__toggle pf-help-popover__toggle--compact"
                              OpenOnHover="true"

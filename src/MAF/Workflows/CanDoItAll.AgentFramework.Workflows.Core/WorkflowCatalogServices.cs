@@ -5,6 +5,7 @@ namespace CanDoItAll.AgentFramework.Core;
 
 public sealed class InMemoryWorkflowCatalogService :
     IWorkflowCatalogService,
+    IWorkflowCatalogSearchService,
     IWorkflowComponentLibraryService,
     IWorkflowSettingsService
 {
@@ -45,15 +46,47 @@ public sealed class InMemoryWorkflowCatalogService :
             return store.Definitions.Values
                 .Select(versions => versions[^1])
                 .OrderByDescending(definition => definition.UpdatedAtUtc)
-                .Select(definition => new WorkflowCatalogItem(
-                    definition.Id,
-                    definition.VersionId,
-                    definition.Name,
-                    definition.Description,
-                    definition.Status,
-                    definition.RuntimePolicy.PreferredBackend,
-                    definition.UpdatedAtUtc))
+                .Select(MapCatalogItem)
                 .ToArray();
+        }
+        finally
+        {
+            store.Gate.Release();
+        }
+    }
+
+    public async Task<WorkflowCatalogSearchPage> SearchDefinitionsAsync(
+        WorkflowCatalogSearchQuery query,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(query);
+
+        await store.Gate.WaitAsync(cancellationToken);
+        try
+        {
+            var filtered = store.Definitions.Values
+                .Select(versions => versions[^1])
+                .Where(definition => !query.Status.HasValue || definition.Status == query.Status.Value)
+                .Where(definition => query.Text is null ||
+                                     definition.Name.Contains(query.Text, StringComparison.OrdinalIgnoreCase) ||
+                                     definition.Description.Contains(query.Text, StringComparison.OrdinalIgnoreCase));
+            var totalCount = filtered.Count();
+            cancellationToken.ThrowIfCancellationRequested();
+            var items = filtered
+                .OrderByDescending(definition => definition.UpdatedAtUtc)
+                .ThenBy(definition => definition.Name, StringComparer.OrdinalIgnoreCase)
+                .ThenBy(definition => definition.Name, StringComparer.Ordinal)
+                .ThenBy(definition => definition.Id.Value)
+                .Skip(query.Offset)
+                .Take(query.PageSize)
+                .Select(MapCatalogItem)
+                .ToArray();
+
+            return new WorkflowCatalogSearchPage(
+                items,
+                query.PageIndex,
+                query.PageSize,
+                totalCount);
         }
         finally
         {
@@ -100,14 +133,25 @@ public sealed class InMemoryWorkflowCatalogService :
         await store.Gate.WaitAsync(cancellationToken);
         try
         {
-            definition = store.Definitions.TryGetValue(workflowId, out var versions)
-                ? versions
-                    .Where(item => item.Status == status)
-                    .OrderByDescending(item => item.UpdatedAtUtc)
-                    .ThenByDescending(item => item.CreatedAtUtc)
-                    .ThenByDescending(item => item.VersionId.Value)
-                    .FirstOrDefault()
-                : null;
+            if (!store.Definitions.TryGetValue(workflowId, out var versions))
+            {
+                definition = null;
+            }
+            else
+            {
+                var current = versions[^1];
+                var currentAllowsActiveLookup =
+                    status != WorkflowLifecycleStatus.Active ||
+                    current.Status is WorkflowLifecycleStatus.Draft or WorkflowLifecycleStatus.Active;
+                definition = currentAllowsActiveLookup
+                    ? versions
+                        .Where(item => item.Status == status)
+                        .OrderByDescending(item => item.UpdatedAtUtc)
+                        .ThenByDescending(item => item.CreatedAtUtc)
+                        .ThenByDescending(item => item.VersionId.Value)
+                        .FirstOrDefault()
+                    : null;
+            }
         }
         finally
         {
@@ -566,6 +610,15 @@ public sealed class InMemoryWorkflowCatalogService :
 
         return [];
     }
+
+    private static WorkflowCatalogItem MapCatalogItem(WorkflowDefinition definition) => new(
+        definition.Id,
+        definition.VersionId,
+        definition.Name,
+        definition.Description,
+        definition.Status,
+        definition.RuntimePolicy.PreferredBackend,
+        definition.UpdatedAtUtc);
 
     private ProviderProfile NormalizeProvider(ProviderProfile provider)
     {

@@ -17,6 +17,7 @@ public partial class WorkflowsPage
 {
     private const int HistoryRunPageSize = 8;
     private const int HistoryEventPageSize = 8;
+    private const int DashboardTabIndex = 0;
     private const int WorkflowsTabIndex = 1;
     private const int EditorTabIndex = 2;
     private const int HistoryTabIndex = 3;
@@ -60,6 +61,9 @@ public partial class WorkflowsPage
     public IWorkflowAnalyticsQueryService AnalyticsQueryService { get; set; } = default!;
 
     [Inject]
+    public IWorkflowOverviewQueryService OverviewQueryService { get; set; } = default!;
+
+    [Inject]
     public IProjectStructureRuntimeGateway ProjectStructureGateway { get; set; } = default!;
 
     [Inject]
@@ -67,6 +71,12 @@ public partial class WorkflowsPage
 
     [Inject]
     public NotificationService NotificationService { get; set; } = default!;
+
+    [Inject]
+    public IAgentChatLauncher AgentChatLauncher { get; set; } = default!;
+
+    [Inject]
+    public IAgentFrameworkWorkspaceService AgentWorkspaceService { get; set; } = default!;
 
     [SupplyParameterFromQuery(Name = "projectId")]
     public Guid? RequestedProjectId { get; set; }
@@ -85,6 +95,7 @@ public partial class WorkflowsPage
     private IReadOnlyList<WorkflowArtifactRecord> artifacts = [];
     private IReadOnlyList<WorkflowExternalRequestRecord> pendingRequests = [];
     private IReadOnlyList<WorkflowValidationIssue> validationIssues = [];
+    private AgentDefinition? workflowCuratorAgent;
     private WorkflowTemplatePack? templatePack;
     private WorkflowTemplateDefinition? selectedTemplate;
     private WorkflowTemplateDefinition? templatePreviewTemplate;
@@ -117,6 +128,7 @@ public partial class WorkflowsPage
     private int historyEventTotalCount;
     private bool isLoading = true;
     private bool isBusy;
+    private bool isOpeningWorkflowCurator;
     private bool isRunningTest;
     private bool isPreviewInputDialogOpen;
     private bool isTemplateCatalogueDialogOpen;
@@ -140,6 +152,7 @@ public partial class WorkflowsPage
     private AgentChatNavigationIdentity observedNavigation;
     private AgentChatNavigationIdentity selectedDefinitionNavigation;
     private Task? componentLibraryLoadTask;
+    private Task? workflowCuratorResolutionTask;
     private readonly HashSet<string> expandedWorkflowTreeNodeIds = [];
     private CanvasWorkbenchUiState templatePreviewCanvasUiState = CreateTemplatePreviewCanvasUiState("start");
     private string? templatePreviewSelectedNodeId = "start";
@@ -177,9 +190,9 @@ public partial class WorkflowsPage
     }
 
     private AgentChatContextAccessState AgentChatAccessState
-        => hasRouteIdentityFailure || IsSelectedDefinitionDetailUnavailable
+        => hasRouteIdentityFailure || IsAgentChatSelectedDefinitionDetailUnavailable
             ? AgentChatContextAccessState.Failed
-            : isLoading || IsSelectedDefinitionDetailPending || isDefinitionSelectionLoading || isRunsPageLoading || isRunSelectionLoading || isBusy
+            : isLoading || IsAgentChatSelectedDefinitionDetailPending || isDefinitionSelectionLoading || isRunsPageLoading || isRunSelectionLoading || isBusy
                 ? AgentChatContextAccessState.Loading
                 : AgentChatContextAccessState.Ready;
 
@@ -189,6 +202,12 @@ public partial class WorkflowsPage
         => CurrentDefinitionId is { } definitionId
             ? definitions.FirstOrDefault(definition => definition.Id == definitionId)
             : null;
+
+    private string WorkflowCuratorDisplayName
+        => workflowCuratorAgent?.Name ?? WorkflowCuratorAgentIdentity.DefaultDisplayName;
+
+    private string WorkflowCuratorAvatarImageUrl
+        => workflowCuratorAgent?.AvatarImageUrl ?? WorkflowCuratorAgentIdentity.DefaultAvatarImageUrl;
 
     private string SelectedDefinitionTitle => selectedDefinition?.Name ?? SelectedDefinitionSummary?.Name ?? "Workflow detail";
 
@@ -202,6 +221,12 @@ public partial class WorkflowsPage
 
     private bool IsSelectedDefinitionDetailUnavailable
         => CurrentDefinitionId.HasValue && selectedDefinition is null && selectedDefinitionDetailUnavailable;
+
+    private bool IsAgentChatSelectedDefinitionDetailPending
+        => WorkflowTabRequiresDefinitionDetail(activeWorkflowTabIndex) && IsSelectedDefinitionDetailPending;
+
+    private bool IsAgentChatSelectedDefinitionDetailUnavailable
+        => WorkflowTabRequiresDefinitionDetail(activeWorkflowTabIndex) && IsSelectedDefinitionDetailUnavailable;
 
     private string EditorDefinitionKey
         => selectedDefinition is null
@@ -403,6 +428,7 @@ public partial class WorkflowsPage
         long generation,
         AgentChatNavigationIdentity navigation)
     {
+        var pageLoadCompleted = false;
         try
         {
             await LoadPageCoreAsync(
@@ -411,6 +437,7 @@ public partial class WorkflowsPage
                 requiredRoute,
                 generation,
                 navigation);
+            pageLoadCompleted = true;
         }
         catch (Exception exception)
         {
@@ -435,6 +462,14 @@ public partial class WorkflowsPage
                 isBusy = false;
             }
         }
+
+        if (!pageLoadCompleted || !IsCurrentPageLoad(generation, navigation))
+        {
+            return;
+        }
+
+        StateHasChanged();
+        await EnsureWorkflowCuratorAgentAsync();
     }
 
     private Task LoadPageAsync(
@@ -2289,5 +2324,90 @@ public partial class WorkflowsPage
     private void OpenAgents()
     {
         Navigation.NavigateTo("/agents");
+    }
+
+    private async Task OpenWorkflowCuratorAsync()
+    {
+        if (isOpeningWorkflowCurator ||
+            workflowCuratorAgent is null ||
+            !WorkflowCuratorAgentIdentity.Matches(workflowCuratorAgent) ||
+            AgentChatAccessState != AgentChatContextAccessState.Ready)
+        {
+            return;
+        }
+
+        isOpeningWorkflowCurator = true;
+        try
+        {
+            await AgentChatLauncher.StartNewChatAsync(workflowCuratorAgent.Id);
+            NotificationService.Success("Workflow Curator ready", "Opened a new managed workflow chat.");
+        }
+        catch (Exception exception)
+        {
+            NotificationService.Error("Unable to open Workflow Curator", FormatWorkflowException(exception));
+        }
+        finally
+        {
+            isOpeningWorkflowCurator = false;
+        }
+    }
+
+    private async Task<(AgentDefinition? Agent, string? ErrorMessage)> TryResolveWorkflowCuratorAgentAsync()
+    {
+        try
+        {
+            var agents = await AgentWorkspaceService.ListAgentsAsync(includeTemplates: false);
+            var agent = agents.SingleOrDefault(WorkflowCuratorAgentIdentity.Matches);
+            return agent is null
+                ? (null, $"The managed agent '{WorkflowCuratorAgentIdentity.AgentId:D}' is not available.")
+                : (agent, null);
+        }
+        catch (Exception exception)
+        {
+            return (null, FormatWorkflowException(exception));
+        }
+    }
+
+    private async Task EnsureWorkflowCuratorAgentAsync()
+    {
+        if (workflowCuratorAgent is not null)
+        {
+            return;
+        }
+
+        var resolutionTask = workflowCuratorResolutionTask;
+        if (resolutionTask is null)
+        {
+            resolutionTask = ResolveWorkflowCuratorAgentAsync();
+            workflowCuratorResolutionTask = resolutionTask;
+        }
+
+        try
+        {
+            await resolutionTask;
+        }
+        finally
+        {
+            if (ReferenceEquals(workflowCuratorResolutionTask, resolutionTask))
+            {
+                workflowCuratorResolutionTask = null;
+            }
+        }
+    }
+
+    private async Task ResolveWorkflowCuratorAgentAsync()
+    {
+        var resolution = await TryResolveWorkflowCuratorAgentAsync();
+        workflowCuratorAgent = resolution.Agent;
+        if (resolution.ErrorMessage is { } curatorError)
+        {
+            NotificationService.Warning("Workflow Curator unavailable", curatorError);
+        }
+    }
+
+    private Task HandleAgentChatExecutionCompletedAsync(AgentChatExecutionCompleted notification)
+    {
+        ArgumentNullException.ThrowIfNull(notification);
+        return RefreshAsync();
     }
 }

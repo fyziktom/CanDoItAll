@@ -150,10 +150,12 @@ public static class AgentFrameworkModuleServiceCollectionExtensions
         services.TryAddScoped<HrAgentProcessReviewService>();
         services.TryAddScoped<HrAgentRuntimeAuthorizationService>();
         services.TryAddScoped<PromptsCuratorAgentRuntimeAuthorizationService>();
+        services.TryAddScoped<WorkflowCuratorAgentRuntimeAuthorizationService>();
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IAgentRuntimeToolProvider, ImageGenerationAgentRuntimeToolProvider>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IAgentRuntimeToolProvider, WorkflowAgentRuntimeToolProvider>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IAgentRuntimeToolProvider, PromptGalleryAgentRuntimeToolProvider>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IAgentRuntimeToolProvider, PromptsCuratorAgentRuntimeToolProvider>());
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IAgentRuntimeToolProvider, WorkflowCuratorAgentRuntimeToolProvider>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IAgentRuntimeToolProvider, HrAgentRuntimeToolProvider>());
         services.TryAddEnumerable(ServiceDescriptor.Singleton<ISettingsRendererSource, WorkflowSettingsRendererSource>());
         services.AddWorkflowTemplateServices();
@@ -173,10 +175,12 @@ public static class AgentFrameworkModuleServiceCollectionExtensions
         services.AddMafWorkflowAdapterServices(ServiceLifetime.Scoped);
         services.TryAddScoped<PersistentWorkflowCatalogService>();
         services.TryAddScoped<IWorkflowCatalogService>(serviceProvider => serviceProvider.GetRequiredService<PersistentWorkflowCatalogService>());
+        services.TryAddScoped<IWorkflowCatalogSearchService>(serviceProvider => serviceProvider.GetRequiredService<PersistentWorkflowCatalogService>());
         services.TryAddScoped<IWorkflowComponentLibraryService>(serviceProvider => serviceProvider.GetRequiredService<PersistentWorkflowCatalogService>());
         services.TryAddScoped<IWorkflowSettingsService>(serviceProvider => serviceProvider.GetRequiredService<PersistentWorkflowCatalogService>());
         services.TryAddScoped<PersistentWorkflowRunStore>();
         services.TryAddScoped<IWorkflowRunStore>(serviceProvider => serviceProvider.GetRequiredService<PersistentWorkflowRunStore>());
+        services.TryAddScoped<IWorkflowOverviewStore>(serviceProvider => serviceProvider.GetRequiredService<PersistentWorkflowRunStore>());
         services.TryAddScoped<IWorkflowArtifactStore>(serviceProvider => serviceProvider.GetRequiredService<PersistentWorkflowRunStore>());
         services.TryAddScoped<IWorkflowExternalRequestStore>(serviceProvider => serviceProvider.GetRequiredService<PersistentWorkflowRunStore>());
         services.TryAddScoped<IWorkflowCheckpointStore>(serviceProvider => serviceProvider.GetRequiredService<PersistentWorkflowRunStore>());
