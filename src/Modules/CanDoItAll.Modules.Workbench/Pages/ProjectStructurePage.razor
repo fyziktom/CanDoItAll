@@ -74,13 +74,15 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
 }
 else if (surface is null || canvasSurface is null)
 {
-    <CanvasWorkbenchStage Eyebrow="Structure canvas"
-                          Title="Project structure workbench"
-                          Description="Loading the shared canvas shell, mirrored inspector, and typed project graph.">
-        <Canvas>
-            <SkeletonStateOverlay Snapshot="@LoadingSkeletonSnapshot" />
-        </Canvas>
-    </CanvasWorkbenchStage>
+    <div class="project-structure-page">
+        <CanvasWorkbenchStage Eyebrow=""
+                              Title=""
+                              Description="">
+            <Canvas>
+                <SkeletonStateOverlay Snapshot="@LoadingSkeletonSnapshot" />
+            </Canvas>
+        </CanvasWorkbenchStage>
+    </div>
 }
 else
 {
@@ -93,10 +95,9 @@ else
               Variant="TabsVariant.WorkspaceSecondary"
               RenderMode="TabRenderMode.Server">
             <TabsItem Text="Canvas" Icon="account_tree">
-        <CanvasWorkbenchStage Eyebrow="Structure canvas"
-                              Title="@($"{surface.ProjectName} workbench")"
-                              Description=""
-                              Stats="stageStats">
+        <CanvasWorkbenchStage Eyebrow=""
+                              Title=""
+                              Description="">
             <Canvas>
                 <CanvasWorkbench Surface="canvasSurface"
                                  @ref="workbenchRef"
@@ -133,6 +134,11 @@ else
                                                        ToggleAgentWindow="ToggleAgentWindowAsync"
                                                        OpenGanttView="OpenGanttViewAsync"
                                                        RecomposeBranch="RecomposeSelectedBranchAsync" />
+                        <div class="project-structure-toolbar-stats"
+                             data-testid="project-structure-canvas-loaded">
+                            <StatusBadge Tone="info" Text="@($"Nodes {surface.Nodes.Count}")" />
+                            <StatusBadge Tone="neutral" Text="@($"Selection {selectedNodeIds.Count}")" />
+                        </div>
                     </ToolbarLeftContent>
                     <OverlayContent>
                         @if ((!SelectionWindowState.IsVisible || SelectionWindowState.IsMinimized) &&
@@ -831,13 +837,6 @@ else
     private string secretReferencePurpose = "Project structure reference";
     private string secretReferenceExternalReference = string.Empty;
     private SecretEditorModel secretReferenceCreateModel = NewProjectStructureSecretModel();
-
-    private IReadOnlyList<CanvasWorkbenchStat> stageStats =>
-    [
-        new() { Label = "Nodes", Value = surface?.Nodes.Count.ToString() ?? "0", Tone = "neutral" },
-        new() { Label = "Links", Value = surface?.Links.Count.ToString() ?? "0", Tone = "accent" },
-        new() { Label = "Selection", Value = selectedNodeIds.Count.ToString(), Tone = "mint" }
-    ];
 
     private SkeletonStateOverlaySnapshot LoadingSkeletonSnapshot
         => SkeletonStateOverlayFactory.CreateLoadingSnapshot(

@@ -110,7 +110,7 @@ public sealed partial class AppSmokeTests
             var response = await page.GotoAsync($"{fixture.BaseUrl}/projects/{projectId:D}/structure");
             Assert.NotNull(response);
             Assert.True(response!.Ok, $"Expected the storage-driver proof workbench route to return 2xx, got {(int)response.Status}.");
-            await page.WaitForSelectorAsync("text=Structure canvas");
+            await page.WaitForSelectorAsync("[data-testid='project-structure-canvas-loaded']");
             await page.Locator(".cw-workbench-shell").WaitForAsync();
 
             await OpenPdfComposerAndPopulateAsync(

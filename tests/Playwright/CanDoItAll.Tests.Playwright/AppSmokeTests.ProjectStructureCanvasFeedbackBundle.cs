@@ -472,7 +472,7 @@ public sealed partial class AppSmokeTests
 
         await page.GotoAsync(ToAbsoluteRoute($"/projects/{subprojectId}/structure"));
         await page.WaitForURLAsync("**/projects/*/structure");
-        await page.WaitForSelectorAsync("text=Structure canvas");
+        await page.WaitForSelectorAsync("[data-testid='project-structure-canvas-loaded']");
 
         await WaitForWorkbenchNodeStateAsync(
             page,

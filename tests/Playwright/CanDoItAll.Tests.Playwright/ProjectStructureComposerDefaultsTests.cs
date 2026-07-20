@@ -25,7 +25,7 @@ public sealed partial class AppSmokeTests
         var page = await context.NewPageAsync();
 
         var projectId = await CreateProjectAsync(page, "Playwright Structure Composer Defaults", "Validation");
-        await page.WaitForSelectorAsync("text=Structure canvas");
+        await page.WaitForSelectorAsync("[data-testid='project-structure-canvas-loaded']");
         await EnsureStructureToolboxWindowExpandedAsync(page);
         await EnsureStructureToolboxGroupExpandedAsync(page, "people");
 
@@ -96,7 +96,7 @@ public sealed partial class AppSmokeTests
         var page = await context.NewPageAsync();
 
         var projectId = await CreateProjectAsync(page, "Playwright Structure Static Select Options", "Validation");
-        await page.WaitForSelectorAsync("text=Structure canvas");
+        await page.WaitForSelectorAsync("[data-testid='project-structure-canvas-loaded']");
         await EnsureStructureToolboxWindowExpandedAsync(page);
         await EnsureStructureToolboxGroupExpandedAsync(page, "meetings");
 

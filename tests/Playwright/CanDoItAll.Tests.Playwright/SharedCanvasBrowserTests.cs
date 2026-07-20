@@ -29,7 +29,7 @@ public sealed partial class AppSmokeTests
         var page = await context.NewPageAsync();
 
         await CreateProjectAsync(page, "Playwright Diagnostics Gate", "Validation");
-        await page.WaitForSelectorAsync("text=Structure canvas");
+        await page.WaitForSelectorAsync("[data-testid='project-structure-canvas-loaded']");
         await SetCanvasDiagnosticsVisibleAsync(page, isVisible: true);
 
         var structureBefore = await ReadCanvasDiagnosticsAsync(page);

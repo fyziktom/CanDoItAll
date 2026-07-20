@@ -35,7 +35,7 @@ public sealed partial class AppSmokeTests
         var definition = await SaveProjectStructureWorkflowDefinitionAsync(fixture.BaseUrl);
         var page = await context.NewPageAsync();
         await CreateProjectAsync(page, "Playwright Workflow Structure", "Validation");
-        await page.WaitForSelectorAsync("text=Structure canvas");
+        await page.WaitForSelectorAsync("[data-testid='project-structure-canvas-loaded']");
         await WaitForInitializedCanvasHostAsync(page);
         await WaitForCanvasRenderIdleAsync(page);
         await HideFloatingToolbarWindowAsync(

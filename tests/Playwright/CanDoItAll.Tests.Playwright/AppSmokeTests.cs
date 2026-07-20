@@ -29,7 +29,7 @@ public sealed partial class AppSmokeTests
 
         var projectId = await CreateProjectAsync(page, "Playwright Project", "Discovery");
 
-        await page.WaitForSelectorAsync("text=Structure canvas");
+        await page.WaitForSelectorAsync("[data-testid='project-structure-canvas-loaded']");
         Assert.Contains($"/projects/{projectId}/structure", page.Url, StringComparison.OrdinalIgnoreCase);
     }
 
@@ -82,7 +82,7 @@ public sealed partial class AppSmokeTests
         await CreateProjectAsync(page, "Playwright Workbench", "Discovery");
 
         await page.WaitForURLAsync("**/projects/*/structure");
-        await page.WaitForSelectorAsync("text=Structure canvas");
+        await page.WaitForSelectorAsync("[data-testid='project-structure-canvas-loaded']");
         await page.Locator(".cw-workbench-shell").WaitForAsync();
         await AssertSharedChromeVisibleAsync(page);
         await OpenQuickCreateMenuAsync(page);

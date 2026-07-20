@@ -207,7 +207,11 @@ public sealed class ProjectStructurePageDatabaseSwitchTests
             var contextProvider = cut.FindComponent<ProjectStructureAgentChatContextProvider>();
             Assert.Equal(expectedProjectId, contextProvider.Instance.ProjectId);
             Assert.Equal(expectedProjectName, contextProvider.Instance.ProjectName);
-            Assert.Contains($"{expectedProjectName} workbench", cut.Markup, StringComparison.Ordinal);
+            var canvasLoadedIndicator = cut.Find("[data-testid='project-structure-canvas-loaded']");
+            Assert.Contains("Nodes", canvasLoadedIndicator.TextContent, StringComparison.Ordinal);
+            Assert.Contains("Selection", canvasLoadedIndicator.TextContent, StringComparison.Ordinal);
+            Assert.DoesNotContain("Links", canvasLoadedIndicator.TextContent, StringComparison.Ordinal);
+            Assert.DoesNotContain($"{expectedProjectName} workbench", cut.Markup, StringComparison.Ordinal);
         });
     }
 
