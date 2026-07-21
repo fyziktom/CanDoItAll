@@ -59,11 +59,25 @@
     min-height: 18rem;
 }
 
-.agent-details-dialog__new-capability {
+.agent-details-dialog__capability-actions {
     border: 1px solid rgb(226 232 240);
-    border-radius: 1rem;
     background: rgb(248 250 252);
-    padding: 1rem;
+    border-radius: 0.75rem;
+    padding: 0.65rem;
+}
+
+.agent-details-dialog__capability-filters {
+    align-items: start;
+    display: grid;
+    gap: 0.65rem;
+    grid-template-columns: minmax(14rem, 1fr) minmax(10rem, 0.55fr) minmax(9rem, 0.45fr) auto;
+    width: 100%;
+}
+
+.agent-details-dialog__capability-filter-input,
+.agent-details-dialog__capability-filter-select {
+    min-width: 0;
+    width: 100%;
 }
 
 @media (max-width: 760px) {
@@ -73,5 +87,9 @@
 
     .agent-details-dialog__tabs {
         min-height: 34rem;
+    }
+
+    .agent-details-dialog__capability-filters {
+        grid-template-columns: 1fr;
     }
 }

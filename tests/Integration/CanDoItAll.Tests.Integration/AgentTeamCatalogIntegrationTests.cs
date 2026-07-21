@@ -10,7 +10,7 @@ namespace CanDoItAll.Tests.Integration;
 public sealed class AgentTeamCatalogIntegrationTests
 {
     private const string ManagedSeedVersionPropertyName = "managedSeedVersion";
-    private const string ExpectedAgentTemplateSeedVersion = "2026-07-agent-template-teams-v62";
+    private const string ExpectedAgentTemplateSeedVersion = "2026-07-agent-template-teams-v63";
 
     private static readonly IReadOnlySet<string> LunaTemplateKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
     {
@@ -198,6 +198,10 @@ public sealed class AgentTeamCatalogIntegrationTests
                     StringComparison.Ordinal) &&
                 !string.Equals(
                     member.Key,
+                    CapabilityCuratorAgentIdentity.TemplateKey,
+                    StringComparison.Ordinal) &&
+                !string.Equals(
+                    member.Key,
                     SchedulerAgentIdentity.TemplateKey,
                     StringComparison.Ordinal)),
             member =>
@@ -239,6 +243,22 @@ public sealed class AgentTeamCatalogIntegrationTests
         Assert.False(workflowCuratorTemplate.Settings.Access.WorkspaceTools!.CanReadFiles);
         Assert.False(workflowCuratorTemplate.Settings.Access.WorkspaceTools.CanWriteFiles);
         Assert.False(workflowCuratorTemplate.Settings.Access.ImageGeneration!.CanGenerateImages);
+
+        var capabilityCuratorTemplate = Assert.Single(
+            members,
+            member => string.Equals(
+                member.Key,
+                CapabilityCuratorAgentIdentity.TemplateKey,
+                StringComparison.Ordinal));
+        Assert.False(capabilityCuratorTemplate.Settings.Access.ProjectStructure!.CanRead);
+        Assert.False(capabilityCuratorTemplate.Settings.Access.ProjectStructure.CanWrite);
+        Assert.False(capabilityCuratorTemplate.Settings.Access.ProjectStructure.AllowAllProjects);
+        Assert.False(capabilityCuratorTemplate.Settings.Access.Processes!.CanRead);
+        Assert.False(capabilityCuratorTemplate.Settings.Access.Processes.CanWrite);
+        Assert.False(capabilityCuratorTemplate.Settings.Access.Processes.AllowAllDefinitions);
+        Assert.False(capabilityCuratorTemplate.Settings.Access.WorkspaceTools!.CanReadFiles);
+        Assert.False(capabilityCuratorTemplate.Settings.Access.WorkspaceTools.CanWriteFiles);
+        Assert.False(capabilityCuratorTemplate.Settings.Access.ImageGeneration!.CanGenerateImages);
 
         var schedulerTemplate = Assert.Single(
             members,
@@ -283,6 +303,7 @@ public sealed class AgentTeamCatalogIntegrationTests
         Assert.Contains(agentsByTemplateKey["delivery-qa-observer"].Id, deliveryTeam.AgentIds);
         Assert.Contains(PromptsCuratorAgentIdentity.AgentId, deliveryTeam.AgentIds);
         Assert.Contains(WorkflowCuratorAgentIdentity.AgentId, deliveryTeam.AgentIds);
+        Assert.Contains(CapabilityCuratorAgentIdentity.AgentId, deliveryTeam.AgentIds);
         Assert.Contains(SchedulerAgentIdentity.AgentId, deliveryTeam.AgentIds);
 
         var curator = agentsByTemplateKey[PromptsCuratorAgentIdentity.TemplateKey];
@@ -308,6 +329,18 @@ public sealed class AgentTeamCatalogIntegrationTests
         Assert.Equal(
             WorkflowCuratorAgentCapabilityKeys.PrivilegedKeys.OrderBy(item => item, StringComparer.OrdinalIgnoreCase),
             workflowCurator.Capabilities.Select(item => item.CapabilityKey).OrderBy(item => item, StringComparer.OrdinalIgnoreCase));
+
+        var capabilityCurator = agentsByTemplateKey[CapabilityCuratorAgentIdentity.TemplateKey];
+        Assert.Equal(CapabilityCuratorAgentIdentity.AgentId, capabilityCurator.Id);
+        Assert.Equal(AgentLifecycleStatus.Active, capabilityCurator.Status);
+        Assert.False(capabilityCurator.IsTemplate);
+        Assert.Equal(AgentWorkloadKind.Management, capabilityCurator.Workload);
+        Assert.True(capabilityCurator.Permissions.CanUseTools);
+        Assert.False(capabilityCurator.Permissions.CanAskOtherAgents);
+        Assert.False(capabilityCurator.Permissions.CanObserveOtherAgents);
+        Assert.Equal(
+            CapabilityCuratorAgentCapabilityKeys.PrivilegedKeys.OrderBy(item => item, StringComparer.OrdinalIgnoreCase),
+            capabilityCurator.Capabilities.Select(item => item.CapabilityKey).OrderBy(item => item, StringComparer.OrdinalIgnoreCase));
 
         var schedulerAgent = agentsByTemplateKey[SchedulerAgentIdentity.TemplateKey];
         Assert.Equal(SchedulerAgentIdentity.AgentId, schedulerAgent.Id);

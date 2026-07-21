@@ -108,6 +108,47 @@ public sealed class AgentPanelSelectionFailClosedTests
         });
     }
 
+    [Fact]
+    public void Capabilities_panel_opens_the_exact_managed_capability_curator()
+    {
+        var availableAgent = CreateAgent("Available agent");
+        var curator = CreateAgent(CapabilityCuratorAgentIdentity.DefaultDisplayName) with
+        {
+            Id = CapabilityCuratorAgentIdentity.AgentId,
+            TemplateKey = CapabilityCuratorAgentIdentity.TemplateKey
+        };
+        var workspace = CreateWorkspace([availableAgent, curator]);
+        var launcher = new RecordingAgentChatLauncher();
+        using var context = CreateCapabilitiesTestContext(workspace, launcher);
+
+        var cut = context.RenderComponent<AgentCapabilitiesPanel>(parameters => parameters
+            .Add(component => component.PreferredAgentId, availableAgent.Id));
+
+        cut.WaitForAssertion(() =>
+            Assert.False(cut.Find("[data-testid='agents-capability-curator-open']").HasAttribute("disabled")));
+        cut.Find("[data-testid='agents-capability-curator-open']").Click();
+
+        cut.WaitForAssertion(() => Assert.Equal(CapabilityCuratorAgentIdentity.AgentId, launcher.StartedAgentId));
+    }
+
+    [Fact]
+    public void Capabilities_panel_does_not_enable_a_spoofed_capability_curator()
+    {
+        var availableAgent = CreateAgent("Available agent");
+        var spoof = CreateAgent(CapabilityCuratorAgentIdentity.DefaultDisplayName) with
+        {
+            TemplateKey = CapabilityCuratorAgentIdentity.TemplateKey
+        };
+        var workspace = CreateWorkspace([availableAgent, spoof]);
+        using var context = CreateCapabilitiesTestContext(workspace);
+
+        var cut = context.RenderComponent<AgentCapabilitiesPanel>(parameters => parameters
+            .Add(component => component.PreferredAgentId, availableAgent.Id));
+
+        cut.WaitForAssertion(() =>
+            Assert.True(cut.Find("[data-testid='agents-capability-curator-open']").HasAttribute("disabled")));
+    }
+
     private static TestContext CreateChatTestContext(WorkspaceServiceProxy workspace)
     {
         var context = CreateBaseTestContext(workspace.Service);
@@ -122,11 +163,15 @@ public sealed class AgentPanelSelectionFailClosedTests
         return context;
     }
 
-    private static TestContext CreateCapabilitiesTestContext(WorkspaceServiceProxy workspace)
+    private static TestContext CreateCapabilitiesTestContext(
+        WorkspaceServiceProxy workspace,
+        IAgentChatLauncher? launcher = null)
     {
         var context = CreateBaseTestContext(workspace.Service);
         context.Services.AddSingleton(
             DispatchProxy.Create<IAgentCapabilitySetupFlowService, UnexpectedCallProxy>());
+        context.Services.AddSingleton(
+            launcher ?? DispatchProxy.Create<IAgentChatLauncher, UnexpectedCallProxy>());
         return context;
     }
 
@@ -227,5 +272,31 @@ public sealed class AgentPanelSelectionFailClosedTests
         protected override object? Invoke(MethodInfo? targetMethod, object?[]? args)
             => throw new InvalidOperationException(
                 $"Service member '{targetMethod?.Name}' was not expected in this component test.");
+    }
+
+    private sealed class RecordingAgentChatLauncher : IAgentChatLauncher
+    {
+        public Guid? StartedAgentId { get; private set; }
+
+        public void ShowCatalog(AgentChatCatalogTab tab = AgentChatCatalogTab.Agents)
+        {
+            throw new InvalidOperationException("Catalog display was not expected in this component test.");
+        }
+
+        public Task<ActiveAgentChat> StartNewChatAsync(
+            Guid agentId,
+            CancellationToken cancellationToken = default)
+        {
+            StartedAgentId = agentId;
+            return Task.FromResult<ActiveAgentChat>(null!);
+        }
+
+        public Task<ActiveAgentChat> OpenChatAsync(
+            Guid agentId,
+            Guid chatSessionId,
+            CancellationToken cancellationToken = default)
+        {
+            throw new InvalidOperationException("Opening an existing chat was not expected in this component test.");
+        }
     }
 }

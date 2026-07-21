@@ -652,8 +652,8 @@ else
                         </FormSection>
                     </TabsItem>
 
-                    <TabsItem Text="Skills and MCP">
-                        <FormSection Title="Skills and MCP" Description="Attach cataloged skills and MCP servers to this agent, or create a compact capability entry and assign it immediately.">
+                    <TabsItem Text="Capabilities">
+                        <FormSection Title="Capabilities" Description="Attach cataloged tools, skills, and MCP servers to this agent, or open the guided setup flow to create and assign one.">
                             <div data-testid="agents-details-capability-summary">
                                 <CompactStatStrip>
                                     <CompactStat Label="attached"
@@ -664,6 +664,10 @@ else
                                                  Value="@capabilities.Count(item => item.Kind == CapabilityKind.Skill).ToString()"
                                                  TooltipText="Prompt and workflow skills in the catalog."
                                                  Tone="success" />
+                                    <CompactStat Label="tools"
+                                                 Value="@capabilities.Count(item => item.Kind == CapabilityKind.Tool).ToString()"
+                                                 TooltipText="Runtime tools in the catalog."
+                                                 Tone="accent" />
                                     <CompactStat Label="MCP servers"
                                                  Value="@capabilities.Count(item => item.Kind == CapabilityKind.McpServer).ToString()"
                                                  TooltipText="MCP tool surfaces in the catalog."
@@ -675,90 +679,88 @@ else
                                 </CompactStatStrip>
                             </div>
 
-                            <div class="agent-details-dialog__new-capability"
+                            <Cluster Gap="LayoutGap.Small"
+                                     Wrap="FlexWrap.Wrap"
+                                     Class="agent-details-dialog__capability-actions"
                                  data-testid="agents-details-new-capability">
-                                <Grid Gap="LayoutGap.Medium" ColumnsLg="4">
-                                    <div>
-                                        <label class="cda-field-label">Kind</label>
-                                        <InputSelect @bind-Value="newCapabilityKind" class="cda-input">
-                                            <option value="@CapabilityKind.Skill">Skill</option>
-                                            <option value="@CapabilityKind.McpServer">MCP server</option>
+                                <Button Text="New tool"
+                                        Icon="build"
+                                        ButtonStyle="ButtonStyle.Light"
+                                        Size="ButtonSize.Small"
+                                        Disabled="@(isBusy || isOpeningCapabilityWizard)"
+                                        Click="@(() => OpenCapabilityWizardAsync(CapabilityKind.Tool))"
+                                        data-testid="agents-details-new-tool" />
+                                <Button Text="New MCP"
+                                        Icon="hub"
+                                        ButtonStyle="ButtonStyle.Light"
+                                        Size="ButtonSize.Small"
+                                        Disabled="@(isBusy || isOpeningCapabilityWizard)"
+                                        Click="@(() => OpenCapabilityWizardAsync(CapabilityKind.McpServer))"
+                                        data-testid="agents-details-new-mcp" />
+                                <Button Text="New skill"
+                                        Icon="psychology"
+                                        ButtonStyle="ButtonStyle.Light"
+                                        Size="ButtonSize.Small"
+                                        Disabled="@(isBusy || isOpeningCapabilityWizard)"
+                                        Click="@(() => OpenCapabilityWizardAsync(CapabilityKind.Skill))"
+                                        data-testid="agents-details-new-skill" />
+                            </Cluster>
+
+                            @if (AssignableCapabilities.Count > 0)
+                            {
+                                <FilterBar ResultText="@($"{FilteredAssignableCapabilities.Count} matching capability(s)")">
+                                    <div class="agent-details-dialog__capability-filters">
+                                        <input @bind="capabilitySearch"
+                                               @bind:event="oninput"
+                                               class="cda-input agent-details-dialog__capability-filter-input"
+                                               placeholder="Search capabilities"
+                                               data-testid="agents-details-capability-search" />
+                                        <InputSelect @bind-Value="capabilityAssignmentFilter"
+                                                     class="cda-input agent-details-dialog__capability-filter-select"
+                                                     data-testid="agents-details-capability-assignment-filter">
+                                            <option value="@CapabilityDialogAssignmentFilter.All">All assignments</option>
+                                            <option value="@CapabilityDialogAssignmentFilter.Attached">Attached</option>
+                                            <option value="@CapabilityDialogAssignmentFilter.Available">Available</option>
                                         </InputSelect>
+                                        <InputSelect @bind-Value="capabilityKindFilter"
+                                                     class="cda-input agent-details-dialog__capability-filter-select"
+                                                     data-testid="agents-details-capability-kind-filter">
+                                            <option value="@CapabilityDialogKindFilter.All">All kinds</option>
+                                            <option value="@CapabilityDialogKindFilter.Tool">Tool</option>
+                                            <option value="@CapabilityDialogKindFilter.Skill">Skill</option>
+                                            <option value="@CapabilityDialogKindFilter.Mcp">MCP server</option>
+                                        </InputSelect>
+                                        <Button Text="Reset"
+                                                ButtonStyle="ButtonStyle.Light"
+                                                Size="ButtonSize.Small"
+                                                Click="ResetCapabilityFilters"
+                                                data-testid="agents-details-capability-filter-reset" />
                                     </div>
-                                    <div>
-                                        <label class="cda-field-label">Name</label>
-                                        <InputText @bind-Value="newCapabilityName" class="cda-input" data-testid="agents-details-new-capability-name" />
-                                    </div>
-                                    <div class="lg:col-span-2">
-                                        <label class="cda-field-label">Endpoint or path</label>
-                                        <InputText @bind-Value="newCapabilityEndpointOrPath" class="cda-input" data-testid="agents-details-new-capability-path" />
-                                    </div>
-                                </Grid>
-                                <div class="mt-3">
-                                    <label class="cda-field-label">Description</label>
-                                    <InputTextArea @bind-Value="newCapabilityDescription"
-                                                   class="cda-input cda-input--textarea min-h-20"
-                                                   data-testid="agents-details-new-capability-description" />
-                                </div>
-                                <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap" Class="mt-3">
-                                    <Button Text="Create and assign"
-                                            ButtonStyle="ButtonStyle.Light"
-                                            Disabled="@isBusy"
-                                            IsBusy="@isBusy"
-                                            Click="CreateAndAssignCapabilityAsync"
-                                            data-testid="agents-details-create-capability" />
-                                </Cluster>
-                            </div>
+                                </FilterBar>
+                            }
 
                             @if (AssignableCapabilities.Count == 0)
                             {
                                 <EmptyState Eyebrow="No capabilities"
-                                            Title="No skills or MCP servers are cataloged yet"
-                                            Description="Create a compact capability entry above, or add capabilities from the dedicated Capabilities tab." />
+                                            Title="No tools, skills, or MCP servers are cataloged yet"
+                                            Description="Use the guided setup actions above to create the first capability for this agent." />
+                            }
+                            else if (FilteredAssignableCapabilities.Count == 0)
+                            {
+                                <EmptyState Eyebrow="No matches"
+                                            Title="No capabilities match the current filters"
+                                            Description="Clear search, assignment, or kind filters to broaden the catalog." />
                             }
                             else
                             {
-                                <Stack GapScale="LayoutGap.Medium" data-testid="agents-details-capability-list">
-                                    @foreach (var capability in AssignableCapabilities)
-                                    {
-                                        var isAttached = IsCapabilityAttached(capability.Id);
-                                        <SurfaceCard Soft="true">
-                                            <Split Gap="LayoutGap.Medium">
-                                                <div class="min-w-0">
-                                                    <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
-                                                        <StatusBadge Tone="info" Text="@ResolveCapabilityKindLabel(capability.Kind)" />
-                                                        @{
-                                                            var proofBadge = CapabilityProofDisplayAdapter.BuildBadge(capability.ProofStatus);
-                                                        }
-                                                        <StatusBadge Tone="@proofBadge.Tone"
-                                                                     Text="@proofBadge.Text" />
-                                                        <StatusBadge Tone="@(isAttached ? "success" : "neutral")"
-                                                                     Text="@(isAttached ? "Attached" : "Available")" />
-                                                    </Cluster>
-                                                    <h3 class="mt-3 text-lg font-semibold text-slate-950">@capability.Name</h3>
-                                                    @if (!string.IsNullOrWhiteSpace(capability.Description))
-                                                    {
-                                                        <p class="mt-2 text-sm leading-6 text-slate-600">@capability.Description</p>
-                                                    }
-                                                    <p class="mt-3 text-xs uppercase tracking-[0.18em] text-slate-500">Path or endpoint</p>
-                                                    <p class="mt-2 text-sm leading-6 text-slate-700"
-                                                       style="overflow-wrap:anywhere;">@ResolveEndpointSummary(capability)</p>
-                                                </div>
-                                                <Stack GapScale="LayoutGap.Small">
-                                                    <Button Text="@(isAttached ? "Remove" : "Assign")"
-                                                            ButtonStyle="@(isAttached ? ButtonStyle.Light : ButtonStyle.Primary)"
-                                                            Disabled="@isBusy"
-                                                            Click="@(async () => await ToggleCapabilityAsync(capability.Id))"
-                                                            data-testid="agents-details-toggle-capability" />
-                                                    <Button Text="Verify"
-                                                            ButtonStyle="ButtonStyle.Light"
-                                                            Disabled="@(!isAttached || isBusy || !editorModel.Id.HasValue)"
-                                                            Click="@(async () => await VerifyCapabilityAsync(capability.Id))" />
-                                                </Stack>
-                                            </Split>
-                                        </SurfaceCard>
-                                    }
-                                </Stack>
+                                <AgentCapabilityList Items="@FilteredAssignableCapabilities"
+                                                     AttachedCapabilityIds="@editorModel.SelectedCapabilityIds"
+                                                     IsBusy="@isBusy"
+                                                     CanVerify="@editorModel.Id.HasValue"
+                                                     AssignmentRequested="ToggleCapabilityAsync"
+                                                     VerificationRequested="VerifyCapabilityAsync"
+                                                     TestIdPrefix="agents-details-capability"
+                                                     ColumnTemplateLg="repeat(2,minmax(16rem,1fr))" />
                             }
                         </FormSection>
                     </TabsItem>

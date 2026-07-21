@@ -308,6 +308,23 @@ public static class ToolCapabilityRegistry
             Mutation(AgentToolInvocationPolicyMetadata.WorkflowCuratorDraftUpdate, ToolCapabilitySideEffectKind.InternalStateMutation),
             Mutation(AgentToolInvocationPolicyMetadata.WorkflowCuratorNodeUpdate, ToolCapabilitySideEffectKind.InternalStateMutation),
             Mutation(AgentToolInvocationPolicyMetadata.WorkflowCuratorLifecycleChange, ToolCapabilitySideEffectKind.InternalStateMutation),
+            Read(AgentToolInvocationPolicyMetadata.CapabilityCuratorCatalogSearch, ToolCapabilitySideEffectKind.InternalDataRead),
+            Read(AgentToolInvocationPolicyMetadata.CapabilityCuratorEditorGet, ToolCapabilitySideEffectKind.InternalDataRead),
+            Read(AgentToolInvocationPolicyMetadata.CapabilityCuratorAssignmentEditorGet, ToolCapabilitySideEffectKind.InternalDataRead),
+            Mutation(AgentToolInvocationPolicyMetadata.CapabilityCuratorSave, ToolCapabilitySideEffectKind.InternalStateMutation),
+            Mutation(
+                AgentToolInvocationPolicyMetadata.CapabilityCuratorToolSetupTest,
+                ToolCapabilitySideEffectKind.ExternalAction,
+                StaticRequirement(ProcessOperationContractNames.ExecuteExternalAction)),
+            Mutation(
+                AgentToolInvocationPolicyMetadata.CapabilityCuratorMcpSetupTest,
+                ToolCapabilitySideEffectKind.ExternalAction,
+                StaticRequirement(ProcessOperationContractNames.ExecuteExternalAction)),
+            Mutation(AgentToolInvocationPolicyMetadata.CapabilityCuratorAssignmentUpdate, ToolCapabilitySideEffectKind.InternalStateMutation),
+            Mutation(
+                AgentToolInvocationPolicyMetadata.CapabilityCuratorVerify,
+                ToolCapabilitySideEffectKind.ExternalAction,
+                StaticRequirement(ProcessOperationContractNames.ExecuteExternalAction)),
             Read(AgentToolInvocationPolicyMetadata.SchedulerWorkflowTargetsSearch, ToolCapabilitySideEffectKind.InternalDataRead),
             Read(AgentToolInvocationPolicyMetadata.SchedulerWorkflowSchedulesSearch, ToolCapabilitySideEffectKind.InternalDataRead),
             Mutation(AgentToolInvocationPolicyMetadata.SchedulerWorkflowScheduleCreate, ToolCapabilitySideEffectKind.InternalStateMutation),

@@ -147,6 +147,7 @@ public sealed class ProviderProfileEditorModel : IProviderModelPricingEditorMode
 public sealed class CapabilityEditorModel
 {
     public Guid? Id { get; set; }
+    public string? ExpectedFingerprint { get; set; }
     public CapabilityKind Kind { get; set; } = CapabilityKind.Skill;
     public string Key { get; set; } = string.Empty;
     public string Name { get; set; } = string.Empty;

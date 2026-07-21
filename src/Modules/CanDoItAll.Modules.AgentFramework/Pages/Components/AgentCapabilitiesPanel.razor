@@ -50,6 +50,10 @@
                                      Value="@capabilities.Count(item => item.Kind == CapabilityKind.Skill).ToString()"
                                      TooltipText="Prompt and workflow skills."
                                      Tone="success" />
+                        <CompactStat Label="tools"
+                                     Value="@capabilities.Count(item => item.Kind == CapabilityKind.Tool).ToString()"
+                                     TooltipText="Runtime tools in the catalog."
+                                     Tone="accent" />
                         <CompactStat Label="MCP servers"
                                      Value="@capabilities.Count(item => item.Kind == CapabilityKind.McpServer).ToString()"
                                      TooltipText="Connector-backed tool surfaces."
@@ -66,25 +70,33 @@
                      Wrap="FlexWrap.Wrap"
                      JustifyContent="JustifyContent.End"
                      Class="agent-capabilities-panel__header-actions">
+                <AgentAvatarActionButton AgentName="@CapabilityCuratorDisplayName"
+                                         AvatarImageUrl="@CapabilityCuratorAvatarImageUrl"
+                                         FallbackText="CC"
+                                         Label="@($"Open {CapabilityCuratorDisplayName}")"
+                                         Click="OpenCapabilityCuratorAsync"
+                                         Disabled="@(!CanOpenCapabilityCurator)"
+                                         TestId="agents-capability-curator-open"
+                                         TooltipTestId="agents-capability-curator-tooltip" />
                 <Button Text="New tool"
                         Icon="build"
                         Size="ButtonSize.Small"
                         ButtonStyle="ButtonStyle.Light"
-                        Disabled="@isBusy"
+                        Disabled="@(isBusy || isOpeningCapabilityWizard)"
                         Click="@(() => OpenCapabilityWizardAsync(CapabilityKind.Tool))"
                         data-testid="agents-capability-new-tool" />
                 <Button Text="New MCP"
                         Icon="hub"
                         Size="ButtonSize.Small"
                         ButtonStyle="ButtonStyle.Light"
-                        Disabled="@isBusy"
+                        Disabled="@(isBusy || isOpeningCapabilityWizard)"
                         Click="@(() => OpenCapabilityWizardAsync(CapabilityKind.McpServer))"
                         data-testid="agents-capability-new-mcp" />
                 <Button Text="New skill"
                         Icon="psychology"
                         Size="ButtonSize.Small"
                         ButtonStyle="ButtonStyle.Light"
-                        Disabled="@isBusy"
+                        Disabled="@(isBusy || isOpeningCapabilityWizard)"
                         Click="@(() => OpenCapabilityWizardAsync(CapabilityKind.Skill))"
                         data-testid="agents-capability-new-skill" />
             </Cluster>
@@ -103,7 +115,7 @@
             {
                 <EmptyState Eyebrow="No capabilities"
                             Title="No capabilities are cataloged yet"
-                            Description="Add skills or MCP servers before assigning them to this agent." />
+                            Description="Add a skill, tool, or MCP server before assigning it to this agent." />
             }
             else
             {
@@ -265,69 +277,16 @@
                 else
                 {
                     <div class="agent-capabilities-panel__card-scroll">
-                        <Grid Gap="LayoutGap.Medium"
-                              ColumnTemplateLg="repeat(3,minmax(16rem,1fr))"
-                              Class="agent-capabilities-panel__grid"
-                              data-testid="agents-capability-card-grid">
-                            @foreach (var capability in FilteredCapabilities)
-                            {
-                                var isAttached = selectedAgentEditor.SelectedCapabilityIds.Contains(capability.Id);
-                                <div class="agent-capabilities-panel__card" data-testid="agents-capability-card">
-                                    <SurfaceCard Soft="true">
-                                        <Stack GapScale="LayoutGap.Small">
-                                            <Cluster Gap="LayoutGap.XSmall" Wrap="FlexWrap.Wrap">
-                                                <StatusBadge Tone="info" Text="@ResolveCapabilityKindLabel(capability.Kind)" />
-                                                @{
-                                                    var proofBadge = CapabilityProofDisplayAdapter.BuildBadge(capability.ProofStatus);
-                                                }
-                                                <StatusBadge Tone="@proofBadge.Tone"
-                                                             Text="@proofBadge.Text" />
-                                                <StatusBadge Tone="@(isAttached ? "success" : "neutral")"
-                                                             Text="@(isAttached ? "Attached" : "Available")" />
-                                            </Cluster>
-
-                                            <div class="agent-capabilities-panel__card-body">
-                                                <h3 class="agent-capabilities-panel__card-title">@capability.Name</h3>
-                                                @if (!string.IsNullOrWhiteSpace(capability.Description))
-                                                {
-                                                    <p class="agent-capabilities-panel__card-description">@capability.Description</p>
-                                                }
-                                                <p class="agent-capabilities-panel__path">@ResolveEndpointSummary(capability)</p>
-                                            </div>
-
-                                            @if (capability.Tags.Count > 0)
-                                            {
-                                                <Cluster Gap="LayoutGap.XSmall" Wrap="FlexWrap.Wrap">
-                                                    @foreach (var tag in capability.Tags.Take(5))
-                                                    {
-                                                        <StatusBadge Tone="neutral" Text="@tag" />
-                                                    }
-                                                </Cluster>
-                                            }
-
-                                            <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
-                                                <Button Text="@(isAttached ? "Remove" : "Assign")"
-                                                        ButtonStyle="@(isAttached ? ButtonStyle.Light : ButtonStyle.Primary)"
-                                                        Size="ButtonSize.Small"
-                                                        Disabled="@isBusy"
-                                                        Click="@(async () => await ToggleCapabilityAsync(capability.Id))" />
-                                                <Button Text="Verify"
-                                                        ButtonStyle="ButtonStyle.Light"
-                                                        Size="ButtonSize.Small"
-                                                        Disabled="@(!isAttached || isBusy)"
-                                                        Click="@(async () => await VerifyCapabilityAsync(capability.Id))" />
-                                                <Button Text="Details"
-                                                        ButtonStyle="ButtonStyle.Light"
-                                                        Size="ButtonSize.Small"
-                                                        Disabled="@isBusy"
-                                                        Click="@(() => OpenCapabilityDetailsDialogAsync(capability.Id))"
-                                                        data-testid="agents-capability-details" />
-                                            </Cluster>
-                                        </Stack>
-                                    </SurfaceCard>
-                                </div>
-                            }
-                        </Grid>
+                        <AgentCapabilityList Items="@FilteredCapabilities"
+                                             AttachedCapabilityIds="@selectedAgentEditor.SelectedCapabilityIds"
+                                             IsBusy="@isBusy"
+                                             CanVerify="true"
+                                             AssignmentRequested="ToggleCapabilityAsync"
+                                             VerificationRequested="VerifyCapabilityAsync"
+                                             DetailsRequested="OpenCapabilityDetailsDialogAsync"
+                                             TestIdPrefix="agents-capability"
+                                             ListTestId="agents-capability-card-grid"
+                                             ColumnTemplateLg="repeat(3,minmax(16rem,1fr))" />
                     </div>
                 }
             }

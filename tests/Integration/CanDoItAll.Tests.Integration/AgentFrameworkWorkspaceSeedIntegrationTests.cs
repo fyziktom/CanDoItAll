@@ -483,6 +483,37 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
     }
 
     [Fact]
+    public async Task Capability_catalog_save_rejects_a_stale_editor_fingerprint_atomically()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var workspaceFactory = scope.ServiceProvider.GetRequiredService<ICanDoItAllAgentWorkspaceFactory>();
+        var workspaceService = workspaceFactory.GetOrganizationWorkspaceService();
+        var capabilityId = await workspaceService.SaveCapabilityAsync(new CapabilityEditorModel
+        {
+            Kind = CapabilityKind.Skill,
+            Key = "capability-concurrency-proof",
+            Name = "Capability Concurrency Proof",
+            Description = "Original description.",
+            EndpointOrPath = "inline://capability-concurrency-proof",
+            ConfigurationJson = "{}"
+        });
+        var firstEditor = await workspaceService.GetCapabilityEditorAsync(capabilityId);
+        var staleEditor = await workspaceService.GetCapabilityEditorAsync(capabilityId);
+        Assert.False(string.IsNullOrWhiteSpace(firstEditor.ExpectedFingerprint));
+        Assert.Equal(firstEditor.ExpectedFingerprint, staleEditor.ExpectedFingerprint);
+
+        firstEditor.Description = "First accepted update.";
+        await workspaceService.SaveCapabilityAsync(firstEditor);
+        staleEditor.Description = "Stale overwrite.";
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            workspaceService.SaveCapabilityAsync(staleEditor));
+        var saved = await workspaceService.GetCapabilityEditorAsync(capabilityId);
+        Assert.Equal("First accepted update.", saved.Description);
+    }
+
+    [Fact]
     public async Task Organization_workspace_seeds_screenshot_agent_templates_with_required_access()
     {
         await using var application = await TestApplication.CreateAsync();

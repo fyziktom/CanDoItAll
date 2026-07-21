@@ -27,6 +27,9 @@ public partial class AgentCapabilitiesPanel
     public IAgentCapabilitySetupFlowService CapabilitySetupFlowService { get; set; } = default!;
 
     [Inject]
+    public IAgentChatLauncher AgentChatLauncher { get; set; } = default!;
+
+    [Inject]
     public NotificationService NotificationService { get; set; } = default!;
 
     [Inject]
@@ -55,6 +58,25 @@ public partial class AgentCapabilitiesPanel
     private AgentChatContextAccessState? publishedAccessState;
     private Guid? appliedPreferredAgentId;
     private bool preferredAgentApplied;
+    private bool isOpeningCapabilityCurator;
+    private bool isOpeningCapabilityWizard;
+
+    private AgentDefinition? CapabilityCuratorAgent => agents.FirstOrDefault(CapabilityCuratorAgentIdentity.Matches);
+
+    private string CapabilityCuratorDisplayName =>
+        CapabilityCuratorAgent?.Name ?? CapabilityCuratorAgentIdentity.DefaultDisplayName;
+
+    private string CapabilityCuratorAvatarImageUrl =>
+        CapabilityCuratorAgent?.AvatarImageUrl ?? CapabilityCuratorAgentIdentity.DefaultAvatarImageUrl;
+
+    private bool CanOpenCapabilityCurator =>
+        !isBusy &&
+        !isOpeningCapabilityCurator &&
+        publishedAccessState == AgentChatContextAccessState.Ready &&
+        CapabilityCuratorAgent is { Status: AgentLifecycleStatus.Active } curator &&
+        !curator.IsTemplate &&
+        curator.Permissions.CanUseTools &&
+        CapabilityCuratorAgentIdentity.Matches(curator);
 
     private IReadOnlyList<TreeViewNode> AgentTreeNodes
     {
@@ -360,6 +382,12 @@ public partial class AgentCapabilitiesPanel
 
     private async Task OpenCapabilityWizardAsync(CapabilityKind initialKind)
     {
+        if (isBusy || isOpeningCapabilityWizard)
+        {
+            return;
+        }
+
+        isOpeningCapabilityWizard = true;
         try
         {
             var result = await DialogService.OpenAsync<CapabilitySetupWizardDialog>(
@@ -388,6 +416,34 @@ public partial class AgentCapabilitiesPanel
         catch (Exception exception)
         {
             NotificationService.Error("Capability wizard failed", exception.Message);
+        }
+        finally
+        {
+            isOpeningCapabilityWizard = false;
+        }
+    }
+
+    private async Task OpenCapabilityCuratorAsync()
+    {
+        var curator = CapabilityCuratorAgent;
+        if (!CanOpenCapabilityCurator || curator is null)
+        {
+            return;
+        }
+
+        isOpeningCapabilityCurator = true;
+        try
+        {
+            await AgentChatLauncher.StartNewChatAsync(curator.Id);
+            NotificationService.Success("Capability Curator ready", "Opened a new managed capability chat.");
+        }
+        catch (Exception exception)
+        {
+            NotificationService.Error("Unable to open Capability Curator", exception.Message);
+        }
+        finally
+        {
+            isOpeningCapabilityCurator = false;
         }
     }
 
@@ -557,16 +613,6 @@ public partial class AgentCapabilitiesPanel
             : agent.Model;
     }
 
-    private static string ResolveCapabilityKindLabel(CapabilityKind kind)
-    {
-        return kind switch
-        {
-            CapabilityKind.McpServer => "MCP server",
-            CapabilityKind.AiContext => "AI context",
-            _ => kind.ToString()
-        };
-    }
-
     private static string ResolveCapabilityWizardTitle(CapabilityKind kind)
     {
         return kind switch
@@ -575,13 +621,6 @@ public partial class AgentCapabilitiesPanel
             CapabilityKind.Tool => "New tool",
             _ => "New skill"
         };
-    }
-
-    private static string ResolveEndpointSummary(CapabilityCatalogItem capability)
-    {
-        return string.IsNullOrWhiteSpace(capability.EndpointOrPath)
-            ? "No endpoint or path is stored for this capability."
-            : capability.EndpointOrPath;
     }
 
     private static string BuildAgentTreeNodeId(Guid agentId)

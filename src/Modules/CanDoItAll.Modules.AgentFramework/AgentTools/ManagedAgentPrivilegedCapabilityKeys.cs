@@ -8,6 +8,7 @@ public static class ManagedAgentPrivilegedCapabilityKeys
         HrAgentCapabilityKeys.PrivilegedKeys
             .Concat(PromptsCuratorAgentCapabilityKeys.PrivilegedKeys)
             .Concat(WorkflowCuratorAgentCapabilityKeys.PrivilegedKeys)
+            .Concat(CapabilityCuratorAgentCapabilityKeys.PrivilegedKeys)
             .Concat(SchedulerAgentIdentity.PrivilegedCapabilityKeys),
         StringComparer.OrdinalIgnoreCase);
 }

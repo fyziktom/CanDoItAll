@@ -35,6 +35,9 @@ public partial class AgentDetailsDialog
     [Inject]
     public NotificationService NotificationService { get; set; } = default!;
 
+    [Inject]
+    public DialogService DialogService { get; set; } = default!;
+
     [CascadingParameter]
     public DialogReference? DialogReference { get; set; }
 
@@ -47,14 +50,14 @@ public partial class AgentDetailsDialog
     private IReadOnlyList<string> tagValues = [];
     private string externalWorkspaceRootsText = string.Empty;
     private string allowedStorageCatalogIdsText = string.Empty;
-    private string newCapabilityName = string.Empty;
-    private string newCapabilityEndpointOrPath = string.Empty;
-    private string newCapabilityDescription = string.Empty;
     private string customAvatarFileName = string.Empty;
-    private CapabilityKind newCapabilityKind = CapabilityKind.Skill;
+    private string capabilitySearch = string.Empty;
+    private CapabilityDialogAssignmentFilter capabilityAssignmentFilter = CapabilityDialogAssignmentFilter.All;
+    private CapabilityDialogKindFilter capabilityKindFilter = CapabilityDialogKindFilter.All;
     private Guid? linkedPartyId;
     private bool isLoading = true;
     private bool isBusy;
+    private bool isOpeningCapabilityWizard;
     private bool isAvatarUploadBusy;
     private bool areProvidersLoaded;
     private bool areProjectStructureProjectsLoaded;
@@ -110,11 +113,24 @@ public partial class AgentDetailsDialog
         .ToList();
 
     private IReadOnlyList<CapabilityCatalogItem> AssignableCapabilities => capabilities
-        .Where(item => item.Kind is CapabilityKind.Skill or CapabilityKind.McpServer ||
+        .Where(item => item.Kind is CapabilityKind.Tool or CapabilityKind.Skill or CapabilityKind.McpServer ||
                        editorModel.SelectedCapabilityIds.Contains(item.Id))
         .OrderByDescending(item => editorModel.SelectedCapabilityIds.Contains(item.Id))
         .ThenBy(item => item.Kind)
         .ThenBy(item => item.Name, StringComparer.OrdinalIgnoreCase)
+        .ToList();
+
+    private IReadOnlyList<CapabilityCatalogItem> FilteredAssignableCapabilities => AssignableCapabilities
+        .Where(MatchesCapabilitySearch)
+        .Where(MatchesCapabilityAssignmentFilter)
+        .Where(MatchesCapabilityKindFilter)
+        .ToList();
+
+    private IReadOnlyList<string> AvailableCapabilityTags => capabilities
+        .SelectMany(item => item.Tags)
+        .Where(tag => !string.IsNullOrWhiteSpace(tag))
+        .Distinct(StringComparer.OrdinalIgnoreCase)
+        .OrderBy(tag => tag, StringComparer.OrdinalIgnoreCase)
         .ToList();
 
     protected override async Task OnInitializedAsync()
@@ -471,60 +487,121 @@ public partial class AgentDetailsDialog
         }
     }
 
-    private async Task CreateAndAssignCapabilityAsync()
+    private async Task OpenCapabilityWizardAsync(CapabilityKind initialKind)
     {
-        if (isBusy)
+        if (isBusy || isOpeningCapabilityWizard)
         {
             return;
         }
 
-        if (string.IsNullOrWhiteSpace(newCapabilityName))
-        {
-            NotificationService.Warning("Capability name required", "Enter a capability name before creating it.");
-            return;
-        }
-
-        isBusy = true;
+        isOpeningCapabilityWizard = true;
         try
         {
-            var capabilityId = await WorkspaceService.SaveCapabilityAsync(new CapabilityEditorModel
-            {
-                Kind = newCapabilityKind,
-                Key = newCapabilityName,
-                Name = newCapabilityName,
-                Description = newCapabilityDescription,
-                EndpointOrPath = newCapabilityEndpointOrPath,
-                ConfigurationJson = string.Empty,
-                IsBuiltIn = false
-            });
+            var result = await DialogService.OpenAsync<CapabilitySetupWizardDialog>(
+                ResolveCapabilityWizardTitle(initialKind),
+                new Dictionary<string, object?>
+                {
+                    [nameof(CapabilitySetupWizardDialog.InitialKind)] = initialKind,
+                    [nameof(CapabilitySetupWizardDialog.TagSuggestions)] = AvailableCapabilityTags
+                },
+                new DialogOptions
+                {
+                    Eyebrow = "Capability setup",
+                    Subtitle = "Create a skill, tool, or MCP capability and assign it to this agent.",
+                    Size = ModalSize.Wide,
+                    DenseChrome = true,
+                    AriaLabel = "Capability setup wizard",
+                    TestId = "agents-details-capability-setup-dialog"
+                });
 
-            if (!editorModel.SelectedCapabilityIds.Contains(capabilityId))
+            if (result is not CapabilityDetailsDialogResult createdCapability)
             {
-                editorModel.SelectedCapabilityIds.Add(capabilityId);
+                return;
             }
 
-            capabilities = await WorkspaceService.ListCapabilitiesAsync();
-            if (editorModel.Id.HasValue)
+            isBusy = true;
+            try
             {
-                var agentId = await PersistEditorAsync();
-                await ReloadCatalogStateAsync(agentId);
-                await Saved.InvokeAsync(new AgentDetailsDialogResult(agentId, Deleted: false));
-            }
+                capabilities = await WorkspaceService.ListCapabilitiesAsync();
+                if (!editorModel.SelectedCapabilityIds.Contains(createdCapability.CapabilityId))
+                {
+                    editorModel.SelectedCapabilityIds = editorModel.SelectedCapabilityIds
+                        .Append(createdCapability.CapabilityId)
+                        .Distinct()
+                        .OrderBy(item => item)
+                        .ToList();
+                }
 
-            newCapabilityName = string.Empty;
-            newCapabilityEndpointOrPath = string.Empty;
-            newCapabilityDescription = string.Empty;
-            newCapabilityKind = CapabilityKind.Skill;
-            NotificationService.Success("Capability created", "Capability was created and assigned.");
+                if (editorModel.Id.HasValue)
+                {
+                    var agentId = await PersistEditorAsync();
+                    await ReloadCatalogStateAsync(agentId);
+                    await Saved.InvokeAsync(new AgentDetailsDialogResult(agentId, Deleted: false));
+                }
+
+                NotificationService.Success(
+                    "Capability created",
+                    editorModel.Id.HasValue
+                        ? "Capability was created and assigned."
+                        : "Capability was created and staged for assignment when the new agent is saved.");
+            }
+            finally
+            {
+                isBusy = false;
+            }
         }
         catch (Exception exception)
         {
-            NotificationService.Error("Capability create failed", exception.Message);
+            NotificationService.Error("Capability setup failed", exception.Message);
         }
         finally
         {
-            isBusy = false;
+            isOpeningCapabilityWizard = false;
         }
+    }
+
+    private bool MatchesCapabilitySearch(CapabilityCatalogItem capability)
+    {
+        if (string.IsNullOrWhiteSpace(capabilitySearch))
+        {
+            return true;
+        }
+
+        var search = capabilitySearch.Trim();
+        return capability.Name.Contains(search, StringComparison.OrdinalIgnoreCase) ||
+               capability.Key.Contains(search, StringComparison.OrdinalIgnoreCase) ||
+               capability.Description.Contains(search, StringComparison.OrdinalIgnoreCase) ||
+               capability.EndpointOrPath.Contains(search, StringComparison.OrdinalIgnoreCase) ||
+               capability.Tags.Any(tag => tag.Contains(search, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private bool MatchesCapabilityAssignmentFilter(CapabilityCatalogItem capability)
+    {
+        var isAttached = editorModel.SelectedCapabilityIds.Contains(capability.Id);
+        return capabilityAssignmentFilter switch
+        {
+            CapabilityDialogAssignmentFilter.Attached => isAttached,
+            CapabilityDialogAssignmentFilter.Available => !isAttached,
+            _ => true
+        };
+    }
+
+    private bool MatchesCapabilityKindFilter(CapabilityCatalogItem capability)
+    {
+        return capabilityKindFilter switch
+        {
+            CapabilityDialogKindFilter.Tool => capability.Kind == CapabilityKind.Tool,
+            CapabilityDialogKindFilter.Skill => capability.Kind == CapabilityKind.Skill,
+            CapabilityDialogKindFilter.Mcp => capability.Kind == CapabilityKind.McpServer,
+            _ => true
+        };
+    }
+
+    private void ResetCapabilityFilters()
+    {
+        capabilitySearch = string.Empty;
+        capabilityAssignmentFilter = CapabilityDialogAssignmentFilter.All;
+        capabilityKindFilter = CapabilityDialogKindFilter.All;
     }
 
     private async Task VerifyCapabilityAsync(Guid capabilityId)
@@ -1219,16 +1296,13 @@ public partial class AgentDetailsDialog
             : string.Concat(words.Select(word => char.ToUpperInvariant(word[0])));
     }
 
-    private bool IsCapabilityAttached(Guid capabilityId)
-        => editorModel.SelectedCapabilityIds.Contains(capabilityId);
-
-    private static string ResolveCapabilityKindLabel(CapabilityKind kind)
+    private static string ResolveCapabilityWizardTitle(CapabilityKind kind)
     {
         return kind switch
         {
-            CapabilityKind.McpServer => "MCP server",
-            CapabilityKind.AiContext => "AI context",
-            _ => kind.ToString()
+            CapabilityKind.McpServer => "New MCP server",
+            CapabilityKind.Tool => "New tool",
+            _ => "New skill"
         };
     }
 
@@ -1244,13 +1318,6 @@ public partial class AgentDetailsDialog
             AgentWorkspaceToolProfileKind.BusinessAnalysis => "Business analysis",
             _ => "Custom"
         };
-    }
-
-    private static string ResolveEndpointSummary(CapabilityCatalogItem capability)
-    {
-        return string.IsNullOrWhiteSpace(capability.EndpointOrPath)
-            ? "No endpoint or path is stored for this capability."
-            : capability.EndpointOrPath;
     }
 
     private void ApplySelectedAgent(AgentDefinition definition)
@@ -1274,5 +1341,20 @@ public partial class AgentDetailsDialog
         externalWorkspaceRootsText = string.Empty;
         allowedStorageCatalogIdsText = string.Empty;
         linkedPartyId = null;
+    }
+
+    private enum CapabilityDialogAssignmentFilter
+    {
+        All,
+        Attached,
+        Available
+    }
+
+    private enum CapabilityDialogKindFilter
+    {
+        All,
+        Tool,
+        Skill,
+        Mcp
     }
 }

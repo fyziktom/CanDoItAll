@@ -563,6 +563,28 @@
     },
     {
       "kind": "skill",
+      "key": "capability-curator-agent-inline-skill",
+      "displayName": "Capability Curator Agent Skill",
+      "description": "Approval-aware workflow for discovering, creating, configuring, testing, assigning, and verifying canonical skills, tools, and MCP servers.",
+      "stableId": "skill:capability-curator-agent:v1",
+      "stableGuidKey": "capabilities/capability-curator-agent-inline-skill",
+      "endpointOrPath": "inline://capability-curator-agent",
+      "skillSource": "inline",
+      "inlineSkill": {
+        "name": "capability-curator-agent",
+        "description": "Curate canonical agent capabilities with exact identity, bounded discovery, typed setup, approval, verification, and concurrency boundaries.",
+        "instructionsAssetKey": "skills/instructions/capability-curator-agent.md"
+      },
+      "operationClassifications": [
+        "read",
+        "mutation",
+        "validation",
+        "external-action"
+      ],
+      "proofNotes": "Template-owned skill for the privileged managed Capability Curator agent."
+    },
+    {
+      "kind": "skill",
       "key": "scheduler-agent-inline-skill",
       "displayName": "Scheduler Agent Skill",
       "description": "Approval-aware workflow for discovering schedulable workflows, detecting existing schedules, and creating canonical workflow schedules.",

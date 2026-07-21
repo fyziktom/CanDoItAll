@@ -75,6 +75,14 @@ public static class ToolContractCatalog
     public const string WorkflowCuratorDraftUpdate = "workflow_curator_draft_update";
     public const string WorkflowCuratorNodeUpdate = "workflow_curator_node_update";
     public const string WorkflowCuratorLifecycleChange = "workflow_curator_lifecycle_change";
+    public const string CapabilityCuratorCatalogSearch = "capability_curator_catalog_search";
+    public const string CapabilityCuratorEditorGet = "capability_curator_editor_get";
+    public const string CapabilityCuratorAssignmentEditorGet = "capability_curator_assignment_editor_get";
+    public const string CapabilityCuratorSave = "capability_curator_save";
+    public const string CapabilityCuratorToolSetupTest = "capability_curator_tool_setup_test";
+    public const string CapabilityCuratorMcpSetupTest = "capability_curator_mcp_setup_test";
+    public const string CapabilityCuratorAssignmentUpdate = "capability_curator_assignment_update";
+    public const string CapabilityCuratorVerify = "capability_curator_verify";
     public const string SchedulerWorkflowTargetsSearch = "scheduler_workflow_targets_search";
     public const string SchedulerWorkflowSchedulesSearch = "scheduler_workflow_schedules_search";
     public const string SchedulerWorkflowScheduleCreate = "scheduler_workflow_schedule_create";
@@ -236,6 +244,14 @@ public static class ToolContractCatalog
         AgentToolInvocationPolicyMetadata.WorkflowCuratorDraftUpdate,
         AgentToolInvocationPolicyMetadata.WorkflowCuratorNodeUpdate,
         AgentToolInvocationPolicyMetadata.WorkflowCuratorLifecycleChange,
+        AgentToolInvocationPolicyMetadata.CapabilityCuratorCatalogSearch,
+        AgentToolInvocationPolicyMetadata.CapabilityCuratorEditorGet,
+        AgentToolInvocationPolicyMetadata.CapabilityCuratorAssignmentEditorGet,
+        AgentToolInvocationPolicyMetadata.CapabilityCuratorSave,
+        AgentToolInvocationPolicyMetadata.CapabilityCuratorToolSetupTest,
+        AgentToolInvocationPolicyMetadata.CapabilityCuratorMcpSetupTest,
+        AgentToolInvocationPolicyMetadata.CapabilityCuratorAssignmentUpdate,
+        AgentToolInvocationPolicyMetadata.CapabilityCuratorVerify,
         AgentToolInvocationPolicyMetadata.SchedulerWorkflowTargetsSearch,
         AgentToolInvocationPolicyMetadata.SchedulerWorkflowSchedulesSearch,
         AgentToolInvocationPolicyMetadata.SchedulerWorkflowScheduleCreate,

@@ -109,7 +109,9 @@ internal sealed partial class AgentFrameworkWorkspaceCatalogService
         var capability = catalog.Capabilities.FirstOrDefault(item => item.Id == capabilityId.Value)
             ?? throw new InvalidOperationException("Capability was not found.");
 
-        return CapabilityEditorModel.FromDefinition(capability);
+        var editor = CapabilityEditorModel.FromDefinition(capability);
+        editor.ExpectedFingerprint = CapabilityEditorConcurrency.ComputeFingerprint(editor);
+        return editor;
     }
 
     public async Task<Guid> SaveCapabilityAsync(
@@ -123,6 +125,27 @@ internal sealed partial class AgentFrameworkWorkspaceCatalogService
             var current = model.Id.HasValue
                 ? catalog.Capabilities.FirstOrDefault(item => item.Id == model.Id.Value)
                 : null;
+
+            if (model.Id.HasValue && current is null)
+            {
+                throw new InvalidOperationException($"Capability '{model.Id.Value:D}' was not found.");
+            }
+
+            if (!model.Id.HasValue && !string.IsNullOrWhiteSpace(model.ExpectedFingerprint))
+            {
+                throw new InvalidOperationException("A capability create cannot specify an expected fingerprint.");
+            }
+
+            if (current is not null && !string.IsNullOrWhiteSpace(model.ExpectedFingerprint))
+            {
+                var actualFingerprint = CapabilityEditorConcurrency.ComputeFingerprint(
+                    CapabilityEditorModel.FromDefinition(current));
+                if (!string.Equals(actualFingerprint, model.ExpectedFingerprint.Trim(), StringComparison.Ordinal))
+                {
+                    throw new InvalidOperationException(
+                        $"Capability '{current.Id:D}' changed after it was read. Reload it before saving.");
+                }
+            }
 
             var capability = new CapabilityCatalogItem(
                 Id: model.Id ?? Guid.NewGuid(),

@@ -58,6 +58,10 @@
       "relativePath": "members/workflow-curator-agent"
     },
     {
+      "key": "capability-curator-agent",
+      "relativePath": "members/capability-curator-agent"
+    },
+    {
       "key": "scheduler-agent",
       "relativePath": "members/scheduler-agent"
     }

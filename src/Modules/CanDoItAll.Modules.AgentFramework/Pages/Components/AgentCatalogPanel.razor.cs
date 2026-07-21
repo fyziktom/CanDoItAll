@@ -415,7 +415,7 @@ public partial class AgentCatalogPanel
                 new DialogOptions
                 {
                     Eyebrow = "Technical editor",
-                    Subtitle = "Edit identity, runtime, access policy, skills, and MCP servers for this technical agent.",
+                    Subtitle = "Edit identity, runtime, access policy, and capabilities for this technical agent.",
                     Size = ModalSize.Full,
                     DenseChrome = true,
                     AriaLabel = "Agent details editor",

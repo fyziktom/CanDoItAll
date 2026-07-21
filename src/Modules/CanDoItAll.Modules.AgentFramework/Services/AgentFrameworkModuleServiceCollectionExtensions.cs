@@ -151,11 +151,14 @@ public static class AgentFrameworkModuleServiceCollectionExtensions
         services.TryAddScoped<HrAgentRuntimeAuthorizationService>();
         services.TryAddScoped<PromptsCuratorAgentRuntimeAuthorizationService>();
         services.TryAddScoped<WorkflowCuratorAgentRuntimeAuthorizationService>();
+        services.TryAddScoped<CapabilityCuratorAgentRuntimeAuthorizationService>();
+        services.TryAddSingleton<CapabilityCuratorSetupAttestationStore>();
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IAgentRuntimeToolProvider, ImageGenerationAgentRuntimeToolProvider>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IAgentRuntimeToolProvider, WorkflowAgentRuntimeToolProvider>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IAgentRuntimeToolProvider, PromptGalleryAgentRuntimeToolProvider>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IAgentRuntimeToolProvider, PromptsCuratorAgentRuntimeToolProvider>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IAgentRuntimeToolProvider, WorkflowCuratorAgentRuntimeToolProvider>());
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IAgentRuntimeToolProvider, CapabilityCuratorAgentRuntimeToolProvider>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IAgentRuntimeToolProvider, HrAgentRuntimeToolProvider>());
         services.TryAddEnumerable(ServiceDescriptor.Singleton<ISettingsRendererSource, WorkflowSettingsRendererSource>());
         services.AddWorkflowTemplateServices();

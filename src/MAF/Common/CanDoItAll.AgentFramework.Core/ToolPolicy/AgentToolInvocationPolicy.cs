@@ -2683,6 +2683,7 @@ public static class AgentToolInvocationPolicyMetadata
     private const string HrApprovalAuditRetentionScheme = "hr-approval-redacted-v1";
     private const string PromptCuratorApprovalAuditRetentionScheme = "prompt-curator-approval-redacted-v1";
     private const string WorkflowCuratorApprovalAuditRetentionScheme = "workflow-curator-approval-redacted-v1";
+    private const string CapabilityCuratorApprovalAuditRetentionScheme = "capability-curator-approval-redacted-v1";
     private const string SchedulerApprovalAuditRetentionScheme = "scheduler-approval-redacted-v1";
 
     private static readonly IReadOnlySet<string> SensitiveHrArgumentToolNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
@@ -2714,6 +2715,16 @@ public static class AgentToolInvocationPolicyMetadata
         WorkflowsExternalResponseSubmit
     };
 
+    private static readonly IReadOnlySet<string> SensitiveCapabilityCuratorArgumentToolNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+    {
+        CapabilityCuratorCatalogSearch,
+        CapabilityCuratorSave,
+        CapabilityCuratorToolSetupTest,
+        CapabilityCuratorMcpSetupTest,
+        CapabilityCuratorAssignmentUpdate,
+        CapabilityCuratorVerify
+    };
+
     private static readonly IReadOnlySet<string> SensitiveSchedulerArgumentToolNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
     {
         SchedulerWorkflowTargetsSearch,
@@ -2723,16 +2734,28 @@ public static class AgentToolInvocationPolicyMetadata
 
     private static readonly IReadOnlySet<string> SensitiveManagedArgumentPropertyNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
     {
+        "allowedExternalRoots",
+        "allowedWorkingDirectories",
+        "arguments",
+        "command",
+        "configurationJson",
         "displayName",
         "content",
         "creationReason",
         "description",
+        "environmentVariableBindings",
+        "endpoint",
+        "endpointOrPath",
         "executorSettingsJson",
         "expectedValueJson",
+        "headerBindings",
         "inputJson",
+        "inlineInstructions",
         "instructions",
+        "jsonInput",
         "name",
         "notes",
+        "otherConfiguration",
         "outputFormat",
         "phase",
         "prompt",
@@ -2741,11 +2764,14 @@ public static class AgentToolInvocationPolicyMetadata
         "responseJson",
         "roleTitle",
         "searchText",
+        "setupAttestationToken",
+        "skillRoot",
         "summary",
         "tags",
         "text",
         "title",
-        "visualBrief"
+        "visualBrief",
+        "workingDirectory"
     };
 
     public const string LoadSkill = "load_skill";
@@ -2795,6 +2821,14 @@ public static class AgentToolInvocationPolicyMetadata
     public const string WorkflowCuratorDraftUpdate = ToolContractCatalog.WorkflowCuratorDraftUpdate;
     public const string WorkflowCuratorNodeUpdate = ToolContractCatalog.WorkflowCuratorNodeUpdate;
     public const string WorkflowCuratorLifecycleChange = ToolContractCatalog.WorkflowCuratorLifecycleChange;
+    public const string CapabilityCuratorCatalogSearch = ToolContractCatalog.CapabilityCuratorCatalogSearch;
+    public const string CapabilityCuratorEditorGet = ToolContractCatalog.CapabilityCuratorEditorGet;
+    public const string CapabilityCuratorAssignmentEditorGet = ToolContractCatalog.CapabilityCuratorAssignmentEditorGet;
+    public const string CapabilityCuratorSave = ToolContractCatalog.CapabilityCuratorSave;
+    public const string CapabilityCuratorToolSetupTest = ToolContractCatalog.CapabilityCuratorToolSetupTest;
+    public const string CapabilityCuratorMcpSetupTest = ToolContractCatalog.CapabilityCuratorMcpSetupTest;
+    public const string CapabilityCuratorAssignmentUpdate = ToolContractCatalog.CapabilityCuratorAssignmentUpdate;
+    public const string CapabilityCuratorVerify = ToolContractCatalog.CapabilityCuratorVerify;
     public const string SchedulerWorkflowTargetsSearch = ToolContractCatalog.SchedulerWorkflowTargetsSearch;
     public const string SchedulerWorkflowSchedulesSearch = ToolContractCatalog.SchedulerWorkflowSchedulesSearch;
     public const string SchedulerWorkflowScheduleCreate = ToolContractCatalog.SchedulerWorkflowScheduleCreate;
@@ -2982,6 +3016,7 @@ public static class AgentToolInvocationPolicyMetadata
         var redactManagedContent = HasSensitiveHrArguments(toolName) ||
                                    HasSensitivePromptCuratorArguments(toolName) ||
                                    HasSensitiveWorkflowCuratorArguments(toolName) ||
+                                   HasSensitiveCapabilityCuratorArguments(toolName) ||
                                    HasSensitiveSchedulerArguments(toolName);
         return arguments
             .Where(item => !string.IsNullOrWhiteSpace(item.Key))
@@ -3012,6 +3047,12 @@ public static class AgentToolInvocationPolicyMetadata
     {
         return !string.IsNullOrWhiteSpace(toolName) &&
                SensitiveWorkflowCuratorArgumentToolNames.Contains(toolName.Trim());
+    }
+
+    public static bool HasSensitiveCapabilityCuratorArguments(string? toolName)
+    {
+        return !string.IsNullOrWhiteSpace(toolName) &&
+               SensitiveCapabilityCuratorArgumentToolNames.Contains(toolName.Trim());
     }
 
     public static bool HasSensitiveSchedulerArguments(string? toolName)
@@ -3174,6 +3215,11 @@ public static class AgentToolInvocationPolicyMetadata
         if (HasSensitiveWorkflowCuratorArguments(toolName))
         {
             return WorkflowCuratorApprovalAuditRetentionScheme;
+        }
+
+        if (HasSensitiveCapabilityCuratorArguments(toolName))
+        {
+            return CapabilityCuratorApprovalAuditRetentionScheme;
         }
 
         return HasSensitiveSchedulerArguments(toolName)

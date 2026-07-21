@@ -1,0 +1,74 @@
+<Grid Gap="LayoutGap.Small"
+      ColumnTemplateLg="@ColumnTemplateLg"
+      Class="agent-capability-list"
+      data-testid="@ResolvedListTestId">
+    @foreach (var capability in Items)
+    {
+        var isAttached = AttachedCapabilityIds.Contains(capability.Id);
+        var proofBadge = ResolveProofBadge(capability.ProofStatus);
+
+        <div @key="capability.Id"
+             class="agent-capability-list__card"
+             data-testid="@CardTestId"
+             data-capability-kind="@capability.Kind">
+            <ActionCard Active="@isAttached">
+                <Stack GapScale="LayoutGap.XSmall">
+                    <Cluster Gap="LayoutGap.XSmall" Wrap="FlexWrap.Wrap">
+                        <StatusBadge Tone="info" Text="@ResolveKindLabel(capability.Kind)" />
+                        <StatusBadge Tone="@proofBadge.Tone" Text="@proofBadge.Text" />
+                        <StatusBadge Tone="@(isAttached ? "success" : "neutral")"
+                                     Text="@(isAttached ? "Attached" : "Available")" />
+                    </Cluster>
+
+                    <div class="agent-capability-list__content">
+                        <h3 class="agent-capability-list__title">@capability.Name</h3>
+                        @if (!string.IsNullOrWhiteSpace(capability.Description))
+                        {
+                            <p class="agent-capability-list__description">@capability.Description</p>
+                        }
+                        <p class="agent-capability-list__endpoint"
+                           tabindex="0"
+                           aria-label="@($"Path or endpoint: {ResolveEndpointSummary(capability)}")"
+                           title="@ResolveEndpointSummary(capability)">@ResolveEndpointSummary(capability)</p>
+                    </div>
+
+                    @if (capability.Tags.Count > 0)
+                    {
+                        <Cluster Gap="LayoutGap.XSmall" Wrap="FlexWrap.Wrap">
+                            @foreach (var tag in capability.Tags.Take(4))
+                            {
+                                <StatusBadge Tone="neutral" Text="@tag" />
+                            }
+                        </Cluster>
+                    }
+
+                    <Cluster Gap="LayoutGap.XSmall"
+                             Wrap="FlexWrap.Wrap"
+                             Class="agent-capability-list__actions">
+                        <Button Text="@(isAttached ? "Remove" : "Assign")"
+                                ButtonStyle="@(isAttached ? ButtonStyle.Light : ButtonStyle.Primary)"
+                                Size="ButtonSize.Small"
+                                Disabled="@IsBusy"
+                                Click="@(() => AssignmentRequested.InvokeAsync(capability.Id))"
+                                data-testid="@AssignmentTestId" />
+                        <Button Text="Verify"
+                                ButtonStyle="ButtonStyle.Light"
+                                Size="ButtonSize.Small"
+                                Disabled="@(!CanVerify || !isAttached || IsBusy)"
+                                Click="@(() => VerificationRequested.InvokeAsync(capability.Id))"
+                                data-testid="@VerificationTestId" />
+                        @if (DetailsRequested.HasDelegate)
+                        {
+                            <Button Text="Details"
+                                    ButtonStyle="ButtonStyle.Light"
+                                    Size="ButtonSize.Small"
+                                    Disabled="@IsBusy"
+                                    Click="@(() => DetailsRequested.InvokeAsync(capability.Id))"
+                                    data-testid="@DetailsTestId" />
+                        }
+                    </Cluster>
+                </Stack>
+            </ActionCard>
+        </div>
+    }
+</Grid>
