@@ -2,6 +2,7 @@ using CanDoItAll.Components.Gantt;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Workbench;
+using CanDoItAll.Modules.Workbench.CanvasAdapters;
 using CanDoItAll.SharedKernel;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
@@ -281,6 +282,96 @@ public sealed class ProjectStructureGanttMutationServiceTests
         Assert.Equal(At(3), persistedB.EndUtc);
         Assert.Equal(7200, persistedA.DurationSeconds);
         Assert.Equal(3600, persistedB.DurationSeconds);
+    }
+
+    [Fact]
+    public async Task ApplyScheduleAsync_MaterializesUnchangedProjectedPredecessorWithAffectedChain()
+    {
+        var taskA = CreateTask("custom:00000000000000000000000000000001", "A", 0, 1);
+        var taskB = CreateTask("custom:00000000000000000000000000000002", "B", 1, 2);
+        var taskC = CreateTask("custom:00000000000000000000000000000003", "C", 2, 3);
+        var taskD = CreateTask("custom:00000000000000000000000000000004", "D", 3, 4);
+        taskA.StartUtc = null;
+        taskA.EndUtc = null;
+        taskA.DurationSeconds = null;
+
+        var dependencyAB = DependsOn(taskB.NodeKey, taskA.NodeKey);
+        var dependencyBC = DependsOn(taskC.NodeKey, taskB.NodeKey);
+        var dependencyCD = DependsOn(taskD.NodeKey, taskC.NodeKey);
+        await using var fixture = await MutationFixture.CreateAsync(
+            [taskA, taskB, taskC, taskD],
+            [dependencyAB, dependencyBC, dependencyCD]);
+        var request = GanttSchedulePlanner.Plan(
+            [
+                new GanttTask(TaskId(taskA.NodeKey), taskA.Title, At(0), At(1)),
+                new GanttTask(TaskId(taskB.NodeKey), taskB.Title, At(1), At(2)),
+                new GanttTask(TaskId(taskC.NodeKey), taskC.Title, At(2), At(3)),
+                new GanttTask(TaskId(taskD.NodeKey), taskD.Title, At(3), At(4))
+            ],
+            [
+                Dependency(dependencyAB, taskA.NodeKey, taskB.NodeKey),
+                Dependency(dependencyBC, taskB.NodeKey, taskC.NodeKey),
+                Dependency(dependencyCD, taskC.NodeKey, taskD.NodeKey)
+            ],
+            TaskId(taskB.NodeKey),
+            GanttScheduleGesture.ResizeEnd,
+            At(3));
+        Assert.DoesNotContain(request.AffectedTasks, change => change.TaskId == TaskId(taskA.NodeKey));
+
+        var result = await fixture.Service.ApplyScheduleAsync(
+            fixture.ProjectId,
+            new ProjectStructureGanttScheduleMutationRequest(
+                request,
+                [
+                    Snapshot(taskA, At(0), At(1)),
+                    Snapshot(taskB),
+                    Snapshot(taskC),
+                    Snapshot(taskD)
+                ]));
+
+        Assert.Equal(4, result.AffectedTaskIds.Count);
+        var persistedA = await fixture.FindTaskAsync(taskA.NodeKey);
+        var persistedB = await fixture.FindTaskAsync(taskB.NodeKey);
+        var persistedC = await fixture.FindTaskAsync(taskC.NodeKey);
+        var persistedD = await fixture.FindTaskAsync(taskD.NodeKey);
+        Assert.Equal(At(0), persistedA.StartUtc);
+        Assert.Equal(At(1), persistedA.EndUtc);
+        Assert.Equal(3600, persistedA.DurationSeconds);
+        Assert.Equal(At(1), persistedB.StartUtc);
+        Assert.Equal(At(3), persistedB.EndUtc);
+        Assert.Equal(7200, persistedB.DurationSeconds);
+        Assert.Equal(At(3), persistedC.StartUtc);
+        Assert.Equal(At(4), persistedC.EndUtc);
+        Assert.Equal(3600, persistedC.DurationSeconds);
+        Assert.Equal(At(4), persistedD.StartUtc);
+        Assert.Equal(At(5), persistedD.EndUtc);
+        Assert.Equal(3600, persistedD.DurationSeconds);
+
+        var persistedTasks = new[] { persistedA, persistedB, persistedC, persistedD };
+        var projectionOrigin = persistedTasks.Min(static task => task.StartUtc)
+            ?? throw new InvalidOperationException("The reloaded schedule has no persisted start.");
+        var surface = new ProjectStructureSurface(
+            fixture.ProjectId,
+            "Reloaded Gantt mutation test",
+            persistedTasks.Select(ProjectionNode).ToArray(),
+            new[] { dependencyAB, dependencyBC, dependencyCD }
+                .Select(static dependency => new ProjectStructureLink(
+                    dependency.SourceNodeKey,
+                    dependency.TargetNodeKey,
+                    dependency.LinkKind,
+                    !dependency.IsSystemManaged,
+                    dependency.Id))
+                .ToArray(),
+            null);
+        var projection = new ProjectStructureGanttProjectionAdapter().Build(
+            surface,
+            [],
+            new ProjectStructureGanttProjectionOptions(projectionOrigin, TimeSpan.FromHours(1)));
+
+        Assert.True(projection.IsValid, string.Join(Environment.NewLine, projection.Issues.Select(static issue => issue.Message)));
+        Assert.DoesNotContain(
+            projection.Issues,
+            static issue => issue.Code == ProjectStructureGanttProjectionIssueCode.DependencyScheduleConflict);
     }
 
     [Fact]
@@ -924,6 +1015,39 @@ public sealed class ProjectStructureGanttMutationServiceTests
                 ?? throw new InvalidOperationException($"Projected start is required for task '{task.NodeKey}'."),
             projectedEndUtc ?? task.EndUtc
                 ?? throw new InvalidOperationException($"Projected end is required for task '{task.NodeKey}'."));
+
+    private static ProjectStructureNode ProjectionNode(ProjectObjectRecord task)
+        => new(
+            Id: task.NodeKey,
+            ParentId: task.ParentNodeKey,
+            ObjectType: task.ObjectType,
+            ObjectSubtype: task.ObjectSubtype,
+            Title: task.Title,
+            Subtitle: task.Subtitle,
+            Status: task.Status,
+            Notes: task.Notes,
+            Route: string.Empty,
+            ArtifactKind: string.Empty,
+            ArtifactId: null,
+            MediaRelativePath: string.Empty,
+            MediaContentType: string.Empty,
+            MediaOriginalFileName: string.Empty,
+            X: task.PositionX,
+            Y: task.PositionY,
+            VisualProfile: new ProjectObjectVisualProfile("pill", "#2563eb", "TK", "Task"),
+            Badges: [],
+            ProgressMode: task.ProgressMode,
+            ProgressPercent: task.ProgressPercent,
+            MarkerIcon: string.Empty,
+            MarkerTone: string.Empty,
+            MarkerLabel: string.Empty,
+            Markers: [],
+            Priority: task.Priority,
+            StartUtc: task.StartUtc,
+            EndUtc: task.EndUtc,
+            MetadataJson: task.MetadataJson,
+            DurationSeconds: task.DurationSeconds,
+            IsSystemManaged: task.IsSystemManaged);
 
     private static DateTimeOffset At(double hours)
         => Baseline.AddHours(hours);

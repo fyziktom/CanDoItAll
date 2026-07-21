@@ -137,7 +137,7 @@ public sealed class ProjectStructureGanttPanelTests
         Assert.Null(chart.Instance.TaskTitleReadOnlySelector);
         Assert.True(chart.Instance.AllowTaskEditing);
         Assert.True(chart.Instance.TaskDoubleClicked.HasDelegate);
-        Assert.Contains("moving or resizing a bar saves its schedule", cut.Markup, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("moving or resizing a bar saves the complete displayed schedule", cut.Markup, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

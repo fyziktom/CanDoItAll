@@ -886,12 +886,26 @@ public sealed class ProjectStructureGanttMutationService(
         }
 
         ValidateScheduleConstraints(schedule, scheduleDependencies);
-        foreach (var change in changes.Values)
+        var persistedTaskIds = changes.Keys.ToHashSet(StringComparer.Ordinal);
+        if (expectedSchedules is not null)
         {
-            ApplyDates(state.TasksByNodeKey[change.TaskId.Value], change.ProposedStart, change.ProposedEnd, now);
+            foreach (var taskId in expectedSchedules.Keys)
+            {
+                var task = state.TasksByNodeKey[taskId];
+                if (!task.StartUtc.HasValue || !task.EndUtc.HasValue)
+                {
+                    persistedTaskIds.Add(taskId);
+                }
+            }
         }
 
-        return Result(changes.Values.Select(static change => change.TaskId));
+        foreach (var taskId in persistedTaskIds)
+        {
+            var interval = schedule[taskId];
+            ApplyDates(state.TasksByNodeKey[taskId], interval.Start, interval.End, now);
+        }
+
+        return Result(persistedTaskIds.Select(static taskId => new GanttTaskId(taskId)));
     }
 
     private static ProjectTaskEstimate ReadEstimate(ProjectWorkItemMetadata? metadata)
