@@ -8,8 +8,6 @@ namespace CanDoItAll.Modules.Workbench.Pages;
 
 public partial class ProjectStructurePage
 {
-    private const string WorkItemEditorAssignmentSource = "project-structure-work-item-editor";
-
     private sealed class ProjectStructurePartyEditorState
     {
         public Guid? SelectedPartyId { get; set; }
@@ -34,19 +32,18 @@ public partial class ProjectStructurePage
     [Inject]
     private IProjectNodeAssignmentPolicyBridge NodeAssignmentPolicyBridge { get; set; } = default!;
 
-    private bool CanShowPartyEditor => selectedNode is not null && ResolveNodeAssignmentSemantics(selectedNode).ReplacementRoles.Count > 0;
+    private bool CanShowPartyEditor =>
+        selectedNode is { ObjectType: ProjectObjectType.Participant or ProjectObjectType.Meeting } &&
+        ResolveNodeAssignmentSemantics(selectedNode).ReplacementRoles.Count > 0;
 
     private bool IsParticipantPartyEditor => selectedNode?.ObjectType == ProjectObjectType.Participant;
 
     private bool IsMeetingPartyEditor => selectedNode?.ObjectType == ProjectObjectType.Meeting;
 
-    private bool IsWorkItemPartyEditor => selectedNode?.ObjectType == ProjectObjectType.WorkItem;
-
     private string PartyEditorTitle => selectedNode?.ObjectType switch
     {
         ProjectObjectType.Participant => "Participant directory sync",
         ProjectObjectType.Meeting => "Meeting party assignments",
-        ProjectObjectType.WorkItem => "Work-item party assignment",
         _ => "Party integration"
     };
 
@@ -54,7 +51,6 @@ public partial class ProjectStructurePage
     {
         ProjectObjectType.Participant => "Link this participant to an existing party, create a new one, or keep the node intentionally local to the project.",
         ProjectObjectType.Meeting => "Meetings can reference real customer, partner, team, and AI-agent parties without removing the local participant graph.",
-        ProjectObjectType.WorkItem => "Assign a real party so delivery ownership is reusable across project, CRM, and HR views.",
         _ => "Keep project and directory identity aligned."
     };
 
@@ -76,9 +72,7 @@ public partial class ProjectStructurePage
                     : "Directory linked";
             }
 
-            return partyEditor.SelectedPartyId.HasValue
-                ? "Directory linked"
-                : "No central assignee";
+            return "Party integration";
         }
     }
 
@@ -86,7 +80,6 @@ public partial class ProjectStructurePage
     {
         "Directory linked" => "mint",
         "Parties selected" => "mint",
-        "No central assignee" => "warn",
         "No parties selected" => "warn",
         _ => "neutral"
     };
@@ -117,19 +110,10 @@ public partial class ProjectStructurePage
     private IReadOnlyList<ResourceCardPickerOption<Guid>> ParticipantPartyPickerOptions
         => BuildPartyPickerOptions("project-structure-participant-party-option");
 
-    private IReadOnlyList<ResourceCardPickerOption<Guid>> WorkItemPartyPickerOptions
-        => BuildPartyPickerOptions("project-structure-work-item-party-option", IsWorkItemAssigneeParty);
-
     private Task HandleParticipantPartySelectedAsync(Guid partyId)
     {
         partyEditor.SelectedPartyId = partyId;
         partyEditor.KeepProjectLocalOnly = false;
-        return Task.CompletedTask;
-    }
-
-    private Task HandleWorkItemPartySelectedAsync(Guid partyId)
-    {
-        partyEditor.SelectedPartyId = partyId;
         return Task.CompletedTask;
     }
 
@@ -193,9 +177,6 @@ public partial class ProjectStructurePage
         return partyType is ProjectPartyType.Person or ProjectPartyType.AiAgent;
     }
 
-    private static bool IsWorkItemAssigneeParty(ProjectPartyOption option)
-        => option.PartyType is ProjectPartyType.Person or ProjectPartyType.AiAgent;
-
     private static string ResolvePartyPickerIcon(ProjectPartyType partyType)
     {
         return partyType switch
@@ -245,9 +226,6 @@ public partial class ProjectStructurePage
                     {
                         partyEditor.SelectedMeetingPartyIds.Add(item.PartyId);
                     }
-                    break;
-                case ProjectObjectType.WorkItem:
-                    partyEditor.SelectedPartyId = ResolvePrimaryNodeAssignment(selectedNode.Id, GetNodeAssignmentRoles(selectedNode))?.PartyId;
                     break;
             }
         }
@@ -434,76 +412,6 @@ public partial class ProjectStructurePage
             metadata.Meeting.RelatedPartySummary = string.Join(", ", selectedOptions.Select(option => option.DisplayName));
             await SaveNodeMetadataAsync(selectedNode, metadata);
             SetPartyEditorMessage("Meeting parties saved.", "mint");
-        }
-        finally
-        {
-            isPartyEditorBusy = false;
-        }
-    }
-
-    private async Task SaveWorkItemPartyAsync()
-    {
-        if (selectedNode is null)
-        {
-            return;
-        }
-
-        isPartyEditorBusy = true;
-        try
-        {
-            ProjectStructureTaskResourceSelection? selection = null;
-            if (partyEditor.SelectedPartyId.HasValue)
-            {
-                var option = partyEditorOptions.FirstOrDefault(item => item.PartyId == partyEditor.SelectedPartyId.Value);
-                if (option is null)
-                {
-                    SetPartyEditorMessage("The selected assignee could not be loaded.", "danger");
-                    return;
-                }
-
-                if (!IsWorkItemAssigneeParty(option))
-                {
-                    SetPartyEditorMessage("A work-item assignee must be a person or AI agent.", "danger");
-                    return;
-                }
-
-                selection = new ProjectStructureTaskResourceSelection(
-                    option.PartyType == ProjectPartyType.AiAgent
-                        ? ProjectStructureTaskResourceKind.Agent
-                        : ProjectStructureTaskResourceKind.Person,
-                    option.PartyId);
-            }
-
-            await WorkItemAssigneeService.ReplaceAsync(
-                ProjectId,
-                selectedNode.Id,
-                selection,
-                WorkItemEditorAssignmentSource);
-            projectPartyAssignments = await ProjectPartyIntegrationBridge.ListAssignmentsDetailedAsync(ProjectId);
-            var refreshedSurface = await ProjectWorkbenchService.GetStructureAsync(ProjectId);
-            var refreshedTask = refreshedSurface.Nodes.FirstOrDefault(node =>
-                string.Equals(node.Id, selectedNode.Id, StringComparison.Ordinal));
-            if (refreshedTask is not null)
-            {
-                await ApplySurfaceNodeUpdatesAsync([refreshedTask]);
-            }
-
-            SetPartyEditorMessage(
-                selection is null ? "Central work-item assignee cleared." : "Work-item assignee saved.",
-                selection is null ? "neutral" : "mint");
-        }
-        catch (ProjectStructureAgentException exception)
-        {
-            SetPartyEditorMessage(exception.Message, "danger");
-        }
-        catch (Exception exception)
-        {
-            Logger.LogError(
-                exception,
-                "Failed to save a work-item assignee. ProjectId={ProjectId} WorkItemNodeId={WorkItemNodeId}",
-                ProjectId,
-                selectedNode.Id);
-            SetPartyEditorMessage("The work-item assignee could not be saved.", "danger");
         }
         finally
         {

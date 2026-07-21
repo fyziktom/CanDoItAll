@@ -90,7 +90,7 @@ public sealed class ProjectStructurePartyPickerTests
     }
 
     [Fact]
-    public async Task Meeting_and_work_item_editor_save_central_party_assignments()
+    public async Task Meeting_editor_saves_assignments_while_work_items_hide_the_page_editor()
     {
         await using var harness = await ComponentTestHarness.CreateAsync();
         var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
@@ -180,26 +180,14 @@ public sealed class ProjectStructurePartyPickerTests
             parameters => parameters.Add(page => page.ProjectId, projectId));
         cut.WaitForAssertion(() =>
         {
-            Assert.Contains("Work-item party assignment", cut.Markup);
+            Assert.Contains("Prepare recap", cut.Markup);
         });
-        cut.WaitForElement("[data-testid='project-structure-work-item-party']");
-        cut.WaitForElement($"[data-testid='project-structure-work-item-party-option-{ownerId:N}']");
-        Assert.Empty(cut.FindAll($"[data-testid='project-structure-work-item-party-option-{customerId:N}']"));
-        cut.Find($"[data-testid='project-structure-work-item-party-option-{ownerId:N}']").Click();
-        cut.Find("[data-testid='project-structure-work-item-save']").Click();
-
-        cut.WaitForAssertion(() =>
-        {
-            Assert.Contains("Work-item assignee saved.", cut.Markup);
-        });
-
-        var workItemMetadata = await ReadWorkItemMetadataAsync(workbenchService, projectId, workItemNode.Id);
-        Assert.Equal("Meeting Owner", workItemMetadata.AssigneePartyDisplayName);
-        Assert.Contains(await bridge.ListAssignmentsDetailedAsync(projectId), item => item.NodeKey == workItemNode.Id && item.Role == ProjectPartyAssignmentRole.WorkItemAssignee);
+        Assert.DoesNotContain("Work-item party assignment", cut.Markup);
+        Assert.Empty(cut.FindAll("[data-testid='project-structure-party-editor']"));
     }
 
     [Fact]
-    public async Task Editors_load_from_canonical_assignments_when_metadata_is_stale()
+    public async Task Participant_and_meeting_editors_load_from_canonical_assignments_when_metadata_is_stale()
     {
         await using var harness = await ComponentTestHarness.CreateAsync();
         var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
@@ -211,7 +199,6 @@ public sealed class ProjectStructurePartyPickerTests
         var participantPartyId = await CreatePartyAsync(partyDirectoryService, PartyType.Person, "Canonical Participant");
         var meetingCustomerId = await CreatePartyAsync(partyDirectoryService, PartyType.Organization, "Canonical Meeting Customer");
         var meetingOwnerId = await CreatePartyAsync(partyDirectoryService, PartyType.Person, "Canonical Meeting Owner");
-        var workItemPartyId = await CreatePartyAsync(partyDirectoryService, PartyType.Person, "Canonical Work Owner");
 
         var participantNode = await workbenchService.CreateObjectAsync(
             projectId,
@@ -247,25 +234,6 @@ public sealed class ProjectStructurePartyPickerTests
                 {
                     Meeting = new ProjectMeetingMetadata()
                 })));
-        var workItemNode = await workbenchService.CreateObjectAsync(
-            projectId,
-            new ProjectObjectCreateRequest(
-                ProjectObjectType.WorkItem,
-                "Stale work item node",
-                "Follow-up",
-                "Metadata starts stale.",
-                $"project:{projectId}",
-                820,
-                260,
-                ObjectSubtype: "task",
-                MetadataJson: ProjectObjectMetadataSerializer.Serialize(new ProjectObjectMetadataEnvelope
-                {
-                    WorkItem = new ProjectWorkItemMetadata
-                    {
-                        WorkItemKind = ProjectWorkItemKind.Task
-                    }
-                })));
-
         Assert.True((await bridge.SaveAssignmentAsync(new ProjectPartyAssignmentUpsertRequest
         {
             ProjectId = projectId,
@@ -293,16 +261,6 @@ public sealed class ProjectStructurePartyPickerTests
             IsPrimary = false,
             Source = "component-tests"
         })).IsSuccess);
-        Assert.True((await bridge.SaveAssignmentAsync(new ProjectPartyAssignmentUpsertRequest
-        {
-            ProjectId = projectId,
-            PartyId = workItemPartyId,
-            Role = ProjectPartyAssignmentRole.WorkItemAssignee,
-            NodeKey = workItemNode.Id,
-            IsPrimary = true,
-            Source = "component-tests"
-        })).IsSuccess);
-
         await SaveSelectedNodeStateAsync(workbenchService, projectId, participantNode.Id);
 
         var cut = harness.Context.RenderComponent<ProjectStructurePage>(
@@ -311,7 +269,6 @@ public sealed class ProjectStructurePartyPickerTests
         {
             Assert.Contains("Stale participant node", cut.Markup);
             Assert.Contains("Stale meeting node", cut.Markup);
-            Assert.Contains("Stale work item node", cut.Markup);
         });
 
         cut.WaitForAssertion(() =>
@@ -346,24 +303,6 @@ public sealed class ProjectStructurePartyPickerTests
         var meetingMetadata = await ReadMeetingMetadataAsync(workbenchService, projectId, meetingNode.Id);
         Assert.Contains("Canonical Meeting Customer", meetingMetadata.RelatedPartySummary);
         Assert.Contains("Canonical Meeting Owner", meetingMetadata.RelatedPartySummary);
-
-        await SaveSelectedNodeStateAsync(workbenchService, projectId, workItemNode.Id);
-        cut.Dispose();
-        cut = harness.Context.RenderComponent<ProjectStructurePage>(
-            parameters => parameters.Add(page => page.ProjectId, projectId));
-        cut.WaitForAssertion(() =>
-        {
-            Assert.Contains("Work-item party assignment", cut.Markup);
-        });
-        cut.WaitForElement("[data-testid='project-structure-work-item-save']");
-        cut.Find("[data-testid='project-structure-work-item-save']").Click();
-        cut.WaitForAssertion(() =>
-        {
-            Assert.Contains("Work-item assignee saved.", cut.Markup);
-        });
-
-        var workItemMetadata = await ReadWorkItemMetadataAsync(workbenchService, projectId, workItemNode.Id);
-        Assert.Equal("Canonical Work Owner", workItemMetadata.AssigneePartyDisplayName);
     }
 
     private static async Task<Guid> CreateProjectAsync(ProjectsService projectsService, string name)
@@ -422,10 +361,4 @@ public sealed class ProjectStructurePartyPickerTests
         return ProjectObjectMetadataSerializer.Parse(node.MetadataJson).Meeting!;
     }
 
-    private static async Task<ProjectWorkItemMetadata> ReadWorkItemMetadataAsync(ProjectWorkbenchService workbenchService, Guid projectId, string nodeId)
-    {
-        var surface = await workbenchService.GetStructureAsync(projectId);
-        var node = surface.Nodes.Single(item => item.Id == nodeId);
-        return ProjectObjectMetadataSerializer.Parse(node.MetadataJson).WorkItem!;
-    }
 }

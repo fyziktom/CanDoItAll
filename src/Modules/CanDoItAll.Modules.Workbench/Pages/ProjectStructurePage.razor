@@ -514,38 +514,6 @@ else
                             </Stack>
                         </SurfaceCard>
                     }
-                    else if (IsWorkItemPartyEditor)
-                    {
-                        <SurfaceCard>
-                            <Stack GapScale="LayoutGap.Large">
-                                <Stack GapScale="LayoutGap.Small">
-                                    <TextBlock TextStyle="TextStyle.Footer"
-                                               Value="Assignee party" />
-                                    <ResourceCardPicker TItem="Guid"
-                                                        Options="@WorkItemPartyPickerOptions"
-                                                        SelectionChanged="HandleWorkItemPartySelectedAsync"
-                                                        SearchPlaceholder="Search people and agents"
-                                                        EmptyTitle="No assignees match the current search"
-                                                        DataTestId="project-structure-work-item-party" />
-                                    <Cluster>
-                                        <Button Text="Clear assignee"
-                                                Variant="Variant.Text"
-                                                ButtonStyle="ButtonStyle.Base"
-                                                Disabled="@(!partyEditor.SelectedPartyId.HasValue)"
-                                                data-testid="project-structure-work-item-party-clear"
-                                                Click="ClearPartySelectionAsync" />
-                                    </Cluster>
-                                </Stack>
-
-                                <Cluster>
-                                    <Button Text="Save work-item assignee"
-                                            Disabled="@isPartyEditorBusy"
-                                            data-testid="project-structure-work-item-save"
-                                            Click="SaveWorkItemPartyAsync" />
-                                </Cluster>
-                            </Stack>
-                        </SurfaceCard>
-                    }
                 </div>
             </SectionCard>
         }
