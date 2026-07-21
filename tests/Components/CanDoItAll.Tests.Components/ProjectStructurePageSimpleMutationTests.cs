@@ -8,6 +8,7 @@ using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Components.CanvasLib;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.Projects;
+using CanDoItAll.Modules.Security;
 using CanDoItAll.Modules.Workbench;
 using CanDoItAll.Modules.Workbench.Pages;
 using CanDoItAll.SharedKernel;
@@ -195,6 +196,56 @@ public sealed class ProjectStructurePageSimpleMutationTests
             persistedSurface.Nodes,
             node => string.Equals(node.Title, expectedTitle, StringComparison.Ordinal));
         Assert.Equal(longNoteBody, persistedNode.Notes);
+    }
+
+    [Fact]
+    public async Task Image_asset_create_persists_payload_larger_than_default_signalr_message_limit()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync(services =>
+            services.Replace(ServiceDescriptor.Singleton<ISecretVault>(new InMemorySecretVault())));
+        var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
+        var workbenchService = harness.Context.Services.GetRequiredService<ProjectWorkbenchService>();
+        var agentService = harness.Context.Services.GetRequiredService<ProjectStructureAgentService>();
+        var projectId = await CreateProjectAsync(projectsService, "Large image asset");
+        var parentNodeId = $"project:{projectId}";
+        await SaveSelectedNodeStateAsync(workbenchService, projectId, parentNodeId);
+
+        var imageBytes = new byte[48 * 1024];
+        for (var index = 0; index < imageBytes.Length; index++)
+        {
+            imageBytes[index] = (byte)(index % 251);
+        }
+
+        new byte[] { 137, 80, 78, 71, 13, 10, 26, 10 }.CopyTo(imageBytes, 0);
+        var uploadedFile = BuildUploadedFile("large-image.png", "image/png", imageBytes);
+        Assert.True(uploadedFile.Base64Data.Length > 32 * 1024);
+
+        var cut = harness.Context.RenderComponent<ProjectStructurePage>(
+            parameters => parameters.Add(page => page.ProjectId, projectId));
+        var canvasWorkbench = WaitForCanvasWorkbench(cut);
+        var createdNodeId = await InvokeCreateActionAsync(
+            cut,
+            canvasWorkbench,
+            "add-image-asset",
+            parentNodeId,
+            parentNodeId,
+            "Large uploaded image",
+            "SignalR regression",
+            "Image content larger than the default inbound hub message limit.",
+            uploadedFile: uploadedFile);
+
+        var persistedSurface = await workbenchService.GetStructureAsync(projectId);
+        var persistedNode = Assert.Single(
+            persistedSurface.Nodes,
+            node => string.Equals(node.Id, createdNodeId, StringComparison.Ordinal));
+        Assert.Equal(ProjectObjectType.ImageAsset, persistedNode.ObjectType);
+        Assert.Equal("image/png", persistedNode.MediaContentType);
+        Assert.Equal("large-image.png", persistedNode.MediaOriginalFileName);
+        Assert.False(string.IsNullOrWhiteSpace(persistedNode.MediaRelativePath));
+
+        var persistedContent = await agentService.GetAssetContentAsync(projectId, createdNodeId);
+        Assert.Equal(imageBytes.LongLength, persistedContent.ContentLength);
+        Assert.Equal(imageBytes, Convert.FromBase64String(persistedContent.Base64Data));
     }
 
     [Fact]
@@ -2003,11 +2054,14 @@ public sealed class ProjectStructurePageSimpleMutationTests
     }
 
     private static CanvasWorkbenchUploadedFile BuildUploadedFile(string fileName, string contentType, string content)
+        => BuildUploadedFile(fileName, contentType, Encoding.UTF8.GetBytes(content));
+
+    private static CanvasWorkbenchUploadedFile BuildUploadedFile(string fileName, string contentType, byte[] content)
         => new()
         {
             FileName = fileName,
             ContentType = contentType,
-            Base64Data = Convert.ToBase64String(Encoding.UTF8.GetBytes(content))
+            Base64Data = Convert.ToBase64String(content)
         };
 
     private sealed class RecordingAgentImageGenerationService : IAgentImageGenerationService

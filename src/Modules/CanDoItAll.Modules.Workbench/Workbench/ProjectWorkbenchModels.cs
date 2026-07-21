@@ -311,6 +311,12 @@ public sealed record ProjectObjectMediaPayload(
     string ContentType,
     string Base64Data);
 
+public static class ProjectStructureAssetUploadLimits
+{
+    public const long MaximumFileBytes = 25L * 1024L * 1024L;
+    public const long MaximumBase64Characters = 4L * ((MaximumFileBytes + 2L) / 3L);
+}
+
 public sealed record ProjectCanvasContextActionRequest(
     string? NodeId,
     string Action,
@@ -1344,9 +1350,25 @@ ProjectWorkbenchCrossModuleMutationService crossModuleMutationService) : IProjec
         ProjectObjectMediaPayload? media,
         CancellationToken cancellationToken)
     {
-        if (media is null || string.IsNullOrWhiteSpace(media.Base64Data) || string.IsNullOrWhiteSpace(media.FileName))
+        if (media is null)
         {
             return null;
+        }
+
+        if (string.IsNullOrWhiteSpace(media.FileName))
+        {
+            throw new InvalidDataException("Uploaded project assets require a file name.");
+        }
+
+        if (string.IsNullOrWhiteSpace(media.Base64Data))
+        {
+            throw new InvalidDataException("Uploaded project assets require file content.");
+        }
+
+        if (media.Base64Data.Length > ProjectStructureAssetUploadLimits.MaximumBase64Characters)
+        {
+            throw new InvalidDataException(
+                $"Uploaded project assets are limited to {ProjectStructureAssetUploadLimits.MaximumFileBytes / (1024 * 1024)} MiB.");
         }
 
         byte[] bytes;
@@ -1354,9 +1376,15 @@ ProjectWorkbenchCrossModuleMutationService crossModuleMutationService) : IProjec
         {
             bytes = Convert.FromBase64String(media.Base64Data);
         }
-        catch
+        catch (FormatException exception)
         {
-            return null;
+            throw new InvalidDataException("Uploaded project asset content is not valid base64.", exception);
+        }
+
+        if (bytes.LongLength > ProjectStructureAssetUploadLimits.MaximumFileBytes)
+        {
+            throw new InvalidDataException(
+                $"Uploaded project assets are limited to {ProjectStructureAssetUploadLimits.MaximumFileBytes / (1024 * 1024)} MiB.");
         }
 
         var extension = Path.GetExtension(media.FileName);

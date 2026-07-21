@@ -1591,7 +1591,29 @@ else
                 return;
             }
 
-            await CreateObjectAsync(definition, request);
+            try
+            {
+                await CreateObjectAsync(definition, request);
+            }
+            catch (OperationCanceledException) when (deferredCompletionCts.IsCancellationRequested)
+            {
+            }
+            catch (Exception exception)
+            {
+                Logger.LogError(
+                    exception,
+                    "Project structure node creation failed. ProjectId={ProjectId} ActionId={ActionId} ObjectType={ObjectType} HasUpload={HasUpload} EncodedUploadLength={EncodedUploadLength}",
+                    ProjectId,
+                    request.ActionId,
+                    definition.ObjectType,
+                    request.UploadedFile is not null,
+                    request.UploadedFile?.Base64Data.Length ?? 0);
+                NotificationService.Error(
+                    "Node could not be created",
+                    exception is InvalidDataException
+                        ? exception.Message
+                        : "The node could not be saved. Check the application logs for details.");
+            }
         }
     }
 

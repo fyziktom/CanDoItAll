@@ -20,7 +20,7 @@ public sealed class ProjectStructureAgentService(
     ProjectStructureProcessNodeService processNodeService,
     ProjectStructureWorkflowNodeService workflowNodeService)
 {
-    private const long MaxExternalAssetSourceBytes = 25L * 1024L * 1024L;
+    private const long MaxExternalAssetSourceBytes = ProjectStructureAssetUploadLimits.MaximumFileBytes;
 
     private static readonly ProjectStructureReadRequest FullNodeReadRequest = new(
         IncludeLinks: true,
@@ -1416,6 +1416,14 @@ public sealed class ProjectStructureAgentService(
         if (string.IsNullOrWhiteSpace(media.Base64Data))
         {
             throw new ProjectStructureAgentException(400, "MediaPayloadRequired", "Uploaded media requires base64 content.");
+        }
+
+        if (media.Base64Data.Length > ProjectStructureAssetUploadLimits.MaximumBase64Characters)
+        {
+            throw new ProjectStructureAgentException(
+                413,
+                "MediaPayloadTooLarge",
+                $"Uploaded media is limited to {ProjectStructureAssetUploadLimits.MaximumFileBytes / (1024 * 1024)} MiB.");
         }
 
         try

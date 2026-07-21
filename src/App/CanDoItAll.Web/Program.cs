@@ -47,8 +47,7 @@ if (!databaseOptions.EnableEntityFrameworkConsoleLogging)
     builder.Logging.AddFilter("Microsoft.EntityFrameworkCore.Infrastructure", LogLevel.Warning);
 }
 
-builder.Services.AddRazorComponents()
-    .AddInteractiveServerComponents(options => options.DetailedErrors = detailedErrorsEnabled);
+builder.Services.AddCanDoItAllInteractiveServer(detailedErrorsEnabled);
 
 builder.Services.AddCanDoItAllBaseLib();
 builder.Services.AddCanDoItAllCharts();
