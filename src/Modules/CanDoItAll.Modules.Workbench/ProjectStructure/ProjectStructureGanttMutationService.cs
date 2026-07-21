@@ -54,19 +54,24 @@ public sealed class ProjectStructureGanttMutationService(
 
     public async Task<ProjectStructureGanttMutationResult> ApplyScheduleAsync(
         Guid projectId,
-        GanttTaskScheduleChangeRequest request,
+        ProjectStructureGanttScheduleMutationRequest request,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(request);
+        var scheduleChange = request.ScheduleChange;
         var result = await ExecuteAsync(
             projectId,
-            (_, state, now, _) => Task.FromResult(ApplyScheduleChanges(state, request, now)),
+            (_, state, now, _) => Task.FromResult(ApplyScheduleChanges(
+                state,
+                scheduleChange,
+                request.ExpectedTaskSchedules,
+                now)),
             cancellationToken);
 
         logger.LogInformation(
             "Applied Gantt schedule mutation for project {ProjectId}, task {TaskId}, and {AffectedCount} affected tasks.",
             Mask(projectId),
-            Mask(request.TaskId),
+            Mask(scheduleChange.TaskId),
             result.AffectedTaskIds.Count);
         return result;
     }
@@ -128,7 +133,11 @@ public sealed class ProjectStructureGanttMutationService(
                             "The schedule change does not belong to the edited task.");
                     }
 
-                    var scheduleResult = ApplyScheduleChanges(state, request.ScheduleChange, now);
+                    var scheduleResult = ApplyScheduleChanges(
+                        state,
+                        request.ScheduleChange,
+                        expectedTaskSchedules: null,
+                        now);
                     affectedTaskIds.UnionWith(scheduleResult.AffectedTaskIds);
                 }
 
@@ -711,19 +720,26 @@ public sealed class ProjectStructureGanttMutationService(
         var schedule = new Dictionary<string, TaskInterval>(StringComparer.Ordinal);
         foreach (var task in tasks)
         {
-            if (!task.StartUtc.HasValue && !task.EndUtc.HasValue)
+            if (task.StartUtc is not { } start || task.EndUtc is not { } end)
             {
-                continue;
+                if (!task.StartUtc.HasValue && !task.EndUtc.HasValue)
+                {
+                    continue;
+                }
+
+                throw new ProjectStructureGanttMutationException(
+                    ProjectStructureGanttMutationErrorCode.InvalidSchedule,
+                    $"Task '{ProjectStructureGanttMutationConventions.Mask(task.NodeKey)}' has an invalid persisted interval.");
             }
 
-            if (!task.StartUtc.HasValue || !task.EndUtc.HasValue || task.EndUtc <= task.StartUtc)
+            if (end <= start)
             {
                 throw new ProjectStructureGanttMutationException(
                     ProjectStructureGanttMutationErrorCode.InvalidSchedule,
                     $"Task '{ProjectStructureGanttMutationConventions.Mask(task.NodeKey)}' has an invalid persisted interval.");
             }
 
-            schedule.Add(task.NodeKey, new TaskInterval(task.StartUtc.Value, task.EndUtc.Value));
+            schedule.Add(task.NodeKey, new TaskInterval(start, end));
         }
 
         return schedule;
@@ -762,12 +778,54 @@ public sealed class ProjectStructureGanttMutationService(
         return distinct;
     }
 
+    private static Dictionary<string, TaskInterval> BuildExpectedSchedule(
+        MutationState state,
+        IReadOnlyDictionary<string, ProjectStructureTaskScheduleSnapshot> expectedSchedules)
+    {
+        var projectedTasksByNodeKey = state.TasksByNodeKey
+            .Where(static pair => !pair.Value.IsSystemManaged)
+            .ToDictionary(static pair => pair.Key, static pair => pair.Value, StringComparer.Ordinal);
+        if (expectedSchedules.Count != projectedTasksByNodeKey.Count ||
+            expectedSchedules.Keys.Any(taskId => !projectedTasksByNodeKey.ContainsKey(taskId)))
+        {
+            throw new ProjectStructureGanttMutationException(
+                ProjectStructureGanttMutationErrorCode.InvalidSchedule,
+                "Expected schedule state must identify every task in the projected graph exactly once.");
+        }
+
+        var schedule = new Dictionary<string, TaskInterval>(expectedSchedules.Count, StringComparer.Ordinal);
+        foreach (var (taskId, expected) in expectedSchedules)
+        {
+            ValidateExpectedScheduleState(projectedTasksByNodeKey[taskId], expected);
+            schedule.Add(taskId, new TaskInterval(expected.ProjectedStartUtc, expected.ProjectedEndUtc));
+        }
+
+        return schedule;
+    }
+
+    private static Dictionary<string, ProjectStructureTaskScheduleSnapshot> RequireDistinctExpectedSchedules(
+        IReadOnlyList<ProjectStructureTaskScheduleSnapshot> expectedTaskSchedules)
+    {
+        var distinct = new Dictionary<string, ProjectStructureTaskScheduleSnapshot>(StringComparer.Ordinal);
+        foreach (var snapshot in expectedTaskSchedules)
+        {
+            if (!distinct.TryAdd(snapshot.TaskId.Value, snapshot))
+            {
+                throw new ProjectStructureGanttMutationException(
+                    ProjectStructureGanttMutationErrorCode.InvalidSchedule,
+                    $"Task '{Mask(snapshot.TaskId)}' has duplicate expected schedule state.");
+            }
+        }
+
+        return distinct;
+    }
+
     private static ProjectStructureGanttMutationResult ApplyScheduleChanges(
         MutationState state,
         GanttTaskScheduleChangeRequest request,
+        IReadOnlyList<ProjectStructureTaskScheduleSnapshot>? expectedTaskSchedules,
         DateTimeOffset now)
     {
-        ValidateGraph(state.TaskIds, state.Dependencies);
         var changes = RequireDistinctChanges(request.AffectedTasks);
         if (changes.Count == 0 || !changes.ContainsKey(request.TaskId.Value))
         {
@@ -777,7 +835,32 @@ public sealed class ProjectStructureGanttMutationService(
         }
 
         RequireEditableTask(state, request.TaskId);
-        var allowedTaskIds = ReachableTaskIds(state.Dependencies, request.TaskId.Value);
+        var expectedSchedules = expectedTaskSchedules is null
+            ? null
+            : RequireDistinctExpectedSchedules(expectedTaskSchedules);
+        Dictionary<string, TaskInterval> schedule;
+        IReadOnlySet<string> graphTaskIds;
+        IReadOnlyList<DependencyEdge> scheduleDependencies;
+        if (expectedSchedules is null)
+        {
+            schedule = BuildSchedule(state.TasksByNodeKey.Values);
+            graphTaskIds = state.TaskIds;
+            scheduleDependencies = state.Dependencies;
+        }
+        else
+        {
+            schedule = BuildExpectedSchedule(state, expectedSchedules);
+            graphTaskIds = schedule.Keys.ToHashSet(StringComparer.Ordinal);
+            scheduleDependencies = state.Dependencies
+                .Where(edge =>
+                    !edge.Record.IsSystemManaged &&
+                    graphTaskIds.Contains(edge.PredecessorId) &&
+                    graphTaskIds.Contains(edge.SuccessorId))
+                .ToArray();
+        }
+
+        ValidateGraph(graphTaskIds, scheduleDependencies);
+        var allowedTaskIds = ReachableTaskIds(scheduleDependencies, request.TaskId.Value);
         allowedTaskIds.Add(request.TaskId.Value);
         if (changes.Keys.Any(taskId => !allowedTaskIds.Contains(taskId)))
         {
@@ -786,16 +869,23 @@ public sealed class ProjectStructureGanttMutationService(
                 "A schedule request can only update the selected task and its dependent tasks.");
         }
 
-        var schedule = BuildSchedule(state.TasksByNodeKey.Values);
-        ValidateScheduleConstraints(schedule, state.Dependencies);
+        ValidateScheduleConstraints(schedule, scheduleDependencies);
         foreach (var change in changes.Values)
         {
             var task = RequireEditableTask(state, change.TaskId);
-            ValidateScheduledStaleState(task, change);
+            if (expectedSchedules is null)
+            {
+                ValidateScheduledStaleState(task, change);
+            }
+            else
+            {
+                ValidateAffectedProjectedDates(change, expectedSchedules[task.NodeKey]);
+            }
+
             schedule[task.NodeKey] = new TaskInterval(change.ProposedStart, change.ProposedEnd);
         }
 
-        ValidateScheduleConstraints(schedule, state.Dependencies);
+        ValidateScheduleConstraints(schedule, scheduleDependencies);
         foreach (var change in changes.Values)
         {
             ApplyDates(state.TasksByNodeKey[change.TaskId.Value], change.ProposedStart, change.ProposedEnd, now);
@@ -824,6 +914,54 @@ public sealed class ProjectStructureGanttMutationService(
         metadata.ExpectedCostCurrencyCode = estimate.ExpectedCostCurrencyCode;
     }
 
+    private static void ValidateExpectedScheduleState(
+        ProjectObjectRecord task,
+        ProjectStructureTaskScheduleSnapshot expected)
+    {
+        if (!string.Equals(expected.TaskId.Value, task.NodeKey, StringComparison.Ordinal))
+        {
+            throw new ProjectStructureGanttMutationException(
+                ProjectStructureGanttMutationErrorCode.InvalidSchedule,
+                "Expected schedule state does not belong to its projected task.");
+        }
+
+        if (task.StartUtc != expected.StartUtc ||
+            task.EndUtc != expected.EndUtc ||
+            task.DurationSeconds != expected.DurationSeconds)
+        {
+            throw StaleTask(expected.TaskId, "schedule");
+        }
+
+        if (expected.ProjectedEndUtc <= expected.ProjectedStartUtc ||
+            (expected.StartUtc.HasValue && expected.StartUtc != expected.ProjectedStartUtc) ||
+            (expected.EndUtc.HasValue && expected.EndUtc != expected.ProjectedEndUtc) ||
+            ((!expected.StartUtc.HasValue || !expected.EndUtc.HasValue) &&
+             expected.DurationSeconds is { } expectedDurationSeconds &&
+             ProjectWorkbenchObjectModeling.CalculateDurationSeconds(
+                 expected.ProjectedStartUtc,
+                 expected.ProjectedEndUtc) !=
+             expectedDurationSeconds))
+        {
+            throw new ProjectStructureGanttMutationException(
+                ProjectStructureGanttMutationErrorCode.InvalidSchedule,
+                $"Expected schedule state for task '{Mask(expected.TaskId)}' does not match its projected dates.");
+        }
+    }
+
+    private static void ValidateAffectedProjectedDates(
+        GanttTaskDateChange change,
+        ProjectStructureTaskScheduleSnapshot expected)
+    {
+        if (expected.TaskId != change.TaskId ||
+            expected.ProjectedStartUtc != change.PreviousStart ||
+            expected.ProjectedEndUtc != change.PreviousEnd)
+        {
+            throw new ProjectStructureGanttMutationException(
+                ProjectStructureGanttMutationErrorCode.InvalidSchedule,
+                $"Affected dates for task '{Mask(change.TaskId)}' do not match the projected schedule snapshot.");
+        }
+    }
+
     private static void ValidateScheduledStaleState(
         ProjectObjectRecord task,
         GanttTaskDateChange change)
@@ -835,7 +973,7 @@ public sealed class ProjectStructureGanttMutationService(
                 $"Task '{Mask(change.TaskId)}' has no authoritative persisted schedule.");
         }
 
-        if (task.StartUtc.Value != change.PreviousStart || task.EndUtc.Value != change.PreviousEnd)
+        if (task.StartUtc != change.PreviousStart || task.EndUtc != change.PreviousEnd)
         {
             throw StaleTask(change.TaskId, "schedule");
         }

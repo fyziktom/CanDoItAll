@@ -76,9 +76,11 @@ public partial class ProjectStructureGanttPanel : ComponentBase, IAsyncDisposabl
     [Parameter]
     public EventCallback OpenAgentCatalog { get; set; }
 
+    private bool CanMutate => !mutationInFlight && !isLoading;
+
     private bool CanInsertTask =>
         projection is { IsValid: true, Dependencies.Count: > 0 } &&
-        !mutationInFlight;
+        CanMutate;
 
     private decimal? TotalExpectedEffortHours
     {
@@ -206,9 +208,19 @@ public partial class ProjectStructureGanttPanel : ComponentBase, IAsyncDisposabl
             cancellationToken => MutationService.ApplyTitleAsync(ProjectId, request, cancellationToken));
 
     private Task ApplyScheduleAsync(GanttTaskScheduleChangeRequest request)
-        => ExecuteMutationAsync(
+    {
+        var renderedSurface = loadedSurface ?? Surface;
+        return ExecuteMutationAsync(
             "schedule",
-            cancellationToken => MutationService.ApplyScheduleAsync(ProjectId, request, cancellationToken));
+            cancellationToken => MutationService.ApplyScheduleAsync(
+                ProjectId,
+                ProjectStructureGanttScheduleMutationFactory.Create(
+                    request,
+                    renderedSurface,
+                    projection?.Tasks
+                        ?? throw new InvalidOperationException("The Gantt projection is unavailable.")),
+                cancellationToken));
+    }
 
     private Task ApplyDependencyAsync(GanttDependencyMutationRequest request)
         => ExecuteMutationAsync(
@@ -513,6 +525,14 @@ public partial class ProjectStructureGanttPanel : ComponentBase, IAsyncDisposabl
             NotificationService.Error(
                 "Project schedule change unavailable",
                 "The schedule host is not configured to reload authoritative project data, so the change was not attempted.");
+            return false;
+        }
+
+        if (isLoading)
+        {
+            NotificationService.Warning(
+                "Project schedule refresh in progress",
+                "Wait for the authoritative project schedule to finish refreshing before making another change.");
             return false;
         }
 

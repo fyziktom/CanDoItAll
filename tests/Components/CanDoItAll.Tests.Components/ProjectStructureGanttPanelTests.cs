@@ -116,7 +116,7 @@ public sealed class ProjectStructureGanttPanelTests
     }
 
     [Fact]
-    public void Projection_only_task_disables_schedule_edits_but_keeps_title_editing_and_loads_assignments()
+    public void Projection_only_task_allows_schedule_edits_and_loads_assignments()
     {
         var projectId = Guid.NewGuid();
         using var context = CreateContext(
@@ -131,12 +131,66 @@ public sealed class ProjectStructureGanttPanelTests
         var chart = cut.FindComponent<GanttChart>();
         var task = Assert.Single(chart.Instance.Tasks);
         Assert.Equal(new GanttAssignment(GanttAssignmentKind.Person, "Grace Hopper"), Assert.Single(task.Assignments));
-        Assert.NotNull(chart.Instance.TaskScheduleReadOnlySelector);
-        Assert.True(chart.Instance.TaskScheduleReadOnlySelector(task));
+        Assert.NotNull(chart.Instance.ProjectionOnlySelector);
+        Assert.True(chart.Instance.ProjectionOnlySelector(task));
+        Assert.Null(chart.Instance.TaskScheduleReadOnlySelector);
         Assert.Null(chart.Instance.TaskTitleReadOnlySelector);
         Assert.True(chart.Instance.AllowTaskEditing);
         Assert.True(chart.Instance.TaskDoubleClicked.HasDelegate);
-        Assert.Contains("read-only projection", cut.Markup, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("moving or resizing a bar saves its schedule", cut.Markup, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void Schedule_mutation_snapshot_covers_the_entire_rendered_graph()
+    {
+        var projectId = Guid.NewGuid();
+        var start = new DateTimeOffset(2026, 7, 15, 8, 0, 0, TimeSpan.Zero);
+        var projectedNode = CreateTask("task-a", "Projected");
+        var canonicalNode = CreateTask("task-b", "Canonical") with
+        {
+            StartUtc = start.AddHours(1),
+            EndUtc = start.AddHours(2),
+            DurationSeconds = 3600
+        };
+        var projectedTasks = new[]
+        {
+            new GanttTask(new GanttTaskId(projectedNode.Id), projectedNode.Title, start, start.AddHours(1)),
+            new GanttTask(
+                new GanttTaskId(canonicalNode.Id),
+                canonicalNode.Title,
+                canonicalNode.StartUtc.Value,
+                canonicalNode.EndUtc.Value)
+        };
+        var scheduleChange = new GanttTaskScheduleChangeRequest(
+            projectedTasks[0].Id,
+            GanttScheduleGesture.ResizeEnd,
+            [new GanttTaskDateChange(
+                projectedTasks[0].Id,
+                start,
+                start.AddHours(1),
+                start,
+                start.AddHours(2),
+                true)],
+            []);
+
+        var mutation = ProjectStructureGanttScheduleMutationFactory.Create(
+            scheduleChange,
+            CreateSurface(projectId, projectedNode, canonicalNode),
+            projectedTasks);
+
+        Assert.Equal(2, mutation.ExpectedTaskSchedules.Count);
+        var projectedSnapshot = Assert.Single(
+            mutation.ExpectedTaskSchedules,
+            snapshot => snapshot.TaskId == projectedTasks[0].Id);
+        Assert.Null(projectedSnapshot.StartUtc);
+        Assert.Null(projectedSnapshot.EndUtc);
+        Assert.Equal(start, projectedSnapshot.ProjectedStartUtc);
+        Assert.Equal(start.AddHours(1), projectedSnapshot.ProjectedEndUtc);
+        var canonicalSnapshot = Assert.Single(
+            mutation.ExpectedTaskSchedules,
+            snapshot => snapshot.TaskId == projectedTasks[1].Id);
+        Assert.Equal(canonicalNode.StartUtc, canonicalSnapshot.StartUtc);
+        Assert.Equal(canonicalNode.EndUtc, canonicalSnapshot.EndUtc);
     }
 
     [Fact]
@@ -199,8 +253,13 @@ public sealed class ProjectStructureGanttPanelTests
         await bridge.RefreshRequested.WaitAsync(TimeSpan.FromSeconds(2));
 
         Assert.Same(originalChart, cut.FindComponent<GanttChart>().Instance);
+        Assert.False(cut.FindComponent<GanttChart>().Instance.AllowTaskEditing);
         Assert.Contains("Before refresh", cut.Markup, StringComparison.Ordinal);
         Assert.DoesNotContain("Building the Gantt projection", cut.Markup, StringComparison.Ordinal);
+        await cut.InvokeAsync(() => originalChart.TaskDoubleClicked.InvokeAsync(new GanttTaskId("task-a")));
+        var refreshNotification = Assert.Single(
+            context.Services.GetRequiredService<NotificationService>().Messages);
+        Assert.Equal("Project schedule refresh in progress", refreshNotification.Summary);
 
         refreshAssignments.SetResult([]);
         await refreshTask;
@@ -208,6 +267,7 @@ public sealed class ProjectStructureGanttPanelTests
         cut.WaitForAssertion(() =>
         {
             Assert.Same(originalChart, cut.FindComponent<GanttChart>().Instance);
+            Assert.True(cut.FindComponent<GanttChart>().Instance.AllowTaskEditing);
             Assert.Contains("After refresh", cut.Markup, StringComparison.Ordinal);
         });
     }

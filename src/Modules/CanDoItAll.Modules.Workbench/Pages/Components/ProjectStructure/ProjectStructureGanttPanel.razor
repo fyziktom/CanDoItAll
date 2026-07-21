@@ -63,7 +63,7 @@
                             Icon="add_task"
                             Size="ButtonSize.Small"
                             ButtonStyle="ButtonStyle.Info"
-                            Disabled="@mutationInFlight"
+                            Disabled="@(!CanMutate)"
                             data-testid="project-structure-gantt-add-task"
                             Click="OpenGeneralTaskDialogAsync" />
                     <Button Text="Agent chats"
@@ -85,7 +85,7 @@
             {
                 <Alert AlertStyle="AlertStyle.Warning"
                        data-testid="project-structure-gantt-projection-warning">
-                    @projection.ProjectionOnlyTaskIds.Count task(s) have no complete persisted schedule. Their displayed dates are a read-only projection; title and dependency changes still use authoritative project services.
+                    @projection.ProjectionOnlyTaskIds.Count task(s) have no complete persisted schedule. Their displayed dates are projected; moving or resizing a bar saves its schedule and any required dependent-task shifts through authoritative project services.
                 </Alert>
             }
 
@@ -130,12 +130,11 @@
                                 TaskOrderChangeRequested="ApplyTaskOrderAsync"
                                 DependencyIdFactory="CreateDependencyId"
                                 ProjectionOnlySelector="IsProjectionOnly"
-                                TaskScheduleReadOnlySelector="IsProjectionOnly"
-                                AllowTaskEditing="@(!mutationInFlight)"
-                                AllowTimelineTaskCreation="@(!mutationInFlight)"
-                                AllowDependencyEditing="@(!mutationInFlight)"
-                                AllowTaskInsertion="@(!mutationInFlight)"
-                                AllowTaskReordering="@(!mutationInFlight)"
+                                AllowTaskEditing="@CanMutate"
+                                AllowTimelineTaskCreation="@CanMutate"
+                                AllowDependencyEditing="@CanMutate"
+                                AllowTaskInsertion="@CanMutate"
+                                AllowTaskReordering="@CanMutate"
                                 HoursPerManDay="8"
                                 RowHeight="48"
                                 HeaderHeight="40"

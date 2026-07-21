@@ -38,6 +38,31 @@ public sealed record ProjectStructureGanttMutationResult(
     int AddedDependencyCount,
     int RemovedDependencyCount);
 
+public sealed record ProjectStructureTaskScheduleSnapshot(
+    GanttTaskId TaskId,
+    DateTimeOffset? StartUtc,
+    DateTimeOffset? EndUtc,
+    int? DurationSeconds,
+    DateTimeOffset ProjectedStartUtc,
+    DateTimeOffset ProjectedEndUtc);
+
+public sealed record ProjectStructureGanttScheduleMutationRequest
+{
+    public ProjectStructureGanttScheduleMutationRequest(
+        GanttTaskScheduleChangeRequest scheduleChange,
+        IEnumerable<ProjectStructureTaskScheduleSnapshot> expectedTaskSchedules)
+    {
+        ArgumentNullException.ThrowIfNull(scheduleChange);
+        ArgumentNullException.ThrowIfNull(expectedTaskSchedules);
+        ScheduleChange = scheduleChange;
+        ExpectedTaskSchedules = Array.AsReadOnly(expectedTaskSchedules.ToArray());
+    }
+
+    public GanttTaskScheduleChangeRequest ScheduleChange { get; }
+
+    public IReadOnlyList<ProjectStructureTaskScheduleSnapshot> ExpectedTaskSchedules { get; }
+}
+
 internal static class ProjectStructureGanttMutationConventions
 {
     private const string PersistedDependencyPrefix = "project-link:";
