@@ -709,6 +709,12 @@ if (-not (Test-Path -LiteralPath (Join-Path $McpRepoRoot "CanDoItAll.Mcp.slnx"))
     throw "MCP repository root '$McpRepoRoot' does not contain CanDoItAll.Mcp.slnx."
 }
 
+$codeAnalysisRepoRoot = Resolve-AbsolutePath (Join-Path (Split-Path -Parent $McpRepoRoot) "CanDoItAll.CodeAnalysis")
+$codeAnalysisApplicationProjectPath = Join-Path $codeAnalysisRepoRoot "src\CanDoItAll.CodeAnalytics.Application\CanDoItAll.CodeAnalytics.Application.csproj"
+if (-not (Test-Path -LiteralPath $codeAnalysisApplicationProjectPath)) {
+    throw "Corrected CodeAnalysis repository root '$codeAnalysisRepoRoot' does not contain '$codeAnalysisApplicationProjectPath'."
+}
+
 $mcpSolutionPath = Resolve-AbsolutePath (Join-Path $McpRepoRoot "CanDoItAll.Mcp.slnx")
 $dotNetWatchWrapperPath = Resolve-AbsolutePath (Join-Path $McpRepoRoot "tools\CanDoItAll.Mcp.DotNetWatch\Start-CanDoItAllDotNetWatchMcp.ps1")
 $dotNetWatchSettingsPath = Resolve-AbsolutePath (Join-Path $RepoRoot "CanDoItAll.Mcp.DotNetWatch.settings.json")
@@ -716,6 +722,14 @@ $componentsProjectPath = Resolve-AbsolutePath (Join-Path $McpRepoRoot "src\CanDo
 $componentsSettingsPath = Resolve-AbsolutePath (Join-Path $RepoRoot "CanDoItAll.Mcp.Components.settings.json")
 $codeAnalyticsProjectPath = Resolve-AbsolutePath (Join-Path $McpRepoRoot "src\CanDoItAll.Mcp.CodeAnalytics\CanDoItAll.Mcp.CodeAnalytics.csproj")
 $codeAnalyticsSettingsPath = Resolve-AbsolutePath (Join-Path $RepoRoot "CanDoItAll.Mcp.CodeAnalytics.settings.json")
+$codeAnalyticsProjectContent = Get-Content -LiteralPath $codeAnalyticsProjectPath -Raw
+if ($codeAnalyticsProjectContent.IndexOf("CanDoItAll.CodeAnalsis", [System.StringComparison]::OrdinalIgnoreCase) -ge 0) {
+    throw "CodeAnalytics MCP project still references the deprecated CanDoItAll.CodeAnalsis repository."
+}
+
+if ($codeAnalyticsProjectContent.IndexOf("CanDoItAll.CodeAnalysis", [System.StringComparison]::OrdinalIgnoreCase) -lt 0) {
+    throw "CodeAnalytics MCP project does not reference the corrected CanDoItAll.CodeAnalysis repository."
+}
 $mermaidProjectPath = Resolve-AbsolutePath (Join-Path $McpRepoRoot "src\CanDoItAll.Mcp.Mermaid\CanDoItAll.Mcp.Mermaid.csproj")
 $mermaidSettingsPath = Resolve-AbsolutePath (Join-Path $RepoRoot "CanDoItAll.Mcp.Mermaid.settings.json")
 $sshOpsProjectPath = Resolve-AbsolutePath (Join-Path $McpRepoRoot "src\CanDoItAll.Mcp.SshOps\CanDoItAll.Mcp.SshOps.csproj")
@@ -870,6 +884,7 @@ $installManifest = @{
     }
     codeAnalytics = @{
         configuration = "Release"
+        codeAnalysisRepoRoot = $codeAnalysisRepoRoot
         settingsPath = $codeAnalyticsSettingsPath
         installRoot = $codeAnalyticsInstallRoot
         entrypointPath = $codeAnalyticsEntrypoint
