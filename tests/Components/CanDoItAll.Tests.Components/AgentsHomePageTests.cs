@@ -16,6 +16,35 @@ namespace CanDoItAll.Tests.Components;
 public sealed class AgentsHomePageTests
 {
     [Fact]
+    public async Task Load_defaults_action_is_in_the_tabs_row_and_requires_confirmation()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var navigation = harness.Context.Services.GetRequiredService<NavigationManager>();
+        var dialogHost = harness.Context.RenderComponent<DialogHost>();
+
+        navigation.NavigateTo("/agents");
+        var cut = harness.Context.RenderComponent<AgentsHomePage>();
+        var tabsRow = cut.WaitForElement(
+            "[data-testid='agents-shell-tabs']",
+            TimeSpan.FromSeconds(10));
+        var loadDefaultsButton = Assert.IsAssignableFrom<IElement>(
+            tabsRow.QuerySelector("[data-testid='agents-shell-feed-defaults']"));
+
+        var clickTask = loadDefaultsButton.ClickAsync(new MouseEventArgs());
+
+        dialogHost.WaitForElement(
+            "[data-testid='agents-feed-defaults-confirmation']",
+            TimeSpan.FromSeconds(10));
+        Assert.False(clickTask.IsCompleted);
+
+        dialogHost.Find("[data-testid='agents-feed-defaults-cancel']").Click();
+        await clickTask.WaitAsync(TimeSpan.FromSeconds(2));
+
+        Assert.Empty(harness.Context.Services.GetRequiredService<DialogService>().Dialogs);
+        Assert.False(cut.Find("[data-testid='agents-shell-feed-defaults']").HasAttribute("disabled"));
+    }
+
+    [Fact]
     public async Task Hr_agent_avatar_action_remains_in_the_page_header_across_module_tabs()
     {
         var launcher = new RecordingAgentChatLauncher();

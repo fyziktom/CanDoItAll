@@ -73,6 +73,7 @@ public partial class AgentsHomePage
     private AgentDefinition? hrAgent;
     private AgentChatContextAccessState selectionAccessState = AgentChatContextAccessState.Loading;
     private bool isLoaded;
+    private bool isConfirmingDefaults;
     private bool isFeedingDefaults;
     private bool isOpeningHrAgent;
     private bool hasOverviewLoadError;
@@ -383,26 +384,45 @@ public partial class AgentsHomePage
 
     private async Task FeedDefaultsAsync()
     {
-        if (isFeedingDefaults)
+        if (isConfirmingDefaults || isFeedingDefaults)
         {
             return;
         }
 
-        isFeedingDefaults = true;
-        ClearStatusMessage();
+        isConfirmingDefaults = true;
 
         try
         {
+            var confirmed = await DialogService.OpenAsync<AgentDefaultsConfirmationDialog>(
+                "Load default agents and providers?",
+                options: new DialogOptions
+                {
+                    Eyebrow = "Managed defaults",
+                    Subtitle = "Confirm before synchronizing the AgentFramework catalog.",
+                    Size = ModalSize.Compact,
+                    DenseChrome = true,
+                    AriaLabel = "Confirm loading default agents and providers",
+                    TestId = "agents-feed-defaults-confirmation"
+                });
+            isConfirmingDefaults = false;
+            if (confirmed is not true)
+            {
+                return;
+            }
+
+            isFeedingDefaults = true;
+            ClearStatusMessage();
             await CatalogWarmupService.WarmupAsync();
             await LoadDashboardAsync();
-            SetStatusMessage("Default agents, capabilities, and CRM-HR projection were synchronized.");
+            SetStatusMessage("Default agents, providers, capabilities, workflows, and CRM-HR projections were synchronized.");
         }
         catch (Exception exception)
         {
-            SetStatusError($"Failed to synchronize default agents. {exception.Message}");
+            SetStatusError($"Failed to load default agents and providers. {exception.Message}");
         }
         finally
         {
+            isConfirmingDefaults = false;
             isFeedingDefaults = false;
             await InvokeAsync(StateHasChanged);
         }

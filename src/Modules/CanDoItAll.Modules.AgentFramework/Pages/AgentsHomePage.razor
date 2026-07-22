@@ -50,13 +50,6 @@
                              Title="Show AgentFramework shell help"
                              Heading="AgentFramework shell"
                              Body="@AgentFrameworkShellHelpText" />
-                <PageHeaderActionButton Icon="cloud_sync"
-                                        Label="Feed defaults"
-                                        TooltipText="Feed default technical agents and providers."
-                                        Click="FeedDefaultsAsync"
-                                        Disabled="@isFeedingDefaults"
-                                        IsBusy="@isFeedingDefaults"
-                                        data-testid="agents-shell-feed-defaults" />
                 <PageHeaderActionButton Icon="groups"
                                         Label="Open CRM / HR agents"
                                         TooltipText="Open CRM-HR agent projections."
@@ -78,11 +71,23 @@
     </Header>
 
     <Lead>
-        <div data-testid="agents-shell-tabs">
+        <Cluster AlignItems="AlignItems.Center"
+                 JustifyContent="JustifyContent.SpaceBetween"
+                 Gap="LayoutGap.Small"
+                 Wrap="FlexWrap.NoWrap"
+                 Class="w-full"
+                 data-testid="agents-shell-tabs">
             <SecondaryTabs Items="Tabs"
                            SelectedKey="@selectedTab"
                            SelectedKeyChanged="HandleTabChangedAsync" />
-        </div>
+            <PageHeaderActionButton Icon="cloud_sync"
+                                    Label="Load default agents and providers"
+                                    TooltipText="Load the managed default agents and providers again."
+                                    Click="FeedDefaultsAsync"
+                                    Disabled="@(isConfirmingDefaults || isFeedingDefaults)"
+                                    IsBusy="@isFeedingDefaults"
+                                    data-testid="agents-shell-feed-defaults" />
+        </Cluster>
     </Lead>
 
     <ChildContent>
