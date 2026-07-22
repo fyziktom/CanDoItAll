@@ -106,8 +106,9 @@ Suggested agent prompts must be outcome-first: goal, success criteria, constrain
 - Do not plan small/medium/tablet/mobile tuning or validation for application pages unless explicitly requested.
 - For reusable basic `CanDoItAll.Components.BaseLib` components, plan small, medium, and large viewport behavior and proof.
 - Preserve existing responsive behavior in other shared libraries when touched; expanding it is separate scope.
-- For CanDoItAll UI, plan `candoitall-components-mcp` before custom structure or CSS and use real browser proof for rendered behavior.
-- Plan open-state checks for menus, tooltips, dropdowns, dialogs, floating windows, clipping, layering, scroll ownership, and lateral overflow at the target viewport.
+- For CanDoItAll UI, plan `candoitall-components-mcp` before custom structure or CSS and use its `references/compact-ui-composition.md` as the detailed composition contract.
+- Record the primary surface, supporting-content placement, stats treatment, list/editor dialog-or-tab decision, textarea and dialog sizing rationale, first-viewport target, and scroll owner in each applicable work unit.
+- Plan normal-state and open-overlay screenshots. Review menus, tooltips, dropdowns, dialogs, and floating windows for clipping, layering, internal scrolling, action visibility, and lateral overflow at the target viewport.
 
 ## C# Architecture Overlay
 
@@ -127,6 +128,7 @@ Reject preparation when execution would still need to guess the intended outcome
 - Read [references/bundle-profiles.md](references/bundle-profiles.md) when selecting content emphasis.
 - Read [references/subbundle-contract.md](references/subbundle-contract.md) while splitting work.
 - Read [references/bundle-validation-rubric.md](references/bundle-validation-rubric.md) before readiness review.
+- For UI bundles, read `candoitall-components-mcp/references/compact-ui-composition.md`; do not duplicate its detailed heuristics in bundle files.
 - Read [../candoitall-bundle-execution/references/semantic-adequacy-proof.md](../candoitall-bundle-execution/references/semantic-adequacy-proof.md) for `Behavioral` or `Governed` proof.
 - Read [../candoitall-bundle-execution/references/artifact-backed-proof-manifest.md](../candoitall-bundle-execution/references/artifact-backed-proof-manifest.md) only for `Governed` proof.
 - Use `scripts/scaffold_bundle.py` for a new canonical bundle and `scripts/validate_bundle.py` for canonical validation.

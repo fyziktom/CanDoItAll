@@ -48,6 +48,16 @@ Never edit `output.css` directly.
 - `--cad-shadow-soft`
 - `--cad-shadow-strong`
 
+### Semantic density
+
+- `--cad-space-compact-gap` for related inline controls and metadata
+- `--cad-space-content-gap` for content within one semantic region
+- `--cad-space-section-gap` between page sections
+- `--cad-space-surface-padding` for cards and panels
+- `--cad-space-dialog-padding` for dialog chrome and body padding
+
+These tokens define shared rhythm, not a global compression switch. Component structure, readable type, and usable controls remain authoritative.
+
 ### Semantic tones
 
 - Primary: `--cad-tone-primary-solid-*`, `--cad-tone-primary-soft-*`
@@ -71,6 +81,7 @@ These are the first places to inspect before adding new styling:
 - Typography helpers: `Tailwind/typography/text.css`
 - Page headers: `Tailwind/navigation/page-header.css`
 - Fields and inputs: `Tailwind/forms/fields.css`
+- Dialogs and dialog scaffolds: `Tailwind/modals/dialogs.css`
 - Tree view: `Tailwind/navigation/treeview.css`
 - Tabs support helpers: `Tailwind/navigation/tabs.css`
 - Legacy wrapper aliases stabilized toward `cad-*`: `Tailwind/layout/sheets.css`, `Tailwind/layout/stats.css`, `Tailwind/forms/tag-editor.css`, `Tailwind/controls/buttons.css`
@@ -83,4 +94,4 @@ These are the first places to inspect before adding new styling:
 
 ## Practical Rule
 
-If the request is "change brand color" or "change rounding" for the whole product, stay at the token layer first. If the request is "this one page needs special chrome", use existing shared components and local composition instead of mutating the theme contract unnecessarily.
+If the request changes brand color, rounding, or repeated component rhythm for the whole product, stay at the token layer first. If one page wastes space, fix its component composition before changing global tokens. Use [../../candoitall-components-mcp/references/compact-ui-composition.md](../../candoitall-components-mcp/references/compact-ui-composition.md) for density decisions; use local composition for unique chrome.

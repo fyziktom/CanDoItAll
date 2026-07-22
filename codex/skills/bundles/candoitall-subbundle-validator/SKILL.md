@@ -17,6 +17,7 @@ Confirm:
 - source references/discovery instructions still identify the correct surfaces;
 - dependency order and parallel work do not create unsafe overlap;
 - applicable architecture, UI, host, security, migration, or production overlays are ready.
+- applicable UI work records its primary surface, supporting content, stats treatment, list/editor composition, textarea/dialog sizing, first-viewport target, and scroll owner using `candoitall-components-mcp/references/compact-ui-composition.md`.
 
 Stop and repair/reopen when any prerequisite is stale, weak, or contradicted.
 
@@ -27,8 +28,9 @@ Confirm:
 - acceptance criteria and required affected-scope validation are complete;
 - the selected proof tier is satisfied;
 - actual code and tests support the recorded behavior;
-- applicable screenshots were inspected, not only captured;
+- normal-state and relevant open-overlay screenshots were inspected, not only captured;
 - CanDoItAll app UI was proven at the target large-screen desktop viewport, with small/medium checks required only for reusable basic BaseLib or explicit scope;
+- the implemented UI still matches its recorded compact composition, with first-viewport, scroll-owner, sizing, and open-overlay findings in the execution report;
 - host-visible behavior has host proof;
 - raw-input closure and progression state were updated while evidence was fresh;
 - a critical foundation has the dependent-flow check needed to lend trust downstream.
@@ -52,6 +54,7 @@ When relevant, require planned dependency direction, target owner, testability s
 ## References
 
 - Read [references/prerequisite-and-closure-gates.md](references/prerequisite-and-closure-gates.md).
+- For UI gates, read `candoitall-components-mcp/references/compact-ui-composition.md`.
 - Read [../candoitall-bundle-execution/references/semantic-adequacy-proof.md](../candoitall-bundle-execution/references/semantic-adequacy-proof.md) for Behavioral/Governed proof.
 - Read [../candoitall-bundle-execution/references/artifact-backed-proof-manifest.md](../candoitall-bundle-execution/references/artifact-backed-proof-manifest.md) only for Governed proof.
 

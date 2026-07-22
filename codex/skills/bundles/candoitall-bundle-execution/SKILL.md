@@ -66,12 +66,13 @@ Read [references/semantic-adequacy-proof.md](references/semantic-adequacy-proof.
 
 ## CanDoItAll UI Rule
 
-- Use Playwright/browser truth and `candoitall-components-mcp` for CanDoItAll Blazor work. Use shared components and existing design tokens before custom structural markup or CSS.
+- Use Playwright/browser truth and `candoitall-components-mcp` for CanDoItAll Blazor work. Read its `references/compact-ui-composition.md` before changing composition; use shared components and semantic tokens before custom structural markup or CSS.
 - Validate CanDoItAll applications at a maximized or named large-screen desktop viewport. Do not tune or validate small, medium, tablet, or mobile application layouts unless explicitly requested.
 - For reusable basic `CanDoItAll.Components.BaseLib` work, validate small, medium, and large viewports.
 - For other shared libraries, preserve existing responsive behavior when touched; new responsive work requires explicit scope.
-- Inspect screenshots rather than merely attaching them. Check readability, hierarchy, clipping, scroll ownership, spacing, interaction states, and consistency.
-- Open menus, tooltips, dropdowns, dialogs, floating windows, and overlays; prove readable content, correct layering, and no harmful clipping/overflow at the target viewport.
+- Confirm that the implemented primary surface, supporting-content placement, stats treatment, list/editor organization, textarea/dialog sizes, first-viewport target, and scroll owner still match the bundle decision.
+- Inspect normal-state and open-overlay screenshots rather than merely attaching them. Check readability, hierarchy, clipping, scroll ownership, spacing, interaction states, and consistency.
+- Open menus, tooltips, dropdowns, dialogs, floating windows, and overlays; capture the relevant open state and prove readable content, correct layering, visible actions, usable internal scrolling, and no harmful clipping/overflow at the target viewport.
 - Browser proof does not replace host-level proof for process launch, file opening, elevation, or OS integration.
 
 Read [references/ui-validation-questions.md](references/ui-validation-questions.md) for the applicable viewport checklist.
@@ -97,6 +98,8 @@ After each completed, blocked, or reopened subbundle, update the bundle’s sema
 - raw-input closure;
 - blockers/follow-ups and downstream gates that must be rechecked.
 
+For UI work, also update the execution report's composition review and record first-viewport, scroll-owner, and open-overlay findings while the screenshots are visible.
+
 If the bundle contract materially changes, rerun canonical prepared validation or the recorded manual compatibility gate. If bundle skills or validators change, synchronize the active skill root and verify hashes before relying on them.
 
 ## Stop Rules
@@ -110,6 +113,7 @@ If the bundle contract materially changes, rerun canonical prepared validation o
 
 - Read [references/execution-loop.md](references/execution-loop.md) for the concise phase loop.
 - Read [references/proof-and-status-updates.md](references/proof-and-status-updates.md) before closure updates.
+- For UI execution, read `candoitall-components-mcp/references/compact-ui-composition.md`.
 - Use `candoitall-subbundle-validator` for entry/closure and `candoitall-bundle-validator` for final closure.
 - Activate architecture, Components MCP, Playwright, screenshot, or host skills only when the current phase needs them.
 

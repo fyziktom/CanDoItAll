@@ -17,7 +17,16 @@
 
 ## Browser Artifacts
 
-- List screenshot, fullscreen, or host-capture artifact paths when UI or desktop proof is involved.
+- List normal-state, open-overlay, fullscreen, or host-capture artifact paths when UI or desktop proof is involved.
+
+## UI Composition Review
+
+- Primary surface and supporting-content finding:
+- Stats and list/editor composition finding:
+- Textarea and dialog sizing finding:
+- First-viewport and scroll-owner finding:
+- Open-overlay screenshot finding:
+- Use `N/A` only when execution has no browser-visible UI.
 
 ## Subbundle Gate Results
 
@@ -32,11 +41,13 @@
 | `01-example` | `/example` | `1600x900` | `Navigate, click, evaluate, screenshot` | `evidence/example-desktop.png` | `Pending` |
 
 - Application rows target large-screen desktop viewports. Add small/medium rows only for reusable basic BaseLib or explicit scope.
+- Include normal and relevant open-overlay states in the evidence or separate rows. Record the intended scroll owner and first-viewport finding in the evidence text.
 
 ## Analytics Review
 
 - Summarize whether the browser-validation evidence was strong enough.
 - Record any gap such as missing screenshots, missing assertions, or blocked Playwright interaction.
+- Record any unresolved primary-surface, density, scroll-ownership, or open-overlay finding.
 - Summarize whether the subbundle gate decisions were strong enough for downstream work.
 
 ## Raw Note Closure
