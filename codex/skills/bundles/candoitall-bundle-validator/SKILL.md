@@ -35,6 +35,7 @@ Confirm:
 - each subbundle has an observable outcome, boundary, acceptance criteria, proof tier, and progression decision;
 - applicable domain overlays exist without imposing unrelated ones;
 - UI target policy is correct: CanDoItAll apps are large-screen desktop only by default; reusable basic BaseLib components cover small, medium, and large.
+- applicable UI work records the compact composition decisions defined by `candoitall-components-mcp/references/compact-ui-composition.md`, including first-viewport target and scroll owner.
 
 ## Final Closure
 
@@ -42,6 +43,7 @@ Confirm:
 
 - no executed work unit remains ambiguously ready/in-progress;
 - affected builds/tests and applicable browser/host checks passed or a blocker is explicit;
+- UI closure includes inspected normal and relevant open-overlay screenshots, with primary-surface, sizing, first-viewport, and scroll-owner findings recorded;
 - Standard proof records commands/results, Behavioral proof contains realistic positive and meaningful negative evidence, and Governed proof contains valid manifests/artifacts;
 - later evidence has not invalidated an earlier foundation;
 - raw inputs are closed as `Solved`, `Partially solved`, or `Not solved` with meaningful evidence;
@@ -59,7 +61,7 @@ Confirm:
 Apply specialized proof only when relevant:
 
 - C# architecture: ownership, dependency direction, testability, composition, partial-class policy, and CodeAnalytics/review evidence;
-- UI: rendered desktop proof and actual screenshot inspection; multi-viewport proof only for reusable basic BaseLib or explicit scope;
+- UI: rendered desktop proof, actual normal/open-overlay screenshot inspection, and agreement with the recorded compact composition; multi-viewport proof only for reusable basic BaseLib or explicit scope;
 - host integration: host-level evidence;
 - production workflows/processes/memory/lifecycle: real producer, consumer, dispatch/lifecycle, lineage, and provider evidence required by the claimed behavior;
 - skill/validator changes: repo-to-active synchronization and hashes.
@@ -74,6 +76,7 @@ Apply specialized proof only when relevant:
 ## References
 
 - Read [references/readiness-and-closure-checks.md](references/readiness-and-closure-checks.md) for the concise checklist.
+- For UI gates, read `candoitall-components-mcp/references/compact-ui-composition.md` rather than duplicating its decision rules here.
 - Use `candoitall-subbundle-validator` for work-unit gates.
 
 ## Exit Condition

@@ -25,6 +25,16 @@
 
 - Add absolute paths to the relevant files.
 
+## UI Composition Contract
+
+- Use `N/A` only when this subbundle has no browser-visible UI.
+- Primary surface and supporting-content placement:
+- Stats treatment and reason:
+- List/editor organization, including dialog, tab, inline, or split decision:
+- Textarea sizing and dialog size rationale:
+- First-viewport target and intended scroll owner:
+- Read `candoitall-components-mcp/references/compact-ui-composition.md` instead of copying its detailed heuristics here.
+
 ## Deliverables
 
 - List the concrete implementation results.
@@ -59,6 +69,7 @@
 - List the commands, screenshots, artifact paths, or DOM checks required to prove completion.
 - For CanDoItAll application UI, require a maximized or named large-screen desktop pass and screenshot review. Do not add narrower-width proof unless explicitly requested.
 - For reusable basic `CanDoItAll.Components.BaseLib` work, require small, medium, and large viewport proof.
+- Require normal-state and relevant open-overlay screenshots, including recorded first-viewport and scroll-owner findings.
 
 ## Browser Validation Logging
 
@@ -66,7 +77,7 @@
 - Record the target desktop viewport. Add small/medium viewports only for reusable basic BaseLib or explicit scope.
 - Record the Playwright MCP actions or assertions that must happen before the subbundle can close.
 - Record the screenshot file names or evidence paths that should appear in the execution report.
-- Record the screenshot review questions or visual findings that must be answered before the next dependent subbundle may start.
+- Record the screenshot review questions or visual findings that must be answered before the next dependent subbundle may start, including open dialogs, menus, dropdowns, tooltips, or floating surfaces.
 - Use `N/A` only when this subbundle does not affect browser-visible or host-visible proof.
 
 ## Progression Gate

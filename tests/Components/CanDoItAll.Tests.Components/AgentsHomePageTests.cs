@@ -16,6 +16,23 @@ namespace CanDoItAll.Tests.Components;
 public sealed class AgentsHomePageTests
 {
     [Fact]
+    public async Task Obsolete_scenarios_route_falls_back_to_overview_without_rendering_a_tab()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var navigation = harness.Context.Services.GetRequiredService<NavigationManager>();
+
+        navigation.NavigateTo("/agents?tab=scenarios");
+        var cut = harness.Context.RenderComponent<AgentsHomePage>();
+
+        cut.WaitForElement(
+            "[data-testid='agents-overview-dashboard']",
+            TimeSpan.FromSeconds(10));
+        Assert.DoesNotContain(
+            cut.FindAll("[data-testid='agents-shell-tabs'] button"),
+            tab => tab.TextContent.Trim().StartsWith("Scenarios", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public async Task Load_defaults_action_is_in_the_tabs_row_and_requires_confirmation()
     {
         await using var harness = await ComponentTestHarness.CreateAsync();

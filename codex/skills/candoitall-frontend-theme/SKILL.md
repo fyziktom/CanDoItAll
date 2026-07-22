@@ -1,6 +1,6 @@
 ---
 name: candoitall-frontend-theme
-description: "Use when setting, overriding, or refactoring a custom CanDoItAll frontend theme for BaseLib-driven apps. Covers the shipped ThemeHost and CadThemes contract, Tailwind-owned semantic tokens in Tailwind/foundation/theme.css, downstream CSS-variable overrides, runtime light-dark switching, and the rule to use semantic cda-* component tones plus cad-* theme or wrapper infrastructure instead of hard-coded colors or new zy-* selectors."
+description: "Use when setting, overriding, or refactoring a custom CanDoItAll frontend theme or semantic UI density for BaseLib-driven apps. Covers ThemeHost and CadThemes, Tailwind-owned color, shape, shadow, and spacing tokens, downstream CSS-variable overrides, runtime light-dark switching, and the cda-* component plus cad-* infrastructure naming contract."
 ---
 
 # CanDoItAll Frontend Theme
@@ -15,13 +15,20 @@ Use this when the task is about branding, theme overrides, dark mode, semantic c
 ## Core Rules
 
 - Tailwind is the source of truth for the shared contract. Do not hand-edit `src/CanDoItAll.Components.BaseLib/wwwroot/css/output.css`.
-- Prefer semantic tokens first: `--cad-color-*`, `--cad-tone-*`, `--cad-radius-*`, `--cad-shadow-*`.
+- Prefer semantic tokens first: `--cad-color-*`, `--cad-tone-*`, `--cad-radius-*`, `--cad-shadow-*`, `--cad-space-*`.
 - Keep public tone semantics descriptive. Do not introduce shorthand names such as `prim`, `sec`, or `dan`.
 - Keep the current naming split stable:
   - `cad-*` for theme host, token infrastructure, and stabilized wrapper surfaces
   - `cda-*` for the existing semantic component family
   - do not introduce new shared non-canvas `zy-*` selectors
 - If a page needs a new visual treatment, add or extend tokens before hard-coding colors on the page.
+
+## Density Rules
+
+- Treat compact as task-first composition, not compressed typography or controls. Read [../candoitall-components-mcp/references/compact-ui-composition.md](../candoitall-components-mcp/references/compact-ui-composition.md) before changing page density.
+- Use semantic spacing tokens for repeated component rhythm. Remove duplicated wrapper padding and default semantic-element margins at the component boundary instead of applying blanket page resets.
+- Preserve whitespace that communicates hierarchy and grouping. Do not reduce control usability, readability, or required open-overlay space to meet a density goal.
+- Fix composition before token values: supporting metrics, stacked editors, and duplicate introductions should not consume permanent height when a badge, strip, dialog, or tab is the honest interaction.
 
 ## Shared Contract Workflow
 
@@ -51,8 +58,11 @@ Use this when the task is about branding, theme overrides, dark mode, semantic c
 - Verify at least one large-screen route.
 - When theme switching is involved, prove the switch on the same rendered surface during the same session.
 - Check readability, contrast, spacing, and whether the app is still using shared components rather than ad hoc markup.
+- For density changes, verify the primary task in the first viewport, the intended scroll owner, and a screenshot with each relevant overlay open.
+- For affected compound controls, prove that layout responds to the immediate containing width by rendering the control inside realistic narrow grid, card, rail, or dialog columns even at the target wide desktop viewport.
 
 ## References
 
 - Read `references/token-contract.md` when editing the shared CanDoItAll theme contract.
 - Read `references/consumer-overrides.md` when overriding the shipped theme from a downstream app or when wiring runtime theme selection.
+- Read [../candoitall-components-mcp/references/compact-ui-composition.md](../candoitall-components-mcp/references/compact-ui-composition.md) for page, metric, card, form, dialog, and proof decisions; keep those details out of this skill.

@@ -12,6 +12,8 @@ Confirm that:
 - each dependent subbundle has a clear prerequisite and progression gate
 - UI-heavy work defines screenshot or browser validation questions
 - CanDoItAll application UI targets a named large-screen desktop viewport; only reusable basic BaseLib components require small, medium, and large coverage by default
+- UI work records the primary surface, supporting content, stats treatment, list/editor composition, textarea and dialog sizing rationale, first-viewport target, and scroll owner
+- open-overlay screenshot review is planned for every relevant dialog, menu, dropdown, tooltip, or floating surface
 - proof expectations are specific enough to fail
 - proof tiers are proportional to risk and are not silently downgraded
 
@@ -46,5 +48,6 @@ Do not accept the bundle as implementation-ready when:
 - a subbundle has no prerequisite or progression gate even though later work depends on it
 - a subbundle is too broad to complete in one coherent pass
 - the bundle relies on unstated repo assumptions
+- UI work leaves agents to rediscover the compact composition or scroll-ownership decisions during implementation
 - UI validation is reduced to “looks fine”
 - a compatible existing bundle is rejected only because its headings or folders differ from the canonical scaffold
