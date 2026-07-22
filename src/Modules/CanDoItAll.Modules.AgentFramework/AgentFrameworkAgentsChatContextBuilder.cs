@@ -12,7 +12,6 @@ public enum AgentFrameworkAgentsChatView
     Chat,
     Capabilities,
     Governance,
-    Scenarios,
     Diagnostics
 }
 
@@ -34,7 +33,6 @@ public static class AgentFrameworkAgentsChatContextBuilder
             "chat" => AgentFrameworkAgentsChatView.Chat,
             "capabilities" => AgentFrameworkAgentsChatView.Capabilities,
             "governance" => AgentFrameworkAgentsChatView.Governance,
-            "scenarios" => AgentFrameworkAgentsChatView.Scenarios,
             "diagnostics" => AgentFrameworkAgentsChatView.Diagnostics,
             _ => throw new ArgumentOutOfRangeException(nameof(view), view, "The Agents view is not supported.")
         };
@@ -174,7 +172,6 @@ public static class AgentFrameworkAgentsChatContextBuilder
             AgentFrameworkAgentsChatView.Chat => "chat",
             AgentFrameworkAgentsChatView.Capabilities => "capabilities",
             AgentFrameworkAgentsChatView.Governance => "governance",
-            AgentFrameworkAgentsChatView.Scenarios => "scenarios",
             AgentFrameworkAgentsChatView.Diagnostics => "diagnostics",
             _ => throw new ArgumentOutOfRangeException(nameof(view), view, "The Agents view is not supported.")
         };
@@ -190,7 +187,6 @@ public static class AgentFrameworkAgentsChatContextBuilder
             AgentFrameworkAgentsChatView.Chat => "Chat",
             AgentFrameworkAgentsChatView.Capabilities => "Capabilities",
             AgentFrameworkAgentsChatView.Governance => "Governance",
-            AgentFrameworkAgentsChatView.Scenarios => "Scenarios",
             AgentFrameworkAgentsChatView.Diagnostics => "Diagnostics",
             _ => throw new ArgumentOutOfRangeException(nameof(view), view, "The Agents view is not supported.")
         };

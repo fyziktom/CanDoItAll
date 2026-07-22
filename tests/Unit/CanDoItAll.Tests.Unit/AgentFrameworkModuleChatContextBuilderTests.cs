@@ -278,6 +278,8 @@ public sealed class AgentFrameworkModuleChatContextBuilderTests
         Assert.Throws<ArgumentOutOfRangeException>(() =>
             AgentFrameworkAgentsChatContextBuilder.ResolveView("unknown"));
         Assert.Throws<ArgumentOutOfRangeException>(() =>
+            AgentFrameworkAgentsChatContextBuilder.ResolveView("scenarios"));
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
             AgentFrameworkWorkflowsChatContextBuilder.Build(
                 view: AgentFrameworkWorkflowsChatView.Dashboard,
                 definitionCount: -1,

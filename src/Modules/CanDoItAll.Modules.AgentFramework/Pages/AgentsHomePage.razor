@@ -130,10 +130,6 @@
                                   SelectedAgentChanged="HandleSelectedAgentChangedAsync"
                                   ContextAccessStateChanged="HandleSelectionAccessStateChangedAsync" />
         }
-        else if (string.Equals(selectedTab, "scenarios", StringComparison.Ordinal))
-        {
-            <ScenarioHarnessPanel />
-        }
         else if (string.Equals(selectedTab, "diagnostics", StringComparison.Ordinal))
         {
             <AgentDiagnosticsPanel />
