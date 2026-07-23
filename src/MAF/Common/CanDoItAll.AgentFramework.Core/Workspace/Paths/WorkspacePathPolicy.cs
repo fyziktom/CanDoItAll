@@ -428,15 +428,22 @@ internal sealed class WorkspacePathPolicy
         }
 
         var driveLetter = char.ToUpperInvariant(segments[0][0]);
+        if (segments.Length == 1)
+        {
+            validationMessage =
+                $"Path '{path}' targets an external drive root. Use a specific grounded path like '{ExternalTargetAliasRoot}/{driveLetter}/path/to/project'.";
+            return ExternalTargetAliasResolution.Invalid;
+        }
+
         var rootPath = $"{driveLetter}:{Path.DirectorySeparatorChar}";
         var remainingSegments = segments.Skip(1).ToArray();
-        var mappedFullPath = remainingSegments.Length == 0
-            ? rootPath
-            : Path.Combine(rootPath, Path.Combine(remainingSegments));
+        var mappedFullPath = Path.Combine(rootPath, Path.Combine(remainingSegments));
         var normalizedFullPath = Path.GetFullPath(mappedFullPath);
-        var aliasPath = remainingSegments.Length == 0
-            ? $"{ExternalTargetAliasRoot}/{driveLetter}"
-            : NormalizeRelativePath(Path.Combine(ExternalTargetAliasRoot, driveLetter.ToString(), Path.Combine(remainingSegments)));
+        var aliasPath = NormalizeRelativePath(
+            Path.Combine(
+                ExternalTargetAliasRoot,
+                driveLetter.ToString(),
+                Path.Combine(remainingSegments)));
 
         resolution = new WorkspacePathResolution(
             FullPath: normalizedFullPath,

@@ -713,7 +713,11 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
             item => string.Equals(item.Name, "Portfolio Architect", StringComparison.Ordinal));
         var architectEditor = await workspaceService.GetAgentEditorAsync(architect.Id);
         Assert.True(architectEditor.ProjectStructureAccess.CanRead);
-        Assert.True(architectEditor.ProjectStructureAccess.CanWrite);
+        Assert.False(architectEditor.ProjectStructureAccess.CanWrite);
+        Assert.True(architectEditor.ProjectStructureAccess.CanWriteNonTaskStructure);
+        Assert.False(architectEditor.ProjectStructureAccess.CanWriteTasks);
+        Assert.True(architectEditor.ProjectStructureAccess.CanCreateProjects);
+        Assert.True(architectEditor.ProjectStructureAccess.CanCreateSubprojects);
         Assert.True(architectEditor.ProjectStructureAccess.AllowAllProjects);
         Assert.True(architectEditor.ProcessAccess.CanRead);
         Assert.False(architectEditor.ProcessAccess.CanWrite);

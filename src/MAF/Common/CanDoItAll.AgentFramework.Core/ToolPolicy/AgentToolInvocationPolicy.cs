@@ -151,6 +151,7 @@ public interface IAgentToolInvocationPolicy
 
 public static class AgentToolPolicyBlockGuard
 {
+    private const string ProjectStructureSourceKind = "project-structure";
     private const string OwnPrimaryManagedOutputReadDenialMarker =
         "cannot read, stat, list, or search its own primary managed output";
     private const string OwnPrimaryManagedOutputPreCreationMarker = "before creating it";
@@ -165,12 +166,15 @@ public static class AgentToolPolicyBlockGuard
     private const string GovernedDotnetNewForceDeniedMarker =
         "cannot run workspace_dotnet_new with force=true";
 
-    private static readonly HashSet<string> RecoverableGovernedReadDiscoveryTools = new(StringComparer.OrdinalIgnoreCase)
+    private static readonly HashSet<string> RecoverableWorkspaceReadDiscoveryTools = new(StringComparer.OrdinalIgnoreCase)
     {
+        ToolContractCatalog.WorkspaceListDirectory,
         ToolContractCatalog.WorkspaceListFiles,
         ToolContractCatalog.WorkspaceSearch,
         ToolContractCatalog.WorkspaceReadFile,
-        ToolContractCatalog.WorkspaceStatPath
+        ToolContractCatalog.WorkspaceStatPath,
+        ToolContractCatalog.WorkspaceHashPath,
+        ToolContractCatalog.WorkspaceDiffText
     };
     private static readonly HashSet<string> RecoverableGovernedBrowserProofTools = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -210,13 +214,26 @@ public static class AgentToolPolicyBlockGuard
             return false;
         }
 
+        if (IsRecoverableInteractiveExternalWorkspaceReadDenial(toolName, decision, context))
+        {
+            var continuation = string.Equals(
+                context.SourceKind,
+                ProjectStructureSourceKind,
+                StringComparison.OrdinalIgnoreCase)
+                ? "Continue from the selected project-structure subtree or managed workspace"
+                : "Continue within the managed workspace";
+            result =
+                $"PolicyDenied: Tool '{toolName}' was denied by the external workspace boundary. {decision.Reason} This is a recoverable path error, not a failed agent run. Do not broaden or guess another external-target root. {continuation}, or use an exact external root explicitly grounded for this run.";
+            return true;
+        }
+
         if (!IsRecoverableGovernedProcessStep(context))
         {
             return false;
         }
 
         if (context.Classification == ToolInvocationClassification.Read &&
-            RecoverableGovernedReadDiscoveryTools.Contains(toolName) &&
+            RecoverableWorkspaceReadDiscoveryTools.Contains(toolName) &&
             IsRecoverableCurrentStepOwnOutputPreCreationReadDenial(decision))
         {
             result = $"PolicyDenied: Tool '{toolName}' was denied for this governed process step. {decision.Reason} This is not a missing tool permission and not a blocker. Do not retry the read, stat, list, or search. Do not write a status-only InProgress or Blocked placeholder and stop. Continue the step's required product, validation, or external work from launch variables, upstream artifacts, project-structure context, or product readback. When recording the step outcome, create or overwrite the named primary managed artifact with workspace_write_file or workspace_append_file, then return submit_process_step_outcome with evidenceRefs containing that managed ref. Submit Blocked only if the artifact write is denied, or if a required tool is denied or fails on a concrete environment boundary.";
@@ -244,7 +261,7 @@ public static class AgentToolPolicyBlockGuard
         }
 
         if (context.Classification == ToolInvocationClassification.Read &&
-            RecoverableGovernedReadDiscoveryTools.Contains(toolName))
+            RecoverableWorkspaceReadDiscoveryTools.Contains(toolName))
         {
             result = $"PolicyDenied: Tool '{toolName}' was denied for this governed process step. {decision.Reason} Use the grounded external-target alias or current-run artifact folder named in the tool boundary, then retry with narrower arguments. When the denial gives a replacement external-target alias, retry the same structured workspace tool with that alias before finalizing Blocked. If this was only an optional context probe for an evidence-producing step, continue from launch variables or project-structure context and create the managed artifact instead of blocking.";
             return true;
@@ -338,6 +355,23 @@ public static class AgentToolPolicyBlockGuard
                !string.IsNullOrWhiteSpace(context.ProcessStepId);
     }
 
+    private static bool IsRecoverableInteractiveExternalWorkspaceReadDenial(
+        string toolName,
+        ToolInvocationPolicyDecision decision,
+        ToolInvocationPolicyContext context)
+    {
+        if (IsRecoverableGovernedProcessStep(context) ||
+            context.Classification != ToolInvocationClassification.Read ||
+            !RecoverableWorkspaceReadDiscoveryTools.Contains(toolName))
+        {
+            return false;
+        }
+
+        return decision.Reason.Contains("external-target", StringComparison.OrdinalIgnoreCase) &&
+               (decision.Reason.Contains("outside the current run boundary", StringComparison.OrdinalIgnoreCase) ||
+                decision.Reason.Contains("external drive root", StringComparison.OrdinalIgnoreCase));
+    }
+
     private static bool IsRecoverableWorkspaceBoundaryDenial(ToolInvocationPolicyDecision decision)
     {
         return decision.Reason.Contains("current-run", StringComparison.OrdinalIgnoreCase) ||
@@ -402,16 +436,21 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
         RegexOptions.CultureInvariant | RegexOptions.IgnoreCase | RegexOptions.Multiline);
     private static readonly HashSet<string> ExternalTargetManagedWorkspaceIsolationTools = new(StringComparer.OrdinalIgnoreCase)
     {
+        ToolContractCatalog.WorkspaceListDirectory,
         ToolContractCatalog.WorkspaceListFiles,
         ToolContractCatalog.WorkspaceSearch,
         ToolContractCatalog.WorkspaceReadFile,
         ToolContractCatalog.WorkspaceStatPath,
+        ToolContractCatalog.WorkspaceHashPath,
+        ToolContractCatalog.WorkspaceDiffText,
         ToolContractCatalog.WorkspaceCreateDirectory,
         ToolContractCatalog.WorkspaceWriteFile,
         ToolContractCatalog.WorkspaceAppendFile,
         ToolContractCatalog.WorkspaceCopyPath,
         ToolContractCatalog.WorkspaceMovePath,
         ToolContractCatalog.WorkspaceDeletePath,
+        ToolContractCatalog.WorkspaceZipPath,
+        ToolContractCatalog.WorkspaceUnzipArchive,
         ToolContractCatalog.WorkspaceDotNetNew,
         ToolContractCatalog.WorkspaceDotNetRestore,
         ToolContractCatalog.WorkspaceDotNetBuild,
@@ -594,7 +633,7 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
             return ValueTask.FromResult(governedBrowserDecision);
         }
 
-        var externalTargetDecision = externalTargetBoundaryPolicy.EvaluateGovernedExternalTargetIsolation(context, signature);
+        var externalTargetDecision = externalTargetBoundaryPolicy.EvaluateExternalTargetIsolation(context, signature);
         if (externalTargetDecision is not null)
         {
             return ValueTask.FromResult(externalTargetDecision);
@@ -1681,11 +1720,11 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
 
     private sealed class ExternalTargetBoundaryPolicy
     {
-        public ToolInvocationPolicyDecision? EvaluateGovernedExternalTargetIsolation(
+        public ToolInvocationPolicyDecision? EvaluateExternalTargetIsolation(
             ToolInvocationPolicyContext context,
             string signature)
         {
-            return DefaultAgentToolInvocationPolicy.EvaluateGovernedExternalTargetIsolation(context, signature);
+            return DefaultAgentToolInvocationPolicy.EvaluateExternalTargetIsolation(context, signature);
         }
 
         public ToolInvocationPolicyDecision? EvaluateGovernedProcessProductMutationBoundary(
@@ -1775,17 +1814,17 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
         }
     }
 
-    private static ToolInvocationPolicyDecision? EvaluateGovernedExternalTargetIsolation(
+    private static ToolInvocationPolicyDecision? EvaluateExternalTargetIsolation(
         ToolInvocationPolicyContext context,
         string signature)
     {
-        if (!IsGovernedProcessRun(context))
+        if (!ExternalTargetManagedWorkspaceIsolationTools.Contains(context.ToolName))
         {
             return null;
         }
 
-        var referencedAliases = ResolveReferencedExternalTargetAliases(context.RedactedArguments);
-        if (referencedAliases.Count == 0)
+        var pathArguments = ResolveManagedWorkspacePathArguments(context.RedactedArguments);
+        if (pathArguments.Count == 0)
         {
             return null;
         }
@@ -1797,8 +1836,22 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .OrderByDescending(alias => alias.Length)
             .ToArray();
-        foreach (var referencedAlias in referencedAliases)
+        foreach (var pathArgument in pathArguments)
         {
+            var normalizedPath = NormalizeManagedWorkspacePath(pathArgument.Value);
+            if (!IsExternalTargetAliasPath(normalizedPath))
+            {
+                continue;
+            }
+
+            var referencedAlias = NormalizeExternalTargetAlias(normalizedPath);
+            if (string.IsNullOrWhiteSpace(referencedAlias))
+            {
+                return ToolInvocationPolicyDecision.Deny(
+                    signature,
+                    "The requested external-target path resolves to an external drive root. External drive-root discovery is denied; use a specific grounded path like external-target/C/path/to/project.");
+            }
+
             if (IsAllowedExternalTargetAlias(referencedAlias, readableAliases))
             {
                 continue;
@@ -1810,7 +1863,7 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
             var currentRunGuidance = BuildCurrentRunExternalTargetGuidance(allowedAliases, readOnlyAliases);
             return ToolInvocationPolicyDecision.Deny(
                 signature,
-                $"Governed process runs may only access external-target paths grounded by the current run. The requested external-target path is outside the current run boundary; {allowedSummary}.{currentRunGuidance}");
+                $"Workspace tools may only access external-target paths grounded by the current run. The requested external-target path is outside the current run boundary; {allowedSummary}.{currentRunGuidance}");
         }
 
         return null;
@@ -2146,8 +2199,7 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
         ToolInvocationPolicyContext context,
         string signature)
     {
-        if (!IsGovernedProcessRun(context) ||
-            !ProductFileMutationTools.Contains(context.ToolName))
+        if (!ProductFileMutationTools.Contains(context.ToolName))
         {
             return null;
         }

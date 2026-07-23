@@ -351,6 +351,7 @@ internal sealed class MafRuntimeAgentFactory
         var runtimeToolOwnershipByToolName = CreateRuntimeToolOwnershipByToolName(capabilityState);
         var featureMatrix = ProviderFeatureService.ResolveFeatureMatrix(provider);
         var logger = services.GetService<ILogger<MafAgentRuntime>>();
+        var configuredWorkspaceAccess = AgentWorkspaceToolAccessMetadata.Read(agentDefinition.ConfigurationJson);
         builder.UseLogging(
             services.GetService<ILoggerFactory>() ?? NullLoggerFactory.Instance,
             logging => logging.JsonSerializerOptions = LoggingJsonSerializerOptions);
@@ -364,6 +365,15 @@ internal sealed class MafRuntimeAgentFactory
                 ? ToolInvocationClassification.Read
                 : AgentToolInvocationPolicyMetadata.Classify(functionName);
             var auditScope = WorkspaceExecutionAuditContext.Current;
+            var hasRunScopedExternalTargets = auditScope is not null &&
+                                              (auditScope.AllowedExternalTargetAliases.Count > 0 ||
+                                               auditScope.ReadOnlyExternalTargetAliases.Count > 0);
+            var allowedExternalTargetAliases = hasRunScopedExternalTargets
+                ? auditScope!.AllowedExternalTargetAliases
+                : configuredWorkspaceAccess.AllowedExternalTargetAliases;
+            var readOnlyExternalTargetAliases = hasRunScopedExternalTargets
+                ? auditScope!.ReadOnlyExternalTargetAliases
+                : [];
             var scriptSideEffectManifestJson = MafScriptPolicyInspectionService.TryGetStringArgument(
                 invocationArguments,
                 GovernedScriptSideEffectManifest.ArgumentName) ?? string.Empty;
@@ -385,8 +395,8 @@ internal sealed class MafRuntimeAgentFactory
                 SourceKind: auditScope?.SourceKind ?? string.Empty,
                 ProcessRunId: auditScope?.ProcessRunId ?? string.Empty,
                 ProcessStepId: auditScope?.ProcessStepId ?? string.Empty,
-                AllowedExternalTargetAliases: auditScope?.AllowedExternalTargetAliases ?? [],
-                ReadOnlyExternalTargetAliases: auditScope?.ReadOnlyExternalTargetAliases ?? [],
+                AllowedExternalTargetAliases: allowedExternalTargetAliases,
+                ReadOnlyExternalTargetAliases: readOnlyExternalTargetAliases,
                 ApprovalWrapperEffectiveForProvider: featureMatrix.SupportsApprovalRequiredAIFunction,
                 ApplicationApprovalAvailable: false,
                 ProcessAllowsProductMutation: auditScope?.ProcessAllowsProductMutation != false,

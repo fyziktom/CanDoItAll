@@ -1,4 +1,5 @@
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.AgentFramework.Tooling;
 using CanDoItAll.Modules.Workbench;
 
 namespace CanDoItAll.Tests.Unit;
@@ -67,5 +68,175 @@ public sealed class ProjectStructureAgentRuntimeToolProviderTests
         };
 
         Assert.False(ProjectStructureAgentRuntimeToolProvider.ShouldAttachForContext(intent));
+    }
+
+    [Fact]
+    public void Portfolio_architect_style_access_allows_non_task_structure_mutations_only()
+    {
+        var access = new AgentProjectStructureAccessSettings
+        {
+            CanRead = true,
+            CanWrite = false,
+            CanWriteNonTaskStructure = true,
+            CanWriteTasks = false,
+            CanCreateProjects = true,
+            CanCreateSubprojects = true,
+            AllowAllProjects = true
+        };
+
+        Assert.True(ProjectStructureNonTaskWritePolicy.CanUseStructureMutationTools(access));
+        Assert.False(ProjectStructureNonTaskWritePolicy.CanUseTaskMutationTools(access));
+    }
+
+    [Fact]
+    public void Project_structure_chat_allows_only_its_active_project_despite_agent_wide_access()
+    {
+        var activeProjectId = Guid.NewGuid();
+        var otherProjectId = Guid.NewGuid();
+        var intent = AgentRuntimeContextIntent.Empty with
+        {
+            SourceKind = "project-structure",
+            SourceId = activeProjectId.ToString("D")
+        };
+        IReadOnlySet<Guid> configuredProjectIds = new HashSet<Guid> { otherProjectId };
+        IReadOnlySet<Guid> sessionCreatedProjectIds = new HashSet<Guid>();
+
+        ProjectStructureAgentRuntimeToolProvider.EnsureProjectAllowedForContext(
+            AgentRuntimeToolProviderPurpose.InteractiveChat,
+            intent,
+            allowAllProjects: true,
+            configuredProjectIds,
+            sessionCreatedProjectIds,
+            activeProjectId);
+
+        Assert.True(ProjectStructureAgentRuntimeToolProvider.IsProjectAllowedForContext(
+            AgentRuntimeToolProviderPurpose.InteractiveChat,
+            intent,
+            allowAllProjects: true,
+            configuredProjectIds,
+            sessionCreatedProjectIds,
+            activeProjectId));
+        Assert.False(ProjectStructureAgentRuntimeToolProvider.IsProjectAllowedForContext(
+            AgentRuntimeToolProviderPurpose.InteractiveChat,
+            intent,
+            allowAllProjects: true,
+            configuredProjectIds,
+            sessionCreatedProjectIds,
+            otherProjectId));
+
+        var exception = Assert.Throws<ProjectStructureAgentException>(() =>
+            ProjectStructureAgentRuntimeToolProvider.EnsureProjectAllowedForContext(
+                AgentRuntimeToolProviderPurpose.InteractiveChat,
+                intent,
+                allowAllProjects: true,
+                configuredProjectIds,
+                sessionCreatedProjectIds,
+                otherProjectId));
+
+        Assert.Equal(403, exception.StatusCode);
+        Assert.Equal("ProjectStructureContextProjectDenied", exception.ErrorCode);
+        Assert.Contains(activeProjectId.ToString("D"), exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Project_structure_chat_allows_projects_created_during_the_same_session()
+    {
+        var activeProjectId = Guid.NewGuid();
+        var createdProjectId = Guid.NewGuid();
+        var unrelatedProjectId = Guid.NewGuid();
+        var intent = AgentRuntimeContextIntent.Empty with
+        {
+            SourceKind = "project-structure",
+            SourceId = activeProjectId.ToString("D")
+        };
+        IReadOnlySet<Guid> allowedProjectIds = new HashSet<Guid>
+        {
+            activeProjectId,
+            createdProjectId,
+            unrelatedProjectId
+        };
+        IReadOnlySet<Guid> sessionCreatedProjectIds = new HashSet<Guid> { createdProjectId };
+
+        ProjectStructureAgentRuntimeToolProvider.EnsureProjectAllowedForContext(
+            AgentRuntimeToolProviderPurpose.InteractiveChat,
+            intent,
+            allowAllProjects: false,
+            allowedProjectIds,
+            sessionCreatedProjectIds,
+            createdProjectId);
+
+        Assert.True(ProjectStructureAgentRuntimeToolProvider.IsProjectAllowedForContext(
+            AgentRuntimeToolProviderPurpose.InteractiveChat,
+            intent,
+            allowAllProjects: false,
+            allowedProjectIds,
+            sessionCreatedProjectIds,
+            createdProjectId));
+        Assert.False(ProjectStructureAgentRuntimeToolProvider.IsProjectAllowedForContext(
+            AgentRuntimeToolProviderPurpose.InteractiveChat,
+            intent,
+            allowAllProjects: false,
+            allowedProjectIds,
+            sessionCreatedProjectIds,
+            unrelatedProjectId));
+    }
+
+    [Fact]
+    public void Portfolio_context_preserves_agent_wide_project_access()
+    {
+        var projectId = Guid.NewGuid();
+        var intent = AgentRuntimeContextIntent.Empty with
+        {
+            SourceKind = "projects",
+            SourceId = Guid.NewGuid().ToString("D")
+        };
+        IReadOnlySet<Guid> configuredProjectIds = new HashSet<Guid>();
+        IReadOnlySet<Guid> sessionCreatedProjectIds = new HashSet<Guid>();
+
+        ProjectStructureAgentRuntimeToolProvider.EnsureProjectAllowedForContext(
+            AgentRuntimeToolProviderPurpose.InteractiveChat,
+            intent,
+            allowAllProjects: true,
+            configuredProjectIds,
+            sessionCreatedProjectIds,
+            projectId);
+
+        Assert.True(ProjectStructureAgentRuntimeToolProvider.IsProjectAllowedForContext(
+            AgentRuntimeToolProviderPurpose.InteractiveChat,
+            intent,
+            allowAllProjects: true,
+            configuredProjectIds,
+            sessionCreatedProjectIds,
+            projectId));
+    }
+
+    [Fact]
+    public void Governed_process_access_is_not_restricted_by_interactive_project_context()
+    {
+        var processProjectId = Guid.NewGuid();
+        var intent = AgentRuntimeContextIntent.Empty with
+        {
+            SourceKind = "project-structure",
+            SourceId = Guid.NewGuid().ToString("D"),
+            IsGovernedProcessStep = true
+        };
+        IReadOnlySet<Guid> configuredProjectIds = new HashSet<Guid>();
+        IReadOnlySet<Guid> sessionCreatedProjectIds = new HashSet<Guid>();
+
+        ProjectStructureAgentRuntimeToolProvider.EnsureProjectAllowedForContext(
+            AgentRuntimeToolProviderPurpose.GovernedProcessAutomation,
+            intent,
+            allowAllProjects: true,
+            configuredProjectIds,
+            sessionCreatedProjectIds,
+            processProjectId);
+
+        Assert.True(ProjectStructureAgentRuntimeToolProvider.IsProjectAllowedForContext(
+            AgentRuntimeToolProviderPurpose.GovernedProcessAutomation,
+            intent,
+            allowAllProjects: true,
+            configuredProjectIds,
+            sessionCreatedProjectIds,
+            processProjectId));
     }
 }

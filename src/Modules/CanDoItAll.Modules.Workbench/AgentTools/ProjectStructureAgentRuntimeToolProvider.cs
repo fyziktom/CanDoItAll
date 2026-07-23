@@ -125,6 +125,74 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
                string.Equals(operation, ProcessOperationContractNames.ExecuteExternalAction, StringComparison.OrdinalIgnoreCase);
     }
 
+    internal static bool IsProjectAllowedForContext(
+        AgentRuntimeToolProviderPurpose purpose,
+        AgentRuntimeContextIntent contextIntent,
+        bool allowAllProjects,
+        IReadOnlySet<Guid> allowedProjectIds,
+        IReadOnlySet<Guid> sessionCreatedProjectIds,
+        Guid projectId)
+    {
+        ArgumentNullException.ThrowIfNull(contextIntent);
+        ArgumentNullException.ThrowIfNull(allowedProjectIds);
+        ArgumentNullException.ThrowIfNull(sessionCreatedProjectIds);
+
+        if (purpose == AgentRuntimeToolProviderPurpose.InteractiveChat &&
+            string.Equals(contextIntent.SourceKind, ProjectStructureSourceKind, StringComparison.OrdinalIgnoreCase) &&
+            (!Guid.TryParse(contextIntent.SourceId, out var activeProjectId) ||
+             activeProjectId == Guid.Empty ||
+             activeProjectId != projectId && !sessionCreatedProjectIds.Contains(projectId)))
+        {
+            return false;
+        }
+
+        return allowAllProjects || allowedProjectIds.Contains(projectId);
+    }
+
+    internal static void EnsureProjectAllowedForContext(
+        AgentRuntimeToolProviderPurpose purpose,
+        AgentRuntimeContextIntent contextIntent,
+        bool allowAllProjects,
+        IReadOnlySet<Guid> allowedProjectIds,
+        IReadOnlySet<Guid> sessionCreatedProjectIds,
+        Guid projectId)
+    {
+        ArgumentNullException.ThrowIfNull(contextIntent);
+        ArgumentNullException.ThrowIfNull(allowedProjectIds);
+        ArgumentNullException.ThrowIfNull(sessionCreatedProjectIds);
+
+        if (purpose == AgentRuntimeToolProviderPurpose.InteractiveChat &&
+            string.Equals(contextIntent.SourceKind, ProjectStructureSourceKind, StringComparison.OrdinalIgnoreCase))
+        {
+            if (!Guid.TryParse(contextIntent.SourceId, out var activeProjectId) ||
+                activeProjectId == Guid.Empty)
+            {
+                throw new ProjectStructureAgentException(
+                    403,
+                    "ProjectStructureContextProjectInvalid",
+                    "The project-structure chat does not identify a valid active project. Reopen the chat from the intended project.");
+            }
+
+            if (activeProjectId != projectId && !sessionCreatedProjectIds.Contains(projectId))
+            {
+                throw new ProjectStructureAgentException(
+                    403,
+                    "ProjectStructureContextProjectDenied",
+                    $"Project '{projectId:D}' is outside the active project-structure chat project '{activeProjectId:D}'.");
+            }
+        }
+
+        if (allowAllProjects || allowedProjectIds.Contains(projectId))
+        {
+            return;
+        }
+
+        throw new ProjectStructureAgentException(
+            403,
+            "ProjectStructureProjectDenied",
+            $"Project '{projectId:D}' is outside the agent's allowed project-structure scope.");
+    }
+
     private sealed class ProjectStructureToolBuilder(
         ProjectStructureAgentService agentService,
         ProjectStructureLeaseService leaseService,
@@ -162,7 +230,9 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
             var accessSettings = AgentProjectStructureAccessMetadata.Read(agent.ConfigurationJson);
             var accessState = new ProjectStructureAccessState(
                 accessSettings,
-                ResolveScopedProcessAccess(context));
+                ResolveScopedProcessAccess(context),
+                context.ContextIntent,
+                context.Purpose);
             if (!accessState.CanRead &&
                 !accessState.CanWrite &&
                 !accessState.CanCreateProjects &&
@@ -457,9 +527,9 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
                 {
                     EnsureReadAllowed(accessState);
                     var projects = await agentService.ListProjectsAsync(cancellationToken);
-                    var visibleProjects = accessState.AllowAllProjects
-                        ? projects
-                        : projects.Where(project => accessState.AllowedProjectIds.Contains(project.Id)).ToList();
+                    var visibleProjects = projects
+                        .Where(project => IsProjectAllowed(accessState, project.Id))
+                        .ToList();
                     return visibleProjects
                         .OrderBy(project => project.Name, StringComparer.OrdinalIgnoreCase)
                         .ToList();
@@ -640,7 +710,7 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
                             cancellationToken),
                         response => response.Id,
                         cancellationToken);
-                    accessState.AllowedProjectIds.Add(created.Id);
+                    GrantSessionCreatedProjectAccess(accessState, created.Id);
                     return created;
                 },
                 cancellationToken,
@@ -682,7 +752,7 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
                             cancellationToken),
                         response => response.Id,
                         cancellationToken);
-                    accessState.AllowedProjectIds.Add(created.Id);
+                    GrantSessionCreatedProjectAccess(accessState, created.Id);
                     return created;
                 },
                 cancellationToken,
@@ -814,7 +884,7 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
                             cancellationToken),
                         response => response.TargetProjectId,
                         cancellationToken);
-                    accessState.AllowedProjectIds.Add(result.TargetProjectId);
+                    GrantSessionCreatedProjectAccess(accessState, result.TargetProjectId);
                     return result;
                 },
                 cancellationToken);
@@ -2029,23 +2099,11 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
                         Take = Math.Clamp(query.Take, 1, 200)
                     }, cancellationToken);
 
-                    if (!accessState.AllowAllProjects &&
-                        accessState.AllowedProjectIds.Count == 0)
-                    {
-                        return response with
-                        {
-                            Entries = response.Entries
-                                .Where(entry => !entry.ProjectId.HasValue)
-                                .ToList()
-                        };
-                    }
-
-                    return accessState.AllowAllProjects
-                        ? response
-                        : response with
+                    return response with
                     {
                         Entries = response.Entries
-                            .Where(entry => !entry.ProjectId.HasValue || accessState.AllowedProjectIds.Contains(entry.ProjectId.Value))
+                            .Where(entry => !entry.ProjectId.HasValue ||
+                                IsProjectAllowed(accessState, entry.ProjectId.Value))
                             .ToList()
                     };
                 },
@@ -2485,11 +2543,13 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
                 EnsureReadAllowed(accessState);
             }
 
-            var candidateProjectIds = accessState.AllowAllProjects
+            var candidateProjectIds = (accessState.AllowAllProjects
                 ? (await agentService.ListProjectsAsync(cancellationToken))
                     .Select(project => project.Id)
-                    .ToList()
-                : accessState.AllowedProjectIds.ToList();
+                : accessState.AllowedProjectIds)
+                .Where(projectId => IsProjectAllowed(accessState, projectId))
+                .Distinct()
+                .ToList();
 
             foreach (var projectId in candidateProjectIds)
             {
@@ -2801,16 +2861,32 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
 
         private static void EnsureProjectAllowed(ProjectStructureAccessState accessState, Guid projectId)
         {
-            if (accessState.AllowAllProjects ||
-                accessState.AllowedProjectIds.Contains(projectId))
-            {
-                return;
-            }
+            EnsureProjectAllowedForContext(
+                accessState.Purpose,
+                accessState.ContextIntent,
+                accessState.AllowAllProjects,
+                accessState.AllowedProjectIds,
+                accessState.SessionCreatedProjectIds,
+                projectId);
+        }
 
-            throw new ProjectStructureAgentException(
-                403,
-                "ProjectStructureProjectDenied",
-                $"Project '{projectId:D}' is outside the agent's allowed project-structure scope.");
+        private static bool IsProjectAllowed(ProjectStructureAccessState accessState, Guid projectId)
+        {
+            return IsProjectAllowedForContext(
+                accessState.Purpose,
+                accessState.ContextIntent,
+                accessState.AllowAllProjects,
+                accessState.AllowedProjectIds,
+                accessState.SessionCreatedProjectIds,
+                projectId);
+        }
+
+        private static void GrantSessionCreatedProjectAccess(
+            ProjectStructureAccessState accessState,
+            Guid projectId)
+        {
+            accessState.AllowedProjectIds.Add(projectId);
+            accessState.SessionCreatedProjectIds.Add(projectId);
         }
 
         private static ProjectStructureScopedProcessAccess? ResolveScopedProcessAccess(AgentRuntimeToolProviderContext context)
@@ -2984,8 +3060,12 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
     {
         public ProjectStructureAccessState(
             AgentProjectStructureAccessSettings settings,
-            ProjectStructureScopedProcessAccess? scopedProcessAccess)
+            ProjectStructureScopedProcessAccess? scopedProcessAccess,
+            AgentRuntimeContextIntent contextIntent,
+            AgentRuntimeToolProviderPurpose purpose)
         {
+            ArgumentNullException.ThrowIfNull(contextIntent);
+
             var normalized = AgentProjectStructureAccessMetadata.Normalize(settings);
             CanRead = normalized.CanRead || scopedProcessAccess?.CanRead == true;
             CanWrite = ProjectStructureNonTaskWritePolicy.CanUseStructureMutationTools(normalized) || scopedProcessAccess?.CanWrite == true;
@@ -2999,7 +3079,10 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
                 scopedProcessAccess?.CanWrite != true;
             AllowAllProjects = normalized.AllowAllProjects;
             AllowedProjectIds = normalized.AllowedProjectIds.ToHashSet();
+            SessionCreatedProjectIds = [];
             ScopedProcessAccess = scopedProcessAccess;
+            ContextIntent = contextIntent;
+            Purpose = purpose;
             if (scopedProcessAccess is not null)
             {
                 AllowedProjectIds.Add(scopedProcessAccess.ProjectId);
@@ -3026,7 +3109,13 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
 
         public HashSet<Guid> AllowedProjectIds { get; }
 
+        public HashSet<Guid> SessionCreatedProjectIds { get; }
+
         public ProjectStructureScopedProcessAccess? ScopedProcessAccess { get; }
+
+        public AgentRuntimeContextIntent ContextIntent { get; }
+
+        public AgentRuntimeToolProviderPurpose Purpose { get; }
     }
 
     private sealed record ProjectStructureScopedProcessAccess(

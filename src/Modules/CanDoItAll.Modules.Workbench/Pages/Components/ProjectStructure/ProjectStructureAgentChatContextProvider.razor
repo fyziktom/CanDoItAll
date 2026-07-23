@@ -146,9 +146,11 @@
         viewFragmentLease = ContextRegistry.RegisterFragment(
             scopeId,
             ProjectStructureAgentChatContextBuilder.BuildViewFragment(ActiveView));
-        var selectionFragment = ProjectStructureAgentChatContextBuilder.BuildSelectionFragment(activeSelectedNodes);
+        var selectionFragment = ProjectStructureAgentChatContextBuilder.BuildSelectionFragment(
+            SelectedNodes,
+            activeSelectedNodes);
         selectionFragmentLease = ContextRegistry.RegisterFragment(scopeId, selectionFragment);
-        selectionKey = BuildSelectionKey(activeSelectedNodes);
+        selectionKey = selectionFragment.Content;
         notificationSubscription = ExecutionNotificationHub.Subscribe(
             source,
             HandleExecutionCompletedAsync);
@@ -236,14 +238,16 @@
         var nextSelectedNodes = ProjectStructureAgentChatContextBuilder.BuildSelectedEntities(
             SelectedNodes,
             SelectedEntityReferences);
-        var nextSelectionKey = BuildSelectionKey(nextSelectedNodes);
+        var nextSelectionFragment = ProjectStructureAgentChatContextBuilder.BuildSelectionFragment(
+            SelectedNodes,
+            nextSelectedNodes);
+        var nextSelectionKey = nextSelectionFragment.Content;
         if (string.Equals(selectionKey, nextSelectionKey, StringComparison.Ordinal))
         {
             return false;
         }
 
-        selectionFragmentLease?.Update(
-            ProjectStructureAgentChatContextBuilder.BuildSelectionFragment(nextSelectedNodes));
+        selectionFragmentLease?.Update(nextSelectionFragment);
         activeSelectedNodes = nextSelectedNodes;
         selectionKey = nextSelectionKey;
         return true;
@@ -289,11 +293,6 @@
 
         return InvokeAsync(() => RefreshRequested.InvokeAsync(notification));
     }
-
-    private static string BuildSelectionKey(IEnumerable<AgentChatContextEntityReference> selectedNodes)
-        => string.Join(
-            '\u001F',
-            selectedNodes.Select(node => $"{node.Id}\u001E{node.DisplayName}"));
 
     private void DisposeContext()
     {

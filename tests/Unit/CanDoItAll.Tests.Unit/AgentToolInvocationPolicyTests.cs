@@ -1346,6 +1346,111 @@ public sealed class AgentToolInvocationPolicyTests
     }
 
     [Fact]
+    public async Task EvaluateAsync_denies_ungrounded_external_target_for_project_structure_chat()
+    {
+        var policy = new DefaultAgentToolInvocationPolicy();
+        var context = CreateContext(
+            "workspace_list_directory",
+            ToolInvocationClassification.Read,
+            isKnownTool: true,
+            autoApprovalAllowed: true,
+            approvalWrapperAvailable: false,
+            arguments: new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["relativePath"] = "external-target/C/programovani"
+            },
+            processRunId: string.Empty,
+            sourceKind: "project-structure",
+            processStepId: string.Empty);
+
+        var decision = await policy.EvaluateAsync(context, CancellationToken.None);
+
+        Assert.Equal(ToolInvocationDecisionKind.Deny, decision.Kind);
+        Assert.Contains("outside the current run boundary", decision.Reason, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("no external-target roots are grounded", decision.Reason, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_allows_grounded_external_target_for_project_structure_chat()
+    {
+        var policy = new DefaultAgentToolInvocationPolicy();
+        const string allowedRoot = "external-target/C/programovani/dotnet/output";
+        var context = CreateContext(
+            "workspace_list_directory",
+            ToolInvocationClassification.Read,
+            isKnownTool: true,
+            autoApprovalAllowed: true,
+            approvalWrapperAvailable: false,
+            arguments: new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["relativePath"] = $"{allowedRoot}/src"
+            },
+            allowedExternalTargetAliases: [allowedRoot],
+            processRunId: string.Empty,
+            sourceKind: "project-structure",
+            processStepId: string.Empty);
+
+        var decision = await policy.EvaluateAsync(context, CancellationToken.None);
+
+        Assert.Equal(ToolInvocationDecisionKind.Allow, decision.Kind);
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_denies_external_drive_root_for_project_structure_chat()
+    {
+        var policy = new DefaultAgentToolInvocationPolicy();
+        var context = CreateContext(
+            "workspace_list_directory",
+            ToolInvocationClassification.Read,
+            isKnownTool: true,
+            autoApprovalAllowed: true,
+            approvalWrapperAvailable: false,
+            arguments: new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["relativePath"] = "external-target/C"
+            },
+            processRunId: string.Empty,
+            sourceKind: "project-structure",
+            processStepId: string.Empty);
+
+        var decision = await policy.EvaluateAsync(context, CancellationToken.None);
+
+        Assert.Equal(ToolInvocationDecisionKind.Deny, decision.Kind);
+        Assert.Contains("external drive root", decision.Reason, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task Project_structure_external_workspace_read_denial_is_recoverable()
+    {
+        var policy = new DefaultAgentToolInvocationPolicy();
+        var context = CreateContext(
+            "workspace_list_directory",
+            ToolInvocationClassification.Read,
+            isKnownTool: true,
+            autoApprovalAllowed: true,
+            approvalWrapperAvailable: false,
+            arguments: new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["relativePath"] = "external-target/C/programovani"
+            },
+            processRunId: string.Empty,
+            sourceKind: "project-structure",
+            processStepId: string.Empty);
+        var decision = await policy.EvaluateAsync(context, CancellationToken.None);
+
+        var recovered = AgentToolPolicyBlockGuard.TryCreateRecoverableDeniedResult(
+            context.ToolName,
+            decision,
+            context,
+            out var result);
+
+        Assert.True(recovered);
+        Assert.Contains("recoverable path error", result, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("selected project-structure subtree", result, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Do not broaden", result, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task EvaluateAsync_allows_read_only_external_target_reads_and_denies_mutation()
     {
         var policy = new DefaultAgentToolInvocationPolicy();
@@ -3908,7 +4013,9 @@ public sealed class AgentToolInvocationPolicyTests
         string contextWorkspaceScopeKind = "",
         string contextWorkspaceScopeKey = "",
         IReadOnlyList<AgentToolInvocationTrace>? toolInvocationTraces = null,
-        IReadOnlyList<string>? processProductMutationRequiredBranchOutcomeKeys = null)
+        IReadOnlyList<string>? processProductMutationRequiredBranchOutcomeKeys = null,
+        string sourceKind = "process-step",
+        string processStepId = "step-001")
     {
         return new ToolInvocationPolicyContext(
             AgentId: Guid.Parse("11111111-1111-1111-1111-111111111111"),
@@ -3920,9 +4027,9 @@ public sealed class AgentToolInvocationPolicyTests
             AutoApprovalAllowed: autoApprovalAllowed,
             ApprovalWrapperAvailable: approvalWrapperAvailable,
             ExecutionRunId: "run-001",
-            SourceKind: "process-step",
+            SourceKind: sourceKind,
             ProcessRunId: processRunId,
-            ProcessStepId: "step-001",
+            ProcessStepId: processStepId,
             AllowedExternalTargetAliases: allowedExternalTargetAliases,
             ReadOnlyExternalTargetAliases: readOnlyExternalTargetAliases,
             ApprovalWrapperEffectiveForProvider: approvalWrapperEffectiveForProvider,
