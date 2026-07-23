@@ -37,7 +37,7 @@
     <PackageReference Include="CanDoItAll.Components.Sandbox" Version="0.1.4" />
     <PackageReference Include="CanDoItAll.Components.WebGlLib" Version="0.1.4" />
     <PackageReference Include="CanDoItAll.FileTools.FileBrowser.Components" Version="0.2.0" />
-    <PackageReference Include="CanDoItAll.FileTools.FileInteraction.Components" Version="0.2.0" />
+    <PackageReference Include="CanDoItAll.FileTools.FileInteraction.Components" Version="0.2.1" />
     <ProjectReference Include="..\..\..\src\Modules\CanDoItAll.Modules.Collaboration\CanDoItAll.Modules.Collaboration.csproj" />
     <ProjectReference Include="..\..\..\src\Modules\CanDoItAll.Modules.CognitiveMemory\CanDoItAll.Modules.CognitiveMemory.csproj" />
     <ProjectReference Include="..\..\..\src\Modules\CanDoItAll.Modules.SchedulerPlanner\CanDoItAll.Modules.SchedulerPlanner.csproj" />
