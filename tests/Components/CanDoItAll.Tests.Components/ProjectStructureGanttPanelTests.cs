@@ -19,6 +19,8 @@ namespace CanDoItAll.Tests.Components;
 
 public sealed class ProjectStructureGanttPanelTests
 {
+    private static readonly DateTimeOffset Baseline = new(2026, 7, 15, 8, 0, 0, TimeSpan.Zero);
+
     [Fact]
     public void Mermaid_export_previews_and_downloads_only_the_gantt_projection_tasks()
     {
@@ -191,6 +193,153 @@ public sealed class ProjectStructureGanttPanelTests
             snapshot => snapshot.TaskId == projectedTasks[1].Id);
         Assert.Equal(canonicalNode.StartUtc, canonicalSnapshot.StartUtc);
         Assert.Equal(canonicalNode.EndUtc, canonicalSnapshot.EndUtc);
+    }
+
+    [Fact]
+    public async Task Schedule_resize_keeps_committed_dates_while_authoritative_reload_is_pending()
+    {
+        using var context = CreateContext([]);
+        var projectId = Guid.NewGuid();
+        var taskNode = CreateTask("task-a", "Resize task") with
+        {
+            StartUtc = Baseline,
+            EndUtc = Baseline.AddHours(2),
+            DurationSeconds = 7200
+        };
+        await SeedProjectTaskAsync(context, projectId, taskNode);
+        var reloadStarted = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var releaseReload = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var cut = context.RenderComponent<ProjectStructureGanttPanel>(parameters => parameters
+            .Add(component => component.ProjectId, projectId)
+            .Add(component => component.Surface, CreateSurface(projectId, taskNode))
+            .Add(component => component.MutationCommitted, async () =>
+            {
+                reloadStarted.TrySetResult(true);
+                await releaseReload.Task;
+            }));
+        var chart = cut.FindComponent<GanttChart>();
+        var renderedTask = Assert.Single(chart.Instance.Tasks);
+        var proposedEnd = renderedTask.End.AddHours(3);
+        var request = new GanttTaskScheduleChangeRequest(
+            renderedTask.Id,
+            GanttScheduleGesture.ResizeEnd,
+            [new GanttTaskDateChange(
+                renderedTask.Id,
+                renderedTask.Start,
+                renderedTask.End,
+                renderedTask.Start,
+                proposedEnd,
+                true)],
+            []);
+
+        var resizeTask = cut.InvokeAsync(() => chart.Instance.TaskScheduleChangeRequested.InvokeAsync(request));
+        await reloadStarted.Task.WaitAsync(TimeSpan.FromSeconds(5));
+
+        try
+        {
+            cut.WaitForAssertion(() =>
+            {
+                var committedTask = Assert.Single(cut.FindComponent<GanttChart>().Instance.Tasks);
+                Assert.Equal(proposedEnd, committedTask.End);
+                Assert.False(cut.FindComponent<GanttChart>().Instance.AllowTaskEditing);
+            });
+            await using var database = await context.Services
+                .GetRequiredService<IDbContextFactory<AppDbContext>>()
+                .CreateDbContextAsync();
+            var persistedTask = await database.Set<ProjectObjectRecord>()
+                .SingleAsync(record => record.ProjectId == projectId && record.NodeKey == taskNode.Id);
+            Assert.Equal(proposedEnd, persistedTask.EndUtc);
+        }
+        finally
+        {
+            releaseReload.TrySetResult(true);
+        }
+
+        await resizeTask.WaitAsync(TimeSpan.FromSeconds(5));
+        Assert.Equal(proposedEnd, Assert.Single(cut.FindComponent<GanttChart>().Instance.Tasks).End);
+    }
+
+    [Fact]
+    public async Task Rejected_schedule_resize_restores_the_rendered_dates()
+    {
+        using var context = CreateContext([]);
+        var projectId = Guid.NewGuid();
+        var taskNode = CreateTask("task-a", "Reject stale resize") with
+        {
+            StartUtc = Baseline,
+            EndUtc = Baseline.AddHours(2),
+            DurationSeconds = 7200
+        };
+        await SeedProjectTaskAsync(context, projectId, taskNode);
+        var committedCount = 0;
+        var cut = context.RenderComponent<ProjectStructureGanttPanel>(parameters => parameters
+            .Add(component => component.ProjectId, projectId)
+            .Add(component => component.Surface, CreateSurface(projectId, taskNode))
+            .Add(component => component.MutationCommitted, () => committedCount++));
+        var chart = cut.FindComponent<GanttChart>();
+        var renderedTask = Assert.Single(chart.Instance.Tasks);
+        var request = new GanttTaskScheduleChangeRequest(
+            renderedTask.Id,
+            GanttScheduleGesture.ResizeEnd,
+            [new GanttTaskDateChange(
+                renderedTask.Id,
+                renderedTask.Start,
+                renderedTask.End.AddMinutes(1),
+                renderedTask.Start,
+                renderedTask.End.AddHours(3),
+                true)],
+            []);
+
+        await cut.InvokeAsync(() => chart.Instance.TaskScheduleChangeRequested.InvokeAsync(request));
+
+        var restoredTask = Assert.Single(cut.FindComponent<GanttChart>().Instance.Tasks);
+        Assert.Equal(renderedTask.Start, restoredTask.Start);
+        Assert.Equal(renderedTask.End, restoredTask.End);
+        Assert.Equal(0, committedCount);
+        var notification = Assert.Single(context.Services.GetRequiredService<NotificationService>().Messages);
+        Assert.Equal(NotificationSeverity.Error, notification.Severity);
+        Assert.Equal("Project schedule change rejected", notification.Summary);
+    }
+
+    [Fact]
+    public async Task Schedule_resize_keeps_committed_dates_when_authoritative_reload_fails()
+    {
+        using var context = CreateContext([]);
+        var projectId = Guid.NewGuid();
+        var taskNode = CreateTask("task-a", "Committed resize") with
+        {
+            StartUtc = Baseline,
+            EndUtc = Baseline.AddHours(2),
+            DurationSeconds = 7200
+        };
+        await SeedProjectTaskAsync(context, projectId, taskNode);
+        var cut = context.RenderComponent<ProjectStructureGanttPanel>(parameters => parameters
+            .Add(component => component.ProjectId, projectId)
+            .Add(component => component.Surface, CreateSurface(projectId, taskNode))
+            .Add(
+                component => component.MutationCommitted,
+                () => Task.FromException(new InvalidOperationException("Reload failed."))));
+        var chart = cut.FindComponent<GanttChart>();
+        var renderedTask = Assert.Single(chart.Instance.Tasks);
+        var proposedEnd = renderedTask.End.AddHours(3);
+        var request = new GanttTaskScheduleChangeRequest(
+            renderedTask.Id,
+            GanttScheduleGesture.ResizeEnd,
+            [new GanttTaskDateChange(
+                renderedTask.Id,
+                renderedTask.Start,
+                renderedTask.End,
+                renderedTask.Start,
+                proposedEnd,
+                true)],
+            []);
+
+        await cut.InvokeAsync(() => chart.Instance.TaskScheduleChangeRequested.InvokeAsync(request));
+
+        Assert.Equal(proposedEnd, Assert.Single(cut.FindComponent<GanttChart>().Instance.Tasks).End);
+        var notification = Assert.Single(context.Services.GetRequiredService<NotificationService>().Messages);
+        Assert.Equal(NotificationSeverity.Warning, notification.Severity);
+        Assert.Equal("Project schedule saved; reload required", notification.Summary);
     }
 
     [Fact]
@@ -383,12 +532,14 @@ public sealed class ProjectStructureGanttPanelTests
         context.Services.AddSingleton<NotificationService>();
         context.Services.AddSingleton(bridge);
         context.Services.AddSingleton<ProjectStructureGanttProjectionAdapter>();
+        var (workbenchService, dbContextFactory, clock) = CreateWorkbenchService();
+        context.Services.AddSingleton(dbContextFactory);
+        context.Services.AddSingleton<IClock>(clock);
         var mutationService = new ProjectStructureGanttMutationService(
-            null!,
-            null!,
+            dbContextFactory,
+            clock,
             NullLogger<ProjectStructureGanttMutationService>.Instance);
         context.Services.AddSingleton(mutationService);
-        var (workbenchService, dbContextFactory, clock) = CreateWorkbenchService();
         context.Services.AddSingleton(workbenchService);
         var assigneeService = new ProjectStructureWorkItemAssigneeService(
             bridge,
@@ -449,6 +600,42 @@ public sealed class ProjectStructureGanttPanelTests
             currencyFormatter,
             NullLogger<ProjectStructureGanttTaskEditCoordinator>.Instance));
         return context;
+    }
+
+    private static async Task SeedProjectTaskAsync(
+        TestContext context,
+        Guid projectId,
+        ProjectStructureNode taskNode)
+    {
+        await using var database = await context.Services
+            .GetRequiredService<IDbContextFactory<AppDbContext>>()
+            .CreateDbContextAsync();
+        database.Set<Project>().Add(new Project
+        {
+            Id = projectId,
+            Name = "Gantt panel test",
+            Slug = $"gantt-panel-{projectId:N}",
+            CreatedAtUtc = Baseline,
+            UpdatedAtUtc = Baseline
+        });
+        database.Set<ProjectObjectRecord>().Add(new ProjectObjectRecord
+        {
+            Id = Guid.NewGuid(),
+            ProjectId = projectId,
+            NodeKey = taskNode.Id,
+            ObjectType = ProjectObjectType.WorkItem,
+            ObjectSubtype = "task",
+            Title = taskNode.Title,
+            Status = "Draft",
+            MetadataJson = "{}",
+            MarkersJson = "[]",
+            StartUtc = taskNode.StartUtc,
+            EndUtc = taskNode.EndUtc,
+            DurationSeconds = taskNode.DurationSeconds,
+            CreatedAtUtc = Baseline,
+            UpdatedAtUtc = Baseline
+        });
+        await database.SaveChangesAsync();
     }
 
     private static (

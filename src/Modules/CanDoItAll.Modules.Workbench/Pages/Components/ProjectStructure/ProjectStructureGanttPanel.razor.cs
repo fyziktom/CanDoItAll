@@ -202,36 +202,50 @@ public partial class ProjectStructureGanttPanel : ComponentBase, IAsyncDisposabl
         return Task.CompletedTask;
     }
 
-    private Task ApplyTitleAsync(GanttTaskTitleChangeRequest request)
-        => ExecuteMutationAsync(
+    private async Task ApplyTitleAsync(GanttTaskTitleChangeRequest request)
+    {
+        await ExecuteMutationAsync(
             "title",
             cancellationToken => MutationService.ApplyTitleAsync(ProjectId, request, cancellationToken));
+    }
 
-    private Task ApplyScheduleAsync(GanttTaskScheduleChangeRequest request)
+    private async Task ApplyScheduleAsync(GanttTaskScheduleChangeRequest request)
     {
         var renderedSurface = loadedSurface ?? Surface;
-        return ExecuteMutationAsync(
+        var renderedProjection = projection
+            ?? throw new InvalidOperationException("The Gantt projection is unavailable.");
+        var pendingProjection = renderedProjection.WithScheduleChanges(request.AffectedTasks);
+        projection = pendingProjection;
+
+        var committed = await ExecuteMutationAsync(
             "schedule",
             cancellationToken => MutationService.ApplyScheduleAsync(
                 ProjectId,
                 ProjectStructureGanttScheduleMutationFactory.Create(
                     request,
                     renderedSurface,
-                    projection?.Tasks
-                        ?? throw new InvalidOperationException("The Gantt projection is unavailable.")),
+                    renderedProjection.Tasks),
                 cancellationToken));
+        if (!committed && ReferenceEquals(projection, pendingProjection))
+        {
+            projection = renderedProjection;
+        }
     }
 
-    private Task ApplyDependencyAsync(GanttDependencyMutationRequest request)
-        => ExecuteMutationAsync(
+    private async Task ApplyDependencyAsync(GanttDependencyMutationRequest request)
+    {
+        await ExecuteMutationAsync(
             "dependency",
             cancellationToken => MutationService.ApplyDependencyAsync(ProjectId, request, cancellationToken));
+    }
 
-    private Task ApplyInsertionAsync(GanttTaskInsertionRequest request)
-        => ExecuteMutationAsync(
+    private async Task ApplyInsertionAsync(GanttTaskInsertionRequest request)
+    {
+        await ExecuteMutationAsync(
             "insertion",
             cancellationToken => MutationService.ApplyInsertionAsync(ProjectId, request, cancellationToken),
             renewInsertionCandidate: true);
+    }
 
     private Task OpenGeneralTaskDialogAsync()
     {
@@ -468,14 +482,14 @@ public partial class ProjectStructureGanttPanel : ComponentBase, IAsyncDisposabl
         }
     }
 
-    private async Task ExecuteMutationAsync(
+    private async Task<bool> ExecuteMutationAsync(
         string operation,
         Func<CancellationToken, Task<ProjectStructureGanttMutationResult>> mutation,
         bool renewInsertionCandidate = false)
     {
         if (!EnsureMutationHostAvailable())
         {
-            return;
+            return false;
         }
 
         mutationInFlight = true;
@@ -493,6 +507,7 @@ public partial class ProjectStructureGanttPanel : ComponentBase, IAsyncDisposabl
             NotificationService.Success(
                 "Project schedule saved",
                 BuildMutationStatus(operation, result));
+            return true;
         }
         catch (ProjectStructureGanttMutationException exception)
         {
@@ -504,9 +519,11 @@ public partial class ProjectStructureGanttPanel : ComponentBase, IAsyncDisposabl
                 operation,
                 Mask(ProjectId),
                 exception.Code);
+            return false;
         }
         catch (OperationCanceledException) when (lifetimeCancellation.IsCancellationRequested)
         {
+            return mutationCommitted;
         }
         catch (Exception exception)
         {
@@ -517,6 +534,7 @@ public partial class ProjectStructureGanttPanel : ComponentBase, IAsyncDisposabl
                 Mask(ProjectId),
                 mutationCommitted,
                 exception.GetType().Name);
+            return mutationCommitted;
         }
         finally
         {
