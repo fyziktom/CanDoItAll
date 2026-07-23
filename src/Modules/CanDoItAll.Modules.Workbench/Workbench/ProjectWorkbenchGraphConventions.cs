@@ -14,9 +14,15 @@ internal enum ProjectHierarchyNodeKind
 
 internal static class ProjectWorkbenchGraphConventions
 {
+    internal const string CustomNodePrefix = "custom:";
     internal const string ProjectRootNodePrefix = "project:";
     internal const string ProjectChildNodePrefix = "project-child:";
     internal const string ProjectRelatedParentNodePrefix = "project-related-parent:";
+
+    internal static bool IsCustomNodeKey(string nodeKey)
+    {
+        return nodeKey.StartsWith(CustomNodePrefix, StringComparison.Ordinal);
+    }
 
     internal static string BuildProjectRootNodeKey(Guid projectId)
     {

@@ -504,7 +504,12 @@ ProjectWorkbenchCrossModuleMutationService crossModuleMutationService) : IProjec
                 ProjectStructureSerializableMutationScope.ForProject(projectId),
                 cancellationToken);
         var normalizedParentNodeKey = ProjectWorkbenchGraphConventions.NormalizeEditableParentNodeKey(projectId, request.ParentNodeKey);
-        var existingNodes = (await projectStructureAssemblyService.LoadAsync(dbContext, projectId, cancellationToken)).Nodes;
+        var existingNodes = await LoadCreatePlanningNodesAsync(
+            dbContext,
+            projectId,
+            normalizedParentNodeKey,
+            request,
+            cancellationToken);
         EnsureCanonicalTaskResourceChildAllowed(
             normalizedParentNodeKey,
             request.ObjectType,
@@ -586,6 +591,51 @@ ProjectWorkbenchCrossModuleMutationService crossModuleMutationService) : IProjec
         await mutationScope.CommitAsync(cancellationToken);
         ProjectNodeBindingStorage.Apply(record, bindingPlan);
         return ProjectWorkbenchNodeMapper.MapStructureNode(record);
+    }
+
+    private async Task<IReadOnlyList<ProjectObjectRecord>> LoadCreatePlanningNodesAsync(
+        AppDbContext dbContext,
+        Guid projectId,
+        string parentNodeKey,
+        ProjectObjectCreateRequest request,
+        CancellationToken cancellationToken)
+    {
+        var hasCallerControlledPosition =
+            request.PlacementIntent == ProjectObjectPlacementIntent.CallerControlled &&
+            request.X.HasValue &&
+            request.Y.HasValue;
+        if (!hasCallerControlledPosition)
+        {
+            return (await projectStructureAssemblyService.LoadAsync(dbContext, projectId, cancellationToken)).Nodes;
+        }
+
+        if (string.Equals(
+                parentNodeKey,
+                ProjectWorkbenchGraphConventions.BuildProjectRootNodeKey(projectId),
+                StringComparison.Ordinal))
+        {
+            await dbContext.Set<Project>()
+                .Where(project => project.Id == projectId)
+                .Select(project => project.Id)
+                .FirstAsync(cancellationToken);
+            return [];
+        }
+
+        if (!ProjectWorkbenchGraphConventions.IsCustomNodeKey(parentNodeKey))
+        {
+            return (await projectStructureAssemblyService.LoadAsync(dbContext, projectId, cancellationToken)).Nodes;
+        }
+
+        var canonicalParent = await dbContext.Set<ProjectObjectRecord>()
+            .FirstOrDefaultAsync(
+                node =>
+                    node.ProjectId == projectId &&
+                    node.NodeKey == parentNodeKey &&
+                    !node.IsSystemManaged,
+                cancellationToken);
+        return canonicalParent is null
+            ? []
+            : [canonicalParent];
     }
 
     private static void EnsureCanonicalTaskResourceChildAllowed(

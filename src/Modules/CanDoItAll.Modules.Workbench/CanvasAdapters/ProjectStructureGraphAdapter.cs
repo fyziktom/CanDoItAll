@@ -15,6 +15,17 @@ public sealed class ProjectStructureGraphAdapter
         Func<ProjectStructureNode, bool>? canOpenInNewTab = null)
     {
         ConfigureChrome(surface, chrome);
+        var parentNodeIds = surface.Nodes
+            .Where(node => !string.IsNullOrWhiteSpace(node.ParentId))
+            .Select(node => node.ParentId!)
+            .ToHashSet(StringComparer.Ordinal);
+        var selectedNodeIds = uiState.SelectedNodeIds
+            .Where(id => !string.IsNullOrWhiteSpace(id))
+            .ToHashSet(StringComparer.Ordinal);
+        var selectedContextTargetCount = uiState.SelectedNodeIds.Count > 1
+            ? selectedNodeIds.Count
+            : 0;
+
         return new CanvasWorkbenchSurface
         {
             SurfaceId = $"project-structure:{surface.ProjectId:N}",
@@ -22,7 +33,15 @@ public sealed class ProjectStructureGraphAdapter
             UiState = uiState,
             Chrome = chrome,
             Nodes = surface.Nodes
-                .Select(node => MapCanvasNode(surface.Nodes, node, uiState.SelectedNodeIds, actionCatalog, canLaunchRuntime, canOpenInFileExplorer, canOpenInNewTab))
+                .Select(node => MapCanvasNode(
+                    node,
+                    parentNodeIds.Contains(node.Id),
+                    selectedNodeIds,
+                    selectedContextTargetCount,
+                    actionCatalog,
+                    canLaunchRuntime,
+                    canOpenInFileExplorer,
+                    canOpenInNewTab))
                 .ToList(),
             Links = surface.Links.Select(link => new CanvasWorkbenchLink
             {
@@ -115,15 +134,15 @@ public sealed class ProjectStructureGraphAdapter
     }
 
     private static CanvasWorkbenchNode MapCanvasNode(
-        IReadOnlyList<ProjectStructureNode> nodes,
         ProjectStructureNode node,
-        IReadOnlyList<string> selectedNodeIds,
+        bool hasChildren,
+        IReadOnlySet<string> selectedNodeIds,
+        int selectedContextTargetCount,
         ProjectStructureActionCatalogAdapter actionCatalog,
         Func<ProjectStructureNode, bool>? canLaunchRuntime,
         Func<ProjectStructureNode, bool>? canOpenInFileExplorer,
         Func<ProjectStructureNode, bool>? canOpenInNewTab)
     {
-        var hasChildren = nodes.Any(candidate => string.Equals(candidate.ParentId, node.Id, StringComparison.Ordinal));
         var inlineText = string.IsNullOrWhiteSpace(node.Notes) ? node.Title : node.Notes;
         var isInlineTextNode = node.ObjectType == ProjectObjectType.Note && string.IsNullOrWhiteSpace(node.Subtitle);
         var progress = ResolveProgress(node);
@@ -187,22 +206,21 @@ public sealed class ProjectStructureGraphAdapter
                 canLaunchRuntime?.Invoke(node) == true,
                 canOpenInFileExplorer?.Invoke(node) == true,
                 canOpenInNewTab?.Invoke(node) == true,
-                CountSelectedContextTargets(node.Id, selectedNodeIds)).ToList()
+                CountSelectedContextTargets(node.Id, selectedNodeIds, selectedContextTargetCount)).ToList()
         };
     }
 
-    private static int CountSelectedContextTargets(string nodeId, IReadOnlyList<string> selectedNodeIds)
+    private static int CountSelectedContextTargets(
+        string nodeId,
+        IReadOnlySet<string> selectedNodeIds,
+        int selectedContextTargetCount)
     {
-        if (selectedNodeIds.Count <= 1 ||
-            !selectedNodeIds.Contains(nodeId, StringComparer.Ordinal))
+        if (selectedContextTargetCount == 0 || !selectedNodeIds.Contains(nodeId))
         {
             return 0;
         }
 
-        return selectedNodeIds
-            .Where(id => !string.IsNullOrWhiteSpace(id))
-            .Distinct(StringComparer.Ordinal)
-            .Count();
+        return selectedContextTargetCount;
     }
 
     private static void ConfigureChrome(ProjectStructureSurface surface, CanvasWorkbenchChrome chrome)

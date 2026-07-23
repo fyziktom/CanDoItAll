@@ -1380,13 +1380,38 @@ else
         await nodeMoveCommitGate.WaitAsync();
         try
         {
-            var updatedNodeIds = await ProjectWorkbenchService.MoveObjectsAsync(ProjectId, requestedPositions);
+            var requestedNodeIds = requestedPositions
+                .Select(position => position.NodeId)
+                .ToHashSet(StringComparer.Ordinal);
+            var originalPositions = surface?.Nodes
+                .Where(node => requestedNodeIds.Contains(node.Id))
+                .Select(node => new CanvasWorkbenchNodePositionChange(node.Id, node.X, node.Y))
+                .ToList() ?? [];
+            TryPatchSurfaceNodePositions(args.Positions);
+
+            IReadOnlyList<string> updatedNodeIds;
+            try
+            {
+                updatedNodeIds = await ProjectWorkbenchService.MoveObjectsAsync(ProjectId, requestedPositions);
+            }
+            catch
+            {
+                TryPatchSurfaceNodePositions(originalPositions);
+                await InvokeAsync(StateHasChanged);
+                throw;
+            }
+
             if (updatedNodeIds.Count == 0)
             {
+                TryPatchSurfaceNodePositions(originalPositions);
                 return;
             }
 
             var updatedNodeIdSet = updatedNodeIds.ToHashSet(StringComparer.Ordinal);
+            var rejectedPositions = originalPositions
+                .Where(position => !updatedNodeIdSet.Contains(position.NodeId))
+                .ToList();
+            TryPatchSurfaceNodePositions(rejectedPositions);
             var committedPositions = args.Positions
                 .Where(position => updatedNodeIdSet.Contains(position.NodeId))
                 .ToList();

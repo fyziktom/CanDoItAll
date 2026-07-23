@@ -140,6 +140,45 @@ public sealed class ProjectStructureGraphAdapterTests
         Assert.Equal("image/png", canvasNode.MediaContentType);
     }
 
+    [Fact]
+    public void Parent_and_selection_indexes_preserve_canvas_mapping_behavior()
+    {
+        var adapter = new ProjectStructureGraphAdapter();
+        var actionCatalog = new ProjectStructureActionCatalogAdapter();
+        var parent = CreateFileNode("parent", "pdf", "#dc2626", ProjectObjectPaletteKeys.Danger);
+        var child = CreateFileNode("child", "docx", "#2563eb", ProjectObjectPaletteKeys.Info) with
+        {
+            ParentId = parent.Id
+        };
+        var surface = new ProjectStructureSurface(
+            Guid.NewGuid(),
+            "Indexed canvas mapping",
+            [parent, child],
+            [],
+            null);
+
+        var canvasSurface = adapter.BuildSurface(
+            surface,
+            new CanvasWorkbenchUiState
+            {
+                SelectedNodeIds = [parent.Id, child.Id]
+            },
+            new CanvasWorkbenchChrome(),
+            actionCatalog);
+
+        var canvasParent = Assert.Single(canvasSurface.Nodes, node => node.Id == parent.Id);
+        var canvasChild = Assert.Single(canvasSurface.Nodes, node => node.Id == child.Id);
+
+        Assert.True(canvasParent.IsCollapsible);
+        Assert.False(canvasChild.IsCollapsible);
+        Assert.Equal(
+            "Delete selected",
+            canvasParent.ContextActions.Single(action => action.ActionId == "delete").Label);
+        Assert.Equal(
+            "Delete selected",
+            canvasChild.ContextActions.Single(action => action.ActionId == "delete").Label);
+    }
+
     private static ProjectStructureNode CreateFileNode(string id, string subtype, string accentColor, string paletteKey)
         => new(
             id,

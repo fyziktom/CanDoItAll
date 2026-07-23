@@ -235,7 +235,6 @@ public sealed class ProjectStructureAssemblyService(
             return [];
         }
 
-        var validProjectionNodeKeys = await LoadProjectionNodeKeysAsync(dbContext, projectId, cancellationToken);
         var nodeKeys = requestedPositions
             .Select(item => item.NodeId)
             .Distinct(StringComparer.Ordinal)
@@ -243,9 +242,17 @@ public sealed class ProjectStructureAssemblyService(
         var canonicalNodes = await dbContext.Set<ProjectObjectRecord>()
             .Where(item => item.ProjectId == projectId && nodeKeys.Contains(item.NodeKey))
             .ToDictionaryAsync(item => item.NodeKey, StringComparer.Ordinal, cancellationToken);
-        var existingLayouts = await dbContext.Set<ProjectStructureProjectionLayoutRecord>()
-            .Where(item => item.ProjectId == projectId && nodeKeys.Contains(item.NodeKey))
-            .ToDictionaryAsync(item => item.NodeKey, StringComparer.Ordinal, cancellationToken);
+        var projectionNodeKeys = nodeKeys
+            .Where(nodeKey => !canonicalNodes.ContainsKey(nodeKey))
+            .ToList();
+        var validProjectionNodeKeys = projectionNodeKeys.Count == 0
+            ? []
+            : await LoadProjectionNodeKeysAsync(dbContext, projectId, cancellationToken);
+        var existingLayouts = projectionNodeKeys.Count == 0
+            ? new Dictionary<string, ProjectStructureProjectionLayoutRecord>(StringComparer.Ordinal)
+            : await dbContext.Set<ProjectStructureProjectionLayoutRecord>()
+                .Where(item => item.ProjectId == projectId && projectionNodeKeys.Contains(item.NodeKey))
+                .ToDictionaryAsync(item => item.NodeKey, StringComparer.Ordinal, cancellationToken);
 
         var updatedNodeIds = new List<string>(requestedPositions.Count);
         var updatedAtUtc = clock.GetUtcNow();
