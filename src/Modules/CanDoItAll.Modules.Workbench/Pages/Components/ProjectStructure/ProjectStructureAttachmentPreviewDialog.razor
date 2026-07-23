@@ -1,5 +1,8 @@
 @namespace CanDoItAll.Modules.Workbench.Pages
+@implements IAsyncDisposable
+@using Microsoft.Extensions.Logging
 @inject FileInteractionComponentComposition InteractionComposition
+@inject ILogger<ProjectStructureAttachmentPreviewDialog> Logger
 
 <ProjectStructureOverlayDialog CanvasScoped="true"
                                CanMaximize="true"
@@ -58,13 +61,15 @@
                     @Interaction.HostNotice
                 </Alert>
 
-                @if (!string.IsNullOrWhiteSpace(Node.Notes))
+                @if (!string.IsNullOrWhiteSpace(supplementalNotes))
                 {
-                    <PanelCard Soft="true" data-testid="project-structure-file-interaction-notes">
+                    <PanelCard Soft="true"
+                               Style="flex:0 1 auto;max-height:min(12rem,35%);min-height:0;overflow:auto;box-sizing:border-box;"
+                               data-testid="project-structure-file-interaction-notes">
                         <Stack GapScale="LayoutGap.Tiny">
                             <TextBlock TextStyle="TextStyle.Eyebrow" Value="Notes" />
                             <TextBlock TextStyle="TextStyle.Note"
-                                       Value="@Node.Notes"
+                                       Value="@supplementalNotes"
                                        Class="whitespace-pre-wrap break-words" />
                         </Stack>
                     </PanelCard>
@@ -149,6 +154,12 @@
     private FileInteractionState? state;
     private long interactionKey;
     private bool showCloseGuard;
+    private ProjectStructureKnownFileInteraction? notesInteraction;
+    private string? notesNodeId;
+    private string notesSource = string.Empty;
+    private string? supplementalNotes;
+    private CancellationTokenSource? notesResolutionCancellation;
+    private bool shouldResolveNotes;
 
     private bool HasGuardedWork =>
         state is { IsDirty: true } or { IsSaving: true } or { HasConflict: true };
@@ -160,16 +171,83 @@
 
     protected override void OnParametersSet()
     {
-        if (ReferenceEquals(activeInteraction, Interaction))
+        if (!ReferenceEquals(activeInteraction, Interaction))
+        {
+            activeInteraction = Interaction;
+            activeRequest = Interaction?.Request;
+            state = null;
+            showCloseGuard = false;
+            interactionKey++;
+        }
+
+        shouldResolveNotes = false;
+        if (ReferenceEquals(notesInteraction, Interaction) &&
+            string.Equals(notesNodeId, Node.Id, StringComparison.Ordinal) &&
+            string.Equals(notesSource, Node.Notes, StringComparison.Ordinal))
         {
             return;
         }
 
-        activeInteraction = Interaction;
-        activeRequest = Interaction?.Request;
-        state = null;
-        showCloseGuard = false;
-        interactionKey++;
+        CancelNotesResolution();
+        notesInteraction = Interaction;
+        notesNodeId = Node.Id;
+        notesSource = Node.Notes;
+        supplementalNotes = string.IsNullOrWhiteSpace(Node.Notes) ? null : Node.Notes;
+        if (!ProjectStructureAttachmentNotesResolver.RequiresContentComparison(Node, Interaction))
+        {
+            return;
+        }
+
+        supplementalNotes = null;
+        notesResolutionCancellation = new CancellationTokenSource();
+        shouldResolveNotes = true;
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (!shouldResolveNotes ||
+            notesInteraction is not { } interaction ||
+            notesResolutionCancellation is not { } cancellation)
+        {
+            return;
+        }
+
+        shouldResolveNotes = false;
+        string nodeId = notesNodeId!;
+        string sourceNotes = notesSource;
+        try
+        {
+            string? resolvedNotes = await ProjectStructureAttachmentNotesResolver.ResolveSupplementalNotesAsync(
+                Node,
+                interaction,
+                cancellation.Token);
+            if (IsCurrentNotesResolution(interaction, nodeId, sourceNotes, cancellation))
+            {
+                supplementalNotes = resolvedNotes;
+            }
+        }
+        catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
+        {
+        }
+        catch (Exception ex)
+        {
+            if (IsCurrentNotesResolution(interaction, nodeId, sourceNotes, cancellation))
+            {
+                Logger.LogWarning(
+                    ex,
+                    "Could not compare supplemental notes with governed file content for project-structure node {NodeId}.",
+                    nodeId);
+                supplementalNotes = sourceNotes;
+            }
+        }
+        finally
+        {
+            if (ReferenceEquals(notesResolutionCancellation, cancellation))
+            {
+                notesResolutionCancellation = null;
+                cancellation.Dispose();
+            }
+        }
     }
 
     private Task HandleSaveRequestedAsync(FileInteractionSaveRequestedEventArgs args)
@@ -221,6 +299,30 @@
         }
     }
 
+    private bool IsCurrentNotesResolution(
+        ProjectStructureKnownFileInteraction interaction,
+        string nodeId,
+        string sourceNotes,
+        CancellationTokenSource cancellation)
+        => ReferenceEquals(notesInteraction, interaction) &&
+           ReferenceEquals(notesResolutionCancellation, cancellation) &&
+           string.Equals(notesNodeId, nodeId, StringComparison.Ordinal) &&
+           string.Equals(notesSource, sourceNotes, StringComparison.Ordinal) &&
+           !cancellation.IsCancellationRequested;
+
+    private void CancelNotesResolution()
+    {
+        CancellationTokenSource? cancellation = notesResolutionCancellation;
+        notesResolutionCancellation = null;
+        if (cancellation is null)
+        {
+            return;
+        }
+
+        cancellation.Cancel();
+        cancellation.Dispose();
+    }
+
     private string ResolveStateLabel()
         => state switch
         {
@@ -242,4 +344,10 @@
             { Lifecycle: FileInteractionLifecycleState.Unsupported } => "neutral",
             _ => "success"
         };
+
+    public ValueTask DisposeAsync()
+    {
+        CancelNotesResolution();
+        return ValueTask.CompletedTask;
+    }
 }

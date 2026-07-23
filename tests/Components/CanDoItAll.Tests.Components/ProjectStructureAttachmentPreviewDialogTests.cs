@@ -101,6 +101,9 @@ public sealed class ProjectStructureAttachmentPreviewDialogTests
             .Add(component => component.CanEditNode, _ => false));
 
         Assert.Contains("Reviewed by finance.", cut.Markup, StringComparison.Ordinal);
+        var notes = cut.Find("[data-testid='project-structure-file-interaction-notes']");
+        Assert.Contains("max-height:min(12rem,35%)", notes.GetAttribute("style"), StringComparison.Ordinal);
+        Assert.Contains("overflow:auto", notes.GetAttribute("style"), StringComparison.Ordinal);
         await cut.FindAll("button")
             .Single(button => button.TextContent.Trim() == "Open in preferred app")
             .ClickAsync(new());
@@ -110,6 +113,113 @@ public sealed class ProjectStructureAttachmentPreviewDialogTests
 
         Assert.True(opened);
         Assert.True(revealed);
+    }
+
+    [Fact]
+    public void Managed_markdown_payload_is_not_repeated_as_node_notes()
+    {
+        using var context = new TestContext();
+        context.JSInterop.Mode = JSRuntimeMode.Loose;
+        RegisterComposition(context);
+        const string markdown = """
+            # Result Summary
+
+            The governed file content is the primary surface.
+            """;
+        var node = CreateNode(
+            ProjectObjectType.File,
+            "text/markdown",
+            "result-summary.md",
+            markdown,
+            "markdown");
+        var file = new FileReference("authorized", "handle-result-summary");
+        var source = new StaticContentSource("text/markdown", markdown);
+        var session = new FileToolsKnownFileSession(
+            file,
+            source,
+            FileToolsKnownFileIntent.ReadOnly);
+        var interaction = new ProjectStructureKnownFileInteraction(
+            new FileInteractionRequest(
+                file,
+                "result-summary.md",
+                FileInteractionMode.View,
+                "text/markdown",
+                Encoding.UTF8.GetByteCount(markdown)),
+            session,
+            new NoopSessionReleaser());
+        IRenderedComponent<ProjectStructureAttachmentPreviewDialog> cut = Render(context, node, interaction);
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.True(source.ReadCount >= 2);
+            Assert.Empty(cut.FindAll("[data-testid='project-structure-file-interaction-notes']"));
+            Assert.Single(cut.FindComponents<FileInteraction>());
+            Assert.NotNull(cut.Find("[data-testid='interaction-markdown-view']"));
+        });
+    }
+
+    [Fact]
+    public void Managed_markdown_keeps_distinct_supplemental_notes()
+    {
+        using var context = new TestContext();
+        context.JSInterop.Mode = JSRuntimeMode.Loose;
+        RegisterComposition(context);
+
+        IRenderedComponent<ProjectStructureAttachmentPreviewDialog> cut = RenderReadOnly(
+            context,
+            "result-summary.md",
+            "text/markdown",
+            "# Result Summary\n\nFile payload.",
+            notes: "Reviewed by finance.",
+            objectSubtype: "markdown");
+
+        cut.WaitForAssertion(() =>
+        {
+            var notes = cut.Find("[data-testid='project-structure-file-interaction-notes']");
+            Assert.Contains("Reviewed by finance.", notes.TextContent, StringComparison.Ordinal);
+            Assert.Contains("max-height:min(12rem,35%)", notes.GetAttribute("style"), StringComparison.Ordinal);
+            Assert.Contains("overflow:auto", notes.GetAttribute("style"), StringComparison.Ordinal);
+            Assert.NotNull(cut.Find("[data-testid='interaction-markdown-view']"));
+        });
+    }
+
+    [Fact]
+    public async Task Notes_comparison_bounds_unknown_length_content_by_bytes()
+    {
+        const string notes = "Keep this supplemental note.";
+        var node = CreateNode(
+            ProjectObjectType.File,
+            "text/plain",
+            "unknown-length.txt",
+            notes);
+        var file = new FileReference("authorized", "unknown-length-handle");
+        var source = new UnknownLengthContentSource(
+            ProjectStructureFileInteractionPolicy.MaximumContentBytes + 2L);
+        var session = new FileToolsKnownFileSession(
+            file,
+            source,
+            FileToolsKnownFileIntent.ReadOnly);
+        var interaction = new ProjectStructureKnownFileInteraction(
+            new FileInteractionRequest(
+                file,
+                "unknown-length.txt",
+                FileInteractionMode.View,
+                "text/plain",
+                null),
+            session,
+            new NoopSessionReleaser());
+
+        string? resolvedNotes = await ProjectStructureAttachmentNotesResolver.ResolveSupplementalNotesAsync(
+            node,
+            interaction);
+
+        Assert.Equal(notes, resolvedNotes);
+        Assert.Equal(
+            ProjectStructureFileInteractionPolicy.MaximumContentBytes + 1L,
+            source.RequestedLength);
+        Assert.Equal(
+            ProjectStructureFileInteractionPolicy.MaximumContentBytes + 1L,
+            source.BytesRead);
     }
 
     [Fact]
@@ -318,6 +428,7 @@ public sealed class ProjectStructureAttachmentPreviewDialogTests
 
     private static void RegisterComposition(TestContext context)
     {
+        context.Services.AddLogging();
         context.Services.AddSingleton(new FileInteractionComponentBuilder()
             .AddBuiltIns()
             .AddMarkdown()
@@ -331,9 +442,11 @@ public sealed class ProjectStructureAttachmentPreviewDialogTests
         TestContext context,
         string fileName,
         string mediaType,
-        string content)
+        string content,
+        string notes = "",
+        string objectSubtype = "")
     {
-        var node = CreateNode(ProjectObjectType.File, mediaType, fileName);
+        var node = CreateNode(ProjectObjectType.File, mediaType, fileName, notes, objectSubtype);
         var file = new FileReference("authorized", $"handle-{Guid.NewGuid():N}");
         var session = new FileToolsKnownFileSession(
             file,
@@ -362,12 +475,13 @@ public sealed class ProjectStructureAttachmentPreviewDialogTests
         ProjectObjectType objectType,
         string mediaType,
         string fileName,
-        string notes = "")
+        string notes = "",
+        string objectSubtype = "")
         => new(
             Id: $"asset:{fileName}",
             ParentId: null,
             ObjectType: objectType,
-            ObjectSubtype: string.Empty,
+            ObjectSubtype: objectSubtype,
             Title: fileName,
             Subtitle: string.Empty,
             Status: "Ready",
@@ -393,15 +507,40 @@ public sealed class ProjectStructureAttachmentPreviewDialogTests
 
     private sealed class StaticContentSource(string mediaType, string? content = null) : IFileContentSource
     {
+        private int readCount;
+
+        public int ReadCount => Volatile.Read(ref readCount);
+
         public ValueTask<FileContentLease> OpenReadAsync(
             FileContentReadRequest request,
             CancellationToken cancellationToken = default)
         {
+            Interlocked.Increment(ref readCount);
             byte[] bytes = content is null ? [1, 2, 3] : Encoding.UTF8.GetBytes(content);
             return ValueTask.FromResult(new FileContentLease(
                 new MemoryStream(bytes),
                 mediaType,
                 bytes.LongLength));
+        }
+    }
+
+    private sealed class UnknownLengthContentSource(long availableBytes) : IFileContentSource
+    {
+        public long? RequestedLength { get; private set; }
+
+        public long BytesRead { get; private set; }
+
+        public ValueTask<FileContentLease> OpenReadAsync(
+            FileContentReadRequest request,
+            CancellationToken cancellationToken = default)
+        {
+            RequestedLength = request.Length;
+            return ValueTask.FromResult(new FileContentLease(
+                new FixedLengthReadStream(
+                    availableBytes,
+                    read => BytesRead += read),
+                "text/plain",
+                length: null));
         }
     }
 
@@ -437,6 +576,63 @@ public sealed class ProjectStructureAttachmentPreviewDialogTests
         {
             onRead();
             return base.ReadAsync(buffer, cancellationToken);
+        }
+    }
+
+    private sealed class FixedLengthReadStream(long length, Action<int> onRead) : Stream
+    {
+        private long position;
+
+        public override bool CanRead => true;
+
+        public override bool CanSeek => false;
+
+        public override bool CanWrite => false;
+
+        public override long Length => throw new NotSupportedException();
+
+        public override long Position
+        {
+            get => throw new NotSupportedException();
+            set => throw new NotSupportedException();
+        }
+
+        public override int Read(byte[] buffer, int offset, int count)
+            => ReadCore(buffer.AsSpan(offset, count));
+
+        public override ValueTask<int> ReadAsync(
+            Memory<byte> buffer,
+            CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            return ValueTask.FromResult(ReadCore(buffer.Span));
+        }
+
+        public override void Flush()
+        {
+        }
+
+        public override long Seek(long offset, SeekOrigin origin)
+            => throw new NotSupportedException();
+
+        public override void SetLength(long value)
+            => throw new NotSupportedException();
+
+        public override void Write(byte[] buffer, int offset, int count)
+            => throw new NotSupportedException();
+
+        private int ReadCore(Span<byte> buffer)
+        {
+            int count = (int)Math.Min(buffer.Length, length - position);
+            if (count == 0)
+            {
+                return 0;
+            }
+
+            buffer[..count].Fill((byte)'A');
+            position += count;
+            onRead(count);
+            return count;
         }
     }
 
