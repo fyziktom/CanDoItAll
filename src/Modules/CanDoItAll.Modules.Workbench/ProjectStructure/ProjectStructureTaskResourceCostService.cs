@@ -1,9 +1,4 @@
-using CanDoItAll.AgentFramework.Models;
-using CanDoItAll.AgentFramework.Workflows.Abstractions;
 using CanDoItAll.Modules.Projects;
-using CanDoItAll.Processes.Abstractions;
-using CanDoItAll.Processes.Application;
-using CanDoItAll.Processes.Projections;
 
 namespace CanDoItAll.Modules.Workbench;
 
@@ -11,6 +6,48 @@ public enum ProjectStructureTaskResourceCostQuoteStatus
 {
     Available,
     Unavailable
+}
+
+public enum ProjectStructureTaskResourceCostSource
+{
+    Unknown,
+    CrmWorkforceRate,
+    AgentRunHistory,
+    WorkflowRunHistory,
+    ProcessRunHistory
+}
+
+public static class ProjectStructureTaskResourceCostSourcePolicy
+{
+    public static ProjectStructureTaskResourceCostSource RequireFor(
+        ProjectStructureTaskResourceKind resourceKind)
+        => resourceKind switch
+        {
+            ProjectStructureTaskResourceKind.Person =>
+                ProjectStructureTaskResourceCostSource.CrmWorkforceRate,
+            ProjectStructureTaskResourceKind.Agent =>
+                ProjectStructureTaskResourceCostSource.AgentRunHistory,
+            ProjectStructureTaskResourceKind.Workflow =>
+                ProjectStructureTaskResourceCostSource.WorkflowRunHistory,
+            ProjectStructureTaskResourceKind.Process =>
+                ProjectStructureTaskResourceCostSource.ProcessRunHistory,
+            _ => throw new ArgumentOutOfRangeException(
+                nameof(resourceKind),
+                resourceKind,
+                "Task resource kind is not defined.")
+        };
+
+    public static void Validate(
+        ProjectStructureTaskResourceKind resourceKind,
+        ProjectStructureTaskResourceCostSource source)
+    {
+        var expected = RequireFor(resourceKind);
+        if (source != expected)
+        {
+            throw new InvalidOperationException(
+                $"Task resource kind '{resourceKind}' requires cost source '{expected}'.");
+        }
+    }
 }
 
 public sealed record ProjectStructureTaskResourceCostRequest(
@@ -24,31 +61,48 @@ public sealed record ProjectStructureTaskResourceCostQuote(
     string CurrencyCode,
     string Source,
     string Summary,
-    DateTimeOffset CalculatedAtUtc)
+    DateTimeOffset CalculatedAtUtc,
+    ProjectStructureTaskResourceCostSource SourceKind)
 {
     public bool IsAvailable => Status == ProjectStructureTaskResourceCostQuoteStatus.Available && Amount.HasValue;
 
     public static ProjectStructureTaskResourceCostQuote Unavailable(
         string source,
         string summary,
-        DateTimeOffset calculatedAtUtc)
+        DateTimeOffset calculatedAtUtc,
+        ProjectStructureTaskResourceCostSource sourceKind)
         => new(
             ProjectStructureTaskResourceCostQuoteStatus.Unavailable,
             null,
             string.Empty,
             source,
             summary,
-            calculatedAtUtc);
+            calculatedAtUtc,
+            sourceKind);
 }
 
-public sealed class ProjectStructureTaskResourceCostService(
-    IProjectPartyCostRateBridge partyCostRateBridge,
-    IWorkflowRunStore workflowRunStore,
-    IWorkflowUsageAnalyticsStore workflowUsageAnalyticsStore,
-    ProcessDefinitionCatalogProjectionService processDefinitionCatalogService,
-    IProcessHistoricalRunCostReader processHistoricalRunCostReader,
-    TimeProvider timeProvider)
+public interface IProjectStructureTaskResourceCostStrategy
 {
+    ProjectStructureTaskResourceKind Kind { get; }
+
+    Task<ProjectStructureTaskResourceCostQuote> GetQuoteAsync(
+        ProjectStructureTaskResourceCostRequest request,
+        CancellationToken cancellationToken = default);
+}
+
+public sealed class ProjectStructureTaskResourceCostService
+{
+    private readonly IReadOnlyDictionary<
+        ProjectStructureTaskResourceKind,
+        IProjectStructureTaskResourceCostStrategy> strategies;
+
+    public ProjectStructureTaskResourceCostService(
+        IEnumerable<IProjectStructureTaskResourceCostStrategy> strategies)
+    {
+        ArgumentNullException.ThrowIfNull(strategies);
+        this.strategies = BuildStrategyMap(strategies);
+    }
+
     public async Task<ProjectStructureTaskResourceCostQuote> GetQuoteAsync(
         ProjectStructureTaskResourceCostRequest request,
         CancellationToken cancellationToken = default)
@@ -60,152 +114,83 @@ public sealed class ProjectStructureTaskResourceCostService(
         }
 
         ArgumentNullException.ThrowIfNull(request.Resource);
-        var estimate = ProjectTaskEstimatePolicy.ValidateAndNormalize(request.Estimate);
-        return request.Resource.Kind switch
+        ProjectStructureTaskResourceSelectionPolicy.Validate(request.Resource);
+
+        var normalizedRequest = request with
         {
-            ProjectStructureTaskResourceKind.Person or ProjectStructureTaskResourceKind.Agent =>
-                await QuotePartyAsync(request.Resource, estimate, cancellationToken),
-            ProjectStructureTaskResourceKind.Workflow =>
-                await QuoteWorkflowAsync(request.Resource, cancellationToken),
-            ProjectStructureTaskResourceKind.Process =>
-                await QuoteProcessAsync(request.Resource, cancellationToken),
-            _ => throw new ArgumentOutOfRangeException(
-                nameof(request),
-                request.Resource.Kind,
-                "Unknown task resource kind.")
+            Estimate = ProjectTaskEstimatePolicy.ValidateAndNormalize(request.Estimate)
         };
+        if (!strategies.TryGetValue(request.Resource.Kind, out var strategy))
+        {
+            throw new InvalidOperationException(
+                $"No task resource cost strategy is registered for resource kind '{request.Resource.Kind}'.");
+        }
+
+        var quote = await strategy.GetQuoteAsync(normalizedRequest, cancellationToken);
+        ValidateQuote(normalizedRequest.Resource.Kind, quote);
+        return quote;
     }
 
-    private async Task<ProjectStructureTaskResourceCostQuote> QuotePartyAsync(
-        ProjectStructureTaskResourceSelection resource,
-        ProjectTaskEstimate estimate,
-        CancellationToken cancellationToken)
+    private static IReadOnlyDictionary<
+        ProjectStructureTaskResourceKind,
+        IProjectStructureTaskResourceCostStrategy> BuildStrategyMap(
+        IEnumerable<IProjectStructureTaskResourceCostStrategy> strategies)
     {
-        var calculatedAtUtc = timeProvider.GetUtcNow();
-        var costRate = await partyCostRateBridge.GetInternalCostRateAsync(resource.ResourceId, cancellationToken);
-        if (costRate is null)
+        var strategyMap = new Dictionary<
+            ProjectStructureTaskResourceKind,
+            IProjectStructureTaskResourceCostStrategy>();
+        foreach (var strategy in strategies)
         {
-            return ProjectStructureTaskResourceCostQuote.Unavailable(
-                "CRM workforce rate",
-                "This resource has no internal cost rate. Add one in CRM workforce or enter the task cost manually.",
-                calculatedAtUtc);
+            ArgumentNullException.ThrowIfNull(strategy);
+            if (!Enum.IsDefined(strategy.Kind))
+            {
+                throw new InvalidOperationException(
+                    $"Task resource cost strategy '{strategy.GetType().FullName}' declares unknown resource kind '{strategy.Kind}'.");
+            }
+
+            if (!strategyMap.TryAdd(strategy.Kind, strategy))
+            {
+                throw new InvalidOperationException(
+                    $"Multiple task resource cost strategies are registered for resource kind '{strategy.Kind}'.");
+            }
         }
 
-        if (!estimate.ExpectedEffortHours.HasValue)
-        {
-            return ProjectStructureTaskResourceCostQuote.Unavailable(
-                "CRM workforce rate",
-                "Enter the task's pure effort before calculating its resource cost.",
-                calculatedAtUtc);
-        }
-
-        var quantity = costRate.Unit switch
-        {
-            ProjectResourceRateUnit.Hour => estimate.ExpectedEffortHours.Value,
-            ProjectResourceRateUnit.ManDay => estimate.ExpectedEffortHours.Value / ProjectTaskEstimatePolicy.DefaultHoursPerManDay,
-            _ => throw new ArgumentOutOfRangeException(nameof(costRate), costRate.Unit, "Unknown workforce rate unit.")
-        };
-        var amount = decimal.Round(quantity * costRate.Rate, 2, MidpointRounding.AwayFromZero);
-        var unitLabel = costRate.Unit == ProjectResourceRateUnit.Hour ? "hour" : "man-day";
-        return new ProjectStructureTaskResourceCostQuote(
-            ProjectStructureTaskResourceCostQuoteStatus.Available,
-            amount,
-            costRate.CurrencyCode,
-            "CRM workforce rate",
-            $"Calculated from {quantity:0.##} {unitLabel}(s) at {costRate.CurrencyCode} {costRate.Rate:0.##} per {unitLabel}.",
-            calculatedAtUtc);
+        return strategyMap;
     }
 
-    private async Task<ProjectStructureTaskResourceCostQuote> QuoteWorkflowAsync(
-        ProjectStructureTaskResourceSelection resource,
-        CancellationToken cancellationToken)
+    private static void ValidateQuote(
+        ProjectStructureTaskResourceKind resourceKind,
+        ProjectStructureTaskResourceCostQuote quote)
     {
-        var calculatedAtUtc = timeProvider.GetUtcNow();
-        WorkflowVersionId? versionId = resource.VersionId.HasValue
-            ? new WorkflowVersionId(resource.VersionId.Value)
-            : null;
-        var runPage = await workflowRunStore.ListRunPageAsync(
-            new WorkflowRunPageRequest(
-                WorkflowId: new WorkflowId(resource.ResourceId),
-                State: WorkflowRunState.Completed,
-                PageSize: 5,
-                VersionId: versionId,
-                IncludeTotalCount: false),
-            cancellationToken);
-        if (runPage.Items.Count == 0)
+        ArgumentNullException.ThrowIfNull(quote);
+        if (!Enum.IsDefined(quote.Status))
         {
-            return ProjectStructureTaskResourceCostQuote.Unavailable(
-                "Workflow run history",
-                "No completed run is available for the selected workflow version.",
-                calculatedAtUtc);
+            throw new InvalidOperationException(
+                $"Task resource cost strategy returned unknown quote status '{quote.Status}'.");
         }
 
-        var runIds = runPage.Items.Select(static run => run.RunId).ToArray();
-        var usageSnapshot = await workflowUsageAnalyticsStore.AggregateAsync(
-            new WorkflowUsageAnalyticsStoreQuery(runIds),
-            cancellationToken);
-        var pricedRuns = runIds
-            .Select(runId => usageSnapshot.Runs.GetValueOrDefault(runId) ?? WorkflowUsageAnalyticsTotals.Empty)
-            .Where(static usage => usage.PricingKnownObservationCount > 0)
-            .ToArray();
-        if (pricedRuns.Length == 0)
+        ProjectStructureTaskResourceCostSourcePolicy.Validate(resourceKind, quote.SourceKind);
+        if (string.IsNullOrWhiteSpace(quote.Source) ||
+            string.IsNullOrWhiteSpace(quote.Summary))
         {
-            return ProjectStructureTaskResourceCostQuote.Unavailable(
-                "Workflow run history",
-                "No completed workflow run has resolvable usage pricing yet. Enter a manual cost or refresh after a priced run completes.",
-                calculatedAtUtc);
+            throw new InvalidOperationException(
+                "Task resource cost strategy must identify and summarize its authoritative source.");
         }
 
-        var averageCost = decimal.Round(
-            pricedRuns.Sum(static usage => usage.KnownCostUsd) / pricedRuns.Length,
-            2,
-            MidpointRounding.AwayFromZero);
-        return new ProjectStructureTaskResourceCostQuote(
-            ProjectStructureTaskResourceCostQuoteStatus.Available,
-            averageCost,
-            "USD",
-            "Workflow run history",
-            $"Average known usage cost from {pricedRuns.Length} priced run(s) out of {runPage.Items.Count} recent completed run(s) for the selected workflow version.",
-            calculatedAtUtc);
-    }
-
-    private async Task<ProjectStructureTaskResourceCostQuote> QuoteProcessAsync(
-        ProjectStructureTaskResourceSelection resource,
-        CancellationToken cancellationToken)
-    {
-        var calculatedAtUtc = timeProvider.GetUtcNow();
-        var definitionId = new ProcessDefinitionId(resource.ResourceId);
-        var definitionKey = processDefinitionCatalogService.ResolveDefinitionKey(definitionId);
-        if (string.IsNullOrWhiteSpace(definitionKey))
+        if (quote.Status == ProjectStructureTaskResourceCostQuoteStatus.Available &&
+            (!quote.Amount.HasValue ||
+             quote.Amount.Value < 0m ||
+             string.IsNullOrWhiteSpace(quote.CurrencyCode)))
         {
-            return ProjectStructureTaskResourceCostQuote.Unavailable(
-                "Process run history",
-                "The selected process definition is no longer available.",
-                calculatedAtUtc);
+            throw new InvalidOperationException(
+                "An available task resource cost quote requires a non-negative amount and currency.");
         }
 
-        var estimate = await processHistoricalRunCostReader.ReadAsync(
-            new ProcessHistoricalRunCostQuery(
-                definitionId,
-                definitionKey,
-                calculatedAtUtc),
-            cancellationToken);
-        if (!estimate.HasActualCost)
+        if (quote.Status == ProjectStructureTaskResourceCostQuoteStatus.Unavailable &&
+            (quote.Amount.HasValue || !string.IsNullOrWhiteSpace(quote.CurrencyCode)))
         {
-            return ProjectStructureTaskResourceCostQuote.Unavailable(
-                "Process run history",
-                estimate.CompletedRunCount == 0
-                    ? "No completed process run is available for a historical price estimate."
-                    : $"{estimate.CompletedRunCount} completed process run(s) were found, but none has resolvable usage pricing.",
-                calculatedAtUtc);
+            throw new InvalidOperationException(
+                "An unavailable task resource cost quote cannot contain an amount or currency.");
         }
-
-        return new ProjectStructureTaskResourceCostQuote(
-            ProjectStructureTaskResourceCostQuoteStatus.Available,
-            decimal.Round(estimate.AverageActualCostUsd, 2, MidpointRounding.AwayFromZero),
-            "USD",
-            "Process run history",
-            $"Average actual usage cost from {estimate.PricedRunCount} priced run(s) out of {estimate.CompletedRunCount} recent completed run(s).",
-            calculatedAtUtc);
     }
 }

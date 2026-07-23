@@ -1,0 +1,180 @@
+@namespace CanDoItAll.Modules.Workbench.Pages
+@using System.Globalization
+@using CanDoItAll.Components.BaseLib
+
+<Stack GapScale="LayoutGap.Small"
+       AlignItems="AlignItems.Stretch"
+       data-testid="@DataTestId">
+    <FormField Text="Execution state">
+        <select class="project-structure-task-execution-editor__input"
+                aria-label="Task execution state"
+                data-testid="@($"{DataTestId}-state")"
+                value="@state"
+                @onchange="HandleStateChanged">
+            @foreach (var option in Enum.GetValues<ProjectTaskExecutionState>())
+            {
+                if (ProjectTaskExecutionStatePolicy.CanTransition(Value.State, option))
+                {
+                    <option value="@option">@ResolveStateLabel(option)</option>
+                }
+            }
+        </select>
+    </FormField>
+
+    @if (state is ProjectTaskExecutionState.Started or
+         ProjectTaskExecutionState.Completed or
+         ProjectTaskExecutionState.Cancelled)
+    {
+        <Grid ColumnTemplate="repeat(2,minmax(0,1fr))"
+              Gap="LayoutGap.Medium">
+            <FormField Text="Actual start (UTC)">
+                <input type="datetime-local"
+                       class="project-structure-task-execution-editor__input"
+                       value="@FormatDateTimeLocal(actualStartedAtUtc)"
+                       aria-label="Task actual start in UTC"
+                       data-testid="@($"{DataTestId}-started")"
+                       @onchange="HandleStartedAtChanged" />
+            </FormField>
+
+            @if (state is ProjectTaskExecutionState.Completed or ProjectTaskExecutionState.Cancelled)
+            {
+                <FormField Text="Actual end (UTC)">
+                    <input type="datetime-local"
+                           class="project-structure-task-execution-editor__input"
+                           value="@FormatDateTimeLocal(actualEndedAtUtc)"
+                           aria-label="Task actual end in UTC"
+                           data-testid="@($"{DataTestId}-ended")"
+                           @onchange="HandleEndedAtChanged" />
+                </FormField>
+            }
+        </Grid>
+    }
+
+    @if (state == ProjectTaskExecutionState.Unknown)
+    {
+        <Alert AlertStyle="AlertStyle.Info"
+               data-testid="@($"{DataTestId}-unknown")">
+            This legacy task has no authoritative execution state. Select “Not started” only when you have confirmed that work has not begun; automatic repricing remains disabled while the state is unknown.
+        </Alert>
+    }
+</Stack>
+
+@code {
+    private const string DateTimeLocalFormat = "yyyy-MM-ddTHH:mm";
+    private bool initialized;
+    private ProjectTaskExecutionState state;
+    private DateTimeOffset? actualStartedAtUtc;
+    private DateTimeOffset? actualEndedAtUtc;
+
+    [Parameter, EditorRequired]
+    public ProjectTaskExecutionSnapshot Value { get; set; } = ProjectTaskExecutionSnapshot.Unknown;
+
+    [Parameter]
+    public EventCallback<ProjectTaskExecutionSnapshot> ValueChanged { get; set; }
+
+    [Parameter]
+    public string DataTestId { get; set; } = "project-structure-task-execution";
+
+    protected override void OnParametersSet()
+    {
+        if (initialized)
+        {
+            return;
+        }
+
+        initialized = true;
+        state = Value.State;
+        actualStartedAtUtc = Value.ActualStartedAtUtc;
+        actualEndedAtUtc = Value.ActualEndedAtUtc;
+    }
+
+    public bool TryGetValue(
+        out ProjectTaskExecutionSnapshot value,
+        out string validationError)
+    {
+        value = new ProjectTaskExecutionSnapshot(
+            state,
+            actualStartedAtUtc,
+            actualEndedAtUtc);
+        try
+        {
+            ProjectTaskExecutionStatePolicy.ValidateTransition(Value.State, value.State);
+            ProjectTaskExecutionStatePolicy.Validate(
+                value.State,
+                value.ActualStartedAtUtc,
+                value.ActualEndedAtUtc);
+            validationError = string.Empty;
+            return true;
+        }
+        catch (Exception exception) when (exception is InvalidOperationException or ArgumentOutOfRangeException)
+        {
+            validationError = exception.Message;
+            return false;
+        }
+    }
+
+    private async Task HandleStateChanged(ChangeEventArgs args)
+    {
+        if (!Enum.TryParse<ProjectTaskExecutionState>(args.Value?.ToString(), out var proposed) ||
+            !ProjectTaskExecutionStatePolicy.CanTransition(Value.State, proposed))
+        {
+            return;
+        }
+
+        state = proposed;
+        if (state is ProjectTaskExecutionState.Unknown or ProjectTaskExecutionState.NotStarted)
+        {
+            actualStartedAtUtc = null;
+            actualEndedAtUtc = null;
+        }
+        else if (state == ProjectTaskExecutionState.Started)
+        {
+            actualEndedAtUtc = null;
+        }
+
+        await NotifyChangedAsync();
+    }
+
+    private async Task HandleStartedAtChanged(ChangeEventArgs args)
+    {
+        actualStartedAtUtc = ParseUtc(args.Value);
+        await NotifyChangedAsync();
+    }
+
+    private async Task HandleEndedAtChanged(ChangeEventArgs args)
+    {
+        actualEndedAtUtc = ParseUtc(args.Value);
+        await NotifyChangedAsync();
+    }
+
+    private Task NotifyChangedAsync()
+        => ValueChanged.InvokeAsync(new ProjectTaskExecutionSnapshot(
+            state,
+            actualStartedAtUtc,
+            actualEndedAtUtc));
+
+    private static DateTimeOffset? ParseUtc(object? value)
+    {
+        return DateTimeOffset.TryParse(
+            value?.ToString(),
+            CultureInfo.InvariantCulture,
+            DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal,
+            out var parsed)
+            ? parsed.ToUniversalTime()
+            : null;
+    }
+
+    private static string FormatDateTimeLocal(DateTimeOffset? value)
+        => value?.ToUniversalTime().ToString(DateTimeLocalFormat, CultureInfo.InvariantCulture) ?? string.Empty;
+
+    private static string ResolveStateLabel(ProjectTaskExecutionState value)
+        => value switch
+        {
+            ProjectTaskExecutionState.Unknown => "Unknown (legacy)",
+            ProjectTaskExecutionState.NotStarted => "Not started",
+            ProjectTaskExecutionState.Started => "Started",
+            ProjectTaskExecutionState.Completed => "Completed",
+            ProjectTaskExecutionState.Cancelled => "Cancelled",
+            _ => throw new ArgumentOutOfRangeException(nameof(value), value, "Task execution state is not defined.")
+        };
+}

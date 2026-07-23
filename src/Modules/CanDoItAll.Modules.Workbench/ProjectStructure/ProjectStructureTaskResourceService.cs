@@ -7,6 +7,11 @@ using CanDoItAll.SharedKernel;
 
 namespace CanDoItAll.Modules.Workbench;
 
+internal sealed record ProjectStructureTaskResourceAttachment(
+    ProjectStructureTaskResourceKind Kind,
+    string? CreatedNodeId,
+    string? LinkTargetNodeId);
+
 public sealed class ProjectStructureTaskResourceService(
     ProjectStructureWorkItemAssigneeService workItemAssigneeService,
     IWorkflowCatalogService workflowCatalogService,
@@ -28,11 +33,19 @@ public sealed class ProjectStructureTaskResourceService(
         var workflowsTask = workflowCatalogService.ListDefinitionsAsync(cancellationToken);
         var processesTask = LoadProcessCatalogAsync(projectId, cancellationToken);
         await Task.WhenAll(partiesTask, workflowsTask, processesTask);
+        var workflowHeads = await workflowsTask;
+        var activeWorkflowDetails = await Task.WhenAll(
+            workflowHeads.Select(workflow =>
+                workflowCatalogService.GetLatestDefinitionByStatusAsync(
+                    workflow.Id,
+                    WorkflowLifecycleStatus.Active,
+                    cancellationToken)));
 
         var options = new List<ProjectStructureTaskResourceOption>();
         options.AddRange(await partiesTask);
-        options.AddRange((await workflowsTask)
-            .Where(workflow => workflow.Status == WorkflowLifecycleStatus.Active)
+        options.AddRange(activeWorkflowDetails
+            .Where(static detail => detail is not null)
+            .Select(static detail => detail!.Definition)
             .Select(workflow => new ProjectStructureTaskResourceOption(
                 ProjectStructureTaskResourceKind.Workflow,
                 workflow.Id.Value,
@@ -59,7 +72,7 @@ public sealed class ProjectStructureTaskResourceService(
             .ToList();
     }
 
-    public async Task AttachAsync(
+    internal async Task<ProjectStructureTaskResourceAttachment> AttachAsync(
         Guid projectId,
         string taskNodeId,
         ProjectStructureTaskResourceSelection selection,
@@ -70,7 +83,7 @@ public sealed class ProjectStructureTaskResourceService(
         ArgumentException.ThrowIfNullOrWhiteSpace(taskNodeId);
         ArgumentNullException.ThrowIfNull(selection);
         ArgumentNullException.ThrowIfNull(agent);
-        ValidateSelection(selection);
+        ProjectStructureTaskResourceSelectionPolicy.Validate(selection);
         await EnsureCanonicalTaskAsync(projectId, taskNodeId, cancellationToken);
 
         switch (selection.Kind)
@@ -83,13 +96,24 @@ public sealed class ProjectStructureTaskResourceService(
                     selection,
                     AssignmentSource,
                     cancellationToken);
-                return;
+                return new ProjectStructureTaskResourceAttachment(
+                    selection.Kind,
+                    CreatedNodeId: null,
+                    LinkTargetNodeId: null);
             case ProjectStructureTaskResourceKind.Workflow:
-                await AttachWorkflowAsync(projectId, taskNodeId, selection, agent, cancellationToken);
-                return;
+                return await AttachWorkflowAsync(
+                    projectId,
+                    taskNodeId,
+                    selection,
+                    agent,
+                    cancellationToken);
             case ProjectStructureTaskResourceKind.Process:
-                await AttachProcessAsync(projectId, taskNodeId, selection, agent, cancellationToken);
-                return;
+                return await AttachProcessAsync(
+                    projectId,
+                    taskNodeId,
+                    selection,
+                    agent,
+                    cancellationToken);
             default:
                 throw new ProjectStructureAgentException(
                     400,
@@ -98,7 +122,62 @@ public sealed class ProjectStructureTaskResourceService(
         }
     }
 
-    private Task AttachWorkflowAsync(
+    internal async Task DetachAsync(
+        Guid projectId,
+        string taskNodeId,
+        ProjectStructureTaskResourceAttachment attachment,
+        ProjectStructureAgentContext agent,
+        CancellationToken cancellationToken = default)
+    {
+        EnsureProjectId(projectId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(taskNodeId);
+        ArgumentNullException.ThrowIfNull(attachment);
+        ArgumentNullException.ThrowIfNull(agent);
+
+        switch (attachment.Kind)
+        {
+            case ProjectStructureTaskResourceKind.Workflow:
+                if (string.IsNullOrWhiteSpace(attachment.CreatedNodeId))
+                {
+                    throw new InvalidOperationException(
+                        "The workflow attachment receipt does not identify its created node.");
+                }
+
+                var deletedCount = await agentService.DeleteCanonicalTaskResourceAsync(
+                    projectId,
+                    attachment.CreatedNodeId,
+                    agent,
+                    cancellationToken);
+                if (deletedCount > 1)
+                {
+                    throw new InvalidOperationException(
+                        $"Workflow attachment rollback removed an unexpected {deletedCount} nodes.");
+                }
+
+                return;
+            case ProjectStructureTaskResourceKind.Process:
+                if (string.IsNullOrWhiteSpace(attachment.LinkTargetNodeId))
+                {
+                    throw new InvalidOperationException(
+                        "The process attachment receipt does not identify its link target.");
+                }
+
+                await agentService.UnlinkCanonicalTaskResourceAsync(
+                    projectId,
+                    new ProjectStructureLinkInput(
+                        taskNodeId,
+                        attachment.LinkTargetNodeId,
+                        ProjectObjectLinkKind.Uses),
+                    agent,
+                    cancellationToken);
+                return;
+            default:
+                throw new InvalidOperationException(
+                    $"Resource kind '{attachment.Kind}' does not support attachment compensation.");
+        }
+    }
+
+    private async Task<ProjectStructureTaskResourceAttachment> AttachWorkflowAsync(
         Guid projectId,
         string taskNodeId,
         ProjectStructureTaskResourceSelection selection,
@@ -108,7 +187,7 @@ public sealed class ProjectStructureTaskResourceService(
         WorkflowVersionId? versionId = selection.VersionId.HasValue
             ? new WorkflowVersionId(selection.VersionId.Value)
             : null;
-        return workflowNodeService.CreateAsync(
+        var result = await workflowNodeService.CreateForCanonicalTaskAsync(
             projectId,
             taskNodeId,
             new ProjectStructureWorkflowNodeCreateInput(
@@ -116,9 +195,13 @@ public sealed class ProjectStructureTaskResourceService(
                 versionId),
             agent,
             cancellationToken);
+        return new ProjectStructureTaskResourceAttachment(
+            ProjectStructureTaskResourceKind.Workflow,
+            result.Node.Id,
+            LinkTargetNodeId: null);
     }
 
-    private async Task AttachProcessAsync(
+    private async Task<ProjectStructureTaskResourceAttachment> AttachProcessAsync(
         Guid projectId,
         string taskNodeId,
         ProjectStructureTaskResourceSelection selection,
@@ -136,12 +219,16 @@ public sealed class ProjectStructureTaskResourceService(
                 $"Process definition '{selection.ResourceId:D}' is not available for project '{projectId:D}'.");
         }
 
-        await agentService.LinkProcessDefinitionAsync(
+        var link = await agentService.LinkCanonicalTaskProcessDefinitionAsync(
             projectId,
             taskNodeId,
             new ProjectStructureProcessDefinitionLinkInput(selection.ResourceId),
             agent,
             cancellationToken);
+        return new ProjectStructureTaskResourceAttachment(
+            ProjectStructureTaskResourceKind.Process,
+            CreatedNodeId: null,
+            link.Link.TargetId);
     }
 
     private async Task EnsureCanonicalTaskAsync(
@@ -174,35 +261,6 @@ public sealed class ProjectStructureTaskResourceService(
         return processDefinitionCatalogService.GetCompleteCatalogItemsAsync(
             ProcessWorkspaceShellScope.ForProject(projectId),
             cancellationToken: cancellationToken);
-    }
-
-    private static void ValidateSelection(ProjectStructureTaskResourceSelection selection)
-    {
-        if (!Enum.IsDefined(selection.Kind))
-        {
-            throw new ProjectStructureAgentException(
-                400,
-                "TaskResourceKindInvalid",
-                $"Task resource kind '{selection.Kind}' is not supported.");
-        }
-
-        if (selection.ResourceId == Guid.Empty)
-        {
-            throw new ProjectStructureAgentException(400, "TaskResourceRequired", "A task resource id is required.");
-        }
-
-        if (selection.VersionId == Guid.Empty)
-        {
-            throw new ProjectStructureAgentException(400, "TaskResourceVersionInvalid", "A resource version id cannot be empty.");
-        }
-
-        if (selection.Kind != ProjectStructureTaskResourceKind.Workflow && selection.VersionId.HasValue)
-        {
-            throw new ProjectStructureAgentException(
-                400,
-                "TaskResourceVersionNotSupported",
-                $"Resource kind '{selection.Kind}' does not support a version id.");
-        }
     }
 
     private static void EnsureProjectId(Guid projectId)

@@ -43,7 +43,8 @@ public sealed record ProjectStructureTaskCreateRequest(
 public sealed record ProjectStructureTaskCreateResult(
     string TaskNodeId,
     string BacklogNodeId,
-    ProjectStructureTaskResourceSelection? AttachedResource);
+    ProjectStructureTaskResourceSelection? AttachedResource,
+    ProjectStructureTaskEstimateRefreshResult Pricing);
 
 public enum ProjectStructureTaskCreationFailureStage
 {

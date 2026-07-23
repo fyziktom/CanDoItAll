@@ -11,6 +11,7 @@ using CanDoItAll.FileTools.FileInteraction.Markdown;
 using CanDoItAll.FileTools.Integration;
 using CanDoItAll.Memory.Application;
 using CanDoItAll.Modules.Projects;
+using CanDoItAll.Modules.Workbench.Pages;
 using CanDoItAll.Modules.Workbench.CanvasAdapters;
 using CanDoItAll.Modules.Workspace;
 using CanDoItAll.Processes.Application;
@@ -59,10 +60,33 @@ public static class WorkbenchModuleServiceCollectionExtensions
         services.AddScoped<ProjectStructureImportService>();
         services.AddScoped<ProjectStructureWorkItemAssigneeService>();
         services.AddScoped<ProjectStructureTaskResourceService>();
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<
+            IProjectStructureTaskResourceCostStrategy,
+            ProjectStructurePersonTaskResourceCostStrategy>());
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<
+            IProjectStructureTaskResourceCostStrategy,
+            ProjectStructureWorkflowTaskResourceCostStrategy>());
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<
+            IProjectStructureTaskResourceCostStrategy,
+            ProjectStructureProcessTaskResourceCostStrategy>());
         services.AddScoped<ProjectStructureTaskResourceCostService>();
+        services.AddScoped<ProjectStructureTaskEstimateRefreshService>();
+        services.AddScoped<
+            ProjectStructureWorkItemAssignmentRevisionService>();
+        services.Replace(ServiceDescriptor.Scoped<
+            IProjectWorkItemAssignmentMutationBridge>(
+            serviceProvider => serviceProvider.GetRequiredService<
+                ProjectStructureWorkItemAssignmentRevisionService>()));
+        services.AddScoped<ProjectStructureTaskEditCompensationService>();
+        services.AddScoped<ProjectStructureTaskApplicationService>();
+        services.AddScoped<ProjectStructureTaskPricingCommitService>();
+        services.AddScoped<ProjectStructureTaskPricingPersistenceService>();
+        services.AddScoped<ProjectStructureTaskResourceAttachmentService>();
         services.AddScoped<ProjectStructureGanttRowOrderService>();
         services.AddScoped<ProjectStructureTaskCreationService>();
         services.AddScoped<ProjectStructureTaskDetailsService>();
+        services.AddScoped<ProjectStructureGanttTaskEditCoordinator>();
+        services.AddScoped<ProjectStructureCanvasTaskDialogCoordinator>();
         services.AddSingleton<ProjectStructureDeferredNodeCompletionQueue>();
         services.AddSingleton<IProjectStructureDeferredNodeCompletionQueue>(serviceProvider =>
             serviceProvider.GetRequiredService<ProjectStructureDeferredNodeCompletionQueue>());

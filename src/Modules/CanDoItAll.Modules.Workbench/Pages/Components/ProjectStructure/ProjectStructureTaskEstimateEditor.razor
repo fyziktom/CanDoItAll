@@ -54,6 +54,7 @@
                    min="0"
                    step="0.01"
                    value="@expectedCostAmountText"
+                   disabled="@ExpectedCostReadOnly"
                    aria-label="Expected task cost"
                    data-testid="@TestId("cost")"
                    @onchange="HandleExpectedCostChangedAsync" />
@@ -64,12 +65,15 @@
                      ValueChanged="HandleCurrencyChangedAsync"
                      Placeholder="@DefaultCurrencyCode"
                      Immediate="true"
+                     Disabled="@ExpectedCostReadOnly"
                      data-testid="@TestId("currency")" />
         </FormField>
     </Grid>
 
     <TextBlock TextStyle="TextStyle.Note"
-               Value="Delivery dates control the Gantt bar. Pure effort and expected cost are independent estimates." />
+               Value="@(ExpectedCostReadOnly
+                   ? "Pure effort remains editable. Expected cost is a historical snapshot and cannot be changed after execution has begun."
+                   : "Delivery dates control the Gantt bar. Pure effort and expected cost are independent estimates.")" />
 
     @if (!string.IsNullOrWhiteSpace(validationError))
     {
@@ -115,6 +119,9 @@
 
     [Parameter]
     public string DefaultCurrencyCode { get; set; } = string.Empty;
+
+    [Parameter]
+    public bool ExpectedCostReadOnly { get; set; }
 
     [Parameter]
     public string DataTestId { get; set; } = "project-structure-task-estimate";

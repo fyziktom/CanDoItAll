@@ -18,6 +18,7 @@ public sealed class ProjectStructureGanttTaskEditCoordinator(
     ProjectStructureTaskResourceService taskResourceService,
     ProjectStructureTaskResourceCostService taskResourceCostService,
     ProjectStructureTaskDetailsService taskDetailsService,
+    ProjectStructureTaskResourceAttachmentService taskResourceAttachmentService,
     DialogService dialogService,
     NotificationService notificationService,
     ICurrencyFormatter currencyFormatter,
@@ -44,11 +45,21 @@ public sealed class ProjectStructureGanttTaskEditCoordinator(
         }
 
         ProjectTaskEstimate estimate;
-        ProjectStructureTaskResourceSelection? assignee;
+        ProjectTaskExecutionSnapshot execution;
+        ProjectTaskExpectedCostBasis? expectedCostBasis;
+        long directAssignmentRevision;
+        ProjectStructureTaskAssigneeSelectionResult assigneeResolution;
         try
         {
-            estimate = ReadEstimate(taskNode);
-            assignee = ResolveAssignee(context.Assignments, taskId.Value);
+            var workItem = ProjectObjectMetadataSerializer.Parse(taskNode.MetadataJson).WorkItem;
+            estimate = ReadEstimate(workItem);
+            execution = ReadExecution(workItem);
+            expectedCostBasis = workItem?.ExpectedCostBasis;
+            directAssignmentRevision =
+                workItem?.DirectAssignmentRevision ?? 0;
+            assigneeResolution = ProjectStructureTaskAssigneeSelectionPolicy.Resolve(
+                context.Assignments,
+                taskId.Value);
         }
         catch (Exception exception) when (exception is InvalidOperationException or ProjectStructureTaskDetailsException)
         {
@@ -64,7 +75,7 @@ public sealed class ProjectStructureGanttTaskEditCoordinator(
         var (resourceOptions, resourceWarnings) = await LoadResourceOptionsAsync(
             context,
             taskId.Value,
-            assignee,
+            assigneeResolution.Representative,
             cancellationToken);
         var editModel = new ProjectStructureGanttTaskEditModel(
             taskId,
@@ -73,8 +84,12 @@ public sealed class ProjectStructureGanttTaskEditCoordinator(
             projectedTask.End,
             taskNode.ProgressPercent,
             estimate,
-            assignee,
-            context.Projection.IsProjectionOnly(projectedTask));
+            assigneeResolution.Representative,
+            context.Projection.IsProjectionOnly(projectedTask),
+            assigneeResolution.CanChangeDirectAssignee,
+            execution,
+            expectedCostBasis,
+            directAssignmentRevision);
         var result = await dialogService.OpenAsync<ProjectStructureGanttTaskDialog>(
             "Edit project task",
             new Dictionary<string, object?>
@@ -151,6 +166,7 @@ public sealed class ProjectStructureGanttTaskEditCoordinator(
             }
         }
 
+        var currentExecution = current.Execution ?? ProjectTaskExecutionSnapshot.Unknown;
         var request = new ProjectStructureTaskDetailsUpdateRequest(
             current.TaskId,
             current.Title,
@@ -161,30 +177,47 @@ public sealed class ProjectStructureGanttTaskEditCoordinator(
             proposed.Estimate,
             scheduleChange,
             proposed.AssigneeChanged,
-            proposed.Assignee);
+            proposed.Assignee,
+            currentExecution,
+            proposed.Execution ?? currentExecution,
+            current.ExpectedCostBasis,
+            current.DirectAssignmentRevision);
         var mutationCommitted = false;
+        ProjectStructureTaskEstimateRefreshResult? committedPricing = null;
         try
         {
-            var result = await taskDetailsService.UpdateAsync(context.ProjectId, request, cancellationToken);
+            var update = await taskDetailsService.UpdateWithPricingAsync(
+                context.ProjectId,
+                request,
+                cancellationToken);
+            committedPricing = update.Pricing;
             mutationCommitted = true;
             if (proposed.ResourceToAttach is not null)
             {
                 try
                 {
-                    await taskResourceService.AttachAsync(
+                    var attachmentResult = await taskResourceAttachmentService.AttachAfterTransitionAsync(
                         context.ProjectId,
                         current.TaskId.Value,
                         proposed.ResourceToAttach,
+                        currentExecution,
+                        proposed.Execution ?? currentExecution,
                         context.MutationOwner,
                         cancellationToken);
+                    committedPricing = attachmentResult.Pricing;
                 }
                 catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
                 {
+                    await TryReloadAfterPartialSaveAsync(
+                        context.ProjectId,
+                        current.TaskId.Value,
+                        proposed.ResourceToAttach.Kind,
+                        reloadAuthoritativeProject);
                     notificationService.Warning(
-                        "Task details saved; resource not attached",
-                        "The task changes were saved, but resource attachment was canceled. Reload the project before trying again.");
+                        "Task details partially saved",
+                        "The task changes were saved, but resource pricing or attachment was canceled. Any newly created attachment was rolled back; reload before trying again.");
                     logger.LogWarning(
-                        "Task details were committed before resource attachment was canceled. ProjectId={ProjectId} TaskId={TaskId} ResourceKind={ResourceKind}",
+                        "Task details were committed before resource attachment pricing completed. ProjectId={ProjectId} TaskId={TaskId} ResourceKind={ResourceKind}",
                         Mask(context.ProjectId),
                         Mask(current.TaskId.Value),
                         proposed.ResourceToAttach.Kind);
@@ -192,26 +225,30 @@ public sealed class ProjectStructureGanttTaskEditCoordinator(
                 }
                 catch (Exception exception)
                 {
-                    try
+                    await TryReloadAfterPartialSaveAsync(
+                        context.ProjectId,
+                        current.TaskId.Value,
+                        proposed.ResourceToAttach.Kind,
+                        reloadAuthoritativeProject);
+                    if (exception is ProjectStructureAgentException
+                        {
+                            ErrorCode: ProjectStructureTaskResourceAttachmentService.CompensationFailedErrorCode
+                        })
                     {
-                        await reloadAuthoritativeProject();
+                        notificationService.Error(
+                            "Task resource requires attention",
+                            exception.Message);
                     }
-                    catch (Exception reloadFailure)
+                    else
                     {
-                        logger.LogError(
-                            reloadFailure,
-                            "Task details were committed, resource attachment failed, and the authoritative project could not be reloaded. ProjectId={ProjectId} TaskId={TaskId} ResourceKind={ResourceKind}",
-                            Mask(context.ProjectId),
-                            Mask(current.TaskId.Value),
-                            proposed.ResourceToAttach.Kind);
+                        notificationService.Warning(
+                            "Task details partially saved",
+                            "The task changes were saved, but the selected workflow or process could not be priced and attached. Any newly created attachment was rolled back; reload before trying again.");
                     }
 
-                    notificationService.Warning(
-                        "Task details saved; resource not attached",
-                        "The task changes were saved, but the selected workflow or process could not be attached. Reload the project before trying again.");
                     logger.LogWarning(
                         exception,
-                        "Task details were committed but resource attachment failed. ProjectId={ProjectId} TaskId={TaskId} ResourceKind={ResourceKind} FailureType={FailureType}",
+                        "Task details were committed but attached-resource pricing did not complete. ProjectId={ProjectId} TaskId={TaskId} ResourceKind={ResourceKind} FailureType={FailureType}",
                         Mask(context.ProjectId),
                         Mask(current.TaskId.Value),
                         proposed.ResourceToAttach.Kind,
@@ -224,8 +261,8 @@ public sealed class ProjectStructureGanttTaskEditCoordinator(
             notificationService.Success(
                 "Task details saved",
                 proposed.ResourceToAttach is null
-                    ? $"{proposed.Title} was saved; {result.AffectedTaskIds.Count} project task(s) were affected."
-                    : $"{proposed.Title} was saved with its selected {proposed.ResourceToAttach.Kind.ToString().ToLowerInvariant()}; {result.AffectedTaskIds.Count} project task(s) were affected.");
+                    ? $"{proposed.Title} was saved; {update.Mutation.AffectedTaskIds.Count} project task(s) were affected.{BuildPricingSummary(committedPricing)}"
+                    : $"{proposed.Title} was saved with its selected {proposed.ResourceToAttach.Kind.ToString().ToLowerInvariant()}; {update.Mutation.AffectedTaskIds.Count} project task(s) were affected.{BuildPricingSummary(committedPricing)}");
         }
         catch (ProjectStructureGanttMutationException exception)
         {
@@ -263,7 +300,7 @@ public sealed class ProjectStructureGanttTaskEditCoordinator(
             {
                 notificationService.Warning(
                     "Task details saved; reload required",
-                    "The change was saved, but the authoritative project could not be reloaded. Reload this page before making another change.");
+                    $"The change was saved, but the authoritative project could not be reloaded.{BuildPricingSummary(committedPricing)} Reload this page before making another change.");
             }
             else
             {
@@ -278,6 +315,27 @@ public sealed class ProjectStructureGanttTaskEditCoordinator(
                 Mask(current.TaskId.Value),
                 mutationCommitted,
                 exception.GetType().Name);
+        }
+    }
+
+    private async Task TryReloadAfterPartialSaveAsync(
+        Guid projectId,
+        string taskNodeId,
+        ProjectStructureTaskResourceKind resourceKind,
+        Func<Task> reloadAuthoritativeProject)
+    {
+        try
+        {
+            await reloadAuthoritativeProject();
+        }
+        catch (Exception reloadFailure)
+        {
+            logger.LogError(
+                reloadFailure,
+                "Task details were partially saved and the authoritative project could not be reloaded. ProjectId={ProjectId} TaskId={TaskId} ResourceKind={ResourceKind}",
+                Mask(projectId),
+                Mask(taskNodeId),
+                resourceKind);
         }
     }
 
@@ -318,31 +376,27 @@ public sealed class ProjectStructureGanttTaskEditCoordinator(
             return true;
         }
 
+        try
+        {
+            ProjectStructureTaskResourceSelectionPolicy.Validate(resource);
+        }
+        catch (ProjectStructureAgentException exception)
+        {
+            validationError = exception.Message;
+            return false;
+        }
+
         if (resource.Kind is not (ProjectStructureTaskResourceKind.Workflow or ProjectStructureTaskResourceKind.Process))
         {
             validationError = "Only a workflow or process can be staged as an attached task resource.";
             return false;
         }
 
-        if (resource.ResourceId == Guid.Empty)
-        {
-            validationError = "Choose a workflow or process before saving the task.";
-            return false;
-        }
-
-        if (resource.VersionId == Guid.Empty ||
-            (resource.Kind == ProjectStructureTaskResourceKind.Process && resource.VersionId.HasValue))
-        {
-            validationError = "The selected workflow or process version is invalid.";
-            return false;
-        }
-
         return true;
     }
 
-    private static ProjectTaskEstimate ReadEstimate(ProjectStructureNode taskNode)
+    private static ProjectTaskEstimate ReadEstimate(ProjectWorkItemMetadata? workItem)
     {
-        var workItem = ProjectObjectMetadataSerializer.Parse(taskNode.MetadataJson).WorkItem;
         return workItem is null
             ? ProjectTaskEstimate.Empty()
             : ProjectTaskEstimatePolicy.ValidateAndNormalize(new ProjectTaskEstimate(
@@ -352,38 +406,18 @@ public sealed class ProjectStructureGanttTaskEditCoordinator(
                 workItem.ExpectedCostCurrencyCode));
     }
 
-    private static ProjectStructureTaskResourceSelection? ResolveAssignee(
-        IEnumerable<ProjectPartyAssignmentDetail> assignments,
-        string taskNodeId)
-    {
-        var taskAssignments = assignments
-            .Where(assignment =>
-                assignment.Role == ProjectPartyAssignmentRole.WorkItemAssignee &&
-                string.Equals(assignment.NodeKey, taskNodeId, StringComparison.Ordinal))
-            .ToArray();
-        if (taskAssignments.Length > 1)
-        {
-            throw new ProjectStructureTaskDetailsException(
-                ProjectStructureTaskDetailsErrorCode.AssignmentConflict,
-                "The task has multiple direct assignees. Resolve the assignment conflict before editing it from the Gantt chart.");
-        }
+    private static ProjectTaskExecutionSnapshot ReadExecution(ProjectWorkItemMetadata? workItem)
+        => workItem is null
+            ? ProjectTaskExecutionSnapshot.Unknown
+            : new ProjectTaskExecutionSnapshot(
+                workItem.ExecutionState,
+                workItem.ActualStartedAtUtc,
+                workItem.ActualEndedAtUtc);
 
-        if (taskAssignments.Length == 0)
-        {
-            return null;
-        }
-
-        var assignment = taskAssignments[0];
-        var kind = assignment.PartyType switch
-        {
-            ProjectPartyType.Person => ProjectStructureTaskResourceKind.Person,
-            ProjectPartyType.AiAgent => ProjectStructureTaskResourceKind.Agent,
-            _ => throw new ProjectStructureTaskDetailsException(
-                ProjectStructureTaskDetailsErrorCode.AssignmentConflict,
-                "The task has an unsupported direct assignee type.")
-        };
-        return new ProjectStructureTaskResourceSelection(kind, assignment.PartyId);
-    }
+    private static string BuildPricingSummary(ProjectStructureTaskEstimateRefreshResult? pricing)
+        => pricing is null
+            ? string.Empty
+            : ProjectStructureTaskPricingFeedback.BuildNotificationSuffix(pricing);
 
     private static IReadOnlyList<ProjectStructureTaskResourceOption> IncludeCurrentAssigneeOption(
         IReadOnlyList<ProjectStructureTaskResourceOption> options,
@@ -397,9 +431,16 @@ public sealed class ProjectStructureGanttTaskEditCoordinator(
             return options;
         }
 
-        var assignment = assignments.Single(item =>
+        var assignment = assignments.FirstOrDefault(item =>
             item.Role == ProjectPartyAssignmentRole.WorkItemAssignee &&
-            string.Equals(item.NodeKey, taskNodeId, StringComparison.Ordinal));
+            string.Equals(item.NodeKey, taskNodeId, StringComparison.Ordinal) &&
+            item.PartyId == assignee.ResourceId &&
+            IsCompatibleAssigneeType(item.PartyType, assignee.Kind));
+        if (assignment is null)
+        {
+            return options;
+        }
+
         return options
             .Append(new ProjectStructureTaskResourceOption(
                 assignee.Kind,
@@ -414,6 +455,13 @@ public sealed class ProjectStructureGanttTaskEditCoordinator(
             .ThenBy(static option => option.DisplayName, StringComparer.OrdinalIgnoreCase)
             .ToArray();
     }
+
+    private static bool IsCompatibleAssigneeType(
+        ProjectPartyType partyType,
+        ProjectStructureTaskResourceKind resourceKind)
+        => (partyType, resourceKind) is
+            (ProjectPartyType.Person, ProjectStructureTaskResourceKind.Person) or
+            (ProjectPartyType.AiAgent, ProjectStructureTaskResourceKind.Agent);
 
     private static string Mask(Guid value)
     {

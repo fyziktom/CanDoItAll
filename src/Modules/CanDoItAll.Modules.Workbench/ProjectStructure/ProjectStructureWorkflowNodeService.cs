@@ -93,7 +93,33 @@ public sealed class ProjectStructureWorkflowNodeService(
             request.LeaseToken,
             agent,
             "create-workflow-node",
-            cancellationToken => CreateCoreAsync(projectId, parentNodeId, request, cancellationToken),
+            cancellationToken => CreateCoreAsync(
+                projectId,
+                parentNodeId,
+                request,
+                allowCanonicalTaskParent: false,
+                cancellationToken),
+            cancellationToken);
+    }
+
+    internal Task<ProjectStructureWorkflowNodeCreateResult> CreateForCanonicalTaskAsync(
+        Guid projectId,
+        string parentTaskNodeId,
+        ProjectStructureWorkflowNodeCreateInput request,
+        ProjectStructureAgentContext agent,
+        CancellationToken cancellationToken = default)
+    {
+        return leaseService.RunWithProjectMutationLeaseAsync(
+            projectId,
+            request.LeaseToken,
+            agent,
+            "create-task-workflow-node",
+            cancellationToken => CreateCoreAsync(
+                projectId,
+                parentTaskNodeId,
+                request,
+                allowCanonicalTaskParent: true,
+                cancellationToken),
             cancellationToken);
     }
 
@@ -165,6 +191,7 @@ public sealed class ProjectStructureWorkflowNodeService(
         Guid projectId,
         string parentNodeId,
         ProjectStructureWorkflowNodeCreateInput request,
+        bool allowCanonicalTaskParent,
         CancellationToken cancellationToken)
     {
         if (request.WorkflowId.Value == Guid.Empty)
@@ -187,6 +214,25 @@ public sealed class ProjectStructureWorkflowNodeService(
         if (parentNode is null)
         {
             throw new ProjectStructureAgentException(404, "ParentNodeNotFound", $"Parent node '{parentNodeId}' was not found.");
+        }
+
+        if (allowCanonicalTaskParent)
+        {
+            if (!ProjectStructureCanonicalTaskMutationPolicy.IsTask(
+                    parentNode.ObjectType,
+                    parentNode.ObjectSubtype))
+            {
+                throw new ProjectStructureAgentException(
+                    400,
+                    "CanonicalTaskRequired",
+                    $"Node '{parentNodeId}' is not a canonical WorkItem/task node.");
+            }
+        }
+        else
+        {
+            ProjectStructureCanonicalTaskMutationPolicy.EnsureGenericResourceAttachmentAllowed(
+                parentNode.ObjectType,
+                parentNode.ObjectSubtype);
         }
 
         var detail = await workflowCatalogService.GetDefinitionAsync(
@@ -224,9 +270,7 @@ public sealed class ProjectStructureWorkflowNodeService(
             ? BuildNotes(detail.Definition, parentNode)
             : request.Notes.Trim();
 
-        var createdNode = await projectWorkbenchService.CreateObjectAsync(
-            projectId,
-            new ProjectObjectCreateRequest(
+        var createRequest = new ProjectObjectCreateRequest(
                 ProjectObjectType.WorkflowDefinition,
                 title,
                 subtitle,
@@ -240,8 +284,16 @@ public sealed class ProjectStructureWorkflowNodeService(
                     BuildWorkflowRoute(projectId, detail.Definition.Id),
                     "workflow-definition",
                     detail.Definition.Id.Value),
-                PlacementIntent: ProjectObjectPlacementIntent.AutomaticAroundParent),
-            cancellationToken);
+                PlacementIntent: ProjectObjectPlacementIntent.AutomaticAroundParent);
+        var createdNode = allowCanonicalTaskParent
+            ? await projectWorkbenchService.CreateCanonicalTaskResourceObjectAsync(
+                projectId,
+                createRequest,
+                cancellationToken)
+            : await projectWorkbenchService.CreateObjectAsync(
+                projectId,
+                createRequest,
+                cancellationToken);
 
         return new ProjectStructureWorkflowNodeCreateResult(
             projectId,

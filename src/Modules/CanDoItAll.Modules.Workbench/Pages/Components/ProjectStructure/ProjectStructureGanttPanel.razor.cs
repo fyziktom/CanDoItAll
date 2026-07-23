@@ -353,6 +353,7 @@ public partial class ProjectStructureGanttPanel : ComponentBase, IAsyncDisposabl
 
         mutationInFlight = true;
         var mutationCommitted = false;
+        var committedPricingFeedback = string.Empty;
         try
         {
             var result = await TaskCreationService.CreateAsync(
@@ -360,13 +361,15 @@ public partial class ProjectStructureGanttPanel : ComponentBase, IAsyncDisposabl
                 request,
                 uiMutationOwner,
                 lifetimeCancellation.Token);
+            committedPricingFeedback =
+                ProjectStructureTaskPricingFeedback.BuildNotificationSuffix(result.Pricing);
             mutationCommitted = true;
             await MutationCommitted.InvokeAsync();
             NotificationService.Success(
                 "Project task created",
                 result.AttachedResource is null
-                    ? $"{request.Title} was added to Main."
-                    : $"{request.Title} was added to Main with its selected resource.");
+                    ? $"{request.Title} was added to Main.{committedPricingFeedback}"
+                    : $"{request.Title} was added to Main with its selected resource.{committedPricingFeedback}");
         }
         catch (ProjectStructureTaskCreationException exception)
         {
@@ -389,7 +392,10 @@ public partial class ProjectStructureGanttPanel : ComponentBase, IAsyncDisposabl
         }
         catch (Exception exception)
         {
-            NotifyUnexpectedMutationFailure("task creation", mutationCommitted);
+            NotifyUnexpectedMutationFailure(
+                "task creation",
+                mutationCommitted,
+                committedPricingFeedback);
             Logger.LogError(
                 "Gantt task creation failed for project {ProjectId} after commit state {MutationCommitted}; failure type {FailureType}.",
                 Mask(ProjectId),
@@ -547,13 +553,16 @@ public partial class ProjectStructureGanttPanel : ComponentBase, IAsyncDisposabl
         return false;
     }
 
-    private void NotifyUnexpectedMutationFailure(string operation, bool mutationCommitted)
+    private void NotifyUnexpectedMutationFailure(
+        string operation,
+        bool mutationCommitted,
+        string committedDetails = "")
     {
         if (mutationCommitted)
         {
             NotificationService.Warning(
                 "Project schedule saved; reload required",
-                "The change was saved, but the authoritative project schedule could not be reloaded. Reload this page before making another change.");
+                $"The change was saved, but the authoritative project schedule could not be reloaded.{committedDetails} Reload this page before making another change.");
             return;
         }
 

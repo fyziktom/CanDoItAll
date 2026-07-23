@@ -2861,6 +2861,7 @@ public static class AgentToolInvocationPolicyMetadata
     public const string ProjectPlanSummaryGet = "project_plan_summary_get";
     public const string ProjectTaskCreate = "project_task_create";
     public const string ProjectTaskUpdate = "project_task_update";
+    public const string ProjectTaskResourceAttach = "project_task_resource_attach";
     public const string ProjectStructureDependencyLink = "project_structure_dependency_link";
     public const string ProjectStructureDependencyUnlink = "project_structure_dependency_unlink";
     public const string ProjectStructureNodeCreate = "project_structure_node_create";
@@ -2932,6 +2933,7 @@ public static class AgentToolInvocationPolicyMetadata
         ProjectStructureNodesToNewSubproject,
         ProjectTaskCreate,
         ProjectTaskUpdate,
+        ProjectTaskResourceAttach,
         ProjectStructureDependencyLink,
         ProjectStructureDependencyUnlink,
         ProjectStructureNodeCreate,

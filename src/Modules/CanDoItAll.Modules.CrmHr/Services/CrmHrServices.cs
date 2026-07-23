@@ -4827,7 +4827,9 @@ public sealed partial class AiAgentService(
 public sealed class ProjectPartyIntegrationService(
     IDbContextFactory<AppDbContext> dbContextFactory,
     PartyDirectoryService partyDirectoryService,
-    ProjectPartyAssignmentNodePolicy projectPartyAssignmentNodePolicy) :
+    ProjectPartyAssignmentNodePolicy projectPartyAssignmentNodePolicy,
+    IProjectWorkItemAssignmentMutationBridge
+        workItemAssignmentMutationBridge) :
     IProjectPartyIntegrationBridge,
     IProjectPartyCostRateBridge
 {
@@ -5140,6 +5142,10 @@ public sealed class ProjectPartyIntegrationService(
         }
 
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        await using var mutationScope = await SerializableMutationScope.BeginAsync(
+            dbContext,
+            $"project:{request.ProjectId:D}",
+            cancellationToken);
         var projectExists = await dbContext.Set<Project>()
             .AnyAsync(item => item.Id == request.ProjectId, cancellationToken);
         if (!projectExists)
@@ -5192,7 +5198,37 @@ public sealed class ProjectPartyIntegrationService(
                     item.PartyId == request.PartyId &&
                     item.AssignmentKind == assignmentKind &&
                     item.NodeKey == normalizedNodeKey,
-                    cancellationToken);
+                cancellationToken);
+        }
+
+        if (entity is not null && entity.ProjectId != request.ProjectId)
+        {
+            return Result<Guid>.Failure(Error.Validation(
+                "The assignment does not belong to the requested project.",
+                "crmhr.project-assignment.project-mismatch"));
+        }
+
+        var affectedTaskNodeKeys = new HashSet<string>(StringComparer.Ordinal);
+        if (entity?.AssignmentKind ==
+            ProjectPartyAssignmentKind.WorkItemAssignee)
+        {
+            affectedTaskNodeKeys.Add(entity.NodeKey);
+        }
+
+        if (assignmentKind == ProjectPartyAssignmentKind.WorkItemAssignee)
+        {
+            affectedTaskNodeKeys.Add(normalizedNodeKey);
+        }
+
+        if (affectedTaskNodeKeys.Count > 0)
+        {
+            await dbContext.Set<ProjectPartyAssignment>()
+                .Where(item =>
+                    item.ProjectId == request.ProjectId &&
+                    affectedTaskNodeKeys.Contains(item.NodeKey) &&
+                    item.AssignmentKind ==
+                    ProjectPartyAssignmentKind.WorkItemAssignee)
+                .LoadAsync(cancellationToken);
         }
 
         if (entity is null)
@@ -5227,16 +5263,67 @@ public sealed class ProjectPartyIntegrationService(
             }
         }
 
+        foreach (var affectedTaskNodeKey in affectedTaskNodeKeys)
+        {
+            await StageTaskAssignmentRevisionAsync(
+                dbContext,
+                request.ProjectId,
+                affectedTaskNodeKey,
+                cancellationToken);
+        }
+
         await dbContext.SaveChangesAsync(cancellationToken);
+        await mutationScope.CommitAsync(cancellationToken);
         return Result<Guid>.Success(entity.Id);
     }
 
-    public async Task<Result> ReplaceNodeAssignmentsAsync(
+    public Task<Result> ReplaceNodeAssignmentsAsync(
         Guid projectId,
         ProjectNodeReference nodeReference,
         IReadOnlyList<ProjectPartyAssignmentUpsertRequest> desiredAssignments,
         IReadOnlyList<ProjectPartyAssignmentRole> targetRoles,
         CancellationToken cancellationToken = default)
+        => ReplaceNodeAssignmentsCoreAsync(
+            projectId,
+            nodeReference,
+            desiredAssignments,
+            targetRoles,
+            expectedAssignments: null,
+            expectedDirectAssignmentRevision: null,
+            cancellationToken);
+
+    public Task<Result> ReplaceNodeAssignmentsIfCurrentAsync(
+        Guid projectId,
+        ProjectNodeReference nodeReference,
+        IReadOnlyList<ProjectPartyAssignmentUpsertRequest> desiredAssignments,
+        IReadOnlyList<ProjectPartyAssignmentRole> targetRoles,
+        IReadOnlyCollection<ProjectPartyAssignmentConcurrencySnapshot>
+            expectedAssignments,
+        ProjectWorkItemDirectAssignmentRevision?
+            expectedDirectAssignmentRevision,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(expectedAssignments);
+        return ReplaceNodeAssignmentsCoreAsync(
+            projectId,
+            nodeReference,
+            desiredAssignments,
+            targetRoles,
+            expectedAssignments,
+            expectedDirectAssignmentRevision,
+            cancellationToken);
+    }
+
+    private async Task<Result> ReplaceNodeAssignmentsCoreAsync(
+        Guid projectId,
+        ProjectNodeReference nodeReference,
+        IReadOnlyList<ProjectPartyAssignmentUpsertRequest> desiredAssignments,
+        IReadOnlyList<ProjectPartyAssignmentRole> targetRoles,
+        IReadOnlyCollection<ProjectPartyAssignmentConcurrencySnapshot>?
+            expectedAssignments,
+        ProjectWorkItemDirectAssignmentRevision?
+            expectedDirectAssignmentRevision,
+        CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(desiredAssignments);
         ArgumentNullException.ThrowIfNull(targetRoles);
@@ -5265,6 +5352,15 @@ public sealed class ProjectPartyIntegrationService(
             return Result.Failure(Error.Validation(
                 "Desired assignments included a role outside the replacement scope.",
                 "crmhr.project-assignment.target-role-mismatch"));
+        }
+
+        if (expectedDirectAssignmentRevision.HasValue &&
+            !targetRoleSet.Contains(
+                ProjectPartyAssignmentRole.WorkItemAssignee))
+        {
+            return Result.Failure(Error.Validation(
+                "A direct-assignment revision can only guard work-item assignee replacement.",
+                "crmhr.project-assignment.revision-role-mismatch"));
         }
 
         foreach (var desiredAssignment in desiredAssignments)
@@ -5298,6 +5394,10 @@ public sealed class ProjectPartyIntegrationService(
         }
 
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        await using var mutationScope = await SerializableMutationScope.BeginAsync(
+                dbContext,
+                $"project:{projectId:D}",
+                cancellationToken);
         var projectExists = await dbContext.Set<Project>()
             .AnyAsync(item => item.Id == projectId, cancellationToken);
         if (!projectExists)
@@ -5374,6 +5474,38 @@ public sealed class ProjectPartyIntegrationService(
                 item.NodeKey == normalizedNodeKey &&
                 targetAssignmentKinds.Contains(item.AssignmentKind))
             .ToListAsync(cancellationToken);
+        if (expectedAssignments is not null)
+        {
+            var currentPartyIds = existingAssignments
+                .Select(static assignment => assignment.PartyId)
+                .Distinct()
+                .ToArray();
+            var currentPartyTypes = await dbContext.Set<Party>()
+                .Where(party => currentPartyIds.Contains(party.Id))
+                .ToDictionaryAsync(
+                    party => party.Id,
+                    party => party.PartyType,
+                    cancellationToken);
+            var currentSnapshots = existingAssignments
+                .Where(assignment =>
+                    currentPartyTypes.ContainsKey(assignment.PartyId))
+                .Select(assignment =>
+                    new ProjectPartyAssignmentConcurrencySnapshot(
+                        assignment.Id,
+                        assignment.PartyId,
+                        MapProjectPartyType(
+                            currentPartyTypes[assignment.PartyId]),
+                        assignment.IsPrimary))
+                .ToHashSet();
+            if (currentSnapshots.Count != existingAssignments.Count ||
+                !currentSnapshots.SetEquals(expectedAssignments))
+            {
+                return Result.Failure(Error.Failure(
+                    "Project assignments changed before the requested replacement could be applied.",
+                    ProjectPartyIntegrationErrorCodes.StaleAssignmentSnapshot));
+            }
+        }
+
         if (existingAssignments.Count > 0)
         {
             dbContext.RemoveRange(existingAssignments);
@@ -5410,8 +5542,15 @@ public sealed class ProjectPartyIntegrationService(
                 emittedPrimaryKinds.Add(desiredAssignment.AssignmentKind);
             }
 
+            var requestedAssignmentId =
+                desiredAssignment.Request.AssignmentId;
             dbContext.Set<ProjectPartyAssignment>().Add(new ProjectPartyAssignment
             {
+                Id = requestedAssignmentId.HasValue &&
+                    existingAssignments.All(existing =>
+                        existing.Id != requestedAssignmentId.Value)
+                        ? requestedAssignmentId.Value
+                        : Guid.NewGuid(),
                 ProjectId = projectId,
                 PartyId = desiredAssignment.Request.PartyId,
                 AssignmentKind = desiredAssignment.AssignmentKind,
@@ -5425,13 +5564,54 @@ public sealed class ProjectPartyIntegrationService(
             });
         }
 
+        if (targetAssignmentKinds.Contains(
+                ProjectPartyAssignmentKind.WorkItemAssignee))
+        {
+            var mutationResult =
+                await StageTaskAssignmentRevisionAsync(
+                    dbContext,
+                    projectId,
+                    normalizedNodeKey,
+                    cancellationToken,
+                    expectedDirectAssignmentRevision);
+            if (mutationResult.Status !=
+                ProjectWorkItemDirectAssignmentMutationStatus.Applied)
+            {
+                return Result.Failure(Error.Failure(
+                    "Project assignments changed before the requested replacement could be applied.",
+                    ProjectPartyIntegrationErrorCodes
+                        .StaleAssignmentSnapshot));
+            }
+        }
+
         await dbContext.SaveChangesAsync(cancellationToken);
+        await mutationScope.CommitAsync(cancellationToken);
+
         return Result.Success();
     }
 
     public async Task DeleteAssignmentAsync(Guid assignmentId, CancellationToken cancellationToken = default)
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        var assignmentScope = await dbContext.Set<ProjectPartyAssignment>()
+            .AsNoTracking()
+            .Where(item => item.Id == assignmentId)
+            .Select(item => new
+            {
+                item.ProjectId,
+                item.NodeKey,
+                item.AssignmentKind
+            })
+            .SingleOrDefaultAsync(cancellationToken);
+        if (assignmentScope is null)
+        {
+            return;
+        }
+
+        await using var mutationScope = await SerializableMutationScope.BeginAsync(
+            dbContext,
+            $"project:{assignmentScope.ProjectId:D}",
+            cancellationToken);
         var entity = await dbContext.Set<ProjectPartyAssignment>()
             .SingleOrDefaultAsync(item => item.Id == assignmentId, cancellationToken);
         if (entity is null)
@@ -5439,8 +5619,37 @@ public sealed class ProjectPartyIntegrationService(
             return;
         }
 
+        if (entity.ProjectId != assignmentScope.ProjectId)
+        {
+            throw new InvalidOperationException(
+                "The assignment project changed while it was being deleted.");
+        }
+
+        if (entity.AssignmentKind ==
+            ProjectPartyAssignmentKind.WorkItemAssignee)
+        {
+            await dbContext.Set<ProjectPartyAssignment>()
+                .Where(item =>
+                    item.ProjectId == entity.ProjectId &&
+                    item.NodeKey == entity.NodeKey &&
+                    item.AssignmentKind ==
+                    ProjectPartyAssignmentKind.WorkItemAssignee)
+                .LoadAsync(cancellationToken);
+        }
+
         dbContext.Set<ProjectPartyAssignment>().Remove(entity);
+        if (entity.AssignmentKind ==
+            ProjectPartyAssignmentKind.WorkItemAssignee)
+        {
+            await StageTaskAssignmentRevisionAsync(
+                dbContext,
+                entity.ProjectId,
+                entity.NodeKey,
+                cancellationToken);
+        }
+
         await dbContext.SaveChangesAsync(cancellationToken);
+        await mutationScope.CommitAsync(cancellationToken);
     }
 
     public async Task DeleteAssignmentsForNodesAsync(
@@ -5455,6 +5664,10 @@ public sealed class ProjectPartyIntegrationService(
         }
 
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        await using var mutationScope = await SerializableMutationScope.BeginAsync(
+            dbContext,
+            $"project:{projectId:D}",
+            cancellationToken);
         var assignments = await dbContext.Set<ProjectPartyAssignment>()
             .Where(item => item.ProjectId == projectId && normalizedNodeKeys.Contains(item.NodeKey))
             .ToListAsync(cancellationToken);
@@ -5463,8 +5676,25 @@ public sealed class ProjectPartyIntegrationService(
             return;
         }
 
+        var affectedTaskNodeKeys = assignments
+            .Where(static assignment =>
+                assignment.AssignmentKind ==
+                ProjectPartyAssignmentKind.WorkItemAssignee)
+            .Select(static assignment => assignment.NodeKey)
+            .Distinct(StringComparer.Ordinal)
+            .ToArray();
         dbContext.RemoveRange(assignments);
+        foreach (var affectedTaskNodeKey in affectedTaskNodeKeys)
+        {
+            await StageTaskAssignmentRevisionAsync(
+                dbContext,
+                projectId,
+                affectedTaskNodeKey,
+                cancellationToken);
+        }
+
         await dbContext.SaveChangesAsync(cancellationToken);
+        await mutationScope.CommitAsync(cancellationToken);
     }
 
     public async Task MoveAssignmentsToProjectAsync(
@@ -5483,6 +5713,14 @@ public sealed class ProjectPartyIntegrationService(
         }
 
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        await using var mutationScope = await SerializableMutationScope.BeginAsync(
+            dbContext,
+            new[]
+            {
+                $"project:{sourceProjectId:D}",
+                $"project:{targetProjectId:D}"
+            },
+            cancellationToken);
         var targetProjectExists = await dbContext.Set<Project>()
             .AnyAsync(item => item.Id == targetProjectId, cancellationToken);
         if (!targetProjectExists)
@@ -5501,18 +5739,108 @@ public sealed class ProjectPartyIntegrationService(
         var assignmentsToMove = await dbContext.Set<ProjectPartyAssignment>()
             .Where(item => item.ProjectId == sourceProjectId && normalizedNodeKeys.Contains(item.NodeKey))
             .ToListAsync(cancellationToken);
-        if (assignmentsToMove.Count == 0)
-        {
-            await dbContext.SaveChangesAsync(cancellationToken);
-            return;
-        }
-
         foreach (var assignment in assignmentsToMove)
         {
             assignment.ProjectId = targetProjectId;
         }
 
+        var affectedTaskNodeKeys = staleTargetAssignments
+            .Concat(assignmentsToMove)
+            .Where(static assignment =>
+                assignment.AssignmentKind ==
+                ProjectPartyAssignmentKind.WorkItemAssignee)
+            .Select(static assignment => assignment.NodeKey)
+            .Distinct(StringComparer.Ordinal)
+            .ToArray();
+        foreach (var affectedTaskNodeKey in affectedTaskNodeKeys)
+        {
+            await StageTaskAssignmentRevisionAsync(
+                dbContext,
+                sourceProjectId,
+                affectedTaskNodeKey,
+                cancellationToken);
+            await StageTaskAssignmentRevisionAsync(
+                dbContext,
+                targetProjectId,
+                affectedTaskNodeKey,
+                cancellationToken);
+        }
+
         await dbContext.SaveChangesAsync(cancellationToken);
+        await mutationScope.CommitAsync(cancellationToken);
+    }
+
+    private async Task<ProjectWorkItemDirectAssignmentMutationResult>
+        StageTaskAssignmentRevisionAsync(
+        AppDbContext dbContext,
+        Guid projectId,
+        string taskNodeId,
+        CancellationToken cancellationToken,
+        ProjectWorkItemDirectAssignmentRevision?
+            expectedDirectAssignmentRevision = null)
+    {
+        if (string.IsNullOrWhiteSpace(taskNodeId))
+        {
+            return new ProjectWorkItemDirectAssignmentMutationResult(
+                ProjectWorkItemDirectAssignmentMutationStatus
+                    .WorkItemNotFound,
+                Revision: null);
+        }
+
+        var finalAssignments = dbContext.ChangeTracker
+            .Entries<ProjectPartyAssignment>()
+            .Where(entry =>
+                entry.State is not (
+                    EntityState.Deleted or
+                    EntityState.Detached) &&
+                entry.Entity.ProjectId == projectId &&
+                entry.Entity.NodeKey == taskNodeId &&
+                entry.Entity.AssignmentKind ==
+                ProjectPartyAssignmentKind.WorkItemAssignee)
+            .Select(static entry => entry.Entity)
+            .ToArray();
+        var partyIds = finalAssignments
+            .Select(static assignment => assignment.PartyId)
+            .Distinct()
+            .ToArray();
+        var parties = await dbContext.Set<Party>()
+            .Where(party => partyIds.Contains(party.Id))
+            .ToDictionaryAsync(
+                party => party.Id,
+                cancellationToken);
+        if (parties.Count != partyIds.Length)
+        {
+            throw new InvalidOperationException(
+                "A direct task assignment references a party that is no longer available.");
+        }
+
+        var states = finalAssignments
+            .Select(assignment =>
+            {
+                var party = parties[assignment.PartyId];
+                var partyType = party.PartyType switch
+                {
+                    PartyType.Person =>
+                        ProjectPartyType.Person,
+                    PartyType.AiAgent =>
+                        ProjectPartyType.AiAgent,
+                    _ => throw new InvalidOperationException(
+                        $"Party type '{party.PartyType}' cannot be assigned directly to a task.")
+                };
+                return new ProjectWorkItemDirectAssignmentState(
+                    partyType,
+                    party.Id,
+                    assignment.IsPrimary,
+                    party.DisplayName);
+            })
+            .ToArray();
+        return await workItemAssignmentMutationBridge.StageMutationAsync(
+            dbContext,
+            projectId,
+            new ProjectNodeReference(taskNodeId),
+            states,
+            expectedDirectAssignmentRevision,
+            cancellationToken);
     }
 
     public async Task<Result<ProjectPartyQuickCreateResult>> CreatePartyAsync(

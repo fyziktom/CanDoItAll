@@ -668,7 +668,7 @@ public sealed class ProjectStructureGanttMutationServiceTests
             GanttScheduleGesture.ResizeEnd,
             [DateChange(task.NodeKey, 0, 1, 0, 2)],
             []);
-        var request = new ProjectStructureTaskDetailsUpdateRequest(
+        var request = new ProjectStructureTaskDetailsMutationRequest(
             TaskId(task.NodeKey),
             task.Title,
             "Should not persist",
@@ -677,8 +677,12 @@ public sealed class ProjectStructureGanttMutationServiceTests
             ProjectTaskEstimate.Empty(),
             ProjectTaskEstimate.Empty(),
             schedule,
-            AssigneeChanged: false,
-            ProposedAssignee: null);
+            CurrentExecution: ProjectTaskExecutionSnapshot.Unknown,
+            ProposedExecution: ProjectTaskExecutionSnapshot.Unknown,
+            CurrentCostBasis: null,
+            ProposedCostBasis: null,
+            CostBasisChanged: false,
+            CurrentDirectAssignmentRevision: 0);
 
         var exception = await Assert.ThrowsAsync<ProjectStructureGanttMutationException>(() =>
             fixture.Service.ApplyTaskDetailsAsync(fixture.ProjectId, request));
@@ -741,7 +745,7 @@ public sealed class ProjectStructureGanttMutationServiceTests
                 DateChange(taskB.NodeKey, 1, 2, 2, 3)
             ],
             [TaskId(taskA.NodeKey), TaskId(taskB.NodeKey)]);
-        var request = new ProjectStructureTaskDetailsUpdateRequest(
+        var request = new ProjectStructureTaskDetailsMutationRequest(
             TaskId(taskA.NodeKey),
             "A",
             "Updated A",
@@ -750,8 +754,12 @@ public sealed class ProjectStructureGanttMutationServiceTests
             currentEstimate,
             proposedEstimate,
             schedule,
-            AssigneeChanged: false,
-            ProposedAssignee: null);
+            CurrentExecution: ProjectTaskExecutionSnapshot.Unknown,
+            ProposedExecution: ProjectTaskExecutionSnapshot.Unknown,
+            CurrentCostBasis: null,
+            ProposedCostBasis: null,
+            CostBasisChanged: false,
+            CurrentDirectAssignmentRevision: 0);
 
         var result = await fixture.Service.ApplyTaskDetailsAsync(fixture.ProjectId, request);
 
@@ -781,7 +789,7 @@ public sealed class ProjectStructureGanttMutationServiceTests
         task.ProgressMode = string.Empty;
         task.MetadataJson = EstimateMetadata(ProjectTaskEstimate.Empty());
         await using var fixture = await MutationFixture.CreateAsync(task);
-        var request = new ProjectStructureTaskDetailsUpdateRequest(
+        var request = new ProjectStructureTaskDetailsMutationRequest(
             TaskId(task.NodeKey),
             "Untracked",
             "Tracked",
@@ -790,8 +798,12 @@ public sealed class ProjectStructureGanttMutationServiceTests
             ProjectTaskEstimate.Empty(),
             ProjectTaskEstimate.Empty(),
             ScheduleChange: null,
-            AssigneeChanged: false,
-            ProposedAssignee: null);
+            CurrentExecution: ProjectTaskExecutionSnapshot.Unknown,
+            ProposedExecution: ProjectTaskExecutionSnapshot.Unknown,
+            CurrentCostBasis: null,
+            ProposedCostBasis: null,
+            CostBasisChanged: false,
+            CurrentDirectAssignmentRevision: 0);
 
         await fixture.Service.ApplyTaskDetailsAsync(fixture.ProjectId, request);
 
@@ -817,7 +829,7 @@ public sealed class ProjectStructureGanttMutationServiceTests
             ProjectWorkItemEffortUnit.Hours,
             100m,
             "USD");
-        var request = new ProjectStructureTaskDetailsUpdateRequest(
+        var request = new ProjectStructureTaskDetailsMutationRequest(
             TaskId(task.NodeKey),
             "Authoritative",
             "Should not persist",
@@ -826,8 +838,12 @@ public sealed class ProjectStructureGanttMutationServiceTests
             staleEstimate,
             ProjectTaskEstimate.Empty(),
             ScheduleChange: null,
-            AssigneeChanged: false,
-            ProposedAssignee: null);
+            CurrentExecution: ProjectTaskExecutionSnapshot.Unknown,
+            ProposedExecution: ProjectTaskExecutionSnapshot.Unknown,
+            CurrentCostBasis: null,
+            ProposedCostBasis: null,
+            CostBasisChanged: false,
+            CurrentDirectAssignmentRevision: 0);
 
         var exception = await Assert.ThrowsAsync<ProjectStructureGanttMutationException>(() =>
             fixture.Service.ApplyTaskDetailsAsync(fixture.ProjectId, request));

@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Tooling;
@@ -37,6 +38,7 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
         ProjectStructureAgentAuthorizationService authorizationService,
         ProjectStructureTaskCreationService taskCreationService,
         ProjectStructureTaskDetailsService taskDetailsService,
+        ProjectStructureTaskResourceAttachmentService taskResourceAttachmentService,
         ProjectManagementKnowledgeService knowledgeService,
         IWorkspacePathResolutionService workspacePaths)
     {
@@ -47,6 +49,7 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
         ArgumentNullException.ThrowIfNull(authorizationService);
         ArgumentNullException.ThrowIfNull(taskCreationService);
         ArgumentNullException.ThrowIfNull(taskDetailsService);
+        ArgumentNullException.ThrowIfNull(taskResourceAttachmentService);
         ArgumentNullException.ThrowIfNull(knowledgeService);
         ArgumentNullException.ThrowIfNull(workspacePaths);
 
@@ -66,6 +69,7 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
             projectCreationCoordinator,
             taskCreationService,
             taskDetailsService,
+            taskResourceAttachmentService,
             knowledgeService,
             workspaceCommandExecutionService,
             workspacePaths,
@@ -130,6 +134,7 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
         ProjectStructureAgentProjectCreationCoordinator projectCreationCoordinator,
         ProjectStructureTaskCreationService taskCreationService,
         ProjectStructureTaskDetailsService taskDetailsService,
+        ProjectStructureTaskResourceAttachmentService taskResourceAttachmentService,
         ProjectManagementKnowledgeService knowledgeService,
         IWorkspaceCommandExecutionService workspaceCommandExecutionService,
         IWorkspacePathResolutionService workspacePaths,
@@ -143,6 +148,8 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
         private readonly ProjectStructureAgentProjectCreationCoordinator projectCreationCoordinator = projectCreationCoordinator;
         private readonly ProjectStructureTaskCreationService taskCreationService = taskCreationService;
         private readonly ProjectStructureTaskDetailsService taskDetailsService = taskDetailsService;
+        private readonly ProjectStructureTaskResourceAttachmentService taskResourceAttachmentService =
+            taskResourceAttachmentService;
         private readonly ProjectManagementKnowledgeService knowledgeService = knowledgeService;
         private readonly IWorkspaceCommandExecutionService workspaceCommandExecutionService = workspaceCommandExecutionService;
         private readonly IWorkspacePathResolutionService workspacePaths = workspacePaths;
@@ -205,19 +212,19 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
                 AIFunctionFactory.Create(
                     (Guid projectId, ProjectStructureNodeCreateInput request, int? estimatedMinutes = null, CancellationToken cancellationToken = default) => ProjectStructureNodeCreateAsync(agent, accessState, projectId, request, estimatedMinutes, cancellationToken),
                     "project_structure_node_create",
-                    "Creates a new project-structure node through the internal workspace service. For work task nodes, use objectType WorkItem and objectSubtype task. For typed block variants, keep objectType as ProjectBlock and set objectSubtype to a lowercase key such as feature, architecture, implementation, testing, delivery, research, risk, deployment, operations, repos, or dockers. Delivery target blocks should set metadata.projectBlock.outputRoot or metadata.projectBlock.targetRoot to the destination folder. Runnable commands must not be ProjectBlock delivery nodes: use Script for shell/test/build commands, Environment for language runtimes such as dotnet-runtime or python, or Infrastructure for container/runtime commands, and include the matching runtime metadata. When adding Mermaid diagrams, always create a File asset node with objectType File, objectSubtype mermaid, and Mermaid source in notes. Other generated files should also use objectType File with an appropriate file subtype, not a ProjectBlock. Every created node needs parentNodeKey: use project:{projectId} for top-level nodes or an existing parent node id."),
+                    "Creates a new non-task project-structure node through the internal workspace service. Canonical WorkItem/task nodes are rejected here and must use project_task_create so lifecycle, assignment, and authoritative pricing are applied. For typed block variants, keep objectType as ProjectBlock and set objectSubtype to a lowercase key such as feature, architecture, implementation, testing, delivery, research, risk, deployment, operations, repos, or dockers. Delivery target blocks should set metadata.projectBlock.outputRoot or metadata.projectBlock.targetRoot to the destination folder. Runnable commands must not be ProjectBlock delivery nodes: use Script for shell/test/build commands, Environment for language runtimes such as dotnet-runtime or python, or Infrastructure for container/runtime commands, and include the matching runtime metadata. When adding Mermaid diagrams, always create a File asset node with objectType File, objectSubtype mermaid, and Mermaid source in notes. Other generated files should also use objectType File with an appropriate file subtype, not a ProjectBlock. Every created node needs parentNodeKey: use project:{projectId} for top-level nodes or an existing parent node id."),
                 AIFunctionFactory.Create(
                     (Guid projectId, string nodeId, ProjectStructureNodeEditInput request, int? estimatedMinutes = null, CancellationToken cancellationToken = default) => ProjectStructureNodeUpdateAsync(agent, accessState, projectId, nodeId, request, estimatedMinutes, cancellationToken),
                     "project_structure_node_update",
-                    "Updates an existing project-structure node, including optional title, notes, timing, metadata, and requested type or subtype reclassification. Typed blocks must use objectType ProjectBlock plus lowercase objectSubtype values like feature, architecture, implementation, testing, delivery, and deployment. Delivery target blocks should keep metadata.projectBlock.outputRoot or metadata.projectBlock.targetRoot when they define the destination folder. Do not invent enum names like FeatureBlock. Runnable commands must be reclassified to Script, Environment, or Infrastructure with matching runtime metadata instead of remaining ProjectBlock delivery nodes. Mermaid diagrams must remain File asset nodes with objectSubtype mermaid and Mermaid source in notes; other generated files should remain File nodes with file subtypes."),
+                    "Updates an existing non-task project-structure node, including optional title, notes, timing, metadata, and requested type or subtype reclassification. Canonical WorkItem/task nodes and reclassification into or out of that type are rejected here; use project_task_update. Typed blocks must use objectType ProjectBlock plus lowercase objectSubtype values like feature, architecture, implementation, testing, delivery, and deployment. Delivery target blocks should keep metadata.projectBlock.outputRoot or metadata.projectBlock.targetRoot when they define the destination folder. Do not invent enum names like FeatureBlock. Runnable commands must be reclassified to Script, Environment, or Infrastructure with matching runtime metadata instead of remaining ProjectBlock delivery nodes. Mermaid diagrams must remain File asset nodes with objectSubtype mermaid and Mermaid source in notes; other generated files should remain File nodes with file subtypes."),
                 AIFunctionFactory.Create(
                     (Guid projectId, string nodeId, ProjectStructureNodeTypeInput request, int? estimatedMinutes = null, CancellationToken cancellationToken = default) => ProjectStructureNodeTypeUpdateAsync(agent, accessState, projectId, nodeId, request, estimatedMinutes, cancellationToken),
                     "project_structure_node_type_update",
-                    "Updates only the objectType/objectSubtype classification for an existing project-structure node while preserving its title, notes, timing, metadata, and duration."),
+                    "Updates only the objectType/objectSubtype classification for an existing non-task project-structure node while preserving its title, notes, timing, metadata, and duration. Canonical WorkItem/task nodes and reclassification into or out of that type must use the typed task path."),
                 AIFunctionFactory.Create(
                     (Guid projectId, string nodeId, ProjectStructureNodeMetadataInput request, int? estimatedMinutes = null, CancellationToken cancellationToken = default) => ProjectStructureNodeMetadataUpdateAsync(agent, accessState, projectId, nodeId, request, estimatedMinutes, cancellationToken),
                     "project_structure_node_metadata_update",
-                    "Updates a node's metadata JSON and optional notes/status without changing its type or layout."),
+                    "Updates a non-task node's metadata JSON and optional notes/status without changing its type or layout. Canonical WorkItem/task metadata must use project_task_update."),
                 AIFunctionFactory.Create(
                     (Guid projectId, ProjectStructureStatusBatchInput request, int? estimatedMinutes = null, CancellationToken cancellationToken = default) => ProjectStructureNodesStatusUpdateAsync(agent, accessState, projectId, request, estimatedMinutes, cancellationToken),
                     "project_structure_nodes_status_update",
@@ -423,7 +430,11 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
                 tools.Add(AIFunctionFactory.Create(
                     (Guid projectId, ProjectStructureTaskDetailsUpdateRequest request, CancellationToken cancellationToken = default) => ProjectTaskUpdateAsync(agent, accessState, projectId, request, cancellationToken),
                     AgentToolInvocationPolicyMetadata.ProjectTaskUpdate,
-                    "Updates a typed project task through the Gantt task-details mutation path. Read the current task first and provide its exact current values for optimistic concurrency; currentProgressPercent accepts -1 for untracked progress, while proposedProgressPercent must be 0-100. Direct assignees may be a person or agent."));
+                    "Updates a typed project task through the Gantt task-details mutation path. Read the current task first and provide exact current estimate, execution, and expected-cost-basis snapshots for optimistic concurrency. currentCostBasis is required even when its value is null. currentProgressPercent accepts -1 for untracked progress, while proposedProgressPercent must be 0-100. Direct assignees may be a person or agent."));
+                tools.Add(AIFunctionFactory.Create(
+                    (Guid projectId, string taskNodeId, ProjectStructureTaskResourceAttachRequest request, CancellationToken cancellationToken = default) => ProjectTaskResourceAttachAsync(agent, accessState, projectId, taskNodeId, request, cancellationToken),
+                    AgentToolInvocationPolicyMetadata.ProjectTaskResourceAttach,
+                    "Attaches an exact workflow version or process to a canonical task and commits authoritative expected pricing as one compensated operation. Read the task first and provide its exact current execution snapshot. Do not use generic workflow, process-link, metadata, or Uses-link tools for canonical task resources."));
             }
 
             return tools;
@@ -516,11 +527,11 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
                     }
                     catch (ProjectStructureTaskCreationException exception)
                     {
-                        throw MapTaskCreationException(exception);
+                        throw ProjectStructureTaskAgentExceptionMapper.Map(exception);
                     }
                     catch (ProjectStructureGanttMutationException exception)
                     {
-                        throw MapGanttMutationException(exception);
+                        throw ProjectStructureTaskAgentExceptionMapper.Map(exception);
                     }
                 },
                 cancellationToken);
@@ -555,68 +566,48 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
                     }
                     catch (ProjectStructureTaskDetailsException exception)
                     {
-                        throw MapTaskDetailsException(exception);
+                        throw ProjectStructureTaskAgentExceptionMapper.Map(exception);
                     }
                     catch (ProjectStructureGanttMutationException exception)
                     {
-                        throw MapGanttMutationException(exception);
+                        throw ProjectStructureTaskAgentExceptionMapper.Map(exception);
                     }
                 },
                 cancellationToken);
         }
 
-        private static ProjectStructureAgentException MapTaskCreationException(
-            ProjectStructureTaskCreationException exception)
+        private Task<ProjectStructureTaskResourceAttachResult> ProjectTaskResourceAttachAsync(
+            AgentDefinition agent,
+            ProjectStructureAccessState accessState,
+            Guid projectId,
+            string taskNodeId,
+            ProjectStructureTaskResourceAttachRequest request,
+            CancellationToken cancellationToken)
         {
-            return new ProjectStructureAgentException(
-                exception.CompensationSucceeded ? 409 : 500,
-                exception.Code.ToString(),
-                exception.Message,
-                new
+            return ExecuteAsync(
+                agent,
+                "tasks.resource-attach",
+                projectId,
+                taskNodeId,
+                ProjectStructureLeaseScopeKind.Project,
+                projectId.ToString("D"),
+                request,
+                async cancellationToken =>
                 {
-                    exception.Code,
-                    exception.Stage,
-                    exception.TaskNodeId,
-                    exception.CompensationSucceeded
-                });
-        }
-
-        private static ProjectStructureAgentException MapTaskDetailsException(
-            ProjectStructureTaskDetailsException exception)
-        {
-            var statusCode = exception.Code switch
-            {
-                ProjectStructureTaskDetailsErrorCode.InvalidRequest => 400,
-                ProjectStructureTaskDetailsErrorCode.AssignmentConflict => 409,
-                ProjectStructureTaskDetailsErrorCode.AssignmentCompensationFailed => 500,
-                _ => 500
-            };
-            return new ProjectStructureAgentException(
-                statusCode,
-                exception.Code.ToString(),
-                exception.Message,
-                new { exception.Code });
-        }
-
-        private static ProjectStructureAgentException MapGanttMutationException(
-            ProjectStructureGanttMutationException exception)
-        {
-            var statusCode = exception.Code switch
-            {
-                ProjectStructureGanttMutationErrorCode.ProjectNotFound or
-                ProjectStructureGanttMutationErrorCode.TaskNotFound or
-                ProjectStructureGanttMutationErrorCode.DependencyNotFound => 404,
-                ProjectStructureGanttMutationErrorCode.StaleTask or
-                ProjectStructureGanttMutationErrorCode.DuplicateDependency or
-                ProjectStructureGanttMutationErrorCode.SystemManagedDependency or
-                ProjectStructureGanttMutationErrorCode.CycleDetected => 409,
-                _ => 400
-            };
-            return new ProjectStructureAgentException(
-                statusCode,
-                exception.Code.ToString(),
-                exception.Message,
-                new { exception.Code });
+                    EnsureProjectTaskWriteAllowed(accessState, projectId);
+                    await authorizationService.EnsureTaskWriteAuthorizedAsync(
+                        agent.Id,
+                        projectId,
+                        AgentToolInvocationPolicyMetadata.ProjectTaskResourceAttach,
+                        cancellationToken);
+                    return await taskResourceAttachmentService.AttachAsync(
+                        projectId,
+                        taskNodeId,
+                        request,
+                        BuildAgentContext(agent, accessState, projectId),
+                        cancellationToken);
+                },
+                cancellationToken);
         }
 
         private Task<ProjectSummary> ProjectStructureProjectCreateAsync(
@@ -1064,6 +1055,9 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
                         accessState.RequiresNonTaskWriteGuard,
                         effectiveRequest.ObjectType,
                         effectiveRequest.ObjectSubtype);
+                    ProjectStructureCanonicalTaskMutationPolicy.EnsureGenericCreateAllowed(
+                        effectiveRequest.ObjectType,
+                        effectiveRequest.ObjectSubtype);
                     if (await TryReuseGovernedProcessNodeCreateAsync(
                             agent,
                             accessState,
@@ -1163,11 +1157,12 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
                 async cancellationToken =>
                 {
                     EnsureProjectWriteAllowed(accessState, projectId);
-                    await EnsureTaskFreeTargetsAsync(
+                    await EnsureNodeUpdateAllowedAsync(
                         accessState,
                         projectId,
-                        [nodeId],
-                        includeDescendants: false,
+                        nodeId,
+                        requestedObjectType: null,
+                        requestedObjectSubtype: null,
                         cancellationToken);
                     return await agentService.UpdateNodeMetadataAsync(projectId, nodeId, request, BuildAgentContext(agent, accessState, projectId), cancellationToken);
                 },
@@ -2277,6 +2272,44 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
                 throw;
             }
             catch (Exception exception)
+                when (SerializableMutationScope.IsConflict(exception))
+            {
+                const string errorCode =
+                    "ProjectStructureConcurrentMutation";
+                const string message =
+                    "The project structure changed concurrently. Reload the authoritative project state and retry the mutation.";
+                stopwatch.Stop();
+                await analyticsService.RecordAsync(
+                    new ProjectStructureAnalyticsWriteRequest(
+                        operationName,
+                        projectId,
+                        nodeId,
+                        scopeKind,
+                        scopeKey,
+                        context,
+                        false,
+                        stopwatch.ElapsedMilliseconds,
+                        [],
+                        errorCode,
+                        message,
+                        ProjectStructureAnalyticsService.SerializeSummary(
+                            requestSummary),
+                        ProjectStructureAnalyticsService.SerializeSummary(
+                            new
+                            {
+                                FailureType = exception.GetType().Name
+                            })),
+                    cancellationToken);
+                throw new ProjectStructureAgentException(
+                    409,
+                    errorCode,
+                    message,
+                    new
+                    {
+                        FailureType = exception.GetType().Name
+                    });
+            }
+            catch (Exception exception)
             {
                 stopwatch.Stop();
                 await analyticsService.RecordAsync(
@@ -2591,11 +2624,6 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
             string? requestedObjectSubtype,
             CancellationToken cancellationToken)
         {
-            if (!accessState.RequiresNonTaskWriteGuard)
-            {
-                return;
-            }
-
             var response = await agentService.GetStructureAsync(
                 projectId,
                 new ProjectStructureReadRequest(NodeIds: [nodeId]),
@@ -2609,8 +2637,12 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
                     $"Project-structure node '{nodeId}' was not found in project '{projectId:D}'.");
             }
 
+            ProjectStructureCanonicalTaskMutationPolicy.EnsureGenericUpdateAllowed(
+                node,
+                requestedObjectType,
+                requestedObjectSubtype);
             ProjectStructureNonTaskWritePolicy.EnsureNodeUpdateAllowed(
-                requiresNonTaskGuard: true,
+                accessState.RequiresNonTaskWriteGuard,
                 node,
                 requestedObjectType,
                 requestedObjectSubtype);

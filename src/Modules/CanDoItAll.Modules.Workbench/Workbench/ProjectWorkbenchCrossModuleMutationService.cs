@@ -12,13 +12,39 @@ public sealed class ProjectWorkbenchCrossModuleMutationService(
     ProjectCrossModuleMutationProcessor mutationProcessor,
     ProjectStructureAssemblyService projectStructureAssemblyService)
 {
-    public async Task<int> DeleteObjectAsync(
+    public Task<int> DeleteObjectAsync(
         Guid projectId,
         string nodeKey,
         CancellationToken cancellationToken = default)
+        => DeleteObjectCoreAsync(
+            projectId,
+            nodeKey,
+            reconcileDetachedTaskResource: true,
+            cancellationToken);
+
+    internal Task<int> DeleteCanonicalTaskResourceAsync(
+        Guid projectId,
+        string nodeKey,
+        CancellationToken cancellationToken = default)
+        => DeleteObjectCoreAsync(
+            projectId,
+            nodeKey,
+            reconcileDetachedTaskResource: false,
+            cancellationToken);
+
+    private async Task<int> DeleteObjectCoreAsync(
+        Guid projectId,
+        string nodeKey,
+        bool reconcileDetachedTaskResource,
+        CancellationToken cancellationToken)
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         await ProjectWorkbenchSchemaInitializer.EnsureAsync(dbContext, cancellationToken);
+        await using var mutationScope =
+            await ProjectStructureSerializableMutationScope.BeginAsync(
+                dbContext,
+                ProjectStructureSerializableMutationScope.ForProject(projectId),
+                cancellationToken);
 
         var records = await dbContext.Set<ProjectObjectRecord>()
             .Where(item => item.ProjectId == projectId)
@@ -26,7 +52,14 @@ public sealed class ProjectWorkbenchCrossModuleMutationService(
         var root = records.FirstOrDefault(item => item.NodeKey == nodeKey && !item.IsSystemManaged);
         if (root is null)
         {
-            return await HideProjectedNodeAsync(dbContext, projectId, nodeKey, cancellationToken);
+            var hiddenCount = await HideProjectedNodeAsync(
+                dbContext,
+                projectId,
+                nodeKey,
+                reconcileDetachedTaskResource,
+                cancellationToken);
+            await mutationScope.CommitAsync(cancellationToken);
+            return hiddenCount;
         }
 
         var keysToDelete = CollectEditableDescendantKeys(records, root.NodeKey);
@@ -38,6 +71,21 @@ public sealed class ProjectWorkbenchCrossModuleMutationService(
         var recordsToDelete = records
             .Where(item => !item.IsSystemManaged && keysToDelete.Contains(item.NodeKey))
             .ToList();
+        var candidateTaskNodeIds = reconcileDetachedTaskResource
+            ? recordsToDelete
+                .Where(record =>
+                    !string.IsNullOrWhiteSpace(record.ParentNodeKey) &&
+                    !keysToDelete.Contains(record.ParentNodeKey))
+                .Select(record => record.ParentNodeKey!)
+                .Concat(linksToDelete
+                    .Where(link =>
+                        link.LinkKind == ProjectObjectLinkKind.Uses &&
+                        !keysToDelete.Contains(link.SourceNodeKey))
+                    .Select(link => link.SourceNodeKey))
+                .Distinct(StringComparer.Ordinal)
+                .ToArray()
+            : [];
+
         await ProjectNodeBindingStorage.LoadAsync(dbContext, recordsToDelete, cancellationToken);
 
         var mutationRecord = mutationCoordinator.Begin(
@@ -59,6 +107,15 @@ public sealed class ProjectWorkbenchCrossModuleMutationService(
         dbContext.RemoveRange(recordsToDelete);
         mutationCoordinator.MarkWorkbenchCommitted(mutationRecord);
         await dbContext.SaveChangesAsync(cancellationToken);
+        await ProjectStructureTaskResourceGraphPolicy
+            .ReconcileAfterStructureMutationAsync(
+                dbContext,
+                projectId,
+                candidateTaskNodeIds,
+                clock.GetUtcNow(),
+                cancellationToken);
+        await dbContext.SaveChangesAsync(cancellationToken);
+        await mutationScope.CommitAsync(cancellationToken);
 
         await ProcessMutationOrThrowAsync(
             mutationRecord.Id,
@@ -71,6 +128,7 @@ public sealed class ProjectWorkbenchCrossModuleMutationService(
         AppDbContext dbContext,
         Guid projectId,
         string nodeKey,
+        bool reconcileDetachedTaskResource,
         CancellationToken cancellationToken)
     {
         var snapshot = await projectStructureAssemblyService.LoadAsync(dbContext, projectId, cancellationToken);
@@ -93,6 +151,16 @@ public sealed class ProjectWorkbenchCrossModuleMutationService(
                 !item.IsSystemManaged &&
                 (removedNodeKeyArray.Contains(item.SourceNodeKey) || removedNodeKeyArray.Contains(item.TargetNodeKey)))
             .ToListAsync(cancellationToken);
+        var candidateTaskNodeIds = reconcileDetachedTaskResource
+            ? userLinksToDelete
+                .Where(link =>
+                    link.LinkKind == ProjectObjectLinkKind.Uses &&
+                    !removedNodeKeys.Contains(link.SourceNodeKey))
+                .Select(link => link.SourceNodeKey)
+                .Distinct(StringComparer.Ordinal)
+                .ToArray()
+            : [];
+
         if (userLinksToDelete.Count > 0)
         {
             dbContext.RemoveRange(userLinksToDelete);
@@ -110,6 +178,14 @@ public sealed class ProjectWorkbenchCrossModuleMutationService(
             }
         }
 
+        await dbContext.SaveChangesAsync(cancellationToken);
+        await ProjectStructureTaskResourceGraphPolicy
+            .ReconcileAfterStructureMutationAsync(
+                dbContext,
+                projectId,
+                candidateTaskNodeIds,
+                clock.GetUtcNow(),
+                cancellationToken);
         await dbContext.SaveChangesAsync(cancellationToken);
         return removedNodeKeys.Count;
     }
@@ -151,6 +227,13 @@ public sealed class ProjectWorkbenchCrossModuleMutationService(
 
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         await ProjectWorkbenchSchemaInitializer.EnsureAsync(dbContext, cancellationToken);
+        await using var mutationScope =
+            await ProjectStructureSerializableMutationScope.BeginAsync(
+                dbContext,
+                ProjectStructureSerializableMutationScope.ForProjects(
+                    sourceProjectId,
+                    targetProjectId),
+                cancellationToken);
 
         var sourceRecords = await dbContext.Set<ProjectObjectRecord>()
             .Where(item => item.ProjectId == sourceProjectId)
@@ -176,6 +259,7 @@ public sealed class ProjectWorkbenchCrossModuleMutationService(
             movedRootKeys,
             ProjectCrossModuleMutationKind.MoveDescendants,
             "Moving descendants committed the Workbench change, but canonical assignment reconciliation failed.",
+            mutationScope,
             cancellationToken);
     }
 
@@ -198,6 +282,13 @@ public sealed class ProjectWorkbenchCrossModuleMutationService(
 
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         await ProjectWorkbenchSchemaInitializer.EnsureAsync(dbContext, cancellationToken);
+        await using var mutationScope =
+            await ProjectStructureSerializableMutationScope.BeginAsync(
+                dbContext,
+                ProjectStructureSerializableMutationScope.ForProjects(
+                    sourceProjectId,
+                    targetProjectId),
+                cancellationToken);
 
         var sourceRecords = await dbContext.Set<ProjectObjectRecord>()
             .Where(item => item.ProjectId == sourceProjectId)
@@ -223,6 +314,7 @@ public sealed class ProjectWorkbenchCrossModuleMutationService(
             movedRootKeys,
             ProjectCrossModuleMutationKind.MoveSelectedNodes,
             "Moving selected nodes committed the Workbench change, but canonical assignment reconciliation failed.",
+            mutationScope,
             cancellationToken);
     }
 
@@ -236,6 +328,7 @@ public sealed class ProjectWorkbenchCrossModuleMutationService(
         HashSet<string> movedRootKeys,
         ProjectCrossModuleMutationKind mutationKind,
         string failureMessage,
+        ProjectStructureSerializableMutationScope mutationScope,
         CancellationToken cancellationToken)
     {
         var targetNodeKeys = await dbContext.Set<ProjectObjectRecord>()
@@ -268,6 +361,14 @@ public sealed class ProjectWorkbenchCrossModuleMutationService(
         await ProjectNodeBindingStorage.LoadAsync(dbContext, movedRecords, cancellationToken);
         var movedRecordByNodeKey = movedRecords.ToDictionary(item => item.NodeKey, StringComparer.Ordinal);
         var originalParentByMovedNodeKey = movedRecords.ToDictionary(item => item.NodeKey, item => item.ParentNodeKey, StringComparer.Ordinal);
+        var sourceCandidateTaskNodeIds = movedRecords
+            .Select(record => record.ParentNodeKey)
+            .Where(parentNodeKey =>
+                !string.IsNullOrWhiteSpace(parentNodeKey) &&
+                !movedNodeKeys.Contains(parentNodeKey))
+            .Select(static parentNodeKey => parentNodeKey!)
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
         var updatedAtUtc = clock.GetUtcNow();
 
         foreach (var record in movedRecords)
@@ -326,6 +427,11 @@ public sealed class ProjectWorkbenchCrossModuleMutationService(
 
             dbContext.Remove(link);
         }
+        sourceCandidateTaskNodeIds.AddRange(linksToProcess
+            .Where(link =>
+                link.LinkKind == ProjectObjectLinkKind.Uses &&
+                !movedNodeKeys.Contains(link.SourceNodeKey))
+            .Select(link => link.SourceNodeKey));
 
         foreach (var record in movedRecords)
         {
@@ -334,6 +440,22 @@ public sealed class ProjectWorkbenchCrossModuleMutationService(
 
         mutationCoordinator.MarkWorkbenchCommitted(mutationRecord);
         await dbContext.SaveChangesAsync(cancellationToken);
+        await ProjectStructureTaskResourceGraphPolicy
+            .ReconcileAfterStructureMutationAsync(
+                dbContext,
+                sourceProjectId,
+                sourceCandidateTaskNodeIds,
+                updatedAtUtc,
+                cancellationToken);
+        await ProjectStructureTaskResourceGraphPolicy
+            .ReconcileAfterStructureMutationAsync(
+                dbContext,
+                targetProjectId,
+                movedRecords.Select(record => record.NodeKey),
+                updatedAtUtc,
+                cancellationToken);
+        await dbContext.SaveChangesAsync(cancellationToken);
+        await mutationScope.CommitAsync(cancellationToken);
 
         await ProcessMutationOrThrowAsync(
             mutationRecord.Id,

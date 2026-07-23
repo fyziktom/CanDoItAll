@@ -18,6 +18,11 @@ public sealed class ProjectWorkbenchLifecycleService(
 
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         await ProjectWorkbenchSchemaInitializer.EnsureAsync(dbContext, cancellationToken);
+        await using var mutationScope =
+            await ProjectStructureSerializableMutationScope.BeginAsync(
+                dbContext,
+                ProjectStructureSerializableMutationScope.ForProject(projectId),
+            cancellationToken);
         var node = await dbContext.Set<ProjectObjectRecord>()
             .FirstOrDefaultAsync(item => item.ProjectId == projectId && item.NodeKey == nodeKey && !item.IsSystemManaged, cancellationToken);
         if (node is null)
@@ -32,6 +37,25 @@ public sealed class ProjectWorkbenchLifecycleService(
         if (!ProjectNodeKindRegistry.CanReclassify(node.ObjectType, node.ObjectSubtype, request.TargetObjectType, request.TargetObjectSubtype))
         {
             return null;
+        }
+
+        if (ProjectStructureTaskResourceGraphPolicy.IsResourceChildType(
+                request.TargetObjectType) &&
+            !string.IsNullOrWhiteSpace(node.ParentNodeKey))
+        {
+            var parent = await dbContext.Set<ProjectObjectRecord>()
+                .FirstOrDefaultAsync(
+                    candidate =>
+                        candidate.ProjectId == projectId &&
+                        candidate.NodeKey == node.ParentNodeKey,
+                    cancellationToken);
+            if (parent is not null)
+            {
+                ProjectStructureCanonicalTaskMutationPolicy
+                    .EnsureGenericResourceAttachmentAllowed(
+                        parent.ObjectType,
+                        parent.ObjectSubtype);
+            }
         }
 
         var sourceSnapshot = new ProjectObjectRecord
@@ -77,6 +101,13 @@ public sealed class ProjectWorkbenchLifecycleService(
             sourceSnapshot.MetadataJson,
             node.Notes,
             null);
+        node.MetadataJson =
+            ProjectStructureCanonicalTaskCreationPolicy.NormalizeMetadataJson(
+                node.ObjectType,
+                node.ObjectSubtype,
+                node.MetadataJson,
+                ProjectObjectTaskPricingInitialization
+                    .ClearAuthoritativePricing);
         node.Binding = node.Binding with
         {
             Route = string.IsNullOrWhiteSpace(node.Binding.Route)
@@ -100,6 +131,17 @@ public sealed class ProjectWorkbenchLifecycleService(
                     now),
                 cancellationToken);
         await dbContext.SaveChangesAsync(cancellationToken);
+        await ProjectStructureTaskResourceGraphPolicy
+            .ReconcileAfterStructureMutationAsync(
+                dbContext,
+                projectId,
+                string.IsNullOrWhiteSpace(sourceSnapshot.ParentNodeKey)
+                    ? []
+                    : [sourceSnapshot.ParentNodeKey],
+                now,
+                cancellationToken);
+        await dbContext.SaveChangesAsync(cancellationToken);
+        await mutationScope.CommitAsync(cancellationToken);
         return ProjectWorkbenchNodeMapper.MapStructureNode(node);
     }
 }

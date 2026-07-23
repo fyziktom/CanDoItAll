@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.Workbench;
 using CanDoItAll.Modules.Workspace;
 using CanDoItAll.SharedKernel;
@@ -168,6 +169,113 @@ public static class ProjectStructureAgentApi
                 (_, cancellationToken) => planAnalyticsService.GetSummaryAsync(projectId, request, cancellationToken),
                 cancellationToken));
 
+        group.MapPost("/projects/{projectId:guid}/tasks", async (
+            Guid projectId,
+            HttpContext httpContext,
+            ProjectStructureTaskCreateRequest request,
+            ProjectStructureTaskCreationService taskCreationService,
+            ProjectStructureAnalyticsService analyticsService,
+            CancellationToken cancellationToken) =>
+            await ExecuteAsync(
+                httpContext,
+                analyticsService,
+                "tasks.create",
+                projectId,
+                null,
+                ProjectStructureLeaseScopeKind.Project,
+                projectId.ToString(),
+                request,
+                async (agent, cancellationToken) =>
+                {
+                    try
+                    {
+                        return await taskCreationService.CreateAsync(
+                            projectId,
+                            request,
+                            agent,
+                            cancellationToken);
+                    }
+                    catch (ProjectStructureTaskCreationException exception)
+                    {
+                        throw ProjectStructureTaskAgentExceptionMapper.Map(exception);
+                    }
+                    catch (ProjectStructureGanttMutationException exception)
+                    {
+                        throw ProjectStructureTaskAgentExceptionMapper.Map(exception);
+                    }
+                },
+                cancellationToken));
+
+        group.MapPut("/projects/{projectId:guid}/tasks/{taskId}", async (
+            Guid projectId,
+            string taskId,
+            HttpContext httpContext,
+            ProjectStructureTaskDetailsUpdateRequest request,
+            ProjectStructureTaskDetailsService taskDetailsService,
+            ProjectStructureAnalyticsService analyticsService,
+            CancellationToken cancellationToken) =>
+            await ExecuteAsync(
+                httpContext,
+                analyticsService,
+                "tasks.update",
+                projectId,
+                taskId,
+                ProjectStructureLeaseScopeKind.Project,
+                projectId.ToString(),
+                request,
+                async (_, cancellationToken) =>
+                {
+                    if (!string.Equals(taskId, request.TaskId.Value, StringComparison.Ordinal))
+                    {
+                        throw new ProjectStructureAgentException(
+                            StatusCodes.Status400BadRequest,
+                            "TaskRouteMismatch",
+                            "The task id in the route must match request.taskId.");
+                    }
+
+                    try
+                    {
+                        return await taskDetailsService.UpdateAsync(
+                            projectId,
+                            request,
+                            cancellationToken);
+                    }
+                    catch (ProjectStructureTaskDetailsException exception)
+                    {
+                        throw ProjectStructureTaskAgentExceptionMapper.Map(exception);
+                    }
+                    catch (ProjectStructureGanttMutationException exception)
+                    {
+                        throw ProjectStructureTaskAgentExceptionMapper.Map(exception);
+                    }
+                },
+                cancellationToken));
+
+        group.MapPost("/projects/{projectId:guid}/tasks/{taskId}/resource", async (
+            Guid projectId,
+            string taskId,
+            HttpContext httpContext,
+            ProjectStructureTaskResourceAttachRequest request,
+            ProjectStructureTaskResourceAttachmentService attachmentService,
+            ProjectStructureAnalyticsService analyticsService,
+            CancellationToken cancellationToken) =>
+            await ExecuteAsync(
+                httpContext,
+                analyticsService,
+                "tasks.resource-attach",
+                projectId,
+                taskId,
+                ProjectStructureLeaseScopeKind.Project,
+                projectId.ToString(),
+                request,
+                (agent, cancellationToken) => attachmentService.AttachAsync(
+                    projectId,
+                    taskId,
+                    request,
+                    agent,
+                    cancellationToken),
+                cancellationToken));
+
         group.MapPost("/projects/{projectId:guid}/nodes", async (
             Guid projectId,
             HttpContext httpContext,
@@ -184,7 +292,17 @@ public static class ProjectStructureAgentApi
                 ProjectStructureLeaseScopeKind.Project,
                 projectId.ToString(),
                 request,
-                (agent, cancellationToken) => agentService.CreateNodeAsync(projectId, request, agent, cancellationToken),
+                async (agent, cancellationToken) =>
+                {
+                    ProjectStructureCanonicalTaskMutationPolicy.EnsureGenericCreateAllowed(
+                        request.ObjectType,
+                        request.ObjectSubtype);
+                    return await agentService.CreateNodeAsync(
+                        projectId,
+                        request,
+                        agent,
+                        cancellationToken);
+                },
                 cancellationToken));
 
         group.MapPut("/projects/{projectId:guid}/nodes/{nodeId}", async (
@@ -204,7 +322,22 @@ public static class ProjectStructureAgentApi
                 ProjectStructureLeaseScopeKind.Project,
                 projectId.ToString(),
                 request,
-                (agent, cancellationToken) => agentService.UpdateNodeAsync(projectId, nodeId, request, agent, cancellationToken),
+                async (agent, cancellationToken) =>
+                {
+                    await EnsureGenericNodeUpdateAllowedAsync(
+                        agentService,
+                        projectId,
+                        nodeId,
+                        request.ObjectType,
+                        request.ObjectSubtype,
+                        cancellationToken);
+                    return await agentService.UpdateNodeAsync(
+                        projectId,
+                        nodeId,
+                        request,
+                        agent,
+                        cancellationToken);
+                },
                 cancellationToken));
 
         group.MapPost("/projects/{projectId:guid}/nodes/{nodeId}/type", async (
@@ -224,7 +357,22 @@ public static class ProjectStructureAgentApi
                 ProjectStructureLeaseScopeKind.Project,
                 projectId.ToString(),
                 request,
-                (agent, cancellationToken) => agentService.UpdateNodeTypeAsync(projectId, nodeId, request, agent, cancellationToken),
+                async (agent, cancellationToken) =>
+                {
+                    await EnsureGenericNodeUpdateAllowedAsync(
+                        agentService,
+                        projectId,
+                        nodeId,
+                        request.ObjectType,
+                        request.ObjectSubtype,
+                        cancellationToken);
+                    return await agentService.UpdateNodeTypeAsync(
+                        projectId,
+                        nodeId,
+                        request,
+                        agent,
+                        cancellationToken);
+                },
                 cancellationToken));
 
         group.MapPost("/projects/{projectId:guid}/nodes/{nodeId}/metadata", async (
@@ -244,7 +392,21 @@ public static class ProjectStructureAgentApi
                 ProjectStructureLeaseScopeKind.Project,
                 projectId.ToString(),
                 request,
-                (agent, cancellationToken) => agentService.UpdateNodeMetadataAsync(projectId, nodeId, request, agent, cancellationToken),
+                async (agent, cancellationToken) =>
+                {
+                    var node = await GetNodeForGenericUpdateAsync(
+                        agentService,
+                        projectId,
+                        nodeId,
+                        cancellationToken);
+                    ProjectStructureCanonicalTaskMutationPolicy.EnsureGenericMetadataUpdateAllowed(node);
+                    return await agentService.UpdateNodeMetadataAsync(
+                        projectId,
+                        nodeId,
+                        request,
+                        agent,
+                        cancellationToken);
+                },
                 cancellationToken));
 
         group.MapPost("/projects/{projectId:guid}/nodes/statuses", async (
@@ -1084,6 +1246,43 @@ public static class ProjectStructureAgentApi
         return endpoints;
     }
 
+    private static async Task EnsureGenericNodeUpdateAllowedAsync(
+        ProjectStructureAgentService agentService,
+        Guid projectId,
+        string nodeId,
+        ProjectObjectType? requestedObjectType,
+        string? requestedObjectSubtype,
+        CancellationToken cancellationToken)
+    {
+        var node = await GetNodeForGenericUpdateAsync(
+            agentService,
+            projectId,
+            nodeId,
+            cancellationToken);
+        ProjectStructureCanonicalTaskMutationPolicy.EnsureGenericUpdateAllowed(
+            node,
+            requestedObjectType,
+            requestedObjectSubtype);
+    }
+
+    private static async Task<ProjectStructureNodeSummary> GetNodeForGenericUpdateAsync(
+        ProjectStructureAgentService agentService,
+        Guid projectId,
+        string nodeId,
+        CancellationToken cancellationToken)
+    {
+        var response = await agentService.GetStructureAsync(
+            projectId,
+            new ProjectStructureReadRequest(NodeIds: [nodeId]),
+            cancellationToken);
+        return response.Nodes.FirstOrDefault(node =>
+                string.Equals(node.Id, nodeId, StringComparison.Ordinal))
+            ?? throw new ProjectStructureAgentException(
+                StatusCodes.Status404NotFound,
+                "NodeNotFound",
+                $"Project-structure node '{nodeId}' was not found in project '{projectId:D}'.");
+    }
+
     private static async Task<IResult> ExecuteAsync<T>(
         HttpContext httpContext,
         ProjectStructureAnalyticsService analyticsService,
@@ -1152,6 +1351,41 @@ public static class ProjectStructureAgentApi
                     ex.Details
                 }
             }, statusCode: ex.StatusCode);
+        }
+        catch (Exception ex) when (SerializableMutationScope.IsConflict(ex))
+        {
+            const string errorCode = "ProjectStructureConcurrentMutation";
+            const string message =
+                "The project structure changed concurrently. Reload the authoritative project state and retry the mutation.";
+            stopwatch.Stop();
+            await analyticsService.RecordAsync(
+                new ProjectStructureAnalyticsWriteRequest(
+                    operationName,
+                    projectId,
+                    nodeId,
+                    scopeKind,
+                    scopeKey,
+                    agent,
+                    false,
+                    stopwatch.ElapsedMilliseconds,
+                    [],
+                    errorCode,
+                    message,
+                    ProjectStructureAnalyticsService.SerializeSummary(
+                        requestSummary),
+                    ProjectStructureAnalyticsService.SerializeSummary(new
+                    {
+                        FailureType = ex.GetType().Name
+                    })),
+                cancellationToken);
+            return Results.Json(new
+            {
+                Error = new
+                {
+                    ErrorCode = errorCode,
+                    Message = message
+                }
+            }, statusCode: StatusCodes.Status409Conflict);
         }
         catch (Exception ex)
         {

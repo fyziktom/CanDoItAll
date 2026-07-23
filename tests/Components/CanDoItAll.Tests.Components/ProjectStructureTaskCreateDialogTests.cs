@@ -77,6 +77,47 @@ public sealed class ProjectStructureTaskCreateDialogTests
         Assert.DoesNotContain(result.CreateRequest.InputValues!, value => value.Key == "assigneeRef");
     }
 
+    [Fact]
+    public async Task Mixed_assignment_edit_keeps_direct_assignee_read_only_while_task_fields_remain_editable()
+    {
+        using var context = CreateContext();
+        var host = context.RenderComponent<DialogHost>();
+        var primaryPersonId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+        var replacementAgentId = Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
+        var primaryAssignee = new ProjectStructureTaskResourceSelection(
+            ProjectStructureTaskResourceKind.Person,
+            primaryPersonId);
+        var resultTask = OpenDialog(
+            context,
+            [
+                CreateResource(
+                    ProjectStructureTaskResourceKind.Person,
+                    primaryPersonId,
+                    "Joe Doe",
+                    "Person"),
+                CreateResource(
+                    ProjectStructureTaskResourceKind.Agent,
+                    replacementAgentId,
+                    "Delivery agent",
+                    "AI agent")
+            ],
+            isEditMode: true,
+            initialAssignee: primaryAssignee,
+            canChangeDirectAssignee: false);
+
+        host.WaitForElement("[data-testid='project-structure-task-edit-assignee-readonly']");
+        Assert.Empty(host.FindAll("[data-testid='project-structure-task-create-assignee-picker-shell']"));
+        Assert.Empty(host.FindAll("[data-testid='project-structure-task-create-assignee-clear']"));
+
+        host.Find("[data-testid='project-structure-task-create-title']").Input("Updated CRM handoff");
+        host.Find("[data-testid='project-structure-task-create-submit']").Click();
+
+        var result = Assert.IsType<ProjectStructureTaskDialogResult>(
+            await resultTask.WaitAsync(TimeSpan.FromSeconds(2)));
+        Assert.Equal("Updated CRM handoff", result.CreateRequest.Title);
+        Assert.Equal(primaryAssignee, result.Assignee);
+    }
+
     private static TestContext CreateContext()
     {
         var context = new TestContext();
@@ -88,7 +129,10 @@ public sealed class ProjectStructureTaskCreateDialogTests
 
     private static Task<object?> OpenDialog(
         TestContext context,
-        IReadOnlyList<ProjectStructureTaskResourceOption> assignees)
+        IReadOnlyList<ProjectStructureTaskResourceOption> assignees,
+        bool isEditMode = false,
+        ProjectStructureTaskResourceSelection? initialAssignee = null,
+        bool canChangeDirectAssignee = true)
     {
         var request = new CanvasWorkbenchCreateActionRequest(
             ProjectStructureTaskActionIds.Create,
@@ -116,7 +160,10 @@ public sealed class ProjectStructureTaskCreateDialogTests
             {
                 [nameof(ProjectStructureTaskCreateDialog.ProjectId)] = Guid.Parse("10000000-0000-0000-0000-000000000001"),
                 [nameof(ProjectStructureTaskCreateDialog.CreateRequest)] = request,
-                [nameof(ProjectStructureTaskCreateDialog.AssigneeOptions)] = assignees
+                [nameof(ProjectStructureTaskCreateDialog.AssigneeOptions)] = assignees,
+                [nameof(ProjectStructureTaskCreateDialog.IsEditMode)] = isEditMode,
+                [nameof(ProjectStructureTaskCreateDialog.InitialAssignee)] = initialAssignee,
+                [nameof(ProjectStructureTaskCreateDialog.CanChangeDirectAssignee)] = canChangeDirectAssignee
             },
             new DialogOptions
             {

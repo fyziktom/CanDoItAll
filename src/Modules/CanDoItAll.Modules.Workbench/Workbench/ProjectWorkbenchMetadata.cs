@@ -44,6 +44,15 @@ public enum ProjectWorkItemKind
     Send
 }
 
+public enum ProjectTaskExecutionState
+{
+    Unknown,
+    NotStarted,
+    Started,
+    Completed,
+    Cancelled
+}
+
 public enum ProjectSendKind
 {
     File,
@@ -335,6 +344,8 @@ public sealed class ProjectWorkItemMetadata
     [ProjectStructurePreviewField("Assignee party", 80)]
     public string AssigneePartyDisplayName { get; set; } = string.Empty;
 
+    public long DirectAssignmentRevision { get; set; }
+
     [ProjectStructurePreviewField("Expected effort (h)", 90)]
     public decimal? ExpectedEffortHours { get; set; }
 
@@ -346,6 +357,17 @@ public sealed class ProjectWorkItemMetadata
 
     [ProjectStructurePreviewField("Expected cost currency", 120)]
     public string ExpectedCostCurrencyCode { get; set; } = string.Empty;
+
+    [ProjectStructurePreviewField("Execution state", 130)]
+    public ProjectTaskExecutionState ExecutionState { get; set; }
+
+    [ProjectStructurePreviewField("Actual start", 140)]
+    public DateTimeOffset? ActualStartedAtUtc { get; set; }
+
+    [ProjectStructurePreviewField("Actual end", 150)]
+    public DateTimeOffset? ActualEndedAtUtc { get; set; }
+
+    public ProjectTaskExpectedCostBasis? ExpectedCostBasis { get; set; }
 }
 
 public sealed class ProjectRepositoryMetadata
@@ -752,12 +774,23 @@ public static class ProjectObjectMetadataSerializer
 
         if (objectType == ProjectObjectType.WorkItem && metadata.WorkItem is not null)
         {
+            if (metadata.WorkItem.DirectAssignmentRevision < 0)
+            {
+                throw new InvalidOperationException(
+                    "A task direct-assignment revision cannot be negative.");
+            }
+
             var estimate = ProjectTaskEstimatePolicy.ValidateAndNormalize(new ProjectTaskEstimate(
                 metadata.WorkItem.ExpectedEffortHours,
                 metadata.WorkItem.ExpectedEffortUnit,
                 metadata.WorkItem.ExpectedCostAmount,
                 metadata.WorkItem.ExpectedCostCurrencyCode));
             metadata.WorkItem.ExpectedCostCurrencyCode = estimate.ExpectedCostCurrencyCode;
+            ProjectTaskExecutionStatePolicy.Validate(
+                metadata.WorkItem.ExecutionState,
+                metadata.WorkItem.ActualStartedAtUtc,
+                metadata.WorkItem.ActualEndedAtUtc);
+            ProjectTaskExpectedCostBasisPolicy.Validate(metadata.WorkItem.ExpectedCostBasis);
         }
     }
 

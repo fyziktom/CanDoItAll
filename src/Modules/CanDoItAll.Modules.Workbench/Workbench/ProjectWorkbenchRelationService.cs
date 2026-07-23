@@ -12,16 +12,55 @@ public sealed class ProjectWorkbenchRelationService(
 {
     private static readonly ProjectStructureInvariantService InvariantService = new();
 
-    public async Task LinkObjectsAsync(
+    public Task LinkObjectsAsync(
         Guid projectId,
         string sourceNodeKey,
         string targetNodeKey,
         ProjectObjectLinkKind linkKind,
         CancellationToken cancellationToken = default)
+        => LinkObjectsCoreAsync(
+            projectId,
+            sourceNodeKey,
+            targetNodeKey,
+            linkKind,
+            allowCanonicalTaskResourceLink: false,
+            cancellationToken);
+
+    internal Task LinkCanonicalTaskResourceAsync(
+        Guid projectId,
+        string sourceNodeKey,
+        string targetNodeKey,
+        ProjectObjectLinkKind linkKind,
+        CancellationToken cancellationToken = default)
+        => LinkObjectsCoreAsync(
+            projectId,
+            sourceNodeKey,
+            targetNodeKey,
+            linkKind,
+            allowCanonicalTaskResourceLink: true,
+            cancellationToken);
+
+    private async Task LinkObjectsCoreAsync(
+        Guid projectId,
+        string sourceNodeKey,
+        string targetNodeKey,
+        ProjectObjectLinkKind linkKind,
+        bool allowCanonicalTaskResourceLink,
+        CancellationToken cancellationToken)
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         await ProjectWorkbenchSchemaInitializer.EnsureAsync(dbContext, cancellationToken);
+        await using var mutationScope =
+            await ProjectStructureSerializableMutationScope.BeginAsync(
+                dbContext,
+                ProjectStructureSerializableMutationScope.ForProject(projectId),
+            cancellationToken);
         var existingNodes = (await projectStructureAssemblyService.LoadAsync(dbContext, projectId, cancellationToken)).Nodes;
+        EnsureCanonicalTaskResourceLinkAllowed(
+            sourceNodeKey,
+            linkKind,
+            existingNodes,
+            allowCanonicalTaskResourceLink);
         InvariantService.ValidateUserAuthoredLink(
             projectId,
             sourceNodeKey,
@@ -40,6 +79,7 @@ public sealed class ProjectWorkbenchRelationService(
         await ClearProjectionVisibilityOverrideAsync(dbContext, projectId, sourceNodeKey, cancellationToken);
         await ClearProjectionVisibilityOverrideAsync(dbContext, projectId, targetNodeKey, cancellationToken);
         await dbContext.SaveChangesAsync(cancellationToken);
+        await mutationScope.CommitAsync(cancellationToken);
     }
 
     private static Guid? TryResolveProcessDefinitionId(string nodeKey)
@@ -83,15 +123,49 @@ public sealed class ProjectWorkbenchRelationService(
         return $"process-run:{runId:D}";
     }
 
-    public async Task<bool> UnlinkObjectsAsync(
+    public Task<bool> UnlinkObjectsAsync(
         Guid projectId,
         string sourceNodeKey,
         string targetNodeKey,
         ProjectObjectLinkKind linkKind,
         CancellationToken cancellationToken = default)
+        => UnlinkObjectsCoreAsync(
+            projectId,
+            sourceNodeKey,
+            targetNodeKey,
+            linkKind,
+            reconcileDetachedTaskResource: true,
+            cancellationToken);
+
+    internal Task<bool> UnlinkCanonicalTaskResourceAsync(
+        Guid projectId,
+        string sourceNodeKey,
+        string targetNodeKey,
+        ProjectObjectLinkKind linkKind,
+        CancellationToken cancellationToken = default)
+        => UnlinkObjectsCoreAsync(
+            projectId,
+            sourceNodeKey,
+            targetNodeKey,
+            linkKind,
+            reconcileDetachedTaskResource: false,
+            cancellationToken);
+
+    private async Task<bool> UnlinkObjectsCoreAsync(
+        Guid projectId,
+        string sourceNodeKey,
+        string targetNodeKey,
+        ProjectObjectLinkKind linkKind,
+        bool reconcileDetachedTaskResource,
+        CancellationToken cancellationToken)
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         await ProjectWorkbenchSchemaInitializer.EnsureAsync(dbContext, cancellationToken);
+        await using var mutationScope =
+            await ProjectStructureSerializableMutationScope.BeginAsync(
+                dbContext,
+                ProjectStructureSerializableMutationScope.ForProject(projectId),
+            cancellationToken);
 
         var link = await dbContext.Set<ProjectObjectLinkRecord>()
             .FirstOrDefaultAsync(item =>
@@ -116,6 +190,20 @@ public sealed class ProjectWorkbenchRelationService(
         await UpdateProjectionVisibilityAfterUnlinkAsync(dbContext, projectId, sourceNodeKey, cancellationToken);
         await UpdateProjectionVisibilityAfterUnlinkAsync(dbContext, projectId, targetNodeKey, cancellationToken);
         await dbContext.SaveChangesAsync(cancellationToken);
+        if (reconcileDetachedTaskResource &&
+            linkKind == ProjectObjectLinkKind.Uses)
+        {
+            await ProjectStructureTaskResourceGraphPolicy
+                .ReconcileAfterStructureMutationAsync(
+                    dbContext,
+                    projectId,
+                    [sourceNodeKey],
+                    clock.GetUtcNow(),
+                    cancellationToken);
+            await dbContext.SaveChangesAsync(cancellationToken);
+        }
+
+        await mutationScope.CommitAsync(cancellationToken);
         return true;
     }
 
@@ -263,6 +351,11 @@ public sealed class ProjectWorkbenchRelationService(
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         await ProjectWorkbenchSchemaInitializer.EnsureAsync(dbContext, cancellationToken);
+        await using var mutationScope =
+            await ProjectStructureSerializableMutationScope.BeginAsync(
+                dbContext,
+                ProjectStructureSerializableMutationScope.ForProject(projectId),
+            cancellationToken);
         var existingNodes = (await projectStructureAssemblyService.LoadAsync(dbContext, projectId, cancellationToken)).Nodes;
         var node = await dbContext.Set<ProjectObjectRecord>()
             .FirstOrDefaultAsync(item => item.ProjectId == projectId && item.NodeKey == nodeKey && !item.IsSystemManaged, cancellationToken);
@@ -279,7 +372,12 @@ public sealed class ProjectWorkbenchRelationService(
             return ProjectWorkbenchNodeMapper.MapStructureNode(node);
         }
 
+        EnsureCanonicalTaskResourceParentAllowed(
+            node,
+            normalizedParentNodeKey,
+            existingNodes);
         InvariantService.ValidateParentAssignment(projectId, node.NodeKey, normalizedParentNodeKey, existingNodes);
+        var sourceParentNodeKey = node.ParentNodeKey;
 
         var parentLinks = await dbContext.Set<ProjectObjectLinkRecord>()
             .Where(item => item.ProjectId == projectId &&
@@ -296,6 +394,17 @@ public sealed class ProjectWorkbenchRelationService(
         node.UpdatedAtUtc = clock.GetUtcNow();
 
         await dbContext.SaveChangesAsync(cancellationToken);
+        await ProjectStructureTaskResourceGraphPolicy
+            .ReconcileAfterStructureMutationAsync(
+                dbContext,
+                projectId,
+                string.IsNullOrWhiteSpace(sourceParentNodeKey)
+                    ? []
+                    : [sourceParentNodeKey],
+                clock.GetUtcNow(),
+                cancellationToken);
+        await dbContext.SaveChangesAsync(cancellationToken);
+        await mutationScope.CommitAsync(cancellationToken);
         return ProjectWorkbenchNodeMapper.MapStructureNode(node);
     }
 
@@ -309,6 +418,11 @@ public sealed class ProjectWorkbenchRelationService(
 
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         await ProjectWorkbenchSchemaInitializer.EnsureAsync(dbContext, cancellationToken);
+        await using var mutationScope =
+            await ProjectStructureSerializableMutationScope.BeginAsync(
+                dbContext,
+                ProjectStructureSerializableMutationScope.ForProject(projectId),
+            cancellationToken);
 
         var normalizedTargetNodeKey = ProjectWorkbenchGraphConventions.NormalizeEditableParentNodeKey(
             projectId,
@@ -328,6 +442,10 @@ public sealed class ProjectWorkbenchRelationService(
 
         foreach (var rootNodeKey in forest.RootNodeKeys)
         {
+            EnsureCanonicalTaskResourceParentAllowed(
+                forest.NodesByKey[rootNodeKey],
+                normalizedTargetNodeKey,
+                assembly.Nodes);
             InvariantService.ValidateParentAssignment(
                 projectId,
                 rootNodeKey,
@@ -341,6 +459,12 @@ public sealed class ProjectWorkbenchRelationService(
         var placementSession = new ProjectStructureAutomaticPlacementSession(
             assembly.Nodes.Where(node => !forestNodeKeys.Contains(node.NodeKey)).ToList());
         var updatedAtUtc = clock.GetUtcNow();
+        var sourceParentNodeKeys = forest.RootNodeKeys
+            .Select(rootNodeKey => forest.NodesByKey[rootNodeKey].ParentNodeKey)
+            .Where(static parentNodeKey => !string.IsNullOrWhiteSpace(parentNodeKey))
+            .Select(static parentNodeKey => parentNodeKey!)
+            .Distinct(StringComparer.Ordinal)
+            .ToArray();
 
         foreach (var rootNodeKey in forest.RootNodeKeys)
         {
@@ -380,10 +504,82 @@ public sealed class ProjectWorkbenchRelationService(
         }
 
         await dbContext.SaveChangesAsync(cancellationToken);
+        await ProjectStructureTaskResourceGraphPolicy
+            .ReconcileAfterStructureMutationAsync(
+                dbContext,
+                projectId,
+                sourceParentNodeKeys,
+                clock.GetUtcNow(),
+                cancellationToken);
+        await dbContext.SaveChangesAsync(cancellationToken);
+        await mutationScope.CommitAsync(cancellationToken);
 
         return forest.RootNodeKeys
             .Select(rootNodeKey => ProjectWorkbenchNodeMapper.MapStructureNode(forest.NodesByKey[rootNodeKey]))
             .ToList();
+    }
+
+    private static void EnsureCanonicalTaskResourceLinkAllowed(
+        string sourceNodeKey,
+        ProjectObjectLinkKind linkKind,
+        IReadOnlyCollection<ProjectObjectRecord> existingNodes,
+        bool allowCanonicalTaskResourceLink)
+    {
+        if (linkKind != ProjectObjectLinkKind.Uses)
+        {
+            return;
+        }
+
+        var source = existingNodes.FirstOrDefault(node =>
+            string.Equals(node.NodeKey, sourceNodeKey, StringComparison.Ordinal));
+        if (allowCanonicalTaskResourceLink)
+        {
+            if (source is null ||
+                !ProjectStructureCanonicalTaskMutationPolicy.IsTask(
+                    source.ObjectType,
+                    source.ObjectSubtype))
+            {
+                throw new ProjectStructureAgentException(
+                    400,
+                    "CanonicalTaskRequired",
+                    $"Node '{sourceNodeKey}' is not a canonical WorkItem/task node.");
+            }
+
+            return;
+        }
+
+        if (source is not null)
+        {
+            ProjectStructureCanonicalTaskMutationPolicy
+                .EnsureGenericResourceAttachmentAllowed(
+                    source.ObjectType,
+                    source.ObjectSubtype);
+        }
+    }
+
+    private static void EnsureCanonicalTaskResourceParentAllowed(
+        ProjectObjectRecord node,
+        string targetParentNodeKey,
+        IReadOnlyCollection<ProjectObjectRecord> existingNodes)
+    {
+        if (!ProjectStructureTaskResourceGraphPolicy.IsResourceChildType(
+                node.ObjectType))
+        {
+            return;
+        }
+
+        var targetParent = existingNodes.FirstOrDefault(candidate =>
+            string.Equals(
+                candidate.NodeKey,
+                targetParentNodeKey,
+                StringComparison.Ordinal));
+        if (targetParent is not null)
+        {
+            ProjectStructureCanonicalTaskMutationPolicy
+                .EnsureGenericResourceAttachmentAllowed(
+                    targetParent.ObjectType,
+                    targetParent.ObjectSubtype);
+        }
     }
 
     public Task MoveObjectAsync(

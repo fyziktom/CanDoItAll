@@ -320,6 +320,55 @@ public sealed class ProjectStructureGanttPanelTests
         await openTask.WaitAsync(TimeSpan.FromSeconds(2));
     }
 
+    [Fact]
+    public async Task Task_double_click_with_person_and_agent_opens_read_only_assignment_details()
+    {
+        var projectId = Guid.NewGuid();
+        var primaryPerson = CreateAssignment(
+            projectId,
+            "task-a",
+            "Joe Doe",
+            ProjectPartyType.Person,
+            isPrimary: true);
+        var agent = CreateAssignment(
+            projectId,
+            "task-a",
+            "Delivery agent",
+            ProjectPartyType.AiAgent,
+            isPrimary: false);
+        using var context = CreateContext([agent, primaryPerson]);
+        var dialogHost = context.RenderComponent<DialogHost>();
+        var task = CreateTask("task-a", "Customer acceptance");
+        var cut = context.RenderComponent<ProjectStructureGanttPanel>(parameters => parameters
+            .Add(component => component.ProjectId, projectId)
+            .Add(component => component.Surface, CreateSurface(projectId, task))
+            .Add(component => component.MutationCommitted, () => { }));
+        var chart = cut.FindComponent<GanttChart>();
+        var projectedTask = Assert.Single(chart.Instance.Tasks);
+        Assert.Equal(2, projectedTask.Assignments.Count);
+
+        var openTask = cut.InvokeAsync(() =>
+            chart.Instance.TaskDoubleClicked.InvokeAsync(new GanttTaskId(task.Id)));
+
+        dialogHost.WaitForElement("[data-testid='project-structure-gantt-task-assignee-readonly']");
+        var dialog = dialogHost.FindComponent<ProjectStructureGanttTaskDialog>().Instance;
+        Assert.False(dialog.EditModel!.CanChangeDirectAssignee);
+        Assert.Equal(
+            new ProjectStructureTaskResourceSelection(
+                ProjectStructureTaskResourceKind.Person,
+                primaryPerson.PartyId),
+            dialog.EditModel.Assignee);
+        Assert.DoesNotContain(
+            context.Services.GetRequiredService<NotificationService>().Messages,
+            message => string.Equals(
+                message.Summary,
+                "Task details unavailable",
+                StringComparison.Ordinal));
+
+        dialogHost.Find("[data-testid='project-structure-gantt-task-cancel']").Click();
+        await openTask.WaitAsync(TimeSpan.FromSeconds(2));
+    }
+
     private static TestContext CreateContext(
         IReadOnlyList<ProjectPartyAssignmentDetail> assignments,
         Exception? assignmentFailure = null)
@@ -339,12 +388,11 @@ public sealed class ProjectStructureGanttPanelTests
             null!,
             NullLogger<ProjectStructureGanttMutationService>.Instance);
         context.Services.AddSingleton(mutationService);
-        var workbenchService = CreateWorkbenchService();
+        var (workbenchService, dbContextFactory, clock) = CreateWorkbenchService();
         context.Services.AddSingleton(workbenchService);
         var assigneeService = new ProjectStructureWorkItemAssigneeService(
             bridge,
-            workbenchService,
-            NullLogger<ProjectStructureWorkItemAssigneeService>.Instance);
+            workbenchService);
         var taskResourceService = new ProjectStructureTaskResourceService(
             assigneeService,
             null!,
@@ -355,33 +403,47 @@ public sealed class ProjectStructureGanttPanelTests
         context.Services.AddSingleton(taskResourceService);
         var rowOrderService = new ProjectStructureGanttRowOrderService(null!, workbenchService);
         context.Services.AddSingleton(rowOrderService);
+        var taskResourceCostService = new ProjectStructureTaskResourceCostService([]);
+        context.Services.AddSingleton(taskResourceCostService);
+        var estimateRefreshService = new ProjectStructureTaskEstimateRefreshService(taskResourceCostService);
+        context.Services.AddSingleton(estimateRefreshService);
         context.Services.AddSingleton(new ProjectStructureTaskCreationService(
             null!,
             null!,
             rowOrderService,
             workbenchService,
+            estimateRefreshService,
             NullLogger<ProjectStructureTaskCreationService>.Instance));
+        var taskApplicationService = new ProjectStructureTaskApplicationService(
+            assigneeService,
+            estimateRefreshService,
+            new ProjectStructureTaskEditCompensationService(
+                dbContextFactory,
+                clock),
+            workbenchService,
+            NullLogger<ProjectStructureTaskApplicationService>.Instance);
         var taskDetailsService = new ProjectStructureTaskDetailsService(
             mutationService,
-            assigneeService,
-            bridge,
-            workbenchService,
-            NullLogger<ProjectStructureTaskDetailsService>.Instance);
+            taskApplicationService);
         context.Services.AddSingleton(taskDetailsService);
         var currencyFormatter = new StubCurrencyFormatter();
         context.Services.AddSingleton<ICurrencyFormatter>(currencyFormatter);
-        var taskResourceCostService = new ProjectStructureTaskResourceCostService(
-            null!,
-            null!,
-            null!,
-            null!,
-            null!,
-            TimeProvider.System);
-        context.Services.AddSingleton(taskResourceCostService);
+        var taskPricingCommitService = new ProjectStructureTaskPricingCommitService(
+            workbenchService,
+            estimateRefreshService,
+            new ProjectStructureTaskPricingPersistenceService(dbContextFactory, clock),
+            NullLogger<ProjectStructureTaskPricingCommitService>.Instance);
+        context.Services.AddSingleton(taskPricingCommitService);
+        var taskResourceAttachmentService = new ProjectStructureTaskResourceAttachmentService(
+            taskResourceService,
+            taskPricingCommitService,
+            NullLogger<ProjectStructureTaskResourceAttachmentService>.Instance);
+        context.Services.AddSingleton(taskResourceAttachmentService);
         context.Services.AddScoped(serviceProvider => new ProjectStructureGanttTaskEditCoordinator(
             taskResourceService,
             taskResourceCostService,
             taskDetailsService,
+            taskResourceAttachmentService,
             serviceProvider.GetRequiredService<DialogService>(),
             serviceProvider.GetRequiredService<NotificationService>(),
             currencyFormatter,
@@ -389,7 +451,10 @@ public sealed class ProjectStructureGanttPanelTests
         return context;
     }
 
-    private static ProjectWorkbenchService CreateWorkbenchService()
+    private static (
+        ProjectWorkbenchService Service,
+        IDbContextFactory<AppDbContext> DbContextFactory,
+        IClock Clock) CreateWorkbenchService()
     {
         AppDbContextModelRegistry.ConfigureAssemblies(
         [
@@ -401,15 +466,19 @@ public sealed class ProjectStructureGanttPanelTests
             .ConfigureWarnings(warnings => warnings.Ignore(InMemoryEventId.TransactionIgnoredWarning))
             .Options;
         var factory = new TestDbContextFactory(options);
-        return new ProjectWorkbenchService(
+        var clock = new FixedClock();
+        return (
+            new ProjectWorkbenchService(
+                factory,
+                clock,
+                null!,
+                null!,
+                null!,
+                null!,
+                null!,
+                null!),
             factory,
-            new FixedClock(),
-            null!,
-            null!,
-            null!,
-            null!,
-            null!,
-            null!);
+            clock);
     }
 
     private static ProjectStructureSurface CreateSurface(Guid projectId, params ProjectStructureNode[] nodes)
@@ -452,17 +521,19 @@ public sealed class ProjectStructureGanttPanelTests
     private static ProjectPartyAssignmentDetail CreateAssignment(
         Guid projectId,
         string nodeKey,
-        string displayName)
+        string displayName,
+        ProjectPartyType partyType = ProjectPartyType.Person,
+        bool isPrimary = false)
         => new(
             Guid.NewGuid(),
             projectId,
             Guid.NewGuid(),
             ProjectPartyAssignmentRole.WorkItemAssignee,
             displayName,
-            "Person",
-            ProjectPartyType.Person,
+            partyType == ProjectPartyType.Person ? "Person" : "AI agent",
+            partyType,
             nodeKey,
-            false,
+            isPrimary,
             null,
             null,
             null,

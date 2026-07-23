@@ -219,11 +219,48 @@ public sealed class ProjectStructureAgentService(
         return Task.FromResult(ProjectStructureCanvasCatalog.BuildAgentNodeCatalog());
     }
 
-    public async Task<ProjectStructureNodeSummary> CreateNodeAsync(
+    public Task<ProjectStructureNodeSummary> CreateNodeAsync(
         Guid projectId,
         ProjectStructureNodeCreateInput request,
         ProjectStructureAgentContext agent,
         CancellationToken cancellationToken = default)
+    {
+        return CreateNodeCoreAsync(
+            projectId,
+            request,
+            agent,
+            allowCanonicalTask: false,
+            cancellationToken);
+    }
+
+    internal Task<ProjectStructureNodeSummary> CreateCanonicalTaskNodeAsync(
+        Guid projectId,
+        ProjectStructureNodeCreateInput request,
+        ProjectStructureAgentContext agent,
+        CancellationToken cancellationToken = default)
+    {
+        if (!ProjectStructureCanonicalTaskMutationPolicy.IsTask(
+                request.ObjectType,
+                request.ObjectSubtype))
+        {
+            throw new InvalidOperationException(
+                "The canonical task creation boundary accepts only WorkItem/task nodes.");
+        }
+
+        return CreateNodeCoreAsync(
+            projectId,
+            request,
+            agent,
+            allowCanonicalTask: true,
+            cancellationToken);
+    }
+
+    private async Task<ProjectStructureNodeSummary> CreateNodeCoreAsync(
+        Guid projectId,
+        ProjectStructureNodeCreateInput request,
+        ProjectStructureAgentContext agent,
+        bool allowCanonicalTask,
+        CancellationToken cancellationToken)
     {
         EnsureValidMediaPayload(request.Media);
 
@@ -235,6 +272,13 @@ public sealed class ProjectStructureAgentService(
             async cancellationToken =>
             {
                 var objectSubtype = ProjectStructureRequestedNodeKindParser.NormalizeSubtypeForType(request.ObjectType, request.ObjectSubtype);
+                if (!allowCanonicalTask)
+                {
+                    ProjectStructureCanonicalTaskMutationPolicy.EnsureGenericCreateAllowed(
+                        request.ObjectType,
+                        objectSubtype);
+                }
+
                 var metadataJson = ProjectStructureDotNetRuntimeMetadataHydrator.NormalizeMetadataJson(
                     request.ObjectType,
                     objectSubtype,
@@ -257,7 +301,10 @@ public sealed class ProjectStructureAgentService(
                         request.Media,
                         metadataJson,
                         request.DurationSeconds,
-                        PlacementIntent: ProjectObjectPlacementIntent.AutomaticAroundParent),
+                        PlacementIntent: ProjectObjectPlacementIntent.AutomaticAroundParent,
+                        TaskPricingInitialization: allowCanonicalTask
+                            ? ProjectObjectTaskPricingInitialization.PreserveValidatedAuthoritativePricing
+                            : ProjectObjectTaskPricingInitialization.ClearAuthoritativePricing),
                     cancellationToken);
                 return MapNodeSummary(createdNode, createdNode.Priority, FullNodeReadRequest);
             },
@@ -285,6 +332,11 @@ public sealed class ProjectStructureAgentService(
                     : request.ObjectType.HasValue && request.ObjectType.Value != existingNode.ObjectType
                         ? string.Empty
                         : existingNode.ObjectSubtype;
+                ProjectStructureCanonicalTaskMutationPolicy.EnsureGenericUpdateAllowed(
+                    existingNode.ObjectType,
+                    existingNode.ObjectSubtype,
+                    targetObjectType,
+                    targetObjectSubtype);
                 var metadataJson = string.IsNullOrWhiteSpace(request.MetadataJson)
                     ? string.IsNullOrWhiteSpace(existingNode.MetadataJson) ? "{}" : existingNode.MetadataJson
                     : request.MetadataJson;
@@ -510,6 +562,9 @@ public sealed class ProjectStructureAgentService(
             async cancellationToken =>
             {
                 var existingNode = await GetNodeAsync(projectId, nodeId, cancellationToken);
+                ProjectStructureCanonicalTaskMutationPolicy.EnsureGenericMetadataUpdateAllowed(
+                    existingNode.ObjectType,
+                    existingNode.ObjectSubtype);
                 var notes = request.Notes ?? existingNode.Notes;
                 var metadataJson = ProjectStructureDotNetRuntimeMetadataHydrator.NormalizeMetadataJson(
                     existingNode.ObjectType,
@@ -703,11 +758,24 @@ public sealed class ProjectStructureAgentService(
             cancellationToken);
     }
 
-    public async Task<ProjectStructureLinkChangeResult> LinkNodesAsync(
+    public Task<ProjectStructureLinkChangeResult> LinkNodesAsync(
         Guid projectId,
         ProjectStructureLinkInput request,
         ProjectStructureAgentContext agent,
         CancellationToken cancellationToken = default)
+        => LinkNodesCoreAsync(
+            projectId,
+            request,
+            agent,
+            allowCanonicalTaskResourceLink: false,
+            cancellationToken);
+
+    private async Task<ProjectStructureLinkChangeResult> LinkNodesCoreAsync(
+        Guid projectId,
+        ProjectStructureLinkInput request,
+        ProjectStructureAgentContext agent,
+        bool allowCanonicalTaskResourceLink,
+        CancellationToken cancellationToken)
     {
         ValidateLinkInput(request);
         return await leaseService.RunWithProjectMutationLeaseAsync(
@@ -717,12 +785,30 @@ public sealed class ProjectStructureAgentService(
             "link-structure-nodes",
             async cancellationToken =>
             {
-                await projectWorkbenchService.LinkObjectsAsync(
+                await EnsureResourceLinkAllowedAsync(
                     projectId,
-                    request.SourceNodeId,
-                    request.TargetNodeId,
-                    request.Kind,
+                    request,
+                    allowCanonicalTaskResourceLink,
                     cancellationToken);
+                if (allowCanonicalTaskResourceLink)
+                {
+                    await projectWorkbenchService.LinkCanonicalTaskResourceAsync(
+                        projectId,
+                        request.SourceNodeId,
+                        request.TargetNodeId,
+                        request.Kind,
+                        cancellationToken);
+                }
+                else
+                {
+                    await projectWorkbenchService.LinkObjectsAsync(
+                        projectId,
+                        request.SourceNodeId,
+                        request.TargetNodeId,
+                        request.Kind,
+                        cancellationToken);
+                }
+
                 return new ProjectStructureLinkChangeResult(
                     true,
                     new ProjectStructureLinkSummary(request.SourceNodeId, request.TargetNodeId, request.Kind, true));
@@ -730,11 +816,36 @@ public sealed class ProjectStructureAgentService(
             cancellationToken);
     }
 
-    public async Task<ProjectStructureLinkChangeResult> UnlinkNodesAsync(
+    public Task<ProjectStructureLinkChangeResult> UnlinkNodesAsync(
         Guid projectId,
         ProjectStructureLinkInput request,
         ProjectStructureAgentContext agent,
         CancellationToken cancellationToken = default)
+        => UnlinkNodesCoreAsync(
+            projectId,
+            request,
+            agent,
+            allowCanonicalTaskResourceLink: false,
+            cancellationToken);
+
+    internal Task<ProjectStructureLinkChangeResult> UnlinkCanonicalTaskResourceAsync(
+        Guid projectId,
+        ProjectStructureLinkInput request,
+        ProjectStructureAgentContext agent,
+        CancellationToken cancellationToken = default)
+        => UnlinkNodesCoreAsync(
+            projectId,
+            request,
+            agent,
+            allowCanonicalTaskResourceLink: true,
+            cancellationToken);
+
+    private async Task<ProjectStructureLinkChangeResult> UnlinkNodesCoreAsync(
+        Guid projectId,
+        ProjectStructureLinkInput request,
+        ProjectStructureAgentContext agent,
+        bool allowCanonicalTaskResourceLink,
+        CancellationToken cancellationToken)
     {
         ValidateLinkInput(request);
         return await leaseService.RunWithProjectMutationLeaseAsync(
@@ -744,12 +855,28 @@ public sealed class ProjectStructureAgentService(
             "unlink-structure-nodes",
             async cancellationToken =>
             {
-                var changed = await projectWorkbenchService.UnlinkObjectsAsync(
-                    projectId,
-                    request.SourceNodeId,
-                    request.TargetNodeId,
-                    request.Kind,
-                    cancellationToken);
+                if (allowCanonicalTaskResourceLink)
+                {
+                    await EnsureResourceLinkAllowedAsync(
+                        projectId,
+                        request,
+                        allowCanonicalTaskResourceLink: true,
+                        cancellationToken);
+                }
+
+                var changed = allowCanonicalTaskResourceLink
+                    ? await projectWorkbenchService.UnlinkCanonicalTaskResourceAsync(
+                        projectId,
+                        request.SourceNodeId,
+                        request.TargetNodeId,
+                        request.Kind,
+                        cancellationToken)
+                    : await projectWorkbenchService.UnlinkObjectsAsync(
+                        projectId,
+                        request.SourceNodeId,
+                        request.TargetNodeId,
+                        request.Kind,
+                        cancellationToken);
                 return new ProjectStructureLinkChangeResult(
                     changed,
                     new ProjectStructureLinkSummary(request.SourceNodeId, request.TargetNodeId, request.Kind, true));
@@ -778,6 +905,69 @@ public sealed class ProjectStructureAgentService(
                 request.LeaseToken),
             agent,
             cancellationToken);
+    }
+
+    internal Task<ProjectStructureLinkChangeResult> LinkCanonicalTaskProcessDefinitionAsync(
+        Guid projectId,
+        string sourceTaskNodeId,
+        ProjectStructureProcessDefinitionLinkInput request,
+        ProjectStructureAgentContext agent,
+        CancellationToken cancellationToken = default)
+    {
+        if (request.ProcessDefinitionId == Guid.Empty)
+        {
+            throw new ProjectStructureAgentException(
+                400,
+                "ProcessDefinitionRequired",
+                "A process definition id is required.");
+        }
+
+        return LinkNodesCoreAsync(
+            projectId,
+            new ProjectStructureLinkInput(
+                sourceTaskNodeId,
+                ProjectStructureProcessNodeKeys.BuildProcessDefinitionNodeKey(
+                    request.ProcessDefinitionId),
+                ProjectObjectLinkKind.Uses,
+                request.LeaseToken),
+            agent,
+            allowCanonicalTaskResourceLink: true,
+            cancellationToken);
+    }
+
+    private async Task EnsureResourceLinkAllowedAsync(
+        Guid projectId,
+        ProjectStructureLinkInput request,
+        bool allowCanonicalTaskResourceLink,
+        CancellationToken cancellationToken)
+    {
+        if (request.Kind != ProjectObjectLinkKind.Uses)
+        {
+            return;
+        }
+
+        var sourceNode = await GetNodeAsync(
+            projectId,
+            request.SourceNodeId,
+            cancellationToken);
+        if (allowCanonicalTaskResourceLink)
+        {
+            if (!ProjectStructureCanonicalTaskMutationPolicy.IsTask(
+                    sourceNode.ObjectType,
+                    sourceNode.ObjectSubtype))
+            {
+                throw new ProjectStructureAgentException(
+                    400,
+                    "CanonicalTaskRequired",
+                    $"Node '{request.SourceNodeId}' is not a canonical WorkItem/task node.");
+            }
+
+            return;
+        }
+
+        ProjectStructureCanonicalTaskMutationPolicy.EnsureGenericResourceAttachmentAllowed(
+            sourceNode.ObjectType,
+            sourceNode.ObjectSubtype);
     }
 
     public async Task<ProjectStructureSubprojectTransferResult> MoveDescendantsToProjectAsync(
@@ -1057,6 +1247,25 @@ public sealed class ProjectStructureAgentService(
             agent,
             "delete-structure-node",
             cancellationToken => projectWorkbenchService.DeleteObjectAsync(projectId, nodeId, cancellationToken),
+            cancellationToken);
+    }
+
+    internal Task<int> DeleteCanonicalTaskResourceAsync(
+        Guid projectId,
+        string nodeId,
+        ProjectStructureAgentContext agent,
+        CancellationToken cancellationToken = default)
+    {
+        return leaseService.RunWithProjectMutationLeaseAsync(
+            projectId,
+            leaseToken: null,
+            agent,
+            "delete-canonical-task-resource",
+            cancellationToken =>
+                projectWorkbenchService.DeleteCanonicalTaskResourceObjectAsync(
+                    projectId,
+                    nodeId,
+                    cancellationToken),
             cancellationToken);
     }
 

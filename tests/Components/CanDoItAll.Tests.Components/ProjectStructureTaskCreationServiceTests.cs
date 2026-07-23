@@ -205,6 +205,119 @@ public sealed class ProjectStructureTaskCreationServiceTests
     }
 
     [Fact]
+    public async Task Create_with_person_ignores_submitted_cost_and_commits_fresh_authoritative_quote()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var services = harness.Context.Services;
+        var projectsService = services.GetRequiredService<ProjectsService>();
+        var partyDirectoryService = services.GetRequiredService<PartyDirectoryService>();
+        var partyBridge = services.GetRequiredService<IProjectPartyIntegrationBridge>();
+        var workbenchService = services.GetRequiredService<ProjectWorkbenchService>();
+        var projectId = await CreateProjectAsync(projectsService, "Authoritative task creation price");
+        var partyId = await CreatePartyAsync(partyDirectoryService, "Priced owner");
+        var resource = new ProjectStructureTaskResourceSelection(
+            ProjectStructureTaskResourceKind.Person,
+            partyId);
+        var pricingStrategy = new FixedQuoteStrategy(
+            ProjectStructureTaskResourceKind.Person,
+            new ProjectStructureTaskResourceCostQuote(
+                ProjectStructureTaskResourceCostQuoteStatus.Available,
+                160m,
+                "USD",
+                "CRM workforce rate",
+                "Fresh CRM price.",
+                DateTimeOffset.Parse("2026-07-23T16:00:00Z"),
+                ProjectStructureTaskResourceCostSource.CrmWorkforceRate));
+        var creationService = CreateTaskCreationService(services, partyBridge, pricingStrategy);
+
+        var result = await creationService.CreateAsync(
+            projectId,
+            new ProjectStructureTaskCreateRequest(
+                "Freshly priced task",
+                StartUtc,
+                StartUtc.AddHours(8),
+                Resource: resource,
+                Estimate: new ProjectTaskEstimate(
+                    8m,
+                    ProjectWorkItemEffortUnit.Hours,
+                    999m,
+                    "EUR")),
+            CreateAgent(projectId));
+
+        var task = (await workbenchService.GetStructureAsync(projectId))
+            .Nodes
+            .Single(node => node.Id == result.TaskNodeId);
+        var metadata = ProjectObjectMetadataSerializer.Parse(task.MetadataJson).WorkItem;
+
+        Assert.NotNull(metadata);
+        Assert.Equal(ProjectTaskExecutionState.NotStarted, metadata!.ExecutionState);
+        Assert.Equal(160m, metadata.ExpectedCostAmount);
+        Assert.Equal("USD", metadata.ExpectedCostCurrencyCode);
+        Assert.Equal(ProjectStructureTaskEstimateRefreshStatus.Refreshed, result.Pricing.Status);
+        Assert.Equal(resource, pricingStrategy.LastRequest?.Resource);
+        Assert.Equal(999m, pricingStrategy.LastRequest?.Estimate.ExpectedCostAmount);
+        Assert.NotNull(metadata.ExpectedCostBasis);
+        Assert.Equal(partyId, metadata.ExpectedCostBasis!.ResourceId);
+        Assert.Equal(
+            ProjectStructureTaskResourceCostSource.CrmWorkforceRate,
+            metadata.ExpectedCostBasis.Source);
+    }
+
+    [Fact]
+    public async Task Create_with_person_without_authoritative_price_clears_submitted_stale_cost()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var services = harness.Context.Services;
+        var projectsService = services.GetRequiredService<ProjectsService>();
+        var partyDirectoryService = services.GetRequiredService<PartyDirectoryService>();
+        var partyBridge = services.GetRequiredService<IProjectPartyIntegrationBridge>();
+        var workbenchService = services.GetRequiredService<ProjectWorkbenchService>();
+        var projectId = await CreateProjectAsync(projectsService, "Missing authoritative task price");
+        var partyId = await CreatePartyAsync(partyDirectoryService, "Unpriced owner");
+        var pricingStrategy = new FixedQuoteStrategy(
+            ProjectStructureTaskResourceKind.Person,
+            ProjectStructureTaskResourceCostQuote.Unavailable(
+                "CRM workforce rate",
+                "No workforce rate is configured.",
+                DateTimeOffset.Parse("2026-07-23T16:00:00Z"),
+                ProjectStructureTaskResourceCostSource.CrmWorkforceRate));
+        var creationService = CreateTaskCreationService(services, partyBridge, pricingStrategy);
+
+        var result = await creationService.CreateAsync(
+            projectId,
+            new ProjectStructureTaskCreateRequest(
+                "Unpriced task",
+                StartUtc,
+                StartUtc.AddHours(8),
+                Resource: new ProjectStructureTaskResourceSelection(
+                    ProjectStructureTaskResourceKind.Person,
+                    partyId),
+                Estimate: new ProjectTaskEstimate(
+                    8m,
+                    ProjectWorkItemEffortUnit.Hours,
+                    999m,
+                    "EUR")),
+            CreateAgent(projectId));
+
+        var task = (await workbenchService.GetStructureAsync(projectId))
+            .Nodes
+            .Single(node => node.Id == result.TaskNodeId);
+        var metadata = ProjectObjectMetadataSerializer.Parse(task.MetadataJson).WorkItem;
+
+        Assert.NotNull(metadata);
+        Assert.Null(metadata!.ExpectedCostAmount);
+        Assert.Equal(string.Empty, metadata.ExpectedCostCurrencyCode);
+        Assert.Equal(ProjectStructureTaskEstimateRefreshStatus.Cleared, result.Pricing.Status);
+        Assert.Equal(
+            ProjectStructureTaskEstimateRefreshReason.AuthoritativeQuoteUnavailable,
+            result.Pricing.Reason);
+        Assert.NotNull(metadata.ExpectedCostBasis);
+        Assert.Equal(
+            ProjectStructureTaskResourceCostSource.CrmWorkforceRate,
+            metadata.ExpectedCostBasis!.Source);
+    }
+
+    [Fact]
     public async Task Agent_resource_uses_canonical_assignment_and_updates_task_metadata()
     {
         await using var harness = await ComponentTestHarness.CreateAsync();
@@ -590,14 +703,14 @@ public sealed class ProjectStructureTaskCreationServiceTests
 
     private static ProjectStructureTaskCreationService CreateTaskCreationService(
         IServiceProvider services,
-        IProjectPartyIntegrationBridge partyIntegrationBridge)
+        IProjectPartyIntegrationBridge partyIntegrationBridge,
+        IProjectStructureTaskResourceCostStrategy? pricingStrategy = null)
     {
         var agentService = services.GetRequiredService<ProjectStructureAgentService>();
         var workbenchService = services.GetRequiredService<ProjectWorkbenchService>();
         var assigneeService = new ProjectStructureWorkItemAssigneeService(
             partyIntegrationBridge,
-            workbenchService,
-            services.GetRequiredService<ILogger<ProjectStructureWorkItemAssigneeService>>());
+            workbenchService);
         var resourceService = new ProjectStructureTaskResourceService(
             assigneeService,
             services.GetRequiredService<IWorkflowCatalogService>(),
@@ -610,7 +723,29 @@ public sealed class ProjectStructureTaskCreationServiceTests
             resourceService,
             services.GetRequiredService<ProjectStructureGanttRowOrderService>(),
             workbenchService,
+            pricingStrategy is null
+                ? services.GetRequiredService<ProjectStructureTaskEstimateRefreshService>()
+                : new ProjectStructureTaskEstimateRefreshService(
+                    new ProjectStructureTaskResourceCostService([pricingStrategy])),
             services.GetRequiredService<ILogger<ProjectStructureTaskCreationService>>());
+    }
+
+    private sealed class FixedQuoteStrategy(
+        ProjectStructureTaskResourceKind kind,
+        ProjectStructureTaskResourceCostQuote quote)
+        : IProjectStructureTaskResourceCostStrategy
+    {
+        public ProjectStructureTaskResourceKind Kind => kind;
+
+        public ProjectStructureTaskResourceCostRequest? LastRequest { get; private set; }
+
+        public Task<ProjectStructureTaskResourceCostQuote> GetQuoteAsync(
+            ProjectStructureTaskResourceCostRequest request,
+            CancellationToken cancellationToken = default)
+        {
+            LastRequest = request;
+            return Task.FromResult(quote);
+        }
     }
 
     private static Task<WorkflowDefinition> CreateWorkflowAsync(

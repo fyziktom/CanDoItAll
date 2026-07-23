@@ -16,6 +16,11 @@ public sealed partial class ProjectWorkbenchService
 
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         await ProjectWorkbenchSchemaInitializer.EnsureAsync(dbContext, cancellationToken);
+        await using var mutationScope =
+            await ProjectStructureSerializableMutationScope.BeginAsync(
+                dbContext,
+                ProjectStructureSerializableMutationScope.ForProject(projectId),
+                cancellationToken);
 
         var normalizedTargetNodeKey = ProjectWorkbenchGraphConventions.NormalizeEditableParentNodeKey(
             projectId,
@@ -34,6 +39,32 @@ public sealed partial class ProjectWorkbenchService
             projectId,
             editableNodes,
             sourceRootNodeKeys);
+        foreach (var rootNodeKey in forest.RootNodeKeys)
+        {
+            EnsureCanonicalTaskResourceChildAllowed(
+                normalizedTargetNodeKey,
+                forest.NodesByKey[rootNodeKey].ObjectType,
+                assembly.Nodes,
+                allowCanonicalTaskResourceChild: false);
+        }
+
+        foreach (var resourceChild in forest.Nodes.Where(node =>
+                     ProjectStructureTaskResourceGraphPolicy.IsResourceChildType(
+                         node.ObjectType) &&
+                     node.ParentNodeKey is not null &&
+                     forest.NodesByKey.TryGetValue(
+                         node.ParentNodeKey,
+                         out var copiedParent) &&
+                     ProjectStructureCanonicalTaskMutationPolicy.IsTask(
+                         copiedParent.ObjectType,
+                         copiedParent.ObjectSubtype)))
+        {
+            ProjectStructureCanonicalTaskMutationPolicy
+                .EnsureGenericResourceAttachmentAllowed(
+                    forest.NodesByKey[resourceChild.ParentNodeKey!].ObjectType,
+                    forest.NodesByKey[resourceChild.ParentNodeKey!].ObjectSubtype);
+        }
+
         var copiedAtUtc = clock.GetUtcNow();
         var objectIdMap = forest.Nodes.ToDictionary(node => node.Id, _ => Guid.NewGuid());
         var nodeKeyMap = forest.Nodes.ToDictionary(
@@ -138,6 +169,7 @@ public sealed partial class ProjectWorkbenchService
         }
 
         await dbContext.SaveChangesAsync(cancellationToken);
+        await mutationScope.CommitAsync(cancellationToken);
 
         return new ProjectStructureClipboardCopyResult(
             forest.RootNodeKeys.Select(nodeKey => nodeKeyMap[nodeKey]).ToList(),
@@ -332,15 +364,22 @@ internal static class ProjectObjectClipboardCopyPolicy
             RemapWorkflowInputSettings(workflow.InputSettings, nodeKeyMap);
         }
 
-        ProjectObjectMetadataSerializer.Validate(source.ObjectType, source.ObjectSubtype, metadata);
-
+        var isCanonicalTask = ProjectStructureCanonicalTaskMutationPolicy.IsTask(
+            source.ObjectType,
+            source.ObjectSubtype);
+        var metadataJson = ProjectObjectMetadataSerializer.Serialize(metadata);
+        metadataJson = ProjectStructureCanonicalTaskCreationPolicy.NormalizeMetadataJson(
+            source.ObjectType,
+            source.ObjectSubtype,
+            metadataJson,
+            ProjectObjectTaskPricingInitialization.ClearAuthoritativePricing);
         var isWorkflowNode = source.ObjectType is ProjectObjectType.WorkflowDefinition or ProjectObjectType.WorkflowRun;
         return new ProjectObjectClipboardCopyState(
-            isWorkflowNode ? WorkflowReadyStatus : source.Status,
-            isWorkflowNode ? WorkflowReadyProgressMode : source.ProgressMode,
-            isWorkflowNode ? 0 : source.ProgressPercent,
+            isWorkflowNode ? WorkflowReadyStatus : isCanonicalTask ? "Draft" : source.Status,
+            isWorkflowNode ? WorkflowReadyProgressMode : isCanonicalTask ? "progress" : source.ProgressMode,
+            isWorkflowNode || isCanonicalTask ? 0 : source.ProgressPercent,
             isWorkflowNode ? FilterWorkflowOwnedMarkers(source.MarkersJson) : source.MarkersJson,
-            ProjectObjectMetadataSerializer.Serialize(metadata));
+            metadataJson);
     }
 
     public static bool IsInternalNodeReferenceKind(string referenceKind)

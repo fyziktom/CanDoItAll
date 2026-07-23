@@ -8,6 +8,7 @@ public sealed class ProjectStructureTaskCreationService(
     ProjectStructureTaskResourceService resourceService,
     ProjectStructureGanttRowOrderService rowOrderService,
     ProjectWorkbenchService projectWorkbenchService,
+    ProjectStructureTaskEstimateRefreshService estimateRefreshService,
     ILogger<ProjectStructureTaskCreationService> logger)
 {
     private const string BacklogSubtype = "backlog";
@@ -39,20 +40,29 @@ public sealed class ProjectStructureTaskCreationService(
         ProjectStructureAgentContext agent,
         CancellationToken cancellationToken)
     {
+        var pricing = await estimateRefreshService.RefreshAsync(
+            projectId,
+            ProjectTaskExecutionState.NotStarted,
+            request.Resource,
+            request.Estimate ?? ProjectTaskEstimate.Empty(),
+            ProjectStructureTaskMissingResourcePricingPolicy.PreserveManualEstimate,
+            cancellationToken);
         var backlog = await EnsureMainBacklogAsync(projectId, agent, cancellationToken);
         var metadata = new ProjectObjectMetadataEnvelope
         {
             WorkItem = new ProjectWorkItemMetadata
             {
                 WorkItemKind = ProjectWorkItemKind.Task,
+                ExecutionState = ProjectTaskExecutionState.NotStarted,
                 Description = request.Title,
-                ExpectedEffortHours = request.Estimate?.ExpectedEffortHours,
-                ExpectedEffortUnit = request.Estimate?.ExpectedEffortUnit ?? ProjectWorkItemEffortUnit.Hours,
-                ExpectedCostAmount = request.Estimate?.ExpectedCostAmount,
-                ExpectedCostCurrencyCode = request.Estimate?.ExpectedCostCurrencyCode ?? string.Empty
+                ExpectedEffortHours = pricing.Estimate.ExpectedEffortHours,
+                ExpectedEffortUnit = pricing.Estimate.ExpectedEffortUnit,
+                ExpectedCostAmount = pricing.Estimate.ExpectedCostAmount,
+                ExpectedCostCurrencyCode = pricing.Estimate.ExpectedCostCurrencyCode,
+                ExpectedCostBasis = pricing.CalculatedCostBasis
             }
         };
-        var task = await agentService.CreateNodeAsync(
+        var task = await agentService.CreateCanonicalTaskNodeAsync(
             projectId,
             new ProjectStructureNodeCreateInput(
                 ProjectObjectType.WorkItem,
@@ -128,7 +138,7 @@ public sealed class ProjectStructureTaskCreationService(
                 agent);
         }
 
-        return new ProjectStructureTaskCreateResult(task.Id, backlog.Id, request.Resource);
+        return new ProjectStructureTaskCreateResult(task.Id, backlog.Id, request.Resource, pricing);
     }
 
     private async Task<ProjectStructureNodeSummary> EnsureMainBacklogAsync(
@@ -295,6 +305,11 @@ public sealed class ProjectStructureTaskCreationService(
                 400,
                 "TaskDurationTooLong",
                 $"Task duration cannot exceed {int.MaxValue} seconds.");
+        }
+
+        if (request.Resource is not null)
+        {
+            ProjectStructureTaskResourceSelectionPolicy.Validate(request.Resource);
         }
 
         var estimate = NormalizeEstimate(request.Estimate);
