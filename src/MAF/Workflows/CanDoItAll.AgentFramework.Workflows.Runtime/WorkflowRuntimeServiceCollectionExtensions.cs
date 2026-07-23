@@ -36,6 +36,7 @@ public static class WorkflowRuntimeServiceCollectionExtensions
         services.TryAddSingleton<InMemoryWorkflowUsageObservationStore>();
         services.TryAddSingleton<IWorkflowRunStore>(serviceProvider => serviceProvider.GetRequiredService<InMemoryWorkflowRunStore>());
         services.TryAddSingleton<IWorkflowOverviewStore>(serviceProvider => serviceProvider.GetRequiredService<InMemoryWorkflowRunStore>());
+        services.TryAddSingleton<IWorkflowDashboardActivityStore>(serviceProvider => serviceProvider.GetRequiredService<InMemoryWorkflowRunStore>());
         services.TryAddSingleton<IWorkflowUsageObservationStore>(serviceProvider => serviceProvider.GetRequiredService<InMemoryWorkflowUsageObservationStore>());
         services.TryAddSingleton<IWorkflowArtifactStore>(serviceProvider => serviceProvider.GetRequiredService<InMemoryWorkflowRunStore>());
         services.TryAddSingleton<IWorkflowExternalRequestStore>(serviceProvider => serviceProvider.GetRequiredService<InMemoryWorkflowRunStore>());

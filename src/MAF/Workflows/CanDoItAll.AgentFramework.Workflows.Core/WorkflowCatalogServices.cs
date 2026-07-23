@@ -6,6 +6,7 @@ namespace CanDoItAll.AgentFramework.Core;
 public sealed class InMemoryWorkflowCatalogService :
     IWorkflowCatalogService,
     IWorkflowCatalogSearchService,
+    IWorkflowCatalogLookupService,
     IWorkflowComponentLibraryService,
     IWorkflowSettingsService
 {
@@ -87,6 +88,31 @@ public sealed class InMemoryWorkflowCatalogService :
                 query.PageIndex,
                 query.PageSize,
                 totalCount);
+        }
+        finally
+        {
+            store.Gate.Release();
+        }
+    }
+
+    public async Task<IReadOnlyList<WorkflowCatalogItem>> LookupDefinitionsAsync(
+        WorkflowCatalogLookupQuery query,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(query);
+        if (query.WorkflowIds.Count == 0)
+        {
+            return [];
+        }
+
+        await store.Gate.WaitAsync(cancellationToken);
+        try
+        {
+            return query.WorkflowIds
+                .Where(store.Definitions.ContainsKey)
+                .Select(workflowId => store.Definitions[workflowId][^1])
+                .Select(MapCatalogItem)
+                .ToArray();
         }
         finally
         {

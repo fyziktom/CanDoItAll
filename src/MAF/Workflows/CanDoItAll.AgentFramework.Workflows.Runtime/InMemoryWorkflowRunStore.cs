@@ -8,7 +8,8 @@ public sealed class InMemoryWorkflowRunStore :
     IWorkflowRunStore,
     IWorkflowArtifactStore,
     IWorkflowExternalRequestStore,
-    IWorkflowOverviewStore
+    IWorkflowOverviewStore,
+    IWorkflowDashboardActivityStore
 {
     private const int MaximumOverviewRecentTake = 12;
     private const int MaximumOverviewTopWorkflowTake = 10;
@@ -263,6 +264,52 @@ public sealed class InMemoryWorkflowRunStore :
                 .ToArray());
         return Task.FromResult(result);
     }
+
+    public Task<WorkflowDashboardActivityStoreResult> QueryActivityAsync(
+        WorkflowDashboardActivityQuery query,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(query);
+        cancellationToken.ThrowIfCancellationRequested();
+
+        WorkflowRunSnapshot[] snapshot;
+        lock (mutationSync)
+        {
+            snapshot = runs.Values.ToArray();
+        }
+
+        var activeRuns = OrderActivity(snapshot.Where(run => WorkflowRunActivityPolicy.IsActive(run.State)))
+            .Take(query.Take)
+            .Select(ToDashboardActivityRun)
+            .ToArray();
+        if (activeRuns.Length > 0)
+        {
+            return Task.FromResult(new WorkflowDashboardActivityStoreResult(
+                WorkflowDashboardActivityMode.Active,
+                activeRuns));
+        }
+
+        var recentRuns = OrderActivity(snapshot)
+            .Take(query.Take)
+            .Select(ToDashboardActivityRun)
+            .ToArray();
+        return Task.FromResult(new WorkflowDashboardActivityStoreResult(
+            WorkflowDashboardActivityMode.RecentFallback,
+            recentRuns));
+    }
+
+    private static IOrderedEnumerable<WorkflowRunSnapshot> OrderActivity(IEnumerable<WorkflowRunSnapshot> runs)
+        => runs
+            .OrderByDescending(run => run.UpdatedAtUtc)
+            .ThenByDescending(run => run.RunId.Value);
+
+    private static WorkflowDashboardActivityRun ToDashboardActivityRun(WorkflowRunSnapshot run)
+        => new(
+            run.RunId,
+            run.WorkflowId,
+            run.State,
+            run.Summary,
+            run.UpdatedAtUtc);
 
     public Task SaveEventAsync(WorkflowEventRecord workflowEvent, CancellationToken cancellationToken = default)
     {

@@ -20,6 +20,7 @@ public static class WorkflowCoreServiceCollectionExtensions
         services.TryAddScoped<IWorkflowUsageAnalyticsStore, WorkflowUsageAnalyticsStore>();
         services.TryAddScoped<IWorkflowAnalyticsQueryService, WorkflowAnalyticsQueryService>();
         services.TryAddScoped<IWorkflowOverviewQueryService, WorkflowOverviewQueryService>();
+        services.TryAddScoped<IWorkflowDashboardActivityQueryService, WorkflowDashboardActivityQueryService>();
         services.TryAddScoped<IWorkflowPayloadPolicyService, WorkflowPayloadPolicyService>();
         services.TryAddScoped<IWorkflowTestRunner, WorkflowTestRunner>();
 
@@ -39,6 +40,7 @@ public static class WorkflowCoreServiceCollectionExtensions
             serviceProvider.GetRequiredService<IWorkflowRuntimeBackendCatalog>()));
         services.TryAddScoped<IWorkflowCatalogService>(serviceProvider => serviceProvider.GetRequiredService<InMemoryWorkflowCatalogService>());
         services.TryAddScoped<IWorkflowCatalogSearchService>(serviceProvider => serviceProvider.GetRequiredService<InMemoryWorkflowCatalogService>());
+        services.TryAddScoped<IWorkflowCatalogLookupService>(serviceProvider => serviceProvider.GetRequiredService<InMemoryWorkflowCatalogService>());
         services.TryAddScoped<IWorkflowComponentLibraryService>(serviceProvider => serviceProvider.GetRequiredService<InMemoryWorkflowCatalogService>());
         services.TryAddScoped<IWorkflowSettingsService>(serviceProvider => serviceProvider.GetRequiredService<InMemoryWorkflowCatalogService>());
 

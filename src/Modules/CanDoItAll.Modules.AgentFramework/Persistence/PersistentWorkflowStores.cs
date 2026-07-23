@@ -23,6 +23,7 @@ public sealed class PersistentWorkflowCatalogService(
     PromptGalleryCompatibilityEvaluator? promptCompatibilityEvaluator = null) :
     IWorkflowCatalogService,
     IWorkflowCatalogSearchService,
+    IWorkflowCatalogLookupService,
     IWorkflowComponentLibraryService,
     IWorkflowSettingsService
 {
@@ -99,6 +100,37 @@ public sealed class PersistentWorkflowCatalogService(
             query.PageIndex,
             query.PageSize,
             totalCount);
+    }
+
+    public async Task<IReadOnlyList<WorkflowCatalogItem>> LookupDefinitionsAsync(
+        WorkflowCatalogLookupQuery query,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(query);
+        if (query.WorkflowIds.Count == 0)
+        {
+            return [];
+        }
+
+        var workflowIds = query.WorkflowIds
+            .Select(workflowId => workflowId.Value)
+            .ToArray();
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        var records = await LatestDefinitionQuery(dbContext)
+            .Where(item => workflowIds.Contains(item.WorkflowId))
+            .Select(item => new WorkflowCatalogProjection(
+                item.WorkflowId,
+                item.VersionId,
+                item.Name,
+                item.Description,
+                item.Status,
+                item.PreferredBackend,
+                item.UpdatedAtUtc))
+            .ToArrayAsync(cancellationToken);
+
+        return records
+            .Select(MapCatalogItem)
+            .ToArray();
     }
 
     public async Task<WorkflowDefinitionDetail?> GetDefinitionAsync(
@@ -1343,7 +1375,8 @@ public sealed class PersistentWorkflowRunStore(IDbContextFactory<AppDbContext> d
     IWorkflowRunStore,
     IWorkflowArtifactStore,
     IWorkflowExternalRequestStore,
-    IWorkflowOverviewStore
+    IWorkflowOverviewStore,
+    IWorkflowDashboardActivityStore
 {
     private const int MaximumOverviewRecentTake = 12;
     private const int MaximumOverviewTopWorkflowTake = 10;
@@ -1648,6 +1681,56 @@ public sealed class PersistentWorkflowRunStore(IDbContextFactory<AppDbContext> d
                 .ToArray(),
             recentRecords.Select(record => record.ToSnapshot()).ToArray());
     }
+
+    public async Task<WorkflowDashboardActivityStoreResult> QueryActivityAsync(
+        WorkflowDashboardActivityQuery query,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(query);
+
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        var runs = dbContext.Set<WorkflowRunRecordEntity>()
+            .AsNoTracking();
+        var activeRuns = runs.Where(run =>
+            run.State == WorkflowRunActivityPolicy.RunningState ||
+            run.State == WorkflowRunActivityPolicy.WaitingForInputState);
+        var activeCandidates = OrderActivity(activeRuns)
+            .Take(query.Take);
+        var fallbackCandidates = OrderActivity(runs.Where(_ => !activeRuns.Any()))
+            .Take(query.Take);
+        var selectableRuns = activeCandidates.Concat(fallbackCandidates);
+        var selectedRecords = await OrderActivity(selectableRuns)
+            .Select(run => new
+            {
+                run.RunId,
+                run.WorkflowId,
+                run.State,
+                run.Summary,
+                run.UpdatedAtUtc
+            })
+            .Take(query.Take)
+            .ToArrayAsync(cancellationToken);
+        var selectedRuns = selectedRecords
+            .Select(record => new WorkflowDashboardActivityRun(
+                new WorkflowRunId(record.RunId),
+                new WorkflowId(record.WorkflowId),
+                record.State,
+                record.Summary,
+                record.UpdatedAtUtc))
+            .ToArray();
+        var mode = selectedRuns.Any(run => WorkflowRunActivityPolicy.IsActive(run.State))
+            ? WorkflowDashboardActivityMode.Active
+            : WorkflowDashboardActivityMode.RecentFallback;
+        return new WorkflowDashboardActivityStoreResult(
+            mode,
+            selectedRuns);
+    }
+
+    private static IOrderedQueryable<WorkflowRunRecordEntity> OrderActivity(
+        IQueryable<WorkflowRunRecordEntity> runs)
+        => runs
+            .OrderByDescending(run => run.UpdatedAtUtc)
+            .ThenByDescending(run => run.RunId);
 
     public async Task SaveEventAsync(
         WorkflowEventRecord workflowEvent,
@@ -2527,6 +2610,8 @@ internal sealed class WorkflowRunRecordEntityConfiguration : IEntityTypeConfigur
         builder.Property(item => item.OriginJson).HasColumnType("TEXT");
         builder.HasIndex(item => item.WorkflowId);
         builder.HasIndex(item => item.UpdatedAtUtc);
+        builder.HasIndex(item => new { item.State, item.UpdatedAtUtc, item.RunId })
+            .IsDescending(false, true, true);
     }
 }
 

@@ -8,6 +8,7 @@ namespace CanDoItAll.Processes.Persistence;
 public sealed class EfProcessRuntimeUnitOfWork(ProcessPersistenceDbContext dbContext) :
     IProcessRuntimeUnitOfWork,
     IProcessRuntimeStateStore,
+    IProcessRuntimeActivityStore,
     IProcessRuntimeRunHierarchyStore,
     IProcessIdempotencyStore
 {
@@ -21,6 +22,46 @@ public sealed class EfProcessRuntimeUnitOfWork(ProcessPersistenceDbContext dbCon
             cancellationToken).ConfigureAwait(false);
         return entity is null ? null : ProcessPersistenceMappers.ToSnapshot(entity);
     }
+
+    public async Task<ProcessRuntimeActivitySelection> QueryActivityAsync(
+        ProcessRuntimeActivityQuery query,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(query);
+
+        var states = dbContext.RuntimeStates.AsNoTracking();
+        var selectedRuns = await OrderActivity(states.Where(state =>
+                (state.Status != ProcessRuntimeStatus.Completed &&
+                 state.Status != ProcessRuntimeStatus.Failed &&
+                 state.Status != ProcessRuntimeStatus.Cancelled) ||
+                !states.Any(candidate =>
+                    candidate.Status != ProcessRuntimeStatus.Completed &&
+                    candidate.Status != ProcessRuntimeStatus.Failed &&
+                    candidate.Status != ProcessRuntimeStatus.Cancelled)))
+            .Take(query.Take)
+            .Select(MapActivityRow())
+            .ToArrayAsync(cancellationToken)
+            .ConfigureAwait(false);
+        var mode = selectedRuns.Any(run => !ProcessRuntimeTerminalStates.IsRunTerminal(run.Status))
+            ? ProcessRuntimeActivitySelectionMode.Active
+            : ProcessRuntimeActivitySelectionMode.RecentFallback;
+        return new ProcessRuntimeActivitySelection(
+            mode,
+            selectedRuns);
+    }
+
+    private static IOrderedQueryable<ProcessRuntimeStateEntity> OrderActivity(
+        IQueryable<ProcessRuntimeStateEntity> states)
+        => states
+            .OrderByDescending(state => state.UpdatedAtUtc)
+            .ThenByDescending(state => state.RunId);
+
+    private static System.Linq.Expressions.Expression<Func<ProcessRuntimeStateEntity, ProcessRuntimeActivityRow>> MapActivityRow()
+        => state => new ProcessRuntimeActivityRow(
+            new ProcessRunId(state.RootRunId),
+            new ProcessRunId(state.RunId),
+            state.Status,
+            state.UpdatedAtUtc);
 
     public async Task<IReadOnlyList<ProcessRunId>> FindCancellableDescendantRunIdsAsync(
         ProcessRunId rootRunId,

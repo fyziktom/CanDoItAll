@@ -1,0 +1,40 @@
+@namespace CanDoItAll.AppComponents
+
+<a href="@Href"
+   aria-label="@Label"
+   data-testid="@TestId"
+   class="group block min-w-0 rounded-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2">
+    <ActionCard Class="h-full transition group-hover:-translate-y-0.5 group-hover:border-sky-300 group-hover:bg-sky-50 group-hover:shadow-md">
+        <Stack AlignItems="AlignItems.Center"
+               JustifyContent="JustifyContent.Center"
+               GapScale="LayoutGap.Small"
+               Class="aspect-square w-full text-center">
+            <Icon Name="@Icon"
+                  Class="text-3xl text-sky-600" />
+            <TextBlock TextStyle="TextStyle.Subtitle2"
+                       Value="@Label"
+                       Class="m-0 text-slate-900" />
+        </Stack>
+    </ActionCard>
+</a>
+
+@code {
+    [Parameter, EditorRequired]
+    public string Href { get; set; } = string.Empty;
+
+    [Parameter, EditorRequired]
+    public string Icon { get; set; } = string.Empty;
+
+    [Parameter, EditorRequired]
+    public string Label { get; set; } = string.Empty;
+
+    [Parameter]
+    public string? TestId { get; set; }
+
+    protected override void OnParametersSet()
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(Href);
+        ArgumentException.ThrowIfNullOrWhiteSpace(Icon);
+        ArgumentException.ThrowIfNullOrWhiteSpace(Label);
+    }
+}

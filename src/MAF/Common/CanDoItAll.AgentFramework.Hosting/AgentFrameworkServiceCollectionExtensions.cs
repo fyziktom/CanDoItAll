@@ -23,6 +23,7 @@ public static class AgentFrameworkServiceCollectionExtensions
         var resolvedScope = workspaceScope ?? WorkspaceScopeDescriptor.Sandbox;
 
         services.TryAddSingleton<ISandboxWorkspaceStore>(_ => new FileSandboxWorkspaceStore(normalizedWorkspaceRoot, resolvedScope));
+        services.TryAddSingleton<IAgentUsageTotalsQueryService, AgentUsageTotalsQueryService>();
         services.TryAddSingleton<IAgentPackageService>(_ => new ZipAgentPackageService(normalizedWorkspaceRoot, resolvedScope));
         services.TryAddSingleton<IWorkspaceFileService>(_ => new WorkspaceFileService(normalizedWorkspaceRoot, resolvedScope));
         services.TryAddSingleton<IPluginWorkspaceFiles, PluginWorkspaceFiles>();

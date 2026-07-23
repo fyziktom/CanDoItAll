@@ -1,203 +1,633 @@
 @page "/"
 @page "/dashboard"
-@implements IDisposable
+@implements IAsyncDisposable
 @* codex-capsule
 kind: page
 name: Home
-summary: Shows the dashboard entry point, workbench overview, and manager loop guidance.
-owns: dashboard-summary, startup-guidance
-deps: shared-shell-components
-risks: stale-startup-copy, missing-next-step
-tests: component:HomePageTests, e2e:smoke-dashboard
+summary: Shows a reusable five-minute operational snapshot with compact navigation and explicit refresh state.
+owns: dashboard-quick-actions, dashboard-operational-snapshot, dashboard-refresh-state
+deps: DashboardSnapshotService, QuickActionCard, BaseLib
+risks: stale-operational-data, excessive-refresh-frequency, partial-usage-pricing
+tests: component:HomePageTests, component:QuickActionCardTests, e2e:smoke-dashboard
 *@
-@using CanDoItAll.Components.BaseLib
 @using CanDoItAll.Components.Common
-@using CanDoItAll.Modules.Workbench
-@using CanDoItAll.Modules.Projects
-@using CanDoItAll.SharedKernel
-@inject NavigationManager Navigation
-@inject WorkbenchStateService Workbench
-@inject ProjectsService ProjectsService
+@using CanDoItAll.Web.Dashboard
+@using System.Globalization
 
 <PageTitle>Dashboard</PageTitle>
 
 <PageScaffold MaxWidthClass="max-w-full">
     <Header>
         <PageHeader Eyebrow="Dashboard"
-                    Title="Delivery control surface"
-                    Description="Resume active work, reopen recent sessions, and move directly into the next project, test, or prompt task."
+                    Title="Operational overview"
+                    Description="Recent projects, live execution activity, and observed agent usage in one five-minute snapshot."
                     Compact="true">
             <Stats>
-                <CompactStat Label="projects"
-                             Value="@projectCount.ToString()"
-                             TooltipText="Saved project workspaces available to reopen." />
-                <CompactStat Label="open work items"
-                             Value="@openWorkItems.Count.ToString()"
-                             TooltipText="Tabs currently active in the recoverable workbench."
-                             Tone="info" />
-                <CompactStat Label="recent tabs"
-                             Value="@recentTabs.Count.ToString()"
-                             TooltipText="Recently closed workbench tabs available to reopen."
-                             Tone="neutral" />
+                @if (SnapshotData is { } snapshotData)
+                {
+                    <CompactStat Label="Total tokens"
+                                 Value="@FormatTokens(snapshotData.Usage.ObservedTokens)"
+                                 TooltipText="Observed input and output tokens recorded by agent executions." />
+                    <CompactStat Label="Known cost (USD)"
+                                 Value="@FormatKnownCost(snapshotData.Usage.KnownCostUsd)"
+                                 TooltipText="@UsageCostTooltip" />
+                }
             </Stats>
             <Actions>
-                <PageHeaderActionButton Icon="add"
-                                        Label="New project"
-                                        TooltipText="Start a new project workspace."
-                                        ButtonStyle="ButtonStyle.Primary"
-                                        Click="@(() => Navigation.NavigateTo("/projects"))" />
-                <PageHeaderActionButton Icon="asset"
-                                        Label="Open projects"
-                                        TooltipText="Open the projects workspace."
-                                        Click="@(() => Navigation.NavigateTo("/projects"))" />
+                <Cluster Wrap="FlexWrap.NoWrap"
+                         Gap="LayoutGap.Small">
+                    @if (nextAutomaticRefreshAtUtc.HasValue)
+                    {
+                        <TextBlock TextStyle="TextStyle.Caption"
+                                   Value="@AutomaticRefreshText"
+                                   Class="whitespace-nowrap text-slate-500"
+                                   data-testid="dashboard-refresh-countdown" />
+                    }
+                    <PageHeaderActionButton Icon="refresh"
+                                            Label="Refresh dashboard"
+                                            TooltipText="Refresh dashboard data now."
+                                            Disabled="@isRefreshing"
+                                            IsBusy="@isRefreshing"
+                                            Click="RefreshAsync"
+                                            TestId="dashboard-refresh" />
+                </Cluster>
             </Actions>
         </PageHeader>
     </Header>
 
     <ChildContent>
-        <Grid Gap="LayoutGap.XXLarge"
-              ColumnTemplateXl="minmax(0,1.05fr) minmax(0,0.95fr)">
-            <SectionCard Title="Quick actions" Description="Go directly to the next likely task instead of starting from a documentation-style overview.">
-                <Grid Gap="LayoutGap.Medium" ColumnsSm="2">
-                    <div class="h-full">
-                        <SelectionListItem Eyebrow="Projects"
-                                           Title="Start or reopen project work"
-                                           Summary="Create a new project or continue a staged authoring session."
-                                           OnSelect="@(() => Navigation.NavigateTo("/projects"))" />
-                    </div>
-                    <div class="h-full">
-                        <SelectionListItem Eyebrow="Prompt gallery"
-                                           Title="Create or reuse a prompt"
-                                           Summary="Manage reusable full prompts and prompt parts in the canonical gallery."
-                                           OnSelect="@(() => Navigation.NavigateTo("/prompt-gallery"))" />
-                    </div>
-                    <div class="h-full">
-                        <SelectionListItem Eyebrow="Test lab"
-                                           Title="Open test planning"
-                                           Summary="Review plans, evidence, linked tests, and execution records."
-                                           OnSelect="@(() => Navigation.NavigateTo("/test-lab"))" />
-                    </div>
-                    <div class="h-full">
-                        <SelectionListItem Eyebrow="Settings"
-                                           Title="Check providers and secrets"
-                                           Summary="Confirm workspace defaults, provider health, and secret-backed connections."
-                                           OnSelect="@(() => Navigation.NavigateTo("/settings"))" />
-                    </div>
+        <Grid Gap="LayoutGap.XLarge"
+              ColumnTemplateXl="minmax(0,0.9fr) minmax(0,1.1fr)"
+              data-testid="dashboard-top-grid">
+            <SectionCard Title="Quick actions"
+                         Description="Open the main operational workspaces.">
+                <Grid Columns="2"
+                      ColumnsLg="4"
+                      Gap="LayoutGap.Small"
+                      Class="!max-w-xl">
+                    <QuickActionCard Href="/projects"
+                                     Icon="folder_open"
+                                     Label="Projects"
+                                     TestId="dashboard-action-projects" />
+                    <QuickActionCard Href="/agents"
+                                     Icon="smart_toy"
+                                     Label="Agents"
+                                     TestId="dashboard-action-agents" />
+                    <QuickActionCard Href="/processes/live"
+                                     Icon="monitor_heart"
+                                     Label="Live Processes"
+                                     TestId="dashboard-action-processes" />
+                    <QuickActionCard Href="/scheduler"
+                                     Icon="calendar_month"
+                                     Label="Scheduler"
+                                     TestId="dashboard-action-scheduler" />
                 </Grid>
             </SectionCard>
 
-            <SectionCard Title="Attention queue" Description="Surface the follow-up items that should interrupt new work.">
-                @if (recentTabs.Count == 0)
-                {
-                    <EmptyState Eyebrow="Stable workspace"
-                                Title="No immediate blockers"
-                                Description="There are no recent work items waiting to be reopened." />
-                }
-                else
-                {
-                    <Stack GapScale="LayoutGap.Medium">
-                        @foreach (var recent in recentTabs.Take(2))
-                        {
-                            <SelectionListItem Eyebrow="Recent tab"
-                                               Title="@recent.Title"
-                                               Meta="@recent.Route"
-                                               OnSelect="@(() => Navigation.NavigateTo(recent.Route))" />
-                        }
-                    </Stack>
-                }
-            </SectionCard>
+            @if (SnapshotData is { } projectData)
+            {
+                <SectionCard Title="Recently updated projects"
+                             Description="The six projects with the latest recorded changes.">
+                    @if (projectData.Projects.IsEmpty)
+                    {
+                        <EmptyState Eyebrow="Projects"
+                                    Title="No projects yet"
+                                    Description="Create a project and its latest activity will appear here." />
+                    }
+                    else
+                    {
+                        <Grid Columns="3"
+                              Gap="LayoutGap.Small"
+                              data-testid="dashboard-project-grid">
+                            @foreach (var project in projectData.Projects)
+                            {
+                                <a href="@BuildProjectHref(project.ProjectId)"
+                                   title="@project.Name"
+                                   class="group block h-full min-w-0 rounded-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2"
+                                   data-testid="@BuildTestId("dashboard-project", project.ProjectId)">
+                                    <ActionCard Class="h-full min-h-24 overflow-hidden !p-3 transition group-hover:-translate-y-0.5 group-hover:border-sky-300 group-hover:bg-sky-50 group-hover:shadow-md">
+                                        <Stack GapScale="LayoutGap.Tiny"
+                                               Class="h-full min-w-0">
+                                            <Split Breakpoint="LayoutBreakpoint.None"
+                                                   Gap="LayoutGap.Small"
+                                                   AlignItems="AlignItems.Start"
+                                                   JustifyContent="JustifyContent.SpaceBetween"
+                                                   Wrap="FlexWrap.NoWrap">
+                                                <TextBlock TextStyle="TextStyle.Subtitle2"
+                                                           Value="@project.Name"
+                                                           Class="min-w-0 flex-1 truncate text-slate-900" />
+                                                <StatusBadge Tone="@MapStatusTone(project.Status.Tone)"
+                                                             Text="@project.Status.Label" />
+                                            </Split>
+                                            <TextBlock TextStyle="TextStyle.Caption"
+                                                       Value="@BuildProjectMeta(project)"
+                                                       Class="mt-auto block w-full min-w-0 max-w-full truncate text-slate-500" />
+                                        </Stack>
+                                    </ActionCard>
+                                </a>
+                            }
+                        </Grid>
+                    }
+                </SectionCard>
+            }
         </Grid>
 
-        <Grid Gap="LayoutGap.XXLarge"
-              ColumnTemplateXl="minmax(0,1.05fr) minmax(0,0.95fr)">
-            <SectionCard Title="Resume work" Description="These tabs are already live in the current workspace session.">
-                @if (openWorkItems.Count == 0)
-                {
-                    <EmptyState Eyebrow="No live items"
-                                Title="Nothing is currently open"
-                                Description="Start a project, prompt draft, or test plan and it will appear here for quick return." />
-                }
-                else
-                {
-                    <Stack GapScale="LayoutGap.Medium">
-                        @foreach (var tab in openWorkItems.Take(5))
-                        {
-                            <SelectionListItem Title="@tab.Title"
-                                               Meta="@($"{tab.TabGroup} / {tab.Route}")"
-                                               OnSelect="@(() => Navigation.NavigateTo(tab.Route))">
-                                <Status>
-                                    @if (!string.IsNullOrWhiteSpace(tab.ProjectName))
-                                    {
-                                        <StatusBadge Tone="info" Text="@tab.ProjectName" />
-                                    }
-                                </Status>
-                            </SelectionListItem>
-                        }
-                    </Stack>
-                }
-            </SectionCard>
-
-            <SectionCard Title="System footing" Description="Keep the platform context available, but subordinate it to task entry points.">
-                <Stack GapScale="LayoutGap.Medium"
-                       Class="text-sm leading-6 text-slate-600">
-                    <p>The workbench restores tabs from browser storage, keeps route groups recoverable, and leaves room for the protected canvas-heavy surfaces to stay focused.</p>
-                    <p>Generated artifacts still live under `.artifacts/`, the development runtime endpoint remains available, and tuning continues to attach only to explicit component boundaries.</p>
-                    <Cluster Gap="LayoutGap.Small">
-                        <StatusBadge Tone="success" Text="Workbench restore active" />
-                        <StatusBadge Tone="info" Text="Module seams active" />
-                        <StatusBadge Tone="neutral" Text="Focused shell enabled" />
-                    </Cluster>
+        @if (SnapshotRead?.HasRefreshFailure == true)
+        {
+            <Alert AlertStyle="AlertStyle.Warning"
+                   Variant="Variant.Outlined"
+                   data-testid="dashboard-stale-warning">
+                <Stack GapScale="LayoutGap.Tiny">
+                    <TextBlock TextStyle="TextStyle.Subtitle2"
+                               Value="Showing the last successful snapshot" />
+                    <TextBlock TextStyle="TextStyle.Body2"
+                               Value="@StaleSnapshotMessage" />
                 </Stack>
-            </SectionCard>
-        </Grid>
+            </Alert>
+        }
+
+        @if (!string.IsNullOrWhiteSpace(loadErrorMessage))
+        {
+            <Alert AlertStyle="@(SnapshotData is null ? AlertStyle.Danger : AlertStyle.Warning)"
+                   Variant="Variant.Outlined"
+                   data-testid="dashboard-load-error">
+                <Stack GapScale="LayoutGap.Small">
+                    <TextBlock TextStyle="TextStyle.Subtitle2"
+                               Value="@(SnapshotData is null ? "Dashboard snapshot unavailable" : "Dashboard refresh failed")" />
+                    <TextBlock TextStyle="TextStyle.Body2"
+                               Value="@loadErrorMessage" />
+                    <Button Text="Retry now"
+                            Icon="refresh"
+                            Size="ButtonSize.Small"
+                            Variant="Variant.Outlined"
+                            Disabled="@isRefreshing"
+                            IsBusy="@isRefreshing"
+                            Click="RefreshAsync"
+                            data-testid="dashboard-retry" />
+                </Stack>
+            </Alert>
+        }
+
+        @if (isInitialLoading && SnapshotData is null)
+        {
+            <LoadingState Eyebrow="Dashboard"
+                          Title="Loading operational snapshot"
+                          Description="Collecting recent projects, execution activity, and observed agent usage." />
+        }
+        else if (SnapshotData is { } data)
+        {
+            <Grid Gap="LayoutGap.XLarge"
+                  ColumnTemplateXl="minmax(0,0.9fr) minmax(0,1.1fr)">
+                <Stack Class="xl:col-start-2">
+                    <SectionCard Title="Execution activity"
+                                 Description="Active runs when present; otherwise the five most recently updated runs.">
+                        <Tabs @bind-SelectedIndex="selectedActivityTabIndex"
+                              Variant="TabsVariant.WorkspaceSecondary"
+                              BorderMode="TabsBorderMode.Soft"
+                              OverflowMode="TabsOverflowMode.Wrap"
+                              AriaLabel="Dashboard activity"
+                              data-testid="dashboard-activity-tabs">
+                            <TabItems>
+                                <TabsItem Text="@WorkflowTabLabel"
+                                          Icon="account_tree"
+                                          BadgeText="@data.Workflows.Length.ToString()"
+                                          data-testid="dashboard-workflows-tab">
+                                @if (data.Workflows.IsEmpty)
+                                {
+                                    <EmptyState Eyebrow="Workflows"
+                                                Title="@WorkflowEmptyTitle"
+                                                Description="Workflow run activity will appear here when available." />
+                                }
+                                else
+                                {
+                                    <Stack GapScale="LayoutGap.Tiny">
+                                        @foreach (var workflow in data.Workflows)
+                                        {
+                                            <a href="@BuildWorkflowHref(workflow.WorkflowId, workflow.RunId)"
+                                               title="@workflow.Summary"
+                                               class="block w-full rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2"
+                                               data-testid="@BuildTestId("dashboard-workflow", workflow.RunId)">
+                                                <SelectionListItem Title="@workflow.WorkflowName"
+                                                                   Meta="@FormatUpdatedAt(workflow.UpdatedAtUtc)"
+                                                                   Dense="true"
+                                                                   Class="!p-2 [&_.cda-selection-list-item__title]:truncate">
+                                                    <Status>
+                                                        <StatusBadge Tone="@MapStatusTone(workflow.Status.Tone)"
+                                                                     Text="@workflow.Status.Label" />
+                                                    </Status>
+                                                </SelectionListItem>
+                                            </a>
+                                        }
+                                    </Stack>
+                                }
+                            </TabsItem>
+                            <TabsItem Text="@ProcessTabLabel"
+                                      Icon="monitor_heart"
+                                      BadgeText="@data.Processes.Length.ToString()"
+                                      data-testid="dashboard-processes-tab">
+                                @if (data.Processes.IsEmpty)
+                                {
+                                    <EmptyState Eyebrow="Processes"
+                                                Title="@ProcessEmptyTitle"
+                                                Description="Process run activity will appear here when available." />
+                                }
+                                else
+                                {
+                                    <Stack GapScale="LayoutGap.Tiny">
+                                        @foreach (var process in data.Processes)
+                                        {
+                                            <a href="@BuildProcessHref(process.RunId)"
+                                               class="block w-full rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2"
+                                               data-testid="@BuildTestId("dashboard-process", process.RunId)">
+                                                <SelectionListItem Title="@process.ProcessName"
+                                                                   Meta="@BuildProcessMeta(process)"
+                                                                   Dense="true"
+                                                                   Class="!p-2 [&_.cda-selection-list-item__title]:truncate">
+                                                    <Status>
+                                                        <Cluster Gap="LayoutGap.Tiny">
+                                                            <StatusBadge Tone="@MapStatusTone(process.Status.Tone)"
+                                                                         Text="@process.Status.Label" />
+                                                            @if (process.ProjectionIsBehind)
+                                                            {
+                                                                <StatusBadge Tone="warning"
+                                                                             Text="Projection behind" />
+                                                            }
+                                                        </Cluster>
+                                                    </Status>
+                                                </SelectionListItem>
+                                            </a>
+                                        }
+                                    </Stack>
+                                }
+                                </TabsItem>
+                            </TabItems>
+                        </Tabs>
+                    </SectionCard>
+                </Stack>
+            </Grid>
+        }
     </ChildContent>
 </PageScaffold>
 
 @code {
-    private int projectCount;
-    private IReadOnlyList<WorkbenchTabState> openWorkItems = [];
-    private IReadOnlyList<WorkbenchTabState> recentTabs = [];
+    private static readonly TimeSpan MaximumCountdownUpdateInterval = TimeSpan.FromMinutes(1);
+
+    private readonly CancellationTokenSource lifetimeCancellation = new();
+    private DashboardSnapshotRead? snapshotRead;
+    private DateTimeOffset? nextAutomaticRefreshAtUtc;
+    private Task? automaticRefreshTask;
+    private string? loadErrorMessage;
+    private bool isInitialLoading = true;
+    private bool isRefreshing;
+    private bool isDisposed;
+    private int selectedActivityTabIndex;
+
+    [Inject]
+    private DashboardSnapshotService DashboardSnapshots { get; set; } = null!;
+
+    [Inject]
+    private TimeProvider TimeProvider { get; set; } = null!;
+
+    [Inject]
+    private ILogger<Home> Logger { get; set; } = null!;
+
+    private DashboardSnapshotRead? SnapshotRead => snapshotRead;
+
+    private DashboardSnapshotData? SnapshotData => snapshotRead?.Snapshot.Data;
+
+    private string WorkflowTabLabel => SnapshotData?.WorkflowMode switch
+    {
+        DashboardActivityMode.Active => "Active workflows",
+        DashboardActivityMode.RecentFallback => "Recent workflows",
+        null => "Workflows",
+        _ => throw new ArgumentOutOfRangeException()
+    };
+
+    private string ProcessTabLabel => SnapshotData?.ProcessMode switch
+    {
+        DashboardActivityMode.Active => "Active processes",
+        DashboardActivityMode.RecentFallback => "Recent processes",
+        null => "Processes",
+        _ => throw new ArgumentOutOfRangeException()
+    };
+
+    private string WorkflowEmptyTitle => SnapshotData?.WorkflowMode == DashboardActivityMode.Active
+        ? "No active workflow rows"
+        : "No recent workflow runs";
+
+    private string ProcessEmptyTitle => SnapshotData?.ProcessMode == DashboardActivityMode.Active
+        ? "No active process rows"
+        : "No recent process runs";
+
+    private string UsageCostTooltip
+    {
+        get
+        {
+            var unknownCount = SnapshotData?.Usage.UnknownUsageObservationCount ?? 0;
+            return unknownCount == 0
+                ? "Cost from observed usage with resolved canonical provider pricing."
+                : $"Known cost excludes {unknownCount.ToString("N0", CultureInfo.CurrentCulture)} usage observations without complete token or pricing data.";
+        }
+    }
+
+    private string AutomaticRefreshText
+    {
+        get
+        {
+            if (isRefreshing)
+            {
+                return "Refreshing…";
+            }
+
+            if (!nextAutomaticRefreshAtUtc.HasValue)
+            {
+                return "Auto refresh not scheduled";
+            }
+
+            var remaining = nextAutomaticRefreshAtUtc.Value - TimeProvider.GetUtcNow();
+            var prefix = SnapshotRead?.HasRefreshFailure == true || SnapshotData is null
+                ? "Auto retry"
+                : "Auto refresh";
+            if (remaining <= TimeSpan.Zero)
+            {
+                return $"{prefix} due";
+            }
+
+            if (remaining < TimeSpan.FromMinutes(1))
+            {
+                return $"{prefix} in <1 min";
+            }
+
+            var minutes = (int)Math.Ceiling(remaining.TotalMinutes);
+            return $"{prefix} in {minutes} min";
+        }
+    }
+
+    private string StaleSnapshotMessage
+    {
+        get
+        {
+            var read = SnapshotRead ?? throw new InvalidOperationException(
+                "A stale dashboard message requires a snapshot read.");
+            var failedAtUtc = read.LastRefreshFailureAtUtc ?? throw new InvalidOperationException(
+                "A stale dashboard message requires a refresh failure timestamp.");
+            return $"Captured {FormatUtc(read.Snapshot.CapturedAtUtc)}. Refresh failed {FormatUtc(failedAtUtc)}; the next automatic retry remains scheduled.";
+        }
+    }
 
     protected override async Task OnInitializedAsync()
     {
-        Workbench.Changed += HandleWorkbenchChanged;
-        await LoadAsync();
+        await LoadSnapshotAsync(
+            DashboardSnapshotRefreshMode.UseCached,
+            lifetimeCancellation.Token);
+
+        if (!isDisposed)
+        {
+            automaticRefreshTask = RunAutomaticRefreshLoopAsync(lifetimeCancellation.Token);
+        }
     }
 
-    private async Task LoadAsync()
+    private Task RefreshAsync()
     {
-        projectCount = (await ProjectsService.ListAsync()).Count;
-
-        openWorkItems = Workbench.Tabs
-            .Where(tab => !string.Equals(tab.Route, "/", StringComparison.OrdinalIgnoreCase))
-            .OrderByDescending(tab => tab.IsDirty)
-            .ThenByDescending(tab => tab.LastActivatedAtUtc ?? DateTimeOffset.MinValue)
-            .ToList();
-
-        recentTabs = Workbench.RecentTabs
-            .OrderByDescending(tab => tab.ClosedAtUtc ?? DateTimeOffset.MinValue)
-            .ToList();
+        return isDisposed
+            ? Task.CompletedTask
+            : LoadSnapshotAsync(
+                DashboardSnapshotRefreshMode.Force,
+                lifetimeCancellation.Token);
     }
 
-    private void HandleWorkbenchChanged()
+    private async Task LoadSnapshotAsync(
+        DashboardSnapshotRefreshMode refreshMode,
+        CancellationToken cancellationToken)
     {
-        openWorkItems = Workbench.Tabs
-            .Where(tab => !string.Equals(tab.Route, "/", StringComparison.OrdinalIgnoreCase))
-            .OrderByDescending(tab => tab.IsDirty)
-            .ThenByDescending(tab => tab.LastActivatedAtUtc ?? DateTimeOffset.MinValue)
-            .ToList();
+        if (isRefreshing)
+        {
+            return;
+        }
 
-        recentTabs = Workbench.RecentTabs
-            .OrderByDescending(tab => tab.ClosedAtUtc ?? DateTimeOffset.MinValue)
-            .ToList();
+        isRefreshing = true;
+        if (SnapshotData is null)
+        {
+            isInitialLoading = true;
+        }
 
-        _ = InvokeAsync(StateHasChanged);
+        try
+        {
+            var read = await DashboardSnapshots.GetAsync(refreshMode, cancellationToken);
+            snapshotRead = read;
+            nextAutomaticRefreshAtUtc = read.NextAutomaticRefreshAtUtc;
+            loadErrorMessage = null;
+        }
+        catch (DashboardSnapshotUnavailableException exception)
+        {
+            nextAutomaticRefreshAtUtc = exception.NextAutomaticRefreshAtUtc;
+            loadErrorMessage = "No successful dashboard snapshot is available yet. Retry now or wait for the scheduled automatic retry.";
+            Logger.LogWarning(
+                exception,
+                "Dashboard snapshot is unavailable after {RefreshMode}. Automatic retry is scheduled for {NextAutomaticRefreshAtUtc}.",
+                refreshMode,
+                exception.NextAutomaticRefreshAtUtc);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+        }
+        catch (Exception exception)
+        {
+            loadErrorMessage = SnapshotData is null
+                ? "Dashboard data could not be loaded. Retry when the active database profile is available."
+                : "The latest refresh failed. The last successful snapshot remains visible.";
+            Logger.LogError(
+                exception,
+                "Dashboard snapshot {RefreshMode} failed. Existing snapshot available: {HasSnapshot}.",
+                refreshMode,
+                SnapshotData is not null);
+        }
+        finally
+        {
+            isRefreshing = false;
+            isInitialLoading = false;
+        }
     }
 
-    public void Dispose()
+    private async Task RunAutomaticRefreshLoopAsync(CancellationToken cancellationToken)
     {
-        Workbench.Changed -= HandleWorkbenchChanged;
+        try
+        {
+            while (!cancellationToken.IsCancellationRequested)
+            {
+                var delay = ResolveNextWakeDelay();
+                await Task.Delay(delay, TimeProvider, cancellationToken);
+
+                await InvokeAsync(async () =>
+                {
+                    if (IsAutomaticRefreshDue() && !isRefreshing)
+                    {
+                        await LoadSnapshotAsync(
+                            DashboardSnapshotRefreshMode.UseCached,
+                            cancellationToken);
+                    }
+
+                    StateHasChanged();
+                });
+            }
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+        }
+        catch (Exception exception)
+        {
+            Logger.LogError(
+                exception,
+                "Dashboard automatic refresh loop stopped unexpectedly.");
+        }
+    }
+
+    private TimeSpan ResolveNextWakeDelay()
+    {
+        if (isRefreshing)
+        {
+            return MaximumCountdownUpdateInterval;
+        }
+
+        if (!nextAutomaticRefreshAtUtc.HasValue)
+        {
+            return Timeout.InfiniteTimeSpan;
+        }
+
+        var remaining = nextAutomaticRefreshAtUtc.Value - TimeProvider.GetUtcNow();
+        if (remaining <= TimeSpan.Zero)
+        {
+            return MaximumCountdownUpdateInterval;
+        }
+
+        return remaining < MaximumCountdownUpdateInterval
+            ? remaining
+            : MaximumCountdownUpdateInterval;
+    }
+
+    private bool IsAutomaticRefreshDue()
+    {
+        return nextAutomaticRefreshAtUtc.HasValue &&
+            TimeProvider.GetUtcNow() >= nextAutomaticRefreshAtUtc.Value;
+    }
+
+    private string BuildProjectMeta(DashboardProjectItem project)
+    {
+        var updatedAt = FormatUpdatedAt(project.UpdatedAtUtc);
+        return string.IsNullOrWhiteSpace(project.CurrentPhase)
+            ? updatedAt
+            : $"{project.CurrentPhase.Trim()} · {updatedAt}";
+    }
+
+    private string BuildProcessMeta(DashboardProcessRunItem process)
+    {
+        return $"{process.ProjectName} · {FormatUpdatedAt(process.UpdatedAtUtc)}";
+    }
+
+    private string FormatUpdatedAt(DateTimeOffset updatedAtUtc)
+    {
+        var elapsed = TimeProvider.GetUtcNow() - updatedAtUtc;
+        if (elapsed <= TimeSpan.FromMinutes(1))
+        {
+            return "Updated just now";
+        }
+
+        if (elapsed < TimeSpan.FromHours(1))
+        {
+            return $"Updated {(int)elapsed.TotalMinutes} min ago";
+        }
+
+        if (elapsed < TimeSpan.FromDays(1))
+        {
+            return $"Updated {(int)elapsed.TotalHours} h ago";
+        }
+
+        if (elapsed < TimeSpan.FromDays(7))
+        {
+            return $"Updated {(int)elapsed.TotalDays} d ago";
+        }
+
+        return $"Updated {FormatUtc(updatedAtUtc)}";
+    }
+
+    private static string FormatTokens(long value)
+    {
+        return value.ToString("N0", CultureInfo.CurrentCulture);
+    }
+
+    private static string FormatKnownCost(decimal value)
+    {
+        if (value <= 0m)
+        {
+            return "$0";
+        }
+
+        return value < 1m
+            ? FormattableString.Invariant($"${value:0.0000}")
+            : FormattableString.Invariant($"${value:0.00}");
+    }
+
+    private static string MapStatusTone(DashboardStatusTone tone)
+    {
+        return tone switch
+        {
+            DashboardStatusTone.Neutral => "neutral",
+            DashboardStatusTone.Info => "info",
+            DashboardStatusTone.Success => "success",
+            DashboardStatusTone.Warning => "warning",
+            DashboardStatusTone.Danger => "danger",
+            _ => throw new ArgumentOutOfRangeException(nameof(tone), tone, null)
+        };
+    }
+
+    private static string BuildProjectHref(Guid projectId)
+    {
+        return FormattableString.Invariant($"/projects?projectId={projectId:D}");
+    }
+
+    private static string BuildWorkflowHref(Guid workflowId, Guid runId)
+    {
+        return FormattableString.Invariant(
+            $"/agents/workflows?workflowId={workflowId:D}&runId={runId:D}");
+    }
+
+    private static string BuildProcessHref(Guid runId)
+    {
+        return FormattableString.Invariant($"/processes/live?runId={runId:D}");
+    }
+
+    private static string BuildTestId(string prefix, Guid id)
+    {
+        return FormattableString.Invariant($"{prefix}-{id:N}");
+    }
+
+    private static string FormatUtc(DateTimeOffset value)
+    {
+        return value.ToUniversalTime().ToString(
+            "yyyy-MM-dd HH:mm 'UTC'",
+            CultureInfo.InvariantCulture);
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (isDisposed)
+        {
+            return;
+        }
+
+        isDisposed = true;
+        await lifetimeCancellation.CancelAsync();
+        if (automaticRefreshTask is not null)
+        {
+            try
+            {
+                await automaticRefreshTask;
+            }
+            catch (OperationCanceledException) when (lifetimeCancellation.IsCancellationRequested)
+            {
+            }
+        }
+
+        lifetimeCancellation.Dispose();
     }
 }
-
-

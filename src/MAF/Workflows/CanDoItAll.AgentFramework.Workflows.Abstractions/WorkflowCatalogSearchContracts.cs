@@ -69,3 +69,34 @@ public interface IWorkflowCatalogSearchService
         WorkflowCatalogSearchQuery query,
         CancellationToken cancellationToken = default);
 }
+
+public sealed record WorkflowCatalogLookupQuery
+{
+    public const int MaximumWorkflowCount = 100;
+
+    public WorkflowCatalogLookupQuery(IReadOnlyCollection<WorkflowId> workflowIds)
+    {
+        ArgumentNullException.ThrowIfNull(workflowIds);
+        var distinctWorkflowIds = workflowIds
+            .Distinct()
+            .ToArray();
+        if (distinctWorkflowIds.Length > MaximumWorkflowCount)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(workflowIds),
+                distinctWorkflowIds.Length,
+                $"Workflow catalog lookup count cannot exceed {MaximumWorkflowCount}.");
+        }
+
+        WorkflowIds = distinctWorkflowIds;
+    }
+
+    public IReadOnlyList<WorkflowId> WorkflowIds { get; }
+}
+
+public interface IWorkflowCatalogLookupService
+{
+    Task<IReadOnlyList<WorkflowCatalogItem>> LookupDefinitionsAsync(
+        WorkflowCatalogLookupQuery query,
+        CancellationToken cancellationToken = default);
+}

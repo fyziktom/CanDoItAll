@@ -39,6 +39,7 @@ public static class ProcessesModuleServiceCollectionExtensions
         services.TryAddScoped<EfProcessRuntimeUnitOfWork>();
         services.TryAddScoped<IProcessRuntimeUnitOfWork>(serviceProvider => serviceProvider.GetRequiredService<EfProcessRuntimeUnitOfWork>());
         services.TryAddScoped<IProcessRuntimeStateStore>(serviceProvider => serviceProvider.GetRequiredService<EfProcessRuntimeUnitOfWork>());
+        services.TryAddScoped<IProcessRuntimeActivityStore>(serviceProvider => serviceProvider.GetRequiredService<EfProcessRuntimeUnitOfWork>());
         services.TryAddScoped<IProcessRuntimeRunHierarchyStore>(serviceProvider => serviceProvider.GetRequiredService<EfProcessRuntimeUnitOfWork>());
         services.TryAddScoped<IProcessIdempotencyStore>(serviceProvider => serviceProvider.GetRequiredService<EfProcessRuntimeUnitOfWork>());
         services.TryAddScoped<EfProcessRuntimeEventStore>();
@@ -133,6 +134,7 @@ public static class ProcessesModuleServiceCollectionExtensions
         services.TryAddScoped<ProcessRuntimeDispatchApplicationService>();
         services.TryAddScoped<ProcessRuntimeOperatorApplicationService>();
         services.TryAddScoped<ProcessRuntimeProjectionQueryService>();
+        services.TryAddScoped<IProcessDashboardActivityQueryService, ProcessDashboardActivityQueryService>();
         services.TryAddScoped<ProcessDefinitionCatalogProjectionService>();
         services.TryAddScoped<ProcessDefinitionEditorProjectionService>();
         services.TryAddScoped<ProcessDefinitionRoleEditorProjectionService>();

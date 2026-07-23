@@ -1009,6 +1009,9 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
 
                     b.HasIndex("WorkflowId");
 
+                    b.HasIndex("State", "UpdatedAtUtc", "RunId")
+                        .IsDescending(false, true, true);
+
                     b.ToTable("AgentFramework_WorkflowRuns", (string)null);
                 });
 
@@ -3134,6 +3137,9 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("UpdatedAtUtc", "Id")
+                        .IsDescending(true, false);
 
                     b.ToTable("Projects_Projects", (string)null);
                 });
@@ -5405,6 +5411,9 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                     b.HasIndex("RootRunId");
 
                     b.HasIndex("Status");
+
+                    b.HasIndex("UpdatedAtUtc", "RunId")
+                        .IsDescending();
 
                     b.ToTable("process_runtime_states", (string)null);
                 });

@@ -30,6 +30,8 @@ internal sealed class ProcessRuntimeStateEntityConfiguration : IEntityTypeConfig
         builder.Property(state => state.ConcurrencyToken).IsConcurrencyToken();
         builder.HasIndex(state => state.RootRunId);
         builder.HasIndex(state => state.Status);
+        builder.HasIndex(state => new { state.UpdatedAtUtc, state.RunId })
+            .IsDescending(true, true);
 
         builder.HasMany(state => state.Steps)
             .WithOne(step => step.RuntimeState)
