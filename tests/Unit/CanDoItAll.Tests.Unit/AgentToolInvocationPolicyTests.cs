@@ -3161,6 +3161,7 @@ public sealed class AgentToolInvocationPolicyTests
             AgentToolInvocationPolicyMetadata.ProjectStructureNodesToNewSubproject,
             AgentToolInvocationPolicyMetadata.ProjectTaskCreate,
             AgentToolInvocationPolicyMetadata.ProjectTaskUpdate,
+            AgentToolInvocationPolicyMetadata.ProjectTaskResourceAttach,
             AgentToolInvocationPolicyMetadata.ProjectStructureDependencyLink,
             AgentToolInvocationPolicyMetadata.ProjectStructureDependencyUnlink,
             AgentToolInvocationPolicyMetadata.ProjectStructureNodeCreate,
