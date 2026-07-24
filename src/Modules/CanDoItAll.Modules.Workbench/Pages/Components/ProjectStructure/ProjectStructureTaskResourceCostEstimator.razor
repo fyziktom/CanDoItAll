@@ -18,7 +18,9 @@
                     <TextBlock TextStyle="TextStyle.Subtitle2"
                                Value="Resource price estimate" />
                     <TextBlock TextStyle="TextStyle.Note"
-                               Value="The selected resource is priced once. Search and filters never calculate prices." />
+                               Value="@(AllowsAuthoritativeRepricing
+                                   ? "This is a preview. Save reloads the authoritative rate or execution history before committing the task cost."
+                                   : "This task is not explicitly not started, so its historical cost snapshot is preserved.")" />
                 </Stack>
                 <TooltipTarget Text="Reload the latest resource rate or run history, recalculate for the current effort, and replace the expected task cost."
                                Position="TooltipPosition.Left"
@@ -28,7 +30,7 @@
                             Size="ButtonSize.Small"
                             ButtonStyle="ButtonStyle.Info"
                             Variant="Variant.Outlined"
-                            Disabled="@(isLoading || QuoteResolver is null)"
+                            Disabled="@(isLoading || QuoteResolver is null || !AllowsAuthoritativeRepricing)"
                             aria-label="Reload and recalculate resource price"
                             data-testid="@($"{DataTestId}-refresh")"
                             Click="RefreshAsync" />
@@ -78,7 +80,14 @@
     public EventCallback<ProjectTaskEstimate> EstimateChanged { get; set; }
 
     [Parameter]
+    public ProjectTaskExecutionState ExecutionState { get; set; } =
+        ProjectTaskExecutionState.NotStarted;
+
+    [Parameter]
     public string DataTestId { get; set; } = "project-structure-task-resource-cost";
+
+    private bool AllowsAuthoritativeRepricing =>
+        ProjectTaskExecutionStatePolicy.AllowsAuthoritativeRepricing(ExecutionState);
 
     protected override void OnParametersSet()
     {
@@ -92,6 +101,13 @@
 
         activeResource = SelectedResource;
         activeRequestIdentity = nextRequestIdentity;
+        if (SelectedResource is not null && !AllowsAuthoritativeRepricing)
+        {
+            statusStyle = AlertStyle.Info;
+            statusSummary = ExecutionState == ProjectTaskExecutionState.Unknown
+                ? "Automatic pricing is disabled until this legacy task is explicitly confirmed as not started."
+                : "Automatic pricing is disabled because this task has execution history.";
+        }
     }
 
     public Task EstimateSelectedAsync(
@@ -100,6 +116,15 @@
     {
         activeResource = resource;
         activeRequestIdentity = new QuoteRequestIdentity(resource, estimate);
+        if (!AllowsAuthoritativeRepricing)
+        {
+            statusStyle = AlertStyle.Info;
+            statusSummary = ExecutionState == ProjectTaskExecutionState.Unknown
+                ? "Automatic pricing is disabled until this legacy task is explicitly confirmed as not started."
+                : "Automatic pricing is disabled because this task has execution history.";
+            return Task.CompletedTask;
+        }
+
         return ResolveQuoteAsync(resource, estimate, forceRefresh: false);
     }
 
@@ -109,7 +134,7 @@
         activeRequestIdentity = SelectedResource is null
             ? null
             : new QuoteRequestIdentity(SelectedResource, Estimate);
-        return SelectedResource is null
+        return SelectedResource is null || !AllowsAuthoritativeRepricing
             ? Task.CompletedTask
             : ResolveQuoteAsync(SelectedResource, Estimate, forceRefresh: true);
     }
@@ -122,7 +147,7 @@
         if (QuoteResolver is null)
         {
             statusStyle = AlertStyle.Warning;
-            statusSummary = "Automatic resource pricing is unavailable. Enter the expected cost manually.";
+            statusSummary = "Authoritative resource pricing is unavailable. A selected resource cannot be saved with an invented or stale price.";
             return;
         }
 
@@ -170,7 +195,7 @@
                     resource.Kind,
                     resource.ResourceId);
                 statusStyle = AlertStyle.Warning;
-                statusSummary = "The price could not be recalculated. The existing expected cost was preserved.";
+                statusSummary = "The authoritative price could not be loaded. Saving cannot replace it with an invented or stale amount.";
             }
         }
         finally
@@ -196,6 +221,11 @@
         statusSummary = $"{quote.Source}: {quote.Summary}";
         if (!quote.IsAvailable)
         {
+            await EstimateChanged.InvokeAsync(requestIdentity.Estimate with
+            {
+                ExpectedCostAmount = null,
+                ExpectedCostCurrencyCode = string.Empty
+            });
             return;
         }
 

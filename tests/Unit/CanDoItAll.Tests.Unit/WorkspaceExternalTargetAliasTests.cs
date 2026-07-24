@@ -25,6 +25,23 @@ public sealed class WorkspaceExternalTargetAliasTests : IDisposable
     }
 
     [Fact]
+    public void TryResolveWorkspacePath_rejects_external_drive_root()
+    {
+        var workspaceRoot = CreateDirectory("workspace");
+        var policy = new WorkspacePathPolicy(workspaceRoot);
+
+        var succeeded = policy.TryResolveWorkspacePath(
+            "external-target/C",
+            allowWorkspaceRoot: false,
+            out _,
+            out var validationMessage);
+
+        Assert.False(succeeded);
+        Assert.Contains("external drive root", validationMessage, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("specific grounded path", validationMessage, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public void WriteTextFile_writes_to_real_external_target_for_alias_path()
     {
         var workspaceRoot = CreateDirectory("workspace");

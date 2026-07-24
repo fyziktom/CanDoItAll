@@ -1,0 +1,216 @@
+Použití nastavení spuštění z src\App\CanDoItAll.Web\Properties\launchSettings.json...
+info: CanDoItAll.Infrastructure.ControlPlane.DatabaseProfileControlPlaneService[0]
+      Resolved database profile Configured PostgreSQL override (e5df9ad6-33db-c697-4a06-78a74976013c) via ExplicitOverride. Provider=PostgreSql. Fingerprint=postgres:127.0.0.1:5432:candoitall_development:candoitall. RuntimeLocked=True.
+info: CanDoItAll.Infrastructure.ControlPlane.CanonicalRuntimeDatabase[0]
+      Initialized canonical runtime database profile e5df9ad6-33db-c697-4a06-78a74976013c (Configured PostgreSQL override). Provider=PostgreSql. Fingerprint=postgres:127.0.0.1:5432:candoitall_development:candoitall. Generation=0.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring runtime database profile e5df9ad6-33db-c697-4a06-78a74976013c (Configured PostgreSQL override) is ready. Provider=PostgreSql, Source=PostgresConnection.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Applying EF migrations for profile e5df9ad6-33db-c697-4a06-78a74976013c.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring CRM/HR schema for profile e5df9ad6-33db-c697-4a06-78a74976013c.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring plugin runtime schema for profile e5df9ad6-33db-c697-4a06-78a74976013c.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring scheduler planner schema for profile e5df9ad6-33db-c697-4a06-78a74976013c.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring agent provider bootstrap for profile e5df9ad6-33db-c697-4a06-78a74976013c.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Runtime database profile e5df9ad6-33db-c697-4a06-78a74976013c is ready.
+info: CanDoItAll.Modules.Prompts.PromptGallerySeedImportHostedService[0]
+      Prompt Gallery seed import completed with 0 created and 111 existing items from 111 packaged components.
+info: CanDoItAll.Modules.AgentFramework.WorkflowPromptGalleryMigrationHostedService[0]
+      Verified canonical Prompt Gallery bindings for workflow LLM components.
+info: Quartz.Core.SchedulerSignalerImpl[0]
+      Initialized Scheduler Signaller of type: Quartz.Core.SchedulerSignalerImpl
+info: Quartz.Core.QuartzScheduler[0]
+      Quartz Scheduler created
+info: Quartz.Core.QuartzScheduler[0]
+      JobFactory set to: Quartz.Simpl.MicrosoftDependencyInjectionJobFactory
+info: Quartz.Simpl.RAMJobStore[0]
+      RAMJobStore initialized.
+info: Quartz.Impl.StdSchedulerFactory[0]
+      Quartz Scheduler 3.13.1.0 - 'CanDoItAll SchedulerPlanner' with instanceId 'CanDoItAll.SchedulerPlanner' initialized
+info: Quartz.Impl.StdSchedulerFactory[0]
+      Using thread pool 'Quartz.Simpl.DefaultThreadPool', size: 10
+info: Quartz.Impl.StdSchedulerFactory[0]
+      Using job store 'Quartz.Simpl.RAMJobStore', supports persistence: False, clustered: False
+info: CanDoItAll.Modules.SchedulerPlanner.SchedulerPlannerTriggerScheduler[0]
+      Projected scheduler plan aa141648-524a-4b15-8992-ee6a8b024d5f into local Quartz runtime. Enabled=True, NextFireAtUtc=07/24/2026 13:00:00 +00:00.
+info: CanDoItAll.Modules.SchedulerPlanner.SchedulerPlannerProjectionHostedService[0]
+      SchedulerPlanner projected saved plans into the local Quartz runtime.
+info: Microsoft.Hosting.Lifetime[14]
+      Now listening on: http://127.0.0.1:5032
+info: Microsoft.Hosting.Lifetime[0]
+      Application started. Press Ctrl+C to shut down.
+info: Microsoft.Hosting.Lifetime[0]
+      Hosting environment: Development
+info: Microsoft.Hosting.Lifetime[0]
+      Content root path: C:\repositories\CanDoItAll\src\App\CanDoItAll.Web
+info: Quartz.Core.QuartzScheduler[0]
+      Scheduler CanDoItAll SchedulerPlanner_$_CanDoItAll.SchedulerPlanner started.
+warn: Microsoft.AspNetCore.HttpsPolicy.HttpsRedirectionMiddleware[3]
+      Failed to determine the https port for redirect.
+info: CanDoItAll.Modules.AgentFramework.AgentFrameworkCatalogWarmupService[0]
+      Completed AgentFramework catalog repair and projection warmup in 8938 ms.
+info: CanDoItAll.Modules.Workbench.ProjectStructureGanttMutationService[0]
+      Applied Gantt schedule mutation for project 33248...b1e9, task custo...a6ae, and 2 affected tasks.
+info: CanDoItAll.AgentFramework.Maf.MafAgentRuntime[0]
+      Agent tool policy decision Allow for tool project_structure_read on agent 952b041a-aba0-385b-8e4e-494c4b21d831. ExecutionRunId=e0d6ff9c-38df-4e7a-b8c2-9313c92d0bfa SourceKind=project-structure ProcessRunId= ProcessStepId= RuntimeToolProviderKey=project-structure.runtime-tools Signature=project_structure_read|projectId=3324868f-66e2-478a-bb8f-14f32a5db1e9,request={"nodeIds":["custom:f09c64048bc946f3a52d0aa51854ae25"],"includeLinks":true,"includeMetadata":true,"includeNotes":true,"includeAssets":true}
+info: CanDoItAll.AgentFramework.Maf.MafAgentRuntime[0]
+      Agent tool policy decision Allow for tool project_structure_hierarchy_get on agent 952b041a-aba0-385b-8e4e-494c4b21d831. ExecutionRunId=e0d6ff9c-38df-4e7a-b8c2-9313c92d0bfa SourceKind=project-structure ProcessRunId= ProcessStepId= RuntimeToolProviderKey=project-structure.runtime-tools Signature=project_structure_hierarchy_get|projectId=3324868f-66e2-478a-bb8f-14f32a5db1e9
+info: CanDoItAll.AgentFramework.Maf.MafAgentRuntime[0]
+      Agent tool policy decision Allow for tool workspace_execution_boundary on agent 952b041a-aba0-385b-8e4e-494c4b21d831. ExecutionRunId=e0d6ff9c-38df-4e7a-b8c2-9313c92d0bfa SourceKind=project-structure ProcessRunId= ProcessStepId= RuntimeToolProviderKey= Signature=workspace_execution_boundary
+info: CanDoItAll.AgentFramework.Maf.MafAgentRuntime[0]
+      Agent tool policy decision Allow for tool workspace_list_directory on agent 952b041a-aba0-385b-8e4e-494c4b21d831. ExecutionRunId=e0d6ff9c-38df-4e7a-b8c2-9313c92d0bfa SourceKind=project-structure ProcessRunId= ProcessStepId= RuntimeToolProviderKey= Signature=workspace_list_directory|maxResults=50,relativePath=.
+info: CanDoItAll.AgentFramework.Maf.MafAgentRuntime[0]
+      Agent tool policy decision Allow for tool workspace_list_files on agent 952b041a-aba0-385b-8e4e-494c4b21d831. ExecutionRunId=e0d6ff9c-38df-4e7a-b8c2-9313c92d0bfa SourceKind=project-structure ProcessRunId= ProcessStepId= RuntimeToolProviderKey= Signature=workspace_list_files|maxResults=20,relativePath=.,searchPattern=**/*.sln
+info: CanDoItAll.AgentFramework.Maf.MafAgentRuntime[0]
+      Agent tool policy decision Allow for tool workspace_list_files on agent 952b041a-aba0-385b-8e4e-494c4b21d831. ExecutionRunId=e0d6ff9c-38df-4e7a-b8c2-9313c92d0bfa SourceKind=project-structure ProcessRunId= ProcessStepId= RuntimeToolProviderKey= Signature=workspace_list_files|maxResults=50,relativePath=.,searchPattern=**/*.csproj
+info: CanDoItAll.AgentFramework.Maf.MafAgentRuntime[0]
+      Agent tool policy decision Allow for tool workspace_list_directory on agent 952b041a-aba0-385b-8e4e-494c4b21d831. ExecutionRunId=e0d6ff9c-38df-4e7a-b8c2-9313c92d0bfa SourceKind=project-structure ProcessRunId= ProcessStepId= RuntimeToolProviderKey= Signature=workspace_list_directory|maxResults=50,relativePath=external-target/C/programovani/dotnet-demo
+fail: Microsoft.Extensions.AI.FunctionInvokingChatClient[1784604714]
+      workspace_list_directory invocation failed.
+      System.InvalidOperationException: External workspace path 'external-target/C/programovani/dotnet-demo' is not in this agent's allowed external workspace roots.
+         at CanDoItAll.AgentFramework.Maf.WorkspaceFilesystemRuntimePlugin.EnsureExternalAliasAllowed(String path, Boolean requireWrite) in C:\repositories\CanDoItAll\src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Workspace\WorkspaceFilesystemRuntimePlugin.cs:line 203
+         at CanDoItAll.AgentFramework.Maf.WorkspaceFilesystemRuntimePlugin.EnsureFileReadAllowed(String path) in C:\repositories\CanDoItAll\src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Workspace\WorkspaceFilesystemRuntimePlugin.cs:line 159
+         at CanDoItAll.AgentFramework.Maf.WorkspaceFilesystemRuntimePlugin.PrepareFileReadPath(String path) in C:\repositories\CanDoItAll\src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Workspace\WorkspaceFilesystemRuntimePlugin.cs:line 142
+         at CanDoItAll.AgentFramework.Maf.WorkspaceFilesystemRuntimePlugin.ListWorkspaceDirectory(String relativePath, Int32 maxResults) in C:\repositories\CanDoItAll\src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Workspace\WorkspaceFilesystemRuntimePlugin.cs:line 36
+         at InvokeStub_WorkspaceFilesystemRuntimePlugin.ListWorkspaceDirectory(Object, Span`1)
+         at System.Reflection.MethodBaseInvoker.InvokeWithFewArgs(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+         at System.Reflection.RuntimeMethodInfo.Invoke(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+         at Microsoft.Extensions.AI.AIFunctionFactory.ReflectionInvoke(MethodInfo method, Object target, Object[] arguments)
+         at Microsoft.Extensions.AI.AIFunctionFactory.ReflectionAIFunction.InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
+         at Microsoft.Extensions.AI.AIFunctionFactory.ReflectionAIFunction.InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
+         at CanDoItAll.AgentFramework.Maf.MafRuntimeAgentFactory.<>c__DisplayClass13_0.<<CreateInstrumentedAgent>b__6>d.MoveNext() in C:\repositories\CanDoItAll\src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\MafRuntimeAgentFactory.cs:line 471
+      --- End of stack trace from previous location ---
+         at Microsoft.Agents.AI.FunctionInvocationDelegatingAgent.MiddlewareEnabledFunction.InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
+         at Microsoft.Extensions.AI.FunctionInvocationProcessor.InstrumentedInvokeFunctionAsync(FunctionInvocationContext context, CancellationToken cancellationToken)
+info: CanDoItAll.AgentFramework.Maf.MafAgentRuntime[0]
+      Agent tool policy decision Allow for tool workspace_list_directory on agent 952b041a-aba0-385b-8e4e-494c4b21d831. ExecutionRunId=e0d6ff9c-38df-4e7a-b8c2-9313c92d0bfa SourceKind=project-structure ProcessRunId= ProcessStepId= RuntimeToolProviderKey= Signature=workspace_list_directory|maxResults=50,relativePath=external-target/C/programovani/dotnet-demo/output
+fail: Microsoft.Extensions.AI.FunctionInvokingChatClient[1784604714]
+      workspace_list_directory invocation failed.
+      System.InvalidOperationException: External workspace path 'external-target/C/programovani/dotnet-demo/output' is not in this agent's allowed external workspace roots.
+         at CanDoItAll.AgentFramework.Maf.WorkspaceFilesystemRuntimePlugin.EnsureExternalAliasAllowed(String path, Boolean requireWrite) in C:\repositories\CanDoItAll\src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Workspace\WorkspaceFilesystemRuntimePlugin.cs:line 203
+         at CanDoItAll.AgentFramework.Maf.WorkspaceFilesystemRuntimePlugin.EnsureFileReadAllowed(String path) in C:\repositories\CanDoItAll\src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Workspace\WorkspaceFilesystemRuntimePlugin.cs:line 159
+         at CanDoItAll.AgentFramework.Maf.WorkspaceFilesystemRuntimePlugin.PrepareFileReadPath(String path) in C:\repositories\CanDoItAll\src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Workspace\WorkspaceFilesystemRuntimePlugin.cs:line 142
+         at CanDoItAll.AgentFramework.Maf.WorkspaceFilesystemRuntimePlugin.ListWorkspaceDirectory(String relativePath, Int32 maxResults) in C:\repositories\CanDoItAll\src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Workspace\WorkspaceFilesystemRuntimePlugin.cs:line 36
+         at InvokeStub_WorkspaceFilesystemRuntimePlugin.ListWorkspaceDirectory(Object, Span`1)
+         at System.Reflection.MethodBaseInvoker.InvokeWithFewArgs(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+         at System.Reflection.RuntimeMethodInfo.Invoke(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+         at Microsoft.Extensions.AI.AIFunctionFactory.ReflectionInvoke(MethodInfo method, Object target, Object[] arguments)
+         at Microsoft.Extensions.AI.AIFunctionFactory.ReflectionAIFunction.InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
+         at Microsoft.Extensions.AI.AIFunctionFactory.ReflectionAIFunction.InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
+         at CanDoItAll.AgentFramework.Maf.MafRuntimeAgentFactory.<>c__DisplayClass13_0.<<CreateInstrumentedAgent>b__6>d.MoveNext() in C:\repositories\CanDoItAll\src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\MafRuntimeAgentFactory.cs:line 471
+      --- End of stack trace from previous location ---
+         at Microsoft.Agents.AI.FunctionInvocationDelegatingAgent.MiddlewareEnabledFunction.InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
+         at Microsoft.Extensions.AI.FunctionInvocationProcessor.InstrumentedInvokeFunctionAsync(FunctionInvocationContext context, CancellationToken cancellationToken)
+info: CanDoItAll.AgentFramework.Maf.MafAgentRuntime[0]
+      Agent tool policy decision Allow for tool workspace_list_directory on agent 952b041a-aba0-385b-8e4e-494c4b21d831. ExecutionRunId=e0d6ff9c-38df-4e7a-b8c2-9313c92d0bfa SourceKind=project-structure ProcessRunId= ProcessStepId= RuntimeToolProviderKey= Signature=workspace_list_directory|maxResults=50,relativePath=external-target
+info: CanDoItAll.AgentFramework.Maf.MafAgentRuntime[0]
+      Agent tool policy decision Allow for tool workspace_stat_path on agent 952b041a-aba0-385b-8e4e-494c4b21d831. ExecutionRunId=e0d6ff9c-38df-4e7a-b8c2-9313c92d0bfa SourceKind=project-structure ProcessRunId= ProcessStepId= RuntimeToolProviderKey= Signature=workspace_stat_path|path=external-target/C/programovani/dotnet-demo/output/output.csproj
+fail: Microsoft.Extensions.AI.FunctionInvokingChatClient[1784604714]
+      workspace_stat_path invocation failed.
+      System.InvalidOperationException: External workspace path 'external-target/C/programovani/dotnet-demo/output/output.csproj' is not in this agent's allowed external workspace roots.
+         at CanDoItAll.AgentFramework.Maf.WorkspaceFilesystemRuntimePlugin.EnsureExternalAliasAllowed(String path, Boolean requireWrite) in C:\repositories\CanDoItAll\src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Workspace\WorkspaceFilesystemRuntimePlugin.cs:line 203
+         at CanDoItAll.AgentFramework.Maf.WorkspaceFilesystemRuntimePlugin.EnsureFileReadAllowed(String path) in C:\repositories\CanDoItAll\src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Workspace\WorkspaceFilesystemRuntimePlugin.cs:line 159
+         at CanDoItAll.AgentFramework.Maf.WorkspaceFilesystemRuntimePlugin.PrepareFileReadPath(String path) in C:\repositories\CanDoItAll\src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Workspace\WorkspaceFilesystemRuntimePlugin.cs:line 142
+         at CanDoItAll.AgentFramework.Maf.WorkspaceFilesystemRuntimePlugin.StatWorkspacePath(String path) in C:\repositories\CanDoItAll\src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Workspace\WorkspaceFilesystemRuntimePlugin.cs:line 60
+         at System.RuntimeMethodHandle.InvokeMethod(ObjectHandleOnStack target, Void** arguments, ObjectHandleOnStack sig, BOOL isConstructor, ObjectHandleOnStack result)
+         at System.Reflection.MethodBaseInvoker.InvokeWithOneArg(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+         at System.Reflection.RuntimeMethodInfo.Invoke(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+         at Microsoft.Extensions.AI.AIFunctionFactory.ReflectionInvoke(MethodInfo method, Object target, Object[] arguments)
+         at Microsoft.Extensions.AI.AIFunctionFactory.ReflectionAIFunction.InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
+         at Microsoft.Extensions.AI.AIFunctionFactory.ReflectionAIFunction.InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
+         at CanDoItAll.AgentFramework.Maf.MafRuntimeAgentFactory.<>c__DisplayClass13_0.<<CreateInstrumentedAgent>b__6>d.MoveNext() in C:\repositories\CanDoItAll\src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\MafRuntimeAgentFactory.cs:line 471
+      --- End of stack trace from previous location ---
+         at Microsoft.Agents.AI.FunctionInvocationDelegatingAgent.MiddlewareEnabledFunction.InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
+         at Microsoft.Extensions.AI.FunctionInvocationProcessor.InstrumentedInvokeFunctionAsync(FunctionInvocationContext context, CancellationToken cancellationToken)
+info: CanDoItAll.AgentFramework.Maf.MafAgentRuntime[0]
+      Agent tool policy decision Allow for tool workspace_list_directory on agent 952b041a-aba0-385b-8e4e-494c4b21d831. ExecutionRunId=e0d6ff9c-38df-4e7a-b8c2-9313c92d0bfa SourceKind=project-structure ProcessRunId= ProcessStepId= RuntimeToolProviderKey= Signature=workspace_list_directory|maxResults=50,relativePath=external-target/C
+info: CanDoItAll.AgentFramework.Maf.MafAgentRuntime[0]
+      Agent tool policy decision Allow for tool workspace_list_directory on agent 952b041a-aba0-385b-8e4e-494c4b21d831. ExecutionRunId=e0d6ff9c-38df-4e7a-b8c2-9313c92d0bfa SourceKind=project-structure ProcessRunId= ProcessStepId= RuntimeToolProviderKey= Signature=workspace_list_directory|maxResults=50,relativePath=external-target/C/programovani
+fail: Microsoft.Extensions.AI.FunctionInvokingChatClient[1784604714]
+      workspace_list_directory invocation failed.
+      System.InvalidOperationException: External workspace path 'external-target/C/programovani' is not in this agent's allowed external workspace roots.
+         at CanDoItAll.AgentFramework.Maf.WorkspaceFilesystemRuntimePlugin.EnsureExternalAliasAllowed(String path, Boolean requireWrite) in C:\repositories\CanDoItAll\src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Workspace\WorkspaceFilesystemRuntimePlugin.cs:line 203
+         at CanDoItAll.AgentFramework.Maf.WorkspaceFilesystemRuntimePlugin.EnsureFileReadAllowed(String path) in C:\repositories\CanDoItAll\src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Workspace\WorkspaceFilesystemRuntimePlugin.cs:line 159
+         at CanDoItAll.AgentFramework.Maf.WorkspaceFilesystemRuntimePlugin.PrepareFileReadPath(String path) in C:\repositories\CanDoItAll\src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Workspace\WorkspaceFilesystemRuntimePlugin.cs:line 142
+         at CanDoItAll.AgentFramework.Maf.WorkspaceFilesystemRuntimePlugin.ListWorkspaceDirectory(String relativePath, Int32 maxResults) in C:\repositories\CanDoItAll\src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Workspace\WorkspaceFilesystemRuntimePlugin.cs:line 36
+         at InvokeStub_WorkspaceFilesystemRuntimePlugin.ListWorkspaceDirectory(Object, Span`1)
+         at System.Reflection.MethodBaseInvoker.InvokeWithFewArgs(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+         at System.Reflection.RuntimeMethodInfo.Invoke(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+         at Microsoft.Extensions.AI.AIFunctionFactory.ReflectionInvoke(MethodInfo method, Object target, Object[] arguments)
+         at Microsoft.Extensions.AI.AIFunctionFactory.ReflectionAIFunction.InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
+         at Microsoft.Extensions.AI.AIFunctionFactory.ReflectionAIFunction.InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
+         at CanDoItAll.AgentFramework.Maf.MafRuntimeAgentFactory.<>c__DisplayClass13_0.<<CreateInstrumentedAgent>b__6>d.MoveNext() in C:\repositories\CanDoItAll\src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\MafRuntimeAgentFactory.cs:line 471
+      --- End of stack trace from previous location ---
+         at Microsoft.Agents.AI.FunctionInvocationDelegatingAgent.MiddlewareEnabledFunction.InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
+         at Microsoft.Extensions.AI.FunctionInvocationProcessor.InstrumentedInvokeFunctionAsync(FunctionInvocationContext context, CancellationToken cancellationToken)
+info: CanDoItAll.AgentFramework.Maf.MafAgentRuntime[0]
+      Agent tool policy decision Allow for tool workspace_list_directory on agent 952b041a-aba0-385b-8e4e-494c4b21d831. ExecutionRunId=e0d6ff9c-38df-4e7a-b8c2-9313c92d0bfa SourceKind=project-structure ProcessRunId= ProcessStepId= RuntimeToolProviderKey= Signature=workspace_list_directory|maxResults=100,relativePath=external-target/C/programovani
+fail: Microsoft.Extensions.AI.FunctionInvokingChatClient[1784604714]
+      workspace_list_directory invocation failed.
+      System.InvalidOperationException: External workspace path 'external-target/C/programovani' is not in this agent's allowed external workspace roots.
+         at CanDoItAll.AgentFramework.Maf.WorkspaceFilesystemRuntimePlugin.EnsureExternalAliasAllowed(String path, Boolean requireWrite) in C:\repositories\CanDoItAll\src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Workspace\WorkspaceFilesystemRuntimePlugin.cs:line 203
+         at CanDoItAll.AgentFramework.Maf.WorkspaceFilesystemRuntimePlugin.EnsureFileReadAllowed(String path) in C:\repositories\CanDoItAll\src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Workspace\WorkspaceFilesystemRuntimePlugin.cs:line 159
+         at CanDoItAll.AgentFramework.Maf.WorkspaceFilesystemRuntimePlugin.PrepareFileReadPath(String path) in C:\repositories\CanDoItAll\src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Workspace\WorkspaceFilesystemRuntimePlugin.cs:line 142
+         at CanDoItAll.AgentFramework.Maf.WorkspaceFilesystemRuntimePlugin.ListWorkspaceDirectory(String relativePath, Int32 maxResults) in C:\repositories\CanDoItAll\src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Workspace\WorkspaceFilesystemRuntimePlugin.cs:line 36
+         at InvokeStub_WorkspaceFilesystemRuntimePlugin.ListWorkspaceDirectory(Object, Span`1)
+         at System.Reflection.MethodBaseInvoker.InvokeWithFewArgs(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+         at System.Reflection.RuntimeMethodInfo.Invoke(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+         at Microsoft.Extensions.AI.AIFunctionFactory.ReflectionInvoke(MethodInfo method, Object target, Object[] arguments)
+         at Microsoft.Extensions.AI.AIFunctionFactory.ReflectionAIFunction.InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
+         at Microsoft.Extensions.AI.AIFunctionFactory.ReflectionAIFunction.InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
+         at CanDoItAll.AgentFramework.Maf.MafRuntimeAgentFactory.<>c__DisplayClass13_0.<<CreateInstrumentedAgent>b__6>d.MoveNext() in C:\repositories\CanDoItAll\src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\MafRuntimeAgentFactory.cs:line 471
+      --- End of stack trace from previous location ---
+         at Microsoft.Agents.AI.FunctionInvocationDelegatingAgent.MiddlewareEnabledFunction.InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
+         at Microsoft.Extensions.AI.FunctionInvocationProcessor.InstrumentedInvokeFunctionAsync(FunctionInvocationContext context, CancellationToken cancellationToken)
+fail: LoggingAgent[1784604714]
+      RunStreamingAsync failed.
+      System.InvalidOperationException: External workspace path 'external-target/C/programovani' is not in this agent's allowed external workspace roots.
+         at CanDoItAll.AgentFramework.Maf.WorkspaceFilesystemRuntimePlugin.EnsureExternalAliasAllowed(String path, Boolean requireWrite) in C:\repositories\CanDoItAll\src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Workspace\WorkspaceFilesystemRuntimePlugin.cs:line 203
+         at CanDoItAll.AgentFramework.Maf.WorkspaceFilesystemRuntimePlugin.EnsureFileReadAllowed(String path) in C:\repositories\CanDoItAll\src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Workspace\WorkspaceFilesystemRuntimePlugin.cs:line 159
+         at CanDoItAll.AgentFramework.Maf.WorkspaceFilesystemRuntimePlugin.PrepareFileReadPath(String path) in C:\repositories\CanDoItAll\src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Workspace\WorkspaceFilesystemRuntimePlugin.cs:line 142
+         at CanDoItAll.AgentFramework.Maf.WorkspaceFilesystemRuntimePlugin.ListWorkspaceDirectory(String relativePath, Int32 maxResults) in C:\repositories\CanDoItAll\src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Workspace\WorkspaceFilesystemRuntimePlugin.cs:line 36
+         at InvokeStub_WorkspaceFilesystemRuntimePlugin.ListWorkspaceDirectory(Object, Span`1)
+         at System.Reflection.MethodBaseInvoker.InvokeWithFewArgs(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+         at System.Reflection.RuntimeMethodInfo.Invoke(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+         at Microsoft.Extensions.AI.AIFunctionFactory.ReflectionInvoke(MethodInfo method, Object target, Object[] arguments)
+         at Microsoft.Extensions.AI.AIFunctionFactory.ReflectionAIFunction.InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
+         at Microsoft.Extensions.AI.AIFunctionFactory.ReflectionAIFunction.InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
+         at CanDoItAll.AgentFramework.Maf.MafRuntimeAgentFactory.<>c__DisplayClass13_0.<<CreateInstrumentedAgent>b__6>d.MoveNext() in C:\repositories\CanDoItAll\src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\MafRuntimeAgentFactory.cs:line 471
+      --- End of stack trace from previous location ---
+         at Microsoft.Agents.AI.FunctionInvocationDelegatingAgent.MiddlewareEnabledFunction.InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
+         at Microsoft.Extensions.AI.FunctionInvocationProcessor.InstrumentedInvokeFunctionAsync(FunctionInvocationContext context, CancellationToken cancellationToken)
+         at Microsoft.Extensions.AI.FunctionInvocationProcessor.ProcessSingleFunctionCallAsync(FunctionCallContent callContent, Func`2 findTool, Int32 callIndex, Func`4 createContext, Action`1 setCurrentContext, Boolean captureExceptions, CancellationToken cancellationToken)
+         at Microsoft.Extensions.AI.FunctionInvocationProcessor.ProcessFunctionCallsAsync(List`1 functionCallContents, Func`2 findTool, Boolean allowConcurrentInvocation, Func`4 createContext, Action`1 setCurrentContext, Boolean captureExceptionsWhenSerial, CancellationToken cancellationToken)
+         at Microsoft.Extensions.AI.FunctionInvokingChatClient.ProcessFunctionCallsAsync(List`1 messages, ChatOptions options, List`1 functionCallContents, Int32 iteration, Int32 consecutiveErrorCount, Boolean isStreaming, CancellationToken cancellationToken)
+         at Microsoft.Extensions.AI.FunctionInvokingChatClient.GetStreamingResponseAsync(IEnumerable`1 messages, ChatOptions options, CancellationToken cancellationToken)+MoveNext()
+         at Microsoft.Extensions.AI.FunctionInvokingChatClient.GetStreamingResponseAsync(IEnumerable`1 messages, ChatOptions options, CancellationToken cancellationToken)+System.Threading.Tasks.Sources.IValueTaskSource<System.Boolean>.GetResult()
+         at Microsoft.Extensions.AI.ConfigureOptionsChatClient.GetStreamingResponseAsync(IEnumerable`1 messages, ChatOptions options, CancellationToken cancellationToken)+MoveNext()
+         at Microsoft.Extensions.AI.ConfigureOptionsChatClient.GetStreamingResponseAsync(IEnumerable`1 messages, ChatOptions options, CancellationToken cancellationToken)+MoveNext()
+         at Microsoft.Extensions.AI.ConfigureOptionsChatClient.GetStreamingResponseAsync(IEnumerable`1 messages, ChatOptions options, CancellationToken cancellationToken)+System.Threading.Tasks.Sources.IValueTaskSource<System.Boolean>.GetResult()
+         at Microsoft.Agents.AI.ChatClientAgent.RunCoreStreamingAsync(IEnumerable`1 messages, AgentSession session, AgentRunOptions options, CancellationToken cancellationToken)+MoveNext()
+         at Microsoft.Agents.AI.ChatClientAgent.RunCoreStreamingAsync(IEnumerable`1 messages, AgentSession session, AgentRunOptions options, CancellationToken cancellationToken)+MoveNext()
+         at Microsoft.Agents.AI.ChatClientAgent.RunCoreStreamingAsync(IEnumerable`1 messages, AgentSession session, AgentRunOptions options, CancellationToken cancellationToken)+MoveNext()
+         at Microsoft.Agents.AI.ChatClientAgent.RunCoreStreamingAsync(IEnumerable`1 messages, AgentSession session, AgentRunOptions options, CancellationToken cancellationToken)+System.Threading.Tasks.Sources.IValueTaskSource<System.Boolean>.GetResult()
+         at Microsoft.Agents.AI.AIAgent.RunStreamingAsync(IEnumerable`1 messages, AgentSession session, AgentRunOptions options, CancellationToken cancellationToken)+MoveNext()
+         at Microsoft.Agents.AI.AIAgent.RunStreamingAsync(IEnumerable`1 messages, AgentSession session, AgentRunOptions options, CancellationToken cancellationToken)+MoveNext()
+         at Microsoft.Agents.AI.AIAgent.RunStreamingAsync(IEnumerable`1 messages, AgentSession session, AgentRunOptions options, CancellationToken cancellationToken)+System.Threading.Tasks.Sources.IValueTaskSource<System.Boolean>.GetResult()
+         at Microsoft.Agents.AI.OpenTelemetryAgent.ForwardingChatClient.GetStreamingResponseAsync(IEnumerable`1 messages, ChatOptions options, CancellationToken cancellationToken)+MoveNext()
+         at Microsoft.Agents.AI.OpenTelemetryAgent.ForwardingChatClient.GetStreamingResponseAsync(IEnumerable`1 messages, ChatOptions options, CancellationToken cancellationToken)+MoveNext()
+         at Microsoft.Agents.AI.OpenTelemetryAgent.ForwardingChatClient.GetStreamingResponseAsync(IEnumerable`1 messages, ChatOptions options, CancellationToken cancellationToken)+System.Threading.Tasks.Sources.IValueTaskSource<System.Boolean>.GetResult()
+         at Microsoft.Extensions.AI.OpenTelemetryChatClient.GetStreamingResponseAsync(IEnumerable`1 messages, ChatOptions options, CancellationToken cancellationToken)+MoveNext()
+         at Microsoft.Extensions.AI.OpenTelemetryChatClient.GetStreamingResponseAsync(IEnumerable`1 messages, ChatOptions options, CancellationToken cancellationToken)+MoveNext()
+         at Microsoft.Extensions.AI.OpenTelemetryChatClient.GetStreamingResponseAsync(IEnumerable`1 messages, ChatOptions options, CancellationToken cancellationToken)+System.Threading.Tasks.Sources.IValueTaskSource<System.Boolean>.GetResult()
+         at Microsoft.Agents.AI.OpenTelemetryAgent.RunCoreStreamingAsync(IEnumerable`1 messages, AgentSession session, AgentRunOptions options, CancellationToken cancellationToken)+MoveNext()
+         at Microsoft.Agents.AI.OpenTelemetryAgent.RunCoreStreamingAsync(IEnumerable`1 messages, AgentSession session, AgentRunOptions options, CancellationToken cancellationToken)+MoveNext()
+         at Microsoft.Agents.AI.OpenTelemetryAgent.RunCoreStreamingAsync(IEnumerable`1 messages, AgentSession session, AgentRunOptions options, CancellationToken cancellationToken)+System.Threading.Tasks.Sources.IValueTaskSource<System.Boolean>.GetResult()
+         at Microsoft.Agents.AI.AIAgent.RunStreamingAsync(IEnumerable`1 messages, AgentSession session, AgentRunOptions options, CancellationToken cancellationToken)+MoveNext()
+         at Microsoft.Agents.AI.AIAgent.RunStreamingAsync(IEnumerable`1 messages, AgentSession session, AgentRunOptions options, CancellationToken cancellationToken)+MoveNext()
+         at Microsoft.Agents.AI.AIAgent.RunStreamingAsync(IEnumerable`1 messages, AgentSession session, AgentRunOptions options, CancellationToken cancellationToken)+System.Threading.Tasks.Sources.IValueTaskSource<System.Boolean>.GetResult()
+         at Microsoft.Agents.AI.AIAgent.RunStreamingAsync(IEnumerable`1 messages, AgentSession session, AgentRunOptions options, CancellationToken cancellationToken)+MoveNext()
+         at Microsoft.Agents.AI.AIAgent.RunStreamingAsync(IEnumerable`1 messages, AgentSession session, AgentRunOptions options, CancellationToken cancellationToken)+MoveNext()
+         at Microsoft.Agents.AI.AIAgent.RunStreamingAsync(IEnumerable`1 messages, AgentSession session, AgentRunOptions options, CancellationToken cancellationToken)+System.Threading.Tasks.Sources.IValueTaskSource<System.Boolean>.GetResult()
+         at Microsoft.Agents.AI.LoggingAgent.RunCoreStreamingAsync(IEnumerable`1 messages, AgentSession session, AgentRunOptions options, CancellationToken cancellationToken)+MoveNext()

@@ -5,6 +5,7 @@ using AngleSharp.Dom;
 using Bunit;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.Components.BaseLib;
 using CanDoItAll.Components.CanvasLib;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.Projects;
@@ -712,6 +713,7 @@ public sealed class ProjectStructurePageSimpleMutationTests
         var workbenchService = harness.Context.Services.GetRequiredService<ProjectWorkbenchService>();
 
         var projectId = await CreateProjectAsync(projectsService, "Artifact create sequence");
+        var dialogHost = harness.Context.RenderComponent<DialogHost>();
         var cut = harness.Context.RenderComponent<ProjectStructurePage>(
             parameters => parameters.Add(page => page.ProjectId, projectId));
         var canvasWorkbench = WaitForCanvasWorkbench(cut);
@@ -770,7 +772,7 @@ public sealed class ProjectStructurePageSimpleMutationTests
             "Validation track",
             "Use this branch for reconnect, summary, export, and delete confirmation evidence.");
 
-        _ = await InvokeCreateActionAsync(
+        var captureEvidenceTask = InvokeCreateActionAsync(
             cut,
             canvasWorkbench,
             "add-work-task",
@@ -782,8 +784,10 @@ public sealed class ProjectStructurePageSimpleMutationTests
             [
                 new CanvasWorkbenchInputValue { Key = "dueUtc", Value = "2026-04-10T15:00:00+00:00" }
             ]);
+        dialogHost.WaitForElement("[data-testid='project-structure-task-create-submit']").Click();
+        _ = await captureEvidenceTask.WaitAsync(TimeSpan.FromSeconds(20));
 
-        _ = await InvokeCreateActionAsync(
+        var exportEvidenceTask = InvokeCreateActionAsync(
             cut,
             canvasWorkbench,
             "add-work-task",
@@ -795,8 +799,10 @@ public sealed class ProjectStructurePageSimpleMutationTests
             [
                 new CanvasWorkbenchInputValue { Key = "dueUtc", Value = "2026-04-11T16:30:00+00:00" }
             ]);
+        dialogHost.WaitForElement("[data-testid='project-structure-task-create-submit']").Click();
+        _ = await exportEvidenceTask.WaitAsync(TimeSpan.FromSeconds(20));
 
-        _ = await InvokeCreateActionAsync(
+        var reconnectFollowUpTask = InvokeCreateActionAsync(
             cut,
             canvasWorkbench,
             "add-work-task",
@@ -808,6 +814,8 @@ public sealed class ProjectStructurePageSimpleMutationTests
             [
                 new CanvasWorkbenchInputValue { Key = "dueUtc", Value = "2026-04-12T12:00:00+00:00" }
             ]);
+        dialogHost.WaitForElement("[data-testid='project-structure-task-create-submit']").Click();
+        _ = await reconnectFollowUpTask.WaitAsync(TimeSpan.FromSeconds(20));
 
         _ = await InvokeCreateActionAsync(
             cut,

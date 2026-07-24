@@ -1,16 +1,16 @@
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.SharedKernel;
-using Microsoft.Extensions.Logging;
 
 namespace CanDoItAll.Modules.Workbench;
 
+public sealed record ProjectStructureTaskAssigneeMutationSnapshot(
+    ProjectStructureNode Task,
+    IReadOnlyList<ProjectPartyAssignmentDetail> DirectAssignments);
+
 public sealed class ProjectStructureWorkItemAssigneeService(
     IProjectPartyIntegrationBridge partyIntegrationBridge,
-    ProjectWorkbenchService projectWorkbenchService,
-    ILogger<ProjectStructureWorkItemAssigneeService> logger)
+    ProjectWorkbenchService projectWorkbenchService)
 {
-    private const string RollbackSource = "project-structure-work-item-assignee-rollback";
-
     private static readonly IReadOnlyList<ProjectPartyAssignmentRole> WorkItemAssignmentRoles =
         [ProjectPartyAssignmentRole.WorkItemAssignee];
 
@@ -29,6 +29,27 @@ public sealed class ProjectStructureWorkItemAssigneeService(
             .ToList();
     }
 
+    public async Task<ProjectStructureTaskAssigneeMutationSnapshot> ReadAsync(
+        Guid projectId,
+        string taskNodeId,
+        CancellationToken cancellationToken = default)
+    {
+        EnsureProjectId(projectId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(taskNodeId);
+
+        var assignments = await ListDirectAssignmentsAsync(
+            projectId,
+            taskNodeId,
+            cancellationToken);
+        var task = await GetCanonicalWorkItemAsync(
+            projectId,
+            taskNodeId,
+            cancellationToken);
+        return new ProjectStructureTaskAssigneeMutationSnapshot(
+            task,
+            assignments);
+    }
+
     public async Task ReplaceAsync(
         Guid projectId,
         string taskNodeId,
@@ -36,16 +57,154 @@ public sealed class ProjectStructureWorkItemAssigneeService(
         string source,
         CancellationToken cancellationToken = default)
     {
+        await ReplaceCoreAsync(
+            projectId,
+            taskNodeId,
+            selection,
+            source,
+            expectedAssignments: null,
+            expectedDirectAssignmentRevision: null,
+            cancellationToken);
+    }
+
+    public async Task ReplaceIfUnchangedAsync(
+        Guid projectId,
+        string taskNodeId,
+        ProjectStructureTaskResourceSelection? selection,
+        string source,
+        IReadOnlyList<ProjectPartyAssignmentDetail> expectedAssignments,
+        long expectedDirectAssignmentRevision,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(expectedAssignments);
+        await ReplaceCoreAsync(
+            projectId,
+            taskNodeId,
+            selection,
+            source,
+            expectedAssignments,
+            new ProjectWorkItemDirectAssignmentRevision(
+                expectedDirectAssignmentRevision),
+            cancellationToken);
+    }
+
+    public Task<ProjectStructureTaskAssigneeMutationSnapshot>
+        ReplaceIfUnchangedAndReadAsync(
+            Guid projectId,
+            string taskNodeId,
+            ProjectStructureTaskResourceSelection? selection,
+            string source,
+            IReadOnlyList<ProjectPartyAssignmentDetail> expectedAssignments,
+            long expectedDirectAssignmentRevision,
+            CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(expectedAssignments);
+        return ReplaceCoreAsync(
+            projectId,
+            taskNodeId,
+            selection,
+            source,
+            expectedAssignments,
+            new ProjectWorkItemDirectAssignmentRevision(
+                expectedDirectAssignmentRevision),
+            cancellationToken);
+    }
+
+    public async Task<ProjectStructureTaskAssigneeMutationSnapshot>
+        RestoreIfUnchangedAndReadAsync(
+            Guid projectId,
+            string taskNodeId,
+            ProjectPartyAssignmentDetail? previousAssignment,
+            IReadOnlyList<ProjectPartyAssignmentDetail> expectedAssignments,
+            long expectedDirectAssignmentRevision,
+            CancellationToken cancellationToken = default)
+    {
+        EnsureProjectId(projectId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(taskNodeId);
+        ArgumentNullException.ThrowIfNull(expectedAssignments);
+        await GetCanonicalWorkItemAsync(
+            projectId,
+            taskNodeId,
+            cancellationToken);
+
+        IReadOnlyList<ProjectPartyAssignmentUpsertRequest> desiredAssignments =
+            previousAssignment is null
+                ? []
+                :
+                [
+                    new ProjectPartyAssignmentUpsertRequest
+                    {
+                        AssignmentId = previousAssignment.Id,
+                        ProjectId = projectId,
+                        PartyId = previousAssignment.PartyId,
+                        Role = previousAssignment.Role,
+                        NodeKey = taskNodeId,
+                        IsPrimary = previousAssignment.IsPrimary,
+                        AllocationPercent =
+                            previousAssignment.AllocationPercent,
+                        StartsOn = ToDateOnly(
+                            previousAssignment.StartsAtUtc),
+                        EndsOn = ToDateOnly(
+                            previousAssignment.EndsAtUtc),
+                        Source = previousAssignment.Source,
+                        Notes = previousAssignment.Notes
+                    }
+                ];
+        var assignmentResult =
+            await partyIntegrationBridge.ReplaceNodeAssignmentsIfCurrentAsync(
+                projectId,
+                new ProjectNodeReference(taskNodeId),
+                desiredAssignments,
+                WorkItemAssignmentRoles,
+                expectedAssignments
+                    .Select(ProjectPartyAssignmentConcurrencySnapshot.From)
+                    .ToArray(),
+                new ProjectWorkItemDirectAssignmentRevision(
+                    expectedDirectAssignmentRevision),
+                cancellationToken);
+        if (assignmentResult.IsFailure)
+        {
+            throw BuildAssignmentException(assignmentResult.Errors);
+        }
+
+        var restoredAssignments = await ListDirectAssignmentsAsync(
+            projectId,
+            taskNodeId,
+            cancellationToken);
+        if (!MatchesRestoredAssignment(
+                restoredAssignments,
+                previousAssignment))
+        {
+            throw new ProjectStructureAgentException(
+                409,
+                "TaskAssigneeConcurrentChange",
+                "The task assignments changed while the previous assignee was being restored. Reload the project before making another change.");
+        }
+
+        var restoredTask = await GetCanonicalWorkItemAsync(
+            projectId,
+            taskNodeId,
+            cancellationToken);
+        return new ProjectStructureTaskAssigneeMutationSnapshot(
+            restoredTask,
+            restoredAssignments);
+    }
+
+    private async Task<ProjectStructureTaskAssigneeMutationSnapshot> ReplaceCoreAsync(
+        Guid projectId,
+        string taskNodeId,
+        ProjectStructureTaskResourceSelection? selection,
+        string source,
+        IReadOnlyList<ProjectPartyAssignmentDetail>? expectedAssignments,
+        ProjectWorkItemDirectAssignmentRevision?
+            expectedDirectAssignmentRevision,
+        CancellationToken cancellationToken)
+    {
         EnsureProjectId(projectId);
         ArgumentException.ThrowIfNullOrWhiteSpace(taskNodeId);
         ArgumentException.ThrowIfNullOrWhiteSpace(source);
 
         await GetCanonicalWorkItemAsync(projectId, taskNodeId, cancellationToken);
-        var previousAssignments = (await partyIntegrationBridge.ListAssignmentsDetailedAsync(projectId, cancellationToken))
-            .Where(assignment =>
-                string.Equals(assignment.NodeKey, taskNodeId, StringComparison.Ordinal) &&
-                assignment.Role == ProjectPartyAssignmentRole.WorkItemAssignee)
-            .ToList();
         var party = selection is null
             ? null
             : await ResolvePartyAsync(projectId, selection, cancellationToken);
@@ -64,66 +223,47 @@ public sealed class ProjectStructureWorkItemAssigneeService(
                 }
             ];
 
-        var assignmentResult = await partyIntegrationBridge.ReplaceNodeAssignmentsAsync(
-            projectId,
-            new ProjectNodeReference(taskNodeId),
-            desiredAssignments,
-            WorkItemAssignmentRoles,
-            cancellationToken);
+        var assignmentResult = expectedAssignments is null
+            ? await partyIntegrationBridge.ReplaceNodeAssignmentsAsync(
+                projectId,
+                new ProjectNodeReference(taskNodeId),
+                desiredAssignments,
+                WorkItemAssignmentRoles,
+                cancellationToken)
+            : await partyIntegrationBridge.ReplaceNodeAssignmentsIfCurrentAsync(
+                projectId,
+                new ProjectNodeReference(taskNodeId),
+                desiredAssignments,
+                WorkItemAssignmentRoles,
+                expectedAssignments
+                    .Select(ProjectPartyAssignmentConcurrencySnapshot.From)
+                    .ToArray(),
+                expectedDirectAssignmentRevision,
+                cancellationToken);
         if (assignmentResult.IsFailure)
         {
             throw BuildAssignmentException(assignmentResult.Errors);
         }
 
-        try
+        var replacementAssignments = await ListDirectAssignmentsAsync(
+            projectId,
+            taskNodeId,
+            cancellationToken);
+        if (!MatchesSelection(replacementAssignments, selection))
         {
-            var workItem = await GetCanonicalWorkItemAsync(projectId, taskNodeId, cancellationToken);
-            var workItemKind = ProjectNodeKindRegistry.ResolveWorkItemKind(workItem.ObjectSubtype);
-            var updatedTask = await projectWorkbenchService.MutateObjectMetadataAsync(
-                projectId,
-                taskNodeId,
-                metadata =>
-                {
-                    metadata.WorkItem ??= new ProjectWorkItemMetadata
-                    {
-                        WorkItemKind = workItemKind
-                    };
-                    metadata.WorkItem.AssigneePartyDisplayName = party?.DisplayName ?? string.Empty;
-                },
-                cancellationToken: cancellationToken);
-            if (updatedTask is null)
-            {
-                throw new InvalidOperationException($"Work item '{taskNodeId}' disappeared while its assignee display snapshot was being saved.");
-            }
-        }
-        catch (OperationCanceledException cancellationFailure) when (cancellationToken.IsCancellationRequested)
-        {
-            await RestoreAssignmentsAsync(
-                projectId,
-                taskNodeId,
-                previousAssignments,
-                cancellationFailure);
-            throw;
-        }
-        catch (Exception metadataFailure)
-        {
-            var rollbackFailure = await RestoreAssignmentsAsync(
-                projectId,
-                taskNodeId,
-                previousAssignments,
-                metadataFailure);
             throw new ProjectStructureAgentException(
-                500,
-                rollbackFailure is null
-                    ? "TaskAssigneeMetadataSyncFailed"
-                    : "TaskAssigneeMetadataSyncRollbackFailed",
-                rollbackFailure is null
-                    ? "The work-item assignee could not be projected into metadata. The canonical assignment was restored."
-                    : "The work-item assignee metadata update and canonical assignment rollback both failed.",
-                rollbackFailure is null
-                    ? metadataFailure.GetType().Name
-                    : new[] { metadataFailure.GetType().Name, rollbackFailure.GetType().Name });
+                409,
+                "TaskAssigneeConcurrentChange",
+                "The task assignments changed while the assignee was being replaced. Reload the project before making another change.");
         }
+
+        var updatedTask = await GetCanonicalWorkItemAsync(
+            projectId,
+            taskNodeId,
+            cancellationToken);
+        return new ProjectStructureTaskAssigneeMutationSnapshot(
+            updatedTask,
+            replacementAssignments);
     }
 
     private async Task<ProjectPartyOption> ResolvePartyAsync(
@@ -182,58 +322,79 @@ public sealed class ProjectStructureWorkItemAssigneeService(
         return task;
     }
 
-    private async Task<Exception?> RestoreAssignmentsAsync(
+    private async Task<IReadOnlyList<ProjectPartyAssignmentDetail>> ListDirectAssignmentsAsync(
         Guid projectId,
         string taskNodeId,
-        IReadOnlyList<ProjectPartyAssignmentDetail> previousAssignments,
-        Exception metadataFailure)
-    {
-        try
-        {
-            var rollback = await partyIntegrationBridge.ReplaceNodeAssignmentsAsync(
+        CancellationToken cancellationToken)
+        => (await partyIntegrationBridge.ListAssignmentsDetailedAsync(
                 projectId,
-                new ProjectNodeReference(taskNodeId),
-                previousAssignments.Select(assignment => new ProjectPartyAssignmentUpsertRequest
-                {
-                    ProjectId = projectId,
-                    PartyId = assignment.PartyId,
-                    Role = assignment.Role,
-                    NodeKey = taskNodeId,
-                    IsPrimary = assignment.IsPrimary,
-                    AllocationPercent = assignment.AllocationPercent,
-                    StartsOn = ToDateOnly(assignment.StartsAtUtc),
-                    EndsOn = ToDateOnly(assignment.EndsAtUtc),
-                    Source = RollbackSource,
-                    Notes = assignment.Notes
-                }).ToList(),
                 WorkItemAssignmentRoles,
-                CancellationToken.None);
-            if (rollback.IsFailure)
-            {
-                return new InvalidOperationException(string.Join(" ", rollback.Errors.Select(error => error.Message)));
-            }
+                cancellationToken))
+            .Where(assignment =>
+                string.Equals(assignment.NodeKey, taskNodeId, StringComparison.Ordinal))
+            .ToArray();
 
-            logger.LogWarning(
-                metadataFailure,
-                "Restored canonical work-item assignments after metadata synchronization failed. ProjectId={ProjectId} WorkItemNodeId={WorkItemNodeId}",
-                projectId,
-                taskNodeId);
-            return null;
-        }
-        catch (Exception rollbackFailure)
+    private static bool MatchesSelection(
+        IReadOnlyList<ProjectPartyAssignmentDetail> assignments,
+        ProjectStructureTaskResourceSelection? selection)
+    {
+        if (selection is null)
         {
-            logger.LogError(
-                rollbackFailure,
-                "Failed to restore canonical work-item assignments. ProjectId={ProjectId} WorkItemNodeId={WorkItemNodeId} MetadataFailureType={MetadataFailureType}",
-                projectId,
-                taskNodeId,
-                metadataFailure.GetType().Name);
-            return rollbackFailure;
+            return assignments.Count == 0;
         }
+
+        var expectedPartyType = selection.Kind switch
+        {
+            ProjectStructureTaskResourceKind.Person => ProjectPartyType.Person,
+            ProjectStructureTaskResourceKind.Agent => ProjectPartyType.AiAgent,
+            _ => (ProjectPartyType?)null
+        };
+        return expectedPartyType.HasValue &&
+            assignments.Count == 1 &&
+            assignments[0].PartyId == selection.ResourceId &&
+            assignments[0].PartyType == expectedPartyType.Value;
+    }
+
+    private static bool MatchesRestoredAssignment(
+        IReadOnlyList<ProjectPartyAssignmentDetail> assignments,
+        ProjectPartyAssignmentDetail? expected)
+    {
+        if (expected is null)
+        {
+            return assignments.Count == 0;
+        }
+
+        return assignments.Count == 1 &&
+            assignments[0].Id == expected.Id &&
+            assignments[0].ProjectId == expected.ProjectId &&
+            assignments[0].PartyId == expected.PartyId &&
+            assignments[0].PartyType == expected.PartyType &&
+            assignments[0].Role == expected.Role &&
+            string.Equals(
+                assignments[0].NodeKey,
+                expected.NodeKey,
+                StringComparison.Ordinal) &&
+            assignments[0].IsPrimary == expected.IsPrimary &&
+            assignments[0].AllocationPercent ==
+                expected.AllocationPercent &&
+            ToDateOnly(assignments[0].StartsAtUtc) ==
+                ToDateOnly(expected.StartsAtUtc) &&
+            ToDateOnly(assignments[0].EndsAtUtc) ==
+                ToDateOnly(expected.EndsAtUtc) &&
+            string.Equals(
+                assignments[0].Source,
+                expected.Source,
+                StringComparison.Ordinal) &&
+            string.Equals(
+                assignments[0].Notes,
+                expected.Notes,
+                StringComparison.Ordinal);
     }
 
     private static DateOnly? ToDateOnly(DateTimeOffset? value)
-        => value.HasValue ? DateOnly.FromDateTime(value.Value.UtcDateTime) : null;
+        => value.HasValue
+            ? DateOnly.FromDateTime(value.Value.UtcDateTime)
+            : null;
 
     private static bool IsAssignableParty(ProjectPartyOption option)
         => option.PartyType is ProjectPartyType.Person or ProjectPartyType.AiAgent;
@@ -284,11 +445,24 @@ public sealed class ProjectStructureWorkItemAssigneeService(
     }
 
     private static ProjectStructureAgentException BuildAssignmentException(IReadOnlyList<Error> errors)
-        => new(
-            422,
-            "TaskAssigneeAssignmentFailed",
-            string.Join(" ", errors.Select(error => error.Message)),
-            errors);
+    {
+        var message = string.Join(" ", errors.Select(error => error.Message));
+        return errors.Any(error =>
+                string.Equals(
+                    error.Code,
+                    ProjectPartyIntegrationErrorCodes.StaleAssignmentSnapshot,
+                    StringComparison.Ordinal))
+            ? new ProjectStructureAgentException(
+                409,
+                "TaskAssigneeConcurrentChange",
+                message,
+                errors)
+            : new ProjectStructureAgentException(
+                422,
+                "TaskAssigneeAssignmentFailed",
+                message,
+                errors);
+    }
 
     private static void EnsureProjectId(Guid projectId)
     {

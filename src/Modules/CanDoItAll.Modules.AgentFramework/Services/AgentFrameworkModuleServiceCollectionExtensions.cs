@@ -19,6 +19,7 @@ using CanDoItAll.Modules.AgentFramework.Hosting;
 using CanDoItAll.Modules.AgentFramework.Pages.Components;
 using CanDoItAll.Modules.CrmHr;
 using CanDoItAll.Modules.Prompts;
+using CanDoItAll.Modules.Workbench;
 using CanDoItAll.Modules.Workspace;
 using CanDoItAll.SharedKernel;
 using CanDoItAll.Tools.Documents;
@@ -148,6 +149,9 @@ public static class AgentFrameworkModuleServiceCollectionExtensions
         services.TryAddScoped<HrAgentAdministrationService>();
         services.TryAddScoped<HrAgentAvatarGenerationService>();
         services.TryAddScoped<HrAgentUsageAnalyticsService>();
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<
+            IProjectStructureTaskResourceCostStrategy,
+            ProjectStructureAgentTaskResourceCostStrategy>());
         services.TryAddScoped<HrAgentProcessReviewService>();
         services.TryAddScoped<HrAgentRuntimeAuthorizationService>();
         services.TryAddScoped<PromptsCuratorAgentRuntimeAuthorizationService>();

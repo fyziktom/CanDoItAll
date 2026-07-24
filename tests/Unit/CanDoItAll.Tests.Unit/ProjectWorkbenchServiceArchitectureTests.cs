@@ -126,8 +126,42 @@ public sealed class ProjectWorkbenchServiceArchitectureTests
             register(services);
 
             var descriptor = Assert.Single(
-                services.Where(item => item.ServiceType == typeof(IProjectNodeDetailsBridge)));
+                services,
+                item => item.ServiceType == typeof(IProjectNodeDetailsBridge));
             Assert.Equal(typeof(ProjectNodeDetailsBridge), descriptor.ImplementationType);
+            Assert.Equal(ServiceLifetime.Scoped, descriptor.Lifetime);
+        }
+    }
+
+    [Fact]
+    public void Workbench_assignment_mutation_bridge_wins_regardless_of_module_registration_order()
+    {
+        Action<IServiceCollection>[] registrations =
+        [
+            services =>
+            {
+                services.AddProjectsModule();
+                services.AddWorkbenchModule();
+            },
+            services =>
+            {
+                services.AddWorkbenchModule();
+                services.AddProjectsModule();
+            }
+        ];
+
+        foreach (var register in registrations)
+        {
+            var services = new ServiceCollection();
+
+            register(services);
+
+            var descriptor = Assert.Single(
+                services,
+                item =>
+                    item.ServiceType ==
+                        typeof(IProjectWorkItemAssignmentMutationBridge));
+            Assert.NotNull(descriptor.ImplementationFactory);
             Assert.Equal(ServiceLifetime.Scoped, descriptor.Lifetime);
         }
     }

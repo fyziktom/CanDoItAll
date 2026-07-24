@@ -281,6 +281,7 @@ public static class ToolContractCatalog
         AgentToolInvocationPolicyMetadata.ProjectPlanSummaryGet,
         AgentToolInvocationPolicyMetadata.ProjectTaskCreate,
         AgentToolInvocationPolicyMetadata.ProjectTaskUpdate,
+        AgentToolInvocationPolicyMetadata.ProjectTaskResourceAttach,
         AgentToolInvocationPolicyMetadata.ProjectStructureDependencyLink,
         AgentToolInvocationPolicyMetadata.ProjectStructureDependencyUnlink,
         AgentToolInvocationPolicyMetadata.ProjectStructureNodeCreate,

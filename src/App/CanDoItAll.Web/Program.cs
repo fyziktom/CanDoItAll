@@ -56,7 +56,6 @@ builder.Services.AddCanDoItAllInfrastructure(builder.Configuration, builder.Envi
 builder.Services.AddCanDoItAllRuntimeDatabaseSwitching();
 builder.Services.AddCanDoItAllRuntimeModules(builder.Configuration, builder.Environment.ContentRootPath);
 builder.Services.AddCanDoItAllDashboard();
-builder.Services.AddScoped<ProjectStructureGanttTaskEditCoordinator>();
 builder.Services.AddCanDoItAllFileToolsStoragePlacementRevision();
 builder.Services.AddCanDoItAllApi(builder.Configuration);
 builder.Services.AddCanDoItAllMermaid();

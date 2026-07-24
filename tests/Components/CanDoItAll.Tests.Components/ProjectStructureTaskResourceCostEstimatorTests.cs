@@ -43,7 +43,8 @@ public sealed class ProjectStructureTaskResourceCostEstimatorTests : TestContext
                     "EUR",
                     "CRM workforce rate",
                     "Calculated from the selected rate.",
-                    DateTimeOffset.Parse("2026-07-16T16:00:00Z")));
+                    DateTimeOffset.Parse("2026-07-16T16:00:00Z"),
+                    ProjectStructureTaskResourceCostSource.CrmWorkforceRate));
             }));
 
         Assert.Equal(0, quoteCalls);
@@ -67,7 +68,7 @@ public sealed class ProjectStructureTaskResourceCostEstimatorTests : TestContext
     }
 
     [Fact]
-    public async Task Failed_refresh_preserves_the_existing_manual_cost()
+    public async Task Failed_refresh_does_not_replace_the_existing_cost_with_stale_data()
     {
         var initialEstimate = new ProjectTaskEstimate(
             8m,
@@ -87,7 +88,71 @@ public sealed class ProjectStructureTaskResourceCostEstimatorTests : TestContext
         cut.Render();
 
         Assert.Null(changedEstimate);
-        Assert.Contains("existing expected cost was preserved", cut.Markup, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("cannot replace it with an invented or stale amount", cut.Markup, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task Unavailable_authoritative_quote_clears_the_existing_cost_preview()
+    {
+        var initialEstimate = new ProjectTaskEstimate(
+            8m,
+            ProjectWorkItemEffortUnit.Hours,
+            275m,
+            "USD");
+        ProjectTaskEstimate? changedEstimate = null;
+        var cut = RenderComponent<ProjectStructureTaskResourceCostEstimator>(parameters => parameters
+            .Add(component => component.ProjectId, ProjectId)
+            .Add(component => component.SelectedResource, Person)
+            .Add(component => component.Estimate, initialEstimate)
+            .Add(component => component.EstimateChanged, value => changedEstimate = value)
+            .Add(component => component.QuoteResolver, (_, _) =>
+                Task.FromResult(ProjectStructureTaskResourceCostQuote.Unavailable(
+                    "CRM workforce rate",
+                    "No rate is configured.",
+                    DateTimeOffset.Parse("2026-07-16T16:00:00Z"),
+                    ProjectStructureTaskResourceCostSource.CrmWorkforceRate))));
+
+        await cut.InvokeAsync(() => cut.Instance.EstimateSelectedAsync(Person, initialEstimate));
+
+        Assert.NotNull(changedEstimate);
+        Assert.Null(changedEstimate!.ExpectedCostAmount);
+        Assert.Equal(string.Empty, changedEstimate.ExpectedCostCurrencyCode);
+    }
+
+    [Fact]
+    public async Task Started_task_preserves_historical_cost_without_requesting_a_quote()
+    {
+        var quoteCalls = 0;
+        var initialEstimate = new ProjectTaskEstimate(
+            8m,
+            ProjectWorkItemEffortUnit.Hours,
+            275m,
+            "USD");
+        ProjectTaskEstimate? changedEstimate = null;
+        var cut = RenderComponent<ProjectStructureTaskResourceCostEstimator>(parameters => parameters
+            .Add(component => component.ProjectId, ProjectId)
+            .Add(component => component.SelectedResource, Person)
+            .Add(component => component.Estimate, initialEstimate)
+            .Add(component => component.ExecutionState, ProjectTaskExecutionState.Started)
+            .Add(component => component.EstimateChanged, value => changedEstimate = value)
+            .Add(component => component.QuoteResolver, (_, _) =>
+            {
+                quoteCalls++;
+                return Task.FromResult(ProjectStructureTaskResourceCostQuote.Unavailable(
+                    "CRM workforce rate",
+                    "No rate is configured.",
+                    DateTimeOffset.Parse("2026-07-16T16:00:00Z"),
+                    ProjectStructureTaskResourceCostSource.CrmWorkforceRate));
+            }));
+
+        await cut.InvokeAsync(() => cut.Instance.EstimateSelectedAsync(Person, initialEstimate));
+
+        Assert.Equal(0, quoteCalls);
+        Assert.Null(changedEstimate);
+        Assert.Contains("execution history", cut.Markup, StringComparison.OrdinalIgnoreCase);
+        Assert.True(cut
+            .Find("[data-testid='project-structure-task-resource-cost-refresh']")
+            .HasAttribute("disabled"));
     }
 
     [Fact]
@@ -117,7 +182,8 @@ public sealed class ProjectStructureTaskResourceCostEstimatorTests : TestContext
             "USD",
             "CRM workforce rate",
             "Calculated for the previous effort.",
-            DateTimeOffset.Parse("2026-07-16T16:00:00Z")));
+            DateTimeOffset.Parse("2026-07-16T16:00:00Z"),
+            ProjectStructureTaskResourceCostSource.CrmWorkforceRate));
         await pendingQuote;
 
         Assert.Null(changedEstimate);
@@ -154,7 +220,8 @@ public sealed class ProjectStructureTaskResourceCostEstimatorTests : TestContext
             "USD",
             "CRM workforce rate",
             "Calculated before the manual edit.",
-            DateTimeOffset.Parse("2026-07-16T16:00:00Z")));
+            DateTimeOffset.Parse("2026-07-16T16:00:00Z"),
+            ProjectStructureTaskResourceCostSource.CrmWorkforceRate));
         await pendingQuote;
 
         Assert.Null(changedEstimate);

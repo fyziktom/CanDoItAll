@@ -195,82 +195,21 @@ public partial class ProjectStructurePage
         Guid? currentParentProjectId,
         IReadOnlyList<ProjectHierarchyLinkSummary> hierarchyLinks)
     {
-        if (candidateProjectId == subjectProjectId)
-        {
-            return false;
-        }
-
         return mode switch
         {
             ProjectStructureProjectHierarchyDialogMode.AddSubproject =>
-                CanAttachProjectAsSubproject(subjectProjectId, candidateProjectId, hierarchyLinks),
+                ProjectStructureProjectHierarchySelectionPolicy.CanAttachProjectAsSubproject(
+                    subjectProjectId,
+                    candidateProjectId,
+                    hierarchyLinks),
             ProjectStructureProjectHierarchyDialogMode.ReconnectSubproject =>
-                CanReconnectProjectToParent(subjectProjectId, candidateProjectId, currentParentProjectId, hierarchyLinks),
+                ProjectStructureProjectHierarchySelectionPolicy.CanReconnectProjectToParent(
+                    subjectProjectId,
+                    candidateProjectId,
+                    currentParentProjectId,
+                    hierarchyLinks),
             _ => false
         };
-    }
-
-    private static bool CanAttachProjectAsSubproject(
-        Guid parentProjectId,
-        Guid candidateChildProjectId,
-        IReadOnlyList<ProjectHierarchyLinkSummary> hierarchyLinks)
-    {
-        if (hierarchyLinks.Any(link =>
-                link.ParentProjectId == parentProjectId &&
-                link.ChildProjectId == candidateChildProjectId))
-        {
-            return false;
-        }
-
-        var ancestorIds = ExpandReachableProjectIds(parentProjectId, hierarchyLinks, walkToParents: true);
-        return !ancestorIds.Contains(candidateChildProjectId);
-    }
-
-    private static bool CanReconnectProjectToParent(
-        Guid childProjectId,
-        Guid candidateParentProjectId,
-        Guid? currentParentProjectId,
-        IReadOnlyList<ProjectHierarchyLinkSummary> hierarchyLinks)
-    {
-        if (currentParentProjectId.HasValue &&
-            candidateParentProjectId == currentParentProjectId.Value)
-        {
-            return false;
-        }
-
-        var descendantIds = ExpandReachableProjectIds(childProjectId, hierarchyLinks, walkToParents: false);
-        return !descendantIds.Contains(candidateParentProjectId);
-    }
-
-    private static HashSet<Guid> ExpandReachableProjectIds(
-        Guid startProjectId,
-        IReadOnlyList<ProjectHierarchyLinkSummary> hierarchyLinks,
-        bool walkToParents)
-    {
-        var visited = new HashSet<Guid>();
-        var pending = new Queue<Guid>();
-        pending.Enqueue(startProjectId);
-
-        while (pending.Count > 0)
-        {
-            var currentProjectId = pending.Dequeue();
-            if (!visited.Add(currentProjectId))
-            {
-                continue;
-            }
-
-            foreach (var relatedProjectId in hierarchyLinks
-                         .Where(link => walkToParents
-                             ? link.ChildProjectId == currentProjectId
-                             : link.ParentProjectId == currentProjectId)
-                         .Select(link => walkToParents ? link.ParentProjectId : link.ChildProjectId))
-            {
-                pending.Enqueue(relatedProjectId);
-            }
-        }
-
-        visited.Remove(startProjectId);
-        return visited;
     }
 
     private Guid? ResolveVisibleProjectParentId(ProjectStructureNode node)

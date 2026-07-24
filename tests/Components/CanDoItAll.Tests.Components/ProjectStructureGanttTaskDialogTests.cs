@@ -167,6 +167,36 @@ public sealed class ProjectStructureGanttTaskDialogTests
     }
 
     [Fact]
+    public void Started_task_keeps_historical_cost_and_currency_inputs_disabled()
+    {
+        using var context = CreateContext();
+        var host = context.RenderComponent<DialogHost>();
+        var editModel = new ProjectStructureGanttTaskEditModel(
+            new CanDoItAll.Components.Gantt.GanttTaskId("custom:started-task"),
+            "Started delivery",
+            StartUtc,
+            StartUtc.AddDays(1),
+            30,
+            new ProjectTaskEstimate(8m, ProjectWorkItemEffortUnit.Hours, 900m, "USD"),
+            Assignee: null,
+            Execution: new ProjectTaskExecutionSnapshot(
+                ProjectTaskExecutionState.Started,
+                StartUtc.AddHours(-2),
+                null));
+
+        _ = OpenEditDialog(context, editModel, []);
+
+        var cost = host.WaitForElement("[data-testid='project-structure-gantt-task-estimate-cost']");
+        var currency = host.Find("[data-testid='project-structure-gantt-task-estimate-currency']");
+        var effort = host.Find("[data-testid='project-structure-gantt-task-estimate-effort']");
+
+        Assert.True(cost.HasAttribute("disabled"));
+        Assert.True(currency.HasAttribute("disabled"));
+        Assert.False(effort.HasAttribute("disabled"));
+        Assert.Contains("historical snapshot", host.Markup, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public async Task Edit_mode_exposes_definition_filters_and_stages_workflow_without_replacing_assignee()
     {
         using var context = CreateContext();
@@ -185,7 +215,8 @@ public sealed class ProjectStructureGanttTaskDialogTests
             StartUtc.AddDays(7),
             30,
             new ProjectTaskEstimate(8m, ProjectWorkItemEffortUnit.Hours, 900m, "USD"),
-            assignee);
+            assignee,
+            Execution: ProjectTaskExecutionSnapshot.NotStarted);
         var workflow = new ProjectStructureTaskResourceSelection(
             ProjectStructureTaskResourceKind.Workflow,
             workflowId,
@@ -230,6 +261,76 @@ public sealed class ProjectStructureGanttTaskDialogTests
     }
 
     [Fact]
+    public async Task Mixed_assignment_mode_keeps_direct_assignee_read_only_and_allows_workflow_attachment()
+    {
+        using var context = CreateContext();
+        var host = context.RenderComponent<DialogHost>();
+        var primaryPersonId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+        var replacementAgentId = Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
+        var workflowId = Guid.Parse("cccccccc-cccc-cccc-cccc-cccccccccccc");
+        var workflowVersionId = Guid.Parse("dddddddd-dddd-dddd-dddd-dddddddddddd");
+        var primaryAssignee = new ProjectStructureTaskResourceSelection(
+            ProjectStructureTaskResourceKind.Person,
+            primaryPersonId);
+        var workflow = new ProjectStructureTaskResourceSelection(
+            ProjectStructureTaskResourceKind.Workflow,
+            workflowId,
+            workflowVersionId);
+        var editModel = new ProjectStructureGanttTaskEditModel(
+            new CanDoItAll.Components.Gantt.GanttTaskId("custom:task-a"),
+            "Customer acceptance",
+            StartUtc,
+            StartUtc.AddDays(7),
+            30,
+            new ProjectTaskEstimate(8m, ProjectWorkItemEffortUnit.Hours, 900m, "USD"),
+            primaryAssignee,
+            CanChangeDirectAssignee: false);
+        var resultTask = OpenEditDialog(
+            context,
+            editModel,
+            [
+                CreateResource(
+                    ProjectStructureTaskResourceKind.Person,
+                    primaryPersonId,
+                    "Joe Doe",
+                    "Person"),
+                CreateResource(
+                    ProjectStructureTaskResourceKind.Agent,
+                    replacementAgentId,
+                    "Delivery agent",
+                    "AI agent"),
+                new ProjectStructureTaskResourceOption(
+                    ProjectStructureTaskResourceKind.Workflow,
+                    workflowId,
+                    workflowVersionId,
+                    "Invoice review",
+                    "Workflow",
+                    "Review and approve an invoice.",
+                    false,
+                    false)
+            ]);
+
+        host.WaitForElement("[data-testid='project-structure-gantt-task-assignee-readonly']");
+        Assert.Empty(host.FindAll("[data-testid='project-structure-gantt-task-resource-picker-filter-person']"));
+        Assert.Empty(host.FindAll("[data-testid='project-structure-gantt-task-resource-picker-filter-agent']"));
+        Assert.Empty(host.FindAll($"[data-testid='project-structure-gantt-task-resource-person-{primaryPersonId:N}']"));
+        Assert.Empty(host.FindAll($"[data-testid='project-structure-gantt-task-resource-agent-{replacementAgentId:N}']"));
+        Assert.Empty(host.FindAll("[data-testid='project-structure-gantt-task-resource-clear']"));
+        Assert.NotEmpty(host.FindAll($"[data-testid='project-structure-gantt-task-resource-workflow-{workflowId:N}']"));
+
+        host.Find("[data-testid='project-structure-gantt-task-title']").Input("Updated acceptance");
+        host.Find($"[data-testid='project-structure-gantt-task-resource-workflow-{workflowId:N}']").Click();
+        host.Find("[data-testid='project-structure-gantt-task-submit']").Click();
+
+        var result = Assert.IsType<ProjectStructureTaskEditDialogResult>(
+            await resultTask.WaitAsync(TimeSpan.FromSeconds(2)));
+        Assert.Equal("Updated acceptance", result.Title);
+        Assert.False(result.AssigneeChanged);
+        Assert.Equal(primaryAssignee, result.Assignee);
+        Assert.Equal(workflow, result.ResourceToAttach);
+    }
+
+    [Fact]
     public async Task Clearing_staged_workflow_restores_and_reprices_the_direct_assignee()
     {
         using var context = CreateContext();
@@ -247,7 +348,8 @@ public sealed class ProjectStructureGanttTaskDialogTests
             StartUtc.AddDays(7),
             30,
             new ProjectTaskEstimate(8m, ProjectWorkItemEffortUnit.Hours, 900m, "USD"),
-            assignee);
+            assignee,
+            Execution: ProjectTaskExecutionSnapshot.NotStarted);
         var resultTask = OpenEditDialog(
             context,
             editModel,
@@ -267,7 +369,8 @@ public sealed class ProjectStructureGanttTaskDialogTests
                 request.Resource.Kind == ProjectStructureTaskResourceKind.Workflow ? 500m : 100m,
                 request.Resource.Kind == ProjectStructureTaskResourceKind.Workflow
                     ? "Workflow run history"
-                    : "CRM workforce rate")));
+                    : "CRM workforce rate",
+                request.Resource.Kind)));
 
         host.WaitForElement($"[data-testid='project-structure-gantt-task-resource-workflow-{workflowId:N}']").Click();
         host.WaitForAssertion(() => Assert.Equal(
@@ -348,12 +451,16 @@ public sealed class ProjectStructureGanttTaskDialogTests
         string typeLabel)
         => new(kind, id, null, name, typeLabel, string.Empty, false, false);
 
-    private static ProjectStructureTaskResourceCostQuote CreateQuote(decimal amount, string source)
+    private static ProjectStructureTaskResourceCostQuote CreateQuote(
+        decimal amount,
+        string source,
+        ProjectStructureTaskResourceKind kind)
         => new(
             ProjectStructureTaskResourceCostQuoteStatus.Available,
             amount,
             "USD",
             source,
             "Calculated for the selected resource.",
-            DateTimeOffset.Parse("2026-07-16T16:00:00Z"));
+            DateTimeOffset.Parse("2026-07-16T16:00:00Z"),
+            ProjectStructureTaskResourceCostSourcePolicy.RequireFor(kind));
 }

@@ -19,6 +19,14 @@
         </Alert>
     }
 
+    @if (IsEditMode && !CanChangeDirectAssignee)
+    {
+        <Alert AlertStyle="AlertStyle.Warning"
+               data-testid="project-structure-task-edit-assignee-readonly">
+            This task has a direct-assignment set that cannot be safely changed as one assignee. Person and agent changes are disabled here so every assignment remains intact. Other task fields can still be saved.
+        </Alert>
+    }
+
     <Grid ColumnTemplate="repeat(2,minmax(0,1fr))"
           Gap="LayoutGap.Medium"
           Class="project-structure-task-create-dialog__grid">
@@ -75,7 +83,16 @@
                                         Value="@estimate"
                                         ValueChanged="HandleEstimateChangedAsync"
                                         DefaultCurrencyCode="@CurrencyFormatter.CurrencyCode"
+                                        ExpectedCostReadOnly="@(!ProjectTaskExecutionStatePolicy.AllowsAuthoritativeRepricing(execution.State))"
                                         DataTestId="project-structure-task-create-estimate" />
+
+    @if (IsEditMode)
+    {
+        <ProjectStructureTaskExecutionEditor @ref="executionEditor"
+                                             Value="@execution"
+                                             ValueChanged="HandleExecutionChangedAsync"
+                                             DataTestId="project-structure-task-edit-execution" />
+    }
 
     <Stack GapScale="LayoutGap.Small"
            AlignItems="AlignItems.Stretch">
@@ -89,7 +106,7 @@
                 <TextBlock TextStyle="TextStyle.Note"
                            Value="The selected CRM person or synchronized AI agent is assigned directly to this task. No child node is created." />
             </Stack>
-            @if (selectedAssignee is not null)
+            @if (selectedAssignee is not null && CanChangeDirectAssignee)
             {
                 <Button Text="Clear selection"
                         Icon="close"
@@ -101,24 +118,28 @@
             }
         </Cluster>
 
-        <ProjectStructureTaskResourcePicker Options="@AssigneeOptions"
-                                            SelectedResource="@selectedAssignee"
-                                            SelectionChanged="SelectAssigneeAsync"
-                                            AllowedKinds="@DirectAssigneeKinds"
-                                            SearchPlaceholder="Search CRM people and synchronized agents"
-                                            EmptyEyebrow="No assignees"
-                                            EmptyTitle="No people or agents match the current filters"
-                                            EmptyDescription="Change the resource-type filters, clear the search, or save without an assignee."
-                                            OptionTestIdPrefix="project-structure-task-create-assignee"
-                                            DataTestId="project-structure-task-create-assignee-picker" />
+        @if (CanChangeDirectAssignee)
+        {
+            <ProjectStructureTaskResourcePicker Options="@AssigneeOptions"
+                                                SelectedResource="@selectedAssignee"
+                                                SelectionChanged="SelectAssigneeAsync"
+                                                AllowedKinds="@DirectAssigneeKinds"
+                                                SearchPlaceholder="Search CRM people and synchronized agents"
+                                                EmptyEyebrow="No assignees"
+                                                EmptyTitle="No people or agents match the current filters"
+                                                EmptyDescription="Change the resource-type filters, clear the search, or save without an assignee."
+                                                OptionTestIdPrefix="project-structure-task-create-assignee"
+                                                DataTestId="project-structure-task-create-assignee-picker" />
 
-        <ProjectStructureTaskResourceCostEstimator @ref="costEstimator"
-                                                   ProjectId="@ProjectId"
-                                                   SelectedResource="@selectedAssignee"
-                                                   Estimate="@estimate"
-                                                   EstimateChanged="HandleEstimateChangedAsync"
-                                                   QuoteResolver="@QuoteResolver"
-                                                   DataTestId="project-structure-task-create-resource-cost" />
+            <ProjectStructureTaskResourceCostEstimator @ref="costEstimator"
+                                                       ProjectId="@ProjectId"
+                                                       SelectedResource="@selectedAssignee"
+                                                       Estimate="@estimate"
+                                                       EstimateChanged="HandleEstimateChangedAsync"
+                                                       ExecutionState="@execution.State"
+                                                       QuoteResolver="@QuoteResolver"
+                                                       DataTestId="project-structure-task-create-resource-cost" />
+        }
     </Stack>
 
     @if (!string.IsNullOrWhiteSpace(validationError))
@@ -173,7 +194,10 @@
     private string? repositoryNodeId;
     private ProjectStructureTaskResourceSelection? selectedAssignee;
     private ProjectTaskEstimate estimate = ProjectTaskEstimate.Empty();
+    private ProjectTaskEstimate? estimateBeforeAssigneeSelection;
+    private ProjectTaskExecutionSnapshot execution = ProjectTaskExecutionSnapshot.NotStarted;
     private ProjectStructureTaskEstimateEditor? estimateEditor;
+    private ProjectStructureTaskExecutionEditor? executionEditor;
     private ProjectStructureTaskResourceCostEstimator? costEstimator;
     private string validationError = string.Empty;
 
@@ -191,6 +215,13 @@
 
     [Parameter]
     public ProjectStructureTaskResourceSelection? InitialAssignee { get; set; }
+
+    [Parameter]
+    public ProjectTaskExecutionSnapshot InitialExecution { get; set; } =
+        ProjectTaskExecutionSnapshot.Unknown;
+
+    [Parameter]
+    public bool CanChangeDirectAssignee { get; set; } = true;
 
     [Parameter]
     public IReadOnlyList<CanvasWorkbenchInputOption> RepositoryOptions { get; set; } = [];
@@ -216,6 +247,7 @@
         subtitle = CreateRequest.Subtitle ?? string.Empty;
         notes = CreateRequest.Notes ?? string.Empty;
         selectedAssignee = InitialAssignee;
+        execution = IsEditMode ? InitialExecution : ProjectTaskExecutionSnapshot.NotStarted;
         var inputValues = CreateRequest.InputValues ?? [];
         estimate = ResolveEstimate(inputValues);
         repositoryNodeId = inputValues
@@ -277,6 +309,16 @@
 
     private async Task SelectAssigneeAsync(ProjectStructureTaskResourceSelection selection)
     {
+        if (!CanChangeDirectAssignee)
+        {
+            return;
+        }
+
+        if (selectedAssignee != selection)
+        {
+            estimateBeforeAssigneeSelection ??= estimate;
+        }
+
         selectedAssignee = selection;
         if (costEstimator is not null)
         {
@@ -286,12 +328,33 @@
 
     private void ClearAssignee()
     {
+        if (!CanChangeDirectAssignee)
+        {
+            return;
+        }
+
         selectedAssignee = null;
+        if (estimateBeforeAssigneeSelection is { } previousEstimate)
+        {
+            estimate = estimate with
+            {
+                ExpectedCostAmount = previousEstimate.ExpectedCostAmount,
+                ExpectedCostCurrencyCode = previousEstimate.ExpectedCostCurrencyCode
+            };
+            estimateBeforeAssigneeSelection = null;
+        }
     }
 
     private Task HandleEstimateChangedAsync(ProjectTaskEstimate value)
     {
         estimate = value;
+        validationError = string.Empty;
+        return Task.CompletedTask;
+    }
+
+    private Task HandleExecutionChangedAsync(ProjectTaskExecutionSnapshot value)
+    {
+        execution = value;
         validationError = string.Empty;
         return Task.CompletedTask;
     }
@@ -323,6 +386,19 @@
             return;
         }
 
+        if (IsEditMode)
+        {
+            var executionError = string.Empty;
+            if (executionEditor is null ||
+                !executionEditor.TryGetValue(out execution, out executionError))
+            {
+                validationError = string.IsNullOrWhiteSpace(executionError)
+                    ? "The task execution state is not ready."
+                    : executionError;
+                return;
+            }
+        }
+
         var inputValues = (CreateRequest.InputValues ?? [])
             .Where(value => !ControlledInputKeys.Contains(value.Key))
             .Select(value => new CanvasWorkbenchInputValue
@@ -350,7 +426,11 @@
                 ObjectSubtype = TaskSubtype,
                 InputValues = inputValues
             },
-            selectedAssignee);
+            IsEditMode && !CanChangeDirectAssignee
+                ? InitialAssignee
+                : selectedAssignee,
+            execution,
+            estimate);
         if (DialogReference is null)
         {
             await DialogService.CloseAsync(result);

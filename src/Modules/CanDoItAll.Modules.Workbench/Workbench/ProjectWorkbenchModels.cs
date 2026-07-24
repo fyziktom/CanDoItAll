@@ -27,6 +27,12 @@ public enum ProjectObjectPlacementIntent
     AutomaticAroundParent
 }
 
+public enum ProjectObjectTaskPricingInitialization
+{
+    ClearAuthoritativePricing,
+    PreserveValidatedAuthoritativePricing
+}
+
 public static class ProjectProgressPolicy
 {
     public const int UntrackedPercent = -1;
@@ -270,7 +276,9 @@ public sealed record ProjectObjectCreateRequest(
     ProjectNodeReferenceCollection? NodeReferences = null,
     ProjectObjectExternalBindingRequest? ExternalBinding = null,
     string? Status = null,
-    ProjectObjectPlacementIntent PlacementIntent = ProjectObjectPlacementIntent.CallerControlled);
+    ProjectObjectPlacementIntent PlacementIntent = ProjectObjectPlacementIntent.CallerControlled,
+    ProjectObjectTaskPricingInitialization TaskPricingInitialization =
+        ProjectObjectTaskPricingInitialization.ClearAuthoritativePricing);
 
 public sealed record ProjectObjectExternalBindingRequest(
     string Route,
@@ -462,12 +470,51 @@ ProjectWorkbenchCrossModuleMutationService crossModuleMutationService) : IProjec
             null);
     }
 
-    public async Task<ProjectStructureNode> CreateObjectAsync(Guid projectId, ProjectObjectCreateRequest request, CancellationToken cancellationToken = default)
+    public Task<ProjectStructureNode> CreateObjectAsync(
+        Guid projectId,
+        ProjectObjectCreateRequest request,
+        CancellationToken cancellationToken = default)
+        => CreateObjectCoreAsync(
+            projectId,
+            request,
+            allowCanonicalTaskResourceChild: false,
+            cancellationToken);
+
+    internal Task<ProjectStructureNode> CreateCanonicalTaskResourceObjectAsync(
+        Guid projectId,
+        ProjectObjectCreateRequest request,
+        CancellationToken cancellationToken = default)
+        => CreateObjectCoreAsync(
+            projectId,
+            request,
+            allowCanonicalTaskResourceChild: true,
+            cancellationToken);
+
+    private async Task<ProjectStructureNode> CreateObjectCoreAsync(
+        Guid projectId,
+        ProjectObjectCreateRequest request,
+        bool allowCanonicalTaskResourceChild,
+        CancellationToken cancellationToken)
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         await ProjectWorkbenchSchemaInitializer.EnsureAsync(dbContext, cancellationToken);
+        await using var mutationScope =
+            await ProjectStructureSerializableMutationScope.BeginAsync(
+                dbContext,
+                ProjectStructureSerializableMutationScope.ForProject(projectId),
+                cancellationToken);
         var normalizedParentNodeKey = ProjectWorkbenchGraphConventions.NormalizeEditableParentNodeKey(projectId, request.ParentNodeKey);
-        var existingNodes = (await projectStructureAssemblyService.LoadAsync(dbContext, projectId, cancellationToken)).Nodes;
+        var existingNodes = await LoadCreatePlanningNodesAsync(
+            dbContext,
+            projectId,
+            normalizedParentNodeKey,
+            request,
+            cancellationToken);
+        EnsureCanonicalTaskResourceChildAllowed(
+            normalizedParentNodeKey,
+            request.ObjectType,
+            existingNodes,
+            allowCanonicalTaskResourceChild);
         InvariantService.ValidateParentAssignment(projectId, $"pending:{Guid.NewGuid():N}", normalizedParentNodeKey, existingNodes);
 
         var hasRequestedPosition = request.X.HasValue && request.Y.HasValue;
@@ -489,6 +536,11 @@ ProjectWorkbenchCrossModuleMutationService crossModuleMutationService) : IProjec
         var binding = ResolveCreateBinding(projectId, request.ObjectType, media, request.ExternalBinding);
         var normalizedObjectSubtype = ProjectObjectSubtypePolicy.Normalize(request.ObjectType, request.ObjectSubtype);
         var metadataJson = ProjectWorkbenchObjectModeling.ResolveMetadataJson(request.ObjectType, normalizedObjectSubtype, request.MetadataJson, null, request.Notes, media);
+        metadataJson = ProjectStructureCanonicalTaskCreationPolicy.NormalizeMetadataJson(
+            request.ObjectType,
+            normalizedObjectSubtype,
+            metadataJson,
+            request.TaskPricingInitialization);
         var resolvedEndUtc = ProjectWorkbenchObjectModeling.ResolveEndUtc(request.StartUtc, request.EndUtc, request.DurationSeconds);
         var normalizedDurationSeconds = ProjectWorkbenchObjectModeling.NormalizeDurationSeconds(request.DurationSeconds, request.StartUtc, resolvedEndUtc);
         var normalizedStatus = string.IsNullOrWhiteSpace(request.Status) ? "Draft" : request.Status.Trim();
@@ -536,8 +588,92 @@ ProjectWorkbenchCrossModuleMutationService crossModuleMutationService) : IProjec
 
         var bindingPlan = await ProjectNodeBindingStorage.PersistAsync(dbContext, record, cancellationToken);
         await dbContext.SaveChangesAsync(cancellationToken);
+        await mutationScope.CommitAsync(cancellationToken);
         ProjectNodeBindingStorage.Apply(record, bindingPlan);
         return ProjectWorkbenchNodeMapper.MapStructureNode(record);
+    }
+
+    private async Task<IReadOnlyList<ProjectObjectRecord>> LoadCreatePlanningNodesAsync(
+        AppDbContext dbContext,
+        Guid projectId,
+        string parentNodeKey,
+        ProjectObjectCreateRequest request,
+        CancellationToken cancellationToken)
+    {
+        var hasCallerControlledPosition =
+            request.PlacementIntent == ProjectObjectPlacementIntent.CallerControlled &&
+            request.X.HasValue &&
+            request.Y.HasValue;
+        if (!hasCallerControlledPosition)
+        {
+            return (await projectStructureAssemblyService.LoadAsync(dbContext, projectId, cancellationToken)).Nodes;
+        }
+
+        if (string.Equals(
+                parentNodeKey,
+                ProjectWorkbenchGraphConventions.BuildProjectRootNodeKey(projectId),
+                StringComparison.Ordinal))
+        {
+            await dbContext.Set<Project>()
+                .Where(project => project.Id == projectId)
+                .Select(project => project.Id)
+                .FirstAsync(cancellationToken);
+            return [];
+        }
+
+        if (!ProjectWorkbenchGraphConventions.IsCustomNodeKey(parentNodeKey))
+        {
+            return (await projectStructureAssemblyService.LoadAsync(dbContext, projectId, cancellationToken)).Nodes;
+        }
+
+        var canonicalParent = await dbContext.Set<ProjectObjectRecord>()
+            .FirstOrDefaultAsync(
+                node =>
+                    node.ProjectId == projectId &&
+                    node.NodeKey == parentNodeKey &&
+                    !node.IsSystemManaged,
+                cancellationToken);
+        return canonicalParent is null
+            ? []
+            : [canonicalParent];
+    }
+
+    private static void EnsureCanonicalTaskResourceChildAllowed(
+        string parentNodeKey,
+        ProjectObjectType objectType,
+        IReadOnlyCollection<ProjectObjectRecord> existingNodes,
+        bool allowCanonicalTaskResourceChild)
+    {
+        if (!ProjectStructureTaskResourceGraphPolicy.IsResourceChildType(objectType))
+        {
+            return;
+        }
+
+        var parent = existingNodes.FirstOrDefault(node =>
+            string.Equals(node.NodeKey, parentNodeKey, StringComparison.Ordinal));
+        if (allowCanonicalTaskResourceChild)
+        {
+            if (parent is null ||
+                !ProjectStructureCanonicalTaskMutationPolicy.IsTask(
+                    parent.ObjectType,
+                    parent.ObjectSubtype))
+            {
+                throw new ProjectStructureAgentException(
+                    400,
+                    "CanonicalTaskRequired",
+                    $"Parent node '{parentNodeKey}' is not a canonical WorkItem/task node.");
+            }
+
+            return;
+        }
+
+        if (parent is not null)
+        {
+            ProjectStructureCanonicalTaskMutationPolicy
+                .EnsureGenericResourceAttachmentAllowed(
+                    parent.ObjectType,
+                    parent.ObjectSubtype);
+        }
     }
 
     public async Task SeedProjectObjectsAsync(Guid projectId, IReadOnlyCollection<ProjectObjectSeedRequest> seeds, CancellationToken cancellationToken = default)
@@ -561,6 +697,18 @@ ProjectWorkbenchCrossModuleMutationService crossModuleMutationService) : IProjec
             var position = ProjectWorkbenchGraphConventions.GetDefaultPosition(seed.ObjectType, existingCount + index);
             var resolvedEndUtc = ProjectWorkbenchObjectModeling.ResolveEndUtc(seed.StartUtc, seed.EndUtc, seed.DurationSeconds);
             var normalizedDurationSeconds = ProjectWorkbenchObjectModeling.NormalizeDurationSeconds(seed.DurationSeconds, seed.StartUtc, resolvedEndUtc);
+            var metadataJson = ProjectWorkbenchObjectModeling.ResolveMetadataJson(
+                seed.ObjectType,
+                normalizedObjectSubtype,
+                seed.MetadataJson,
+                null,
+                seed.Notes,
+                null);
+            metadataJson = ProjectStructureCanonicalTaskCreationPolicy.NormalizeMetadataJson(
+                seed.ObjectType,
+                normalizedObjectSubtype,
+                metadataJson,
+                ProjectObjectTaskPricingInitialization.ClearAuthoritativePricing);
             var record = new ProjectObjectRecord
             {
                 ProjectId = projectId,
@@ -573,7 +721,7 @@ ProjectWorkbenchCrossModuleMutationService crossModuleMutationService) : IProjec
                 ObjectSubtype = normalizedObjectSubtype,
                 ProgressMode = "progress",
                 ProgressPercent = 0,
-                MetadataJson = ProjectWorkbenchObjectModeling.ResolveMetadataJson(seed.ObjectType, normalizedObjectSubtype, seed.MetadataJson, null, seed.Notes, null),
+                MetadataJson = metadataJson,
                 ParentNodeKey = projectRootNodeKey,
                 PositionX = position.Item1,
                 PositionY = position.Item2,
@@ -610,6 +758,19 @@ ProjectWorkbenchCrossModuleMutationService crossModuleMutationService) : IProjec
         await relationService.LinkObjectsAsync(projectId, sourceNodeKey, targetNodeKey, linkKind, cancellationToken);
     }
 
+    internal Task LinkCanonicalTaskResourceAsync(
+        Guid projectId,
+        string sourceNodeKey,
+        string targetNodeKey,
+        ProjectObjectLinkKind linkKind,
+        CancellationToken cancellationToken = default)
+        => relationService.LinkCanonicalTaskResourceAsync(
+            projectId,
+            sourceNodeKey,
+            targetNodeKey,
+            linkKind,
+            cancellationToken);
+
     public async Task<bool> UnlinkObjectsAsync(
         Guid projectId,
         string sourceNodeKey,
@@ -619,6 +780,19 @@ ProjectWorkbenchCrossModuleMutationService crossModuleMutationService) : IProjec
     {
         return await relationService.UnlinkObjectsAsync(projectId, sourceNodeKey, targetNodeKey, linkKind, cancellationToken);
     }
+
+    internal Task<bool> UnlinkCanonicalTaskResourceAsync(
+        Guid projectId,
+        string sourceNodeKey,
+        string targetNodeKey,
+        ProjectObjectLinkKind linkKind,
+        CancellationToken cancellationToken = default)
+        => relationService.UnlinkCanonicalTaskResourceAsync(
+            projectId,
+            sourceNodeKey,
+            targetNodeKey,
+            linkKind,
+            cancellationToken);
 
     public async Task<ProjectStructureNode?> ReparentObjectAsync(
         Guid projectId,
@@ -646,6 +820,15 @@ ProjectWorkbenchCrossModuleMutationService crossModuleMutationService) : IProjec
     {
         return await crossModuleMutationService.DeleteObjectAsync(projectId, nodeKey, cancellationToken);
     }
+
+    internal Task<int> DeleteCanonicalTaskResourceObjectAsync(
+        Guid projectId,
+        string nodeKey,
+        CancellationToken cancellationToken = default)
+        => crossModuleMutationService.DeleteCanonicalTaskResourceAsync(
+            projectId,
+            nodeKey,
+            cancellationToken);
 
     public async Task MoveObjectAsync(Guid projectId, string nodeKey, double x, double y, CancellationToken cancellationToken = default)
     {
@@ -694,23 +877,66 @@ ProjectWorkbenchCrossModuleMutationService crossModuleMutationService) : IProjec
         return ProjectWorkbenchNodeMapper.MapStructureNode(node);
     }
 
-    public async Task<ProjectStructureNode?> UpdateObjectAsync(
+    public Task<ProjectStructureNode?> UpdateObjectAsync(
         Guid projectId,
         string nodeKey,
         ProjectObjectEditRequest request,
         CancellationToken cancellationToken = default)
+        => UpdateObjectCoreAsync(
+            projectId,
+            nodeKey,
+            request,
+            currentMetadataValidation: null,
+            cancellationToken);
+
+    public Task<ProjectStructureNode?> UpdateObjectIfMetadataAsync(
+        Guid projectId,
+        string nodeKey,
+        ProjectObjectEditRequest request,
+        Action<ProjectObjectMetadataEnvelope> currentMetadataValidation,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(currentMetadataValidation);
+        return UpdateObjectCoreAsync(
+            projectId,
+            nodeKey,
+            request,
+            currentMetadataValidation,
+            cancellationToken);
+    }
+
+    private async Task<ProjectStructureNode?> UpdateObjectCoreAsync(
+        Guid projectId,
+        string nodeKey,
+        ProjectObjectEditRequest request,
+        Action<ProjectObjectMetadataEnvelope>? currentMetadataValidation,
+        CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request);
 
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         await ProjectWorkbenchSchemaInitializer.EnsureAsync(dbContext, cancellationToken);
+        await using var mutationScope =
+            await ProjectStructureSerializableMutationScope.BeginAsync(
+                dbContext,
+                ProjectStructureSerializableMutationScope.ForProject(projectId),
+            cancellationToken);
         var node = await dbContext.Set<ProjectObjectRecord>()
             .FirstOrDefaultAsync(item => item.ProjectId == projectId && item.NodeKey == nodeKey && !item.IsSystemManaged, cancellationToken);
         if (node is null)
         {
             return null;
         }
+        var resourceParentNodeKey =
+            ProjectStructureTaskResourceGraphPolicy.IsResourceChildType(
+                node.ObjectType)
+                ? node.ParentNodeKey
+                : null;
         await ProjectNodeBindingStorage.LoadAsync(dbContext, [node], cancellationToken);
+        if (currentMetadataValidation is not null)
+        {
+            currentMetadataValidation(ProjectObjectMetadataSerializer.Parse(node.MetadataJson));
+        }
 
         node.Title = string.IsNullOrWhiteSpace(request.Title) ? node.Title : request.Title.Trim();
         node.Subtitle = request.Subtitle?.Trim() ?? string.Empty;
@@ -723,6 +949,18 @@ ProjectWorkbenchCrossModuleMutationService crossModuleMutationService) : IProjec
         node.UpdatedAtUtc = clock.GetUtcNow();
         var bindingPlan = await ProjectNodeBindingStorage.PersistAsync(dbContext, node, cancellationToken);
         await dbContext.SaveChangesAsync(cancellationToken);
+        await ProjectStructureTaskResourceGraphPolicy
+            .ReconcileAfterStructureMutationAsync(
+                dbContext,
+                projectId,
+                string.IsNullOrWhiteSpace(resourceParentNodeKey)
+                    ? []
+                    : [resourceParentNodeKey],
+                clock.GetUtcNow(),
+                cancellationToken);
+        await dbContext.SaveChangesAsync(cancellationToken);
+        await mutationScope.CommitAsync(cancellationToken);
+
         ProjectNodeBindingStorage.Apply(node, bindingPlan);
         return ProjectWorkbenchNodeMapper.MapStructureNode(node);
     }
@@ -800,6 +1038,24 @@ ProjectWorkbenchCrossModuleMutationService crossModuleMutationService) : IProjec
             cancellationToken: cancellationToken);
     }
 
+    public Task<ProjectStructureNode?> MutateObjectMetadataSerializableAsync(
+        Guid projectId,
+        string nodeKey,
+        Action<ProjectObjectMetadataEnvelope> metadataMutation,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(metadataMutation);
+        return UpdateObjectMetadataCoreAsync(
+            projectId,
+            nodeKey,
+            metadataJson: null,
+            metadataMutation: metadataMutation,
+            notes: null,
+            status: null,
+            nodeReferences: null,
+            cancellationToken: cancellationToken);
+    }
+
     private async Task<ProjectStructureNode?> UpdateObjectMetadataCoreAsync(
         Guid projectId,
         string nodeKey,
@@ -812,12 +1068,22 @@ ProjectWorkbenchCrossModuleMutationService crossModuleMutationService) : IProjec
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         await ProjectWorkbenchSchemaInitializer.EnsureAsync(dbContext, cancellationToken);
+        await using var mutationScope =
+            await ProjectStructureSerializableMutationScope.BeginAsync(
+                dbContext,
+                ProjectStructureSerializableMutationScope.ForProject(projectId),
+            cancellationToken);
         var node = await dbContext.Set<ProjectObjectRecord>()
             .FirstOrDefaultAsync(item => item.ProjectId == projectId && item.NodeKey == nodeKey && !item.IsSystemManaged, cancellationToken);
         if (node is null)
         {
             return null;
         }
+        var resourceParentNodeKey =
+            ProjectStructureTaskResourceGraphPolicy.IsResourceChildType(
+                node.ObjectType)
+                ? node.ParentNodeKey
+                : null;
         await ProjectNodeBindingStorage.LoadAsync(dbContext, [node], cancellationToken);
 
         if (notes is not null)
@@ -846,6 +1112,18 @@ ProjectWorkbenchCrossModuleMutationService crossModuleMutationService) : IProjec
         node.UpdatedAtUtc = clock.GetUtcNow();
         var bindingPlan = await ProjectNodeBindingStorage.PersistAsync(dbContext, node, cancellationToken);
         await dbContext.SaveChangesAsync(cancellationToken);
+        await ProjectStructureTaskResourceGraphPolicy
+            .ReconcileAfterStructureMutationAsync(
+                dbContext,
+                projectId,
+                string.IsNullOrWhiteSpace(resourceParentNodeKey)
+                    ? []
+                    : [resourceParentNodeKey],
+                clock.GetUtcNow(),
+                cancellationToken);
+        await dbContext.SaveChangesAsync(cancellationToken);
+        await mutationScope.CommitAsync(cancellationToken);
+
         ProjectNodeBindingStorage.Apply(node, bindingPlan);
         return ProjectWorkbenchNodeMapper.MapStructureNode(node);
     }

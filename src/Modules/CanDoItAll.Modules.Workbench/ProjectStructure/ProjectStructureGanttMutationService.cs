@@ -76,9 +76,9 @@ public sealed class ProjectStructureGanttMutationService(
         return result;
     }
 
-    public async Task<ProjectStructureGanttMutationResult> ApplyTaskDetailsAsync(
+    internal async Task<ProjectStructureGanttMutationResult> ApplyTaskDetailsAsync(
         Guid projectId,
-        ProjectStructureTaskDetailsUpdateRequest request,
+        ProjectStructureTaskDetailsMutationRequest request,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(request);
@@ -123,6 +123,26 @@ public sealed class ProjectStructureGanttMutationService(
                     throw StaleTask(request.TaskId, "estimate");
                 }
 
+                var persistedExecution = ReadExecution(metadata.WorkItem);
+                if (persistedExecution != request.CurrentExecution)
+                {
+                    throw StaleTask(request.TaskId, "execution state");
+                }
+
+                var persistedCostBasis = metadata.WorkItem?.ExpectedCostBasis;
+                if (persistedCostBasis != request.CurrentCostBasis)
+                {
+                    throw StaleTask(request.TaskId, "expected-cost basis");
+                }
+
+                var persistedDirectAssignmentRevision =
+                    metadata.WorkItem?.DirectAssignmentRevision ?? 0;
+                if (persistedDirectAssignmentRevision !=
+                    request.CurrentDirectAssignmentRevision)
+                {
+                    throw StaleTask(request.TaskId, "direct assignments");
+                }
+
                 var affectedTaskIds = new HashSet<GanttTaskId> { request.TaskId };
                 if (request.ScheduleChange is not null)
                 {
@@ -146,6 +166,21 @@ public sealed class ProjectStructureGanttMutationService(
                     WorkItemKind = ProjectWorkItemKind.Task
                 };
                 WriteEstimate(metadata.WorkItem, proposedEstimate);
+                ProjectTaskExecutionStatePolicy.ValidateTransition(
+                    request.CurrentExecution.State,
+                    request.ProposedExecution.State);
+                ProjectTaskExecutionStatePolicy.Validate(
+                    request.ProposedExecution.State,
+                    request.ProposedExecution.ActualStartedAtUtc,
+                    request.ProposedExecution.ActualEndedAtUtc);
+                WriteExecution(metadata.WorkItem, request.ProposedExecution);
+
+                if (request.CostBasisChanged)
+                {
+                    ProjectTaskExpectedCostBasisPolicy.Validate(request.ProposedCostBasis);
+                    metadata.WorkItem.ExpectedCostBasis = request.ProposedCostBasis;
+                }
+
                 ProjectObjectMetadataSerializer.Validate(task.ObjectType, task.ObjectSubtype, metadata);
 
                 task.Title = proposedTitle;
@@ -575,7 +610,15 @@ public sealed class ProjectStructureGanttMutationService(
             ProgressMode = progress.Mode,
             ProgressPercent = progress.Percent,
             MarkersJson = "[]",
-            MetadataJson = "{}",
+            MetadataJson = ProjectObjectMetadataSerializer.Serialize(new ProjectObjectMetadataEnvelope
+            {
+                WorkItem = new ProjectWorkItemMetadata
+                {
+                    WorkItemKind = ProjectWorkItemKind.Task,
+                    ExecutionState = ProjectTaskExecutionState.NotStarted,
+                    Description = task.Title
+                }
+            }),
             ParentNodeKey = successor.ParentNodeKey,
             PositionX = (predecessor.PositionX + successor.PositionX) / 2,
             PositionY = (predecessor.PositionY + successor.PositionY) / 2,
@@ -926,6 +969,23 @@ public sealed class ProjectStructureGanttMutationService(
         metadata.ExpectedEffortUnit = estimate.ExpectedEffortUnit;
         metadata.ExpectedCostAmount = estimate.ExpectedCostAmount;
         metadata.ExpectedCostCurrencyCode = estimate.ExpectedCostCurrencyCode;
+    }
+
+    private static ProjectTaskExecutionSnapshot ReadExecution(ProjectWorkItemMetadata? metadata)
+        => metadata is null
+            ? ProjectTaskExecutionSnapshot.Unknown
+            : new ProjectTaskExecutionSnapshot(
+                metadata.ExecutionState,
+                metadata.ActualStartedAtUtc,
+                metadata.ActualEndedAtUtc);
+
+    private static void WriteExecution(
+        ProjectWorkItemMetadata metadata,
+        ProjectTaskExecutionSnapshot execution)
+    {
+        metadata.ExecutionState = execution.State;
+        metadata.ActualStartedAtUtc = execution.ActualStartedAtUtc;
+        metadata.ActualEndedAtUtc = execution.ActualEndedAtUtc;
     }
 
     private static void ValidateExpectedScheduleState(

@@ -35,7 +35,9 @@
   "access": {
     "projectStructure": {
       "canRead": true,
-      "canWrite": true,
+      "canWrite": false,
+      "canWriteNonTaskStructure": true,
+      "canWriteTasks": false,
       "canCreateProjects": true,
       "canCreateSubprojects": true,
       "allowAllProjects": true,

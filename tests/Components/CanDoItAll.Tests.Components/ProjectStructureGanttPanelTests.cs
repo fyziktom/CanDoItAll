@@ -19,6 +19,8 @@ namespace CanDoItAll.Tests.Components;
 
 public sealed class ProjectStructureGanttPanelTests
 {
+    private static readonly DateTimeOffset Baseline = new(2026, 7, 15, 8, 0, 0, TimeSpan.Zero);
+
     [Fact]
     public void Mermaid_export_previews_and_downloads_only_the_gantt_projection_tasks()
     {
@@ -194,6 +196,153 @@ public sealed class ProjectStructureGanttPanelTests
     }
 
     [Fact]
+    public async Task Schedule_resize_keeps_committed_dates_while_authoritative_reload_is_pending()
+    {
+        using var context = CreateContext([]);
+        var projectId = Guid.NewGuid();
+        var taskNode = CreateTask("task-a", "Resize task") with
+        {
+            StartUtc = Baseline,
+            EndUtc = Baseline.AddHours(2),
+            DurationSeconds = 7200
+        };
+        await SeedProjectTaskAsync(context, projectId, taskNode);
+        var reloadStarted = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var releaseReload = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var cut = context.RenderComponent<ProjectStructureGanttPanel>(parameters => parameters
+            .Add(component => component.ProjectId, projectId)
+            .Add(component => component.Surface, CreateSurface(projectId, taskNode))
+            .Add(component => component.MutationCommitted, async () =>
+            {
+                reloadStarted.TrySetResult(true);
+                await releaseReload.Task;
+            }));
+        var chart = cut.FindComponent<GanttChart>();
+        var renderedTask = Assert.Single(chart.Instance.Tasks);
+        var proposedEnd = renderedTask.End.AddHours(3);
+        var request = new GanttTaskScheduleChangeRequest(
+            renderedTask.Id,
+            GanttScheduleGesture.ResizeEnd,
+            [new GanttTaskDateChange(
+                renderedTask.Id,
+                renderedTask.Start,
+                renderedTask.End,
+                renderedTask.Start,
+                proposedEnd,
+                true)],
+            []);
+
+        var resizeTask = cut.InvokeAsync(() => chart.Instance.TaskScheduleChangeRequested.InvokeAsync(request));
+        await reloadStarted.Task.WaitAsync(TimeSpan.FromSeconds(5));
+
+        try
+        {
+            cut.WaitForAssertion(() =>
+            {
+                var committedTask = Assert.Single(cut.FindComponent<GanttChart>().Instance.Tasks);
+                Assert.Equal(proposedEnd, committedTask.End);
+                Assert.False(cut.FindComponent<GanttChart>().Instance.AllowTaskEditing);
+            });
+            await using var database = await context.Services
+                .GetRequiredService<IDbContextFactory<AppDbContext>>()
+                .CreateDbContextAsync();
+            var persistedTask = await database.Set<ProjectObjectRecord>()
+                .SingleAsync(record => record.ProjectId == projectId && record.NodeKey == taskNode.Id);
+            Assert.Equal(proposedEnd, persistedTask.EndUtc);
+        }
+        finally
+        {
+            releaseReload.TrySetResult(true);
+        }
+
+        await resizeTask.WaitAsync(TimeSpan.FromSeconds(5));
+        Assert.Equal(proposedEnd, Assert.Single(cut.FindComponent<GanttChart>().Instance.Tasks).End);
+    }
+
+    [Fact]
+    public async Task Rejected_schedule_resize_restores_the_rendered_dates()
+    {
+        using var context = CreateContext([]);
+        var projectId = Guid.NewGuid();
+        var taskNode = CreateTask("task-a", "Reject stale resize") with
+        {
+            StartUtc = Baseline,
+            EndUtc = Baseline.AddHours(2),
+            DurationSeconds = 7200
+        };
+        await SeedProjectTaskAsync(context, projectId, taskNode);
+        var committedCount = 0;
+        var cut = context.RenderComponent<ProjectStructureGanttPanel>(parameters => parameters
+            .Add(component => component.ProjectId, projectId)
+            .Add(component => component.Surface, CreateSurface(projectId, taskNode))
+            .Add(component => component.MutationCommitted, () => committedCount++));
+        var chart = cut.FindComponent<GanttChart>();
+        var renderedTask = Assert.Single(chart.Instance.Tasks);
+        var request = new GanttTaskScheduleChangeRequest(
+            renderedTask.Id,
+            GanttScheduleGesture.ResizeEnd,
+            [new GanttTaskDateChange(
+                renderedTask.Id,
+                renderedTask.Start,
+                renderedTask.End.AddMinutes(1),
+                renderedTask.Start,
+                renderedTask.End.AddHours(3),
+                true)],
+            []);
+
+        await cut.InvokeAsync(() => chart.Instance.TaskScheduleChangeRequested.InvokeAsync(request));
+
+        var restoredTask = Assert.Single(cut.FindComponent<GanttChart>().Instance.Tasks);
+        Assert.Equal(renderedTask.Start, restoredTask.Start);
+        Assert.Equal(renderedTask.End, restoredTask.End);
+        Assert.Equal(0, committedCount);
+        var notification = Assert.Single(context.Services.GetRequiredService<NotificationService>().Messages);
+        Assert.Equal(NotificationSeverity.Error, notification.Severity);
+        Assert.Equal("Project schedule change rejected", notification.Summary);
+    }
+
+    [Fact]
+    public async Task Schedule_resize_keeps_committed_dates_when_authoritative_reload_fails()
+    {
+        using var context = CreateContext([]);
+        var projectId = Guid.NewGuid();
+        var taskNode = CreateTask("task-a", "Committed resize") with
+        {
+            StartUtc = Baseline,
+            EndUtc = Baseline.AddHours(2),
+            DurationSeconds = 7200
+        };
+        await SeedProjectTaskAsync(context, projectId, taskNode);
+        var cut = context.RenderComponent<ProjectStructureGanttPanel>(parameters => parameters
+            .Add(component => component.ProjectId, projectId)
+            .Add(component => component.Surface, CreateSurface(projectId, taskNode))
+            .Add(
+                component => component.MutationCommitted,
+                () => Task.FromException(new InvalidOperationException("Reload failed."))));
+        var chart = cut.FindComponent<GanttChart>();
+        var renderedTask = Assert.Single(chart.Instance.Tasks);
+        var proposedEnd = renderedTask.End.AddHours(3);
+        var request = new GanttTaskScheduleChangeRequest(
+            renderedTask.Id,
+            GanttScheduleGesture.ResizeEnd,
+            [new GanttTaskDateChange(
+                renderedTask.Id,
+                renderedTask.Start,
+                renderedTask.End,
+                renderedTask.Start,
+                proposedEnd,
+                true)],
+            []);
+
+        await cut.InvokeAsync(() => chart.Instance.TaskScheduleChangeRequested.InvokeAsync(request));
+
+        Assert.Equal(proposedEnd, Assert.Single(cut.FindComponent<GanttChart>().Instance.Tasks).End);
+        var notification = Assert.Single(context.Services.GetRequiredService<NotificationService>().Messages);
+        Assert.Equal(NotificationSeverity.Warning, notification.Severity);
+        Assert.Equal("Project schedule saved; reload required", notification.Summary);
+    }
+
+    [Fact]
     public void Assignment_load_failure_blocks_chart_with_safe_explicit_error()
     {
         using var context = CreateContext([], new InvalidOperationException("private connection detail"));
@@ -320,6 +469,55 @@ public sealed class ProjectStructureGanttPanelTests
         await openTask.WaitAsync(TimeSpan.FromSeconds(2));
     }
 
+    [Fact]
+    public async Task Task_double_click_with_person_and_agent_opens_read_only_assignment_details()
+    {
+        var projectId = Guid.NewGuid();
+        var primaryPerson = CreateAssignment(
+            projectId,
+            "task-a",
+            "Joe Doe",
+            ProjectPartyType.Person,
+            isPrimary: true);
+        var agent = CreateAssignment(
+            projectId,
+            "task-a",
+            "Delivery agent",
+            ProjectPartyType.AiAgent,
+            isPrimary: false);
+        using var context = CreateContext([agent, primaryPerson]);
+        var dialogHost = context.RenderComponent<DialogHost>();
+        var task = CreateTask("task-a", "Customer acceptance");
+        var cut = context.RenderComponent<ProjectStructureGanttPanel>(parameters => parameters
+            .Add(component => component.ProjectId, projectId)
+            .Add(component => component.Surface, CreateSurface(projectId, task))
+            .Add(component => component.MutationCommitted, () => { }));
+        var chart = cut.FindComponent<GanttChart>();
+        var projectedTask = Assert.Single(chart.Instance.Tasks);
+        Assert.Equal(2, projectedTask.Assignments.Count);
+
+        var openTask = cut.InvokeAsync(() =>
+            chart.Instance.TaskDoubleClicked.InvokeAsync(new GanttTaskId(task.Id)));
+
+        dialogHost.WaitForElement("[data-testid='project-structure-gantt-task-assignee-readonly']");
+        var dialog = dialogHost.FindComponent<ProjectStructureGanttTaskDialog>().Instance;
+        Assert.False(dialog.EditModel!.CanChangeDirectAssignee);
+        Assert.Equal(
+            new ProjectStructureTaskResourceSelection(
+                ProjectStructureTaskResourceKind.Person,
+                primaryPerson.PartyId),
+            dialog.EditModel.Assignee);
+        Assert.DoesNotContain(
+            context.Services.GetRequiredService<NotificationService>().Messages,
+            message => string.Equals(
+                message.Summary,
+                "Task details unavailable",
+                StringComparison.Ordinal));
+
+        dialogHost.Find("[data-testid='project-structure-gantt-task-cancel']").Click();
+        await openTask.WaitAsync(TimeSpan.FromSeconds(2));
+    }
+
     private static TestContext CreateContext(
         IReadOnlyList<ProjectPartyAssignmentDetail> assignments,
         Exception? assignmentFailure = null)
@@ -334,17 +532,18 @@ public sealed class ProjectStructureGanttPanelTests
         context.Services.AddSingleton<NotificationService>();
         context.Services.AddSingleton(bridge);
         context.Services.AddSingleton<ProjectStructureGanttProjectionAdapter>();
+        var (workbenchService, dbContextFactory, clock) = CreateWorkbenchService();
+        context.Services.AddSingleton(dbContextFactory);
+        context.Services.AddSingleton<IClock>(clock);
         var mutationService = new ProjectStructureGanttMutationService(
-            null!,
-            null!,
+            dbContextFactory,
+            clock,
             NullLogger<ProjectStructureGanttMutationService>.Instance);
         context.Services.AddSingleton(mutationService);
-        var workbenchService = CreateWorkbenchService();
         context.Services.AddSingleton(workbenchService);
         var assigneeService = new ProjectStructureWorkItemAssigneeService(
             bridge,
-            workbenchService,
-            NullLogger<ProjectStructureWorkItemAssigneeService>.Instance);
+            workbenchService);
         var taskResourceService = new ProjectStructureTaskResourceService(
             assigneeService,
             null!,
@@ -355,33 +554,47 @@ public sealed class ProjectStructureGanttPanelTests
         context.Services.AddSingleton(taskResourceService);
         var rowOrderService = new ProjectStructureGanttRowOrderService(null!, workbenchService);
         context.Services.AddSingleton(rowOrderService);
+        var taskResourceCostService = new ProjectStructureTaskResourceCostService([]);
+        context.Services.AddSingleton(taskResourceCostService);
+        var estimateRefreshService = new ProjectStructureTaskEstimateRefreshService(taskResourceCostService);
+        context.Services.AddSingleton(estimateRefreshService);
         context.Services.AddSingleton(new ProjectStructureTaskCreationService(
             null!,
             null!,
             rowOrderService,
             workbenchService,
+            estimateRefreshService,
             NullLogger<ProjectStructureTaskCreationService>.Instance));
+        var taskApplicationService = new ProjectStructureTaskApplicationService(
+            assigneeService,
+            estimateRefreshService,
+            new ProjectStructureTaskEditCompensationService(
+                dbContextFactory,
+                clock),
+            workbenchService,
+            NullLogger<ProjectStructureTaskApplicationService>.Instance);
         var taskDetailsService = new ProjectStructureTaskDetailsService(
             mutationService,
-            assigneeService,
-            bridge,
-            workbenchService,
-            NullLogger<ProjectStructureTaskDetailsService>.Instance);
+            taskApplicationService);
         context.Services.AddSingleton(taskDetailsService);
         var currencyFormatter = new StubCurrencyFormatter();
         context.Services.AddSingleton<ICurrencyFormatter>(currencyFormatter);
-        var taskResourceCostService = new ProjectStructureTaskResourceCostService(
-            null!,
-            null!,
-            null!,
-            null!,
-            null!,
-            TimeProvider.System);
-        context.Services.AddSingleton(taskResourceCostService);
+        var taskPricingCommitService = new ProjectStructureTaskPricingCommitService(
+            workbenchService,
+            estimateRefreshService,
+            new ProjectStructureTaskPricingPersistenceService(dbContextFactory, clock),
+            NullLogger<ProjectStructureTaskPricingCommitService>.Instance);
+        context.Services.AddSingleton(taskPricingCommitService);
+        var taskResourceAttachmentService = new ProjectStructureTaskResourceAttachmentService(
+            taskResourceService,
+            taskPricingCommitService,
+            NullLogger<ProjectStructureTaskResourceAttachmentService>.Instance);
+        context.Services.AddSingleton(taskResourceAttachmentService);
         context.Services.AddScoped(serviceProvider => new ProjectStructureGanttTaskEditCoordinator(
             taskResourceService,
             taskResourceCostService,
             taskDetailsService,
+            taskResourceAttachmentService,
             serviceProvider.GetRequiredService<DialogService>(),
             serviceProvider.GetRequiredService<NotificationService>(),
             currencyFormatter,
@@ -389,7 +602,46 @@ public sealed class ProjectStructureGanttPanelTests
         return context;
     }
 
-    private static ProjectWorkbenchService CreateWorkbenchService()
+    private static async Task SeedProjectTaskAsync(
+        TestContext context,
+        Guid projectId,
+        ProjectStructureNode taskNode)
+    {
+        await using var database = await context.Services
+            .GetRequiredService<IDbContextFactory<AppDbContext>>()
+            .CreateDbContextAsync();
+        database.Set<Project>().Add(new Project
+        {
+            Id = projectId,
+            Name = "Gantt panel test",
+            Slug = $"gantt-panel-{projectId:N}",
+            CreatedAtUtc = Baseline,
+            UpdatedAtUtc = Baseline
+        });
+        database.Set<ProjectObjectRecord>().Add(new ProjectObjectRecord
+        {
+            Id = Guid.NewGuid(),
+            ProjectId = projectId,
+            NodeKey = taskNode.Id,
+            ObjectType = ProjectObjectType.WorkItem,
+            ObjectSubtype = "task",
+            Title = taskNode.Title,
+            Status = "Draft",
+            MetadataJson = "{}",
+            MarkersJson = "[]",
+            StartUtc = taskNode.StartUtc,
+            EndUtc = taskNode.EndUtc,
+            DurationSeconds = taskNode.DurationSeconds,
+            CreatedAtUtc = Baseline,
+            UpdatedAtUtc = Baseline
+        });
+        await database.SaveChangesAsync();
+    }
+
+    private static (
+        ProjectWorkbenchService Service,
+        IDbContextFactory<AppDbContext> DbContextFactory,
+        IClock Clock) CreateWorkbenchService()
     {
         AppDbContextModelRegistry.ConfigureAssemblies(
         [
@@ -401,15 +653,19 @@ public sealed class ProjectStructureGanttPanelTests
             .ConfigureWarnings(warnings => warnings.Ignore(InMemoryEventId.TransactionIgnoredWarning))
             .Options;
         var factory = new TestDbContextFactory(options);
-        return new ProjectWorkbenchService(
+        var clock = new FixedClock();
+        return (
+            new ProjectWorkbenchService(
+                factory,
+                clock,
+                null!,
+                null!,
+                null!,
+                null!,
+                null!,
+                null!),
             factory,
-            new FixedClock(),
-            null!,
-            null!,
-            null!,
-            null!,
-            null!,
-            null!);
+            clock);
     }
 
     private static ProjectStructureSurface CreateSurface(Guid projectId, params ProjectStructureNode[] nodes)
@@ -452,17 +708,19 @@ public sealed class ProjectStructureGanttPanelTests
     private static ProjectPartyAssignmentDetail CreateAssignment(
         Guid projectId,
         string nodeKey,
-        string displayName)
+        string displayName,
+        ProjectPartyType partyType = ProjectPartyType.Person,
+        bool isPrimary = false)
         => new(
             Guid.NewGuid(),
             projectId,
             Guid.NewGuid(),
             ProjectPartyAssignmentRole.WorkItemAssignee,
             displayName,
-            "Person",
-            ProjectPartyType.Person,
+            partyType == ProjectPartyType.Person ? "Person" : "AI agent",
+            partyType,
             nodeKey,
-            false,
+            isPrimary,
             null,
             null,
             null,

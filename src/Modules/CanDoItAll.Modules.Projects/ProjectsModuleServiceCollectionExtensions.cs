@@ -13,6 +13,9 @@ public static class ProjectsModuleServiceCollectionExtensions
         services.AddScoped<IProjectNodeScopeBridge, NoopProjectNodeScopeBridge>();
         services.TryAddScoped<IProjectNodeDetailsBridge, NoopProjectNodeDetailsBridge>();
         services.AddScoped<IProjectNodeAssignmentPolicyBridge, NoopProjectNodeAssignmentPolicyBridge>();
+        services.TryAddScoped<
+            IProjectWorkItemAssignmentMutationBridge,
+            NoopProjectWorkItemAssignmentMutationBridge>();
         services.AddScoped<IProjectPartyIntegrationBridge, NoopProjectPartyIntegrationBridge>();
         services.AddScoped<IProjectPartyCostRateBridge, NoopProjectPartyCostRateBridge>();
         services.TryAddEnumerable(

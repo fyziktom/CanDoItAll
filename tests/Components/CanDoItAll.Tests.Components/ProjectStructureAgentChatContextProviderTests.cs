@@ -243,6 +243,99 @@ public sealed class ProjectStructureAgentChatContextProviderTests
         Assert.Equal(0, cacheInvalidator.SubscriptionCount);
     }
 
+    [Fact]
+    public void Provider_publishes_bounded_typed_selection_details_and_refreshes_when_node_data_changes()
+    {
+        using var context = new TestContext();
+        var registry = new AgentChatContextRegistry(TimeProvider.System);
+        var agent = CreateAgent();
+        var projectId = Guid.NewGuid();
+        var selectedNode = CreateNode("custom:architecture", "Main Architecture") with
+        {
+            ParentId = $"project:{projectId:N}",
+            ObjectType = ProjectObjectType.ProjectBlock,
+            ObjectSubtype = "architecture",
+            ArtifactKind = "ProjectBlock",
+            Status = "Draft",
+            Notes = "Initial architecture summary.",
+            MetadataJson = """{"owner":"architecture"}""",
+            MediaRelativePath = "external-target/C/example/architecture.md",
+            MediaContentType = "text/markdown",
+            MediaOriginalFileName = "architecture.md"
+        };
+        context.Services.AddLogging();
+        context.Services.AddSingleton<IAgentChatContextRegistry>(registry);
+        context.Services.AddSingleton<IAgentChatExecutionNotificationHub>(new RecordingNotificationHub());
+        context.Services.AddSingleton<IAgentReferenceDataProvider>(
+            new StubAgentReferenceDataProvider(agent));
+        context.Services.AddSingleton<IAgentReferenceDataCacheInvalidator>(
+            new RecordingReferenceDataCacheInvalidator());
+
+        var cut = context.RenderComponent<ProjectStructureAgentChatContextProvider>(parameters => parameters
+            .Add(component => component.ProjectId, projectId)
+            .Add(component => component.ProjectName, "Architecture project")
+            .Add(component => component.SelectedNodes, new[] { selectedNode }));
+
+        cut.WaitForAssertion(() =>
+        {
+            var snapshot = Assert.IsType<AgentChatContextSnapshot>(registry.Capture());
+            var baseContent = FindFragment(
+                snapshot,
+                ProjectStructureAgentChatContextBuilder.BaseContributorId).Content;
+            Assert.Contains("request.nodeIds is exact-node-only", baseContent, StringComparison.Ordinal);
+            Assert.Contains("request.subtreeRootIds", baseContent, StringComparison.Ordinal);
+            Assert.Contains("request.includeLinks", baseContent, StringComparison.Ordinal);
+            Assert.Contains("request.includeNotes", baseContent, StringComparison.Ordinal);
+            Assert.Contains("request.includeMetadata", baseContent, StringComparison.Ordinal);
+            Assert.Contains("request.includeAssets", baseContent, StringComparison.Ordinal);
+            Assert.Contains("request.sourceWorkspacePath", baseContent, StringComparison.Ordinal);
+            Assert.Contains("no external-target path is needed", baseContent, StringComparison.Ordinal);
+            Assert.Contains("project_structure_asset_get", baseContent, StringComparison.Ordinal);
+            Assert.Contains("project_structure_asset_content_get", baseContent, StringComparison.Ordinal);
+            Assert.Contains("do not grant workspace access", baseContent, StringComparison.Ordinal);
+
+            var selectionContent = FindFragment(
+                snapshot,
+                ProjectStructureAgentChatContextBuilder.SelectionContributorId).Content;
+            Assert.Contains("objectType: ProjectBlock", selectionContent, StringComparison.Ordinal);
+            Assert.Contains("objectSubtype: architecture", selectionContent, StringComparison.Ordinal);
+            Assert.Contains("status: Draft", selectionContent, StringComparison.Ordinal);
+            Assert.Contains("notes: Initial architecture summary.", selectionContent, StringComparison.Ordinal);
+            Assert.Contains(
+                "parentNodeKey=\"custom:architecture\"",
+                selectionContent,
+                StringComparison.Ordinal);
+        });
+        var originalSnapshot = Assert.IsType<AgentChatContextSnapshot>(registry.Capture());
+        var oversizedNotes = new string('x', 600);
+        var updatedNode = selectedNode with
+        {
+            Status = "Ready",
+            Notes = oversizedNotes,
+            MetadataJson = """{"owner":"delivery"}"""
+        };
+
+        cut.SetParametersAndRender(parameters => parameters
+            .Add(component => component.ProjectId, projectId)
+            .Add(component => component.ProjectName, "Architecture project")
+            .Add(component => component.SelectedNodes, new[] { updatedNode }));
+
+        cut.WaitForAssertion(() =>
+        {
+            var snapshot = Assert.IsType<AgentChatContextSnapshot>(registry.Capture());
+            Assert.True(snapshot.Version > originalSnapshot.Version);
+            var selectionContent = FindFragment(
+                snapshot,
+                ProjectStructureAgentChatContextBuilder.SelectionContributorId).Content;
+            Assert.Contains("status: Ready", selectionContent, StringComparison.Ordinal);
+            Assert.Contains("""metadataJson: {"owner":"delivery"}""", selectionContent, StringComparison.Ordinal);
+            Assert.DoesNotContain(oversizedNotes, selectionContent, StringComparison.Ordinal);
+            Assert.Contains(new string('x', 319) + "…", selectionContent, StringComparison.Ordinal);
+            Assert.DoesNotContain("Initial architecture summary.", selectionContent, StringComparison.Ordinal);
+            Assert.True(selectionContent.Length < AgentChatContextFragment.MaximumContentLength);
+        });
+    }
+
     private static void AssertProjectSource(
         AgentChatContextSnapshot snapshot,
         Guid projectId)

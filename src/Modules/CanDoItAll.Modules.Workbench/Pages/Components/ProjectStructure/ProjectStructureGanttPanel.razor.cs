@@ -202,36 +202,50 @@ public partial class ProjectStructureGanttPanel : ComponentBase, IAsyncDisposabl
         return Task.CompletedTask;
     }
 
-    private Task ApplyTitleAsync(GanttTaskTitleChangeRequest request)
-        => ExecuteMutationAsync(
+    private async Task ApplyTitleAsync(GanttTaskTitleChangeRequest request)
+    {
+        await ExecuteMutationAsync(
             "title",
             cancellationToken => MutationService.ApplyTitleAsync(ProjectId, request, cancellationToken));
+    }
 
-    private Task ApplyScheduleAsync(GanttTaskScheduleChangeRequest request)
+    private async Task ApplyScheduleAsync(GanttTaskScheduleChangeRequest request)
     {
         var renderedSurface = loadedSurface ?? Surface;
-        return ExecuteMutationAsync(
+        var renderedProjection = projection
+            ?? throw new InvalidOperationException("The Gantt projection is unavailable.");
+        var pendingProjection = renderedProjection.WithScheduleChanges(request.AffectedTasks);
+        projection = pendingProjection;
+
+        var committed = await ExecuteMutationAsync(
             "schedule",
             cancellationToken => MutationService.ApplyScheduleAsync(
                 ProjectId,
                 ProjectStructureGanttScheduleMutationFactory.Create(
                     request,
                     renderedSurface,
-                    projection?.Tasks
-                        ?? throw new InvalidOperationException("The Gantt projection is unavailable.")),
+                    renderedProjection.Tasks),
                 cancellationToken));
+        if (!committed && ReferenceEquals(projection, pendingProjection))
+        {
+            projection = renderedProjection;
+        }
     }
 
-    private Task ApplyDependencyAsync(GanttDependencyMutationRequest request)
-        => ExecuteMutationAsync(
+    private async Task ApplyDependencyAsync(GanttDependencyMutationRequest request)
+    {
+        await ExecuteMutationAsync(
             "dependency",
             cancellationToken => MutationService.ApplyDependencyAsync(ProjectId, request, cancellationToken));
+    }
 
-    private Task ApplyInsertionAsync(GanttTaskInsertionRequest request)
-        => ExecuteMutationAsync(
+    private async Task ApplyInsertionAsync(GanttTaskInsertionRequest request)
+    {
+        await ExecuteMutationAsync(
             "insertion",
             cancellationToken => MutationService.ApplyInsertionAsync(ProjectId, request, cancellationToken),
             renewInsertionCandidate: true);
+    }
 
     private Task OpenGeneralTaskDialogAsync()
     {
@@ -353,6 +367,7 @@ public partial class ProjectStructureGanttPanel : ComponentBase, IAsyncDisposabl
 
         mutationInFlight = true;
         var mutationCommitted = false;
+        var committedPricingFeedback = string.Empty;
         try
         {
             var result = await TaskCreationService.CreateAsync(
@@ -360,13 +375,15 @@ public partial class ProjectStructureGanttPanel : ComponentBase, IAsyncDisposabl
                 request,
                 uiMutationOwner,
                 lifetimeCancellation.Token);
+            committedPricingFeedback =
+                ProjectStructureTaskPricingFeedback.BuildNotificationSuffix(result.Pricing);
             mutationCommitted = true;
             await MutationCommitted.InvokeAsync();
             NotificationService.Success(
                 "Project task created",
                 result.AttachedResource is null
-                    ? $"{request.Title} was added to Main."
-                    : $"{request.Title} was added to Main with its selected resource.");
+                    ? $"{request.Title} was added to Main.{committedPricingFeedback}"
+                    : $"{request.Title} was added to Main with its selected resource.{committedPricingFeedback}");
         }
         catch (ProjectStructureTaskCreationException exception)
         {
@@ -389,7 +406,10 @@ public partial class ProjectStructureGanttPanel : ComponentBase, IAsyncDisposabl
         }
         catch (Exception exception)
         {
-            NotifyUnexpectedMutationFailure("task creation", mutationCommitted);
+            NotifyUnexpectedMutationFailure(
+                "task creation",
+                mutationCommitted,
+                committedPricingFeedback);
             Logger.LogError(
                 "Gantt task creation failed for project {ProjectId} after commit state {MutationCommitted}; failure type {FailureType}.",
                 Mask(ProjectId),
@@ -462,14 +482,14 @@ public partial class ProjectStructureGanttPanel : ComponentBase, IAsyncDisposabl
         }
     }
 
-    private async Task ExecuteMutationAsync(
+    private async Task<bool> ExecuteMutationAsync(
         string operation,
         Func<CancellationToken, Task<ProjectStructureGanttMutationResult>> mutation,
         bool renewInsertionCandidate = false)
     {
         if (!EnsureMutationHostAvailable())
         {
-            return;
+            return false;
         }
 
         mutationInFlight = true;
@@ -487,6 +507,7 @@ public partial class ProjectStructureGanttPanel : ComponentBase, IAsyncDisposabl
             NotificationService.Success(
                 "Project schedule saved",
                 BuildMutationStatus(operation, result));
+            return true;
         }
         catch (ProjectStructureGanttMutationException exception)
         {
@@ -498,9 +519,11 @@ public partial class ProjectStructureGanttPanel : ComponentBase, IAsyncDisposabl
                 operation,
                 Mask(ProjectId),
                 exception.Code);
+            return false;
         }
         catch (OperationCanceledException) when (lifetimeCancellation.IsCancellationRequested)
         {
+            return mutationCommitted;
         }
         catch (Exception exception)
         {
@@ -511,6 +534,7 @@ public partial class ProjectStructureGanttPanel : ComponentBase, IAsyncDisposabl
                 Mask(ProjectId),
                 mutationCommitted,
                 exception.GetType().Name);
+            return mutationCommitted;
         }
         finally
         {
@@ -547,13 +571,16 @@ public partial class ProjectStructureGanttPanel : ComponentBase, IAsyncDisposabl
         return false;
     }
 
-    private void NotifyUnexpectedMutationFailure(string operation, bool mutationCommitted)
+    private void NotifyUnexpectedMutationFailure(
+        string operation,
+        bool mutationCommitted,
+        string committedDetails = "")
     {
         if (mutationCommitted)
         {
             NotificationService.Warning(
                 "Project schedule saved; reload required",
-                "The change was saved, but the authoritative project schedule could not be reloaded. Reload this page before making another change.");
+                $"The change was saved, but the authoritative project schedule could not be reloaded.{committedDetails} Reload this page before making another change.");
             return;
         }
 

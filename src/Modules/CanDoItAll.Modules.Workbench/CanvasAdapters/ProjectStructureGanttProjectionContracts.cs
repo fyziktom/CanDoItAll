@@ -122,4 +122,60 @@ public sealed class ProjectStructureGanttProjectionResult
         ArgumentNullException.ThrowIfNull(task);
         return ProjectionOnlyTaskIds.Contains(task.Id);
     }
+
+    internal ProjectStructureGanttProjectionResult WithScheduleChanges(
+        IReadOnlyList<GanttTaskDateChange> changes)
+    {
+        ArgumentNullException.ThrowIfNull(changes);
+        if (changes.Count == 0)
+        {
+            return this;
+        }
+
+        var changesByTaskId = new Dictionary<GanttTaskId, GanttTaskDateChange>();
+        foreach (var change in changes)
+        {
+            if (!changesByTaskId.TryAdd(change.TaskId, change))
+            {
+                throw new InvalidOperationException(
+                    $"The Gantt schedule update contains duplicate dates for task '{change.TaskId.Value}'.");
+            }
+        }
+
+        var appliedTaskIds = new HashSet<GanttTaskId>();
+        var updatedTasks = Tasks
+            .Select(task =>
+            {
+                if (!changesByTaskId.TryGetValue(task.Id, out var change))
+                {
+                    return task;
+                }
+
+                appliedTaskIds.Add(task.Id);
+                return new GanttTask(
+                    task.Id,
+                    task.Title,
+                    change.ProposedStart,
+                    change.ProposedEnd,
+                    task.Assignments)
+                {
+                    ProgressPercent = task.ProgressPercent,
+                    ExpectedEffort = task.ExpectedEffort
+                };
+            })
+            .ToArray();
+        if (appliedTaskIds.Count != changesByTaskId.Count)
+        {
+            var missingTaskId = changesByTaskId.Keys.First(taskId => !appliedTaskIds.Contains(taskId));
+            throw new InvalidOperationException(
+                $"Task '{missingTaskId.Value}' is missing from the rendered Gantt projection.");
+        }
+
+        return new ProjectStructureGanttProjectionResult(
+            updatedTasks,
+            Dependencies,
+            ProjectionOnlyTaskIds,
+            Issues,
+            ExpectedCostTotals);
+    }
 }

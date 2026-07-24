@@ -74,9 +74,16 @@ internal static class ProjectStructureCreateRequestComposer
                 break;
             case ProjectObjectType.WorkItem:
                 var taskEstimate = ComposeTaskEstimate(inputValues);
+                var workItemKind = ParseEnum(
+                    inputValues,
+                    "workItemKind",
+                    ProjectNodeKindRegistry.ResolveWorkItemKind(subtype));
                 metadata.WorkItem = new ProjectWorkItemMetadata
                 {
-                    WorkItemKind = ParseEnum(inputValues, "workItemKind", ProjectNodeKindRegistry.ResolveWorkItemKind(subtype)),
+                    WorkItemKind = workItemKind,
+                    ExecutionState = workItemKind == ProjectWorkItemKind.Task
+                        ? ProjectTaskExecutionState.NotStarted
+                        : ProjectTaskExecutionState.Unknown,
                     SendKind = TryParseNullableEnum<ProjectSendKind>(inputValues, "sendKind"),
                     DeliveryChannel = ParseEnum(inputValues, "deliveryChannel", ProjectMessageChannel.None),
                     Amount = ParseDecimalNullable(inputValues, "amount"),

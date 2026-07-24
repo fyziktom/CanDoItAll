@@ -1,3 +1,4 @@
+using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.SharedKernel;
 
 namespace CanDoItAll.Modules.Projects;
@@ -95,6 +96,72 @@ public sealed record ProjectPartyAssignmentDetail(
     DateTimeOffset? EndsAtUtc,
     string Source,
     string Notes);
+
+public sealed record ProjectPartyAssignmentConcurrencySnapshot(
+    Guid AssignmentId,
+    Guid PartyId,
+    ProjectPartyType PartyType,
+    bool IsPrimary)
+{
+    public static ProjectPartyAssignmentConcurrencySnapshot From(
+        ProjectPartyAssignmentDetail assignment)
+    {
+        ArgumentNullException.ThrowIfNull(assignment);
+        return new(
+            assignment.Id,
+            assignment.PartyId,
+            assignment.PartyType,
+            assignment.IsPrimary);
+    }
+}
+
+public readonly record struct ProjectWorkItemDirectAssignmentRevision
+{
+    public ProjectWorkItemDirectAssignmentRevision(long value)
+    {
+        if (value < 0)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(value),
+                value,
+                "A direct-assignment revision cannot be negative.");
+        }
+
+        Value = value;
+    }
+
+    public long Value { get; }
+}
+
+public sealed record ProjectWorkItemDirectAssignmentState(
+    ProjectPartyType PartyType,
+    Guid PartyId,
+    bool IsPrimary,
+    string DisplayName);
+
+public enum ProjectWorkItemDirectAssignmentMutationStatus
+{
+    Applied,
+    WorkItemNotFound,
+    RevisionConflict
+}
+
+public sealed record ProjectWorkItemDirectAssignmentMutationResult(
+    ProjectWorkItemDirectAssignmentMutationStatus Status,
+    ProjectWorkItemDirectAssignmentRevision? Revision);
+
+public interface IProjectWorkItemAssignmentMutationBridge
+{
+    Task<ProjectWorkItemDirectAssignmentMutationResult> StageMutationAsync(
+        AppDbContext dbContext,
+        Guid projectId,
+        ProjectNodeReference taskNode,
+        IReadOnlyCollection<ProjectWorkItemDirectAssignmentState>
+            finalAssignments,
+        ProjectWorkItemDirectAssignmentRevision?
+            expectedCurrentRevision = null,
+        CancellationToken cancellationToken = default);
+}
 
 public sealed record ProjectWorkItemAssigneeBinding(
     Guid ProjectId,
@@ -212,6 +279,14 @@ public interface IProjectNodeAssignmentPolicyBridge
     ProjectNodeAssignmentSemantics Resolve(ProjectObjectType objectType, string objectSubtype);
 }
 
+public static class ProjectPartyIntegrationErrorCodes
+{
+    public const string ConditionalReplacementUnavailable =
+        "projects.party-assignment.conditional-replacement-unavailable";
+    public const string StaleAssignmentSnapshot =
+        "crmhr.project-assignment.stale-snapshot";
+}
+
 public interface IProjectPartyIntegrationBridge
 {
     Task<IReadOnlyDictionary<Guid, ProjectPortfolioPartyContext>> GetPortfolioContextsAsync(
@@ -249,6 +324,20 @@ public interface IProjectPartyIntegrationBridge
         IReadOnlyList<ProjectPartyAssignmentUpsertRequest> desiredAssignments,
         IReadOnlyList<ProjectPartyAssignmentRole> targetRoles,
         CancellationToken cancellationToken = default);
+
+    Task<Result> ReplaceNodeAssignmentsIfCurrentAsync(
+        Guid projectId,
+        ProjectNodeReference nodeReference,
+        IReadOnlyList<ProjectPartyAssignmentUpsertRequest> desiredAssignments,
+        IReadOnlyList<ProjectPartyAssignmentRole> targetRoles,
+        IReadOnlyCollection<ProjectPartyAssignmentConcurrencySnapshot>
+            expectedAssignments,
+        ProjectWorkItemDirectAssignmentRevision?
+            expectedDirectAssignmentRevision,
+        CancellationToken cancellationToken = default)
+        => Task.FromResult(Result.Failure(Error.Failure(
+            "Conditional project-party assignment replacement is not available.",
+            ProjectPartyIntegrationErrorCodes.ConditionalReplacementUnavailable)));
 
     Task DeleteAssignmentAsync(
         Guid assignmentId,
@@ -412,6 +501,23 @@ internal sealed class NoopProjectPartyIntegrationBridge : IProjectPartyIntegrati
             "Project-party integration is not available.",
             "projects.party-integration-unavailable")));
     }
+}
+
+internal sealed class NoopProjectWorkItemAssignmentMutationBridge :
+    IProjectWorkItemAssignmentMutationBridge
+{
+    public Task<ProjectWorkItemDirectAssignmentMutationResult>
+        StageMutationAsync(
+            AppDbContext dbContext,
+            Guid projectId,
+            ProjectNodeReference taskNode,
+            IReadOnlyCollection<ProjectWorkItemDirectAssignmentState>
+                finalAssignments,
+            ProjectWorkItemDirectAssignmentRevision?
+                expectedCurrentRevision = null,
+            CancellationToken cancellationToken = default)
+        => throw new InvalidOperationException(
+            "Canonical task assignment mutation integration is unavailable.");
 }
 
 internal sealed class NoopProjectNodeDetailsBridge : IProjectNodeDetailsBridge
