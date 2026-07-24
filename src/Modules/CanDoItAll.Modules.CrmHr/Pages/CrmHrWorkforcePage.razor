@@ -34,10 +34,10 @@
         <Stack GapScale="LayoutGap.Medium">
             <CrmHrSecondaryTabs SelectedArea="CrmHrWorkspaceArea.Workforce" />
 
-            <ListDetailShell ListPaneWidth="30rem">
-                <ListHeader>
+            <SurfaceCard data-testid="crmhr-workforce-catalog">
+                <Stack GapScale="LayoutGap.Medium">
                     <ListPanelHeader Title="Workforce records"
-                                     Description="Select a worker or delivery unit to manage employment type, reporting line, home unit, searchable skills, and allocation-driven availability."
+                                     Description="Search and page through workers and delivery units. Open a card to manage its profile, skills, allocations, and history."
                                      Count="Server-paged">
                         <Actions>
                             <Button Text="New delivery unit"
@@ -49,8 +49,6 @@
                                     data-testid="crmhr-workforce-new-delivery-unit" />
                         </Actions>
                     </ListPanelHeader>
-                </ListHeader>
-                <ListContent>
                     <PartyRecordBrowser @key="workforceBrowserVersion"
                                         AllowedScope="@(PartyRecordScope.People | PartyRecordScope.Organizations | PartyRecordScope.OrganizationUnits)"
                                         InitialScope="@(PartyRecordScope.People | PartyRecordScope.Organizations | PartyRecordScope.OrganizationUnits)"
@@ -59,29 +57,25 @@
                                         SelectionChanged="SelectPartyAsync"
                                         LoadFailed="HandleWorkforceBrowserLoadFailedAsync"
                                         PageSize="12"
+                                        ResultsScrollMode="PagedRecordResultsScrollMode.Bounded"
                                         SearchPlaceholder="Search workforce name, code, summary, or tag"
                                         DataTestId="crmhr-workforce"
                                         OptionTestId="crmhr-workforce-item" />
-                </ListContent>
+                </Stack>
+            </SurfaceCard>
 
-                <DetailHeader>
-                    @if (selectedWorkspace is null)
-                    {
-                        <SurfaceCard Soft="true">
-                            <p class="cda-eyebrow">No workforce record selected</p>
-                            <h2 class="mt-1 text-lg font-semibold text-slate-950">Choose a party from the list</h2>
-                            <p class="mt-3 text-sm leading-6 text-slate-600">
-                                The workforce detail surface shows reporting line, home unit, profile economics, searchable skills, and allocation-driven capacity after you select a person or delivery unit.
-                            </p>
-                            <Cluster Gap="LayoutGap.Small" Class="mt-4">
-                                <Button Text="Open directory"
-                                        ButtonStyle="ButtonStyle.Light"
-                                        Click="OpenDirectory" />
-                            </Cluster>
-                        </SurfaceCard>
-                    }
-                    else
-                    {
+            @if (isRecordDialogOpen && selectedWorkspace is not null)
+            {
+                <Dialog IsOpen="true"
+                        Eyebrow="Workforce record"
+                        Title="@selectedWorkspace.DisplayName"
+                        Subtitle="Profile, skills, allocation-driven availability, and workforce history."
+                        Size="ModalSize.Full"
+                        DenseChrome="true"
+                        CloseOnBackdrop="false"
+                        TestId="crmhr-workforce-record-dialog"
+                        OnClose="CloseRecordDialogAsync">
+                    <ChildContent>
                         <SurfaceCard Soft="true">
                             <Split Gap="LayoutGap.Medium">
                                 <div class="min-w-0">
@@ -107,18 +101,7 @@
                                 </Cluster>
                             </Split>
                         </SurfaceCard>
-                    }
-                </DetailHeader>
 
-                <DetailContent>
-                    @if (selectedWorkspace is null)
-                    {
-                        <EmptyState Eyebrow="Workforce workspace ready"
-                                    Title="Select a worker or unit to continue"
-                                    Description="Profile editing, skill coverage, capacity blocks, and project allocations appear here after you choose a party from the workforce list." />
-                    }
-                    else
-                    {
                         <Tabs SelectedIndex="@selectedDetailTabIndex"
                               SelectedIndexChanged="HandleDetailTabChangedAsync"
                               RenderMode="TabRenderMode.Server"
@@ -181,7 +164,9 @@
                             <TabsItem Text="Profile"
                                       Icon="badge"
                                       data-testid="crmhr-workforce-tab-profile">
-                            <EditForm Model="profileEditor" OnValidSubmit="SaveWorkforceProfileAsync">
+                            <EditForm id="crmhr-workforce-profile-form"
+                                      Model="profileEditor"
+                                      OnValidSubmit="SaveWorkforceProfileAsync">
                                 <FormSection Title="Workforce profile"
                                              Description="Keep employment type, commercial rate context, and org-structure metadata attached to the same Party identity used by CRM and project flows.">
                                     <Grid Gap="LayoutGap.Large" ColumnsMd="3">
@@ -332,14 +317,6 @@
                                                        data-testid="crmhr-workforce-notes" />
                                     </div>
 
-                                    <Cluster Gap="LayoutGap.Small" Class="mt-5">
-                                        <Button Text="Save workforce profile"
-                                                Type="submit"
-                                                data-testid="crmhr-workforce-save-button" />
-                                        <Button Text="Open directory record"
-                                                ButtonStyle="ButtonStyle.Light"
-                                                Click="OpenDirectory" />
-                                    </Cluster>
                                 </FormSection>
                             </EditForm>
                             </TabsItem>
@@ -433,9 +410,32 @@
                                 </div>
                             </TabsItem>
                         </Tabs>
-                    }
-                </DetailContent>
-            </ListDetailShell>
+                    </ChildContent>
+                    <Footer>
+                        <Split Breakpoint="LayoutBreakpoint.None"
+                               Gap="LayoutGap.Medium"
+                               AlignItems="AlignItems.Center"
+                               JustifyContent="JustifyContent.SpaceBetween"
+                               Wrap="FlexWrap.Wrap">
+                            <Button Text="Open directory record"
+                                    ButtonStyle="ButtonStyle.Light"
+                                    Click="OpenDirectory" />
+                            <Cluster Gap="LayoutGap.Small">
+                                <Button Text="Close"
+                                        ButtonStyle="ButtonStyle.Light"
+                                        Click="CloseRecordDialogAsync"
+                                        data-testid="crmhr-workforce-record-close" />
+                                @if (selectedDetailTabIndex == ProfileTabIndex)
+                                {
+                                    <Button Text="Save workforce profile"
+                                            Click="SaveWorkforceProfileAsync"
+                                            data-testid="crmhr-workforce-save-button" />
+                                }
+                            </Cluster>
+                        </Split>
+                    </Footer>
+                </Dialog>
+            }
 
             @if (isDeliveryUnitDialogOpen)
             {
@@ -548,6 +548,7 @@
     private int workforceBrowserVersion;
     private bool isCapacityWorkspaceLoading;
     private bool isHistoryLoading;
+    private bool isRecordDialogOpen;
     private bool isDeliveryUnitDialogOpen;
     private bool isDeliveryUnitSaving;
     private bool isDisposed;
@@ -599,6 +600,11 @@
     protected override async Task OnParametersSetAsync()
     {
         var requestedPartyId = PartyIdQuery;
+        if (requestedPartyId != selectedWorkspace?.PartyId)
+        {
+            isRecordDialogOpen = false;
+        }
+
         var request = BeginWorkforceLoad(
             requestedPartyId,
             WorkforceLoadBinding.RouteBound,
@@ -612,6 +618,9 @@
         agentChatContextAccessState = outcome == WorkforceLoadOutcome.Ready
             ? AgentChatContextAccessState.Ready
             : AgentChatContextAccessState.Failed;
+        isRecordDialogOpen = outcome == WorkforceLoadOutcome.Ready &&
+                             requestedPartyId.HasValue &&
+                             selectedWorkspace is not null;
 
         if (outcome == WorkforceLoadOutcome.Ready && selectedDetailTabIndex == AllocationsTabIndex)
         {
@@ -805,12 +814,29 @@
     {
         if (PartyIdQuery == partyId && selectedWorkspace?.PartyId == partyId)
         {
+            isRecordDialogOpen = true;
             return Task.CompletedTask;
         }
 
         Interlocked.Increment(ref workforceLoadGeneration);
+        isRecordDialogOpen = false;
         agentChatContextAccessState = AgentChatContextAccessState.Loading;
         Navigation.NavigateTo($"/crm-hr/workforce?partyId={partyId}");
+        return Task.CompletedTask;
+    }
+
+    private Task CloseRecordDialogAsync()
+    {
+        if (!isRecordDialogOpen)
+        {
+            return Task.CompletedTask;
+        }
+
+        Interlocked.Increment(ref workforceLoadGeneration);
+        isRecordDialogOpen = false;
+        ClearWorkforceSelection();
+        agentChatContextAccessState = AgentChatContextAccessState.Ready;
+        Navigation.NavigateTo("/crm-hr/workforce", replace: true);
         return Task.CompletedTask;
     }
 

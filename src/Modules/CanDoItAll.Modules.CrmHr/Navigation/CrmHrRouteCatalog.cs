@@ -37,7 +37,7 @@ public static class CrmHrRouteCatalog
             "directory",
             "/crm-hr/directory",
             "Directory",
-            "Directory",
+            "CRM Directory",
             "Unified party directory for people, organizations, units, and AI agents."),
         new(
             CrmHrWorkspaceArea.Crm,
@@ -51,14 +51,14 @@ public static class CrmHrRouteCatalog
             "workforce",
             "/crm-hr/workforce",
             "Workforce",
-            "Workforce",
+            "CRM Workforce",
             "People, units, and staffing supply overview."),
         new(
             CrmHrWorkspaceArea.Recruiting,
             "recruiting",
             "/crm-hr/recruiting",
             "Recruiting",
-            "Recruiting",
+            "CRM Recruiting",
             "Candidate and onboarding workspace."),
         new(
             CrmHrWorkspaceArea.Agents,
@@ -72,7 +72,7 @@ public static class CrmHrRouteCatalog
             "assignments",
             "/crm-hr/assignments",
             "Assignments",
-            "Assignments",
+            "CRM Assignments",
             "Project-linked staffing and party assignment workspace.")
     ];
 

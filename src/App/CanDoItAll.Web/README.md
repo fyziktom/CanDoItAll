@@ -54,8 +54,11 @@ Development and Visual Studio `http`/`https` launch profiles are PostgreSQL-firs
 
 The checked-in API configuration is intended for a trusted local host and leaves bearer authorization disabled. Any remotely reachable deployment must enable `Api:Authorization:Enabled` and supply a secret signing key of at least 32 bytes before exposing Prompt Gallery or other mutation endpoints.
 
+`/api/crm-hr` is a thin HTTP adapter over the CRM-HR application services. It intentionally has no seed route and no direct persistence. The repo-owned `codex/skills/candoitall-api-crmhr` skill orchestrates normal party, workforce, skill, capacity, and recruiting commands with readback and search-before-create identity handling. JWT scope claims are not endpoint policies in the current host; remotely reachable deployments must not treat a claimed `crmhr.*` scope as authorization enforcement.
+
 ## Related Docs
 
 - Repository overview: `README.md` at the repo root
 - Current architecture: `docs/architecture-beta.md`
 - Development runtime: `docs/development-runtime.md`
+- CRM-HR API: `docs/crm-hr-api.md`

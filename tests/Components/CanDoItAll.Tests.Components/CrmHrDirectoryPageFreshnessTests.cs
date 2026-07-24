@@ -254,6 +254,37 @@ public sealed class CrmHrDirectoryPageFreshnessTests
                 contextProvider.Instance.ContextAccessState);
             Assert.Null(contextProvider.Instance.Surface.Position.PrimarySelection);
             Assert.DoesNotContain(existingPartyId.ToString("D"), contextProvider.Instance.Surface.Source.Id.Value, StringComparison.Ordinal);
+            Assert.Empty(cut.FindAll("[data-testid='crmhr-directory-record-dialog']"));
+        });
+    }
+
+    [Fact]
+    public async Task Closing_the_record_dialog_invalidates_an_in_flight_save_refresh()
+    {
+        var loadGate = new DelayedDbContextCreationGate();
+        await using var harness = await ComponentTestHarness.CreateAsync(
+            services => WrapDbContextFactory(services, loadGate));
+        var partyDirectoryService = harness.Context.Services.GetRequiredService<PartyDirectoryService>();
+        var navigation = harness.Context.Services.GetRequiredService<NavigationManager>();
+        var partyId = await CreatePartyAsync(partyDirectoryService, "Closing save dialog");
+        navigation.NavigateTo($"/crm-hr/directory?partyId={partyId:D}");
+        var cut = harness.Context.RenderComponent<CrmHrDirectoryPage>();
+        cut.WaitForElement("[data-testid='crmhr-directory-record-dialog']");
+        cut.Find("[data-testid='crmhr-party-summary']").Change("Saved while closing");
+        loadGate.Arm();
+
+        var saveTask = cut.InvokeAsync(
+            () => cut.Find("[data-testid='crmhr-party-save-button']").Click());
+        await loadGate.WaitForDelayedCreationAsync();
+        await cut.InvokeAsync(
+            () => cut.Find("[data-testid='crmhr-directory-record-close']").Click());
+        loadGate.Release();
+        await saveTask;
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Empty(cut.FindAll("[data-testid='crmhr-directory-record-dialog']"));
+            Assert.EndsWith("/crm-hr/directory", navigation.Uri, StringComparison.Ordinal);
         });
     }
 
@@ -272,6 +303,8 @@ public sealed class CrmHrDirectoryPageFreshnessTests
                 contextProvider.Instance.Surface.Position.PrimarySelection);
             Assert.Equal(expectedPartyId.ToString("D"), selection.Id);
             Assert.Equal(expectedDisplayName, selection.DisplayName);
+            Assert.Single(cut.FindAll("[data-testid='crmhr-directory-record-dialog']"));
+            Assert.Contains(expectedDisplayName, cut.Markup);
         });
     }
 

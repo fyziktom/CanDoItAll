@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Product module for parties, staffing, AI-agent party bindings, and CRM/HR records used by process assignments.
+Product module for parties, CRM accounts, recruiting, workforce/staffing, AI-agent party bindings, and CRM/HR records used by process assignments.
 
 ## Project Type
 
@@ -38,7 +38,12 @@ Direct package references:
 
 This module owns product semantics for its bounded area. Keep business behavior here and expose it through typed services, Razor components, and module contracts. MCP projects should call into these services instead of duplicating module logic.
 
+Directory and Workforce use the shared typed `PagedRecordBrowser` through the module-owned `PartyRecordBrowser` adapter. Queries perform source paging with deterministic ordering; the routed catalogue owns an opt-in bounded card-results scroll while record workspaces open in controlled dialogs. Picker-dialog consumers keep the browser's default non-bounded scroll behavior.
+
+The Web host exposes the supported HTTP slice at `/api/crm-hr`. Web owns route binding and status mapping; this module's application services continue to own validation, persistence, audit, search-index, activity, and lifecycle side effects. Do not add direct `DbContext` writes or scenario-specific seed behavior to the Web adapter.
+
 ## Related Docs
 
 - Repository overview: `README.md` at the repo root
 - Current architecture: `docs/architecture-beta.md`
+- CRM-HR HTTP API: `docs/crm-hr-api.md`

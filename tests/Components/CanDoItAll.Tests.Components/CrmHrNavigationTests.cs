@@ -31,12 +31,12 @@ public sealed class CrmHrNavigationTests
 
     [Theory]
     [InlineData(CrmHrWorkspaceArea.Home, "/crm-hr", "CRM / HR")]
-    [InlineData(CrmHrWorkspaceArea.Directory, "/crm-hr/directory", "Directory")]
+    [InlineData(CrmHrWorkspaceArea.Directory, "/crm-hr/directory", "CRM Directory")]
     [InlineData(CrmHrWorkspaceArea.Crm, "/crm-hr/crm", "CRM")]
-    [InlineData(CrmHrWorkspaceArea.Workforce, "/crm-hr/workforce", "Workforce")]
-    [InlineData(CrmHrWorkspaceArea.Recruiting, "/crm-hr/recruiting", "Recruiting")]
+    [InlineData(CrmHrWorkspaceArea.Workforce, "/crm-hr/workforce", "CRM Workforce")]
+    [InlineData(CrmHrWorkspaceArea.Recruiting, "/crm-hr/recruiting", "CRM Recruiting")]
     [InlineData(CrmHrWorkspaceArea.Agents, "/crm-hr/agents", "CRM Agents")]
-    [InlineData(CrmHrWorkspaceArea.Assignments, "/crm-hr/assignments", "Assignments")]
+    [InlineData(CrmHrWorkspaceArea.Assignments, "/crm-hr/assignments", "CRM Assignments")]
     public void Route_catalog_defines_contextual_workbench_titles(
         CrmHrWorkspaceArea area,
         string route,

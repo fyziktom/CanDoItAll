@@ -59,3 +59,26 @@ Every checkpoint is a blocking decision. Record results in `reviews/01-execution
 - CodeAnalytics status: capture scoped snapshot/cycle result if transport is restored; otherwise preserve explicit unavailable gap and manual proof.
 - Regression review: no prior foundation reopened; all raw notes have Behavioral evidence.
 - Closure: `csharp-architecture-review-gate` and completed bundle validator must pass.
+
+## CP-07 After SB07: Catalogue And Dialog Re-entry
+
+- Shared-boundary review: AppComponents change is typed, domain-neutral, and default-off; picker-dialog scroll behavior is unchanged.
+- Orchestration review: Directory/Workforce retain page-owned generation guards while the permanent detail panes are removed.
+- Route review: prefixed workbench titles remain independent from concise secondary labels and path-based tab identity.
+- Negative proof: stale selection cannot reopen a closed dialog; nested overlays and fixed pager remain usable.
+- Unlock: `Pass` contributes UI proof required by SB09 and final closure.
+
+## CP-08 After SB08: CRM-HR HTTP Contract
+
+- Boundary review: Web owns only route binding/status mapping and contains no direct persistence or duplicated domain validation.
+- Security review: endpoints follow the configured global API authentication boundary; documentation does not misrepresent unenforced scope claims.
+- Contract review: list reads are bounded and safe; write models are typed; invalid references fail predictably.
+- Skill review: repo and active-root copies validate and hash-match; no database bypass is documented.
+- Unlock: `Pass` unlocks SB09.
+
+## CP-09 After SB09: Scenario And Final Re-closure
+
+- Data provenance review: every new demonstration record is traced to a live API call; no startup hook, migration seed, SQL, or direct EF operation exists.
+- Identity review: two operator runs preserve deterministic external-code identities without duplicates.
+- UI/API consistency review: populated Directory, Workforce, and Recruiting browser evidence agrees with API responses.
+- Final gate: two-pass performance scan, C# architecture review, affected/full validation, completed bundle validator, and healthy Release host on `5032`.

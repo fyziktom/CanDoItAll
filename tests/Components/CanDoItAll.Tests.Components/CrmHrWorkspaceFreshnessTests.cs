@@ -223,6 +223,84 @@ public sealed class CrmHrWorkspaceFreshnessTests
                 AgentChatContextAccessState.Failed,
                 contextProvider.Instance.ContextAccessState);
             Assert.Null(contextProvider.Instance.Surface.Position.PrimarySelection);
+            Assert.Empty(cut.FindAll("[data-testid='crmhr-workforce-record-dialog']"));
+        });
+    }
+
+    [Fact]
+    public async Task Recruiting_query_selection_publishes_context_only_after_workspace_load_completes()
+    {
+        var loadGate = new DelayedDbContextCreationGate();
+        await using var harness = await ComponentTestHarness.CreateAsync(
+            services => WrapDbContextFactory(services, loadGate));
+        var partyDirectoryService = harness.Context.Services.GetRequiredService<PartyDirectoryService>();
+        var recruitingService = harness.Context.Services.GetRequiredService<RecruitingService>();
+        var navigation = harness.Context.Services.GetRequiredService<NavigationManager>();
+        var candidateId = await CreatePartyAsync(
+            partyDirectoryService,
+            "Delayed recruiting candidate",
+            PartyType.Person,
+            PartyLifecycleStatus.Candidate,
+            PartyRoleKind.Candidate);
+        var applicationResult = await recruitingService.SaveRecruitmentApplicationAsync(
+            new RecruitmentApplicationEditorModel
+            {
+                PartyId = candidateId,
+                DesiredRole = "Platform engineer",
+                Stage = RecruitmentStage.Interviewing,
+                Decision = RecruitmentDecision.Pending,
+                LastChangedBy = "component-tests"
+            });
+        Assert.True(applicationResult.IsSuccess);
+
+        navigation.NavigateTo("/crm-hr/recruiting");
+        var cut = harness.Context.RenderComponent<CrmHrRecruitingPage>();
+        cut.WaitForAssertion(() =>
+        {
+            var contextProvider = cut.FindComponent<AgentChatContextSurfaceProvider>();
+            Assert.Equal(
+                AgentChatContextAccessState.Ready,
+                contextProvider.Instance.ContextAccessState);
+            Assert.Null(contextProvider.Instance.Surface.Position.PrimarySelection);
+        });
+
+        loadGate.Arm();
+        navigation.NavigateTo(
+            $"/crm-hr/recruiting?applicationId={applicationResult.Value:D}");
+        await loadGate.WaitForDelayedCreationAsync();
+        try
+        {
+            cut.WaitForAssertion(() =>
+            {
+                var contextProvider = cut.FindComponent<AgentChatContextSurfaceProvider>();
+                Assert.Equal(
+                    AgentChatContextAccessState.Loading,
+                    contextProvider.Instance.ContextAccessState);
+                Assert.Null(contextProvider.Instance.Surface.Position.PrimarySelection);
+            });
+        }
+        finally
+        {
+            loadGate.Release();
+        }
+
+        cut.WaitForAssertion(() =>
+        {
+            var contextProvider = cut.FindComponent<AgentChatContextSurfaceProvider>();
+            Assert.Equal(
+                AgentChatContextAccessState.Ready,
+                contextProvider.Instance.ContextAccessState);
+            var selection = Assert.IsType<AgentChatContextEntityReference>(
+                contextProvider.Instance.Surface.Position.PrimarySelection);
+            Assert.Equal(applicationResult.Value.ToString("D"), selection.Id);
+            Assert.Contains(
+                contextProvider.Instance.Surface.Position.Facts,
+                fact => fact.Name == "recruitment-stage" &&
+                        fact.Value == RecruitmentStage.Interviewing.ToString());
+            Assert.Contains(
+                contextProvider.Instance.Surface.Position.Facts,
+                fact => fact.Name == "decision-status" &&
+                        fact.Value == RecruitmentDecision.Pending.ToString());
         });
     }
 
@@ -326,6 +404,8 @@ public sealed class CrmHrWorkspaceFreshnessTests
                 contextProvider.Instance.Surface.Position.PrimarySelection);
             Assert.Equal(expectedPartyId.ToString("D"), selection.Id);
             Assert.Equal(expectedDisplayName, selection.DisplayName);
+            Assert.Single(cut.FindAll("[data-testid='crmhr-workforce-record-dialog']"));
+            Assert.Contains(expectedDisplayName, cut.Markup);
         });
     }
 

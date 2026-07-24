@@ -77,3 +77,17 @@ Do not create all listed abstractions merely to match names. Preserve the separa
 - The large services/pages shrink or remain thin orchestrators relative to the responsibilities moved; line count alone is supportive, not sufficient.
 - Adding another record kind or picker consumer does not require editing the shared component's domain logic.
 - No new partial file is part of the final design.
+
+## Follow-Up Boundary Addendum
+
+| Owner | New follow-up responsibility | Explicit exclusion |
+| --- | --- | --- |
+| `CanDoItAll.AppComponents` | Domain-neutral, strongly typed opt-in results-scroll presentation for the existing paged browser. | CRM card semantics, routes, dialog state, or paging queries. |
+| `CanDoItAll.Modules.CrmHr` | Full-width Directory/Workforce card composition, page-owned dialog/load state, existing application commands and bounded projections. | HTTP transport, JWT composition, direct scenario bootstrapping. |
+| `CanDoItAll.Web` | `/api/crm-hr` route binding, typed request binding, cancellation, and result/status mapping through existing application services. | CRM-HR validation duplication, EF entities/`DbContext`, startup seed records. |
+| Repo/active Codex skill | Operator workflow and exact public API contract. | Database access, secrets, or production runtime behavior. |
+| External seed operation | Search-before-create orchestration through the live HTTP contract. | Committed seed hook, direct SQL/EF, destructive cleanup. |
+
+- Directory and Workforce keep generation-guarded orchestration in their current page owners. Moving the existing tabbed markup into a controlled dialog is a presentation-boundary change, not a new business layer.
+- One full details/editor dialog per selected record matches the Agents interaction and avoids duplicating read-only/edit orchestration. Nested contact, party-picker, merge, and delivery-unit dialogs remain independent controlled overlays.
+- API endpoints use existing concrete application services directly. Adding one-implementation interfaces or a generic repository only for Minimal API handlers is rejected.

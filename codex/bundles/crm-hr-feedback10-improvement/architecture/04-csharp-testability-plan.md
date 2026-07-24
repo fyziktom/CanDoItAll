@@ -83,3 +83,26 @@
 - CRM/Directory pages no longer own the moved filtering/wizard/aggregation logic.
 - `PartyPicker` is removed or demonstrably thin.
 - Downstream Playwright checks prove the composition root uses the extracted behavior.
+
+## Follow-Up Test Plan
+
+### Catalogue and dialog behavior
+
+- `PagedRecordBrowser` preserves its existing default class/scroll behavior and adds the bounded-results modifier only when explicitly requested.
+- Directory and Workforce issue source-paged requests after search/filter/page changes, render several comparable cards, and keep the pager outside the result scroll owner.
+- Selection and `partyId` deep links open the full dialog; close invalidates pending loads and returns to a usable list without changing the route-based workbench identity.
+- Existing privacy masking and lazy Activity/Relations/History loading remain covered after markup relocation.
+- Nested CRM-HR dialogs remain focusable and their action footers remain visible at `1800x1100`.
+
+### HTTP API
+
+- API tests use the normal mapped `/api/crm-hr` group and prove create/read/update across party, workforce, skills/capacity, and recruiting.
+- Invalid model and nonexistent reference cases return the shared structured error shape and do not partially persist.
+- List/search operations enforce bounded page sizes and return safe projections; no confidential notes or private contact values appear in catalogue responses.
+- Source assertions reject `DbContext`, entity construction, TODO/`NotImplemented`, and seed-only routes in Web API code.
+
+### Scenario operation
+
+- First HTTP run creates deterministic parties, delivery units, skill/capacity, and multiple recruiting stages.
+- Second HTTP run finds the same external codes and updates/reuses their ids rather than creating duplicates.
+- Browser proof cross-checks Directory, Workforce, Recruiting, record dialogs, scrolling, paging, and contextual workbench titles.

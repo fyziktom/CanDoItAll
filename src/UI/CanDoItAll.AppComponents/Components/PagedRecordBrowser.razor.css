@@ -18,6 +18,14 @@
     width: 100%;
 }
 
+.paged-record-browser__results--bounded {
+    max-height: min(44rem, calc(100vh - 34rem));
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding-right: 0.35rem;
+    scrollbar-gutter: stable;
+}
+
 .paged-record-browser__card {
     background: rgb(248 250 252);
     border: 1px solid rgb(226 232 240);

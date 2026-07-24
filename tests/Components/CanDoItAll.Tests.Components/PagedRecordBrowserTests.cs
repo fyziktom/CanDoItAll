@@ -124,6 +124,28 @@ public sealed class PagedRecordBrowserTests : TestContext
     }
 
     [Fact]
+    public void Results_scrolling_is_typed_opt_in_and_does_not_change_the_pager_region()
+    {
+        var defaultCut = RenderBrowser(LoaderWith(Option(AlphaId, "Alpha")));
+        var boundedCut = RenderBrowser(
+            LoaderWith(Option(AlphaId, "Alpha")),
+            resultsScrollMode: PagedRecordResultsScrollMode.Bounded);
+
+        Assert.DoesNotContain(
+            "paged-record-browser__results--bounded",
+            defaultCut.Find("[data-testid='records-results']").ClassList);
+        Assert.Contains(
+            "paged-record-browser__results--bounded",
+            boundedCut.Find("[data-testid='records-results']").ClassList);
+        Assert.DoesNotContain(
+            "paged-record-browser__results--bounded",
+            boundedCut.Find("[data-testid='records-pager']").ClassList);
+        Assert.Contains(
+            "w-full",
+            boundedCut.Find("[data-testid='records']").ClassList);
+    }
+
+    [Fact]
     public async Task Late_cancelled_search_cannot_replace_a_newer_result()
     {
         var slowStarted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -256,7 +278,8 @@ public sealed class PagedRecordBrowserTests : TestContext
     private IRenderedComponent<PagedRecordBrowser<Guid, RecordScope>> RenderBrowser(
         PagedRecordLoader<Guid, RecordScope> loader,
         Action<Guid>? selectionChanged = null,
-        Action<Exception>? loadFailed = null)
+        Action<Exception>? loadFailed = null,
+        PagedRecordResultsScrollMode resultsScrollMode = PagedRecordResultsScrollMode.Page)
     {
         return RenderComponent<PagedRecordBrowser<Guid, RecordScope>>(parameters =>
         {
@@ -266,6 +289,7 @@ public sealed class PagedRecordBrowserTests : TestContext
                 .Add(component => component.FilterOptions, ScopeOptions())
                 .Add(component => component.TagSuggestions, ["priority", "partner"])
                 .Add(component => component.PageSize, 2)
+                .Add(component => component.ResultsScrollMode, resultsScrollMode)
                 .Add(component => component.DataTestId, "records");
 
             if (selectionChanged is not null)

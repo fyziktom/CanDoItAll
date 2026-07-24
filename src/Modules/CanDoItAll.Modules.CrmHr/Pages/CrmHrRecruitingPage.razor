@@ -283,14 +283,22 @@
     {
         get
         {
-            var hasSelectedApplication = currentWorkspace?.HasSelectedApplication == true;
-            var application = hasSelectedApplication ? currentWorkspace!.Application : null;
+            if (agentChatContextAccessState != AgentChatContextAccessState.Ready ||
+                currentWorkspace is not { HasSelectedApplication: true } workspace ||
+                !RecruitmentWorkspaceContextSelection.MatchesRequestedApplication(
+                    ApplicationId,
+                    PartyId,
+                    workspace))
+            {
+                return CrmHrAgentChatSurfaceBuilder.BuildRecruitingSurface();
+            }
+
             return CrmHrAgentChatSurfaceBuilder.BuildRecruitingSurface(
-                application?.Id ?? ApplicationId,
-                application?.Stage,
-                application?.Decision,
-                application?.PartyId ?? PartyId,
-                hasSelectedApplication ? currentWorkspace!.CandidateDisplayName : null);
+                workspace.Application.Id,
+                workspace.Application.Stage,
+                workspace.Application.Decision,
+                workspace.Application.PartyId,
+                workspace.CandidateDisplayName);
         }
     }
 

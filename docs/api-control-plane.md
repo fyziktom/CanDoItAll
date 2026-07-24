@@ -1,6 +1,6 @@
 # API Control Plane
 
-The current project, process, workflow, cognitive-memory, and agent automation path is the CanDoItAll web-hosted HTTP API. The old Processes and ProjectStructure MCP servers are suppressed; use the API and the repo-managed `candoitall-api-*` skills for those surfaces.
+The current project, process, workflow, cognitive-memory, CRM-HR, and agent automation path is the CanDoItAll web-hosted HTTP API. The old Processes and ProjectStructure MCP servers are suppressed; use the API and the repo-managed `candoitall-api-*` skills for those surfaces.
 
 ## Host And Discovery
 
@@ -109,6 +109,21 @@ Important operating rule: Qdrant/RAG is a rebuildable projection. Durable memory
 
 New integrations should prefer `/api/cognitive-memory/v1`. Legacy `/api/cognitive-memory` routes remain available for compatibility.
 
+### CRM-HR
+
+Use `/api/crm-hr` for the seedable CRM-HR control-plane slice:
+
+- source-paged party and workforce discovery
+- safe party creation and explicit relationship management
+- workforce profiles, skill definitions, party skills, and capacity blocks
+- source-paged recruitment applications, aggregate recruitment workspaces, interviews, lifecycle tasks, support assignments, and candidate conversion
+
+The Web handlers are transport adapters over CRM-HR application services. They do not expose a seed endpoint and do not write the database directly. Demonstration scenarios must use normal resource commands with search-before-create identity reconciliation.
+
+Sensitive party collection rows keep their existing redaction behavior. Detail/workspace responses are explicit-id operations and can include HR data; remotely reachable deployments must enable API bearer authorization before exposing this family. JWT `scope`/`scopes` claims are currently token metadata, not route policies, so do not describe them as CRM-HR authorization enforcement.
+
+See [CRM-HR API](crm-hr-api.md) and the [CRM-HR API skill](../codex/skills/candoitall-api-crmhr/SKILL.md).
+
 ### Plugins And Projects
 
 `/api/projects` record commands are covered by the Project Structure API skill because project records and structure operations are normally used together. `/api/plugins` does not currently have a dedicated repo-managed API skill; use OpenAPI plus `src/App/CanDoItAll.Web/Api/PluginsApi.cs` until a dedicated skill is justified.
@@ -128,6 +143,7 @@ The internal MAF/runtime-provider tool surface is narrower than the HTTP API. Cu
    - [Agents API skill](../codex/skills/candoitall-api-agents/SKILL.md)
    - [Workflows API skill](../codex/skills/candoitall-api-workflows/SKILL.md)
    - [Cognitive Memory API skill](../codex/skills/candoitall-api-cognitive-memory/SKILL.md)
+   - [CRM-HR API skill](../codex/skills/candoitall-api-crmhr/SKILL.md)
 5. Make the smallest focused API call.
 6. Read back the changed resource or run evidence route.
 

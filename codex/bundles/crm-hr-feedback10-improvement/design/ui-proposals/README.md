@@ -34,6 +34,10 @@ and first-viewport behavior.
 | `06-project-picker-dialog.png` | Reuse project-list vocabulary in a paged project picker with search, status, portfolio, tags, selection summary, and stable actions. |
 | `07-financials-tab.png` | Add a task-first `Financials` tab with opportunity-derived sold/bought/net metrics, monthly/yearly grouped bars, sold-vs-bought doughnut distribution, and an explicit `Coming with invoicing` placeholder. |
 | `08-opportunity-edit-dialog.png` | Keep opportunity editing isolated in a wide controlled dialog with explicit record selectors, commercial validation, stale-update context, and stable cancel/save actions. |
+| `09-directory-card-catalog.png` | Correct the earlier split-pane direction: Directory becomes a full-width, server-paged card catalogue with compact filters, bounded result scrolling, and fixed paging. |
+| `10-workforce-card-catalog.png` | Give Workforce the same catalogue interaction with realistic worker/unit states, compact supporting metadata, bounded result scrolling, and no inline editor. |
+| `11-party-details-edit-dialog.png` | Keep the Directory catalogue behind a full controlled party details/editor dialog with compact tabs, body scrolling, and a stable footer. |
+| `12-workforce-details-edit-dialog.png` | Keep Workforce details, skills, allocations, history, and profile editing in one controlled dialog while preserving the catalogue context. |
 
 ## Source References
 
@@ -50,7 +54,7 @@ and first-viewport behavior.
 ## Implementation Rules Derived From The Proposals
 
 - The primary collection must be useful in the first viewport.
-- The standard CRM page remains the intentional page scroll owner.
+- Directory and Workforce use their card-results region as the intentional inner scroll owner while keeping catalogue controls and paging visible; other CRM pages preserve their recorded scroll ownership.
 - Independent create/edit work belongs in controlled `Dialog` components with
   stable headers and footers.
 - Selection dialogs own their internal result scrolling and keep paging and

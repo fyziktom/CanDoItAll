@@ -34,6 +34,14 @@ dotnet test ..\CanDoItAll.Mcp\tests\CanDoItAll.Mcp.DotNetWatch.IntegrationTests\
 
 Playwright hosts and MCP stdio tests infer the active build configuration from the test output path. Set `CANDOITALL_TEST_CONFIGURATION` only when running from a non-standard output layout. MCP tests live in the sibling `CanDoItAll.Mcp` repo; the DotNetWatch integration assembly uses this repo for workspace settings and runtime state. The DotNetWatch integration assembly is categorized as `LiveProcess` and `LongRunning`, so `Category!=Quarantined` is its stable extended gate.
 
+For CRM-HR API changes, run the real HTTP-host integration slice before the broad gate:
+
+```powershell
+dotnet test tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj --configuration Release --filter "FullyQualifiedName~CrmHrApiIntegrationTests" /m:1
+```
+
+This proof must create/read linked records through `/api/crm-hr`; direct service or database setup is not a substitute for the HTTP boundary under test.
+
 ## Full Suite
 
 ```powershell

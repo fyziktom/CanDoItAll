@@ -80,3 +80,18 @@ The new `CrmHr -> AppComponents` edge points toward a domain-neutral UI project 
 - Source assertion: no AppComponents file imports CRM/HR or Projects namespaces.
 - Source assertion: no new feature partial class is added.
 - Unit tests instantiate the record-browser loader/query and financial projection without constructing the old large services/pages.
+
+## Follow-Up Dependency Proof
+
+```text
+External API client / Codex skill
+  -> HTTP /api/crm-hr
+  -> CanDoItAll.Web transport adapter
+  -> existing CanDoItAll.Modules.CrmHr application services
+  -> existing persistence/integration dependencies
+```
+
+- No project reference is added for the API because Web already references CRM-HR.
+- The AppComponents scroll option remains a primitive/enum presentation contract and cannot import CRM-HR.
+- CRM-HR does not reference Web, the API skill, or seed orchestration.
+- Required proof adds: source assertion that `CrmHrApi` contains no `DbContext`/entity writes; project-reference diff; default-off picker behavior; and Release solution build.

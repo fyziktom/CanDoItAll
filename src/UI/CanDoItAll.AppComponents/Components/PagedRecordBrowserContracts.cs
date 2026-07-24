@@ -1,5 +1,11 @@
 namespace CanDoItAll.AppComponents;
 
+public enum PagedRecordResultsScrollMode
+{
+    Page,
+    Bounded
+}
+
 public sealed record PagedRecordRequest<TFilter>(
     string SearchText,
     IReadOnlyList<string> Tags,

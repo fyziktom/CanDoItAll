@@ -100,3 +100,21 @@ The existing partial-class split is cross-module integration leakage already und
 - A migration limited to the entity property without import/export/merge/snapshot review would create partial behavior.
 - A full-list fallback in the picker would conceal query or transport errors and violate scale.
 - Without CodeAnalytics, cycle assertions require explicit project-reference inspection and build proof.
+
+## 2026-07-24 Follow-Up Re-entry
+
+- `CrmHrDirectoryPage.razor` and `CrmHrWorkforcePage.razor` already use `PartyRecordBrowser`, whose query path performs source `Count` plus stable `Skip`/`Take`; the follow-up does not justify replacing that paging boundary.
+- Both pages still render their selected-record workspaces permanently inside `ListDetailShell`. Directory is approximately 1,850 lines and Workforce approximately 1,500 lines, so extracting their full orchestration into new stateful components would increase refactoring risk.
+- `PagedRecordBrowser` has no bounded results-scroll mode. The routed page currently owns vertical scrolling, while the Agents catalogue bounds only its card-results region.
+- `CrmHrRouteCatalog` still exposes ambiguous workbench titles for Directory, Workforce, Recruiting, and Assignments even though route/tab identity is path-based.
+- Web maps several `/api` areas but no `/api/crm-hr` area. CRM-HR commands already exist behind application services; an HTTP adapter can delegate without direct EF access or a new service layer.
+- Local `Api:Authorization:Enabled` is false by explicit configuration. When authorization is enabled, the existing `/api` group requires authentication, but issued JWT scopes are descriptive claims and are not currently enforced as endpoint policies. The CRM-HR API must not claim scope isolation that the platform does not implement.
+- The existing host contains no general CRM-HR demo-data startup hook. Follow-up scenarios must be created by an external, idempotent HTTP operator flow.
+
+## Follow-Up Risks
+
+- A default browser overflow change would create nested scrolling in picker dialogs; bounded results scrolling must be typed and opt-in.
+- Route-selected dialogs need request-generation invalidation so a late load cannot reopen or overwrite a closed dialog.
+- API list responses must stay bounded and must not expose confidential notes or private contact values.
+- Treating external codes as idempotency keys without query-before-write would create duplicates because the existing application services do not promise HTTP idempotency.
+- Broadly redesigning the existing API authorization model inside this UI/data task would enlarge scope. Record the existing authenticated-group boundary honestly and keep sensitive detail operations out of the new contract.

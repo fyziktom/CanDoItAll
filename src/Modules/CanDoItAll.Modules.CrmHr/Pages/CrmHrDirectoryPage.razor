@@ -55,24 +55,35 @@
         <Stack GapScale="LayoutGap.Medium">
             <CrmHrSecondaryTabs SelectedArea="CrmHrWorkspaceArea.Directory" />
 
-            <ListDetailShell ListPaneWidth="25rem">
-                <ListHeader>
-                    <ListPanelHeader Title="Directory"
+            <SurfaceCard data-testid="crmhr-directory-catalog">
+                <Stack GapScale="LayoutGap.Medium">
+                    <ListPanelHeader Title="Directory records"
+                                     Description="Search and page through shared people, organizations, delivery units, and AI agents. Open a card to view or edit the complete record."
                                      Count="Server-paged" />
-                </ListHeader>
-
-                <ListContent>
                     <PartyRecordBrowser @key="directoryBrowserVersion"
                                         SelectedPartyId="@editor.Id"
                                         SelectionChanged="SelectPartyAsync"
                                         IncludeArchived="true"
                                         PageSize="18"
+                                        ResultsScrollMode="PagedRecordResultsScrollMode.Bounded"
                                         SearchPlaceholder="Search name, code, summary, or tags"
                                         OptionTestId="crmhr-directory-item"
                                         DataTestId="crmhr-directory" />
-                </ListContent>
+                </Stack>
+            </SurfaceCard>
 
-                <DetailHeader>
+            @if (isEditorDialogOpen)
+            {
+                <Dialog IsOpen="true"
+                        Eyebrow="Party directory"
+                        Title="@EditorTitle"
+                        Subtitle="Shared identity, contact, privacy, activity, and relationship record."
+                        Size="ModalSize.Full"
+                        DenseChrome="true"
+                        CloseOnBackdrop="false"
+                        TestId="crmhr-directory-record-dialog"
+                        OnClose="CloseEditorDialogAsync">
+                    <ChildContent>
                     <Split Gap="LayoutGap.Medium">
                         <Stack GapScale="LayoutGap.Tiny">
                             <p class="cda-eyebrow">Party editor</p>
@@ -88,10 +99,10 @@
                             }
                         </Cluster>
                     </Split>
-                </DetailHeader>
 
-                <DetailContent>
-                    <EditForm Model="editor" OnValidSubmit="SaveAsync">
+                    <EditForm id="crmhr-directory-record-form"
+                              Model="editor"
+                              OnValidSubmit="SaveAsync">
                         <Stack Class="min-h-full" GapScale="LayoutGap.Large">
                             <Tabs SelectedIndex="@selectedEditorTabIndex"
                                   SelectedIndexChanged="HandleEditorTabChangedAsync"
@@ -667,29 +678,35 @@
                                 </TabsItem>
                             </Tabs>
 
-                            <StickyActionFooter StatusLabel="Party save state"
-                                                StatusTone="success">
-                                <SecondaryActions>
-                                    <Button Text="New party"
-                                            ButtonStyle="ButtonStyle.Light"
-                                            Click="CreateNewAsync" />
-                                </SecondaryActions>
-                                <PrimaryActions>
-                                    <Button Text="Save party"
-                                            Type="submit"
-                                            data-testid="crmhr-party-save-button" />
-                                </PrimaryActions>
-                            </StickyActionFooter>
                         </Stack>
                     </EditForm>
+                    </ChildContent>
+                    <Footer>
+                        <Split Breakpoint="LayoutBreakpoint.None"
+                               Gap="LayoutGap.Medium"
+                               AlignItems="AlignItems.Center"
+                               JustifyContent="JustifyContent.SpaceBetween"
+                               Wrap="FlexWrap.Wrap">
+                            <SmallText Text="Changes remain local until Save party succeeds." />
+                            <Cluster Gap="LayoutGap.Small">
+                                <Button Text="Close"
+                                        ButtonStyle="ButtonStyle.Light"
+                                        Click="CloseEditorDialogAsync"
+                                        data-testid="crmhr-directory-record-close" />
+                                <Button Text="Save party"
+                                        Click="SaveAsync"
+                                        data-testid="crmhr-party-save-button" />
+                            </Cluster>
+                        </Split>
+                    </Footer>
+                </Dialog>
+            }
 
-                    <PartyMergeDialog IsOpen="@isMergeDialogOpen"
-                                      CurrentPartyDisplayName="@editor.DisplayName"
-                                      Candidate="@mergeCandidate"
-                                      OnClose="HandleMergeCloseAsync"
-                                      OnConfirm="HandleMergeConfirmAsync" />
-                </DetailContent>
-            </ListDetailShell>
+            <PartyMergeDialog IsOpen="@isMergeDialogOpen"
+                              CurrentPartyDisplayName="@editor.DisplayName"
+                              Candidate="@mergeCandidate"
+                              OnClose="HandleMergeCloseAsync"
+                              OnConfirm="HandleMergeConfirmAsync" />
 
             @if (isImportExportDialogOpen)
             {
@@ -729,6 +746,7 @@
     private CrmActivityHistoryPage activityPage = CrmActivityHistoryPage.Empty();
     private PartyProjectAssignmentPage projectAssignmentsPage = PartyProjectAssignmentPage.Empty();
     private PartyDuplicateCandidateModel? mergeCandidate;
+    private bool isEditorDialogOpen;
     private bool isMergeDialogOpen;
     private bool isImportExportDialogOpen;
     private bool isRelationshipsLoading;
@@ -784,6 +802,11 @@
             return;
         }
 
+        if (requestedPartyId != editor.Id)
+        {
+            isEditorDialogOpen = false;
+        }
+
         var request = BeginDirectoryLoad(
             requestedPartyId,
             DirectoryLoadBinding.RouteBound);
@@ -798,6 +821,7 @@
         agentChatContextAccessState = outcome == DirectoryLoadOutcome.Ready
             ? AgentChatContextAccessState.Ready
             : AgentChatContextAccessState.Failed;
+        isEditorDialogOpen = outcome == DirectoryLoadOutcome.Ready && requestedPartyId.HasValue;
 
         if (outcome == DirectoryLoadOutcome.Ready)
         {
@@ -831,6 +855,7 @@
     private Task SelectPartyAsync(Guid partyId)
     {
         Interlocked.Increment(ref directoryLoadGeneration);
+        isEditorDialogOpen = false;
         selectedEditorTabIndex = ProfileTabIndex;
         agentChatContextAccessState = AgentChatContextAccessState.Loading;
         Navigation.NavigateTo($"/crm-hr/directory?partyId={partyId}", replace: true);
@@ -920,13 +945,39 @@
         handledPartyKey = "new";
         hasHandledPartyRequest = true;
         agentChatContextAccessState = AgentChatContextAccessState.Ready;
+        isEditorDialogOpen = true;
+        Navigation.NavigateTo("/crm-hr/directory", replace: true);
+        return Task.CompletedTask;
+    }
+
+    private Task CloseEditorDialogAsync()
+    {
+        if (!isEditorDialogOpen)
+        {
+            return Task.CompletedTask;
+        }
+
+        Interlocked.Increment(ref directoryLoadGeneration);
+        isEditorDialogOpen = false;
+        editor = PartyEditorViewModel.CreateNew();
+        selectedEditorTabIndex = ProfileTabIndex;
+        ResetDirectoryDetailState();
+        handledPartyKey = "new";
+        hasHandledPartyRequest = true;
+        agentChatContextAccessState = AgentChatContextAccessState.Ready;
         Navigation.NavigateTo("/crm-hr/directory", replace: true);
         return Task.CompletedTask;
     }
 
     private async Task SaveAsync()
     {
+        var action = CaptureDirectoryAction();
         var result = await PartyDirectoryService.SavePartyAsync(editor.ToEditorModel());
+        if (!IsCurrentDirectoryAction(action))
+        {
+            return;
+        }
+
         if (result.IsFailure)
         {
             NotificationService.Warning("Party was not saved", string.Join(" ", result.Errors.Select(error => error.Message)));
@@ -943,11 +994,20 @@
                 savedPartyId,
                 relationships,
                 editor.LastChangedBy);
+            if (!IsCurrentDirectoryAction(action))
+            {
+                return;
+            }
 
             if (relationshipSaveResult.IsFailure)
             {
                 directoryBrowserVersion++;
                 duplicateCandidates = await ManagementService.FindPotentialDuplicatesAsync(savedPartyId);
+                if (!IsCurrentDirectoryAction(action))
+                {
+                    return;
+                }
+
                 NotificationService.Warning(
                     "Party saved with relationship issue",
                     $"Relationships were not updated. {string.Join(" ", relationshipSaveResult.Errors.Select(error => error.Message))}");
@@ -959,6 +1019,11 @@
         NotificationService.Success("Party saved", "Party saved.");
         directoryBrowserVersion++;
         await LoadAsync(savedPartyId, clearMessage: false);
+        if (!isEditorDialogOpen || editor.Id != savedPartyId)
+        {
+            return;
+        }
+
         Navigation.NavigateTo($"/crm-hr/directory?partyId={savedPartyId}", replace: true);
     }
 
@@ -1342,11 +1407,19 @@
             return;
         }
 
+        var action = CaptureDirectoryAction();
+        var candidateId = mergeCandidate.Id;
         var result = await ManagementService.MergePartyAsync(
             retainedPartyId,
-            mergeCandidate.Id,
+            candidateId,
             editor.LastChangedBy,
             reason);
+        if (!IsCurrentDirectoryAction(action) ||
+            !isMergeDialogOpen ||
+            mergeCandidate?.Id != candidateId)
+        {
+            return;
+        }
 
         if (result.IsFailure || result.Value is not PartyMergeSummaryModel summary)
         {
@@ -1359,8 +1432,24 @@
         handledPartyKey = retainedPartyId.ToString("N");
         directoryBrowserVersion++;
         await LoadAsync(retainedPartyId, clearMessage: false);
+        if (!isEditorDialogOpen || editor.Id != retainedPartyId)
+        {
+            return;
+        }
+
         Navigation.NavigateTo($"/crm-hr/directory?partyId={retainedPartyId}", replace: true);
     }
+
+    private DirectoryActionStamp CaptureDirectoryAction()
+        => new(
+            Volatile.Read(ref directoryLoadGeneration),
+            PartyIdQuery,
+            editor);
+
+    private bool IsCurrentDirectoryAction(DirectoryActionStamp action)
+        => action.Generation == Volatile.Read(ref directoryLoadGeneration) &&
+           action.RoutePartyId == PartyIdQuery &&
+           ReferenceEquals(action.Editor, editor);
 
     private void ResetDirectoryDetailState()
     {
@@ -1487,6 +1576,11 @@
         Guid? RoutePartyId,
         DirectoryLoadBinding Binding,
         long Generation);
+
+    private readonly record struct DirectoryActionStamp(
+        long Generation,
+        Guid? RoutePartyId,
+        PartyEditorViewModel Editor);
 
     private sealed record DirectoryLoadSnapshot(
         PartyEditorViewModel Editor,

@@ -7,6 +7,8 @@
 3. Execute SB02 and SB03 sequentially so tag/picker adoption precedes contact persistence and relationship flows.
 4. Execute SB04 before SB05 because both change the CRM workspace and Financials depends on opportunity truth.
 5. Execute SB06 only after every earlier checkpoint passes; finish with broad validation and raw-note closure.
+6. Reopen the completed bundle for the follow-up. Execute SB07 and SB08 independently when useful.
+7. Execute SB09 only after SB08 passes; final closure waits for both SB07 and SB09.
 
 ## Subbundle Dependency Map
 
@@ -19,10 +21,17 @@ flowchart LR
     S4 --> S5["SB05 Financials / CP-05"]
     S5 --> S6["SB06 contextual tabs + hardening / CP-06"]
     S6 --> C["Completed validator + final closure gate"]
+    C --> S7["SB07 Directory/Workforce catalogues + dialogs / CP-07"]
+    C --> S8["SB08 CRM-HR HTTP API + skill / CP-08"]
+    S8 --> S9["SB09 API-seeded scenarios + docs / CP-09"]
+    S7 --> C2["Recompleted validator + final closure"]
+    S9 --> C2
 ```
 
 - A failed checkpoint reopens its owning subbundle and all downstream proof that depends on the failed contract.
 - SB04 and SB05 must not run in parallel because they both own `CrmHrCrmPage.razor`.
+- SB07 and SB08 are parallel-safe because they own UI/catalog and Web API/skill surfaces respectively.
+- SB09 depends on SB08 and supplies populated-data browser proof used by final SB07/SB09 closure.
 
 ## Critical Subbundles
 
@@ -31,6 +40,9 @@ flowchart LR
 - SB03 is the persistence/correctness foundation; its migration round trip and exact crash regression must pass before opportunity work.
 - SB04 establishes opportunity/project truth consumed by SB05.
 - SB06 is the closure gate and may reopen any earlier work.
+- SB07 reopens the shared ordinary-list/title interpretation.
+- SB08 is the critical HTTP/skill foundation for SB09.
+- SB09 is the new final closure gate.
 
 ## Phase Gates
 

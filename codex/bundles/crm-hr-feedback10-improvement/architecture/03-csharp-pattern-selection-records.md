@@ -71,3 +71,44 @@
 - New types/projects: none beyond a thinner existing component.
 - Testability improvement: facade behavior is limited to filter mapping and selection propagation.
 - Proof required: source assertion that paging/search/error mechanics live in AppComponents; old dropdown/inline fallback removed; all consumers updated or facade deleted.
+
+## PSR-07: Opt-In Bounded Results Scroll
+
+- Problem force: Directory and Workforce need Agents-like dense catalogues whose filters and pager remain usable, while picker dialogs already own their own scrolling.
+- Selected pattern: a strongly typed/default-off browser presentation option that modifies only the results container.
+- Rejected alternatives:
+  - Global overflow CSS: changes every picker consumer and creates nested scroll traps.
+  - Page-level fixed height: scrolls controls and pager away.
+  - Copying the Agents in-memory catalogue: discards genuine server paging.
+- Testability improvement: component tests can assert default and opt-in modifiers without a CRM dependency.
+- Proof required: fixed filter/pager, bounded results at `1800x1100`, default picker unchanged, and real next-page loads.
+
+## PSR-08: Route-Synchronized Controlled Record Dialog
+
+- Problem force: record selection remains addressable by `partyId`, but permanent split editors waste catalogue width and conflict with the requested Agents interaction.
+- Selected pattern: keep page-owned generation/load state and render the existing workspace in one controlled full dialog; opening follows successful selection load and closing clears route selection plus invalidates pending work.
+- Rejected alternatives:
+  - New stateful detail component containing copied services/view models: broadens an already large refactor.
+  - Separate detail and edit state machines: duplicates the same tabbed workspace for no behavioral gain.
+  - CSS overlay around the permanent editor: leaves route/loading ownership ambiguous.
+- Testability improvement: existing page freshness/privacy tests remain the orchestration seam; browser tests exercise deep-link, close/reopen, nested overlays, and stale completion.
+- Proof required: no permanent detail pane, list context remains usable, and a closed dialog cannot be reopened by an old request.
+
+## PSR-09: Thin HTTP Transport Adapter
+
+- Problem force: realistic persistent CRM-HR scenarios must be operable through the product API, while application services already own validation, audit, search, and persistence.
+- Selected pattern: cohesive Minimal API route group with typed request models and direct delegation to existing application services.
+- Rejected alternatives:
+  - Direct `DbContext` writes in Web or a seed-only endpoint: bypasses canonical behavior.
+  - Generic command-name dispatcher: stringly typed and weakens OpenAPI.
+  - New repository/facade interfaces with one trivial implementation: boilerplate without a new lifecycle or boundary.
+- Testability improvement: route handlers are covered through the HTTP host and services retain their existing direct tests.
+- Proof required: positive linked scenario, bounded list output, structured invalid-reference/validation responses, no direct persistence, and normal API authorization composition.
+
+## PSR-10: External Search-Before-Create Scenario Operator
+
+- Problem force: demo records must persist and be repeatable without product startup code.
+- Selected pattern: an external HTTP workflow uses deterministic external codes, lists/searches before writes, and carries returned typed ids across commands.
+- Rejected alternatives: migrations with data, application startup seeding, direct SQL/EF scripts, destructive reset endpoints, and trusting row counts as identity.
+- Testability improvement: running the same operator flow twice proves stable business identities against the real API.
+- Proof required: two runs, identical external-code identities, no duplicates, and visible UI records.

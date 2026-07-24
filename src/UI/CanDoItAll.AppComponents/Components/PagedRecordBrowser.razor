@@ -7,7 +7,7 @@
 
 <Stack GapScale="LayoutGap.Medium"
        AlignItems="AlignItems.Stretch"
-       Class="paged-record-browser"
+       Class="paged-record-browser w-full"
        data-testid="@DataTestId">
     <FilterBar ResultText="@ResultText">
         <div class="paged-record-browser__filters"
@@ -99,7 +99,7 @@
     }
     else
     {
-        <div class="paged-record-browser__results"
+        <div class="@ResultsClass"
              data-testid="@($"{DataTestId}-results")">
             <Grid Gap="LayoutGap.Medium"
                   ColumnTemplate="repeat(auto-fit,minmax(16rem,1fr))"
@@ -270,6 +270,9 @@
     public int MaximumVisibleTags { get; set; } = 4;
 
     [Parameter]
+    public PagedRecordResultsScrollMode ResultsScrollMode { get; set; } = PagedRecordResultsScrollMode.Page;
+
+    [Parameter]
     public string SearchPlaceholder { get; set; } = "Search records";
 
     [Parameter]
@@ -331,6 +334,16 @@
         loadError is null &&
         page.TotalPages > 0 &&
         page.PageIndex + 1 < page.TotalPages;
+
+    private string ResultsClass => ResultsScrollMode switch
+    {
+        PagedRecordResultsScrollMode.Page => "paged-record-browser__results",
+        PagedRecordResultsScrollMode.Bounded => "paged-record-browser__results paged-record-browser__results--bounded",
+        _ => throw new ArgumentOutOfRangeException(
+            nameof(ResultsScrollMode),
+            ResultsScrollMode,
+            "Unknown paged record results scroll mode.")
+    };
 
     protected override async Task OnInitializedAsync()
     {

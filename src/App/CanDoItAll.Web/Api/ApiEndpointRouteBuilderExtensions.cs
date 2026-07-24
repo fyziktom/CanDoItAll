@@ -48,6 +48,7 @@ public static class ApiEndpointRouteBuilderExtensions
         group.MapProcessesApi();
         group.MapCognitiveMemoryApi();
         group.MapPluginsApi();
+        group.MapCrmHrApi();
 
         return endpoints;
     }
