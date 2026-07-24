@@ -1,0 +1,126 @@
+@using CanDoItAll.Components.BaseLib
+@using CanDoItAll.Modules.Projects
+@inject IProjectRecordQueryService ProjectRecordQueryService
+
+<FormField Text="@Label">
+    <SurfaceCard Soft="true">
+        <Split Breakpoint="LayoutBreakpoint.None"
+               Gap="LayoutGap.Medium"
+               AlignItems="AlignItems.Center"
+               JustifyContent="JustifyContent.SpaceBetween"
+               Wrap="FlexWrap.Wrap">
+            <div class="min-w-0">
+                <TextBlock TextStyle="TextStyle.Subtitle2"
+                           Value="@SelectedProjectLabel" />
+                <TextBlock TextStyle="TextStyle.Note"
+                           Value="@SelectedProjectDescription" />
+            </div>
+            <Cluster Gap="LayoutGap.Small">
+                @if (EffectiveSelectedProjectId.HasValue)
+                {
+                    <Button Text="Clear"
+                            ButtonStyle="ButtonStyle.Light"
+                            Size="ButtonSize.Small"
+                            Click="ClearSelectionAsync"
+                            data-testid="@($"{TestIdPrefix}-clear")" />
+                }
+                <Button Text="Choose project"
+                        Icon="search"
+                        Size="ButtonSize.Small"
+                        Click="OpenPicker"
+                        data-testid="@($"{TestIdPrefix}-select")" />
+            </Cluster>
+        </Split>
+    </SurfaceCard>
+</FormField>
+
+<ProjectRecordPickerDialog IsOpen="@isPickerOpen"
+                           SelectedProjectId="@EffectiveSelectedProjectId"
+                           InitialScope="ProjectRecordScope.All"
+                           SelectionConfirmed="ConfirmSelectionAsync"
+                           OnClose="ClosePickerAsync"
+                           Title="@($"Choose {Label.ToLowerInvariant()}")"
+                           Subtitle="Search and page through project records."
+                           DataTestId="@($"{TestIdPrefix}-dialog")" />
+
+@code {
+    private bool isPickerOpen;
+    private ProjectRecordQueryItem? resolvedSelectedProject;
+    private Guid? resolvedProjectId;
+    private long resolveGeneration;
+
+    [Parameter]
+    public string Label { get; set; } = "Project";
+
+    [Parameter]
+    public string TestIdPrefix { get; set; } = "crmhr-project-picker";
+
+    [Parameter]
+    public Guid? SelectedProjectId { get; set; }
+
+    [Parameter]
+    public EventCallback<Guid?> SelectedProjectIdChanged { get; set; }
+
+    private Guid? EffectiveSelectedProjectId => SelectedProjectId is { } projectId && projectId != Guid.Empty
+        ? projectId
+        : null;
+
+    private string SelectedProjectLabel => resolvedSelectedProject?.Name
+        ?? (EffectiveSelectedProjectId.HasValue ? "Selected project" : "No project selected");
+
+    private string SelectedProjectDescription => resolvedSelectedProject is null
+        ? EffectiveSelectedProjectId.HasValue
+            ? "The selected project remains linked while its display record is unavailable."
+            : "Choose from the server-paged project catalog."
+        : string.IsNullOrWhiteSpace(resolvedSelectedProject.CurrentPhase)
+            ? resolvedSelectedProject.Status.ToString()
+            : $"{resolvedSelectedProject.Status} / {resolvedSelectedProject.CurrentPhase}";
+
+    protected override async Task OnParametersSetAsync()
+    {
+        var selectedProjectId = EffectiveSelectedProjectId;
+        if (resolvedProjectId == selectedProjectId)
+        {
+            return;
+        }
+
+        resolvedProjectId = selectedProjectId;
+        var generation = ++resolveGeneration;
+        if (!selectedProjectId.HasValue)
+        {
+            resolvedSelectedProject = null;
+            return;
+        }
+
+        var project = await ProjectRecordQueryService.GetAsync(selectedProjectId.Value);
+        if (generation != resolveGeneration ||
+            resolvedProjectId != EffectiveSelectedProjectId)
+        {
+            return;
+        }
+
+        resolvedSelectedProject = project;
+    }
+
+    private void OpenPicker()
+    {
+        isPickerOpen = true;
+    }
+
+    private Task ClosePickerAsync()
+    {
+        isPickerOpen = false;
+        return Task.CompletedTask;
+    }
+
+    private async Task ConfirmSelectionAsync(Guid projectId)
+    {
+        isPickerOpen = false;
+        await SelectedProjectIdChanged.InvokeAsync(projectId);
+    }
+
+    private Task ClearSelectionAsync()
+    {
+        return SelectedProjectIdChanged.InvokeAsync(null);
+    }
+}

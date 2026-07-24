@@ -8,7 +8,7 @@
             <p class="cda-eyebrow">Bulk import and export</p>
             <h2 class="text-lg font-semibold text-slate-950">CSV stewardship tools</h2>
             <p class="text-sm leading-6 text-slate-600">
-                Export the current filtered party list, or paste CSV rows for preview-first import with explicit validation and duplicate warnings.
+                @ExportDescription
             </p>
         </Stack>
         <Cluster Gap="LayoutGap.Small">
@@ -99,14 +99,28 @@
     public IReadOnlyList<Guid> ExportPartyIds { get; set; } = [];
 
     [Parameter]
+    public PartyCsvExportScope ExportScope { get; set; } = PartyCsvExportScope.SelectedParties;
+
+    [Parameter]
     public EventCallback ImportApplied { get; set; }
 
     private async Task RefreshExportAsync()
     {
-        exportText = await ManagementService.ExportPartiesCsvAsync(ExportPartyIds);
-        statusMessage = $"Export refreshed for {ExportPartyIds.Count} party row(s).";
+        exportText = ExportScope switch
+        {
+            PartyCsvExportScope.SelectedParties => await ManagementService.ExportPartiesCsvAsync(ExportPartyIds),
+            PartyCsvExportScope.EntireDirectory => await ManagementService.ExportAllPartiesCsvAsync(),
+            _ => throw new ArgumentOutOfRangeException(nameof(ExportScope), ExportScope, "Unsupported party CSV export scope.")
+        };
+        statusMessage = ExportScope == PartyCsvExportScope.EntireDirectory
+            ? "Directory export refreshed."
+            : $"Export refreshed for {ExportPartyIds.Count} party row(s).";
         statusTone = "info";
     }
+
+    private string ExportDescription => ExportScope == PartyCsvExportScope.EntireDirectory
+        ? "Export the full party directory, or paste CSV rows for preview-first import with explicit validation and duplicate warnings."
+        : "Export the selected party records, or paste CSV rows for preview-first import with explicit validation and duplicate warnings.";
 
     private async Task PreviewImportAsync()
     {

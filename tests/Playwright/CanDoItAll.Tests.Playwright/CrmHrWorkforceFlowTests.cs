@@ -25,8 +25,8 @@ public sealed class CrmHrWorkforceFlowTests
         {
             ViewportSize = new ViewportSize
             {
-                Width = 1600,
-                Height = 1000
+                Width = 1800,
+                Height = 1100
             }
         });
         var page = await context.NewPageAsync();
@@ -51,12 +51,9 @@ public sealed class CrmHrWorkforceFlowTests
             State = WaitForSelectorState.Detached
         });
 
-        Assert.Equal(0, await page.GetByTestId("crmhr-workforce-kind-filter").CountAsync());
-        await page.GetByTestId("crmhr-workforce-filters-button").ClickAsync();
-        await page.GetByTestId("crmhr-workforce-kind-filter").WaitForAsync();
-        await page.GetByTestId("crmhr-workforce-filters-dialog")
-            .GetByRole(AriaRole.Button, new() { Name = "Show results", Exact = true })
-            .ClickAsync();
+        await page.GetByTestId("crmhr-workforce-scope-filter").WaitForAsync();
+        await page.GetByTestId("party-scope-people").WaitForAsync();
+        await page.GetByTestId("party-scope-units").WaitForAsync();
 
         await page.GetByTestId("crmhr-workforce-search").FillAsync(workerName);
         await page.GetByTestId("crmhr-workforce-item")
@@ -64,7 +61,6 @@ public sealed class CrmHrWorkforceFlowTests
             {
                 HasText = workerName
             })
-            .Locator("button")
             .First
             .ClickAsync();
         await page.GetByTestId("crmhr-workforce-summary-home-unit").WaitForAsync();
@@ -76,13 +72,6 @@ public sealed class CrmHrWorkforceFlowTests
         await page.ScreenshotAsync(new PageScreenshotOptions
         {
             Path = Path.Combine(evidenceDirectory, "crm-hr-workforce-b06-desktop.png"),
-            FullPage = true
-        });
-
-        await page.SetViewportSizeAsync(1100, 900);
-        await page.ScreenshotAsync(new PageScreenshotOptions
-        {
-            Path = Path.Combine(evidenceDirectory, "crm-hr-workforce-b06-tablet.png"),
             FullPage = true
         });
 

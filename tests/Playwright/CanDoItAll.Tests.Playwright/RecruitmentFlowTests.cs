@@ -30,8 +30,8 @@ public sealed class RecruitmentFlowTests
         {
             ViewportSize = new ViewportSize
             {
-                Width = 1600,
-                Height = 1000
+                Width = 1800,
+                Height = 1100
             }
         });
         var page = await context.NewPageAsync();
@@ -46,9 +46,9 @@ public sealed class RecruitmentFlowTests
         await page.GetByTestId("crmhr-recruiting-candidate-summary").FillAsync("Playwright recruiting candidate");
         await page.GetByTestId("crmhr-recruiting-role").FillAsync("Senior Platform Engineer");
         await page.GetByTestId("crmhr-recruiting-source").FillAsync("Referral");
-        await page.GetByTestId("crmhr-recruiting-recruiter").SelectOptionAsync(seed.RecruiterId.ToString());
-        await page.GetByTestId("crmhr-recruiting-hiring-manager").SelectOptionAsync(seed.HiringManagerId.ToString());
-        await page.GetByTestId("crmhr-recruiting-target-unit").SelectOptionAsync(seed.TargetUnitId.ToString());
+        await ChoosePartyAsync(page, "crmhr-recruiting-recruiter", seed.RecruiterId);
+        await ChoosePartyAsync(page, "crmhr-recruiting-hiring-manager", seed.HiringManagerId);
+        await ChoosePartyAsync(page, "crmhr-recruiting-target-unit", seed.TargetUnitId);
         await page.GetByTestId("crmhr-recruiting-save-button").ClickAsync();
         await ExpectTextContainsAsync(page.GetByTestId("crmhr-recruiting-message"), "Recruitment application saved.");
         await page.GetByTestId("crmhr-recruiting-stage-history-item").WaitForAsync();
@@ -59,7 +59,7 @@ public sealed class RecruitmentFlowTests
         await ExpectTextContainsAsync(page.GetByTestId("crmhr-recruiting-message"), "Recruitment application saved.");
 
         await page.GetByTestId("crmhr-recruiting-interview-scheduled").FillAsync("2026-04-15T10:30");
-        await page.GetByTestId("crmhr-recruiting-interviewer").SelectOptionAsync(seed.HiringManagerId.ToString());
+        await ChoosePartyAsync(page, "crmhr-recruiting-interviewer", seed.HiringManagerId);
         await page.GetByTestId("crmhr-recruiting-interview-outcome").SelectOptionAsync(RecruitmentInterviewOutcome.Yes.ToString());
         await page.GetByTestId("crmhr-recruiting-interview-recommendation").FillAsync("Proceed to offer");
         await page.GetByTestId("crmhr-recruiting-interview-feedback").FillAsync("Strong system design and delivery fit.");
@@ -67,17 +67,17 @@ public sealed class RecruitmentFlowTests
         await ExpectTextContainsAsync(page.GetByTestId("crmhr-recruiting-message"), "Interview saved.");
         await page.GetByTestId("crmhr-recruiting-interview-item").WaitForAsync();
 
-        await page.GetByTestId("crmhr-recruiting-support-manager").SelectOptionAsync(seed.HiringManagerId.ToString());
-        await page.GetByTestId("crmhr-recruiting-support-buddy").SelectOptionAsync(seed.BuddyId.ToString());
-        await page.GetByTestId("crmhr-recruiting-support-mentor").SelectOptionAsync(seed.MentorId.ToString());
+        await ChoosePartyAsync(page, "crmhr-recruiting-support-manager", seed.HiringManagerId);
+        await ChoosePartyAsync(page, "crmhr-recruiting-support-buddy", seed.BuddyId);
+        await ChoosePartyAsync(page, "crmhr-recruiting-support-mentor", seed.MentorId);
         await page.GetByTestId("crmhr-recruiting-support-save-button").ClickAsync();
         await ExpectTextContainsAsync(page.GetByTestId("crmhr-recruiting-message"), "Support assignments saved.");
 
         await page.GetByTestId("crmhr-recruiting-task-kind").SelectOptionAsync(LifecycleTaskKind.Onboarding.ToString());
         await page.GetByTestId("crmhr-recruiting-task-title").FillAsync("Prepare equipment and access");
-        await page.GetByTestId("crmhr-recruiting-task-owner").SelectOptionAsync(seed.HiringManagerId.ToString());
+        await ChoosePartyAsync(page, "crmhr-recruiting-task-owner", seed.HiringManagerId);
         await page.GetByTestId("crmhr-recruiting-task-due-date").FillAsync("2026-04-20");
-        await page.GetByTestId("crmhr-recruiting-task-project").SelectOptionAsync(seed.ProjectId.ToString());
+        await ChooseProjectAsync(page, "crmhr-recruiting-task-project", seed.ProjectId);
         await page.GetByTestId("crmhr-recruiting-task-notes").FillAsync("Provision laptop, VPN, and starter access.");
         await page.GetByTestId("crmhr-recruiting-task-save-button").ClickAsync();
         await ExpectTextContainsAsync(page.GetByTestId("crmhr-recruiting-message"), "Lifecycle task saved.");
@@ -86,8 +86,8 @@ public sealed class RecruitmentFlowTests
         await page.GetByTestId("crmhr-recruiting-convert-job-title").FillAsync("Senior Platform Engineer");
         await page.GetByTestId("crmhr-recruiting-convert-discipline").FillAsync("Platform");
         await page.GetByTestId("crmhr-recruiting-convert-seniority").FillAsync("Senior");
-        await page.GetByTestId("crmhr-recruiting-convert-home-unit").SelectOptionAsync(seed.TargetUnitId.ToString());
-        await page.GetByTestId("crmhr-recruiting-convert-manager").SelectOptionAsync(seed.HiringManagerId.ToString());
+        await ChoosePartyAsync(page, "crmhr-recruiting-convert-home-unit", seed.TargetUnitId);
+        await ChoosePartyAsync(page, "crmhr-recruiting-convert-manager", seed.HiringManagerId);
         await page.GetByTestId("crmhr-recruiting-convert-start-date").FillAsync("2026-05-01");
         await page.GetByTestId("crmhr-recruiting-convert-location").FillAsync("Remote");
         await page.GetByTestId("crmhr-recruiting-convert-timezone").FillAsync("Europe/Prague");
@@ -102,15 +102,28 @@ public sealed class RecruitmentFlowTests
             FullPage = true
         });
 
-        await page.SetViewportSizeAsync(1100, 900);
-        await page.ScreenshotAsync(new PageScreenshotOptions
-        {
-            Path = Path.Combine(evidenceDirectory, "crm-hr-recruiting-b08-tablet.png"),
-            FullPage = true
-        });
-
         await VerifyPersistedStateAsync(seed);
         Assert.False(await page.Locator("#blazor-error-ui").IsVisibleAsync());
+    }
+
+    private static async Task ChoosePartyAsync(
+        IPage page,
+        string testIdPrefix,
+        Guid partyId)
+    {
+        await page.GetByTestId($"{testIdPrefix}-select").ClickAsync();
+        await page.GetByTestId($"crmhr-party-option-{partyId:N}").ClickAsync();
+        await page.GetByTestId($"{testIdPrefix}-dialog-confirm").ClickAsync();
+    }
+
+    private static async Task ChooseProjectAsync(
+        IPage page,
+        string testIdPrefix,
+        Guid projectId)
+    {
+        await page.GetByTestId($"{testIdPrefix}-select").ClickAsync();
+        await page.GetByTestId($"crmhr-project-option-{projectId:N}").ClickAsync();
+        await page.GetByTestId($"{testIdPrefix}-dialog-confirm").ClickAsync();
     }
 
     private async Task VerifyPersistedStateAsync(SeededScenario seed)
@@ -131,7 +144,11 @@ public sealed class RecruitmentFlowTests
 
         var candidate = Assert.Single(await partyDirectoryService.ListDirectoryAsync(), item => item.DisplayName == seed.CandidateName);
 
-        var application = Assert.Single(await recruitingService.ListRecruitmentApplicationsAsync(), item => item.CandidateName == seed.CandidateName);
+        var applications = await recruitingService.SearchRecruitmentApplicationsAsync(
+            new RecruitmentApplicationQuery(
+                seed.CandidateName,
+                PageSize: RecruitmentApplicationQueryLimits.MaximumPageSize));
+        var application = Assert.Single(applications.Items, item => item.CandidateName == seed.CandidateName);
         var workspace = await recruitingService.GetRecruitmentWorkspaceAsync(application.Id);
 
         Assert.True(workspace.HasWorkforceProfile);

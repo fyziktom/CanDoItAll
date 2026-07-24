@@ -1,0 +1,480 @@
+@implements IAsyncDisposable
+@using Microsoft.Extensions.Logging
+@inject IOpportunityPipelineQueryService OpportunityPipelineQueryService
+@inject ILogger<OpportunityPipeline> Logger
+
+<Stack GapScale="LayoutGap.Medium"
+       data-testid="crmhr-opportunity-pipeline">
+    <Split Gap="LayoutGap.Medium"
+           AlignItems="AlignItems.Center"
+           JustifyContent="JustifyContent.SpaceBetween"
+           Wrap="FlexWrap.Wrap">
+        <Stack GapScale="LayoutGap.XSmall">
+            <TextBlock TextStyle="TextStyle.Subtitle2"
+                       Value="Opportunity pipeline" />
+            <SmallText Text="Search and filter the account pipeline without loading every opportunity into the page." />
+        </Stack>
+        <Button Text="Add opportunity"
+                Icon="add"
+                Click="AddOpportunity"
+                data-testid="crmhr-opportunity-add-button" />
+    </Split>
+
+    <FilterBar ResultText="@ResultText">
+        <Stack GapScale="LayoutGap.Small"
+               Class="w-full"
+               data-testid="crmhr-opportunity-filter-stack">
+            <Grid Gap="LayoutGap.Small"
+                  ColumnsLg="3">
+                <input value="@searchText"
+                       @oninput="HandleSearchInputAsync"
+                       class="cda-input"
+                       placeholder="Search title or summary"
+                       aria-label="Search opportunities"
+                       data-testid="crmhr-opportunity-search" />
+                <InputSelect @bind-Value="stageFilter"
+                             @bind-Value:after="HandleFilterChangedAsync"
+                             class="cda-input"
+                             aria-label="Opportunity stage"
+                             data-testid="crmhr-opportunity-stage-filter">
+                    <option value="">All stages</option>
+                    @foreach (var stage in Enum.GetValues<OpportunityStage>())
+                    {
+                        <option value="@stage">@stage</option>
+                    }
+                </InputSelect>
+                <InputSelect @bind-Value="sourceFilter"
+                             @bind-Value:after="HandleFilterChangedAsync"
+                             class="cda-input"
+                             aria-label="Opportunity source"
+                             data-testid="crmhr-opportunity-source-filter">
+                    <option value="">All sources</option>
+                    @foreach (var source in Enum.GetValues<OpportunitySource>())
+                    {
+                        <option value="@source">@source</option>
+                    }
+                </InputSelect>
+            </Grid>
+
+            <Cluster Gap="LayoutGap.Small"
+                     Wrap="FlexWrap.Wrap">
+                <Button Text="@(ownerPartyId.HasValue ? "Owner selected" : "Any owner")"
+                        Icon="person_search"
+                        ButtonStyle="@(ownerPartyId.HasValue ? ButtonStyle.Info : ButtonStyle.Light)"
+                        Size="ButtonSize.Small"
+                        Click="@(() => OpenPartyFilter(OpportunityPartyFilterKind.Owner))"
+                        data-testid="crmhr-opportunity-owner-filter" />
+                <Button Text="@(deliveryUnitPartyId.HasValue ? "Delivery selected" : "Any delivery unit")"
+                        Icon="account_tree"
+                        ButtonStyle="@(deliveryUnitPartyId.HasValue ? ButtonStyle.Info : ButtonStyle.Light)"
+                        Size="ButtonSize.Small"
+                        Click="@(() => OpenPartyFilter(OpportunityPartyFilterKind.DeliveryUnit))"
+                        data-testid="crmhr-opportunity-delivery-filter" />
+                <Button Text="@(partnerPartyId.HasValue ? "Partner selected" : "Any partner")"
+                        Icon="handshake"
+                        ButtonStyle="@(partnerPartyId.HasValue ? ButtonStyle.Info : ButtonStyle.Light)"
+                        Size="ButtonSize.Small"
+                        Click="@(() => OpenPartyFilter(OpportunityPartyFilterKind.Partner))"
+                        data-testid="crmhr-opportunity-partner-filter" />
+                <Button Text="Reset"
+                        Icon="restart_alt"
+                        ButtonStyle="ButtonStyle.Light"
+                        Size="ButtonSize.Small"
+                        Disabled="@(!HasActiveFilters)"
+                        Click="ResetFiltersAsync"
+                        data-testid="crmhr-opportunity-filter-reset" />
+            </Cluster>
+        </Stack>
+    </FilterBar>
+
+    @if (isLoading)
+    {
+        <div data-testid="crmhr-opportunity-loading">
+            <EmptyState Eyebrow="Opportunities"
+                        Title="Loading pipeline"
+                        Description="Loading the requested opportunity page." />
+        </div>
+    }
+    else if (loadError is not null)
+    {
+        <div data-testid="crmhr-opportunity-error">
+            <EmptyState Eyebrow="Pipeline unavailable"
+                        Title="Opportunities could not be loaded"
+                        Description="Retry after checking the active CRM data source.">
+                <Actions>
+                    <Button Text="Retry"
+                            ButtonStyle="ButtonStyle.Light"
+                            Click="@(() => LoadPageAsync(page.PageIndex))"
+                            data-testid="crmhr-opportunity-retry" />
+                </Actions>
+            </EmptyState>
+        </div>
+    }
+    else if (page.Items.Count == 0)
+    {
+        <div data-testid="crmhr-opportunity-empty">
+            <EmptyState Eyebrow="No opportunities"
+                        Title="No pipeline records match"
+                        Description="Change the filters or create an opportunity for this account.">
+                <Actions>
+                    <Button Text="Add opportunity"
+                            Icon="add"
+                            Click="AddOpportunity" />
+                </Actions>
+            </EmptyState>
+        </div>
+    }
+    else
+    {
+        <OpportunityBoard Opportunities="page.Items"
+                          SelectedOpportunityId="SelectedOpportunityId"
+                          SelectOpportunity="SelectOpportunity"
+                          AdvanceOpportunityStage="AdvanceOpportunityStage" />
+    }
+
+    <Split Breakpoint="LayoutBreakpoint.None"
+           Gap="LayoutGap.Small"
+           AlignItems="AlignItems.Center"
+           JustifyContent="JustifyContent.SpaceBetween"
+           Wrap="FlexWrap.Wrap"
+           data-testid="crmhr-opportunity-pager">
+        <StatusBadge Tone="neutral"
+                     Text="@PageText" />
+        <Cluster Gap="LayoutGap.Small">
+            <Button Text="Previous"
+                    Icon="chevron_left"
+                    ButtonStyle="ButtonStyle.Light"
+                    Size="ButtonSize.Small"
+                    Disabled="@(!CanMovePrevious)"
+                    Click="@(() => LoadPageAsync(page.PageIndex - 1))"
+                    data-testid="crmhr-opportunity-previous" />
+            <Button Text="Next"
+                    Icon="chevron_right"
+                    ButtonStyle="ButtonStyle.Light"
+                    Size="ButtonSize.Small"
+                    Disabled="@(!CanMoveNext)"
+                    Click="@(() => LoadPageAsync(page.PageIndex + 1))"
+                    data-testid="crmhr-opportunity-next" />
+        </Cluster>
+    </Split>
+</Stack>
+
+<PartyRecordPickerDialog IsOpen="@(partyFilterKind == OpportunityPartyFilterKind.Owner)"
+                         SelectedPartyId="ownerPartyId"
+                         AllowedScope="@(PartyRecordScope.People | PartyRecordScope.OrganizationUnits | PartyRecordScope.AiAgents)"
+                         InitialScope="@(PartyRecordScope.People | PartyRecordScope.OrganizationUnits | PartyRecordScope.AiAgents)"
+                         SelectionConfirmed="HandlePartyFilterSelectedAsync"
+                         OnClose="ClosePartyFilterAsync"
+                         LoadFailed="LoadFailed"
+                         Title="Filter by owner"
+                         Subtitle="Choose one owner without loading the full directory."
+                         DataTestId="crmhr-opportunity-owner-picker" />
+
+<PartyRecordPickerDialog IsOpen="@(partyFilterKind == OpportunityPartyFilterKind.DeliveryUnit)"
+                         SelectedPartyId="deliveryUnitPartyId"
+                         AllowedScope="PartyRecordScope.OrganizationUnits"
+                         InitialScope="PartyRecordScope.OrganizationUnits"
+                         SelectionConfirmed="HandlePartyFilterSelectedAsync"
+                         OnClose="ClosePartyFilterAsync"
+                         LoadFailed="LoadFailed"
+                         Title="Filter by delivery unit"
+                         Subtitle="Choose one organization unit without loading the full directory."
+                         DataTestId="crmhr-opportunity-delivery-picker" />
+
+<PartyRecordPickerDialog IsOpen="@(partyFilterKind == OpportunityPartyFilterKind.Partner)"
+                         SelectedPartyId="partnerPartyId"
+                         AllowedScope="PartyRecordScope.All"
+                         InitialScope="PartyRecordScope.Organizations"
+                         SelectionConfirmed="HandlePartyFilterSelectedAsync"
+                         OnClose="ClosePartyFilterAsync"
+                         LoadFailed="LoadFailed"
+                         Title="Filter by partner"
+                         Subtitle="Choose one linked partner without loading the full directory."
+                         DataTestId="crmhr-opportunity-partner-picker" />
+
+@code {
+    private const int SearchDebounceMilliseconds = 250;
+    private readonly CancellationTokenSource lifetime = new();
+    private OpportunityPipelinePage page = new([], 0, OpportunityPipelineQueryLimits.DefaultPageSize, 0);
+    private CancellationTokenSource? operation;
+    private OpportunityStage? stageFilter;
+    private OpportunitySource? sourceFilter;
+    private OpportunityPartyFilterKind partyFilterKind;
+    private Guid? ownerPartyId;
+    private Guid? deliveryUnitPartyId;
+    private Guid? partnerPartyId;
+    private Guid loadedAccountPartyId;
+    private long loadedRefreshVersion = -1;
+    private long loadGeneration;
+    private string searchText = string.Empty;
+    private Exception? loadError;
+    private bool isLoading = true;
+    private bool disposed;
+
+    [Parameter, EditorRequired]
+    public Guid AccountPartyId { get; set; }
+
+    [Parameter]
+    public Guid? SelectedOpportunityId { get; set; }
+
+    [Parameter]
+    public long RefreshVersion { get; set; }
+
+    [Parameter]
+    public int PageSize { get; set; } = 8;
+
+    [Parameter]
+    public EventCallback AddOpportunity { get; set; }
+
+    [Parameter]
+    public EventCallback<Guid> SelectOpportunity { get; set; }
+
+    [Parameter]
+    public EventCallback<Guid> AdvanceOpportunityStage { get; set; }
+
+    [Parameter]
+    public EventCallback<Exception> LoadFailed { get; set; }
+
+    private string ResultText => isLoading
+        ? "Searching opportunities"
+        : $"{page.TotalCount:N0} matching opportunity record(s)";
+
+    private string PageText => page.TotalPages == 0
+        ? "No pages"
+        : $"Page {page.PageIndex + 1:N0} of {page.TotalPages:N0} · {page.TotalCount:N0} record(s)";
+
+    private bool HasActiveFilters =>
+        !string.IsNullOrWhiteSpace(searchText) ||
+        stageFilter.HasValue ||
+        sourceFilter.HasValue ||
+        ownerPartyId.HasValue ||
+        deliveryUnitPartyId.HasValue ||
+        partnerPartyId.HasValue;
+
+    private bool CanMovePrevious => !isLoading && loadError is null && page.PageIndex > 0;
+
+    private bool CanMoveNext =>
+        !isLoading &&
+        loadError is null &&
+        page.TotalPages > 0 &&
+        page.PageIndex + 1 < page.TotalPages;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (AccountPartyId == Guid.Empty)
+        {
+            throw new ArgumentException("An account is required by the opportunity pipeline.", nameof(AccountPartyId));
+        }
+
+        if (PageSize is < 1 or > OpportunityPipelineQueryLimits.MaximumPageSize)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(PageSize),
+                PageSize,
+                $"Page size must be between 1 and {OpportunityPipelineQueryLimits.MaximumPageSize}.");
+        }
+
+        if (loadedAccountPartyId == AccountPartyId &&
+            loadedRefreshVersion == RefreshVersion)
+        {
+            return;
+        }
+
+        if (loadedAccountPartyId != AccountPartyId)
+        {
+            ClearFilters();
+        }
+
+        loadedAccountPartyId = AccountPartyId;
+        loadedRefreshVersion = RefreshVersion;
+        page = new OpportunityPipelinePage([], 0, PageSize, 0);
+        await LoadPageAsync(0);
+    }
+
+    private async Task HandleSearchInputAsync(ChangeEventArgs args)
+    {
+        searchText = args.Value?.ToString() ?? string.Empty;
+        var currentOperation = ReplaceOperation();
+        var generation = ++loadGeneration;
+        try
+        {
+            await Task.Delay(SearchDebounceMilliseconds, currentOperation.Token);
+            await LoadPageCoreAsync(0, currentOperation, generation);
+        }
+        catch (OperationCanceledException) when (currentOperation.IsCancellationRequested)
+        {
+        }
+    }
+
+    private Task HandleFilterChangedAsync()
+    {
+        return LoadPageAsync(0);
+    }
+
+    private void OpenPartyFilter(OpportunityPartyFilterKind filterKind)
+    {
+        partyFilterKind = filterKind;
+    }
+
+    private Task ClosePartyFilterAsync()
+    {
+        partyFilterKind = OpportunityPartyFilterKind.None;
+        return Task.CompletedTask;
+    }
+
+    private async Task HandlePartyFilterSelectedAsync(Guid partyId)
+    {
+        switch (partyFilterKind)
+        {
+            case OpportunityPartyFilterKind.Owner:
+                ownerPartyId = partyId;
+                break;
+            case OpportunityPartyFilterKind.DeliveryUnit:
+                deliveryUnitPartyId = partyId;
+                break;
+            case OpportunityPartyFilterKind.Partner:
+                partnerPartyId = partyId;
+                break;
+            default:
+                return;
+        }
+
+        partyFilterKind = OpportunityPartyFilterKind.None;
+        await LoadPageAsync(0);
+    }
+
+    private Task ResetFiltersAsync()
+    {
+        ClearFilters();
+        return LoadPageAsync(0);
+    }
+
+    private void ClearFilters()
+    {
+        searchText = string.Empty;
+        stageFilter = null;
+        sourceFilter = null;
+        ownerPartyId = null;
+        deliveryUnitPartyId = null;
+        partnerPartyId = null;
+        partyFilterKind = OpportunityPartyFilterKind.None;
+    }
+
+    private Task LoadPageAsync(int pageIndex)
+    {
+        var currentOperation = ReplaceOperation();
+        var generation = ++loadGeneration;
+        return LoadPageCoreAsync(pageIndex, currentOperation, generation);
+    }
+
+    private async Task LoadPageCoreAsync(
+        int pageIndex,
+        CancellationTokenSource currentOperation,
+        long generation)
+    {
+        isLoading = true;
+        loadError = null;
+        try
+        {
+            var result = await OpportunityPipelineQueryService.SearchAsync(
+                new OpportunityPipelineQuery(
+                    AccountPartyId,
+                    searchText,
+                    stageFilter,
+                    ownerPartyId,
+                    deliveryUnitPartyId,
+                    partnerPartyId,
+                    sourceFilter,
+                    pageIndex,
+                    PageSize),
+                currentOperation.Token);
+            if (!IsCurrent(currentOperation, generation))
+            {
+                return;
+            }
+
+            ValidatePage(result, pageIndex);
+            page = result;
+        }
+        catch (OperationCanceledException) when (currentOperation.IsCancellationRequested)
+        {
+        }
+        catch (Exception exception)
+        {
+            if (!IsCurrent(currentOperation, generation))
+            {
+                return;
+            }
+
+            loadError = exception;
+            Logger.LogError(
+                exception,
+                "Opportunity pipeline load failed for account {AccountPartyId} and zero-based page {PageIndex}.",
+                AccountPartyId,
+                pageIndex);
+            await LoadFailed.InvokeAsync(exception);
+        }
+        finally
+        {
+            if (IsCurrent(currentOperation, generation))
+            {
+                isLoading = false;
+            }
+        }
+    }
+
+    private CancellationTokenSource ReplaceOperation()
+    {
+        operation?.Cancel();
+        operation?.Dispose();
+        operation = CancellationTokenSource.CreateLinkedTokenSource(lifetime.Token);
+        return operation;
+    }
+
+    private bool IsCurrent(CancellationTokenSource currentOperation, long generation)
+    {
+        return ReferenceEquals(operation, currentOperation) &&
+               generation == loadGeneration &&
+               !currentOperation.IsCancellationRequested;
+    }
+
+    private void ValidatePage(OpportunityPipelinePage result, int requestedPageIndex)
+    {
+        ArgumentNullException.ThrowIfNull(result);
+        ArgumentNullException.ThrowIfNull(result.Items);
+        if (result.PageIndex != requestedPageIndex ||
+            result.PageSize != PageSize)
+        {
+            throw new InvalidOperationException("The opportunity query returned a different page than requested.");
+        }
+
+        if (result.TotalCount < 0 ||
+            result.Items.Count > result.PageSize)
+        {
+            throw new InvalidOperationException("The opportunity query returned an invalid page.");
+        }
+    }
+
+    public ValueTask DisposeAsync()
+    {
+        if (disposed)
+        {
+            return ValueTask.CompletedTask;
+        }
+
+        disposed = true;
+        operation?.Cancel();
+        operation?.Dispose();
+        lifetime.Cancel();
+        lifetime.Dispose();
+        return ValueTask.CompletedTask;
+    }
+
+    private enum OpportunityPartyFilterKind
+    {
+        None,
+        Owner,
+        DeliveryUnit,
+        Partner
+    }
+}

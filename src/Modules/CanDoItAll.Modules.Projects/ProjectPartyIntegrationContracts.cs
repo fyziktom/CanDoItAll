@@ -318,6 +318,15 @@ public interface IProjectPartyIntegrationBridge
         ProjectPartyAssignmentUpsertRequest request,
         CancellationToken cancellationToken = default);
 
+    Task<Result> ReplaceProjectAssignmentsAsync(
+        Guid projectId,
+        IReadOnlyList<ProjectPartyAssignmentUpsertRequest> desiredAssignments,
+        IReadOnlyList<ProjectPartyAssignmentRole> targetRoles,
+        CancellationToken cancellationToken = default)
+        => Task.FromResult(Result.Failure(Error.Failure(
+            "Project-level assignment replacement is not available.",
+            "projects.party-assignment.project-replacement-unavailable")));
+
     Task<Result> ReplaceNodeAssignmentsAsync(
         Guid projectId,
         ProjectNodeReference nodeReference,
@@ -453,6 +462,17 @@ internal sealed class NoopProjectPartyIntegrationBridge : IProjectPartyIntegrati
         CancellationToken cancellationToken = default)
     {
         return Task.FromResult(Result<Guid>.Failure(Error.Failure(
+            "Project-party integration is not available.",
+            "projects.party-integration-unavailable")));
+    }
+
+    public Task<Result> ReplaceProjectAssignmentsAsync(
+        Guid projectId,
+        IReadOnlyList<ProjectPartyAssignmentUpsertRequest> desiredAssignments,
+        IReadOnlyList<ProjectPartyAssignmentRole> targetRoles,
+        CancellationToken cancellationToken = default)
+    {
+        return Task.FromResult(Result.Failure(Error.Failure(
             "Project-party integration is not available.",
             "projects.party-integration-unavailable")));
     }

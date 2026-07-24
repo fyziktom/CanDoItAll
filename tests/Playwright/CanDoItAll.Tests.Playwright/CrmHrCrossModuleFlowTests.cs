@@ -104,15 +104,15 @@ public sealed class CrmHrCrossModuleFlowTests
         Assert.False(await page.Locator("#blazor-error-ui").IsVisibleAsync());
 
         await page.GotoAsync($"{fixture.BaseUrl}/crm-hr/recruiting");
-        await page.GetByTestId("crmhr-recruiting-search").WaitForAsync();
-        await page.GetByTestId("crmhr-recruiting-search").FillAsync(seed.CandidateName);
-        await page.GetByTestId("crmhr-recruiting-application-item")
-            .Filter(new LocatorFilterOptions
-            {
-                HasText = seed.CandidateName
-            })
-            .Locator("button")
-            .First
+        await page.GetByTestId("crmhr-recruiting-applications-search").WaitForAsync();
+        await page.GetByTestId("crmhr-recruiting-applications-search").FillAsync(seed.CandidateName);
+        await page.GetByRole(
+                AriaRole.Button,
+                new PageGetByRoleOptions
+                {
+                    Name = $"Select {seed.CandidateName}",
+                    Exact = true
+                })
             .ClickAsync();
         await page.GetByTestId("crmhr-recruiting-convert-existing-callout").WaitForAsync();
         await page.WaitForSelectorAsync($"text={seed.LifecycleTaskTitle}");

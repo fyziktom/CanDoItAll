@@ -29,6 +29,26 @@ public sealed class AiResourceBinding
 
     public string LastError { get; set; } = string.Empty;
 
+    public AiExecutionMode? ProjectedExecutionMode { get; set; }
+
+    public string ProjectedProviderName { get; set; } = string.Empty;
+
+    public string ProjectedDefaultModel { get; set; } = string.Empty;
+
+    public int ProjectedCapabilityCount { get; set; }
+
+    public string ProjectedRoleTitle { get; set; } = string.Empty;
+
+    public string ProjectedInstructions { get; set; } = string.Empty;
+
+    public string ProjectedTemplateKey { get; set; } = string.Empty;
+
+    public string ProjectedTagsJson { get; set; } = "[]";
+
+    public string ProjectedCapabilitiesJson { get; set; } = "[]";
+
+    public DateTimeOffset? ProjectionUpdatedAtUtc { get; set; }
+
     public DateTimeOffset CreatedAtUtc { get; set; }
 
     public DateTimeOffset UpdatedAtUtc { get; set; }
@@ -43,6 +63,16 @@ internal sealed class AiResourceBindingConfiguration : IEntityTypeConfiguration<
         builder.Property(binding => binding.BindingStatus).HasConversion<string>().HasMaxLength(32);
         builder.Property(binding => binding.BindingReason).HasColumnType("TEXT");
         builder.Property(binding => binding.LastError).HasColumnType("TEXT");
+        builder.Property(binding => binding.ProjectedExecutionMode)
+            .HasConversion<string>()
+            .HasMaxLength(32);
+        builder.Property(binding => binding.ProjectedProviderName).HasMaxLength(200);
+        builder.Property(binding => binding.ProjectedDefaultModel).HasMaxLength(200);
+        builder.Property(binding => binding.ProjectedRoleTitle).HasMaxLength(200);
+        builder.Property(binding => binding.ProjectedInstructions).HasColumnType("TEXT");
+        builder.Property(binding => binding.ProjectedTemplateKey).HasMaxLength(200);
+        builder.Property(binding => binding.ProjectedTagsJson).HasColumnType("TEXT");
+        builder.Property(binding => binding.ProjectedCapabilitiesJson).HasColumnType("TEXT");
         builder.HasIndex(binding => binding.PartyId).IsUnique();
         builder.HasIndex(binding => binding.TechnicalAgentId);
     }
@@ -130,17 +160,21 @@ internal sealed class LegacyAiTechnicalAgentBridge(
         IReadOnlyList<Guid> partyIds,
         CancellationToken cancellationToken = default)
     {
-        if (partyIds.Count == 0)
+        var requestedPartyIds = partyIds
+            .Where(partyId => partyId != Guid.Empty)
+            .Distinct()
+            .ToArray();
+        if (requestedPartyIds.Length == 0)
         {
             return new Dictionary<Guid, AiTechnicalAgentDirectorySummary>();
         }
 
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         var profiles = await dbContext.Set<AiAgentProfile>()
-            .Where(item => partyIds.Contains(item.PartyId))
+            .Where(item => requestedPartyIds.Contains(item.PartyId))
             .ToListAsync(cancellationToken);
         var bindings = await dbContext.Set<AiResourceBinding>()
-            .Where(item => partyIds.Contains(item.PartyId))
+            .Where(item => requestedPartyIds.Contains(item.PartyId))
             .ToListAsync(cancellationToken);
         var providerIds = profiles
             .Where(item => item.ProviderProfileId.HasValue)
@@ -156,7 +190,7 @@ internal sealed class LegacyAiTechnicalAgentBridge(
         var bindingByPartyId = bindings.ToDictionary(item => item.PartyId);
         var result = new Dictionary<Guid, AiTechnicalAgentDirectorySummary>();
 
-        foreach (var partyId in partyIds)
+        foreach (var partyId in requestedPartyIds)
         {
             profileByPartyId.TryGetValue(partyId, out var profile);
             bindingByPartyId.TryGetValue(partyId, out var binding);

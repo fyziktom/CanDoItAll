@@ -1,0 +1,107 @@
+@using CanDoItAll.Modules.Projects
+@inject IProjectRecordQueryService ProjectRecordQueryService
+
+<PagedRecordPickerDialog TKey="Guid"
+                         TFilter="ProjectRecordScope"
+                         IsOpen="@IsOpen"
+                         Loader="LoadPageAsync"
+                         InitialFilter="@InitialScope"
+                         FilterOptions="@ScopeOptions"
+                         ShowTagFilter="false"
+                         InitialSelection="@InitialSelection"
+                         SelectionConfirmed="@SelectionConfirmed"
+                         OnClose="@OnClose"
+                         LoadFailed="@LoadFailed"
+                         Eyebrow="Projects"
+                         Title="@Title"
+                         Subtitle="@Subtitle"
+                         SearchPlaceholder="Search project, objective, phase, or description"
+                         TagPlaceholder="Projects do not expose tags"
+                         FilterAriaLabel="Project status"
+                         LoadingEyebrow="Projects"
+                         LoadingTitle="Loading projects"
+                         EmptyEyebrow="No projects"
+                         EmptyTitle="No projects match"
+                         EmptyDescription="Change the search or project status."
+                         DataTestId="@DataTestId" />
+
+@code {
+    private static readonly IReadOnlyList<PagedRecordFilterOption<ProjectRecordScope>> ScopeOptions =
+    [
+        new(ProjectRecordScope.All, "All", "project-scope-all"),
+        new(ProjectRecordScope.Open, "Open", "project-scope-open"),
+        new(ProjectRecordScope.Active, "Active", "project-scope-active"),
+        new(ProjectRecordScope.Completed, "Completed", "project-scope-completed"),
+        new(ProjectRecordScope.Archived, "Archived", "project-scope-archived")
+    ];
+
+    [Parameter]
+    public bool IsOpen { get; set; }
+
+    [Parameter]
+    public Guid? SelectedProjectId { get; set; }
+
+    [Parameter]
+    public ProjectRecordScope InitialScope { get; set; } = ProjectRecordScope.Open;
+
+    [Parameter]
+    public EventCallback<Guid> SelectionConfirmed { get; set; }
+
+    [Parameter]
+    public EventCallback OnClose { get; set; }
+
+    [Parameter]
+    public EventCallback<Exception> LoadFailed { get; set; }
+
+    [Parameter]
+    public string Title { get; set; } = "Choose a project";
+
+    [Parameter]
+    public string Subtitle { get; set; } = "Search and page through project records.";
+
+    [Parameter]
+    public string DataTestId { get; set; } = "crmhr-project-picker";
+
+    private PagedRecordSelection<Guid>? InitialSelection => SelectedProjectId.HasValue
+        ? new PagedRecordSelection<Guid>(SelectedProjectId.Value)
+        : null;
+
+    private async Task<PagedRecordPage<Guid>> LoadPageAsync(
+        PagedRecordRequest<ProjectRecordScope> request,
+        CancellationToken cancellationToken)
+    {
+        if (request.Tags.Count > 0)
+        {
+            throw new InvalidOperationException("Project tag filtering is not supported by the project data source.");
+        }
+
+        var result = await ProjectRecordQueryService.SearchAsync(
+            new ProjectRecordQuery(
+                request.SearchText,
+                request.Filter,
+                request.PageIndex,
+                request.PageSize),
+            cancellationToken);
+
+        return new PagedRecordPage<Guid>(
+            result.Items.Select(ToOption).ToList(),
+            result.PageIndex,
+            result.PageSize,
+            result.TotalCount);
+    }
+
+    private static PagedRecordOption<Guid> ToOption(ProjectRecordQueryItem project)
+    {
+        return new PagedRecordOption<Guid>(
+            project.Id,
+            project.Name,
+            project.Status.ToString())
+        {
+            Subtitle = project.CurrentPhase,
+            Description = project.Description,
+            Meta = $"Updated {project.UpdatedAtUtc.LocalDateTime:g}",
+            Icon = "folder_open",
+            TestId = $"crmhr-project-option-{project.Id:N}"
+        };
+    }
+}

@@ -1474,6 +1474,48 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                     b.Property<Guid>("PartyId")
                         .HasColumnType("uuid");
 
+                    b.Property<string>("ProjectedCapabilitiesJson")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("ProjectedCapabilityCount")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("ProjectedDefaultModel")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("ProjectedExecutionMode")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<string>("ProjectedInstructions")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ProjectedProviderName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("ProjectedRoleTitle")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("ProjectedTagsJson")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ProjectedTemplateKey")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<DateTimeOffset?>("ProjectionUpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<Guid?>("TechnicalAgentId")
                         .HasColumnType("uuid");
 
@@ -1653,7 +1695,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("EntityType", "EntityId");
+                    b.HasIndex("EntityType", "EntityId", "CreatedAtUtc", "Id")
+                        .IsDescending(false, false, true, false);
 
                     b.ToTable("CrmHr_AuditEntries", (string)null);
                 });
@@ -1716,6 +1759,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("InteractionId", "PartyId", "Role");
+
+                    b.HasIndex("PartyId", "Role", "InteractionId");
 
                     b.ToTable("CrmHr_InteractionParties", (string)null);
                 });
@@ -1896,17 +1941,21 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                         .HasColumnType("character varying(200)");
 
                     b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .IsConcurrencyToken()
                         .HasColumnType("timestamp with time zone");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("AccountPartyId");
 
                     b.HasIndex("LinkedProjectId");
 
                     b.HasIndex("OwnerPartyId");
 
                     b.HasIndex("Stage");
+
+                    b.HasIndex("AccountPartyId", "Stage");
+
+                    b.HasIndex("AccountPartyId", "UpdatedAtUtc", "Id")
+                        .IsDescending(false, true, false);
 
                     b.ToTable("CrmHr_Opportunities", (string)null);
                 });
@@ -1955,6 +2004,14 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
 
                     b.Property<Guid>("OpportunityId")
                         .HasColumnType("uuid");
+
+                    b.Property<decimal?>("RecognizedAmount")
+                        .HasColumnType("numeric");
+
+                    b.Property<string>("RecognizedCurrencyCode")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("character varying(3)");
 
                     b.Property<string>("Stage")
                         .IsRequired()
@@ -2014,6 +2071,34 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                         .HasMaxLength(64)
                         .HasColumnType("character varying(64)");
 
+                    b.Property<string>("NormalizedDisplayName")
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasComputedColumnSql("regexp_replace(lower(trim(\"DisplayName\")), '[^[:alnum:]]', '', 'g')", true);
+
+                    b.Property<string>("NormalizedExternalCode")
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)")
+                        .HasComputedColumnSql("lower(trim(\"ExternalCode\"))", true);
+
+                    b.Property<string>("NormalizedLegalName")
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasComputedColumnSql("regexp_replace(lower(trim(\"LegalName\")), '[^[:alnum:]]', '', 'g')", true);
+
+                    b.Property<string>("NormalizedPreferredName")
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasComputedColumnSql("regexp_replace(lower(trim(\"PreferredName\")), '[^[:alnum:]]', '', 'g')", true);
+
                     b.Property<string>("Notes")
                         .IsRequired()
                         .HasColumnType("TEXT");
@@ -2051,9 +2136,17 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("DisplayName");
-
                     b.HasIndex("ExternalCode");
+
+                    b.HasIndex("NormalizedDisplayName");
+
+                    b.HasIndex("NormalizedExternalCode");
+
+                    b.HasIndex("NormalizedLegalName");
+
+                    b.HasIndex("NormalizedPreferredName");
+
+                    b.HasIndex("DisplayName", "Id");
 
                     b.HasIndex("PartyType", "LifecycleStatus");
 
@@ -2187,6 +2280,12 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
 
                     b.Property<Guid>("PartyId")
                         .HasColumnType("uuid");
+
+                    b.Property<string>("TagsJson")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("[]");
 
                     b.Property<string>("Value")
                         .IsRequired()
@@ -3137,6 +3236,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("Name", "Id");
 
                     b.HasIndex("UpdatedAtUtc", "Id")
                         .IsDescending(true, false);

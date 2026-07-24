@@ -55,97 +55,145 @@ public sealed record PartyProjectAssignmentItemModel(
     bool IsPrimary,
     string Notes);
 
+public static class PartyProjectAssignmentQueryLimits
+{
+    public const int DefaultPageSize = 8;
+    public const int MaximumPageSize = 50;
+}
+
+public sealed record PartyProjectAssignmentQuery(
+    Guid PartyId,
+    int PageIndex = 0,
+    int PageSize = PartyProjectAssignmentQueryLimits.DefaultPageSize);
+
+public sealed record PartyProjectAssignmentPage(
+    IReadOnlyList<PartyProjectAssignmentItemModel> Items,
+    int PageIndex,
+    int PageSize,
+    int TotalCount)
+{
+    public int TotalPages => TotalCount == 0
+        ? 0
+        : (int)Math.Ceiling(TotalCount / (double)PageSize);
+
+    public static PartyProjectAssignmentPage Empty(
+        int pageSize = PartyProjectAssignmentQueryLimits.DefaultPageSize)
+        => new([], 0, pageSize, 0);
+}
+
 public sealed partial class PartyDirectoryService
 {
-    public async Task<IReadOnlyList<CrmAccountActivityTimelineItemModel>> ListPartyActivityTimelineAsync(
-        Guid partyId,
+    public async Task<CrmActivityHistoryPage> SearchPartyActivityAsync(
+        CrmActivityHistoryQuery query,
         CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(query);
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        var interactionIds = await dbContext.Set<InteractionPartyLink>()
-            .Where(item => item.PartyId == partyId)
-            .Select(item => item.InteractionId)
-            .Distinct()
-            .ToListAsync(cancellationToken);
-        var interactions = interactionIds.Count == 0
-            ? []
-            : await dbContext.Set<InteractionRecord>()
-                .Where(item => interactionIds.Contains(item.Id))
-                .ToListAsync(cancellationToken);
-
-        var recruitmentApplicationIds = await dbContext.Set<RecruitmentApplication>()
-            .Where(item => item.PartyId == partyId)
-            .Select(item => item.Id)
-            .ToListAsync(cancellationToken);
-        var auditEntries = await dbContext.Set<CrmHrAuditEntry>()
+        var interactions = dbContext.Set<InteractionRecord>()
+            .AsNoTracking()
+            .Where(interaction => dbContext.Set<InteractionPartyLink>().Any(link =>
+                link.PartyId == query.PartyId &&
+                link.InteractionId == interaction.Id));
+        var auditEntries = dbContext.Set<CrmHrAuditEntry>()
+            .AsNoTracking()
             .Where(item =>
-                (item.EntityType == nameof(Party) && item.EntityId == partyId) ||
-                (item.EntityType == nameof(WorkforceProfile) && item.EntityId == partyId) ||
-                (item.EntityType == nameof(AiAgentProfile) && item.EntityId == partyId) ||
-                (item.EntityType == nameof(RecruitmentApplication) && recruitmentApplicationIds.Contains(item.EntityId)) ||
-                item.EntityId == partyId)
-            .ToListAsync(cancellationToken);
+                item.EntityId == query.PartyId ||
+                (item.EntityType == nameof(RecruitmentApplication) &&
+                 dbContext.Set<RecruitmentApplication>().Any(application =>
+                     application.PartyId == query.PartyId &&
+                     application.Id == item.EntityId)));
 
-        var interactionItems = interactions.Select(item => new CrmAccountActivityTimelineItemModel(
-            item.Id,
-            item.InteractionType.ToString(),
-            item.Subject,
-            string.IsNullOrWhiteSpace(item.Summary) ? item.Notes : item.Summary,
-            string.IsNullOrWhiteSpace(item.NextActionText)
-                ? item.OccurredAtUtc.LocalDateTime.ToString("g")
-                : $"Next action: {item.NextActionText}",
-            item.OccurredAtUtc,
-            item.NextActionDueUtc.HasValue && item.NextActionDueUtc.Value < clock.GetUtcNow() ? "danger" : "info",
-            item.NextActionDueUtc.HasValue && item.NextActionDueUtc.Value < clock.GetUtcNow()));
-
-        var auditItems = auditEntries.Select(item => new CrmAccountActivityTimelineItemModel(
-            item.Id,
-            "Change",
-            item.Summary,
-            item.Action,
-            item.Actor,
-            item.CreatedAtUtc,
-            item.IsSensitive ? "warning" : "neutral",
-            false));
-
-        return interactionItems
-            .Concat(auditItems)
-            .OrderByDescending(item => item.OccurredAtUtc)
-            .ToList();
+        return await CrmActivityHistoryQueryComposer.SearchAsync(
+            dbContext,
+            interactions,
+            auditEntries,
+            query,
+            includeParticipantNames: false,
+            clock.GetUtcNow(),
+            cancellationToken);
     }
 
-    public async Task<IReadOnlyList<PartyProjectAssignmentItemModel>> ListPartyProjectAssignmentsAsync(
-        Guid partyId,
+    public async Task<PartyProjectAssignmentPage> SearchPartyProjectAssignmentsAsync(
+        PartyProjectAssignmentQuery query,
         CancellationToken cancellationToken = default)
     {
-        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        var assignments = await dbContext.Set<ProjectPartyAssignment>()
-            .Where(item => item.PartyId == partyId)
-            .ToListAsync(cancellationToken);
-        if (assignments.Count == 0)
+        ArgumentNullException.ThrowIfNull(query);
+        if (query.PartyId == Guid.Empty)
         {
-            return [];
+            throw new ArgumentException("A persisted party identifier is required.", nameof(query));
         }
 
-        var projectNames = await dbContext.Set<Projects.Project>()
-            .Where(item => assignments.Select(assignment => assignment.ProjectId).Distinct().Contains(item.Id))
-            .ToDictionaryAsync(item => item.Id, item => item.Name, cancellationToken);
+        if (query.PageIndex < 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(query), "Page index cannot be negative.");
+        }
 
-        return assignments
+        if (query.PageSize is <= 0 or > PartyProjectAssignmentQueryLimits.MaximumPageSize)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(query),
+                $"Page size must be between 1 and {PartyProjectAssignmentQueryLimits.MaximumPageSize}.");
+        }
+
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        var assignments =
+            from assignment in dbContext.Set<ProjectPartyAssignment>().AsNoTracking()
+            where assignment.PartyId == query.PartyId
+            join project in dbContext.Set<Projects.Project>().AsNoTracking()
+                on assignment.ProjectId equals project.Id into projects
+            from project in projects.DefaultIfEmpty()
+            select new
+            {
+                Assignment = assignment,
+                ProjectName = project == null ? "Unknown project" : project.Name
+            };
+
+        var totalCountTask = assignments.CountAsync(cancellationToken);
+        var itemsTask = assignments
+            .OrderBy(item => item.ProjectName)
+            .ThenBy(item => item.Assignment.AssignmentKind)
+            .ThenBy(item => item.Assignment.Id)
+            .Skip(query.PageIndex * query.PageSize)
+            .Take(query.PageSize)
+            .Select(item => new
+            {
+                item.Assignment.Id,
+                item.Assignment.ProjectId,
+                item.ProjectName,
+                item.Assignment.AssignmentKind,
+                item.Assignment.NodeKey,
+                item.Assignment.AllocationPercent,
+                item.Assignment.StartsAtUtc,
+                item.Assignment.EndsAtUtc,
+                item.Assignment.IsPrimary,
+                item.Assignment.Notes
+            })
+            .ToListAsync(cancellationToken);
+        await Task.WhenAll(totalCountTask, itemsTask);
+
+        var items = (await itemsTask)
             .Select(item => new PartyProjectAssignmentItemModel(
                 item.Id,
                 item.ProjectId,
-                projectNames.GetValueOrDefault(item.ProjectId, "Unknown project"),
+                item.ProjectName,
                 item.AssignmentKind,
                 item.NodeKey,
                 item.AllocationPercent,
-                item.StartsAtUtc is DateTimeOffset startsAtUtc ? DateOnly.FromDateTime(startsAtUtc.UtcDateTime) : null,
-                item.EndsAtUtc is DateTimeOffset endsAtUtc ? DateOnly.FromDateTime(endsAtUtc.UtcDateTime) : null,
+                item.StartsAtUtc.HasValue
+                    ? DateOnly.FromDateTime(item.StartsAtUtc.Value.UtcDateTime)
+                    : null,
+                item.EndsAtUtc.HasValue
+                    ? DateOnly.FromDateTime(item.EndsAtUtc.Value.UtcDateTime)
+                    : null,
                 item.IsPrimary,
                 item.Notes))
-            .OrderBy(item => item.ProjectName)
-            .ThenBy(item => item.AssignmentKind)
-            .ToList();
+            .ToArray();
+
+        return new PartyProjectAssignmentPage(
+            items,
+            query.PageIndex,
+            query.PageSize,
+            await totalCountTask);
     }
 
     private async Task UpsertPartySearchDocumentAsync(Guid partyId, CancellationToken cancellationToken)
@@ -171,7 +219,7 @@ public sealed partial class PartyDirectoryService
             .Select(item => item.RoleKind)
             .ToListAsync(cancellationToken);
         var contacts = await dbContext.Set<PartyContactPoint>()
-            .Where(item => item.PartyId == partyId)
+            .Where(item => item.PartyId == partyId && item.IsPublic)
             .OrderByDescending(item => item.IsPrimary)
             .ToListAsync(cancellationToken);
 
@@ -387,7 +435,7 @@ public sealed partial class RecruitingService
                 item.Id == application.TargetUnitPartyId)
             .ToDictionaryAsync(item => item.Id, item => item.DisplayName, cancellationToken);
         var contacts = await dbContext.Set<PartyContactPoint>()
-            .Where(item => item.PartyId == application.PartyId)
+            .Where(item => item.PartyId == application.PartyId && item.IsPublic)
             .OrderByDescending(item => item.IsPrimary)
             .ToListAsync(cancellationToken);
         var primaryEmail = contacts

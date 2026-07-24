@@ -7,6 +7,87 @@ namespace CanDoItAll.Tests.Integration;
 public sealed class RecruitmentLifecycleIntegrationTests
 {
     [Fact]
+    public async Task Recruitment_application_query_pages_filters_and_never_projects_private_contacts()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var partyDirectoryService = scope.ServiceProvider.GetRequiredService<PartyDirectoryService>();
+        var recruitingService = scope.ServiceProvider.GetRequiredService<RecruitingService>();
+
+        var appliedPartyId = await CreatePartyAsync(
+            partyDirectoryService,
+            PartyType.Person,
+            "Paged Applied Candidate",
+            "public-applied@example.test",
+            isPublic: true);
+        var interviewingPartyId = await CreatePartyAsync(
+            partyDirectoryService,
+            PartyType.Person,
+            "Paged Interview Candidate",
+            "private-interview-marker@example.test",
+            isPublic: false);
+        var offerPartyId = await CreatePartyAsync(
+            partyDirectoryService,
+            PartyType.Person,
+            "Paged Offer Candidate",
+            "public-offer@example.test",
+            isPublic: true);
+
+        foreach (var candidate in new[]
+                 {
+                     (PartyId: appliedPartyId, Role: "Applied role", Stage: RecruitmentStage.Applied),
+                     (PartyId: interviewingPartyId, Role: "Interview role", Stage: RecruitmentStage.Interviewing),
+                     (PartyId: offerPartyId, Role: "Offer role", Stage: RecruitmentStage.Offer)
+                 })
+        {
+            var result = await recruitingService.SaveRecruitmentApplicationAsync(
+                new RecruitmentApplicationEditorModel
+                {
+                    PartyId = candidate.PartyId,
+                    DesiredRole = candidate.Role,
+                    Stage = candidate.Stage,
+                    LastChangedBy = "integration-tests"
+                });
+            Assert.True(result.IsSuccess);
+        }
+
+        var firstPage = await recruitingService.SearchRecruitmentApplicationsAsync(
+            new RecruitmentApplicationQuery(PageSize: 2));
+        var secondPage = await recruitingService.SearchRecruitmentApplicationsAsync(
+            new RecruitmentApplicationQuery(PageIndex: 1, PageSize: 2));
+
+        Assert.Equal(3, firstPage.TotalCount);
+        Assert.Equal(2, firstPage.Items.Count);
+        Assert.Single(secondPage.Items);
+        Assert.Empty(firstPage.Items.Select(item => item.Id).Intersect(secondPage.Items.Select(item => item.Id)));
+
+        var interviewing = await recruitingService.SearchRecruitmentApplicationsAsync(
+            new RecruitmentApplicationQuery(
+                Scope: RecruitmentApplicationScope.Interviewing,
+                PageSize: 10));
+        var interviewingItem = Assert.Single(interviewing.Items);
+        Assert.Equal(interviewingPartyId, interviewingItem.PartyId);
+        Assert.Empty(interviewingItem.PrimaryEmail);
+
+        var privateContactSearch = await recruitingService.SearchRecruitmentApplicationsAsync(
+            new RecruitmentApplicationQuery(
+                "private-interview-marker",
+                PageSize: 10));
+        Assert.Equal(0, privateContactSearch.TotalCount);
+
+        var publicContactSearch = await recruitingService.SearchRecruitmentApplicationsAsync(
+            new RecruitmentApplicationQuery(
+                "public-offer",
+                PageSize: 10));
+        Assert.Equal(offerPartyId, Assert.Single(publicContactSearch.Items).PartyId);
+
+        var summary = await recruitingService.GetRecruitmentApplicationSummaryAsync();
+        Assert.Equal(3, summary.TotalCount);
+        Assert.Equal(1, summary.InterviewingCount);
+        Assert.Equal(1, summary.OfferOrHiredCount);
+    }
+
+    [Fact]
     public async Task Recruitment_stage_history_interviews_tasks_support_roles_and_conversion_persist_without_duplicate_party()
     {
         await using var application = await TestApplication.CreateAsync();
@@ -150,7 +231,12 @@ public sealed class RecruitmentLifecycleIntegrationTests
         return result.Value;
     }
 
-    private static async Task<Guid> CreatePartyAsync(PartyDirectoryService partyDirectoryService, PartyType partyType, string displayName)
+    private static async Task<Guid> CreatePartyAsync(
+        PartyDirectoryService partyDirectoryService,
+        PartyType partyType,
+        string displayName,
+        string? email = null,
+        bool isPublic = true)
     {
         var result = await partyDirectoryService.SavePartyAsync(new PartyEditorModel
         {
@@ -158,6 +244,19 @@ public sealed class RecruitmentLifecycleIntegrationTests
             LifecycleStatus = PartyLifecycleStatus.Active,
             DisplayName = displayName,
             Summary = $"{displayName} summary",
+            ContactPoints = string.IsNullOrWhiteSpace(email)
+                ? []
+                :
+                [
+                    new PartyContactPointEditorModel
+                    {
+                        ContactType = PartyContactType.Email,
+                        Label = "Work",
+                        Value = email,
+                        IsPrimary = true,
+                        IsPublic = isPublic
+                    }
+                ],
             LastChangedBy = "integration-tests"
         });
 

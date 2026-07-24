@@ -12,6 +12,15 @@ public sealed class PartyDirectoryManagementService(
     IClock clock,
     PartyDirectoryService partyDirectoryService)
 {
+    private const string PartyNotFoundErrorCode = "crmhr.party.not-found";
+    private const string RelationshipInvalidErrorCode = "crmhr.party.relationship-invalid";
+    private const string RelationshipDuplicateErrorCode = "crmhr.party.relationship-duplicate";
+    private const string RelationshipPartyNotFoundErrorCode = "crmhr.party.relationship-party-not-found";
+    private const int MaximumCsvContentLength = 1_000_000;
+    private const int MaximumPreviewRowCount = 250;
+    private const int MaximumDuplicateCandidatesPerRow = 20;
+    private const int MaximumPreviewDuplicateCandidates = MaximumPreviewRowCount * MaximumDuplicateCandidatesPerRow;
+
     private static readonly string[] ExportColumns =
     [
         "DisplayName",
@@ -40,25 +49,36 @@ public sealed class PartyDirectoryManagementService(
             .Where(item => item.SourcePartyId == partyId || item.TargetPartyId == partyId)
             .ToListAsync(cancellationToken);
 
-        var relatedPartyIds = relationships
-            .Select(item => item.SourcePartyId == partyId ? item.TargetPartyId : item.SourcePartyId)
+        var endpointPartyIds = relationships
+            .SelectMany(item => new[] { item.SourcePartyId, item.TargetPartyId })
             .Distinct()
             .ToList();
 
-        var relatedParties = await dbContext.Set<Party>()
-            .Where(item => relatedPartyIds.Contains(item.Id))
+        var partiesById = await dbContext.Set<Party>()
+            .Where(item => endpointPartyIds.Contains(item.Id))
             .Select(item => new { item.Id, item.DisplayName, item.PartyType })
             .ToDictionaryAsync(item => item.Id, cancellationToken);
+
+        foreach (var relationship in relationships)
+        {
+            var missingPartyIds = new[] { relationship.SourcePartyId, relationship.TargetPartyId }
+                .Where(endpointPartyId => !partiesById.ContainsKey(endpointPartyId))
+                .ToArray();
+            if (missingPartyIds.Length == 0)
+            {
+                continue;
+            }
+
+            throw new InvalidOperationException(
+                $"Party relationship '{relationship.Id}' references missing party record(s): {string.Join(", ", missingPartyIds.Select(id => id.ToString("D")))}.");
+        }
 
         return relationships
             .Select(item =>
             {
                 var isOutgoing = item.SourcePartyId == partyId;
                 var relatedPartyId = isOutgoing ? item.TargetPartyId : item.SourcePartyId;
-                if (!relatedParties.TryGetValue(relatedPartyId, out var relatedParty))
-                {
-                    return null;
-                }
+                var relatedParty = partiesById[relatedPartyId];
 
                 return new PartyRelationshipListItemModel(
                     item.Id,
@@ -72,10 +92,10 @@ public sealed class PartyDirectoryManagementService(
                     item.EndDateUtc,
                     item.Notes);
             })
-            .Where(item => item is not null)
-            .Cast<PartyRelationshipListItemModel>()
             .OrderBy(item => item.RelatedPartyDisplayName, StringComparer.OrdinalIgnoreCase)
             .ThenBy(item => item.RelationshipKind)
+            .ThenBy(item => item.RelatedPartyId)
+            .ThenBy(item => item.Id)
             .ToList();
     }
 
@@ -85,12 +105,7 @@ public sealed class PartyDirectoryManagementService(
         string actor,
         CancellationToken cancellationToken = default)
     {
-        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        var partyExists = await dbContext.Set<Party>().AnyAsync(item => item.Id == partyId, cancellationToken);
-        if (!partyExists)
-        {
-            return Result.Failure(Error.Failure("The selected party was not found.", "crmhr.party.not-found"));
-        }
+        ArgumentNullException.ThrowIfNull(relationships);
 
         var invalidRelationships = relationships
             .Where(item => item.RelatedPartyId == Guid.Empty || item.RelatedPartyId == partyId)
@@ -99,7 +114,61 @@ public sealed class PartyDirectoryManagementService(
         {
             return Result.Failure(Error.Validation(
                 "Relationships must target another saved party.",
-                "crmhr.party.relationship-invalid"));
+                RelationshipInvalidErrorCode));
+        }
+
+        var preparedRelationships = relationships
+            .Select(relationship =>
+            {
+                var sourcePartyId = relationship.IsOutgoing ? partyId : relationship.RelatedPartyId;
+                var targetPartyId = relationship.IsOutgoing ? relationship.RelatedPartyId : partyId;
+                return (Relationship: relationship, SourcePartyId: sourcePartyId, TargetPartyId: targetPartyId);
+            })
+            .ToList();
+        var relationshipIdentities =
+            new HashSet<(Guid SourcePartyId, Guid TargetPartyId, PartyRelationshipKind RelationshipKind)>();
+        foreach (var preparedRelationship in preparedRelationships)
+        {
+            var identity = (
+                preparedRelationship.SourcePartyId,
+                preparedRelationship.TargetPartyId,
+                preparedRelationship.Relationship.RelationshipKind);
+            if (relationshipIdentities.Add(identity))
+            {
+                continue;
+            }
+
+            return Result.Failure(Error.Validation(
+                "Duplicate relationships with the same source, target, and kind are not allowed.",
+                RelationshipDuplicateErrorCode));
+        }
+
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        var requiredPartyIds = preparedRelationships
+            .Select(item => item.Relationship.RelatedPartyId)
+            .Append(partyId)
+            .Distinct()
+            .ToArray();
+        var existingPartyIds = await dbContext.Set<Party>()
+            .Where(item => requiredPartyIds.Contains(item.Id))
+            .Select(item => item.Id)
+            .ToHashSetAsync(cancellationToken);
+        if (!existingPartyIds.Contains(partyId))
+        {
+            return Result.Failure(Error.Failure("The selected party was not found.", PartyNotFoundErrorCode));
+        }
+
+        var missingRelatedPartyIds = preparedRelationships
+            .Select(item => item.Relationship.RelatedPartyId)
+            .Distinct()
+            .Where(relatedPartyId => !existingPartyIds.Contains(relatedPartyId))
+            .OrderBy(relatedPartyId => relatedPartyId)
+            .ToList();
+        if (missingRelatedPartyIds.Count > 0)
+        {
+            return Result.Failure(Error.Validation(
+                $"One or more related parties were not found: {string.Join(", ", missingRelatedPartyIds.Select(id => id.ToString("D")))}.",
+                RelationshipPartyNotFoundErrorCode));
         }
 
         var existingRelationships = await dbContext.Set<PartyRelationship>()
@@ -107,22 +176,15 @@ public sealed class PartyDirectoryManagementService(
             .ToListAsync(cancellationToken);
         dbContext.Set<PartyRelationship>().RemoveRange(existingRelationships);
 
-        var seenKeys = new HashSet<string>(StringComparer.Ordinal);
-        foreach (var relationship in relationships)
+        foreach (var preparedRelationship in preparedRelationships)
         {
-            var sourcePartyId = relationship.IsOutgoing ? partyId : relationship.RelatedPartyId;
-            var targetPartyId = relationship.IsOutgoing ? relationship.RelatedPartyId : partyId;
-            var dedupeKey = BuildRelationshipKey(sourcePartyId, targetPartyId, relationship.RelationshipKind);
-            if (!seenKeys.Add(dedupeKey))
-            {
-                continue;
-            }
+            var relationship = preparedRelationship.Relationship;
 
             dbContext.Set<PartyRelationship>().Add(new PartyRelationship
             {
                 Id = relationship.Id ?? Guid.NewGuid(),
-                SourcePartyId = sourcePartyId,
-                TargetPartyId = targetPartyId,
+                SourcePartyId = preparedRelationship.SourcePartyId,
+                TargetPartyId = preparedRelationship.TargetPartyId,
                 RelationshipKind = relationship.RelationshipKind,
                 IsPrimary = relationship.IsPrimary,
                 StartDateUtc = relationship.StartDateUtc,
@@ -136,8 +198,8 @@ public sealed class PartyDirectoryManagementService(
             EntityType = nameof(Party),
             EntityId = partyId,
             Action = "RelationshipsSaved",
-            Summary = $"Saved {seenKeys.Count} relationship(s).",
-            DetailJson = JsonSerializer.Serialize(new { RelationshipCount = seenKeys.Count }),
+            Summary = $"Saved {preparedRelationships.Count} relationship(s).",
+            DetailJson = JsonSerializer.Serialize(new { RelationshipCount = preparedRelationships.Count }),
             Actor = ResolveActor(actor),
             CreatedAtUtc = clock.GetUtcNow()
         });
@@ -273,25 +335,49 @@ public sealed class PartyDirectoryManagementService(
         IReadOnlyCollection<Guid> partyIds,
         CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(partyIds);
         if (partyIds.Count == 0)
         {
             return string.Join(",", ExportColumns) + Environment.NewLine;
         }
 
+        return await ExportPartiesCsvCoreAsync(partyIds, cancellationToken);
+    }
+
+    public Task<string> ExportAllPartiesCsvAsync(
+        CancellationToken cancellationToken = default)
+    {
+        return ExportPartiesCsvCoreAsync(null, cancellationToken);
+    }
+
+    private async Task<string> ExportPartiesCsvCoreAsync(
+        IReadOnlyCollection<Guid>? partyIds,
+        CancellationToken cancellationToken)
+    {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        var parties = await dbContext.Set<Party>()
-            .Where(item => partyIds.Contains(item.Id))
+        IQueryable<Party> partyQuery = dbContext.Set<Party>().AsNoTracking();
+        IQueryable<PartyRoleAssignment> roleQuery = dbContext.Set<PartyRoleAssignment>().AsNoTracking();
+        IQueryable<PartyContactPoint> contactPointQuery = dbContext.Set<PartyContactPoint>().AsNoTracking();
+        IQueryable<PartyAddress> addressQuery = dbContext.Set<PartyAddress>().AsNoTracking();
+        if (partyIds is not null)
+        {
+            partyQuery = partyQuery.Where(item => partyIds.Contains(item.Id));
+            roleQuery = roleQuery.Where(item => partyIds.Contains(item.PartyId));
+            contactPointQuery = contactPointQuery.Where(item => partyIds.Contains(item.PartyId));
+            addressQuery = addressQuery.Where(item => partyIds.Contains(item.PartyId));
+        }
+
+        var parties = await partyQuery
             .OrderBy(item => item.DisplayName)
             .ToListAsync(cancellationToken);
-        var roles = await dbContext.Set<PartyRoleAssignment>()
-            .Where(item => partyIds.Contains(item.PartyId))
+        var roles = await roleQuery.ToListAsync(cancellationToken);
+        var contactPoints = await contactPointQuery
+            .OrderBy(item => item.PartyId)
+            .ThenBy(item => item.ContactType)
+            .ThenByDescending(item => item.IsPrimary)
+            .ThenBy(item => item.Id)
             .ToListAsync(cancellationToken);
-        var contactPoints = await dbContext.Set<PartyContactPoint>()
-            .Where(item => partyIds.Contains(item.PartyId))
-            .ToListAsync(cancellationToken);
-        var addresses = await dbContext.Set<PartyAddress>()
-            .Where(item => partyIds.Contains(item.PartyId))
-            .ToListAsync(cancellationToken);
+        var addresses = await addressQuery.ToListAsync(cancellationToken);
 
         var rolesByPartyId = roles.GroupBy(item => item.PartyId).ToDictionary(group => group.Key, group => group.ToList());
         var contactsByPartyId = contactPoints.GroupBy(item => item.PartyId).ToDictionary(group => group.Key, group => group.ToList());
@@ -334,6 +420,13 @@ public sealed class PartyDirectoryManagementService(
                 "crmhr.party.import-empty"));
         }
 
+        if (csvContent.Length > MaximumCsvContentLength)
+        {
+            return Result<PartyCsvImportPreviewModel>.Failure(Error.Validation(
+                $"CSV preview is limited to {MaximumCsvContentLength:N0} characters. Split the file into smaller imports.",
+                "crmhr.party.import-content-limit"));
+        }
+
         var rows = ParseCsv(csvContent);
         if (rows.Count < 2)
         {
@@ -342,10 +435,16 @@ public sealed class PartyDirectoryManagementService(
                 "crmhr.party.import-no-data"));
         }
 
+        if (rows.Count - 1 > MaximumPreviewRowCount)
+        {
+            return Result<PartyCsvImportPreviewModel>.Failure(Error.Validation(
+                $"CSV preview is limited to {MaximumPreviewRowCount} data rows. Split the file into smaller imports.",
+                "crmhr.party.import-preview-limit"));
+        }
+
         var headerMap = BuildHeaderMap(rows[0]);
         var previewRows = new List<PartyCsvImportPreviewRowModel>();
-
-        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        var preparedRows = new List<PreparedImportRow>();
         for (var rowIndex = 1; rowIndex < rows.Count; rowIndex++)
         {
             var cells = rows[rowIndex];
@@ -366,30 +465,55 @@ public sealed class PartyDirectoryManagementService(
                 });
                 continue;
             }
-
-            var duplicateCandidates = await FindPotentialDuplicatesCoreAsync(
-                dbContext,
-                party.DisplayName,
-                party.LegalName,
-                party.PreferredName,
-                party.ExternalCode,
-                party.ContactPoints.Select(item => item.NormalizedValue),
-                excludePartyId: null,
-                cancellationToken);
-
-            if (duplicateCandidates.Count > 0)
-            {
-                messages.Add($"Potential duplicates detected: {string.Join(", ", duplicateCandidates.Select(item => item.DisplayName))}.");
-            }
-
             previewRows.Add(new PartyCsvImportPreviewRowModel
             {
                 RowNumber = rowIndex + 1,
                 Party = party,
                 Messages = messages,
-                DuplicateCandidates = duplicateCandidates,
                 CanImport = messages.Count == 0
             });
+            preparedRows.Add(new PreparedImportRow(previewRows.Count - 1, party));
+        }
+
+        if (preparedRows.Count > 0)
+        {
+            await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+            IReadOnlyList<IReadOnlyList<PartyDuplicateCandidateModel>> duplicateCandidatesByInput;
+            try
+            {
+                duplicateCandidatesByInput = await FindPotentialDuplicatesForInputsAsync(
+                    dbContext,
+                    preparedRows.Select(item => PartyDuplicateLookupInput.FromParty(item.Party)).ToList(),
+                    excludePartyId: null,
+                    cancellationToken);
+            }
+            catch (DuplicateAnalysisLimitException exception)
+            {
+                return Result<PartyCsvImportPreviewModel>.Failure(Error.Validation(
+                    exception.Message,
+                    "crmhr.party.import-duplicate-limit"));
+            }
+
+            for (var index = 0; index < preparedRows.Count; index++)
+            {
+                var preparedRow = preparedRows[index];
+                var existingRow = previewRows[preparedRow.PreviewRowIndex];
+                var duplicateCandidates = duplicateCandidatesByInput[index];
+                var messages = existingRow.Messages.ToList();
+                if (duplicateCandidates.Count > 0)
+                {
+                    messages.Add($"Potential duplicates detected: {string.Join(", ", duplicateCandidates.Select(item => item.DisplayName))}.");
+                }
+
+                previewRows[preparedRow.PreviewRowIndex] = new PartyCsvImportPreviewRowModel
+                {
+                    RowNumber = existingRow.RowNumber,
+                    Party = existingRow.Party,
+                    Messages = messages,
+                    DuplicateCandidates = duplicateCandidates,
+                    CanImport = messages.Count == 0
+                };
+            }
         }
 
         return Result<PartyCsvImportPreviewModel>.Success(new PartyCsvImportPreviewModel
@@ -403,6 +527,8 @@ public sealed class PartyDirectoryManagementService(
         string actor,
         CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(rows);
+
         var importableRows = rows.Where(item => item.CanImport).ToList();
         if (importableRows.Count == 0)
         {
@@ -411,33 +537,22 @@ public sealed class PartyDirectoryManagementService(
                 "crmhr.party.import-no-ready-rows"));
         }
 
-        var importedCount = 0;
+        if (importableRows.Count > MaximumPreviewRowCount)
+        {
+            return Result<int>.Failure(Error.Validation(
+                $"CSV import is limited to {MaximumPreviewRowCount} rows per apply operation.",
+                "crmhr.party.import-apply-limit"));
+        }
+
         foreach (var row in importableRows)
         {
             row.Party.LastChangedBy = ResolveActor(actor);
-            var result = await partyDirectoryService.SavePartyAsync(row.Party, cancellationToken);
-            if (result.IsFailure)
-            {
-                return Result<int>.Failure(result.Errors);
-            }
-
-            importedCount++;
         }
 
-        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        dbContext.Set<CrmHrAuditEntry>().Add(new CrmHrAuditEntry
-        {
-            EntityType = nameof(Party),
-            EntityId = Guid.Empty,
-            Action = "CsvImport",
-            Summary = $"Imported {importedCount} party row(s) from CSV.",
-            DetailJson = JsonSerializer.Serialize(new { ImportedCount = importedCount }),
-            Actor = ResolveActor(actor),
-            CreatedAtUtc = clock.GetUtcNow()
-        });
-        await dbContext.SaveChangesAsync(cancellationToken);
-
-        return Result<int>.Success(importedCount);
+        return await partyDirectoryService.ImportPartiesAtomicallyAsync(
+            importableRows.Select(item => item.Party).ToList(),
+            ResolveActor(actor),
+            cancellationToken);
     }
 
     private static async Task MergeRoleAssignmentsAsync(
@@ -484,10 +599,16 @@ public sealed class PartyDirectoryManagementService(
     {
         var retainedContactPoints = await dbContext.Set<PartyContactPoint>()
             .Where(item => item.PartyId == retainedPartyId)
+            .OrderBy(item => item.Id)
             .ToListAsync(cancellationToken);
         var mergedContactPoints = await dbContext.Set<PartyContactPoint>()
             .Where(item => item.PartyId == mergedPartyId)
+            .OrderBy(item => item.Id)
             .ToListAsync(cancellationToken);
+        var retainedPrimaryContactIds = retainedContactPoints
+            .Where(item => item.IsPrimary)
+            .Select(item => item.Id)
+            .ToHashSet();
 
         var keys = retainedContactPoints
             .Select(BuildContactPointKey)
@@ -501,7 +622,12 @@ public sealed class PartyDirectoryManagementService(
             {
                 var retainedContactPoint = retainedContactPoints.First(item => string.Equals(BuildContactPointKey(item), key, StringComparison.OrdinalIgnoreCase));
                 retainedContactPoint.IsPrimary = retainedContactPoint.IsPrimary || mergedContactPoint.IsPrimary;
-                retainedContactPoint.IsPublic = retainedContactPoint.IsPublic || mergedContactPoint.IsPublic;
+                retainedContactPoint.IsPublic = retainedContactPoint.IsPublic && mergedContactPoint.IsPublic;
+                retainedContactPoint.TagsJson = JsonSerializer.Serialize(
+                    DeserializeTags(retainedContactPoint.TagsJson)
+                        .Concat(DeserializeTags(mergedContactPoint.TagsJson))
+                        .Distinct(StringComparer.OrdinalIgnoreCase)
+                        .ToList());
                 retainedContactPoint.Notes = CombineText(retainedContactPoint.Notes, mergedContactPoint.Notes);
                 dbContext.Set<PartyContactPoint>().Remove(mergedContactPoint);
                 continue;
@@ -510,6 +636,8 @@ public sealed class PartyDirectoryManagementService(
             mergedContactPoint.PartyId = retainedPartyId;
             retainedContactPoints.Add(mergedContactPoint);
         }
+
+        NormalizeContactPrimariesAfterMerge(retainedContactPoints, retainedPrimaryContactIds);
     }
 
     private static async Task MergeAddressesAsync(
@@ -560,7 +688,8 @@ public sealed class PartyDirectoryManagementService(
                 || item.TargetPartyId == mergedPartyId)
             .ToListAsync(cancellationToken);
 
-        var dedupeMap = new Dictionary<string, PartyRelationship>(StringComparer.Ordinal);
+        var dedupeMap =
+            new Dictionary<(Guid SourcePartyId, Guid TargetPartyId, PartyRelationshipKind RelationshipKind), PartyRelationship>();
         foreach (var relationship in relationships)
         {
             if (relationship.SourcePartyId == mergedPartyId)
@@ -579,7 +708,10 @@ public sealed class PartyDirectoryManagementService(
                 continue;
             }
 
-            var key = BuildRelationshipKey(relationship.SourcePartyId, relationship.TargetPartyId, relationship.RelationshipKind);
+            var key = (
+                relationship.SourcePartyId,
+                relationship.TargetPartyId,
+                relationship.RelationshipKind);
             if (!dedupeMap.TryAdd(key, relationship))
             {
                 var retainedRelationship = dedupeMap[key];
@@ -588,6 +720,27 @@ public sealed class PartyDirectoryManagementService(
                 retainedRelationship.EndDateUtc = MaxDate(retainedRelationship.EndDateUtc, relationship.EndDateUtc);
                 retainedRelationship.Notes = CombineText(retainedRelationship.Notes, relationship.Notes);
                 dbContext.Set<PartyRelationship>().Remove(relationship);
+            }
+        }
+    }
+
+    private static void NormalizeContactPrimariesAfterMerge(
+        IReadOnlyList<PartyContactPoint> contactPoints,
+        IReadOnlySet<Guid> retainedPrimaryContactIds)
+    {
+        foreach (var contactTypeGroup in contactPoints.GroupBy(item => item.ContactType))
+        {
+            var orderedContacts = contactTypeGroup
+                .OrderBy(item => item.Id)
+                .ToArray();
+            var selectedPrimary = orderedContacts
+                .FirstOrDefault(item => retainedPrimaryContactIds.Contains(item.Id))
+                ?? orderedContacts.FirstOrDefault(item => item.IsPrimary);
+
+            foreach (var contactPoint in orderedContacts)
+            {
+                contactPoint.IsPrimary = selectedPrimary is not null &&
+                    contactPoint.Id == selectedPrimary.Id;
             }
         }
     }
@@ -829,88 +982,200 @@ public sealed class PartyDirectoryManagementService(
         Guid? excludePartyId,
         CancellationToken cancellationToken)
     {
-        var normalizedNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        AddIfNotBlank(normalizedNames, NormalizeName(displayName));
-        AddIfNotBlank(normalizedNames, NormalizeName(legalName));
-        AddIfNotBlank(normalizedNames, NormalizeName(preferredName));
+        var lookup = new PartyDuplicateLookupInput(
+            displayName,
+            legalName,
+            preferredName,
+            externalCode,
+            normalizedContactValues);
+        var candidates = await FindPotentialDuplicatesForInputsAsync(
+            dbContext,
+            [lookup],
+            excludePartyId,
+            cancellationToken);
+        return candidates[0];
+    }
 
-        var normalizedContacts = normalizedContactValues
-            .Where(item => !string.IsNullOrWhiteSpace(item))
-            .Select(item => item.Trim())
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .ToHashSet(StringComparer.OrdinalIgnoreCase);
-
-        var parties = await dbContext.Set<Party>()
-            .Where(item => !excludePartyId.HasValue || item.Id != excludePartyId.Value)
-            .Select(item => new
-            {
-                item.Id,
-                item.DisplayName,
-                item.LegalName,
-                item.PreferredName,
-                item.ExternalCode,
-                item.PartyType,
-                item.LifecycleStatus,
-                item.Summary
-            })
-            .ToListAsync(cancellationToken);
-
-        var partyIds = parties.Select(item => item.Id).ToList();
-        var contactPoints = await dbContext.Set<PartyContactPoint>()
-            .Where(item => partyIds.Contains(item.PartyId))
-            .Select(item => new { item.PartyId, item.NormalizedValue })
-            .ToListAsync(cancellationToken);
-        var contactsByPartyId = contactPoints
-            .GroupBy(item => item.PartyId)
-            .ToDictionary(group => group.Key, group => group.Select(item => item.NormalizedValue).ToHashSet(StringComparer.OrdinalIgnoreCase));
-
-        var candidates = new List<(PartyDuplicateCandidateModel Candidate, int Score)>();
-        foreach (var party in parties)
+    private static async Task<IReadOnlyList<IReadOnlyList<PartyDuplicateCandidateModel>>> FindPotentialDuplicatesForInputsAsync(
+        AppDbContext dbContext,
+        IReadOnlyList<PartyDuplicateLookupInput> inputs,
+        Guid? excludePartyId,
+        CancellationToken cancellationToken)
+    {
+        if (inputs.Count == 0)
         {
-            var reasons = new List<string>();
-            var score = 0;
-
-            if (!string.IsNullOrWhiteSpace(externalCode)
-                && string.Equals(party.ExternalCode, externalCode, StringComparison.OrdinalIgnoreCase))
-            {
-                reasons.Add("matching external code");
-                score += 4;
-            }
-
-            if (normalizedNames.Contains(NormalizeName(party.DisplayName))
-                || normalizedNames.Contains(NormalizeName(party.LegalName))
-                || normalizedNames.Contains(NormalizeName(party.PreferredName)))
-            {
-                reasons.Add("matching normalized name");
-                score += 2;
-            }
-
-            var partyContacts = contactsByPartyId.GetValueOrDefault(party.Id) ?? [];
-            if (partyContacts.Any(normalizedContacts.Contains))
-            {
-                reasons.Add("matching contact value");
-                score += 3;
-            }
-
-            if (reasons.Count == 0)
-            {
-                continue;
-            }
-
-            candidates.Add((
-                new PartyDuplicateCandidateModel(
-                    party.Id,
-                    party.DisplayName,
-                    party.PartyType,
-                    party.LifecycleStatus,
-                    party.Summary,
-                    reasons.Distinct(StringComparer.OrdinalIgnoreCase).ToList()),
-                score));
+            return [];
         }
 
-        return candidates
+        var normalizedNames = inputs
+            .SelectMany(input => input.NormalizedNames)
+            .ToHashSet(StringComparer.Ordinal);
+        var normalizedExternalCodes = inputs
+            .Select(input => input.NormalizedExternalCode)
+            .Where(value => !string.IsNullOrEmpty(value))
+            .ToHashSet(StringComparer.Ordinal);
+        var normalizedContacts = inputs
+            .SelectMany(input => input.NormalizedContactValues)
+            .ToHashSet(StringComparer.Ordinal);
+        if (normalizedNames.Count == 0 && normalizedExternalCodes.Count == 0 && normalizedContacts.Count == 0)
+        {
+            return inputs.Select(_ => (IReadOnlyList<PartyDuplicateCandidateModel>)[]).ToList();
+        }
+
+        var candidateParties = await dbContext.Set<Party>()
+            .AsNoTracking()
+            .Where(item => !excludePartyId.HasValue || item.Id != excludePartyId.Value)
+            .Where(item =>
+                normalizedNames.Contains(item.NormalizedDisplayName)
+                || normalizedNames.Contains(item.NormalizedLegalName)
+                || normalizedNames.Contains(item.NormalizedPreferredName)
+                || normalizedExternalCodes.Contains(item.NormalizedExternalCode)
+                || dbContext.Set<PartyContactPoint>().Any(contactPoint =>
+                    contactPoint.PartyId == item.Id
+                    && normalizedContacts.Contains(contactPoint.NormalizedValue)))
+            .OrderBy(item => item.DisplayName)
+            .ThenBy(item => item.Id)
+            .Take(MaximumPreviewDuplicateCandidates + 1)
+            .Select(item => new DuplicatePartyProjection(
+                item.Id,
+                item.DisplayName,
+                item.PartyType,
+                item.LifecycleStatus,
+                item.Summary,
+                item.NormalizedDisplayName,
+                item.NormalizedLegalName,
+                item.NormalizedPreferredName,
+                item.NormalizedExternalCode))
+            .ToListAsync(cancellationToken);
+        if (candidateParties.Count > MaximumPreviewDuplicateCandidates)
+        {
+            throw new DuplicateAnalysisLimitException(
+                $"Duplicate analysis matched more than {MaximumPreviewDuplicateCandidates} directory records. Narrow the import batch before previewing it.");
+        }
+
+        var candidatePartyIds = candidateParties.Select(item => item.Id).ToArray();
+        var matchingContactsByPartyId = candidatePartyIds.Length == 0 || normalizedContacts.Count == 0
+            ? new Dictionary<Guid, HashSet<string>>()
+            : (await dbContext.Set<PartyContactPoint>()
+                .AsNoTracking()
+                .Where(item => candidatePartyIds.Contains(item.PartyId) && normalizedContacts.Contains(item.NormalizedValue))
+                .Select(item => new { item.PartyId, item.NormalizedValue })
+                .ToListAsync(cancellationToken))
+                .GroupBy(item => item.PartyId)
+                .ToDictionary(
+                    group => group.Key,
+                    group => group.Select(item => item.NormalizedValue).ToHashSet(StringComparer.Ordinal));
+
+        return inputs
+            .Select(input => BuildDuplicateCandidates(input, candidateParties, matchingContactsByPartyId))
+            .ToList();
+    }
+
+    private sealed record PreparedImportRow(int PreviewRowIndex, PartyEditorModel Party);
+
+    private sealed record DuplicatePartyProjection(
+        Guid Id,
+        string DisplayName,
+        PartyType PartyType,
+        PartyLifecycleStatus LifecycleStatus,
+        string Summary,
+        string NormalizedDisplayName,
+        string NormalizedLegalName,
+        string NormalizedPreferredName,
+        string NormalizedExternalCode);
+
+    private sealed record DuplicateCandidateScore(PartyDuplicateCandidateModel Candidate, int Score);
+
+    private sealed class DuplicateAnalysisLimitException(string message) : Exception(message);
+
+    private sealed class PartyDuplicateLookupInput
+    {
+        public PartyDuplicateLookupInput(
+            string displayName,
+            string legalName,
+            string preferredName,
+            string externalCode,
+            IEnumerable<string> normalizedContactValues)
+        {
+            NormalizedNames = new[]
+                {
+                    NormalizeName(displayName),
+                    NormalizeName(legalName),
+                    NormalizeName(preferredName)
+                }
+                .Where(value => !string.IsNullOrEmpty(value))
+                .ToHashSet(StringComparer.Ordinal);
+            NormalizedExternalCode = NormalizeExternalCode(externalCode);
+            NormalizedContactValues = normalizedContactValues
+                .Where(value => !string.IsNullOrWhiteSpace(value))
+                .Select(value => value.Trim().ToLowerInvariant())
+                .ToHashSet(StringComparer.Ordinal);
+        }
+
+        public HashSet<string> NormalizedNames { get; }
+
+        public string NormalizedExternalCode { get; }
+
+        public HashSet<string> NormalizedContactValues { get; }
+
+        public static PartyDuplicateLookupInput FromParty(PartyEditorModel party)
+        {
+            return new PartyDuplicateLookupInput(
+                party.DisplayName,
+                party.LegalName,
+                party.PreferredName,
+                party.ExternalCode,
+                party.ContactPoints.Select(item => item.NormalizedValue));
+        }
+    }
+
+    private static IReadOnlyList<PartyDuplicateCandidateModel> BuildDuplicateCandidates(
+        PartyDuplicateLookupInput input,
+        IReadOnlyList<DuplicatePartyProjection> candidateParties,
+        IReadOnlyDictionary<Guid, HashSet<string>> matchingContactsByPartyId)
+    {
+        return candidateParties
+            .Select(party =>
+            {
+                var reasons = new List<string>();
+                var score = 0;
+                if (!string.IsNullOrEmpty(input.NormalizedExternalCode)
+                    && string.Equals(input.NormalizedExternalCode, party.NormalizedExternalCode, StringComparison.Ordinal))
+                {
+                    reasons.Add("matching external code");
+                    score += 4;
+                }
+
+                if (input.NormalizedNames.Contains(party.NormalizedDisplayName)
+                    || input.NormalizedNames.Contains(party.NormalizedLegalName)
+                    || input.NormalizedNames.Contains(party.NormalizedPreferredName))
+                {
+                    reasons.Add("matching normalized name");
+                    score += 2;
+                }
+
+                if (matchingContactsByPartyId.TryGetValue(party.Id, out var partyContacts)
+                    && partyContacts.Overlaps(input.NormalizedContactValues))
+                {
+                    reasons.Add("matching contact value");
+                    score += 3;
+                }
+
+                return new DuplicateCandidateScore(
+                    new PartyDuplicateCandidateModel(
+                        party.Id,
+                        party.DisplayName,
+                        party.PartyType,
+                        party.LifecycleStatus,
+                        party.Summary,
+                        reasons),
+                    score);
+            })
+            .Where(item => item.Score > 0)
             .OrderByDescending(item => item.Score)
             .ThenBy(item => item.Candidate.DisplayName, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(item => item.Candidate.Id)
+            .Take(MaximumDuplicateCandidatesPerRow)
             .Select(item => item.Candidate)
             .ToList();
     }
@@ -1027,7 +1292,13 @@ public sealed class PartyDirectoryManagementService(
                 Value = value,
                 NormalizedValue = NormalizeContactValue(contactType, value),
                 IsPrimary = parts.Length > 3 && bool.TryParse(parts[3], out var isPrimary) && isPrimary,
-                IsPublic = parts.Length <= 4 || !bool.TryParse(parts[4], out var isPublic) || isPublic
+                IsPublic = parts.Length <= 4 || !bool.TryParse(parts[4], out var isPublic) || isPublic,
+                Tags = parts.Length > 5
+                    ? parts[5]
+                        .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                        .Distinct(StringComparer.OrdinalIgnoreCase)
+                        .ToList()
+                    : []
             });
         }
 
@@ -1081,7 +1352,10 @@ public sealed class PartyDirectoryManagementService(
 
     private static string SerializeContactPoints(IReadOnlyList<PartyContactPoint> contactPoints)
     {
-        return string.Join(';', contactPoints.Select(item => $"{item.ContactType}|{item.Label}|{item.Value}|{item.IsPrimary}|{item.IsPublic}"));
+        return string.Join(
+            ';',
+            contactPoints.Select(item =>
+                $"{item.ContactType}|{item.Label}|{item.Value}|{item.IsPrimary}|{item.IsPublic}|{string.Join(',', DeserializeTags(item.TagsJson))}"));
     }
 
     private static string SerializeAddresses(IReadOnlyList<PartyAddress> addresses)
@@ -1185,6 +1459,11 @@ public sealed class PartyDirectoryManagementService(
             .ToArray());
     }
 
+    private static string NormalizeExternalCode(string value)
+    {
+        return value.Trim().ToLowerInvariant();
+    }
+
     private static string NormalizeContactValue(PartyContactType contactType, string value)
     {
         var trimmedValue = value.Trim();
@@ -1224,11 +1503,6 @@ public sealed class PartyDirectoryManagementService(
         }
 
         return $"{currentValue.Trim()}{Environment.NewLine}{Environment.NewLine}{incomingValue.Trim()}";
-    }
-
-    private static string BuildRelationshipKey(Guid sourcePartyId, Guid targetPartyId, PartyRelationshipKind relationshipKind)
-    {
-        return $"{sourcePartyId:N}|{targetPartyId:N}|{relationshipKind}";
     }
 
     private static string BuildRoleAssignmentKey(PartyRoleAssignment roleAssignment)

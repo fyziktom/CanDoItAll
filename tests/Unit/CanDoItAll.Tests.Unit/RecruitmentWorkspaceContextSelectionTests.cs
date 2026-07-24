@@ -75,19 +75,15 @@ public sealed class RecruitmentWorkspaceContextSelectionTests
         };
 
         return new RecruitmentWorkspaceModel(
-            [],
             application,
             selectedApplicationId.HasValue,
             string.Empty,
             string.Empty,
             string.Empty,
             string.Empty,
+            string.Empty,
+            string.Empty,
             false,
-            [],
-            [],
-            [],
-            [],
-            [],
             [],
             [],
             [],
@@ -99,7 +95,6 @@ public sealed class RecruitmentWorkspaceContextSelectionTests
                 string.Empty,
                 null,
                 string.Empty),
-            [],
             new RecruitmentConversionEditorModel());
     }
 }

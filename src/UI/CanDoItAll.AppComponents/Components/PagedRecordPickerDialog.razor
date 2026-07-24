@@ -1,0 +1,208 @@
+@namespace CanDoItAll.AppComponents
+@typeparam TKey where TKey : notnull
+@typeparam TFilter where TFilter : notnull
+
+@if (IsOpen)
+{
+    <Dialog IsOpen="true"
+            Eyebrow="@Eyebrow"
+            Title="@Title"
+            Subtitle="@Subtitle"
+            Size="ModalSize.Wide"
+            DenseChrome="true"
+            CloseOnBackdrop="@CloseOnBackdrop"
+            TestId="@DataTestId"
+            OnClose="HandleCloseAsync">
+        <ChildContent>
+            <PagedRecordBrowser TKey="TKey"
+                                TFilter="TFilter"
+                                Loader="@Loader"
+                                InitialFilter="@InitialFilter"
+                                FilterOptions="@FilterOptions"
+                                TagSuggestions="@TagSuggestions"
+                                ShowTagFilter="@ShowTagFilter"
+                                Selection="@pendingSelection"
+                                SelectionChanged="HandleSelectionChangedAsync"
+                                LoadFailed="@LoadFailed"
+                                PageSize="@PageSize"
+                                MaximumTags="@MaximumTags"
+                                MaximumVisibleTags="@MaximumVisibleTags"
+                                SearchPlaceholder="@SearchPlaceholder"
+                                TagPlaceholder="@TagPlaceholder"
+                                FilterAriaLabel="@FilterAriaLabel"
+                                LoadingEyebrow="@LoadingEyebrow"
+                                LoadingTitle="@LoadingTitle"
+                                LoadingDescription="@LoadingDescription"
+                                ErrorEyebrow="@ErrorEyebrow"
+                                ErrorTitle="@ErrorTitle"
+                                ErrorDescription="@ErrorDescription"
+                                EmptyEyebrow="@EmptyEyebrow"
+                                EmptyTitle="@EmptyTitle"
+                                EmptyDescription="@EmptyDescription"
+                                DataTestId="@($"{DataTestId}-browser")" />
+        </ChildContent>
+        <Footer>
+            <Split Breakpoint="LayoutBreakpoint.None"
+                   Gap="LayoutGap.Medium"
+                   AlignItems="AlignItems.Center"
+                   JustifyContent="JustifyContent.SpaceBetween"
+                   Wrap="FlexWrap.Wrap">
+                <StatusBadge Tone="@(pendingSelection is null ? "neutral" : "info")"
+                             Text="@(pendingSelection is null ? NoSelectionText : SelectionReadyText)"
+                             data-testid="@($"{DataTestId}-selection-summary")" />
+                <Cluster Gap="LayoutGap.Small">
+                    <Button Text="@CancelText"
+                            ButtonStyle="ButtonStyle.Light"
+                            Disabled="@IsConfirming"
+                            Click="HandleCloseAsync"
+                            data-testid="@($"{DataTestId}-cancel")" />
+                    <Button Text="@ConfirmText"
+                            Icon="check"
+                            Disabled="@(pendingSelection is null || IsConfirming)"
+                            IsBusy="@IsConfirming"
+                            Click="ConfirmSelectionAsync"
+                            data-testid="@($"{DataTestId}-confirm")" />
+                </Cluster>
+            </Split>
+        </Footer>
+    </Dialog>
+}
+
+@code {
+    private PagedRecordSelection<TKey>? pendingSelection;
+    private bool wasOpen;
+
+    [Parameter]
+    public bool IsOpen { get; set; }
+
+    [Parameter, EditorRequired]
+    public PagedRecordLoader<TKey, TFilter>? Loader { get; set; }
+
+    [Parameter, EditorRequired]
+    public TFilter InitialFilter { get; set; } = default!;
+
+    [Parameter]
+    public IReadOnlyList<PagedRecordFilterOption<TFilter>> FilterOptions { get; set; } = [];
+
+    [Parameter]
+    public IReadOnlyList<string> TagSuggestions { get; set; } = [];
+
+    [Parameter]
+    public bool ShowTagFilter { get; set; } = true;
+
+    [Parameter]
+    public PagedRecordSelection<TKey>? InitialSelection { get; set; }
+
+    [Parameter]
+    public EventCallback<TKey> SelectionConfirmed { get; set; }
+
+    [Parameter]
+    public EventCallback OnClose { get; set; }
+
+    [Parameter]
+    public EventCallback<Exception> LoadFailed { get; set; }
+
+    [Parameter]
+    public bool IsConfirming { get; set; }
+
+    [Parameter]
+    public bool CloseOnBackdrop { get; set; }
+
+    [Parameter]
+    public int PageSize { get; set; } = 24;
+
+    [Parameter]
+    public int MaximumTags { get; set; } = 20;
+
+    [Parameter]
+    public int MaximumVisibleTags { get; set; } = 4;
+
+    [Parameter]
+    public string Eyebrow { get; set; } = "Select record";
+
+    [Parameter]
+    public string Title { get; set; } = "Choose a record";
+
+    [Parameter]
+    public string Subtitle { get; set; } = "Search and filter the available records.";
+
+    [Parameter]
+    public string SearchPlaceholder { get; set; } = "Search records";
+
+    [Parameter]
+    public string TagPlaceholder { get; set; } = "Filter by tags";
+
+    [Parameter]
+    public string FilterAriaLabel { get; set; } = "Record scope";
+
+    [Parameter]
+    public string LoadingEyebrow { get; set; } = "Records";
+
+    [Parameter]
+    public string LoadingTitle { get; set; } = "Loading records";
+
+    [Parameter]
+    public string LoadingDescription { get; set; } = "Loading the requested page.";
+
+    [Parameter]
+    public string ErrorEyebrow { get; set; } = "Records unavailable";
+
+    [Parameter]
+    public string ErrorTitle { get; set; } = "Records could not be loaded";
+
+    [Parameter]
+    public string ErrorDescription { get; set; } = "Retry after checking the active data source.";
+
+    [Parameter]
+    public string EmptyEyebrow { get; set; } = "No matches";
+
+    [Parameter]
+    public string EmptyTitle { get; set; } = "No records match these filters";
+
+    [Parameter]
+    public string EmptyDescription { get; set; } = "Clear one or more filters to show available records.";
+
+    [Parameter]
+    public string NoSelectionText { get; set; } = "No record selected";
+
+    [Parameter]
+    public string SelectionReadyText { get; set; } = "1 record selected";
+
+    [Parameter]
+    public string CancelText { get; set; } = "Cancel";
+
+    [Parameter]
+    public string ConfirmText { get; set; } = "Select";
+
+    [Parameter]
+    public string DataTestId { get; set; } = "paged-record-picker-dialog";
+
+    protected override void OnParametersSet()
+    {
+        if (IsOpen && !wasOpen)
+        {
+            pendingSelection = InitialSelection;
+        }
+
+        wasOpen = IsOpen;
+    }
+
+    private Task HandleSelectionChangedAsync(TKey key)
+    {
+        pendingSelection = new PagedRecordSelection<TKey>(key);
+        return Task.CompletedTask;
+    }
+
+    private async Task HandleCloseAsync()
+    {
+        pendingSelection = InitialSelection;
+        await OnClose.InvokeAsync();
+    }
+
+    private Task ConfirmSelectionAsync()
+    {
+        return pendingSelection is null
+            ? Task.CompletedTask
+            : SelectionConfirmed.InvokeAsync(pendingSelection.Key);
+    }
+}

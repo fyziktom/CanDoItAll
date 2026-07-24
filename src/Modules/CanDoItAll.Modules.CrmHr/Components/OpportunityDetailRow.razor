@@ -1,0 +1,17 @@
+<Split Breakpoint="LayoutBreakpoint.None"
+       Gap="LayoutGap.Small"
+       AlignItems="AlignItems.Start"
+       JustifyContent="JustifyContent.SpaceBetween">
+    <SmallText Text="@Label" />
+    <TextBlock TextStyle="TextStyle.Body1"
+               Value="@Value"
+               Class="text-right" />
+</Split>
+
+@code {
+    [Parameter, EditorRequired]
+    public string Label { get; set; } = string.Empty;
+
+    [Parameter, EditorRequired]
+    public string Value { get; set; } = string.Empty;
+}

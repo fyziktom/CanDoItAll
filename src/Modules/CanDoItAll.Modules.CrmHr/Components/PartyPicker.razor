@@ -1,17 +1,38 @@
 @using CanDoItAll.Components.BaseLib
 @using CanDoItAll.Modules.Projects
+@inject IPartyRecordQueryService PartyRecordQueryService
 
 <Stack GapScale="LayoutGap.Medium">
     <FormField Text="@Label">
-        <InputSelect @bind-Value="SelectedPartyValue"
-                     class="cda-input"
-                     data-testid="@($"{TestIdPrefix}-select")">
-            <option value="">Choose a party</option>
-            @foreach (var option in Options)
-            {
-                <option value="@option.PartyId">@($"{option.DisplayName} ({option.PartyTypeLabel})")</option>
-            }
-        </InputSelect>
+        <SurfaceCard Soft="true">
+            <Split Breakpoint="LayoutBreakpoint.None"
+                   Gap="LayoutGap.Medium"
+                   AlignItems="AlignItems.Center"
+                   JustifyContent="JustifyContent.SpaceBetween"
+                   Wrap="FlexWrap.Wrap">
+                <div class="min-w-0">
+                    <TextBlock TextStyle="TextStyle.Subtitle2"
+                               Value="@SelectedPartyLabel" />
+                    <TextBlock TextStyle="TextStyle.Note"
+                               Value="@SelectedPartyDescription" />
+                </div>
+                <Cluster Gap="LayoutGap.Small">
+                    @if (EffectiveSelectedPartyId.HasValue)
+                    {
+                        <Button Text="Clear"
+                                ButtonStyle="ButtonStyle.Light"
+                                Size="ButtonSize.Small"
+                                Click="ClearSelectionAsync"
+                                data-testid="@($"{TestIdPrefix}-clear")" />
+                    }
+                    <Button Text="Choose party"
+                            Icon="search"
+                            Size="ButtonSize.Small"
+                            Click="OpenPicker"
+                            data-testid="@($"{TestIdPrefix}-select")" />
+                </Cluster>
+            </Split>
+        </SurfaceCard>
     </FormField>
 
     @if (ResolvedSelectedParty is not null)
@@ -94,7 +115,23 @@
     }
 </Stack>
 
+<PartyRecordPickerDialog IsOpen="@isPickerOpen"
+                         SelectedPartyId="@EffectiveSelectedPartyId"
+                         AllowedScope="@AllowedScope"
+                         InitialScope="@InitialScope"
+                         ExcludedPartyId="@EffectiveExcludedPartyId"
+                         SelectionConfirmed="ConfirmSelectionAsync"
+                         OnClose="ClosePickerAsync"
+                         Title="@($"Choose {Label.ToLowerInvariant()}")"
+                         Subtitle="Search and page through the shared party directory."
+                         DataTestId="@($"{TestIdPrefix}-dialog")" />
+
 @code {
+    private bool isPickerOpen;
+    private ProjectPartyOption? resolvedSelectedParty;
+    private Guid? resolvedPartyId;
+    private long resolveGeneration;
+
     [Parameter]
     public string Label { get; set; } = "Party";
 
@@ -102,7 +139,13 @@
     public string TestIdPrefix { get; set; } = "project-party-picker";
 
     [Parameter]
-    public IReadOnlyList<ProjectPartyOption> Options { get; set; } = [];
+    public PartyRecordScope AllowedScope { get; set; } = PartyRecordScope.All;
+
+    [Parameter]
+    public PartyRecordScope InitialScope { get; set; } = PartyRecordScope.All;
+
+    [Parameter]
+    public Guid? ExcludedPartyId { get; set; }
 
     [Parameter]
     public Guid? SelectedPartyId { get; set; }
@@ -119,18 +162,80 @@
     [Parameter]
     public EventCallback CreateParty { get; set; }
 
-    private ProjectPartyOption? ResolvedSelectedParty => SelectedPartyId.HasValue
-        ? Options.FirstOrDefault(option => option.PartyId == SelectedPartyId.Value)
+    private ProjectPartyOption? ResolvedSelectedParty => resolvedSelectedParty;
+
+    private Guid? EffectiveSelectedPartyId => SelectedPartyId is { } partyId && partyId != Guid.Empty
+        ? partyId
         : null;
 
-    private string SelectedPartyValue
+    private Guid? EffectiveExcludedPartyId => ExcludedPartyId is { } partyId && partyId != Guid.Empty
+        ? partyId
+        : null;
+
+    private string SelectedPartyLabel => ResolvedSelectedParty?.DisplayName
+        ?? (EffectiveSelectedPartyId.HasValue ? "Selected directory party" : "No party selected");
+
+    private string SelectedPartyDescription => ResolvedSelectedParty is null
+        ? EffectiveSelectedPartyId.HasValue
+            ? "The selected party remains linked even when it is outside the current project option set."
+            : "Choose from the server-paged shared directory."
+        : ResolvedSelectedParty.PartyTypeLabel;
+
+    protected override async Task OnParametersSetAsync()
     {
-        get => SelectedPartyId?.ToString("D") ?? string.Empty;
-        set
+        var selectedPartyId = EffectiveSelectedPartyId;
+        if (resolvedPartyId == selectedPartyId)
         {
-            Guid? parsed = Guid.TryParse(value, out var partyId) ? partyId : null;
-            _ = SelectedPartyIdChanged.InvokeAsync(parsed);
+            return;
         }
+
+        resolvedPartyId = selectedPartyId;
+        var generation = ++resolveGeneration;
+        if (!selectedPartyId.HasValue)
+        {
+            resolvedSelectedParty = null;
+            return;
+        }
+
+        var party = await PartyRecordQueryService.GetAsync(selectedPartyId.Value);
+        if (generation != resolveGeneration ||
+            resolvedPartyId != EffectiveSelectedPartyId)
+        {
+            return;
+        }
+
+        resolvedSelectedParty = party is null
+            ? null
+            : new ProjectPartyOption(
+                party.Id,
+                party.DisplayName,
+                party.PartyType.ToString(),
+                MapPartyType(party.PartyType),
+                string.Empty,
+                string.Empty,
+                party.IsSensitive);
+    }
+
+    private void OpenPicker()
+    {
+        isPickerOpen = true;
+    }
+
+    private Task ClosePickerAsync()
+    {
+        isPickerOpen = false;
+        return Task.CompletedTask;
+    }
+
+    private async Task ConfirmSelectionAsync(Guid partyId)
+    {
+        isPickerOpen = false;
+        await SelectedPartyIdChanged.InvokeAsync(partyId);
+    }
+
+    private Task ClearSelectionAsync()
+    {
+        return SelectedPartyIdChanged.InvokeAsync(null);
     }
 
     private static string ResolveQuickCreateLabel(ProjectPartyQuickCreateKind kind)
@@ -140,6 +245,17 @@
             ProjectPartyQuickCreateKind.OrganizationUnit => "Organization unit",
             ProjectPartyQuickCreateKind.AiAgent => "AI agent",
             _ => kind.ToString()
+        };
+    }
+
+    private static ProjectPartyType MapPartyType(PartyType partyType)
+    {
+        return partyType switch
+        {
+            PartyType.Organization => ProjectPartyType.Organization,
+            PartyType.OrganizationUnit => ProjectPartyType.OrganizationUnit,
+            PartyType.AiAgent => ProjectPartyType.AiAgent,
+            _ => ProjectPartyType.Person
         };
     }
 }

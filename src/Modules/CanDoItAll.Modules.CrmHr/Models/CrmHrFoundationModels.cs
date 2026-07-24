@@ -85,6 +85,10 @@ public sealed class Party
     public string Region { get; set; } = string.Empty;
     public string CountryCode { get; set; } = string.Empty;
     public string TimeZone { get; set; } = string.Empty;
+    public string NormalizedDisplayName { get; private set; } = string.Empty;
+    public string NormalizedLegalName { get; private set; } = string.Empty;
+    public string NormalizedPreferredName { get; private set; } = string.Empty;
+    public string NormalizedExternalCode { get; private set; } = string.Empty;
     public bool IsSensitive { get; set; }
     public string ExtendedDataJson { get; set; } = "{}";
     public string LastChangedBy { get; set; } = string.Empty;
@@ -114,6 +118,7 @@ public sealed class PartyContactPoint
     public string NormalizedValue { get; set; } = string.Empty;
     public bool IsPrimary { get; set; }
     public bool IsPublic { get; set; }
+    public string TagsJson { get; set; } = "[]";
     public string Notes { get; set; } = string.Empty;
 }
 
@@ -197,11 +202,27 @@ internal sealed class PartyConfiguration : IEntityTypeConfiguration<Party>
         builder.Property(party => party.Region).HasMaxLength(120);
         builder.Property(party => party.CountryCode).HasMaxLength(16);
         builder.Property(party => party.TimeZone).HasMaxLength(80);
+        builder.Property(party => party.NormalizedDisplayName)
+            .HasMaxLength(200)
+            .HasComputedColumnSql("regexp_replace(lower(trim(\"DisplayName\")), '[^[:alnum:]]', '', 'g')", stored: true);
+        builder.Property(party => party.NormalizedLegalName)
+            .HasMaxLength(200)
+            .HasComputedColumnSql("regexp_replace(lower(trim(\"LegalName\")), '[^[:alnum:]]', '', 'g')", stored: true);
+        builder.Property(party => party.NormalizedPreferredName)
+            .HasMaxLength(200)
+            .HasComputedColumnSql("regexp_replace(lower(trim(\"PreferredName\")), '[^[:alnum:]]', '', 'g')", stored: true);
+        builder.Property(party => party.NormalizedExternalCode)
+            .HasMaxLength(120)
+            .HasComputedColumnSql("lower(trim(\"ExternalCode\"))", stored: true);
         builder.Property(party => party.ExtendedDataJson).HasColumnType("TEXT");
         builder.Property(party => party.LastChangedBy).HasMaxLength(160);
-        builder.HasIndex(party => party.DisplayName);
+        builder.HasIndex(party => new { party.DisplayName, party.Id });
         builder.HasIndex(party => new { party.PartyType, party.LifecycleStatus });
         builder.HasIndex(party => party.ExternalCode);
+        builder.HasIndex(party => party.NormalizedDisplayName);
+        builder.HasIndex(party => party.NormalizedLegalName);
+        builder.HasIndex(party => party.NormalizedPreferredName);
+        builder.HasIndex(party => party.NormalizedExternalCode);
     }
 }
 
@@ -228,6 +249,7 @@ internal sealed class PartyContactPointConfiguration : IEntityTypeConfiguration<
         builder.Property(contactPoint => contactPoint.Label).HasMaxLength(120);
         builder.Property(contactPoint => contactPoint.Value).HasMaxLength(400).IsRequired();
         builder.Property(contactPoint => contactPoint.NormalizedValue).HasMaxLength(400);
+        builder.Property(contactPoint => contactPoint.TagsJson).HasColumnType("TEXT").HasDefaultValue("[]");
         builder.Property(contactPoint => contactPoint.Notes).HasColumnType("TEXT");
         builder.HasIndex(contactPoint => contactPoint.NormalizedValue);
         builder.HasIndex(contactPoint => new { contactPoint.PartyId, contactPoint.IsPrimary });
@@ -289,7 +311,13 @@ internal sealed class CrmHrAuditEntryConfiguration : IEntityTypeConfiguration<Cr
         builder.Property(entry => entry.Summary).HasMaxLength(400).IsRequired();
         builder.Property(entry => entry.DetailJson).HasColumnType("TEXT");
         builder.Property(entry => entry.Actor).HasMaxLength(160);
-        builder.HasIndex(entry => new { entry.EntityType, entry.EntityId });
+        builder.HasIndex(entry => new
+        {
+            entry.EntityType,
+            entry.EntityId,
+            entry.CreatedAtUtc,
+            entry.Id
+        }).IsDescending(false, false, true, false);
     }
 }
 

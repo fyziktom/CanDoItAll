@@ -113,6 +113,7 @@ internal sealed class ProjectConfiguration : IEntityTypeConfiguration<Project>
         builder.Property(project => project.Description).HasColumnType("TEXT");
         builder.Property(project => project.Objective).HasColumnType("TEXT");
         builder.Property(project => project.CurrentPhase).HasMaxLength(120);
+        builder.HasIndex(project => new { project.Name, project.Id });
         builder.HasIndex(project => new { project.UpdatedAtUtc, project.Id })
             .IsDescending(true, false);
     }

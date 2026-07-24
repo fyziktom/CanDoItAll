@@ -11,6 +11,40 @@ namespace CanDoItAll.Tests.Components;
 
 public sealed class CrmHrSecondaryPageFreshnessTests
 {
+    [Fact]
+    public async Task Agents_page_requests_bounded_server_pages()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var workspaces = Enumerable.Range(0, 20)
+            .Select(index => CreateAgentWorkspace(Guid.NewGuid(), $"Agent {index:D2}"))
+            .ToDictionary(workspace => workspace.PartyId);
+        var cut = harness.Context.RenderComponent<RacingCrmHrAgentsPage>(parameters => parameters
+            .Add(page => page.TestItems, workspaces.Values.Select(CreateAgentItem).ToArray())
+            .Add(page => page.TestWorkspaces, workspaces));
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Equal(12, cut.FindAll("[data-testid='crmhr-agent-item']").Count);
+            Assert.Equal(
+                new AiAgentDirectoryQuery(
+                    PageSize: AiAgentDirectoryQueryLimits.DefaultPageSize),
+                Assert.Single(cut.Instance.DirectoryQueries));
+        });
+        Assert.Equal(0, cut.Instance.DirectoryProjectionRefreshCount);
+
+        cut.Find("[data-testid='crmhr-agent-next']").Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Equal(8, cut.FindAll("[data-testid='crmhr-agent-item']").Count);
+            Assert.Equal(2, cut.Instance.DirectoryQueries.Count);
+            Assert.Equal(1, cut.Instance.DirectoryQueries[1].PageIndex);
+            Assert.Equal(
+                AiAgentDirectoryQueryLimits.DefaultPageSize,
+                cut.Instance.DirectoryQueries[1].PageSize);
+        });
+    }
+
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
@@ -200,7 +234,40 @@ public sealed class CrmHrSecondaryPageFreshnessTests
             cut.Instance,
             new RecordedAssignmentSelectionRequest(
                 project.Id,
-                RecordedAssignmentSelectionData.Assignments));
+                RecordedAssignmentSelectionData.AssignmentCounts |
+                RecordedAssignmentSelectionData.RelationshipAssignments));
+    }
+
+    [Fact]
+    public async Task Assignments_page_selects_projects_through_the_server_paged_catalog()
+    {
+        var firstProject = CreateProject("First project");
+        var secondProject = CreateProject("Second project");
+        var queryService = new RecordingProjectRecordQueryService(
+            [ToQueryItem(firstProject), ToQueryItem(secondProject)]);
+        await using var harness = await ComponentTestHarness.CreateAsync(
+            services => services.AddSingleton<IProjectRecordQueryService>(queryService));
+        var cut = harness.Context.RenderComponent<RacingCrmHrAssignmentsPage>(parameters => parameters
+            .Add(page => page.TestProjects, [firstProject, secondProject]));
+        cut.WaitForAssertion(() => AssertAssignmentSurface(cut, firstProject));
+
+        Assert.Equal(2, ReadProjectCount(cut.Instance));
+        cut.Find("[data-testid='crmhr-assignment-project']").Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.NotNull(cut.Find("[data-testid='crmhr-assignment-project-picker']"));
+            Assert.NotNull(cut.Find($"[data-testid='crmhr-project-option-{secondProject.Id:N}']"));
+        });
+        var query = Assert.Single(queryService.Queries);
+        Assert.Equal(ProjectRecordScope.All, query.Scope);
+        Assert.Equal(ProjectRecordQueryLimits.DefaultPageSize, query.PageSize);
+
+        cut.Find($"[data-testid='crmhr-project-option-{secondProject.Id:N}']").Click();
+        cut.Find("[data-testid='crmhr-assignment-project-picker-confirm']").Click();
+
+        cut.WaitForAssertion(() => AssertAssignmentSurface(cut, secondProject));
+        Assert.Equal(secondProject.Id, ReadSelectedProjectId(cut.Instance));
     }
 
     [Fact]
@@ -239,7 +306,10 @@ public sealed class CrmHrSecondaryPageFreshnessTests
             cut.Instance,
             new RecordedAssignmentSelectionRequest(
                 project.Id,
-                RecordedAssignmentSelectionData.Assignments));
+                RecordedAssignmentSelectionData.Assignments),
+            new RecordedAssignmentSelectionRequest(
+                project.Id,
+                RecordedAssignmentSelectionData.RelationshipAssignments));
 
         cut.Find("[data-testid='crmhr-assignment-create-button']").Click();
         cut.WaitForAssertion(() =>
@@ -249,8 +319,12 @@ public sealed class CrmHrSecondaryPageFreshnessTests
         });
         AssertSelectionRequests(
             cut.Instance,
-            new(project.Id, RecordedAssignmentSelectionData.Assignments),
-            new(project.Id, RecordedAssignmentSelectionData.PartyOptions));
+            new RecordedAssignmentSelectionRequest(
+                project.Id,
+                RecordedAssignmentSelectionData.Assignments),
+            new RecordedAssignmentSelectionRequest(
+                project.Id,
+                RecordedAssignmentSelectionData.RelationshipAssignments));
 
         cut.Find("[data-testid='crmhr-assignments-tab-staffing']").Click();
         cut.WaitForAssertion(() =>
@@ -262,7 +336,7 @@ public sealed class CrmHrSecondaryPageFreshnessTests
         AssertSelectionRequests(
             cut.Instance,
             new(project.Id, RecordedAssignmentSelectionData.Assignments),
-            new(project.Id, RecordedAssignmentSelectionData.PartyOptions),
+            new(project.Id, RecordedAssignmentSelectionData.RelationshipAssignments),
             new(project.Id, RecordedAssignmentSelectionData.StaffingRequests));
 
         cut.Find("[data-testid='crmhr-staffing-request-create-button']").Click();
@@ -274,7 +348,7 @@ public sealed class CrmHrSecondaryPageFreshnessTests
         AssertSelectionRequests(
             cut.Instance,
             new(project.Id, RecordedAssignmentSelectionData.Assignments),
-            new(project.Id, RecordedAssignmentSelectionData.PartyOptions),
+            new(project.Id, RecordedAssignmentSelectionData.RelationshipAssignments),
             new(project.Id, RecordedAssignmentSelectionData.StaffingRequests),
             new(project.Id, RecordedAssignmentSelectionData.SkillCatalog));
 
@@ -288,9 +362,10 @@ public sealed class CrmHrSecondaryPageFreshnessTests
         AssertSelectionRequests(
             cut.Instance,
             new(project.Id, RecordedAssignmentSelectionData.Assignments),
-            new(project.Id, RecordedAssignmentSelectionData.PartyOptions),
+            new(project.Id, RecordedAssignmentSelectionData.RelationshipAssignments),
             new(project.Id, RecordedAssignmentSelectionData.StaffingRequests),
-            new(project.Id, RecordedAssignmentSelectionData.SkillCatalog));
+            new(project.Id, RecordedAssignmentSelectionData.SkillCatalog),
+            new(project.Id, RecordedAssignmentSelectionData.AllocationAssignments));
 
         cut.Find("[data-testid='crmhr-allocation-create-button']").Click();
         cut.WaitForAssertion(() =>
@@ -302,9 +377,10 @@ public sealed class CrmHrSecondaryPageFreshnessTests
         AssertSelectionRequests(
             cut.Instance,
             new(project.Id, RecordedAssignmentSelectionData.Assignments),
-            new(project.Id, RecordedAssignmentSelectionData.PartyOptions),
+            new(project.Id, RecordedAssignmentSelectionData.RelationshipAssignments),
             new(project.Id, RecordedAssignmentSelectionData.StaffingRequests),
             new(project.Id, RecordedAssignmentSelectionData.SkillCatalog),
+            new(project.Id, RecordedAssignmentSelectionData.AllocationAssignments),
             new(project.Id, RecordedAssignmentSelectionData.StaffingCandidates));
         Assert.Equal(1, cut.Instance.StaffingDashboardRequestCount);
     }
@@ -335,10 +411,13 @@ public sealed class CrmHrSecondaryPageFreshnessTests
         => ReadField<StaffingDashboardModel>(page, "staffingDashboard");
 
     private static IReadOnlyList<ProjectPartyAssignmentDetail> ReadAssignments(CrmHrAssignmentsPage page)
-        => ReadField<IReadOnlyList<ProjectPartyAssignmentDetail>>(page, "assignments");
+        => ReadField<IReadOnlyList<ProjectPartyAssignmentDetail>>(page, "scheduleAssignments");
 
     private static Guid? ReadSelectedProjectId(CrmHrAssignmentsPage page)
         => ReadField<Guid?>(page, "selectedProjectId");
+
+    private static int ReadProjectCount(CrmHrAssignmentsPage page)
+        => ReadField<int>(page, "projectCount");
 
     private static T ReadField<T>(object instance, string name)
     {
@@ -384,6 +463,15 @@ public sealed class CrmHrSecondaryPageFreshnessTests
             0,
             DateTimeOffset.UtcNow);
 
+    private static ProjectRecordQueryItem ToQueryItem(ProjectSummary project)
+        => new(
+            project.Id,
+            project.Name,
+            project.Status,
+            project.CurrentPhase,
+            string.Empty,
+            project.UpdatedAtUtc);
+
     private static ProjectPartyAssignmentDetail CreateAssignment(Guid projectId, string displayName)
         => new(
             Guid.NewGuid(),
@@ -420,7 +508,7 @@ public sealed class CrmHrSecondaryPageFreshnessTests
             workspace.ProviderName,
             workspace.Profile.DefaultModel,
             workspace.OwnerName,
-            workspace.Profile.Capabilities.Count,
+            workspace.CapabilityCount,
             true,
             workspace.AgentsRoute,
             DateTimeOffset.UtcNow);
@@ -439,15 +527,14 @@ public sealed class CrmHrSecondaryPageFreshnessTests
             $"/agents?partyId={partyId:D}",
             "OpenAI",
             "Owner",
+            0,
             new AiAgentProfileEditorModel
             {
                 PartyId = partyId,
                 DefaultModel = "gpt-5.4-mini",
                 ExecutionMode = AiExecutionMode.Remote,
                 ValidationStatus = AiValidationStatus.Approved
-            },
-            [],
-            []);
+            });
 
     private sealed class RacingCrmHrAgentsPage : CrmHrAgentsPage
     {
@@ -461,6 +548,10 @@ public sealed class CrmHrSecondaryPageFreshnessTests
             = new Dictionary<Guid, AiAgentWorkspaceModel>();
 
         public List<Guid> WorkspaceRequests { get; } = [];
+
+        public List<AiAgentDirectoryQuery> DirectoryQueries { get; } = [];
+
+        public int DirectoryProjectionRefreshCount { get; private set; }
 
         public void Delay(params Guid[] partyIds)
         {
@@ -483,9 +574,38 @@ public sealed class CrmHrSecondaryPageFreshnessTests
         public void RenderNow()
             => StateHasChanged();
 
-        protected override Task<IReadOnlyList<AiAgentListItemModel>> ListAgentItemsAsync(
+        protected override Task RefreshAgentDirectoryProjectionAsync(
             CancellationToken cancellationToken)
-            => Task.FromResult(TestItems);
+        {
+            DirectoryProjectionRefreshCount++;
+            return Task.CompletedTask;
+        }
+
+        protected override Task<AiAgentDirectoryPage> QueryAgentDirectoryAsync(
+            AiAgentDirectoryQuery query,
+            CancellationToken cancellationToken)
+        {
+            DirectoryQueries.Add(query);
+            var items = TestItems
+                .Where(item =>
+                    !query.ValidationStatus.HasValue ||
+                    item.ValidationStatus == query.ValidationStatus)
+                .Where(item =>
+                    string.IsNullOrWhiteSpace(query.SearchText) ||
+                    item.DisplayName.Contains(query.SearchText, StringComparison.OrdinalIgnoreCase) ||
+                    item.OwnerName.Contains(query.SearchText, StringComparison.OrdinalIgnoreCase) ||
+                    item.Summary.Contains(query.SearchText, StringComparison.OrdinalIgnoreCase))
+                .OrderBy(item => item.DisplayName)
+                .ToArray();
+            return Task.FromResult(new AiAgentDirectoryPage(
+                items
+                    .Skip(query.PageIndex * query.PageSize)
+                    .Take(query.PageSize)
+                    .ToArray(),
+                query.PageIndex,
+                query.PageSize,
+                items.Length));
+        }
 
         protected override async Task<AiAgentWorkspaceModel?> GetAgentWorkspaceAsync(
             Guid partyId,
@@ -555,9 +675,28 @@ public sealed class CrmHrSecondaryPageFreshnessTests
         public void RenderNow()
             => StateHasChanged();
 
-        protected override Task<IReadOnlyList<ProjectSummary>> ListProjectsAsync(
+        protected override Task<AssignmentProjectCatalog> LoadProjectCatalogAsync(
+            Guid? preferredProjectId,
+            bool allowFallback,
             CancellationToken cancellationToken)
-            => Task.FromResult(TestProjects);
+        {
+            var selectedProject = preferredProjectId.HasValue
+                ? TestProjects.FirstOrDefault(project => project.Id == preferredProjectId.Value)
+                : null;
+            selectedProject ??= allowFallback ? TestProjects.FirstOrDefault() : null;
+            return Task.FromResult(new AssignmentProjectCatalog(
+                selectedProject is null ? null : CrmHrSecondaryPageFreshnessTests.ToQueryItem(selectedProject),
+                TestProjects.Count));
+        }
+
+        protected override Task<ProjectRecordQueryItem?> GetProjectAsync(
+            Guid projectId,
+            CancellationToken cancellationToken)
+        {
+            var project = TestProjects.FirstOrDefault(item => item.Id == projectId);
+            return Task.FromResult(
+                project is null ? null : CrmHrSecondaryPageFreshnessTests.ToQueryItem(project));
+        }
 
         protected override async Task<AssignmentSelectionSnapshot> LoadSelectionSnapshotAsync(
             AssignmentSelectionLoadRequest request,
@@ -576,13 +715,14 @@ public sealed class CrmHrSecondaryPageFreshnessTests
                 }
             }
 
-            var assignments = request.RequestedData.HasFlag(AssignmentSelectionData.Assignments)
+            var assignments = (request.RequestedData.HasFlag(AssignmentSelectionData.ScheduleAssignments) ||
+                               request.RequestedData.HasFlag(AssignmentSelectionData.RelationshipAssignments) ||
+                               request.RequestedData.HasFlag(AssignmentSelectionData.AllocationAssignments))
                 && request.ProjectId is { } projectId
                     ? TestAssignments.GetValueOrDefault(projectId) ?? []
                     : [];
             return new AssignmentSelectionSnapshot(
                 request.RequestedData,
-                [],
                 assignments,
                 [],
                 [],
@@ -603,17 +743,54 @@ public sealed class CrmHrSecondaryPageFreshnessTests
             => pendingRequests.TryGetValue(projectId, out var pendingRequest)
                 ? pendingRequest
                 : throw new InvalidOperationException($"Project '{projectId:D}' is not delayed.");
+
+    }
+
+    private sealed class RecordingProjectRecordQueryService(
+        IReadOnlyList<ProjectRecordQueryItem> projects) : IProjectRecordQueryService
+    {
+        public List<ProjectRecordQuery> Queries { get; } = [];
+
+        public Task<ProjectRecordQueryItem?> GetAsync(
+            Guid projectId,
+            CancellationToken cancellationToken = default)
+            => Task.FromResult(projects.FirstOrDefault(project => project.Id == projectId));
+
+        public Task<IReadOnlyList<ProjectRecordQueryItem>> GetManyAsync(
+            IReadOnlyCollection<Guid> projectIds,
+            CancellationToken cancellationToken = default)
+            => Task.FromResult<IReadOnlyList<ProjectRecordQueryItem>>(
+                projects.Where(project => projectIds.Contains(project.Id)).ToList());
+
+        public Task<ProjectRecordPage> SearchAsync(
+            ProjectRecordQuery query,
+            CancellationToken cancellationToken = default)
+        {
+            Queries.Add(query);
+            var items = projects
+                .Skip(query.PageIndex * query.PageSize)
+                .Take(query.PageSize)
+                .ToList();
+            return Task.FromResult(new ProjectRecordPage(
+                items,
+                query.PageIndex,
+                query.PageSize,
+                projects.Count));
+        }
     }
 
     [Flags]
     private enum RecordedAssignmentSelectionData
     {
         None = 0,
-        Assignments = 1 << 0,
-        PartyOptions = 1 << 1,
-        SkillCatalog = 1 << 2,
-        StaffingRequests = 1 << 3,
-        StaffingCandidates = 1 << 4
+        AssignmentCounts = 1 << 0,
+        ScheduleAssignments = 1 << 1,
+        Assignments = AssignmentCounts | ScheduleAssignments,
+        RelationshipAssignments = 1 << 2,
+        AllocationAssignments = 1 << 3,
+        SkillCatalog = 1 << 4,
+        StaffingRequests = 1 << 5,
+        StaffingCandidates = 1 << 6
     }
 
     private readonly record struct RecordedAssignmentSelectionRequest(

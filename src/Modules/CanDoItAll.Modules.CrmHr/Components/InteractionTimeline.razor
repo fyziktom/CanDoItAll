@@ -5,7 +5,24 @@
         @Description
     </p>
 
-    @if (Items.Count == 0)
+    <Cluster Gap="LayoutGap.Small" Class="mt-4">
+        <StatusBadge Tone="neutral" Text="@($"{Page.TotalCount:N0} activities")" />
+        <StatusBadge Tone="info" Text="@($"{Page.ActionCount:N0} next actions")" />
+        @if (Page.OverdueActionCount > 0)
+        {
+            <StatusBadge Tone="danger" Text="@($"{Page.OverdueActionCount:N0} overdue")" />
+        }
+    </Cluster>
+
+    @if (IsLoading)
+    {
+        <div class="mt-5" data-testid="@($"{DataTestId}-loading")">
+            <LoadingState Eyebrow="@Eyebrow"
+                          Title="Loading history"
+                          Description="Loading only the requested activity page." />
+        </div>
+    }
+    else if (Page.Items.Count == 0)
     {
         <div class="mt-5">
             <EmptyState Eyebrow="@EmptyEyebrow"
@@ -16,10 +33,10 @@
     else
     {
         <Stack GapScale="LayoutGap.Small" Class="mt-5">
-            @foreach (var item in Items)
+            @foreach (var item in Page.Items)
             {
                 <div class="rounded-[1.25rem] border border-slate-200 bg-slate-50/80 px-4 py-4"
-                     data-testid="crmhr-timeline-item">
+                     data-testid="@($"{DataTestId}-item")">
                     <Split Gap="LayoutGap.Medium">
                         <div class="min-w-0">
                             <p class="text-sm font-semibold text-slate-950">@item.Title</p>
@@ -42,11 +59,43 @@
             }
         </Stack>
     }
+
+    <Split Breakpoint="LayoutBreakpoint.None"
+           Gap="LayoutGap.Small"
+           AlignItems="AlignItems.Center"
+           JustifyContent="JustifyContent.SpaceBetween"
+           Wrap="FlexWrap.Wrap"
+           Class="mt-5"
+           data-testid="@($"{DataTestId}-pager")">
+        <StatusBadge Tone="neutral" Text="@PageText" />
+        <Cluster Gap="LayoutGap.Small">
+            <Button Text="Previous"
+                    Icon="chevron_left"
+                    ButtonStyle="ButtonStyle.Light"
+                    Size="ButtonSize.Small"
+                    Disabled="@(!CanMovePrevious)"
+                    Click="@(() => RequestPageAsync(Page.PageIndex - 1))"
+                    data-testid="@($"{DataTestId}-previous")" />
+            <Button Text="Next"
+                    Icon="chevron_right"
+                    ButtonStyle="ButtonStyle.Light"
+                    Size="ButtonSize.Small"
+                    Disabled="@(!CanMoveNext)"
+                    Click="@(() => RequestPageAsync(Page.PageIndex + 1))"
+                    data-testid="@($"{DataTestId}-next")" />
+        </Cluster>
+    </Split>
 </SurfaceCard>
 
 @code {
     [Parameter]
-    public IReadOnlyList<CrmAccountActivityTimelineItemModel> Items { get; set; } = [];
+    public CrmActivityHistoryPage Page { get; set; } = CrmActivityHistoryPage.Empty();
+
+    [Parameter]
+    public bool IsLoading { get; set; }
+
+    [Parameter]
+    public EventCallback<int> PageRequested { get; set; }
 
     [Parameter]
     public string Eyebrow { get; set; } = "Timeline";
@@ -65,4 +114,25 @@
 
     [Parameter]
     public string EmptyDescription { get; set; } = "Timeline entries appear here after you save CRM interactions or update account details.";
+
+    [Parameter]
+    public string DataTestId { get; set; } = "crmhr-timeline";
+
+    private string PageText => Page.TotalPages == 0
+        ? "No pages"
+        : $"Page {Page.PageIndex + 1:N0} of {Page.TotalPages:N0}";
+
+    private bool CanMovePrevious => !IsLoading && Page.PageIndex > 0;
+
+    private bool CanMoveNext =>
+        !IsLoading &&
+        Page.TotalPages > 0 &&
+        Page.PageIndex + 1 < Page.TotalPages;
+
+    private Task RequestPageAsync(int pageIndex)
+    {
+        return pageIndex < 0 || pageIndex >= Page.TotalPages
+            ? Task.CompletedTask
+            : PageRequested.InvokeAsync(pageIndex);
+    }
 }

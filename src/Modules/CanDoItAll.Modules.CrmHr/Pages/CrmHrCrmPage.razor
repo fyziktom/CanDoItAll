@@ -3,12 +3,13 @@
 @using CanDoItAll.AgentFramework.Core
 @using CanDoItAll.AgentFramework.Models
 @using CanDoItAll.Components.BaseLib
-@using CanDoItAll.Modules.Projects
+@using Microsoft.Extensions.Logging
 @inject CrmService CrmService
-@inject ProjectsService ProjectsService
+@inject IPartyRecordQueryService PartyRecordQueryService
 @inject IAgentChatLauncher AgentChatLauncher
 @inject NavigationManager Navigation
 @inject NotificationService NotificationService
+@inject ILogger<CrmHrCrmPage> Logger
 
 <PageTitle>CRM / HR CRM</PageTitle>
 
@@ -20,20 +21,12 @@
                     Compact="true">
             <Stats>
                 <CompactStat Label="accounts"
-                             Value="@accounts.Count.ToString()"
-                             TooltipText="Organization records currently visible to the CRM workspace." />
-                <CompactStat Label="visible"
-                             Value="@FilteredAccounts.Count.ToString()"
-                             TooltipText="Accounts matching the current CRM filters."
+                             Value="@accountCount.ToString()"
+                             TooltipText="Active organization records in the shared directory." />
+                <CompactStat Label="selection"
+                             Value="@(selectedAccount is null ? "None" : "Active")"
+                             TooltipText="Current account workspace selection."
                              Tone="info" />
-                <CompactStat Label="overdue"
-                             Value="@accounts.Sum(item => item.OverdueNextActionCount).ToString()"
-                             TooltipText="Follow-ups already past due."
-                             Tone="warning" />
-                <CompactStat Label="recent"
-                             Value="@accounts.Count(item => item.LastInteractionAtUtc >= DateTimeOffset.UtcNow.AddDays(-30)).ToString()"
-                             TooltipText="Accounts with interactions in the last 30 days."
-                             Tone="success" />
             </Stats>
             <Actions>
                 <PageHeaderActionButton Icon="smart_toy"
@@ -52,76 +45,24 @@
 
     <ChildContent>
         <Stack GapScale="LayoutGap.Large">
-            <CrmHrSecondaryTabs SelectedKey="crm" />
+            <CrmHrSecondaryTabs SelectedArea="CrmHrWorkspaceArea.Crm" />
 
             <ListDetailShell ListPaneWidth="28rem">
                 <ListHeader>
                     <ListPanelHeader Title="Accounts"
-                                     Description="Select an organization to review relationship stage, stakeholders, recent interactions, and overdue commitments."
-                                     Count="@($"{FilteredAccounts.Count} account(s)")">
-                        <Filters>
-                            <FilterBar ResultText="@($"{FilteredAccounts.Count} matching account(s)")">
-                                <input @bind="searchText"
-                                       @bind:event="oninput"
-                                       class="cda-input min-w-[16rem] flex-1"
-                                       placeholder="Search account, role, email, phone, or stage"
-                                       data-testid="crmhr-account-search" />
-                                <InputSelect @bind-Value="stageFilter"
-                                             class="cda-input"
-                                             data-testid="crmhr-account-stage-filter">
-                                    <option value="">All relationship stages</option>
-                                    @foreach (var stage in Enum.GetValues<CrmAccountRelationshipStage>())
-                                    {
-                                        <option value="@stage.ToString()">@stage</option>
-                                    }
-                                </InputSelect>
-                                <Button Text="Reset"
-                                        ButtonStyle="ButtonStyle.Light"
-                                        Size="ButtonSize.Small"
-                                        Click="ResetFilters" />
-                            </FilterBar>
-                        </Filters>
-                    </ListPanelHeader>
+                                     Description="Search and page through organization records, then open one account workspace." />
                 </ListHeader>
 
                 <ListContent>
-                    @if (FilteredAccounts.Count == 0)
-                    {
-                        <EmptyState Eyebrow="No CRM accounts yet"
-                                    Title="Start from the shared directory"
-                                    Description="Create or update an organization in the directory, then return here to manage CRM relationship stage, stakeholders, and follow-ups.">
-                            <Actions>
-                                <Button Text="Open directory"
-                                        Click="OpenDirectory" />
-                            </Actions>
-                        </EmptyState>
-                    }
-                    else
-                    {
-                        <Stack GapScale="LayoutGap.Medium">
-                            @foreach (var item in FilteredAccounts)
-                            {
-                                <div data-testid="crmhr-account-item">
-                                    <SelectionListItem Title="@item.DisplayName"
-                                                       Eyebrow="@item.RelationshipStage.ToString()"
-                                                       Meta="@BuildAccountMeta(item)"
-                                                       Summary="@BuildAccountSummary(item)"
-                                                       IsSelected="@(selectedAccount?.AccountPartyId == item.AccountPartyId)"
-                                                       OnSelect="@(() => SelectAccountAsync(item.AccountPartyId))">
-                                        <Status>
-                                            <Cluster Gap="LayoutGap.Small">
-                                                <StatusBadge Tone="@ResolveStageTone(item.RelationshipStage)" Text="@item.RelationshipStage.ToString()" />
-                                                @if (item.OverdueNextActionCount > 0)
-                                                {
-                                                    <StatusBadge Tone="danger" Text="@($"{item.OverdueNextActionCount} overdue")" />
-                                                }
-                                            </Cluster>
-                                        </Status>
-                                    </SelectionListItem>
-                                </div>
-                            }
-                        </Stack>
-                    }
+                    <PartyRecordBrowser AllowedScope="PartyRecordScope.Organizations"
+                                        InitialScope="PartyRecordScope.Organizations"
+                                        SelectedPartyId="selectedAccount?.AccountPartyId"
+                                        SelectionChanged="SelectAccountAsync"
+                                        LoadFailed="HandleAccountBrowserLoadFailedAsync"
+                                        PageSize="12"
+                                        SearchPlaceholder="Search account name, code, summary, or tag"
+                                        DataTestId="crmhr-account-browser"
+                                        OptionTestId="crmhr-account-item" />
                 </ListContent>
 
                 <DetailHeader>
@@ -169,7 +110,7 @@
                                         <div class="rounded-[1.25rem] border border-slate-200 bg-slate-50/80 px-4 py-4">
                                             <p class="cda-eyebrow">Current scope</p>
                                             <p class="mt-2 text-sm leading-6 text-slate-700">
-                                                B04 keeps account context, stakeholder ownership, and follow-up history grounded on the shared party record. Structured opportunity progression arrives in the next bundle.
+                                                Account context, stakeholder ownership, follow-up history, opportunity progression, and recognized sold value stay grounded on the shared party record.
                                             </p>
                                         </div>
                                     </Grid>
@@ -205,6 +146,12 @@
                                     </Cluster>
                                 </FormSection>
                             </EditForm>
+                                </TabsItem>
+
+                                <TabsItem Text="Financials"
+                                          Icon="monitoring"
+                                          data-testid="crmhr-crm-tab-financials">
+                                    <CrmFinancialsPanel AccountPartyId="@selectedAccount.AccountPartyId" />
                                 </TabsItem>
 
                                 <TabsItem Text="Stakeholders"
@@ -243,15 +190,31 @@
                                                 <Grid Gap="LayoutGap.Medium" ColumnsLg="4">
                                                     <div class="lg:col-span-2">
                                                         <label class="cda-field-label">Related party</label>
-                                                        <InputSelect @bind-Value="stakeholder.RelatedPartyId"
-                                                                     class="cda-input"
-                                                                     data-testid="@($"crmhr-stakeholder-party-{rowIndex}")">
-                                                            <option value="@Guid.Empty">Select party</option>
-                                                            @foreach (var option in selectedAccount.AvailableParties)
-                                                            {
-                                                                <option value="@option.Id">@option.DisplayName (@option.PartyType)</option>
-                                                            }
-                                                        </InputSelect>
+                                                        <SurfaceCard Soft="true">
+                                                            <Split Breakpoint="LayoutBreakpoint.None"
+                                                                   Gap="LayoutGap.Medium"
+                                                                   AlignItems="AlignItems.Center"
+                                                                   JustifyContent="JustifyContent.SpaceBetween"
+                                                                   Wrap="FlexWrap.Wrap">
+                                                                <TextBlock TextStyle="TextStyle.Note"
+                                                                           Value="@ResolveStakeholderPartyLabel(stakeholder.RelatedPartyId)" />
+                                                                <Cluster Gap="LayoutGap.Small">
+                                                                    @if (stakeholder.RelatedPartyId != Guid.Empty)
+                                                                    {
+                                                                        <Button Text="Clear"
+                                                                                ButtonStyle="ButtonStyle.Light"
+                                                                                Size="ButtonSize.Small"
+                                                                                Click="@(() => ClearStakeholderParty(rowIndex))"
+                                                                                data-testid="@($"crmhr-stakeholder-party-clear-{rowIndex}")" />
+                                                                    }
+                                                                    <Button Text="Choose party"
+                                                                            Icon="search"
+                                                                            Size="ButtonSize.Small"
+                                                                            Click="@(() => OpenStakeholderPartyPicker(rowIndex))"
+                                                                            data-testid="@($"crmhr-stakeholder-party-{rowIndex}")" />
+                                                                </Cluster>
+                                                            </Split>
+                                                        </SurfaceCard>
                                                     </div>
                                                     <div>
                                                         <label class="cda-field-label">Account role</label>
@@ -304,34 +267,41 @@
                                           data-testid="crmhr-crm-tab-interactions">
                                     <Stack GapScale="LayoutGap.Large">
                             <Grid Gap="LayoutGap.Large" ColumnsLg="2">
-                                <InteractionTimeline Items="selectedAccount.ActivityTimeline" />
+                                @if (!string.IsNullOrWhiteSpace(accountActivityLoadError))
+                                {
+                                    <SurfaceCard Soft="true" data-testid="crmhr-account-activity-error">
+                                        <p class="cda-eyebrow text-rose-700">Account activity unavailable</p>
+                                        <p class="mt-2 text-sm leading-6 text-slate-700">@accountActivityLoadError</p>
+                                        <Button Text="Retry"
+                                                Icon="refresh"
+                                                ButtonStyle="ButtonStyle.Light"
+                                                Size="ButtonSize.Small"
+                                                Class="mt-4"
+                                                Click="RetryAccountActivityAsync" />
+                                    </SurfaceCard>
+                                }
+                                else
+                                {
+                                    <InteractionTimeline Page="accountActivityPage"
+                                                         IsLoading="@isAccountActivityLoading"
+                                                         PageRequested="HandleAccountActivityPageRequestedAsync"
+                                                         DataTestId="crmhr-account-activity" />
+                                }
 
                                 <SurfaceCard Soft="true">
-                                    <p class="cda-eyebrow">Overdue next actions</p>
+                                    <p class="cda-eyebrow">Next actions</p>
                                     <h3 class="mt-1 text-lg font-semibold text-slate-950">Follow-up pressure</h3>
-                                    @if (selectedAccount.OverdueNextActions.Count == 0)
-                                    {
-                                        <p class="mt-4 text-sm leading-6 text-slate-600">No overdue next actions for this account.</p>
-                                    }
-                                    else
-                                    {
-                                        <Stack GapScale="LayoutGap.Small" Class="mt-4">
-                                            @foreach (var action in selectedAccount.OverdueNextActions)
-                                            {
-                                                <div class="rounded-[1.2rem] border border-rose-200 bg-rose-50/80 px-4 py-4"
-                                                     data-testid="crmhr-overdue-action-item">
-                                                    <Split Gap="LayoutGap.Medium">
-                                                        <div class="min-w-0">
-                                                            <p class="text-sm font-semibold text-slate-950">@action.NextActionText</p>
-                                                            <p class="mt-1 text-sm leading-6 text-slate-600">From @action.InteractionSubject</p>
-                                                            <p class="mt-1 text-xs uppercase tracking-[0.18em] text-rose-700">Owner: @action.OwnerName</p>
-                                                        </div>
-                                                        <StatusBadge Tone="danger" Text="@action.DueAtUtc.LocalDateTime.ToString("yyyy-MM-dd")" />
-                                                    </Split>
-                                                </div>
-                                            }
-                                        </Stack>
-                                    }
+                                    <p class="mt-4 text-sm leading-6 text-slate-600">
+                                        Counts cover the complete account history while the timeline renders only the active page.
+                                    </p>
+                                    <Cluster Gap="LayoutGap.Small" Class="mt-4">
+                                        <StatusBadge Tone="info"
+                                                     Text="@($"{accountActivityPage.ActionCount:N0} open follow-ups")"
+                                                     data-testid="crmhr-account-action-count" />
+                                        <StatusBadge Tone="@(accountActivityPage.OverdueActionCount > 0 ? "danger" : "success")"
+                                                     Text="@($"{accountActivityPage.OverdueActionCount:N0} overdue")"
+                                                     data-testid="crmhr-account-overdue-count" />
+                                    </Cluster>
                                 </SurfaceCard>
                             </Grid>
 
@@ -363,11 +333,14 @@
                                                              class="cda-input"
                                                              data-testid="crmhr-interaction-opportunity">
                                                     <option value="">No linked opportunity</option>
-                                                    @foreach (var opportunity in selectedAccount.Opportunities)
+                                                    @if (SelectedOpportunity is { } selectedOpportunity)
                                                     {
-                                                        <option value="@opportunity.Id">@opportunity.Title</option>
+                                                        <option value="@selectedOpportunity.Id">@selectedOpportunity.Title</option>
                                                     }
                                                 </InputSelect>
+                                                <p class="mt-1 text-xs leading-5 text-slate-500">
+                                                    Select an opportunity from the paged Opportunities tab before linking it here.
+                                                </p>
                                             </div>
                                         </Grid>
 
@@ -421,7 +394,7 @@
                                     </FormSection>
 
                                     <NextActionEditor Model="interactionEditor"
-                                                      OwnerOptions="selectedAccount.AvailableParties" />
+                                                      OwnerOptions="selectedAccount.StakeholderParties" />
 
                                     <Cluster Gap="LayoutGap.Small">
                                         <Button Text="Log interaction"
@@ -436,105 +409,13 @@
                                 <TabsItem Text="Opportunities"
                                           Icon="trending_up"
                                           data-testid="crmhr-crm-tab-opportunities">
-                            <FormSection Title="Opportunity pipeline"
-                                         Description="Track deal progression, partner context, loss reasons, and project handoff without leaving the CRM workspace.">
-                                <ChildContent>
-                                    <Stack GapScale="LayoutGap.Large">
-                                        <FilterBar ResultText="@($"{FilteredOpportunities.Count} opportunity record(s) in view")">
-                                            <input @bind="opportunitySearchText"
-                                                   @bind:event="oninput"
-                                                   class="cda-input min-w-[16rem] flex-1"
-                                                   placeholder="Search opportunity, owner, delivery unit, or notes"
-                                                   data-testid="crmhr-opportunity-search" />
-                                            <InputSelect @bind-Value="opportunityStageFilter"
-                                                         class="cda-input"
-                                                         data-testid="crmhr-opportunity-stage-filter">
-                                                <option value="">All stages</option>
-                                                @foreach (var stage in Enum.GetValues<OpportunityStage>())
-                                                {
-                                                    <option value="@stage.ToString()">@stage</option>
-                                                }
-                                            </InputSelect>
-                                            <InputSelect @bind-Value="opportunityOwnerFilter"
-                                                         class="cda-input"
-                                                         data-testid="crmhr-opportunity-owner-filter">
-                                                <option value="">All owners</option>
-                                                @foreach (var option in OpportunityOwnerFilters)
-                                                {
-                                                    <option value="@option.Id">@option.DisplayName</option>
-                                                }
-                                            </InputSelect>
-                                            <InputSelect @bind-Value="opportunityDeliveryUnitFilter"
-                                                         class="cda-input"
-                                                         data-testid="crmhr-opportunity-delivery-filter">
-                                                <option value="">All delivery units</option>
-                                                @foreach (var option in OpportunityDeliveryUnitFilters)
-                                                {
-                                                    <option value="@option.Id">@option.DisplayName</option>
-                                                }
-                                            </InputSelect>
-                                            <InputSelect @bind-Value="opportunityPartnerFilter"
-                                                         class="cda-input"
-                                                         data-testid="crmhr-opportunity-partner-filter">
-                                                <option value="">All partners</option>
-                                                @foreach (var option in OpportunityPartnerFilters)
-                                                {
-                                                    <option value="@option.Id">@option.DisplayName</option>
-                                                }
-                                            </InputSelect>
-                                            <InputSelect @bind-Value="opportunitySourceFilter"
-                                                         class="cda-input"
-                                                         data-testid="crmhr-opportunity-source-filter">
-                                                <option value="">All sources</option>
-                                                @foreach (var source in Enum.GetValues<OpportunitySource>())
-                                                {
-                                                    <option value="@source.ToString()">@source</option>
-                                                }
-                                            </InputSelect>
-                                            <Button Text="Reset"
-                                                    ButtonStyle="ButtonStyle.Light"
-                                                    Size="ButtonSize.Small"
-                                                    Click="ResetOpportunityFilters" />
-                                        </FilterBar>
-
-                                        @if (selectedAccount.Opportunities.Count == 0)
-                                        {
-                                            <EmptyState Eyebrow="No opportunities yet"
-                                                        Title="Create the first pursuit record"
-                                                        Description="The editor is ready. Capture stage, owner, delivery unit, and partner context so forecast and handoff work stay structured.">
-                                                <Actions>
-                                                    <Button Text="Start opportunity"
-                                                            Click="StartNewOpportunity" />
-                                                </Actions>
-                                            </EmptyState>
-                                        }
-
-                                        <Grid Gap="LayoutGap.Large" ColumnsLg="2" ColumnsXl="3">
-                                            <OpportunityBoard Opportunities="FilteredOpportunities"
-                                                              SelectedOpportunityId="selectedOpportunityId"
-                                                              SelectOpportunity="SelectOpportunityAsync"
-                                                              AdvanceOpportunityStage="AdvanceOpportunityStageAsync" />
-                                        </Grid>
-
-                                        <OpportunityEditor Model="opportunityEditor"
-                                                           AccountDisplayName="@selectedAccount.DisplayName"
-                                                           RelationshipStageLabel="@profileEditor.RelationshipStage.ToString()"
-                                                           OwnerOptions="OpportunityOwnerOptions"
-                                                           DeliveryUnitOptions="OpportunityDeliveryUnitOptions"
-                                                           PartyOptions="OpportunityPartyOptions"
-                                                           StageHistory="SelectedOpportunityStageHistory"
-                                                           LinkedProjectName="SelectedOpportunityLinkedProjectName"
-                                                           CanConvert="CanConvertOpportunity"
-                                                           IsBusy="isOpportunityBusy"
-                                                           Save="SaveOpportunityAsync"
-                                                           StartNewOpportunity="StartNewOpportunity"
-                                                           AddPartyLink="AddOpportunityPartyLink"
-                                                           RemovePartyLink="RemoveOpportunityPartyLink"
-                                                           OpenConversion="OpenConversionDialogAsync"
-                                                           OpenLinkedProject="OpenLinkedProjectAsync" />
-                                    </Stack>
-                                </ChildContent>
-                            </FormSection>
+                                    <OpportunityPipeline AccountPartyId="selectedAccount.AccountPartyId"
+                                                         SelectedOpportunityId="selectedOpportunityId"
+                                                         RefreshVersion="opportunityPipelineRefreshVersion"
+                                                         AddOpportunity="OpenOpportunityCreateDialog"
+                                                         SelectOpportunity="SelectOpportunityAsync"
+                                                         AdvanceOpportunityStage="AdvanceOpportunityStageAsync"
+                                                         LoadFailed="HandleOpportunityPipelineLoadFailedAsync" />
                                 </TabsItem>
                             </TabItems>
                         </Tabs>
@@ -545,17 +426,52 @@
     </ChildContent>
 </PageScaffold>
 
+<OpportunityCreateDialog IsOpen="@isOpportunityCreateDialogOpen"
+                         InitialModel="opportunityEditor"
+                         AccountDisplayName="@(selectedAccount?.DisplayName ?? string.Empty)"
+                         RelationshipStageLabel="@profileEditor.RelationshipStage.ToString()"
+                         IsBusy="isOpportunityBusy"
+                         Message="@(isOpportunityCreateDialogOpen ? message : null)"
+                         Save="SaveOpportunityAsync"
+                         Close="CloseOpportunityCreateDialogAsync"
+                         LoadFailed="HandleOpportunityPickerLoadFailedAsync" />
+
+<OpportunityDetailDialog IsOpen="@isOpportunityDetailDialogOpen"
+                         Opportunity="SelectedOpportunity"
+                         Close="CloseOpportunityDetailDialogAsync"
+                         Edit="OpenOpportunityEditDialog"
+                         Convert="OpenConversionDialogAsync"
+                         OpenLinkedProject="OpenLinkedProjectAsync" />
+
+<OpportunityEditDialog IsOpen="@isOpportunityEditDialogOpen"
+                       Opportunity="SelectedOpportunity"
+                       IsBusy="isOpportunityBusy"
+                       Message="@(isOpportunityEditDialogOpen ? message : null)"
+                       Save="SaveOpportunityAsync"
+                       Close="CloseOpportunityEditDialogAsync"
+                       LoadFailed="HandleOpportunityPickerLoadFailedAsync" />
+
 <OpportunityConversionDialog IsOpen="@isOpportunityConversionDialogOpen"
                              Opportunity="SelectedOpportunity"
                              Model="opportunityConversionEditor"
-                             ProjectSummaries="projectSummaries"
                              IsBusy="isOpportunityConversionBusy"
                              Message="@(isOpportunityConversionDialogOpen ? message : null)"
-                             IsErrorMessage="@(messageTone == "danger")"
                              Close="CloseOpportunityConversionDialogAsync"
-                             Save="SaveOpportunityConversionAsync" />
+                             Save="SaveOpportunityConversionAsync"
+                             LoadFailed="HandleOpportunityPickerLoadFailedAsync" />
 
-<CrmAgentChatContextProvider AccountCount="accounts.Count"
+<PartyRecordPickerDialog IsOpen="@stakeholderPartyPickerIndex.HasValue"
+                         SelectedPartyId="@SelectedStakeholderPartyId"
+                         ExcludedPartyId="selectedAccount?.AccountPartyId"
+                         SelectionConfirmed="ConfirmStakeholderPartyAsync"
+                         OnClose="CloseStakeholderPartyPickerAsync"
+                         LoadFailed="HandleOpportunityPickerLoadFailedAsync"
+                         Eyebrow="Account stakeholders"
+                         Title="Choose a stakeholder"
+                         Subtitle="Search and page through the shared party directory."
+                         DataTestId="crmhr-stakeholder-party-picker" />
+
+<CrmAgentChatContextProvider AccountCount="accountCount"
                              Account="agentChatAccountContext"
                              Opportunity="agentChatOpportunityContext"
                              Interaction="agentChatInteractionContext"
@@ -573,116 +489,71 @@
     [SupplyParameterFromQuery(Name = "interactionId")]
     public Guid? InteractionIdQuery { get; set; }
 
-    private IReadOnlyList<CrmAccountListItemModel> accounts = [];
-    private IReadOnlyList<ProjectSummary> projectSummaries = [];
+    private readonly Dictionary<Guid, string> stakeholderPartyLabels = [];
     private CrmAccountWorkspaceModel? selectedAccount;
+    private CrmInteractionDetailModel? selectedInteraction;
+    private CrmOpportunityDetailModel? selectedOpportunity;
+    private CrmActivityHistoryPage accountActivityPage = CrmActivityHistoryPage.Empty();
     private CrmAccountProfileEditorModel profileEditor = new();
     private List<CrmAccountStakeholderEditorModel> stakeholderEditors = [];
     private CrmInteractionEditorModel interactionEditor = CreateInteractionEditor();
-    private CrmOpportunityEditorModel opportunityEditor = CreateOpportunityEditor(null, null);
+    private CrmOpportunityEditorModel opportunityEditor = new();
     private CrmOpportunityConversionEditorModel opportunityConversionEditor = new();
     private CrmAgentChatAccountContext? agentChatAccountContext;
     private CrmAgentChatOpportunityContext? agentChatOpportunityContext;
     private CrmAgentChatInteractionContext? agentChatInteractionContext;
     private AgentChatContextAccessState agentChatContextAccessState = AgentChatContextAccessState.Loading;
+    private int accountCount;
     private Guid? selectedOpportunityId;
     private Guid? selectedInteractionId;
+    private Guid? accountActivityLoadedPartyId;
+    private int? stakeholderPartyPickerIndex;
     private CrmRecordTab selectedCrmRecordTab = CrmRecordTab.Overview;
-    private string searchText = string.Empty;
-    private string stageFilter = string.Empty;
-    private string opportunitySearchText = string.Empty;
-    private string opportunityStageFilter = string.Empty;
-    private Guid? opportunityOwnerFilter;
-    private Guid? opportunityDeliveryUnitFilter;
-    private Guid? opportunityPartnerFilter;
-    private string opportunitySourceFilter = string.Empty;
     private string? committedQueryKey;
     private readonly CrmQueryLoadGeneration queryLoadGeneration = new();
     private CrmQueryLoadStamp? activeQueryLoadStamp;
     private CancellationTokenSource? queryLoadCancellation;
     private long transientStateGeneration;
+    private long accountActivityLoadGeneration;
+    private Task? accountActivityLoadTask;
     private string? message;
-    private string messageTone = "success";
+    private long opportunityPipelineRefreshVersion;
     private bool isOpportunityBusy;
+    private bool isOpportunityCreateDialogOpen;
+    private bool isOpportunityDetailDialogOpen;
+    private bool isOpportunityEditDialogOpen;
     private bool isOpportunityConversionDialogOpen;
     private bool isOpportunityConversionBusy;
+    private bool isAccountActivityLoading;
     private bool isDisposed;
+    private string accountActivityLoadError = string.Empty;
 
     private int SelectedCrmRecordTabIndex => (int)selectedCrmRecordTab;
-
-    private IReadOnlyList<CrmAccountListItemModel> FilteredAccounts => accounts
-        .Where(MatchesSearch)
-        .Where(MatchesStage)
-        .OrderByDescending(item => item.LastInteractionAtUtc ?? item.UpdatedAtUtc)
-        .ThenBy(item => item.DisplayName)
-        .ToList();
-
-    private IReadOnlyList<CrmOpportunityDetailModel> FilteredOpportunities => selectedAccount is null
-        ? []
-        : selectedAccount.Opportunities
-            .Where(MatchesOpportunitySearch)
-            .Where(MatchesOpportunityStage)
-            .Where(MatchesOpportunityOwner)
-            .Where(MatchesOpportunityDeliveryUnit)
-            .Where(MatchesOpportunityPartner)
-            .Where(MatchesOpportunitySource)
-            .OrderByDescending(item => item.UpdatedAtUtc)
-            .ToList();
 
     private IReadOnlyList<PartyOptionModel> ParticipantOptions
         => selectedAccount is null
             ? []
-            : selectedAccount.AvailableParties
+            : selectedAccount.StakeholderParties
                 .Where(option => stakeholderEditors.Any(stakeholder => stakeholder.RelatedPartyId == option.Id))
                 .ToList();
 
-    private IReadOnlyList<PartyOptionModel> OpportunityOwnerOptions => selectedAccount is null
-        ? []
-        : DistinctPartyOptions(
-            selectedAccount.AvailableParties
-                .Where(option => option.PartyType is PartyType.Person or PartyType.OrganizationUnit or PartyType.AiAgent)
-                .Concat(selectedAccount.Opportunities.Select(item => new PartyOptionModel(item.OwnerPartyId, item.OwnerDisplayName, PartyType.Person))));
+    private CrmOpportunityDetailModel? SelectedOpportunity
+        => selectedOpportunity?.Id == selectedOpportunityId
+            ? selectedOpportunity
+            : null;
 
-    private IReadOnlyList<PartyOptionModel> OpportunityDeliveryUnitOptions => selectedAccount is null
-        ? []
-        : DistinctPartyOptions(
-            selectedAccount.AvailableParties
-                .Where(option => option.PartyType == PartyType.OrganizationUnit)
-                .Concat(selectedAccount.Opportunities
-                    .Where(item => item.DeliveryUnitPartyId.HasValue && !string.IsNullOrWhiteSpace(item.DeliveryUnitDisplayName))
-                    .Select(item => new PartyOptionModel(item.DeliveryUnitPartyId!.Value, item.DeliveryUnitDisplayName, PartyType.OrganizationUnit))));
+    private Guid? SelectedStakeholderPartyId
+        => stakeholderPartyPickerIndex is int index &&
+           index >= 0 &&
+           index < stakeholderEditors.Count &&
+           stakeholderEditors[index].RelatedPartyId != Guid.Empty
+            ? stakeholderEditors[index].RelatedPartyId
+            : null;
 
-    private IReadOnlyList<PartyOptionModel> OpportunityPartyOptions => selectedAccount is null
-        ? []
-        : DistinctPartyOptions(selectedAccount.AvailableParties);
-
-    private IReadOnlyList<PartyOptionModel> OpportunityOwnerFilters => selectedAccount is null
-        ? []
-        : DistinctPartyOptions(selectedAccount.Opportunities.Select(item => ResolvePartyFilterOption(item.OwnerPartyId, item.OwnerDisplayName, PartyType.Person)));
-
-    private IReadOnlyList<PartyOptionModel> OpportunityDeliveryUnitFilters => selectedAccount is null
-        ? []
-        : DistinctPartyOptions(selectedAccount.Opportunities
-            .Where(item => item.DeliveryUnitPartyId.HasValue && !string.IsNullOrWhiteSpace(item.DeliveryUnitDisplayName))
-            .Select(item => ResolvePartyFilterOption(item.DeliveryUnitPartyId!.Value, item.DeliveryUnitDisplayName, PartyType.OrganizationUnit)));
-
-    private IReadOnlyList<PartyOptionModel> OpportunityPartnerFilters => selectedAccount is null
-        ? []
-        : DistinctPartyOptions(selectedAccount.Opportunities
-            .SelectMany(item => item.Parties.Where(party => party.Role == OpportunityPartyRole.Partner))
-            .Select(item => new PartyOptionModel(item.PartyId, item.DisplayName, item.PartyType)));
-
-    private CrmOpportunityDetailModel? SelectedOpportunity => selectedAccount?.Opportunities
-        .FirstOrDefault(item => item.Id == selectedOpportunityId);
-
-    private CrmInteractionDetailModel? SelectedInteraction => selectedAccount?.Interactions
-        .FirstOrDefault(item => item.Id == selectedInteractionId);
-
-    private IReadOnlyList<OpportunityStageHistoryItemModel> SelectedOpportunityStageHistory => SelectedOpportunity?.StageHistory ?? [];
-
-    private string SelectedOpportunityLinkedProjectName => SelectedOpportunity?.LinkedProjectName ?? string.Empty;
-
-    private bool CanConvertOpportunity => SelectedOpportunity?.Stage == OpportunityStage.Won;
+    private CrmInteractionDetailModel? SelectedInteraction
+        => selectedInteraction?.Id == selectedInteractionId
+            ? selectedInteraction
+            : null;
 
     private AgentChatNavigationIdentity AgentChatNavigationFence
         => AgentChatNavigationIdentity.CreateForLocation(
@@ -720,21 +591,20 @@
                 await InvokeAsync(StateHasChanged);
             }
 
-            var loadedAccountsTask = CrmService.ListAccountsAsync(loadCancellation.Token);
+            var accountCountTask = CrmService.CountAccountsAsync(loadCancellation.Token);
             var routeResolutionTask = CrmService.ResolveRouteSelectionAsync(
                 requestedAccountId,
                 requestedOpportunityId,
                 requestedInteractionId,
                 loadCancellation.Token);
-            await Task.WhenAll(loadedAccountsTask, routeResolutionTask);
-            var loadedAccounts = await loadedAccountsTask;
+            await Task.WhenAll(accountCountTask, routeResolutionTask);
+            accountCount = await accountCountTask;
             var routeResolution = await routeResolutionTask;
             if (!IsCurrentQueryLoad(loadGeneration))
             {
                 return;
             }
 
-            accounts = loadedAccounts;
             committedQueryKey = queryKey;
             if (!routeResolution.IsResolved)
             {
@@ -745,11 +615,6 @@
             }
 
             var targetId = routeResolution.AccountPartyId;
-            if (!targetId.HasValue && loadedAccounts.Count > 0)
-            {
-                targetId = loadedAccounts[0].AccountPartyId;
-            }
-
             CrmAccountWorkspaceModel? account = null;
             if (targetId.HasValue)
             {
@@ -774,13 +639,36 @@
                 return;
             }
 
+            var interaction = requestedInteractionId.HasValue
+                ? await CrmService.GetAccountInteractionAsync(
+                    account.AccountPartyId,
+                    requestedInteractionId.Value,
+                    loadCancellation.Token)
+                : null;
+            if (!IsCurrentQueryLoad(loadGeneration))
+            {
+                return;
+            }
+
+            var relatedInteractionOpportunityId = interaction?.RelatedOpportunityId;
             var preferredOpportunityId = requestedOpportunityId ??
-                                         (!requestedInteractionId.HasValue &&
-                                          capturedSelectedAccountId == account.AccountPartyId
+                                         relatedInteractionOpportunityId ??
+                                         (capturedSelectedAccountId == account.AccountPartyId
                                              ? capturedSelectedOpportunityId
                                              : null);
+            var opportunity = await LoadOpportunityForAccountAsync(
+                preferredOpportunityId,
+                account.AccountPartyId,
+                loadCancellation.Token);
+            if (!IsCurrentQueryLoad(loadGeneration))
+            {
+                return;
+            }
+
             ApplyLoadedAccount(
                 account,
+                opportunity,
+                interaction,
                 clearMessage: true,
                 requestedOpportunityId,
                 preferredOpportunityId,
@@ -790,6 +678,10 @@
                 capturedSelectedAccountId,
                 requestedOpportunityId,
                 requestedInteractionId);
+            if (selectedCrmRecordTab == CrmRecordTab.Interactions)
+            {
+                await EnsureAccountActivityLoadedAsync();
+            }
             var requestedSelectionFound =
                 (!requestedOpportunityId.HasValue ||
                  selectedOpportunityId == requestedOpportunityId) &&
@@ -826,6 +718,9 @@
             Interlocked.Increment(ref transientStateGeneration);
             isOpportunityBusy = false;
             isOpportunityConversionBusy = false;
+            isOpportunityCreateDialogOpen = false;
+            isOpportunityDetailDialogOpen = false;
+            isOpportunityEditDialogOpen = false;
             isOpportunityConversionDialogOpen = false;
         }
 
@@ -835,14 +730,37 @@
         return stamp;
     }
 
+    private async Task<CrmOpportunityDetailModel?> LoadOpportunityForAccountAsync(
+        Guid? opportunityId,
+        Guid accountPartyId,
+        CancellationToken cancellationToken)
+    {
+        if (!opportunityId.HasValue)
+        {
+            return null;
+        }
+
+        var opportunity = await CrmService.GetOpportunityAsync(
+            opportunityId.Value,
+            cancellationToken);
+        return opportunity?.AccountPartyId == accountPartyId
+            ? opportunity
+            : null;
+    }
+
     private void ApplyLoadedAccount(
         CrmAccountWorkspaceModel account,
+        CrmOpportunityDetailModel? opportunity,
+        CrmInteractionDetailModel? interaction,
         bool clearMessage,
         Guid? requestedOpportunityId,
         Guid? preferredOpportunityId,
         Guid? requestedInteractionId)
     {
+        InvalidateAccountActivity();
         selectedAccount = account;
+        selectedOpportunity = opportunity;
+        selectedInteraction = interaction;
         profileEditor = new CrmAccountProfileEditorModel
         {
             Id = account.Profile.Id,
@@ -863,6 +781,14 @@
                 Notes = item.Notes
             })
             .ToList();
+        stakeholderPartyLabels.Clear();
+        foreach (var stakeholder in account.Stakeholders)
+        {
+            stakeholderPartyLabels[stakeholder.RelatedPartyId] =
+                $"{stakeholder.DisplayName} ({stakeholder.PartyType})";
+        }
+
+        stakeholderPartyPickerIndex = null;
         ApplyContextSelection(
             requestedOpportunityId,
             preferredOpportunityId,
@@ -871,7 +797,6 @@
         if (clearMessage)
         {
             message = null;
-            messageTone = "success";
         }
     }
 
@@ -895,19 +820,14 @@
         supersededLoad?.Cancel();
         try
         {
-            var accountsTask = CrmService.ListAccountsAsync(loadCancellation.Token);
-            var accountTask = CrmService.GetAccountWorkspaceAsync(
+            var account = await CrmService.GetAccountWorkspaceAsync(
                 action.AccountId,
                 loadCancellation.Token);
-            await Task.WhenAll(accountsTask, accountTask);
-            var loadedAccounts = await accountsTask;
-            var account = await accountTask;
             if (!IsCurrentAccountRefresh(loadGeneration, action))
             {
                 return false;
             }
 
-            accounts = loadedAccounts;
             committedQueryKey = queryKey;
             if (account is null)
             {
@@ -916,12 +836,41 @@
                 return false;
             }
 
+            var targetOpportunityId = preferredOpportunityId ??
+                                      action.SelectedOpportunityId ??
+                                      action.RouteOpportunityId;
+            var opportunity = await LoadOpportunityForAccountAsync(
+                targetOpportunityId,
+                account.AccountPartyId,
+                loadCancellation.Token);
+            if (!IsCurrentAccountRefresh(loadGeneration, action))
+            {
+                return false;
+            }
+
+            var interaction = action.RouteInteractionId.HasValue
+                ? await CrmService.GetAccountInteractionAsync(
+                    account.AccountPartyId,
+                    action.RouteInteractionId.Value,
+                    loadCancellation.Token)
+                : null;
+            if (!IsCurrentAccountRefresh(loadGeneration, action))
+            {
+                return false;
+            }
+
             ApplyLoadedAccount(
                 account,
+                opportunity,
+                interaction,
                 clearMessage,
                 action.RouteOpportunityId,
                 preferredOpportunityId ?? action.SelectedOpportunityId,
                 action.RouteInteractionId);
+            if (selectedCrmRecordTab == CrmRecordTab.Interactions)
+            {
+                await EnsureAccountActivityLoadedAsync();
+            }
             var requestedSelectionFound =
                 (!action.RouteOpportunityId.HasValue ||
                  selectedOpportunityId == action.RouteOpportunityId) &&
@@ -996,7 +945,7 @@
            selectedOpportunityId == action.SelectedOpportunityId &&
            selectedInteractionId == action.SelectedInteractionId;
 
-    private void HandleCrmRecordTabChanged(int selectedIndex)
+    private async Task HandleCrmRecordTabChanged(int selectedIndex)
     {
         var requestedTab = (CrmRecordTab)selectedIndex;
         if (!Enum.IsDefined(requestedTab))
@@ -1005,6 +954,113 @@
         }
 
         selectedCrmRecordTab = requestedTab;
+        if (requestedTab == CrmRecordTab.Interactions)
+        {
+            await EnsureAccountActivityLoadedAsync();
+        }
+    }
+
+    private async Task EnsureAccountActivityLoadedAsync()
+    {
+        if (selectedAccount is not { } account ||
+            accountActivityLoadedPartyId == account.AccountPartyId)
+        {
+            return;
+        }
+
+        var accountPartyId = account.AccountPartyId;
+        var generation = Volatile.Read(ref accountActivityLoadGeneration);
+        if (accountActivityLoadTask is null)
+        {
+            isAccountActivityLoading = true;
+            accountActivityLoadError = string.Empty;
+            accountActivityLoadTask = LoadAccountActivityAsync(
+                accountPartyId,
+                pageIndex: 0,
+                generation);
+        }
+
+        await accountActivityLoadTask;
+    }
+
+    private async Task LoadAccountActivityAsync(
+        Guid accountPartyId,
+        int pageIndex,
+        long generation)
+    {
+        try
+        {
+            var page = await CrmService.SearchAccountActivityAsync(
+                new CrmActivityHistoryQuery(
+                    accountPartyId,
+                    pageIndex,
+                    accountActivityPage.PageSize));
+            if (!IsCurrentAccountActivityLoad(accountPartyId, generation))
+            {
+                return;
+            }
+
+            accountActivityPage = page;
+            accountActivityLoadedPartyId = accountPartyId;
+        }
+        catch when (!IsCurrentAccountActivityLoad(accountPartyId, generation))
+        {
+        }
+        catch (Exception exception)
+        {
+            Logger.LogError(
+                exception,
+                "Failed to load account activity page {PageIndex} for account {AccountPartyId}.",
+                pageIndex,
+                accountPartyId);
+            accountActivityLoadError = "Account activity could not be loaded.";
+        }
+        finally
+        {
+            if (IsCurrentAccountActivityLoad(accountPartyId, generation))
+            {
+                isAccountActivityLoading = false;
+                accountActivityLoadTask = null;
+            }
+        }
+    }
+
+    private async Task HandleAccountActivityPageRequestedAsync(int pageIndex)
+    {
+        if (selectedAccount is not { } account ||
+            pageIndex < 0 ||
+            pageIndex >= accountActivityPage.TotalPages)
+        {
+            return;
+        }
+
+        isAccountActivityLoading = true;
+        accountActivityLoadError = string.Empty;
+        await LoadAccountActivityAsync(
+            account.AccountPartyId,
+            pageIndex,
+            Volatile.Read(ref accountActivityLoadGeneration));
+    }
+
+    private bool IsCurrentAccountActivityLoad(Guid accountPartyId, long generation)
+        => !isDisposed &&
+           selectedAccount?.AccountPartyId == accountPartyId &&
+           generation == Volatile.Read(ref accountActivityLoadGeneration);
+
+    private async Task RetryAccountActivityAsync()
+    {
+        InvalidateAccountActivity();
+        await EnsureAccountActivityLoadedAsync();
+    }
+
+    private void InvalidateAccountActivity()
+    {
+        Interlocked.Increment(ref accountActivityLoadGeneration);
+        accountActivityPage = CrmActivityHistoryPage.Empty();
+        accountActivityLoadedPartyId = null;
+        accountActivityLoadTask = null;
+        isAccountActivityLoading = false;
+        accountActivityLoadError = string.Empty;
     }
 
     private void SelectCrmRecordTabForRoute(
@@ -1033,14 +1089,23 @@
 
     private void ClearAccountSelection()
     {
+        InvalidateAccountActivity();
         selectedAccount = null;
+        selectedOpportunity = null;
+        selectedInteraction = null;
         profileEditor = new();
         stakeholderEditors = [];
+        stakeholderPartyLabels.Clear();
+        stakeholderPartyPickerIndex = null;
         interactionEditor = CreateInteractionEditor();
-        opportunityEditor = CreateOpportunityEditor(null, null);
+        opportunityEditor = new();
         opportunityConversionEditor = new();
         selectedOpportunityId = null;
         selectedInteractionId = null;
+        isOpportunityCreateDialogOpen = false;
+        isOpportunityDetailDialogOpen = false;
+        isOpportunityEditDialogOpen = false;
+        isOpportunityConversionDialogOpen = false;
         selectedCrmRecordTab = CrmRecordTab.Overview;
         UpdateAgentChatContext();
     }
@@ -1103,8 +1168,84 @@
 
     private void RemoveStakeholder(int index)
     {
+        if (index < 0 || index >= stakeholderEditors.Count)
+        {
+            return;
+        }
+
         stakeholderEditors.RemoveAt(index);
+        if (stakeholderPartyPickerIndex == index)
+        {
+            stakeholderPartyPickerIndex = null;
+        }
+        else if (stakeholderPartyPickerIndex > index)
+        {
+            stakeholderPartyPickerIndex--;
+        }
+
         StateHasChanged();
+    }
+
+    private void OpenStakeholderPartyPicker(int index)
+    {
+        if (index < 0 || index >= stakeholderEditors.Count)
+        {
+            return;
+        }
+
+        stakeholderPartyPickerIndex = index;
+    }
+
+    private Task CloseStakeholderPartyPickerAsync()
+    {
+        stakeholderPartyPickerIndex = null;
+        return Task.CompletedTask;
+    }
+
+    private async Task ConfirmStakeholderPartyAsync(Guid partyId)
+    {
+        if (stakeholderPartyPickerIndex is not int index ||
+            index < 0 ||
+            index >= stakeholderEditors.Count)
+        {
+            stakeholderPartyPickerIndex = null;
+            return;
+        }
+
+        var party = await PartyRecordQueryService.GetAsync(partyId);
+        if (party is null)
+        {
+            stakeholderPartyPickerIndex = null;
+            NotifyError(
+                "Stakeholder unavailable",
+                "The selected party no longer exists or is archived.");
+            return;
+        }
+
+        stakeholderEditors[index].RelatedPartyId = party.Id;
+        stakeholderPartyLabels[party.Id] = $"{party.DisplayName} ({party.PartyType})";
+        stakeholderPartyPickerIndex = null;
+    }
+
+    private void ClearStakeholderParty(int index)
+    {
+        if (index < 0 || index >= stakeholderEditors.Count)
+        {
+            return;
+        }
+
+        stakeholderEditors[index].RelatedPartyId = Guid.Empty;
+    }
+
+    private string ResolveStakeholderPartyLabel(Guid partyId)
+    {
+        if (partyId == Guid.Empty)
+        {
+            return "No party selected";
+        }
+
+        return stakeholderPartyLabels.GetValueOrDefault(partyId)
+            ?? "Selected directory party";
     }
 
     private async Task SaveStakeholdersAsync()
@@ -1178,7 +1319,7 @@
         return Task.CompletedTask;
     }
 
-    private async Task SaveOpportunityAsync()
+    private async Task SaveOpportunityAsync(CrmOpportunityEditorModel model)
     {
         if (!TryCaptureCrmAction(out var action))
         {
@@ -1189,16 +1330,20 @@
         isOpportunityBusy = true;
         try
         {
-            opportunityEditor.AccountPartyId = action.AccountId;
-            opportunityEditor.RelationshipStage = profileEditor.RelationshipStage.ToString();
-            opportunityEditor.LastChangedBy = profileEditor.LastChangedBy;
+            var editor = OpportunityEditorDrafts.Clone(model);
+            editor.AccountPartyId = action.AccountId;
+            editor.RelationshipStage = profileEditor.RelationshipStage.ToString();
+            editor.LastChangedBy = profileEditor.LastChangedBy;
 
-            var result = await CrmService.SaveOpportunityAsync(opportunityEditor);
+            var result = await CrmService.SaveOpportunityAsync(editor);
             if (result.IsFailure)
             {
                 if (IsCurrentCrmAction(action))
                 {
-                    NotifyError("Opportunity save failed", string.Join(" ", result.Errors.Select(error => error.Message)));
+                    NotifyError(
+                        "Opportunity save failed",
+                        string.Join(" ", result.Errors.Select(error => error.Message)),
+                        keepDialogMessage: true);
                 }
 
                 return;
@@ -1212,6 +1357,10 @@
                 return;
             }
 
+            opportunityPipelineRefreshVersion++;
+            isOpportunityCreateDialogOpen = false;
+            isOpportunityEditDialogOpen = false;
+            isOpportunityDetailDialogOpen = true;
             NotifySuccess("Opportunity saved", "Opportunity saved.");
         }
         finally
@@ -1225,89 +1374,106 @@
 
     private async Task AdvanceOpportunityStageAsync(Guid opportunityId)
     {
-        if (selectedAccount is null)
+        if (!TryCaptureCrmAction(out var action))
         {
             return;
         }
 
-        var opportunity = selectedAccount.Opportunities.FirstOrDefault(item => item.Id == opportunityId);
-        if (opportunity is null)
+        var opportunity = await CrmService.GetOpportunityAsync(opportunityId);
+        if (!IsCurrentCrmAction(action) ||
+            opportunity is null ||
+            opportunity.AccountPartyId != action.AccountId)
         {
             return;
         }
 
-        opportunityEditor = CreateOpportunityEditor(selectedAccount, opportunity);
-        opportunityEditor.Stage = ResolveNextOpportunityStage(opportunity.Stage);
-        opportunityEditor.StageNotes = $"Advanced from {opportunity.Stage} to {opportunityEditor.Stage}.";
-        selectedOpportunityId = opportunityId;
-        await SaveOpportunityAsync();
+        var editor = OpportunityEditorDrafts.FromDetail(opportunity);
+        editor.Stage = ResolveNextOpportunityStage(opportunity.Stage);
+        editor.StageNotes = $"Advanced from {opportunity.Stage} to {editor.Stage}.";
+        await SaveOpportunityAsync(editor);
     }
 
-    private void StartNewOpportunity()
+    private void OpenOpportunityCreateDialog()
     {
         if (selectedAccount is null)
         {
             return;
         }
 
-        InvalidateCurrentQueryForNavigation();
-        Navigation.NavigateTo($"/crm-hr/crm?accountId={selectedAccount.AccountPartyId:D}");
+        opportunityEditor = new CrmOpportunityEditorModel
+        {
+            AccountPartyId = selectedAccount.AccountPartyId,
+            RelationshipStage = profileEditor.RelationshipStage.ToString()
+        };
+        message = null;
+        isOpportunityDetailDialogOpen = false;
+        isOpportunityEditDialogOpen = false;
+        isOpportunityCreateDialogOpen = true;
     }
 
-    private void AddOpportunityPartyLink()
+    private Task CloseOpportunityCreateDialogAsync()
     {
-        opportunityEditor.Parties.Add(new CrmOpportunityPartyLinkEditorModel
-        {
-            Role = OpportunityPartyRole.Partner
-        });
-    }
-
-    private Task RemoveOpportunityPartyLink(int index)
-    {
-        if (index >= 0 && index < opportunityEditor.Parties.Count)
-        {
-            opportunityEditor.Parties.RemoveAt(index);
-        }
-
+        isOpportunityCreateDialogOpen = false;
+        message = null;
         return Task.CompletedTask;
     }
 
-    private async Task OpenConversionDialogAsync()
+    private Task CloseOpportunityDetailDialogAsync()
     {
-        if (!TryCaptureCrmAction(out var action) ||
-            SelectedOpportunity is not { } selectedOpportunity)
+        isOpportunityDetailDialogOpen = false;
+        return Task.CompletedTask;
+    }
+
+    private void OpenOpportunityEditDialog()
+    {
+        if (SelectedOpportunity is null)
+        {
+            return;
+        }
+
+        message = null;
+        isOpportunityDetailDialogOpen = false;
+        isOpportunityEditDialogOpen = true;
+    }
+
+    private Task CloseOpportunityEditDialogAsync()
+    {
+        isOpportunityEditDialogOpen = false;
+        isOpportunityDetailDialogOpen = SelectedOpportunity is not null;
+        message = null;
+        return Task.CompletedTask;
+    }
+
+    private Task OpenConversionDialogAsync()
+    {
+        if (SelectedOpportunity is not { } selectedOpportunity)
         {
             NotifyWarning("Opportunity conversion unavailable", "Choose a won opportunity before converting it to a project.");
-            return;
+            return Task.CompletedTask;
         }
 
         if (selectedOpportunity.Stage != OpportunityStage.Won)
         {
             NotifyWarning("Opportunity conversion unavailable", "Only won opportunities can be converted into projects.");
-            return;
+            return Task.CompletedTask;
         }
 
-        var loadedProjectSummaries = await ProjectsService.ListAsync();
-        if (!IsCurrentCrmAction(action) ||
-            SelectedOpportunity?.Id != selectedOpportunity.Id)
-        {
-            return;
-        }
-
-        projectSummaries = loadedProjectSummaries;
         opportunityConversionEditor = CreateOpportunityConversionEditor(selectedOpportunity);
         message = null;
-        messageTone = "success";
+        isOpportunityDetailDialogOpen = false;
         isOpportunityConversionDialogOpen = true;
+        return Task.CompletedTask;
     }
 
     private Task CloseOpportunityConversionDialogAsync()
     {
         isOpportunityConversionDialogOpen = false;
+        isOpportunityDetailDialogOpen = SelectedOpportunity is not null;
+        message = null;
         return Task.CompletedTask;
     }
 
-    private async Task SaveOpportunityConversionAsync()
+    private async Task SaveOpportunityConversionAsync(CrmOpportunityConversionEditorModel model)
     {
         if (!TryCaptureCrmAction(out var action) ||
             SelectedOpportunity is not { } selectedOpportunity)
@@ -1319,10 +1485,11 @@
         isOpportunityConversionBusy = true;
         try
         {
-            opportunityConversionEditor.OpportunityId = selectedOpportunity.Id;
-            opportunityConversionEditor.LastChangedBy = profileEditor.LastChangedBy;
+            var editor = CloneOpportunityConversionEditor(model);
+            editor.OpportunityId = selectedOpportunity.Id;
+            editor.LastChangedBy = profileEditor.LastChangedBy;
 
-            var result = await CrmService.ConvertOpportunityToProjectAsync(opportunityConversionEditor);
+            var result = await CrmService.ConvertOpportunityToProjectAsync(editor);
             if (result.IsFailure)
             {
                 if (IsCurrentCrmAction(action))
@@ -1352,7 +1519,9 @@
                 return;
             }
 
+            opportunityPipelineRefreshVersion++;
             isOpportunityConversionDialogOpen = false;
+            isOpportunityDetailDialogOpen = true;
             var conversionMessage = conversion.CreatedNewProject
                 ? "Opportunity converted into a new project."
                 : "Opportunity linked to the selected project.";
@@ -1365,6 +1534,30 @@
                 isOpportunityConversionBusy = false;
             }
         }
+    }
+
+    private Task HandleOpportunityPipelineLoadFailedAsync(Exception exception)
+    {
+        NotificationService.Error(
+            "Opportunity pipeline unavailable",
+            "The opportunity query failed. Retry after checking the active CRM data source.");
+        return Task.CompletedTask;
+    }
+
+    private Task HandleAccountBrowserLoadFailedAsync(Exception exception)
+    {
+        NotificationService.Error(
+            "Account directory unavailable",
+            "The account query failed. Retry after checking the active CRM data source.");
+        return Task.CompletedTask;
+    }
+
+    private Task HandleOpportunityPickerLoadFailedAsync(Exception exception)
+    {
+        NotificationService.Error(
+            "Record picker unavailable",
+            "The record query failed. Close the picker or retry after checking the active data source.");
+        return Task.CompletedTask;
     }
 
     private Task OpenLinkedProjectAsync()
@@ -1394,100 +1587,15 @@
         interactionEditor.ParticipantPartyIds.Remove(partyId);
     }
 
-    private void ResetFilters()
-    {
-        searchText = string.Empty;
-        stageFilter = string.Empty;
-    }
-
-    private void ResetOpportunityFilters()
-    {
-        opportunitySearchText = string.Empty;
-        opportunityStageFilter = string.Empty;
-        opportunityOwnerFilter = null;
-        opportunityDeliveryUnitFilter = null;
-        opportunityPartnerFilter = null;
-        opportunitySourceFilter = string.Empty;
-    }
-
-    private bool MatchesSearch(CrmAccountListItemModel item)
-    {
-        if (string.IsNullOrWhiteSpace(searchText))
-        {
-            return true;
-        }
-
-        var normalizedSearch = searchText.Trim();
-        return item.DisplayName.Contains(normalizedSearch, StringComparison.OrdinalIgnoreCase)
-            || item.PrimaryEmail.Contains(normalizedSearch, StringComparison.OrdinalIgnoreCase)
-            || item.PrimaryPhone.Contains(normalizedSearch, StringComparison.OrdinalIgnoreCase)
-            || item.RelationshipStage.ToString().Contains(normalizedSearch, StringComparison.OrdinalIgnoreCase)
-            || item.Roles.Any(role => role.ToString().Contains(normalizedSearch, StringComparison.OrdinalIgnoreCase));
-    }
-
-    private bool MatchesStage(CrmAccountListItemModel item)
-    {
-        return string.IsNullOrWhiteSpace(stageFilter)
-            || string.Equals(item.RelationshipStage.ToString(), stageFilter, StringComparison.OrdinalIgnoreCase);
-    }
-
-    private bool MatchesOpportunitySearch(CrmOpportunityDetailModel item)
-    {
-        if (string.IsNullOrWhiteSpace(opportunitySearchText))
-        {
-            return true;
-        }
-
-        var normalizedSearch = opportunitySearchText.Trim();
-        return item.Title.Contains(normalizedSearch, StringComparison.OrdinalIgnoreCase)
-            || item.OwnerDisplayName.Contains(normalizedSearch, StringComparison.OrdinalIgnoreCase)
-            || item.DeliveryUnitDisplayName.Contains(normalizedSearch, StringComparison.OrdinalIgnoreCase)
-            || item.Summary.Contains(normalizedSearch, StringComparison.OrdinalIgnoreCase)
-            || item.Notes.Contains(normalizedSearch, StringComparison.OrdinalIgnoreCase)
-            || item.Parties.Any(party => party.DisplayName.Contains(normalizedSearch, StringComparison.OrdinalIgnoreCase));
-    }
-
-    private bool MatchesOpportunityStage(CrmOpportunityDetailModel item)
-    {
-        return string.IsNullOrWhiteSpace(opportunityStageFilter)
-            || string.Equals(item.Stage.ToString(), opportunityStageFilter, StringComparison.OrdinalIgnoreCase);
-    }
-
-    private bool MatchesOpportunityOwner(CrmOpportunityDetailModel item)
-    {
-        return !opportunityOwnerFilter.HasValue || item.OwnerPartyId == opportunityOwnerFilter.Value;
-    }
-
-    private bool MatchesOpportunityDeliveryUnit(CrmOpportunityDetailModel item)
-    {
-        return !opportunityDeliveryUnitFilter.HasValue || item.DeliveryUnitPartyId == opportunityDeliveryUnitFilter.Value;
-    }
-
-    private bool MatchesOpportunityPartner(CrmOpportunityDetailModel item)
-    {
-        return !opportunityPartnerFilter.HasValue
-            || item.Parties.Any(party =>
-                party.Role == OpportunityPartyRole.Partner &&
-                party.PartyId == opportunityPartnerFilter.Value);
-    }
-
-    private bool MatchesOpportunitySource(CrmOpportunityDetailModel item)
-    {
-        return string.IsNullOrWhiteSpace(opportunitySourceFilter)
-            || string.Equals(item.OpportunitySource.ToString(), opportunitySourceFilter, StringComparison.OrdinalIgnoreCase);
-    }
-
     private void NotifySuccess(string summary, string detail)
     {
         message = detail;
-        messageTone = "success";
         NotificationService.Success(summary, detail);
     }
 
     private void NotifyWarning(string summary, string detail)
     {
         message = detail;
-        messageTone = "danger";
         NotificationService.Warning(summary, detail);
     }
 
@@ -1496,45 +1604,9 @@
         if (keepDialogMessage || isOpportunityConversionDialogOpen)
         {
             message = detail;
-            messageTone = "danger";
         }
 
         NotificationService.Error(summary, detail);
-    }
-
-    private static string BuildAccountMeta(CrmAccountListItemModel item)
-    {
-        var roleText = item.Roles.Count == 0 ? "No roles" : string.Join(", ", item.Roles);
-        return $"{roleText} / {item.OpenOpportunityCount} open opportunity record(s)";
-    }
-
-    private static string BuildAccountSummary(CrmAccountListItemModel item)
-    {
-        if (!string.IsNullOrWhiteSpace(item.PrimaryEmail))
-        {
-            return item.PrimaryEmail;
-        }
-
-        if (!string.IsNullOrWhiteSpace(item.PrimaryPhone))
-        {
-            return item.PrimaryPhone;
-        }
-
-        return item.LastInteractionAtUtc.HasValue
-            ? $"Last interaction {item.LastInteractionAtUtc.Value.LocalDateTime:g}"
-            : "No interactions logged yet";
-    }
-
-    private static string ResolveStageTone(CrmAccountRelationshipStage stage)
-    {
-        return stage switch
-        {
-            CrmAccountRelationshipStage.ActiveCustomer => "success",
-            CrmAccountRelationshipStage.Prospect => "info",
-            CrmAccountRelationshipStage.DormantCustomer => "warning",
-            CrmAccountRelationshipStage.LostCustomer => "danger",
-            _ => "neutral"
-        };
     }
 
     private void ApplyContextSelection(
@@ -1544,39 +1616,47 @@
     {
         if (selectedAccount is null)
         {
+            selectedOpportunity = null;
             selectedOpportunityId = null;
             selectedInteractionId = null;
-            opportunityEditor = CreateOpportunityEditor(null, null);
+            opportunityEditor = new();
             interactionEditor = CreateInteractionEditor();
             opportunityConversionEditor = new();
+            isOpportunityCreateDialogOpen = false;
+            isOpportunityDetailDialogOpen = false;
+            isOpportunityEditDialogOpen = false;
+            isOpportunityConversionDialogOpen = false;
             UpdateAgentChatContext();
             return;
         }
 
         selectedInteractionId = requestedInteractionId.HasValue &&
-                                selectedAccount.Interactions.Any(item => item.Id == requestedInteractionId.Value)
+                                selectedInteraction?.Id == requestedInteractionId.Value
             ? requestedInteractionId
             : null;
         var targetOpportunityId = requestedOpportunityId ?? preferredOpportunityId;
         if (targetOpportunityId.HasValue &&
-            !selectedAccount.Opportunities.Any(item => item.Id == targetOpportunityId.Value))
+            (selectedOpportunity?.Id != targetOpportunityId.Value ||
+             selectedOpportunity.AccountPartyId != selectedAccount.AccountPartyId))
         {
             targetOpportunityId = null;
-        }
-
-        if (!requestedOpportunityId.HasValue &&
-            !requestedInteractionId.HasValue &&
-            !targetOpportunityId.HasValue &&
-            selectedAccount.Opportunities.Count > 0)
-        {
-            targetOpportunityId = selectedAccount.Opportunities[0].Id;
+            selectedOpportunity = null;
         }
 
         selectedOpportunityId = targetOpportunityId;
-        opportunityEditor = CreateOpportunityEditor(selectedAccount, SelectedOpportunity);
+        opportunityEditor = SelectedOpportunity is null
+            ? new CrmOpportunityEditorModel
+            {
+                AccountPartyId = selectedAccount.AccountPartyId,
+                RelationshipStage = selectedAccount.Profile.RelationshipStage.ToString()
+            }
+            : OpportunityEditorDrafts.FromDetail(SelectedOpportunity);
         interactionEditor = CreateInteractionEditor(
             selectedOpportunityId ?? SelectedInteraction?.RelatedOpportunityId);
         opportunityConversionEditor = CreateOpportunityConversionEditor(SelectedOpportunity);
+        isOpportunityDetailDialogOpen =
+            requestedOpportunityId.HasValue &&
+            SelectedOpportunity is not null;
         UpdateAgentChatContext();
     }
 
@@ -1636,6 +1716,9 @@
         Interlocked.Increment(ref transientStateGeneration);
         isOpportunityBusy = false;
         isOpportunityConversionBusy = false;
+        isOpportunityCreateDialogOpen = false;
+        isOpportunityDetailDialogOpen = false;
+        isOpportunityEditDialogOpen = false;
         isOpportunityConversionDialogOpen = false;
         agentChatAccountContext = null;
         agentChatOpportunityContext = null;
@@ -1668,21 +1751,6 @@
             "The selected account was refreshed after the agent run completed.");
     }
 
-    private PartyOptionModel ResolvePartyFilterOption(Guid id, string displayName, PartyType fallbackPartyType)
-    {
-        return OpportunityPartyOptions.FirstOrDefault(item => item.Id == id)
-            ?? new PartyOptionModel(id, displayName, fallbackPartyType);
-    }
-
-    private static IReadOnlyList<PartyOptionModel> DistinctPartyOptions(IEnumerable<PartyOptionModel> options)
-    {
-        return options
-            .GroupBy(item => item.Id)
-            .Select(group => group.First())
-            .OrderBy(item => item.DisplayName)
-            .ToList();
-    }
-
     private static OpportunityStage ResolveNextOpportunityStage(OpportunityStage stage)
     {
         return stage switch
@@ -1695,58 +1763,6 @@
         };
     }
 
-    private static CrmOpportunityEditorModel CreateOpportunityEditor(CrmAccountWorkspaceModel? account, CrmOpportunityDetailModel? opportunity)
-    {
-        if (opportunity is not null)
-        {
-            return new CrmOpportunityEditorModel
-            {
-                Id = opportunity.Id,
-                AccountPartyId = opportunity.AccountPartyId,
-                Title = opportunity.Title,
-                Stage = opportunity.Stage,
-                RelationshipStage = opportunity.RelationshipStage,
-                OpportunitySource = opportunity.OpportunitySource,
-                OwnerPartyId = opportunity.OwnerPartyId,
-                DeliveryUnitPartyId = opportunity.DeliveryUnitPartyId,
-                CurrencyCode = opportunity.CurrencyCode,
-                Amount = opportunity.Amount,
-                ProbabilityPercent = opportunity.ProbabilityPercent,
-                ExpectedCloseOn = opportunity.ExpectedCloseOn,
-                LostReason = opportunity.LostReason,
-                CompetitorName = opportunity.CompetitorName,
-                PartnerContributionSummary = opportunity.PartnerContributionSummary,
-                Summary = opportunity.Summary,
-                Notes = opportunity.Notes,
-                LinkedProjectId = opportunity.LinkedProjectId,
-                Parties = opportunity.Parties
-                    .Select(item => new CrmOpportunityPartyLinkEditorModel
-                    {
-                        Id = item.Id,
-                        PartyId = item.PartyId,
-                        Role = item.Role
-                    })
-                    .ToList()
-            };
-        }
-
-        return new CrmOpportunityEditorModel
-        {
-            AccountPartyId = account?.AccountPartyId ?? Guid.Empty,
-            RelationshipStage = account?.Profile.RelationshipStage.ToString() ?? string.Empty,
-            OwnerPartyId = account is null ? Guid.Empty : ResolveDefaultOwnerId(account)
-        };
-    }
-
-    private static Guid ResolveDefaultOwnerId(CrmAccountWorkspaceModel account)
-    {
-        return account.AvailableParties
-            .Where(item => item.PartyType is PartyType.Person or PartyType.OrganizationUnit or PartyType.AiAgent)
-            .OrderBy(item => item.DisplayName)
-            .Select(item => item.Id)
-            .FirstOrDefault();
-    }
-
     private static CrmOpportunityConversionEditorModel CreateOpportunityConversionEditor(CrmOpportunityDetailModel? opportunity)
     {
         if (opportunity is null)
@@ -1757,6 +1773,7 @@
         return new CrmOpportunityConversionEditorModel
         {
             OpportunityId = opportunity.Id,
+            ExpectedUpdatedAtUtc = opportunity.UpdatedAtUtc,
             LinkExistingProject = opportunity.LinkedProjectId.HasValue,
             ExistingProjectId = opportunity.LinkedProjectId,
             ProjectName = string.IsNullOrWhiteSpace(opportunity.LinkedProjectName)
@@ -1777,9 +1794,27 @@
         };
     }
 
+    private static CrmOpportunityConversionEditorModel CloneOpportunityConversionEditor(
+        CrmOpportunityConversionEditorModel source)
+    {
+        return new CrmOpportunityConversionEditorModel
+        {
+            OpportunityId = source.OpportunityId,
+            ExpectedUpdatedAtUtc = source.ExpectedUpdatedAtUtc,
+            LinkExistingProject = source.LinkExistingProject,
+            ExistingProjectId = source.ExistingProjectId,
+            ProjectName = source.ProjectName,
+            ProjectDescription = source.ProjectDescription,
+            ProjectObjective = source.ProjectObjective,
+            CurrentPhase = source.CurrentPhase,
+            LastChangedBy = source.LastChangedBy
+        };
+    }
+
     private enum CrmRecordTab
     {
         Overview,
+        Financials,
         Stakeholders,
         Interactions,
         Opportunities

@@ -21,17 +21,12 @@
                         <Stack GapScale="LayoutGap.Medium"
                                AlignItems="AlignItems.Stretch">
                             <Grid Gap="LayoutGap.Medium" ColumnsMd="2">
-                                <FormField Text="Candidate">
-                                    <InputSelect @bind-Value="Draft.PartyId"
-                                                 class="cda-input"
-                                                 data-testid="crmhr-recruiting-candidate-party">
-                                        <option value="">Create a new candidate</option>
-                                        @foreach (var option in CandidateOptions.OrderBy(item => item.DisplayName, StringComparer.OrdinalIgnoreCase))
-                                        {
-                                            <option value="@option.Id">@option.DisplayName (@option.PartyType)</option>
-                                        }
-                                    </InputSelect>
-                                </FormField>
+                                <PartyPicker Label="Candidate"
+                                             TestIdPrefix="crmhr-recruiting-candidate-party"
+                                             AllowedScope="PartyRecordScope.People"
+                                             InitialScope="PartyRecordScope.People"
+                                             SelectedPartyId="@Draft.PartyId"
+                                             SelectedPartyIdChanged="SetCandidatePartyAsync" />
                                 <FormField Text="Desired role">
                                     <InputText @bind-Value="Draft.DesiredRole"
                                                class="cda-input"
@@ -107,39 +102,24 @@
                         <Stack GapScale="LayoutGap.Medium"
                                AlignItems="AlignItems.Stretch">
                             <Grid Gap="LayoutGap.Medium" ColumnsMd="2">
-                                <FormField Text="Recruiter">
-                                    <InputSelect @bind-Value="Draft.RecruiterPartyId"
-                                                 class="cda-input"
-                                                 data-testid="crmhr-recruiting-recruiter">
-                                        <option value="">Choose recruiter</option>
-                                        @foreach (var option in RecruiterOptions.OrderBy(item => item.DisplayName, StringComparer.OrdinalIgnoreCase))
-                                        {
-                                            <option value="@option.Id">@option.DisplayName</option>
-                                        }
-                                    </InputSelect>
-                                </FormField>
-                                <FormField Text="Hiring manager">
-                                    <InputSelect @bind-Value="Draft.HiringManagerPartyId"
-                                                 class="cda-input"
-                                                 data-testid="crmhr-recruiting-hiring-manager">
-                                        <option value="">Choose hiring manager</option>
-                                        @foreach (var option in HiringManagerOptions.OrderBy(item => item.DisplayName, StringComparer.OrdinalIgnoreCase))
-                                        {
-                                            <option value="@option.Id">@option.DisplayName</option>
-                                        }
-                                    </InputSelect>
-                                </FormField>
-                                <FormField Text="Target unit">
-                                    <InputSelect @bind-Value="Draft.TargetUnitPartyId"
-                                                 class="cda-input"
-                                                 data-testid="crmhr-recruiting-target-unit">
-                                        <option value="">Choose target unit</option>
-                                        @foreach (var option in TargetUnitOptions.OrderBy(item => item.DisplayName, StringComparer.OrdinalIgnoreCase))
-                                        {
-                                            <option value="@option.Id">@option.DisplayName (@option.PartyType)</option>
-                                        }
-                                    </InputSelect>
-                                </FormField>
+                                <PartyPicker Label="Recruiter"
+                                             TestIdPrefix="crmhr-recruiting-recruiter"
+                                             AllowedScope="PartyRecordScope.People"
+                                             InitialScope="PartyRecordScope.People"
+                                             SelectedPartyId="@Draft.RecruiterPartyId"
+                                             SelectedPartyIdChanged="SetRecruiterPartyAsync" />
+                                <PartyPicker Label="Hiring manager"
+                                             TestIdPrefix="crmhr-recruiting-hiring-manager"
+                                             AllowedScope="PartyRecordScope.People"
+                                             InitialScope="PartyRecordScope.People"
+                                             SelectedPartyId="@Draft.HiringManagerPartyId"
+                                             SelectedPartyIdChanged="SetHiringManagerPartyAsync" />
+                                <PartyPicker Label="Target unit"
+                                             TestIdPrefix="crmhr-recruiting-target-unit"
+                                             AllowedScope="@(PartyRecordScope.Organizations | PartyRecordScope.OrganizationUnits)"
+                                             InitialScope="@(PartyRecordScope.Organizations | PartyRecordScope.OrganizationUnits)"
+                                             SelectedPartyId="@Draft.TargetUnitPartyId"
+                                             SelectedPartyIdChanged="SetTargetUnitPartyAsync" />
                             </Grid>
                         </Stack>
                     </TabsItem>
@@ -234,18 +214,6 @@
     public RecruitmentApplicationEditorModel Draft { get; set; } = new();
 
     [Parameter]
-    public IReadOnlyList<PartyOptionModel> CandidateOptions { get; set; } = [];
-
-    [Parameter]
-    public IReadOnlyList<PartyOptionModel> RecruiterOptions { get; set; } = [];
-
-    [Parameter]
-    public IReadOnlyList<PartyOptionModel> HiringManagerOptions { get; set; } = [];
-
-    [Parameter]
-    public IReadOnlyList<PartyOptionModel> TargetUnitOptions { get; set; } = [];
-
-    [Parameter]
     public IReadOnlyList<RecruitmentStageHistoryItemModel> StageHistory { get; set; } = [];
 
     [Parameter]
@@ -256,6 +224,30 @@
 
     [Parameter]
     public EventCallback ResetApplication { get; set; }
+
+    private Task SetCandidatePartyAsync(Guid? partyId)
+    {
+        Draft.PartyId = partyId;
+        return Task.CompletedTask;
+    }
+
+    private Task SetRecruiterPartyAsync(Guid? partyId)
+    {
+        Draft.RecruiterPartyId = partyId;
+        return Task.CompletedTask;
+    }
+
+    private Task SetHiringManagerPartyAsync(Guid? partyId)
+    {
+        Draft.HiringManagerPartyId = partyId;
+        return Task.CompletedTask;
+    }
+
+    private Task SetTargetUnitPartyAsync(Guid? partyId)
+    {
+        Draft.TargetUnitPartyId = partyId;
+        return Task.CompletedTask;
+    }
 
     private static string ResolveStageTone(RecruitmentStage stage)
     {

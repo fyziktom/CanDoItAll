@@ -1,0 +1,263 @@
+@if (IsOpen && Opportunity is not null)
+{
+    <Dialog IsOpen="true"
+            Eyebrow="Opportunity"
+            Title="@Opportunity.Title"
+            Subtitle="@($"{Opportunity.AccountDisplayName} · {Opportunity.OpportunitySource}")"
+            Size="ModalSize.Wide"
+            DenseChrome="true"
+            TestId="crmhr-opportunity-detail-dialog"
+            OnClose="Close">
+        <HeaderActions>
+            <Cluster Gap="LayoutGap.Small">
+                <StatusBadge Tone="@ResolveStageTone(Opportunity.Stage)"
+                             Text="@Opportunity.Stage.ToString()" />
+                <StatusBadge Tone="neutral"
+                             Text="@ResolveValueLabel(Opportunity)" />
+            </Cluster>
+        </HeaderActions>
+        <ChildContent>
+            <Stack GapScale="LayoutGap.Medium">
+                <TextBlock TextStyle="TextStyle.Subtitle2"
+                           Value="@Opportunity.Title"
+                           Class="sr-only"
+                           data-testid="crmhr-opportunity-title" />
+
+                <Grid Gap="LayoutGap.Medium"
+                      ColumnsLg="2">
+                    <FormSection Title="Commercial details"
+                                 Description="Read-only opportunity value and decision context.">
+                        <ChildContent>
+                            <Stack GapScale="LayoutGap.Small">
+                                <OpportunityDetailRow Label="Stage" Value="@Opportunity.Stage.ToString()" />
+                                <OpportunityDetailRow Label="Source" Value="@Opportunity.OpportunitySource.ToString()" />
+                                <OpportunityDetailRow Label="Value" Value="@ResolveValueLabel(Opportunity)" />
+                                <OpportunityDetailRow Label="Probability" Value="@($"{Opportunity.ProbabilityPercent}%")" />
+                                <OpportunityDetailRow Label="Expected close" Value="@ResolveExpectedCloseLabel(Opportunity)" />
+                                <OpportunityDetailRow Label="Relationship" Value="@Opportunity.RelationshipStage" />
+                                @if (!string.IsNullOrWhiteSpace(Opportunity.Summary))
+                                {
+                                    <PanelCard Soft="true">
+                                        <Stack GapScale="LayoutGap.XSmall">
+                                            <SmallText Text="Summary" />
+                                            <TextBlock TextStyle="TextStyle.Body1"
+                                                       Value="@Opportunity.Summary" />
+                                        </Stack>
+                                    </PanelCard>
+                                }
+                                @if (!string.IsNullOrWhiteSpace(Opportunity.Notes))
+                                {
+                                    <PanelCard Soft="true">
+                                        <Stack GapScale="LayoutGap.XSmall">
+                                            <SmallText Text="Notes" />
+                                            <TextBlock TextStyle="TextStyle.Body1"
+                                                       Value="@Opportunity.Notes" />
+                                        </Stack>
+                                    </PanelCard>
+                                }
+                                @if (Opportunity.Stage == OpportunityStage.Lost)
+                                {
+                                    <OpportunityDetailRow Label="Lost reason" Value="@Opportunity.LostReason" />
+                                }
+                            </Stack>
+                        </ChildContent>
+                    </FormSection>
+
+                    <FormSection Title="Ownership and delivery"
+                                 Description="Account, owner, delivery, partner, and project context.">
+                        <ChildContent>
+                            <Stack GapScale="LayoutGap.Small">
+                                <OpportunityDetailRow Label="Account" Value="@Opportunity.AccountDisplayName" />
+                                <OpportunityDetailRow Label="Owner" Value="@Opportunity.OwnerDisplayName" />
+                                <OpportunityDetailRow Label="Delivery unit" Value="@ResolveDeliveryUnitLabel(Opportunity)" />
+                                <OpportunityDetailRow Label="Competitor" Value="@ResolveOptionalLabel(Opportunity.CompetitorName)" />
+                                <OpportunityDetailRow Label="Linked project" Value="@ResolveOptionalLabel(Opportunity.LinkedProjectName)" />
+                                @if (!string.IsNullOrWhiteSpace(Opportunity.PartnerContributionSummary))
+                                {
+                                    <PanelCard Soft="true">
+                                        <Stack GapScale="LayoutGap.XSmall">
+                                            <SmallText Text="Partner contribution" />
+                                            <TextBlock TextStyle="TextStyle.Body1"
+                                                       Value="@Opportunity.PartnerContributionSummary" />
+                                        </Stack>
+                                    </PanelCard>
+                                }
+
+                                @if (Opportunity.Parties.Count == 0)
+                                {
+                                    <SmallText Text="No explicit pursuit parties." />
+                                }
+                                else
+                                {
+                                    @foreach (var party in Opportunity.Parties)
+                                    {
+                                        <PanelCard Soft="true"
+                                                   @key="party.Id">
+                                            <Split Breakpoint="LayoutBreakpoint.None"
+                                                   Gap="LayoutGap.Small"
+                                                   AlignItems="AlignItems.Center"
+                                                   JustifyContent="JustifyContent.SpaceBetween">
+                                                <TextBlock TextStyle="TextStyle.Body1"
+                                                           Value="@party.DisplayName" />
+                                                <StatusBadge Tone="neutral"
+                                                             Text="@ResolvePartyRoleLabel(party.Role)" />
+                                            </Split>
+                                        </PanelCard>
+                                    }
+                                }
+                            </Stack>
+                        </ChildContent>
+                    </FormSection>
+                </Grid>
+
+                <FormSection Title="Stage history"
+                             Description="The most recent movement is shown first.">
+                    <ChildContent>
+                        @if (Opportunity.StageHistory.Count == 0)
+                        {
+                            <SmallText Text="No stage history is available." />
+                        }
+                        else
+                        {
+                            <Grid Gap="LayoutGap.Small"
+                                  ColumnsLg="2">
+                                @foreach (var historyItem in Opportunity.StageHistory)
+                                {
+                                    <PanelCard Soft="true"
+                                               @key="historyItem.Id">
+                                        <Stack GapScale="LayoutGap.XSmall">
+                                            <Split Breakpoint="LayoutBreakpoint.None"
+                                                   Gap="LayoutGap.Small"
+                                                   AlignItems="AlignItems.Center"
+                                                   JustifyContent="JustifyContent.SpaceBetween">
+                                                <TextBlock TextStyle="TextStyle.Subtitle2"
+                                                           Value="@historyItem.Stage.ToString()" />
+                                                <StatusBadge Tone="neutral"
+                                                             Text="@historyItem.ChangedAtUtc.LocalDateTime.ToString("yyyy-MM-dd HH:mm")" />
+                                            </Split>
+                                            <SmallText Text="@historyItem.ChangedBy" />
+                                            @if (!string.IsNullOrWhiteSpace(historyItem.Notes))
+                                            {
+                                                <TextBlock TextStyle="TextStyle.Body1"
+                                                           Value="@historyItem.Notes" />
+                                            }
+                                        </Stack>
+                                    </PanelCard>
+                                }
+                            </Grid>
+                        }
+                    </ChildContent>
+                </FormSection>
+            </Stack>
+        </ChildContent>
+        <Footer>
+            <Split Breakpoint="LayoutBreakpoint.None"
+                   Gap="LayoutGap.Medium"
+                   AlignItems="AlignItems.Center"
+                   JustifyContent="JustifyContent.SpaceBetween"
+                   Wrap="FlexWrap.Wrap">
+                <Button Text="Close"
+                        ButtonStyle="ButtonStyle.Light"
+                        Click="Close"
+                        data-testid="crmhr-opportunity-detail-close" />
+                <Cluster Gap="LayoutGap.Small">
+                    @if (Opportunity.LinkedProjectId.HasValue)
+                    {
+                        <Button Text="Open linked project"
+                                Icon="folder_open"
+                                ButtonStyle="ButtonStyle.Light"
+                                Click="OpenLinkedProject"
+                                data-testid="crmhr-opportunity-open-project" />
+                    }
+                    @if (Opportunity.Stage == OpportunityStage.Won)
+                    {
+                        <Button Text="Convert to project"
+                                ButtonStyle="ButtonStyle.Info"
+                                Click="Convert"
+                                data-testid="crmhr-opportunity-convert-button" />
+                    }
+                    <Button Text="Edit opportunity"
+                            Icon="edit"
+                            Click="Edit"
+                            data-testid="crmhr-opportunity-edit-button" />
+                </Cluster>
+            </Split>
+        </Footer>
+    </Dialog>
+}
+
+@code {
+    [Parameter]
+    public bool IsOpen { get; set; }
+
+    [Parameter]
+    public CrmOpportunityDetailModel? Opportunity { get; set; }
+
+    [Parameter]
+    public EventCallback Close { get; set; }
+
+    [Parameter]
+    public EventCallback Edit { get; set; }
+
+    [Parameter]
+    public EventCallback Convert { get; set; }
+
+    [Parameter]
+    public EventCallback OpenLinkedProject { get; set; }
+
+    private static string ResolveValueLabel(CrmOpportunityDetailModel opportunity)
+    {
+        if (!opportunity.Amount.HasValue)
+        {
+            return "Value not set";
+        }
+
+        var currencyCode = string.IsNullOrWhiteSpace(opportunity.CurrencyCode)
+            ? "Currency missing"
+            : opportunity.CurrencyCode.Trim().ToUpperInvariant();
+        return $"{currencyCode} {opportunity.Amount.Value:N2}";
+    }
+
+    private static string ResolveExpectedCloseLabel(CrmOpportunityDetailModel opportunity)
+    {
+        return opportunity.ExpectedCloseOn?.ToString("yyyy-MM-dd")
+               ?? "Not set";
+    }
+
+    private static string ResolveDeliveryUnitLabel(CrmOpportunityDetailModel opportunity)
+    {
+        return ResolveOptionalLabel(opportunity.DeliveryUnitDisplayName);
+    }
+
+    private static string ResolveOptionalLabel(string value)
+    {
+        return string.IsNullOrWhiteSpace(value)
+            ? "Not set"
+            : value;
+    }
+
+    private static string ResolveStageTone(OpportunityStage stage)
+    {
+        return stage switch
+        {
+            OpportunityStage.Identified => "neutral",
+            OpportunityStage.Qualified => "info",
+            OpportunityStage.Proposal => "warning",
+            OpportunityStage.Negotiation => "warning",
+            OpportunityStage.Won => "success",
+            OpportunityStage.Lost => "danger",
+            _ => "neutral"
+        };
+    }
+
+    private static string ResolvePartyRoleLabel(OpportunityPartyRole role)
+    {
+        return role switch
+        {
+            OpportunityPartyRole.TechnicalContact => "Technical contact",
+            OpportunityPartyRole.BillingContact => "Billing contact",
+            OpportunityPartyRole.DeliveryLead => "Delivery lead",
+            _ => role.ToString()
+        };
+    }
+}

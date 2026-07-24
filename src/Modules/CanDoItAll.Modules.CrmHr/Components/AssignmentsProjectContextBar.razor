@@ -10,18 +10,37 @@
            Wrap="FlexWrap.Wrap">
         <div class="min-w-[20rem] flex-[1_1_34rem]">
             <FormField Text="Project">
-                <InputSelect TValue="Guid?"
-                             Value="SelectedProjectId"
-                             ValueChanged="HandleProjectChangedAsync"
-                             ValueExpression="@(() => SelectedProjectId)"
-                             class="cda-input"
-                             data-testid="crmhr-assignment-project">
-                    <option value="">Choose a project</option>
-                    @foreach (var project in Projects.OrderBy(item => item.Name, StringComparer.OrdinalIgnoreCase))
-                    {
-                        <option value="@project.Id">@project.Name</option>
-                    }
-                </InputSelect>
+                <SurfaceCard Soft="true">
+                    <Split Breakpoint="LayoutBreakpoint.None"
+                           Gap="LayoutGap.Medium"
+                           AlignItems="AlignItems.Center"
+                           JustifyContent="JustifyContent.SpaceBetween"
+                           Wrap="FlexWrap.Wrap">
+                        <Stack GapScale="LayoutGap.Tiny"
+                               Class="min-w-0">
+                            <TextBlock TextStyle="TextStyle.Subtitle2"
+                                       Value="@SelectedProjectLabel" />
+                            <SmallText Text="@SelectedProjectDescription" />
+                        </Stack>
+                        <Cluster Gap="LayoutGap.XSmall"
+                                 Wrap="FlexWrap.NoWrap">
+                            @if (SelectedProjectId.HasValue)
+                            {
+                                <Button Text="Clear"
+                                        ButtonStyle="ButtonStyle.Light"
+                                        Size="ButtonSize.Small"
+                                        Click="ClearProjectAsync"
+                                        data-testid="crmhr-assignment-project-clear" />
+                            }
+                            <Button Text="@(SelectedProjectId.HasValue ? "Change project" : "Choose project")"
+                                    Icon="search"
+                                    ButtonStyle="ButtonStyle.Light"
+                                    Size="ButtonSize.Small"
+                                    Click="OpenProjectPicker"
+                                    data-testid="crmhr-assignment-project" />
+                        </Cluster>
+                    </Split>
+                </SurfaceCard>
             </FormField>
         </div>
 
@@ -79,15 +98,30 @@
     </Split>
 </SurfaceCard>
 
+<ProjectRecordPickerDialog IsOpen="isProjectPickerOpen"
+                           SelectedProjectId="SelectedProjectId"
+                           InitialScope="ProjectRecordScope.All"
+                           SelectionConfirmed="HandleProjectSelectedAsync"
+                           OnClose="CloseProjectPickerAsync"
+                           LoadFailed="ProjectLoadFailed"
+                           Title="Choose an assignments project"
+                           Subtitle="Search and page through Projects-owned records."
+                           DataTestId="crmhr-assignment-project-picker" />
+
 @code {
-    [Parameter]
-    public IReadOnlyList<ProjectSummary> Projects { get; set; } = [];
+    private bool isProjectPickerOpen;
 
     [Parameter]
     public Guid? SelectedProjectId { get; set; }
 
     [Parameter]
+    public ProjectRecordQueryItem? SelectedProject { get; set; }
+
+    [Parameter]
     public EventCallback<Guid?> SelectedProjectIdChanged { get; set; }
+
+    [Parameter]
+    public EventCallback<Exception> ProjectLoadFailed { get; set; }
 
     [Parameter]
     public int AssignmentCount { get; set; }
@@ -108,10 +142,34 @@
         ? $"{StaffingRequestCount.Value} staffing requests"
         : "Staffing on demand";
 
-    private ProjectSummary? SelectedProject => SelectedProjectId.HasValue
-        ? Projects.FirstOrDefault(project => project.Id == SelectedProjectId.Value)
-        : null;
+    private string SelectedProjectLabel => SelectedProject?.Name
+        ?? (SelectedProjectId.HasValue ? "Selected project" : "No project selected");
 
-    private Task HandleProjectChangedAsync(Guid? projectId)
-        => SelectedProjectIdChanged.InvokeAsync(projectId);
+    private string SelectedProjectDescription => SelectedProject is null
+        ? SelectedProjectId.HasValue
+            ? "The selected project record is unavailable."
+            : "Choose from the server-paged project catalog."
+        : string.IsNullOrWhiteSpace(SelectedProject.CurrentPhase)
+            ? SelectedProject.Status.ToString()
+            : $"{SelectedProject.Status} / {SelectedProject.CurrentPhase}";
+
+    private void OpenProjectPicker()
+    {
+        isProjectPickerOpen = true;
+    }
+
+    private Task CloseProjectPickerAsync()
+    {
+        isProjectPickerOpen = false;
+        return Task.CompletedTask;
+    }
+
+    private async Task HandleProjectSelectedAsync(Guid projectId)
+    {
+        isProjectPickerOpen = false;
+        await SelectedProjectIdChanged.InvokeAsync(projectId);
+    }
+
+    private Task ClearProjectAsync()
+        => SelectedProjectIdChanged.InvokeAsync(null);
 }

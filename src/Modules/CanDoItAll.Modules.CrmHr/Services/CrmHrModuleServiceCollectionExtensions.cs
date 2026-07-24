@@ -14,10 +14,15 @@ public static class CrmHrModuleServiceCollectionExtensions
     {
         services.AddScoped<PartyDirectoryService>();
         services.AddScoped<PartyDirectoryManagementService>();
+        services.AddScoped<IPartyRecordQueryService, PartyRecordQueryService>();
+        services.AddScoped<ICrmHrHomeQueryService, CrmHrHomeQueryService>();
         services.AddScoped<CrmService>();
+        services.AddScoped<IOpportunityPipelineQueryService, OpportunityPipelineQueryService>();
+        services.AddScoped<ICrmFinancialSnapshotQueryService, CrmFinancialSnapshotQueryService>();
         services.AddScoped<HrService>();
         services.AddScoped<RecruitingService>();
         services.AddScoped<AiAgentService>();
+        services.AddScoped<IAiAgentDirectoryQueryService, AiAgentDirectoryQueryService>();
         services.AddScoped<ICrmHrAgentQueryService, CrmHrAgentQueryService>();
         services.AddScoped<ProjectPartyAssignmentNodePolicy>();
         services.AddScoped<ProjectPartyIntegrationService>();

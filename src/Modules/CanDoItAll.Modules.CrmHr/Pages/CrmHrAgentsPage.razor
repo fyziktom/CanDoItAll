@@ -1,6 +1,7 @@
 @page "/crm-hr/agents"
 @implements IAsyncDisposable
 @inject AiAgentService AiAgentService
+@inject IAiAgentDirectoryQueryService AiAgentDirectoryQueryService
 @inject NavigationManager Navigation
 
 <PageTitle>CRM / HR Agents</PageTitle>
@@ -17,19 +18,19 @@
                     Compact="true">
             <Stats>
                 <CompactStat Label="projected agents"
-                             Value="@(ShouldShowListLoadingState ? "..." : agentItems.Count.ToString())"
-                             TooltipText="CRM-HR AI resources currently projected from AgentFramework." />
-                <CompactStat Label="bound providers"
-                             Value="@(ShouldShowListLoadingState ? "..." : agentItems.Count(item => item.HasProfile && !string.IsNullOrWhiteSpace(item.ProviderName)).ToString())"
-                             TooltipText="Projected agents already linked to a technical provider profile."
+                             Value="@(ShouldShowListLoadingState ? "..." : agentPage.TotalCount.ToString())"
+                             TooltipText="CRM-HR AI resources matching the current server-side directory filters." />
+                <CompactStat Label="page providers"
+                             Value="@(ShouldShowListLoadingState ? "..." : agentPage.Items.Count(item => !string.IsNullOrWhiteSpace(item.ProviderName)).ToString())"
+                             TooltipText="Agents on the current page linked to a technical provider profile."
                              Tone="info" />
-                <CompactStat Label="review"
-                             Value="@(ShouldShowListLoadingState ? "..." : agentItems.Count(item => item.ValidationStatus == AiValidationStatus.ReviewRequired).ToString())"
-                             TooltipText="Projected agents whose governance review is still pending."
+                <CompactStat Label="page review"
+                             Value="@(ShouldShowListLoadingState ? "..." : agentPage.Items.Count(item => item.ValidationStatus == AiValidationStatus.ReviewRequired).ToString())"
+                             TooltipText="Agents on the current page whose governance review is still pending."
                              Tone="warning" />
-                <CompactStat Label="capability-backed"
-                             Value="@(ShouldShowListLoadingState ? "..." : agentItems.Count(item => item.CapabilityCount > 0).ToString())"
-                             TooltipText="Projected agents that already expose runtime capabilities."
+                <CompactStat Label="page capabilities"
+                             Value="@(ShouldShowListLoadingState ? "..." : agentPage.Items.Count(item => item.CapabilityCount > 0).ToString())"
+                             TooltipText="Agents on the current page that expose runtime capabilities."
                              Tone="success" />
             </Stats>
             <Actions>
@@ -49,77 +50,35 @@
 
     <ChildContent>
         <Stack GapScale="LayoutGap.Large">
-            <CrmHrSecondaryTabs SelectedKey="agents" />
+            <CrmHrSecondaryTabs SelectedArea="CrmHrWorkspaceArea.Agents" />
 
             <ListDetailShell ListPaneWidth="30rem">
                 <ListHeader>
                     <ListPanelHeader Title="Agent roster"
                                      Description="This directory shows AgentFramework-backed AI resources. Technical editing stays in AgentFramework, while CRM-HR exposes the linked business-facing record."
-                                     Count="@(ShouldShowListLoadingState ? "Loading..." : $"{FilteredItems.Count} visible agent(s)")">
-                        <Filters>
-                            <FilterBar ResultText="@(ShouldShowListLoadingState ? "Refreshing projected roster..." : $"{FilteredItems.Count} matching agent(s)")">
-                                <input @bind="searchText"
-                                       @bind:event="oninput"
-                                       class="cda-input min-w-[16rem] flex-1"
-                                       placeholder="Search agent, provider, owner, model, or summary"
-                                       data-testid="crmhr-agent-search" />
-                                <InputSelect @bind-Value="validationFilter"
-                                             class="cda-input"
-                                             data-testid="crmhr-agent-validation-filter">
-                                    @foreach (var filter in ValidationFilters)
-                                    {
-                                        <option value="@filter.Value">@filter.Label</option>
-                                    }
-                                </InputSelect>
-                                <Button Text="Reset"
-                                        ButtonStyle="ButtonStyle.Light"
-                                        Size="ButtonSize.Small"
-                                        Click="ResetFilters" />
-                            </FilterBar>
-                        </Filters>
-                    </ListPanelHeader>
+                                     Count="@(ShouldShowListLoadingState ? "Loading..." : $"{agentPage.TotalCount} matching agent(s)")" />
                 </ListHeader>
 
                 <ListContent>
-                    @if (ShouldShowListLoadingState)
-                    {
-                        <SurfaceCard Soft="true">
-                            <p class="cda-eyebrow">Refreshing projection</p>
-                            <h3 class="mt-1 text-lg font-semibold text-slate-950">Loading projected AI agents</h3>
-                            <p class="mt-3 text-sm leading-6 text-slate-600">
-                                CRM-HR is reading the AgentFramework-owned catalog before the business-facing roster is shown.
-                            </p>
-                        </SurfaceCard>
-                    }
-                    else if (FilteredItems.Count == 0)
-                    {
-                        <EmptyState Eyebrow="No projected AI agents"
-                                    Title="Create technical agents in AgentFramework"
-                                    Description="CRM-HR will display them here after AgentFramework projects the technical runtime into the business directory." />
-                    }
-                    else
-                    {
-                        <Stack GapScale="LayoutGap.Medium">
-                            @foreach (var item in FilteredItems)
-                            {
-                                <div data-testid="crmhr-agent-item">
-                                    <SelectionListItem Title="@item.DisplayName"
-                                                       Eyebrow="AI agent"
-                                                       Meta="@BuildItemMeta(item)"
-                                                       Summary="@BuildItemSummary(item)"
-                                                       IsSelected="@(selectedWorkspace?.PartyId == item.PartyId)"
-                                                       OnSelect="@(() => SelectPartyAsync(item.PartyId))">
-                                        <Status>
-                                            <Cluster Gap="LayoutGap.Small">
-                                                <StatusBadge Tone="@ResolveValidationTone(item.ValidationStatus)" Text="@ResolveValidationText(item)" />
-                                                <StatusBadge Tone="@ResolveExecutionTone(item.ExecutionMode)" Text="@ResolveExecutionText(item)" />
-                                            </Cluster>
-                                        </Status>
-                                    </SelectionListItem>
-                                </div>
-                            }
-                        </Stack>
-                    }
+                    <PagedRecordBrowser TKey="Guid"
+                                        TFilter="AiAgentValidationFilter"
+                                        Loader="LoadAgentPageAsync"
+                                        InitialFilter="AiAgentValidationFilter.All"
+                                        FilterOptions="@ValidationFilters"
+                                        Selection="@AgentSelection"
+                                        SelectionChanged="@SelectPartyAsync"
+                                        LoadFailed="@HandleAgentDirectoryLoadFailed"
+                                        PageSize="@AiAgentDirectoryQueryLimits.DefaultPageSize"
+                                        ShowTagFilter="false"
+                                        SearchPlaceholder="Search agent, owner, or summary"
+                                        FilterAriaLabel="Validation status"
+                                        LoadingEyebrow="Agent directory"
+                                        LoadingTitle="Loading projected AI agents"
+                                        LoadingDescription="CRM-HR is reading the AgentFramework-owned projection."
+                                        EmptyEyebrow="No projected AI agents"
+                                        EmptyTitle="No projected agents match"
+                                        EmptyDescription="Change the search or validation filter, or create a technical agent in AgentFramework."
+                                        DataTestId="crmhr-agent" />
                 </ListContent>
 
                 <DetailHeader>
@@ -189,7 +148,7 @@
                                 <div class="rounded-[1.2rem] border border-slate-200 bg-slate-50/80 px-4 py-4">
                                     <p class="text-xs uppercase tracking-[0.18em] text-slate-500">Capabilities</p>
                                     <p class="mt-1 text-sm font-medium text-slate-950"
-                                       data-testid="crmhr-agent-summary-capabilities">@selectedWorkspace.Profile.Capabilities.Count</p>
+                                       data-testid="crmhr-agent-summary-capabilities">@selectedWorkspace.CapabilityCount</p>
                                 </div>
                             </Grid>
 
@@ -276,27 +235,29 @@
 </PageScaffold>
 
 @code {
-    private static readonly IReadOnlyList<ValidationFilterOption> ValidationFilters =
+    private static readonly IReadOnlyList<PagedRecordFilterOption<AiAgentValidationFilter>> ValidationFilters =
     [
-        new(string.Empty, "All validation states"),
-        new(nameof(AiValidationStatus.Draft), "Draft"),
-        new(nameof(AiValidationStatus.ReviewRequired), "Review required"),
-        new(nameof(AiValidationStatus.Approved), "Approved"),
-        new(nameof(AiValidationStatus.Suspended), "Suspended")
+        new(AiAgentValidationFilter.All, "All", "crmhr-agent-validation-all"),
+        new(AiAgentValidationFilter.Draft, "Draft", "crmhr-agent-validation-draft"),
+        new(AiAgentValidationFilter.ReviewRequired, "Review required", "crmhr-agent-validation-review"),
+        new(AiAgentValidationFilter.Approved, "Approved", "crmhr-agent-validation-approved"),
+        new(AiAgentValidationFilter.Suspended, "Suspended", "crmhr-agent-validation-suspended")
     ];
 
     [SupplyParameterFromQuery(Name = "partyId")]
     public Guid? PartyIdQuery { get; set; }
 
-    private IReadOnlyList<AiAgentListItemModel> agentItems = [];
+    private AiAgentDirectoryPage agentPage = new(
+        [],
+        0,
+        AiAgentDirectoryQueryLimits.DefaultPageSize,
+        0);
     private AiAgentWorkspaceModel? selectedWorkspace;
-    private string searchText = string.Empty;
-    private string validationFilter = string.Empty;
     private bool isListLoading = true;
     private bool isWorkspaceLoading = true;
-    private bool interactiveReloadAttempted;
     private bool isDisposed;
     private long loadGeneration;
+    private long directoryLoadGeneration;
     private CancellationTokenSource? loadCancellation;
     private AgentChatContextAccessState agentChatContextAccessState = AgentChatContextAccessState.Loading;
 
@@ -315,31 +276,16 @@
             Navigation.Uri,
             [new("partyId", PartyIdQuery?.ToString("D"))]);
 
-    private bool ShouldShowListLoadingState => isListLoading || (!interactiveReloadAttempted && agentItems.Count == 0);
-    private bool ShouldShowDetailLoadingState => isListLoading || isWorkspaceLoading;
+    private PagedRecordSelection<Guid>? AgentSelection => selectedWorkspace is null
+        ? null
+        : new PagedRecordSelection<Guid>(selectedWorkspace.PartyId);
 
-    private IReadOnlyList<AiAgentListItemModel> FilteredItems => agentItems
-        .Where(MatchesSearch)
-        .Where(MatchesValidation)
-        .OrderBy(item => item.DisplayName)
-        .ToList();
+    private bool ShouldShowListLoadingState => isListLoading;
+    private bool ShouldShowDetailLoadingState => isWorkspaceLoading;
 
     protected override async Task OnParametersSetAsync()
     {
-        var requestedPartyId = PartyIdQuery;
-        await LoadAsync(requestedPartyId);
-    }
-
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (!firstRender || interactiveReloadAttempted || agentItems.Count > 0)
-        {
-            return;
-        }
-
-        interactiveReloadAttempted = true;
         await LoadAsync(PartyIdQuery);
-        StateHasChanged();
     }
 
     private async Task LoadAsync(Guid? requestedPartyId)
@@ -347,7 +293,6 @@
         var expectedQueryPartyId = requestedPartyId;
         var currentGeneration = Interlocked.Increment(ref loadGeneration);
         agentChatContextAccessState = AgentChatContextAccessState.Loading;
-        isListLoading = true;
         isWorkspaceLoading = true;
         using var cancellation = new CancellationTokenSource();
         var supersededLoad = Interlocked.Exchange(ref loadCancellation, cancellation);
@@ -355,13 +300,8 @@
 
         try
         {
-            var loadedItems = await ListAgentItemsAsync(cancellation.Token);
-            var targetPartyId = requestedPartyId;
-            if (!targetPartyId.HasValue && loadedItems.Count > 0)
-            {
-                targetPartyId = loadedItems[0].PartyId;
-            }
-
+            var targetPartyId = requestedPartyId
+                ?? agentPage.Items.FirstOrDefault()?.PartyId;
             AiAgentWorkspaceModel? loadedWorkspace = null;
             if (targetPartyId.HasValue)
             {
@@ -378,11 +318,14 @@
                 return;
             }
 
-            agentItems = loadedItems;
             selectedWorkspace = loadedWorkspace;
-            agentChatContextAccessState = requestedPartyId.HasValue && loadedWorkspace is null
-                ? AgentChatContextAccessState.Failed
-                : AgentChatContextAccessState.Ready;
+            agentChatContextAccessState = targetPartyId.HasValue
+                ? loadedWorkspace is null
+                    ? AgentChatContextAccessState.Failed
+                    : AgentChatContextAccessState.Ready
+                : isListLoading
+                    ? AgentChatContextAccessState.Loading
+                    : AgentChatContextAccessState.Ready;
         }
         catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
         {
@@ -400,15 +343,19 @@
             Interlocked.CompareExchange(ref loadCancellation, null, cancellation);
             if (IsCurrentLoad(currentGeneration, expectedQueryPartyId))
             {
-                isListLoading = false;
                 isWorkspaceLoading = false;
             }
         }
     }
 
-    protected virtual Task<IReadOnlyList<AiAgentListItemModel>> ListAgentItemsAsync(
+    protected virtual Task RefreshAgentDirectoryProjectionAsync(
         CancellationToken cancellationToken)
-        => AiAgentService.ListAgentDirectoryAsync(cancellationToken);
+        => AiAgentDirectoryQueryService.RefreshProjectionAsync(cancellationToken);
+
+    protected virtual Task<AiAgentDirectoryPage> QueryAgentDirectoryAsync(
+        AiAgentDirectoryQuery query,
+        CancellationToken cancellationToken)
+        => AiAgentDirectoryQueryService.SearchAsync(query, cancellationToken);
 
     protected virtual Task<AiAgentWorkspaceModel?> GetAgentWorkspaceAsync(
         Guid partyId,
@@ -420,10 +367,99 @@
            generation == Volatile.Read(ref loadGeneration) &&
            PartyIdQuery == expectedQueryPartyId;
 
+    private async Task<PagedRecordPage<Guid>> LoadAgentPageAsync(
+        PagedRecordRequest<AiAgentValidationFilter> request,
+        CancellationToken cancellationToken)
+    {
+        var generation = Interlocked.Increment(ref directoryLoadGeneration);
+        isListLoading = true;
+        try
+        {
+            var result = await QueryAgentDirectoryAsync(
+                new AiAgentDirectoryQuery(
+                    request.SearchText,
+                    MapValidationFilter(request.Filter),
+                    request.PageIndex,
+                    request.PageSize),
+                cancellationToken);
+            cancellationToken.ThrowIfCancellationRequested();
+            if (generation != Volatile.Read(ref directoryLoadGeneration) || isDisposed)
+            {
+                throw new OperationCanceledException(cancellationToken);
+            }
+
+            agentPage = result;
+            if (PartyIdQuery is null &&
+                selectedWorkspace is null &&
+                result.Items.FirstOrDefault() is { } firstItem)
+            {
+                await LoadDefaultWorkspaceAsync(firstItem.PartyId, cancellationToken);
+            }
+            else if (PartyIdQuery is null && result.Items.Count == 0)
+            {
+                agentChatContextAccessState = AgentChatContextAccessState.Ready;
+                isWorkspaceLoading = false;
+            }
+
+            return new PagedRecordPage<Guid>(
+                result.Items.Select(ToPagedRecordOption).ToArray(),
+                result.PageIndex,
+                result.PageSize,
+                result.TotalCount);
+        }
+        finally
+        {
+            if (generation == Volatile.Read(ref directoryLoadGeneration))
+            {
+                isListLoading = false;
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+    }
+
+    private async Task LoadDefaultWorkspaceAsync(
+        Guid partyId,
+        CancellationToken cancellationToken)
+    {
+        var expectedWorkspaceGeneration = Volatile.Read(ref loadGeneration);
+        isWorkspaceLoading = true;
+        var workspace = await GetAgentWorkspaceAsync(partyId, cancellationToken);
+        cancellationToken.ThrowIfCancellationRequested();
+        if (isDisposed ||
+            PartyIdQuery.HasValue ||
+            expectedWorkspaceGeneration != Volatile.Read(ref loadGeneration))
+        {
+            return;
+        }
+
+        if (workspace is not null && workspace.PartyId != partyId)
+        {
+            throw new InvalidOperationException(
+                $"Agent workspace '{workspace.PartyId:D}' did not match requested party '{partyId:D}'.");
+        }
+
+        selectedWorkspace = workspace;
+        agentChatContextAccessState = workspace is null
+            ? AgentChatContextAccessState.Failed
+            : AgentChatContextAccessState.Ready;
+        isWorkspaceLoading = false;
+    }
+
+    private void HandleAgentDirectoryLoadFailed(Exception _)
+    {
+        isListLoading = false;
+        if (PartyIdQuery is null && selectedWorkspace is null)
+        {
+            agentChatContextAccessState = AgentChatContextAccessState.Failed;
+            isWorkspaceLoading = false;
+        }
+    }
+
     public ValueTask DisposeAsync()
     {
         isDisposed = true;
         Interlocked.Increment(ref loadGeneration);
+        Interlocked.Increment(ref directoryLoadGeneration);
         var cancellation = Interlocked.Exchange(ref loadCancellation, null);
         cancellation?.Cancel();
         cancellation?.Dispose();
@@ -463,35 +499,30 @@
         Navigation.NavigateTo($"/crm-hr/directory?partyId={selectedWorkspace.PartyId}");
     }
 
-    private void ResetFilters()
-    {
-        searchText = string.Empty;
-        validationFilter = string.Empty;
-    }
-
-    private bool MatchesSearch(AiAgentListItemModel item)
-    {
-        if (string.IsNullOrWhiteSpace(searchText))
+    private static AiValidationStatus? MapValidationFilter(AiAgentValidationFilter filter)
+        => filter switch
         {
-            return true;
-        }
+            AiAgentValidationFilter.All => null,
+            AiAgentValidationFilter.Draft => AiValidationStatus.Draft,
+            AiAgentValidationFilter.ReviewRequired => AiValidationStatus.ReviewRequired,
+            AiAgentValidationFilter.Approved => AiValidationStatus.Approved,
+            AiAgentValidationFilter.Suspended => AiValidationStatus.Suspended,
+            _ => throw new ArgumentOutOfRangeException(nameof(filter), filter, "Validation filter is not supported.")
+        };
 
-        return item.DisplayName.Contains(searchText, StringComparison.OrdinalIgnoreCase)
-            || item.ProviderName.Contains(searchText, StringComparison.OrdinalIgnoreCase)
-            || item.OwnerName.Contains(searchText, StringComparison.OrdinalIgnoreCase)
-            || item.DefaultModel.Contains(searchText, StringComparison.OrdinalIgnoreCase)
-            || item.Summary.Contains(searchText, StringComparison.OrdinalIgnoreCase);
-    }
-
-    private bool MatchesValidation(AiAgentListItemModel item)
-    {
-        if (string.IsNullOrWhiteSpace(validationFilter))
+    private static PagedRecordOption<Guid> ToPagedRecordOption(AiAgentListItemModel item)
+        => new(item.PartyId, item.DisplayName, "AI agent")
         {
-            return true;
-        }
-
-        return string.Equals(item.ValidationStatus?.ToString(), validationFilter, StringComparison.OrdinalIgnoreCase);
-    }
+            Subtitle = BuildItemMeta(item),
+            Description = BuildItemSummary(item),
+            Icon = "smart_toy",
+            Tags =
+            [
+                ResolveValidationText(item),
+                ResolveExecutionText(item)
+            ],
+            TestId = "crmhr-agent-item"
+        };
 
     private static string BuildItemMeta(AiAgentListItemModel item)
     {
@@ -574,5 +605,12 @@
         return string.IsNullOrWhiteSpace(value) ? "Not set" : value;
     }
 
-    private sealed record ValidationFilterOption(string Value, string Label);
+    private enum AiAgentValidationFilter
+    {
+        All,
+        Draft,
+        ReviewRequired,
+        Approved,
+        Suspended
+    }
 }

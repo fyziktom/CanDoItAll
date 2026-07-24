@@ -14,39 +14,27 @@
                 <h3 class="mt-1 text-lg font-semibold text-slate-950">Manager, buddy, and mentor</h3>
 
                 <Grid Gap="LayoutGap.Medium" ColumnsMd="3" Class="mt-4">
-                    <FormField Text="Manager">
-                        <InputSelect @bind-Value="SupportDraft.ManagerPartyId"
-                                     class="cda-input"
-                                     data-testid="crmhr-recruiting-support-manager">
-                            <option value="">Choose manager</option>
-                            @foreach (var option in SupportOptions.OrderBy(item => item.DisplayName, StringComparer.OrdinalIgnoreCase))
-                            {
-                                <option value="@option.Id">@option.DisplayName</option>
-                            }
-                        </InputSelect>
-                    </FormField>
-                    <FormField Text="Buddy">
-                        <InputSelect @bind-Value="SupportDraft.BuddyPartyId"
-                                     class="cda-input"
-                                     data-testid="crmhr-recruiting-support-buddy">
-                            <option value="">Choose buddy</option>
-                            @foreach (var option in SupportOptions.OrderBy(item => item.DisplayName, StringComparer.OrdinalIgnoreCase))
-                            {
-                                <option value="@option.Id">@option.DisplayName</option>
-                            }
-                        </InputSelect>
-                    </FormField>
-                    <FormField Text="Mentor">
-                        <InputSelect @bind-Value="SupportDraft.MentorPartyId"
-                                     class="cda-input"
-                                     data-testid="crmhr-recruiting-support-mentor">
-                            <option value="">Choose mentor</option>
-                            @foreach (var option in SupportOptions.OrderBy(item => item.DisplayName, StringComparer.OrdinalIgnoreCase))
-                            {
-                                <option value="@option.Id">@option.DisplayName</option>
-                            }
-                        </InputSelect>
-                    </FormField>
+                    <PartyPicker Label="Manager"
+                                 TestIdPrefix="crmhr-recruiting-support-manager"
+                                 AllowedScope="PartyRecordScope.People"
+                                 InitialScope="PartyRecordScope.People"
+                                 ExcludedPartyId="@SupportDraft.PartyId"
+                                 SelectedPartyId="@SupportDraft.ManagerPartyId"
+                                 SelectedPartyIdChanged="SetManagerPartyAsync" />
+                    <PartyPicker Label="Buddy"
+                                 TestIdPrefix="crmhr-recruiting-support-buddy"
+                                 AllowedScope="PartyRecordScope.People"
+                                 InitialScope="PartyRecordScope.People"
+                                 ExcludedPartyId="@SupportDraft.PartyId"
+                                 SelectedPartyId="@SupportDraft.BuddyPartyId"
+                                 SelectedPartyIdChanged="SetBuddyPartyAsync" />
+                    <PartyPicker Label="Mentor"
+                                 TestIdPrefix="crmhr-recruiting-support-mentor"
+                                 AllowedScope="PartyRecordScope.People"
+                                 InitialScope="PartyRecordScope.People"
+                                 ExcludedPartyId="@SupportDraft.PartyId"
+                                 SelectedPartyId="@SupportDraft.MentorPartyId"
+                                 SelectedPartyIdChanged="SetMentorPartyAsync" />
                 </Grid>
 
                 <Cluster Gap="LayoutGap.Small" Class="mt-4">
@@ -101,17 +89,13 @@
                                    class="cda-input"
                                    data-testid="crmhr-recruiting-task-title" />
                     </FormField>
-                    <FormField Text="Owner">
-                        <InputSelect @bind-Value="TaskDraft.OwnerPartyId"
-                                     class="cda-input"
-                                     data-testid="crmhr-recruiting-task-owner">
-                            <option value="">Choose owner</option>
-                            @foreach (var option in SupportOptions.OrderBy(item => item.DisplayName, StringComparer.OrdinalIgnoreCase))
-                            {
-                                <option value="@option.Id">@option.DisplayName</option>
-                            }
-                        </InputSelect>
-                    </FormField>
+                    <PartyPicker Label="Owner"
+                                 TestIdPrefix="crmhr-recruiting-task-owner"
+                                 AllowedScope="PartyRecordScope.People"
+                                 InitialScope="PartyRecordScope.People"
+                                 ExcludedPartyId="@SupportDraft.PartyId"
+                                 SelectedPartyId="@TaskDraft.OwnerPartyId"
+                                 SelectedPartyIdChanged="SetTaskOwnerPartyAsync" />
                 </Grid>
 
                 <Grid Gap="LayoutGap.Medium" ColumnsMd="2" Class="mt-4">
@@ -120,17 +104,10 @@
                                    class="cda-input"
                                    data-testid="crmhr-recruiting-task-due-date" />
                     </FormField>
-                    <FormField Text="Related project">
-                        <InputSelect @bind-Value="TaskDraft.RelatedProjectId"
-                                     class="cda-input"
-                                     data-testid="crmhr-recruiting-task-project">
-                            <option value="">No project</option>
-                            @foreach (var option in ProjectOptions.OrderBy(item => item.Name, StringComparer.OrdinalIgnoreCase))
-                            {
-                                <option value="@option.Id">@option.Name (@option.CurrentPhase)</option>
-                            }
-                        </InputSelect>
-                    </FormField>
+                    <ProjectPicker Label="Related project"
+                                   TestIdPrefix="crmhr-recruiting-task-project"
+                                   SelectedProjectId="@TaskDraft.RelatedProjectId"
+                                   SelectedProjectIdChanged="SetRelatedProjectAsync" />
                 </Grid>
 
                 <div class="mt-4">
@@ -211,12 +188,6 @@
     public LifecycleTaskEditorModel TaskDraft { get; set; } = new();
 
     [Parameter]
-    public IReadOnlyList<PartyOptionModel> SupportOptions { get; set; } = [];
-
-    [Parameter]
-    public IReadOnlyList<RecruitmentProjectOptionModel> ProjectOptions { get; set; } = [];
-
-    [Parameter]
     public IReadOnlyList<LifecycleTaskItemModel> Tasks { get; set; } = [];
 
     [Parameter]
@@ -230,6 +201,36 @@
 
     [Parameter]
     public EventCallback<Guid> DeleteTask { get; set; }
+
+    private Task SetManagerPartyAsync(Guid? partyId)
+    {
+        SupportDraft.ManagerPartyId = partyId;
+        return Task.CompletedTask;
+    }
+
+    private Task SetBuddyPartyAsync(Guid? partyId)
+    {
+        SupportDraft.BuddyPartyId = partyId;
+        return Task.CompletedTask;
+    }
+
+    private Task SetMentorPartyAsync(Guid? partyId)
+    {
+        SupportDraft.MentorPartyId = partyId;
+        return Task.CompletedTask;
+    }
+
+    private Task SetTaskOwnerPartyAsync(Guid? partyId)
+    {
+        TaskDraft.OwnerPartyId = partyId;
+        return Task.CompletedTask;
+    }
+
+    private Task SetRelatedProjectAsync(Guid? projectId)
+    {
+        TaskDraft.RelatedProjectId = projectId;
+        return Task.CompletedTask;
+    }
 
     private static string BuildSupportBadge(string label, string value)
     {

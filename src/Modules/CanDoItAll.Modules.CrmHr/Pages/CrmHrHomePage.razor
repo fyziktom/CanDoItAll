@@ -1,8 +1,5 @@
 @page "/crm-hr"
-@inject PartyDirectoryService PartyDirectoryService
-@inject CrmService CrmService
-@inject HrService HrService
-@inject AiAgentService AiAgentService
+@inject ICrmHrHomeQueryService HomeQueryService
 @inject NavigationManager Navigation
 
 <PageTitle>CRM / HR</PageTitle>
@@ -17,22 +14,22 @@
                     Compact="true">
             <Stats>
                 <CompactStat Label="parties"
-                             Value="@directoryItems.Count.ToString()"
+                             Value="@homeSnapshot.PartyCount.ToString()"
                              TooltipText="Unified directory records across CRM and HR." />
                 <CompactStat Label="organizations"
-                             Value="@directoryItems.Count(item => item.PartyType == PartyType.Organization || item.PartyType == PartyType.OrganizationUnit).ToString()"
+                             Value="@homeSnapshot.OrganizationCount.ToString()"
                              TooltipText="Accounts, legal entities, and delivery units."
                              Tone="info" />
                 <CompactStat Label="pipeline"
-                             Value="@opportunities.Count.ToString()"
+                             Value="@homeSnapshot.OpportunityCount.ToString()"
                              TooltipText="Tracked opportunities in the shared CRM workspace." />
                 <CompactStat Label="workforce"
-                             Value="@workforceProfiles.Count.ToString()"
+                             Value="@homeSnapshot.WorkforceProfileCount.ToString()"
                              TooltipText="People and delivery supply profiles."
                              Tone="success" />
                 <CompactStat Label="agents"
-                             Value="@agentProfiles.Count.ToString()"
-                             TooltipText="AI agents represented in the same staffing surface."
+                             Value="@homeSnapshot.AgentProjectionCount.ToString()"
+                             TooltipText="Bound AgentFramework projections available to CRM-HR."
                              Tone="warning" />
             </Stats>
             <Actions>
@@ -48,7 +45,7 @@
 
     <ChildContent>
         <Stack GapScale="LayoutGap.Large">
-            <CrmHrSecondaryTabs SelectedKey="home" />
+            <CrmHrSecondaryTabs SelectedArea="CrmHrWorkspaceArea.Home" />
 
             <Grid Gap="LayoutGap.Large" ColumnsLg="2">
                 <SurfaceCard>
@@ -59,7 +56,7 @@
                     </p>
 
                     <Stack GapScale="LayoutGap.Small" Class="mt-5">
-                        @foreach (var item in directoryItems.Take(5))
+                        @foreach (var item in homeSnapshot.DirectoryPreview)
                         {
                             <div class="rounded-[1.25rem] border border-slate-200 bg-slate-50/90 px-4 py-3">
                                 <Split Gap="LayoutGap.Small">
@@ -80,7 +77,7 @@
                         }
                     </Stack>
 
-                    @if (directoryItems.Count == 0)
+                    @if (homeSnapshot.PartyCount == 0)
                     {
                         <div class="mt-5">
                             <EmptyState Eyebrow="No parties"
@@ -99,7 +96,7 @@
                     <p class="cda-eyebrow">Route coverage</p>
                     <h2 class="mt-1 text-lg font-semibold text-slate-950">Module entry points</h2>
                     <p class="mt-3 text-sm leading-6 text-slate-600">
-                        The B02 shell exposes every planned CRM / HR workspace route now, even where later bundles still need to populate the deeper business flows.
+                        Move directly between the shared directory, commercial pipeline, workforce, recruiting, AI-agent projection, and project assignments.
                     </p>
 
                     <Grid Gap="LayoutGap.Medium" ColumnsSm="2" Class="mt-5">
@@ -125,7 +122,7 @@
                     <div class="mt-6 rounded-[1.25rem] border border-slate-200 bg-white px-4 py-4">
                         <p class="cda-eyebrow">Current signal</p>
                         <p class="mt-2 text-sm leading-6 text-slate-700">
-                            Opportunities: @opportunities.Count. Workforce profiles: @workforceProfiles.Count. Agent profiles: @agentProfiles.Count.
+                            Opportunities: @homeSnapshot.OpportunityCount. Workforce profiles: @homeSnapshot.WorkforceProfileCount. Agent projections: @homeSnapshot.AgentProjectionCount.
                         </p>
                     </div>
                 </SurfaceCard>
@@ -153,14 +150,14 @@
                         </Cluster>
                     </Split>
 
-                    @if (SensitivePreview.Count == 0)
+                    @if (homeSnapshot.SensitivePreview.Count == 0)
                     {
                         <p class="mt-5 text-sm leading-6 text-slate-600">No sensitive parties are currently flagged in the shared directory.</p>
                     }
                     else
                     {
                         <Stack GapScale="LayoutGap.Small" Class="mt-5">
-                            @foreach (var item in SensitivePreview)
+                            @foreach (var item in homeSnapshot.SensitivePreview)
                             {
                                 <div class="rounded-[1rem] border border-slate-200 bg-white/90 px-4 py-4">
                                     <Split Gap="LayoutGap.Small"
@@ -187,7 +184,7 @@
                         <p class="cda-eyebrow">Open pipeline</p>
                         <h2 class="mt-1 text-lg font-semibold text-slate-950">Recent opportunities</h2>
                         <p class="mt-2 text-sm leading-6 text-slate-600">
-                            CRM-18 keeps live opportunity context visible here so project and workforce reviews do not have to reconstruct the commercial pipeline.
+                            Live opportunity context stays visible here so project and workforce reviews do not have to reconstruct the commercial pipeline.
                         </p>
                     </div>
                     <Button Text="Open CRM"
@@ -195,14 +192,14 @@
                             Click="OpenCrm" />
                 </Split>
 
-                @if (OpenPipelinePreview.Count == 0)
+                @if (homeSnapshot.OpenPipelinePreview.Count == 0)
                 {
                     <p class="mt-5 text-sm leading-6 text-slate-600">No open opportunities are currently tracked.</p>
                 }
                 else
                 {
                     <Grid Gap="LayoutGap.Medium" ColumnsLg="2" Class="mt-5">
-                        @foreach (var opportunity in OpenPipelinePreview)
+                        @foreach (var opportunity in homeSnapshot.OpenPipelinePreview)
                         {
                             <div class="rounded-[1.25rem] border border-slate-200 bg-slate-50/80 px-4 py-4"
                                  data-testid="crmhr-home-opportunity-item">
@@ -239,32 +236,22 @@
     private static AgentChatContextSurface AgentChatSurface { get; } =
         CrmHrAgentChatSurfaceBuilder.BuildHomeSurface();
 
-    private IReadOnlyList<PartyDirectoryListItemModel> directoryItems = [];
-    private IReadOnlyList<OpportunitySummaryModel> opportunities = [];
-    private IReadOnlyList<WorkforceProfileSummaryModel> workforceProfiles = [];
-    private IReadOnlyList<AiAgentProfileSummaryModel> agentProfiles = [];
+    private CrmHrHomeSnapshotModel homeSnapshot = new(
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        [],
+        [],
+        []);
 
-    private IReadOnlyList<OpportunitySummaryModel> OpenPipelinePreview => opportunities
-        .Where(item => item.Stage is not OpportunityStage.Won and not OpportunityStage.Lost)
-        .OrderBy(item => item.ExpectedCloseOn ?? DateOnly.MaxValue)
-        .ThenByDescending(item => item.UpdatedAtUtc)
-        .Take(6)
-        .ToList();
-
-    private IReadOnlyList<PartyDirectoryListItemModel> SensitivePreview => directoryItems
-        .Where(item => item.IsSensitive)
-        .OrderByDescending(item => item.UpdatedAtUtc)
-        .Take(3)
-        .ToList();
-
-    private int SensitiveCount => directoryItems.Count(item => item.IsSensitive);
+    private int SensitiveCount => homeSnapshot.SensitiveCount;
 
     protected override async Task OnInitializedAsync()
     {
-        directoryItems = await PartyDirectoryService.ListDirectoryAsync();
-        opportunities = await CrmService.ListOpportunitiesAsync();
-        workforceProfiles = await HrService.ListWorkforceProfilesAsync();
-        agentProfiles = await AiAgentService.ListAgentProfilesAsync();
+        homeSnapshot = await HomeQueryService.GetAsync();
     }
 
     private void OpenDirectory()

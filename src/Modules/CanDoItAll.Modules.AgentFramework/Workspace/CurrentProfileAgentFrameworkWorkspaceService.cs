@@ -152,6 +152,7 @@ internal sealed class CurrentProfileAgentFrameworkWorkspaceService(
     {
         var templateId = await ResolveService().ConvertToTemplateAsync(agentId, templateKey, cancellationToken);
         referenceDataCacheInvalidator.Invalidate();
+        await technicalAgentBridge.SynchronizeDirectoryProjectionAsync(cancellationToken);
         return templateId;
     }
 
@@ -182,6 +183,7 @@ internal sealed class CurrentProfileAgentFrameworkWorkspaceService(
     {
         var providerId = await ResolveService().SaveProviderAsync(model, cancellationToken);
         referenceDataCacheInvalidator.Invalidate();
+        await technicalAgentBridge.SynchronizeDirectoryProjectionAsync(cancellationToken);
         return providerId;
     }
 
@@ -189,6 +191,7 @@ internal sealed class CurrentProfileAgentFrameworkWorkspaceService(
     {
         await ResolveService().DeleteProviderAsync(providerId, cancellationToken);
         referenceDataCacheInvalidator.Invalidate();
+        await technicalAgentBridge.SynchronizeDirectoryProjectionAsync(cancellationToken);
     }
 
     public async Task<ProviderHealthResult> TestProviderAsync(Guid providerId, CancellationToken cancellationToken = default)
@@ -207,6 +210,7 @@ internal sealed class CurrentProfileAgentFrameworkWorkspaceService(
     {
         var result = await ResolveService().CreateOrUpdateProviderModelAsync(providerId, request, cancellationToken);
         referenceDataCacheInvalidator.Invalidate();
+        await technicalAgentBridge.SynchronizeDirectoryProjectionAsync(cancellationToken);
         return result;
     }
 

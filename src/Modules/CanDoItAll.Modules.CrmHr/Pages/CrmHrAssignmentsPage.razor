@@ -3,10 +3,11 @@
 @using CanDoItAll.Components.BaseLib
 @using CanDoItAll.Modules.Projects
 @using Microsoft.Extensions.Logging
-@inject ProjectsService ProjectsService
+@inject IProjectRecordQueryService ProjectRecordQueryService
 @inject ProjectPartyIntegrationService ProjectPartyIntegrationService
 @inject IProjectNodeDetailsBridge ProjectNodeDetailsBridge
 @inject HrService HrService
+@inject CanDoItAll.SharedKernel.IClock Clock
 @inject NavigationManager Navigation
 @inject NotificationService NotificationService
 @inject Microsoft.Extensions.Logging.ILogger<CrmHrAssignmentsPage> Logger
@@ -25,7 +26,7 @@
                     Compact="true">
             <Stats>
                 <CompactStat Label="projects"
-                             Value="@projectSummaries.Count.ToString()"
+                             Value="@projectCount.ToString()"
                              TooltipText="Projects currently available for CRM-HR relationship binding." />
                 <CompactStat Label="open requests"
                              Value="@staffingDashboard.OpenRequestCount.ToString()"
@@ -49,13 +50,14 @@
 
     <ChildContent>
         <Stack GapScale="LayoutGap.Medium">
-            <CrmHrSecondaryTabs SelectedKey="assignments" />
+            <CrmHrSecondaryTabs SelectedArea="CrmHrWorkspaceArea.Assignments" />
 
-            <AssignmentsProjectContextBar Projects="projectSummaries"
+            <AssignmentsProjectContextBar SelectedProject="SelectedProject"
                                           SelectedProjectId="selectedProjectId"
                                           SelectedProjectIdChanged="HandleProjectChanged"
-                                          AssignmentCount="assignments.Count"
-                                          AllocationCount="AllocationAssignments.Count"
+                                          ProjectLoadFailed="HandleProjectPickerLoadFailed"
+                                          AssignmentCount="assignmentCounts.TotalCount"
+                                          AllocationCount="assignmentCounts.AllocationCount"
                                           StaffingRequestCount="StaffingRequestCount"
                                           OpenStructure="OpenStructure"
                                           OpenGantt="OpenGantt" />
@@ -71,28 +73,54 @@
                   data-testid="crmhr-assignments-workspace-tabs">
                 <TabsItem Text="Resource schedule"
                           Icon="view_timeline"
-                          BadgeText="@AllocationAssignments.Count.ToString()"
+                          BadgeText="@assignmentCounts.ScheduledCount.ToString()"
                           data-testid="crmhr-assignments-tab-schedule">
-                    <ProjectAssignmentResourceGanttPanel ProjectName="@(SelectedProject?.Name ?? string.Empty)"
-                                                         Assignments="AllocationAssignments" />
+                    @if (IsLoading(AssignmentSelectionData.ScheduleAssignments))
+                    {
+                        <LoadingState Eyebrow="Resource schedule"
+                                      Title="Loading the bounded schedule window"
+                                      Description="Only the current project's dated allocation view is being loaded." />
+                    }
+                    else
+                    {
+                        <ProjectAssignmentResourceGanttPanel ProjectName="@(SelectedProject?.Name ?? string.Empty)"
+                                                             Assignments="scheduleAssignments"
+                                                             TotalCount="scheduleAssignmentTotalCount" />
+                    }
                 </TabsItem>
 
                 <TabsItem Text="Relationships"
                           Icon="hub"
-                          BadgeText="@assignments.Count.ToString()"
+                          BadgeText="@assignmentCounts.TotalCount.ToString()"
                           data-testid="crmhr-assignments-tab-relationships">
-                    <ProjectPartyAssignmentPanel ProjectName="@(SelectedProject?.Name ?? string.Empty)"
-                                                 CanCreate="@(selectedProjectId.HasValue && !isProjectContextLoading)"
-                                                 Draft="draftAssignment"
-                                                 PartyOptions="partyOptions"
-                                                 Assignments="assignments"
-                                                 PrepareCreate="PrepareRelationshipCreateAsync"
-                                                 SaveDraft="SaveDraftAsync"
-                                                 ResetDraft="ResetDraftAsync"
-                                                 DeleteAssignment="DeleteAssignmentAsync"
-                                                 LoadTaskDetails="LoadTaskDetailsAsync"
-                                                 OpenStructure="OpenSelectedProjectStructure"
-                                                 OpenGantt="OpenSelectedProjectGantt" />
+                    @if (IsLoading(AssignmentSelectionData.RelationshipAssignments))
+                    {
+                        <LoadingState Eyebrow="Project relationships"
+                                      Title="Loading relationship records"
+                                      Description="The selected relationship page is being loaded from the server." />
+                    }
+                    else
+                    {
+                        <ProjectPartyAssignmentPanel ProjectName="@(SelectedProject?.Name ?? string.Empty)"
+                                                     CanCreate="@(selectedProjectId.HasValue && !isProjectContextLoading)"
+                                                     Draft="draftAssignment"
+                                                     Assignments="relationshipAssignments"
+                                                     PageIndex="relationshipAssignmentPageIndex"
+                                                     PageSize="AssignmentPageSize"
+                                                     TotalCount="relationshipAssignmentTotalCount"
+                                                     SearchText="relationshipAssignmentSearchText"
+                                                     SearchTextChanged="HandleRelationshipSearchTextChangedAsync"
+                                                     RoleFilter="relationshipAssignmentRoleFilter"
+                                                     RoleFilterChanged="HandleRelationshipRoleFilterChangedAsync"
+                                                     PageChanged="HandleRelationshipPageChangedAsync"
+                                                     PrepareCreate="PrepareRelationshipCreateAsync"
+                                                     SaveDraft="SaveDraftAsync"
+                                                     ResetDraft="ResetDraftAsync"
+                                                     DeleteAssignment="DeleteAssignmentAsync"
+                                                     LoadTaskDetails="LoadTaskDetailsAsync"
+                                                     OpenStructure="OpenSelectedProjectStructure"
+                                                     OpenGantt="OpenSelectedProjectGantt" />
+                    }
                 </TabsItem>
 
                 <TabsItem Text="Staffing requests"
@@ -111,8 +139,15 @@
                                                CanCreate="@(selectedProjectId.HasValue && !isProjectContextLoading)"
                                                Draft="staffingRequestDraft"
                                                SkillCatalog="skillCatalog"
-                                               PartyOptions="partyOptions"
                                                Requests="staffingRequests"
+                                               PageIndex="staffingRequestPageIndex"
+                                               PageSize="StaffingPageSize"
+                                               TotalCount="staffingRequestTotalCount"
+                                               SearchText="staffingRequestSearchText"
+                                               SearchTextChanged="HandleStaffingRequestSearchTextChangedAsync"
+                                               StatusFilter="staffingRequestStatusFilter"
+                                               StatusFilterChanged="HandleStaffingRequestStatusFilterChangedAsync"
+                                               PageChanged="HandleStaffingRequestPageChangedAsync"
                                                PrepareCreate="PrepareStaffingCreateAsync"
                                                SaveRequest="SaveStaffingRequestAsync"
                                                ResetRequest="ResetStaffingRequestAsync"
@@ -122,30 +157,50 @@
 
                 <TabsItem Text="Allocations"
                           Icon="groups"
-                          BadgeText="@AllocationAssignments.Count.ToString()"
+                          BadgeText="@assignmentCounts.AllocationCount.ToString()"
                           data-testid="crmhr-assignments-tab-allocations">
-                    <ProjectAllocationEditor Draft="allocationDraft"
-                                             ProjectName="@(SelectedProject?.Name ?? string.Empty)"
-                                             CanCreate="@(selectedProjectId.HasValue && !isProjectContextLoading)"
-                                             PartyOptions="partyOptions"
-                                             Allocations="AllocationAssignments"
-                                             SkillCatalog="skillCatalog"
-                                             Candidates="staffingCandidates"
-                                             CandidateSearchText="candidateSearchText"
-                                             CandidateSearchTextChanged="HandleCandidateSearchTextChanged"
-                                             CandidateSkillFilter="candidateSkillFilter"
-                                             CandidateSkillFilterChanged="HandleCandidateSkillFilterChanged"
-                                             CandidateAvailabilityFilter="candidateAvailabilityFilter"
-                                             CandidateAvailabilityFilterChanged="HandleCandidateAvailabilityFilterChanged"
-                                             SearchCandidates="SearchCandidatesAsync"
-                                             ResetCandidateFilters="ResetCandidateFiltersAsync"
-                                             PrepareCreate="PrepareAllocationCreateAsync"
-                                             SaveAllocation="SaveAllocationAsync"
-                                             ResetAllocation="ResetAllocationAsync"
-                                             DeleteAllocation="DeleteAllocationAsync"
-                                             LoadTaskDetails="LoadTaskDetailsAsync"
-                                             OpenStructure="OpenSelectedProjectStructure"
-                                             OpenGantt="OpenSelectedProjectGantt" />
+                    @if (IsLoading(AssignmentSelectionData.AllocationAssignments))
+                    {
+                        <LoadingState Eyebrow="Project allocations"
+                                      Title="Loading allocation records"
+                                      Description="The selected allocation page is being loaded from the server." />
+                    }
+                    else
+                    {
+                        <ProjectAllocationEditor Draft="allocationDraft"
+                                                 ProjectName="@(SelectedProject?.Name ?? string.Empty)"
+                                                 CanCreate="@(selectedProjectId.HasValue && !isProjectContextLoading)"
+                                                 Allocations="allocationAssignments"
+                                                 PageIndex="allocationAssignmentPageIndex"
+                                                 PageSize="AssignmentPageSize"
+                                                 TotalCount="allocationAssignmentTotalCount"
+                                                 SearchText="allocationAssignmentSearchText"
+                                                 SearchTextChanged="HandleAllocationSearchTextChangedAsync"
+                                                 RoleFilter="allocationAssignmentRoleFilter"
+                                                 RoleFilterChanged="HandleAllocationRoleFilterChangedAsync"
+                                                 PageChanged="HandleAllocationPageChangedAsync"
+                                                 SkillCatalog="skillCatalog"
+                                                 Candidates="staffingCandidates"
+                                                 CandidatePageIndex="staffingCandidatePageIndex"
+                                                 CandidatePageSize="StaffingPageSize"
+                                                 CandidateTotalCount="staffingCandidateTotalCount"
+                                                 CandidatePageChanged="HandleCandidatePageChangedAsync"
+                                                 CandidateSearchText="candidateSearchText"
+                                                 CandidateSearchTextChanged="HandleCandidateSearchTextChanged"
+                                                 CandidateSkillFilter="candidateSkillFilter"
+                                                 CandidateSkillFilterChanged="HandleCandidateSkillFilterChanged"
+                                                 CandidateAvailabilityFilter="candidateAvailabilityFilter"
+                                                 CandidateAvailabilityFilterChanged="HandleCandidateAvailabilityFilterChanged"
+                                                 SearchCandidates="SearchCandidatesAsync"
+                                                 ResetCandidateFilters="ResetCandidateFiltersAsync"
+                                                 PrepareCreate="PrepareAllocationCreateAsync"
+                                                 SaveAllocation="SaveAllocationAsync"
+                                                 ResetAllocation="ResetAllocationAsync"
+                                                 DeleteAllocation="DeleteAllocationAsync"
+                                                 LoadTaskDetails="LoadTaskDetailsAsync"
+                                                 OpenStructure="OpenSelectedProjectStructure"
+                                                 OpenGantt="OpenSelectedProjectGantt" />
+                    }
                 </TabsItem>
             </Tabs>
         </Stack>
@@ -153,15 +208,45 @@
 </PageScaffold>
 
 @code {
+    private const int StaffingPageSize = StaffingQueryLimits.DefaultPageSize;
+    private const int AssignmentPageSize = ProjectPartyAssignmentQueryLimits.DefaultPageSize;
+    private const int StaffingRequestSearchDebounceMilliseconds = 250;
+    private const int AssignmentSearchDebounceMilliseconds = 250;
+    private static readonly IReadOnlyList<ProjectPartyAssignmentRole> AllAssignmentRoles =
+        Enum.GetValues<ProjectPartyAssignmentRole>();
+    private static readonly IReadOnlyList<ProjectPartyAssignmentRole> AllocationRoles =
+    [
+        ProjectPartyAssignmentRole.TeamMember,
+        ProjectPartyAssignmentRole.DeliveryUnit,
+        ProjectPartyAssignmentRole.Manager,
+        ProjectPartyAssignmentRole.AiAgent,
+        ProjectPartyAssignmentRole.Reviewer,
+        ProjectPartyAssignmentRole.WorkItemAssignee
+    ];
+
     [SupplyParameterFromQuery(Name = "projectId")]
     public Guid? ProjectIdQuery { get; set; }
 
-    private IReadOnlyList<ProjectSummary> projectSummaries = [];
-    private IReadOnlyList<ProjectPartyOption> partyOptions = [];
-    private IReadOnlyList<ProjectPartyAssignmentDetail> assignments = [];
+    private ProjectRecordQueryItem? selectedProject;
+    private int projectCount;
+    private IReadOnlyList<ProjectPartyAssignmentDetail> scheduleAssignments = [];
+    private IReadOnlyList<ProjectPartyAssignmentDetail> relationshipAssignments = [];
+    private IReadOnlyList<ProjectPartyAssignmentDetail> allocationAssignments = [];
+    private ProjectPartyAssignmentCounts assignmentCounts = ProjectPartyAssignmentCounts.Empty;
+    private int scheduleAssignmentTotalCount;
+    private int relationshipAssignmentPageIndex;
+    private int relationshipAssignmentTotalCount;
+    private int allocationAssignmentPageIndex;
+    private int allocationAssignmentTotalCount;
+    private DateTimeOffset scheduleWindowStartUtc;
+    private DateTimeOffset scheduleWindowEndUtc;
     private IReadOnlyList<SkillCatalogItemModel> skillCatalog = [];
     private IReadOnlyList<StaffingRequestItemModel> staffingRequests = [];
     private IReadOnlyList<StaffingCandidateItemModel> staffingCandidates = [];
+    private int staffingRequestPageIndex;
+    private int staffingRequestTotalCount;
+    private int staffingCandidatePageIndex;
+    private int staffingCandidateTotalCount;
     private StaffingDashboardModel staffingDashboard = new(0, 0m, 0, 0);
     private Guid? selectedProjectId;
     private AssignmentWorkspaceTab selectedWorkspaceTab;
@@ -174,10 +259,19 @@
     private long loadGeneration;
     private CancellationTokenSource? loadCancellation;
     private CancellationTokenSource? selectionLifetimeCancellation;
+    private CancellationTokenSource? staffingRequestSearchCancellation;
+    private CancellationTokenSource? relationshipAssignmentSearchCancellation;
+    private CancellationTokenSource? allocationAssignmentSearchCancellation;
     private AgentChatContextAccessState agentChatContextAccessState = AgentChatContextAccessState.Loading;
     private string candidateSearchText = string.Empty;
     private string candidateSkillFilter = string.Empty;
     private string candidateAvailabilityFilter = string.Empty;
+    private string staffingRequestSearchText = string.Empty;
+    private string relationshipAssignmentSearchText = string.Empty;
+    private string allocationAssignmentSearchText = string.Empty;
+    private StaffingRequestStatus? staffingRequestStatusFilter;
+    private ProjectPartyAssignmentRole? relationshipAssignmentRoleFilter;
+    private ProjectPartyAssignmentRole? allocationAssignmentRoleFilter;
     private ProjectPartyAssignmentUpsertRequest draftAssignment = CreateProjectAssignmentDraft();
     private ProjectPartyAssignmentUpsertRequest allocationDraft = CreateAllocationDraft();
     private StaffingRequestEditorModel staffingRequestDraft = CreateStaffingRequestDraft();
@@ -191,7 +285,7 @@
                 return CrmHrAgentChatSurfaceBuilder.BuildAssignmentsSurface();
             }
 
-            var project = projectSummaries.FirstOrDefault(item => item.Id == projectId);
+            var project = SelectedProject;
             return project is null
                 ? CrmHrAgentChatSurfaceBuilder.BuildAssignmentsSurface()
                 : CrmHrAgentChatSurfaceBuilder.BuildAssignmentsSurface(
@@ -210,34 +304,21 @@
                 new("routeProjectId", ProjectIdQuery?.ToString("D"))
             ]);
 
-    private IReadOnlyList<ProjectPartyAssignmentDetail> AllocationAssignments => assignments
-        .Where(item =>
-            item.AllocationPercent.HasValue
-            || item.Role is ProjectPartyAssignmentRole.TeamMember
-                or ProjectPartyAssignmentRole.DeliveryUnit
-                or ProjectPartyAssignmentRole.Manager
-                or ProjectPartyAssignmentRole.AiAgent
-                or ProjectPartyAssignmentRole.Reviewer
-                or ProjectPartyAssignmentRole.WorkItemAssignee)
-        .OrderByDescending(item => item.IsPrimary)
-        .ThenBy(item => item.PartyDisplayName, StringComparer.OrdinalIgnoreCase)
-        .ToList();
-
     private WorkspaceTabsIdentity WorkspaceTabsKey => new(
         selectedProjectId,
-        assignments.Count,
-        AllocationAssignments.Count,
-        staffingRequests.Count,
+        assignmentCounts.TotalCount,
+        assignmentCounts.AllocationCount,
+        staffingRequestTotalCount,
         loadedSelectionData.HasFlag(AssignmentSelectionData.StaffingRequests));
 
     private int? StaffingRequestCount => loadedSelectionData.HasFlag(AssignmentSelectionData.StaffingRequests)
-        ? staffingRequests.Count
+        ? staffingRequestTotalCount
         : null;
 
     private string StaffingRequestBadgeText => StaffingRequestCount?.ToString() ?? string.Empty;
 
-    private ProjectSummary? SelectedProject => selectedProjectId.HasValue
-        ? projectSummaries.FirstOrDefault(project => project.Id == selectedProjectId.Value)
+    private ProjectRecordQueryItem? SelectedProject => selectedProject?.Id == selectedProjectId
+        ? selectedProject
         : null;
 
     private readonly record struct WorkspaceTabsIdentity(
@@ -259,15 +340,19 @@
     protected enum AssignmentSelectionData
     {
         None = 0,
-        Assignments = 1 << 0,
-        PartyOptions = 1 << 1,
-        SkillCatalog = 1 << 2,
-        StaffingRequests = 1 << 3,
-        StaffingCandidates = 1 << 4
+        AssignmentCounts = 1 << 0,
+        ScheduleAssignments = 1 << 1,
+        RelationshipAssignments = 1 << 2,
+        Assignments = RelationshipAssignments,
+        AllocationAssignments = 1 << 3,
+        SkillCatalog = 1 << 4,
+        StaffingRequests = 1 << 5,
+        StaffingCandidates = 1 << 6
     }
 
     protected override async Task OnParametersSetAsync()
     {
+        EnsureScheduleWindow();
         var requestedProjectId = ProjectIdQuery;
         isProjectContextLoading = true;
         var generation = BeginLoad(out var cancellation);
@@ -279,40 +364,37 @@
         await InvokeAsync(StateHasChanged);
         try
         {
-            var projectsTask = ListProjectsAsync(cancellation.Token);
+            var projectCatalogTask = LoadProjectCatalogAsync(
+                requestedProjectId ?? selectedProjectId,
+                allowFallback: !requestedProjectId.HasValue,
+                cancellation.Token);
             var dashboardTask = hasStaffingDashboardLoaded
                 ? Task.FromResult(staffingDashboard)
                 : GetStaffingDashboardAsync(cancellation.Token);
 
-            await Task.WhenAll(projectsTask, dashboardTask);
+            await Task.WhenAll(projectCatalogTask, dashboardTask);
             if (!IsCurrentRouteLoad(generation, requestedProjectId))
             {
                 return;
             }
 
-            var loadedProjects = await projectsTask;
-            projectSummaries = loadedProjects;
+            var projectCatalog = await projectCatalogTask;
+            projectCount = projectCatalog.TotalCount;
             staffingDashboard = await dashboardTask;
             hasStaffingDashboardLoaded = true;
 
-            var targetProjectId = requestedProjectId;
-            if (!targetProjectId.HasValue)
-            {
-                targetProjectId = selectedProjectId.HasValue &&
-                                  loadedProjects.Any(project => project.Id == selectedProjectId.Value)
-                    ? selectedProjectId
-                    : loadedProjects.FirstOrDefault()?.Id;
-            }
-
+            var targetProjectId = projectCatalog.SelectedProject?.Id
+                ?? requestedProjectId;
             SetSelectedProject(targetProjectId);
+            selectedProject = projectCatalog.SelectedProject;
             if (requestedProjectId.HasValue &&
-                loadedProjects.All(project => project.Id != requestedProjectId.Value))
+                projectCatalog.SelectedProject is null)
             {
                 agentChatContextAccessState = AgentChatContextAccessState.Failed;
                 return;
             }
 
-            var requestedData = AssignmentSelectionData.Assignments | GetRequiredData(selectedWorkspaceTab);
+            var requestedData = AssignmentSelectionData.AssignmentCounts | GetRequiredData(selectedWorkspaceTab);
             var missingData = requestedData & ~loadedSelectionData;
             if (missingData is not AssignmentSelectionData.None)
             {
@@ -320,7 +402,18 @@
                     new AssignmentSelectionLoadRequest(
                         targetProjectId,
                         missingData,
-                        CaptureCandidateFilter()),
+                        CaptureCandidateFilter())
+                    {
+                        StaffingRequestPageIndex = staffingRequestPageIndex,
+                        StaffingRequestFilter = CaptureStaffingRequestFilter(),
+                        StaffingCandidatePageIndex = staffingCandidatePageIndex,
+                        RelationshipPageIndex = relationshipAssignmentPageIndex,
+                        RelationshipSearchText = relationshipAssignmentSearchText,
+                        RelationshipRoleFilter = relationshipAssignmentRoleFilter,
+                        AllocationPageIndex = allocationAssignmentPageIndex,
+                        AllocationSearchText = allocationAssignmentSearchText,
+                        AllocationRoleFilter = allocationAssignmentRoleFilter
+                    },
                     cancellation.Token);
                 if (!IsCurrentRouteSelectionLoad(generation, requestedProjectId, targetProjectId))
                 {
@@ -369,18 +462,38 @@
         await InvokeAsync(StateHasChanged);
         try
         {
-            if (projectId.HasValue && projectSummaries.All(project => project.Id != projectId.Value))
+            var resolvedProject = projectId.HasValue
+                ? await GetProjectAsync(projectId.Value, cancellation.Token)
+                : null;
+            if (!IsCurrentSelectionLoad(generation, projectId))
+            {
+                return;
+            }
+
+            if (projectId.HasValue && resolvedProject is null)
             {
                 agentChatContextAccessState = AgentChatContextAccessState.Failed;
                 return;
             }
 
-            var requestedData = AssignmentSelectionData.Assignments | GetRequiredData(selectedWorkspaceTab);
+            selectedProject = resolvedProject;
+            var requestedData = AssignmentSelectionData.AssignmentCounts | GetRequiredData(selectedWorkspaceTab);
             var snapshot = await LoadSelectionSnapshotAsync(
                 new AssignmentSelectionLoadRequest(
                     projectId,
                     requestedData,
-                    CaptureCandidateFilter()),
+                    CaptureCandidateFilter())
+                {
+                    StaffingRequestPageIndex = staffingRequestPageIndex,
+                    StaffingRequestFilter = CaptureStaffingRequestFilter(),
+                    StaffingCandidatePageIndex = staffingCandidatePageIndex,
+                    RelationshipPageIndex = relationshipAssignmentPageIndex,
+                    RelationshipSearchText = relationshipAssignmentSearchText,
+                    RelationshipRoleFilter = relationshipAssignmentRoleFilter,
+                    AllocationPageIndex = allocationAssignmentPageIndex,
+                    AllocationSearchText = allocationAssignmentSearchText,
+                    AllocationRoleFilter = allocationAssignmentRoleFilter
+                },
                 cancellation.Token);
             if (!IsCurrentSelectionLoad(generation, projectId))
             {
@@ -426,13 +539,18 @@
         selectedWorkspaceTab = (AssignmentWorkspaceTab)selectedIndex;
         await InvokeAsync(StateHasChanged);
         await EnsureSelectionDataLoadedAsync(
-            AssignmentSelectionData.Assignments | GetRequiredData(selectedWorkspaceTab));
+            AssignmentSelectionData.AssignmentCounts | GetRequiredData(selectedWorkspaceTab));
     }
 
     private static AssignmentSelectionData GetRequiredData(AssignmentWorkspaceTab tab)
-        => tab is AssignmentWorkspaceTab.StaffingRequests
-            ? AssignmentSelectionData.StaffingRequests
-            : AssignmentSelectionData.None;
+        => tab switch
+        {
+            AssignmentWorkspaceTab.ResourceSchedule => AssignmentSelectionData.ScheduleAssignments,
+            AssignmentWorkspaceTab.Relationships => AssignmentSelectionData.RelationshipAssignments,
+            AssignmentWorkspaceTab.StaffingRequests => AssignmentSelectionData.StaffingRequests,
+            AssignmentWorkspaceTab.Allocations => AssignmentSelectionData.AllocationAssignments,
+            _ => throw new ArgumentOutOfRangeException(nameof(tab), tab, "The assignment workspace tab is not supported.")
+        };
 
     private async Task<bool> EnsureSelectionDataLoadedAsync(
         AssignmentSelectionData requestedData,
@@ -462,7 +580,18 @@
                 new AssignmentSelectionLoadRequest(
                     expectedProjectId,
                     dataToLoad,
-                    CaptureCandidateFilter()),
+                    CaptureCandidateFilter())
+                {
+                    StaffingRequestPageIndex = staffingRequestPageIndex,
+                    StaffingRequestFilter = CaptureStaffingRequestFilter(),
+                    StaffingCandidatePageIndex = staffingCandidatePageIndex,
+                    RelationshipPageIndex = relationshipAssignmentPageIndex,
+                    RelationshipSearchText = relationshipAssignmentSearchText,
+                    RelationshipRoleFilter = relationshipAssignmentRoleFilter,
+                    AllocationPageIndex = allocationAssignmentPageIndex,
+                    AllocationSearchText = allocationAssignmentSearchText,
+                    AllocationRoleFilter = allocationAssignmentRoleFilter
+                },
                 cancellation.Token);
             if (!IsCurrentSelectionLoad(generation, expectedProjectId))
             {
@@ -513,53 +642,170 @@
     {
         var projectId = request.ProjectId;
         var requestedData = request.RequestedData;
-        var partyOptionsTask = requestedData.HasFlag(AssignmentSelectionData.PartyOptions) && projectId.HasValue
-            ? ProjectPartyIntegrationService.ListPartyOptionsAsync(projectId.Value, cancellationToken)
-            : Task.FromResult<IReadOnlyList<ProjectPartyOption>>([]);
-        var assignmentsTask = requestedData.HasFlag(AssignmentSelectionData.Assignments) && projectId.HasValue
-            ? ProjectPartyIntegrationService.ListAssignmentsDetailedAsync(projectId.Value, cancellationToken)
-            : Task.FromResult<IReadOnlyList<ProjectPartyAssignmentDetail>>([]);
+        var assignmentCountsTask = requestedData.HasFlag(AssignmentSelectionData.AssignmentCounts) && projectId.HasValue
+            ? ProjectPartyIntegrationService.GetAssignmentCountsAsync(
+                projectId.Value,
+                scheduleWindowStartUtc,
+                scheduleWindowEndUtc,
+                cancellationToken)
+            : Task.FromResult(ProjectPartyAssignmentCounts.Empty);
+        var assignmentPageTask = projectId.HasValue
+            ? LoadRequestedAssignmentPageAsync(request, projectId.Value, cancellationToken)
+            : Task.FromResult(ProjectPartyAssignmentPage.Empty());
         var skillCatalogTask = requestedData.HasFlag(AssignmentSelectionData.SkillCatalog)
             ? HrService.ListSkillCatalogAsync(cancellationToken)
             : Task.FromResult<IReadOnlyList<SkillCatalogItemModel>>([]);
         var staffingRequestsTask = requestedData.HasFlag(AssignmentSelectionData.StaffingRequests) && projectId.HasValue
-            ? HrService.ListStaffingRequestsAsync(projectId.Value, cancellationToken)
-            : Task.FromResult<IReadOnlyList<StaffingRequestItemModel>>([]);
+            ? HrService.SearchStaffingRequestsAsync(
+                new StaffingRequestQuery(
+                    projectId.Value,
+                    request.StaffingRequestFilter.SearchText,
+                    request.StaffingRequestFilter.Status,
+                    request.StaffingRequestPageIndex,
+                    StaffingPageSize),
+                cancellationToken)
+            : Task.FromResult(StaffingRequestPage.Empty(StaffingPageSize));
         var staffingCandidatesTask = requestedData.HasFlag(AssignmentSelectionData.StaffingCandidates)
-            ? SearchStaffingCandidatesAsync(request.CandidateFilter, cancellationToken)
-            : Task.FromResult<IReadOnlyList<StaffingCandidateItemModel>>([]);
+            ? SearchStaffingCandidatesAsync(
+                request.CandidateFilter,
+                request.StaffingCandidatePageIndex,
+                cancellationToken)
+            : Task.FromResult(StaffingCandidatePage.Empty(StaffingPageSize));
 
         await Task.WhenAll(
-            partyOptionsTask,
-            assignmentsTask,
+            assignmentCountsTask,
+            assignmentPageTask,
             skillCatalogTask,
             staffingRequestsTask,
             staffingCandidatesTask);
 
+        var staffingRequestPage = await staffingRequestsTask;
+        var staffingCandidatePage = await staffingCandidatesTask;
+        var assignmentPage = await assignmentPageTask;
         return new AssignmentSelectionSnapshot(
             requestedData,
-            await partyOptionsTask,
-            await assignmentsTask,
+            assignmentPage.Items,
             await skillCatalogTask,
-            await staffingRequestsTask,
-            await staffingCandidatesTask);
+            staffingRequestPage.Items,
+            staffingCandidatePage.Items)
+        {
+            AssignmentCounts = await assignmentCountsTask,
+            AssignmentPageIndex = assignmentPage.PageIndex,
+            AssignmentTotalCount = assignmentPage.TotalCount,
+            StaffingRequestPageIndex = staffingRequestPage.PageIndex,
+            StaffingRequestTotalCount = staffingRequestPage.TotalCount,
+            StaffingCandidatePageIndex = staffingCandidatePage.PageIndex,
+            StaffingCandidateTotalCount = staffingCandidatePage.TotalCount
+        };
+    }
+
+    private Task<ProjectPartyAssignmentPage> LoadRequestedAssignmentPageAsync(
+        AssignmentSelectionLoadRequest request,
+        Guid projectId,
+        CancellationToken cancellationToken)
+    {
+        var requestedViews = request.RequestedData &
+            (AssignmentSelectionData.ScheduleAssignments |
+             AssignmentSelectionData.RelationshipAssignments |
+             AssignmentSelectionData.AllocationAssignments);
+        if (requestedViews is AssignmentSelectionData.None)
+        {
+            return Task.FromResult(ProjectPartyAssignmentPage.Empty());
+        }
+
+        if (requestedViews != AssignmentSelectionData.ScheduleAssignments &&
+            requestedViews != AssignmentSelectionData.RelationshipAssignments &&
+            requestedViews != AssignmentSelectionData.AllocationAssignments)
+        {
+            throw new InvalidOperationException(
+                "Only one assignment detail view can be loaded in a single selection snapshot.");
+        }
+
+        if (requestedViews == AssignmentSelectionData.ScheduleAssignments)
+        {
+            return ProjectPartyIntegrationService.SearchAssignmentsDetailedAsync(
+                new ProjectPartyAssignmentQuery(
+                    projectId,
+                    AllAssignmentRoles,
+                    PageSize: ProjectPartyAssignmentQueryLimits.SchedulePageSize,
+                    WindowStartUtc: scheduleWindowStartUtc,
+                    WindowEndUtc: scheduleWindowEndUtc,
+                    AllocationOnly: true),
+                cancellationToken);
+        }
+
+        if (requestedViews == AssignmentSelectionData.RelationshipAssignments)
+        {
+            var roles = request.RelationshipRoleFilter.HasValue
+                ? [request.RelationshipRoleFilter.Value]
+                : AllAssignmentRoles;
+            return ProjectPartyIntegrationService.SearchAssignmentsDetailedAsync(
+                new ProjectPartyAssignmentQuery(
+                    projectId,
+                    roles,
+                    request.RelationshipSearchText,
+                    request.RelationshipPageIndex,
+                    AssignmentPageSize),
+                cancellationToken);
+        }
+
+        var allocationRoles = request.AllocationRoleFilter.HasValue
+            ? [request.AllocationRoleFilter.Value]
+            : AllAssignmentRoles;
+        return ProjectPartyIntegrationService.SearchAssignmentsDetailedAsync(
+            new ProjectPartyAssignmentQuery(
+                projectId,
+                allocationRoles,
+                request.AllocationSearchText,
+                request.AllocationPageIndex,
+                AssignmentPageSize,
+                AllocationOnly: true),
+            cancellationToken);
     }
 
     protected virtual Task<StaffingDashboardModel> GetStaffingDashboardAsync(
         CancellationToken cancellationToken)
         => HrService.GetStaffingDashboardAsync(cancellationToken);
 
-    protected virtual Task<IReadOnlyList<ProjectSummary>> ListProjectsAsync(
+    protected virtual async Task<AssignmentProjectCatalog> LoadProjectCatalogAsync(
+        Guid? preferredProjectId,
+        bool allowFallback,
         CancellationToken cancellationToken)
-        => ProjectsService.ListAsync(cancellationToken);
+    {
+        var firstPageTask = ProjectRecordQueryService.SearchAsync(
+            new ProjectRecordQuery(
+                Scope: ProjectRecordScope.All,
+                PageSize: 1),
+            cancellationToken);
+        var preferredProjectTask = preferredProjectId.HasValue
+            ? GetProjectAsync(preferredProjectId.Value, cancellationToken)
+            : Task.FromResult<ProjectRecordQueryItem?>(null);
 
-    protected virtual Task<IReadOnlyList<StaffingCandidateItemModel>> SearchStaffingCandidatesAsync(
+        await Task.WhenAll(firstPageTask, preferredProjectTask);
+        var firstPage = await firstPageTask;
+        var preferredProject = await preferredProjectTask;
+        var selectedProject = preferredProject
+            ?? (allowFallback ? firstPage.Items.FirstOrDefault() : null);
+
+        return new AssignmentProjectCatalog(selectedProject, firstPage.TotalCount);
+    }
+
+    protected virtual Task<ProjectRecordQueryItem?> GetProjectAsync(
+        Guid projectId,
+        CancellationToken cancellationToken)
+        => ProjectRecordQueryService.GetAsync(projectId, cancellationToken);
+
+    protected virtual Task<StaffingCandidatePage> SearchStaffingCandidatesAsync(
         CandidateFilterSnapshot candidateFilter,
+        int pageIndex,
         CancellationToken cancellationToken)
         => HrService.SearchStaffingCandidatesAsync(
-            candidateFilter.SkillId,
-            candidateFilter.SearchText,
-            candidateFilter.AvailabilityState,
+            new StaffingCandidateQuery(
+                candidateFilter.SkillId,
+                candidateFilter.SearchText,
+                candidateFilter.AvailabilityState,
+                pageIndex,
+                StaffingPageSize),
             cancellationToken);
 
     private CandidateFilterSnapshot CaptureCandidateFilter()
@@ -567,6 +813,11 @@
             ResolveCandidateSkillId(),
             candidateSearchText,
             ResolveCandidateAvailabilityState());
+
+    private StaffingRequestFilterSnapshot CaptureStaffingRequestFilter()
+        => new(
+            staffingRequestSearchText,
+            staffingRequestStatusFilter);
 
     private Guid? ResolveCandidateSkillId()
     {
@@ -615,14 +866,29 @@
 
     private void MergeSelectionSnapshot(AssignmentSelectionSnapshot snapshot)
     {
-        if (snapshot.LoadedData.HasFlag(AssignmentSelectionData.PartyOptions))
+        if (snapshot.LoadedData.HasFlag(AssignmentSelectionData.AssignmentCounts))
         {
-            partyOptions = snapshot.PartyOptions;
+            assignmentCounts = snapshot.AssignmentCounts;
         }
 
-        if (snapshot.LoadedData.HasFlag(AssignmentSelectionData.Assignments))
+        if (snapshot.LoadedData.HasFlag(AssignmentSelectionData.ScheduleAssignments))
         {
-            assignments = snapshot.Assignments;
+            scheduleAssignments = snapshot.Assignments;
+            scheduleAssignmentTotalCount = snapshot.AssignmentTotalCount;
+        }
+
+        if (snapshot.LoadedData.HasFlag(AssignmentSelectionData.RelationshipAssignments))
+        {
+            relationshipAssignments = snapshot.Assignments;
+            relationshipAssignmentPageIndex = snapshot.AssignmentPageIndex;
+            relationshipAssignmentTotalCount = snapshot.AssignmentTotalCount;
+        }
+
+        if (snapshot.LoadedData.HasFlag(AssignmentSelectionData.AllocationAssignments))
+        {
+            allocationAssignments = snapshot.Assignments;
+            allocationAssignmentPageIndex = snapshot.AssignmentPageIndex;
+            allocationAssignmentTotalCount = snapshot.AssignmentTotalCount;
         }
 
         if (snapshot.LoadedData.HasFlag(AssignmentSelectionData.SkillCatalog))
@@ -633,11 +899,15 @@
         if (snapshot.LoadedData.HasFlag(AssignmentSelectionData.StaffingRequests))
         {
             staffingRequests = snapshot.StaffingRequests;
+            staffingRequestPageIndex = snapshot.StaffingRequestPageIndex;
+            staffingRequestTotalCount = snapshot.StaffingRequestTotalCount;
         }
 
         if (snapshot.LoadedData.HasFlag(AssignmentSelectionData.StaffingCandidates))
         {
             staffingCandidates = snapshot.StaffingCandidates;
+            staffingCandidatePageIndex = snapshot.StaffingCandidatePageIndex;
+            staffingCandidateTotalCount = snapshot.StaffingCandidateTotalCount;
         }
 
         loadedSelectionData |= snapshot.LoadedData;
@@ -655,19 +925,40 @@
             projectId.HasValue ? new CancellationTokenSource() : null);
         previousSelection?.Cancel();
         previousSelection?.Dispose();
+        CancelStaffingRequestSearch();
+        CancelAssignmentSearches();
 
         selectedProjectId = projectId;
-        partyOptions = [];
-        assignments = [];
+        selectedProject = null;
+        scheduleAssignments = [];
+        relationshipAssignments = [];
+        allocationAssignments = [];
+        assignmentCounts = ProjectPartyAssignmentCounts.Empty;
+        scheduleAssignmentTotalCount = 0;
+        relationshipAssignmentPageIndex = 0;
+        relationshipAssignmentTotalCount = 0;
+        allocationAssignmentPageIndex = 0;
+        allocationAssignmentTotalCount = 0;
+        ResetScheduleWindow();
         skillCatalog = [];
         staffingRequests = [];
         staffingCandidates = [];
+        staffingRequestPageIndex = 0;
+        staffingRequestTotalCount = 0;
+        staffingCandidatePageIndex = 0;
+        staffingCandidateTotalCount = 0;
         loadedSelectionData = AssignmentSelectionData.None;
         loadingSelectionData = AssignmentSelectionData.None;
         isSelectionDataLoading = false;
         candidateSearchText = string.Empty;
         candidateSkillFilter = string.Empty;
         candidateAvailabilityFilter = string.Empty;
+        staffingRequestSearchText = string.Empty;
+        staffingRequestStatusFilter = null;
+        relationshipAssignmentSearchText = string.Empty;
+        allocationAssignmentSearchText = string.Empty;
+        relationshipAssignmentRoleFilter = null;
+        allocationAssignmentRoleFilter = null;
         draftAssignment = CreateProjectAssignmentDraft(projectId);
         allocationDraft = CreateAllocationDraft(projectId);
         staffingRequestDraft = CreateStaffingRequestDraft(projectId);
@@ -675,11 +966,6 @@
 
     private async Task<bool> PrepareRelationshipCreateAsync()
     {
-        if (!await EnsureSelectionDataLoadedAsync(AssignmentSelectionData.PartyOptions))
-        {
-            return false;
-        }
-
         ResetDraft();
         await InvokeAsync(StateHasChanged);
         return true;
@@ -688,7 +974,7 @@
     private async Task<bool> PrepareStaffingCreateAsync()
     {
         if (!await EnsureSelectionDataLoadedAsync(
-                AssignmentSelectionData.PartyOptions | AssignmentSelectionData.SkillCatalog))
+                AssignmentSelectionData.SkillCatalog))
         {
             return false;
         }
@@ -701,7 +987,6 @@
     private async Task<bool> PrepareAllocationCreateAsync()
     {
         if (!await EnsureSelectionDataLoadedAsync(
-                AssignmentSelectionData.PartyOptions |
                 AssignmentSelectionData.SkillCatalog |
                 AssignmentSelectionData.StaffingCandidates))
         {
@@ -735,8 +1020,11 @@
         ResetDraft();
         if (selectedProjectId == projectId)
         {
-            loadedSelectionData &= ~AssignmentSelectionData.Assignments;
-            await EnsureSelectionDataLoadedAsync(AssignmentSelectionData.Assignments, force: true);
+            InvalidateAssignmentViews();
+            await EnsureSelectionDataLoadedAsync(
+                AssignmentSelectionData.AssignmentCounts |
+                AssignmentSelectionData.RelationshipAssignments,
+                force: true);
             await RefreshStaffingDashboardAsync();
             await InvokeAsync(StateHasChanged);
         }
@@ -767,8 +1055,12 @@
         ResetAllocationDraft();
         if (selectedProjectId == projectId)
         {
-            loadedSelectionData &= ~(AssignmentSelectionData.Assignments | AssignmentSelectionData.StaffingCandidates);
-            await EnsureSelectionDataLoadedAsync(AssignmentSelectionData.Assignments, force: true);
+            InvalidateAssignmentViews();
+            loadedSelectionData &= ~AssignmentSelectionData.StaffingCandidates;
+            await EnsureSelectionDataLoadedAsync(
+                AssignmentSelectionData.AssignmentCounts |
+                AssignmentSelectionData.AllocationAssignments,
+                force: true);
             await RefreshStaffingDashboardAsync();
             await InvokeAsync(StateHasChanged);
         }
@@ -798,6 +1090,7 @@
         ResetStaffingRequestDraft();
         if (selectedProjectId == projectId)
         {
+            staffingRequestPageIndex = 0;
             loadedSelectionData &= ~AssignmentSelectionData.StaffingRequests;
             await EnsureSelectionDataLoadedAsync(AssignmentSelectionData.StaffingRequests, force: true);
             await RefreshStaffingDashboardAsync();
@@ -808,7 +1101,10 @@
     }
 
     private Task SearchCandidatesAsync()
-        => ReloadCandidatesAsync();
+    {
+        staffingCandidatePageIndex = 0;
+        return ReloadCandidatesAsync();
+    }
 
     private Task HandleCandidateSearchTextChanged(string value)
     {
@@ -826,6 +1122,215 @@
     {
         candidateAvailabilityFilter = value;
         return Task.CompletedTask;
+    }
+
+    private async Task HandleStaffingRequestSearchTextChangedAsync(string value)
+    {
+        staffingRequestSearchText = value;
+        staffingRequestPageIndex = 0;
+        var currentSearch = new CancellationTokenSource();
+        var supersededSearch = Interlocked.Exchange(
+            ref staffingRequestSearchCancellation,
+            currentSearch);
+        supersededSearch?.Cancel();
+        supersededSearch?.Dispose();
+        try
+        {
+            await Task.Delay(
+                StaffingRequestSearchDebounceMilliseconds,
+                currentSearch.Token);
+            await EnsureSelectionDataLoadedAsync(
+                AssignmentSelectionData.StaffingRequests,
+                force: true);
+        }
+        catch (OperationCanceledException) when (currentSearch.IsCancellationRequested)
+        {
+        }
+        finally
+        {
+            if (ReferenceEquals(
+                    Interlocked.CompareExchange(
+                        ref staffingRequestSearchCancellation,
+                        null,
+                        currentSearch),
+                    currentSearch))
+            {
+                currentSearch.Dispose();
+            }
+        }
+    }
+
+    private async Task HandleStaffingRequestStatusFilterChangedAsync(
+        StaffingRequestStatus? status)
+    {
+        CancelStaffingRequestSearch();
+        staffingRequestStatusFilter = status;
+        staffingRequestPageIndex = 0;
+        await EnsureSelectionDataLoadedAsync(
+            AssignmentSelectionData.StaffingRequests,
+            force: true);
+    }
+
+    private async Task HandleRelationshipSearchTextChangedAsync(string value)
+    {
+        if (!ValidateAssignmentSearch(value))
+        {
+            return;
+        }
+
+        relationshipAssignmentSearchText = value;
+        relationshipAssignmentPageIndex = 0;
+        var currentSearch = new CancellationTokenSource();
+        var supersededSearch = Interlocked.Exchange(
+            ref relationshipAssignmentSearchCancellation,
+            currentSearch);
+        supersededSearch?.Cancel();
+        supersededSearch?.Dispose();
+        try
+        {
+            await Task.Delay(AssignmentSearchDebounceMilliseconds, currentSearch.Token);
+            await EnsureSelectionDataLoadedAsync(
+                AssignmentSelectionData.RelationshipAssignments,
+                force: true);
+        }
+        catch (OperationCanceledException) when (currentSearch.IsCancellationRequested)
+        {
+        }
+        finally
+        {
+            if (ReferenceEquals(
+                    Interlocked.CompareExchange(
+                        ref relationshipAssignmentSearchCancellation,
+                        null,
+                        currentSearch),
+                    currentSearch))
+            {
+                currentSearch.Dispose();
+            }
+        }
+    }
+
+    private async Task HandleAllocationSearchTextChangedAsync(string value)
+    {
+        if (!ValidateAssignmentSearch(value))
+        {
+            return;
+        }
+
+        allocationAssignmentSearchText = value;
+        allocationAssignmentPageIndex = 0;
+        var currentSearch = new CancellationTokenSource();
+        var supersededSearch = Interlocked.Exchange(
+            ref allocationAssignmentSearchCancellation,
+            currentSearch);
+        supersededSearch?.Cancel();
+        supersededSearch?.Dispose();
+        try
+        {
+            await Task.Delay(AssignmentSearchDebounceMilliseconds, currentSearch.Token);
+            await EnsureSelectionDataLoadedAsync(
+                AssignmentSelectionData.AllocationAssignments,
+                force: true);
+        }
+        catch (OperationCanceledException) when (currentSearch.IsCancellationRequested)
+        {
+        }
+        finally
+        {
+            if (ReferenceEquals(
+                    Interlocked.CompareExchange(
+                        ref allocationAssignmentSearchCancellation,
+                        null,
+                        currentSearch),
+                    currentSearch))
+            {
+                currentSearch.Dispose();
+            }
+        }
+    }
+
+    private async Task HandleRelationshipRoleFilterChangedAsync(
+        ProjectPartyAssignmentRole? role)
+    {
+        CancelRelationshipAssignmentSearch();
+        relationshipAssignmentRoleFilter = role;
+        relationshipAssignmentPageIndex = 0;
+        await EnsureSelectionDataLoadedAsync(
+            AssignmentSelectionData.RelationshipAssignments,
+            force: true);
+    }
+
+    private async Task HandleAllocationRoleFilterChangedAsync(
+        ProjectPartyAssignmentRole? role)
+    {
+        if (role.HasValue && !AllocationRoles.Contains(role.Value))
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(role),
+                role,
+                "The allocation role filter is not supported.");
+        }
+
+        CancelAllocationAssignmentSearch();
+        allocationAssignmentRoleFilter = role;
+        allocationAssignmentPageIndex = 0;
+        await EnsureSelectionDataLoadedAsync(
+            AssignmentSelectionData.AllocationAssignments,
+            force: true);
+    }
+
+    private async Task HandleRelationshipPageChangedAsync(int pageIndex)
+    {
+        if (pageIndex < 0 ||
+            pageIndex >= Math.Max(1, CalculateAssignmentTotalPages(relationshipAssignmentTotalCount)))
+        {
+            return;
+        }
+
+        relationshipAssignmentPageIndex = pageIndex;
+        await EnsureSelectionDataLoadedAsync(
+            AssignmentSelectionData.RelationshipAssignments,
+            force: true);
+    }
+
+    private async Task HandleAllocationPageChangedAsync(int pageIndex)
+    {
+        if (pageIndex < 0 ||
+            pageIndex >= Math.Max(1, CalculateAssignmentTotalPages(allocationAssignmentTotalCount)))
+        {
+            return;
+        }
+
+        allocationAssignmentPageIndex = pageIndex;
+        await EnsureSelectionDataLoadedAsync(
+            AssignmentSelectionData.AllocationAssignments,
+            force: true);
+    }
+
+    private async Task HandleStaffingRequestPageChangedAsync(int pageIndex)
+    {
+        if (pageIndex < 0 ||
+            pageIndex >= Math.Max(1, CalculateTotalPages(staffingRequestTotalCount)))
+        {
+            return;
+        }
+
+        staffingRequestPageIndex = pageIndex;
+        await EnsureSelectionDataLoadedAsync(
+            AssignmentSelectionData.StaffingRequests,
+            force: true);
+    }
+
+    private async Task HandleCandidatePageChangedAsync(int pageIndex)
+    {
+        if (pageIndex < 0 ||
+            pageIndex >= Math.Max(1, CalculateTotalPages(staffingCandidateTotalCount)))
+        {
+            return;
+        }
+
+        staffingCandidatePageIndex = pageIndex;
+        await ReloadCandidatesAsync();
     }
 
     private async Task ResetDraftAsync()
@@ -851,6 +1356,7 @@
         candidateSearchText = string.Empty;
         candidateSkillFilter = string.Empty;
         candidateAvailabilityFilter = string.Empty;
+        staffingCandidatePageIndex = 0;
         await ReloadCandidatesAsync();
     }
 
@@ -866,8 +1372,11 @@
         NotificationService.Warning("Assignment deleted", "Project assignment deleted.");
         if (selectedProjectId == projectId)
         {
-            loadedSelectionData &= ~AssignmentSelectionData.Assignments;
-            await EnsureSelectionDataLoadedAsync(AssignmentSelectionData.Assignments, force: true);
+            InvalidateAssignmentViews();
+            await EnsureSelectionDataLoadedAsync(
+                AssignmentSelectionData.AssignmentCounts |
+                AssignmentSelectionData.RelationshipAssignments,
+                force: true);
             await RefreshStaffingDashboardAsync();
         }
     }
@@ -881,8 +1390,12 @@
         NotificationService.Warning("Allocation deleted", "Project allocation deleted.");
         if (selectedProjectId == projectId)
         {
-            loadedSelectionData &= ~(AssignmentSelectionData.Assignments | AssignmentSelectionData.StaffingCandidates);
-            await EnsureSelectionDataLoadedAsync(AssignmentSelectionData.Assignments, force: true);
+            InvalidateAssignmentViews();
+            loadedSelectionData &= ~AssignmentSelectionData.StaffingCandidates;
+            await EnsureSelectionDataLoadedAsync(
+                AssignmentSelectionData.AssignmentCounts |
+                AssignmentSelectionData.AllocationAssignments,
+                force: true);
             await RefreshStaffingDashboardAsync();
         }
     }
@@ -896,6 +1409,11 @@
         NotificationService.Warning("Staffing request deleted", "Staffing request deleted.");
         if (selectedProjectId == projectId)
         {
+            if (staffingRequests.Count == 1 && staffingRequestPageIndex > 0)
+            {
+                staffingRequestPageIndex--;
+            }
+
             loadedSelectionData &= ~AssignmentSelectionData.StaffingRequests;
             await EnsureSelectionDataLoadedAsync(AssignmentSelectionData.StaffingRequests, force: true);
             await RefreshStaffingDashboardAsync();
@@ -904,6 +1422,29 @@
 
     private bool IsLoading(AssignmentSelectionData data)
         => isSelectionDataLoading && loadingSelectionData.HasFlag(data);
+
+    private static int CalculateTotalPages(int totalCount)
+        => totalCount == 0
+            ? 0
+            : (int)Math.Ceiling(totalCount / (double)StaffingPageSize);
+
+    private static int CalculateAssignmentTotalPages(int totalCount)
+        => totalCount == 0
+            ? 0
+            : (int)Math.Ceiling(totalCount / (double)AssignmentPageSize);
+
+    private bool ValidateAssignmentSearch(string value)
+    {
+        if (value.Length <= ProjectPartyAssignmentQueryLimits.MaximumSearchLength)
+        {
+            return true;
+        }
+
+        NotificationService.Warning(
+            "Search text is too long",
+            $"Assignment search is limited to {ProjectPartyAssignmentQueryLimits.MaximumSearchLength} characters.");
+        return false;
+    }
 
     private async Task<ProjectNodeDetails?> LoadTaskDetailsAsync(ProjectPartyAssignmentDetail assignment)
     {
@@ -960,6 +1501,14 @@
         }
     }
 
+    private void HandleProjectPickerLoadFailed(Exception exception)
+    {
+        Logger.LogError(exception, "Failed to load the project picker in the CRM-HR assignments workspace.");
+        NotificationService.Error(
+            "Projects unavailable",
+            "The project catalog could not be loaded. Try again.");
+    }
+
     private Task OpenStructure(Guid projectId)
     {
         Navigation.NavigateTo($"/projects/{projectId}/structure");
@@ -997,6 +1546,66 @@
         staffingRequestDraft = CreateStaffingRequestDraft(selectedProjectId);
     }
 
+    private void InvalidateAssignmentViews()
+    {
+        loadedSelectionData &=
+            ~(AssignmentSelectionData.AssignmentCounts |
+              AssignmentSelectionData.ScheduleAssignments |
+              AssignmentSelectionData.RelationshipAssignments |
+              AssignmentSelectionData.AllocationAssignments);
+    }
+
+    private void EnsureScheduleWindow()
+    {
+        if (scheduleWindowStartUtc != default &&
+            scheduleWindowEndUtc != default)
+        {
+            return;
+        }
+
+        ResetScheduleWindow();
+    }
+
+    private void ResetScheduleWindow()
+    {
+        var now = Clock.GetUtcNow();
+        scheduleWindowStartUtc = now.AddDays(-90);
+        scheduleWindowEndUtc = now.AddMonths(18);
+    }
+
+    private void CancelStaffingRequestSearch()
+    {
+        var cancellation = Interlocked.Exchange(
+            ref staffingRequestSearchCancellation,
+            null);
+        cancellation?.Cancel();
+        cancellation?.Dispose();
+    }
+
+    private void CancelAssignmentSearches()
+    {
+        CancelRelationshipAssignmentSearch();
+        CancelAllocationAssignmentSearch();
+    }
+
+    private void CancelRelationshipAssignmentSearch()
+    {
+        var cancellation = Interlocked.Exchange(
+            ref relationshipAssignmentSearchCancellation,
+            null);
+        cancellation?.Cancel();
+        cancellation?.Dispose();
+    }
+
+    private void CancelAllocationAssignmentSearch()
+    {
+        var cancellation = Interlocked.Exchange(
+            ref allocationAssignmentSearchCancellation,
+            null);
+        cancellation?.Cancel();
+        cancellation?.Dispose();
+    }
+
     public ValueTask DisposeAsync()
     {
         isDisposed = true;
@@ -1007,12 +1616,17 @@
         var selectionCancellation = Interlocked.Exchange(ref selectionLifetimeCancellation, null);
         selectionCancellation?.Cancel();
         selectionCancellation?.Dispose();
+        CancelStaffingRequestSearch();
+        CancelAssignmentSearches();
         return ValueTask.CompletedTask;
     }
 
+    protected sealed record AssignmentProjectCatalog(
+        ProjectRecordQueryItem? SelectedProject,
+        int TotalCount);
+
     protected sealed record AssignmentSelectionSnapshot(
         AssignmentSelectionData LoadedData,
-        IReadOnlyList<ProjectPartyOption> PartyOptions,
         IReadOnlyList<ProjectPartyAssignmentDetail> Assignments,
         IReadOnlyList<SkillCatalogItemModel> SkillCatalog,
         IReadOnlyList<StaffingRequestItemModel> StaffingRequests,
@@ -1023,19 +1637,56 @@
             [],
             [],
             [],
-            [],
             []);
+
+        public int StaffingRequestPageIndex { get; init; }
+
+        public int StaffingRequestTotalCount { get; init; }
+
+        public int StaffingCandidatePageIndex { get; init; }
+
+        public int StaffingCandidateTotalCount { get; init; }
+
+        public ProjectPartyAssignmentCounts AssignmentCounts { get; init; } =
+            ProjectPartyAssignmentCounts.Empty;
+
+        public int AssignmentPageIndex { get; init; }
+
+        public int AssignmentTotalCount { get; init; }
     }
 
     protected readonly record struct AssignmentSelectionLoadRequest(
         Guid? ProjectId,
         AssignmentSelectionData RequestedData,
-        CandidateFilterSnapshot CandidateFilter);
+        CandidateFilterSnapshot CandidateFilter)
+    {
+        public int StaffingRequestPageIndex { get; init; }
+
+        public StaffingRequestFilterSnapshot StaffingRequestFilter { get; init; }
+
+        public int StaffingCandidatePageIndex { get; init; }
+
+        public int RelationshipPageIndex { get; init; }
+
+        public string RelationshipSearchText { get; init; } = string.Empty;
+
+        public ProjectPartyAssignmentRole? RelationshipRoleFilter { get; init; }
+
+        public int AllocationPageIndex { get; init; }
+
+        public string AllocationSearchText { get; init; } = string.Empty;
+
+        public ProjectPartyAssignmentRole? AllocationRoleFilter { get; init; }
+    }
 
     protected readonly record struct CandidateFilterSnapshot(
         Guid? SkillId,
         string SearchText,
         WorkforceAvailabilityState? AvailabilityState);
+
+    protected readonly record struct StaffingRequestFilterSnapshot(
+        string SearchText,
+        StaffingRequestStatus? Status);
 
     private static ProjectPartyAssignmentUpsertRequest CreateProjectAssignmentDraft(Guid? projectId = null)
     {

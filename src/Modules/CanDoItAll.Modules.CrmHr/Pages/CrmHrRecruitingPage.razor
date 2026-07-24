@@ -1,9 +1,11 @@
 @page "/crm-hr/recruiting"
 @using CanDoItAll.Components.BaseLib
 @using CanDoItAll.SharedKernel
+@using Microsoft.Extensions.Logging
 @inject RecruitingService RecruitingService
 @inject NavigationManager Navigation
 @inject NotificationService NotificationService
+@inject ILogger<CrmHrRecruitingPage> Logger
 
 <PageTitle>CRM / HR Recruiting</PageTitle>
 
@@ -19,14 +21,14 @@
                     Compact="true">
             <Stats>
                 <CompactStat Label="applications"
-                             Value="@(currentWorkspace?.Applications.Count.ToString() ?? "0")"
+                             Value="@applicationSummary.TotalCount.ToString()"
                              TooltipText="Candidate pipelines tracked on the shared registry." />
                 <CompactStat Label="interviewing"
-                             Value="@(currentWorkspace?.Applications.Count(item => item.Stage == RecruitmentStage.Interviewing).ToString() ?? "0")"
+                             Value="@applicationSummary.InterviewingCount.ToString()"
                              TooltipText="Candidates currently in interview loops."
                              Tone="info" />
                 <CompactStat Label="offer or hired"
-                             Value="@(currentWorkspace?.Applications.Count(item => item.Stage is RecruitmentStage.Offer or RecruitmentStage.Hired).ToString() ?? "0")"
+                             Value="@applicationSummary.OfferOrHiredCount.ToString()"
                              TooltipText="Applications close enough to require controlled handoff."
                              Tone="success" />
                 <CompactStat Label="open tasks"
@@ -49,61 +51,43 @@
 
     <ChildContent>
         <Stack GapScale="LayoutGap.Large">
-            <CrmHrSecondaryTabs SelectedKey="recruiting" />
+            <CrmHrSecondaryTabs SelectedArea="CrmHrWorkspaceArea.Recruiting" />
 
             <ListDetailShell ListPaneWidth="30rem">
                 <ListHeader>
                     <ListPanelHeader Title="Recruitment applications"
                                      Description="Select an existing candidate pipeline or create a new one directly from this route."
-                                     Count="@($"{FilteredApplications.Count} visible application(s)")">
-                        <Filters>
-                            <FilterBar ResultText="@($"{FilteredApplications.Count} matching application(s)")">
-                                <input @bind="searchText" @bind:event="oninput" class="cda-input min-w-[16rem] flex-1" placeholder="Search candidate, role, recruiter, manager, source, or email" data-testid="crmhr-recruiting-search" />
-                                <InputSelect @bind-Value="stageFilter" class="cda-input" data-testid="crmhr-recruiting-stage-filter">
-                                    <option value="">All stages</option>
-                                    @foreach (var stage in Enum.GetValues<RecruitmentStage>())
-                                    {
-                                        <option value="@stage.ToString()">@stage</option>
-                                    }
-                                </InputSelect>
-                                <Button Text="New application" ButtonStyle="ButtonStyle.Light" Size="ButtonSize.Small" Click="CreateNewApplicationAsync" data-testid="crmhr-recruiting-new-button" />
-                            </FilterBar>
-                        </Filters>
+                                     Count="@($"{applicationSummary.TotalCount} application(s)")">
+                        <Actions>
+                            <Button Text="New application"
+                                    ButtonStyle="ButtonStyle.Light"
+                                    Size="ButtonSize.Small"
+                                    Click="CreateNewApplicationAsync"
+                                    data-testid="crmhr-recruiting-new-button" />
+                        </Actions>
                     </ListPanelHeader>
                 </ListHeader>
 
                 <ListContent>
-                    @if (FilteredApplications.Count == 0)
-                    {
-                        <EmptyState Eyebrow="No recruitment applications" Title="Create the first candidate" Description="New candidates and application stages appear here after the first recruitment application is saved." />
-                    }
-                    else
-                    {
-                        <Stack GapScale="LayoutGap.Medium">
-                            @foreach (var item in FilteredApplications)
-                            {
-                                <div data-testid="crmhr-recruiting-application-item">
-                                    <SelectionListItem Title="@item.CandidateName"
-                                                       Eyebrow="@BuildApplicationEyebrow(item)"
-                                                       Meta="@BuildApplicationMeta(item)"
-                                                       Summary="@BuildApplicationSummary(item)"
-                                                       IsSelected="@(currentWorkspace?.Application.Id == item.Id)"
-                                                       OnSelect="@(() => SelectApplicationAsync(item.Id))">
-                                        <Status>
-                                            <Cluster Gap="LayoutGap.Small">
-                                                <StatusBadge Tone="@ResolveStageTone(item.Stage)" Text="@item.Stage.ToString()" />
-                                                <StatusBadge Tone="@ResolveDecisionTone(item.Decision)" Text="@item.Decision.ToString()" />
-                                                @if (item.HasWorkforceProfile)
-                                                {
-                                                    <StatusBadge Tone="success" Text="Workforce" />
-                                                }
-                                            </Cluster>
-                                        </Status>
-                                    </SelectionListItem>
-                                </div>
-                            }
-                        </Stack>
-                    }
+                    <PagedRecordBrowser @key="ApplicationBrowserKey"
+                                        TKey="Guid"
+                                        TFilter="RecruitmentApplicationScope"
+                                        Loader="LoadApplicationPageAsync"
+                                        InitialFilter="RecruitmentApplicationScope.All"
+                                        FilterOptions="@ApplicationScopeOptions"
+                                        ShowTagFilter="false"
+                                        Selection="@ApplicationSelection"
+                                        SelectionChanged="SelectApplicationAsync"
+                                        LoadFailed="HandleApplicationPageLoadFailed"
+                                        PageSize="@RecruitmentApplicationQueryLimits.DefaultPageSize"
+                                        SearchPlaceholder="Search candidate, role, recruiter, manager, source, or public email"
+                                        FilterAriaLabel="Recruitment stage"
+                                        LoadingEyebrow="Recruiting"
+                                        LoadingTitle="Loading applications"
+                                        EmptyEyebrow="No recruitment applications"
+                                        EmptyTitle="No applications match"
+                                        EmptyDescription="Change the search or stage, or create the first candidate."
+                                        DataTestId="crmhr-recruiting-applications" />
                 </ListContent>
 
                 <DetailHeader>
@@ -128,8 +112,8 @@
                             <Grid Gap="LayoutGap.Medium" ColumnsMd="4" Class="mt-5">
                                 <div class="rounded-[1.2rem] border border-slate-200 bg-slate-50/80 px-4 py-4"><p class="text-xs uppercase tracking-[0.18em] text-slate-500">Email</p><p class="mt-1 text-sm font-medium text-slate-950">@FormatValue(currentWorkspace.CandidatePrimaryEmail)</p></div>
                                 <div class="rounded-[1.2rem] border border-slate-200 bg-slate-50/80 px-4 py-4"><p class="text-xs uppercase tracking-[0.18em] text-slate-500">Phone</p><p class="mt-1 text-sm font-medium text-slate-950">@FormatValue(currentWorkspace.CandidatePrimaryPhone)</p></div>
-                                <div class="rounded-[1.2rem] border border-slate-200 bg-slate-50/80 px-4 py-4"><p class="text-xs uppercase tracking-[0.18em] text-slate-500">Recruiter</p><p class="mt-1 text-sm font-medium text-slate-950">@FormatValue(ResolveSelectedPartyName(currentWorkspace.RecruiterOptions, applicationEditor.RecruiterPartyId))</p></div>
-                                <div class="rounded-[1.2rem] border border-slate-200 bg-slate-50/80 px-4 py-4"><p class="text-xs uppercase tracking-[0.18em] text-slate-500">Hiring manager</p><p class="mt-1 text-sm font-medium text-slate-950">@FormatValue(ResolveSelectedPartyName(currentWorkspace.HiringManagerOptions, applicationEditor.HiringManagerPartyId))</p></div>
+                                <div class="rounded-[1.2rem] border border-slate-200 bg-slate-50/80 px-4 py-4"><p class="text-xs uppercase tracking-[0.18em] text-slate-500">Recruiter</p><p class="mt-1 text-sm font-medium text-slate-950">@FormatValue(currentWorkspace.RecruiterDisplayName)</p></div>
+                                <div class="rounded-[1.2rem] border border-slate-200 bg-slate-50/80 px-4 py-4"><p class="text-xs uppercase tracking-[0.18em] text-slate-500">Hiring manager</p><p class="mt-1 text-sm font-medium text-slate-950">@FormatValue(currentWorkspace.HiringManagerDisplayName)</p></div>
                             </Grid>
                         </SurfaceCard>
                     }
@@ -152,17 +136,12 @@
                     {
                         <Stack GapScale="LayoutGap.Large">
                             <CandidatePipeline Draft="applicationEditor"
-                                               CandidateOptions="currentWorkspace.CandidateOptions"
-                                               RecruiterOptions="currentWorkspace.RecruiterOptions"
-                                               HiringManagerOptions="currentWorkspace.HiringManagerOptions"
-                                               TargetUnitOptions="currentWorkspace.TargetUnitOptions"
                                                StageHistory="currentWorkspace.StageHistory"
                                                HasWorkforceProfile="currentWorkspace.HasWorkforceProfile"
                                                SaveApplication="SaveApplicationAsync"
                                                ResetApplication="ResetApplicationAsync" />
 
                             <InterviewSchedulePanel Draft="interviewEditor"
-                                                    InterviewerOptions="currentWorkspace.SupportOptions"
                                                     Interviews="currentWorkspace.Interviews"
                                                     SaveInterview="SaveInterviewAsync"
                                                     ResetInterview="ResetInterviewAsync"
@@ -171,8 +150,6 @@
                             <OnboardingChecklistPanel SupportDraft="supportEditor"
                                                       CurrentAssignments="currentWorkspace.SupportAssignments"
                                                       TaskDraft="taskEditor"
-                                                      SupportOptions="currentWorkspace.SupportOptions"
-                                                      ProjectOptions="currentWorkspace.ProjectOptions"
                                                       Tasks="currentWorkspace.LifecycleTasks"
                                                       SaveSupportAssignments="SaveSupportAssignmentsAsync"
                                                       SaveTask="SaveTaskAsync"
@@ -216,24 +193,19 @@
                                             <FormField Text="Seniority">
                                                 <InputText @bind-Value="conversionEditor.Seniority" class="cda-input" data-testid="crmhr-recruiting-convert-seniority" />
                                             </FormField>
-                                            <FormField Text="Home unit">
-                                                <InputSelect @bind-Value="conversionEditor.HomeUnitPartyId" class="cda-input" data-testid="crmhr-recruiting-convert-home-unit">
-                                                    <option value="">Choose home unit</option>
-                                                    @foreach (var option in currentWorkspace.TargetUnitOptions.OrderBy(item => item.DisplayName, StringComparer.OrdinalIgnoreCase))
-                                                    {
-                                                        <option value="@option.Id">@option.DisplayName (@option.PartyType)</option>
-                                                    }
-                                                </InputSelect>
-                                            </FormField>
-                                            <FormField Text="Manager">
-                                                <InputSelect @bind-Value="conversionEditor.ManagerPartyId" class="cda-input" data-testid="crmhr-recruiting-convert-manager">
-                                                    <option value="">Choose manager</option>
-                                                    @foreach (var option in currentWorkspace.SupportOptions.OrderBy(item => item.DisplayName, StringComparer.OrdinalIgnoreCase))
-                                                    {
-                                                        <option value="@option.Id">@option.DisplayName</option>
-                                                    }
-                                                </InputSelect>
-                                            </FormField>
+                                            <PartyPicker Label="Home unit"
+                                                         TestIdPrefix="crmhr-recruiting-convert-home-unit"
+                                                         AllowedScope="@(PartyRecordScope.Organizations | PartyRecordScope.OrganizationUnits)"
+                                                         InitialScope="@(PartyRecordScope.Organizations | PartyRecordScope.OrganizationUnits)"
+                                                         SelectedPartyId="@conversionEditor.HomeUnitPartyId"
+                                                         SelectedPartyIdChanged="SetConversionHomeUnitAsync" />
+                                            <PartyPicker Label="Manager"
+                                                         TestIdPrefix="crmhr-recruiting-convert-manager"
+                                                         AllowedScope="PartyRecordScope.People"
+                                                         InitialScope="PartyRecordScope.People"
+                                                         ExcludedPartyId="@SelectedPartyId"
+                                                         SelectedPartyId="@conversionEditor.ManagerPartyId"
+                                                         SelectedPartyIdChanged="SetConversionManagerAsync" />
                                         </Grid>
 
                                         <Grid Gap="LayoutGap.Medium" ColumnsMd="4" Class="mt-4">
@@ -268,6 +240,18 @@
 </PageScaffold>
 
 @code {
+    private static readonly IReadOnlyList<PagedRecordFilterOption<RecruitmentApplicationScope>> ApplicationScopeOptions =
+    [
+        new(RecruitmentApplicationScope.All, "All", "crmhr-recruiting-stage-all"),
+        new(RecruitmentApplicationScope.Applied, "Applied", "crmhr-recruiting-stage-applied"),
+        new(RecruitmentApplicationScope.Screening, "Screening", "crmhr-recruiting-stage-screening"),
+        new(RecruitmentApplicationScope.Interviewing, "Interviewing", "crmhr-recruiting-stage-interviewing"),
+        new(RecruitmentApplicationScope.Offer, "Offer", "crmhr-recruiting-stage-offer"),
+        new(RecruitmentApplicationScope.Hired, "Hired", "crmhr-recruiting-stage-hired"),
+        new(RecruitmentApplicationScope.Rejected, "Rejected", "crmhr-recruiting-stage-rejected"),
+        new(RecruitmentApplicationScope.Withdrawn, "Withdrawn", "crmhr-recruiting-stage-withdrawn")
+    ];
+
     [SupplyParameterFromQuery]
     private Guid? ApplicationId { get; set; }
 
@@ -280,12 +264,20 @@
     private LifecycleTaskEditorModel taskEditor = new();
     private RecruitmentSupportAssignmentsEditorModel supportEditor = new();
     private RecruitmentConversionEditorModel conversionEditor = new();
-    private string searchText = string.Empty;
-    private string stageFilter = string.Empty;
+    private RecruitmentApplicationSummary applicationSummary = new(0, 0, 0);
+    private int applicationBrowserRevision;
     private AgentChatContextAccessState agentChatContextAccessState = AgentChatContextAccessState.Loading;
     private long agentChatContextLoadGeneration;
 
     private Guid? SelectedPartyId => currentWorkspace?.HasSelectedApplication == true ? currentWorkspace.Application.PartyId : null;
+
+    private PagedRecordSelection<Guid>? ApplicationSelection => currentWorkspace?.Application.Id is { } applicationId
+        ? new PagedRecordSelection<Guid>(applicationId)
+        : null;
+
+    private ApplicationBrowserIdentity ApplicationBrowserKey => new(
+        ApplicationId,
+        applicationBrowserRevision);
 
     private AgentChatContextSurface AgentChatSurface
     {
@@ -311,8 +303,6 @@
                 new("partyId", PartyId?.ToString("D"))
             ]);
 
-    private IReadOnlyList<RecruitmentApplicationListItemModel> FilteredApplications => currentWorkspace?.Applications.Where(MatchesApplicationFilters).ToList() ?? [];
-
     protected override async Task OnParametersSetAsync()
     {
         await LoadAsync();
@@ -326,15 +316,19 @@
         agentChatContextAccessState = AgentChatContextAccessState.Loading;
         try
         {
-            var loadedWorkspace = await RecruitingService.GetRecruitmentWorkspaceAsync(
+            var workspaceTask = RecruitingService.GetRecruitmentWorkspaceAsync(
                 requestedApplicationId,
                 requestedPartyId);
+            var summaryTask = RecruitingService.GetRecruitmentApplicationSummaryAsync();
+            await Task.WhenAll(workspaceTask, summaryTask);
             if (!IsCurrentAgentChatContextLoad(loadGeneration))
             {
                 return;
             }
 
+            var loadedWorkspace = await workspaceTask;
             currentWorkspace = loadedWorkspace;
+            applicationSummary = await summaryTask;
             ApplyWorkspace(loadedWorkspace);
             if (!RecruitmentWorkspaceContextSelection.MatchesRequestedApplication(
                     requestedApplicationId,
@@ -382,30 +376,41 @@
         conversionEditor = CloneConversion(workspace.Conversion);
     }
 
-    private bool MatchesApplicationFilters(RecruitmentApplicationListItemModel item)
+    private async Task<PagedRecordPage<Guid>> LoadApplicationPageAsync(
+        PagedRecordRequest<RecruitmentApplicationScope> request,
+        CancellationToken cancellationToken)
     {
-        if (!string.IsNullOrWhiteSpace(stageFilter) && !string.Equals(item.Stage.ToString(), stageFilter, StringComparison.OrdinalIgnoreCase))
+        if (request.Tags.Count > 0)
         {
-            return false;
+            throw new InvalidOperationException("Recruitment application tag filtering is not supported.");
         }
 
-        if (string.IsNullOrWhiteSpace(searchText))
-        {
-            return true;
-        }
-
-        var search = searchText.Trim();
-        return item.CandidateName.Contains(search, StringComparison.OrdinalIgnoreCase) ||
-               item.DesiredRole.Contains(search, StringComparison.OrdinalIgnoreCase) ||
-               item.RecruiterName.Contains(search, StringComparison.OrdinalIgnoreCase) ||
-               item.HiringManagerName.Contains(search, StringComparison.OrdinalIgnoreCase) ||
-               item.TargetUnitName.Contains(search, StringComparison.OrdinalIgnoreCase) ||
-               item.PrimaryEmail.Contains(search, StringComparison.OrdinalIgnoreCase);
+        var result = await RecruitingService.SearchRecruitmentApplicationsAsync(
+            new RecruitmentApplicationQuery(
+                request.SearchText,
+                request.Filter,
+                request.PageIndex,
+                request.PageSize),
+            cancellationToken);
+        return new PagedRecordPage<Guid>(
+            result.Items.Select(ToApplicationOption).ToList(),
+            result.PageIndex,
+            result.PageSize,
+            result.TotalCount);
     }
 
     private Task SelectApplicationAsync(Guid applicationId)
     {
         Navigation.NavigateTo($"/crm-hr/recruiting?applicationId={applicationId:D}");
+        return Task.CompletedTask;
+    }
+
+    private Task HandleApplicationPageLoadFailed(Exception exception)
+    {
+        Logger.LogError(exception, "Failed to load the server-paged recruitment application directory.");
+        NotificationService.Error(
+            "Recruitment applications unavailable",
+            "The application list could not be loaded. Try again.");
         return Task.CompletedTask;
     }
 
@@ -425,6 +430,7 @@
         }
 
         NotificationService.Success("Recruitment application saved", "Recruitment application saved.");
+        applicationBrowserRevision++;
         if (ApplicationId != result.Value)
         {
             Navigation.NavigateTo($"/crm-hr/recruiting?applicationId={result.Value:D}");
@@ -550,6 +556,18 @@
         await LoadAsync();
     }
 
+    private Task SetConversionHomeUnitAsync(Guid? partyId)
+    {
+        conversionEditor.HomeUnitPartyId = partyId;
+        return Task.CompletedTask;
+    }
+
+    private Task SetConversionManagerAsync(Guid? partyId)
+    {
+        conversionEditor.ManagerPartyId = partyId;
+        return Task.CompletedTask;
+    }
+
     private Task OpenWorkforceAsync()
     {
         if (SelectedPartyId.HasValue)
@@ -634,6 +652,33 @@
         };
     }
 
+    private static PagedRecordOption<Guid> ToApplicationOption(
+        RecruitmentApplicationListItemModel item)
+    {
+        var tags = new List<string>
+        {
+            item.Stage.ToString(),
+            item.Decision.ToString()
+        };
+        if (item.HasWorkforceProfile)
+        {
+            tags.Add("Workforce");
+        }
+
+        return new PagedRecordOption<Guid>(
+            item.Id,
+            item.CandidateName,
+            BuildApplicationEyebrow(item))
+        {
+            Subtitle = BuildApplicationSummary(item),
+            Description = BuildApplicationMeta(item),
+            Meta = $"Updated {item.UpdatedAtUtc.LocalDateTime:g}",
+            Tags = tags,
+            Icon = "person_search",
+            TestId = $"crmhr-recruiting-application-{item.Id:N}"
+        };
+    }
+
     private static string BuildApplicationEyebrow(RecruitmentApplicationListItemModel item)
     {
         return string.IsNullOrWhiteSpace(item.DesiredRole) ? "Recruitment application" : item.DesiredRole;
@@ -700,13 +745,12 @@
         };
     }
 
-    private static string ResolveSelectedPartyName(IReadOnlyList<PartyOptionModel> options, Guid? selectedId)
-    {
-        return selectedId.HasValue ? options.FirstOrDefault(item => item.Id == selectedId.Value)?.DisplayName ?? string.Empty : string.Empty;
-    }
-
     private static string FormatValue(string? value)
     {
         return string.IsNullOrWhiteSpace(value) ? "Not set" : value;
     }
+
+    private readonly record struct ApplicationBrowserIdentity(
+        Guid? SelectedApplicationId,
+        int Revision);
 }
