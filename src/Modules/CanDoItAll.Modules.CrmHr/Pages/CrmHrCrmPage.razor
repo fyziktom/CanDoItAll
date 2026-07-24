@@ -44,42 +44,43 @@
     </Header>
 
     <ChildContent>
-        <Stack GapScale="LayoutGap.Large">
+        <Stack GapScale="LayoutGap.Medium">
             <CrmHrSecondaryTabs SelectedArea="CrmHrWorkspaceArea.Crm" />
 
-            <ListDetailShell ListPaneWidth="28rem">
-                <ListHeader>
+            <SurfaceCard data-testid="crmhr-crm-catalog">
+                <Stack GapScale="LayoutGap.Medium">
                     <ListPanelHeader Title="Accounts"
-                                     Description="Search and page through organization records, then open one account workspace." />
-                </ListHeader>
-
-                <ListContent>
+                                     Description="Search and page through customer, partner, and vendor organizations. Open a card to manage the complete CRM workspace."
+                                     Count="Server-paged" />
                     <PartyRecordBrowser AllowedScope="PartyRecordScope.Organizations"
                                         InitialScope="PartyRecordScope.Organizations"
                                         SelectedPartyId="selectedAccount?.AccountPartyId"
                                         SelectionChanged="SelectAccountAsync"
                                         LoadFailed="HandleAccountBrowserLoadFailedAsync"
                                         PageSize="12"
+                                        ResultsScrollMode="PagedRecordResultsScrollMode.Bounded"
                                         SearchPlaceholder="Search account name, code, summary, or tag"
-                                        DataTestId="crmhr-account-browser"
+                                        DataTestId="crmhr-account"
                                         OptionTestId="crmhr-account-item" />
-                </ListContent>
+                </Stack>
+            </SurfaceCard>
 
-                <DetailHeader>
-                    <AccountSummaryPanel Account="selectedAccount"
-                                         OpenDirectory="OpenDirectory"
-                                         MarkActiveCustomer="MarkActiveCustomerAsync" />
-                </DetailHeader>
+            @if (isAccountDialogOpen && selectedAccount is not null)
+            {
+                <Dialog IsOpen="true"
+                        Eyebrow="CRM account"
+                        Title="@selectedAccount.DisplayName"
+                        Subtitle="Relationship profile, financials, stakeholders, interactions, and opportunities."
+                        Size="ModalSize.Full"
+                        DenseChrome="true"
+                        CloseOnBackdrop="false"
+                        TestId="crmhr-crm-record-dialog"
+                        OnClose="CloseAccountDialogAsync">
+                    <ChildContent>
+                        <AccountSummaryPanel Account="selectedAccount"
+                                             OpenDirectory="OpenDirectory"
+                                             MarkActiveCustomer="MarkActiveCustomerAsync" />
 
-                <DetailContent>
-                    @if (selectedAccount is null)
-                    {
-                        <EmptyState Eyebrow="CRM workspace ready"
-                                    Title="Select an account to continue"
-                                    Description="The account detail surface will show relationship stage, stakeholders, interaction history, and overdue next actions after you choose an organization." />
-                    }
-                    else
-                    {
                         <Tabs SelectedIndex="@SelectedCrmRecordTabIndex"
                               SelectedIndexChanged="HandleCrmRecordTabChanged"
                               RenderMode="TabRenderMode.Server"
@@ -419,9 +420,24 @@
                                 </TabsItem>
                             </TabItems>
                         </Tabs>
-                    }
-                </DetailContent>
-            </ListDetailShell>
+                    </ChildContent>
+                    <Footer>
+                        <Split Breakpoint="LayoutBreakpoint.None"
+                               Gap="LayoutGap.Medium"
+                               AlignItems="AlignItems.Center"
+                               JustifyContent="JustifyContent.SpaceBetween"
+                               Wrap="FlexWrap.Wrap">
+                            <Button Text="Open directory record"
+                                    ButtonStyle="ButtonStyle.Light"
+                                    Click="OpenDirectory" />
+                            <Button Text="Close"
+                                    ButtonStyle="ButtonStyle.Light"
+                                    Click="CloseAccountDialogAsync"
+                                    data-testid="crmhr-crm-record-close" />
+                        </Split>
+                    </Footer>
+                </Dialog>
+            }
         </Stack>
     </ChildContent>
 </PageScaffold>
@@ -523,6 +539,7 @@
     private bool isOpportunityDetailDialogOpen;
     private bool isOpportunityEditDialogOpen;
     private bool isOpportunityConversionDialogOpen;
+    private bool isAccountDialogOpen;
     private bool isOpportunityConversionBusy;
     private bool isAccountActivityLoading;
     private bool isDisposed;
@@ -574,6 +591,11 @@
             requestedAccountId,
             requestedOpportunityId,
             requestedInteractionId);
+        if (!string.Equals(committedQueryKey, queryKey, StringComparison.Ordinal))
+        {
+            isAccountDialogOpen = false;
+        }
+
         var capturedSelectedAccountId = selectedAccount?.AccountPartyId;
         var capturedSelectedOpportunityId = selectedOpportunityId;
         var loadGeneration = BeginQueryLoad(queryKey, resetTransientState: true);
@@ -678,6 +700,7 @@
                 capturedSelectedAccountId,
                 requestedOpportunityId,
                 requestedInteractionId);
+            isAccountDialogOpen = true;
             if (selectedCrmRecordTab == CrmRecordTab.Interactions)
             {
                 await EnsureAccountActivityLoadedAsync();
@@ -1106,14 +1129,36 @@
         isOpportunityDetailDialogOpen = false;
         isOpportunityEditDialogOpen = false;
         isOpportunityConversionDialogOpen = false;
+        isAccountDialogOpen = false;
         selectedCrmRecordTab = CrmRecordTab.Overview;
         UpdateAgentChatContext();
     }
 
     private Task SelectAccountAsync(Guid accountPartyId)
     {
+        if (AccountIdQuery == accountPartyId &&
+            selectedAccount?.AccountPartyId == accountPartyId)
+        {
+            isAccountDialogOpen = true;
+            return Task.CompletedTask;
+        }
+
         InvalidateCurrentQueryForNavigation();
         Navigation.NavigateTo($"/crm-hr/crm?accountId={accountPartyId}");
+        return Task.CompletedTask;
+    }
+
+    private Task CloseAccountDialogAsync()
+    {
+        if (!isAccountDialogOpen)
+        {
+            return Task.CompletedTask;
+        }
+
+        InvalidateCurrentQueryForNavigation();
+        ClearAccountSelection();
+        agentChatContextAccessState = AgentChatContextAccessState.Ready;
+        Navigation.NavigateTo("/crm-hr/crm", replace: true);
         return Task.CompletedTask;
     }
 
@@ -1212,7 +1257,21 @@
             return;
         }
 
+        if (!TryCaptureCrmAction(out var action))
+        {
+            stakeholderPartyPickerIndex = null;
+            return;
+        }
+
         var party = await PartyRecordQueryService.GetAsync(partyId);
+        if (!IsCurrentCrmAction(action) ||
+            stakeholderPartyPickerIndex != index ||
+            index < 0 ||
+            index >= stakeholderEditors.Count)
+        {
+            return;
+        }
+
         if (party is null)
         {
             stakeholderPartyPickerIndex = null;
@@ -1720,6 +1779,7 @@
         isOpportunityDetailDialogOpen = false;
         isOpportunityEditDialogOpen = false;
         isOpportunityConversionDialogOpen = false;
+        isAccountDialogOpen = false;
         agentChatAccountContext = null;
         agentChatOpportunityContext = null;
         agentChatInteractionContext = null;

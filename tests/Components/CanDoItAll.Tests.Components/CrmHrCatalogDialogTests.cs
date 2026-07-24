@@ -91,15 +91,156 @@ public sealed class CrmHrCatalogDialogTests
         });
     }
 
+    [Fact]
+    public async Task Crm_deep_link_opens_a_controlled_dialog_over_the_bounded_catalog()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var partyDirectoryService = harness.Context.Services.GetRequiredService<PartyDirectoryService>();
+        var crmService = harness.Context.Services.GetRequiredService<CrmService>();
+        var navigation = harness.Context.Services.GetRequiredService<NavigationManager>();
+        var accountId = await CreatePartyAsync(
+            partyDirectoryService,
+            "CRM dialog proof",
+            PartyRoleKind.Customer,
+            PartyType.Organization,
+            PartyLifecycleStatus.Prospect);
+        var profileResult = await crmService.SaveAccountProfileAsync(new CrmAccountProfileEditorModel
+        {
+            AccountPartyId = accountId,
+            RelationshipStage = CrmAccountRelationshipStage.Prospect,
+            CommercialNotes = "Controlled dialog proof",
+            LastChangedBy = "component-tests"
+        });
+        Assert.True(profileResult.IsSuccess);
+
+        navigation.NavigateTo($"/crm-hr/crm?accountId={accountId:D}");
+        var cut = harness.Context.RenderComponent<CrmHrCrmPage>();
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.NotNull(cut.Find("[data-testid='crmhr-crm-catalog']"));
+            Assert.Contains(
+                "paged-record-browser__results--bounded",
+                cut.Find("[data-testid='crmhr-account-results']").ClassList);
+            Assert.NotNull(cut.Find("[data-testid='crmhr-crm-record-dialog']"));
+            Assert.Contains("CRM dialog proof", cut.Markup);
+        });
+
+        cut.Find("[data-testid='crmhr-crm-record-close']").Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Empty(cut.FindAll("[data-testid='crmhr-crm-record-dialog']"));
+            Assert.EndsWith("/crm-hr/crm", navigation.Uri, StringComparison.Ordinal);
+            Assert.NotNull(cut.Find("[data-testid='crmhr-crm-catalog']"));
+        });
+    }
+
+    [Fact]
+    public async Task Recruiting_deep_link_opens_a_tabbed_dialog_over_the_bounded_catalog()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var partyDirectoryService = harness.Context.Services.GetRequiredService<PartyDirectoryService>();
+        var recruitingService = harness.Context.Services.GetRequiredService<RecruitingService>();
+        var navigation = harness.Context.Services.GetRequiredService<NavigationManager>();
+        var candidateId = await CreatePartyAsync(
+            partyDirectoryService,
+            "Recruiting dialog proof",
+            PartyRoleKind.Candidate,
+            PartyType.Person,
+            PartyLifecycleStatus.Candidate);
+        var applicationResult = await recruitingService.SaveRecruitmentApplicationAsync(
+            new RecruitmentApplicationEditorModel
+            {
+                PartyId = candidateId,
+                DesiredRole = "Platform engineer",
+                Stage = RecruitmentStage.Interviewing,
+                Decision = RecruitmentDecision.Pending,
+                LastChangedBy = "component-tests"
+            });
+        Assert.True(applicationResult.IsSuccess);
+
+        navigation.NavigateTo(
+            $"/crm-hr/recruiting?applicationId={applicationResult.Value:D}");
+        var cut = harness.Context.RenderComponent<CrmHrRecruitingPage>();
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.NotNull(cut.Find("[data-testid='crmhr-recruiting-catalog']"));
+            Assert.Contains(
+                "paged-record-browser__results--bounded",
+                cut.Find("[data-testid='crmhr-recruiting-applications-results']").ClassList);
+            Assert.NotNull(cut.Find("[data-testid='crmhr-recruiting-record-dialog']"));
+            Assert.NotNull(cut.Find("[data-testid='crmhr-recruiting-tab-application']"));
+            Assert.Contains("Recruiting dialog proof", cut.Markup);
+        });
+        var browser = cut
+            .FindComponent<PagedRecordBrowser<Guid, RecruitmentApplicationScope>>()
+            .Instance;
+
+        cut.Find("[data-testid='crmhr-recruiting-tab-interviews']").Click();
+        cut.WaitForElement("[data-testid='crmhr-recruiting-interview-type']");
+        Assert.Empty(cut.FindAll("[data-testid='crmhr-recruiting-role']"));
+
+        cut.Find("[data-testid='crmhr-recruiting-tab-lifecycle']").Click();
+        cut.WaitForElement("[data-testid='crmhr-recruiting-support-save-button']");
+        Assert.Empty(cut.FindAll("[data-testid='crmhr-recruiting-interview-type']"));
+
+        cut.Find("[data-testid='crmhr-recruiting-tab-conversion']").Click();
+        cut.WaitForElement("[data-testid='crmhr-recruiting-convert-kind']");
+        Assert.Empty(cut.FindAll("[data-testid='crmhr-recruiting-support-save-button']"));
+
+        cut.Find("[data-testid='crmhr-recruiting-record-close']").Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Empty(cut.FindAll("[data-testid='crmhr-recruiting-record-dialog']"));
+            Assert.EndsWith("/crm-hr/recruiting", navigation.Uri, StringComparison.Ordinal);
+            Assert.NotNull(cut.Find("[data-testid='crmhr-recruiting-catalog']"));
+            Assert.Same(
+                browser,
+                cut.FindComponent<PagedRecordBrowser<Guid, RecruitmentApplicationScope>>().Instance);
+        });
+    }
+
+    [Fact]
+    public async Task Recruiting_new_application_dialog_can_close_and_reopen_on_the_base_route()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var navigation = harness.Context.Services.GetRequiredService<NavigationManager>();
+        navigation.NavigateTo("/crm-hr/recruiting");
+        var cut = harness.Context.RenderComponent<CrmHrRecruitingPage>();
+
+        cut.WaitForElement("[data-testid='crmhr-recruiting-new-button']").Click();
+        cut.WaitForAssertion(() =>
+        {
+            Assert.NotNull(cut.Find("[data-testid='crmhr-recruiting-record-dialog']"));
+            Assert.NotNull(cut.Find("[data-testid='crmhr-recruiting-tab-application']"));
+            Assert.Empty(cut.FindAll("[data-testid='crmhr-recruiting-tab-interviews']"));
+        });
+
+        cut.Find("[data-testid='crmhr-recruiting-record-close']").Click();
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Empty(cut.FindAll("[data-testid='crmhr-recruiting-record-dialog']"));
+            Assert.EndsWith("/crm-hr/recruiting", navigation.Uri, StringComparison.Ordinal);
+        });
+
+        cut.Find("[data-testid='crmhr-recruiting-new-button']").Click();
+        cut.WaitForElement("[data-testid='crmhr-recruiting-record-dialog']");
+    }
+
     private static async Task<Guid> CreatePartyAsync(
         PartyDirectoryService partyDirectoryService,
         string displayName,
-        PartyRoleKind roleKind)
+        PartyRoleKind roleKind,
+        PartyType partyType = PartyType.Person,
+        PartyLifecycleStatus lifecycleStatus = PartyLifecycleStatus.Active)
     {
         var result = await partyDirectoryService.SavePartyAsync(new PartyEditorModel
         {
-            PartyType = PartyType.Person,
-            LifecycleStatus = PartyLifecycleStatus.Active,
+            PartyType = partyType,
+            LifecycleStatus = lifecycleStatus,
             DisplayName = displayName,
             Summary = $"{displayName} summary",
             LastChangedBy = "component-tests",

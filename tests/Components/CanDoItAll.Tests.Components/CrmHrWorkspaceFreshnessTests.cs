@@ -262,6 +262,7 @@ public sealed class CrmHrWorkspaceFreshnessTests
                 AgentChatContextAccessState.Ready,
                 contextProvider.Instance.ContextAccessState);
             Assert.Null(contextProvider.Instance.Surface.Position.PrimarySelection);
+            Assert.Empty(cut.FindAll("[data-testid='crmhr-recruiting-record-dialog']"));
         });
 
         loadGate.Arm();
@@ -277,6 +278,7 @@ public sealed class CrmHrWorkspaceFreshnessTests
                     AgentChatContextAccessState.Loading,
                     contextProvider.Instance.ContextAccessState);
                 Assert.Null(contextProvider.Instance.Surface.Position.PrimarySelection);
+                Assert.Empty(cut.FindAll("[data-testid='crmhr-recruiting-record-dialog']"));
             });
         }
         finally
@@ -301,6 +303,7 @@ public sealed class CrmHrWorkspaceFreshnessTests
                 contextProvider.Instance.Surface.Position.Facts,
                 fact => fact.Name == "decision-status" &&
                         fact.Value == RecruitmentDecision.Pending.ToString());
+            Assert.Single(cut.FindAll("[data-testid='crmhr-recruiting-record-dialog']"));
         });
     }
 
@@ -365,6 +368,7 @@ public sealed class CrmHrWorkspaceFreshnessTests
             var account = Assert.IsType<CrmAgentChatAccountContext>(contextProvider.Instance.Account);
             Assert.Equal(expectedAccountId, account.AccountId);
             Assert.Equal(expectedDisplayName, account.DisplayLabel);
+            Assert.Single(cut.FindAll("[data-testid='crmhr-crm-record-dialog']"));
             if (expectedOpportunityId.HasValue)
             {
                 var opportunity = Assert.IsType<CrmAgentChatOpportunityContext>(
@@ -386,6 +390,7 @@ public sealed class CrmHrWorkspaceFreshnessTests
             Assert.Null(contextProvider.Instance.Account);
             Assert.Null(contextProvider.Instance.Opportunity);
             Assert.Null(contextProvider.Instance.Interaction);
+            Assert.Empty(cut.FindAll("[data-testid='crmhr-crm-record-dialog']"));
         });
     }
 

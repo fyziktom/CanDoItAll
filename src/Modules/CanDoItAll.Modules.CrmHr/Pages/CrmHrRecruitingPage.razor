@@ -1,4 +1,5 @@
 @page "/crm-hr/recruiting"
+@implements IDisposable
 @using CanDoItAll.Components.BaseLib
 @using CanDoItAll.SharedKernel
 @using Microsoft.Extensions.Logging
@@ -50,14 +51,14 @@
     </Header>
 
     <ChildContent>
-        <Stack GapScale="LayoutGap.Large">
+        <Stack GapScale="LayoutGap.Medium">
             <CrmHrSecondaryTabs SelectedArea="CrmHrWorkspaceArea.Recruiting" />
 
-            <ListDetailShell ListPaneWidth="30rem">
-                <ListHeader>
+            <SurfaceCard data-testid="crmhr-recruiting-catalog">
+                <Stack GapScale="LayoutGap.Medium">
                     <ListPanelHeader Title="Recruitment applications"
-                                     Description="Select an existing candidate pipeline or create a new one directly from this route."
-                                     Count="@($"{applicationSummary.TotalCount} application(s)")">
+                                     Description="Search and page through candidate pipelines. Open a card to manage the complete recruitment record."
+                                     Count="Server-paged">
                         <Actions>
                             <Button Text="New application"
                                     ButtonStyle="ButtonStyle.Light"
@@ -66,10 +67,8 @@
                                     data-testid="crmhr-recruiting-new-button" />
                         </Actions>
                     </ListPanelHeader>
-                </ListHeader>
 
-                <ListContent>
-                    <PagedRecordBrowser @key="ApplicationBrowserKey"
+                    <PagedRecordBrowser @key="applicationBrowserRevision"
                                         TKey="Guid"
                                         TFilter="RecruitmentApplicationScope"
                                         Loader="LoadApplicationPageAsync"
@@ -80,6 +79,7 @@
                                         SelectionChanged="SelectApplicationAsync"
                                         LoadFailed="HandleApplicationPageLoadFailed"
                                         PageSize="@RecruitmentApplicationQueryLimits.DefaultPageSize"
+                                        ResultsScrollMode="PagedRecordResultsScrollMode.Bounded"
                                         SearchPlaceholder="Search candidate, role, recruiter, manager, source, or public email"
                                         FilterAriaLabel="Recruitment stage"
                                         LoadingEyebrow="Recruiting"
@@ -88,19 +88,31 @@
                                         EmptyTitle="No applications match"
                                         EmptyDescription="Change the search or stage, or create the first candidate."
                                         DataTestId="crmhr-recruiting-applications" />
-                </ListContent>
+                </Stack>
+            </SurfaceCard>
 
-                <DetailHeader>
-                    @if (currentWorkspace?.HasSelectedApplication == true)
+            @if (isRecruitmentDialogOpen && currentWorkspace is { } recruitmentWorkspace)
+            {
+                <Dialog IsOpen="true"
+                        Eyebrow="Recruitment record"
+                        Title="@RecruitmentDialogTitle"
+                        Subtitle="Application, interviews, lifecycle preparation, and workforce conversion."
+                        Size="ModalSize.Full"
+                        DenseChrome="true"
+                        CloseOnBackdrop="false"
+                        TestId="crmhr-recruiting-record-dialog"
+                        OnClose="CloseRecruitmentDialogAsync">
+                    <ChildContent>
+                    @if (recruitmentWorkspace.HasSelectedApplication)
                     {
                         <SurfaceCard>
                             <Split Gap="LayoutGap.Medium" AlignItems="AlignItems.Start" JustifyContent="JustifyContent.SpaceBetween">
                                 <div class="min-w-0">
                                     <p class="cda-eyebrow">Candidate summary</p>
-                                    <h2 class="mt-1 text-lg font-semibold text-slate-950">@currentWorkspace.CandidateDisplayName</h2>
-                                    @if (!string.IsNullOrWhiteSpace(currentWorkspace.CandidateSummary))
+                                    <h2 class="mt-1 text-lg font-semibold text-slate-950">@recruitmentWorkspace.CandidateDisplayName</h2>
+                                    @if (!string.IsNullOrWhiteSpace(recruitmentWorkspace.CandidateSummary))
                                     {
-                                        <p class="mt-3 text-sm leading-6 text-slate-600">@currentWorkspace.CandidateSummary</p>
+                                        <p class="mt-3 text-sm leading-6 text-slate-600">@recruitmentWorkspace.CandidateSummary</p>
                                     }
                                 </div>
                                 <Cluster Gap="LayoutGap.Small">
@@ -110,10 +122,10 @@
                             </Split>
 
                             <Grid Gap="LayoutGap.Medium" ColumnsMd="4" Class="mt-5">
-                                <div class="rounded-[1.2rem] border border-slate-200 bg-slate-50/80 px-4 py-4"><p class="text-xs uppercase tracking-[0.18em] text-slate-500">Email</p><p class="mt-1 text-sm font-medium text-slate-950">@FormatValue(currentWorkspace.CandidatePrimaryEmail)</p></div>
-                                <div class="rounded-[1.2rem] border border-slate-200 bg-slate-50/80 px-4 py-4"><p class="text-xs uppercase tracking-[0.18em] text-slate-500">Phone</p><p class="mt-1 text-sm font-medium text-slate-950">@FormatValue(currentWorkspace.CandidatePrimaryPhone)</p></div>
-                                <div class="rounded-[1.2rem] border border-slate-200 bg-slate-50/80 px-4 py-4"><p class="text-xs uppercase tracking-[0.18em] text-slate-500">Recruiter</p><p class="mt-1 text-sm font-medium text-slate-950">@FormatValue(currentWorkspace.RecruiterDisplayName)</p></div>
-                                <div class="rounded-[1.2rem] border border-slate-200 bg-slate-50/80 px-4 py-4"><p class="text-xs uppercase tracking-[0.18em] text-slate-500">Hiring manager</p><p class="mt-1 text-sm font-medium text-slate-950">@FormatValue(currentWorkspace.HiringManagerDisplayName)</p></div>
+                                <div class="rounded-[1.2rem] border border-slate-200 bg-slate-50/80 px-4 py-4"><p class="text-xs uppercase tracking-[0.18em] text-slate-500">Email</p><p class="mt-1 text-sm font-medium text-slate-950">@FormatValue(recruitmentWorkspace.CandidatePrimaryEmail)</p></div>
+                                <div class="rounded-[1.2rem] border border-slate-200 bg-slate-50/80 px-4 py-4"><p class="text-xs uppercase tracking-[0.18em] text-slate-500">Phone</p><p class="mt-1 text-sm font-medium text-slate-950">@FormatValue(recruitmentWorkspace.CandidatePrimaryPhone)</p></div>
+                                <div class="rounded-[1.2rem] border border-slate-200 bg-slate-50/80 px-4 py-4"><p class="text-xs uppercase tracking-[0.18em] text-slate-500">Recruiter</p><p class="mt-1 text-sm font-medium text-slate-950">@FormatValue(recruitmentWorkspace.RecruiterDisplayName)</p></div>
+                                <div class="rounded-[1.2rem] border border-slate-200 bg-slate-50/80 px-4 py-4"><p class="text-xs uppercase tracking-[0.18em] text-slate-500">Hiring manager</p><p class="mt-1 text-sm font-medium text-slate-950">@FormatValue(recruitmentWorkspace.HiringManagerDisplayName)</p></div>
                             </Grid>
                         </SurfaceCard>
                     }
@@ -125,47 +137,57 @@
                             <p class="mt-3 text-sm leading-6 text-slate-600">Candidate setup, interviews, lifecycle tasks, and workforce conversion all stay on this route once the first application is saved.</p>
                         </SurfaceCard>
                     }
-                </DetailHeader>
 
-                <DetailContent>
-                    @if (currentWorkspace is null)
-                    {
-                        <EmptyState Eyebrow="Loading recruiting workspace" Title="Loading..." Description="Recruiting data is being loaded." />
-                    }
-                    else
-                    {
-                        <Stack GapScale="LayoutGap.Large">
+                        <Tabs SelectedIndex="@SelectedRecruitingTabIndex"
+                              SelectedIndexChanged="HandleRecruitingTabChangedAsync"
+                              RenderMode="TabRenderMode.Server"
+                              Variant="TabsVariant.WorkspaceSecondary"
+                              BorderMode="TabsBorderMode.Soft"
+                              OverflowMode="TabsOverflowMode.Wrap"
+                              AriaLabel="Recruitment record sections"
+                              data-testid="crmhr-recruiting-tabs">
+                            <TabsItem Text="Application"
+                                      Icon="person_search"
+                                      data-testid="crmhr-recruiting-tab-application">
                             <CandidatePipeline Draft="applicationEditor"
-                                               StageHistory="currentWorkspace.StageHistory"
-                                               HasWorkforceProfile="currentWorkspace.HasWorkforceProfile"
+                                               StageHistory="recruitmentWorkspace.StageHistory"
+                                               HasWorkforceProfile="recruitmentWorkspace.HasWorkforceProfile"
                                                SaveApplication="SaveApplicationAsync"
                                                ResetApplication="ResetApplicationAsync" />
+                            </TabsItem>
 
+                            @if (recruitmentWorkspace.HasSelectedApplication)
+                            {
+                            <TabsItem Text="Interviews"
+                                      Icon="event"
+                                      data-testid="crmhr-recruiting-tab-interviews">
                             <InterviewSchedulePanel Draft="interviewEditor"
-                                                    Interviews="currentWorkspace.Interviews"
+                                                    Interviews="recruitmentWorkspace.Interviews"
                                                     SaveInterview="SaveInterviewAsync"
                                                     ResetInterview="ResetInterviewAsync"
                                                     DeleteInterview="DeleteInterviewAsync" />
+                            </TabsItem>
 
+                            <TabsItem Text="Lifecycle"
+                                      Icon="checklist"
+                                      data-testid="crmhr-recruiting-tab-lifecycle">
                             <OnboardingChecklistPanel SupportDraft="supportEditor"
-                                                      CurrentAssignments="currentWorkspace.SupportAssignments"
+                                                      CurrentAssignments="recruitmentWorkspace.SupportAssignments"
                                                       TaskDraft="taskEditor"
-                                                      Tasks="currentWorkspace.LifecycleTasks"
+                                                      Tasks="recruitmentWorkspace.LifecycleTasks"
                                                       SaveSupportAssignments="SaveSupportAssignmentsAsync"
                                                       SaveTask="SaveTaskAsync"
                                                       ResetTask="ResetTaskAsync"
                                                       DeleteTask="DeleteTaskAsync" />
+                            </TabsItem>
 
+                            <TabsItem Text="Conversion"
+                                      Icon="group_add"
+                                      data-testid="crmhr-recruiting-tab-conversion">
                             <FormSection Title="Hiring conversion"
                                          Description="Turn a hired candidate into a workforce profile on the same Party identity so recruiting handoff does not create duplicates.">
-                                @if (!currentWorkspace.HasSelectedApplication)
-                                {
-                                    <EmptyState Eyebrow="No candidate selected" Title="Choose or save an application first" Description="Conversion becomes available once the recruitment application exists." />
-                                }
-                                else
-                                {
                                     <SurfaceCard>
-                                        @if (currentWorkspace.HasWorkforceProfile)
+                                        @if (recruitmentWorkspace.HasWorkforceProfile)
                                         {
                                             <div class="rounded-[1.2rem] border border-emerald-200 bg-emerald-50 px-4 py-4 text-sm text-emerald-700" data-testid="crmhr-recruiting-convert-existing-callout">
                                                 This candidate already has a workforce profile. Saving conversion updates that existing identity instead of creating another person.
@@ -229,12 +251,34 @@
                                             }
                                         </Cluster>
                                     </SurfaceCard>
-                                }
                             </FormSection>
-                        </Stack>
-                    }
-                </DetailContent>
-            </ListDetailShell>
+                            </TabsItem>
+                            }
+                        </Tabs>
+                    </ChildContent>
+                    <Footer>
+                        <Split Breakpoint="LayoutBreakpoint.None"
+                               Gap="LayoutGap.Medium"
+                               AlignItems="AlignItems.Center"
+                               JustifyContent="JustifyContent.SpaceBetween"
+                               Wrap="FlexWrap.Wrap">
+                            <SmallText Text="Save each recruitment area from its own tab." />
+                            <Cluster Gap="LayoutGap.Small">
+                                @if (SelectedPartyId.HasValue)
+                                {
+                                    <Button Text="Open workforce"
+                                            ButtonStyle="ButtonStyle.Light"
+                                            Click="OpenWorkforceAsync" />
+                                }
+                                <Button Text="Close"
+                                        ButtonStyle="ButtonStyle.Light"
+                                        Click="CloseRecruitmentDialogAsync"
+                                        data-testid="crmhr-recruiting-record-close" />
+                            </Cluster>
+                        </Split>
+                    </Footer>
+                </Dialog>
+            }
         </Stack>
     </ChildContent>
 </PageScaffold>
@@ -268,6 +312,14 @@
     private int applicationBrowserRevision;
     private AgentChatContextAccessState agentChatContextAccessState = AgentChatContextAccessState.Loading;
     private long agentChatContextLoadGeneration;
+    private long recruitmentActionGeneration;
+    private Guid? committedApplicationId;
+    private Guid? committedPartyId;
+    private RecruitingRecordTab selectedRecruitingTab = RecruitingRecordTab.Application;
+    private bool hasCommittedRecruitmentRoute;
+    private bool isRecruitmentDialogOpen;
+    private bool openNewApplicationAfterRouteReset;
+    private bool isDisposed;
 
     private Guid? SelectedPartyId => currentWorkspace?.HasSelectedApplication == true ? currentWorkspace.Application.PartyId : null;
 
@@ -275,9 +327,13 @@
         ? new PagedRecordSelection<Guid>(applicationId)
         : null;
 
-    private ApplicationBrowserIdentity ApplicationBrowserKey => new(
-        ApplicationId,
-        applicationBrowserRevision);
+    private int SelectedRecruitingTabIndex => (int)selectedRecruitingTab;
+
+    private string RecruitmentDialogTitle
+        => currentWorkspace?.HasSelectedApplication == true &&
+           !string.IsNullOrWhiteSpace(currentWorkspace.CandidateDisplayName)
+            ? currentWorkspace.CandidateDisplayName
+            : "New recruitment application";
 
     private AgentChatContextSurface AgentChatSurface
     {
@@ -313,6 +369,16 @@
 
     protected override async Task OnParametersSetAsync()
     {
+        var requestedApplicationId = ApplicationId;
+        var requestedPartyId = PartyId;
+        if (!hasCommittedRecruitmentRoute ||
+            committedApplicationId != requestedApplicationId ||
+            committedPartyId != requestedPartyId)
+        {
+            InvalidateRecruitmentActions();
+            isRecruitmentDialogOpen = false;
+        }
+
         await LoadAsync();
     }
 
@@ -321,6 +387,7 @@
         var loadGeneration = Interlocked.Increment(ref agentChatContextLoadGeneration);
         var requestedApplicationId = ApplicationId;
         var requestedPartyId = PartyId;
+        var previousApplicationId = currentWorkspace?.Application.Id;
         agentChatContextAccessState = AgentChatContextAccessState.Loading;
         try
         {
@@ -338,30 +405,49 @@
             currentWorkspace = loadedWorkspace;
             applicationSummary = await summaryTask;
             ApplyWorkspace(loadedWorkspace);
+            committedApplicationId = requestedApplicationId;
+            committedPartyId = requestedPartyId;
+            hasCommittedRecruitmentRoute = true;
             if (!RecruitmentWorkspaceContextSelection.MatchesRequestedApplication(
                     requestedApplicationId,
                     requestedPartyId,
                     loadedWorkspace))
             {
+                isRecruitmentDialogOpen = false;
                 agentChatContextAccessState = AgentChatContextAccessState.Failed;
                 return;
             }
 
+            if (previousApplicationId != loadedWorkspace.Application.Id)
+            {
+                selectedRecruitingTab = RecruitingRecordTab.Application;
+            }
+
+            var shouldOpenNewApplication =
+                openNewApplicationAfterRouteReset &&
+                !requestedApplicationId.HasValue &&
+                !requestedPartyId.HasValue &&
+                !loadedWorkspace.HasSelectedApplication;
+            openNewApplicationAfterRouteReset = false;
+            isRecruitmentDialogOpen =
+                shouldOpenNewApplication ||
+                (loadedWorkspace.HasSelectedApplication &&
+                 (requestedApplicationId.HasValue || requestedPartyId.HasValue));
             agentChatContextAccessState = AgentChatContextAccessState.Ready;
+        }
+        catch when (!IsCurrentAgentChatContextLoad(loadGeneration))
+        {
         }
         catch
         {
-            if (IsCurrentAgentChatContextLoad(loadGeneration))
-            {
-                agentChatContextAccessState = AgentChatContextAccessState.Failed;
-            }
-
+            agentChatContextAccessState = AgentChatContextAccessState.Failed;
             throw;
         }
     }
 
     private bool IsCurrentAgentChatContextLoad(long loadGeneration)
-        => loadGeneration == Volatile.Read(ref agentChatContextLoadGeneration);
+        => !isDisposed &&
+           loadGeneration == Volatile.Read(ref agentChatContextLoadGeneration);
 
     private void ApplyWorkspace(RecruitmentWorkspaceModel workspace)
     {
@@ -409,6 +495,17 @@
 
     private Task SelectApplicationAsync(Guid applicationId)
     {
+        if (currentWorkspace?.Application.Id == applicationId &&
+            (ApplicationId == applicationId || PartyId == currentWorkspace.Application.PartyId))
+        {
+            isRecruitmentDialogOpen = true;
+            return Task.CompletedTask;
+        }
+
+        InvalidateRecruitmentActions();
+        Interlocked.Increment(ref agentChatContextLoadGeneration);
+        isRecruitmentDialogOpen = false;
+        agentChatContextAccessState = AgentChatContextAccessState.Loading;
         Navigation.NavigateTo($"/crm-hr/recruiting?applicationId={applicationId:D}");
         return Task.CompletedTask;
     }
@@ -424,13 +521,85 @@
 
     private Task CreateNewApplicationAsync()
     {
-        Navigation.NavigateTo("/crm-hr/recruiting");
+        if (currentWorkspace is null || currentWorkspace.HasSelectedApplication)
+        {
+            return Task.CompletedTask;
+        }
+
+        if (ApplicationId.HasValue || PartyId.HasValue)
+        {
+            openNewApplicationAfterRouteReset = true;
+            InvalidateRecruitmentActions();
+            Interlocked.Increment(ref agentChatContextLoadGeneration);
+            isRecruitmentDialogOpen = false;
+            agentChatContextAccessState = AgentChatContextAccessState.Loading;
+            Navigation.NavigateTo("/crm-hr/recruiting", replace: true);
+            return Task.CompletedTask;
+        }
+
+        InvalidateRecruitmentActions();
+        selectedRecruitingTab = RecruitingRecordTab.Application;
+        ApplyWorkspace(currentWorkspace);
+        isRecruitmentDialogOpen = true;
+        return Task.CompletedTask;
+    }
+
+    private Task CloseRecruitmentDialogAsync()
+    {
+        if (!isRecruitmentDialogOpen)
+        {
+            return Task.CompletedTask;
+        }
+
+        var wasUnsavedApplication = currentWorkspace is { HasSelectedApplication: false };
+        InvalidateRecruitmentActions();
+        openNewApplicationAfterRouteReset = false;
+        isRecruitmentDialogOpen = false;
+        selectedRecruitingTab = RecruitingRecordTab.Application;
+        if (wasUnsavedApplication && currentWorkspace is { } unsavedWorkspace)
+        {
+            ApplyWorkspace(unsavedWorkspace);
+            agentChatContextAccessState = AgentChatContextAccessState.Ready;
+            return Task.CompletedTask;
+        }
+
+        Interlocked.Increment(ref agentChatContextLoadGeneration);
+        currentWorkspace = null;
+        applicationEditor = new();
+        interviewEditor = new();
+        taskEditor = new();
+        supportEditor = new();
+        conversionEditor = new();
+        agentChatContextAccessState = AgentChatContextAccessState.Loading;
+        Navigation.NavigateTo("/crm-hr/recruiting", replace: true);
+        return Task.CompletedTask;
+    }
+
+    private Task HandleRecruitingTabChangedAsync(int selectedIndex)
+    {
+        var requestedTab = (RecruitingRecordTab)selectedIndex;
+        if (Enum.IsDefined(requestedTab))
+        {
+            selectedRecruitingTab = requestedTab;
+        }
+
         return Task.CompletedTask;
     }
 
     private async Task SaveApplicationAsync()
     {
+        var action = CaptureRecruitmentAction();
+        if (!IsCurrentRecruitmentAction(action))
+        {
+            return;
+        }
+
         var result = await RecruitingService.SaveRecruitmentApplicationAsync(applicationEditor);
+        if (!IsCurrentRecruitmentAction(action))
+        {
+            return;
+        }
+
         if (!result.IsSuccess)
         {
             SetError(result.Errors);
@@ -441,6 +610,10 @@
         applicationBrowserRevision++;
         if (ApplicationId != result.Value)
         {
+            InvalidateRecruitmentActions();
+            Interlocked.Increment(ref agentChatContextLoadGeneration);
+            isRecruitmentDialogOpen = false;
+            agentChatContextAccessState = AgentChatContextAccessState.Loading;
             Navigation.NavigateTo($"/crm-hr/recruiting?applicationId={result.Value:D}");
             return;
         }
@@ -456,6 +629,12 @@
 
     private async Task SaveInterviewAsync()
     {
+        var action = CaptureRecruitmentAction();
+        if (!IsCurrentRecruitmentAction(action))
+        {
+            return;
+        }
+
         if (currentWorkspace?.HasSelectedApplication != true || !currentWorkspace.Application.Id.HasValue)
         {
             SetError([Error.Validation("Save or select an application first.")]);
@@ -464,6 +643,11 @@
 
         interviewEditor.ApplicationId = currentWorkspace.Application.Id.Value;
         var result = await RecruitingService.SaveRecruitmentInterviewAsync(interviewEditor);
+        if (!IsCurrentRecruitmentAction(action))
+        {
+            return;
+        }
+
         if (!result.IsSuccess)
         {
             SetError(result.Errors);
@@ -484,13 +668,30 @@
 
     private async Task DeleteInterviewAsync(Guid interviewId)
     {
+        var action = CaptureRecruitmentAction();
+        if (!IsCurrentRecruitmentAction(action))
+        {
+            return;
+        }
+
         await RecruitingService.DeleteRecruitmentInterviewAsync(interviewId);
+        if (!IsCurrentRecruitmentAction(action))
+        {
+            return;
+        }
+
         NotificationService.Warning("Interview deleted", "Interview deleted.");
         await LoadAsync();
     }
 
     private async Task SaveTaskAsync()
     {
+        var action = CaptureRecruitmentAction();
+        if (!IsCurrentRecruitmentAction(action))
+        {
+            return;
+        }
+
         if (currentWorkspace?.HasSelectedApplication != true || !currentWorkspace.Application.PartyId.HasValue)
         {
             SetError([Error.Validation("Save or select an application first.")]);
@@ -499,6 +700,11 @@
 
         taskEditor.PartyId = currentWorkspace.Application.PartyId.Value;
         var result = await RecruitingService.SaveLifecycleTaskAsync(taskEditor);
+        if (!IsCurrentRecruitmentAction(action))
+        {
+            return;
+        }
+
         if (!result.IsSuccess)
         {
             SetError(result.Errors);
@@ -519,13 +725,30 @@
 
     private async Task DeleteTaskAsync(Guid taskId)
     {
+        var action = CaptureRecruitmentAction();
+        if (!IsCurrentRecruitmentAction(action))
+        {
+            return;
+        }
+
         await RecruitingService.DeleteLifecycleTaskAsync(taskId);
+        if (!IsCurrentRecruitmentAction(action))
+        {
+            return;
+        }
+
         NotificationService.Warning("Lifecycle task deleted", "Lifecycle task deleted.");
         await LoadAsync();
     }
 
     private async Task SaveSupportAssignmentsAsync()
     {
+        var action = CaptureRecruitmentAction();
+        if (!IsCurrentRecruitmentAction(action))
+        {
+            return;
+        }
+
         if (currentWorkspace?.HasSelectedApplication != true || !currentWorkspace.Application.PartyId.HasValue)
         {
             SetError([Error.Validation("Save or select an application first.")]);
@@ -534,6 +757,11 @@
 
         supportEditor.PartyId = currentWorkspace.Application.PartyId.Value;
         var result = await RecruitingService.SaveSupportAssignmentsAsync(supportEditor);
+        if (!IsCurrentRecruitmentAction(action))
+        {
+            return;
+        }
+
         if (!result.IsSuccess)
         {
             SetError(result.Errors);
@@ -546,6 +774,12 @@
 
     private async Task ConvertCandidateAsync()
     {
+        var action = CaptureRecruitmentAction();
+        if (!IsCurrentRecruitmentAction(action))
+        {
+            return;
+        }
+
         if (currentWorkspace?.HasSelectedApplication != true || !currentWorkspace.Application.Id.HasValue)
         {
             SetError([Error.Validation("Save or select an application first.")]);
@@ -554,6 +788,11 @@
 
         conversionEditor.ApplicationId = currentWorkspace.Application.Id.Value;
         var result = await RecruitingService.ConvertCandidateAsync(conversionEditor);
+        if (!IsCurrentRecruitmentAction(action))
+        {
+            return;
+        }
+
         if (!result.IsSuccess)
         {
             SetError(result.Errors);
@@ -561,6 +800,7 @@
         }
 
         NotificationService.Success("Candidate converted", "Candidate converted to workforce.");
+        applicationBrowserRevision++;
         await LoadAsync();
     }
 
@@ -580,11 +820,32 @@
     {
         if (SelectedPartyId.HasValue)
         {
+            InvalidateRecruitmentActions();
             Navigation.NavigateTo($"/crm-hr/workforce?partyId={SelectedPartyId.Value:D}");
         }
 
         return Task.CompletedTask;
     }
+
+    private RecruitmentActionStamp CaptureRecruitmentAction()
+        => new(
+            Volatile.Read(ref recruitmentActionGeneration),
+            ApplicationId,
+            PartyId,
+            currentWorkspace?.Application.Id,
+            isRecruitmentDialogOpen);
+
+    private bool IsCurrentRecruitmentAction(RecruitmentActionStamp action)
+        => !isDisposed &&
+           action.Generation == Volatile.Read(ref recruitmentActionGeneration) &&
+           action.RouteApplicationId == ApplicationId &&
+           action.RoutePartyId == PartyId &&
+           action.SelectedApplicationId == currentWorkspace?.Application.Id &&
+           action.DialogWasOpen &&
+           isRecruitmentDialogOpen;
+
+    private void InvalidateRecruitmentActions()
+        => Interlocked.Increment(ref recruitmentActionGeneration);
 
     private void SetError(IReadOnlyList<Error> errors)
     {
@@ -758,7 +1019,30 @@
         return string.IsNullOrWhiteSpace(value) ? "Not set" : value;
     }
 
-    private readonly record struct ApplicationBrowserIdentity(
+    private enum RecruitingRecordTab
+    {
+        Application,
+        Interviews,
+        Lifecycle,
+        Conversion
+    }
+
+    private readonly record struct RecruitmentActionStamp(
+        long Generation,
+        Guid? RouteApplicationId,
+        Guid? RoutePartyId,
         Guid? SelectedApplicationId,
-        int Revision);
+        bool DialogWasOpen);
+
+    public void Dispose()
+    {
+        if (isDisposed)
+        {
+            return;
+        }
+
+        isDisposed = true;
+        InvalidateRecruitmentActions();
+        Interlocked.Increment(ref agentChatContextLoadGeneration);
+    }
 }

@@ -38,7 +38,7 @@ Direct package references:
 
 This module owns product semantics for its bounded area. Keep business behavior here and expose it through typed services, Razor components, and module contracts. MCP projects should call into these services instead of duplicating module logic.
 
-Directory and Workforce use the shared typed `PagedRecordBrowser` through the module-owned `PartyRecordBrowser` adapter. Queries perform source paging with deterministic ordering; the routed catalogue owns an opt-in bounded card-results scroll while record workspaces open in controlled dialogs. Picker-dialog consumers keep the browser's default non-bounded scroll behavior.
+Directory, Workforce, CRM, and Recruiting use the shared typed `PagedRecordBrowser`; party-backed routes compose it through the module-owned `PartyRecordBrowser` adapter. Queries perform source paging with deterministic ordering, the route catalogue owns an opt-in bounded card-results scroll, and complete record workspaces open in controlled full-size dialogs without displacing or recreating the catalogue. Recruiting separates application, interview, lifecycle, and conversion work into server-rendered dialog tabs. Picker-dialog consumers keep the browser's default non-bounded scroll behavior.
 
 The Web host exposes the supported HTTP slice at `/api/crm-hr`. Web owns route binding and status mapping; this module's application services continue to own validation, persistence, audit, search-index, activity, and lifecycle side effects. Do not add direct `DbContext` writes or scenario-specific seed behavior to the Web adapter.
 

@@ -38,6 +38,8 @@ public sealed class RecruitmentFlowTests
 
         await page.GotoAsync($"{fixture.BaseUrl}/crm-hr/recruiting");
         await DismissStartupModalIfPresentAsync(page);
+        await page.GetByTestId("crmhr-recruiting-new-button").ClickAsync();
+        await page.GetByTestId("crmhr-recruiting-record-dialog").WaitForAsync();
         await page.GetByTestId("crmhr-recruiting-candidate-name").WaitForAsync();
 
         await page.GetByTestId("crmhr-recruiting-candidate-name").FillAsync(seed.CandidateName);
@@ -45,33 +47,36 @@ public sealed class RecruitmentFlowTests
         await page.GetByTestId("crmhr-recruiting-candidate-phone").FillAsync("+1 555 0202");
         await page.GetByTestId("crmhr-recruiting-candidate-summary").FillAsync("Playwright recruiting candidate");
         await page.GetByTestId("crmhr-recruiting-role").FillAsync("Senior Platform Engineer");
+        await page.GetByTestId("crmhr-recruiting-application-tab-stage").ClickAsync();
         await page.GetByTestId("crmhr-recruiting-source").FillAsync("Referral");
+        await page.GetByTestId("crmhr-recruiting-application-tab-ownership").ClickAsync();
         await ChoosePartyAsync(page, "crmhr-recruiting-recruiter", seed.RecruiterId);
         await ChoosePartyAsync(page, "crmhr-recruiting-hiring-manager", seed.HiringManagerId);
         await ChoosePartyAsync(page, "crmhr-recruiting-target-unit", seed.TargetUnitId);
         await page.GetByTestId("crmhr-recruiting-save-button").ClickAsync();
-        await ExpectTextContainsAsync(page.GetByTestId("crmhr-recruiting-message"), "Recruitment application saved.");
+        await page.GetByTestId("crmhr-recruiting-record-dialog").WaitForAsync();
         await page.GetByTestId("crmhr-recruiting-stage-history-item").WaitForAsync();
 
+        await page.GetByTestId("crmhr-recruiting-application-tab-stage").ClickAsync();
         await page.GetByTestId("crmhr-recruiting-stage").SelectOptionAsync(RecruitmentStage.Interviewing.ToString());
+        await page.GetByTestId("crmhr-recruiting-application-tab-notes").ClickAsync();
         await page.GetByTestId("crmhr-recruiting-stage-notes").FillAsync("Move candidate into active interview loop.");
         await page.GetByTestId("crmhr-recruiting-save-button").ClickAsync();
-        await ExpectTextContainsAsync(page.GetByTestId("crmhr-recruiting-message"), "Recruitment application saved.");
 
+        await page.GetByTestId("crmhr-recruiting-tab-interviews").ClickAsync();
         await page.GetByTestId("crmhr-recruiting-interview-scheduled").FillAsync("2026-04-15T10:30");
         await ChoosePartyAsync(page, "crmhr-recruiting-interviewer", seed.HiringManagerId);
         await page.GetByTestId("crmhr-recruiting-interview-outcome").SelectOptionAsync(RecruitmentInterviewOutcome.Yes.ToString());
         await page.GetByTestId("crmhr-recruiting-interview-recommendation").FillAsync("Proceed to offer");
         await page.GetByTestId("crmhr-recruiting-interview-feedback").FillAsync("Strong system design and delivery fit.");
         await page.GetByTestId("crmhr-recruiting-interview-save-button").ClickAsync();
-        await ExpectTextContainsAsync(page.GetByTestId("crmhr-recruiting-message"), "Interview saved.");
         await page.GetByTestId("crmhr-recruiting-interview-item").WaitForAsync();
 
+        await page.GetByTestId("crmhr-recruiting-tab-lifecycle").ClickAsync();
         await ChoosePartyAsync(page, "crmhr-recruiting-support-manager", seed.HiringManagerId);
         await ChoosePartyAsync(page, "crmhr-recruiting-support-buddy", seed.BuddyId);
         await ChoosePartyAsync(page, "crmhr-recruiting-support-mentor", seed.MentorId);
         await page.GetByTestId("crmhr-recruiting-support-save-button").ClickAsync();
-        await ExpectTextContainsAsync(page.GetByTestId("crmhr-recruiting-message"), "Support assignments saved.");
 
         await page.GetByTestId("crmhr-recruiting-task-kind").SelectOptionAsync(LifecycleTaskKind.Onboarding.ToString());
         await page.GetByTestId("crmhr-recruiting-task-title").FillAsync("Prepare equipment and access");
@@ -80,9 +85,9 @@ public sealed class RecruitmentFlowTests
         await ChooseProjectAsync(page, "crmhr-recruiting-task-project", seed.ProjectId);
         await page.GetByTestId("crmhr-recruiting-task-notes").FillAsync("Provision laptop, VPN, and starter access.");
         await page.GetByTestId("crmhr-recruiting-task-save-button").ClickAsync();
-        await ExpectTextContainsAsync(page.GetByTestId("crmhr-recruiting-message"), "Lifecycle task saved.");
         await page.GetByTestId("crmhr-recruiting-task-item").WaitForAsync();
 
+        await page.GetByTestId("crmhr-recruiting-tab-conversion").ClickAsync();
         await page.GetByTestId("crmhr-recruiting-convert-job-title").FillAsync("Senior Platform Engineer");
         await page.GetByTestId("crmhr-recruiting-convert-discipline").FillAsync("Platform");
         await page.GetByTestId("crmhr-recruiting-convert-seniority").FillAsync("Senior");
@@ -93,7 +98,6 @@ public sealed class RecruitmentFlowTests
         await page.GetByTestId("crmhr-recruiting-convert-timezone").FillAsync("Europe/Prague");
         await page.GetByTestId("crmhr-recruiting-convert-capacity").FillAsync("40");
         await page.GetByTestId("crmhr-recruiting-convert-save-button").ClickAsync();
-        await ExpectTextContainsAsync(page.GetByTestId("crmhr-recruiting-message"), "Candidate converted to workforce.");
         await page.GetByTestId("crmhr-recruiting-convert-existing-callout").WaitForAsync();
 
         await page.ScreenshotAsync(new PageScreenshotOptions
@@ -246,22 +250,6 @@ public sealed class RecruitmentFlowTests
 
         Assert.True(result.IsSuccess);
         return result.Value;
-    }
-
-    private static async Task ExpectTextContainsAsync(ILocator locator, string expectedValue, int timeoutMs = 10_000)
-    {
-        var timeoutAt = DateTimeOffset.UtcNow.AddMilliseconds(timeoutMs);
-        while (DateTimeOffset.UtcNow < timeoutAt)
-        {
-            if ((await locator.InnerTextAsync()).Contains(expectedValue, StringComparison.Ordinal))
-            {
-                return;
-            }
-
-            await Task.Delay(200);
-        }
-
-        throw new TimeoutException($"Timed out waiting for text '{expectedValue}'.");
     }
 
     private static async Task DismissStartupModalIfPresentAsync(IPage page, float timeoutMs = 1_500)

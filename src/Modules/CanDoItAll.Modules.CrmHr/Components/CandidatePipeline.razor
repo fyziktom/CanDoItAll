@@ -15,9 +15,12 @@
                   Tone="TabsTone.Success"
                   OverflowMode="TabsOverflowMode.Wrap"
                   AriaLabel="Candidate pipeline editor sections"
-                  Class="mt-4">
+                  Class="mt-4"
+                  data-testid="crmhr-recruiting-application-tabs">
                 <TabItems>
-                    <TabsItem Text="Candidate" Icon="person">
+                    <TabsItem Text="Candidate"
+                              Icon="person"
+                              data-testid="crmhr-recruiting-application-tab-candidate">
                         <Stack GapScale="LayoutGap.Medium"
                                AlignItems="AlignItems.Stretch">
                             <Grid Gap="LayoutGap.Medium" ColumnsMd="2">
@@ -60,7 +63,9 @@
                         </Stack>
                     </TabsItem>
 
-                    <TabsItem Text="Stage" Icon="phase">
+                    <TabsItem Text="Stage"
+                              Icon="phase"
+                              data-testid="crmhr-recruiting-application-tab-stage">
                         <Stack GapScale="LayoutGap.Medium"
                                AlignItems="AlignItems.Stretch">
                             <Grid Gap="LayoutGap.Medium" ColumnsMd="2">
@@ -98,7 +103,9 @@
                         </Stack>
                     </TabsItem>
 
-                    <TabsItem Text="Ownership" Icon="manage_accounts">
+                    <TabsItem Text="Ownership"
+                              Icon="manage_accounts"
+                              data-testid="crmhr-recruiting-application-tab-ownership">
                         <Stack GapScale="LayoutGap.Medium"
                                AlignItems="AlignItems.Stretch">
                             <Grid Gap="LayoutGap.Medium" ColumnsMd="2">
@@ -124,7 +131,9 @@
                         </Stack>
                     </TabsItem>
 
-                    <TabsItem Text="Notes" Icon="note">
+                    <TabsItem Text="Notes"
+                              Icon="note"
+                              data-testid="crmhr-recruiting-application-tab-notes">
                         <Stack GapScale="LayoutGap.Medium"
                                AlignItems="AlignItems.Stretch">
                             <FormField Text="Stage note">
