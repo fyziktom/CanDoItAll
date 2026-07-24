@@ -19,7 +19,7 @@ public sealed class CrmHrSecondaryPageFreshnessTests
             .Select(index => CreateAgentWorkspace(Guid.NewGuid(), $"Agent {index:D2}"))
             .ToDictionary(workspace => workspace.PartyId);
         var cut = harness.Context.RenderComponent<RacingCrmHrAgentsPage>(parameters => parameters
-            .Add(page => page.TestItems, workspaces.Values.Select(CreateAgentItem).ToArray())
+            .Add(page => page.TestItems, workspaces.Values.Select(workspace => CreateAgentItem(workspace)).ToArray())
             .Add(page => page.TestWorkspaces, workspaces));
 
         cut.WaitForAssertion(() =>
@@ -31,6 +31,12 @@ public sealed class CrmHrSecondaryPageFreshnessTests
                 Assert.Single(cut.Instance.DirectoryQueries));
         });
         Assert.Equal(0, cut.Instance.DirectoryProjectionRefreshCount);
+        Assert.Empty(cut.Instance.WorkspaceRequests);
+        Assert.Empty(cut.Instance.DirectoryItemRequests);
+        Assert.Empty(cut.FindAll("[data-testid='crmhr-agent-record-dialog']"));
+        var provider = cut.FindComponent<AgentChatContextSurfaceProvider>();
+        Assert.Equal(AgentChatContextAccessState.Ready, provider.Instance.ContextAccessState);
+        Assert.Null(provider.Instance.Surface.Position.PrimarySelection);
 
         cut.Find("[data-testid='crmhr-agent-next']").Click();
 
@@ -43,6 +49,28 @@ public sealed class CrmHrSecondaryPageFreshnessTests
                 AiAgentDirectoryQueryLimits.DefaultPageSize,
                 cut.Instance.DirectoryQueries[1].PageSize);
         });
+        Assert.Empty(cut.Instance.WorkspaceRequests);
+        Assert.Empty(cut.Instance.DirectoryItemRequests);
+    }
+
+    [Fact]
+    public async Task Agents_page_opens_record_dialog_for_explicit_party()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var partyId = Guid.NewGuid();
+        var workspace = CreateAgentWorkspace(partyId, "Projected agent");
+        var navigation = harness.Context.Services.GetRequiredService<NavigationManager>();
+        navigation.NavigateTo($"/crm-hr/agents?partyId={partyId:D}");
+        var cut = harness.Context.RenderComponent<RacingCrmHrAgentsPage>(parameters => parameters
+            .Add(page => page.TestItems, [CreateAgentItem(workspace)])
+            .Add(page => page.TestWorkspaces, new Dictionary<Guid, AiAgentWorkspaceModel>
+            {
+                [partyId] = workspace
+            }));
+
+        cut.WaitForAssertion(() => AssertAgentDialogSurface(cut, partyId, "Projected agent"));
+        Assert.Equal([partyId], cut.Instance.WorkspaceRequests);
+        Assert.Equal([partyId], cut.Instance.DirectoryItemRequests);
     }
 
     [Theory]
@@ -58,21 +86,27 @@ public sealed class CrmHrSecondaryPageFreshnessTests
             [firstPartyId] = CreateAgentWorkspace(firstPartyId, "First agent"),
             [secondPartyId] = CreateAgentWorkspace(secondPartyId, "Second agent")
         };
-        var items = workspaces.Values.Select(CreateAgentItem).ToArray();
+        var items = workspaces.Values.Select(workspace => CreateAgentItem(workspace)).ToArray();
         var cut = harness.Context.RenderComponent<RacingCrmHrAgentsPage>(parameters => parameters
             .Add(page => page.TestItems, items)
             .Add(page => page.TestWorkspaces, workspaces));
-        cut.WaitForAssertion(() => AssertAgentSurface(cut, firstPartyId, "First agent"));
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Equal(2, cut.FindAll("[data-testid='crmhr-agent-item']").Count);
+            Assert.Empty(cut.FindAll("[data-testid='crmhr-agent-record-dialog']"));
+        });
+        Assert.Empty(cut.Instance.WorkspaceRequests);
+        Assert.Empty(cut.Instance.DirectoryItemRequests);
         cut.Instance.Delay(firstPartyId, secondPartyId);
 
         cut.Instance.PartyIdQuery = firstPartyId;
         var staleLoad = cut.InvokeAsync(() => InvokeAgentLoadAsync(cut.Instance, firstPartyId));
-        await cut.Instance.WaitForRequestAsync(firstPartyId);
+        await cut.Instance.WaitForRequestsAsync(firstPartyId);
         Assert.Equal(AgentChatContextAccessState.Loading, ReadAgentAccessState(cut.Instance));
 
         cut.Instance.PartyIdQuery = secondPartyId;
         var currentLoad = cut.InvokeAsync(() => InvokeAgentLoadAsync(cut.Instance, secondPartyId));
-        await cut.Instance.WaitForRequestAsync(secondPartyId);
+        await cut.Instance.WaitForRequestsAsync(secondPartyId);
         cut.Instance.Complete(secondPartyId);
         await currentLoad;
 
@@ -88,8 +122,14 @@ public sealed class CrmHrSecondaryPageFreshnessTests
         await staleLoad;
         await cut.InvokeAsync(cut.Instance.RenderNow);
 
-        AssertAgentSurface(cut, secondPartyId, "Second agent");
+        AssertAgentDialogSurface(cut, secondPartyId, "Second agent");
         Assert.Equal(AgentChatContextAccessState.Ready, ReadAgentAccessState(cut.Instance));
+        Assert.Equal(
+            [firstPartyId, secondPartyId],
+            cut.Instance.WorkspaceRequests);
+        Assert.Equal(
+            [firstPartyId, secondPartyId],
+            cut.Instance.DirectoryItemRequests);
     }
 
     [Fact]
@@ -113,8 +153,38 @@ public sealed class CrmHrSecondaryPageFreshnessTests
             var provider = cut.FindComponent<AgentChatContextSurfaceProvider>();
             Assert.Equal(AgentChatContextAccessState.Failed, provider.Instance.ContextAccessState);
             Assert.Null(provider.Instance.Surface.Position.PrimarySelection);
+            Assert.Empty(cut.FindAll("[data-testid='crmhr-agent-record-dialog']"));
         });
         Assert.Equal([missingPartyId], cut.Instance.WorkspaceRequests);
+        Assert.Equal([missingPartyId], cut.Instance.DirectoryItemRequests);
+    }
+
+    [Fact]
+    public async Task Agents_page_rejects_conflicting_technical_projection_identity()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var partyId = Guid.NewGuid();
+        var workspace = CreateAgentWorkspace(partyId, "Conflicting agent");
+        var projectedItem = CreateAgentItem(workspace);
+        var directoryItem = projectedItem with
+        {
+            Agent = projectedItem.Agent with
+            {
+                Id = Guid.NewGuid()
+            }
+        };
+        var navigation = harness.Context.Services.GetRequiredService<NavigationManager>();
+        navigation.NavigateTo($"/crm-hr/agents?partyId={partyId:D}");
+
+        var exception = Assert.Throws<InvalidOperationException>(
+            () => harness.Context.RenderComponent<RacingCrmHrAgentsPage>(parameters => parameters
+                .Add(page => page.TestItems, [directoryItem])
+                .Add(page => page.TestWorkspaces, new Dictionary<Guid, AiAgentWorkspaceModel>
+                {
+                    [partyId] = workspace
+                })));
+
+        Assert.Contains("resolved conflicting technical agents", exception.Message, StringComparison.Ordinal);
     }
 
     [Theory]
@@ -440,6 +510,16 @@ public sealed class CrmHrSecondaryPageFreshnessTests
         Assert.Equal(displayName, selection.DisplayName);
     }
 
+    private static void AssertAgentDialogSurface(
+        IRenderedComponent<RacingCrmHrAgentsPage> cut,
+        Guid partyId,
+        string displayName)
+    {
+        AssertAgentSurface(cut, partyId, displayName);
+        var dialog = cut.Find("[data-testid='crmhr-agent-record-dialog']");
+        Assert.Contains(displayName, dialog.TextContent, StringComparison.Ordinal);
+    }
+
     private static void AssertAssignmentSurface(
         IRenderedComponent<RacingCrmHrAssignmentsPage> cut,
         ProjectSummary project)
@@ -494,24 +574,73 @@ public sealed class CrmHrSecondaryPageFreshnessTests
         params RecordedAssignmentSelectionRequest[] expected)
         => Assert.Equal(expected, page.SelectionRequests);
 
-    private static AiAgentListItemModel CreateAgentItem(AiAgentWorkspaceModel workspace)
-        => new(
-            workspace.PartyId,
-            workspace.DisplayName,
-            workspace.Summary,
+    private static AiAgentDirectoryItemModel CreateAgentItem(
+        AiAgentWorkspaceModel workspace,
+        bool includeProvider = true)
+    {
+        var now = DateTimeOffset.UtcNow;
+        var providerId = includeProvider ? Guid.NewGuid() : (Guid?)null;
+        var agent = new AgentDefinition(
+            Id: workspace.TechnicalAgentId
+                ?? throw new InvalidOperationException("The test workspace must reference a technical agent."),
+            Name: workspace.DisplayName,
+            RoleTitle: "CRM-HR projection specialist",
+            Summary: workspace.Summary,
+            Instructions: "Keep projected work scoped and explicit.",
+            Status: AgentLifecycleStatus.Active,
+            ProviderProfileId: providerId,
+            Model: workspace.Profile.DefaultModel,
+            Workload: AgentWorkloadKind.General,
+            ChatHistoryMode: AgentChatHistoryMode.FrameworkManaged,
+            Temperature: 0.2,
+            RequirePerServiceCallChatHistoryPersistence: true,
+            EnableBackgroundResponses: false,
+            ConfigurationJson: "{}",
+            IsTemplate: false,
+            TemplateKey: string.Empty,
+            Permissions: AgentPermissionsPolicy.Default,
+            Capabilities: [],
+            Tags: ["crm-hr", "projection"],
+            CreatedAtUtc: now,
+            UpdatedAtUtc: now);
+        var governance = new AiAgentDirectoryGovernanceModel(
             workspace.LifecycleStatus,
-            workspace.TechnicalAgentId,
+            IsSensitive: false,
             workspace.BindingStatus,
             workspace.BindingSummary,
             workspace.Profile.ExecutionMode,
+            HasProfile: true,
             workspace.Profile.ValidationStatus,
-            workspace.ProviderName,
-            workspace.Profile.DefaultModel,
             workspace.OwnerName,
-            workspace.CapabilityCount,
-            true,
-            workspace.AgentsRoute,
-            DateTimeOffset.UtcNow);
+            now);
+        var provider = providerId is Guid id
+            ? new ProviderProfile(
+                Id: id,
+                Name: workspace.ProviderName,
+                Kind: ProviderKind.OpenAi,
+                BaseUrl: "https://api.example.test/v1",
+                ApiKeyEnvironmentVariable: "TEST_API_KEY",
+                DefaultModel: workspace.Profile.DefaultModel,
+                Transport: ProviderTransportKind.Responses,
+                IsEnabled: true,
+                SupportsStreaming: true,
+                SupportsTools: true,
+                PreferFrameworkManagedChatHistory: true,
+                SupportsBackgroundResponses: false,
+                ConfigurationJson: "{}",
+                Notes: string.Empty,
+                HealthStatus: "Healthy",
+                LastCheckedAtUtc: now,
+                SuggestedModels: [workspace.Profile.DefaultModel])
+            : null;
+
+        return new AiAgentDirectoryItemModel(
+            workspace.PartyId,
+            agent,
+            governance,
+            provider,
+            now);
+    }
 
     private static AiAgentWorkspaceModel CreateAgentWorkspace(Guid partyId, string displayName)
         => new(
@@ -538,16 +667,18 @@ public sealed class CrmHrSecondaryPageFreshnessTests
 
     private sealed class RacingCrmHrAgentsPage : CrmHrAgentsPage
     {
-        private readonly Dictionary<Guid, PendingRequest> pendingRequests = [];
+        private readonly Dictionary<Guid, PendingAgentRequest> pendingRequests = [];
 
         [Microsoft.AspNetCore.Components.Parameter]
-        public IReadOnlyList<AiAgentListItemModel> TestItems { get; set; } = [];
+        public IReadOnlyList<AiAgentDirectoryItemModel> TestItems { get; set; } = [];
 
         [Microsoft.AspNetCore.Components.Parameter]
         public IReadOnlyDictionary<Guid, AiAgentWorkspaceModel> TestWorkspaces { get; set; }
             = new Dictionary<Guid, AiAgentWorkspaceModel>();
 
         public List<Guid> WorkspaceRequests { get; } = [];
+
+        public List<Guid> DirectoryItemRequests { get; } = [];
 
         public List<AiAgentDirectoryQuery> DirectoryQueries { get; } = [];
 
@@ -557,19 +688,33 @@ public sealed class CrmHrSecondaryPageFreshnessTests
         {
             foreach (var partyId in partyIds)
             {
-                pendingRequests[partyId] = new PendingRequest();
+                pendingRequests[partyId] = new PendingAgentRequest();
             }
         }
 
-        public Task WaitForRequestAsync(Guid partyId)
-            => GetPendingRequest(partyId).Started.Task.WaitAsync(TimeSpan.FromSeconds(10));
+        public Task WaitForRequestsAsync(Guid partyId)
+        {
+            var request = GetPendingRequest(partyId);
+            return Task.WhenAll(
+                    request.WorkspaceStarted.Task,
+                    request.DirectoryItemStarted.Task)
+                .WaitAsync(TimeSpan.FromSeconds(10));
+        }
 
         public void Complete(Guid partyId)
-            => GetPendingRequest(partyId).Completion.TrySetResult(null);
+        {
+            var request = GetPendingRequest(partyId);
+            request.WorkspaceCompletion.TrySetResult(null);
+            request.DirectoryItemCompletion.TrySetResult(null);
+        }
 
         public void Fail(Guid partyId)
-            => GetPendingRequest(partyId).Completion.TrySetResult(
+        {
+            var request = GetPendingRequest(partyId);
+            request.WorkspaceCompletion.TrySetResult(null);
+            request.DirectoryItemCompletion.TrySetResult(
                 new InvalidOperationException($"Delayed agent '{partyId:D}' failed."));
+        }
 
         public void RenderNow()
             => StateHasChanged();
@@ -592,10 +737,11 @@ public sealed class CrmHrSecondaryPageFreshnessTests
                     item.ValidationStatus == query.ValidationStatus)
                 .Where(item =>
                     string.IsNullOrWhiteSpace(query.SearchText) ||
-                    item.DisplayName.Contains(query.SearchText, StringComparison.OrdinalIgnoreCase) ||
-                    item.OwnerName.Contains(query.SearchText, StringComparison.OrdinalIgnoreCase) ||
-                    item.Summary.Contains(query.SearchText, StringComparison.OrdinalIgnoreCase))
-                .OrderBy(item => item.DisplayName)
+                    item.Agent.Name.Contains(query.SearchText, StringComparison.OrdinalIgnoreCase) ||
+                    item.Agent.RoleTitle.Contains(query.SearchText, StringComparison.OrdinalIgnoreCase) ||
+                    item.Governance.OwnerName.Contains(query.SearchText, StringComparison.OrdinalIgnoreCase) ||
+                    item.Agent.Summary.Contains(query.SearchText, StringComparison.OrdinalIgnoreCase))
+                .OrderBy(item => item.Agent.Name)
                 .ToArray();
             return Task.FromResult(new AiAgentDirectoryPage(
                 items
@@ -607,6 +753,24 @@ public sealed class CrmHrSecondaryPageFreshnessTests
                 items.Length));
         }
 
+        protected override async Task<AiAgentDirectoryItemModel?> GetAgentDirectoryItemAsync(
+            Guid partyId,
+            CancellationToken cancellationToken)
+        {
+            DirectoryItemRequests.Add(partyId);
+            if (pendingRequests.TryGetValue(partyId, out var pendingRequest))
+            {
+                pendingRequest.DirectoryItemStarted.TrySetResult();
+                var exception = await pendingRequest.DirectoryItemCompletion.Task;
+                if (exception is not null)
+                {
+                    throw exception;
+                }
+            }
+
+            return TestItems.FirstOrDefault(item => item.PartyId == partyId);
+        }
+
         protected override async Task<AiAgentWorkspaceModel?> GetAgentWorkspaceAsync(
             Guid partyId,
             CancellationToken cancellationToken)
@@ -614,8 +778,8 @@ public sealed class CrmHrSecondaryPageFreshnessTests
             WorkspaceRequests.Add(partyId);
             if (pendingRequests.TryGetValue(partyId, out var pendingRequest))
             {
-                pendingRequest.Started.TrySetResult();
-                var exception = await pendingRequest.Completion.Task;
+                pendingRequest.WorkspaceStarted.TrySetResult();
+                var exception = await pendingRequest.WorkspaceCompletion.Task;
                 if (exception is not null)
                 {
                     throw exception;
@@ -625,7 +789,7 @@ public sealed class CrmHrSecondaryPageFreshnessTests
             return TestWorkspaces.GetValueOrDefault(partyId);
         }
 
-        private PendingRequest GetPendingRequest(Guid partyId)
+        private PendingAgentRequest GetPendingRequest(Guid partyId)
             => pendingRequests.TryGetValue(partyId, out var pendingRequest)
                 ? pendingRequest
                 : throw new InvalidOperationException($"Agent '{partyId:D}' is not delayed.");
@@ -796,6 +960,21 @@ public sealed class CrmHrSecondaryPageFreshnessTests
     private readonly record struct RecordedAssignmentSelectionRequest(
         Guid? ProjectId,
         RecordedAssignmentSelectionData RequestedData);
+
+    private sealed class PendingAgentRequest
+    {
+        public TaskCompletionSource WorkspaceStarted { get; } =
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public TaskCompletionSource DirectoryItemStarted { get; } =
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public TaskCompletionSource<Exception?> WorkspaceCompletion { get; } =
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public TaskCompletionSource<Exception?> DirectoryItemCompletion { get; } =
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
+    }
 
     private sealed class PendingRequest
     {

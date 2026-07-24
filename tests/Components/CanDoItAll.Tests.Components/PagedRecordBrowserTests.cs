@@ -1,6 +1,7 @@
 using Bunit;
 using CanDoItAll.AppComponents;
 using CanDoItAll.Components.BaseLib;
+using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace CanDoItAll.Tests.Components;
@@ -143,6 +144,68 @@ public sealed class PagedRecordBrowserTests : TestContext
         Assert.Contains(
             "w-full",
             boundedCut.Find("[data-testid='records']").ClassList);
+    }
+
+    [Fact]
+    public void Filter_toolbar_keeps_fields_flexible_and_actions_intrinsic()
+    {
+        var cut = RenderBrowser(LoaderWith(Option(AlphaId, "Alpha")));
+        var filters = cut.Find("[data-testid='records-filters']");
+
+        Assert.Equal("DIV", filters.TagName);
+        Assert.Contains("paged-record-browser__filters", filters.ClassList);
+        Assert.Collection(
+            filters.Children,
+            search =>
+            {
+                Assert.Equal("records-search", search.GetAttribute("data-testid"));
+                Assert.Contains("paged-record-browser__filter-field", search.ClassList);
+            },
+            tags =>
+            {
+                Assert.Equal("records-tag-filter", tags.GetAttribute("data-testid"));
+                Assert.Contains("paged-record-browser__filter-field", tags.ClassList);
+            },
+            scope =>
+            {
+                Assert.Equal("records-scope-filter", scope.GetAttribute("data-testid"));
+                Assert.Contains("paged-record-browser__scope", scope.ClassList);
+            },
+            reset =>
+            {
+                Assert.Equal("records-reset", reset.GetAttribute("data-testid"));
+                Assert.Contains("paged-record-browser__reset", reset.ClassList);
+            });
+    }
+
+    [Fact]
+    public void Typed_item_template_keeps_selection_owned_by_the_browser()
+    {
+        Guid? selectedId = null;
+        RenderFragment<PagedRecordItemTemplateContext<Guid>> template = context => builder =>
+        {
+            builder.OpenElement(0, "button");
+            builder.AddAttribute(1, "type", "button");
+            builder.AddAttribute(2, "data-testid", "templated-record");
+            builder.AddAttribute(3, "onclick", context.SelectAsync);
+            builder.AddContent(4, $"{context.Option.Title}:{context.IsSelected}");
+            builder.CloseElement();
+        };
+        var cut = RenderComponent<PagedRecordBrowser<Guid, RecordScope>>(parameters => parameters
+            .Add(component => component.Loader, LoaderWith(Option(AlphaId, "Alpha")))
+            .Add(component => component.InitialFilter, RecordScope.All)
+            .Add(component => component.ShowTagFilter, false)
+            .Add(component => component.PageSize, 2)
+            .Add(component => component.ColumnTemplate, "repeat(auto-fit,minmax(17rem,1fr))")
+            .Add(component => component.DataTestId, "records")
+            .Add(component => component.SelectionChanged, value => selectedId = value)
+            .Add(component => component.ItemTemplate, template));
+
+        cut.WaitForAssertion(() => Assert.Contains("Alpha:False", cut.Markup));
+        cut.Find("[data-testid='templated-record']").Click();
+
+        Assert.Equal(AlphaId, selectedId);
+        Assert.Empty(cut.FindAll("[data-testid='record-alpha-shell']"));
     }
 
     [Fact]

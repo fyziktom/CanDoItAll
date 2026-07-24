@@ -16,7 +16,7 @@
                      ValueChanged="HandleSearchChangedAsync"
                      Placeholder="@SearchPlaceholder"
                      Immediate="true"
-                     Class="paged-record-browser__search"
+                     Class="paged-record-browser__filter-field paged-record-browser__search"
                      aria-label="@SearchPlaceholder"
                      data-testid="@($"{DataTestId}-search")" />
 
@@ -27,6 +27,7 @@
                            Suggestions="@TagSuggestions"
                            Placeholder="@TagPlaceholder"
                            MaxTags="@MaximumTags"
+                           Class="paged-record-browser__filter-field paged-record-browser__tags"
                            TestId="@($"{DataTestId}-tag-filter")"
                            InputTestId="@($"{DataTestId}-tag-filter-input")" />
             }
@@ -35,6 +36,7 @@
             {
                 <Cluster Gap="LayoutGap.XSmall"
                          Wrap="FlexWrap.Wrap"
+                         Class="paged-record-browser__scope"
                          role="group"
                          aria-label="@FilterAriaLabel"
                          data-testid="@($"{DataTestId}-scope-filter")">
@@ -58,6 +60,7 @@
                     ButtonStyle="ButtonStyle.Light"
                     Variant="Variant.Text"
                     Size="ButtonSize.Small"
+                    Class="paged-record-browser__reset"
                     Disabled="@(!HasActiveFilters || isLoading)"
                     Click="ResetFiltersAsync"
                     aria-label="@ResetFiltersLabel"
@@ -102,94 +105,104 @@
         <div class="@ResultsClass"
              data-testid="@($"{DataTestId}-results")">
             <Grid Gap="LayoutGap.Medium"
-                  ColumnTemplate="repeat(auto-fit,minmax(16rem,1fr))"
+                  ColumnTemplate="@ColumnTemplate"
                   Class="w-full">
                 @foreach (var option in page.Items)
                 {
                     var isSelected = IsSelected(option);
-                    <article class="@ResolveCardClass(option, isSelected)"
-                             data-testid="@ResolveShellTestId(option)">
-                        <button type="button"
-                                class="paged-record-browser__select"
-                                aria-label="@($"Select {option.Title}")"
-                                aria-pressed="@(isSelected ? "true" : "false")"
-                                disabled="@option.IsDisabled"
-                                title="@ResolveSelectTitle(option)"
-                                data-testid="@ResolveOptionTestId(option)"
-                                @onclick="@(() => SelectAsync(option))">
-                            <Stack GapScale="LayoutGap.Small"
-                                   AlignItems="AlignItems.Stretch">
-                                <div class="paged-record-browser__identity">
-                                    <span class="paged-record-browser__icon"
-                                          aria-hidden="true">
-                                        <Icon Name="@option.Icon" />
-                                    </span>
+                    @if (ItemTemplate is not null)
+                    {
+                        @ItemTemplate(new PagedRecordItemTemplateContext<TKey>(
+                            option,
+                            isSelected,
+                            () => SelectAsync(option)))
+                    }
+                    else
+                    {
+                        <article class="@ResolveCardClass(option, isSelected)"
+                                 data-testid="@ResolveShellTestId(option)">
+                            <button type="button"
+                                    class="paged-record-browser__select"
+                                    aria-label="@($"Select {option.Title}")"
+                                    aria-pressed="@(isSelected ? "true" : "false")"
+                                    disabled="@option.IsDisabled"
+                                    title="@ResolveSelectTitle(option)"
+                                    data-testid="@ResolveOptionTestId(option)"
+                                    @onclick="@(() => SelectAsync(option))">
+                                <Stack GapScale="LayoutGap.Small"
+                                       AlignItems="AlignItems.Stretch">
+                                    <div class="paged-record-browser__identity">
+                                        <span class="paged-record-browser__icon"
+                                              aria-hidden="true">
+                                            <Icon Name="@option.Icon" />
+                                        </span>
 
-                                    <div class="paged-record-browser__identity-copy">
+                                        <div class="paged-record-browser__identity-copy">
+                                            <Cluster Gap="LayoutGap.XSmall"
+                                                     Wrap="FlexWrap.Wrap">
+                                                <StatusBadge Tone="neutral"
+                                                             Text="@option.KindLabel" />
+                                                @if (isSelected)
+                                                {
+                                                    <StatusBadge Tone="info"
+                                                                 Text="Selected" />
+                                                }
+                                            </Cluster>
+
+                                            <TextBlock TextStyle="TextStyle.Subtitle2"
+                                                       Value="@option.Title"
+                                                       Class="paged-record-browser__title" />
+
+                                            @if (!string.IsNullOrWhiteSpace(option.Subtitle))
+                                            {
+                                                <TextBlock TextStyle="TextStyle.Note"
+                                                           Value="@option.Subtitle"
+                                                           Class="paged-record-browser__subtitle" />
+                                            }
+                                        </div>
+                                    </div>
+
+                                    @if (!string.IsNullOrWhiteSpace(option.Description))
+                                    {
+                                        <TextBlock TextStyle="TextStyle.Note"
+                                                   Value="@option.Description"
+                                                   Class="paged-record-browser__description" />
+                                    }
+
+                                    @if (option.Tags.Count > 0)
+                                    {
                                         <Cluster Gap="LayoutGap.XSmall"
                                                  Wrap="FlexWrap.Wrap">
-                                            <StatusBadge Tone="neutral"
-                                                         Text="@option.KindLabel" />
-                                            @if (isSelected)
+                                            @foreach (var tag in option.Tags.Take(MaximumVisibleTags))
+                                            {
+                                                <StatusBadge Tone="neutral"
+                                                             Text="@tag" />
+                                            }
+                                            @if (option.Tags.Count > MaximumVisibleTags)
                                             {
                                                 <StatusBadge Tone="info"
-                                                             Text="Selected" />
+                                                             Text="@($"+{option.Tags.Count - MaximumVisibleTags}")" />
                                             }
                                         </Cluster>
+                                    }
 
-                                        <TextBlock TextStyle="TextStyle.Subtitle2"
-                                                   Value="@option.Title"
-                                                   Class="paged-record-browser__title" />
+                                    @if (!string.IsNullOrWhiteSpace(option.Meta))
+                                    {
+                                        <TextBlock TextStyle="TextStyle.Note"
+                                                   Value="@option.Meta"
+                                                   Class="paged-record-browser__meta" />
+                                    }
 
-                                        @if (!string.IsNullOrWhiteSpace(option.Subtitle))
-                                        {
-                                            <TextBlock TextStyle="TextStyle.Note"
-                                                       Value="@option.Subtitle"
-                                                       Class="paged-record-browser__subtitle" />
-                                        }
-                                    </div>
-                                </div>
-
-                                @if (!string.IsNullOrWhiteSpace(option.Description))
-                                {
-                                    <TextBlock TextStyle="TextStyle.Note"
-                                               Value="@option.Description"
-                                               Class="paged-record-browser__description" />
-                                }
-
-                                @if (option.Tags.Count > 0)
-                                {
-                                    <Cluster Gap="LayoutGap.XSmall"
-                                             Wrap="FlexWrap.Wrap">
-                                        @foreach (var tag in option.Tags.Take(MaximumVisibleTags))
-                                        {
-                                            <StatusBadge Tone="neutral"
-                                                         Text="@tag" />
-                                        }
-                                        @if (option.Tags.Count > MaximumVisibleTags)
-                                        {
-                                            <StatusBadge Tone="info"
-                                                         Text="@($"+{option.Tags.Count - MaximumVisibleTags}")" />
-                                        }
-                                    </Cluster>
-                                }
-
-                                @if (!string.IsNullOrWhiteSpace(option.Meta))
-                                {
-                                    <TextBlock TextStyle="TextStyle.Note"
-                                               Value="@option.Meta"
-                                               Class="paged-record-browser__meta" />
-                                }
-
-                                @if (option.IsDisabled && !string.IsNullOrWhiteSpace(option.DisabledReason))
-                                {
-                                    <TextBlock TextStyle="TextStyle.Note"
-                                               Value="@option.DisabledReason"
-                                               Class="paged-record-browser__disabled-reason" />
-                                }
-                            </Stack>
-                        </button>
-                    </article>
+                                    @if (option.IsDisabled && !string.IsNullOrWhiteSpace(option.DisabledReason))
+                                    {
+                                        <TextBlock TextStyle="TextStyle.Note"
+                                                   Value="@option.DisabledReason"
+                                                   Class="paged-record-browser__disabled-reason" />
+                                    }
+                                </Stack>
+                            </button>
+                        </article>
+                    }
                 }
             </Grid>
         </div>
@@ -268,6 +281,12 @@
 
     [Parameter]
     public int MaximumVisibleTags { get; set; } = 4;
+
+    [Parameter]
+    public string ColumnTemplate { get; set; } = "repeat(auto-fit,minmax(16rem,1fr))";
+
+    [Parameter]
+    public RenderFragment<PagedRecordItemTemplateContext<TKey>>? ItemTemplate { get; set; }
 
     [Parameter]
     public PagedRecordResultsScrollMode ResultsScrollMode { get; set; } = PagedRecordResultsScrollMode.Page;
@@ -368,6 +387,13 @@
                 nameof(MaximumVisibleTags),
                 MaximumVisibleTags,
                 "Maximum visible tags must be positive.");
+        }
+
+        if (string.IsNullOrWhiteSpace(ColumnTemplate))
+        {
+            throw new ArgumentException(
+                "The record grid column template cannot be empty.",
+                nameof(ColumnTemplate));
         }
 
         currentFilter = InitialFilter;

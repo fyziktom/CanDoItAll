@@ -65,19 +65,9 @@ internal sealed class CurrentProfileAgentFrameworkWorkspaceService(
     public async Task<Guid> SaveAgentAsync(AgentEditorModel model, CancellationToken cancellationToken = default)
     {
         var agentId = await ResolveService().SaveAgentAsync(model, cancellationToken);
-        referenceDataCacheInvalidator.Invalidate();
-        try
-        {
-            await technicalAgentBridge.SynchronizeDirectoryProjectionAsync(cancellationToken);
-        }
-        catch (OperationCanceledException)
-        {
-            throw;
-        }
-        catch (Exception exception)
-        {
-            throw new AgentDirectoryProjectionSynchronizationException(agentId, exception);
-        }
+        await SynchronizeDirectoryProjectionWithReferenceDataInvalidationAsync(
+            cancellationToken,
+            exception => new AgentDirectoryProjectionSynchronizationException(agentId, exception));
 
         return agentId;
     }
@@ -111,8 +101,7 @@ internal sealed class CurrentProfileAgentFrameworkWorkspaceService(
     public async Task DeleteAgentAsync(Guid agentId, CancellationToken cancellationToken = default)
     {
         await ResolveService().DeleteAgentAsync(agentId, cancellationToken);
-        referenceDataCacheInvalidator.Invalidate();
-        await technicalAgentBridge.SynchronizeDirectoryProjectionAsync(cancellationToken);
+        await SynchronizeDirectoryProjectionWithReferenceDataInvalidationAsync(cancellationToken);
     }
 
     public Task<IReadOnlyList<AgentTeamDefinition>> ListAgentTeamsAsync(CancellationToken cancellationToken = default)
@@ -143,16 +132,14 @@ internal sealed class CurrentProfileAgentFrameworkWorkspaceService(
     public async Task<Guid> CloneAgentAsync(Guid agentId, string cloneName, CancellationToken cancellationToken = default)
     {
         var cloneId = await ResolveService().CloneAgentAsync(agentId, cloneName, cancellationToken);
-        referenceDataCacheInvalidator.Invalidate();
-        await technicalAgentBridge.SynchronizeDirectoryProjectionAsync(cancellationToken);
+        await SynchronizeDirectoryProjectionWithReferenceDataInvalidationAsync(cancellationToken);
         return cloneId;
     }
 
     public async Task<Guid> ConvertToTemplateAsync(Guid agentId, string templateKey, CancellationToken cancellationToken = default)
     {
         var templateId = await ResolveService().ConvertToTemplateAsync(agentId, templateKey, cancellationToken);
-        referenceDataCacheInvalidator.Invalidate();
-        await technicalAgentBridge.SynchronizeDirectoryProjectionAsync(cancellationToken);
+        await SynchronizeDirectoryProjectionWithReferenceDataInvalidationAsync(cancellationToken);
         return templateId;
     }
 
@@ -164,8 +151,7 @@ internal sealed class CurrentProfileAgentFrameworkWorkspaceService(
     public async Task<Guid> ImportAgentAsync(string packagePath, CancellationToken cancellationToken = default)
     {
         var agentId = await ResolveService().ImportAgentAsync(packagePath, cancellationToken);
-        referenceDataCacheInvalidator.Invalidate();
-        await technicalAgentBridge.SynchronizeDirectoryProjectionAsync(cancellationToken);
+        await SynchronizeDirectoryProjectionWithReferenceDataInvalidationAsync(cancellationToken);
         return agentId;
     }
 
@@ -182,16 +168,14 @@ internal sealed class CurrentProfileAgentFrameworkWorkspaceService(
     public async Task<Guid> SaveProviderAsync(ProviderProfileEditorModel model, CancellationToken cancellationToken = default)
     {
         var providerId = await ResolveService().SaveProviderAsync(model, cancellationToken);
-        referenceDataCacheInvalidator.Invalidate();
-        await technicalAgentBridge.SynchronizeDirectoryProjectionAsync(cancellationToken);
+        await SynchronizeDirectoryProjectionWithReferenceDataInvalidationAsync(cancellationToken);
         return providerId;
     }
 
     public async Task DeleteProviderAsync(Guid providerId, CancellationToken cancellationToken = default)
     {
         await ResolveService().DeleteProviderAsync(providerId, cancellationToken);
-        referenceDataCacheInvalidator.Invalidate();
-        await technicalAgentBridge.SynchronizeDirectoryProjectionAsync(cancellationToken);
+        await SynchronizeDirectoryProjectionWithReferenceDataInvalidationAsync(cancellationToken);
     }
 
     public async Task<ProviderHealthResult> TestProviderAsync(Guid providerId, CancellationToken cancellationToken = default)
@@ -209,8 +193,7 @@ internal sealed class CurrentProfileAgentFrameworkWorkspaceService(
     public async Task<ProviderModelMaintenanceEditorResult> CreateOrUpdateProviderModelAsync(Guid providerId, ProviderModelMaintenanceEditorRequest request, CancellationToken cancellationToken = default)
     {
         var result = await ResolveService().CreateOrUpdateProviderModelAsync(providerId, request, cancellationToken);
-        referenceDataCacheInvalidator.Invalidate();
-        await technicalAgentBridge.SynchronizeDirectoryProjectionAsync(cancellationToken);
+        await SynchronizeDirectoryProjectionWithReferenceDataInvalidationAsync(cancellationToken);
         return result;
     }
 
@@ -352,25 +335,34 @@ internal sealed class CurrentProfileAgentFrameworkWorkspaceService(
         return service;
     }
 
+    private async Task SynchronizeDirectoryProjectionWithReferenceDataInvalidationAsync(
+        CancellationToken cancellationToken,
+        Func<Exception, Exception>? synchronizationExceptionFactory = null)
+    {
+        referenceDataCacheInvalidator.Invalidate();
+        try
+        {
+            await technicalAgentBridge.SynchronizeDirectoryProjectionAsync(cancellationToken);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception exception) when (synchronizationExceptionFactory is not null)
+        {
+            throw synchronizationExceptionFactory(exception);
+        }
+
+        referenceDataCacheInvalidator.Invalidate();
+    }
+
     private async Task RefreshProjectStructureAccessProjectionsAsync(
         Guid agentId,
         Guid projectId,
         ProjectStructureAccessChange change,
         CancellationToken cancellationToken)
     {
-        try
-        {
-            referenceDataCacheInvalidator.Invalidate();
-        }
-        catch (Exception exception)
-        {
-            logger.LogWarning(
-                exception,
-                "Project-structure access was {AccessChange} in the catalog for agent {AgentId} and project {ProjectId}, but reference-data cache invalidation failed.",
-                change,
-                agentId,
-                projectId);
-        }
+        InvalidateProjectStructureAccessReferenceData(agentId, projectId, change);
 
         try
         {
@@ -381,6 +373,29 @@ internal sealed class CurrentProfileAgentFrameworkWorkspaceService(
             logger.LogWarning(
                 exception,
                 "Project-structure access was {AccessChange} in the catalog for agent {AgentId} and project {ProjectId}, but agent-directory projection synchronization failed.",
+                change,
+                agentId,
+                projectId);
+            return;
+        }
+
+        InvalidateProjectStructureAccessReferenceData(agentId, projectId, change);
+    }
+
+    private void InvalidateProjectStructureAccessReferenceData(
+        Guid agentId,
+        Guid projectId,
+        ProjectStructureAccessChange change)
+    {
+        try
+        {
+            referenceDataCacheInvalidator.Invalidate();
+        }
+        catch (Exception exception)
+        {
+            logger.LogWarning(
+                exception,
+                "Project-structure access was {AccessChange} in the catalog for agent {AgentId} and project {ProjectId}, but reference-data cache invalidation failed.",
                 change,
                 agentId,
                 projectId);

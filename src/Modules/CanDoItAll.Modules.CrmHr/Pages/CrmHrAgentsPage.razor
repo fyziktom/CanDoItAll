@@ -4,7 +4,7 @@
 @inject IAiAgentDirectoryQueryService AiAgentDirectoryQueryService
 @inject NavigationManager Navigation
 
-<PageTitle>CRM / HR Agents</PageTitle>
+<PageTitle>CRM Agents</PageTitle>
 
 <AgentChatContextSurfaceProvider Surface="@AgentChatSurface"
                                  ContextNavigationIdentity="@AgentChatNavigationFence"
@@ -14,23 +14,23 @@
     <Header>
         <PageHeader Eyebrow="CRM / HR"
                     Title="Agent directory projection"
-                    Description="CRM-HR displays the business-facing projection of AgentFramework-owned AI agents. Create and edit the technical runtime, instructions, skills, and provider setup in AgentFramework; CRM-HR consumes that catalog instead of creating a second source of truth."
+                    Description="CRM-HR displays the business-facing projection of AgentFramework-owned AI agents. The shared catalog snapshot supplies technical identity and card data; CRM-HR adds governance, ownership, and directory context."
                     Compact="true">
             <Stats>
                 <CompactStat Label="projected agents"
                              Value="@(ShouldShowListLoadingState ? "..." : agentPage.TotalCount.ToString())"
-                             TooltipText="CRM-HR AI resources matching the current server-side directory filters." />
+                             TooltipText="AgentFramework agents in the current CRM-HR projection." />
                 <CompactStat Label="page providers"
-                             Value="@(ShouldShowListLoadingState ? "..." : agentPage.Items.Count(item => !string.IsNullOrWhiteSpace(item.ProviderName)).ToString())"
-                             TooltipText="Agents on the current page linked to a technical provider profile."
+                             Value="@(ShouldShowListLoadingState ? "..." : agentPage.Items.Count(item => item.Provider is not null).ToString())"
+                             TooltipText="Agents on this page linked to a provider profile."
                              Tone="info" />
                 <CompactStat Label="page review"
-                             Value="@(ShouldShowListLoadingState ? "..." : agentPage.Items.Count(item => item.ValidationStatus == AiValidationStatus.ReviewRequired).ToString())"
-                             TooltipText="Agents on the current page whose governance review is still pending."
+                             Value="@(ShouldShowListLoadingState ? "..." : agentPage.Items.Count(item => item.Governance.ValidationStatus == AiValidationStatus.ReviewRequired).ToString())"
+                             TooltipText="Agents on this page awaiting CRM-HR governance review."
                              Tone="warning" />
                 <CompactStat Label="page capabilities"
-                             Value="@(ShouldShowListLoadingState ? "..." : agentPage.Items.Count(item => item.CapabilityCount > 0).ToString())"
-                             TooltipText="Agents on the current page that expose runtime capabilities."
+                             Value="@(ShouldShowListLoadingState ? "..." : agentPage.Items.Count(item => item.Agent.Capabilities.Count > 0).ToString())"
+                             TooltipText="Agents on this page that expose technical capabilities."
                              Tone="success" />
             </Stats>
             <Actions>
@@ -52,184 +52,61 @@
         <Stack GapScale="LayoutGap.Large">
             <CrmHrSecondaryTabs SelectedArea="CrmHrWorkspaceArea.Agents" />
 
-            <ListDetailShell ListPaneWidth="30rem">
-                <ListHeader>
-                    <ListPanelHeader Title="Agent roster"
-                                     Description="This directory shows AgentFramework-backed AI resources. Technical editing stays in AgentFramework, while CRM-HR exposes the linked business-facing record."
-                                     Count="@(ShouldShowListLoadingState ? "Loading..." : $"{agentPage.TotalCount} matching agent(s)")" />
-                </ListHeader>
+            <section class="crmhr-agent-catalog" data-testid="crmhr-agent-catalog">
+                <div class="crmhr-agent-catalog__hero">
+                    <div class="min-w-0">
+                        <p class="cda-eyebrow">Projected technical agents</p>
+                        <h2 class="cda-title-xl">Agent cards</h2>
+                    </div>
+                    <StatusBadge Tone="info"
+                                 Text="@(ShouldShowListLoadingState ? "Loading..." : $"{agentPage.Items.Count} of {agentPage.TotalCount} agent(s)")" />
+                </div>
 
-                <ListContent>
-                    <PagedRecordBrowser TKey="Guid"
-                                        TFilter="AiAgentValidationFilter"
-                                        Loader="LoadAgentPageAsync"
-                                        InitialFilter="AiAgentValidationFilter.All"
-                                        FilterOptions="@ValidationFilters"
-                                        Selection="@AgentSelection"
-                                        SelectionChanged="@SelectPartyAsync"
-                                        LoadFailed="@HandleAgentDirectoryLoadFailed"
-                                        PageSize="@AiAgentDirectoryQueryLimits.DefaultPageSize"
-                                        ShowTagFilter="false"
-                                        SearchPlaceholder="Search agent, owner, or summary"
-                                        FilterAriaLabel="Validation status"
-                                        LoadingEyebrow="Agent directory"
-                                        LoadingTitle="Loading projected AI agents"
-                                        LoadingDescription="CRM-HR is reading the AgentFramework-owned projection."
-                                        EmptyEyebrow="No projected AI agents"
-                                        EmptyTitle="No projected agents match"
-                                        EmptyDescription="Change the search or validation filter, or create a technical agent in AgentFramework."
-                                        DataTestId="crmhr-agent" />
-                </ListContent>
+                <PagedRecordBrowser TKey="Guid"
+                                    TFilter="AiAgentValidationFilter"
+                                    Loader="LoadAgentPageAsync"
+                                    InitialFilter="AiAgentValidationFilter.All"
+                                    FilterOptions="@ValidationFilters"
+                                    Selection="@AgentSelection"
+                                    SelectionChanged="@SelectPartyAsync"
+                                    LoadFailed="@HandleAgentDirectoryLoadFailed"
+                                    PageSize="@AiAgentDirectoryQueryLimits.DefaultPageSize"
+                                    ShowTagFilter="false"
+                                    ResultsScrollMode="PagedRecordResultsScrollMode.Bounded"
+                                    ColumnTemplate="repeat(auto-fit,minmax(17rem,1fr))"
+                                    SearchPlaceholder="Search name, role, owner, model, or tags"
+                                    FilterAriaLabel="CRM-HR validation status"
+                                    LoadingEyebrow="Agent projection"
+                                    LoadingTitle="Loading projected agent cards"
+                                    LoadingDescription="CRM-HR is joining its governance snapshot to the shared AgentFramework catalog."
+                                    EmptyEyebrow="No projected AI agents"
+                                    EmptyTitle="No agents match these filters"
+                                    EmptyDescription="Change the search or validation filter, or create a technical agent in AgentFramework."
+                                    DataTestId="crmhr-agent">
+                    <ItemTemplate Context="recordContext">
+                        @{
+                            var item = GetCurrentPageItem(recordContext.Option.Key);
+                        }
+                        <AgentSelectionCard Agent="@item.Agent"
+                                            IsSelected="@recordContext.IsSelected"
+                                            IsPrivateProvider="@item.IsPrivateProvider"
+                                            SelectedLabel="Selected"
+                                            ShowChatHistory="true"
+                                            ShowDetailsTooltip="true"
+                                            ShellTestId="crmhr-agent-item-shell"
+                                            SelectTestId="crmhr-agent-item"
+                                            OnSelect="@(() => recordContext.SelectAsync())" />
+                    </ItemTemplate>
+                </PagedRecordBrowser>
+            </section>
 
-                <DetailHeader>
-                    @if (ShouldShowDetailLoadingState)
-                    {
-                        <SurfaceCard Soft="true">
-                            <p class="cda-eyebrow">Projection refresh</p>
-                            <h2 class="mt-1 text-lg font-semibold text-slate-950">Loading agent details</h2>
-                            <p class="mt-3 text-sm leading-6 text-slate-600">
-                                CRM-HR is waiting for the current AgentFramework-backed projection before opening the linked directory detail.
-                            </p>
-                        </SurfaceCard>
-                    }
-                    else if (selectedWorkspace is null)
-                    {
-                        <SurfaceCard Soft="true">
-                            <p class="cda-eyebrow">No AI agent selected</p>
-                            <h2 class="mt-1 text-lg font-semibold text-slate-950">Choose an agent from the list</h2>
-                            <p class="mt-3 text-sm leading-6 text-slate-600">
-                                CRM-HR shows the projected directory record, while technical editing stays in AgentFramework.
-                            </p>
-                            <Cluster Gap="LayoutGap.Small" Class="mt-4">
-                                <Button Text="Open technical catalog"
-                                        Click="OpenTechnicalCatalog" />
-                                <Button Text="Open directory"
-                                        ButtonStyle="ButtonStyle.Light"
-                                        Click="OpenDirectoryRecord" />
-                            </Cluster>
-                        </SurfaceCard>
-                    }
-                    else
-                    {
-                        <SurfaceCard>
-                            <Split Gap="LayoutGap.Medium">
-                                <div class="min-w-0">
-                                    <p class="cda-eyebrow">Agent summary</p>
-                                    <h2 class="mt-1 text-lg font-semibold text-slate-950">@selectedWorkspace.DisplayName</h2>
-                                    @if (!string.IsNullOrWhiteSpace(selectedWorkspace.Summary))
-                                    {
-                                        <p class="mt-3 text-sm leading-6 text-slate-600">@selectedWorkspace.Summary</p>
-                                    }
-                                    <p class="mt-3 text-sm leading-6 text-slate-600">
-                                        Technical instructions, skills, and runtime configuration are edited in AgentFramework. CRM-HR exposes the linked business-facing record and current projection state.
-                                    </p>
-                                </div>
-                                <Cluster Gap="LayoutGap.Small">
-                                    <StatusBadge Tone="@ResolveValidationTone(selectedWorkspace.Profile.ValidationStatus)" Text="@selectedWorkspace.Profile.ValidationStatus.ToString()" />
-                                    <StatusBadge Tone="@ResolveExecutionTone(selectedWorkspace.Profile.ExecutionMode)" Text="@selectedWorkspace.Profile.ExecutionMode.ToString()" />
-                                </Cluster>
-                            </Split>
-
-                            <Grid Gap="LayoutGap.Medium" ColumnsMd="2" Class="mt-5">
-                                <div class="rounded-[1.2rem] border border-slate-200 bg-slate-50/80 px-4 py-4">
-                                    <p class="text-xs uppercase tracking-[0.18em] text-slate-500">Provider</p>
-                                    <p class="mt-1 text-sm font-medium text-slate-950"
-                                       data-testid="crmhr-agent-summary-provider">@FormatValue(selectedWorkspace.ProviderName)</p>
-                                </div>
-                                <div class="rounded-[1.2rem] border border-slate-200 bg-slate-50/80 px-4 py-4">
-                                    <p class="text-xs uppercase tracking-[0.18em] text-slate-500">Owner / steward</p>
-                                    <p class="mt-1 text-sm font-medium text-slate-950"
-                                       data-testid="crmhr-agent-summary-owner">@FormatValue(selectedWorkspace.OwnerName)</p>
-                                </div>
-                                <div class="rounded-[1.2rem] border border-slate-200 bg-slate-50/80 px-4 py-4">
-                                    <p class="text-xs uppercase tracking-[0.18em] text-slate-500">Execution mode</p>
-                                    <p class="mt-1 text-sm font-medium text-slate-950">@selectedWorkspace.Profile.ExecutionMode</p>
-                                </div>
-                                <div class="rounded-[1.2rem] border border-slate-200 bg-slate-50/80 px-4 py-4">
-                                    <p class="text-xs uppercase tracking-[0.18em] text-slate-500">Capabilities</p>
-                                    <p class="mt-1 text-sm font-medium text-slate-950"
-                                       data-testid="crmhr-agent-summary-capabilities">@selectedWorkspace.CapabilityCount</p>
-                                </div>
-                            </Grid>
-
-                            <Cluster Gap="LayoutGap.Small" Class="mt-5">
-                                <Button Text="Open technical record"
-                                        data-testid="crmhr-agent-open-technical-record"
-                                        Click="OpenTechnicalRecord" />
-                                <Button Text="Open directory record"
-                                        ButtonStyle="ButtonStyle.Light"
-                                        data-testid="crmhr-agent-open-directory-record"
-                                        Click="OpenDirectoryRecord" />
-                            </Cluster>
-                        </SurfaceCard>
-                    }
-                </DetailHeader>
-
-                <DetailContent>
-                    @if (ShouldShowDetailLoadingState)
-                    {
-                        <SurfaceCard Soft="true">
-                            <p class="cda-eyebrow">Projection refresh</p>
-                            <h3 class="mt-1 text-lg font-semibold text-slate-950">Waiting for the linked technical record</h3>
-                            <p class="mt-3 text-sm leading-6 text-slate-600">
-                                Once the AgentFramework projection is loaded, CRM-HR will show the business-facing summary and the route back to the technical runtime.
-                            </p>
-                        </SurfaceCard>
-                    }
-                    else if (selectedWorkspace is null)
-                    {
-                        <EmptyState Eyebrow="Projection ready"
-                                    Title="Select an agent to continue"
-                                    Description="Projection details, provider binding, and the linked AgentFramework route appear here after you choose an AI agent from the roster." />
-                    }
-                    else
-                    {
-                        <Stack GapScale="LayoutGap.Large">
-                            <SurfaceCard Soft="true">
-                                <p class="cda-eyebrow">Technical ownership</p>
-                                <h3 class="mt-1 text-lg font-semibold text-slate-950">AgentFramework owns the editable runtime</h3>
-                                <p class="mt-3 text-sm leading-6 text-slate-600">
-                                    Use the technical record for instructions, provider selection, model, capabilities, and runtime-facing changes. CRM-HR intentionally stays read-only for that technical surface.
-                                </p>
-                                <Cluster Gap="LayoutGap.Small" Class="mt-4">
-                                    <Button Text="Open technical record"
-                                            Click="OpenTechnicalRecord" />
-                                    <Button Text="Open technical catalog"
-                                            ButtonStyle="ButtonStyle.Light"
-                                            Click="OpenTechnicalCatalog" />
-                                </Cluster>
-                            </SurfaceCard>
-
-                            <Grid Gap="LayoutGap.Medium" ColumnsMd="2">
-                                <SurfaceCard Soft="true">
-                                    <p class="text-xs uppercase tracking-[0.18em] text-slate-500">Binding summary</p>
-                                    <p class="mt-2 text-sm leading-6 text-slate-700">@selectedWorkspace.BindingSummary</p>
-                                </SurfaceCard>
-                                <SurfaceCard Soft="true">
-                                    <p class="text-xs uppercase tracking-[0.18em] text-slate-500">Default model</p>
-                                    <p class="mt-2 text-sm leading-6 text-slate-700">@FormatValue(selectedWorkspace.Profile.DefaultModel)</p>
-                                </SurfaceCard>
-                                <SurfaceCard Soft="true">
-                                    <p class="text-xs uppercase tracking-[0.18em] text-slate-500">Primary email</p>
-                                    <p class="mt-2 text-sm leading-6 text-slate-700">@FormatValue(selectedWorkspace.PrimaryEmail)</p>
-                                </SurfaceCard>
-                                <SurfaceCard Soft="true">
-                                    <p class="text-xs uppercase tracking-[0.18em] text-slate-500">Primary phone</p>
-                                    <p class="mt-2 text-sm leading-6 text-slate-700">@FormatValue(selectedWorkspace.PrimaryPhone)</p>
-                                </SurfaceCard>
-                            </Grid>
-
-                            @if (!string.IsNullOrWhiteSpace(selectedWorkspace.Profile.Notes))
-                            {
-                                <SurfaceCard Soft="true">
-                                    <p class="text-xs uppercase tracking-[0.18em] text-slate-500">Current notes</p>
-                                    <p class="mt-2 text-sm leading-6 text-slate-700">@selectedWorkspace.Profile.Notes</p>
-                                </SurfaceCard>
-                            }
-                        </Stack>
-                    }
-                </DetailContent>
-            </ListDetailShell>
+            <CrmHrAgentRecordDialog IsOpen="@isRecordDialogOpen"
+                                    IsLoading="@isWorkspaceLoading"
+                                    Item="@selectedDirectoryItem"
+                                    Workspace="@selectedWorkspace"
+                                    Close="CloseRecordDialogAsync"
+                                    OpenTechnicalRecord="OpenTechnicalRecord"
+                                    OpenDirectoryRecord="OpenDirectoryRecord" />
         </Stack>
     </ChildContent>
 </PageScaffold>
@@ -252,9 +129,13 @@
         0,
         AiAgentDirectoryQueryLimits.DefaultPageSize,
         0);
+    private IReadOnlyDictionary<Guid, AiAgentDirectoryItemModel> currentPageItems =
+        new Dictionary<Guid, AiAgentDirectoryItemModel>();
+    private AiAgentDirectoryItemModel? selectedDirectoryItem;
     private AiAgentWorkspaceModel? selectedWorkspace;
     private bool isListLoading = true;
-    private bool isWorkspaceLoading = true;
+    private bool isWorkspaceLoading;
+    private bool isRecordDialogOpen;
     private bool isDisposed;
     private long loadGeneration;
     private long directoryLoadGeneration;
@@ -276,56 +157,78 @@
             Navigation.Uri,
             [new("partyId", PartyIdQuery?.ToString("D"))]);
 
-    private PagedRecordSelection<Guid>? AgentSelection => selectedWorkspace is null
-        ? null
-        : new PagedRecordSelection<Guid>(selectedWorkspace.PartyId);
+    private PagedRecordSelection<Guid>? AgentSelection => PartyIdQuery is Guid partyId
+        ? new PagedRecordSelection<Guid>(partyId)
+        : null;
 
     private bool ShouldShowListLoadingState => isListLoading;
-    private bool ShouldShowDetailLoadingState => isWorkspaceLoading;
 
-    protected override async Task OnParametersSetAsync()
-    {
-        await LoadAsync(PartyIdQuery);
-    }
+    protected override Task OnParametersSetAsync()
+        => LoadAsync(PartyIdQuery);
 
     private async Task LoadAsync(Guid? requestedPartyId)
     {
         var expectedQueryPartyId = requestedPartyId;
         var currentGeneration = Interlocked.Increment(ref loadGeneration);
-        agentChatContextAccessState = AgentChatContextAccessState.Loading;
-        isWorkspaceLoading = true;
-        using var cancellation = new CancellationTokenSource();
+        var cancellation = new CancellationTokenSource();
         var supersededLoad = Interlocked.Exchange(ref loadCancellation, cancellation);
         supersededLoad?.Cancel();
 
+        selectedDirectoryItem = null;
+        selectedWorkspace = null;
+        isRecordDialogOpen = requestedPartyId.HasValue;
+        isWorkspaceLoading = requestedPartyId.HasValue;
+        agentChatContextAccessState = requestedPartyId.HasValue
+            ? AgentChatContextAccessState.Loading
+            : AgentChatContextAccessState.Ready;
+
+        if (!requestedPartyId.HasValue)
+        {
+            Interlocked.CompareExchange(ref loadCancellation, null, cancellation);
+            cancellation.Dispose();
+            return;
+        }
+
         try
         {
-            var targetPartyId = requestedPartyId
-                ?? agentPage.Items.FirstOrDefault()?.PartyId;
-            AiAgentWorkspaceModel? loadedWorkspace = null;
-            if (targetPartyId.HasValue)
-            {
-                loadedWorkspace = await GetAgentWorkspaceAsync(targetPartyId.Value, cancellation.Token);
-                if (loadedWorkspace is not null && loadedWorkspace.PartyId != targetPartyId.Value)
-                {
-                    throw new InvalidOperationException(
-                        $"Agent workspace '{loadedWorkspace.PartyId:D}' did not match requested party '{targetPartyId.Value:D}'.");
-                }
-            }
+            var workspaceTask = GetAgentWorkspaceAsync(requestedPartyId.Value, cancellation.Token);
+            var directoryItemTask = GetAgentDirectoryItemAsync(requestedPartyId.Value, cancellation.Token);
+            var loadedWorkspace = await workspaceTask;
+            var loadedDirectoryItem = await directoryItemTask;
 
             if (!IsCurrentLoad(currentGeneration, expectedQueryPartyId))
             {
                 return;
             }
 
+            if (loadedWorkspace is not null && loadedWorkspace.PartyId != requestedPartyId.Value)
+            {
+                throw new InvalidOperationException(
+                    $"Agent workspace '{loadedWorkspace.PartyId:D}' did not match requested party '{requestedPartyId.Value:D}'.");
+            }
+
+            if (loadedDirectoryItem is not null && loadedDirectoryItem.PartyId != requestedPartyId.Value)
+            {
+                throw new InvalidOperationException(
+                    $"Agent directory item '{loadedDirectoryItem.PartyId:D}' did not match requested party '{requestedPartyId.Value:D}'.");
+            }
+
+            if (loadedWorkspace is not null &&
+                loadedDirectoryItem is not null &&
+                loadedWorkspace.TechnicalAgentId != loadedDirectoryItem.Agent.Id)
+            {
+                throw new InvalidOperationException(
+                    $"CRM-HR party '{requestedPartyId.Value:D}' resolved conflicting technical agents: " +
+                    $"workspace '{loadedWorkspace.TechnicalAgentId?.ToString("D") ?? "none"}' and " +
+                    $"catalog '{loadedDirectoryItem.Agent.Id:D}'.");
+            }
+
             selectedWorkspace = loadedWorkspace;
-            agentChatContextAccessState = targetPartyId.HasValue
-                ? loadedWorkspace is null
-                    ? AgentChatContextAccessState.Failed
-                    : AgentChatContextAccessState.Ready
-                : isListLoading
-                    ? AgentChatContextAccessState.Loading
-                    : AgentChatContextAccessState.Ready;
+            selectedDirectoryItem = loadedDirectoryItem;
+            isRecordDialogOpen = loadedWorkspace is not null && loadedDirectoryItem is not null;
+            agentChatContextAccessState = isRecordDialogOpen
+                ? AgentChatContextAccessState.Ready
+                : AgentChatContextAccessState.Failed;
         }
         catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
         {
@@ -334,6 +237,7 @@
         {
             if (IsCurrentLoad(currentGeneration, expectedQueryPartyId))
             {
+                isRecordDialogOpen = false;
                 agentChatContextAccessState = AgentChatContextAccessState.Failed;
                 throw;
             }
@@ -345,6 +249,8 @@
             {
                 isWorkspaceLoading = false;
             }
+
+            cancellation.Dispose();
         }
     }
 
@@ -356,6 +262,11 @@
         AiAgentDirectoryQuery query,
         CancellationToken cancellationToken)
         => AiAgentDirectoryQueryService.SearchAsync(query, cancellationToken);
+
+    protected virtual Task<AiAgentDirectoryItemModel?> GetAgentDirectoryItemAsync(
+        Guid partyId,
+        CancellationToken cancellationToken)
+        => AiAgentDirectoryQueryService.GetByPartyIdAsync(partyId, cancellationToken);
 
     protected virtual Task<AiAgentWorkspaceModel?> GetAgentWorkspaceAsync(
         Guid partyId,
@@ -389,18 +300,7 @@
             }
 
             agentPage = result;
-            if (PartyIdQuery is null &&
-                selectedWorkspace is null &&
-                result.Items.FirstOrDefault() is { } firstItem)
-            {
-                await LoadDefaultWorkspaceAsync(firstItem.PartyId, cancellationToken);
-            }
-            else if (PartyIdQuery is null && result.Items.Count == 0)
-            {
-                agentChatContextAccessState = AgentChatContextAccessState.Ready;
-                isWorkspaceLoading = false;
-            }
-
+            currentPageItems = result.Items.ToDictionary(item => item.PartyId);
             return new PagedRecordPage<Guid>(
                 result.Items.Select(ToPagedRecordOption).ToArray(),
                 result.PageIndex,
@@ -417,58 +317,41 @@
         }
     }
 
-    private async Task LoadDefaultWorkspaceAsync(
-        Guid partyId,
-        CancellationToken cancellationToken)
-    {
-        var expectedWorkspaceGeneration = Volatile.Read(ref loadGeneration);
-        isWorkspaceLoading = true;
-        var workspace = await GetAgentWorkspaceAsync(partyId, cancellationToken);
-        cancellationToken.ThrowIfCancellationRequested();
-        if (isDisposed ||
-            PartyIdQuery.HasValue ||
-            expectedWorkspaceGeneration != Volatile.Read(ref loadGeneration))
-        {
-            return;
-        }
-
-        if (workspace is not null && workspace.PartyId != partyId)
-        {
-            throw new InvalidOperationException(
-                $"Agent workspace '{workspace.PartyId:D}' did not match requested party '{partyId:D}'.");
-        }
-
-        selectedWorkspace = workspace;
-        agentChatContextAccessState = workspace is null
-            ? AgentChatContextAccessState.Failed
-            : AgentChatContextAccessState.Ready;
-        isWorkspaceLoading = false;
-    }
-
     private void HandleAgentDirectoryLoadFailed(Exception _)
     {
         isListLoading = false;
-        if (PartyIdQuery is null && selectedWorkspace is null)
+        if (!PartyIdQuery.HasValue)
         {
             agentChatContextAccessState = AgentChatContextAccessState.Failed;
-            isWorkspaceLoading = false;
         }
     }
 
-    public ValueTask DisposeAsync()
-    {
-        isDisposed = true;
-        Interlocked.Increment(ref loadGeneration);
-        Interlocked.Increment(ref directoryLoadGeneration);
-        var cancellation = Interlocked.Exchange(ref loadCancellation, null);
-        cancellation?.Cancel();
-        cancellation?.Dispose();
-        return ValueTask.CompletedTask;
-    }
+    private AiAgentDirectoryItemModel GetCurrentPageItem(Guid partyId)
+        => currentPageItems.TryGetValue(partyId, out var item)
+            ? item
+            : throw new InvalidOperationException(
+                $"The rendered CRM-HR agent page does not contain party '{partyId:D}'.");
 
     private Task SelectPartyAsync(Guid partyId)
     {
-        Navigation.NavigateTo($"/crm-hr/agents?partyId={partyId}");
+        selectedDirectoryItem = GetCurrentPageItem(partyId);
+        selectedWorkspace = null;
+        isWorkspaceLoading = true;
+        isRecordDialogOpen = true;
+        agentChatContextAccessState = AgentChatContextAccessState.Loading;
+        Navigation.NavigateTo($"/crm-hr/agents?partyId={partyId:D}");
+        return Task.CompletedTask;
+    }
+
+    private Task CloseRecordDialogAsync()
+    {
+        if (!isRecordDialogOpen)
+        {
+            return Task.CompletedTask;
+        }
+
+        isRecordDialogOpen = false;
+        Navigation.NavigateTo("/crm-hr/agents");
         return Task.CompletedTask;
     }
 
@@ -496,7 +379,7 @@
             return;
         }
 
-        Navigation.NavigateTo($"/crm-hr/directory?partyId={selectedWorkspace.PartyId}");
+        Navigation.NavigateTo($"/crm-hr/directory?partyId={selectedWorkspace.PartyId:D}");
     }
 
     private static AiValidationStatus? MapValidationFilter(AiAgentValidationFilter filter)
@@ -507,102 +390,29 @@
             AiAgentValidationFilter.ReviewRequired => AiValidationStatus.ReviewRequired,
             AiAgentValidationFilter.Approved => AiValidationStatus.Approved,
             AiAgentValidationFilter.Suspended => AiValidationStatus.Suspended,
-            _ => throw new ArgumentOutOfRangeException(nameof(filter), filter, "Validation filter is not supported.")
+            _ => throw new ArgumentOutOfRangeException(
+                nameof(filter),
+                filter,
+                "Validation filter is not supported.")
         };
 
-    private static PagedRecordOption<Guid> ToPagedRecordOption(AiAgentListItemModel item)
-        => new(item.PartyId, item.DisplayName, "AI agent")
+    private static PagedRecordOption<Guid> ToPagedRecordOption(AiAgentDirectoryItemModel item)
+        => new(item.PartyId, item.Agent.Name, "AI agent")
         {
-            Subtitle = BuildItemMeta(item),
-            Description = BuildItemSummary(item),
-            Icon = "smart_toy",
-            Tags =
-            [
-                ResolveValidationText(item),
-                ResolveExecutionText(item)
-            ],
+            Subtitle = item.Agent.RoleTitle,
+            Description = item.Agent.Summary,
             TestId = "crmhr-agent-item"
         };
 
-    private static string BuildItemMeta(AiAgentListItemModel item)
+    public ValueTask DisposeAsync()
     {
-        var parts = new List<string>
-        {
-            ResolveValidationText(item)
-        };
-
-        if (!string.IsNullOrWhiteSpace(item.ProviderName))
-        {
-            parts.Add($"Provider: {item.ProviderName}");
-        }
-
-        if (!string.IsNullOrWhiteSpace(item.OwnerName))
-        {
-            parts.Add($"Owner: {item.OwnerName}");
-        }
-
-        return string.Join(" / ", parts);
-    }
-
-    private static string BuildItemSummary(AiAgentListItemModel item)
-    {
-        var parts = new List<string>();
-        if (!string.IsNullOrWhiteSpace(item.DefaultModel))
-        {
-            parts.Add(item.DefaultModel);
-        }
-
-        if (item.CapabilityCount > 0)
-        {
-            parts.Add($"{item.CapabilityCount} capability record(s)");
-        }
-
-        if (parts.Count > 0)
-        {
-            return string.Join(" / ", parts);
-        }
-
-        return string.IsNullOrWhiteSpace(item.Summary)
-            ? "Projected business record is available; open the technical record in AgentFramework for runtime edits."
-            : item.Summary;
-    }
-
-    private static string ResolveValidationText(AiAgentListItemModel item)
-    {
-        return item.ValidationStatus?.ToString() ?? "Draft";
-    }
-
-    private static string ResolveExecutionText(AiAgentListItemModel item)
-    {
-        return item.ExecutionMode?.ToString() ?? "Unbound";
-    }
-
-    private static string ResolveValidationTone(AiValidationStatus? validationStatus)
-    {
-        return validationStatus switch
-        {
-            AiValidationStatus.ReviewRequired => "warning",
-            AiValidationStatus.Approved => "success",
-            AiValidationStatus.Suspended => "danger",
-            AiValidationStatus.Draft => "base",
-            _ => "neutral"
-        };
-    }
-
-    private static string ResolveExecutionTone(AiExecutionMode? executionMode)
-    {
-        return executionMode switch
-        {
-            AiExecutionMode.Local => "info",
-            AiExecutionMode.Remote => "primary",
-            AiExecutionMode.ThirdParty => "warning",
-            _ => "neutral"
-        };
-    }
-
-    private static string FormatValue(string value)
-    {
-        return string.IsNullOrWhiteSpace(value) ? "Not set" : value;
+        isDisposed = true;
+        Interlocked.Increment(ref loadGeneration);
+        Interlocked.Increment(ref directoryLoadGeneration);
+        var cancellation = Interlocked.Exchange(ref loadCancellation, null);
+        cancellation?.Cancel();
+        cancellation?.Dispose();
+        return ValueTask.CompletedTask;
     }
 
     private enum AiAgentValidationFilter

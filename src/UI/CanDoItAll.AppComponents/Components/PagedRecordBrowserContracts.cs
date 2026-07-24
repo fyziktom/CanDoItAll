@@ -58,6 +58,12 @@ public sealed record PagedRecordFilterOption<TFilter>(
 public sealed record PagedRecordSelection<TKey>(TKey Key)
     where TKey : notnull;
 
+public sealed record PagedRecordItemTemplateContext<TKey>(
+    PagedRecordOption<TKey> Option,
+    bool IsSelected,
+    Func<Task> SelectAsync)
+    where TKey : notnull;
+
 public delegate Task<PagedRecordPage<TKey>> PagedRecordLoader<TKey, TFilter>(
     PagedRecordRequest<TFilter> request,
     CancellationToken cancellationToken)

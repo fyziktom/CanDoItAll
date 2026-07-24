@@ -5,14 +5,28 @@
 
 .paged-record-browser__filters {
     align-items: center;
-    display: grid;
-    gap: 0.75rem;
-    grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--cad-space-content-gap, 0.75rem);
     min-width: 0;
     width: 100%;
 }
 
-.paged-record-browser__search,
+.paged-record-browser__filters ::deep .paged-record-browser__filter-field {
+    flex: 1 1 15rem;
+    min-width: min(15rem, 100%);
+    width: auto;
+}
+
+.paged-record-browser__filters ::deep .paged-record-browser__scope {
+    flex: 0 1 auto;
+    max-width: 100%;
+}
+
+.paged-record-browser__filters ::deep .paged-record-browser__reset {
+    flex: 0 0 auto;
+}
+
 .paged-record-browser__results {
     min-width: 0;
     width: 100%;

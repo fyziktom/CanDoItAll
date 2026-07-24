@@ -1,5 +1,7 @@
 using System.Collections.Concurrent;
 using System.Data.Common;
+using CanDoItAll.AgentFramework.Core;
+using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Composition;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.CrmHr;
@@ -13,7 +15,69 @@ namespace CanDoItAll.Tests.Integration;
 public sealed class AiAgentDirectoryQueryIntegrationTests
 {
     [Fact]
-    public async Task Query_filters_and_pages_the_projection_before_technical_enrichment()
+    public async Task Query_rejects_multiple_parties_bound_to_the_same_technical_agent()
+    {
+        AppDbContextModelRegistry.ConfigureAssemblies(ModuleAssemblies.All);
+        await using var database = PostgresTestDatabaseLease.Create("aiagentdirectoryduplicate");
+        var factory = new TestDbContextFactory(database.CreateAppDbContextOptions());
+        var technicalAgentId = DeterministicGuid(9_000);
+        var firstPartyId = DeterministicGuid(9_001);
+        var secondPartyId = DeterministicGuid(9_002);
+
+        await using (var dbContext = factory.CreateDbContext())
+        {
+            await dbContext.Database.EnsureCreatedAsync();
+            foreach (var partyId in new[] { firstPartyId, secondPartyId })
+            {
+                dbContext.Set<Party>().Add(new Party
+                {
+                    Id = partyId,
+                    PartyType = PartyType.AiAgent,
+                    LifecycleStatus = PartyLifecycleStatus.Active,
+                    DisplayName = $"Duplicate projection {partyId:D}",
+                    CreatedAtUtc = DateTimeOffset.UnixEpoch,
+                    UpdatedAtUtc = DateTimeOffset.UnixEpoch
+                });
+                dbContext.Set<AiResourceBinding>().Add(new AiResourceBinding
+                {
+                    PartyId = partyId,
+                    TechnicalAgentId = technicalAgentId,
+                    BindingStatus = AiResourceBindingStatus.Bound,
+                    BindingReason = "Invalid duplicate binding",
+                    ProjectionUpdatedAtUtc = DateTimeOffset.UnixEpoch,
+                    CreatedAtUtc = DateTimeOffset.UnixEpoch,
+                    UpdatedAtUtc = DateTimeOffset.UnixEpoch
+                });
+            }
+
+            await dbContext.SaveChangesAsync();
+        }
+
+        var agent = CreateAgent(technicalAgentId, DeterministicGuid(9_100), 0);
+        var referenceDataProvider = new RecordingReferenceDataProvider(
+            new AgentReferenceDataSnapshot(
+                AgentReferenceDataSections.Agents,
+                [agent],
+                [],
+                new Dictionary<Guid, ProviderProfile>(),
+                DateTimeOffset.UnixEpoch,
+                TimeSpan.Zero));
+        using var service = new AiAgentDirectoryQueryService(
+            factory,
+            new RecordingTechnicalAgentBridge(),
+            referenceDataProvider,
+            new AgentReferenceDataInvalidationHub());
+
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => service.SearchAsync(new AiAgentDirectoryQuery()));
+
+        Assert.Contains(technicalAgentId.ToString("D"), exception.Message, StringComparison.Ordinal);
+        Assert.Contains(firstPartyId.ToString("D"), exception.Message, StringComparison.Ordinal);
+        Assert.Contains(secondPartyId.ToString("D"), exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Query_reuses_composite_snapshot_until_reference_data_is_invalidated()
     {
         AppDbContextModelRegistry.ConfigureAssemblies(ModuleAssemblies.All);
         await using var database = PostgresTestDatabaseLease.Create("aiagentdirectoryquery");
@@ -23,8 +87,12 @@ public sealed class AiAgentDirectoryQueryIntegrationTests
             .Options;
         var factory = new TestDbContextFactory(options);
         var ownerId = DeterministicGuid(10_000);
-        var agentIds = Enumerable.Range(0, 65)
+        var providerId = DeterministicGuid(10_500);
+        var partyIds = Enumerable.Range(0, 65)
             .Select(index => DeterministicGuid(11_000 + index))
+            .ToArray();
+        var technicalAgentIds = Enumerable.Range(0, partyIds.Length)
+            .Select(index => DeterministicGuid(12_000 + index))
             .ToArray();
 
         await using (var dbContext = factory.CreateDbContext())
@@ -40,27 +108,27 @@ public sealed class AiAgentDirectoryQueryIntegrationTests
                 UpdatedAtUtc = DateTimeOffset.UnixEpoch
             });
 
-            for (var index = 0; index < agentIds.Length; index++)
+            for (var index = 0; index < partyIds.Length; index++)
             {
-                var partyId = agentIds[index];
+                var partyId = partyIds[index];
                 dbContext.Set<Party>().Add(new Party
                 {
                     Id = partyId,
                     PartyType = PartyType.AiAgent,
                     LifecycleStatus = PartyLifecycleStatus.Active,
-                    DisplayName = index == 62
-                        ? "Agent 062 needle"
-                        : $"Agent {index:D3}",
-                    Summary = "Projected technical resource",
+                    DisplayName = $"CRM projection {index:D3}",
+                    Summary = "This flattened CRM text must not drive technical search.",
                     CreatedAtUtc = DateTimeOffset.UnixEpoch,
                     UpdatedAtUtc = DateTimeOffset.UnixEpoch.AddDays(index)
                 });
                 dbContext.Set<AiResourceBinding>().Add(new AiResourceBinding
                 {
                     PartyId = partyId,
-                    TechnicalAgentId = DeterministicGuid(12_000 + index),
+                    TechnicalAgentId = technicalAgentIds[index],
                     BindingStatus = AiResourceBindingStatus.Bound,
                     BindingReason = "Integration test",
+                    ProjectedExecutionMode = AiExecutionMode.Remote,
+                    ProjectionUpdatedAtUtc = DateTimeOffset.UnixEpoch.AddHours(index),
                     CreatedAtUtc = DateTimeOffset.UnixEpoch,
                     UpdatedAtUtc = DateTimeOffset.UnixEpoch
                 });
@@ -77,8 +145,29 @@ public sealed class AiAgentDirectoryQueryIntegrationTests
             await dbContext.SaveChangesAsync();
         }
 
-        var bridge = new RecordingTechnicalAgentBridge(agentIds);
-        var service = new AiAgentDirectoryQueryService(factory, bridge);
+        var agents = technicalAgentIds
+            .Select((technicalAgentId, index) =>
+                CreateAgent(technicalAgentId, providerId, index))
+            .ToArray();
+        var provider = CreateProvider(providerId);
+        var referenceDataProvider = new RecordingReferenceDataProvider(
+            new AgentReferenceDataSnapshot(
+                AgentReferenceDataSections.Agents | AgentReferenceDataSections.Providers,
+                agents,
+                [provider],
+                new Dictionary<Guid, ProviderProfile>
+                {
+                    [provider.Id] = provider
+                },
+                DateTimeOffset.UnixEpoch,
+                TimeSpan.Zero));
+        var bridge = new RecordingTechnicalAgentBridge();
+        var invalidator = new AgentReferenceDataInvalidationHub();
+        using var service = new AiAgentDirectoryQueryService(
+            factory,
+            bridge,
+            referenceDataProvider,
+            invalidator);
         await service.RefreshProjectionAsync();
         interceptor.Clear();
 
@@ -89,23 +178,113 @@ public sealed class AiAgentDirectoryQueryIntegrationTests
             SearchText: "needle",
             ValidationStatus: AiValidationStatus.Approved,
             PageSize: 10));
+        var deepLinkedItem = await service.GetByPartyIdAsync(partyIds[0]);
 
         Assert.Equal(65, thirdPage.TotalCount);
         Assert.Equal(20, thirdPage.Items.Count);
-        Assert.Equal(20, bridge.SummaryRequests[0].Count);
         var match = Assert.Single(filtered.Items);
-        Assert.Equal(agentIds[62], match.PartyId);
-        Assert.Equal("Directory owner", match.OwnerName);
-        Assert.Equal(AiValidationStatus.Approved, match.ValidationStatus);
-        Assert.Single(bridge.SummaryRequests[1]);
-        Assert.Equal(1, bridge.RefreshCount);
-        Assert.Contains(
-            interceptor.Commands,
-            command =>
-                command.CommandText.Contains("CrmHr_Parties", StringComparison.Ordinal) &&
-                command.CommandText.Contains("CrmHr_AiResourceBindings", StringComparison.Ordinal) &&
-                command.CommandText.Contains("LIMIT", StringComparison.OrdinalIgnoreCase) &&
-                command.CommandText.Contains("OFFSET", StringComparison.OrdinalIgnoreCase));
+        Assert.Equal(partyIds[62], match.PartyId);
+        Assert.Equal(technicalAgentIds[62], match.Agent.Id);
+        Assert.Equal("Directory owner", match.Governance.OwnerName);
+        Assert.Equal(AiValidationStatus.Approved, match.Governance.ValidationStatus);
+        Assert.Same(provider, match.Provider);
+        Assert.True(match.IsPrivateProvider);
+        Assert.NotNull(deepLinkedItem);
+        Assert.Equal(technicalAgentIds[0], deepLinkedItem.Agent.Id);
+        Assert.Single(referenceDataProvider.Requests);
+        Assert.Equal(1, CountProjectionSnapshotQueries(interceptor));
+
+        invalidator.Invalidate();
+        var afterExternalInvalidation = await service.SearchAsync(new AiAgentDirectoryQuery(
+            SearchText: "needle",
+            PageSize: 10));
+
+        Assert.Single(afterExternalInvalidation.Items);
+        Assert.Equal(2, referenceDataProvider.Requests.Count);
+        Assert.Equal(2, CountProjectionSnapshotQueries(interceptor));
+
+        await service.RefreshProjectionAsync();
+        await service.GetByPartyIdAsync(partyIds[62]);
+
+        Assert.Equal(2, bridge.RefreshCount);
+        Assert.Equal(3, referenceDataProvider.Requests.Count);
+        Assert.Equal(3, CountProjectionSnapshotQueries(interceptor));
+        Assert.All(
+            referenceDataProvider.Requests,
+            request => Assert.Equal(
+                AgentReferenceDataRequest.AgentsAndProviders(false),
+                request));
+    }
+
+    private static int CountProjectionSnapshotQueries(QueryCommandInterceptor interceptor)
+    {
+        return interceptor.Commands.Count(command =>
+            command.CommandText.Contains(
+                "CrmHr_AiResourceBindings",
+                StringComparison.Ordinal) &&
+            command.CommandText.Contains(
+                "CrmHr_Parties",
+                StringComparison.Ordinal));
+    }
+
+    private static AgentDefinition CreateAgent(
+        Guid id,
+        Guid providerId,
+        int index)
+    {
+        return new AgentDefinition(
+            id,
+            index == 62
+                ? "Agent 062 needle"
+                : $"Agent {index:D3}",
+            index == 62
+                ? "Searchable specialist"
+                : "Integration specialist",
+            "Canonical technical resource",
+            "Use integration-test instructions.",
+            AgentLifecycleStatus.Active,
+            providerId,
+            "integration-model",
+            AgentWorkloadKind.Programming,
+            AgentChatHistoryMode.FrameworkManaged,
+            0.2,
+            false,
+            false,
+            "{}",
+            false,
+            string.Empty,
+            AgentPermissionsPolicy.Default,
+            [],
+            index == 62
+                ? ["integration", "needle-tag"]
+                : ["integration"],
+            DateTimeOffset.UnixEpoch,
+            DateTimeOffset.UnixEpoch.AddDays(index));
+    }
+
+    private static ProviderProfile CreateProvider(Guid id)
+    {
+        return new ProviderProfile(
+            id,
+            "Private integration provider",
+            ProviderKind.OpenAi,
+            "https://example.invalid",
+            "INTEGRATION_API_KEY",
+            "integration-model",
+            ProviderTransportKind.Responses,
+            true,
+            true,
+            true,
+            true,
+            false,
+            "{}",
+            string.Empty,
+            "Healthy",
+            DateTimeOffset.UnixEpoch,
+            ["integration-model"])
+        {
+            IsPrivateProvider = true
+        };
     }
 
     private static Guid DeterministicGuid(int value)
@@ -150,34 +329,23 @@ public sealed class AiAgentDirectoryQueryIntegrationTests
         }
     }
 
-    private sealed class RecordingTechnicalAgentBridge
-        : IAiTechnicalAgentBridge
+    private sealed class RecordingReferenceDataProvider(
+        AgentReferenceDataSnapshot snapshot) : IAgentReferenceDataProvider
     {
-        private readonly IReadOnlyDictionary<Guid, AiTechnicalAgentDirectorySummary> summaries;
+        public List<AgentReferenceDataRequest> Requests { get; } = [];
 
-        public RecordingTechnicalAgentBridge(IReadOnlyList<Guid> partyIds)
+        public Task<AgentReferenceDataSnapshot> GetAsync(
+            AgentReferenceDataRequest request,
+            CancellationToken cancellationToken = default)
         {
-            summaries = partyIds
-                .Select((partyId, index) => new
-                {
-                    PartyId = partyId,
-                    Summary = new AiTechnicalAgentDirectorySummary(
-                        DeterministicGuid(12_000 + index),
-                        AiResourceBindingStatus.Bound,
-                        "Bound",
-                        AiExecutionMode.Remote,
-                        "Provider",
-                        "model",
-                        2,
-                        true,
-                        $"/agents?tab=agents&agentId={DeterministicGuid(12_000 + index):D}")
-                })
-                .ToDictionary(item => item.PartyId, item => item.Summary);
+            Requests.Add(request);
+            return Task.FromResult(snapshot);
         }
+    }
 
+    private sealed class RecordingTechnicalAgentBridge : IAiTechnicalAgentBridge
+    {
         public int RefreshCount { get; private set; }
-
-        public List<IReadOnlyList<Guid>> SummaryRequests { get; } = [];
 
         public Task SynchronizeDirectoryProjectionAsync(
             CancellationToken cancellationToken = default)
@@ -190,10 +358,7 @@ public sealed class AiAgentDirectoryQueryIntegrationTests
             IReadOnlyList<Guid> partyIds,
             CancellationToken cancellationToken = default)
         {
-            SummaryRequests.Add(partyIds.ToArray());
-            IReadOnlyDictionary<Guid, AiTechnicalAgentDirectorySummary> result = partyIds
-                .ToDictionary(partyId => partyId, partyId => summaries[partyId]);
-            return Task.FromResult(result);
+            throw new NotSupportedException();
         }
 
         public Task<AiTechnicalAgentWorkspaceModel> GetWorkspaceAsync(
