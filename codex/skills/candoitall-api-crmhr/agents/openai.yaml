@@ -1,0 +1,5 @@
+interface:
+  display_name: "CanDoItAll CRM-HR API"
+  short_description: "Operate CRM-HR safely through its HTTP API"
+  brand_color: "#0E7490"
+  default_prompt: "Use $candoitall-api-crmhr to create or inspect CRM-HR records through the supported HTTP API."

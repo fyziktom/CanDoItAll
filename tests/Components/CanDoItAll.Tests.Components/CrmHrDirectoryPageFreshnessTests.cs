@@ -14,6 +14,92 @@ namespace CanDoItAll.Tests.Components;
 public sealed class CrmHrDirectoryPageFreshnessTests
 {
     [Fact]
+    public async Task Saving_primary_contact_value_preserves_email_and_phone_metadata_separately()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var partyDirectoryService = harness.Context.Services.GetRequiredService<PartyDirectoryService>();
+        var navigation = harness.Context.Services.GetRequiredService<NavigationManager>();
+        var emailId = Guid.NewGuid();
+        var phoneId = Guid.NewGuid();
+        var saveResult = await partyDirectoryService.SavePartyAsync(new PartyEditorModel
+        {
+            PartyType = PartyType.Person,
+            LifecycleStatus = PartyLifecycleStatus.Active,
+            DisplayName = "Primary contact metadata",
+            LastChangedBy = "component-tests",
+            ContactPoints =
+            [
+                new PartyContactPointEditorModel
+                {
+                    Id = emailId,
+                    ContactType = PartyContactType.Email,
+                    Label = "Billing email",
+                    Value = "old@example.test",
+                    NormalizedValue = "old@example.test",
+                    IsPrimary = true,
+                    IsPublic = false,
+                    Tags = ["billing", "restricted"],
+                    Notes = "Use for invoices only."
+                },
+                new PartyContactPointEditorModel
+                {
+                    Id = phoneId,
+                    ContactType = PartyContactType.Phone,
+                    Label = "Escalation phone",
+                    Value = "+1 555 0100",
+                    NormalizedValue = "+15550100",
+                    IsPrimary = true,
+                    IsPublic = true,
+                    Tags = ["urgent"],
+                    Notes = "Call after email escalation."
+                }
+            ]
+        });
+        Assert.True(saveResult.IsSuccess);
+
+        navigation.NavigateTo($"/crm-hr/directory?partyId={saveResult.Value:D}");
+        var cut = harness.Context.RenderComponent<CrmHrDirectoryPage>();
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Equal(
+                "old@example.test",
+                cut.Find("[data-testid='crmhr-party-email']").GetAttribute("value"));
+            Assert.Equal(
+                "+1 555 0100",
+                cut.Find("[data-testid='crmhr-party-phone']").GetAttribute("value"));
+        });
+
+        cut.Find("[data-testid='crmhr-party-email']")
+            .Change("new@example.test");
+        await cut.Find("[data-testid='crmhr-party-save-button']")
+            .ClickAsync(new MouseEventArgs());
+
+        var savedParty = await partyDirectoryService.GetPartyAsync(saveResult.Value);
+
+        Assert.NotNull(savedParty);
+        var savedEmail = Assert.Single(
+            savedParty.ContactPoints,
+            item => item.ContactType == PartyContactType.Email);
+        Assert.Equal(emailId, savedEmail.Id);
+        Assert.Equal("new@example.test", savedEmail.Value);
+        Assert.Equal("new@example.test", savedEmail.NormalizedValue);
+        Assert.Equal("Billing email", savedEmail.Label);
+        Assert.False(savedEmail.IsPublic);
+        Assert.Equal(["billing", "restricted"], savedEmail.Tags);
+        Assert.Equal("Use for invoices only.", savedEmail.Notes);
+
+        var savedPhone = Assert.Single(
+            savedParty.ContactPoints,
+            item => item.ContactType == PartyContactType.Phone);
+        Assert.Equal(phoneId, savedPhone.Id);
+        Assert.Equal("+1 555 0100", savedPhone.Value);
+        Assert.Equal("Escalation phone", savedPhone.Label);
+        Assert.True(savedPhone.IsPublic);
+        Assert.Equal(["urgent"], savedPhone.Tags);
+        Assert.Equal("Call after email escalation.", savedPhone.Notes);
+    }
+
+    [Fact]
     public async Task Saving_profile_without_opening_relationships_preserves_existing_relationships()
     {
         await using var harness = await ComponentTestHarness.CreateAsync();
@@ -72,7 +158,7 @@ public sealed class CrmHrDirectoryPageFreshnessTests
     {
         await using var harness = await ComponentTestHarness.CreateAsync();
         var partyDirectoryService = harness.Context.Services.GetRequiredService<PartyDirectoryService>();
-        for (var index = 1; index <= 10; index++)
+        for (var index = 1; index <= 20; index++)
         {
             await CreatePartyAsync(partyDirectoryService, $"Paging slice party {index:D2}");
         }
@@ -83,28 +169,23 @@ public sealed class CrmHrDirectoryPageFreshnessTests
 
         cut.WaitForAssertion(() =>
         {
-            var scrollOwner = Assert.Single(
-                cut.FindAll("[data-testid='crmhr-directory-list-scroll']"));
-            Assert.Equal(8, cut.FindAll("[data-testid='crmhr-directory-item']").Count);
+            Assert.Single(cut.FindAll("[data-testid='crmhr-directory-results']"));
+            Assert.Equal(18, cut.FindAll("[data-testid='crmhr-directory-item']").Count);
             Assert.Contains("Paging slice party 01", cut.Markup);
-            Assert.Contains("Paging slice party 08", cut.Markup);
-            Assert.DoesNotContain("Paging slice party 09", cut.Markup);
-            Assert.Contains("Showing 1-8 of 10", cut.Markup);
-            Assert.Contains(
-                "overflow-y: auto",
-                scrollOwner.GetAttribute("style") ?? string.Empty);
-            Assert.Null(scrollOwner.QuerySelector("[data-testid='crmhr-directory-pager']"));
+            Assert.Contains("Paging slice party 18", cut.Markup);
+            Assert.DoesNotContain("Paging slice party 19", cut.Markup);
+            Assert.Contains("Page 1 of 2", cut.Markup);
         });
 
-        cut.Find("[data-testid='crmhr-directory-next-page']").Click();
+        cut.Find("[data-testid='crmhr-directory-next']").Click();
 
         cut.WaitForAssertion(() =>
         {
             Assert.Equal(2, cut.FindAll("[data-testid='crmhr-directory-item']").Count);
-            Assert.DoesNotContain("Paging slice party 08", cut.Markup);
-            Assert.Contains("Paging slice party 09", cut.Markup);
-            Assert.Contains("Paging slice party 10", cut.Markup);
-            Assert.Contains("Showing 9-10 of 10", cut.Markup);
+            Assert.DoesNotContain("Paging slice party 18", cut.Markup);
+            Assert.Contains("Paging slice party 19", cut.Markup);
+            Assert.Contains("Paging slice party 20", cut.Markup);
+            Assert.Contains("Page 2 of 2", cut.Markup);
         });
 
         cut.Find("[data-testid='crmhr-directory-search']")
@@ -112,11 +193,11 @@ public sealed class CrmHrDirectoryPageFreshnessTests
 
         cut.WaitForAssertion(() =>
         {
-            Assert.Equal(8, cut.FindAll("[data-testid='crmhr-directory-item']").Count);
+            Assert.Equal(18, cut.FindAll("[data-testid='crmhr-directory-item']").Count);
             Assert.Contains("Paging slice party 01", cut.Markup);
-            Assert.Contains("Paging slice party 08", cut.Markup);
-            Assert.DoesNotContain("Paging slice party 09", cut.Markup);
-            Assert.Contains("Showing 1-8 of 10", cut.Markup);
+            Assert.Contains("Paging slice party 18", cut.Markup);
+            Assert.DoesNotContain("Paging slice party 19", cut.Markup);
+            Assert.Contains("Page 1 of 2", cut.Markup);
         });
     }
 
@@ -173,6 +254,37 @@ public sealed class CrmHrDirectoryPageFreshnessTests
                 contextProvider.Instance.ContextAccessState);
             Assert.Null(contextProvider.Instance.Surface.Position.PrimarySelection);
             Assert.DoesNotContain(existingPartyId.ToString("D"), contextProvider.Instance.Surface.Source.Id.Value, StringComparison.Ordinal);
+            Assert.Empty(cut.FindAll("[data-testid='crmhr-directory-record-dialog']"));
+        });
+    }
+
+    [Fact]
+    public async Task Closing_the_record_dialog_invalidates_an_in_flight_save_refresh()
+    {
+        var loadGate = new DelayedDbContextCreationGate();
+        await using var harness = await ComponentTestHarness.CreateAsync(
+            services => WrapDbContextFactory(services, loadGate));
+        var partyDirectoryService = harness.Context.Services.GetRequiredService<PartyDirectoryService>();
+        var navigation = harness.Context.Services.GetRequiredService<NavigationManager>();
+        var partyId = await CreatePartyAsync(partyDirectoryService, "Closing save dialog");
+        navigation.NavigateTo($"/crm-hr/directory?partyId={partyId:D}");
+        var cut = harness.Context.RenderComponent<CrmHrDirectoryPage>();
+        cut.WaitForElement("[data-testid='crmhr-directory-record-dialog']");
+        cut.Find("[data-testid='crmhr-party-summary']").Change("Saved while closing");
+        loadGate.Arm();
+
+        var saveTask = cut.InvokeAsync(
+            () => cut.Find("[data-testid='crmhr-party-save-button']").Click());
+        await loadGate.WaitForDelayedCreationAsync();
+        await cut.InvokeAsync(
+            () => cut.Find("[data-testid='crmhr-directory-record-close']").Click());
+        loadGate.Release();
+        await saveTask;
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Empty(cut.FindAll("[data-testid='crmhr-directory-record-dialog']"));
+            Assert.EndsWith("/crm-hr/directory", navigation.Uri, StringComparison.Ordinal);
         });
     }
 
@@ -191,6 +303,8 @@ public sealed class CrmHrDirectoryPageFreshnessTests
                 contextProvider.Instance.Surface.Position.PrimarySelection);
             Assert.Equal(expectedPartyId.ToString("D"), selection.Id);
             Assert.Equal(expectedDisplayName, selection.DisplayName);
+            Assert.Single(cut.FindAll("[data-testid='crmhr-directory-record-dialog']"));
+            Assert.Contains(expectedDisplayName, cut.Markup);
         });
     }
 

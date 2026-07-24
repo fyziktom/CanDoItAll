@@ -12,6 +12,49 @@ namespace CanDoItAll.Tests.Unit;
 public sealed class CurrentProfileAgentFrameworkWorkspaceServiceTests
 {
     [Theory]
+    [InlineData(DirectoryProjectionMutation.SaveAgent)]
+    [InlineData(DirectoryProjectionMutation.DeleteAgent)]
+    [InlineData(DirectoryProjectionMutation.CloneAgent)]
+    [InlineData(DirectoryProjectionMutation.ConvertToTemplate)]
+    [InlineData(DirectoryProjectionMutation.ImportAgent)]
+    [InlineData(DirectoryProjectionMutation.SaveProvider)]
+    [InlineData(DirectoryProjectionMutation.DeleteProvider)]
+    [InlineData(DirectoryProjectionMutation.CreateOrUpdateProviderModel)]
+    [InlineData(DirectoryProjectionMutation.GrantProjectStructureAccess)]
+    [InlineData(DirectoryProjectionMutation.RevokeProjectStructureAccess)]
+    public async Task Directory_projection_mutation_invalidates_reference_data_on_both_sides_of_successful_synchronization(
+        DirectoryProjectionMutation mutation)
+    {
+        var calls = new List<ProjectionRefreshCall>();
+        var workspace = DispatchProxy.Create<IAgentFrameworkWorkspaceService, RecordingWorkspaceServiceProxy>();
+        var workspaceProxy = (RecordingWorkspaceServiceProxy)(object)workspace;
+        workspaceProxy.Calls = calls;
+        var bridge = DispatchProxy.Create<IAiTechnicalAgentBridge, RecordingTechnicalAgentBridgeProxy>();
+        var bridgeProxy = (RecordingTechnicalAgentBridgeProxy)(object)bridge;
+        bridgeProxy.Calls = calls;
+        var invalidator = new RecordingReferenceDataCacheInvalidator(calls);
+        var services = new ServiceCollection();
+        services.AddLogging();
+        using var serviceProvider = services.BuildServiceProvider();
+        var service = CreateCurrentProfileService(
+            new StubWorkspaceFactory(workspace),
+            bridge,
+            invalidator,
+            serviceProvider);
+
+        await ExecuteDirectoryProjectionMutationAsync(service, mutation);
+
+        Assert.Equal(
+            [
+                ProjectionRefreshCall.WorkspaceMutation,
+                ProjectionRefreshCall.ReferenceDataInvalidation,
+                ProjectionRefreshCall.DirectoryProjectionSynchronization,
+                ProjectionRefreshCall.ReferenceDataInvalidation
+            ],
+            calls);
+    }
+
+    [Theory]
     [InlineData(ProjectAccessMutation.Grant)]
     [InlineData(ProjectAccessMutation.Revoke)]
     public async Task Project_access_mutation_succeeds_after_catalog_commit_when_secondary_projections_fail(
@@ -72,6 +115,76 @@ public sealed class CurrentProfileAgentFrameworkWorkspaceServiceTests
             [workspaceFactory, technicalAgentBridge, referenceDataCacheInvalidator, logger]));
     }
 
+    private static async Task ExecuteDirectoryProjectionMutationAsync(
+        IAgentFrameworkWorkspaceService service,
+        DirectoryProjectionMutation mutation)
+    {
+        var entityId = Guid.NewGuid();
+
+        switch (mutation)
+        {
+            case DirectoryProjectionMutation.SaveAgent:
+                await service.SaveAgentAsync(new AgentEditorModel());
+                break;
+            case DirectoryProjectionMutation.DeleteAgent:
+                await service.DeleteAgentAsync(entityId);
+                break;
+            case DirectoryProjectionMutation.CloneAgent:
+                await service.CloneAgentAsync(entityId, "Clone");
+                break;
+            case DirectoryProjectionMutation.ConvertToTemplate:
+                await service.ConvertToTemplateAsync(entityId, "template-key");
+                break;
+            case DirectoryProjectionMutation.ImportAgent:
+                await service.ImportAgentAsync("agent-package");
+                break;
+            case DirectoryProjectionMutation.SaveProvider:
+                await service.SaveProviderAsync(new ProviderProfileEditorModel());
+                break;
+            case DirectoryProjectionMutation.DeleteProvider:
+                await service.DeleteProviderAsync(entityId);
+                break;
+            case DirectoryProjectionMutation.CreateOrUpdateProviderModel:
+                await service.CreateOrUpdateProviderModelAsync(
+                    entityId,
+                    new ProviderModelMaintenanceEditorRequest(
+                        "base-model",
+                        "target-model",
+                        "system-prompt",
+                        4096));
+                break;
+            case DirectoryProjectionMutation.GrantProjectStructureAccess:
+                await service.GrantAgentProjectStructureAccessAsync(entityId, Guid.NewGuid());
+                break;
+            case DirectoryProjectionMutation.RevokeProjectStructureAccess:
+                await service.RevokeAgentProjectStructureAccessAsync(entityId, Guid.NewGuid());
+                break;
+            default:
+                throw new ArgumentOutOfRangeException(nameof(mutation), mutation, null);
+        }
+    }
+
+    public enum DirectoryProjectionMutation
+    {
+        SaveAgent,
+        DeleteAgent,
+        CloneAgent,
+        ConvertToTemplate,
+        ImportAgent,
+        SaveProvider,
+        DeleteProvider,
+        CreateOrUpdateProviderModel,
+        GrantProjectStructureAccess,
+        RevokeProjectStructureAccess
+    }
+
+    private enum ProjectionRefreshCall
+    {
+        WorkspaceMutation,
+        ReferenceDataInvalidation,
+        DirectoryProjectionSynchronization
+    }
+
     public enum ProjectAccessMutation
     {
         Grant,
@@ -90,6 +203,41 @@ public sealed class CurrentProfileAgentFrameworkWorkspaceServiceTests
         public WorkspaceScopeDescriptor GetOrganizationScope() => scope;
 
         public string GetWorkspaceRoot() => string.Empty;
+    }
+
+    private class RecordingWorkspaceServiceProxy : DispatchProxy
+    {
+        public List<ProjectionRefreshCall> Calls { get; set; } = null!;
+
+        protected override object? Invoke(MethodInfo? targetMethod, object?[]? args)
+        {
+            ArgumentNullException.ThrowIfNull(targetMethod);
+            Calls.Add(ProjectionRefreshCall.WorkspaceMutation);
+
+            return targetMethod.Name switch
+            {
+                nameof(IAgentFrameworkWorkspaceService.SaveAgentAsync) or
+                nameof(IAgentFrameworkWorkspaceService.CloneAgentAsync) or
+                nameof(IAgentFrameworkWorkspaceService.ConvertToTemplateAsync) or
+                nameof(IAgentFrameworkWorkspaceService.ImportAgentAsync) or
+                nameof(IAgentFrameworkWorkspaceService.SaveProviderAsync)
+                    => Task.FromResult(Guid.NewGuid()),
+                nameof(IAgentFrameworkWorkspaceService.DeleteAgentAsync) or
+                nameof(IAgentFrameworkWorkspaceService.DeleteProviderAsync) or
+                nameof(IAgentFrameworkWorkspaceService.GrantAgentProjectStructureAccessAsync) or
+                nameof(IAgentFrameworkWorkspaceService.RevokeAgentProjectStructureAccessAsync)
+                    => Task.CompletedTask,
+                nameof(IAgentFrameworkWorkspaceService.CreateOrUpdateProviderModelAsync)
+                    => Task.FromResult(new ProviderModelMaintenanceEditorResult(
+                        "target-model",
+                        "base-model",
+                        "system-prompt",
+                        4096,
+                        "modelfile",
+                        "ok")),
+                _ => throw new NotSupportedException($"Unexpected workspace call '{targetMethod.Name}'.")
+            };
+        }
     }
 
     private class WorkspaceServiceProxy : DispatchProxy
@@ -118,6 +266,24 @@ public sealed class CurrentProfileAgentFrameworkWorkspaceServiceTests
         }
     }
 
+    private class RecordingTechnicalAgentBridgeProxy : DispatchProxy
+    {
+        public List<ProjectionRefreshCall> Calls { get; set; } = null!;
+
+        protected override object? Invoke(MethodInfo? targetMethod, object?[]? args)
+        {
+            ArgumentNullException.ThrowIfNull(targetMethod);
+
+            if (targetMethod.Name == nameof(IAiTechnicalAgentBridge.SynchronizeDirectoryProjectionAsync))
+            {
+                Calls.Add(ProjectionRefreshCall.DirectoryProjectionSynchronization);
+                return Task.CompletedTask;
+            }
+
+            throw new NotSupportedException($"Unexpected bridge call '{targetMethod.Name}'.");
+        }
+    }
+
     private class TechnicalAgentBridgeProxy : DispatchProxy
     {
         public int SynchronizationCallCount { get; private set; }
@@ -133,6 +299,25 @@ public sealed class CurrentProfileAgentFrameworkWorkspaceServiceTests
             }
 
             throw new NotSupportedException($"Unexpected bridge call '{targetMethod.Name}'.");
+        }
+    }
+
+    private sealed class RecordingReferenceDataCacheInvalidator(List<ProjectionRefreshCall> calls)
+        : IAgentReferenceDataCacheInvalidator
+    {
+        public event EventHandler? Invalidated
+        {
+            add
+            {
+            }
+            remove
+            {
+            }
+        }
+
+        public void Invalidate()
+        {
+            calls.Add(ProjectionRefreshCall.ReferenceDataInvalidation);
         }
     }
 

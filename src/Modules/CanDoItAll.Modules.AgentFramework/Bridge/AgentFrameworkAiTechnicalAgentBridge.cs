@@ -20,6 +20,10 @@ internal sealed class AgentFrameworkAiTechnicalAgentBridge(
     {
         var workspaceService = workspaceFactory.GetWorkspaceService(workspaceFactory.GetOrganizationScope());
         var agents = await workspaceService.ListAgentsAsync(includeTemplates: false, cancellationToken);
+        var providers = await workspaceService.ListProvidersAsync(cancellationToken);
+        var capabilities = await workspaceService.ListCapabilitiesAsync(cancellationToken);
+        var providersById = providers.ToDictionary(item => item.Id);
+        var capabilityNamesById = capabilities.ToDictionary(item => item.Id, item => item.Name);
         var currentAgentIds = agents
             .Select(item => item.Id)
             .ToHashSet();
@@ -70,6 +74,11 @@ internal sealed class AgentFrameworkAiTechnicalAgentBridge(
             var projectedDisplayName = agent.Name.Trim();
             var projectedSummary = BuildPartySummary(agent);
             var projectedLifecycleStatus = MapLifecycleStatus(agent.Status);
+            var projectedProvider = ResolveEffectiveProvider(agent, providersById);
+            var projectedProviderName = projectedProvider?.Name ?? string.Empty;
+            var projectedDefaultModel = ResolveEffectiveModel(agent, projectedProvider);
+            var projectedExecutionMode = ResolveExecutionMode(metadata, agent);
+            var projectedCapabilities = ResolveCapabilities(metadata, agent, capabilityNamesById);
 
             var binding = preferredPartyId.HasValue
                 ? bindingByPartyId.GetValueOrDefault(preferredPartyId.Value)
@@ -104,7 +113,6 @@ internal sealed class AgentFrameworkAiTechnicalAgentBridge(
                     DisplayName = projectedDisplayName,
                     Summary = projectedSummary,
                     ExtendedDataJson = "{}",
-                    TagsJson = BuildProjectedPartyTagsJson("[]", agent.Tags, projectedPartyId),
                     LastChangedBy = "agent-framework-sync",
                     CreatedAtUtc = timestamp,
                     UpdatedAtUtc = timestamp
@@ -131,13 +139,6 @@ internal sealed class AgentFrameworkAiTechnicalAgentBridge(
                 if (party.LifecycleStatus != projectedLifecycleStatus)
                 {
                     party.LifecycleStatus = projectedLifecycleStatus;
-                    partyChanged = true;
-                }
-
-                var projectedTagsJson = BuildProjectedPartyTagsJson(party.TagsJson, agent.Tags, party.Id);
-                if (!string.Equals(party.TagsJson, projectedTagsJson, StringComparison.Ordinal))
-                {
-                    party.TagsJson = projectedTagsJson;
                     partyChanged = true;
                 }
 
@@ -213,6 +214,21 @@ internal sealed class AgentFrameworkAiTechnicalAgentBridge(
                 }
             }
 
+            if (UpdateDirectoryProjection(
+                    binding,
+                    projectedExecutionMode,
+                    projectedProviderName,
+                    projectedDefaultModel,
+                    projectedCapabilities,
+                    agent.RoleTitle,
+                    agent.Instructions,
+                    agent.TemplateKey,
+                    agent.Tags,
+                    timestamp))
+            {
+                changed = true;
+            }
+
             if (bindingsByTechnicalAgentId.TryGetValue(agent.Id, out var duplicateBindings))
             {
                 foreach (var duplicateBinding in duplicateBindings.Where(item => item.Id != binding.Id))
@@ -243,6 +259,10 @@ internal sealed class AgentFrameworkAiTechnicalAgentBridge(
                         duplicateBinding.LastError = duplicateError;
                         duplicateChanged = true;
                     }
+
+                    duplicateChanged |= ClearDirectoryProjection(
+                        duplicateBinding,
+                        timestamp);
 
                     if (duplicateChanged)
                     {
@@ -284,6 +304,8 @@ internal sealed class AgentFrameworkAiTechnicalAgentBridge(
                 staleChanged = true;
             }
 
+            staleChanged |= ClearDirectoryProjection(staleBinding, timestamp);
+
             if (staleChanged)
             {
                 staleBinding.UpdatedAtUtc = timestamp;
@@ -297,97 +319,61 @@ internal sealed class AgentFrameworkAiTechnicalAgentBridge(
         }
     }
 
-    private static string BuildProjectedPartyTagsJson(
-        string existingTagsJson,
-        IReadOnlyList<string> agentTags,
-        Guid partyId)
-    {
-        var tags = DeserializeProjectedPartyTags(existingTagsJson, partyId)
-            .Concat(agentTags)
-            .Append(AgentFrameworkCrmHrMetadata.BuildPartyTag(partyId))
-            .Where(item => !string.IsNullOrWhiteSpace(item))
-            .Select(item => item.Trim())
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .OrderBy(item => item, StringComparer.OrdinalIgnoreCase)
-            .ToList();
-
-        return JsonSerializer.Serialize(tags);
-    }
-
-    private static IReadOnlyList<string> DeserializeProjectedPartyTags(
-        string existingTagsJson,
-        Guid partyId)
-    {
-        if (string.IsNullOrWhiteSpace(existingTagsJson))
-        {
-            return [];
-        }
-
-        try
-        {
-            return JsonSerializer.Deserialize<List<string>>(existingTagsJson) ?? [];
-        }
-        catch (JsonException exception)
-        {
-            throw new InvalidOperationException(
-                $"AI agent party '{partyId:D}' contains invalid tags JSON.",
-                exception);
-        }
-    }
-
     public async Task<IReadOnlyDictionary<Guid, AiTechnicalAgentDirectorySummary>> GetDirectorySummariesAsync(
         IReadOnlyList<Guid> partyIds,
         CancellationToken cancellationToken = default)
     {
-        if (partyIds.Count == 0)
+        var requestedPartyIds = partyIds
+            .Where(partyId => partyId != Guid.Empty)
+            .Distinct()
+            .ToArray();
+        if (requestedPartyIds.Length == 0)
         {
             return new Dictionary<Guid, AiTechnicalAgentDirectorySummary>();
         }
 
-        var workspaceService = workspaceFactory.GetWorkspaceService(workspaceFactory.GetOrganizationScope());
-        var agents = await workspaceService.ListAgentsAsync(includeTemplates: false, cancellationToken);
-        var providers = await workspaceService.ListProvidersAsync(cancellationToken);
-        var providersById = providers.ToDictionary(item => item.Id);
-
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         var bindings = await dbContext.Set<AiResourceBinding>()
-            .Where(item => partyIds.Contains(item.PartyId))
+            .AsNoTracking()
+            .Where(item => requestedPartyIds.Contains(item.PartyId))
             .ToListAsync(cancellationToken);
         var bindingByPartyId = bindings.ToDictionary(item => item.PartyId);
 
         var result = new Dictionary<Guid, AiTechnicalAgentDirectorySummary>();
-        foreach (var partyId in partyIds)
+        foreach (var partyId in requestedPartyIds)
         {
-            var resolved = ResolveBoundAgent(bindingByPartyId.GetValueOrDefault(partyId), agents, partyId);
-            if (resolved.Agent is null)
+            var binding = bindingByPartyId.GetValueOrDefault(partyId);
+            var hasTechnicalProfile =
+                binding?.TechnicalAgentId.HasValue == true &&
+                binding.BindingStatus == AiResourceBindingStatus.Bound &&
+                binding.ProjectionUpdatedAtUtc.HasValue;
+            if (!hasTechnicalProfile)
             {
                 result[partyId] = new AiTechnicalAgentDirectorySummary(
-                    resolved.Binding?.TechnicalAgentId,
-                    resolved.Binding?.BindingStatus ?? AiResourceBindingStatus.Unbound,
-                    ResolveBindingSummary(resolved.Binding, missingAgent: resolved.Binding?.TechnicalAgentId is not null),
+                    binding?.TechnicalAgentId,
+                    binding?.BindingStatus ?? AiResourceBindingStatus.Unbound,
+                    ResolveBindingSummary(
+                        binding,
+                        missingAgent: binding?.TechnicalAgentId is not null),
                     null,
                     string.Empty,
                     string.Empty,
                     0,
                     false,
-                    BuildAgentsRoute(resolved.Binding?.TechnicalAgentId));
+                    BuildAgentsRoute(binding?.TechnicalAgentId));
                 continue;
             }
 
-            var metadata = AgentFrameworkCrmHrMetadata.Read(resolved.Agent.ConfigurationJson);
-            var effectiveProvider = ResolveEffectiveProvider(resolved.Agent, providersById);
-            var resolvedModel = ResolveEffectiveModel(resolved.Agent, effectiveProvider);
-            var capabilityCount = ResolveCapabilityCount(metadata, resolved.Agent);
             result[partyId] = new AiTechnicalAgentDirectorySummary(
-                resolved.Agent.Id,
-                resolved.Binding?.BindingStatus ?? AiResourceBindingStatus.Bound,
-                ResolveBindingSummary(resolved.Binding, missingAgent: false),
-                ResolveExecutionMode(metadata, resolved.Agent),
-                effectiveProvider?.Name ?? string.Empty,
-                resolvedModel,
-                capabilityCount,
+                binding!.TechnicalAgentId,
+                binding.BindingStatus,
+                ResolveBindingSummary(binding, missingAgent: false),
+                binding.ProjectedExecutionMode,
+                binding.ProjectedProviderName,
+                binding.ProjectedDefaultModel,
+                binding.ProjectedCapabilityCount,
                 true,
-                BuildAgentsRoute(resolved.Agent.Id));
+                BuildAgentsRoute(binding.TechnicalAgentId));
         }
 
         return result;
@@ -444,95 +430,72 @@ internal sealed class AgentFrameworkAiTechnicalAgentBridge(
         IReadOnlyList<Guid> partyIds,
         CancellationToken cancellationToken = default)
     {
-        var workspaceService = workspaceFactory.GetWorkspaceService(workspaceFactory.GetOrganizationScope());
-        var agents = await workspaceService.ListAgentsAsync(includeTemplates: false, cancellationToken);
-        if (agents.Count == 0)
+        var requestedPartyIds = partyIds
+            .Where(partyId => partyId != Guid.Empty)
+            .Distinct()
+            .ToArray();
+        if (requestedPartyIds.Length == 0)
         {
             return new Dictionary<Guid, AiAgentStaffingFactModel>();
         }
-
-        IReadOnlyList<Guid> resolvedPartyIds;
-        if (partyIds.Count == 0)
-        {
-            resolvedPartyIds = agents
-                .Select(agent => AgentFrameworkCrmHrMetadata.ResolvePartyId(agent.ConfigurationJson, agent.Tags))
-                .Where(item => item.HasValue)
-                .Select(item => item!.Value)
-                .Distinct()
-                .ToList();
-        }
-        else
-        {
-            resolvedPartyIds = partyIds;
-        }
-
-        if (resolvedPartyIds.Count == 0)
-        {
-            return new Dictionary<Guid, AiAgentStaffingFactModel>();
-        }
-
-        var providers = await workspaceService.ListProvidersAsync(cancellationToken);
-        var providersById = providers.ToDictionary(item => item.Id);
-        var capabilities = await workspaceService.ListCapabilitiesAsync(cancellationToken);
-        var capabilityNamesById = capabilities.ToDictionary(item => item.Id, item => item.Name);
 
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         var bindings = await dbContext.Set<AiResourceBinding>()
-            .Where(item => resolvedPartyIds.Contains(item.PartyId))
+            .AsNoTracking()
+            .Where(item => requestedPartyIds.Contains(item.PartyId))
             .ToDictionaryAsync(item => item.PartyId, cancellationToken);
         var parties = await dbContext.Set<Party>()
-            .Where(item => resolvedPartyIds.Contains(item.Id))
+            .AsNoTracking()
+            .Where(item => requestedPartyIds.Contains(item.Id))
             .ToDictionaryAsync(item => item.Id, cancellationToken);
 
-        var result = new Dictionary<Guid, AiAgentStaffingFactModel>(resolvedPartyIds.Count);
-        foreach (var partyId in resolvedPartyIds)
+        var result = new Dictionary<Guid, AiAgentStaffingFactModel>(requestedPartyIds.Length);
+        foreach (var partyId in requestedPartyIds)
         {
             bindings.TryGetValue(partyId, out var binding);
             parties.TryGetValue(partyId, out var party);
-            var resolved = ResolveBoundAgent(binding, agents, partyId);
-            if (resolved.Agent is null)
+            if (binding is not
+                {
+                    TechnicalAgentId: not null,
+                    BindingStatus: AiResourceBindingStatus.Bound,
+                    ProjectionUpdatedAtUtc: not null
+                })
             {
-                var bindingSummary = ResolveBindingSummary(resolved.Binding, missingAgent: resolved.Binding?.TechnicalAgentId is not null);
                 result[partyId] = new AiAgentStaffingFactModel(
                     partyId,
-                    resolved.Binding?.TechnicalAgentId,
+                    binding?.TechnicalAgentId,
                     party?.DisplayName ?? string.Empty,
                     string.Empty,
                     party?.Summary ?? string.Empty,
                     string.Empty,
-                    resolved.Binding?.BindingStatus ?? AiResourceBindingStatus.Unbound,
-                    bindingSummary,
+                    binding?.BindingStatus ?? AiResourceBindingStatus.Unbound,
+                    ResolveBindingSummary(binding, missingAgent: binding?.TechnicalAgentId is not null),
                     null,
                     string.Empty,
                     string.Empty,
                     string.Empty,
                     [],
                     [],
-                    BuildAgentsRoute(resolved.Binding?.TechnicalAgentId));
+                    BuildAgentsRoute(binding?.TechnicalAgentId));
                 continue;
             }
 
-            var metadata = AgentFrameworkCrmHrMetadata.Read(resolved.Agent.ConfigurationJson);
-            var resolvedCapabilities = ResolveCapabilities(metadata, resolved.Agent, capabilityNamesById);
-            var effectiveProvider = ResolveEffectiveProvider(resolved.Agent, providersById);
-            var resolvedModel = ResolveEffectiveModel(resolved.Agent, effectiveProvider);
-
             result[partyId] = new AiAgentStaffingFactModel(
                 partyId,
-                resolved.Agent.Id,
-                party?.DisplayName ?? resolved.Agent.Name,
-                resolved.Agent.RoleTitle,
-                string.IsNullOrWhiteSpace(party?.Summary) ? resolved.Agent.Summary : party.Summary,
-                resolved.Agent.Instructions,
-                resolved.Binding?.BindingStatus ?? AiResourceBindingStatus.Bound,
-                ResolveBindingSummary(resolved.Binding, missingAgent: false),
-                ResolveExecutionMode(metadata, resolved.Agent),
-                effectiveProvider?.Name ?? string.Empty,
-                resolvedModel,
-                resolved.Agent.TemplateKey,
-                resolved.Agent.Tags,
-                resolvedCapabilities,
-                BuildAgentsRoute(resolved.Agent.Id));
+                binding.TechnicalAgentId,
+                party?.DisplayName ?? string.Empty,
+                binding.ProjectedRoleTitle,
+                party?.Summary ?? string.Empty,
+                binding.ProjectedInstructions,
+                binding.BindingStatus,
+                ResolveBindingSummary(binding, missingAgent: false),
+                binding.ProjectedExecutionMode,
+                binding.ProjectedProviderName,
+                binding.ProjectedDefaultModel,
+                binding.ProjectedTemplateKey,
+                DeserializeProjectedTags(binding),
+                DeserializeProjectedCapabilities(binding),
+                BuildAgentsRoute(binding.TechnicalAgentId));
         }
 
         return result;
@@ -623,6 +586,19 @@ internal sealed class AgentFrameworkAiTechnicalAgentBridge(
             binding.BindingReason = "Bound to AgentFramework organization catalog.";
             binding.LastError = string.Empty;
             binding.UpdatedAtUtc = timestamp;
+            UpdateDirectoryProjection(
+                binding,
+                model.ExecutionMode,
+                selectedProvider?.Name ?? string.Empty,
+                string.IsNullOrWhiteSpace(editor.Model)
+                    ? selectedProvider?.DefaultModel ?? string.Empty
+                    : editor.Model,
+                normalizedCapabilities,
+                editor.RoleTitle,
+                editor.Instructions,
+                editor.TemplateKey,
+                editor.Tags,
+                timestamp);
             await dbContext.SaveChangesAsync(cancellationToken);
 
             return Result<AiTechnicalAgentSaveResult>.Success(
@@ -720,6 +696,52 @@ internal sealed class AgentFrameworkAiTechnicalAgentBridge(
             : binding.BindingReason;
     }
 
+    private static IReadOnlyList<string> DeserializeProjectedTags(AiResourceBinding binding)
+    {
+        try
+        {
+            return JsonSerializer.Deserialize<List<string>>(binding.ProjectedTagsJson)?
+                .Where(tag => !string.IsNullOrWhiteSpace(tag))
+                .Select(tag => tag.Trim())
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .OrderBy(tag => tag, StringComparer.OrdinalIgnoreCase)
+                .ToArray()
+                ?? [];
+        }
+        catch (JsonException exception)
+        {
+            throw new InvalidOperationException(
+                $"AI resource binding '{binding.Id:D}' contains invalid projected tags JSON.",
+                exception);
+        }
+    }
+
+    private static IReadOnlyList<AiCapabilityEditorModel> DeserializeProjectedCapabilities(
+        AiResourceBinding binding)
+    {
+        try
+        {
+            return JsonSerializer.Deserialize<List<AiCapabilityEditorModel>>(
+                binding.ProjectedCapabilitiesJson)?
+                .Select(capability => new AiCapabilityEditorModel
+                {
+                    Name = capability.Name?.Trim() ?? string.Empty,
+                    Scope = capability.Scope?.Trim() ?? string.Empty,
+                    ToolAccess = capability.ToolAccess?.Trim() ?? string.Empty,
+                    Limitations = capability.Limitations?.Trim() ?? string.Empty,
+                    Notes = capability.Notes?.Trim() ?? string.Empty
+                })
+                .ToArray()
+                ?? [];
+        }
+        catch (JsonException exception)
+        {
+            throw new InvalidOperationException(
+                $"AI resource binding '{binding.Id:D}' contains invalid projected capabilities JSON.",
+                exception);
+        }
+    }
+
     private static string BuildAgentsRoute(
         Guid? agentId)
     {
@@ -748,6 +770,107 @@ internal sealed class AgentFrameworkAiTechnicalAgentBridge(
             : agent.Summary.Trim();
     }
 
+    private static bool UpdateDirectoryProjection(
+        AiResourceBinding binding,
+        AiExecutionMode? executionMode,
+        string providerName,
+        string defaultModel,
+        IReadOnlyList<AiCapabilityEditorModel> capabilities,
+        string roleTitle,
+        string instructions,
+        string templateKey,
+        IReadOnlyList<string> tags,
+        DateTimeOffset timestamp)
+    {
+        var projectedTagsJson = SerializeTags(tags);
+        var projectedCapabilitiesJson = SerializeCapabilities(capabilities);
+        var changed = false;
+        if (binding.ProjectedExecutionMode != executionMode)
+        {
+            binding.ProjectedExecutionMode = executionMode;
+            changed = true;
+        }
+
+        if (!string.Equals(
+                binding.ProjectedProviderName,
+                providerName,
+                StringComparison.Ordinal))
+        {
+            binding.ProjectedProviderName = providerName;
+            changed = true;
+        }
+
+        if (!string.Equals(
+                binding.ProjectedDefaultModel,
+                defaultModel,
+                StringComparison.Ordinal))
+        {
+            binding.ProjectedDefaultModel = defaultModel;
+            changed = true;
+        }
+
+        if (binding.ProjectedCapabilityCount != capabilities.Count)
+        {
+            binding.ProjectedCapabilityCount = capabilities.Count;
+            changed = true;
+        }
+
+        if (!string.Equals(binding.ProjectedRoleTitle, roleTitle, StringComparison.Ordinal))
+        {
+            binding.ProjectedRoleTitle = roleTitle;
+            changed = true;
+        }
+
+        if (!string.Equals(binding.ProjectedInstructions, instructions, StringComparison.Ordinal))
+        {
+            binding.ProjectedInstructions = instructions;
+            changed = true;
+        }
+
+        if (!string.Equals(binding.ProjectedTemplateKey, templateKey, StringComparison.Ordinal))
+        {
+            binding.ProjectedTemplateKey = templateKey;
+            changed = true;
+        }
+
+        if (!string.Equals(binding.ProjectedTagsJson, projectedTagsJson, StringComparison.Ordinal))
+        {
+            binding.ProjectedTagsJson = projectedTagsJson;
+            changed = true;
+        }
+
+        if (!string.Equals(binding.ProjectedCapabilitiesJson, projectedCapabilitiesJson, StringComparison.Ordinal))
+        {
+            binding.ProjectedCapabilitiesJson = projectedCapabilitiesJson;
+            changed = true;
+        }
+
+        if (changed || !binding.ProjectionUpdatedAtUtc.HasValue)
+        {
+            binding.ProjectionUpdatedAtUtc = timestamp;
+            changed = true;
+        }
+
+        return changed;
+    }
+
+    private static bool ClearDirectoryProjection(
+        AiResourceBinding binding,
+        DateTimeOffset timestamp)
+    {
+        return UpdateDirectoryProjection(
+            binding,
+            null,
+            string.Empty,
+            string.Empty,
+            [],
+            string.Empty,
+            string.Empty,
+            string.Empty,
+            [],
+            timestamp);
+    }
+
     private static AiExecutionMode? ResolveExecutionMode(
         AgentFrameworkCrmHrMetadataModel? metadata,
         AgentDefinition? agent)
@@ -762,16 +885,26 @@ internal sealed class AgentFrameworkAiTechnicalAgentBridge(
             : AiExecutionMode.Remote;
     }
 
-    private static int ResolveCapabilityCount(
-        AgentFrameworkCrmHrMetadataModel? metadata,
-        AgentDefinition agent)
+    private static string SerializeTags(IReadOnlyList<string> tags)
     {
-        if (metadata?.Capabilities.Count > 0)
-        {
-            return metadata.Capabilities.Count;
-        }
+        return JsonSerializer.Serialize(tags
+            .Where(tag => !string.IsNullOrWhiteSpace(tag))
+            .Select(tag => tag.Trim())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(tag => tag, StringComparer.OrdinalIgnoreCase)
+            .ToArray());
+    }
 
-        return agent.Capabilities.Count;
+    private static string SerializeCapabilities(IReadOnlyList<AiCapabilityEditorModel> capabilities)
+    {
+        return JsonSerializer.Serialize(capabilities.Select(capability => new AiCapabilityEditorModel
+        {
+            Name = capability.Name?.Trim() ?? string.Empty,
+            Scope = capability.Scope?.Trim() ?? string.Empty,
+            ToolAccess = capability.ToolAccess?.Trim() ?? string.Empty,
+            Limitations = capability.Limitations?.Trim() ?? string.Empty,
+            Notes = capability.Notes?.Trim() ?? string.Empty
+        }).ToArray());
     }
 
     private static IReadOnlyList<AiCapabilityEditorModel> ResolveCapabilities(

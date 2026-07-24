@@ -195,7 +195,7 @@ CRM workspace (sanitized)
 Subview: CRM
 AccountCount: {accountCount}
 SelectedAccount: None
-""";
+""".ReplaceLineEndings("\n");
         return new AgentChatContextFragment(
             new AgentChatContextContributorId(WorkspaceContributorId),
             order: 50,
@@ -255,7 +255,7 @@ DisplayLabel: {account.DisplayLabel}
 LifecycleStatus: {account.LifecycleStatus}
 RelationshipStage: {account.RelationshipStage}
 Roles: {roles}
-""";
+""".ReplaceLineEndings("\n");
         return new AgentChatContextFragment(
             new AgentChatContextContributorId(AccountContributorId),
             order: 100,
@@ -277,7 +277,7 @@ DisplayLabel: {opportunity.DisplayLabel}
 Stage: {opportunity.Stage}
 Source: {opportunity.Source}
 PartyRoles: {roles}
-""";
+""".ReplaceLineEndings("\n");
         return new AgentChatContextFragment(
             new AgentChatContextContributorId(OpportunityContributorId),
             order: 200,
@@ -296,7 +296,7 @@ InteractionId: {interaction.InteractionId:D}
 DisplayLabel: {interaction.DisplayLabel}
 InteractionType: {interaction.InteractionType}
 RelatedOpportunityId: {relatedOpportunityId}
-""";
+""".ReplaceLineEndings("\n");
         return new AgentChatContextFragment(
             new AgentChatContextContributorId(InteractionContributorId),
             order: 225,

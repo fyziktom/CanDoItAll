@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Routing;
 using Microsoft.AspNetCore.WebUtilities;
+using CanDoItAll.Modules.CrmHr;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.SharedKernel;
 using CanDoItAll.Web.Composition;
@@ -354,12 +355,16 @@ public partial class MainLayout
         return project.Id.HasValue ? project : null;
     }
 
-    private WorkbenchTabDescriptor BuildPageDescriptor(string path, string route)
+    internal WorkbenchTabDescriptor BuildPageDescriptor(string path, string route)
     {
         var navigation = ShellNavigation.MatchRoute(path.TrimStart('/'), ShellNavigationContributors);
+        var title = CrmHrRouteCatalog.TryResolve(path, out var crmHrRoute)
+            ? crmHrRoute.WorkbenchTitle
+            : navigation.Title;
+
         return new WorkbenchTabDescriptor(
             string.Equals(path, "/settings", StringComparison.OrdinalIgnoreCase) ? "route:settings" : BuildPageTabId(path),
-            navigation.Title,
+            title,
             route,
             string.Equals(path, "/settings", StringComparison.OrdinalIgnoreCase) ? WorkbenchTabKinds.Settings : WorkbenchTabKinds.Page,
             ArtifactKind: navigation.Title,

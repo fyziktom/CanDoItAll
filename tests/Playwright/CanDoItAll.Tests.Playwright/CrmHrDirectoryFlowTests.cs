@@ -181,7 +181,7 @@ public sealed class CrmHrDirectoryFlowTests
     private static async Task SelectPartyAsync(IPage page, string partyName)
     {
         await page.GetByTestId("crmhr-directory-search").FillAsync(partyName);
-        var listItem = page.Locator($"div[data-testid='crmhr-directory-item']:has-text(\"{EscapeSelectorText(partyName)}\")").First;
+        var listItem = page.Locator($"[data-testid='crmhr-directory-item']:has-text(\"{EscapeSelectorText(partyName)}\")").First;
         await listItem.WaitForAsync();
         await listItem.GetByText(partyName, new LocatorGetByTextOptions { Exact = true }).First.ClickAsync();
         await page.GetByTestId("crmhr-party-display-name").WaitForAsync();

@@ -180,11 +180,15 @@ The selected database profile can change, but control-plane metadata and local w
 
 The current automation boundary is split deliberately:
 
-- HTTP API: `/api/projects`, `/api/project-structure`, `/api/processes`, `/api/agents`, `/api/workflows`, `/api/cognitive-memory`, `/api/plugins`, and `/api/access`.
-- Codex/operator API skills: `candoitall-api-project-structure`, `candoitall-api-processes`, `candoitall-api-agents`, `candoitall-api-workflows`, and `candoitall-api-cognitive-memory`.
+- HTTP API: `/api/projects`, `/api/project-structure`, `/api/processes`, `/api/agents`, `/api/workflows`, `/api/cognitive-memory`, `/api/crm-hr`, `/api/plugins`, and `/api/access`.
+- Codex/operator API skills: `candoitall-api-project-structure`, `candoitall-api-processes`, `candoitall-api-agents`, `candoitall-api-workflows`, `candoitall-api-cognitive-memory`, and `candoitall-api-crmhr`.
 - Internal app capability templates: skills, tools, MCP servers, and access policies under `Templates/Capabilities`.
 - Selected MCP sidecars: development and diagnostics helpers from the sibling `CanDoItAll.Mcp` repo.
 - Suppressed MCPs: old Processes and ProjectStructure MCP servers are not current. Use the HTTP APIs plus Codex/operator API skills for external operation, and use template-backed app capabilities for internal agents.
+
+The CRM-HR HTTP family is a Web transport adapter over module-owned application/query services. Its high-cardinality party, workforce, and recruiting collection paths are source-paged; it has no direct EF persistence and no scenario seed route. API-created demonstration data is reconciled by an external search-before-create operator flow.
+
+The CRM-HR Agents UI is a projection consumer, not an agent source of truth. Canonical card identity comes from the shared, invalidation-aware `IAgentReferenceDataProvider` snapshot; CRM-HR joins it through the persisted `AiResourceBinding.TechnicalAgentId` mapping to its owner, validation, lifecycle, and contact data. A short-lived scoped composite snapshot serves search, validation filtering, paging, and direct dialog lookup without repeated EF reads. AgentFramework mutations invalidate shared reference data before synchronization and again after a successful CRM-HR projection commit, preventing a request in the synchronization window from retaining a mixed snapshot. CRM-HR may display technical fields and route to AgentFramework, but it does not edit or reconstruct the AgentFramework model.
 
 ## Validation Guidance
 

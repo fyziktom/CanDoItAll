@@ -6,7 +6,7 @@
           ColumnsMd="2"
           ColumnsXl="3"
           data-testid="@($"{TestIdPrefix}-grid")">
-        @foreach (var item in PagedItems)
+        @foreach (var item in VisibleItems)
         {
             <div @key="item" class="h-full">
                 @ItemTemplate(item)
@@ -23,26 +23,26 @@
                Wrap="FlexWrap.Wrap"
                Class="mt-3"
                data-testid="@($"{TestIdPrefix}-pager")">
-            <SmallText Text="@($"Showing {FirstVisibleItem}-{LastVisibleItem} of {Items.Count}")" />
+            <SmallText Text="@($"Showing {FirstVisibleItem}-{LastVisibleItem} of {ResolvedTotalCount}")" />
             <Cluster Gap="LayoutGap.XSmall" Wrap="FlexWrap.NoWrap">
                 <TooltipTarget Text="Previous page" Position="TooltipPosition.Bottom">
                     <Button ButtonStyle="ButtonStyle.Light"
                             Class="cda-button--quick"
                             Icon="chevron_left"
-                            Disabled="@(pageIndex == 0)"
+                            Disabled="@(CurrentPageIndex == 0)"
                             aria-label="Previous page"
                             data-testid="@($"{TestIdPrefix}-previous-page")"
-                            Click="@(() => MovePage(-1))" />
+                            Click="@(() => MovePageAsync(-1))" />
                 </TooltipTarget>
-                <StatusBadge Tone="neutral" Text="@($"{pageIndex + 1} / {PageCount}")" />
+                <StatusBadge Tone="neutral" Text="@($"{CurrentPageIndex + 1} / {PageCount}")" />
                 <TooltipTarget Text="Next page" Position="TooltipPosition.Bottom">
                     <Button ButtonStyle="ButtonStyle.Light"
                             Class="cda-button--quick"
                             Icon="chevron_right"
-                            Disabled="@(pageIndex >= PageCount - 1)"
+                            Disabled="@(CurrentPageIndex >= PageCount - 1)"
                             aria-label="Next page"
                             data-testid="@($"{TestIdPrefix}-next-page")"
-                            Click="@(() => MovePage(1))" />
+                            Click="@(() => MovePageAsync(1))" />
                 </TooltipTarget>
             </Cluster>
         </Split>
@@ -60,30 +60,65 @@
     public int PageSize { get; set; } = 6;
 
     [Parameter]
+    public int? TotalCount { get; set; }
+
+    [Parameter]
+    public int PageIndex { get; set; }
+
+    [Parameter]
+    public EventCallback<int> PageChanged { get; set; }
+
+    [Parameter]
     public string TestIdPrefix { get; set; } = "crmhr-paged-cards";
 
-    private int pageIndex;
+    private int localPageIndex;
 
     private int NormalizedPageSize => Math.Max(1, PageSize);
 
-    private int PageCount => Math.Max(1, (int)Math.Ceiling(Items.Count / (double)NormalizedPageSize));
+    private bool IsServerPaged => TotalCount.HasValue && PageChanged.HasDelegate;
 
-    private int FirstVisibleItem => pageIndex * NormalizedPageSize + 1;
+    private int CurrentPageIndex => IsServerPaged ? PageIndex : localPageIndex;
 
-    private int LastVisibleItem => Math.Min((pageIndex + 1) * NormalizedPageSize, Items.Count);
+    private int ResolvedTotalCount => TotalCount ?? Items.Count;
 
-    private IReadOnlyList<TItem> PagedItems => Items
-        .Skip(pageIndex * NormalizedPageSize)
-        .Take(NormalizedPageSize)
-        .ToList();
+    private int PageCount => Math.Max(
+        1,
+        (int)Math.Ceiling(ResolvedTotalCount / (double)NormalizedPageSize));
+
+    private int FirstVisibleItem => ResolvedTotalCount == 0
+        ? 0
+        : CurrentPageIndex * NormalizedPageSize + 1;
+
+    private int LastVisibleItem => Math.Min(
+        CurrentPageIndex * NormalizedPageSize + Items.Count,
+        ResolvedTotalCount);
+
+    private IReadOnlyList<TItem> VisibleItems => IsServerPaged
+        ? Items
+        : Items
+            .Skip(localPageIndex * NormalizedPageSize)
+            .Take(NormalizedPageSize)
+            .ToList();
 
     protected override void OnParametersSet()
     {
-        pageIndex = Math.Clamp(pageIndex, 0, PageCount - 1);
+        localPageIndex = Math.Clamp(localPageIndex, 0, PageCount - 1);
     }
 
-    private void MovePage(int delta)
+    private async Task MovePageAsync(int delta)
     {
-        pageIndex = Math.Clamp(pageIndex + delta, 0, PageCount - 1);
+        var targetPageIndex = Math.Clamp(CurrentPageIndex + delta, 0, PageCount - 1);
+        if (targetPageIndex == CurrentPageIndex)
+        {
+            return;
+        }
+
+        if (IsServerPaged)
+        {
+            await PageChanged.InvokeAsync(targetPageIndex);
+            return;
+        }
+
+        localPageIndex = targetPageIndex;
     }
 }

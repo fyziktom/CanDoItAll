@@ -42,7 +42,8 @@ public static class CrmHrAgentChatSurfaceBuilder
         string? displayName = null,
         PartyLifecycleStatus? lifecycleStatus = null,
         WorkforceAvailabilityState? availabilityStatus = null,
-        bool hasWorkforceProfile = true)
+        bool hasWorkforceProfile = true,
+        bool availabilityLoaded = true)
     {
         var selection = BuildSelection("workforce-party", partyId, displayName, nameof(partyId));
         return BuildSurface(
@@ -55,7 +56,8 @@ public static class CrmHrAgentChatSurfaceBuilder
                 selection,
                 lifecycleStatus,
                 availabilityStatus,
-                hasWorkforceProfile));
+                hasWorkforceProfile,
+                availabilityLoaded));
     }
 
     public static AgentChatContextSurface BuildRecruitingSurface(
@@ -287,7 +289,8 @@ public static class CrmHrAgentChatSurfaceBuilder
         AgentChatContextEntityReference? selection,
         PartyLifecycleStatus? lifecycleStatus,
         WorkforceAvailabilityState? availabilityStatus,
-        bool hasWorkforceProfile)
+        bool hasWorkforceProfile,
+        bool availabilityLoaded)
     {
         if (selection is null)
         {
@@ -295,12 +298,14 @@ public static class CrmHrAgentChatSurfaceBuilder
         }
 
         var lifecycleFact = BuildFact("lifecycle-status", lifecycleStatus);
-        if (!hasWorkforceProfile)
+        if (!hasWorkforceProfile || !availabilityLoaded)
         {
             if (availabilityStatus.HasValue)
             {
                 throw new ArgumentException(
-                    "A workforce party without a profile cannot publish availability state.",
+                    hasWorkforceProfile
+                        ? "A workforce party cannot publish availability state before capacity is loaded."
+                        : "A workforce party without a profile cannot publish availability state.",
                     nameof(availabilityStatus));
             }
 

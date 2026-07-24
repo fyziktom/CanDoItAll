@@ -61,13 +61,9 @@ else
                              Value="@Account.Stakeholders.Count.ToString()"
                              TooltipText="Stakeholders linked to this account." />
                 <CompactStat Label="opportunities"
-                             Value="@Account.Opportunities.Count.ToString()"
+                             Value="@Account.OpportunityCount.ToString()"
                              TooltipText="Opportunities currently attached to this account."
                              Tone="info" />
-                <CompactStat Label="overdue actions"
-                             Value="@Account.OverdueNextActions.Count.ToString()"
-                             TooltipText="Overdue next actions for this account."
-                             Tone="warning" />
                 <CompactStat Label="tags"
                              Value="@Account.Tags.Count.ToString()"
                              TooltipText="Tags currently attached to this account." />

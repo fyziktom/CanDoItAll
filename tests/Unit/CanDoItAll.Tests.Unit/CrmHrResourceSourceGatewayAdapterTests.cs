@@ -1,4 +1,5 @@
 using CanDoItAll.Memory.SourceGateway;
+using System.Text.Json;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Memory.Application;
@@ -72,6 +73,8 @@ public sealed class CrmHrResourceSourceGatewayAdapterTests
         Assert.Contains("[REDACTED]", combinedContent, StringComparison.Ordinal);
         Assert.DoesNotContain("crm-secret", combinedContent, StringComparison.Ordinal);
         Assert.DoesNotContain("private@example.test", combinedContent, StringComparison.Ordinal);
+        Assert.DoesNotContain("strategic", combinedContent, StringComparison.Ordinal);
+        Assert.DoesNotContain("private-channel", combinedContent, StringComparison.Ordinal);
         Assert.All(
             result.Snapshot.Items.Where(item => item.Permission.ContainsSensitivePayload),
             item =>
@@ -79,6 +82,167 @@ public sealed class CrmHrResourceSourceGatewayAdapterTests
                 Assert.Equal(MemorySourceAccessMode.Redacted, item.Permission.AccessMode);
                 Assert.Equal(MemorySourceHashClassification.RestrictedIntegrity, item.HashPolicy.Classification);
             });
+    }
+
+    [Fact]
+    public async Task Crm_hr_source_pages_mixed_records_with_stable_v2_page_scoped_cursors()
+    {
+        using var serviceProvider = CreateServiceProvider();
+        using var scope = serviceProvider.CreateScope();
+        var scopedProvider = scope.ServiceProvider;
+        await SeedCrmHrAsync(scopedProvider);
+        var provider = scopedProvider.GetRequiredService<ICrmHrSourceSnapshotProvider>();
+
+        var full = await provider.ReadSnapshotAsync(new CrmHrSourceSnapshotRequest(
+            PartyId,
+            Take: MemorySourceSnapshotPage.MaxTake));
+        var first = await provider.ReadSnapshotAsync(new CrmHrSourceSnapshotRequest(
+            PartyId,
+            Take: 2));
+        var second = await provider.ReadSnapshotAsync(new CrmHrSourceSnapshotRequest(
+            PartyId,
+            first.Manifest.NextCursor,
+            Take: 2));
+        var repeatedSecond = await provider.ReadSnapshotAsync(new CrmHrSourceSnapshotRequest(
+            PartyId,
+            first.Manifest.NextCursor,
+            Take: 2));
+        var third = await provider.ReadSnapshotAsync(new CrmHrSourceSnapshotRequest(
+            PartyId,
+            second.Manifest.NextCursor,
+            Take: 2));
+
+        Assert.Equal(5, full.Manifest.TotalItemCount);
+        Assert.Equal(
+            full.Items.Select(item => item.Id),
+            first.Items
+                .Concat(second.Items)
+                .Concat(third.Items)
+                .Select(item => item.Id));
+        Assert.All(
+            new[] { full, first, second, repeatedSecond, third },
+            snapshot =>
+            {
+                Assert.Equal(MemorySourceSnapshotHashScope.PageScoped, snapshot.Manifest.SnapshotHashScope);
+                Assert.Equal(MemorySourceSnapshotProviderVersions.CrmHr, snapshot.Manifest.ProviderVersion);
+                Assert.Equal(5, snapshot.Manifest.TotalItemCount);
+            });
+        Assert.Equal(second.Manifest.SnapshotId, repeatedSecond.Manifest.SnapshotId);
+        Assert.Equal(
+            second.Items.Select(item => item.ContentHash),
+            repeatedSecond.Items.Select(item => item.ContentHash));
+        Assert.False(third.Manifest.HasMore);
+        Assert.Null(third.Manifest.NextCursor);
+        Assert.Equal(MemorySourceSnapshotPageStatus.EndOfSource, third.Manifest.PageStatus);
+
+        var staleCursor = MemorySourceSnapshotCursor.Create(
+            MemorySourceKind.CrmHr,
+            PartyId,
+            MemorySourceSnapshotProviderVersions.CrmHr,
+            2,
+            full.Items[2].Id);
+        var staleException = await Assert.ThrowsAsync<MemorySourceSnapshotCursorException>(
+            async () => await provider.ReadSnapshotAsync(new CrmHrSourceSnapshotRequest(
+                PartyId,
+                staleCursor,
+                Take: 2)));
+        Assert.Equal(MemorySourceSnapshotCursorFailureReason.StaleAnchor, staleException.Reason);
+
+        var legacyCursor = MemorySourceSnapshotCursor.Create(
+            MemorySourceKind.CrmHr,
+            PartyId,
+            "crm-hr-source-v1",
+            2,
+            first.Items[^1].Id);
+        var legacyException = await Assert.ThrowsAsync<MemorySourceSnapshotCursorException>(
+            async () => await provider.ReadSnapshotAsync(new CrmHrSourceSnapshotRequest(
+                PartyId,
+                legacyCursor,
+                Take: 2)));
+        Assert.Equal(
+            MemorySourceSnapshotCursorFailureReason.ProviderVersionMismatch,
+            legacyException.Reason);
+    }
+
+    [Fact]
+    public async Task Crm_hr_party_source_normalizes_contact_tags_and_hashes_the_canonical_projection()
+    {
+        using var serviceProvider = CreateServiceProvider();
+        using var scope = serviceProvider.CreateScope();
+        var scopedProvider = scope.ServiceProvider;
+        var dbContextFactory = scopedProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+        var partyId = Guid.Parse("fdfdf12c-94c4-454a-9a38-b3e477e0a90d");
+        var contactId = Guid.Parse("8e755e84-4d7c-4a9c-a397-f84f91d99355");
+
+        await using (var dbContext = await dbContextFactory.CreateDbContextAsync())
+        {
+            dbContext.Set<Party>().Add(new Party
+            {
+                Id = partyId,
+                PartyType = PartyType.Person,
+                LifecycleStatus = PartyLifecycleStatus.Active,
+                DisplayName = "Public Contact",
+                TagsJson = """[" Customer ","CUSTOMER"]""",
+                CreatedAtUtc = Now,
+                UpdatedAtUtc = Now
+            });
+            dbContext.Set<PartyContactPoint>().Add(new PartyContactPoint
+            {
+                Id = contactId,
+                PartyId = partyId,
+                ContactType = PartyContactType.Email,
+                Label = "Work",
+                Value = "public@example.test",
+                NormalizedValue = "public@example.test",
+                IsPrimary = true,
+                IsPublic = true,
+                TagsJson = """[" VIP ","priority","vip"]"""
+            });
+            await dbContext.SaveChangesAsync();
+        }
+
+        var provider = scopedProvider.GetRequiredService<ICrmHrSourceSnapshotProvider>();
+        var firstSnapshot = await provider.ReadSnapshotAsync(new CrmHrSourceSnapshotRequest(partyId));
+        var firstParty = Assert.Single(
+            firstSnapshot.Items,
+            item => item.EntityKind == MemorySourceEntityKind.CrmParty);
+
+        Assert.Contains("Tags: customer", firstParty.Content, StringComparison.Ordinal);
+        Assert.Contains(
+            "Email:Work:public@example.test [tags: priority, vip]",
+            firstParty.Content,
+            StringComparison.Ordinal);
+
+        await using (var dbContext = await dbContextFactory.CreateDbContextAsync())
+        {
+            var contact = await dbContext.Set<PartyContactPoint>().SingleAsync(item => item.Id == contactId);
+            contact.TagsJson = JsonSerializer.Serialize(new[] { "vip", " PRIORITY " });
+            await dbContext.SaveChangesAsync();
+        }
+
+        var reorderedSnapshot = await provider.ReadSnapshotAsync(new CrmHrSourceSnapshotRequest(partyId));
+        var reorderedParty = Assert.Single(
+            reorderedSnapshot.Items,
+            item => item.EntityKind == MemorySourceEntityKind.CrmParty);
+        Assert.Equal(firstParty.Content, reorderedParty.Content);
+        Assert.Equal(firstParty.ContentHash, reorderedParty.ContentHash);
+
+        await using (var dbContext = await dbContextFactory.CreateDbContextAsync())
+        {
+            var contact = await dbContext.Set<PartyContactPoint>().SingleAsync(item => item.Id == contactId);
+            contact.TagsJson = JsonSerializer.Serialize(new[] { "vip", "priority", "delivery" });
+            await dbContext.SaveChangesAsync();
+        }
+
+        var changedSnapshot = await provider.ReadSnapshotAsync(new CrmHrSourceSnapshotRequest(partyId));
+        var changedParty = Assert.Single(
+            changedSnapshot.Items,
+            item => item.EntityKind == MemorySourceEntityKind.CrmParty);
+        Assert.Contains(
+            "Email:Work:public@example.test [tags: delivery, priority, vip]",
+            changedParty.Content,
+            StringComparison.Ordinal);
+        Assert.NotEqual(firstParty.ContentHash, changedParty.ContentHash);
     }
 
     [Fact]
@@ -230,7 +394,8 @@ public sealed class CrmHrResourceSourceGatewayAdapterTests
             Value = "private@example.test",
             NormalizedValue = "private@example.test",
             IsPrimary = true,
-            IsPublic = false
+            IsPublic = false,
+            TagsJson = """["private-channel"]"""
         });
         dbContext.Set<PartyConfidentialNote>().Add(new PartyConfidentialNote
         {

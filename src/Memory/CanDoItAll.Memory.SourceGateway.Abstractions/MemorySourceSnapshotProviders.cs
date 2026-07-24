@@ -5,7 +5,7 @@ public static class MemorySourceSnapshotProviderVersions
     public const string WorkbenchProjectStructure = "workbench-project-structure-v2";
     public const string ProcessRuntime = "process-runtime-evidence-v2";
     public const string WorkflowRuntime = "workflow-runtime-evidence-v2";
-    public const string CrmHr = "crm-hr-source-v1";
+    public const string CrmHr = "crm-hr-source-v2";
     public const string ResourceCatalog = "resource-catalog-source-v1";
     public const string ManualInput = "manual-input-source-v1";
 }

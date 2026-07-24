@@ -1,0 +1,221 @@
+@if (IsOpen)
+{
+    <Dialog IsOpen="true"
+            Eyebrow="CRM / HR"
+            Title="Create opportunity"
+            Subtitle="Capture the pursuit in three focused steps without losing the pipeline context."
+            Size="ModalSize.Wide"
+            DenseChrome="true"
+            CloseOnBackdrop="false"
+            TestId="crmhr-opportunity-create-dialog"
+            OnClose="HandleCloseAsync">
+        <ChildContent>
+            <Stack GapScale="LayoutGap.Medium">
+                <Cluster Gap="LayoutGap.Small"
+                         Wrap="FlexWrap.Wrap"
+                         data-testid="crmhr-opportunity-create-steps">
+                    @foreach (var wizardStep in Enum.GetValues<CreateOpportunityStep>())
+                    {
+                        <StatusBadge Tone="@(wizardStep == step ? "info" : "neutral")"
+                                     Text="@($"{(int)wizardStep + 1}. {ResolveStepLabel(wizardStep)}")" />
+                    }
+                </Cluster>
+
+                @if (!string.IsNullOrWhiteSpace(DisplayMessage))
+                {
+                    <PanelCard Soft="true"
+                               data-testid="crmhr-opportunity-create-message">
+                        <TextBlock TextStyle="TextStyle.Body1"
+                                   Value="@DisplayMessage" />
+                    </PanelCard>
+                }
+
+                <EditForm id="crmhr-opportunity-create-form"
+                          Model="draft"
+                          OnValidSubmit="HandleCreateAsync">
+                    <OpportunityEditor Model="draft"
+                                       Section="@ResolveEditorSection(step)"
+                                       AccountDisplayName="@AccountDisplayName"
+                                       RelationshipStageLabel="@RelationshipStageLabel"
+                                       LoadFailed="LoadFailed" />
+                </EditForm>
+            </Stack>
+        </ChildContent>
+        <Footer>
+            <Split Breakpoint="LayoutBreakpoint.None"
+                   Gap="LayoutGap.Medium"
+                   AlignItems="AlignItems.Center"
+                   JustifyContent="JustifyContent.SpaceBetween"
+                   Wrap="FlexWrap.Wrap">
+                <Button Text="Cancel"
+                        ButtonStyle="ButtonStyle.Light"
+                        Disabled="IsBusy"
+                        Click="HandleCloseAsync"
+                        data-testid="crmhr-opportunity-create-cancel" />
+                <Cluster Gap="LayoutGap.Small">
+                    <Button Text="Back"
+                            ButtonStyle="ButtonStyle.Light"
+                            Disabled="@(IsBusy || step == CreateOpportunityStep.Basics)"
+                            Click="MoveBack"
+                            data-testid="crmhr-opportunity-create-back" />
+                    @if (step == CreateOpportunityStep.Commercial)
+                    {
+                        <Button Text="Create opportunity"
+                                Type="submit"
+                                form="crmhr-opportunity-create-form"
+                                Disabled="IsBusy"
+                                IsBusy="IsBusy"
+                                data-testid="crmhr-opportunity-save-button" />
+                    }
+                    else
+                    {
+                        <Button Text="Continue"
+                                Disabled="IsBusy"
+                                Click="MoveNext"
+                                data-testid="crmhr-opportunity-create-next" />
+                    }
+                </Cluster>
+            </Split>
+        </Footer>
+    </Dialog>
+}
+
+@code {
+    private CrmOpportunityEditorModel draft = new();
+    private CreateOpportunityStep step;
+    private string? validationMessage;
+    private bool wasOpen;
+
+    [Parameter]
+    public bool IsOpen { get; set; }
+
+    [Parameter, EditorRequired]
+    public CrmOpportunityEditorModel InitialModel { get; set; } = new();
+
+    [Parameter]
+    public string AccountDisplayName { get; set; } = string.Empty;
+
+    [Parameter]
+    public string RelationshipStageLabel { get; set; } = string.Empty;
+
+    [Parameter]
+    public bool IsBusy { get; set; }
+
+    [Parameter]
+    public string? Message { get; set; }
+
+    [Parameter]
+    public EventCallback<CrmOpportunityEditorModel> Save { get; set; }
+
+    [Parameter]
+    public EventCallback Close { get; set; }
+
+    [Parameter]
+    public EventCallback<Exception> LoadFailed { get; set; }
+
+    private string? DisplayMessage => validationMessage ?? Message;
+
+    protected override void OnParametersSet()
+    {
+        if (IsOpen && !wasOpen)
+        {
+            ResetDraft();
+        }
+
+        wasOpen = IsOpen;
+    }
+
+    private void MoveNext()
+    {
+        validationMessage = ValidateStep(step);
+        if (validationMessage is not null)
+        {
+            return;
+        }
+
+        step = step switch
+        {
+            CreateOpportunityStep.Basics => CreateOpportunityStep.Ownership,
+            CreateOpportunityStep.Ownership => CreateOpportunityStep.Commercial,
+            _ => step
+        };
+    }
+
+    private void MoveBack()
+    {
+        validationMessage = null;
+        step = step switch
+        {
+            CreateOpportunityStep.Commercial => CreateOpportunityStep.Ownership,
+            CreateOpportunityStep.Ownership => CreateOpportunityStep.Basics,
+            _ => step
+        };
+    }
+
+    private Task HandleCreateAsync()
+    {
+        validationMessage = ValidateStep(CreateOpportunityStep.Commercial);
+        return validationMessage is null
+            ? Save.InvokeAsync(draft)
+            : Task.CompletedTask;
+    }
+
+    private async Task HandleCloseAsync()
+    {
+        ResetDraft();
+        wasOpen = false;
+        await Close.InvokeAsync();
+    }
+
+    private void ResetDraft()
+    {
+        draft = OpportunityEditorDrafts.Clone(InitialModel);
+        step = CreateOpportunityStep.Basics;
+        validationMessage = null;
+    }
+
+    private string? ValidateStep(CreateOpportunityStep wizardStep)
+    {
+        return wizardStep switch
+        {
+            CreateOpportunityStep.Basics when string.IsNullOrWhiteSpace(draft.Title) =>
+                "Opportunity title is required before continuing.",
+            CreateOpportunityStep.Ownership when draft.OwnerPartyId == Guid.Empty =>
+                "Choose an opportunity owner before continuing.",
+            CreateOpportunityStep.Commercial
+                when draft.Stage == OpportunityStage.Lost &&
+                     string.IsNullOrWhiteSpace(draft.LostReason) =>
+                "Lost opportunities require a loss reason.",
+            _ => null
+        };
+    }
+
+    private static OpportunityEditorSection ResolveEditorSection(CreateOpportunityStep wizardStep)
+    {
+        return wizardStep switch
+        {
+            CreateOpportunityStep.Basics => OpportunityEditorSection.Basics,
+            CreateOpportunityStep.Ownership => OpportunityEditorSection.Ownership,
+            CreateOpportunityStep.Commercial => OpportunityEditorSection.Commercial,
+            _ => throw new ArgumentOutOfRangeException(nameof(wizardStep), wizardStep, "Unsupported opportunity step.")
+        };
+    }
+
+    private static string ResolveStepLabel(CreateOpportunityStep wizardStep)
+    {
+        return wizardStep switch
+        {
+            CreateOpportunityStep.Basics => "Basics",
+            CreateOpportunityStep.Ownership => "Ownership",
+            CreateOpportunityStep.Commercial => "Commercial",
+            _ => wizardStep.ToString()
+        };
+    }
+
+    private enum CreateOpportunityStep
+    {
+        Basics,
+        Ownership,
+        Commercial
+    }
+}

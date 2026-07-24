@@ -12,7 +12,7 @@
                     <h2 class="mt-1 truncate text-lg font-semibold tracking-tight text-slate-950">
                         @(string.IsNullOrWhiteSpace(ProjectName) ? "Project resource plan" : ProjectName)
                     </h2>
-                    <SmallText Text="@($"{Allocations.Count} saved allocation(s)")" />
+                    <SmallText Text="@($"{TotalCount} saved allocation(s)")" />
                 </div>
                 <TooltipTarget Text="Create project allocation"
                                Position="TooltipPosition.Bottom"
@@ -27,15 +27,17 @@
                 </TooltipTarget>
             </Split>
 
-            <CompactFilterBar ResultText="@($"{FilteredAllocations.Count} matching allocation(s)")">
-                <input @bind="allocationSearchText"
-                       @bind:event="oninput"
+            <CompactFilterBar ResultText="@($"{TotalCount} matching allocation(s)")">
+                <input value="@SearchText"
+                       @oninput="HandleAllocationSearchInputAsync"
                        class="cda-input cda-input--toolbar h-10 min-w-[18rem] flex-1"
                        style="width: auto; flex: 1 1 24rem;"
                        placeholder="Search party, role, task, or notes"
                        data-testid="crmhr-allocation-filter-search" />
                 <InputSelect TValue="ProjectPartyAssignmentRole?"
-                             @bind-Value="allocationRoleFilter"
+                             Value="@RoleFilter"
+                             ValueChanged="HandleAllocationRoleChangedAsync"
+                             ValueExpression="@(() => RoleFilter)"
                              class="cda-input cda-input--toolbar h-10 min-w-[13rem]"
                              style="width: 13rem; flex: 0 1 13rem;"
                              data-testid="crmhr-allocation-filter-role">
@@ -46,15 +48,18 @@
                 </InputSelect>
             </CompactFilterBar>
 
-            @if (FilteredAllocations.Count == 0) {
+            @if (Allocations.Count == 0) {
                 <EmptyState Eyebrow="No matching allocations"
                             Title="No allocation records are in view"
                             Description="Create an allocation or adjust the search and role filters." />
             }
             else {
                 <PagedCardGrid TItem="ProjectPartyAssignmentDetail"
-                               Items="FilteredAllocations"
-                               PageSize="6"
+                               Items="Allocations"
+                               PageSize="@PageSize"
+                               PageIndex="@PageIndex"
+                               TotalCount="@TotalCount"
+                               PageChanged="PageChanged"
                                TestIdPrefix="crmhr-allocations">
                     <ItemTemplate Context="allocation">
                         <ProjectAssignmentRecordCard Assignment="allocation"
@@ -88,7 +93,7 @@
                             <h3 class="mt-1 text-base font-semibold text-slate-950">Available staffing candidates</h3>
                         </div>
 
-                        <CompactFilterBar ResultText="@($"{Candidates.Count} candidate(s)")">
+                        <CompactFilterBar ResultText="@($"{CandidateTotalCount} matching candidate(s)")">
                             <input value="@CandidateSearchText"
                                    @oninput="HandleCandidateSearchInputAsync"
                                    class="cda-input cda-input--toolbar h-10 min-w-[15rem] flex-1"
@@ -145,11 +150,11 @@
                                         Description="Adjust the candidate filters and refresh the search." />
                         }
                         else {
-                            <PagedCardGrid TItem="StaffingCandidateItemModel"
-                                           Items="Candidates"
-                                           PageSize="6"
-                                           TestIdPrefix="crmhr-staffing-candidates">
-                                <ItemTemplate Context="candidate">
+                            <Grid Gap="LayoutGap.Medium"
+                                  ColumnTemplate="repeat(auto-fit,minmax(20rem,1fr))"
+                                  data-testid="crmhr-staffing-candidates-grid">
+                                @foreach (var candidate in Candidates)
+                                {
                                     <PanelCard Class="h-full" data-testid="crmhr-staffing-candidate-item">
                                         <Stack GapScale="LayoutGap.Small" Class="h-full">
                                             <Split Breakpoint="LayoutBreakpoint.None"
@@ -177,8 +182,33 @@
                                             </CardActions>
                                         </Stack>
                                     </PanelCard>
-                                </ItemTemplate>
-                            </PagedCardGrid>
+                                }
+                            </Grid>
+
+                            <Split Breakpoint="LayoutBreakpoint.None"
+                                   Gap="LayoutGap.Small"
+                                   AlignItems="AlignItems.Center"
+                                   JustifyContent="JustifyContent.SpaceBetween"
+                                   Wrap="FlexWrap.Wrap">
+                                <StatusBadge Tone="neutral"
+                                             Text="@CandidatePageText" />
+                                <Cluster Gap="LayoutGap.Small">
+                                    <Button Text="Previous"
+                                            Icon="chevron_left"
+                                            ButtonStyle="ButtonStyle.Light"
+                                            Size="ButtonSize.Small"
+                                            Disabled="@(CandidatePageIndex <= 0)"
+                                            Click="@(() => CandidatePageChanged.InvokeAsync(CandidatePageIndex - 1))"
+                                            data-testid="crmhr-staffing-candidates-previous" />
+                                    <Button Text="Next"
+                                            Icon="chevron_right"
+                                            ButtonStyle="ButtonStyle.Light"
+                                            Size="ButtonSize.Small"
+                                            Disabled="@(CandidatePageIndex + 1 >= CandidateTotalPages)"
+                                            Click="@(() => CandidatePageChanged.InvokeAsync(CandidatePageIndex + 1))"
+                                            data-testid="crmhr-staffing-candidates-next" />
+                                </Cluster>
+                            </Split>
                         }
                     </Stack>
                 </SurfaceCard>
@@ -195,7 +225,6 @@
                     </FormField>
                     <PartyPicker Label="Party"
                                  TestIdPrefix="crmhr-allocation-party"
-                                 Options="PartyOptions"
                                  SelectedPartyId="Draft.PartyId"
                                  SelectedPartyIdChanged="HandlePartyChanged" />
                 </Grid>
@@ -294,16 +323,49 @@
     public ProjectPartyAssignmentUpsertRequest Draft { get; set; } = new();
 
     [Parameter]
-    public IReadOnlyList<ProjectPartyOption> PartyOptions { get; set; } = [];
+    public IReadOnlyList<ProjectPartyAssignmentDetail> Allocations { get; set; } = [];
 
     [Parameter]
-    public IReadOnlyList<ProjectPartyAssignmentDetail> Allocations { get; set; } = [];
+    public int PageIndex { get; set; }
+
+    [Parameter]
+    public int PageSize { get; set; } = ProjectPartyAssignmentQueryLimits.DefaultPageSize;
+
+    [Parameter]
+    public int TotalCount { get; set; }
+
+    [Parameter]
+    public string SearchText { get; set; } = string.Empty;
+
+    [Parameter]
+    public EventCallback<string> SearchTextChanged { get; set; }
+
+    [Parameter]
+    public ProjectPartyAssignmentRole? RoleFilter { get; set; }
+
+    [Parameter]
+    public EventCallback<ProjectPartyAssignmentRole?> RoleFilterChanged { get; set; }
+
+    [Parameter]
+    public EventCallback<int> PageChanged { get; set; }
 
     [Parameter]
     public IReadOnlyList<SkillCatalogItemModel> SkillCatalog { get; set; } = [];
 
     [Parameter]
     public IReadOnlyList<StaffingCandidateItemModel> Candidates { get; set; } = [];
+
+    [Parameter]
+    public int CandidatePageIndex { get; set; }
+
+    [Parameter]
+    public int CandidatePageSize { get; set; } = StaffingQueryLimits.DefaultPageSize;
+
+    [Parameter]
+    public int CandidateTotalCount { get; set; }
+
+    [Parameter]
+    public EventCallback<int> CandidatePageChanged { get; set; }
 
     [Parameter]
     public string CandidateSearchText { get; set; } = string.Empty;
@@ -350,8 +412,6 @@
     [Parameter]
     public EventCallback OpenGantt { get; set; }
 
-    private string allocationSearchText = string.Empty;
-    private ProjectPartyAssignmentRole? allocationRoleFilter;
     private bool isAllocationDialogOpen;
     private bool isPreparingCreate;
     private bool isAllocationSaving;
@@ -359,33 +419,40 @@
     private ProjectNodeDetails? detailsTask;
     private bool isDetailsTaskLoading;
     private int detailsLoadVersion;
+    private StaffingCandidateItemModel? selectedCandidate;
 
-    private IReadOnlyList<ProjectPartyAssignmentDetail> FilteredAllocations => Allocations
-        .Where(MatchesAllocationFilters)
-        .ToList();
-
-    private StaffingCandidateItemModel? SelectedCandidate => Candidates
-        .FirstOrDefault(item => item.PartyId == Draft.PartyId);
+    private StaffingCandidateItemModel? SelectedCandidate => selectedCandidate;
 
     private string AllocationDialogTitle => SelectedCandidate is null
         ? "Create allocation"
         : $"Allocate {SelectedCandidate.DisplayName}";
 
-    private bool MatchesAllocationFilters(ProjectPartyAssignmentDetail allocation) {
-        if (allocationRoleFilter.HasValue && allocation.Role != allocationRoleFilter.Value) {
-            return false;
+    private int CandidateTotalPages => CandidateTotalCount == 0
+        ? 0
+        : (int)Math.Ceiling(CandidateTotalCount / (double)CandidatePageSize);
+
+    private string CandidatePageText => CandidateTotalPages == 0
+        ? "No pages"
+        : $"Page {CandidatePageIndex + 1:N0} of {CandidateTotalPages:N0} · {CandidateTotalCount:N0} candidate(s)";
+
+    protected override void OnParametersSet() {
+        var pageCandidate = Candidates.FirstOrDefault(item => item.PartyId == Draft.PartyId);
+        if (pageCandidate is not null) {
+            selectedCandidate = pageCandidate;
+            return;
         }
 
-        if (string.IsNullOrWhiteSpace(allocationSearchText)) {
-            return true;
+        if (Draft.PartyId == Guid.Empty || selectedCandidate?.PartyId != Draft.PartyId) {
+            selectedCandidate = null;
         }
+    }
 
-        var search = allocationSearchText.Trim();
-        return allocation.PartyDisplayName.Contains(search, StringComparison.OrdinalIgnoreCase)
-               || allocation.PartyTypeLabel.Contains(search, StringComparison.OrdinalIgnoreCase)
-               || ProjectPartyAssignmentPresentation.ResolveRoleLabel(allocation.Role).Contains(search, StringComparison.OrdinalIgnoreCase)
-               || (!string.IsNullOrWhiteSpace(allocation.NodeKey) && allocation.NodeKey.Contains(search, StringComparison.OrdinalIgnoreCase))
-               || (!string.IsNullOrWhiteSpace(allocation.Notes) && allocation.Notes.Contains(search, StringComparison.OrdinalIgnoreCase));
+    private Task HandleAllocationSearchInputAsync(ChangeEventArgs args) {
+        return SearchTextChanged.InvokeAsync(args.Value?.ToString() ?? string.Empty);
+    }
+
+    private Task HandleAllocationRoleChangedAsync(ProjectPartyAssignmentRole? role) {
+        return RoleFilterChanged.InvokeAsync(role);
     }
 
     private Task HandleCandidateSearchInputAsync(ChangeEventArgs args) {
@@ -402,6 +469,7 @@
 
     private Task HandlePartyChanged(Guid? partyId) {
         Draft.PartyId = partyId ?? Guid.Empty;
+        selectedCandidate = Candidates.FirstOrDefault(candidate => candidate.PartyId == Draft.PartyId);
         return Task.CompletedTask;
     }
 
@@ -424,6 +492,7 @@
     }
 
     private Task SelectCandidateAsync(StaffingCandidateItemModel candidate) {
+        selectedCandidate = candidate;
         Draft.PartyId = candidate.PartyId;
         Draft.Role = candidate.PartyType == PartyType.OrganizationUnit
             ? ProjectPartyAssignmentRole.DeliveryUnit

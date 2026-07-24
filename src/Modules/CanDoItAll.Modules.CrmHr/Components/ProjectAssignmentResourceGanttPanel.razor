@@ -2,12 +2,6 @@
 @using CanDoItAll.Components.Gantt
 @using CanDoItAll.Modules.Projects
 
-@{
-    var projection = ProjectAssignmentGanttProjectionAdapter.Build(
-        Assignments,
-        DateOnly.FromDateTime(DateTime.UtcNow));
-}
-
 <SurfaceCard data-testid="crmhr-assignment-resource-schedule">
     <Stack GapScale="LayoutGap.Large">
         <Split Breakpoint="LayoutBreakpoint.Lg"
@@ -22,10 +16,18 @@
                 </p>
             </Stack>
             <Cluster Gap="LayoutGap.Small">
-                <StatusBadge Tone="info" Text="@($"{projection.Tasks.Count} scheduled")" />
-                <StatusBadge Tone="base" Text="@($"{DistinctResourceCount} resources")" />
+                <StatusBadge Tone="info" Text="@($"{TotalCount} scheduled")" />
+                <StatusBadge Tone="base" Text="@($"{distinctResourceCount} resources shown")" />
             </Cluster>
         </Split>
+
+        @if (TotalCount > Assignments.Count)
+        {
+            <Alert AlertStyle="AlertStyle.Info"
+                   data-testid="crmhr-assignment-resource-gantt-result-limit">
+                Showing the first @Assignments.Count of @TotalCount assignments in the current schedule window. Narrower dated windows remain available in the project planning workspace.
+            </Alert>
+        }
 
         @if (projection.Issues.Count > 0)
         {
@@ -90,14 +92,40 @@
     [Parameter]
     public IReadOnlyList<ProjectPartyAssignmentDetail> Assignments { get; set; } = [];
 
+    [Parameter]
+    public int TotalCount { get; set; }
+
+    private ProjectAssignmentGanttProjection projection =
+        ProjectAssignmentGanttProjectionAdapter.Build([], DateOnly.FromDateTime(DateTime.UtcNow));
+
+    private IReadOnlyList<ProjectPartyAssignmentDetail> projectedAssignments = [];
+
+    private DateOnly projectionDate;
+
+    private int distinctResourceCount;
+
     private string ScheduleTitle => string.IsNullOrWhiteSpace(ProjectName)
         ? "Assigned-resource timeline"
         : $"{ProjectName} resource timeline";
 
-    private int DistinctResourceCount => Assignments
-        .Select(assignment => assignment.PartyId)
-        .Distinct()
-        .Count();
+    protected override void OnParametersSet()
+    {
+        var currentDate = DateOnly.FromDateTime(DateTime.UtcNow);
+        if (ReferenceEquals(projectedAssignments, Assignments) && projectionDate == currentDate)
+        {
+            return;
+        }
+
+        projection = ProjectAssignmentGanttProjectionAdapter.Build(
+            Assignments,
+            currentDate);
+        distinctResourceCount = Assignments
+            .Select(assignment => assignment.PartyId)
+            .Distinct()
+            .Count();
+        projectedAssignments = Assignments;
+        projectionDate = currentDate;
+    }
 
     private static string FormatIssue(ProjectAssignmentGanttProjectionIssue issue)
     {

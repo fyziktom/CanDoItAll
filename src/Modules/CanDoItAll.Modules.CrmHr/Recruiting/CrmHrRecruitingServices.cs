@@ -23,6 +23,42 @@ public sealed record RecruitmentApplicationListItemModel(
     bool HasWorkforceProfile,
     DateTimeOffset UpdatedAtUtc);
 
+public enum RecruitmentApplicationScope
+{
+    All,
+    Applied,
+    Screening,
+    Interviewing,
+    Offer,
+    Hired,
+    Rejected,
+    Withdrawn
+}
+
+public static class RecruitmentApplicationQueryLimits
+{
+    public const int DefaultPageSize = 12;
+    public const int MaximumPageSize = 100;
+    public const int MaximumSearchLength = 200;
+}
+
+public sealed record RecruitmentApplicationQuery(
+    string SearchText = "",
+    RecruitmentApplicationScope Scope = RecruitmentApplicationScope.All,
+    int PageIndex = 0,
+    int PageSize = RecruitmentApplicationQueryLimits.DefaultPageSize);
+
+public sealed record RecruitmentApplicationPage(
+    IReadOnlyList<RecruitmentApplicationListItemModel> Items,
+    int PageIndex,
+    int PageSize,
+    int TotalCount);
+
+public sealed record RecruitmentApplicationSummary(
+    int TotalCount,
+    int InterviewingCount,
+    int OfferOrHiredCount);
+
 public sealed class RecruitmentApplicationEditorModel
 {
     public Guid? Id { get; set; }
@@ -120,12 +156,6 @@ public sealed record RecruitmentSupportAssignmentsModel(
     Guid? MentorPartyId,
     string MentorName);
 
-public sealed record RecruitmentProjectOptionModel(
-    Guid Id,
-    string Name,
-    string CurrentPhase,
-    ProjectStatus Status);
-
 public sealed class RecruitmentConversionEditorModel
 {
     public Guid ApplicationId { get; set; }
@@ -145,31 +175,26 @@ public sealed class RecruitmentConversionEditorModel
 }
 
 public sealed record RecruitmentWorkspaceModel(
-    IReadOnlyList<RecruitmentApplicationListItemModel> Applications,
     RecruitmentApplicationEditorModel Application,
     bool HasSelectedApplication,
     string CandidateDisplayName,
     string CandidateSummary,
     string CandidatePrimaryEmail,
     string CandidatePrimaryPhone,
+    string RecruiterDisplayName,
+    string HiringManagerDisplayName,
     bool HasWorkforceProfile,
-    IReadOnlyList<PartyOptionModel> CandidateOptions,
-    IReadOnlyList<PartyOptionModel> RecruiterOptions,
-    IReadOnlyList<PartyOptionModel> HiringManagerOptions,
-    IReadOnlyList<PartyOptionModel> TargetUnitOptions,
-    IReadOnlyList<PartyOptionModel> SupportOptions,
     IReadOnlyList<RecruitmentStageHistoryItemModel> StageHistory,
     IReadOnlyList<RecruitmentInterviewItemModel> Interviews,
     IReadOnlyList<LifecycleTaskItemModel> LifecycleTasks,
     RecruitmentSupportAssignmentsModel SupportAssignments,
-    IReadOnlyList<RecruitmentProjectOptionModel> ProjectOptions,
     RecruitmentConversionEditorModel Conversion);
 
 public sealed partial class RecruitingService(
     IDbContextFactory<AppDbContext> dbContextFactory,
     PartyDirectoryService partyDirectoryService,
     HrService hrService,
-    ProjectsService projectsService,
+    IProjectRecordQueryService projectRecordQueryService,
     IActivityStream activityStream,
     ISearchIndexService searchIndexService)
 {
@@ -177,71 +202,114 @@ public sealed partial class RecruitingService(
     private const string SupportBuddyLabel = "Buddy";
     private const string SupportMentorLabel = "Mentor";
 
-    public async Task<IReadOnlyList<RecruitmentApplicationListItemModel>> ListRecruitmentApplicationsAsync(CancellationToken cancellationToken = default)
+    public async Task<RecruitmentApplicationPage> SearchRecruitmentApplicationsAsync(
+        RecruitmentApplicationQuery query,
+        CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(query);
+        var normalized = NormalizeRecruitmentApplicationQuery(query);
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        var applications = await dbContext.Set<RecruitmentApplication>()
-            .ToListAsync(cancellationToken);
-        if (applications.Count == 0)
+        IQueryable<RecruitmentApplication> applications = dbContext
+            .Set<RecruitmentApplication>()
+            .AsNoTracking();
+
+        if (TryMapRecruitmentStage(normalized.Scope) is { } stage)
         {
-            return [];
+            applications = applications.Where(application => application.Stage == stage);
         }
 
-        applications = applications
-            .OrderByDescending(item => item.UpdatedAtUtc)
-            .ThenBy(item => item.Stage)
-            .ThenBy(item => item.DesiredRole)
-            .ToList();
-
-        var partyIds = applications
-            .SelectMany(item => new[] { item.PartyId, item.TargetUnitPartyId, item.RecruiterPartyId, item.HiringManagerPartyId })
-            .Where(item => item.HasValue)
-            .Select(item => item!.Value)
-            .Distinct()
-            .ToList();
-        partyIds.AddRange(applications.Select(item => item.PartyId));
-        partyIds = partyIds.Distinct().ToList();
-
-        var parties = await dbContext.Set<Party>()
-            .Where(item => partyIds.Contains(item.Id))
-            .Select(item => new PartyOptionModel(item.Id, item.DisplayName, item.PartyType))
-            .ToListAsync(cancellationToken);
-        var contacts = await dbContext.Set<PartyContactPoint>()
-            .Where(item => partyIds.Contains(item.PartyId))
-            .OrderByDescending(item => item.IsPrimary)
-            .Select(item => new RecruitmentContactValue(item.PartyId, item.ContactType, item.Value, item.IsPrimary))
-            .ToListAsync(cancellationToken);
-        var workforcePartyIds = await dbContext.Set<WorkforceProfile>()
-            .Where(item => applications.Select(application => application.PartyId).Contains(item.PartyId))
-            .Select(item => item.PartyId)
-            .Distinct()
-            .ToListAsync(cancellationToken);
-
-        var partyMap = parties.ToDictionary(item => item.Id);
-        var contactsByPartyId = contacts
-            .GroupBy(item => item.PartyId)
-            .ToDictionary(group => group.Key, group => (IReadOnlyList<RecruitmentContactValue>)group.ToList());
-        var workforcePartySet = workforcePartyIds.ToHashSet();
-
-        return applications.Select(item =>
+        if (!string.IsNullOrEmpty(normalized.SearchText))
         {
-            var candidateContacts = contactsByPartyId.GetValueOrDefault(item.PartyId) ?? [];
-            return new RecruitmentApplicationListItemModel(
-                item.Id,
-                item.PartyId,
-                partyMap.GetValueOrDefault(item.PartyId)?.DisplayName ?? string.Empty,
-                item.DesiredRole,
-                item.Stage,
-                item.Decision,
-                ResolvePartyDisplayName(partyMap, item.RecruiterPartyId),
-                ResolvePartyDisplayName(partyMap, item.HiringManagerPartyId),
-                ResolvePartyDisplayName(partyMap, item.TargetUnitPartyId),
-                ResolvePrimaryContactValue(candidateContacts, PartyContactType.Email),
-                ResolvePrimaryContactValue(candidateContacts, PartyContactType.Phone),
-                ToDateOnly(item.AvailableFromUtc),
-                workforcePartySet.Contains(item.PartyId),
-                item.UpdatedAtUtc);
-        }).ToList();
+            var search = normalized.SearchText.ToUpperInvariant();
+            applications = applications.Where(application =>
+                application.DesiredRole.ToUpper().Contains(search) ||
+                application.Source.ToUpper().Contains(search) ||
+                dbContext.Set<Party>().Any(party =>
+                    (party.Id == application.PartyId ||
+                     party.Id == application.RecruiterPartyId ||
+                     party.Id == application.HiringManagerPartyId ||
+                     party.Id == application.TargetUnitPartyId) &&
+                    party.DisplayName.ToUpper().Contains(search)) ||
+                dbContext.Set<PartyContactPoint>().Any(contact =>
+                    contact.PartyId == application.PartyId &&
+                    contact.IsPublic &&
+                    contact.ContactType == PartyContactType.Email &&
+                    contact.Value.ToUpper().Contains(search)));
+        }
+
+        var totalCount = await applications.CountAsync(cancellationToken);
+        var pageRows = await applications
+            .OrderByDescending(application => application.UpdatedAtUtc)
+            .ThenBy(application => application.Id)
+            .Skip(normalized.PageIndex * normalized.PageSize)
+            .Take(normalized.PageSize)
+            .Select(application => new RecruitmentApplicationListProjection(
+                application.Id,
+                application.PartyId,
+                dbContext.Set<Party>()
+                    .Where(party => party.Id == application.PartyId)
+                    .Select(party => party.DisplayName)
+                    .FirstOrDefault() ?? string.Empty,
+                application.DesiredRole,
+                application.Stage,
+                application.Decision,
+                dbContext.Set<Party>()
+                    .Where(party => party.Id == application.RecruiterPartyId)
+                    .Select(party => party.DisplayName)
+                    .FirstOrDefault() ?? string.Empty,
+                dbContext.Set<Party>()
+                    .Where(party => party.Id == application.HiringManagerPartyId)
+                    .Select(party => party.DisplayName)
+                    .FirstOrDefault() ?? string.Empty,
+                dbContext.Set<Party>()
+                    .Where(party => party.Id == application.TargetUnitPartyId)
+                    .Select(party => party.DisplayName)
+                    .FirstOrDefault() ?? string.Empty,
+                dbContext.Set<PartyContactPoint>()
+                    .Where(contact =>
+                        contact.PartyId == application.PartyId &&
+                        contact.IsPublic &&
+                        contact.ContactType == PartyContactType.Email)
+                    .OrderByDescending(contact => contact.IsPrimary)
+                    .ThenBy(contact => contact.Id)
+                    .Select(contact => contact.Value)
+                    .FirstOrDefault() ?? string.Empty,
+                dbContext.Set<PartyContactPoint>()
+                    .Where(contact =>
+                        contact.PartyId == application.PartyId &&
+                        contact.IsPublic &&
+                        contact.ContactType == PartyContactType.Phone)
+                    .OrderByDescending(contact => contact.IsPrimary)
+                    .ThenBy(contact => contact.Id)
+                    .Select(contact => contact.Value)
+                    .FirstOrDefault() ?? string.Empty,
+                application.AvailableFromUtc,
+                dbContext.Set<WorkforceProfile>().Any(profile => profile.PartyId == application.PartyId),
+                application.UpdatedAtUtc))
+            .ToListAsync(cancellationToken);
+
+        return new RecruitmentApplicationPage(
+            pageRows.Select(MapRecruitmentApplicationListItem).ToList(),
+            normalized.PageIndex,
+            normalized.PageSize,
+            totalCount);
+    }
+
+    public async Task<RecruitmentApplicationSummary> GetRecruitmentApplicationSummaryAsync(
+        CancellationToken cancellationToken = default)
+    {
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        return await dbContext.Set<RecruitmentApplication>()
+            .AsNoTracking()
+            .GroupBy(_ => 1)
+            .Select(applications => new RecruitmentApplicationSummary(
+                applications.Count(),
+                applications.Count(application => application.Stage == RecruitmentStage.Interviewing),
+                applications.Count(application =>
+                    application.Stage == RecruitmentStage.Offer ||
+                    application.Stage == RecruitmentStage.Hired)))
+            .SingleOrDefaultAsync(cancellationToken)
+            ?? new RecruitmentApplicationSummary(0, 0, 0);
     }
 
     public async Task<RecruitmentWorkspaceModel> GetRecruitmentWorkspaceAsync(
@@ -250,44 +318,34 @@ public sealed partial class RecruitingService(
         CancellationToken cancellationToken = default)
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        var applications = await ListRecruitmentApplicationsAsync(cancellationToken);
-        var peopleOptions = await LoadPartyOptionsAsync(
-            dbContext,
-            new[] { PartyType.Person },
-            cancellationToken);
-        var targetUnitOptions = await LoadPartyOptionsAsync(
-            dbContext,
-            new[] { PartyType.Organization, PartyType.OrganizationUnit },
-            cancellationToken);
-        var projectOptions = (await projectsService.ListAsync(cancellationToken))
-            .OrderBy(item => item.Name, StringComparer.OrdinalIgnoreCase)
-            .Select(item => new RecruitmentProjectOptionModel(item.Id, item.Name, item.CurrentPhase, item.Status))
-            .ToList();
+        var resolvedApplicationId = applicationId;
+        if (!resolvedApplicationId.HasValue && partyId.HasValue)
+        {
+            resolvedApplicationId = await dbContext.Set<RecruitmentApplication>()
+                .AsNoTracking()
+                .Where(item => item.PartyId == partyId.Value)
+                .OrderByDescending(item => item.UpdatedAtUtc)
+                .ThenBy(item => item.Id)
+                .Select(item => (Guid?)item.Id)
+                .FirstOrDefaultAsync(cancellationToken);
+        }
 
-        var resolvedApplicationId = applicationId ?? applications
-            .FirstOrDefault(item => partyId.HasValue && item.PartyId == partyId.Value)
-            ?.Id;
         if (!resolvedApplicationId.HasValue)
         {
             return new RecruitmentWorkspaceModel(
-                applications,
                 CreateEmptyApplicationEditor(),
                 false,
                 string.Empty,
                 string.Empty,
                 string.Empty,
                 string.Empty,
+                string.Empty,
+                string.Empty,
                 false,
-                peopleOptions,
-                peopleOptions,
-                peopleOptions,
-                targetUnitOptions,
-                peopleOptions,
                 [],
                 [],
                 [],
                 new RecruitmentSupportAssignmentsModel(Guid.Empty, null, string.Empty, null, string.Empty, null, string.Empty),
-                projectOptions,
                 CreateEmptyConversionEditor());
         }
 
@@ -297,24 +355,19 @@ public sealed partial class RecruitingService(
             partyId.HasValue && application.PartyId != partyId.Value)
         {
             return new RecruitmentWorkspaceModel(
-                applications,
                 CreateEmptyApplicationEditor(),
                 false,
                 string.Empty,
                 string.Empty,
                 string.Empty,
                 string.Empty,
+                string.Empty,
+                string.Empty,
                 false,
-                peopleOptions,
-                peopleOptions,
-                peopleOptions,
-                targetUnitOptions,
-                peopleOptions,
                 [],
                 [],
                 [],
                 new RecruitmentSupportAssignmentsModel(Guid.Empty, null, string.Empty, null, string.Empty, null, string.Empty),
-                projectOptions,
                 CreateEmptyConversionEditor());
         }
 
@@ -355,13 +408,24 @@ public sealed partial class RecruitingService(
             .Select(item => new PartyOptionModel(item.Id, item.DisplayName, item.PartyType))
             .ToListAsync(cancellationToken);
         var contacts = await dbContext.Set<PartyContactPoint>()
-            .Where(item => partyIds.Contains(item.PartyId))
+            .Where(item => partyIds.Contains(item.PartyId) && item.IsPublic)
             .OrderByDescending(item => item.IsPrimary)
             .Select(item => new RecruitmentContactValue(item.PartyId, item.ContactType, item.Value, item.IsPrimary))
             .ToListAsync(cancellationToken);
         var workloadProfile = await dbContext.Set<WorkforceProfile>()
             .SingleOrDefaultAsync(item => item.PartyId == application.PartyId, cancellationToken);
         var stageHistory = await LoadStageHistoryAsync(dbContext, application.Id, cancellationToken);
+        var relatedProjectIds = tasks
+            .Where(task => task.RelatedProjectId.HasValue)
+            .Select(task => task.RelatedProjectId!.Value)
+            .Distinct()
+            .ToList();
+        var relatedProjects = await projectRecordQueryService.GetManyAsync(
+            relatedProjectIds,
+            cancellationToken);
+        var relatedProjectNames = relatedProjects.ToDictionary(
+            project => project.Id,
+            project => project.Name);
 
         var partyMap = parties.ToDictionary(item => item.Id);
         var contactMap = contacts
@@ -370,7 +434,6 @@ public sealed partial class RecruitingService(
         var candidateContacts = contactMap.GetValueOrDefault(application.PartyId) ?? [];
 
         return new RecruitmentWorkspaceModel(
-            applications,
             MapApplication(application, partyMap, contactMap),
             true,
             ResolvePartyDisplayName(partyMap, application.PartyId),
@@ -379,12 +442,9 @@ public sealed partial class RecruitingService(
                 : string.Empty,
             ResolvePrimaryContactValue(candidateContacts, PartyContactType.Email),
             ResolvePrimaryContactValue(candidateContacts, PartyContactType.Phone),
+            ResolvePartyDisplayName(partyMap, application.RecruiterPartyId),
+            ResolvePartyDisplayName(partyMap, application.HiringManagerPartyId),
             workloadProfile is not null,
-            peopleOptions,
-            peopleOptions,
-            peopleOptions,
-            targetUnitOptions,
-            peopleOptions,
             stageHistory,
             interviews.Select(item => new RecruitmentInterviewItemModel(
                 item.Id,
@@ -410,7 +470,9 @@ public sealed partial class RecruitingService(
                     ToDateOnly(item.DueDateUtc),
                     item.Status,
                     item.RelatedProjectId,
-                    projectOptions.FirstOrDefault(project => project.Id == item.RelatedProjectId)?.Name ?? string.Empty,
+                    item.RelatedProjectId.HasValue
+                        ? relatedProjectNames.GetValueOrDefault(item.RelatedProjectId.Value) ?? string.Empty
+                        : string.Empty,
                     item.Notes,
                     item.DueDateUtc.HasValue &&
                     item.Status is not LifecycleTaskStatus.Completed &&
@@ -418,7 +480,6 @@ public sealed partial class RecruitingService(
                     item.DueDateUtc.Value.Date < DateTimeOffset.UtcNow.Date))
                 .ToList(),
             supportAssignments,
-            projectOptions,
             CreateConversionEditor(application, supportAssignments, workloadProfile));
     }
 
@@ -1170,23 +1231,6 @@ public sealed partial class RecruitingService(
             : null;
     }
 
-    private static async Task<IReadOnlyList<PartyOptionModel>> LoadPartyOptionsAsync(
-        AppDbContext dbContext,
-        IReadOnlyCollection<PartyType> allowedTypes,
-        CancellationToken cancellationToken)
-    {
-        if (allowedTypes.Count == 0)
-        {
-            return [];
-        }
-
-        return await dbContext.Set<Party>()
-            .Where(item => allowedTypes.Contains(item.PartyType))
-            .OrderBy(item => item.DisplayName)
-            .Select(item => new PartyOptionModel(item.Id, item.DisplayName, item.PartyType))
-            .ToListAsync(cancellationToken);
-    }
-
     private async Task<RecruitmentSupportAssignmentsModel> LoadSupportAssignmentsAsync(
         AppDbContext dbContext,
         Guid partyId,
@@ -1409,6 +1453,104 @@ public sealed partial class RecruitingService(
             .SingleOrDefaultAsync(cancellationToken)
             ?? string.Empty;
     }
+
+    private static RecruitmentApplicationQuery NormalizeRecruitmentApplicationQuery(
+        RecruitmentApplicationQuery query)
+    {
+        if (query.PageIndex < 0)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(query),
+                query.PageIndex,
+                "Recruitment application page index cannot be negative.");
+        }
+
+        if (query.PageSize is < 1 or > RecruitmentApplicationQueryLimits.MaximumPageSize)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(query),
+                query.PageSize,
+                $"Recruitment application page size must be between 1 and {RecruitmentApplicationQueryLimits.MaximumPageSize}.");
+        }
+
+        if (query.PageIndex > int.MaxValue / query.PageSize)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(query),
+                query.PageIndex,
+                "Recruitment application page offset is too large.");
+        }
+
+        var searchText = query.SearchText?.Trim() ?? string.Empty;
+        if (searchText.Length > RecruitmentApplicationQueryLimits.MaximumSearchLength)
+        {
+            throw new ArgumentException(
+                $"Recruitment application search cannot exceed {RecruitmentApplicationQueryLimits.MaximumSearchLength} characters.",
+                nameof(query));
+        }
+
+        if (!Enum.IsDefined(query.Scope))
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(query),
+                query.Scope,
+                "Recruitment application scope is not supported.");
+        }
+
+        return query with { SearchText = searchText };
+    }
+
+    private static RecruitmentStage? TryMapRecruitmentStage(RecruitmentApplicationScope scope)
+    {
+        return scope switch
+        {
+            RecruitmentApplicationScope.All => null,
+            RecruitmentApplicationScope.Applied => RecruitmentStage.Applied,
+            RecruitmentApplicationScope.Screening => RecruitmentStage.Screening,
+            RecruitmentApplicationScope.Interviewing => RecruitmentStage.Interviewing,
+            RecruitmentApplicationScope.Offer => RecruitmentStage.Offer,
+            RecruitmentApplicationScope.Hired => RecruitmentStage.Hired,
+            RecruitmentApplicationScope.Rejected => RecruitmentStage.Rejected,
+            RecruitmentApplicationScope.Withdrawn => RecruitmentStage.Withdrawn,
+            _ => throw new ArgumentOutOfRangeException(nameof(scope), scope, "Recruitment application scope is not supported.")
+        };
+    }
+
+    private static RecruitmentApplicationListItemModel MapRecruitmentApplicationListItem(
+        RecruitmentApplicationListProjection item)
+    {
+        return new RecruitmentApplicationListItemModel(
+            item.Id,
+            item.PartyId,
+            item.CandidateName,
+            item.DesiredRole,
+            item.Stage,
+            item.Decision,
+            item.RecruiterName,
+            item.HiringManagerName,
+            item.TargetUnitName,
+            item.PrimaryEmail,
+            item.PrimaryPhone,
+            ToDateOnly(item.AvailableFromUtc),
+            item.HasWorkforceProfile,
+            item.UpdatedAtUtc);
+    }
+
+    private sealed record RecruitmentApplicationListProjection(
+        Guid Id,
+        Guid PartyId,
+        string CandidateName,
+        string DesiredRole,
+        RecruitmentStage Stage,
+        RecruitmentDecision Decision,
+        string RecruiterName,
+        string HiringManagerName,
+        string TargetUnitName,
+        string PrimaryEmail,
+        string PrimaryPhone,
+        DateTimeOffset? AvailableFromUtc,
+        bool HasWorkforceProfile,
+        DateTimeOffset UpdatedAtUtc);
 
     private sealed record RecruitmentContactValue(
         Guid PartyId,

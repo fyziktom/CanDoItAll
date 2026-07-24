@@ -1,106 +1,74 @@
-@foreach (var stage in Enum.GetValues<OpportunityStage>())
+@if (Opportunities.Count > 0)
 {
-    var stageOpportunities = Opportunities
-        .Where(item => item.Stage == stage)
-        .OrderByDescending(item => item.UpdatedAtUtc)
-        .ToList();
-    var weightedValue = stageOpportunities.Sum(item => (item.Amount ?? 0m) * item.ProbabilityPercent / 100m);
-
-    <SurfaceCard Soft="@(stage is OpportunityStage.Won or OpportunityStage.Lost)"
-                 data-testid="@($"crmhr-opportunity-column-{stage.ToString().ToLowerInvariant()}")">
-        <Split Gap="LayoutGap.Medium"
-               AlignItems="AlignItems.Start"
-               JustifyContent="JustifyContent.SpaceBetween">
-            <div class="min-w-0">
-                <p class="cda-eyebrow">@ResolveStageEyebrow(stage)</p>
-                <h3 class="mt-1 text-lg font-semibold text-slate-950">@stage</h3>
-                <p class="mt-2 text-sm leading-6 text-slate-600">@ResolveStageDescription(stage)</p>
-            </div>
-            <Cluster Gap="LayoutGap.Small">
-                <StatusBadge Tone="@ResolveStageTone(stage)" Text="@($"{stageOpportunities.Count}")" />
-                @if (weightedValue > 0)
-                {
-                    <StatusBadge Tone="neutral" Text="@($"Weighted {weightedValue:0.##}")" />
-                }
-            </Cluster>
-        </Split>
-
-        @if (stageOpportunities.Count == 0)
+    <Grid Gap="LayoutGap.Medium"
+          ColumnsLg="2"
+          data-testid="crmhr-opportunity-board">
+        @foreach (var opportunity in Opportunities)
         {
-            <div class="mt-4 rounded-[1.2rem] border border-dashed border-slate-300 bg-slate-50/70 px-4 py-4 text-sm leading-6 text-slate-600">
-                No opportunities in this stage yet.
-            </div>
-        }
-        else
-        {
-            <Stack GapScale="LayoutGap.Small" Class="mt-4">
-                @foreach (var opportunity in stageOpportunities)
+            <Stack GapScale="LayoutGap.XSmall"
+                   @key="opportunity.Id"
+                   data-testid="@($"crmhr-opportunity-column-{opportunity.Stage.ToString().ToLowerInvariant()}")">
+                <button type="button"
+                        class="w-full text-left"
+                        aria-label="@($"Open {opportunity.Title}")"
+                        @onclick="@(() => SelectOpportunity.InvokeAsync(opportunity.Id))"
+                        data-testid="@($"crmhr-opportunity-card-{opportunity.Id:N}")">
+                    <PanelCard Soft="@(SelectedOpportunityId == opportunity.Id)"
+                               Class="h-full">
+                        <Stack GapScale="LayoutGap.Small">
+                            <Split Breakpoint="LayoutBreakpoint.None"
+                                   Gap="LayoutGap.Small"
+                                   AlignItems="AlignItems.Start"
+                                   JustifyContent="JustifyContent.SpaceBetween">
+                                <Stack GapScale="LayoutGap.XSmall"
+                                       Class="min-w-0">
+                                    <TextBlock TextStyle="TextStyle.Subtitle2"
+                                               Value="@opportunity.Title" />
+                                    <SmallText Text="@($"{opportunity.Source} · {opportunity.OwnerDisplayName}")" />
+                                </Stack>
+                                <StatusBadge Tone="@ResolveStageTone(opportunity.Stage)"
+                                             Text="@opportunity.Stage.ToString()" />
+                            </Split>
+
+                            <Cluster Gap="LayoutGap.XSmall"
+                                     Wrap="FlexWrap.Wrap">
+                                <StatusBadge Tone="neutral"
+                                             Text="@ResolveValueLabel(opportunity)" />
+                                <StatusBadge Tone="info"
+                                             Text="@($"{opportunity.ProbabilityPercent}% probability")" />
+                                @if (opportunity.ExpectedCloseOn.HasValue)
+                                {
+                                    <StatusBadge Tone="neutral"
+                                                 Text="@($"Close {opportunity.ExpectedCloseOn:yyyy-MM-dd}")" />
+                                }
+                            </Cluster>
+
+                            @if (!string.IsNullOrWhiteSpace(opportunity.DeliveryUnitDisplayName))
+                            {
+                                <SmallText Text="@($"Delivery: {opportunity.DeliveryUnitDisplayName}")" />
+                            }
+
+                            <SmallText Text="@($"Updated {opportunity.UpdatedAtUtc.LocalDateTime:g}")" />
+                        </Stack>
+                    </PanelCard>
+                </button>
+
+                @if (CanAdvance(opportunity.Stage))
                 {
-                    var latestHistory = opportunity.StageHistory.FirstOrDefault();
-                    var primaryPartner = opportunity.Parties.FirstOrDefault(item => item.Role == OpportunityPartyRole.Partner);
-
-                    <div class="rounded-[1.25rem] border px-4 py-4 @(SelectedOpportunityId == opportunity.Id ? "border-sky-400 bg-sky-50/70" : "border-slate-200 bg-white")"
-                         data-testid="@($"crmhr-opportunity-card-{opportunity.Id:N}")">
-                        <Split Gap="LayoutGap.Small"
-                               AlignItems="AlignItems.Start"
-                               JustifyContent="JustifyContent.SpaceBetween">
-                            <div class="min-w-0">
-                                <p class="text-sm font-semibold text-slate-950">@opportunity.Title</p>
-                                <p class="mt-1 text-xs uppercase tracking-[0.18em] text-slate-500">
-                                    @opportunity.OpportunitySource / @opportunity.OwnerDisplayName
-                                </p>
-                                @if (!string.IsNullOrWhiteSpace(opportunity.DeliveryUnitDisplayName))
-                                {
-                                    <p class="mt-2 text-sm text-slate-600">Delivery unit: @opportunity.DeliveryUnitDisplayName</p>
-                                }
-                                @if (primaryPartner is not null)
-                                {
-                                    <p class="mt-1 text-sm text-slate-600">Partner: @primaryPartner.DisplayName</p>
-                                }
-                            </div>
-                            <StatusBadge Tone="@ResolveStageTone(opportunity.Stage)"
-                                         Text="@ResolveValueLabel(opportunity)" />
-                        </Split>
-
-                        @if (!string.IsNullOrWhiteSpace(opportunity.Summary))
-                        {
-                            <p class="mt-3 text-sm leading-6 text-slate-600">@opportunity.Summary</p>
-                        }
-
-                        <Cluster Gap="LayoutGap.Small" Class="mt-4">
-                            <Button Text="Open"
-                                    Size="ButtonSize.Small"
-                                    Click="@(() => SelectOpportunity.InvokeAsync(opportunity.Id))"
-                                    data-testid="@($"crmhr-opportunity-select-{opportunity.Id:N}")" />
-                            @if (CanAdvance(opportunity.Stage))
-                            {
-                                <Button Text="@($"Advance to {ResolveNextStage(opportunity.Stage)}")"
-                                        ButtonStyle="ButtonStyle.Light"
-                                        Size="ButtonSize.Small"
-                                        Click="@(() => AdvanceOpportunityStage.InvokeAsync(opportunity.Id))"
-                                        data-testid="@($"crmhr-opportunity-advance-{opportunity.Id:N}")" />
-                            }
-                            @if (!string.IsNullOrWhiteSpace(opportunity.LinkedProjectName))
-                            {
-                                <StatusBadge Tone="success" Text="Linked project" />
-                            }
-                        </Cluster>
-
-                        <p class="mt-3 text-xs uppercase tracking-[0.18em] text-slate-500">
-                            @(latestHistory is null
-                                ? $"Updated {opportunity.UpdatedAtUtc:yyyy-MM-dd}"
-                                : $"Last movement {latestHistory.ChangedAtUtc:yyyy-MM-dd} by {latestHistory.ChangedBy}")
-                        </p>
-                    </div>
+                    <Button Text="@($"Advance to {ResolveNextStage(opportunity.Stage)}")"
+                            ButtonStyle="ButtonStyle.Light"
+                            Size="ButtonSize.Small"
+                            Click="@(() => AdvanceOpportunityStage.InvokeAsync(opportunity.Id))"
+                            data-testid="@($"crmhr-opportunity-advance-{opportunity.Id:N}")" />
                 }
             </Stack>
         }
-    </SurfaceCard>
+    </Grid>
 }
 
 @code {
     [Parameter]
-    public IReadOnlyList<CrmOpportunityDetailModel> Opportunities { get; set; } = [];
+    public IReadOnlyList<OpportunityPipelineItem> Opportunities { get; set; } = [];
 
     [Parameter]
     public Guid? SelectedOpportunityId { get; set; }
@@ -142,41 +110,16 @@
         };
     }
 
-    private static string ResolveStageEyebrow(OpportunityStage stage)
-    {
-        return stage switch
-        {
-            OpportunityStage.Identified => "Discovery",
-            OpportunityStage.Qualified => "Validation",
-            OpportunityStage.Proposal => "Commercial",
-            OpportunityStage.Negotiation => "Close plan",
-            OpportunityStage.Won => "Closed won",
-            OpportunityStage.Lost => "Closed lost",
-            _ => "Pipeline"
-        };
-    }
-
-    private static string ResolveStageDescription(OpportunityStage stage)
-    {
-        return stage switch
-        {
-            OpportunityStage.Identified => "New demand signals and early shaping before qualification.",
-            OpportunityStage.Qualified => "Confirmed demand, owner, and commercial fit.",
-            OpportunityStage.Proposal => "Proposal and commercial packaging are in play.",
-            OpportunityStage.Negotiation => "Decision path is active and close planning matters.",
-            OpportunityStage.Won => "Closed work that should hand off into project context.",
-            OpportunityStage.Lost => "Historically visible losses with reason capture.",
-            _ => "Opportunity pipeline stage."
-        };
-    }
-
-    private static string ResolveValueLabel(CrmOpportunityDetailModel opportunity)
+    private static string ResolveValueLabel(OpportunityPipelineItem opportunity)
     {
         if (!opportunity.Amount.HasValue)
         {
-            return $"{opportunity.ProbabilityPercent}%";
+            return "Value not set";
         }
 
-        return $"{opportunity.CurrencyCode} {opportunity.Amount.Value:0.##}";
+        var currencyCode = string.IsNullOrWhiteSpace(opportunity.CurrencyCode)
+            ? "Currency missing"
+            : opportunity.CurrencyCode.Trim().ToUpperInvariant();
+        return $"{currencyCode} {opportunity.Amount.Value:N2}";
     }
 }

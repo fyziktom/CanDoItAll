@@ -1,10 +1,20 @@
 namespace CanDoItAll.Modules.CrmHr;
 
+public enum PartyCsvExportScope
+{
+    SelectedParties,
+    EntireDirectory
+}
+
 public sealed class PartyRelationshipEditorModel
 {
     public Guid? Id { get; set; }
 
     public Guid RelatedPartyId { get; set; }
+
+    public string RelatedPartyDisplayName { get; set; } = string.Empty;
+
+    public PartyType? RelatedPartyType { get; set; }
 
     public PartyRelationshipKind RelationshipKind { get; set; } = PartyRelationshipKind.MemberOf;
 

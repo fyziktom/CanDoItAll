@@ -1,5 +1,7 @@
 using CanDoItAll.Infrastructure.Search;
+using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.CrmHr;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace CanDoItAll.Tests.Integration;
@@ -71,18 +73,120 @@ public sealed class CrmInteractionIntegrationTests
         Assert.True(interactionResult.IsSuccess);
 
         var workspace = await crmService.GetAccountWorkspaceAsync(accountId);
+        var activity = await crmService.SearchAccountActivityAsync(
+            new CrmActivityHistoryQuery(accountId));
         var searchResults = await searchIndexService.SearchAsync("Fabrikam");
 
         Assert.NotNull(workspace);
         Assert.Equal(CrmAccountRelationshipStage.ActiveCustomer, workspace.Profile.RelationshipStage);
         Assert.Single(workspace.Stakeholders);
-        Assert.Single(workspace.OverdueNextActions);
+        Assert.Equal(1, activity.ActionCount);
+        Assert.Equal(1, activity.OverdueActionCount);
         Assert.Contains(
-            workspace.ActivityTimeline,
+            activity.Items,
             item => item.Title.Contains("Executive steering review", StringComparison.Ordinal));
         Assert.Contains(
             searchResults,
             item => item.Route.Contains($"/crm-hr/crm?accountId={accountId}", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task Activity_history_pages_account_and_party_rows_without_materializing_the_full_timeline()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var partyDirectoryService = scope.ServiceProvider.GetRequiredService<PartyDirectoryService>();
+        var crmService = scope.ServiceProvider.GetRequiredService<CrmService>();
+        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+        var accountId = await CreatePartyAsync(
+            partyDirectoryService,
+            "Paged account",
+            PartyType.Organization,
+            PartyLifecycleStatus.Prospect,
+            PartyRoleKind.Customer,
+            "paged-account@example.test");
+        var participantId = await CreatePartyAsync(
+            partyDirectoryService,
+            "Paged participant",
+            PartyType.Person,
+            PartyLifecycleStatus.Active,
+            PartyRoleKind.Stakeholder,
+            "paged-participant@example.test");
+        var now = DateTimeOffset.UtcNow;
+
+        await using (var dbContext = await dbContextFactory.CreateDbContextAsync())
+        {
+            for (var index = 0; index < 24; index++)
+            {
+                var occurredAtUtc = now.AddMinutes(index);
+                var interactionId = Guid.NewGuid();
+                dbContext.Set<InteractionRecord>().Add(new InteractionRecord
+                {
+                    Id = interactionId,
+                    InteractionType = InteractionType.Meeting,
+                    Subject = $"Paged interaction {index:D2}",
+                    Summary = "History paging test",
+                    NextActionText = index % 3 == 0 ? "Follow up" : string.Empty,
+                    NextActionDueUtc = index % 3 == 0
+                        ? now.AddDays(-1)
+                        : null,
+                    OccurredAtUtc = occurredAtUtc,
+                    CreatedAtUtc = occurredAtUtc,
+                    UpdatedAtUtc = occurredAtUtc
+                });
+                dbContext.Set<InteractionPartyLink>().AddRange(
+                    new InteractionPartyLink
+                    {
+                        InteractionId = interactionId,
+                        PartyId = accountId,
+                        Role = InteractionPartyRole.Account
+                    },
+                    new InteractionPartyLink
+                    {
+                        InteractionId = interactionId,
+                        PartyId = participantId,
+                        Role = InteractionPartyRole.Attendee
+                    });
+                dbContext.Set<CrmHrAuditEntry>().AddRange(
+                    new CrmHrAuditEntry
+                    {
+                        EntityType = "CrmAccount",
+                        EntityId = accountId,
+                        Action = "InteractionLogged",
+                        Summary = $"Account audit {index:D2}",
+                        Actor = "integration-tests",
+                        CreatedAtUtc = occurredAtUtc
+                    },
+                    new CrmHrAuditEntry
+                    {
+                        EntityType = nameof(Party),
+                        EntityId = participantId,
+                        Action = "InteractionLogged",
+                        Summary = $"Party audit {index:D2}",
+                        Actor = "integration-tests",
+                        CreatedAtUtc = occurredAtUtc
+                    });
+            }
+
+            await dbContext.SaveChangesAsync();
+        }
+
+        var accountPage = await crmService.SearchAccountActivityAsync(
+            new CrmActivityHistoryQuery(accountId, PageIndex: 2, PageSize: 10));
+        var partyPage = await partyDirectoryService.SearchPartyActivityAsync(
+            new CrmActivityHistoryQuery(participantId, PageIndex: 4, PageSize: 10));
+
+        Assert.Equal(48, accountPage.TotalCount);
+        Assert.Equal(10, accountPage.Items.Count);
+        Assert.Equal(8, accountPage.ActionCount);
+        Assert.Equal(8, accountPage.OverdueActionCount);
+        Assert.Equal(2, accountPage.PageIndex);
+        Assert.Equal(5, accountPage.TotalPages);
+        Assert.Equal(49, partyPage.TotalCount);
+        Assert.Equal(9, partyPage.Items.Count);
+        Assert.Equal(4, partyPage.PageIndex);
+        Assert.All(accountPage.Items, item => Assert.NotEqual(Guid.Empty, item.Id));
+        Assert.All(partyPage.Items, item => Assert.NotEqual(Guid.Empty, item.Id));
     }
 
     private static async Task<Guid> CreatePartyAsync(

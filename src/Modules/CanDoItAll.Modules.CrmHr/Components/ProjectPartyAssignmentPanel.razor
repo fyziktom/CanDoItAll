@@ -15,7 +15,7 @@
                     @if (string.IsNullOrWhiteSpace(ProjectName)) {
                         <text>Choose a project to manage its commercial and staffing relationships.</text>
                     } else {
-                        <text>@Assignments.Count assignment(s) for @ProjectName</text>
+                        <text>@TotalCount assignment(s) for @ProjectName</text>
                     }
                 </p>
             </div>
@@ -40,15 +40,17 @@
                         Title="Choose a project to manage relationships"
                         Description="The project selector remains available above the workspace tabs." />
         } else {
-            <CompactFilterBar ResultText="@($"{FilteredAssignments.Count} matching assignment(s)")">
-                <input @bind="searchText"
-                       @bind:event="oninput"
+            <CompactFilterBar ResultText="@($"{TotalCount} matching assignment(s)")">
+                <input value="@SearchText"
+                       @oninput="HandleSearchInputAsync"
                        class="cda-input cda-input--toolbar h-10 min-w-[18rem] flex-1"
                        style="width: auto; flex: 1 1 24rem;"
                        placeholder="Search party, role, node, or notes"
                        data-testid="crmhr-assignment-search" />
                 <InputSelect TValue="ProjectPartyAssignmentRole?"
-                             @bind-Value="roleFilter"
+                             Value="@RoleFilter"
+                             ValueChanged="HandleRoleFilterChangedAsync"
+                             ValueExpression="@(() => RoleFilter)"
                              class="cda-input cda-input--toolbar h-10 min-w-[13rem]"
                              style="width: 13rem; flex: 0 1 13rem;"
                              data-testid="crmhr-assignment-role-filter">
@@ -61,14 +63,17 @@
 
             <Stack GapScale="LayoutGap.Medium"
                    data-testid="crmhr-assignment-list">
-                @if (FilteredAssignments.Count == 0) {
+                @if (Assignments.Count == 0) {
                     <EmptyState Eyebrow="No matching assignments"
                                 Title="Adjust the relationship filters"
                                 Description="Create an assignment or broaden the current search and role filter." />
                 } else {
                     <PagedCardGrid TItem="ProjectPartyAssignmentDetail"
-                                   Items="FilteredAssignments"
-                                   PageSize="6"
+                                   Items="Assignments"
+                                   PageSize="@PageSize"
+                                   PageIndex="@PageIndex"
+                                   TotalCount="@TotalCount"
+                                   PageChanged="PageChanged"
                                    TestIdPrefix="crmhr-assignment-list">
                         <ItemTemplate Context="assignment">
                             <ProjectAssignmentRecordCard Assignment="assignment"
@@ -114,7 +119,6 @@
 
             <PartyPicker Label="Party"
                          TestIdPrefix="crmhr-assignment-party"
-                         Options="PartyOptions"
                          SelectedPartyId="Draft.PartyId"
                          SelectedPartyIdChanged="HandlePartyChanged" />
 
@@ -187,8 +191,6 @@
                                 OpenGantt="OpenGantt" />
 
 @code {
-    private string searchText = string.Empty;
-    private ProjectPartyAssignmentRole? roleFilter;
     private bool isCreateDialogOpen;
     private bool isPreparingCreate;
     private bool isSaving;
@@ -207,10 +209,31 @@
     public ProjectPartyAssignmentUpsertRequest Draft { get; set; } = new();
 
     [Parameter]
-    public IReadOnlyList<ProjectPartyOption> PartyOptions { get; set; } = [];
+    public IReadOnlyList<ProjectPartyAssignmentDetail> Assignments { get; set; } = [];
 
     [Parameter]
-    public IReadOnlyList<ProjectPartyAssignmentDetail> Assignments { get; set; } = [];
+    public int PageIndex { get; set; }
+
+    [Parameter]
+    public int PageSize { get; set; } = ProjectPartyAssignmentQueryLimits.DefaultPageSize;
+
+    [Parameter]
+    public int TotalCount { get; set; }
+
+    [Parameter]
+    public string SearchText { get; set; } = string.Empty;
+
+    [Parameter]
+    public EventCallback<string> SearchTextChanged { get; set; }
+
+    [Parameter]
+    public ProjectPartyAssignmentRole? RoleFilter { get; set; }
+
+    [Parameter]
+    public EventCallback<ProjectPartyAssignmentRole?> RoleFilterChanged { get; set; }
+
+    [Parameter]
+    public EventCallback<int> PageChanged { get; set; }
 
     [Parameter, EditorRequired]
     public Func<Task<bool>> PrepareCreate { get; set; } = default!;
@@ -232,10 +255,6 @@
 
     [Parameter]
     public EventCallback OpenGantt { get; set; }
-
-    private IReadOnlyList<ProjectPartyAssignmentDetail> FilteredAssignments => Assignments
-        .Where(MatchesFilters)
-        .ToList();
 
     private async Task OpenCreateDialogAsync() {
         if (!CanCreate || isPreparingCreate || isCreateDialogOpen) {
@@ -309,25 +328,11 @@
         return Task.CompletedTask;
     }
 
-    private bool MatchesFilters(ProjectPartyAssignmentDetail assignment) {
-        if (roleFilter.HasValue && assignment.Role != roleFilter.Value) {
-            return false;
-        }
-
-        if (string.IsNullOrWhiteSpace(searchText)) {
-            return true;
-        }
-
-        var search = searchText.Trim();
-        return Contains(assignment.PartyDisplayName, search)
-            || Contains(assignment.PartyTypeLabel, search)
-            || Contains(ProjectPartyAssignmentPresentation.ResolveRoleLabel(assignment.Role), search)
-            || Contains(assignment.NodeKey, search)
-            || Contains(assignment.Source, search)
-            || Contains(assignment.Notes, search);
+    private Task HandleSearchInputAsync(ChangeEventArgs args) {
+        return SearchTextChanged.InvokeAsync(args.Value?.ToString() ?? string.Empty);
     }
 
-    private static bool Contains(string value, string search) {
-        return value.Contains(search, StringComparison.OrdinalIgnoreCase);
+    private Task HandleRoleFilterChangedAsync(ProjectPartyAssignmentRole? role) {
+        return RoleFilterChanged.InvokeAsync(role);
     }
 }

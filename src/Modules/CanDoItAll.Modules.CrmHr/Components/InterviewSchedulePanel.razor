@@ -44,17 +44,12 @@
                                class="cda-input"
                                data-testid="crmhr-recruiting-interview-scheduled" />
                     </FormField>
-                    <FormField Text="Interviewer">
-                        <InputSelect @bind-Value="Draft.InterviewerPartyId"
-                                     class="cda-input"
-                                     data-testid="crmhr-recruiting-interviewer">
-                            <option value="">Choose interviewer</option>
-                            @foreach (var option in InterviewerOptions.OrderBy(item => item.DisplayName, StringComparer.OrdinalIgnoreCase))
-                            {
-                                <option value="@option.Id">@option.DisplayName</option>
-                            }
-                        </InputSelect>
-                    </FormField>
+                    <PartyPicker Label="Interviewer"
+                                 TestIdPrefix="crmhr-recruiting-interviewer"
+                                 AllowedScope="PartyRecordScope.People"
+                                 InitialScope="PartyRecordScope.People"
+                                 SelectedPartyId="@Draft.InterviewerPartyId"
+                                 SelectedPartyIdChanged="SetInterviewerPartyAsync" />
                 </Grid>
 
                 <div class="mt-4">
@@ -141,9 +136,6 @@
     public RecruitmentInterviewEditorModel Draft { get; set; } = new();
 
     [Parameter]
-    public IReadOnlyList<PartyOptionModel> InterviewerOptions { get; set; } = [];
-
-    [Parameter]
     public IReadOnlyList<RecruitmentInterviewItemModel> Interviews { get; set; } = [];
 
     [Parameter]
@@ -154,6 +146,12 @@
 
     [Parameter]
     public EventCallback<Guid> DeleteInterview { get; set; }
+
+    private Task SetInterviewerPartyAsync(Guid? partyId)
+    {
+        Draft.InterviewerPartyId = partyId;
+        return Task.CompletedTask;
+    }
 
     private string ScheduledAtLocalValue
     {

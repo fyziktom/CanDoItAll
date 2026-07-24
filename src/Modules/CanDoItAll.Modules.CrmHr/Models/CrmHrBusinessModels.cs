@@ -280,6 +280,8 @@ public sealed class OpportunityStageHistory
     public DateTimeOffset ChangedAtUtc { get; set; }
     public string ChangedBy { get; set; } = string.Empty;
     public string Notes { get; set; } = string.Empty;
+    public decimal? RecognizedAmount { get; set; }
+    public string RecognizedCurrencyCode { get; set; } = string.Empty;
 }
 
 public sealed class WorkforceProfile
@@ -454,6 +456,7 @@ internal sealed class InteractionPartyLinkConfiguration : IEntityTypeConfigurati
         builder.HasKey(link => link.Id);
         builder.Property(link => link.Role).HasConversion<string>().HasMaxLength(64);
         builder.HasIndex(link => new { link.InteractionId, link.PartyId, link.Role });
+        builder.HasIndex(link => new { link.PartyId, link.Role, link.InteractionId });
     }
 }
 
@@ -500,9 +503,16 @@ internal sealed class OpportunityConfiguration : IEntityTypeConfiguration<Opport
         builder.Property(opportunity => opportunity.Summary).HasColumnType("TEXT");
         builder.Property(opportunity => opportunity.Notes).HasColumnType("TEXT");
         builder.Property(opportunity => opportunity.ExtendedDataJson).HasColumnType("TEXT");
+        builder.Property(opportunity => opportunity.UpdatedAtUtc).IsConcurrencyToken();
         builder.HasIndex(opportunity => opportunity.Stage);
         builder.HasIndex(opportunity => opportunity.OwnerPartyId);
-        builder.HasIndex(opportunity => opportunity.AccountPartyId);
+        builder.HasIndex(opportunity => new { opportunity.AccountPartyId, opportunity.Stage });
+        builder.HasIndex(opportunity => new
+        {
+            opportunity.AccountPartyId,
+            opportunity.UpdatedAtUtc,
+            opportunity.Id
+        }).IsDescending(false, true, false);
         builder.HasIndex(opportunity => opportunity.LinkedProjectId);
     }
 }
@@ -527,6 +537,7 @@ internal sealed class OpportunityStageHistoryConfiguration : IEntityTypeConfigur
         builder.Property(entry => entry.Stage).HasConversion<string>().HasMaxLength(64);
         builder.Property(entry => entry.ChangedBy).HasMaxLength(160);
         builder.Property(entry => entry.Notes).HasColumnType("TEXT");
+        builder.Property(entry => entry.RecognizedCurrencyCode).HasMaxLength(3).IsRequired();
         builder.HasIndex(entry => new { entry.OpportunityId, entry.ChangedAtUtc });
     }
 }

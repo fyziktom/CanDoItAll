@@ -20,19 +20,19 @@
                     Compact="true">
             <Stats>
                 <CompactStat Label="directory"
-                             Value="@directoryItems.Count.ToString()"
-                             TooltipText="All saved party records in the shared directory." />
-                <CompactStat Label="visible"
-                             Value="@FilteredParties.Count.ToString()"
-                             TooltipText="Records matching the current filters."
+                             Value="Server-paged"
+                             TooltipText="Directory records are queried in bounded pages." />
+                <CompactStat Label="search"
+                             Value="Name + tags"
+                             TooltipText="Search and tag filters execute at the data source."
                              Tone="info" />
-                <CompactStat Label="organizations"
-                             Value="@directoryItems.Count(item => item.PartyType == PartyType.Organization || item.PartyType == PartyType.OrganizationUnit).ToString()"
-                             TooltipText="Organization and unit records available to CRM and HR."
+                <CompactStat Label="scope"
+                             Value="4 party types"
+                             TooltipText="People, organizations, organization units, and AI agents share this directory."
                              Tone="success" />
                 <CompactStat Label="sensitive"
-                             Value="@directoryItems.Count(item => item.IsSensitive).ToString()"
-                             TooltipText="Records that require careful downstream handling."
+                             Value="Masked"
+                             TooltipText="Sensitive summaries and tags stay out of list projections."
                              Tone="warning" />
             </Stats>
             <Actions>
@@ -53,121 +53,37 @@
 
     <ChildContent>
         <Stack GapScale="LayoutGap.Medium">
-            <CrmHrSecondaryTabs SelectedKey="directory" />
+            <CrmHrSecondaryTabs SelectedArea="CrmHrWorkspaceArea.Directory" />
 
-            <ListDetailShell ListPaneWidth="25rem">
-                <ListHeader>
-                    <ListPanelHeader Title="Directory"
-                                     Count="@($"{FilteredParties.Count} record(s)")">
-                        <Actions>
-                            <Button Text="@FilterButtonText"
-                                    Icon="filter_alt"
-                                    ButtonStyle="ButtonStyle.Light"
-                                    Size="ButtonSize.Small"
-                                    Click="OpenFiltersDialog"
-                                    data-testid="crmhr-directory-filters-button" />
-                        </Actions>
-                        <Filters>
-                            <FilterBar ResultText="@($"{FilteredParties.Count} matching record(s)")">
-                                <input value="@searchText"
-                                       @oninput="HandleSearchChanged"
-                                       class="cda-input min-w-0 flex-1"
-                                       placeholder="Search name, role, tag, email, phone, or code"
-                                       data-testid="crmhr-directory-search" />
-                                @if (!string.IsNullOrWhiteSpace(searchText))
-                                {
-                                    <TooltipTarget Text="Clear search" Position="TooltipPosition.Bottom">
-                                        <Button Icon="close"
-                                                Class="cda-button--quick"
-                                                ButtonStyle="ButtonStyle.Light"
-                                                Size="ButtonSize.Small"
-                                                Click="ClearSearch"
-                                                aria-label="Clear search" />
-                                    </TooltipTarget>
-                                }
-                            </FilterBar>
-                        </Filters>
-                    </ListPanelHeader>
-                </ListHeader>
+            <SurfaceCard data-testid="crmhr-directory-catalog">
+                <Stack GapScale="LayoutGap.Medium">
+                    <ListPanelHeader Title="Directory records"
+                                     Description="Search and page through shared people, organizations, delivery units, and AI agents. Open a card to view or edit the complete record."
+                                     Count="Server-paged" />
+                    <PartyRecordBrowser @key="directoryBrowserVersion"
+                                        SelectedPartyId="@editor.Id"
+                                        SelectionChanged="SelectPartyAsync"
+                                        IncludeArchived="true"
+                                        PageSize="18"
+                                        ResultsScrollMode="PagedRecordResultsScrollMode.Bounded"
+                                        SearchPlaceholder="Search name, code, summary, or tags"
+                                        OptionTestId="crmhr-directory-item"
+                                        DataTestId="crmhr-directory" />
+                </Stack>
+            </SurfaceCard>
 
-                <ListContent>
-                    @if (FilteredParties.Count == 0)
-                    {
-                        <EmptyState Eyebrow="Directory is empty"
-                                    Title="Create the first shared party record"
-                                    Description="The shell route is ready. Save a party here to prove the CRM / HR module persists and reloads correctly.">
-                            <Actions>
-                                <Button Text="Create party"
-                                        Click="CreateNewAsync" />
-                            </Actions>
-                        </EmptyState>
-                    }
-                    else
-                    {
-                        <div style="max-height: min(52rem, calc(100vh - 22rem)); overflow-y: auto; overscroll-behavior: contain; padding-right: 0.25rem;"
-                             data-testid="crmhr-directory-list-scroll">
-                            <Stack GapScale="LayoutGap.Small">
-                                @foreach (var item in PagedParties)
-                                {
-                                    <div data-testid="crmhr-directory-item">
-                                        <SelectionListItem Title="@item.DisplayName"
-                                                           Eyebrow="@item.PartyType.ToString()"
-                                                           Meta="@BuildMeta(item)"
-                                                           Summary="@BuildSummary(item)"
-                                                           IsSelected="@(editor.Id == item.Id)"
-                                                           OnSelect="@(() => SelectPartyAsync(item.Id))">
-                                            <Status>
-                                                <Cluster Gap="LayoutGap.Small">
-                                                    <StatusBadge Tone="@ResolveStatusTone(item.LifecycleStatus)" Text="@item.LifecycleStatus.ToString()" />
-                                                    @if (item.IsSensitive)
-                                                    {
-                                                        <StatusBadge Tone="warning" Text="Sensitive" />
-                                                    }
-                                                </Cluster>
-                                            </Status>
-                                        </SelectionListItem>
-                                    </div>
-                                }
-                            </Stack>
-                        </div>
-
-                        @if (DirectoryPageCount > 1)
-                        {
-                            <Split Breakpoint="LayoutBreakpoint.None"
-                                   Gap="LayoutGap.Small"
-                                   AlignItems="AlignItems.Center"
-                                   JustifyContent="JustifyContent.SpaceBetween"
-                                   Wrap="FlexWrap.Wrap"
-                                   Class="mt-3"
-                                   data-testid="crmhr-directory-pager">
-                                <SmallText Text="@($"Showing {FirstPagedParty}-{LastPagedParty} of {FilteredParties.Count}")" />
-                                <Cluster Gap="LayoutGap.XSmall" Wrap="FlexWrap.NoWrap">
-                                    <TooltipTarget Text="Previous page" Position="TooltipPosition.Bottom">
-                                        <Button ButtonStyle="ButtonStyle.Light"
-                                                Class="cda-button--quick"
-                                                Icon="chevron_left"
-                                                Disabled="@(NormalizedDirectoryPageIndex == 0)"
-                                                aria-label="Previous page"
-                                                data-testid="crmhr-directory-previous-page"
-                                                Click="@(() => MoveDirectoryPage(-1))" />
-                                    </TooltipTarget>
-                                    <StatusBadge Tone="neutral" Text="@($"{NormalizedDirectoryPageIndex + 1} / {DirectoryPageCount}")" />
-                                    <TooltipTarget Text="Next page" Position="TooltipPosition.Bottom">
-                                        <Button ButtonStyle="ButtonStyle.Light"
-                                                Class="cda-button--quick"
-                                                Icon="chevron_right"
-                                                Disabled="@(NormalizedDirectoryPageIndex >= DirectoryPageCount - 1)"
-                                                aria-label="Next page"
-                                                data-testid="crmhr-directory-next-page"
-                                                Click="@(() => MoveDirectoryPage(1))" />
-                                    </TooltipTarget>
-                                </Cluster>
-                            </Split>
-                        }
-                    }
-                </ListContent>
-
-                <DetailHeader>
+            @if (isEditorDialogOpen)
+            {
+                <Dialog IsOpen="true"
+                        Eyebrow="Party directory"
+                        Title="@EditorTitle"
+                        Subtitle="Shared identity, contact, privacy, activity, and relationship record."
+                        Size="ModalSize.Full"
+                        DenseChrome="true"
+                        CloseOnBackdrop="false"
+                        TestId="crmhr-directory-record-dialog"
+                        OnClose="CloseEditorDialogAsync">
+                    <ChildContent>
                     <Split Gap="LayoutGap.Medium">
                         <Stack GapScale="LayoutGap.Tiny">
                             <p class="cda-eyebrow">Party editor</p>
@@ -183,10 +99,10 @@
                             }
                         </Cluster>
                     </Split>
-                </DetailHeader>
 
-                <DetailContent>
-                    <EditForm Model="editor" OnValidSubmit="SaveAsync">
+                    <EditForm id="crmhr-directory-record-form"
+                              Model="editor"
+                              OnValidSubmit="SaveAsync">
                         <Stack Class="min-h-full" GapScale="LayoutGap.Large">
                             <Tabs SelectedIndex="@selectedEditorTabIndex"
                                   SelectedIndexChanged="HandleEditorTabChangedAsync"
@@ -272,10 +188,12 @@
                                     </div>
                                     <div>
                                         <label class="cda-field-label">Tags</label>
-                                        <InputText @bind-Value="editor.TagsText"
-                                                   class="cda-input"
-                                                   placeholder="customer, priority, berlin"
-                                                   data-testid="crmhr-party-tags" />
+                                        <TagEditor Value="@editor.Tags"
+                                                   ValueChanged="value => editor.Tags = value"
+                                                   Placeholder="Add customer, priority, or region tags"
+                                                   MaxTags="20"
+                                                   TestId="crmhr-party-tags-editor"
+                                                   InputTestId="crmhr-party-tags" />
                                     </div>
                                 </Grid>
 
@@ -557,8 +475,11 @@
                             <FormSection Title="Activity and project context"
                                          Description="Review the selected party's interaction history and project links without crowding the editable record fields.">
                                 <Stack GapScale="LayoutGap.XLarge">
-                                    <InteractionTimeline Items="activityTimeline"
-                                                        Eyebrow="Party history"
+                                    <InteractionTimeline Page="activityPage"
+                                                         IsLoading="@isActivityLoading"
+                                                         PageRequested="HandleActivityPageRequestedAsync"
+                                                         DataTestId="crmhr-directory-activity"
+                                                         Eyebrow="Party history"
                                                         Title="Recent interactions, changes, and follow-ups"
                                                         Description="Directory edits, CRM interactions, recruiting state changes, and workforce or AI updates stay visible in one place for the selected party."
                                                         EmptyEyebrow="No party activity"
@@ -572,7 +493,29 @@
                                             Project-party links stay visible here so staffing, ownership, and stakeholder context do not require a separate workbench pass.
                                         </p>
 
-                                        @if (projectAssignments.Count == 0)
+                                        @if (isProjectAssignmentsLoading)
+                                        {
+                                            <div class="mt-5">
+                                                <LoadingState Eyebrow="Project assignments"
+                                                              Title="Loading assignment page"
+                                                              Description="Loading only the requested assignment page for this party." />
+                                            </div>
+                                        }
+                                        else if (!string.IsNullOrWhiteSpace(projectAssignmentsLoadError))
+                                        {
+                                            <SurfaceCard Soft="true" Class="mt-5">
+                                                <p class="cda-eyebrow text-rose-700">Project assignments unavailable</p>
+                                                <h4 class="mt-1 text-base font-semibold text-slate-950">Assignment history could not be loaded</h4>
+                                                <p class="mt-2 text-sm leading-6 text-slate-700">Retry to load the requested assignment page for this party.</p>
+                                                <Button Text="Retry"
+                                                        Icon="refresh"
+                                                        ButtonStyle="ButtonStyle.Light"
+                                                        Size="ButtonSize.Small"
+                                                        Class="mt-4"
+                                                        Click="RetryProjectAssignmentsLoadAsync" />
+                                            </SurfaceCard>
+                                        }
+                                        else if (projectAssignmentsPage.Items.Count == 0)
                                         {
                                             <div class="mt-5">
                                                 <EmptyState Eyebrow="No assignments"
@@ -583,7 +526,7 @@
                                         else
                                         {
                                             <Stack GapScale="LayoutGap.Small" Class="mt-5">
-                                                @foreach (var assignment in projectAssignments)
+                                                @foreach (var assignment in projectAssignmentsPage.Items)
                                                 {
                                                     <div class="rounded-[1.25rem] border border-slate-200 bg-slate-50/80 px-4 py-4"
                                                          data-testid="crmhr-party-assignment-item">
@@ -612,6 +555,32 @@
                                                 }
                                             </Stack>
                                         }
+
+                                        <Split Breakpoint="LayoutBreakpoint.None"
+                                               Gap="LayoutGap.Small"
+                                               AlignItems="AlignItems.Center"
+                                               JustifyContent="JustifyContent.SpaceBetween"
+                                               Wrap="FlexWrap.Wrap"
+                                               Class="mt-5"
+                                               data-testid="crmhr-party-assignments-pager">
+                                            <StatusBadge Tone="neutral" Text="@ProjectAssignmentsPageText" />
+                                            <Cluster Gap="LayoutGap.Small">
+                                                <Button Text="Previous"
+                                                        Icon="chevron_left"
+                                                        ButtonStyle="ButtonStyle.Light"
+                                                        Size="ButtonSize.Small"
+                                                        Disabled="@(!CanMoveProjectAssignmentsPrevious)"
+                                                        Click="@(() => HandleProjectAssignmentsPageRequestedAsync(projectAssignmentsPage.PageIndex - 1))"
+                                                        data-testid="crmhr-party-assignments-previous" />
+                                                <Button Text="Next"
+                                                        Icon="chevron_right"
+                                                        ButtonStyle="ButtonStyle.Light"
+                                                        Size="ButtonSize.Small"
+                                                        Disabled="@(!CanMoveProjectAssignmentsNext)"
+                                                        Click="@(() => HandleProjectAssignmentsPageRequestedAsync(projectAssignmentsPage.PageIndex + 1))"
+                                                        data-testid="crmhr-party-assignments-next" />
+                                            </Cluster>
+                                        </Split>
                                     </SurfaceCard>
                                 </Stack>
                             </FormSection>
@@ -647,8 +616,7 @@
                                          Description="Model org structure and safe deduplication here so downstream CRM, workforce, recruiting, and assignment flows inherit trusted references.">
                                 <Stack GapScale="LayoutGap.XLarge">
                                     <PartyRelationshipsEditor CurrentPartyId="editor.Id"
-                                                             Relationships="relationships"
-                                                             AvailableParties="RelationshipOptions" />
+                                                             Relationships="relationships" />
 
                                     @if (!editor.Id.HasValue)
                                     {
@@ -710,94 +678,53 @@
                                 </TabsItem>
                             </Tabs>
 
-                            <StickyActionFooter StatusLabel="Party save state"
-                                                StatusTone="success">
-                                <SecondaryActions>
-                                    <Button Text="New party"
-                                            ButtonStyle="ButtonStyle.Light"
-                                            Click="CreateNewAsync" />
-                                </SecondaryActions>
-                                <PrimaryActions>
-                                    <Button Text="Save party"
-                                            Type="submit"
-                                            data-testid="crmhr-party-save-button" />
-                                </PrimaryActions>
-                            </StickyActionFooter>
                         </Stack>
                     </EditForm>
+                    </ChildContent>
+                    <Footer>
+                        <Split Breakpoint="LayoutBreakpoint.None"
+                               Gap="LayoutGap.Medium"
+                               AlignItems="AlignItems.Center"
+                               JustifyContent="JustifyContent.SpaceBetween"
+                               Wrap="FlexWrap.Wrap">
+                            <SmallText Text="Changes remain local until Save party succeeds." />
+                            <Cluster Gap="LayoutGap.Small">
+                                <Button Text="Close"
+                                        ButtonStyle="ButtonStyle.Light"
+                                        Click="CloseEditorDialogAsync"
+                                        data-testid="crmhr-directory-record-close" />
+                                <Button Text="Save party"
+                                        Click="SaveAsync"
+                                        data-testid="crmhr-party-save-button" />
+                            </Cluster>
+                        </Split>
+                    </Footer>
+                </Dialog>
+            }
 
-                    <PartyMergeDialog IsOpen="@isMergeDialogOpen"
-                                      CurrentPartyDisplayName="@editor.DisplayName"
-                                      Candidate="@mergeCandidate"
-                                      OnClose="HandleMergeCloseAsync"
-                                      OnConfirm="HandleMergeConfirmAsync" />
-                </DetailContent>
-            </ListDetailShell>
+            <PartyMergeDialog IsOpen="@isMergeDialogOpen"
+                              CurrentPartyDisplayName="@editor.DisplayName"
+                              Candidate="@mergeCandidate"
+                              OnClose="HandleMergeCloseAsync"
+                              OnConfirm="HandleMergeConfirmAsync" />
 
             @if (isImportExportDialogOpen)
             {
                 <Dialog IsOpen="true"
                         Eyebrow="Party directory"
                         Title="Import and export"
-                        Subtitle="Export the filtered directory or validate CSV rows before importing them."
+                        Subtitle="Export the full directory on demand or validate CSV rows before importing them."
                         Size="ModalSize.Wide"
                         DenseChrome="true"
                         TestId="crmhr-directory-import-export-dialog"
                         OnClose="CloseImportExportDialogAsync">
                     <ChildContent>
-                        <PartyImportExportActions ExportPartyIds="@FilteredParties.Select(item => item.Id).ToList()"
+                        <PartyImportExportActions ExportScope="PartyCsvExportScope.EntireDirectory"
                                                   ImportApplied="HandleImportAppliedAsync" />
                     </ChildContent>
                 </Dialog>
             }
 
-            @if (isFiltersDialogOpen)
-            {
-                <Dialog IsOpen="true"
-                        Eyebrow="Party directory"
-                        Title="Filters"
-                        Subtitle="Narrow the directory by party type or lifecycle status."
-                        Size="ModalSize.Compact"
-                        DenseChrome="true"
-                        TestId="crmhr-directory-filters-dialog"
-                        OnClose="CloseFiltersDialogAsync">
-                    <ChildContent>
-                        <Stack GapScale="LayoutGap.Medium">
-                            <FormField Text="Party type">
-                                <InputSelect @bind-Value="typeFilter"
-                                             class="cda-input"
-                                             data-testid="crmhr-directory-type-filter">
-                                    <option value="">All types</option>
-                                    @foreach (var partyType in Enum.GetValues<PartyType>())
-                                    {
-                                        <option value="@partyType.ToString()">@partyType</option>
-                                    }
-                                </InputSelect>
-                            </FormField>
-
-                            <FormField Text="Lifecycle status">
-                                <InputSelect @bind-Value="statusFilter"
-                                             class="cda-input"
-                                             data-testid="crmhr-directory-status-filter">
-                                    <option value="">All statuses</option>
-                                    @foreach (var lifecycleStatus in Enum.GetValues<PartyLifecycleStatus>())
-                                    {
-                                        <option value="@lifecycleStatus.ToString()">@lifecycleStatus</option>
-                                    }
-                                </InputSelect>
-                            </FormField>
-
-                            <Cluster Gap="LayoutGap.Small" JustifyContent="JustifyContent.SpaceBetween">
-                                <Button Text="Reset all"
-                                        ButtonStyle="ButtonStyle.Light"
-                                        Click="ResetFilters" />
-                                <Button Text="Show results"
-                                        Click="CloseFiltersDialogAsync" />
-                            </Cluster>
-                        </Stack>
-                    </ChildContent>
-                </Dialog>
-            }
         </Stack>
     </ChildContent>
 </PageScaffold>
@@ -811,40 +738,42 @@
     private const int HandlingTabIndex = 2;
     private const int ActivityTabIndex = 3;
     private const int RelationshipsTabIndex = 4;
-    private const int DirectoryPageSize = 8;
-
     private static readonly IReadOnlyList<string> ConfidentialNoteCategories = PartyConfidentialNoteCategories.All;
 
-    private IReadOnlyList<PartyDirectoryListItemModel> directoryItems = [];
     private PartyEditorViewModel editor = PartyEditorViewModel.CreateNew();
     private List<PartyRelationshipEditorModel> relationships = [];
     private IReadOnlyList<PartyDuplicateCandidateModel> duplicateCandidates = [];
-    private IReadOnlyList<CrmAccountActivityTimelineItemModel> activityTimeline = [];
-    private IReadOnlyList<PartyProjectAssignmentItemModel> projectAssignments = [];
+    private CrmActivityHistoryPage activityPage = CrmActivityHistoryPage.Empty();
+    private PartyProjectAssignmentPage projectAssignmentsPage = PartyProjectAssignmentPage.Empty();
     private PartyDuplicateCandidateModel? mergeCandidate;
+    private bool isEditorDialogOpen;
     private bool isMergeDialogOpen;
     private bool isImportExportDialogOpen;
-    private bool isFiltersDialogOpen;
     private bool isRelationshipsLoading;
     private bool isActivityLoading;
+    private bool isProjectAssignmentsLoading;
     private string? handledPartyKey;
     private bool hasHandledPartyRequest;
     private long directoryLoadGeneration;
+    private long directoryBrowserVersion;
     private int selectedEditorTabIndex = ProfileTabIndex;
-    private int directoryPageIndex;
-    private string searchText = string.Empty;
-    private string typeFilter = string.Empty;
-    private string statusFilter = string.Empty;
     private string relationshipsLoadError = string.Empty;
     private string activityLoadError = string.Empty;
+    private string projectAssignmentsLoadError = string.Empty;
     private Guid? relationshipsLoadedPartyId;
     private Guid? activityLoadedPartyId;
+    private Guid? projectAssignmentsLoadedPartyId;
     private Guid? relationshipsLoadPartyId;
     private Guid? activityLoadPartyId;
+    private Guid? projectAssignmentsLoadPartyId;
     private long relationshipsLoadGeneration;
     private long activityLoadGeneration;
+    private long projectAssignmentsLoadGeneration;
     private Task? relationshipsLoadTask;
     private Task? activityLoadTask;
+    private Task? projectAssignmentsLoadTask;
+    private CancellationTokenSource? activityLoadCancellation;
+    private CancellationTokenSource? projectAssignmentsLoadCancellation;
     private AgentChatContextAccessState agentChatContextAccessState = AgentChatContextAccessState.Loading;
 
     private AgentChatContextSurface AgentChatSurface => editor.Id is { } partyId &&
@@ -861,34 +790,6 @@
             Navigation.Uri,
             [new("partyId", PartyIdQuery?.ToString("D"))]);
 
-    private IReadOnlyList<PartyDirectoryListItemModel> FilteredParties => directoryItems
-        .Where(MatchesSearch)
-        .Where(MatchesType)
-        .Where(MatchesStatus)
-        .ToList();
-
-    private int ActiveFilterCount => (string.IsNullOrWhiteSpace(typeFilter) ? 0 : 1) +
-                                     (string.IsNullOrWhiteSpace(statusFilter) ? 0 : 1);
-
-    private string FilterButtonText => ActiveFilterCount == 0 ? "Filters" : $"Filters ({ActiveFilterCount})";
-
-    private int DirectoryPageCount => Math.Max(1, (int)Math.Ceiling(FilteredParties.Count / (double)DirectoryPageSize));
-
-    private int NormalizedDirectoryPageIndex => Math.Clamp(directoryPageIndex, 0, DirectoryPageCount - 1);
-
-    private int FirstPagedParty => NormalizedDirectoryPageIndex * DirectoryPageSize + 1;
-
-    private int LastPagedParty => Math.Min((NormalizedDirectoryPageIndex + 1) * DirectoryPageSize, FilteredParties.Count);
-
-    private IReadOnlyList<PartyDirectoryListItemModel> PagedParties => FilteredParties
-        .Skip(NormalizedDirectoryPageIndex * DirectoryPageSize)
-        .Take(DirectoryPageSize)
-        .ToList();
-
-    private IReadOnlyList<PartyDirectoryListItemModel> RelationshipOptions => directoryItems
-        .Where(item => item.Id != editor.Id)
-        .ToList();
-
     private string EditorTitle => editor.Id.HasValue ? editor.DisplayName : "New party";
 
     protected override async Task OnParametersSetAsync()
@@ -899,6 +800,11 @@
             string.Equals(currentPartyKey, handledPartyKey, StringComparison.Ordinal))
         {
             return;
+        }
+
+        if (requestedPartyId != editor.Id)
+        {
+            isEditorDialogOpen = false;
         }
 
         var request = BeginDirectoryLoad(
@@ -915,6 +821,7 @@
         agentChatContextAccessState = outcome == DirectoryLoadOutcome.Ready
             ? AgentChatContextAccessState.Ready
             : AgentChatContextAccessState.Failed;
+        isEditorDialogOpen = outcome == DirectoryLoadOutcome.Ready && requestedPartyId.HasValue;
 
         if (outcome == DirectoryLoadOutcome.Ready)
         {
@@ -948,6 +855,7 @@
     private Task SelectPartyAsync(Guid partyId)
     {
         Interlocked.Increment(ref directoryLoadGeneration);
+        isEditorDialogOpen = false;
         selectedEditorTabIndex = ProfileTabIndex;
         agentChatContextAccessState = AgentChatContextAccessState.Loading;
         Navigation.NavigateTo($"/crm-hr/directory?partyId={partyId}", replace: true);
@@ -995,24 +903,18 @@
 
     private async Task<DirectoryLoadSnapshot> LoadDirectorySnapshotAsync(Guid? requestedPartyId)
     {
-        var directoryTask = PartyDirectoryService.ListDirectoryAsync();
         if (!requestedPartyId.HasValue)
         {
-            return DirectoryLoadSnapshot.ForNewParty(await directoryTask);
+            return DirectoryLoadSnapshot.ForNewParty();
         }
 
-        var partyId = requestedPartyId.Value;
-        var partyTask = PartyDirectoryService.GetPartyAsync(partyId);
-        await Task.WhenAll(directoryTask, partyTask);
-        var directory = await directoryTask;
-        var party = await partyTask;
+        var party = await PartyDirectoryService.GetPartyAsync(requestedPartyId.Value);
         if (party is null)
         {
-            return DirectoryLoadSnapshot.ForMissingParty(directory);
+            return DirectoryLoadSnapshot.ForMissingParty();
         }
 
         return new DirectoryLoadSnapshot(
-            directory,
             PartyEditorViewModel.FromEditorModel(party),
             RequestedPartyFound: true);
     }
@@ -1020,7 +922,6 @@
     private void CommitDirectorySnapshot(DirectoryLoadSnapshot snapshot)
     {
         var isPartySelectionChanged = editor.Id != snapshot.Editor.Id;
-        directoryItems = snapshot.DirectoryItems;
         editor = snapshot.Editor;
         if (isPartySelectionChanged)
         {
@@ -1028,7 +929,6 @@
         }
 
         ResetDirectoryDetailState();
-        MoveDirectoryPageToSelectedParty();
     }
 
     private bool IsCurrentDirectoryLoad(DirectoryLoadRequest request)
@@ -1045,13 +945,39 @@
         handledPartyKey = "new";
         hasHandledPartyRequest = true;
         agentChatContextAccessState = AgentChatContextAccessState.Ready;
+        isEditorDialogOpen = true;
+        Navigation.NavigateTo("/crm-hr/directory", replace: true);
+        return Task.CompletedTask;
+    }
+
+    private Task CloseEditorDialogAsync()
+    {
+        if (!isEditorDialogOpen)
+        {
+            return Task.CompletedTask;
+        }
+
+        Interlocked.Increment(ref directoryLoadGeneration);
+        isEditorDialogOpen = false;
+        editor = PartyEditorViewModel.CreateNew();
+        selectedEditorTabIndex = ProfileTabIndex;
+        ResetDirectoryDetailState();
+        handledPartyKey = "new";
+        hasHandledPartyRequest = true;
+        agentChatContextAccessState = AgentChatContextAccessState.Ready;
         Navigation.NavigateTo("/crm-hr/directory", replace: true);
         return Task.CompletedTask;
     }
 
     private async Task SaveAsync()
     {
+        var action = CaptureDirectoryAction();
         var result = await PartyDirectoryService.SavePartyAsync(editor.ToEditorModel());
+        if (!IsCurrentDirectoryAction(action))
+        {
+            return;
+        }
+
         if (result.IsFailure)
         {
             NotificationService.Warning("Party was not saved", string.Join(" ", result.Errors.Select(error => error.Message)));
@@ -1068,11 +994,20 @@
                 savedPartyId,
                 relationships,
                 editor.LastChangedBy);
+            if (!IsCurrentDirectoryAction(action))
+            {
+                return;
+            }
 
             if (relationshipSaveResult.IsFailure)
             {
-                directoryItems = await PartyDirectoryService.ListDirectoryAsync();
+                directoryBrowserVersion++;
                 duplicateCandidates = await ManagementService.FindPotentialDuplicatesAsync(savedPartyId);
+                if (!IsCurrentDirectoryAction(action))
+                {
+                    return;
+                }
+
                 NotificationService.Warning(
                     "Party saved with relationship issue",
                     $"Relationships were not updated. {string.Join(" ", relationshipSaveResult.Errors.Select(error => error.Message))}");
@@ -1082,12 +1017,19 @@
         }
 
         NotificationService.Success("Party saved", "Party saved.");
+        directoryBrowserVersion++;
         await LoadAsync(savedPartyId, clearMessage: false);
+        if (!isEditorDialogOpen || editor.Id != savedPartyId)
+        {
+            return;
+        }
+
         Navigation.NavigateTo($"/crm-hr/directory?partyId={savedPartyId}", replace: true);
     }
 
     private async Task HandleImportAppliedAsync()
     {
+        directoryBrowserVersion++;
         await LoadAsync(editor.Id, clearMessage: false);
         isImportExportDialogOpen = false;
     }
@@ -1100,18 +1042,6 @@
     private Task CloseImportExportDialogAsync()
     {
         isImportExportDialogOpen = false;
-        return Task.CompletedTask;
-    }
-
-    private void OpenFiltersDialog()
-    {
-        isFiltersDialogOpen = true;
-    }
-
-    private Task CloseFiltersDialogAsync()
-    {
-        isFiltersDialogOpen = false;
-        directoryPageIndex = 0;
         return Task.CompletedTask;
     }
 
@@ -1189,7 +1119,19 @@
 
     private async Task EnsureActivityLoadedAsync()
     {
-        if (editor.Id is not Guid partyId || activityLoadedPartyId == partyId)
+        if (editor.Id is not Guid partyId)
+        {
+            return;
+        }
+
+        var timelineTask = EnsureActivityTimelineLoadedAsync(partyId);
+        var assignmentsTask = EnsureProjectAssignmentsLoadedAsync(partyId);
+        await Task.WhenAll(timelineTask, assignmentsTask);
+    }
+
+    private async Task EnsureActivityTimelineLoadedAsync(Guid partyId)
+    {
+        if (activityLoadedPartyId == partyId)
         {
             return;
         }
@@ -1199,31 +1141,41 @@
             activityLoadPartyId != partyId ||
             activityLoadGeneration != generation)
         {
+            CancelActivityLoad();
             activityLoadPartyId = partyId;
             activityLoadGeneration = generation;
             isActivityLoading = true;
             activityLoadError = string.Empty;
-            activityLoadTask = LoadActivityAsync(partyId, generation);
+            activityLoadCancellation = new CancellationTokenSource();
+            activityLoadTask = LoadActivityAsync(
+                partyId,
+                generation,
+                activityLoadCancellation.Token);
         }
 
         await activityLoadTask;
     }
 
-    private async Task LoadActivityAsync(Guid partyId, long generation)
+    private async Task LoadActivityAsync(
+        Guid partyId,
+        long generation,
+        CancellationToken cancellationToken)
     {
         try
         {
-            var timelineTask = PartyDirectoryService.ListPartyActivityTimelineAsync(partyId);
-            var assignmentsTask = PartyDirectoryService.ListPartyProjectAssignmentsAsync(partyId);
-            await Task.WhenAll(timelineTask, assignmentsTask);
+            var timeline = await PartyDirectoryService.SearchPartyActivityAsync(
+                new CrmActivityHistoryQuery(partyId),
+                cancellationToken);
             if (!IsCurrentDetailLoad(partyId, generation))
             {
                 return;
             }
 
-            activityTimeline = await timelineTask;
-            projectAssignments = await assignmentsTask;
+            activityPage = timeline;
             activityLoadedPartyId = partyId;
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
         }
         catch when (!IsCurrentDetailLoad(partyId, generation))
         {
@@ -1239,6 +1191,141 @@
             {
                 isActivityLoading = false;
                 activityLoadTask = null;
+            }
+        }
+    }
+
+    private async Task EnsureProjectAssignmentsLoadedAsync(Guid partyId)
+    {
+        if (projectAssignmentsLoadedPartyId == partyId)
+        {
+            return;
+        }
+
+        await LoadProjectAssignmentsPageAsync(partyId, 0);
+    }
+
+    private async Task HandleProjectAssignmentsPageRequestedAsync(int pageIndex)
+    {
+        if (editor.Id is not Guid partyId ||
+            pageIndex < 0 ||
+            pageIndex >= projectAssignmentsPage.TotalPages)
+        {
+            return;
+        }
+
+        await LoadProjectAssignmentsPageAsync(partyId, pageIndex);
+    }
+
+    private async Task LoadProjectAssignmentsPageAsync(Guid partyId, int pageIndex)
+    {
+        var generation = Volatile.Read(ref directoryLoadGeneration);
+        CancelProjectAssignmentsLoad();
+        projectAssignmentsLoadPartyId = partyId;
+        projectAssignmentsLoadGeneration = generation;
+        isProjectAssignmentsLoading = true;
+        projectAssignmentsLoadError = string.Empty;
+        projectAssignmentsLoadCancellation = new CancellationTokenSource();
+        var cancellationToken = projectAssignmentsLoadCancellation.Token;
+        projectAssignmentsLoadTask = LoadProjectAssignmentsPageCoreAsync(
+            partyId,
+            pageIndex,
+            generation,
+            cancellationToken);
+        await projectAssignmentsLoadTask;
+    }
+
+    private async Task LoadProjectAssignmentsPageCoreAsync(
+        Guid partyId,
+        int pageIndex,
+        long generation,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var page = await PartyDirectoryService.SearchPartyProjectAssignmentsAsync(
+                new PartyProjectAssignmentQuery(
+                    partyId,
+                    pageIndex,
+                    PartyProjectAssignmentQueryLimits.DefaultPageSize),
+                cancellationToken);
+            if (!IsCurrentDetailLoad(partyId, generation))
+            {
+                return;
+            }
+
+            projectAssignmentsPage = page;
+            projectAssignmentsLoadedPartyId = partyId;
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+        }
+        catch when (!IsCurrentDetailLoad(partyId, generation))
+        {
+        }
+        catch (Exception exception)
+        {
+            Logger.LogError(
+                exception,
+                "Failed to load project assignment page {PageIndex} for party {PartyId}.",
+                pageIndex,
+                partyId);
+            projectAssignmentsLoadError = "The requested project assignment page could not be loaded.";
+        }
+        finally
+        {
+            if (projectAssignmentsLoadPartyId == partyId &&
+                projectAssignmentsLoadGeneration == generation)
+            {
+                isProjectAssignmentsLoading = false;
+                projectAssignmentsLoadTask = null;
+            }
+        }
+    }
+
+    private async Task HandleActivityPageRequestedAsync(int pageIndex)
+    {
+        if (editor.Id is not Guid partyId ||
+            pageIndex < 0 ||
+            pageIndex >= activityPage.TotalPages)
+        {
+            return;
+        }
+
+        var generation = Volatile.Read(ref directoryLoadGeneration);
+        isActivityLoading = true;
+        activityLoadError = string.Empty;
+        try
+        {
+            var page = await PartyDirectoryService.SearchPartyActivityAsync(
+                new CrmActivityHistoryQuery(
+                    partyId,
+                    pageIndex,
+                    activityPage.PageSize));
+            if (!IsCurrentDetailLoad(partyId, generation))
+            {
+                return;
+            }
+
+            activityPage = page;
+        }
+        catch when (!IsCurrentDetailLoad(partyId, generation))
+        {
+        }
+        catch (Exception exception)
+        {
+            Logger.LogError(
+                exception,
+                "Failed to load activity page {PageIndex} for party {PartyId}.",
+                pageIndex,
+                partyId);
+            activityLoadError = "The requested activity page could not be loaded.";
+        }
+        finally
+        {
+            if (IsCurrentDetailLoad(partyId, generation))
+            {
+                isActivityLoading = false;
             }
         }
     }
@@ -1259,6 +1346,14 @@
         activityLoadedPartyId = null;
         activityLoadTask = null;
         activityLoadError = string.Empty;
+        return EnsureActivityLoadedAsync();
+    }
+
+    private Task RetryProjectAssignmentsLoadAsync()
+    {
+        projectAssignmentsLoadedPartyId = null;
+        projectAssignmentsLoadTask = null;
+        projectAssignmentsLoadError = string.Empty;
         return EnsureActivityLoadedAsync();
     }
 
@@ -1312,11 +1407,19 @@
             return;
         }
 
+        var action = CaptureDirectoryAction();
+        var candidateId = mergeCandidate.Id;
         var result = await ManagementService.MergePartyAsync(
             retainedPartyId,
-            mergeCandidate.Id,
+            candidateId,
             editor.LastChangedBy,
             reason);
+        if (!IsCurrentDirectoryAction(action) ||
+            !isMergeDialogOpen ||
+            mergeCandidate?.Id != candidateId)
+        {
+            return;
+        }
 
         if (result.IsFailure || result.Value is not PartyMergeSummaryModel summary)
         {
@@ -1327,100 +1430,66 @@
         await HandleMergeCloseAsync();
         NotificationService.Success("Party merged", summary.Summary);
         handledPartyKey = retainedPartyId.ToString("N");
+        directoryBrowserVersion++;
         await LoadAsync(retainedPartyId, clearMessage: false);
+        if (!isEditorDialogOpen || editor.Id != retainedPartyId)
+        {
+            return;
+        }
+
         Navigation.NavigateTo($"/crm-hr/directory?partyId={retainedPartyId}", replace: true);
     }
+
+    private DirectoryActionStamp CaptureDirectoryAction()
+        => new(
+            Volatile.Read(ref directoryLoadGeneration),
+            PartyIdQuery,
+            editor);
+
+    private bool IsCurrentDirectoryAction(DirectoryActionStamp action)
+        => action.Generation == Volatile.Read(ref directoryLoadGeneration) &&
+           action.RoutePartyId == PartyIdQuery &&
+           ReferenceEquals(action.Editor, editor);
 
     private void ResetDirectoryDetailState()
     {
         relationships = [];
         duplicateCandidates = [];
-        activityTimeline = [];
-        projectAssignments = [];
+        activityPage = CrmActivityHistoryPage.Empty();
+        projectAssignmentsPage = PartyProjectAssignmentPage.Empty();
         relationshipsLoadedPartyId = null;
         activityLoadedPartyId = null;
+        projectAssignmentsLoadedPartyId = null;
         relationshipsLoadPartyId = null;
         activityLoadPartyId = null;
+        projectAssignmentsLoadPartyId = null;
         relationshipsLoadTask = null;
         activityLoadTask = null;
+        projectAssignmentsLoadTask = null;
+        CancelActivityLoad();
+        CancelProjectAssignmentsLoad();
         isRelationshipsLoading = false;
         isActivityLoading = false;
+        isProjectAssignmentsLoading = false;
         relationshipsLoadError = string.Empty;
         activityLoadError = string.Empty;
+        projectAssignmentsLoadError = string.Empty;
         mergeCandidate = null;
         isMergeDialogOpen = false;
     }
 
-    private void ResetFilters()
+    private void CancelActivityLoad()
     {
-        searchText = string.Empty;
-        typeFilter = string.Empty;
-        statusFilter = string.Empty;
-        directoryPageIndex = 0;
+        activityLoadCancellation?.Cancel();
+        activityLoadCancellation?.Dispose();
+        activityLoadCancellation = null;
     }
 
-    private void ClearSearch()
+    private void CancelProjectAssignmentsLoad()
     {
-        searchText = string.Empty;
-        directoryPageIndex = 0;
-    }
-
-    private void HandleSearchChanged(ChangeEventArgs args)
-    {
-        searchText = args.Value?.ToString() ?? string.Empty;
-        directoryPageIndex = 0;
-    }
-
-    private void MoveDirectoryPage(int delta)
-    {
-        directoryPageIndex = Math.Clamp(
-            NormalizedDirectoryPageIndex + delta,
-            0,
-            DirectoryPageCount - 1);
-    }
-
-    private void MoveDirectoryPageToSelectedParty()
-    {
-        if (editor.Id is not Guid selectedPartyId)
-        {
-            directoryPageIndex = 0;
-            return;
-        }
-
-        var selectedIndex = FilteredParties
-            .Select((item, index) => (item.Id, index))
-            .FirstOrDefault(item => item.Id == selectedPartyId)
-            .index;
-        directoryPageIndex = selectedIndex / DirectoryPageSize;
-    }
-
-    private bool MatchesSearch(PartyDirectoryListItemModel item)
-    {
-        if (string.IsNullOrWhiteSpace(searchText))
-        {
-            return true;
-        }
-
-        var normalizedSearch = searchText.Trim();
-        return item.DisplayName.Contains(normalizedSearch, StringComparison.OrdinalIgnoreCase)
-            || item.ExternalCode.Contains(normalizedSearch, StringComparison.OrdinalIgnoreCase)
-            || item.Summary.Contains(normalizedSearch, StringComparison.OrdinalIgnoreCase)
-            || item.PrimaryEmail.Contains(normalizedSearch, StringComparison.OrdinalIgnoreCase)
-            || item.PrimaryPhone.Contains(normalizedSearch, StringComparison.OrdinalIgnoreCase)
-            || item.Tags.Any(tag => tag.Contains(normalizedSearch, StringComparison.OrdinalIgnoreCase))
-            || item.Roles.Any(role => role.ToString().Contains(normalizedSearch, StringComparison.OrdinalIgnoreCase));
-    }
-
-    private bool MatchesType(PartyDirectoryListItemModel item)
-    {
-        return string.IsNullOrWhiteSpace(typeFilter)
-            || string.Equals(item.PartyType.ToString(), typeFilter, StringComparison.OrdinalIgnoreCase);
-    }
-
-    private bool MatchesStatus(PartyDirectoryListItemModel item)
-    {
-        return string.IsNullOrWhiteSpace(statusFilter)
-            || string.Equals(item.LifecycleStatus.ToString(), statusFilter, StringComparison.OrdinalIgnoreCase);
+        projectAssignmentsLoadCancellation?.Cancel();
+        projectAssignmentsLoadCancellation?.Dispose();
+        projectAssignmentsLoadCancellation = null;
     }
 
     private static PartyRelationshipEditorModel MapRelationship(PartyRelationshipListItemModel relationship)
@@ -1429,6 +1498,8 @@
         {
             Id = relationship.Id,
             RelatedPartyId = relationship.RelatedPartyId,
+            RelatedPartyDisplayName = relationship.RelatedPartyDisplayName,
+            RelatedPartyType = relationship.RelatedPartyType,
             RelationshipKind = relationship.RelationshipKind,
             IsOutgoing = relationship.IsOutgoing,
             IsPrimary = relationship.IsPrimary,
@@ -1436,32 +1507,6 @@
             EndDateUtc = relationship.EndDateUtc,
             Notes = relationship.Notes
         };
-    }
-
-    private static string BuildMeta(PartyDirectoryListItemModel item)
-    {
-        var roleText = item.Roles.Count == 0
-            ? item.PartyType == PartyType.AiAgent
-                ? "AI agent"
-                : "Unclassified"
-            : string.Join(", ", item.Roles);
-        var tagText = item.Tags.Count == 0 ? "No tags" : string.Join(", ", item.Tags);
-        return $"{roleText} / {tagText}";
-    }
-
-    private static string BuildSummary(PartyDirectoryListItemModel item)
-    {
-        if (!string.IsNullOrWhiteSpace(item.PrimaryEmail))
-        {
-            return item.PrimaryEmail;
-        }
-
-        if (!string.IsNullOrWhiteSpace(item.PrimaryPhone))
-        {
-            return item.PrimaryPhone;
-        }
-
-        return string.IsNullOrWhiteSpace(item.Summary) ? item.ExternalCode : item.Summary;
     }
 
     private static string BuildAssignmentSchedule(PartyProjectAssignmentItemModel assignment)
@@ -1474,6 +1519,17 @@
             : "No schedule window";
         return $"{allocation} / {window}";
     }
+
+    private string ProjectAssignmentsPageText => projectAssignmentsPage.TotalPages == 0
+        ? "No pages"
+        : $"Page {projectAssignmentsPage.PageIndex + 1:N0} of {projectAssignmentsPage.TotalPages:N0}";
+
+    private bool CanMoveProjectAssignmentsPrevious =>
+        !isProjectAssignmentsLoading && projectAssignmentsPage.PageIndex > 0;
+
+    private bool CanMoveProjectAssignmentsNext =>
+        !isProjectAssignmentsLoading &&
+        projectAssignmentsPage.PageIndex + 1 < projectAssignmentsPage.TotalPages;
 
     private static string ResolveStatusTone(PartyLifecycleStatus lifecycleStatus)
     {
@@ -1521,24 +1577,23 @@
         DirectoryLoadBinding Binding,
         long Generation);
 
+    private readonly record struct DirectoryActionStamp(
+        long Generation,
+        Guid? RoutePartyId,
+        PartyEditorViewModel Editor);
+
     private sealed record DirectoryLoadSnapshot(
-        IReadOnlyList<PartyDirectoryListItemModel> DirectoryItems,
         PartyEditorViewModel Editor,
         bool RequestedPartyFound)
     {
-        public static DirectoryLoadSnapshot ForNewParty(
-            IReadOnlyList<PartyDirectoryListItemModel> directoryItems)
-            => Empty(directoryItems, requestedPartyFound: true);
+        public static DirectoryLoadSnapshot ForNewParty()
+            => Empty(requestedPartyFound: true);
 
-        public static DirectoryLoadSnapshot ForMissingParty(
-            IReadOnlyList<PartyDirectoryListItemModel> directoryItems)
-            => Empty(directoryItems, requestedPartyFound: false);
+        public static DirectoryLoadSnapshot ForMissingParty()
+            => Empty(requestedPartyFound: false);
 
-        private static DirectoryLoadSnapshot Empty(
-            IReadOnlyList<PartyDirectoryListItemModel> directoryItems,
-            bool requestedPartyFound)
+        private static DirectoryLoadSnapshot Empty(bool requestedPartyFound)
             => new(
-                directoryItems,
                 PartyEditorViewModel.CreateNew(),
                 requestedPartyFound);
     }
@@ -1563,7 +1618,7 @@
 
         public string Notes { get; set; } = string.Empty;
 
-        public string TagsText { get; set; } = string.Empty;
+        public IReadOnlyList<string> Tags { get; set; } = [];
 
         public string Region { get; set; } = string.Empty;
 
@@ -1584,6 +1639,10 @@
         public string PrimaryEmail { get; set; } = string.Empty;
 
         public string PrimaryPhone { get; set; } = string.Empty;
+
+        private PartyContactPointEditorModel? PrimaryEmailContactPoint { get; set; }
+
+        private PartyContactPointEditorModel? PrimaryPhoneContactPoint { get; set; }
 
         public List<PartyRoleAssignmentEditorModel> AdditionalRoles { get; set; } = [];
 
@@ -1619,7 +1678,7 @@
                 ExternalCode = model.ExternalCode,
                 Summary = model.Summary,
                 Notes = model.Notes,
-                TagsText = string.Join(", ", model.Tags),
+                Tags = model.Tags.ToList(),
                 Region = model.Region,
                 CountryCode = model.CountryCode,
                 TimeZone = model.TimeZone,
@@ -1630,6 +1689,12 @@
                 PrimaryRoleKindText = primaryRole?.RoleKind.ToString() ?? string.Empty,
                 PrimaryEmail = primaryEmailIndex >= 0 ? contactPoints[primaryEmailIndex].Value : string.Empty,
                 PrimaryPhone = primaryPhoneIndex >= 0 ? contactPoints[primaryPhoneIndex].Value : string.Empty,
+                PrimaryEmailContactPoint = primaryEmailIndex >= 0
+                    ? CloneContactPoint(contactPoints[primaryEmailIndex])
+                    : null,
+                PrimaryPhoneContactPoint = primaryPhoneIndex >= 0
+                    ? CloneContactPoint(contactPoints[primaryPhoneIndex])
+                    : null,
                 AdditionalRoles = roles
                     .Where((_, index) => index != primaryRoleIndex)
                     .Select(CloneRole)
@@ -1656,9 +1721,7 @@
                 ExternalCode = ExternalCode,
                 Summary = Summary,
                 Notes = Notes,
-                Tags = TagsText
-                    .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-                    .ToList(),
+                Tags = Tags.ToList(),
                 Region = Region,
                 CountryCode = CountryCode,
                 TimeZone = TimeZone,
@@ -1711,8 +1774,18 @@
         private List<PartyContactPointEditorModel> BuildContactPoints()
         {
             var contactPoints = new List<PartyContactPointEditorModel>();
-            AddPrimaryContactPoint(contactPoints, PartyContactType.Email, PrimaryEmail, "Primary email");
-            AddPrimaryContactPoint(contactPoints, PartyContactType.Phone, PrimaryPhone, "Primary phone");
+            AddPrimaryContactPoint(
+                contactPoints,
+                PartyContactType.Email,
+                PrimaryEmail,
+                "Primary email",
+                PrimaryEmailContactPoint);
+            AddPrimaryContactPoint(
+                contactPoints,
+                PartyContactType.Phone,
+                PrimaryPhone,
+                "Primary phone",
+                PrimaryPhoneContactPoint);
 
             contactPoints.AddRange(AdditionalContactPoints
                 .Where(contactPoint => !string.IsNullOrWhiteSpace(contactPoint.Value))
@@ -1725,6 +1798,7 @@
                     NormalizedValue = NormalizeContactValue(contactPoint.ContactType, contactPoint.Value),
                     IsPrimary = false,
                     IsPublic = contactPoint.IsPublic,
+                    Tags = contactPoint.Tags.ToList(),
                     Notes = contactPoint.Notes.Trim()
                 }));
 
@@ -1735,7 +1809,8 @@
             ICollection<PartyContactPointEditorModel> contactPoints,
             PartyContactType contactType,
             string value,
-            string label)
+            string defaultLabel,
+            PartyContactPointEditorModel? existingContactPoint)
         {
             if (string.IsNullOrWhiteSpace(value))
             {
@@ -1744,12 +1819,17 @@
 
             contactPoints.Add(new PartyContactPointEditorModel
             {
+                Id = existingContactPoint?.Id,
                 ContactType = contactType,
-                Label = label,
+                Label = string.IsNullOrWhiteSpace(existingContactPoint?.Label)
+                    ? defaultLabel
+                    : existingContactPoint.Label.Trim(),
                 Value = value.Trim(),
                 NormalizedValue = NormalizeContactValue(contactType, value),
                 IsPrimary = true,
-                IsPublic = true
+                IsPublic = existingContactPoint?.IsPublic ?? true,
+                Tags = existingContactPoint?.Tags.ToList() ?? [],
+                Notes = existingContactPoint?.Notes.Trim() ?? string.Empty
             });
         }
 
@@ -1819,6 +1899,7 @@
                 NormalizedValue = contactPoint.NormalizedValue,
                 IsPrimary = contactPoint.IsPrimary,
                 IsPublic = contactPoint.IsPublic,
+                Tags = contactPoint.Tags.ToList(),
                 Notes = contactPoint.Notes
             };
         }

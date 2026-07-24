@@ -1,6 +1,7 @@
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Infrastructure.Search;
 using CanDoItAll.Modules.CrmHr;
+using CanDoItAll.Modules.Projects;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -8,6 +9,54 @@ namespace CanDoItAll.Tests.Integration;
 
 public sealed class CrmHrAuditTrailIntegrationTests
 {
+    [Fact]
+    public async Task Non_public_contact_values_stay_out_of_search_and_picker_projections()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var partyDirectoryService = scope.ServiceProvider.GetRequiredService<PartyDirectoryService>();
+        var searchIndexService = scope.ServiceProvider.GetRequiredService<ISearchIndexService>();
+        var projectPartyBridge = scope.ServiceProvider.GetRequiredService<IProjectPartyIntegrationBridge>();
+        const string privateEmail = "private-contact-493@example.test";
+        const string publicPhone = "+1 555 01493";
+
+        var partyResult = await partyDirectoryService.SavePartyAsync(new PartyEditorModel
+        {
+            PartyType = PartyType.Person,
+            LifecycleStatus = PartyLifecycleStatus.Active,
+            DisplayName = "Public directory identity",
+            LastChangedBy = "integration-tests",
+            ContactPoints =
+            [
+                new PartyContactPointEditorModel
+                {
+                    ContactType = PartyContactType.Email,
+                    Label = "Private email",
+                    Value = privateEmail,
+                    NormalizedValue = privateEmail,
+                    IsPrimary = true,
+                    IsPublic = false
+                },
+                new PartyContactPointEditorModel
+                {
+                    ContactType = PartyContactType.Phone,
+                    Label = "Public phone",
+                    Value = publicPhone,
+                    NormalizedValue = "+155501493",
+                    IsPrimary = true,
+                    IsPublic = true
+                }
+            ]
+        });
+        Assert.True(partyResult.IsSuccess);
+
+        Assert.Empty(await searchIndexService.SearchAsync(privateEmail));
+        var option = await projectPartyBridge.GetPartyOptionAsync(partyResult.Value);
+        Assert.NotNull(option);
+        Assert.Equal(string.Empty, option.PrimaryEmail);
+        Assert.Equal(publicPhone, option.PrimaryPhone);
+    }
+
     [Fact]
     public async Task Sensitive_party_notes_and_workforce_records_stay_out_of_search()
     {
@@ -144,10 +193,11 @@ public sealed class CrmHrAuditTrailIntegrationTests
         Assert.Contains(auditEntries, item => item.Action == "PartyReactivated");
         Assert.Contains(auditEntries, item => item.Action == "WorkforceProfileSaved");
 
-        var timeline = await partyDirectoryService.ListPartyActivityTimelineAsync(createResult.Value);
-        Assert.Contains(timeline, item => item.Title.Contains("Archived party 'Mila Archive'.", StringComparison.Ordinal));
-        Assert.Contains(timeline, item => item.Title.Contains("Reactivated party 'Mila Archive'.", StringComparison.Ordinal));
-        Assert.Contains(timeline, item => item.Title.Contains("Saved workforce profile for 'Mila Archive'.", StringComparison.Ordinal));
+        var activity = await partyDirectoryService.SearchPartyActivityAsync(
+            new CrmActivityHistoryQuery(createResult.Value, PageSize: 20));
+        Assert.Contains(activity.Items, item => item.Title.Contains("Archived party 'Mila Archive'.", StringComparison.Ordinal));
+        Assert.Contains(activity.Items, item => item.Title.Contains("Reactivated party 'Mila Archive'.", StringComparison.Ordinal));
+        Assert.Contains(activity.Items, item => item.Title.Contains("Saved workforce profile for 'Mila Archive'.", StringComparison.Ordinal));
 
         var workspace = await hrService.GetWorkforceWorkspaceAsync(createResult.Value);
         Assert.NotNull(workspace);

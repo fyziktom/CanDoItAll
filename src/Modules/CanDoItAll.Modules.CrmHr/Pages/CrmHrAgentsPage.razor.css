@@ -1,0 +1,24 @@
+.crmhr-agent-catalog {
+    display: grid;
+    gap: 1rem;
+    min-width: 0;
+    width: 100%;
+}
+
+.crmhr-agent-catalog__hero {
+    align-items: center;
+    border-bottom: 1px solid rgb(226 232 240);
+    display: flex;
+    gap: 1rem;
+    justify-content: space-between;
+    min-width: 0;
+    padding-bottom: 0.85rem;
+}
+
+.crmhr-agent-catalog ::deep .paged-record-browser__results--bounded {
+    max-height: min(48rem, calc(100vh - 25rem));
+}
+
+.crmhr-agent-catalog ::deep .agent-selection-card {
+    height: 100%;
+}

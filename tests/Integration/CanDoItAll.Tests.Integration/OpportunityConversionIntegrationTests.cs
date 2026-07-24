@@ -85,10 +85,13 @@ public sealed class OpportunityConversionIntegrationTests
         });
 
         Assert.True(saveResult.IsSuccess);
+        var savedOpportunity = await crmService.GetOpportunityAsync(saveResult.Value);
+        Assert.NotNull(savedOpportunity);
 
         var conversionResult = await crmService.ConvertOpportunityToProjectAsync(new CrmOpportunityConversionEditorModel
         {
             OpportunityId = saveResult.Value,
+            ExpectedUpdatedAtUtc = savedOpportunity!.UpdatedAtUtc,
             ProjectName = "Fabrikam Platform Handoff",
             ProjectDescription = "Platform delivery context created from the won CRM opportunity.",
             ProjectObjective = "Start structured delivery with preserved commercial relationships.",
@@ -102,7 +105,8 @@ public sealed class OpportunityConversionIntegrationTests
 
         var workspace = await crmService.GetAccountWorkspaceAsync(accountId);
         Assert.NotNull(workspace);
-        var opportunity = Assert.Single(workspace!.Opportunities);
+        var opportunity = await crmService.GetOpportunityAsync(saveResult.Value);
+        Assert.NotNull(opportunity);
         Assert.Equal(conversion!.ProjectId, opportunity.LinkedProjectId);
 
         var project = await projectsService.GetAsync(conversion.ProjectId);
@@ -123,8 +127,10 @@ public sealed class OpportunityConversionIntegrationTests
         Assert.Equal("Nina Owner", projectSummary.PrimaryOwnerName);
         Assert.Contains(projectSummary.RelatedParties!, item => item.DisplayName == "Contoso Partner");
 
+        var activity = await crmService.SearchAccountActivityAsync(
+            new CrmActivityHistoryQuery(accountId));
         Assert.Contains(
-            workspace.ActivityTimeline,
+            activity.Items,
             item => item.Title.Contains("Converted opportunity", StringComparison.Ordinal));
     }
 

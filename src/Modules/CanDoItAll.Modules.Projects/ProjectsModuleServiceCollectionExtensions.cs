@@ -9,6 +9,7 @@ public static class ProjectsModuleServiceCollectionExtensions
     public static IServiceCollection AddProjectsModule(this IServiceCollection services)
     {
         services.AddScoped<ProjectsService>();
+        services.AddScoped<IProjectRecordQueryService, ProjectRecordQueryService>();
         services.AddScoped<IRecentProjectActivityQueryService, RecentProjectActivityQueryService>();
         services.AddScoped<IProjectNodeScopeBridge, NoopProjectNodeScopeBridge>();
         services.TryAddScoped<IProjectNodeDetailsBridge, NoopProjectNodeDetailsBridge>();

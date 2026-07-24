@@ -87,6 +87,111 @@ public sealed class ProjectPartyAssignmentIntegrationTests
     }
 
     [Fact]
+    public async Task Detailed_assignment_search_pages_the_server_result_and_rejects_unbounded_page_sizes()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var partyDirectoryService = scope.ServiceProvider.GetRequiredService<PartyDirectoryService>();
+        var projectsService = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var assignments = scope.ServiceProvider.GetRequiredService<ProjectPartyIntegrationService>();
+
+        var projectId = await CreateProjectAsync(projectsService, "Bounded assignment search project");
+        for (var index = 0; index < 13; index++)
+        {
+            var partyId = await CreatePartyAsync(
+                partyDirectoryService,
+                PartyType.Person,
+                $"Paged resource {index:D2}");
+            var result = await assignments.SaveAssignmentAsync(new ProjectPartyAssignmentUpsertRequest
+            {
+                ProjectId = projectId,
+                PartyId = partyId,
+                Role = ProjectPartyAssignmentRole.TeamMember,
+                AllocationPercent = 50m,
+                StartsOn = new DateOnly(2026, 7, 1),
+                EndsOn = new DateOnly(2026, 7, 31),
+                Source = "integration-tests"
+            });
+
+            Assert.True(result.IsSuccess);
+        }
+
+        var page = await assignments.SearchAssignmentsDetailedAsync(
+            new ProjectPartyAssignmentQuery(
+                projectId,
+                [ProjectPartyAssignmentRole.TeamMember],
+                "Paged resource",
+                PageIndex: 1,
+                PageSize: 5,
+                WindowStartUtc: new DateTimeOffset(2026, 7, 1, 0, 0, 0, TimeSpan.Zero),
+                WindowEndUtc: new DateTimeOffset(2026, 7, 31, 23, 59, 59, TimeSpan.Zero),
+                AllocationOnly: true));
+
+        Assert.Equal(13, page.TotalCount);
+        Assert.Equal(1, page.PageIndex);
+        Assert.Equal(5, page.Items.Count);
+        Assert.All(page.Items, item => Assert.Contains("Paged resource", item.PartyDisplayName));
+
+        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() =>
+            assignments.SearchAssignmentsDetailedAsync(
+                new ProjectPartyAssignmentQuery(
+                    projectId,
+                    [ProjectPartyAssignmentRole.TeamMember],
+                PageSize: ProjectPartyAssignmentQueryLimits.MaximumPageSize + 1)));
+    }
+
+    [Fact]
+    public async Task Party_assignment_history_pages_the_server_result_and_rejects_unbounded_page_sizes()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var partyDirectoryService = scope.ServiceProvider.GetRequiredService<PartyDirectoryService>();
+        var projectsService = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var assignments = scope.ServiceProvider.GetRequiredService<IProjectPartyIntegrationBridge>();
+        var partyId = await CreatePartyAsync(
+            partyDirectoryService,
+            PartyType.Person,
+            "Paged assignment history party");
+
+        for (var index = 0; index < 9; index++)
+        {
+            var projectId = await CreateProjectAsync(
+                projectsService,
+                $"Party assignment history project {index:D2}");
+            var result = await assignments.SaveAssignmentAsync(new ProjectPartyAssignmentUpsertRequest
+            {
+                ProjectId = projectId,
+                PartyId = partyId,
+                Role = ProjectPartyAssignmentRole.TeamMember,
+                Source = "integration-tests"
+            });
+
+            Assert.True(result.IsSuccess);
+        }
+
+        var page = await partyDirectoryService.SearchPartyProjectAssignmentsAsync(
+            new PartyProjectAssignmentQuery(partyId, PageIndex: 1, PageSize: 4));
+
+        Assert.Equal(9, page.TotalCount);
+        Assert.Equal(1, page.PageIndex);
+        Assert.Equal(4, page.Items.Count);
+        Assert.Equal(
+            [
+                "Party assignment history project 04",
+                "Party assignment history project 05",
+                "Party assignment history project 06",
+                "Party assignment history project 07"
+            ],
+            page.Items.Select(item => item.ProjectName));
+
+        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() =>
+            partyDirectoryService.SearchPartyProjectAssignmentsAsync(
+                new PartyProjectAssignmentQuery(
+                    partyId,
+                    PageSize: PartyProjectAssignmentQueryLimits.MaximumPageSize + 1)));
+    }
+
+    [Fact]
     public async Task Node_details_bridge_reads_the_live_workbench_record()
     {
         await using var application = await TestApplication.CreateAsync();

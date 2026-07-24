@@ -1,10 +1,6 @@
 @using CanDoItAll.Components.BaseLib
 @using CanDoItAll.Modules.Projects
 
-@{
-    var filteredRequests = FilterRequests();
-}
-
 <Stack GapScale="LayoutGap.Medium">
     <SurfaceCard Soft="true">
         <Stack GapScale="LayoutGap.Small">
@@ -32,16 +28,18 @@
                 </TooltipTarget>
             </Split>
 
-            <CompactFilterBar ResultText="@($"{filteredRequests.Count} of {Requests.Count} request(s)")">
-                <input @bind="searchText"
-                       @bind:event="oninput"
+            <CompactFilterBar ResultText="@($"{TotalCount} matching request(s)")">
+                <input value="@SearchText"
+                       @oninput="HandleSearchInputAsync"
                        class="cda-input cda-input--toolbar h-10 min-w-[16rem] flex-1"
                        style="width: auto; flex: 1 1 24rem;"
                        placeholder="Search title, role, project, requester, unit, skill, or notes"
                        aria-label="Search staffing requests"
                        data-testid="crmhr-staffing-request-search" />
                 <InputSelect TValue="StaffingRequestStatus?"
-                             @bind-Value="statusFilter"
+                             Value="@StatusFilter"
+                             ValueChanged="HandleStatusFilterChangedAsync"
+                             ValueExpression="@(() => StatusFilter)"
                              class="cda-input cda-input--toolbar h-10 min-w-[12rem]"
                              style="width: 12rem; flex: 0 1 12rem;"
                              aria-label="Filter staffing requests by status"
@@ -56,7 +54,7 @@
         </Stack>
     </SurfaceCard>
 
-    @if (filteredRequests.Count == 0)
+    @if (Requests.Count == 0)
     {
         <EmptyState Eyebrow="@EmptyStateEyebrow"
                     Title="@EmptyStateTitle"
@@ -64,11 +62,11 @@
     }
     else
     {
-        <PagedCardGrid TItem="StaffingRequestItemModel"
-                       Items="filteredRequests"
-                       PageSize="6"
-                       TestIdPrefix="crmhr-staffing-request">
-            <ItemTemplate Context="request">
+        <Grid Gap="LayoutGap.Medium"
+              ColumnTemplate="repeat(auto-fit,minmax(20rem,1fr))"
+              data-testid="crmhr-staffing-request-grid">
+            @foreach (var request in Requests)
+            {
                 <PanelCard Class="h-full"
                            data-testid="crmhr-staffing-request-item">
                     <Stack GapScale="LayoutGap.Small" Class="h-full">
@@ -135,8 +133,33 @@
                         </CardActions>
                     </Stack>
                 </PanelCard>
-            </ItemTemplate>
-        </PagedCardGrid>
+            }
+        </Grid>
+
+        <Split Breakpoint="LayoutBreakpoint.None"
+               Gap="LayoutGap.Small"
+               AlignItems="AlignItems.Center"
+               JustifyContent="JustifyContent.SpaceBetween"
+               Wrap="FlexWrap.Wrap">
+            <StatusBadge Tone="neutral"
+                         Text="@PageText" />
+            <Cluster Gap="LayoutGap.Small">
+                <Button Text="Previous"
+                        Icon="chevron_left"
+                        ButtonStyle="ButtonStyle.Light"
+                        Size="ButtonSize.Small"
+                        Disabled="@(PageIndex <= 0)"
+                        Click="@(() => PageChanged.InvokeAsync(PageIndex - 1))"
+                        data-testid="crmhr-staffing-request-previous" />
+                <Button Text="Next"
+                        Icon="chevron_right"
+                        ButtonStyle="ButtonStyle.Light"
+                        Size="ButtonSize.Small"
+                        Disabled="@(PageIndex + 1 >= TotalPages)"
+                        Click="@(() => PageChanged.InvokeAsync(PageIndex + 1))"
+                        data-testid="crmhr-staffing-request-next" />
+            </Cluster>
+        </Split>
     }
 </Stack>
 
@@ -196,28 +219,16 @@
                 </Grid>
 
                 <Grid Gap="LayoutGap.Medium" ColumnsMd="2">
-                    <FormField Text="Requested by">
-                        <InputSelect @bind-Value="Draft.RequestedByPartyId"
-                                     class="cda-input"
-                                     data-testid="crmhr-staffing-request-requested-by">
-                            <option value="">Choose a requester</option>
-                            @foreach (var option in PartyOptions.OrderBy(item => item.DisplayName, StringComparer.OrdinalIgnoreCase))
-                            {
-                                <option value="@option.PartyId">@option.DisplayName (@option.PartyTypeLabel)</option>
-                            }
-                        </InputSelect>
-                    </FormField>
-                    <FormField Text="Delivery unit">
-                        <InputSelect @bind-Value="Draft.DeliveryUnitPartyId"
-                                     class="cda-input"
-                                     data-testid="crmhr-staffing-request-delivery-unit">
-                            <option value="">Choose a delivery unit</option>
-                            @foreach (var option in PartyOptions.OrderBy(item => item.DisplayName, StringComparer.OrdinalIgnoreCase))
-                            {
-                                <option value="@option.PartyId">@option.DisplayName (@option.PartyTypeLabel)</option>
-                            }
-                        </InputSelect>
-                    </FormField>
+                    <PartyPicker Label="Requested by"
+                                 TestIdPrefix="crmhr-staffing-request-requested-by"
+                                 SelectedPartyId="Draft.RequestedByPartyId"
+                                 SelectedPartyIdChanged="HandleRequestedByChanged" />
+                    <PartyPicker Label="Delivery unit"
+                                 TestIdPrefix="crmhr-staffing-request-delivery-unit"
+                                 AllowedScope="PartyRecordScope.OrganizationUnits"
+                                 InitialScope="PartyRecordScope.OrganizationUnits"
+                                 SelectedPartyId="Draft.DeliveryUnitPartyId"
+                                 SelectedPartyIdChanged="HandleDeliveryUnitChanged" />
                 </Grid>
 
                 <div>
@@ -366,10 +377,31 @@
     public IReadOnlyList<SkillCatalogItemModel> SkillCatalog { get; set; } = [];
 
     [Parameter]
-    public IReadOnlyList<ProjectPartyOption> PartyOptions { get; set; } = [];
+    public IReadOnlyList<StaffingRequestItemModel> Requests { get; set; } = [];
 
     [Parameter]
-    public IReadOnlyList<StaffingRequestItemModel> Requests { get; set; } = [];
+    public int PageIndex { get; set; }
+
+    [Parameter]
+    public int PageSize { get; set; } = StaffingQueryLimits.DefaultPageSize;
+
+    [Parameter]
+    public int TotalCount { get; set; }
+
+    [Parameter]
+    public string SearchText { get; set; } = string.Empty;
+
+    [Parameter]
+    public EventCallback<string> SearchTextChanged { get; set; }
+
+    [Parameter]
+    public StaffingRequestStatus? StatusFilter { get; set; }
+
+    [Parameter]
+    public EventCallback<StaffingRequestStatus?> StatusFilterChanged { get; set; }
+
+    [Parameter]
+    public EventCallback<int> PageChanged { get; set; }
 
     [Parameter, EditorRequired]
     public Func<Task<bool>> PrepareCreate { get; set; } = default!;
@@ -383,8 +415,6 @@
     [Parameter]
     public EventCallback<Guid> DeleteRequest { get; set; }
 
-    private string searchText = string.Empty;
-    private StaffingRequestStatus? statusFilter;
     private StaffingRequestItemModel? selectedRequest;
     private bool isEditorOpen;
     private bool isPreparingCreate;
@@ -396,7 +426,15 @@
 
     private string ProjectContextText => string.IsNullOrWhiteSpace(ProjectName)
         ? "Choose a project to create and review staffing demand."
-        : $"{ProjectName} · {Requests.Count} request(s)";
+        : $"{ProjectName} · {TotalCount} request(s)";
+
+    private int TotalPages => TotalCount == 0
+        ? 0
+        : (int)Math.Ceiling(TotalCount / (double)PageSize);
+
+    private string PageText => TotalPages == 0
+        ? "No pages"
+        : $"Page {PageIndex + 1:N0} of {TotalPages:N0} · {TotalCount:N0} request(s)";
 
     private string CreateTooltipText => CanCreate && !string.IsNullOrWhiteSpace(ProjectName)
         ? "Create a staffing request"
@@ -404,54 +442,46 @@
 
     private string EmptyStateEyebrow => string.IsNullOrWhiteSpace(ProjectName)
         ? "No project selected"
-        : Requests.Count == 0
+        : !HasActiveFilters
             ? "No staffing requests"
             : "No matching requests";
 
     private string EmptyStateTitle => string.IsNullOrWhiteSpace(ProjectName)
         ? "Choose a project to review demand"
-        : Requests.Count == 0
+        : !HasActiveFilters
             ? "Capture the first request"
             : "Adjust the staffing filters";
 
     private string EmptyStateDescription => string.IsNullOrWhiteSpace(ProjectName)
         ? "The project selector remains available above the workspace tabs."
-        : Requests.Count == 0
+        : !HasActiveFilters
             ? "Open requests appear here once the selected project starts requesting staffing."
             : "No staffing requests match the current search text and status.";
 
-    private IReadOnlyList<StaffingRequestItemModel> FilterRequests()
+    private bool HasActiveFilters =>
+        !string.IsNullOrWhiteSpace(SearchText) ||
+        StatusFilter.HasValue;
+
+    private Task HandleSearchInputAsync(ChangeEventArgs args)
     {
-        IEnumerable<StaffingRequestItemModel> filtered = Requests;
-        if (statusFilter.HasValue)
-        {
-            filtered = filtered.Where(request => request.Status == statusFilter.Value);
-        }
-
-        if (!string.IsNullOrWhiteSpace(searchText))
-        {
-            var term = searchText.Trim();
-            filtered = filtered.Where(request => MatchesSearch(request, term));
-        }
-
-        return filtered.ToList();
+        return SearchTextChanged.InvokeAsync(args.Value?.ToString() ?? string.Empty);
     }
 
-    private static bool MatchesSearch(StaffingRequestItemModel request, string term)
+    private Task HandleStatusFilterChangedAsync(StaffingRequestStatus? status)
     {
-        return Contains(request.Title, term)
-            || Contains(request.NeededRole, term)
-            || Contains(request.ProjectName, term)
-            || Contains(request.RequestedByName, term)
-            || Contains(request.DeliveryUnitName, term)
-            || Contains(request.Notes, term)
-            || request.NeededSkills.Any(skill => Contains(skill.Name, term) || Contains(skill.Category, term));
+        return StatusFilterChanged.InvokeAsync(status);
     }
 
-    private static bool Contains(string? value, string term)
+    private Task HandleRequestedByChanged(Guid? partyId)
     {
-        return !string.IsNullOrWhiteSpace(value)
-            && value.Contains(term, StringComparison.OrdinalIgnoreCase);
+        Draft.RequestedByPartyId = partyId;
+        return Task.CompletedTask;
+    }
+
+    private Task HandleDeliveryUnitChanged(Guid? partyId)
+    {
+        Draft.DeliveryUnitPartyId = partyId;
+        return Task.CompletedTask;
     }
 
     private async Task OpenCreateAsync()

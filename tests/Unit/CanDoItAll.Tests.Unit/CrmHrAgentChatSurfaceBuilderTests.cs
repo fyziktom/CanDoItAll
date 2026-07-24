@@ -79,6 +79,23 @@ public sealed class CrmHrAgentChatSurfaceBuilderTests
     }
 
     [Fact]
+    public void Workforce_surface_omits_availability_until_capacity_is_loaded()
+    {
+        var partyId = Guid.NewGuid();
+        var workforce = CrmHrAgentChatSurfaceBuilder.BuildWorkforceSurface(
+            partyId,
+            "Lazy capacity worker",
+            PartyLifecycleStatus.Active,
+            availabilityStatus: null,
+            hasWorkforceProfile: true,
+            availabilityLoaded: false);
+
+        AssertSelection(workforce.Position, "workforce-party", partyId, "Lazy capacity worker");
+        var fact = Assert.Single(workforce.Position.Facts);
+        AssertFact(fact, "lifecycle-status", "Active");
+    }
+
+    [Fact]
     public void Recruiting_surface_publishes_the_selected_application_and_candidate_party()
     {
         var applicationId = Guid.NewGuid();

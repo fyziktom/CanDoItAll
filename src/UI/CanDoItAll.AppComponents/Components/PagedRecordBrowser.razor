@@ -1,0 +1,630 @@
+@namespace CanDoItAll.AppComponents
+@typeparam TKey where TKey : notnull
+@typeparam TFilter where TFilter : notnull
+@implements IAsyncDisposable
+@using Microsoft.Extensions.Logging
+@inject Microsoft.Extensions.Logging.ILogger<PagedRecordBrowser<TKey, TFilter>> Logger
+
+<Stack GapScale="LayoutGap.Medium"
+       AlignItems="AlignItems.Stretch"
+       Class="paged-record-browser w-full"
+       data-testid="@DataTestId">
+    <FilterBar ResultText="@ResultText">
+        <div class="paged-record-browser__filters"
+             data-testid="@($"{DataTestId}-filters")">
+            <TextBox Value="@searchText"
+                     ValueChanged="HandleSearchChangedAsync"
+                     Placeholder="@SearchPlaceholder"
+                     Immediate="true"
+                     Class="paged-record-browser__filter-field paged-record-browser__search"
+                     aria-label="@SearchPlaceholder"
+                     data-testid="@($"{DataTestId}-search")" />
+
+            @if (ShowTagFilter)
+            {
+                <TagEditor Value="@tagFilters"
+                           ValueChanged="HandleTagsChangedAsync"
+                           Suggestions="@TagSuggestions"
+                           Placeholder="@TagPlaceholder"
+                           MaxTags="@MaximumTags"
+                           Class="paged-record-browser__filter-field paged-record-browser__tags"
+                           TestId="@($"{DataTestId}-tag-filter")"
+                           InputTestId="@($"{DataTestId}-tag-filter-input")" />
+            }
+
+            @if (FilterOptions.Count > 0)
+            {
+                <Cluster Gap="LayoutGap.XSmall"
+                         Wrap="FlexWrap.Wrap"
+                         Class="paged-record-browser__scope"
+                         role="group"
+                         aria-label="@FilterAriaLabel"
+                         data-testid="@($"{DataTestId}-scope-filter")">
+                    @foreach (var option in FilterOptions)
+                    {
+                        var isSelected = EqualityComparer<TFilter>.Default.Equals(currentFilter, option.Value);
+                        <Button Text="@option.Label"
+                                Size="ButtonSize.Small"
+                                Variant="@(isSelected ? Variant.Filled : Variant.Outlined)"
+                                ButtonStyle="@(isSelected ? ButtonStyle.Info : ButtonStyle.Base)"
+                                Disabled="@isLoading"
+                                aria-pressed="@(isSelected ? "true" : "false")"
+                                data-testid="@option.TestId"
+                                Click="@(() => HandleFilterChangedAsync(option.Value))" />
+                    }
+                </Cluster>
+            }
+
+            <Button Text=""
+                    Icon="filter_alt_off"
+                    ButtonStyle="ButtonStyle.Light"
+                    Variant="Variant.Text"
+                    Size="ButtonSize.Small"
+                    Class="paged-record-browser__reset"
+                    Disabled="@(!HasActiveFilters || isLoading)"
+                    Click="ResetFiltersAsync"
+                    aria-label="@ResetFiltersLabel"
+                    title="@ResetFiltersLabel"
+                    data-testid="@($"{DataTestId}-reset")" />
+        </div>
+    </FilterBar>
+
+    @if (isLoading)
+    {
+        <div data-testid="@($"{DataTestId}-loading")">
+            <LoadingState Eyebrow="@LoadingEyebrow"
+                          Title="@LoadingTitle"
+                          Description="@LoadingDescription" />
+        </div>
+    }
+    else if (loadError is not null)
+    {
+        <div data-testid="@($"{DataTestId}-error")">
+            <EmptyState Eyebrow="@ErrorEyebrow"
+                        Title="@ErrorTitle"
+                        Description="@ErrorDescription">
+                <Actions>
+                    <Button Text="Retry"
+                            Icon="refresh"
+                            Click="RetryAsync"
+                            data-testid="@($"{DataTestId}-retry")" />
+                </Actions>
+            </EmptyState>
+        </div>
+    }
+    else if (page.Items.Count == 0)
+    {
+        <div data-testid="@($"{DataTestId}-empty")">
+            <EmptyState Eyebrow="@EmptyEyebrow"
+                        Title="@EmptyTitle"
+                        Description="@EmptyDescription" />
+        </div>
+    }
+    else
+    {
+        <div class="@ResultsClass"
+             data-testid="@($"{DataTestId}-results")">
+            <Grid Gap="LayoutGap.Medium"
+                  ColumnTemplate="@ColumnTemplate"
+                  Class="w-full">
+                @foreach (var option in page.Items)
+                {
+                    var isSelected = IsSelected(option);
+                    @if (ItemTemplate is not null)
+                    {
+                        @ItemTemplate(new PagedRecordItemTemplateContext<TKey>(
+                            option,
+                            isSelected,
+                            () => SelectAsync(option)))
+                    }
+                    else
+                    {
+                        <article class="@ResolveCardClass(option, isSelected)"
+                                 data-testid="@ResolveShellTestId(option)">
+                            <button type="button"
+                                    class="paged-record-browser__select"
+                                    aria-label="@($"Select {option.Title}")"
+                                    aria-pressed="@(isSelected ? "true" : "false")"
+                                    disabled="@option.IsDisabled"
+                                    title="@ResolveSelectTitle(option)"
+                                    data-testid="@ResolveOptionTestId(option)"
+                                    @onclick="@(() => SelectAsync(option))">
+                                <Stack GapScale="LayoutGap.Small"
+                                       AlignItems="AlignItems.Stretch">
+                                    <div class="paged-record-browser__identity">
+                                        <span class="paged-record-browser__icon"
+                                              aria-hidden="true">
+                                            <Icon Name="@option.Icon" />
+                                        </span>
+
+                                        <div class="paged-record-browser__identity-copy">
+                                            <Cluster Gap="LayoutGap.XSmall"
+                                                     Wrap="FlexWrap.Wrap">
+                                                <StatusBadge Tone="neutral"
+                                                             Text="@option.KindLabel" />
+                                                @if (isSelected)
+                                                {
+                                                    <StatusBadge Tone="info"
+                                                                 Text="Selected" />
+                                                }
+                                            </Cluster>
+
+                                            <TextBlock TextStyle="TextStyle.Subtitle2"
+                                                       Value="@option.Title"
+                                                       Class="paged-record-browser__title" />
+
+                                            @if (!string.IsNullOrWhiteSpace(option.Subtitle))
+                                            {
+                                                <TextBlock TextStyle="TextStyle.Note"
+                                                           Value="@option.Subtitle"
+                                                           Class="paged-record-browser__subtitle" />
+                                            }
+                                        </div>
+                                    </div>
+
+                                    @if (!string.IsNullOrWhiteSpace(option.Description))
+                                    {
+                                        <TextBlock TextStyle="TextStyle.Note"
+                                                   Value="@option.Description"
+                                                   Class="paged-record-browser__description" />
+                                    }
+
+                                    @if (option.Tags.Count > 0)
+                                    {
+                                        <Cluster Gap="LayoutGap.XSmall"
+                                                 Wrap="FlexWrap.Wrap">
+                                            @foreach (var tag in option.Tags.Take(MaximumVisibleTags))
+                                            {
+                                                <StatusBadge Tone="neutral"
+                                                             Text="@tag" />
+                                            }
+                                            @if (option.Tags.Count > MaximumVisibleTags)
+                                            {
+                                                <StatusBadge Tone="info"
+                                                             Text="@($"+{option.Tags.Count - MaximumVisibleTags}")" />
+                                            }
+                                        </Cluster>
+                                    }
+
+                                    @if (!string.IsNullOrWhiteSpace(option.Meta))
+                                    {
+                                        <TextBlock TextStyle="TextStyle.Note"
+                                                   Value="@option.Meta"
+                                                   Class="paged-record-browser__meta" />
+                                    }
+
+                                    @if (option.IsDisabled && !string.IsNullOrWhiteSpace(option.DisabledReason))
+                                    {
+                                        <TextBlock TextStyle="TextStyle.Note"
+                                                   Value="@option.DisabledReason"
+                                                   Class="paged-record-browser__disabled-reason" />
+                                    }
+                                </Stack>
+                            </button>
+                        </article>
+                    }
+                }
+            </Grid>
+        </div>
+    }
+
+    <Split Breakpoint="LayoutBreakpoint.None"
+           Gap="LayoutGap.Small"
+           AlignItems="AlignItems.Center"
+           JustifyContent="JustifyContent.SpaceBetween"
+           Wrap="FlexWrap.Wrap"
+           Class="paged-record-browser__pager"
+           data-testid="@($"{DataTestId}-pager")">
+        <StatusBadge Tone="neutral"
+                     Text="@PageText" />
+        <Cluster Gap="LayoutGap.Small">
+            <Button Text="Previous"
+                    Icon="chevron_left"
+                    ButtonStyle="ButtonStyle.Light"
+                    Size="ButtonSize.Small"
+                    Disabled="@(!CanMovePrevious)"
+                    Click="PreviousPageAsync"
+                    data-testid="@($"{DataTestId}-previous")" />
+            <Button Text="Next"
+                    Icon="chevron_right"
+                    ButtonStyle="ButtonStyle.Light"
+                    Size="ButtonSize.Small"
+                    Disabled="@(!CanMoveNext)"
+                    Click="NextPageAsync"
+                    data-testid="@($"{DataTestId}-next")" />
+        </Cluster>
+    </Split>
+</Stack>
+
+@code {
+    private const int SearchDebounceMilliseconds = 250;
+    private readonly CancellationTokenSource lifetime = new();
+    private PagedRecordPage<TKey> page = new([], 0, 1, 0);
+    private CancellationTokenSource? operation;
+    private IReadOnlyList<string> tagFilters = [];
+    private string searchText = string.Empty;
+    private Exception? loadError;
+    private TFilter currentFilter = default!;
+    private long loadGeneration;
+    private bool isLoading = true;
+    private bool disposed;
+
+    [Parameter, EditorRequired]
+    public PagedRecordLoader<TKey, TFilter>? Loader { get; set; }
+
+    [Parameter, EditorRequired]
+    public TFilter InitialFilter { get; set; } = default!;
+
+    [Parameter]
+    public IReadOnlyList<PagedRecordFilterOption<TFilter>> FilterOptions { get; set; } = [];
+
+    [Parameter]
+    public IReadOnlyList<string> TagSuggestions { get; set; } = [];
+
+    [Parameter]
+    public bool ShowTagFilter { get; set; } = true;
+
+    [Parameter]
+    public PagedRecordSelection<TKey>? Selection { get; set; }
+
+    [Parameter]
+    public EventCallback<TKey> SelectionChanged { get; set; }
+
+    [Parameter]
+    public EventCallback<Exception> LoadFailed { get; set; }
+
+    [Parameter]
+    public int PageSize { get; set; } = 24;
+
+    [Parameter]
+    public int MaximumTags { get; set; } = 20;
+
+    [Parameter]
+    public int MaximumVisibleTags { get; set; } = 4;
+
+    [Parameter]
+    public string ColumnTemplate { get; set; } = "repeat(auto-fit,minmax(16rem,1fr))";
+
+    [Parameter]
+    public RenderFragment<PagedRecordItemTemplateContext<TKey>>? ItemTemplate { get; set; }
+
+    [Parameter]
+    public PagedRecordResultsScrollMode ResultsScrollMode { get; set; } = PagedRecordResultsScrollMode.Page;
+
+    [Parameter]
+    public string SearchPlaceholder { get; set; } = "Search records";
+
+    [Parameter]
+    public string TagPlaceholder { get; set; } = "Filter by tags";
+
+    [Parameter]
+    public string FilterAriaLabel { get; set; } = "Record scope";
+
+    [Parameter]
+    public string ResetFiltersLabel { get; set; } = "Clear record filters";
+
+    [Parameter]
+    public string LoadingEyebrow { get; set; } = "Records";
+
+    [Parameter]
+    public string LoadingTitle { get; set; } = "Loading records";
+
+    [Parameter]
+    public string LoadingDescription { get; set; } = "Loading the requested page.";
+
+    [Parameter]
+    public string ErrorEyebrow { get; set; } = "Records unavailable";
+
+    [Parameter]
+    public string ErrorTitle { get; set; } = "Records could not be loaded";
+
+    [Parameter]
+    public string ErrorDescription { get; set; } = "Retry after checking the active data source.";
+
+    [Parameter]
+    public string EmptyEyebrow { get; set; } = "No matches";
+
+    [Parameter]
+    public string EmptyTitle { get; set; } = "No records match these filters";
+
+    [Parameter]
+    public string EmptyDescription { get; set; } = "Clear one or more filters to show available records.";
+
+    [Parameter]
+    public string DataTestId { get; set; } = "paged-record-browser";
+
+    private string ResultText => isLoading
+        ? "Searching"
+        : $"{page.TotalCount:N0} matching record(s)";
+
+    private string PageText => page.TotalPages == 0
+        ? "No pages"
+        : $"Page {page.PageIndex + 1:N0} of {page.TotalPages:N0} · {page.TotalCount:N0} record(s)";
+
+    private bool HasActiveFilters =>
+        !string.IsNullOrWhiteSpace(searchText) ||
+        tagFilters.Count > 0 ||
+        !EqualityComparer<TFilter>.Default.Equals(currentFilter, InitialFilter);
+
+    private bool CanMovePrevious => !isLoading && loadError is null && page.PageIndex > 0;
+
+    private bool CanMoveNext =>
+        !isLoading &&
+        loadError is null &&
+        page.TotalPages > 0 &&
+        page.PageIndex + 1 < page.TotalPages;
+
+    private string ResultsClass => ResultsScrollMode switch
+    {
+        PagedRecordResultsScrollMode.Page => "paged-record-browser__results",
+        PagedRecordResultsScrollMode.Bounded => "paged-record-browser__results paged-record-browser__results--bounded",
+        _ => throw new ArgumentOutOfRangeException(
+            nameof(ResultsScrollMode),
+            ResultsScrollMode,
+            "Unknown paged record results scroll mode.")
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (Loader is null)
+        {
+            throw new InvalidOperationException($"{nameof(PagedRecordBrowser<TKey, TFilter>)} requires a loader.");
+        }
+
+        if (PageSize <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(PageSize), PageSize, "Page size must be positive.");
+        }
+
+        if (MaximumTags <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(MaximumTags), MaximumTags, "Maximum tags must be positive.");
+        }
+
+        if (MaximumVisibleTags <= 0)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(MaximumVisibleTags),
+                MaximumVisibleTags,
+                "Maximum visible tags must be positive.");
+        }
+
+        if (string.IsNullOrWhiteSpace(ColumnTemplate))
+        {
+            throw new ArgumentException(
+                "The record grid column template cannot be empty.",
+                nameof(ColumnTemplate));
+        }
+
+        currentFilter = InitialFilter;
+        page = new PagedRecordPage<TKey>([], 0, PageSize, 0);
+        await LoadPageAsync(0);
+    }
+
+    private async Task HandleSearchChangedAsync(string? value)
+    {
+        searchText = value ?? string.Empty;
+        var currentOperation = ReplaceOperation();
+        var generation = ++loadGeneration;
+        try
+        {
+            await Task.Delay(SearchDebounceMilliseconds, currentOperation.Token);
+            await LoadPageCoreAsync(0, currentOperation, generation);
+        }
+        catch (OperationCanceledException) when (currentOperation.IsCancellationRequested)
+        {
+        }
+    }
+
+    private async Task HandleTagsChangedAsync(IReadOnlyList<string> value)
+    {
+        tagFilters = NormalizeTags(value);
+        await LoadPageAsync(0);
+    }
+
+    private async Task HandleFilterChangedAsync(TFilter value)
+    {
+        if (EqualityComparer<TFilter>.Default.Equals(currentFilter, value))
+        {
+            return;
+        }
+
+        currentFilter = value;
+        await LoadPageAsync(0);
+    }
+
+    private async Task ResetFiltersAsync()
+    {
+        searchText = string.Empty;
+        tagFilters = [];
+        currentFilter = InitialFilter;
+        await LoadPageAsync(0);
+    }
+
+    private Task PreviousPageAsync()
+    {
+        return CanMovePrevious
+            ? LoadPageAsync(page.PageIndex - 1)
+            : Task.CompletedTask;
+    }
+
+    private Task NextPageAsync()
+    {
+        return CanMoveNext
+            ? LoadPageAsync(page.PageIndex + 1)
+            : Task.CompletedTask;
+    }
+
+    private Task RetryAsync()
+    {
+        return LoadPageAsync(page.PageIndex);
+    }
+
+    private Task SelectAsync(PagedRecordOption<TKey> option)
+    {
+        return option.IsDisabled
+            ? Task.CompletedTask
+            : SelectionChanged.InvokeAsync(option.Key);
+    }
+
+    private Task LoadPageAsync(int pageIndex)
+    {
+        var currentOperation = ReplaceOperation();
+        var generation = ++loadGeneration;
+        return LoadPageCoreAsync(pageIndex, currentOperation, generation);
+    }
+
+    private async Task LoadPageCoreAsync(
+        int pageIndex,
+        CancellationTokenSource currentOperation,
+        long generation)
+    {
+        isLoading = true;
+        loadError = null;
+        try
+        {
+            var request = new PagedRecordRequest<TFilter>(
+                searchText.Trim(),
+                NormalizeTags(tagFilters),
+                currentFilter,
+                pageIndex,
+                PageSize);
+            var result = await Loader!(request, currentOperation.Token);
+            if (!IsCurrent(currentOperation, generation))
+            {
+                return;
+            }
+
+            ValidatePage(result, request);
+            page = result;
+        }
+        catch (OperationCanceledException) when (currentOperation.IsCancellationRequested)
+        {
+        }
+        catch (Exception exception)
+        {
+            if (!IsCurrent(currentOperation, generation))
+            {
+                return;
+            }
+
+            loadError = exception;
+            Logger.LogError(
+                exception,
+                "Paged record load failed for zero-based page {PageIndex} with page size {PageSize}.",
+                pageIndex,
+                PageSize);
+            await LoadFailed.InvokeAsync(exception);
+        }
+        finally
+        {
+            if (IsCurrent(currentOperation, generation))
+            {
+                isLoading = false;
+            }
+        }
+    }
+
+    private CancellationTokenSource ReplaceOperation()
+    {
+        operation?.Cancel();
+        operation?.Dispose();
+        operation = CancellationTokenSource.CreateLinkedTokenSource(lifetime.Token);
+        return operation;
+    }
+
+    private bool IsCurrent(CancellationTokenSource currentOperation, long generation)
+    {
+        return ReferenceEquals(operation, currentOperation) &&
+               generation == loadGeneration &&
+               !currentOperation.IsCancellationRequested;
+    }
+
+    private bool IsSelected(PagedRecordOption<TKey> option)
+    {
+        return Selection is not null &&
+               EqualityComparer<TKey>.Default.Equals(Selection.Key, option.Key);
+    }
+
+    private static IReadOnlyList<string> NormalizeTags(IEnumerable<string> tags)
+    {
+        return tags
+            .Where(tag => !string.IsNullOrWhiteSpace(tag))
+            .Select(tag => tag.Trim())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+    }
+
+    private static void ValidatePage(
+        PagedRecordPage<TKey> result,
+        PagedRecordRequest<TFilter> request)
+    {
+        ArgumentNullException.ThrowIfNull(result);
+        ArgumentNullException.ThrowIfNull(result.Items);
+        if (result.PageIndex != request.PageIndex)
+        {
+            throw new InvalidOperationException(
+                $"The loader returned zero-based page {result.PageIndex} for requested page {request.PageIndex}.");
+        }
+
+        if (result.PageSize != request.PageSize)
+        {
+            throw new InvalidOperationException(
+                $"The loader returned page size {result.PageSize} for requested size {request.PageSize}.");
+        }
+
+        if (result.TotalCount < 0)
+        {
+            throw new InvalidOperationException("The loader returned a negative total count.");
+        }
+
+        if (result.Items.Count > result.PageSize)
+        {
+            throw new InvalidOperationException("The loader returned more records than the requested page size.");
+        }
+    }
+
+    private static string ResolveCardClass(PagedRecordOption<TKey> option, bool isSelected)
+    {
+        return string.Join(' ', new[]
+        {
+            "paged-record-browser__card",
+            isSelected ? "paged-record-browser__card--selected" : string.Empty,
+            option.IsDisabled ? "paged-record-browser__card--disabled" : string.Empty
+        }.Where(value => !string.IsNullOrWhiteSpace(value)));
+    }
+
+    private static string ResolveSelectTitle(PagedRecordOption<TKey> option)
+    {
+        return option.IsDisabled && !string.IsNullOrWhiteSpace(option.DisabledReason)
+            ? option.DisabledReason
+            : option.Title;
+    }
+
+    private static string ResolveOptionTestId(PagedRecordOption<TKey> option)
+    {
+        return string.IsNullOrWhiteSpace(option.TestId)
+            ? "paged-record-option"
+            : option.TestId;
+    }
+
+    private static string ResolveShellTestId(PagedRecordOption<TKey> option)
+    {
+        return $"{ResolveOptionTestId(option)}-shell";
+    }
+
+    public ValueTask DisposeAsync()
+    {
+        if (disposed)
+        {
+            return ValueTask.CompletedTask;
+        }
+
+        disposed = true;
+        operation?.Cancel();
+        operation?.Dispose();
+        lifetime.Cancel();
+        lifetime.Dispose();
+        return ValueTask.CompletedTask;
+    }
+}
