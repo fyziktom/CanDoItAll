@@ -20,7 +20,7 @@ public sealed class ProjectStructureProcessRunRecordIntegrationTests
     public async Task GetStructureAsync_projects_completed_record_after_runtime_details_are_purged()
     {
         await using var testEnvironment = CanDoItAllTestEnvironment.Create("process-run-record-project-structure");
-        var activeProfile = testEnvironment.CreateInMemoryProfile("primary");
+        var activeProfile = testEnvironment.CreatePostgreSqlProfile("primary");
         await using var application = await TestApplication.CreateAsync(new TestHarnessOptions
         {
             TestEnvironment = testEnvironment,
@@ -160,7 +160,7 @@ public sealed class ProjectStructureProcessRunRecordIntegrationTests
         ProcessRunFactsStatus factsStatus)
     {
         await using var testEnvironment = CanDoItAllTestEnvironment.Create("process-run-record-project-structure");
-        var activeProfile = testEnvironment.CreateInMemoryProfile("primary");
+        var activeProfile = testEnvironment.CreatePostgreSqlProfile("primary");
         await using var application = await TestApplication.CreateAsync(new TestHarnessOptions
         {
             TestEnvironment = testEnvironment,

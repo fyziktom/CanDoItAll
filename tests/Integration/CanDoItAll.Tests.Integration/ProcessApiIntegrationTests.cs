@@ -1,6 +1,7 @@
 using System.Net.Http.Json;
 using System.Text.Json;
 using CanDoItAll.Processes.Application;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace CanDoItAll.Tests.Integration;
@@ -12,7 +13,13 @@ public sealed class ProcessApiIntegrationTests
     {
         await using var host = await ApiTestHost.CreateAsync(
             jwtEnabled: false,
-            services => services.RemoveAll<ProcessRuntimeProjectionCatchupService>());
+            services =>
+            {
+                services.RemoveAll<ProcessRuntimeProjectionCatchupService>();
+                services.AddScoped<ProcessRuntimeProjectionCatchupService>(_ =>
+                    throw new InvalidOperationException(
+                        "Projection reads must not resolve foreground catch-up."));
+            });
         var missingRunId = Guid.NewGuid();
 
         using var liveResponse = await host.Client.GetAsync("/api/processes/live");

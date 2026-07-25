@@ -62,10 +62,10 @@ internal sealed class ProjectStructureProcessProjectionContributor(
             .Where(item =>
                 item.ProjectId == context.ProjectId &&
                 !item.IsSystemManaged &&
-                (item.SourceNodeKey.StartsWith(ProjectStructureProcessNodeKeys.ProcessDefinitionPrefix, StringComparison.Ordinal) ||
-                 item.SourceNodeKey.StartsWith(ProjectStructureProcessNodeKeys.ProcessRunPrefix, StringComparison.Ordinal) ||
-                 item.TargetNodeKey.StartsWith(ProjectStructureProcessNodeKeys.ProcessDefinitionPrefix, StringComparison.Ordinal) ||
-                 item.TargetNodeKey.StartsWith(ProjectStructureProcessNodeKeys.ProcessRunPrefix, StringComparison.Ordinal)))
+                (item.SourceNodeKey.StartsWith(ProjectStructureProcessNodeKeys.ProcessDefinitionPrefix) ||
+                 item.SourceNodeKey.StartsWith(ProjectStructureProcessNodeKeys.ProcessRunPrefix) ||
+                 item.TargetNodeKey.StartsWith(ProjectStructureProcessNodeKeys.ProcessDefinitionPrefix) ||
+                 item.TargetNodeKey.StartsWith(ProjectStructureProcessNodeKeys.ProcessRunPrefix)))
             .Select(item => new ProjectStructureProcessLink(
                 item.SourceNodeKey,
                 item.TargetNodeKey,
