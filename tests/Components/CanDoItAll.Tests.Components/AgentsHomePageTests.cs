@@ -27,6 +27,17 @@ public sealed class AgentsHomePageTests
         cut.WaitForElement(
             "[data-testid='agents-overview-dashboard']",
             TimeSpan.FromSeconds(10));
+        cut.WaitForAssertion(() =>
+        {
+            Assert.DoesNotContain(
+                "...",
+                cut.Find("[data-testid='agents-overview-metric-agents']").TextContent,
+                StringComparison.Ordinal);
+            Assert.DoesNotContain(
+                "Teams are loading",
+                cut.Markup,
+                StringComparison.Ordinal);
+        }, TimeSpan.FromSeconds(10));
         Assert.DoesNotContain(
             cut.FindAll("[data-testid='agents-shell-tabs'] button"),
             tab => tab.TextContent.Trim().StartsWith("Scenarios", StringComparison.Ordinal));

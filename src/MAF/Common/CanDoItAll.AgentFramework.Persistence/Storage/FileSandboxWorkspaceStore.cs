@@ -190,7 +190,7 @@ public sealed class FileSandboxWorkspaceStore : ISandboxWorkspaceStore, ISandbox
 
     public async Task<SandboxWorkspaceExecutionSummary> LoadExecutionSummaryAsync(CancellationToken cancellationToken = default)
     {
-        if (CanReadExecutionWithoutWorkspaceLock())
+        if (CanReadExecutionProjectionWithoutWorkspaceLock())
         {
             return await LoadExecutionSummaryCoreAsync(cancellationToken);
         }
@@ -210,7 +210,7 @@ public sealed class FileSandboxWorkspaceStore : ISandboxWorkspaceStore, ISandbox
 
     public async Task<AgentUsageProjection> LoadUsageProjectionAsync(CancellationToken cancellationToken = default)
     {
-        if (CanReadExecutionWithoutWorkspaceLock())
+        if (CanReadExecutionProjectionWithoutWorkspaceLock())
         {
             return await LoadUsageProjectionCoreAsync(cancellationToken);
         }
@@ -487,7 +487,7 @@ public sealed class FileSandboxWorkspaceStore : ISandboxWorkspaceStore, ISandbox
         Guid? agentId = null,
         CancellationToken cancellationToken = default)
     {
-        if (executionSliceStore.ExecutionStorageExists())
+        if (CanReadChatProjectionWithoutWorkspaceLock())
         {
             return await chatProjectionStore.ListChatSessionSummariesAsync(agentId, cancellationToken);
         }
@@ -509,7 +509,7 @@ public sealed class FileSandboxWorkspaceStore : ISandboxWorkspaceStore, ISandbox
         Guid agentId,
         CancellationToken cancellationToken = default)
     {
-        if (executionSliceStore.ExecutionStorageExists())
+        if (CanReadChatProjectionWithoutWorkspaceLock())
         {
             return await chatProjectionStore.LoadChatWorkspaceProjectionAsync(agentId, cancellationToken);
         }
@@ -554,7 +554,7 @@ public sealed class FileSandboxWorkspaceStore : ISandboxWorkspaceStore, ISandbox
         Guid? chatSessionId = null,
         CancellationToken cancellationToken = default)
     {
-        if (executionSliceStore.ExecutionStorageExists())
+        if (CanReadChatProjectionWithoutWorkspaceLock())
         {
             return await chatProjectionStore.ListChatRunSummariesAsync(agentId, chatSessionId, cancellationToken);
         }
@@ -577,7 +577,7 @@ public sealed class FileSandboxWorkspaceStore : ISandboxWorkspaceStore, ISandbox
         Guid? chatSessionId = null,
         CancellationToken cancellationToken = default)
     {
-        if (executionSliceStore.ExecutionStorageExists())
+        if (CanReadChatProjectionWithoutWorkspaceLock())
         {
             return await chatProjectionStore.LoadChatRuntimeSnapshotAsync(agentId, chatSessionId, cancellationToken);
         }
@@ -893,16 +893,12 @@ public sealed class FileSandboxWorkspaceStore : ISandboxWorkspaceStore, ISandbox
 
     private async Task<SandboxWorkspaceExecutionSummary> LoadExecutionSummaryCoreAsync(CancellationToken cancellationToken)
     {
-        var recentWindow = DateTimeOffset.UtcNow.AddHours(-1);
         var executionIndex = await executionSliceStore.LoadIndexAsync(cancellationToken);
-        var runSummaries = await chatProjectionStore.ListAllRunSummariesAsync(cancellationToken);
 
         return new SandboxWorkspaceExecutionSummary(
             SessionCount: executionIndex.SessionCount,
-            ActiveRuns: runSummaries.Count(item =>
-                item.UpdatedAtUtc >= recentWindow &&
-                item.State is ExecutionState.Preparing or ExecutionState.Running or ExecutionState.WaitingOnTool or ExecutionState.Persisting),
-            FailedRuns: runSummaries.Count(item => item.Outcome == RunOutcome.Failed));
+            ActiveRuns: executionIndex.ActiveRunCount,
+            FailedRuns: executionIndex.FailedRunCount);
     }
 
     private Task<bool> SaveCatalogCoreAsync(SandboxWorkspaceCatalog catalog, CancellationToken cancellationToken)
@@ -1016,6 +1012,18 @@ public sealed class FileSandboxWorkspaceStore : ISandboxWorkspaceStore, ISandbox
     {
         return CanReadCatalogWithoutWorkspaceLock() &&
                executionSliceStore.ExecutionStorageExists();
+    }
+
+    private bool CanReadExecutionProjectionWithoutWorkspaceLock()
+    {
+        return CanReadExecutionWithoutWorkspaceLock() &&
+               executionSliceStore.HasPersistedIndex();
+    }
+
+    private bool CanReadChatProjectionWithoutWorkspaceLock()
+    {
+        return executionSliceStore.ExecutionStorageExists() &&
+               chatProjectionStore.HasPersistedChatIndex();
     }
 
     private bool CanReadExecutionDetailsWithoutWorkspaceLock()
