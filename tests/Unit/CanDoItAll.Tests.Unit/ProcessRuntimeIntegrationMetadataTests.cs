@@ -296,25 +296,24 @@ public sealed class ProcessRuntimeIntegrationMetadataTests
             ProcessStepId = assignment.StepInstanceId.Value.ToString("D")
         };
         var method = typeof(AgentFrameworkWorkspaceExecutionService).GetMethod(
-            "CreateRuntimeExecutionOptions",
+            "CreateRuntimeContextIntent",
             BindingFlags.NonPublic | BindingFlags.Static)
-            ?? throw new InvalidOperationException("CreateRuntimeExecutionOptions method was not found.");
+            ?? throw new InvalidOperationException("CreateRuntimeContextIntent method was not found.");
 
-        var options = Assert.IsType<AgentRuntimeExecutionOptions>(method.Invoke(null, [run, null, null, Array.Empty<AgentRuntimeInputAttachment>()]));
+        var contextIntent = Assert.IsType<AgentRuntimeContextIntent>(method.Invoke(null, [run]));
 
-        Assert.NotNull(options.ContextIntent);
-        Assert.True(options.ContextIntent!.IsGovernedProcessStep);
-        Assert.Equal("process-step", options.ContextIntent.SourceKind);
-        Assert.Equal("targeted-validation", options.ContextIntent.SourceId);
-        Assert.Equal(assignment.RunId.Value.ToString("D"), options.ContextIntent.ProcessRunId);
-        Assert.Equal(assignment.StepInstanceId.Value.ToString("D"), options.ContextIntent.ProcessStepId);
-        Assert.Equal(ProcessOperationContractNames.ExternalProductTargetReadOnly, options.ContextIntent.TargetScope);
-        Assert.False(options.ContextIntent.AllowsProductMutation);
-        Assert.True(options.ContextIntent.RuntimeToolProvidersEnabled);
-        Assert.True(options.ContextIntent.WorkspaceToolsEnabled);
-        Assert.True(options.ContextIntent.ToolCapabilitiesEnabled);
-        Assert.Contains(ProcessOperationContractNames.ReadProcessContext, options.ContextIntent.AllowedOperations);
-        Assert.Contains(ProcessOperationContractNames.RunValidation, options.ContextIntent.AllowedOperations);
+        Assert.True(contextIntent.IsGovernedProcessStep);
+        Assert.Equal("process-step", contextIntent.SourceKind);
+        Assert.Equal("targeted-validation", contextIntent.SourceId);
+        Assert.Equal(assignment.RunId.Value.ToString("D"), contextIntent.ProcessRunId);
+        Assert.Equal(assignment.StepInstanceId.Value.ToString("D"), contextIntent.ProcessStepId);
+        Assert.Equal(ProcessOperationContractNames.ExternalProductTargetReadOnly, contextIntent.TargetScope);
+        Assert.False(contextIntent.AllowsProductMutation);
+        Assert.True(contextIntent.RuntimeToolProvidersEnabled);
+        Assert.True(contextIntent.WorkspaceToolsEnabled);
+        Assert.True(contextIntent.ToolCapabilitiesEnabled);
+        Assert.Contains(ProcessOperationContractNames.ReadProcessContext, contextIntent.AllowedOperations);
+        Assert.Contains(ProcessOperationContractNames.RunValidation, contextIntent.AllowedOperations);
     }
 
     [Fact]
@@ -327,16 +326,15 @@ public sealed class ProcessRuntimeIntegrationMetadataTests
             enabled: false);
         var run = CreateTrustedProcessRun(metadataJson);
         var method = typeof(AgentFrameworkWorkspaceExecutionService).GetMethod(
-            "CreateRuntimeExecutionOptions",
+            "CreateRuntimeContextIntent",
             BindingFlags.NonPublic | BindingFlags.Static)
-            ?? throw new InvalidOperationException("CreateRuntimeExecutionOptions method was not found.");
+            ?? throw new InvalidOperationException("CreateRuntimeContextIntent method was not found.");
 
-        var options = Assert.IsType<AgentRuntimeExecutionOptions>(method.Invoke(null, [run, null, null, Array.Empty<AgentRuntimeInputAttachment>()]));
+        var contextIntent = Assert.IsType<AgentRuntimeContextIntent>(method.Invoke(null, [run]));
 
-        Assert.NotNull(options.ContextIntent);
-        Assert.False(options.ContextIntent!.RuntimeToolProvidersEnabled);
-        Assert.False(options.ContextIntent.WorkspaceToolsEnabled);
-        Assert.False(options.ContextIntent.ToolCapabilitiesEnabled);
+        Assert.False(contextIntent.RuntimeToolProvidersEnabled);
+        Assert.False(contextIntent.WorkspaceToolsEnabled);
+        Assert.False(contextIntent.ToolCapabilitiesEnabled);
     }
 
     [Fact]
@@ -485,18 +483,18 @@ public sealed class ProcessRuntimeIntegrationMetadataTests
             ProcessStepId = assignment.StepInstanceId.Value.ToString("D")
         };
         var method = typeof(AgentFrameworkWorkspaceExecutionService).GetMethod(
-            "CreateRuntimeExecutionOptions",
+            "CreateRuntimeContextIntent",
             BindingFlags.NonPublic | BindingFlags.Static)
-            ?? throw new InvalidOperationException("CreateRuntimeExecutionOptions method was not found.");
+            ?? throw new InvalidOperationException("CreateRuntimeContextIntent method was not found.");
 
-        var options = Assert.IsType<AgentRuntimeExecutionOptions>(method.Invoke(null, [run, null, null, Array.Empty<AgentRuntimeInputAttachment>()]));
+        var contextIntent = Assert.IsType<AgentRuntimeContextIntent>(method.Invoke(null, [run]));
 
         var resolvedScope = ExecutionInvocationMetadata.ResolveRuntimeCapabilityScopeOverride(run);
         Assert.NotNull(resolvedScope);
-        Assert.NotNull(options.ContextIntent!.CapabilityScopeOverride);
-        Assert.Equal(resolvedScope!.Policies.Count, options.ContextIntent.CapabilityScopeOverride!.Policies.Count);
-        Assert.Equal(resolvedScope.RequiredCapabilities.Count, options.ContextIntent.CapabilityScopeOverride.RequiredCapabilities.Count);
-        Assert.Equal(resolvedScope.RequiredReceipts.Count, options.ContextIntent.CapabilityScopeOverride.RequiredReceipts.Count);
+        Assert.NotNull(contextIntent.CapabilityScopeOverride);
+        Assert.Equal(resolvedScope!.Policies.Count, contextIntent.CapabilityScopeOverride!.Policies.Count);
+        Assert.Equal(resolvedScope.RequiredCapabilities.Count, contextIntent.CapabilityScopeOverride.RequiredCapabilities.Count);
+        Assert.Equal(resolvedScope.RequiredReceipts.Count, contextIntent.CapabilityScopeOverride.RequiredReceipts.Count);
         var policy = Assert.Single(resolvedScope.Policies);
         Assert.Equal(Capabilities.CapabilityAccessDefaultEffect.DenyAll, policy.DefaultEffect);
         Assert.Contains(policy.Rules, rule =>
@@ -647,11 +645,209 @@ public sealed class ProcessRuntimeIntegrationMetadataTests
 
         var query = Assert.Single(workspace.ExecutionRunQueries);
         Assert.Null(query.ProcessRunId);
-        Assert.Equal(50, query.Take);
+        Assert.Equal(
+            new HashSet<string>(
+                [firstProcessRunId.ToString(), secondProcessRunId.ToString()],
+                StringComparer.OrdinalIgnoreCase),
+            query.ProcessRunIds.ToHashSet(StringComparer.OrdinalIgnoreCase));
+        Assert.Equal(51, query.Take);
         Assert.Equal(2, workspace.ExecutionRunDetailRequestCount);
         var observation = Assert.Single(observations);
         Assert.Equal(firstProcessRunId, observation.RunId);
         Assert.Equal(0.42m, observation.ActualCostUsd);
+    }
+
+    [Fact]
+    public async Task Execution_observation_reader_batches_headers_and_skips_details_for_summary_shape()
+    {
+        var now = new DateTimeOffset(2026, 7, 24, 12, 0, 0, TimeSpan.Zero);
+        var firstProcessRunId = ProcessRunId.New();
+        var secondProcessRunId = ProcessRunId.New();
+        var unrelatedProcessRunId = ProcessRunId.New();
+        var firstStepId = ProcessStepInstanceId.New();
+        var secondStepId = ProcessStepInstanceId.New();
+        var firstRun = CreateUsageExecutionRun(firstProcessRunId, now.AddMinutes(-2)) with
+        {
+            ProcessStepId = firstStepId.ToString(),
+            ResultSummary = "First header result"
+        };
+        var secondRun = CreateUsageExecutionRun(secondProcessRunId, now.AddMinutes(-1)) with
+        {
+            ProcessStepId = secondStepId.ToString(),
+            ResultSummary = "Second header result"
+        };
+        var unrelatedRun = CreateUsageExecutionRun(unrelatedProcessRunId, now);
+        var workspace = new UsageTelemetryWorkspaceService(
+            [firstRun, secondRun, unrelatedRun],
+            new Dictionary<Guid, ExecutionRunDetail>());
+        var reader = new AgentFrameworkProcessExecutionObservationReader(
+            new EmptyAgentReferenceDataProvider(now),
+            workspace);
+
+        var read = await reader.ReadAsync(
+            new ProcessExecutionObservationQuery(
+                [firstProcessRunId, secondProcessRunId],
+                now.AddHours(-1),
+                now.AddHours(1),
+                TakePerRun: 2)
+            {
+                StepInstanceIds = [firstStepId, secondStepId],
+                DetailLevel = ProcessExecutionObservationDetailLevel.Summary
+            });
+        var observations = read.Items;
+
+        Assert.True(read.IsComplete);
+        var executionRunQuery = Assert.Single(workspace.ExecutionRunQueries);
+        Assert.Null(executionRunQuery.ProcessRunId);
+        Assert.Null(executionRunQuery.ProcessStepId);
+        Assert.Equal(
+            [firstProcessRunId.ToString(), secondProcessRunId.ToString()],
+            executionRunQuery.ProcessRunIds);
+        Assert.Equal(
+            [firstStepId.ToString(), secondStepId.ToString()],
+            executionRunQuery.ProcessStepIds);
+        Assert.Equal(12, executionRunQuery.Take);
+        Assert.Equal(0, workspace.ExecutionRunDetailRequestCount);
+        Assert.Equal(2, observations.Count);
+        var firstObservation = Assert.Single(observations, observation => observation.RunId == firstProcessRunId);
+        Assert.Equal(firstRun.AgentId, firstObservation.AgentId);
+        Assert.Equal(firstRun.StartedAtUtc, firstObservation.StartedAtUtc);
+        Assert.Equal(firstRun.CompletedAtUtc, firstObservation.CompletedAtUtc);
+        Assert.Equal("First header result", firstObservation.ResultSummary);
+        Assert.Empty(firstObservation.RecentActivities);
+        Assert.Empty(firstObservation.RecentTools);
+        Assert.Empty(firstObservation.Artifacts);
+    }
+
+    [Fact]
+    public async Task Execution_observation_reader_preserves_full_detail_loading_by_default()
+    {
+        var now = new DateTimeOffset(2026, 7, 24, 13, 0, 0, TimeSpan.Zero);
+        var processRunId = ProcessRunId.New();
+        var executionRun = CreateUsageExecutionRun(processRunId, now) with
+        {
+            ResultSummary = "Header result"
+        };
+        var detailRun = executionRun with
+        {
+            ResultSummary = "Detailed result"
+        };
+        var workspace = new UsageTelemetryWorkspaceService(
+            [executionRun],
+            new Dictionary<Guid, ExecutionRunDetail>
+            {
+                [executionRun.Id] = CreateExecutionRunDetail(detailRun, [])
+            });
+        var reader = new AgentFrameworkProcessExecutionObservationReader(
+            new EmptyAgentReferenceDataProvider(now),
+            workspace);
+
+        var observations = await reader.ListAsync(
+            new ProcessExecutionObservationQuery(
+                [processRunId],
+                now.AddHours(-1),
+                now.AddHours(1),
+                TakePerRun: 1));
+
+        Assert.Single(workspace.ExecutionRunQueries);
+        Assert.Equal(1, workspace.ExecutionRunDetailRequestCount);
+        var observation = Assert.Single(observations);
+        Assert.Equal("Detailed result", observation.ResultSummary);
+    }
+
+    [Fact]
+    public async Task Execution_observation_reader_reports_per_step_cap_boundary_as_incomplete()
+    {
+        var now = new DateTimeOffset(2026, 7, 24, 13, 30, 0, TimeSpan.Zero);
+        var processRunId = ProcessRunId.New();
+        var stepId = ProcessStepInstanceId.New();
+        var olderRun = CreateUsageExecutionRun(processRunId, now.AddMinutes(-2)) with
+        {
+            ProcessStepId = stepId.ToString()
+        };
+        var newerRun = CreateUsageExecutionRun(processRunId, now.AddMinutes(-1)) with
+        {
+            ProcessStepId = stepId.ToString()
+        };
+        var workspace = new UsageTelemetryWorkspaceService(
+            [olderRun, newerRun],
+            new Dictionary<Guid, ExecutionRunDetail>());
+        var reader = new AgentFrameworkProcessExecutionObservationReader(
+            new EmptyAgentReferenceDataProvider(now),
+            workspace);
+
+        var result = await reader.ReadAsync(
+            new ProcessExecutionObservationQuery(
+                [processRunId],
+                now.AddHours(-1),
+                now.AddHours(1),
+                TakePerRun: 1)
+            {
+                StepInstanceIds = [stepId],
+                DetailLevel = ProcessExecutionObservationDetailLevel.Summary
+            });
+
+        Assert.False(result.IsComplete);
+        Assert.Single(result.Items);
+        Assert.Equal(newerRun.Id, result.Items[0].ExecutionRunId);
+        Assert.Equal(2, Assert.Single(workspace.ExecutionRunQueries).Take);
+    }
+
+    [Fact]
+    public async Task Runtime_usage_reader_reports_per_run_cap_boundary_as_incomplete()
+    {
+        var now = new DateTimeOffset(2026, 7, 24, 14, 0, 0, TimeSpan.Zero);
+        var processRunId = ProcessRunId.New();
+        var executionRun = CreateUsageExecutionRun(
+            processRunId,
+            now.AddMinutes(-2));
+        var firstUsage = new ProviderUsageObservation(
+            Id: Guid.NewGuid(),
+            CreatedAtUtc: now.AddMinutes(-2),
+            ProviderName: "OpenAI default",
+            ProviderKind: ProviderKind.OpenAi,
+            Model: "gpt-test",
+            TransportKind: ProviderTransportKind.Responses,
+            SourcePhase: ProviderUsageSourcePhases.AgentRuntime,
+            UsageStatus: ProviderUsageObservationStatus.Observed,
+            InputTokens: 100,
+            CachedInputTokens: 10,
+            OutputTokens: 50,
+            ReasoningTokens: 0,
+            TotalTokens: 150,
+            ToolCallCount: 1)
+        {
+            ExecutionRunId = executionRun.Id,
+            ProcessRunId = processRunId.ToString()
+        };
+        var secondUsage = firstUsage with
+        {
+            Id = Guid.NewGuid(),
+            CreatedAtUtc = now.AddMinutes(-1)
+        };
+        var workspace = new UsageTelemetryWorkspaceService(
+            [executionRun],
+            new Dictionary<Guid, ExecutionRunDetail>
+            {
+                [executionRun.Id] = CreateExecutionRunDetail(
+                    executionRun,
+                    [firstUsage, secondUsage])
+            });
+        var reader = new AgentFrameworkProcessRuntimeUsageTelemetryReader(
+            new EmptyAgentReferenceDataProvider(now),
+            workspace);
+
+        var result = await reader.ReadAsync(
+            new ProcessRuntimeUsageTelemetryQuery(
+                [processRunId],
+                now.AddHours(-1),
+                now.AddHours(1),
+                TakePerRun: 1));
+
+        Assert.False(result.IsComplete);
+        Assert.Single(result.Items);
+        Assert.Equal(firstUsage.Id, result.Items[0].UsageObservationId);
+        Assert.Equal(2, Assert.Single(workspace.ExecutionRunQueries).Take);
     }
 
     [Fact]
@@ -662,18 +858,50 @@ public sealed class ProcessRuntimeIntegrationMetadataTests
         await workflowStore.AppendAsync(fixture.WorkflowObservation);
         var reader = new WorkflowAwareProcessRuntimeUsageTelemetryReader(fixture.AgentReader, workflowStore);
 
-        var observations = await reader.ListAsync(new ProcessRuntimeUsageTelemetryQuery(
+        var result = await reader.ReadAsync(new ProcessRuntimeUsageTelemetryQuery(
             [fixture.ProcessRunId],
             fixture.Now.AddHours(-1),
             fixture.Now.AddHours(1),
             TakePerRun: 25));
 
-        var observation = Assert.Single(observations);
+        Assert.True(result.IsComplete);
+        var observation = Assert.Single(result.Items);
         Assert.Equal(fixture.WorkflowObservation.Id.Value, observation.UsageObservationId);
         Assert.Equal(fixture.ProcessRunId, observation.RunId);
         Assert.Equal(fixture.WorkflowObservation.RunId!.Value.Value, observation.ExecutionRunId);
         Assert.Equal(1, observation.ToolCallCount);
         Assert.Equal(0.42m, observation.ActualCostUsd);
+    }
+
+    [Fact]
+    public async Task Runtime_usage_reader_reports_merged_workflow_cap_boundary_as_incomplete()
+    {
+        var fixture = CreateWorkflowUsageTelemetryFixture();
+        var workflowStore = new InMemoryWorkflowUsageObservationStore();
+        var secondObservation = fixture.WorkflowObservation with
+        {
+            Id = WorkflowUsageObservationId.New(),
+            InvocationId = Guid.NewGuid(),
+            RecordedAtUtc = fixture.Now.AddMinutes(1)
+        };
+        await workflowStore.AppendRangeAsync(
+            [fixture.WorkflowObservation, secondObservation]);
+        var reader = new WorkflowAwareProcessRuntimeUsageTelemetryReader(
+            fixture.AgentReader,
+            workflowStore);
+
+        var result = await reader.ReadAsync(
+            new ProcessRuntimeUsageTelemetryQuery(
+                [fixture.ProcessRunId],
+                fixture.Now.AddHours(-1),
+                fixture.Now.AddHours(1),
+                TakePerRun: 1));
+
+        Assert.False(result.IsComplete);
+        var observation = Assert.Single(result.Items);
+        Assert.Equal(
+            fixture.WorkflowObservation.Id.Value,
+            observation.UsageObservationId);
     }
 
     [Fact]
@@ -1013,6 +1241,23 @@ public sealed class ProcessRuntimeIntegrationMetadataTests
         AgentFrameworkProcessRuntimeUsageTelemetryReader AgentReader,
         WorkflowUsageObservation WorkflowObservation);
 
+    private sealed class EmptyAgentReferenceDataProvider(DateTimeOffset now) : IAgentReferenceDataProvider
+    {
+        public Task<AgentReferenceDataSnapshot> GetAsync(
+            AgentReferenceDataRequest request,
+            CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            return Task.FromResult(new AgentReferenceDataSnapshot(
+                AgentReferenceDataSections.Agents,
+                [],
+                [],
+                new Dictionary<Guid, ProviderProfile>(),
+                now,
+                TimeSpan.Zero));
+        }
+    }
+
     private sealed class FixedWorkflowUsageObservationStore(
         IReadOnlyList<WorkflowUsageObservation> observations) : IWorkflowUsageObservationStore
     {
@@ -1034,7 +1279,17 @@ public sealed class ProcessRuntimeIntegrationMetadataTests
         public Task<WorkflowListPage<WorkflowUsageObservation>> ListPageAsync(
             WorkflowUsageObservationPageRequest request,
             CancellationToken cancellationToken = default)
-            => throw new NotSupportedException();
+        {
+            var items = observations
+                .Skip(request.PageIndex * request.PageSize)
+                .Take(request.PageSize)
+                .ToArray();
+            return Task.FromResult(new WorkflowListPage<WorkflowUsageObservation>(
+                items,
+                request.PageIndex,
+                request.PageSize,
+                observations.Count));
+        }
     }
 
     private sealed class FixedMetadataContribution(
@@ -1077,9 +1332,19 @@ public sealed class ProcessRuntimeIntegrationMetadataTests
             CancellationToken cancellationToken = default)
         {
             ExecutionRunQueries.Add(query);
+            var processRunIds = query.ProcessRunIds.ToHashSet(
+                StringComparer.OrdinalIgnoreCase);
+            var processStepIds = query.ProcessStepIds.ToHashSet(
+                StringComparer.OrdinalIgnoreCase);
             var result = executionRuns
                 .Where(run => query.ProcessRunId is null ||
                               string.Equals(run.ProcessRunId, query.ProcessRunId, StringComparison.OrdinalIgnoreCase))
+                .Where(run => processRunIds.Count == 0 ||
+                              processRunIds.Contains(run.ProcessRunId))
+                .Where(run => query.ProcessStepId is null ||
+                              string.Equals(run.ProcessStepId, query.ProcessStepId, StringComparison.OrdinalIgnoreCase))
+                .Where(run => processStepIds.Count == 0 ||
+                              processStepIds.Contains(run.ProcessStepId))
                 .Where(run => query.UpdatedFromUtc is null || run.UpdatedAtUtc >= query.UpdatedFromUtc)
                 .Where(run => query.UpdatedToUtc is null || run.UpdatedAtUtc <= query.UpdatedToUtc)
                 .OrderByDescending(run => run.UpdatedAtUtc)

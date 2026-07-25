@@ -63,11 +63,52 @@ public sealed class EfProcessInstancePlanStore(ProcessPersistenceDbContext dbCon
             return null;
         }
 
+        return DeserializePlan(entity);
+    }
+
+    public async ValueTask<IReadOnlyList<ProcessInstancePlan>> LoadManyAsync(
+        IReadOnlyList<ProcessInstancePlanId> planIds,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(planIds);
+        if (planIds.Count > IProcessInstancePlanStore.MaximumBatchPlanCount)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(planIds),
+                planIds.Count,
+                $"Instance-plan batch cannot exceed {IProcessInstancePlanStore.MaximumBatchPlanCount} plans.");
+        }
+
+        var values = planIds
+            .Select(planId => planId.Value)
+            .Distinct()
+            .ToArray();
+        if (values.Length == 0)
+        {
+            return [];
+        }
+
+        var entities = await dbContext.InstancePlans
+            .AsNoTracking()
+            .Where(plan => values.Contains(plan.PlanId))
+            .OrderBy(plan => plan.PlanId)
+            .ToArrayAsync(cancellationToken)
+            .ConfigureAwait(false);
+        return entities
+            .Select(DeserializePlan)
+            .ToArray();
+    }
+
+    private static ProcessInstancePlan DeserializePlan(ProcessInstancePlanEntity entity)
+    {
+        var planId = new ProcessInstancePlanId(entity.PlanId);
         var plan = JsonSerializer.Deserialize<ProcessInstancePlan>(entity.PayloadJson, SerializerOptions)
             ?? throw new InvalidOperationException($"Process instance plan '{planId}' payload deserialized to null.");
-        if (!string.Equals(plan.PlanHash, entity.PlanHash, StringComparison.Ordinal))
+        if (plan.Header.PlanId != planId ||
+            !string.Equals(plan.PlanHash, entity.PlanHash, StringComparison.Ordinal))
         {
-            throw new InvalidOperationException($"Process instance plan '{planId}' payload hash does not match the persisted metadata.");
+            throw new InvalidOperationException(
+                $"Process instance plan '{planId}' payload identity or hash does not match the persisted metadata.");
         }
 
         return plan;

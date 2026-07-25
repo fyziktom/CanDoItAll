@@ -2112,6 +2112,12 @@ public sealed class ProcessRuntimeDispatchApplicationServiceTests
             CancellationToken cancellationToken = default)
             => Task.FromResult<ProcessProjectionSnapshot?>(null);
 
+        public Task<IReadOnlyList<ProcessProjectionSnapshot>> LoadSnapshotsAsync(
+            ProcessProjectorName projectorName,
+            IReadOnlyList<ProcessProjectionKey> projectionKeys,
+            CancellationToken cancellationToken = default)
+            => Task.FromResult<IReadOnlyList<ProcessProjectionSnapshot>>([]);
+
         public Task<IReadOnlyList<ProcessProjectionSnapshot>> ReadSnapshotsAsync(
             ProcessProjectorName projectorName,
             ProcessProjectionKeyPrefix projectionKeyPrefix,

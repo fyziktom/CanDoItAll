@@ -4,7 +4,7 @@ using CanDoItAll.AgentFramework.Models;
 
 namespace CanDoItAll.AgentFramework.Persistence;
 
-public sealed class FileSandboxWorkspaceStore : ISandboxWorkspaceStore, ISandboxWorkspaceChatQueryStore, ISandboxWorkspaceChatProjectionQueryStore, ISandboxWorkspaceChatSessionStore, ISandboxWorkspaceExecutionRunStore, ISandboxWorkspaceExecutionRunMutationStore
+public sealed class FileSandboxWorkspaceStore : ISandboxWorkspaceStore, ISandboxWorkspaceChatQueryStore, ISandboxWorkspaceChatProjectionQueryStore, ISandboxWorkspaceChatSessionStore, ISandboxWorkspaceExecutionRunStore, ISandboxWorkspaceExecutionRunMutationStore, ISandboxWorkspaceExecutionRunReservationStore
 {
     private static readonly TimeSpan CatalogReadNormalizationLockTimeout = TimeSpan.FromMilliseconds(100);
 
@@ -351,6 +351,64 @@ public sealed class FileSandboxWorkspaceStore : ISandboxWorkspaceStore, ISandbox
 
             var previousDetail = await executionSliceStore.LoadRunDetailAsync(detail.Run.Id, cancellationToken);
             return await SaveExecutionRunDetailCoreAsync(previousDetail, detail, cancellationToken);
+        }
+        finally
+        {
+            gate.Release();
+        }
+    }
+
+    public async Task<ExecutionRunSourceReservationResult> ReserveExecutionRunAsync(
+        ExecutionRunSourceKey source,
+        ExecutionRunDetail candidate,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(source);
+        ArgumentNullException.ThrowIfNull(candidate);
+        if (!source.Matches(candidate.Run))
+        {
+            throw new InvalidOperationException(
+                "The candidate execution run does not match the requested source key.");
+        }
+
+        await gate.WaitAsync(cancellationToken);
+        try
+        {
+            await using var workspaceLock = await crossProcessLock.AcquireAsync(cancellationToken);
+            await EnsureSplitFilesCoreAsync(cancellationToken);
+
+            var sameSourceRuns = (await executionSliceStore.ListRunsAsync(cancellationToken))
+                .Where(source.Matches)
+                .OrderByDescending(run => run.UpdatedAtUtc)
+                .ToArray();
+            var completedRun = sameSourceRuns.FirstOrDefault(run =>
+                run.State == ExecutionState.Completed &&
+                run.Outcome == RunOutcome.Succeeded);
+            if (completedRun is not null)
+            {
+                return new ExecutionRunSourceReservationResult(
+                    ExecutionRunSourceDisposition.ReusedCompleted,
+                    completedRun);
+            }
+
+            var activeRun = sameSourceRuns.FirstOrDefault(run =>
+                run.State is not ExecutionState.Completed and not ExecutionState.Failed);
+            if (activeRun is not null)
+            {
+                return new ExecutionRunSourceReservationResult(
+                    ExecutionRunSourceDisposition.ExistingActive,
+                    activeRun);
+            }
+
+            var catalog = await LoadCatalogCoreAsync(cancellationToken);
+            ValidateExecutionRunDetail(catalog, candidate);
+            var persisted = await SaveExecutionRunDetailCoreAsync(
+                previousDetail: null,
+                candidate,
+                cancellationToken);
+            return new ExecutionRunSourceReservationResult(
+                ExecutionRunSourceDisposition.Created,
+                persisted.Run);
         }
         finally
         {

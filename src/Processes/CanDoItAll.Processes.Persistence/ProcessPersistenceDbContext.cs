@@ -36,6 +36,10 @@ public sealed class ProcessPersistenceDbContext(DbContextOptions<ProcessPersiste
 
     public DbSet<ProcessProjectionDeadLetterEntity> ProjectionDeadLetters => Set<ProcessProjectionDeadLetterEntity>();
 
+    public DbSet<ProcessRunRecordEntity> RunRecords => Set<ProcessRunRecordEntity>();
+
+    public DbSet<ProcessRunRecordParticipantEntity> RunRecordParticipants => Set<ProcessRunRecordParticipantEntity>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(ProcessPersistenceDbContext).Assembly);

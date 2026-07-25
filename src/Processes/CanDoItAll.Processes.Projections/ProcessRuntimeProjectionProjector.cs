@@ -6,7 +6,8 @@ namespace CanDoItAll.Processes.Projections;
 public sealed class ProcessRuntimeProjectionProjector(
     IProcessProjectionStore projectionStore,
     ProcessProjectionJsonCodec jsonCodec,
-    IProcessProjectionClock clock) : IProcessRuntimeProjector
+    IProcessProjectionClock clock,
+    IProcessRunRecordStore runRecordStore) : IProcessRuntimeProjector
 {
     public static ProcessProjectorName ProjectorName { get; } = new("runtime.projections");
 
@@ -33,6 +34,7 @@ public sealed class ProcessRuntimeProjectionProjector(
         var recentEvents = AppendRecentEvent(previous?.RecentEvents, timelineEvent);
         var incidents = AppendIncident(previous?.Incidents, runtimeEvent);
         var firstEventAtUtc = previous?.FirstEventAtUtc ?? runtimeEvent.Envelope.OccurredAtUtc;
+        var projectedAtUtc = clock.GetUtcNow();
 
         var liveSnapshot = new ProcessLiveProcessSnapshot(
             runtimeEvent.Envelope.RootRunId,
@@ -70,16 +72,16 @@ public sealed class ProcessRuntimeProjectionProjector(
             []);
 
         await projectionStore
-            .UpsertSnapshotAsync(jsonCodec.CreateSnapshot(ProjectorName, liveKey, liveSnapshot, clock.GetUtcNow()), cancellationToken)
+            .UpsertSnapshotAsync(jsonCodec.CreateSnapshot(ProjectorName, liveKey, liveSnapshot, projectedAtUtc), cancellationToken)
             .ConfigureAwait(false);
         await projectionStore
-            .UpsertSnapshotAsync(jsonCodec.CreateSnapshot(ProjectorName, ProcessRuntimeProjectionKeys.RunDetail(runtimeEvent.Envelope.RunId), detail, clock.GetUtcNow()), cancellationToken)
+            .UpsertSnapshotAsync(jsonCodec.CreateSnapshot(ProjectorName, ProcessRuntimeProjectionKeys.RunDetail(runtimeEvent.Envelope.RunId), detail, projectedAtUtc), cancellationToken)
             .ConfigureAwait(false);
         await projectionStore
-            .UpsertSnapshotAsync(jsonCodec.CreateSnapshot(ProjectorName, ProcessRuntimeProjectionKeys.RuntimeCanvas(runtimeEvent.Envelope.RunId), runtimeCanvas, clock.GetUtcNow()), cancellationToken)
+            .UpsertSnapshotAsync(jsonCodec.CreateSnapshot(ProjectorName, ProcessRuntimeProjectionKeys.RuntimeCanvas(runtimeEvent.Envelope.RunId), runtimeCanvas, projectedAtUtc), cancellationToken)
             .ConfigureAwait(false);
         await projectionStore
-            .UpsertSnapshotAsync(jsonCodec.CreateSnapshot(ProjectorName, ProcessRuntimeProjectionKeys.ArtifactMap(runtimeEvent.Envelope.RunId), artifactMap, clock.GetUtcNow()), cancellationToken)
+            .UpsertSnapshotAsync(jsonCodec.CreateSnapshot(ProjectorName, ProcessRuntimeProjectionKeys.ArtifactMap(runtimeEvent.Envelope.RunId), artifactMap, projectedAtUtc), cancellationToken)
             .ConfigureAwait(false);
         await projectionStore
             .AppendHistoryAsync(
@@ -99,6 +101,83 @@ public sealed class ProcessRuntimeProjectionProjector(
                         timelineEvent.RestrictedDiagnosticReference)),
                 cancellationToken)
             .ConfigureAwait(false);
+
+        await ProjectRunRecordLifecycleAsync(
+                runtimeEvent,
+                projectedAtUtc,
+                cancellationToken)
+            .ConfigureAwait(false);
+    }
+
+    private async Task ProjectRunRecordLifecycleAsync(
+        ProcessStoredRuntimeEvent runtimeEvent,
+        DateTimeOffset projectedAtUtc,
+        CancellationToken cancellationToken)
+    {
+        if (string.Equals(
+                runtimeEvent.Envelope.EventType.Value,
+                ProcessRuntimeProjectionEventTypeNames.ProcessRunReactivated,
+                StringComparison.Ordinal))
+        {
+            await runRecordStore
+                .SupersedeAsync(
+                    new ProcessRunRecordSupersession(
+                        runtimeEvent.Envelope.RunId,
+                        runtimeEvent.GlobalSequence,
+                        runtimeEvent.RootSequence,
+                        projectedAtUtc),
+                    cancellationToken)
+                .ConfigureAwait(false);
+            return;
+        }
+
+        if (!TryResolveDisposition(runtimeEvent.Envelope.EventType, out var disposition))
+        {
+            return;
+        }
+
+        await runRecordStore
+            .UpsertSeedAsync(
+                new ProcessRunRecordSeed(
+                    new ProcessRunRecordIdentity(
+                        runtimeEvent.Envelope.RunId,
+                        runtimeEvent.Envelope.RootRunId,
+                        ParentRunId: null,
+                        PlanId: null,
+                        DefinitionId: null,
+                        DefinitionVersionId: null,
+                        ProjectId: null),
+                    disposition,
+                    runtimeEvent.Envelope.OccurredAtUtc,
+                    runtimeEvent.GlobalSequence,
+                    runtimeEvent.RootSequence,
+                    projectedAtUtc),
+                cancellationToken)
+            .ConfigureAwait(false);
+    }
+
+    private static bool TryResolveDisposition(
+        ProcessEventType eventType,
+        out ProcessRunDisposition disposition)
+    {
+        switch (eventType.Value)
+        {
+            case ProcessRuntimeProjectionEventTypeNames.ProcessRunCompleted:
+                disposition = ProcessRunDisposition.Succeeded;
+                return true;
+
+            case ProcessRuntimeProjectionEventTypeNames.ProcessRunFailed:
+                disposition = ProcessRunDisposition.Failed;
+                return true;
+
+            case ProcessRuntimeProjectionEventTypeNames.ProcessRunCancelled:
+                disposition = ProcessRunDisposition.Cancelled;
+                return true;
+
+            default:
+                disposition = default;
+                return false;
+        }
     }
 
     private static ProcessLiveRunEventProjection CreateTimelineEvent(ProcessStoredRuntimeEvent runtimeEvent)

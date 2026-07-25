@@ -68,6 +68,7 @@ public sealed record ProcessRuntimeWorkspaceLoadOptions
     {
         LiveProcesses = ProcessLiveProcessesLoadOptions.SnapshotOnly,
         IncludeSelectedRun = false,
+        IncludeRunRecord = false,
         IncludeHistory = false,
         IncludeMetricHistory = false,
         IncludeActiveAgents = false,
@@ -77,6 +78,8 @@ public sealed record ProcessRuntimeWorkspaceLoadOptions
     public ProcessLiveProcessesLoadOptions LiveProcesses { get; init; } = ProcessLiveProcessesLoadOptions.Full;
 
     public bool IncludeSelectedRun { get; init; } = true;
+
+    public bool IncludeRunRecord { get; init; } = true;
 
     public bool IncludeHistory { get; init; } = true;
 
@@ -94,7 +97,10 @@ public sealed record ProcessRuntimeWorkspaceResult(
     IReadOnlyList<ProcessTimelineEventProjection> MetricEvents,
     bool HasMoreEvents,
     IReadOnlyList<ProcessRuntimeActiveAgentProjection> ActiveAgents,
-    ProcessProjectionFreshness? Freshness);
+    ProcessProjectionFreshness? Freshness)
+{
+    public ProcessRunRecord? SelectedRunRecord { get; init; }
+}
 
 public sealed record ProcessProjectionHistoryQuery(
     ProcessProjectorName ProjectorName,

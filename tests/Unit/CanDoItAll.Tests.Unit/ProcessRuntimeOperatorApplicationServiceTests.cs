@@ -37,7 +37,11 @@ public sealed class ProcessRuntimeOperatorApplicationServiceTests
             new ProcessRuntimeProjectionCatchupService(
                 new EmptyRuntimeEventReplayStore(),
                 projectionStore,
-                new ProcessRuntimeProjectionProjector(projectionStore, ProcessProjectionJsonCodec.Default, clock),
+                new ProcessRuntimeProjectionProjector(
+                    projectionStore,
+                    ProcessProjectionJsonCodec.Default,
+                    clock,
+                    new EfProcessRunRecordStore(dbContext)),
                 clock),
             []);
 
@@ -83,7 +87,11 @@ public sealed class ProcessRuntimeOperatorApplicationServiceTests
             new ProcessRuntimeProjectionCatchupService(
                 new EmptyRuntimeEventReplayStore(),
                 projectionStore,
-                new ProcessRuntimeProjectionProjector(projectionStore, ProcessProjectionJsonCodec.Default, clock),
+                new ProcessRuntimeProjectionProjector(
+                    projectionStore,
+                    ProcessProjectionJsonCodec.Default,
+                    clock,
+                    new EfProcessRunRecordStore(dbContext)),
                 clock),
             [],
             recoveryInstructionBuilder: CreateRecoveryInstructionBuilder());
@@ -148,7 +156,11 @@ public sealed class ProcessRuntimeOperatorApplicationServiceTests
             new ProcessRuntimeProjectionCatchupService(
                 new EmptyRuntimeEventReplayStore(),
                 projectionStore,
-                new ProcessRuntimeProjectionProjector(projectionStore, ProcessProjectionJsonCodec.Default, clock),
+                new ProcessRuntimeProjectionProjector(
+                    projectionStore,
+                    ProcessProjectionJsonCodec.Default,
+                    clock,
+                    new EfProcessRunRecordStore(dbContext)),
                 clock),
             []);
 
@@ -195,7 +207,11 @@ public sealed class ProcessRuntimeOperatorApplicationServiceTests
             new ProcessRuntimeProjectionCatchupService(
                 new EmptyRuntimeEventReplayStore(),
                 projectionStore,
-                new ProcessRuntimeProjectionProjector(projectionStore, ProcessProjectionJsonCodec.Default, clock),
+                new ProcessRuntimeProjectionProjector(
+                    projectionStore,
+                    ProcessProjectionJsonCodec.Default,
+                    clock,
+                    new EfProcessRunRecordStore(dbContext)),
                 clock),
             []);
 
@@ -240,7 +256,11 @@ public sealed class ProcessRuntimeOperatorApplicationServiceTests
             new ProcessRuntimeProjectionCatchupService(
                 new EmptyRuntimeEventReplayStore(),
                 projectionStore,
-                new ProcessRuntimeProjectionProjector(projectionStore, ProcessProjectionJsonCodec.Default, clock),
+                new ProcessRuntimeProjectionProjector(
+                    projectionStore,
+                    ProcessProjectionJsonCodec.Default,
+                    clock,
+                    new EfProcessRunRecordStore(dbContext)),
                 clock),
             []);
 
@@ -281,7 +301,11 @@ public sealed class ProcessRuntimeOperatorApplicationServiceTests
             new ProcessRuntimeProjectionCatchupService(
                 new EmptyRuntimeEventReplayStore(),
                 projectionStore,
-                new ProcessRuntimeProjectionProjector(projectionStore, ProcessProjectionJsonCodec.Default, clock),
+                new ProcessRuntimeProjectionProjector(
+                    projectionStore,
+                    ProcessProjectionJsonCodec.Default,
+                    clock,
+                    new EfProcessRunRecordStore(dbContext)),
                 clock),
             []);
 
@@ -325,7 +349,11 @@ public sealed class ProcessRuntimeOperatorApplicationServiceTests
             new ProcessRuntimeProjectionCatchupService(
                 new EmptyRuntimeEventReplayStore(),
                 projectionStore,
-                new ProcessRuntimeProjectionProjector(projectionStore, ProcessProjectionJsonCodec.Default, clock),
+                new ProcessRuntimeProjectionProjector(
+                    projectionStore,
+                    ProcessProjectionJsonCodec.Default,
+                    clock,
+                    new EfProcessRunRecordStore(dbContext)),
                 clock),
             []);
 
@@ -370,7 +398,11 @@ public sealed class ProcessRuntimeOperatorApplicationServiceTests
             new ProcessRuntimeProjectionCatchupService(
                 new EmptyRuntimeEventReplayStore(),
                 projectionStore,
-                new ProcessRuntimeProjectionProjector(projectionStore, ProcessProjectionJsonCodec.Default, clock),
+                new ProcessRuntimeProjectionProjector(
+                    projectionStore,
+                    ProcessProjectionJsonCodec.Default,
+                    clock,
+                    new EfProcessRunRecordStore(dbContext)),
                 clock),
             [],
             [observer]);

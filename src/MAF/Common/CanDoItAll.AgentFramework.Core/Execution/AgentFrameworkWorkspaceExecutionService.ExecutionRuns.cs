@@ -66,6 +66,97 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         return await ExecuteRunWithWorkspaceDocumentAsync(request, cancellationToken);
     }
 
+    public async Task<ExecutionRunSourceExecutionResult> ExecuteSameSourceRunAsync(
+        ExecutionRunSourceKey source,
+        ExecutionRunRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(source);
+        ArgumentNullException.ThrowIfNull(request);
+
+        if (string.IsNullOrWhiteSpace(request.Prompt))
+        {
+            throw new InvalidOperationException("Prompt is required.");
+        }
+
+        if (request.ChatSessionId.HasValue)
+        {
+            throw new InvalidOperationException(
+                "Atomic same-source execution is supported only for non-chat execution runs.");
+        }
+
+        if (store is not ISandboxWorkspaceExecutionRunReservationStore reservationStore)
+        {
+            throw new NotSupportedException(
+                "The workspace store does not support atomic same-source execution reservation.");
+        }
+
+        var context = PrepareInvocationContext(request) with
+        {
+            SourceKind = source.SourceKind,
+            SourceId = source.SourceId
+        };
+        request = request with { Context = context };
+
+        var catalog = await store.LoadCatalogAsync(cancellationToken);
+        var agent = EnsureAgentExists(catalog, request.AgentId);
+        var provider = await ResolveProviderForExecutionRequestAsync(
+            agent,
+            catalog,
+            request,
+            await ResolveProviderForAgentAsync(agent, catalog, cancellationToken).ConfigureAwait(false),
+            cancellationToken).ConfigureAwait(false);
+        var prompt = request.Prompt.Trim();
+        var run = CreatePreparingRun(
+            agent,
+            provider,
+            chatSessionId: null,
+            CreateSessionTitle(prompt),
+            context,
+            prompt,
+            DateTimeOffset.UtcNow,
+            request.AutoApprovePendingToolCalls,
+            request.StructuredOutput);
+        var reservation = await reservationStore
+            .ReserveExecutionRunAsync(
+                source,
+                CreateExecutionRunDetail(
+                    run,
+                    session: null,
+                    executionLog: [],
+                    metrics: [],
+                    usageObservations: [],
+                    approvals: [],
+                    artifacts: [],
+                    checkpoints: [],
+                    toolReceipts: []),
+                cancellationToken)
+            .ConfigureAwait(false);
+
+        if (reservation.Disposition != ExecutionRunSourceDisposition.Created)
+        {
+            return new ExecutionRunSourceExecutionResult(
+                reservation.Disposition,
+                reservation.Run,
+                CreatedExecutionResult: null);
+        }
+
+        var result = await CompletePreparedExecutionRunAsync(
+                agent,
+                provider,
+                catalog,
+                session: null,
+                request,
+                reservation.Run,
+                userMessage: null,
+                cancellationToken)
+            .ConfigureAwait(false);
+        return new ExecutionRunSourceExecutionResult(
+            ExecutionRunSourceDisposition.Created,
+            reservation.Run,
+            result);
+    }
+
     private async Task<ExecutionRunResult> ExecuteRunWithWorkspaceDocumentAsync(
         ExecutionRunRequest request,
         CancellationToken cancellationToken)
@@ -520,9 +611,21 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
             runs = runs.Where(item => string.Equals(item.ProcessRunId, query.ProcessRunId, StringComparison.OrdinalIgnoreCase));
         }
 
+        if (query.ProcessRunIds.Count > 0)
+        {
+            var processRunIds = query.ProcessRunIds.ToHashSet(StringComparer.OrdinalIgnoreCase);
+            runs = runs.Where(item => processRunIds.Contains(item.ProcessRunId));
+        }
+
         if (!string.IsNullOrWhiteSpace(query.ProcessStepId))
         {
             runs = runs.Where(item => string.Equals(item.ProcessStepId, query.ProcessStepId, StringComparison.OrdinalIgnoreCase));
+        }
+
+        if (query.ProcessStepIds.Count > 0)
+        {
+            var processStepIds = query.ProcessStepIds.ToHashSet(StringComparer.OrdinalIgnoreCase);
+            runs = runs.Where(item => processStepIds.Contains(item.ProcessStepId));
         }
 
         if (!string.IsNullOrWhiteSpace(query.SchedulerRunId))

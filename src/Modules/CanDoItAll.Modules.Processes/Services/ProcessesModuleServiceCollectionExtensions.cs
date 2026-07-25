@@ -27,12 +27,16 @@ public static class ProcessesModuleServiceCollectionExtensions
         IConfiguration configuration)
     {
         ArgumentNullException.ThrowIfNull(configuration);
+        var backgroundWorkersEnabled = LocalRuntimeHostedWorkerPolicy.AreBackgroundHostedWorkersEnabled(
+            configuration[LocalRuntimeHostedWorkerPolicy.LaneKindConfigurationKey],
+            configuration["LaneKind"]);
 
         services.AddDbContext<ProcessPersistenceDbContext>(ConfigureProcessPersistenceDbContext);
         services.AddDbContextFactory<ProcessPersistenceDbContext>(
             ConfigureProcessPersistenceDbContext,
             ServiceLifetime.Scoped);
 
+        services.TryAddSingleton(TimeProvider.System);
         services.TryAddSingleton<IProcessProjectionClock, SystemProcessProjectionClock>();
         services.TryAddSingleton(ProcessProjectionJsonCodec.Default);
         services.TryAddSingleton<ProcessTemplatePackLoader>();
@@ -48,6 +52,9 @@ public static class ProcessesModuleServiceCollectionExtensions
         services.TryAddScoped<IProcessOutboxWriter, EfProcessOutboxStore>();
         services.TryAddScoped<IProcessArtifactLedgerStore, EfProcessArtifactLedgerStore>();
         services.TryAddScoped<IProcessProjectionStore, EfProcessProjectionStore>();
+        services.TryAddScoped<IProcessRunRecordStore, EfProcessRunRecordStore>();
+        services.TryAddScoped<IProcessRunRecordReader, ProcessRunRecordReader>();
+        services.TryAddScoped<IProcessRunRecordBackfillSource, EfProcessRunRecordBackfillSource>();
         services.TryAddScoped<IProcessInstancePlanStore, EfProcessInstancePlanStore>();
         services.TryAddScoped<IProcessRuntimeStepAssignmentStore, EfProcessRuntimeStepAssignmentStore>();
         services.TryAddScoped<IProcessRunFileScopeProvider, ProcessRunFileScopeProvider>();
@@ -110,6 +117,12 @@ public static class ProcessesModuleServiceCollectionExtensions
         services.TryAddScoped<IProcessExecutionObservationReader, AgentFrameworkProcessExecutionObservationReader>();
         services.TryAddScoped<AgentFrameworkProcessRuntimeUsageTelemetryReader>();
         services.TryAddScoped<IProcessRuntimeUsageTelemetryReader, WorkflowAwareProcessRuntimeUsageTelemetryReader>();
+        services.TryAddScoped<ProcessRunRecordAssembler>();
+        services.TryAddScoped<ProcessRunRecordBackfillProcessor>();
+        services.TryAddScoped<ProcessRunRecordQueryService>();
+        services.TryAddScoped<ProcessRunManagerAgentSelector>();
+        services.TryAddScoped<IProcessRunNarrativeGenerator, AgentFrameworkProcessRunNarrativeGenerator>();
+        services.TryAddScoped<ProcessRunRecordBatchProcessor>();
         services.TryAddScoped<AgentFrameworkProcessExecutionClaimRecoveryCoordinator>();
         services.TryAddScoped<AgentFrameworkProcessExecutionClaimRecoveryReconciler>();
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IAgentExecutionRecoveryObserver, AgentFrameworkProcessExecutionRecoveryObserver>());
@@ -126,10 +139,22 @@ public static class ProcessesModuleServiceCollectionExtensions
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IMemorySourceGatewayAdapter, ProcessRuntimeMemorySourceGatewayAdapter>());
         services.Configure<ProcessRuntimeDispatchQueueOptions>(
             configuration.GetSection(ProcessRuntimeDispatchQueueOptions.ConfigurationSectionName));
+        services.AddOptions<ProcessRunRecordProcessingOptions>()
+            .Bind(configuration.GetSection(ProcessRunRecordProcessingOptions.ConfigurationSectionName))
+            .Validate(
+                ProcessRunRecordProcessingOptions.IsValid,
+                "Process run record processing options are invalid.")
+            .ValidateOnStart();
         services.TryAddSingleton<ProcessRuntimeDispatchQueue>();
         services.TryAddSingleton<IProcessRuntimeDispatchQueue>(serviceProvider => serviceProvider.GetRequiredService<ProcessRuntimeDispatchQueue>());
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IHostedService, ProcessRuntimeDispatchQueueWorker>());
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IHostedService, AgentFrameworkProcessExecutionClaimRecoveryWorker>());
+        if (backgroundWorkersEnabled)
+        {
+            services.TryAddEnumerable(ServiceDescriptor.Singleton<IHostedService, ProcessRuntimeProjectionReplayBackgroundWorker>());
+            services.TryAddEnumerable(ServiceDescriptor.Singleton<IHostedService, ProcessRunRecordBackgroundWorker>());
+        }
+
         services.TryAddScoped<ProcessLaunchApplicationService>();
         services.TryAddScoped<ProcessRuntimeDispatchApplicationService>();
         services.TryAddScoped<ProcessRuntimeOperatorApplicationService>();

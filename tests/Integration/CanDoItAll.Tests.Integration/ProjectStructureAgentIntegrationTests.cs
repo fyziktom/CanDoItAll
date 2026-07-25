@@ -594,7 +594,10 @@ public sealed class ProjectStructureAgentIntegrationTests
         Assert.Equal("process-summary", summaryNode.ObjectSubtype);
         Assert.Equal(runNodeId, summaryNode.ParentId);
         Assert.Equal("process-run-summary", summaryNode.ArtifactKind);
-        Assert.Contains("Projected process run summary.", summaryNode.Notes, StringComparison.Ordinal);
+        Assert.Contains(
+            "The process is still active; this node contains live projection data.",
+            summaryNode.Notes,
+            StringComparison.Ordinal);
         var screenshotNodeId = ProjectStructureProcessNodeKeys.BuildProcessRunScreenshotNodeKey(runId.Value, screenshotRelativePath);
         var screenshotNode = Assert.Single(surface.Nodes, node => string.Equals(node.Id, screenshotNodeId, StringComparison.Ordinal));
         Assert.Equal(ProjectObjectType.ImageAsset, screenshotNode.ObjectType);

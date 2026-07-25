@@ -36,6 +36,8 @@ public sealed record ProcessRuntimeBranchGate(
 
 public interface IProcessRuntimeStepAssignmentStore
 {
+    public const int MaximumBatchRunCount = 2_049;
+
     ValueTask SaveAsync(
         IReadOnlyList<ProcessRuntimeStepAssignment> assignments,
         CancellationToken cancellationToken = default);
@@ -43,6 +45,29 @@ public interface IProcessRuntimeStepAssignmentStore
     ValueTask<IReadOnlyList<ProcessRuntimeStepAssignment>> LoadByRunAsync(
         ProcessRunId runId,
         CancellationToken cancellationToken = default);
+
+    async ValueTask<IReadOnlyList<ProcessRuntimeStepAssignment>> LoadByRunsAsync(
+        IReadOnlyList<ProcessRunId> runIds,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(runIds);
+        if (runIds.Count > MaximumBatchRunCount)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(runIds),
+                runIds.Count,
+                $"Step-assignment batch cannot exceed {MaximumBatchRunCount} runs.");
+        }
+
+        var result = new List<ProcessRuntimeStepAssignment>();
+        foreach (var runId in runIds.Distinct().OrderBy(runId => runId.Value))
+        {
+            result.AddRange(
+                await LoadByRunAsync(runId, cancellationToken).ConfigureAwait(false));
+        }
+
+        return result;
+    }
 
     ValueTask<IReadOnlyList<ProcessRuntimeStepAssignment>> FindByLaunchVariablesAsync(
         IReadOnlyDictionary<string, string> requiredVariables,

@@ -23,6 +23,38 @@ public sealed class EfProcessRuntimeUnitOfWork(ProcessPersistenceDbContext dbCon
         return entity is null ? null : ProcessPersistenceMappers.ToSnapshot(entity);
     }
 
+    public async Task<IReadOnlyList<ProcessRuntimeStateSnapshot>> LoadManyAsync(
+        IReadOnlyList<ProcessRunId> runIds,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(runIds);
+        if (runIds.Count > IProcessRuntimeStateStore.MaximumBatchRunCount)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(runIds),
+                runIds.Count,
+                $"Runtime state batch cannot exceed {IProcessRuntimeStateStore.MaximumBatchRunCount} runs.");
+        }
+
+        var values = runIds
+            .Select(runId => runId.Value)
+            .Distinct()
+            .ToArray();
+        if (values.Length == 0)
+        {
+            return [];
+        }
+
+        var entities = await BuildStateQuery(trackChanges: false)
+            .Where(state => values.Contains(state.RunId))
+            .OrderBy(state => state.RunId)
+            .ToArrayAsync(cancellationToken)
+            .ConfigureAwait(false);
+        return entities
+            .Select(ProcessPersistenceMappers.ToSnapshot)
+            .ToArray();
+    }
+
     public async Task<ProcessRuntimeActivitySelection> QueryActivityAsync(
         ProcessRuntimeActivityQuery query,
         CancellationToken cancellationToken = default)
@@ -77,6 +109,31 @@ public sealed class EfProcessRuntimeUnitOfWork(ProcessPersistenceDbContext dbCon
                 state.Status != ProcessRuntimeStatus.Cancelled &&
                 state.Status != ProcessRuntimeStatus.CancelRequested)
             .OrderByDescending(state => state.UpdatedAtUtc)
+            .Select(state => new ProcessRunId(state.RunId))
+            .ToArrayAsync(cancellationToken)
+            .ConfigureAwait(false);
+    }
+
+    public async Task<IReadOnlyList<ProcessRunId>> FindDescendantRunIdsAsync(
+        ProcessRunId rootRunId,
+        int take,
+        CancellationToken cancellationToken = default)
+    {
+        if (take is < 1 or > IProcessRuntimeRunHierarchyStore.MaximumBatchRunCount)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(take),
+                take,
+                $"Runtime hierarchy take must be between 1 and {IProcessRuntimeRunHierarchyStore.MaximumBatchRunCount}.");
+        }
+
+        return await dbContext.RuntimeStates
+            .AsNoTracking()
+            .Where(state =>
+                state.RootRunId == rootRunId.Value &&
+                state.RunId != rootRunId.Value)
+            .OrderBy(state => state.RunId)
+            .Take(take)
             .Select(state => new ProcessRunId(state.RunId))
             .ToArrayAsync(cancellationToken)
             .ConfigureAwait(false);
@@ -193,21 +250,26 @@ public sealed class EfProcessRuntimeUnitOfWork(ProcessPersistenceDbContext dbCon
         bool trackChanges,
         CancellationToken cancellationToken)
     {
+        return await BuildStateQuery(trackChanges)
+            .SingleOrDefaultAsync(state => state.RunId == runId, cancellationToken)
+            .ConfigureAwait(false);
+    }
+
+    private IQueryable<ProcessRuntimeStateEntity> BuildStateQuery(bool trackChanges)
+    {
         var query = dbContext.RuntimeStates.AsQueryable();
         if (!trackChanges)
         {
             query = query.AsNoTracking();
         }
 
-        return await query
+        return query
             .AsSplitQuery()
             .Include(state => state.Steps)
             .Include(state => state.Claims)
             .Include(state => state.ResultReceipts)
             .Include(state => state.AvailableArtifactSlots)
-            .Include(state => state.ConnectedInputArtifacts)
-            .SingleOrDefaultAsync(state => state.RunId == runId, cancellationToken)
-            .ConfigureAwait(false);
+            .Include(state => state.ConnectedInputArtifacts);
     }
 
     private async Task AppendEventsAsync(

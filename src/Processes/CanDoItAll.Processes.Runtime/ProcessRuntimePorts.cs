@@ -5,9 +5,37 @@ namespace CanDoItAll.Processes.Runtime;
 
 public interface IProcessRuntimeStateStore
 {
+    public const int MaximumBatchRunCount = 2_049;
+
     Task<ProcessRuntimeStateSnapshot?> LoadAsync(
         ProcessRunId runId,
         CancellationToken cancellationToken = default);
+
+    async Task<IReadOnlyList<ProcessRuntimeStateSnapshot>> LoadManyAsync(
+        IReadOnlyList<ProcessRunId> runIds,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(runIds);
+        if (runIds.Count > MaximumBatchRunCount)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(runIds),
+                runIds.Count,
+                $"Runtime state batch cannot exceed {MaximumBatchRunCount} runs.");
+        }
+
+        var result = new List<ProcessRuntimeStateSnapshot>(runIds.Count);
+        foreach (var runId in runIds.Distinct().OrderBy(runId => runId.Value))
+        {
+            var state = await LoadAsync(runId, cancellationToken).ConfigureAwait(false);
+            if (state is not null)
+            {
+                result.Add(state);
+            }
+        }
+
+        return result;
+    }
 }
 
 public enum ProcessRuntimeActivitySelectionMode
@@ -56,9 +84,18 @@ public interface IProcessRuntimeActivityStore
 
 public interface IProcessRuntimeRunHierarchyStore
 {
+    public const int MaximumBatchRunCount = IProcessRuntimeStateStore.MaximumBatchRunCount;
+
     Task<IReadOnlyList<ProcessRunId>> FindCancellableDescendantRunIdsAsync(
         ProcessRunId rootRunId,
         CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<ProcessRunId>> FindDescendantRunIdsAsync(
+        ProcessRunId rootRunId,
+        int take,
+        CancellationToken cancellationToken = default)
+        => throw new NotSupportedException(
+            "The runtime hierarchy store does not support bounded descendant reads.");
 }
 
 public interface IProcessRuntimeUnitOfWork

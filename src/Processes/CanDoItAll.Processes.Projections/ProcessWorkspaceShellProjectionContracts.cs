@@ -603,6 +603,8 @@ public sealed record ProcessRuntimeWorkspaceProjection(
     string Summary,
     string AttentionSummary)
 {
+    public ProcessRunRecord? SelectedRunRecord { get; init; }
+
     public static ProcessRuntimeWorkspaceProjection Empty { get; } = new(
         ProcessRuntimeHistoryWindow.OneDay,
         EventPage: 0,

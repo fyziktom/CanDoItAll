@@ -53,6 +53,42 @@ public sealed class EfProcessProjectionStore(ProcessPersistenceDbContext dbConte
         return entity is null ? null : ProcessPersistenceMappers.ToProjectionSnapshot(entity);
     }
 
+    public async Task<IReadOnlyList<ProcessProjectionSnapshot>> LoadSnapshotsAsync(
+        ProcessProjectorName projectorName,
+        IReadOnlyList<ProcessProjectionKey> projectionKeys,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(projectionKeys);
+        if (projectionKeys.Count == 0)
+        {
+            return [];
+        }
+
+        if (projectionKeys.Count > ProcessProjectionBatchLimits.MaximumSnapshotKeyCount)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(projectionKeys),
+                projectionKeys.Count,
+                $"Projection snapshot key count cannot exceed {ProcessProjectionBatchLimits.MaximumSnapshotKeyCount}.");
+        }
+
+        var keyValues = projectionKeys
+            .Select(key => key.Value)
+            .Distinct(StringComparer.Ordinal)
+            .ToArray();
+        var rows = await dbContext.ProjectionSnapshots
+            .AsNoTracking()
+            .Where(snapshot =>
+                snapshot.ProjectorName == projectorName.Value &&
+                keyValues.Contains(snapshot.ProjectionKey))
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        return rows
+            .Select(ProcessPersistenceMappers.ToProjectionSnapshot)
+            .ToArray();
+    }
+
     public async Task<IReadOnlyList<ProcessProjectionSnapshot>> ReadSnapshotsAsync(
         ProcessProjectorName projectorName,
         ProcessProjectionKeyPrefix projectionKeyPrefix,

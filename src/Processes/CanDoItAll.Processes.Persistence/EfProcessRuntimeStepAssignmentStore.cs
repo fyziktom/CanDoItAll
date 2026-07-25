@@ -48,6 +48,41 @@ public sealed class EfProcessRuntimeStepAssignmentStore(ProcessPersistenceDbCont
         return rows.Select(ToAssignment).ToArray();
     }
 
+    public async ValueTask<IReadOnlyList<ProcessRuntimeStepAssignment>> LoadByRunsAsync(
+        IReadOnlyList<ProcessRunId> runIds,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(runIds);
+        if (runIds.Count > IProcessRuntimeStepAssignmentStore.MaximumBatchRunCount)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(runIds),
+                runIds.Count,
+                $"Step-assignment batch cannot exceed {IProcessRuntimeStepAssignmentStore.MaximumBatchRunCount} runs.");
+        }
+
+        var values = runIds
+            .Select(runId => runId.Value)
+            .Distinct()
+            .ToArray();
+        if (values.Length == 0)
+        {
+            return [];
+        }
+
+        var rows = await dbContext.RuntimeStepAssignments
+            .AsNoTracking()
+            .Where(assignment => values.Contains(assignment.RunId))
+            .OrderBy(assignment => assignment.RunId)
+            .ThenBy(assignment => assignment.StepKey)
+            .ThenBy(assignment => assignment.StepInstanceId)
+            .ToArrayAsync(cancellationToken)
+            .ConfigureAwait(false);
+        return rows
+            .Select(ToAssignment)
+            .ToArray();
+    }
+
     public async ValueTask<IReadOnlyList<ProcessRuntimeStepAssignment>> FindByLaunchVariablesAsync(
         IReadOnlyDictionary<string, string> requiredVariables,
         CancellationToken cancellationToken = default)

@@ -507,7 +507,12 @@ public sealed record ExecutionRunQuery(
     DateTimeOffset? CreatedFromUtc = null,
     DateTimeOffset? CreatedToUtc = null,
     DateTimeOffset? UpdatedFromUtc = null,
-    DateTimeOffset? UpdatedToUtc = null);
+    DateTimeOffset? UpdatedToUtc = null)
+{
+    public IReadOnlyList<string> ProcessRunIds { get; init; } = [];
+
+    public IReadOnlyList<string> ProcessStepIds { get; init; } = [];
+}
 
 public sealed record ExecutionRunDetail(
     ExecutionRunRecord Run,

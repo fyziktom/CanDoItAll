@@ -14,7 +14,8 @@ internal sealed class ProjectStructureProcessProjectionContributor(
     IDbContextFactory<ProcessPersistenceDbContext> processDbContextFactory,
     ProcessDefinitionCatalogProjectionService definitionCatalogProjectionService,
     IWorkspacePathResolver workspacePathResolver,
-    ILogger<ProjectStructureProcessProjectionContributor> logger) : IProjectStructureProjectionContributor
+    ILogger<ProjectStructureProcessProjectionContributor> logger,
+    ProjectStructureProcessRunRecordProjector runRecordProjector) : IProjectStructureProjectionContributor
 {
     private const string ProjectIdVariableName = "ProjectId";
     private const string ProjectNodeIdVariableName = "ProjectNodeId";
@@ -53,15 +54,18 @@ internal sealed class ProjectStructureProcessProjectionContributor(
 
     public async Task ContributeAsync(ProjectStructureProjectionContext context, CancellationToken cancellationToken)
     {
+        var runRecordProjectionsTask = runRecordProjector.LoadAsync(
+            context.ProjectId,
+            cancellationToken);
         var userAuthoredLinks = await context.DbContext.Set<ProjectObjectLinkRecord>()
             .AsNoTracking()
             .Where(item =>
                 item.ProjectId == context.ProjectId &&
                 !item.IsSystemManaged &&
-                (item.SourceNodeKey.StartsWith(ProjectStructureProcessNodeKeys.ProcessDefinitionPrefix) ||
-                 item.SourceNodeKey.StartsWith(ProjectStructureProcessNodeKeys.ProcessRunPrefix) ||
-                 item.TargetNodeKey.StartsWith(ProjectStructureProcessNodeKeys.ProcessDefinitionPrefix) ||
-                 item.TargetNodeKey.StartsWith(ProjectStructureProcessNodeKeys.ProcessRunPrefix)))
+                (item.SourceNodeKey.StartsWith(ProjectStructureProcessNodeKeys.ProcessDefinitionPrefix, StringComparison.Ordinal) ||
+                 item.SourceNodeKey.StartsWith(ProjectStructureProcessNodeKeys.ProcessRunPrefix, StringComparison.Ordinal) ||
+                 item.TargetNodeKey.StartsWith(ProjectStructureProcessNodeKeys.ProcessDefinitionPrefix, StringComparison.Ordinal) ||
+                 item.TargetNodeKey.StartsWith(ProjectStructureProcessNodeKeys.ProcessRunPrefix, StringComparison.Ordinal)))
             .Select(item => new ProjectStructureProcessLink(
                 item.SourceNodeKey,
                 item.TargetNodeKey,
@@ -81,6 +85,8 @@ internal sealed class ProjectStructureProcessProjectionContributor(
             .Where(runId => runId.HasValue)
             .Select(runId => runId!.Value)
             .ToHashSet();
+        var runRecordProjectionsByRunId = await runRecordProjectionsTask.ConfigureAwait(false);
+        var durableRunIds = runRecordProjectionsByRunId.Keys.ToHashSet();
 
         await using var processDbContext = await processDbContextFactory
             .CreateDbContextAsync(cancellationToken)
@@ -88,11 +94,17 @@ internal sealed class ProjectStructureProcessProjectionContributor(
         var projectScopedRunReferences = await LoadProjectScopedRunReferencesAsync(
                 processDbContext,
                 context.ProjectId,
+                durableRunIds,
                 cancellationToken)
             .ConfigureAwait(false);
         foreach (var reference in projectScopedRunReferences)
         {
             linkedRunIds.Add(reference.RunId);
+        }
+
+        foreach (var runId in durableRunIds)
+        {
+            linkedRunIds.Add(runId);
         }
 
         if (linkedDefinitionIds.Count == 0 && linkedRunIds.Count == 0)
@@ -113,12 +125,14 @@ internal sealed class ProjectStructureProcessProjectionContributor(
                 item => ProcessDefinitionCatalogProjectionService.CreateDefinitionId(item.Key).Value,
                 item => item);
 
-        var linkedRunIdArray = linkedRunIds.ToArray();
-        var linkedRuntimeStates = linkedRunIdArray.Length == 0
+        var runtimeDiscoveryRunIds = linkedRunIds
+            .Where(runId => !durableRunIds.Contains(runId))
+            .ToArray();
+        var linkedRuntimeStates = runtimeDiscoveryRunIds.Length == 0
             ? []
             : await processDbContext.RuntimeStates
                 .AsNoTracking()
-                .Where(item => linkedRunIdArray.Contains(item.RunId))
+                .Where(item => runtimeDiscoveryRunIds.Contains(item.RunId))
                 .OrderByDescending(item => item.UpdatedAtUtc)
                 .Select(item => new ProjectStructureProcessRuntimeState(
                     item.RunId,
@@ -127,15 +141,15 @@ internal sealed class ProjectStructureProcessProjectionContributor(
                     item.Status,
                     item.UpdatedAtUtc))
                 .ToListAsync(cancellationToken);
-        var projectedRunIds = linkedRuntimeStates
+        var projectedRuntimeRunIds = linkedRuntimeStates
             .Select(item => item.RootRunId)
             .Distinct()
             .ToArray();
-        var runtimeStates = projectedRunIds.Length == 0
+        var persistedRuntimeStates = projectedRuntimeRunIds.Length == 0
             ? []
             : await processDbContext.RuntimeStates
                 .AsNoTracking()
-                .Where(item => projectedRunIds.Contains(item.RunId))
+                .Where(item => projectedRuntimeRunIds.Contains(item.RunId))
                 .OrderByDescending(item => item.UpdatedAtUtc)
                 .Select(item => new ProjectStructureProcessRuntimeState(
                     item.RunId,
@@ -144,13 +158,31 @@ internal sealed class ProjectStructureProcessProjectionContributor(
                     item.Status,
                     item.UpdatedAtUtc))
                 .ToListAsync(cancellationToken);
+        var runtimeStatesByRunId = persistedRuntimeStates.ToDictionary(state => state.RunId);
+        foreach (var projection in runRecordProjectionsByRunId.Values)
+        {
+            runtimeStatesByRunId[projection.RunId] = new ProjectStructureProcessRuntimeState(
+                projection.RunId,
+                projection.RootRunId,
+                projection.PlanId,
+                projection.RuntimeStatus,
+                projection.UpdatedAtUtc);
+        }
+
+        var runtimeStates = runtimeStatesByRunId.Values
+            .OrderByDescending(state => state.UpdatedAtUtc)
+            .ThenByDescending(state => state.RunId)
+            .ToArray();
         var projectedRunNodeKeyByLinkedRunNodeKey = linkedRuntimeStates
             .ToDictionary(
                 item => ProjectStructureProcessNodeKeys.BuildProcessRunNodeKey(item.RunId),
                 item => ProjectStructureProcessNodeKeys.BuildProcessRunNodeKey(item.RootRunId),
                 StringComparer.Ordinal);
         var planIds = runtimeStates
+            .Where(item => !runRecordProjectionsByRunId.ContainsKey(item.RunId))
             .Select(item => item.PlanId)
+            .Where(planId => planId.HasValue)
+            .Select(planId => planId!.Value)
             .Distinct()
             .ToArray();
         var plansById = planIds.Length == 0
@@ -166,13 +198,16 @@ internal sealed class ProjectStructureProcessProjectionContributor(
         var projectedRunIdArray = runtimeStates
             .Select(item => item.RunId)
             .ToArray();
-        var stepStatsByRunId = projectedRunIdArray.Length == 0
-            ? new Dictionary<Guid, ProcessRunProjectionStats>()
+        var runtimeStepRunIds = projectedRunIdArray
+            .Where(runId => !runRecordProjectionsByRunId.ContainsKey(runId))
+            .ToArray();
+        var stepStatsByRunId = runtimeStepRunIds.Length == 0
+            ? new Dictionary<Guid, ProjectStructureProcessRunProjectionStats>()
             : await processDbContext.RuntimeSteps
                 .AsNoTracking()
-                .Where(item => projectedRunIdArray.Contains(item.RunId))
+                .Where(item => runtimeStepRunIds.Contains(item.RunId))
                 .GroupBy(item => item.RunId)
-                .Select(group => new ProcessRunProjectionStats(
+                .Select(group => new ProjectStructureProcessRunProjectionStats(
                     group.Key,
                     group.Count(),
                     group.Count(item => item.Status == ProcessRuntimeStepStatus.Completed),
@@ -184,12 +219,21 @@ internal sealed class ProjectStructureProcessProjectionContributor(
                                         item.Status == ProcessRuntimeStepStatus.Claimed)))
                 .ToDictionaryAsync(item => item.RunId, cancellationToken);
 
-        foreach (var definitionId in runtimeStates
-            .Select(state => plansById.TryGetValue(state.PlanId, out var plan) ? plan.DefinitionId : (Guid?)null)
-            .Where(definitionId => definitionId.HasValue)
-            .Select(definitionId => definitionId!.Value))
+        foreach (var projection in runRecordProjectionsByRunId.Values)
         {
-            linkedDefinitionIds.Add(definitionId);
+            stepStatsByRunId[projection.RunId] = projection.Stats;
+        }
+
+        foreach (var state in runtimeStates)
+        {
+            plansById.TryGetValue(state.PlanId ?? Guid.Empty, out var plan);
+            var definitionId = ResolveDefinitionId(
+                plan,
+                runRecordProjectionsByRunId.GetValueOrDefault(state.RunId));
+            if (definitionId.HasValue)
+            {
+                linkedDefinitionIds.Add(definitionId.Value);
+            }
         }
 
         var preferredDefinitionParentByNodeKey = BuildPreferredDefinitionParentMap(userAuthoredLinks);
@@ -218,16 +262,21 @@ internal sealed class ProjectStructureProcessProjectionContributor(
         var placementSession = new ProjectStructureAutomaticPlacementSession(context.AllNodes);
         foreach (var run in runtimeStates.Select((state, index) => new { State = state, Index = index }))
         {
-            plansById.TryGetValue(run.State.PlanId, out var plan);
-            var definitionItem = plan is null
+            plansById.TryGetValue(run.State.PlanId ?? Guid.Empty, out var plan);
+            var runRecordProjection = runRecordProjectionsByRunId.GetValueOrDefault(run.State.RunId);
+            var definitionId = ResolveDefinitionId(plan, runRecordProjection);
+            var definitionItem = definitionId is null
                 ? null
-                : catalogItemsByDefinitionId.GetValueOrDefault(plan.DefinitionId);
+                : catalogItemsByDefinitionId.GetValueOrDefault(definitionId.Value);
             var runNode = AddRunNode(
                 context,
                 run.State,
                 plan,
                 definitionItem,
-                stepStatsByRunId.GetValueOrDefault(run.State.RunId, ProcessRunProjectionStats.Empty(run.State.RunId)),
+                stepStatsByRunId.GetValueOrDefault(
+                    run.State.RunId,
+                    ProjectStructureProcessRunProjectionStats.Empty(run.State.RunId)),
+                runRecordProjection,
                 run.Index,
                 preferredRunParentByNodeKey);
             if (runNode is not null)
@@ -246,9 +295,24 @@ internal sealed class ProjectStructureProcessProjectionContributor(
                 run.State,
                 plan,
                 definitionItem,
-                stepStatsByRunId.GetValueOrDefault(run.State.RunId, ProcessRunProjectionStats.Empty(run.State.RunId)),
-                projectScopedRunReferencesByRunId.GetValueOrDefault(run.State.RunId, []));
+                stepStatsByRunId.GetValueOrDefault(
+                    run.State.RunId,
+                    ProjectStructureProcessRunProjectionStats.Empty(run.State.RunId)),
+                projectScopedRunReferencesByRunId.GetValueOrDefault(run.State.RunId, []),
+                runRecordProjection);
         }
+    }
+
+    private static Guid? ResolveDefinitionId(
+        ProjectStructureProcessPlan? plan,
+        ProjectStructureProcessRunRecordProjection? runRecordProjection)
+    {
+        if (runRecordProjection?.DefinitionId is { } definitionId)
+        {
+            return definitionId;
+        }
+
+        return plan?.DefinitionId;
     }
 
     private static void AddDefinitionNode(
@@ -302,14 +366,16 @@ internal sealed class ProjectStructureProcessProjectionContributor(
         ProjectStructureProcessRuntimeState state,
         ProjectStructureProcessPlan? plan,
         ProcessDefinitionCatalogItemProjection? definition,
-        ProcessRunProjectionStats stats,
+        ProjectStructureProcessRunProjectionStats stats,
+        ProjectStructureProcessRunRecordProjection? runRecordProjection,
         int index,
         IReadOnlyDictionary<string, string> preferredRunParentByNodeKey)
     {
         var runNodeKey = ProjectStructureProcessNodeKeys.BuildProcessRunNodeKey(state.RunId);
-        var definitionNodeKey = plan is null
+        var definitionId = ResolveDefinitionId(plan, runRecordProjection);
+        var definitionNodeKey = definitionId is null
             ? ProjectWorkbenchGraphConventions.BuildProjectRootNodeKey(context.ProjectId)
-            : ProjectStructureProcessNodeKeys.BuildProcessDefinitionNodeKey(plan.DefinitionId);
+            : ProjectStructureProcessNodeKeys.BuildProcessDefinitionNodeKey(definitionId.Value);
         var parentNodeKey = preferredRunParentByNodeKey.TryGetValue(runNodeKey, out var preferredParentNodeKey) &&
                             !string.IsNullOrWhiteSpace(preferredParentNodeKey)
             ? preferredParentNodeKey
@@ -326,9 +392,11 @@ internal sealed class ProjectStructureProcessProjectionContributor(
             NodeKey = runNodeKey,
             ObjectType = ProjectObjectType.ProcessRun,
             Title = $"{definitionTitle} run",
-            Subtitle = BuildRunSubtitle(state, stats),
-            Status = state.Status.ToString(),
-            Notes = BuildRunNotes(context.ProjectId, state, plan, definition, stats),
+            Subtitle = runRecordProjection?.Subtitle ?? BuildRunSubtitle(state, stats),
+            Status = runRecordProjection?.Status ?? state.Status.ToString(),
+            Notes = runRecordProjection is null
+                ? BuildRunNotes(context.ProjectId, state, plan, definition, stats)
+                : runRecordProjection.Notes,
             Binding = ProjectStructureProjectionBindingFactory.Create(
                 $"/projects/{context.ProjectId:D}/processes/live?runId={state.RunId:D}",
                 "process-run",
@@ -338,8 +406,11 @@ internal sealed class ProjectStructureProcessProjectionContributor(
             PositionY = position.Y,
             ProgressMode = progressPercent >= 0 ? "progress" : string.Empty,
             ProgressPercent = progressPercent,
-            CreatedAtUtc = plan?.CreatedAtUtc ?? state.UpdatedAtUtc,
-            UpdatedAtUtc = state.UpdatedAtUtc
+            CreatedAtUtc = runRecordProjection?.StartedAtUtc ??
+                           runRecordProjection?.EndedAtUtc ??
+                           plan?.CreatedAtUtc ??
+                           state.UpdatedAtUtc,
+            UpdatedAtUtc = runRecordProjection?.UpdatedAtUtc ?? state.UpdatedAtUtc
         };
         context.AddNode(runNode);
 
@@ -402,8 +473,9 @@ internal sealed class ProjectStructureProcessProjectionContributor(
         ProjectStructureProcessRuntimeState state,
         ProjectStructureProcessPlan? plan,
         ProcessDefinitionCatalogItemProjection? definition,
-        ProcessRunProjectionStats stats,
-        IReadOnlyList<ProjectScopedProcessRunReference> runReferences)
+        ProjectStructureProcessRunProjectionStats stats,
+        IReadOnlyList<ProjectScopedProcessRunReference> runReferences,
+        ProjectStructureProcessRunRecordProjection? runRecordProjection)
     {
         var runNodeKey = ProjectStructureProcessNodeKeys.BuildProcessRunNodeKey(state.RunId);
         if (!context.ContainsNode(runNodeKey))
@@ -411,7 +483,14 @@ internal sealed class ProjectStructureProcessProjectionContributor(
             return;
         }
 
-        AddRunSummaryNode(context, placementSession, state, plan, definition, stats);
+        AddRunSummaryNode(
+            context,
+            placementSession,
+            state,
+            plan,
+            definition,
+            stats,
+            runRecordProjection);
         AddRunScreenshotNodes(context, placementSession, state);
         AddRunRuntimeNodes(context, placementSession, state, runReferences);
     }
@@ -422,7 +501,8 @@ internal sealed class ProjectStructureProcessProjectionContributor(
         ProjectStructureProcessRuntimeState state,
         ProjectStructureProcessPlan? plan,
         ProcessDefinitionCatalogItemProjection? definition,
-        ProcessRunProjectionStats stats)
+        ProjectStructureProcessRunProjectionStats stats,
+        ProjectStructureProcessRunRecordProjection? runRecordProjection)
     {
         var runNodeKey = ProjectStructureProcessNodeKeys.BuildProcessRunNodeKey(state.RunId);
         var nodeKey = ProjectStructureProcessNodeKeys.BuildProcessRunSummaryNodeKey(state.RunId);
@@ -433,17 +513,19 @@ internal sealed class ProjectStructureProcessProjectionContributor(
             ObjectType = ProjectObjectType.Note,
             ObjectSubtype = "process-summary",
             Title = "Run summary",
-            Subtitle = BuildRunSubtitle(state, stats),
-            Status = state.Status.ToString(),
-            Notes = BuildRunSummaryNotes(context.ProjectId, state, plan, definition, stats),
-            MetadataJson = BuildRunSummaryMetadataJson(state, stats),
+            Subtitle = runRecordProjection?.Subtitle ?? BuildRunSummarySubtitle(state, stats),
+            Status = runRecordProjection?.Status ?? state.Status.ToString(),
+            Notes = runRecordProjection?.Notes ??
+                    BuildRunSummaryNotes(context.ProjectId, state, plan, definition, stats),
+            MetadataJson = runRecordProjection?.MetadataJson ??
+                           BuildRunSummaryMetadataJson(state, stats),
             Binding = ProjectStructureProjectionBindingFactory.Create(
                 $"/projects/{context.ProjectId:D}/processes/live?runId={state.RunId:D}",
                 ProcessRunSummaryArtifactKind,
                 state.RunId),
             ParentNodeKey = runNodeKey,
-            CreatedAtUtc = plan?.CreatedAtUtc ?? state.UpdatedAtUtc,
-            UpdatedAtUtc = state.UpdatedAtUtc
+            CreatedAtUtc = runRecordProjection?.StartedAtUtc ?? plan?.CreatedAtUtc ?? state.UpdatedAtUtc,
+            UpdatedAtUtc = runRecordProjection?.UpdatedAtUtc ?? state.UpdatedAtUtc
         });
     }
 
@@ -633,12 +715,19 @@ internal sealed class ProjectStructureProcessProjectionContributor(
     private static async Task<IReadOnlyList<ProjectScopedProcessRunReference>> LoadProjectScopedRunReferencesAsync(
         ProcessPersistenceDbContext processDbContext,
         Guid projectId,
+        IReadOnlyCollection<Guid> excludedRunIds,
         CancellationToken cancellationToken)
     {
         var projectIdText = projectId.ToString("D");
         var projectIdSnippet = BuildLaunchVariableJsonSnippet(ProjectIdVariableName, projectIdText);
-        var rows = await processDbContext.RuntimeStepAssignments
-            .AsNoTracking()
+        var assignmentsQuery = processDbContext.RuntimeStepAssignments.AsNoTracking();
+        if (excludedRunIds.Count > 0)
+        {
+            var excludedRunIdArray = excludedRunIds.ToArray();
+            assignmentsQuery = assignmentsQuery.Where(assignment => !excludedRunIdArray.Contains(assignment.RunId));
+        }
+
+        var rows = await assignmentsQuery
             .Where(assignment => assignment.LaunchVariablesJson.Contains(projectIdSnippet))
             .Select(assignment => new ProjectStructureProcessAssignmentScope(
                 assignment.RunId,
@@ -786,7 +875,9 @@ internal sealed class ProjectStructureProcessProjectionContributor(
             });
     }
 
-    private static string BuildRunSubtitle(ProjectStructureProcessRuntimeState state, ProcessRunProjectionStats stats)
+    private static string BuildRunSubtitle(
+        ProjectStructureProcessRuntimeState state,
+        ProjectStructureProcessRunProjectionStats stats)
     {
         var stepSummary = stats.TotalStepCount == 0
             ? "No runtime steps"
@@ -801,12 +892,21 @@ internal sealed class ProjectStructureProcessProjectionContributor(
         return $"{state.Status} · {stepSummary}{issueSummary}";
     }
 
+    private static string BuildRunSummarySubtitle(
+        ProjectStructureProcessRuntimeState state,
+        ProjectStructureProcessRunProjectionStats stats)
+    {
+        return IsTerminal(state.Status)
+            ? $"{state.Status} · durable summary pending"
+            : BuildRunSubtitle(state, stats);
+    }
+
     private static string BuildRunNotes(
         Guid projectId,
         ProjectStructureProcessRuntimeState state,
         ProjectStructureProcessPlan? plan,
         ProcessDefinitionCatalogItemProjection? definition,
-        ProcessRunProjectionStats stats)
+        ProjectStructureProcessRunProjectionStats stats)
     {
         var definitionName = definition?.Name ?? "Unknown definition";
         var definitionKey = definition?.Key.Value ?? "unknown";
@@ -817,7 +917,9 @@ internal sealed class ProjectStructureProcessProjectionContributor(
                 $"{definitionName} runtime state for project {projectId:D}.",
                 $"Run id: {state.RunId:D}",
                 $"Root run id: {state.RootRunId:D}",
-                $"Plan id: {state.PlanId:D}",
+                state.PlanId is { } planId
+                    ? $"Plan id: {planId:D}"
+                    : "Plan id: unavailable",
                 plan is null ? "Definition id: unknown" : $"Definition id: {plan.DefinitionId:D}",
                 $"Definition key: {definitionKey}",
                 $"Steps: {stats.CompletedStepCount}/{stats.TotalStepCount} completed, {stats.BlockedStepCount} blocked, {stats.WaitingApprovalStepCount} waiting approval, {stats.ActiveStepCount} active.",
@@ -830,18 +932,23 @@ internal sealed class ProjectStructureProcessProjectionContributor(
         ProjectStructureProcessRuntimeState state,
         ProjectStructureProcessPlan? plan,
         ProcessDefinitionCatalogItemProjection? definition,
-        ProcessRunProjectionStats stats)
-        => string.Join(
+        ProjectStructureProcessRunProjectionStats stats)
+    {
+        var summaryState = IsTerminal(state.Status)
+            ? "The durable process-run summary is pending background assembly."
+            : "The process is still active; this node contains live projection data.";
+        return string.Join(
             Environment.NewLine,
             new[]
             {
-                "Projected process run summary.",
+                summaryState,
                 BuildRunNotes(projectId, state, plan, definition, stats)
             });
+    }
 
     private static string BuildRunSummaryMetadataJson(
         ProjectStructureProcessRuntimeState state,
-        ProcessRunProjectionStats stats)
+        ProjectStructureProcessRunProjectionStats stats)
     {
         return JsonSerializer.Serialize(new
         {
@@ -856,10 +963,19 @@ internal sealed class ProjectStructureProcessProjectionContributor(
                 stats.BlockedStepCount,
                 stats.WaitingApprovalStepCount,
                 stats.ActiveStepCount,
+                DurableRecordStatus = IsTerminal(state.Status)
+                    ? "Pending"
+                    : "NotTerminal",
                 state.UpdatedAtUtc
             }
         });
     }
+
+    private static bool IsTerminal(ProcessRuntimeStatus status)
+        => status is ProcessRuntimeStatus.Completed
+            or ProcessRuntimeStatus.Failed
+            or ProcessRuntimeStatus.Cancelled
+            or ProcessRuntimeStatus.Escalated;
 
     private static string BuildScreenshotTitle(string fileName)
     {
@@ -1240,7 +1356,7 @@ internal sealed class ProjectStructureProcessProjectionContributor(
     private sealed record ProjectStructureProcessRuntimeState(
         Guid RunId,
         Guid RootRunId,
-        Guid PlanId,
+        Guid? PlanId,
         ProcessRuntimeStatus Status,
         DateTimeOffset UpdatedAtUtc);
 
@@ -1248,20 +1364,6 @@ internal sealed class ProjectStructureProcessProjectionContributor(
         Guid PlanId,
         Guid DefinitionId,
         DateTimeOffset CreatedAtUtc);
-
-    private sealed record ProcessRunProjectionStats(
-        Guid RunId,
-        int TotalStepCount,
-        int CompletedStepCount,
-        int BlockedStepCount,
-        int WaitingApprovalStepCount,
-        int ActiveStepCount)
-    {
-        public static ProcessRunProjectionStats Empty(Guid runId)
-        {
-            return new ProcessRunProjectionStats(runId, 0, 0, 0, 0, 0);
-        }
-    }
 
     private sealed record ProjectedProcessRunFile(
         string RelativePath,
