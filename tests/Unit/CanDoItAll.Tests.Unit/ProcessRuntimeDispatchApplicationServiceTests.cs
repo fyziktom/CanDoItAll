@@ -70,6 +70,41 @@ public sealed class ProcessRuntimeDispatchApplicationServiceTests
     }
 
     [Fact]
+    public async Task ExecuteReady_does_not_dispatch_cancel_requested_run()
+    {
+        var stepId = ProcessStepInstanceId.New();
+        var initialState = new ProcessRuntimeStateSnapshot(
+            RunId,
+            RunId,
+            PlanId,
+            "sha256:plan",
+            ProcessRuntimeStatus.CancelRequested,
+            [NewStep(stepId, ProcessRuntimeStepStatus.Cancelled)],
+            [],
+            [],
+            new HashSet<ArtifactSlotId>(),
+            Now);
+        var stateStore = new InMemoryRuntimeStateStore(initialState);
+        var unitOfWork = new RecordingRuntimeUnitOfWork(stateStore);
+        var strategyResolver = new RecordingStrategyFactoryResolver("implementation");
+        var service = new ProcessRuntimeDispatchApplicationService(
+            new TestProcessProjectionClock(Now),
+            stateStore,
+            unitOfWork,
+            new InMemoryPlanStore(NewSingleStepPlan(stepId, "implementation")),
+            new InMemoryAssignmentStore([]),
+            strategyResolver,
+            NewNoOpCatchupService());
+
+        var result = await service.ExecuteReadyAsync(RunId, "unit-test");
+
+        Assert.Equal(ProcessLaunchStage.Running, result.Stage);
+        Assert.Equal(ProcessRuntimeStatus.CancelRequested, result.Status);
+        Assert.Empty(unitOfWork.Requests);
+        Assert.Empty(strategyResolver.ExecutionContexts);
+    }
+
+    [Fact]
     public async Task ExecuteReady_skips_branch_descendants_when_branch_source_was_skipped_and_closes_run()
     {
         var initialState = new ProcessRuntimeStateSnapshot(

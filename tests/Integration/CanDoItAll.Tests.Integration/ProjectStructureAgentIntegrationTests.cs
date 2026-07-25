@@ -13,6 +13,9 @@ using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Workbench;
 using CanDoItAll.Processes.Abstractions;
 using CanDoItAll.Processes.Application;
+using CanDoItAll.Processes.Builder;
+using CanDoItAll.Processes.Contracts;
+using CanDoItAll.Processes.Core;
 using CanDoItAll.Processes.Persistence;
 using CanDoItAll.Processes.Projections;
 using CanDoItAll.Processes.Runtime;
@@ -393,25 +396,11 @@ public sealed class ProjectStructureAgentIntegrationTests
         Assert.Contains("ExecuteExternalAction", runtimeCommandAssignment.AllowedOperations);
         var qaAssignment = assignments.Single(item => item.StepKey == "qa-validation");
         Assert.Contains(
-            "workspace_dotnet_run",
-            qaAssignment.LaunchVariables[ProcessRuntimeLaunchVariables.ProductCompletionRequiredToolReceipts],
-            StringComparison.Ordinal);
+            qaAssignment.CapabilityScope.RequiredReceipts,
+            receipt => string.Equals(receipt.ToolName, "workspace_dotnet_run", StringComparison.Ordinal));
         Assert.Contains(
-            "browser_take_screenshot",
-            qaAssignment.LaunchVariables[ProcessRuntimeLaunchVariables.ProductCompletionRequiredToolReceipts],
-            StringComparison.Ordinal);
-        Assert.Contains(
-            "Counter.razor",
-            qaAssignment.LaunchVariables[ProcessRuntimeLaunchVariables.ProductCompletionRequiredFileContentChecks],
-            StringComparison.Ordinal);
-        Assert.Contains(
-            "forbiddenTextAny",
-            qaAssignment.LaunchVariables[ProcessRuntimeLaunchVariables.ProductCompletionRequiredFileContentChecks],
-            StringComparison.Ordinal);
-        Assert.Contains(
-            "counter",
-            qaAssignment.LaunchVariables[ProcessRuntimeLaunchVariables.ProductCompletionRequiredFileContentChecks],
-            StringComparison.Ordinal);
+            qaAssignment.CapabilityScope.RequiredReceipts,
+            receipt => string.Equals(receipt.ToolName, "browser_take_screenshot", StringComparison.Ordinal));
         var screenshotAssignment = assignments.Single(item => item.StepKey == "capture-ui-screenshots");
         Assert.Equal("ExternalActionControlled", screenshotAssignment.OperationTargetScope);
         Assert.Contains("ExecuteExternalAction", screenshotAssignment.AllowedOperations);
@@ -959,6 +948,10 @@ public sealed class ProjectStructureAgentIntegrationTests
         };
         await assignmentStore.SaveAsync([parentAssignment]);
 
+        await EnsureParentStepRunningAsync(
+            scope.ServiceProvider,
+            new ProcessRunId(parent.RunId.Value),
+            parentAssignment.StepInstanceId);
         var subprocess = await agentService.StartProcessSubprocessAsync(
             projectId,
             parent.RunId.Value.ToString("D"),
@@ -1081,6 +1074,10 @@ public sealed class ProjectStructureAgentIntegrationTests
             Assert.Equal("integration-test", assignment.LaunchVariables["ChildLaunchReason"]);
         });
 
+        await EnsureParentStepRunningAsync(
+            scope.ServiceProvider,
+            new ProcessRunId(parent.RunId.Value),
+            parentAssignment.StepInstanceId);
         var retry = await agentService.StartProcessSubprocessAsync(
             projectId,
             parent.RunId.Value.ToString("D"),
@@ -1101,6 +1098,10 @@ public sealed class ProjectStructureAgentIntegrationTests
         var retryLaunchPlan = Assert.IsType<ProcessLaunchPlanView>(retry.LaunchPlan);
         Assert.Equal("dotnet-architecture-design-review", retryLaunchPlan.DefinitionKey);
 
+        await EnsureParentStepRunningAsync(
+            scope.ServiceProvider,
+            new ProcessRunId(parent.RunId.Value),
+            parentAssignment.StepInstanceId);
         var runNodeScopedRetry = await agentService.StartProcessSubprocessAsync(
             projectId,
             parent.RunId.Value.ToString("D"),
@@ -1194,6 +1195,10 @@ public sealed class ProjectStructureAgentIntegrationTests
         var parentAssignments = await assignmentStore.LoadByRunAsync(new ProcessRunId(parent.RunId!.Value));
         var parentAssignment = Assert.Single(parentAssignments, item => item.StepKey == "capture-ui-screenshots");
 
+        await EnsureParentStepRunningAsync(
+            scope.ServiceProvider,
+            new ProcessRunId(parent.RunId.Value),
+            parentAssignment.StepInstanceId);
         var subprocess = await agentService.StartProcessSubprocessAsync(
             projectId,
             parent.RunId.Value.ToString("D"),
@@ -1279,6 +1284,10 @@ public sealed class ProjectStructureAgentIntegrationTests
         var parentAssignments = await assignmentStore.LoadByRunAsync(new ProcessRunId(parent.RunId!.Value));
         var parentAssignment = Assert.Single(parentAssignments, item => item.StepKey == "architecture-review");
 
+        await EnsureParentStepRunningAsync(
+            scope.ServiceProvider,
+            new ProcessRunId(parent.RunId.Value),
+            parentAssignment.StepInstanceId);
         var firstChild = await agentService.StartProcessSubprocessAsync(
             projectId,
             parent.RunId.Value.ToString("D"),
@@ -1300,6 +1309,10 @@ public sealed class ProjectStructureAgentIntegrationTests
         Assert.True(cancellation.Succeeded);
         Assert.Equal(ProcessRuntimeStatus.Cancelled, cancellation.Status);
 
+        await EnsureParentStepRunningAsync(
+            scope.ServiceProvider,
+            new ProcessRunId(parent.RunId.Value),
+            parentAssignment.StepInstanceId);
         var retryChild = await agentService.StartProcessSubprocessAsync(
             projectId,
             parent.RunId.Value.ToString("D"),
@@ -1380,6 +1393,10 @@ public sealed class ProjectStructureAgentIntegrationTests
         var parentAssignments = await assignmentStore.LoadByRunAsync(new ProcessRunId(parent.RunId!.Value));
         var parentAssignment = Assert.Single(parentAssignments, item => item.StepKey == "architecture-review");
 
+        await EnsureParentStepRunningAsync(
+            scope.ServiceProvider,
+            new ProcessRunId(parent.RunId.Value),
+            parentAssignment.StepInstanceId);
         var firstChild = await agentService.StartProcessSubprocessAsync(
             projectId,
             parent.RunId.Value.ToString("D"),
@@ -1414,6 +1431,10 @@ public sealed class ProjectStructureAgentIntegrationTests
 
         await dbContext.SaveChangesAsync();
 
+        await EnsureParentStepRunningAsync(
+            scope.ServiceProvider,
+            new ProcessRunId(parent.RunId.Value),
+            parentAssignment.StepInstanceId);
         var retryChild = await agentService.StartProcessSubprocessAsync(
             projectId,
             parent.RunId.Value.ToString("D"),
@@ -1498,6 +1519,10 @@ public sealed class ProjectStructureAgentIntegrationTests
         var parentAssignments = await assignmentStore.LoadByRunAsync(new ProcessRunId(parent.RunId!.Value));
         var parentAssignment = Assert.Single(parentAssignments, item => item.StepKey == "architecture-review");
 
+        await EnsureParentStepRunningAsync(
+            scope.ServiceProvider,
+            new ProcessRunId(parent.RunId.Value),
+            parentAssignment.StepInstanceId);
         var firstChild = await agentService.StartProcessSubprocessAsync(
             projectId,
             parent.RunId.Value.ToString("D"),
@@ -1532,6 +1557,10 @@ public sealed class ProjectStructureAgentIntegrationTests
 
         await dbContext.SaveChangesAsync();
 
+        await EnsureParentStepRunningAsync(
+            scope.ServiceProvider,
+            new ProcessRunId(parent.RunId.Value),
+            parentAssignment.StepInstanceId);
         var retryChild = await agentService.StartProcessSubprocessAsync(
             projectId,
             parent.RunId.Value.ToString("D"),
@@ -1570,7 +1599,7 @@ public sealed class ProjectStructureAgentIntegrationTests
     }
 
     [Fact]
-    public async Task StartProcessSubprocessAsync_supplies_dotnet_solution_setup_scaffold_contract()
+    public async Task StartProcessSubprocessAsync_supplies_dotnet_solution_setup_scaffold_contract_from_bound_solution_context()
     {
         await using var application = await TestApplication.CreateAsync();
         await using var scope = application.Services.CreateAsyncScope();
@@ -1578,6 +1607,8 @@ public sealed class ProjectStructureAgentIntegrationTests
         var workbench = scope.ServiceProvider.GetRequiredService<ProjectWorkbenchService>();
         var agentService = scope.ServiceProvider.GetRequiredService<ProjectStructureAgentService>();
         var assignmentStore = scope.ServiceProvider.GetRequiredService<IProcessRuntimeStepAssignmentStore>();
+        var stateStore = scope.ServiceProvider.GetRequiredService<IProcessRuntimeStateStore>();
+        var workspaceFiles = scope.ServiceProvider.GetRequiredService<IWorkspaceFileService>();
 
         var projectId = await CreateProjectAsync(projects, "TetrisGame");
         const string outputRoot = @"C:\temp\CanDoItAll\TetrisGame";
@@ -1623,7 +1654,7 @@ public sealed class ProjectStructureAgentIntegrationTests
                 "architecture"));
 
         var parentDefinitionId = ProcessDefinitionCatalogProjectionService
-            .CreateDefinitionId(new ProcessDefinitionCatalogItemKey("software-delivery"))
+            .CreateDefinitionId(new ProcessDefinitionCatalogItemKey("dotnet-development-slice"))
             .Value;
         await agentService.LinkProcessDefinitionAsync(
             projectId,
@@ -1641,7 +1672,59 @@ public sealed class ProjectStructureAgentIntegrationTests
                 RequestedBy: "integration-test"),
             DefaultAgent);
         var parentAssignments = await assignmentStore.LoadByRunAsync(new ProcessRunId(parent.RunId!.Value));
-        var parentAssignment = Assert.Single(parentAssignments, item => item.StepKey == "implementation");
+        var parentAssignment = Assert.Single(parentAssignments, item => item.StepKey == "prepare-solution-skeleton");
+        var parentState = await stateStore.LoadAsync(new ProcessRunId(parent.RunId.Value));
+        Assert.NotNull(parentState);
+        var parentStepState = Assert.Single(
+            parentState!.Steps,
+            step => step.StepInstanceId == parentAssignment.StepInstanceId);
+        var solutionContextDescriptor = Assert.Single(
+            parentStepState.ArtifactDescriptors,
+            descriptor => parentStepState.RequiredArtifactSlots.Contains(descriptor.SlotId) &&
+                          string.Equals(descriptor.StepKey, "slice-architecture-check", StringComparison.Ordinal) &&
+                          string.Equals(descriptor.ArtifactExpectationKey, "dotnet-solution-context", StringComparison.Ordinal));
+        var solutionContextWrite = workspaceFiles.WriteTextFile(
+            solutionContextDescriptor.PrimaryManagedRef,
+            """
+            TetrisGame solution context
+
+            ```json
+            {
+              "schema": "dotnet.solution-context/v1",
+              "provisioningMode": "initialize",
+              "solution": {
+                "file": "TetrisGame.slnx",
+                "candidateFiles": ["TetrisGame.slnx", "TetrisGame.sln"]
+              },
+              "requiredProjectFiles": [
+                "src/TetrisGame/TetrisGame.csproj",
+                "tests/TetrisGame.Tests/TetrisGame.Tests.csproj"
+              ],
+              "testProjectFiles": ["tests/TetrisGame.Tests/TetrisGame.Tests.csproj"],
+              "initialization": {
+                "solutionName": "TetrisGame",
+                "application": {
+                  "name": "TetrisGame",
+                  "directory": "src/TetrisGame",
+                  "file": "src/TetrisGame/TetrisGame.csproj",
+                  "template": "blazorwasm",
+                  "templateOptions": ["--pwa"],
+                  "archetype": "Blazor WebAssembly PWA"
+                },
+                "tests": {
+                  "name": "TetrisGame.Tests",
+                  "directory": "tests/TetrisGame.Tests",
+                  "file": "tests/TetrisGame.Tests/TetrisGame.Tests.csproj",
+                  "template": "xunit",
+                  "frameworkPreference": "xUnit"
+                },
+                "targetFramework": "net10.0"
+              }
+            }
+            ```
+            """);
+        Assert.True(solutionContextWrite.Succeeded, solutionContextWrite.Message);
+
         var genericParentLaunchVariables = parentAssignment.LaunchVariables
             .Where(item =>
                 !item.Key.Contains("Root", StringComparison.OrdinalIgnoreCase) &&
@@ -1659,6 +1742,10 @@ public sealed class ProjectStructureAgentIntegrationTests
         Assert.DoesNotContain("ProductRoot", parentAssignment.LaunchVariables.Keys, StringComparer.OrdinalIgnoreCase);
         Assert.DoesNotContain("OutputRoot", parentAssignment.LaunchVariables.Keys, StringComparer.OrdinalIgnoreCase);
 
+        await EnsureParentStepRunningAsync(
+            scope.ServiceProvider,
+            new ProcessRunId(parent.RunId.Value),
+            parentAssignment.StepInstanceId);
         var subprocess = await agentService.StartProcessSubprocessAsync(
             projectId,
             parent.RunId.Value.ToString("D"),
@@ -1764,23 +1851,23 @@ public sealed class ProjectStructureAgentIntegrationTests
         Assert.DoesNotContain("dotnet.create-project", addTestProjectAssignment.Prompt, StringComparison.Ordinal);
         Assert.False(scaffoldAssignment.LaunchVariables.ContainsKey("DotNetScaffoldContract"));
         Assert.Contains(
-            @"C:\temp\CanDoItAll\TetrisGame\TetrisGame.slnx",
+            "C:/temp/CanDoItAll/TetrisGame/TetrisGame.slnx",
             createProjectAssignment.LaunchVariables[ProcessRuntimeLaunchVariables.ProductCompletionRequiredPaths],
             StringComparison.Ordinal);
         Assert.Contains(
-            @"C:\temp\CanDoItAll\TetrisGame\src\TetrisGame\TetrisGame.csproj",
+            "C:/temp/CanDoItAll/TetrisGame/src/TetrisGame/TetrisGame.csproj",
             createProjectAssignment.LaunchVariables[ProcessRuntimeLaunchVariables.ProductCompletionRequiredPaths],
             StringComparison.Ordinal);
         Assert.Contains(
-            @"C:\temp\CanDoItAll\TetrisGame\TetrisGame.slnx",
+            "C:/temp/CanDoItAll/TetrisGame/TetrisGame.slnx",
             addTestProjectAssignment.LaunchVariables[ProcessRuntimeLaunchVariables.ProductCompletionRequiredPaths],
             StringComparison.Ordinal);
         Assert.Contains(
-            @"C:\temp\CanDoItAll\TetrisGame\src\TetrisGame\TetrisGame.csproj",
+            "C:/temp/CanDoItAll/TetrisGame/src/TetrisGame/TetrisGame.csproj",
             addTestProjectAssignment.LaunchVariables[ProcessRuntimeLaunchVariables.ProductCompletionRequiredPaths],
             StringComparison.Ordinal);
         Assert.Contains(
-            @"C:\temp\CanDoItAll\TetrisGame\tests\TetrisGame.Tests\TetrisGame.Tests.csproj",
+            "C:/temp/CanDoItAll/TetrisGame/tests/TetrisGame.Tests/TetrisGame.Tests.csproj",
             addTestProjectAssignment.LaunchVariables[ProcessRuntimeLaunchVariables.ProductCompletionRequiredPaths],
             StringComparison.Ordinal);
         Assert.Contains(
@@ -1832,22 +1919,53 @@ public sealed class ProjectStructureAgentIntegrationTests
             revalidateFirstBuildAssignment.LaunchVariables[ProcessRuntimeLaunchVariables.ProductCompletionRequiredToolReceipts],
             StringComparison.Ordinal);
         Assert.Contains(
-            @"src\\TetrisGame\\TetrisGame.csproj",
+            "src/TetrisGame/TetrisGame.csproj",
             createProjectAssignment.LaunchVariables[ProcessRuntimeLaunchVariables.ProductCompletionRequiredFileContentChecks],
             StringComparison.Ordinal);
         Assert.Contains(
-            @"tests\\TetrisGame.Tests\\TetrisGame.Tests.csproj",
+            "tests/TetrisGame.Tests/TetrisGame.Tests.csproj",
             addTestProjectAssignment.LaunchVariables[ProcessRuntimeLaunchVariables.ProductCompletionRequiredFileContentChecks],
             StringComparison.Ordinal);
         Assert.Contains(
-            @"..\\..\\src\\TetrisGame\\TetrisGame.csproj",
+            "../../src/TetrisGame/TetrisGame.csproj",
             addTestProjectAssignment.LaunchVariables[ProcessRuntimeLaunchVariables.ProductCompletionRequiredFileContentChecks],
             StringComparison.Ordinal);
+        const string expectedTestProjectFile = "C:/temp/CanDoItAll/TetrisGame/tests/TetrisGame.Tests/TetrisGame.Tests.csproj";
+        const string expectedAppReferencePath = "../../src/TetrisGame/TetrisGame.csproj";
+        var expectedAppReferencePaths = new[]
+        {
+            expectedAppReferencePath,
+            @"..\..\src\TetrisGame\TetrisGame.csproj"
+        };
+        var jsonOptions = new JsonSerializerOptions(JsonSerializerDefaults.Web);
+        var scaffoldChecksByStep = Assert.IsType<Dictionary<string, ProductCompletionRequiredFileContentCheckJson[]>>(
+            JsonSerializer.Deserialize<Dictionary<string, ProductCompletionRequiredFileContentCheckJson[]>>(
+                scaffoldAssignment.LaunchVariables[
+                    ProcessRuntimeLaunchVariables.ProductCompletionRequiredFileContentChecksByStep],
+                jsonOptions));
+        var scaffoldAddTestProjectChecks = Assert.Contains("add-test-project", scaffoldChecksByStep);
+        var directAddTestProjectChecks = Assert.IsType<ProductCompletionRequiredFileContentCheckJson[]>(
+            JsonSerializer.Deserialize<ProductCompletionRequiredFileContentCheckJson[]>(
+                addTestProjectAssignment.LaunchVariables[
+                    ProcessRuntimeLaunchVariables.ProductCompletionRequiredFileContentChecks],
+                jsonOptions));
+
+        foreach (var checks in new[] { scaffoldAddTestProjectChecks, directAddTestProjectChecks })
+        {
+            var testProjectCheck = Assert.Single(
+                checks,
+                check => check.PathCandidates.Contains(expectedTestProjectFile, StringComparer.Ordinal));
+            var appReferenceGroup = Assert.Single(
+                testProjectCheck.RequiredTextAnyGroups,
+                group => group.Contains(expectedAppReferencePath, StringComparer.Ordinal));
+            Assert.Equal(expectedAppReferencePaths, appReferenceGroup);
+        }
+
         Assert.Contains("ProductCompletionRequiredPaths", createProjectAssignment.Prompt, StringComparison.Ordinal);
         Assert.Contains("ProductCompletionRequiredToolReceipts", createProjectAssignment.Prompt, StringComparison.Ordinal);
         Assert.Contains("ProductCompletionRequiredFileContentChecks", createProjectAssignment.Prompt, StringComparison.Ordinal);
-        Assert.Contains(@"C:\temp\CanDoItAll\TetrisGame\TetrisGame.slnx", createProjectAssignment.Prompt, StringComparison.Ordinal);
-        Assert.Contains(@"C:\temp\CanDoItAll\TetrisGame\src\TetrisGame\TetrisGame.csproj", createProjectAssignment.Prompt, StringComparison.Ordinal);
+        Assert.Contains("C:/temp/CanDoItAll/TetrisGame/TetrisGame.slnx", createProjectAssignment.Prompt, StringComparison.Ordinal);
+        Assert.Contains("C:/temp/CanDoItAll/TetrisGame/src/TetrisGame/TetrisGame.csproj", createProjectAssignment.Prompt, StringComparison.Ordinal);
         Assert.Contains("ProductCompletionRequiredToolReceipts", validateFirstBuildAssignment.Prompt, StringComparison.Ordinal);
         Assert.Contains("workspace_dotnet_restore", validateFirstBuildAssignment.Prompt, StringComparison.Ordinal);
         Assert.Contains("workspace_dotnet_build", validateFirstBuildAssignment.Prompt, StringComparison.Ordinal);
@@ -1857,7 +1975,7 @@ public sealed class ProjectStructureAgentIntegrationTests
     }
 
     [Fact]
-    public async Task StartProcessNodeAsync_hr_match_resolves_software_delivery_person_or_agent_roles()
+    public async Task StartProcessNodeAsync_hr_match_resolves_software_delivery_and_runtime_command_roles()
     {
         await using var application = await TestApplication.CreateAsync(new TestHarnessOptions
         {
@@ -1935,33 +2053,40 @@ public sealed class ProjectStructureAgentIntegrationTests
             Assert.Equal(ProcessLaunchExecutorKinds.Agent, assignment.ExecutorKind);
             Assert.False(string.IsNullOrWhiteSpace(assignment.ExecutorId));
         });
-        var runtimeCommandParentAssignment = Assert.Single(assignments, assignment => assignment.StepKey == "record-runtime-commands");
         Assert.Contains(assignments, assignment => assignment.StepKey == "capture-ui-screenshots");
 
-        var runtimeCommandSubprocess = await agentService.StartProcessSubprocessAsync(
+        var runtimeCommandDefinitionId = ProcessDefinitionCatalogProjectionService
+            .CreateDefinitionId(new ProcessDefinitionCatalogItemKey("dotnet-runtime-command-writeback"))
+            .Value;
+        await agentService.LinkProcessDefinitionAsync(
             projectId,
-            result.RunId.Value.ToString("D"),
-            runtimeCommandParentAssignment.StepInstanceId.ToString(),
-            new ProjectStructureProcessSubprocessLaunchInput(
-                DefinitionKey: "dotnet-runtime-command-writeback",
+            deliveryNode.Id,
+            new ProjectStructureProcessDefinitionLinkInput(runtimeCommandDefinitionId),
+            DefaultAgent);
+        var runtimeCommandRun = await agentService.StartProcessNodeAsync(
+            projectId,
+            ProjectStructureProcessNodeKeys.BuildProcessDefinitionNodeKey(runtimeCommandDefinitionId),
+            new ProjectStructureProcessNodeStartInput(
                 RunHrMatch: true,
                 Execute: false,
                 IncludeLaunchPlan: true,
                 RequestedBy: "integration-test"),
             DefaultAgent);
-        var runtimeCommandAssignments = await assignmentStore.LoadByRunAsync(new ProcessRunId(runtimeCommandSubprocess.RunId!.Value));
+        var runtimeCommandAssignments = await assignmentStore.LoadByRunAsync(new ProcessRunId(runtimeCommandRun.RunId!.Value));
         var resolveRunCommands = Assert.Single(runtimeCommandAssignments, assignment => assignment.StepKey == "resolve-dotnet-run-commands");
         Assert.Equal("runtime-command-recorder", resolveRunCommands.RoleKey);
         Assert.Equal("delivery-manager", resolveRunCommands.RoleResourceKey);
         Assert.Equal("Runtime command recorder", resolveRunCommands.RoleDisplayName);
         Assert.Contains("Delivery Manager", resolveRunCommands.ExecutorDisplayName, StringComparison.OrdinalIgnoreCase);
         var writeRunCommandNodes = Assert.Single(runtimeCommandAssignments, assignment => assignment.StepKey == "write-run-command-nodes");
-        var runtimeCommandReceiptMap = Assert.Contains(
-            ProcessRuntimeLaunchVariables.ProductCompletionRequiredToolReceiptsByStep,
-            writeRunCommandNodes.LaunchVariables);
-        Assert.Contains("write-run-command-nodes", runtimeCommandReceiptMap, StringComparison.Ordinal);
-        Assert.Contains("project_structure_node_create", runtimeCommandReceiptMap, StringComparison.Ordinal);
-        Assert.Contains("project_structure_read", runtimeCommandReceiptMap, StringComparison.Ordinal);
+        Assert.Contains(
+            writeRunCommandNodes.CapabilityScope.RequiredReceipts,
+            receipt => string.Equals(receipt.ToolName, "project_structure_node_create", StringComparison.Ordinal) &&
+                       receipt.Activation == ProcessRequiredToolReceiptActivation.Always);
+        Assert.Contains(
+            writeRunCommandNodes.CapabilityScope.RequiredReceipts,
+            receipt => string.Equals(receipt.ToolName, "project_structure_read", StringComparison.Ordinal) &&
+                       receipt.Activation == ProcessRequiredToolReceiptActivation.Always);
     }
 
     [Fact]
@@ -3085,6 +3210,133 @@ public sealed class ProjectStructureAgentIntegrationTests
         return result.Value;
     }
 
+    private static async Task EnsureParentStepRunningAsync(
+        IServiceProvider serviceProvider,
+        ProcessRunId runId,
+        ProcessStepInstanceId stepInstanceId)
+    {
+        var stateStore = serviceProvider.GetRequiredService<IProcessRuntimeStateStore>();
+        var planStore = serviceProvider.GetRequiredService<IProcessInstancePlanStore>();
+        var unitOfWork = serviceProvider.GetRequiredService<IProcessRuntimeUnitOfWork>();
+        var state = Assert.IsType<ProcessRuntimeStateSnapshot>(
+            await stateStore.LoadAsync(runId));
+
+        var nowUtc = DateTimeOffset.UtcNow;
+        Assert.Equal(ProcessRuntimeStatus.Active, state.Status);
+        var parentStep = Assert.Single(
+            state.Steps,
+            step => step.StepInstanceId == stepInstanceId);
+        if (parentStep is
+            {
+                Status: ProcessRuntimeStepStatus.Running,
+                ActiveClaimToken: { } activeClaimToken
+            })
+        {
+            var activeClaim = Assert.Single(
+                state.Claims,
+                claim => claim.ClaimToken == activeClaimToken);
+            Assert.True(
+                activeClaim.Status is
+                    DispatchClaimStatus.Claimed or
+                    DispatchClaimStatus.LeaseRenewed or
+                    DispatchClaimStatus.Reclaimed);
+            Assert.True(activeClaim.ExpiresAtUtc > nowUtc);
+            return;
+        }
+
+        Assert.True(parentStep.IsExecutable);
+        Assert.Equal(ProcessRuntimeStepStatus.Pending, parentStep.Status);
+        Assert.Null(parentStep.ActiveClaimToken);
+
+        var actor = new ProcessEventActor(
+            ProcessEventActorKind.System,
+            new ProcessActorId("project-structure-integration-test"));
+        var correlationId = new ProcessCorrelationId(Guid.NewGuid().ToString("N"));
+        var readyState = state with
+        {
+            Steps = state.Steps
+                .Select(step => step.StepInstanceId == stepInstanceId
+                    ? step with { Status = ProcessRuntimeStepStatus.Ready }
+                    : step)
+                .ToArray(),
+            UpdatedAtUtc = nowUtc
+        };
+        var stepReadyEvent = new ProcessRuntimeEventEnvelope(
+            RuntimeEventId.New(),
+            state.RootRunId,
+            state.RunId,
+            correlationId,
+            null,
+            actor,
+            ProcessContractVersions.RuntimeEventEnvelopeV1,
+            ProcessEventSensitivity.Normal,
+            nowUtc,
+            ProcessRuntimeEventTypes.StepReady,
+            stepInstanceId.ToString());
+        var readyMutation = new ProcessRuntimeMutation(
+            ProcessRuntimeTransitionOutcome.Applied,
+            readyState,
+            [stepReadyEvent],
+            [
+                new ProcessOutboxMessage(
+                    RuntimeOutboxMessageId.New(),
+                    stepReadyEvent.EventId,
+                    ProcessOutboxSubscriberKind.RuntimeProjection,
+                    stepReadyEvent.PayloadHash)
+            ],
+            [],
+            []);
+        var ready = await unitOfWork.CommitAsync(
+            new ProcessRuntimeCommitRequest(
+                RuntimeCommandId.New(),
+                state,
+                readyMutation));
+        Assert.Equal(ProcessRuntimeTransitionOutcome.Applied, ready.Outcome);
+        state = Assert.IsType<ProcessRuntimeStateSnapshot>(
+            await stateStore.LoadAsync(runId));
+        nowUtc = nowUtc.AddMilliseconds(1);
+
+        var plan = await planStore.LoadAsync(state.PlanId);
+        Assert.NotNull(plan);
+        var workItem = Assert.Single(
+            new ProcessRuntimeScheduler().CalculateReadyWork(state, plan!, nowUtc),
+            item => item.StepInstanceId == stepInstanceId);
+        var claimToken = DispatchClaimToken.New();
+        var ownerId = new DispatcherOwnerId("project-structure-integration-test");
+        var engine = new ProcessRuntimeEngine(unitOfWork);
+        var claim = await engine.CreateClaimAsync(
+            state,
+            new RuntimeCommandContext(
+                RuntimeCommandId.New(),
+                actor,
+                correlationId,
+                nowUtc),
+            new CreateDispatchClaimCommand(
+                workItem,
+                ownerId,
+                claimToken,
+                nowUtc.AddMinutes(30)));
+        Assert.Equal(ProcessRuntimeTransitionOutcome.Applied, claim.Outcome);
+
+        var claimedState = Assert.IsType<ProcessRuntimeStateSnapshot>(
+            await stateStore.LoadAsync(runId));
+        var running = await engine.MarkClaimRunningAsync(
+            claimedState,
+            new RuntimeCommandContext(
+                RuntimeCommandId.New(),
+                actor,
+                correlationId,
+                nowUtc.AddMilliseconds(1)),
+            stepInstanceId,
+            claimToken);
+        Assert.Equal(ProcessRuntimeTransitionOutcome.Applied, running.Outcome);
+        var runningStep = Assert.Single(
+            running.State.Steps,
+            step => step.StepInstanceId == stepInstanceId);
+        Assert.Equal(ProcessRuntimeStepStatus.Running, runningStep.Status);
+        Assert.Equal(claimToken, runningStep.ActiveClaimToken);
+    }
+
     private static ProjectObjectMediaPayload CreateMediaPayload(string fileName, string contentType, string textContent)
     {
         return new ProjectObjectMediaPayload(
@@ -3141,6 +3393,10 @@ public sealed class ProjectStructureAgentIntegrationTests
         response.Content.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(contentType);
         return response;
     }
+
+    private sealed record ProductCompletionRequiredFileContentCheckJson(
+        string[] PathCandidates,
+        string[][] RequiredTextAnyGroups);
 
     private sealed class StaticHttpClientFactory(HttpMessageHandler handler) : IHttpClientFactory
     {

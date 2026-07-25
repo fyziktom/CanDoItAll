@@ -91,6 +91,7 @@ public static class ProcessesModuleServiceCollectionExtensions
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IProcessCompletionGateContribution, BrowserRuntimeLifecycleCompletionGateContribution>());
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IProcessCompletionGateContribution, BrowserInteractiveAcceptanceCompletionGateContribution>());
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IProcessCompletionDefectEvidenceContribution, BrowserConsoleDefectEvidenceContribution>());
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IProcessCompletionDefectEvidenceContribution, BrowserObservedDefectEvidenceContribution>());
         services.TryAddSingleton<ProcessCompletionDefectEvidenceCatalog>();
         services.TryAddSingleton<ProcessToolReceiptPolicyCatalog>();
         services.TryAddSingleton<ProcessSubprocessContractResolver>();

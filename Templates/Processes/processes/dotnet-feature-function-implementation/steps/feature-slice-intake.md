@@ -12,6 +12,8 @@ Without such a schedule, named interaction, typed state transitions, persistence
 
 Use upstream facts as decisions, not questions. Preserve the named product root, app archetype, target framework, test framework, UI/no-UI classification, required controls, validation hooks, and no-go constraints. Do not invent optional behavior or substitute easier contracts.
 
+When `ProductAcceptanceCriteriaContract` is present, only criteria with `kind=ProductAcceptance` and `required=true` define mandatory feature behavior and proof. Preserve `kind=DeliveryPlanning` items in the slice packet as nonblocking context, not implementation work. Current project-source facts, including an explicitly stated timeline, remain resolved even if imported open gaps, recommendations, or next actions say to validate, confirm, or reconfirm them. Do not request human confirmation or escalate those planning items unless a separate typed decision gate explicitly asks for that exact decision.
+
 If upstream scope lists visual target ImageAsset ids or media paths, preserve them as acceptance inputs for the visible UI behavior. Record the target asset identity and media path in the feature boundary instead of translating it into an unsupported generic style sentence.
 
 For a generated app, the derived behavior must be the complete runnable core workflow named by the parent. A scaffold, empty app shell, starter page replacement note, static-looking mock, or build-only proof is not a valid derived behavior. Record only optional polish or explicitly scheduled later work as exclusions; keep every core named interaction and persistence/recovery criterion that makes the requested product recognizable and usable.

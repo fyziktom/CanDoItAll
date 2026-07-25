@@ -1,6 +1,7 @@
 using System.Text.Json;
 using CanDoItAll.Modules.Processes;
 using CanDoItAll.Processes.Application;
+using CanDoItAll.Processes.Runtime;
 using CanDoItAll.Processes.Templates;
 
 namespace CanDoItAll.Tests.Unit;
@@ -137,6 +138,55 @@ public sealed class DotNetProcessLaunchVariableContributorTests
         Assert.Equal(1, paths.GetArrayLength());
         Assert.Equal("C:/output/Custom/Custom.slnx", paths[0].GetString());
         Assert.False(pathMap.TryGetProperty("create-dotnet-project", out _));
+    }
+
+    [Fact]
+    public void Template_owned_setup_policy_resolves_windows_paths_before_serializing_json()
+    {
+        var activation = new ProcessLaunchDriverActivation(
+            "dotnet.launch-contract",
+            new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                [DotNetSolutionSetupTemplatePolicyBindings.RequiredPathsSettingKey] =
+                    """{"add-test-project":["${DotNetTestProjectFileForwardSlash}"]}""",
+                [DotNetSolutionSetupTemplatePolicyBindings.RequiredToolReceiptsSettingKey] =
+                    """{"add-test-project":["workspace_pwsh_run_script"]}""",
+                [DotNetSolutionSetupTemplatePolicyBindings.RequiredFileContentChecksSettingKey] =
+                    """{"add-test-project":[{"pathCandidates":["${DotNetTestProjectFileForwardSlash}"],"requiredTextAnyGroups":[["${DotNetAppProjectReferenceRelativePath}","${DotNetAppProjectReferenceRelativePathWindows}"]]}]}""",
+                [DotNetSolutionSetupTemplatePolicyBindings.ScopedLaunchVariablePrefixesSettingKey] =
+                    """{"add-test-project":["DotNetAddTestProject"]}"""
+            });
+        Assert.True(
+            DotNetSolutionSetupTemplatePolicyBindings.TryParse(
+                activation,
+                out var bindings,
+                out var issue),
+            issue);
+        var variables = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["DotNetTestProjectFileForwardSlash"] = "verification/TetrisGame.Tests/TetrisGame.Tests.csproj",
+            ["DotNetAppProjectReferenceRelativePath"] = "../../app/TetrisGame/TetrisGame.csproj",
+            ["DotNetAppProjectReferenceRelativePathWindows"] = @"..\..\app\TetrisGame\TetrisGame.csproj"
+        };
+
+        bindings.ApplyTo(variables);
+        var resolved = new LaunchVariableTemplateResolver().Resolve(variables);
+
+        Assert.DoesNotContain(resolved.Diagnostics, diagnostic => diagnostic.IsBlocking);
+        using var document = JsonDocument.Parse(
+            resolved.Variables[ProcessRuntimeLaunchVariables.ProductCompletionRequiredFileContentChecksByStep]);
+        var referenceGroup = document.RootElement
+            .GetProperty("add-test-project")[0]
+            .GetProperty("requiredTextAnyGroups")[0]
+            .EnumerateArray()
+            .Select(value => value.GetString()!)
+            .ToArray();
+        Assert.Equal(
+            [
+                "../../app/TetrisGame/TetrisGame.csproj",
+                @"..\..\app\TetrisGame\TetrisGame.csproj"
+            ],
+            referenceGroup);
     }
 
     [Fact]

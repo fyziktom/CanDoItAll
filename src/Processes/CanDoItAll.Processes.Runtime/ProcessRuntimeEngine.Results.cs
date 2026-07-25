@@ -104,6 +104,73 @@ public sealed partial class ProcessRuntimeEngine
             return ProcessRuntimeMutation.Rejected(state, "Runtime.TerminalRunImmutable", "Terminal runs cannot be cancelled again.");
         }
 
+        var next = CancelOpenWork(state, ProcessRuntimeStatus.Cancelled, context.OccurredAtUtc);
+        return Applied(next, context, ProcessRuntimeEventTypes.ProcessRunCancelled, state.RunId.ToString());
+    }
+
+    private static ProcessRuntimeMutation BeginRootCancellation(
+        ProcessRuntimeStateSnapshot state,
+        RuntimeCommandContext context)
+    {
+        ValidateArguments(state, context);
+
+        if (state.RunId != state.RootRunId)
+        {
+            return ProcessRuntimeMutation.Rejected(
+                state,
+                "Runtime.RootCancellationRequiresRootRun",
+                "The root cancellation barrier can only be started on the root process run.");
+        }
+
+        if (state.Status == ProcessRuntimeStatus.CancelRequested)
+        {
+            return Duplicate(state);
+        }
+
+        if (ProcessRuntimeTerminalStates.IsRunTerminal(state.Status))
+        {
+            return ProcessRuntimeMutation.Rejected(state, "Runtime.TerminalRunImmutable", "Terminal runs cannot be cancelled again.");
+        }
+
+        var next = CancelOpenWork(state, ProcessRuntimeStatus.CancelRequested, context.OccurredAtUtc);
+        return Applied(next, context, ProcessRuntimeEventTypes.ProcessRunCancelRequested, state.RunId.ToString());
+    }
+
+    private static ProcessRuntimeMutation FinalizeRootCancellation(
+        ProcessRuntimeStateSnapshot state,
+        RuntimeCommandContext context)
+    {
+        ValidateArguments(state, context);
+
+        if (state.RunId != state.RootRunId)
+        {
+            return ProcessRuntimeMutation.Rejected(
+                state,
+                "Runtime.RootCancellationRequiresRootRun",
+                "The root cancellation barrier can only be finalized on the root process run.");
+        }
+
+        if (state.Status != ProcessRuntimeStatus.CancelRequested)
+        {
+            return ProcessRuntimeMutation.Rejected(
+                state,
+                "Runtime.RootCancellationBarrierMissing",
+                "Root cancellation can only be finalized after the cancellation barrier was committed.");
+        }
+
+        var next = state with
+        {
+            Status = ProcessRuntimeStatus.Cancelled,
+            UpdatedAtUtc = context.OccurredAtUtc
+        };
+        return Applied(next, context, ProcessRuntimeEventTypes.ProcessRunCancelled, state.RunId.ToString());
+    }
+
+    private static ProcessRuntimeStateSnapshot CancelOpenWork(
+        ProcessRuntimeStateSnapshot state,
+        ProcessRuntimeStatus status,
+        DateTimeOffset occurredAtUtc)
+    {
         var steps = new List<ProcessRuntimeStepState>(state.Steps.Count);
         foreach (var step in state.Steps)
         {
@@ -124,13 +191,12 @@ public sealed partial class ProcessRuntimeEngine
                 : claim);
         }
 
-        var next = state with
+        return state with
         {
-            Status = ProcessRuntimeStatus.Cancelled,
+            Status = status,
             Steps = steps,
             Claims = claims,
-            UpdatedAtUtc = context.OccurredAtUtc
+            UpdatedAtUtc = occurredAtUtc
         };
-        return Applied(next, context, ProcessRuntimeEventTypes.ProcessRunCancelled, state.RunId.ToString());
     }
 }

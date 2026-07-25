@@ -171,21 +171,16 @@ public sealed class GenericProcessStepBriefBuilder : IProcessStepBriefBuilder
             return "This step contributes evidence to a later acceptance owner. Preserve criterion-relevant proof in its managed artifact, but do not claim end-to-end acceptance solely from this step.";
         }
 
-        var acceptanceBranchKeys = SplitLaunchVariableList(rawAcceptanceBranchKeys);
+        var acceptanceBranchKeys = ProcessLaunchVariableStringList.TryParse(
+            rawAcceptanceBranchKeys,
+            out var parsedAcceptanceBranchKeys)
+            ? parsedAcceptanceBranchKeys
+            : [];
         const string failedCriterionGuidance = "For a non-acceptance branch that reports an observed product or deliverable defect, populate acceptanceCriteriaEvidence for every criterion you directly found to fail. Each failed entry must use the exact criterion id, Status: Failed, a concise observed-failure summary, and at least one grounded current-run proof ref. Do not mark a criterion Failed merely because a later parent-owned proof has not run.";
         return acceptanceBranchKeys.Count == 0
             ? $"This step contributes evidence to a later acceptance owner. Preserve criterion-relevant proof in its managed artifact, but do not claim end-to-end acceptance solely from this step. {failedCriterionGuidance}"
-            : $"For these final-acceptance branches only: {string.Join(", ", acceptanceBranchKeys)}. Populate acceptanceCriteriaEvidence in the final structured result for every criterion id in ProductAcceptanceCriteriaContract. Each entry must use the exact id, Status: Passed, a concise criterion-specific summary, and at least one current-run proof ref. Do not select one of those branches when any required criterion cannot be recorded this way; select the template's applicable non-acceptance branch instead. {failedCriterionGuidance}";
+            : $"For these final-acceptance branches only: {string.Join(", ", acceptanceBranchKeys)}. Populate acceptanceCriteriaEvidence in the final structured result for every criterion in ProductAcceptanceCriteriaContract marked kind=ProductAcceptance and required=true. Legacy criterion lines without kind/required markers default to required ProductAcceptance and need the same evidence. Each entry must use the exact id, Status: Passed, a concise criterion-specific summary, and at least one current-run proof ref. Preserve kind=DeliveryPlanning entries as nonblocking context; do not submit Passed or Failed acceptance evidence for them, and do not route no-go, escalation, or human reconfirmation solely because they lack product proof unless a separate typed decision gate explicitly requires it. Do not select one of those branches when any required ProductAcceptance criterion cannot be recorded this way; select the template's applicable non-acceptance branch instead. {failedCriterionGuidance}";
     }
-
-    private static IReadOnlyList<string> SplitLaunchVariableList(string value)
-        => string.IsNullOrWhiteSpace(value)
-            ? []
-            : value
-                .Split([';', ',', '\n', '\r'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-                .Where(item => !string.IsNullOrWhiteSpace(item))
-                .Distinct(StringComparer.OrdinalIgnoreCase)
-                .ToArray();
 
     private static string FormatLaunchVariables(IReadOnlyDictionary<string, string> variables)
     {

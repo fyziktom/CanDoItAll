@@ -372,6 +372,56 @@ public sealed class ProcessRuntimeOperatorApplicationServiceTests
     }
 
     [Fact]
+    public async Task Request_cancellation_on_root_discovers_child_created_after_barrier_and_emits_root_terminal_event_last()
+    {
+        var rootRunId = ProcessRunId.New();
+        var childRunId = ProcessRunId.New();
+        var rootStepId = ProcessStepInstanceId.New();
+        var childStepId = ProcessStepInstanceId.New();
+        var planId = ProcessInstancePlanId.New();
+        var childState = CreateActiveReadyState(childRunId, planId, childStepId, rootRunId);
+        var assignmentStore = new RecordingAssignmentStore(CreateAssignment(rootRunId, planId, rootStepId));
+        var dispatchQueue = new RecordingDispatchQueue();
+        await using var dbContext = CreateDbContext();
+        var projectionStore = new EfProcessProjectionStore(dbContext);
+        var clock = new FixedProcessProjectionClock(Now);
+        var stateStore = new InMemoryRuntimeStateStore(CreateActiveReadyState(rootRunId, planId, rootStepId));
+        var unitOfWork = new BarrierInjectingUnitOfWork(stateStore, childState);
+        var service = new ProcessRuntimeOperatorApplicationService(
+            clock,
+            stateStore,
+            stateStore,
+            assignmentStore,
+            unitOfWork,
+            dispatchQueue,
+            new ProcessRuntimeProjectionCatchupService(
+                new EmptyRuntimeEventReplayStore(),
+                projectionStore,
+                new ProcessRuntimeProjectionProjector(
+                    projectionStore,
+                    ProcessProjectionJsonCodec.Default,
+                    clock,
+                    new EfProcessRunRecordStore(dbContext)),
+                clock),
+            []);
+
+        var result = await service.RequestCancellationAsync(new ProcessRuntimeRunCancellationCommand(
+            rootRunId,
+            "unit-test",
+            "Exercise the cancellation/subprocess barrier."));
+
+        Assert.True(result.Succeeded);
+        Assert.Equal(ProcessRuntimeStatus.Cancelled, stateStore.GetState(rootRunId).Status);
+        Assert.Equal(ProcessRuntimeStatus.Cancelled, stateStore.GetState(childRunId).Status);
+        var events = unitOfWork.Requests.SelectMany(request => request.Mutation.Events).ToArray();
+        Assert.Equal(ProcessRuntimeEventTypes.ProcessRunCancelRequested, events[0].EventType);
+        Assert.Equal(childRunId, events[^2].RunId);
+        Assert.Equal(ProcessRuntimeEventTypes.ProcessRunCancelled, events[^2].EventType);
+        Assert.Equal(rootRunId, events[^1].RunId);
+        Assert.Equal(ProcessRuntimeEventTypes.ProcessRunCancelled, events[^1].EventType);
+    }
+
+    [Fact]
     public async Task Request_cancellation_notifies_observers_with_cancelled_root_and_descendants()
     {
         var rootRunId = ProcessRunId.New();
@@ -413,11 +463,116 @@ public sealed class ProcessRuntimeOperatorApplicationServiceTests
             "Stop root and active children before starting a clean E2E pass."));
 
         Assert.True(result.Succeeded);
-        var observation = Assert.Single(observer.Observations);
-        Assert.Equal(rootRunId, observation.RequestedRunId);
-        Assert.Contains(rootRunId, observation.CancelledRunIds);
-        Assert.Contains(childRunId, observation.CancelledRunIds);
+        Assert.Equal(2, observer.Observations.Count);
+        Assert.Equal(rootRunId, observer.Observations[0].RequestedRunId);
+        Assert.Equal([rootRunId], observer.Observations[0].CancelledRunIds);
+        Assert.Equal([childRunId], observer.Observations[1].CancelledRunIds);
         Assert.Contains(result.Diagnostics, diagnostic => diagnostic == RecordingCancellationObserver.Diagnostic);
+    }
+
+    [Fact]
+    public async Task Request_cancellation_rejection_leaves_root_pending_and_notifies_already_cancelled_runs()
+    {
+        var rootRunId = ProcessRunId.New();
+        var cancelledChildRunId = ProcessRunId.New();
+        var stuckChildRunId = ProcessRunId.New();
+        var planId = ProcessInstancePlanId.New();
+        var observer = new RecordingCancellationObserver();
+        var stateStore = new InMemoryRuntimeStateStore(
+            CreateActiveReadyState(rootRunId, planId, ProcessStepInstanceId.New()),
+            CreateActiveReadyState(cancelledChildRunId, planId, ProcessStepInstanceId.New(), rootRunId),
+            CreateActiveReadyState(stuckChildRunId, planId, ProcessStepInstanceId.New(), rootRunId));
+        var unitOfWork = new RejectingDescendantCancellationUnitOfWork(stateStore, stuckChildRunId);
+        await using var dbContext = CreateDbContext();
+        var projectionStore = new EfProcessProjectionStore(dbContext);
+        var clock = new FixedProcessProjectionClock(Now);
+        var service = new ProcessRuntimeOperatorApplicationService(
+            clock,
+            stateStore,
+            stateStore,
+            new RecordingAssignmentStore(CreateAssignment(rootRunId, planId, stateStore.GetState(rootRunId).Steps.Single().StepInstanceId)),
+            unitOfWork,
+            new RecordingDispatchQueue(),
+            new ProcessRuntimeProjectionCatchupService(
+                new EmptyRuntimeEventReplayStore(),
+                projectionStore,
+                new ProcessRuntimeProjectionProjector(
+                    projectionStore,
+                    ProcessProjectionJsonCodec.Default,
+                    clock,
+                    new EfProcessRunRecordStore(dbContext)),
+                clock),
+            [],
+            [observer]);
+
+        var result = await service.RequestCancellationAsync(new ProcessRuntimeRunCancellationCommand(
+            rootRunId,
+            "unit-test",
+            "Keep the barrier pending when one descendant cannot be cancelled."));
+
+        Assert.False(result.Succeeded);
+        Assert.Equal(ProcessRuntimeTransitionOutcome.Rejected, result.Outcome);
+        Assert.Equal(ProcessRuntimeStatus.CancelRequested, result.Status);
+        Assert.Equal(ProcessRuntimeStatus.CancelRequested, stateStore.GetState(rootRunId).Status);
+        Assert.Equal(ProcessRuntimeStatus.Cancelled, stateStore.GetState(cancelledChildRunId).Status);
+        Assert.Equal(ProcessRuntimeStatus.Active, stateStore.GetState(stuckChildRunId).Status);
+        Assert.Contains(result.Diagnostics, diagnostic => diagnostic.Contains(stuckChildRunId.Value.ToString("D"), StringComparison.Ordinal));
+        var observedRunIds = observer.Observations.SelectMany(observation => observation.CancelledRunIds).ToArray();
+        Assert.Contains(rootRunId, observedRunIds);
+        Assert.Contains(cancelledChildRunId, observedRunIds);
+        Assert.DoesNotContain(stuckChildRunId, observedRunIds);
+        Assert.DoesNotContain(
+            unitOfWork.Requests.SelectMany(request => request.Mutation.Events),
+            runtimeEvent =>
+                runtimeEvent.RunId == rootRunId &&
+                runtimeEvent.EventType == ProcessRuntimeEventTypes.ProcessRunCancelled);
+    }
+
+    [Fact]
+    public async Task Request_cancellation_finalizes_root_when_authoritative_final_query_finds_failed_descendant_terminal()
+    {
+        var rootRunId = ProcessRunId.New();
+        var childRunId = ProcessRunId.New();
+        var rootStepId = ProcessStepInstanceId.New();
+        var planId = ProcessInstancePlanId.New();
+        var stateStore = new InMemoryRuntimeStateStore(
+            CreateActiveReadyState(rootRunId, planId, rootStepId),
+            CreateActiveReadyState(childRunId, planId, ProcessStepInstanceId.New(), rootRunId));
+        var hierarchyStore = new CompletingOnFinalHierarchyQueryStore(stateStore, childRunId);
+        var unitOfWork = new RejectingDescendantCancellationUnitOfWork(stateStore, childRunId);
+        await using var dbContext = CreateDbContext();
+        var projectionStore = new EfProcessProjectionStore(dbContext);
+        var clock = new FixedProcessProjectionClock(Now);
+        var service = new ProcessRuntimeOperatorApplicationService(
+            clock,
+            stateStore,
+            hierarchyStore,
+            new RecordingAssignmentStore(CreateAssignment(rootRunId, planId, rootStepId)),
+            unitOfWork,
+            new RecordingDispatchQueue(),
+            new ProcessRuntimeProjectionCatchupService(
+                new EmptyRuntimeEventReplayStore(),
+                projectionStore,
+                new ProcessRuntimeProjectionProjector(
+                    projectionStore,
+                    ProcessProjectionJsonCodec.Default,
+                    clock,
+                    new EfProcessRunRecordStore(dbContext)),
+                clock),
+            []);
+
+        var result = await service.RequestCancellationAsync(new ProcessRuntimeRunCancellationCommand(
+            rootRunId,
+            "unit-test",
+            "Use the final hierarchy postcondition."));
+
+        Assert.True(result.Succeeded);
+        Assert.Equal(ProcessRuntimeStatus.Cancelled, stateStore.GetState(rootRunId).Status);
+        Assert.Equal(ProcessRuntimeStatus.Completed, stateStore.GetState(childRunId).Status);
+        Assert.Contains(result.Diagnostics, diagnostic => diagnostic.Contains(childRunId.Value.ToString("D"), StringComparison.Ordinal));
+        var lastEvent = unitOfWork.Requests.SelectMany(request => request.Mutation.Events).Last();
+        Assert.Equal(rootRunId, lastEvent.RunId);
+        Assert.Equal(ProcessRuntimeEventTypes.ProcessRunCancelled, lastEvent.EventType);
     }
 
     private static ProcessRuntimeStateSnapshot CreateFailedState(
@@ -661,6 +816,9 @@ public sealed class ProcessRuntimeOperatorApplicationServiceTests
         public ProcessRuntimeStateSnapshot GetState(ProcessRunId runId)
             => statesByRunId[runId];
 
+        public void AddState(ProcessRuntimeStateSnapshot state)
+            => statesByRunId.Add(state.RunId, state);
+
         public Task<ProcessRuntimeStateSnapshot?> LoadAsync(
             ProcessRunId runId,
             CancellationToken cancellationToken = default)
@@ -704,6 +862,84 @@ public sealed class ProcessRuntimeOperatorApplicationServiceTests
             }
 
             return Task.FromResult(ProcessRuntimeCommitResult.FromMutation(request.Mutation));
+        }
+    }
+
+    private sealed class BarrierInjectingUnitOfWork(
+        InMemoryRuntimeStateStore stateStore,
+        ProcessRuntimeStateSnapshot childState) : IProcessRuntimeUnitOfWork
+    {
+        private bool childInjected;
+
+        public List<ProcessRuntimeCommitRequest> Requests { get; } = [];
+
+        public Task<ProcessRuntimeCommitResult> CommitAsync(
+            ProcessRuntimeCommitRequest request,
+            CancellationToken cancellationToken = default)
+        {
+            Requests.Add(request);
+            stateStore.State = request.Mutation.State;
+            if (!childInjected &&
+                request.Mutation.Events.Any(runtimeEvent =>
+                    runtimeEvent.EventType == ProcessRuntimeEventTypes.ProcessRunCancelRequested))
+            {
+                childInjected = true;
+                stateStore.AddState(childState);
+            }
+
+            return Task.FromResult(ProcessRuntimeCommitResult.FromMutation(request.Mutation));
+        }
+    }
+
+    private sealed class RejectingDescendantCancellationUnitOfWork(
+        InMemoryRuntimeStateStore stateStore,
+        ProcessRunId rejectedRunId) : IProcessRuntimeUnitOfWork
+    {
+        public List<ProcessRuntimeCommitRequest> Requests { get; } = [];
+
+        public Task<ProcessRuntimeCommitResult> CommitAsync(
+            ProcessRuntimeCommitRequest request,
+            CancellationToken cancellationToken = default)
+        {
+            Requests.Add(request);
+            if (request.Mutation.State.RunId == rejectedRunId &&
+                request.Mutation.Events.Any(runtimeEvent =>
+                    runtimeEvent.EventType == ProcessRuntimeEventTypes.ProcessRunCancelled))
+            {
+                return Task.FromResult(ProcessRuntimeCommitResult.FromMutation(
+                    ProcessRuntimeMutation.Rejected(
+                        request.OriginalState,
+                        "Runtime.TestCancellationRejected",
+                        "The test descendant remains cancellable.")));
+            }
+
+            stateStore.State = request.Mutation.State;
+            return Task.FromResult(ProcessRuntimeCommitResult.FromMutation(request.Mutation));
+        }
+    }
+
+    private sealed class CompletingOnFinalHierarchyQueryStore(
+        InMemoryRuntimeStateStore stateStore,
+        ProcessRunId childRunId) : IProcessRuntimeRunHierarchyStore
+    {
+        private int queryCount;
+
+        public Task<IReadOnlyList<ProcessRunId>> FindCancellableDescendantRunIdsAsync(
+            ProcessRunId rootRunId,
+            CancellationToken cancellationToken = default)
+        {
+            queryCount++;
+            if (queryCount == 2)
+            {
+                var childState = stateStore.GetState(childRunId);
+                stateStore.State = childState with
+                {
+                    Status = ProcessRuntimeStatus.Completed,
+                    UpdatedAtUtc = childState.UpdatedAtUtc.AddMilliseconds(1)
+                };
+            }
+
+            return stateStore.FindCancellableDescendantRunIdsAsync(rootRunId, cancellationToken);
         }
     }
 

@@ -3317,6 +3317,49 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
     }
 
     [Fact]
+    public void QualityAccepted_with_blank_present_acceptance_matrix_rejects_the_invalid_contract()
+    {
+        var outputRoot = CreateTempProductRoot();
+        try
+        {
+            var scaffoldPage = Path.Combine(outputRoot, "src", "App", "Pages", "Counter.razor");
+            var assignment = CreateQaValidationAssignmentWithAcceptanceMatrix(outputRoot, scaffoldPage);
+            assignment = assignment with
+            {
+                LaunchVariables = WithLaunchVariables(
+                    assignment,
+                    (ProcessRuntimeLaunchVariables.AcceptanceCriteriaMatrix, " "))
+            };
+            var primaryRef = BuildStepArtifactRef(assignment);
+            var executionRunId = Guid.NewGuid();
+
+            var result = ToAdapterResult(
+                assignment,
+                new ProcessStepOutcomeResult
+                {
+                    Status = ProcessStepOutcomeStatus.Completed,
+                    Reason = "QA selected acceptance with a blank internal acceptance contract.",
+                    BranchOutcomeKey = "quality-accepted",
+                    BranchOutcomeTitle = "Quality accepted",
+                    EvidenceRefs = [primaryRef],
+                    NextActions = []
+                },
+                CreateFullQaValidationReceipts(primaryRef, executionRunId),
+                executionRunId);
+
+            Assert.Equal(StrategyOutcome.NeedsManager, result.Outcome);
+            Assert.Contains(result.Diagnostics, diagnostic =>
+                diagnostic.Code.Value == "process.adapter.acceptance_criteria_contract_invalid");
+            Assert.DoesNotContain(result.ManagerSignals, signal =>
+                signal.Code.Value == ProcessBranchSignalCodes.Outcome("quality-accepted").Value);
+        }
+        finally
+        {
+            DeleteDirectory(outputRoot);
+        }
+    }
+
+    [Fact]
     public void QualityAccepted_with_full_browser_receipts_accepts_criterion_by_criterion_proof()
     {
         var outputRoot = CreateTempProductRoot();
@@ -3577,6 +3620,194 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
                 signal.Code.Value == ProcessBranchSignalCodes.Outcome("repair-required").Value);
             Assert.DoesNotContain(result.Diagnostics, diagnostic =>
                 diagnostic.Code.Value == "process.adapter.branch_outcome_defect_evidence_missing");
+        }
+        finally
+        {
+            DeleteDirectory(outputRoot);
+        }
+    }
+
+    [Theory]
+    [InlineData("The #blazor-error-ui remained visible and displayed 'An unhandled error has occurred.' while the console remained clean.")]
+    [InlineData("Browser showed #blazor-error-ui; no other runtime error occurred.")]
+    public void RepairRequired_with_current_run_browser_state_artifact_accepts_visible_unhandled_error_with_clean_console(
+        string reason)
+    {
+        var outputRoot = CreateTempProductRoot();
+        try
+        {
+            var page = Path.Combine(outputRoot, "src", "App", "Pages", "Home.razor");
+            Directory.CreateDirectory(Path.GetDirectoryName(page)!);
+            File.WriteAllText(page, "<h1>Implemented app</h1>");
+            var assignment = CreateQaValidationAssignmentWithBranchAwareCompletionRules(
+                outputRoot,
+                page);
+            var primaryRef = BuildStepArtifactRef(assignment);
+            var browserStateRef = $"artifacts/process-runs/{assignment.RunId.Value:D}/browser/blazor-error-state.json";
+            var screenshotRef = $"artifacts/process-runs/{assignment.RunId.Value:D}/browser/blazor-error.png";
+            var executionRunId = Guid.NewGuid();
+
+            var result = ToAdapterResult(
+                assignment,
+                new ProcessStepOutcomeResult
+                {
+                    Status = ProcessStepOutcomeStatus.Completed,
+                    Reason = reason,
+                    BranchOutcomeKey = "repair-required",
+                    BranchOutcomeTitle = "Repair required",
+                    EvidenceRefs = [primaryRef, browserStateRef, screenshotRef],
+                    NextActions = ["Repair the visible Blazor runtime failure and rerun QA."]
+                },
+                [
+                    CreateToolReceipt(
+                        "workspace_write_file",
+                        primaryRef,
+                        "Succeeded: Wrote QA evidence.",
+                        executionRunId: executionRunId),
+                    CreateToolReceipt(
+                        ToolContractCatalog.BrowserEvaluate,
+                        $"selector=#blazor-error-ui,filename={browserStateRef},timeout=5000",
+                        "Succeeded",
+                        executionRunId: executionRunId),
+                    CreateToolReceipt(
+                        ToolContractCatalog.BrowserTakeScreenshot,
+                        $"filename={screenshotRef},fullPage=False",
+                        "Succeeded",
+                        executionRunId: executionRunId),
+                    CreateToolReceipt(
+                        ToolContractCatalog.BrowserConsoleMessages,
+                        "level=\"error\"",
+                        "Succeeded: No console errors.",
+                        executionRunId: executionRunId)
+                ],
+                executionRunId);
+
+            Assert.Equal(StrategyOutcome.Succeeded, result.Outcome);
+            Assert.Contains(result.ManagerSignals, signal =>
+                signal.Code.Value == ProcessBranchSignalCodes.Outcome("repair-required").Value);
+            Assert.DoesNotContain(result.Diagnostics, diagnostic =>
+                diagnostic.Code.Value == "process.adapter.branch_outcome_defect_evidence_missing");
+        }
+        finally
+        {
+            DeleteDirectory(outputRoot);
+        }
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void RepairRequired_rejects_stale_or_unmatched_browser_observed_defect_evidence(
+        bool receiptUsesCurrentExecution)
+    {
+        var outputRoot = CreateTempProductRoot();
+        try
+        {
+            var page = Path.Combine(outputRoot, "src", "App", "Pages", "Home.razor");
+            Directory.CreateDirectory(Path.GetDirectoryName(page)!);
+            File.WriteAllText(page, "<h1>Implemented app</h1>");
+            var assignment = CreateQaValidationAssignmentWithBranchAwareCompletionRules(
+                outputRoot,
+                page);
+            var primaryRef = BuildStepArtifactRef(assignment);
+            var citedBrowserStateRef = $"artifacts/process-runs/{assignment.RunId.Value:D}/browser/blazor-error-state.json";
+            var receiptBrowserStateRef = receiptUsesCurrentExecution
+                ? $"artifacts/process-runs/{assignment.RunId.Value:D}/browser/unmatched-state.json"
+                : citedBrowserStateRef;
+            var currentExecutionRunId = Guid.NewGuid();
+            var receiptExecutionRunId = receiptUsesCurrentExecution
+                ? currentExecutionRunId
+                : Guid.NewGuid();
+
+            var result = ToAdapterResult(
+                assignment,
+                new ProcessStepOutcomeResult
+                {
+                    Status = ProcessStepOutcomeStatus.Completed,
+                    Reason = "Current-run browser evaluation showed visible #blazor-error-ui text 'An unhandled error has occurred.'",
+                    BranchOutcomeKey = "repair-required",
+                    BranchOutcomeTitle = "Repair required",
+                    EvidenceRefs = [primaryRef, citedBrowserStateRef],
+                    NextActions = ["Repair the visible Blazor runtime failure and rerun QA."]
+                },
+                [
+                    CreateToolReceipt(
+                        "workspace_write_file",
+                        primaryRef,
+                        "Succeeded: Wrote QA evidence.",
+                        executionRunId: currentExecutionRunId),
+                    CreateToolReceipt(
+                        ToolContractCatalog.BrowserEvaluate,
+                        $"selector=\"#blazor-error-ui\", filename=\"{receiptBrowserStateRef}\"",
+                        "Succeeded",
+                        executionRunId: receiptExecutionRunId)
+                ],
+                currentExecutionRunId);
+
+            Assert.Equal(StrategyOutcome.NeedsManager, result.Outcome);
+            Assert.Contains(result.Diagnostics, diagnostic =>
+                diagnostic.Code.Value == "process.adapter.branch_outcome_defect_evidence_missing");
+            Assert.DoesNotContain(result.ManagerSignals, signal =>
+                signal.Code.Value == ProcessBranchSignalCodes.Outcome("repair-required").Value);
+        }
+        finally
+        {
+            DeleteDirectory(outputRoot);
+        }
+    }
+
+    [Theory]
+    [InlineData("Current page displayed no #blazor-error-ui.")]
+    [InlineData("Browser evaluation found no runtime error.")]
+    [InlineData("#blazor-error-ui was not visible after the repair.")]
+    [InlineData("#blazor-error-ui is no longer visible after the repair.")]
+    [InlineData("The application error surface was hidden with display: none.")]
+    public void RepairRequired_rejects_negated_browser_defect_claims(
+        string reason)
+    {
+        var outputRoot = CreateTempProductRoot();
+        try
+        {
+            var page = Path.Combine(outputRoot, "src", "App", "Pages", "Home.razor");
+            Directory.CreateDirectory(Path.GetDirectoryName(page)!);
+            File.WriteAllText(page, "<h1>Implemented app</h1>");
+            var assignment = CreateQaValidationAssignmentWithBranchAwareCompletionRules(
+                outputRoot,
+                page);
+            var primaryRef = BuildStepArtifactRef(assignment);
+            var browserStateRef = $"artifacts/process-runs/{assignment.RunId.Value:D}/browser/clean-state.json";
+            var executionRunId = Guid.NewGuid();
+
+            var result = ToAdapterResult(
+                assignment,
+                new ProcessStepOutcomeResult
+                {
+                    Status = ProcessStepOutcomeStatus.Completed,
+                    Reason = reason,
+                    BranchOutcomeKey = "repair-required",
+                    BranchOutcomeTitle = "Repair required",
+                    EvidenceRefs = [primaryRef, browserStateRef],
+                    NextActions = ["Repair a different product defect."]
+                },
+                [
+                    CreateToolReceipt(
+                        "workspace_write_file",
+                        primaryRef,
+                        "Succeeded: Wrote QA evidence.",
+                        executionRunId: executionRunId),
+                    CreateToolReceipt(
+                        ToolContractCatalog.BrowserEvaluate,
+                        $"filename={browserStateRef},timeout=5000",
+                        "Succeeded",
+                        executionRunId: executionRunId)
+                ],
+                executionRunId);
+
+            Assert.Equal(StrategyOutcome.NeedsManager, result.Outcome);
+            Assert.Contains(result.Diagnostics, diagnostic =>
+                diagnostic.Code.Value == "process.adapter.branch_outcome_defect_evidence_missing");
+            Assert.DoesNotContain(result.ManagerSignals, signal =>
+                signal.Code.Value == ProcessBranchSignalCodes.Outcome("repair-required").Value);
         }
         finally
         {
@@ -7744,7 +7975,8 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
             new WorkspaceFileService(Path.GetTempPath()),
             new ProcessCompletionDefectEvidenceCatalog(
             [
-                new BrowserConsoleDefectEvidenceContribution()
+                new BrowserConsoleDefectEvidenceContribution(),
+                new BrowserObservedDefectEvidenceContribution()
             ]));
         var completionGateEvaluator = new ProcessCompletionGateFactory(
                 toolReceiptPolicies,
@@ -8241,7 +8473,8 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
             workspaceFiles,
             new ProcessCompletionDefectEvidenceCatalog(
             [
-                new BrowserConsoleDefectEvidenceContribution()
+                new BrowserConsoleDefectEvidenceContribution(),
+                new BrowserObservedDefectEvidenceContribution()
             ]));
         var completionGateEvaluator = new ProcessCompletionGateFactory(
                 toolReceiptPolicies,

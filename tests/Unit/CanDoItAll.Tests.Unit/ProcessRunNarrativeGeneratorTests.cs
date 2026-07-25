@@ -34,7 +34,7 @@ public sealed class ProcessRunNarrativeGeneratorTests
     }
 
     [Fact]
-    public void Selector_SelectsOnlyExactAuthorizedProcessManagerTag()
+    public void Selector_SelectsExactAuthorizedProcessManagerTag()
     {
         var selector = new ProcessRunManagerAgentSelector();
         var arbitraryAgent = CreateAgent(
@@ -49,6 +49,53 @@ public sealed class ProcessRunNarrativeGeneratorTests
         var selected = selector.Select([arbitraryAgent, explicitManager], []);
 
         Assert.Equal(explicitManager.Id, selected.Id);
+    }
+
+    [Fact]
+    public void Selector_SelectsCustomizedCanonicalDeliveryManagerThatPredatesProcessManagerTag()
+    {
+        var selector = new ProcessRunManagerAgentSelector();
+        var managerByNameOnly = CreateAgent(
+            "Delivery Manager",
+            ["delivery", "manager"],
+            canObserveOtherAgents: true);
+        var matchingTemplateKeyOnly = CreateAgent(
+            "Matching template key only",
+            ["delivery", "manager"],
+            canObserveOtherAgents: true,
+            templateKey: DeliveryManagerAgentIdentity.TemplateKey);
+        var matchingIdOnly = CreateAgent(
+            "Matching ID only",
+            ["delivery", "manager"],
+            canObserveOtherAgents: true,
+            templateKey: "noncanonical-delivery-manager",
+            id: DeliveryManagerAgentIdentity.AgentId);
+        var customizedCanonicalManager = CreateAgent(
+            "Customized Delivery Manager",
+            ["delivery", "manager"],
+            canObserveOtherAgents: true,
+            templateKey: DeliveryManagerAgentIdentity.TemplateKey,
+            id: DeliveryManagerAgentIdentity.AgentId);
+
+        var selected = selector.Select(
+            [managerByNameOnly, matchingTemplateKeyOnly, matchingIdOnly, customizedCanonicalManager],
+            []);
+
+        Assert.Equal(customizedCanonicalManager.Id, selected.Id);
+    }
+
+    [Fact]
+    public void Selector_RejectsCanonicalDeliveryManagerWithoutObservationAuthority()
+    {
+        var selector = new ProcessRunManagerAgentSelector();
+        var ineligibleCanonicalManager = CreateAgent(
+            "Canonical Delivery Manager",
+            ["delivery", "manager"],
+            canObserveOtherAgents: false,
+            templateKey: DeliveryManagerAgentIdentity.TemplateKey,
+            id: DeliveryManagerAgentIdentity.AgentId);
+
+        Assert.Throws<InvalidOperationException>(() => selector.Select([ineligibleCanonicalManager], []));
     }
 
     [Fact]
@@ -286,10 +333,12 @@ public sealed class ProcessRunNarrativeGeneratorTests
         string name,
         IReadOnlyList<string> tags,
         bool canObserveOtherAgents,
-        Guid? providerProfileId = null)
+        Guid? providerProfileId = null,
+        string templateKey = "",
+        Guid? id = null)
     {
         return new AgentDefinition(
-            Guid.NewGuid(),
+            id ?? Guid.NewGuid(),
             name,
             "Manager",
             "Summary",
@@ -304,7 +353,7 @@ public sealed class ProcessRunNarrativeGeneratorTests
             EnableBackgroundResponses: false,
             ConfigurationJson: "{}",
             IsTemplate: false,
-            TemplateKey: string.Empty,
+            TemplateKey: templateKey,
             Permissions: AgentPermissionsPolicy.Default with
             {
                 CanObserveOtherAgents = canObserveOtherAgents

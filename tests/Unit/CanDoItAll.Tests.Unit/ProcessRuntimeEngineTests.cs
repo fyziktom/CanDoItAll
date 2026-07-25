@@ -416,6 +416,43 @@ public sealed class ProcessRuntimeEngineTests
     }
 
     [Fact]
+    public async Task Root_cancellation_barrier_cancels_open_work_before_terminal_finalization()
+    {
+        var unitOfWork = new RecordingUnitOfWork();
+        var engine = new ProcessRuntimeEngine(unitOfWork);
+        var token = DispatchClaimToken.New();
+        var state = NewState(
+            ProcessRuntimeStatus.Active,
+            NewStartStep(ProcessRuntimeStepStatus.Completed),
+            NewActivityStep(ProcessRuntimeStepStatus.Running, activeClaimToken: token),
+            claims:
+            [
+                new DispatchClaimState(
+                    token,
+                    ActivityStepId,
+                    OwnerId,
+                    DispatchClaimStatus.Claimed,
+                    1,
+                    Now,
+                    Now.AddMinutes(5),
+                    null,
+                    null)
+            ]);
+
+        var begin = await engine.BeginRootCancellationAsync(state, Context());
+        var finalize = await engine.FinalizeRootCancellationAsync(begin.State, Context(Now.AddSeconds(1)));
+
+        Assert.True(begin.Succeeded);
+        Assert.Equal(ProcessRuntimeStatus.CancelRequested, begin.State.Status);
+        Assert.Equal(ProcessRuntimeStepStatus.Cancelled, begin.State.Steps.Single(step => step.StepInstanceId == ActivityStepId).Status);
+        Assert.Equal(DispatchClaimStatus.Cancelled, begin.State.Claims.Single().Status);
+        Assert.Contains(begin.Events, runtimeEvent => runtimeEvent.EventType == ProcessRuntimeEventTypes.ProcessRunCancelRequested);
+        Assert.True(finalize.Succeeded);
+        Assert.Equal(ProcessRuntimeStatus.Cancelled, finalize.State.Status);
+        Assert.Contains(finalize.Events, runtimeEvent => runtimeEvent.EventType == ProcessRuntimeEventTypes.ProcessRunCancelled);
+    }
+
+    [Fact]
     public async Task Failed_strategy_result_terminally_fails_run_and_emits_failure_event()
     {
         var unitOfWork = new RecordingUnitOfWork();

@@ -1,4 +1,5 @@
 using CanDoItAll.Processes.Abstractions;
+using CanDoItAll.Processes.Builder;
 using CanDoItAll.Processes.Core;
 using CanDoItAll.Processes.Drivers.Abstractions;
 
@@ -280,7 +281,9 @@ public sealed record ProcessRuntimeMutation(
 public sealed record ProcessRuntimeCommitRequest(
     RuntimeCommandId CommandId,
     ProcessRuntimeStateSnapshot OriginalState,
-    ProcessRuntimeMutation Mutation);
+    ProcessRuntimeMutation Mutation,
+    ProcessRuntimeParentStepReference? ParentStepPrecondition = null,
+    ProcessInstancePlan? InitialPlan = null);
 
 public sealed record ProcessRuntimeCommitResult(
     ProcessRuntimeTransitionOutcome Outcome,

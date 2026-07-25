@@ -25,7 +25,8 @@ internal sealed class ProcessRunManagerAgentSelector
             .ThenBy(agent => agent.Name, StringComparer.OrdinalIgnoreCase)
             .FirstOrDefault()
             ?? throw new InvalidOperationException(
-                $"A process run narrative requires an active non-template agent tagged '{ProcessManagerTag}', " +
+                $"A process run narrative requires an active non-template agent tagged '{ProcessManagerTag}' " +
+                $"or identified as the canonical '{DeliveryManagerAgentIdentity.TemplateKey}' agent, " +
                 "authorized to observe other agents, and configured with a provider.");
     }
 
@@ -39,7 +40,8 @@ internal sealed class ProcessRunManagerAgentSelector
 
     private static bool HasProcessManagerIdentity(AgentDefinition agent)
     {
-        return agent.Tags.Any(tag =>
-            string.Equals(tag?.Trim(), ProcessManagerTag, StringComparison.OrdinalIgnoreCase));
+        return DeliveryManagerAgentIdentity.Matches(agent) ||
+               agent.Tags.Any(tag =>
+                   string.Equals(tag?.Trim(), ProcessManagerTag, StringComparison.OrdinalIgnoreCase));
     }
 }

@@ -39,14 +39,47 @@ internal static class ProcessAcceptanceCriteriaGate
         ProcessStepOutcomeResult output)
     {
         if (output.Status != ProcessStepOutcomeStatus.Completed ||
-            !IsAcceptanceCriteriaBranch(assignment, output.BranchOutcomeKey))
+            !assignment.LaunchVariables.TryGetValue(
+                ProcessRuntimeLaunchVariables.AcceptanceCriteriaAcceptedBranchOutcomeKeys,
+                out var rawBranchKeys))
         {
             return null;
         }
 
-        if (!assignment.LaunchVariables.TryGetValue(ProcessRuntimeLaunchVariables.AcceptanceCriteriaMatrix, out var rawMatrix) ||
-            !ProcessAcceptanceCriteriaMatrixJson.TryDeserialize(rawMatrix, out var matrix) ||
-            matrix.RequiredCriteria.Count == 0)
+        if (!ProcessLaunchVariableStringList.TryParse(
+                rawBranchKeys,
+                out var acceptanceBranchKeys))
+        {
+            return CreateInvalidContractIssue(
+                assignment,
+                output.BranchOutcomeKey,
+                "acceptance branch keys");
+        }
+
+        if (!acceptanceBranchKeys.Contains(
+                output.BranchOutcomeKey.Trim(),
+                StringComparer.OrdinalIgnoreCase))
+        {
+            return null;
+        }
+
+        if (!assignment.LaunchVariables.TryGetValue(
+                ProcessRuntimeLaunchVariables.AcceptanceCriteriaMatrix,
+                out var rawMatrix))
+        {
+            return null;
+        }
+
+        if (string.IsNullOrWhiteSpace(rawMatrix) ||
+            !ProcessAcceptanceCriteriaMatrixJson.TryDeserialize(rawMatrix, out var matrix))
+        {
+            return CreateInvalidContractIssue(
+                assignment,
+                output.BranchOutcomeKey,
+                "acceptance-criteria matrix");
+        }
+
+        if (matrix.RequiredCriteria.Count == 0)
         {
             return null;
         }
@@ -83,8 +116,12 @@ internal static class ProcessAcceptanceCriteriaGate
             return false;
         }
 
-        return SplitLaunchVariableList(rawBranchKeys)
-            .Contains(branchOutcomeKey.Trim(), StringComparer.OrdinalIgnoreCase);
+        return ProcessLaunchVariableStringList.TryParse(
+                   rawBranchKeys,
+                   out var branchKeys) &&
+               branchKeys.Contains(
+                   branchOutcomeKey.Trim(),
+                   StringComparer.OrdinalIgnoreCase);
     }
 
     internal static bool HasPassedCriterionEvidence(
@@ -137,12 +174,15 @@ internal static class ProcessAcceptanceCriteriaGate
         return true;
     }
 
-    internal static IReadOnlyList<string> SplitLaunchVariableList(string value)
-        => string.IsNullOrWhiteSpace(value)
-            ? []
-            : value
-                .Split([';', ',', '\n', '\r'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-                .Where(item => !string.IsNullOrWhiteSpace(item))
-                .Distinct(StringComparer.OrdinalIgnoreCase)
-                .ToArray();
+    private static ProcessCompletionIssue CreateInvalidContractIssue(
+        ProcessRuntimeStepAssignment assignment,
+        string branchOutcomeKey,
+        string invalidPart)
+        => new(
+            "process.adapter.acceptance_criteria_contract_invalid",
+            $"Step '{assignment.StepKey}' selected acceptance branch '{branchOutcomeKey}', but its {invalidPart} is malformed or violates the typed criterion contract. The launch contract must be repaired before acceptance can continue.",
+            $"{assignment.RunId}:{assignment.StepInstanceId}:acceptance-criteria-contract-invalid:{branchOutcomeKey}:{invalidPart}",
+            assignment.ProducedArtifactSlotIds,
+            ProcessDiagnosticRetrySafety.UnsafeToRetry,
+            ProcessDiagnosticIdempotencyClassification.Idempotent);
 }

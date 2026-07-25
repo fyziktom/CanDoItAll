@@ -283,6 +283,10 @@ public sealed class ProcessDefinitionCatalogProjectionTests
         Assert.Contains("Return Succeeded / Completed once product mutation and the grounded change-set artifact are complete", codeChange.Notes, StringComparison.Ordinal);
         Assert.Contains("expected values and recorded history follow from the exact action sequence", testContract.Notes, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("Source-text, markup-content, selector-presence, or copied-label assertions may prove content hygiene only", testContract.Notes, StringComparison.Ordinal);
+        Assert.Contains("kind=ProductAcceptance and required=true", testContract.Notes, StringComparison.Ordinal);
+        Assert.Contains("kind=DeliveryPlanning items separately as nonblocking", testContract.Notes, StringComparison.Ordinal);
+        Assert.Contains("typed storage adapter or coordinator", testContract.Notes, StringComparison.Ordinal);
+        Assert.Contains("browser_evaluate", testContract.Notes, StringComparison.Ordinal);
         Assert.Contains("A visible control or product shell without the assigned event wiring and observable state transition is incomplete", codeChange.Notes, StringComparison.Ordinal);
         Assert.Contains(
             codeChange.BranchOutcomes,
@@ -327,6 +331,12 @@ public sealed class ProcessDefinitionCatalogProjectionTests
         Assert.Contains("product proof failure is a completed validation decision", targetedValidation.Notes, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("parent runtime-command and screenshot writeback steps", targetedRecheck.Notes, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("Branch outcome key: feature-repair-escalation", targetedRecheck.Notes, StringComparison.Ordinal);
+        Assert.Contains("kind=ProductAcceptance and required=true", targetedValidation.Notes, StringComparison.Ordinal);
+        Assert.Contains("kind=DeliveryPlanning items separately as nonblocking", targetedValidation.Notes, StringComparison.Ordinal);
+        Assert.Contains("kind=ProductAcceptance and required=true", targetedRecheck.Notes, StringComparison.Ordinal);
+        Assert.Contains("kind=DeliveryPlanning items separately as nonblocking", targetedRecheck.Notes, StringComparison.Ordinal);
+        Assert.Contains("live browser outage", targetedValidation.Notes, StringComparison.Ordinal);
+        Assert.Contains("live browser outage", targetedRecheck.Notes, StringComparison.Ordinal);
         Assert.Contains("repair-attempt-incomplete", targetedRecheckDoc, StringComparison.Ordinal);
         Assert.Contains("missing build/test receipts are not a reason to escalate", targetedRecheck.Notes, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("required current-run focused proof was attempted", targetedRecheck.ExceptionPolicySummary, StringComparison.OrdinalIgnoreCase);
@@ -354,6 +364,10 @@ public sealed class ProcessDefinitionCatalogProjectionTests
         Assert.Contains("do not carry that other domain into scope", featureIntake.Notes, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("Return Succeeded / Completed once the grounded scope packet is written", featureIntake.Notes, StringComparison.Ordinal);
         Assert.Contains("Do not return NeedsManager", featureIntake.Notes, StringComparison.Ordinal);
+        Assert.Contains("including an explicit timeline", featureIntake.Notes, StringComparison.Ordinal);
+        Assert.Contains("kind=ProductAcceptance and required=true", featureIntake.Notes, StringComparison.Ordinal);
+        Assert.Contains("kind=DeliveryPlanning items as nonblocking context", featureIntake.Notes, StringComparison.Ordinal);
+        Assert.Contains("without a separate typed decision gate", featureIntake.Notes, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -440,6 +454,10 @@ public sealed class ProcessDefinitionCatalogProjectionTests
         Assert.Contains("ask a manager to assign another agent", qaRecheck.ExceptionPolicySummary, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("workspace_analyze_images", qaValidation.EvidenceContractSummary, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("workspace_analyze_images", qaRecheck.EvidenceContractSummary, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("kind=ProductAcceptance and required=true", qaValidation.Notes, StringComparison.Ordinal);
+        Assert.Contains("kind=DeliveryPlanning items as nonblocking context", qaValidation.Notes, StringComparison.Ordinal);
+        Assert.Contains("kind=ProductAcceptance and required=true", qaRecheck.Notes, StringComparison.Ordinal);
+        Assert.Contains("kind=DeliveryPlanning items as nonblocking context", qaRecheck.Notes, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -497,8 +515,19 @@ public sealed class ProcessDefinitionCatalogProjectionTests
     [Fact]
     public void Dotnet_solution_setup_routes_repairable_first_build_failures_through_setup_repair()
     {
-        var loader = new ProcessTemplatePackLoader(Path.Combine(FindRepositoryRoot(), "Templates", "Processes"));
+        var repositoryRoot = FindRepositoryRoot();
+        var loader = new ProcessTemplatePackLoader(Path.Combine(repositoryRoot, "Templates", "Processes"));
         var definition = loader.LoadDefinition("dotnet-solution-setup");
+        var setupStepsRoot = Path.Combine(
+            repositoryRoot,
+            "Templates",
+            "Processes",
+            "processes",
+            "dotnet-solution-setup",
+            "steps");
+        var validateDoc = File.ReadAllText(Path.Combine(setupStepsRoot, "validate-first-build.md"));
+        var repairDoc = File.ReadAllText(Path.Combine(setupStepsRoot, "repair-solution-setup.md"));
+        var revalidateDoc = File.ReadAllText(Path.Combine(setupStepsRoot, "validate-first-build-after-repair.md"));
 
         var validate = Assert.Single(definition.Steps, step => string.Equals(step.Key, "validate-first-build", StringComparison.Ordinal));
         var create = Assert.Single(definition.Steps, step => string.Equals(step.Key, "create-dotnet-project", StringComparison.Ordinal));
@@ -511,9 +540,29 @@ public sealed class ProcessDefinitionCatalogProjectionTests
 
         Assert.Contains(validate.BranchOutcomes, outcome => string.Equals(outcome.Key, "setup-validated", StringComparison.Ordinal));
         Assert.Contains(validate.BranchOutcomes, outcome => string.Equals(outcome.Key, "setup-repair-required", StringComparison.Ordinal));
+        Assert.True(
+            validate.CompletionPolicy is null ||
+            validate.CompletionPolicy.AcceptanceCriteriaRequiredBranchOutcomeKeys.Count == 0);
         Assert.Contains("Select setup-repair-required", validate.ExceptionPolicySummary, StringComparison.Ordinal);
         Assert.Contains("ProductCompletionRequiredToolReceipts", validate.Notes, StringComparison.Ordinal);
         Assert.Contains("successful current-run receipts for restore, build, and test", validate.Notes, StringComparison.Ordinal);
+        Assert.Contains(
+            "Generated starter/demo UI or content and a passing placeholder template test are expected",
+            validate.Notes,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "Do not assess product acceptance criteria, feature completeness, substantive product-test coverage",
+            validate.Notes,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "Missing feature behavior or substantive product tests do not qualify",
+            validate.BranchOutcomes.Single(outcome =>
+                string.Equals(outcome.Key, "setup-repair-required", StringComparison.Ordinal)).Description,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "must not select `setup-repair-required`",
+            validateDoc,
+            StringComparison.Ordinal);
 
         Assert.Contains("ProductCompletionRequiredToolReceipts", create.Notes, StringComparison.Ordinal);
         Assert.Contains("workspace_pwsh_run_script", create.Notes, StringComparison.Ordinal);
@@ -554,6 +603,14 @@ public sealed class ProcessDefinitionCatalogProjectionTests
         Assert.Contains("DotNetAddTestProjectScript", repair.Notes, StringComparison.Ordinal);
         Assert.Contains("System.IO.Path.GetRelativePath", repair.Notes, StringComparison.Ordinal);
         Assert.Contains("Do not hardcode escaped relative ProjectReference strings", repair.Notes, StringComparison.Ordinal);
+        Assert.Contains(
+            "never treat them, absent feature behavior, unmet product acceptance criteria, or missing substantive product tests as setup repair targets",
+            repair.Notes,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "Never treat them, absent feature behavior, unmet product acceptance criteria, or missing substantive product tests as setup repair targets",
+            repairDoc,
+            StringComparison.Ordinal);
         Assert.Equal(ProcessTemplateStepExecutionClasses.RuntimeOwnedToolPlan, repair.ExecutionClass);
         Assert.Equal("dotnet.solution-setup", repair.ExecutionContract?.RuntimeOwnedExecutorKey);
         Assert.Equal("dotnet.repair-solution-setup", repair.ExecutionContract?.DeterministicToolPlan?.PlanKey);
@@ -562,10 +619,26 @@ public sealed class ProcessDefinitionCatalogProjectionTests
         Assert.Equal("repair-solution-setup", revalidate.DependsOnStepKey);
         Assert.Contains(revalidate.BranchOutcomes, outcome => string.Equals(outcome.Key, "setup-validated", StringComparison.Ordinal));
         Assert.Contains(revalidate.BranchOutcomes, outcome => string.Equals(outcome.Key, "setup-repair-escalation", StringComparison.Ordinal));
+        Assert.True(
+            revalidate.CompletionPolicy is null ||
+            revalidate.CompletionPolicy.AcceptanceCriteriaRequiredBranchOutcomeKeys.Count == 0);
         Assert.Contains(ProcessOperationContractNames.RunValidation, revalidate.AllowedOperations);
         Assert.DoesNotContain(ProcessOperationContractNames.MutateProductTarget, revalidate.AllowedOperations);
         Assert.Contains("ProductCompletionRequiredToolReceipts", revalidate.Notes, StringComparison.Ordinal);
         Assert.Contains("successful current-run receipts for restore, build, and test", revalidate.Notes, StringComparison.Ordinal);
+        Assert.Contains(
+            "must not select setup-repair-escalation",
+            revalidate.Notes,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "Missing feature behavior or substantive product tests do not qualify",
+            revalidate.BranchOutcomes.Single(outcome =>
+                string.Equals(outcome.Key, "setup-repair-escalation", StringComparison.Ordinal)).Description,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "must not select `setup-repair-escalation`",
+            revalidateDoc,
+            StringComparison.Ordinal);
 
         Assert.Equal("validate-first-build", handoff.DependsOnStepKey);
         Assert.Equal("setup-validated", handoff.DependsOnBranchOutcomeKey);
@@ -1053,6 +1126,27 @@ public sealed class ProcessDefinitionCatalogProjectionTests
         Assert.Contains("known failed proof", validationDoc, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("not residual risk", validationDoc, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("exact failing evidence", validationDoc, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("kind=ProductAcceptance and required=true", validation.Notes, StringComparison.Ordinal);
+        Assert.Contains("kind=DeliveryPlanning items as nonblocking context", validation.Notes, StringComparison.Ordinal);
+        Assert.Contains("artifacts/process-runs/<current-process-run-id>/browser/", validation.Notes, StringComparison.Ordinal);
+        Assert.Contains("recapture once with the full managed filename", validation.Notes, StringComparison.Ordinal);
+        Assert.Contains("source target first and delivered current-run screenshot second", validation.Notes, StringComparison.Ordinal);
+        Assert.Contains("typed storage adapter or coordinator", validationDoc, StringComparison.Ordinal);
+
+        var revalidationDoc = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Templates",
+            "Processes",
+            "processes",
+            "dotnet-quality-repair",
+            "steps",
+            "revalidate-bughunt-repair.md"));
+        Assert.Contains("kind=ProductAcceptance and required=true", revalidation.Notes, StringComparison.Ordinal);
+        Assert.Contains("kind=DeliveryPlanning items as nonblocking context", revalidation.Notes, StringComparison.Ordinal);
+        Assert.Contains("artifacts/process-runs/<current-process-run-id>/browser/", revalidation.Notes, StringComparison.Ordinal);
+        Assert.Contains("recapture once with the full managed filename", revalidation.Notes, StringComparison.Ordinal);
+        Assert.Contains("source target first and delivered current-run screenshot second", revalidation.Notes, StringComparison.Ordinal);
+        Assert.Contains("typed storage adapter or coordinator", revalidationDoc, StringComparison.Ordinal);
 
         var repairDoc = File.ReadAllText(Path.Combine(
             repositoryRoot,
@@ -1183,6 +1277,47 @@ public sealed class ProcessDefinitionCatalogProjectionTests
             Assert.DoesNotContain(ProcessOperationContractNames.MutateProductTarget, step.AllowedOperations);
             Assert.DoesNotContain(ProcessOperationContractNames.LaunchRuntime, step.AllowedOperations);
             Assert.DoesNotContain(ProcessOperationContractNames.CaptureRuntimeProof, step.AllowedOperations);
+        }
+    }
+
+    [Fact]
+    public void Runtime_command_writeback_requires_durable_create_and_readback_receipts()
+    {
+        var loader = new ProcessTemplatePackLoader(Path.Combine(FindRepositoryRoot(), "Templates", "Processes"));
+        var writebackDefinition = loader.LoadDefinition("dotnet-runtime-command-writeback");
+        var writebackStep = Assert.Single(
+            writebackDefinition.Steps,
+            step => string.Equals(step.Key, "write-run-command-nodes", StringComparison.Ordinal));
+
+        Assert.Contains(
+            writebackStep.CapabilityScope.RequiredReceipts,
+            receipt => string.Equals(receipt.ToolName, "project_structure_node_create", StringComparison.Ordinal) &&
+                       receipt.Kind == ProcessRequiredToolReceiptKind.RuntimeToolName &&
+                       receipt.Activation == ProcessRequiredToolReceiptActivation.Always &&
+                       receipt.Purpose == ProcessRequiredToolReceiptPurpose.AcceptanceProof);
+        Assert.Contains(
+            writebackStep.CapabilityScope.RequiredReceipts,
+            receipt => string.Equals(receipt.ToolName, "project_structure_read", StringComparison.Ordinal) &&
+                       receipt.Kind == ProcessRequiredToolReceiptKind.RuntimeToolName &&
+                       receipt.Activation == ProcessRequiredToolReceiptActivation.Always &&
+                       receipt.Purpose == ProcessRequiredToolReceiptPurpose.AcceptanceProof);
+
+        var deliveryDefinition = loader.LoadDefinition("software-delivery");
+        foreach (var stepKey in new[] { "record-runtime-commands", "record-runtime-commands-after-repair" })
+        {
+            var step = Assert.Single(
+                deliveryDefinition.Steps,
+                candidate => string.Equals(candidate.Key, stepKey, StringComparison.Ordinal));
+            var contract = Assert.IsType<ProcessSubprocessContract>(step.SubprocessContract);
+
+            Assert.Contains(
+                contract.RequiredChildReceipts,
+                receipt => string.Equals(receipt.ToolName, "project_structure_node_create", StringComparison.Ordinal) &&
+                           string.Equals(receipt.RuntimeToolProviderKey, "project-structure.runtime-tools", StringComparison.Ordinal));
+            Assert.Contains(
+                contract.RequiredChildReceipts,
+                receipt => string.Equals(receipt.ToolName, "project_structure_read", StringComparison.Ordinal) &&
+                           string.Equals(receipt.RuntimeToolProviderKey, "project-structure.runtime-tools", StringComparison.Ordinal));
         }
     }
 
@@ -2532,7 +2667,7 @@ public sealed class ProcessDefinitionCatalogProjectionTests
         var start = Assert.Single(recomposed.Projection.Nodes, node => node.StepKind == ProcessDefinitionStepKind.Start);
         var successfulTerminal = Assert.Single(recomposed.Projection.Nodes, node =>
             node.Kind == ProcessDefinitionCanvasNodeKind.Step &&
-            node.StepKey == new ProcessDefinitionStepKey("approve-merge-after-qa"));
+            node.StepKey == new ProcessDefinitionStepKey("approve-merge"));
         var failure = Assert.Single(recomposed.Projection.Nodes, node =>
             node.Kind == ProcessDefinitionCanvasNodeKind.Step &&
             node.StepKey == new ProcessDefinitionStepKey("capture-workflow-failure"));

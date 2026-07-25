@@ -100,8 +100,6 @@ public sealed class ProcessLaunchApplicationService(
         var assignments = preparation.Assignments;
         var launchPlan = preparation.LaunchPlan ?? throw new InvalidOperationException("Prepared process launch did not include a launch plan view.");
 
-        await planStore.PersistAsync(plan, cancellationToken).ConfigureAwait(false);
-
         var initialState = BuildInitialState(
             plan,
             selected.Definition,
@@ -114,17 +112,27 @@ public sealed class ProcessLaunchApplicationService(
             createContext,
             ProcessRuntimeEventTypes.ProcessRunCreated,
             plan.PlanHash);
+        var parentStepPrecondition = ProcessRuntimeLaunchVariables.TryReadParentStep(
+            request.Variables,
+            out var parentStep)
+            ? parentStep
+            : (ProcessRuntimeParentStepReference?)null;
         var createCommit = await unitOfWork.CommitAsync(
-            new ProcessRuntimeCommitRequest(createContext.CommandId, initialState, createMutation),
+            new ProcessRuntimeCommitRequest(
+                createContext.CommandId,
+                initialState,
+                createMutation,
+                parentStepPrecondition,
+                plan),
             cancellationToken).ConfigureAwait(false);
         if (!createCommit.Succeeded)
         {
             return new ProcessLaunchResult(
                 plan.Definition.DefinitionId,
                 plan.Header.PlanId,
-                initialState.RunId,
+                RunId: null,
                 ProcessLaunchStage.Failed,
-                BuildRunRoute(initialState.RunId, request.ProjectId),
+                Route: string.Empty,
                 launchPlan,
                 createCommit.Diagnostics.Select(diagnostic => diagnostic.Message).ToArray());
         }

@@ -85,6 +85,11 @@ public sealed class ProcessRuntimeDispatchApplicationService(
                 return new ProcessRuntimeDispatchResult(runId, ToStage(state.Status), state.Status, diagnostics);
             }
 
+            if (state.Status == ProcessRuntimeStatus.CancelRequested)
+            {
+                return new ProcessRuntimeDispatchResult(runId, ToStage(state.Status), state.Status, diagnostics);
+            }
+
             var plan = await planStore.LoadAsync(state.PlanId, cancellationToken).ConfigureAwait(false)
                 ?? throw new InvalidOperationException($"Process run '{runId}' references missing plan '{state.PlanId}'.");
             if (state.Status == ProcessRuntimeStatus.Created)

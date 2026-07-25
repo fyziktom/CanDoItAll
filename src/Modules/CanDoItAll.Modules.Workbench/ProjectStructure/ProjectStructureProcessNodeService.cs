@@ -63,6 +63,12 @@ public sealed class ProjectStructureProcessNodeService(
         AgentProcessStepAllowsProductMutationVariableName
     ];
 
+    private static readonly string[] AcceptanceContractLaunchVariableKeys =
+    [
+        ProcessRuntimeLaunchVariables.AcceptanceCriteriaMatrix,
+        ProcessRuntimeLaunchVariables.ProductAcceptanceCriteriaContract
+    ];
+
     private static readonly string[] SubprocessDerivedScopeLaunchVariableKeys =
     [
         ProjectStructureProcessLaunchContext.ContextSummaryVariableName,
@@ -1101,7 +1107,8 @@ public sealed class ProjectStructureProcessNodeService(
                 var key = NormalizeOptional(item.Key);
                 if (key is not null &&
                     !IsSubprocessReservedLaunchVariableKey(key) &&
-                    !IsSubprocessDerivedScopeLaunchVariableKey(key))
+                    !IsSubprocessDerivedScopeLaunchVariableKey(key) &&
+                    !IsAcceptanceContractLaunchVariableKey(key))
                 {
                     variables[key] = NormalizeLaunchVariableValue(item.Value);
                 }
@@ -1184,7 +1191,8 @@ public sealed class ProjectStructureProcessNodeService(
         foreach (var item in launchVariables)
         {
             var key = NormalizeOptional(item.Key);
-            if (key is null)
+            if (key is null ||
+                IsAcceptanceContractLaunchVariableKey(key))
             {
                 continue;
             }
@@ -1210,6 +1218,9 @@ public sealed class ProjectStructureProcessNodeService(
 
     private static bool IsSubprocessDerivedScopeLaunchVariableKey(string key)
         => SubprocessDerivedScopeLaunchVariableKeys.Contains(key.Trim(), StringComparer.OrdinalIgnoreCase);
+
+    private static bool IsAcceptanceContractLaunchVariableKey(string key)
+        => AcceptanceContractLaunchVariableKeys.Contains(key.Trim(), StringComparer.OrdinalIgnoreCase);
 
     private static string NormalizeLaunchVariableValue(object? value)
     {

@@ -32,6 +32,9 @@ public partial class ProjectStructurePage
     [Inject]
     private ProcessLaunchVariablePreparationService ProcessLaunchVariablePreparationService { get; set; } = default!;
 
+    [Inject]
+    private ProjectStructureTaskResourceAttachmentService TaskResourceAttachmentService { get; set; } = default!;
+
     private ProjectStructureProcessLinkDialogState? processLinkDialog;
     private ProjectStructureProcessStartDialogState? processStartDialog;
     private CancellationTokenSource? processStartHistoricalEstimateRefreshCts;
@@ -112,40 +115,68 @@ public partial class ProjectStructurePage
             return;
         }
 
-        if (!processLinkDialog.SelectedDefinitionId.HasValue)
+        var dialog = processLinkDialog;
+        if (!dialog.SelectedDefinitionId.HasValue)
         {
-            processLinkDialog = processLinkDialog with { Error = "Select a process before continuing." };
+            processLinkDialog = dialog with { Error = "Select a process before continuing." };
             await InvokeAsync(StateHasChanged);
             return;
         }
 
-        var selectedOption = processLinkDialog.Options
-            .FirstOrDefault(option => option.DefinitionId == processLinkDialog.SelectedDefinitionId.Value);
+        var selectedOption = dialog.Options
+            .FirstOrDefault(option => option.DefinitionId == dialog.SelectedDefinitionId.Value);
         if (selectedOption is null)
         {
-            processLinkDialog = processLinkDialog with { Error = "The selected process is no longer available." };
+            processLinkDialog = dialog with { Error = "The selected process is no longer available." };
             await InvokeAsync(StateHasChanged);
             return;
         }
 
         try
         {
-            await ProjectWorkbenchService.LinkObjectsAsync(
-                ProjectId,
-                processLinkDialog.SourceNodeId,
-                ProjectStructureProcessNodeKeys.BuildProcessDefinitionNodeKey(selectedOption.DefinitionId),
-                ProjectObjectLinkKind.Uses);
+            var sourceNode = ResolveNode(dialog.SourceNodeId)
+                ?? throw new InvalidOperationException("The selected project-structure node is no longer available.");
+            if (IsCanonicalTaskNode(sourceNode))
+            {
+                var execution = ProjectStructureTaskEditStatePolicy.Read(sourceNode).Execution;
+                await TaskResourceAttachmentService.AttachAsync(
+                    ProjectId,
+                    sourceNode.Id,
+                    new ProjectStructureTaskResourceAttachRequest(
+                        new ProjectStructureTaskResourceSelection(
+                            ProjectStructureTaskResourceKind.Process,
+                            selectedOption.DefinitionId),
+                        execution),
+                    CreateProjectStructureUiAgentContext());
+            }
+            else
+            {
+                await ProjectWorkbenchService.LinkObjectsAsync(
+                    ProjectId,
+                    sourceNode.Id,
+                    ProjectStructureProcessNodeKeys.BuildProcessDefinitionNodeKey(selectedOption.DefinitionId),
+                    ProjectObjectLinkKind.Uses);
+            }
         }
-        catch (InvalidOperationException exception)
+        catch (Exception exception) when (exception is not OperationCanceledException)
         {
-            processLinkDialog = processLinkDialog with { Error = exception.Message };
+            var message = exception is ProjectStructureAgentException or InvalidOperationException or ArgumentException
+                ? exception.GetBaseException().Message
+                : "The process could not be linked. Check the application logs and try again.";
+            processLinkDialog = dialog with { Error = message };
+            Logger.LogWarning(
+                exception,
+                "Project structure process definition link failed. ProjectId={ProjectId} SourceNodeId={SourceNodeId} ProcessDefinitionId={ProcessDefinitionId}",
+                ProjectId,
+                dialog.SourceNodeId,
+                selectedOption.DefinitionId);
             await InvokeAsync(StateHasChanged);
             return;
         }
 
-        var sourceNodeId = processLinkDialog.SourceNodeId;
+        var sourceNodeId = dialog.SourceNodeId;
         var processNodeId = ProjectStructureProcessNodeKeys.BuildProcessDefinitionNodeKey(selectedOption.DefinitionId);
-        workflowFeedback = $"{selectedOption.DisplayName} was linked to {processLinkDialog.SourceNodeTitle}.";
+        workflowFeedback = $"{selectedOption.DisplayName} was linked to {dialog.SourceNodeTitle}.";
         workflowFeedbackTone = "mint";
         processLinkDialog = null;
         await ReloadSurfaceAsync(sourceNodeId);
@@ -1198,6 +1229,12 @@ public partial class ProjectStructurePage
             return;
         }
 
+        if (ResolveNode(sourceNodeId) is { } sourceNode &&
+            IsCanonicalTaskNode(sourceNode))
+        {
+            return;
+        }
+
         try
         {
             await ProjectWorkbenchService.LinkObjectsAsync(
@@ -1206,9 +1243,9 @@ public partial class ProjectStructurePage
                 ProjectStructureProcessNodeKeys.BuildProcessRunNodeKey(runId.Value),
                 ProjectObjectLinkKind.Uses);
         }
-        catch (InvalidOperationException exception)
+        catch (Exception exception) when (exception is not OperationCanceledException)
         {
-            Logger.LogDebug(
+            Logger.LogWarning(
                 exception,
                 "Project structure process run link could not be created. ProjectId={ProjectId} SourceNodeId={SourceNodeId} RunId={RunId}",
                 ProjectId,
