@@ -12,6 +12,8 @@ internal sealed record ProcessCompletionGateContext(
     Guid? CurrentExecutionRunId)
 {
     public ProcessStepExecutionContract StepContract { get; init; } = ProcessStepExecutionContract.Empty;
+
+    public ParentSubprocessBridgedOutcome? VerifiedSubprocessOutcome { get; init; }
 }
 
 internal sealed record ProcessCompletionIssue(

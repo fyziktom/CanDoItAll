@@ -1,5 +1,6 @@
 using System.Text;
 using CanDoItAll.Processes.Abstractions;
+using CanDoItAll.Processes.Contracts;
 using CanDoItAll.Processes.Runtime;
 using CanDoItAll.Processes.Templates;
 
@@ -27,6 +28,7 @@ public sealed record ProcessStepBriefBuildRequest(
 
 public sealed class GenericProcessStepBriefBuilder : IProcessStepBriefBuilder
 {
+    private const string SubprocessLaunchToolName = "project_structure_process_subprocess_launch";
     private const int MaxLaunchVariableValueCharacters = 2400;
     private const int MaxAcceptanceCriteriaContractCharacters = 12000;
     private const int MaxExecutionGuidanceCharacters = 16000;
@@ -391,6 +393,18 @@ public sealed class GenericProcessStepBriefBuilder : IProcessStepBriefBuilder
         var snapshotName = string.IsNullOrWhiteSpace(step.SubprocessDefinitionSnapshotName)
             ? "not supplied"
             : step.SubprocessDefinitionSnapshotName.Trim();
+        if (IsRuntimeOwnedSubprocess(step))
+        {
+            return $"""
+            - Child process definition key: {subprocessKey}
+            - Child definition snapshot name: {snapshotName}
+            - Launch ownership: process runtime owned
+            - Completion rule: the process runtime launches, defers, and completes this parent step from typed child evidence. Do not call {SubprocessLaunchToolName} and do not hand-author a parent handoff from a generic child folder.
+            - Accepted evidence rule: the runtime accepts only the typed child output rows listed in the subprocess parent bridge contract.
+            - Parent artifact rule: the parent artifact is runtime-synthesized from accepted child evidence using the materialization mode in the typed contract.
+            """;
+        }
+
         var completionRule = string.IsNullOrWhiteSpace(step.SubprocessProcessKey)
             ? "This step is marked as a subprocess but has no child process definition key. Return a blocked result unless upstream evidence already supplies the missing child run."
             : "Complete only after the child process result and required child artifacts are available through the configured subprocess driver. A stopped child run is historical evidence, not an active wait; inspect it, then complete from valid evidence or propagate a concrete child blocker. Relaunch only when the stopped child has no blocker/escalation evidence and the missing evidence is recoverable by another child attempt.";
@@ -403,6 +417,9 @@ public sealed class GenericProcessStepBriefBuilder : IProcessStepBriefBuilder
         - Child-outcome rule: when the subprocess launch tool returns ParentDeferredOutcomeJson, submit that JSON exactly. Running children defer the parent; Completed children complete the parent from child evidence; stopped children propagate their concrete blocker. Do not relaunch a Blocked child or a child with escalation/no-go evidence.
         """;
     }
+
+    private static bool IsRuntimeOwnedSubprocess(ProcessTemplateDefinitionStepDocument step)
+        => step.SubprocessContract?.LaunchMode == ProcessSubprocessLaunchMode.RuntimeOwned;
 
     private static string BuildStepArtifactPath(string artifactRoot, string stepKey)
         => $"{artifactRoot}/steps/{SanitizePathSegment(stepKey)}.md";

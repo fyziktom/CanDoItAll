@@ -1,8 +1,8 @@
 {
   "PackKey": "candoitall-process-template-pack",
   "Name": "CanDoItAll process template pack (current architecture aligned)",
-  "Version": "2.1.51-template-path-variants",
-  "GeneratedAtUtc": "2026-07-12T08:54:00Z",
+  "Version": "2.1.52-simple-app-delivery",
+  "GeneratedAtUtc": "2026-07-25T00:00:00Z",
   "SourceFrameworkKeys": [
     "nist-ssdf",
     "nist-ssdf-ai",
@@ -69,6 +69,10 @@
     {
       "Key": "blazor-app-delivery",
       "RelativePath": "processes/blazor-app-delivery"
+    },
+    {
+      "Key": "simple-app-delivery",
+      "RelativePath": "processes/simple-app-delivery"
     },
     {
       "Key": "blazor-app-repair-fix",

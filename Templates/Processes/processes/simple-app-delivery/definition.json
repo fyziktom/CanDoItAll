@@ -1,0 +1,916 @@
+{
+  "Key": "simple-app-delivery",
+  "DisplayName": "Simple application delivery",
+  "Summary": "Compact multi-team delivery for small local UI, API, console, or library applications.",
+  "ValueStatement": "A single implementation owner builds the requested application while independent QA proves the acceptance contract and a delivery manager contains unresolved outcomes.",
+  "CustomerName": "Application requester",
+  "OwnerName": "Delivery manager",
+  "InterfaceContractSummary": "Project structure and launch variables define the application profile, product root, acceptance criteria, and proof appropriate to the application kind.",
+  "ManagerOverrideSummary": "The manager may classify unsupported risk or close an unresolved repair with a bounded follow-up decision, but may not waive missing acceptance proof.",
+  "GovernanceNotes": "This lane is intentionally limited to small local applications. Production deployment, privileged operations, regulated data, payments, destructive migrations, and unresolved security boundaries require a specialist process.",
+  "ChangeSummary": "Adds a compact framework-neutral multi-team lane with one mutation owner, independent validation, one bounded repair, and manager-contained terminal paths.",
+  "GovernancePolicySummary": "Require only proof applicable to the declared application kind; do not impose browser or runtime gates on console and library work.",
+  "ConstitutionRuleSummary": "Agents own implementation and validation within the approved product root. Reviewers do not mutate concurrently with the implementation owner.",
+  "OperatingModeSummary": "Governed local development with bounded repair and no deployment execution.",
+  "SimulationReadinessSummary": "Suitable for low-risk sample applications such as games, calculators, small APIs, console tools, and libraries.",
+  "Criticality": "Medium",
+  "AutonomyLevel": "Guarded",
+  "OperatingMode": "GovernedLive",
+  "RoleUsages": [
+    {
+      "Key": "simple-app-manager",
+      "RoleResourceKey": "delivery-manager",
+      "DisplayName": "Simple app delivery manager",
+      "Purpose": "Resolve the delivery contract, keep scope bounded, and close normal or exceptional paths.",
+      "StaffingIntent": "Use an agent with project-structure, process-artifact, and delivery decision readiness.",
+      "PreferredExecutorKind": "agent",
+      "PreferredProjectAssignmentRole": "Manager",
+      "IsRequired": true,
+      "AllowsFallback": true,
+      "RequiresExplicitApproval": false,
+      "DefaultAllocationPercent": 45,
+      "Notes": "Owns process decisions but does not perform implementation work."
+    },
+    {
+      "Key": "simple-app-architect",
+      "RoleResourceKey": "solution-architect",
+      "DisplayName": "Simple app contract reviewer",
+      "Purpose": "Review the application profile, product boundary, and unsupported-risk classification.",
+      "StaffingIntent": "Use an agent able to review multiple application kinds without introducing framework assumptions.",
+      "PreferredExecutorKind": "agent",
+      "PreferredProjectAssignmentRole": "Reviewer",
+      "IsRequired": true,
+      "AllowsFallback": true,
+      "RequiresExplicitApproval": false,
+      "DefaultAllocationPercent": 25,
+      "Notes": "Reviews the contract and architecture; remains read-only during implementation."
+    },
+    {
+      "Key": "simple-app-engineer",
+      "RoleResourceKey": "lead-engineer",
+      "DisplayName": "Simple app implementation owner",
+      "Purpose": "Scaffold when necessary, implement the complete acceptance contract, and repair validation findings.",
+      "StaffingIntent": "Use an agent with workspace mutation, scaffolding, build, test, and local runtime readiness for the selected stack.",
+      "PreferredExecutorKind": "agent",
+      "PreferredProjectAssignmentRole": "TeamMember",
+      "IsRequired": true,
+      "AllowsFallback": true,
+      "RequiresExplicitApproval": false,
+      "DefaultAllocationPercent": 100,
+      "Notes": "The only role authorized to mutate the product target."
+    },
+    {
+      "Key": "simple-app-qa",
+      "RoleResourceKey": "qa-lead",
+      "DisplayName": "Simple app independent validator",
+      "Purpose": "Independently validate build, tests, runtime behavior, and acceptance proof appropriate to the application kind.",
+      "StaffingIntent": "Use an agent with read-only product access and the validation tools required by the application profile.",
+      "PreferredExecutorKind": "agent",
+      "PreferredProjectAssignmentRole": "Reviewer",
+      "IsRequired": true,
+      "AllowsFallback": true,
+      "RequiresExplicitApproval": false,
+      "DefaultAllocationPercent": 70,
+      "Notes": "Validates independently and routes concrete findings to the repair owner."
+    }
+  ],
+  "Steps": [
+    {
+      "Order": 0,
+      "Key": "resolve-app-profile",
+      "Title": "Resolve simple application contract",
+      "Subtitle": "Kind, root, criteria, proof, and risk",
+      "Notes": "Produce a typed application profile before implementation. Choose exactly one supported kind and one risk disposition.",
+      "StepKind": "Start",
+      "AllowsManualSkip": false,
+      "AllowsSafeRefusal": false,
+      "RequiresApproval": false,
+      "RequiresDecisionRecord": false,
+      "InputContractSummary": "Use project-structure source-of-truth data and explicit launch constraints.",
+      "OutputContractSummary": "Define application kind, stack, product root, entry point, acceptance criteria, applicable proof, exclusions, and risk disposition.",
+      "EvidenceContractSummary": "Cite the project/node identifiers and managed contract artifact.",
+      "DecisionRightsSummary": "The manager owns classification; the architect reviews boundary and risk.",
+      "ExceptionPolicySummary": "Select specialist-review-required only for a named unsupported-risk trigger; ambiguity alone is resolved conservatively in the contract.",
+      "TargetLeadHours": 1,
+      "DecisionRoleKey": "simple-app-manager",
+      "Dependencies": [],
+      "RoleAssignments": [
+        {
+          "RoleKey": "simple-app-manager",
+          "ResponsibilityKind": "Responsible",
+          "IsRequired": true,
+          "FallbackOrder": 0,
+          "RebindPolicySummary": "Rebind to a delivery-capable agent with project-structure access."
+        },
+        {
+          "RoleKey": "simple-app-architect",
+          "ResponsibilityKind": "Reviewer",
+          "IsRequired": true,
+          "FallbackOrder": 1,
+          "RebindPolicySummary": "Rebind to a framework-neutral architecture reviewer."
+        }
+      ],
+      "ArtifactExpectations": [
+        {
+          "Key": "simple-app-contract",
+          "TemplateKey": "project-structure-context-brief",
+          "Title": "Simple application delivery contract",
+          "ArtifactKind": "Brief",
+          "IsRequired": true,
+          "TrustRequirement": "ReviewRequired",
+          "SensitivityLevel": "Internal",
+          "RetentionDays": 365,
+          "AllowedFutureUsageSummary": "Reusable by implementation, QA, repair, and handoff.",
+          "ValidationRequirementSummary": "Must declare applicationKind as UI, WebApi, Console, or Library; technology stack; approved product root; entry project or command; acceptance criteria; applicable build, test, runtime, HTTP, browser, console, or consumer proof; and riskDisposition as SimpleSupported or SpecialistReviewRequired with a typed reason."
+        }
+      ],
+      "ArtifactInputs": [],
+      "BranchOutcomes": [
+        {
+          "Key": "simple-supported",
+          "Title": "Simple delivery supported",
+          "Description": "The work is local, bounded, and eligible for autonomous implementation.",
+          "RouteTargetKind": "SpecificStep",
+          "RouteTargetStepKey": "implement-application"
+        },
+        {
+          "Key": "specialist-review-required",
+          "Title": "Specialist review required",
+          "Description": "A typed deployment, privilege, security, data, payment, migration, or production-infrastructure risk is outside this lane.",
+          "RouteTargetKind": "SpecificStep",
+          "RouteTargetStepKey": "route-unsupported-risk"
+        }
+      ],
+      "ExecutionGuidanceRefs": [
+        "processes/simple-app-delivery/steps/resolve-app-profile.md"
+      ],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure",
+        "WriteManagedProcessArtifacts"
+      ],
+      "OperationTargetScope": "ExternalProductTargetReadOnly"
+    },
+    {
+      "Order": 1,
+      "Key": "implement-application",
+      "Title": "Implement simple application",
+      "Subtitle": "Single mutation owner",
+      "Notes": "Scaffold if required, then implement every acceptance criterion in the approved product root. Scaffolding is not a completed deliverable.",
+      "StepKind": "Work",
+      "AllowsManualSkip": false,
+      "AllowsSafeRefusal": false,
+      "RequiresApproval": false,
+      "RequiresDecisionRecord": false,
+      "InputContractSummary": "Use the accepted simple application contract.",
+      "OutputContractSummary": "Produce the complete product change set and a criterion-by-criterion self-review.",
+      "EvidenceContractSummary": "Record changed files and current build, test, or smoke receipts appropriate to the stack.",
+      "DecisionRightsSummary": "The implementation owner is the only product mutator.",
+      "ExceptionPolicySummary": "Block only on a concrete tool, access, policy, or environment failure with a failed receipt.",
+      "TargetLeadHours": 4,
+      "DependsOnStepKey": "resolve-app-profile",
+      "DependsOnBranchOutcomeKey": "simple-supported",
+      "DecisionRoleKey": "simple-app-engineer",
+      "Dependencies": [
+        {
+          "DependsOnStepKey": "resolve-app-profile",
+          "DependsOnBranchOutcomeKey": "simple-supported"
+        }
+      ],
+      "RoleAssignments": [
+        {
+          "RoleKey": "simple-app-engineer",
+          "ResponsibilityKind": "Responsible",
+          "IsRequired": true,
+          "FallbackOrder": 0,
+          "RebindPolicySummary": "Rebind only to an agent with mutation and validation readiness for the selected stack."
+        },
+        {
+          "RoleKey": "simple-app-architect",
+          "ResponsibilityKind": "Reviewer",
+          "IsRequired": true,
+          "FallbackOrder": 1,
+          "RebindPolicySummary": "Reviewer remains read-only while the implementation owner is active."
+        }
+      ],
+      "ArtifactExpectations": [
+        {
+          "Key": "simple-app-change-set",
+          "TemplateKey": "implementation-change-set",
+          "Title": "Simple application change set",
+          "ArtifactKind": "Deliverable",
+          "IsRequired": true,
+          "TrustRequirement": "ReviewRequired",
+          "SensitivityLevel": "Internal",
+          "RetentionDays": 365,
+          "AllowedFutureUsageSummary": "Reusable by QA, repair, and handoff.",
+          "ValidationRequirementSummary": "Must list created and changed files, scaffold command when used, entry project or command, acceptance-criteria mapping, validation receipts, and known risks."
+        }
+      ],
+      "ArtifactInputs": [
+        {
+          "SourceStepKey": "resolve-app-profile",
+          "ArtifactExpectationKey": "simple-app-contract"
+        }
+      ],
+      "BranchOutcomes": [],
+      "ExecutionGuidanceRefs": [
+        "processes/simple-app-delivery/steps/implement-application.md"
+      ],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure",
+        "ReadUpstreamArtifacts",
+        "MutateProductTarget",
+        "RunValidation",
+        "LaunchRuntime",
+        "CaptureRuntimeProof",
+        "WriteManagedProcessArtifacts"
+      ],
+      "OperationTargetScope": "ExternalProductTargetMutable"
+    },
+    {
+      "Order": 2,
+      "Key": "validate-application",
+      "Title": "Independently validate application",
+      "Subtitle": "Profile-specific build, test, and behavior proof",
+      "Notes": "Validate the approved product root without mutation and select exactly one branch.",
+      "StepKind": "Review",
+      "AllowsManualSkip": false,
+      "AllowsSafeRefusal": false,
+      "RequiresApproval": false,
+      "RequiresDecisionRecord": false,
+      "InputContractSummary": "Use the contract and implementation change set.",
+      "OutputContractSummary": "Produce independent proof and either accept quality or identify bounded repair findings.",
+      "EvidenceContractSummary": "Use only proof applicable to the declared application kind and cite current-run receipts.",
+      "DecisionRightsSummary": "QA owns the validation verdict; implementation evidence is input, not acceptance.",
+      "ExceptionPolicySummary": "Route product defects and proof gaps to repair-required. Block only when a concrete failure prevents a branch decision.",
+      "TargetLeadHours": 2,
+      "DependsOnStepKey": "implement-application",
+      "DecisionRoleKey": "simple-app-qa",
+      "Dependencies": [
+        {
+          "DependsOnStepKey": "implement-application",
+          "DependsOnBranchOutcomeKey": ""
+        }
+      ],
+      "RoleAssignments": [
+        {
+          "RoleKey": "simple-app-qa",
+          "ResponsibilityKind": "Responsible",
+          "IsRequired": true,
+          "FallbackOrder": 0,
+          "RebindPolicySummary": "Rebind only to an independent validator with the profile-required tools."
+        },
+        {
+          "RoleKey": "simple-app-manager",
+          "ResponsibilityKind": "Reviewer",
+          "IsRequired": true,
+          "FallbackOrder": 1,
+          "RebindPolicySummary": "The reviewer may clarify the contract but may not replace QA proof."
+        }
+      ],
+      "ArtifactExpectations": [
+        {
+          "Key": "simple-app-validation-evidence",
+          "TemplateKey": "",
+          "Title": "Simple application validation evidence",
+          "ArtifactKind": "Evidence",
+          "IsRequired": true,
+          "TrustRequirement": "ReviewRequired",
+          "SensitivityLevel": "Internal",
+          "RetentionDays": 365,
+          "AllowedFutureUsageSummary": "Reusable by repair and final handoff.",
+          "ValidationRequirementSummary": "Must include current build and test results plus profile-specific evidence: UI browser behavior and console status, WebApi HTTP assertions, Console invocation with output and exit code, or Library tests and consumer-facing contract proof."
+        }
+      ],
+      "ArtifactInputs": [
+        {
+          "SourceStepKey": "resolve-app-profile",
+          "ArtifactExpectationKey": "simple-app-contract"
+        },
+        {
+          "SourceStepKey": "implement-application",
+          "ArtifactExpectationKey": "simple-app-change-set"
+        }
+      ],
+      "BranchOutcomes": [
+        {
+          "Key": "quality-accepted",
+          "Title": "Quality accepted",
+          "Description": "All acceptance criteria have current applicable proof.",
+          "RouteTargetKind": "SpecificStep",
+          "RouteTargetStepKey": "handoff-results"
+        },
+        {
+          "Key": "repair-required",
+          "Title": "Repair required",
+          "Description": "Concrete product defects or proof gaps can be repaired within the approved scope.",
+          "RouteTargetKind": "SpecificStep",
+          "RouteTargetStepKey": "repair-findings"
+        }
+      ],
+      "CapabilityScope": {
+        "RequiredReceipts": [
+          {
+            "Key": "simple-app-build",
+            "Kind": "RuntimeToolName",
+            "ToolName": "workspace_dotnet_build",
+            "Activation": "WhenLaunchContextDeclaresTool",
+            "Purpose": "AcceptanceProof",
+            "ApplicableBranchOutcomeKeys": [
+              "quality-accepted"
+            ],
+            "Reason": "Require a current build only when the selected stack declares the .NET build tool."
+          },
+          {
+            "Key": "simple-app-test",
+            "Kind": "RuntimeToolName",
+            "ToolName": "workspace_dotnet_test",
+            "Activation": "WhenLaunchContextDeclaresTool",
+            "Purpose": "AcceptanceProof",
+            "ApplicableBranchOutcomeKeys": [
+              "quality-accepted"
+            ],
+            "Reason": "Require a current test run only when the selected stack declares the .NET test tool."
+          },
+          {
+            "Key": "simple-app-runtime",
+            "Kind": "RuntimeToolName",
+            "ToolName": "workspace_dotnet_run",
+            "Activation": "WhenLaunchContextDeclaresTool",
+            "Purpose": "AcceptanceProof",
+            "ApplicableBranchOutcomeKeys": [
+              "quality-accepted"
+            ],
+            "Reason": "Require local runtime startup only when the application profile declares it."
+          },
+          {
+            "Key": "simple-app-browser",
+            "Kind": "RuntimeToolName",
+            "ToolName": "browser_navigate",
+            "Activation": "WhenLaunchContextDeclaresTool",
+            "Purpose": "AcceptanceProof",
+            "ApplicableBranchOutcomeKeys": [
+              "quality-accepted"
+            ],
+            "Reason": "Require browser proof only for profiles that declare a browser-visible surface."
+          }
+        ]
+      },
+      "ExecutionGuidanceRefs": [
+        "processes/simple-app-delivery/steps/validate-application.md"
+      ],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure",
+        "ReadUpstreamArtifacts",
+        "RunValidation",
+        "LaunchRuntime",
+        "CaptureRuntimeProof",
+        "WriteManagedProcessArtifacts"
+      ],
+      "OperationTargetScope": "ExternalProductTargetReadOnly"
+    },
+    {
+      "Order": 3,
+      "Key": "repair-findings",
+      "Title": "Repair validation findings",
+      "Subtitle": "One bounded repair",
+      "Notes": "Repair only the findings from independent validation, then run the smallest relevant checks.",
+      "StepKind": "Work",
+      "AllowsManualSkip": false,
+      "AllowsSafeRefusal": false,
+      "RequiresApproval": false,
+      "RequiresDecisionRecord": false,
+      "InputContractSummary": "Use the contract and concrete QA findings.",
+      "OutputContractSummary": "Produce a bounded repair change set mapped to every finding.",
+      "EvidenceContractSummary": "Cite changed files and targeted check receipts.",
+      "DecisionRightsSummary": "The same implementation owner performs the only repair mutation cycle.",
+      "ExceptionPolicySummary": "Do not expand scope; record findings that cannot be repaired for manager resolution.",
+      "TargetLeadHours": 2,
+      "DependsOnStepKey": "validate-application",
+      "DependsOnBranchOutcomeKey": "repair-required",
+      "DecisionRoleKey": "simple-app-engineer",
+      "Dependencies": [
+        {
+          "DependsOnStepKey": "validate-application",
+          "DependsOnBranchOutcomeKey": "repair-required"
+        }
+      ],
+      "RoleAssignments": [
+        {
+          "RoleKey": "simple-app-engineer",
+          "ResponsibilityKind": "Responsible",
+          "IsRequired": true,
+          "FallbackOrder": 0,
+          "RebindPolicySummary": "Retain the implementation owner when possible; otherwise rebind with the full QA evidence."
+        },
+        {
+          "RoleKey": "simple-app-qa",
+          "ResponsibilityKind": "Reviewer",
+          "IsRequired": true,
+          "FallbackOrder": 1,
+          "RebindPolicySummary": "QA remains read-only and does not pre-accept the repair."
+        }
+      ],
+      "ArtifactExpectations": [
+        {
+          "Key": "simple-app-repair-change-set",
+          "TemplateKey": "implementation-change-set",
+          "Title": "Simple application repair change set",
+          "ArtifactKind": "Deliverable",
+          "IsRequired": true,
+          "TrustRequirement": "ReviewRequired",
+          "SensitivityLevel": "Internal",
+          "RetentionDays": 365,
+          "AllowedFutureUsageSummary": "Reusable by revalidation and repaired handoff.",
+          "ValidationRequirementSummary": "Must map every QA finding to cause, changed files, targeted checks, and disposition."
+        }
+      ],
+      "ArtifactInputs": [
+        {
+          "SourceStepKey": "validate-application",
+          "ArtifactExpectationKey": "simple-app-validation-evidence"
+        }
+      ],
+      "BranchOutcomes": [],
+      "ExecutionGuidanceRefs": [
+        "processes/simple-app-delivery/steps/repair-findings.md"
+      ],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure",
+        "ReadUpstreamArtifacts",
+        "MutateProductTarget",
+        "RunValidation",
+        "LaunchRuntime",
+        "CaptureRuntimeProof",
+        "WriteManagedProcessArtifacts"
+      ],
+      "OperationTargetScope": "ExternalProductTargetMutable"
+    },
+    {
+      "Order": 4,
+      "Key": "revalidate-repair",
+      "Title": "Revalidate repaired application",
+      "Subtitle": "Fresh independent proof",
+      "Notes": "Repeat the applicable acceptance proof against the repaired product root and select exactly one branch.",
+      "StepKind": "Review",
+      "AllowsManualSkip": false,
+      "AllowsSafeRefusal": false,
+      "RequiresApproval": false,
+      "RequiresDecisionRecord": false,
+      "InputContractSummary": "Use the original contract, QA findings, and repair change set.",
+      "OutputContractSummary": "Produce fresh proof and either accept the repaired application or route unresolved findings to the manager.",
+      "EvidenceContractSummary": "Do not reuse stale pre-repair success receipts.",
+      "DecisionRightsSummary": "Independent QA owns the repaired verdict.",
+      "ExceptionPolicySummary": "Any remaining defect, proof gap, or concrete environment blocker routes to manager-resolution-required.",
+      "TargetLeadHours": 1,
+      "DependsOnStepKey": "repair-findings",
+      "DecisionRoleKey": "simple-app-qa",
+      "Dependencies": [
+        {
+          "DependsOnStepKey": "repair-findings",
+          "DependsOnBranchOutcomeKey": ""
+        }
+      ],
+      "RoleAssignments": [
+        {
+          "RoleKey": "simple-app-qa",
+          "ResponsibilityKind": "Responsible",
+          "IsRequired": true,
+          "FallbackOrder": 0,
+          "RebindPolicySummary": "Rebind only to an independent validator with the profile-required tools."
+        },
+        {
+          "RoleKey": "simple-app-manager",
+          "ResponsibilityKind": "Reviewer",
+          "IsRequired": true,
+          "FallbackOrder": 1,
+          "RebindPolicySummary": "The manager receives unresolved evidence but may not waive it."
+        }
+      ],
+      "ArtifactExpectations": [
+        {
+          "Key": "simple-app-revalidation-evidence",
+          "TemplateKey": "",
+          "Title": "Repaired application validation evidence",
+          "ArtifactKind": "Evidence",
+          "IsRequired": true,
+          "TrustRequirement": "ReviewRequired",
+          "SensitivityLevel": "Internal",
+          "RetentionDays": 365,
+          "AllowedFutureUsageSummary": "Reusable by repaired handoff or manager resolution.",
+          "ValidationRequirementSummary": "Must contain fresh profile-specific build, test, runtime, behavior, cleanup, and remaining-finding evidence."
+        }
+      ],
+      "ArtifactInputs": [
+        {
+          "SourceStepKey": "resolve-app-profile",
+          "ArtifactExpectationKey": "simple-app-contract"
+        },
+        {
+          "SourceStepKey": "repair-findings",
+          "ArtifactExpectationKey": "simple-app-repair-change-set"
+        }
+      ],
+      "BranchOutcomes": [
+        {
+          "Key": "quality-accepted",
+          "Title": "Quality accepted after repair",
+          "Description": "Fresh proof satisfies every acceptance criterion.",
+          "RouteTargetKind": "SpecificStep",
+          "RouteTargetStepKey": "handoff-repaired-results"
+        },
+        {
+          "Key": "manager-resolution-required",
+          "Title": "Manager resolution required",
+          "Description": "A bounded repair was attempted and unresolved evidence requires a managed decision.",
+          "RouteTargetKind": "SpecificStep",
+          "RouteTargetStepKey": "manage-unresolved-delivery"
+        }
+      ],
+      "CapabilityScope": {
+        "RequiredReceipts": [
+          {
+            "Key": "simple-app-recheck-build",
+            "Kind": "RuntimeToolName",
+            "ToolName": "workspace_dotnet_build",
+            "Activation": "WhenLaunchContextDeclaresTool",
+            "Purpose": "AcceptanceProof",
+            "ApplicableBranchOutcomeKeys": [
+              "quality-accepted"
+            ],
+            "Reason": "Require a fresh build only when the selected stack declares the .NET build tool."
+          },
+          {
+            "Key": "simple-app-recheck-test",
+            "Kind": "RuntimeToolName",
+            "ToolName": "workspace_dotnet_test",
+            "Activation": "WhenLaunchContextDeclaresTool",
+            "Purpose": "AcceptanceProof",
+            "ApplicableBranchOutcomeKeys": [
+              "quality-accepted"
+            ],
+            "Reason": "Require a fresh test run only when the selected stack declares the .NET test tool."
+          },
+          {
+            "Key": "simple-app-recheck-runtime",
+            "Kind": "RuntimeToolName",
+            "ToolName": "workspace_dotnet_run",
+            "Activation": "WhenLaunchContextDeclaresTool",
+            "Purpose": "AcceptanceProof",
+            "ApplicableBranchOutcomeKeys": [
+              "quality-accepted"
+            ],
+            "Reason": "Require fresh runtime startup only when the application profile declares it."
+          },
+          {
+            "Key": "simple-app-recheck-browser",
+            "Kind": "RuntimeToolName",
+            "ToolName": "browser_navigate",
+            "Activation": "WhenLaunchContextDeclaresTool",
+            "Purpose": "AcceptanceProof",
+            "ApplicableBranchOutcomeKeys": [
+              "quality-accepted"
+            ],
+            "Reason": "Require fresh browser proof only for profiles that declare a browser-visible surface."
+          }
+        ]
+      },
+      "ExecutionGuidanceRefs": [
+        "processes/simple-app-delivery/steps/revalidate-repair.md"
+      ],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure",
+        "ReadUpstreamArtifacts",
+        "RunValidation",
+        "LaunchRuntime",
+        "CaptureRuntimeProof",
+        "WriteManagedProcessArtifacts"
+      ],
+      "OperationTargetScope": "ExternalProductTargetReadOnly"
+    },
+    {
+      "Order": 5,
+      "Key": "handoff-results",
+      "Title": "Handoff accepted application",
+      "Subtitle": "Compact evidence index",
+      "Notes": "Produce a concise final handoff from the accepted contract, change set, and QA proof.",
+      "StepKind": "End",
+      "AllowsManualSkip": false,
+      "AllowsSafeRefusal": false,
+      "RequiresApproval": false,
+      "RequiresDecisionRecord": false,
+      "InputContractSummary": "Use accepted independent validation evidence.",
+      "OutputContractSummary": "Produce the final application path, run command, validation summary, and evidence index.",
+      "EvidenceContractSummary": "Reference existing receipts; do not rerun implementation or validation.",
+      "DecisionRightsSummary": "The manager closes only the accepted branch.",
+      "ExceptionPolicySummary": "Do not invent missing proof or convert open defects into acceptance.",
+      "TargetLeadHours": 1,
+      "DependsOnStepKey": "validate-application",
+      "DependsOnBranchOutcomeKey": "quality-accepted",
+      "DecisionRoleKey": "simple-app-manager",
+      "Dependencies": [
+        {
+          "DependsOnStepKey": "validate-application",
+          "DependsOnBranchOutcomeKey": "quality-accepted"
+        }
+      ],
+      "RoleAssignments": [
+        {
+          "RoleKey": "simple-app-manager",
+          "ResponsibilityKind": "Responsible",
+          "IsRequired": true,
+          "FallbackOrder": 0,
+          "RebindPolicySummary": "Rebind to a delivery manager with access to the accepted evidence."
+        },
+        {
+          "RoleKey": "simple-app-qa",
+          "ResponsibilityKind": "Reviewer",
+          "IsRequired": true,
+          "FallbackOrder": 1,
+          "RebindPolicySummary": "QA confirms the handoff cites the accepted evidence."
+        }
+      ],
+      "ArtifactExpectations": [
+        {
+          "Key": "simple-app-handoff",
+          "TemplateKey": "",
+          "Title": "Simple application handoff",
+          "ArtifactKind": "Deliverable",
+          "IsRequired": true,
+          "TrustRequirement": "ReviewRequired",
+          "SensitivityLevel": "Internal",
+          "RetentionDays": 365,
+          "AllowedFutureUsageSummary": "Reusable for project writeback, documentation, and future maintenance.",
+          "ValidationRequirementSummary": "Must list product root, entry project or command, implemented criteria, build and test status, profile-specific runtime proof, cleanup status, known limitations, and evidence references."
+        }
+      ],
+      "ArtifactInputs": [
+        {
+          "SourceStepKey": "resolve-app-profile",
+          "ArtifactExpectationKey": "simple-app-contract"
+        },
+        {
+          "SourceStepKey": "validate-application",
+          "ArtifactExpectationKey": "simple-app-validation-evidence"
+        }
+      ],
+      "BranchOutcomes": [],
+      "ExecutionGuidanceRefs": [
+        "processes/simple-app-delivery/steps/handoff-results.md"
+      ],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure",
+        "ReadUpstreamArtifacts",
+        "WriteManagedProcessArtifacts"
+      ],
+      "OperationTargetScope": "ManagedProcessArtifactsOnly"
+    },
+    {
+      "Order": 6,
+      "Key": "handoff-repaired-results",
+      "Title": "Handoff repaired application",
+      "Subtitle": "Compact repaired evidence index",
+      "Notes": "Produce a concise final handoff from the accepted repaired branch.",
+      "StepKind": "End",
+      "AllowsManualSkip": false,
+      "AllowsSafeRefusal": false,
+      "RequiresApproval": false,
+      "RequiresDecisionRecord": false,
+      "InputContractSummary": "Use accepted fresh revalidation evidence.",
+      "OutputContractSummary": "Produce the final application path, repaired findings, run command, validation summary, and evidence index.",
+      "EvidenceContractSummary": "Reference both the repair and fresh QA receipts.",
+      "DecisionRightsSummary": "The manager closes only the accepted repaired branch.",
+      "ExceptionPolicySummary": "Do not accept unresolved revalidation findings.",
+      "TargetLeadHours": 1,
+      "DependsOnStepKey": "revalidate-repair",
+      "DependsOnBranchOutcomeKey": "quality-accepted",
+      "DecisionRoleKey": "simple-app-manager",
+      "Dependencies": [
+        {
+          "DependsOnStepKey": "revalidate-repair",
+          "DependsOnBranchOutcomeKey": "quality-accepted"
+        }
+      ],
+      "RoleAssignments": [
+        {
+          "RoleKey": "simple-app-manager",
+          "ResponsibilityKind": "Responsible",
+          "IsRequired": true,
+          "FallbackOrder": 0,
+          "RebindPolicySummary": "Rebind to a delivery manager with access to the repair and accepted revalidation evidence."
+        },
+        {
+          "RoleKey": "simple-app-qa",
+          "ResponsibilityKind": "Reviewer",
+          "IsRequired": true,
+          "FallbackOrder": 1,
+          "RebindPolicySummary": "QA confirms the handoff cites fresh accepted evidence."
+        }
+      ],
+      "ArtifactExpectations": [
+        {
+          "Key": "simple-app-repaired-handoff",
+          "TemplateKey": "",
+          "Title": "Repaired simple application handoff",
+          "ArtifactKind": "Deliverable",
+          "IsRequired": true,
+          "TrustRequirement": "ReviewRequired",
+          "SensitivityLevel": "Internal",
+          "RetentionDays": 365,
+          "AllowedFutureUsageSummary": "Reusable for project writeback, documentation, and future maintenance.",
+          "ValidationRequirementSummary": "Must list product root, entry project or command, repaired findings, implemented criteria, fresh build and test status, profile-specific runtime proof, cleanup status, known limitations, and evidence references."
+        }
+      ],
+      "ArtifactInputs": [
+        {
+          "SourceStepKey": "repair-findings",
+          "ArtifactExpectationKey": "simple-app-repair-change-set"
+        },
+        {
+          "SourceStepKey": "revalidate-repair",
+          "ArtifactExpectationKey": "simple-app-revalidation-evidence"
+        }
+      ],
+      "BranchOutcomes": [],
+      "ExecutionGuidanceRefs": [
+        "processes/simple-app-delivery/steps/handoff-repaired-results.md"
+      ],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure",
+        "ReadUpstreamArtifacts",
+        "WriteManagedProcessArtifacts"
+      ],
+      "OperationTargetScope": "ManagedProcessArtifactsOnly"
+    },
+    {
+      "Order": 7,
+      "Key": "manage-unresolved-delivery",
+      "Title": "Resolve persistent findings",
+      "Subtitle": "Manager-contained terminal decision",
+      "Notes": "Close the bounded lane with a concrete disposition; do not ask an operator to code or fabricate acceptance.",
+      "StepKind": "End",
+      "AllowsManualSkip": false,
+      "AllowsSafeRefusal": false,
+      "RequiresApproval": false,
+      "RequiresDecisionRecord": true,
+      "AllowsCompletedOutcomeWithOpenIssues": true,
+      "InputContractSummary": "Use the contract, repair change set, and fresh unresolved QA evidence.",
+      "OutputContractSummary": "Choose a typed disposition: FollowUpRepair, ReplanScope, EnvironmentAction, or UnsupportedRiskProcess.",
+      "EvidenceContractSummary": "Name the exact unresolved findings, owner, next process, and preserved evidence.",
+      "DecisionRightsSummary": "The manager may contain and route the issue but may not mark quality accepted.",
+      "ExceptionPolicySummary": "This is a terminal managed outcome, not an operator escalation or a second unbounded repair loop.",
+      "TargetLeadHours": 1,
+      "DependsOnStepKey": "revalidate-repair",
+      "DependsOnBranchOutcomeKey": "manager-resolution-required",
+      "DecisionRoleKey": "simple-app-manager",
+      "Dependencies": [
+        {
+          "DependsOnStepKey": "revalidate-repair",
+          "DependsOnBranchOutcomeKey": "manager-resolution-required"
+        }
+      ],
+      "RoleAssignments": [
+        {
+          "RoleKey": "simple-app-manager",
+          "ResponsibilityKind": "Responsible",
+          "IsRequired": true,
+          "FallbackOrder": 0,
+          "RebindPolicySummary": "Keep the decision with a delivery manager able to route a bounded next action."
+        },
+        {
+          "RoleKey": "simple-app-engineer",
+          "ResponsibilityKind": "Contributor",
+          "IsRequired": true,
+          "FallbackOrder": 1,
+          "RebindPolicySummary": "Implementation owner explains technical repair implications without mutating."
+        },
+        {
+          "RoleKey": "simple-app-qa",
+          "ResponsibilityKind": "Reviewer",
+          "IsRequired": true,
+          "FallbackOrder": 2,
+          "RebindPolicySummary": "QA preserves the unresolved evidence and prevents false acceptance."
+        }
+      ],
+      "ArtifactExpectations": [
+        {
+          "Key": "simple-app-unresolved-decision",
+          "TemplateKey": "",
+          "Title": "Simple application unresolved decision",
+          "ArtifactKind": "Decision",
+          "IsRequired": true,
+          "TrustRequirement": "ReviewRequired",
+          "SensitivityLevel": "Internal",
+          "RetentionDays": 365,
+          "AllowedFutureUsageSummary": "Reusable to launch a focused repair or specialist process.",
+          "ValidationRequirementSummary": "Must contain a typed disposition, unresolved finding ids, preserved evidence, accountable owner, bounded next scope, and an explicit statement that quality was not accepted."
+        }
+      ],
+      "ArtifactInputs": [
+        {
+          "SourceStepKey": "repair-findings",
+          "ArtifactExpectationKey": "simple-app-repair-change-set"
+        },
+        {
+          "SourceStepKey": "revalidate-repair",
+          "ArtifactExpectationKey": "simple-app-revalidation-evidence"
+        }
+      ],
+      "BranchOutcomes": [],
+      "ExecutionGuidanceRefs": [
+        "processes/simple-app-delivery/steps/manage-unresolved-delivery.md"
+      ],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure",
+        "ReadUpstreamArtifacts",
+        "WriteManagedProcessArtifacts",
+        "EscalateOrDecide"
+      ],
+      "OperationTargetScope": "ManagedProcessArtifactsOnly"
+    },
+    {
+      "Order": 8,
+      "Key": "route-unsupported-risk",
+      "Title": "Route unsupported application risk",
+      "Subtitle": "Specialist process decision",
+      "Notes": "Close this lane with a typed specialist routing decision before any product mutation occurs.",
+      "StepKind": "End",
+      "AllowsManualSkip": false,
+      "AllowsSafeRefusal": false,
+      "RequiresApproval": false,
+      "RequiresDecisionRecord": true,
+      "AllowsCompletedOutcomeWithOpenIssues": true,
+      "InputContractSummary": "Use the typed unsupported-risk classification from the application contract.",
+      "OutputContractSummary": "Name the specialist process or prerequisite that must own the work.",
+      "EvidenceContractSummary": "Preserve the trigger, affected criteria, and accountable routing owner.",
+      "DecisionRightsSummary": "The manager routes the work and this lane performs no implementation.",
+      "ExceptionPolicySummary": "Do not downgrade the typed risk merely to keep the simple lane moving.",
+      "TargetLeadHours": 1,
+      "DependsOnStepKey": "resolve-app-profile",
+      "DependsOnBranchOutcomeKey": "specialist-review-required",
+      "DecisionRoleKey": "simple-app-manager",
+      "Dependencies": [
+        {
+          "DependsOnStepKey": "resolve-app-profile",
+          "DependsOnBranchOutcomeKey": "specialist-review-required"
+        }
+      ],
+      "RoleAssignments": [
+        {
+          "RoleKey": "simple-app-manager",
+          "ResponsibilityKind": "Responsible",
+          "IsRequired": true,
+          "FallbackOrder": 0,
+          "RebindPolicySummary": "Keep routing accountable to the delivery manager."
+        },
+        {
+          "RoleKey": "simple-app-architect",
+          "ResponsibilityKind": "Reviewer",
+          "IsRequired": true,
+          "FallbackOrder": 1,
+          "RebindPolicySummary": "The architect confirms the unsupported-risk trigger and specialist boundary."
+        }
+      ],
+      "ArtifactExpectations": [
+        {
+          "Key": "simple-app-risk-routing-decision",
+          "TemplateKey": "",
+          "Title": "Simple application risk routing decision",
+          "ArtifactKind": "Decision",
+          "IsRequired": true,
+          "TrustRequirement": "ReviewRequired",
+          "SensitivityLevel": "Internal",
+          "RetentionDays": 365,
+          "AllowedFutureUsageSummary": "Reusable as intake for the selected specialist process.",
+          "ValidationRequirementSummary": "Must contain the typed unsupported-risk trigger, affected scope, specialist process or prerequisite, accountable owner, and confirmation that no product mutation occurred."
+        }
+      ],
+      "ArtifactInputs": [
+        {
+          "SourceStepKey": "resolve-app-profile",
+          "ArtifactExpectationKey": "simple-app-contract"
+        }
+      ],
+      "BranchOutcomes": [],
+      "ExecutionGuidanceRefs": [
+        "processes/simple-app-delivery/steps/route-unsupported-risk.md"
+      ],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure",
+        "ReadUpstreamArtifacts",
+        "WriteManagedProcessArtifacts",
+        "EscalateOrDecide"
+      ],
+      "OperationTargetScope": "ManagedProcessArtifactsOnly"
+    }
+  ]
+}

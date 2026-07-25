@@ -1,4 +1,6 @@
 using System.Reflection;
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
@@ -15,6 +17,9 @@ namespace CanDoItAll.Tests.Unit;
 
 public sealed class ProcessRuntimeIntegrationAdapterTests
 {
+    private const string ForwardedRuntimeProjectPath =
+        @"C:\programovani\dotnet\output\src\TetrisGame.Client\TetrisGame.Client.csproj";
+
     private static readonly ProcessStrategyBindingSnapshot Binding = new(
         new DriverId("driver.runtime"),
         new StrategyId("strategy.execute"),
@@ -185,7 +190,7 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
     }
 
     [Fact]
-    public void Subprocess_step_completion_with_child_evidence_can_succeed_without_current_launch_receipt()
+    public void Subprocess_step_completion_with_grounded_child_evidence_can_succeed_without_current_launch_receipt()
     {
         var assignment = CreateSubprocessAssignment();
         var childEvidenceRef = $"artifacts/process-runs/{Guid.NewGuid():D}/steps/slice-handoff.md";
@@ -199,7 +204,16 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
                 NextActions = [],
                 HumanReadableSummaryMarkdown = "Completed from stopped child evidence."
             },
-            [CreateToolReceipt("workspace_write_file", BuildStepArtifactRef(assignment), "Succeeded: Created file.")]);
+            [
+                CreateToolReceipt(
+                    "workspace_read_file",
+                    childEvidenceRef,
+                    $"Succeeded: Read {childEvidenceRef}."),
+                CreateToolReceipt(
+                    "workspace_write_file",
+                    BuildStepArtifactRef(assignment),
+                    "Succeeded: Created file.")
+            ]);
 
         Assert.Equal(StrategyOutcome.Succeeded, result.Outcome);
         Assert.DoesNotContain(result.Diagnostics, diagnostic =>
@@ -4022,7 +4036,6 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
     {
         var assignment = CreateManagedArtifactAssignment("feature-intake");
         var primaryRef = BuildStepArtifactRef(assignment);
-        var staleRef = @"C:\other-projects\stale-source\scope.md";
         var result = ToAdapterResult(
             assignment,
             new ProcessStepOutcomeResult
@@ -4031,7 +4044,7 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
                 Reason = "Wrote the current scope packet.",
                 EvidenceRefs = [primaryRef],
                 NextActions = [],
-                HumanReadableSummaryMarkdown = $"Completed from source document `{staleRef}`."
+                HumanReadableSummaryMarkdown = $"Completed from source document `{ForwardedRuntimeProjectPath}`."
             },
             [CreateToolReceipt("workspace_write_file", primaryRef, "Succeeded: Wrote file.")]);
 
@@ -4040,7 +4053,30 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
             diagnostic.Code.Value == "process.adapter.ungrounded_outcome_reference" &&
             diagnostic.RetrySafety == ProcessDiagnosticRetrySafety.SafeToRetry);
         Assert.Contains("not grounded in the current step brief", result.UserSafeSummary, StringComparison.OrdinalIgnoreCase);
-        Assert.DoesNotContain(staleRef, result.UserSafeSummary, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain(ForwardedRuntimeProjectPath, result.UserSafeSummary, StringComparison.OrdinalIgnoreCase);
+        Assert.Empty(result.ProducedArtifacts);
+    }
+
+    [Fact]
+    public void Managed_artifact_completion_requires_receipt_grounding_for_top_level_evidence_refs()
+    {
+        var assignment = CreateManagedArtifactAssignment("feature-intake");
+        var primaryRef = BuildStepArtifactRef(assignment);
+        var result = ToAdapterResult(
+            assignment,
+            new ProcessStepOutcomeResult
+            {
+                Status = ProcessStepOutcomeStatus.Completed,
+                Reason = "Wrote the current scope packet.",
+                EvidenceRefs = [primaryRef, ForwardedRuntimeProjectPath],
+                NextActions = []
+            },
+            [CreateToolReceipt("workspace_write_file", primaryRef, "Succeeded: Wrote file.")]);
+
+        Assert.Equal(StrategyOutcome.NeedsManager, result.Outcome);
+        Assert.Contains(result.Diagnostics, diagnostic =>
+            diagnostic.Code.Value == "process.adapter.ungrounded_outcome_reference");
+        Assert.DoesNotContain(ForwardedRuntimeProjectPath, result.UserSafeSummary, StringComparison.OrdinalIgnoreCase);
         Assert.Empty(result.ProducedArtifacts);
     }
 
@@ -5795,10 +5831,17 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
     }
 
     [Fact]
-    public async Task ExecuteAsync_completes_subprocess_parent_from_completed_child_without_reinvoking_agent()
+    public async Task ExecuteAsync_completes_subprocess_parent_with_hash_verified_forwarded_child_context()
     {
         var parentRunId = ProcessRunId.New();
         var childRunId = ProcessRunId.New();
+        var forwardedSlotId = ArtifactSlotId.New();
+        var forwardedArtifactId = ArtifactInstanceId.New();
+        const string forwardedContent = $"""
+            ## Runtime project
+
+            Project path: `{ForwardedRuntimeProjectPath}`
+            """;
         var agent = NewAgent(
             ".NET Application Developer",
             ".NET implementation specialist",
@@ -5808,10 +5851,29 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
                 "dotnet"
             ],
             AgentWorkspaceToolProfileKind.ArchitectureReview);
-        var assignment = CreateSubprocessAssignment() with
+        var baseAssignment = CreateSubprocessAssignment();
+        Assert.True(ProcessRuntimeLaunchVariables.TryReadProcessStepSubprocessContract(
+            baseAssignment.LaunchVariables,
+            out var subprocessContract));
+        subprocessContract.ForwardedChildContextArtifacts =
+        [
+            new ProcessSubprocessForwardedChildContextArtifactContract
+            {
+                BindingKey = "runtime-project",
+                SourceStepKey = "architecture",
+                ArtifactExpectationKey = "runtime-project",
+                PayloadSchema = "runtime-project/v1"
+            }
+        ];
+        var assignment = baseAssignment with
         {
             RunId = parentRunId,
-            ExecutorId = agent.Id.ToString("D")
+            ExecutorId = agent.Id.ToString("D"),
+            LaunchVariables = WithLaunchVariables(
+                baseAssignment,
+                (
+                    ProcessRuntimeLaunchVariables.ProcessStepSubprocessContractJson,
+                    ProcessRuntimeLaunchVariables.SerializeProcessStepSubprocessContract(subprocessContract)))
         };
         var childArtifactSlotId = ArtifactSlotId.New();
         var childAssignment = CreateChildAssignment(
@@ -5825,11 +5887,17 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
         };
         var workspaceFiles = CreateWorkspaceFileService(out var workspaceRoot);
         var childEvidenceRef = $"artifacts/process-runs/{childRunId.Value:D}/steps/{childAssignment.StepKey}.md";
+        var forwardedRef = $"artifacts/process-runs/{childRunId.Value:D}/steps/architecture.md";
         var writeChildEvidence = workspaceFiles.WriteTextFile(
             childEvidenceRef,
             "Status: Completed\n\nChild evidence.",
             overwrite: true);
         Assert.True(writeChildEvidence.Succeeded);
+        var writeForwardedContext = workspaceFiles.WriteTextFile(
+            forwardedRef,
+            forwardedContent,
+            overwrite: true);
+        Assert.True(writeForwardedContext.Succeeded);
         var workspace = new ThrowingWorkspaceService(
             agent,
             new InvalidOperationException("The parent agent should not be reinvoked for a completed child run."));
@@ -5847,9 +5915,10 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
             [
                 childStepState with
                 {
+                    RequiredArtifactSlots = new HashSet<ArtifactSlotId> { forwardedSlotId },
                     ArtifactDescriptors =
                     [
-                        new ProcessArtifactSlotDescriptor(
+                        new(
                             childArtifactSlotId,
                             "slice-handoff",
                             childAssignment.StepKey,
@@ -5857,9 +5926,29 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
                             "Implementation slice handoff packet",
                             "markdown",
                             childEvidenceRef,
+                            ProcessArtifactMaterializationMode.AgentWritten),
+                        new(
+                            forwardedSlotId,
+                            "architecture:runtime-project",
+                            "architecture",
+                            "runtime-project",
+                            "Runtime project",
+                            "ManagedMarkdown",
+                            forwardedRef,
                             ProcessArtifactMaterializationMode.AgentWritten)
                     ]
                 }
+            ],
+            ConnectedInputArtifacts =
+            [
+                new ProcessRuntimeInputArtifactReceipt(
+                    childAssignment.StepInstanceId,
+                    forwardedSlotId,
+                    ProcessArtifactInputAvailability.Available,
+                    ProcessStepInstanceId.New(),
+                    forwardedArtifactId,
+                    ComputeContentHash(forwardedContent),
+                    "sha256:runtime-project-connection")
             ]
         };
         var adapter = CreateAdapter(
@@ -5886,10 +5975,13 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
             Assert.Equal(StrategyOutcome.Succeeded, result.Outcome);
             Assert.False(workspace.ExecuteRunCalled);
             Assert.Contains(result.ProducedArtifacts, artifact => artifact.SlotId == assignment.ProducedArtifactSlotIds[0]);
+            Assert.DoesNotContain(result.Diagnostics, diagnostic =>
+                diagnostic.Code.Value == "process.adapter.ungrounded_outcome_reference");
             var parentArtifact = workspaceFiles.ReadTextFile(BuildStepArtifactRef(assignment));
             Assert.True(parentArtifact.Succeeded);
             Assert.Contains(childRunId.Value.ToString("D"), parentArtifact.Content, StringComparison.Ordinal);
             Assert.Contains(childEvidenceRef, parentArtifact.Content, StringComparison.Ordinal);
+            Assert.Contains(ForwardedRuntimeProjectPath, parentArtifact.Content, StringComparison.Ordinal);
         }
         finally
         {
@@ -8758,6 +8850,9 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
                     ArtifactInstanceId.New(),
                     "sha256:child-artifact")
             ]);
+
+    private static string ComputeContentHash(string value)
+        => "sha256:" + Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(value))).ToLowerInvariant();
 
     private static StrategyResultReceipt CreateBlockedChildDiagnosticReceipt(ProcessRuntimeStepAssignment assignment)
         => new(

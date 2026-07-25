@@ -1,5 +1,6 @@
 using CanDoItAll.Processes.Abstractions;
 using CanDoItAll.Processes.Application;
+using CanDoItAll.Processes.Contracts;
 using CanDoItAll.Processes.Runtime;
 
 namespace CanDoItAll.Tests.Unit;
@@ -171,6 +172,45 @@ public sealed class ProcessAutomaticRecoveryPromptBuilderTests
         Assert.Contains("Payload schema: opaque.example/v1", prompt, StringComparison.Ordinal);
         Assert.Contains("Must contain exactly one declared payload.", prompt, StringComparison.Ordinal);
         Assert.Contains("Reread the schema-bound Produced artifact slot and rewrite its declared payload exactly before finalizing.", prompt, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Build_RuntimeOwnedSubprocess_RemovesAgentOwnedLaunchRecoveryInstructions()
+    {
+        var contract = new ProcessSubprocessContract
+        {
+            DefinitionKey = "dotnet-development-slice",
+            LaunchMode = ProcessSubprocessLaunchMode.RuntimeOwned
+        };
+        var assignment = CreateAssignment(
+            """
+            Step instructions:
+            First call project_structure_process_subprocess_launch with definitionKey dotnet-development-slice.
+
+            Subprocess mapping:
+            - Launch ownership: process runtime owned
+            - Do not call project_structure_process_subprocess_launch.
+            """,
+            new Dictionary<string, string>
+            {
+                [ProcessRuntimeLaunchVariables.ProcessStepSubprocessContractJson] =
+                    ProcessRuntimeLaunchVariables.SerializeProcessStepSubprocessContract(contract)
+            });
+
+        var prompt = ProcessAutomaticRecoveryPromptBuilder.Build(
+            assignment,
+            """
+            Runtime diagnostic rework instruction:
+            Required current-run process tool receipt(s) are missing: project_structure_process_subprocess_launch; workspace_dotnet_test.
+            """);
+
+        Assert.Contains("Subprocess launch ownership:", prompt, StringComparison.Ordinal);
+        Assert.Contains("process runtime owned", prompt, StringComparison.Ordinal);
+        Assert.Contains("Do not call project_structure_process_subprocess_launch", prompt, StringComparison.Ordinal);
+        Assert.Contains("Invoke `workspace_dotnet_test` successfully", prompt, StringComparison.Ordinal);
+        Assert.DoesNotContain("First call project_structure_process_subprocess_launch", prompt, StringComparison.Ordinal);
+        Assert.DoesNotContain("Invoke `project_structure_process_subprocess_launch`", prompt, StringComparison.Ordinal);
+        Assert.DoesNotContain("receipt(s) are missing: project_structure_process_subprocess_launch", prompt, StringComparison.Ordinal);
     }
 
     private static ProcessRuntimeStepAssignment CreateAssignment(

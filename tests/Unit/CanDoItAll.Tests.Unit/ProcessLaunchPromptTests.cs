@@ -374,6 +374,36 @@ public sealed class ProcessLaunchPromptTests
     }
 
     [Fact]
+    public void AgentFramework_runtime_owned_subprocess_prompt_uses_single_runtime_launch_owner()
+    {
+        var runId = new ProcessRunId(Guid.Parse("d9450dd1-4920-457c-92a4-48d1ec648181"));
+        var step = CreatePromptStep("Coordinate the typed child evidence for this delivery slice.");
+        step.StepKind = ProcessTemplateStepKinds.Subprocess;
+        step.SubprocessProcessKey = "dotnet-development-slice";
+        step.SubprocessContract = new ProcessSubprocessContract
+        {
+            DefinitionKey = "dotnet-development-slice",
+            LaunchMode = ProcessSubprocessLaunchMode.RuntimeOwned
+        };
+        step.AllowedOperations =
+        [
+            ProcessOperationContractNames.ReadProjectStructure,
+            ProcessOperationContractNames.ExecuteExternalAction
+        ];
+
+        var genericPrompt = BuildStepPrompt(new GenericProcessStepBriefBuilder(), runId, step);
+        var prompt = BuildStepPrompt(new AgentFrameworkProcessStepBriefBuilder(), runId, step);
+
+        Assert.Contains("Launch ownership: process runtime owned", genericPrompt, StringComparison.Ordinal);
+        Assert.Contains("Do not call project_structure_process_subprocess_launch", genericPrompt, StringComparison.Ordinal);
+        Assert.DoesNotContain("Child-outcome rule: when the subprocess launch tool returns", genericPrompt, StringComparison.Ordinal);
+        Assert.Contains("Launch ownership: process runtime owned", prompt, StringComparison.Ordinal);
+        Assert.Contains("Do not call project_structure_process_subprocess_launch", prompt, StringComparison.Ordinal);
+        Assert.DoesNotContain("Governed launch tool: project_structure_process_subprocess_launch", prompt, StringComparison.Ordinal);
+        Assert.DoesNotContain("your first non-read external action", prompt, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Generic_step_brief_maps_required_upstream_slots_to_producer_artifact_paths()
     {
         var runId = new ProcessRunId(Guid.Parse("d9450dd1-4920-457c-92a4-48d1ec648181"));

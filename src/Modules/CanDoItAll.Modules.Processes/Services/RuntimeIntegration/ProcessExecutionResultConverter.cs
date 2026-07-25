@@ -52,7 +52,8 @@ internal sealed class ProcessExecutionResultConverter(
         IReadOnlyList<ToolExecutionReceiptRecord>? toolReceipts = null,
         Guid? currentExecutionRunId = null,
         IReadOnlyDictionary<ArtifactSlotId, string>? producedArtifactContentHashes = null,
-        ProcessStepExecutionContract? stepContract = null)
+        ProcessStepExecutionContract? stepContract = null,
+        ParentSubprocessBridgedOutcome? verifiedSubprocessOutcome = null)
     {
         var rawOutput = output;
         output = RemoveNonCitableSourceMetadataFromOutcome(output);
@@ -182,7 +183,8 @@ internal sealed class ProcessExecutionResultConverter(
                 toolReceipts,
                 currentExecutionRunId)
             {
-                StepContract = stepContract ?? ProcessStepExecutionContract.Empty
+                StepContract = stepContract ?? ProcessStepExecutionContract.Empty,
+                VerifiedSubprocessOutcome = verifiedSubprocessOutcome
             });
             if (!completionGateEvaluation.IsSatisfied)
             {
