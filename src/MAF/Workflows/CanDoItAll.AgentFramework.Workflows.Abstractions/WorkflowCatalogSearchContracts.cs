@@ -100,3 +100,15 @@ public interface IWorkflowCatalogLookupService
         WorkflowCatalogLookupQuery query,
         CancellationToken cancellationToken = default);
 }
+
+public interface IWorkflowStableIdentityLookupService
+{
+    Task<WorkflowStableIdentityResolution> ResolveByTemplateKeyAsync(
+        string templateKey,
+        CancellationToken cancellationToken = default);
+
+    Task<WorkflowStableIdentityResolution> ResolveByExternalKeyAsync(
+        string externalNamespace,
+        string externalKey,
+        CancellationToken cancellationToken = default);
+}

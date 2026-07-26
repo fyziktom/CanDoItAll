@@ -4,7 +4,15 @@ using CanDoItAll.AgentFramework.Models;
 
 namespace CanDoItAll.AgentFramework.Persistence;
 
-public sealed class FileSandboxWorkspaceStore : ISandboxWorkspaceStore, ISandboxWorkspaceChatQueryStore, ISandboxWorkspaceChatProjectionQueryStore, ISandboxWorkspaceChatSessionStore, ISandboxWorkspaceExecutionRunStore, ISandboxWorkspaceExecutionRunMutationStore, ISandboxWorkspaceExecutionRunReservationStore
+public sealed partial class FileSandboxWorkspaceStore :
+    ISandboxWorkspaceStore,
+    ISandboxWorkspaceChatQueryStore,
+    ISandboxWorkspaceChatProjectionQueryStore,
+    ISandboxWorkspaceChatSessionStore,
+    ISandboxWorkspaceExecutionRunStore,
+    ISandboxWorkspaceExecutionRunMutationStore,
+    ISandboxWorkspaceExecutionRunReservationStore,
+    IAgentRecruitingEvidenceStore
 {
     private static readonly TimeSpan CatalogReadNormalizationLockTimeout = TimeSpan.FromMilliseconds(100);
 

@@ -51,7 +51,6 @@
     --spacing: 0.25rem;
     --container-sm: 24rem;
     --container-xl: 36rem;
-    --container-2xl: 42rem;
     --container-3xl: 48rem;
     --container-4xl: 56rem;
     --text-xs: 0.75rem;
@@ -716,9 +715,6 @@
   .rounded-\[1\.5rem\] {
     border-radius: 1.5rem;
   }
-  .rounded-\[1\.15rem\] {
-    border-radius: 1.15rem;
-  }
   .rounded-\[1\.25rem\] {
     border-radius: 1.25rem;
   }
@@ -777,9 +773,6 @@
   .border-sky-200 {
     border-color: var(--color-sky-200);
   }
-  .border-sky-400 {
-    border-color: var(--color-sky-400);
-  }
   .border-sky-500 {
     border-color: var(--color-sky-500);
   }
@@ -825,12 +818,6 @@
   .bg-emerald-50 {
     background-color: var(--color-emerald-50);
   }
-  .bg-emerald-50\/70 {
-    background-color: color-mix(in srgb, oklch(97.9% 0.021 166.113) 70%, transparent);
-    @supports (color: color-mix(in lab, red, red)) {
-      background-color: color-mix(in oklab, var(--color-emerald-50) 70%, transparent);
-    }
-  }
   .bg-emerald-50\/80 {
     background-color: color-mix(in srgb, oklch(97.9% 0.021 166.113) 80%, transparent);
     @supports (color: color-mix(in lab, red, red)) {
@@ -840,20 +827,8 @@
   .bg-rose-50 {
     background-color: var(--color-rose-50);
   }
-  .bg-rose-50\/80 {
-    background-color: color-mix(in srgb, oklch(96.9% 0.015 12.422) 80%, transparent);
-    @supports (color: color-mix(in lab, red, red)) {
-      background-color: color-mix(in oklab, var(--color-rose-50) 80%, transparent);
-    }
-  }
   .bg-sky-50 {
     background-color: var(--color-sky-50);
-  }
-  .bg-sky-50\/70 {
-    background-color: color-mix(in srgb, oklch(97.7% 0.013 236.62) 70%, transparent);
-    @supports (color: color-mix(in lab, red, red)) {
-      background-color: color-mix(in oklab, var(--color-sky-50) 70%, transparent);
-    }
   }
   .bg-sky-50\/80 {
     background-color: color-mix(in srgb, oklch(97.7% 0.013 236.62) 80%, transparent);
@@ -1308,6 +1283,9 @@
   .ring-sky-100 {
     --tw-ring-color: var(--color-sky-100);
   }
+  .ring-sky-200 {
+    --tw-ring-color: var(--color-sky-200);
+  }
   .outline {
     outline-style: var(--tw-outline-style);
     outline-width: 1px;
@@ -1383,10 +1361,27 @@
       padding-bottom: calc(var(--spacing) * 0);
     }
   }
+  .hover\:border-sky-300 {
+    &:hover {
+      @media (hover: hover) {
+        border-color: var(--color-sky-300);
+      }
+    }
+  }
   .hover\:border-slate-300 {
     &:hover {
       @media (hover: hover) {
         border-color: var(--color-slate-300);
+      }
+    }
+  }
+  .hover\:bg-sky-50\/60 {
+    &:hover {
+      @media (hover: hover) {
+        background-color: color-mix(in srgb, oklch(97.7% 0.013 236.62) 60%, transparent);
+        @supports (color: color-mix(in lab, red, red)) {
+          background-color: color-mix(in oklab, var(--color-sky-50) 60%, transparent);
+        }
       }
     }
   }

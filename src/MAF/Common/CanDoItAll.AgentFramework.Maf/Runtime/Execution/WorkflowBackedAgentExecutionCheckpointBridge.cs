@@ -55,6 +55,10 @@ public sealed class WorkflowBackedAgentExecutionCheckpointBridge : IAgentExecuti
             StructuredOutputTypeName: run.StructuredOutputTypeName,
             StructuredOutputSchemaName: run.StructuredOutputSchemaName,
             StructuredOutputSchemaDescription: run.StructuredOutputSchemaDescription,
+            StructuredOutputJsonSchema: run.StructuredOutputJsonSchema,
+            StructuredOutputSchemaHash: run.StructuredOutputSchemaHash,
+            StructuredOutputSchemaVersion: run.StructuredOutputSchemaVersion,
+            StructuredOutputSchemaStrict: run.StructuredOutputSchemaStrict,
             CapturedAtUtc: capturedAtUtc);
 
         var checkpointInfo = await CreateCheckpointAsync(GetWorkflowSessionId(run.Id), payload, cancellationToken);
@@ -284,7 +288,11 @@ public sealed class WorkflowBackedAgentExecutionCheckpointBridge : IAgentExecuti
             && string.Equals(payload.StructuredOutputContractKey ?? string.Empty, run.StructuredOutputContractKey, StringComparison.Ordinal)
             && string.Equals(payload.StructuredOutputTypeName ?? string.Empty, run.StructuredOutputTypeName, StringComparison.Ordinal)
             && string.Equals(payload.StructuredOutputSchemaName ?? string.Empty, run.StructuredOutputSchemaName, StringComparison.Ordinal)
-            && string.Equals(payload.StructuredOutputSchemaDescription ?? string.Empty, run.StructuredOutputSchemaDescription, StringComparison.Ordinal))
+            && string.Equals(payload.StructuredOutputSchemaDescription ?? string.Empty, run.StructuredOutputSchemaDescription, StringComparison.Ordinal)
+            && string.Equals(payload.StructuredOutputJsonSchema ?? string.Empty, run.StructuredOutputJsonSchema, StringComparison.Ordinal)
+            && string.Equals(payload.StructuredOutputSchemaHash ?? string.Empty, run.StructuredOutputSchemaHash, StringComparison.Ordinal)
+            && string.Equals(payload.StructuredOutputSchemaVersion ?? string.Empty, run.StructuredOutputSchemaVersion, StringComparison.Ordinal)
+            && payload.StructuredOutputSchemaStrict == run.StructuredOutputSchemaStrict)
         {
             return;
         }
@@ -309,5 +317,9 @@ public sealed class WorkflowBackedAgentExecutionCheckpointBridge : IAgentExecuti
         string StructuredOutputTypeName,
         string StructuredOutputSchemaName,
         string StructuredOutputSchemaDescription,
+        string StructuredOutputJsonSchema,
+        string StructuredOutputSchemaHash,
+        string StructuredOutputSchemaVersion,
+        bool StructuredOutputSchemaStrict,
         DateTimeOffset CapturedAtUtc);
 }

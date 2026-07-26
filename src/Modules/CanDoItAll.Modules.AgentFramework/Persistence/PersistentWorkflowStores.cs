@@ -48,7 +48,8 @@ public sealed class PersistentWorkflowCatalogService(
                 item.Description,
                 item.Status,
                 item.PreferredBackend,
-                item.UpdatedAtUtc))
+                item.UpdatedAtUtc,
+                item.DefinitionJson))
             .ToListAsync(cancellationToken);
 
         return records
@@ -92,7 +93,8 @@ public sealed class PersistentWorkflowCatalogService(
                 item.Description,
                 item.Status,
                 item.PreferredBackend,
-                item.UpdatedAtUtc))
+                item.UpdatedAtUtc,
+                item.DefinitionJson))
             .ToArrayAsync(cancellationToken);
 
         return new WorkflowCatalogSearchPage(
@@ -125,7 +127,8 @@ public sealed class PersistentWorkflowCatalogService(
                 item.Description,
                 item.Status,
                 item.PreferredBackend,
-                item.UpdatedAtUtc))
+                item.UpdatedAtUtc,
+                item.DefinitionJson))
             .ToArrayAsync(cancellationToken);
 
         return records
@@ -222,6 +225,30 @@ public sealed class PersistentWorkflowCatalogService(
             throw CreateDefinitionConcurrencyException(workflowId);
         }
 
+        var currentDefinition = current is null
+            ? null
+            : Deserialize<WorkflowDefinition>(current.DefinitionJson);
+        var stableIdentity = WorkflowStableIdentityPolicy.Resolve(
+            request,
+            currentDefinition);
+        if (stableIdentity.ExternalNamespace.Length > 0)
+        {
+            var identityConflict = await heads
+                .AsNoTracking()
+                .AnyAsync(
+                    item =>
+                        item.WorkflowId != workflowId.Value &&
+                        item.ExternalNamespace == stableIdentity.ExternalNamespace &&
+                        item.ExternalKey == stableIdentity.ExternalKey,
+                    cancellationToken);
+            if (identityConflict)
+            {
+                throw CreateExternalIdentityConflictException(
+                    stableIdentity.ExternalNamespace,
+                    stableIdentity.ExternalKey);
+            }
+        }
+
         var now = DateTimeOffset.UtcNow;
         var graphSnapshot = await SnapshotGraphAsync(dbContext, request.Graph, cancellationToken);
         var definition = new WorkflowDefinition(
@@ -235,7 +262,13 @@ public sealed class PersistentWorkflowCatalogService(
             current?.CreatedAtUtc ?? now,
             now)
         {
-            InputParameters = SnapshotInputParameters(request.InputParameters)
+            InputParameters = SnapshotInputParameters(request.InputParameters),
+            TemplateKey = stableIdentity.TemplateKey,
+            TemplatePackKey = stableIdentity.TemplatePackKey,
+            TemplatePackVersion = stableIdentity.TemplatePackVersion,
+            SourceHash = stableIdentity.SourceHash,
+            ExternalNamespace = stableIdentity.ExternalNamespace,
+            ExternalKey = stableIdentity.ExternalKey
         };
 
         ThrowIfValidationFailed(
@@ -250,12 +283,16 @@ public sealed class PersistentWorkflowCatalogService(
             heads.Add(new WorkflowDefinitionHeadRecord
             {
                 WorkflowId = workflowId.Value,
-                VersionId = definition.VersionId.Value
+                VersionId = definition.VersionId.Value,
+                ExternalNamespace = definition.ExternalNamespace,
+                ExternalKey = definition.ExternalKey
             });
         }
         else
         {
             head.VersionId = definition.VersionId.Value;
+            head.ExternalNamespace = definition.ExternalNamespace;
+            head.ExternalKey = definition.ExternalKey;
         }
 
         try
@@ -265,6 +302,13 @@ public sealed class PersistentWorkflowCatalogService(
         catch (DbUpdateConcurrencyException exception)
         {
             throw CreateDefinitionConcurrencyException(workflowId, exception);
+        }
+        catch (DbUpdateException exception) when (IsWorkflowExternalIdentityCollision(exception))
+        {
+            throw CreateExternalIdentityConflictException(
+                definition.ExternalNamespace,
+                definition.ExternalKey,
+                exception);
         }
         catch (DbUpdateException exception) when (IsWorkflowDefinitionWriteCollision(exception))
         {
@@ -348,7 +392,21 @@ public sealed class PersistentWorkflowCatalogService(
                 source.Graph,
                 source.RuntimePolicy)
             {
-                InputParameters = source.InputParameters
+                InputParameters = source.InputParameters,
+                TemplateProvenance = request.PreserveWorkflowId &&
+                                     source.TemplateKey.Length > 0
+                    ? new WorkflowTemplateProvenance(
+                        source.TemplateKey,
+                        source.TemplatePackKey,
+                        source.TemplatePackVersion,
+                        source.SourceHash)
+                    : null,
+                ExternalNamespace = request.PreserveWorkflowId
+                    ? source.ExternalNamespace
+                    : string.Empty,
+                ExternalKey = request.PreserveWorkflowId
+                    ? source.ExternalKey
+                    : string.Empty
             },
             cancellationToken);
     }
@@ -1248,6 +1306,23 @@ public sealed class PersistentWorkflowCatalogService(
             : new InvalidOperationException(message, innerException);
     }
 
+    private static InvalidOperationException CreateExternalIdentityConflictException(
+        string externalNamespace,
+        string externalKey,
+        Exception? innerException = null)
+    {
+        var message =
+            $"Workflow external identity '{externalNamespace}/{externalKey}' is already bound to another workflow.";
+        return innerException is null
+            ? new InvalidOperationException(message)
+            : new InvalidOperationException(message, innerException);
+    }
+
+    private static bool IsWorkflowExternalIdentityCollision(DbUpdateException exception)
+        => DbUpdateExceptionClassifier.IsUniqueConstraintViolation(exception) &&
+           DbUpdateExceptionClassifier.GetConstraintName(exception) ==
+           WorkflowDefinitionPersistenceConstraints.ExternalIdentityUniqueIndex;
+
     private static bool IsWorkflowDefinitionWriteCollision(DbUpdateException exception)
     {
         if (!DbUpdateExceptionClassifier.IsUniqueConstraintViolation(exception))
@@ -1344,14 +1419,26 @@ public sealed class PersistentWorkflowCatalogService(
                equals new { record.WorkflowId, record.VersionId }
            select record;
 
-    private static WorkflowCatalogItem MapCatalogItem(WorkflowCatalogProjection item) => new(
-        new WorkflowId(item.WorkflowId),
-        new WorkflowVersionId(item.VersionId),
-        item.Name,
-        item.Description,
-        item.Status,
-        item.PreferredBackend,
-        item.UpdatedAtUtc);
+    private static WorkflowCatalogItem MapCatalogItem(WorkflowCatalogProjection item)
+    {
+        var definition = Deserialize<WorkflowDefinition>(item.DefinitionJson);
+        return new WorkflowCatalogItem(
+            new WorkflowId(item.WorkflowId),
+            new WorkflowVersionId(item.VersionId),
+            item.Name,
+            item.Description,
+            item.Status,
+            item.PreferredBackend,
+            item.UpdatedAtUtc)
+        {
+            TemplateKey = definition.TemplateKey,
+            TemplatePackKey = definition.TemplatePackKey,
+            TemplatePackVersion = definition.TemplatePackVersion,
+            SourceHash = definition.SourceHash,
+            ExternalNamespace = definition.ExternalNamespace,
+            ExternalKey = definition.ExternalKey
+        };
+    }
 
     private static string Serialize<T>(T value) => JsonSerializer.Serialize(value, JsonOptions);
 
@@ -1368,7 +1455,8 @@ public sealed class PersistentWorkflowCatalogService(
         string Description,
         WorkflowLifecycleStatus Status,
         WorkflowRuntimeBackendKind PreferredBackend,
-        DateTimeOffset UpdatedAtUtc);
+        DateTimeOffset UpdatedAtUtc,
+        string DefinitionJson);
 }
 
 public sealed class PersistentWorkflowRunStore(IDbContextFactory<AppDbContext> dbContextFactory) :
@@ -2070,6 +2158,7 @@ internal static class WorkflowDefinitionPersistenceConstraints
 {
     public const string HeadPrimaryKey = "PK_AgentFramework_WorkflowDefinitionHeads";
     public const string RevisionUniqueIndex = "IX_WorkflowDefinitions_WorkflowId_Revision";
+    public const string ExternalIdentityUniqueIndex = "IX_WorkflowDefinitionHeads_ExternalIdentity";
 }
 
 public sealed class WorkflowDefinitionHeadRecord
@@ -2077,6 +2166,10 @@ public sealed class WorkflowDefinitionHeadRecord
     public Guid WorkflowId { get; set; }
 
     public Guid VersionId { get; set; }
+
+    public string ExternalNamespace { get; set; } = string.Empty;
+
+    public string ExternalKey { get; set; } = string.Empty;
 }
 
 public sealed class WorkflowDefinitionRecord
@@ -2552,6 +2645,12 @@ internal sealed class WorkflowDefinitionHeadRecordConfiguration : IEntityTypeCon
         builder.HasKey(item => item.WorkflowId)
             .HasName(WorkflowDefinitionPersistenceConstraints.HeadPrimaryKey);
         builder.Property(item => item.VersionId).IsConcurrencyToken();
+        builder.Property(item => item.ExternalNamespace).HasMaxLength(100);
+        builder.Property(item => item.ExternalKey).HasMaxLength(200);
+        builder.HasIndex(item => new { item.ExternalNamespace, item.ExternalKey })
+            .IsUnique()
+            .HasFilter("\"ExternalNamespace\" <> ''")
+            .HasDatabaseName(WorkflowDefinitionPersistenceConstraints.ExternalIdentityUniqueIndex);
         builder.HasOne<WorkflowDefinitionRecord>()
             .WithMany()
             .HasForeignKey(item => item.VersionId)

@@ -17,6 +17,9 @@ public sealed record SandboxWorkspaceDocument(
     public IReadOnlyList<ExecutionWorkflowCheckpointRecord> ExecutionWorkflowCheckpoints { get; init; } = [];
     public IReadOnlyList<ToolExecutionReceiptRecord> ToolExecutionReceipts { get; init; } = [];
     public IReadOnlyList<ProviderUsageObservation> ProviderUsageObservations { get; init; } = [];
+    public IReadOnlyList<AgentPackageImportOperationRecord> AgentPackageImportOperations { get; init; } = [];
+    public IReadOnlyList<AgentExternalBindingRecord> AgentExternalBindings { get; init; } = [];
+    public IReadOnlyList<AgentExternalProvisioningOperationRecord> AgentExternalProvisioningOperations { get; init; } = [];
 
     public static SandboxWorkspaceDocument Empty { get; } = new(
         Version: "1.0",
@@ -37,7 +40,10 @@ public sealed record SandboxWorkspaceDocument(
             Capabilities,
             Memory)
         {
-            AgentTeams = AgentTeams
+            AgentTeams = AgentTeams,
+            AgentPackageImportOperations = AgentPackageImportOperations,
+            AgentExternalBindings = AgentExternalBindings,
+            AgentExternalProvisioningOperations = AgentExternalProvisioningOperations
         };
     }
 
@@ -77,6 +83,9 @@ public sealed record SandboxWorkspaceDocument(
             Memory: catalog.Memory)
         {
             AgentTeams = catalog.AgentTeams,
+            AgentPackageImportOperations = catalog.AgentPackageImportOperations,
+            AgentExternalBindings = catalog.AgentExternalBindings,
+            AgentExternalProvisioningOperations = catalog.AgentExternalProvisioningOperations,
             ExecutionRuns = executionState.ExecutionRuns,
             ExecutionApprovals = executionState.ExecutionApprovals,
             ExecutionArtifacts = executionState.ExecutionArtifacts,
@@ -95,6 +104,9 @@ public sealed record SandboxWorkspaceCatalog(
     IReadOnlyList<AgentMemoryRecord> Memory)
 {
     public IReadOnlyList<AgentTeamDefinition> AgentTeams { get; init; } = [];
+    public IReadOnlyList<AgentPackageImportOperationRecord> AgentPackageImportOperations { get; init; } = [];
+    public IReadOnlyList<AgentExternalBindingRecord> AgentExternalBindings { get; init; } = [];
+    public IReadOnlyList<AgentExternalProvisioningOperationRecord> AgentExternalProvisioningOperations { get; init; } = [];
 
     public static SandboxWorkspaceCatalog Empty { get; } = new(
         Version: "1.0",

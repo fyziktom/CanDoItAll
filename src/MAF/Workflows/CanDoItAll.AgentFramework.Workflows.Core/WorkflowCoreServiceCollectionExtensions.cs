@@ -14,7 +14,12 @@ public static class WorkflowCoreServiceCollectionExtensions
             serviceProvider.GetRequiredService<IWorkflowExecutorCatalog>()));
         services.TryAddSingleton<IWorkflowRuntimeBackendCatalog>(_ => new WorkflowRuntimeBackendCatalog());
         services.TryAddSingleton(TimeProvider.System);
-        services.TryAddSingleton<IWorkflowLaunchIdempotencyStore, InMemoryWorkflowLaunchIdempotencyStore>();
+        services.TryAddSingleton<InMemoryWorkflowLaunchIdempotencyStore>();
+        services.TryAddSingleton<IWorkflowLaunchIdempotencyStore>(serviceProvider =>
+            serviceProvider.GetRequiredService<InMemoryWorkflowLaunchIdempotencyStore>());
+        services.TryAddSingleton<IWorkflowLaunchIdempotencyQueryStore>(serviceProvider =>
+            serviceProvider.GetRequiredService<InMemoryWorkflowLaunchIdempotencyStore>());
+        services.TryAddScoped<IWorkflowLaunchIdempotencyQueryService, WorkflowLaunchIdempotencyQueryService>();
         services.TryAddScoped<IWorkflowRunLauncher, WorkflowRuntimeManagerRunLauncher>();
         services.TryAddScoped<IWorkflowLaunchService, WorkflowLaunchService>();
         services.TryAddScoped<IWorkflowUsageAnalyticsStore, WorkflowUsageAnalyticsStore>();
@@ -23,6 +28,7 @@ public static class WorkflowCoreServiceCollectionExtensions
         services.TryAddScoped<IWorkflowDashboardActivityQueryService, WorkflowDashboardActivityQueryService>();
         services.TryAddScoped<IWorkflowPayloadPolicyService, WorkflowPayloadPolicyService>();
         services.TryAddScoped<IWorkflowTestRunner, WorkflowTestRunner>();
+        services.TryAddScoped<IWorkflowStableIdentityLookupService, WorkflowStableIdentityLookupService>();
 
         return services;
     }

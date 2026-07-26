@@ -616,6 +616,18 @@ public sealed record WorkflowDefinition(
     DateTimeOffset UpdatedAtUtc)
 {
     public IReadOnlyList<WorkflowInputParameterDescriptor> InputParameters { get; init; } = [];
+
+    public string TemplateKey { get; init; } = string.Empty;
+
+    public string TemplatePackKey { get; init; } = string.Empty;
+
+    public string TemplatePackVersion { get; init; } = string.Empty;
+
+    public string SourceHash { get; init; } = string.Empty;
+
+    public string ExternalNamespace { get; init; } = string.Empty;
+
+    public string ExternalKey { get; init; } = string.Empty;
 }
 
 public sealed record WorkflowValidationIssue(

@@ -7,6 +7,8 @@ public sealed partial class AgentFrameworkWorkspaceService : IAgentFrameworkWork
     private readonly ISandboxWorkspaceStore store;
     private readonly AgentFrameworkWorkspaceCatalogService catalogService;
     private readonly AgentFrameworkWorkspaceExecutionService executionService;
+    private readonly AgentPackageImportService packageImportService;
+    private readonly AgentExternalProvisioningService externalProvisioningService;
     private readonly ExecutionBoundaryDescriptor toolExecutionBoundary;
 
     public AgentFrameworkWorkspaceService(
@@ -41,6 +43,13 @@ public sealed partial class AgentFrameworkWorkspaceService : IAgentFrameworkWork
         var resolvedExecutionEventSink = executionEventSink ?? new NullAgentExecutionEventSink();
         var resolvedExecutionCheckpointBridge = executionCheckpointBridge ?? new NullAgentExecutionCheckpointBridge();
         toolExecutionBoundary = workspaceProcessHost?.DescribeBoundary() ?? ExecutionBoundaryDescriptor.Unknown;
+        packageImportService = new AgentPackageImportService(
+            store,
+            packageService,
+            resolvedProviderProfileService);
+        externalProvisioningService = new AgentExternalProvisioningService(
+            store,
+            resolvedProviderProfileService);
 
         catalogService = new AgentFrameworkWorkspaceCatalogService(
             store,

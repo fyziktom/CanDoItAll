@@ -1,7 +1,9 @@
 using System.Text;
+using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.FileTools.Integration;
-using CanDoItAll.Web.Infrastructure;
 using CanDoItAll.Modules.Workspace.ApiAccess;
+using CanDoItAll.SharedKernel;
+using CanDoItAll.Web.Infrastructure;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.IdentityModel.Tokens;
@@ -33,6 +35,7 @@ public static class ApiServiceCollectionExtensions
         services.AddOpenApi();
         services.AddAuthorization();
         services.AddHttpContextAccessor();
+        services.TryAddScoped<IAgentRecruitingTargetResolver, WorkspaceAgentRecruitingTargetResolver>();
         services.Replace(ServiceDescriptor.Scoped<IFileAccessContextProvider, HttpFileAccessContextProvider>());
         services.Replace(ServiceDescriptor.Singleton<IFileAccessPolicy, WebFileAccessPolicy>());
 
@@ -57,8 +60,38 @@ public static class ApiServiceCollectionExtensions
                     ValidateLifetime = true,
                     ClockSkew = TimeSpan.FromSeconds(30)
                 };
+                options.Events = new JwtBearerEvents
+                {
+                    OnChallenge = context =>
+                    {
+                        context.HandleResponse();
+                        return WriteAuthorizationErrorAsync(
+                            context.HttpContext,
+                            StatusCodes.Status401Unauthorized,
+                            "api.authorization-required",
+                            "A valid bearer token is required.");
+                    },
+                    OnForbidden = context => WriteAuthorizationErrorAsync(
+                        context.HttpContext,
+                        StatusCodes.Status403Forbidden,
+                        "api.authorization-forbidden",
+                        "The bearer token does not authorize this operation.")
+                };
             });
 
         return services;
+    }
+
+    private static Task WriteAuthorizationErrorAsync(
+        HttpContext httpContext,
+        int statusCode,
+        string code,
+        string message)
+    {
+        httpContext.Response.StatusCode = statusCode;
+        return httpContext.Response.WriteAsJsonAsync(
+            new ApiErrorResponse(
+                [new ApiErrorItem(code, message, ErrorSeverity.Error)]),
+            httpContext.RequestAborted);
     }
 }

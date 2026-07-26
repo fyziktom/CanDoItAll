@@ -215,6 +215,12 @@ public sealed class InMemoryWorkflowCatalogService :
                 throw new InvalidOperationException($"Workflow definition '{workflowId}' was updated by another request.");
             }
 
+            var stableIdentity = WorkflowStableIdentityPolicy.Resolve(request, current);
+            WorkflowStableIdentityPolicy.EnsureExternalIdentityIsUnique(
+                store.Definitions,
+                workflowId,
+                stableIdentity.ExternalNamespace,
+                stableIdentity.ExternalKey);
             definition = new WorkflowDefinition(
                 workflowId,
                 WorkflowVersionId.New(),
@@ -226,7 +232,13 @@ public sealed class InMemoryWorkflowCatalogService :
                 current?.CreatedAtUtc ?? now,
                 now)
             {
-                InputParameters = SnapshotInputParameters(request.InputParameters)
+                InputParameters = SnapshotInputParameters(request.InputParameters),
+                TemplateKey = stableIdentity.TemplateKey,
+                TemplatePackKey = stableIdentity.TemplatePackKey,
+                TemplatePackVersion = stableIdentity.TemplatePackVersion,
+                SourceHash = stableIdentity.SourceHash,
+                ExternalNamespace = stableIdentity.ExternalNamespace,
+                ExternalKey = stableIdentity.ExternalKey
             };
         }
         finally
@@ -250,6 +262,11 @@ public sealed class InMemoryWorkflowCatalogService :
                 throw new InvalidOperationException($"Workflow definition '{definition.Id}' was updated by another request.");
             }
 
+            WorkflowStableIdentityPolicy.EnsureExternalIdentityIsUnique(
+                store.Definitions,
+                definition.Id,
+                definition.ExternalNamespace,
+                definition.ExternalKey);
             if (versions is null)
             {
                 store.Definitions[definition.Id] = [definition];
@@ -341,7 +358,21 @@ public sealed class InMemoryWorkflowCatalogService :
                 source.Graph,
                 source.RuntimePolicy)
             {
-                InputParameters = source.InputParameters
+                InputParameters = source.InputParameters,
+                ExternalNamespace = request.PreserveWorkflowId
+                    ? source.ExternalNamespace
+                    : string.Empty,
+                ExternalKey = request.PreserveWorkflowId
+                    ? source.ExternalKey
+                    : string.Empty,
+                TemplateProvenance = request.PreserveWorkflowId &&
+                                     !string.IsNullOrWhiteSpace(source.TemplateKey)
+                    ? new WorkflowTemplateProvenance(
+                        source.TemplateKey,
+                        source.TemplatePackKey,
+                        source.TemplatePackVersion,
+                        source.SourceHash)
+                    : null
             },
             cancellationToken);
     }
@@ -637,14 +668,8 @@ public sealed class InMemoryWorkflowCatalogService :
         return [];
     }
 
-    private static WorkflowCatalogItem MapCatalogItem(WorkflowDefinition definition) => new(
-        definition.Id,
-        definition.VersionId,
-        definition.Name,
-        definition.Description,
-        definition.Status,
-        definition.RuntimePolicy.PreferredBackend,
-        definition.UpdatedAtUtc);
+    private static WorkflowCatalogItem MapCatalogItem(WorkflowDefinition definition)
+        => WorkflowStableIdentityLookupService.MapCatalogItem(definition);
 
     private ProviderProfile NormalizeProvider(ProviderProfile provider)
     {

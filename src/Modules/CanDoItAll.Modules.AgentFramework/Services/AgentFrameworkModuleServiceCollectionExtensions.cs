@@ -110,6 +110,11 @@ public static class AgentFrameworkModuleServiceCollectionExtensions
             (ISandboxWorkspaceExecutionRunStore)serviceProvider.GetRequiredService<ISandboxWorkspaceStore>());
         services.TryAddScoped<ISandboxWorkspaceExecutionStore>(serviceProvider =>
             serviceProvider.GetRequiredService<ISandboxWorkspaceStore>());
+        services.TryAddScoped<ISandboxWorkspaceCatalogStore>(serviceProvider =>
+            serviceProvider.GetRequiredService<ISandboxWorkspaceStore>());
+        services.TryAddScoped<IAgentRecruitingEvidenceStore>(serviceProvider =>
+            (IAgentRecruitingEvidenceStore)serviceProvider.GetRequiredService<ISandboxWorkspaceStore>());
+        services.TryAddScoped<IAgentRecruitingEvidenceService, AgentRecruitingEvidenceService>();
         services.TryAddSingleton<IAgentExecutionCancellationRegistry, AgentExecutionCancellationRegistry>();
         services.AddScoped<IProviderProfileRegistry, WorkspaceBackedAgentProviderProfileRegistry>();
         services.TryAddSingleton<AgentReferenceDataInvalidationHub>();
@@ -196,6 +201,8 @@ public static class AgentFrameworkModuleServiceCollectionExtensions
         services.TryAddScoped<IWorkflowCheckpointStore>(serviceProvider => serviceProvider.GetRequiredService<PersistentWorkflowRunStore>());
         services.TryAddScoped<PersistentWorkflowLaunchIdempotencyStore>();
         services.Replace(ServiceDescriptor.Scoped<IWorkflowLaunchIdempotencyStore>(serviceProvider =>
+            serviceProvider.GetRequiredService<PersistentWorkflowLaunchIdempotencyStore>()));
+        services.Replace(ServiceDescriptor.Scoped<IWorkflowLaunchIdempotencyQueryStore>(serviceProvider =>
             serviceProvider.GetRequiredService<PersistentWorkflowLaunchIdempotencyStore>()));
         services.TryAddScoped<PersistentWorkflowUsageObservationStore>();
         services.Replace(ServiceDescriptor.Scoped<IWorkflowUsageObservationStore>(serviceProvider =>
